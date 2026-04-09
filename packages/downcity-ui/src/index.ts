@@ -21,10 +21,10 @@ export type {
   DowncityWorkboardActivityStatus,
   DowncityWorkboardAgentSummary,
   DowncityWorkboardProps,
-  DowncityWorkboardServiceItem,
+  DowncityWorkboardSignalItem,
+  DowncityWorkboardSignalTone,
   DowncityWorkboardSnapshot,
   DowncityWorkboardSummary,
-  DowncityWorkboardTaskSummary,
 } from "./types/workboard";
 
 export { Button, buttonVariants } from "./components/button";

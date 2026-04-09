@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只做确定性采集，不引入 LLM 推理。
- * - 当前聚合 session、task、service 三类运行事实，先满足“当前在做什么 + 最近做过什么”。
+ * - 内部仍聚合 session、task、service 三类运行事实，但最终只输出对外安全的模糊状态。
  */
 
 import { listTaskDefinitions } from "@services/task/Action.js";
@@ -13,11 +13,11 @@ import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { WorkboardSnapshot } from "@/plugins/workboard/types/Workboard.js";
 import {
   buildIdleActivity,
+  toRecentActivity,
+  toRunningActivity,
   toWorkboardAgentSummary,
-  toWorkboardServiceItems,
-  toWorkboardSessionActivity,
+  toWorkboardSignals,
   toWorkboardSummary,
-  toWorkboardTaskSummary,
 } from "@/plugins/workboard/runtime/Normalizer.js";
 
 const WORKBOARD_RECENT_LIMIT = 8;
@@ -36,39 +36,43 @@ export async function collectWorkboardSnapshot(
     limit: WORKBOARD_RECENT_LIMIT + Math.max(executingSessionIds.size, 1),
     executingSessionIds,
   });
-  const services = toWorkboardServiceItems(listServiceStates());
-  const tasks = toWorkboardTaskSummary(
-    await listTaskDefinitions({ projectRoot: context.rootPath }),
-  );
+  const services = listServiceStates();
+  const taskResult = await listTaskDefinitions({ projectRoot: context.rootPath });
+  const degradedCount = services.filter((item) => item.state !== "running").length;
 
   const current = sessions
     .filter((item) => item.executing === true)
     .slice(0, 4)
-    .map((item) => toWorkboardSessionActivity({ item, status: "running" }));
+    .map((item, index) => toRunningActivity({ item, index }));
   const recent = sessions
     .filter((item) => item.executing !== true)
     .slice(0, WORKBOARD_RECENT_LIMIT)
-    .map((item) => toWorkboardSessionActivity({ item, status: "done" }));
+    .map((item, index) => toRecentActivity({ item, index }));
 
   const safeCurrent = current.length > 0
     ? current
-    : [buildIdleActivity({ updatedAt: collectedAt, recentFirstTitle: recent[0]?.title })];
+    : [buildIdleActivity({ updatedAt: collectedAt, recentCount: recent.length })];
 
   return {
     agent: toWorkboardAgentSummary({
       context,
       collectedAt,
-      executingSessionCount: current.length,
-      recentFirstTitle: recent[0]?.title,
+      currentCount: current.length,
+      recentCount: recent.length,
+      degradedCount,
     }),
     summary: toWorkboardSummary({
       currentCount: current.length,
       recentCount: recent.length,
-      services,
+      degradedCount,
     }),
     current: safeCurrent,
     recent,
-    services,
-    tasks,
+    signals: toWorkboardSignals({
+      currentCount: current.length,
+      recentCount: recent.length,
+      services,
+      taskResult,
+    }),
   };
 }

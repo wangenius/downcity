@@ -521,14 +521,6 @@ export function App() {
           chatChannels={chatChannels}
           onChatAction={(action, channel) => runChatChannelAction(action, channel)}
         />
-        <WorkboardSection
-          snapshot={workboard.snapshot}
-          loading={workboard.loading}
-          errorMessage={workboard.errorMessage}
-          onRefresh={() => {
-            void workboard.refresh()
-          }}
-        />
       </section>
     )
   )
@@ -637,6 +629,26 @@ export function App() {
       }
       case "agentOverview":
         return renderAgentOverviewSection()
+      case "agentWorkboard":
+        return (
+          <section>
+            <WorkboardSection
+              snapshot={workboard.snapshot}
+              loading={workboard.loading}
+              errorMessage={workboard.errorMessage}
+              agentName={String(selectedAgent?.name || "").trim()}
+              running={selectedAgent?.running === true}
+              statusText={String(selectedAgent?.statusText || "").trim()}
+              onRefresh={() => {
+                void workboard.refresh()
+              }}
+              onStartAgent={() => {
+                if (!selectedAgentId) return
+                void startAgentFromHistory(selectedAgentId)
+              }}
+            />
+          </section>
+        )
       case "agentAuthorization":
         return (
           <section>

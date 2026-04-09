@@ -204,7 +204,10 @@ export const dashboardApiRoutes = {
     agentId
       ? `/api/ui/plugins?agent=${encodeURIComponent(agentId)}`
       : "/api/ui/plugins",
-  uiPluginsAction: () => "/api/ui/plugins/action",
+  uiPluginsAction: (agentId?: string) =>
+    agentId
+      ? `/api/ui/plugins/action?agent=${encodeURIComponent(agentId)}`
+      : "/api/ui/plugins/action",
   uiModel: (agentId?: string) =>
     agentId
       ? `/api/ui/model?agent=${encodeURIComponent(agentId)}`

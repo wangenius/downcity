@@ -1,25 +1,24 @@
 ---
 title: workboard plugin
-description: Observe what the current agent is doing now and what it recently worked on through structured snapshots
+description: Present the current public-facing state of an agent and its recent changes through structured snapshots
 ---
 
 # workboard plugin
 
-`workboard` is a built-in plugin that turns the current agent runtime into a structured activity snapshot for Console and UI consumers.
+`workboard` is a built-in plugin that turns the current outward-facing agent state into a structured snapshot for Console and UI consumers.
 
 ## What it shows
 
-- Currently executing sessions
-- Recently updated or recently completed sessions
-- Service state
-- Task summary
-- The active execution mode and model
+- Whether the agent is currently unfolding, pausing, or idle
+- Whether there has been a recent update
+- Public-safe fuzzy cues
+- A high-level summary that avoids leaking internal context
 
 ## When to use it
 
-- You want to see what the current agent is doing right now
-- You want a recent activity surface in Console
-- You want to wire runtime activity into a custom host or UI SDK surface
+- You want to see what kind of state the current agent is presenting right now
+- You want a recent-change surface in Console
+- You want to wire this public-facing state into a custom host or UI SDK surface
 
 ## Runtime endpoint
 
@@ -27,17 +26,19 @@ When the agent is running, `workboard` exposes:
 
 - `GET /api/workboard/snapshot`
 
-The endpoint returns structured JSON instead of generated text, so it can be consumed directly by `@downcity/ui` or your own host layer.
+The endpoint returns structured JSON, but only as a public-safe high-level projection. It does not expose internal session, service, task, path, or model details.
 
 ## Console behavior
 
-Console uses the workboard snapshot to render a dedicated workspace surface:
+Console uses the workboard snapshot to render a dedicated agent main view:
 
-- the left side focuses on current and recent activities
-- the right side acts as an inspector with service and task summaries
+- open `Workboard` from the Agent navigation in the sidebar
+- the main stage focuses on the current public state and recent fragments
+- the right inspector focuses on the selected state and public-safe cues
 
 ## Notes
 
 - `workboard` ships as a built-in plugin
 - if you disable the plugin, the snapshot endpoint becomes unavailable
 - the current version is based on deterministic collection instead of extra model inference
+- the current version is intentionally designed for external display, so it only exposes high-level public state

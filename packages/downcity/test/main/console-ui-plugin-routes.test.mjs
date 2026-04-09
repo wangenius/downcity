@@ -138,6 +138,8 @@ test("ui plugins route without agent returns city-level plugin catalog", async (
   assert.equal(Array.isArray(body.plugins), true);
   assert.equal(body.plugins.every((item) => item?.availability?.enabled === true), true);
   assert.equal(body.plugins.every((item) => item?.availability?.available === true), true);
+  assert.equal(Boolean(body.plugins.find((item) => item?.name === "lmp")?.config?.setup), true);
+  assert.equal(Boolean(body.plugins.find((item) => item?.name === "lmp")?.config?.usage), false);
   assert.equal(resolveCalled, false);
 });
 
@@ -215,4 +217,61 @@ test("ui agent plugin fallback keeps setup and usage definitions separate", asyn
   assert.equal(body.runtimeConnected, false);
   assert.equal(lmpItem?.config?.setup?.primaryAction, "install");
   assert.equal(lmpItem?.config?.usage?.saveAction, "configure");
+});
+
+test("ui global plugin action can run local setup-related action with selected agent", async () => {
+  const app = new Hono();
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-test-plugin-action-agent-"));
+  fs.writeFileSync(
+    path.join(projectRoot, "downcity.json"),
+    `${JSON.stringify({
+      name: "demo",
+      version: "1.0.0",
+      execution: {
+        type: "local",
+      },
+      plugins: {
+        lmp: {
+          provider: "llama",
+          modelsDir: path.join(projectRoot, ".models"),
+          command: "llama-server",
+          autoStart: true,
+        },
+      },
+    }, null, 2)}\n`,
+    "utf-8",
+  );
+
+  registerConsolePluginRoutes({
+    app,
+    readRequestedAgentId(request) {
+      return new URL(request.url).searchParams.get("agent") || "";
+    },
+    async resolveSelectedAgent(requestedAgentId) {
+      if (requestedAgentId !== "agent-1") return null;
+      return {
+        id: "agent-1",
+        name: "Agent 1",
+        projectRoot,
+        baseUrl: "",
+      };
+    },
+  });
+
+  const response = await app.request("/api/ui/plugins/action?agent=agent-1", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      pluginName: "lmp",
+      actionName: "status",
+    }),
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.pluginName, "lmp");
+  assert.equal(typeof body.data?.plugin, "object");
 });

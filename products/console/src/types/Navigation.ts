@@ -24,6 +24,7 @@ export type DashboardView =
   | "globalAgents"
   | "globalPlugins"
   | "agentOverview"
+  | "agentWorkboard"
   | "agentAuthorization"
   | "agentPlugins"
   | "agentSkills"

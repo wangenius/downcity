@@ -159,6 +159,7 @@ const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.Reac
   globalAgents: <Layers3Icon />,
   globalPlugins: <PuzzleIcon />,
   agentOverview: <Layers3Icon />,
+  agentWorkboard: <RadarIcon />,
   agentAuthorization: <ShieldCheckIcon />,
   agentPlugins: <PuzzleIcon />,
   agentSkills: <SparklesIcon />,

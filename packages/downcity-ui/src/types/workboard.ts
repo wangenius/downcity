@@ -3,21 +3,26 @@
  *
  * 关键点（中文）
  * - 这些类型只服务 `@downcity/ui` 的 workboard 组件导出。
- * - 字段命名尽量贴近展示语义，避免把 runtime 内部结构直接暴露到 UI SDK。
+ * - UI 只接收对外安全的模糊公开态，不消费内部运行事实。
  */
 
 /**
  * Workboard 活动类型。
  */
-export type DowncityWorkboardActivityKind = "session" | "task" | "system";
+export type DowncityWorkboardActivityKind = "focus" | "progress" | "idle";
 
 /**
  * Workboard 活动状态。
  */
-export type DowncityWorkboardActivityStatus = "running" | "idle" | "done" | "error";
+export type DowncityWorkboardActivityStatus = "active" | "steady" | "waiting" | "issue";
 
 /**
- * 单个工作活动项。
+ * Workboard 信号语气。
+ */
+export type DowncityWorkboardSignalTone = "neutral" | "accent" | "warning";
+
+/**
+ * 单个公开活动项。
  */
 export interface DowncityWorkboardActivityItem {
   /**
@@ -29,15 +34,15 @@ export interface DowncityWorkboardActivityItem {
    */
   kind: DowncityWorkboardActivityKind;
   /**
-   * 活动标题。
+   * 对外标题。
    */
   title: string;
   /**
-   * 活动摘要。
+   * 对外摘要。
    */
   summary: string;
   /**
-   * 活动状态。
+   * 当前状态。
    */
   status: DowncityWorkboardActivityStatus;
   /**
@@ -45,105 +50,59 @@ export interface DowncityWorkboardActivityItem {
    */
   updatedAt: string;
   /**
-   * 开始时间（ISO8601，可选）。
-   */
-  startedAt?: string;
-  /**
-   * 关联 sessionId（可选）。
-   */
-  sessionId?: string;
-  /**
-   * 标签列表。
+   * 对外安全标签。
    */
   tags: string[];
 }
 
 /**
- * 单个 service 状态项。
+ * 单个公开信号项。
  */
-export interface DowncityWorkboardServiceItem {
+export interface DowncityWorkboardSignalItem {
   /**
-   * service 名称。
+   * 信号名称。
    */
-  name: string;
+  label: string;
   /**
-   * 当前状态文本。
+   * 信号值。
    */
-  state: string;
+  value: string;
   /**
-   * 最近更新时间（ISO8601）。
+   * 信号语气。
    */
-  updatedAt: string;
-  /**
-   * 最近错误信息（可选）。
-   */
-  lastError?: string;
+  tone: DowncityWorkboardSignalTone;
 }
 
 /**
- * workboard 顶部聚合摘要。
+ * workboard 顶部公开摘要。
  */
 export interface DowncityWorkboardSummary {
   /**
-   * 当前执行中的会话数量。
+   * 顶部 headline。
    */
-  executingSessions: number;
+  headline: string;
   /**
-   * 最近活动条目数量。
+   * 当前姿态描述。
    */
-  recentActivities: number;
+  posture: string;
   /**
-   * 当前异常 service 数量。
+   * 当前动量描述。
    */
-  degradedServices: number;
+  momentum: string;
+  /**
+   * 可见性说明。
+   */
+  visibilityNote: string;
 }
 
 /**
- * task 摘要信息。
- */
-export interface DowncityWorkboardTaskSummary {
-  /**
-   * task 总数。
-   */
-  total: number;
-  /**
-   * 启用中的 task 数量。
-   */
-  enabled: number;
-  /**
-   * 暂停中的 task 数量。
-   */
-  paused: number;
-  /**
-   * 禁用中的 task 数量。
-   */
-  disabled: number;
-}
-
-/**
- * agent 基础摘要。
+ * agent 基础公开摘要。
  */
 export interface DowncityWorkboardAgentSummary {
-  /**
-   * agent 唯一标识。
-   */
-  id: string;
   /**
    * agent 展示名称。
    */
   name: string;
-  /**
-   * agent 项目根路径。
-   */
-  projectRoot: string;
-  /**
-   * 执行模式。
-   */
-  executionMode: string;
-  /**
-   * 主模型标识（可选）。
-   */
-  modelId?: string;
   /**
    * agent 是否运行中。
    */
@@ -163,11 +122,11 @@ export interface DowncityWorkboardAgentSummary {
  */
 export interface DowncityWorkboardSnapshot {
   /**
-   * agent 摘要信息。
+   * agent 公开摘要。
    */
   agent: DowncityWorkboardAgentSummary;
   /**
-   * 顶部聚合摘要。
+   * 顶部公开摘要。
    */
   summary: DowncityWorkboardSummary;
   /**
@@ -179,13 +138,9 @@ export interface DowncityWorkboardSnapshot {
    */
   recent: DowncityWorkboardActivityItem[];
   /**
-   * service 状态列表。
+   * 模糊信号列表。
    */
-  services: DowncityWorkboardServiceItem[];
-  /**
-   * task 摘要。
-   */
-  tasks: DowncityWorkboardTaskSummary;
+  signals: DowncityWorkboardSignalItem[];
 }
 
 /**

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - console 必须通过 runtime workboard route 读取数据。
- * - workboard 必须以独立 section 形式接入页面，而不是散落在已有卡片中。
+ * - workboard 必须以独立 main view 形式接入页面，而不是塞在 overview 下。
  */
 
 import assert from "node:assert/strict";
@@ -13,6 +13,8 @@ import test from "node:test";
 
 const dashboardApiPath = path.resolve(import.meta.dirname, "../src/lib/dashboard-api.ts");
 const appPath = path.resolve(import.meta.dirname, "../src/App.tsx");
+const navigationPath = path.resolve(import.meta.dirname, "../src/lib/dashboard-navigation.ts");
+const routePath = path.resolve(import.meta.dirname, "../src/lib/dashboard-route.ts");
 
 test("console dashboard api should expose workboard snapshot route", () => {
   const source = fs.readFileSync(dashboardApiPath, "utf-8");
@@ -20,8 +22,16 @@ test("console dashboard api should expose workboard snapshot route", () => {
   assert.match(source, /workboardSnapshot:\s*\(\)\s*=>\s*"\/api\/workboard\/snapshot"/);
 });
 
-test("console app should render a dedicated workboard section", () => {
+test("console navigation should expose agent workboard main view", () => {
+  const navigationSource = fs.readFileSync(navigationPath, "utf-8");
+  const routeSource = fs.readFileSync(routePath, "utf-8");
+
+  assert.match(navigationSource, /agentWorkboard/);
+  assert.match(routeSource, /workboard/);
+});
+
+test("console app should render a dedicated workboard main view", () => {
   const source = fs.readFileSync(appPath, "utf-8");
 
-  assert.match(source, /WorkboardSection/);
+  assert.match(source, /case "agentWorkboard"/);
 });

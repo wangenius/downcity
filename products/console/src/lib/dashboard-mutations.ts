@@ -79,7 +79,7 @@ export async function runPluginActionMutation(params: {
     const scope = params.scope === "global" ? "global" : "agent";
     const path =
       scope === "global"
-        ? dashboardApiRoutes.uiPluginsAction()
+        ? dashboardApiRoutes.uiPluginsAction(params.selectedAgentId)
         : withConsoleAgent(
             dashboardApiRoutes.pluginsAction(),
             params.selectedAgentId,

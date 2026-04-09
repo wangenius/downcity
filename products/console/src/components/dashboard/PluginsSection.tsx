@@ -776,7 +776,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1 lg:justify-end">
-                      {scope === "agent" && setup ? (
+                      {scope === "global" && setup ? (
                         <ToolAction
                           icon={<Settings2Icon className="size-3.5" />}
                           label={snapshotMode === "attention" ? "修复" : "安装"}

@@ -2,24 +2,27 @@
  * Workboard 插件类型定义。
  *
  * 关键点（中文）
- * - 这些类型只服务 workboard plugin 自身，不进入 shared。
- * - 输出结构优先面向 console workboard 展示，而不是通用领域模型。
+ * - workboard 是对外展示面板，类型只保留公开安全的模糊状态。
+ * - 不暴露 sessionId、路径、模型、service 名称、task 明细等内部信息。
  */
-
-import type { ServiceState } from "@/shared/types/Service.js";
 
 /**
  * Workboard 活动类型。
  */
-export type WorkboardActivityKind = "session" | "task" | "system";
+export type WorkboardActivityKind = "focus" | "progress" | "idle";
 
 /**
  * Workboard 活动状态。
  */
-export type WorkboardActivityStatus = "running" | "idle" | "done" | "error";
+export type WorkboardActivityStatus = "active" | "steady" | "waiting" | "issue";
 
 /**
- * 单个工作活动项。
+ * Workboard 信号语气。
+ */
+export type WorkboardSignalTone = "neutral" | "accent" | "warning";
+
+/**
+ * 单个公开活动项。
  */
 export interface WorkboardActivityItem {
   /**
@@ -31,11 +34,11 @@ export interface WorkboardActivityItem {
    */
   kind: WorkboardActivityKind;
   /**
-   * 主标题。
+   * 对外可展示的模糊标题。
    */
   title: string;
   /**
-   * 摘要说明。
+   * 对外可展示的模糊摘要。
    */
   summary: string;
   /**
@@ -47,105 +50,59 @@ export interface WorkboardActivityItem {
    */
   updatedAt: string;
   /**
-   * 开始时间（ISO8601，可选）。
-   */
-  startedAt?: string;
-  /**
-   * 关联 sessionId（可选）。
-   */
-  sessionId?: string;
-  /**
-   * 次级标签集合。
+   * 对外安全标签。
    */
   tags: string[];
 }
 
 /**
- * 单个 service 状态摘要。
+ * 单个公开信号项。
  */
-export interface WorkboardServiceItem {
+export interface WorkboardSignalItem {
   /**
-   * service 名称。
+   * 信号名称。
    */
-  name: string;
+  label: string;
   /**
-   * 当前运行状态。
+   * 信号值。
    */
-  state: ServiceState;
+  value: string;
   /**
-   * 最近更新时间（ISO8601）。
+   * 信号语气。
    */
-  updatedAt: string;
-  /**
-   * 最近错误信息（可选）。
-   */
-  lastError?: string;
+  tone: WorkboardSignalTone;
 }
 
 /**
- * task 聚合摘要。
- */
-export interface WorkboardTaskSummary {
-  /**
-   * task 总数。
-   */
-  total: number;
-  /**
-   * 启用中的 task 数量。
-   */
-  enabled: number;
-  /**
-   * 暂停中的 task 数量。
-   */
-  paused: number;
-  /**
-   * 禁用中的 task 数量。
-   */
-  disabled: number;
-}
-
-/**
- * workboard 顶部摘要。
+ * 顶部公开摘要。
  */
 export interface WorkboardSummary {
   /**
-   * 当前执行中的 session 数量。
+   * 对外 headline。
    */
-  executingSessions: number;
+  headline: string;
   /**
-   * 最近活动条目数量。
+   * 当前姿态描述。
    */
-  recentActivities: number;
+  posture: string;
   /**
-   * 异常 service 数量。
+   * 当前动量描述。
    */
-  degradedServices: number;
+  momentum: string;
+  /**
+   * 可见性说明。
+   */
+  visibilityNote: string;
 }
 
 /**
- * agent 摘要信息。
+ * agent 公开摘要。
  */
 export interface WorkboardAgentSummary {
-  /**
-   * agent 唯一标识。
-   */
-  id: string;
   /**
    * agent 展示名称。
    */
   name: string;
-  /**
-   * agent 项目根目录。
-   */
-  projectRoot: string;
-  /**
-   * 当前执行模式。
-   */
-  executionMode: string;
-  /**
-   * 当前主模型标识（可选）。
-   */
-  modelId?: string;
   /**
    * 当前 agent 是否运行中。
    */
@@ -165,11 +122,11 @@ export interface WorkboardAgentSummary {
  */
 export interface WorkboardSnapshot {
   /**
-   * agent 基础摘要。
+   * agent 公开摘要。
    */
   agent: WorkboardAgentSummary;
   /**
-   * 顶部聚合摘要。
+   * 顶部公开摘要。
    */
   summary: WorkboardSummary;
   /**
@@ -181,13 +138,9 @@ export interface WorkboardSnapshot {
    */
   recent: WorkboardActivityItem[];
   /**
-   * service 状态列表。
+   * 模糊信号列表。
    */
-  services: WorkboardServiceItem[];
-  /**
-   * task 聚合摘要。
-   */
-  tasks: WorkboardTaskSummary;
+  signals: WorkboardSignalItem[];
 }
 
 /**

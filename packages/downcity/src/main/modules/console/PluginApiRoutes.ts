@@ -12,6 +12,7 @@ import {
   findBuiltinPlugin,
   listStaticPluginViews,
 } from "@/main/plugin/Catalog.js";
+import { runLocalPluginAction } from "@/main/plugin/LocalExecution.js";
 import { isPluginEnabled } from "@/main/plugin/Activation.js";
 import { setCityPluginEnabled } from "@/main/plugin/Lifecycle.js";
 import type { ConsoleAgentOption } from "@/shared/types/Console.js";
@@ -90,14 +91,6 @@ function buildPluginActionConfig(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function buildGlobalPluginActionConfig(
-  plugin: ReturnType<typeof findBuiltinPlugin>,
-): PluginActionConfigItem[] {
-  return buildPluginActionConfig(plugin).filter((item) =>
-    item.name === "on" || item.name === "off",
-  );
-}
-
 function buildPluginConfigMap(): Map<string, {
   actions: PluginActionConfigItem[];
   setup?: PluginSetupDefinition;
@@ -119,12 +112,18 @@ function buildPluginConfigMap(): Map<string, {
   );
 }
 
-function buildGlobalPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[] }> {
+function buildGlobalPluginConfigMap(): Map<string, {
+  actions: PluginActionConfigItem[];
+  setup?: PluginSetupDefinition;
+}> {
   return new Map(
     listStaticPluginViews().map((view) => [
       view.name,
       {
-        actions: buildGlobalPluginActionConfig(findBuiltinPlugin(view.name)),
+        actions: buildPluginActionConfig(findBuiltinPlugin(view.name)),
+        ...(findBuiltinPlugin(view.name)?.setup
+          ? { setup: findBuiltinPlugin(view.name)?.setup }
+          : {}),
       },
     ] as const),
   );
@@ -149,8 +148,8 @@ function buildGlobalPluginPayload(): PluginUiResponse {
         available: true,
         reasons: [],
       },
-      config: {
-        actions: configMap.get(view.name)?.actions || [],
+      config: configMap.get(view.name) || {
+        actions: [],
       },
     })),
   };
@@ -291,10 +290,12 @@ async function buildRuntimePluginPayload(
   };
 }
 
-function runGlobalPluginAction(input: {
+async function runGlobalPluginAction(input: {
   pluginName: string;
   actionName: string;
-}): PluginActionResult<JsonValue> {
+  projectRoot?: string;
+  payload?: JsonValue;
+}): Promise<PluginActionResult<JsonValue>> {
   const pluginName = String(input.pluginName || "").trim();
   const actionName = String(input.actionName || "").trim();
   const plugin = findBuiltinPlugin(pluginName);
@@ -305,31 +306,41 @@ function runGlobalPluginAction(input: {
       message: `Unknown plugin: ${pluginName}`,
     };
   }
-  if (actionName !== "on" && actionName !== "off") {
+  if (actionName === "on" || actionName === "off") {
+    if (plugin.name === "auth") {
+      return {
+        success: false,
+        error: `Plugin "${plugin.name}" cannot be disabled globally`,
+        message: `Plugin "${plugin.name}" cannot be disabled globally`,
+      };
+    }
+
+    setCityPluginEnabled(plugin.name, actionName === "on");
     return {
-      success: false,
-      error: `Unsupported global plugin action: ${actionName}`,
-      message: `Unsupported global plugin action: ${actionName}`,
+      success: true,
+      message: `Plugin "${plugin.name}" ${actionName === "on" ? "enabled" : "disabled"} in city config`,
+      data: {
+        pluginName: plugin.name,
+        enabled: actionName === "on",
+      },
     };
   }
 
-  if (plugin.name === "auth") {
+  const projectRoot = String(input.projectRoot || "").trim();
+  if (!projectRoot) {
     return {
       success: false,
-      error: `Plugin "${plugin.name}" cannot be disabled globally`,
-      message: `Plugin "${plugin.name}" cannot be disabled globally`,
+      error: `Plugin "${plugin.name}" action "${actionName}" requires a selected agent`,
+      message: `Plugin "${plugin.name}" action "${actionName}" requires a selected agent`,
     };
   }
 
-  setCityPluginEnabled(plugin.name, actionName === "on");
-  return {
-    success: true,
-    message: `Plugin "${plugin.name}" ${actionName === "on" ? "enabled" : "disabled"} in city config`,
-    data: {
-      pluginName: plugin.name,
-      enabled: actionName === "on",
-    },
-  };
+  return runLocalPluginAction({
+    projectRoot,
+    pluginName: plugin.name,
+    actionName,
+    payload: input.payload,
+  });
 }
 
 /**
@@ -410,9 +421,16 @@ export function registerConsolePluginRoutes(params: {
         return c.json({ success: false, error: "actionName is required" }, 400);
       }
 
-      const result = runGlobalPluginAction({
+      const requestedAgentId = params.readRequestedAgentId(c.req.raw);
+      const selectedAgent = requestedAgentId
+        ? await params.resolveSelectedAgent(requestedAgentId)
+        : null;
+
+      const result = await runGlobalPluginAction({
         pluginName,
         actionName,
+        projectRoot: String(selectedAgent?.projectRoot || "").trim() || undefined,
+        payload: body?.payload,
       });
       return c.json(
         {

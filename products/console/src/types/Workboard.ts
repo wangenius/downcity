@@ -2,150 +2,104 @@
  * Console workboard 类型定义。
  *
  * 关键点（中文）
- * - workboard 是独立 feature，类型不并入 Dashboard.ts。
- * - 字段设计直接对齐 console 实际消费的快照结构。
+ * - console 只消费 workboard 的对外模糊状态，不直接接触内部运行事实。
+ * - 字段命名与 plugin 公开快照保持一致，避免出现二次扩展泄漏。
  */
 
 /**
- * 单个活动项。
+ * 单个公开活动项。
  */
 export interface UiWorkboardActivityItem {
   /**
    * 活动稳定标识。
    */
-  id: string;
+  id: string
   /**
    * 活动类型。
    */
-  kind: "session" | "task" | "system";
+  kind: "focus" | "progress" | "idle"
   /**
-   * 活动标题。
+   * 对外标题。
    */
-  title: string;
+  title: string
   /**
-   * 活动摘要。
+   * 对外摘要。
    */
-  summary: string;
-  /**
-   * 活动状态。
-   */
-  status: "running" | "idle" | "done" | "error";
-  /**
-   * 最近更新时间（ISO8601）。
-   */
-  updatedAt: string;
-  /**
-   * 开始时间（ISO8601，可选）。
-   */
-  startedAt?: string;
-  /**
-   * 关联 sessionId（可选）。
-   */
-  sessionId?: string;
-  /**
-   * 标签列表。
-   */
-  tags: string[];
-}
-
-/**
- * 单个 service 状态项。
- */
-export interface UiWorkboardServiceItem {
-  /**
-   * service 名称。
-   */
-  name: string;
+  summary: string
   /**
    * 当前状态。
    */
-  state: string;
+  status: "active" | "steady" | "waiting" | "issue"
   /**
    * 最近更新时间（ISO8601）。
    */
-  updatedAt: string;
+  updatedAt: string
   /**
-   * 最近错误（可选）。
+   * 对外安全标签。
    */
-  lastError?: string;
+  tags: string[]
 }
 
 /**
- * 顶部摘要。
+ * 单个公开信号项。
+ */
+export interface UiWorkboardSignalItem {
+  /**
+   * 信号名称。
+   */
+  label: string
+  /**
+   * 信号值。
+   */
+  value: string
+  /**
+   * 信号语气。
+   */
+  tone: "neutral" | "accent" | "warning"
+}
+
+/**
+ * 顶部公开摘要。
  */
 export interface UiWorkboardSummary {
   /**
-   * 当前执行中的 session 数量。
+   * 顶部 headline。
    */
-  executingSessions: number;
+  headline: string
   /**
-   * 最近活动数量。
+   * 当前姿态描述。
    */
-  recentActivities: number;
+  posture: string
   /**
-   * 异常 service 数量。
+   * 当前动量描述。
    */
-  degradedServices: number;
+  momentum: string
+  /**
+   * 可见性说明。
+   */
+  visibilityNote: string
 }
 
 /**
- * task 摘要。
- */
-export interface UiWorkboardTaskSummary {
-  /**
-   * task 总数。
-   */
-  total: number;
-  /**
-   * 启用中的 task 数量。
-   */
-  enabled: number;
-  /**
-   * 暂停中的 task 数量。
-   */
-  paused: number;
-  /**
-   * 禁用中的 task 数量。
-   */
-  disabled: number;
-}
-
-/**
- * agent 摘要信息。
+ * agent 公开摘要。
  */
 export interface UiWorkboardAgentSummary {
   /**
-   * agent 唯一标识。
+   * agent 展示名称。
    */
-  id: string;
+  name: string
   /**
-   * agent 展示名。
+   * 当前是否运行中。
    */
-  name: string;
+  running: boolean
   /**
-   * 项目根目录。
+   * 顶部状态文案。
    */
-  projectRoot: string;
-  /**
-   * 执行模式。
-   */
-  executionMode: string;
-  /**
-   * 主模型标识（可选）。
-   */
-  modelId?: string;
-  /**
-   * 当前 agent 是否运行中。
-   */
-  running: boolean;
-  /**
-   * 状态摘要文案。
-   */
-  statusText: string;
+  statusText: string
   /**
    * 最近采样时间（ISO8601）。
    */
-  collectedAt: string;
+  collectedAt: string
 }
 
 /**
@@ -153,29 +107,25 @@ export interface UiWorkboardAgentSummary {
  */
 export interface UiWorkboardSnapshot {
   /**
-   * agent 摘要。
+   * agent 公开摘要。
    */
-  agent: UiWorkboardAgentSummary;
+  agent: UiWorkboardAgentSummary
   /**
-   * 顶部摘要。
+   * 顶部公开摘要。
    */
-  summary: UiWorkboardSummary;
+  summary: UiWorkboardSummary
   /**
    * 当前活动列表。
    */
-  current: UiWorkboardActivityItem[];
+  current: UiWorkboardActivityItem[]
   /**
    * 最近活动列表。
    */
-  recent: UiWorkboardActivityItem[];
+  recent: UiWorkboardActivityItem[]
   /**
-   * service 状态列表。
+   * 模糊信号列表。
    */
-  services: UiWorkboardServiceItem[];
-  /**
-   * task 摘要。
-   */
-  tasks: UiWorkboardTaskSummary;
+  signals: UiWorkboardSignalItem[]
 }
 
 /**
@@ -185,13 +135,13 @@ export interface UiWorkboardSnapshotResponse {
   /**
    * 请求是否成功。
    */
-  success?: boolean;
+  success?: boolean
   /**
    * 当前快照。
    */
-  snapshot?: UiWorkboardSnapshot;
+  snapshot?: UiWorkboardSnapshot
   /**
    * 错误信息。
    */
-  error?: string;
+  error?: string
 }

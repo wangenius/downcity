@@ -2,8 +2,8 @@
  * Workboard 结构化归一化工具。
  *
  * 关键点（中文）
- * - collector 只负责取数，这里统一把原始运行态映射成 workboard 视图结构。
- * - 所有对 UI 友好的标题、摘要、标签都在这里生成，避免 collector 继续膨胀。
+ * - 这里负责把内部运行事实投影成“对外模糊公开态”。
+ * - 所有会泄漏上下文的字段都必须在这里截断或抽象。
  */
 
 import type { DashboardSessionSummary } from "@/shared/types/DashboardData.js";
@@ -12,9 +12,8 @@ import type { TaskListResponse } from "@services/task/types/TaskCommand.js";
 import type {
   WorkboardActivityItem,
   WorkboardAgentSummary,
-  WorkboardServiceItem,
+  WorkboardSignalItem,
   WorkboardSummary,
-  WorkboardTaskSummary,
 } from "@/plugins/workboard/types/Workboard.js";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 
@@ -25,60 +24,75 @@ function toIsoString(timestamp?: number): string {
   return new Date(timestamp).toISOString();
 }
 
-/**
- * 读取 agent 执行模式。
- */
-export function readWorkboardExecutionMode(context: AgentContext): string {
-  const execution = context.config.execution;
-  if (execution && typeof execution.type === "string" && execution.type.trim()) {
-    return execution.type.trim();
+function buildHeadline(params: {
+  currentCount: number;
+  recentCount: number;
+  degradedCount: number;
+}): string {
+  if (params.currentCount > 0 && params.degradedCount > 0) {
+    return "当前仍在展开，但节奏出现了一些波动";
   }
-  return "unknown";
+  if (params.currentCount > 1) {
+    return "当前呈现多线展开的状态";
+  }
+  if (params.currentCount === 1) {
+    return "当前呈现稳定展开的状态";
+  }
+  if (params.recentCount > 0) {
+    return "刚刚有过新的进展，现在进入短暂停留";
+  }
+  return "当前处于安静待命的状态";
+}
+
+function buildPosture(params: { currentCount: number; recentCount: number }): string {
+  if (params.currentCount > 1) return "多线展开";
+  if (params.currentCount === 1) return "单线聚焦";
+  if (params.recentCount > 0) return "短暂停留";
+  return "静候下一步";
+}
+
+function buildMomentum(params: { currentCount: number; recentCount: number }): string {
+  if (params.currentCount > 1) return "活跃展开";
+  if (params.currentCount === 1) return "平稳延续";
+  if (params.recentCount > 2) return "轻微起伏";
+  if (params.recentCount > 0) return "余温未散";
+  return "安静";
+}
+
+function buildRunningSummary(item: DashboardSessionSummary): string {
+  const messageCount = typeof item.messageCount === "number" ? item.messageCount : 0;
+  if (messageCount >= 24) return "正在延展一段较长的工作脉络，并持续生成新的内容。";
+  if (messageCount >= 8) return "正在承接连续输入，逐步形成新的阶段结果。";
+  if (messageCount > 0) return "正在回应当前输入，并把工作继续向前展开。";
+  return "当前处于活跃展开之中。";
+}
+
+function buildRecentSummary(item: DashboardSessionSummary, index: number): string {
+  const messageCount = typeof item.messageCount === "number" ? item.messageCount : 0;
+  if (index === 0 && messageCount > 0) return "刚刚完成一段新的展开，正在短暂停留。";
+  if (messageCount >= 12) return "近期完成了一次较长的内容延展。";
+  if (messageCount > 0) return "近期完成了一次常规更新。";
+  return "近期出现了一次轻微变化。";
 }
 
 /**
- * 读取 agent 主模型标识。
- */
-export function readWorkboardModelId(context: AgentContext): string | undefined {
-  const execution = context.config.execution;
-  if (
-    execution &&
-    execution.type === "api" &&
-    typeof execution.modelId === "string" &&
-    execution.modelId.trim()
-  ) {
-    return execution.modelId.trim();
-  }
-  const localModel = context.config.plugins?.lmp?.model;
-  if (typeof localModel === "string" && localModel.trim()) {
-    return localModel.trim();
-  }
-  return undefined;
-}
-
-/**
- * 构建 agent 顶部摘要。
+ * 构建 agent 顶部公开摘要。
  */
 export function toWorkboardAgentSummary(params: {
   context: AgentContext;
   collectedAt: string;
-  executingSessionCount: number;
-  recentFirstTitle?: string;
+  currentCount: number;
+  recentCount: number;
+  degradedCount: number;
 }): WorkboardAgentSummary {
-  const statusText = params.executingSessionCount > 0
-    ? `正在处理 ${params.executingSessionCount} 个会话`
-    : params.recentFirstTitle
-      ? `当前空闲，最近完成：${params.recentFirstTitle}`
-      : "当前空闲，等待新任务";
+  const statusText = buildHeadline({
+    currentCount: params.currentCount,
+    recentCount: params.recentCount,
+    degradedCount: params.degradedCount,
+  });
 
   return {
-    id: params.context.rootPath,
     name: String(params.context.config.name || "").trim() || "agent",
-    projectRoot: params.context.rootPath,
-    executionMode: readWorkboardExecutionMode(params.context),
-    ...(readWorkboardModelId(params.context)
-      ? { modelId: readWorkboardModelId(params.context) }
-      : {}),
     running: true,
     statusText,
     collectedAt: params.collectedAt,
@@ -86,35 +100,42 @@ export function toWorkboardAgentSummary(params: {
 }
 
 /**
- * 将 session 摘要转换为 workboard 活动项。
+ * 将运行中的 session 映射为对外安全活动项。
  */
-export function toWorkboardSessionActivity(params: {
+export function toRunningActivity(params: {
   item: DashboardSessionSummary;
-  status: "running" | "done";
+  index: number;
 }): WorkboardActivityItem {
-  const title =
-    String(params.item.chatTitle || "").trim() ||
-    String(params.item.channel || "").trim() ||
-    String(params.item.sessionId || "").trim() ||
-    "session";
-  const summary =
-    String(params.item.lastText || "").trim() ||
-    (params.status === "running" ? "正在处理中" : "暂无可展示摘要");
-  const tags = [
-    String(params.item.channel || "").trim(),
-    typeof params.item.messageCount === "number" ? `${params.item.messageCount} messages` : "",
-  ].filter(Boolean);
+  const title = params.index === 0 ? "当前主线" : `当前并行线 ${params.index + 1}`;
 
   return {
-    id: `session:${params.item.sessionId}`,
-    kind: "session",
+    id: `current:${params.index + 1}`,
+    kind: "focus",
     title,
-    summary,
-    status: params.status,
+    summary: buildRunningSummary(params.item),
+    status: "active",
     updatedAt: toIsoString(params.item.updatedAt),
-    ...(params.item.updatedAt ? { startedAt: toIsoString(params.item.updatedAt) } : {}),
-    sessionId: String(params.item.sessionId || "").trim(),
-    tags,
+    tags: ["public", "active"],
+  };
+}
+
+/**
+ * 将近期 session 映射为对外安全活动项。
+ */
+export function toRecentActivity(params: {
+  item: DashboardSessionSummary;
+  index: number;
+}): WorkboardActivityItem {
+  const title = params.index === 0 ? "最近一次更新" : `近期片段 ${params.index + 1}`;
+
+  return {
+    id: `recent:${params.index + 1}`,
+    kind: "progress",
+    title,
+    summary: buildRecentSummary(params.item, params.index),
+    status: params.index === 0 ? "steady" : "waiting",
+    updatedAt: toIsoString(params.item.updatedAt),
+    tags: ["public", "recent"],
   };
 }
 
@@ -123,59 +144,70 @@ export function toWorkboardSessionActivity(params: {
  */
 export function buildIdleActivity(params: {
   updatedAt: string;
-  recentFirstTitle?: string;
+  recentCount: number;
 }): WorkboardActivityItem {
   return {
-    id: "system:idle",
-    kind: "system",
-    title: "当前没有执行中的会话",
-    summary: params.recentFirstTitle
-      ? `最近完成的是 ${params.recentFirstTitle}`
-      : "等待新的输入、任务或调度触发",
-    status: "idle",
+    id: "idle:standby",
+    kind: "idle",
+    title: "当前处于安静待命",
+    summary: params.recentCount > 0
+      ? "刚刚有过新的更新，现在等待下一次输入。"
+      : "当前没有明显变化，等待新的触发。",
+    status: "waiting",
     updatedAt: params.updatedAt,
-    tags: ["idle"],
+    tags: ["public", "idle"],
   };
 }
 
 /**
- * 构建 service 摘要。
- */
-export function toWorkboardServiceItems(
-  items: ServiceStateSnapshot[],
-): WorkboardServiceItem[] {
-  return items.map((item) => ({
-    name: item.name,
-    state: item.state,
-    updatedAt: toIsoString(item.updatedAt),
-    ...(item.lastError ? { lastError: item.lastError } : {}),
-  }));
-}
-
-/**
- * 构建 task 聚合摘要。
- */
-export function toWorkboardTaskSummary(result: TaskListResponse): WorkboardTaskSummary {
-  const tasks = Array.isArray(result.tasks) ? result.tasks : [];
-  return {
-    total: tasks.length,
-    enabled: tasks.filter((item) => item.status === "enabled").length,
-    paused: tasks.filter((item) => item.status === "paused").length,
-    disabled: tasks.filter((item) => item.status === "disabled").length,
-  };
-}
-
-/**
- * 构建顶部摘要。
+ * 构建公开摘要。
  */
 export function toWorkboardSummary(params: {
   currentCount: number;
   recentCount: number;
-  services: WorkboardServiceItem[];
+  degradedCount: number;
 }): WorkboardSummary {
   return {
-    executingSessions: params.currentCount,
-    recentActivities: params.recentCount,
-    degradedServices: params.services.filter((item) => item.state !== "running").length,
+    headline: buildHeadline(params),
+    posture: buildPosture(params),
+    momentum: buildMomentum(params),
+    visibilityNote: "这里展示的是面向外部的概览状态，不包含内部上下文细节。",
   };
+}
+
+/**
+ * 构建对外模糊信号。
+ */
+export function toWorkboardSignals(params: {
+  currentCount: number;
+  recentCount: number;
+  services: ServiceStateSnapshot[];
+  taskResult: TaskListResponse;
+}): WorkboardSignalItem[] {
+  const degradedCount = params.services.filter((item) => item.state !== "running").length;
+  const taskCount = Array.isArray(params.taskResult.tasks) ? params.taskResult.tasks.length : 0;
+
+  return [
+    {
+      label: "状态节奏",
+      value: params.currentCount > 1
+        ? "多线展开"
+        : params.currentCount === 1
+          ? "稳定展开"
+          : params.recentCount > 0
+            ? "轻微流动"
+            : "安静待命",
+      tone: params.currentCount > 0 ? "accent" : "neutral",
+    },
+    {
+      label: "现场感受",
+      value: degradedCount > 0 ? "有些波动" : "整体平稳",
+      tone: degradedCount > 0 ? "warning" : "neutral",
+    },
+    {
+      label: "活跃温度",
+      value: taskCount > 0 || params.recentCount > 0 ? "仍有余温" : "较为安静",
+      tone: params.recentCount > 0 ? "accent" : "neutral",
+    },
+  ];
 }

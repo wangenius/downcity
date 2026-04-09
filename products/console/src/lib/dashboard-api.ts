@@ -133,15 +133,18 @@ export async function requestConsoleApiJson<T>(params: {
   options?: RequestInit;
 }): Promise<T> {
   const authState = readConsoleAuthState()
+  const headers = new Headers(params.options?.headers)
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json")
+  }
+  if (authState?.token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${authState.token}`)
+  }
   const response = await fetch(
     withConsoleAgent(params.path, params.selectedAgentId, params.preferredAgentId),
     {
-      headers: {
-        "Content-Type": "application/json",
-        ...(authState?.token ? { Authorization: `Bearer ${authState.token}` } : {}),
-        ...(params.options?.headers || {}),
-      },
       ...(params.options || {}),
+      headers,
     },
   );
 

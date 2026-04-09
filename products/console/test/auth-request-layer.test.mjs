@@ -18,7 +18,15 @@ test("dashboard api request layer should inject bearer token from console auth s
   const source = fs.readFileSync(dashboardApiPath, "utf-8")
 
   assert.match(source, /readConsoleAuthState/)
-  assert.match(source, /Authorization:\s*`Bearer \$\{authState\.token\}`/)
+  assert.match(source, /headers\.set\("Authorization", `Bearer \$\{authState\.token\}`\)/)
+})
+
+test("dashboard api request layer should preserve bearer token when custom headers are passed", () => {
+  const source = fs.readFileSync(dashboardApiPath, "utf-8")
+
+  assert.match(source, /const headers = new Headers\(params\.options\?\.headers\)/)
+  assert.match(source, /authState\?\.token && !headers\.has\("Authorization"\)/)
+  assert.match(source, /\.\.\.\(params\.options \|\| \{\}\),\s*headers,/s)
 })
 
 test("dashboard request layer should expose unauthorized api error handling", () => {

@@ -7,9 +7,9 @@
  * - 新版本所有状态都通过 ShellServiceState 显式传入，不再使用模块级单例。
  */
 
-import { spawn } from "node:child_process";
 import fs from "fs-extra";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
+import { spawnShellProcess } from "@/sandbox/SandboxRunner.js";
 import type {
   ShellServiceState,
   ShellSessionRuntimeState,
@@ -137,13 +137,18 @@ export async function startShellSession(
   await fs.ensureDir(shellDir);
   await fs.writeFile(outputFilePath, "", "utf-8");
 
-  const child = spawn(shellPath, [login ? "-lc" : "-c", cmd], {
+  const spawnResult = await spawnShellProcess({
+    context,
+    shellId,
+    shellDir,
+    cmd,
     cwd,
-    stdio: "pipe",
-    env: buildShellEnv(context),
+    shellPath,
+    login,
+    baseEnv: buildShellEnv(context),
   });
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
+  const child = spawnResult.child;
+  const actualCwd = spawnResult.cwd;
 
   const startedAt = nowMs();
   let resolveCompletion: () => void = () => {};
@@ -155,8 +160,11 @@ export async function startShellSession(
       shellId,
       ...(ownerContextId ? { ownerContextId } : {}),
       cmd,
-      cwd,
+      cwd: actualCwd,
       shellPath,
+      sandboxed: spawnResult.sandboxed,
+      sandboxBackend: spawnResult.backend,
+      sandboxNetworkMode: spawnResult.networkMode,
       status: "running",
       ...(typeof child.pid === "number" ? { pid: child.pid } : {}),
       startedAt,

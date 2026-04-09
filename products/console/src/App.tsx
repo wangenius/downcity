@@ -22,10 +22,12 @@ import { SkillsSection } from "@/components/dashboard/SkillsSection"
 import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { TasksSection } from "@/components/dashboard/TasksSection"
 import { ToastMessage } from "@/components/dashboard/ToastMessage"
+import { WorkboardSection } from "@/components/dashboard/WorkboardSection"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@downcity/ui"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
+import { useWorkboard } from "@/hooks/useWorkboard"
 import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
 import { resolveSessionChannel } from "@/lib/context-groups"
 import { parseDashboardPath, toAgentRouteSegment, toDashboardPath } from "@/lib/dashboard-route"
@@ -171,6 +173,10 @@ export function App() {
     submitAuthToken,
     logout,
   } = useConsoleDashboard()
+  const workboard = useWorkboard({
+    agentId: selectedAgentId,
+    enabled: isAuthenticated && !authRequired && selectedAgent?.running === true,
+  })
 
   const resolveAgentRouteSegment = React.useCallback(
     (agentIdInput?: string): string => {
@@ -514,6 +520,14 @@ export function App() {
           onControlService={(serviceName, action) => controlService(serviceName, action)}
           chatChannels={chatChannels}
           onChatAction={(action, channel) => runChatChannelAction(action, channel)}
+        />
+        <WorkboardSection
+          snapshot={workboard.snapshot}
+          loading={workboard.loading}
+          errorMessage={workboard.errorMessage}
+          onRefresh={() => {
+            void workboard.refresh()
+          }}
         />
       </section>
     )

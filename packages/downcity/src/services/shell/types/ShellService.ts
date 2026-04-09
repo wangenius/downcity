@@ -48,6 +48,12 @@ export type ShellSessionSnapshot = {
   cwd: string;
   /** 实际使用的 shell 可执行文件路径。 */
   shellPath: string;
+  /** 当前 shell 是否运行在 sandbox 中。 */
+  sandboxed?: boolean;
+  /** 当前 shell 使用的 sandbox backend。 */
+  sandboxBackend?: string;
+  /** 当前 shell 采用的 sandbox 网络模式。 */
+  sandboxNetworkMode?: "off" | "restricted" | "full";
   /** 当前 shell 状态。 */
   status: ShellSessionStatus;
   /** 子进程 pid；若尚未创建成功则为空。 */

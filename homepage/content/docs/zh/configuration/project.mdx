@@ -30,6 +30,7 @@ description: downcity.json 中用户最常用字段与注意事项
 2. `execution.type="acp"` 可把 session 执行切到 ACP coding agent，目前只支持 `codex`、`claude`、`kimi`。
 3. `start.host/start.port` 会影响 CLI 的默认路由目标。
 4. 项目层统一在 `downcity.json` 中维护 `services` 与 `plugins`。
+5. 本地 shell / CLI 命令默认强制运行在 sandbox 中，顶层 `sandbox` 只用于调整边界参数。
 
 ## 执行模式
 
@@ -96,6 +97,32 @@ description: downcity.json 中用户最常用字段与注意事项
 - `execution.type="acp"` 只影响 session/chat/task 这条执行链。
 - `execution.type="api"` 时，`execution.modelId` 必须能在 console 模型池中找到。
 - `execution.type="local"` 时，本地模型与 llama 参数从 `plugins.lmp` 读取，默认目录是 `~/.models`，并要求本机安装 `llama-server`。
+
+## Shell Sandbox
+
+当前版本里，`shell` / CLI 命令默认强制运行在 sandbox 中。项目层 `sandbox` 只用于调整边界参数：
+
+```json
+{
+  "sandbox": {
+    "networkMode": "off",
+    "writablePaths": [".", ".downcity"],
+    "envAllowlist": ["PATH", "LANG", "TERM", "SHELL"]
+  }
+}
+```
+
+当前版本的行为：
+
+- 作用于 shell service 与 `kind=script` 的 task 执行链
+- 当前优先支持 macOS，本地 backend 使用系统自带 `sandbox-exec`
+- 不支持关闭 sandbox，也不会回退到宿主机普通子进程执行
+- 未挂入 sandbox 的宿主路径默认不可见
+- `writablePaths` 只允许写项目根目录内的路径
+- 默认网络是放开的；未显式配置时等价于 `networkMode="full"`
+- `networkMode="off"` 时禁止联网
+- `networkMode="restricted"` 当前先按放开网络处理
+- `networkMode="full"` 允许 shell 打开网络访问
 
 ## 常用命令
 

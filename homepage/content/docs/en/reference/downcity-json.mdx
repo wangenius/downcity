@@ -176,6 +176,44 @@ city lmp models
 city lmp use gemma-4-E4B-it-UD-Q4_K_XL.gguf
 ```
 
+## Sandbox
+
+Project-level `sandbox` adjusts the execution boundary for shell / CLI commands. It does not represent an approval flow or a chat-user permission system.
+
+Example:
+
+```json
+{
+  "sandbox": {
+    "networkMode": "off",
+    "writablePaths": [".", ".downcity"],
+    "envAllowlist": ["PATH", "LANG", "TERM", "SHELL"]
+  }
+}
+```
+
+Field notes:
+
+- `sandbox.networkMode`
+  - Default is `full`
+  - `off`: blocks network access
+  - `restricted`: currently handled the same as open network
+  - `full`: allows network access
+- `sandbox.writablePaths`
+  - Writable path list
+  - Relative paths resolve from the project root
+  - Current implementation only allows paths inside the project root
+- `sandbox.envAllowlist`
+  - Environment variable names that may be exported into the sandbox
+
+Current boundary:
+
+- Current first-class support is macOS using `sandbox-exec`
+- Shell commands are required to go through sandbox and do not fall back to an unrestricted host process
+- `kind=script` task bodies also run through the same sandbox backend
+- Host paths not mounted into the sandbox are not visible
+- Isolated `HOME` / `TMPDIR` live under `.downcity/shell/<shellId>/sandbox/`
+
 ## Related docs
 
 - [Model Config Reference](/en/docs/reference/model-config)

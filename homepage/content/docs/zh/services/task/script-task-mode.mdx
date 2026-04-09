@@ -17,6 +17,8 @@ description: kind=script 的执行行为、约束与脚本写法建议
 
 - 正文不能为空
 - 正文必须是可执行脚本
+- 脚本执行会进入和 shell service 相同的 sandbox backend
+- 网络默认放开；只有显式配置 `sandbox.networkMode="off"` 时才禁网
 - 脚本输出会写入 `result.md`
 
 ## 最佳实践

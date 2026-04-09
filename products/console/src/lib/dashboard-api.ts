@@ -219,6 +219,7 @@ export const dashboardApiRoutes = {
     `/api/ui/env?scope=agent&agent=${encodeURIComponent(agentId)}`,
   overview: (sessionLimit = 40) =>
     `/api/dashboard/overview?sessionLimit=${encodeURIComponent(String(sessionLimit))}`,
+  workboardSnapshot: () => "/api/workboard/snapshot",
   services: () => "/api/dashboard/services",
   sessions: (limit = 120) =>
     `/api/dashboard/sessions?limit=${encodeURIComponent(String(limit))}`,

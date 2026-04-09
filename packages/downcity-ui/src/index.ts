@@ -2,7 +2,8 @@
  * Downcity UI SDK 导出入口。
  *
  * 关键说明（中文）
- * - 这里只导出可复用的基础 UI 原语，不导出业务组件。
+ * - 默认导出可复用的基础 UI 原语。
+ * - 少量经过抽象的复合组件也会在这里公开，例如 workboard。
  * - `styles.css` 作为独立样式入口，由宿主应用按需引入。
  */
 
@@ -14,6 +15,17 @@ export type {
   DowncityDropdownMenuItemVariant,
   DowncityToasterTheme,
 } from "./types/components";
+export type {
+  DowncityWorkboardActivityItem,
+  DowncityWorkboardActivityKind,
+  DowncityWorkboardActivityStatus,
+  DowncityWorkboardAgentSummary,
+  DowncityWorkboardProps,
+  DowncityWorkboardServiceItem,
+  DowncityWorkboardSnapshot,
+  DowncityWorkboardSummary,
+  DowncityWorkboardTaskSummary,
+} from "./types/workboard";
 
 export { Button, buttonVariants } from "./components/button";
 export { Badge, badgeVariants } from "./components/badge";
@@ -83,3 +95,4 @@ export { Toaster } from "./components/sonner";
 export { Toggle, toggleVariants } from "./components/toggle";
 export { ToggleGroup, ToggleGroupItem } from "./components/toggle-group";
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./components/tooltip";
+export { Workboard } from "./components/workboard";

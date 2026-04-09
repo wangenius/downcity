@@ -8,7 +8,7 @@
  */
 
 import type { Command } from "commander";
-import type { Context as HonoContext } from "hono";
+import type { Context as HonoContext, Hono } from "hono";
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
@@ -20,6 +20,7 @@ import type {
 import type { Logger } from "@shared/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { AuthRoutePolicy } from "@/shared/types/auth/AuthRoute.js";
 
 /**
  * Plugin 命令执行上下文。
@@ -637,6 +638,47 @@ export interface PluginUsageDefinition {
 }
 
 /**
+ * Plugin runtime HTTP 注入参数。
+ *
+ * 关键点（中文）
+ * - plugin 只声明自己的路由与鉴权策略，不感知 server 装配细节。
+ * - console 会复用相同路径策略保护代理请求，但不会重复注册路由本身。
+ */
+export interface PluginRuntimeHttpRegistration {
+  /**
+   * 该组路由对应的鉴权策略列表。
+   */
+  authPolicies?: AuthRoutePolicy[];
+  /**
+   * 向 runtime Hono 应用注册路由。
+   */
+  register(params: {
+    /**
+     * 当前 Hono 应用实例。
+     */
+    app: Hono;
+    /**
+     * 获取当前统一执行上下文。
+     */
+    getContext: () => AgentContext;
+    /**
+     * 当前 plugin 稳定名称。
+     */
+    pluginName: string;
+  }): void;
+}
+
+/**
+ * Plugin HTTP 注入定义。
+ */
+export interface PluginHttpDefinition {
+  /**
+   * runtime HTTP 路由注入（可选）。
+   */
+  runtime?: PluginRuntimeHttpRegistration;
+}
+
+/**
  * Plugin 定义。
  */
 export interface Plugin {
@@ -694,4 +736,8 @@ export interface Plugin {
   availability?: (
     context: PluginCommandContext,
   ) => Promise<PluginAvailability> | PluginAvailability;
+  /**
+   * Plugin HTTP 注入定义（可选）。
+   */
+  http?: PluginHttpDefinition;
 }

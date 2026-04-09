@@ -1,0 +1,43 @@
+---
+title: workboard 插件
+description: 用结构化快照观察当前 agent 正在做什么，以及最近做过什么
+---
+
+# workboard 插件
+
+`workboard` 是一个内建 plugin，用来把当前 agent 的运行状态整理成结构化快照，供 Console 和 UI 组件直接消费。
+
+## 它会展示什么
+
+- 当前执行中的会话
+- 最近完成或最近更新过的会话
+- service 状态
+- task 聚合状态
+- agent 当前执行模式和模型信息
+
+## 适合什么场景
+
+- 你想快速知道当前 agent 正在处理哪件事
+- 你需要在 Console 里观察最近工作轨迹
+- 你想把运行态接到自定义 host 或 UI SDK 组件上
+
+## 数据接口
+
+当 agent 运行时，`workboard` 会提供：
+
+- `GET /api/workboard/snapshot`
+
+该接口返回结构化 JSON，而不是拼接文本，适合直接接到 `@downcity/ui` 的 workboard 组件或你自己的容器层。
+
+## Console 中的表现
+
+Console 会通过 workboard 快照展示一个独立的工作看板区域：
+
+- 左侧查看当前活动与近期活动
+- 右侧查看选中活动的详情和 service / task 摘要
+
+## 说明
+
+- `workboard` 默认随内建 plugin 一起提供
+- 如果你关闭该 plugin，对应快照接口会不可用
+- 当前版本优先使用确定性采集，不依赖额外模型推理

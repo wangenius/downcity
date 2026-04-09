@@ -3,13 +3,13 @@
  *
  * 关键点（中文）
  * - 统一覆盖交互式持续对话与一次性消息两种入口。
- * - 默认复用 Console UI 主会话，避免再暴露第二套 `quest` 语义。
+ * - 默认使用独立的 local-cli 会话，避免与 Console UI 上下文互相污染。
  */
 
 /**
- * `city agent chat` 默认使用的 Console 会话 ID。
+ * `city agent chat` 默认使用的 local-cli 会话 ID。
  */
-export const AGENT_CHAT_DEFAULT_SESSION_ID = "consoleui-chat-main";
+export const AGENT_CHAT_DEFAULT_SESSION_ID = "local-cli-chat-main";
 
 /**
  * `city agent chat` 命令选项。

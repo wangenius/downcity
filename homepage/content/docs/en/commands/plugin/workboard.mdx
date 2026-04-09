@@ -1,0 +1,43 @@
+---
+title: workboard plugin
+description: Observe what the current agent is doing now and what it recently worked on through structured snapshots
+---
+
+# workboard plugin
+
+`workboard` is a built-in plugin that turns the current agent runtime into a structured activity snapshot for Console and UI consumers.
+
+## What it shows
+
+- Currently executing sessions
+- Recently updated or recently completed sessions
+- Service state
+- Task summary
+- The active execution mode and model
+
+## When to use it
+
+- You want to see what the current agent is doing right now
+- You want a recent activity surface in Console
+- You want to wire runtime activity into a custom host or UI SDK surface
+
+## Runtime endpoint
+
+When the agent is running, `workboard` exposes:
+
+- `GET /api/workboard/snapshot`
+
+The endpoint returns structured JSON instead of generated text, so it can be consumed directly by `@downcity/ui` or your own host layer.
+
+## Console behavior
+
+Console uses the workboard snapshot to render a dedicated workspace surface:
+
+- the left side focuses on current and recent activities
+- the right side acts as an inspector with service and task summaries
+
+## Notes
+
+- `workboard` ships as a built-in plugin
+- if you disable the plugin, the snapshot endpoint becomes unavailable
+- the current version is based on deterministic collection instead of extra model inference

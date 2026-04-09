@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 统一覆盖交互式持续对话与一次性消息模式，不再保留独立 `quest` 命令。
  * - 目标 agent 始终按 console registry 名称解析，不依赖当前工作目录。
- * - 默认复用 Console UI 主会话：`consoleui-chat-main`。
+ * - 默认使用独立 local-cli 主会话：`local-cli-chat-main`。
  */
 
 import { createInterface } from "node:readline/promises";
@@ -420,7 +420,7 @@ async function runInteractiveChat(params: {
   emitCliBlock({
     tone: "info",
     title: `Agent chat · ${params.agentName}`,
-    note: "Shared session: consoleui-chat-main · Type /exit to quit.",
+    note: "Session: local-cli-chat-main · Type /exit to quit.",
   });
 
   const rl = createInterface({

@@ -4,6 +4,7 @@
     "runtime-and-services",
     "runtime-evolution",
     "session-sandbox-execution",
+    "console-sandbox-module",
     "module-breakdown",
     "plugin-migration"
   ]

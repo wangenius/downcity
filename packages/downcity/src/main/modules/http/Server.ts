@@ -23,7 +23,15 @@ import { staticRouter } from "@/main/modules/http/static/static.js";
 import { dashboardRouter } from "@/main/modules/http/dashboard/Router.js";
 import { registerAuthRoutes } from "@main/modules/http/auth/AuthRoutes.js";
 import { AuthService } from "@main/modules/http/auth/AuthService.js";
-import { createRouteAuthGuardMiddleware } from "@main/modules/http/auth/RoutePolicy.js";
+import {
+  createRouteAuthGuardMiddleware,
+  SERVER_AUTH_ROUTE_POLICIES,
+} from "@main/modules/http/auth/RoutePolicy.js";
+import {
+  listBuiltinPluginRuntimeAuthPolicies,
+  registerBuiltinPluginHttpRoutes,
+} from "@/main/plugin/HttpRoutes.js";
+import { getAgentContext } from "@/main/agent/AgentRuntime.js";
 
 /**
  * Server 启动参数。
@@ -53,6 +61,10 @@ export interface ServerInstance {
 export function createServerApp(): Hono {
   const app = new Hono();
   const authService = new AuthService();
+  const authPolicies = [
+    ...SERVER_AUTH_ROUTE_POLICIES,
+    ...listBuiltinPluginRuntimeAuthPolicies(),
+  ];
 
   app.use("*", logger());
   app.use(
@@ -63,7 +75,7 @@ export function createServerApp(): Hono {
       allowHeaders: ["Content-Type", "Authorization"],
     }),
   );
-  app.use("*", createRouteAuthGuardMiddleware(authService));
+  app.use("*", createRouteAuthGuardMiddleware(authService, authPolicies));
 
   // 关键点（中文）：service action 路由在 runtime ready 后再注册，避免命令级 import 副作用。
   ensureServiceActionRoutesRegistered();
@@ -75,6 +87,10 @@ export function createServerApp(): Hono {
   app.route("/", pluginsRouter);
   app.route("/", executeRouter);
   app.route("/", dashboardRouter);
+  registerBuiltinPluginHttpRoutes({
+    app,
+    getContext: getAgentContext,
+  });
   registerAuthRoutes({ app, authService });
 
   return app;

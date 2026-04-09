@@ -173,7 +173,8 @@ agent 启动时：
 1. 如果你走远程 API 模式，在 console 层维护 provider/model，再在 agent 层配置 `execution.type="api"` 与 `execution.modelId`
 2. 如果你走本地 GGUF 模式，在 agent 层配置 `execution.type="local"` 与 `plugins.lmp.*`
 3. 如果你走 coding agent 模式，在 agent 层配置 `execution.type="acp"`
-4. 修改后重启 agent：
+4. 本地 shell / CLI 命令默认强制运行在 sandbox 中，项目层 `sandbox` 只用于调整边界参数
+5. 修改后重启 agent：
 
 ```bash
 city agent restart .
@@ -186,6 +187,44 @@ city lmp status
 city lmp models
 city lmp use gemma-4-E4B-it-UD-Q4_K_XL.gguf
 ```
+
+## 9) Sandbox
+
+项目层 `sandbox` 用于调整 shell / CLI 命令的执行边界，不涉及审批流或 chat 用户权限系统。
+
+示例：
+
+```json
+{
+  "sandbox": {
+    "networkMode": "off",
+    "writablePaths": [".", ".downcity"],
+    "envAllowlist": ["PATH", "LANG", "TERM", "SHELL"]
+  }
+}
+```
+
+字段说明：
+
+- `sandbox.networkMode`
+  - 默认是 `full`
+  - `off`：禁网
+  - `restricted`：当前先按放开网络处理
+  - `full`：允许网络访问
+- `sandbox.writablePaths`
+  - 允许写入的路径列表
+  - 可以写相对路径，默认相对项目根目录解析
+  - 当前只允许项目根目录内路径
+- `sandbox.envAllowlist`
+  - 允许导出到 sandbox 的环境变量名列表
+
+当前实现边界：
+
+- 当前优先支持 macOS，本地 backend 使用 `sandbox-exec`
+- shell 命令强制经过 sandbox，不支持关闭，也不会回退到宿主机普通子进程执行
+- `kind=script` 的 task 正文也通过同一套 sandbox backend 执行
+- 未挂入 sandbox 的宿主路径默认不可见
+- shell 的隔离 `HOME` / `TMPDIR` 会落在 `.downcity/shell/<shellId>/sandbox/`
 
 ## 相关文档
 

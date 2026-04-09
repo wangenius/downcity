@@ -11,6 +11,7 @@ import test from "node:test";
 import { Command, Option } from "commander";
 import { registerAgentCommands } from "../../bin/main/modules/cli/IndexAgentCommand.js";
 import { resolveCliAgentStartTargetDecision } from "../../bin/main/modules/cli/AgentSelection.js";
+import { AGENT_CHAT_DEFAULT_SESSION_ID } from "../../bin/types/cli/AgentChat.js";
 
 test("registerAgentCommands exposes agent list and chat commands", () => {
   const program = new Command();
@@ -34,6 +35,10 @@ test("registerAgentCommands exposes agent list and chat commands", () => {
   assert.equal(chatCommand.options.some((option) => option.long === "--to"), true);
   assert.equal(chatCommand.options.some((option) => option.long === "--message"), true);
   assert.equal(chatCommand.options.some((option) => option.long === "--json"), true);
+});
+
+test("agent chat uses dedicated local cli session by default", () => {
+  assert.equal(AGENT_CHAT_DEFAULT_SESSION_ID, "local-cli-chat-main");
 });
 
 test("resolveCliAgentStartTargetDecision prefers interactive selection when cwd is not initialized", () => {

@@ -30,6 +30,7 @@ description: Most-used project-level fields and practical cautions
 2. `execution.type="acp"` switches session execution to an ACP coding agent. Current supported values are `codex`, `claude`, and `kimi`.
 3. `start.host/start.port` affects default CLI routing.
 4. Keep project-level config in `downcity.json`, including `services` and `plugins`.
+5. Local shell / CLI commands now always run inside a sandbox. Top-level `sandbox` only adjusts the boundary.
 
 ## Execution Modes
 
@@ -96,6 +97,32 @@ Current scope:
 - `execution.type="acp"` only changes the session/chat/task execution path.
 - `execution.type="api"` requires `execution.modelId` to exist in the console model pool.
 - `execution.type="local"` reads local-model and llama settings from `plugins.lmp`, defaults to `~/.models`, and requires a working `llama-server`.
+
+## Shell Sandbox
+
+In the current version, `shell` / CLI commands always run inside a sandbox. Project-level `sandbox` only adjusts the boundary:
+
+```json
+{
+  "sandbox": {
+    "networkMode": "off",
+    "writablePaths": [".", ".downcity"],
+    "envAllowlist": ["PATH", "LANG", "TERM", "SHELL"]
+  }
+}
+```
+
+Current behavior:
+
+- Affects both the shell service path and `kind=script` task execution
+- Current first-class backend is macOS using built-in `sandbox-exec`
+- Sandbox cannot be disabled and shell execution does not fall back to an unrestricted host process
+- Host paths not mounted into the sandbox are not visible
+- `writablePaths` must stay inside the project root
+- Network is open by default; omitting the field behaves like `networkMode="full"`
+- `networkMode="off"` blocks network access
+- `networkMode="restricted"` is currently handled the same as open network
+- `networkMode="full"` allows network access from shell commands
 
 ## Common commands
 

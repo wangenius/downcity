@@ -164,6 +164,7 @@ export async function runTaskNow(params: {
     });
     try {
       const scriptResult = await runScriptTask({
+        context,
         runDirAbs,
         sessionId: task.frontmatter.sessionId,
         scriptBody: task.body,

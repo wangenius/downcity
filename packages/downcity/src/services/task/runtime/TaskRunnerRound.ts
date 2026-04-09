@@ -8,8 +8,9 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import { execa } from "execa";
 import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
+import { runSandboxCommand } from "@/sandbox/SandboxRunner.js";
 import type { SessionRunResult } from "@/types/session/SessionRun.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type {
@@ -269,6 +270,7 @@ export async function runAgentRound(params: {
  * 执行 script 类型任务。
  */
 export async function runScriptTask(params: {
+  context: AgentContext;
   runDirAbs: string;
   sessionId: string;
   scriptBody: string;
@@ -287,12 +289,17 @@ export async function runScriptTask(params: {
         DC_SESSION_ID: params.sessionId,
       };
       stripInvocationAuthEnv(childEnv);
-      return execa("sh", [scriptAbs], {
+      return runSandboxCommand({
+        context: params.context,
+        shellId: `task-script:${params.sessionId}`,
+        shellDir: params.runDirAbs,
+        cmd: `sh "${scriptAbs.replace(/(["\\$`])/g, "\\$1")}"`,
         cwd: params.runDirAbs,
-        reject: true,
-        env: childEnv,
+        shellPath: "/bin/sh",
+        login: false,
+        baseEnv: childEnv,
       });
-    },
+    }
   );
 
   const stdout = String(execResult.stdout || "").trim();

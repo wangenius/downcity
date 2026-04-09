@@ -8,6 +8,7 @@
 import type { LlmConfig } from "@/shared/types/LlmConfig.js";
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
 import type { JsonObject } from "@/shared/types/Json.js";
+import type { SandboxProjectConfig } from "@/shared/types/Sandbox.js";
 
 export interface DowncityConfig {
   $schema?: string;
@@ -132,6 +133,14 @@ export interface DowncityConfig {
    * - `local` 模式只选择本地执行器，模型与 llama 参数由 `plugins.lmp` 提供。
    */
   execution?: ExecutionBindingConfig;
+  /**
+   * shell / CLI 执行 sandbox 配置。
+   *
+   * 关键点（中文）
+   * - 当前只作用于 shell service 这条命令执行链。
+   * - 这里不表达审批、用户授权与复杂策略系统，只表达最小边界。
+   */
+  sandbox?: SandboxProjectConfig;
   /**
    * LLM 全量配置（通常来自 console 全局层合并结果）。
    *

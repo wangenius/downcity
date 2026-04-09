@@ -94,6 +94,32 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
         },
       ],
     },
+    sandbox: {
+      type: "object",
+      additionalProperties: true,
+      description:
+        "Shell / CLI sandbox boundary configuration for local command execution. Sandbox is always required for shell execution.",
+      properties: {
+        envAllowlist: {
+          type: "array",
+          description:
+            "Environment variable names that may be exported into the sandbox.",
+          items: { type: "string" },
+        },
+        writablePaths: {
+          type: "array",
+          description:
+            "Writable paths, absolute or relative to the project root.",
+          items: { type: "string" },
+        },
+        networkMode: {
+          type: "string",
+          enum: ["off", "restricted", "full"],
+          description:
+            "Network boundary for sandboxed shell execution.",
+        },
+      },
+    },
     services: {
       type: "object",
       additionalProperties: true,

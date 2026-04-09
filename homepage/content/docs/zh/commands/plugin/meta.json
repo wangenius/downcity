@@ -1,4 +1,4 @@
 {
   "title": "Plugin",
-  "pages": ["plugin", "skill", "web", "asr", "tts"]
+  "pages": ["plugin", "skill", "web", "asr", "tts", "workboard"]
 }

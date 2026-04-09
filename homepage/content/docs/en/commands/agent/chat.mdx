@@ -7,7 +7,7 @@ description: Chat with a selected agent in interactive or one-shot mode
 
 Chat with a target agent from the terminal.
 
-This command reuses the same main session as Console UI: `consoleui-chat-main`.
+This command uses a dedicated local CLI main session: `local-cli-chat-main`.
 
 ## Usage
 
@@ -29,7 +29,7 @@ city agent chat [--to <agentName>] --message <text> [--json]
 - Defaults to interactive terminal chat when `--message` is omitted.
 - One-shot mode works without entering the REPL.
 - Requires the target agent to be running.
-- Keeps sending every line into the same shared Console main session.
+- Keeps sending every line into the same local CLI session instead of sharing Console UI context.
 - Type `/exit` or `/quit` to leave the chat loop.
 
 ## Related commands

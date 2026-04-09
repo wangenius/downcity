@@ -56,6 +56,7 @@ import {
   CONSOLE_AUTH_ROUTE_POLICIES,
   createRouteAuthGuardMiddleware,
 } from "@/main/modules/http/auth/RoutePolicy.js";
+import { listBuiltinPluginRuntimeAuthPolicies } from "@/main/plugin/HttpRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,7 +119,10 @@ export class ConsoleGateway {
       "*",
       createRouteAuthGuardMiddleware(
         this.authService,
-        CONSOLE_AUTH_ROUTE_POLICIES,
+        [
+          ...CONSOLE_AUTH_ROUTE_POLICIES,
+          ...listBuiltinPluginRuntimeAuthPolicies(),
+        ],
       ),
     );
 

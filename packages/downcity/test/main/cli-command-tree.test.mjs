@@ -50,6 +50,21 @@ test("agent list help exposes running filter", () => {
   assert.match(output, /--running \[enabled\]/);
 });
 
+test("city start help exposes console public and host shortcuts", () => {
+  const output = readHelp(["start", "--help"]);
+
+  assert.match(output, /-p, --public \[enabled\]/);
+  assert.match(output, /-h, --host <host>/);
+  assert.doesNotMatch(output, /-p, --port <port>/);
+});
+
+test("city console help hides internal port option", () => {
+  const output = readHelp(["console", "--help"]);
+
+  assert.match(output, /-p, --public \[enabled\]/);
+  assert.doesNotMatch(output, /--port <port>/);
+});
+
 test("agent chat help exposes interactive and one-shot options", () => {
   const output = readHelp(["agent", "chat", "--help"]);
 

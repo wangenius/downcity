@@ -31,8 +31,10 @@ If `action` is omitted, `start` is used.
 
 ## Options
 
-- `-p, --port <port>`: Console port, default `5315`
+- `-p, --public [enabled]`: start Console in public mode and bind it to `0.0.0.0`
 - `-h, --host <host>`: Console host, default `127.0.0.1`
+
+If you pass `-p` without `-h`, the CLI automatically switches the bind host to `0.0.0.0` so the server can expose Console externally.
 
 ## Important behavior
 
@@ -46,6 +48,12 @@ If `action` is omitted, `start` is used.
 ```bash
 # 1) start runtime + Console together
 city start --console
+
+# 1.1) start and expose Console in one step
+city start -p
+
+# 1.2) start only Console and expose it externally
+city console start -p
 
 # 2) start agents
 city agent start /path/to/agent-a
@@ -64,6 +72,17 @@ city console restart
 - [`city status`](/en/docs/commands/status)
 - [`city agent list`](/en/docs/commands/agent/list)
 - [`city agent start`](/en/docs/commands/agent/start)
+
+## External access notes
+
+- By default, `city console start` binds to `127.0.0.1:5315`, so only the local machine can access it.
+- `city console start -p` binds to `0.0.0.0:5315`, which allows external access.
+- When using a `0.0.0.0` bind, connect with the server IP or domain instead of `127.0.0.1`.
+
+## Port meanings
+
+- `5314`: city runtime API port used by service / task / plugin endpoints.
+- `5315`: Console Web UI port used for browser access.
 
 ## Example output
 

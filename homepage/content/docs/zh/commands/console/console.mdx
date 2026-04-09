@@ -31,8 +31,10 @@ city console [action] [options]
 
 ## 常用参数
 
-- `-p, --port <port>`：Console 端口，默认 `5315`
+- `-p, --public [enabled]`：以公网模式启动 Console（绑定 `0.0.0.0`）
 - `-h, --host <host>`：Console 主机，默认 `127.0.0.1`
+
+如果传 `-p` 而不传 `-h`，CLI 会自动把监听主机切到 `0.0.0.0`，方便服务器直接对外暴露。
 
 ## 关键行为
 
@@ -46,6 +48,12 @@ city console [action] [options]
 ```bash
 # 1) 一起启动 runtime + Console
 city start --console
+
+# 1.1) 一步启动并对外暴露 Console
+city start -p
+
+# 1.2) 只启动 Console，并对外暴露
+city console start -p
 
 # 2) 启动多个 agent
 city agent start /path/to/agent-a
@@ -64,6 +72,17 @@ city console restart
 - [`city status`](/zh/docs/commands/status)
 - [`city agent list`](/zh/docs/commands/agent/list)
 - [`city agent start`](/zh/docs/commands/agent/start)
+
+## 对外访问说明
+
+- 默认 `city console start` 绑定 `127.0.0.1:5315`，只能本机访问。
+- `city console start -p` 会绑定 `0.0.0.0:5315`，可以从外部访问。
+- 如果使用了 `0.0.0.0` 绑定，浏览器访问时请改用服务器 IP 或域名。
+
+## 端口说明
+
+- `5314`：city runtime API 端口，供 service / task / plugin 等接口使用。
+- `5315`：Console Web UI 端口，供浏览器访问 Console。
 
 ## 示例输出
 

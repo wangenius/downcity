@@ -11,6 +11,7 @@ import test from "node:test";
 import {
   findReusableConsoleProcess,
   parseConsoleProcessCommand,
+  resolveConsoleHostForBinding,
 } from "../../bin/main/modules/cli/Console.js";
 import { isDowncityCliCommand } from "../../bin/main/city/runtime/ProcessSweep.js";
 
@@ -58,5 +59,14 @@ test("isDowncityCliCommand accepts console build output path", () => {
       "/opt/homebrew/bin/node /Users/demo/packages/downcity/bin/main/modules/cli/Index.js console run --host 127.0.0.1 --port 5315",
     ),
     true,
+  );
+});
+
+test("resolveConsoleHostForBinding uses wildcard host when public mode is enabled", () => {
+  assert.equal(
+    resolveConsoleHostForBinding({
+      public: true,
+    }),
+    "0.0.0.0",
   );
 });

@@ -10,7 +10,8 @@ description: 后台启动 city runtime
 启动时会初始化 city runtime 的 registry 和进程状态。
 如果当前还没有任何本机 token，启动过程会自动初始化一个 `console-bootstrap` token，并在启动日志里显示一次明文 token。
 
-如果你希望一并启动 Console，请使用 `city start --console` 或 `city start -a`。
+如果你希望一并启动 Console，请使用 `city start --console`、`city start -a` 或 `city start -p`。
+如果你传入 `-p/--public` 或 `-h/--host`，CLI 也会自动一并启动 Console。
 
 ## 用法
 
@@ -21,6 +22,29 @@ city start
 ```bash
 city start --console
 ```
+
+```bash
+city start -p
+```
+
+## 常用参数
+
+- `-a, --all`：同时启动 Console
+- `--console`：同时启动 Console
+- `-p, --public [enabled]`：以公网模式启动 Console，并绑定 `0.0.0.0`
+- `-h, --host <host>`：Console 主机；传入后默认同时启动 Console
+
+## 对外访问
+
+- 默认 `city start` 只启动 runtime，不暴露 Web Console。
+- `city start --console` 默认仍绑定 `127.0.0.1:5315`。
+- `city start -p` 会自动启动 Console，并把监听地址切到 `0.0.0.0:5315`，适合服务器对外访问。
+- 如果绑定的是 `0.0.0.0`，外部访问时请使用服务器实际 IP 或域名，而不是 `127.0.0.1`。
+
+## 端口说明
+
+- `5314`：city runtime API 端口，用于 `health`、`service`、`task`、`plugin` 等接口。
+- `5315`：Console Web UI 端口，用于浏览器访问控制台。
 
 ## 相关命令
 
@@ -38,10 +62,14 @@ city version: 1.0.0
 ✅ city runtime started
    pid: <runtimePid>
    log: <cityRuntimeLogPath>
+   port: 5314
+   usage: Runtime API / service endpoints (health, service, task, plugin)
 ✅ Console started
    pid: <consolePid>
    url: http://127.0.0.1:5315
    log: <consoleLogPath>
+   port: 5315
+   usage: Console Web UI / control plane
 ✅ Console token initialized
    subject: local-cli
    name: console-bootstrap
@@ -55,4 +83,6 @@ city version: 1.0.0
 ✅ city runtime started
    pid: <runtimePid>
    log: <cityRuntimeLogPath>
+   port: 5314
+   usage: Runtime API / service endpoints (health, service, task, plugin)
 ```

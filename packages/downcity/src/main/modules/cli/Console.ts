@@ -28,14 +28,21 @@ import type {
   ConsoleRuntimeStatus,
 } from "@/shared/types/Console.js";
 import { emitCliBlock } from "./CliReporter.js";
+import { buildConsolePortFacts } from "./PortHints.js";
 
 const DEFAULT_CONSOLE_HOST = "127.0.0.1";
 const DEFAULT_CONSOLE_PORT = 5315;
+const PUBLIC_CONSOLE_HOST = "0.0.0.0";
 
 /**
  * Console 模块启动参数。
  */
 export interface ConsoleStartOptions {
+  /**
+   * 是否以公网模式暴露 Console。
+   */
+  public?: boolean;
+
   /**
    * Console 监听端口。
    */
@@ -105,6 +112,23 @@ function normalizeHost(host: string): string {
   if (!value) return DEFAULT_CONSOLE_HOST;
   if (value === "0.0.0.0" || value === "::") return "127.0.0.1";
   return value;
+}
+
+/**
+ * 解析 Console 实际监听 host。
+ *
+ * 关键点（中文）
+ * - 用户显式传 `--host` 时，始终尊重显式值。
+ * - 传 `--public` 时，默认切到 `0.0.0.0`，方便服务器直接对外暴露。
+ * - 未传 host/public 时，仍保持本机模式 `127.0.0.1`。
+ */
+export function resolveConsoleHostForBinding(
+  options?: ConsoleStartOptions,
+): string {
+  const explicitHost = String(options?.host || "").trim();
+  if (explicitHost) return explicitHost;
+  if (options?.public === true) return PUBLIC_CONSOLE_HOST;
+  return DEFAULT_CONSOLE_HOST;
 }
 
 /**
@@ -256,7 +280,7 @@ export async function getConsoleRuntimeStatus(): Promise<ConsoleRuntimeStatus> {
 export async function runConsoleRuntimeCommand(
   options?: ConsoleStartOptions,
 ): Promise<void> {
-  const host = String(options?.host || DEFAULT_CONSOLE_HOST).trim() || DEFAULT_CONSOLE_HOST;
+  const host = resolveConsoleHostForBinding(options);
   const port =
     typeof options?.port === "number" && Number.isInteger(options.port)
       ? options.port
@@ -270,12 +294,7 @@ export async function runConsoleRuntimeCommand(
     tone: "success",
     title: "Console started",
     summary: "foreground",
-    facts: [
-      {
-        label: "URL",
-        value: `http://${visibleHost}:${port}`,
-      },
-    ],
+    facts: buildConsolePortFacts(`http://${visibleHost}:${port}`),
     note: "单个 Console 实例可切换查看多个已运行 agent。",
   });
 
@@ -340,7 +359,7 @@ export async function startConsoleCommand(params: {
     });
   }
 
-  const host = String(params.options?.host || DEFAULT_CONSOLE_HOST).trim() || DEFAULT_CONSOLE_HOST;
+  const host = resolveConsoleHostForBinding(params.options);
   const port =
     typeof params.options?.port === "number" && Number.isInteger(params.options.port)
       ? params.options.port
@@ -397,12 +416,7 @@ export async function startConsoleCommand(params: {
   emitCliBlock({
     tone: "success",
     title: "Console started",
-    facts: [
-      {
-        label: "URL",
-        value: `http://${normalizeHost(host)}:${port}`,
-      },
-    ],
+    facts: buildConsolePortFacts(`http://${normalizeHost(host)}:${port}`),
   });
 }
 

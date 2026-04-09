@@ -6,7 +6,7 @@
  * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
  */
 
-import type { Command } from "commander";
+import { Command, Option } from "commander";
 import {
   getConsoleRuntimeStatus,
   restartConsoleCommand,
@@ -59,19 +59,34 @@ export function registerConsoleCommands(
 
   program
     .command("start")
-    .description("启动 city runtime；使用 -a/--all 或 --console 可同时启动 Console")
+    .description("启动 city runtime；使用 -a/--all、--console 或 -p/--public 可同时启动 Console")
     .option("-a, --all", "同时启动 Console")
     .option("--console", "同时启动 Console")
+    .option("-p, --public [enabled]", "以公网模式启动 Console（绑定 0.0.0.0）", parseBoolean)
+    .option("-h, --host <host>", "Console 主机；传入后默认同时启动 Console")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async (
-      _options: { all?: boolean; console?: boolean },
+      _options: { all?: boolean; console?: boolean; public?: boolean; host?: string },
       command: Command,
     ) => {
-      const options = command.opts<{ all?: boolean; console?: boolean }>();
-      const shouldStartConsole = options?.all === true || options?.console === true;
+      const options = command.opts<{
+        all?: boolean;
+        console?: boolean;
+        public?: boolean;
+        host?: string;
+      }>();
+      const shouldStartConsole =
+        options?.all === true ||
+        options?.console === true ||
+        options?.public === true ||
+        Boolean(String(options?.host || "").trim());
       await startCityRuntimeCommand(context.cliPath);
       if (shouldStartConsole) {
         await startConsoleCommand({
+          options: {
+            public: options?.public,
+            host: options?.host,
+          },
           cliPath: context.cliPath,
         });
       }
@@ -112,8 +127,9 @@ export function registerConsoleCommands(
   const consoleCommand = program
     .command("console [action]")
     .description("管理 Console 模块（start/stop/restart/status，默认 start）")
-    .option("-p, --port <port>", "Console 端口（默认 5315）", parsePort)
+    .option("-p, --public [enabled]", "以公网模式启动 Console（绑定 0.0.0.0）", parseBoolean)
     .option("-h, --host <host>", "Console 主机（默认 127.0.0.1）")
+    .addOption(new Option("--port <port>").argParser(parsePort).hideHelp())
     .helpOption("--help", "display help for command");
 
   consoleCommand
@@ -122,10 +138,10 @@ export function registerConsoleCommands(
         context.version,
         async (
           action: string | undefined,
-          _options: { port?: number; host?: string },
+          _options: { public?: boolean; host?: string; port?: number },
           command: Command,
         ) => {
-          const options = command.opts<{ port?: number; host?: string }>();
+          const options = command.opts<{ public?: boolean; host?: string; port?: number }>();
           const resolvedAction = String(action || "start").trim().toLowerCase();
           if (resolvedAction === "start") {
             await startConsoleCommand({

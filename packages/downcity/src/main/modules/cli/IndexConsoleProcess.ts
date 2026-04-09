@@ -42,6 +42,7 @@ import {
   resolveAgentName,
   sleep,
 } from "./IndexSupport.js";
+import { buildRuntimePortFacts } from "./PortHints.js";
 import { stopConsoleCommand } from "./Console.js";
 import { ensureConsoleAuthBootstrap } from "./ConsoleAuthBootstrap.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
@@ -107,6 +108,7 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
   emitCliBlock({
     tone: "success",
     title: "City runtime started",
+    facts: buildRuntimePortFacts(),
   });
 
   await ensureConsoleAuthBootstrap();

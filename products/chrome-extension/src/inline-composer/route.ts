@@ -7,7 +7,9 @@
  */
 
 import type {
-  ConsoleModelInferResponse,
+  ConsoleInlineInstantRequestBody,
+  ConsoleInlineInstantResponse,
+  ConsoleModelOption,
   ConsoleUiAgentOption,
   ConsoleUiAgentsResponse,
   TuiContextExecuteRequestBody,
@@ -16,12 +18,14 @@ import type {
 } from "../types/api";
 import type {
   AskHistoryCommand,
+  ChannelRouteInfo,
   InlineComposerChatOption,
   InlineComposerRouteSettings,
-  RouteInfo,
+  InstantRouteInfo,
   SendPageContextParams,
   SendToAgentResult,
 } from "../types/inlineComposer";
+import type { InlineInstantExecutorType } from "../types/extension";
 import {
   DEFAULT_ROUTE_SETTINGS,
   MAX_PAGE_IMAGE_COUNT,
@@ -195,8 +199,10 @@ async function loadStoredRouteSnapshot(): Promise<{
   consolePort: number;
   agentId: string;
   chatKey: string;
-  modelId: string;
-  inlineMode: "agent" | "model";
+  inlineMode: "channel" | "instant";
+  instantExecutor: InlineInstantExecutorType;
+  instantAgentId: string;
+  instantModelId: string;
   legacyAuthToken: string;
 }> {
   const stored = await storageGet("sync", [SETTINGS_STORAGE_KEY]);
@@ -209,8 +215,10 @@ async function loadStoredRouteSnapshot(): Promise<{
     consolePort: legacy?.consolePort || normalizePort(value.consolePort),
     agentId: normalizeText(value.agentId, 240),
     chatKey: normalizeText(value.chatKey, 300),
-    modelId: normalizeText(value.modelId, 240),
-    inlineMode: String(value.inlineMode || "").trim() === "model" ? "model" : "agent",
+    inlineMode: String(value.inlineMode || "").trim() === "instant" ? "instant" : "channel",
+    instantExecutor: String(value.instantExecutor || "").trim() === "acp" ? "acp" : "model",
+    instantAgentId: normalizeText(value.instantAgentId, 240),
+    instantModelId: normalizeText(value.instantModelId, 240),
     legacyAuthToken: normalizeAuthToken(value.authToken).slice(0, 4096),
   };
 }
@@ -227,8 +235,10 @@ async function saveStoredRouteSnapshot(settings: InlineComposerRouteSettings): P
       consolePort: normalizePort(settings.consolePort),
       agentId: normalizeText(settings.agentId, 240),
       chatKey: normalizeText(settings.chatKey, 300),
-      modelId: normalizeText(settings.modelId, 240),
-      inlineMode: settings.inlineMode === "model" ? "model" : "agent",
+      inlineMode: settings.inlineMode === "instant" ? "instant" : "channel",
+      instantExecutor: settings.instantExecutor === "acp" ? "acp" : "model",
+      instantAgentId: normalizeText(settings.instantAgentId, 240),
+      instantModelId: normalizeText(settings.instantModelId, 240),
     },
   });
 }
@@ -390,8 +400,10 @@ export async function loadRouteSettings(): Promise<InlineComposerRouteSettings> 
     authToken: normalizeText(authToken, 4096),
     agentId: normalizeText(loaded.agentId, 240),
     chatKey: normalizeText(loaded.chatKey, 300),
-    modelId: normalizeText(loaded.modelId, 240),
-    inlineMode: loaded.inlineMode === "model" ? "model" : "agent",
+    inlineMode: loaded.inlineMode === "instant" ? "instant" : "channel",
+    instantExecutor: loaded.instantExecutor === "acp" ? "acp" : "model",
+    instantAgentId: normalizeText(loaded.instantAgentId, 240),
+    instantModelId: normalizeText(loaded.instantModelId, 240),
   };
 }
 
@@ -419,8 +431,22 @@ async function resolveEffectiveRouteSettings(
         : loaded.consolePort,
     agentId: normalizeText(preferred.agentId, 240) || loaded.agentId,
     chatKey: normalizeText(preferred.chatKey, 300) || loaded.chatKey,
-    modelId: normalizeText(preferred.modelId, 240) || loaded.modelId,
-    inlineMode: preferred.inlineMode === "model" ? "model" : loaded.inlineMode,
+    inlineMode:
+      preferred.inlineMode === undefined
+        ? loaded.inlineMode
+        : preferred.inlineMode === "instant"
+          ? "instant"
+          : "channel",
+    instantExecutor:
+      preferred.instantExecutor === undefined
+        ? loaded.instantExecutor
+        : preferred.instantExecutor === "acp"
+          ? "acp"
+          : "model",
+    instantAgentId:
+      normalizeText(preferred.instantAgentId, 240) || loaded.instantAgentId,
+    instantModelId:
+      normalizeText(preferred.instantModelId, 240) || loaded.instantModelId,
     authToken: loaded.authToken,
   };
 }
@@ -435,41 +461,45 @@ export async function saveRouteSettings(
 }
 
 /**
- * Inline Composer 直接调用模型直答。
+ * Inline Composer 即时模式执行。
  */
-export async function inferInlineComposerModel(params: {
+export async function runInlineInstant(params: {
   consoleHost: string;
   consolePort: number;
   authToken: string;
-  modelId: string;
+  executorType: InlineInstantExecutorType;
   prompt: string;
   system?: string;
   pageContext?: string;
-}): Promise<ConsoleModelInferResponse> {
+  modelId?: string;
+  agentId?: string;
+}): Promise<ConsoleInlineInstantResponse> {
   const baseUrl = buildConsoleBaseUrl({
     host: params.consoleHost,
     port: params.consolePort,
   });
-  const payload = await requestJson<ConsoleModelInferResponse>(
-    `${baseUrl}/api/ui/model/infer`,
+  const payload = await requestJson<ConsoleInlineInstantResponse>(
+    `${baseUrl}/api/ui/inline/instant-run`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        modelId: normalizeText(params.modelId, 240),
+        executorType: params.executorType,
         prompt: normalizeText(params.prompt, MAX_PROMPT_CHARS),
         system: normalizeText(params.system, 2000),
         pageContext: String(params.pageContext || "").trim(),
-      }),
+        modelId: normalizeText(params.modelId, 240),
+        agentId: normalizeText(params.agentId, 240),
+      } satisfies ConsoleInlineInstantRequestBody),
     },
     {
       authToken: params.authToken,
     },
   );
   if (payload.success !== true) {
-    throw new Error(payload.error || "模型回复失败");
+    throw new Error(payload.error || "即时执行失败");
   }
   return payload;
 }
@@ -499,6 +529,27 @@ async function fetchAgents(
     throw new Error(payload.error || "加载 Agent 列表失败");
   }
   return Array.isArray(payload.agents) ? payload.agents : [];
+}
+
+async function fetchModels(
+  baseUrl: string,
+  authToken: string,
+): Promise<ConsoleModelOption[]> {
+  const payload = await requestJson<{
+    success: boolean;
+    models?: ConsoleModelOption[];
+    error?: string;
+  }>(
+    `${baseUrl}/api/ui/model/pool`,
+    { method: "GET" },
+    { authToken },
+  );
+  if (payload.success !== true) {
+    throw new Error(payload.error || "加载模型列表失败");
+  }
+  return Array.isArray(payload.models)
+    ? payload.models.filter((item) => item && item.isPaused !== true)
+    : [];
 }
 
 async function fetchContexts(
@@ -689,9 +740,9 @@ function buildInstructions(params: {
 /**
  * 解析当前可用路由。
  */
-export async function resolveRouteInfo(
+export async function resolveChannelRouteInfo(
   inputSettings?: Partial<InlineComposerRouteSettings>,
-): Promise<RouteInfo> {
+): Promise<ChannelRouteInfo> {
   const settings = await resolveEffectiveRouteSettings(inputSettings);
   const baseUrl = buildConsoleBaseUrl({
     host: settings.consoleHost,
@@ -764,13 +815,52 @@ export async function resolveRouteInfo(
 }
 
 /**
+ * 解析即时模式当前可用执行目标。
+ */
+export async function resolveInstantRouteInfo(
+  inputSettings?: Partial<InlineComposerRouteSettings>,
+): Promise<InstantRouteInfo> {
+  const settings = await resolveEffectiveRouteSettings(inputSettings);
+  const baseUrl = buildConsoleBaseUrl({
+    host: settings.consoleHost,
+    port: settings.consolePort,
+  });
+
+  const [agents, models] = await Promise.all([
+    fetchAgents(baseUrl, settings.authToken),
+    fetchModels(baseUrl, settings.authToken),
+  ]);
+  const acpAgents = agents.filter((item) => item.executionMode === "acp");
+  const targetExecutor: InlineInstantExecutorType =
+    settings.instantExecutor === "acp" ? "acp" : "model";
+  const targetAgentId =
+    acpAgents.some((item) => item.id === settings.instantAgentId)
+      ? settings.instantAgentId
+      : acpAgents[0]?.id || "";
+  const targetModelId =
+    models.some((item) => item.id === settings.instantModelId)
+      ? settings.instantModelId
+      : models[0]?.id || "";
+
+  return {
+    settings,
+    baseUrl,
+    agents: acpAgents,
+    models,
+    targetExecutor,
+    targetAgentId,
+    targetModelId,
+  };
+}
+
+/**
  * 发送页面上下文到 Agent。
  */
 export async function sendPageContextToAgent(
   params: SendPageContextParams,
   routeSettings: InlineComposerRouteSettings,
 ): Promise<SendToAgentResult> {
-  const { targetAgent, targetChatKey, baseUrl } = await resolveRouteInfo(routeSettings);
+  const { targetAgent, targetChatKey, baseUrl } = await resolveChannelRouteInfo(routeSettings);
   const attachment = buildContextAttachment(params);
   const executeUrl = `${baseUrl}/api/dashboard/sessions/${encodeURIComponent(targetChatKey)}/execute?agent=${encodeURIComponent(targetAgent.id)}`;
 

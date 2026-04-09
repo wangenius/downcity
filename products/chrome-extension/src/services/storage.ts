@@ -9,6 +9,7 @@
 import type {
   ExtensionAuthState,
   InlineComposerMode,
+  InlineInstantExecutorType,
   ExtensionPageSendRecord,
   ExtensionQuickPromptItem,
   ExtensionSettings,
@@ -82,7 +83,11 @@ function normalizeQuickPromptId(input: unknown): string {
 }
 
 function normalizeInlineMode(input: unknown): InlineComposerMode {
-  return String(input || "").trim() === "model" ? "model" : "agent";
+  return String(input || "").trim() === "instant" ? "instant" : "channel";
+}
+
+function normalizeInstantExecutor(input: unknown): InlineInstantExecutorType {
+  return String(input || "").trim() === "acp" ? "acp" : "model";
 }
 
 function toQuickPromptIdFromTitle(title: string): string {
@@ -160,8 +165,10 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   consolePort: DEFAULT_CONSOLE_PORT,
   agentId: "",
   chatKey: "",
-  modelId: "",
-  inlineMode: "agent",
+  instantModelId: "",
+  inlineMode: "channel",
+  instantExecutor: "model",
+  instantAgentId: "",
   taskPrompt: "请阅读这个页面并给我一个可执行摘要。",
   quickPrompts: DEFAULT_QUICK_PROMPTS.map((item) => ({ ...item })),
   defaultQuickPromptId: DEFAULT_QUICK_PROMPTS[0]?.id || "",
@@ -203,8 +210,12 @@ export async function loadSettings(): Promise<ExtensionSettings> {
     consolePort: legacy?.consolePort || normalizePort(value.consolePort),
     agentId: typeof value.agentId === "string" ? value.agentId.trim() : "",
     chatKey: typeof value.chatKey === "string" ? value.chatKey.trim() : "",
-    modelId: typeof value.modelId === "string" ? value.modelId.trim() : "",
+    instantModelId:
+      typeof value.instantModelId === "string" ? value.instantModelId.trim() : "",
     inlineMode: normalizeInlineMode(value.inlineMode),
+    instantExecutor: normalizeInstantExecutor(value.instantExecutor),
+    instantAgentId:
+      typeof value.instantAgentId === "string" ? value.instantAgentId.trim() : "",
     taskPrompt:
       typeof value.taskPrompt === "string" && value.taskPrompt.trim()
         ? value.taskPrompt
@@ -225,8 +236,10 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
     consolePort: normalizePort(settings.consolePort),
     agentId: String(settings.agentId || "").trim(),
     chatKey: String(settings.chatKey || "").trim(),
-    modelId: String(settings.modelId || "").trim(),
+    instantModelId: String(settings.instantModelId || "").trim(),
     inlineMode: normalizeInlineMode(settings.inlineMode),
+    instantExecutor: normalizeInstantExecutor(settings.instantExecutor),
+    instantAgentId: String(settings.instantAgentId || "").trim(),
     taskPrompt: String(settings.taskPrompt || "").trim() || DEFAULT_SETTINGS.taskPrompt,
     quickPrompts,
     defaultQuickPromptId: quickPrompts.some((item) => item.id === defaultQuickPromptId)

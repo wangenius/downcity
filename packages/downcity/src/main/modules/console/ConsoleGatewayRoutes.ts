@@ -8,6 +8,7 @@
 
 import type { Hono, Context } from "hono";
 import { registerConsoleModelRoutes } from "@/main/modules/console/ModelApiRoutes.js";
+import { registerConsoleInlineInstantRoutes } from "@/main/modules/console/InlineInstantRoutes.js";
 import { registerConsoleChannelAccountRoutes } from "@/main/modules/console/ChannelAccountApiRoutes.js";
 import { registerConsoleEnvRoutes } from "@/main/modules/console/EnvApiRoutes.js";
 import { registerConsoleAgentStatusRoutes } from "@/main/modules/console/AgentStatusApiRoutes.js";
@@ -443,6 +444,10 @@ export function registerConsoleGatewayRoutes(params: {
       handlers.resolveSelectedAgent(requestedAgentId),
     buildModelResponse: (requestedAgentId) =>
       handlers.buildModelResponse(requestedAgentId),
+  });
+  registerConsoleInlineInstantRoutes({
+    app,
+    resolveAgentById: (requestedAgentId) => handlers.resolveAgentById(requestedAgentId),
   });
   registerConsoleChannelAccountRoutes({ app });
   registerConsoleEnvRoutes({ app });

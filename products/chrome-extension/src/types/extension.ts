@@ -9,7 +9,12 @@
 /**
  * Inline Composer 的发送模式。
  */
-export type InlineComposerMode = "agent" | "model";
+export type InlineComposerMode = "channel" | "instant";
+
+/**
+ * Inline Composer 即时模式执行器类型。
+ */
+export type InlineInstantExecutorType = "model" | "acp";
 
 /**
  * 插件设置。
@@ -36,14 +41,24 @@ export interface ExtensionSettings {
   chatKey: string;
 
   /**
-   * 默认直答模型 id（来自 `/api/ui/model/pool`）。
+   * 即时模式默认模型 id（来自 `/api/ui/model/pool`）。
    */
-  modelId: string;
+  instantModelId: string;
 
   /**
    * Inline Composer 默认采用的发送模式。
    */
   inlineMode: InlineComposerMode;
+
+  /**
+   * Inline Composer 即时模式默认使用的 executor。
+   */
+  instantExecutor: InlineInstantExecutorType;
+
+  /**
+   * Inline Composer 即时模式默认使用的 ACP Agent id。
+   */
+  instantAgentId: string;
 
   /**
    * 用户补充任务说明。

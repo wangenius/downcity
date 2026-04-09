@@ -26,9 +26,143 @@ import type {
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "@/types/cli/AgentChat.js";
 
 const AGENT_CHAT_EXECUTE_TIMEOUT_MS = 120_000;
+const AGENT_REPLY_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const AGENT_REPLY_SPINNER_INTERVAL_MS = 80;
+
+type AgentReplySpinner = {
+  start: () => void;
+  stop: () => void;
+};
+
+type AgentReplySpinnerStream = {
+  isTTY?: boolean;
+  write: (chunk: string) => unknown;
+  clearLine?: (dir: number) => unknown;
+  cursorTo?: (col: number) => unknown;
+};
 
 function normalizeChatMessage(input: string): string {
   return String(input || "").trim();
+}
+
+/**
+ * 判断当前这轮 chat 是否应该渲染 spinner。
+ *
+ * 关键点（中文）
+ * - 仅人类交互终端展示 spinner。
+ * - JSON 输出必须保持纯净，不能混入 spinner 帧。
+ */
+export function shouldRenderAgentReplySpinner(params?: {
+  json?: boolean;
+  stdin?: { isTTY?: boolean };
+  stdout?: { isTTY?: boolean };
+}): boolean {
+  if (params?.json === true) return false;
+  if (params?.stdin?.isTTY !== true) return false;
+  if (params?.stdout?.isTTY !== true) return false;
+  return true;
+}
+
+/**
+ * 创建终端回复 spinner。
+ *
+ * 关键点（中文）
+ * - 自己管理帧动画，避免和 `readline`/外部 spinner 库互相抢占光标。
+ * - stop 时主动清掉整行，保证后续正文输出从干净位置开始。
+ */
+export function createAgentReplySpinner(params: {
+  text: string;
+  stream?: unknown;
+  intervalMs?: number;
+  frames?: string[];
+}): AgentReplySpinner {
+  const stream = (params.stream || process.stdout) as AgentReplySpinnerStream;
+  const intervalMs =
+    typeof params.intervalMs === "number" && params.intervalMs > 0
+      ? params.intervalMs
+      : AGENT_REPLY_SPINNER_INTERVAL_MS;
+  const frames =
+    Array.isArray(params.frames) && params.frames.length > 0
+      ? params.frames
+      : AGENT_REPLY_SPINNER_FRAMES;
+  let timer: NodeJS.Timeout | null = null;
+  let frameIndex = 0;
+
+  const render = () => {
+    const frame = frames[frameIndex % frames.length];
+    frameIndex += 1;
+    if (typeof stream.clearLine === "function" && typeof stream.cursorTo === "function") {
+      stream.clearLine(0);
+      stream.cursorTo(0);
+      stream.write(`${frame} ${params.text}`);
+      return;
+    }
+    stream.write(`\r${frame} ${params.text}`);
+  };
+
+  const clear = () => {
+    if (typeof stream.clearLine === "function" && typeof stream.cursorTo === "function") {
+      stream.clearLine(0);
+      stream.cursorTo(0);
+      return;
+    }
+    stream.write("\r");
+  };
+
+  return {
+    start() {
+      if (timer) return;
+      render();
+      timer = setInterval(render, intervalMs);
+    },
+    stop() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      clear();
+    },
+  };
+}
+
+/**
+ * 在 agent 回复期间渲染临时 spinner。
+ *
+ * 关键点（中文）
+ * - 只包裹等待阶段；真正回复打印前会自动 stop，避免和正文混排。
+ * - 默认用 ora，但测试里允许注入假 spinner 工厂。
+ */
+export async function runWithAgentReplySpinner<T>(
+  task: () => Promise<T>,
+  options?: {
+    agentName?: string;
+    json?: boolean;
+    stdin?: { isTTY?: boolean };
+    stdout?: { isTTY?: boolean };
+    spinnerFactory?: (text: string) => AgentReplySpinner;
+  },
+): Promise<T> {
+  if (!shouldRenderAgentReplySpinner({
+    json: options?.json,
+    stdin: options?.stdin || process.stdin,
+    stdout: options?.stdout || process.stdout,
+  })) {
+    return await task();
+  }
+
+  const text = `${String(options?.agentName || "Agent").trim() || "Agent"} is replying...`;
+  const spinner = options?.spinnerFactory
+    ? options.spinnerFactory(text)
+    : createAgentReplySpinner({
+        text,
+        stream: process.stdout,
+      });
+  spinner.start();
+  try {
+    return await task();
+  } finally {
+    spinner.stop();
+  }
 }
 
 function isChatSuccess(payload: AgentChatExecuteResponse | undefined): boolean {
@@ -216,14 +350,19 @@ async function runOneShotChat(params: {
   message: string;
   options: AgentChatCliOptions;
 }): Promise<void> {
-  const outcome = await executeAgentChatTurn({
+  const outcome = await runWithAgentReplySpinner(async () => {
+    return await executeAgentChatTurn({
+      agentName: params.agentName,
+      message: params.message,
+      transport: {
+        host: params.options.host,
+        port: params.options.port,
+        token: params.options.token,
+      },
+    });
+  }, {
     agentName: params.agentName,
-    message: params.message,
-    transport: {
-      host: params.options.host,
-      port: params.options.port,
-      token: params.options.token,
-    },
+    json: params.options.json,
   });
 
   if (params.options.json === true) {
@@ -297,14 +436,18 @@ async function runInteractiveChat(params: {
       if (!text) continue;
       if (text === "/exit" || text === "/quit") break;
 
-      const outcome = await executeAgentChatTurn({
+      const outcome = await runWithAgentReplySpinner(async () => {
+        return await executeAgentChatTurn({
+          agentName: params.agentName,
+          message: text,
+          transport: {
+            host: params.options.host,
+            port: params.options.port,
+            token: params.options.token,
+          },
+        });
+      }, {
         agentName: params.agentName,
-        message: text,
-        transport: {
-          host: params.options.host,
-          port: params.options.port,
-          token: params.options.token,
-        },
       });
 
       if (!outcome.success || !outcome.payload) {

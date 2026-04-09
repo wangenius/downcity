@@ -2,7 +2,7 @@
  * Options 设置页。
  *
  * 关键点（中文）：
- * - 只保留扩展运行必需设置：Console 地址、Inline Composer 默认模型、默认 Agent/Chat。
+ * - 只保留扩展运行必需设置：Console 地址、频道模式默认目标、即时模式默认执行器。
  * - 请求流必须稳定，避免 effect/callback 互相依赖导致无限刷新。
  * - 只有初始化、手动刷新、切换 Agent 时才重新拉取数据。
  */
@@ -94,6 +94,50 @@ export function App() {
     [models],
   );
 
+  const modeOptions = useMemo<ExtensionSelectOption[]>(
+    () => [
+      {
+        value: "channel",
+        label: "频道模式",
+        description: "沿用 Agent / Channel 投递链路",
+      },
+      {
+        value: "instant",
+        label: "即时模式",
+        description: "执行完成后直接在页面内返回结果",
+      },
+    ],
+    [],
+  );
+
+  const instantExecutorOptions = useMemo<ExtensionSelectOption[]>(
+    () => [
+      {
+        value: "model",
+        label: "Model Executor",
+        description: "使用模型池中的 API 模型临时执行",
+      },
+      {
+        value: "acp",
+        label: "ACP Executor",
+        description: "使用 ACP Agent 临时执行一次编码代理请求",
+      },
+    ],
+    [],
+  );
+
+  const instantAgentOptions = useMemo<ExtensionSelectOption[]>(
+    () =>
+      agents
+        .filter((item) => item.executionMode === "acp")
+        .map((item) => ({
+          value: item.id,
+          label: item.name,
+          description: item.agentType ? `ACP · ${item.agentType}` : "ACP Agent",
+        })),
+    [agents],
+  );
+
   const hasSavedToken = Boolean(normalizeAuthToken(authToken));
   const hasDraftToken = Boolean(normalizeAuthToken(authTokenInput));
 
@@ -179,6 +223,7 @@ export function App() {
     authToken: string;
     preferredAgentId: string;
     preferredChatKey: string;
+    preferredInstantAgentId: string;
   }): Promise<boolean> {
     const port = parsePortInput(params.port);
     if (!port) {
@@ -204,6 +249,11 @@ export function App() {
         preferredAgentId: params.preferredAgentId,
         selectedAgentId: response.selectedAgentId,
       });
+      const acpAgents = nextAgents.filter((item) => item.executionMode === "acp");
+      const preferredInstantAgentId = String(params.preferredInstantAgentId || "").trim();
+      const nextInstantAgentId = acpAgents.some((item) => item.id === preferredInstantAgentId)
+        ? preferredInstantAgentId
+        : acpAgents[0]?.id || "";
 
       setAgents(nextAgents);
       setSettings((prev) => ({
@@ -211,6 +261,7 @@ export function App() {
         consoleHost: params.host,
         consolePort: port,
         agentId: nextAgentId,
+        instantAgentId: nextInstantAgentId,
       }));
 
       await loadChats({
@@ -289,7 +340,7 @@ export function App() {
       setModels(nextModels);
       setSettings((prev) => ({
         ...prev,
-        modelId: nextModelId,
+        instantModelId: nextModelId,
       }));
       return nextModelId;
     } catch (error) {
@@ -301,7 +352,7 @@ export function App() {
         setAuthToken("");
         setAuthUsername("");
         setModels([]);
-        setSettings((prev) => ({ ...prev, modelId: "" }));
+        setSettings((prev) => ({ ...prev, instantModelId: "" }));
         setStatus({
           type: "error",
           text: "Token 已失效，请重新填写 Bearer Token。",
@@ -309,7 +360,7 @@ export function App() {
         return "";
       }
       setModels([]);
-      setSettings((prev) => ({ ...prev, modelId: "" }));
+      setSettings((prev) => ({ ...prev, instantModelId: "" }));
       setStatus({
         type: "error",
         text: `加载模型失败：${errorText}`,
@@ -325,6 +376,7 @@ export function App() {
     port: string;
     preferredAgentId: string;
     preferredChatKey: string;
+    preferredInstantAgentId: string;
     preferredModelId: string;
   }): Promise<void> {
     const port = parsePortInput(params.port);
@@ -374,6 +426,7 @@ export function App() {
           authToken: token,
           preferredAgentId: params.preferredAgentId,
           preferredChatKey: params.preferredChatKey,
+          preferredInstantAgentId: params.preferredInstantAgentId,
         }),
         loadModels({
           host: params.host,
@@ -410,7 +463,8 @@ export function App() {
           port: String(loaded.consolePort),
           preferredAgentId: loaded.agentId,
           preferredChatKey: loaded.chatKey,
-          preferredModelId: loaded.modelId,
+          preferredInstantAgentId: loaded.instantAgentId,
+          preferredModelId: loaded.instantModelId,
         });
       } catch (error) {
         if (!mounted) return;
@@ -452,7 +506,8 @@ export function App() {
       port: String(port),
       preferredAgentId: settings.agentId,
       preferredChatKey: settings.chatKey,
-      preferredModelId: settings.modelId,
+      preferredInstantAgentId: settings.instantAgentId,
+      preferredModelId: settings.instantModelId,
     });
   }
 
@@ -486,7 +541,8 @@ export function App() {
       consolePort: port,
       agentId: String(settings.agentId || "").trim(),
       chatKey: String(settings.chatKey || "").trim(),
-      modelId: String(settings.modelId || "").trim(),
+      instantModelId: String(settings.instantModelId || "").trim(),
+      instantAgentId: String(settings.instantAgentId || "").trim(),
     };
 
     setIsSaving(true);
@@ -530,7 +586,8 @@ export function App() {
       port: consolePortInput,
       preferredAgentId: settings.agentId,
       preferredChatKey: settings.chatKey,
-      preferredModelId: settings.modelId,
+      preferredInstantAgentId: settings.instantAgentId,
+      preferredModelId: settings.instantModelId,
     });
   }
 
@@ -544,7 +601,7 @@ export function App() {
           Chrome Extension Settings
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          先连接 Console 并完成鉴权，再选择 Inline Composer 默认模型与默认投递目标。
+          先连接 Console 并完成鉴权，再设置 Inline Composer 的默认模式、频道目标与即时执行器。
         </p>
       </header>
 
@@ -658,8 +715,36 @@ export function App() {
           </div>
 
           <ExtensionPopupSelect
-            label="Default Model"
-            value={settings.modelId}
+            label="Default Mode"
+            value={settings.inlineMode}
+            placeholder="请选择默认模式"
+            options={modeOptions}
+            onChange={(value) =>
+              setSettings((prev) => ({
+                ...prev,
+                inlineMode: value === "instant" ? "instant" : "channel",
+              }))
+            }
+            disabled={authInitializing}
+          />
+
+          <ExtensionPopupSelect
+            label="Default Instant Executor"
+            value={settings.instantExecutor}
+            placeholder="请选择即时模式执行器"
+            options={instantExecutorOptions}
+            onChange={(value) =>
+              setSettings((prev) => ({
+                ...prev,
+                instantExecutor: value === "acp" ? "acp" : "model",
+              }))
+            }
+            disabled={authInitializing || authRequired}
+          />
+
+          <ExtensionPopupSelect
+            label="Default Instant Model"
+            value={settings.instantModelId}
             placeholder={
               isLoadingModels
                 ? "加载模型中..."
@@ -671,14 +756,38 @@ export function App() {
             onChange={(value) =>
               setSettings((prev) => ({
                 ...prev,
-                modelId: value,
+                instantModelId: value,
               }))
             }
             disabled={
               authInitializing ||
               authRequired ||
               isLoadingModels ||
-              modelSelectOptions.length === 0
+              modelSelectOptions.length === 0 ||
+              settings.instantExecutor !== "model"
+            }
+          />
+
+          <ExtensionPopupSelect
+            label="Default Instant ACP Agent"
+            value={settings.instantAgentId}
+            placeholder={
+              instantAgentOptions.length > 0
+                ? "请选择 ACP Agent"
+                : "暂无可用 ACP Agent"
+            }
+            options={instantAgentOptions}
+            onChange={(value) =>
+              setSettings((prev) => ({
+                ...prev,
+                instantAgentId: value,
+              }))
+            }
+            disabled={
+              authInitializing ||
+              authRequired ||
+              instantAgentOptions.length === 0 ||
+              settings.instantExecutor !== "acp"
             }
           />
         </div>

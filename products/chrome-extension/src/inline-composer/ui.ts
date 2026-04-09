@@ -2,8 +2,8 @@
  * Inline Composer UI。
  *
  * 关键点（中文）：
- * - 负责选区按钮、输入面板、页内直答结果区与快捷键交互。
- * - Inline Composer 同时支持 Agent 投递与模型直答，两条链路都在页内完成。
+ * - 负责选区按钮、输入面板、页内即时结果区与快捷键交互。
+ * - Inline Composer 当前只暴露两种产品模式：频道模式与即时模式。
  */
 
 import type {
@@ -12,7 +12,10 @@ import type {
   MountedInlineComposerUi,
   SelectionRectSnapshot,
 } from "../types/inlineComposer";
-import type { InlineComposerMode } from "../types/extension";
+import type {
+  InlineComposerMode,
+  InlineInstantExecutorType,
+} from "../types/extension";
 import {
   COMPOSER_MAX_WIDTH,
   COMPOSER_MIN_WIDTH,
@@ -34,10 +37,11 @@ import {
   isEditableTarget,
 } from "./pageContext";
 import {
-  inferInlineComposerModel,
   loadAskHistoryCommands,
   loadRouteSettings,
-  resolveRouteInfo,
+  resolveChannelRouteInfo,
+  resolveInstantRouteInfo,
+  runInlineInstant,
   saveRouteSettings,
   sendPageContextToAgent,
   summarizeRouteErrorText,
@@ -70,11 +74,17 @@ function createInitialState(): InlineComposerState {
     isRoutePanelOpen: false,
     routeAgents: [],
     routeChats: [],
+    instantAgents: [],
+    instantModels: [],
     activeAgentId: "",
     activeChatKey: "",
+    activeInstantExecutor: "model",
+    activeInstantAgentId: "",
+    activeInstantModelId: "",
     routeRefreshSeq: 0,
     toastTimerId: null,
     replyText: "",
+    lastInstantResult: null,
   };
 }
 
@@ -121,11 +131,11 @@ function mountUi(): MountedInlineComposerUi {
         <div id="dcResult" class="dc-result dc-hidden" hidden></div>
         <div id="dcRoutePanel" class="dc-route-panel dc-hidden" hidden>
           <div class="dc-route-section">
-            <div class="dc-route-title">Agent</div>
+            <div id="dcAgentTitle" class="dc-route-title">Agent</div>
             <div id="dcAgentList" class="dc-route-list"></div>
           </div>
           <div class="dc-route-section">
-            <div class="dc-route-title">Chat</div>
+            <div id="dcChatTitle" class="dc-route-title">Chat</div>
             <div id="dcChatList" class="dc-route-list"></div>
           </div>
         </div>
@@ -162,7 +172,15 @@ function mountUi(): MountedInlineComposerUi {
       shadow.getElementById("dcRoutePanel"),
       "dcRoutePanel",
     ),
+    agentTitle: mustElement<HTMLDivElement>(
+      shadow.getElementById("dcAgentTitle"),
+      "dcAgentTitle",
+    ),
     agentList: mustElement<HTMLDivElement>(shadow.getElementById("dcAgentList"), "dcAgentList"),
+    chatTitle: mustElement<HTMLDivElement>(
+      shadow.getElementById("dcChatTitle"),
+      "dcChatTitle",
+    ),
     chatList: mustElement<HTMLDivElement>(shadow.getElementById("dcChatList"), "dcChatList"),
     agentTag: mustElement<HTMLDivElement>(shadow.getElementById("dcAgentTag"), "dcAgentTag"),
     sendBtn: mustElement<HTMLButtonElement>(shadow.getElementById("dcSendBtn"), "dcSendBtn"),
@@ -315,6 +333,84 @@ export function bootstrapInlineComposer(): void {
   }
 
   function renderRoutePanel(): void {
+    const mode = normalizeInlineModeValue(state.lastSettings.inlineMode);
+    if (mode === "instant") {
+      const targetLabel =
+        state.activeInstantExecutor === "acp"
+          ? state.instantAgents.find((item) => item.id === state.activeInstantAgentId)?.name ||
+            "选择 ACP Agent"
+          : state.activeInstantModelId || "选择模型";
+      ui.routeTrigger.title = `即时模式 / ${targetLabel}`;
+      ui.routeTrigger.disabled = state.isSending || state.isRouteLoading;
+      ui.agentTitle.textContent = "Executor";
+      ui.chatTitle.textContent =
+        state.activeInstantExecutor === "acp" ? "ACP Agent" : "Model";
+
+      ui.agentList.replaceChildren();
+      const executors: Array<{ id: InlineInstantExecutorType; label: string }> = [
+        { id: "model", label: "Model" },
+        { id: "acp", label: "ACP" },
+      ];
+      for (const executor of executors) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dc-route-item";
+        button.dataset.selected =
+          executor.id === state.activeInstantExecutor ? "true" : "false";
+        button.textContent = executor.label;
+        button.addEventListener("mousedown", (event) => event.preventDefault());
+        button.addEventListener("click", () => {
+          void selectInstantExecutor(executor.id);
+        });
+        ui.agentList.appendChild(button);
+      }
+
+      ui.chatList.replaceChildren();
+      if (state.activeInstantExecutor === "acp") {
+        if (state.instantAgents.length > 0) {
+          for (const agent of state.instantAgents) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "dc-route-item";
+            button.dataset.selected =
+              agent.id === state.activeInstantAgentId ? "true" : "false";
+            button.textContent = toAgentOptionLabel(agent);
+            button.addEventListener("mousedown", (event) => event.preventDefault());
+            button.addEventListener("click", () => {
+              void selectInstantAgent(agent.id);
+            });
+            ui.chatList.appendChild(button);
+          }
+        } else {
+          const empty = document.createElement("div");
+          empty.className = "dc-route-empty";
+          empty.textContent = "没有可用 ACP Agent";
+          ui.chatList.appendChild(empty);
+        }
+      } else if (state.instantModels.length > 0) {
+        for (const model of state.instantModels) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "dc-route-item";
+          button.dataset.selected =
+            model.id === state.activeInstantModelId ? "true" : "false";
+          button.textContent = normalizeText(model.id, 72);
+          button.title = model.name || model.id;
+          button.addEventListener("mousedown", (event) => event.preventDefault());
+          button.addEventListener("click", () => {
+            void selectInstantModel(model.id);
+          });
+          ui.chatList.appendChild(button);
+        }
+      } else {
+        const empty = document.createElement("div");
+        empty.className = "dc-route-empty";
+        empty.textContent = "没有可用模型";
+        ui.chatList.appendChild(empty);
+      }
+      return;
+    }
+
     const selectedAgent =
       state.routeAgents.find((item) => item.id === state.activeAgentId) || null;
     const selectedChat =
@@ -333,6 +429,8 @@ export function bootstrapInlineComposer(): void {
     ui.routeTrigger.title = `${agentLabel} / ${chatLabel}`;
     ui.routeTrigger.disabled =
       state.isSending || state.isRouteLoading || state.routeAgents.length < 1;
+    ui.agentTitle.textContent = "Agent";
+    ui.chatTitle.textContent = "Chat";
 
     ui.agentList.replaceChildren();
     if (state.routeAgents.length > 0) {
@@ -344,7 +442,7 @@ export function bootstrapInlineComposer(): void {
         button.textContent = toAgentOptionLabel(agent);
         button.addEventListener("mousedown", (event) => event.preventDefault());
         button.addEventListener("click", () => {
-          void selectAgent(agent.id);
+          void selectChannelAgent(agent.id);
         });
         ui.agentList.appendChild(button);
       }
@@ -366,7 +464,7 @@ export function bootstrapInlineComposer(): void {
         button.title = chat.title;
         button.addEventListener("mousedown", (event) => event.preventDefault());
         button.addEventListener("click", () => {
-          void selectChat(chat.chatKey);
+          void selectChannelChat(chat.chatKey);
         });
         ui.chatList.appendChild(button);
       }
@@ -379,7 +477,11 @@ export function bootstrapInlineComposer(): void {
   }
 
   function normalizeInlineModeValue(value: unknown): InlineComposerMode {
-    return String(value || "").trim() === "model" ? "model" : "agent";
+    return String(value || "").trim() === "instant" ? "instant" : "channel";
+  }
+
+  function normalizeInstantExecutorValue(value: unknown): InlineInstantExecutorType {
+    return String(value || "").trim() === "acp" ? "acp" : "model";
   }
 
   function renderModeToggle(): void {
@@ -387,15 +489,15 @@ export function bootstrapInlineComposer(): void {
     ui.modeToggle.disabled = state.isSending;
     ui.modeToggle.dataset.mode = mode;
     ui.modeToggle.title =
-      mode === "model"
-        ? "当前模式：模型直答。点击切换到 Agent 投递"
-        : "当前模式：Agent 投递。点击切换到模型直答";
+      mode === "instant"
+        ? "当前模式：即时模式。点击切换到频道模式"
+        : "当前模式：频道模式。点击切换到即时模式";
     ui.modeToggle.setAttribute(
       "aria-label",
-      mode === "model" ? "当前模式：模型直答" : "当前模式：Agent 投递",
+      mode === "instant" ? "当前模式：即时模式" : "当前模式：频道模式",
     );
     ui.modeToggle.innerHTML =
-      mode === "model"
+      mode === "instant"
         ? `
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3L13.9 8.1L19 10L13.9 11.9L12 17L10.1 11.9L5 10L10.1 8.1L12 3Z"></path>
@@ -411,11 +513,22 @@ export function bootstrapInlineComposer(): void {
   }
 
   function renderAgentTag(): void {
-    const selectedChat =
-      state.routeChats.find((item) => item.chatKey === state.activeChatKey) || null;
-    const chatShort = selectedChat ? normalizeText(selectedChat.title, 26) : "No Chat";
-    const text =
-      state.routeErrorText || `${state.agentTagText || "Agent"} · ${chatShort}`;
+    const mode = normalizeInlineModeValue(state.lastSettings.inlineMode);
+    const text = (() => {
+      if (state.routeErrorText) return state.routeErrorText;
+      if (mode === "instant") {
+        const target =
+          normalizeInstantExecutorValue(state.activeInstantExecutor) === "acp"
+            ? state.instantAgents.find((item) => item.id === state.activeInstantAgentId)?.name ||
+              "No ACP Agent"
+            : state.activeInstantModelId || "No Model";
+        return `${state.agentTagText || "即时"} · ${normalizeText(target, 26)}`;
+      }
+      const selectedChat =
+        state.routeChats.find((item) => item.chatKey === state.activeChatKey) || null;
+      const chatShort = selectedChat ? normalizeText(selectedChat.title, 26) : "No Chat";
+      return `${state.agentTagText || "频道"} · ${chatShort}`;
+    })();
     ui.agentTag.textContent = text;
     ui.agentTag.dataset.state = state.routeErrorText ? "error" : "default";
     ui.routeTrigger.dataset.state = state.routeErrorText ? "error" : "default";
@@ -520,7 +633,7 @@ export function bootstrapInlineComposer(): void {
     setInputPlaceholder("idle");
   }
 
-  async function refreshRouteState(
+  async function refreshChannelRouteState(
     preferredSettings?: Partial<typeof state.lastSettings>,
   ): Promise<void> {
     const requestSeq = state.routeRefreshSeq + 1;
@@ -530,7 +643,7 @@ export function bootstrapInlineComposer(): void {
     renderRoutePanel();
 
     try {
-      const routeInfo = await resolveRouteInfo(preferredSettings || {});
+      const routeInfo = await resolveChannelRouteInfo(preferredSettings || {});
       if (requestSeq !== state.routeRefreshSeq) return;
 
       state.routeBaseUrl = routeInfo.baseUrl;
@@ -565,20 +678,66 @@ export function bootstrapInlineComposer(): void {
     }
   }
 
-  async function selectAgent(agentId: string): Promise<void> {
+  async function refreshInstantRouteState(
+    preferredSettings?: Partial<typeof state.lastSettings>,
+  ): Promise<void> {
+    const requestSeq = state.routeRefreshSeq + 1;
+    state.routeRefreshSeq = requestSeq;
+    state.isRouteLoading = true;
+    renderAgentTag();
+    renderRoutePanel();
+
+    try {
+      const routeInfo = await resolveInstantRouteInfo(preferredSettings || {});
+      if (requestSeq !== state.routeRefreshSeq) return;
+
+      state.routeBaseUrl = routeInfo.baseUrl;
+      state.routeErrorText = "";
+      state.instantAgents = routeInfo.agents;
+      state.instantModels = routeInfo.models;
+      state.activeInstantExecutor = routeInfo.targetExecutor;
+      state.activeInstantAgentId = routeInfo.targetAgentId;
+      state.activeInstantModelId = routeInfo.targetModelId;
+      state.agentTagText = routeInfo.targetExecutor === "acp" ? "即时 · ACP" : "即时 · Model";
+
+      state.lastSettings = {
+        ...state.lastSettings,
+        inlineMode: "instant",
+        instantExecutor: routeInfo.targetExecutor,
+        instantAgentId: routeInfo.targetAgentId,
+        instantModelId: routeInfo.targetModelId,
+      };
+      await saveRouteSettings(state.lastSettings);
+    } catch (error) {
+      if (requestSeq !== state.routeRefreshSeq) return;
+      state.routeBaseUrl = "";
+      state.routeErrorText = summarizeRouteErrorText(readErrorText(error));
+      state.instantAgents = [];
+      state.instantModels = [];
+      state.activeInstantAgentId = "";
+      state.activeInstantModelId = "";
+    } finally {
+      if (requestSeq !== state.routeRefreshSeq) return;
+      state.isRouteLoading = false;
+      renderAgentTag();
+      renderRoutePanel();
+    }
+  }
+
+  async function selectChannelAgent(agentId: string): Promise<void> {
     const selectedId = normalizeText(agentId, 240);
     if (!selectedId || selectedId === state.activeAgentId) {
       setRoutePanelOpen(false);
       return;
     }
     setRoutePanelOpen(false);
-    await refreshRouteState({
+    await refreshChannelRouteState({
       agentId: selectedId,
       chatKey: "",
     });
   }
 
-  async function selectChat(chatKey: string): Promise<void> {
+  async function selectChannelChat(chatKey: string): Promise<void> {
     const selectedKey = normalizeText(chatKey, 300);
     if (!selectedKey || selectedKey === state.activeChatKey) {
       setRoutePanelOpen(false);
@@ -601,6 +760,57 @@ export function bootstrapInlineComposer(): void {
     }
   }
 
+  async function selectInstantExecutor(executor: InlineInstantExecutorType): Promise<void> {
+    const nextExecutor = normalizeInstantExecutorValue(executor);
+    if (nextExecutor === state.activeInstantExecutor) {
+      setRoutePanelOpen(false);
+      return;
+    }
+    setRoutePanelOpen(false);
+    await refreshInstantRouteState({
+      inlineMode: "instant",
+      instantExecutor: nextExecutor,
+    });
+  }
+
+  async function selectInstantAgent(agentId: string): Promise<void> {
+    const selectedId = normalizeText(agentId, 240);
+    if (!selectedId || selectedId === state.activeInstantAgentId) {
+      setRoutePanelOpen(false);
+      return;
+    }
+    setRoutePanelOpen(false);
+    state.activeInstantAgentId = selectedId;
+    state.lastSettings = {
+      ...state.lastSettings,
+      inlineMode: "instant",
+      instantExecutor: "acp",
+      instantAgentId: selectedId,
+    };
+    await saveRouteSettings(state.lastSettings);
+    renderRoutePanel();
+    renderAgentTag();
+  }
+
+  async function selectInstantModel(modelId: string): Promise<void> {
+    const selectedId = normalizeText(modelId, 240);
+    if (!selectedId || selectedId === state.activeInstantModelId) {
+      setRoutePanelOpen(false);
+      return;
+    }
+    setRoutePanelOpen(false);
+    state.activeInstantModelId = selectedId;
+    state.lastSettings = {
+      ...state.lastSettings,
+      inlineMode: "instant",
+      instantExecutor: "model",
+      instantModelId: selectedId,
+    };
+    await saveRouteSettings(state.lastSettings);
+    renderRoutePanel();
+    renderAgentTag();
+  }
+
   async function refreshAskHistoryCommands(): Promise<void> {
     state.askHistoryCommands = await loadAskHistoryCommands();
   }
@@ -618,10 +828,18 @@ export function bootstrapInlineComposer(): void {
     ui.input.value = "";
     ui.input.setSelectionRange(0, 0);
 
-    void refreshRouteState({
+    const mode = normalizeInlineModeValue(state.lastSettings.inlineMode);
+    void (mode === "instant"
+      ? refreshInstantRouteState({
+          ...(state.activeInstantAgentId ? { instantAgentId: state.activeInstantAgentId } : {}),
+          ...(state.activeInstantModelId ? { instantModelId: state.activeInstantModelId } : {}),
+          instantExecutor: state.activeInstantExecutor,
+          inlineMode: "instant",
+        })
+      : refreshChannelRouteState({
       ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
       ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
-    });
+        }));
 
     void refreshAskHistoryCommands()
       .then(() => {
@@ -807,7 +1025,9 @@ export function bootstrapInlineComposer(): void {
         authToken: latestSettings.authToken,
         consoleHost: latestSettings.consoleHost,
         consolePort: latestSettings.consolePort,
-        modelId: latestSettings.modelId || state.lastSettings.modelId,
+        instantModelId: latestSettings.instantModelId || state.lastSettings.instantModelId,
+        instantAgentId: latestSettings.instantAgentId || state.lastSettings.instantAgentId,
+        instantExecutor: latestSettings.instantExecutor || state.lastSettings.instantExecutor,
       };
       renderModeToggle();
       const pageMeta = getSafePageMeta();
@@ -834,32 +1054,52 @@ export function bootstrapInlineComposer(): void {
         .trim();
       const inlineMode = normalizeInlineModeValue(state.lastSettings.inlineMode);
 
-      if (inlineMode === "model") {
-        const modelId = normalizeText(state.lastSettings.modelId, 240);
-        if (!modelId) {
-          state.routeErrorText = "请先在设置页选择默认模型";
+      if (inlineMode === "instant") {
+        if (state.isRouteLoading) {
+          await refreshInstantRouteState({
+            inlineMode: "instant",
+            instantExecutor: state.activeInstantExecutor,
+            instantAgentId: state.activeInstantAgentId,
+            instantModelId: state.activeInstantModelId,
+          });
+        }
+        const instantExecutor = normalizeInstantExecutorValue(state.activeInstantExecutor);
+        const instantModelId = normalizeText(state.activeInstantModelId, 240);
+        const instantAgentId = normalizeText(state.activeInstantAgentId, 240);
+        if (instantExecutor === "model" && !instantModelId) {
+          state.routeErrorText = "请先在设置页选择即时模式默认模型";
+          renderAgentTag();
+          showToast("error", state.routeErrorText);
+          return;
+        }
+        if (instantExecutor === "acp" && !instantAgentId) {
+          state.routeErrorText = "请先在设置页选择 ACP Agent";
           renderAgentTag();
           showToast("error", state.routeErrorText);
           return;
         }
 
-        const result = await inferInlineComposerModel({
+        const result = await runInlineInstant({
           consoleHost: state.lastSettings.consoleHost,
           consolePort: state.lastSettings.consolePort,
           authToken: state.lastSettings.authToken,
-          modelId,
+          executorType: instantExecutor,
+          modelId: instantExecutor === "model" ? instantModelId : "",
+          agentId: instantExecutor === "acp" ? instantAgentId : "",
           prompt: taskPrompt,
-          system: DEFAULT_MODEL_SYSTEM_PROMPT,
+          system: instantExecutor === "model" ? DEFAULT_MODEL_SYSTEM_PROMPT : "",
           pageContext,
         });
 
+        state.lastInstantResult = result;
         state.replyText = normalizeText(result.text, 12_000);
         state.routeErrorText = "";
-        state.agentTagText = `直答 · ${modelId}`;
+        state.agentTagText =
+          instantExecutor === "acp" ? "即时 · ACP" : `即时 · ${instantModelId}`;
         renderReplyResult();
         renderAgentTag();
         await refreshAskHistoryCommands().catch(() => {});
-        showToast("success", "直答完成");
+        showToast("success", "即时执行完成");
         ui.input.focus();
         return;
       }
@@ -870,7 +1110,7 @@ export function bootstrapInlineComposer(): void {
         !state.activeAgentId ||
         !state.activeChatKey
       ) {
-        await refreshRouteState({
+        await refreshChannelRouteState({
           ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
           ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
         });
@@ -894,6 +1134,7 @@ export function bootstrapInlineComposer(): void {
       );
 
       state.replyText = "";
+      state.lastInstantResult = null;
       state.routeErrorText = "";
       state.agentTagText = `投递 · ${dispatched.agentLabel}`;
       renderReplyResult();
@@ -921,10 +1162,15 @@ export function bootstrapInlineComposer(): void {
       state.lastSettings = { ...DEFAULT_ROUTE_SETTINGS, ...settings };
       state.activeAgentId = settings.agentId || "";
       state.activeChatKey = settings.chatKey || "";
+      state.activeInstantExecutor = normalizeInstantExecutorValue(settings.instantExecutor);
+      state.activeInstantAgentId = settings.instantAgentId || "";
+      state.activeInstantModelId = settings.instantModelId || "";
       renderModeToggle();
       renderRoutePanel();
       renderAgentTag();
-      return refreshRouteState();
+      return normalizeInlineModeValue(settings.inlineMode) === "instant"
+        ? refreshInstantRouteState()
+        : refreshChannelRouteState();
     })
     .catch(() => {
       state.lastSettings = { ...DEFAULT_ROUTE_SETTINGS };
@@ -951,7 +1197,16 @@ export function bootstrapInlineComposer(): void {
     const nextOpen = !state.isRoutePanelOpen;
     setRoutePanelOpen(nextOpen);
     if (!nextOpen) return;
-    void refreshRouteState({
+    if (normalizeInlineModeValue(state.lastSettings.inlineMode) === "instant") {
+      void refreshInstantRouteState({
+        inlineMode: "instant",
+        instantExecutor: state.activeInstantExecutor,
+        ...(state.activeInstantAgentId ? { instantAgentId: state.activeInstantAgentId } : {}),
+        ...(state.activeInstantModelId ? { instantModelId: state.activeInstantModelId } : {}),
+      });
+      return;
+    }
+    void refreshChannelRouteState({
       ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
       ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
     });
@@ -960,16 +1215,20 @@ export function bootstrapInlineComposer(): void {
   ui.modeToggle.addEventListener("click", () => {
     if (ui.modeToggle.disabled) return;
     const nextMode: InlineComposerMode =
-      normalizeInlineModeValue(state.lastSettings.inlineMode) === "model" ? "agent" : "model";
+      normalizeInlineModeValue(state.lastSettings.inlineMode) === "instant"
+        ? "channel"
+        : "instant";
     state.lastSettings = {
       ...state.lastSettings,
       inlineMode: nextMode,
     };
     state.replyText = "";
+    state.lastInstantResult = null;
     renderReplyResult();
     renderModeToggle();
     void saveRouteSettings(state.lastSettings).catch(() => undefined);
-    showToast("success", nextMode === "model" ? "已切换到模型直答" : "已切换到 Agent 投递");
+    void (nextMode === "instant" ? refreshInstantRouteState() : refreshChannelRouteState());
+    showToast("success", nextMode === "instant" ? "已切换到即时模式" : "已切换到频道模式");
   });
 
   ui.input.addEventListener("input", () => {

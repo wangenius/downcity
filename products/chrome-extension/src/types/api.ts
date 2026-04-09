@@ -69,6 +69,16 @@ export interface ConsoleUiAgentOption {
      */
     statusText?: string;
   }>;
+
+  /**
+   * 当前 agent 的执行模式。
+   */
+  executionMode?: "api" | "acp" | "local";
+
+  /**
+   * 当前 agent 绑定的 ACP agent 类型。
+   */
+  agentType?: string;
 }
 
 /**
@@ -257,13 +267,13 @@ export interface ConsoleModelPoolResponse {
 }
 
 /**
- * `/api/ui/model/infer` 请求体。
+ * `/api/ui/inline/instant-run` 请求体。
  */
-export interface ConsoleModelInferRequestBody {
+export interface ConsoleInlineInstantRequestBody {
   /**
-   * 目标模型池 modelId。
+   * 即时执行器类型。
    */
-  modelId: string;
+  executorType: "model" | "acp";
 
   /**
    * 用户问题。
@@ -271,7 +281,7 @@ export interface ConsoleModelInferRequestBody {
   prompt: string;
 
   /**
-   * 可选系统提示。
+   * 可选 system prompt。
    */
   system?: string;
 
@@ -279,31 +289,51 @@ export interface ConsoleModelInferRequestBody {
    * 可选页面 Markdown 上下文。
    */
   pageContext?: string;
+
+  /**
+   * `model` executor 目标模型池 modelId。
+   */
+  modelId?: string;
+
+  /**
+   * `acp` executor 目标 agentId。
+   */
+  agentId?: string;
 }
 
 /**
- * `/api/ui/model/infer` 响应体。
+ * `/api/ui/inline/instant-run` 响应体。
  */
-export interface ConsoleModelInferResponse {
+export interface ConsoleInlineInstantResponse {
   /**
    * 请求是否成功。
    */
   success: boolean;
 
   /**
-   * 本次调用的模型池 modelId。
+   * 本次即时执行使用的临时 sessionId。
    */
-  modelId: string;
+  sessionId: string;
 
   /**
-   * 归一化后的用户问题。
+   * 本次实际执行使用的 executor。
    */
-  prompt: string;
+  executorType: "model" | "acp";
 
   /**
-   * 模型回复正文。
+   * 即时模式最终返回文本。
    */
   text: string;
+
+  /**
+   * 若走模型 executor，则回传 modelId。
+   */
+  modelId?: string;
+
+  /**
+   * 若走 ACP executor，则回传 agentId。
+   */
+  agentId?: string;
 
   /**
    * 错误信息。

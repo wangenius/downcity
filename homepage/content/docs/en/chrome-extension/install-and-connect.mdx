@@ -38,7 +38,7 @@ The default extension target is:
 If your Console UI is elsewhere, open the extension settings page. The page is split into three parts:
 
 - `Connect Console`: set Console Host and Port, then paste a Bearer token
-- `Inline Composer`: choose the default model used when the page-level composer is in model-reply mode
+- `Inline Composer`: choose the default mode, instant executor, instant model, and instant ACP agent
 - `Agent / Channel`: choose the default Agent and default Channel Chat used by the popup
 
 If you do not have a token yet, create one in the local terminal first:
@@ -59,14 +59,19 @@ Then paste the returned value into `Access Token`.
 
 After token save succeeds, the extension will attach `Authorization: Bearer ...` to later requests automatically.
 
-## What the Inline Composer Model Is For
+## How Inline Composer Modes Work
 
 The inline composer supports two modes:
 
-- `Agent Dispatch`: uses the default Agent / Channel Chat path
-- `Model Reply`: uses this default model for page-context answers
+- `Channel Mode`: uses the default Agent / Channel Chat delivery path
+- `Instant Mode`: runs a temporary session and returns the result directly on the page
 
-If you switch to `Model Reply` and no model is selected there, the inline composer will ask you to go back to settings and finish that configuration first.
+Inside `Instant Mode`, you can choose one executor:
+
+- `Model Executor`: runs against the selected Console model pool entry
+- `ACP Executor`: runs against the selected ACP agent project
+
+If the selected instant executor has no valid default target, the inline composer will ask you to go back to settings and complete that configuration first.
 
 ## How Agent and Chat Selection Works
 

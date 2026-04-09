@@ -4,14 +4,12 @@
  * 关键点（中文）：
  * - 所有 HTTP 交互统一从这里走，UI 只关注业务流程。
  * - 默认走本地 Console，也支持外部传入自定义 IP/端口地址。
- * - 同时覆盖 Agent 投递与模型直答两条请求路径。
+ * - 当前只保留设置页需要的拉取能力与频道模式投递能力。
  */
 
 import type {
   ChatKeyOption,
   ConsoleUiAgentsResponse,
-  ConsoleModelInferRequestBody,
-  ConsoleModelInferResponse,
   ConsoleModelOption,
   ConsoleModelPoolResponse,
   TuiContextExecuteRequestBody,
@@ -110,34 +108,6 @@ export async function fetchModelOptions(
   return models
     .filter((item) => item && item.isPaused !== true)
     .sort((a, b) => String(a.id || "").localeCompare(String(b.id || ""), "zh-CN"));
-}
-
-/**
- * 直接调用模型直答接口。
- */
-export async function inferModel(params: {
-  consoleBaseUrl?: string;
-  authToken?: string;
-  body: ConsoleModelInferRequestBody;
-}): Promise<ConsoleModelInferResponse> {
-  const url = `${resolveConsoleBaseUrl(params.consoleBaseUrl)}/api/ui/model/infer`;
-  const payload = await requestJson<ConsoleModelInferResponse>(
-    url,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(params.body),
-    },
-    {
-      authToken: params.authToken,
-    },
-  );
-  if (payload.success !== true) {
-    throw new Error(payload.error || "模型回复失败");
-  }
-  return payload;
 }
 
 /**

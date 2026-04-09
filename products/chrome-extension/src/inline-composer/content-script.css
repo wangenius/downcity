@@ -280,7 +280,7 @@
   color: var(--dc-fg);
 }
 
-.dc-mode-btn[data-mode="model"] {
+.dc-mode-btn[data-mode="instant"] {
   border-color: var(--dc-primary-ring);
   color: var(--dc-fg);
   background: var(--dc-primary-soft);

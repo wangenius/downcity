@@ -7,7 +7,14 @@
  */
 
 import type { ConsoleUiAgentOption } from "./api";
-import type { ExtensionSettings } from "./extension";
+import type {
+  ConsoleModelOption,
+  ConsoleInlineInstantResponse,
+} from "./api";
+import type {
+  ExtensionSettings,
+  InlineInstantExecutorType,
+} from "./extension";
 
 /**
  * 选区矩形快照。
@@ -75,7 +82,14 @@ export interface PageContentSnapshot {
 export interface InlineComposerRouteSettings
   extends Pick<
     ExtensionSettings,
-    "consoleHost" | "consolePort" | "agentId" | "chatKey" | "modelId" | "inlineMode"
+    | "consoleHost"
+    | "consolePort"
+    | "agentId"
+    | "chatKey"
+    | "inlineMode"
+    | "instantExecutor"
+    | "instantAgentId"
+    | "instantModelId"
   > {
   /**
    * 当前本地鉴权状态里的 Bearer Token。
@@ -139,9 +153,9 @@ export interface InlineComposerChatOption {
 }
 
 /**
- * 路由解析结果。
+ * 频道模式路由解析结果。
  */
-export interface RouteInfo {
+export interface ChannelRouteInfo {
   /**
    * 当前解析生效的设置快照。
    */
@@ -171,6 +185,46 @@ export interface RouteInfo {
    * 实际命中的 chatKey。
    */
   targetChatKey: string;
+}
+
+/**
+ * 即时模式路由解析结果。
+ */
+export interface InstantRouteInfo {
+  /**
+   * 当前解析生效的设置快照。
+   */
+  settings: InlineComposerRouteSettings;
+
+  /**
+   * Console 基础地址。
+   */
+  baseUrl: string;
+
+  /**
+   * 当前可选的 ACP Agent 列表。
+   */
+  agents: ConsoleUiAgentOption[];
+
+  /**
+   * 当前可选的模型池列表。
+   */
+  models: ConsoleModelOption[];
+
+  /**
+   * 当前实际命中的 executor。
+   */
+  targetExecutor: InlineInstantExecutorType;
+
+  /**
+   * 当前实际命中的 ACP Agent id。
+   */
+  targetAgentId: string;
+
+  /**
+   * 当前实际命中的模型池 modelId。
+   */
+  targetModelId: string;
 }
 
 /**
@@ -298,9 +352,19 @@ export interface MountedInlineComposerUi {
   routePanel: HTMLDivElement;
 
   /**
+   * 路由面板第一列标题。
+   */
+  agentTitle: HTMLDivElement;
+
+  /**
    * Agent 列表挂载点。
    */
   agentList: HTMLDivElement;
+
+  /**
+   * 路由面板第二列标题。
+   */
+  chatTitle: HTMLDivElement;
 
   /**
    * Chat 列表挂载点。
@@ -433,6 +497,16 @@ export interface InlineComposerState {
   routeChats: InlineComposerChatOption[];
 
   /**
+   * 当前可选即时模式 ACP Agent 列表。
+   */
+  instantAgents: ConsoleUiAgentOption[];
+
+  /**
+   * 当前可选即时模式模型列表。
+   */
+  instantModels: ConsoleModelOption[];
+
+  /**
    * 当前激活的 Agent id。
    */
   activeAgentId: string;
@@ -441,6 +515,21 @@ export interface InlineComposerState {
    * 当前激活的 chatKey。
    */
   activeChatKey: string;
+
+  /**
+   * 当前激活的即时模式 executor。
+   */
+  activeInstantExecutor: InlineInstantExecutorType;
+
+  /**
+   * 当前激活的即时模式 ACP Agent id。
+   */
+  activeInstantAgentId: string;
+
+  /**
+   * 当前激活的即时模式模型 id。
+   */
+  activeInstantModelId: string;
 
   /**
    * 路由刷新序列号，用于丢弃过期响应。
@@ -456,4 +545,9 @@ export interface InlineComposerState {
    * 最近一次直答结果。
    */
   replyText: string;
+
+  /**
+   * 最近一次即时模式结果。
+   */
+  lastInstantResult: ConsoleInlineInstantResponse | null;
 }

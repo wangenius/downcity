@@ -78,6 +78,8 @@ city console restart
 - 默认 `city console start` 绑定 `127.0.0.1:5315`，只能本机访问。
 - `city console start -p` 会绑定 `0.0.0.0:5315`，可以从外部访问。
 - 如果使用了 `0.0.0.0` 绑定，浏览器访问时请改用服务器 IP 或域名。
+- 公网模式下，启动结果会额外打印 `Public URL`。
+- 如果运行环境处于 NAT / 反向代理后面，建议显式设置 `DOWNCITY_PUBLIC_HOST` 或 `DOWNCITY_PUBLIC_URL`。
 
 ## 端口说明
 

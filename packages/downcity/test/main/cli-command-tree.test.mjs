@@ -24,6 +24,7 @@ test("root help hides internal and redundant commands", () => {
 
   assert.match(output, /\n  token\s+/);
   assert.match(output, /\n  env\s+/);
+  assert.match(output, /\n  update\s+/);
   assert.doesNotMatch(output, /\n  agents \[options\]/);
   assert.doesNotMatch(output, /\n  run\s+/);
 });
@@ -63,6 +64,12 @@ test("city console help hides internal port option", () => {
 
   assert.match(output, /-p, --public \[enabled\]/);
   assert.doesNotMatch(output, /--port <port>/);
+});
+
+test("city update help exposes package manager override", () => {
+  const output = readHelp(["update", "--help"]);
+
+  assert.match(output, /--manager <manager>/);
 });
 
 test("agent chat help exposes interactive and one-shot options", () => {

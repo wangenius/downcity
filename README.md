@@ -44,6 +44,12 @@ npm install -g downcity
 pnpm add -g downcity
 ```
 
+升级到最新版本：
+
+```bash
+city update
+```
+
 ### 初始化项目
 
 在你的项目根目录运行：
@@ -332,6 +338,5 @@ MIT © [Your Name]
 ---
 
 **Downcity 不是"帮你写代码"，而是定义：一个项目如何被一个 AI 长期、安全、可控地维护。**
-
 
 

@@ -78,6 +78,8 @@ city console restart
 - By default, `city console start` binds to `127.0.0.1:5315`, so only the local machine can access it.
 - `city console start -p` binds to `0.0.0.0:5315`, which allows external access.
 - When using a `0.0.0.0` bind, connect with the server IP or domain instead of `127.0.0.1`.
+- In public mode, startup output also prints `Public URL`.
+- If the runtime sits behind NAT / reverse proxy / load balancer, set `DOWNCITY_PUBLIC_HOST` or `DOWNCITY_PUBLIC_URL` for an exact external address.
 
 ## Port meanings
 

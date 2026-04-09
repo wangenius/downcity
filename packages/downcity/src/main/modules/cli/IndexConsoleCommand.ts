@@ -18,6 +18,7 @@ import { registerConfigCommand } from "./Config.js";
 import { registerModelCommand } from "./Model.js";
 import { consoleInitCommand } from "./ConsoleInit.js";
 import { parseBoolean, parsePort, createVersionBanner } from "./IndexSupport.js";
+import { updateCommand } from "./Update.js";
 import {
   consoleStatusCommand,
   printConsoleStatusPanel,
@@ -117,6 +118,26 @@ export function registerConsoleCommands(
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
       await consoleStatusCommand();
+    }));
+
+  program
+    .command("update")
+    .description("更新全局 downcity CLI 到最新版本")
+    .option("--manager <manager>", "指定包管理器（npm|pnpm|auto）", "auto")
+    .helpOption("--help", "display help for command")
+    .action(createVersionBanner(context.version, async (
+      _options: { manager?: string },
+      command: Command,
+    ) => {
+      const options = command.opts<{ manager?: string }>();
+      const manager = String(options.manager || "auto").trim().toLowerCase();
+      if (manager !== "auto" && manager !== "npm" && manager !== "pnpm") {
+        console.error(`❌ Invalid manager: ${manager}. Use npm|pnpm|auto.`);
+        process.exit(1);
+      }
+      await updateCommand({
+        manager: manager as "auto" | "npm" | "pnpm",
+      });
     }));
 
   program

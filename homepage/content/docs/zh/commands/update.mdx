@@ -1,0 +1,55 @@
+---
+title: city update
+description: 更新全局安装的 downcity CLI 到最新版本
+---
+
+# `city update`
+
+更新全局安装的 `downcity` CLI 到最新版本。
+
+默认情况下，Downcity 会先尝试判断当前 CLI 是通过 `npm` 还是 `pnpm` 安装的，然后优先使用同一个包管理器完成更新。
+
+## 用法
+
+```bash
+city update
+```
+
+```bash
+city update --manager npm
+```
+
+```bash
+city update --manager pnpm
+```
+
+## 常用参数
+
+- `--manager <manager>`：指定 `auto`、`npm` 或 `pnpm`（默认 `auto`）
+
+## 关键行为
+
+- `city update` 只更新全局 CLI 包本身。
+- 不会自动重启已经运行中的 city runtime / Console 进程。
+- 更新完成后，如果你希望运行中的进程也加载新版本，请执行 [`city restart`](/zh/docs/commands/restart)。
+
+## 相关命令
+
+- [`city restart`](/zh/docs/commands/restart)
+- [`city status`](/zh/docs/commands/status)
+
+## 示例输出
+
+```text
+$ city update
+downcity v1.0.0
+
+Updating downcity
+  manager   npm
+  command   npm install -g downcity@latest
+
+Downcity updated
+  package   downcity@latest
+  manager   npm
+  note      如果当前已有 city runtime / Console 在运行，建议执行 `city restart` 载入最新版本。
+```

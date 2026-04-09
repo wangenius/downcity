@@ -40,6 +40,8 @@ city start -p
 - `city start --console` still binds Console to `127.0.0.1:5315` by default.
 - `city start -p` starts Console automatically and switches the bind address to `0.0.0.0:5315`, which is suitable for server access from outside.
 - When Console is bound to `0.0.0.0`, use the server IP or domain to connect, not `127.0.0.1`.
+- In public mode, startup output also prints `Public URL`.
+- If the machine cannot determine a real public IP by itself (for example behind NAT / reverse proxy / load balancer), set `DOWNCITY_PUBLIC_HOST` or `DOWNCITY_PUBLIC_URL` explicitly.
 
 ## Port meanings
 
@@ -67,6 +69,7 @@ city version: 1.0.0
 ✅ Console started
    pid: <consolePid>
    url: http://127.0.0.1:5315
+   public_url: http://203.0.113.10:5315
    log: <consoleLogPath>
    port: 5315
    usage: Console Web UI / control plane

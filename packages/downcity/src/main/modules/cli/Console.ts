@@ -29,6 +29,7 @@ import type {
 } from "@/shared/types/Console.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { buildConsolePortFacts } from "./PortHints.js";
+import { resolveConsolePublicUrl } from "./PublicAccess.js";
 
 const DEFAULT_CONSOLE_HOST = "127.0.0.1";
 const DEFAULT_CONSOLE_PORT = 5315;
@@ -290,11 +291,18 @@ export async function runConsoleRuntimeCommand(
   await gateway.start({ host, port });
 
   const visibleHost = normalizeHost(host);
+  const publicUrl = resolveConsolePublicUrl({
+    bindHost: host,
+    port,
+    publicMode: options?.public === true,
+  });
   emitCliBlock({
     tone: "success",
     title: "Console started",
     summary: "foreground",
-    facts: buildConsolePortFacts(`http://${visibleHost}:${port}`),
+    facts: buildConsolePortFacts(`http://${visibleHost}:${port}`, {
+      publicUrl,
+    }),
     note: "单个 Console 实例可切换查看多个已运行 agent。",
   });
 
@@ -327,16 +335,19 @@ export async function startConsoleCommand(params: {
 
   const status = await getConsoleRuntimeStatus();
   if (status.running) {
+    const statusUrl = String(status.url || "").trim();
+    const publicUrl = resolveConsolePublicUrl({
+      bindHost: params.options?.host || "",
+      port: status.port || DEFAULT_CONSOLE_PORT,
+      publicMode: params.options?.public === true,
+    });
     emitCliBlock({
       tone: "info",
       title: "Console already running",
-      facts: status.url
-        ? [
-            {
-              label: "URL",
-              value: status.url,
-            },
-          ]
+      facts: statusUrl
+        ? buildConsolePortFacts(statusUrl, {
+            publicUrl,
+          })
         : [],
     });
     return;
@@ -416,7 +427,13 @@ export async function startConsoleCommand(params: {
   emitCliBlock({
     tone: "success",
     title: "Console started",
-    facts: buildConsolePortFacts(`http://${normalizeHost(host)}:${port}`),
+    facts: buildConsolePortFacts(`http://${normalizeHost(host)}:${port}`, {
+      publicUrl: resolveConsolePublicUrl({
+        bindHost: host,
+        port,
+        publicMode: params.options?.public === true,
+      }),
+    }),
   });
 }
 

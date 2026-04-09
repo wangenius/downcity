@@ -31,7 +31,27 @@ export function buildRuntimePortFacts(): Array<{
 /**
  * 生成 Console 启动提示。
  */
-export function buildConsolePortFacts(url: string): Array<{
+export function buildConsolePortFacts(
+  url: string,
+  options?: {
+    publicUrl?: string | null;
+  },
+): Array<{
+  label: string;
+  value: string;
+}> {
+  return buildConsolePortFactsWithOptions(url, options);
+}
+
+/**
+ * 生成 Console 启动提示。
+ */
+export function buildConsolePortFactsWithOptions(
+  url: string,
+  options?: {
+    publicUrl?: string | null;
+  },
+): Array<{
   label: string;
   value: string;
 }> {
@@ -40,6 +60,14 @@ export function buildConsolePortFacts(url: string): Array<{
       label: "URL",
       value: url,
     },
+    ...(String(options?.publicUrl || "").trim()
+      ? [
+          {
+            label: "Public URL",
+            value: String(options?.publicUrl || "").trim(),
+          },
+        ]
+      : []),
     {
       label: "Port",
       value: String(DEFAULT_CONSOLE_UI_PORT),

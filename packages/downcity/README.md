@@ -10,6 +10,12 @@ downcity -v
 
 > `city` 与 `downcity` 指向同一个 CLI。
 
+upgrade:
+
+```bash
+city update
+```
+
 ## quick start
 
 ### 1. initialize console

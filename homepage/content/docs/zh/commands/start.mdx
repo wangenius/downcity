@@ -40,6 +40,8 @@ city start -p
 - `city start --console` 默认仍绑定 `127.0.0.1:5315`。
 - `city start -p` 会自动启动 Console，并把监听地址切到 `0.0.0.0:5315`，适合服务器对外访问。
 - 如果绑定的是 `0.0.0.0`，外部访问时请使用服务器实际 IP 或域名，而不是 `127.0.0.1`。
+- 在公网模式下，启动结果会额外打印 `Public URL`。
+- 如果机器本身拿不到公网 IP（例如处在 NAT / SLB / 反向代理后面），请显式设置 `DOWNCITY_PUBLIC_HOST` 或 `DOWNCITY_PUBLIC_URL`。
 
 ## 端口说明
 
@@ -67,6 +69,7 @@ city version: 1.0.0
 ✅ Console started
    pid: <consolePid>
    url: http://127.0.0.1:5315
+   public_url: http://203.0.113.10:5315
    log: <consoleLogPath>
    port: 5315
    usage: Console Web UI / control plane

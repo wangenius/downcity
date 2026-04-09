@@ -148,6 +148,36 @@ export const webPlugin: Plugin = {
     primaryAction: "install",
     statusAction: "status",
   },
+  usage: {
+    title: "配置联网方式",
+    description: "选择当前 agent 默认使用的联网 provider 与提示词注入策略。",
+    fields: [
+      {
+        key: "provider",
+        label: "当前 Provider",
+        type: "select",
+        required: true,
+        sourceAction: "providers",
+      },
+      {
+        key: "injectPrompt",
+        label: "注入 Provider 提示词",
+        type: "boolean",
+        trueLabel: "开启",
+        falseLabel: "关闭",
+        description: "开启后，agent system prompt 会自动注入当前 provider 的使用约束。",
+      },
+      {
+        key: "browserCommand",
+        label: "Browser 命令",
+        type: "string",
+        placeholder: "agent-browser",
+        description: "仅在 provider 为 agent-browser 时生效。",
+      },
+    ],
+    saveAction: "configure",
+    statusAction: "status",
+  },
   async availability(context) {
     if (!isPluginEnabled({ plugin: webPlugin })) {
       return {

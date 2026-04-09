@@ -187,3 +187,32 @@ test("ui global plugin action toggles city lifecycle without agent", async () =>
   assert.equal(onResponse.status, 200);
   assert.equal(onBody.success, true);
 });
+
+test("ui agent plugin fallback keeps setup and usage definitions separate", async () => {
+  const app = new Hono();
+
+  registerConsolePluginRoutes({
+    app,
+    readRequestedAgentId() {
+      return "agent-lmp";
+    },
+    async resolveSelectedAgent() {
+      return {
+        id: "agent-lmp",
+        name: "Agent LMP",
+        projectRoot: "/tmp/agent-lmp",
+        baseUrl: "",
+      };
+    },
+  });
+
+  const response = await app.request("/api/ui/plugins?agent=agent-lmp");
+  const body = await response.json();
+  const lmpItem = body.plugins.find((item) => item?.name === "lmp");
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.runtimeConnected, false);
+  assert.equal(lmpItem?.config?.setup?.primaryAction, "install");
+  assert.equal(lmpItem?.config?.usage?.saveAction, "configure");
+});

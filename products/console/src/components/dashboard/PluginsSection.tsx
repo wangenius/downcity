@@ -1,10 +1,10 @@
 /**
- * Plugin 状态与 setup 区。
+ * Plugin 状态、setup 与 usage 区。
  *
  * 关键点（中文）
  * - 插件卡片层只保留状态、主动作和少量辅助动作。
- * - 安装/配置统一走 plugin 自己声明的 setup schema。
- * - setup 字段当前严格限制为 `select` / `checkbox`，避免 UI 再退回到自由输入。
+ * - setup 只负责 plugin 自身安装/依赖修复；usage 只负责 agent 如何使用该 plugin。
+ * - setup 与 usage 都由 plugin 自己声明 schema，Console 只做协议渲染。
  */
 
 import * as React from "react"
@@ -29,6 +29,7 @@ import {
   Label,
 } from "@downcity/ui"
 import { DashboardModule } from "./DashboardModule"
+import { ConfigFieldEditor } from "./ConfigFieldEditor"
 import { useConfirmDialog } from "../ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import type {
@@ -38,15 +39,27 @@ import type {
   UiPluginSetupDefinition,
   UiPluginSetupField,
   UiPluginSetupFieldOption,
+  UiPluginUsageDefinition,
+  UiPluginUsageField,
+  UiPluginUsageFieldOption,
 } from "../../types/Dashboard"
 
-type PendingActionKind = "toggle" | "status" | "doctor" | "setup" | "options"
+type PendingActionKind =
+  | "toggle"
+  | "status"
+  | "doctor"
+  | "setup"
+  | "usage"
+  | "setupOptions"
+  | "usageOptions"
 
-type SetupDraftValue = string | boolean
+type EditorDraftValue = string | boolean
 
-type SetupDraftState = Record<string, SetupDraftValue>
+type EditorDraftState = Record<string, EditorDraftValue>
 
 type SetupOptionsState = Record<string, UiPluginSetupFieldOption[]>
+
+type UsageOptionsState = Record<string, UiPluginUsageFieldOption[]>
 
 type PluginsSectionBaseProps = {
   /**
@@ -165,7 +178,10 @@ function ToolAction(props: {
   )
 }
 
-function normalizeSetupDraft(setup: UiPluginSetupDefinition | undefined, data: unknown): SetupDraftState {
+function normalizeSetupDraft(
+  setup: UiPluginSetupDefinition | undefined,
+  data: unknown,
+): EditorDraftState {
   const payload = data && typeof data === "object" ? (data as Record<string, unknown>) : null
   const plugin =
     payload?.plugin && typeof payload.plugin === "object"
@@ -180,7 +196,7 @@ function normalizeSetupDraft(setup: UiPluginSetupDefinition | undefined, data: u
     ...(transcriber || {}),
   }
 
-  const next: SetupDraftState = {}
+  const next: EditorDraftState = {}
   for (const field of setup?.fields || []) {
     const raw = source[field.key]
     if (field.type === "checkbox") {
@@ -200,7 +216,10 @@ function normalizeSetupDraft(setup: UiPluginSetupDefinition | undefined, data: u
   return next
 }
 
-function extractSetupOptions(field: UiPluginSetupField, data: unknown): UiPluginSetupFieldOption[] {
+function extractSetupOptions(
+  field: UiPluginSetupField,
+  data: unknown,
+): UiPluginSetupFieldOption[] {
   const payload = data && typeof data === "object" ? (data as Record<string, unknown>) : null
   const optionRows = Array.isArray(payload?.options)
     ? payload.options
@@ -223,7 +242,10 @@ function extractSetupOptions(field: UiPluginSetupField, data: unknown): UiPlugin
   return options
 }
 
-function buildSetupPayload(setup: UiPluginSetupDefinition | undefined, draft: SetupDraftState): Record<string, unknown> {
+function buildSetupPayload(
+  setup: UiPluginSetupDefinition | undefined,
+  draft: EditorDraftState,
+): Record<string, unknown> {
   const payload: Record<string, unknown> = {}
   for (const field of setup?.fields || []) {
     const value = draft[field.key]
@@ -251,6 +273,91 @@ function getPrimaryActionLabel(mode: UiPluginSetupDefinition["mode"], needsAtten
   return needsAttention ? "修复并更新配置" : "更新安装配置"
 }
 
+function normalizeUsageDraft(
+  usage: UiPluginUsageDefinition | undefined,
+  data: unknown,
+): EditorDraftState {
+  const payload = data && typeof data === "object" ? (data as Record<string, unknown>) : null
+  const plugin =
+    payload?.plugin && typeof payload.plugin === "object"
+      ? (payload.plugin as Record<string, unknown>)
+      : payload
+
+  const next: EditorDraftState = {}
+  for (const field of usage?.fields || []) {
+    const raw = plugin?.[field.key]
+    if (field.type === "boolean") {
+      next[field.key] = raw === true
+      continue
+    }
+    if (typeof raw === "string" && raw.trim()) {
+      next[field.key] = raw.trim()
+      continue
+    }
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      next[field.key] = String(raw)
+      continue
+    }
+    if (Array.isArray(field.options) && field.options.length > 0) {
+      next[field.key] = field.options[0].value
+      continue
+    }
+    next[field.key] = ""
+  }
+  return next
+}
+
+function extractUsageOptions(
+  field: UiPluginUsageField,
+  data: unknown,
+): UiPluginUsageFieldOption[] {
+  const payload = data && typeof data === "object" ? (data as Record<string, unknown>) : null
+  const optionRows = Array.isArray(payload?.options)
+    ? payload.options
+    : Array.isArray(payload?.models)
+      ? payload.models
+      : []
+  const options: UiPluginUsageFieldOption[] = []
+
+  for (const item of optionRows) {
+    const row = item && typeof item === "object" ? (item as Record<string, unknown>) : null
+    const value = String(row?.value || row?.id || "").trim()
+    if (!value) continue
+    options.push({
+      label: String(row?.label || value).trim() || value,
+      value,
+      description: String(row?.description || row?.hint || "").trim() || undefined,
+    })
+  }
+
+  return options
+}
+
+function buildUsagePayload(
+  usage: UiPluginUsageDefinition | undefined,
+  draft: EditorDraftState,
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+  for (const field of usage?.fields || []) {
+    const value = draft[field.key]
+    if (field.type === "boolean") {
+      payload[field.key] = value === true
+      continue
+    }
+    const text = typeof value === "string" ? value.trim() : ""
+    if (!text) continue
+    if (field.type === "number") {
+      const parsed = Number(text)
+      if (Number.isFinite(parsed)) {
+        payload[field.key] = parsed
+      }
+      continue
+    }
+    payload[field.key] = text
+  }
+  return payload
+}
+
 export function PluginsSection(props: PluginsSectionProps) {
   const { scope, plugins, onRunAction } = props
   const hasRunningAgent = scope === "agent" ? props.hasRunningAgent : false
@@ -260,10 +367,13 @@ export function PluginsSection(props: PluginsSectionProps) {
   const [pendingActions, setPendingActions] = React.useState<Record<string, PendingActionKind | null>>({})
   const [enabledOverrides, setEnabledOverrides] = React.useState<Record<string, boolean | undefined>>({})
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({})
-  const [setupDrafts, setSetupDrafts] = React.useState<Record<string, SetupDraftState>>({})
+  const [setupDrafts, setSetupDrafts] = React.useState<Record<string, EditorDraftState>>({})
   const [setupOptions, setSetupOptions] = React.useState<Record<string, SetupOptionsState>>({})
+  const [usageDrafts, setUsageDrafts] = React.useState<Record<string, EditorDraftState>>({})
+  const [usageOptions, setUsageOptions] = React.useState<Record<string, UsageOptionsState>>({})
   const [setupLogs, setSetupLogs] = React.useState<Record<string, string[]>>({})
   const [installerPluginName, setInstallerPluginName] = React.useState("")
+  const [usagePluginName, setUsagePluginName] = React.useState("")
 
   React.useEffect(() => {
     setEnabledOverrides((current) => {
@@ -311,6 +421,11 @@ export function PluginsSection(props: PluginsSectionProps) {
   const installerPlugin = React.useMemo(
     () => plugins.find((item) => String(item.name || "").trim() === installerPluginName) || null,
     [plugins, installerPluginName],
+  )
+
+  const usagePlugin = React.useMemo(
+    () => plugins.find((item) => String(item.name || "").trim() === usagePluginName) || null,
+    [plugins, usagePluginName],
   )
 
   const executeAction = React.useCallback(
@@ -380,7 +495,7 @@ export function PluginsSection(props: PluginsSectionProps) {
 
       for (const field of setup.fields) {
         if (!field.sourceAction || !hasAction(actionItems, field.sourceAction)) continue
-        const result = await executeAction(pluginName, "options", field.sourceAction)
+        const result = await executeAction(pluginName, "setupOptions", field.sourceAction)
         if (!result?.success) continue
         const options = extractSetupOptions(field, result.data)
         setSetupOptions((current) => ({
@@ -397,6 +512,56 @@ export function PluginsSection(props: PluginsSectionProps) {
             typeof draft[field.key] !== "string" &&
             options.length > 0
           ) {
+            draft[field.key] = options[0].value
+          }
+          if (field.type === "select" && !(draft[field.key] as string) && options.length > 0) {
+            draft[field.key] = options[0].value
+          }
+          return {
+            ...current,
+            [pluginName]: draft,
+          }
+        })
+      }
+    },
+    [executeAction],
+  )
+
+  const syncUsageState = React.useCallback(
+    async (plugin: UiPluginRuntimeItem) => {
+      const pluginName = String(plugin.name || "").trim()
+      const actionItems = Array.isArray(plugin.config?.actions) ? plugin.config?.actions : []
+      const usage = plugin.config?.usage
+      if (!pluginName || !usage) return
+
+      if (usage.statusAction && hasAction(actionItems, usage.statusAction)) {
+        const result = await executeAction(pluginName, "status", usage.statusAction)
+        if (result?.success) {
+          setUsageDrafts((current) => ({
+            ...current,
+            [pluginName]: {
+              ...(current[pluginName] || {}),
+              ...normalizeUsageDraft(usage, result.data),
+            },
+          }))
+        }
+      }
+
+      for (const field of usage.fields) {
+        if (!field.sourceAction || !hasAction(actionItems, field.sourceAction)) continue
+        const result = await executeAction(pluginName, "usageOptions", field.sourceAction)
+        if (!result?.success) continue
+        const options = extractUsageOptions(field, result.data)
+        setUsageOptions((current) => ({
+          ...current,
+          [pluginName]: {
+            ...(current[pluginName] || {}),
+            [field.key]: options,
+          },
+        }))
+        setUsageDrafts((current) => {
+          const draft = { ...(current[pluginName] || {}) }
+          if (field.type === "select" && typeof draft[field.key] !== "string" && options.length > 0) {
             draft[field.key] = options[0].value
           }
           if (field.type === "select" && !(draft[field.key] as string) && options.length > 0) {
@@ -430,9 +595,36 @@ export function PluginsSection(props: PluginsSectionProps) {
     setInstallerPluginName("")
   }, [])
 
+  const openUsageEditor = React.useCallback(
+    (plugin: UiPluginRuntimeItem) => {
+      const pluginName = String(plugin.name || "").trim()
+      if (!pluginName || !plugin.config?.usage) return
+      setUsagePluginName(pluginName)
+      void syncUsageState(plugin)
+    },
+    [syncUsageState],
+  )
+
+  const closeUsageEditor = React.useCallback(() => {
+    setUsagePluginName("")
+  }, [])
+
   const setSetupField = React.useCallback(
-    (pluginName: string, fieldKey: string, value: SetupDraftValue) => {
+    (pluginName: string, fieldKey: string, value: EditorDraftValue) => {
       setSetupDrafts((current) => ({
+        ...current,
+        [pluginName]: {
+          ...(current[pluginName] || {}),
+          [fieldKey]: value,
+        },
+      }))
+    },
+    [],
+  )
+
+  const setUsageField = React.useCallback(
+    (pluginName: string, fieldKey: string, value: EditorDraftValue) => {
+      setUsageDrafts((current) => ({
         ...current,
         [pluginName]: {
           ...(current[pluginName] || {}),
@@ -462,6 +654,19 @@ export function PluginsSection(props: PluginsSectionProps) {
     }
     closeInstaller()
   }, [closeInstaller, executeAction, installerPlugin, setupDrafts, syncSetupState])
+
+  const runUsageAction = React.useCallback(async () => {
+    if (!usagePlugin?.config?.usage) return
+    const pluginName = String(usagePlugin.name || "").trim()
+    const usage = usagePlugin.config.usage
+    const draft = usageDrafts[pluginName] || {}
+    const payload = buildUsagePayload(usage, draft)
+    await executeAction(pluginName, "usage", usage.saveAction, payload)
+    if (usage.statusAction) {
+      await syncUsageState(usagePlugin)
+    }
+    closeUsageEditor()
+  }, [closeUsageEditor, executeAction, syncUsageState, usageDrafts, usagePlugin])
 
   return (
     <>
@@ -499,6 +704,7 @@ export function PluginsSection(props: PluginsSectionProps) {
               const description = String(item.description || "").trim()
               const actionItems = Array.isArray(item.config?.actions) ? item.config?.actions : []
               const setup = item.config?.setup
+              const usage = item.config?.usage
               const snapshotMode = getSnapshotMode(item)
               const effectiveEnabled = enabledOverrides[name] ?? getSnapshotEnabled(item)
               const pending = pendingActions[name] || null
@@ -506,7 +712,9 @@ export function PluginsSection(props: PluginsSectionProps) {
               const statusLoading = pending === "status"
               const doctorLoading = pending === "doctor"
               const setupLoading = pending === "setup"
-              const optionsLoading = pending === "options"
+              const usageLoading = pending === "usage"
+              const setupOptionsLoading = pending === "setupOptions"
+              const usageOptionsLoading = pending === "usageOptions"
               const canRunStatus = hasAction(actionItems, "status")
               const canRunDoctor = hasAction(actionItems, "doctor")
               const canRunOn = hasAction(actionItems, "on")
@@ -571,10 +779,20 @@ export function PluginsSection(props: PluginsSectionProps) {
                       {scope === "agent" && setup ? (
                         <ToolAction
                           icon={<Settings2Icon className="size-3.5" />}
-                          label={snapshotMode === "attention" ? "修复" : "配置"}
-                          loading={setupLoading || optionsLoading}
-                          disabled={toggleLoading || statusLoading || doctorLoading}
+                          label={snapshotMode === "attention" ? "修复" : "安装"}
+                          loading={setupLoading || setupOptionsLoading}
+                          disabled={toggleLoading || statusLoading || doctorLoading || usageLoading || usageOptionsLoading}
                           onClick={() => openInstaller(item)}
+                        />
+                      ) : null}
+
+                      {scope === "agent" && usage ? (
+                        <ToolAction
+                          icon={<Settings2Icon className="size-3.5" />}
+                          label="选项"
+                          loading={usageLoading || usageOptionsLoading}
+                          disabled={toggleLoading || statusLoading || doctorLoading || setupLoading || setupOptionsLoading}
+                          onClick={() => openUsageEditor(item)}
                         />
                       ) : null}
 
@@ -583,7 +801,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                           icon={<RefreshCcwIcon className="size-3.5" />}
                           label="同步"
                           loading={statusLoading}
-                          disabled={toggleLoading || doctorLoading || setupLoading || optionsLoading}
+                          disabled={toggleLoading || doctorLoading || setupLoading || setupOptionsLoading || usageLoading || usageOptionsLoading}
                           onClick={() => {
                             void executeAction(name, "status", "status")
                           }}
@@ -595,7 +813,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                           icon={<PowerIcon className="size-3.5" />}
                           label={effectiveEnabled ? "停用" : "启用"}
                           loading={toggleLoading}
-                          disabled={statusLoading || doctorLoading || setupLoading || optionsLoading}
+                          disabled={statusLoading || doctorLoading || setupLoading || setupOptionsLoading || usageLoading || usageOptionsLoading}
                           tone={effectiveEnabled ? "danger" : "default"}
                           onClick={() => {
                             const nextAction = effectiveEnabled ? "off" : "on"
@@ -696,7 +914,14 @@ export function PluginsSection(props: PluginsSectionProps) {
                               size="sm"
                               variant="outline"
                               className="h-8 rounded-[12px] px-3"
-                              disabled={toggleLoading || statusLoading || setupLoading || optionsLoading}
+                              disabled={
+                                toggleLoading ||
+                                statusLoading ||
+                                setupLoading ||
+                                setupOptionsLoading ||
+                                usageLoading ||
+                                usageOptionsLoading
+                              }
                               onClick={() => {
                                 void executeAction(name, "doctor", "doctor")
                               }}
@@ -739,7 +964,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                   const busy =
                     pendingActions[pluginName] === "setup" ||
                     pendingActions[pluginName] === "status" ||
-                    pendingActions[pluginName] === "options"
+                    pendingActions[pluginName] === "setupOptions"
                   const mode = getSnapshotMode(installerPlugin)
                   const reasons = Array.isArray(installerPlugin.availability?.reasons)
                     ? installerPlugin.availability?.reasons
@@ -848,6 +1073,112 @@ export function PluginsSection(props: PluginsSectionProps) {
                         >
                           {busy ? <Loader2Icon className="size-4 animate-spin" /> : null}
                           <span>{getPrimaryActionLabel(setup.mode, mode === "attention")}</span>
+                        </Button>
+                      </DialogFooter>
+                    </>
+                  )
+                })()}
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(usagePlugin)}
+        onOpenChange={(open) => {
+          if (!open) closeUsageEditor()
+        }}
+      >
+        <DialogContent className="w-[min(92vw,560px)] overflow-hidden border border-border/75 bg-background p-0 shadow-[0_24px_72px_rgba(17,17,19,0.12)]">
+          {usagePlugin?.config?.usage ? (
+            <>
+              <DialogHeader className="border-b border-border/60 px-5 py-4">
+                <DialogTitle>{usagePlugin.config.usage.title}</DialogTitle>
+                <DialogDescription className="max-w-[40ch] text-[12px] leading-5 text-muted-foreground">
+                  {usagePlugin.config.usage.description || "配置当前 agent 如何使用这个 plugin。"}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 px-5 py-5">
+                {(() => {
+                  const pluginName = String(usagePlugin.name || "").trim()
+                  const usage = usagePlugin.config?.usage
+                  const busy =
+                    pendingActions[pluginName] === "usage" ||
+                    pendingActions[pluginName] === "status" ||
+                    pendingActions[pluginName] === "usageOptions"
+                  const draft = usageDrafts[pluginName] || {}
+                  const optionMap = usageOptions[pluginName] || {}
+
+                  return (
+                    <>
+                      <div className="rounded-[16px] bg-secondary/55 px-4 py-3">
+                        <div className="text-sm font-medium text-foreground">
+                          {String(usagePlugin.title || pluginName)}
+                        </div>
+                        <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
+                          这里修改的是 agent 运行时如何使用该 plugin，不负责依赖安装或资源修复。
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {usage.fields.map((field) => {
+                          const options = Array.isArray(optionMap[field.key]) && optionMap[field.key].length > 0
+                            ? optionMap[field.key]
+                            : Array.isArray(field.options)
+                              ? field.options
+                              : []
+                          const currentValue =
+                            field.type === "boolean"
+                              ? draft[field.key] === true
+                              : typeof draft[field.key] === "string"
+                                ? String(draft[field.key] || "")
+                                : options[0]?.value || ""
+
+                          return (
+                            <ConfigFieldEditor
+                              key={`${pluginName}:usage:${field.key}`}
+                              field={{
+                                key: field.key,
+                                label: field.label,
+                                type: field.type,
+                                placeholder: field.placeholder,
+                                description: field.description,
+                                required: field.required,
+                                disabled: field.disabled || busy,
+                                trueLabel: field.trueLabel,
+                                falseLabel: field.falseLabel,
+                                options: options.map((option) => ({
+                                  value: option.value,
+                                  label: option.label,
+                                  description: option.description,
+                                })),
+                              }}
+                              value={currentValue}
+                              onChange={(value) => setUsageField(pluginName, field.key, value)}
+                            />
+                          )
+                        })}
+                      </div>
+
+                      <DialogFooter className="border-t border-border/60 px-0 pt-4 sm:justify-end">
+                        <Button type="button" variant="outline" onClick={closeUsageEditor} disabled={busy}>
+                          取消
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={
+                            busy ||
+                            usage.fields.some((field) => {
+                              if (field.required !== true || field.type === "boolean") return false
+                              return !String(usageDrafts[pluginName]?.[field.key] || "").trim()
+                            })
+                          }
+                          onClick={() => void runUsageAction()}
+                        >
+                          {busy ? <Loader2Icon className="size-4 animate-spin" /> : null}
+                          <span>保存选项</span>
                         </Button>
                       </DialogFooter>
                     </>

@@ -131,6 +131,50 @@ export const ttsPlugin: Plugin = {
     primaryAction: "install",
     statusAction: "status",
   },
+  usage: {
+    title: "配置语音合成",
+    description: "设置当前 agent 默认使用的语音模型与输出参数。",
+    fields: [
+      {
+        key: "modelId",
+        label: "默认模型",
+        type: "select",
+        required: true,
+        sourceAction: "models",
+      },
+      {
+        key: "format",
+        label: "输出格式",
+        type: "select",
+        required: true,
+        options: [
+          { label: "WAV", value: "wav", description: "兼容性最好，适合绝大多数渠道。" },
+          { label: "FLAC", value: "flac", description: "体积更小，适合存档或传输。" },
+        ],
+      },
+      {
+        key: "speed",
+        label: "默认语速",
+        type: "number",
+        placeholder: "1",
+        description: "1 为正常语速，可按需要设置为 0.8、1.2 等。",
+      },
+      {
+        key: "language",
+        label: "默认语言提示",
+        type: "string",
+        placeholder: "auto / zh / en",
+      },
+      {
+        key: "voice",
+        label: "默认音色",
+        type: "string",
+        placeholder: "可选音色 ID",
+      },
+    ],
+    saveAction: "configure",
+    statusAction: "status",
+  },
   async availability(context) {
     if (!isPluginEnabled({ plugin: ttsPlugin })) {
       return {

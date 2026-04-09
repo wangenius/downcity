@@ -19,6 +19,7 @@ import type {
   PluginActionResult,
   PluginAvailability,
   PluginSetupDefinition,
+  PluginUsageDefinition,
   PluginView,
 } from "@/shared/types/Plugin.js";
 import type { JsonValue } from "@/shared/types/Json.js";
@@ -37,6 +38,7 @@ type PluginUiItem = PluginView & {
   config: {
     actions: PluginActionConfigItem[];
     setup?: PluginSetupDefinition;
+    usage?: PluginUsageDefinition;
   };
 };
 
@@ -96,7 +98,11 @@ function buildGlobalPluginActionConfig(
   );
 }
 
-function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[]; setup?: PluginSetupDefinition }> {
+function buildPluginConfigMap(): Map<string, {
+  actions: PluginActionConfigItem[];
+  setup?: PluginSetupDefinition;
+  usage?: PluginUsageDefinition;
+}> {
   return new Map(
     listStaticPluginViews().map((view) => [
       view.name,
@@ -104,6 +110,9 @@ function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[]
         actions: buildPluginActionConfig(findBuiltinPlugin(view.name)),
         ...(findBuiltinPlugin(view.name)?.setup
           ? { setup: findBuiltinPlugin(view.name)?.setup }
+          : {}),
+        ...(findBuiltinPlugin(view.name)?.usage
+          ? { usage: findBuiltinPlugin(view.name)?.usage }
           : {}),
       },
     ] as const),

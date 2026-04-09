@@ -38,6 +38,9 @@ city plugin action asr status
 - `city plugin action ...` 仍然是高级执行入口，真正执行时依赖具体 agent 项目。
 - 日常使用更推荐直接使用具体 plugin 根命令，例如 `city web ...`、`city skill ...`、`city asr ...`、`city tts ...`。
 - plugin 启用态现在属于 city 级事实；静态状态页不再读取 agent `downcity.json`。
+- Console 的 agent 插件页现在把两类配置明确分开：
+  - `安装/修复` 只处理 plugin 自身依赖、asset、provider 安装等控制面动作。
+  - `选项` 只处理当前 agent 如何使用该 plugin 的运行参数。
 
 ## 相关页面
 

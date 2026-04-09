@@ -185,6 +185,48 @@ export const asrPlugin: Plugin = {
     primaryAction: "install",
     statusAction: "status",
   },
+  usage: {
+    title: "配置语音识别",
+    description: "设置当前 agent 如何把语音内容转成文本并注入对话链路。",
+    fields: [
+      {
+        key: "injectPrompt",
+        label: "注入 Prompt 提示",
+        type: "boolean",
+        trueLabel: "开启",
+        falseLabel: "关闭",
+        description: "开启后会把 ASR 使用约束注入到 agent 的系统提示词。",
+      },
+      {
+        key: "augmentMessage",
+        label: "自动增强消息",
+        type: "boolean",
+        trueLabel: "开启",
+        falseLabel: "关闭",
+        description: "开启后，入站语音消息会先自动转写再交给 agent。",
+      },
+      {
+        key: "modelId",
+        label: "默认模型",
+        type: "select",
+        sourceAction: "models",
+      },
+      {
+        key: "language",
+        label: "默认语言提示",
+        type: "string",
+        placeholder: "auto / zh / en",
+      },
+      {
+        key: "timeoutMs",
+        label: "超时（毫秒）",
+        type: "number",
+        placeholder: "60000",
+      },
+    ],
+    saveAction: "configure",
+    statusAction: "status",
+  },
   async availability(context) {
     if (!isPluginEnabled({ plugin: asrPlugin })) {
       return {

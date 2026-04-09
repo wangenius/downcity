@@ -124,7 +124,7 @@ export function ConfigFieldEditor(props: ConfigFieldEditorProps) {
         {field.label} {renderRequiredMark(field)}
       </Label>
       <Input
-        type={field.type === "secret" ? "password" : "text"}
+        type={field.type === "secret" ? "password" : field.type === "number" ? "number" : "text"}
         placeholder={field.placeholder}
         className="h-10 rounded-[12px]"
         value={String(value ?? "")}

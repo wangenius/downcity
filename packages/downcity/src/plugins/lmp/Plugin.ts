@@ -106,6 +106,74 @@ export const lmpPlugin: Plugin = {
       autoStart: true,
     },
   },
+  setup: {
+    mode: "install-configure",
+    title: "安装本地模型",
+    description: "选择一个本地 GGUF 模型并写入当前激活配置；必要时也可通过 install action 下载模型。",
+    fields: [
+      {
+        key: "activeModel",
+        label: "模型",
+        type: "select",
+        required: true,
+        sourceAction: "models",
+      },
+    ],
+    primaryAction: "install",
+    statusAction: "status",
+  },
+  usage: {
+    title: "配置本地模型运行参数",
+    description: "设置当前 agent 使用本地模型时的默认模型与 llama-server 运行参数。",
+    fields: [
+      {
+        key: "model",
+        label: "当前模型",
+        type: "select",
+        required: true,
+        sourceAction: "models",
+      },
+      {
+        key: "command",
+        label: "llama-server 命令",
+        type: "string",
+        placeholder: "llama-server",
+      },
+      {
+        key: "host",
+        label: "监听 Host",
+        type: "string",
+        placeholder: "127.0.0.1",
+      },
+      {
+        key: "port",
+        label: "监听端口",
+        type: "number",
+        placeholder: "留空则自动分配",
+      },
+      {
+        key: "contextSize",
+        label: "上下文窗口",
+        type: "number",
+        placeholder: "8192",
+      },
+      {
+        key: "gpuLayers",
+        label: "GPU Layers",
+        type: "number",
+        placeholder: "可选",
+      },
+      {
+        key: "autoStart",
+        label: "自动启动 llama-server",
+        type: "boolean",
+        trueLabel: "自动",
+        falseLabel: "手动",
+      },
+    ],
+    saveAction: "configure",
+    statusAction: "status",
+  },
   async availability(context) {
     if (!isPluginEnabled({ plugin: lmpPlugin })) {
       return {

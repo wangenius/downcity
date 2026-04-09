@@ -977,6 +977,100 @@ export interface UiPluginSetupDefinition {
 }
 
 /**
+ * Plugin usage 字段选项。
+ */
+export interface UiPluginUsageFieldOption {
+  /**
+   * 选项展示标签。
+   */
+  label: string;
+  /**
+   * 选项实际值。
+   */
+  value: string;
+  /**
+   * 选项补充说明（可选）。
+   */
+  description?: string;
+}
+
+/**
+ * Plugin usage 字段定义。
+ */
+export interface UiPluginUsageField {
+  /**
+   * 字段稳定键。
+   */
+  key: string;
+  /**
+   * 字段展示标签。
+   */
+  label: string;
+  /**
+   * 字段类型。
+   */
+  type: "string" | "secret" | "boolean" | "select" | "number";
+  /**
+   * 字段占位文案（可选）。
+   */
+  placeholder?: string;
+  /**
+   * 字段说明文案（可选）。
+   */
+  description?: string;
+  /**
+   * 是否必填。
+   */
+  required?: boolean;
+  /**
+   * 是否禁用。
+   */
+  disabled?: boolean;
+  /**
+   * 布尔字段为 true 时的标签（可选）。
+   */
+  trueLabel?: string;
+  /**
+   * 布尔字段为 false 时的标签（可选）。
+   */
+  falseLabel?: string;
+  /**
+   * 静态选项列表（可选）。
+   */
+  options?: UiPluginUsageFieldOption[];
+  /**
+   * 动态选项来源 action（可选）。
+   */
+  sourceAction?: string;
+}
+
+/**
+ * Plugin usage 定义。
+ */
+export interface UiPluginUsageDefinition {
+  /**
+   * 面板标题。
+   */
+  title: string;
+  /**
+   * 面板说明（可选）。
+   */
+  description?: string;
+  /**
+   * 字段列表。
+   */
+  fields: UiPluginUsageField[];
+  /**
+   * 保存 usage 配置时调用的 action。
+   */
+  saveAction: string;
+  /**
+   * 状态同步 action 名称（可选）。
+   */
+  statusAction?: string;
+}
+
+/**
  * Plugin 可用性摘要。
  */
 export interface UiPluginAvailability {
@@ -1066,6 +1160,10 @@ export interface UiPluginRuntimeItem {
      * setup 协议（可选）。
      */
     setup?: UiPluginSetupDefinition;
+    /**
+     * usage 协议（可选）。
+     */
+    usage?: UiPluginUsageDefinition;
   };
 }
 

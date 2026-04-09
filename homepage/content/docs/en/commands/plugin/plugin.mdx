@@ -38,6 +38,9 @@ city plugin action asr status
 - `city plugin action ...` is the advanced execution form and still targets a specific agent project.
 - For day-to-day usage, prefer concrete plugin roots such as `city web ...`, `city skill ...`, `city asr ...`, and `city tts ...`.
 - Plugin enablement is now a city-level fact. Static status does not read agent `downcity.json`.
+- In the Console agent plugin page, configuration is now split into two surfaces:
+  - `Install / Repair` handles plugin-owned dependencies, assets, providers, and other control-plane setup.
+  - `Options` handles how the current agent uses that plugin at runtime.
 
 ## Related
 

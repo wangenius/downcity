@@ -16,6 +16,10 @@ export type UiConfigEditorFieldType =
    */
   | "string"
   /**
+   * 数字输入。
+   */
+  | "number"
+  /**
    * 敏感文本输入（密码/密钥）。
    */
   | "secret"

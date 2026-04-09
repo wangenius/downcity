@@ -537,6 +537,106 @@ export interface PluginSetupDefinition {
 }
 
 /**
+ * Plugin usage 字段选项。
+ */
+export interface PluginUsageFieldOption {
+  /**
+   * 选项展示标签。
+   */
+  label: string;
+  /**
+   * 选项实际值。
+   */
+  value: string;
+  /**
+   * 选项补充说明（可选）。
+   */
+  description?: string;
+}
+
+/**
+ * Plugin usage 字段定义。
+ */
+export interface PluginUsageField {
+  /**
+   * 字段稳定键。
+   */
+  key: string;
+  /**
+   * 字段展示标签。
+   */
+  label: string;
+  /**
+   * 字段类型。
+   *
+   * 说明（中文）
+   * - `usage` 面向 agent 如何使用 plugin，因此允许更丰富的配置类型。
+   */
+  type: "string" | "secret" | "boolean" | "select" | "number";
+  /**
+   * 字段占位文案（可选）。
+   */
+  placeholder?: string;
+  /**
+   * 字段说明（可选）。
+   */
+  description?: string;
+  /**
+   * 是否必填。
+   */
+  required?: boolean;
+  /**
+   * 字段是否禁用。
+   */
+  disabled?: boolean;
+  /**
+   * 布尔字段为 true 时的标签（可选）。
+   */
+  trueLabel?: string;
+  /**
+   * 布尔字段为 false 时的标签（可选）。
+   */
+  falseLabel?: string;
+  /**
+   * 静态选项列表（可选）。
+   */
+  options?: PluginUsageFieldOption[];
+  /**
+   * 动态选项来源 action（可选）。
+   *
+   * 说明（中文）
+   * - Console 打开 usage 面板时会先调用该 action 同步下拉选项。
+   */
+  sourceAction?: string;
+}
+
+/**
+ * Plugin usage 定义。
+ */
+export interface PluginUsageDefinition {
+  /**
+   * usage 面板标题。
+   */
+  title: string;
+  /**
+   * usage 面板说明（可选）。
+   */
+  description?: string;
+  /**
+   * agent 使用该 plugin 时可配置的字段列表。
+   */
+  fields: PluginUsageField[];
+  /**
+   * 保存 usage 配置时调用的 action。
+   */
+  saveAction: string;
+  /**
+   * 读取当前 usage 快照时调用的 action（可选）。
+   */
+  statusAction?: string;
+}
+
+/**
  * Plugin 定义。
  */
 export interface Plugin {
@@ -568,6 +668,14 @@ export interface Plugin {
    * - plugin 内部仍可复用 asset/helper，但 UI 只读取这层抽象。
    */
   setup?: PluginSetupDefinition;
+  /**
+   * Plugin usage 定义（可选）。
+   *
+   * 说明（中文）
+   * - 这是 agent 侧如何使用该 plugin 的配置协议。
+   * - 与 setup 不同，这里不负责依赖安装，只负责行为选择与运行参数。
+   */
+  usage?: PluginUsageDefinition;
   /**
    * Plugin Hook 集合（可选）。
    */

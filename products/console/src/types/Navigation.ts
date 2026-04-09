@@ -16,6 +16,7 @@ export type DashboardScope = "global" | "agent" | "context";
  */
 export type DashboardView =
   | "globalOverview"
+  | "globalWorkboard"
   | "globalApiKeys"
   | "globalEnv"
   | "globalModel"
@@ -24,7 +25,6 @@ export type DashboardView =
   | "globalAgents"
   | "globalPlugins"
   | "agentOverview"
-  | "agentWorkboard"
   | "agentAuthorization"
   | "agentPlugins"
   | "agentSkills"

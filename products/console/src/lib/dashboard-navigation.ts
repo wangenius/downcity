@@ -20,6 +20,12 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
     title: "Overview",
     path: "/global/overview",
   },
+  globalWorkboard: {
+    view: "globalWorkboard",
+    scope: "global",
+    title: "Workboard",
+    path: "/global/workboard",
+  },
   globalApiKeys: {
     view: "globalApiKeys",
     scope: "global",
@@ -67,12 +73,6 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
     scope: "agent",
     title: "Overview",
     path: "/agent/overview",
-  },
-  agentWorkboard: {
-    view: "agentWorkboard",
-    scope: "agent",
-    title: "Workboard",
-    path: "/agent/workboard",
   },
   agentAuthorization: {
     view: "agentAuthorization",
@@ -132,6 +132,7 @@ const SCOPE_TITLES: Record<DashboardScope, string> = {
 
 const PRIMARY_PAGE_ORDER: DashboardPrimaryView[] = [
   "globalOverview",
+  "globalWorkboard",
   "globalApiKeys",
   "globalCommand",
   "globalEnv",
@@ -140,7 +141,6 @@ const PRIMARY_PAGE_ORDER: DashboardPrimaryView[] = [
   "globalAgents",
   "globalPlugins",
   "agentOverview",
-  "agentWorkboard",
   "agentAuthorization",
   "agentPlugins",
   "agentSkills",

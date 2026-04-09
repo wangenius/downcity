@@ -2,24 +2,9 @@
  * Workboard 组件公开类型。
  *
  * 关键点（中文）
- * - 这些类型只服务 `@downcity/ui` 的 workboard 组件导出。
- * - UI 只接收对外安全的模糊公开态，不消费内部运行事实。
+ * - 这里导出的是“全局 workboard”板面类型，而不是单个 agent 面板。
+ * - UI 组件只消费聚合后的公开状态，不知道 plugin 内部实现。
  */
-
-/**
- * Workboard 活动类型。
- */
-export type DowncityWorkboardActivityKind = "focus" | "progress" | "idle";
-
-/**
- * Workboard 活动状态。
- */
-export type DowncityWorkboardActivityStatus = "active" | "steady" | "waiting" | "issue";
-
-/**
- * Workboard 信号语气。
- */
-export type DowncityWorkboardSignalTone = "neutral" | "accent" | "warning";
 
 /**
  * 单个公开活动项。
@@ -32,7 +17,7 @@ export interface DowncityWorkboardActivityItem {
   /**
    * 活动类型。
    */
-  kind: DowncityWorkboardActivityKind;
+  kind: "focus" | "progress" | "idle";
   /**
    * 对外标题。
    */
@@ -44,7 +29,7 @@ export interface DowncityWorkboardActivityItem {
   /**
    * 当前状态。
    */
-  status: DowncityWorkboardActivityStatus;
+  status: "active" | "steady" | "waiting" | "issue";
   /**
    * 最近更新时间（ISO8601）。
    */
@@ -56,61 +41,161 @@ export interface DowncityWorkboardActivityItem {
 }
 
 /**
- * 单个公开信号项。
+ * 单个公开线索项。
  */
 export interface DowncityWorkboardSignalItem {
   /**
-   * 信号名称。
+   * 线索名称。
    */
   label: string;
   /**
-   * 信号值。
+   * 线索值。
    */
   value: string;
   /**
-   * 信号语气。
+   * 线索语气。
    */
-  tone: DowncityWorkboardSignalTone;
+  tone: "neutral" | "accent" | "warning";
 }
 
 /**
- * workboard 顶部公开摘要。
+ * 单个 agent 的公开快照。
  */
-export interface DowncityWorkboardSummary {
+export interface DowncityWorkboardAgentSnapshot {
   /**
-   * 顶部 headline。
+   * agent 展示名称。
+   */
+  name: string;
+  /**
+   * 是否运行中。
+   */
+  running: boolean;
+  /**
+   * 对外状态文案。
+   */
+  statusText: string;
+  /**
+   * 最近采样时间（ISO8601）。
+   */
+  collectedAt: string;
+  /**
+   * headline。
    */
   headline: string;
   /**
-   * 当前姿态描述。
+   * posture。
    */
   posture: string;
   /**
-   * 当前动量描述。
+   * momentum。
    */
   momentum: string;
   /**
    * 可见性说明。
    */
   visibilityNote: string;
+  /**
+   * 当前公开活动列表。
+   */
+  current: DowncityWorkboardActivityItem[];
+  /**
+   * 最近公开活动列表。
+   */
+  recent: DowncityWorkboardActivityItem[];
+  /**
+   * 公开线索列表。
+   */
+  signals: DowncityWorkboardSignalItem[];
 }
 
 /**
- * agent 基础公开摘要。
+ * 全局看板中的单个 agent 项。
  */
-export interface DowncityWorkboardAgentSummary {
+export interface DowncityWorkboardAgentItem {
+  /**
+   * agent 稳定标识。
+   */
+  id: string;
   /**
    * agent 展示名称。
    */
   name: string;
   /**
-   * agent 是否运行中。
+   * 当前是否运行中。
    */
   running: boolean;
   /**
-   * 顶部状态文案。
+   * headline。
+   */
+  headline: string;
+  /**
+   * posture。
+   */
+  posture: string;
+  /**
+   * momentum。
+   */
+  momentum: string;
+  /**
+   * 状态摘要文案。
    */
   statusText: string;
+  /**
+   * 最近采样时间（ISO8601）。
+   */
+  collectedAt: string;
+  /**
+   * 当前公开活动数量。
+   */
+  currentCount: number;
+  /**
+   * 近期片段数量。
+   */
+  recentCount: number;
+  /**
+   * 公开线索数量。
+   */
+  signalCount: number;
+  /**
+   * 该 agent 的完整公开快照。
+   */
+  snapshot: DowncityWorkboardAgentSnapshot;
+}
+
+/**
+ * 全局看板顶部摘要。
+ */
+export interface DowncityWorkboardBoardSummary {
+  /**
+   * agent 总数。
+   */
+  totalAgents: number;
+  /**
+   * live agent 数量。
+   */
+  liveAgents: number;
+  /**
+   * 呈现活跃状态的 agent 数量。
+   */
+  activeAgents: number;
+  /**
+   * 安静中的 agent 数量。
+   */
+  quietAgents: number;
+}
+
+/**
+ * 全局 workboard 板面。
+ */
+export interface DowncityWorkboardBoardSnapshot {
+  /**
+   * 顶部摘要。
+   */
+  summary: DowncityWorkboardBoardSummary;
+  /**
+   * agent 列表。
+   */
+  agents: DowncityWorkboardAgentItem[];
   /**
    * 最近采样时间（ISO8601）。
    */
@@ -118,51 +203,25 @@ export interface DowncityWorkboardAgentSummary {
 }
 
 /**
- * Workboard 快照。
- */
-export interface DowncityWorkboardSnapshot {
-  /**
-   * agent 公开摘要。
-   */
-  agent: DowncityWorkboardAgentSummary;
-  /**
-   * 顶部公开摘要。
-   */
-  summary: DowncityWorkboardSummary;
-  /**
-   * 当前活动列表。
-   */
-  current: DowncityWorkboardActivityItem[];
-  /**
-   * 最近活动列表。
-   */
-  recent: DowncityWorkboardActivityItem[];
-  /**
-   * 模糊信号列表。
-   */
-  signals: DowncityWorkboardSignalItem[];
-}
-
-/**
  * Workboard 组件属性。
  */
 export interface DowncityWorkboardProps {
   /**
-   * 当前快照。
+   * 当前板面。
    */
-  snapshot: DowncityWorkboardSnapshot | null;
+  board: DowncityWorkboardBoardSnapshot | null;
   /**
    * 当前是否处于刷新中。
    */
   loading?: boolean;
   /**
-   * 当前选中的活动 id。
+   * 当前选中的 agent id。
    */
-  selectedActivityId?: string;
+  selectedAgentId?: string;
   /**
    * 外层接收选中变化。
    */
-  onSelectActivity?: (activityId: string) => void;
+  onSelectAgent?: (agentId: string) => void;
   /**
    * 外层触发刷新。
    */

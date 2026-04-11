@@ -22,16 +22,17 @@ test("console dashboard api should expose workboard snapshot route", () => {
   assert.match(source, /workboardSnapshot:\s*\(\)\s*=>\s*"\/api\/workboard\/snapshot"/);
 });
 
-test("console navigation should expose agent workboard main view", () => {
+test("console navigation should expose global workboard main view", () => {
   const navigationSource = fs.readFileSync(navigationPath, "utf-8");
   const routeSource = fs.readFileSync(routePath, "utf-8");
 
-  assert.match(navigationSource, /agentWorkboard/);
-  assert.match(routeSource, /workboard/);
+  assert.match(navigationSource, /globalWorkboard/);
+  assert.match(routeSource, /\/global\/workboard/);
 });
 
 test("console app should render a dedicated workboard main view", () => {
   const source = fs.readFileSync(appPath, "utf-8");
 
-  assert.match(source, /case "agentWorkboard"/);
+  assert.match(source, /case "globalWorkboard"/);
+  assert.doesNotMatch(source, /case "agentWorkboard"/);
 });

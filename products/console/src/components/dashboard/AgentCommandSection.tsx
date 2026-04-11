@@ -533,21 +533,23 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
         <>
           {agents.length > 0 ? (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-2 rounded-[11px] px-2.5 text-[12px] font-normal"
-                >
-                  <span
-                    className={cn(
-                      "inline-flex size-1.5 rounded-full",
-                      activeAgent?.running ? "bg-emerald-500" : "bg-muted-foreground/40",
-                    )}
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 rounded-[11px] px-2.5 text-[12px] font-normal"
                   />
-                  <span className="max-w-[12rem] truncate">{activeAgentName}</span>
-                  <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
-                </Button>
+                }
+              >
+                <span
+                  className={cn(
+                    "inline-flex size-1.5 rounded-full",
+                    activeAgent?.running ? "bg-emerald-500" : "bg-muted-foreground/40",
+                  )}
+                />
+                <span className="max-w-[12rem] truncate">{activeAgentName}</span>
+                <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuGroup>

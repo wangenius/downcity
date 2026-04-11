@@ -1,11 +1,11 @@
 ---
 title: workboard 插件
-description: 用结构化快照展示当前 agent 对外呈现出的状态与近期变化
+description: 用结构化快照展示各个 agent 对外呈现出的状态与近期变化
 ---
 
 # workboard 插件
 
-`workboard` 是一个内建 plugin，用来把当前 agent 的对外状态整理成结构化快照，供 Console 和 UI 组件直接消费。
+`workboard` 是一个内建 plugin，用来把单个 agent 的对外状态整理成结构化快照，供 Console 聚合和 UI 组件消费。
 
 ## 它会展示什么
 
@@ -16,8 +16,8 @@ description: 用结构化快照展示当前 agent 对外呈现出的状态与近
 
 ## 适合什么场景
 
-- 你想快速知道当前 agent 现在呈现出什么状态
-- 你需要在 Console 里观察近期变化
+- 你想快速知道各个 agent 现在分别呈现出什么状态
+- 你需要在 Console 里观察整个 agent 群组的近期变化
 - 你想把这种公开状态接到自定义 host 或 UI SDK 组件上
 
 ## 数据接口
@@ -30,11 +30,30 @@ description: 用结构化快照展示当前 agent 对外呈现出的状态与近
 
 ## Console 中的表现
 
-Console 会通过 workboard 快照展示一个独立的 Agent 主视图：
+Console 会聚合所有 agent 的 workboard 快照，展示一个独立的全局 game world：
 
-- 在侧边栏的 Agent 导航里单独进入 `Workboard`
-- 主区域展示当前公开状态和近期片段
-- 右侧 inspector 展示选中状态与公开线索
+- 在 Console 主导航里单独进入 `Workboard`
+- 主区域是一个像素化 world atlas，先按公开状态簇组织，再进入簇内 room
+- agent 会作为 sprite 沿 corridor、gate、station 巡游与停靠
+- 点击状态簇可以进入该簇内部，再点击具体 sprite 查看公开片段
+- 右侧 codex log 始终跟随当前聚焦对象，展示公开片段与线索
+
+## UI SDK 中的映射方式
+
+如果你使用 `@downcity/ui`，现在除了直接渲染 `Workboard` 组件之外，还可以使用统一的地图配置构建器：
+
+- `buildWorkboardGameMapConfig`
+
+它会把公开快照映射成一套完整的游戏地图模型，包括：
+
+- 状态簇 zones
+- agent actors
+- atlas 通道 corridors
+- 簇内巡游 patrols
+- atlas 入口 gate 与簇内 station
+- 舞台道具与标签
+
+这样你可以继续复用 Downcity 默认的像素 game world，也可以把同一份公开数据接到自己的 host 渲染器里。
 
 ## 说明
 

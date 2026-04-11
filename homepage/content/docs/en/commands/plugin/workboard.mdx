@@ -1,11 +1,11 @@
 ---
 title: workboard plugin
-description: Present the current public-facing state of an agent and its recent changes through structured snapshots
+description: Present the public-facing state of multiple agents and their recent changes through structured snapshots
 ---
 
 # workboard plugin
 
-`workboard` is a built-in plugin that turns the current outward-facing agent state into a structured snapshot for Console and UI consumers.
+`workboard` is a built-in plugin that turns a single agent's outward-facing state into a structured snapshot for Console aggregation and UI consumers.
 
 ## What it shows
 
@@ -16,8 +16,8 @@ description: Present the current public-facing state of an agent and its recent 
 
 ## When to use it
 
-- You want to see what kind of state the current agent is presenting right now
-- You want a recent-change surface in Console
+- You want to see what kinds of states your agents are presenting right now
+- You want a recent-change surface across the whole agent group in Console
 - You want to wire this public-facing state into a custom host or UI SDK surface
 
 ## Runtime endpoint
@@ -30,11 +30,30 @@ The endpoint returns structured JSON, but only as a public-safe high-level proje
 
 ## Console behavior
 
-Console uses the workboard snapshot to render a dedicated agent main view:
+Console aggregates workboard snapshots from all agents into a dedicated global game world:
 
-- open `Workboard` from the Agent navigation in the sidebar
-- the main stage focuses on the current public state and recent fragments
-- the right inspector focuses on the selected state and public-safe cues
+- open `Workboard` from the main Console navigation in the sidebar
+- the main stage behaves like a pixel-style world atlas: start with public state clusters, then enter a cluster room
+- agents appear as sprites that patrol corridors, gates, and stations
+- click a cluster to enter it, then click a specific sprite to inspect its public-facing fragments
+- the right codex log follows the current focus and shows public-safe state and cues
+
+## UI SDK mapping layer
+
+If you use `@downcity/ui`, you can now do more than render the default `Workboard` component. The package also exports:
+
+- `buildWorkboardGameMapConfig`
+
+It maps the public snapshot into a full game-map model, including:
+
+- state-cluster zones
+- agent actors
+- atlas corridors
+- interior patrol routes
+- atlas gates and interior stations
+- scene props and area labels
+
+That lets you keep the default Downcity pixel game world or feed the same public-safe state into your own custom host renderer.
 
 ## Notes
 

@@ -17,15 +17,21 @@ export type {
 } from "./types/components";
 export type {
   DowncityWorkboardActivityItem,
-  DowncityWorkboardActivityKind,
-  DowncityWorkboardActivityStatus,
-  DowncityWorkboardAgentSummary,
+  DowncityWorkboardAgentItem,
+  DowncityWorkboardAgentSnapshot,
+  DowncityWorkboardBoardSnapshot,
+  DowncityWorkboardBoardSummary,
   DowncityWorkboardProps,
   DowncityWorkboardSignalItem,
-  DowncityWorkboardSignalTone,
-  DowncityWorkboardSnapshot,
-  DowncityWorkboardSummary,
 } from "./types/workboard";
+export type {
+  DowncityWorkboardGameActor,
+  DowncityWorkboardGameAreaLabel,
+  DowncityWorkboardGameMapConfig,
+  DowncityWorkboardGamePointOfInterest,
+  DowncityWorkboardGameRoute,
+  DowncityWorkboardGameZone,
+} from "./types/workboard-game-map";
 
 export { Button, buttonVariants } from "./components/button";
 export { Badge, badgeVariants } from "./components/badge";
@@ -96,3 +102,4 @@ export { Toggle, toggleVariants } from "./components/toggle";
 export { ToggleGroup, ToggleGroupItem } from "./components/toggle-group";
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./components/tooltip";
 export { Workboard } from "./components/workboard";
+export { buildWorkboardGameMapConfig } from "./components/workboard-game-map";

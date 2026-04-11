@@ -750,20 +750,22 @@ export function AppSidebar({
       <SidebarFooter className="px-3 pb-3 pt-1">
         {/* Admin popover - styled like SidebarMenuButton */}
         <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                menuItemButtonClass,
-                "flex w-full items-center justify-start gap-2 text-sidebar-foreground/82"
-              )}
-            >
-              <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
-                <UserIcon className="size-4" />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-left">{props.user?.username || "admin"}</span>
-              <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-            </button>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                className={cn(
+                  menuItemButtonClass,
+                  "flex w-full items-center justify-start gap-2 text-sidebar-foreground/82"
+                )}
+              />
+            }
+          >
+            <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
+              <UserIcon className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-left">{props.user?.username || "admin"}</span>
+            <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
           </PopoverTrigger>
           <PopoverContent side="top" align="start" className="w-48 p-1.5">
             <div className="space-y-0.5">

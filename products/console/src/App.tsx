@@ -174,8 +174,9 @@ export function App() {
     logout,
   } = useConsoleDashboard()
   const workboard = useWorkboard({
-    agentId: selectedAgentId,
-    enabled: isAuthenticated && !authRequired && selectedAgent?.running === true,
+    agents,
+    selectedAgentId,
+    enabled: isAuthenticated && !authRequired,
   })
 
   const resolveAgentRouteSegment = React.useCallback(
@@ -351,6 +352,9 @@ export function App() {
     if (typeof window === "undefined") return
     if (!routeHydrated) return
     const agentScopedView = activeView !== "globalOverview" &&
+      activeView !== "globalWorkboard" &&
+      activeView !== "globalApiKeys" &&
+      activeView !== "globalEnv" &&
       activeView !== "globalModel" &&
       activeView !== "globalChannelAccounts" &&
       activeView !== "globalCommand" &&
@@ -560,6 +564,19 @@ export function App() {
             />
           </section>
         )
+      case "globalWorkboard":
+        return (
+          <section>
+            <WorkboardSection
+              board={workboard.board}
+              loading={workboard.loading}
+              errorMessage={workboard.errorMessage}
+              onRefresh={() => {
+                void workboard.refresh()
+              }}
+            />
+          </section>
+        )
       case "globalApiKeys":
         return (
           <section>
@@ -629,26 +646,6 @@ export function App() {
       }
       case "agentOverview":
         return renderAgentOverviewSection()
-      case "agentWorkboard":
-        return (
-          <section>
-            <WorkboardSection
-              snapshot={workboard.snapshot}
-              loading={workboard.loading}
-              errorMessage={workboard.errorMessage}
-              agentName={String(selectedAgent?.name || "").trim()}
-              running={selectedAgent?.running === true}
-              statusText={String(selectedAgent?.statusText || "").trim()}
-              onRefresh={() => {
-                void workboard.refresh()
-              }}
-              onStartAgent={() => {
-                if (!selectedAgentId) return
-                void startAgentFromHistory(selectedAgentId)
-              }}
-            />
-          </section>
-        )
       case "agentAuthorization":
         return (
           <section>

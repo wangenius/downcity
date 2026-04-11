@@ -10,7 +10,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.3.7
+        version: 1.3.11
 
   homepage:
     dependencies:
@@ -34,7 +34,7 @@ importers:
         version: 3.40.0(react@19.2.4)
       better-auth:
         specifier: ^1.3.9
-        version: 1.5.6(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 1.5.6(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -49,7 +49,7 @@ importers:
         version: 17.3.1
       drizzle-orm:
         specifier: ^0.44.5
-        version: 0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8)
+        version: 0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8)
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.2.4)
@@ -221,7 +221,7 @@ importers:
         version: 16.6.1
       drizzle-orm:
         specifier: ^0.36.4
-        version: 0.36.4(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8)(react@19.2.4)
+        version: 0.36.4(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8)(react@19.2.4)
       execa:
         specifier: ^9.5.0
         version: 9.6.1
@@ -295,6 +295,24 @@ importers:
       '@base-ui/react':
         specifier: ^1.3.0
         version: 1.3.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@pxlkit/core':
+        specifier: ^1.2.2
+        version: 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@pxlkit/effects':
+        specifier: ^1.2.2
+        version: 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@pxlkit/feedback':
+        specifier: ^1.2.2
+        version: 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@pxlkit/gamification':
+        specifier: ^1.2.2
+        version: 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@pxlkit/parallax':
+        specifier: ^1.2.2
+        version: 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@pxlkit/ui':
+        specifier: ^1.2.2
+        version: 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1682,6 +1700,27 @@ packages:
   '@protobufjs/utf8@1.1.0':
     resolution: {integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==}
 
+  '@pxlkit/core@1.2.2':
+    resolution: {integrity: sha512-U6gbbuM0XtjlxUtv+bwlqoP5QQduxptypRW8KLedqqDw6KIm3EUAePvf/b0g2swV8F+Dsymd2H/JORnVxUbllw==}
+    peerDependencies:
+      react: '>=18.0.0'
+      react-dom: '>=18.0.0'
+
+  '@pxlkit/effects@1.2.2':
+    resolution: {integrity: sha512-qWAdq3unUe0yPq3mz5wio4AXgeUq3Bkcw3FaKsY6E2BUbEz3f2+hueY8KGQJ6LRdhNa+dz9HxpPP/HBx/seQtQ==}
+
+  '@pxlkit/feedback@1.2.2':
+    resolution: {integrity: sha512-qFqhWSgLyB1Ib1MUO7a0J1Hq/G7k1Ob2FLoS7Hlvs/SB65H5iA6Z1Yyd0hFi7GdbDBH3eulPLpXnsdmOeW6v+Q==}
+
+  '@pxlkit/gamification@1.2.2':
+    resolution: {integrity: sha512-gKpS5BCTj/+aT3gTdPaM4+80/1ydgCmwtsnlN60oyuft1UWZBd77P7NRS6IdHyH/ZvsXj3SQJQh81bKyHV3CoQ==}
+
+  '@pxlkit/parallax@1.2.2':
+    resolution: {integrity: sha512-9Ldnmp5lbDE9WH8X7no4VsxHxWc+2a330Yzj38YkNgOmJGFcIaU6s5blWATG4cbqMJoU+YolSM62zGLC/rFN0Q==}
+
+  '@pxlkit/ui@1.2.2':
+    resolution: {integrity: sha512-/c4HiGjUIy0JWhnO/WKI8TquU06YZQ/4VJ0or3MCOP49aeQ7AMp5AgyVetMMAed83gahpdqPhnMTkIX+98Q3VA==}
+
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
 
@@ -2454,8 +2493,8 @@ packages:
   '@types/better-sqlite3@7.6.13':
     resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
 
-  '@types/bun@1.3.7':
-    resolution: {integrity: sha512-lmNuMda+Z9b7tmhA0tohwy8ZWFSnmQm1UDWXtH5r9F7wZCfkeO3Jx7wKQ1EOiKq43yHts7ky6r8SDJQWRNupkA==}
+  '@types/bun@1.3.11':
+    resolution: {integrity: sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg==}
 
   '@types/chrome@0.1.38':
     resolution: {integrity: sha512-5aK4m9wZqoWAoB98aElESLm/5pXpqJnFWMNoiCs/XdPsXR6wNdVkJFSdQ9Wr4PnTuUrxD0SuNuDHh3EG5QeBzA==}
@@ -2916,8 +2955,8 @@ packages:
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
-  bun-types@1.3.7:
-    resolution: {integrity: sha512-qyschsA03Qz+gou+apt6HNl6HnI+sJJLL4wLDke4iugsE6584CMupOtTY1n+2YC9nGVrEKUlTs99jjRLKgWnjQ==}
+  bun-types@1.3.11:
+    resolution: {integrity: sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg==}
 
   bundle-name@4.1.0:
     resolution: {integrity: sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q==}
@@ -6682,12 +6721,12 @@ snapshots:
       nanostores: 1.2.0
       zod: 4.3.6
 
-  '@better-auth/drizzle-adapter@1.5.6(@better-auth/core@1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0))(@better-auth/utils@0.3.1)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8))':
+  '@better-auth/drizzle-adapter@1.5.6(@better-auth/core@1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0))(@better-auth/utils@0.3.1)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8))':
     dependencies:
       '@better-auth/core': 1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0)
       '@better-auth/utils': 0.3.1
     optionalDependencies:
-      drizzle-orm: 0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8)
+      drizzle-orm: 0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8)
 
   '@better-auth/kysely-adapter@1.5.6(@better-auth/core@1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0))(@better-auth/utils@0.3.1)(kysely@0.28.14)':
     dependencies:
@@ -7387,6 +7426,46 @@ snapshots:
   '@protobufjs/pool@1.1.0': {}
 
   '@protobufjs/utf8@1.1.0': {}
+
+  '@pxlkit/core@1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
+  '@pxlkit/effects@1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@pxlkit/core': 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@pxlkit/feedback@1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@pxlkit/core': 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@pxlkit/gamification@1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@pxlkit/core': 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@pxlkit/parallax@1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@pxlkit/core': 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@pxlkit/ui@1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@pxlkit/core': 1.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@radix-ui/number@1.1.1': {}
 
@@ -8125,9 +8204,9 @@ snapshots:
     dependencies:
       '@types/node': 22.19.15
 
-  '@types/bun@1.3.7':
+  '@types/bun@1.3.11':
     dependencies:
-      bun-types: 1.3.7
+      bun-types: 1.3.11
 
   '@types/chrome@0.1.38':
     dependencies:
@@ -8514,10 +8593,10 @@ snapshots:
     dependencies:
       safe-buffer: 5.1.2
 
-  better-auth@1.5.6(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8))(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  better-auth@1.5.6(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8))(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
       '@better-auth/core': 1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0)
-      '@better-auth/drizzle-adapter': 1.5.6(@better-auth/core@1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0))(@better-auth/utils@0.3.1)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8))
+      '@better-auth/drizzle-adapter': 1.5.6(@better-auth/core@1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0))(@better-auth/utils@0.3.1)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8))
       '@better-auth/kysely-adapter': 1.5.6(@better-auth/core@1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0))(@better-auth/utils@0.3.1)(kysely@0.28.14)
       '@better-auth/memory-adapter': 1.5.6(@better-auth/core@1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0))(@better-auth/utils@0.3.1)
       '@better-auth/mongo-adapter': 1.5.6(@better-auth/core@1.5.6(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.0)(better-call@1.3.2(zod@4.3.6))(jose@6.2.2)(kysely@0.28.14)(nanostores@1.2.0))(@better-auth/utils@0.3.1)
@@ -8535,7 +8614,7 @@ snapshots:
       zod: 4.3.6
     optionalDependencies:
       drizzle-kit: 0.31.10
-      drizzle-orm: 0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8)
+      drizzle-orm: 0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
     transitivePeerDependencies:
@@ -8627,7 +8706,7 @@ snapshots:
       base64-js: 1.5.1
       ieee754: 1.2.1
 
-  bun-types@1.3.7:
+  bun-types@1.3.11:
     dependencies:
       '@types/node': 22.19.15
 
@@ -9126,22 +9205,22 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.21.0
 
-  drizzle-orm@0.36.4(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8)(react@19.2.4):
+  drizzle-orm@0.36.4(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8)(react@19.2.4):
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/better-sqlite3': 7.6.13
       '@types/react': 19.2.14
       better-sqlite3: 11.10.0
-      bun-types: 1.3.7
+      bun-types: 1.3.11
       kysely: 0.28.14
       postgres: 3.4.8
       react: 19.2.4
 
-  drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.7)(kysely@0.28.14)(postgres@3.4.8):
+  drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(bun-types@1.3.11)(kysely@0.28.14)(postgres@3.4.8):
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/better-sqlite3': 7.6.13
-      bun-types: 1.3.7
+      bun-types: 1.3.11
       kysely: 0.28.14
       postgres: 3.4.8
 

@@ -115,9 +115,22 @@ This page lists the full public module surface of `@downcity/ui`.
 - Exports: `Workboard`
 - Exported types:
   - `DowncityWorkboardProps`
-  - `DowncityWorkboardSnapshot`
+  - `DowncityWorkboardBoardSnapshot`
+  - `DowncityWorkboardAgentItem`
   - `DowncityWorkboardActivityItem`
-- Purpose: render an agent workboard with current activity, recent activity, and an inspector panel
+- Purpose: render a pixel-style game world across multiple agents with a world atlas, cluster rooms, sprite patrols, a codex log, and focused inspection
+
+### `buildWorkboardGameMapConfig`
+
+- Exports: `buildWorkboardGameMapConfig`
+- Exported types:
+  - `DowncityWorkboardGameMapConfig`
+  - `DowncityWorkboardGameZone`
+  - `DowncityWorkboardGameActor`
+  - `DowncityWorkboardGameRoute`
+  - `DowncityWorkboardGamePointOfInterest`
+  - `DowncityWorkboardGameAreaLabel`
+- Purpose: map the public `workboard` snapshot into a full game-map configuration that custom hosts can reuse for zones, actors, routes, gates, stations, props, and area labels
 
 ## Overlays and Feedback Modules
 

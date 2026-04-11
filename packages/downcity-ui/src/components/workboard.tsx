@@ -1,51 +1,43 @@
 /**
- * Workboard 全局看板组件。
+ * Workboard 游戏世界入口组件。
  *
  * 关键点（中文）
- * - 组件展示的是“所有 agents 的公开状态总览”，不是单个 agent 面板。
- * - 布局参考 teamprofile：左侧全景总览，右侧选中详情。
- * - 这里只消费聚合后的公开数据，不负责请求。
+ * - 这里不再实现具体地图细节，只负责 game shell、HUD、状态切换和 motion 接线。
+ * - atlas、interior、inspector 都拆成独立 renderer，避免主入口继续变成混合 dashboard。
+ * - 组件仍然只消费公开 workboard 快照，所有内部 runtime 细节都不会进入 UI。
  */
 
+import * as React from "react";
 import {
-  ActivityIcon,
-  BotIcon,
-  PauseCircleIcon,
+  Maximize2Icon,
+  Minimize2Icon,
   RefreshCwIcon,
-  SparklesIcon,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Badge } from "./badge";
-import { Button } from "./button";
-import { Card, CardContent } from "./card";
+import { WorkboardGameAtlas } from "./workboard-game-atlas";
+import { WorkboardGameInspector } from "./workboard-game-inspector";
+import { buildWorkboardGameMapConfig } from "./workboard-game-map";
+import { useWorkboardMotion } from "./workboard-motion";
+import {
+  FocusedClusterStage,
+  WORKBOARD_STAGE_HEIGHT,
+  WORKBOARD_STAGE_WIDTH,
+  formatWorkboardRelativeTime,
+  resolveZoneDefinition,
+  resolveZoneId,
+} from "./workboard-stage";
 import type {
-  DowncityWorkboardActivityItem,
   DowncityWorkboardAgentItem,
   DowncityWorkboardProps,
-  DowncityWorkboardSignalItem,
 } from "../types/workboard";
+import type { DowncityWorkboardGameHudProps } from "../types/workboard-game-ui";
+import type {
+  DowncityWorkboardMotionNode,
+  DowncityWorkboardStageLevel,
+  DowncityWorkboardZoneId,
+} from "../types/workboard-stage";
 
-function formatTimestamp(value?: string): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
-
-function formatRelativeTime(value?: string): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  const now = Date.now();
-  if (Number.isNaN(date.getTime())) return value;
-  const delta = Math.max(0, now - date.getTime());
-  const minutes = Math.floor(delta / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+const PIXEL_PANEL_CLIP = "polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 0px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px))";
 
 function resolveSelectedAgent(params: {
   board: DowncityWorkboardProps["board"];
@@ -53,261 +45,352 @@ function resolveSelectedAgent(params: {
 }): DowncityWorkboardAgentItem | null {
   const items = params.board?.agents || [];
   if (items.length === 0) return null;
-  const explicit = items.find((item) => item.id === params.selectedAgentId);
-  return explicit || items[0] || null;
+  return items.find((item) => item.id === params.selectedAgentId) || items[0] || null;
 }
 
-function activityIcon(kind: string) {
-  if (kind === "focus") return SparklesIcon;
-  if (kind === "progress") return ActivityIcon;
-  return PauseCircleIcon;
-}
+function resolveZoneLead(params: {
+  board: DowncityWorkboardProps["board"];
+  zoneId: DowncityWorkboardZoneId;
+}): DowncityWorkboardAgentItem | null {
+  const items = (params.board?.agents || []).filter((item) => resolveZoneId(item) === params.zoneId);
+  if (items.length === 0) return null;
 
-function statusBadgeVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
-  if (status === "active") return "default";
-  if (status === "issue") return "destructive";
-  if (status === "waiting") return "outline";
-  return "secondary";
-}
-
-function toneClass(tone: string): string {
-  if (tone === "accent") return "border-emerald-200/70 bg-emerald-50/80";
-  if (tone === "warning") return "border-amber-300/70 bg-amber-50/85";
-  return "border-border/70 bg-background/80";
-}
-
-function accentClass(status: string): string {
-  if (status === "active") return "bg-emerald-500";
-  if (status === "issue") return "bg-rose-500";
-  if (status === "waiting") return "bg-stone-400";
-  return "bg-amber-500";
-}
-
-function AgentNode(props: {
-  item: DowncityWorkboardAgentItem;
-  active: boolean;
-  onSelect?: (agentId: string) => void;
-}) {
   return (
-    <button
-      type="button"
-      onClick={() => props.onSelect?.(props.item.id)}
-      className={cn(
-        "group relative overflow-hidden rounded-[26px] border p-4 text-left transition-all duration-200",
-        props.active
-          ? "border-foreground/18 bg-[linear-gradient(145deg,rgba(251,248,240,0.96),rgba(255,255,255,0.9))] shadow-[0_18px_34px_rgba(17,17,19,0.08)]"
-          : "border-border/70 bg-background/84 hover:-translate-y-1 hover:border-foreground/12 hover:bg-background",
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className={cn("inline-flex h-2.5 w-2.5 rounded-full", props.item.running ? "bg-emerald-500" : "bg-stone-400")} />
-            <span className="truncate text-[1rem] font-semibold tracking-[-0.03em] text-foreground">
-              {props.item.name}
-            </span>
-          </div>
-          <div className="mt-2 text-sm leading-6 text-muted-foreground">{props.item.headline}</div>
-        </div>
-        <Badge variant={props.item.running ? "secondary" : "outline"}>
-          {props.item.posture}
-        </Badge>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <div className="rounded-[16px] border border-border/70 bg-muted/20 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/45">Now</div>
-          <div className="mt-1 text-lg font-semibold tracking-[-0.04em] text-foreground">{props.item.currentCount}</div>
-        </div>
-        <div className="rounded-[16px] border border-border/70 bg-muted/20 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/45">Recent</div>
-          <div className="mt-1 text-lg font-semibold tracking-[-0.04em] text-foreground">{props.item.recentCount}</div>
-        </div>
-        <div className="rounded-[16px] border border-border/70 bg-muted/20 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/45">Cues</div>
-          <div className="mt-1 text-lg font-semibold tracking-[-0.04em] text-foreground">{props.item.signalCount}</div>
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.12em] text-foreground/42">
-        <span>{props.item.momentum}</span>
-        <span>{formatRelativeTime(props.item.collectedAt)}</span>
-      </div>
-    </button>
+    items.find((item) => item.snapshot.current.some((entry) => entry.status === "active")) ||
+    items.find((item) => item.running) ||
+    items[0] ||
+    null
   );
 }
 
-function ActivityLine(props: { item: DowncityWorkboardActivityItem }) {
-  const Icon = activityIcon(props.item.kind);
+function WorkboardGameHud(props: DowncityWorkboardGameHudProps) {
+  const worldLine = [
+    `sprites ${props.board.summary.totalAgents}`,
+    `live ${props.board.summary.liveAgents}`,
+    `active ${props.board.summary.activeAgents}`,
+    `quiet ${props.board.summary.quietAgents}`,
+    props.selected ? `focus ${props.selected.name}` : "focus world",
+    `tick ${formatWorkboardRelativeTime(props.board.collectedAt)}`,
+  ];
 
   return (
-    <div className="flex items-start gap-3 rounded-[18px] border border-border/70 bg-background/78 px-3 py-3">
-      <span className={cn("mt-1 inline-flex size-8 items-center justify-center rounded-[12px] text-foreground", accentClass(props.item.status))}>
-        <Icon className="size-4 text-white" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-foreground">{props.item.title}</span>
-          <Badge variant={statusBadgeVariant(props.item.status)}>{props.item.status}</Badge>
+    <div className="absolute inset-x-2 top-2 z-40 flex flex-wrap items-start justify-between gap-2">
+      <div
+        className="border-2 border-border/70 bg-[rgba(255,252,247,0.92)] px-3 py-2 shadow-[0_3px_0_rgba(17,17,19,0.12)]"
+        style={{ clipPath: PIXEL_PANEL_CLIP }}
+      >
+        <div className="text-[10px] uppercase tracking-[0.2em] text-foreground/42">
+          {props.stageLevel === "clusters" ? "world map" : `${props.activeZone.title} room`}
         </div>
-        <div className="mt-1 text-sm leading-6 text-muted-foreground">{props.item.summary}</div>
+        <div className="mt-1 text-lg font-semibold leading-none tracking-[-0.06em] text-foreground">
+          Workboard Game World
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-[0.16em] text-foreground/42">
+          {worldLine.map((item, index) => (
+            <React.Fragment key={item}>
+              {index > 0 ? <span className="text-foreground/20">/</span> : null}
+              <span>{item}</span>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap justify-end gap-1.5">
+        {props.stageLevel === "agents" ? (
+          <button
+            type="button"
+            onClick={props.onBackToAtlas}
+            className="border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
+            style={{ clipPath: PIXEL_PANEL_CLIP }}
+          >
+            world
+          </button>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={props.onToggleFlowMode}
+          className="border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
+          style={{ clipPath: PIXEL_PANEL_CLIP }}
+          aria-pressed={props.flowMode === "turbo"}
+        >
+          {props.flowMode}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => props.onRefresh?.()}
+          className="inline-flex items-center gap-1.5 border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105 disabled:opacity-45"
+          style={{ clipPath: PIXEL_PANEL_CLIP }}
+          disabled={!props.onRefresh}
+        >
+          <RefreshCwIcon className={cn("size-3.5", props.loading ? "animate-spin" : "")} />
+          tick
+        </button>
+
+        <button
+          type="button"
+          onClick={props.onToggleFullscreen}
+          className="inline-flex items-center gap-1.5 border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
+          style={{ clipPath: PIXEL_PANEL_CLIP }}
+          aria-pressed={props.isFullscreen}
+        >
+          {props.isFullscreen ? <Minimize2Icon className="size-3.5" /> : <Maximize2Icon className="size-3.5" />}
+          {props.isFullscreen ? "exit" : "full"}
+        </button>
       </div>
     </div>
   );
 }
 
-function CueCard(props: { item: DowncityWorkboardSignalItem }) {
+function WorkboardGameStyles() {
   return (
-    <div className={cn("rounded-[18px] border px-4 py-4", toneClass(props.item.tone))}>
-      <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/45">{props.item.label}</div>
-      <div className="mt-2 text-base font-semibold tracking-[-0.03em] text-foreground">{props.item.value}</div>
-    </div>
+    <style>{`
+      @keyframes workboard-dash {
+        from { stroke-dashoffset: 0; }
+        to { stroke-dashoffset: 18; }
+      }
+      @keyframes workboard-pulse {
+        0% { opacity: 0.15; transform: scale(0.98); }
+        50% { opacity: 0.5; transform: scale(1.08); }
+        100% { opacity: 0.15; transform: scale(0.98); }
+      }
+      @keyframes workboard-sprite-step {
+        0% { translate: 0 0; }
+        50% { translate: 0 -1px; }
+        100% { translate: 0 0; }
+      }
+      @keyframes workboard-world-scan {
+        0% { transform: translateY(-16px); opacity: 0.08; }
+        50% { opacity: 0.18; }
+        100% { transform: translateY(16px); opacity: 0.08; }
+      }
+    `}</style>
   );
 }
 
+/**
+ * 渲染全局 Workboard 游戏世界。
+ */
 export function Workboard(props: DowncityWorkboardProps) {
   const { board, loading, selectedAgentId, onRefresh, onSelectAgent, className } = props;
   const selected = resolveSelectedAgent({ board, selectedAgentId });
+  const containerRef = React.useRef<HTMLElement | null>(null);
+  const [stageLevel, setStageLevel] = React.useState<DowncityWorkboardStageLevel>("clusters");
+  const [detailsCollapsed, setDetailsCollapsed] = React.useState(true);
+  const [flowMode, setFlowMode] = React.useState<"cruise" | "turbo">("cruise");
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [activeZoneId, setActiveZoneId] = React.useState<DowncityWorkboardZoneId>(() =>
+    selected ? resolveZoneId(selected) : "engaged",
+  );
 
-  if (!board) {
+  React.useEffect(() => {
+    const nextZoneId = selected ? resolveZoneId(selected) : activeZoneId;
+    setActiveZoneId(nextZoneId);
+    if (selected) setDetailsCollapsed(false);
+  }, [activeZoneId, selected]);
+
+  React.useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  const activeZone = resolveZoneDefinition(activeZoneId);
+  const activeZoneItems = React.useMemo(
+    () => (board?.agents || []).filter((item) => resolveZoneId(item) === activeZoneId),
+    [activeZoneId, board],
+  );
+  const selectedPeers = React.useMemo(
+    () => (board?.agents || []).filter((item) => resolveZoneId(item) === activeZoneId),
+    [activeZoneId, board],
+  );
+  const gameMap = React.useMemo(
+    () =>
+      board
+        ? buildWorkboardGameMapConfig({
+            board,
+            activeZoneId,
+            selectedAgentId: selected?.id,
+          })
+        : null,
+    [activeZoneId, board, selected?.id],
+  );
+  const motionNodes = React.useMemo(() => {
+    if (!gameMap) return [];
+
+    if (stageLevel === "clusters") {
+      return gameMap.actors.map((actor, index) => {
+        const route = gameMap.corridors.find((item) => item.id === `corridor-${actor.id}`);
+        return {
+          id: actor.id,
+          anchor: actor.overviewAnchor,
+          swayX: 6 + (index % 3) * 2.5,
+          swayY: 4 + (index % 4) * 1.7,
+          phase: index * 0.9,
+          speed: 0.8 + (index % 5) * 0.08,
+          mode: "route",
+          route: route?.points || actor.overviewRoute,
+          dwellRatio: route?.dwellRatio,
+          snapSize: route?.snapSize,
+        } satisfies DowncityWorkboardMotionNode;
+      });
+    }
+
+    return gameMap.actors
+      .filter((actor) => actor.zoneId === activeZoneId && actor.focusedAnchor)
+      .map((actor, index) => {
+        const route = gameMap.patrols.find((item) => item.id === actor.focusedRouteId);
+        const fallbackPoint = actor.focusedAnchor || {
+          x: WORKBOARD_STAGE_WIDTH / 2,
+          y: WORKBOARD_STAGE_HEIGHT / 2,
+        };
+        return {
+          id: actor.id,
+          anchor: fallbackPoint,
+          swayX: 9 + (index % 3) * 2.2,
+          swayY: 6 + (index % 4) * 1.6,
+          phase: index * 0.82,
+          speed: 0.95 + (index % 5) * 0.1,
+          mode: "route",
+          route:
+            route?.points ||
+            gameMap.patrols[index % Math.max(gameMap.patrols.length, 1)]?.points ||
+            [fallbackPoint],
+          dwellRatio: route?.dwellRatio,
+          snapSize: route?.snapSize,
+        } satisfies DowncityWorkboardMotionNode;
+      });
+  }, [activeZoneId, gameMap, stageLevel]);
+  const motionFrames = useWorkboardMotion({ nodes: motionNodes, flowMode });
+
+  const openZone = React.useCallback(
+    (zoneId: DowncityWorkboardZoneId) => {
+      setActiveZoneId(zoneId);
+      setStageLevel("agents");
+      setDetailsCollapsed(false);
+      const lead = resolveZoneLead({ board, zoneId });
+      if (lead) onSelectAgent?.(lead.id);
+    },
+    [board, onSelectAgent],
+  );
+
+  const openAgent = React.useCallback(
+    (agentId: string) => {
+      const item = (board?.agents || []).find((entry) => entry.id === agentId);
+      if (!item) return;
+
+      setActiveZoneId(resolveZoneId(item));
+      setStageLevel("agents");
+      setDetailsCollapsed(false);
+      onSelectAgent?.(agentId);
+    },
+    [board, onSelectAgent],
+  );
+
+  const toggleFullscreen = React.useCallback(async () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (document.fullscreenElement === container) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    if (document.fullscreenElement) await document.exitFullscreen();
+    await container.requestFullscreen();
+  }, []);
+
+  if (!board || !gameMap) {
     return (
-      <Card className={cn("overflow-hidden border border-dashed border-border/80 bg-[linear-gradient(145deg,rgba(247,244,236,0.84),rgba(255,255,255,0.95))]", className)}>
-        <CardContent className="flex min-h-72 items-center justify-center text-sm text-muted-foreground">
-          {loading ? "正在加载 workboard..." : "当前没有可展示的 workboard 板面。"}
-        </CardContent>
-      </Card>
+      <div
+        className={cn(
+          "grid min-h-72 place-items-center border-2 border-dashed border-border/70 bg-[linear-gradient(145deg,rgba(247,244,236,0.84),rgba(255,255,255,0.95))] text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ clipPath: PIXEL_PANEL_CLIP }}
+      >
+        {loading ? "正在生成 workboard game world..." : "当前没有可展示的 workboard game world。"}
+      </div>
     );
   }
 
   return (
-    <Card className={cn("relative overflow-hidden border border-border/70 bg-[linear-gradient(145deg,rgba(247,244,236,0.95),rgba(255,255,255,0.98)_42%,rgba(229,238,234,0.72))]", className)}>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(17,17,19,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(17,17,19,0.03)_1px,transparent_1px)] bg-[size:26px_26px] opacity-30" />
-      <div className="pointer-events-none absolute left-6 top-6 h-28 w-28 rounded-full bg-[radial-gradient(circle,rgba(190,106,40,0.16),transparent_68%)]" />
-      <div className="pointer-events-none absolute bottom-4 right-4 h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(54,107,96,0.18),transparent_70%)]" />
+    <section className={cn("min-h-full", className)}>
+      <WorkboardGameStyles />
+      <section
+        ref={containerRef}
+        className={cn(
+          "relative overflow-hidden border-2 border-border/70 bg-[linear-gradient(145deg,rgba(236,232,218,0.96),rgba(255,252,247,0.98)_42%,rgba(217,231,224,0.76))] p-2 shadow-[0_8px_0_rgba(17,17,19,0.12)]",
+          isFullscreen ? "h-[100dvh] rounded-none border-0 shadow-none" : "",
+        )}
+        style={isFullscreen ? undefined : { clipPath: PIXEL_PANEL_CLIP }}
+      >
+        <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(rgba(17,17,19,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(17,17,19,0.04)_1px,transparent_1px)] bg-[size:18px_18px] opacity-40" />
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-[linear-gradient(180deg,transparent,rgba(17,17,19,0.08),transparent)]"
+          style={{ animation: "workboard-world-scan 4.5s steps(6, end) infinite" }}
+        />
 
-      <CardContent className="relative p-4 md:p-6">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.22fr)_minmax(22rem,0.78fr)]">
-          <section className="space-y-5">
-            <div className="rounded-[28px] border border-foreground/10 bg-background/84 p-5 shadow-[0_18px_36px_rgba(17,17,19,0.05)]">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">Global public board</Badge>
-                    <Badge variant="outline">all agents</Badge>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-[1.55rem] font-semibold tracking-[-0.05em] text-foreground">
-                      当前所有 agents 的公开状态总览
-                    </h3>
-                    <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                      这块板面展示的是每个 agent 对外呈现出的状态、近期变化和公开线索。
-                    </p>
-                  </div>
-                </div>
+        <WorkboardGameHud
+          board={board}
+          stageLevel={stageLevel}
+          activeZone={activeZone}
+          selected={selected}
+          flowMode={flowMode}
+          loading={loading}
+          isFullscreen={isFullscreen}
+          onBackToAtlas={() => setStageLevel("clusters")}
+          onToggleFlowMode={() => setFlowMode((prev) => (prev === "cruise" ? "turbo" : "cruise"))}
+          onRefresh={onRefresh}
+          onToggleFullscreen={toggleFullscreen}
+        />
 
-                <div className="flex items-center gap-2">
-                  <div className="grid grid-cols-4 gap-2 rounded-[20px] border border-border/70 bg-muted/35 p-2">
-                    <div className="min-w-20 rounded-[14px] bg-background px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/48">Agents</div>
-                      <div className="mt-1 text-lg font-semibold tracking-[-0.04em] text-foreground">{board.summary.totalAgents}</div>
-                    </div>
-                    <div className="min-w-20 rounded-[14px] bg-background px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/48">Live</div>
-                      <div className="mt-1 text-lg font-semibold tracking-[-0.04em] text-foreground">{board.summary.liveAgents}</div>
-                    </div>
-                    <div className="min-w-20 rounded-[14px] bg-background px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/48">Active</div>
-                      <div className="mt-1 text-lg font-semibold tracking-[-0.04em] text-foreground">{board.summary.activeAgents}</div>
-                    </div>
-                    <div className="min-w-20 rounded-[14px] bg-background px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/48">Quiet</div>
-                      <div className="mt-1 text-lg font-semibold tracking-[-0.04em] text-foreground">{board.summary.quietAgents}</div>
-                    </div>
-                  </div>
-                  <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={!onRefresh} className="rounded-[14px]">
-                    <RefreshCwIcon className={cn("size-4", loading ? "animate-spin" : "")} />
-                    Refresh
-                  </Button>
-                </div>
-              </div>
-            </div>
+        <div
+          className={cn(
+            "relative z-20 w-full overflow-hidden border-2 border-border/70 bg-[linear-gradient(145deg,rgba(251,250,247,0.96),rgba(245,248,245,0.88))]",
+            isFullscreen ? "h-[calc(100dvh-16px)]" : "",
+          )}
+          style={isFullscreen ? undefined : { minHeight: WORKBOARD_STAGE_HEIGHT, clipPath: PIXEL_PANEL_CLIP }}
+        >
+          {stageLevel === "clusters" ? (
+            <WorkboardGameAtlas
+              board={board}
+              gameMap={gameMap}
+              activeZoneId={activeZoneId}
+              selectedAgentId={selected?.id}
+              flowMode={flowMode}
+              motionFrames={motionFrames}
+              onSelectZone={openZone}
+              onSelectAgent={(agentId) => openAgent(agentId)}
+            />
+          ) : (
+            <FocusedClusterStage
+              zone={activeZone}
+              items={activeZoneItems}
+              gameMap={gameMap}
+              selectedAgentId={selected?.id}
+              motionFrames={motionFrames}
+              flowMode={flowMode}
+              onBack={() => setStageLevel("clusters")}
+              onSelectAgent={openAgent}
+            />
+          )}
 
-            <div className="rounded-[28px] border border-foreground/10 bg-background/82 p-5 shadow-[0_16px_32px_rgba(17,17,19,0.05)]">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-foreground/42">Agents stage</div>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">点击任一 agent，右侧会展开它当前的公开状态细节。</p>
-                </div>
-                <div className="text-[11px] uppercase tracking-[0.12em] text-foreground/40">
-                  collected {formatTimestamp(board.collectedAt)}
-                </div>
-              </div>
-              <div className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-                {board.agents.map((item) => (
-                  <AgentNode
-                    key={item.id}
-                    item={item}
-                    active={selected?.id === item.id}
-                    onSelect={onSelectAgent}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <aside className="space-y-5">
-            <div className="rounded-[28px] border border-foreground/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.95),rgba(241,245,243,0.88))] p-5 shadow-[0_18px_36px_rgba(17,17,19,0.05)]">
-              <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-foreground/42">
-                <BotIcon className="size-4" />
-                Inspector
-              </div>
-              {selected ? (
-                <div className="mt-4 space-y-4">
-                  <div className="rounded-[22px] border border-border/70 bg-background/85 px-4 py-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-lg font-semibold tracking-[-0.03em] text-foreground">{selected.name}</span>
-                      <Badge variant={selected.running ? "secondary" : "outline"}>{selected.posture}</Badge>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{selected.statusText}</p>
-                    <div className="mt-3 text-xs uppercase tracking-[0.12em] text-foreground/42">
-                      {selected.momentum} · {formatRelativeTime(selected.collectedAt)}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-foreground/42">Current public moments</div>
-                    {(selected.snapshot.current || []).map((item) => (
-                      <ActivityLine key={item.id} item={item} />
-                    ))}
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-foreground/42">Recent fragments</div>
-                    {(selected.snapshot.recent || []).length === 0 ? (
-                      <div className="rounded-[18px] border border-dashed border-border/80 bg-background/72 px-4 py-4 text-sm text-muted-foreground">
-                        暂无近期片段。
-                      </div>
-                    ) : (
-                      (selected.snapshot.recent || []).map((item) => (
-                        <ActivityLine key={item.id} item={item} />
-                      ))
-                    )}
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-foreground/42">Public cues</div>
-                    {(selected.snapshot.signals || []).map((item) => (
-                      <CueCard key={item.label} item={item} />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-[20px] border border-dashed border-border/80 bg-background/70 px-4 py-5 text-sm text-muted-foreground">
-                  当前没有可查看的 agent。
-                </div>
-              )}
-            </div>
-          </aside>
+          <WorkboardGameInspector
+            selected={selected}
+            activeZone={activeZone}
+            selectedPeers={selectedPeers}
+            stageLevel={stageLevel}
+            collapsed={detailsCollapsed}
+            onToggleCollapsed={() => setDetailsCollapsed((prev) => !prev)}
+            onSelectAgent={openAgent}
+          />
         </div>
-      </CardContent>
-    </Card>
+      </section>
+    </section>
   );
 }

@@ -733,6 +733,7 @@ export interface UseConsoleDashboardResult {
    */
   upsertGlobalEnv: (input: {
     key: string;
+    description?: string;
     value: string;
   }) => Promise<void>;
 
@@ -752,6 +753,7 @@ export interface UseConsoleDashboardResult {
   upsertAgentEnv: (input: {
     agentId: string;
     key: string;
+    description?: string;
     value: string;
   }) => Promise<void>;
 

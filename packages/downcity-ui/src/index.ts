@@ -32,6 +32,13 @@ export type {
   DowncityWorkboardGameRoute,
   DowncityWorkboardGameZone,
 } from "./types/workboard-game-map";
+export type {
+  DowncityWorkboardGameAtlasProps,
+  DowncityWorkboardGameHudProps,
+  DowncityWorkboardGameInspectorProps,
+  DowncityWorkboardGameRoomProps,
+  DowncityWorkboardHoverTagSetter,
+} from "./types/workboard-game-ui";
 
 export { Button, buttonVariants } from "./components/button";
 export { Badge, badgeVariants } from "./components/badge";

@@ -8,7 +8,7 @@
  */
 
 import type { DowncityWorkboardAgentItem, DowncityWorkboardBoardSnapshot } from "./workboard";
-import type { DowncityWorkboardGameMapConfig } from "./workboard-game-map";
+import type { DowncityWorkboardGameMapConfig, DowncityWorkboardGameZone } from "./workboard-game-map";
 import type {
   DowncityWorkboardHoverTag,
   DowncityWorkboardMotionFrame,
@@ -56,6 +56,40 @@ export interface DowncityWorkboardGameAtlasProps {
 }
 
 /**
+ * Workboard cluster room 场景组件属性。
+ */
+export interface DowncityWorkboardGameRoomProps {
+  /**
+   * 当前房间所属状态簇。
+   */
+  zone: DowncityWorkboardZoneDefinition;
+  /**
+   * 当前房间中的 agent 列表。
+   */
+  items: DowncityWorkboardAgentItem[];
+  /**
+   * 当前游戏地图配置。
+   */
+  gameMap: DowncityWorkboardGameMapConfig;
+  /**
+   * 当前选中的 agent id。
+   */
+  selectedAgentId?: string;
+  /**
+   * 当前 motion hook 计算出的 actor 坐标。
+   */
+  motionFrames?: Record<string, DowncityWorkboardMotionFrame>;
+  /**
+   * 当前地图流速档位。
+   */
+  flowMode: "cruise" | "turbo";
+  /**
+   * 选择 agent 的回调。
+   */
+  onSelectAgent?: (agentId: string) => void;
+}
+
+/**
  * Workboard 游戏化 HUD 属性。
  */
 export interface DowncityWorkboardGameHudProps {
@@ -87,6 +121,14 @@ export interface DowncityWorkboardGameHudProps {
    * 是否处于全屏。
    */
   isFullscreen: boolean;
+  /**
+   * 底部 portal rail 展示的状态簇集合。
+   */
+  zones: DowncityWorkboardGameZone[];
+  /**
+   * 从底部 portal rail 进入某个状态簇。
+   */
+  onSelectZone?: (zoneId: DowncityWorkboardZoneId) => void;
   /**
    * 返回 atlas 的回调。
    */

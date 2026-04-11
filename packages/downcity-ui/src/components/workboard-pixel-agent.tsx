@@ -61,12 +61,18 @@ function rect(x: number, y: number, w: number, h: number, fill: string): string 
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" />`;
 }
 
-function buildPixelAvatarSvg(params: { agentId: string; name: string }): string {
+function buildPixelAvatarSvg(params: {
+  agentId: string;
+  name: string;
+  direction?: DowncityWorkboardPixelAgentProps["direction"];
+}): string {
   const seed = hashText(`${params.agentId}:${params.name}`);
   const palette = PIXEL_PALETTES[seed % PIXEL_PALETTES.length];
   const hairVariant = seed % 3;
   const eyeVariant = (seed >> 2) % 2;
   const accentVariant = (seed >> 4) % 3;
+  const facingUp = params.direction === "up";
+  const facingSide = params.direction === "left" || params.direction === "right";
 
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">`,
@@ -79,11 +85,29 @@ function buildPixelAvatarSvg(params: { agentId: string; name: string }): string 
     rect(9, 14, 2, 2, palette.outline),
     rect(4, 11, 1, 3, palette.outline),
     rect(11, 11, 1, 3, palette.outline),
-    rect(6, 6, 1, 1, palette.outline),
-    rect(9, 6, 1, 1, palette.outline),
-    rect(7, 8, 2, 1, "#9d6f4d"),
     rect(6, 4, 4, 1, palette.accent),
   ];
+
+  if (facingUp) {
+    parts.push(
+      rect(3, 4, 10, 5, palette.hair),
+      rect(5, 8, 6, 2, palette.hair),
+      rect(6, 11, 4, 2, palette.accent),
+    );
+  } else if (facingSide) {
+    parts.push(
+      rect(5, 6, 1, 1, palette.outline),
+      rect(9, 7, 2, 1, palette.outline),
+      rect(8, 8, 2, 1, "#9d6f4d"),
+      rect(11, 5, 2, 4, palette.hair),
+    );
+  } else {
+    parts.push(
+      rect(6, 6, 1, 1, palette.outline),
+      rect(9, 6, 1, 1, palette.outline),
+      rect(7, 8, 2, 1, "#9d6f4d"),
+    );
+  }
 
   if (hairVariant === 0) {
     parts.push(rect(2, 3, 1, 4, palette.hair), rect(13, 3, 1, 4, palette.hair));
@@ -93,7 +117,7 @@ function buildPixelAvatarSvg(params: { agentId: string; name: string }): string 
     parts.push(rect(4, 1, 8, 1, palette.hair), rect(3, 2, 1, 2, palette.hair), rect(12, 2, 1, 2, palette.hair));
   }
 
-  if (eyeVariant === 1) {
+  if (!facingUp && eyeVariant === 1) {
     parts.push(rect(5, 6, 1, 1, palette.outline), rect(10, 6, 1, 1, palette.outline));
   }
 
@@ -115,8 +139,8 @@ function svgToDataUri(svg: string): string {
 
 export function WorkboardPixelAgent(props: DowncityWorkboardPixelAgentProps) {
   const src = React.useMemo(
-    () => svgToDataUri(buildPixelAvatarSvg({ agentId: props.agentId, name: props.name })),
-    [props.agentId, props.name],
+    () => svgToDataUri(buildPixelAvatarSvg({ agentId: props.agentId, name: props.name, direction: props.direction })),
+    [props.agentId, props.name, props.direction],
   );
   const flipped = props.direction === "left";
 

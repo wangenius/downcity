@@ -17,9 +17,9 @@ import { cn } from "../lib/utils";
 import { WorkboardGameAtlas } from "./workboard-game-atlas";
 import { WorkboardGameInspector } from "./workboard-game-inspector";
 import { buildWorkboardGameMapConfig } from "./workboard-game-map";
+import { WorkboardGameRoom } from "./workboard-game-room";
 import { useWorkboardMotion } from "./workboard-motion";
 import {
-  FocusedClusterStage,
   WORKBOARD_STAGE_HEIGHT,
   WORKBOARD_STAGE_WIDTH,
   formatWorkboardRelativeTime,
@@ -31,6 +31,7 @@ import type {
   DowncityWorkboardProps,
 } from "../types/workboard";
 import type { DowncityWorkboardGameHudProps } from "../types/workboard-game-ui";
+import type { DowncityWorkboardGameZone } from "../types/workboard-game-map";
 import type {
   DowncityWorkboardMotionNode,
   DowncityWorkboardStageLevel,
@@ -74,70 +75,156 @@ function WorkboardGameHud(props: DowncityWorkboardGameHudProps) {
   ];
 
   return (
-    <div className="absolute inset-x-2 top-2 z-40 flex flex-wrap items-start justify-between gap-2">
-      <div
-        className="border-2 border-border/70 bg-[rgba(255,252,247,0.92)] px-3 py-2 shadow-[0_3px_0_rgba(17,17,19,0.12)]"
-        style={{ clipPath: PIXEL_PANEL_CLIP }}
-      >
-        <div className="text-[10px] uppercase tracking-[0.2em] text-foreground/42">
-          {props.stageLevel === "clusters" ? "world map" : `${props.activeZone.title} room`}
+    <>
+      <div className="absolute inset-x-2 top-2 z-40 flex flex-wrap items-start justify-between gap-2">
+        <div
+          className="border-2 border-border/70 bg-[rgba(255,252,247,0.92)] px-3 py-2 shadow-[0_3px_0_rgba(17,17,19,0.12)]"
+          style={{ clipPath: PIXEL_PANEL_CLIP }}
+        >
+          <div className="text-[10px] uppercase tracking-[0.2em] text-foreground/42">
+            {props.stageLevel === "clusters" ? "world map" : `${props.activeZone.title} room`}
+          </div>
+          <div className="mt-1 text-lg font-semibold leading-none tracking-[-0.06em] text-foreground">
+            Workboard Game World
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-[0.16em] text-foreground/42">
+            {worldLine.map((item, index) => (
+              <React.Fragment key={item}>
+                {index > 0 ? <span className="text-foreground/20">/</span> : null}
+                <span>{item}</span>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
-        <div className="mt-1 text-lg font-semibold leading-none tracking-[-0.06em] text-foreground">
-          Workboard Game World
+
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {props.stageLevel === "agents" ? (
+            <button
+              type="button"
+              onClick={props.onBackToAtlas}
+              className="border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
+              style={{ clipPath: PIXEL_PANEL_CLIP }}
+            >
+              world
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={props.onToggleFlowMode}
+            className="border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
+            style={{ clipPath: PIXEL_PANEL_CLIP }}
+            aria-pressed={props.flowMode === "turbo"}
+          >
+            {props.flowMode}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => props.onRefresh?.()}
+            className="inline-flex items-center gap-1.5 border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105 disabled:opacity-45"
+            style={{ clipPath: PIXEL_PANEL_CLIP }}
+            disabled={!props.onRefresh}
+          >
+            <RefreshCwIcon className={cn("size-3.5", props.loading ? "animate-spin" : "")} />
+            tick
+          </button>
+
+          <button
+            type="button"
+            onClick={props.onToggleFullscreen}
+            className="inline-flex items-center gap-1.5 border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
+            style={{ clipPath: PIXEL_PANEL_CLIP }}
+            aria-pressed={props.isFullscreen}
+          >
+            {props.isFullscreen ? <Minimize2Icon className="size-3.5" /> : <Maximize2Icon className="size-3.5" />}
+            {props.isFullscreen ? "exit" : "full"}
+          </button>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-[0.16em] text-foreground/42">
-          {worldLine.map((item, index) => (
-            <React.Fragment key={item}>
-              {index > 0 ? <span className="text-foreground/20">/</span> : null}
-              <span>{item}</span>
-            </React.Fragment>
+      </div>
+
+      <div className="absolute inset-x-2 bottom-2 z-40 flex justify-center">
+        <div
+          className="flex max-w-full gap-1 overflow-x-auto border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1.5 shadow-[0_3px_0_rgba(17,17,19,0.12)]"
+          style={{ clipPath: PIXEL_PANEL_CLIP }}
+          aria-label="Workboard zone portals"
+        >
+          {props.zones.map((zone) => (
+            <WorkboardZonePortalButton
+              key={zone.id}
+              zone={zone}
+              current={zone.id === props.activeZone.id}
+              onSelect={props.onSelectZone}
+            />
           ))}
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-end gap-1.5">
-        {props.stageLevel === "agents" ? (
-          <button
-            type="button"
-            onClick={props.onBackToAtlas}
-            className="border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
-            style={{ clipPath: PIXEL_PANEL_CLIP }}
-          >
-            world
-          </button>
-        ) : null}
+      <div className="pointer-events-none absolute bottom-[4.7rem] left-2 z-40 hidden border-2 border-border/60 bg-[rgba(255,252,247,0.82)] px-2 py-1 text-[9px] uppercase tracking-[0.13em] text-foreground/44 shadow-[0_2px_0_rgba(17,17,19,0.1)] md:block" style={{ clipPath: PIXEL_PANEL_CLIP }}>
+        left/right switch zone / enter open / esc world
+      </div>
+    </>
+  );
+}
 
-        <button
-          type="button"
-          onClick={props.onToggleFlowMode}
-          className="border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
-          style={{ clipPath: PIXEL_PANEL_CLIP }}
-          aria-pressed={props.flowMode === "turbo"}
-        >
-          {props.flowMode}
-        </button>
+function WorkboardZonePortalButton(props: {
+  zone: DowncityWorkboardGameZone;
+  current: boolean;
+  onSelect?: (zoneId: DowncityWorkboardZoneId) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => props.onSelect?.(props.zone.id)}
+      className={cn(
+        "group inline-flex min-w-24 items-center gap-2 border border-border/50 px-2 py-1 text-left transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-105 focus:outline-none focus-visible:-translate-y-0.5",
+        props.current ? "bg-foreground text-background" : "bg-[rgba(255,252,247,0.76)] text-foreground",
+      )}
+      style={{ clipPath: PIXEL_PANEL_CLIP }}
+      aria-pressed={props.current}
+    >
+      <span
+        className={cn(
+          "grid size-5 place-items-center border text-[10px] font-semibold leading-none",
+          props.current ? "border-background/70" : "border-foreground/35",
+        )}
+        aria-hidden="true"
+      >
+        {props.zone.count}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.13em]">
+          {props.zone.badge}
+        </span>
+        <span className={cn("block truncate text-[9px]", props.current ? "text-background/70" : "text-foreground/46")}>
+          portal
+        </span>
+      </span>
+    </button>
+  );
+}
 
-        <button
-          type="button"
-          onClick={() => props.onRefresh?.()}
-          className="inline-flex items-center gap-1.5 border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105 disabled:opacity-45"
-          style={{ clipPath: PIXEL_PANEL_CLIP }}
-          disabled={!props.onRefresh}
-        >
-          <RefreshCwIcon className={cn("size-3.5", props.loading ? "animate-spin" : "")} />
-          tick
-        </button>
+function WorkboardWorldPortalOverlay(props: {
+  portal: { key: number; label: string; mode: "enter" | "world" } | null;
+}) {
+  if (!props.portal) return null;
 
-        <button
-          type="button"
-          onClick={props.onToggleFullscreen}
-          className="inline-flex items-center gap-1.5 border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] shadow-[0_2px_0_rgba(17,17,19,0.12)] transition-[filter] hover:brightness-105"
-          style={{ clipPath: PIXEL_PANEL_CLIP }}
-          aria-pressed={props.isFullscreen}
-        >
-          {props.isFullscreen ? <Minimize2Icon className="size-3.5" /> : <Maximize2Icon className="size-3.5" />}
-          {props.isFullscreen ? "exit" : "full"}
-        </button>
+  return (
+    <div
+      key={props.portal.key}
+      className="pointer-events-none absolute inset-0 z-50 grid place-items-center bg-[rgba(255,252,247,0.18)]"
+      aria-hidden="true"
+    >
+      <div className="absolute inset-y-0 left-0 w-1/2 origin-left bg-[rgba(17,17,19,0.82)] workboard-portal-left" />
+      <div className="absolute inset-y-0 right-0 w-1/2 origin-right bg-[rgba(17,17,19,0.82)] workboard-portal-right" />
+      <div
+        className="relative z-10 border-2 border-background/80 bg-[rgba(17,17,19,0.88)] px-4 py-3 text-center text-background shadow-[0_4px_0_rgba(17,17,19,0.2)] workboard-portal-label"
+        style={{ clipPath: PIXEL_PANEL_CLIP }}
+      >
+        <div className="text-[10px] uppercase tracking-[0.22em] text-background/58">
+          {props.portal.mode === "enter" ? "enter room" : "return atlas"}
+        </div>
+        <div className="mt-1 text-base font-semibold tracking-[-0.05em]">{props.portal.label}</div>
       </div>
     </div>
   );
@@ -165,8 +252,51 @@ function WorkboardGameStyles() {
         50% { opacity: 0.18; }
         100% { transform: translateY(16px); opacity: 0.08; }
       }
+      @keyframes workboard-portal-left {
+        0% { transform: scaleX(0); }
+        35% { transform: scaleX(1); }
+        70% { transform: scaleX(1); }
+        100% { transform: scaleX(0); }
+      }
+      @keyframes workboard-portal-right {
+        0% { transform: scaleX(0); }
+        35% { transform: scaleX(1); }
+        70% { transform: scaleX(1); }
+        100% { transform: scaleX(0); }
+      }
+      @keyframes workboard-portal-label {
+        0% { opacity: 0; transform: translateY(6px) scale(0.96); }
+        28% { opacity: 1; transform: translateY(0) scale(1); }
+        74% { opacity: 1; transform: translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-6px) scale(0.98); }
+      }
+      .workboard-portal-left { animation: workboard-portal-left 560ms steps(7, end) both; }
+      .workboard-portal-right { animation: workboard-portal-right 560ms steps(7, end) both; }
+      .workboard-portal-label { animation: workboard-portal-label 560ms steps(6, end) both; }
+      @media (prefers-reduced-motion: reduce) {
+        .workboard-portal-left,
+        .workboard-portal-right,
+        .workboard-portal-label {
+          animation-duration: 1ms;
+        }
+      }
     `}</style>
   );
+}
+
+function resolveAdjacentZoneId(params: {
+  zones: DowncityWorkboardGameZone[];
+  activeZoneId: DowncityWorkboardZoneId;
+  direction: -1 | 1;
+}): DowncityWorkboardZoneId {
+  if (params.zones.length === 0) return params.activeZoneId;
+
+  const currentIndex = Math.max(
+    0,
+    params.zones.findIndex((zone) => zone.id === params.activeZoneId),
+  );
+  const nextIndex = (currentIndex + params.direction + params.zones.length) % params.zones.length;
+  return params.zones[nextIndex]?.id || params.activeZoneId;
 }
 
 /**
@@ -180,15 +310,31 @@ export function Workboard(props: DowncityWorkboardProps) {
   const [detailsCollapsed, setDetailsCollapsed] = React.useState(true);
   const [flowMode, setFlowMode] = React.useState<"cruise" | "turbo">("cruise");
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [portal, setPortal] = React.useState<{ key: number; label: string; mode: "enter" | "world" } | null>(null);
+  const previousSelectedIdRef = React.useRef<string | undefined>(selected?.id);
   const [activeZoneId, setActiveZoneId] = React.useState<DowncityWorkboardZoneId>(() =>
     selected ? resolveZoneId(selected) : "engaged",
   );
 
   React.useEffect(() => {
-    const nextZoneId = selected ? resolveZoneId(selected) : activeZoneId;
-    setActiveZoneId(nextZoneId);
-    if (selected) setDetailsCollapsed(false);
-  }, [activeZoneId, selected]);
+    if (!selected?.id) {
+      previousSelectedIdRef.current = undefined;
+      return;
+    }
+
+    if (selected.id === previousSelectedIdRef.current) return;
+
+    previousSelectedIdRef.current = selected.id;
+    setActiveZoneId(resolveZoneId(selected));
+    setDetailsCollapsed(false);
+  }, [selected]);
+
+  React.useEffect(() => {
+    if (!portal) return undefined;
+
+    const timeout = window.setTimeout(() => setPortal(null), 620);
+    return () => window.clearTimeout(timeout);
+  }, [portal]);
 
   React.useEffect(() => {
     const onFullscreenChange = () => {
@@ -267,15 +413,24 @@ export function Workboard(props: DowncityWorkboardProps) {
   }, [activeZoneId, gameMap, stageLevel]);
   const motionFrames = useWorkboardMotion({ nodes: motionNodes, flowMode });
 
+  const triggerPortal = React.useCallback((label: string, mode: "enter" | "world") => {
+    setPortal((prev) => ({
+      key: (prev?.key || 0) + 1,
+      label,
+      mode,
+    }));
+  }, []);
+
   const openZone = React.useCallback(
     (zoneId: DowncityWorkboardZoneId) => {
+      triggerPortal(resolveZoneDefinition(zoneId).title, "enter");
       setActiveZoneId(zoneId);
       setStageLevel("agents");
       setDetailsCollapsed(false);
       const lead = resolveZoneLead({ board, zoneId });
       if (lead) onSelectAgent?.(lead.id);
     },
-    [board, onSelectAgent],
+    [board, onSelectAgent, triggerPortal],
   );
 
   const openAgent = React.useCallback(
@@ -283,12 +438,50 @@ export function Workboard(props: DowncityWorkboardProps) {
       const item = (board?.agents || []).find((entry) => entry.id === agentId);
       if (!item) return;
 
-      setActiveZoneId(resolveZoneId(item));
+      const nextZoneId = resolveZoneId(item);
+      if (stageLevel === "clusters" || nextZoneId !== activeZoneId) {
+        triggerPortal(resolveZoneDefinition(nextZoneId).title, "enter");
+      }
+      setActiveZoneId(nextZoneId);
       setStageLevel("agents");
       setDetailsCollapsed(false);
       onSelectAgent?.(agentId);
     },
-    [board, onSelectAgent],
+    [activeZoneId, board, onSelectAgent, stageLevel, triggerPortal],
+  );
+
+  const backToAtlas = React.useCallback(() => {
+    triggerPortal("World Atlas", "world");
+    setStageLevel("clusters");
+  }, [triggerPortal]);
+
+  const handleWorldKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (!gameMap) return;
+
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        const nextZoneId = resolveAdjacentZoneId({
+          zones: gameMap.zones,
+          activeZoneId,
+          direction: event.key === "ArrowRight" ? 1 : -1,
+        });
+        setActiveZoneId(nextZoneId);
+        return;
+      }
+
+      if (event.key === "Enter" && stageLevel === "clusters") {
+        event.preventDefault();
+        openZone(activeZoneId);
+        return;
+      }
+
+      if (event.key === "Escape" && stageLevel === "agents") {
+        event.preventDefault();
+        backToAtlas();
+      }
+    },
+    [activeZoneId, backToAtlas, gameMap, openZone, stageLevel],
   );
 
   const toggleFullscreen = React.useCallback(async () => {
@@ -323,8 +516,10 @@ export function Workboard(props: DowncityWorkboardProps) {
       <WorkboardGameStyles />
       <section
         ref={containerRef}
+        tabIndex={0}
+        onKeyDown={handleWorldKeyDown}
         className={cn(
-          "relative overflow-hidden border-2 border-border/70 bg-[linear-gradient(145deg,rgba(236,232,218,0.96),rgba(255,252,247,0.98)_42%,rgba(217,231,224,0.76))] p-2 shadow-[0_8px_0_rgba(17,17,19,0.12)]",
+          "relative overflow-hidden border-2 border-border/70 bg-[linear-gradient(145deg,rgba(236,232,218,0.96),rgba(255,252,247,0.98)_42%,rgba(217,231,224,0.76))] p-2 shadow-[0_8px_0_rgba(17,17,19,0.12)] outline-none focus-visible:ring-2 focus-visible:ring-foreground/30",
           isFullscreen ? "h-[100dvh] rounded-none border-0 shadow-none" : "",
         )}
         style={isFullscreen ? undefined : { clipPath: PIXEL_PANEL_CLIP }}
@@ -343,7 +538,9 @@ export function Workboard(props: DowncityWorkboardProps) {
           flowMode={flowMode}
           loading={loading}
           isFullscreen={isFullscreen}
-          onBackToAtlas={() => setStageLevel("clusters")}
+          zones={gameMap.zones}
+          onSelectZone={openZone}
+          onBackToAtlas={backToAtlas}
           onToggleFlowMode={() => setFlowMode((prev) => (prev === "cruise" ? "turbo" : "cruise"))}
           onRefresh={onRefresh}
           onToggleFullscreen={toggleFullscreen}
@@ -351,7 +548,7 @@ export function Workboard(props: DowncityWorkboardProps) {
 
         <div
           className={cn(
-            "relative z-20 w-full overflow-hidden border-2 border-border/70 bg-[linear-gradient(145deg,rgba(251,250,247,0.96),rgba(245,248,245,0.88))]",
+            "relative z-20 grid w-full place-items-center overflow-auto border-2 border-border/70 bg-[linear-gradient(145deg,rgba(251,250,247,0.96),rgba(245,248,245,0.88))]",
             isFullscreen ? "h-[calc(100dvh-16px)]" : "",
           )}
           style={isFullscreen ? undefined : { minHeight: WORKBOARD_STAGE_HEIGHT, clipPath: PIXEL_PANEL_CLIP }}
@@ -368,17 +565,18 @@ export function Workboard(props: DowncityWorkboardProps) {
               onSelectAgent={(agentId) => openAgent(agentId)}
             />
           ) : (
-            <FocusedClusterStage
+            <WorkboardGameRoom
               zone={activeZone}
               items={activeZoneItems}
               gameMap={gameMap}
               selectedAgentId={selected?.id}
               motionFrames={motionFrames}
               flowMode={flowMode}
-              onBack={() => setStageLevel("clusters")}
               onSelectAgent={openAgent}
             />
           )}
+
+          <WorkboardWorldPortalOverlay portal={portal} />
 
           <WorkboardGameInspector
             selected={selected}

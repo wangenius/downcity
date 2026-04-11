@@ -25,6 +25,47 @@ import type { DowncityWorkboardHoverTag } from "../types/workboard-stage";
 const PIXEL_PANEL_CLIP = "polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 0px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px))";
 
 /**
+ * 渲染 atlas 中当前活跃状态簇的入口标记。
+ */
+function WorkboardAtlasPortalSign(props: {
+  activeZoneId: DowncityWorkboardGameAtlasProps["activeZoneId"];
+  zones: DowncityWorkboardGameAtlasProps["gameMap"]["zones"];
+  onSelectZone: DowncityWorkboardGameAtlasProps["onSelectZone"];
+}) {
+  const zone = props.zones.find((item) => item.id === props.activeZoneId) || props.zones[0];
+  if (!zone) return null;
+
+  const point = toZoneHubPoint(zone.id);
+  const left = Math.min(Math.max(point.x + 22, 18), WORKBOARD_STAGE_WIDTH - 198);
+  const top = Math.min(Math.max(point.y - 54, 76), WORKBOARD_STAGE_HEIGHT - 120);
+
+  return (
+    <button
+      type="button"
+      onClick={() => props.onSelectZone(zone.id)}
+      className="absolute z-30 w-40 border-[3px] border-[#6e4d2f] bg-[#f8de8d] px-3 py-2 text-left shadow-[5px_5px_0_rgba(72,50,33,0.28)] transition-[filter,transform] hover:-translate-y-0.5 hover:brightness-105 focus:outline-none focus-visible:-translate-y-0.5"
+      style={{ left, top, clipPath: PIXEL_PANEL_CLIP }}
+    >
+      <span className="absolute left-3 top-full h-5 w-2 bg-[#6e4d2f]" />
+      <span className="absolute right-3 top-full h-5 w-2 bg-[#6e4d2f]" />
+      <span className="block text-[9px] uppercase tracking-[0.18em] text-[#6e4d2f]/70">zone gate</span>
+      <span className="mt-1 block truncate text-sm font-semibold leading-5 tracking-[-0.04em] text-[#352516]">
+        {zone.title}
+      </span>
+      <span className="mt-1 grid grid-cols-[1fr_auto] items-center gap-2">
+        <span className="h-2 border border-[#6e4d2f]/35 bg-[#fff1bd]">
+          <span
+            className="block h-full bg-[#6e4d2f]/70"
+            style={{ width: `${Math.max(8, Math.min(100, zone.count * 18))}%` }}
+          />
+        </span>
+        <span className="text-[10px] font-semibold text-[#6e4d2f]/75">{zone.count}</span>
+      </span>
+    </button>
+  );
+}
+
+/**
  * 渲染全局 atlas 世界地图。
  */
 export function WorkboardGameAtlas(props: DowncityWorkboardGameAtlasProps) {
@@ -35,7 +76,7 @@ export function WorkboardGameAtlas(props: DowncityWorkboardGameAtlasProps) {
   return (
     <div
       className="relative overflow-hidden border-2 border-border/70 bg-[linear-gradient(145deg,rgba(251,250,247,0.96),rgba(245,248,245,0.88))]"
-      style={{ height: WORKBOARD_STAGE_HEIGHT, clipPath: PIXEL_PANEL_CLIP }}
+      style={{ width: WORKBOARD_STAGE_WIDTH, height: WORKBOARD_STAGE_HEIGHT, clipPath: PIXEL_PANEL_CLIP, imageRendering: "pixelated" }}
     >
       <div className="absolute left-3 top-3 z-20 px-1">
         <div className="text-[10px] uppercase tracking-[0.2em] text-foreground/42">world atlas</div>
@@ -61,11 +102,16 @@ export function WorkboardGameAtlas(props: DowncityWorkboardGameAtlasProps) {
           onHoverChange={setHoveredTag}
         />
       ))}
+      <WorkboardAtlasPortalSign
+        activeZoneId={props.activeZoneId}
+        zones={zones}
+        onSelectZone={props.onSelectZone}
+      />
 
       <svg
         viewBox={`0 0 ${WORKBOARD_STAGE_WIDTH} ${WORKBOARD_STAGE_HEIGHT}`}
         className="pointer-events-none absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid meet"
         aria-hidden="true"
       >
         {props.gameMap.corridors.map((route) => (
@@ -143,7 +189,7 @@ export function WorkboardGameAtlas(props: DowncityWorkboardGameAtlasProps) {
       <svg
         viewBox={`0 0 ${WORKBOARD_STAGE_WIDTH} ${WORKBOARD_STAGE_HEIGHT}`}
         className="pointer-events-none absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid meet"
         aria-hidden="true"
       >
         <PixelHoverTag tag={hoveredTag} stageWidth={WORKBOARD_STAGE_WIDTH} stageHeight={WORKBOARD_STAGE_HEIGHT} />

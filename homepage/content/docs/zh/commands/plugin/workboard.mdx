@@ -33,8 +33,14 @@ description: 用结构化快照展示各个 agent 对外呈现出的状态与近
 Console 会聚合所有 agent 的 workboard 快照，展示一个独立的全局 game world：
 
 - 在 Console 主导航里单独进入 `Workboard`
-- 主区域是一个像素化 world atlas，先按公开状态簇组织，再进入簇内 room
-- agent 会作为 sprite 沿 corridor、gate、station 巡游与停靠
+- 主区域是一个 Smallville 风格的像素小镇 atlas，由中心 plaza、四栋开放式状态建筑、主干路、水边、栅栏和地形边界组成
+- 进入状态簇后会切到室内平面图式 room，包含墙体、门、走廊、station 和 hub
+- 地图使用固定 25 x 16 tile 画布，全屏时保持正方像素块比例
+- 底部 portal rail 可以直接切换状态簇，进入 room 时会有像素化传送门过渡
+- agent 会作为带方向和状态符号的 sprite 沿 corridor、gate、station 巡游与停靠
+- room 内会高亮当前聚焦 sprite 的 quest path、station 和 hub 连接关系
+- atlas 支持键盘式地图控制：左右切换状态簇、Enter 进入、Esc 返回 world
+- room 会展示公开任务条目的 quest ledger 和 station mini-map
 - 点击状态簇可以进入该簇内部，再点击具体 sprite 查看公开片段
 - 右侧 codex log 始终跟随当前聚焦对象，展示公开片段与线索
 

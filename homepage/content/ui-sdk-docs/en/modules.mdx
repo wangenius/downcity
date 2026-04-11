@@ -118,7 +118,7 @@ This page lists the full public module surface of `@downcity/ui`.
   - `DowncityWorkboardBoardSnapshot`
   - `DowncityWorkboardAgentItem`
   - `DowncityWorkboardActivityItem`
-- Purpose: render a pixel-style game world across multiple agents with a world atlas, cluster rooms, sprite patrols, a codex log, and focused inspection
+- Purpose: render a pixel-style game world across multiple agents with a fixed 25 x 16 tile canvas, a Smallville-style town atlas, open state buildings, interior floor-plan rooms, a portal rail, keyboard map control, sprite patrols, quest paths, a quest ledger, a mini-map, a codex log, and focused inspection
 
 ### `buildWorkboardGameMapConfig`
 
@@ -130,6 +130,10 @@ This page lists the full public module surface of `@downcity/ui`.
   - `DowncityWorkboardGameRoute`
   - `DowncityWorkboardGamePointOfInterest`
   - `DowncityWorkboardGameAreaLabel`
+  - `DowncityWorkboardGameAtlasProps`
+  - `DowncityWorkboardGameRoomProps`
+  - `DowncityWorkboardGameInspectorProps`
+  - `DowncityWorkboardGameHudProps`
 - Purpose: map the public `workboard` snapshot into a full game-map configuration that custom hosts can reuse for zones, actors, routes, gates, stations, props, and area labels
 
 ## Overlays and Feedback Modules

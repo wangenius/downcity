@@ -2,26 +2,15 @@
  * Workboard 主舞台子组件与布局工具。
  *
  * 关键点（中文）
- * - 这里封装 cluster stage / focused cluster stage 的空间化表达。
+ * - 这里封装 Workboard game world 共用的空间布局与节点工具。
  * - 逻辑参考 teamprofile：先看全局簇，再进入局部簇内舞台。
- * - 节点只表达位置与存在感，详情统一交给浮动 inspector。
+ * - 具体 atlas / room renderer 已拆到独立文件，避免工具层继续混入场景组件。
  */
 
 import * as React from "react";
-import { ParallaxPxlKitIcon } from "@pxlkit/core";
-import { RetroJoystick } from "@pxlkit/parallax";
-import { ArrowLeftIcon } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Button } from "./button";
 import { WorkboardPixelAgent } from "./workboard-pixel-agent";
-import {
-  PixelFocusedField,
-  PixelHoverTag,
-  PixelRoute,
-  PixelZoneTiles,
-  WORKBOARD_ZONE_LAYOUT,
-} from "./workboard-stage-map";
-import type { DowncityWorkboardGameMapConfig } from "../types/workboard-game-map";
+import { WORKBOARD_ZONE_LAYOUT } from "./workboard-stage-map";
 import type {
   DowncityWorkboardAgentItem,
   DowncityWorkboardProps,
@@ -36,8 +25,6 @@ import type {
   DowncityWorkboardZoneDefinition,
   DowncityWorkboardZoneId,
 } from "../types/workboard-stage";
-
-const PIXEL_PANEL_CLIP = "polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 0px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px))";
 
 export const WORKBOARD_STAGE_HEIGHT = 640;
 export const WORKBOARD_STAGE_WIDTH = 1000;
@@ -140,43 +127,43 @@ function createHoverTag(params: {
   };
 }
 
-function resolveStagePoint(params: {
-  agentId: string;
-  fallback: DowncityWorkboardStagePoint;
-  motionFrames?: Record<string, DowncityWorkboardMotionFrame>;
-}): DowncityWorkboardStagePoint {
-  return params.motionFrames?.[params.agentId] || params.fallback;
-}
+/**
+ * 将公开 agent 状态压缩成像素游戏中的小状态符号。
+ */
+function resolveAgentGlyph(item: DowncityWorkboardAgentItem): {
+  label: string;
+  className: string;
+} {
+  const hasIssue =
+    item.snapshot.current.some((entry) => entry.status === "issue") ||
+    item.snapshot.recent.some((entry) => entry.status === "issue") ||
+    item.snapshot.signals.some((entry) => entry.tone === "warning");
 
-function ActiveSpeechBubble(props: {
-  item: DowncityWorkboardAgentItem | null;
-  point: DowncityWorkboardStagePoint | null;
-}) {
-  if (!props.item || !props.point) {
-    return null;
+  if (hasIssue) {
+    return {
+      label: "!",
+      className: "border-amber-700/50 bg-amber-400 text-amber-950",
+    };
   }
 
-  const line =
-    props.item.snapshot.current[0]?.summary ||
-    props.item.snapshot.recent[0]?.summary ||
-    props.item.headline;
+  if (item.snapshot.current.some((entry) => entry.status === "active")) {
+    return {
+      label: ">",
+      className: "border-emerald-700/45 bg-emerald-400 text-emerald-950",
+    };
+  }
 
-  return (
-    <div
-      className="pointer-events-none absolute z-30 max-w-[22rem] border-2 border-border/70 bg-[rgba(255,252,247,0.96)] px-3 py-2 text-sm shadow-[0_3px_0_rgba(17,17,19,0.12)]"
-      style={{
-        left: Math.min(Math.max(props.point.x + 28, 48), WORKBOARD_STAGE_WIDTH - 260),
-        top: Math.min(Math.max(props.point.y - 74, 20), WORKBOARD_STAGE_HEIGHT - 72),
-        clipPath: PIXEL_PANEL_CLIP,
-      }}
-    >
-      <p className="text-[10px] uppercase tracking-[0.14em] text-foreground/44">
-        {props.item.name} · {props.item.posture}
-      </p>
-      <p className="mt-1 leading-6 text-foreground">“{line}”</p>
-      <span className="absolute -bottom-[10px] left-4 block h-[10px] w-[14px] border-x-2 border-b-2 border-border/70 bg-[rgba(255,252,247,0.96)]" />
-    </div>
-  );
+  if (item.running) {
+    return {
+      label: "~",
+      className: "border-lime-700/45 bg-lime-300 text-lime-950",
+    };
+  }
+
+  return {
+    label: ".",
+    className: "border-stone-500/45 bg-stone-300 text-stone-800",
+  };
 }
 
 export function resolveZoneId(item: DowncityWorkboardAgentItem): DowncityWorkboardZoneId {
@@ -294,91 +281,46 @@ export function buildOverviewPatrolRoute(params: {
   const anchor = toStagePoint(params.zoneId, params.placement);
   const hub = toZoneHubPoint(params.zoneId);
   const laneIndex = Math.round((params.placement.left + params.placement.top) / 32) % 3;
+  const laneOffset = (laneIndex - 1) * 14;
+  const plaza = { x: 500 + laneOffset, y: 320 + laneOffset };
 
   if (params.zoneId === "engaged") {
-    const corridors = [
-      [
-        { x: 188, y: 110 },
-        { x: 256, y: 110 },
-        { x: 320, y: 110 },
-      ],
-      [
-        { x: 164, y: 178 },
-        { x: 240, y: 178 },
-        { x: 316, y: 178 },
-      ],
-      [
-        { x: 168, y: 246 },
-        { x: 242, y: 246 },
-        { x: 308, y: 246 },
-      ],
-    ][laneIndex];
-    return [hub, ...corridors, anchor, { x: anchor.x - 16, y: anchor.y + 10 }];
+    return [
+      hub,
+      { x: 360, y: 240 + laneOffset },
+      { x: 420, y: 300 + laneOffset },
+      plaza,
+      anchor,
+    ];
   }
 
   if (params.zoneId === "steady") {
-    const corridors = [
-      [
-        { x: 520, y: 116 },
-        { x: 600, y: 116 },
-        { x: 686, y: 116 },
-      ],
-      [
-        { x: 544, y: 176 },
-        { x: 620, y: 176 },
-        { x: 700, y: 176 },
-      ],
-      [
-        { x: 560, y: 236 },
-        { x: 636, y: 236 },
-        { x: 708, y: 236 },
-      ],
-    ][laneIndex];
-    return [hub, ...corridors, anchor, { x: anchor.x - 12, y: anchor.y + 12 }];
+    return [
+      hub,
+      { x: 640, y: 240 + laneOffset },
+      { x: 580, y: 300 + laneOffset },
+      plaza,
+      anchor,
+    ];
   }
 
   if (params.zoneId === "quiet") {
-    const corridors = [
-      [
-        { x: 138, y: 368 },
-        { x: 138, y: 430 },
-        { x: 138, y: 492 },
-      ],
-      [
-        { x: 214, y: 382 },
-        { x: 214, y: 448 },
-        { x: 214, y: 510 },
-      ],
-      [
-        { x: 286, y: 396 },
-        { x: 286, y: 456 },
-        { x: 286, y: 518 },
-      ],
-    ][laneIndex];
-    return [hub, ...corridors, anchor, { x: anchor.x + 10, y: anchor.y - 12 }];
+    return [
+      hub,
+      { x: 360, y: 400 + laneOffset },
+      { x: 420, y: 340 + laneOffset },
+      plaza,
+      anchor,
+    ];
   }
 
-  const corridors = [
-    [
-      { x: 546, y: 370 },
-      { x: 620, y: 370 },
-      { x: 700, y: 370 },
-      { x: 782, y: 370 },
-    ],
-    [
-      { x: 560, y: 442 },
-      { x: 638, y: 442 },
-      { x: 720, y: 442 },
-      { x: 806, y: 442 },
-    ],
-    [
-      { x: 574, y: 514 },
-      { x: 654, y: 514 },
-      { x: 736, y: 514 },
-      { x: 818, y: 514 },
-    ],
-  ][laneIndex];
-  return [hub, ...corridors, anchor, { x: anchor.x - 12, y: anchor.y - 10 }];
+  return [
+    hub,
+    { x: 640, y: 400 + laneOffset },
+    { x: 580, y: 340 + laneOffset },
+    plaza,
+    anchor,
+  ];
 }
 
 export function buildFocusedPatrolRoute(params: {
@@ -462,12 +404,7 @@ export function WorkboardStageZone(props: {
         )
       }
       onBlur={() => props.onHoverChange?.(null)}
-      className={cn(
-        "absolute z-10 bg-transparent text-left transition-all duration-300 focus:outline-none",
-        props.active
-          ? "shadow-[inset_0_0_0_2px_rgba(17,17,19,0.18)]"
-          : "hover:shadow-[inset_0_0_0_2px_rgba(17,17,19,0.12)]",
-      )}
+      className="absolute z-10 bg-transparent text-left focus:outline-none"
       aria-label={`${props.zone.title} ${props.count}`}
       style={{
         left: `${layout.x}%`,
@@ -494,6 +431,7 @@ export function WorkboardStageAgentNode(props: {
   const avatarSize = compact ? 28 : 36;
   const direction = "direction" in props.point ? props.point.direction : undefined;
   const walking = "state" in props.point ? props.point.state === "walking" : false;
+  const glyph = resolveAgentGlyph(props.item);
 
   return (
     <button
@@ -561,236 +499,14 @@ export function WorkboardStageAgentNode(props: {
         />
         <span
           className={cn(
-            "absolute -bottom-1 -right-1 inline-flex size-2.5 rounded-full border border-[rgba(255,252,247,0.88)]",
-            props.item.running ? "bg-emerald-500" : "bg-stone-400",
+            "absolute -bottom-1 -right-1 grid size-3 place-items-center border text-[8px] font-bold leading-none",
+            glyph.className,
           )}
-        />
+          aria-hidden="true"
+        >
+          {glyph.label}
+        </span>
       </span>
     </button>
-  );
-}
-
-export function FocusedClusterStage(props: {
-  zone: DowncityWorkboardZoneDefinition;
-  items: DowncityWorkboardAgentItem[];
-  gameMap: DowncityWorkboardGameMapConfig;
-  selectedAgentId?: string;
-  motionFrames?: Record<string, DowncityWorkboardMotionFrame>;
-  flowMode: "cruise" | "turbo";
-  onBack?: () => void;
-  onSelectAgent?: (agentId: string) => void;
-}) {
-  const [hoveredTag, setHoveredTag] = React.useState<DowncityWorkboardHoverTag | null>(null);
-  const hubPoint = React.useMemo(
-    () =>
-      props.gameMap.pointsOfInterest.find((item) => item.kind === "hub") || {
-        id: `${props.zone.id}-hub-fallback`,
-        kind: "hub" as const,
-        x: WORKBOARD_STAGE_WIDTH / 2,
-        y: WORKBOARD_STAGE_HEIGHT / 2,
-      },
-    [props.gameMap.pointsOfInterest, props.zone.id],
-  );
-  const center = { x: hubPoint.x, y: hubPoint.y };
-  const focusedNodes = React.useMemo(
-    () =>
-      props.gameMap.actors
-        .filter((actor) => actor.zoneId === props.zone.id && actor.focusedAnchor)
-        .map((actor) => ({
-          item: actor.agent,
-          x: actor.focusedAnchor?.x || hubPoint.x,
-          y: actor.focusedAnchor?.y || hubPoint.y,
-          delay: 0,
-          routeId: actor.focusedRouteId,
-        })),
-    [hubPoint.x, hubPoint.y, props.gameMap.actors, props.zone.id],
-  );
-  const activeItem = React.useMemo(
-    () => props.items.find((item) => item.id === props.selectedAgentId) || props.items[0] || null,
-    [props.items, props.selectedAgentId],
-  );
-  const activePoint = React.useMemo(() => {
-    if (!activeItem) {
-      return null;
-    }
-
-    const node = focusedNodes.find((entry) => entry.item.id === activeItem.id);
-    if (!node) {
-      return null;
-    }
-
-    return resolveStagePoint({
-      agentId: node.item.id,
-      fallback: { x: node.x, y: node.y },
-      motionFrames: props.motionFrames,
-    });
-  }, [activeItem, focusedNodes, props.motionFrames]);
-
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden border-2 bg-[linear-gradient(145deg,rgba(251,250,247,0.96),rgba(245,248,245,0.88))]",
-        props.zone.borderClassName,
-      )}
-      style={{ height: WORKBOARD_STAGE_HEIGHT, clipPath: PIXEL_PANEL_CLIP }}
-    >
-      <PixelFocusedField
-        zone={props.zone}
-        stageWidth={WORKBOARD_STAGE_WIDTH}
-        stageHeight={WORKBOARD_STAGE_HEIGHT}
-        pointsOfInterest={props.gameMap.pointsOfInterest}
-        areaLabels={props.gameMap.areaLabels}
-      />
-      <div className={cn("pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2", props.zone.glowClassName)} />
-      <PixelZoneTiles zone={props.zone} />
-
-      <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
-        <Button type="button" variant="outline" size="sm" className="rounded-none border-2 bg-[rgba(255,252,247,0.92)] shadow-[0_2px_0_rgba(17,17,19,0.12)]" onClick={props.onBack}>
-          <ArrowLeftIcon className="size-4" />
-          Back to atlas
-        </Button>
-        <div className="border-2 border-border/70 bg-background/82 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-foreground/50" style={{ clipPath: PIXEL_PANEL_CLIP }}>
-          {props.zone.subtitle}
-        </div>
-      </div>
-
-      <div className="absolute right-3 top-3 z-20 border-2 border-border/70 bg-background/82 px-3 py-2 text-right" style={{ clipPath: PIXEL_PANEL_CLIP }}>
-        <div className="text-[10px] uppercase tracking-[0.16em] text-foreground/42">flow</div>
-        <div className="mt-1 text-sm font-semibold text-foreground">{props.flowMode}</div>
-      </div>
-
-      <svg
-        viewBox={`0 0 ${WORKBOARD_STAGE_WIDTH} ${WORKBOARD_STAGE_HEIGHT}`}
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        {props.gameMap.patrols.map((route) => {
-          return (
-            <PixelRoute
-              key={route.id}
-              points={route.points}
-              className={cn("stroke-foreground/10", route.active ? "opacity-100" : "opacity-70")}
-              dashed
-            />
-          );
-        })}
-        {focusedNodes.map((node) => (
-          <g key={`focused-station-${node.item.id}`} opacity={props.selectedAgentId === node.item.id ? 0.86 : 0.42}>
-            <rect
-              x={node.x - 8}
-              y={node.y - 8}
-              width="16"
-              height="16"
-              fill="rgba(255,252,247,0.9)"
-              stroke="rgba(17,17,19,0.34)"
-              strokeWidth="2"
-            />
-            <rect
-              x={node.x - 3}
-              y={node.y - 3}
-              width="6"
-              height="6"
-              fill="rgba(17,17,19,0.28)"
-            />
-          </g>
-        ))}
-        {focusedNodes.map((node) => {
-          const point = resolveStagePoint({
-            agentId: node.item.id,
-            fallback: { x: node.x, y: node.y },
-            motionFrames: props.motionFrames,
-          });
-          const path = buildWorkboardCurvePath({
-            from: center,
-            to: point,
-          });
-
-          return (
-            <path
-              key={`focused-line-${node.item.id}`}
-              d={path}
-              fill="none"
-              className={cn(
-                props.zone.lineClassName,
-                props.selectedAgentId === node.item.id ? "opacity-78" : "opacity-34",
-              )}
-              strokeWidth={props.selectedAgentId === node.item.id ? 2.8 : 1.5}
-              strokeDasharray={props.selectedAgentId === node.item.id ? "6 8" : "4 10"}
-              style={{
-                animation: `workboard-dash ${props.flowMode === "turbo" ? "1.6s" : "2.8s"} linear infinite`,
-              }}
-            />
-          );
-        })}
-      </svg>
-
-      <div
-        className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2"
-        style={{ left: hubPoint.x, top: hubPoint.y }}
-      >
-        <div className="relative grid h-14 w-14 place-items-center border-2 border-border/70 bg-[rgba(255,252,247,0.92)] shadow-[0_4px_0_rgba(17,17,19,0.14)]">
-          <ParallaxPxlKitIcon
-            icon={RetroJoystick}
-            size={34}
-            colorful
-            strength={10}
-            perspective={220}
-            className="pointer-events-auto"
-            interactive={false}
-            aria-label={`${props.zone.title} hub`}
-          />
-        </div>
-      </div>
-
-      <div
-        className="pointer-events-none absolute z-20 -translate-x-1/2"
-        style={{ left: hubPoint.x, top: hubPoint.y - 92 }}
-      >
-        <div className="border-2 border-border/70 bg-[rgba(255,252,247,0.94)] px-3 py-1.5 text-center shadow-[0_3px_0_rgba(17,17,19,0.12)]" style={{ clipPath: PIXEL_PANEL_CLIP }}>
-          <div className="text-[10px] uppercase tracking-[0.16em] text-foreground/44">{props.zone.badge}</div>
-          <div className="mt-1 text-sm font-semibold tracking-[-0.04em] text-foreground">{props.zone.title}</div>
-        </div>
-      </div>
-
-      <div
-        className="pointer-events-none absolute z-20 border-2 border-border/70 bg-[rgba(255,252,247,0.94)] px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-foreground/56 shadow-[0_3px_0_rgba(17,17,19,0.12)]"
-        style={{ left: hubPoint.x + 38, top: hubPoint.y + 18, clipPath: PIXEL_PANEL_CLIP }}
-      >
-        agents {props.items.length}
-      </div>
-
-      {focusedNodes.map((node) => {
-        const point = resolveStagePoint({
-          agentId: node.item.id,
-          fallback: { x: node.x, y: node.y },
-          motionFrames: props.motionFrames,
-        });
-
-        return (
-          <WorkboardStageAgentNode
-            key={`focused-node-${node.item.id}`}
-            item={node.item}
-            zone={props.zone}
-            point={point}
-            active={props.selectedAgentId === node.item.id}
-            faded={false}
-            mode="focused"
-            onSelect={props.onSelectAgent}
-            onHoverChange={setHoveredTag}
-          />
-        );
-      })}
-
-      <ActiveSpeechBubble item={activeItem} point={activePoint} />
-      <svg
-        viewBox={`0 0 ${WORKBOARD_STAGE_WIDTH} ${WORKBOARD_STAGE_HEIGHT}`}
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <PixelHoverTag tag={hoveredTag} stageWidth={WORKBOARD_STAGE_WIDTH} stageHeight={WORKBOARD_STAGE_HEIGHT} />
-      </svg>
-    </div>
   );
 }

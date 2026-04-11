@@ -33,8 +33,14 @@ The endpoint returns structured JSON, but only as a public-safe high-level proje
 Console aggregates workboard snapshots from all agents into a dedicated global game world:
 
 - open `Workboard` from the main Console navigation in the sidebar
-- the main stage behaves like a pixel-style world atlas: start with public state clusters, then enter a cluster room
-- agents appear as sprites that patrol corridors, gates, and stations
+- the main stage is a Smallville-style pixel town atlas with a central plaza, four open state buildings, trunk roads, water edges, fences, and terrain boundaries
+- entering a state cluster switches into an interior floor-plan room with walls, doors, corridors, stations, and a hub
+- the map uses a fixed 25 x 16 tile canvas, so fullscreen mode keeps square pixel blocks
+- the bottom portal rail lets you switch state clusters directly, with a pixel portal transition when entering a room
+- agents appear as directional sprites with compact state glyphs while patrolling corridors, gates, and stations
+- rooms highlight the focused sprite's quest path, station, and hub relationship
+- the atlas supports keyboard-style map control: left/right switch clusters, Enter opens, and Esc returns to the world
+- rooms show a public quest ledger and station mini-map
 - click a cluster to enter it, then click a specific sprite to inspect its public-facing fragments
 - the right codex log follows the current focus and shows public-safe state and cues
 

@@ -7,6 +7,32 @@
  */
 
 /**
+ * 像素 agent 的确定性色板。
+ */
+export interface DowncityWorkboardPixelAgentPalette {
+  /**
+   * 皮肤颜色。
+   */
+  skin: string;
+  /**
+   * 头发颜色。
+   */
+  hair: string;
+  /**
+   * 衣服主色。
+   */
+  outfit: string;
+  /**
+   * 衣服或头部的强调色。
+   */
+  accent: string;
+  /**
+   * 像素轮廓色。
+   */
+  outline: string;
+}
+
+/**
  * 像素 agent 组件属性。
  */
 export interface DowncityWorkboardPixelAgentProps {

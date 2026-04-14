@@ -57,6 +57,60 @@ function normalizeRequiredText(value: string | undefined, fieldName: string): st
 }
 
 /**
+ * 把 env value 格式化成 `.env` 可解析的值。
+ *
+ * 关键点（中文）
+ * - 简单值保持裸值，便于用户直接阅读。
+ * - 包含空白、引号、换行等特殊字符时使用双引号并转义。
+ * - 空字符串输出为空值：`KEY=`。
+ */
+function formatDotenvValue(value: string): string {
+  const text = String(value ?? "");
+  if (!text) return "";
+  if (/^[A-Za-z0-9_./:@+-]+$/.test(text)) {
+    return text;
+  }
+  return `"${text
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t")
+    .replace(/"/g, "\\\"")}"`;
+}
+
+/**
+ * 把 Console Env 条目输出为 dotenv 文件内容。
+ */
+function formatDotenvEntries(entries: StoredEnvEntry[]): string {
+  if (entries.length === 0) return "";
+  return `${entries
+    .map((item) => `${item.key}=${formatDotenvValue(item.value)}`)
+    .join("\n")}\n`;
+}
+
+/**
+ * 判断当前命令是否处在 agent shell 执行上下文。
+ *
+ * 关键点（中文）
+ * - agent shell 会注入 `DC_AGENT_PATH/DC_AGENT_NAME`，用于嵌套 city CLI 定位当前 agent。
+ * - `env copy` 会导出 secret 明文，不能允许 agent 自己调用。
+ */
+function isAgentShellExecution(): boolean {
+  return Boolean(
+    String(process.env.DC_AGENT_PATH || "").trim() ||
+      String(process.env.DC_AGENT_NAME || "").trim(),
+  );
+}
+
+/**
+ * 限制 `city env copy` 只能由本机 CLI 执行。
+ */
+function assertEnvCopyAllowedFromLocalCli(): void {
+  if (!isAgentShellExecution()) return;
+  throw new Error("city env copy can only be run from the local CLI, not from an agent shell.");
+}
+
+/**
  * 解析命令输入最终使用的 env scope。
  */
 function resolveKeysCommandScope(params: {
@@ -202,6 +256,26 @@ async function emitKeysList(params: {
       ],
     })),
   });
+}
+
+/**
+ * 输出 dotenv 格式的 env 内容。
+ */
+async function emitDotenvCopy(params: {
+  /**
+   * scope 过滤。
+   */
+  scope: KeysScope;
+  /**
+   * agent 过滤。
+   */
+  agentId?: string;
+}): Promise<void> {
+  const entries = await listKeysEntries({
+    scope: params.scope,
+    agentId: params.agentId,
+  });
+  process.stdout.write(formatDotenvEntries(entries));
 }
 
 /**
@@ -408,6 +482,25 @@ export function registerEnvCommand(program: Command): void {
         value: String(valueInput ?? ""),
         description: String(options.description || "").trim(),
         asJson: options.json === true,
+      });
+    });
+
+  env
+    .command("copy")
+    .description("按 .env 文件格式输出 Console Env 的明文值")
+    .option("--scope <scope>", "按作用域复制：global|agent|all", "global")
+    .option("--agent <agentId>", "复制指定 agent 的私有 env（会隐式使用 --scope agent）")
+    .helpOption("--help", "display help for command")
+    .action(async (options: { scope?: string; agent?: string }) => {
+      assertEnvCopyAllowedFromLocalCli();
+      const resolved = resolveKeysCommandScope({
+        scope: options.scope,
+        agentId: options.agent,
+        allowAll: true,
+      });
+      await emitDotenvCopy({
+        scope: resolved.scope,
+        agentId: resolved.agentId,
       });
     });
 

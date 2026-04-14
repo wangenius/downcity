@@ -99,6 +99,7 @@ export function isAuthErrorMessage(input: unknown): boolean {
   return (
     normalized.includes("missing bearer token") ||
     normalized.includes("invalid bearer token") ||
+    normalized.includes("auth required") ||
     normalized.includes("permission denied") ||
     normalized.includes("401")
   );

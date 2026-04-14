@@ -26,6 +26,7 @@ import type {
   SendToAgentResult,
 } from "../types/inlineComposer";
 import type { InlineInstantExecutorType } from "../types/extension";
+import { requestViaBackground } from "../services/backgroundHttp";
 import {
   DEFAULT_ROUTE_SETTINGS,
   MAX_PAGE_IMAGE_COUNT,
@@ -92,23 +93,35 @@ function buildAuthHeaders(params?: {
   return headers;
 }
 
+function toHeaderRecord(headers: Headers): Record<string, string> {
+  const out: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
+}
+
 async function requestJson<T>(
   url: string,
   init?: RequestInit,
   authOptions?: { authToken?: unknown },
 ): Promise<T> {
-  const response = await fetch(url, {
-    ...init,
-    headers: buildAuthHeaders({
-      authToken: authOptions?.authToken,
-      headers: {
-        "Content-Type": "application/json",
-        ...(init?.headers || {}),
-      },
-    }),
+  const response = await requestViaBackground({
+    url,
+    method: String(init?.method || "GET"),
+    headers: toHeaderRecord(
+      buildAuthHeaders({
+        authToken: authOptions?.authToken,
+        headers: {
+          "Content-Type": "application/json",
+          ...(init?.headers || {}),
+        },
+      }),
+    ),
+    body: typeof init?.body === "string" ? init.body : undefined,
   });
 
-  const rawText = await response.text();
+  const rawText = response.text;
   let json: unknown = null;
   if (rawText) {
     try {
@@ -883,19 +896,22 @@ export async function sendPageContextToAgent(
     ],
   };
 
-  const response = await fetch(executeUrl, {
+  const response = await requestViaBackground({
+    url: executeUrl,
     method: "POST",
-    headers: buildAuthHeaders({
-      authToken: routeSettings.authToken,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }),
+    headers: toHeaderRecord(
+      buildAuthHeaders({
+        authToken: routeSettings.authToken,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    ),
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const raw = await response.text();
+    const raw = response.text;
     let hint = "";
     if (raw) {
       try {

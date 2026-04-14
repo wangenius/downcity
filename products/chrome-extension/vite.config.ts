@@ -19,6 +19,7 @@ export default defineConfig({
         input: {
           popup: path.resolve(__dirname, "index.html"),
           options: path.resolve(__dirname, "options.html"),
+          background: path.resolve(__dirname, "src/background/main.ts"),
           contentScript: path.resolve(__dirname, "src/inline-composer/main.ts"),
           contentScriptStyle: path.resolve(
             __dirname,
@@ -29,6 +30,9 @@ export default defineConfig({
         entryFileNames(chunkInfo) {
           if (chunkInfo.name === "contentScript") {
             return "content-script.js";
+          }
+          if (chunkInfo.name === "background") {
+            return "background.js";
           }
           return "assets/[name]-[hash].js";
         },

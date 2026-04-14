@@ -37,11 +37,12 @@ test("token help exposes token management subcommands", () => {
   assert.match(output, /\n  delete \[options\] \[tokenId\]/);
 });
 
-test("env help exposes list set delete subcommands", () => {
+test("env help exposes list set copy delete subcommands", () => {
   const output = readHelp(["env", "--help"]);
 
   assert.match(output, /\n  list \[options\]/);
   assert.match(output, /\n  set \[options\] <key> <value>/);
+  assert.match(output, /\n  copy \[options\]/);
   assert.match(output, /\n  delete \[options\] <key>/);
 });
 

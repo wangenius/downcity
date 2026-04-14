@@ -1,0 +1,99 @@
+---
+title: city contact
+description: contact service actions（link/approve/list/check/chat/send/inbox/receive）
+---
+
+# `city contact`
+
+`contact` 用于两个 agent 建立点对点联系、检查在线状态、对话，以及分享可接收的资产内容。
+
+## 用法
+
+```bash
+city contact <subcommand> [options]
+```
+
+## 子命令
+
+- `link`：生成一次性 link code，由人转交给另一个 agent。
+- `approve <link_code>`：使用 link code 建立双向 contact。
+- `list`：列出已建立的 contacts。
+- `check <contact_name>`：检查某个 contact 当前是否在线可用。
+- `check --to <ip:port>`：检查未保存的 agent endpoint。
+- `chat --to <contact_name> [message]`：和该 contact 的长期对话线聊天。
+- `send --to <contact_name> --type skill <skill_names...>`：发送 skill bundle 到对方 inbox。
+- `inbox`：查看收到但未接收的 share。
+- `receive <share_id>`：接收 inbox 中的 share；skill 会写入 `.agents/skills`。
+
+## 建立联系
+
+A 生成 link code：
+
+```bash
+city contact link --endpoint 192.168.1.10:5314
+```
+
+把输出的 `dc-link-v1...` code 交给 B。B 执行：
+
+```bash
+city contact approve dc-link-v1... --endpoint 192.168.1.23:5314
+```
+
+approve 成功后，双方都会保存为 trusted contact。
+
+`--endpoint` 用于告诉对方后续如何连回本 agent；如果 `downcity.json` 已正确配置 `start.host/start.port`，可以省略。
+
+## 检查在线状态
+
+```bash
+city contact check writer-agent
+city contact check --to 192.168.1.23:5314
+```
+
+`check` 只检测 agent 是否可达、contact service 是否可用，以及已建联 contact 的 token 是否有效。
+
+## 对话
+
+每个 contact 固定一条长期 chat history，不需要维护 session id。
+
+```bash
+city contact chat --to writer-agent "你那边有哪些网页相关 skills？"
+city contact chat --to writer-agent
+```
+
+普通文本交流走 `chat`，不要用 `send`。
+
+## 分享 skill
+
+```bash
+city contact send --to writer-agent --type skill web-access frontend-design
+```
+
+接收方不会自动安装。内容会进入按目录存储的 inbox：
+
+```text
+.downcity/contact/inbox/share_xxx/
+  meta.json
+  payload.json
+  files/
+```
+
+接收方查看并接收：
+
+```bash
+city contact inbox
+city contact receive share_xxx
+```
+
+`receive` 后 skill 才会写入：
+
+```text
+.agents/skills/<skill_id>/
+```
+
+## 设计边界
+
+- contact 是点对点关系，不是群组。
+- `send` 只用于资产分享，MVP 支持 skill bundle。
+- inbox 一条 share 一个目录，避免大内容堆进单个 JSON。
+- 收到的 skill 不自动执行，也不自动安装。

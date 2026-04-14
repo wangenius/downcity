@@ -12,6 +12,7 @@ import { ChatService } from "@services/chat/ChatService.js";
 import { TaskService } from "@services/task/TaskService.js";
 import { MemoryService } from "@services/memory/MemoryService.js";
 import { ShellService } from "@services/shell/ShellService.js";
+import { ContactService } from "@services/contact/ContactService.js";
 
 /**
  * 单个 service class 构造器。
@@ -25,6 +26,7 @@ export type ServiceClass<T extends BaseService = BaseService> = new (
  */
 export const SERVICE_CLASSES: ServiceClass[] = [
   ChatService,
+  ContactService,
   TaskService,
   MemoryService,
   ShellService,

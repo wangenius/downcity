@@ -172,7 +172,7 @@ city service schedule ...
 - `city service list/status` 是 console 级静态 catalog 视图
 - 不依赖 agent、`--path`、`--agent`
 - `city service start/stop/restart/command` 是高级定向入口
-- 日常运行态操作更推荐直接使用 `city chat` / `city task` / `city memory`
+- 日常运行态操作更推荐直接使用 `city chat` / `city contact` / `city task` / `city memory`
 
 ### 3.7 plugin
 
@@ -207,6 +207,7 @@ city plugin action <pluginName> <actionName>
 当前已注册 service class：
 
 - `chat`
+- `contact`
 - `task`
 - `memory`
 - `shell`
@@ -214,13 +215,14 @@ city plugin action <pluginName> <actionName>
 说明：
 
 - 只有声明了 `action.command` 的 action 才会暴露为 CLI 子命令
-- 当前根帮助里可见的是 `chat`、`task`、`memory`
+- 当前根帮助里可见的是 `chat`、`contact`、`task`、`memory`
 - `shell` 虽然是已注册 service，但当前没有暴露出可见根命令
 
 当前可见子树：
 
 ```text
 city chat ...
+city contact ...
 city task ...
 city memory ...
 ```
@@ -249,6 +251,26 @@ city chat react
 city chat context
 city chat delete
 city chat history
+```
+
+#### contact
+
+来源：
+
+- 命令动态注册器：[`ServiceCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/service/ServiceCommand.ts)
+- 实现：[`ContactService.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/services/contact/ContactService.ts)
+
+当前可见二级命令：
+
+```text
+city contact link
+city contact approve
+city contact list
+city contact check
+city contact chat
+city contact send
+city contact inbox
+city contact receive
 ```
 
 #### task

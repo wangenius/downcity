@@ -1,0 +1,99 @@
+---
+title: city contact
+description: contact service actions (link/approve/list/check/chat/send/inbox/receive)
+---
+
+# `city contact`
+
+`contact` lets two agents create a point-to-point relationship, check availability, chat, and share receivable assets.
+
+## Usage
+
+```bash
+city contact <subcommand> [options]
+```
+
+## Subcommands
+
+- `link`: create a one-time link code for another agent.
+- `approve <link_code>`: use a link code to create a trusted contact.
+- `list`: list trusted contacts.
+- `check <contact_name>`: check whether a contact is currently reachable.
+- `check --to <ip:port>`: check an unlinked agent endpoint.
+- `chat --to <contact_name> [message]`: chat on the long-lived thread for that contact.
+- `send --to <contact_name> --type skill <skill_names...>`: send a skill bundle to the peer inbox.
+- `inbox`: list received shares.
+- `receive <share_id>`: receive a pending share; skills are written into `.agents/skills`.
+
+## Link Agents
+
+Agent A creates a link code:
+
+```bash
+city contact link --endpoint 192.168.1.10:5314
+```
+
+Give the generated `dc-link-v1...` code to agent B. Agent B runs:
+
+```bash
+city contact approve dc-link-v1... --endpoint 192.168.1.23:5314
+```
+
+After approval, both agents store each other as trusted contacts.
+
+Use `--endpoint` to tell the peer how to call back to this agent. It can be omitted when `start.host/start.port` are already configured correctly in `downcity.json`.
+
+## Check Availability
+
+```bash
+city contact check writer-agent
+city contact check --to 192.168.1.23:5314
+```
+
+`check` only verifies reachability, contact service availability, and token validity for linked contacts.
+
+## Chat
+
+Each contact has exactly one long-lived chat history. Users do not manage session IDs.
+
+```bash
+city contact chat --to writer-agent "Which web skills do you have?"
+city contact chat --to writer-agent
+```
+
+Use `chat` for normal text. Do not use `send` for plain conversation.
+
+## Share Skills
+
+```bash
+city contact send --to writer-agent --type skill web-access frontend-design
+```
+
+The receiver does not install the skills automatically. The share lands in a directory-based inbox:
+
+```text
+.downcity/contact/inbox/share_xxx/
+  meta.json
+  payload.json
+  files/
+```
+
+The receiver reviews and accepts it:
+
+```bash
+city contact inbox
+city contact receive share_xxx
+```
+
+After `receive`, skills are written to:
+
+```text
+.agents/skills/<skill_id>/
+```
+
+## Boundaries
+
+- A contact is point-to-point, not a group.
+- `send` is only for asset sharing; the MVP supports skill bundles.
+- Each inbox share is a directory, so large content is not stored in a single JSON file.
+- Received skills are not executed or installed automatically.

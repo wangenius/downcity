@@ -10,7 +10,15 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
 import { WorkboardPixelAgent } from "./workboard-pixel-agent";
-import { WORKBOARD_ZONE_LAYOUT } from "./workboard-stage-map";
+import {
+  WORKBOARD_FOCUSED_PATROL_ROUTES,
+  WORKBOARD_FOCUSED_STATIONS_BY_ZONE,
+} from "./workboard-room-layout";
+import {
+  WORKBOARD_TOWN_PLAZA_POINT,
+  WORKBOARD_ZONE_GATE_POINTS,
+  WORKBOARD_ZONE_LAYOUT,
+} from "./workboard-stage-map";
 import type {
   DowncityWorkboardAgentItem,
   DowncityWorkboardProps,
@@ -26,8 +34,8 @@ import type {
   DowncityWorkboardZoneId,
 } from "../types/workboard-stage";
 
-export const WORKBOARD_STAGE_HEIGHT = 640;
-export const WORKBOARD_STAGE_WIDTH = 1000;
+export const WORKBOARD_STAGE_HEIGHT = 960;
+export const WORKBOARD_STAGE_WIDTH = 1600;
 
 const NODE_PLACEMENTS: DowncityWorkboardZoneAgentPlacement[] = [
   { left: 18, top: 26, delay: 0.0 },
@@ -38,17 +46,6 @@ const NODE_PLACEMENTS: DowncityWorkboardZoneAgentPlacement[] = [
   { left: 75, top: 47, delay: 2.0 },
   { left: 14, top: 70, delay: 2.4 },
   { left: 46, top: 74, delay: 2.8 },
-];
-
-const FOCUSED_STATIONS: Array<{ x: number; y: number }> = [
-  { x: 212, y: 150 },
-  { x: 396, y: 138 },
-  { x: 714, y: 162 },
-  { x: 166, y: 320 },
-  { x: 812, y: 304 },
-  { x: 248, y: 510 },
-  { x: 486, y: 552 },
-  { x: 748, y: 498 },
 ];
 
 export const WORKBOARD_ZONE_DEFINITIONS: DowncityWorkboardZoneDefinition[] = [
@@ -208,12 +205,13 @@ export function formatWorkboardRelativeTime(value?: string): string {
   return `${days}d ago`;
 }
 
-export function buildWorkboardCurvePath(params: {
+export function buildWorkboardTilePath(params: {
   from: { x: number; y: number };
   to: { x: number; y: number };
 }): string {
   const midX = params.from.x + (params.to.x - params.from.x) * 0.5;
-  return `M ${params.from.x} ${params.from.y} C ${midX} ${params.from.y}, ${midX} ${params.to.y}, ${params.to.x} ${params.to.y}`;
+  // 关键节点：像素小镇路线必须沿水平/垂直 tile 行走，不能用普通 UI 的曲线连线。
+  return `M ${params.from.x} ${params.from.y} H ${midX} V ${params.to.y} H ${params.to.x}`;
 }
 
 export function toStagePoint(
@@ -262,9 +260,11 @@ export function deriveStageNodes(
 
 export function deriveFocusedClusterNodes(
   items: DowncityWorkboardAgentItem[],
+  zoneId: DowncityWorkboardZoneId,
 ): DowncityWorkboardFocusedStageNode[] {
+  const stations = WORKBOARD_FOCUSED_STATIONS_BY_ZONE[zoneId];
   return items.map((item, index) => {
-    const station = FOCUSED_STATIONS[index % FOCUSED_STATIONS.length];
+    const station = stations[index % stations.length];
     return {
       item,
       x: station.x,
@@ -280,91 +280,44 @@ export function buildOverviewPatrolRoute(params: {
 }): DowncityWorkboardStagePoint[] {
   const anchor = toStagePoint(params.zoneId, params.placement);
   const hub = toZoneHubPoint(params.zoneId);
+  const gate = WORKBOARD_ZONE_GATE_POINTS[params.zoneId];
   const laneIndex = Math.round((params.placement.left + params.placement.top) / 32) % 3;
-  const laneOffset = (laneIndex - 1) * 14;
-  const plaza = { x: 500 + laneOffset, y: 320 + laneOffset };
+  const laneOffset = (laneIndex - 1) * 10;
+  const roadY = params.zoneId === "engaged" || params.zoneId === "steady" ? 300 : 340;
+  const plazaLane = {
+    x: WORKBOARD_TOWN_PLAZA_POINT.x + laneOffset,
+    y: WORKBOARD_TOWN_PLAZA_POINT.y + (roadY < WORKBOARD_TOWN_PLAZA_POINT.y ? -10 : 10),
+  };
 
-  if (params.zoneId === "engaged") {
-    return [
-      hub,
-      { x: 360, y: 240 + laneOffset },
-      { x: 420, y: 300 + laneOffset },
-      plaza,
-      anchor,
-    ];
-  }
-
-  if (params.zoneId === "steady") {
-    return [
-      hub,
-      { x: 640, y: 240 + laneOffset },
-      { x: 580, y: 300 + laneOffset },
-      plaza,
-      anchor,
-    ];
-  }
-
-  if (params.zoneId === "quiet") {
-    return [
-      hub,
-      { x: 360, y: 400 + laneOffset },
-      { x: 420, y: 340 + laneOffset },
-      plaza,
-      anchor,
-    ];
-  }
-
+  // 关键节点：overview 使用正交 tile 路径，避免 sprite 穿过建筑或草地。
   return [
+    anchor,
+    { x: anchor.x, y: hub.y },
     hub,
-    { x: 640, y: 400 + laneOffset },
-    { x: 580, y: 340 + laneOffset },
-    plaza,
+    { x: gate.x, y: hub.y },
+    gate,
+    { x: gate.x, y: roadY },
+    { x: plazaLane.x, y: roadY },
+    plazaLane,
+    WORKBOARD_TOWN_PLAZA_POINT,
+    plazaLane,
+    { x: plazaLane.x, y: roadY },
+    { x: gate.x, y: roadY },
+    gate,
+    { x: gate.x, y: hub.y },
+    hub,
+    { x: anchor.x, y: hub.y },
     anchor,
   ];
 }
 
 export function buildFocusedPatrolRoute(params: {
   index: number;
+  zoneId: DowncityWorkboardZoneId;
 }): DowncityWorkboardStagePoint[] {
-  const lane = params.index % 3;
-  if (lane === 0) {
-    return [
-      { x: 184, y: 156 },
-      { x: 422, y: 150 },
-      { x: 642, y: 150 },
-      { x: 786, y: 202 },
-      { x: 802, y: 332 },
-      { x: 704, y: 488 },
-      { x: 472, y: 528 },
-      { x: 244, y: 490 },
-      { x: 168, y: 352 },
-      { x: 176, y: 212 },
-    ];
-  }
-
-  if (lane === 1) {
-    return [
-      { x: 292, y: 236 },
-      { x: 438, y: 216 },
-      { x: 594, y: 224 },
-      { x: 676, y: 298 },
-      { x: 656, y: 402 },
-      { x: 530, y: 454 },
-      { x: 384, y: 432 },
-      { x: 300, y: 344 },
-    ];
-  }
-
-  return [
-    { x: 220, y: 320 },
-    { x: 320, y: 286 },
-    { x: 504, y: 286 },
-    { x: 688, y: 312 },
-    { x: 748, y: 388 },
-    { x: 620, y: 470 },
-    { x: 406, y: 486 },
-    { x: 260, y: 430 },
-  ];
+  const routes = WORKBOARD_FOCUSED_PATROL_ROUTES[params.zoneId];
+  // 关键节点：room 的巡游路线跟随具体建筑布局，避免所有子地图共享同一条抽象动线。
+  return routes[params.index % routes.length];
 }
 
 export function WorkboardStageZone(props: {

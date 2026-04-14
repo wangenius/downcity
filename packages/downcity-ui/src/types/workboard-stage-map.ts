@@ -68,6 +68,11 @@ export interface WorkboardTownBuilding extends WorkboardTileRect {
    */
   wall: string;
   /**
+   * 建筑入口朝向。
+   * 上方建筑通常从底部进入主路，下方建筑通常从顶部进入主路。
+   */
+  entrance: "top" | "bottom";
+  /**
    * 建筑内部的隔断墙 tile 集合。
    */
   walls: WorkboardTileRect[];
@@ -75,4 +80,83 @@ export interface WorkboardTownBuilding extends WorkboardTileRect {
    * 建筑内部的家具 tile 集合。
    */
   props: WorkboardTownProp[];
+}
+
+/**
+ * Workboard 子地图内的像素物件类型。
+ */
+export type WorkboardRoomPropKind =
+  | "desk"
+  | "rack"
+  | "console"
+  | "crate"
+  | "bench"
+  | "plant"
+  | "bed"
+  | "table"
+  | "board"
+  | "blueprint";
+
+/**
+ * Workboard 子地图中的单个像素物件。
+ */
+export interface WorkboardRoomMapProp {
+  /**
+   * 物件稳定标识。
+   */
+  id: string;
+  /**
+   * 物件像素渲染类型。
+   */
+  kind: WorkboardRoomPropKind;
+  /**
+   * 物件所在横向像素坐标。
+   */
+  x: number;
+  /**
+   * 物件所在纵向像素坐标。
+   */
+  y: number;
+}
+
+/**
+ * Workboard 子地图的完整 tile 布局。
+ */
+export interface WorkboardRoomMapPlan {
+  /**
+   * 可行走木地板 tile 区块。
+   */
+  floors: WorkboardTileRect[];
+  /**
+   * 室内主通道 tile 区块。
+   */
+  corridors: WorkboardTileRect[];
+  /**
+   * 室内地毯或状态重点区域 tile 区块。
+   */
+  rugs: WorkboardTileRect[];
+  /**
+   * 外墙与隔断墙 tile 区块。
+   */
+  walls: WorkboardTileRect[];
+  /**
+   * 门洞 tile 区块。
+   */
+  doors: WorkboardTileRect[];
+  /**
+   * 建筑外部道路 tile 区块。
+   */
+  exteriorPaths: WorkboardTileRect[];
+  /**
+   * 建筑外部树木 tile 坐标。
+   */
+  trees: WorkboardTilePoint[];
+  /**
+   * 建筑外部灌木 tile 坐标。
+   */
+  shrubs: WorkboardTilePoint[];
+  /**
+   * 室内固定像素物件集合。
+   */
+  props: WorkboardRoomMapProp[];
 }

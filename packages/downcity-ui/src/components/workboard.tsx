@@ -64,6 +64,73 @@ function resolveZoneLead(params: {
   );
 }
 
+function useWorkboardStageViewportScale(params: {
+  viewportRef: React.RefObject<HTMLDivElement | null>;
+  isFullscreen: boolean;
+}): number {
+  const [size, setSize] = React.useState({ width: WORKBOARD_STAGE_WIDTH, height: WORKBOARD_STAGE_HEIGHT });
+
+  React.useEffect(() => {
+    const element = params.viewportRef.current;
+    if (!element) return undefined;
+
+    const updateSize = () => {
+      const rect = element.getBoundingClientRect();
+      setSize({
+        width: Math.max(1, rect.width),
+        height: Math.max(1, rect.height),
+      });
+    };
+
+    updateSize();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateSize);
+      return () => window.removeEventListener("resize", updateSize);
+    }
+
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [params.viewportRef]);
+
+  const horizontalPadding = params.isFullscreen ? 0 : 16;
+  const verticalHudReserve = params.isFullscreen ? 0 : 20;
+  const widthScale = (size.width - horizontalPadding) / WORKBOARD_STAGE_WIDTH;
+  const heightScale = (size.height - verticalHudReserve) / WORKBOARD_STAGE_HEIGHT;
+  const rawScale = params.isFullscreen ? Math.max(widthScale, heightScale) : Math.min(widthScale, heightScale);
+
+  // 关键节点：全屏使用 cover 缩放铺满视口，不再保留一个居中的“小舞台窗口”。
+  return Math.max(params.isFullscreen ? 1 : 0.72, Math.min(params.isFullscreen ? 4 : 1.35, rawScale || 1));
+}
+
+function WorkboardScaledStage(props: {
+  scale: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="relative shrink-0"
+      style={{
+        width: WORKBOARD_STAGE_WIDTH * props.scale,
+        height: WORKBOARD_STAGE_HEIGHT * props.scale,
+      }}
+    >
+      <div
+        className="absolute left-0 top-0"
+        style={{
+          width: WORKBOARD_STAGE_WIDTH,
+          height: WORKBOARD_STAGE_HEIGHT,
+          transform: `scale(${props.scale})`,
+          transformOrigin: "left top",
+          imageRendering: "pixelated",
+        }}
+      >
+        {props.children}
+      </div>
+    </div>
+  );
+}
+
 function WorkboardGameHud(props: DowncityWorkboardGameHudProps) {
   const worldLine = [
     `sprites ${props.board.summary.totalAgents}`,
@@ -306,6 +373,7 @@ export function Workboard(props: DowncityWorkboardProps) {
   const { board, loading, selectedAgentId, onRefresh, onSelectAgent, className } = props;
   const selected = resolveSelectedAgent({ board, selectedAgentId });
   const containerRef = React.useRef<HTMLElement | null>(null);
+  const stageViewportRef = React.useRef<HTMLDivElement | null>(null);
   const [stageLevel, setStageLevel] = React.useState<DowncityWorkboardStageLevel>("clusters");
   const [detailsCollapsed, setDetailsCollapsed] = React.useState(true);
   const [flowMode, setFlowMode] = React.useState<"cruise" | "turbo">("cruise");
@@ -326,7 +394,6 @@ export function Workboard(props: DowncityWorkboardProps) {
 
     previousSelectedIdRef.current = selected.id;
     setActiveZoneId(resolveZoneId(selected));
-    setDetailsCollapsed(false);
   }, [selected]);
 
   React.useEffect(() => {
@@ -412,6 +479,10 @@ export function Workboard(props: DowncityWorkboardProps) {
       });
   }, [activeZoneId, gameMap, stageLevel]);
   const motionFrames = useWorkboardMotion({ nodes: motionNodes, flowMode });
+  const stageScale = useWorkboardStageViewportScale({
+    viewportRef: stageViewportRef,
+    isFullscreen,
+  });
 
   const triggerPortal = React.useCallback((label: string, mode: "enter" | "world") => {
     setPortal((prev) => ({
@@ -426,7 +497,7 @@ export function Workboard(props: DowncityWorkboardProps) {
       triggerPortal(resolveZoneDefinition(zoneId).title, "enter");
       setActiveZoneId(zoneId);
       setStageLevel("agents");
-      setDetailsCollapsed(false);
+      setDetailsCollapsed(true);
       const lead = resolveZoneLead({ board, zoneId });
       if (lead) onSelectAgent?.(lead.id);
     },
@@ -444,7 +515,7 @@ export function Workboard(props: DowncityWorkboardProps) {
       }
       setActiveZoneId(nextZoneId);
       setStageLevel("agents");
-      setDetailsCollapsed(false);
+      setDetailsCollapsed(true);
       onSelectAgent?.(agentId);
     },
     [activeZoneId, board, onSelectAgent, stageLevel, triggerPortal],
@@ -519,8 +590,10 @@ export function Workboard(props: DowncityWorkboardProps) {
         tabIndex={0}
         onKeyDown={handleWorldKeyDown}
         className={cn(
-          "relative overflow-hidden border-2 border-border/70 bg-[linear-gradient(145deg,rgba(236,232,218,0.96),rgba(255,252,247,0.98)_42%,rgba(217,231,224,0.76))] p-2 shadow-[0_8px_0_rgba(17,17,19,0.12)] outline-none focus-visible:ring-2 focus-visible:ring-foreground/30",
-          isFullscreen ? "h-[100dvh] rounded-none border-0 shadow-none" : "",
+          "relative overflow-hidden bg-[linear-gradient(145deg,rgba(236,232,218,0.96),rgba(255,252,247,0.98)_42%,rgba(217,231,224,0.76))] outline-none focus-visible:ring-2 focus-visible:ring-foreground/30",
+          isFullscreen
+            ? "h-[100dvh] rounded-none"
+            : "border-2 border-border/70 p-2 shadow-[0_8px_0_rgba(17,17,19,0.12)]",
         )}
         style={isFullscreen ? undefined : { clipPath: PIXEL_PANEL_CLIP }}
       >
@@ -547,34 +620,39 @@ export function Workboard(props: DowncityWorkboardProps) {
         />
 
         <div
+          ref={stageViewportRef}
           className={cn(
-            "relative z-20 grid w-full place-items-center overflow-auto border-2 border-border/70 bg-[linear-gradient(145deg,rgba(251,250,247,0.96),rgba(245,248,245,0.88))]",
-            isFullscreen ? "h-[calc(100dvh-16px)]" : "",
+            "z-20 grid w-full place-items-center",
+            isFullscreen
+              ? "absolute inset-0 overflow-hidden"
+              : "relative overflow-auto border-2 border-border/70 bg-[linear-gradient(145deg,rgba(251,250,247,0.96),rgba(245,248,245,0.88))]",
           )}
           style={isFullscreen ? undefined : { minHeight: WORKBOARD_STAGE_HEIGHT, clipPath: PIXEL_PANEL_CLIP }}
         >
-          {stageLevel === "clusters" ? (
-            <WorkboardGameAtlas
-              board={board}
-              gameMap={gameMap}
-              activeZoneId={activeZoneId}
-              selectedAgentId={selected?.id}
-              flowMode={flowMode}
-              motionFrames={motionFrames}
-              onSelectZone={openZone}
-              onSelectAgent={(agentId) => openAgent(agentId)}
-            />
-          ) : (
-            <WorkboardGameRoom
-              zone={activeZone}
-              items={activeZoneItems}
-              gameMap={gameMap}
-              selectedAgentId={selected?.id}
-              motionFrames={motionFrames}
-              flowMode={flowMode}
-              onSelectAgent={openAgent}
-            />
-          )}
+          <WorkboardScaledStage scale={stageScale}>
+            {stageLevel === "clusters" ? (
+              <WorkboardGameAtlas
+                board={board}
+                gameMap={gameMap}
+                activeZoneId={activeZoneId}
+                selectedAgentId={selected?.id}
+                flowMode={flowMode}
+                motionFrames={motionFrames}
+                onSelectZone={openZone}
+                onSelectAgent={(agentId) => openAgent(agentId)}
+              />
+            ) : (
+              <WorkboardGameRoom
+                zone={activeZone}
+                items={activeZoneItems}
+                gameMap={gameMap}
+                selectedAgentId={selected?.id}
+                motionFrames={motionFrames}
+                flowMode={flowMode}
+                onSelectAgent={openAgent}
+              />
+            )}
+          </WorkboardScaledStage>
 
           <WorkboardWorldPortalOverlay portal={portal} />
 

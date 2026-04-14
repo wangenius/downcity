@@ -8,26 +8,21 @@
  */
 
 import * as React from "react";
-import { ParallaxPxlKitIcon } from "@pxlkit/core";
-import { RetroJoystick } from "@pxlkit/parallax";
 import { cn } from "../lib/utils";
-import {
-  PixelFocusedField,
-  PixelHoverTag,
-  PixelRoute,
-  PixelZoneTiles,
-} from "./workboard-stage-map";
+import { WorkboardRoomField } from "./workboard-room-field";
+import { PixelHoverTag } from "./workboard-stage-map";
 import {
   WORKBOARD_STAGE_HEIGHT,
   WORKBOARD_STAGE_WIDTH,
   WorkboardStageAgentNode,
-  buildWorkboardCurvePath,
+  buildWorkboardTilePath,
 } from "./workboard-stage";
 import type {
   DowncityWorkboardActivityItem,
   DowncityWorkboardAgentItem,
 } from "../types/workboard";
 import type { DowncityWorkboardGameRoomProps } from "../types/workboard-game-ui";
+import type { DowncityWorkboardGameRoute } from "../types/workboard-game-map";
 import type {
   DowncityWorkboardHoverTag,
   DowncityWorkboardMotionFrame,
@@ -57,18 +52,18 @@ function ActiveSpeechBubble(props: {
 
   return (
     <div
-      className="pointer-events-none absolute z-30 max-w-[22rem] border-2 border-border/70 bg-[rgba(255,252,247,0.96)] px-3 py-2 text-sm shadow-[0_3px_0_rgba(17,17,19,0.12)]"
+      className="pointer-events-none absolute z-30 max-w-[20rem] border-[3px] border-[#6e4d2f] bg-[#fff1bd] px-3 py-2 text-sm shadow-[5px_5px_0_rgba(72,50,33,0.22)]"
       style={{
         left: Math.min(Math.max(props.point.x + 28, 48), WORKBOARD_STAGE_WIDTH - 260),
         top: Math.min(Math.max(props.point.y - 74, 20), WORKBOARD_STAGE_HEIGHT - 72),
         clipPath: PIXEL_PANEL_CLIP,
       }}
     >
-      <p className="text-[10px] uppercase tracking-[0.14em] text-foreground/44">
+      <p className="text-[9px] uppercase tracking-[0.14em] text-[#6e4d2f]/70">
         {props.item.name} · {props.item.posture}
       </p>
-      <p className="mt-1 leading-6 text-foreground">“{line}”</p>
-      <span className="absolute -bottom-[10px] left-4 block h-[10px] w-[14px] border-x-2 border-b-2 border-border/70 bg-[rgba(255,252,247,0.96)]" />
+      <p className="mt-1 leading-6 text-[#352516]">“{line}”</p>
+      <span className="absolute -bottom-[11px] left-5 block h-[11px] w-[16px] border-x-[3px] border-b-[3px] border-[#6e4d2f] bg-[#fff1bd]" />
     </div>
   );
 }
@@ -92,30 +87,30 @@ function WorkboardRoomQuestLedger(props: {
 
   return (
     <div
-      className="absolute bottom-20 left-3 z-20 w-64 border-2 border-border/70 bg-[rgba(255,252,247,0.9)] px-3 py-2 shadow-[0_3px_0_rgba(17,17,19,0.12)]"
+      className="pointer-events-none absolute left-[104px] top-[424px] z-10 w-56 border-[3px] border-[#6e4d2f] bg-[#c48752] px-3 py-2 shadow-[5px_5px_0_rgba(72,50,33,0.24)]"
       style={{ clipPath: PIXEL_PANEL_CLIP }}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[10px] uppercase tracking-[0.18em] text-foreground/42">quest ledger</div>
-        <div className="text-[10px] uppercase tracking-[0.14em] text-foreground/42">
+        <div className="text-[9px] uppercase tracking-[0.18em] text-[#fff1bd]/80">wall board</div>
+        <div className="text-[9px] uppercase tracking-[0.14em] text-[#fff1bd]/70">
           {props.item ? props.item.posture : "empty"}
         </div>
       </div>
       <div className="mt-2 space-y-1.5">
         {entries.length > 0 ? (
           entries.map((entry, index) => (
-            <div key={entry.id} className="grid grid-cols-[1.5rem_1fr] gap-2 text-xs">
-              <span className="grid h-5 place-items-center border border-foreground/24 bg-background/70 text-[9px] font-semibold text-foreground/56">
+            <div key={entry.id} className="grid grid-cols-[1.5rem_1fr] gap-2 bg-[#fff1bd]/88 px-1.5 py-1 text-xs shadow-[2px_2px_0_rgba(72,50,33,0.18)]">
+              <span className="grid h-5 place-items-center border border-[#6e4d2f]/35 bg-[#f8de8d] text-[9px] font-semibold text-[#6e4d2f]/70">
                 Q{index + 1}
               </span>
               <span className="min-w-0">
-                <span className="block truncate font-semibold leading-5 text-foreground">{entry.title}</span>
-                <span className="block truncate text-[11px] leading-4 text-foreground/48">{entry.status}</span>
+                <span className="block truncate font-semibold leading-5 text-[#352516]">{entry.title}</span>
+                <span className="block truncate text-[11px] leading-4 text-[#6e4d2f]/70">{entry.status}</span>
               </span>
             </div>
           ))
         ) : (
-          <div className="text-xs leading-5 text-foreground/48">No public quest beats in this room.</div>
+          <div className="bg-[#fff1bd]/88 px-2 py-1 text-xs leading-5 text-[#6e4d2f]/70">No public quest beats.</div>
         )}
       </div>
     </div>
@@ -130,23 +125,23 @@ function WorkboardRoomMiniMap(props: {
   activeItemId?: string;
   nodes: Array<{ item: DowncityWorkboardAgentItem; x: number; y: number }>;
 }) {
-  const miniWidth = 132;
-  const miniHeight = 84;
+  const miniWidth = 112;
+  const miniHeight = 72;
   const scaleX = miniWidth / WORKBOARD_STAGE_WIDTH;
   const scaleY = miniHeight / WORKBOARD_STAGE_HEIGHT;
 
   return (
     <div
-      className="absolute bottom-20 right-3 z-20 border-2 border-border/70 bg-[rgba(255,252,247,0.9)] p-2 shadow-[0_3px_0_rgba(17,17,19,0.12)]"
+      className="pointer-events-none absolute left-[784px] top-[432px] z-10 border-[3px] border-[#6e4d2f] bg-[#8a6040] p-2 shadow-[5px_5px_0_rgba(72,50,33,0.24)]"
       style={{ clipPath: PIXEL_PANEL_CLIP }}
       aria-hidden="true"
     >
-      <div className="mb-1 text-[10px] uppercase tracking-[0.16em] text-foreground/42">mini map</div>
+      <div className="mb-1 text-[9px] uppercase tracking-[0.16em] text-[#fff1bd]/75">floor plan</div>
       <svg width={miniWidth} height={miniHeight} viewBox={`0 0 ${miniWidth} ${miniHeight}`} shapeRendering="crispEdges">
-        <rect x="0" y="0" width={miniWidth} height={miniHeight} fill="rgba(236,232,224,0.5)" />
-        <rect x="6" y="6" width={miniWidth - 12} height={miniHeight - 12} fill="rgba(255,252,247,0.82)" stroke="rgba(17,17,19,0.22)" strokeWidth="2" />
-        <line x1="12" y1={miniHeight / 2} x2={miniWidth - 12} y2={miniHeight / 2} stroke="rgba(17,17,19,0.12)" strokeWidth="2" />
-        <line x1={miniWidth / 2} y1="12" x2={miniWidth / 2} y2={miniHeight - 12} stroke="rgba(17,17,19,0.12)" strokeWidth="2" />
+        <rect x="0" y="0" width={miniWidth} height={miniHeight} fill="rgba(241,225,166,0.95)" />
+        <rect x="6" y="6" width={miniWidth - 12} height={miniHeight - 12} fill="rgba(255,241,189,0.9)" stroke="rgba(110,77,47,0.42)" strokeWidth="2" />
+        <line x1="12" y1={miniHeight / 2} x2={miniWidth - 12} y2={miniHeight / 2} stroke="rgba(110,77,47,0.18)" strokeWidth="2" />
+        <line x1={miniWidth / 2} y1="12" x2={miniWidth / 2} y2={miniHeight - 12} stroke="rgba(110,77,47,0.18)" strokeWidth="2" />
         {props.nodes.map((node) => {
           const active = node.item.id === props.activeItemId;
           return (
@@ -156,7 +151,7 @@ function WorkboardRoomMiniMap(props: {
               y={Math.max(8, Math.min(miniHeight - 10, node.y * scaleY))}
               width={active ? 6 : 4}
               height={active ? 6 : 4}
-              fill={active ? "rgba(17,17,19,0.78)" : "rgba(17,17,19,0.34)"}
+              fill={active ? "rgba(53,37,22,0.86)" : "rgba(110,77,47,0.48)"}
             />
           );
         })}
@@ -167,12 +162,130 @@ function WorkboardRoomMiniMap(props: {
             width="10"
             height="10"
             fill="none"
-            stroke="rgba(17,17,19,0.72)"
+            stroke="rgba(53,37,22,0.86)"
             strokeWidth="2"
           />
         ) : null}
       </svg>
     </div>
+  );
+}
+
+function RoomEntranceSign(props: {
+  zone: DowncityWorkboardGameRoomProps["zone"];
+  flowMode: DowncityWorkboardGameRoomProps["flowMode"];
+}) {
+  return (
+    <div
+      className="pointer-events-none absolute left-[382px] top-[566px] z-10 border-[3px] border-[#6e4d2f] bg-[#fff1bd] px-3 py-2 text-center shadow-[4px_4px_0_rgba(72,50,33,0.22)]"
+      style={{ clipPath: PIXEL_PANEL_CLIP }}
+      aria-hidden="true"
+    >
+      <div className="text-[9px] uppercase tracking-[0.18em] text-[#6e4d2f]/65">{props.zone.subtitle}</div>
+      <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#352516]">
+        {props.flowMode} room
+      </div>
+    </div>
+  );
+}
+
+function buildRoomPolylinePath(points: DowncityWorkboardStagePoint[]): string {
+  return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+}
+
+function RoomPatrolTrail(props: { route: DowncityWorkboardGameRoute }) {
+  const d = buildRoomPolylinePath(props.route.points);
+  return (
+    <g opacity={props.route.active ? 0.68 : 0.34}>
+      <path
+        d={d}
+        fill="none"
+        stroke="rgba(101,75,52,0.34)"
+        strokeWidth={props.route.active ? 12 : 8}
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
+      <path
+        d={d}
+        fill="none"
+        stroke="rgba(245,211,142,0.38)"
+        strokeWidth={props.route.active ? 4 : 3}
+        strokeDasharray="6 12"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
+      {props.route.points.map((point, index) => (
+        <rect
+          key={`${props.route.id}-trail-${index}`}
+          x={point.x - 4}
+          y={point.y - 4}
+          width="8"
+          height="8"
+          fill="rgba(245,211,142,0.52)"
+        />
+      ))}
+    </g>
+  );
+}
+
+function RoomHubMapObject(props: {
+  badge: string;
+  title: string;
+  point: DowncityWorkboardStagePoint;
+}) {
+  return (
+    <div
+      className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2"
+      style={{ left: props.point.x, top: props.point.y }}
+      aria-hidden="true"
+    >
+      <div className="relative h-24 w-28">
+        <div className="absolute left-4 top-5 h-14 w-20 border-[3px] border-[#6e4d2f] bg-[#f8de8d] shadow-[4px_4px_0_rgba(72,50,33,0.28)]" />
+        <div className="absolute left-8 top-8 h-7 w-12 bg-[#6b8f83]" />
+        <div className="absolute left-11 top-11 h-2 w-6 bg-[#cde6d9]" />
+        <div className="absolute left-7 top-[3.9rem] h-3 w-4 bg-[#6e4d2f]" />
+        <div className="absolute right-7 top-[3.9rem] h-3 w-4 bg-[#6e4d2f]" />
+        <div className="absolute left-1/2 top-0 -translate-x-1/2 border-2 border-[#6e4d2f] bg-[#fff1bd] px-2 py-1 text-center shadow-[3px_3px_0_rgba(72,50,33,0.18)]">
+          <div className="text-[8px] uppercase tracking-[0.13em] text-[#6e4d2f]/70">{props.badge}</div>
+          <div className="max-w-20 truncate text-[10px] font-bold leading-3 text-[#352516]">{props.title}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function renderRoomStationObject(params: {
+  node: { item: DowncityWorkboardAgentItem; x: number; y: number };
+  index: number;
+  active: boolean;
+}): React.ReactNode {
+  const deskFill = params.active ? "rgba(158,107,65,0.98)" : "rgba(138,96,65,0.84)";
+  const chairFill = params.active ? "rgba(93,128,103,0.95)" : "rgba(91,91,78,0.72)";
+
+  return (
+    <g key={`focused-station-${params.node.item.id}`} opacity={params.active ? 0.96 : 0.66}>
+      <rect x={params.node.x - 23} y={params.node.y - 19} width="46" height="24" fill={deskFill} stroke="rgba(72,50,33,0.56)" strokeWidth="3" />
+      <rect x={params.node.x - 15} y={params.node.y - 14} width="18" height="7" fill="rgba(231,211,148,0.76)" />
+      <rect x={params.node.x + 7} y={params.node.y - 15} width="10" height="9" fill="rgba(79,102,96,0.9)" />
+      <rect x={params.node.x - 12} y={params.node.y + 8} width="24" height="12" fill={chairFill} />
+      <rect x={params.node.x - 21} y={params.node.y + 22} width="8" height="7" fill="rgba(72,50,33,0.34)" />
+      <rect x={params.node.x + 13} y={params.node.y + 22} width="8" height="7" fill="rgba(72,50,33,0.34)" />
+      <rect x={params.node.x + 20} y={params.node.y - 26} width="22" height="14" fill="rgba(250,236,178,0.92)" stroke="rgba(110,77,47,0.54)" strokeWidth="2" />
+      <text
+        x={params.node.x + 31}
+        y={params.node.y - 16}
+        textAnchor="middle"
+        fill="rgba(72,50,33,0.78)"
+        fontSize="8"
+        fontWeight="800"
+        fontFamily="var(--font-geist-mono, var(--font-sans))"
+      >
+        {params.index + 1}
+      </text>
+      {params.active ? (
+        <rect x={params.node.x - 29} y={params.node.y - 25} width="58" height="58" fill="none" stroke="rgba(17,17,19,0.42)" strokeWidth="2" strokeDasharray="4 5" />
+      ) : null}
+    </g>
   );
 }
 
@@ -230,7 +343,7 @@ export function WorkboardGameRoom(props: DowncityWorkboardGameRoomProps) {
       )}
       style={{ width: WORKBOARD_STAGE_WIDTH, height: WORKBOARD_STAGE_HEIGHT, clipPath: PIXEL_PANEL_CLIP, imageRendering: "pixelated" }}
     >
-      <PixelFocusedField
+      <WorkboardRoomField
         zone={props.zone}
         stageWidth={WORKBOARD_STAGE_WIDTH}
         stageHeight={WORKBOARD_STAGE_HEIGHT}
@@ -238,21 +351,7 @@ export function WorkboardGameRoom(props: DowncityWorkboardGameRoomProps) {
         areaLabels={props.gameMap.areaLabels}
       />
       <div className={cn("pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2", props.zone.glowClassName)} />
-      <PixelZoneTiles zone={props.zone} />
-
-      <div
-        className="absolute left-3 top-3 z-20 border-2 border-border/70 bg-background/82 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-foreground/50"
-        style={{ clipPath: PIXEL_PANEL_CLIP }}
-      >
-        {props.zone.subtitle}
-      </div>
-      <div
-        className="absolute right-3 top-3 z-20 border-2 border-border/70 bg-background/82 px-3 py-2 text-right"
-        style={{ clipPath: PIXEL_PANEL_CLIP }}
-      >
-        <div className="text-[10px] uppercase tracking-[0.16em] text-foreground/42">room flow</div>
-        <div className="mt-1 text-sm font-semibold text-foreground">{props.flowMode}</div>
-      </div>
+      <RoomEntranceSign zone={props.zone} flowMode={props.flowMode} />
 
       <svg
         viewBox={`0 0 ${WORKBOARD_STAGE_WIDTH} ${WORKBOARD_STAGE_HEIGHT}`}
@@ -261,21 +360,16 @@ export function WorkboardGameRoom(props: DowncityWorkboardGameRoomProps) {
         aria-hidden="true"
       >
         {props.gameMap.patrols.map((route) => (
-          <PixelRoute
-            key={route.id}
-            points={route.points}
-            className={cn("stroke-foreground/10", route.active ? "opacity-100" : "opacity-70")}
-            dashed
-          />
+          <RoomPatrolTrail key={route.id} route={route} />
         ))}
         {activePoint ? (
           <g>
             <path
-              d={buildWorkboardCurvePath({ from: center, to: activePoint })}
+              d={buildWorkboardTilePath({ from: center, to: activePoint })}
               fill="none"
-              className={props.zone.lineClassName}
-              strokeWidth="7"
-              strokeOpacity="0.16"
+              stroke="rgba(245,211,142,0.58)"
+              strokeWidth="10"
+              strokeOpacity="0.52"
               strokeLinecap="square"
             />
             <rect
@@ -301,37 +395,13 @@ export function WorkboardGameRoom(props: DowncityWorkboardGameRoomProps) {
             />
           </g>
         ) : null}
-        {roomNodes.map((node, index) => (
-          <g key={`focused-station-${node.item.id}`} opacity={props.selectedAgentId === node.item.id ? 0.86 : 0.42}>
-            <rect
-              x={node.x - 8}
-              y={node.y - 8}
-              width="16"
-              height="16"
-              fill="rgba(255,252,247,0.9)"
-              stroke="rgba(17,17,19,0.34)"
-              strokeWidth="2"
-            />
-            <rect x={node.x - 3} y={node.y - 3} width="6" height="6" fill="rgba(17,17,19,0.28)" />
-            <text
-              x={node.x + 12}
-              y={node.y + 4}
-              fill="rgba(17,17,19,0.56)"
-              fontSize="9"
-              fontWeight="700"
-              fontFamily="var(--font-geist-mono, var(--font-sans))"
-            >
-              S{index + 1}
-            </text>
-          </g>
-        ))}
         {roomNodes.map((node) => {
           const point = resolveRoomPoint({
             agentId: node.item.id,
             fallback: { x: node.x, y: node.y },
             motionFrames: props.motionFrames,
           });
-          const path = buildWorkboardCurvePath({ from: center, to: point });
+          const path = buildWorkboardTilePath({ from: center, to: point });
 
           return (
             <path
@@ -350,41 +420,19 @@ export function WorkboardGameRoom(props: DowncityWorkboardGameRoomProps) {
             />
           );
         })}
+        {roomNodes.map((node, index) =>
+          renderRoomStationObject({
+            node,
+            index,
+            active: props.selectedAgentId === node.item.id,
+          }),
+        )}
       </svg>
 
-      <div
-        className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2"
-        style={{ left: hubPoint.x, top: hubPoint.y }}
-      >
-        <div className="relative grid h-14 w-14 place-items-center border-2 border-border/70 bg-[rgba(255,252,247,0.92)] shadow-[0_4px_0_rgba(17,17,19,0.14)]">
-          <ParallaxPxlKitIcon
-            icon={RetroJoystick}
-            size={34}
-            colorful
-            strength={10}
-            perspective={220}
-            className="pointer-events-auto"
-            interactive={false}
-            aria-label={`${props.zone.title} hub`}
-          />
-        </div>
-      </div>
+      <RoomHubMapObject badge={props.zone.badge} title={props.zone.title} point={hubPoint} />
 
       <div
-        className="pointer-events-none absolute z-20 -translate-x-1/2"
-        style={{ left: hubPoint.x, top: hubPoint.y - 92 }}
-      >
-        <div
-          className="border-2 border-border/70 bg-[rgba(255,252,247,0.94)] px-3 py-1.5 text-center shadow-[0_3px_0_rgba(17,17,19,0.12)]"
-          style={{ clipPath: PIXEL_PANEL_CLIP }}
-        >
-          <div className="text-[10px] uppercase tracking-[0.16em] text-foreground/44">{props.zone.badge}</div>
-          <div className="mt-1 text-sm font-semibold tracking-[-0.04em] text-foreground">{props.zone.title}</div>
-        </div>
-      </div>
-
-      <div
-        className="pointer-events-none absolute z-20 border-2 border-border/70 bg-[rgba(255,252,247,0.94)] px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-foreground/56 shadow-[0_3px_0_rgba(17,17,19,0.12)]"
+        className="pointer-events-none absolute z-20 border-2 border-[#6e4d2f]/70 bg-[#fff1bd]/90 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-[#6e4d2f]/70 shadow-[3px_3px_0_rgba(72,50,33,0.16)]"
         style={{ left: hubPoint.x + 38, top: hubPoint.y + 18, clipPath: PIXEL_PANEL_CLIP }}
       >
         sprites {props.items.length}

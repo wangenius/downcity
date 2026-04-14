@@ -135,7 +135,7 @@ function buildActors(params: {
 
   WORKBOARD_ZONE_DEFINITIONS.forEach((zone) => {
     const items = params.board.agents.filter((item) => resolveZoneId(item) === zone.id);
-    const focusedNodes = deriveFocusedClusterNodes(items);
+    const focusedNodes = deriveFocusedClusterNodes(items, zone.id);
 
     focusedNodes.forEach((node, index) => {
       focusedLookup.set(node.item.id, {
@@ -156,9 +156,7 @@ function buildActors(params: {
       id: node.item.id,
       agent: node.item,
       zoneId: node.zone.id,
-      overviewAnchor: node.placement
-        ? overviewRoute.slice(-2)[0] || toZoneHubPoint(node.zone.id)
-        : toZoneHubPoint(node.zone.id),
+      overviewAnchor: overviewRoute[0] || toZoneHubPoint(node.zone.id),
       overviewRoute,
       overviewGate: resolveOverviewGate({
         zoneId: node.zone.id,
@@ -187,7 +185,7 @@ function buildPatrols(params: {
   return Array.from({ length: laneCount }, (_, index) => ({
     id: `patrol-${params.activeZoneId}-${index}`,
     kind: "patrol",
-    points: buildFocusedPatrolRoute({ index }),
+    points: buildFocusedPatrolRoute({ index, zoneId: params.activeZoneId }),
     zoneId: params.activeZoneId,
     dwellRatio: FOCUSED_ROUTE_DWELL,
     snapSize: PIXEL_STEP_SIZE,

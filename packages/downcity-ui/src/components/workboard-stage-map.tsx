@@ -3,21 +3,15 @@
  *
  * 关键点（中文）
  * - 地图统一使用 25 x 16 的 tile 坐标系，每个 tile 对应 40px 正方块。
- * - atlas 与 room 都从 tile-map 渲染，不再使用会被全屏拉伸的百分比散块。
+ * - atlas 从 tile-map 渲染，不再使用会被全屏拉伸的百分比散块。
  * - 所有地图元素只表达公开状态的空间关系，不承载内部 runtime 细节。
  */
 
 import * as React from "react";
-import { cn } from "../lib/utils";
-import type {
-  DowncityWorkboardGameAreaLabel,
-  DowncityWorkboardGamePointOfInterest,
-  DowncityWorkboardGameZone,
-} from "../types/workboard-game-map";
+import type { DowncityWorkboardGameZone } from "../types/workboard-game-map";
 import type {
   DowncityWorkboardHoverTag,
   DowncityWorkboardStagePoint,
-  DowncityWorkboardZoneDefinition,
   DowncityWorkboardZoneId,
   DowncityWorkboardZoneLayout,
 } from "../types/workboard-stage";
@@ -32,6 +26,21 @@ const GRID_COLS = 25;
 const GRID_ROWS = 16;
 const STAGE_WIDTH = TILE_SIZE * GRID_COLS;
 const STAGE_HEIGHT = TILE_SIZE * GRID_ROWS;
+
+/**
+ * Workboard 小镇中心广场坐标。
+ */
+export const WORKBOARD_TOWN_PLAZA_POINT: DowncityWorkboardStagePoint = { x: 500, y: 320 };
+
+/**
+ * Workboard 小镇中每个状态建筑连接主路的入口坐标。
+ */
+export const WORKBOARD_ZONE_GATE_POINTS: Record<DowncityWorkboardZoneId, DowncityWorkboardStagePoint> = {
+  engaged: { x: 240, y: 300 },
+  steady: { x: 760, y: 300 },
+  quiet: { x: 240, y: 340 },
+  drift: { x: 760, y: 340 },
+};
 
 /**
  * Workboard 全局 atlas 中每个状态簇的外部布局。
@@ -109,6 +118,7 @@ const TOWN_BUILDINGS: TownBuilding[] = [
     zoneId: "engaged",
     floor: "rgba(230,199,170,0.98)",
     wall: "rgba(135,73,56,0.96)",
+    entrance: "bottom",
     walls: [
       { col: 5, row: 2, cols: 1, rows: 3 },
       { col: 2, row: 4, cols: 8, rows: 1 },
@@ -128,6 +138,7 @@ const TOWN_BUILDINGS: TownBuilding[] = [
     zoneId: "steady",
     floor: "rgba(244,236,174,0.98)",
     wall: "rgba(118,95,68,0.96)",
+    entrance: "bottom",
     walls: [
       { col: 18, row: 2, cols: 1, rows: 3 },
       { col: 15, row: 4, cols: 8, rows: 1 },
@@ -147,6 +158,7 @@ const TOWN_BUILDINGS: TownBuilding[] = [
     zoneId: "quiet",
     floor: "rgba(231,226,207,0.98)",
     wall: "rgba(116,107,97,0.96)",
+    entrance: "top",
     walls: [
       { col: 5, row: 9, cols: 1, rows: 3 },
       { col: 2, row: 11, cols: 8, rows: 1 },
@@ -166,6 +178,7 @@ const TOWN_BUILDINGS: TownBuilding[] = [
     zoneId: "drift",
     floor: "rgba(244,211,166,0.98)",
     wall: "rgba(155,85,43,0.96)",
+    entrance: "top",
     walls: [
       { col: 18, row: 9, cols: 1, rows: 3 },
       { col: 15, row: 11, cols: 8, rows: 1 },
@@ -192,6 +205,19 @@ const TOWN_TREE_POINTS: TilePoint[] = [
   { col: 19, row: 14 },
 ];
 
+const TOWN_SHRUB_POINTS: TilePoint[] = [
+  { col: 4, row: 1 },
+  { col: 9, row: 1 },
+  { col: 15, row: 1 },
+  { col: 22, row: 5 },
+  { col: 2, row: 7 },
+  { col: 22, row: 8 },
+  { col: 10, row: 14 },
+  { col: 15, row: 14 },
+  { col: 3, row: 15 },
+  { col: 21, row: 15 },
+];
+
 const TOWN_FLOWER_POINTS: TilePoint[] = [
   { col: 4, row: 8 },
   { col: 9, row: 8 },
@@ -199,47 +225,6 @@ const TOWN_FLOWER_POINTS: TilePoint[] = [
   { col: 21, row: 8 },
   { col: 11, row: 4 },
   { col: 13, row: 11 },
-];
-
-const ROOM_FLOOR_TILES: TileRect[] = [
-  { col: 2, row: 2, cols: 21, rows: 12 },
-  { col: 6, row: 5, cols: 13, rows: 6 },
-];
-
-const ROOM_SECTOR_TILES: Array<TileRect & { label: "a" | "b" }> = [
-  { col: 3, row: 3, cols: 4, rows: 3, label: "a" },
-  { col: 18, row: 3, cols: 4, rows: 3, label: "a" },
-  { col: 3, row: 10, cols: 4, rows: 3, label: "b" },
-  { col: 18, row: 10, cols: 4, rows: 3, label: "b" },
-  { col: 8, row: 3, cols: 9, rows: 2, label: "b" },
-  { col: 8, row: 11, cols: 9, rows: 2, label: "a" },
-];
-
-const ROOM_CORRIDOR_TILES: TileRect[] = [
-  { col: 5, row: 7, cols: 15, rows: 2 },
-  { col: 12, row: 4, cols: 2, rows: 9 },
-  { col: 7, row: 6, cols: 2, rows: 5 },
-  { col: 17, row: 6, cols: 2, rows: 5 },
-];
-
-const ROOM_WALL_TILES: TileRect[] = [
-  { col: 2, row: 2, cols: 21, rows: 1 },
-  { col: 2, row: 13, cols: 9, rows: 1 },
-  { col: 14, row: 13, cols: 9, rows: 1 },
-  { col: 2, row: 2, cols: 1, rows: 12 },
-  { col: 22, row: 2, cols: 1, rows: 12 },
-  { col: 7, row: 3, cols: 1, rows: 4 },
-  { col: 17, row: 3, cols: 1, rows: 4 },
-  { col: 7, row: 9, cols: 1, rows: 4 },
-  { col: 17, row: 9, cols: 1, rows: 4 },
-];
-
-const ROOM_DOOR_TILES: TileRect[] = [
-  { col: 11, row: 13, cols: 3, rows: 1 },
-  { col: 7, row: 7, cols: 1, rows: 2 },
-  { col: 17, row: 7, cols: 1, rows: 2 },
-  { col: 12, row: 6, cols: 2, rows: 1 },
-  { col: 12, row: 10, cols: 2, rows: 1 },
 ];
 
 function tileToRect(tile: TileRect) {
@@ -295,14 +280,14 @@ function renderGrassTiles(): React.ReactNode[] {
   return Array.from({ length: GRID_COLS * GRID_ROWS }, (_, index) => {
     const col = index % GRID_COLS;
     const row = Math.floor(index / GRID_COLS);
-    const fill = (col + row) % 2 === 0 ? "rgba(151,232,92,0.98)" : "rgba(132,220,82,0.98)";
+    const fill = (col + row) % 2 === 0 ? "rgba(104,136,76,0.98)" : "rgba(91,124,70,0.98)";
     const rect = tileToRect({ col, row, cols: 1, rows: 1 });
 
     return (
       <g key={`grass-${col}-${row}`}>
         <rect x={rect.x} y={rect.y} width={TILE_SIZE} height={TILE_SIZE} fill={fill} />
-        <rect x={rect.x + 6} y={rect.y + 8} width="4" height="4" fill="rgba(72,158,61,0.28)" />
-        <rect x={rect.x + 27} y={rect.y + 25} width="3" height="3" fill="rgba(72,158,61,0.24)" />
+        <rect x={rect.x + 6} y={rect.y + 8} width="4" height="4" fill="rgba(40,78,45,0.26)" />
+        <rect x={rect.x + 27} y={rect.y + 25} width="4" height="4" fill="rgba(142,161,89,0.18)" />
       </g>
     );
   });
@@ -310,11 +295,20 @@ function renderGrassTiles(): React.ReactNode[] {
 
 function renderTownPath(tile: TileRect, index: number): React.ReactNode {
   const rect = tileToRect(tile);
+  const cobbles = Array.from({ length: tile.cols * tile.rows }, (_, cobbleIndex) => {
+    const col = tile.col + (cobbleIndex % tile.cols);
+    const row = tile.row + Math.floor(cobbleIndex / tile.cols);
+    const x = col * TILE_SIZE + ((col + row) % 2 === 0 ? 8 : 22);
+    const y = row * TILE_SIZE + ((col * 3 + row) % 2 === 0 ? 10 : 24);
+    return <rect key={`town-path-cobble-${index}-${cobbleIndex}`} x={x} y={y} width="8" height="5" fill="rgba(134,105,67,0.24)" />;
+  });
+
   return (
     <g key={`town-path-${index}`}>
-      <rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} fill="rgba(226,204,139,0.98)" />
-      <rect x={rect.x} y={rect.y} width={rect.width} height="4" fill="rgba(178,151,91,0.42)" />
-      <rect x={rect.x} y={rect.y + rect.height - 4} width={rect.width} height="4" fill="rgba(178,151,91,0.34)" />
+      <rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} fill="rgba(193,165,104,0.98)" />
+      <rect x={rect.x} y={rect.y} width={rect.width} height="4" fill="rgba(116,92,62,0.34)" />
+      <rect x={rect.x} y={rect.y + rect.height - 4} width={rect.width} height="4" fill="rgba(116,92,62,0.28)" />
+      {cobbles}
     </g>
   );
 }
@@ -323,8 +317,9 @@ function renderTownWater(tile: TileRect, index: number): React.ReactNode {
   const rect = tileToRect(tile);
   return (
     <g key={`town-water-${index}`}>
-      <rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} fill="rgba(112,193,218,0.9)" />
-      <rect x={rect.x + 8} y={rect.y + 10} width={Math.max(12, rect.width - 16)} height="4" fill="rgba(196,238,241,0.42)" />
+      <rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} fill="rgba(82,139,149,0.9)" />
+      <rect x={rect.x + 8} y={rect.y + 10} width={Math.max(12, rect.width - 16)} height="4" fill="rgba(160,205,199,0.34)" />
+      <rect x={rect.x + 18} y={rect.y + rect.height - 14} width={Math.max(18, rect.width - 48)} height="4" fill="rgba(53,103,112,0.24)" />
     </g>
   );
 }
@@ -371,6 +366,18 @@ function renderTree(point: TilePoint, index: number): React.ReactNode {
       <rect x={x + 10} y={y + 10} width="22" height="18" fill="rgba(58,145,77,0.95)" />
       <rect x={x + 14} y={y + 4} width="14" height="12" fill="rgba(80,174,86,0.96)" />
       <rect x={x + 8} y={y + 18} width="26" height="8" fill="rgba(38,122,67,0.84)" />
+    </g>
+  );
+}
+
+function renderShrub(point: TilePoint, index: number): React.ReactNode {
+  const x = point.col * TILE_SIZE;
+  const y = point.row * TILE_SIZE;
+  return (
+    <g key={`shrub-${index}`}>
+      <rect x={x + 8} y={y + 18} width="24" height="12" fill="rgba(53,111,61,0.86)" />
+      <rect x={x + 14} y={y + 12} width="14" height="10" fill="rgba(72,132,67,0.9)" />
+      <rect x={x + 5} y={y + 27} width="30" height="5" fill="rgba(33,76,43,0.32)" />
     </g>
   );
 }
@@ -441,9 +448,13 @@ function renderTownProp(prop: TownBuilding["props"][number], index: number): Rea
 function renderTownBuilding(building: TownBuilding, activeZoneId?: DowncityWorkboardZoneId): React.ReactNode {
   const rect = tileToRect(building);
   const active = building.zoneId === activeZoneId;
+  const doorX = rect.x + rect.width / 2 - 24;
+  const doorY = building.entrance === "top" ? rect.y - 6 : rect.y + rect.height - 10;
+  const stepY = building.entrance === "top" ? rect.y - 22 : rect.y + rect.height + 6;
 
   return (
     <g key={`town-building-${building.zoneId}`}>
+      <rect x={doorX + 4} y={stepY} width="40" height="22" fill="rgba(193,165,104,0.92)" opacity="0.9" />
       <rect x={rect.x - 6} y={rect.y - 6} width={rect.width + 12} height={rect.height + 12} fill={building.wall} opacity={active ? 1 : 0.82} />
       <rect x={rect.x + 8} y={rect.y + 8} width={rect.width - 16} height={rect.height - 16} fill={building.floor} />
       {Array.from({ length: building.cols * building.rows }, (_, index) => {
@@ -475,87 +486,11 @@ function renderTownBuilding(building: TownBuilding, activeZoneId?: DowncityWorkb
           />
         );
       })}
-      <rect x={rect.x + rect.width / 2 - 24} y={rect.y + rect.height - 10} width="48" height="16" fill="rgba(226,204,139,0.98)" />
+      <rect x={doorX} y={doorY} width="48" height="16" fill="rgba(226,204,139,0.98)" />
+      <rect x={doorX + 8} y={doorY + 4} width="32" height="8" fill="rgba(91,65,44,0.55)" />
       {building.props.map(renderTownProp)}
       <rect x={rect.x - 8} y={rect.y - 8} width={rect.width + 16} height={rect.height + 16} fill="none" stroke={active ? ZONE_PIXEL_PALETTE[building.zoneId].stroke : "rgba(17,17,19,0.34)"} strokeWidth={active ? 5 : 3} />
     </g>
-  );
-}
-
-function renderFocusedProp(params: {
-  kind: "desk" | "rack" | "console" | "crate" | "bench" | "plant";
-  x: number;
-  y: number;
-}): React.ReactNode {
-  if (params.kind === "desk") {
-    return (
-      <g>
-        <rect x={params.x} y={params.y} width={28} height={10} fill="rgba(126,91,67,0.92)" />
-        <rect x={params.x + 3} y={params.y + 10} width={4} height={10} fill="rgba(77,57,43,0.9)" />
-        <rect x={params.x + 21} y={params.y + 10} width={4} height={10} fill="rgba(77,57,43,0.9)" />
-      </g>
-    );
-  }
-
-  if (params.kind === "rack") {
-    return (
-      <g>
-        <rect x={params.x} y={params.y} width={10} height={28} fill="rgba(88,82,75,0.92)" />
-        <rect x={params.x + 3} y={params.y + 5} width={18} height={4} fill="rgba(166,149,112,0.88)" />
-        <rect x={params.x + 3} y={params.y + 13} width={18} height={4} fill="rgba(166,149,112,0.88)" />
-        <rect x={params.x + 3} y={params.y + 21} width={18} height={4} fill="rgba(166,149,112,0.88)" />
-      </g>
-    );
-  }
-
-  if (params.kind === "console") {
-    return (
-      <g>
-        <rect x={params.x} y={params.y} width={20} height={14} fill="rgba(72,95,86,0.94)" />
-        <rect x={params.x + 4} y={params.y + 4} width={12} height={4} fill="rgba(215,236,222,0.92)" />
-        <rect x={params.x + 4} y={params.y + 14} width={4} height={8} fill="rgba(56,64,60,0.88)" />
-        <rect x={params.x + 13} y={params.y + 14} width={4} height={8} fill="rgba(56,64,60,0.88)" />
-      </g>
-    );
-  }
-
-  if (params.kind === "bench") {
-    return (
-      <g>
-        <rect x={params.x} y={params.y} width={32} height={8} fill="rgba(145,108,76,0.92)" />
-        <rect x={params.x + 5} y={params.y + 8} width={4} height={10} fill="rgba(82,62,49,0.9)" />
-        <rect x={params.x + 23} y={params.y + 8} width={4} height={10} fill="rgba(82,62,49,0.9)" />
-      </g>
-    );
-  }
-
-  if (params.kind === "plant") {
-    return (
-      <g>
-        <rect x={params.x + 5} y={params.y + 12} width={12} height={9} fill="rgba(127,90,63,0.92)" />
-        <rect x={params.x + 3} y={params.y + 5} width={16} height={10} fill="rgba(100,145,80,0.92)" />
-        <rect x={params.x + 8} y={params.y} width={6} height={8} fill="rgba(136,179,101,0.9)" />
-      </g>
-    );
-  }
-
-  return (
-    <g>
-      <rect x={params.x} y={params.y + 4} width={16} height={14} fill="rgba(143,105,70,0.9)" />
-      <rect x={params.x + 16} y={params.y + 8} width={10} height={10} fill="rgba(177,136,94,0.9)" />
-    </g>
-  );
-}
-
-export function PixelStageBackdrop() {
-  return (
-    <>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(17,17,19,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(17,17,19,0.04)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30" />
-      <div className="pointer-events-none absolute left-3 top-3 h-2 w-2 bg-foreground/18" />
-      <div className="pointer-events-none absolute right-3 top-3 h-2 w-2 bg-foreground/14" />
-      <div className="pointer-events-none absolute bottom-3 left-3 h-2 w-2 bg-foreground/12" />
-      <div className="pointer-events-none absolute bottom-3 right-3 h-2 w-2 bg-foreground/10" />
-    </>
   );
 }
 
@@ -583,6 +518,7 @@ export function PixelAtlasMap(props: {
       {TOWN_PATH_TILES.map(renderTownPath)}
       {renderTownPlaza()}
       {TOWN_FENCE_TILES.map(renderTownFence)}
+      {TOWN_SHRUB_POINTS.map(renderShrub)}
       {TOWN_TREE_POINTS.map(renderTree)}
       {TOWN_FLOWER_POINTS.map(renderFlower)}
       {TOWN_BUILDINGS.map((building) => renderTownBuilding(building, activeZoneId))}
@@ -640,31 +576,6 @@ export function PixelAtlasMap(props: {
   );
 }
 
-export function PixelZoneTiles(props: { zone: DowncityWorkboardZoneDefinition }) {
-  const palette = ZONE_PIXEL_PALETTE[props.zone.id];
-
-  return (
-    <>
-      {ROOM_SECTOR_TILES.map((tile, index) => {
-        const rect = tileToRect(tile);
-        return (
-          <div
-            key={`${props.zone.id}-sector-${index}`}
-            className={cn("pointer-events-none absolute border border-foreground/10", props.zone.borderClassName)}
-            style={{
-              left: rect.x,
-              top: rect.y,
-              width: rect.width,
-              height: rect.height,
-              background: tile.label === "a" ? palette.shadow : "rgba(255,252,247,0.28)",
-            }}
-          />
-        );
-      })}
-    </>
-  );
-}
-
 export function PixelRoute(props: {
   points: DowncityWorkboardStagePoint[];
   className?: string;
@@ -686,83 +597,6 @@ export function PixelRoute(props: {
       strokeLinejoin="miter"
       strokeDasharray={props.dashed ? "8 8" : undefined}
     />
-  );
-}
-
-/**
- * 簇内局部地图底板。
- */
-export function PixelFocusedField(props: {
-  zone: DowncityWorkboardZoneDefinition;
-  stageWidth: number;
-  stageHeight: number;
-  pointsOfInterest: DowncityWorkboardGamePointOfInterest[];
-  areaLabels: DowncityWorkboardGameAreaLabel[];
-}) {
-  const palette = ZONE_PIXEL_PALETTE[props.zone.id];
-
-  return (
-    <svg
-      viewBox={`0 0 ${props.stageWidth} ${props.stageHeight}`}
-      className="pointer-events-none absolute inset-0 h-full w-full"
-      preserveAspectRatio="xMidYMid meet"
-      shapeRendering="crispEdges"
-      aria-hidden="true"
-    >
-      <rect x={0} y={0} width={STAGE_WIDTH} height={STAGE_HEIGHT} fill="rgba(238,234,224,0.96)" />
-      {ROOM_FLOOR_TILES.map((tile, index) => (
-        <TileRectSvg key={`room-floor-${index}`} tile={tile} fill="rgba(255,252,247,0.86)" stroke="rgba(17,17,19,0.06)" />
-      ))}
-      {ROOM_SECTOR_TILES.map((tile, index) => (
-        <TileRectSvg
-          key={`room-sector-${index}`}
-          tile={tile}
-          fill={tile.label === "a" ? palette.fill : "rgba(255,252,247,0.72)"}
-          stroke="rgba(17,17,19,0.1)"
-          opacity={0.82}
-        />
-      ))}
-      {ROOM_CORRIDOR_TILES.map((tile, index) => (
-        <TileRectSvg key={`room-corridor-${index}`} tile={tile} fill="rgba(91,86,78,0.18)" stroke="rgba(17,17,19,0.08)" />
-      ))}
-      {ROOM_DOOR_TILES.map((tile, index) => (
-        <TileRectSvg key={`room-door-${index}`} tile={tile} fill="rgba(255,252,247,0.96)" stroke={palette.line} />
-      ))}
-      {props.pointsOfInterest.map((item, index) => (
-        <g key={`prop-${index}`} opacity={0.95}>
-          {item.kind === "hub" ? null : renderFocusedProp(item)}
-        </g>
-      ))}
-      {props.areaLabels.map((item, index) => (
-        <g key={`label-${index}`} opacity={0.94}>
-          <rect
-            x={item.x}
-            y={item.y}
-            width={Math.max(72, estimateTextWidth(item.label) + 16)}
-            height="20"
-            fill="rgba(255,252,247,0.94)"
-            stroke="rgba(17,17,19,0.34)"
-            strokeWidth="2"
-          />
-          <text
-            x={item.x + 7}
-            y={item.y + 14}
-            fill="rgba(17,17,19,0.72)"
-            fontSize="9"
-            fontWeight="700"
-            fontFamily="var(--font-geist-mono, var(--font-sans))"
-          >
-            {item.label}
-          </text>
-        </g>
-      ))}
-      {ROOM_WALL_TILES.map((tile, index) => (
-        <TileRectSvg key={`room-wall-${index}`} tile={tile} fill="rgba(40,36,32,0.74)" />
-      ))}
-      <rect x={460} y={286} width={80} height={68} fill="rgba(255,252,247,0.96)" stroke={palette.line} strokeWidth="3" />
-      <rect x={472} y={298} width={56} height={44} fill={palette.fillStrong} opacity={0.9} />
-      <rect x={490} y={312} width={20} height={16} fill={palette.stroke} opacity={0.92} />
-    </svg>
   );
 }
 

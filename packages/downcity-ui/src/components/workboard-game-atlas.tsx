@@ -15,7 +15,6 @@ import {
   WORKBOARD_STAGE_WIDTH,
   WorkboardStageAgentNode,
   WorkboardStageZone,
-  buildWorkboardCurvePath,
   resolveZoneDefinition,
   toZoneHubPoint,
 } from "./workboard-stage";
@@ -122,26 +121,6 @@ export function WorkboardGameAtlas(props: DowncityWorkboardGameAtlasProps) {
             dashed
           />
         ))}
-        {actors.map((actor) => {
-          const zone = resolveZoneDefinition(actor.zoneId);
-          const from = toZoneHubPoint(actor.zoneId);
-          const to = props.motionFrames[actor.id] || actor.overviewAnchor;
-          const path = buildWorkboardCurvePath({ from, to });
-          const faded = actor.zoneId !== props.activeZoneId;
-          return (
-            <path
-              key={`line-${actor.id}`}
-              d={path}
-              fill="none"
-              className={cn(zone.lineClassName, faded ? "opacity-16" : "opacity-48")}
-              strokeWidth={props.selectedAgentId === actor.id ? 2.6 : 1.4}
-              strokeDasharray={props.selectedAgentId === actor.id ? "6 8" : "4 10"}
-              style={{
-                animation: `workboard-dash ${props.flowMode === "turbo" ? "1.5s" : "2.7s"} linear infinite`,
-              }}
-            />
-          );
-        })}
         {actors.map((actor) => {
           const faded = actor.zoneId !== props.activeZoneId;
           return (

@@ -8,42 +8,37 @@
 
 import * as React from "react";
 import { cn } from "../lib/utils";
-import type { DowncityWorkboardPixelAgentProps } from "../types/workboard-pixel-agent";
+import type {
+  DowncityWorkboardPixelAgentPalette,
+  DowncityWorkboardPixelAgentProps,
+} from "../types/workboard-pixel-agent";
 
-type PixelPalette = {
-  skin: string;
-  hair: string;
-  outfit: string;
-  accent: string;
-  outline: string;
-};
-
-const PIXEL_PALETTES: PixelPalette[] = [
+const PIXEL_PALETTES: DowncityWorkboardPixelAgentPalette[] = [
   {
     skin: "#f1c7a5",
     hair: "#4c3327",
-    outfit: "#35736b",
+    outfit: "#3f7c63",
     accent: "#d4eadf",
     outline: "#241a16",
   },
   {
     skin: "#dbb08a",
     hair: "#2d2a3b",
-    outfit: "#8a5f31",
+    outfit: "#8b6b37",
     accent: "#ead6bf",
     outline: "#231f18",
   },
   {
     skin: "#f0d1b5",
     hair: "#70462d",
-    outfit: "#566f3a",
+    outfit: "#667b42",
     accent: "#dde8c7",
     outline: "#2a251d",
   },
   {
     skin: "#c98d66",
     hair: "#3b281f",
-    outfit: "#81503f",
+    outfit: "#925a45",
     accent: "#efdfd1",
     outline: "#241b16",
   },
@@ -81,6 +76,8 @@ function buildPixelAvatarSvg(params: {
     rect(2, 4, 12, 1, palette.hair),
     rect(3, 5, 10, 5, palette.skin),
     rect(4, 10, 8, 4, palette.outfit),
+    rect(2, 10, 2, 3, palette.outfit),
+    rect(12, 10, 2, 3, palette.outfit),
     rect(5, 14, 2, 2, palette.outline),
     rect(9, 14, 2, 2, palette.outline),
     rect(4, 11, 1, 3, palette.outline),
@@ -147,14 +144,14 @@ export function WorkboardPixelAgent(props: DowncityWorkboardPixelAgentProps) {
   return (
     <span
       className={cn(
-        "inline-flex overflow-hidden rounded-[2px] border bg-[rgba(255,252,247,0.9)] shadow-[0_1px_0_rgba(17,17,19,0.12)]",
-        props.active ? "border-foreground/70" : "border-foreground/28",
+        "relative inline-flex overflow-visible",
         props.faded ? "opacity-65" : "opacity-100",
         props.className,
       )}
       style={{ width: props.size, height: props.size }}
       aria-hidden="true"
     >
+      <span className="absolute bottom-[1px] left-1/2 h-[4px] w-[70%] -translate-x-1/2 bg-[rgba(45,36,25,0.24)]" />
       <img
         src={src}
         alt=""

@@ -3,13 +3,14 @@
  *
  * 关键点（中文）
  * - pid 文件缺失时，仍应能从 detached UI 进程命令行恢复运行状态。
- * - host 需要先归一化后再做匹配，避免 `0.0.0.0` 与 `127.0.0.1` 误判不一致。
+ * - 真实绑定 host 需要严格匹配，避免本机监听被误报成公网监听。
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   findReusableConsoleProcess,
+  isConsoleBindingMatch,
   parseConsoleProcessCommand,
   resolveConsoleHostForBinding,
 } from "../../bin/main/modules/cli/Console.js";
@@ -26,7 +27,18 @@ test("parseConsoleProcessCommand extracts host and port from console ui run comm
   });
 });
 
-test("findReusableConsoleProcess reuses detached ui process with matching normalized host and port", () => {
+test("parseConsoleProcessCommand keeps wildcard bind host", () => {
+  const result = parseConsoleProcessCommand(
+    "/opt/homebrew/bin/node /tmp/Index.js console run --host 0.0.0.0 --port 5315",
+  );
+
+  assert.deepEqual(result, {
+    host: "0.0.0.0",
+    port: 5315,
+  });
+});
+
+test("findReusableConsoleProcess reuses detached ui process with matching bind host and port", () => {
   const result = findReusableConsoleProcess(
     [
       {
@@ -37,7 +49,7 @@ test("findReusableConsoleProcess reuses detached ui process with matching normal
       {
         pid: 20002,
         command:
-          "/opt/homebrew/bin/node /tmp/Index.js console run --host 127.0.0.1 --port 5415",
+          "/opt/homebrew/bin/node /tmp/Index.js console run --host 127.0.0.1 --port 5315",
       },
     ],
     {
@@ -47,10 +59,33 @@ test("findReusableConsoleProcess reuses detached ui process with matching normal
   );
 
   assert.deepEqual(result, {
-    pid: 20001,
+    pid: 20002,
     host: "127.0.0.1",
     port: 5315,
   });
+});
+
+test("findReusableConsoleProcess does not reuse local process for public binding", () => {
+  const result = findReusableConsoleProcess(
+    [
+      {
+        pid: 20001,
+        command:
+          "/opt/homebrew/bin/node /tmp/Index.js console run --host 127.0.0.1 --port 5315",
+      },
+    ],
+    {
+      host: "0.0.0.0",
+      port: 5315,
+    },
+  );
+
+  assert.equal(result, null);
+});
+
+test("isConsoleBindingMatch treats wildcard and loopback as different endpoints", () => {
+  assert.equal(isConsoleBindingMatch("0.0.0.0", "127.0.0.1"), false);
+  assert.equal(isConsoleBindingMatch("0.0.0.0", "0.0.0.0"), true);
 });
 
 test("isDowncityCliCommand accepts console build output path", () => {

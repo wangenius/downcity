@@ -41,6 +41,7 @@ If you pass `-p` without `-h`, the CLI automatically switches the bind host to `
 - Console depends on city runtime. Start runtime first with [`city start`](/en/docs/commands/start).
 - Console is not the city runtime process. It is a separate module on top of the runtime.
 - One Console instance can switch across multiple running agents.
+- `start` does not change the bind address of an already running Console. To move an existing local Console into public mode, run `city console restart -p`.
 - `city status` shows both city runtime state and Console state.
 
 ## Typical flow
@@ -77,6 +78,7 @@ city console restart
 
 - By default, `city console start` binds to `127.0.0.1:5315`, so only the local machine can access it.
 - `city console start -p` binds to `0.0.0.0:5315`, which allows external access.
+- If Console is already running, `city console start -p` does not rebind the existing process from `127.0.0.1` to `0.0.0.0`; use `city console restart -p`.
 - When using a `0.0.0.0` bind, connect with the server IP or domain instead of `127.0.0.1`.
 - In public mode, startup output also prints `Public URL`.
 - If the runtime sits behind NAT / reverse proxy / load balancer, set `DOWNCITY_PUBLIC_HOST` or `DOWNCITY_PUBLIC_URL` for an exact external address.

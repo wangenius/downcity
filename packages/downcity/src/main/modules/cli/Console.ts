@@ -116,6 +116,41 @@ function normalizeHost(host: string): string {
 }
 
 /**
+ * 规范化真实绑定 host。
+ */
+function normalizeBindHost(host: string): string {
+  const value = String(host || "").trim();
+  return value || DEFAULT_CONSOLE_HOST;
+}
+
+/**
+ * 判断两个 Console 绑定端点是否一致。
+ *
+ * 关键点（中文）
+ * - `127.0.0.1` 和 `0.0.0.0` 不能视为同一个绑定端点。
+ * - 这是 `start -p` 是否已经生效的核心判断，避免本机监听被误报成公网监听。
+ */
+export function isConsoleBindingMatch(actualHost: string, expectedHost: string): boolean {
+  return normalizeBindHost(actualHost).toLowerCase() ===
+    normalizeBindHost(expectedHost).toLowerCase();
+}
+
+/**
+ * 生成重新绑定 Console 的命令提示。
+ */
+function formatConsoleRestartHint(
+  options: ConsoleStartOptions | undefined,
+  port: number,
+): string {
+  const parts = ["city", "console", "restart"];
+  if (options?.public === true) parts.push("-p");
+  const explicitHost = String(options?.host || "").trim();
+  if (explicitHost) parts.push("--host", explicitHost);
+  if (port !== DEFAULT_CONSOLE_PORT) parts.push("--port", String(port));
+  return parts.join(" ");
+}
+
+/**
  * 解析 Console 实际监听 host。
  *
  * 关键点（中文）
@@ -144,7 +179,7 @@ export function parseConsoleProcessCommand(command: string): {
 
   const hostMatch = normalized.match(/(?:^|\s)--host\s+(\S+)/);
   const portMatch = normalized.match(/(?:^|\s)--port\s+(\d+)/);
-  const host = normalizeHost(hostMatch?.[1] || DEFAULT_CONSOLE_HOST);
+  const host = normalizeBindHost(hostMatch?.[1] || DEFAULT_CONSOLE_HOST);
   const port = Number.parseInt(portMatch?.[1] || String(DEFAULT_CONSOLE_PORT), 10);
   if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
 
@@ -160,7 +195,7 @@ export function parseConsoleProcessCommand(command: string): {
 export function findReusableConsoleProcess(
   processes: Array<{ pid: number; command: string }>,
   expected: {
-    host: string;
+    host?: string;
     port: number;
   },
 ): {
@@ -168,13 +203,16 @@ export function findReusableConsoleProcess(
   host: string;
   port: number;
 } | null {
-  const expectedHost = normalizeHost(expected.host);
+  const expectedHost = String(expected.host || "").trim()
+    ? normalizeBindHost(String(expected.host))
+    : "";
   const expectedPort = expected.port;
 
   for (const item of processes) {
     const parsed = parseConsoleProcessCommand(item.command);
     if (!parsed) continue;
-    if (parsed.host !== expectedHost || parsed.port !== expectedPort) continue;
+    if (parsed.port !== expectedPort) continue;
+    if (expectedHost && !isConsoleBindingMatch(parsed.host, expectedHost)) continue;
     return {
       pid: item.pid,
       host: parsed.host,
@@ -194,7 +232,9 @@ async function recoverDetachedConsoleStatus(
     port?: number;
   },
 ): Promise<ConsoleRuntimeStatus | null> {
-  const host = normalizeHost(expected?.host || DEFAULT_CONSOLE_HOST);
+  const host = String(expected?.host || "").trim()
+    ? normalizeBindHost(String(expected?.host))
+    : "";
   const port =
     typeof expected?.port === "number" && Number.isInteger(expected.port)
       ? expected.port
@@ -218,9 +258,10 @@ async function recoverDetachedConsoleStatus(
   return {
     running: true,
     pid: reusable.pid,
-    host: reusable.host,
+    host: normalizeHost(reusable.host),
+    bindHost: reusable.host,
     port: reusable.port,
-    url: `http://${reusable.host}:${reusable.port}`,
+    url: `http://${normalizeHost(reusable.host)}:${reusable.port}`,
     logPath: getConsoleLogPath(),
     pidPath: getConsolePidPath(),
   };
@@ -261,13 +302,15 @@ export async function getConsoleRuntimeStatus(): Promise<ConsoleRuntimeStatus> {
     };
   }
 
-  const host = normalizeHost(meta?.host || DEFAULT_CONSOLE_HOST);
+  const bindHost = normalizeBindHost(meta?.host || DEFAULT_CONSOLE_HOST);
+  const host = normalizeHost(bindHost);
   const port =
     meta && Number.isInteger(meta.port) ? meta.port : DEFAULT_CONSOLE_PORT;
   return {
     running: true,
     pid,
     host,
+    bindHost,
     port,
     url: `http://${host}:${port}`,
     logPath,
@@ -333,22 +376,46 @@ export async function startConsoleCommand(params: {
     process.exit(1);
   }
 
+  const host = resolveConsoleHostForBinding(params.options);
+  const port =
+    typeof params.options?.port === "number" && Number.isInteger(params.options.port)
+      ? params.options.port
+      : DEFAULT_CONSOLE_PORT;
+
   const status = await getConsoleRuntimeStatus();
   if (status.running) {
     const statusUrl = String(status.url || "").trim();
-    const publicUrl = resolveConsolePublicUrl({
-      bindHost: params.options?.host || "",
-      port: status.port || DEFAULT_CONSOLE_PORT,
-      publicMode: params.options?.public === true,
-    });
+    const currentBindHost = normalizeBindHost(
+      status.bindHost || status.host || DEFAULT_CONSOLE_HOST,
+    );
+    const currentPort = status.port || DEFAULT_CONSOLE_PORT;
+    const sameEndpoint =
+      isConsoleBindingMatch(currentBindHost, host) && currentPort === port;
+    const restartHint = formatConsoleRestartHint(params.options, port);
+    const publicUrl = sameEndpoint
+      ? resolveConsolePublicUrl({
+          bindHost: currentBindHost,
+          port: currentPort,
+          publicMode: params.options?.public === true,
+        })
+      : null;
     emitCliBlock({
-      tone: "info",
+      tone: sameEndpoint ? "info" : "warning",
       title: "Console already running",
+      summary: sameEndpoint ? undefined : "different binding",
       facts: statusUrl
         ? buildConsolePortFacts(statusUrl, {
             publicUrl,
           })
-        : [],
+        : [
+            {
+              label: "URL",
+              value: `http://${normalizeHost(currentBindHost)}:${currentPort}`,
+            },
+          ],
+      note: sameEndpoint
+        ? undefined
+        : `当前 Console 绑定 ${currentBindHost}:${currentPort}；如需改为 ${host}:${port}，请运行 \`${restartHint}\`。`,
     });
     return;
   }
@@ -369,12 +436,6 @@ export async function startConsoleCommand(params: {
       title: "Orphan Console process still alive",
     });
   }
-
-  const host = resolveConsoleHostForBinding(params.options);
-  const port =
-    typeof params.options?.port === "number" && Number.isInteger(params.options.port)
-      ? params.options.port
-      : DEFAULT_CONSOLE_PORT;
 
   await fs.ensureDir(getCityRuntimeDirPath());
   const logPath = getConsoleLogPath();

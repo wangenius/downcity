@@ -41,6 +41,7 @@ city console [action] [options]
 - Console 依赖 city runtime，先执行 [`city start`](/zh/docs/commands/start)。
 - Console 不是 city runtime 本身，而是运行在其上的独立模块。
 - 一个 Console 实例可以切换查看多个运行中的 agent。
+- `start` 不会改写已经运行中的监听地址；如果当前是本机模式，要切到公网模式请执行 `city console restart -p`。
 - `city status` 会同时显示 city runtime 与 Console 状态。
 
 ## 典型流程
@@ -77,6 +78,7 @@ city console restart
 
 - 默认 `city console start` 绑定 `127.0.0.1:5315`，只能本机访问。
 - `city console start -p` 会绑定 `0.0.0.0:5315`，可以从外部访问。
+- 如果 Console 已经在运行，`city console start -p` 不会把已有进程从 `127.0.0.1` 改成 `0.0.0.0`；请使用 `city console restart -p`。
 - 如果使用了 `0.0.0.0` 绑定，浏览器访问时请改用服务器 IP 或域名。
 - 公网模式下，启动结果会额外打印 `Public URL`。
 - 如果运行环境处于 NAT / 反向代理后面，建议显式设置 `DOWNCITY_PUBLIC_HOST` 或 `DOWNCITY_PUBLIC_URL`。

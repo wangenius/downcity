@@ -113,6 +113,16 @@ test("concrete service roots expose lifecycle commands when supported", () => {
   assert.match(taskOutput, /\n  restart \[options\]/);
 });
 
+test("contact link and approve keep endpoint internal", () => {
+  const linkOutput = readHelp(["contact", "link", "--help"]);
+  const approveOutput = readHelp(["contact", "approve", "--help"]);
+
+  assert.doesNotMatch(linkOutput, /--endpoint/);
+  assert.doesNotMatch(approveOutput, /--endpoint/);
+  assert.match(linkOutput, /--ttl-seconds <seconds>/);
+  assert.match(approveOutput, /--name <alias>/);
+});
+
 test("static service and plugin catalog commands run without agent context", () => {
   const serviceOutput = readHelp(["service", "list", "--json"]);
   const pluginOutput = readHelp(["plugin", "list", "--json"]);

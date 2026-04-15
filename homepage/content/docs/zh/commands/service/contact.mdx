@@ -5,7 +5,7 @@ description: contact service actions（link/approve/list/check/chat/share/inbox/
 
 # `city contact`
 
-`contact` 用于两个 agent 建立点对点联系、检查在线状态、对话，以及分享可接收的资产内容。
+`contact` 用于两个 agent 建立点对点联系方式、检查在线状态、对话，以及分享可接收的资产内容。联系方式可以是单向的，只要本 agent 能访问对方，就可以主动 `check`、`chat`、`share`。
 
 ## 用法
 
@@ -16,7 +16,7 @@ city contact <subcommand> [options]
 ## 子命令
 
 - `link`：生成一次性 link code，由人转交给另一个 agent。
-- `approve <link_code>`：使用 link code 建立双向 contact。
+- `approve <link_code>`：使用 link code 建立 trusted contact。
 - `list`：列出已建立的 contacts。
 - `check <contact_name>`：检查某个 contact 当前是否在线可用。
 - `check --to <ip:port>`：检查未保存的 agent endpoint。
@@ -32,18 +32,47 @@ city contact <subcommand> [options]
 A 生成 link code：
 
 ```bash
-city contact link --endpoint 192.168.1.10:5314
+city contact link
 ```
 
 把输出的 `dc-link-v1...` code 交给 B。B 执行：
 
 ```bash
-city contact approve dc-link-v1... --endpoint 192.168.1.23:5314
+city contact approve dc-link-v1...
 ```
 
-approve 成功后，双方都会保存为 trusted contact。
+approve 成功后，B 会保存 A 为 trusted contact。即使 B 在本地电脑、没有公网入口，也可以主动访问 A：
 
-`--endpoint` 用于告诉对方后续如何连回本 agent；如果 `downcity.json` 已正确配置 `start.host/start.port`，可以省略。
+```bash
+city contact check server-agent
+city contact share --to server-agent ./notes.md
+```
+
+link code 会自动包含 A 当前可访问地址。公开部署时优先使用 `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`，否则使用 runtime host 或本机网卡地址。
+
+## 当前逻辑
+
+`contact link` 是一次性建联码，不是群组邀请。A 生成 link code 时，会在本地保存一条未使用的 link 记录，并把 A 的可访问地址和一次性 secret 写入 `dc-link-v1...` code。
+
+`contact approve <code>` 由 B 执行。B 会用 code 中的地址访问 A，提交 link id、secret 和 B 的 agent 名称。A 校验通过后，把 B 保存为 trusted contact，并让这条 link 失效。
+
+默认是单向联系：B 保存 A 为可主动访问的 contact，所以 B 可以继续对 A 执行：
+
+```bash
+city contact check server-agent
+city contact chat --to server-agent "hello"
+city contact share --to server-agent ./notes.md
+```
+
+A 也会保存 B，但如果 B 没有公网入口，A 只把 B 视为 inbound contact：A 可以识别 B 发来的请求，但不会假设自己能主动连回 B。
+
+`contact link` 不需要用户填写 endpoint。Downcity 会按这个顺序自动解析 A 的可访问地址：
+
+1. `DOWNCITY_PUBLIC_URL`
+2. `DOWNCITY_PUBLIC_HOST`
+3. runtime 的 host / port
+4. 本机网卡地址
+5. `127.0.0.1`
 
 ## 检查在线状态
 
@@ -53,6 +82,8 @@ city contact check --to 192.168.1.23:5314
 ```
 
 `check` 只检测 agent 是否可达、contact service 是否可用，以及已建联 contact 的 token 是否有效。
+
+如果某个 contact 只有 inbound 方向，本 agent 没有对方 endpoint，`check/chat/share` 会提示该 contact 不能被主动访问。
 
 ## 对话
 
@@ -98,6 +129,7 @@ city contact receive share_xxx
 ## 设计边界
 
 - contact 是点对点关系，不是群组。
+- contact 可以是单向的；本地机器在 NAT 后面时，不需要暴露公网 endpoint 也能主动联系服务器 agent。
 - `share` 是通用分享，不绑定 skill 概念。
 - inbox 一条 share 一个目录，避免大内容堆进单个 JSON。
 - 收到的内容不自动执行，也不自动安装。

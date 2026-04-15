@@ -27,6 +27,16 @@ import {
   saveContactInboxShare,
   listContactInboxShares,
 } from "../../bin/services/contact/runtime/InboxStore.js";
+import {
+  listContacts,
+} from "../../bin/services/contact/runtime/ContactStore.js";
+import {
+  saveContactLinkRecord,
+} from "../../bin/services/contact/runtime/LinkStore.js";
+import {
+  hashContactToken,
+} from "../../bin/services/contact/runtime/Token.js";
+import { ContactService } from "../../bin/services/contact/ContactService.js";
 import { listRegisteredServiceNames } from "../../bin/main/service/ServiceClassRegistry.js";
 import { SERVICE_SYSTEM_PROVIDERS } from "../../bin/main/service/ServiceSystemProviders.js";
 
@@ -95,6 +105,151 @@ test("contact link code encodes a point-to-point one-time link", () => {
   assert.equal(parsed.endpoint, "http://192.168.1.10:5314");
   assert.equal(parsed.secret, "secret-token");
   assert.equal(parsed.expiresAt, 1776173600000);
+});
+
+test("contact link resolves endpoint from runtime public URL without user option", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-link-"));
+  const previousPublicUrl = process.env.DOWNCITY_PUBLIC_URL;
+  try {
+    process.env.DOWNCITY_PUBLIC_URL = "https://agent-a.example.com";
+    const service = new ContactService(null);
+    const result = await service.actions.link.execute({
+      context: {
+        rootPath: root,
+        config: {
+          name: "server-agent",
+          start: {
+            host: "0.0.0.0",
+            port: 8787,
+          },
+        },
+      },
+      payload: {},
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.endpoint, "https://agent-a.example.com");
+    assert.equal(parseContactLinkCode(result.data.code).endpoint, "https://agent-a.example.com");
+  } finally {
+    if (previousPublicUrl === undefined) {
+      delete process.env.DOWNCITY_PUBLIC_URL;
+    } else {
+      process.env.DOWNCITY_PUBLIC_URL = previousPublicUrl;
+    }
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("remote approve allows an inbound-only contact without requester endpoint", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-oneway-"));
+  try {
+    const service = new ContactService(null);
+    const context = {
+      rootPath: root,
+      config: {
+        name: "server-agent",
+        start: {
+          host: "0.0.0.0",
+          port: 8787,
+        },
+      },
+    };
+    await saveContactLinkRecord(root, {
+      id: "link_oneway",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secretHash: hashContactToken("secret-token"),
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600_000,
+      usedAt: null,
+    });
+
+    const result = await service.actions.remoteapprove.execute({
+      context,
+      payload: {
+        linkId: "link_oneway",
+        secret: "secret-token",
+        agentName: "local-agent",
+        tokenForRequester: "server-cannot-call-local",
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.success, true);
+
+    const contacts = await listContacts(root);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].name, "local-agent");
+    assert.equal(contacts[0].endpoint, null);
+    assert.equal(contacts[0].reachability, "inbound");
+    assert.equal(contacts[0].outboundToken, null);
+    assert.equal(typeof contacts[0].inboundTokenHash, "string");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("approve without endpoint creates an outbound-only local contact", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-approve-"));
+  const originalFetch = globalThis.fetch;
+  try {
+    const service = new ContactService(null);
+    const code = createContactLinkCode({
+      version: 1,
+      linkId: "link_server",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secret: "secret-token",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600_000,
+    });
+    let approveBody = null;
+    globalThis.fetch = async (_url, init) => {
+      approveBody = JSON.parse(String(init?.body || "{}"));
+      return new Response(JSON.stringify({
+        success: true,
+        agentName: "server-agent",
+        endpoint: "https://agent-a.example.com",
+        tokenForOwner: "local-can-call-server",
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    };
+
+    const result = await service.actions.approve.execute({
+      context: {
+        rootPath: root,
+        config: {
+          name: "local-agent",
+          start: {
+            host: "127.0.0.1",
+            port: 5314,
+          },
+        },
+      },
+      payload: {
+        code,
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(approveBody.endpoint, undefined);
+    assert.equal(approveBody.tokenForRequester, undefined);
+
+    const contacts = await listContacts(root);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].name, "server-agent");
+    assert.equal(contacts[0].endpoint, "https://agent-a.example.com");
+    assert.equal(contacts[0].reachability, "outbound");
+    assert.equal(contacts[0].outboundToken, "local-can-call-server");
+    assert.equal(contacts[0].inboundTokenHash, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await fs.rm(root, { recursive: true, force: true });
+  }
 });
 
 test("inbox stores each share as a directory with lightweight meta and files", async () => {

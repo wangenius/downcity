@@ -273,6 +273,11 @@ city contact inbox
 city contact receive
 ```
 
+说明：
+
+- `city contact approve <code>` 默认建立单向 contact：本 agent 可以主动访问 link 发起方。
+- link code 中的 endpoint 由 contact service 根据 runtime 配置和环境自动解析，不暴露用户参数。
+
 #### task
 
 来源：

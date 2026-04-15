@@ -10,7 +10,7 @@
  */
 export interface ContactLinkCommandPayload {
   /**
-   * 对外可访问 endpoint。
+   * 内部解析出的本 agent 对外可访问 endpoint；CLI 不暴露该字段。
    */
   endpoint?: string;
   /**
@@ -32,7 +32,7 @@ export interface ContactApproveCommandPayload {
    */
   name?: string;
   /**
-   * 本 agent 对外可访问 endpoint。
+   * 内部解析出的本 agent 对外可访问 endpoint；CLI 不暴露该字段，省略时 approve 方只建立主动访问对方的单向 contact。
    */
   endpoint?: string;
 }

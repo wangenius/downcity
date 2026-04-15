@@ -2,7 +2,7 @@
  * ContactService：agent 点对点关系与分享服务。
  *
  * 关键点（中文）
- * - `link/approve` 建立双向可信 contact。
+ * - `link/approve` 建立可信 contact，支持 outbound/inbound/bidirectional 三种可达方向。
  * - 每个 contact 固定一条长期 chat history。
  * - `share` 分享文本、链接、文件和目录，并进入对方 inbox。
  */
@@ -27,6 +27,7 @@ import type {
 } from "@/types/contact/ContactLink.js";
 import type { ContactPingResponse } from "@/types/contact/ContactCheck.js";
 import type { ContactChatResponse } from "@/types/contact/ContactChat.js";
+import type { AgentContact } from "@/types/contact/Contact.js";
 import type { SaveContactInboxShareInput } from "@/types/contact/ContactShare.js";
 import {
   appendContactMessage,
@@ -70,6 +71,7 @@ import {
 } from "./runtime/ShareBundle.js";
 import { receiveContactChatMessage } from "./runtime/ChatRuntime.js";
 import { buildContactServiceSystemText } from "./runtime/SystemProvider.js";
+import { resolveContactSelfEndpoint } from "./runtime/EndpointResolver.js";
 
 function readObject(value: JsonValue): JsonObject {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -106,14 +108,29 @@ function resolveSelfEndpoint(
   const explicit = String(endpointOverride || "").trim();
   if (explicit) return normalizeContactEndpoint(explicit);
   const start = context.config.start || {};
-  const host = String(start.host || process.env.DC_SERVER_HOST || "127.0.0.1").trim();
-  const port = Number(start.port || process.env.DC_SERVER_PORT || 5314);
-  const normalizedHost = host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
-  return normalizeContactEndpoint(`${normalizedHost}:${port}`);
+  return normalizeContactEndpoint(
+    resolveContactSelfEndpoint({
+      host: start.host,
+      port: start.port,
+    }),
+  );
 }
 
 function getAgentName(context: AgentContext): string {
   return String(context.config.name || "downcity-agent").trim() || "downcity-agent";
+}
+
+function requireOutboundContact(contact: AgentContact): {
+  endpoint: string;
+  token: string;
+} {
+  if (!contact.endpoint || !contact.outboundToken) {
+    throw new Error(`Contact is inbound-only and cannot be called directly: ${contact.name}`);
+  }
+  return {
+    endpoint: contact.endpoint,
+    token: contact.outboundToken,
+  };
 }
 
 /**
@@ -137,13 +154,10 @@ export class ContactService extends BaseService {
         command: {
           description: "生成一次性 contact link code，交给另一个 agent approve",
           configure(command: Command) {
-            command
-              .option("--endpoint <endpoint>", "本 agent 对外可访问 endpoint")
-              .option("--ttl-seconds <seconds>", "link 过期秒数，默认 600", Number);
+            command.option("--ttl-seconds <seconds>", "link 过期秒数，默认 600", Number);
           },
           mapInput({ opts }) {
             const payload: JsonObject = {};
-            if (typeof opts.endpoint === "string") payload.endpoint = opts.endpoint;
             if (typeof opts.ttlSeconds === "number") payload.ttlSeconds = opts.ttlSeconds;
             return payload;
           },
@@ -162,15 +176,13 @@ export class ContactService extends BaseService {
           configure(command: Command) {
             command
               .argument("<code>")
-              .option("--name <alias>", "本地 contact 别名")
-              .option("--endpoint <endpoint>", "本 agent 对外可访问 endpoint");
+              .option("--name <alias>", "本地 contact 别名");
           },
           mapInput({ args, opts }) {
             const code = String(args[0] || "").trim();
             if (!code) throw new Error("Missing link code");
             const payload: JsonObject = { code };
             if (typeof opts.name === "string") payload.name = opts.name;
-            if (typeof opts.endpoint === "string") payload.endpoint = opts.endpoint;
             return payload;
           },
         },
@@ -453,16 +465,18 @@ export class ContactService extends BaseService {
     const parsed = parseContactLinkCode(payload.code);
     if (isContactLinkExpired(parsed)) throw new Error("Contact link expired");
 
-    const tokenForRequester = createContactToken();
-    const endpoint = resolveSelfEndpoint(context, payload.endpoint);
+    const requesterEndpoint = payload.endpoint
+      ? resolveSelfEndpoint(context, payload.endpoint)
+      : undefined;
+    const tokenForRequester = requesterEndpoint ? createContactToken() : undefined;
     const response = await callContactApprove<ContactApproveLinkResponse>({
       endpoint: parsed.endpoint,
       body: {
         linkId: parsed.linkId,
         secret: parsed.secret,
         agentName: getAgentName(context),
-        endpoint,
-        tokenForRequester,
+        ...(requesterEndpoint ? { endpoint: requesterEndpoint } : {}),
+        ...(tokenForRequester ? { tokenForRequester } : {}),
       } as unknown as JsonValue,
     });
     if (!response.success) throw new Error(response.error || "Contact approve failed");
@@ -472,9 +486,10 @@ export class ContactService extends BaseService {
       id: createStableContactId(name),
       name,
       endpoint: response.endpoint || parsed.endpoint,
+      reachability: requesterEndpoint ? "bidirectional" : "outbound",
       status: "trusted",
       outboundToken: response.tokenForOwner,
-      inboundTokenHash: hashContactToken(tokenForRequester),
+      inboundTokenHash: tokenForRequester ? hashContactToken(tokenForRequester) : null,
       createdAt: Date.now(),
       lastSeenAt: Date.now(),
     });
@@ -489,11 +504,14 @@ export class ContactService extends BaseService {
       : await findContact(context.rootPath, String(payload.target || "").trim());
     const endpoint = endpointInput || contact?.endpoint || "";
     if (!endpoint) throw new Error("contact target or --to endpoint is required");
+    if (contact && !contact.outboundToken) {
+      throw new Error(`Contact is inbound-only and cannot be checked directly: ${contact.name}`);
+    }
 
     try {
       const pong = await callContactPing<ContactPingResponse>({
         endpoint,
-        token: contact?.outboundToken,
+        token: contact?.outboundToken || undefined,
       });
       if (contact && pong.success) {
         await touchContactSeen(context.rootPath, contact.id);
@@ -534,9 +552,10 @@ export class ContactService extends BaseService {
       text: message,
       createdAt: Date.now(),
     });
+    const outbound = requireOutboundContact(contact);
     const response = await callContactChat<ContactChatResponse>({
-      endpoint: contact.endpoint,
-      token: contact.outboundToken,
+      endpoint: outbound.endpoint,
+      token: outbound.token,
       body: {
         senderContactId: contact.id,
         message,
@@ -555,6 +574,7 @@ export class ContactService extends BaseService {
   private async share(context: AgentContext, payload: ContactShareCommandPayload) {
     const contact = await findContact(context.rootPath, payload.to);
     if (!contact) throw new Error(`Contact not found: ${payload.to}`);
+    const outbound = requireOutboundContact(contact);
     const share = await createShareInput({
       context,
       fromContactId: contact.id,
@@ -564,8 +584,8 @@ export class ContactService extends BaseService {
       paths: payload.paths,
     });
     const response = await callContactShare<{ success: boolean; shareId?: string; error?: string }>({
-      endpoint: contact.endpoint,
-      token: contact.outboundToken,
+      endpoint: outbound.endpoint,
+      token: outbound.token,
       body: share as unknown as JsonValue,
     });
     if (!response.success) throw new Error(response.error || "Contact share failed");
@@ -643,12 +663,16 @@ export class ContactService extends BaseService {
     }
 
     const tokenForOwner = createContactToken();
+    const requesterEndpoint = request.endpoint
+      ? normalizeContactEndpoint(request.endpoint)
+      : null;
     await saveContact(context.rootPath, {
       id: createStableContactId(request.agentName),
       name: request.agentName,
-      endpoint: request.endpoint,
+      endpoint: requesterEndpoint,
+      reachability: requesterEndpoint ? "bidirectional" : "inbound",
       status: "trusted",
-      outboundToken: request.tokenForRequester,
+      outboundToken: requesterEndpoint ? request.tokenForRequester || null : null,
       inboundTokenHash: hashContactToken(tokenForOwner),
       createdAt: Date.now(),
       lastSeenAt: Date.now(),

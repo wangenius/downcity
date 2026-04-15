@@ -12,6 +12,11 @@
 export type ContactStatus = "trusted" | "blocked";
 
 /**
+ * contact 当前可达方向。
+ */
+export type ContactReachability = "inbound" | "outbound" | "bidirectional";
+
+/**
  * agent contact 记录。
  */
 export interface AgentContact {
@@ -24,21 +29,25 @@ export interface AgentContact {
    */
   name: string;
   /**
-   * 对方 agent 的 HTTP endpoint。
+   * 对方 agent 的 HTTP endpoint；仅 inbound contact 可以为空。
    */
-  endpoint: string;
+  endpoint: string | null;
+  /**
+   * 当前 agent 与对方 agent 的可达方向。
+   */
+  reachability: ContactReachability;
   /**
    * 当前关系状态。
    */
   status: ContactStatus;
   /**
-   * 本 agent 调用对方时携带的 token。
+   * 本 agent 调用对方时携带的 token；仅 inbound contact 可以为空。
    */
-  outboundToken: string;
+  outboundToken: string | null;
   /**
-   * 对方调用本 agent 时必须携带的 token hash。
+   * 对方调用本 agent 时必须携带的 token hash；仅 outbound contact 可以为空。
    */
-  inboundTokenHash: string;
+  inboundTokenHash: string | null;
   /**
    * contact 创建时间戳。
    */

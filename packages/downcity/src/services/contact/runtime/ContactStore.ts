@@ -10,6 +10,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import type {
   AgentContact,
+  ContactReachability,
   ContactChatMessage,
 } from "@/types/contact/Contact.js";
 import { hashContactToken, toContactSlug } from "./Token.js";
@@ -37,10 +38,22 @@ function isContactLike(input: unknown): input is AgentContact {
     item &&
       typeof item.id === "string" &&
       typeof item.name === "string" &&
-      typeof item.endpoint === "string" &&
-      typeof item.outboundToken === "string" &&
-      typeof item.inboundTokenHash === "string",
+      (typeof item.endpoint === "string" || item.endpoint === null) &&
+      (item.reachability === "inbound" ||
+        item.reachability === "outbound" ||
+        item.reachability === "bidirectional") &&
+      (typeof item.outboundToken === "string" || item.outboundToken === null) &&
+      (typeof item.inboundTokenHash === "string" || item.inboundTokenHash === null),
   );
+}
+
+function resolveReachability(contact: AgentContact): ContactReachability {
+  if (contact.reachability) return contact.reachability;
+  if (contact.endpoint && contact.outboundToken && contact.inboundTokenHash) {
+    return "bidirectional";
+  }
+  if (contact.endpoint && contact.outboundToken) return "outbound";
+  return "inbound";
 }
 
 /**
@@ -68,11 +81,23 @@ export async function saveContact(
     ...contact,
     id: contact.id || createStableContactId(contact.name),
     name: String(contact.name || "").trim(),
-    endpoint: normalizeEndpoint(contact.endpoint),
+    endpoint: contact.endpoint ? normalizeEndpoint(contact.endpoint) : null,
+    reachability: resolveReachability(contact),
     status: contact.status || "trusted",
+    outboundToken: contact.outboundToken || null,
+    inboundTokenHash: contact.inboundTokenHash || null,
     createdAt: contact.createdAt || Date.now(),
   };
   if (!normalized.name) throw new Error("contact name is required");
+  if (normalized.reachability !== "inbound" && !normalized.endpoint) {
+    throw new Error("contact endpoint is required for outbound contacts");
+  }
+  if (normalized.reachability !== "inbound" && !normalized.outboundToken) {
+    throw new Error("contact outbound token is required for outbound contacts");
+  }
+  if (normalized.reachability !== "outbound" && !normalized.inboundTokenHash) {
+    throw new Error("contact inbound token hash is required for inbound contacts");
+  }
   await fs.ensureDir(getContactDirectoryPath(projectRoot, normalized.id));
   await fs.writeJson(getContactJsonPath(projectRoot, normalized.id), normalized, {
     spaces: 2,

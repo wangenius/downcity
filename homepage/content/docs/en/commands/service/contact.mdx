@@ -5,7 +5,7 @@ description: contact service actions (link/approve/list/check/chat/share/inbox/r
 
 # `city contact`
 
-`contact` lets two agents create a point-to-point relationship, check availability, chat, and share receivable assets.
+`contact` lets agents create point-to-point contact entries, check availability, chat, and share receivable assets. A contact can be one-way: as long as this agent can reach the peer, it can initiate `check`, `chat`, and `share`.
 
 ## Usage
 
@@ -32,18 +32,47 @@ city contact <subcommand> [options]
 Agent A creates a link code:
 
 ```bash
-city contact link --endpoint 192.168.1.10:5314
+city contact link
 ```
 
 Give the generated `dc-link-v1...` code to agent B. Agent B runs:
 
 ```bash
-city contact approve dc-link-v1... --endpoint 192.168.1.23:5314
+city contact approve dc-link-v1...
 ```
 
-After approval, both agents store each other as trusted contacts.
+After approval, B stores A as a trusted contact. Even if B is on a local computer without a public inbound address, it can still initiate calls to A:
 
-Use `--endpoint` to tell the peer how to call back to this agent. It can be omitted when `start.host/start.port` are already configured correctly in `downcity.json`.
+```bash
+city contact check server-agent
+city contact share --to server-agent ./notes.md
+```
+
+The link code automatically includes A's currently reachable address. Public deployments prefer `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`; otherwise Downcity uses the runtime host or a local network interface address.
+
+## Current Logic
+
+`contact link` creates a one-time contact code, not a group invite. When A creates a link code, A stores an unused local link record and writes A's reachable address plus a one-time secret into the `dc-link-v1...` code.
+
+`contact approve <code>` is run by B. B calls A using the address in the code and sends the link id, secret, and B's agent name. After A validates the request, A stores B as a trusted contact and invalidates that link.
+
+The default contact is one-way. B stores A as a contact it can call, so B can continue with:
+
+```bash
+city contact check server-agent
+city contact chat --to server-agent "hello"
+city contact share --to server-agent ./notes.md
+```
+
+A also stores B, but if B has no public inbound address, A treats B as an inbound contact: A can authenticate requests from B, but it does not assume it can call B directly.
+
+`contact link` does not ask users to enter an endpoint. Downcity resolves A's reachable address in this order:
+
+1. `DOWNCITY_PUBLIC_URL`
+2. `DOWNCITY_PUBLIC_HOST`
+3. runtime host / port
+4. local network interface address
+5. `127.0.0.1`
 
 ## Check Availability
 
@@ -53,6 +82,8 @@ city contact check --to 192.168.1.23:5314
 ```
 
 `check` only verifies reachability, contact service availability, and token validity for linked contacts.
+
+If a contact is inbound-only and this agent has no peer endpoint, `check`, `chat`, and `share` report that the contact cannot be called directly.
 
 ## Chat
 
@@ -98,6 +129,7 @@ After `receive`, content is copied into the received area:
 ## Boundaries
 
 - A contact is point-to-point, not a group.
+- A contact can be one-way; a local machine behind NAT can still initiate contact with a server agent without exposing a public endpoint.
 - `share` is generic and is not tied to skills.
 - Each inbox share is a directory, so large content is not stored in a single JSON file.
 - Received content is not executed or installed automatically.

@@ -91,13 +91,13 @@ export interface ContactApproveLinkRequest {
    */
   agentName: string;
   /**
-   * approve 方 HTTP endpoint。
+   * approve 方 HTTP endpoint；缺省时只建立发起方可接收请求的单向 contact。
    */
-  endpoint: string;
+  endpoint?: string;
   /**
-   * 发起方后续调用 approve 方时使用的 token。
+   * 发起方后续调用 approve 方时使用的 token；只有 approve 方提供 endpoint 时才需要。
    */
-  tokenForRequester: string;
+  tokenForRequester?: string;
 }
 
 /**

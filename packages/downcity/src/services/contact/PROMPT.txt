@@ -1,6 +1,6 @@
 Contact service
 
-contact service 用来管理和其他 agent 的联系方式。一个 contact 代表一个已建立联系的远端 agent，并固定拥有一条长期对话历史。
+contact service 用来管理和其他 agent 的联系方式。一个 contact 代表一个已建立联系的远端 agent，并固定拥有一条长期对话历史。contact 可以是单向的：只要本 agent 能访问对方，就可以 check、chat、share。
 
 可用命令：
 - `contact link`：生成一次性联系码，交给另一个 agent。

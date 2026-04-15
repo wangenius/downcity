@@ -14,7 +14,7 @@ Task definitions live in `.downcity/task/<taskId>/task.md`.
 title: Daily Repo Check
 when: "0 9 * * 1-5"
 description: Run tests and summarize issues
-contextId: telegram-chat-123456
+sessionId: telegram-chat-123456
 status: enabled
 kind: agent
 ---
@@ -24,9 +24,9 @@ Run tasks, write the final output body to `output.md`, and write a summary to `r
 
 ## Result Delivery
 
-- Task runs only write artifacts under `.downcity/task/<taskId>/<timestamp>/`.
-- Results are not auto-sent to chat channels.
-- `contextId` is used as the task execution context identifier.
+- Task runs write artifacts under `.downcity/task/<taskId>/<timestamp>/`.
+- By default, the final result body is sent back to the chat bound to `sessionId`.
+- `sessionId` decides where the task result returns; it is not an authentication identity.
 
 ## Directory layout
 
@@ -45,7 +45,7 @@ Run tasks, write the final output body to `output.md`, and write a summary to `r
 
 ```bash
 city task list
-city task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 9 * * 1-5" --activate
+city task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 9 * * 1-5" --activate
 city task run daily-check
 city task update daily-check --when "@manual"
 city task disable daily-check
@@ -56,6 +56,12 @@ city task disable daily-check
 - `enabled`: scheduled
 - `paused`: defined but not scheduled
 - `disabled`: disabled
+
+## Time Semantics
+
+- Cron expressions are interpreted in the local timezone of the runtime process. For example, when the runtime timezone is `Asia/Shanghai`, `0 13 * * *` means 13:00 Beijing time every day.
+- `time:<ISO8601>` one-shot triggers must include an explicit timezone, such as `time:2026-03-08T10:30:00+08:00`.
+- Proxies may affect IP-based location detection, but they do not change the machine timezone. To change cron semantics, change the system timezone or `TZ` for the runtime process.
 
 ## Runtime requirement
 

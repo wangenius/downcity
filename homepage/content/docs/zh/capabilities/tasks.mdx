@@ -17,7 +17,7 @@ description: 任务定义、调度与 CLI 操作
 title: 每日仓库巡检
 when: "0 9 * * 1-5"
 description: 运行测试并总结异常
-contextId: telegram-chat-123456
+sessionId: telegram-chat-123456
 status: enabled
 kind: agent
 ---
@@ -27,9 +27,9 @@ kind: agent
 
 ## 执行结果通知
 
-- 任务完成后只会写入 `.downcity/task/<taskId>/<timestamp>/` 产物。
-- 不会自动把结果发送到 chat channel。
-- `contextId` 仅作为任务执行上下文标识使用。
+- 任务完成后会写入 `.downcity/task/<taskId>/<timestamp>/` 产物。
+- 默认会把最终结果正文发送回 `sessionId` 绑定的 chat。
+- `sessionId` 仅决定任务结果回到哪个会话，不代表认证身份。
 
 ## 目录结构
 
@@ -48,7 +48,7 @@ kind: agent
 
 ```bash
 city task list
-city task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 9 * * 1-5" --activate
+city task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 9 * * 1-5" --activate
 city task run daily-check
 city task update daily-check --when "@manual"
 city task disable daily-check
@@ -59,6 +59,12 @@ city task disable daily-check
 - `enabled`：参与调度
 - `paused`：保留定义，不调度
 - `disabled`：禁用
+
+## 时间口径
+
+- cron 表达式按运行该 runtime 的本机时区解释。例如本机时区是 `Asia/Shanghai` 时，`0 13 * * *` 表示每天北京时间 13:00。
+- `time:<ISO8601>` 一次性触发必须显式带时区，例如 `time:2026-03-08T10:30:00+08:00`。
+- 代理只会影响基于 IP 的位置推断，不会改变本机时区；如果要改变 cron 口径，请调整运行环境的系统时区或 `TZ`。
 
 ## 调度生效条件
 

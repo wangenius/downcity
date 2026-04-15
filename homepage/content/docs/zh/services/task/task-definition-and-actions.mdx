@@ -31,6 +31,8 @@ description: task.md schema、when 触发语义、create/update/run/list 协议
 - cron 表达式：按周期触发。
 - `time:2026-03-08T10:30:00+08:00`：一次性触发（必须带时区）。
 
+cron 表达式按 runtime 进程的本机时区解释。例如 runtime 跑在 `Asia/Shanghai` 时，`0 13 * * *` 表示每天北京时间 13:00。HTTP 代理不会改变这个时区；它只可能影响基于 IP 的位置推断。
+
 one-shot 触发成功后，任务会自动：
 - `status -> paused`
 - `when -> @manual`

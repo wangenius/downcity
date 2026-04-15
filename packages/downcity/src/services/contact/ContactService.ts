@@ -7,7 +7,6 @@
  * - `share` 分享文本、链接、文件和目录，并进入对方 inbox。
  */
 
-import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
@@ -70,16 +69,7 @@ import {
   receiveShare,
 } from "./runtime/ShareBundle.js";
 import { receiveContactChatMessage } from "./runtime/ChatRuntime.js";
-
-const CONTACT_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
-
-function loadContactPrompt(): string {
-  try {
-    return readFileSync(CONTACT_PROMPT_FILE_URL, "utf-8").trim();
-  } catch {
-    return "";
-  }
-}
+import { buildContactServiceSystemText } from "./runtime/SystemProvider.js";
 
 function readObject(value: JsonValue): JsonObject {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -420,7 +410,7 @@ export class ContactService extends BaseService {
    * contact system 文本。
    */
   system(): string {
-    return loadContactPrompt();
+    return buildContactServiceSystemText();
   }
 
   private async link(context: AgentContext, payload: ContactLinkCommandPayload) {

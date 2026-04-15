@@ -15,6 +15,7 @@ import {
 import { listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 import { ServiceCronEngine } from "./types/Cron.js";
+import { resolveRuntimeTimezone } from "@/shared/utils/Time.js";
 
 const TASK_LOG_PREFIX = "[TASK]";
 
@@ -29,6 +30,7 @@ export async function registerTaskCronJobs(params: {
   const context = params.context;
   const logger = context.logger;
   const tasks = await listTasks(context.rootPath);
+  const runtimeTimezone = resolveRuntimeTimezone();
 
   const runningByTaskId = new Set<string>();
   let jobsScheduled = 0;
@@ -38,11 +40,11 @@ export async function registerTaskCronJobs(params: {
 
     const expr = resolveTaskWhenCronExpression(item.when);
     let latestWhen = item.when;
-      try {
-        const task = await readTask({
-          taskId: item.taskId,
-          projectRoot: context.rootPath,
-        });
+    try {
+      const task = await readTask({
+        taskId: item.taskId,
+        projectRoot: context.rootPath,
+      });
       latestWhen = task.frontmatter.when;
     } catch {}
 
@@ -51,6 +53,7 @@ export async function registerTaskCronJobs(params: {
         params.engine.register({
           id: `task:${item.taskId}`,
           expression: expr,
+          timezone: runtimeTimezone,
           execute: async () => {
             const taskId = String(item.taskId || "").trim();
             if (!taskId) return;
@@ -135,6 +138,7 @@ export async function registerTaskCronJobs(params: {
       params.engine.register({
         id: `task-time:${item.taskId}`,
         expression: "* * * * *",
+        timezone: runtimeTimezone,
         execute: async () => {
           const taskId = String(item.taskId || "").trim();
           if (!taskId) return;

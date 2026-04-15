@@ -18,10 +18,14 @@ export interface PromptGeoContext {
 }
 
 export interface PromptVariables {
+  /** 当前日期字符串，按当前时区格式化为 `YYYY-MM-DD`。 */
+  currentDate: string;
   /** 当前时间字符串，包含日期、时分秒与时区信息。 */
   currentTime: string;
   /** 当前年份字符串，用于显式提示“现在是几几年”。 */
   currentYear: string;
+  /** 当前运行时使用的 IANA 时区标识，例如 `Asia/Shanghai`。 */
+  timezone: string;
   /** 当前地理位置描述。 */
   location: string;
   /** 当前项目路径。 */

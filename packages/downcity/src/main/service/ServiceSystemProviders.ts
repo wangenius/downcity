@@ -9,6 +9,7 @@
 
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 import { buildChatServiceSystem } from "@services/chat/runtime/ChatServiceSystem.js";
+import { buildContactServiceSystemText } from "@services/contact/runtime/SystemProvider.js";
 import { buildMemoryServiceSystemText } from "@services/memory/runtime/SystemProvider.js";
 import { TASK_SERVICE_PROMPT } from "@services/task/runtime/TaskServiceSystem.js";
 
@@ -33,6 +34,10 @@ export const SERVICE_SYSTEM_PROVIDERS: ServiceSystemProvider[] = [
   {
     name: "chat",
     system: buildChatServiceSystem,
+  },
+  {
+    name: "contact",
+    system: buildContactServiceSystemText,
   },
   {
     name: "task",

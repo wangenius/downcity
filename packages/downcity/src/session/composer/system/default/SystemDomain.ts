@@ -13,6 +13,7 @@ import { isPluginEnabled } from "@/main/plugin/Activation.js";
 import { PLUGINS } from "@/main/plugin/Plugins.js";
 import { SERVICE_SYSTEM_PROVIDERS } from "@/main/service/ServiceSystemProviders.js";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
+import { buildRuntimeClockSystemPrompt } from "@session/composer/system/default/variables/VariableReplacer.js";
 
 const CORE_PROMPT_FILE_URL = new URL(
   "./assets/core.prompt.txt",
@@ -304,6 +305,13 @@ export async function buildSessionSystemMessages(input: {
    */
   pluginSystemPrompts: string[];
 }): Promise<SystemModelMessage[]> {
+  const runtimeClockText = buildRuntimeClockSystemPrompt({
+    projectPath: input.projectRoot,
+    sessionId: input.sessionId,
+  });
+  const runtimeClockMessages: SystemModelMessage[] = runtimeClockText
+    ? [{ role: "system", content: runtimeClockText }]
+    : [];
   const runtimeSystemText = buildContextSystemPrompt({
     projectRoot: input.projectRoot,
     sessionId: input.sessionId,
@@ -345,6 +353,7 @@ export async function buildSessionSystemMessages(input: {
     ...serviceSystemMessages,
     ...pluginSystemMessages,
     ...runtimeRuleMessages,
+    ...runtimeClockMessages,
   ];
 }
 

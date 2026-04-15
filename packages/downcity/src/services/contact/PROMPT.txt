@@ -1,9 +1,18 @@
 Contact service
 
-关键点：
-- contact 是 agent 之间的点对点关系，不是群组。
-- `contact link` 生成一次性 link code，由人转交给另一个 agent。
-- `contact approve <code>` 使用 link code 建立双向可信 contact。
-- 每个 contact 固定一条长期 chat history，不需要维护额外 session。
-- `contact share` 用于分享文本、链接、文件和目录。
-- 收到的 share 只进入 inbox，必须显式 `contact receive` 后才会进入 received 区。
+contact service 用来管理和其他 agent 的联系方式。一个 contact 代表一个已建立联系的远端 agent，并固定拥有一条长期对话历史。
+
+可用命令：
+- `contact link`：生成一次性联系码，交给另一个 agent。
+- `contact approve <code>`：使用对方给的联系码建立 contact。
+- `contact list`：查看已保存的 agent 联系方式。
+- `contact check <contact>` / `contact check --to <ip:port>`：检查对方是否在线可用。
+- `contact chat --to <contact> "<message>"`：和某个 agent 对话。
+- `contact share --to <contact> --text ... | --link ... | <path...>`：分享文本、链接、文件或目录。
+- `contact inbox`：查看收到的分享。
+- `contact receive <share_id>`：接收某条分享。
+
+边界：
+- chat 用于对话，share 用于资料交接。
+- receive 只接收内容，不自动执行、不安装 skill、不修改项目业务文件。
+- 不自动 approve 或 receive，除非用户明确要求。

@@ -54,7 +54,7 @@ description: kind=agent behavior, use cases, and output expectations
 
 ## Context Model
 
-- `contextId` is stored in task definition as the task semantic context
+- `sessionId` is stored in task definition and decides which chat receives the task result
 - execution uses a separate task run context
 - task execution therefore does not directly reuse normal chat message history
 
@@ -62,7 +62,7 @@ description: kind=agent behavior, use cases, and output expectations
 
 ```mermaid
 flowchart TD
-    A["task.md<br/>title / when / description / contextId / kind / status"] --> B["Task Service<br/>create / update / run / status / delete"]
+    A["task.md<br/>title / when / description / sessionId / kind / status"] --> B["Task Service<br/>create / update / run / status / delete"]
 
     B --> C["Manual Run API<br/>POST /api/dashboard/tasks/run"]
     B --> D["Scheduler<br/>cron / time"]
@@ -118,7 +118,7 @@ flowchart TD
 ---
 title: daily-market-research
 description: daily market research summary
-contextId: research
+sessionId: research
 when: 0 8 * * *
 status: enabled
 kind: agent

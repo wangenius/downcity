@@ -31,6 +31,8 @@ description: task.md schema, when trigger semantics, and action contracts
 - cron expression: periodic scheduling.
 - `time:2026-03-08T10:30:00+08:00`: one-shot trigger (timezone required).
 
+Cron expressions are interpreted in the local timezone of the runtime process. If the runtime runs in `Asia/Shanghai`, `0 13 * * *` means 13:00 Beijing time every day. HTTP proxies do not change this timezone; they can only affect IP-based location detection.
+
 After one-shot execution succeeds:
 - `status -> paused`
 - `when -> @manual`

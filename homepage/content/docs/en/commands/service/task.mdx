@@ -35,6 +35,8 @@ city task <subcommand> [options]
 - `--body <body>`
 - `--overwrite`
 
+Cron uses the local timezone of the runtime process. For example, when the runtime timezone is `Asia/Shanghai`, `0 13 * * *` means 13:00 Beijing time every day. Proxies do not change the machine timezone; one-shot `time:...` values must include an explicit offset such as `+08:00` or `Z`.
+
 Create dedup now uses exact `title` only.
 
 ## `update` common options

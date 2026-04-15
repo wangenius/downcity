@@ -8,7 +8,12 @@
  */
 
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { createTaskDefinition } from "../../bin/services/task/Action.js";
+import { registerTaskCronJobs } from "../../bin/services/task/Scheduler.js";
 import {
   isTaskWhenManual,
   isTaskWhenOneShot,
@@ -17,6 +22,22 @@ import {
   resolveTaskWhenCronExpression,
   resolveTaskWhenOneShotMs,
 } from "../../bin/services/task/runtime/Model.js";
+
+function createRuntime(projectRoot) {
+  const logger = {
+    log: async () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  };
+  return {
+    rootPath: projectRoot,
+    logger,
+    config: {},
+    systems: [],
+    session: {},
+  };
+}
 
 test("normalizeTaskWhen rejects ISO datetime without explicit timezone", () => {
   const result = normalizeTaskWhen("2026-03-08T10:30:00");
@@ -52,4 +73,37 @@ test("cron alias normalizes to expression and rejects invalid expression", () =>
   assert.equal(invalid.ok, false);
   if (invalid.ok) return;
   assert.match(invalid.error, /Invalid when \(cron\)/i);
+});
+
+test("registerTaskCronJobs passes runtime timezone to scheduled task definitions", async () => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-task-cron-tz-"));
+  try {
+    await createTaskDefinition({
+      projectRoot,
+      request: {
+        title: "cron timezone task",
+        description: "verify runtime timezone is propagated",
+        sessionId: "ctx_cron_timezone",
+        when: "0 9 * * *",
+        status: "enabled",
+        body: "# 任务目标\n\n- verify timezone\n",
+      },
+    });
+
+    const definitions = [];
+    await registerTaskCronJobs({
+      context: createRuntime(projectRoot),
+      engine: {
+        register(definition) {
+          definitions.push(definition);
+        },
+      },
+    });
+
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    assert.equal(definitions.length, 1);
+    assert.equal(definitions[0].timezone, timezone);
+  } finally {
+    await fs.rm(projectRoot, { recursive: true, force: true });
+  }
 });

@@ -9,6 +9,12 @@
 import { resolvePromptGeoContext } from "@session/composer/system/default/variables/GeoContext.js";
 import type { PromptVariables } from "@session/composer/system/default/variables/PromptTypes.js";
 import { renderTemplateVariables } from "@/shared/utils/Template.js";
+import {
+  formatDateInTimezone,
+  formatDateTimeInTimezone,
+  formatYearInTimezone,
+  resolveRuntimeTimezone,
+} from "@/shared/utils/Time.js";
 
 /**
  * Prompt 变量替换模式。
@@ -18,44 +24,6 @@ import { renderTemplateVariables } from "@/shared/utils/Template.js";
  * - `stable`：仅保留稳定替换；但 `current_year` 属于低频年度变量，仍保留真实值。
  */
 export type PromptVariableMode = "full" | "stable";
-
-/**
- * 获取当前时间字符串（指定时区）。
- */
-function getCurrentTimeString(timezone: string): string {
-  try {
-    // 关键点（中文）：使用固定格式，确保模型读取时区信息时稳定。
-    const formatted = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    })
-      .format(new Date())
-      .replace(" ", "T");
-    return `${formatted} (${timezone})`;
-  } catch {
-    return new Date().toISOString();
-  }
-}
-
-/**
- * 获取当前年份字符串（指定时区）。
- */
-function getCurrentYearString(timezone: string): string {
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone,
-      year: "numeric",
-    }).format(new Date());
-  } catch {
-    return String(new Date().getUTCFullYear());
-  }
-}
 
 async function buildPromptVariables(options?: {
   /**
@@ -75,12 +43,14 @@ async function buildPromptVariables(options?: {
 }): Promise<PromptVariables> {
   const mode = options?.mode === "stable" ? "stable" : "full";
   const projectPath = String(options?.projectPath || "").trim() || process.cwd();
-  const localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  const safeLocalTimezone = String(localTimezone || "").trim() || "UTC";
+  const safeLocalTimezone = resolveRuntimeTimezone();
+  const now = new Date();
   if (mode === "stable") {
     return {
+      currentDate: "[See runtime clock tail message]",
       currentTime: "[See runtime clock tail message]",
-      currentYear: getCurrentYearString(safeLocalTimezone),
+      currentYear: formatYearInTimezone(now, safeLocalTimezone),
+      timezone: safeLocalTimezone,
       location: "[See runtime clock tail message]",
       projectPath,
       projectRoot: projectPath,
@@ -91,8 +61,11 @@ async function buildPromptVariables(options?: {
   const geo = await resolvePromptGeoContext();
   const sessionId = String(options?.sessionId || "").trim() || "unknown";
   return {
-    currentTime: getCurrentTimeString(geo.timezone),
-    currentYear: getCurrentYearString(geo.timezone),
+    // 关键点（中文）：时间字段只使用本机 runtime 时区，避免代理/IP 地理推断改变 cron 与相对时间口径。
+    currentDate: formatDateInTimezone(now, safeLocalTimezone),
+    currentTime: formatDateTimeInTimezone(now, safeLocalTimezone),
+    currentYear: formatYearInTimezone(now, safeLocalTimezone),
+    timezone: safeLocalTimezone,
     location: geo.location,
     projectPath,
     projectRoot: projectPath,
@@ -105,7 +78,9 @@ async function buildPromptVariables(options?: {
  *
  * 当前支持（中文）
  * - `{{current_time}}`
+ * - `{{current_date}}`
  * - `{{current_year}}`
+ * - `{{timezone}}`
  * - `{{location}}`
  * - `{{project_path}}`
  * - `{{project_root}}`
@@ -133,11 +108,47 @@ export async function replaceVariablesInPrompts(
   if (!prompt) return prompt;
   const variables = await buildPromptVariables(options);
   return renderTemplateVariables(prompt, {
+    current_date: variables.currentDate,
     current_time: variables.currentTime,
     current_year: variables.currentYear,
+    timezone: variables.timezone,
     location: variables.location,
     project_path: variables.projectPath,
     project_root: variables.projectRoot,
     session_id: variables.sessionId,
   });
+}
+
+/**
+ * 构建每轮运行末尾的 runtime clock system prompt。
+ *
+ * 关键点（中文）
+ * - system/static prompt 使用 stable 模式，不能直接承载每轮变化的时间。
+ * - 这里在 messages 尾部补齐 `current_date/current_time/timezone`，让 chat、task、prompt 的时间语义统一。
+ * - 只使用本机 runtime 时区，避免每轮为了地理位置进行网络请求。
+ */
+export function buildRuntimeClockSystemPrompt(options?: {
+  /**
+   * 项目路径（用于 `project_root`）。
+   */
+  projectPath?: string;
+
+  /**
+   * 会话 ID（用于 `session_id`）。
+   */
+  sessionId?: string;
+}): string {
+  const timezone = resolveRuntimeTimezone();
+  const projectPath = String(options?.projectPath || "").trim() || process.cwd();
+  const sessionId = String(options?.sessionId || "").trim() || "unknown";
+  const now = new Date();
+  return [
+    "# Runtime Clock Context",
+    "以下字段是本轮运行的权威时间上下文；解析“今天/明天/几点”等相对时间时优先使用它们：",
+    `- current_date: ${formatDateInTimezone(now, timezone)}`,
+    `- current_time: ${formatDateTimeInTimezone(now, timezone)}`,
+    `- timezone: ${timezone}`,
+    `- session_id: ${sessionId}`,
+    `- project_root: ${projectPath}`,
+  ].join("\n");
 }

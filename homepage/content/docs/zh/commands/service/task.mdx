@@ -35,6 +35,8 @@ city task <subcommand> [options]
 - `--body <body>`
 - `--overwrite`
 
+cron 使用运行 runtime 的本机时区。例如本机时区是 `Asia/Shanghai` 时，`0 13 * * *` 表示每天北京时间 13:00。代理不会改变本机时区；一次性 `time:...` 必须显式带 `+08:00` 或 `Z` 这类时区。
+
 create 去重：只按 `title` 精确去重。
 
 ## `update` 常用参数

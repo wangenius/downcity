@@ -54,7 +54,7 @@ description: kind=agent 的执行行为、适用场景与输出要求
 
 ## 相关上下文
 
-- `contextId` 记录在任务定义中，用来标记任务语义上下文
+- `sessionId` 记录在任务定义中，用来决定任务结果回发到哪个会话
 - 真正执行时会创建独立的 task run context
 - 因此 task 执行不会直接复用普通 chat 的消息历史
 
@@ -62,7 +62,7 @@ description: kind=agent 的执行行为、适用场景与输出要求
 
 ```mermaid
 flowchart TD
-    A["task.md<br/>title / when / description / contextId / kind / status"] --> B["Task Service<br/>create / update / run / status / delete"]
+    A["task.md<br/>title / when / description / sessionId / kind / status"] --> B["Task Service<br/>create / update / run / status / delete"]
 
     B --> C["Manual Run API<br/>POST /api/dashboard/tasks/run"]
     B --> D["Scheduler<br/>cron / time"]
@@ -118,7 +118,7 @@ flowchart TD
 ---
 title: daily-market-research
 description: 每日市场研究摘要
-contextId: research
+sessionId: research
 when: 0 8 * * *
 status: enabled
 kind: agent

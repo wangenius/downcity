@@ -28,9 +28,22 @@ import {
   listContactInboxShares,
 } from "../../bin/services/contact/runtime/InboxStore.js";
 import { listRegisteredServiceNames } from "../../bin/main/service/ServiceClassRegistry.js";
+import { SERVICE_SYSTEM_PROVIDERS } from "../../bin/main/service/ServiceSystemProviders.js";
 
 test("contact service is registered as a root service", () => {
   assert.ok(listRegisteredServiceNames().includes("contact"));
+});
+
+test("contact service system prompt is injected through service providers", () => {
+  const provider = SERVICE_SYSTEM_PROVIDERS.find((item) => item.name === "contact");
+  assert.ok(provider);
+  const text = provider.system({});
+  assert.equal(typeof text, "string");
+  assert.match(text, /contact link/);
+  assert.match(text, /contact share/);
+  assert.match(text, /contact check/);
+  assert.match(text, /contact chat/);
+  assert.match(text, /不安装 skill/);
 });
 
 test("contact runtime paths keep one contact and one chat history per contact", () => {

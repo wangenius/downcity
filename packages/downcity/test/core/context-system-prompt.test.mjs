@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   DEFAULT_SHIP_PROMPTS,
+  buildSessionSystemMessages,
   buildContextSystemPrompt,
 } from "../../bin/session/composer/system/default/SystemDomain.js";
 
@@ -42,7 +43,34 @@ test("default core prompt enforces decisive execution and preflight checks", () 
     true,
   );
   assert.equal(
-    DEFAULT_SHIP_PROMPTS.includes("应先按当前用户时区解析为绝对时间"),
+    DEFAULT_SHIP_PROMPTS.includes("如果入站 `<info>` 明确提供了 `user_timezone`"),
     true,
   );
+});
+
+test("buildSessionSystemMessages appends runtime clock context for chat and task", async () => {
+  const chatMessages = await buildSessionSystemMessages({
+    projectRoot: "/tmp/demo",
+    sessionId: "session_chat",
+    mode: "chat",
+    staticSystemPrompts: [DEFAULT_SHIP_PROMPTS],
+    serviceSystemPrompts: [],
+    pluginSystemPrompts: [],
+  });
+  const chatTail = chatMessages.at(-1)?.content || "";
+  assert.equal(chatTail.includes("# Runtime Clock Context"), true);
+  assert.equal(chatTail.includes("current_date:"), true);
+  assert.equal(chatTail.includes("timezone:"), true);
+
+  const taskMessages = await buildSessionSystemMessages({
+    projectRoot: "/tmp/demo",
+    sessionId: "session_task",
+    mode: "task",
+    staticSystemPrompts: [DEFAULT_SHIP_PROMPTS],
+    serviceSystemPrompts: [],
+    pluginSystemPrompts: [],
+  });
+  const taskTail = taskMessages.at(-1)?.content || "";
+  assert.equal(taskTail.includes("# Runtime Clock Context"), true);
+  assert.equal(taskTail.includes("session_id: session_task"), true);
 });

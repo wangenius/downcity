@@ -66,21 +66,25 @@ export interface ContactChatCommandPayload {
 }
 
 /**
- * contact send command 输入。
+ * contact share command 输入。
  */
-export interface ContactSendCommandPayload {
+export interface ContactShareCommandPayload {
   /**
    * 已保存 contact 名称。
    */
   to: string;
   /**
-   * 发送内容类型。
+   * 分享的文本内容。
    */
-  type: "skill";
+  text?: string;
   /**
-   * skill 名称列表。
+   * 分享的链接列表。
    */
-  skills: string[];
+  links?: string[];
+  /**
+   * 分享的文件或目录路径列表。
+   */
+  paths?: string[];
 }
 
 /**
@@ -91,8 +95,4 @@ export interface ContactReceiveCommandPayload {
    * inbox share id。
    */
   shareId: string;
-  /**
-   * 是否覆盖已存在 skill。
-   */
-  force?: boolean;
 }

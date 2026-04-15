@@ -87,7 +87,7 @@ function WorkboardRoomQuestLedger(props: {
 
   return (
     <div
-      className="pointer-events-none absolute left-[104px] top-[424px] z-10 w-56 border-[3px] border-[#6e4d2f] bg-[#c48752] px-3 py-2 shadow-[5px_5px_0_rgba(72,50,33,0.24)]"
+      className="pointer-events-none absolute left-[128px] top-[662px] z-10 w-64 border-[3px] border-[#6e4d2f] bg-[#c48752] px-3 py-2 shadow-[5px_5px_0_rgba(72,50,33,0.24)]"
       style={{ clipPath: PIXEL_PANEL_CLIP }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -125,14 +125,14 @@ function WorkboardRoomMiniMap(props: {
   activeItemId?: string;
   nodes: Array<{ item: DowncityWorkboardAgentItem; x: number; y: number }>;
 }) {
-  const miniWidth = 112;
-  const miniHeight = 72;
+  const miniWidth = 144;
+  const miniHeight = 88;
   const scaleX = miniWidth / WORKBOARD_STAGE_WIDTH;
   const scaleY = miniHeight / WORKBOARD_STAGE_HEIGHT;
 
   return (
     <div
-      className="pointer-events-none absolute left-[784px] top-[432px] z-10 border-[3px] border-[#6e4d2f] bg-[#8a6040] p-2 shadow-[5px_5px_0_rgba(72,50,33,0.24)]"
+      className="pointer-events-none absolute left-[1228px] top-[662px] z-10 border-[3px] border-[#6e4d2f] bg-[#8a6040] p-2 shadow-[5px_5px_0_rgba(72,50,33,0.24)]"
       style={{ clipPath: PIXEL_PANEL_CLIP }}
       aria-hidden="true"
     >
@@ -177,7 +177,7 @@ function RoomEntranceSign(props: {
 }) {
   return (
     <div
-      className="pointer-events-none absolute left-[382px] top-[566px] z-10 border-[3px] border-[#6e4d2f] bg-[#fff1bd] px-3 py-2 text-center shadow-[4px_4px_0_rgba(72,50,33,0.22)]"
+      className="pointer-events-none absolute left-[674px] top-[850px] z-10 border-[3px] border-[#6e4d2f] bg-[#fff1bd] px-3 py-2 text-center shadow-[4px_4px_0_rgba(72,50,33,0.22)]"
       style={{ clipPath: PIXEL_PANEL_CLIP }}
       aria-hidden="true"
     >

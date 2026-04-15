@@ -92,21 +92,20 @@ test("inbox stores each share as a directory with lightweight meta and files", a
         id: "share_p7k2m",
         fromContactId: "contact_alice",
         fromAgentName: "alice-agent",
-        type: "skill",
-        title: "web-access",
+        title: "research-notes",
         status: "pending",
         receivedAt: 1776173400000,
         sizeBytes: 12,
         itemCount: 1,
       },
       payload: {
-        kind: "skillBundle",
-        skills: [
+        kind: "share",
+        items: [
           {
-            id: "web-access",
-            name: "web-access",
-            description: "web access skill",
-            root: "web-access",
+            id: "item_notes",
+            type: "directory",
+            title: "research-notes",
+            root: "research-notes",
             files: [{ path: "SKILL.md", sha256: "hash" }],
           },
         ],
@@ -121,7 +120,7 @@ test("inbox stores each share as a directory with lightweight meta and files", a
 
     const metaPath = getContactInboxShareMetaPath(root, "share_p7k2m");
     const payloadPath = getContactInboxSharePayloadPath(root, "share_p7k2m");
-    const skillPath = path.join(
+    const sharedFilePath = path.join(
       getContactInboxShareFilesPath(root, "share_p7k2m"),
       "web-access",
       "SKILL.md",
@@ -131,8 +130,8 @@ test("inbox stores each share as a directory with lightweight meta and files", a
 
     assert.equal(meta.id, "share_p7k2m");
     assert.equal(meta.status, "pending");
-    assert.equal(payload.kind, "skillBundle");
-    assert.equal(await fs.readFile(skillPath, "utf-8"), "# web access\n");
+    assert.equal(payload.kind, "share");
+    assert.equal(await fs.readFile(sharedFilePath, "utf-8"), "# web access\n");
 
     const shares = await listContactInboxShares(root);
     assert.deepEqual(shares.map((item) => item.id), ["share_p7k2m"]);

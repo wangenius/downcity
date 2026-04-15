@@ -44,7 +44,6 @@ function isMeta(input: unknown): input is ContactInboxShareMeta {
     item &&
       typeof item.id === "string" &&
       typeof item.fromAgentName === "string" &&
-      item.type === "skill" &&
       (item.status === "pending" || item.status === "received"),
   );
 }
@@ -71,8 +70,13 @@ export async function saveContactInboxShare(
   for (const file of input.files) {
     const relativePath = assertSafeRelativePath(file.relativePath);
     const outputPath = path.join(filesRoot, relativePath);
+    const encoding = file.encoding === "base64" ? "base64" : "utf8";
+    const content =
+      encoding === "base64"
+        ? Buffer.from(file.content, "base64")
+        : Buffer.from(file.content, "utf-8");
     await fs.ensureDir(path.dirname(outputPath));
-    await fs.writeFile(outputPath, file.content, "utf-8");
+    await fs.writeFile(outputPath, content);
   }
 
   return input.meta;
@@ -103,7 +107,7 @@ export async function readContactInboxSharePayload(
   const raw = await fs.readJson(filePath).catch(() => null);
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const payload = raw as ContactInboxSharePayload;
-  return payload.kind === "skillBundle" ? payload : null;
+  return payload.kind === "share" ? payload : null;
 }
 
 /**

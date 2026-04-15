@@ -46,38 +46,10 @@ const FOCUSED_PROP_ITEMS: Record<
   DowncityWorkboardZoneId,
   DowncityWorkboardGamePointOfInterest[]
 > = {
-  engaged: [
-    { id: "engaged-desk-a", kind: "desk", x: 184, y: 126 },
-    { id: "engaged-console-a", kind: "console", x: 410, y: 122 },
-    { id: "engaged-rack-a", kind: "rack", x: 722, y: 132 },
-    { id: "engaged-bench-a", kind: "bench", x: 158, y: 300 },
-    { id: "engaged-crate-a", kind: "crate", x: 512, y: 274 },
-    { id: "engaged-plant-a", kind: "plant", x: 796, y: 294 },
-  ],
-  steady: [
-    { id: "steady-desk-a", kind: "desk", x: 184, y: 126 },
-    { id: "steady-console-a", kind: "console", x: 410, y: 122 },
-    { id: "steady-rack-a", kind: "rack", x: 722, y: 132 },
-    { id: "steady-bench-a", kind: "bench", x: 158, y: 300 },
-    { id: "steady-crate-a", kind: "crate", x: 512, y: 274 },
-    { id: "steady-plant-a", kind: "plant", x: 796, y: 294 },
-  ],
-  quiet: [
-    { id: "quiet-desk-a", kind: "desk", x: 184, y: 126 },
-    { id: "quiet-console-a", kind: "console", x: 410, y: 122 },
-    { id: "quiet-rack-a", kind: "rack", x: 722, y: 132 },
-    { id: "quiet-bench-a", kind: "bench", x: 158, y: 300 },
-    { id: "quiet-crate-a", kind: "crate", x: 512, y: 274 },
-    { id: "quiet-plant-a", kind: "plant", x: 796, y: 294 },
-  ],
-  drift: [
-    { id: "drift-desk-a", kind: "desk", x: 184, y: 126 },
-    { id: "drift-console-a", kind: "console", x: 410, y: 122 },
-    { id: "drift-rack-a", kind: "rack", x: 722, y: 132 },
-    { id: "drift-bench-a", kind: "bench", x: 158, y: 300 },
-    { id: "drift-crate-a", kind: "crate", x: 512, y: 274 },
-    { id: "drift-plant-a", kind: "plant", x: 796, y: 294 },
-  ],
+  engaged: [],
+  steady: [],
+  quiet: [],
+  drift: [],
 };
 
 const FOCUSED_AREA_LABELS: Record<
@@ -85,24 +57,24 @@ const FOCUSED_AREA_LABELS: Record<
   DowncityWorkboardGameAreaLabel[]
 > = {
   engaged: [
-    { id: "engaged-briefing", label: "briefing node", x: 124, y: 112 },
-    { id: "engaged-relay", label: "relay desk", x: 352, y: 122 },
-    { id: "engaged-dispatch", label: "dispatch rack", x: 662, y: 132 },
+    { id: "engaged-briefing", label: "briefing node", x: 166, y: 118 },
+    { id: "engaged-relay", label: "relay desk", x: 660, y: 118 },
+    { id: "engaged-dispatch", label: "dispatch rack", x: 1194, y: 118 },
   ],
   steady: [
-    { id: "steady-focus", label: "focus lane", x: 148, y: 126 },
-    { id: "steady-desk", label: "steady desk", x: 386, y: 124 },
-    { id: "steady-throughput", label: "throughput rail", x: 666, y: 138 },
+    { id: "steady-focus", label: "focus lane", x: 166, y: 118 },
+    { id: "steady-desk", label: "steady desk", x: 660, y: 118 },
+    { id: "steady-throughput", label: "throughput rail", x: 1194, y: 118 },
   ],
   quiet: [
-    { id: "quiet-standby", label: "standby desk", x: 136, y: 128 },
-    { id: "quiet-idle", label: "idle rail", x: 404, y: 118 },
-    { id: "quiet-sleep", label: "sleep shelf", x: 678, y: 136 },
+    { id: "quiet-standby", label: "standby desk", x: 166, y: 118 },
+    { id: "quiet-idle", label: "idle rail", x: 660, y: 118 },
+    { id: "quiet-sleep", label: "sleep shelf", x: 1194, y: 118 },
   ],
   drift: [
-    { id: "drift-watch", label: "watch point", x: 132, y: 126 },
-    { id: "drift-issue", label: "issue console", x: 364, y: 118 },
-    { id: "drift-signal", label: "signal rack", x: 668, y: 138 },
+    { id: "drift-watch", label: "watch point", x: 166, y: 118 },
+    { id: "drift-issue", label: "issue console", x: 660, y: 118 },
+    { id: "drift-signal", label: "signal rack", x: 1194, y: 118 },
   ],
 };
 
@@ -236,8 +208,8 @@ export function buildWorkboardGameMapConfig(params: {
       {
         id: `${params.activeZoneId}-hub`,
         kind: "hub",
-        x: 500,
-        y: 320,
+        x: 800,
+        y: 480,
         active: true,
       },
     ],

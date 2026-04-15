@@ -2,14 +2,14 @@
  * contact share 类型。
  *
  * 关键点（中文）
- * - send 只发送资产型内容，文本对话走 chat。
- * - MVP 仅支持 skill bundle，后续可扩展 file bundle。
+ * - share 是通用内容分享，不绑定 skill 概念。
+ * - 文本、链接、文件、目录都进入 inbox，由接收方显式 receive。
  */
 
 /**
- * contact share 类型。
+ * share item 类型。
  */
-export type ContactShareType = "skill";
+export type ContactShareItemType = "text" | "link" | "file" | "directory";
 
 /**
  * inbox share 状态。
@@ -33,10 +33,6 @@ export interface ContactInboxShareMeta {
    */
   fromAgentName: string;
   /**
-   * share 类型。
-   */
-  type: ContactShareType;
-  /**
    * 面向用户展示的标题。
    */
   title: string;
@@ -59,11 +55,11 @@ export interface ContactInboxShareMeta {
 }
 
 /**
- * skill bundle 中的单个文件 manifest。
+ * share item 中的单个文件 manifest。
  */
-export interface ContactSkillBundleFile {
+export interface ContactShareFileManifest {
   /**
-   * skill 目录内相对路径。
+   * item 根目录内相对路径。
    */
   path: string;
   /**
@@ -73,49 +69,57 @@ export interface ContactSkillBundleFile {
 }
 
 /**
- * skill bundle 中的单个 skill manifest。
+ * share payload 中的单个 item。
  */
-export interface ContactSkillBundleItem {
+export interface ContactShareItem {
   /**
-   * skill 稳定标识。
+   * item 稳定标识。
    */
   id: string;
   /**
-   * skill 展示名称。
+   * item 类型。
    */
-  name: string;
+  type: ContactShareItemType;
   /**
-   * skill 描述。
+   * item 展示标题。
    */
-  description: string;
+  title: string;
   /**
-   * share files 下的 skill 根目录名。
+   * 文本内容。
    */
-  root: string;
+  text?: string;
   /**
-   * skill 文件列表。
+   * 链接 URL。
    */
-  files: ContactSkillBundleFile[];
+  url?: string;
+  /**
+   * share files 下的根目录名。
+   */
+  root?: string;
+  /**
+   * 文件 manifest 列表。
+   */
+  files?: ContactShareFileManifest[];
 }
 
 /**
- * skill bundle payload。
+ * 通用 share payload。
  */
-export interface ContactSkillBundlePayload {
+export interface ContactSharePayload {
   /**
    * payload 类型。
    */
-  kind: "skillBundle";
+  kind: "share";
   /**
-   * skill manifest 列表。
+   * share item 列表。
    */
-  skills: ContactSkillBundleItem[];
+  items: ContactShareItem[];
 }
 
 /**
  * inbox share payload。
  */
-export type ContactInboxSharePayload = ContactSkillBundlePayload;
+export type ContactInboxSharePayload = ContactSharePayload;
 
 /**
  * inbox share 文件内容。
@@ -126,9 +130,17 @@ export interface ContactInboxShareFileInput {
    */
   relativePath: string;
   /**
-   * UTF-8 文件内容。
+   * 文件内容。
    */
   content: string;
+  /**
+   * 内容编码。
+   *
+   * 说明（中文）
+   * - 省略时按 `utf8` 处理，兼容测试和手写 payload。
+   * - 文件/目录分享默认使用 `base64`，避免二进制文件损坏。
+   */
+  encoding?: "utf8" | "base64";
 }
 
 /**

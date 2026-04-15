@@ -27,8 +27,8 @@ import type {
 } from "../types/workboard-stage-map";
 
 const TILE_SIZE = 40;
-const GRID_COLS = 25;
-const GRID_ROWS = 16;
+const GRID_COLS = 40;
+const GRID_ROWS = 24;
 const STAGE_WIDTH = TILE_SIZE * GRID_COLS;
 const STAGE_HEIGHT = TILE_SIZE * GRID_ROWS;
 
@@ -290,13 +290,13 @@ function renderAreaLabel(label: DowncityWorkboardGameAreaLabel, index: number): 
 function renderHub(zone: DowncityWorkboardZoneDefinition, palette: (typeof WORKBOARD_ROOM_PALETTE)[DowncityWorkboardZoneId]) {
   return (
     <g>
-      <rect x={456} y={282} width="88" height="76" fill="rgba(250,236,178,0.94)" stroke={palette.accent} strokeWidth="4" />
-      <rect x={470} y={296} width="60" height="46" fill={palette.rugStrong} opacity="0.9" />
-      <rect x={490} y={312} width="20" height="16" fill={palette.accent} opacity="0.92" />
-      <rect x={482} y={360} width="36" height="12" fill="rgba(111,78,47,0.82)" />
+      <rect x={736} y={422} width="128" height="116" fill="rgba(250,236,178,0.94)" stroke={palette.accent} strokeWidth="4" />
+      <rect x={758} y={444} width="84" height="70" fill={palette.rugStrong} opacity="0.9" />
+      <rect x={788} y={470} width="28" height="22" fill={palette.accent} opacity="0.92" />
+      <rect x={774} y={540} width="52" height="14" fill="rgba(111,78,47,0.82)" />
       <text
-        x="500"
-        y="277"
+        x="800"
+        y="414"
         textAnchor="middle"
         fill={palette.accent}
         fontSize="10"

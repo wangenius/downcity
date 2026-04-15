@@ -268,7 +268,7 @@ city contact approve
 city contact list
 city contact check
 city contact chat
-city contact send
+city contact share
 city contact inbox
 city contact receive
 ```
@@ -434,6 +434,6 @@ city tts synthesize <text>
 
 3. 动态 action 命令
    - 来自 `service` / `plugin` 的注册表
-   - 当前可见：`chat / task / memory / skill / web / asr / tts`
+   - 当前可见：`chat / contact / task / memory / skill / web / asr / tts`
 
 这也是当前命令树看起来“比较散”的根本原因：一部分命令来自固定装配，一部分来自运行时注册表。

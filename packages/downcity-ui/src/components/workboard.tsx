@@ -627,7 +627,7 @@ export function Workboard(props: DowncityWorkboardProps) {
               ? "absolute inset-0 overflow-hidden"
               : "relative overflow-auto border-2 border-border/70 bg-[linear-gradient(145deg,rgba(251,250,247,0.96),rgba(245,248,245,0.88))]",
           )}
-          style={isFullscreen ? undefined : { minHeight: WORKBOARD_STAGE_HEIGHT, clipPath: PIXEL_PANEL_CLIP }}
+          style={isFullscreen ? undefined : { minHeight: 720, clipPath: PIXEL_PANEL_CLIP }}
         >
           <WorkboardScaledStage scale={stageScale}>
             {stageLevel === "clusters" ? (

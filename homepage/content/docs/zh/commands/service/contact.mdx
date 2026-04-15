@@ -1,6 +1,6 @@
 ---
 title: city contact
-description: contact service actions（link/approve/list/check/chat/send/inbox/receive）
+description: contact service actions（link/approve/list/check/chat/share/inbox/receive）
 ---
 
 # `city contact`
@@ -21,9 +21,11 @@ city contact <subcommand> [options]
 - `check <contact_name>`：检查某个 contact 当前是否在线可用。
 - `check --to <ip:port>`：检查未保存的 agent endpoint。
 - `chat --to <contact_name> [message]`：和该 contact 的长期对话线聊天。
-- `send --to <contact_name> --type skill <skill_names...>`：发送 skill bundle 到对方 inbox。
+- `share --to <contact_name> [paths...]`：分享文件或目录。
+- `share --to <contact_name> --text <text>`：分享文本。
+- `share --to <contact_name> --link <url...>`：分享链接。
 - `inbox`：查看收到但未接收的 share。
-- `receive <share_id>`：接收 inbox 中的 share；skill 会写入 `.agents/skills`。
+- `receive <share_id>`：接收 inbox 中的 share。
 
 ## 建立联系
 
@@ -61,15 +63,17 @@ city contact chat --to writer-agent "你那边有哪些网页相关 skills？"
 city contact chat --to writer-agent
 ```
 
-普通文本交流走 `chat`，不要用 `send`。
+普通对话走 `chat`，资料交接走 `share`。
 
-## 分享 skill
+## 分享内容
 
 ```bash
-city contact send --to writer-agent --type skill web-access frontend-design
+city contact share --to writer-agent ./notes.md ./research-folder
+city contact share --to writer-agent --link https://example.com
+city contact share --to writer-agent --text "这是一段资料"
 ```
 
-接收方不会自动安装。内容会进入按目录存储的 inbox：
+接收方不会自动执行或写入项目根目录。内容会进入按目录存储的 inbox：
 
 ```text
 .downcity/contact/inbox/share_xxx/
@@ -85,15 +89,15 @@ city contact inbox
 city contact receive share_xxx
 ```
 
-`receive` 后 skill 才会写入：
+`receive` 后内容会进入 received 区：
 
 ```text
-.agents/skills/<skill_id>/
+.downcity/contact/received/share_xxx/
 ```
 
 ## 设计边界
 
 - contact 是点对点关系，不是群组。
-- `send` 只用于资产分享，MVP 支持 skill bundle。
+- `share` 是通用分享，不绑定 skill 概念。
 - inbox 一条 share 一个目录，避免大内容堆进单个 JSON。
-- 收到的 skill 不自动执行，也不自动安装。
+- 收到的内容不自动执行，也不自动安装。

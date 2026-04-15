@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - `link/approve` 建立双向可信 contact。
  * - 每个 contact 固定一条长期 chat history。
- * - `send` 只发送资产型内容，MVP 仅支持 skill bundle，并进入对方 inbox。
+ * - `share` 分享文本、链接、文件和目录，并进入对方 inbox。
  */
 
 import { readFileSync } from "node:fs";
@@ -20,7 +20,7 @@ import type {
   ContactCheckCommandPayload,
   ContactLinkCommandPayload,
   ContactReceiveCommandPayload,
-  ContactSendCommandPayload,
+  ContactShareCommandPayload,
 } from "@/types/contact/ContactCommand.js";
 import type {
   ContactApproveLinkRequest,
@@ -66,9 +66,9 @@ import {
   saveContactInboxShare,
 } from "./runtime/InboxStore.js";
 import {
-  createSkillShareInput,
-  receiveSkillShare,
-} from "./runtime/SkillShare.js";
+  createShareInput,
+  receiveShare,
+} from "./runtime/ShareBundle.js";
 import { receiveContactChatMessage } from "./runtime/ChatRuntime.js";
 
 const CONTACT_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
@@ -253,30 +253,35 @@ export class ContactService extends BaseService {
           )) as unknown as JsonValue,
         }),
       },
-      send: {
+      share: {
         command: {
-          description: "向 contact 发送资产型内容（MVP 支持 skill）",
+          description: "向 contact 分享文本、链接、文件或目录",
           configure(command: Command) {
             command
               .requiredOption("--to <contact>", "目标 contact")
-              .option("--type <type>", "发送类型，当前仅支持 skill", "skill")
-              .argument("<skills...>");
+              .option("--text <text>", "分享文本")
+              .option("--link <url...>", "分享链接")
+              .argument("[paths...]");
           },
           mapInput({ args, opts }) {
-            const type = String(opts.type || "skill").trim();
-            if (type !== "skill") throw new Error("Only --type skill is supported");
+            const links = Array.isArray(opts.link)
+              ? opts.link.map((item) => String(item || "").trim()).filter(Boolean)
+              : typeof opts.link === "string"
+                ? [opts.link]
+                : [];
             return {
               to: String(opts.to || "").trim(),
-              type,
-              skills: args.map((item) => String(item || "").trim()).filter(Boolean),
+              ...(typeof opts.text === "string" ? { text: opts.text } : {}),
+              ...(links.length > 0 ? { links } : {}),
+              paths: args.map((item) => String(item || "").trim()).filter(Boolean),
             };
           },
         },
         execute: async (params) => ({
           success: true,
-          data: (await this.send(
+          data: (await this.share(
             params.context,
-            params.payload as unknown as ContactSendCommandPayload,
+            params.payload as unknown as ContactShareCommandPayload,
           )) as unknown as JsonValue,
         }),
       },
@@ -296,25 +301,23 @@ export class ContactService extends BaseService {
       },
       receive: {
         command: {
-          description: "接收 inbox 中的 share（skill 会写入 .agents/skills）",
+          description: "接收 inbox 中的 share",
           configure(command: Command) {
-            command.argument("<shareId>").option("--force", "覆盖已存在 skill", false);
+            command.argument("<shareId>");
           },
           mapInput({ args, opts }) {
             const shareId = String(args[0] || "").trim();
             if (!shareId) throw new Error("Missing shareId");
             return {
               shareId,
-              force: opts.force === true,
             };
           },
         },
         execute: async (params) => ({
           success: true,
-          data: (await receiveSkillShare({
+          data: (await receiveShare({
             projectRoot: params.context.rootPath,
             shareId: (params.payload as unknown as ContactReceiveCommandPayload).shareId,
-            force: (params.payload as unknown as ContactReceiveCommandPayload).force,
           })) as unknown as JsonValue,
         }),
       },
@@ -559,27 +562,30 @@ export class ContactService extends BaseService {
     return response;
   }
 
-  private async send(context: AgentContext, payload: ContactSendCommandPayload) {
-    if (payload.type !== "skill") throw new Error("Only skill share is supported");
+  private async share(context: AgentContext, payload: ContactShareCommandPayload) {
     const contact = await findContact(context.rootPath, payload.to);
     if (!contact) throw new Error(`Contact not found: ${payload.to}`);
-    const share = await createSkillShareInput({
+    const share = await createShareInput({
       context,
       fromContactId: contact.id,
       fromAgentName: getAgentName(context),
-      skillNames: payload.skills,
+      text: payload.text,
+      links: payload.links,
+      paths: payload.paths,
     });
     const response = await callContactShare<{ success: boolean; shareId?: string; error?: string }>({
       endpoint: contact.endpoint,
       token: contact.outboundToken,
       body: share as unknown as JsonValue,
     });
-    if (!response.success) throw new Error(response.error || "Contact send failed");
+    if (!response.success) throw new Error(response.error || "Contact share failed");
     return {
       shareId: response.shareId || share.meta.id,
       to: contact.name,
-      type: "skill",
-      items: payload.skills,
+      items: share.payload.items.map((item) => ({
+        type: item.type,
+        title: item.title,
+      })),
     };
   }
 

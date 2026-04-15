@@ -283,7 +283,7 @@ export function buildOverviewPatrolRoute(params: {
   const gate = WORKBOARD_ZONE_GATE_POINTS[params.zoneId];
   const laneIndex = Math.round((params.placement.left + params.placement.top) / 32) % 3;
   const laneOffset = (laneIndex - 1) * 10;
-  const roadY = params.zoneId === "engaged" || params.zoneId === "steady" ? 300 : 340;
+  const roadY = params.zoneId === "engaged" || params.zoneId === "steady" ? 460 : 500;
   const plazaLane = {
     x: WORKBOARD_TOWN_PLAZA_POINT.x + laneOffset,
     y: WORKBOARD_TOWN_PLAZA_POINT.y + (roadY < WORKBOARD_TOWN_PLAZA_POINT.y ? -10 : 10),

@@ -2,7 +2,7 @@
  * Workboard 像素地图辅助组件。
  *
  * 关键点（中文）
- * - 地图统一使用 25 x 16 的 tile 坐标系，每个 tile 对应 40px 正方块。
+ * - 地图统一使用 40 x 24 的 tile 坐标系，每个 tile 对应 40px 正方块。
  * - atlas 从 tile-map 渲染，不再使用会被全屏拉伸的百分比散块。
  * - 所有地图元素只表达公开状态的空间关系，不承载内部 runtime 细节。
  */
@@ -22,34 +22,34 @@ import type {
 } from "../types/workboard-stage-map";
 
 const TILE_SIZE = 40;
-const GRID_COLS = 25;
-const GRID_ROWS = 16;
+const GRID_COLS = 40;
+const GRID_ROWS = 24;
 const STAGE_WIDTH = TILE_SIZE * GRID_COLS;
 const STAGE_HEIGHT = TILE_SIZE * GRID_ROWS;
 
 /**
  * Workboard 小镇中心广场坐标。
  */
-export const WORKBOARD_TOWN_PLAZA_POINT: DowncityWorkboardStagePoint = { x: 500, y: 320 };
+export const WORKBOARD_TOWN_PLAZA_POINT: DowncityWorkboardStagePoint = { x: 800, y: 480 };
 
 /**
  * Workboard 小镇中每个状态建筑连接主路的入口坐标。
  */
 export const WORKBOARD_ZONE_GATE_POINTS: Record<DowncityWorkboardZoneId, DowncityWorkboardStagePoint> = {
-  engaged: { x: 240, y: 300 },
-  steady: { x: 760, y: 300 },
-  quiet: { x: 240, y: 340 },
-  drift: { x: 760, y: 340 },
+  engaged: { x: 560, y: 400 },
+  steady: { x: 1040, y: 400 },
+  quiet: { x: 560, y: 560 },
+  drift: { x: 1040, y: 560 },
 };
 
 /**
  * Workboard 全局 atlas 中每个状态簇的外部布局。
  */
 export const WORKBOARD_ZONE_LAYOUT: Record<DowncityWorkboardZoneId, DowncityWorkboardZoneLayout> = {
-  engaged: { x: 8, y: 12.5, w: 32, h: 31.25, hubX: 22, hubY: 28.125 },
-  steady: { x: 60, y: 12.5, w: 32, h: 31.25, hubX: 74, hubY: 28.125 },
-  quiet: { x: 8, y: 56.25, w: 32, h: 31.25, hubX: 22, hubY: 78.125 },
-  drift: { x: 60, y: 56.25, w: 32, h: 31.25, hubX: 74, hubY: 78.125 },
+  engaged: { x: 2.5, y: 12.5, w: 35, h: 29.167, hubX: 20, hubY: 27.083 },
+  steady: { x: 62.5, y: 12.5, w: 35, h: 29.167, hubX: 80, hubY: 27.083 },
+  quiet: { x: 2.5, y: 58.333, w: 35, h: 33.333, hubX: 20, hubY: 75 },
+  drift: { x: 62.5, y: 58.333, w: 35, h: 33.333, hubX: 80, hubY: 75 },
 };
 
 const ZONE_PIXEL_PALETTE: Record<
@@ -87,144 +87,158 @@ const ZONE_PIXEL_PALETTE: Record<
 };
 
 const TOWN_PATH_TILES: TileRect[] = [
-  { col: 0, row: 7, cols: 25, rows: 2 },
-  { col: 11, row: 0, cols: 2, rows: 16 },
-  { col: 5, row: 4, cols: 6, rows: 1 },
-  { col: 14, row: 4, cols: 6, rows: 1 },
-  { col: 5, row: 11, cols: 6, rows: 1 },
-  { col: 14, row: 11, cols: 6, rows: 1 },
+  { col: 0, row: 10, cols: 40, rows: 4 },
+  { col: 19, row: 0, cols: 2, rows: 24 },
+  { col: 12, row: 7, cols: 7, rows: 2 },
+  { col: 21, row: 7, cols: 7, rows: 2 },
+  { col: 12, row: 15, cols: 7, rows: 2 },
+  { col: 21, row: 15, cols: 7, rows: 2 },
 ];
 
 const TOWN_WATER_TILES: TileRect[] = [
-  { col: 0, row: 0, cols: 4, rows: 1 },
-  { col: 21, row: 0, cols: 4, rows: 1 },
-  { col: 0, row: 14, cols: 5, rows: 2 },
-  { col: 20, row: 14, cols: 5, rows: 2 },
+  { col: 0, row: 0, cols: 10, rows: 2 },
+  { col: 30, row: 0, cols: 10, rows: 2 },
+  { col: 0, row: 22, cols: 11, rows: 2 },
+  { col: 29, row: 22, cols: 11, rows: 2 },
+  { col: 0, row: 2, cols: 2, rows: 5 },
+  { col: 38, row: 17, cols: 2, rows: 5 },
 ];
 
 const TOWN_FENCE_TILES: TileRect[] = [
-  { col: 1, row: 1, cols: 9, rows: 1 },
-  { col: 15, row: 1, cols: 9, rows: 1 },
-  { col: 1, row: 14, cols: 9, rows: 1 },
-  { col: 15, row: 14, cols: 9, rows: 1 },
+  { col: 2, row: 2, cols: 15, rows: 1 },
+  { col: 23, row: 2, cols: 15, rows: 1 },
+  { col: 2, row: 22, cols: 15, rows: 1 },
+  { col: 23, row: 22, cols: 15, rows: 1 },
 ];
 
 const TOWN_BUILDINGS: TownBuilding[] = [
   {
-    col: 2,
-    row: 2,
-    cols: 8,
-    rows: 5,
+    col: 1,
+    row: 3,
+    cols: 14,
+    rows: 7,
     zoneId: "engaged",
     floor: "rgba(230,199,170,0.98)",
     wall: "rgba(135,73,56,0.96)",
     entrance: "bottom",
     walls: [
-      { col: 5, row: 2, cols: 1, rows: 3 },
-      { col: 2, row: 4, cols: 8, rows: 1 },
+      { col: 5, row: 3, cols: 1, rows: 7 },
+      { col: 10, row: 3, cols: 1, rows: 7 },
+      { col: 1, row: 6, cols: 14, rows: 1 },
     ],
     props: [
-      { col: 3, row: 3, cols: 1, rows: 1, kind: "desk" },
-      { col: 7, row: 3, cols: 2, rows: 1, kind: "shelf" },
-      { col: 4, row: 5, cols: 2, rows: 1, kind: "table" },
-      { col: 7, row: 5, cols: 1, rows: 1, kind: "sofa" },
+      { col: 2, row: 4, cols: 1, rows: 1, kind: "desk" },
+      { col: 7, row: 4, cols: 2, rows: 1, kind: "shelf" },
+      { col: 12, row: 4, cols: 1, rows: 1, kind: "desk" },
+      { col: 2, row: 8, cols: 2, rows: 1, kind: "table" },
+      { col: 7, row: 8, cols: 1, rows: 1, kind: "sofa" },
+      { col: 12, row: 8, cols: 1, rows: 1, kind: "sofa" },
     ],
   },
   {
-    col: 15,
-    row: 2,
-    cols: 8,
-    rows: 5,
+    col: 25,
+    row: 3,
+    cols: 14,
+    rows: 7,
     zoneId: "steady",
     floor: "rgba(244,236,174,0.98)",
     wall: "rgba(118,95,68,0.96)",
     entrance: "bottom",
     walls: [
-      { col: 18, row: 2, cols: 1, rows: 3 },
-      { col: 15, row: 4, cols: 8, rows: 1 },
+      { col: 29, row: 3, cols: 1, rows: 7 },
+      { col: 34, row: 3, cols: 1, rows: 7 },
+      { col: 25, row: 6, cols: 14, rows: 1 },
     ],
     props: [
-      { col: 16, row: 3, cols: 1, rows: 1, kind: "desk" },
-      { col: 20, row: 3, cols: 2, rows: 1, kind: "shelf" },
-      { col: 16, row: 5, cols: 2, rows: 1, kind: "table" },
-      { col: 20, row: 5, cols: 1, rows: 1, kind: "bed" },
+      { col: 26, row: 4, cols: 1, rows: 1, kind: "desk" },
+      { col: 31, row: 4, cols: 2, rows: 1, kind: "shelf" },
+      { col: 36, row: 4, cols: 1, rows: 1, kind: "desk" },
+      { col: 26, row: 8, cols: 2, rows: 1, kind: "table" },
+      { col: 31, row: 8, cols: 1, rows: 1, kind: "bed" },
+      { col: 36, row: 8, cols: 1, rows: 1, kind: "sofa" },
     ],
   },
   {
-    col: 2,
-    row: 9,
-    cols: 8,
-    rows: 5,
+    col: 1,
+    row: 14,
+    cols: 14,
+    rows: 8,
     zoneId: "quiet",
     floor: "rgba(231,226,207,0.98)",
     wall: "rgba(116,107,97,0.96)",
     entrance: "top",
     walls: [
-      { col: 5, row: 9, cols: 1, rows: 3 },
-      { col: 2, row: 11, cols: 8, rows: 1 },
+      { col: 5, row: 14, cols: 1, rows: 8 },
+      { col: 10, row: 14, cols: 1, rows: 8 },
+      { col: 1, row: 18, cols: 14, rows: 1 },
     ],
     props: [
-      { col: 3, row: 10, cols: 1, rows: 1, kind: "bed" },
-      { col: 7, row: 10, cols: 2, rows: 1, kind: "shelf" },
-      { col: 4, row: 12, cols: 2, rows: 1, kind: "table" },
-      { col: 8, row: 12, cols: 1, rows: 1, kind: "sofa" },
+      { col: 2, row: 15, cols: 1, rows: 1, kind: "bed" },
+      { col: 7, row: 15, cols: 2, rows: 1, kind: "shelf" },
+      { col: 12, row: 15, cols: 1, rows: 1, kind: "bed" },
+      { col: 2, row: 20, cols: 2, rows: 1, kind: "table" },
+      { col: 7, row: 20, cols: 1, rows: 1, kind: "sofa" },
+      { col: 12, row: 20, cols: 1, rows: 1, kind: "sofa" },
     ],
   },
   {
-    col: 15,
-    row: 9,
-    cols: 8,
-    rows: 5,
+    col: 25,
+    row: 14,
+    cols: 14,
+    rows: 8,
     zoneId: "drift",
     floor: "rgba(244,211,166,0.98)",
     wall: "rgba(155,85,43,0.96)",
     entrance: "top",
     walls: [
-      { col: 18, row: 9, cols: 1, rows: 3 },
-      { col: 15, row: 11, cols: 8, rows: 1 },
+      { col: 29, row: 14, cols: 1, rows: 8 },
+      { col: 34, row: 14, cols: 1, rows: 8 },
+      { col: 25, row: 18, cols: 14, rows: 1 },
     ],
     props: [
-      { col: 16, row: 10, cols: 1, rows: 1, kind: "desk" },
-      { col: 20, row: 10, cols: 2, rows: 1, kind: "shelf" },
-      { col: 16, row: 12, cols: 2, rows: 1, kind: "table" },
-      { col: 20, row: 12, cols: 1, rows: 1, kind: "sofa" },
+      { col: 26, row: 15, cols: 1, rows: 1, kind: "desk" },
+      { col: 31, row: 15, cols: 2, rows: 1, kind: "shelf" },
+      { col: 36, row: 15, cols: 1, rows: 1, kind: "desk" },
+      { col: 26, row: 20, cols: 2, rows: 1, kind: "table" },
+      { col: 31, row: 20, cols: 1, rows: 1, kind: "sofa" },
+      { col: 36, row: 20, cols: 1, rows: 1, kind: "sofa" },
     ],
   },
 ];
 
 const TOWN_TREE_POINTS: TilePoint[] = [
-  { col: 1, row: 2 },
-  { col: 13, row: 1 },
-  { col: 23, row: 2 },
-  { col: 1, row: 12 },
-  { col: 13, row: 14 },
-  { col: 23, row: 12 },
-  { col: 5, row: 1 },
-  { col: 19, row: 1 },
-  { col: 5, row: 14 },
-  { col: 19, row: 14 },
+  { col: 19, row: 2 },
+  { col: 20, row: 21 },
+  { col: 7, row: 2 },
+  { col: 32, row: 2 },
+  { col: 17, row: 4 },
+  { col: 22, row: 4 },
+  { col: 17, row: 19 },
+  { col: 22, row: 19 },
 ];
 
 const TOWN_SHRUB_POINTS: TilePoint[] = [
-  { col: 4, row: 1 },
-  { col: 9, row: 1 },
-  { col: 15, row: 1 },
-  { col: 22, row: 5 },
-  { col: 2, row: 7 },
-  { col: 22, row: 8 },
-  { col: 10, row: 14 },
-  { col: 15, row: 14 },
-  { col: 3, row: 15 },
-  { col: 21, row: 15 },
+  { col: 16, row: 8 },
+  { col: 23, row: 8 },
+  { col: 16, row: 15 },
+  { col: 23, row: 15 },
+  { col: 4, row: 2 },
+  { col: 35, row: 2 },
+  { col: 4, row: 22 },
+  { col: 35, row: 22 },
 ];
 
 const TOWN_FLOWER_POINTS: TilePoint[] = [
-  { col: 4, row: 8 },
-  { col: 9, row: 8 },
-  { col: 15, row: 7 },
-  { col: 21, row: 8 },
-  { col: 11, row: 4 },
-  { col: 13, row: 11 },
+  { col: 6, row: 11 },
+  { col: 11, row: 12 },
+  { col: 16, row: 9 },
+  { col: 23, row: 14 },
+  { col: 29, row: 11 },
+  { col: 34, row: 12 },
+  { col: 18, row: 5 },
+  { col: 21, row: 18 },
+  { col: 3, row: 21 },
+  { col: 36, row: 2 },
 ];
 
 function tileToRect(tile: TileRect) {
@@ -343,16 +357,16 @@ function renderTownFence(tile: TileRect, index: number): React.ReactNode {
 function renderTownPlaza(): React.ReactNode {
   return (
     <g key="town-plaza">
-      <TileRectSvg tile={{ col: 10, row: 6, cols: 5, rows: 4 }} fill="rgba(211,189,128,0.96)" stroke="rgba(126,97,58,0.36)" />
-      <TileRectSvg tile={{ col: 11, row: 7, cols: 3, rows: 2 }} fill="rgba(232,210,148,0.98)" stroke="rgba(126,97,58,0.32)" />
-      <rect x="476" y="296" width="48" height="48" fill="rgba(116,160,178,0.92)" stroke="rgba(64,91,105,0.76)" strokeWidth="4" />
-      <rect x="488" y="308" width="24" height="24" fill="rgba(178,226,228,0.88)" />
-      <rect x="496" y="284" width="8" height="24" fill="rgba(101,112,109,0.9)" />
-      <rect x="484" y="356" width="32" height="12" fill="rgba(113,79,48,0.86)" />
-      <rect x="456" y="276" width="8" height="8" fill="rgba(238,228,183,0.9)" />
-      <rect x="536" y="276" width="8" height="8" fill="rgba(238,228,183,0.9)" />
-      <rect x="456" y="356" width="8" height="8" fill="rgba(238,228,183,0.9)" />
-      <rect x="536" y="356" width="8" height="8" fill="rgba(238,228,183,0.9)" />
+      <TileRectSvg tile={{ col: 17, row: 9, cols: 6, rows: 6 }} fill="rgba(211,189,128,0.96)" stroke="rgba(126,97,58,0.36)" />
+      <TileRectSvg tile={{ col: 18, row: 10, cols: 4, rows: 4 }} fill="rgba(232,210,148,0.98)" stroke="rgba(126,97,58,0.32)" />
+      <rect x="776" y="456" width="48" height="48" fill="rgba(116,160,178,0.92)" stroke="rgba(64,91,105,0.76)" strokeWidth="4" />
+      <rect x="788" y="468" width="24" height="24" fill="rgba(178,226,228,0.88)" />
+      <rect x="796" y="444" width="8" height="24" fill="rgba(101,112,109,0.9)" />
+      <rect x="784" y="516" width="32" height="12" fill="rgba(113,79,48,0.86)" />
+      <rect x="736" y="436" width="8" height="8" fill="rgba(238,228,183,0.9)" />
+      <rect x="856" y="436" width="8" height="8" fill="rgba(238,228,183,0.9)" />
+      <rect x="736" y="556" width="8" height="8" fill="rgba(238,228,183,0.9)" />
+      <rect x="856" y="556" width="8" height="8" fill="rgba(238,228,183,0.9)" />
     </g>
   );
 }

@@ -1,6 +1,6 @@
 ---
 title: city contact
-description: contact service actions (link/approve/list/check/chat/send/inbox/receive)
+description: contact service actions (link/approve/list/check/chat/share/inbox/receive)
 ---
 
 # `city contact`
@@ -21,9 +21,11 @@ city contact <subcommand> [options]
 - `check <contact_name>`: check whether a contact is currently reachable.
 - `check --to <ip:port>`: check an unlinked agent endpoint.
 - `chat --to <contact_name> [message]`: chat on the long-lived thread for that contact.
-- `send --to <contact_name> --type skill <skill_names...>`: send a skill bundle to the peer inbox.
+- `share --to <contact_name> [paths...]`: share files or directories.
+- `share --to <contact_name> --text <text>`: share text.
+- `share --to <contact_name> --link <url...>`: share links.
 - `inbox`: list received shares.
-- `receive <share_id>`: receive a pending share; skills are written into `.agents/skills`.
+- `receive <share_id>`: receive a pending share.
 
 ## Link Agents
 
@@ -61,15 +63,17 @@ city contact chat --to writer-agent "Which web skills do you have?"
 city contact chat --to writer-agent
 ```
 
-Use `chat` for normal text. Do not use `send` for plain conversation.
+Use `chat` for conversation. Use `share` for handing over materials.
 
-## Share Skills
+## Share Content
 
 ```bash
-city contact send --to writer-agent --type skill web-access frontend-design
+city contact share --to writer-agent ./notes.md ./research-folder
+city contact share --to writer-agent --link https://example.com
+city contact share --to writer-agent --text "reference notes"
 ```
 
-The receiver does not install the skills automatically. The share lands in a directory-based inbox:
+The receiver does not execute the content or write it into the project root automatically. The share lands in a directory-based inbox:
 
 ```text
 .downcity/contact/inbox/share_xxx/
@@ -85,15 +89,15 @@ city contact inbox
 city contact receive share_xxx
 ```
 
-After `receive`, skills are written to:
+After `receive`, content is copied into the received area:
 
 ```text
-.agents/skills/<skill_id>/
+.downcity/contact/received/share_xxx/
 ```
 
 ## Boundaries
 
 - A contact is point-to-point, not a group.
-- `send` is only for asset sharing; the MVP supports skill bundles.
+- `share` is generic and is not tied to skills.
 - Each inbox share is a directory, so large content is not stored in a single JSON file.
-- Received skills are not executed or installed automatically.
+- Received content is not executed or installed automatically.

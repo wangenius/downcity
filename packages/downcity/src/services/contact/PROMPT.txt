@@ -5,5 +5,5 @@ Contact service
 - `contact link` 生成一次性 link code，由人转交给另一个 agent。
 - `contact approve <code>` 使用 link code 建立双向可信 contact。
 - 每个 contact 固定一条长期 chat history，不需要维护额外 session。
-- `contact send` 只用于资产型内容分享；普通文本对话应使用 `contact chat`。
-- 收到的 skill share 只进入 inbox，必须显式 `contact receive` 后才会落盘。
+- `contact share` 用于分享文本、链接、文件和目录。
+- 收到的 share 只进入 inbox，必须显式 `contact receive` 后才会进入 received 区。

@@ -54,7 +54,7 @@ The `notes` field returned by `contact link` explains who can use that code:
 
 - `127.0.0.1` / `localhost`: only an agent on the same machine can approve it; do not give it to a server agent.
 - Private-network address: only agents on the same LAN/VPN can approve it.
-- Public address or domain: any remote agent that can reach the address can approve it.
+- Public address or domain: any remote agent that can reach the address can approve it; Downcity cannot verify firewall/NAT reachability from this machine, so use a reachable server, domain, or tunnel if approval cannot connect.
 
 Agents should repeat the returned `notes` to the user and should not rewrite the endpoint inside the link code.
 
@@ -63,6 +63,8 @@ Agents should repeat the returned `notes` to the user and should not rewrite the
 `contact link` creates a one-time contact code, not a group invite. When A creates a link code, A stores an unused local link record and writes A's reachable address plus a one-time secret into the `dc-link-v1...` code.
 
 `contact approve <code>` is run by B. B calls A using the address in the code and sends the link id, secret, and B's agent name. After A validates the request, A stores B as a trusted contact and invalidates that link.
+
+If approval returns `Contact link not found`, the request reached an agent runtime, but that runtime does not have the matching link record. First check whether the endpoint and port in the code point to the agent that generated the link, or whether the code came from another project/agent. Expiration returns `Contact link expired` explicitly, so do not treat `not found` as expiration.
 
 The default contact is one-way. B stores A as a contact it can call, so B can continue with:
 

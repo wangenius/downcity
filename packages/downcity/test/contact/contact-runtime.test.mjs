@@ -173,6 +173,108 @@ test("contact link resolves endpoint from context global env", async () => {
   }
 });
 
+test("contact link prefers actual runtime port over configured start port", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-runtime-port-"));
+  const previousServerPort = process.env.DC_SERVER_PORT;
+  const previousPublicUrl = process.env.DOWNCITY_PUBLIC_URL;
+  const previousPublicHost = process.env.DOWNCITY_PUBLIC_HOST;
+  try {
+    process.env.DC_SERVER_PORT = "7777";
+    delete process.env.DOWNCITY_PUBLIC_URL;
+    delete process.env.DOWNCITY_PUBLIC_HOST;
+    const service = new ContactService(null);
+    const result = await service.actions.link.execute({
+      context: {
+        rootPath: root,
+        env: {},
+        globalEnv: {
+          DOWNCITY_PUBLIC_HOST: "203.0.113.10",
+        },
+        config: {
+          name: "server-agent",
+          start: {
+            host: "0.0.0.0",
+            port: 5314,
+          },
+        },
+      },
+      payload: {},
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.endpoint, "http://203.0.113.10:7777");
+    assert.equal(parseContactLinkCode(result.data.code).endpoint, "http://203.0.113.10:7777");
+  } finally {
+    if (previousServerPort === undefined) {
+      delete process.env.DC_SERVER_PORT;
+    } else {
+      process.env.DC_SERVER_PORT = previousServerPort;
+    }
+    if (previousPublicUrl === undefined) {
+      delete process.env.DOWNCITY_PUBLIC_URL;
+    } else {
+      process.env.DOWNCITY_PUBLIC_URL = previousPublicUrl;
+    }
+    if (previousPublicHost === undefined) {
+      delete process.env.DOWNCITY_PUBLIC_HOST;
+    } else {
+      process.env.DOWNCITY_PUBLIC_HOST = previousPublicHost;
+    }
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("contact link prefers context public host while keeping actual runtime port", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-env-precedence-"));
+  const previousServerPort = process.env.DC_SERVER_PORT;
+  const previousPublicHost = process.env.DOWNCITY_PUBLIC_HOST;
+  const previousPublicUrl = process.env.DOWNCITY_PUBLIC_URL;
+  try {
+    process.env.DC_SERVER_PORT = "7777";
+    process.env.DOWNCITY_PUBLIC_HOST = "198.51.100.50";
+    delete process.env.DOWNCITY_PUBLIC_URL;
+    const service = new ContactService(null);
+    const result = await service.actions.link.execute({
+      context: {
+        rootPath: root,
+        env: {},
+        globalEnv: {
+          DOWNCITY_PUBLIC_HOST: "203.0.113.10",
+        },
+        config: {
+          name: "server-agent",
+          start: {
+            host: "0.0.0.0",
+            port: 5314,
+          },
+        },
+      },
+      payload: {},
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.endpoint, "http://203.0.113.10:7777");
+    assert.equal(parseContactLinkCode(result.data.code).endpoint, "http://203.0.113.10:7777");
+  } finally {
+    if (previousServerPort === undefined) {
+      delete process.env.DC_SERVER_PORT;
+    } else {
+      process.env.DC_SERVER_PORT = previousServerPort;
+    }
+    if (previousPublicHost === undefined) {
+      delete process.env.DOWNCITY_PUBLIC_HOST;
+    } else {
+      process.env.DOWNCITY_PUBLIC_HOST = previousPublicHost;
+    }
+    if (previousPublicUrl === undefined) {
+      delete process.env.DOWNCITY_PUBLIC_URL;
+    } else {
+      process.env.DOWNCITY_PUBLIC_URL = previousPublicUrl;
+    }
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("contact link warns when endpoint is local-only", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-local-link-"));
   try {
@@ -199,6 +301,38 @@ test("contact link warns when endpoint is local-only", async () => {
     assert.equal(result.data.endpointReachability, "loopback");
     assert.ok(
       result.data.notes.some((item) => /same machine/.test(item) && /server agent cannot approve/.test(item)),
+    );
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("contact link notes that public-looking endpoints may still be blocked", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-public-link-"));
+  try {
+    const service = new ContactService(null);
+    const result = await service.actions.link.execute({
+      context: {
+        rootPath: root,
+        env: {},
+        globalEnv: {},
+        config: {
+          name: "server-agent",
+          start: {
+            host: "0.0.0.0",
+            port: 5314,
+          },
+        },
+      },
+      payload: {
+        endpoint: "203.0.113.10:5314",
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.endpointReachability, "public");
+    assert.ok(
+      result.data.notes.some((item) => /firewall|NAT/i.test(item)),
     );
   } finally {
     await fs.rm(root, { recursive: true, force: true });
@@ -261,6 +395,41 @@ test("remote approve allows an inbound-only contact without requester endpoint",
     assert.equal(contacts[0].reachability, "inbound");
     assert.equal(contacts[0].outboundToken, null);
     assert.equal(typeof contacts[0].inboundTokenHash, "string");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("remote approve explains missing link records separately from expiration", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-missing-link-"));
+  try {
+    const service = new ContactService(null);
+    const result = await service.actions.remoteapprove.execute({
+      context: {
+        rootPath: root,
+        env: {
+          DOWNCITY_PUBLIC_URL: "https://agent-a.example.com",
+        },
+        config: {
+          name: "server-agent",
+          start: {
+            host: "0.0.0.0",
+            port: 5314,
+          },
+        },
+      },
+      payload: {
+        linkId: "link_missing",
+        secret: "secret-token",
+        agentName: "local-agent",
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.success, false);
+    assert.match(result.data.error, /Contact link not found/);
+    assert.match(result.data.error, /wrong endpoint or port/);
+    assert.match(result.data.error, /Contact link expired/);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

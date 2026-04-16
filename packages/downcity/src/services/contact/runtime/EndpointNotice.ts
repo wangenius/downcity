@@ -71,6 +71,7 @@ export function buildContactLinkNotes(params: {
   if (reachability === "public") {
     return [
       "This link can be approved by agents that can reach this endpoint before the code expires.",
+      "Downcity cannot verify firewall or NAT reachability from here; if approval cannot connect, use a reachable server, domain, or tunnel in DOWNCITY_PUBLIC_URL / DOWNCITY_PUBLIC_HOST.",
     ];
   }
   return [
@@ -105,7 +106,7 @@ export function buildContactApproveNotes(params: {
 
   if (params.requesterEndpoint) {
     notes.push(
-      "This contact is bidirectional: this agent sent its public endpoint during approve, so both agents can initiate check, chat, and share.",
+      "This contact is bidirectional if the sent endpoint is reachable from the peer; this agent sent its public endpoint during approve, so both agents can initiate check, chat, and share when firewall/NAT allows it.",
     );
   } else {
     notes.push(

@@ -3,8 +3,8 @@
  *
  * 关键点（中文）
  * - 通过 JSON-RPC over stdio 连接外部 coding agent。
- * - 当前消费 `session/update -> agent_message_chunk/tool_call/tool_call_update/tool_result`。
- * - ACP 输出若包含 Downcity final 标签，只把标签内文本视为用户可见回复。
+ * - 当前消费 `session/update -> agent_message_chunk/agent_thought_chunk/tool_call/tool_call_update/tool_result`。
+ * - ACP 原生 thought chunk 落盘为 reasoning，不混入普通 assistant text。
  * - 首次进入 session 时，会把 system 与已持久化历史一起 bootstrap 给 ACP agent。
  */
 
@@ -30,8 +30,8 @@ import {
 } from "@/main/city/env/Config.js";
 import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpLaunchConfig.js";
+import { normalizeAcpEventPayload } from "./AcpEventPayload.js";
 import { buildAcpPromptText } from "./AcpPromptText.js";
-import { extractAcpVisibleText, hasAcpVisibleTextTag } from "./AcpVisibleText.js";
 
 type JsonRpcId = number;
 
@@ -178,10 +178,8 @@ export class AcpSessionExecutor implements SessionExecutor {
             stopReason?: unknown;
           } | null;
           stopReason = String(response?.stopReason || "").trim() || "unknown";
-          if (stopReason !== "cancelled") {
-            await this.flushAssistantProgress(true, { final: true });
-          }
-          text = extractAcpVisibleText(this.activePromptCollector.chunks.join(""));
+          await this.flushAssistantProgress(true);
+          text = this.activePromptCollector.chunks.join("").trim();
           this.bootstrapped = true;
         } catch (error) {
           // 关键点（中文）：一旦 prompt 级 RPC 出错，远端 session 可能已经脏掉。
@@ -540,6 +538,11 @@ export class AcpSessionExecutor implements SessionExecutor {
     if (!update) return;
     const sessionUpdate = String(update.sessionUpdate || "");
 
+    if (sessionUpdate === "user_message_chunk" || sessionUpdate === "userMessageChunk") {
+      await this.emitAcpEventProgress("user_message_chunk", update);
+      return;
+    }
+
     if (sessionUpdate === "tool_call" || sessionUpdate === "toolCall") {
       const normalizedToolCall = normalizeAcpToolCallUpdate(update);
       const toolCallId = String(normalizedToolCall.toolCallId || "").trim();
@@ -613,6 +616,55 @@ export class AcpSessionExecutor implements SessionExecutor {
       return;
     }
 
+    if (sessionUpdate === "agent_thought_chunk" || sessionUpdate === "agentThoughtChunk") {
+      const content = update.content;
+      if (!content || content.type !== "text") return;
+      const text = String(content.text || "").trim();
+      if (!text) return;
+      await this.emitAssistantProgressEvent({
+        text,
+        visibility: "internal",
+      });
+      return;
+    }
+
+    if (sessionUpdate === "plan") {
+      await this.emitAcpEventProgress("plan", update);
+      return;
+    }
+
+    if (
+      sessionUpdate === "available_commands_update" ||
+      sessionUpdate === "availableCommandsUpdate"
+    ) {
+      await this.emitAcpEventProgress("available_commands_update", update);
+      return;
+    }
+
+    if (
+      sessionUpdate === "current_mode_update" ||
+      sessionUpdate === "currentModeUpdate"
+    ) {
+      await this.emitAcpEventProgress("current_mode_update", update);
+      return;
+    }
+
+    if (
+      sessionUpdate === "config_option_update" ||
+      sessionUpdate === "configOptionUpdate"
+    ) {
+      await this.emitAcpEventProgress("config_option_update", update);
+      return;
+    }
+
+    if (
+      sessionUpdate === "session_info_update" ||
+      sessionUpdate === "sessionInfoUpdate"
+    ) {
+      await this.emitAcpEventProgress("session_info_update", update);
+      return;
+    }
+
     if (sessionUpdate !== "agent_message_chunk" && sessionUpdate !== "agentMessageChunk") {
       return;
     }
@@ -627,12 +679,24 @@ export class AcpSessionExecutor implements SessionExecutor {
     await this.flushAssistantProgress(false);
   }
 
-  private async flushAssistantProgress(
-    force: boolean,
-    options?: {
-      final?: boolean;
-    },
+  private async emitAcpEventProgress(
+    type: string,
+    update: AcpSessionUpdatePayload,
   ): Promise<void> {
+    await this.flushAssistantProgress(true);
+    await this.emitAssistantProgressEvent({
+      stepResult: {
+        acpEvents: [
+          {
+            type,
+            data: normalizeAcpEventPayload(update),
+          },
+        ],
+      },
+    });
+  }
+
+  private async flushAssistantProgress(force: boolean): Promise<void> {
     const progress = this.activeAssistantProgress;
     if (!progress || typeof progress.callback !== "function") return;
     const normalized = String(progress.buffer || "");
@@ -640,24 +704,18 @@ export class AcpSessionExecutor implements SessionExecutor {
       progress.buffer = normalized;
       return;
     }
-    if (!force && !shouldFlushAssistantProgress(normalized)) {
-      return;
-    }
-    if (options?.final !== true && !hasAcpVisibleTextTag(normalized)) {
+    if (!force) {
       return;
     }
 
-    const text = extractAcpVisibleText(normalized);
-    if (!text) {
-      progress.buffer = "";
-      return;
-    }
+    const text = normalized.trim();
     progress.buffer = "";
-    await this.emitAssistantProgressEvent({ text });
+    await this.emitAssistantProgressEvent({ text, visibility: "visible" });
   }
 
   private async emitAssistantProgressEvent(params: {
     text?: string;
+    visibility?: "visible" | "internal";
     stepResult?: unknown;
   }): Promise<void> {
     const progress = this.activeAssistantProgress;
@@ -671,6 +729,7 @@ export class AcpSessionExecutor implements SessionExecutor {
       await progress.callback({
         text,
         stepIndex: progress.stepIndex,
+        ...(params.visibility ? { visibility: params.visibility } : {}),
         ...(hasStepResult ? { stepResult: params.stepResult } : {}),
       });
     } catch {
@@ -938,8 +997,4 @@ function formatJsonRpcError(error: unknown): string {
     return `${message} (code=${String(code)})`;
   }
   return message || JSON.stringify(error);
-}
-
-function shouldFlushAssistantProgress(_text: string): boolean {
-  return false;
 }

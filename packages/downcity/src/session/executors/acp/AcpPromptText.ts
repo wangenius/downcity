@@ -2,12 +2,11 @@
  * AcpPromptText：ACP prompt 文本组装工具。
  *
  * 关键点（中文）
- * - ACP adapter 只接收 prompt text，这里集中组装输出契约、system 与历史。
+ * - ACP adapter 只接收 prompt text，这里集中组装 system、历史与当前请求。
  * - 历史回灌只拼接 `type=text` 的用户可见消息，避免 tool/reasoning part 混入。
  */
 
 import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
-import { buildAcpVisibleOutputContract } from "./AcpVisibleText.js";
 
 /**
  * 构建发送给 ACP agent 的 prompt 文本。
@@ -19,18 +18,11 @@ export function buildAcpPromptText(params: {
   historyMessages: SessionMessageV1[];
 }): string {
   const query = String(params.query || "").trim();
-  const outputContract = buildAcpVisibleOutputContract();
   if (params.bootstrapped) {
-    return [
-      outputContract,
-      [
-        "## Current User Request",
-        query,
-      ].join("\n"),
-    ].join("\n\n");
+    return query;
   }
 
-  const sections: string[] = [outputContract];
+  const sections: string[] = [];
   const systemText = params.systemMessages
     .map((message) => normalizeSystemMessageText(message.content))
     .filter(Boolean)

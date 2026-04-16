@@ -173,6 +173,38 @@ test("contact link resolves endpoint from context global env", async () => {
   }
 });
 
+test("contact link warns when endpoint is local-only", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-local-link-"));
+  try {
+    const service = new ContactService(null);
+    const result = await service.actions.link.execute({
+      context: {
+        rootPath: root,
+        env: {},
+        globalEnv: {},
+        config: {
+          name: "local-agent",
+          start: {
+            host: "127.0.0.1",
+            port: 5314,
+          },
+        },
+      },
+      payload: {
+        endpoint: "127.0.0.1:5314",
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.endpointReachability, "loopback");
+    assert.ok(
+      result.data.notes.some((item) => /same machine/.test(item) && /server agent cannot approve/.test(item)),
+    );
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("contact endpoint resolver discovers public ip before falling back to localhost", async () => {
   const endpoint = await resolveContactSelfEndpoint({
     host: "0.0.0.0",
@@ -283,6 +315,8 @@ test("approve without endpoint creates an outbound-only local contact", async ()
     assert.equal(result.success, true);
     assert.equal(approveBody.endpoint, undefined);
     assert.equal(approveBody.tokenForRequester, undefined);
+    assert.equal(result.data.reachability, "outbound");
+    assert.ok(result.data.notes.some((item) => /outbound-only/.test(item)));
 
     const contacts = await listContacts(root);
     assert.equal(contacts.length, 1);
@@ -291,6 +325,72 @@ test("approve without endpoint creates an outbound-only local contact", async ()
     assert.equal(contacts[0].reachability, "outbound");
     assert.equal(contacts[0].outboundToken, "local-can-call-server");
     assert.equal(contacts[0].inboundTokenHash, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("approve sends requester endpoint from global public host", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-bidirectional-"));
+  const originalFetch = globalThis.fetch;
+  try {
+    const service = new ContactService(null);
+    const code = createContactLinkCode({
+      version: 1,
+      linkId: "link_server",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secret: "secret-token",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600_000,
+    });
+    let approveBody = null;
+    globalThis.fetch = async (_url, init) => {
+      approveBody = JSON.parse(String(init?.body || "{}"));
+      return new Response(JSON.stringify({
+        success: true,
+        agentName: "server-agent",
+        endpoint: "https://agent-a.example.com",
+        tokenForOwner: "local-can-call-server",
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    };
+
+    const result = await service.actions.approve.execute({
+      context: {
+        rootPath: root,
+        env: {},
+        globalEnv: {
+          DOWNCITY_PUBLIC_HOST: "203.0.113.20",
+        },
+        config: {
+          name: "public-agent-b",
+          start: {
+            host: "0.0.0.0",
+            port: 5314,
+          },
+        },
+      },
+      payload: {
+        code,
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(approveBody.endpoint, "http://203.0.113.20:5314");
+    assert.equal(typeof approveBody.tokenForRequester, "string");
+    assert.equal(result.data.reachability, "bidirectional");
+    assert.ok(result.data.notes.some((item) => /bidirectional/.test(item)));
+
+    const contacts = await listContacts(root);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].reachability, "bidirectional");
+    assert.equal(typeof contacts[0].inboundTokenHash, "string");
   } finally {
     globalThis.fetch = originalFetch;
     await fs.rm(root, { recursive: true, force: true });

@@ -50,6 +50,14 @@ city contact share --to server-agent ./notes.md
 
 The link code automatically includes A's currently reachable address. Public deployments prefer `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`. When no explicit public address is configured, `city start` writes a global `DOWNCITY_PUBLIC_HOST` automatically; otherwise `contact link` continues with the runtime host, a local network interface address, or automatic public IP discovery.
 
+The `notes` field returned by `contact link` explains who can use that code:
+
+- `127.0.0.1` / `localhost`: only an agent on the same machine can approve it; do not give it to a server agent.
+- Private-network address: only agents on the same LAN/VPN can approve it.
+- Public address or domain: any remote agent that can reach the address can approve it.
+
+Agents should repeat the returned `notes` to the user and should not rewrite the endpoint inside the link code.
+
 ## Current Logic
 
 `contact link` creates a one-time contact code, not a group invite. When A creates a link code, A stores an unused local link record and writes A's reachable address plus a one-time secret into the `dc-link-v1...` code.
@@ -64,7 +72,20 @@ city contact chat --to server-agent "hello"
 city contact share --to server-agent ./notes.md
 ```
 
-A also stores B, but if B has no public inbound address, A treats B as an inbound contact: A can authenticate requests from B, but it does not assume it can call B directly.
+A also stores B. If B has `DOWNCITY_PUBLIC_URL` or `DOWNCITY_PUBLIC_HOST` in global env, B sends its endpoint to A during approval and both sides create a bidirectional contact. Otherwise, A treats B as an inbound contact: A can authenticate requests from B, but it does not assume it can call B directly.
+
+When both agents run on public servers, the contact usually becomes bidirectional automatically:
+
+```text
+A <-> B
+```
+
+As long as both agents have global `DOWNCITY_PUBLIC_HOST` written by `city start`, or explicitly configured `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`, both sides can initiate `check`, `chat`, and `share` later.
+
+The `notes` field returned by `contact approve` explains the resulting relationship:
+
+- `outbound-only`: this agent can call the peer, but the peer cannot call back to this agent.
+- `bidirectional`: both sides saved reachable endpoints, so both sides can initiate calls.
 
 `contact link` does not ask users to enter an endpoint. Downcity resolves A's reachable address in this order:
 

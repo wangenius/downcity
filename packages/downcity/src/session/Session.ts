@@ -170,6 +170,7 @@ export class Session {
     const wrappedOnAssistantStepCallback = async (step: {
       text: string;
       stepIndex: number;
+      visibility?: "visible" | "internal";
       stepResult?: unknown;
     }): Promise<void> => {
       const stepMessages = buildSessionStepEventMessages({
@@ -177,6 +178,7 @@ export class Session {
         stepIndex: step.stepIndex,
         stepResult: step.stepResult,
         text: step.text,
+        visibility: step.visibility,
       });
       if (stepMessages.length > 0) {
         for (const stepMessage of stepMessages) {

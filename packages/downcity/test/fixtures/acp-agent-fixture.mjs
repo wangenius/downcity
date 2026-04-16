@@ -11,13 +11,6 @@ function send(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
 }
 
-function extractCurrentUserRequest(promptText) {
-  const marker = "## Current User Request";
-  const index = promptText.lastIndexOf(marker);
-  if (index < 0) return promptText;
-  return promptText.slice(index + marker.length).replace(/^\s+/, "").trim();
-}
-
 function sendTextUpdate(sessionId, text) {
   send({
     jsonrpc: "2.0",
@@ -47,6 +40,20 @@ function sendThoughtUpdate(sessionId, text) {
           type: "text",
           text,
         },
+      },
+    },
+  });
+}
+
+function sendPlanUpdate(sessionId, entries) {
+  send({
+    jsonrpc: "2.0",
+    method: "session/update",
+    params: {
+      sessionId,
+      update: {
+        sessionUpdate: "plan",
+        entries,
       },
     },
   });
@@ -234,7 +241,6 @@ rl.on("line", (line) => {
       }
 
       if (promptText.includes("tool call stream test")) {
-        const hasFinalTagContract = promptText.includes("## Downcity ACP Output Contract");
         sendTextUpdate(sessionId, "正在分析项目结构...");
         sendToolCallUpdate(sessionId, {
           toolCallId: "call_001",
@@ -260,12 +266,7 @@ rl.on("line", (line) => {
             files: ["package.json", "src/index.ts"],
           },
         });
-        sendTextUpdate(
-          sessionId,
-          hasFinalTagContract
-            ? "<downcity_final>分析完成，这是最终结果。</downcity_final>"
-            : "分析完成，这是最终结果。",
-        );
+        sendTextUpdate(sessionId, "分析完成，这是最终结果。");
         send({
           jsonrpc: "2.0",
           id: msg.id,
@@ -276,19 +277,31 @@ rl.on("line", (line) => {
         return;
       }
 
-      if (promptText.includes("final tag contract test")) {
-        const hasFinalTagContract =
-          promptText.includes("<downcity_final>") &&
-          promptText.includes("</downcity_final>") &&
-          promptText.includes("最终可见回复");
+      if (promptText.includes("native thought chunk test")) {
         sendThoughtUpdate(sessionId, "这段 ACP thought 永远不该进入 assistant 正文。");
-        sendTextUpdate(sessionId, "我先检查 contact 命令怎么调用。");
-        sendTextUpdate(
-          sessionId,
-          hasFinalTagContract
-            ? "<downcity_final>FINAL_VISIBLE</downcity_final>"
-            : "<downcity_final>CONTRACT_MISSING</downcity_final>",
-        );
+        sendTextUpdate(sessionId, "VISIBLE_REPLY");
+        send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            stopReason: "end_turn",
+          },
+        });
+        return;
+      }
+
+      if (promptText.includes("native plan update test")) {
+        sendPlanUpdate(sessionId, [
+          {
+            content: "检查输入",
+            status: "completed",
+          },
+          {
+            content: "返回结果",
+            status: "pending",
+          },
+        ]);
+        sendTextUpdate(sessionId, "PLAN_VISIBLE_REPLY");
         send({
           jsonrpc: "2.0",
           id: msg.id,
@@ -419,11 +432,6 @@ rl.on("line", (line) => {
 
       if (promptText.includes("## Conversation History")) {
         sendTextUpdate(sessionId, "BOOTSTRAP_OK");
-      } else if (promptText.includes("## Downcity ACP Output Contract")) {
-        sendTextUpdate(
-          sessionId,
-          `<downcity_final>ECHO:${extractCurrentUserRequest(promptText)}</downcity_final>`,
-        );
       } else {
         sendTextUpdate(sessionId, `ECHO:${promptText}`);
       }

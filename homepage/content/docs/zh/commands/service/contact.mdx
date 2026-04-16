@@ -50,6 +50,14 @@ city contact share --to server-agent ./notes.md
 
 link code 会自动包含 A 当前可访问地址。公开部署时优先使用 `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`。`city start` 会在没有显式配置时自动写入全局 `DOWNCITY_PUBLIC_HOST`，否则 `contact link` 会继续使用 runtime host、本机网卡地址或公网 IP 自动发现结果。
 
+`contact link` 返回结果里的 `notes` 会说明这条联系码适合谁使用：
+
+- `127.0.0.1` / `localhost`：只能同一台机器上的 agent approve，不能交给 server agent。
+- 私有网段地址：只能同一 LAN/VPN 内的 agent approve。
+- 公网地址或域名：可以交给能访问该地址的远端 agent approve。
+
+agent 回复用户时应该直接转述 `notes`，不要自己修改 link code 里的 endpoint。
+
 ## 当前逻辑
 
 `contact link` 是一次性建联码，不是群组邀请。A 生成 link code 时，会在本地保存一条未使用的 link 记录，并把 A 的可访问地址和一次性 secret 写入 `dc-link-v1...` code。
@@ -64,7 +72,20 @@ city contact chat --to server-agent "hello"
 city contact share --to server-agent ./notes.md
 ```
 
-A 也会保存 B，但如果 B 没有公网入口，A 只把 B 视为 inbound contact：A 可以识别 B 发来的请求，但不会假设自己能主动连回 B。
+A 也会保存 B。如果 B 的全局 env 中有 `DOWNCITY_PUBLIC_URL` 或 `DOWNCITY_PUBLIC_HOST`，B approve 时会自动把自己的 endpoint 发给 A，双方会建立双向 contact。否则 A 只把 B 视为 inbound contact：A 可以识别 B 发来的请求，但不会假设自己能主动连回 B。
+
+两个公网服务器上的 agent 建联时，通常会自动变成双向联系：
+
+```text
+A <-> B
+```
+
+只要两个 agent 都已经通过 `city start` 写入了全局 `DOWNCITY_PUBLIC_HOST`，或者显式配置了 `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`，双方后续都可以主动 `check`、`chat`、`share`。
+
+`contact approve` 返回结果里的 `notes` 会说明建联结果：
+
+- `outbound-only`：当前 agent 可以主动访问对方，但对方不能主动回连当前 agent。
+- `bidirectional`：双方都保存了可访问 endpoint，双方都可以主动访问对方。
 
 `contact link` 不需要用户填写 endpoint。Downcity 会按这个顺序自动解析 A 的可访问地址：
 

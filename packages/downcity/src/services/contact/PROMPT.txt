@@ -14,5 +14,7 @@ contact service 用来管理和其他 agent 的联系方式。一个 contact 代
 
 边界：
 - chat 用于对话，share 用于资料交接。
+- `city contact link` 返回中的 notes 会说明联系码适合本机、局域网还是公网 agent 使用；本地 localhost 联系码不能交给 server agent approve。
+- `city contact approve` 返回中的 notes 会说明建联结果是 outbound-only 还是 bidirectional。
 - receive 只接收内容，不自动执行、不安装 skill、不修改项目业务文件。
 - 不自动 approve 或 receive，除非用户明确要求。

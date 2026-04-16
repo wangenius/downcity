@@ -12,6 +12,15 @@ import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
 import type { SessionSystemMessage } from "@/types/session/SessionPrompts.js";
 
 /**
+ * Assistant step 可见性。
+ *
+ * 说明（中文）
+ * - `visible`：ACP `agent_message_chunk` 或普通模型文本，属于用户可见回复。
+ * - `internal`：ACP `agent_thought_chunk` 等内部过程，应作为 reasoning 保留，但不能混入普通 text。
+ */
+export type SessionAssistantStepVisibility = "visible" | "internal";
+
+/**
  * Assistant step 回调入参。
  */
 export interface SessionAssistantStepCallbackInput {
@@ -24,6 +33,15 @@ export interface SessionAssistantStepCallbackInput {
    * 当前 step 序号（从 1 开始）。
    */
   stepIndex: number;
+
+  /**
+   * 当前 step 的可见性。
+   *
+   * 关键点（中文）
+   * - 未声明时按 `visible` 处理，兼容本地模型与旧调用方。
+   * - `internal` 会落盘为 reasoning part，外部渠道不应当成普通回复文本发送。
+   */
+  visibility?: SessionAssistantStepVisibility;
 
   /**
    * 当前 step 的原始结果对象。

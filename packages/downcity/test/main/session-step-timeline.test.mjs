@@ -58,6 +58,58 @@ test("buildSessionStepEventMessages keeps text-only step minimal", () => {
   assert.equal(messages[0].parts[0].text, "只有文本");
 });
 
+test("buildSessionStepEventMessages persists internal step text as reasoning", () => {
+  const messages = buildSessionStepEventMessages({
+    sessionId: "consoleui-chat-main",
+    stepIndex: 3,
+    text: "内部推理过程",
+    visibility: "internal",
+    stepResult: {},
+  });
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].parts[0].type, "reasoning");
+  assert.equal(messages[0].parts[0].text, "内部推理过程");
+  assert.equal(messages[0].parts[0].state, "done");
+  assert.equal(messages[0].metadata.extra.internal, "assistant_step_reasoning");
+});
+
+test("buildSessionStepEventMessages persists ACP events as data parts", () => {
+  const messages = buildSessionStepEventMessages({
+    sessionId: "consoleui-chat-main",
+    stepIndex: 4,
+    text: "",
+    stepResult: {
+      acpEvents: [
+        {
+          type: "plan",
+          data: {
+            entries: [
+              {
+                content: "检查输入",
+                status: "completed",
+              },
+            ],
+          },
+        },
+      ],
+    },
+  });
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].parts[0].type, "data-acp-plan");
+  assert.deepEqual(messages[0].parts[0].data, {
+    entries: [
+      {
+        content: "检查输入",
+        status: "completed",
+      },
+    ],
+  });
+  assert.equal(messages[0].metadata.extra.internal, "assistant_step_acp_event");
+  assert.equal(messages[0].metadata.extra.acpEventType, "plan");
+});
+
 test("resolveAssistantMessageForPersistence skips merged assistant after step persistence", () => {
   const persisted = resolveAssistantMessageForPersistence({
     id: "a:test:1",

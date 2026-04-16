@@ -72,6 +72,11 @@ import {
 import { receiveContactChatMessage } from "./runtime/ChatRuntime.js";
 import { buildContactServiceSystemText } from "./runtime/SystemProvider.js";
 import { resolveContactSelfEndpoint } from "./runtime/EndpointResolver.js";
+import {
+  buildContactApproveNotes,
+  buildContactLinkNotes,
+  classifyContactEndpoint,
+} from "./runtime/EndpointNotice.js";
 
 function readObject(value: JsonValue): JsonObject {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -118,6 +123,18 @@ async function resolveSelfEndpoint(
         ...process.env,
       },
     }),
+  );
+}
+
+function hasConfiguredPublicEndpointEnv(context: AgentContext): boolean {
+  const env = {
+    ...context.globalEnv,
+    ...context.env,
+    ...process.env,
+  };
+  return Boolean(
+    String(env.DOWNCITY_PUBLIC_URL || "").trim() ||
+      String(env.DOWNCITY_PUBLIC_HOST || "").trim(),
   );
 }
 
@@ -462,6 +479,8 @@ export class ContactService extends BaseService {
       linkId,
       agentName,
       endpoint,
+      endpointReachability: classifyContactEndpoint(endpoint),
+      notes: buildContactLinkNotes({ endpoint }),
       expiresAt: now + ttlSeconds * 1000,
     };
   }
@@ -470,20 +489,30 @@ export class ContactService extends BaseService {
     const parsed = parseContactLinkCode(payload.code);
     if (isContactLinkExpired(parsed)) throw new Error("Contact link expired");
 
-    const requesterEndpoint = payload.endpoint
-      ? await resolveSelfEndpoint(context, payload.endpoint)
-      : undefined;
+    const requesterEndpoint =
+      payload.endpoint || hasConfiguredPublicEndpointEnv(context)
+        ? await resolveSelfEndpoint(context, payload.endpoint)
+        : undefined;
     const tokenForRequester = requesterEndpoint ? createContactToken() : undefined;
-    const response = await callContactApprove<ContactApproveLinkResponse>({
-      endpoint: parsed.endpoint,
-      body: {
-        linkId: parsed.linkId,
-        secret: parsed.secret,
-        agentName: getAgentName(context),
-        ...(requesterEndpoint ? { endpoint: requesterEndpoint } : {}),
-        ...(tokenForRequester ? { tokenForRequester } : {}),
-      } as unknown as JsonValue,
+    const approveNotes = buildContactApproveNotes({
+      targetEndpoint: parsed.endpoint,
+      requesterEndpoint,
     });
+    let response: ContactApproveLinkResponse;
+    try {
+      response = await callContactApprove<ContactApproveLinkResponse>({
+        endpoint: parsed.endpoint,
+        body: {
+          linkId: parsed.linkId,
+          secret: parsed.secret,
+          agentName: getAgentName(context),
+          ...(requesterEndpoint ? { endpoint: requesterEndpoint } : {}),
+          ...(tokenForRequester ? { tokenForRequester } : {}),
+        } as unknown as JsonValue,
+      });
+    } catch (error) {
+      throw new Error(`${String(error)}\n${approveNotes.join("\n")}`);
+    }
     if (!response.success) throw new Error(response.error || "Contact approve failed");
 
     const name = String(payload.name || response.agentName || parsed.agentName).trim();
@@ -498,7 +527,13 @@ export class ContactService extends BaseService {
       createdAt: Date.now(),
       lastSeenAt: Date.now(),
     });
-    return { contact };
+    return {
+      contact,
+      reachability: contact.reachability,
+      targetEndpointReachability: classifyContactEndpoint(parsed.endpoint),
+      ...(requesterEndpoint ? { requesterEndpoint } : {}),
+      notes: approveNotes,
+    };
   }
 
   private async check(context: AgentContext, payload: ContactCheckCommandPayload) {

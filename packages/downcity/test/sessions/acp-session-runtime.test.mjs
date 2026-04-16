@@ -179,7 +179,7 @@ test("AcpSessionExecutor: injects sessionId for prompt resolver when request con
       query: "hello",
     });
     assert.equal(result.success, true);
-    assert.equal(result.assistantMessage.parts[0].text, "ECHO:hello");
+    assert.match(String(result.assistantMessage.parts[0].text || ""), /System prompt/);
   } finally {
     await runtime.dispose();
   }
@@ -292,11 +292,16 @@ test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", a
       });
     });
     assert.equal(result.success, true);
-    assert.equal(result.assistantMessage.parts[0].text, "分析完成，这是最终结果。");
+    assert.equal(result.assistantMessage.parts[0].text, "正在分析项目结构...分析完成，这是最终结果。");
     assert.deepEqual(steps, [
       {
-        text: "",
+        text: "正在分析项目结构...",
         stepIndex: 1,
+        stepResult: undefined,
+      },
+      {
+        text: "",
+        stepIndex: 2,
         stepResult: {
           toolCalls: [
             {
@@ -312,7 +317,7 @@ test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", a
       },
       {
         text: "",
-        stepIndex: 2,
+        stepIndex: 3,
         stepResult: {
           toolResults: [
             {
@@ -328,7 +333,7 @@ test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", a
       },
       {
         text: "分析完成，这是最终结果。",
-        stepIndex: 3,
+        stepIndex: 4,
         stepResult: undefined,
       },
     ]);
@@ -337,7 +342,47 @@ test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", a
   }
 });
 
-test("AcpSessionExecutor: exposes only tagged final text when ACP emits process chatter", async () => {
+test("AcpSessionExecutor: exposes native ACP thought chunks as internal steps only", async () => {
+  const runtime = createRuntime();
+  const steps = [];
+  try {
+    const result = await withSessionRunScope({
+      sessionId: "test-session",
+      onAssistantStepCallback: async (input) => {
+        steps.push({
+          text: String(input.text || ""),
+          stepIndex: input.stepIndex,
+          visibility: input.visibility,
+          stepResult: input.stepResult,
+        });
+      },
+    }, async () => {
+      return await runtime.run({
+        query: "native thought chunk test",
+      });
+    });
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.parts[0].text, "VISIBLE_REPLY");
+    assert.deepEqual(steps, [
+      {
+        text: "这段 ACP thought 永远不该进入 assistant 正文。",
+        stepIndex: 1,
+        visibility: "internal",
+        stepResult: undefined,
+      },
+      {
+        text: "VISIBLE_REPLY",
+        stepIndex: 2,
+        visibility: "visible",
+        stepResult: undefined,
+      },
+    ]);
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionExecutor: persists native ACP plan updates as structured events", async () => {
   const runtime = createRuntime();
   const steps = [];
   try {
@@ -352,18 +397,40 @@ test("AcpSessionExecutor: exposes only tagged final text when ACP emits process 
       },
     }, async () => {
       return await runtime.run({
-        query: "final tag contract test",
+        query: "native plan update test",
       });
     });
     assert.equal(result.success, true);
-    assert.equal(result.assistantMessage.parts[0].text, "FINAL_VISIBLE");
-    assert.deepEqual(steps, [
-      {
-        text: "FINAL_VISIBLE",
-        stepIndex: 1,
-        stepResult: undefined,
+    assert.equal(result.assistantMessage.parts[0].text, "PLAN_VISIBLE_REPLY");
+    assert.equal(steps.length, 2);
+    assert.deepEqual(steps[0], {
+      text: "",
+      stepIndex: 1,
+      stepResult: {
+        acpEvents: [
+          {
+            type: "plan",
+            data: {
+              entries: [
+                {
+                  content: "检查输入",
+                  status: "completed",
+                },
+                {
+                  content: "返回结果",
+                  status: "pending",
+                },
+              ],
+            },
+          },
+        ],
       },
-    ]);
+    });
+    assert.deepEqual(steps[1], {
+      text: "PLAN_VISIBLE_REPLY",
+      stepIndex: 2,
+      stepResult: undefined,
+    });
   } finally {
     await runtime.dispose();
   }
@@ -472,8 +539,13 @@ test("AcpSessionExecutor: defers cancel until pending tool call returns tool res
     assert.equal(result.assistantMessage.parts[0].text, "先发一段前置文本。");
     assert.deepEqual(steps, [
       {
-        text: "",
+        text: "先发一段前置文本。",
         stepIndex: 1,
+        stepResult: undefined,
+      },
+      {
+        text: "",
+        stepIndex: 2,
         stepResult: {
           toolCalls: [
             {
@@ -489,7 +561,7 @@ test("AcpSessionExecutor: defers cancel until pending tool call returns tool res
       },
       {
         text: "",
-        stepIndex: 2,
+        stepIndex: 3,
         stepResult: {
           toolResults: [
             {

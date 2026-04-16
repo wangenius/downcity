@@ -64,6 +64,23 @@ function resolveToolResultPayload(value: unknown): unknown {
   return undefined;
 }
 
+function resolveAcpEventType(value: unknown): string {
+  const record = toRecord(value);
+  const type = typeof record?.type === "string" ? record.type : "";
+  return type.trim();
+}
+
+function resolveAcpEventData(value: unknown): unknown {
+  const record = toRecord(value);
+  if (!record) return value;
+  if ("data" in record) return record.data;
+  return record;
+}
+
+function toDataPartType(type: string): string {
+  return `data-acp-${type.replace(/_/g, "-")}`;
+}
+
 function buildMetadata(params: {
   sessionId: string;
   ts: number;
@@ -105,6 +122,7 @@ export function buildSessionStepEventMessages(params: {
   stepIndex: number;
   stepResult?: unknown;
   text: string;
+  visibility?: "visible" | "internal";
 }): SessionMessageV1[] {
   const sessionId = String(params.sessionId || "").trim();
   if (!sessionId) return [];
@@ -115,21 +133,31 @@ export function buildSessionStepEventMessages(params: {
   const toolResults = Array.isArray(stepRecord.toolResults)
     ? stepRecord.toolResults
     : [];
+  const acpEvents = Array.isArray(stepRecord.acpEvents)
+    ? stepRecord.acpEvents
+    : [];
   const baseTs = Date.now();
   let sequence = 0;
 
   const text = String(params.text || "").trim();
   if (text) {
+    const isInternal = params.visibility === "internal";
     out.push(
       buildAssistantStepMessage({
         sessionId,
         ts: baseTs + sequence,
-        part: {
-          type: "text",
-          text,
-        },
+        part: isInternal
+          ? {
+              type: "reasoning",
+              text,
+              state: "done",
+            }
+          : {
+              type: "text",
+              text,
+            },
         extra: {
-          internal: "assistant_step_text",
+          internal: isInternal ? "assistant_step_reasoning" : "assistant_step_text",
           stepIndex: params.stepIndex,
           persistedBy: "session_store_run",
         },
@@ -182,6 +210,29 @@ export function buildSessionStepEventMessages(params: {
           internal: "assistant_step_tool_result",
           stepIndex: params.stepIndex,
           toolIndex: index + 1,
+        },
+      }),
+    );
+    sequence += 1;
+  }
+
+  for (let index = 0; index < acpEvents.length; index += 1) {
+    const acpEvent = acpEvents[index];
+    const type = resolveAcpEventType(acpEvent);
+    if (!type) continue;
+    out.push(
+      buildAssistantStepMessage({
+        sessionId,
+        ts: baseTs + sequence,
+        part: {
+          type: toDataPartType(type),
+          data: resolveAcpEventData(acpEvent),
+        },
+        extra: {
+          internal: "assistant_step_acp_event",
+          stepIndex: params.stepIndex,
+          acpEventType: type,
+          eventIndex: index + 1,
         },
       }),
     );

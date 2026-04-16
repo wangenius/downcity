@@ -70,8 +70,14 @@ test("ChatQueueWorker only dispatches step text when assistant steps already exi
           async run(params) {
             if (typeof params.onAssistantStepCallback === "function") {
               await params.onAssistantStepCallback({
-                text: "step-visible-text",
+                text: "internal-reasoning-should-not-send",
                 stepIndex: 1,
+                visibility: "internal",
+              });
+              await params.onAssistantStepCallback({
+                text: "step-visible-text",
+                stepIndex: 2,
+                visibility: "visible",
               });
             }
             return {

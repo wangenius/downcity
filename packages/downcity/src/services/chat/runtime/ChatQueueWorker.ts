@@ -352,7 +352,9 @@ export class ChatQueueWorker {
     const onAssistantStepCallback = async (params: {
       text: string;
       stepIndex: number;
+      visibility?: "visible" | "internal";
     }): Promise<void> => {
+      if (params.visibility === "internal") return;
       const stepText = String(params.text || "").trim();
       if (!stepText) return;
       const dispatched = await this.dispatchAssistantStepMessage({

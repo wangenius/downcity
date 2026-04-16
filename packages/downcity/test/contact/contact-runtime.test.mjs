@@ -401,6 +401,61 @@ test("remote approve allows an inbound-only contact without requester endpoint",
   }
 });
 
+test("remote approve can be retried by the same agent after the owner saved inbound contact", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-retry-"));
+  try {
+    const service = new ContactService(null);
+    const context = {
+      rootPath: root,
+      config: {
+        name: "server-agent",
+        start: {
+          host: "0.0.0.0",
+          port: 8787,
+        },
+      },
+    };
+    await saveContactLinkRecord(root, {
+      id: "link_retry",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secretHash: hashContactToken("secret-token"),
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600_000,
+      usedAt: null,
+    });
+
+    const first = await service.actions.remoteapprove.execute({
+      context,
+      payload: {
+        linkId: "link_retry",
+        secret: "secret-token",
+        agentName: "local-agent",
+      },
+    });
+    const second = await service.actions.remoteapprove.execute({
+      context,
+      payload: {
+        linkId: "link_retry",
+        secret: "secret-token",
+        agentName: "local-agent",
+      },
+    });
+
+    assert.equal(first.success, true);
+    assert.equal(first.data.success, true);
+    assert.equal(second.success, true);
+    assert.equal(second.data.success, true);
+    assert.equal(second.data.tokenForOwner, first.data.tokenForOwner);
+
+    const contacts = await listContacts(root);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].reachability, "inbound");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("remote approve explains missing link records separately from expiration", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-missing-link-"));
   try {

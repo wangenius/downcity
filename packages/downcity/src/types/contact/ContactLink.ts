@@ -72,6 +72,18 @@ export interface ContactLinkRecord {
    * link 被使用的时间戳。
    */
   usedAt?: number | null;
+  /**
+   * 已使用该 link 的 approve 方 agent 名称；用于同一 agent 在网络中断或本地保存失败后做幂等重试。
+   */
+  approvedAgentName?: string | null;
+  /**
+   * approve 方在建联时提供的 HTTP endpoint；没有公开 endpoint 时为空。
+   */
+  approvedEndpoint?: string | null;
+  /**
+   * 发起方发给 approve 方的明文 contact token；只保存在本地 link 记录中，用于同一 link 在有效期内重试恢复。
+   */
+  tokenForOwner?: string | null;
 }
 
 /**

@@ -93,7 +93,7 @@ export async function saveContact(
     throw new Error("contact endpoint is required for outbound contacts");
   }
   if (normalized.reachability !== "inbound" && !normalized.outboundToken) {
-    throw new Error("contact outbound token is required for outbound contacts");
+    throw new Error("contact approve response did not include the peer token; generate a fresh link and approve again");
   }
   if (normalized.reachability !== "outbound" && !normalized.inboundTokenHash) {
     throw new Error("contact inbound token hash is required for inbound contacts");

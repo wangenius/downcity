@@ -64,6 +64,8 @@ Agents should repeat the returned `notes` to the user and should not rewrite the
 
 `contact approve <code>` is run by B. B calls A using the address in the code and sends the link id, secret, and B's agent name. After A validates the request, A stores B as a trusted contact and invalidates that link.
 
+Contact tokens are exchanged automatically by link/approve. Users do not configure token environment variables manually. If approval reached A but B was interrupted while saving locally, the same B can run the same `contact approve <code>` again while the link is valid to recover the same token.
+
 If approval returns `Contact link not found`, the request reached an agent runtime, but that runtime does not have the matching link record. First check whether the endpoint and port in the code point to the agent that generated the link, or whether the code came from another project/agent. Expiration returns `Contact link expired` explicitly, so do not treat `not found` as expiration.
 
 The default contact is one-way. B stores A as a contact it can call, so B can continue with:

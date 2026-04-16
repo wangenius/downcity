@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - link code 明文只展示给用户；本地落盘只保存 secret hash。
- * - approve 成功后写入 usedAt，确保一次性语义。
+ * - approve 成功后写入 usedAt 和恢复元数据，确保一次性语义并支持同一 agent 幂等重试。
  */
 
 import fs from "fs-extra";
@@ -47,22 +47,4 @@ export async function readContactLinkRecord(
   if (!(await fs.pathExists(filePath))) return null;
   const raw = await fs.readJson(filePath).catch(() => null);
   return isLinkRecord(raw) ? raw : null;
-}
-
-/**
- * 标记 link 已使用。
- */
-export async function markContactLinkUsed(
-  projectRoot: string,
-  linkId: string,
-  usedAt: number = Date.now(),
-): Promise<ContactLinkRecord | null> {
-  const record = await readContactLinkRecord(projectRoot, linkId);
-  if (!record) return null;
-  const next = {
-    ...record,
-    usedAt,
-  };
-  await saveContactLinkRecord(projectRoot, next);
-  return next;
 }

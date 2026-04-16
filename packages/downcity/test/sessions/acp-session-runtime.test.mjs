@@ -179,7 +179,7 @@ test("AcpSessionExecutor: injects sessionId for prompt resolver when request con
       query: "hello",
     });
     assert.equal(result.success, true);
-    assert.match(String(result.assistantMessage.parts[0].text || ""), /System prompt/);
+    assert.equal(result.assistantMessage.parts[0].text, "ECHO:hello");
   } finally {
     await runtime.dispose();
   }
@@ -292,16 +292,11 @@ test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", a
       });
     });
     assert.equal(result.success, true);
-    assert.equal(result.assistantMessage.parts[0].text, "正在分析项目结构...分析完成，这是最终结果。");
+    assert.equal(result.assistantMessage.parts[0].text, "分析完成，这是最终结果。");
     assert.deepEqual(steps, [
       {
-        text: "正在分析项目结构...",
-        stepIndex: 1,
-        stepResult: undefined,
-      },
-      {
         text: "",
-        stepIndex: 2,
+        stepIndex: 1,
         stepResult: {
           toolCalls: [
             {
@@ -317,7 +312,7 @@ test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", a
       },
       {
         text: "",
-        stepIndex: 3,
+        stepIndex: 2,
         stepResult: {
           toolResults: [
             {
@@ -333,7 +328,39 @@ test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", a
       },
       {
         text: "分析完成，这是最终结果。",
-        stepIndex: 4,
+        stepIndex: 3,
+        stepResult: undefined,
+      },
+    ]);
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionExecutor: exposes only tagged final text when ACP emits process chatter", async () => {
+  const runtime = createRuntime();
+  const steps = [];
+  try {
+    const result = await withSessionRunScope({
+      sessionId: "test-session",
+      onAssistantStepCallback: async (input) => {
+        steps.push({
+          text: String(input.text || ""),
+          stepIndex: input.stepIndex,
+          stepResult: input.stepResult,
+        });
+      },
+    }, async () => {
+      return await runtime.run({
+        query: "final tag contract test",
+      });
+    });
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.parts[0].text, "FINAL_VISIBLE");
+    assert.deepEqual(steps, [
+      {
+        text: "FINAL_VISIBLE",
+        stepIndex: 1,
         stepResult: undefined,
       },
     ]);
@@ -445,13 +472,8 @@ test("AcpSessionExecutor: defers cancel until pending tool call returns tool res
     assert.equal(result.assistantMessage.parts[0].text, "先发一段前置文本。");
     assert.deepEqual(steps, [
       {
-        text: "先发一段前置文本。",
-        stepIndex: 1,
-        stepResult: undefined,
-      },
-      {
         text: "",
-        stepIndex: 2,
+        stepIndex: 1,
         stepResult: {
           toolCalls: [
             {
@@ -467,7 +489,7 @@ test("AcpSessionExecutor: defers cancel until pending tool call returns tool res
       },
       {
         text: "",
-        stepIndex: 3,
+        stepIndex: 2,
         stepResult: {
           toolResults: [
             {

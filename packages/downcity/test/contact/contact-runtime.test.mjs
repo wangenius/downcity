@@ -24,6 +24,9 @@ import {
   parseContactLinkCode,
 } from "../../bin/services/contact/runtime/LinkCode.js";
 import {
+  resolveContactSelfEndpoint,
+} from "../../bin/services/contact/runtime/EndpointResolver.js";
+import {
   saveContactInboxShare,
   listContactInboxShares,
 } from "../../bin/services/contact/runtime/InboxStore.js";
@@ -138,6 +141,48 @@ test("contact link resolves endpoint from runtime public URL without user option
     }
     await fs.rm(root, { recursive: true, force: true });
   }
+});
+
+test("contact link resolves endpoint from context global env", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-global-env-"));
+  try {
+    const service = new ContactService(null);
+    const result = await service.actions.link.execute({
+      context: {
+        rootPath: root,
+        env: {},
+        globalEnv: {
+          DOWNCITY_PUBLIC_HOST: "203.0.113.10",
+        },
+        config: {
+          name: "server-agent",
+          start: {
+            host: "0.0.0.0",
+            port: 8787,
+          },
+        },
+      },
+      payload: {},
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.endpoint, "http://203.0.113.10:8787");
+    assert.equal(parseContactLinkCode(result.data.code).endpoint, "http://203.0.113.10:8787");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("contact endpoint resolver discovers public ip before falling back to localhost", async () => {
+  const endpoint = await resolveContactSelfEndpoint({
+    host: "0.0.0.0",
+    port: 5314,
+    env: {},
+    interfaces: {},
+    resolvePublicIpv4: async () => "72.62.254.79",
+  });
+
+  assert.equal(endpoint, "http://72.62.254.79:5314");
 });
 
 test("remote approve allows an inbound-only contact without requester endpoint", async () => {

@@ -48,7 +48,7 @@ city contact check server-agent
 city contact share --to server-agent ./notes.md
 ```
 
-The link code automatically includes A's currently reachable address. Public deployments prefer `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`; otherwise Downcity uses the runtime host or a local network interface address.
+The link code automatically includes A's currently reachable address. Public deployments prefer `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`. When no explicit public address is configured, `city start` writes a global `DOWNCITY_PUBLIC_HOST` automatically; otherwise `contact link` continues with the runtime host, a local network interface address, or automatic public IP discovery.
 
 ## Current Logic
 
@@ -69,10 +69,11 @@ A also stores B, but if B has no public inbound address, A treats B as an inboun
 `contact link` does not ask users to enter an endpoint. Downcity resolves A's reachable address in this order:
 
 1. `DOWNCITY_PUBLIC_URL`
-2. `DOWNCITY_PUBLIC_HOST`
+2. `DOWNCITY_PUBLIC_HOST`, including the value written automatically by `city start`
 3. runtime host / port
 4. local network interface address
-5. `127.0.0.1`
+5. public IP discovery
+6. `127.0.0.1`
 
 ## Check Availability
 

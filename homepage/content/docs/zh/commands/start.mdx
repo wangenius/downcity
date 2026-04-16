@@ -9,6 +9,7 @@ description: 后台启动 city runtime
 
 启动时会初始化 city runtime 的 registry 和进程状态。
 如果当前还没有任何本机 token，启动过程会自动初始化一个 `console-bootstrap` token，并在启动日志里显示一次明文 token。
+启动过程还会尝试自动发现当前机器的公网 IP，并写入 Console Env 的 `DOWNCITY_PUBLIC_HOST`。后续 agent 生成 `contact link` 时会优先使用这个地址，避免 link code 回退到 `127.0.0.1`。
 
 如果你希望一并启动 Console，请使用 `city start --console`、`city start -a` 或 `city start -p`。
 如果你传入 `-p/--public` 或 `-h/--host`，CLI 也会自动一并启动 Console。
@@ -42,6 +43,7 @@ city start -p
 - 如果绑定的是 `0.0.0.0`，外部访问时请使用服务器实际 IP 或域名，而不是 `127.0.0.1`。
 - 在公网模式下，启动结果会额外打印 `Public URL`。
 - 如果机器本身拿不到公网 IP（例如处在 NAT / SLB / 反向代理后面），请显式设置 `DOWNCITY_PUBLIC_HOST` 或 `DOWNCITY_PUBLIC_URL`。
+- `city start` 会把自动发现的公网 IP 保存为全局 `DOWNCITY_PUBLIC_HOST`；如果你已经配置了 `DOWNCITY_PUBLIC_URL` 或 `DOWNCITY_PUBLIC_HOST`，不会覆盖你的配置。
 
 ## 端口说明
 

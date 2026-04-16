@@ -4,6 +4,7 @@
  * 关键点（中文）
  * - 通过 JSON-RPC over stdio 连接外部 coding agent。
  * - 当前消费 `session/update -> agent_message_chunk/tool_call/tool_call_update/tool_result`。
+ * - ACP 输出若包含 Downcity final 标签，只把标签内文本视为用户可见回复。
  * - 首次进入 session 时，会把 system 与已持久化历史一起 bootstrap 给 ACP agent。
  */
 
@@ -29,6 +30,8 @@ import {
 } from "@/main/city/env/Config.js";
 import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpLaunchConfig.js";
+import { buildAcpPromptText } from "./AcpPromptText.js";
+import { extractAcpVisibleText, hasAcpVisibleTextTag } from "./AcpVisibleText.js";
 
 type JsonRpcId = number;
 
@@ -175,8 +178,10 @@ export class AcpSessionExecutor implements SessionExecutor {
             stopReason?: unknown;
           } | null;
           stopReason = String(response?.stopReason || "").trim() || "unknown";
-          await this.flushAssistantProgress(true);
-          text = this.activePromptCollector.chunks.join("").trim();
+          if (stopReason !== "cancelled") {
+            await this.flushAssistantProgress(true, { final: true });
+          }
+          text = extractAcpVisibleText(this.activePromptCollector.chunks.join(""));
           this.bootstrapped = true;
         } catch (error) {
           // 关键点（中文）：一旦 prompt 级 RPC 出错，远端 session 可能已经脏掉。
@@ -434,44 +439,20 @@ export class AcpSessionExecutor implements SessionExecutor {
   }
 
   private async buildPromptText(query: string): Promise<string> {
-    if (this.bootstrapped) return query;
-
-    const systemMessages = await this.systemComposer.resolve();
-    const historyMessages = await this.historyComposer.list();
-    const sections: string[] = [];
-    const systemText = systemMessages
-      .map((message) => normalizeSystemMessageText(message.content))
-      .filter(Boolean)
-      .join("\n\n");
-    if (systemText) {
-      sections.push(
-        [
-          "## System Instructions",
-          systemText,
-        ].join("\n"),
-      );
-    }
-
-    const historyText = historyMessages
-      .map((message) => stringifySessionMessage(message))
-      .filter(Boolean)
-      .join("\n\n");
-    if (historyText) {
-      sections.push(
-        [
-          "## Conversation History",
-          historyText,
-        ].join("\n"),
-      );
-    }
-
-    sections.push(
-      [
-        "## Current User Request",
+    if (this.bootstrapped) {
+      return buildAcpPromptText({
         query,
-      ].join("\n"),
-    );
-    return sections.join("\n\n");
+        bootstrapped: true,
+        systemMessages: [],
+        historyMessages: [],
+      });
+    }
+    return buildAcpPromptText({
+      query,
+      bootstrapped: false,
+      systemMessages: await this.systemComposer.resolve(),
+      historyMessages: await this.historyComposer.list(),
+    });
   }
 
   private async onStdoutLine(line: string): Promise<void> {
@@ -646,7 +627,12 @@ export class AcpSessionExecutor implements SessionExecutor {
     await this.flushAssistantProgress(false);
   }
 
-  private async flushAssistantProgress(force: boolean): Promise<void> {
+  private async flushAssistantProgress(
+    force: boolean,
+    options?: {
+      final?: boolean;
+    },
+  ): Promise<void> {
     const progress = this.activeAssistantProgress;
     if (!progress || typeof progress.callback !== "function") return;
     const normalized = String(progress.buffer || "");
@@ -657,8 +643,15 @@ export class AcpSessionExecutor implements SessionExecutor {
     if (!force && !shouldFlushAssistantProgress(normalized)) {
       return;
     }
+    if (options?.final !== true && !hasAcpVisibleTextTag(normalized)) {
+      return;
+    }
 
-    const text = normalized.trim();
+    const text = extractAcpVisibleText(normalized);
+    if (!text) {
+      progress.buffer = "";
+      return;
+    }
     progress.buffer = "";
     await this.emitAssistantProgressEvent({ text });
   }
@@ -784,37 +777,6 @@ export class AcpSessionExecutor implements SessionExecutor {
       // ignore reset failures
     }
   }
-}
-
-function normalizeSystemMessageText(content: unknown): string {
-  if (typeof content === "string") return content.trim();
-  if (!Array.isArray(content)) return "";
-  return content
-    .map((item) =>
-      item && typeof item === "object" && "text" in item
-        ? String((item as { text?: unknown }).text || "").trim()
-        : "",
-    )
-    .filter(Boolean)
-    .join("\n")
-    .trim();
-}
-
-function stringifySessionMessage(message: SessionMessageV1): string {
-  const role = message.role === "assistant" ? "Assistant" : "User";
-  const text = Array.isArray(message.parts)
-    ? message.parts
-        .map((part) =>
-          part && typeof part === "object" && "type" in part && part.type === "text"
-            ? String((part as { text?: unknown }).text || "")
-            : "",
-        )
-        .filter(Boolean)
-        .join("\n")
-        .trim()
-    : "";
-  if (!text) return "";
-  return `${role}: ${text}`;
 }
 
 function pickPermissionOptionId(params: unknown): string | null {

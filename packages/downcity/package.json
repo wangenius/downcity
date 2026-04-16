@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.0.491",
+  "version": "1.0.492",
   "type": "module",
   "description": "每一个文件仓库都是一个Agent，搭建你的Agent City",
   "bin": {

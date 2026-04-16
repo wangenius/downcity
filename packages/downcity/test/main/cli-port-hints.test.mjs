@@ -16,6 +16,9 @@ import {
   detectPublicIpv4FromInterfaces,
   resolveConsolePublicUrl,
 } from "../../bin/main/modules/cli/PublicAccess.js";
+import {
+  ensureCityPublicHostEnv,
+} from "../../bin/main/modules/cli/PublicHostEnv.js";
 
 test("buildRuntimePortFacts explains the runtime API port", () => {
   assert.deepEqual(buildRuntimePortFacts(), [
@@ -139,4 +142,49 @@ test("resolveConsolePublicUrl falls back to detected public ip in public mode", 
     }),
     "http://203.0.113.10:5315",
   );
+});
+
+test("ensureCityPublicHostEnv stores detected public host when missing", async () => {
+  const writes = [];
+  const result = await ensureCityPublicHostEnv({
+    env: {},
+    readGlobalEnv: () => ({}),
+    resolvePublicIpv4: async () => "203.0.113.10",
+    upsertGlobalEnv: async (entry) => {
+      writes.push(entry);
+    },
+  });
+
+  assert.deepEqual(result, {
+    changed: true,
+    key: "DOWNCITY_PUBLIC_HOST",
+    value: "203.0.113.10",
+  });
+  assert.deepEqual(writes, [
+    {
+      key: "DOWNCITY_PUBLIC_HOST",
+      value: "203.0.113.10",
+      description: "Auto-detected public host for agent contact links.",
+    },
+  ]);
+});
+
+test("ensureCityPublicHostEnv does not override configured public address", async () => {
+  const writes = [];
+  const result = await ensureCityPublicHostEnv({
+    env: {},
+    readGlobalEnv: () => ({
+      DOWNCITY_PUBLIC_URL: "https://agent.example.com",
+    }),
+    resolvePublicIpv4: async () => "203.0.113.10",
+    upsertGlobalEnv: async (entry) => {
+      writes.push(entry);
+    },
+  });
+
+  assert.deepEqual(result, {
+    changed: false,
+    reason: "configured",
+  });
+  assert.deepEqual(writes, []);
 });

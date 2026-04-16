@@ -101,17 +101,22 @@ function getHeaderToken(params: { headers?: Headers; body?: JsonObject }): strin
   return params.body ? readString(params.body, "token") : "";
 }
 
-function resolveSelfEndpoint(
+async function resolveSelfEndpoint(
   context: AgentContext,
   endpointOverride?: string,
-): string {
+): Promise<string> {
   const explicit = String(endpointOverride || "").trim();
   if (explicit) return normalizeContactEndpoint(explicit);
   const start = context.config.start || {};
   return normalizeContactEndpoint(
-    resolveContactSelfEndpoint({
+    await resolveContactSelfEndpoint({
       host: start.host,
       port: start.port,
+      env: {
+        ...context.globalEnv,
+        ...context.env,
+        ...process.env,
+      },
     }),
   );
 }
@@ -430,7 +435,7 @@ export class ContactService extends BaseService {
     const ttlSeconds = Math.max(60, Number(payload.ttlSeconds || 600));
     const linkId = createContactId("link");
     const secret = createContactToken();
-    const endpoint = resolveSelfEndpoint(context, payload.endpoint);
+    const endpoint = await resolveSelfEndpoint(context, payload.endpoint);
     const agentName = getAgentName(context);
 
     await saveContactLinkRecord(context.rootPath, {
@@ -466,7 +471,7 @@ export class ContactService extends BaseService {
     if (isContactLinkExpired(parsed)) throw new Error("Contact link expired");
 
     const requesterEndpoint = payload.endpoint
-      ? resolveSelfEndpoint(context, payload.endpoint)
+      ? await resolveSelfEndpoint(context, payload.endpoint)
       : undefined;
     const tokenForRequester = requesterEndpoint ? createContactToken() : undefined;
     const response = await callContactApprove<ContactApproveLinkResponse>({
@@ -629,7 +634,7 @@ export class ContactService extends BaseService {
       return {
         success: false,
         agentName: getAgentName(context),
-        endpoint: resolveSelfEndpoint(context),
+        endpoint: await resolveSelfEndpoint(context),
         tokenForOwner: "",
         error: "Contact link not found",
       };

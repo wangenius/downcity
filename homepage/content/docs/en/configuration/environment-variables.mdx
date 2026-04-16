@@ -163,6 +163,8 @@ If the runtime cannot know the real external address by itself (for example behi
 1. `DOWNCITY_PUBLIC_URL`: full external URL, for example `https://console.example.com`
 2. `DOWNCITY_PUBLIC_HOST`: external host only; the CLI expands it to `http://<host>:5315`
 
+When no explicit public address is configured, `city start` automatically detects the public IP and stores it in global Console Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
+
 Priority:
 
 1. `DOWNCITY_PUBLIC_URL`

@@ -3,14 +3,14 @@ Contact service
 contact service 用来管理和其他 agent 的联系方式。一个 contact 代表一个已建立联系的远端 agent，并固定拥有一条长期对话历史。contact 可以是单向的：只要本 agent 能访问对方，就可以 check、chat、share。
 
 可用命令：
-- `contact link`：生成一次性联系码，交给另一个 agent。
-- `contact approve <code>`：使用对方给的联系码建立 contact。
-- `contact list`：查看已保存的 agent 联系方式。
-- `contact check <contact>` / `contact check --to <ip:port>`：检查对方是否在线可用。
-- `contact chat --to <contact> "<message>"`：和某个 agent 对话。
-- `contact share --to <contact> --text ... | --link ... | <path...>`：分享文本、链接、文件或目录。
-- `contact inbox`：查看收到的分享。
-- `contact receive <share_id>`：接收某条分享。
+- `city contact link`：生成一次性联系码，交给另一个 agent。
+- `city contact approve <code>`：使用对方给的联系码建立 contact。
+- `city contact list`：查看已保存的 agent 联系方式。
+- `city contact check <contact>` / `city contact check --to <ip:port>`：检查对方是否在线可用。
+- `city contact chat --to <contact> "<message>"`：和某个 agent 对话。
+- `city contact share --to <contact> --text ... | --link ... | <path...>`：分享文本、链接、文件或目录。
+- `city contact inbox`：查看收到的分享。
+- `city contact receive <share_id>`：接收某条分享。
 
 边界：
 - chat 用于对话，share 用于资料交接。

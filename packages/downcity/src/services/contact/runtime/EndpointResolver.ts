@@ -26,6 +26,10 @@ export interface ResolveContactSelfEndpointInput {
    * 网卡信息读取来源，测试可注入。
    */
   interfaces?: NodeJS.Dict<os.NetworkInterfaceInfo[]>;
+  /**
+   * 公网 IPv4 解析器，测试可注入。
+   */
+  resolvePublicIpv4?: () => Promise<string | null> | string | null;
 }
 
 function normalizeUrl(value: string, fallbackPort: number): string {
@@ -79,12 +83,43 @@ function detectLanIpv4FromInterfaces(
   return null;
 }
 
+function isIpv4Address(value: string): boolean {
+  const parts = String(value || "").trim().split(".");
+  if (parts.length !== 4) return false;
+  return parts.every((part) => {
+    if (!/^\d+$/.test(part)) return false;
+    const value = Number.parseInt(part, 10);
+    return value >= 0 && value <= 255;
+  });
+}
+
+async function resolvePublicIpv4FromNetwork(): Promise<string | null> {
+  if (typeof fetch !== "function") return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 800);
+  try {
+    const response = await fetch("https://api.ipify.org?format=json", {
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const data = (await response.json().catch(() => null)) as {
+      ip?: unknown;
+    } | null;
+    const ip = String(data?.ip || "").trim();
+    return isIpv4Address(ip) ? ip : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * 解析 contact link code 中写入的自身 endpoint。
  */
-export function resolveContactSelfEndpoint(
+export async function resolveContactSelfEndpoint(
   input: ResolveContactSelfEndpointInput,
-): string {
+): Promise<string> {
   const env = input.env || process.env;
   const port = Number(input.port || env.DC_SERVER_PORT || 5314);
 
@@ -100,6 +135,12 @@ export function resolveContactSelfEndpoint(
 
   const lanIp = detectLanIpv4FromInterfaces(input.interfaces);
   if (lanIp) return formatUrl(lanIp, port);
+
+  // 关键点（中文）：云服务器公网 IP 可能不在网卡上，最后再做短超时公网探测。
+  const publicIp = String(
+    (await (input.resolvePublicIpv4 || resolvePublicIpv4FromNetwork)()) || "",
+  ).trim();
+  if (isIpv4Address(publicIp)) return formatUrl(publicIp, port);
 
   return formatUrl("127.0.0.1", port);
 }

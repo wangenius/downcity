@@ -46,6 +46,7 @@ import { buildRuntimePortFacts } from "./PortHints.js";
 import { stopConsoleCommand } from "./Console.js";
 import { ensureConsoleAuthBootstrap } from "./ConsoleAuthBootstrap.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
+import { ensureCityPublicHostEnv } from "./PublicHostEnv.js";
 
 /**
  * 启动 city runtime 后台进程。
@@ -88,6 +89,7 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
   }
 
   const logFd = fs.openSync(logPath, "a");
+  const publicHost = await ensureCityPublicHostEnv();
   const child = spawn(process.execPath, [cliPath, "run"], {
     cwd: process.cwd(),
     detached: true,
@@ -108,7 +110,17 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
   emitCliBlock({
     tone: "success",
     title: "City runtime started",
-    facts: buildRuntimePortFacts(),
+    facts: [
+      ...buildRuntimePortFacts(),
+      ...(publicHost.changed
+        ? [
+            {
+              label: "Public Host",
+              value: publicHost.value,
+            },
+          ]
+        : []),
+    ],
   });
 
   await ensureConsoleAuthBootstrap();

@@ -8,6 +8,12 @@
 
 import type { JsonValue } from "@/shared/types/Json.js";
 
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
 function normalizeEndpoint(endpoint: string): string {
   const raw = String(endpoint || "").trim();
   if (!raw) throw new Error("endpoint is required");
@@ -17,6 +23,16 @@ function normalizeEndpoint(endpoint: string): string {
   url.search = "";
   url.hash = "";
   return url.toString().replace(/\/$/, "");
+}
+
+function unwrapServiceActionEnvelope<T>(value: T): T {
+  if (!isRecord(value)) return value;
+  const inner = value.data;
+  if (typeof value.success === "boolean" && isRecord(inner)) {
+    // 关键点（中文）：远端 contact API 挂在统一 service action route 下，HTTP 返回会包一层 { success, data }。
+    return inner as T;
+  }
+  return value;
 }
 
 async function postJson<T>(params: {
@@ -43,7 +59,7 @@ async function postJson<T>(params: {
   if (!response.ok) {
     throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
   }
-  return data;
+  return unwrapServiceActionEnvelope<T>(data);
 }
 
 /**

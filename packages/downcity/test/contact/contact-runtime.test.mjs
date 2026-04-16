@@ -32,6 +32,7 @@ import {
 } from "../../bin/services/contact/runtime/InboxStore.js";
 import {
   listContacts,
+  saveContact,
 } from "../../bin/services/contact/runtime/ContactStore.js";
 import {
   saveContactLinkRecord,
@@ -500,6 +501,62 @@ test("approve without endpoint creates an outbound-only local contact", async ()
   }
 });
 
+test("approve unwraps remote service action envelope", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-approve-envelope-"));
+  const originalFetch = globalThis.fetch;
+  try {
+    const service = new ContactService(null);
+    const code = createContactLinkCode({
+      version: 1,
+      linkId: "link_server",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secret: "secret-token",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600_000,
+    });
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({
+        success: true,
+        data: {
+          success: true,
+          agentName: "server-agent",
+          endpoint: "https://agent-a.example.com",
+          tokenForOwner: "local-can-call-server",
+        },
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+    const result = await service.actions.approve.execute({
+      context: {
+        rootPath: root,
+        config: {
+          name: "local-agent",
+          start: {
+            host: "127.0.0.1",
+            port: 5314,
+          },
+        },
+      },
+      payload: {
+        code,
+      },
+    });
+
+    assert.equal(result.success, true);
+    const contacts = await listContacts(root);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].outboundToken, "local-can-call-server");
+  } finally {
+    globalThis.fetch = originalFetch;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("approve sends requester endpoint from global public host", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-bidirectional-"));
   const originalFetch = globalThis.fetch;
@@ -560,6 +617,61 @@ test("approve sends requester endpoint from global public host", async () => {
     assert.equal(contacts.length, 1);
     assert.equal(contacts[0].reachability, "bidirectional");
     assert.equal(typeof contacts[0].inboundTokenHash, "string");
+  } finally {
+    globalThis.fetch = originalFetch;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("share unwraps remote service action envelope", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-share-envelope-"));
+  const originalFetch = globalThis.fetch;
+  try {
+    const service = new ContactService(null);
+    await saveContact(root, {
+      id: "contact_server_agent",
+      name: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      reachability: "outbound",
+      status: "trusted",
+      outboundToken: "local-can-call-server",
+      inboundTokenHash: null,
+      createdAt: Date.now(),
+      lastSeenAt: Date.now(),
+    });
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({
+        success: true,
+        data: {
+          success: true,
+          shareId: "remote_share_123",
+        },
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+    const result = await service.actions.share.execute({
+      context: {
+        rootPath: root,
+        config: {
+          name: "local-agent",
+          start: {
+            host: "127.0.0.1",
+            port: 5314,
+          },
+        },
+      },
+      payload: {
+        to: "server-agent",
+        text: "hello",
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.shareId, "remote_share_123");
   } finally {
     globalThis.fetch = originalFetch;
     await fs.rm(root, { recursive: true, force: true });

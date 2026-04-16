@@ -27,6 +27,7 @@ import {
   markConsoleAgentStopped,
   upsertConsoleAgentEntry,
 } from "@/main/city/runtime/CityRegistry.js";
+import { signalDetachedProcess } from "@/main/city/runtime/ProcessSweep.js";
 
 /**
  * 异步睡眠工具。
@@ -275,14 +276,10 @@ export const startDaemonProcess = async (params: {
     });
   } catch (error) {
     // 回滚：无法登记时立即停止 daemon 并清理状态文件。
-    try {
-      process.kill(child.pid, "SIGTERM");
-    } catch {
-      // ignore
-    }
+    signalDetachedProcess(child.pid, "SIGTERM");
     await sleep(300);
     try {
-      if (isProcessAlive(child.pid)) process.kill(child.pid, "SIGKILL");
+      if (isProcessAlive(child.pid)) signalDetachedProcess(child.pid, "SIGKILL");
     } catch {
       // ignore
     }
@@ -317,7 +314,7 @@ export const stopDaemonProcess = async (params: {
     return { stopped: false, pid };
   }
 
-  process.kill(pid, "SIGTERM");
+  signalDetachedProcess(pid, "SIGTERM");
 
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -328,7 +325,7 @@ export const stopDaemonProcess = async (params: {
   if (isProcessAlive(pid)) {
     // 关键注释：尽量优雅停止，超时后再强杀，避免后台进程“卡死”。
     try {
-      process.kill(pid, "SIGKILL");
+      signalDetachedProcess(pid, "SIGKILL");
     } catch {
       // ignore
     }

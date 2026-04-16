@@ -20,6 +20,7 @@ import {
 } from "@/main/city/runtime/CityRuntime.js";
 import {
   findDetachedCityProcesses,
+  signalDetachedProcess,
   sweepDetachedCityProcesses,
 } from "@/main/city/runtime/ProcessSweep.js";
 import { createConsoleGateway } from "@/main/modules/console/ConsoleGateway.js";
@@ -549,7 +550,7 @@ export async function stopConsoleCommand(params?: {
   }
 
   const pid = status.pid;
-  process.kill(pid, "SIGTERM");
+  signalDetachedProcess(pid, "SIGTERM");
 
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -559,7 +560,7 @@ export async function stopConsoleCommand(params?: {
 
   if (isCityProcessAlive(pid)) {
     try {
-      process.kill(pid, "SIGKILL");
+      signalDetachedProcess(pid, "SIGKILL");
     } catch {
       // ignore
     }

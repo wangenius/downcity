@@ -7,6 +7,34 @@
  */
 
 import type { ContactApproveLinkRequest } from "./ContactLink.js";
+import type { ContactEndpointReachability } from "./ContactEndpoint.js";
+import type { ContactApproveCallbackReason } from "./ContactLink.js";
+
+/**
+ * approve 方对“对方能否回连自己”的本地推导结果。
+ */
+export interface ContactApproveCallbackDecision {
+  /**
+   * approve 方是否认为发起方可以主动回连自己。
+   */
+  canReceiveContactCalls: boolean;
+  /**
+   * 本次推导的原因。
+   */
+  reason: ContactApproveCallbackReason;
+  /**
+   * approve 方自己的 endpoint；仅当推导过程解析出了 endpoint 时存在。
+   */
+  endpoint?: string;
+  /**
+   * approve 方 endpoint 的粗粒度可达范围。
+   */
+  requesterReachability: ContactEndpointReachability;
+  /**
+   * link code 中目标 endpoint 的粗粒度可达范围。
+   */
+  targetReachability: ContactEndpointReachability;
+}
 
 /**
  * 处理远端 contact link approve 请求的输入。

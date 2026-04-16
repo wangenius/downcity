@@ -401,6 +401,54 @@ test("remote approve allows an inbound-only contact without requester endpoint",
   }
 });
 
+test("remote approve treats private requester endpoint as inbound-only", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-private-requester-"));
+  try {
+    const service = new ContactService(null);
+    const context = {
+      rootPath: root,
+      config: {
+        name: "server-agent",
+        start: {
+          host: "0.0.0.0",
+          port: 8787,
+        },
+      },
+    };
+    await saveContactLinkRecord(root, {
+      id: "link_private",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secretHash: hashContactToken("secret-token"),
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600_000,
+      usedAt: null,
+    });
+
+    const result = await service.actions.remoteapprove.execute({
+      context,
+      payload: {
+        linkId: "link_private",
+        secret: "secret-token",
+        agentName: "local-agent",
+        endpoint: "http://192.168.2.87:5314",
+        tokenForRequester: "server-cannot-call-local",
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.success, true);
+
+    const contacts = await listContacts(root);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].endpoint, null);
+    assert.equal(contacts[0].reachability, "inbound");
+    assert.equal(contacts[0].outboundToken, null);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("remote approve can be retried by the same agent after the owner saved inbound contact", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-retry-"));
   try {
@@ -665,6 +713,8 @@ test("approve sends requester endpoint from global public host", async () => {
     assert.equal(result.success, true);
     assert.equal(approveBody.endpoint, "http://203.0.113.20:5314");
     assert.equal(typeof approveBody.tokenForRequester, "string");
+    assert.equal(approveBody.canReceiveContactCalls, true);
+    assert.equal(approveBody.callbackReason, "requester-public");
     assert.equal(result.data.reachability, "bidirectional");
     assert.ok(result.data.notes.some((item) => /bidirectional/.test(item)));
 
@@ -672,6 +722,73 @@ test("approve sends requester endpoint from global public host", async () => {
     assert.equal(contacts.length, 1);
     assert.equal(contacts[0].reachability, "bidirectional");
     assert.equal(typeof contacts[0].inboundTokenHash, "string");
+  } finally {
+    globalThis.fetch = originalFetch;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("approve does not offer private requester endpoint to a public target", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-local-to-public-"));
+  const originalFetch = globalThis.fetch;
+  try {
+    const service = new ContactService(null);
+    const code = createContactLinkCode({
+      version: 1,
+      linkId: "link_server",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secret: "secret-token",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600_000,
+    });
+    let approveBody = null;
+    globalThis.fetch = async (_url, init) => {
+      approveBody = JSON.parse(String(init?.body || "{}"));
+      return new Response(JSON.stringify({
+        success: true,
+        agentName: "server-agent",
+        endpoint: "https://agent-a.example.com",
+        tokenForOwner: "local-can-call-server",
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    };
+
+    const result = await service.actions.approve.execute({
+      context: {
+        rootPath: root,
+        env: {},
+        globalEnv: {
+          DOWNCITY_PUBLIC_HOST: "192.168.2.87",
+        },
+        config: {
+          name: "local-agent-b",
+          start: {
+            host: "0.0.0.0",
+            port: 5314,
+          },
+        },
+      },
+      payload: {
+        code,
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(approveBody.endpoint, undefined);
+    assert.equal(approveBody.tokenForRequester, undefined);
+    assert.equal(approveBody.canReceiveContactCalls, false);
+    assert.equal(approveBody.callbackReason, "requester-not-routable-from-target");
+    assert.equal(result.data.reachability, "outbound");
+
+    const contacts = await listContacts(root);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].reachability, "outbound");
+    assert.equal(contacts[0].inboundTokenHash, null);
   } finally {
     globalThis.fetch = originalFetch;
     await fs.rm(root, { recursive: true, force: true });

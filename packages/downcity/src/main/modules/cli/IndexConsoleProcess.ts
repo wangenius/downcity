@@ -34,7 +34,10 @@ import {
   isCityRunning,
   readCityPid,
 } from "@/main/city/runtime/CityRuntime.js";
-import { sweepDetachedCityProcesses } from "@/main/city/runtime/ProcessSweep.js";
+import {
+  signalDetachedProcess,
+  sweepDetachedCityProcesses,
+} from "@/main/city/runtime/ProcessSweep.js";
 import { startCommand } from "./Start.js";
 import type { StartOptions } from "@/shared/types/Start.js";
 import {
@@ -270,7 +273,7 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
     return;
   }
 
-  process.kill(consolePid, "SIGTERM");
+  signalDetachedProcess(consolePid, "SIGTERM");
 
   const startAt = Date.now();
   while (Date.now() - startAt < timeoutMs) {
@@ -279,7 +282,7 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
   }
 
   if (isCityProcessAlive(consolePid)) {
-    process.kill(consolePid, "SIGKILL");
+    signalDetachedProcess(consolePid, "SIGKILL");
     const forceStartAt = Date.now();
     while (Date.now() - forceStartAt < 2_000) {
       if (!isCityProcessAlive(consolePid)) break;

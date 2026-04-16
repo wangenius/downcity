@@ -15,6 +15,8 @@ description: 重启 city runtime，恢复托管 agent，并重新拉起 Console
 4. 恢复重启前处于运行状态的托管 agent
 5. 重新拉起 Console
 
+停止阶段会优先清理对应的进程组。agent 内部拉起的 ACP 执行器、shell 会话、watch 子进程会随父进程一起停止，避免重启后旧子进程继续留在后台占用内存。
+
 ## 用法
 
 ```bash

@@ -15,6 +15,8 @@ Current behavior:
 4. restore managed agents that were running before restart
 5. restart Console
 
+During the stop phase, Downcity stops the matching process group first. ACP executors, shell sessions, and watch child processes started by an agent stop with the parent, so old children do not keep consuming memory after the restart.
+
 ## Usage
 
 ```bash

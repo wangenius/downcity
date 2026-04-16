@@ -87,6 +87,16 @@ export interface ContactLinkRecord {
 }
 
 /**
+ * approve 方声明自己可被回连的推导原因。
+ */
+export type ContactApproveCallbackReason =
+  | "missing-requester-endpoint"
+  | "requester-public"
+  | "same-loopback-host"
+  | "same-private-network"
+  | "requester-not-routable-from-target";
+
+/**
  * 远端 approve link 请求。
  */
 export interface ContactApproveLinkRequest {
@@ -110,6 +120,14 @@ export interface ContactApproveLinkRequest {
    * 发起方后续调用 approve 方时使用的 token；只有 approve 方提供 endpoint 时才需要。
    */
   tokenForRequester?: string;
+  /**
+   * approve 方是否判断自己可以被发起方主动回连；该值由 approve 方基于双方 endpoint 自动推导。
+   */
+  canReceiveContactCalls?: boolean;
+  /**
+   * approve 方推导 `canReceiveContactCalls` 的原因，方便接收方和用户诊断网络关系。
+   */
+  callbackReason?: ContactApproveCallbackReason;
 }
 
 /**

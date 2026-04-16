@@ -76,7 +76,7 @@ city contact chat --to server-agent "hello"
 city contact share --to server-agent ./notes.md
 ```
 
-A also stores B. If B has `DOWNCITY_PUBLIC_URL` or `DOWNCITY_PUBLIC_HOST` in global env, B sends its endpoint to A during approval and both sides create a bidirectional contact. Otherwise, A treats B as an inbound contact: A can authenticate requests from B, but it does not assume it can call B directly.
+A also stores B. During approval, B first derives `canReceiveContactCalls` from both endpoints. B sends its endpoint and callback token to A only when B has a public endpoint, both sides are same-machine loopback, or both sides appear to be on the same private network. When local B connects to public A, the default relationship is one-way: B can call A, and A stores B as inbound only.
 
 When both agents run on public servers, the contact usually becomes bidirectional automatically:
 

@@ -76,7 +76,7 @@ city contact chat --to server-agent "hello"
 city contact share --to server-agent ./notes.md
 ```
 
-A 也会保存 B。如果 B 的全局 env 中有 `DOWNCITY_PUBLIC_URL` 或 `DOWNCITY_PUBLIC_HOST`，B approve 时会自动把自己的 endpoint 发给 A，双方会建立双向 contact。否则 A 只把 B 视为 inbound contact：A 可以识别 B 发来的请求，但不会假设自己能主动连回 B。
+A 也会保存 B。B approve 时会先基于双方 endpoint 自动推导 `canReceiveContactCalls`：B 是公网 endpoint、双方都是同机 loopback，或双方在同一私网网段时，B 才会把自己的 endpoint 和回连 token 发给 A，双方建立双向 contact。local B 连接 public A 时默认只建立单向联系：B 可以主动访问 A，A 只把 B 视为 inbound contact。
 
 两个公网服务器上的 agent 建联时，通常会自动变成双向联系：
 

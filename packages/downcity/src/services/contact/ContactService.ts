@@ -76,6 +76,7 @@ import {
   classifyContactEndpoint,
 } from "./runtime/EndpointNotice.js";
 import { approveContactLinkRequest } from "./runtime/LinkApproval.js";
+import { buildContactApproveCallbackDecision } from "./runtime/ApproveCallback.js";
 
 function readObject(value: JsonValue): JsonObject {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -493,10 +494,22 @@ export class ContactService extends BaseService {
     const parsed = parseContactLinkCode(payload.code);
     if (isContactLinkExpired(parsed)) throw new Error("Contact link expired");
 
-    const requesterEndpoint =
-      payload.endpoint || hasConfiguredPublicEndpointEnv(context)
-        ? await resolveSelfEndpoint(context, payload.endpoint)
-        : undefined;
+    const targetReachability = classifyContactEndpoint(parsed.endpoint);
+    const shouldResolveRequesterEndpoint =
+      payload.endpoint ||
+      hasConfiguredPublicEndpointEnv(context) ||
+      targetReachability === "loopback" ||
+      targetReachability === "private";
+    const requesterEndpointCandidate = shouldResolveRequesterEndpoint
+      ? await resolveSelfEndpoint(context, payload.endpoint)
+      : undefined;
+    const callbackDecision = buildContactApproveCallbackDecision({
+      targetEndpoint: parsed.endpoint,
+      requesterEndpoint: requesterEndpointCandidate,
+    });
+    const requesterEndpoint = callbackDecision.canReceiveContactCalls
+      ? callbackDecision.endpoint
+      : undefined;
     const tokenForRequester = requesterEndpoint ? createContactToken() : undefined;
     const approveNotes = buildContactApproveNotes({
       targetEndpoint: parsed.endpoint,
@@ -510,6 +523,8 @@ export class ContactService extends BaseService {
           linkId: parsed.linkId,
           secret: parsed.secret,
           agentName: getAgentName(context),
+          canReceiveContactCalls: callbackDecision.canReceiveContactCalls,
+          callbackReason: callbackDecision.reason,
           ...(requesterEndpoint ? { endpoint: requesterEndpoint } : {}),
           ...(tokenForRequester ? { tokenForRequester } : {}),
         } as unknown as JsonValue,

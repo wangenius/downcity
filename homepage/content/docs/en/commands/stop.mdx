@@ -9,9 +9,11 @@ Stop console (and managed child agent processes).
 
 The current implementation also tries to clean up detached orphan processes:
 
-- `console run` processes that are still alive without a pid file
-- `console ui run` processes that are still alive without a pid file
+- city runtime (`run`) processes that are still alive without a pid file
+- Console (`console run`) processes that are still alive without a pid file
 - agent daemons (`agent start --foreground true`) that are still alive without a pid file
+
+On macOS and Linux, `city stop` stops the matching process group first. ACP executors, shell sessions, and watch child processes started by an agent receive the same stop signal, which prevents orphaned children from continuing to consume memory after the parent process exits.
 
 ## Usage
 

@@ -89,13 +89,14 @@ export async function approveContactLinkRequest(
   }
 
   const tokenForOwner = createContactToken();
-  const requesterEndpoint = input.request.endpoint
+  const wantsCallback = input.request.canReceiveContactCalls === true;
+  const requesterEndpoint = wantsCallback && input.request.endpoint
     ? normalizeContactEndpoint(input.request.endpoint)
     : null;
   const tokenForRequester = requesterEndpoint
     ? String(input.request.tokenForRequester || "").trim()
     : null;
-  if (requesterEndpoint && !tokenForRequester) {
+  if (wantsCallback && (!requesterEndpoint || !tokenForRequester)) {
     return failure({
       ownerAgentName: input.ownerAgentName,
       endpoint: link.endpoint,

@@ -9,9 +9,11 @@ description: 停止 console（并停止其托管的子 agent 进程）
 
 当前实现还会额外尝试清理“失联的旧进程”：
 
-- 没有 pid 文件但仍在后台运行的 `console run`
-- 没有 pid 文件但仍在后台运行的 `console ui run`
+- 没有 pid 文件但仍在后台运行的 city runtime（`run`）
+- 没有 pid 文件但仍在后台运行的 Console（`console run`）
 - 没有 pid 文件但仍在后台运行的 agent daemon（`agent start --foreground true`）
+
+在 macOS / Linux 上，`city stop` 会优先停止对应的进程组。这样 agent 内部拉起的 ACP 执行器、shell 会话、watch 子进程也会一起收到停止信号，避免父进程退出后留下孤儿进程继续占用内存。
 
 ## 用法
 

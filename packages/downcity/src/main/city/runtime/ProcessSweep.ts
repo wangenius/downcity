@@ -26,11 +26,55 @@ function normalizeCommand(command: string): string {
   return String(command || "").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * 构建 detached 进程停机时的信号目标。
+ *
+ * 关键点（中文）
+ * - POSIX 下 `detached: true` 会让子进程成为新的进程组 leader。
+ * - `-pid` 表示向整个进程组发信号，可覆盖 ACP、shell、watcher 等孙进程。
+ * - Windows 不支持负 pid 进程组语义，只能回退到单 pid。
+ */
+export function buildDetachedProcessSignalTargets(pid: number): number[] {
+  if (!Number.isInteger(pid) || pid <= 0) return [];
+  if (process.platform === "win32") return [pid];
+  return [-pid, pid];
+}
+
+/**
+ * 向 detached 进程发送信号。
+ *
+ * 关键点（中文）
+ * - 优先发送到进程组；失败后再尝试单 pid。
+ * - 返回值只表示至少有一个目标接收到了信号，不代表进程已经退出。
+ */
+export function signalDetachedProcess(
+  pid: number,
+  signal: NodeJS.Signals,
+): boolean {
+  for (const target of buildDetachedProcessSignalTargets(pid)) {
+    try {
+      process.kill(target, signal);
+      return true;
+    } catch {
+      // 尝试下一个目标。
+    }
+  }
+  return false;
+}
+
 export function isDowncityCliCommand(command: string): boolean {
   return /\/bin\/main\/modules\/cli\/Index\.js(?:\s|$)/.test(command);
 }
 
-function shouldSweepCommand(
+/**
+ * 判断命令行是否属于本次清扫目标。
+ *
+ * 关键点（中文）
+ * - `Index.js run` 是 city runtime。
+ * - `Index.js console run` 是 Console UI runtime。
+ * - 两者都包含 `run`，因此必须按完整子命令匹配，不能只查 `run` 词元。
+ */
+export function shouldSweepDetachedCityCommand(
   command: string,
   params: {
     includeConsole?: boolean;
@@ -39,11 +83,21 @@ function shouldSweepCommand(
   },
 ): boolean {
   if (!isDowncityCliCommand(command)) return false;
-  if (params.includeConsole && /(?:^|\s)run\b/.test(command)) return true;
-  if (params.includeUi && /\bconsole run\b/.test(command)) return true;
+  if (
+    params.includeConsole &&
+    /\/bin\/main\/modules\/cli\/Index\.js\s+run(?:\s|$)/.test(command)
+  ) {
+    return true;
+  }
+  if (
+    params.includeUi &&
+    /\/bin\/main\/modules\/cli\/Index\.js\s+console\s+run(?:\s|$)/.test(command)
+  ) {
+    return true;
+  }
   if (
     params.includeAgent &&
-    /\bagent start\b/.test(command) &&
+    /\/bin\/main\/modules\/cli\/Index\.js\s+agent\s+start(?:\s|$)/.test(command) &&
     /--foreground\s+true\b/.test(command)
   ) {
     return true;
@@ -80,7 +134,7 @@ async function listDetachedCityProcesses(params: {
       }))
       .filter((item) => Number.isInteger(item.pid) && item.pid > 0)
       .filter((item) => !params.excludePids.has(item.pid))
-      .filter((item) => shouldSweepCommand(item.command, params));
+      .filter((item) => shouldSweepDetachedCityCommand(item.command, params));
   } catch {
     return [];
   }
@@ -111,9 +165,7 @@ export async function findDetachedCityProcesses(params?: {
 async function stopPid(pid: number, timeoutMs: number): Promise<boolean> {
   if (!isProcessAlive(pid)) return true;
 
-  try {
-    process.kill(pid, "SIGTERM");
-  } catch {
+  if (!signalDetachedProcess(pid, "SIGTERM")) {
     return !isProcessAlive(pid);
   }
 
@@ -125,7 +177,7 @@ async function stopPid(pid: number, timeoutMs: number): Promise<boolean> {
 
   try {
     if (isProcessAlive(pid)) {
-      process.kill(pid, "SIGKILL");
+      signalDetachedProcess(pid, "SIGKILL");
     }
   } catch {
     return !isProcessAlive(pid);

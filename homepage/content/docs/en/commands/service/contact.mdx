@@ -48,13 +48,13 @@ city contact check server-agent
 city contact share --to server-agent ./notes.md
 ```
 
-The link code automatically includes A's currently reachable address. Public deployments prefer `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`. When no explicit public address is configured, `city start` writes a global `DOWNCITY_PUBLIC_HOST` automatically; otherwise `contact link` continues with the runtime host, a local network interface address, or automatic public IP discovery.
+The link code automatically includes A's currently reachable address. `city start` discovers the public IP and writes it to global Console Env as `DOWNCITY_PUBLIC_HOST`; `contact link` prefers that runtime address. Users do not enter an endpoint for `contact link`.
 
 The `notes` field returned by `contact link` explains who can use that code:
 
 - `127.0.0.1` / `localhost`: only an agent on the same machine can approve it; do not give it to a server agent.
 - Private-network address: only agents on the same LAN/VPN can approve it.
-- Public address or domain: any remote agent that can reach the address can approve it; Downcity cannot verify firewall/NAT reachability from this machine, so use a reachable server, domain, or tunnel if approval cannot connect.
+- Public address or domain: any remote agent that can reach the address can approve it; Downcity cannot verify firewall/NAT reachability from this machine, so restart city behind a reachable server, domain, or tunnel and create a new link if approval cannot connect.
 
 Agents should repeat the returned `notes` to the user and should not rewrite the endpoint inside the link code.
 
@@ -62,7 +62,7 @@ Agents should repeat the returned `notes` to the user and should not rewrite the
 
 `contact link` creates a one-time contact code, not a group invite. When A creates a link code, A stores an unused local link record and writes A's reachable address plus a one-time secret into the `dc-link-v1...` code.
 
-`contact approve <code>` is run by B. B calls A using the address in the code and sends the link id, secret, and B's agent name. After A validates the request, A stores B as a trusted contact and invalidates that link.
+`contact approve <code>` is run by B. B calls A using the address in the code and sends the link id, secret, and B's agent name. After A validates the request, A first stores B as an inbound trusted contact and invalidates that link; B stores A locally as an outbound trusted contact.
 
 Contact tokens are exchanged automatically by link/approve. Users do not configure token environment variables manually. If approval reached A but B was interrupted while saving locally, the same B can run the same `contact approve <code>` again while the link is valid to recover the same token.
 
@@ -76,7 +76,9 @@ city contact chat --to server-agent "hello"
 city contact share --to server-agent ./notes.md
 ```
 
-A also stores B. During approval, B first derives `canReceiveContactCalls` from both endpoints. B sends its endpoint and callback token to A only when B has a public endpoint, both sides are same-machine loopback, or both sides appear to be on the same private network. When local B connects to public A, the default relationship is one-way: B can call A, and A stores B as inbound only.
+During approval, B first derives whether it should offer a callback candidate from both endpoints. B sends its endpoint and callback token to A only when B has a public endpoint, both sides are same-machine loopback, or both sides appear to be on the same private network.
+
+That is still not bidirectional confirmation. After B saves A locally as outbound, B sends a confirm request to A. A then pings B with B's callback token. Only when that ping succeeds does A upgrade B to bidirectional, and B upgrades local A to bidirectional. When local B connects to public A, the default relationship is one-way: B can call A, and A stores B as inbound only.
 
 When both agents run on public servers, the contact usually becomes bidirectional automatically:
 
@@ -84,17 +86,17 @@ When both agents run on public servers, the contact usually becomes bidirectiona
 A <-> B
 ```
 
-As long as both agents have global `DOWNCITY_PUBLIC_HOST` written by `city start`, or explicitly configured `DOWNCITY_PUBLIC_URL` / `DOWNCITY_PUBLIC_HOST`, both sides can initiate `check`, `chat`, and `share` later.
+As long as both agents have reachable global `DOWNCITY_PUBLIC_HOST` values written by `city start`, and firewall/NAT allows both directions, the confirm ping succeeds and both sides can initiate `check`, `chat`, and `share` later.
 
 The `notes` field returned by `contact approve` explains the resulting relationship:
 
 - `outbound-only`: this agent can call the peer, but the peer cannot call back to this agent.
-- `bidirectional`: both sides saved reachable endpoints, so both sides can initiate calls.
+- `bidirectional`: the confirm ping succeeded, and both sides saved reachable endpoints, so both sides can initiate calls.
 
 `contact link` does not ask users to enter an endpoint. Downcity resolves A's reachable address in this order:
 
-1. `DOWNCITY_PUBLIC_URL`
-2. `DOWNCITY_PUBLIC_HOST`, including the value written automatically by `city start`
+1. runtime `DOWNCITY_PUBLIC_URL`
+2. runtime `DOWNCITY_PUBLIC_HOST`, including the value written automatically by `city start`
 3. runtime host / port
 4. local network interface address
 5. public IP discovery

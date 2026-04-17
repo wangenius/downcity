@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `city start` 时自动探测公网 IPv4，并写入 Console Env 的 `DOWNCITY_PUBLIC_HOST`。
- * - 若用户已经配置 `DOWNCITY_PUBLIC_URL/HOST`，绝不覆盖。
+ * - 若部署环境已经注入 `DOWNCITY_PUBLIC_URL/HOST`，绝不覆盖。
  * - 写入 Console Env 后，后续 agent daemon 启动会通过 `context.globalEnv` 读取到该值。
  */
 
@@ -80,11 +80,11 @@ export async function ensureCityPublicHostEnv(
 ): Promise<CityPublicHostEnvResult> {
   const env = input.env || process.env;
   const globalEnv = input.readGlobalEnv ? input.readGlobalEnv() : readGlobalEnvFromStore();
-  const hasConfiguredPublicAddress = Boolean(
+  const hasRuntimePublicAddress = Boolean(
     String(env.DOWNCITY_PUBLIC_URL || globalEnv.DOWNCITY_PUBLIC_URL || "").trim() ||
       String(env.DOWNCITY_PUBLIC_HOST || globalEnv.DOWNCITY_PUBLIC_HOST || "").trim(),
   );
-  if (hasConfiguredPublicAddress) {
+  if (hasRuntimePublicAddress) {
     return {
       changed: false,
       reason: "configured",

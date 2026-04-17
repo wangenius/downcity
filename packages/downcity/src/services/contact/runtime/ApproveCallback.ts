@@ -47,7 +47,7 @@ export function buildContactApproveCallbackDecision(params: {
     : "unknown";
   if (!endpoint) {
     return {
-      canReceiveContactCalls: false,
+      callbackOffered: false,
       reason: "missing-requester-endpoint",
       requesterReachability,
       targetReachability,
@@ -55,7 +55,7 @@ export function buildContactApproveCallbackDecision(params: {
   }
   if (requesterReachability === "public") {
     return {
-      canReceiveContactCalls: true,
+      callbackOffered: true,
       reason: "requester-public",
       endpoint,
       requesterReachability,
@@ -67,7 +67,7 @@ export function buildContactApproveCallbackDecision(params: {
     targetReachability === "loopback"
   ) {
     return {
-      canReceiveContactCalls: true,
+      callbackOffered: true,
       reason: "same-loopback-host",
       endpoint,
       requesterReachability,
@@ -80,7 +80,7 @@ export function buildContactApproveCallbackDecision(params: {
     privateIpv4NetworkKey(endpoint) === privateIpv4NetworkKey(params.targetEndpoint)
   ) {
     return {
-      canReceiveContactCalls: true,
+      callbackOffered: true,
       reason: "same-private-network",
       endpoint,
       requesterReachability,
@@ -88,7 +88,7 @@ export function buildContactApproveCallbackDecision(params: {
     };
   }
   return {
-    canReceiveContactCalls: false,
+    callbackOffered: false,
     reason: "requester-not-routable-from-target",
     endpoint,
     requesterReachability,

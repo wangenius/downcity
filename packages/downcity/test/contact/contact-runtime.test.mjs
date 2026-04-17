@@ -449,6 +449,82 @@ test("remote approve treats private requester endpoint as inbound-only", async (
   }
 });
 
+test("remote confirm upgrades inbound contact only after callback ping succeeds", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-confirm-"));
+  const originalFetch = globalThis.fetch;
+  try {
+    const service = new ContactService(null);
+    const context = {
+      rootPath: root,
+      config: {
+        name: "server-agent",
+        start: {
+          host: "0.0.0.0",
+          port: 8787,
+        },
+      },
+    };
+    await saveContactLinkRecord(root, {
+      id: "link_confirm",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secretHash: hashContactToken("secret-token"),
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600_000,
+      usedAt: Date.now(),
+      approvedAgentName: "local-agent",
+      tokenForOwner: "local-can-call-server",
+    });
+    await saveContact(root, {
+      id: "contact_local_agent",
+      name: "local-agent",
+      endpoint: null,
+      reachability: "inbound",
+      status: "trusted",
+      outboundToken: null,
+      inboundTokenHash: hashContactToken("local-can-call-server"),
+      createdAt: Date.now(),
+      lastSeenAt: Date.now(),
+    });
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({
+        success: true,
+        agentName: "local-agent",
+        authenticated: true,
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+    const result = await service.actions.remoteconfirm.execute({
+      context,
+      payload: {
+        linkId: "link_confirm",
+        secret: "secret-token",
+        agentName: "local-agent",
+        endpoint: "http://203.0.113.20:5314",
+        tokenForRequester: "server-can-call-local",
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.success, true);
+    assert.equal(result.data.confirmed, true);
+
+    const contacts = await listContacts(root);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].endpoint, "http://203.0.113.20:5314");
+    assert.equal(contacts[0].reachability, "bidirectional");
+    assert.equal(contacts[0].outboundToken, "server-can-call-local");
+    assert.equal(typeof contacts[0].inboundTokenHash, "string");
+  } finally {
+    globalThis.fetch = originalFetch;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("remote approve can be retried by the same agent after the owner saved inbound contact", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-retry-"));
   try {
@@ -660,7 +736,7 @@ test("approve unwraps remote service action envelope", async () => {
   }
 });
 
-test("approve sends requester endpoint from global public host", async () => {
+test("approve confirms requester endpoint before marking contact bidirectional", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-bidirectional-"));
   const originalFetch = globalThis.fetch;
   try {
@@ -675,7 +751,24 @@ test("approve sends requester endpoint from global public host", async () => {
       expiresAt: Date.now() + 600_000,
     });
     let approveBody = null;
-    globalThis.fetch = async (_url, init) => {
+    let confirmBody = null;
+    const callPaths = [];
+    globalThis.fetch = async (url, init) => {
+      const pathName = new URL(String(url)).pathname;
+      callPaths.push(pathName);
+      if (pathName === "/api/contact/confirm") {
+        confirmBody = JSON.parse(String(init?.body || "{}"));
+        return new Response(JSON.stringify({
+          success: true,
+          confirmed: true,
+          reachability: "bidirectional",
+        }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
       approveBody = JSON.parse(String(init?.body || "{}"));
       return new Response(JSON.stringify({
         success: true,
@@ -713,8 +806,11 @@ test("approve sends requester endpoint from global public host", async () => {
     assert.equal(result.success, true);
     assert.equal(approveBody.endpoint, "http://203.0.113.20:5314");
     assert.equal(typeof approveBody.tokenForRequester, "string");
-    assert.equal(approveBody.canReceiveContactCalls, true);
+    assert.equal(approveBody.callbackOffered, true);
     assert.equal(approveBody.callbackReason, "requester-public");
+    assert.equal(confirmBody.endpoint, "http://203.0.113.20:5314");
+    assert.equal(confirmBody.tokenForRequester, approveBody.tokenForRequester);
+    assert.deepEqual(callPaths, ["/api/contact/approve", "/api/contact/confirm"]);
     assert.equal(result.data.reachability, "bidirectional");
     assert.ok(result.data.notes.some((item) => /bidirectional/.test(item)));
 
@@ -781,7 +877,7 @@ test("approve does not offer private requester endpoint to a public target", asy
     assert.equal(result.success, true);
     assert.equal(approveBody.endpoint, undefined);
     assert.equal(approveBody.tokenForRequester, undefined);
-    assert.equal(approveBody.canReceiveContactCalls, false);
+    assert.equal(approveBody.callbackOffered, false);
     assert.equal(approveBody.callbackReason, "requester-not-routable-from-target");
     assert.equal(result.data.reachability, "outbound");
 

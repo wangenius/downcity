@@ -25,6 +25,10 @@ import type {
   ContactApproveLinkRequest,
   ContactApproveLinkResponse,
 } from "@/types/contact/ContactLink.js";
+import type {
+  ContactConfirmRequest,
+  ContactConfirmResponse,
+} from "@/types/contact/ContactApproval.js";
 import type { ContactPingResponse } from "@/types/contact/ContactCheck.js";
 import type { ContactChatResponse } from "@/types/contact/ContactChat.js";
 import type { AgentContact } from "@/types/contact/Contact.js";
@@ -56,6 +60,7 @@ import {
 import {
   callContactApprove,
   callContactChat,
+  callContactConfirm,
   callContactPing,
   callContactShare,
 } from "./runtime/RemoteClient.js";
@@ -75,7 +80,10 @@ import {
   buildContactLinkNotes,
   classifyContactEndpoint,
 } from "./runtime/EndpointNotice.js";
-import { approveContactLinkRequest } from "./runtime/LinkApproval.js";
+import {
+  approveContactLinkRequest,
+  confirmContactLinkRequest,
+} from "./runtime/LinkApproval.js";
 import { buildContactApproveCallbackDecision } from "./runtime/ApproveCallback.js";
 
 function readObject(value: JsonValue): JsonObject {
@@ -131,7 +139,7 @@ async function resolveSelfEndpoint(
   );
 }
 
-function hasConfiguredPublicEndpointEnv(context: AgentContext): boolean {
+function hasRuntimePublicEndpointEnv(context: AgentContext): boolean {
   const env = {
     ...context.globalEnv,
     ...context.env,
@@ -389,6 +397,22 @@ export class ContactService extends BaseService {
           )) as unknown as JsonValue,
         }),
       },
+      remoteconfirm: {
+        api: {
+          method: "POST",
+          path: "/api/contact/confirm",
+          async mapInput(ctx) {
+            return (await ctx.req.json()) as JsonValue;
+          },
+        },
+        execute: async (params) => ({
+          success: true,
+          data: (await this.remoteConfirm(
+            params.context,
+            readObject(params.payload) as unknown as ContactConfirmRequest,
+          )) as unknown as JsonValue,
+        }),
+      },
       remotechat: {
         api: {
           method: "POST",
@@ -497,7 +521,7 @@ export class ContactService extends BaseService {
     const targetReachability = classifyContactEndpoint(parsed.endpoint);
     const shouldResolveRequesterEndpoint =
       payload.endpoint ||
-      hasConfiguredPublicEndpointEnv(context) ||
+      hasRuntimePublicEndpointEnv(context) ||
       targetReachability === "loopback" ||
       targetReachability === "private";
     const requesterEndpointCandidate = shouldResolveRequesterEndpoint
@@ -507,13 +531,12 @@ export class ContactService extends BaseService {
       targetEndpoint: parsed.endpoint,
       requesterEndpoint: requesterEndpointCandidate,
     });
-    const requesterEndpoint = callbackDecision.canReceiveContactCalls
+    const requesterEndpoint = callbackDecision.callbackOffered
       ? callbackDecision.endpoint
       : undefined;
     const tokenForRequester = requesterEndpoint ? createContactToken() : undefined;
     const approveNotes = buildContactApproveNotes({
       targetEndpoint: parsed.endpoint,
-      requesterEndpoint,
     });
     let response: ContactApproveLinkResponse;
     try {
@@ -523,7 +546,7 @@ export class ContactService extends BaseService {
           linkId: parsed.linkId,
           secret: parsed.secret,
           agentName: getAgentName(context),
-          canReceiveContactCalls: callbackDecision.canReceiveContactCalls,
+          callbackOffered: callbackDecision.callbackOffered,
           callbackReason: callbackDecision.reason,
           ...(requesterEndpoint ? { endpoint: requesterEndpoint } : {}),
           ...(tokenForRequester ? { tokenForRequester } : {}),
@@ -539,19 +562,57 @@ export class ContactService extends BaseService {
       id: createStableContactId(name),
       name,
       endpoint: response.endpoint || parsed.endpoint,
-      reachability: requesterEndpoint ? "bidirectional" : "outbound",
+      reachability: "outbound",
       status: "trusted",
       outboundToken: response.tokenForOwner,
       inboundTokenHash: tokenForRequester ? hashContactToken(tokenForRequester) : null,
       createdAt: Date.now(),
       lastSeenAt: Date.now(),
     });
+    let confirmed = false;
+    let confirmError: string | undefined;
+    if (requesterEndpoint && tokenForRequester) {
+      try {
+        const confirm = await callContactConfirm<ContactConfirmResponse>({
+          endpoint: parsed.endpoint,
+          body: {
+            linkId: parsed.linkId,
+            secret: parsed.secret,
+            agentName: getAgentName(context),
+            endpoint: requesterEndpoint,
+            tokenForRequester,
+          } as unknown as JsonValue,
+        });
+        confirmed = Boolean(confirm.success && confirm.confirmed);
+        if (!confirmed && confirm.error) confirmError = confirm.error;
+      } catch (error) {
+        // 关键点（中文）：confirm 只决定是否升级双向；approve 已成功时仍保留 outbound contact。
+        confirmError = String(error);
+      }
+    }
+    const finalContact = confirmed
+      ? await saveContact(context.rootPath, {
+          ...contact,
+          reachability: "bidirectional",
+          inboundTokenHash: tokenForRequester ? hashContactToken(tokenForRequester) : null,
+          lastSeenAt: Date.now(),
+        })
+      : contact;
+    const finalNotes = buildContactApproveNotes({
+      targetEndpoint: parsed.endpoint,
+      requesterEndpoint,
+      callbackConfirmed: confirmed,
+    });
     return {
-      contact,
-      reachability: contact.reachability,
+      contact: finalContact,
+      reachability: finalContact.reachability,
       targetEndpointReachability: classifyContactEndpoint(parsed.endpoint),
+      callbackOffered: callbackDecision.callbackOffered,
+      callbackConfirmed: confirmed,
+      callbackReason: callbackDecision.reason,
       ...(requesterEndpoint ? { requesterEndpoint } : {}),
-      notes: approveNotes,
+      ...(confirmError ? { confirmError } : {}),
+      notes: finalNotes,
     };
   }
 
@@ -688,6 +749,24 @@ export class ContactService extends BaseService {
       ownerAgentName: getAgentName(context),
       ownerEndpoint: await resolveSelfEndpoint(context),
       request,
+    });
+  }
+
+  private async remoteConfirm(
+    context: AgentContext,
+    request: ContactConfirmRequest,
+  ): Promise<ContactConfirmResponse> {
+    return await confirmContactLinkRequest({
+      projectRoot: context.rootPath,
+      ownerAgentName: getAgentName(context),
+      request,
+      verifyCallback: async ({ endpoint, token }) => {
+        const pong = await callContactPing<ContactPingResponse>({
+          endpoint,
+          token,
+        });
+        return Boolean(pong.success && pong.authenticated);
+      },
     });
   }
 

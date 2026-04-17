@@ -154,16 +154,16 @@ Behavior:
 2. Managers approve or reject records manually in Supabase.
 3. Only `approved` records are shown on the public marketplace page.
 
-## 10. Console public address override
+## 10. Console public address
 
 When you use `city start -p` or `city console start -p`, the CLI tries to print `Public URL` in startup output.
 
-If the runtime cannot know the real external address by itself (for example behind NAT, reverse proxy, or load balancer), set one of these explicitly:
+These values are normally injected by `city start` or the deployment environment. They are not endpoint parameters that users enter for `contact link`:
 
 1. `DOWNCITY_PUBLIC_URL`: full external URL, for example `https://console.example.com`
 2. `DOWNCITY_PUBLIC_HOST`: external host only; the CLI expands it to `http://<host>:5315`
 
-When no explicit public address is configured, `city start` automatically detects the public IP and stores it in global Console Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
+`city start` automatically detects the public IP and stores it in global Console Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
 
 Priority:
 

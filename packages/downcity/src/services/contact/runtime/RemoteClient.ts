@@ -91,6 +91,20 @@ export async function callContactApprove<T>(params: {
 }
 
 /**
+ * 调用远端 confirm。
+ */
+export async function callContactConfirm<T>(params: {
+  endpoint: string;
+  body: JsonValue;
+}): Promise<T> {
+  return await postJson<T>({
+    endpoint: params.endpoint,
+    path: "/api/contact/confirm",
+    body: params.body,
+  });
+}
+
+/**
  * 调用远端 chat。
  */
 export async function callContactChat<T>(params: {

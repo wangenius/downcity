@@ -16,8 +16,9 @@ contact service 用来管理和其他 agent 的联系方式。一个 contact 代
 - chat 用于对话，share 用于资料交接。
 - `city contact link` 返回中的 notes 会说明联系码适合本机、局域网还是公网 agent 使用；本地 localhost 联系码不能交给 server agent approve。
 - public-looking endpoint 仍可能被防火墙/NAT 阻断；以返回的 notes 为准，不要承诺公网一定可达。
-- `city contact approve` 返回中的 notes 会说明建联结果是 outbound-only 还是 bidirectional。
-- approve 方会自动推导 `canReceiveContactCalls`；local/private agent 连接 public agent 时通常只能 outbound-only，不要说成双向。
+- `city start` 会自动写入 `DOWNCITY_PUBLIC_HOST` 供 contact link 使用；这不是要求用户手动配置的 token 或 endpoint。
+- `city contact approve` 会先建立单向关系，再由对方主动 ping 回本 agent，ping 成功才升级为 bidirectional。
+- local/private agent 连接 public agent 时通常只能 outbound-only，不要说成双向。
 - contact token 由 link/approve 自动交换；不要要求用户手动配置 token 环境变量。
 - `Contact link not found` 表示请求打到的 agent runtime 没有这条 link 记录，优先检查 endpoint/端口/agent 是否一致；过期会明确返回 `Contact link expired`。
 - receive 只接收内容，不自动执行、不安装 skill、不修改项目业务文件。

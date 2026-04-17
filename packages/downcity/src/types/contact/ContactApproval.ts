@@ -11,13 +11,13 @@ import type { ContactEndpointReachability } from "./ContactEndpoint.js";
 import type { ContactApproveCallbackReason } from "./ContactLink.js";
 
 /**
- * approve 方对“对方能否回连自己”的本地推导结果。
+ * approve 方对“是否提供回连候选”的本地推导结果。
  */
 export interface ContactApproveCallbackDecision {
   /**
-   * approve 方是否认为发起方可以主动回连自己。
+   * approve 方是否应该把自己的 endpoint/token 作为回连候选发给发起方做 confirm。
    */
-  canReceiveContactCalls: boolean;
+  callbackOffered: boolean;
   /**
    * 本次推导的原因。
    */
@@ -56,6 +56,93 @@ export interface ApproveContactLinkRequestInput {
    * approve 方发来的 link id、secret、agent 名称和可选回连信息。
    */
   request: ContactApproveLinkRequest;
+  /**
+   * 当前时间戳；测试可注入，生产环境默认使用 Date.now()。
+   */
+  nowMs?: number;
+}
+
+/**
+ * 远端 contact confirm 请求。
+ */
+export interface ContactConfirmRequest {
+  /**
+   * 被 confirm 的 link id。
+   */
+  linkId: string;
+  /**
+   * link code 中的一次性明文 secret，用于确认请求来自同一个 approve 方。
+   */
+  secret: string;
+  /**
+   * approve 方 agent 名称。
+   */
+  agentName: string;
+  /**
+   * approve 方提供给发起方主动检查的 endpoint。
+   */
+  endpoint: string;
+  /**
+   * 发起方主动调用 approve 方时携带的 token。
+   */
+  tokenForRequester: string;
+}
+
+/**
+ * 远端 contact confirm 响应。
+ */
+export interface ContactConfirmResponse {
+  /**
+   * confirm 请求是否执行成功。
+   */
+  success: boolean;
+  /**
+   * 发起方 agent 名称。
+   */
+  agentName: string;
+  /**
+   * 发起方是否已确认可以主动回连 approve 方。
+   */
+  confirmed: boolean;
+  /**
+   * confirm 后发起方保存的 contact 方向。
+   */
+  reachability: "inbound" | "bidirectional";
+  /**
+   * confirm 失败原因。
+   */
+  error?: string;
+}
+
+/**
+ * 处理远端 contact confirm 请求的输入。
+ */
+export interface ConfirmContactLinkRequestInput {
+  /**
+   * 当前 agent 项目根目录，用于读取 link 记录并更新 contact。
+   */
+  projectRoot: string;
+  /**
+   * 当前 agent 名称，也就是 link 所属方名称。
+   */
+  ownerAgentName: string;
+  /**
+   * confirm 方发来的 link id、secret、agent 名称和回连 token。
+   */
+  request: ContactConfirmRequest;
+  /**
+   * 发起方主动 ping approve 方的验证函数；只有验证成功才能升级为 bidirectional。
+   */
+  verifyCallback: (params: {
+    /**
+     * approve 方提供的回连 endpoint。
+     */
+    endpoint: string;
+    /**
+     * 发起方调用 approve 方时携带的 token。
+     */
+    token: string;
+  }) => Promise<boolean>;
   /**
    * 当前时间戳；测试可注入，生产环境默认使用 Date.now()。
    */

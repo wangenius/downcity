@@ -84,6 +84,18 @@ export interface ContactLinkRecord {
    * 发起方发给 approve 方的明文 contact token；只保存在本地 link 记录中，用于同一 link 在有效期内重试恢复。
    */
   tokenForOwner?: string | null;
+  /**
+   * approve 方发给发起方的明文 contact token；仅作为 confirm 阶段的本地恢复元数据。
+   */
+  tokenForRequester?: string | null;
+  /**
+   * approve 方推导回连候选的原因；用于 confirm 失败后的诊断。
+   */
+  callbackReason?: ContactApproveCallbackReason | null;
+  /**
+   * 发起方成功 confirm 并升级为 bidirectional 的时间戳。
+   */
+  confirmedAt?: number | null;
 }
 
 /**
@@ -121,11 +133,11 @@ export interface ContactApproveLinkRequest {
    */
   tokenForRequester?: string;
   /**
-   * approve 方是否判断自己可以被发起方主动回连；该值由 approve 方基于双方 endpoint 自动推导。
+   * approve 方是否提供了一个回连候选；这不是双向确认结果，发起方必须再执行 confirm 主动检查。
    */
-  canReceiveContactCalls?: boolean;
+  callbackOffered?: boolean;
   /**
-   * approve 方推导 `canReceiveContactCalls` 的原因，方便接收方和用户诊断网络关系。
+   * approve 方推导 `callbackOffered` 的原因，方便接收方和用户诊断网络关系。
    */
   callbackReason?: ContactApproveCallbackReason;
 }

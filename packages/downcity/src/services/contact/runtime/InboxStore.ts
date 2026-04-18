@@ -55,28 +55,45 @@ export async function saveContactInboxShare(
   projectRoot: string,
   input: SaveContactInboxShareInput,
 ): Promise<ContactInboxShareMeta> {
+  const inboxRoot = getContactInboxRootPath(projectRoot);
   const sharePath = getContactInboxSharePath(projectRoot, input.meta.id);
-  await fs.ensureDir(sharePath);
-  await fs.writeJson(getContactInboxShareMetaPath(projectRoot, input.meta.id), input.meta, {
-    spaces: 2,
-  });
-  await fs.writeJson(
-    getContactInboxSharePayloadPath(projectRoot, input.meta.id),
-    input.payload,
-    { spaces: 2 },
+  const tempRoot = path.join(path.dirname(inboxRoot), ".inbox-tmp");
+  const tempPath = path.join(
+    tempRoot,
+    `${path.basename(sharePath)}.${process.pid}.${Date.now()}`,
   );
 
-  const filesRoot = getContactInboxShareFilesPath(projectRoot, input.meta.id);
-  for (const file of input.files) {
-    const relativePath = assertSafeRelativePath(file.relativePath);
-    const outputPath = path.join(filesRoot, relativePath);
-    const encoding = file.encoding === "base64" ? "base64" : "utf8";
-    const content =
-      encoding === "base64"
-        ? Buffer.from(file.content, "base64")
-        : Buffer.from(file.content, "utf-8");
-    await fs.ensureDir(path.dirname(outputPath));
-    await fs.writeFile(outputPath, content);
+  await fs.ensureDir(inboxRoot);
+  await fs.remove(tempPath);
+  try {
+    await fs.ensureDir(tempPath);
+    await fs.writeJson(path.join(tempPath, "payload.json"), input.payload, {
+      spaces: 2,
+    });
+
+    const filesRoot = path.join(tempPath, "files");
+    for (const file of input.files) {
+      const relativePath = assertSafeRelativePath(file.relativePath);
+      const outputPath = path.join(filesRoot, relativePath);
+      const encoding = file.encoding === "base64" ? "base64" : "utf8";
+      const content =
+        encoding === "base64"
+          ? Buffer.from(file.content, "base64")
+          : Buffer.from(file.content, "utf-8");
+      await fs.ensureDir(path.dirname(outputPath));
+      await fs.writeFile(outputPath, content);
+    }
+
+    // meta 最后写入，正式目录只在整条 share 完整后出现，避免 inbox 暴露半成品。
+    await fs.writeJson(path.join(tempPath, "meta.json"), input.meta, {
+      spaces: 2,
+    });
+    await fs.move(tempPath, sharePath, {
+      overwrite: false,
+    });
+  } catch (error) {
+    await fs.remove(tempPath).catch(() => undefined);
+    throw error;
   }
 
   return input.meta;
@@ -141,12 +158,13 @@ export async function markContactInboxShareReceived(
     ...meta,
     status: "received",
   };
-  await fs.writeJson(getContactInboxShareMetaPath(projectRoot, shareId), next, {
-    spaces: 2,
-  });
   const receivedPath = getContactReceivedSharePath(projectRoot, shareId);
   await fs.ensureDir(receivedPath);
   await fs.writeJson(path.join(receivedPath, "meta.json"), next, {
+    spaces: 2,
+  });
+  // received 区先完整写入，最后再更新 inbox meta，避免列表状态提前变成 received。
+  await fs.writeJson(getContactInboxShareMetaPath(projectRoot, shareId), next, {
     spaces: 2,
   });
   return next;

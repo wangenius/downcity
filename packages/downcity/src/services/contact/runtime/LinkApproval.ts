@@ -15,8 +15,9 @@ import type {
 } from "@/types/contact/ContactApproval.js";
 import {
   createStableContactId,
-  findContact,
+  listContacts,
   normalizeContactEndpoint,
+  readContact,
   saveContact,
 } from "./ContactStore.js";
 import {
@@ -58,6 +59,83 @@ function confirmFailure(params: {
   };
 }
 
+function readCallbackCandidate(
+  request: {
+    callbackOffered?: boolean;
+    endpoint?: string;
+    tokenForRequester?: string;
+  },
+): {
+  endpoint: string | null;
+  token: string | null;
+  error?: string;
+} {
+  if (request.callbackOffered !== true) {
+    return {
+      endpoint: null,
+      token: null,
+    };
+  }
+  const token = String(request.tokenForRequester || "").trim();
+  if (!request.endpoint || !token) {
+    return {
+      endpoint: null,
+      token: null,
+      error: "Contact approve request is missing the peer callback token",
+    };
+  }
+  try {
+    return {
+      endpoint: normalizeContactEndpoint(request.endpoint),
+      token,
+    };
+  } catch {
+    return {
+      endpoint: null,
+      token: null,
+      error: "Contact approve request has an invalid peer callback endpoint",
+    };
+  }
+}
+
+async function findApprovedContact(params: {
+  projectRoot: string;
+  agentName: string;
+}) {
+  const stable = await readContact(
+    params.projectRoot,
+    createStableContactId(params.agentName),
+  );
+  if (stable) return stable;
+  const contacts = await listContacts(params.projectRoot);
+  const lower = params.agentName.trim().toLowerCase();
+  return contacts.find((item) => item.name.toLowerCase() === lower) || null;
+}
+
+async function saveApprovedInboundContact(params: {
+  projectRoot: string;
+  agentName: string;
+  tokenForOwner: string;
+  nowMs: number;
+}) {
+  const existing = await findApprovedContact({
+    projectRoot: params.projectRoot,
+    agentName: params.agentName,
+  });
+  const hasOutboundSide = Boolean(existing?.endpoint && existing?.outboundToken);
+  await saveContact(params.projectRoot, {
+    id: existing?.id || createStableContactId(params.agentName),
+    name: existing?.name || params.agentName,
+    endpoint: existing?.endpoint || null,
+    reachability: hasOutboundSide ? "bidirectional" : "inbound",
+    status: "trusted",
+    outboundToken: existing?.outboundToken || null,
+    inboundTokenHash: hashContactToken(params.tokenForOwner),
+    createdAt: existing?.createdAt || params.nowMs,
+    lastSeenAt: params.nowMs,
+  });
+}
+
 /**
  * 执行远端 link approve 状态转换。
  */
@@ -87,11 +165,34 @@ export async function approveContactLinkRequest(
       error: "Invalid contact link secret",
     });
   }
+  const callbackCandidate = readCallbackCandidate(input.request);
+
   if (link.usedAt) {
     if (
       link.approvedAgentName === input.request.agentName &&
       link.tokenForOwner
     ) {
+      let nextLink = link;
+      if (
+        !link.confirmedAt &&
+        !callbackCandidate.error &&
+        callbackCandidate.endpoint &&
+        callbackCandidate.token
+      ) {
+        nextLink = {
+          ...link,
+          approvedEndpoint: callbackCandidate.endpoint,
+          tokenForRequester: callbackCandidate.token,
+          callbackReason: input.request.callbackReason || link.callbackReason || null,
+        };
+        await saveContactLinkRecord(input.projectRoot, nextLink);
+      }
+      await saveApprovedInboundContact({
+        projectRoot: input.projectRoot,
+        agentName: input.request.agentName,
+        tokenForOwner: link.tokenForOwner,
+        nowMs,
+      });
       return {
         success: true,
         agentName: input.ownerAgentName,
@@ -107,40 +208,23 @@ export async function approveContactLinkRequest(
   }
 
   const tokenForOwner = createContactToken();
-  const callbackOffered = input.request.callbackOffered === true;
-  const requesterEndpoint = callbackOffered && input.request.endpoint
-    ? normalizeContactEndpoint(input.request.endpoint)
-    : null;
-  const tokenForRequester = requesterEndpoint
-    ? String(input.request.tokenForRequester || "").trim()
-    : null;
-  if (callbackOffered && (!requesterEndpoint || !tokenForRequester)) {
-    return failure({
-      ownerAgentName: input.ownerAgentName,
-      endpoint: link.endpoint,
-      error: "Contact approve request is missing the peer callback token",
-    });
-  }
-
-  await saveContact(input.projectRoot, {
-    id: createStableContactId(input.request.agentName),
-    name: input.request.agentName,
-    endpoint: null,
-    reachability: "inbound",
-    status: "trusted",
-    outboundToken: null,
-    inboundTokenHash: hashContactToken(tokenForOwner),
-    createdAt: nowMs,
-    lastSeenAt: nowMs,
-  });
-  await saveContactLinkRecord(input.projectRoot, {
+  const approvedLink = {
     ...link,
     usedAt: nowMs,
     approvedAgentName: input.request.agentName,
-    approvedEndpoint: requesterEndpoint,
+    approvedEndpoint: callbackCandidate.endpoint,
     tokenForOwner,
-    tokenForRequester,
-    callbackReason: input.request.callbackReason || null,
+    tokenForRequester: callbackCandidate.token,
+    callbackReason: callbackCandidate.error ? null : input.request.callbackReason || null,
+  };
+
+  // 先消费 link，再派生 contact；重试时以 link 记录为来源修复 contact，避免孤儿 trusted contact。
+  await saveContactLinkRecord(input.projectRoot, approvedLink);
+  await saveApprovedInboundContact({
+    projectRoot: input.projectRoot,
+    agentName: input.request.agentName,
+    tokenForOwner,
+    nowMs,
   });
 
   return {
@@ -165,7 +249,7 @@ export async function confirmContactLinkRequest(
       error: CONTACT_LINK_NOT_FOUND_ERROR,
     });
   }
-  if (link.expiresAt <= nowMs) {
+  if (!link.usedAt && link.expiresAt <= nowMs) {
     return confirmFailure({
       ownerAgentName: input.ownerAgentName,
       error: "Contact link expired",
@@ -184,7 +268,15 @@ export async function confirmContactLinkRequest(
     });
   }
 
-  const endpoint = normalizeContactEndpoint(input.request.endpoint);
+  let endpoint: string;
+  try {
+    endpoint = normalizeContactEndpoint(input.request.endpoint);
+  } catch {
+    return confirmFailure({
+      ownerAgentName: input.ownerAgentName,
+      error: "Contact confirm request has an invalid peer callback endpoint",
+    });
+  }
   const token = String(input.request.tokenForRequester || "").trim();
   if (!token) {
     return confirmFailure({
@@ -192,12 +284,67 @@ export async function confirmContactLinkRequest(
       error: "Contact confirm request is missing the peer callback token",
     });
   }
-  const contact = await findContact(input.projectRoot, input.request.agentName);
+  if (!link.tokenForRequester) {
+    return confirmFailure({
+      ownerAgentName: input.ownerAgentName,
+      error: "Contact link has no callback token to confirm",
+    });
+  }
+  if (link.tokenForRequester !== token) {
+    return confirmFailure({
+      ownerAgentName: input.ownerAgentName,
+      error: "Contact confirm callback token does not match the approved token",
+    });
+  }
+  if (!link.approvedEndpoint) {
+    return confirmFailure({
+      ownerAgentName: input.ownerAgentName,
+      error: "Contact link has no callback endpoint to confirm",
+    });
+  }
+  if (normalizeContactEndpoint(link.approvedEndpoint) !== endpoint) {
+    return confirmFailure({
+      ownerAgentName: input.ownerAgentName,
+      error: "Contact confirm callback endpoint does not match the approved endpoint",
+    });
+  }
+  const contact = await findApprovedContact({
+    projectRoot: input.projectRoot,
+    agentName: input.request.agentName,
+  });
   if (!contact || contact.status !== "trusted") {
     return confirmFailure({
       ownerAgentName: input.ownerAgentName,
       error: "Contact not found for approved link",
     });
+  }
+  if (!link.tokenForOwner || contact.inboundTokenHash !== hashContactToken(link.tokenForOwner)) {
+    return confirmFailure({
+      ownerAgentName: input.ownerAgentName,
+      error: "Contact token state does not match the approved link",
+    });
+  }
+
+  if (
+    contact.reachability === "bidirectional" &&
+    contact.endpoint === endpoint &&
+    contact.outboundToken === token
+  ) {
+    if (!link.confirmedAt) {
+      // contact 已经完成双向升级时，重试 confirm 需要补齐 link 状态，避免最终状态分裂。
+      await saveContactLinkRecord(input.projectRoot, {
+        ...link,
+        approvedEndpoint: endpoint,
+        tokenForRequester: token,
+        confirmedAt: nowMs,
+      });
+    }
+    return {
+      success: true,
+      agentName: input.ownerAgentName,
+      confirmed: true,
+      reachability: "bidirectional",
+    };
   }
 
   let callbackOk = false;

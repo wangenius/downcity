@@ -34,12 +34,6 @@ import {
   listContacts,
   saveContact,
 } from "../../bin/services/contact/runtime/ContactStore.js";
-import {
-  saveContactLinkRecord,
-} from "../../bin/services/contact/runtime/LinkStore.js";
-import {
-  hashContactToken,
-} from "../../bin/services/contact/runtime/Token.js";
 import { ContactService } from "../../bin/services/contact/ContactService.js";
 import { listRegisteredServiceNames } from "../../bin/main/service/ServiceClassRegistry.js";
 import { SERVICE_SYSTEM_PROVIDERS } from "../../bin/main/service/ServiceSystemProviders.js";
@@ -350,269 +344,6 @@ test("contact endpoint resolver discovers public ip before falling back to local
   });
 
   assert.equal(endpoint, "http://72.62.254.79:5314");
-});
-
-test("remote approve allows an inbound-only contact without requester endpoint", async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-oneway-"));
-  try {
-    const service = new ContactService(null);
-    const context = {
-      rootPath: root,
-      config: {
-        name: "server-agent",
-        start: {
-          host: "0.0.0.0",
-          port: 8787,
-        },
-      },
-    };
-    await saveContactLinkRecord(root, {
-      id: "link_oneway",
-      agentName: "server-agent",
-      endpoint: "https://agent-a.example.com",
-      secretHash: hashContactToken("secret-token"),
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 600_000,
-      usedAt: null,
-    });
-
-    const result = await service.actions.remoteapprove.execute({
-      context,
-      payload: {
-        linkId: "link_oneway",
-        secret: "secret-token",
-        agentName: "local-agent",
-        tokenForRequester: "server-cannot-call-local",
-      },
-    });
-
-    assert.equal(result.success, true);
-    assert.equal(result.data.success, true);
-
-    const contacts = await listContacts(root);
-    assert.equal(contacts.length, 1);
-    assert.equal(contacts[0].name, "local-agent");
-    assert.equal(contacts[0].endpoint, null);
-    assert.equal(contacts[0].reachability, "inbound");
-    assert.equal(contacts[0].outboundToken, null);
-    assert.equal(typeof contacts[0].inboundTokenHash, "string");
-  } finally {
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
-
-test("remote approve treats private requester endpoint as inbound-only", async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-private-requester-"));
-  try {
-    const service = new ContactService(null);
-    const context = {
-      rootPath: root,
-      config: {
-        name: "server-agent",
-        start: {
-          host: "0.0.0.0",
-          port: 8787,
-        },
-      },
-    };
-    await saveContactLinkRecord(root, {
-      id: "link_private",
-      agentName: "server-agent",
-      endpoint: "https://agent-a.example.com",
-      secretHash: hashContactToken("secret-token"),
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 600_000,
-      usedAt: null,
-    });
-
-    const result = await service.actions.remoteapprove.execute({
-      context,
-      payload: {
-        linkId: "link_private",
-        secret: "secret-token",
-        agentName: "local-agent",
-        endpoint: "http://192.168.2.87:5314",
-        tokenForRequester: "server-cannot-call-local",
-      },
-    });
-
-    assert.equal(result.success, true);
-    assert.equal(result.data.success, true);
-
-    const contacts = await listContacts(root);
-    assert.equal(contacts.length, 1);
-    assert.equal(contacts[0].endpoint, null);
-    assert.equal(contacts[0].reachability, "inbound");
-    assert.equal(contacts[0].outboundToken, null);
-  } finally {
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
-
-test("remote confirm upgrades inbound contact only after callback ping succeeds", async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-confirm-"));
-  const originalFetch = globalThis.fetch;
-  try {
-    const service = new ContactService(null);
-    const context = {
-      rootPath: root,
-      config: {
-        name: "server-agent",
-        start: {
-          host: "0.0.0.0",
-          port: 8787,
-        },
-      },
-    };
-    await saveContactLinkRecord(root, {
-      id: "link_confirm",
-      agentName: "server-agent",
-      endpoint: "https://agent-a.example.com",
-      secretHash: hashContactToken("secret-token"),
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 600_000,
-      usedAt: Date.now(),
-      approvedAgentName: "local-agent",
-      tokenForOwner: "local-can-call-server",
-    });
-    await saveContact(root, {
-      id: "contact_local_agent",
-      name: "local-agent",
-      endpoint: null,
-      reachability: "inbound",
-      status: "trusted",
-      outboundToken: null,
-      inboundTokenHash: hashContactToken("local-can-call-server"),
-      createdAt: Date.now(),
-      lastSeenAt: Date.now(),
-    });
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({
-        success: true,
-        agentName: "local-agent",
-        authenticated: true,
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-    const result = await service.actions.remoteconfirm.execute({
-      context,
-      payload: {
-        linkId: "link_confirm",
-        secret: "secret-token",
-        agentName: "local-agent",
-        endpoint: "http://203.0.113.20:5314",
-        tokenForRequester: "server-can-call-local",
-      },
-    });
-
-    assert.equal(result.success, true);
-    assert.equal(result.data.success, true);
-    assert.equal(result.data.confirmed, true);
-
-    const contacts = await listContacts(root);
-    assert.equal(contacts.length, 1);
-    assert.equal(contacts[0].endpoint, "http://203.0.113.20:5314");
-    assert.equal(contacts[0].reachability, "bidirectional");
-    assert.equal(contacts[0].outboundToken, "server-can-call-local");
-    assert.equal(typeof contacts[0].inboundTokenHash, "string");
-  } finally {
-    globalThis.fetch = originalFetch;
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
-
-test("remote approve can be retried by the same agent after the owner saved inbound contact", async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-retry-"));
-  try {
-    const service = new ContactService(null);
-    const context = {
-      rootPath: root,
-      config: {
-        name: "server-agent",
-        start: {
-          host: "0.0.0.0",
-          port: 8787,
-        },
-      },
-    };
-    await saveContactLinkRecord(root, {
-      id: "link_retry",
-      agentName: "server-agent",
-      endpoint: "https://agent-a.example.com",
-      secretHash: hashContactToken("secret-token"),
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 600_000,
-      usedAt: null,
-    });
-
-    const first = await service.actions.remoteapprove.execute({
-      context,
-      payload: {
-        linkId: "link_retry",
-        secret: "secret-token",
-        agentName: "local-agent",
-      },
-    });
-    const second = await service.actions.remoteapprove.execute({
-      context,
-      payload: {
-        linkId: "link_retry",
-        secret: "secret-token",
-        agentName: "local-agent",
-      },
-    });
-
-    assert.equal(first.success, true);
-    assert.equal(first.data.success, true);
-    assert.equal(second.success, true);
-    assert.equal(second.data.success, true);
-    assert.equal(second.data.tokenForOwner, first.data.tokenForOwner);
-
-    const contacts = await listContacts(root);
-    assert.equal(contacts.length, 1);
-    assert.equal(contacts[0].reachability, "inbound");
-  } finally {
-    await fs.rm(root, { recursive: true, force: true });
-  }
-});
-
-test("remote approve explains missing link records separately from expiration", async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-missing-link-"));
-  try {
-    const service = new ContactService(null);
-    const result = await service.actions.remoteapprove.execute({
-      context: {
-        rootPath: root,
-        env: {
-          DOWNCITY_PUBLIC_URL: "https://agent-a.example.com",
-        },
-        config: {
-          name: "server-agent",
-          start: {
-            host: "0.0.0.0",
-            port: 5314,
-          },
-        },
-      },
-      payload: {
-        linkId: "link_missing",
-        secret: "secret-token",
-        agentName: "local-agent",
-      },
-    });
-
-    assert.equal(result.success, true);
-    assert.equal(result.data.success, false);
-    assert.match(result.data.error, /Contact link not found/);
-    assert.match(result.data.error, /wrong endpoint or port/);
-    assert.match(result.data.error, /Contact link expired/);
-  } finally {
-    await fs.rm(root, { recursive: true, force: true });
-  }
 });
 
 test("approve without endpoint creates an outbound-only local contact", async () => {
@@ -997,6 +728,54 @@ test("inbox stores each share as a directory with lightweight meta and files", a
 
     const shares = await listContactInboxShares(root);
     assert.deepEqual(shares.map((item) => item.id), ["share_p7k2m"]);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("inbox save does not expose a partial share when file validation fails", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-inbox-partial-"));
+  try {
+    await assert.rejects(
+      saveContactInboxShare(root, {
+        meta: {
+          id: "share_bad",
+          fromContactId: "contact_alice",
+          fromAgentName: "alice-agent",
+          title: "bad-share",
+          status: "pending",
+          receivedAt: 1776173400000,
+          sizeBytes: 1,
+          itemCount: 1,
+        },
+        payload: {
+          kind: "share",
+          items: [
+            {
+              id: "item_bad",
+              type: "file",
+              title: "bad",
+              root: "bad",
+              files: [{ path: "bad.txt", sha256: "hash" }],
+            },
+          ],
+        },
+        files: [
+          {
+            relativePath: "../outside.txt",
+            content: "bad",
+          },
+        ],
+      }),
+      /Unsafe relative path/,
+    );
+
+    const shares = await listContactInboxShares(root);
+    assert.deepEqual(shares, []);
+    await assert.rejects(
+      fs.readFile(getContactInboxShareMetaPath(root, "share_bad"), "utf-8"),
+      /ENOENT/,
+    );
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

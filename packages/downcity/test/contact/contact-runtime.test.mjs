@@ -411,6 +411,59 @@ test("approve without endpoint creates an outbound-only local contact", async ()
   }
 });
 
+test("approve delegates expiration checks to the remote owner instead of local clock", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-approve-remote-expiry-"));
+  const originalFetch = globalThis.fetch;
+  try {
+    const service = new ContactService(null);
+    const code = createContactLinkCode({
+      version: 1,
+      linkId: "link_server",
+      agentName: "server-agent",
+      endpoint: "https://agent-a.example.com",
+      secret: "secret-token",
+      createdAt: Date.now() - 900_000,
+      expiresAt: Date.now() - 300_000,
+    });
+    let approveCalls = 0;
+    globalThis.fetch = async () => {
+      approveCalls += 1;
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Contact link expired",
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    };
+
+    await assert.rejects(
+      service.actions.approve.execute({
+        context: {
+          rootPath: root,
+          config: {
+            name: "local-agent",
+            start: {
+              host: "127.0.0.1",
+              port: 5314,
+            },
+          },
+        },
+        payload: {
+          code,
+        },
+      }),
+      /Contact link expired/,
+    );
+    assert.equal(approveCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("approve unwraps remote service action envelope", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-approve-envelope-"));
   const originalFetch = globalThis.fetch;

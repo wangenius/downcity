@@ -46,7 +46,6 @@ import {
 } from "./runtime/ContactStore.js";
 import {
   createContactLinkCode,
-  isContactLinkExpired,
   parseContactLinkCode,
 } from "./runtime/LinkCode.js";
 import {
@@ -516,7 +515,8 @@ export class ContactService extends BaseService {
 
   private async approve(context: AgentContext, payload: ContactApproveCommandPayload) {
     const parsed = parseContactLinkCode(payload.code);
-    if (isContactLinkExpired(parsed)) throw new Error("Contact link expired");
+    // 关键点（中文）：approve 端不使用本机时钟预判过期，避免两台机器时钟不一致时把本来可用的 link 提前拦截。
+    // 是否过期统一交给 link 持有方在远端按本地记录判断。
 
     const targetReachability = classifyContactEndpoint(parsed.endpoint);
     const shouldResolveRequesterEndpoint =

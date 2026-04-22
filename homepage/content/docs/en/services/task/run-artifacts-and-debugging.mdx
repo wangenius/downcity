@@ -50,6 +50,7 @@ Every task execution creates a run directory:
 
 - `executionStatus=failure`
   - usually script execution failure, agent process failure, failed `chat_send` delivery, or an agent run that only performed tool calls without producing any user-visible output
+  - for ACP agents such as Claude ACP, task now normalizes known startup / hook / transport internal errors into a stable failure message first; if the same task keeps failing, inspect agent-server logs and hook configuration
 
 - `Task skipped (already running)`
   - overlap trigger skipped by per-task serial guard

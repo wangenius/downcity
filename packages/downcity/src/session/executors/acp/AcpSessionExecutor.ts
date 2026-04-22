@@ -30,6 +30,10 @@ import {
 } from "@/main/city/env/Config.js";
 import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpLaunchConfig.js";
+import {
+  buildAcpRuntimeFailureMessage,
+  shouldRetryAcpRuntimeFailure,
+} from "./AcpError.js";
 import { normalizeAcpEventPayload } from "./AcpEventPayload.js";
 import { buildAcpPromptText } from "./AcpPromptText.js";
 
@@ -82,6 +86,7 @@ type AcpJsonRpcEnvelope = {
 };
 
 const ACP_PROTOCOL_VERSION = 1;
+const ACP_RUNTIME_DIAGNOSTIC_LIMIT = 8;
 
 /**
  * ACP executor 默认实现。
@@ -109,6 +114,8 @@ export class AcpSessionExecutor implements SessionExecutor {
   private cancelRequestedAfterToolResults = false;
   private readonly pendingPermissionRequests: PendingPermissionRequest[] = [];
   private stdoutProcessing: Promise<void> = Promise.resolve();
+  private readonly recentStderrLines: string[] = [];
+  private readonly recentInvalidStdoutLines: string[] = [];
 
   constructor(options: {
     rootPath: string;
@@ -140,78 +147,45 @@ export class AcpSessionExecutor implements SessionExecutor {
     return await withSessionRunScope(nextContext, async () => {
       this.running = true;
       try {
-        await this.ensureReady();
-        const remoteSessionId = this.remoteSessionId;
-        if (!remoteSessionId) {
-          throw new Error("ACP session is not initialized");
-        }
-
-        const promptText = await this.buildPromptText(String(input.query || "").trim());
-        const requestId = this.sendRequest("session/prompt", {
-          sessionId: remoteSessionId,
-          prompt: [
-            {
-              type: "text",
-              text: promptText,
-            },
-          ],
-        });
-        this.activePromptRequestId = requestId;
-        this.activePromptCollector = { chunks: [] };
-        this.activeAssistantProgress = {
-          callback:
-            typeof nextContext.onAssistantStepCallback === "function"
-              ? nextContext.onAssistantStepCallback
-              : null,
-          buffer: "",
-          stepIndex: 0,
-          pendingToolCalls: new Map(),
-          activeToolCallIds: new Set(),
-        };
-        this.cancellationRequested = false;
-        this.cancelRequestedAfterToolResults = false;
-
-        let stopReason = "unknown";
-        let text = "";
-        try {
-          const response = (await this.waitForRequest(requestId)) as {
-            stopReason?: unknown;
-          } | null;
-          stopReason = String(response?.stopReason || "").trim() || "unknown";
-          await this.flushAssistantProgress(true);
-          text = this.activePromptCollector.chunks.join("").trim();
-          this.bootstrapped = true;
-        } catch (error) {
-          // 关键点（中文）：一旦 prompt 级 RPC 出错，远端 session 可能已经脏掉。
-          // 这里直接释放子进程，下一轮强制重新 bootstrap，避免后续一直 -32603。
-          await this.resetRemoteRuntime();
-          throw error;
-        } finally {
-          this.activePromptCollector = null;
-          this.activePromptRequestId = null;
-          this.activeAssistantProgress = null;
-          this.cancellationRequested = false;
-          this.cancelRequestedAfterToolResults = false;
-        }
-
-        if (!text && stopReason !== "cancelled") {
-          throw new Error(`ACP agent returned no text output (stopReason=${stopReason})`);
-        }
-
-        return {
-          success: true,
-          assistantMessage: this.historyComposer.assistantText({
-            text,
-            metadata: {
-              sessionId: this.sessionId,
-              extra: {
-                runtime: "acp",
+        for (let attempt = 1; attempt <= 2; attempt += 1) {
+          try {
+            return await this.runSingleAttempt(input, nextContext);
+          } catch (error) {
+            const diagnostics = this.snapshotRuntimeDiagnostics();
+            const rawErrorText = String(error || "").trim();
+            const shouldRetry =
+              attempt === 1 &&
+              shouldRetryAcpRuntimeFailure({
+                errorText: rawErrorText,
+                recentStderrLines: diagnostics.recentStderrLines,
+                recentInvalidStdoutLines: diagnostics.recentInvalidStdoutLines,
+              });
+            const normalizedError = new Error(
+              buildAcpRuntimeFailureMessage({
                 agentType: this.launch.type,
-                stopReason,
-              },
-            },
-          }),
-        };
+                errorText: rawErrorText,
+                recentStderrLines: diagnostics.recentStderrLines,
+                recentInvalidStdoutLines: diagnostics.recentInvalidStdoutLines,
+                retried: shouldRetry || attempt > 1,
+              }),
+            );
+
+            await this.resetRemoteRuntime();
+
+            if (shouldRetry) {
+              await this.logger.log("warn", "[acp] retry_after_runtime_failure", {
+                sessionId: this.sessionId,
+                type: this.launch.type,
+                rawError: rawErrorText,
+                normalizedError: normalizedError.message,
+              });
+              continue;
+            }
+
+            throw normalizedError;
+          }
+        }
+        throw new Error("ACP runtime exhausted retry budget");
       } finally {
         this.running = false;
         this.activePromptCollector = null;
@@ -221,6 +195,86 @@ export class AcpSessionExecutor implements SessionExecutor {
         this.cancelRequestedAfterToolResults = false;
       }
     });
+  }
+
+  /**
+   * 单次 ACP prompt 执行。
+   *
+   * 关键点（中文）
+   * - 这里不做错误归一化与自动重试，只负责完成一次真实 RPC。
+   * - 外层 `run()` 会根据 stderr / invalid-json 诊断信息决定是否 reset 后再试一次。
+   */
+  private async runSingleAttempt(
+    input: SessionRunInput,
+    nextContext: { sessionId: string; onAssistantStepCallback?: SessionAssistantStepCallback },
+  ): Promise<SessionRunResult> {
+    await this.ensureReady();
+    const remoteSessionId = this.remoteSessionId;
+    if (!remoteSessionId) {
+      throw new Error("ACP session is not initialized");
+    }
+
+    const promptText = await this.buildPromptText(String(input.query || "").trim());
+    const requestId = this.sendRequest("session/prompt", {
+      sessionId: remoteSessionId,
+      prompt: [
+        {
+          type: "text",
+          text: promptText,
+        },
+      ],
+    });
+    this.activePromptRequestId = requestId;
+    this.activePromptCollector = { chunks: [] };
+    this.activeAssistantProgress = {
+      callback:
+        typeof nextContext.onAssistantStepCallback === "function"
+          ? nextContext.onAssistantStepCallback
+          : null,
+      buffer: "",
+      stepIndex: 0,
+      pendingToolCalls: new Map(),
+      activeToolCallIds: new Set(),
+    };
+    this.cancellationRequested = false;
+    this.cancelRequestedAfterToolResults = false;
+
+    let stopReason = "unknown";
+    let text = "";
+    try {
+      const response = (await this.waitForRequest(requestId)) as {
+        stopReason?: unknown;
+      } | null;
+      stopReason = String(response?.stopReason || "").trim() || "unknown";
+      await this.flushAssistantProgress(true);
+      text = this.activePromptCollector.chunks.join("").trim();
+      this.bootstrapped = true;
+    } finally {
+      this.activePromptCollector = null;
+      this.activePromptRequestId = null;
+      this.activeAssistantProgress = null;
+      this.cancellationRequested = false;
+      this.cancelRequestedAfterToolResults = false;
+    }
+
+    if (!text && stopReason !== "cancelled") {
+      throw new Error(`ACP agent returned no text output (stopReason=${stopReason})`);
+    }
+
+    return {
+      success: true,
+      assistantMessage: this.historyComposer.assistantText({
+        text,
+        metadata: {
+          sessionId: this.sessionId,
+          extra: {
+            runtime: "acp",
+            agentType: this.launch.type,
+            stopReason,
+          },
+        },
+      }),
+    };
   }
 
   /**
@@ -290,6 +344,8 @@ export class AcpSessionExecutor implements SessionExecutor {
   }
 
   private async spawnProcess(): Promise<void> {
+    this.recentStderrLines.length = 0;
+    this.recentInvalidStdoutLines.length = 0;
     await this.logger.log("info", "[acp] spawn", {
       sessionId: this.sessionId,
       type: this.launch.type,
@@ -326,6 +382,7 @@ export class AcpSessionExecutor implements SessionExecutor {
     child.stderr.on("data", (chunk) => {
       const text = String(chunk || "").trim();
       if (!text) return;
+      rememberRecentLines(this.recentStderrLines, text);
       void this.logger.log("warn", "[acp] stderr", {
         sessionId: this.sessionId,
         type: this.launch.type,
@@ -461,6 +518,7 @@ export class AcpSessionExecutor implements SessionExecutor {
     try {
       envelope = JSON.parse(raw) as AcpJsonRpcEnvelope;
     } catch {
+      rememberRecentLines(this.recentInvalidStdoutLines, raw);
       await this.logger.log("warn", "[acp] invalid_json", {
         sessionId: this.sessionId,
         raw,
@@ -834,6 +892,29 @@ export class AcpSessionExecutor implements SessionExecutor {
       await this.dispose();
     } catch {
       // ignore reset failures
+    }
+  }
+
+  private snapshotRuntimeDiagnostics(): {
+    recentStderrLines: string[];
+    recentInvalidStdoutLines: string[];
+  } {
+    return {
+      recentStderrLines: [...this.recentStderrLines],
+      recentInvalidStdoutLines: [...this.recentInvalidStdoutLines],
+    };
+  }
+}
+
+function rememberRecentLines(target: string[], rawText: string): void {
+  const lines = String(rawText || "")
+    .split(/\r?\n/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  for (const line of lines) {
+    target.push(line);
+    while (target.length > ACP_RUNTIME_DIAGNOSTIC_LIMIT) {
+      target.shift();
     }
   }
 }

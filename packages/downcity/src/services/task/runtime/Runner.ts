@@ -49,6 +49,23 @@ import { dispatchTaskRunCompletionToChat } from "./TaskRunChatDispatch.js";
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
 const DEFAULT_SINGLE_ROUND = 1;
 
+function buildTaskExecutionFailureText(params: {
+  round: number;
+  error: unknown;
+}): string {
+  const reason = String(params.error || "")
+    .trim()
+    .replace(/^Error:\s*/i, "")
+    .trim();
+  if (!reason) {
+    return `任务执行失败（第 ${params.round} 轮）：执行器未返回可诊断错误。`;
+  }
+  if (/^任务执行失败[:：]/.test(reason)) {
+    return reason;
+  }
+  return `任务执行失败（第 ${params.round} 轮）：${reason}`;
+}
+
 /**
  * 立即执行任务定义。
  *
@@ -273,11 +290,14 @@ export async function runTaskNow(params: {
         }
       } catch (error) {
         executionStatus = "failure";
-        errorText = `Executor agent failed at round ${round}: ${String(error)}`;
+        errorText = buildTaskExecutionFailureText({
+          round,
+          error,
+        });
         await runProgress.update({
           status: "running",
           phase: "agent_executor_round",
-          message: `执行器在第 ${round} 轮失败: ${summarizeText(String(error), 160)}`,
+          message: summarizeText(errorText, 160),
           round,
           maxRounds: maxDialogueRounds,
         });

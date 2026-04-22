@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import readline from "node:readline";
 
 let nextSessionId = 1;
@@ -397,6 +398,50 @@ rl.on("line", (line) => {
       if (promptText.includes("cancel empty runtime test")) {
         pendingPromptBySessionId.set(sessionId, {
           promptId: msg.id,
+        });
+        return;
+      }
+
+      if (promptText.includes("retryable startup transport error test")) {
+        const markerPath = String(process.env.DC_FIXTURE_RETRY_MARKER || "").trim();
+        if (markerPath && !fs.existsSync(markerPath)) {
+          fs.writeFileSync(markerPath, "retry-once", "utf-8");
+          process.stderr.write("ProcessTransport is not ready for writing\n");
+          send({
+            jsonrpc: "2.0",
+            id: msg.id,
+            error: {
+              code: -32603,
+              message: "Internal error",
+            },
+          });
+          return;
+        }
+
+        sendTextUpdate(sessionId, "RETRY_TRANSPORT_BOOTSTRAP_OK");
+        send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            stopReason: "end_turn",
+          },
+        });
+        return;
+      }
+
+      if (promptText.includes("persistent transport error test")) {
+        process.stdout.write(
+          "CLI output was not valid JSON. This may indicate an error during startup.\n",
+        );
+        process.stderr.write('{"subtype":"hook_callback","callback_id":"hook_1"}\n');
+        process.stderr.write("ProcessTransport is not ready for writing\n");
+        send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          error: {
+            code: -32603,
+            message: "Internal error",
+          },
         });
         return;
       }

@@ -98,7 +98,7 @@ function createRuntime(params = {}) {
       type: "kimi",
       command: process.execPath,
       args: [fixturePath],
-      env: {},
+      env: params.launchEnv || {},
     },
   });
 }
@@ -253,6 +253,28 @@ test("AcpSessionExecutor: missing ACP command rejects run instead of crashing pr
     );
   } finally {
     await runtime.dispose();
+  }
+});
+
+test("AcpSessionExecutor: retries once after known startup transport failure", async () => {
+  const retryMarkerPath = path.join(
+    consoleRoot,
+    `fixture-retry-marker-${Date.now()}-${Math.random()}.txt`,
+  );
+  const runtime = createRuntime({
+    launchEnv: {
+      DC_FIXTURE_RETRY_MARKER: retryMarkerPath,
+    },
+  });
+  try {
+    const result = await runtime.run({
+      query: "retryable startup transport error test",
+    });
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.parts[0].text, "RETRY_TRANSPORT_BOOTSTRAP_OK");
+  } finally {
+    await runtime.dispose();
+    fs.rmSync(retryMarkerPath, { force: true });
   }
 });
 
@@ -498,7 +520,7 @@ test("AcpSessionExecutor: RPC internal error disposes stale remote session befor
         runtime.run({
           query: "rpc error turn test",
         }),
-      /Internal error \(code=-32603\)/,
+      /ACP 运行时在生成结果前返回上游内部错误/,
     );
 
     const next = await runtime.run({

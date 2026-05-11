@@ -16,6 +16,7 @@ import {
   getContactInboxShareFilesPath,
   getContactInboxShareMetaPath,
   getContactInboxSharePayloadPath,
+  getContactJsonPath,
   getContactMessagesPath,
   getContactRootPath,
 } from "../../bin/services/contact/runtime/Paths.js";
@@ -81,6 +82,41 @@ test("contact runtime paths keep one contact and one chat history per contact", 
     getContactInboxShareFilesPath(root, "share_p7k2m"),
     "/tmp/downcity-contact-demo/.downcity/contact/inbox/share_p7k2m/files",
   );
+});
+
+test("contact list normalizes partial inbound contact records", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-contact-partial-"));
+  try {
+    const contactPath = getContactJsonPath(root, "contact_local_agent");
+    await fs.mkdir(path.dirname(contactPath), { recursive: true });
+    await fs.writeFile(
+      contactPath,
+      JSON.stringify(
+        {
+          id: "contact_local_agent",
+          name: "local-agent",
+          endpoint: "http://72.62.254.79:5314",
+          status: "trusted",
+          inboundTokenHash: "hash-local-can-call-server",
+          createdAt: 1776247239373,
+          lastSeenAt: 1776247239373,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const contacts = await listContacts(root);
+
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].id, "contact_local_agent");
+    assert.equal(contacts[0].reachability, "inbound");
+    assert.equal(contacts[0].outboundToken, null);
+    assert.equal(contacts[0].inboundTokenHash, "hash-local-can-call-server");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
 });
 
 test("contact link code encodes a point-to-point one-time link", () => {

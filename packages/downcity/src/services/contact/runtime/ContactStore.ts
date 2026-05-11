@@ -32,19 +32,92 @@ function normalizeEndpoint(endpoint: string): string {
   return url.toString().replace(/\/$/, "");
 }
 
-function isContactLike(input: unknown): input is AgentContact {
+function isReachability(input: unknown): input is ContactReachability {
+  return input === "inbound" || input === "outbound" || input === "bidirectional";
+}
+
+function isContactStatus(input: unknown): input is AgentContact["status"] {
+  return input === "trusted" || input === "blocked";
+}
+
+function normalizeOptionalEndpoint(input: unknown): string | null | undefined {
+  if (input === undefined || input === null) return null;
+  if (typeof input !== "string") return undefined;
+  try {
+    return normalizeEndpoint(input);
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeOptionalToken(input: unknown): string | null | undefined {
+  if (input === undefined || input === null) return null;
+  if (typeof input !== "string") return undefined;
+  const value = input.trim();
+  return value || null;
+}
+
+function normalizeOptionalTimestamp(input: unknown): number | undefined {
+  return typeof input === "number" && Number.isFinite(input) ? input : undefined;
+}
+
+function inferStoredReachability(params: {
+  endpoint: string | null;
+  outboundToken: string | null;
+  inboundTokenHash: string | null;
+}): ContactReachability {
+  if (params.endpoint && params.outboundToken && params.inboundTokenHash) {
+    return "bidirectional";
+  }
+  if (params.endpoint && params.outboundToken) return "outbound";
+  return "inbound";
+}
+
+function isReachabilityStateValid(contact: AgentContact): boolean {
+  if (contact.reachability !== "inbound" && (!contact.endpoint || !contact.outboundToken)) {
+    return false;
+  }
+  if (contact.reachability !== "outbound" && !contact.inboundTokenHash) {
+    return false;
+  }
+  return true;
+}
+
+function normalizeStoredContact(input: unknown): AgentContact | null {
   const item = input as Partial<AgentContact> | null;
-  return Boolean(
-    item &&
-      typeof item.id === "string" &&
-      typeof item.name === "string" &&
-      (typeof item.endpoint === "string" || item.endpoint === null) &&
-      (item.reachability === "inbound" ||
-        item.reachability === "outbound" ||
-        item.reachability === "bidirectional") &&
-      (typeof item.outboundToken === "string" || item.outboundToken === null) &&
-      (typeof item.inboundTokenHash === "string" || item.inboundTokenHash === null),
-  );
+  if (!item || typeof item.id !== "string" || typeof item.name !== "string") {
+    return null;
+  }
+
+  const endpoint = normalizeOptionalEndpoint(item.endpoint);
+  const outboundToken = normalizeOptionalToken(item.outboundToken);
+  const inboundTokenHash = normalizeOptionalToken(item.inboundTokenHash);
+  if (endpoint === undefined || outboundToken === undefined || inboundTokenHash === undefined) {
+    return null;
+  }
+
+  const contact: AgentContact = {
+    id: item.id,
+    name: item.name.trim(),
+    endpoint,
+    reachability: isReachability(item.reachability)
+      ? item.reachability
+      : inferStoredReachability({
+          endpoint,
+          outboundToken,
+          inboundTokenHash,
+        }),
+    status: isContactStatus(item.status) ? item.status : "trusted",
+    outboundToken,
+    inboundTokenHash,
+    createdAt: normalizeOptionalTimestamp(item.createdAt) ?? 0,
+    ...(normalizeOptionalTimestamp(item.lastSeenAt) !== undefined
+      ? { lastSeenAt: normalizeOptionalTimestamp(item.lastSeenAt) }
+      : {}),
+  };
+
+  if (!contact.name || !isReachabilityStateValid(contact)) return null;
+  return contact;
 }
 
 function resolveReachability(contact: AgentContact): ContactReachability {
@@ -116,7 +189,8 @@ export async function readContact(
   const filePath = getContactJsonPath(projectRoot, contactId);
   if (!(await fs.pathExists(filePath))) return null;
   const raw = await fs.readJson(filePath).catch(() => null);
-  return isContactLike(raw) ? raw : null;
+  // 关键点（中文）：读取时归一化可恢复字段，避免一次局部写入让已收到的 contact 在列表中消失。
+  return normalizeStoredContact(raw);
 }
 
 /**

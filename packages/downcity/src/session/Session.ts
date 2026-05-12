@@ -105,7 +105,7 @@ export class Session {
   clearExecutor(): void {
     const current = this.executor;
     this.executor = null;
-    void current?.dispose?.();
+    
   }
 
   /**

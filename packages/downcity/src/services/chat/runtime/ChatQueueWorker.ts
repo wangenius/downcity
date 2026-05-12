@@ -171,10 +171,11 @@ export class ChatQueueWorker {
     const sessionKey = String(sessionId || "").trim();
     if (!sessionKey) return;
     try {
-      const runtime = this.context.session.get(sessionKey).getExecutor();
-      if (typeof runtime.requestCancelCurrentTurn !== "function") return;
-      await runtime.requestCancelCurrentTurn();
+      // ACP executor removed; cancel is no longer supported through session executor port.
     } catch {
+      // ignore
+
+      return;
       // ignore
     }
   }

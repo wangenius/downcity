@@ -43,7 +43,6 @@ import type {
 } from "@/shared/types/AgentProject.js";
 import { assertProjectExecutionTarget } from "@/main/agent/project/ProjectExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
-import { readLmpPluginConfig } from "@/plugins/lmp/runtime/Config.js";
 
 /**
  * Console 模型选项。
@@ -235,19 +234,8 @@ export async function initializeAgentProject(
   const fallbackAgentName = normalizeDefaultAgentName(projectBaseName) || projectBaseName;
   const agentName = String(input.agentName || "").trim() || fallbackAgentName;
   const execution = input.execution as ExecutionBindingConfig;
-  const executionMode = String(execution?.type || "").trim();
-  const primaryModelId =
-    executionMode === "api"
-      ? String((execution as ExecutionBindingConfig & { modelId?: string }).modelId || "").trim()
-      : "";
-  const sessionAgentType =
-    executionMode === "acp"
-      ? String((execution as ExecutionBindingConfig & { agent?: { type?: string } }).agent?.type || "").trim()
-      : "";
-  const lmpModel =
-    executionMode === "local"
-      ? String(readLmpPluginConfig({ plugins: input.plugins }).model || "").trim()
-      : "";
+  const primaryModelId = String(execution?.modelId || "").trim();
+
   const channels = normalizeChannels(input.channels);
   const dotEnvPath = path.join(projectRoot, ".env");
   const dotEnvExamplePath = path.join(projectRoot, ".env.example");
@@ -265,9 +253,6 @@ export async function initializeAgentProject(
       throw new Error("Console model pool is empty. Please configure at least one model first.");
     }
     assertApiPrimaryModelReady(primaryModelId);
-  }
-  if (executionMode === "local" && !lmpModel) {
-    throw new Error('Local execution requires plugins.lmp.model');
   }
 
   await ensureDir(projectRoot);
@@ -389,9 +374,7 @@ export async function initializeAgentProject(
   return {
     projectRoot,
     agentName,
-    executionMode: execution.type,
     ...(primaryModelId ? { modelId: primaryModelId } : {}),
-    ...(sessionAgentType ? { agentType: sessionAgentType as "codex" | "claude" | "kimi" } : {}),
     channels,
     createdFiles,
     skippedFiles,

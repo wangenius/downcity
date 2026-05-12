@@ -165,8 +165,11 @@ export interface SessionExecutorPort {
    * - 对普通本地 runtime 可不实现。
    * - ACP runtime 可借此向远端发送 `session/cancel`。
    */
-  requestCancelCurrentTurn?(): Promise<boolean> | boolean;
 }
+
+/**
+ * Session 集合入口。
+ */
 
 /**
  * 单个 Session 实例端口。
@@ -249,9 +252,6 @@ export interface SessionPort {
   isExecuting(): boolean;
 }
 
-/**
- * Session 集合入口。
- */
 export interface SessionCollectionPort {
   /**
    * 获取指定 sessionId 对应的 Session 实例。

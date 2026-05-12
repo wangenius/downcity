@@ -4,8 +4,7 @@
  * 设计目标（中文，关键点）
  * - 这是“核心能力”，不应该依赖 server/RuntimeContext（避免隐式初始化时序）。
  * - `execution.type=api` 时，从 console 全局 `llm.models` / `llm.providers` 解析最终模型。
- * - `execution.type=local` 时，读取 `plugins.lmp` 并通过 LMP plugin 管理本地 llama server。
- * - Agent、Memory extractor 等都可以复用同一套模型构造逻辑。
+ * - 当前只有 `api` 执行模式。
  */
 
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -24,10 +23,6 @@ import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
 import { ConsoleStore } from "@shared/utils/store/index.js";
 import { readProjectExecutionBinding } from "@/main/agent/project/ProjectExecutionBinding.js";
-import { isPluginEnabled } from "@/main/plugin/Activation.js";
-import { lmpPlugin } from "@/plugins/lmp/Plugin.js";
-import { resolveLmpRuntimeConfig } from "@/plugins/lmp/runtime/Config.js";
-import { ensureLmpLocalServer } from "@/plugins/lmp/runtime/Server.js";
 
 type ModelLogContext = {
   sessionId?: string;
@@ -147,10 +142,9 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
  * 创建 LanguageModel 实例。
  *
  * 解析策略（中文）
- * 1) 读取 `execution`，判断当前是 `api` 还是 `local`。
- * 2) `api`：定位 console 全局 `llm.models[modelId]` 与 `llm.providers[providerKey]`。
- * 3) `local`：解析 `~/.models` 下的 GGUF 文件并确保本地 llama server 已启动。
- * 4) 创建带日志拦截的 fetch，并按 provider type 分发到 SDK 工厂。
+ * 1) 读取 `execution`，确认是 `api` 模式。
+ * `api`：定位 console 全局 `llm.models[modelId]` 与 `llm.providers[providerKey]`。
+ * 创建带日志拦截的 fetch，并按 provider type 分发到 SDK 工厂。
  */
 export async function createModel(input: {
   config: DowncityConfig;
@@ -173,42 +167,7 @@ export async function createModel(input: {
     enabled: logLlmMessages,
     getSessionRunScope: input.getSessionRunScope,
   });
-
-  if (execution.type === "local") {
-    if (!isPluginEnabled({ plugin: lmpPlugin })) {
-      await logger.log("warn", "LMP plugin is disabled while execution.type=local");
-      throw Error('LMP plugin is disabled. Enable it with "city plugin action lmp on".');
-    }
-    const resolvedLocal = resolveLmpRuntimeConfig({
-      projectRoot: input.projectRoot || process.cwd(),
-      config: input.config,
-    });
-    const localServer = await ensureLmpLocalServer({
-      config: resolvedLocal,
-      logger,
-    });
-    await logger.log(
-      "info",
-      `[main] local model name=${localServer.modelName} file=${resolvedLocal.modelPath} baseUrl=${localServer.baseUrl}`,
-      {
-        kind: "llm_model_ready",
-        executionType: "local",
-        model: localServer.modelName,
-        modelPath: resolvedLocal.modelPath,
-        baseUrl: localServer.baseUrl,
-        logMessages: logLlmMessages,
-      },
-    );
-    const localProvider = createOpenAICompatible({
-      name: "local-llama",
-      baseURL: localServer.baseUrl,
-      apiKey: "downcity-local",
-      fetch: loggingFetch as typeof fetch,
-    });
-    return localProvider(localServer.modelName);
-  }
-
-  if (execution.type !== "api") {
+  if (!execution || execution.type !== "api") {
     await logger.log("warn", `Unsupported agent execution for createModel: ${execution.type}`);
     throw Error(`Unsupported agent execution for createModel: ${execution.type}`);
   }

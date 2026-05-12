@@ -4,7 +4,6 @@
  * 关键点（中文）
  * - 统一维护全部内建 plugin，避免 CLI / agent / docs 各自硬编码。
  * - 同时提供统一注册入口，减少额外跳转层级。
- * - 当前阶段注册 auth / skill / web / asr / tts / lmp / workboard 七个内建 plugin。
  */
 
 import type { PluginRegistry } from "@/main/plugin/PluginRegistry.js";
@@ -14,7 +13,6 @@ import { skillPlugin } from "@/plugins/skill/Plugin.js";
 import { webPlugin } from "@/plugins/web/Plugin.js";
 import { asrPlugin } from "@/plugins/asr/Plugin.js";
 import { ttsPlugin } from "@/plugins/tts/Plugin.js";
-import { lmpPlugin } from "@/plugins/lmp/Plugin.js";
 import { workboardPlugin } from "@/plugins/workboard/Plugin.js";
 
 /**
@@ -26,7 +24,6 @@ export const PLUGINS: Plugin[] = [
   webPlugin,
   asrPlugin,
   ttsPlugin,
-  lmpPlugin,
   workboardPlugin,
 ];
 

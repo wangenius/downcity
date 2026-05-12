@@ -19,7 +19,6 @@ import {
   buildConsoleConfigStatusResponse,
   buildConsoleModelResponse,
   inspectConsoleAgentDirectory,
-  listConsoleLocalModels,
   listKnownConsoleAgents,
   readConsoleConfigFileStatus,
   readRequestedConsoleAgentId,
@@ -278,7 +277,7 @@ export class ConsoleGateway {
   private async listLocalModels(
     projectRoot?: string,
   ): Promise<ConsoleLocalModelsResponse> {
-    return listConsoleLocalModels(projectRoot);
+    return { success: true, modelsDir: "~/.models", models: [] };
   }
 
   /**
@@ -307,19 +306,13 @@ export class ConsoleGateway {
 
   private async initializeAgentProject(projectRoot: string, initialization: {
     agentName?: unknown;
-    executionMode?: unknown;
     modelId?: unknown;
-    localModel?: unknown;
-    agentType?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult> {
     return initializeConsoleAgentProject({
       projectRoot,
       agentName: initialization.agentName,
-      executionMode: initialization.executionMode,
       modelId: initialization.modelId,
-      localModel: initialization.localModel,
-      agentType: initialization.agentType,
       forceOverwriteShipJson: initialization.forceOverwriteShipJson,
     });
   }
@@ -328,10 +321,7 @@ export class ConsoleGateway {
     initializeIfNeeded?: boolean;
     initialization?: {
       agentName?: unknown;
-      executionMode?: unknown;
       modelId?: unknown;
-      localModel?: unknown;
-      agentType?: unknown;
       forceOverwriteShipJson?: unknown;
     };
   }): Promise<{
@@ -351,24 +341,17 @@ export class ConsoleGateway {
   }
 
   private async updateAgentExecution(projectRoot: string, input: {
-    executionMode?: unknown;
     modelId?: unknown;
-    localModel?: unknown;
-    agentType?: unknown;
   }): Promise<{
     projectRoot: string;
-    executionMode: "api" | "acp" | "local";
-    modelId?: string;
-    agentType?: "codex" | "claude" | "kimi";
+    modelId: string;
   }> {
     return updateConsoleAgentExecution({
       projectRoot,
-      executionMode: input.executionMode,
       modelId: input.modelId,
-      localModel: input.localModel,
-      agentType: input.agentType,
     });
   }
+
 
   private async inspectAgentRestartSafety(projectRoot: string): Promise<{
     activeContexts: string[];

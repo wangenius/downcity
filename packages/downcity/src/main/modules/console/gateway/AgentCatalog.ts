@@ -40,29 +40,10 @@ import type {
 } from "@/shared/types/ConsoleGateway.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import { ConsoleStore } from "@shared/utils/store/index.js";
-import {
-  listLocalGgufModels,
-  resolveLmpModelsDir,
-} from "@/plugins/lmp/runtime/Config.js";
-
-const DEFAULT_RUNTIME_PORT = 5314;
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
+const DEFAULT_RUNTIME_PORT = 5314;
 
-function readShipLocalModel(ship: ConsoleShipJson | null | undefined): string {
-  const shipRecord =
-    ship && typeof ship === "object" && !Array.isArray(ship)
-      ? (ship as Record<string, unknown>)
-      : null;
-  const pluginMap =
-    shipRecord?.plugins && typeof shipRecord.plugins === "object" && !Array.isArray(shipRecord.plugins)
-      ? (shipRecord.plugins as Record<string, unknown>)
-      : null;
-  const lmp =
-    pluginMap?.lmp && typeof pluginMap.lmp === "object" && !Array.isArray(pluginMap.lmp)
-      ? (pluginMap.lmp as Record<string, unknown>)
-      : null;
-  return String(lmp?.model || "").trim();
-}
+
 
 /**
  * 从请求中读取当前指向的 agent id。
@@ -231,17 +212,7 @@ async function buildAgentOption(
     daemonPid: running ? daemonPid || undefined : undefined,
     logPath: running ? getDaemonLogPath(projectRoot) : undefined,
     chatProfiles,
-    executionMode:
-      String(ship?.execution?.type || "").trim() === "acp"
-        ? "acp"
-        : String(ship?.execution?.type || "").trim() === "api"
-          ? "api"
-          : String(ship?.execution?.type || "").trim() === "local"
-            ? "local"
-            : undefined,
-    modelId: String(ship?.execution?.modelId || "").trim() || undefined,
-    localModel: readShipLocalModel(ship) || undefined,
-    agentType: String(ship?.execution?.agent?.type || "").trim() || undefined,
+    modelId: ship?.execution?.modelId && typeof ship.execution.modelId === "string" ? ship.execution.modelId.trim() || undefined : undefined,
   };
 }
 
@@ -350,18 +321,12 @@ export async function inspectConsoleAgentDirectory(
   const matched = knownAgents.find((item) => item.projectRoot === normalizedRoot) || null;
 
   let displayName = basename(normalizedRoot);
-  let executionMode = "";
   let modelId = "";
-  let localModel = "";
-  let agentType = "";
   if (hasShipJson) {
     try {
       const ship = (await fs.readJson(shipPath)) as ConsoleShipJson;
       displayName = String(ship?.name || "").trim() || displayName;
-      executionMode = String(ship?.execution?.type || "").trim();
       modelId = String(ship?.execution?.modelId || "").trim();
-      localModel = readShipLocalModel(ship);
-      agentType = String(ship?.execution?.agent?.type || "").trim();
     } catch {
       // ignore parse failures
     }
@@ -377,13 +342,7 @@ export async function inspectConsoleAgentDirectory(
     knownAgent: matched !== null,
     running: matched?.running === true,
     displayName,
-    executionMode:
-      (executionMode === "api" || executionMode === "acp" || executionMode === "local"
-        ? executionMode
-        : matched?.executionMode) || undefined,
-    modelId: modelId || matched?.modelId || undefined,
-    localModel: localModel || matched?.localModel || undefined,
-    agentType: agentType || matched?.agentType || undefined,
+        
   };
 }
 
@@ -394,49 +353,6 @@ export async function inspectConsoleAgentDirectory(
  * - 如果项目已存在 `downcity.json`，优先尊重 `plugins.lmp.modelsDir`。
  * - 若项目未初始化，则回退到默认 `~/.models`，保证首次创建 agent 时也能直接选择。
  */
-export async function listConsoleLocalModels(
-  projectRoot?: string,
-): Promise<ConsoleLocalModelsResponse> {
-  const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
-  const shipPath = getDowncityJsonPath(normalizedRoot);
-  let config: DowncityConfig = {
-    name: "Console Local Models",
-    version: "1.0.0",
-    plugins: {
-      lmp: {
-        provider: "llama",
-        modelsDir: "~/.models",
-      },
-    },
-  };
-
-  if (await fs.pathExists(shipPath)) {
-    try {
-      const ship = (await fs.readJson(shipPath)) as DowncityConfig;
-      if (ship && typeof ship === "object" && !Array.isArray(ship)) {
-        config = ship;
-      }
-    } catch {
-      // ignore parse failures and keep default fallback
-    }
-  }
-
-  const modelsDir = resolveLmpModelsDir({
-    projectRoot: normalizedRoot,
-    config,
-  });
-  const models = await listLocalGgufModels({
-    projectRoot: normalizedRoot,
-    config,
-    modelsDir,
-  });
-
-  return {
-    success: true,
-    modelsDir,
-    models,
-  };
-}
 
 /**
  * 构建 Global Model 面板响应。
@@ -485,10 +401,9 @@ export async function buildConsoleModelResponse(params: {
     const providers = await store.listProviders();
     const providerMap = new Map(providers.map((x) => [x.id, x] as const));
     const activeModel = agentPrimaryModelId
-      ? models.find((x) => x.id === agentPrimaryModelId)
-      : undefined;
+      ? models.find((x) => x.id === agentPrimaryModelId) : null
     const providerKey = String(activeModel?.providerId || "").trim();
-    const provider = providerKey ? providerMap.get(providerKey) : undefined;
+    const provider = providerKey ? providerMap.get(providerKey) : null;
 
     return {
       success: true,
@@ -527,6 +442,7 @@ export async function readConsoleConfigFileStatus(params: {
 }): Promise<ConsoleConfigFileStatusItem> {
   const filePath = path.resolve(String(params.filePath || ""));
   if (!filePath) {
+
     return {
       key: params.key,
       scope: params.scope,
@@ -535,6 +451,7 @@ export async function readConsoleConfigFileStatus(params: {
       exists: false,
       isFile: false,
       readable: false,
+
       sizeBytes: 0,
       mtime: "",
       status: "error",
@@ -546,6 +463,7 @@ export async function readConsoleConfigFileStatus(params: {
     const stat = await fs.stat(filePath);
     const isFile = stat.isFile();
     if (!isFile) {
+
       return {
         key: params.key,
         scope: params.scope,
@@ -554,6 +472,7 @@ export async function readConsoleConfigFileStatus(params: {
         exists: true,
         isFile: false,
         readable: false,
+
         sizeBytes: Number(stat.size || 0),
         mtime: stat.mtime.toISOString(),
         status: "error",
@@ -565,7 +484,6 @@ export async function readConsoleConfigFileStatus(params: {
     try {
       await fs.access(filePath, fs.constants.R_OK);
     } catch {
-      readable = false;
     }
 
     return {
@@ -574,6 +492,7 @@ export async function readConsoleConfigFileStatus(params: {
       label: params.label,
       path: filePath,
       exists: true,
+
       isFile: true,
       readable,
       sizeBytes: Number(stat.size || 0),
@@ -583,6 +502,7 @@ export async function readConsoleConfigFileStatus(params: {
     };
   } catch (error) {
     const message = String(error || "").toLowerCase();
+
     const missing = message.includes("enoent");
     return {
       key: params.key,
@@ -592,6 +512,7 @@ export async function readConsoleConfigFileStatus(params: {
       exists: false,
       isFile: false,
       readable: false,
+
       sizeBytes: 0,
       mtime: "",
       status: missing ? "missing" : "error",

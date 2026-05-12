@@ -2,7 +2,7 @@
  * InlineInstantSessionService：Inline Composer 即时模式执行服务。
  *
  * 关键点（中文）
- * - 统一承接 `model / acp` 两类即时 executor。
+ * - 统一承接 model 即时 executor。
  * - 每次请求都创建独立临时 session，执行结束后立即清理临时目录与 executor。
  * - 不复用长期 runtime session，也不进入 channel/chat 的普通投递链路。
  */
@@ -23,19 +23,9 @@ import { Session } from "@session/Session.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
-import { AcpSessionExecutor } from "@session/executors/acp/AcpSessionExecutor.js";
 import { InlineInstantSystemComposer } from "@/main/modules/console/InlineInstantSystemComposer.js";
 import { createModel } from "@/main/city/model/CreateModel.js";
-import {
-  loadAgentEnvSnapshot,
-  loadGlobalEnvFromStore,
-  loadDowncityConfig,
-} from "@/main/city/env/Config.js";
 import { loadStaticSystemPrompts } from "@session/composer/system/default/StaticPromptCatalog.js";
-import {
-  readEnabledSessionAgentConfig,
-  resolveAcpLaunchConfig,
-} from "@session/executors/acp/AcpLaunchConfig.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import {
   pickLastSuccessfulChatSendText,
@@ -89,9 +79,6 @@ function buildInstantPrompt(input: {
   ].join("\n").trim();
 }
 
-function buildInstantSessionId(executorType: "model" | "acp"): string {
-  return `inline:instant:${executorType}:${Date.now()}:${generateId()}`;
-}
 
 function readAssistantFallbackText(text: string, resultText: string): string {
   const picked = String(text || "").trim();
@@ -141,12 +128,7 @@ export class InlineInstantSessionService implements ConsoleInlineInstantService 
         executorType: "model",
       });
     }
-    if (executorType === "acp") {
-      return await this.runAcpInstant({
-        ...input,
-        executorType: "acp",
-      });
-    }
+
     throw new Error(`Unsupported inline instant executor: ${String(input.executorType || "")}`);
   }
 
@@ -225,13 +207,17 @@ export class InlineInstantSessionService implements ConsoleInlineInstantService 
     }
   }
 
+  private buildSessionId(): string {
+    return `inline-instant-model`;
+  }
+
   private async runModelInstant(
     input: ConsoleInlineInstantRunInput & { executorType: "model" },
   ): Promise<ConsoleInlineInstantRunResult> {
     const modelId = String(input.modelId || "").trim();
     if (!modelId) throw new Error("modelId is required for inline model executor");
 
-    const sessionId = buildInstantSessionId("model");
+    const sessionId = this.buildSessionId();
     const rootPath = process.cwd();
     const { tempDirPath, historyComposer } = await this.createTempHistoryComposer({
       rootPath,
@@ -287,79 +273,4 @@ export class InlineInstantSessionService implements ConsoleInlineInstantService 
     };
   }
 
-  private async runAcpInstant(
-    input: ConsoleInlineInstantRunInput & { executorType: "acp" },
-  ): Promise<ConsoleInlineInstantRunResult> {
-    const agentId = String(input.agentId || "").trim();
-    if (!agentId) throw new Error("agentId is required for inline ACP executor");
-    if (typeof this.resolveAgentById !== "function") {
-      throw new Error("InlineInstantSessionService requires resolveAgentById for ACP executor");
-    }
-
-    const selectedAgent = await this.resolveAgentById(agentId);
-    if (!selectedAgent) {
-      throw new Error(`Agent not found: ${agentId}`);
-    }
-    const projectRoot = String(selectedAgent.projectRoot || "").trim();
-    if (!projectRoot) {
-      throw new Error(`Agent projectRoot is unavailable: ${agentId}`);
-    }
-
-    const globalEnv = loadGlobalEnvFromStore();
-    const projectEnv = loadAgentEnvSnapshot(projectRoot);
-    const config = loadDowncityConfig(projectRoot, {
-      projectEnv,
-      globalEnv,
-    });
-    const sessionAgent = readEnabledSessionAgentConfig(config);
-    if (!sessionAgent) {
-      throw new Error(`Agent is not configured with execution.type="acp": ${agentId}`);
-    }
-
-    const sessionId = buildInstantSessionId("acp");
-    const { tempDirPath, historyComposer } = await this.createTempHistoryComposer({
-      rootPath: projectRoot,
-      sessionId,
-    });
-    const systemComposer = new InlineInstantSystemComposer({
-      prompts: [
-        ...loadStaticSystemPrompts(projectRoot),
-        ...[String(input.system || "").trim()].filter(Boolean),
-      ],
-      projectRoot,
-    });
-    const launch = resolveAcpLaunchConfig(sessionAgent);
-    const session = new Session({
-      sessionId,
-      historyComposer,
-      createExecutor: (sessionHistoryComposer) =>
-        new AcpSessionExecutor({
-          rootPath: projectRoot,
-          sessionId,
-          logger: this.logger,
-          historyComposer: sessionHistoryComposer,
-          systemComposer,
-          launch,
-        }),
-    });
-
-    const text = await this.executeTempSession({
-      sessionRuntime: {
-        sessionId,
-        tempDirPath,
-        session,
-      },
-      query: buildInstantPrompt({
-        prompt: String(input.prompt || "").trim(),
-        pageContext: input.pageContext,
-      }),
-    });
-
-    return {
-      sessionId: text.sessionId,
-      executorType: "acp",
-      agentId,
-      text: text.text,
-    };
-  }
 }

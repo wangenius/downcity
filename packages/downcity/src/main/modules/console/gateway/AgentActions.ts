@@ -33,36 +33,10 @@ import type { AgentProjectInitializationResult } from "@/shared/types/AgentProje
 import type {
   ExecutionBindingConfig,
 } from "@/shared/types/ExecutionBinding.js";
-import type { SessionAgentType } from "@/shared/types/SessionAgent.js";
 
 function resolveExecutionInput(params: {
-  executionMode?: unknown;
   modelId?: unknown;
-  localModel?: unknown;
-  agentType?: unknown;
 }): ExecutionBindingConfig {
-  const executionMode = String(params.executionMode || "").trim();
-  if (executionMode === "acp") {
-    const agentType = String(params.agentType || "").trim() as SessionAgentType;
-    if (agentType !== "codex" && agentType !== "claude" && agentType !== "kimi") {
-      throw new Error("ACP execution requires agentType: codex | claude | kimi");
-    }
-    return {
-      type: "acp",
-      agent: {
-        type: agentType,
-      },
-    };
-  }
-  if (executionMode === "local") {
-    const localModel = String(params.localModel || "").trim();
-    if (!localModel) {
-      throw new Error("Local execution requires localModel");
-    }
-    return {
-      type: "local",
-    };
-  }
   const modelId = String(params.modelId || "").trim();
   if (!modelId) {
     throw new Error("API execution requires modelId");
@@ -79,31 +53,15 @@ function resolveExecutionInput(params: {
 export async function initializeConsoleAgentProject(params: {
   projectRoot: string;
   agentName?: unknown;
-  executionMode?: unknown;
   modelId?: unknown;
-  localModel?: unknown;
-  agentType?: unknown;
   forceOverwriteShipJson?: unknown;
 }): Promise<AgentProjectInitializationResult> {
   return initializeAgentProject({
     projectRoot: params.projectRoot,
     agentName: String(params.agentName || "").trim() || undefined,
     execution: resolveExecutionInput({
-      executionMode: params.executionMode,
       modelId: params.modelId,
-      localModel: params.localModel,
-      agentType: params.agentType,
     }),
-    ...(String(params.executionMode || "").trim() === "local"
-      ? {
-          plugins: {
-            lmp: {
-              provider: "llama",
-              model: String(params.localModel || "").trim(),
-            },
-          },
-        }
-      : {}),
     forceOverwriteShipJson: params.forceOverwriteShipJson === true,
   });
 }
@@ -113,15 +71,10 @@ export async function initializeConsoleAgentProject(params: {
  */
 export async function updateConsoleAgentExecution(params: {
   projectRoot: string;
-  executionMode?: unknown;
   modelId?: unknown;
-  localModel?: unknown;
-  agentType?: unknown;
 }): Promise<{
   projectRoot: string;
-  executionMode: "api" | "acp" | "local";
-  modelId?: string;
-  agentType?: SessionAgentType;
+  modelId: string;
 }> {
   const projectRoot = path.resolve(String(params.projectRoot || "").trim() || ".");
   const shipJsonPath = getDowncityJsonPath(projectRoot);
@@ -129,37 +82,23 @@ export async function updateConsoleAgentExecution(params: {
     throw new Error(`downcity.json not found: ${shipJsonPath}`);
   }
   const ship = (await fs.readJson(shipJsonPath)) as Record<string, unknown>;
-  const execution = resolveExecutionInput({
-    executionMode: params.executionMode,
-    modelId: params.modelId,
-    localModel: params.localModel,
-    agentType: params.agentType,
-  });
-  ship.execution = execution;
-  if (execution.type === "local") {
-    const pluginMap =
-      ship.plugins && typeof ship.plugins === "object" && !Array.isArray(ship.plugins)
-        ? (ship.plugins as Record<string, unknown>)
-        : {};
-    const currentLmp =
-      pluginMap.lmp && typeof pluginMap.lmp === "object" && !Array.isArray(pluginMap.lmp)
-        ? (pluginMap.lmp as Record<string, unknown>)
-        : {};
-    pluginMap.lmp = {
-      ...currentLmp,
-      provider: "llama",
-      model: String(params.localModel || "").trim(),
-    };
-    ship.plugins = pluginMap;
+  const modelId = String(params.modelId || "").trim();
+  if (!modelId) {
+    throw new Error("modelId is required");
   }
+  ship.execution = {
+    type: "api",
+    modelId,
+  };
   await fs.writeJson(shipJsonPath, ship, { spaces: 2 });
   return {
     projectRoot,
-    executionMode: execution.type,
-    ...(execution.type === "api" ? { modelId: execution.modelId } : {}),
-    ...(execution.type === "acp" ? { agentType: execution.agent.type } : {}),
+    modelId,
   };
 }
+
+/**
+ * 调起系统目录选择器。
 
 /**
  * 调起系统目录选择器。
@@ -283,10 +222,7 @@ export async function startConsoleAgentByProjectRoot(params: {
   initializeIfNeeded?: boolean;
     initialization?: {
       agentName?: unknown;
-      executionMode?: unknown;
       modelId?: unknown;
-      localModel?: unknown;
-      agentType?: unknown;
       forceOverwriteShipJson?: unknown;
     };
 }): Promise<{
@@ -321,21 +257,8 @@ export async function startConsoleAgentByProjectRoot(params: {
       projectRoot: normalizedRoot,
       agentName: String(params.initialization?.agentName || "").trim() || undefined,
       execution: resolveExecutionInput({
-        executionMode: params.initialization?.executionMode,
         modelId: params.initialization?.modelId,
-        localModel: params.initialization?.localModel,
-        agentType: params.initialization?.agentType,
       }),
-      ...(String(params.initialization?.executionMode || "").trim() === "local"
-        ? {
-            plugins: {
-              lmp: {
-                provider: "llama",
-                model: String(params.initialization?.localModel || "").trim(),
-              },
-            },
-          }
-        : {}),
       forceOverwriteShipJson: params.initialization?.forceOverwriteShipJson === true,
     });
   } else {

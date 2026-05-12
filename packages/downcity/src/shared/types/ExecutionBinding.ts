@@ -1,68 +1,18 @@
 /**
- * 项目执行绑定类型定义。
+ * 项目执行绑定类型定义（api 模式）。
  *
  * 关键点（中文）
- * - 项目运行入口只允许三类执行模式：`api`、`acp`、`local`。
- * - `api` 模式只保存 console 全局模型池中的模型 ID。
- * - `acp` 模式只保存 ACP coding agent 所需的最小启动配置。
- * - `local` 模式只表达“走本地执行器”，具体模型与 llama 配置改由 `plugins.lmp` 管理。
- * - 该类型是项目 `downcity.json` 中唯一的执行配置来源。
+ * - 项目运行入口只有一种执行模式：`api`。
+ * - 绑定 console 全局模型池中的模型 ID。
+ * - 该类型是项目 `downcity.json` 中唯一的执行配置。
  */
-
-import type { SessionAgentType } from "@/shared/types/SessionAgent.js";
 
 /**
- * 支持的执行模式。
+ * 项目执行绑定配置（api 模式）。
  */
-export type ExecutionBindingMode = "api" | "acp" | "local";
-
-/**
- * ACP agent 启动配置。
- */
-export interface AcpExecutionAgentConfig {
+export interface ExecutionBindingConfig {
   /**
-   * ACP agent 类型。
-   *
-   * 说明（中文）
-   * - `codex`：默认走 Codex ACP adapter。
-   * - `claude`：默认走 Claude ACP adapter。
-   * - `kimi`：默认走 `kimi acp`。
-   */
-  type: SessionAgentType;
-
-  /**
-   * 自定义启动命令。
-   *
-   * 说明（中文）
-   * - 留空时按 `type` 使用内置默认命令。
-   * - 用于适配本机已安装的 wrapper / adapter。
-   */
-  command?: string;
-
-  /**
-   * 自定义启动参数列表。
-   *
-   * 说明（中文）
-   * - 留空时按 `type` 使用内置默认参数。
-   * - 一旦写入，会完整覆盖默认参数。
-   */
-  args?: string[];
-
-  /**
-   * 启动该 ACP agent 时额外注入的环境变量。
-   *
-   * 说明（中文）
-   * - 仅作用于子进程，不会回写当前 agent 进程环境。
-   */
-  env?: Record<string, string>;
-}
-
-/**
- * 基于 console 模型池的 API 执行配置。
- */
-export interface ApiExecutionBindingConfig {
-  /**
-   * 执行模式类型。
+   * 执行模式类型，固定为 `api`。
    */
   type: "api";
 
@@ -75,36 +25,3 @@ export interface ApiExecutionBindingConfig {
    */
   modelId: string;
 }
-
-/**
- * 基于本地 llama 模型文件的执行配置。
- */
-export interface LocalExecutionBindingConfig {
-  /**
-   * 执行模式类型。
-   */
-  type: "local";
-}
-
-/**
- * 基于 ACP coding agent 的执行配置。
- */
-export interface AcpExecutionBindingConfig {
-  /**
-   * 执行模式类型。
-   */
-  type: "acp";
-
-  /**
-   * ACP agent 配置。
-   */
-  agent: AcpExecutionAgentConfig;
-}
-
-/**
- * 项目执行绑定联合类型。
- */
-export type ExecutionBindingConfig =
-  | ApiExecutionBindingConfig
-  | AcpExecutionBindingConfig
-  | LocalExecutionBindingConfig;

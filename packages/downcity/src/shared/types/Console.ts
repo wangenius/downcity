@@ -89,30 +89,12 @@ export interface ConsoleAgentOption {
   }>;
 
   /**
-   * 当前 agent 的执行模式。
-   */
-  executionMode?: "api" | "acp" | "local";
 
   /**
-   * 当前 agent 的 `downcity.json.execution.modelId`。
-   *
-   * 说明（中文）
-   * - 仅当 `executionMode=api` 时有值。
+   * 当前 agent 绑定的 console 模型 ID（downcity.json.execution.modelId）。
    */
   modelId?: string;
 
-  /**
-   * 当前 agent 的 `downcity.json.plugins.lmp.model`。
-   *
-   * 说明（中文）
-   * - 仅当 `executionMode=local` 时有值。
-   */
-  localModel?: string;
-
-  /**
-   * 当前 agent 的 `downcity.json.execution.agent.type`。
-   */
-  agentType?: string;
 }
 
 /**
@@ -200,24 +182,12 @@ export interface ConsoleAgentDirectoryInspection {
   displayName: string;
 
   /**
-   * 当前读取到的执行模式（若存在）。
-   */
-  executionMode?: "api" | "acp" | "local";
-
-  /**
    * 当前读取到的主模型 ID（若存在）。
    */
   modelId?: string;
 
   /**
-   * 当前读取到的本地模型文件名（若存在）。
    */
-  localModel?: string;
-
-  /**
-   * 当前读取到的 ACP agent 类型（若存在）。
-   */
-  agentType?: string;
 }
 
 /**

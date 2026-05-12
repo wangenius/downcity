@@ -5,12 +5,14 @@
  * - 这里是单 agent 宿主的主装配入口，负责把 config、model、session、service、plugin 串起来。
  * - 完整运行态类型仍由 `AgentRuntimeState.ts` 维护；本模块只负责装配与对外导出。
  * - 该模块同时负责热重载提示词系统与导出统一的 `getAgentContext()` 入口。
+ * - 当前只有 `api` 执行模式：从 console 模型池取模型，走 LocalSessionCore。
  */
 
 import path from "path";
 import fs from "fs";
 import { logger as defaultLogger } from "@shared/utils/logger/Logger.js";
 import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
+import { ensureRuntimeProjectReady } from "@/main/city/daemon/ProjectSetup.js";
 import { createModel } from "@/main/city/model/CreateModel.js";
 import {
   loadGlobalEnvFromStore,
@@ -28,14 +30,8 @@ import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/Jso
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { DefaultSessionSystemComposer } from "@session/composer/system/default/DefaultSessionSystemComposer.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
-import { AcpSessionExecutor } from "@session/executors/acp/AcpSessionExecutor.js";
 import { ChatSession } from "@services/chat/runtime/ChatSession.js";
 import { ChatSessionExecutionComposer } from "@services/chat/runtime/ChatSessionExecutionComposer.js";
-import {
-  readEnabledSessionAgentConfig,
-  resolveAcpLaunchConfig,
-} from "@session/executors/acp/AcpLaunchConfig.js";
-import { ensureRuntimeProjectReady } from "@/main/city/daemon/ProjectSetup.js";
 import {
   loadStaticSystemPrompts,
   StaticPromptCatalog,
@@ -62,7 +58,6 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/main/city/runtime/AgentHostRuntime.js";
 import { updateAgentRuntimeConfig } from "@/main/agent/AgentRuntimeState.js";
-import { readProjectExecutionBinding } from "@/main/agent/project/ProjectExecutionBinding.js";
 
 export type { AgentRuntimeBase, AgentRuntime } from "@/main/agent/AgentRuntimeState.js";
 export {
@@ -185,7 +180,37 @@ function startAgentHotReload(): void {
 }
 
 /**
+ * 创建 session history composer。
+ */
+function createSessionHistoryComposer(
+  rootPath: string,
+  sessionId: string,
+): JsonlSessionHistoryComposer {
+  const parsedRun = parseTaskRunSessionId(sessionId);
+  const paths = parsedRun
+    ? (() => {
+        const runDir = getTaskRunDir(
+          rootPath,
+          parsedRun.taskId,
+          parsedRun.timestamp,
+        );
+        return {
+          sessionDirPath: runDir,
+        };
+      })()
+    : undefined;
+  return new JsonlSessionHistoryComposer({
+    sessionId,
+    rootPath,
+    ...(paths ? { paths } : {}),
+  });
+}
+
+/**
  * 初始化入口。
+ *
+ * 关键点（中文）
+ * - 只有 api 执行模式：从 console 模型池创建模型 → LocalSessionExecutor → LocalSessionCore。
  */
 export async function initAgentRuntime(cwd: string): Promise<void> {
   stopAgentHotReload();
@@ -232,17 +257,12 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
   });
 
-  const sessionAgent = readEnabledSessionAgentConfig(config);
-  const execution = readProjectExecutionBinding(config);
   const primaryModelId = readProjectPrimaryModelId(config);
-  const model =
-    sessionAgent || !execution || execution.type === "acp"
-      ? undefined
-      : await createModel({
-          config,
-          getSessionRunScope: getSessionRunScope,
-          projectRoot: rootPath,
-        });
+  const model = await createModel({
+    config,
+    getSessionRunScope: getSessionRunScope,
+    projectRoot: rootPath,
+  });
 
   const compactionComposer = new JsonlSessionCompactionComposer({
     keepLastMessages: config.context?.messages?.keepLastMessages,
@@ -268,12 +288,12 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     if (existing) return existing;
 
     const historyComposer = createSessionHistoryComposer(rootPath, key);
-    let created!: ChatSession;
     const executionComposer = new ChatSessionExecutionComposer({
       sessionId: key,
       getTools: () => shellTools,
       getTurnState: () => created.getTurnState(),
     });
+    let created!: ChatSession;
     created = new ChatSession({
       sessionId: key,
       historyComposer,
@@ -282,24 +302,15 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
         sessionHistoryComposer: SessionHistoryComposer,
         chatExecutionComposer: ChatSessionExecutionComposer,
       ) =>
-        sessionAgent
-          ? new AcpSessionExecutor({
-              rootPath,
-              sessionId: key,
-              logger: defaultLogger,
-              historyComposer: sessionHistoryComposer,
-              systemComposer,
-              launch: resolveAcpLaunchConfig(sessionAgent),
-            })
-          : new LocalSessionExecutor({
-              model: model as NonNullable<typeof model>,
-              logger: defaultLogger,
-              historyComposer: sessionHistoryComposer,
-              compactionComposer,
-              systemComposer,
-              getTools: () => shellTools,
-              executionComposer: chatExecutionComposer,
-            }),
+        new LocalSessionExecutor({
+          model,
+          logger: defaultLogger,
+          historyComposer: sessionHistoryComposer,
+          compactionComposer,
+          systemComposer,
+          getTools: () => shellTools,
+          executionComposer: chatExecutionComposer,
+        }),
     });
     sessionsById.set(key, created);
     return created;
@@ -322,7 +333,8 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
         .filter(([, session]) => session.isExecuting())
         .map(([sessionId]) => sessionId),
     getExecutingSessionCount: () =>
-      [...sessionsById.values()].filter((session) => session.isExecuting()).length,
+      [...sessionsById.values()].filter((session) => session.isExecuting())
+        .length,
     services: new Map(),
   };
   agentState.services = createRegisteredServiceInstances(agentState);
@@ -334,26 +346,3 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
   startAgentHotReload();
 }
 
-function createSessionHistoryComposer(
-  rootPath: string,
-  sessionId: string,
-): JsonlSessionHistoryComposer {
-  const parsedRun = parseTaskRunSessionId(sessionId);
-  const paths = parsedRun
-    ? (() => {
-        const runDir = getTaskRunDir(
-          rootPath,
-          parsedRun.taskId,
-          parsedRun.timestamp,
-        );
-        return {
-          sessionDirPath: runDir,
-        };
-      })()
-    : undefined;
-  return new JsonlSessionHistoryComposer({
-    sessionId,
-    rootPath,
-    ...(paths ? { paths } : {}),
-  });
-}

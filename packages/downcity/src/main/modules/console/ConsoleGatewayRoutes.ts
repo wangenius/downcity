@@ -35,10 +35,7 @@ export interface ConsoleGatewayRouteHandlers {
   /** 初始化 agent 项目骨架。 */
   initializeAgentProject(projectRoot: string, initialization: {
     agentName?: unknown;
-    executionMode?: unknown;
     modelId?: unknown;
-    localModel?: unknown;
-    agentType?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult>;
   /** 通过目录启动 agent。 */
@@ -46,7 +43,6 @@ export interface ConsoleGatewayRouteHandlers {
     initializeIfNeeded?: boolean;
     initialization?: {
       agentName?: unknown;
-      executionMode?: unknown;
       modelId?: unknown;
       localModel?: unknown;
       agentType?: unknown;
@@ -61,23 +57,20 @@ export interface ConsoleGatewayRouteHandlers {
     message?: string;
   }>;
   /** 更新 agent 执行绑定。 */
+  /** 更新 agent 执行绑定。 */
   updateAgentExecution(projectRoot: string, input: {
-    executionMode?: unknown;
     modelId?: unknown;
-    localModel?: unknown;
-    agentType?: unknown;
   }): Promise<{
     projectRoot: string;
-    executionMode: "api" | "acp" | "local";
-    modelId?: string;
-    agentType?: "codex" | "claude" | "kimi";
+    modelId: string;
   }>;
   /** 选择系统目录。 */
   pickDirectoryPath(): Promise<string>;
-  /** 探测 agent 目录状态。 */
   inspectAgentDirectory(projectRoot: string): Promise<ConsoleAgentDirectoryInspection>;
   /** 列出本地 GGUF 模型。 */
   listLocalModels(projectRoot?: string): Promise<ConsoleLocalModelsResponse>;
+
+  /** 探测 agent 目录状态。 */
   /** 检查 agent 停止/重启安全性。 */
   inspectAgentRestartSafety(projectRoot: string): Promise<{
     activeContexts: string[];
@@ -182,10 +175,7 @@ export function registerConsoleGatewayRoutes(params: {
         initializeIfNeeded?: unknown;
         initialization?: {
           agentName?: unknown;
-          executionMode?: unknown;
           modelId?: unknown;
-          localModel?: unknown;
-          agentType?: unknown;
           forceOverwriteShipJson?: unknown;
         };
       };
@@ -208,10 +198,7 @@ export function registerConsoleGatewayRoutes(params: {
       const body = (await c.req.json().catch(() => ({}))) as {
         projectRoot?: unknown;
         agentName?: unknown;
-        executionMode?: unknown;
         modelId?: unknown;
-        localModel?: unknown;
-        agentType?: unknown;
         autoStart?: unknown;
         forceOverwriteShipJson?: unknown;
       };
@@ -221,10 +208,7 @@ export function registerConsoleGatewayRoutes(params: {
       }
       const initResult = await handlers.initializeAgentProject(rawProject, {
         agentName: body.agentName,
-        executionMode: body.executionMode,
         modelId: body.modelId,
-        localModel: body.localModel,
-        agentType: body.agentType,
         forceOverwriteShipJson: body.forceOverwriteShipJson,
       });
       if (body.autoStart === false) {
@@ -289,20 +273,14 @@ export function registerConsoleGatewayRoutes(params: {
       const body = (await c.req.json().catch(() => ({}))) as {
         agentId?: unknown;
         projectRoot?: unknown;
-        executionMode?: unknown;
         modelId?: unknown;
-        localModel?: unknown;
-        agentType?: unknown;
       };
       const rawProject = String(body.projectRoot || body.agentId || "").trim();
       if (!rawProject) {
         return c.json({ success: false, error: "projectRoot is required" }, 400);
       }
       const payload = await handlers.updateAgentExecution(rawProject, {
-        executionMode: body.executionMode,
         modelId: body.modelId,
-        localModel: body.localModel,
-        agentType: body.agentType,
       });
       return c.json({
         success: true,

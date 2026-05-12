@@ -5,6 +5,7 @@
  * - 负责构建 task 专用 LocalSessionCore / JsonlSessionHistoryComposer 运行时。
  * - 负责把每轮 user/assistant 消息写入 run 目录对应的 messages.jsonl。
  * - 这些能力与任务编排逻辑解耦后，Runner 主流程会更聚焦于状态流转。
+ * - 当前只有 api 执行模式。
  */
 
 import path from "node:path";
@@ -13,11 +14,6 @@ import type { SessionRunResult } from "@/types/session/SessionRun.js";
 import type { TaskSessionRuntimePort } from "@/types/task/TaskRunner.js";
 import { LocalSessionCore } from "@session/executors/local/LocalSessionCore.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
-import { AcpSessionExecutor } from "@session/executors/acp/AcpSessionExecutor.js";
-import {
-  readEnabledSessionAgentConfig,
-  resolveAcpLaunchConfig,
-} from "@session/executors/acp/AcpLaunchConfig.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionExecutionComposer } from "@session/composer/execution/LocalSessionExecutionComposer.js";
@@ -56,6 +52,9 @@ export async function appendTaskRoundUserMessage(params: {
 
 /**
  * 构建 task 专用 Session 运行时（独立于普通 Session 实例缓存）。
+ *
+ * 关键点（中文）
+ * - 使用 LocalSessionCore 执行，模型来自 context.session.model（agent 级模型）。
  */
 export function createTaskSessionRuntimePort(params: {
   context: AgentContext;
@@ -78,8 +77,6 @@ export function createTaskSessionRuntimePort(params: {
   });
   const historyComposersBySessionId = new Map<string, JsonlSessionHistoryComposer>();
   const runtimesBySessionId = new Map<string, SessionExecutor>();
-  const sessionAgent = readEnabledSessionAgentConfig(context.config);
-  const launch = sessionAgent ? resolveAcpLaunchConfig(sessionAgent) : null;
 
   const resolveTaskHistoryComposer = (sessionId: string): JsonlSessionHistoryComposer => {
     const existing = historyComposersBySessionId.get(sessionId);
@@ -128,32 +125,21 @@ export function createTaskSessionRuntimePort(params: {
       if (existing) return existing;
 
       const historyComposer = resolveTaskHistoryComposer(key);
-      const created = launch
-        ? new AcpSessionExecutor({
-            rootPath: context.rootPath,
-            sessionId: key,
-            logger: context.logger,
-            historyComposer,
-            systemComposer,
-            launch,
-          })
-        : (() => {
-            if (!context.session.model) {
-              throw new Error("TaskSessionRuntimePort requires session.model when execution.type is not acp");
-            }
-            const executionComposer = new LocalSessionExecutionComposer({
-              sessionId: key,
-              getTools: () => shellTools,
-            });
-            return new LocalSessionCore({
-              model: context.session.model,
-              logger: context.logger,
-              historyComposer,
-              compactionComposer,
-              executionComposer,
-              systemComposer,
-            });
-          })();
+      if (!context.session.model) {
+        throw new Error("TaskSessionRuntimePort requires session.model");
+      }
+      const executionComposer = new LocalSessionExecutionComposer({
+        sessionId: key,
+        getTools: () => shellTools,
+      });
+      const created = new LocalSessionCore({
+        model: context.session.model,
+        logger: context.logger,
+        historyComposer,
+        compactionComposer,
+        executionComposer,
+        systemComposer,
+      });
       runtimesBySessionId.set(key, created);
       return created;
     },
@@ -169,16 +155,13 @@ export async function appendTaskAssistantMessage(params: {
   taskId: string;
   rawResult: SessionRunResult;
 }): Promise<void> {
-  const historyComposer = params.taskSessionRuntime.getHistoryComposer(params.sessionId);
-  const assistantMessage = params.rawResult?.assistantMessage;
-  if (assistantMessage && typeof assistantMessage === "object") {
-    await historyComposer.append(assistantMessage);
-    const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-      params.sessionId,
-    );
-    for (const message of deferredInjectedMessages) {
-      await historyComposer.append(message);
-    }
-    return;
+  const { taskSessionRuntime, sessionId, rawResult } = params;
+  const historyComposer = taskSessionRuntime.getHistoryComposer(sessionId);
+  if (rawResult.assistantMessage) {
+    await historyComposer.append(rawResult.assistantMessage);
+  }
+  const deferredUserMessages = drainDeferredPersistedUserMessages(sessionId);
+  for (const deferred of deferredUserMessages) {
+    await historyComposer.append(deferred);
   }
 }

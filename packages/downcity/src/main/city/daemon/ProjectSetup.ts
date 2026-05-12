@@ -11,10 +11,8 @@ import path from "node:path";
 import { loadDowncityConfig } from "@/main/city/env/Config.js";
 import { ConsoleStore } from "@/shared/utils/store/index.js";
 import {
-  readProjectExecutionMode,
   readProjectExecutionBinding,
   readProjectPrimaryModelId,
-  readProjectSessionAgentType,
 } from "@/main/agent/project/ProjectExecutionBinding.js";
 import {
   getCacheDirPath,
@@ -30,10 +28,6 @@ import {
   getDowncitySessionRootDirPath,
   getDowncityTasksDirPath,
 } from "@/main/city/env/Paths.js";
-import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
-import { isPluginEnabled } from "@/main/plugin/Activation.js";
-import { lmpPlugin } from "@/plugins/lmp/Plugin.js";
-import { resolveLmpRuntimeConfig } from "@/plugins/lmp/runtime/Config.js";
 
 /**
  * 校验项目初始化关键文件。
@@ -92,15 +86,9 @@ export function ensureRuntimeProjectReady(projectRoot: string): void {
  */
 export function ensureRuntimeExecutionBindingReady(projectRoot: string): void {
   let primaryModelId = "";
-  let sessionAgentType = "";
-  let executionMode = "";
-  let executionBinding: ExecutionBindingConfig | null = null;
   try {
     const config = loadDowncityConfig(projectRoot);
-    executionBinding = readProjectExecutionBinding(config);
-    executionMode = String(readProjectExecutionMode(config) || "").trim();
     primaryModelId = readProjectPrimaryModelId(config);
-    sessionAgentType = String(readProjectSessionAgentType(config) || "").trim();
   } catch (error) {
     console.error("❌ Invalid downcity.json execution binding");
     console.error(`   project: ${projectRoot}`);
@@ -108,35 +96,10 @@ export function ensureRuntimeExecutionBindingReady(projectRoot: string): void {
     process.exit(1);
   }
 
-  if (sessionAgentType) {
-    return;
-  }
-
-  if (executionMode === "local" && executionBinding?.type === "local") {
-    if (!isPluginEnabled({ plugin: lmpPlugin })) {
-      console.error("❌ LMP plugin is disabled");
-      console.error(`   project: ${projectRoot}`);
-      console.error("   fix: run `city plugin action lmp on`");
-      process.exit(1);
-    }
-    const resolvedLocal = resolveLmpRuntimeConfig({
-      projectRoot,
-      config: loadDowncityConfig(projectRoot),
-    });
-    if (!fs.existsSync(resolvedLocal.modelPath)) {
-      console.error("❌ Local llama model file not found");
-      console.error(`   project: ${projectRoot}`);
-      console.error(`   plugins.lmp.model: ${resolvedLocal.modelPath}`);
-      console.error("   fix: download a GGUF model into ~/.models or update plugins.lmp.model");
-      process.exit(1);
-    }
-    return;
-  }
-
-  if (!executionMode || !primaryModelId) {
+  if (!primaryModelId) {
     console.error("❌ Invalid downcity.json execution binding");
     console.error(`   project: ${projectRoot}`);
-    console.error('   error: "execution" must be either api, acp, or local');
+    console.error('   error: "execution" must be { "type": "api", "modelId": "..." }');
     process.exit(1);
   }
 

@@ -27,7 +27,7 @@ run_build() {
 }
 
 install_city_globally() {
-  npm install -g "$ROOT_DIR/packages/city"
+  rm -f /opt/homebrew/bin/city /opt/homebrew/bin/downcity 2>/dev/null; npm install -g "$ROOT_DIR/packages/city"
 }
 
 if [[ "$BUILD_SCOPE" == "all" || "$BUILD_SCOPE" == "city" ]]; then

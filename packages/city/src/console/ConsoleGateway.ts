@@ -65,7 +65,7 @@ const __dirname = path.dirname(__filename);
  */
 const DC_VERSION = (() => {
   try {
-    const pkg = fs.readJsonSync(path.join(__dirname, "../../../../package.json")) as {
+    const pkg = fs.readJsonSync(path.join(__dirname, "../../package.json")) as {
       version?: string;
     };
     const version = String(pkg?.version || "").trim();
@@ -101,7 +101,7 @@ export class ConsoleGateway {
 
   constructor() {
     // 关键点（中文）：旧的 ui 构建产物路径都统一回退到 packages/downcity/public。
-    this.publicDir = path.join(__dirname, "../../../../public");
+    this.publicDir = path.join(__dirname, "../../public");
     this.app = new Hono();
     this.authService = new AuthService();
 

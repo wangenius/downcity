@@ -47,11 +47,11 @@ export class ConsoleClient {
   constructor(context: InteractiveServerContext) {
     this.context = context;
     // 关键点（中文）：旧的 ui 资源路径都统一回到 packages/downcity/public。
-    this.publicDir = path.join(__dirname, "../../../../public");
+    this.publicDir = path.join(__dirname, "../../public");
     this.app = new Hono();
 
     try {
-      const pkg = fs.readJsonSync(path.join(__dirname, "../../../../package.json")) as {
+      const pkg = fs.readJsonSync(path.join(__dirname, "../../package.json")) as {
         version?: string;
       };
       if (pkg && typeof pkg.version === 'string') this.version = pkg.version;

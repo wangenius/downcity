@@ -22,7 +22,7 @@ const __dirname = dirname(__filename);
  */
 const DC_VERSION = (() => {
   try {
-    const pkg = fs.readJsonSync(join(__dirname, "../../../../../package.json")) as {
+    const pkg = fs.readJsonSync(join(__dirname, "../../../package.json")) as {
       version?: string;
     };
     const version = String(pkg?.version || "").trim();

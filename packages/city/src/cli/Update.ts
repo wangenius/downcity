@@ -98,7 +98,7 @@ function readGlobalRoot(manager: UpdateManager): string | null {
 export function detectInstalledUpdateManager(): UpdateManager {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const packageRoot = path.resolve(__dirname, "../../../..");
+  const packageRoot = path.resolve(__dirname, "../..");
   const detected = resolveUpdateManagerFromGlobalRoots({
     packageRoot,
     npmRoot: readGlobalRoot("npm") || undefined,

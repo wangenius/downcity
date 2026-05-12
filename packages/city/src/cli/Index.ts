@@ -27,7 +27,7 @@ const __dirname = dirname(__filename);
 const cliPath = join(__dirname, "./Index.js");
 
 const packageJson = JSON.parse(
-  readFileSync(join(__dirname, "../../../../package.json"), "utf-8"),
+  readFileSync(join(__dirname, "../../package.json"), "utf-8"),
 ) as { version: string };
 
 const program = new Command();

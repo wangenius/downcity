@@ -31,7 +31,7 @@ const PAGE = {
     factsTitle: "事实对齐",
     facts: [
       "包名：@downcity/ui",
-      "源码目录：packages/downcity-ui/",
+      "源码目录：packages/ui/",
       "当前组件能力来源：console-ui 与 homepage 的基础组件抽离",
     ],
   },
@@ -64,7 +64,7 @@ const PAGE = {
     factsTitle: "Facts",
     facts: [
       "Package name: @downcity/ui",
-      "Source directory: packages/downcity-ui/",
+      "Source directory: packages/ui/",
       "Current capability source: shared primitives extracted from console-ui and homepage",
     ],
   },

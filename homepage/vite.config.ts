@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - homepage 运行在 monorepo 内部，需要直接消费 workspace 包源码。
- * - Vercel 在构建 homepage 时不会自动先构建 `packages/downcity-ui/dist`。
+ * - Vercel 在构建 homepage 时不会自动先构建 `packages/ui/dist`。
  * - 因此这里显式把 `@downcity/ui` 解析到源码入口，避免依赖未生成的 dist 产物。
  */
 import { reactRouter } from "@react-router/dev/vite";
@@ -36,21 +36,21 @@ export default defineConfig({
         find: "@downcity/ui/source.css",
         replacement: path.resolve(
           __dirname,
-          "../packages/downcity-ui/src/source.css",
+          "../packages/ui/src/source.css",
         ),
       },
       {
         find: "@downcity/ui/styles.css",
         replacement: path.resolve(
           __dirname,
-          "../packages/downcity-ui/src/styles.css",
+          "../packages/ui/src/styles.css",
         ),
       },
       {
         find: /^@downcity\/ui$/,
         replacement: path.resolve(
           __dirname,
-          "../packages/downcity-ui/src/index.ts",
+          "../packages/ui/src/index.ts",
         ),
       },
     ],

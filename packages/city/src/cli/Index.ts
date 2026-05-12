@@ -21,6 +21,7 @@ import { registerConsoleCommands } from "./IndexConsoleCommand.js";
 import { registerAgentCommands } from "./IndexAgentCommand.js";
 import { registerEnvCommand } from "./Env.js";
 import { registerTokenCommand } from "./Token.js";
+import { registerResetCommand } from "./Reset.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -50,6 +51,7 @@ registerAgentCommands(program, {
 });
 registerTokenCommand(program);
 registerEnvCommand(program);
+registerResetCommand(program);
 
 registerServicesCommand(program);
 registerPluginsCommand(program);

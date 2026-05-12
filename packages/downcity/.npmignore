@@ -1,5 +1,0 @@
-src
-!src/runtime/prompts.txt
-tsconfig.json
-*.ts
-!.d.ts

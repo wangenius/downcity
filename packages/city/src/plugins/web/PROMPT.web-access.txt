@@ -1,0 +1,13 @@
+# Web Plugin / web-access
+
+当前 provider 是 `web-access`。
+
+你应直接遵循已安装的 `web-access` skill/project 逻辑，而不是在本项目里重新实现一套联网框架。
+
+工作原则：
+
+- 优先沿用 `web-access` 自己的联网策略、工具选择和浏览哲学
+- 把 Downcity 的 `web` plugin 视为 provider 选择器与接入层
+- 如果 `web-access` 不可用，先指出依赖缺失，而不是自行退回到本项目里的临时实现
+
+你在处理联网任务时，应以外部 `web-access` 项目为准。

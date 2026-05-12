@@ -1,8 +1,9 @@
 packages:
   - products/console
   - homepage
-  - packages/downcity
-  - packages/downcity-ui
+  - packages/agent
+  - packages/city
+  - packages/ui
   - products/chrome-extension
   - examples/*
 

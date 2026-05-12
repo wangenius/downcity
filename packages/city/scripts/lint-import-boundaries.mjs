@@ -3,13 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Import 边界检查。
+ * Import 边界检查（扁平化后）。
  *
- * 关键点（中文）
- * - 限制 services 层对 main-server 的反向依赖
- * - 限制 service module 入口对 server 的直接依赖
- * - 限制 services 之间的横向直接依赖（全部禁止）
- * - 以脚本方式落地，避免引入额外 lint 工具链
+ * 规则（中文）
+ * - services 层禁止依赖 agent/config/http/rpc/service/plugin/daemon/registry 等上层模块。
+ * - services 之间禁止横向直接依赖（除 BaseService 外）。
  */
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,31 +28,12 @@ function isRelativeSpecifier(specifier) {
   return specifier.startsWith("./") || specifier.startsWith("../");
 }
 
+// 扁平化后的别名解析
 function resolveAliasToSrcRelative(specifier) {
-  if (specifier.startsWith("@/")) {
-    return specifier.slice(2);
-  }
-  if (specifier.startsWith("@main/")) {
-    return `main/${specifier.slice("@main/".length)}`;
-  }
-  if (specifier.startsWith("@agent/")) {
-    return `agent/${specifier.slice("@agent/".length)}`;
-  }
-  if (specifier.startsWith("@services/")) {
-    return `services/${specifier.slice("@services/".length)}`;
-  }
-  if (specifier.startsWith("@sessions/")) {
-    return `sessions/${specifier.slice("@sessions/".length)}`;
-  }
-  if (specifier.startsWith("@plugins/")) {
-    return `plugins/${specifier.slice("@plugins/".length)}`;
-  }
-  if (specifier.startsWith("@types/")) {
-    return `types/${specifier.slice("@types/".length)}`;
-  }
-  if (specifier.startsWith("@utils/")) {
-    return `utils/${specifier.slice("@utils/".length)}`;
-  }
+  if (specifier.startsWith("@/")) return specifier.slice(2);
+  if (specifier.startsWith("@session/")) return `session/${specifier.slice("@session/".length)}`;
+  if (specifier.startsWith("@services/")) return `services/${specifier.slice("@services/".length)}`;
+  if (specifier.startsWith("@shared/")) return `shared/${specifier.slice("@shared/".length)}`;
   return null;
 }
 
@@ -64,17 +43,29 @@ function resolveToSrcRelative(filePath, specifier) {
   return toPosix(relative);
 }
 
-function isServiceEntry(srcRelativePath) {
-  if (!srcRelativePath.startsWith("services/")) return false;
-  const seg = srcRelativePath.split("/");
-  return seg.length === 3 && seg[2] === "service-entry.ts";
-}
-
 function getServiceName(srcRelativePath) {
   const seg = srcRelativePath.split("/");
   if (seg.length < 2 || seg[0] !== "services") return "";
   return seg[1] || "";
 }
+
+// 扁平化后 services 禁止依赖的上层模块
+const BLOCKED_PREFIXES = [
+  "agent/",
+  "config/",
+  "http/",
+  "rpc/",
+  "service/",
+  "plugin/",
+  "daemon/",
+  "registry/",
+  "cli/",
+  "console/",
+  "model/",
+  "runtime/",
+  "sandbox/",
+  "session/",
+];
 
 async function collectTsFiles(dirPath) {
   const items = await fs.readdir(dirPath);
@@ -98,7 +89,6 @@ async function run() {
   for (const filePath of files) {
     const source = await fs.readFile(filePath, "utf-8");
     const srcRelativeFilePath = toPosix(path.relative(srcRoot, filePath));
-    const isServiceEntryFile = isServiceEntry(srcRelativeFilePath);
     const currentServiceName = getServiceName(srcRelativeFilePath);
 
     for (const match of source.matchAll(IMPORT_RE)) {
@@ -110,41 +100,26 @@ async function run() {
         : resolveAliasToSrcRelative(specifier);
       if (!target) continue;
 
-      const allowMainServerClient = target.startsWith("main/daemon/Client");
-      const allowSharedServiceInfra = target === "services/BaseService.js";
-
-      // 规则 1（中文）：service 全量禁止反向依赖 main（daemon client 例外）。
-      if (target.startsWith("main/") && !allowMainServerClient) {
+      // 规则 1：services 禁止依赖上层模块
+      const blocked = BLOCKED_PREFIXES.find((p) => target.startsWith(p));
+      if (blocked) {
         violations.push({
           file: srcRelativeFilePath,
           specifier,
-          reason: "services 层禁止直接依赖 main/*，请通过依赖注入访问运行时能力",
+          reason: `services 层禁止直接依赖 ${blocked}，请通过依赖注入访问运行时能力`,
         });
       }
 
-      // 规则 2（中文）：service 入口文件禁止直接依赖 main。
-      if (
-        isServiceEntryFile &&
-        target.startsWith("main/") &&
-        !allowMainServerClient
-      ) {
-        violations.push({
-          file: srcRelativeFilePath,
-          specifier,
-          reason: "services/*/service-entry.ts 禁止直接依赖 main/*",
-        });
-      }
-
-      // 规则 3（中文）：service 全量禁止跨 service 直接依赖（无例外）。
+      // 规则 2：services 之间禁止横向直接依赖（BaseService 除外）
       if (target.startsWith("services/")) {
         const targetServiceName = getServiceName(target);
         const isSameService = currentServiceName && targetServiceName === currentServiceName;
-        if (!isSameService && !allowSharedServiceInfra) {
+        const isBaseService = target === "services/BaseService.js";
+        if (!isSameService && !isBaseService) {
           violations.push({
             file: srcRelativeFilePath,
             specifier,
-            reason:
-              "services/* 禁止直接依赖其他 service 模块，请通过 infra 抽象能力或 server 注入解耦",
+            reason: "services/* 禁止直接依赖其他 service 模块",
           });
         }
       }

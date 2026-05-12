@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 交互式发布脚本：用于发布 @downcity/ui。
 # 关键点（中文）：
-# 1) 只修改 packages/downcity-ui/package.json 的版本号
+# 1) 只修改 packages/ui/package.json 的版本号
 # 2) 通过提交并推送触发 GitHub Actions 自动发布
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,7 +33,7 @@ print_error() {
 }
 
 get_current_version() {
-  node -p "require('./packages/downcity-ui/package.json').version"
+  node -p "require('./packages/ui/package.json').version"
 }
 
 set_new_version() {
@@ -47,7 +47,7 @@ if (!newVersion) {
   process.exit(1);
 }
 
-const file = 'packages/downcity-ui/package.json';
+const file = 'packages/ui/package.json';
 const raw = fs.readFileSync(file, 'utf8');
 const pkg = JSON.parse(raw);
 pkg.version = newVersion;
@@ -155,7 +155,7 @@ main() {
 
   set_new_version "$new_version"
 
-  git add packages/downcity-ui/package.json
+  git add packages/ui/package.json
 
   local default_msg="chore: release @downcity/ui v${new_version}"
   local input_msg

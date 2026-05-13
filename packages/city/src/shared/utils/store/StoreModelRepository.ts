@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import type {
   StoredModel,
   StoredModelProvider,
+  StoredProviderMeta,
   UpsertModelInput,
   UpsertModelProviderInput,
 } from "@/shared/types/Store.js";
@@ -41,6 +42,20 @@ export async function listStoredProviders(
     });
   }
   return result;
+}
+
+/**
+ * 同步列出 provider 元信息（不含 API Key）。
+ */
+export function listStoredProviderMetas(
+  context: ConsoleStoreContext,
+): StoredProviderMeta[] {
+  const rows = context.db.select().from(modelProvidersTable).all();
+  return rows.map((row) => ({
+    id: row.id,
+    type: row.type,
+    baseUrl: row.baseUrl || undefined,
+  }));
 }
 
 /**

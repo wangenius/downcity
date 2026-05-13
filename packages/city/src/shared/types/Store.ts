@@ -43,6 +43,18 @@ export interface StoredModelProvider {
 }
 
 /**
+ * Provider 元信息（不含 API Key，用于同步快速查询）。
+ */
+export interface StoredProviderMeta {
+  /** provider 主键 ID */
+  id: string;
+  /** provider 类型 */
+  type: string;
+  /** provider baseUrl（可选） */
+  baseUrl?: string;
+}
+
+/**
  * 模型记录。
  */
 export interface StoredModel {

@@ -321,8 +321,19 @@ export async function createModel(input: {
     return openRouterProvider(resolvedModel);
   }
 
+  // DeepSeek 只支持 Chat Completions，不能用 Responses API。
+  if (providerType === "deepseek") {
+    const deepseekProvider = createOpenAICompatible({
+      name: providerKey,
+      baseURL: resolvedBaseUrl || "https://api.deepseek.com/v1",
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return deepseekProvider(resolvedModel);
+  }
+
   // OpenAI-compatible providers（中文）：
-  // - openai / deepseek 统一走 OpenAI SDK（Responses/Completions 由 SDK 自适配）。
+  // - openai 统一走 OpenAI SDK（Responses/Completions 由 SDK 自适配）。
   const openaiCompatibleProvider = createOpenAI({
     apiKey: resolvedApiKey,
     baseURL: resolvedBaseUrl,

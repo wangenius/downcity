@@ -499,6 +499,59 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
               }}
               disabled={loading}
             />
+            {providers.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="inline-flex items-center gap-1.5 h-8 rounded-[11px] px-3"
+                      disabled={loading}
+                    />
+                  }
+                >
+                  <WandSparklesIcon className="size-3.5" />
+                  <span className="text-xs">发现并添加</span>
+                  <ChevronDownIcon className="size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="min-w-[14rem]">
+                  {providers.map((provider) => {
+                    const providerId = String(provider.id || "").trim()
+                    if (!providerId) return null
+                    return (
+                      <DropdownMenuItem
+                        key={providerId}
+                        onClick={() => {
+                          void runWithPending(`provider:discover:${providerId}`, async () => {
+                            const prefix = discoverPrefix.trim()
+                            const result = await Promise.resolve(
+                              onDiscoverProvider({
+                                providerId,
+                                autoAdd: false,
+                                prefix: prefix || undefined,
+                              }),
+                            )
+                            if (!result) return
+                            const discovered = Array.isArray(result.discoveredModels) ? result.discoveredModels : []
+                            setDiscoverResultProviderId(providerId)
+                            setDiscoverResultPrefix(prefix)
+                            setDiscoveredModelNames(discovered)
+                            setDiscoverQuery("")
+                            setSelectedDiscoveredModelNames([])
+                            setDiscoverDialogOpen(true)
+                          })
+                        }}
+                      >
+                        <span>{providerId}</span>
+                        <span className="ml-auto text-[11px] text-muted-foreground">{provider.type || "-"}</span>
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </>
         }
       >

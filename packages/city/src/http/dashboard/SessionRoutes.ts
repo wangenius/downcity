@@ -125,7 +125,8 @@ export function registerDashboardSessionRoutes(
         sessions: enrichedSessions,
       });
     } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
+      const errMsg = String(error || "").trim() || "Session execute failed (internal error)";
+      return c.json({ success: false, error: errMsg }, 500);
     }
   });
 
@@ -151,7 +152,8 @@ export function registerDashboardSessionRoutes(
         messages: sliced,
       });
     } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
+      const errMsg = String(error || "").trim() || "Session execute failed (internal error)";
+      return c.json({ success: false, error: errMsg }, 500);
     }
   });
 
@@ -175,7 +177,8 @@ export function registerDashboardSessionRoutes(
         cleared: true,
       });
     } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
+      const errMsg = String(error || "").trim() || "Session execute failed (internal error)";
+      return c.json({ success: false, error: errMsg }, 500);
     }
   });
 
@@ -196,7 +199,8 @@ export function registerDashboardSessionRoutes(
         cleared: true,
       });
     } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
+      const errMsg = String(error || "").trim() || "Session execute failed (internal error)";
+      return c.json({ success: false, error: errMsg }, 500);
     }
   });
 
@@ -279,7 +283,8 @@ export function registerDashboardSessionRoutes(
         archives: archives.slice(0, limit),
       });
     } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
+      const errMsg = String(error || "").trim() || "Session execute failed (internal error)";
+      return c.json({ success: false, error: errMsg }, 500);
     }
   });
 
@@ -335,7 +340,8 @@ export function registerDashboardSessionRoutes(
         messages,
       });
     } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
+      const errMsg = String(error || "").trim() || "Session execute failed (internal error)";
+      return c.json({ success: false, error: errMsg }, 500);
     }
   });
 
@@ -358,7 +364,8 @@ export function registerDashboardSessionRoutes(
         ...toSystemPromptPayload(systemMessages),
       });
     } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
+      const errMsg = String(error || "").trim() || "Session execute failed (internal error)";
+      return c.json({ success: false, error: errMsg }, 500);
     }
   });
 
@@ -388,7 +395,8 @@ export function registerDashboardSessionRoutes(
         result,
       });
     } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
+      const errMsg = String(error || "").trim() || "Session execute failed (internal error)";
+      return c.json({ success: false, error: errMsg }, 500);
     }
   });
 }

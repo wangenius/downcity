@@ -110,7 +110,7 @@ export function ensureRuntimeExecutionBindingReady(projectRoot: string): void {
       console.error("❌ Model not found in console model pool");
       console.error(`   project: ${projectRoot}`);
       console.error(`   execution.modelId: ${primaryModelId}`);
-      console.error("   fix: run `city model create` or `city model list`");
+      console.error("   fix: run `city agent reset <path>` to pick an available model");
       process.exit(1);
     }
     if (model.isPaused === true) {

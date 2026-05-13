@@ -14,6 +14,8 @@ import {
 import { chatCommand } from "./AgentChat.js";
 import { initCommand } from "./Init.js";
 import { restartCommand } from "./Restart.js";
+
+import { agentResetCommand } from "./AgentReset.js";
 import { runCommand } from "./Run.js";
 import { startCommand } from "./Start.js";
 import { statusCommand } from "./Status.js";
@@ -223,6 +225,15 @@ export function registerAgentCommands(
         });
       },
     ));
+
+  agent
+    .command("reset [path]")
+    .description("重新配置 Agent 的执行模型绑定")
+    .helpOption("--help", "display help for command")
+    .action(createVersionBanner(context.version, async (cwd: string = ".") => {
+      // reset 不要求 agent 在 registry 中，只需要 downcity.json 存在
+      await agentResetCommand(cwd);
+    }));
 
   agent
     .command("restart [path]")

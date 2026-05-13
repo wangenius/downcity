@@ -204,6 +204,7 @@ export class LocalSessionCore {
         // 达到上限后返回可读失败消息，避免死循环。
         return {
           success: false,
+          error: "Context length exceeded and retries failed",
           assistantMessage: this.executionComposer.buildFallbackAssistantMessage(
             "Context length exceeded and retries failed. Please resend your question.",
           ),
@@ -221,6 +222,7 @@ export class LocalSessionCore {
       // 返回失败 assistant 消息。
       return {
         success: false,
+        error: errorMsg,
         assistantMessage: this.executionComposer.buildFallbackAssistantMessage(
           `Execution failed: ${errorMsg}`,
         ),
@@ -632,6 +634,7 @@ export class LocalSessionCore {
 
       // 返回失败消息。
       return {
+          error: "Execution failed",
         success: false,
         assistantMessage: this.executionComposer.buildFallbackAssistantMessage(
           `Execution failed: ${errorMsg}`,

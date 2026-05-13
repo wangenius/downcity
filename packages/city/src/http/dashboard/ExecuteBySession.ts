@@ -147,5 +147,6 @@ export async function executeBySessionId(params: {
     ...result,
     userVisible,
     queued: false,
+    error: result.success === false ? (result.error || "Session execution failed") : undefined,
   };
 }

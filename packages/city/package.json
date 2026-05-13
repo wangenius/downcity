@@ -1,6 +1,6 @@
 {
   "name": "@downcity/city",
-  "version": "1.0.6",
+  "version": "1.0.18",
   "type": "module",
   "description": "Downcity City 平台 — CLI、daemon 管理、Console 网关、能力平台",
   "bin": {
@@ -8,7 +8,7 @@
     "city": "./bin/cli/Index.js"
   },
   "scripts": {
-    "build": "rm -rf bin && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs && node scripts/ensure-cli-executable.mjs",
+    "build": "node scripts/bump-patch.mjs && rm -rf bin && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs && node scripts/ensure-cli-executable.mjs",
     "dev": "tsc --watch",
     "start": "node bin/cli/Index.js",
     "typecheck": "tsc --noEmit",

@@ -325,8 +325,22 @@ export async function executeAgentChatTurn(params: {
       projectRoot: resolved.projectRoot,
       sessionId,
       success: false,
-      error: remote.error || "Unknown error",
+      error: remote.error || "Agent daemon unreachable or returned empty error (try `city agent restart`)",
     };
+  }
+
+  // 关键调试日志（中文）：确认 daemon 返回的完整结构
+  if (!isChatSuccess(remote.data)) {
+    const resultKeys = remote.data.result && typeof remote.data.result === "object"
+      ? Object.keys(remote.data.result as Record<string,unknown>)
+      : [];
+    const topKeys = Object.keys(remote.data as unknown as Record<string,unknown>);
+    process.stderr.write(
+      `[chat debug] remote.success=${remote.success} ` +
+      `result.success=${String((remote.data.result as Record<string,unknown> | undefined)?.success)} ` +
+      `result.error=${JSON.stringify((remote.data.result as Record<string,unknown> | undefined)?.error)} ` +
+      `topKeys=[${topKeys.join(",")}] resultKeys=[${resultKeys.join(",")}]\n`
+    );
   }
 
   return {
@@ -340,7 +354,7 @@ export async function executeAgentChatTurn(params: {
       : {
           error:
             String(remote.data.result?.error || remote.data.error || "").trim() ||
-            "Unknown error",
+            "Daemon error (check `city agent status` and `city agent doctor`)",
         }),
   };
 }
@@ -392,7 +406,7 @@ async function runOneShotChat(params: {
         },
         {
           label: "error",
-          value: outcome.error || "Unknown error",
+          value: outcome.error || "Agent daemon returned empty error (check config with `city agent status`)",
         },
       ],
     });
@@ -461,7 +475,7 @@ async function runInteractiveChat(params: {
             },
             {
               label: "error",
-              value: outcome.error || "Unknown error",
+              value: outcome.error || "Agent daemon returned empty error (check config with `city agent status`)",
             },
           ],
         });

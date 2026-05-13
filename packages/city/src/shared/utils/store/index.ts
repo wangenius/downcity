@@ -21,6 +21,7 @@ import type {
   StoredGlobalEnvEntry,
   StoredModel,
   StoredModelProvider,
+  StoredProviderMeta,
   UpsertAgentEnvEntryInput,
   UpsertChannelAccountInput,
   UpsertEnvEntryInput,
@@ -37,6 +38,7 @@ import {
   getStoredModel,
   getStoredProvider,
   listStoredModels,
+  listStoredProviderMetas,
   listStoredProviders,
   removeStoredModel,
   removeStoredProvider,
@@ -147,6 +149,13 @@ export class ConsoleStore {
    */
   listModels(): StoredModel[] {
     return listStoredModels(this.context);
+  }
+
+  /**
+   * 同步列出 provider 元信息（不含 API Key）。
+   */
+  listProvidersSync(): StoredProviderMeta[] {
+    return listStoredProviderMetas(this.context);
   }
 
   /**

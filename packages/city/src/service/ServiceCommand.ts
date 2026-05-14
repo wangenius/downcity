@@ -16,7 +16,7 @@ import type { ServiceCommandResponse } from "@/shared/types/Services.js";
 import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
 import { callAgentTransport } from "@/rpc/Transport.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
-import { parsePortOption } from "@shared/utils/cli/Checker.js";
+import { parsePort } from "@/cli/IndexSupport.js";
 import { runServiceControlCommand } from "@/cli/ServiceCommandRemote.js";
 import { parseScheduledRunAtMsOrThrow } from "./schedule/Time.js";
 
@@ -203,7 +203,7 @@ function registerServiceActionCommand(params: {
     .helpOption("--help", "display help for command")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", true);
 
@@ -326,7 +326,7 @@ function attachServiceLifecycleOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", true);
 }

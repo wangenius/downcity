@@ -247,8 +247,8 @@ async function runOneShotChat(params: {
       },
     });
   }, {
-    agentName: params.agentName,
-    json: params.options.json,
+    text: `${params.agentName} is replying...`,
+    disabled: params.options.json === true,
   });
 
   if (params.options.json === true) {
@@ -350,7 +350,7 @@ async function runInteractiveChat(params: {
           },
         });
       }, {
-        agentName: params.agentName,
+        text: `${params.agentName} is replying...`,
       });
 
       if (!outcome.success || !outcome.payload) {

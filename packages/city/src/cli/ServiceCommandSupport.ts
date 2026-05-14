@@ -20,7 +20,7 @@ import { CliError } from "@/types/cli/CliError.js";
 import type { ScheduledJobStatus } from "@/shared/types/ServiceSchedule.js";
 import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
 
-function isRegistryEntryRunning(
+export function isRegistryEntryRunning(
   entry: { status?: "running" | "stopped" },
 ): boolean {
   return entry.status !== "stopped";

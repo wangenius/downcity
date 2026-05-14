@@ -287,7 +287,10 @@ export async function resolveCliAgentStartProjectRoot(
       tone: "info",
       title: "Agent start cancelled",
     });
-    return null;
+    throw new CliError({
+      title: "Agent start cancelled",
+      exitCode: 0,
+    });
   }
 
   return selectedProjectRoot;

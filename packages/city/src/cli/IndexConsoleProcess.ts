@@ -49,6 +49,8 @@ import { buildRuntimePortFacts } from "./PortHints.js";
 import { stopConsoleCommand } from "./Console.js";
 import { ensureConsoleAuthBootstrap } from "./ConsoleAuthBootstrap.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
+import { runWithSpinner } from "@shared/utils/cli/Spinner.js";
+import { CliError } from "@/types/cli/CliError.js";
 import { ensureCityPublicHostEnv } from "./PublicHostEnv.js";
 
 /**
@@ -191,7 +193,10 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
     }> = [];
     for (const item of views) {
       try {
-        const result = await stopDaemonProcess({ projectRoot: item.projectRoot });
+        const result = await runWithSpinner(
+          () => stopDaemonProcess({ projectRoot: item.projectRoot }),
+          { text: `Stopping ${resolveAgentName(item.projectRoot)}...` },
+        );
         stoppedItems.push({
           tone: result.stopped ? "success" : "info",
           title: resolveAgentName(item.projectRoot),
@@ -416,7 +421,7 @@ export async function runCityRuntimeCommand(): Promise<void> {
  */
 async function resolveRegisteredAgentProjectRoot(
   cwd: string,
-): Promise<string | null> {
+): Promise<string> {
   const projectRoot = resolve(String(cwd || "."));
   const entries = await listConsoleAgents();
   const matched = entries.some(
@@ -425,10 +430,11 @@ async function resolveRegisteredAgentProjectRoot(
   );
   if (matched) return projectRoot;
 
-  console.error("❌ agent is not registered in console registry");
-  console.error(`   project: ${projectRoot}`);
-  console.error("   fix: start agent first (`city agent start <path>`) or run `city agent list`");
-  return null;
+  throw new CliError({
+    title: "Agent is not registered in console registry",
+    note: `project: ${projectRoot}`,
+    fix: "city agent start <path>",
+  });
 }
 
 /**
@@ -436,7 +442,7 @@ async function resolveRegisteredAgentProjectRoot(
  */
 export async function ensureRegisteredAgentProjectRoot(
   cwd: string,
-): Promise<string | null> {
+): Promise<string> {
   return await resolveRegisteredAgentProjectRoot(cwd);
 }
 
@@ -452,10 +458,10 @@ export async function prepareForegroundAgent(
   shouldForeground: boolean;
 }> {
   if (!(await isCityRunning())) {
-    console.error(
-      "❌ city runtime is not running. Please run `city start` first.",
-    );
-    process.exit(1);
+    throw new CliError({
+      title: "city runtime is not running",
+      fix: "city start",
+    });
   }
 
   injectAgentContext(cwd);

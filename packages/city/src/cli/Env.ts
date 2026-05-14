@@ -11,6 +11,7 @@ import type { Command } from "commander";
 import { ConsoleStore } from "@/shared/utils/store/index.js";
 import type { StoredEnvEntry, StoredEnvScope } from "@/shared/types/Store.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
+import { printResult } from "@shared/utils/cli/CliOutput.js";
 import { parseBoolean } from "./IndexSupport.js";
 
 /**
@@ -198,20 +199,24 @@ async function emitKeysList(params: {
   });
 
   if (params.asJson === true) {
-    console.log(JSON.stringify({
+    printResult({
+      asJson: true,
       success: true,
-      scope: params.scope,
-      agentId: params.agentId,
-      count: entries.length,
-      keys: entries.map((item) => ({
-        key: item.key,
-        description: item.description || "",
-        scope: item.scope,
-        ...(item.agentId ? { agentId: item.agentId } : {}),
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-      })),
-    }, null, 2));
+      title: "env list",
+      payload: {
+        scope: params.scope,
+        agentId: params.agentId,
+        count: entries.length,
+        keys: entries.map((item) => ({
+          key: item.key,
+          description: item.description || "",
+          scope: item.scope,
+          ...(item.agentId ? { agentId: item.agentId } : {}),
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        })),
+      },
+    });
     return;
   }
 
@@ -321,13 +326,17 @@ async function setKeyEntry(params: {
   }
 
   if (params.asJson === true) {
-    console.log(JSON.stringify({
+    printResult({
+      asJson: true,
       success: true,
-      action: "set",
-      scope: params.scope,
-      agentId: params.agentId,
-      key: params.key,
-    }, null, 2));
+      title: "env set",
+      payload: {
+        action: "set",
+        scope: params.scope,
+        agentId: params.agentId,
+        key: params.key,
+      },
+    });
     return;
   }
 
@@ -393,13 +402,17 @@ function deleteKeyEntry(params: {
   }
 
   if (params.asJson === true) {
-    console.log(JSON.stringify({
+    printResult({
+      asJson: true,
       success: true,
-      action: "delete",
-      scope: params.scope,
-      agentId: params.agentId,
-      key: params.key,
-    }, null, 2));
+      title: "env delete",
+      payload: {
+        action: "delete",
+        scope: params.scope,
+        agentId: params.agentId,
+        key: params.key,
+      },
+    });
     return;
   }
 

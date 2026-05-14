@@ -20,6 +20,8 @@ import type {
   ResolveCliAgentStartTargetDecisionInput,
 } from "@/types/cli/AgentSelection.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
+import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { CliError } from "@/types/cli/CliError.js";
 import { resolveAgentName } from "./IndexSupport.js";
 import { resolveRunningConsoleAgents } from "./IndexConsoleProcess.js";
 
@@ -197,12 +199,16 @@ export async function emitRegisteredAgentListWithOptions(options?: {
     : allAgents;
 
   if (options?.asJson === true) {
-    console.log(JSON.stringify({
+    printResult({
+      asJson: true,
       success: true,
-      count: agents.length,
-      runningOnly: options.runningOnly === true,
-      agents,
-    }, null, 2));
+      title: "agents",
+      payload: {
+        count: agents.length,
+        runningOnly: options.runningOnly === true,
+        agents,
+      },
+    });
     return;
   }
 
@@ -246,7 +252,7 @@ export async function emitRegisteredAgentListWithOptions(options?: {
  */
 export async function resolveCliAgentStartProjectRoot(
   pathInput?: string,
-): Promise<string | null> {
+): Promise<string> {
   const currentWorkingDirectory = resolve(process.cwd());
   const registeredAgents = await listRegisteredAgentsForCli();
   const decision = resolveCliAgentStartTargetDecision({
@@ -263,20 +269,16 @@ export async function resolveCliAgentStartProjectRoot(
 
   if (decision.mode === "error") {
     if (decision.reason === "no-registered-agents") {
-      emitCliBlock({
-        tone: "error",
+      throw new CliError({
         title: "No registered agents",
-        note: "Run `city agent start <path>` to start and register an agent first.",
+        fix: "city agent start <path>",
       });
-      return null;
     }
 
-    emitCliBlock({
-      tone: "error",
+    throw new CliError({
       title: "Agent path is required",
-      note: "Use `city agent start <path>` or run this command in an interactive terminal.",
+      fix: "city agent start <path>",
     });
-    return null;
   }
 
   const selectedProjectRoot = await promptRegisteredAgentProjectRoot(registeredAgents);

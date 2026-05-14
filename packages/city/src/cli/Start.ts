@@ -12,22 +12,20 @@
  */
 
 import path from "path";
-import fs from "fs-extra";
 import { fileURLToPath } from "url";
-import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
 import { startDaemonProcess } from "@/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/daemon/CliArgs.js";
 import type { StartOptions } from "@/shared/types/Start.js";
-import { isCityRunning } from "@/registry/CityRuntime.js";
-import { ensureRuntimeExecutionBindingReady } from "@/daemon/ProjectSetup.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { resolveAgentName } from "./IndexSupport.js";
+import { checkAgentPreflight } from "./ServiceCommandSupport.js";
+import { CliError } from "@/types/cli/CliError.js";
 
 /**
  * daemon 启动入口。
  *
  * 流程（中文）
- * 1) 校验项目初始化文件是否存在
+ * 1) 统一预检（city runtime + 项目初始化 + binding）
  * 2) 组装 `agent start` 子进程参数
  * 3) 通过 daemon manager 后台拉起并打印 pid/log
  */
@@ -37,27 +35,8 @@ export async function startCommand(
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
 
-  // 关键点（中文）：console 必须先启动，agent daemon 才“有效”。
-  if (!(await isCityRunning())) {
-    console.error("❌ city runtime is not running. Please run `city start` first.");
-    process.exit(1);
-  }
-
-  // 启动前先做最基本的工程校验，避免起了一个立刻报错退出的 daemon。
-  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
-    console.error(
-      '❌ Project not initialized. Please run "city agent create" first',
-    );
-    process.exit(1);
-  }
-  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
-    console.error(
-      '❌ downcity.json does not exist. Please run "city agent create" first',
-    );
-    process.exit(1);
-  }
-  // 关键点（中文）：后台拉起前先校验 execution binding 是否可用，避免“启动成功后秒退”。
-  ensureRuntimeExecutionBindingReady(projectRoot);
+  // 关键点（中文）：统一预检，替代分散的内联校验。
+  await checkAgentPreflight(projectRoot);
 
   // 计算当前 CLI 的入口路径（编译后是 `bin/main/modules/cli/Index.js`）。
   const __filename = fileURLToPath(import.meta.url);
@@ -85,7 +64,9 @@ export async function startCommand(
       ],
     });
   } catch (error) {
-    console.error("❌ Failed to start daemon:", error);
-    process.exit(1);
+    throw new CliError({
+      title: "Failed to start daemon",
+      note: error instanceof Error ? error.message : String(error),
+    });
   }
 }

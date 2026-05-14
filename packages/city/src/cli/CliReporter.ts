@@ -18,21 +18,31 @@ import type {
 } from "@/types/cli/CliReporter.js";
 
 const FACT_LABEL_MIN_WIDTH = 8;
-const HEADLINE_WIDTH = 60;
+/**
+ * 解析终端可用宽度。
+ *
+ * 关键点（中文）
+ * - 读取 process.stdout.columns，窄终端（<80）用更紧凑的排版。
+ * - 最小 40 列，最大 120 列。
+ */
+function resolveCliWidth(): number {
+  const columns = process.stdout.columns || 80;
+  if (columns < 80) return 40;
+  if (columns < 100) return 60;
+  return Math.min(columns - 20, 100);
+}
+/** 当前命令已输出的 section 计数（管理 section 间空行）。 */
 let cliSectionPrinted = false;
+/** 上一个 section 是否紧凑（无 facts/note）。 */
 let cliPreviousSectionCompact = false;
 
 /**
  * CLI 语气对应的视觉调色板。
  */
 type CliTonePalette = {
-  /**
-   * 当前语气的标题颜色。
-   */
+  /** 当前语气的标题颜色。 */
   title: (text: string) => string;
-  /**
-   * 当前语气的状态颜色。
-   */
+  /** 当前语气的状态颜色。 */
   status: (text: string) => string;
 };
 
@@ -133,16 +143,17 @@ function formatHeadingLine(params: {
 }): string {
   const palette = resolveChalk(params.options);
   const tonePalette = resolveTonePalette(params.tone, palette);
-  const title = tonePalette.title(params.title);
+  const renderedTitle = tonePalette.title(params.title);
   if (!params.summary) {
-    return title;
+    return renderedTitle;
   }
   const plainSummary = String(params.summary || "").trim().toLowerCase();
+  const headlineWidth = resolveCliWidth();
   const spacing = Math.max(
     2,
-    HEADLINE_WIDTH - params.title.length - plainSummary.length,
+    headlineWidth - params.title.length - plainSummary.length,
   );
-  return `${title}${" ".repeat(spacing)}${tonePalette.status(plainSummary)}`;
+  return `${renderedTitle}${" ".repeat(spacing)}${tonePalette.status(plainSummary)}`;
 }
 
 /**
@@ -170,7 +181,7 @@ function formatFactValue(
 }
 
 /**
- * 渲染单个信息区块。
+ * 渲染单个信息区块（纯文本，不输出到 stdout）。
  */
 export function formatCliBlock(
   block: CliReportBlock,
@@ -202,7 +213,7 @@ export function formatCliBlock(
 }
 
 /**
- * 渲染列表项。
+ * 渲染列表项（纯文本）。
  */
 function formatCliListItem(
   item: CliReportListItem,
@@ -223,7 +234,7 @@ function formatCliListItem(
 }
 
 /**
- * 渲染列表分组。
+ * 渲染列表分组（纯文本）。
  */
 export function formatCliList(
   list: CliReportList,
@@ -244,6 +255,17 @@ export function formatCliList(
   }
 
   return lines.join("\n");
+}
+
+/**
+ * 渲染命令顶部 banner（纯文本）。
+ */
+export function formatCliHeader(
+  version: string,
+  options?: CliRenderOptions,
+): string {
+  const palette = resolveChalk(options);
+  return `${palette.bold("downcity")} ${palette.dim(`v${version}`)}`;
 }
 
 /**
@@ -316,15 +338,4 @@ export function emitCliList(
   options?: CliRenderOptions,
 ): void {
   emitCliSection(formatCliList(list, options), isCompactCliList(list));
-}
-
-/**
- * 渲染命令顶部 banner。
- */
-export function formatCliHeader(
-  version: string,
-  options?: CliRenderOptions,
-): string {
-  const palette = resolveChalk(options);
-  return `${palette.bold("downcity")} ${palette.dim(`v${version}`)}`;
 }

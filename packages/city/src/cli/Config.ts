@@ -13,19 +13,9 @@ import type { Command } from "commander";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
 import { aliasCommand } from "./Alias.js";
+import { parseBoolean } from "./IndexSupport.js";
+import { resolveProjectRoot } from "./ServiceCommandSupport.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
-
-function parseBooleanOption(value: string | undefined): boolean {
-  if (value === undefined) return true;
-  const normalized = String(value).trim().toLowerCase();
-  if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
-  if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
-  throw new Error(`Invalid boolean: ${value}`);
-}
-
-function resolveProjectRoot(pathInput?: string): string {
-  return path.resolve(String(pathInput || "."));
-}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -195,7 +185,7 @@ function runConfigCommand(
 function applyCommonOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--json [enabled]", "以 JSON 输出", parseBooleanOption, true);
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }
 
 /**

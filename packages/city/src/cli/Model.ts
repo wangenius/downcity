@@ -18,7 +18,7 @@ import { registerModelReadCommands } from "./ModelReadCommand.js";
 export function registerModelCommand(program: Command): void {
   const model = program
     .command("model")
-    .description("管理 city 全局语言模型池（provider/model）")
+    .description("管理 city 全局语言模型池（无参数时启动交互式管理器）")
     .helpOption("--help", "display help for command")
     .action(async () => {
       if (process.stdin.isTTY === true && process.stdout.isTTY === true) {

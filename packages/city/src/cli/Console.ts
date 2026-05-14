@@ -29,6 +29,7 @@ import type {
   ConsoleRuntimeStatus,
 } from "@/shared/types/Console.js";
 import { emitCliBlock } from "./CliReporter.js";
+import { CliError } from "@/types/cli/CliError.js";
 import { buildConsolePortFacts } from "./PortHints.js";
 import { resolveConsolePublicUrl } from "./PublicAccess.js";
 
@@ -366,15 +367,35 @@ export async function runConsoleRuntimeCommand(
 /**
  * 后台启动 Console。
  */
+/**
+ * 轮询 HTTP health endpoint，直到成功或超时。
+ */
+async function waitForHttp(url: string, timeoutMs: number): Promise<boolean> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (response.ok) return true;
+    } catch {
+      // 继续轮询
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  return false;
+}
+
 export async function startConsoleCommand(params: {
   options?: ConsoleStartOptions;
   cliPath: string;
 }): Promise<void> {
   if (!(await isCityRunning())) {
-    console.error(
-      "❌ city runtime is not running. Please run `city start` first.",
-    );
-    process.exit(1);
+    throw new CliError({
+      title: "city runtime is not running",
+      fix: "city start",
+    });
   }
 
   const host = resolveConsoleHostForBinding(params.options);
@@ -481,9 +502,21 @@ export async function startConsoleCommand(params: {
   }
   if (!childAlive) {
     await cleanupConsoleStateFiles();
-    throw new Error(
-      `Console exited before becoming ready. Please check log: ${logPath}`,
-    );
+    throw new CliError({
+      title: "Console exited before becoming ready",
+      note: `Check log: ${logPath}`,
+    });
+  }
+
+  // 关键点（中文）：进程存活后，再确认 HTTP 端口真正可用。
+  const healthUrl = `http://${normalizeHost(host)}:${port}/api/health`;
+  const healthOk = await waitForHttp(healthUrl, 5_000);
+  if (!healthOk) {
+    await cleanupConsoleStateFiles();
+    throw new CliError({
+      title: "Console health check failed",
+      note: `Process is alive but ${healthUrl} is not responding. Check log: ${logPath}`,
+    });
   }
 
   emitCliBlock({

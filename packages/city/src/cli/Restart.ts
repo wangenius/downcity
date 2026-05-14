@@ -8,21 +8,20 @@
  */
 
 import path from "path";
-import fs from "fs-extra";
 import { fileURLToPath } from "url";
-import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
 import { buildRunArgsFromOptions } from "@/daemon/CliArgs.js";
 import { startDaemonProcess, stopDaemonProcess } from "@/daemon/Manager.js";
 import type { StartOptions } from "@/shared/types/Start.js";
-import { ensureRuntimeExecutionBindingReady } from "@/daemon/ProjectSetup.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { resolveAgentName } from "./IndexSupport.js";
+import { checkAgentPreflight } from "./ServiceCommandSupport.js";
+import { CliError } from "@/types/cli/CliError.js";
 
 /**
  * restart 命令执行流程。
  *
  * 关键点（中文）
- * 1) 校验项目初始化状态
+ * 1) 统一预检（项目初始化 + binding）
  * 2) 停止旧 daemon
  * 3) 按当前参数重建启动参数并拉起新 daemon
  */
@@ -32,20 +31,8 @@ export async function restartCommand(
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
 
-  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
-    console.error(
-      '❌ Project not initialized. Please run "city agent create" first',
-    );
-    process.exit(1);
-  }
-  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
-    console.error(
-      '❌ downcity.json does not exist. Please run "city agent create" first',
-    );
-    process.exit(1);
-  }
-  // 关键点（中文）：重启前同样校验 execution binding，避免停掉旧进程后无法拉起新进程。
-  ensureRuntimeExecutionBindingReady(projectRoot);
+  // 关键点（中文）：统一预检（restart 不强制要求 city runtime running，因为 stop 后可能已停）。
+  await checkAgentPreflight(projectRoot, { requireCityRunning: false });
 
   // 计算当前 CLI 的入口路径（编译后是 `bin/main/modules/cli/Index.js`）。
   const __filename = fileURLToPath(import.meta.url);
@@ -73,7 +60,9 @@ export async function restartCommand(
       ],
     });
   } catch (error) {
-    console.error("❌ Failed to restart daemon:", error);
-    process.exit(1);
+    throw new CliError({
+      title: "Failed to restart daemon",
+      note: error instanceof Error ? error.message : String(error),
+    });
   }
 }

@@ -1,8 +1,9 @@
 /**
- * `city service` 命令共享辅助。
+ * `city service` 命令共享辅助 + Agent 预检。
  *
  * 关键点（中文）
  * - 统一承载 service 命令的参数解析、目标 agent 路径解析与项目目录校验。
+ * - 提供 `checkAgentPreflight` 供 start/restart/status 等命令统一使用。
  * - 保持 command 注册层只关注命令树，不再直接承载路径解析细节。
  */
 
@@ -11,7 +12,11 @@ import fs from "node:fs";
 import type { Command } from "commander";
 import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
 import { listConsoleAgents } from "@/registry/CityRegistry.js";
+import { isCityRunning } from "@/registry/CityRuntime.js";
+import { ensureRuntimeExecutionBindingReady } from "@/daemon/ProjectSetup.js";
 import type { JsonValue } from "@/shared/types/Json.js";
+import { parsePort, resolveAgentName } from "./IndexSupport.js";
+import { CliError } from "@/types/cli/CliError.js";
 import type { ScheduledJobStatus } from "@/shared/types/ServiceSchedule.js";
 import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
 
@@ -22,14 +27,55 @@ function isRegistryEntryRunning(
 }
 
 /**
- * 解析端口参数。
+ * Agent 启动前预检选项。
  */
-export function parsePortOption(value: string): number {
-  const port = Number.parseInt(value, 10);
-  if (!Number.isFinite(port) || Number.isNaN(port) || !Number.isInteger(port) || port <= 0 || port > 65535) {
-    throw new Error(`Invalid port: ${value}`);
+export interface AgentPreflightOptions {
+  /** 是否要求 city runtime 已运行。 */
+  requireCityRunning?: boolean;
+}
+
+/**
+ * Agent 启动前统一预检。
+ *
+ * 关键点（中文）
+ * - 收敛 start/restart/status 等命令的前置校验逻辑。
+ * - 按顺序检查，首个失败即抛 CliError（city running → PROFILE.md → downcity.json → binding）。
+ *
+ * @throws {CliError} 任一校验失败时抛出。
+ */
+export async function checkAgentPreflight(
+  projectRoot: string,
+  options?: AgentPreflightOptions,
+): Promise<void> {
+  if (options?.requireCityRunning !== false) {
+    if (!(await isCityRunning())) {
+      throw new CliError({
+        title: "city runtime is not running",
+        fix: "city start",
+      });
+    }
   }
-  return port;
+
+  const profilePath = getProfileMdPath(projectRoot);
+  if (!fs.existsSync(profilePath)) {
+    throw new CliError({
+      title: "Project not initialized",
+      note: `PROFILE.md not found at ${projectRoot}`,
+      fix: "city agent create",
+    });
+  }
+
+  const downcityJsonPath = getDowncityJsonPath(projectRoot);
+  if (!fs.existsSync(downcityJsonPath)) {
+    throw new CliError({
+      title: "downcity.json not found",
+      note: `project: ${projectRoot}`,
+      fix: "city agent create",
+    });
+  }
+
+  // 关键点（中文）：提前校验 execution binding，避免"启动成功后秒退"。
+  ensureRuntimeExecutionBindingReady(projectRoot);
 }
 
 /**
@@ -79,25 +125,6 @@ export function resolveProjectRoot(pathInput?: string): string {
 }
 
 /**
- * 读取 agent 显示名（优先 downcity.json.name，其次目录名）。
- */
-function readAgentName(projectRoot: string): string {
-  const shipJsonPath = getDowncityJsonPath(projectRoot);
-  const fallback = path.basename(projectRoot);
-  if (!fs.existsSync(shipJsonPath)) return fallback;
-  try {
-    const raw = fs.readFileSync(shipJsonPath, "utf-8");
-    const parsed = JSON.parse(raw) as { name?: unknown };
-    if (typeof parsed.name === "string" && parsed.name.trim()) {
-      return parsed.name.trim();
-    }
-  } catch {
-    // ignore and fallback
-  }
-  return fallback;
-}
-
-/**
  * 通过 agent 名称解析 projectRoot。
  */
 export async function resolveProjectRootByAgentName(agentName: string): Promise<{
@@ -116,7 +143,7 @@ export async function resolveProjectRootByAgentName(agentName: string): Promise<
     .filter((root, index, all) => all.indexOf(root) === index)
     .filter((root) => {
       const byDirName = path.basename(root).toLowerCase() === target;
-      const byShipName = readAgentName(root).toLowerCase() === target;
+      const byShipName = resolveAgentName(root).toLowerCase() === target;
       return byDirName || byShipName;
     });
 
@@ -231,7 +258,7 @@ export function addServiceTargetOptions(command: Command): Command {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", true);
 }

@@ -141,6 +141,24 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
   const modelStore = new ConsoleStore();
   try {
     if (allowOverwrite) {
+      // 关键点（中文）：--force 时仍需二次确认，避免误删全部模型配置。
+      const existingModels = modelStore.listModels();
+      if (existingModels.length > 0) {
+        const confirmResponse = (await prompts({
+          type: "confirm",
+          name: "confirmed",
+          message: `即将清空全部 ${existingModels.length} 个已配置模型，确认？`,
+          initial: false,
+        })) as { confirmed?: boolean };
+        if (!confirmResponse.confirmed) {
+          emitCliBlock({
+            tone: "info",
+            title: "Console init cancelled",
+          });
+          modelStore.close();
+          return;
+        }
+      }
       modelStore.clearAll();
     }
     await modelStore.upsertProvider({

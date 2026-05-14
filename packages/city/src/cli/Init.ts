@@ -24,6 +24,7 @@ import {
 import type { AgentProjectChannel } from "@/shared/types/AgentProject.js";
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
+import { CliError } from "@/types/cli/CliError.js";
 
 type InitPromptResponse = {
   name?: string;
@@ -126,10 +127,11 @@ export async function initCommand(
   const primaryModelId =
     String(response.primaryModelId || "").trim() || "default";
   if (consoleModelIds.length === 0) {
-    console.error("❌ Console model pool is empty.");
-    console.error("   Please configure at least one model first:");
-    console.error("   1) city model create");
-    process.exit(1);
+    throw new CliError({
+      title: "Console model pool is empty",
+      note: "Please configure at least one model first.",
+      fix: "city model create",
+    });
   }
   const execution: ExecutionBindingConfig = {
     type: "api",

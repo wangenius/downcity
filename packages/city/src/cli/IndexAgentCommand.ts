@@ -92,7 +92,6 @@ export function registerAgentCommands(
         context.version,
         async (cwd: string | undefined, options: StartOptions & { foreground?: boolean }) => {
           const projectRoot = await resolveCliAgentStartProjectRoot(cwd);
-          if (!projectRoot) process.exit(1);
 
           const prepared = await prepareForegroundAgent(projectRoot, options);
           if (prepared.shouldForeground) {
@@ -136,7 +135,6 @@ export function registerAgentCommands(
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async (cwd: string = ".") => {
       const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
-      if (!projectRoot) process.exit(1);
       injectAgentContext(projectRoot);
       await statusCommand(projectRoot);
     }));
@@ -150,7 +148,6 @@ export function registerAgentCommands(
       context.version,
       async (cwd: string = ".", options: { fix?: boolean }) => {
         const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
-        if (!projectRoot) process.exit(1);
         injectAgentContext(projectRoot);
         const pid = await readDaemonPid(projectRoot);
 
@@ -242,7 +239,6 @@ export function registerAgentCommands(
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async (cwd: string = ".", options: StartOptions) => {
       const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
-      if (!projectRoot) process.exit(1);
       injectAgentContext(projectRoot);
       await restartCommand(projectRoot, options);
     }));

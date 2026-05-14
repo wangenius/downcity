@@ -29,6 +29,7 @@ import {
   startServiceScheduleRuntime,
   stopServiceScheduleRuntime,
 } from "@/service/schedule/Runtime.js";
+import { CliError } from "@/types/cli/CliError.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -67,8 +68,10 @@ export async function runCommand(
   try {
     port = parsePort(options.port, "port") ?? 5314;
   } catch (error) {
-    console.error("❌ Invalid start options:", error);
-    process.exit(1);
+    throw new CliError({
+      title: "Invalid start options",
+      note: error instanceof Error ? error.message : String(error),
+    });
   }
 
   const host = (options.host ?? "0.0.0.0").trim();

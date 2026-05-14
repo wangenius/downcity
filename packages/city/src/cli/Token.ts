@@ -13,10 +13,9 @@ import prompts from "prompts";
 import type { AuthIssuedToken, AuthTokenSummary } from "@/shared/types/auth/AuthToken.js";
 import { AuthService } from "@/http/auth/AuthService.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
+import { printResult } from "@shared/utils/cli/CliOutput.js";
 
-function printJson(payload: Record<string, unknown>): void {
-  console.log(JSON.stringify(payload, null, 2));
-}
+
 
 function isInteractiveTerminal(): boolean {
   return process.stdin.isTTY === true && process.stdout.isTTY === true;
@@ -87,9 +86,11 @@ function buildTokenFacts(token: AuthTokenSummary): Array<{ label: string; value:
 
 function printTokenList(tokens: AuthTokenSummary[], json = false): void {
   if (json === true) {
-    printJson({
+    printResult({
+      asJson: true,
       success: true,
-      tokens,
+      title: "tokens",
+      payload: { tokens },
     });
     return;
   }
@@ -141,9 +142,11 @@ function createToken(params: {
     });
 
     if (params.json === true) {
-      printJson({
+      printResult({
+        asJson: true,
         success: true,
-        token: issued,
+        title: "token created",
+        payload: { token: issued },
       });
       return issued;
     }
@@ -177,9 +180,11 @@ function deleteToken(tokenId: string, json = false): void {
     const deleted = tokens.find((item) => item.id === tokenId);
     authService.deleteLocalCliToken(tokenId);
     if (json === true) {
-      printJson({
+      printResult({
+        asJson: true,
         success: true,
-        tokenId,
+        title: "token deleted",
+        payload: { tokenId },
       });
       return;
     }
@@ -616,7 +621,7 @@ async function runInteractiveTokenCommand(): Promise<void> {
 export function registerTokenCommand(program: Command): void {
   const token = program
     .command("token")
-    .description("管理本机 Bearer Token")
+    .description("管理本机 Bearer Token（无参数时启动交互式管理器）")
     .action(async () => {
       await runInteractiveTokenCommand();
     });

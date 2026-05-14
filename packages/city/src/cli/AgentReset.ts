@@ -13,6 +13,7 @@ import prompts from "prompts";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { ConsoleStore } from "@/shared/utils/store/index.js";
 import { emitCliBlock } from "./CliReporter.js";
+import { CliError } from "@/types/cli/CliError.js";
 import { resolveAgentName } from "./IndexSupport.js";
 
 /**
@@ -65,13 +66,11 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   // 1) 校验项目文件存在
   const shipJsonPath = getDowncityJsonPath(projectRoot);
   if (!fs.existsSync(shipJsonPath)) {
-    emitCliBlock({
-      tone: "error",
+    throw new CliError({
       title: "downcity.json not found",
-      summary: projectRoot,
-      facts: [{ label: "fix", value: "city agent create <path>" }],
+      note: `project: ${projectRoot}`,
+      fix: "city agent create <path>",
     });
-    process.exit(1);
   }
 
   // 2) 读取当前 modelId
@@ -80,16 +79,11 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   // 3) 获取可用模型列表
   const choices = listModelChoices();
   if (choices.length === 0) {
-    emitCliBlock({
-      tone: "error",
+    throw new CliError({
       title: "No models available in console pool",
-      summary: "请先配置 provider 并创建 model",
-      facts: [
-        { label: "fix", value: "city model create" },
-        { label: "project", value: projectRoot },
-      ],
+      note: "请先配置 provider 并创建 model",
+      fix: "city model create",
     });
-    process.exit(1);
   }
 
   // 4) 交互选择模型

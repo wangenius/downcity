@@ -18,6 +18,7 @@ import { registerConfigCommand } from "./Config.js";
 import { registerModelCommand } from "./Model.js";
 import { consoleInitCommand } from "./ConsoleInit.js";
 import { parseBoolean, parsePort, createVersionBanner } from "./IndexSupport.js";
+import { CliError } from "@/types/cli/CliError.js";
 import { updateCommand } from "./Update.js";
 import {
   consoleStatusCommand,
@@ -132,8 +133,10 @@ export function registerConsoleCommands(
       const options = command.opts<{ manager?: string }>();
       const manager = String(options.manager || "auto").trim().toLowerCase();
       if (manager !== "auto" && manager !== "npm" && manager !== "pnpm") {
-        console.error(`❌ Invalid manager: ${manager}. Use npm|pnpm|auto.`);
-        process.exit(1);
+        throw new CliError({
+          title: `Invalid manager: ${manager}`,
+          fix: "Use npm|pnpm|auto.",
+        });
       }
       await updateCommand({
         manager: manager as "auto" | "npm" | "pnpm",
@@ -191,10 +194,10 @@ export function registerConsoleCommands(
             printConsoleStatusPanel(status);
             return;
           }
-          console.error(
-            `❌ Unknown action: ${resolvedAction}. Use start|stop|restart|status.`,
-          );
-          process.exit(1);
+          throw new CliError({
+            title: `Unknown action: ${resolvedAction}`,
+            fix: "Use start|stop|restart|status.",
+          });
         },
       ),
     );

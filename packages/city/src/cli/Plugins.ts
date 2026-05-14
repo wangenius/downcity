@@ -27,70 +27,7 @@ import type { PluginCliBaseOptions } from "@/shared/types/PluginApi.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { parseBoolean } from "./IndexSupport.js";
 
-function isRegistryEntryRunning(
-  entry: { status?: "running" | "stopped" },
-): boolean {
-  return entry.status !== "stopped";
-}
-
-function resolveProjectRoot(pathInput?: string): string {
-  const raw = String(pathInput || ".").trim() || ".";
-  if (raw === ".") {
-    const envAgentPath = String(process.env.DC_AGENT_PATH || "").trim();
-    if (envAgentPath) return path.resolve(envAgentPath);
-  }
-  return path.resolve(raw);
-}
-
-function readAgentName(projectRoot: string): string {
-  const shipJsonPath = getDowncityJsonPath(projectRoot);
-  const fallback = path.basename(projectRoot);
-  if (!fs.existsSync(shipJsonPath)) return fallback;
-  try {
-    const raw = fs.readFileSync(shipJsonPath, "utf-8");
-    const parsed = JSON.parse(raw) as { name?: unknown };
-    if (typeof parsed.name === "string" && parsed.name.trim()) {
-      return parsed.name.trim();
-    }
-  } catch {
-    // ignore
-  }
-  return fallback;
-}
-
-async function resolveProjectRootByAgentName(agentName: string): Promise<{
-  projectRoot?: string;
-  error?: string;
-}> {
-  const target = String(agentName || "").trim().toLowerCase();
-  if (!target) {
-    return { error: "--agent requires a non-empty value" };
-  }
-
-  const entries = await listConsoleAgents();
-  const matchedRoots = entries
-    .filter((entry) => isRegistryEntryRunning(entry))
-    .map((entry) => path.resolve(String(entry.projectRoot || "").trim() || "."))
-    .filter((root, index, all) => all.indexOf(root) === index)
-    .filter((root) => {
-      const byDirName = path.basename(root).toLowerCase() === target;
-      const byShipName = readAgentName(root).toLowerCase() === target;
-      return byDirName || byShipName;
-    });
-
-  if (matchedRoots.length === 0) {
-    return {
-      error: `Agent not found in console registry: ${agentName}. Run "city agent list" to inspect names.`,
-    };
-  }
-  if (matchedRoots.length > 1) {
-    return {
-      error: `Agent name is ambiguous: ${agentName}. Matched paths: ${matchedRoots.join(", ")}`,
-    };
-  }
-
-  return { projectRoot: matchedRoots[0] };
-}
+import { isRegistryEntryRunning, resolveProjectRoot, resolveProjectRootByAgentName, validateAgentProjectRoot } from "./ServiceCommandSupport.js";
 
 async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<{
   projectRoot?: string;
@@ -104,12 +41,7 @@ async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<
   return { projectRoot: resolveProjectRoot(options.path) };
 }
 
-function validatePluginProjectRoot(projectRoot: string): string | null {
-  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
-    return `Invalid project path: ${projectRoot}. Missing: downcity.json`;
-  }
-  return null;
-}
+
 
 function parseCommandPayload(raw?: string): JsonValue | undefined {
   if (typeof raw !== "string") return undefined;
@@ -541,7 +473,7 @@ async function runPluginActionCommand(params: {
     return;
   }
 
-  const pathError = validatePluginProjectRoot(resolved.projectRoot);
+  const pathError = validateAgentProjectRoot(resolved.projectRoot);
   if (pathError) {
     printResult({
       asJson: params.options.json,
@@ -581,7 +513,7 @@ async function runPluginActionCommand(params: {
 export function registerPluginsCommand(program: Command): void {
   const plugin = program
     .command("plugin")
-    .description("查看 plugin catalog，并提供高级 action 入口")
+    .description("管理 plugin（无参数时启动交互式管理器）")
     .helpOption("--help", "display help for command");
 
   plugin.action(async () => {

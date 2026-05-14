@@ -181,9 +181,7 @@ export async function discoverProviderModels(params: {
   }
 }
 
-export function resolveProjectRoot(pathInput?: string): string {
-  return path.resolve(String(pathInput || "."));
-}
+export { resolveProjectRoot } from "./ServiceCommandSupport.js";
 
 /**
  * 设置项目 `downcity.json.execution.modelId`。

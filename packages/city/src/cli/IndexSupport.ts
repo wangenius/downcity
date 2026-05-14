@@ -8,13 +8,15 @@
 
 import { readFileSync, existsSync } from "fs";
 import { basename, join, resolve } from "path";
-import { emitCliHeader, resetCliSectionFlow } from "./CliReporter.js";
+import { emitCliHeader, emitCliBlock, resetCliSectionFlow } from "./CliReporter.js";
+import { CliError } from "@/types/cli/CliError.js";
 
 /**
  * 在关键运行命令执行前打印当前 city 版本。
  *
  * 说明（中文）
  * - 仅用于 runtime 相关命令，避免影响 `config --json` 等结构化输出。
+ * - 全局 catch CliError，统一渲染错误输出。
  */
 export function createVersionBanner<TArgs extends unknown[]>(
   version: string,
@@ -31,7 +33,38 @@ export function createVersionBanner<TArgs extends unknown[]>(
       resetCliSectionFlow();
       emitCliHeader(version);
     }
-    await action(...args);
+
+    try {
+      await action(...args);
+    } catch (error) {
+      if (error instanceof CliError) {
+        if (hasJsonMode) {
+          console.log(
+            JSON.stringify(
+              {
+                success: false,
+                error: error.message,
+                ...(error.note ? { detail: error.note } : {}),
+                ...(error.fix ? { fix: error.fix } : {}),
+              },
+              null,
+              2,
+            ),
+          );
+        } else {
+          emitCliBlock({
+            tone: "error",
+            title: error.message,
+            note: error.note,
+            facts: error.fix ? [{ label: "fix", value: error.fix }] : undefined,
+          });
+        }
+        process.exitCode = error.exitCode;
+        return;
+      }
+      // 非 CliError 继续向上抛，让 Node.js 默认处理。
+      throw error;
+    }
   };
 }
 

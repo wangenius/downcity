@@ -12,6 +12,8 @@ import path from "path";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "url";
 import { emitCliBlock } from "./CliReporter.js";
+import { CliError } from "@/types/cli/CliError.js";
+import { runWithSpinner } from "@shared/utils/cli/Spinner.js";
 
 export type UpdateManager = "npm" | "pnpm";
 
@@ -152,10 +154,15 @@ export async function updateCommand(
   });
 
   try {
-    await runCommand(invocation.command, invocation.args);
+    await runWithSpinner(
+      () => runCommand(invocation.command, invocation.args),
+      { text: `Installing ${GLOBAL_PACKAGE_NAME}@latest via ${manager}...` },
+    );
   } catch (error) {
-    console.error("❌ Failed to update downcity:", error);
-    process.exit(1);
+    throw new CliError({
+      title: "Failed to update downcity",
+      note: error instanceof Error ? error.message : String(error),
+    });
   }
 
   emitCliBlock({

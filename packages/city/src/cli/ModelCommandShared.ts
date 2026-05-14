@@ -46,13 +46,7 @@ export function toSafeProviderView<T extends { apiKey?: string }>(provider: T): 
   };
 }
 
-export function parseBooleanOption(value: string | undefined): boolean {
-  if (value === undefined) return true;
-  const normalized = String(value).trim().toLowerCase();
-  if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
-  if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
-  throw new Error(`Invalid boolean: ${value}`);
-}
+export { parseBoolean as parseBooleanOption } from "./IndexSupport.js";
 
 export function parseNumberOption(value: string): number {
   const num = Number(value);

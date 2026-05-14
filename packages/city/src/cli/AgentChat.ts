@@ -8,6 +8,7 @@
  */
 
 import { createInterface } from "node:readline/promises";
+import chalk from "chalk";
 import prompts from "prompts";
 import { callAgentTransport } from "@/rpc/Transport.js";
 import { emitCliBlock } from "./CliReporter.js";
@@ -302,11 +303,20 @@ async function runInteractiveChat(params: {
   agentName: string;
   options: AgentChatCliOptions;
 }): Promise<void> {
+  const prompt = `${chalk.cyan(params.agentName)} ${chalk.dim("›")} `;
+  const helpText = [
+    `${chalk.dim("/exit, /quit  — 退出对话")}`,
+    `${chalk.dim("/clear       — 清屏")}`,
+    `${chalk.dim("/help        — 显示此帮助")}`,
+    `${chalk.dim("Ctrl+C       — 退出对话")}`,
+  ];
+
   emitCliBlock({
     tone: "info",
     title: `Agent chat · ${params.agentName}`,
-    note: "Session: local-cli-chat-main · Type /exit to quit.",
+    note: `Session: local-cli-chat-main · ${helpText[0].replace(chalk.dim(""), "").trim()}`,
   });
+  console.log(helpText.join("\n"));
 
   const rl = createInterface({
     input: process.stdin,
@@ -316,10 +326,18 @@ async function runInteractiveChat(params: {
 
   try {
     while (true) {
-      const line = await rl.question(`${params.agentName}> `);
+      const line = await rl.question(prompt);
       const text = normalizeChatMessage(line);
       if (!text) continue;
       if (text === "/exit" || text === "/quit") break;
+      if (text === "/clear") {
+        console.clear();
+        continue;
+      }
+      if (text === "/help") {
+        console.log(helpText.join("\n"));
+        continue;
+      }
 
       const outcome = await runWithSpinner(async () => {
         return await executeAgentChatTurn({
@@ -366,6 +384,7 @@ async function runInteractiveChat(params: {
   } finally {
     rl.close();
   }
+  console.log(chalk.dim("Chat ended."));
 }
 
 /**

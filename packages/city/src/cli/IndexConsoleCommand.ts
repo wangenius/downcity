@@ -145,7 +145,7 @@ export function registerConsoleCommands(
 
   program
     .command("run", { hidden: true })
-    .description("internal city runtime")
+    .description("city 内部运行时（不直接使用）")
     .action(runCityRuntimeCommand);
 
   const consoleCommand = program

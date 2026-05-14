@@ -179,64 +179,53 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
   const timeoutMs = params?.timeoutMs ?? 10_000;
   const consoleDir = getCityRuntimeDirPath();
   const pidPath = getCityPidPath();
-  const logPath = getCityLogPath();
   await fs.ensureDir(consoleDir);
 
+  // Phase 1: Stop Console
+  emitCliBlock({
+    tone: "info",
+    title: "City runtime",
+    summary: "stopping",
+  });
   await stopConsoleCommand();
 
+  // Phase 2: Stop managed agents
   const views = await resolveRunningConsoleAgents();
   if (views.length > 0) {
-    const stoppedItems: Array<{
-      tone: "success" | "info" | "error";
-      title: string;
-      facts: Array<{ label: string; value: string }>;
-    }> = [];
+    emitCliBlock({
+      tone: "info",
+      title: "Managed agents",
+      summary: `stopping · ${views.length} item${views.length > 1 ? "s" : ""}`,
+    });
+
     for (const item of views) {
       try {
         const result = await runWithSpinner(
           () => stopDaemonProcess({ projectRoot: item.projectRoot }),
           { text: `Stopping ${resolveAgentName(item.projectRoot)}...` },
         );
-        stoppedItems.push({
+        emitCliBlock({
           tone: result.stopped ? "success" : "info",
           title: resolveAgentName(item.projectRoot),
-          facts: [
-            {
-              label: "Project",
-              value: item.projectRoot,
-            },
-            {
-              label: "Status",
-              value: result.stopped ? "stopped" : "already stopped",
-            },
-          ],
+          summary: result.stopped ? "stopped" : "already stopped",
+          facts: [{ label: "project", value: item.projectRoot }],
         });
         await markConsoleAgentStopped(item.projectRoot);
       } catch (error) {
-        stoppedItems.push({
+        emitCliBlock({
           tone: "error",
           title: resolveAgentName(item.projectRoot),
+          summary: "failed",
           facts: [
-            {
-              label: "Project",
-              value: item.projectRoot,
-            },
-            {
-              label: "Error",
-              value: String(error),
-            },
+            { label: "project", value: item.projectRoot },
+            { label: "error", value: String(error) },
           ],
         });
       }
     }
-    emitCliList({
-      tone: "accent",
-      title: "Managed agents",
-      summary: `stopping · ${views.length} item${views.length > 1 ? "s" : ""}`,
-      items: stoppedItems,
-    });
   }
 
+  // Phase 3: Stop city runtime process
   const sweepOrphans = async (): Promise<void> => {
     const orphanSweep = await sweepDetachedCityProcesses({
       includeConsole: true,
@@ -262,9 +251,15 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
   if (!consolePid) {
     emitCliBlock({
       tone: "info",
-      title: "City runtime not running",
+      title: "City runtime process",
+      summary: "not running",
     });
     await sweepOrphans();
+    emitCliBlock({
+      tone: "success",
+      title: "City runtime",
+      summary: "stopped",
+    });
     return;
   }
 
@@ -272,9 +267,15 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
     await fs.remove(pidPath);
     emitCliBlock({
       tone: "warning",
-      title: "Stale city runtime state cleaned",
+      title: "City runtime process",
+      summary: "stale state cleaned",
     });
     await sweepOrphans();
+    emitCliBlock({
+      tone: "success",
+      title: "City runtime",
+      summary: "stopped",
+    });
     return;
   }
 
@@ -297,20 +298,21 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
 
   await fs.remove(pidPath);
 
+  const stillAlive = isCityProcessAlive(consolePid);
   emitCliBlock({
-    tone: isCityProcessAlive(consolePid) ? "warning" : "success",
-    title: isCityProcessAlive(consolePid)
-      ? "City runtime may still be running"
-      : "City runtime stopped",
+    tone: stillAlive ? "warning" : "success",
+    title: "City runtime process",
+    summary: stillAlive ? "may still be running" : "stopped",
   });
 
   await sweepOrphans();
-}
 
-/**
- * 从 daemon meta 中提取可恢复的启动参数。
- */
-async function resolveRestartOptionsFromProjectRoot(
+  emitCliBlock({
+    tone: "success",
+    title: "City runtime",
+    summary: "stopped",
+  });
+}async function resolveRestartOptionsFromProjectRoot(
   projectRoot: string,
 ): Promise<StartOptions> {
   const meta = await readDaemonMeta(projectRoot);

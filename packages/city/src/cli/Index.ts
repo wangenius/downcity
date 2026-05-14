@@ -22,6 +22,7 @@ import { registerAgentCommands } from "./IndexAgentCommand.js";
 import { registerEnvCommand } from "./Env.js";
 import { registerTokenCommand } from "./Token.js";
 import { registerResetCommand } from "./Reset.js";
+import { setCliVerbosity } from "./CliReporter.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -39,6 +40,9 @@ program
   .version(packageJson.version, "-v, --version");
 
 program.helpOption("--help", "display help for command");
+
+program.option("-q, --quiet", "仅输出错误信息");
+program.option("--verbose", "输出详细进度");
 
 registerConsoleCommands(program, {
   version: packageJson.version,
@@ -67,5 +71,12 @@ if (process.argv.length <= 2) {
   program.outputHelp();
   process.exit(0);
 }
+
+// 关键点（中文）：在 parse 前解析 --quiet / --verbose，设置全局 verbosity。
+program.hook("preAction", (thisCommand) => {
+  const opts = thisCommand.opts<{ quiet?: boolean; verbose?: boolean }>();
+  if (opts.quiet) setCliVerbosity("quiet");
+  else if (opts.verbose) setCliVerbosity("verbose");
+});
 
 program.parse();

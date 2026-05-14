@@ -37,6 +37,25 @@ let cliSectionPrinted = false;
 let cliPreviousSectionCompact = false;
 
 /**
+ * 全局 verbosity 级别。
+ * - "quiet"：仅输出 error 级别 block。
+ * - "normal"：输出全部内容（默认）。
+ * - "verbose"：输出更多细节（暂同 normal）。
+ */
+let cliVerbosity: "quiet" | "normal" | "verbose" = "normal";
+
+/**
+ * 设置全局 verbosity 级别。
+ *
+ * 关键点（中文）
+ * - 由 CLI 入口在 parse 前调用。
+ * - quiet 模式下 suppress 所有非 error 的 emitCliBlock/emitCliList。
+ */
+export function setCliVerbosity(level: "quiet" | "normal" | "verbose"): void {
+  cliVerbosity = level;
+}
+
+/**
  * CLI 语气对应的视觉调色板。
  */
 type CliTonePalette = {
@@ -327,6 +346,7 @@ export function emitCliBlock(
   block: CliReportBlock,
   options?: CliRenderOptions,
 ): void {
+  if (cliVerbosity === "quiet" && block.tone !== "error") return;
   emitCliSection(formatCliBlock(block, options), isCompactCliBlock(block));
 }
 
@@ -337,5 +357,6 @@ export function emitCliList(
   list: CliReportList,
   options?: CliRenderOptions,
 ): void {
+  if (cliVerbosity === "quiet") return;
   emitCliSection(formatCliList(list, options), isCompactCliList(list));
 }

@@ -209,7 +209,10 @@ export function registerAgentCommands(
           return;
         }
 
-        await cleanupStaleDaemonFiles(projectRoot);
+        await runWithSpinner(
+          () => cleanupStaleDaemonFiles(projectRoot),
+          { text: "Cleaning stale daemon files..." },
+        );
         emitCliBlock({
           tone: "success",
           title: "Cleaned stale daemon state",

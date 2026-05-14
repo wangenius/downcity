@@ -1,19 +1,31 @@
 ---
 title: city chat
-description: chat service actions（status/test/reconnect/open/close/configuration/configure/list/info/send/react/context/delete/history）
+description: chat service 交互式管理与 actions（status/test/reconnect/open/close/configuration/configure/list/info/send/react/context/delete/history）
 ---
 
 # `city chat`
 
-用于向指定会话发送消息、贴表情、查看上下文和读取历史。
+用于管理 chat service、配置 city 级 channel account、向指定会话发送消息、贴表情、查看上下文和读取历史。
 
-> 层级说明：`city chat` 是 service 动作命令，不是一级命令。一级入口是 `city service`。
+裸 `city chat` 会进入交互式管理器；脚本化场景仍可继续使用下列子命令。
 
 ## 用法
 
 ```bash
+city chat
 city chat <subcommand> [options]
 ```
+
+## 交互式管理
+
+运行 `city chat` 后可以：
+
+- 查看、启动、停止、重启当前项目的 chat service
+- 选择“配置 channel”管理 city 全局 Telegram / Feishu / QQ accounts
+- 新增、编辑、删除 channel account
+- 选择“配置 authorization”，给平台用户分配 auth role
+
+channel account 与 chat authorization 都写入 city 全局 `~/.downcity/downcity.db`。agent 项目只保存 `services.chat.channels.<channel>.channelAccountId` 绑定。
 
 ## 子命令
 
@@ -31,6 +43,18 @@ city chat <subcommand> [options]
 - `context`：查看当前会话上下文快照
 - `delete`：彻底删除会话（路由映射 + chat 历史 + context 目录）
 - `history`：读取历史消息
+- `auth set <platform:userId>`：给平台用户设置 auth role，例如 `city chat auth set telegram:12345678`
+
+## `auth set` 常用选项
+
+- `<platform:userId>`：授权主体，例如 `telegram:12345678`、`feishu:ou_xxx`、`qq:123456`
+- `--role <roleId>`：直接指定角色；不传则交互式选择
+
+当聊天用户权限不足时，拒绝消息会返回一条可直接转发给管理员的命令：
+
+```bash
+city chat auth set telegram:12345678
+```
 
 ## `status/test/reconnect/open/close` 常用选项
 

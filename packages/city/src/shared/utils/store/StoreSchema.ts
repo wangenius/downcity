@@ -94,7 +94,230 @@ export function ensureConsoleStoreSchema(context: ConsoleStoreContext): void {
     ON channel_accounts(channel);
   `);
   ensureChannelAccountsTableColumns(context);
+  ensureChatAuthSchema(context);
+  removeLegacyChatAuthSecureSettings(context);
   ensureAuthSchema(context);
+}
+
+/**
+ * 初始化 city 全局 chat authorization 表结构。
+ *
+ * 关键点（中文）
+ * - chat authorization 是 city 级业务数据，不属于 agent 项目配置。
+ * - 使用结构化表而不是 JSON blob，便于查询、更新和后续审计。
+ */
+function ensureChatAuthSchema(context: ConsoleStoreContext): void {
+  createChatAuthTables(context);
+  if (chatAuthSchemaNeedsRebuild(context)) {
+    rebuildChatAuthTables(context);
+  }
+  createChatAuthIndexes(context);
+}
+
+/**
+ * 创建 city 全局 chat authorization 表。
+ */
+function createChatAuthTables(context: ConsoleStoreContext): void {
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS chat_auth_roles (
+      role_id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS chat_auth_role_permissions (
+      role_id TEXT NOT NULL,
+      permission TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (role_id, permission),
+      FOREIGN KEY (role_id) REFERENCES chat_auth_roles(role_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS chat_auth_channel_defaults (
+      channel TEXT PRIMARY KEY NOT NULL CHECK (channel IN ('telegram', 'feishu', 'qq')),
+      role_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (role_id) REFERENCES chat_auth_roles(role_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS chat_auth_user_roles (
+      channel TEXT NOT NULL CHECK (channel IN ('telegram', 'feishu', 'qq')),
+      user_id TEXT NOT NULL,
+      role_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (channel, user_id),
+      FOREIGN KEY (role_id) REFERENCES chat_auth_roles(role_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+    );
+  `);
+}
+
+/**
+ * 创建 city 全局 chat authorization 查询索引。
+ */
+function createChatAuthIndexes(context: ConsoleStoreContext): void {
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS chat_auth_role_permissions_role_idx
+    ON chat_auth_role_permissions(role_id);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS chat_auth_user_roles_role_idx
+    ON chat_auth_user_roles(role_id);
+  `);
+}
+
+/**
+ * 判断旧版 chat authorization 表是否需要重建。
+ */
+function chatAuthSchemaNeedsRebuild(context: ConsoleStoreContext): boolean {
+  const requiredForeignKeyTables = [
+    "chat_auth_role_permissions",
+    "chat_auth_channel_defaults",
+    "chat_auth_user_roles",
+  ];
+  for (const tableName of requiredForeignKeyTables) {
+    const foreignKeys = context.sqlite
+      .prepare(`PRAGMA foreign_key_list(${tableName});`)
+      .all() as unknown[];
+    if (foreignKeys.length === 0) return true;
+  }
+
+  const constrainedTables = ["chat_auth_channel_defaults", "chat_auth_user_roles"];
+  for (const tableName of constrainedTables) {
+    const row = context.sqlite
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1;")
+      .get(tableName) as { sql?: unknown } | undefined;
+    const sql = String(row?.sql || "");
+    if (!sql.includes("CHECK (channel IN")) return true;
+  }
+
+  return false;
+}
+
+/**
+ * 重建旧版 chat authorization 表，保留仍然有效的数据。
+ */
+function rebuildChatAuthTables(context: ConsoleStoreContext): void {
+  const roles = context.sqlite
+    .prepare("SELECT role_id, name, description, created_at, updated_at FROM chat_auth_roles;")
+    .all() as Array<Record<string, unknown>>;
+  const rolePermissions = context.sqlite
+    .prepare("SELECT role_id, permission, created_at FROM chat_auth_role_permissions;")
+    .all() as Array<Record<string, unknown>>;
+  const channelDefaults = context.sqlite
+    .prepare("SELECT channel, role_id, created_at, updated_at FROM chat_auth_channel_defaults;")
+    .all() as Array<Record<string, unknown>>;
+  const userRoles = context.sqlite
+    .prepare("SELECT channel, user_id, role_id, created_at, updated_at FROM chat_auth_user_roles;")
+    .all() as Array<Record<string, unknown>>;
+  const validRoleIds = new Set(
+    roles.map((row) => String(row.role_id || "").trim()).filter(Boolean),
+  );
+  const validChannels = new Set(["telegram", "feishu", "qq"]);
+
+  const tx = context.sqlite.transaction(() => {
+    context.sqlite.exec(`
+      DROP TABLE IF EXISTS chat_auth_role_permissions;
+      DROP TABLE IF EXISTS chat_auth_channel_defaults;
+      DROP TABLE IF EXISTS chat_auth_user_roles;
+      DROP TABLE IF EXISTS chat_auth_roles;
+    `);
+    createChatAuthTables(context);
+
+    const insertRole = context.sqlite.prepare(`
+      INSERT OR IGNORE INTO chat_auth_roles (role_id, name, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?);
+    `);
+    for (const row of roles) {
+      const roleId = String(row.role_id || "").trim();
+      const name = String(row.name || "").trim();
+      if (!roleId || !name) continue;
+      insertRole.run(
+        roleId,
+        name,
+        String(row.description || "").trim() || null,
+        String(row.created_at || ""),
+        String(row.updated_at || ""),
+      );
+    }
+
+    const insertPermission = context.sqlite.prepare(`
+      INSERT OR IGNORE INTO chat_auth_role_permissions (role_id, permission, created_at)
+      VALUES (?, ?, ?);
+    `);
+    for (const row of rolePermissions) {
+      const roleId = String(row.role_id || "").trim();
+      const permission = String(row.permission || "").trim();
+      if (!roleId || !permission || !validRoleIds.has(roleId)) continue;
+      insertPermission.run(roleId, permission, String(row.created_at || ""));
+    }
+
+    const insertDefault = context.sqlite.prepare(`
+      INSERT OR IGNORE INTO chat_auth_channel_defaults (channel, role_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?);
+    `);
+    for (const row of channelDefaults) {
+      const channel = String(row.channel || "").trim();
+      const roleId = String(row.role_id || "").trim();
+      if (!validChannels.has(channel) || !validRoleIds.has(roleId)) continue;
+      insertDefault.run(
+        channel,
+        roleId,
+        String(row.created_at || ""),
+        String(row.updated_at || ""),
+      );
+    }
+
+    const insertUserRole = context.sqlite.prepare(`
+      INSERT OR IGNORE INTO chat_auth_user_roles (channel, user_id, role_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?);
+    `);
+    for (const row of userRoles) {
+      const channel = String(row.channel || "").trim();
+      const userId = String(row.user_id || "").trim();
+      const roleId = String(row.role_id || "").trim();
+      if (!validChannels.has(channel) || !userId || !validRoleIds.has(roleId)) continue;
+      insertUserRole.run(
+        channel,
+        userId,
+        roleId,
+        String(row.created_at || ""),
+        String(row.updated_at || ""),
+      );
+    }
+  });
+  tx();
+}
+
+/**
+ * 清理旧版 chat authorization key-value 存储。
+ *
+ * 关键点（中文）
+ * - 新设计已经使用 `chat_auth_*` 结构化表。
+ * - 旧的 `chat_authorization` / `agent:*:chat_authorization` 不再作为迁移来源。
+ */
+function removeLegacyChatAuthSecureSettings(context: ConsoleStoreContext): void {
+  context.sqlite
+    .prepare(
+      `
+      DELETE FROM console_secure_settings
+      WHERE key = 'chat_authorization'
+        OR key GLOB 'agent:*:chat_authorization';
+      `,
+    )
+    .run();
 }
 
 /**

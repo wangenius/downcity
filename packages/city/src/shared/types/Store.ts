@@ -410,3 +410,117 @@ export interface UpsertChannelAccountInput {
    */
   sandbox?: boolean;
 }
+
+/**
+ * Chat Auth 角色记录。
+ */
+export interface StoredChatAuthRole {
+  /**
+   * 角色 ID，例如 `default`、`member`、`admin`。
+   */
+  roleId: string;
+  /**
+   * 角色展示名。
+   */
+  name: string;
+  /**
+   * 角色说明。
+   */
+  description?: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt: string;
+  /**
+   * 更新时间（ISO 字符串）。
+   */
+  updatedAt: string;
+}
+
+/**
+ * Chat Auth 角色权限记录。
+ */
+export interface StoredChatAuthRolePermission {
+  /**
+   * 角色 ID。
+   */
+  roleId: string;
+  /**
+   * 权限 ID，例如 `chat.dm.use`。
+   */
+  permission: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt: string;
+}
+
+/**
+ * Chat Auth channel 默认角色记录。
+ */
+export interface StoredChatAuthChannelDefault {
+  /**
+   * 平台 channel，例如 `telegram`。
+   */
+  channel: StoredChannelAccountChannel;
+  /**
+   * 新用户默认角色 ID。
+   */
+  roleId: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt: string;
+  /**
+   * 更新时间（ISO 字符串）。
+   */
+  updatedAt: string;
+}
+
+/**
+ * Chat Auth 用户角色绑定记录。
+ */
+export interface StoredChatAuthUserRole {
+  /**
+   * 平台 channel，例如 `telegram`。
+   */
+  channel: StoredChannelAccountChannel;
+  /**
+   * 平台用户 ID。
+   */
+  userId: string;
+  /**
+   * 角色 ID。
+   */
+  roleId: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt: string;
+  /**
+   * 更新时间（ISO 字符串）。
+   */
+  updatedAt: string;
+}
+
+/**
+ * Chat Auth 结构化快照。
+ */
+export interface StoredChatAuthSnapshot {
+  /**
+   * 角色列表。
+   */
+  roles: StoredChatAuthRole[];
+  /**
+   * 角色权限列表。
+   */
+  rolePermissions: StoredChatAuthRolePermission[];
+  /**
+   * 每个平台的新用户默认角色。
+   */
+  channelDefaults: StoredChatAuthChannelDefault[];
+  /**
+   * 平台用户角色绑定。
+   */
+  userRoles: StoredChatAuthUserRole[];
+}

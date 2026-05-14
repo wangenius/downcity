@@ -2,8 +2,9 @@
  * Auth 授权配置读写工具。
  *
  * 关键点（中文）
- * - 静态授权规则统一写入 console `~/.downcity/downcity.db`。
+ * - 静态授权规则统一写入 city 全局 console `~/.downcity/downcity.db`。
  * - 授权核心模型为 role / permission / binding。
+ * - chat authorization 不再按 agent/projectRoot 隔离；agent 只负责连接 channel account。
  */
 
 import type { AgentContext } from "@/types/agent/AgentContext.js";
@@ -14,6 +15,13 @@ import type {
   ChatAuthorizationRole,
   ChatChannelAuthorizationConfig,
 } from "@/shared/types/AuthPlugin.js";
+import type {
+  StoredChatAuthChannelDefault,
+  StoredChatAuthRole,
+  StoredChatAuthRolePermission,
+  StoredChatAuthSnapshot,
+  StoredChatAuthUserRole,
+} from "@/shared/types/Store.js";
 import {
   CHAT_AUTHORIZATION_CHANNELS,
   CHAT_AUTHORIZATION_PERMISSIONS,
@@ -21,7 +29,6 @@ import {
 } from "@/shared/types/AuthPlugin.js";
 import { ConsoleStore } from "@/shared/utils/store/index.js";
 
-const CHAT_AUTHORIZATION_STORE_KEY = "chat_authorization";
 const CHANNELS: ChatAuthorizationChannel[] = [...CHAT_AUTHORIZATION_CHANNELS];
 
 export const DEFAULT_CHAT_AUTHORIZATION_PERMISSIONS: ChatAuthorizationPermission[] = [
@@ -139,17 +146,100 @@ function cloneAuthorizationConfig(
   return normalizeAuthorizationConfig(input ? JSON.parse(JSON.stringify(input)) : {});
 }
 
-function readAuthorizationConfigFromStoreSync(projectRoot: string): ChatAuthorizationConfig {
-  const normalizedProjectRoot = normalizeText(projectRoot);
-  if (!normalizedProjectRoot) return normalizeAuthorizationConfig({});
+function snapshotIsEmpty(snapshot: StoredChatAuthSnapshot): boolean {
+  return (
+    snapshot.roles.length === 0 &&
+    snapshot.rolePermissions.length === 0 &&
+    snapshot.channelDefaults.length === 0 &&
+    snapshot.userRoles.length === 0
+  );
+}
+
+function configToSnapshot(input: ChatAuthorizationConfig): StoredChatAuthSnapshot {
+  const config = normalizeAuthorizationConfig(input);
+  const now = new Date().toISOString();
+  const roles: StoredChatAuthRole[] = Object.values(config.roles || {}).map((role) => ({
+    roleId: role.roleId,
+    name: role.name,
+    description: role.description,
+    createdAt: now,
+    updatedAt: now,
+  }));
+  const rolePermissions: StoredChatAuthRolePermission[] = [];
+  for (const role of Object.values(config.roles || {})) {
+    for (const permission of role.permissions || []) {
+      rolePermissions.push({
+        roleId: role.roleId,
+        permission,
+        createdAt: now,
+      });
+    }
+  }
+  const channelDefaults: StoredChatAuthChannelDefault[] = [];
+  const userRoles: StoredChatAuthUserRole[] = [];
+  for (const channel of CHANNELS) {
+    const channelConfig = config.channels?.[channel];
+    channelDefaults.push({
+      channel,
+      roleId: channelConfig?.defaultUserRoleId || "default",
+      createdAt: now,
+      updatedAt: now,
+    });
+    for (const [userId, roleId] of Object.entries(channelConfig?.userRoles || {})) {
+      userRoles.push({
+        channel,
+        userId,
+        roleId,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+  return { roles, rolePermissions, channelDefaults, userRoles };
+}
+
+function snapshotToConfig(snapshot: StoredChatAuthSnapshot): ChatAuthorizationConfig {
+  const roles: Record<string, ChatAuthorizationRole> = {};
+  for (const role of snapshot.roles) {
+    roles[role.roleId] = {
+      roleId: role.roleId,
+      name: role.name,
+      description: role.description,
+      permissions: [],
+    };
+  }
+  for (const item of snapshot.rolePermissions) {
+    const role = roles[item.roleId];
+    if (!role) continue;
+    role.permissions.push(item.permission as ChatAuthorizationPermission);
+  }
+  const config = normalizeAuthorizationConfig({
+    roles,
+    channels: {},
+  });
+  for (const item of snapshot.channelDefaults) {
+    const channelConfig = ensureChannelConfig(config, item.channel);
+    channelConfig.defaultUserRoleId = item.roleId;
+  }
+  for (const item of snapshot.userRoles) {
+    const channelConfig = ensureChannelConfig(config, item.channel);
+    channelConfig.userRoles ??= {};
+    channelConfig.userRoles[item.userId] = item.roleId;
+  }
+  return normalizeAuthorizationConfig(config);
+}
+
+function readAuthorizationConfigFromStoreSync(): ChatAuthorizationConfig {
   const store = new ConsoleStore();
   try {
-    return normalizeAuthorizationConfig(
-      store.getAgentSecureSettingJsonSync<ChatAuthorizationConfig>(
-        normalizedProjectRoot,
-        CHAT_AUTHORIZATION_STORE_KEY,
-      ) || {},
-    );
+    const snapshot = store.getChatAuthSnapshot();
+    if (!snapshotIsEmpty(snapshot)) {
+      return snapshotToConfig(snapshot);
+    }
+
+    const defaults = normalizeAuthorizationConfig({});
+    store.replaceChatAuthSnapshot(configToSnapshot(defaults));
+    return defaults;
   } catch {
     return normalizeAuthorizationConfig({});
   } finally {
@@ -158,18 +248,11 @@ function readAuthorizationConfigFromStoreSync(projectRoot: string): ChatAuthoriz
 }
 
 async function writeAuthorizationConfigToStore(params: {
-  projectRoot: string;
   nextConfig: ChatAuthorizationConfig;
 }): Promise<void> {
-  const normalizedProjectRoot = normalizeText(params.projectRoot);
-  if (!normalizedProjectRoot) throw new Error("projectRoot is required");
   const store = new ConsoleStore();
   try {
-    await store.setAgentSecureSettingJson(
-      normalizedProjectRoot,
-      CHAT_AUTHORIZATION_STORE_KEY,
-      normalizeAuthorizationConfig(params.nextConfig),
-    );
+    store.replaceChatAuthSnapshot(configToSnapshot(params.nextConfig));
   } finally {
     store.close();
   }
@@ -186,34 +269,29 @@ function ensureChannelConfig(
 }
 
 /**
- * 同步读取当前 agent 的授权配置。
+ * 同步读取 city 全局授权配置。
  */
-export function readChatAuthorizationConfigSync(projectRoot: string): ChatAuthorizationConfig {
-  return readAuthorizationConfigFromStoreSync(projectRoot);
+export function readChatAuthorizationConfigSync(_projectRoot?: string): ChatAuthorizationConfig {
+  return readAuthorizationConfigFromStoreSync();
 }
 
 /**
- * 读取当前 agent 的授权配置。
+ * 读取 city 全局授权配置。
  */
 export function readChatAuthorizationConfig(
-  contextOrProjectRoot: Pick<AgentContext, "rootPath"> | string,
+  _contextOrProjectRoot?: Pick<AgentContext, "rootPath"> | string,
 ): ChatAuthorizationConfig {
-  const projectRoot =
-    typeof contextOrProjectRoot === "string"
-      ? contextOrProjectRoot
-      : contextOrProjectRoot.rootPath;
-  return readAuthorizationConfigFromStoreSync(projectRoot);
+  return readAuthorizationConfigFromStoreSync();
 }
 
 /**
  * 覆盖写入整份授权配置。
  */
 export async function writeChatAuthorizationConfig(params: {
-  context: Pick<AgentContext, "rootPath">;
+  context?: Pick<AgentContext, "rootPath">;
   nextConfig: ChatAuthorizationConfig;
 }): Promise<void> {
   await writeAuthorizationConfigToStore({
-    projectRoot: params.context.rootPath,
     nextConfig: params.nextConfig,
   });
 }
@@ -232,7 +310,7 @@ export function listChatAuthorizationRoles(params: {
  * 设置用户角色。
  */
 export async function setChatAuthorizationUserRole(params: {
-  context: Pick<AgentContext, "rootPath">;
+  context?: Pick<AgentContext, "rootPath">;
   channel: ChatAuthorizationChannel;
   userId: string;
   roleId: string;
@@ -241,15 +319,18 @@ export async function setChatAuthorizationUserRole(params: {
   const roleId = normalizeText(params.roleId);
   if (!userId || !roleId) throw new Error("userId and roleId are required");
   const authorization = cloneAuthorizationConfig(
-    readAuthorizationConfigFromStoreSync(params.context.rootPath),
+    readAuthorizationConfigFromStoreSync(),
   );
   authorization.roles = normalizeRoleMap(authorization.roles);
-  const channelConfig = ensureChannelConfig(authorization, params.channel);
   if (!authorization.roles?.[roleId]) throw new Error(`Unknown roleId: ${roleId}`);
-  channelConfig.userRoles ??= {};
-  channelConfig.userRoles[userId] = roleId;
-  await writeAuthorizationConfigToStore({
-    projectRoot: params.context.rootPath,
-    nextConfig: authorization,
-  });
+  const store = new ConsoleStore();
+  try {
+    store.setChatAuthUserRole({
+      channel: params.channel,
+      userId,
+      roleId,
+    });
+  } finally {
+    store.close();
+  }
 }

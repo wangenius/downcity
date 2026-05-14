@@ -53,10 +53,9 @@ export function registerConsoleCommands(
   program
     .command("init")
     .description("初始化 city 全局配置（模型/插件等，写入 ~/.downcity/downcity.db）")
-    .option("--force [enabled]", "允许清空并重建 ~/.downcity/downcity.db 中的 console 数据（危险操作）", parseBoolean)
     .helpOption("--help", "display help for command")
-    .action(createVersionBanner(context.version, async (options: { force?: boolean }) => {
-      await consoleInitCommand(options);
+    .action(createVersionBanner(context.version, async () => {
+      await consoleInitCommand();
     }));
 
   program

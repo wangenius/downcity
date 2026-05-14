@@ -17,6 +17,7 @@ import {
 } from "./ServiceCommandRemote.js";
 import { registerServiceScheduleCommands } from "./ServiceScheduleCommand.js";
 import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
+import { parseBoolean, parsePort } from "./IndexSupport.js";
 
 function toStaticServiceView(service: Service): {
   name: string;
@@ -90,7 +91,7 @@ export function registerServicesCommand(program: Command): void {
   service
     .command("list")
     .description("列出全部已注册 service 的静态能力")
-    .option("--json [enabled]", "以 JSON 输出", true)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (opts: { json?: boolean }) => {
       printStaticServiceList({
         asJson: opts.json !== false,
@@ -100,7 +101,7 @@ export function registerServicesCommand(program: Command): void {
   service
     .command("status <serviceName>")
     .description("查看单个 service 的静态能力")
-    .option("--json [enabled]", "以 JSON 输出", true)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (serviceName: string, opts: { json?: boolean }) => {
       printStaticServiceStatus({
         serviceName,
@@ -114,9 +115,9 @@ export function registerServicesCommand(program: Command): void {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）")
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
-    .option("--json [enabled]", "以 JSON 输出", true)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (serviceName: string, opts: ServiceCliBaseOptions) => {
       await runServiceControlCommand({
         serviceName,
@@ -131,9 +132,9 @@ export function registerServicesCommand(program: Command): void {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）")
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
-    .option("--json [enabled]", "以 JSON 输出", true)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (serviceName: string, opts: ServiceCliBaseOptions) => {
       await runServiceControlCommand({
         serviceName,
@@ -148,9 +149,9 @@ export function registerServicesCommand(program: Command): void {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）")
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
-    .option("--json [enabled]", "以 JSON 输出", true)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (serviceName: string, opts: ServiceCliBaseOptions) => {
       await runServiceControlCommand({
         serviceName,
@@ -166,9 +167,9 @@ export function registerServicesCommand(program: Command): void {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）")
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
-    .option("--json [enabled]", "以 JSON 输出", true)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(
     async (
       serviceName: string,

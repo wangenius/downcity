@@ -25,11 +25,11 @@ description: Chat service responsibilities and channel integrations
 - Access is judged by the speaking user's permission group, not by the group chat itself.
 - If the user has no explicit assignment yet, the default group is used automatically.
 
-## Multi-agent authorization isolation
+## City-Level Authorization
 
-- `chat` authorization rules are isolated per agent rather than shared globally.
-- Even if multiple agents bind the same channel account, their default roles, user role bindings, and authorization results can still differ.
-- In short, bot credentials are shared, but authorization policy is not.
+- `chat` authorization rules are shared globally at the city level and stored in `~/.downcity/downcity.db`.
+- When multiple agents bind the same channel account, the same platform user uses the same role binding.
+- In short, bot credentials and chat authorization policy are both city-level configuration. Agents only connect channel accounts.
 
 Full explanation: [Permissions](/en/docs/security/permissions)
 

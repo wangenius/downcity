@@ -1,11 +1,13 @@
 ---
 title: city agent
-description: 使用 start/restart 管理当前目录或指定目录的 Agent 进程
+description: 交互式管理 agent，或使用子命令做脚本化操作
 ---
 
 # `city agent`
 
 管理 Agent 生命周期和 registry 相关操作。
+
+在交互式终端中直接运行 `city agent` 会进入 agent manager。需要脚本化调用时，继续使用明确子命令。
 
 ## 命令层级
 
@@ -14,14 +16,30 @@ description: 使用 start/restart 管理当前目录或指定目录的 Agent 进
 ## 用法
 
 ```bash
+city agent
 city agent <subcommand>
 ```
+
+## 交互式管理器
+
+交互式管理器可以完成：
+
+- 查看已登记 agents
+- 创建 agent 项目
+- 启动 agent
+- 选择 agent 时直接看到当前状态、名称、模型和聊天渠道关联
+- 配置 agent 名称、模型绑定，或连接 city 级聊天渠道账号
+
+它不会替代下面的子命令，只是把常用本地操作收进一个引导入口。
+
+聊天渠道凭据属于 `city chat` 中的 city 级 channel account。agent manager 只负责把当前 agent 连接到已有账号，即写入 `services.chat.channels.<channel>.channelAccountId`。如果发现 agent 绑定了不存在的 account，会自动清理这个悬空关联。
 
 ## 子命令
 
 - `create`：创建/初始化 agent 项目
 - `list`：列出已登记的 agent 项目
 - `start`：启动 agent
+- `stop`：停止 agent daemon
 - `chat`：在终端中与 agent 对话，支持交互式和一次性模式
 - `status`：查看 agent 状态
 - `doctor`：诊断状态文件，并可修复僵尸 pid/meta
@@ -32,6 +50,7 @@ city agent <subcommand>
 - [`city agent create`](/zh/docs/commands/agent/create)
 - [`city agent list`](/zh/docs/commands/agent/list)
 - [`city agent start`](/zh/docs/commands/agent/start)
+- [`city agent stop`](/zh/docs/commands/agent/stop)
 - [`city agent chat`](/zh/docs/commands/agent/chat)
 - [`city agent status`](/zh/docs/commands/agent/status)
 - [`city agent restart`](/zh/docs/commands/agent/restart)
@@ -57,13 +76,10 @@ city agent <subcommand>
 ```text
 $ city agent
 city version: 1.0.0
-Usage: city agent [options] [command]
-Commands:
-  create [path]
-  list
-  start [path]
-  chat
-  status [path]
-  doctor [path]
-  restart [path]
+? 管理 Agent
+  查看 agents
+  创建 agent
+  启动 agent
+  管理 agent - 选择前显示状态、模型和渠道
+  退出
 ```

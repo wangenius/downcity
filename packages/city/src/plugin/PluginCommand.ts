@@ -13,6 +13,7 @@ import { PLUGINS } from "@/plugin/Plugins.js";
 import type { Plugin, PluginAction } from "@/shared/types/Plugin.js";
 import { runLocalPluginAction } from "@/plugin/LocalExecution.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { parseBoolean } from "@/cli/IndexSupport.js";
 
 type PluginCliBridgeOptions = {
   path?: string;
@@ -134,7 +135,7 @@ function registerPluginActionCommand(params: {
     .description(commandSpec.description)
     .helpOption("--help", "display help for command")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--json [enabled]", "以 JSON 输出", true);
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 
   commandSpec.configure?.(actionCommand);
 

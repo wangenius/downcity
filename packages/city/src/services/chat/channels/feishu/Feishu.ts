@@ -317,7 +317,11 @@ export class FeishuBot extends BaseChatChannel {
             await this.sendAuthorizationText({
               chatId: chat_id,
               chatType: chat_type,
-              text: this.buildUnauthorizedBlockedText(),
+              text: this.buildUnauthorizedBlockedText({
+                chatId: chat_id,
+                chatType: chat_type,
+                userId: actorId,
+              }),
             });
           }
           handled = true;

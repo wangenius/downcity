@@ -49,13 +49,15 @@ CLI 文档按“单命令页面 + 命令组”组织。
 - `city stop`：先停止 Console，再停止 city runtime 与托管 agent
 - `city restart`：重启 city runtime，恢复之前运行中的 agent，再重启 Console
 - `city update`：更新全局安装的 downcity CLI 包
+- `city agent`：在交互式终端中打开 agent manager
 - `city agent create`：初始化项目运行文件
 - `city agent list`：查看已登记 agent，也可加 `--running` 只看正在运行的项目
 - `city agent start`：启动项目 agent daemon
+- `city agent stop`：停止项目 agent daemon
 - `city agent chat`：在终端中与 agent 对话，也可通过 `--message` 发送一次性消息
 - `city console`：管理 Console 模块本身
 - `city service ...`：查看静态 service catalog，或使用高级定向 service 控制
-- `city plugin ...`：查看静态 plugin catalog，或使用高级定向 plugin action 路由
+- `city plugin ...`：查看静态 plugin catalog，或使用高级本地 plugin action 执行入口
 - `city chat/task/memory ...`：日常面向 agent 的 service 运行态命令
 - `city web/skill/asr/tts ...`：日常面向 agent 的 plugin 命令
 - `city web ...`：运维内置 web plugin

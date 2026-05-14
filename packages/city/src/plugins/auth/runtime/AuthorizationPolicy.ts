@@ -91,13 +91,16 @@ export function resolveAuthorizedUserRole(params: {
   channel: ChatAuthorizationChannel;
   userId?: string;
   authorizationConfig?: ChatAuthorizationConfig;
+  /**
+   * 兼容旧调用签名；chat authorization 现在从 city 全局配置读取。
+   */
   rootPath?: string;
 }): ChatAuthorizationRole | undefined {
   const userId = normalizeText(params.userId);
   if (!userId) return undefined;
   const authorizationConfig =
     params.authorizationConfig ||
-    (params.rootPath ? readChatAuthorizationConfigSync(params.rootPath) : undefined);
+    readChatAuthorizationConfigSync(params.rootPath);
   const roles = resolveAuthorizationRoles(authorizationConfig);
   const channelConfig = resolveChannelAuthorizationConfig(params.channel, authorizationConfig);
   return resolveUserRole({

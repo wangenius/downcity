@@ -1,0 +1,232 @@
+/**
+ * Chat channel account 管理类型。
+ *
+ * 关键点（中文）
+ * - 这些类型描述 city 全局 chat channel account 管理服务的输入与输出。
+ * - 账号密钥只在写入路径传入明文；列表结果仅暴露脱敏信息与是否存在。
+ */
+
+import type { StoredChannelAccountChannel } from "@/shared/types/Store.js";
+
+/**
+ * 支持的 chat channel account 类型。
+ */
+export type ChatChannelAccountChannel = StoredChannelAccountChannel;
+
+/**
+ * Channel account 探测结果。
+ */
+export interface ChatChannelAccountProbeResult {
+  /**
+   * 账号所属 chat channel。
+   */
+  channel: ChatChannelAccountChannel;
+  /**
+   * 系统生成的账号 ID。
+   */
+  accountId: string;
+  /**
+   * 账号展示名称。
+   */
+  name: string;
+  /**
+   * 平台身份展示文案，例如 bot username 或 app id。
+   */
+  identity?: string;
+  /**
+   * 平台返回的所有者信息。
+   */
+  owner?: string;
+  /**
+   * 平台返回的创建者信息。
+   */
+  creator?: string;
+  /**
+   * 平台返回的 bot 用户 ID。
+   */
+  botUserId?: string;
+  /**
+   * 面向用户的探测结果说明。
+   */
+  message: string;
+}
+
+/**
+ * Channel account 列表中的安全视图。
+ */
+export interface ChatChannelAccountListItem {
+  /**
+   * 账号 ID。
+   */
+  id: string;
+  /**
+   * 账号所属 chat channel。
+   */
+  channel: ChatChannelAccountChannel;
+  /**
+   * 账号展示名称。
+   */
+  name: string;
+  /**
+   * 平台身份展示文案。
+   */
+  identity?: string;
+  /**
+   * 平台所有者信息。
+   */
+  owner?: string;
+  /**
+   * 平台创建者信息。
+   */
+  creator?: string;
+  /**
+   * 渠道域名，例如 Feishu/Lark 域。
+   */
+  domain?: string;
+  /**
+   * QQ 沙箱模式开关。
+   */
+  sandbox: boolean;
+  /**
+   * 是否保存了 bot token。
+   */
+  hasBotToken: boolean;
+  /**
+   * 是否保存了 app id。
+   */
+  hasAppId: boolean;
+  /**
+   * 是否保存了 app secret。
+   */
+  hasAppSecret: boolean;
+  /**
+   * 脱敏后的 bot token。
+   */
+  botTokenMasked?: string;
+  /**
+   * 脱敏后的 app id。
+   */
+  appIdMasked?: string;
+  /**
+   * 脱敏后的 app secret。
+   */
+  appSecretMasked?: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt: string;
+  /**
+   * 更新时间（ISO 字符串）。
+   */
+  updatedAt: string;
+}
+
+/**
+ * Channel account 列表结果。
+ */
+export interface ChatChannelAccountListResult {
+  /**
+   * 脱敏后的账号列表。
+   */
+  items: ChatChannelAccountListItem[];
+}
+
+/**
+ * Channel account 写入输入。
+ */
+export interface ChatChannelAccountUpsertInput {
+  /**
+   * 账号 ID。
+   */
+  id: string;
+  /**
+   * 账号所属 chat channel。
+   */
+  channel: string;
+  /**
+   * 账号展示名称。
+   */
+  name: string;
+  /**
+   * 平台身份展示文案。
+   */
+  identity?: string;
+  /**
+   * 平台所有者信息。
+   */
+  owner?: string;
+  /**
+   * 平台创建者信息。
+   */
+  creator?: string;
+  /**
+   * Telegram bot token。
+   */
+  botToken?: string;
+  /**
+   * Feishu/QQ app id。
+   */
+  appId?: string;
+  /**
+   * Feishu/QQ app secret。
+   */
+  appSecret?: string;
+  /**
+   * Feishu/Lark 域名。
+   */
+  domain?: string;
+  /**
+   * QQ 沙箱模式。
+   */
+  sandbox?: boolean;
+  /**
+   * 是否清空 bot token。
+   */
+  clearBotToken?: boolean;
+  /**
+   * 是否清空 app id。
+   */
+  clearAppId?: boolean;
+  /**
+   * 是否清空 app secret。
+   */
+  clearAppSecret?: boolean;
+}
+
+/**
+ * Channel account 凭据创建输入。
+ */
+export interface ChatChannelAccountCreateInput {
+  /**
+   * 账号所属 chat channel。
+   */
+  channel: string;
+  /**
+   * 账号展示名称；未传时优先使用探测结果。
+   */
+  name?: string;
+  /**
+   * Telegram bot token。
+   */
+  botToken?: string;
+  /**
+   * Feishu/QQ app id。
+   */
+  appId?: string;
+  /**
+   * Feishu/QQ app secret。
+   */
+  appSecret?: string;
+  /**
+   * Feishu/Lark 域名。
+   */
+  domain?: string;
+  /**
+   * QQ 沙箱模式。
+   */
+  sandbox?: boolean;
+  /**
+   * 是否尝试调用平台接口探测 bot 信息。
+   */
+  probe?: boolean;
+}

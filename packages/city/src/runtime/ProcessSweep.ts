@@ -62,8 +62,24 @@ export function signalDetachedProcess(
   return false;
 }
 
+function parseDowncityCliArgs(command: string): string | null {
+  const normalized = normalizeCommand(command);
+  const match = normalized.match(
+    /(?:^|\s)(\S*[\\/]Index\.js)(?:\s+(.+)|$)/,
+  );
+  if (!match) return null;
+  const entryPath = String(match[1] || "");
+  const isKnownEntry =
+    /[\\/]bin[\\/]cli[\\/]Index\.js$/.test(entryPath) ||
+    /[\\/]bin[\\/]main[\\/]modules[\\/]cli[\\/]Index\.js$/.test(entryPath);
+  if (!isKnownEntry) return null;
+
+  const args = String(match[2] || "").trim();
+  return args;
+}
+
 export function isDowncityCliCommand(command: string): boolean {
-  return /\/bin\/main\/modules\/cli\/Index\.js(?:\s|$)/.test(command);
+  return parseDowncityCliArgs(command) !== null;
 }
 
 /**
@@ -82,23 +98,24 @@ export function shouldSweepDetachedCityCommand(
     includeAgent?: boolean;
   },
 ): boolean {
-  if (!isDowncityCliCommand(command)) return false;
+  const args = parseDowncityCliArgs(command);
+  if (args === null) return false;
   if (
     params.includeConsole &&
-    /\/bin\/main\/modules\/cli\/Index\.js\s+run(?:\s|$)/.test(command)
+    /^run(?:\s|$)/.test(args)
   ) {
     return true;
   }
   if (
     params.includeUi &&
-    /\/bin\/main\/modules\/cli\/Index\.js\s+console\s+run(?:\s|$)/.test(command)
+    /^console\s+run(?:\s|$)/.test(args)
   ) {
     return true;
   }
   if (
     params.includeAgent &&
-    /\/bin\/main\/modules\/cli\/Index\.js\s+agent\s+start(?:\s|$)/.test(command) &&
-    /--foreground\s+true\b/.test(command)
+    /^agent\s+start(?:\s|$)/.test(args) &&
+    /--foreground\s+true\b/.test(args)
   ) {
     return true;
   }

@@ -145,8 +145,8 @@ async function writeState(rootPath: string, state: ChatAuthorizationStateFile): 
   await fs.writeJson(file, state, { spaces: 2 });
 }
 
-function readAuthorizationConfig(projectRoot: string): ChatAuthorizationSnapshot["config"] {
-  return readChatAuthorizationConfigSync(projectRoot);
+function readAuthorizationConfig(): ChatAuthorizationSnapshot["config"] {
+  return readChatAuthorizationConfigSync();
 }
 
 /**
@@ -211,7 +211,7 @@ export async function readAuthorizationSnapshot(params: {
 }): Promise<ChatAuthorizationSnapshot> {
   const state = await readState(params.context.rootPath);
   return {
-    config: readAuthorizationConfig(params.context.rootPath),
+    config: readAuthorizationConfig(),
     users: Object.values(state.usersByKey).sort((a, b) => b.lastSeenAt - a.lastSeenAt),
     chats: Object.values(state.chatsByKey).sort((a, b) => b.lastSeenAt - a.lastSeenAt),
   };

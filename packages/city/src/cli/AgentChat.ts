@@ -201,20 +201,6 @@ export async function executeAgentChatTurn(params: {
     };
   }
 
-  // 关键调试日志（中文）：确认 daemon 返回的完整结构
-  if (!isChatSuccess(remote.data)) {
-    const resultKeys = remote.data.result && typeof remote.data.result === "object"
-      ? Object.keys(remote.data.result as Record<string,unknown>)
-      : [];
-    const topKeys = Object.keys(remote.data as unknown as Record<string,unknown>);
-    process.stderr.write(
-      `[chat debug] remote.success=${remote.success} ` +
-      `result.success=${String((remote.data.result as Record<string,unknown> | undefined)?.success)} ` +
-      `result.error=${JSON.stringify((remote.data.result as Record<string,unknown> | undefined)?.error)} ` +
-      `topKeys=[${topKeys.join(",")}] resultKeys=[${resultKeys.join(",")}]\n`
-    );
-  }
-
   return {
     agentName,
     projectRoot: resolved.projectRoot,

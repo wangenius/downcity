@@ -35,16 +35,31 @@ There is no special `master` or `owner` identity in this model. Everything is ha
 
 Chat user authorization is not written back to project `downcity.json`.
 
-It is stored in Console `~/.downcity/downcity.db`, which keeps permission management centralized and avoids exposing user authorization in plaintext project config.
+It is stored in the city-global `~/.downcity/downcity.db`, which keeps permission management centralized and avoids exposing user authorization in plaintext project config. A role assigned to the same `telegram:12345678`, `feishu:ou_xxx`, or `qq:123456` principal applies across agents connected to that platform.
+
+The backing storage is structured tables, not a key-value JSON blob:
+
+- `chat_auth_roles`: roles
+- `chat_auth_role_permissions`: permissions owned by each role
+- `chat_auth_channel_defaults`: default role per platform
+- `chat_auth_user_roles`: platform user to role bindings
 
 ### Where to manage it
 
-Use Console UI under `Agent / Authorization` to:
+Use the interactive `city chat` menu and choose "configure channel → configure authorization", or use the CLI directly:
+
+```bash
+city chat auth set telegram:12345678
+```
+
+The CLI then lets you choose the target permission group interactively. Common management tasks include:
 
 - view permission groups
 - edit which permissions belong to each group
 - choose the default group
 - assign users to groups
+
+When a chat user is denied, the denial message includes a command like `city chat auth set telegram:12345678` that they can forward to an admin.
 
 ### A common group layout
 

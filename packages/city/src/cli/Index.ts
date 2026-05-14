@@ -22,6 +22,7 @@ import { registerAgentCommands } from "./IndexAgentCommand.js";
 import { registerEnvCommand } from "./Env.js";
 import { registerTokenCommand } from "./Token.js";
 import { registerResetCommand } from "./Reset.js";
+import { registerChatCommand } from "./Chat.js";
 import { setCliVerbosity } from "./CliReporter.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,6 +57,7 @@ registerAgentCommands(program, {
 registerTokenCommand(program);
 registerEnvCommand(program);
 registerResetCommand(program);
+registerChatCommand(program);
 
 registerServicesCommand(program);
 registerPluginsCommand(program);
@@ -74,9 +76,9 @@ if (process.argv.length <= 2) {
 
 // 关键点（中文）：在 parse 前解析 --quiet / --verbose，设置全局 verbosity。
 program.hook("preAction", (thisCommand) => {
-  const opts = thisCommand.opts<{ quiet?: boolean; verbose?: boolean }>();
+  const opts = thisCommand.optsWithGlobals<{ quiet?: boolean; verbose?: boolean }>();
   if (opts.quiet) setCliVerbosity("quiet");
   else if (opts.verbose) setCliVerbosity("verbose");
 });
 
-program.parse();
+await program.parseAsync();

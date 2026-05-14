@@ -146,16 +146,12 @@ export interface PluginActionResponse {
  * plugin CLI 通用选项。
  */
 export interface PluginCliBaseOptions {
- /**
-  * agent 项目路径（默认当前目录）。
-  */
+  /**
+   * agent 项目路径（默认当前目录）。
+   */
   path?: string;
   /**
    * 是否输出 JSON。
    */
   json?: boolean;
-  /**
-   * agent 名称（从 console registry 解析到项目路径）。
-   */
-  agent?: string;
 }

@@ -5,27 +5,25 @@ description: Initialize global console config (stored in ~/.downcity/downcity.db
 
 # `city init`
 
-Initialize global console configuration.
+Initialize global console infrastructure.
 
 ## Usage
 
 ```bash
-city init [--force]
+city init
 ```
 
 ## Behavior
 
-- Writes/updates `~/.downcity/downcity.db` (global config + model pool)
+- Writes/updates `~/.downcity/downcity.db` (global console infrastructure)
 - Generates `~/.downcity/schema/downcity.schema.json` (editor schema)
-
-## Key option
-
-- `--force`: overwrite existing global config (dangerous)
 
 ## Notes
 
 - This is a console-level command and does not depend on an agent project path.
 - For project-level configuration, use [`city config`](/en/docs/commands/config).
+- `city init` does not create or update models.
+- Configure models later with `city model create`.
 
 ## Example Output (Based on Current Implementation)
 
@@ -34,12 +32,13 @@ The examples below are aligned with current command implementations in `packages
 ```text
 $ city init
 city version: 1.0.0
-✅ Saved console global settings into ~/.downcity/downcity.db (encrypted)
-✅ Initialized ~/.downcity/downcity.db model store
+Console base initialized
+Console initialized
 ```
 
 ```text
 $ city init
 city version: 1.0.0
-❌ API Key is required
+Console base initialized
+Console initialized
 ```

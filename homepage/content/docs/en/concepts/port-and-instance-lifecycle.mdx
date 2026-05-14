@@ -52,6 +52,6 @@ For runtime API calls:
 
 ## Recommendations
 
-- In multi-agent scenarios, prefer `city service ... --agent <name>` and `city plugin ... --agent <name>`.
+- In multi-agent scenarios, prefer `city service ... --agent <name>`. Plugin actions run locally against the selected project path.
 - Do not keep stale `DC_SERVER_PORT` in your shell profile.
 - If runtime status is abnormal, run `city agent doctor --fix` and inspect daemon logs.

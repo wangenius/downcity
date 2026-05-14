@@ -1,0 +1,41 @@
+---
+title: city agent stop
+description: Stop a target agent daemon
+---
+
+# `city agent stop`
+
+Stop the background daemon for a target agent.
+
+## Usage
+
+```bash
+city agent stop [path]
+```
+
+## Behavior
+
+- `path` defaults to current directory `.`
+- Target agent must be registered in the city registry
+- Stops the matching daemon process group
+- Cleans daemon pid/meta files
+- Marks the agent as `stopped` in the city registry
+- If the daemon is not running, the command exits successfully with a not-running message
+
+## Related commands
+
+- [`city agent start`](/en/docs/commands/agent/start)
+- [`city agent restart`](/en/docs/commands/agent/restart)
+- [`city agent status`](/en/docs/commands/agent/status)
+- [`city agent list`](/en/docs/commands/agent/list)
+
+## Example Output
+
+```text
+$ city agent stop .
+downcity v1.0.437
+
+Agent daemon stopped                            lucas_whitman
+  project   /Users/you/Documents/bots/lucas_whitman
+  pid       12345
+```

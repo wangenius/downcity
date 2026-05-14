@@ -509,7 +509,7 @@ export async function startConsoleCommand(params: {
   }
 
   // 关键点（中文）：进程存活后，再确认 HTTP 端口真正可用。
-  const healthUrl = `http://${normalizeHost(host)}:${port}/api/health`;
+  const healthUrl = `http://${normalizeHost(host)}:${port}/health`;
   const healthOk = await waitForHttp(healthUrl, 5_000);
   if (!healthOk) {
     await cleanupConsoleStateFiles();

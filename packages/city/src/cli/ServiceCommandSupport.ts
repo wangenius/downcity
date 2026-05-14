@@ -19,6 +19,7 @@ import { parsePort, resolveAgentName } from "./IndexSupport.js";
 import { CliError } from "@/types/cli/CliError.js";
 import type { ScheduledJobStatus } from "@/shared/types/ServiceSchedule.js";
 import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
+import { parseBoolean } from "./IndexSupport.js";
 
 export function isRegistryEntryRunning(
   entry: { status?: "running" | "stopped" },
@@ -260,7 +261,7 @@ export function addServiceTargetOptions(command: Command): Command {
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
-    .option("--json [enabled]", "以 JSON 输出", true);
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }
 
 /**
@@ -270,5 +271,5 @@ export function addServiceScheduleOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
-    .option("--json [enabled]", "以 JSON 输出", true);
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }

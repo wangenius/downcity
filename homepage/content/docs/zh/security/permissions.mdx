@@ -35,16 +35,31 @@ description: "了解 Ship 当前的聊天用户权限模型"
 
 聊天用户权限不会写进项目 `downcity.json`。
 
-这部分统一保存在 Console 的 `~/.downcity/downcity.db` 中，便于集中管理，也不会把用户权限明文散落到项目配置里。
+这部分统一保存在 city 全局 `~/.downcity/downcity.db` 中，便于集中管理，也不会把用户权限明文散落到项目配置里。同一个 `telegram:12345678`、`feishu:ou_xxx` 或 `qq:123456` 角色会对所有连接该平台的 agent 生效。
+
+底层不是 key-value JSON blob，而是结构化表：
+
+- `chat_auth_roles`：角色
+- `chat_auth_role_permissions`：角色拥有的权限
+- `chat_auth_channel_defaults`：各平台默认角色
+- `chat_auth_user_roles`：平台用户到角色的绑定
 
 ### 在哪里管理
 
-可以直接在 Console UI 的 `Agent / Authorization` 页面管理：
+可以在 `city chat` 的交互式菜单中选择“配置 channel → 配置 authorization”，也可以直接使用 CLI：
+
+```bash
+city chat auth set telegram:12345678
+```
+
+执行后 CLI 会交互式选择目标权限组。常用管理动作包括：
 
 - 查看当前权限组
 - 配置某个组拥有哪些权限
 - 设置默认权限组
 - 把具体用户分配到指定权限组
+
+聊天用户被拒绝时，返回消息会包含类似 `city chat auth set telegram:12345678` 的命令，用户可以直接转发给管理员。
 
 ### 一个常见的分组方式
 

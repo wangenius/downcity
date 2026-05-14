@@ -11,9 +11,11 @@ import {
   emitRegisteredAgentListWithOptions,
   resolveCliAgentStartProjectRoot,
 } from "./AgentSelection.js";
+import { runInteractiveAgentManager } from "./AgentManager.js";
 import { chatCommand } from "./AgentChat.js";
 import { initCommand } from "./Init.js";
 import { restartCommand } from "./Restart.js";
+import { stopCommand } from "./Stop.js";
 
 import { agentResetCommand } from "./AgentReset.js";
 import { runCommand } from "./Run.js";
@@ -53,8 +55,15 @@ export function registerAgentCommands(
 ): void {
   const agent = program
     .command("agent")
-    .description("管理 Agent：创建/列出/启停/重启")
-    .helpOption("--help", "display help for command");
+    .description("管理 Agent：创建/列出/启停/重启（无参数时启动交互式管理器）")
+    .helpOption("--help", "display help for command")
+    .action(createVersionBanner(context.version, async () => {
+      if (process.stdin.isTTY === true && process.stdout.isTTY === true) {
+        await runInteractiveAgentManager();
+        return;
+      }
+      agent.outputHelp();
+    }));
 
   agent
     .command("create [path]")
@@ -234,6 +243,16 @@ export function registerAgentCommands(
     .action(createVersionBanner(context.version, async (cwd: string = ".") => {
       // reset 不要求 agent 在 registry 中，只需要 downcity.json 存在
       await agentResetCommand(cwd);
+    }));
+
+  agent
+    .command("stop [path]")
+    .description("停止后台 Agent 进程（daemon）")
+    .helpOption("--help", "display help for command")
+    .action(createVersionBanner(context.version, async (cwd: string = ".") => {
+      const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
+      injectAgentContext(projectRoot);
+      await stopCommand(projectRoot);
     }));
 
   agent

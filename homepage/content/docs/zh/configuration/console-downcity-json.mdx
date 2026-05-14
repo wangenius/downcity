@@ -22,6 +22,7 @@ Console 全局配置统一存储在：
 2. Console 共享 env（`global_env`）
 3. Agent 私有 env（`agent_env`）
 4. Bot 账号凭据池（`channel_accounts`）
+5. Chat 用户授权（`chat_auth_roles`、`chat_auth_role_permissions`、`chat_auth_channel_defaults`、`chat_auth_user_roles`）
 
 其中敏感字段（如 API Key）采用加密存储。
 
@@ -45,6 +46,7 @@ Console 全局配置统一存储在：
 2. Agent 私有 DB env：`agent_env`
 3. Agent 本地运行时覆盖：`<agent>/.env`（用户维护）
 4. Chat 渠道凭据：`channel_accounts`（由 `downcity.json` 的 `channelAccountId` 绑定）
+5. Chat 用户授权：`chat_auth_*` 结构化表（city 全局生效）
 
 关键行为：
 
@@ -52,7 +54,8 @@ Console 全局配置统一存储在：
 2. Agent 的 `.env` 只在当前 agent 内生效，不污染全局 `process.env`。
 3. `downcity.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
 4. 渠道真实凭据来自 `channel_accounts`。
-5. plugin 参数来自项目 `downcity.json`，plugin 启停属于 Console 全局配置。
+5. 用户聊天权限来自 `chat_auth_*` 表，不保存在 agent 项目里。
+6. plugin 参数来自项目 `downcity.json`，plugin 启停属于 Console 全局配置。
 
 ## 常用操作
 

@@ -1,11 +1,13 @@
 ---
 title: city agent
-description: Manage the agent process in the current directory or a target directory
+description: Manage agents interactively, or use subcommands for scripts
 ---
 
 # `city agent`
 
 Manage agent lifecycle and registry-aware operations.
+
+Run `city agent` without a subcommand in an interactive terminal to open the agent manager. Use subcommands when you want a scriptable command.
 
 ## Command hierarchy
 
@@ -14,14 +16,30 @@ Top-level command groups are: `city console`, `city agent`, `city service`, `cit
 ## Usage
 
 ```bash
+city agent
 city agent <subcommand>
 ```
+
+## Interactive manager
+
+The interactive manager lets you:
+
+- list registered agents
+- create an agent project
+- start an agent
+- pick an agent and see current status, name, model, and chat channel connections before choosing an action
+- configure the agent name, model binding, or city-level chat channel account connections
+
+It does not replace the subcommands below. It is a guided entry point for common local operations.
+
+Chat channel credentials stay in city-level channel accounts managed from `city chat`. The agent manager only connects an agent to those existing accounts through `services.chat.channels.<channel>.channelAccountId`. If an agent points at a missing account, the manager removes that dangling binding automatically.
 
 ## Subcommands
 
 - `create`: create/initialize an agent project
 - `list`: list registered agent projects
 - `start`: start the agent
+- `stop`: stop the agent daemon
 - `chat`: chat with an agent in interactive or one-shot mode
 - `status`: show agent status
 - `doctor`: diagnose state files and optionally fix stale pid/meta
@@ -32,6 +50,7 @@ city agent <subcommand>
 - [`city agent create`](/en/docs/commands/agent/create)
 - [`city agent list`](/en/docs/commands/agent/list)
 - [`city agent start`](/en/docs/commands/agent/start)
+- [`city agent stop`](/en/docs/commands/agent/stop)
 - [`city agent chat`](/en/docs/commands/agent/chat)
 - [`city agent status`](/en/docs/commands/agent/status)
 - [`city agent restart`](/en/docs/commands/agent/restart)
@@ -57,13 +76,10 @@ The examples below are aligned with current command implementations in `packages
 ```text
 $ city agent
 city version: 1.0.0
-Usage: city agent [options] [command]
-Commands:
-  create [path]
-  list
-  start [path]
-  chat
-  status [path]
-  doctor [path]
-  restart [path]
+? 管理 Agent
+  查看 agents
+  创建 agent
+  启动 agent
+  管理 agent - status, model, channels are shown before actions
+  退出
 ```

@@ -16,6 +16,7 @@ import type { ConsoleStoreContext } from "./StoreShared.js";
 import type {
   StoredAgentEnvEntry,
   StoredChannelAccount,
+  StoredChatAuthSnapshot,
   StoredEnvEntry,
   StoredEnvScope,
   StoredGlobalEnvEntry,
@@ -83,6 +84,11 @@ import {
   removeChannelAccount,
   upsertChannelAccount,
 } from "./StoreChannelAccountRepository.js";
+import {
+  getChatAuthSnapshot,
+  replaceChatAuthSnapshot,
+  setChatAuthUserRole,
+} from "./StoreChatAuthRepository.js";
 
 /**
  * Console 模型存储。
@@ -94,6 +100,7 @@ export class ConsoleStore {
   constructor(dbPath: string = getConsoleShipDbPath()) {
     fs.ensureDirSync(getConsoleRootDirPath());
     this.sqlite = new Database(dbPath);
+    this.sqlite.pragma("foreign_keys = ON");
     this.sqlite.pragma("journal_mode = WAL");
     this.db = drizzle(this.sqlite);
     ensureConsoleStoreSchema(this.context);
@@ -206,6 +213,10 @@ export class ConsoleStore {
     this.sqlite.exec("DELETE FROM global_env;");
     this.sqlite.exec("DELETE FROM agent_env;");
     this.sqlite.exec("DELETE FROM channel_accounts;");
+    this.sqlite.exec("DELETE FROM chat_auth_role_permissions;");
+    this.sqlite.exec("DELETE FROM chat_auth_channel_defaults;");
+    this.sqlite.exec("DELETE FROM chat_auth_user_roles;");
+    this.sqlite.exec("DELETE FROM chat_auth_roles;");
   }
 
   /**
@@ -241,6 +252,31 @@ export class ConsoleStore {
    */
   async setSecureSettingJson(key: string, value: unknown): Promise<void> {
     await setSecureSettingJson(this.context, key, value);
+  }
+
+  /**
+   * 读取 city 全局 chat authorization 结构化快照。
+   */
+  getChatAuthSnapshot(): StoredChatAuthSnapshot {
+    return getChatAuthSnapshot(this.context);
+  }
+
+  /**
+   * 覆盖写入 city 全局 chat authorization 结构化快照。
+   */
+  replaceChatAuthSnapshot(snapshot: StoredChatAuthSnapshot): void {
+    replaceChatAuthSnapshot(this.context, snapshot);
+  }
+
+  /**
+   * 设置 city 全局 chat authorization 用户角色。
+   */
+  setChatAuthUserRole(params: {
+    channel: string;
+    userId: string;
+    roleId: string;
+  }): void {
+    setChatAuthUserRole(this.context, params);
   }
 
   /**

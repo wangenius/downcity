@@ -27,18 +27,20 @@ import type { PluginCliBaseOptions } from "@/shared/types/PluginApi.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { parseBoolean } from "./IndexSupport.js";
 
-import { isRegistryEntryRunning, resolveProjectRoot, resolveProjectRootByAgentName, validateAgentProjectRoot } from "./ServiceCommandSupport.js";
+import { resolveProjectRoot } from "./ServiceCommandSupport.js";
 
 async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<{
   projectRoot?: string;
   error?: string;
 }> {
-  const explicitAgent = String(options.agent || "").trim();
-  if (explicitAgent) {
-    return resolveProjectRootByAgentName(explicitAgent);
-  }
-
   return { projectRoot: resolveProjectRoot(options.path) };
+}
+
+function validatePluginProjectRoot(projectRoot: string): string | null {
+  const downcityJsonPath = getDowncityJsonPath(projectRoot);
+  return fs.existsSync(downcityJsonPath)
+    ? null
+    : `Invalid plugin project path: ${projectRoot}. Missing: downcity.json`;
 }
 
 
@@ -473,14 +475,14 @@ async function runPluginActionCommand(params: {
     return;
   }
 
-  const pathError = validateAgentProjectRoot(resolved.projectRoot);
-  if (pathError) {
+  const pluginPathError = validatePluginProjectRoot(resolved.projectRoot);
+  if (pluginPathError) {
     printResult({
       asJson: params.options.json,
       success: false,
       title: "plugin action failed",
       payload: {
-        error: pathError,
+        error: pluginPathError || `Invalid plugin project path: ${resolved.projectRoot}. Missing: downcity.json`,
       },
     });
     return;
@@ -545,11 +547,10 @@ export function registerPluginsCommand(program: Command): void {
 
   plugin
     .command("action <pluginName> <actionName>")
-    .description("运行 plugin action")
+    .description("运行 plugin action（在当前本地项目内直接执行）")
     .option("--payload <json>", "Action payload（JSON 或普通字符串）")
     .option("--path <path>", "agent 项目路径（默认当前目录）", ".")
-    .option("--agent <name>", "agent 名称（从 console registry 解析）")
-    .option("--json [enabled]", "以 JSON 输出", true)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(
       async (
         pluginName: string,

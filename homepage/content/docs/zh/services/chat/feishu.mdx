@@ -88,7 +88,7 @@ Downcity 当前默认按长连接模式工作，不要求你先暴露公网 webh
 - `permission`：分组拥有的权限，例如 `chat.dm.use`、`chat.group.use`、`agent.manage`
 - `user -> role`：某个飞书用户属于哪个角色
 
-这些配置统一保存在 console `~/.downcity/downcity.db`，并可直接在 Console UI 的 `Agent / Authorization` 页面管理，不会明文写到项目 `downcity.json`。新用户会自动落到默认角色，不再走审批流程；群聊/频道是否可用，只看当前发消息 user 的角色权限。
+这些配置统一保存在 console `~/.downcity/downcity.db` 的 `chat_auth_*` 结构化表中，可通过 `city chat` 或 `city chat auth set feishu:<userId>` 管理，不会明文写到项目 `downcity.json`。新用户会自动落到默认角色，不再走审批流程；群聊/频道是否可用，只看当前发消息 user 的角色权限。
 
 对于当前运行时，最关键的是 **tenant / 应用身份权限**，不是单独的 `user` 权限。
 

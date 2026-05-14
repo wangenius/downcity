@@ -69,14 +69,15 @@ Recommended flow:
 
 This cleanly separates secret management and per-agent channel runtime config.
 
-## In multi-agent setups: what is shared and what is isolated
+## In multi-agent setups: what is shared and what stays agent-local
 
 This boundary is important:
 
 - Bot credentials behind `channelAccountId` are shared globally in `downcity.db`
-- `chat` authorization rules are isolated per agent, even when multiple agents reuse the same channel account
+- `chat` authorization rules are also shared globally in `downcity.db`
+- agent-local config only decides which channels are enabled and which `channelAccountId` is bound
 
-That means multiple agents can bind the same Telegram / Feishu / QQ bot account while still having different:
+That means multiple agents can bind the same Telegram / Feishu / QQ bot account, and the same platform user's role stays consistent across those agents:
 
 - default roles
 - user role bindings
@@ -86,22 +87,22 @@ That means multiple agents can bind the same Telegram / Feishu / QQ bot account 
 In practice:
 
 - Channel Account decides which bot identity connects to the platform
-- Chat Authorization decides who is allowed to use this specific agent
+- Chat Authorization decides whether that platform user may use chat access in this city
 
 ### Example
 
 For example:
 
 1. `agent-A` and `agent-B` both bind the same `channelAccountId`
-2. `agent-A` assigns one user to `admin`
-3. `agent-B` does not assign that role
+2. an admin runs `city chat auth set telegram:12345678` and chooses `admin`
+3. that Telegram user enters authorization as `admin` for agents connected to Telegram
 
 Result:
 
-- the user is allowed in `agent-A`
-- the same user can still be blocked in `agent-B`
+- the user uses the same city-level authorization in both `agent-A` and `agent-B`
+- switching agents or rebinding a bot account does not invalidate the user's role
 
-So reusing bot credentials means reusing the platform identity, not reusing authorization policy.
+So channel accounts and chat authorization are both city-level configuration. Agents only decide which channel account they connect to.
 
 ### How bot info is fetched
 

@@ -345,7 +345,11 @@ export class TelegramBot extends BaseChatChannel {
           chatId,
           chatType: message.chat.type,
           messageThreadId,
-          text: this.buildUnauthorizedBlockedText(),
+          text: this.buildUnauthorizedBlockedText({
+            chatId,
+            chatType: message.chat.type,
+            userId: actorId,
+          }),
         });
       }
       return;

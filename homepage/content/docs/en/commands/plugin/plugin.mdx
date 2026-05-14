@@ -1,6 +1,6 @@
 ---
 title: city plugin
-description: Inspect the global plugin catalog and use advanced plugin action routing
+description: Inspect the global plugin catalog and use advanced local plugin action execution
 ---
 
 # `city plugin`
@@ -13,6 +13,7 @@ Use it when you want to:
 - inspect a plugin's static enabled state and capability surface
 - enable or disable plugin lifecycle globally in city config
 - dispatch a plugin action without using the plugin's short alias
+- execute a plugin action directly inside the current local project
 
 ## Common examples
 
@@ -35,7 +36,8 @@ city plugin action asr status
 - They do not require `--path`, `--agent`, or a running agent.
 - `city plugin list` renders a human-readable table by default; add `--json` for scripts.
 - Global enable/disable also works without agent context because plugin lifecycle is stored at city scope.
-- `city plugin action ...` is the advanced execution form and still targets a specific agent project.
+- `city plugin action ...` is the advanced execution form and runs directly inside the current local project by default.
+- Add `--path <path>` only when you intentionally want to operate on another project.
 - For day-to-day usage, prefer concrete plugin roots such as `city web ...`, `city skill ...`, `city asr ...`, and `city tts ...`.
 - Plugin enablement is now a city-level fact. Static status does not read agent `downcity.json`.
 - In the Console agent plugin page, configuration is now split into two surfaces:

@@ -2,7 +2,7 @@
  * SessionStepEventMapper：把单个 step 结果转成按顺序可持久化的 session 消息。
  *
  * 关键点（中文）
- * - 顺序固定为 `assistant text -> tool-call -> tool-result`。
+ * - 工具结果使用 AI SDK v6 UI tool part 格式，避免历史重放时丢失 tool result。
  * - 只做 best-effort 提取，不依赖 provider 私有结构。
  * - 输出仍然是标准 SessionMessageV1，供 SessionHistoryWriter 直接落盘。
  */
@@ -62,6 +62,16 @@ function resolveToolResultPayload(value: unknown): unknown {
   if ("errorText" in record) return record.errorText;
   if ("error" in record) return record.error;
   return undefined;
+}
+
+function mapToolResultsByCallId(toolResults: unknown[]): Map<string, unknown> {
+  const out = new Map<string, unknown>();
+  for (const toolResult of toolResults) {
+    const toolCallId = resolveToolCallId(toolResult);
+    if (!toolCallId) continue;
+    out.set(toolCallId, toolResult);
+  }
+  return out;
 }
 
 function resolveAcpEventType(value: unknown): string {
@@ -133,6 +143,7 @@ export function buildSessionStepEventMessages(params: {
   const toolResults = Array.isArray(stepRecord.toolResults)
     ? stepRecord.toolResults
     : [];
+  const toolResultsByCallId = mapToolResultsByCallId(toolResults);
   const acpEvents = Array.isArray(stepRecord.acpEvents)
     ? stepRecord.acpEvents
     : [];
@@ -171,40 +182,19 @@ export function buildSessionStepEventMessages(params: {
     const toolName = resolveToolName(toolCall) || "unknown_tool";
     const toolCallId = resolveToolCallId(toolCall);
     const input = resolveToolCallInput(toolCall);
+    const toolResult = toolCallId ? toolResultsByCallId.get(toolCallId) : undefined;
+    if (!toolResult) continue;
+    const output = resolveToolResultPayload(toolResult);
     out.push(
       buildAssistantStepMessage({
         sessionId,
         ts: baseTs + sequence,
         part: {
-          type: "tool-call",
-          toolName,
+          type: `tool-${toolName}`,
           ...(toolCallId ? { toolCallId } : {}),
           ...(input !== undefined ? { input } : {}),
-        },
-        extra: {
-          internal: "assistant_step_tool_call",
-          stepIndex: params.stepIndex,
-          toolIndex: index + 1,
-        },
-      }),
-    );
-    sequence += 1;
-  }
-
-  for (let index = 0; index < toolResults.length; index += 1) {
-    const toolResult = toolResults[index];
-    const toolName = resolveToolName(toolResult) || "unknown_tool";
-    const toolCallId = resolveToolCallId(toolResult);
-    const result = resolveToolResultPayload(toolResult);
-    out.push(
-      buildAssistantStepMessage({
-        sessionId,
-        ts: baseTs + sequence,
-        part: {
-          type: "tool-result",
-          toolName,
-          ...(toolCallId ? { toolCallId } : {}),
-          ...(result !== undefined ? { result } : {}),
+          state: "output-available",
+          output,
         },
         extra: {
           internal: "assistant_step_tool_result",

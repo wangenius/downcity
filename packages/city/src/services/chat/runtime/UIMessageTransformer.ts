@@ -27,14 +27,9 @@ type ToolCallSummary = {
 
 type ToolPartCompatShape = {
   type?: string;
-  toolName?: string;
-  tool?: string;
   state?: string;
   input?: JsonValue;
-  rawInput?: JsonValue;
-  arguments?: JsonValue;
   output?: unknown;
-  result?: unknown;
   errorText?: unknown;
   error?: unknown;
   approval?: {
@@ -68,25 +63,11 @@ function toToolInput(rawInput: JsonValue | object | undefined): JsonObject {
 }
 
 function resolveToolName(part: ToolPartCompatShape, aiToolName?: string): string {
-  const fromField = typeof part.toolName === "string" ? part.toolName.trim() : "";
-  if (fromField) return fromField;
-
-  const fromTool = typeof part.tool === "string" ? part.tool.trim() : "";
-  if (fromTool) return fromTool;
-
   const fromAi = String(aiToolName || "").trim();
   if (fromAi) return fromAi;
 
   const rawType = typeof part.type === "string" ? part.type.trim() : "";
-  if (
-    rawType.startsWith("tool-") &&
-    rawType !== "tool-call" &&
-    rawType !== "tool-result" &&
-    rawType !== "tool-error" &&
-    rawType !== "tool-approval-request"
-  ) {
-    return rawType.slice("tool-".length);
-  }
+  if (rawType.startsWith("tool-")) return rawType.slice("tool-".length);
 
   return "";
 }
@@ -105,9 +86,7 @@ function extractToolOutput(part: ToolPartCompatShape): string {
         ? { error: part.errorText ?? part.error ?? "tool_error" }
         : state === "output-denied"
           ? { error: "tool_denied", reason: part.approval?.reason }
-          : part.type === "tool-result" || part.type === "tool-error"
-            ? part.result ?? part.output ?? part.errorText ?? part.error ?? ""
-            : undefined;
+          : undefined;
   if (outputObj === undefined) return "";
   try {
     return JSON.stringify(outputObj);
@@ -141,19 +120,13 @@ export function extractToolCallsFromUiMessage(
 
   for (const part of parts) {
     const partObject = part as ToolPartCompatShape;
-    const legacyType = typeof partObject.type === "string" ? partObject.type.trim() : "";
     const toolUiPart = isToolUIPart(part) ? part : null;
-    const isCompatToolPart = toolUiPart !== null || legacyType === "tool-call";
-    if (!isCompatToolPart) continue;
+    if (!toolUiPart) continue;
 
     const toolName = resolveToolName(partObject, tryReadAiToolName(part));
     if (!toolName) continue;
 
-    const rawInput =
-      (part as { input?: JsonValue }).input ??
-      partObject.rawInput ??
-      partObject.arguments ??
-      undefined;
+    const rawInput = (part as { input?: JsonValue }).input;
     const input = toToolInput(rawInput);
     const output = extractToolOutput(partObject);
 

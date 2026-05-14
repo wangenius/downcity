@@ -71,6 +71,10 @@ export function buildChannelErrorText(error: unknown): string {
   }
 
   const normalized = String(error ?? "").replace(/\s+/g, " ").trim();
+  if (/AI_NoOutputGeneratedError|No output generated/i.test(normalized)) {
+    return "❌ 模型本轮没有生成可发送内容。系统已记录底层 stream 错误，请稍后重试。";
+  }
+
   if (!normalized) {
     return "❌ 执行失败，请稍后重试。";
   }

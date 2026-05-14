@@ -28,7 +28,7 @@ const useCases = [
   {
     id: "interface",
     bulletKeys: ["deploy", "query", "infra", "workflows", "logs"],
-    example: `# Telegram Bot = Your Project UI\n\n/status              # Check status\n/clear               # Clear conversation history\n<any message>        # Execute instruction`,
+    example: `# Telegram Bot = Your Project UI\n\n/status              # Check status\n/clear               # Clear conversation history\n<any message>        # Execute instruction\n\n# Hard clean one broken chat session\ncity agent history clean . \\\n  --channel telegram \\\n  --chat-id <chat-id> \\\n  --hard`,
   },
   {
     id: "maintainer",

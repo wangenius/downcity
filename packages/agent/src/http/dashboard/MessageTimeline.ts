@@ -26,14 +26,9 @@ type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
 
 type ToolPartCompatShape = {
   type?: unknown;
-  toolName?: unknown;
-  tool?: unknown;
   state?: unknown;
   input?: unknown;
-  rawInput?: unknown;
-  arguments?: unknown;
   output?: unknown;
-  result?: unknown;
   errorText?: unknown;
   error?: unknown;
   approval?: { reason?: unknown } | null;
@@ -91,28 +86,13 @@ function resolveToolName(part: ToolPartCompatShape, aiToolName?: string): string
   const fromAi = String(aiToolName || "").trim();
   if (fromAi) return fromAi;
 
-  const fromField =
-    typeof part.toolName === "string" ? part.toolName.trim() : "";
-  if (fromField) return fromField;
-
-  const fromTool = typeof part.tool === "string" ? part.tool.trim() : "";
-  if (fromTool) return fromTool;
-
   const rawType = typeof part.type === "string" ? part.type.trim() : "";
-  if (
-    rawType.startsWith("tool-") &&
-    rawType !== "tool-call" &&
-    rawType !== "tool-result" &&
-    rawType !== "tool-error" &&
-    rawType !== "tool-approval-request"
-  ) {
-    return rawType.slice("tool-".length);
-  }
+  if (rawType.startsWith("tool-")) return rawType.slice("tool-".length);
   return "unknown_tool";
 }
 
 function extractToolCallInput(part: ToolPartCompatShape): unknown {
-  return part.input ?? part.rawInput ?? part.arguments ?? undefined;
+  return part.input ?? undefined;
 }
 
 function extractToolResultOutput(part: ToolPartCompatShape): unknown {
@@ -133,9 +113,6 @@ function extractToolResultOutput(part: ToolPartCompatShape): unknown {
     state === "output-streaming"
   ) {
     return undefined;
-  }
-  if (part.type === "tool-result" || part.type === "tool-error") {
-    return part.result ?? part.output ?? part.errorText ?? part.error ?? "";
   }
   return undefined;
 }
@@ -199,8 +176,6 @@ export function toUiMessageTimeline(
   for (const part of parts) {
     if (!part || typeof part !== "object") continue;
     const partObject = part as ToolPartCompatShape;
-    const legacyType =
-      typeof partObject.type === "string" ? partObject.type.trim() : "";
 
     if (isTextUIPart(part)) {
       const text = String(part.text || "").trim();
@@ -211,39 +186,6 @@ export function toUiMessageTimeline(
           role: "assistant",
           text,
           sequence,
-        }),
-      );
-      sequence += 1;
-      continue;
-    }
-
-    // 关键点（中文）：已持久化的 legacy `tool-call` / `tool-result` 必须优先处理。
-    // 否则 `isToolUIPart(part)` 会把 `tool-result` 误当成“既有 call 又有 result”的复合事件，
-    // 从而在 UI 中额外生成一条空的 `tool-call`。
-    if (legacyType === "tool-call") {
-      const toolName = resolveToolName(partObject);
-      events.push(
-        toUiMessageEvent({
-          message,
-          role: "tool-call",
-          text: stringifyForDisplay(extractToolCallInput(partObject)) || "(empty)",
-          sequence,
-          toolName,
-        }),
-      );
-      sequence += 1;
-      continue;
-    }
-
-    if (legacyType === "tool-result" || legacyType === "tool-error") {
-      const toolName = resolveToolName(partObject);
-      events.push(
-        toUiMessageEvent({
-          message,
-          role: "tool-result",
-          text: stringifyForDisplay(extractToolResultOutput(partObject)) || "(empty)",
-          sequence,
-          toolName,
         }),
       );
       sequence += 1;

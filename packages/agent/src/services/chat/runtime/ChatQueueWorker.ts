@@ -417,6 +417,37 @@ export class ChatQueueWorker {
       return;
     }
 
+    if (!result.success) {
+      const resultErrorText =
+        pickLastSuccessfulChatSendText(result.assistantMessage) ||
+        result.error ||
+        "Execution failed";
+      const channelErrorText = buildChannelErrorText(resultErrorText);
+      this.logger.error("ChatQueueWorker execution returned failure", {
+        sessionId: runItem.sessionId,
+        error: result.error || resultErrorText,
+      });
+
+      try {
+        await appendChatRunErrorMessage({
+          session: serviceContext,
+          text: channelErrorText,
+        });
+      } catch {
+        // ignore
+      }
+
+      await dispatchTextToChannel({
+        logger: this.logger,
+        context: this.context,
+        sessionId: runItem.sessionId,
+        text: channelErrorText,
+        messageId: runItem.messageId,
+        phase: "error",
+      });
+      return;
+    }
+
     try {
       await persistChatRunResult({
         session: serviceContext,

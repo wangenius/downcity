@@ -13,6 +13,7 @@ import {
 } from "./AgentSelection.js";
 import { runInteractiveAgentManager } from "./AgentManager.js";
 import { chatCommand } from "./AgentChat.js";
+import { agentHistoryCleanCommand } from "./AgentHistory.js";
 import { initCommand } from "./Init.js";
 import { restartCommand } from "./Restart.js";
 import { stopCommand } from "./Stop.js";
@@ -136,6 +137,40 @@ export function registerAgentCommands(
         },
       ) => {
         await chatCommand(options);
+      },
+    ));
+
+  const history = agent
+    .command("history")
+    .description("维护 Agent 会话历史");
+
+  history
+    .command("clean [path]")
+    .description("按 session 或 chat 目标硬清理一条会话历史")
+    .option("--session-id <sessionId>", "目标 session ID")
+    .option("--channel <channel>", "目标聊天渠道，例如 telegram")
+    .option("--chat-id <chatId>", "目标渠道 chat ID")
+    .option("--target-type <targetType>", "目标渠道会话类型")
+    .option("--thread-id <threadId>", "目标线程 ID")
+    .option("--hard [enabled]", "执行硬清理：删除 session/chat/route", parseBoolean)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+    .helpOption("--help", "display help for command")
+    .action(createVersionBanner(
+      context.version,
+      async (
+        cwd: string = ".",
+        options: {
+          sessionId?: string;
+          channel?: string;
+          chatId?: string;
+          targetType?: string;
+          threadId?: string;
+          hard?: boolean;
+          json?: boolean;
+        },
+      ) => {
+        const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
+        await agentHistoryCleanCommand(projectRoot, options);
       },
     ));
 

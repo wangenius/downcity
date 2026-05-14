@@ -61,6 +61,27 @@ import type { JsonObject } from "@/shared/types/Json.js";
 const MAX_COMPACTION_RETRY_ATTEMPTS = 3;
 
 /**
+ * 归一化 stream 错误日志字段。
+ *
+ * 关键点（中文）
+ * - AI SDK 的 `No output generated` 常常只是最终兜底错误。
+ * - 真正的 provider 错误会先经过 `onError`，这里保留 name/cause 便于定位。
+ */
+function summarizeStreamError(error: unknown): JsonObject {
+  const record =
+    error && typeof error === "object" && !Array.isArray(error)
+      ? (error as Record<string, unknown>)
+      : {};
+  const cause = record.cause;
+  return {
+    error: String(error),
+    name: typeof record.name === "string" ? record.name : null,
+    message: typeof record.message === "string" ? record.message : null,
+    cause: cause === undefined ? null : String(cause),
+  };
+}
+
+/**
  * LocalSessionCore 构造参数。
  */
 type LocalSessionCoreOptions = {
@@ -402,6 +423,13 @@ export class LocalSessionCore {
           tools,
           // 注入 provider 选项。
           providerOptions: buildOpenAIResponsesProviderOptions(),
+          // 记录底层 stream 错误，避免只看到最终的 NoOutputGenerated 兜底错误。
+          onError: async ({ error }) => {
+            await this.logger.log("error", "[agent] stream.error", {
+              sessionId,
+              ...summarizeStreamError(error),
+            });
+          },
         });
 
         // 单步收敛 UI assistant 消息，并累计为本轮最终消息。

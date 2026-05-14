@@ -1,16 +1,20 @@
-name: Publish downcity to npmjs
+name: Publish Downcity packages to npmjs
 
 on:
   push:
     branches:
       - main
     paths:
-      - "packages/downcity/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "packages/agent/**"
+      - "packages/city/**"
       - ".github/workflows/publish.yml"
   workflow_dispatch:
 
 concurrency:
-  group: publish-downcity
+  group: publish-downcity-packages
   cancel-in-progress: false
 
 jobs:
@@ -22,19 +26,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
           registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
 
-      - name: Install package dependencies
-        working-directory: packages/downcity
-        run: npm install --legacy-peer-deps
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Build package
-        working-directory: packages/downcity
-        run: npm run build
+      - name: Build packages
+        run: |
+          set -euo pipefail
+          pnpm -C packages/agent build
+          pnpm -C packages/city build
 
       - name: Validate npm token and package ownership
         env:
@@ -43,21 +54,50 @@ jobs:
           set -euo pipefail
           WHOAMI="$(npm whoami)"
           echo "Authenticated npm user: ${WHOAMI}"
-          npm owner ls downcity
-          if ! npm owner ls downcity | awk '{print $1}' | grep -qx "${WHOAMI}"; then
-            echo "NPM_TOKEN user '${WHOAMI}' is not an owner of 'downcity'."
-            exit 1
-          fi
+          for PACKAGE_NAME in @downcity/agent @downcity/city; do
+            if npm view "${PACKAGE_NAME}" version >/dev/null 2>&1; then
+              npm owner ls "${PACKAGE_NAME}"
+              if ! npm owner ls "${PACKAGE_NAME}" | awk '{print $1}' | grep -qx "${WHOAMI}"; then
+                echo "NPM_TOKEN user '${WHOAMI}' is not an owner of '${PACKAGE_NAME}'."
+                exit 1
+              fi
+            else
+              echo "${PACKAGE_NAME} is not published yet. Skipping owner check for first publish."
+            fi
+          done
 
-      - name: Check version and publish
-        working-directory: packages/downcity
+      - name: Check versions and publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          VERSION="$(node -p 'require("./package.json").version')"
-          if npm view downcity versions --json | grep -q "\"${VERSION}\""; then
-            echo "Version ${VERSION} already exists, skipping publish"
-            exit 0
-          fi
-          npm publish --access public
+
+          publish_package() {
+            local package_dir="$1"
+            local package_name="$2"
+            local version
+            version="$(node -p "require('./${package_dir}/package.json').version")"
+
+            if npm view "${package_name}" versions --json >/tmp/downcity-versions.json 2>/dev/null; then
+              if grep -q "\"${version}\"" /tmp/downcity-versions.json; then
+                echo "${package_name}@${version} already exists, skipping publish"
+                return 0
+              fi
+            else
+              echo "${package_name} has no published versions yet. Continuing with first publish."
+            fi
+
+            local pack_dir
+            local tarball
+            pack_dir="$(mktemp -d)"
+            pnpm -C "${package_dir}" pack --pack-destination "${pack_dir}"
+            tarball="$(find "${pack_dir}" -maxdepth 1 -name "*.tgz" -print -quit)"
+            if [[ -z "${tarball}" ]]; then
+              echo "No tarball generated for ${package_name}."
+              exit 1
+            fi
+            npm publish "${tarball}" --access public
+          }
+
+          publish_package packages/agent @downcity/agent
+          publish_package packages/city @downcity/city

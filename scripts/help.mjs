@@ -27,19 +27,18 @@ const HELP_ITEMS = [
     name: "build",
     summary: "完整构建整个仓库。",
     detail:
-      "等价于 `build:all`，会构建 downcity-ui、homepage、console、packages/downcity，并刷新全局 CLI。",
+      "等价于 `build:all`，会构建 packages/ui、homepage、console、packages/agent 与 packages/city。",
   },
   {
     name: "build:all",
     summary: "执行完整仓库构建链路。",
     detail:
-      "会自动对 packages/downcity 做 patch 版本自增，随后完成全量构建并执行全局安装。",
+      "按仓库构建脚本完成全量构建；发布版本由 release commit 显式控制。",
   },
   {
-    name: "build:downcity",
-    summary: "只构建 downcity 交付链路。",
-    detail:
-      "先构建 console 并输出到 packages/downcity/public，再构建 packages/downcity。",
+    name: "build:city",
+    summary: "只构建 City CLI 包。",
+    detail: "执行 `pnpm -C packages/city build`，不会修改 package version。",
   },
   {
     name: "build:homepage",
@@ -58,7 +57,7 @@ const HELP_ITEMS = [
   },
   {
     name: "dev:ui-sdk",
-    summary: "启动 packages/downcity-ui 的开发模式。",
+    summary: "启动 packages/ui 的开发模式。",
     detail: "用于单独开发 UI SDK，不会自动启动 homepage 或 console。",
   },
   {
@@ -79,7 +78,8 @@ const HELP_ITEMS = [
   {
     name: "publish",
     summary: "执行 downcity 发布脚本。",
-    detail: "用于仓库级发布流程，不建议在日常开发中随手执行。",
+    detail:
+      "同步 root、@downcity/agent、@downcity/city 版本并推送，触发 GitHub Actions 发布 npm 包。",
   },
   {
     name: "publish:ui",

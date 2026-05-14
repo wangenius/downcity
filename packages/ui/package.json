@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wangenius/downcity.git",
-    "directory": "packages/downcity-ui"
+    "directory": "packages/ui"
   },
   "bugs": {
     "url": "https://github.com/wangenius/downcity/issues"

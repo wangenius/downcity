@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 交互式发布脚本：检查状态、选择版本提升类型、确认并推送
+# 交互式发布脚本：检查状态、同步版本、提交并推送触发 CI 发布。
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -45,11 +45,18 @@ if (!newVersion) {
   process.exit(1);
 }
 
-const file = 'packages/city/package.json';
-const raw = fs.readFileSync(file, 'utf8');
-const pkg = JSON.parse(raw);
-pkg.version = newVersion;
-fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+const files = [
+  'package.json',
+  'packages/agent/package.json',
+  'packages/city/package.json',
+];
+
+for (const file of files) {
+  const raw = fs.readFileSync(file, 'utf8');
+  const pkg = JSON.parse(raw);
+  pkg.version = newVersion;
+  fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+}
 NODE
 }
 
@@ -143,7 +150,7 @@ main() {
   echo
   print_status "执行发布..."
   
-  # 5. 执行版本提升（避免 npm workspace 解析导致 workspace:* 报错）
+  # 5. 执行版本提升
   local current_version
   current_version=$(get_current_version)
   local new_version
@@ -178,7 +185,7 @@ main() {
   echo
   if confirm "推送到远程仓库? (y/N): "; then
     git push
-    print_success "🎉 已推送到远程仓库，CI 将尝试发布 npm 版本 v${new_version}"
+    print_success "🎉 已推送到远程仓库，CI 将尝试发布 npm 版本 @downcity/agent@${new_version} 与 @downcity/city@${new_version}"
   else
     print_warning "已提交到本地，但未推送到远程"
     print_status "运行 'git push' 手动推送"

@@ -24,7 +24,7 @@ import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/Jso
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
 import { InlineInstantSystemComposer } from "@/console/InlineInstantSystemComposer.js";
-import { createModel } from "@/model/CreateModel.js";
+import { createModel } from "@downcity/agent";
 import { loadStaticSystemPrompts } from "@session/composer/system/default/StaticPromptCatalog.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import {

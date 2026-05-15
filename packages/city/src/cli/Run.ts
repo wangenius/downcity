@@ -10,25 +10,20 @@
  *   `downcity agent restart` 管理。
  */
 
-import { startServer } from "@/http/Server.js";
-import { startLocalRpcServer } from "@/rpc/Server.js";
-
 import {
   getAgentContext,
   getAgentRuntime,
   initAgentRuntime,
+  startAllServices,
+  startLocalRpcServer,
+  startServer,
+  startServiceScheduleRuntime,
   stopAgentHotReload,
-} from "@/agent/AgentRuntime.js";
+  stopAllServices,
+  stopServiceScheduleRuntime,
+} from "@downcity/agent";
 import type { StartOptions } from "@/shared/types/Start.js";
 import { logger } from "@shared/utils/logger/Logger.js";
-import {
-  startAllServices,
-  stopAllServices,
-} from "@/service/Manager.js";
-import {
-  startServiceScheduleRuntime,
-  stopServiceScheduleRuntime,
-} from "@/service/schedule/Runtime.js";
 import { CliError } from "@/types/cli/CliError.js";
 
 /**

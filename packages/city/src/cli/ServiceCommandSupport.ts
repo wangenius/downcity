@@ -13,7 +13,7 @@ import type { Command } from "commander";
 import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
 import { listConsoleAgents } from "@/registry/CityRegistry.js";
 import { isCityRunning } from "@/registry/CityRuntime.js";
-import { ensureRuntimeExecutionBindingReady } from "@/daemon/ProjectSetup.js";
+import { ensureRuntimeExecutionBindingReady } from "@downcity/agent";
 import type { JsonValue } from "@/shared/types/Json.js";
 import { parsePort, resolveAgentName } from "./IndexSupport.js";
 import { CliError } from "@/types/cli/CliError.js";

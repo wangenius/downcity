@@ -6,7 +6,7 @@
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 
-import { callAgentTransport } from "@/rpc/Transport.js";
+import { callAgentTransport } from "@downcity/agent";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
 import type {
   ServiceCliBaseOptions,

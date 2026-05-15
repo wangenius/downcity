@@ -8,7 +8,7 @@
     "city": "./bin/cli/Index.js"
   },
   "scripts": {
-    "build": "rm -rf bin && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs && node scripts/ensure-cli-executable.mjs",
+    "build": "rm -rf bin tsconfig.tsbuildinfo && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs && node scripts/ensure-cli-executable.mjs",
     "dev": "tsc --watch",
     "start": "node bin/cli/Index.js",
     "typecheck": "tsc --noEmit",

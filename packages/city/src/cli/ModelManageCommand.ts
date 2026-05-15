@@ -8,7 +8,7 @@
 
 import type { Command } from "commander";
 import { generateText } from "ai";
-import { createModel } from "@/model/CreateModel.js";
+import { createModel } from "@downcity/agent";
 import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
 import {
   discoverProviderModels,

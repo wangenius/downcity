@@ -9,7 +9,7 @@
 
 import path from "node:path";
 import { logger as defaultLogger } from "@shared/utils/logger/Logger.js";
-import { loadAgentEnvSnapshot, loadDowncityConfig, loadGlobalEnvFromStore } from "@/config/Config.js";
+import { loadAgentEnvSnapshot, loadDowncityConfig, loadGlobalEnvFromStore } from "@downcity/agent";
 import { isPluginEnabled } from "@/plugin/Activation.js";
 import { findBuiltinPlugin, listStaticPluginViews } from "@/plugin/Catalog.js";
 import {

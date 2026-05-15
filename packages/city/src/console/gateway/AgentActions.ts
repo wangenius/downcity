@@ -17,11 +17,11 @@ import {
   readDaemonPid,
 } from "@/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/daemon/CliArgs.js";
-import { ensureRuntimeExecutionBindingReady } from "@/daemon/ProjectSetup.js";
 import {
+  ensureRuntimeExecutionBindingReady,
   initializeAgentProject,
   isAgentProjectInitialized,
-} from "@/agent/project/AgentInitializer.js";
+} from "@downcity/agent";
 import {
   getProfileMdPath,
   getDowncitySessionRootDirPath,

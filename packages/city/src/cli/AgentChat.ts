@@ -10,7 +10,7 @@
 import { createInterface } from "node:readline/promises";
 import chalk from "chalk";
 import prompts from "prompts";
-import { callAgentTransport } from "@/rpc/Transport.js";
+import { callAgentTransport } from "@downcity/agent";
 import { emitCliBlock } from "./CliReporter.js";
 import {
   createSpinner,

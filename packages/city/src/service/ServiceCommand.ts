@@ -14,7 +14,7 @@ import type { Service, ServiceAction } from "@/shared/types/Service.js";
 import { listRegisteredServices } from "@/service/ServiceClassRegistry.js";
 import type { ServiceCommandResponse } from "@/shared/types/Services.js";
 import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
-import { callAgentTransport } from "@/rpc/Transport.js";
+import { callAgentTransport } from "@downcity/agent";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
 import { parseBoolean, parsePort } from "@/cli/IndexSupport.js";
 import { runServiceControlCommand } from "@/cli/ServiceCommandRemote.js";

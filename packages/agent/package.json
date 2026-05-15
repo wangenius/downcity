@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "rm -rf bin && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs",
+    "build": "rm -rf bin tsconfig.tsbuildinfo && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit"
   },

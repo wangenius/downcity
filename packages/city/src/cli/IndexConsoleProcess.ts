@@ -16,7 +16,7 @@ import {
   readDaemonPid,
   stopDaemonProcess,
 } from "@/daemon/Manager.js";
-import { ensureRuntimeExecutionBindingReady } from "@/daemon/ProjectSetup.js";
+import { ensureRuntimeExecutionBindingReady } from "@downcity/agent";
 import { allocateAvailablePort } from "@/daemon/PortAllocator.js";
 import {
   ensureConsoleAgentRegistry,

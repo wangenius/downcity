@@ -17,7 +17,7 @@ import {
   getDowncitySchemaPath,
   getSoulMdPath,
 } from "@/config/Paths.js";
-import { isAgentProjectInitialized } from "@/agent/project/AgentInitializer.js";
+import { isAgentProjectInitialized } from "@downcity/agent";
 import { listConsoleAgents } from "@/registry/CityRegistry.js";
 import {
   getConsoleAgentRegistryPath,

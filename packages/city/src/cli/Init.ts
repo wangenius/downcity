@@ -20,7 +20,7 @@ import {
   initializeAgentProject,
   listConsoleModelChoices,
   normalizeDefaultAgentName,
-} from "@/agent/project/AgentInitializer.js";
+} from "@downcity/agent";
 import type { AgentProjectChannel } from "@/shared/types/AgentProject.js";
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";

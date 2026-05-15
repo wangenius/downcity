@@ -1,6 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { SessionUserMessageV1 } from "@/types/session/SessionMessages.js";
-import type { SessionAssistantStepCallback } from "@/types/session/SessionRun.js";
+import type {
+  SessionAssistantStepCallback,
+  SessionUiMessageChunkCallback,
+} from "@/types/session/SessionRun.js";
 
 /**
  * SessionRunScope（单次请求作用域）。
@@ -28,6 +31,15 @@ export type SessionRunScope = {
    * - 用于把中间文本增量派发到外部通道（如 direct 模式分步发送）。
    */
   onAssistantStepCallback?: SessionAssistantStepCallback;
+
+  /**
+   * UI stream chunk 回调（可选）。
+   *
+   * 关键点（中文）
+   * - 用于把底层模型 UI stream 事件向上层 SDK / transport 旁路输出。
+   * - 不影响最终 assistantMessage 的收敛与落盘。
+   */
+  onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
 
   /**
    * 运行时注入的 user 消息队列（可选）。

@@ -1,0 +1,133 @@
+---
+title: Agent SDK
+description: 以本地嵌入式 Agent 或远程 Agent Client 的方式使用 Downcity
+---
+
+# Agent SDK
+
+`@downcity/agent` 当前对外提供两个主要 SDK 入口：
+
+- `Agent`：本地嵌入式 Agent
+- `RemoteAgent`：连接已启动 Agent HTTP 服务的远程客户端
+
+## 安装
+
+```bash
+pnpm add @downcity/agent
+```
+
+## 本地 Agent
+
+当你的应用与 Agent 运行在同一进程，并且可以直接注入 tools 与 model 时，使用 `new Agent(...)`。
+
+```ts
+import { Agent } from "@downcity/agent";
+import { createOpenAI } from "@ai-sdk/openai";
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+const agent = new Agent({
+  id: "vibecape-official",
+  path: "/path/to/agent-project",
+  tools: {},
+});
+
+const session = await agent.session();
+await session.set({
+  model: openai.responses("gpt-5"),
+});
+
+const result = await session.run({
+  query: "把本地文件重命名为新的规范",
+});
+
+console.log(result.text);
+```
+
+## 流式执行
+
+```ts
+for await (const event of session.stream({
+  query: "继续刚才的话题",
+})) {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+当前支持的事件类型包括：
+
+- `text-delta`
+- `reasoning-delta`
+- `tool-call`
+- `tool-result`
+- `tool-error`
+- `finish`
+- `error`
+
+## 分叉 Session
+
+```ts
+const branched = await session.fork();
+const fromMessage = await session.fork("message-id");
+```
+
+传入 `messageId` 时，新 session 会复制到该消息为止（包含该消息）的历史。
+
+## 启动 HTTP / RPC
+
+```ts
+const http = await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+
+await agent.rpc.start();
+
+console.log(http.baseUrl);
+```
+
+## 远程 Agent
+
+当另一个进程已经调用过 `agent.http.start()` 时，使用 `RemoteAgent`。
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314",
+});
+
+const session = await agent.session();
+
+const result = await session.run({
+  query: "总结一下当前仓库结构",
+});
+
+console.log(result.text);
+```
+
+远程流式调用方式相同：
+
+```ts
+for await (const event of session.stream({
+  query: "继续",
+})) {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+## Session 落盘位置
+
+SDK session 默认落盘到：
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
+```
+
+这样即使多个 agent 共用同一个项目目录，session 也会按 `agentId` 隔离。

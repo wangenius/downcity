@@ -7,7 +7,7 @@
  * - 输出仅暴露 assistantMessage（UIMessage）。
  */
 
-import type { Tool } from "ai";
+import type { Tool, UIMessageChunk } from "ai";
 import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
 import type { SessionSystemMessage } from "@/types/session/SessionPrompts.js";
 
@@ -58,6 +58,22 @@ export interface SessionAssistantStepCallbackInput {
  */
 export type SessionAssistantStepCallback = (
   input: SessionAssistantStepCallbackInput,
+) => Promise<void>;
+
+/**
+ * UI stream chunk 回调入参。
+ *
+ * 关键点（中文）
+ * - 这里直接复用 AI SDK 的 `UIMessageChunk` 结构，避免在 session 内核层再复制一套协议。
+ * - SDK / HTTP / RPC 若需要自己的事件模型，应在更上层做映射。
+ */
+export type SessionUiMessageChunk = UIMessageChunk;
+
+/**
+ * UI stream chunk 回调。
+ */
+export type SessionUiMessageChunkCallback = (
+  chunk: SessionUiMessageChunk,
 ) => Promise<void>;
 
 /**

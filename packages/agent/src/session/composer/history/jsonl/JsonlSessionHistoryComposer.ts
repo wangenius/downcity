@@ -161,6 +161,20 @@ export class JsonlSessionHistoryComposer extends SessionHistoryComposer {
     return Array.from(new Set(out)).slice(0, 2000);
   }
 
+  private normalizeSdkConfig(
+    input: SessionHistoryMetaV1["sdkConfig"],
+  ): SessionHistoryMetaV1["sdkConfig"] {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      return undefined;
+    }
+    const modelLabel =
+      typeof input.modelLabel === "string" ? input.modelLabel.trim() : "";
+    if (!modelLabel) return undefined;
+    return {
+      modelLabel,
+    };
+  }
+
   private async readMetaUnsafe(): Promise<SessionHistoryMetaV1> {
     const file = this.getMetaFilePath();
     try {
@@ -171,6 +185,12 @@ export class JsonlSessionHistoryComposer extends SessionHistoryComposer {
       return {
         v: 1,
         sessionId: this.sessionId,
+        ...(typeof raw.agentId === "string" && raw.agentId.trim()
+          ? { agentId: raw.agentId.trim() }
+          : {}),
+        ...(typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
+          ? { createdAt: raw.createdAt }
+          : {}),
         updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : 0,
         pinnedSkillIds: this.normalizePinnedSkillIds(raw.pinnedSkillIds),
         ...(typeof raw.lastArchiveId === "string" && raw.lastArchiveId.trim()
@@ -188,11 +208,15 @@ export class JsonlSessionHistoryComposer extends SessionHistoryComposer {
         Number.isFinite(raw.compactRatio)
           ? { compactRatio: raw.compactRatio }
           : {}),
+        ...(this.normalizeSdkConfig(raw.sdkConfig)
+          ? { sdkConfig: this.normalizeSdkConfig(raw.sdkConfig) }
+          : {}),
       };
     } catch {
       return {
         v: 1,
         sessionId: this.sessionId,
+        createdAt: Date.now(),
         updatedAt: 0,
         pinnedSkillIds: [],
       };
@@ -205,6 +229,12 @@ export class JsonlSessionHistoryComposer extends SessionHistoryComposer {
     const normalized: SessionHistoryMetaV1 = {
       v: 1,
       sessionId: this.sessionId,
+      ...(typeof next.agentId === "string" && next.agentId.trim()
+        ? { agentId: next.agentId.trim() }
+        : {}),
+      ...(typeof next.createdAt === "number" && Number.isFinite(next.createdAt)
+        ? { createdAt: next.createdAt }
+        : {}),
       updatedAt:
         typeof next.updatedAt === "number" ? next.updatedAt : Date.now(),
       pinnedSkillIds: this.normalizePinnedSkillIds(next.pinnedSkillIds),
@@ -222,6 +252,9 @@ export class JsonlSessionHistoryComposer extends SessionHistoryComposer {
       ...(typeof next.compactRatio === "number" &&
       Number.isFinite(next.compactRatio)
         ? { compactRatio: next.compactRatio }
+        : {}),
+      ...(this.normalizeSdkConfig(next.sdkConfig)
+        ? { sdkConfig: this.normalizeSdkConfig(next.sdkConfig) }
         : {}),
     };
     await fs.writeJson(this.getMetaFilePath(), normalized, { spaces: 2 });

@@ -148,6 +148,7 @@ export class Session {
     query: string;
     onStepCallback?: SessionRunScope["onStepCallback"];
     onAssistantStepCallback?: SessionRunScope["onAssistantStepCallback"];
+    onUiMessageChunkCallback?: SessionRunScope["onUiMessageChunkCallback"];
   }): Promise<SessionRunResult> {
     if (this.executing) {
       // 关键点（中文）：同一个 Session 实例只允许一个活跃 run，
@@ -161,6 +162,9 @@ export class Session {
         : {}),
       ...(typeof params.onAssistantStepCallback === "function"
         ? { onAssistantStepCallback: params.onAssistantStepCallback }
+        : {}),
+      ...(typeof params.onUiMessageChunkCallback === "function"
+        ? { onUiMessageChunkCallback: params.onUiMessageChunkCallback }
         : {}),
     };
     let persistedAssistantStepCount = 0;

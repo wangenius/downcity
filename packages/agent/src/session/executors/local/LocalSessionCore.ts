@@ -47,6 +47,7 @@ import {
   evaluateSessionLoopDecision,
   shouldContinueForTailMergedUserMessages,
 } from "@session/executors/local/SessionLoopDecision.js";
+import { getSessionRunScope } from "@session/SessionRunScope.js";
 import type {
   SessionExecuteInput,
   SessionRunResult,
@@ -684,8 +685,8 @@ export class LocalSessionCore {
 
     // 创建 UI message stream。
     const uiStream = params.result.toUIMessageStream<SessionMessageV1>({
-      // 不发送 reasoning 片段。
-      sendReasoning: false,
+      // 关键点（中文）：SDK stream 需要 reasoning 旁路事件时可直接消费；最终落盘仍由 responseMessage 收敛。
+      sendReasoning: true,
       // 不发送来源片段。
       sendSources: false,
       // 在 finish 时收敛最终 responseMessage。
@@ -702,8 +703,15 @@ export class LocalSessionCore {
     });
 
     // 必须完整消费 stream，确保 onFinish 被触发。
-    for await (const _ of uiStream) {
-      // 此处只为驱动流消费，不处理 chunk。
+    const onUiMessageChunkCallback =
+      getSessionRunScope()?.onUiMessageChunkCallback;
+    for await (const chunk of uiStream) {
+      if (typeof onUiMessageChunkCallback !== "function") continue;
+      try {
+        await onUiMessageChunkCallback(chunk);
+      } catch {
+        // ignore UI stream callback failures
+      }
     }
 
     await this.logger.log("info", "[agent] ui.finish", {

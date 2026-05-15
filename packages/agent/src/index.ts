@@ -6,6 +6,21 @@
  * - city 包通过 `import { ... } from '@downcity/agent'` 使用代理运行时。
  */
 
+// SDK 入口
+export { Agent } from "./sdk/Agent.js";
+export { RemoteAgent } from "./sdk/RemoteAgent.js";
+export type {
+  AgentOptions,
+  RemoteAgentOptions,
+  AgentSessionSetInput,
+  AgentSessionConfigSnapshot,
+  AgentSessionRunInput,
+  AgentSessionRunResult,
+  AgentSessionStreamEvent,
+  AgentSessionMetadata,
+  AgentSessionForkInput,
+} from "./types/sdk/AgentSdk.js";
+
 // Agent 运行时
 export { initAgentRuntime, stopAgentHotReload, getAgentContext, getAgentRuntime } from './agent/AgentRuntime.js';
 export type { AgentRuntime, AgentRuntimeBase } from './agent/AgentRuntimeState.js';

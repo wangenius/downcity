@@ -1,0 +1,133 @@
+---
+title: Agent SDK
+description: Use Downcity as a local embeddable Agent or as a remote Agent client
+---
+
+# Agent SDK
+
+The `@downcity/agent` package now exposes two primary SDK entries:
+
+- `Agent`: local embeddable agent runtime
+- `RemoteAgent`: remote HTTP client for an already-running agent
+
+## Install
+
+```bash
+pnpm add @downcity/agent
+```
+
+## Local Agent
+
+Use `new Agent(...)` when your app runs in the same process and can provide tools and models directly.
+
+```ts
+import { Agent } from "@downcity/agent";
+import { createOpenAI } from "@ai-sdk/openai";
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+const agent = new Agent({
+  id: "vibecape-official",
+  path: "/path/to/agent-project",
+  tools: {},
+});
+
+const session = await agent.session();
+await session.set({
+  model: openai.responses("gpt-5"),
+});
+
+const result = await session.run({
+  query: "Rename the local file to match the new convention",
+});
+
+console.log(result.text);
+```
+
+## Stream a session
+
+```ts
+for await (const event of session.stream({
+  query: "Continue the previous task",
+})) {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+Current stream events include:
+
+- `text-delta`
+- `reasoning-delta`
+- `tool-call`
+- `tool-result`
+- `tool-error`
+- `finish`
+- `error`
+
+## Fork a session
+
+```ts
+const branched = await session.fork();
+const fromMessage = await session.fork("message-id");
+```
+
+If `messageId` is provided, the new session copies history up to and including that message.
+
+## Start HTTP / RPC
+
+```ts
+const http = await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+
+await agent.rpc.start();
+
+console.log(http.baseUrl);
+```
+
+## Remote Agent
+
+Use `RemoteAgent` when another process has already started `agent.http.start()`.
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314",
+});
+
+const session = await agent.session();
+
+const result = await session.run({
+  query: "Summarize the repository structure",
+});
+
+console.log(result.text);
+```
+
+Remote streaming uses the same API:
+
+```ts
+for await (const event of session.stream({
+  query: "Continue",
+})) {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+## Session storage
+
+SDK sessions are stored under:
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
+```
+
+This keeps sessions from different agents isolated even when they share the same project directory.

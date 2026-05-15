@@ -10,7 +10,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { StoredChannelAccount } from "@/shared/types/Store.js";
 import type {
   ChatChannelName,

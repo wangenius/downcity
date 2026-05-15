@@ -2,9 +2,9 @@
  * Chat channel account 管理服务。
  *
  * 关键点（中文）
- * - 统一封装 city 全局 chat channel account 的 CRUD 与探测。
- * - 业务语义归属 chat service；console/CLI 只复用这里的能力。
- * - 敏感字段仅在写入时接收明文；读取时只返回脱敏与布尔状态。
+ * - 统一封装 agent 运行时下 chat channel account 的 CRUD 与探测。
+ * - 账号凭据只在写入路径接收明文；列表与读取路径返回脱敏结果。
+ * - city / vibecape 等上层产品都应直接复用这个实现，而不是各自维护副本。
  */
 
 import crypto from "node:crypto";
@@ -73,8 +73,8 @@ export class ChatChannelAccountService {
    * 生成唯一 channel account id。
    *
    * 关键点（中文）
-   * - 账号 id 统一由系统生成，避免用户手填导致冲突/命名不一致。
-   * - 若碰撞会自动追加随机后缀重试。
+   * - 账号 id 统一由系统生成，避免用户手填导致冲突或命名不一致。
+   * - 若碰撞则自动追加随机后缀重试。
    */
   private async generateUniqueAccountId(params: {
     channel: StoredChannelAccountChannel;
@@ -145,8 +145,8 @@ export class ChatChannelAccountService {
    * 使用凭据创建账号。
    *
    * 关键点（中文）
-   * - 默认会尝试探测平台 bot 信息，成功时自动生成更友好的名称与身份。
-   * - 探测失败时允许用户给定名称继续保存，方便先录入后排查。
+   * - 默认先尝试探测 bot 信息，成功时自动填充名称与身份。
+   * - 探测失败但用户提供了名称时，仍允许先保存，便于后续排障。
    */
   async create(input: ChatChannelAccountCreateInput): Promise<{
     id: string;
@@ -221,9 +221,9 @@ export class ChatChannelAccountService {
           hasBotToken: !!String(item.botToken || "").trim(),
           hasAppId: !!String(item.appId || "").trim(),
           hasAppSecret: !!String(item.appSecret || "").trim(),
-          botTokenMasked: maskSecret(item.botToken),
-          appIdMasked: maskSecret(item.appId),
-          appSecretMasked: maskSecret(item.appSecret),
+          botTokenMasked: item.botToken ? maskSecret(item.botToken) : undefined,
+          appIdMasked: item.appId ? maskSecret(item.appId) : undefined,
+          appSecretMasked: item.appSecret ? maskSecret(item.appSecret) : undefined,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
         })),
@@ -234,7 +234,7 @@ export class ChatChannelAccountService {
   }
 
   /**
-   * 新增或更新账户。
+   * 新增或更新账号。
    */
   async upsert(input: ChatChannelAccountUpsertInput): Promise<{ id: string }> {
     const id = String(input.id || "").trim();
@@ -302,7 +302,7 @@ export class ChatChannelAccountService {
   }
 
   /**
-   * 删除账户。
+   * 删除账号。
    */
   remove(idInput: string): void {
     const id = String(idInput || "").trim();

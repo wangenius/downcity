@@ -8,7 +8,7 @@
  */
 
 import type { Command } from "commander";
-import type { ServiceActions } from "@/shared/types/Service.js";
+import type { ServiceActions } from "@downcity/agent/shared/types/Service.js";
 import type {
   ChatCloseActionPayload,
   ChatConfigurationActionPayload,

@@ -1,4 +1,4 @@
-import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { Logger } from "@downcity/agent/shared/utils/logger/Logger.js";
 import type { TelegramUpdate, TelegramUser } from "./Shared.js";
 
 /**

@@ -7,7 +7,7 @@
  * - 这样调用方不需要知道 plugin action 名称，也不需要依赖 `plugins/auth/*` 目录。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { AuthDashboardPayload } from "@/shared/types/AuthDashboard.js";
 import type {

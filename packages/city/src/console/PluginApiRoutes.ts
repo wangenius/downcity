@@ -22,7 +22,7 @@ import type {
   PluginSetupDefinition,
   PluginUsageDefinition,
   PluginView,
-} from "@/shared/types/Plugin.js";
+} from "@downcity/agent/shared/types/Plugin.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 
 type PluginActionConfigItem = {

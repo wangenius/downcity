@@ -6,7 +6,7 @@
  * - 跨模块复用的 task service 类型统一提升到 `shared/types/`，避免散落在具体实现文件中。
  */
 
-import type { ShipTaskStatus } from "@services/task/types/Task.js";
+import type { ShipTaskStatus } from "@downcity/agent/services/task/types/Task.js";
 
 /**
  * `task.list` action 的输入载荷。

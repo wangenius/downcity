@@ -7,7 +7,7 @@
  */
 
 import { buildChatInboundText, augmentChatInboundInput } from "@services/chat/runtime/InboundAugment.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { QQMessageData, QQReadyUser } from "@/shared/types/QqChannel.js";
 import type { QqIncomingAttachment } from "@services/chat/types/QqVoice.js";

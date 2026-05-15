@@ -2,8 +2,8 @@
  * Chat channel account 管理类型。
  *
  * 关键点（中文）
- * - 这些类型描述 city 全局 chat channel account 管理服务的输入与输出。
- * - 账号密钥只在写入路径传入明文；列表结果仅暴露脱敏信息与是否存在。
+ * - 这些类型描述 agent 运行时内部的 chat channel account 管理输入输出。
+ * - 凭据明文只允许出现在写入输入中，读取结果必须是脱敏后的安全视图。
  */
 
 import type { StoredChannelAccountChannel } from "@/shared/types/Store.js";
@@ -226,7 +226,7 @@ export interface ChatChannelAccountCreateInput {
    */
   sandbox?: boolean;
   /**
-   * 是否尝试调用平台接口探测 bot 信息。
+   * 是否跳过自动探测。
    */
   probe?: boolean;
 }

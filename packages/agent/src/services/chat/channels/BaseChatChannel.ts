@@ -228,8 +228,33 @@ export abstract class BaseChatChannel {
   /**
    * 生成未授权提示文案。
    */
-  protected buildUnauthorizedBlockedText(): string {
-    return "当前会话权限不足，已拒绝处理。请在 Console 的 Agent / Authorization 页面调整角色后再重试。";
+  protected buildUnauthorizedBlockedText(params?: {
+    userId?: string;
+    chatId?: string;
+    chatType?: string;
+  }): string {
+    const userId = String(params?.userId || "").trim();
+    const chatId = String(params?.chatId || "").trim();
+    const chatType = String(params?.chatType || "").trim();
+    const lines = [
+      "当前会话权限不足，已拒绝处理。请联系管理员调整你的角色。",
+    ];
+
+    if (userId) {
+      lines.push(
+        "",
+        "请把下面命令发给管理员：",
+        `city chat auth set ${this.channel}:${userId}`,
+      );
+    }
+
+    if (chatId || chatType) {
+      lines.push("", "来源信息：");
+      if (chatId) lines.push(`chatId: ${chatId}`);
+      if (chatType) lines.push(`chatType: ${chatType}`);
+    }
+
+    return lines.join("\n");
   }
 
   /**

@@ -8,10 +8,10 @@
  * - action 注册表已经拆到独立模块，当前文件只保留实例骨架。
  */
 
-import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
-import { BaseService } from "@services/BaseService.js";
-import type { ServiceActions } from "@/shared/types/Service.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentRuntime } from "@downcity/agent/types/agent/AgentRuntime.js";
+import { BaseService } from "@downcity/agent/services/BaseService.js";
+import type { ServiceActions } from "@downcity/agent/shared/types/Service.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import {
   createChatChannelState,

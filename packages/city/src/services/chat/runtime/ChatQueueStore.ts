@@ -7,7 +7,7 @@
  * - 旧的 `ChatQueue.ts` 会保留共享门面，逐步迁移到显式实例注入。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type {
   ChatQueueEnqueueParams,
   ChatQueueEnqueueResult,

@@ -10,7 +10,7 @@
 import type { Command } from "commander";
 import { listRegisteredServices } from "@/service/ServiceClassRegistry.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
-import type { Service } from "@/shared/types/Service.js";
+import type { Service } from "@downcity/agent/shared/types/Service.js";
 import {
   runServiceCommandBridge,
   runServiceControlCommand,

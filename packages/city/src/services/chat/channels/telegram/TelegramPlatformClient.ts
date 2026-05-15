@@ -7,7 +7,7 @@
  * - `TelegramBot` 只保留入站授权、命令分发、消息入队等业务编排。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import { TelegramApiClient } from "./ApiClient.js";
 import { TelegramStateStore } from "./StateStore.js";

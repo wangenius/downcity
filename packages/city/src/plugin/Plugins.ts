@@ -7,7 +7,7 @@
  */
 
 import type { PluginRegistry } from "@/plugin/PluginRegistry.js";
-import type { Plugin } from "@/shared/types/Plugin.js";
+import type { Plugin } from "@downcity/agent/shared/types/Plugin.js";
 import { authPlugin } from "@/plugins/auth/Plugin.js";
 import { skillPlugin } from "@/plugins/skill/Plugin.js";
 import { webPlugin } from "@/plugins/web/Plugin.js";

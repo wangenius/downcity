@@ -9,6 +9,26 @@
     ".": {
       "import": "./bin/index.js",
       "types": "./bin/index.d.ts"
+    },
+    "./session/*.js": {
+      "import": "./bin/session/*.js",
+      "types": "./bin/session/*.d.ts"
+    },
+    "./services/*.js": {
+      "import": "./bin/services/*.js",
+      "types": "./bin/services/*.d.ts"
+    },
+    "./shared/*.js": {
+      "import": "./bin/shared/*.js",
+      "types": "./bin/shared/*.d.ts"
+    },
+    "./types/*.js": {
+      "import": "./bin/types/*.js",
+      "types": "./bin/types/*.d.ts"
+    },
+    "./service/*.js": {
+      "import": "./bin/service/*.js",
+      "types": "./bin/service/*.d.ts"
     }
   },
   "scripts": {

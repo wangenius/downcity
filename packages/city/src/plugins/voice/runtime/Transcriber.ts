@@ -9,7 +9,7 @@ import type {
 } from "@/shared/types/Voice.js";
 import { resolveVoiceModelsRootDir } from "./Paths.js";
 import type { VoicePluginConfig } from "@/shared/types/VoicePlugin.js";
-import type { PluginCommandContext } from "@/shared/types/Plugin.js";
+import type { PluginCommandContext } from "@downcity/agent/shared/types/Plugin.js";
 
 const execShellAsync = promisify(execWithShell);
 const execFileAsync = promisify(execFileCb);

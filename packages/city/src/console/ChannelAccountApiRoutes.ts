@@ -7,14 +7,14 @@
  */
 
 import type { Hono } from "hono";
-import { ChannelAccountService } from "@/console/ChannelAccountService.js";
+import { ChatChannelAccountService } from "@downcity/agent/services/chat/accounts/ChannelAccountService.js";
 
 /**
  * 注册 Channel Account API 路由。
  */
 export function registerConsoleChannelAccountRoutes(params: { app: Hono }): void {
   const app = params.app;
-  const service = new ChannelAccountService();
+  const service = new ChatChannelAccountService();
 
   app.get("/api/ui/channel-accounts", async (c) => {
     try {

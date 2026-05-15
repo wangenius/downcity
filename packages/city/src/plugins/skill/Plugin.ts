@@ -7,7 +7,7 @@
  * - skills overview 文本通过 `plugin.system` 注入，不再依赖 service.system。
  */
 
-import type { Plugin } from "@/shared/types/Plugin.js";
+import type { Plugin } from "@downcity/agent/shared/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import { readFileSync } from "node:fs";
 import { isPluginEnabled } from "@/plugin/Activation.js";

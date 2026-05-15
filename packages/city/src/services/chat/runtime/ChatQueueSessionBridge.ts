@@ -7,11 +7,11 @@
  * - 这样可以把“队列消费”与“session 持久化/补写”边界拆清楚。
  */
 
-import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
+import { drainDeferredPersistedUserMessages } from "@downcity/agent/session/SessionRunScope.js";
 import type { JsonObject } from "@/shared/types/Json.js";
-import type { SessionRunResult } from "@/types/session/SessionRun.js";
-import type { SessionUserMessageV1 } from "@/types/session/SessionMessages.js";
-import type { SessionPort } from "@/types/agent/AgentContext.js";
+import type { SessionRunResult } from "@downcity/agent/types/session/SessionRun.js";
+import type { SessionUserMessageV1 } from "@downcity/agent/types/session/SessionMessages.js";
+import type { SessionPort } from "@downcity/agent/types/agent/AgentContext.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import { resolveAssistantMessageForPersistence } from "./UserVisibleText.js";
 

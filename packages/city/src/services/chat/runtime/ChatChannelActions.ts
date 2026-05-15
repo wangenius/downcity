@@ -8,7 +8,7 @@
  */
 
 import { ConsoleStore } from "@/shared/utils/store/index.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import type {
   ChatCloseActionPayload,

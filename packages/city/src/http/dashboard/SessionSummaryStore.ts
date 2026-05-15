@@ -7,12 +7,13 @@
  */
 
 import fs from "fs-extra";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
+import type { AgentContext as AgentPackageContext } from "@downcity/agent/types/agent/AgentContext.js";
 import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,
 } from "@/config/Paths.js";
-import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
+import { readChatMetaBySessionId } from "@downcity/agent/services/chat/runtime/ChatMetaStore.js";
 import type { DashboardSessionSummary } from "@/shared/types/DashboardData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
@@ -49,7 +50,7 @@ export async function listDashboardSessionSummaries(params: {
     const updatedAt = lastTs || (stat ? stat.mtimeMs : undefined);
     const chatMeta = params.executionContext
       ? await readChatMetaBySessionId({
-          context: params.executionContext,
+          context: params.executionContext as unknown as AgentPackageContext,
           sessionId,
         })
       : null;

@@ -13,8 +13,8 @@ import type {
   PluginActionResult,
   PluginAvailability,
   PluginView,
-} from "@/shared/types/Plugin.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+} from "@downcity/agent/shared/types/Plugin.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 
 type ContextResolver = () => AgentContext;

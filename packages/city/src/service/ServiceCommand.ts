@@ -10,7 +10,7 @@ import path from "node:path";
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type { ServiceCommandScheduleInput } from "@/shared/types/ServiceSchedule.js";
-import type { Service, ServiceAction } from "@/shared/types/Service.js";
+import type { Service, ServiceAction } from "@downcity/agent/shared/types/Service.js";
 import { listRegisteredServices } from "@/service/ServiceClassRegistry.js";
 import type { ServiceCommandResponse } from "@/shared/types/Services.js";
 import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";

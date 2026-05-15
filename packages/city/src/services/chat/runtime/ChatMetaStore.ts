@@ -7,7 +7,7 @@
  * - 底层数据落在 `.downcity/channel/meta.json`，由 ChannelContextStore 统一维护
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import {

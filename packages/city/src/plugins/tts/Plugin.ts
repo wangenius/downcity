@@ -6,7 +6,7 @@
  * - Console 只通过 setup / action 与插件交互，保持极简统一。
  */
 
-import type { Plugin } from "@/shared/types/Plugin.js";
+import type { Plugin } from "@downcity/agent/shared/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type {
   TtsInstallInput,

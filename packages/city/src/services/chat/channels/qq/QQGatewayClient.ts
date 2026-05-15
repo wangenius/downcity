@@ -8,7 +8,7 @@
  */
 
 import WebSocket, { type RawData } from "ws";
-import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { Logger } from "@downcity/agent/shared/utils/logger/Logger.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type {
   QQEventCaptureConfig,

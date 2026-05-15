@@ -7,12 +7,12 @@
  * - 支持 step 边界合并（同 lane 新消息可插入当前 run）
  */
 
-import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { SessionRunResult } from "@/types/session/SessionRun.js";
+import type { Logger } from "@downcity/agent/shared/utils/logger/Logger.js";
+import type { SessionRunResult } from "@downcity/agent/types/session/SessionRun.js";
 import type {
   SessionUserMessageV1,
-} from "@/types/session/SessionMessages.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+} from "@downcity/agent/types/session/SessionMessages.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { ChatQueueWorkerConfig } from "@/shared/types/ChatQueueWorker.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";

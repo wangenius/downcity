@@ -35,7 +35,7 @@ import {
   buildChatInboundText,
 } from "@services/chat/runtime/InboundAugment.js";
 import { renderChatMessageFileTag } from "@services/chat/runtime/ChatMessageMarkup.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import {

@@ -6,7 +6,7 @@
  * - service 通过这里暴露 queue 生命周期，不直接散落调用细节。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type {
   ChatEnqueueEffectInput,
   ChatEnqueuePipelineInput,

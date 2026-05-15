@@ -13,7 +13,7 @@ import type {
   Plugin,
   PluginAvailability,
   PluginView,
-} from "@/shared/types/Plugin.js";
+} from "@downcity/agent/shared/types/Plugin.js";
 
 /**
  * 将 Plugin 定义转换成静态概览视图。

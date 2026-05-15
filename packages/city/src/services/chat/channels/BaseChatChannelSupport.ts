@@ -7,8 +7,8 @@
  */
 
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { Logger } from "@downcity/agent/shared/utils/logger/Logger.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import {
   resolveSessionIdByChatTarget,

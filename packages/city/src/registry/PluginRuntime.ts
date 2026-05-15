@@ -7,7 +7,7 @@
  * - agent runtime 仅作为 context provider 注册方，不再成为 plugin manager 的宿主。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 
 type AgentContextResolver = () => AgentContext;
 

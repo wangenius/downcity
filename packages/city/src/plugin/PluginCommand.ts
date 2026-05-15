@@ -10,7 +10,7 @@ import path from "node:path";
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import { PLUGINS } from "@/plugin/Plugins.js";
-import type { Plugin, PluginAction } from "@/shared/types/Plugin.js";
+import type { Plugin, PluginAction } from "@downcity/agent/shared/types/Plugin.js";
 import { runLocalPluginAction } from "@/plugin/LocalExecution.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
 import { parseBoolean } from "@/cli/IndexSupport.js";

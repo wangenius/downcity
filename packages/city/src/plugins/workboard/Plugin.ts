@@ -6,7 +6,7 @@
  * - 当前通过 plugin HTTP 注入暴露 `/api/workboard/snapshot`，供 console 代理与 UI 消费。
  */
 
-import type { Plugin } from "@/shared/types/Plugin.js";
+import type { Plugin } from "@downcity/agent/shared/types/Plugin.js";
 import { isPluginEnabled } from "@/plugin/Activation.js";
 import { getWorkboardSnapshotStore } from "@/plugins/workboard/runtime/Store.js";
 import type { WorkboardSnapshotResponse } from "@/plugins/workboard/types/Workboard.js";

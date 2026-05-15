@@ -6,15 +6,15 @@
  * - 这些类型服务于 task 运行链路，统一归档到 `src/types/task/`。
  */
 
-import type { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import type { SessionExecutor } from "@/types/session/SessionExecutor.js";
+import type { SessionHistoryComposerPort } from "@downcity/agent/types/agent/AgentContext.js";
+import type { SessionExecutor } from "@downcity/agent/types/session/SessionExecutor.js";
 import type {
   ShipTaskRunExecutionStatusV1,
   ShipTaskRunProgressPhaseV1,
   ShipTaskRunProgressStatusV1,
   ShipTaskRunResultStatusV1,
   ShipTaskRunStatusV1,
-} from "@services/task/types/Task.js";
+} from "@downcity/agent/services/task/types/Task.js";
 
 /**
  * run-progress.json 的当前快照状态。
@@ -179,9 +179,9 @@ export type TaskSessionRuntimePort = {
    */
   getExecutor(sessionId: string): SessionExecutor;
   /**
-   * 获取指定 sessionId 对应的 JsonlSessionHistoryComposer。
+   * 获取指定 sessionId 对应的 SessionHistoryComposer 持久化端口。
    */
-  getHistoryComposer(sessionId: string): JsonlSessionHistoryComposer;
+  getHistoryComposer(sessionId: string): SessionHistoryComposerPort;
 };
 
 /**

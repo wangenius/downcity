@@ -6,8 +6,8 @@
  * - ChatQueueWorker 主类只保留“何时分发”的决策，不再承载具体发消息细节。
  */
 
-import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { Logger } from "@downcity/agent/shared/utils/logger/Logger.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 import { sendActionByChatKey } from "./ChatkeySend.js";
 import { sendChatTextByChatKey } from "../Action.js";

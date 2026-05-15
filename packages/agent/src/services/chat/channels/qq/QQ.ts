@@ -364,7 +364,11 @@ export class QQBot extends BaseChatChannel {
         await this.sendAuthorizationText({
           chatId,
           chatType,
-          text: this.buildUnauthorizedBlockedText(),
+          text: this.buildUnauthorizedBlockedText({
+            chatId,
+            chatType,
+            userId: actor.userId,
+          }),
         });
       }
       return;

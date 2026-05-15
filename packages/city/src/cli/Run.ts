@@ -23,7 +23,7 @@ import {
   stopServiceScheduleRuntime,
 } from "@downcity/agent";
 import type { StartOptions } from "@/shared/types/Start.js";
-import { logger } from "@shared/utils/logger/Logger.js";
+import { logger } from "@downcity/agent/shared/utils/logger/Logger.js";
 import { CliError } from "@/types/cli/CliError.js";
 
 /**

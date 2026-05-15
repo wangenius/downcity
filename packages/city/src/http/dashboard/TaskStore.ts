@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { getLogsDirPath, getDowncityTasksDirPath } from "@/config/Paths.js";
-import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
+import { resolveTaskIdByTitle } from "@downcity/agent/services/task/runtime/Store.js";
 import type {
   DashboardLogEntry,
   DashboardTaskRunDetail,

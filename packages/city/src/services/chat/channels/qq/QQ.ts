@@ -32,7 +32,7 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@services/chat/channels/BaseChatChannel.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { QQConfig, QQMessageData } from "@/shared/types/QqChannel.js";

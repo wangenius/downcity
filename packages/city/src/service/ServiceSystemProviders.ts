@@ -7,11 +7,11 @@
  * - 这样也能避开 `task -> runner -> prompt system -> service class registry` 的循环依赖。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import { buildChatServiceSystem } from "@services/chat/runtime/ChatServiceSystem.js";
-import { buildContactServiceSystemText } from "@services/contact/runtime/SystemProvider.js";
-import { buildMemoryServiceSystemText } from "@services/memory/runtime/SystemProvider.js";
-import { TASK_SERVICE_PROMPT } from "@services/task/runtime/TaskServiceSystem.js";
+import { buildContactServiceSystemText } from "@downcity/agent/services/contact/runtime/SystemProvider.js";
+import { buildMemoryServiceSystemText } from "@downcity/agent/services/memory/runtime/SystemProvider.js";
+import { TASK_SERVICE_PROMPT } from "@downcity/agent/services/task/runtime/TaskServiceSystem.js";
 
 /**
  * 单个 service 的 system provider。

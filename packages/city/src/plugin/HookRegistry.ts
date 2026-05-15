@@ -12,8 +12,8 @@ import type {
   PluginGuardHook,
   PluginPipelineHook,
   PluginResolveHook,
-} from "@/shared/types/Plugin.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+} from "@downcity/agent/shared/types/Plugin.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 
 type ContextResolver = () => AgentContext;
 type PluginEnabledChecker = (pluginName: string, context: AgentContext) => boolean;

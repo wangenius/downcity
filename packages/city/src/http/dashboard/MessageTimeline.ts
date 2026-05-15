@@ -16,9 +16,9 @@ import {
 import type {
   SessionMessageV1,
   SessionMetadataV1,
-} from "@/types/session/SessionMessages.js";
-import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
-import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
+} from "@downcity/agent/types/session/SessionMessages.js";
+import { pickLastSuccessfulChatSendText } from "@downcity/agent/services/chat/runtime/UserVisibleText.js";
+import { extractToolCallsFromUiMessage } from "@downcity/agent/services/chat/runtime/UIMessageTransformer.js";
 import type { DashboardTimelineEvent, DashboardTimelineRole } from "@/shared/types/DashboardData.js";
 import { truncateText } from "./CommonHelpers.js";
 

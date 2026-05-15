@@ -7,7 +7,7 @@
  * - chat authorization 不再按 agent/projectRoot 隔离；agent 只负责连接 channel account。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,

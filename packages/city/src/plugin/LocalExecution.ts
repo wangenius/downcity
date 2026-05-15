@@ -8,7 +8,7 @@
  */
 
 import path from "node:path";
-import { logger as defaultLogger } from "@shared/utils/logger/Logger.js";
+import { logger as defaultLogger } from "@downcity/agent/shared/utils/logger/Logger.js";
 import { loadAgentEnvSnapshot, loadDowncityConfig, loadGlobalEnvFromStore } from "@downcity/agent";
 import { isPluginEnabled } from "@/plugin/Activation.js";
 import { findBuiltinPlugin, listStaticPluginViews } from "@/plugin/Catalog.js";
@@ -22,7 +22,7 @@ import type {
   PluginAvailability,
   PluginCommandContext,
   PluginView,
-} from "@/shared/types/Plugin.js";
+} from "@downcity/agent/shared/types/Plugin.js";
 
 /**
  * 创建本地 plugin 命令上下文。

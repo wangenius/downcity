@@ -12,25 +12,26 @@ import path from "node:path";
 import os from "node:os";
 import { mkdtemp } from "node:fs/promises";
 import { generateId } from "@shared/utils/Id.js";
-import { getLogger, type Logger } from "@shared/utils/logger/Logger.js";
+import { getLogger, type Logger } from "@downcity/agent/shared/utils/logger/Logger.js";
 import type { ConsoleAgentOption } from "@/shared/types/Console.js";
 import type {
   ConsoleInlineInstantRunInput,
   ConsoleInlineInstantRunResult,
   ConsoleInlineInstantService,
 } from "@/shared/types/InlineInstant.js";
-import { Session } from "@session/Session.js";
-import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
+import { Session } from "@downcity/agent/session/Session.js";
+import { JsonlSessionHistoryComposer } from "@downcity/agent/session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+import { JsonlSessionCompactionComposer } from "@downcity/agent/session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
+import { LocalSessionExecutor } from "@downcity/agent/session/executors/local/LocalSessionExecutor.js";
 import { InlineInstantSystemComposer } from "@/console/InlineInstantSystemComposer.js";
 import { createModel } from "@downcity/agent";
-import { loadStaticSystemPrompts } from "@session/composer/system/default/StaticPromptCatalog.js";
-import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
+import type { Logger as AgentLogger } from "@downcity/agent/shared/utils/logger/Logger.js";
+import { loadStaticSystemPrompts } from "@downcity/agent/session/composer/system/default/StaticPromptCatalog.js";
+import { drainDeferredPersistedUserMessages } from "@downcity/agent/session/SessionRunScope.js";
 import {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
-} from "@services/chat/runtime/UserVisibleText.js";
+} from "@downcity/agent/services/chat/runtime/UserVisibleText.js";
 
 type InlineInstantSessionServiceOptions = {
   /**
@@ -245,7 +246,7 @@ export class InlineInstantSessionService implements ConsoleInlineInstantService 
       createExecutor: (sessionHistoryComposer) =>
         new LocalSessionExecutor({
           model,
-          logger: this.logger,
+          logger: this.logger as unknown as AgentLogger,
           historyComposer: sessionHistoryComposer,
           compactionComposer,
           systemComposer,

@@ -7,7 +7,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import type { Plugin } from "@/shared/types/Plugin.js";
+import type { Plugin } from "@downcity/agent/shared/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type { WebPluginConfig, WebPluginInstallInput } from "@/shared/types/WebPlugin.js";
 import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/shared/types/WebPlugin.js";

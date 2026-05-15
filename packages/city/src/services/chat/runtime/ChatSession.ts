@@ -7,12 +7,12 @@
  * - 外层仍只调用标准 `run(...)`；chat 语义由 ChatSession 内部收敛。
  */
 
-import { Session } from "@session/Session.js";
-import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
+import { Session } from "@downcity/agent/session/Session.js";
+import type { SessionHistoryComposer } from "@downcity/agent/session/composer/history/SessionHistoryComposer.js";
 import type { ChatSessionExecutionComposer } from "@services/chat/runtime/ChatSessionExecutionComposer.js";
-import type { SessionExecutor } from "@/types/session/SessionExecutor.js";
-import type { SessionAssistantStepCallback } from "@/types/session/SessionRun.js";
-import type { SessionRunResult } from "@/types/session/SessionRun.js";
+import type { SessionExecutor } from "@downcity/agent/types/session/SessionExecutor.js";
+import type { SessionAssistantStepCallback } from "@downcity/agent/types/session/SessionRun.js";
+import type { SessionRunResult } from "@downcity/agent/types/session/SessionRun.js";
 import type { ChatSessionTurnState } from "@/types/chat/ChatSession.js";
 
 type ChatSessionOptions = {

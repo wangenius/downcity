@@ -6,7 +6,7 @@
  * - 目的是让 main/service 内部拆分后，仍能共享统一的状态结构。
  */
 
-import type { ServiceState } from "@/shared/types/Service.js";
+import type { ServiceState } from "@downcity/agent/shared/types/Service.js";
 
 /**
  * 单个 service 实例内部持有的状态记录。

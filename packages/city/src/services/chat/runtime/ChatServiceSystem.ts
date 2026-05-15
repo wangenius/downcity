@@ -8,7 +8,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
 import {
   buildCurrentChatEnvironmentPrompt,
   resolveCurrentChatEnvironmentPromptInput,

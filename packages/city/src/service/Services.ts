@@ -6,13 +6,13 @@
  * - 这里只声明“有哪些 service class”，不承载运行态逻辑。
  */
 
-import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
-import type { BaseService } from "@services/BaseService.js";
+import type { AgentRuntime } from "@downcity/agent/types/agent/AgentRuntime.js";
+import type { BaseService } from "@downcity/agent/services/BaseService.js";
 import { ChatService } from "@services/chat/ChatService.js";
-import { TaskService } from "@services/task/TaskService.js";
-import { MemoryService } from "@services/memory/MemoryService.js";
-import { ShellService } from "@services/shell/ShellService.js";
-import { ContactService } from "@services/contact/ContactService.js";
+import { TaskService } from "@downcity/agent/services/task/TaskService.js";
+import { MemoryService } from "@downcity/agent/services/memory/MemoryService.js";
+import { ShellService } from "@downcity/agent/services/shell/ShellService.js";
+import { ContactService } from "@downcity/agent/services/contact/ContactService.js";
 
 /**
  * 单个 service class 构造器。

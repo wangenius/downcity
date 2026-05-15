@@ -10,7 +10,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import type { ServiceActionCommandInput } from "@/shared/types/Service.js";
+import type { ServiceActionCommandInput } from "@downcity/agent/shared/types/Service.js";
 import type {
   ChatConfigureActionPayload,
   ChatDeleteActionPayload,

@@ -7,10 +7,10 @@
  * - CLI / 只读场景也复用这里构造无宿主实例，避免维护第二套静态 definition。
  */
 
-import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
+import type { AgentRuntime } from "@downcity/agent/types/agent/AgentRuntime.js";
 import { SERVICE_CLASSES } from "@/service/Services.js";
-import { BaseService } from "@services/BaseService.js";
-import type { Service } from "@/shared/types/Service.js";
+import { BaseService } from "@downcity/agent/services/BaseService.js";
+import type { Service } from "@downcity/agent/shared/types/Service.js";
 
 let staticServiceInstances: Map<string, BaseService> | null = null;
 

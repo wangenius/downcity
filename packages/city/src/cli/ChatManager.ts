@@ -11,8 +11,8 @@ import prompts from "prompts";
 import type { PromptObject } from "prompts";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { runServiceControlCommand } from "./ServiceCommandRemote.js";
-import { ChatChannelAccountService } from "@services/chat/accounts/ChannelAccountService.js";
-import type { ChatChannelAccountListItem } from "@services/chat/types/ChannelAccount.js";
+import { ChatChannelAccountService } from "@downcity/agent/services/chat/accounts/ChannelAccountService.js";
+import type { ChatChannelAccountListItem } from "@downcity/agent/services/chat/types/ChannelAccount.js";
 import type { StoredChannelAccountChannel } from "@/shared/types/Store.js";
 import type {
   ChatChannelAccountAction,

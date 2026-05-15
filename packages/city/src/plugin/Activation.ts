@@ -6,7 +6,7 @@
  * - plugin 启用态属于 city 级生命周期配置，不再来自 agent `downcity.json`。
  */
 
-import type { Plugin } from "@/shared/types/Plugin.js";
+import type { Plugin } from "@downcity/agent/shared/types/Plugin.js";
 import { isCityPluginEnabled } from "@/plugin/Lifecycle.js";
 
 /**

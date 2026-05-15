@@ -7,9 +7,9 @@
  * - auth plugin 只负责统一暴露扩展点 / action 边界，不改变底层存储模型。
  */
 
-import type { Plugin } from "@/shared/types/Plugin.js";
+import type { Plugin } from "@downcity/agent/shared/types/Plugin.js";
 import type { JsonValue } from "@/shared/types/Json.js";
-import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
+import { CHAT_PLUGIN_POINTS } from "@downcity/agent/services/chat/runtime/PluginPoints.js";
 import {
   AUTH_ACTIONS,
   type AuthObservePrincipalPayload,
@@ -32,7 +32,7 @@ import {
   readAuthorizationSnapshot,
   recordObservedAuthorizationPrincipal,
 } from "@/plugins/auth/runtime/AuthorizationStore.js";
-import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import type { ChatDispatchChannel } from "@downcity/agent/services/chat/types/ChatDispatcher.js";
 
 function toChannel(value: unknown): ChatDispatchChannel | null {
   const text = String(value || "").trim().toLowerCase();

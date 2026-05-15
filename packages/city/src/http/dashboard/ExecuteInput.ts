@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { getCacheDirPath } from "@/config/Paths.js";
-import { renderChatMessageFileTag } from "@services/chat/runtime/ChatMessageMarkup.js";
+import { renderChatMessageFileTag } from "@downcity/agent/services/chat/runtime/ChatMessageMarkup.js";
 import type {
   DashboardSessionExecuteAttachmentInput,
   DashboardSessionExecuteAttachmentType,

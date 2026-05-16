@@ -22,7 +22,7 @@ import type {
   AgentHistoryCleanResult,
 } from "@/types/cli/AgentHistory.js";
 import { emitCliBlock } from "./CliReporter.js";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 
 function normalizeText(input: unknown): string {
   return String(input || "").trim();

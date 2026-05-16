@@ -29,6 +29,18 @@
     "./service/*.js": {
       "import": "./bin/service/*.js",
       "types": "./bin/service/*.d.ts"
+    },
+    "./plugin/*.js": {
+      "import": "./bin/plugin/*.js",
+      "types": "./bin/plugin/*.d.ts"
+    },
+    "./plugins/*.js": {
+      "import": "./bin/plugins/*.js",
+      "types": "./bin/plugins/*.d.ts"
+    },
+    "./runtime/*.js": {
+      "import": "./bin/runtime/*.js",
+      "types": "./bin/runtime/*.d.ts"
     }
   },
   "scripts": {

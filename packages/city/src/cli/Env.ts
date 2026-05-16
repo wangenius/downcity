@@ -8,10 +8,10 @@
  */
 
 import type { Command } from "commander";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
-import type { StoredEnvEntry, StoredEnvScope } from "@/shared/types/Store.js";
+import { ConsoleStore } from "@/store/index.js";
+import type { StoredEnvEntry, StoredEnvScope } from "@/types/store/Store.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean } from "./IndexSupport.js";
 
 /**

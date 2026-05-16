@@ -11,7 +11,7 @@ import path from "node:path";
 import fs from "fs-extra";
 import prompts from "prompts";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { ConsoleStore } from "@/store/index.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { CliError } from "@/types/cli/CliError.js";
 import { resolveAgentName } from "./IndexSupport.js";

@@ -13,7 +13,7 @@ import { renderChatMessageFileTag } from "@downcity/agent/services/chat/runtime/
 import type {
   DashboardSessionExecuteAttachmentInput,
   DashboardSessionExecuteAttachmentType,
-} from "@/shared/types/DashboardSessionExecute.js";
+} from "@downcity/agent/shared/types/DashboardSessionExecute.js";
 
 const EXECUTE_ATTACHMENT_MAX_COUNT = 8;
 const EXECUTE_ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024;

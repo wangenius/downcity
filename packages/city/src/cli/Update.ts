@@ -13,7 +13,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "url";
 import { emitCliBlock } from "./CliReporter.js";
 import { CliError } from "@/types/cli/CliError.js";
-import { runWithSpinner } from "@shared/utils/cli/Spinner.js";
+import { runWithSpinner } from "@/utils/cli/Spinner.js";
 
 export type UpdateManager = "npm" | "pnpm";
 

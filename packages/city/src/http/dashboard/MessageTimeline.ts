@@ -19,7 +19,7 @@ import type {
 } from "@downcity/agent/types/session/SessionMessages.js";
 import { pickLastSuccessfulChatSendText } from "@downcity/agent/services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@downcity/agent/services/chat/runtime/UIMessageTransformer.js";
-import type { DashboardTimelineEvent, DashboardTimelineRole } from "@/shared/types/DashboardData.js";
+import type { DashboardTimelineEvent, DashboardTimelineRole } from "@downcity/agent/shared/types/DashboardData.js";
 import { truncateText } from "./CommonHelpers.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;

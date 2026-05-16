@@ -7,9 +7,9 @@
  */
 
 import type { Command } from "commander";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
-import { ServiceScheduleStore } from "@/service/schedule/Store.js";
-import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
+import { ServiceScheduleStore } from "@downcity/agent/service/schedule/Store.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
+import type { ServiceCliBaseOptions } from "@downcity/agent/shared/types/Services.js";
 import {
   addServiceScheduleOptions,
   normalizeScheduledJobStatus,

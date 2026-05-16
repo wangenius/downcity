@@ -9,7 +9,7 @@
 import {
   getConsoleRuntimeStatus,
 } from "./Console.js";
-import type { ConsoleAgentProcessView } from "@/shared/types/Console.js";
+import type { ConsoleAgentProcessView } from "@downcity/agent/shared/types/Console.js";
 import {
   getConsoleAgentRegistryPath,
   getCityPidPath,

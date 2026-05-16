@@ -8,7 +8,7 @@
 
 import dotenv from "dotenv";
 import type { Hono } from "hono";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { ConsoleStore } from "@/store/index.js";
 
 type EnvScope = "global" | "agent";
 

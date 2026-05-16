@@ -9,7 +9,7 @@
 import net from "node:net";
 import { nanoid } from "nanoid";
 import type { DaemonJsonApiCallParams, DaemonJsonApiCallResult } from "@/daemon/Api.js";
-import type { LocalRpcRequest, LocalRpcResponse } from "@/shared/types/LocalRpc.js";
+import type { LocalRpcRequest, LocalRpcResponse } from "@downcity/agent/shared/types/LocalRpc.js";
 import { getLocalRpcEndpoint } from "./Paths.js";
 
 const LOCAL_RPC_TIMEOUT_MS = 5_000;

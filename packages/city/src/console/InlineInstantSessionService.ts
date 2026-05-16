@@ -11,14 +11,14 @@ import fs from "fs-extra";
 import path from "node:path";
 import os from "node:os";
 import { mkdtemp } from "node:fs/promises";
-import { generateId } from "@shared/utils/Id.js";
+import { generateId } from "@/utils/Id.js";
 import { getLogger, type Logger } from "@downcity/agent/shared/utils/logger/Logger.js";
-import type { ConsoleAgentOption } from "@/shared/types/Console.js";
+import type { ConsoleAgentOption } from "@downcity/agent/shared/types/Console.js";
 import type {
   ConsoleInlineInstantRunInput,
   ConsoleInlineInstantRunResult,
   ConsoleInlineInstantService,
-} from "@/shared/types/InlineInstant.js";
+} from "@downcity/agent/shared/types/InlineInstant.js";
 import { Session } from "@downcity/agent/session/Session.js";
 import { JsonlSessionHistoryComposer } from "@downcity/agent/session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@downcity/agent/session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";

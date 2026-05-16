@@ -27,7 +27,7 @@ import { createConsoleGateway } from "@/console/ConsoleGateway.js";
 import type {
   ConsoleRuntimeMeta,
   ConsoleRuntimeStatus,
-} from "@/shared/types/Console.js";
+} from "@downcity/agent/shared/types/Console.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { CliError } from "@/types/cli/CliError.js";
 import { buildConsolePortFacts } from "./PortHints.js";

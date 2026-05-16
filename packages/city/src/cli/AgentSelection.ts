@@ -12,7 +12,7 @@ import { resolve } from "path";
 import prompts from "prompts";
 import { getDowncityJsonPath, getProfileMdPath } from "@/config/Paths.js";
 import { listConsoleAgents } from "@/registry/CityRegistry.js";
-import type { ConsoleAgentRegistryEntry } from "@/shared/types/Console.js";
+import type { ConsoleAgentRegistryEntry } from "@downcity/agent/shared/types/Console.js";
 import type {
   CliAgentPromptChoice,
   CliRegisteredAgentView,
@@ -20,7 +20,7 @@ import type {
   ResolveCliAgentStartTargetDecisionInput,
 } from "@/types/cli/AgentSelection.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { CliError } from "@/types/cli/CliError.js";
 import { resolveAgentName } from "./IndexSupport.js";
 import { resolveRunningConsoleAgents } from "./IndexConsoleProcess.js";

@@ -10,10 +10,10 @@
 import type { Command } from "commander";
 import { spawnSync } from "node:child_process";
 import prompts from "prompts";
-import type { AuthIssuedToken, AuthTokenSummary } from "@/shared/types/auth/AuthToken.js";
+import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent/shared/types/auth/AuthToken.js";
 import { AuthService } from "@/http/auth/AuthService.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 
 
 

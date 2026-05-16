@@ -7,7 +7,7 @@
  * - 写入 Console Env 后，后续 agent daemon 启动会通过 `context.globalEnv` 读取到该值。
  */
 
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { ConsoleStore } from "@/store/index.js";
 import type {
   CityPublicHostEnvEntry,
   CityPublicHostEnvResult,

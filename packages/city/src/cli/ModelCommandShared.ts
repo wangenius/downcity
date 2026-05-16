@@ -6,10 +6,10 @@
  * - 保持 `Model.ts` 只负责命令装配，不再承载具体业务实现。
  */
 
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { ModelManager, type ModelPreset } from "@/model/ModelManager.js";
-import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import type { LlmProviderType } from "@downcity/agent/shared/types/LlmConfig.js";
+import { ConsoleStore } from "@/store/index.js";
 
 const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [
   "anthropic",

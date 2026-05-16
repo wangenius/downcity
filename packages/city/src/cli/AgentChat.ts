@@ -17,8 +17,8 @@ import {
   runWithSpinner,
   shouldRenderSpinner,
   type Spinner,
-} from "@shared/utils/cli/Spinner.js";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+} from "@/utils/cli/Spinner.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import {
   resolveProjectRootByAgentName,
   validateAgentProjectRoot,

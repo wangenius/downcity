@@ -10,7 +10,7 @@
 import prompts from "prompts";
 import { generateText } from "ai";
 import { createModel } from "@downcity/agent";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { ConsoleStore } from "@/store/index.js";
 import { toSafeProviderView } from "./ModelCommandShared.js";
 import {
   discoverProviderModels,

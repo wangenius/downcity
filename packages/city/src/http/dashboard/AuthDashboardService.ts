@@ -8,19 +8,19 @@
  */
 
 import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
-import type { JsonObject } from "@/shared/types/Json.js";
-import type { AuthDashboardPayload } from "@/shared/types/AuthDashboard.js";
+import type { JsonObject } from "@downcity/agent/shared/types/Json.js";
+import type { AuthDashboardPayload } from "@downcity/agent/shared/types/AuthDashboard.js";
 import type {
   AuthSetUserRolePayload,
   AuthWriteConfigPayload,
   ChatAuthorizationConfig,
   ChatAuthorizationSnapshot,
-} from "@/shared/types/AuthPlugin.js";
+} from "@downcity/agent/shared/types/AuthPlugin.js";
 import {
   AUTH_ACTIONS,
   AUTH_PLUGIN_NAME,
   CHAT_AUTHORIZATION_CATALOG,
-} from "@/shared/types/AuthPlugin.js";
+} from "@downcity/agent/shared/types/AuthPlugin.js";
 
 function toRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};

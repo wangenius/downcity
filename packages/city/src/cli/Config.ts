@@ -11,11 +11,11 @@ import path from "node:path";
 import fs from "fs-extra";
 import type { Command } from "commander";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { aliasCommand } from "./Alias.js";
 import { parseBoolean } from "./IndexSupport.js";
 import { resolveProjectRoot } from "./ServiceCommandSupport.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
+import type { DowncityConfig } from "@downcity/agent/shared/types/DowncityConfig.js";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

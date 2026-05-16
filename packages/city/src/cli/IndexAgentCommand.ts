@@ -22,9 +22,9 @@ import { agentResetCommand } from "./AgentReset.js";
 import { runCommand } from "./Run.js";
 import { startCommand } from "./Start.js";
 import { statusCommand } from "./Status.js";
-import type { StartOptions } from "@/shared/types/Start.js";
+import type { StartOptions } from "@downcity/agent/shared/types/Start.js";
 import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "./IndexSupport.js";
-import { runWithSpinner } from "@shared/utils/cli/Spinner.js";
+import { runWithSpinner } from "@/utils/cli/Spinner.js";
 import { emitCliBlock } from "./CliReporter.js";
 import {
   cleanupStaleDaemonFiles,

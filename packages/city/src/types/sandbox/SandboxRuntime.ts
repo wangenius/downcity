@@ -8,8 +8,8 @@
  */
 
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import type { SandboxConfig } from "@/shared/types/Sandbox.js";
-import type { SandboxNetworkMode } from "@/shared/types/Sandbox.js";
+import type { SandboxConfig } from "@downcity/agent/shared/types/Sandbox.js";
+import type { SandboxNetworkMode } from "@downcity/agent/shared/types/Sandbox.js";
 
 /**
  * sandbox 会话状态。

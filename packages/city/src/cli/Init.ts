@@ -21,8 +21,8 @@ import {
   listConsoleModelChoices,
   normalizeDefaultAgentName,
 } from "@downcity/agent";
-import type { AgentProjectChannel } from "@/shared/types/AgentProject.js";
-import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
+import type { AgentProjectChannel } from "@downcity/agent/shared/types/AgentProject.js";
+import type { ExecutionBindingConfig } from "@downcity/agent/shared/types/ExecutionBinding.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { CliError } from "@/types/cli/CliError.js";
 

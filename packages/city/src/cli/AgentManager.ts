@@ -25,10 +25,10 @@ import { injectAgentContext } from "./IndexSupport.js";
 import { prepareForegroundAgent } from "./IndexConsoleCommand.js";
 import { CliError } from "@/types/cli/CliError.js";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
-import type { StartOptions } from "@/shared/types/Start.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
-import type { StoredChannelAccount, StoredChannelAccountChannel } from "@/shared/types/Store.js";
+import { ConsoleStore } from "@/store/index.js";
+import type { StartOptions } from "@downcity/agent/shared/types/Start.js";
+import type { DowncityConfig } from "@downcity/agent/shared/types/DowncityConfig.js";
+import type { StoredChannelAccount, StoredChannelAccountChannel } from "@/types/store/Store.js";
 import type {
   AgentManagerAgentAction,
   AgentManagerAgentSummary,

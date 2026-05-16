@@ -13,7 +13,7 @@ import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { runServiceControlCommand } from "./ServiceCommandRemote.js";
 import { ChatChannelAccountService } from "@downcity/agent/services/chat/accounts/ChannelAccountService.js";
 import type { ChatChannelAccountListItem } from "@downcity/agent/services/chat/types/ChannelAccount.js";
-import type { StoredChannelAccountChannel } from "@/shared/types/Store.js";
+import type { StoredChannelAccountChannel } from "@/types/store/Store.js";
 import type {
   ChatChannelAccountAction,
   ChatManagerRootAction,

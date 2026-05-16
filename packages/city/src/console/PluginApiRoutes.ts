@@ -11,11 +11,11 @@ import type { Hono } from "hono";
 import {
   findBuiltinPlugin,
   listStaticPluginViews,
-} from "@/plugin/Catalog.js";
-import { runLocalPluginAction } from "@/plugin/LocalExecution.js";
-import { isPluginEnabled } from "@/plugin/Activation.js";
-import { setCityPluginEnabled } from "@/plugin/Lifecycle.js";
-import type { ConsoleAgentOption } from "@/shared/types/Console.js";
+} from "@downcity/agent/plugin/Catalog.js";
+import { runLocalPluginAction } from "@downcity/agent/plugin/LocalExecution.js";
+import { isPluginEnabled } from "@downcity/agent/plugin/Activation.js";
+import { setCityPluginEnabled } from "@downcity/agent/plugin/Lifecycle.js";
+import type { ConsoleAgentOption } from "@downcity/agent/shared/types/Console.js";
 import type {
   PluginActionResult,
   PluginAvailability,
@@ -23,7 +23,7 @@ import type {
   PluginUsageDefinition,
   PluginView,
 } from "@downcity/agent/shared/types/Plugin.js";
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { JsonValue } from "@downcity/agent/shared/types/Json.js";
 
 type PluginActionConfigItem = {
   name: string;

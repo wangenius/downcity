@@ -14,7 +14,7 @@ import {
   getDowncitySessionRootDirPath,
 } from "@/config/Paths.js";
 import { readChatMetaBySessionId } from "@downcity/agent/services/chat/runtime/ChatMetaStore.js";
-import type { DashboardSessionSummary } from "@/shared/types/DashboardData.js";
+import type { DashboardSessionSummary } from "@downcity/agent/shared/types/DashboardData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
 

@@ -11,29 +11,29 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { nanoid } from "nanoid";
-import { getConsoleShipDbPath } from "@/runtime/CityPaths.js";
-import type { AuthIssuedToken, AuthTokenSummary } from "@/shared/types/auth/AuthToken.js";
+import { getConsoleShipDbPath } from "@/registry/CityPaths.js";
+import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent/shared/types/auth/AuthToken.js";
 import {
   AUTH_DEFAULT_ROLES,
   AUTH_PERMISSION_DESCRIPTIONS,
   AUTH_PERMISSION_KEYS,
   type AuthDefaultRoleName,
   type AuthPermissionKey,
-} from "@/shared/types/auth/AuthPermission.js";
+} from "@downcity/agent/shared/types/auth/AuthPermission.js";
 import type {
   AuthAuditLog,
   AuthPermission,
   AuthRole,
   AuthTokenRecord,
   AuthUser,
-} from "@/shared/types/auth/AuthTypes.js";
-import { ensureConsoleStoreSchema } from "@/shared/utils/store/StoreSchema.js";
+} from "@downcity/agent/shared/types/auth/AuthTypes.js";
+import { ensureConsoleStoreSchema } from "@/store/StoreSchema.js";
 import {
   nowIso,
   normalizeNonEmptyText,
   optionalTrimmedText,
   type ConsoleStoreContext,
-} from "@/shared/utils/store/StoreShared.js";
+} from "@/store/StoreShared.js";
 
 /**
  * AuthStore 构造参数。

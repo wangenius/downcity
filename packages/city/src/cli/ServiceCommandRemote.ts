@@ -7,14 +7,14 @@
  */
 
 import { callAgentTransport } from "@downcity/agent";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import type {
   ServiceCliBaseOptions,
   ServiceCommandResponse,
   ServiceControlAction,
   ServiceControlResponse,
   ServiceListResponse,
-} from "@/shared/types/Services.js";
+} from "@downcity/agent/shared/types/Services.js";
 import {
   parseCommandPayload,
   resolveServiceProjectRoot,

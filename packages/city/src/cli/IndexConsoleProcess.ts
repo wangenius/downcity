@@ -23,7 +23,7 @@ import {
   listConsoleAgents,
   markConsoleAgentStopped,
 } from "@/registry/CityRegistry.js";
-import type { ConsoleAgentProcessView } from "@/shared/types/Console.js";
+import type { ConsoleAgentProcessView } from "@downcity/agent/shared/types/Console.js";
 import {
   getCityLogPath,
   getCityPidPath,
@@ -39,7 +39,7 @@ import {
   sweepDetachedCityProcesses,
 } from "@/registry/ProcessSweep.js";
 import { startCommand } from "./Start.js";
-import type { StartOptions } from "@/shared/types/Start.js";
+import type { StartOptions } from "@downcity/agent/shared/types/Start.js";
 import {
   injectAgentContext,
   resolveAgentName,
@@ -49,7 +49,7 @@ import { buildRuntimePortFacts } from "./PortHints.js";
 import { stopConsoleCommand } from "./Console.js";
 import { ensureConsoleAuthBootstrap } from "./ConsoleAuthBootstrap.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { runWithSpinner } from "@shared/utils/cli/Spinner.js";
+import { runWithSpinner } from "@/utils/cli/Spinner.js";
 import { CliError } from "@/types/cli/CliError.js";
 import { ensureCityPublicHostEnv } from "./PublicHostEnv.js";
 

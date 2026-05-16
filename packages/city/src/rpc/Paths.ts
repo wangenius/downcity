@@ -10,7 +10,7 @@
 
 import crypto from "node:crypto";
 import path from "node:path";
-import { getCityRuntimeDirPath } from "@/runtime/CityPaths.js";
+import { getCityRuntimeDirPath } from "@/registry/CityPaths.js";
 
 function buildProjectDigest(projectRoot: string): string {
   return crypto

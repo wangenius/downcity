@@ -8,15 +8,15 @@
  */
 
 import type { Command } from "commander";
-import { listRegisteredServices } from "@/service/ServiceClassRegistry.js";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { listRegisteredServices } from "@downcity/agent/service/ServiceClassRegistry.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import type { Service } from "@downcity/agent/shared/types/Service.js";
 import {
   runServiceCommandBridge,
   runServiceControlCommand,
 } from "./ServiceCommandRemote.js";
 import { registerServiceScheduleCommands } from "./ServiceScheduleCommand.js";
-import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
+import type { ServiceCliBaseOptions } from "@downcity/agent/shared/types/Services.js";
 import { parseBoolean, parsePort } from "./IndexSupport.js";
 
 function toStaticServiceView(service: Service): {

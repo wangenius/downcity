@@ -6,7 +6,7 @@
  * - 底层委托给 model/ModelManager，命令层只关心交互与配置生成需要的数据形状。
  */
 
-import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
+import type { LlmProviderType } from "@downcity/agent/shared/types/LlmConfig.js";
 import {
   ModelManager,
   type ModelPreset,

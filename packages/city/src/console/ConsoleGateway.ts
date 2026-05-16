@@ -47,15 +47,15 @@ import type {
   ConsoleConfigStatusResponse,
   ConsoleAgentDirectoryInspection,
   ConsoleLocalModelsResponse,
-} from "@/shared/types/Console.js";
-import type { AgentProjectInitializationResult } from "@/shared/types/AgentProject.js";
+} from "@downcity/agent/shared/types/Console.js";
+import type { AgentProjectInitializationResult } from "@downcity/agent/shared/types/AgentProject.js";
 import { AuthService } from "@/http/auth/AuthService.js";
 import { registerAuthRoutes } from "@/http/auth/AuthRoutes.js";
 import {
   CONSOLE_AUTH_ROUTE_POLICIES,
   createRouteAuthGuardMiddleware,
 } from "@/http/auth/RoutePolicy.js";
-import { listBuiltinPluginRuntimeAuthPolicies } from "@/plugin/HttpRoutes.js";
+import { listBuiltinPluginRuntimeAuthPolicies } from "@downcity/agent/plugin/HttpRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -2,11 +2,12 @@
  * `city chat auth` CLI 辅助模块。
  *
  * 关键点（中文）
- * - chat authorization 属于 city 全局 chat service 策略。
+ * - chat authorization 现在按 agent projectRoot 隔离存储。
  * - 授权主体使用 `<platform>:<platformUserId>`，例如 `telegram:12345678`。
  * - 管理员执行 `city chat auth set telegram:12345678` 后交互式选择 role。
  */
 
+import path from "node:path";
 import prompts from "prompts";
 import type { Command } from "commander";
 import { emitCliBlock } from "./CliReporter.js";
@@ -15,19 +16,23 @@ import {
   listChatAuthorizationRoles,
   readChatAuthorizationConfigSync,
   setChatAuthorizationUserRole,
-} from "@/plugins/auth/runtime/AuthorizationConfig.js";
-import { resolveAuthorizedUserRole } from "@/plugins/auth/runtime/AuthorizationPolicy.js";
+} from "@downcity/agent/plugins/auth/runtime/AuthorizationConfig.js";
+import { resolveAuthorizedUserRole } from "@downcity/agent/plugins/auth/runtime/AuthorizationPolicy.js";
 import {
   isChatAuthorizationChannel,
   type ChatAuthorizationChannel,
   type ChatAuthorizationRole,
-} from "@/shared/types/AuthPlugin.js";
+} from "@downcity/agent/shared/types/AuthPlugin.js";
 
 type ChatAuthSetOptions = {
   /**
    * 非交互式直接指定 roleId。
    */
   role?: string;
+  /**
+   * 目标 agent 项目根目录。
+   */
+  path?: string;
   /**
    * 是否以 JSON 输出。
    */
@@ -44,6 +49,10 @@ type ParsedPrincipal = {
    */
   userId: string;
 };
+
+function resolveChatAuthProjectRoot(pathInput?: string): string {
+  return path.resolve(String(pathInput || "."));
+}
 
 function parsePrincipal(principalInput: string): ParsedPrincipal {
   const principal = String(principalInput || "").trim();
@@ -98,12 +107,14 @@ export async function runChatAuthSet(params: {
   options?: ChatAuthSetOptions;
 }): Promise<void> {
   const principal = parsePrincipal(params.principal);
-  const config = readChatAuthorizationConfigSync();
+  const projectRoot = resolveChatAuthProjectRoot(params.options?.path);
+  const config = readChatAuthorizationConfigSync(projectRoot);
   const roles = listChatAuthorizationRoles({ config });
   const currentRole = resolveAuthorizedUserRole({
     channel: principal.channel,
     userId: principal.userId,
     authorizationConfig: config,
+    rootPath: projectRoot,
   });
 
   let nextRole: ChatAuthorizationRole | null = null;
@@ -118,7 +129,8 @@ export async function runChatAuthSet(params: {
       facts: [
         { label: "Principal", value: `${principal.channel}:${principal.userId}` },
         { label: "Current role", value: currentRole?.roleId || "default" },
-        { label: "Scope", value: "city" },
+        { label: "Scope", value: "agent project" },
+        { label: "Project", value: projectRoot },
       ],
     });
     nextRole = await chooseRole({
@@ -130,6 +142,9 @@ export async function runChatAuthSet(params: {
   if (!nextRole) return;
 
   await setChatAuthorizationUserRole({
+    context: {
+      rootPath: projectRoot,
+    },
     channel: principal.channel,
     userId: principal.userId,
     roleId: nextRole.roleId,
@@ -141,7 +156,8 @@ export async function runChatAuthSet(params: {
     summary: `${principal.channel}:${principal.userId} -> ${nextRole.roleId}`,
     facts: [
       { label: "Role", value: nextRole.name },
-      { label: "Scope", value: "city" },
+      { label: "Scope", value: "agent project" },
+      { label: "Project", value: projectRoot },
     ],
   });
 }
@@ -169,12 +185,13 @@ export async function runInteractiveChatAuthSetFlow(options?: ChatAuthSetOptions
 export function registerChatAuthCommands(chat: Command): void {
   const auth = chat
     .command("auth")
-    .description("管理 city 全局 chat authorization")
+    .description("管理当前 agent 项目的 chat authorization")
     .helpOption("--help", "display help for command");
 
   auth
     .command("set <principal>")
-    .description("给授权主体设置角色，例如：city chat auth set telegram:12345678")
+    .description("给授权主体设置角色，例如：city chat auth set telegram:12345678 --path .")
+    .option("--path <path>", "agent 项目根目录（默认当前目录）", ".")
     .option("--role <roleId>", "直接指定 roleId；不传则交互式选择")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, false)
     .action(async (principal: string, options: ChatAuthSetOptions) => {

@@ -13,12 +13,12 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import { DOWNCITY_JSON_SCHEMA } from "@/shared/constants/DowncitySchema.js";
-import { saveJson } from "@/shared/utils/storage/index.js";
+import { DOWNCITY_JSON_SCHEMA } from "@/constants/DowncitySchema.js";
+import { saveJson } from "@/utils/storage.js";
 import {
   getConsoleRootDirPath,
 } from "@/registry/CityPaths.js";
-import { ConsoleStore } from "@shared/utils/store/index.js";
+import { ConsoleStore } from "@/store/index.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 
 /**

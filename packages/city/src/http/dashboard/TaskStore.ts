@@ -14,7 +14,7 @@ import type {
   DashboardLogEntry,
   DashboardTaskRunDetail,
   DashboardTaskRunSummary,
-} from "@/shared/types/DashboardData.js";
+} from "@downcity/agent/shared/types/DashboardData.js";
 import { truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, toUiMessageTimeline } from "./MessageTimeline.js";
 

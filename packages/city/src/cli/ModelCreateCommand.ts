@@ -9,8 +9,8 @@
 
 import prompts from "prompts";
 import type { Command } from "commander";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
-import { printResult } from "@shared/utils/cli/CliOutput.js";
+import { ConsoleStore } from "@/store/index.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import {
   discoverProviderModels,
   type ProviderDiscoveryResult,

@@ -28,11 +28,11 @@ import {
   getDowncityJsonPath,
 } from "@/config/Paths.js";
 import { stripInvocationAuthEnv } from "@/http/auth/AuthEnv.js";
-import type { ConsoleAgentOption } from "@/shared/types/Console.js";
-import type { AgentProjectInitializationResult } from "@/shared/types/AgentProject.js";
+import type { ConsoleAgentOption } from "@downcity/agent/shared/types/Console.js";
+import type { AgentProjectInitializationResult } from "@downcity/agent/shared/types/AgentProject.js";
 import type {
   ExecutionBindingConfig,
-} from "@/shared/types/ExecutionBinding.js";
+} from "@downcity/agent/shared/types/ExecutionBinding.js";
 
 function resolveExecutionInput(params: {
   modelId?: unknown;

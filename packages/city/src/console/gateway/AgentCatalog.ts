@@ -32,14 +32,14 @@ import type {
   ConsoleConfigStatusResponse,
   ConsoleAgentDirectoryInspection,
   ConsoleLocalModelsResponse,
-} from "@/shared/types/Console.js";
+} from "@downcity/agent/shared/types/Console.js";
 import type {
   ConsoleChatChannelStatus,
   ConsoleDaemonMeta,
   ConsoleShipJson,
-} from "@/shared/types/ConsoleGateway.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
-import { ConsoleStore } from "@shared/utils/store/index.js";
+} from "@downcity/agent/shared/types/ConsoleGateway.js";
+import type { DowncityConfig } from "@downcity/agent/shared/types/DowncityConfig.js";
+import { ConsoleStore } from "@/store/index.js";
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 const DEFAULT_RUNTIME_PORT = 5314;
 

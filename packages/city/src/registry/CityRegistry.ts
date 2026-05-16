@@ -12,7 +12,7 @@ import path from "node:path";
 import type {
   ConsoleAgentRegistryEntry,
   ConsoleAgentRegistryV1,
-} from "@/shared/types/Console.js";
+} from "@downcity/agent/shared/types/Console.js";
 import { getConsoleAgentRegistryPath, getCityRuntimeDirPath } from "./CityPaths.js";
 import { isCityRunning } from "./CityRuntime.js";
 

@@ -8,7 +8,7 @@
  */
 
 import type { AgentContext } from "@downcity/agent/types/agent/AgentContext.js";
-import { buildChatServiceSystem } from "@services/chat/runtime/ChatServiceSystem.js";
+import { buildChatServiceSystem } from "@downcity/agent/services/chat/runtime/ChatServiceSystem.js";
 import { buildContactServiceSystemText } from "@downcity/agent/services/contact/runtime/SystemProvider.js";
 import { buildMemoryServiceSystemText } from "@downcity/agent/services/memory/runtime/SystemProvider.js";
 import { TASK_SERVICE_PROMPT } from "@downcity/agent/services/task/runtime/TaskServiceSystem.js";

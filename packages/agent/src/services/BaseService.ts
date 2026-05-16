@@ -43,9 +43,9 @@ export abstract class BaseService implements Service {
    * - 允许为空，仅用于静态装配与无宿主测试场景。
    * - 真正运行中的 service 实例应始终绑定一个 agent。
    */
-  protected readonly agent: AgentRuntime | null;
+  protected agent: AgentRuntime | null;
 
-  constructor(agent: AgentRuntime | null) {
+  constructor(agent: AgentRuntime | null = null) {
     this.agent = agent;
   }
 
@@ -68,6 +68,18 @@ export abstract class BaseService implements Service {
    * 可选的 service 生命周期定义。
    */
   lifecycle?: ServiceLifecycle;
+
+  /**
+   * 绑定当前 service 所属的 agent 宿主。
+   *
+   * 关键点（中文）
+   * - SDK `new Agent({ services: [...] })` 会在装配阶段调用这里完成后绑定。
+   * - 若 service 已在构造阶段绑定过宿主，则这里允许覆盖到新的宿主实例。
+   */
+  bindAgent(agent: AgentRuntime | null): this {
+    this.agent = agent;
+    return this;
+  }
 
   /**
    * 读取绑定的 agent 宿主。

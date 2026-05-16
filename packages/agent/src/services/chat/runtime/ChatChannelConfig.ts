@@ -24,6 +24,7 @@ import {
 } from "@services/chat/channels/ConfigurationRegistry.js";
 import {
   getChatChannelBot,
+  isChatChannelEnabled,
   isChannelAccountConfigured,
   resolveChannelAccount,
   resolveChannelAccountId,
@@ -48,26 +49,22 @@ export function buildChatChannelConfigSummary(
   const account = accountInput ?? resolveChannelAccount(context, channel);
   const channelAccountId = resolveChannelAccountId(context, channel);
   const configured = isChannelAccountConfigured(channel, account);
-  const channels = context.config.services?.chat?.channels;
   if (channel === "telegram") {
-    const cfg = channels?.telegram;
     return {
-      enabled: cfg?.enabled === true,
+      enabled: isChatChannelEnabled(context, channel),
       channelAccountId: channelAccountId || null,
       channelAccountConfigured: configured,
     };
   }
   if (channel === "feishu") {
-    const cfg = channels?.feishu;
     return {
-      enabled: cfg?.enabled === true,
+      enabled: isChatChannelEnabled(context, channel),
       channelAccountId: channelAccountId || null,
       channelAccountConfigured: configured,
     };
   }
-  const cfg = channels?.qq;
   return {
-    enabled: cfg?.enabled === true,
+    enabled: isChatChannelEnabled(context, channel),
     channelAccountId: channelAccountId || null,
     channelAccountConfigured: configured,
   };
@@ -81,8 +78,7 @@ export function getChatChannelStatus(
   context: AgentContext,
   channel: ChatChannelName,
 ): ChatChannelStateSnapshot {
-  const channels = context.config.services?.chat?.channels || {};
-  const enabled = channels[channel]?.enabled === true;
+  const enabled = isChatChannelEnabled(context, channel);
   const channelAccount = resolveChannelAccount(context, channel);
   const configured = isChannelAccountConfigured(channel, channelAccount);
 

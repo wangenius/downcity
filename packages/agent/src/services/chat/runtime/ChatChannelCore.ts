@@ -15,6 +15,24 @@ import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
+type ChatServiceRuntimeBindings = {
+  getChannelAccountId?(context: AgentContext, channel: ChatChannelName): string;
+  resolveChannelAccount?(
+    context: AgentContext,
+    channel: ChatChannelName,
+  ): StoredChannelAccount | null;
+  isChannelEnabled?(context: AgentContext, channel: ChatChannelName): boolean;
+};
+
+function resolveChatServiceBindings(
+  context: AgentContext,
+): ChatServiceRuntimeBindings | null {
+  const candidate = context.agent?.services?.get?.("chat") as
+    | ChatServiceRuntimeBindings
+    | undefined;
+  return candidate || null;
+}
+
 /**
  * 创建 chat 渠道状态对象。
  */
@@ -57,6 +75,9 @@ export function resolveChannelAccountId(
   context: AgentContext,
   channel: ChatChannelName,
 ): string {
+  const service = resolveChatServiceBindings(context);
+  const explicit = String(service?.getChannelAccountId?.(context, channel) || "").trim();
+  if (explicit) return explicit;
   const config = context.config.services?.chat?.channels?.[channel] as
     | { channelAccountId?: unknown }
     | undefined;
@@ -70,6 +91,9 @@ export function resolveChannelAccount(
   context: AgentContext,
   channel: ChatChannelName,
 ): StoredChannelAccount | null {
+  const service = resolveChatServiceBindings(context);
+  const explicit = service?.resolveChannelAccount?.(context, channel);
+  if (explicit) return explicit;
   const channelAccountId = resolveChannelAccountId(context, channel);
   if (!channelAccountId) return null;
   const store = new ConsoleStore();
@@ -97,6 +121,20 @@ export function isChannelAccountConfigured(
     return !!String(account.botToken || "").trim();
   }
   return !!String(account.appId || "").trim() && !!String(account.appSecret || "").trim();
+}
+
+/**
+ * 判断指定渠道当前是否启用。
+ */
+export function isChatChannelEnabled(
+  context: AgentContext,
+  channel: ChatChannelName,
+): boolean {
+  const service = resolveChatServiceBindings(context);
+  if (typeof service?.isChannelEnabled === "function") {
+    return service.isChannelEnabled(context, channel);
+  }
+  return context.config.services?.chat?.channels?.[channel]?.enabled === true;
 }
 
 /**

@@ -18,7 +18,7 @@ pnpm add @downcity/agent
 
 ## 本地 Agent
 
-当你的应用与 Agent 运行在同一进程，并且可以直接注入 tools 与 model 时，使用 `new Agent(...)`。
+当你的应用与 Agent 运行在同一进程，并且可以直接注入 tools、service 与 model 时，使用 `new Agent(...)`。
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -45,6 +45,30 @@ const result = await session.run({
 
 console.log(result.text);
 ```
+
+## 注入 ChatService
+
+如果你的 client 需要直接在 `@downcity/agent` 内启动 chat 渠道，可以显式传入 `ChatService` 实例：
+
+```ts
+import { Agent, ChatService } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "vibecape-official",
+  path: "/path/to/agent-project",
+  tools: {},
+  services: [
+    new ChatService({
+      telegram: {
+        botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      },
+    }),
+  ],
+});
+```
+
+`services` 接收“已经实例化好的 service 对象”。  
+`agent.http.start()` 与 `agent.rpc.start()` 会在启动服务端点前自动启动这些 service。
 
 ## 流式执行
 

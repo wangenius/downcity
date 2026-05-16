@@ -13,7 +13,7 @@ import fs from "fs-extra";
 import type { TtsPluginConfig, TtsSynthesizeInput } from "@/shared/types/TtsPlugin.js";
 import type { TtsAudioFormat, TtsModelId } from "@/shared/types/Tts.js";
 import type { PluginCommandContext } from "@downcity/agent/shared/types/Plugin.js";
-import { renderChatMessageFileTag } from "@/services/chat/runtime/ChatMessageMarkup.js";
+import { renderChatMessageFileTag } from "@downcity/agent/services/chat/runtime/ChatMessageMarkup.js";
 import { getTtsModelCatalogItem, resolveTtsModelId } from "@/plugins/tts/runtime/Catalog.js";
 import { resolveTtsModelsRootDir } from "@/plugins/tts/runtime/Paths.js";
 

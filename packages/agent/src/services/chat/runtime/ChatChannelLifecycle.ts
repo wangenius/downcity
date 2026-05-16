@@ -13,13 +13,17 @@ import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";
 import { createTelegramBot } from "@services/chat/channels/telegram/Bot.js";
 import { createFeishuBot } from "@services/chat/channels/feishu/Feishu.js";
 import { createQQBot } from "@services/chat/channels/qq/QQ.js";
-import { resolveChannelAccount, resolveTargetChannels } from "./ChatChannelCore.js";
+import {
+  isChatChannelEnabled,
+  resolveChannelAccount,
+  resolveTargetChannels,
+} from "./ChatChannelCore.js";
 
 async function startTelegramChannel(
   state: ChatChannelState,
   context: AgentContext,
 ): Promise<void> {
-  if (!context.config.services?.chat?.channels?.telegram?.enabled) return;
+  if (!isChatChannelEnabled(context, "telegram")) return;
   context.logger.info("Telegram channel enabled");
   const account = resolveChannelAccount(context, "telegram");
   const token = String(account?.botToken || "").trim();
@@ -40,7 +44,7 @@ async function startFeishuChannel(
   state: ChatChannelState,
   context: AgentContext,
 ): Promise<void> {
-  if (!context.config.services?.chat?.channels?.feishu?.enabled) return;
+  if (!isChatChannelEnabled(context, "feishu")) return;
   context.logger.info("Feishu channel enabled");
   const account = resolveChannelAccount(context, "feishu");
   const appId = String(account?.appId || "").trim();
@@ -64,7 +68,7 @@ async function startQQChannel(
   state: ChatChannelState,
   context: AgentContext,
 ): Promise<void> {
-  if (!context.config.services?.chat?.channels?.qq?.enabled) return;
+  if (!isChatChannelEnabled(context, "qq")) return;
   context.logger.info("QQ channel enabled");
   const account = resolveChannelAccount(context, "qq");
   const appId = String(account?.appId || "").trim();

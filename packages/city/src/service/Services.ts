@@ -8,7 +8,7 @@
 
 import type { AgentRuntime } from "@downcity/agent/types/agent/AgentRuntime.js";
 import type { BaseService } from "@downcity/agent/services/BaseService.js";
-import { ChatService } from "@services/chat/ChatService.js";
+import { ChatService } from "@downcity/agent/services/chat/ChatService.js";
 import { TaskService } from "@downcity/agent/services/task/TaskService.js";
 import { MemoryService } from "@downcity/agent/services/memory/MemoryService.js";
 import { ShellService } from "@downcity/agent/services/shell/ShellService.js";

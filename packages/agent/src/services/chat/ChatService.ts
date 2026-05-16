@@ -13,6 +13,15 @@ import { BaseService } from "@services/BaseService.js";
 import type { ServiceActions } from "@/shared/types/Service.js";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
+import type { StoredChannelAccount } from "@/shared/types/Store.js";
+import type { ChatQueueWorkerConfig } from "@/shared/types/ChatQueueWorker.js";
+import type {
+  ChatServiceFeishuOptions,
+  ChatServiceOptions,
+  ChatServiceQqOptions,
+  ChatServiceTelegramOptions,
+} from "@/types/chat/ChatService.js";
+import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";
 import {
   createChatChannelState,
   startChatChannels,
@@ -56,6 +65,11 @@ export class ChatService extends BaseService {
   public readonly queueStore = new ChatQueueStore();
 
   /**
+   * 当前实例持有的显式 service 配置。
+   */
+  public readonly options: ChatServiceOptions;
+
+  /**
    * 当前 service 的 system 文本构建器。
    */
   readonly system = async (context: AgentContext): Promise<string> => {
@@ -76,7 +90,7 @@ export class ChatService extends BaseService {
       logger: context.logger,
       context,
       queueStore: this.queueStore,
-      config: context.config.services?.chat?.queue,
+      config: this.getQueueWorkerConfig(context),
     });
     worker.start();
     this.queueWorker = worker;
@@ -92,8 +106,11 @@ export class ChatService extends BaseService {
     worker.stop();
   }
 
-  constructor(agent: AgentRuntime | null) {
-    super(agent);
+  constructor(optionsOrAgent?: ChatServiceOptions | AgentRuntime | null) {
+    super(isAgentRuntimeInput(optionsOrAgent) ? optionsOrAgent : null);
+    this.options = isAgentRuntimeInput(optionsOrAgent)
+      ? {}
+      : (optionsOrAgent || {});
     this.actions = createChatServiceActions({
       channelState: this.channelState,
     });
@@ -108,4 +125,131 @@ export class ChatService extends BaseService {
       },
     };
   }
+
+  /**
+   * 读取 queue worker 配置。
+   */
+  getQueueWorkerConfig(
+    context: AgentContext,
+  ): Partial<ChatQueueWorkerConfig> | undefined {
+    return this.options.queue || context.config.services?.chat?.queue;
+  }
+
+  /**
+   * 判断指定渠道是否启用。
+   */
+  isChannelEnabled(context: AgentContext, channel: ChatChannelName): boolean {
+    const explicit = this.getExplicitChannelOptions(channel);
+    if (explicit) {
+      return explicit.enabled !== false;
+    }
+    return context.config.services?.chat?.channels?.[channel]?.enabled === true;
+  }
+
+  /**
+   * 读取指定渠道的显式账户 ID。
+   */
+  getChannelAccountId(
+    context: AgentContext,
+    channel: ChatChannelName,
+  ): string {
+    const explicit = this.getExplicitChannelOptions(channel);
+    const explicitAccountId = String(explicit?.channelAccountId || "").trim();
+    if (explicitAccountId) return explicitAccountId;
+    const config = context.config.services?.chat?.channels?.[channel] as
+      | { channelAccountId?: unknown }
+      | undefined;
+    return String(config?.channelAccountId || "").trim();
+  }
+
+  /**
+   * 解析指定渠道当前应使用的账户。
+   */
+  resolveChannelAccount(
+    context: AgentContext,
+    channel: ChatChannelName,
+  ): StoredChannelAccount | null {
+    const explicit = this.buildExplicitChannelAccount(channel);
+    if (explicit) return explicit;
+
+    const provider = this.options.channelAccounts;
+    if (provider) {
+      return provider.getChannelAccount({
+        channel,
+        context,
+        channelAccountId: this.getChannelAccountId(context, channel) || undefined,
+      });
+    }
+    return null;
+  }
+
+  private getExplicitChannelOptions(
+    channel: ChatChannelName,
+  ): ChatServiceTelegramOptions | ChatServiceFeishuOptions | ChatServiceQqOptions | undefined {
+    if (channel === "telegram") return this.options.telegram;
+    if (channel === "feishu") return this.options.feishu;
+    return this.options.qq;
+  }
+
+  private buildExplicitChannelAccount(
+    channel: ChatChannelName,
+  ): StoredChannelAccount | null {
+    const now = new Date().toISOString();
+
+    if (channel === "telegram") {
+      const config = this.options.telegram;
+      const botToken = String(config?.botToken || "").trim();
+      if (!botToken) return null;
+      return {
+        id: String(config?.channelAccountId || `chat-sdk-${channel}`).trim(),
+        channel,
+        name: String(config?.name || "telegram").trim() || "telegram",
+        botToken,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    if (channel === "feishu") {
+      const config = this.options.feishu;
+      const appId = String(config?.appId || "").trim();
+      const appSecret = String(config?.appSecret || "").trim();
+      if (!appId || !appSecret) return null;
+      return {
+        id: String(config?.channelAccountId || `chat-sdk-${channel}`).trim(),
+        channel,
+        name: String(config?.name || "feishu").trim() || "feishu",
+        appId,
+        appSecret,
+        ...(String(config?.domain || "").trim()
+          ? { domain: String(config?.domain || "").trim() }
+          : {}),
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    const config = this.options.qq;
+    const appId = String(config?.appId || "").trim();
+    const appSecret = String(config?.appSecret || "").trim();
+    if (!appId || !appSecret) return null;
+    return {
+      id: String(config?.channelAccountId || `chat-sdk-${channel}`).trim(),
+      channel,
+      name: String(config?.name || "qq").trim() || "qq",
+      appId,
+      appSecret,
+      ...(config?.sandbox === true ? { sandbox: true } : {}),
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+}
+
+function isAgentRuntimeInput(
+  input: ChatServiceOptions | AgentRuntime | null | undefined,
+): input is AgentRuntime | null {
+  if (input === null) return true;
+  if (!input || typeof input !== "object") return false;
+  return typeof (input as AgentRuntime).getSession === "function";
 }

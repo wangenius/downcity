@@ -42,6 +42,7 @@ export class SdkAgentHttpServer {
     if (this.server && this.baseUrlValue) {
       return { baseUrl: this.baseUrlValue };
     }
+    await this.agent.ensureServicesStarted();
     const host = String(options?.host || "127.0.0.1").trim() || "127.0.0.1";
     const port =
       typeof options?.port === "number" && Number.isInteger(options.port)

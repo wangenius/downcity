@@ -36,6 +36,7 @@ export class SdkAgentRpcServer {
     if (this.server && this.endpoint) {
       return { endpoint: this.endpoint };
     }
+    await this.agent.ensureServicesStarted();
 
     const endpoint = getSdkAgentRpcEndpointPath(this.agent.path, this.agent.id);
     await fs.ensureDir(path.dirname(endpoint));

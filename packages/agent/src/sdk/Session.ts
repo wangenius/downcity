@@ -38,6 +38,7 @@ import {
   getSdkAgentSessionDirPath,
 } from "@/sdk/Paths.js";
 import { AsyncQueue } from "@/sdk/AsyncQueue.js";
+import type { SessionPort } from "@/types/agent/AgentContext.js";
 
 type SdkSessionOptions = {
   /**
@@ -88,6 +89,8 @@ export class SdkSession {
   private readonly historyComposer: JsonlSessionHistoryComposer;
   private readonly coreSession: CoreSession;
   private sessionConfig: AgentSessionConfigSnapshot = {};
+  private initializePromise: Promise<this> | null = null;
+  private servicePort: SessionPort | null = null;
 
   constructor(options: SdkSessionOptions) {
     this.id = String(options.sessionId || "").trim();
@@ -157,28 +160,34 @@ export class SdkSession {
    * 初始化当前 session 的 meta 信息与内存配置。
    */
   async initialize(): Promise<this> {
-    const metadata = await readSdkSessionMetadata({
-      projectRoot: this.projectRoot,
-      agentId: this.agentId,
-      sessionId: this.id,
-    });
-    await writeSdkSessionMetadata({
-      projectRoot: this.projectRoot,
-      agentId: this.agentId,
-      sessionId: this.id,
-      meta: {
-        ...metadata,
+    if (this.initializePromise) {
+      return await this.initializePromise;
+    }
+    this.initializePromise = (async () => {
+      const metadata = await readSdkSessionMetadata({
+        projectRoot: this.projectRoot,
         agentId: this.agentId,
-        createdAt:
-          typeof metadata.createdAt === "number" ? metadata.createdAt : Date.now(),
-      },
-    });
-    this.sessionConfig = {
-      ...(metadata.sdkConfig?.modelLabel
-        ? { modelLabel: metadata.sdkConfig.modelLabel }
-        : {}),
-    };
-    return this;
+        sessionId: this.id,
+      });
+      await writeSdkSessionMetadata({
+        projectRoot: this.projectRoot,
+        agentId: this.agentId,
+        sessionId: this.id,
+        meta: {
+          ...metadata,
+          agentId: this.agentId,
+          createdAt:
+            typeof metadata.createdAt === "number" ? metadata.createdAt : Date.now(),
+        },
+      });
+      this.sessionConfig = {
+        ...(metadata.sdkConfig?.modelLabel
+          ? { modelLabel: metadata.sdkConfig.modelLabel }
+          : {}),
+      };
+      return this;
+    })();
+    return await this.initializePromise;
   }
 
   /**
@@ -242,6 +251,20 @@ export class SdkSession {
    */
   async history(): Promise<SessionMessageV1[]> {
     return await this.historyComposer.list();
+  }
+
+  /**
+   * 返回当前 session 是否正在执行。
+   */
+  isExecuting(): boolean {
+    return this.coreSession.isExecuting();
+  }
+
+  /**
+   * 清理当前 session 的执行器缓存。
+   */
+  clearExecutor(): void {
+    this.coreSession.clearExecutor();
   }
 
   /**
@@ -365,6 +388,41 @@ export class SdkSession {
       ...(typeof meta.updatedAt === "number" ? { updatedAt: meta.updatedAt } : {}),
       ...(meta.sdkConfig?.modelLabel ? { modelLabel: meta.sdkConfig.modelLabel } : {}),
     };
+  }
+
+  /**
+   * 返回供 chat service 使用的 session 端口。
+   *
+   * 关键点（中文）
+   * - 这里不走 SDK `run()` 包装层，而是直接暴露底层 `CoreSession` 协议。
+   * - 这样 chat queue worker 可以复用既有 `SessionPort` 契约，不会重复补写消息。
+   */
+  getServicePort(): SessionPort {
+    if (this.servicePort) return this.servicePort;
+    this.servicePort = {
+      sessionId: this.id,
+      getExecutor: () => this.coreSession.getExecutor(),
+      getHistoryComposer: () => this.historyComposer,
+      run: async (params) => {
+        return await this.coreSession.run(params);
+      },
+      clearExecutor: () => {
+        this.coreSession.clearExecutor();
+      },
+      afterSessionUpdatedAsync: async () => {
+        await this.coreSession.afterSessionUpdatedAsync();
+      },
+      appendUserMessage: async (params) => {
+        await this.coreSession.appendUserMessage(params);
+        await this.touchMetadata();
+      },
+      appendAssistantMessage: async (params) => {
+        await this.coreSession.appendAssistantMessage(params);
+        await this.touchMetadata();
+      },
+      isExecuting: () => this.coreSession.isExecuting(),
+    };
+    return this.servicePort;
   }
 
   private async touchMetadata(): Promise<void> {

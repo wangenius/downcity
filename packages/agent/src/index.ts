@@ -20,6 +20,14 @@ export type {
   AgentSessionMetadata,
   AgentSessionForkInput,
 } from "./types/sdk/AgentSdk.js";
+export { ChatService } from "./services/chat/ChatService.js";
+export type {
+  ChatServiceChannelAccountProvider,
+  ChatServiceFeishuOptions,
+  ChatServiceOptions,
+  ChatServiceQqOptions,
+  ChatServiceTelegramOptions,
+} from "./types/chat/ChatService.js";
 
 // Agent 运行时
 export {

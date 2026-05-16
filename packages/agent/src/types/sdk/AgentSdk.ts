@@ -8,6 +8,7 @@
  */
 
 import type { LanguageModel, Tool } from "ai";
+import type { BaseService } from "@services/BaseService.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
 
@@ -37,6 +38,16 @@ export interface AgentOptions {
    * - session 运行时会直接复用这份工具集合。
    */
   tools?: Record<string, Tool>;
+
+  /**
+   * 当前 agent 显式持有的 service 实例集合。
+   *
+   * 关键点（中文）
+   * - 这里接收已经实例化好的 service，而不是 service class。
+   * - `Agent` 会在构造阶段按名称注册这些实例，并在启动时自动绑定 runtime。
+   * - v1 推荐显式传入 `new ChatService(...)` 这类实例，而不是依赖包内隐式注册表。
+   */
+  services?: BaseService[];
 }
 
 /**

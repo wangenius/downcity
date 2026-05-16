@@ -7,7 +7,7 @@
  * - 字段全部保持 Json 兼容，避免把函数或运行时私有对象塞进 plugin 点。
  */
 
-import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import type { ChatDispatchChannel } from "@downcity/agent/services/chat/types/ChatDispatcher.js";
 
 /**
  * chat 入站附件类型。

@@ -18,7 +18,7 @@ pnpm add @downcity/agent
 
 ## Local Agent
 
-Use `new Agent(...)` when your app runs in the same process and can provide tools and models directly.
+Use `new Agent(...)` when your app runs in the same process and can provide tools, services, and models directly.
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -45,6 +45,30 @@ const result = await session.run({
 
 console.log(result.text);
 ```
+
+## Inject ChatService
+
+If your client needs to start chat channels directly inside `@downcity/agent`, pass an explicit `ChatService` instance:
+
+```ts
+import { Agent, ChatService } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "vibecape-official",
+  path: "/path/to/agent-project",
+  tools: {},
+  services: [
+    new ChatService({
+      telegram: {
+        botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      },
+    }),
+  ],
+});
+```
+
+`services` accepts already-instantiated service objects.  
+`agent.http.start()` and `agent.rpc.start()` automatically start those services before exposing the endpoints.
 
 ## Stream a session
 

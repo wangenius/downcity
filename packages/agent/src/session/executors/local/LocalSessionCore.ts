@@ -83,6 +83,25 @@ function summarizeStreamError(error: unknown): JsonObject {
 }
 
 /**
+ * 提取实际应返回给上层的错误文本。
+ *
+ * 关键点（中文）
+ * - `AI_NoOutputGeneratedError` 往往只是 AI SDK 的兜底包装。
+ * - 如果同一轮里已经捕获到底层 `stream.error`，应优先把底层 provider 错误透传出去。
+ */
+function resolveEffectiveExecutionError(params: {
+  error: unknown;
+  streamError?: unknown;
+}): string {
+  const outerError = String(params.error ?? "").trim();
+  const innerError = String(params.streamError ?? "").trim();
+  if (/AI_NoOutputGeneratedError|No output generated/i.test(outerError) && innerError) {
+    return innerError;
+  }
+  return outerError || innerError || "Unknown execution error";
+}
+
+/**
  * LocalSessionCore 构造参数。
  */
 type LocalSessionCoreOptions = {
@@ -226,6 +245,7 @@ export class LocalSessionCore {
         // 达到上限后返回可读失败消息，避免死循环。
         return {
           success: false,
+          error: "Context length exceeded and retries failed. Please resend your question.",
           assistantMessage: this.executionComposer.buildFallbackAssistantMessage(
             "Context length exceeded and retries failed. Please resend your question.",
           ),
@@ -243,6 +263,7 @@ export class LocalSessionCore {
       // 返回失败 assistant 消息。
       return {
         success: false,
+        error: errorMsg,
         assistantMessage: this.executionComposer.buildFallbackAssistantMessage(
           `Execution failed: ${errorMsg}`,
         ),
@@ -330,6 +351,7 @@ export class LocalSessionCore {
 
     // 工具集合直接透传。
     const tools = input.tools;
+    let lastObservedStreamError: unknown = undefined;
 
     try {
       // 核心步骤 1（中文）：把 session messages 转成模型输入消息。
@@ -424,6 +446,7 @@ export class LocalSessionCore {
           providerOptions: buildOpenAIResponsesProviderOptions(),
           // 记录底层 stream 错误，避免只看到最终的 NoOutputGenerated 兜底错误。
           onError: async ({ error }) => {
+            lastObservedStreamError = error;
             await this.logger.log("error", "[agent] stream.error", {
               sessionId,
               ...summarizeStreamError(error),
@@ -652,7 +675,10 @@ export class LocalSessionCore {
       }
 
       // 非“可压缩错误”转为失败结果。
-      const errorMsg = String(error);
+      const errorMsg = resolveEffectiveExecutionError({
+        error,
+        streamError: lastObservedStreamError,
+      });
 
       // 记录错误日志。
       await this.logger.log("error", "LocalSessionCore execution failed", {
@@ -662,6 +688,7 @@ export class LocalSessionCore {
       // 返回失败消息。
       return {
         success: false,
+        error: errorMsg,
         assistantMessage: this.executionComposer.buildFallbackAssistantMessage(
           `Execution failed: ${errorMsg}`,
         ),

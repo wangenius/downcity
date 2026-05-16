@@ -321,12 +321,28 @@ export async function createModel(input: {
     return openRouterProvider(resolvedModel);
   }
 
-  // OpenAI-compatible providers（中文）：
-  // - openai / deepseek 统一走 OpenAI SDK（Responses/Completions 由 SDK 自适配）。
-  const openaiCompatibleProvider = createOpenAI({
+  if (providerType === "deepseek") {
+    // 关键点（中文）：
+    // - DeepSeek 提供的是 OpenAI-compatible chat/completions 接口，不支持
+    //   `createOpenAI()` 默认语言模型走的 `/responses` 路径。
+    // - 若继续使用 `createOpenAI()`，请求会落到
+    //   `https://api.deepseek.com/v1/responses` 并直接返回 404。
+    const deepseekCompatibleProvider = createOpenAICompatible({
+      name: providerKey,
+      baseURL: resolvedBaseUrl || "https://api.deepseek.com/v1",
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return deepseekCompatibleProvider(resolvedModel);
+  }
+
+  // OpenAI 官方 provider（中文）：
+  // - 只在真正的 OpenAI provider 下使用 `createOpenAI()`。
+  // - 该 SDK 默认语言模型使用 Responses API，适配官方 OpenAI 路径。
+  const openaiProvider = createOpenAI({
     apiKey: resolvedApiKey,
     baseURL: resolvedBaseUrl,
     fetch: loggingFetch as typeof fetch,
   });
-  return openaiCompatibleProvider(resolvedModel);
+  return openaiProvider(resolvedModel);
 }

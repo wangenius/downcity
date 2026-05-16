@@ -8,7 +8,7 @@
 
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import type { StoredChannelAccountChannel } from "@/types/store/Store.js";
+import type { StoredChannelAccountChannel } from "@/store/StoreTypes.js";
 
 /**
  * Drizzle SQLite 实例类型。

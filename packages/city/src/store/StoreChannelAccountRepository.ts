@@ -9,7 +9,7 @@
 import type {
   StoredChannelAccount,
   UpsertChannelAccountInput,
-} from "@/types/store/Store.js";
+} from "@/store/StoreTypes.js";
 import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
 import type { ConsoleStoreContext } from "./StoreShared.js";
 import {

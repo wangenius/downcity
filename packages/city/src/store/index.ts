@@ -10,7 +10,7 @@
 import fs from "fs-extra";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { getConsoleShipDbPath } from "@/registry/CityPaths.js";
+import { getConsoleShipDbPath } from "@/process/registry/CityPaths.js";
 import { ensureConsoleStoreSchema } from "./StoreSchema.js";
 import type { ConsoleStoreContext } from "./StoreShared.js";
 import type {
@@ -28,10 +28,10 @@ import type {
   UpsertGlobalEnvEntryInput,
   UpsertModelInput,
   UpsertModelProviderInput,
-} from "@/types/store/Store.js";
+} from "@/store/StoreTypes.js";
 import {
   getConsoleRootDirPath,
-} from "@/registry/CityPaths.js";
+} from "@/process/registry/CityPaths.js";
 import {
   clearStoredModelsAndProviders,
   getResolvedStoredModel,

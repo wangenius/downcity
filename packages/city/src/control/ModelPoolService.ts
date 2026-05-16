@@ -11,7 +11,7 @@ import { generateText } from "ai";
 import type { LlmProviderType } from "@downcity/agent/shared/types/LlmConfig.js";
 import { ConsoleStore } from "@/store/index.js";
 import { createModel } from "@downcity/agent";
-import { discoverProviderModels } from "@/cli/ModelSupport.js";
+import { discoverProviderModels } from "@/cli/model/ModelSupport.js";
 
 const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [
   "anthropic",

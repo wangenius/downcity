@@ -13,7 +13,7 @@ import type {
   StoredProviderMeta,
   UpsertModelInput,
   UpsertModelProviderInput,
-} from "@/types/store/Store.js";
+} from "@/store/StoreTypes.js";
 import { decryptText, encryptText } from "./crypto.js";
 import { modelProvidersTable, modelsTable } from "./schema.js";
 import type { ConsoleStoreContext } from "./StoreShared.js";

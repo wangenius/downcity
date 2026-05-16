@@ -14,7 +14,7 @@ import type {
   UpsertAgentEnvEntryInput,
   UpsertEnvEntryInput,
   UpsertGlobalEnvEntryInput,
-} from "@/types/store/Store.js";
+} from "@/store/StoreTypes.js";
 import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
 import type { ConsoleStoreContext } from "./StoreShared.js";
 import { normalizeNonEmptyText, nowIso } from "./StoreShared.js";

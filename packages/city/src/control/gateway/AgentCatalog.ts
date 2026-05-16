@@ -9,7 +9,12 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { basename } from "node:path";
-import { getDaemonLogPath, getDaemonMetaPath, isProcessAlive, readDaemonPid } from "@/daemon/Manager.js";
+import {
+  getDaemonLogPath,
+  getDaemonMetaPath,
+  isProcessAlive,
+  readDaemonPid,
+} from "@/process/daemon/Manager.js";
 import {
   getProfileMdPath,
   getDowncityJsonPath,
@@ -18,13 +23,13 @@ import {
   getSoulMdPath,
 } from "@/config/Paths.js";
 import { isAgentProjectInitialized } from "@downcity/agent";
-import { listConsoleAgents } from "@/registry/CityRegistry.js";
+import { listConsoleAgents } from "@/process/registry/CityRegistry.js";
 import {
   getConsoleAgentRegistryPath,
   getCityPidPath,
   getConsolePidPath,
   getConsoleShipDbPath,
-} from "@/registry/CityPaths.js";
+} from "@/process/registry/CityPaths.js";
 import type {
   ConsoleAgentOption,
   ConsoleAgentsResponse,

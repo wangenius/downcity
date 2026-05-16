@@ -15,8 +15,8 @@ import {
   getDaemonLogPath,
   isProcessAlive,
   readDaemonPid,
-} from "@/daemon/Manager.js";
-import { buildRunArgsFromOptions } from "@/daemon/CliArgs.js";
+} from "@/process/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
 import {
   ensureRuntimeExecutionBindingReady,
   initializeAgentProject,

@@ -23,7 +23,7 @@ import {
   signalDetachedProcess,
   sweepDetachedCityProcesses,
 } from "@/registry/ProcessSweep.js";
-import { createConsoleGateway } from "@/console/ConsoleGateway.js";
+import { createControlGateway } from "@/control/ControlGateway.js";
 import type {
   ConsoleRuntimeMeta,
   ConsoleRuntimeStatus,
@@ -332,7 +332,7 @@ export async function runConsoleRuntimeCommand(
       ? options.port
       : DEFAULT_CONSOLE_PORT;
 
-  const gateway = createConsoleGateway();
+  const gateway = createControlGateway();
   await gateway.start({ host, port });
 
   const visibleHost = normalizeHost(host);

@@ -8,7 +8,7 @@
 
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { listServiceStates } from "@/service/Manager.js";
-import { listDashboardSessionSummaries } from "@/http/dashboard/SessionSummaryStore.js";
+import { listControlSessionSummaries } from "@/http/control/SessionSummaryStore.js";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { WorkboardSnapshot } from "@/plugins/workboard/types/Workboard.js";
 import {
@@ -30,7 +30,7 @@ export async function collectWorkboardSnapshot(
 ): Promise<WorkboardSnapshot> {
   const collectedAt = new Date().toISOString();
   const executingSessionIds = new Set(context.session.listExecutingSessionIds());
-  const sessions = await listDashboardSessionSummaries({
+  const sessions = await listControlSessionSummaries({
     projectRoot: context.rootPath,
     executionContext: context,
     limit: WORKBOARD_RECENT_LIMIT + Math.max(executingSessionIds.size, 1),

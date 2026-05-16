@@ -23,7 +23,7 @@ import { Session } from "@downcity/agent/session/Session.js";
 import { JsonlSessionHistoryComposer } from "@downcity/agent/session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@downcity/agent/session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionExecutor } from "@downcity/agent/session/executors/local/LocalSessionExecutor.js";
-import { InlineInstantSystemComposer } from "@/console/InlineInstantSystemComposer.js";
+import { InlineInstantSystemComposer } from "@/control/InlineInstantSystemComposer.js";
 import { createModel } from "@downcity/agent";
 import type { Logger as AgentLogger } from "@downcity/agent/shared/utils/logger/Logger.js";
 import { loadStaticSystemPrompts } from "@downcity/agent/session/composer/system/default/StaticPromptCatalog.js";

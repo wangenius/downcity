@@ -13,7 +13,7 @@ import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type { LocalRpcRequest, LocalRpcResponse, LocalRpcServerHandle } from "@/shared/types/LocalRpc.js";
-import type { DashboardSessionExecuteRequestBody } from "@/shared/types/DashboardSessionExecute.js";
+import type { ControlSessionExecuteRequestBody } from "@/shared/types/ControlSessionExecute.js";
 import type {
   PluginActionResponse,
   PluginAvailabilityResponse,
@@ -27,7 +27,7 @@ import type {
 } from "@/shared/types/Services.js";
 import { listServiceStates, controlServiceState } from "@/service/ServiceStateController.js";
 import { runServiceCommand } from "@/service/ServiceActionRunner.js";
-import { executeBySessionId } from "@/http/dashboard/ExecuteBySession.js";
+import { executeBySessionId } from "@/http/control/ExecuteBySession.js";
 import { getLocalRpcEndpoint } from "./Paths.js";
 
 async function isSocketEndpointActive(endpoint: string): Promise<boolean> {
@@ -182,7 +182,7 @@ async function handlePluginAction(params: {
   );
 }
 
-function matchDashboardSessionExecutePath(pathname: string): string | null {
+function matchControlSessionExecutePath(pathname: string): string | null {
   const match = /^\/api\/dashboard\/sessions\/([^/]+)\/execute$/.exec(
     String(pathname || "").trim(),
   );
@@ -194,7 +194,7 @@ function matchDashboardSessionExecutePath(pathname: string): string | null {
   }
 }
 
-async function handleDashboardSessionExecute(params: {
+async function handleControlSessionExecute(params: {
   requestId: string;
   body: JsonValue | undefined;
   context: AgentContext;
@@ -211,7 +211,7 @@ async function handleDashboardSessionExecute(params: {
   const body = isObjectRecord(params.body) ? params.body : {};
   const instructions = String(body.instructions || "").trim();
   const attachments = Array.isArray(body.attachments)
-    ? (body.attachments as DashboardSessionExecuteRequestBody["attachments"])
+    ? (body.attachments as ControlSessionExecuteRequestBody["attachments"])
     : undefined;
   if (!params.sessionId) {
     return createErrorResponse(params.requestId, 400, "sessionId is required");
@@ -288,17 +288,17 @@ async function dispatchRequest(params: {
       context: params.context,
     });
   }
-  const dashboardSessionId =
+  const controlSessionId =
     request.method === "POST"
-      ? matchDashboardSessionExecutePath(request.path)
+      ? matchControlSessionExecutePath(request.path)
       : null;
-  if (dashboardSessionId) {
-    return await handleDashboardSessionExecute({
+  if (controlSessionId) {
+    return await handleControlSessionExecute({
       requestId: request.requestId,
       body: request.body,
       context: params.context,
       runtime: params.runtime,
-      sessionId: dashboardSessionId,
+      sessionId: controlSessionId,
     });
   }
   return createErrorResponse(

@@ -1,8 +1,8 @@
 /**
- * Dashboard 会话路由。
+ * Control 会话路由。
  *
  * 关键点（中文）
- * - 聚合 dashboard 会话消息、归档、system prompt 与执行相关接口。
+ * - 聚合控制面会话消息、归档、system prompt 与执行相关接口。
  * - 仅负责编排请求与响应；消息读取、时间线映射、执行拼装复用 helper。
  */
 
@@ -16,11 +16,11 @@ import {
   getDowncitySessionMessagesArchivePath,
   getDowncitySessionMessagesPath,
 } from "@/config/Paths.js";
-import type { DashboardSessionExecuteRequestBody } from "@/shared/types/DashboardSessionExecute.js";
-import type { DashboardRouteRegistrationParams } from "@/shared/types/DashboardRoutes.js";
+import type { ControlSessionExecuteRequestBody } from "@/shared/types/ControlSessionExecute.js";
+import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 import {
   decodeMaybe,
-  listDashboardSessionSummaries,
+  listControlSessionSummaries,
   loadSessionMessagesFromFile,
   toLimit,
   toUiMessageTimeline,
@@ -85,8 +85,8 @@ function toSystemPromptPayload(messages: SystemModelMessage[]): {
 /**
  * 注册上下文相关路由。
  */
-export function registerDashboardSessionRoutes(
-  params: DashboardRouteRegistrationParams,
+export function registerControlSessionRoutes(
+  params: ControlRouteRegistrationParams,
 ): void {
   const { app } = params;
 
@@ -97,7 +97,7 @@ export function registerDashboardSessionRoutes(
       const executingSessionIds = new Set<string>(
         runtime.listExecutingSessionIds(),
       );
-      const sessions = await listDashboardSessionSummaries({
+      const sessions = await listControlSessionSummaries({
         projectRoot: runtime.rootPath,
         executionContext: params.getAgentContext(),
         limit,
@@ -366,7 +366,7 @@ export function registerDashboardSessionRoutes(
     try {
       const runtime = params.getAgentRuntime();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      const body = (await c.req.json().catch(() => ({}))) as Partial<DashboardSessionExecuteRequestBody>;
+      const body = (await c.req.json().catch(() => ({}))) as Partial<ControlSessionExecuteRequestBody>;
       const instructions = String(body.instructions || "").trim();
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);

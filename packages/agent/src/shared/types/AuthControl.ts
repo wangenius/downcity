@@ -1,9 +1,9 @@
 /**
- * Auth Dashboard 类型定义。
+ * Auth Control 类型定义。
  *
  * 关键点（中文）
- * - 统一承载 dashboard authorization 页面需要的返回结构。
- * - 这是 console UI 数据面类型，不属于 auth plugin 内核协议。
+ * - 统一承载控制面 authorization 页面需要的返回结构。
+ * - 这是控制面 UI 数据类型，不属于 auth plugin 内核协议。
  */
 
 import type {
@@ -15,7 +15,7 @@ import type {
 /**
  * authorization 页面完整载荷。
  */
-export interface AuthDashboardPayload {
+export interface AuthControlPayload {
   /**
    * 后端提供的授权目录定义。
    */

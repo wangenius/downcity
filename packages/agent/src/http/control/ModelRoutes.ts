@@ -1,21 +1,21 @@
 /**
- * Dashboard 模型路由。
+ * Control 模型路由。
  *
  * 关键点（中文）
  * - 仅承接当前 agent 视角下的模型展示与切换。
- * - Console 全局模型池管理仍由 `/api/ui/model*` 处理。
+ * - 控制面全局模型池管理仍由 `/api/ui/model*` 处理。
  */
 
 import fs from "fs-extra";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { ConsoleStore } from "@shared/utils/store/index.js";
-import type { DashboardRouteRegistrationParams } from "@/shared/types/DashboardRoutes.js";
+import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 
 /**
  * 注册模型相关路由。
  */
-export function registerDashboardModelRoutes(
-  params: DashboardRouteRegistrationParams,
+export function registerControlModelRoutes(
+  params: ControlRouteRegistrationParams,
 ): void {
   const { app } = params;
 

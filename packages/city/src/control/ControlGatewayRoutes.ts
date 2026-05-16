@@ -1,18 +1,18 @@
 /**
- * ConsoleGatewayRoutes：Console 网关路由注册。
+ * ControlGatewayRoutes：控制面网关路由注册。
  *
  * 关键点（中文）
- * - 路由注册从 `ConsoleGateway` 宿主类中拆出，避免网关门面继续膨胀。
+ * - 路由注册从 `ControlGateway` 宿主类中拆出，避免网关门面继续膨胀。
  * - 这里不持有状态，只消费宿主提供的 handlers。
  */
 
 import type { Hono, Context } from "hono";
-import { registerConsoleModelRoutes } from "@/console/ModelApiRoutes.js";
-import { registerConsoleInlineInstantRoutes } from "@/console/InlineInstantRoutes.js";
-import { registerConsoleChannelAccountRoutes } from "@/console/ChannelAccountApiRoutes.js";
-import { registerConsoleEnvRoutes } from "@/console/EnvApiRoutes.js";
-import { registerConsoleAgentStatusRoutes } from "@/console/AgentStatusApiRoutes.js";
-import { registerConsolePluginRoutes } from "@/console/PluginApiRoutes.js";
+import { registerConsoleModelRoutes } from "@/control/ModelApiRoutes.js";
+import { registerConsoleInlineInstantRoutes } from "@/control/InlineInstantRoutes.js";
+import { registerConsoleChannelAccountRoutes } from "@/control/ChannelAccountApiRoutes.js";
+import { registerConsoleEnvRoutes } from "@/control/EnvApiRoutes.js";
+import { registerConsoleAgentStatusRoutes } from "@/control/AgentStatusApiRoutes.js";
+import { registerConsolePluginRoutes } from "@/control/PluginApiRoutes.js";
 import type {
   ConsoleAgentDirectoryInspection,
   ConsoleAgentOption,
@@ -22,12 +22,12 @@ import type {
   ConsoleLocalModelsResponse,
 } from "@downcity/agent/shared/types/Console.js";
 import type { AgentProjectInitializationResult } from "@downcity/agent/shared/types/AgentProject.js";
-import { buildConsoleWorkloadBlockPayload } from "@/console/gateway/GatewaySupport.js";
+import { buildConsoleWorkloadBlockPayload } from "@/control/gateway/GatewaySupport.js";
 
 /**
- * Console 路由宿主能力。
+ * 控制面路由宿主能力。
  */
-export interface ConsoleGatewayRouteHandlers {
+export interface ControlGatewayRouteHandlers {
   /** 读取请求中的 agentId。 */
   readRequestedAgentId(request: Request): string;
   /** 构建 agents 响应。 */
@@ -142,11 +142,11 @@ export interface ConsoleGatewayRouteHandlers {
 }
 
 /**
- * 注册 Console 网关路由。
+ * 注册控制面网关路由。
  */
-export function registerConsoleGatewayRoutes(params: {
+export function registerControlGatewayRoutes(params: {
   app: Hono;
-  handlers: ConsoleGatewayRouteHandlers;
+  handlers: ControlGatewayRouteHandlers;
 }): void {
   const { app, handlers } = params;
 

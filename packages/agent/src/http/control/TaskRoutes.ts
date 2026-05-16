@@ -1,5 +1,5 @@
 /**
- * Dashboard 任务与日志路由。
+ * Control 任务与日志路由。
  *
  * 关键点（中文）
  * - 聚合 tasks/runs/logs 相关接口。
@@ -12,7 +12,7 @@ import { getDowncityTasksDirPath } from "@/config/Paths.js";
 import { runServiceCommand } from "@/service/Manager.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
-import type { DashboardRouteRegistrationParams } from "@/shared/types/DashboardRoutes.js";
+import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 import {
   TASK_RUN_DIR_REGEX,
   decodeMaybe,
@@ -60,8 +60,8 @@ async function readTaskRunningState(params: {
 /**
  * 注册任务与日志路由。
  */
-export function registerDashboardTaskRoutes(
-  params: DashboardRouteRegistrationParams,
+export function registerControlTaskRoutes(
+  params: ControlRouteRegistrationParams,
 ): void {
   const { app } = params;
 

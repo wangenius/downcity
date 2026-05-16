@@ -59,14 +59,14 @@ export {
   servicesRouter,
 } from "./http/services/services.js";
 export { staticRouter } from "./http/static/static.js";
-export { dashboardRouter } from "./http/dashboard/Router.js";
-export { registerDashboardApiRoutes } from "./http/dashboard/DashboardApiRoutes.js";
-export { registerDashboardAuthorizationRoutes } from "./http/dashboard/DashboardAuthorizationRoutes.js";
-export { registerDashboardModelRoutes } from "./http/dashboard/ModelRoutes.js";
-export { registerDashboardOverviewRoutes } from "./http/dashboard/OverviewRoutes.js";
-export { registerDashboardSessionRoutes } from "./http/dashboard/SessionRoutes.js";
-export { registerDashboardTaskRoutes } from "./http/dashboard/TaskRoutes.js";
-export { executeBySessionId } from "./http/dashboard/ExecuteBySession.js";
+export { controlRouter } from "./http/control/ControlRouter.js";
+export { registerControlApiRoutes } from "./http/control/ControlApiRoutes.js";
+export { registerControlAuthorizationRoutes } from "./http/control/ControlAuthorizationRoutes.js";
+export { registerControlModelRoutes } from "./http/control/ModelRoutes.js";
+export { registerControlOverviewRoutes } from "./http/control/OverviewRoutes.js";
+export { registerControlSessionRoutes } from "./http/control/SessionRoutes.js";
+export { registerControlTaskRoutes } from "./http/control/TaskRoutes.js";
+export { executeBySessionId } from "./http/control/ExecuteBySession.js";
 
 // RPC
 export { startLocalRpcServer } from './rpc/Server.js';
@@ -135,3 +135,25 @@ export {
 } from "./daemon/ProjectSetup.js";
 
 // 沙箱
+export {
+  spawnShellProcess,
+  runSandboxCommand,
+} from "./sandbox/SandboxRunner.js";
+export {
+  resolveSandboxConfig,
+  resolveSandboxCwd,
+} from "./sandbox/SandboxConfigResolver.js";
+export { spawnMacOsSeatbeltSandbox } from "./sandbox/MacOsSeatbeltSandbox.js";
+export type {
+  SandboxSessionStatus,
+  SandboxSessionSnapshot,
+  SandboxOutputChunk,
+  SandboxExecRequest,
+  SandboxStartRequest,
+  SandboxReadRequest,
+  SandboxWriteRequest,
+  SandboxWaitRequest,
+  ResolvedSandboxConfig,
+  SandboxSpawnParams,
+  SandboxSpawnResult,
+} from "./types/sandbox/SandboxRuntime.js";

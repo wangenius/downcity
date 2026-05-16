@@ -34,8 +34,8 @@
 - `Sandbox.ts`
   - 定义 `SandboxConfig`、`SandboxProjectConfig`、`AgentSandboxConfigRecord` 等最小 sandbox 协议。
   - 用于 console sandbox 配置层与 agent 执行层之间共享“命令执行边界”定义。
-- `AuthDashboard.ts`
-  - 定义 `AuthDashboardPayload`。
+- `AuthControl.ts`
+  - 定义 `AuthControlPayload`。
   - 用于 dashboard authorization 页面，统一描述 auth 管理面的返回结构。
 - `types/auth/*`
   - 定义统一账户 V1 的用户、角色、权限、token、路由策略等基础类型。

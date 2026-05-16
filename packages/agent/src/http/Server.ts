@@ -20,7 +20,7 @@ import {
 } from "@/http/services/services.js";
 import { pluginsRouter } from "@/http/plugins/plugins.js";
 import { staticRouter } from "@/http/static/static.js";
-import { dashboardRouter } from "@/http/dashboard/Router.js";
+import { controlRouter } from "@/http/control/ControlRouter.js";
 import { registerAuthRoutes } from "@/http/auth/AuthRoutes.js";
 import { AuthService } from "@/http/auth/AuthService.js";
 import {
@@ -86,7 +86,7 @@ export function createServerApp(): Hono {
   app.route("/", servicesRouter);
   app.route("/", pluginsRouter);
   app.route("/", executeRouter);
-  app.route("/", dashboardRouter);
+  app.route("/", controlRouter);
   registerBuiltinPluginHttpRoutes({
     app,
     getContext: getAgentContext,

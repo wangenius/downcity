@@ -13,7 +13,7 @@ import type {
   ConsoleInlineInstantService,
   InlineInstantExecutorType,
 } from "@downcity/agent/shared/types/InlineInstant.js";
-import { InlineInstantSessionService } from "@/console/InlineInstantSessionService.js";
+import { InlineInstantSessionService } from "@/control/InlineInstantSessionService.js";
 
 function normalizeExecutorType(input: unknown): InlineInstantExecutorType | "" {
   const value = String(input || "").trim();

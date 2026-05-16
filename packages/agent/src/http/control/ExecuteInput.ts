@@ -9,11 +9,11 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { getCacheDirPath } from "@/config/Paths.js";
-import { renderChatMessageFileTag } from "@downcity/agent/services/chat/runtime/ChatMessageMarkup.js";
+import { renderChatMessageFileTag } from "@services/chat/runtime/ChatMessageMarkup.js";
 import type {
-  DashboardSessionExecuteAttachmentInput,
-  DashboardSessionExecuteAttachmentType,
-} from "@downcity/agent/shared/types/DashboardSessionExecute.js";
+  ControlSessionExecuteAttachmentInput,
+  ControlSessionExecuteAttachmentType,
+} from "@/shared/types/ControlSessionExecute.js";
 
 const EXECUTE_ATTACHMENT_MAX_COUNT = 8;
 const EXECUTE_ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024;
@@ -22,7 +22,7 @@ const EXECUTE_ATTACHMENT_FALLBACK_TEXT = "请查看以上附件并按用户要�
 
 function normalizeExecuteAttachmentType(
   value: unknown,
-): DashboardSessionExecuteAttachmentType {
+): ControlSessionExecuteAttachmentType {
   const raw = String(value || "")
     .trim()
     .toLowerCase();
@@ -76,7 +76,7 @@ function normalizeAttachmentFileName(params: {
 }
 
 function inferAttachmentExt(params: {
-  type: DashboardSessionExecuteAttachmentType;
+  type: ControlSessionExecuteAttachmentType;
   fileName?: string;
   contentType?: string;
 }): string {
@@ -97,7 +97,7 @@ function inferAttachmentExt(params: {
 
 async function resolveAttachmentPathFromInput(params: {
   projectRoot: string;
-  attachment: DashboardSessionExecuteAttachmentInput;
+  attachment: ControlSessionExecuteAttachmentInput;
 }): Promise<string | null> {
   const rawPath = String(params.attachment.path || "").trim();
   if (!rawPath) return null;
@@ -115,7 +115,7 @@ async function resolveAttachmentPathFromInput(params: {
 }
 
 function resolveAttachmentBytes(
-  attachment: DashboardSessionExecuteAttachmentInput,
+  attachment: ControlSessionExecuteAttachmentInput,
 ): Buffer | null {
   const textContent =
     typeof attachment.content === "string" ? attachment.content : "";
@@ -136,7 +136,7 @@ function resolveAttachmentBytes(
 async function materializeAttachmentContent(params: {
   projectRoot: string;
   sessionId: string;
-  attachment: DashboardSessionExecuteAttachmentInput;
+  attachment: ControlSessionExecuteAttachmentInput;
   index: number;
 }): Promise<string | null> {
   const bytes = resolveAttachmentBytes(params.attachment);
@@ -172,7 +172,7 @@ async function materializeAttachmentContent(params: {
 }
 
 function toAttachmentLine(params: {
-  type: DashboardSessionExecuteAttachmentType;
+  type: ControlSessionExecuteAttachmentType;
   relativePath: string;
   caption?: string;
 }): string {
@@ -190,7 +190,7 @@ export async function buildExecuteInputText(params: {
   projectRoot: string;
   sessionId: string;
   instructions: string;
-  attachments?: DashboardSessionExecuteAttachmentInput[];
+  attachments?: ControlSessionExecuteAttachmentInput[];
 }): Promise<string> {
   const instructions = String(params.instructions || "").trim();
   const inputAttachments = Array.isArray(params.attachments)

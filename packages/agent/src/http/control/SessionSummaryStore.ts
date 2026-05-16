@@ -1,9 +1,9 @@
 /**
- * Dashboard 会话摘要读取 helper。
+ * Control 会话摘要读取 helper。
  *
  * 关键点（中文）
  * - 负责会话列表聚合。
- * - 只返回 dashboard 视图需要的摘要字段。
+ * - 只返回控制面视图需要的摘要字段。
  */
 
 import fs from "fs-extra";
@@ -18,9 +18,9 @@ import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
 
 /**
- * 枚举 dashboard 所需的 session 摘要。
+ * 枚举控制面所需的 session 摘要。
  */
-export async function listDashboardSessionSummaries(params: {
+export async function listControlSessionSummaries(params: {
   projectRoot: string;
   executionContext?: AgentContext;
   limit: number;

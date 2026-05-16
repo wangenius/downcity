@@ -1,8 +1,8 @@
 /**
- * Console 网关。
+ * 控制面网关。
  *
  * 关键点（中文）
- * - UI 由 console 进程独立托管，不依赖单个 agent 启动参数。
+ * - UI 由控制面进程独立托管，不依赖单个 agent 启动参数。
  * - 提供统一的多 agent 选择能力，并把 `/api/*` 代理到选中 agent。
  */
 
@@ -13,7 +13,7 @@ import http from "node:http";
 import fs from "fs-extra";
 import path from "node:path";
 import { fileURLToPath } from "url";
-import { registerConsoleGatewayRoutes } from "@/console/ConsoleGatewayRoutes.js";
+import { registerControlGatewayRoutes } from "@/control/ControlGatewayRoutes.js";
 import {
   buildConsoleAgentsResponse,
   buildConsoleConfigStatusResponse,
@@ -24,7 +24,7 @@ import {
   readRequestedConsoleAgentId,
   resolveConsoleAgentById,
   resolveSelectedConsoleAgent,
-} from "@/console/gateway/AgentCatalog.js";
+} from "@/control/gateway/AgentCatalog.js";
 import {
   executeConsoleShellCommand,
   initializeConsoleAgentProject,
@@ -34,12 +34,12 @@ import {
   startConsoleAgentByProjectRoot,
   stopConsoleAgentByProjectRoot,
   updateConsoleAgentExecution,
-} from "@/console/gateway/AgentActions.js";
-import { serveConsoleFrontendPath } from "@/console/gateway/FrontendAssets.js";
+} from "@/control/gateway/AgentActions.js";
+import { serveConsoleFrontendPath } from "@/control/gateway/FrontendAssets.js";
 import {
   buildConsoleUpstreamUrl,
   forwardConsoleRequest,
-} from "@/console/gateway/Proxy.js";
+} from "@/control/gateway/Proxy.js";
 import type {
   ConsoleAgentOption,
   ConsoleAgentsResponse,
@@ -76,9 +76,9 @@ const DC_VERSION = (() => {
 })();
 
 /**
- * Console 启动参数。
+ * 控制面网关启动参数。
  */
-export interface ConsoleGatewayStartOptions {
+export interface ControlGatewayStartOptions {
   /**
    * UI 监听端口。
    */
@@ -91,9 +91,9 @@ export interface ConsoleGatewayStartOptions {
 }
 
 /**
- * Console 网关。
+ * 控制面网关。
  */
-export class ConsoleGateway {
+export class ControlGateway {
   private app: Hono;
   private server: ReturnType<typeof http.createServer> | null = null;
   private readonly publicDir: string;
@@ -136,7 +136,7 @@ export class ConsoleGateway {
       app: this.app,
       authService: this.authService,
     });
-    registerConsoleGatewayRoutes({
+    registerControlGatewayRoutes({
       app: this.app,
       handlers: {
         readRequestedAgentId: (request) => this.readRequestedAgentId(request),
@@ -409,7 +409,7 @@ export class ConsoleGateway {
   /**
    * 启动 UI 网关。
    */
-  async start(options: ConsoleGatewayStartOptions): Promise<void> {
+  async start(options: ControlGatewayStartOptions): Promise<void> {
     const { port, host } = options;
     await new Promise<void>((resolve) => {
       const server = http.createServer(async (req, res) => {
@@ -458,6 +458,6 @@ export class ConsoleGateway {
   }
 }
 
-export function createConsoleGateway(): ConsoleGateway {
-  return new ConsoleGateway();
+export function createControlGateway(): ControlGateway {
+  return new ControlGateway();
 }

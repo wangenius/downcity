@@ -1,5 +1,5 @@
 /**
- * Dashboard 概览路由。
+ * Control 概览路由。
  *
  * 关键点（中文）
  * - 聚合 overview 与 services 两块轻量只读接口。
@@ -11,8 +11,8 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { listServiceStates } from "@/service/Manager.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
-import { listDashboardSessionSummaries, readRecentLogs, toLimit } from "./Helpers.js";
-import type { DashboardRouteRegistrationParams } from "@/shared/types/DashboardRoutes.js";
+import { listControlSessionSummaries, readRecentLogs, toLimit } from "./Helpers.js";
+import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,8 +35,8 @@ const DC_VERSION = (() => {
 /**
  * 注册概览与服务路由。
  */
-export function registerDashboardOverviewRoutes(
-  params: DashboardRouteRegistrationParams,
+export function registerControlOverviewRoutes(
+  params: ControlRouteRegistrationParams,
 ): void {
   const { app } = params;
 
@@ -47,7 +47,7 @@ export function registerDashboardOverviewRoutes(
         c.req.query("sessionLimit") || c.req.query("contextLimit"),
         20,
       );
-      const sessions = await listDashboardSessionSummaries({
+      const sessions = await listControlSessionSummaries({
         projectRoot: runtime.rootPath,
         executionContext: params.getAgentContext(),
         limit: sessionLimit,

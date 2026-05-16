@@ -1,8 +1,8 @@
 /**
- * Dashboard helper 聚合出口。
+ * Control helper 聚合出口。
  *
  * 关键点（中文）
- * - 兼容 dashboard 路由层现有 import 路径。
+ * - 兼容控制面路由层的统一 import 路径。
  * - 具体实现已拆分到独立子模块，避免单文件继续膨胀。
  */
 
@@ -13,7 +13,7 @@ export {
   resolveUiMessagePreview,
   toUiMessageTimeline,
 } from "./MessageTimeline.js";
-export { listDashboardSessionSummaries } from "./SessionSummaryStore.js";
+export { listControlSessionSummaries } from "./SessionSummaryStore.js";
 export {
   TASK_RUN_DIR_REGEX,
   listTaskRuns,

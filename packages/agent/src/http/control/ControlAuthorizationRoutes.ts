@@ -1,18 +1,18 @@
 /**
- * Dashboard Authorization 路由。
+ * Agent Control Authorization 路由。
  *
  * 关键点（中文）
- * - 单独承接 `/api/dashboard/authorization*`，避免 DashboardApiRoutes 文件继续膨胀。
+ * - 单独承接 `/api/dashboard/authorization*`，避免控制面聚合文件继续膨胀。
  * - 授权页面的数据统一通过 auth plugin API 读取与写入。
  */
 
 import type { Hono } from "hono";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 import {
-  readAuthDashboardPayload,
-  setAuthDashboardUserRole,
-  writeAuthDashboardConfig,
-} from "@/http/dashboard/AuthDashboardService.js";
+  readAuthControlPayload,
+  setAuthControlUserRole,
+  writeAuthControlConfig,
+} from "@/http/control/AuthControlService.js";
 import {
   isChatAuthorizationChannel,
   type AuthSetUserRolePayload,
@@ -29,7 +29,7 @@ function normalizeChatChannel(value: unknown): ChatAuthorizationChannel | null {
 /**
  * 注册 authorization 相关路由。
  */
-export function registerDashboardAuthorizationRoutes(params: {
+export function registerControlAuthorizationRoutes(params: {
   app: Hono;
   getAgentContext: () => AgentContext;
 }): void {
@@ -37,7 +37,7 @@ export function registerDashboardAuthorizationRoutes(params: {
 
   app.get("/api/dashboard/authorization", async (c) => {
     try {
-      const payload = await readAuthDashboardPayload(getAgentContext());
+      const payload = await readAuthControlPayload(getAgentContext());
       return c.json({
         success: true,
         ...payload,
@@ -52,7 +52,7 @@ export function registerDashboardAuthorizationRoutes(params: {
       const body = (await c.req.json().catch(() => ({}))) as {
         config?: ChatAuthorizationConfig;
       };
-      const payload = await writeAuthDashboardConfig({
+      const payload = await writeAuthControlConfig({
         context: getAgentContext(),
         config: body.config && typeof body.config === "object" ? body.config : {},
       });
@@ -82,7 +82,7 @@ export function registerDashboardAuthorizationRoutes(params: {
         return c.json({ success: false, error: `Unsupported action: ${action}` }, 400);
       }
 
-      const payload = await setAuthDashboardUserRole({
+      const payload = await setAuthControlUserRole({
         context: getAgentContext(),
         input: {
           channel,

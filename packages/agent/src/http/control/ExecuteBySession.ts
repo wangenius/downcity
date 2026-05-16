@@ -9,7 +9,7 @@
 import type { AgentRuntime } from "@/agent/AgentRuntime.js";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
-import type { DashboardSessionExecuteAttachmentInput } from "@/shared/types/DashboardSessionExecute.js";
+import type { ControlSessionExecuteAttachmentInput } from "@/shared/types/ControlSessionExecute.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";
@@ -33,7 +33,7 @@ export async function executeBySessionId(params: {
   executionContext: AgentContext;
   sessionId: string;
   instructions: string;
-  attachments?: DashboardSessionExecuteAttachmentInput[];
+  attachments?: ControlSessionExecuteAttachmentInput[];
 }) {
   const sessionId = String(params.sessionId || "").trim();
   const instructions = String(params.instructions || "").trim();

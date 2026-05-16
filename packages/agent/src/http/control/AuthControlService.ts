@@ -1,15 +1,15 @@
 /**
- * Dashboard Authorization Service。
+ * Control Authorization Service。
  *
  * 关键点（中文）
- * - 这是 main/dashboard 侧的 auth 管理面 facade。
+ * - 这是 control 侧的 auth 管理面 facade。
  * - 它通过 auth plugin action 读取与写入授权数据，但自身不属于 plugin 内核。
  * - 这样调用方不需要知道 plugin action 名称，也不需要依赖 `plugins/auth/*` 目录。
  */
 
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
-import type { AuthDashboardPayload } from "@/shared/types/AuthDashboard.js";
+import type { AuthControlPayload } from "@/shared/types/AuthControl.js";
 import type {
   AuthSetUserRolePayload,
   AuthWriteConfigPayload,
@@ -115,9 +115,9 @@ async function setAuthorizationUserRoleViaPlugin(params: {
 /**
  * 读取 authorization 页面所需的完整数据。
  */
-export async function readAuthDashboardPayload(
+export async function readAuthControlPayload(
   context: AgentContext,
-): Promise<AuthDashboardPayload> {
+): Promise<AuthControlPayload> {
   const [config, snapshot] = await Promise.all([
     readAuthorizationConfigViaPlugin(context),
     readAuthorizationSnapshotViaPlugin(context),
@@ -133,29 +133,29 @@ export async function readAuthDashboardPayload(
 /**
  * 覆盖写入授权配置，并返回最新 dashboard payload。
  */
-export async function writeAuthDashboardConfig(params: {
+export async function writeAuthControlConfig(params: {
   context: AgentContext;
   config: ChatAuthorizationConfig;
-}): Promise<AuthDashboardPayload> {
+}): Promise<AuthControlPayload> {
   await writeAuthorizationConfigViaPlugin({
     context: params.context,
     config: params.config,
   });
-  return readAuthDashboardPayload(params.context);
+  return readAuthControlPayload(params.context);
 }
 
 /**
  * 设置用户角色，并返回最新 dashboard payload。
  */
-export async function setAuthDashboardUserRole(params: {
+export async function setAuthControlUserRole(params: {
   context: AgentContext;
   input: AuthSetUserRolePayload;
-}): Promise<AuthDashboardPayload> {
+}): Promise<AuthControlPayload> {
   await setAuthorizationUserRoleViaPlugin({
     context: params.context,
     channel: params.input.channel,
     userId: params.input.userId,
     roleId: params.input.roleId,
   });
-  return readAuthDashboardPayload(params.context);
+  return readAuthControlPayload(params.context);
 }

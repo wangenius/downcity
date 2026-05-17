@@ -8,9 +8,9 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { LlmProviderType } from "@downcity/agent/shared/types/LlmConfig.js";
+import type { LlmProviderType } from "@downcity/agent";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import type { DowncityConfig } from "@downcity/agent/shared/types/DowncityConfig.js";
+import type { DowncityConfig } from "@downcity/agent";
 
 const OPENAI_COMPAT_PROVIDER_TYPES = new Set<LlmProviderType>([
   "openai",

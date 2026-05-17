@@ -6,7 +6,7 @@
  * - runtime 重启时会把遗留 `running` 任务回退成 `pending`，然后继续补执行。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import { ServiceScheduleStore } from "./Store.js";
 import { runDueScheduledJobs } from "./Executor.js";
 

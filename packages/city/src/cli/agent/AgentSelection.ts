@@ -12,7 +12,7 @@ import { resolve } from "path";
 import prompts from "prompts";
 import { getDowncityJsonPath, getProfileMdPath } from "@/config/Paths.js";
 import { listConsoleAgents } from "@/process/registry/CityRegistry.js";
-import type { ConsoleAgentRegistryEntry } from "@downcity/agent/shared/types/Console.js";
+import type { ConsoleAgentRegistryEntry } from "@downcity/agent";
 import type {
   CliAgentPromptChoice,
   CliRegisteredAgentView,

@@ -6,7 +6,7 @@
  *   进程（显式 `--foreground true`），这里负责拼装其 argv。
  */
 
-import type { StartOptions } from "@downcity/agent/shared/types/Start.js";
+import type { StartOptions } from "@downcity/agent";
 import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
 
 /**

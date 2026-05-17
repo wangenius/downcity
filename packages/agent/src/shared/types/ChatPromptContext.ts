@@ -8,7 +8,7 @@
  */
 
 import type { ChatAuthorizationPermission } from "@/shared/types/AuthPlugin.js";
-import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 
 /**
  * 当前 chat 环境提示输入。

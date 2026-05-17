@@ -17,8 +17,8 @@ import type {
   SessionMessageV1,
   SessionMetadataV1,
 } from "@/types/session/SessionMessages.js";
-import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
-import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
+import { pickLastSuccessfulChatSendText } from "@/service/builtins/chat/runtime/UserVisibleText.js";
+import { extractToolCallsFromUiMessage } from "@/service/builtins/chat/runtime/UIMessageTransformer.js";
 import type { DashboardTimelineEvent, DashboardTimelineRole } from "@/shared/types/DashboardData.js";
 import { truncateText } from "./CommonHelpers.js";
 

@@ -15,7 +15,7 @@ import {
   type FileUIPart,
 } from "ai";
 import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
-import { parseChatMessageMarkup } from "../../services/chat/runtime/ChatMessageMarkup.js";
+import { parseChatMessageMarkup } from "@/service/builtins/chat/runtime/ChatMessageMarkup.js";
 
 /**
  * 从 `<file>` 标签中解析附件描述。

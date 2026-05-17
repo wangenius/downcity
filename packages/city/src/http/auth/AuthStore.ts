@@ -12,21 +12,21 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { nanoid } from "nanoid";
 import { getConsoleShipDbPath } from "@/process/registry/CityPaths.js";
-import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent/shared/types/auth/AuthToken.js";
+import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import {
   AUTH_DEFAULT_ROLES,
   AUTH_PERMISSION_DESCRIPTIONS,
   AUTH_PERMISSION_KEYS,
   type AuthDefaultRoleName,
   type AuthPermissionKey,
-} from "@downcity/agent/shared/types/auth/AuthPermission.js";
+} from "@downcity/agent";
 import type {
   AuthAuditLog,
   AuthPermission,
   AuthRole,
   AuthTokenRecord,
   AuthUser,
-} from "@downcity/agent/shared/types/auth/AuthTypes.js";
+} from "@downcity/agent";
 import { ensureConsoleStoreSchema } from "@/store/StoreSchema.js";
 import {
   nowIso,

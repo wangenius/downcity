@@ -1,8 +1,8 @@
 /**
- * IndexConsoleProcess：console 命令的 runtime/进程控制辅助。
+ * IndexConsoleProcess：city gateway / control plane 命令的 runtime/进程控制辅助。
  *
  * 关键点（中文）
- * - 聚合 console 与受管 agent 的后台进程控制逻辑。
+ * - 聚合 control plane 与受管 agent 的后台进程控制逻辑。
  * - 让 `IndexConsoleCommand` 只保留命令树装配，不再混杂大量进程细节。
  */
 
@@ -23,7 +23,7 @@ import {
   listConsoleAgents,
   markConsoleAgentStopped,
 } from "@/process/registry/CityRegistry.js";
-import type { ConsoleAgentProcessView } from "@downcity/agent/shared/types/Console.js";
+import type { ConsoleAgentProcessView } from "@downcity/agent";
 import {
   getCityLogPath,
   getCityPidPath,
@@ -39,7 +39,7 @@ import {
   sweepDetachedCityProcesses,
 } from "@/process/registry/ProcessSweep.js";
 import { startCommand } from "../agent/Start.js";
-import type { StartOptions } from "@downcity/agent/shared/types/Start.js";
+import type { StartOptions } from "@downcity/agent";
 import {
   injectAgentContext,
   resolveAgentName,

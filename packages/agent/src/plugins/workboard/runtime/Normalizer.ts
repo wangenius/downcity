@@ -8,14 +8,14 @@
 
 import type { DashboardSessionSummary } from "@/shared/types/DashboardData.js";
 import type { ServiceStateSnapshot } from "@/shared/types/ServiceState.js";
-import type { TaskListResponse } from "@services/task/types/TaskCommand.js";
+import type { TaskListResponse } from "@/service/builtins/task/types/TaskCommand.js";
 import type {
   WorkboardActivityItem,
   WorkboardAgentSummary,
   WorkboardSignalItem,
   WorkboardSummary,
 } from "@/plugins/workboard/types/Workboard.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 
 function toIsoString(timestamp?: number): string {
   if (!timestamp || !Number.isFinite(timestamp)) {

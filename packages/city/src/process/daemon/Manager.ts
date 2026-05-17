@@ -22,7 +22,7 @@ import {
   DAEMON_PID_FILENAME,
   type DaemonMeta,
   type DaemonStaleReason,
-} from "@downcity/agent/shared/types/Daemon.js";
+} from "@downcity/agent";
 import {
   markConsoleAgentStopped,
   upsertConsoleAgentEntry,

@@ -13,8 +13,8 @@ import {
   listServiceStates,
   registerAllServicesForServer,
   runServiceCommand,
-} from "@/service/Manager.js";
-import type { ServiceStateControlAction } from "@/service/Manager.js";
+} from "@/service/core/Manager.js";
+import type { ServiceStateControlAction } from "@/service/core/Manager.js";
 import { getAgentContext } from "@/agent/AgentRuntime.js";
 
 /**

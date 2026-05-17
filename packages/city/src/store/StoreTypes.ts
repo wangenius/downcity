@@ -6,7 +6,22 @@
  * - city 只在这里补充 console 专属的派生视图类型，避免继续维护整份副本。
  */
 
-export * from "@downcity/agent/shared/types/Store.js";
+export type {
+  StoredAgentEnvEntry,
+  StoredChannelAccount,
+  StoredChannelAccountChannel,
+  StoredEnvEntry,
+  StoredEnvScope,
+  StoredGlobalEnvEntry,
+  StoredModel,
+  StoredModelProvider,
+  UpsertAgentEnvEntryInput,
+  UpsertChannelAccountInput,
+  UpsertEnvEntryInput,
+  UpsertGlobalEnvEntryInput,
+  UpsertModelInput,
+  UpsertModelProviderInput,
+} from "@downcity/agent";
 
 /**
  * Provider 元信息（不含 API Key，用于同步快速查询）。

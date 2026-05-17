@@ -9,14 +9,16 @@
 
 import path from "node:path";
 import type { Command } from "commander";
-import { callAgentTransport } from "@downcity/agent";
-import { listRegisteredServices } from "@downcity/agent/service/ServiceClassRegistry.js";
-import { parseScheduledRunAtMsOrThrow } from "@downcity/agent/service/schedule/Time.js";
-import type { Service, ServiceAction } from "@downcity/agent/shared/types/Service.js";
-import type { JsonObject, JsonValue } from "@downcity/agent/shared/types/Json.js";
-import type { ServiceCommandScheduleInput } from "@downcity/agent/shared/types/ServiceSchedule.js";
-import type { ServiceCommandResponse } from "@downcity/agent/shared/types/Services.js";
-import type { ServiceCliBaseOptions } from "@downcity/agent/shared/types/Services.js";
+import {
+  callAgentTransport,
+  listRegisteredServices,
+  parseScheduledRunAtMsOrThrow,
+} from "@downcity/agent";
+import type { Service, ServiceAction } from "@downcity/agent";
+import type { JsonObject, JsonValue } from "@downcity/agent";
+import type { ServiceCommandScheduleInput } from "@downcity/agent";
+import type { ServiceCommandResponse } from "@downcity/agent";
+import type { ServiceCliBaseOptions } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean, parsePort } from "../shared/IndexSupport.js";
 import { runServiceControlCommand } from "./ServiceCommandRemote.js";

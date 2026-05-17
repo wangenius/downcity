@@ -1,15 +1,15 @@
 /**
- * IndexConsoleStatus：console 命令的状态展示辅助。
+ * IndexConsoleStatus：city gateway / control plane 命令的状态展示辅助。
  *
  * 关键点（中文）
- * - 聚合 city 后台、Console 与受管 agent 的状态面板输出。
+ * - 聚合 city 后台、gateway/control plane 与受管 agent 的状态面板输出。
  * - 与进程控制逻辑解耦，便于后续继续拆分命令入口文件。
  */
 
 import {
   getConsoleRuntimeStatus,
 } from "./Console.js";
-import type { ConsoleAgentProcessView } from "@downcity/agent/shared/types/Console.js";
+import type { ConsoleAgentProcessView } from "@downcity/agent";
 import {
   getConsoleAgentRegistryPath,
   getCityPidPath,

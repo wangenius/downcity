@@ -12,26 +12,27 @@ import path from "node:path";
 import os from "node:os";
 import { mkdtemp } from "node:fs/promises";
 import { generateId } from "@/utils/Id.js";
-import { getLogger, type Logger } from "@downcity/agent/shared/utils/logger/Logger.js";
-import type { ConsoleAgentOption } from "@downcity/agent/shared/types/Console.js";
+import {
+  createModel,
+  drainDeferredPersistedUserMessages,
+  getLogger,
+  JsonlSessionCompactionComposer,
+  JsonlSessionHistoryComposer,
+  loadStaticSystemPrompts,
+  LocalSessionExecutor,
+  pickLastSuccessfulChatSendText,
+  resolveAssistantMessageForPersistence,
+  Session,
+} from "@downcity/agent";
+import type { Logger } from "@downcity/agent";
+import type { ConsoleAgentOption } from "@downcity/agent";
 import type {
   ConsoleInlineInstantRunInput,
   ConsoleInlineInstantRunResult,
   ConsoleInlineInstantService,
-} from "@downcity/agent/shared/types/InlineInstant.js";
-import { Session } from "@downcity/agent/session/Session.js";
-import { JsonlSessionHistoryComposer } from "@downcity/agent/session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import { JsonlSessionCompactionComposer } from "@downcity/agent/session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-import { LocalSessionExecutor } from "@downcity/agent/session/executors/local/LocalSessionExecutor.js";
+} from "@downcity/agent";
 import { InlineInstantSystemComposer } from "@/control/InlineInstantSystemComposer.js";
-import { createModel } from "@downcity/agent";
-import type { Logger as AgentLogger } from "@downcity/agent/shared/utils/logger/Logger.js";
-import { loadStaticSystemPrompts } from "@downcity/agent/session/composer/system/default/StaticPromptCatalog.js";
-import { drainDeferredPersistedUserMessages } from "@downcity/agent/session/SessionRunScope.js";
-import {
-  pickLastSuccessfulChatSendText,
-  resolveAssistantMessageForPersistence,
-} from "@downcity/agent/services/chat/runtime/UserVisibleText.js";
+import type { Logger as AgentLogger } from "@downcity/agent";
 
 type InlineInstantSessionServiceOptions = {
   /**

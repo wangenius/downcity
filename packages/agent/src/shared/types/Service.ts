@@ -9,7 +9,7 @@
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 
 /**

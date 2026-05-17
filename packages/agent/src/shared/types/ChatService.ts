@@ -14,8 +14,8 @@ import type {
   ChatInfoRequest,
   ChatListRequest,
   ChatReactRequest,
-} from "@services/chat/types/ChatCommand.js";
-import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";
+} from "@/service/builtins/chat/types/ChatCommand.js";
+import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 
 /**
  * `chat.send` action 的输入载荷。

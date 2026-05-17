@@ -11,7 +11,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { nanoid } from "nanoid";
-import { getConsoleShipDbPath } from "@/runtime/CityPaths.js";
+import { getConsoleShipDbPath } from "@/host/runtime/CityPaths.js";
 import type { AuthIssuedToken, AuthTokenSummary } from "@/shared/types/auth/AuthToken.js";
 import {
   AUTH_DEFAULT_ROLES,

@@ -8,7 +8,7 @@
  */
 
 import path from "node:path";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { ResolvedSandboxConfig } from "@/types/sandbox/SandboxRuntime.js";
 
 const DEFAULT_ENV_ALLOWLIST = [

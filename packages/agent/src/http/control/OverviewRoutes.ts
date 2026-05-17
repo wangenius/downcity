@@ -9,8 +9,8 @@
 import fs from "fs-extra";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { listServiceStates } from "@/service/Manager.js";
-import { listTaskDefinitions } from "@services/task/Action.js";
+import { listServiceStates } from "@/service/core/Manager.js";
+import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
 import { listControlSessionSummaries, readRecentLogs, toLimit } from "./Helpers.js";
 import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 

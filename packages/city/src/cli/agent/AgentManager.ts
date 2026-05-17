@@ -26,8 +26,8 @@ import { prepareForegroundAgent } from "../console/IndexConsoleCommand.js";
 import { CliError } from "../shared/CliError.js";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { ConsoleStore } from "@/store/index.js";
-import type { StartOptions } from "@downcity/agent/shared/types/Start.js";
-import type { DowncityConfig } from "@downcity/agent/shared/types/DowncityConfig.js";
+import type { StartOptions } from "@downcity/agent";
+import type { DowncityConfig } from "@downcity/agent";
 import type { StoredChannelAccount, StoredChannelAccountChannel } from "@/store/StoreTypes.js";
 import type {
   AgentManagerAgentAction,

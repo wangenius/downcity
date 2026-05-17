@@ -13,7 +13,7 @@ import type {
   PluginPipelineHook,
   PluginResolveHook,
 } from "@/shared/types/Plugin.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 
 type ContextResolver = () => AgentContext;
 type PluginEnabledChecker = (pluginName: string, context: AgentContext) => boolean;

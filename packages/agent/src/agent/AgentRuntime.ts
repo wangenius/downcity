@@ -12,7 +12,7 @@ import path from "path";
 import fs from "fs";
 import { logger as defaultLogger } from "@shared/utils/logger/Logger.js";
 import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
-import { ensureRuntimeProjectReady } from "@/daemon/ProjectSetup.js";
+import { ensureRuntimeProjectReady } from "@/host/daemon/ProjectSetup.js";
 import { createModel } from "@/model/CreateModel.js";
 import {
   loadGlobalEnvFromStore,
@@ -23,15 +23,15 @@ import { getDowncityJsonPath } from "@/config/Paths.js";
 import {
   getTaskRunDir,
   parseTaskRunSessionId,
-} from "@services/task/runtime/Paths.js";
+} from "@/service/builtins/task/runtime/Paths.js";
 import { setShellToolRuntime, shellTools } from "@session/tools/shell/ShellToolDefinition.js";
 import { getSessionRunScope } from "@session/SessionRunScope.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { DefaultSessionSystemComposer } from "@session/composer/system/default/DefaultSessionSystemComposer.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
-import { ChatSession } from "@services/chat/runtime/ChatSession.js";
-import { ChatSessionExecutionComposer } from "@services/chat/runtime/ChatSessionExecutionComposer.js";
+import { ChatSession } from "@/service/builtins/chat/runtime/ChatSession.js";
+import { ChatSessionExecutionComposer } from "@/service/builtins/chat/runtime/ChatSessionExecutionComposer.js";
 import {
   loadStaticSystemPrompts,
   StaticPromptCatalog,
@@ -46,17 +46,17 @@ import {
   setAgentRuntimeBase,
   type AgentRuntime,
 } from "@/agent/AgentRuntimeState.js";
-import { createRegisteredServiceInstances } from "@/service/ServiceClassRegistry.js";
+import { createRegisteredServiceInstances } from "@/service/core/ServiceClassRegistry.js";
 import { readProjectPrimaryModelId } from "@/agent/project/ProjectExecutionBinding.js";
 import { initializePluginManager, resetPluginManager } from "@/plugin/PluginManager.js";
 import {
   clearPluginRuntimeContextResolver,
   setPluginRuntimeContextResolver,
-} from "@/runtime/PluginRuntime.js";
+} from "@/host/runtime/PluginRuntime.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
-} from "@/runtime/AgentHostRuntime.js";
+} from "@/host/runtime/AgentHostRuntime.js";
 import { updateAgentRuntimeConfig } from "@/agent/AgentRuntimeState.js";
 
 export type { AgentRuntimeBase, AgentRuntime } from "@/agent/AgentRuntimeState.js";
@@ -345,4 +345,3 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
   setShellToolRuntime(getAgentContext().invoke);
   startAgentHotReload();
 }
-

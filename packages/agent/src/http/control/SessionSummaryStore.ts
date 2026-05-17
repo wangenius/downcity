@@ -7,12 +7,12 @@
  */
 
 import fs from "fs-extra";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,
 } from "@/config/Paths.js";
-import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
+import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
 import type { DashboardSessionSummary } from "@/shared/types/DashboardData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";

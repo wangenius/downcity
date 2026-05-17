@@ -8,7 +8,7 @@
  */
 
 import type { Hono } from "hono";
-import type { ConsoleAgentOption } from "@downcity/agent/shared/types/Console.js";
+import type { ConsoleAgentOption } from "@downcity/agent";
 
 type AgentStatusPayload = {
   success: boolean;

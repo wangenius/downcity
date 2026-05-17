@@ -14,7 +14,7 @@ import type {
   ServiceControlAction,
   ServiceControlResponse,
   ServiceListResponse,
-} from "@downcity/agent/shared/types/Services.js";
+} from "@downcity/agent";
 import {
   parseCommandPayload,
   resolveServiceProjectRoot,

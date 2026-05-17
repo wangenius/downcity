@@ -8,7 +8,7 @@
  */
 
 import { generateText } from "ai";
-import type { LlmProviderType } from "@downcity/agent/shared/types/LlmConfig.js";
+import type { LlmProviderType } from "@downcity/agent";
 import { ConsoleStore } from "@/store/index.js";
 import { createModel } from "@downcity/agent";
 import { discoverProviderModels } from "@/cli/model/ModelSupport.js";

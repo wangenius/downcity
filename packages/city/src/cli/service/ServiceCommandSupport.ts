@@ -14,11 +14,11 @@ import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
 import { listConsoleAgents } from "@/process/registry/CityRegistry.js";
 import { isCityRunning } from "@/process/registry/CityRuntime.js";
 import { ensureRuntimeExecutionBindingReady } from "@downcity/agent";
-import type { JsonValue } from "@downcity/agent/shared/types/Json.js";
+import type { JsonValue } from "@downcity/agent";
 import { parsePort, resolveAgentName } from "../shared/IndexSupport.js";
 import { CliError } from "../shared/CliError.js";
-import type { ScheduledJobStatus } from "@downcity/agent/shared/types/ServiceSchedule.js";
-import type { ServiceCliBaseOptions } from "@downcity/agent/shared/types/Services.js";
+import type { ScheduledJobStatus } from "@downcity/agent";
+import type { ServiceCliBaseOptions } from "@downcity/agent";
 import { parseBoolean } from "../shared/IndexSupport.js";
 
 export function isRegistryEntryRunning(

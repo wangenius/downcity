@@ -6,8 +6,8 @@
  * - 路由层只调用这里，不直接碰数据库与密码哈希细节。
  */
 
-import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent/shared/types/auth/AuthToken.js";
-import type { AuthPrincipal, AuthTokenRecord, AuthUser } from "@downcity/agent/shared/types/auth/AuthTypes.js";
+import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
+import type { AuthPrincipal, AuthTokenRecord, AuthUser } from "@downcity/agent";
 import { optionalTrimmedText } from "@/store/StoreShared.js";
 import { AuthError } from "./AuthError.js";
 import { AuthStore, type AuthStoreOptions } from "./AuthStore.js";

@@ -15,7 +15,7 @@ import { printResult } from "@/utils/cli/CliOutput.js";
 import { aliasCommand } from "./Alias.js";
 import { parseBoolean } from "./IndexSupport.js";
 import { resolveProjectRoot } from "../service/ServiceCommandSupport.js";
-import type { DowncityConfig } from "@downcity/agent/shared/types/DowncityConfig.js";
+import type { DowncityConfig } from "@downcity/agent";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

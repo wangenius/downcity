@@ -7,8 +7,8 @@
  */
 
 // SDK 入口
-export { Agent } from "./sdk/Agent.js";
-export { RemoteAgent } from "./sdk/RemoteAgent.js";
+export { Agent } from "./host/sdk/Agent.js";
+export { RemoteAgent } from "./host/sdk/RemoteAgent.js";
 export type {
   AgentOptions,
   RemoteAgentOptions,
@@ -19,15 +19,17 @@ export type {
   AgentSessionStreamEvent,
   AgentSessionMetadata,
   AgentSessionForkInput,
-} from "./types/sdk/AgentSdk.js";
-export { ChatService } from "./services/chat/ChatService.js";
+} from "./host/sdk/AgentSdkTypes.js";
+export { ChatService } from "./service/builtins/chat/ChatService.js";
+export { ChatChannelAccountService } from "./service/builtins/chat/accounts/ChannelAccountService.js";
+export type { ChatChannelAccountListItem } from "./service/builtins/chat/types/ChannelAccount.js";
 export type {
   ChatServiceChannelAccountProvider,
   ChatServiceFeishuOptions,
   ChatServiceOptions,
   ChatServiceQqOptions,
   ChatServiceTelegramOptions,
-} from "./types/chat/ChatService.js";
+} from "./service/builtins/chat/ChatServiceTypes.js";
 
 // Agent 运行时
 export {
@@ -44,10 +46,17 @@ export type { AgentRuntime, AgentRuntimeBase } from './agent/AgentRuntimeState.j
 
 // Agent 上下文
 export { createAgentContext } from "./agent/AgentContext.js";
-export type { AgentContext } from './types/agent/AgentContext.js';
+export type { AgentContext } from "./agent/AgentContextTypes.js";
 
 // 会话
 export { Session } from './session/Session.js';
+export { getSessionRunScope, drainDeferredPersistedUserMessages } from "./session/SessionRunScope.js";
+export { JsonlSessionHistoryComposer } from "./session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+export { JsonlSessionCompactionComposer } from "./session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
+export { SessionSystemComposer } from "./session/composer/system/SessionSystemComposer.js";
+export { transformPromptsIntoSystemMessages } from "./session/composer/system/default/PromptRenderer.js";
+export { loadStaticSystemPrompts } from "./session/composer/system/default/StaticPromptCatalog.js";
+export { LocalSessionExecutor } from "./session/executors/local/LocalSessionExecutor.js";
 
 // HTTP 服务
 export { startServer } from './http/Server.js';
@@ -69,14 +78,15 @@ export { registerControlTaskRoutes } from "./http/control/TaskRoutes.js";
 export { executeBySessionId } from "./http/control/ExecuteBySession.js";
 
 // RPC
-export { startLocalRpcServer } from './rpc/Server.js';
-export { callAgentTransport } from './rpc/Transport.js';
+export { startLocalRpcServer } from "./host/rpc/Server.js";
+export { callAgentTransport } from "./host/rpc/Transport.js";
 
 // 服务框架
 export {
   invokeServiceAction,
   resolveServiceAction,
-} from "./service/ServiceActionRunner.js";
+} from "./service/core/ServiceActionRunner.js";
+export { listRegisteredServices } from "./service/core/ServiceClassRegistry.js";
 export {
   controlServiceState,
   getServiceRootCommandNames,
@@ -87,12 +97,12 @@ export {
   runServiceCommand,
   startAllServices,
   stopAllServices,
-} from "./service/Manager.js";
+} from "./service/core/Manager.js";
 export type {
   ServiceStateControlAction,
   ServiceStateControlResult,
   ServiceStateSnapshot,
-} from "./service/Manager.js";
+} from "./service/core/Manager.js";
 export {
   startServiceScheduleRuntime,
   stopServiceScheduleRuntime,
@@ -105,6 +115,42 @@ export {
   parseScheduledRunAtMsOrThrow,
   parseScheduleTimeOptionOrThrow,
 } from "./service/schedule/Time.js";
+export {
+  pickLastSuccessfulChatSendText,
+  resolveAssistantMessageForPersistence,
+} from "./service/builtins/chat/runtime/UserVisibleText.js";
+export { logger, getLogger, type Logger } from "./shared/utils/logger/Logger.js";
+
+// 共享协议类型与控制面常量
+export * from "./shared/types/AgentHost.js";
+export * from "./shared/types/AgentProject.js";
+export * from "./shared/types/AuthPlugin.js";
+export * from "./shared/types/Console.js";
+export * from "./shared/types/ConsoleGateway.js";
+export * from "./shared/types/Daemon.js";
+export * from "./shared/types/DowncityConfig.js";
+export * from "./shared/types/ExecutionBinding.js";
+export * from "./shared/types/InlineInstant.js";
+export * from "./shared/types/Json.js";
+export * from "./shared/types/LlmConfig.js";
+export * from "./shared/types/LocalRpc.js";
+export * from "./shared/types/Plugin.js";
+export type {
+  PluginCliBaseOptions,
+  PluginActionResponse,
+  PluginAvailabilityResponse,
+  PluginAvailabilityView,
+  PluginListResponse,
+} from "./shared/types/PluginApi.js";
+export * from "./shared/types/Service.js";
+export * from "./shared/types/ServiceSchedule.js";
+export * from "./shared/types/Services.js";
+export * from "./shared/types/Start.js";
+export * from "./shared/types/Store.js";
+export * from "./shared/types/auth/AuthPermission.js";
+export * from "./shared/types/auth/AuthRoute.js";
+export * from "./shared/types/auth/AuthToken.js";
+export * from "./shared/types/auth/AuthTypes.js";
 
 // 模型
 export { createModel } from './model/CreateModel.js';
@@ -127,12 +173,31 @@ export {
   hasProjectExecutionTarget,
   assertProjectExecutionTarget,
 } from "./agent/project/ProjectExecutionBinding.js";
+export {
+  listChatAuthorizationRoles,
+  readChatAuthorizationConfigSync,
+  setChatAuthorizationUserRole,
+} from "./plugins/auth/runtime/AuthorizationConfig.js";
+export { resolveAuthorizedUserRole } from "./plugins/auth/runtime/AuthorizationPolicy.js";
 
 // Agent 项目准备
 export {
   ensureRuntimeProjectReady,
   ensureRuntimeExecutionBindingReady,
-} from "./daemon/ProjectSetup.js";
+} from "./host/daemon/ProjectSetup.js";
+export {
+  buildStaticPluginAvailability,
+  findBuiltinPlugin,
+  findStaticPluginView,
+  listBuiltinPlugins,
+  listStaticPluginViews,
+  toStaticPluginView,
+} from "./plugin/Catalog.js";
+export { setCityPluginEnabled, isCityPluginEnabled } from "./plugin/Lifecycle.js";
+export { runLocalPluginAction, listLocalPlugins, getLocalPluginAvailability } from "./plugin/LocalExecution.js";
+export { registerAllPluginsForCli } from "./plugin/PluginCommand.js";
+export { listBuiltinPluginRuntimeAuthPolicies } from "./plugin/HttpRoutes.js";
+export { persistProjectPluginConfig } from "./plugin/ProjectConfigStore.js";
 
 // 沙箱
 export {

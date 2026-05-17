@@ -9,9 +9,9 @@
 import fs from "fs-extra";
 import { join } from "path";
 import { getDowncityTasksDirPath } from "@/config/Paths.js";
-import { runServiceCommand } from "@/service/Manager.js";
-import { listTaskDefinitions } from "@services/task/Action.js";
-import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
+import { runServiceCommand } from "@/service/core/Manager.js";
+import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
+import { resolveTaskIdByTitle } from "@/service/builtins/task/runtime/Store.js";
 import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 import {
   TASK_RUN_DIR_REGEX,

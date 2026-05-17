@@ -21,7 +21,7 @@ import { agentResetCommand } from "../agent/AgentReset.js";
 import { runCommand } from "../agent/Run.js";
 import { startCommand } from "../agent/Start.js";
 import { statusCommand } from "../agent/Status.js";
-import type { StartOptions } from "@downcity/agent/shared/types/Start.js";
+import type { StartOptions } from "@downcity/agent";
 import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "./IndexSupport.js";
 import { runWithSpinner } from "@/utils/cli/Spinner.js";
 import { emitCliBlock } from "./CliReporter.js";

@@ -7,9 +7,11 @@
  * - 支持项目路径与 sessionId 变量替换，保留 PROFILE/SOUL 等静态提示的可用性。
  */
 
-import { getSessionRunScope } from "@downcity/agent/session/SessionRunScope.js";
-import { SessionSystemComposer } from "@downcity/agent/session/composer/system/SessionSystemComposer.js";
-import { transformPromptsIntoSystemMessages } from "@downcity/agent/session/composer/system/default/PromptRenderer.js";
+import {
+  getSessionRunScope,
+  SessionSystemComposer,
+  transformPromptsIntoSystemMessages,
+} from "@downcity/agent";
 
 type InlineInstantSystemComposerOptions = {
   /**

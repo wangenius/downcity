@@ -2,6 +2,7 @@
  * CLI city/console 命令装配。
  *
  * 关键点（中文）
+ * - 这里的 `console` 更接近 city gateway / control plane 的运维入口，而不是单 agent API。
  * - 统一管理 top-level city 生命周期命令与 Console 模块命令。
  * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
  */
@@ -45,6 +46,10 @@ export interface ConsoleCommandRegistrationContext {
 
 /**
  * 注册 top-level city 生命周期命令与 `console` 模块命令。
+ *
+ * 语义说明（中文）
+ * - `city ...` / `city console ...` 管的是平台控制面进程。
+ * - 单 agent 控制能力统一留在 `@downcity/agent` 暴露的 runtime / HTTP control API。
  */
 export function registerConsoleCommands(
   program: Command,

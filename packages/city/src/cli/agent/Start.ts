@@ -15,7 +15,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { startDaemonProcess } from "@/process/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
-import type { StartOptions } from "@downcity/agent/shared/types/Start.js";
+import type { StartOptions } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { resolveAgentName } from "../shared/IndexSupport.js";
 import { checkAgentPreflight } from "../service/ServiceCommandSupport.js";

@@ -1,9 +1,10 @@
 /**
- * Control 会话路由。
+ * 单 agent control API 会话路由。
  *
  * 关键点（中文）
  * - 聚合控制面会话消息、归档、system prompt 与执行相关接口。
  * - 仅负责编排请求与响应；消息读取、时间线映射、执行拼装复用 helper。
+ * - 虽然当前 URL 前缀仍是 `/api/dashboard/*`，但语义上属于单 agent 控制域。
  */
 
 import type { SystemModelMessage } from "ai";

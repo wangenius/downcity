@@ -15,7 +15,7 @@ import { findBuiltinPlugin, listStaticPluginViews } from "@/plugin/Catalog.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
-} from "@/runtime/AgentHostRuntime.js";
+} from "@/host/runtime/AgentHostRuntime.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type {
   PluginActionResult,

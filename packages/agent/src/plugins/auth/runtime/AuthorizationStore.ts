@@ -14,8 +14,8 @@ import type {
   ChatAuthorizationSnapshot,
   ChatAuthorizationStateFile,
 } from "@/shared/types/AuthPlugin.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
-import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 import { readChatAuthorizationConfigSync } from "@/plugins/auth/runtime/AuthorizationConfig.js";
 
 function getAuthorizationStatePath(rootPath: string): string {

@@ -6,9 +6,9 @@
  * - channel bots 的状态所有权归属于 ChatService 实例，而不是模块级单例。
  */
 
-import type { FeishuBot } from "@services/chat/channels/feishu/Feishu.js";
-import type { QQBot } from "@services/chat/channels/qq/QQ.js";
-import type { TelegramBot } from "@services/chat/channels/telegram/Bot.js";
+import type { FeishuBot } from "@/service/builtins/chat/channels/feishu/Feishu.js";
+import type { QQBot } from "@/service/builtins/chat/channels/qq/QQ.js";
+import type { TelegramBot } from "@/service/builtins/chat/channels/telegram/Bot.js";
 
 /**
  * ChatService 实例持有的渠道状态。

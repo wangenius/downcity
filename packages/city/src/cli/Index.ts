@@ -13,7 +13,7 @@ import { readFileSync } from "fs";
 import { basename, dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Command, Option } from "commander";
-import { registerAllPluginsForCli } from "@downcity/agent/plugin/PluginCommand.js";
+import { registerAllPluginsForCli } from "@downcity/agent";
 import { registerServicesCommand } from "./service/Services.js";
 import { registerPluginsCommand } from "./shared/Plugins.js";
 import { registerAllServicesForCli } from "./service/ServiceActionCommands.js";

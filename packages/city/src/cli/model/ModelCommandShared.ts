@@ -11,7 +11,7 @@ import {
   ModelPresetManager,
   type ModelPreset,
 } from "@/store/model/ModelPresetManager.js";
-import type { LlmProviderType } from "@downcity/agent/shared/types/LlmConfig.js";
+import type { LlmProviderType } from "@downcity/agent";
 import { ConsoleStore } from "@/store/index.js";
 
 const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [

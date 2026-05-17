@@ -17,7 +17,7 @@ import {
   resolveCliAuthToken,
 } from "@/http/auth/CliAuthStateStore.js";
 import { getDaemonMetaPath } from "@/process/daemon/Manager.js";
-import type { JsonObject, JsonValue } from "@downcity/agent/shared/types/Json.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**
  * 解析端口值。

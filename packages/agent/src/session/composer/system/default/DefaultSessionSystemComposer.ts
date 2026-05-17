@@ -10,7 +10,7 @@ import {
   SessionSystemComposer,
 } from "@session/composer/system/SessionSystemComposer.js";
 import { getSessionRunScope } from "@session/SessionRunScope.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import {
   resolveSessionSystemMessages,
   type SystemProfile,

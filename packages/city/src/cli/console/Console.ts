@@ -1,9 +1,10 @@
 /**
- * `city console`：Console 模块进程管理与前台运行入口。
+ * `city console`：city gateway / control plane 进程管理与前台运行入口。
  *
  * 关键点（中文）
  * - 默认 `city console` 等同于 `city console start`。
- * - `run` 仅供内部使用（真正启动 Console 网关进程）。
+ * - `run` 仅供内部使用（真正启动 control plane / gateway 进程）。
+ * - 这里管理的是平台控制面，不是单 agent control API。
  */
 
 import fs from "fs-extra";
@@ -27,7 +28,7 @@ import { createControlGateway } from "@/control/ControlGateway.js";
 import type {
   ConsoleRuntimeMeta,
   ConsoleRuntimeStatus,
-} from "@downcity/agent/shared/types/Console.js";
+} from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
 import { buildConsolePortFacts } from "../shared/PortHints.js";

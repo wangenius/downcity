@@ -10,20 +10,20 @@
 import type { Hono } from "hono";
 import {
   findBuiltinPlugin,
+  isCityPluginEnabled,
   listStaticPluginViews,
-} from "@downcity/agent/plugin/Catalog.js";
-import { runLocalPluginAction } from "@downcity/agent/plugin/LocalExecution.js";
-import { isPluginEnabled } from "@downcity/agent/plugin/Activation.js";
-import { setCityPluginEnabled } from "@downcity/agent/plugin/Lifecycle.js";
-import type { ConsoleAgentOption } from "@downcity/agent/shared/types/Console.js";
+  runLocalPluginAction,
+  setCityPluginEnabled,
+} from "@downcity/agent";
+import type { ConsoleAgentOption } from "@downcity/agent";
 import type {
   PluginActionResult,
   PluginAvailability,
   PluginSetupDefinition,
   PluginUsageDefinition,
   PluginView,
-} from "@downcity/agent/shared/types/Plugin.js";
-import type { JsonValue } from "@downcity/agent/shared/types/Json.js";
+} from "@downcity/agent";
+import type { JsonValue } from "@downcity/agent";
 
 type PluginActionConfigItem = {
   name: string;
@@ -137,14 +137,7 @@ function buildGlobalPluginPayload(): PluginUiResponse {
     plugins: listStaticPluginViews().map((view) => ({
       ...view,
       availability: {
-        enabled: isPluginEnabled({
-          plugin: findBuiltinPlugin(view.name) || {
-            name: view.name,
-            title: view.title,
-            description: view.description,
-            actions: {},
-          },
-        }),
+        enabled: isCityPluginEnabled(view.name),
         available: true,
         reasons: [],
       },
@@ -169,14 +162,7 @@ function buildAgentPluginPayload(params?: {
     plugins: listStaticPluginViews().map((view) => ({
       ...view,
       availability: {
-        enabled: isPluginEnabled({
-          plugin: findBuiltinPlugin(view.name) || {
-            name: view.name,
-            title: view.title,
-            description: view.description,
-            actions: {},
-          },
-        }),
+        enabled: isCityPluginEnabled(view.name),
         available: false,
         reasons: reason
           ? [`Agent server unavailable: ${reason}`]

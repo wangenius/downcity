@@ -7,12 +7,12 @@
  */
 
 import type { Hono } from "hono";
-import type { ConsoleAgentOption } from "@downcity/agent/shared/types/Console.js";
+import type { ConsoleAgentOption } from "@downcity/agent";
 import type {
   ConsoleInlineInstantRunInput,
   ConsoleInlineInstantService,
   InlineInstantExecutorType,
-} from "@downcity/agent/shared/types/InlineInstant.js";
+} from "@downcity/agent";
 import { InlineInstantSessionService } from "@/control/InlineInstantSessionService.js";
 
 function normalizeExecutorType(input: unknown): InlineInstantExecutorType | "" {

@@ -20,8 +20,8 @@ import type {
   ConsoleConfigFileStatusItem,
   ConsoleConfigStatusResponse,
   ConsoleLocalModelsResponse,
-} from "@downcity/agent/shared/types/Console.js";
-import type { AgentProjectInitializationResult } from "@downcity/agent/shared/types/AgentProject.js";
+} from "@downcity/agent";
+import type { AgentProjectInitializationResult } from "@downcity/agent";
 import { buildConsoleWorkloadBlockPayload } from "@/control/gateway/GatewaySupport.js";
 
 /**

@@ -12,20 +12,20 @@ import type {
   AgentContext,
   InvokeServicePort,
   SessionCollectionPort,
-} from "@/types/agent/AgentContext.js";
+} from "@/agent/AgentContextTypes.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type {
   PluginAvailability,
   PluginPort,
   PluginView,
 } from "@/shared/types/Plugin.js";
-import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
-import { runServiceCommand } from "@/service/Manager.js";
+import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
+import { runServiceCommand } from "@/service/core/Manager.js";
 import { getPluginManager } from "@/plugin/PluginManager.js";
 import { getAgentRuntime } from "@/agent/AgentRuntimeState.js";
-import { appendExecSessionMessage } from "@services/chat/runtime/ChatIngressStore.js";
-import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
-import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
+import { appendExecSessionMessage } from "@/service/builtins/chat/runtime/ChatIngressStore.js";
+import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
+import { resolveChatQueueStore } from "@/service/builtins/chat/runtime/ChatQueue.js";
 
 /**
  * service 调用端口实现。

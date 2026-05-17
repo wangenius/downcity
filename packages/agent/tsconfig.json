@@ -9,7 +9,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@session/*": ["./src/session/*"],
-      "@services/*": ["./src/services/*"],
+      "@services/*": ["./src/service/builtins/*"],
       "@shared/*": ["./src/shared/*"]
     },
     "strict": true,

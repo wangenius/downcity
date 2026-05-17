@@ -82,7 +82,7 @@ src
 
 - `src/cli/console/`
   - `city` 顶层 runtime 命令与 `city console ...` 命令。
-  - 更偏 control plane / gateway 宿主管理，而不是单 Agent API。
+  - 名字虽然叫 `console`，但语义更偏 control plane / gateway 宿主管理，而不是单 Agent API。
 
 - `src/cli/model/`
   - `city model ...` 命令。
@@ -108,6 +108,19 @@ src
 - `src/control/gateway/`
   - gateway 的读写辅助模块。
   - 包括 agent catalog、agent actions、proxy、frontend assets 等。
+
+## 命名说明
+
+- `city/cli/console`
+  - 这里的 `console` 更像 city gateway / control plane 的命令面与进程管理面。
+  - 名字暂时保留，是为了不在这一轮先引入大规模逻辑迁移。
+
+- `city/control`
+  - 这里承载的是多 agent 聚合控制面，不是单 agent control API。
+
+- `@downcity/agent/http/control`
+  - 这里承载的是 single-agent control API。
+  - 当前 `/api/dashboard/*` 只是历史 URL 命名，不代表它属于 city gateway/dashboard 层。
 
 - `src/http/auth/`
   - city 控制面自己的鉴权体系。

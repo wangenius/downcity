@@ -6,9 +6,9 @@
  * - 不负责调度入口和轮询生命周期管理。
  */
 
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { ServiceScheduleStore } from "./Store.js";
-import { runServiceCommand } from "@/service/Manager.js";
+import { runServiceCommand } from "@/service/core/Manager.js";
 
 /**
  * 执行当前已到点的 pending 任务。

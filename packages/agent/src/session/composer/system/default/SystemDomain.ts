@@ -11,8 +11,8 @@ import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@session/composer/system/default/PromptRenderer.js";
 import { isPluginEnabled } from "@/plugin/Activation.js";
 import { PLUGINS } from "@/plugin/Plugins.js";
-import { SERVICE_SYSTEM_PROVIDERS } from "@/service/ServiceSystemProviders.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import { SERVICE_SYSTEM_PROVIDERS } from "@/service/core/ServiceSystemProviders.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import { buildRuntimeClockSystemPrompt } from "@session/composer/system/default/variables/VariableReplacer.js";
 
 const CORE_PROMPT_FILE_URL = new URL(

@@ -12,7 +12,7 @@ import type { ChatInboundAugmentInput } from "@/shared/types/ChatPlugin.js";
 import type { VoicePluginConfig } from "@/shared/types/VoicePlugin.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type { AgentPluginConfigRuntime } from "@/shared/types/AgentHost.js";
-import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
+import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
 import {
   listVoiceModels,
   resolveVoicePluginModelId,

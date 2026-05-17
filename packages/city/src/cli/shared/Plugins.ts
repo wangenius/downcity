@@ -16,14 +16,14 @@ import {
   findBuiltinPlugin,
   findStaticPluginView,
   listStaticPluginViews,
-} from "@downcity/agent/plugin/Catalog.js";
-import { setCityPluginEnabled } from "@downcity/agent/plugin/Lifecycle.js";
-import { runLocalPluginAction } from "@downcity/agent/plugin/LocalExecution.js";
+  runLocalPluginAction,
+  setCityPluginEnabled,
+} from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
-import type { JsonValue } from "@downcity/agent/shared/types/Json.js";
+import type { JsonValue } from "@downcity/agent";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { listConsoleAgents } from "@/process/registry/CityRegistry.js";
-import type { PluginCliBaseOptions } from "@downcity/agent/shared/types/PluginApi.js";
+import type { PluginCliBaseOptions } from "@downcity/agent";
 import { emitCliBlock } from "./CliReporter.js";
 import { parseBoolean } from "./IndexSupport.js";
 import { resolveProjectRoot } from "../service/ServiceCommandSupport.js";

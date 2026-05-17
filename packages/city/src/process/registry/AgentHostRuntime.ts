@@ -19,12 +19,12 @@ import {
   getDowncitySessionDirPath,
   getDowncitySessionRootDirPath,
 } from "@/config/Paths.js";
-import { persistProjectPluginConfig } from "@downcity/agent/plugin/ProjectConfigStore.js";
+import { persistProjectPluginConfig } from "@downcity/agent";
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
-} from "@downcity/agent/shared/types/AgentHost.js";
-import type { DowncityConfig } from "@downcity/agent/shared/types/DowncityConfig.js";
+} from "@downcity/agent";
+import type { DowncityConfig } from "@downcity/agent";
 
 /**
  * 创建当前项目的路径能力集合。

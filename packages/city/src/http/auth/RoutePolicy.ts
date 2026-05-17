@@ -7,8 +7,8 @@
  */
 
 import type { MiddlewareHandler } from "hono";
-import type { AuthRoutePolicy } from "@downcity/agent/shared/types/auth/AuthRoute.js";
-import type { AuthPermissionKey } from "@downcity/agent/shared/types/auth/AuthPermission.js";
+import type { AuthRoutePolicy } from "@downcity/agent";
+import type { AuthPermissionKey } from "@downcity/agent";
 import { isAuthError as isAuthDomainError } from "./AuthError.js";
 import type { AuthService } from "./AuthService.js";
 import { AUTH_PRINCIPAL_CONTEXT_KEY, type AuthMiddlewareVariables } from "./AuthMiddleware.js";

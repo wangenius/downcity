@@ -9,10 +9,12 @@
 
 import prompts from "prompts";
 import type { PromptObject } from "prompts";
+import {
+  ChatChannelAccountService,
+  type ChatChannelAccountListItem,
+} from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { runServiceControlCommand } from "../service/ServiceCommandRemote.js";
-import { ChatChannelAccountService } from "@downcity/agent/services/chat/accounts/ChannelAccountService.js";
-import type { ChatChannelAccountListItem } from "@downcity/agent/services/chat/types/ChannelAccount.js";
 import type { StoredChannelAccountChannel } from "@/store/StoreTypes.js";
 import type {
   ChatChannelAccountAction,

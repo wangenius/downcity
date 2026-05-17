@@ -6,10 +6,10 @@
  * - 内部仍聚合 session、task、service 三类运行事实，但最终只输出对外安全的模糊状态。
  */
 
-import { listTaskDefinitions } from "@services/task/Action.js";
-import { listServiceStates } from "@/service/Manager.js";
+import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
+import { listServiceStates } from "@/service/core/Manager.js";
 import { listControlSessionSummaries } from "@/http/control/SessionSummaryStore.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { WorkboardSnapshot } from "@/plugins/workboard/types/Workboard.js";
 import {
   buildIdleActivity,

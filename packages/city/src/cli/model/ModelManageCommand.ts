@@ -9,7 +9,7 @@
 import type { Command } from "commander";
 import { generateText } from "ai";
 import { createModel } from "@downcity/agent";
-import type { LlmProviderType } from "@downcity/agent/shared/types/LlmConfig.js";
+import type { LlmProviderType } from "@downcity/agent";
 import {
   discoverProviderModels,
 } from "./ModelSupport.js";

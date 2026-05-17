@@ -10,7 +10,7 @@ import type { Hono } from "hono";
 import fs from "fs-extra";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { ConsoleStore } from "@/store/index.js";
-import type { ConsoleAgentOption } from "@downcity/agent/shared/types/Console.js";
+import type { ConsoleAgentOption } from "@downcity/agent";
 import { ModelPoolService } from "@/control/ModelPoolService.js";
 
 type ShipJsonLike = {

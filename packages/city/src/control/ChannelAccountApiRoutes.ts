@@ -7,7 +7,7 @@
  */
 
 import type { Hono } from "hono";
-import { ChatChannelAccountService } from "@downcity/agent/services/chat/accounts/ChannelAccountService.js";
+import { ChatChannelAccountService } from "@downcity/agent";
 
 /**
  * 注册 Channel Account API 路由。

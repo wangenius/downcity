@@ -2,9 +2,14 @@
  * Agent Control API 路由入口模块。
  *
  * 职责说明：
- * 1. 为单 agent 控制面暴露独立 router。
+ * 1. 为单 agent control API 暴露独立 router。
  * 2. 将控制域的 API 装配收敛在 `http/control/` 下。
  * 3. server 只负责挂载该 router，不再持有控制面细节。
+ *
+ * 命名说明（中文）
+ * - 这里的 control 指“单 agent 控制域”。
+ * - 它不是 city 的 gateway / control plane。
+ * - 当前 `/api/dashboard/*` 只是历史 URL 前缀，语义上仍属于 single-agent control API。
  */
 
 import { Hono } from "hono";
@@ -15,7 +20,7 @@ import {
 import { registerControlApiRoutes } from "@/http/control/ControlApiRoutes.js";
 
 /**
- * 单 agent 控制面专用路由。
+ * 单 agent control API 专用路由。
  */
 export const controlRouter = new Hono();
 

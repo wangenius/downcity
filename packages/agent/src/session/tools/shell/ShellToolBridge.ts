@@ -11,8 +11,8 @@ import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type {
   InvokeServicePort,
   InvokeServiceResult,
-} from "@/types/agent/AgentContext.js";
-import type { ShellActionResponse } from "@services/shell/types/ShellService.js";
+} from "@/agent/AgentContextTypes.js";
+import type { ShellActionResponse } from "@/service/builtins/shell/types/ShellService.js";
 import {
   enqueueDeferredPersistedUserMessage,
   enqueueInjectedUserMessage,

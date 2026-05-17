@@ -11,13 +11,13 @@ import type { LanguageModel } from "ai";
 import type {
   AgentRuntime,
   AgentRuntimeBase,
-} from "@/types/agent/AgentRuntime.js";
+} from "@/agent/AgentRuntimeTypes.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
-export type { AgentRuntime, AgentRuntimeBase } from "@/types/agent/AgentRuntime.js";
+export type { AgentRuntime, AgentRuntimeBase } from "@/agent/AgentRuntimeTypes.js";
 
 let baseState: AgentRuntimeBase | null = null;
 let readyState: AgentRuntime | null = null;

@@ -7,8 +7,8 @@
  */
 
 import type { Hono } from "hono";
-import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
-import type { AgentContext } from "@/types/agent/AgentContext.js";
+import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
 
 /**
  * Control 路由注册入参。

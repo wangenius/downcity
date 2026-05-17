@@ -1,0 +1,21 @@
+---
+title: Example: Minimal RemoteAgent
+description: Call an Agent in another process over HTTP
+---
+
+# Example: Minimal RemoteAgent
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314",
+});
+
+const session = await agent.session();
+const result = await session.run({
+  query: "Summarize this project",
+});
+```
+
+It is best to use this minimal example to validate remote connectivity first, and only then add more complex streaming or multi-session behavior.

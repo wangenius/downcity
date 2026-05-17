@@ -1,0 +1,25 @@
+---
+title: .downcity Layout
+description: The rough responsibility split inside the .downcity directory of an Agent project
+---
+
+# `.downcity` Layout
+
+`.downcity/` is the project runtime directory.
+
+From a user perspective, the most important things inside it are:
+
+- sessions and messages
+- logs
+- schema files
+- daemon state
+- task run artifacts
+
+## When you will look at it
+
+- troubleshooting
+- checking message history
+- inspecting the output of a past run
+- figuring out whether daemon state is abnormal
+
+For most users, `.downcity/` is more like an observability panel than a directory they should edit by hand frequently.

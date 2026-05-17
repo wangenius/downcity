@@ -1,0 +1,25 @@
+---
+title: Restart an Agent Safely
+description: Recommended restart order after changing configuration, channels, or model binding
+---
+
+# Restart an Agent Safely
+
+If you changed:
+
+- `downcity.json`
+- model binding
+- channel binding
+- environment variables
+
+the recommended sequence is:
+
+```bash
+city agent status
+city agent restart
+city agent status
+```
+
+This is easier to observe than restarting blindly.
+
+Especially when you changed models, channels, and prompts at the same time, checking state before and after restart is a much safer routine.

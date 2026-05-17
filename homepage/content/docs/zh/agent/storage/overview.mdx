@@ -1,0 +1,28 @@
+---
+title: 存储总览
+description: 理解 Agent 项目中的 .downcity 目录、会话落盘和日志文件
+---
+
+# 存储总览
+
+Agent 的运行产物大多会落在项目的 `.downcity/` 目录里。
+
+你可以把它理解成：
+
+- 会话数据目录
+- 日志目录
+- 运行时状态目录
+- task run 产物目录
+
+## 最常看的三类内容
+
+- 会话消息
+- daemon / runtime 日志
+- 调试和状态文件
+
+如果你需要回答“这个 agent 到底做了什么”，`.downcity/` 往往比终端里一闪而过的输出更可靠。
+
+## 继续阅读
+
+- [`.downcity` 布局](/zh/docs/agent/storage/dot-downcity-layout)
+- [SDK Session 布局](/zh/docs/agent/storage/sdk-session-layout)

@@ -1,0 +1,26 @@
+---
+title: Agent 显示 stale
+description: status 返回 stale 时，应该如何处理
+---
+
+# Agent 显示 stale
+
+`stale` 表示：
+
+- 状态文件还在
+- 但对应 daemon 进程已经不存在或不一致
+
+## 标准处理
+
+```bash
+city agent doctor --fix
+city agent start
+```
+
+## 常见原因
+
+- 异常退出
+- 机器重启
+- 上一次启动未完整清理状态
+
+这通常是状态一致性问题，而不是项目配置本身坏掉了。

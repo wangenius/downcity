@@ -1,0 +1,98 @@
+---
+title: 首次排障
+description: 第一次使用 Agent 时最常遇到的问题和排查顺序
+---
+
+# 首次排障
+
+第一次跑 agent 时，最常见的问题通常集中在 4 个地方。
+
+## 1. 项目还没初始化
+
+表现：
+
+- `city agent status` 显示 `not initialized`
+- 缺少 `PROFILE.md` 或 `downcity.json`
+
+处理：
+
+```bash
+city agent create .
+```
+
+如果连最小初始化文件都不完整，就先不要去怀疑模型、渠道或 session。
+
+## 2. 没有可用的模型绑定
+
+表现：
+
+- 启动时报执行绑定无效
+- 模型调用失败
+
+处理：
+
+- 检查 `downcity.json.execution.modelId`
+- 确认这个 `modelId` 在全局模型池中存在
+
+这是当前项目 agent 启动链路里最常见的结构性错误之一。
+
+## 3. Agent 不是 running
+
+表现：
+
+- `city agent chat` 连不上
+- CLI 提示 daemon unreachable
+
+处理：
+
+```bash
+city agent status
+city agent start
+```
+
+如果后台启动信息不够清楚，可以进一步使用：
+
+```bash
+city agent start --foreground
+```
+
+## 4. 状态文件 stale
+
+表现：
+
+- `status` 显示 `stale`
+
+处理：
+
+```bash
+city agent doctor --fix
+city agent start
+```
+
+这种情况通常不需要删除项目目录或手工乱删状态文件，先走 `doctor --fix` 就够了。
+
+## 推荐排查顺序
+
+1. `city agent status`
+2. 看 `downcity.json`
+3. 确认模型绑定
+4. 如果 stale 就 `doctor --fix`
+5. 还不行再 `restart`
+
+## 一个高频误区
+
+第一次排障时，很多人会一上来反复执行 `start`。
+
+更推荐的方式是：
+
+- 先 `status`
+- 再看配置
+- 再有针对性地 `restart` 或 `doctor`
+
+这样通常更快定位问题。
+
+## 更详细的排障文档
+
+- [Agent 无法启动](/zh/docs/agent/operations/troubleshooting/agent-wont-start)
+- [Agent 显示 stale](/zh/docs/agent/operations/troubleshooting/agent-shows-stale)
+- [聊天没有响应](/zh/docs/agent/operations/troubleshooting/chat-not-responding)

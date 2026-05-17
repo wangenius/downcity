@@ -1,0 +1,35 @@
+---
+title: channelAccountId 绑定
+description: 把当前 Agent 绑定到 city 全局层已有的聊天账号
+---
+
+# `channelAccountId` 绑定
+
+每个渠道配置里最关键的字段通常都是：
+
+```json
+{
+  "channelAccountId": "telegram-main"
+}
+```
+
+## 它表示什么
+
+表示当前 agent 要使用 city 全局层中 ID 为 `telegram-main` 的账号。
+
+这个 ID 应该是稳定、可读并且真实存在的。
+
+## 它不表示什么
+
+它不是 bot token，也不是 webhook URL。
+
+## 一个常见问题
+
+如果这里填了一个不存在的 account id，agent 无法正常使用该渠道。
+
+## 推荐做法
+
+- 使用稳定、可读的 account id
+- 修改绑定后重启 agent
+
+如果你在团队里共享多个 agent 项目，给账号起清楚的名字会显著降低维护成本。

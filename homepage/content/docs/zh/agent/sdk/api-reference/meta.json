@@ -1,0 +1,10 @@
+{
+  "title": "API Reference",
+  "pages": [
+    "agent-class",
+    "remote-agent-class",
+    "session-types",
+    "stream-events",
+    "sdk-http-endpoints"
+  ]
+}

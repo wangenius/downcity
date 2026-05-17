@@ -1,0 +1,31 @@
+---
+title: session.fork()
+description: Copy the current Session into a branch for trying alternate directions
+---
+
+# `session.fork()`
+
+## Example
+
+```ts
+const branched = await session.fork();
+const fromMessage = await session.fork("message-id");
+```
+
+## Two fork modes
+
+### Without `messageId`
+
+Copy the full current history into a new session.
+
+### With `messageId`
+
+Copy history up to that message and use it as the branching point.
+
+## Good use cases
+
+- keep the main thread unchanged
+- test different prompt directions on side branches
+- rerun from a specific point
+
+If you often need multiple experiments from the same context, `fork()` is much more convenient than manually duplicating history.

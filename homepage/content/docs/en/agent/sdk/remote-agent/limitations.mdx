@@ -1,0 +1,34 @@
+---
+title: Current Limitations
+description: Capability boundaries and limitations you should know when using RemoteAgent
+---
+
+# Current Limitations
+
+The most important current limitation of RemoteAgent is:
+
+## You cannot pass a local model instance remotely
+
+In other words, this is not supported right now:
+
+```ts
+await session.set({ model });
+```
+
+The reason is simple:
+
+- model instances are usually not serializable
+- the server-side local session should own the model
+
+## Recommended approach
+
+- configure the model on the server-side local Agent
+- keep the client focused on remote calls
+
+If you move model control logic to the client, you are likely to run into the current boundary.
+
+## Another practical limitation
+
+If the server did not start `agent.http.start()`, `RemoteAgent` cannot connect.
+
+From an operational perspective, `RemoteAgent` behaves more like a thin client than a smart proxy that can bootstrap missing server capability for you.

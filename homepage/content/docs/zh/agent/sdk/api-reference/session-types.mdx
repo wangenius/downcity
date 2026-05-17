@@ -1,0 +1,30 @@
+---
+title: Session 类型与结果
+description: Session 输入输出对象里最重要的字段和语义
+---
+
+# Session 类型与结果
+
+最常见的输入输出对象有：
+
+- `AgentSessionSetInput`
+- `AgentSessionRunInput`
+- `AgentSessionRunResult`
+- `AgentSessionMetadata`
+
+## `AgentSessionRunInput`
+
+核心字段：
+
+- `query`
+
+## `AgentSessionRunResult`
+
+核心字段：
+
+- `success`
+- `error`
+- `text`
+- `assistantMessage`
+
+对大多数用户来说，最常直接消费的是 `text`；而 `assistantMessage` 更适合更底层的 UI 渲染、调试或高级处理。

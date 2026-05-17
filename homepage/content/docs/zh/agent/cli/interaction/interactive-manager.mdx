@@ -1,0 +1,51 @@
+---
+title: 交互式 Agent Manager
+description: 直接运行 city agent 时出现的交互式管理入口
+---
+
+# 交互式 Agent Manager
+
+在交互式终端中直接运行：
+
+```bash
+city agent
+```
+
+CLI 会进入一个交互式 manager，而不是只打印静态帮助。
+
+## 它适合什么场景
+
+- 你想快速浏览当前有哪些 agent
+- 你不想记所有命令参数
+- 你要做的是高频的人类操作，而不是脚本化调用
+
+对第一次接触 Downcity 的用户来说，它也很适合作为“发现命令能力”的入口。
+
+## 你可以在里面做什么
+
+- 查看已登记 agent
+- 创建 agent 项目
+- 启动 agent
+- 选择某个 agent 后继续做管理动作
+
+当前 manager 不是一个独立产品，而是把几个高频 CLI 动作收纳在一起，降低记忆命令的负担。
+
+## 它不会替代什么
+
+它不会替代：
+
+- 脚本化命令
+- CI 场景
+- 精确参数控制
+
+这些仍然建议使用明确的子命令。
+
+也就是说：
+
+- 人工探索时优先 manager
+- 自动化和稳定脚本时优先明确子命令
+
+## 相关文档
+
+- [Agent CLI 总览](/zh/docs/agent/cli/overview)
+- [city agent list](/zh/docs/agent/cli/lifecycle/list)

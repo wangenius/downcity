@@ -1,0 +1,49 @@
+---
+title: Interactive Agent Manager
+description: The interactive management UI you enter when you run city agent directly
+---
+
+# Interactive Agent Manager
+
+When you run this in an interactive terminal:
+
+```bash
+city agent
+```
+
+the CLI enters an interactive Agent manager instead of only printing static help.
+
+## Best use cases
+
+- you want to browse available agents quickly
+- you do not want to memorize every subcommand
+- you are doing common human operations rather than scripted automation
+
+For new Downcity users, it is also a great discovery surface for the command set.
+
+## What you can do from it
+
+- view registered agents
+- create an agent project
+- start an agent
+- choose a specific agent and continue managing it
+
+It is not a separate product. It is a human-friendly wrapper around common CLI flows.
+
+## What it does not replace
+
+It does not replace:
+
+- scripted command usage
+- CI automation
+- precise repeatable command invocation
+
+A good rule of thumb:
+
+- use the manager for human exploration
+- use explicit subcommands for automation and stable scripts
+
+Continue with:
+
+- [Agent CLI overview](/en/docs/agent/cli/overview)
+- [city agent list](/en/docs/agent/cli/lifecycle/list)

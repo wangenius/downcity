@@ -1,0 +1,116 @@
+---
+title: Agent 生命周期
+description: 从初始化到启动、聊天、停机，理解一个 Agent 的完整生命周期
+---
+
+# Agent 生命周期
+
+一个项目 agent 的典型生命周期可以拆成 5 步。
+
+## 1. 初始化项目
+
+```bash
+city agent create .
+```
+
+这一步会生成最小可运行骨架，包括：
+
+- `PROFILE.md`
+- `SOUL.md`
+- `downcity.json`
+- `.downcity/`
+
+这一步的目标是把一个普通目录变成“可以被 Downcity 识别和启动的 agent 项目”，而不是一次性把所有外部依赖都配置完。
+
+## 2. 配置执行目标
+
+当前 agent 项目只有一种执行绑定：
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "your-model-id"
+  }
+}
+```
+
+也就是说，项目要绑定到 city 全局模型池中的某个模型 ID。
+
+在当前代码里，这个执行绑定不是可选装饰，而是启动链路的硬前提之一。
+
+## 3. 启动运行时
+
+```bash
+city agent start
+```
+
+启动时，agent 会：
+
+- 校验项目是否初始化完成
+- 读取 `downcity.json`
+- 载入 `PROFILE.md` / `SOUL.md`
+- 解析模型绑定
+- 启动 HTTP 服务和本地 RPC
+- 启动项目内配置的 service
+
+如果你使用的是后台模式，CLI 还会为它维护 daemon 状态，方便后续 `status / stop / restart / doctor` 命令接管。
+
+## 4. 执行和交互
+
+运行中的 agent 可以通过多种入口执行：
+
+- `city agent chat`
+- 已接入的聊天渠道
+- 项目级 HTTP 控制接口
+- SDK `Agent` / `RemoteAgent`
+
+无论从哪个入口进入，都会回到同一套会话和执行内核。
+
+这意味着 CLI、聊天渠道、项目控制接口和 SDK 虽然看起来是不同入口，但对 agent 来说，它们更多是“不同的调用入口”，而不是“不同的产品”。
+
+## 5. 停止、重启和恢复
+
+常用命令：
+
+```bash
+city agent status
+city agent stop
+city agent restart
+city agent doctor --fix
+```
+
+如果进程异常退出但状态文件仍在，`doctor` 用来清理 stale 状态。
+
+## 日常迭代里最常见的生命周期循环
+
+在真实使用中，Agent 的生命周期通常不是单次直线流程，而是一个循环：
+
+1. 改 `PROFILE.md`
+2. 改 `downcity.json`
+3. `city agent restart`
+4. `city agent chat`
+5. 看输出，再继续微调
+
+如果你在打磨一个长期运行的项目 agent，这个循环会非常常见。
+
+## 推荐使用顺序
+
+对大多数用户，推荐按下面的顺序上手：
+
+1. `city agent create .`
+2. 配好 `downcity.json.execution.modelId`
+3. `city agent start`
+4. `city agent chat`
+5. 需要时再接入渠道或 SDK
+
+## 什么时候应该跳到后面的章节
+
+如果你不是来“启动一个 CLI agent”，而是要“在应用里嵌入 agent”，那可以直接跳去看：
+
+- [Agent SDK 总览](/zh/docs/agent/sdk/overview)
+
+## 继续阅读
+
+- [创建第一个 Agent](/zh/docs/agent/getting-started/create-your-first-agent)
+- [启动和停止 Agent](/zh/docs/agent/getting-started/start-and-stop-an-agent)

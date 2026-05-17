@@ -1,0 +1,51 @@
+---
+title: Remote Session API
+description: The core session methods available under RemoteAgent and their capability boundaries
+---
+
+# Remote Session API
+
+After you obtain a session from `RemoteAgent`, the most common methods are:
+
+- `run()`
+- `stream()`
+- `history()`
+- `fork()`
+
+These APIs stay intentionally close to the local session surface so you can reuse nearly the same mental model across local and remote modes.
+
+## Get a session
+
+```ts
+const session = await agent.session();
+```
+
+You can also pass an existing `sessionId`.
+
+That lets you continue an existing remote conversation instead of always starting over.
+
+## Non-streaming execution
+
+```ts
+await session.run({ query: "Continue" });
+```
+
+## Streaming execution
+
+```ts
+for await (const event of session.stream({ query: "Continue" })) {
+  // handle event
+}
+```
+
+## Message history
+
+```ts
+const messages = await session.history();
+```
+
+## Fork
+
+```ts
+const next = await session.fork();
+```

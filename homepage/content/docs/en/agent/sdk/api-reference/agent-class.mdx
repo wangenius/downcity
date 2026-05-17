@@ -1,0 +1,28 @@
+---
+title: Agent Class
+description: The core public interface of the local Agent SDK
+---
+
+# Agent Class
+
+The local `Agent` exposes these core public entry points:
+
+- `new Agent(options)`
+- `agent.session(sessionId?)`
+- `agent.sessions()`
+- `agent.http.start()`
+- `agent.rpc.start()`
+
+## Constructor options
+
+- `id`
+- `path`
+- `tools`
+- `services`
+
+## Core semantics
+
+- `Agent` itself is the local execution shell
+- the real execution object is the session it creates
+
+From an API-design perspective, it behaves more like a session factory plus transport exposer than a single-shot executor.

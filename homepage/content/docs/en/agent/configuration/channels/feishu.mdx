@@ -1,0 +1,30 @@
+---
+title: Feishu
+description: Basic project-side setup for enabling the Feishu channel in an Agent
+---
+
+# Feishu
+
+The project-level Feishu configuration follows the same pattern as Telegram:
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "feishu": {
+          "enabled": true,
+          "channelAccountId": "feishu-main"
+        }
+      }
+    }
+  }
+}
+```
+
+The project only binds an account. It does not store the Feishu credentials themselves.
+
+If Feishu messages are not getting through, verify first:
+
+- whether the bound `channelAccountId` exists
+- whether the agent has been restarted

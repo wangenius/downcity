@@ -1,0 +1,85 @@
+---
+title: city agent chat
+description: Chat with a running Agent from the terminal in interactive or one-shot mode
+---
+
+# `city agent chat`
+
+## Usage
+
+```bash
+city agent chat
+city agent chat --to my-agent
+city agent chat --to my-agent --message "Summarize this repo"
+city agent chat --to my-agent --message "Return JSON" --json
+```
+
+## Two modes
+
+### Interactive mode
+
+Without `--message`, you enter a persistent terminal conversation:
+
+```bash
+city agent chat --to my-agent
+```
+
+Best for:
+
+- multi-turn interactive exploration
+- iterative prompt and behavior testing
+- manual project conversations
+
+### One-shot mode
+
+With `--message`, the CLI sends one turn and exits:
+
+```bash
+city agent chat --to my-agent --message "Summarize the current repository structure"
+```
+
+Best for:
+
+- scripting
+- one-off analysis
+- terminal toolchain integration
+
+## Target resolution
+
+- if `--to` is provided, it uses that agent name directly
+- if not, and the terminal is interactive, it prompts from currently running agents
+
+If the terminal is non-interactive and you do not provide `--to`, the CLI does not have enough information to choose a target safely.
+
+## Important limitation
+
+The target agent must already be running.
+
+`chat` will not auto-start the runtime for you.
+
+## Common parameters
+
+- `--to <name>`
+- `--message <text>`
+- `--json`
+- `--host`
+- `--port`
+- `--token`
+
+## Useful interactive commands
+
+- `/exit`
+- `/quit`
+- `/clear`
+- `/help`
+
+## A common misunderstanding
+
+Do not treat terminal chat as "one globally shared context across every surface."
+
+By default it uses its own dedicated local CLI session, which is excellent for terminal debugging, but it is still its own context boundary.
+
+Continue with:
+
+- [Chat with an Agent](/en/docs/agent/getting-started/chat-with-an-agent)
+- [Chat not responding](/en/docs/agent/operations/troubleshooting/chat-not-responding)

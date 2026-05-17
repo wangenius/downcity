@@ -1,0 +1,10 @@
+{
+  "title": "Local Agent",
+  "pages": [
+    "quickstart",
+    "constructor-options",
+    "tools-and-services",
+    "http-and-rpc",
+    "example-node-service"
+  ]
+}

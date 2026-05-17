@@ -1,0 +1,40 @@
+---
+title: Bind a Model to an Agent
+description: Use execution.modelId to make a project run with a global model
+---
+
+# Bind a Model to an Agent
+
+The binding point between a project and a model is:
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  }
+}
+```
+
+## How to change it
+
+You can edit `downcity.json` directly, or use related model-management commands to help you manage it.
+
+Either way, the final project-side result should be the same:
+
+- `execution.type = "api"`
+- `execution.modelId = "<some-id>"`
+
+## What to do after changing it
+
+Usually the safest next step is:
+
+```bash
+city agent restart
+```
+
+## Common mistake
+
+Binding the project to a `modelId` that does not exist.
+
+That usually causes failures at startup or at the first execution step, not only later during longer conversations.

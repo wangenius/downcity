@@ -1,0 +1,37 @@
+---
+title: city agent stop
+description: Stop the background daemon for one Agent project
+---
+
+# `city agent stop`
+
+## Usage
+
+```bash
+city agent stop [path]
+```
+
+## What it does
+
+- stops the daemon process for the target project
+- cleans daemon pid and meta state
+- marks the agent as stopped in the registry
+
+This helps `status` and `list` return to a cleaner and more consistent state.
+
+## Important property
+
+If the target agent is already not running, the command remains idempotent.
+
+That is especially useful in scripts and automation, because you do not need a separate "skip if already stopped" layer.
+
+## When to use it
+
+- when you want to intentionally stop a project agent
+- before a clean restart cycle
+- when cleaning up resource usage during debugging
+
+Continue with:
+
+- [city agent restart](/en/docs/agent/cli/lifecycle/restart)
+- [city agent status](/en/docs/agent/cli/lifecycle/status)

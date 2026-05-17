@@ -1,0 +1,72 @@
+---
+title: Agent 构造参数
+description: 详细说明本地 Agent 的 id、path、tools 和 services 参数
+---
+
+# Agent 构造参数
+
+本地 Agent 的构造方式：
+
+```ts
+new Agent({
+  id,
+  path,
+  tools,
+  services,
+})
+```
+
+## `id`
+
+agent 的稳定标识。
+
+它会影响 SDK session 落盘路径：
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/...
+```
+
+推荐：
+
+- 稳定
+- 可 URL 编码
+- 不要随便改
+
+因为它直接决定了 session 落盘目录分区。
+
+## `path`
+
+当前 agent 绑定的项目根目录。
+
+SDK 会基于它：
+
+- 读取项目配置
+- 读取静态系统提示词
+- 组织会话落盘目录
+
+如果 `path` 给错，后面很多行为都会变得不符合预期，因为 Agent 会在错误上下文里读取配置和写数据。
+
+## `tools`
+
+agent 级默认工具集合。
+
+关键点：
+
+- 它属于 agent 级，不是 session 级
+- 当前 agent 创建出来的 session 会直接复用这份工具集合
+
+这很适合“多个 session 共用一套默认工具能力”的场景。
+
+## `services`
+
+这里接收的是已经实例化好的 service 对象。
+
+例如：
+
+```ts
+services: [new ChatService(...)]
+```
+
+不是传 class，也不是传配置对象。
+
+如果同名 service 被重复注册，当前实现会直接报错，而不会静默覆盖。

@@ -1,0 +1,57 @@
+---
+title: PROFILE.md
+description: 用 PROFILE.md 定义 Agent 的角色、输出风格和行为边界
+---
+
+# `PROFILE.md`
+
+`PROFILE.md` 用来定义 agent 的外显角色。
+
+## 它适合写什么
+
+- 你是谁
+- 你的职责是什么
+- 你应该如何回答
+- 你有哪些行为限制
+
+如果你想约束输出风格、优先级或协作口径，这里通常是第一落点。
+
+## 它不适合写什么
+
+- 频繁变化的运行时配置
+- 模型 ID
+- channel account 绑定
+
+这些应该放在 `downcity.json`。
+
+因为这些属于结构化运行配置，而不是角色说明。
+
+## 一个简单例子
+
+```md
+# Agent Role
+You are the maintainer agent of this repository.
+
+## Goals
+- Help maintain the project
+- Keep outputs concise
+
+## Constraints
+- Do not invent facts
+- Prefer explicit file references
+```
+
+## 使用建议
+
+- 写得清晰，不要堆很多互相冲突的规则
+- 优先写“角色、目标、边界”
+- 保持项目内长期稳定
+
+如果你发现 `PROFILE.md` 越写越像杂乱的需求堆栈，通常说明有些内容应该回到：
+
+- `SOUL.md`
+- `downcity.json`
+
+## 相关文档
+
+- [SOUL.md](/zh/docs/agent/configuration/profile-and-soul/soul-md)

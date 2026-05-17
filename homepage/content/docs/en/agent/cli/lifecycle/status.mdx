@@ -1,0 +1,65 @@
+---
+title: city agent status
+description: Inspect whether an Agent is running, stopped, stale, or not initialized
+---
+
+# `city agent status`
+
+## Usage
+
+```bash
+city agent status [path]
+```
+
+## `running`
+
+The daemon is alive and the project runtime is up.
+
+If chat still fails while status is `running`, the next suspects are usually:
+
+- model binding
+- channel binding
+- the specific message path
+
+not whether the process exists.
+
+## `stopped`
+
+The project is initialized, but there is no active daemon.
+
+Typical next step:
+
+```bash
+city agent start
+```
+
+This usually means the project structure is healthy and only the process is missing.
+
+## `stale`
+
+The state files still exist, but the process does not.
+
+Typical fix:
+
+```bash
+city agent doctor --fix
+```
+
+`stale` is mainly a state-consistency problem, not necessarily a broken project configuration problem.
+
+## `not initialized`
+
+The current directory is not a complete Agent project yet.
+
+Typical fix:
+
+```bash
+city agent create .
+```
+
+If you see this state, do not continue treating the directory like a fully initialized runtime project yet.
+
+Continue with:
+
+- [city agent doctor](/en/docs/agent/cli/maintenance/doctor)
+- [Agent shows stale](/en/docs/agent/operations/troubleshooting/agent-shows-stale)

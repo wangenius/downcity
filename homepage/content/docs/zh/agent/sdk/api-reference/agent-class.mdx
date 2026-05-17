@@ -1,0 +1,28 @@
+---
+title: Agent 类
+description: 本地 Agent SDK 的核心公开接口
+---
+
+# Agent 类
+
+本地 `Agent` 的核心公开使用面包括：
+
+- `new Agent(options)`
+- `agent.session(sessionId?)`
+- `agent.sessions()`
+- `agent.http.start()`
+- `agent.rpc.start()`
+
+## 构造参数
+
+- `id`
+- `path`
+- `tools`
+- `services`
+
+## 核心语义
+
+- `Agent` 本身是本地执行壳
+- 真正的执行对象是它创建出来的 session
+
+从 API 设计上看，它更像一个“session 工厂 + transport 暴露器”。

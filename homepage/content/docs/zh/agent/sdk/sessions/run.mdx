@@ -1,0 +1,33 @@
+---
+title: session.run()
+description: 执行一轮非流式请求，并拿到最终文本结果
+---
+
+# `session.run()`
+
+## 示例
+
+```ts
+const result = await session.run({
+  query: "总结一下当前仓库结构",
+});
+
+console.log(result.text);
+```
+
+## 返回什么
+
+返回结果里最常用的是：
+
+- `success`
+- `error`
+- `text`
+- `assistantMessage`
+
+## 什么时候用 run
+
+- 你只关心最终结果
+- 你不需要实时增量渲染
+- 脚本或批处理场景
+
+`run()` 的优势是简单、稳定、容易接脚本。

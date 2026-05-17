@@ -1,0 +1,24 @@
+---
+title: session.history()
+description: Read the complete message history for the current Session
+---
+
+# `session.history()`
+
+## Example
+
+```ts
+const messages = await session.history();
+```
+
+## What it returns
+
+It returns the full persisted message history for the current session.
+
+## Good use cases
+
+- replaying a conversation in UI
+- debugging the current context
+- exporting session history
+
+If you need to understand why a particular answer came out the way it did, message history is usually one of the first places worth inspecting.

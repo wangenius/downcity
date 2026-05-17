@@ -1,0 +1,22 @@
+---
+title: Expose an Agent over HTTP
+description: Turn a local Agent into an HTTP service for other processes or clients
+---
+
+# Expose an Agent over HTTP
+
+If the caller and executor do not live in the same process, expose the local Agent as an HTTP service:
+
+```ts
+await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+```
+
+Then connect to it from another process using `RemoteAgent`.
+
+This creates a very natural local client-server shape:
+
+- the local Agent executes
+- `RemoteAgent` consumes

@@ -1,0 +1,42 @@
+---
+title: session.stream()
+description: 以流式事件的方式执行一轮请求，适合实时 UI 和渐进式输出
+---
+
+# `session.stream()`
+
+## 示例
+
+```ts
+for await (const event of session.stream({
+  query: "继续刚才的话题",
+})) {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+## 常见事件类型
+
+- `text-delta`
+- `reasoning-delta`
+- `tool-call`
+- `tool-result`
+- `tool-error`
+- `finish`
+- `error`
+
+如果你要做更丰富的 UI，通常还会关心：
+
+- tool call 何时开始
+- tool output 何时返回
+- 是否出现 tool error
+
+## 什么时候优先用 stream
+
+- 你要做实时输出
+- 你想显示工具调用过程
+- 你在做聊天 UI
+
+它特别适合边生成边展示的体验。

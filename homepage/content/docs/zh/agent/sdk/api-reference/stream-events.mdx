@@ -1,0 +1,33 @@
+---
+title: Stream 事件
+description: Session.stream() 会返回哪些事件类型以及各自表示什么
+---
+
+# Stream 事件
+
+`session.stream()` 当前支持的核心事件类型：
+
+- `text-delta`
+- `reasoning-delta`
+- `tool-call`
+- `tool-result`
+- `tool-error`
+- `finish`
+- `error`
+
+## 最常见的是 `text-delta`
+
+如果你只是做实时文本输出，通常只需要先处理：
+
+```ts
+if (event.type === "text-delta") {
+  process.stdout.write(event.text);
+}
+```
+
+如果你要做更完整的体验，通常还应同时处理：
+
+- `finish`
+- `error`
+- `tool-call`
+- `tool-result`

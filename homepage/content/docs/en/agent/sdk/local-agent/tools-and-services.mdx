@@ -1,0 +1,58 @@
+---
+title: tools and services
+description: How to inject tools and explicit service instances into a local Agent
+---
+
+# tools and services
+
+## tools
+
+A local Agent can receive a tool collection directly:
+
+```ts
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {
+    my_tool: myTool,
+  },
+});
+```
+
+Those tools become available during session execution.
+
+If your app needs a long-lived default tool set, agent-level injection is usually the cleanest choice.
+
+## services
+
+If you want the local Agent to own services, pass explicit instances:
+
+```ts
+import { Agent, ChatService } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [
+    new ChatService({
+      telegram: {
+        botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      },
+    }),
+  ],
+});
+```
+
+## When explicit services are useful
+
+- you want the SDK process itself to start chat channels
+- you want service lifecycle to be controlled by your application code
+
+You can think of this as: the caller explicitly decides which services are permanent capabilities of this local agent.
+
+## Important boundary
+
+The SDK `services` field is the set of instances you hand to `Agent` yourself. It is not a mirror of some automatic project-runtime registry.
+
+So do not think of SDK mode as "import everything from the project automatically." It is intentionally explicit assembly.

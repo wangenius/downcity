@@ -1,0 +1,11 @@
+{
+  "title": "SDK",
+  "pages": [
+    "overview",
+    "local-agent",
+    "remote-agent",
+    "sessions",
+    "integration-patterns",
+    "api-reference"
+  ]
+}

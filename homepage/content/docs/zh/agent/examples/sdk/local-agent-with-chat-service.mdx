@@ -1,0 +1,25 @@
+---
+title: 例子：带 ChatService 的本地 Agent
+description: 给本地 Agent 显式注入 ChatService 的完整方向
+---
+
+# 例子：带 ChatService 的本地 Agent
+
+```ts
+import { Agent, ChatService } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [
+    new ChatService({
+      telegram: {
+        botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      },
+    }),
+  ],
+});
+```
+
+如果你希望 SDK 进程本身也承担聊天 service 的职责，这个方向会很自然。

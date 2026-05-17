@@ -1,0 +1,58 @@
+---
+title: city agent doctor
+description: 诊断并修复 Agent daemon 的 stale 状态文件
+---
+
+# `city agent doctor`
+
+## 用法
+
+```bash
+city agent doctor [path]
+city agent doctor [path] --fix
+```
+
+## 它解决什么问题
+
+当 agent 进程已经不存在，但 daemon 的 pid / meta 状态文件还留着时，`status` 会显示 `stale`。
+
+`doctor` 就是专门处理这个问题的。
+
+它不是用来修所有类型的问题的，而是专门面向 daemon 状态文件和真实进程状态不一致这类问题。
+
+## 不带 `--fix`
+
+只诊断，不修改：
+
+```bash
+city agent doctor
+```
+
+## 带 `--fix`
+
+清理 stale 状态文件：
+
+```bash
+city agent doctor --fix
+```
+
+然后通常再执行：
+
+```bash
+city agent start
+```
+
+`doctor --fix` 之后是否立刻 `start`，取决于你是要恢复运行，还是只是先把状态清理干净。
+
+## 什么时候优先用 doctor
+
+- `status` 显示 `stale`
+- `chat` 提示 daemon unreachable，但项目似乎又“像是启动过”
+- 机器异常重启后遗留旧状态
+
+如果 `status` 明确告诉你当前是 `stale`，那优先级通常高于“先试着重启几次”。
+
+## 相关文档
+
+- [daemon 状态说明](/zh/docs/agent/cli/maintenance/daemon-state)
+- [Agent 显示 stale](/zh/docs/agent/operations/troubleshooting/agent-shows-stale)

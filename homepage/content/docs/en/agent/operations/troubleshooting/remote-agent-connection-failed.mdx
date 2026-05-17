@@ -1,0 +1,23 @@
+---
+title: RemoteAgent Connection Failed
+description: Troubleshooting order when RemoteAgent cannot connect to the server
+---
+
+# RemoteAgent Connection Failed
+
+Check these first:
+
+1. whether the server actually called `agent.http.start()`
+2. whether `baseUrl` is correct
+3. whether the server port is really listening
+
+## Common misunderstanding
+
+Creating a `RemoteAgent` client does not mean the server will start automatically.
+
+The server must explicitly expose HTTP first.
+
+So the first debugging target here is usually not the session. It is:
+
+- whether the server is actually listening
+- whether `baseUrl` points to the right place

@@ -1,0 +1,31 @@
+---
+title: session.fork()
+description: 从当前 Session 复制一条分支会话，适合试验不同方向
+---
+
+# `session.fork()`
+
+## 示例
+
+```ts
+const branched = await session.fork();
+const fromMessage = await session.fork("message-id");
+```
+
+## 两种 fork 方式
+
+### 不传 `messageId`
+
+复制当前完整历史，创建一条新 session。
+
+### 传 `messageId`
+
+复制到某条消息为止的历史，用它作为分叉点。
+
+## 适合什么场景
+
+- 保留主线讨论不变
+- 在侧线尝试不同提示词
+- 做“从某个节点开始重跑”
+
+如果你经常需要对同一份上下文做多个分支实验，`fork()` 会比手工复制历史方便得多。

@@ -1,0 +1,92 @@
+---
+title: 启动和停止 Agent
+description: 启动后台 Agent、查看状态，并在需要时停止或重启
+---
+
+# 启动和停止 Agent
+
+## 启动
+
+默认后台启动：
+
+```bash
+city agent start
+```
+
+如果当前目录不是已初始化项目，也没有显式传路径，CLI 会尝试从已登记 agent 中让你选择。
+
+这个行为背后有一条明确规则：
+
+1. 显式传入的路径优先
+2. 如果当前目录本身已经初始化，就直接使用当前目录
+3. 只有前两者都不满足，才进入交互选择
+
+## 前台启动
+
+如果你只是临时在当前终端观察运行过程，可以用：
+
+```bash
+city agent start --foreground
+```
+
+前台模式适合调试，不适合长期挂着。
+
+如果你遇到“后台启动失败但不知道失败在哪一步”，前台模式通常是最快的排查方式。
+
+## 查看状态
+
+```bash
+city agent status
+```
+
+常见状态：
+
+- `running`
+- `stopped`
+- `stale`
+- `not initialized`
+
+理解这几个状态的区别，比反复执行 `start` 更重要。
+
+## 停止
+
+```bash
+city agent stop
+```
+
+这会停止目标项目的 daemon，并清理对应状态文件。
+
+如果目标进程本来就没有运行，这个命令仍然会保持幂等，不会把“没在跑”当成失败。
+
+## 重启
+
+```bash
+city agent restart
+```
+
+当你改了模型绑定、渠道配置或项目提示词后，重启通常是最稳妥的做法。
+
+这是因为有些配置在启动阶段就已经装配进运行时，单纯改文件不会让当前进程自动切到新配置。
+
+## 推荐习惯
+
+- 配置修改后优先 `restart`
+- 状态异常先看 `status`
+- 如果看到 `stale`，再跑 `doctor --fix`
+
+## 一个安全的日常操作顺序
+
+对大多数配置变更，推荐：
+
+```bash
+city agent status
+city agent restart
+city agent status
+```
+
+这样你能在每一步都确认状态是否符合预期。
+
+## 下一步
+
+- [和 Agent 对话](/zh/docs/agent/getting-started/chat-with-an-agent)
+- [首次排障](/zh/docs/agent/getting-started/first-troubleshooting)

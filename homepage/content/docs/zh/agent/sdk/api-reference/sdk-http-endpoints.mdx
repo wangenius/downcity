@@ -1,0 +1,21 @@
+---
+title: SDK HTTP 端点
+description: 本地 Agent 暴露给 RemoteAgent 使用的最小 HTTP 接口集合
+---
+
+# SDK HTTP 端点
+
+本地 Agent 通过 `agent.http.start()` 暴露出来的 SDK 路由，当前核心包括：
+
+- `GET /api/sdk/sessions`
+- `POST /api/sdk/sessions`
+- `GET /api/sdk/sessions/:sessionId/messages`
+- `POST /api/sdk/sessions/:sessionId/run`
+- `POST /api/sdk/sessions/:sessionId/fork`
+- `POST /api/sdk/sessions/:sessionId/stream`
+
+## 设计目标
+
+这套接口不是一个通用“大而全 API”，而是一组尽量小、围绕 session 使用面展开的 SDK 路由。
+
+它的重点不是扩展成复杂平台 API，而是保证本地 `Agent` 和 `RemoteAgent` 之间的能力面对齐。

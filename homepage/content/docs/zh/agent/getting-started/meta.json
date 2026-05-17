@@ -1,0 +1,10 @@
+{
+  "title": "Getting Started",
+  "pages": [
+    "create-your-first-agent",
+    "start-and-stop-an-agent",
+    "chat-with-an-agent",
+    "connect-chat-channels",
+    "first-troubleshooting"
+  ]
+}

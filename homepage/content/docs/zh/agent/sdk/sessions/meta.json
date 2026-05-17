@@ -1,0 +1,12 @@
+{
+  "title": "Sessions",
+  "pages": [
+    "overview",
+    "set-model",
+    "run",
+    "stream",
+    "history",
+    "fork",
+    "metadata-and-storage"
+  ]
+}

@@ -1,0 +1,72 @@
+---
+title: Agent Constructor Options
+description: Detailed explanation of the local Agent id, path, tools, and services options
+---
+
+# Agent Constructor Options
+
+The local Agent is constructed like this:
+
+```ts
+new Agent({
+  id,
+  path,
+  tools,
+  services,
+})
+```
+
+## `id`
+
+The stable identifier of the agent.
+
+It affects the SDK session storage path:
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/...
+```
+
+Recommended properties:
+
+- stable
+- URL-safe
+- not changed casually
+
+That is because it directly controls the session storage partition.
+
+## `path`
+
+The project root directory bound to the current agent.
+
+The SDK uses it to:
+
+- load project config
+- load static system prompts
+- organize session storage
+
+If `path` is wrong, many later behaviors will feel confusing because the agent will read config and write data in the wrong context.
+
+## `tools`
+
+The default tool set at the agent level.
+
+Key points:
+
+- it belongs to the agent, not the session
+- sessions created by this agent reuse the same tool collection
+
+This is a good fit when multiple sessions should share a stable default tool set.
+
+## `services`
+
+This accepts already-instantiated service objects.
+
+For example:
+
+```ts
+services: [new ChatService(...)]
+```
+
+You do not pass the class itself, and you do not pass a raw config object.
+
+If two services with the same name are registered, the current implementation throws instead of silently overriding one of them.

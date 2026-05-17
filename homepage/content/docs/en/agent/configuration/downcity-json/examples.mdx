@@ -1,0 +1,76 @@
+---
+title: downcity.json Examples
+description: Common Agent project configuration examples
+---
+
+# `downcity.json` Examples
+
+## Minimal project
+
+```json
+{
+  "name": "my-agent",
+  "version": "1.0.0",
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  },
+  "services": {}
+}
+```
+
+Good for:
+
+- validating the startup path for the first time
+- narrowing the scope during troubleshooting
+
+## Bind Telegram
+
+```json
+{
+  "name": "my-agent",
+  "version": "1.0.0",
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  },
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+Good for:
+
+- when you already have a global Telegram account
+- when you want to verify a single chat channel first
+
+## Bind multiple channels
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        },
+        "feishu": {
+          "enabled": true,
+          "channelAccountId": "feishu-main"
+        }
+      }
+    }
+  }
+}
+```
+
+It is usually easier to get one channel working first and then expand to multiple channels.

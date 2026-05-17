@@ -1,0 +1,51 @@
+---
+title: Agent Registry
+description: 理解 city registry 中的已登记 Agent 与当前运行状态的关系
+---
+
+# Agent Registry
+
+`city agent list` 显示的是 city registry 中已登记的 agent，而不是“当前目录下找出来的项目”。
+
+## registry 记录了什么
+
+从用户角度看，你可以把 registry 理解成：
+
+- 哪些项目已经被 city 认识了
+- 它们的项目路径是什么
+- 当前显示为 running 还是 stopped
+
+对用户来说，它最重要的价值是“可发现性”和“可选择性”。
+
+## 为什么这很重要
+
+很多 CLI 操作都依赖这层信息：
+
+- `city agent list`
+- `city agent start` 的交互选择
+- `city agent chat --to <name>`
+
+如果没有 registry，很多“按 agent 名称操作”的体验都会退化成“你必须自己记绝对路径”。
+
+## 它和 daemon 运行状态的关系
+
+registry 是“登记信息”。
+
+真正的运行状态还要结合 daemon 进程检查来判断。
+
+这也是为什么 `list` 和 `status` 看起来是相关命令，但它们关注的层次不完全相同。
+
+所以有时你会看到：
+
+- registry 里有这个 agent
+- 但它当前并没有运行
+
+## 典型使用场景
+
+- 先 `list` 看有哪些 agent
+- 再 `start` 或 `chat`
+
+## 相关文档
+
+- [city agent list](/zh/docs/agent/cli/lifecycle/list)
+- [city agent start](/zh/docs/agent/cli/lifecycle/start)

@@ -1,0 +1,25 @@
+---
+title: 例子：在 Node 服务里嵌入本地 Agent
+description: 一个典型的本地 Agent 嵌入模式示例
+---
+
+# 例子：在 Node 服务里嵌入本地 Agent
+
+下面是一个很常见的模式：
+
+1. 你的 Node 服务进程内创建 `Agent`
+2. 服务启动时创建或获取 session
+3. 某个 HTTP handler 收到请求后转成 `session.run()`
+
+这种模式适合：
+
+- 内部工具
+- 研发助手
+- 把某个仓库能力封装成服务
+
+如果你后面要给别的进程复用，再叠加 HTTP 暴露通常是最自然的下一步。
+
+如果你需要跨进程访问，通常再叠加：
+
+- `agent.http.start()`
+- 另一个进程用 `RemoteAgent`

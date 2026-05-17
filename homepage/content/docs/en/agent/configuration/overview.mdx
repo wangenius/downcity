@@ -1,0 +1,76 @@
+---
+title: Agent Configuration Overview
+description: Understand the main configuration layers in an Agent project from a user perspective
+---
+
+# Agent Configuration Overview
+
+An Agent project usually has five configuration pieces:
+
+- `downcity.json`
+- `PROFILE.md`
+- `SOUL.md`
+- chat channel bindings
+- environment variables and secrets
+
+You can also think about them in two layers:
+
+- human-readable principles: `PROFILE.md` and `SOUL.md`
+- structured runtime configuration: `downcity.json`, channel bindings, and environment variables
+
+## Recommended mental model
+
+### 1. `downcity.json`
+
+This decides:
+
+- what the agent is called
+- which model it uses
+- which services are enabled
+- which chat channels are attached
+
+This is the structured file the runtime actually reads.
+
+### 2. `PROFILE.md`
+
+This decides:
+
+- the agent's role
+- its response style
+- its behavior boundaries
+
+Think of it as the visible role spec.
+
+### 3. `SOUL.md`
+
+This decides:
+
+- deeper and more stable operating principles
+
+Think of it as the long-term work philosophy.
+
+### 4. Channel bindings
+
+This decides:
+
+- which city-level channel account the current agent should use
+
+The most important rule here is:
+
+- global accounts belong to city
+- the project only says which one to use
+
+### 5. Environment variables
+
+This decides:
+
+- whether `${VAR}` placeholders in config can resolve
+- whether startup has the keys and secrets it needs
+
+If environment variables are missing, a config that looks correct on paper can still fail at runtime.
+
+## Continue reading
+
+- [downcity.json](/en/docs/agent/configuration/downcity-json/basics)
+- [PROFILE and SOUL](/en/docs/agent/configuration/profile-and-soul/profile-md)
+- [Model binding](/en/docs/agent/configuration/models/platform-model-pool)

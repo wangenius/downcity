@@ -1,0 +1,35 @@
+---
+title: session.set({ model })
+description: 本地 SDK Session 如何显式绑定默认模型实例
+---
+
+# `session.set({ model })`
+
+本地 SDK session 默认并没有模型。
+
+你需要显式调用：
+
+```ts
+await session.set({
+  model: openai.responses("gpt-5"),
+});
+```
+
+## 为什么要这样设计
+
+因为本地 SDK 更像一个嵌入式执行壳：
+
+- agent 负责路径、工具、service、会话落盘
+- 具体用哪个运行中的模型实例，由调用方决定
+
+这让本地 SDK 更灵活，但也把“模型是否准备好”的责任明确交给了调用方。
+
+## 如果不设置会怎样
+
+执行时会报错，因为 session 没有默认模型。
+
+这是本地 SDK 场景下最常见的运行时错误之一。
+
+## 远程 session 呢
+
+远程 session 当前不支持直接这样设置模型。

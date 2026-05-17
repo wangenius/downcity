@@ -1,0 +1,21 @@
+---
+title: Logs and Debug Files
+description: Which logs and state files to inspect first when an Agent fails
+---
+
+# Logs and Debug Files
+
+When an agent behaves incorrectly, the most useful places to inspect first are:
+
+- `city agent status`
+- logs under `.downcity/`
+- daemon state files
+- related session message files
+
+## Recommended inspection order
+
+1. Check command output first.
+2. Then inspect logs and persisted messages under `.downcity/`.
+3. Only after that consider cleaning stale state.
+
+If you have not narrowed the issue yet, deleting state files or message directories too early usually makes the problem harder to reproduce.

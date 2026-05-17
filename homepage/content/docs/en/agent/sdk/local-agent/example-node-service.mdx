@@ -1,0 +1,25 @@
+---
+title: Example: Embed a Local Agent in a Node Service
+description: A typical embedding pattern for using a local Agent inside a Node service
+---
+
+# Example: Embed a Local Agent in a Node Service
+
+One very common pattern looks like this:
+
+1. Your Node service process creates an `Agent`.
+2. The service creates or loads a session at startup.
+3. An HTTP handler receives a request and turns it into `session.run()`.
+
+This is a good fit for:
+
+- internal tools
+- engineering assistants
+- packaging repository capabilities behind a service
+
+If you later want other processes to reuse it, exposing the same local agent over HTTP is usually the most natural next step.
+
+If you need cross-process access, add:
+
+- `agent.http.start()`
+- a second process using `RemoteAgent`

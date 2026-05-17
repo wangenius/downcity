@@ -1,0 +1,58 @@
+---
+title: tools 和 services
+description: 如何给本地 Agent 注入工具和显式的 service 实例
+---
+
+# tools 和 services
+
+## tools
+
+本地 Agent 可以直接接收工具集合：
+
+```ts
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {
+    my_tool: myTool,
+  },
+});
+```
+
+这些工具会在 session 执行时直接可用。
+
+如果你的应用需要一套长期稳定的默认工具集合，这种 agent 级注入方式通常最顺手。
+
+## services
+
+如果你需要本地 Agent 持有某些 service，可以显式传入实例：
+
+```ts
+import { Agent, ChatService } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [
+    new ChatService({
+      telegram: {
+        botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      },
+    }),
+  ],
+});
+```
+
+## 什么时候需要显式传 service
+
+- 你希望 SDK 自己启动 chat 渠道
+- 你需要把 service 生命周期和应用代码绑定在一起
+
+你可以把这里理解成：“由调用方自己决定，哪些 service 是这个本地 Agent 的常驻能力。”
+
+## 一个重要边界
+
+SDK 这里的 `services` 是“你主动交给 Agent 的实例集合”，不是项目 runtime 自动注册表的镜像。
+
+所以不要把 SDK 模式想成“自动把项目里一切都搬进来”，它更强调显式装配。

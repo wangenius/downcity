@@ -1,0 +1,11 @@
+{
+  "title": "Configuration",
+  "pages": [
+    "overview",
+    "downcity-json",
+    "profile-and-soul",
+    "models",
+    "channels",
+    "environment"
+  ]
+}

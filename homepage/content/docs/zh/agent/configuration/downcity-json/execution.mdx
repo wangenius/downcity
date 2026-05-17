@@ -1,0 +1,56 @@
+---
+title: execution 配置
+description: 当前 Agent 项目如何绑定到 city 全局模型池中的模型
+---
+
+# `execution` 配置
+
+当前 agent 项目只有一种执行绑定：
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  }
+}
+```
+
+## 含义
+
+- `type` 固定为 `api`
+- `modelId` 指向 city 全局模型池中的某个模型 ID
+
+在当前代码里，项目执行绑定就是围绕这条约束统一解析的。
+
+## 为什么是这种设计
+
+这样做可以把：
+
+- provider
+- API key
+- 模型名
+- 其它全局模型细节
+
+统一放在 city 全局模型池里管理。
+
+项目只需要声明“我用哪个模型”。
+
+这让项目配置和全局模型定义之间的边界非常清晰。
+
+## 一个常见错误
+
+如果 `modelId` 在全局模型池中不存在，agent 启动时会失败。
+
+另一个常见错误是沿用旧口径，把这里写成别的执行模式。当前项目 runtime 只认 `api`。
+
+## 推荐做法
+
+先确认全局模型池里有模型，再把项目绑定过去。
+
+如果你第一次排障，建议先用一个已经确认可用的稳定 `modelId`，不要在第一次启动时同时验证模型定义和项目绑定。
+
+## 继续阅读
+
+- [平台模型池](/zh/docs/agent/configuration/models/platform-model-pool)
+- [把模型绑定到项目](/zh/docs/agent/configuration/models/bind-model-to-agent)

@@ -1,0 +1,42 @@
+---
+title: session.stream()
+description: Execute a request as a stream of events for real-time UI and progressive output
+---
+
+# `session.stream()`
+
+## Example
+
+```ts
+for await (const event of session.stream({
+  query: "Continue the previous topic",
+})) {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+## Common event types
+
+- `text-delta`
+- `reasoning-delta`
+- `tool-call`
+- `tool-result`
+- `tool-error`
+- `finish`
+- `error`
+
+If you are building a richer UI, you will usually also care about:
+
+- when a tool call starts
+- when a tool result returns
+- whether a tool error occurred
+
+## When to prefer stream
+
+- you want real-time output
+- you want to show tool activity
+- you are building chat UI
+
+It is especially useful for experiences that render while the model is still generating.

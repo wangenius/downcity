@@ -1,0 +1,76 @@
+---
+title: downcity.json 示例
+description: 几个常见 Agent 项目配置示例
+---
+
+# `downcity.json` 示例
+
+## 最小项目
+
+```json
+{
+  "name": "my-agent",
+  "version": "1.0.0",
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  },
+  "services": {}
+}
+```
+
+适合：
+
+- 第一次验证启动链路
+- 排障时缩小问题范围
+
+## 绑定 Telegram
+
+```json
+{
+  "name": "my-agent",
+  "version": "1.0.0",
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  },
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+适合：
+
+- 你已经有全局 Telegram 账号
+- 你想先跑通单渠道消息入口
+
+## 绑定多个渠道
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        },
+        "feishu": {
+          "enabled": true,
+          "channelAccountId": "feishu-main"
+        }
+      }
+    }
+  }
+}
+```
+
+建议先单渠道跑通，再扩展到多渠道，这样更容易定位问题。

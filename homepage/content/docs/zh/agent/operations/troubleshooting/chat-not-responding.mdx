@@ -1,0 +1,27 @@
+---
+title: 聊天没有响应
+description: city agent chat 或渠道消息没有收到有效回复时的排查顺序
+---
+
+# 聊天没有响应
+
+优先检查：
+
+1. `city agent status`
+2. 目标 agent 是否处于 `running`
+3. 模型绑定是否正确
+4. 如果是渠道消息，渠道绑定是否有效
+
+## CLI 场景
+
+如果 `city agent chat` 不通，通常先检查 agent 是否真的运行。
+
+## 渠道场景
+
+如果是 Telegram、飞书或 QQ 没响应，优先检查 `channelAccountId`。
+
+很多“聊天没响应”的问题，本质并不在消息内容，而在：
+
+- 目标 agent 没有运行
+- 模型绑定无效
+- 渠道绑定悬空

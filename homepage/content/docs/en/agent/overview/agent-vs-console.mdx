@@ -1,0 +1,108 @@
+---
+title: Agent vs Console
+description: Understand the boundary between the single-project Agent runtime and the global city or Console control plane
+---
+
+# Agent vs Console
+
+Two concepts appear constantly in Downcity:
+
+- `agent`: the runtime for one project
+- `city` / Console: the global control plane
+
+## The short version
+
+- `agent` owns how one project runs
+- `city` owns which projects exist, which global resources exist, and how they are managed
+
+If you prefer a control-plane vs execution-plane mental model:
+
+- `city` / Console is the control plane
+- `agent` is the execution plane
+
+## What Console owns
+
+Console or city-level runtime is responsible for global concerns:
+
+- managing multiple agent projects
+- maintaining the global model pool
+- maintaining global channel accounts
+- exposing control-plane APIs
+- providing aggregated UI views
+
+These are shared resources. They do not naturally belong to one project.
+
+## What the Agent owns
+
+The single-project agent runtime is responsible for project execution:
+
+- reading the current project config
+- creating and running sessions
+- starting project services
+- binding the project to its selected model
+- exposing project-level HTTP, RPC, and CLI entry points
+- persisting project messages and logs
+
+These concerns are tightly bound to one project because they depend directly on that project's prompts, config, history, and tools.
+
+## Why the split matters
+
+Without this split, the system quickly becomes muddy:
+
+- multi-project management and single-project execution get coupled
+- global config and project config get mixed together
+- it becomes much harder to tell whether a failure belongs to the control plane or the project runtime
+
+This split is also what keeps many CLI and HTTP behaviors understandable:
+
+- `city` locates or manages the target project
+- the project `agent` actually executes the work
+
+## What this means in practice
+
+For day-to-day use, keep two rules in mind:
+
+1. When you configure the project runtime, you edit project files like `downcity.json`.
+2. When you manage shared resources, you use city-level capabilities like the model pool, channel accounts, and Console.
+
+## Common examples
+
+### Model binding
+
+- the model definition lives in the global model pool
+- the project chooses its model through `downcity.json.execution.modelId`
+
+So model definition and model selection are separate concerns.
+
+### Chat channels
+
+- bot credentials and channel accounts are city-level resources
+- the project only binds a `channelAccountId`
+
+That is why project config usually contains something like:
+
+```json
+{
+  "channelAccountId": "telegram-main"
+}
+```
+
+instead of raw credentials.
+
+### Runtime status
+
+- use `city agent status` to inspect one project runtime
+- use `city agent list` to inspect the set of known agents globally
+
+## A common misunderstanding
+
+People often ask: "If I run `city agent ...`, is the agent really separate?"
+
+Yes.
+
+`city agent ...` is the user-facing entry point. The actual runtime being started, queried, or stopped is the single-project agent runtime.
+
+Continue with:
+
+- [Project structure](/en/docs/agent/overview/project-structure)
+- [Execution model](/en/docs/agent/overview/execution-model)

@@ -1,0 +1,31 @@
+---
+title: Built-in Environment Variables
+description: Which environment variables city and agent commands inject for the current Agent context
+---
+
+# Built-in Environment Variables
+
+When the CLI runs agent-related commands, it derives the current agent context and injects a few environment variables.
+
+The most common ones are:
+
+- `DC_AGENT_PATH`
+- `DC_AGENT_NAME`
+
+## `DC_AGENT_PATH`
+
+The absolute path of the current agent project.
+
+This is useful in scripts, logs, and debugging workflows.
+
+## `DC_AGENT_NAME`
+
+The display name of the current agent.
+
+It usually comes from:
+
+- `downcity.json.name`
+
+If that is missing, it falls back to the directory name.
+
+These variables are injected for the current command execution context. They are not permanently written back into your current shell session.

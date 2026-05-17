@@ -1,0 +1,10 @@
+{
+  "title": "Channels",
+  "pages": [
+    "overview",
+    "channel-account-binding",
+    "telegram",
+    "feishu",
+    "qq"
+  ]
+}

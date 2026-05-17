@@ -1,0 +1,35 @@
+---
+title: Transport Behavior
+description: Understand the HTTP transport, response formats, and streaming behavior used by RemoteAgent
+---
+
+# Transport Behavior
+
+RemoteAgent currently calls the server through HTTP SDK routes.
+
+## Regular requests
+
+For example:
+
+- create session
+- list sessions
+- `run`
+- `history`
+- `fork`
+
+Those use normal JSON request-response exchanges.
+
+## Streaming requests
+
+`stream()` uses an NDJSON-style response stream.
+
+That means the client receives JSON events one line at a time.
+
+Each line can be treated as an independent stream event.
+
+## What this means for callers
+
+- if you are writing a script, `run()` is simpler
+- if you are building a real-time UI, prefer `stream()`
+
+If you want to show tool activity, progressive output, or streaming chat UI, `stream()` is usually a much better fit than `run()`.

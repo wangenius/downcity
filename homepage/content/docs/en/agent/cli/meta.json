@@ -1,0 +1,9 @@
+{
+  "title": "CLI",
+  "pages": [
+    "overview",
+    "lifecycle",
+    "interaction",
+    "maintenance"
+  ]
+}

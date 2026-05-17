@@ -1,0 +1,73 @@
+---
+title: Connect Chat Channels
+description: Connect the current Agent to Telegram, Feishu, QQ, or other chat surfaces
+---
+
+# Connect Chat Channels
+
+An Agent does not store bot credentials directly.
+
+In Downcity, chat integration is split into two levels:
+
+- city global level: stores channel accounts
+- project level: binds the current agent to a `channelAccountId`
+
+## Step 1: Prepare a channel account globally
+
+Make sure the global account already exists.
+
+Then bind it from the project:
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+That config says:
+
+- this project enables Telegram
+- it should use the global account called `telegram-main`
+
+## Step 2: Restart the Agent
+
+```bash
+city agent restart
+```
+
+If this is your first time wiring a channel into the project, send a real test message immediately after restart.
+
+## Supported channels in this doc set
+
+- Telegram
+- Feishu
+- QQ
+
+## One important boundary
+
+If `channelAccountId` points to a missing global account, the channel will not work.
+
+The interactive Agent manager can clean some dangling bindings in certain flows, but the safest approach is still to confirm the target account exists explicitly.
+
+## Recommended rollout strategy
+
+When integrating channels for the first time:
+
+1. start with one channel only
+2. validate account binding first
+3. verify send and receive
+4. only then add more channels
+
+Continue with:
+
+- [Channel overview](/en/docs/agent/configuration/channels/overview)
+- [Channel account binding](/en/docs/agent/configuration/channels/channel-account-binding)

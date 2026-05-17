@@ -1,0 +1,34 @@
+---
+title: Environment Variable Loading
+description: How project agents read .env values and resolve ${VAR} placeholders in configuration
+---
+
+# Environment Variable Loading
+
+When a project agent starts, it loads project environment variables and resolves `${VAR}` placeholders inside `downcity.json`.
+
+## Common use cases
+
+- referencing secrets from config
+- avoiding plain-text secrets inside `downcity.json`
+
+## Recommended practice
+
+- keep secrets in project `.env` files or a controlled runtime environment
+- keep only `${VAR_NAME}` references in config
+
+Benefits:
+
+- config is easier to share
+- secrets are less likely to be committed by accident
+- changing environments is easier
+
+## What to do after changes
+
+Usually you should restart the agent:
+
+```bash
+city agent restart
+```
+
+The agent reads and resolves this configuration at startup, so changing environment variables alone does not automatically refresh the current runtime process.

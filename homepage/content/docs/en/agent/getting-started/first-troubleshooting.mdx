@@ -1,0 +1,96 @@
+---
+title: First Troubleshooting Steps
+description: The most common first-time Agent problems and the fastest order to check them
+---
+
+# First Troubleshooting Steps
+
+When an agent fails the first time, the cause usually belongs to one of four areas.
+
+## 1. The project is not initialized
+
+Symptoms:
+
+- `city agent status` shows `not initialized`
+- `PROFILE.md` or `downcity.json` is missing
+
+Fix:
+
+```bash
+city agent create .
+```
+
+If the minimum project files do not exist, do not start by suspecting models, channels, or sessions.
+
+## 2. No valid model binding
+
+Symptoms:
+
+- startup fails because execution binding is invalid
+- model calls fail immediately
+
+Fix:
+
+- check `downcity.json.execution.modelId`
+- confirm that the model ID exists in the global model pool
+
+This is one of the most common structural startup problems in the current implementation.
+
+## 3. The Agent is not running
+
+Symptoms:
+
+- `city agent chat` cannot connect
+- CLI says the daemon is unreachable
+
+Fix:
+
+```bash
+city agent status
+city agent start
+```
+
+If background behavior is unclear, also try:
+
+```bash
+city agent start --foreground
+```
+
+## 4. State files are stale
+
+Symptoms:
+
+- `status` shows `stale`
+
+Fix:
+
+```bash
+city agent doctor --fix
+city agent start
+```
+
+In most cases you do not need to delete project directories or manually remove random state files. `doctor --fix` is the right first move.
+
+## Recommended order
+
+1. `city agent status`
+2. inspect `downcity.json`
+3. confirm model binding
+4. if stale, run `doctor --fix`
+5. if still needed, `restart`
+
+## A frequent mistake
+
+Many first-time users just run `start` again and again.
+
+The better pattern is:
+
+- check `status`
+- check config
+- use `restart` or `doctor` deliberately
+
+More troubleshooting:
+
+- [Agent won't start](/en/docs/agent/operations/troubleshooting/agent-wont-start)
+- [Agent shows stale](/en/docs/agent/operations/troubleshooting/agent-shows-stale)
+- [Chat not responding](/en/docs/agent/operations/troubleshooting/chat-not-responding)

@@ -1,0 +1,51 @@
+---
+title: Remote Session API
+description: RemoteAgent 下 session 可用的核心方法和能力边界
+---
+
+# Remote Session API
+
+通过 `RemoteAgent` 拿到 session 后，最常用的方法有：
+
+- `run()`
+- `stream()`
+- `history()`
+- `fork()`
+
+这些 API 尽量和本地 session 的使用面保持一致，方便你在本地和远程模式之间复用同一套心智模型。
+
+## 获取 session
+
+```ts
+const session = await agent.session();
+```
+
+也可以传入已有的 `sessionId`。
+
+这让你可以继续一条已有的远程会话，而不是每次都从头开始。
+
+## 非流式执行
+
+```ts
+await session.run({ query: "继续" });
+```
+
+## 流式执行
+
+```ts
+for await (const event of session.stream({ query: "继续" })) {
+  // handle event
+}
+```
+
+## 历史消息
+
+```ts
+const messages = await session.history();
+```
+
+## 分叉
+
+```ts
+const next = await session.fork();
+```

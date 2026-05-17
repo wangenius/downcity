@@ -29,17 +29,24 @@ Only configure `start` when manually running foreground runtime or debugging spe
 }
 ```
 
-### `model`
+### `execution`
 
-Agent model binding (maps to console-global model pool):
+Agent model binding (maps to the city global model pool):
 
 ```json
 {
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
   }
 }
 ```
+
+Notes:
+
+- project runtime now binds through `execution.modelId`
+- for the current project runtime path, `execution.type` should be `api`
+- the old `model.primary` structure is no longer the recommended project-side format
 
 ### `services.chat`
 
@@ -103,13 +110,14 @@ city config get plugins.asr
 
 ```bash
 city config get
-city config get model.primary
+city config get execution.modelId
 city model list
 city config unset services.chat.channels.telegram
 ```
 
 ## Next
 
+- [Agent Configuration Overview](/en/docs/agent/configuration/overview)
 - [CLI Reference](/en/docs/reference/cli)
 - [`.downcity/` Directory](/en/docs/reference/dot-downcity)
 - [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)

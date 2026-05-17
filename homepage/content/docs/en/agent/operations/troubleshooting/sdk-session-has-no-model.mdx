@@ -1,0 +1,32 @@
+---
+title: SDK Session Has No Model
+description: What to do when a local Agent SDK run fails because the session has no model
+---
+
+# SDK Session Has No Model
+
+This is one of the most common local SDK problems.
+
+## Reason
+
+Local SDK sessions do not have a model by default.
+
+You must explicitly call:
+
+```ts
+await session.set({ model });
+```
+
+## Correct order
+
+```ts
+const session = await agent.session();
+await session.set({ model });
+await session.run({ query: "Continue" });
+```
+
+If you already confirmed that local `Agent` construction succeeded but execution still fails, this is usually the first thing to check.
+
+## What about remote sessions
+
+Remote sessions do not currently support passing a local model instance from the client.

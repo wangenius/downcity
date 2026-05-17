@@ -1,0 +1,21 @@
+---
+title: 例子：最小 RemoteAgent
+description: 通过 HTTP 调用另一个进程中的 Agent
+---
+
+# 例子：最小 RemoteAgent
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314",
+});
+
+const session = await agent.session();
+const result = await session.run({
+  query: "总结一下这个项目",
+});
+```
+
+建议先用这个最小例子验证远程连通性，再逐步叠加更复杂的 streaming 或多 session 行为。

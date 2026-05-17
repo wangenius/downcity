@@ -1,0 +1,32 @@
+---
+title: Telegram
+description: 在 Agent 项目中启用 Telegram 渠道的基本方式
+---
+
+# Telegram
+
+在项目层启用 Telegram 时，最常见配置是：
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+关键点：
+
+- `enabled` 打开这个渠道
+- `channelAccountId` 绑定全局账号
+
+如果你已经有一套可用的全局 Telegram 账号，这一页里的配置通常就是项目层最关键的一步。
+
+如果你需要更完整的聊天链路说明，可以继续看 chat service 的 Telegram 文档。

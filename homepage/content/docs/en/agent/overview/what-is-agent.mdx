@@ -1,0 +1,114 @@
+---
+title: What Is an Agent
+description: Understand what a Downcity Agent is, what it owns, and how you use it
+---
+
+# What Is an Agent
+
+In Downcity, an `agent` is a runtime for a single project.
+
+You can think of it as:
+
+- an AI execution unit bound to one repository
+- a project-level assistant that holds sessions, reads project config, calls tools, and runs services
+- an execution surface you can use through CLI, HTTP, chat channels, or the SDK
+
+It is not just a chat box, and it is not the global multi-project control plane.
+
+## What an Agent is responsible for
+
+Once an agent starts, it is responsible for the current project runtime:
+
+- reading `downcity.json`
+- loading `PROFILE.md` and `SOUL.md`
+- binding the project to its selected model
+- creating and maintaining sessions
+- exposing project-level HTTP, RPC, and CLI entry points
+- starting enabled project services
+- persisting messages, logs, and runtime artifacts into `.downcity/`
+
+From an execution point of view, the agent is the layer that assembles:
+
+- project config
+- static prompts
+- session history
+- available tools
+- the active model
+
+into one executable runtime context.
+
+## What an Agent is not responsible for
+
+An agent does not own global platform concerns:
+
+- it does not manage multiple projects
+- it does not own the global model pool
+- it does not persist city-level channel accounts
+- it is not the Console UI or the global control plane
+
+Those concerns belong to `city` and Console.
+
+This boundary matters, because once you mix global concerns and project concerns together, it becomes much harder to answer basic questions like:
+
+- where should I configure a model?
+- where should a bot credential live?
+- is this failure in the control plane or in the project runtime?
+
+## Typical use cases
+
+You use an agent when you want to turn a repository into a long-running execution unit:
+
+- make one project conversational
+- chat with a project through `city agent chat`
+- receive Telegram, Feishu, or QQ messages into the project runtime
+- embed an agent into your own Node.js app with `@downcity/agent`
+- call a running agent process through `RemoteAgent`
+
+## Two primary ways to use an Agent
+
+### 1. CLI / runtime mode
+
+You run commands inside a project:
+
+```bash
+city agent create .
+city agent start
+city agent chat
+```
+
+This path is best when your goal is "turn this repository into an agent runtime and use it directly."
+
+### 2. SDK integration mode
+
+You use the SDK from your own application:
+
+```ts
+import { Agent } from "@downcity/agent";
+```
+
+Then you create a local `Agent` or connect to a remote process through `RemoteAgent`.
+
+This path is best when your goal is "embed agent capability into my own software."
+
+## When to prefer CLI vs SDK
+
+Prefer CLI when:
+
+- you want to get a project running quickly
+- you want to validate prompts, model binding, and runtime behavior
+- you mainly need human-driven interaction
+
+Prefer SDK when:
+
+- you already have a Node.js service or application
+- you want agent capability inside an existing workflow
+- you want to control tools, services, and session lifecycle programmatically
+
+## Recommended reading order
+
+If this is your first time in the Agent docs, the cleanest path is:
+
+1. [Agent vs Console](/en/docs/agent/overview/agent-vs-console)
+2. [Agent lifecycle](/en/docs/agent/overview/lifecycle)
+3. [Create your first Agent](/en/docs/agent/getting-started/create-your-first-agent)
+4. [Agent SDK overview](/en/docs/agent/sdk/overview)

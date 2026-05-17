@@ -1,0 +1,94 @@
+---
+title: Agent 项目结构
+description: 理解一个 Agent 项目中的核心文件、目录和各自职责
+---
+
+# Agent 项目结构
+
+一个最小可用的 agent 项目通常长这样：
+
+```text
+your-project/
+├── PROFILE.md
+├── SOUL.md
+├── downcity.json
+├── .downcity/
+└── 你的业务代码
+```
+
+## `PROFILE.md`
+
+定义 agent 的外显角色、行为边界和协作风格。
+
+常见内容包括：
+
+- 你是谁
+- 你服务的对象是谁
+- 你应该遵守什么规则
+- 你如何沟通和输出
+
+它更像是“角色说明书”，而不是结构化运行配置。
+
+## `SOUL.md`
+
+定义更稳定、更底层的 operating principles。
+
+它更像是 agent 的核心价值观和长期行为准则，而不是某次会话的具体提示词。
+
+如果你发现某条原则应该跨很多会话都成立，而且不止影响“语气”，那通常更适合放在 `SOUL.md`。
+
+## `downcity.json`
+
+项目级配置入口。
+
+用户最常修改的是：
+
+- `name`
+- `execution`
+- `services.chat.channels.*`
+- `context`
+
+如果说 `PROFILE.md` 和 `SOUL.md` 更偏向“人类可读原则”，那 `downcity.json` 更偏向“运行时要消费的声明式配置”。
+
+## `.downcity/`
+
+运行时目录。
+
+通常包含：
+
+- 会话消息
+- 日志
+- 缓存
+- task run 产物
+- schema 文件
+- daemon 状态文件
+
+你通常不会手工编辑 `.downcity/` 里的内容，但在排障和观察运行时结果时会频繁查看它。
+
+## 这几个文件分别什么时候改
+
+- 想改 agent 的身份和说话方式：改 `PROFILE.md`
+- 想改更长期的行为原则：改 `SOUL.md`
+- 想改模型、服务和渠道绑定：改 `downcity.json`
+- 想排障或看运行产物：看 `.downcity/`
+
+## 推荐的维护分工
+
+把这 4 类内容分开维护，会让项目更稳定：
+
+1. 角色与输出风格：`PROFILE.md`
+2. 长期原则：`SOUL.md`
+3. 结构化配置：`downcity.json`
+4. 运行产物：`.downcity/`
+
+如果把这些层混在一起，后面往往会出现：
+
+- 不知道某个问题应该改哪个文件
+- 把长期原则错误塞进 JSON
+- 把运行产物误当配置去修改
+
+## 继续阅读
+
+- [downcity.json 配置](/zh/docs/agent/configuration/downcity-json/basics)
+- [PROFILE 和 SOUL](/zh/docs/agent/configuration/profile-and-soul/profile-md)
+- [存储布局](/zh/docs/agent/storage/dot-downcity-layout)

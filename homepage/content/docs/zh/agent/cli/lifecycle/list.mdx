@@ -1,0 +1,52 @@
+---
+title: city agent list
+description: 查看当前 city registry 中已登记的 Agent 项目
+---
+
+# `city agent list`
+
+## 用法
+
+```bash
+city agent list
+city agent list --running
+city agent list --json
+```
+
+## 它列出的是什么
+
+这个命令显示的是 city registry 中已登记的 agent 项目，而不是“当前目录下有哪些文件”。
+
+这也是为什么你有时会看到：
+
+- 某个 agent 出现在 `list` 里
+- 但它当前并没有处于 `running`
+
+## `--running`
+
+只显示当前仍然运行中的 agent：
+
+```bash
+city agent list --running
+```
+
+## `--json`
+
+如果你想把结果接到脚本里处理：
+
+```bash
+city agent list --json
+```
+
+## 什么时候用
+
+- 你不确定某个项目是否已经登记
+- 你想从多个 agent 中选择一个聊天或启动
+- 你想看当前有哪些 running agent
+
+如果你不确定自己要聊天的是哪个项目，先 `list` 再 `chat --to ...` 是最稳的路径。
+
+## 相关文档
+
+- [city agent start](/zh/docs/agent/cli/lifecycle/start)
+- [registry 说明](/zh/docs/agent/cli/maintenance/registry)

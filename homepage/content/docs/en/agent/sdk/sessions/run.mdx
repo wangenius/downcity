@@ -1,0 +1,33 @@
+---
+title: session.run()
+description: Execute one non-streaming request and get the final text result
+---
+
+# `session.run()`
+
+## Example
+
+```ts
+const result = await session.run({
+  query: "Summarize the current repository structure",
+});
+
+console.log(result.text);
+```
+
+## What it returns
+
+The most commonly used result fields are:
+
+- `success`
+- `error`
+- `text`
+- `assistantMessage`
+
+## When to use run
+
+- you only care about the final result
+- you do not need real-time incremental rendering
+- you are writing scripts or batch workflows
+
+The strength of `run()` is that it is simple, stable, and script-friendly.

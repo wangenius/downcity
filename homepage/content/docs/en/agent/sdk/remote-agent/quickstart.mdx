@@ -1,0 +1,42 @@
+---
+title: RemoteAgent Quickstart
+description: Connect to an Agent that has already been exposed over HTTP
+---
+
+# RemoteAgent Quickstart
+
+## Start HTTP on the server side first
+
+Server-side code:
+
+```ts
+const http = await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+```
+
+## Connect from the client
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314",
+});
+
+const session = await agent.session();
+const result = await session.run({
+  query: "Summarize the current repository structure",
+});
+```
+
+On the client side, you do not need to care about project prompts, model pool details, or service assembly. You only consume the remote session capability that has already been exposed.
+
+## Good fit for
+
+- another process already owns the local Agent
+- you only want to consume agent capability through HTTP
+- you want to separate the caller from the executor
+
+If you have a frontend and backend, a local daemon plus callers, or several consumers sharing one agent service, this mode feels very natural.

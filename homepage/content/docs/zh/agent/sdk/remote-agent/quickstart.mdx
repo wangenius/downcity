@@ -1,0 +1,42 @@
+---
+title: RemoteAgent 快速开始
+description: 连接一个已经通过 HTTP 暴露出来的 Agent
+---
+
+# RemoteAgent 快速开始
+
+## 服务端先启动 HTTP
+
+服务端代码：
+
+```ts
+const http = await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+```
+
+## 客户端连接
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314",
+});
+
+const session = await agent.session();
+const result = await session.run({
+  query: "总结一下当前仓库结构",
+});
+```
+
+客户端在这里不需要关心项目提示词、模型池或 service 装配细节，它只消费远程已经暴露好的 session 能力。
+
+## 适用场景
+
+- 另一个进程已经持有本地 Agent
+- 你只想通过 HTTP 方式消费 agent 能力
+- 你想把调用方和执行方分开
+
+如果你有前后端、本地守护进程加调用端、或者多个消费者共享一套 agent 服务，这种模式会很自然。

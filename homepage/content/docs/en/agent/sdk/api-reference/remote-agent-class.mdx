@@ -1,0 +1,18 @@
+---
+title: RemoteAgent Class
+description: The core public interface of the remote Agent client
+---
+
+# RemoteAgent Class
+
+`RemoteAgent` exposes these core public entry points:
+
+- `new RemoteAgent({ baseUrl })`
+- `agent.session(sessionId?)`
+- `agent.sessions()`
+
+## Core semantics
+
+It does not execute work by itself. It only talks to a remote server over HTTP.
+
+If you think of local `Agent` as the server-side executor, `RemoteAgent` is the paired client.

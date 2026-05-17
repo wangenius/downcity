@@ -1,0 +1,30 @@
+---
+title: Session Types and Results
+description: The most important fields and meanings in Session input and output objects
+---
+
+# Session Types and Results
+
+The most common input and output objects are:
+
+- `AgentSessionSetInput`
+- `AgentSessionRunInput`
+- `AgentSessionRunResult`
+- `AgentSessionMetadata`
+
+## `AgentSessionRunInput`
+
+Core field:
+
+- `query`
+
+## `AgentSessionRunResult`
+
+Core fields:
+
+- `success`
+- `error`
+- `text`
+- `assistantMessage`
+
+For most users, `text` is the field they consume most directly. `assistantMessage` is more useful for lower-level UI rendering, debugging, or advanced handling.

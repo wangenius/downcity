@@ -29,17 +29,24 @@ Downcity 的核心配置由 3 部分组成：
 }
 ```
 
-### `model`
+### `execution`
 
-agent 绑定模型 ID（映射到 console 全局模型池）：
+agent 绑定模型 ID（映射到 city 全局模型池）：
 
 ```json
 {
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
   }
 }
 ```
+
+说明：
+
+- 当前项目 runtime 通过 `execution.modelId` 绑定模型
+- 对当前项目 runtime 路径，`execution.type` 应写为 `api`
+- 旧的 `model.primary` 不再是推荐的项目侧写法
 
 ### `services.chat`
 
@@ -103,13 +110,14 @@ city config get plugins.asr
 
 ```bash
 city config get
-city config get model.primary
+city config get execution.modelId
 city model list
 city config unset services.chat.channels.telegram
 ```
 
 ## 下一步
 
+- [Agent 配置总览](/zh/docs/agent/configuration/overview)
 - [CLI 参考](/zh/docs/reference/cli)
 - [downcity.json 参考](/zh/docs/reference/downcity-json)
 - [`.downcity/` 目录说明](/zh/docs/reference/dot-downcity)

@@ -1,0 +1,11 @@
+{
+  "title": "Lifecycle",
+  "pages": [
+    "create",
+    "start",
+    "stop",
+    "restart",
+    "status",
+    "list"
+  ]
+}

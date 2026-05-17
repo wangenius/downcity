@@ -1,0 +1,28 @@
+---
+title: Storage Overview
+description: Understand the .downcity directory, persisted sessions, and log files in an Agent project
+---
+
+# Storage Overview
+
+Most Agent runtime artifacts end up under the project's `.downcity/` directory.
+
+You can think of it as:
+
+- the session data directory
+- the log directory
+- the runtime state directory
+- the task run output directory
+
+## The three things you will inspect most often
+
+- session messages
+- daemon or runtime logs
+- debug and state files
+
+If you need to answer "what did this agent actually do," `.downcity/` is often more reliable than terminal output that has already scrolled away.
+
+## Continue reading
+
+- [`.downcity` layout](/en/docs/agent/storage/dot-downcity-layout)
+- [SDK Session layout](/en/docs/agent/storage/sdk-session-layout)

@@ -1,0 +1,48 @@
+---
+title: Session 总览
+description: 理解 Session 在 Agent SDK 中的核心地位和常见使用顺序
+---
+
+# Session 总览
+
+在 SDK 里，真正承载执行的是 session。
+
+## 最常见的使用顺序
+
+### 本地 Agent
+
+```ts
+const session = await agent.session();
+await session.set({ model });
+const result = await session.run({ query: "继续" });
+```
+
+### RemoteAgent
+
+```ts
+const session = await remoteAgent.session();
+const result = await session.run({ query: "继续" });
+```
+
+## 你最常会用到的方法
+
+- `set`
+- `run`
+- `stream`
+- `history`
+- `fork`
+
+如果你只能记住一个事实，那就是：SDK 真正的工作对象不是 `Agent` 本身，而是 `session`。
+
+## 一个重要区别
+
+- 本地 session 需要先 `set({ model })`
+- 远程 session 当前不支持远程传模型实例
+
+所以本地和远程的最大差异，不在 `run()`，而在“模型是在哪里被持有和配置的”。
+
+## 继续阅读
+
+- [set model](/zh/docs/agent/sdk/sessions/set-model)
+- [run](/zh/docs/agent/sdk/sessions/run)
+- [stream](/zh/docs/agent/sdk/sessions/stream)

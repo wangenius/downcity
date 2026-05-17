@@ -1,0 +1,41 @@
+---
+title: 渠道配置总览
+description: 理解 Agent 如何连接 Telegram、飞书和 QQ 等聊天渠道
+---
+
+# 渠道配置总览
+
+Agent 渠道接入的核心原则只有一句：
+
+**全局层保存账号，项目层只做绑定。**
+
+## 项目层长什么样
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+无论是 Telegram、飞书还是 QQ，项目层的核心思路都是一样的。
+
+## 当前文档重点覆盖
+
+- Telegram
+- 飞书
+- QQ
+
+第一次接渠道时，建议先选一个最容易验证的渠道跑通，再扩展到多渠道。
+
+## 继续阅读
+
+- [channel account 绑定](/zh/docs/agent/configuration/channels/channel-account-binding)

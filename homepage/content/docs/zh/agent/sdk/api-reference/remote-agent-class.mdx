@@ -1,0 +1,18 @@
+---
+title: RemoteAgent 类
+description: 远程 Agent 客户端的核心公开接口
+---
+
+# RemoteAgent 类
+
+`RemoteAgent` 的核心公开使用面包括：
+
+- `new RemoteAgent({ baseUrl })`
+- `agent.session(sessionId?)`
+- `agent.sessions()`
+
+## 核心语义
+
+它本身不执行任务，只负责通过 HTTP 调远程服务端。
+
+如果你把本地 `Agent` 看成服务端，那 `RemoteAgent` 就是与之配对的客户端。

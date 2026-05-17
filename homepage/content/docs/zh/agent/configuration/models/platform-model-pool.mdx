@@ -1,0 +1,39 @@
+---
+title: 平台模型池
+description: 理解 city 全局模型池与 Agent 项目绑定之间的关系
+---
+
+# 平台模型池
+
+Agent 项目本身不保存完整模型定义。
+
+## 模型池在哪里
+
+模型池属于 city 全局层。
+
+从用户视角理解：
+
+- 全局层保存 provider、模型名、API key 等完整信息
+- 项目层只保存 `execution.modelId`
+
+这也是为什么项目里通常看不到完整 provider 配置。
+
+## 为什么这样设计
+
+- 多个项目可以共用同一模型定义
+- API key 不需要在每个项目里重复保存
+- 项目切模型时只改绑定字段
+
+如果你同时维护多个项目，这个收益会非常明显。
+
+## 你通常怎么操作
+
+1. 先在 city 全局层准备好模型
+2. 再把项目的 `execution.modelId` 绑定到目标模型
+
+一旦绑定完成，后续切换模型本质上就是切换 `modelId`。
+
+## 相关文档
+
+- [execution 配置](/zh/docs/agent/configuration/downcity-json/execution)
+- [把模型绑定到 Agent](/zh/docs/agent/configuration/models/bind-model-to-agent)

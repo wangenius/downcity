@@ -15,7 +15,7 @@ downcity --version
 
 > `downcity` 与 `city` 都是同一个 CLI 可执行命令。
 >
-> 如果安装后仍然找不到 `city`，请先看[常见问题](/zh/docs/operations/troubleshooting/common-issues)。
+> 如果安装后仍然找不到 `city`，请先看 [FAQ](/zh/docs/operations/faq)。
 >
 > 后续升级可以直接执行 `city update`。
 
@@ -49,25 +49,28 @@ city agent create .
 - `downcity.json`
 - `.downcity/` 运行目录
 
-## 5. 配置 LLM
+## 5. 绑定模型
 
-在项目根目录创建 `.env`（不要提交到 Git）：
+当前项目 agent 使用的是全局模型池绑定方式。
 
-```bash
-LLM_API_KEY=your_key
-```
-
-`downcity.json` 最小示例：
+`downcity.json` 最小示例应为：
 
 ```json
 {
   "name": "my-agent",
   "version": "1.0.0",
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
   }
 }
 ```
+
+说明：
+
+- `modelId` 指向 city 全局模型池中的某个模型
+- 项目本身不再直接保存旧的 `model.primary` 结构
+- 如果你还没准备模型池，请先到全局模型管理中准备一个可用模型
 
 ## 6. 启动 Agent
 
@@ -121,6 +124,7 @@ city start
 ## 下一步
 
 - [配置详解](/zh/docs/quickstart/configuration)
+- [Agent 文档总览](/zh/docs/agent/overview/what-is-agent)
 - [`city skill`](/zh/docs/commands/plugin/skill)
 - [Task Service](/zh/docs/services/task/task-service)
-- [故障排查](/zh/docs/operations/troubleshooting)
+- [FAQ](/zh/docs/operations/faq)

@@ -1,0 +1,23 @@
+---
+title: RemoteAgent 连接失败
+description: RemoteAgent 无法连接服务端时的排查顺序
+---
+
+# RemoteAgent 连接失败
+
+优先检查：
+
+1. 服务端是否已经调用 `agent.http.start()`
+2. `baseUrl` 是否正确
+3. 服务端端口是否真的在监听
+
+## 一个常见误区
+
+客户端创建了 `RemoteAgent`，并不意味着服务端会自动启动。
+
+服务端必须先显式暴露 HTTP。
+
+所以这类问题的优先排查点通常不是 session，而是：
+
+- 服务端是否真的在监听
+- `baseUrl` 是否正确

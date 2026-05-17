@@ -1,0 +1,107 @@
+---
+title: Agent Lifecycle
+description: Understand the full lifecycle of a project Agent from initialization to execution and recovery
+---
+
+# Agent Lifecycle
+
+A project agent usually moves through five stages.
+
+## 1. Initialize the project
+
+```bash
+city agent create .
+```
+
+This generates the minimum runtime scaffold:
+
+- `PROFILE.md`
+- `SOUL.md`
+- `downcity.json`
+- `.downcity/`
+
+The point here is not to configure every external dependency up front. The goal is to turn a normal directory into an Agent project that Downcity can recognize and run.
+
+## 2. Bind an execution target
+
+Current project agents use one execution binding:
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "your-model-id"
+  }
+}
+```
+
+This means the project must bind to a model ID from the global city model pool.
+
+In the current code, this binding is not optional decoration. It is one of the core prerequisites for startup.
+
+## 3. Start the runtime
+
+```bash
+city agent start
+```
+
+During startup, the agent will:
+
+- validate that the project is initialized
+- read `downcity.json`
+- load `PROFILE.md` and `SOUL.md`
+- resolve model binding
+- start HTTP and local RPC
+- start configured project services
+
+In background mode, the CLI also maintains daemon state so commands like `status`, `stop`, `restart`, and `doctor` can manage the process later.
+
+## 4. Execute and interact
+
+Once running, the agent can be entered through multiple surfaces:
+
+- `city agent chat`
+- connected chat channels
+- project-level HTTP control routes
+- SDK `Agent` and `RemoteAgent`
+
+Even though these look different from the outside, they ultimately reuse the same session and executor core.
+
+## 5. Stop, restart, and recover
+
+Common lifecycle commands:
+
+```bash
+city agent status
+city agent stop
+city agent restart
+city agent doctor --fix
+```
+
+If the process exits unexpectedly but state files remain, `doctor` is the command that restores consistency.
+
+## The normal day-to-day loop
+
+In real usage, lifecycle is often cyclical rather than linear:
+
+1. edit `PROFILE.md`
+2. edit `downcity.json`
+3. `city agent restart`
+4. `city agent chat`
+5. observe output and iterate again
+
+That loop is normal when you are shaping a long-lived project agent.
+
+## Recommended first-time order
+
+For most users, the easiest first path is:
+
+1. `city agent create .`
+2. configure `downcity.json.execution.modelId`
+3. `city agent start`
+4. `city agent chat`
+5. only then add channels or SDK integrations
+
+If you are here specifically for embedding, jump to:
+
+- [Agent SDK overview](/en/docs/agent/sdk/overview)

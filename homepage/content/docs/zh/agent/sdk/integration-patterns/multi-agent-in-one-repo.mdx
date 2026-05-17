@@ -1,0 +1,21 @@
+---
+title: 一个仓库里多个 Agent
+description: 用多个 agentId 在同一项目目录里隔离不同的 SDK Agent
+---
+
+# 一个仓库里多个 Agent
+
+如果你在同一个项目目录里创建多个本地 SDK Agent，最重要的是：
+
+- 给每个 agent 一个稳定且不同的 `id`
+
+例如：
+
+```ts
+new Agent({ id: "planner", path: repoPath, tools: {} });
+new Agent({ id: "reviewer", path: repoPath, tools: {} });
+```
+
+这样它们的 session 会落到不同目录里，不会混在一起。
+
+如果你做的是“同一仓库里多个不同角色的 agent”，这会非常有用。

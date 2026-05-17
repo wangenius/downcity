@@ -1,0 +1,37 @@
+---
+title: channelAccountId Binding
+description: Bind the current Agent to an existing chat account in the city global layer
+---
+
+# `channelAccountId` Binding
+
+Inside each channel config, the most important field is usually:
+
+```json
+{
+  "channelAccountId": "telegram-main"
+}
+```
+
+## What it means
+
+It means the current agent should use the city global account whose ID is `telegram-main`.
+
+This ID should be stable, readable, and actually exist.
+
+## What it does not mean
+
+It is not a bot token.
+
+It is not a webhook URL.
+
+## Common issue
+
+If this points to an account ID that does not exist, the agent cannot use that channel correctly.
+
+## Recommended practice
+
+- use stable, readable account IDs
+- restart the agent after changing a binding
+
+If your team shares multiple agent projects, good account naming reduces maintenance friction a lot.

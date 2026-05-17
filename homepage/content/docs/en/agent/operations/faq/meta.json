@@ -1,0 +1,7 @@
+{
+  "title": "FAQ",
+  "pages": [
+    "cli-faq",
+    "sdk-faq"
+  ]
+}

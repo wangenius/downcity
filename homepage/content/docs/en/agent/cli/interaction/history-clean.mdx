@@ -1,0 +1,53 @@
+---
+title: city agent history clean
+description: Hard-clean one Agent session history for recovery or debugging
+---
+
+# `city agent history clean`
+
+## Usage
+
+```bash
+city agent history clean [path] --session-id <sessionId> --hard
+```
+
+You can also target a session by chat route:
+
+```bash
+city agent history clean [path] --channel telegram --chat-id 123 --hard
+```
+
+## What it is for
+
+This command performs a targeted hard clean of one session history.
+
+Typical use cases:
+
+- a session context is badly polluted
+- a specific chat route must be reset
+- you want to start from a clean context for debugging
+
+The current implementation is deliberately explicit. It is not a vague "clear the last few turns" command.
+
+## Common parameters
+
+- `--session-id`
+- `--channel`
+- `--chat-id`
+- `--target-type`
+- `--thread-id`
+- `--hard`
+- `--json`
+
+When you already know the exact session identity, `--session-id` is usually the cleanest targeting strategy.
+
+## Usage guidance
+
+Use this only when you know exactly which session you want to clean.
+
+It is a maintenance and troubleshooting command, not a normal daily chat command.
+
+Continue with:
+
+- [SDK session layout](/en/docs/agent/storage/sdk-session-layout)
+- [CLI chat](/en/docs/agent/cli/interaction/chat)

@@ -1,0 +1,55 @@
+---
+title: city agent history clean
+description: 清理某条 Agent 会话历史，适合排障或重置上下文
+---
+
+# `city agent history clean`
+
+## 用法
+
+```bash
+city agent history clean [path] --session-id <sessionId> --hard
+```
+
+也可以按聊天目标来指定：
+
+```bash
+city agent history clean [path] --channel telegram --chat-id 123 --hard
+```
+
+## 它是做什么的
+
+这个命令用于硬清理一条会话历史。
+
+适用场景：
+
+- 某个 session 上下文已经污染
+- 某个渠道会话需要强制重置
+- 调试时想从一条干净上下文重新开始
+
+从当前实现看，它会对一条目标 session 进行定点硬清理，而不是做模糊的“清空最近几轮”。
+
+## 常用参数
+
+- `--session-id`
+- `--channel`
+- `--chat-id`
+- `--target-type`
+- `--thread-id`
+- `--hard`
+- `--json`
+
+在你已经明确知道 session 身份时，`--session-id` 通常是最直接、最稳的指定方式。
+
+## 使用建议
+
+只有在你明确知道要清理哪条会话时再执行。
+
+如果只是普通对话，不建议频繁手工清理历史。
+
+这是一个偏维护和排障的命令，不是日常高频交互命令。
+
+## 相关文档
+
+- [Session 存储](/zh/docs/agent/storage/sdk-session-layout)
+- [CLI chat](/zh/docs/agent/cli/interaction/chat)

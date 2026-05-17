@@ -1,0 +1,24 @@
+---
+title: session.history()
+description: 读取当前 Session 的完整消息历史
+---
+
+# `session.history()`
+
+## 示例
+
+```ts
+const messages = await session.history();
+```
+
+## 它返回什么
+
+返回的是当前 session 已落盘的完整消息历史。
+
+## 适合什么场景
+
+- 在 UI 中重放对话
+- 调试当前上下文
+- 做会话导出
+
+如果你要定位“为什么这轮回答会这样”，历史消息通常是最值得优先看的数据之一。

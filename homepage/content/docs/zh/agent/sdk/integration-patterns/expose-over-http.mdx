@@ -1,0 +1,22 @@
+---
+title: 通过 HTTP 暴露 Agent
+description: 把本地 Agent 作为 HTTP 服务暴露给其它进程或客户端
+---
+
+# 通过 HTTP 暴露 Agent
+
+如果你的调用方和执行方不在同一个进程里，可以把本地 Agent 暴露成 HTTP 服务：
+
+```ts
+await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+```
+
+然后别的进程用 `RemoteAgent` 连接它。
+
+这是一种很自然的本地 client-server 形态：
+
+- 本地 Agent 负责执行
+- RemoteAgent 负责消费

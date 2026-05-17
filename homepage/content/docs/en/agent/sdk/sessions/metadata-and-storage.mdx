@@ -1,0 +1,32 @@
+---
+title: Session Metadata and Storage
+description: SDK Session metadata, message files, and directory layout
+---
+
+# Session Metadata and Storage
+
+SDK sessions are persisted by default under:
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
+```
+
+## Why storage is partitioned by `agentId`
+
+Because multiple SDK agents can exist inside the same project directory.
+
+`agentId` keeps their session data isolated.
+
+This is also one of the reasons why `id` should not be treated as a casual display string.
+
+## What you can usually find here
+
+- message history
+- session metadata
+- archive directories
+
+If you are troubleshooting, replaying history, or running multi-agent experiments, this persisted data is extremely useful.
+
+## Related docs
+
+- [SDK Session layout](/en/docs/agent/storage/sdk-session-layout)

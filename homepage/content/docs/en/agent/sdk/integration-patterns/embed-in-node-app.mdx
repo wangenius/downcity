@@ -1,0 +1,24 @@
+---
+title: Embed in a Node App
+description: Recommended pattern for creating and using a local Agent directly inside a Node.js application
+---
+
+# Embed in a Node App
+
+This is the most natural SDK usage pattern:
+
+- your application code creates `Agent` directly
+- the app prepares a session at startup
+- a handler turns incoming requests into `run()` or `stream()`
+
+Good fit for:
+
+- internal tools
+- MCP-style wrappers
+- project-oriented engineering assistant services
+
+Its biggest advantages are:
+
+- full local context
+- direct debugging
+- no cross-process networking problems to solve first

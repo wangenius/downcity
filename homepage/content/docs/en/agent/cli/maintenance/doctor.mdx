@@ -1,0 +1,54 @@
+---
+title: city agent doctor
+description: Diagnose and repair stale Agent daemon state
+---
+
+# `city agent doctor`
+
+## Usage
+
+```bash
+city agent doctor [path]
+city agent doctor [path] --fix
+```
+
+## What problem it solves
+
+When the daemon process is gone but pid or meta state files remain, `status` shows `stale`.
+
+`doctor` is specifically for that class of problem.
+
+It is not a universal repair command for every runtime issue.
+
+## Without `--fix`
+
+Diagnostic only:
+
+```bash
+city agent doctor
+```
+
+## With `--fix`
+
+Repair stale state:
+
+```bash
+city agent doctor --fix
+```
+
+Then, if you want to restore execution:
+
+```bash
+city agent start
+```
+
+Use `doctor` first when:
+
+- `status` explicitly says `stale`
+- the machine restarted unexpectedly
+- the daemon looks like it existed before but cannot be reached now
+
+Continue with:
+
+- [Daemon state](/en/docs/agent/cli/maintenance/daemon-state)
+- [Agent shows stale](/en/docs/agent/operations/troubleshooting/agent-shows-stale)

@@ -1,0 +1,33 @@
+---
+title: Stream Events
+description: Which event types session.stream() returns and what each one means
+---
+
+# Stream Events
+
+`session.stream()` currently supports these core event types:
+
+- `text-delta`
+- `reasoning-delta`
+- `tool-call`
+- `tool-result`
+- `tool-error`
+- `finish`
+- `error`
+
+## The most common one is `text-delta`
+
+If you only need real-time text output, this is usually enough to handle first:
+
+```ts
+if (event.type === "text-delta") {
+  process.stdout.write(event.text);
+}
+```
+
+If you want a fuller experience, you will usually also handle:
+
+- `finish`
+- `error`
+- `tool-call`
+- `tool-result`

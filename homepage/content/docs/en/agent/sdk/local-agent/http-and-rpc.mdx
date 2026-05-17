@@ -1,0 +1,47 @@
+---
+title: Local Agent HTTP and RPC
+description: How to expose a local Agent as an HTTP service or RPC service
+---
+
+# Local Agent HTTP and RPC
+
+A local Agent can be called directly in-process, but it can also expose service endpoints.
+
+## Start HTTP
+
+```ts
+const http = await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+
+console.log(http.baseUrl);
+```
+
+The current default port is `15314`.
+
+If you do not specify a port manually, this is the default local SDK HTTP listener port.
+
+## Start RPC
+
+```ts
+await agent.rpc.start();
+```
+
+## When to use HTTP
+
+- another process should call the agent through `RemoteAgent`
+- you want to expose the local agent as a lightweight service
+
+This is especially useful when the caller and the executor live in different processes.
+
+## What happens before startup
+
+Before `agent.http.start()` and `agent.rpc.start()` expose endpoints, the SDK ensures that explicitly injected services have started.
+
+That reduces the risk of ending up in a state where the endpoint is up but a critical service is still not ready.
+
+## Related docs
+
+- [RemoteAgent quickstart](/en/docs/agent/sdk/remote-agent/quickstart)
+- [SDK HTTP endpoints](/en/docs/agent/sdk/api-reference/sdk-http-endpoints)

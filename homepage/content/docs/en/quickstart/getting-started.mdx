@@ -15,7 +15,7 @@ downcity --version
 
 > `downcity` and `city` are the same CLI binary.
 >
-> If `city` is not found after install, see [Common Issues](/en/docs/operations/troubleshooting/common-issues).
+> If `city` is not found after install, see [FAQ](/en/docs/operations/faq).
 >
 > To upgrade later, run `city update`.
 
@@ -49,25 +49,28 @@ Initialization generates:
 - `downcity.json`
 - `.downcity/` runtime directory
 
-## 5. Configure LLM
+## 5. Bind a model
 
-Create `.env` at project root (do not commit):
+The current project agent uses the global model-pool binding style.
 
-```bash
-LLM_API_KEY=your_key
-```
-
-Minimal `downcity.json` example:
+The minimal `downcity.json` example should be:
 
 ```json
 {
   "name": "my-agent",
   "version": "1.0.0",
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
   }
 }
 ```
+
+Notes:
+
+- `modelId` points to a model in the city global model pool
+- the project no longer stores the old `model.primary` structure
+- if you have not prepared a model pool yet, do that first at the global level
 
 ## 6. Start Agent
 
@@ -121,6 +124,7 @@ If you use the repo's `chrome-extension`:
 ## Next
 
 - [Configuration](/en/docs/quickstart/configuration)
+- [Agent Overview](/en/docs/agent/overview/what-is-agent)
 - [`city skill`](/en/docs/commands/plugin/skill)
 - [Task Service](/en/docs/services/task/task-service)
-- [Troubleshooting](/en/docs/operations/troubleshooting)
+- [FAQ](/en/docs/operations/faq)

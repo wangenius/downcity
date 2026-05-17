@@ -1,0 +1,76 @@
+---
+title: Agent 配置总览
+description: 从用户视角理解 Agent 项目配置的主要组成部分
+---
+
+# Agent 配置总览
+
+一个 agent 项目的配置主要分成 5 块：
+
+- `downcity.json`
+- `PROFILE.md`
+- `SOUL.md`
+- 聊天渠道绑定
+- 环境变量和密钥
+
+你也可以把它们再拆成两层来理解：
+
+- 人类可读原则：`PROFILE.md` / `SOUL.md`
+- 运行时结构化配置：`downcity.json` / 渠道绑定 / 环境变量
+
+## 推荐理解方式
+
+### 1. `downcity.json`
+
+决定：
+
+- agent 叫什么
+- 绑定哪个模型
+- 启用哪些 service
+- 接哪些聊天渠道
+
+这是运行时真正会解析和消费的结构化配置文件。
+
+### 2. `PROFILE.md`
+
+决定：
+
+- agent 的角色
+- 说话方式
+- 行为边界
+
+它更像角色说明书。
+
+### 3. `SOUL.md`
+
+决定：
+
+- 更长期、更稳定的 operating principles
+
+它更像长期工作原则说明书。
+
+### 4. 渠道绑定
+
+决定：
+
+- 当前 agent 使用哪个 city 级 channel account
+
+这里最重要的心智模型是：
+
+- 全局账号属于 city
+- 项目只是在说“我要用哪一个”
+
+### 5. 环境变量
+
+决定：
+
+- 配置里的 `${VAR}` 能否正确解析
+- 启动时需要哪些密钥
+
+如果环境变量没准备好，很多看起来“写对了”的配置在运行时仍然会失效。
+
+## 继续阅读
+
+- [downcity.json](/zh/docs/agent/configuration/downcity-json/basics)
+- [PROFILE 和 SOUL](/zh/docs/agent/configuration/profile-and-soul/profile-md)
+- [模型绑定](/zh/docs/agent/configuration/models/platform-model-pool)

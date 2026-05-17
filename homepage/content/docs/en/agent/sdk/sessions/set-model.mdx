@@ -1,0 +1,35 @@
+---
+title: session.set({ model })
+description: How a local SDK session explicitly binds its default model instance
+---
+
+# `session.set({ model })`
+
+Local SDK sessions do not have a model by default.
+
+You must explicitly call:
+
+```ts
+await session.set({
+  model: openai.responses("gpt-5"),
+});
+```
+
+## Why it works this way
+
+The local SDK behaves more like an embedded execution shell:
+
+- the agent handles path, tools, services, and session storage
+- the caller decides which live model instance should be used
+
+That makes the local SDK more flexible, but it also makes the caller responsible for model readiness.
+
+## What happens if you skip it
+
+Execution fails because the session has no default model.
+
+This is one of the most common runtime mistakes in local SDK usage.
+
+## What about remote sessions
+
+Remote sessions do not currently support setting the model this way from the client side.

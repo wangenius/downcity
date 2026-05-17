@@ -1,0 +1,24 @@
+---
+title: Agent Will Not Start
+description: A practical troubleshooting order when city agent start fails
+---
+
+# Agent Will Not Start
+
+Check these four things first:
+
+1. whether the project has been initialized
+2. whether `execution.modelId` exists
+3. whether the target model can be resolved in the global model pool
+4. whether environment variables and project configuration are actually ready
+
+## Recommended troubleshooting order
+
+```bash
+city agent status
+city agent start --foreground
+```
+
+Foreground startup usually makes startup-stage errors much easier to see.
+
+If foreground mode already shows a clear configuration error, do not keep bouncing back to background mode and retrying blindly.

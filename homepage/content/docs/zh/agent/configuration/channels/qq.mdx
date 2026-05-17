@@ -1,0 +1,25 @@
+---
+title: QQ
+description: 在 Agent 项目中启用 QQ 渠道的基本方式
+---
+
+# QQ
+
+QQ 渠道的项目层配置方式同样遵循“全局账号，项目绑定”的原则：
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "qq": {
+          "enabled": true,
+          "channelAccountId": "qq-main"
+        }
+      }
+    }
+  }
+}
+```
+
+如果你在多个项目间复用同一个 QQ 渠道账号，这种设计会比每个项目各自持有凭据更清晰。

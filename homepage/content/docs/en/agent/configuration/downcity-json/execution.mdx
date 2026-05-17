@@ -1,0 +1,56 @@
+---
+title: execution Configuration
+description: How an Agent project binds to a model in the city global model pool
+---
+
+# `execution` Configuration
+
+For the current project runtime, the agent uses one execution binding:
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  }
+}
+```
+
+## What it means
+
+- `type` is fixed to `api`
+- `modelId` points to a model ID in the city global model pool
+
+In the current codebase, project execution binding is parsed around this rule.
+
+## Why it works this way
+
+This keeps:
+
+- the provider
+- the API key
+- the actual model name
+- other model details
+
+in the city global model pool.
+
+The project only needs to say, "use this model."
+
+That makes the boundary between project config and global model definitions much clearer.
+
+## Common mistakes
+
+If `modelId` does not exist in the global model pool, agent startup will fail.
+
+Another common mistake is carrying over older configuration language and writing a different runtime binding here. For the current project runtime path, use `api`.
+
+## Recommended workflow
+
+First make sure the global model pool has a working model. Then bind the project to it.
+
+If you are troubleshooting for the first time, start with a model ID you already know works instead of validating both the global model definition and the project binding at the same time.
+
+## Continue reading
+
+- [Platform model pool](/en/docs/agent/configuration/models/platform-model-pool)
+- [Bind a model to an agent](/en/docs/agent/configuration/models/bind-model-to-agent)

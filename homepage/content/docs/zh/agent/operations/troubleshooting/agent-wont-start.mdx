@@ -1,0 +1,24 @@
+---
+title: Agent 无法启动
+description: city agent start 失败时的排查顺序
+---
+
+# Agent 无法启动
+
+优先检查这 4 件事：
+
+1. 项目是否已初始化
+2. `execution.modelId` 是否存在
+3. 目标模型是否能在全局模型池中解析
+4. 环境变量和项目配置是否已经准备好
+
+## 推荐排查顺序
+
+```bash
+city agent status
+city agent start --foreground
+```
+
+前台启动通常更容易看清启动阶段报错。
+
+如果前台模式已经明确报出配置错误，就不要继续盲目切回后台模式重复尝试。

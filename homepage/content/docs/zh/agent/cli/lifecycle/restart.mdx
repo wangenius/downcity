@@ -1,0 +1,49 @@
+---
+title: city agent restart
+description: 先停后起地重启指定 Agent
+---
+
+# `city agent restart`
+
+## 用法
+
+```bash
+city agent restart [path]
+city agent restart [path] --host 0.0.0.0
+```
+
+## 它会做什么
+
+重启流程是：
+
+1. 校验目标项目可运行
+2. 停止旧 daemon
+3. 重新按当前参数启动新 daemon
+
+从用户角度理解，它更像是把“停”和“起”收敛成一条安全流程，而不是简单粗暴地替换进程。
+
+## 什么时候优先用 restart
+
+- 改了 `downcity.json`
+- 改了渠道绑定
+- 改了模型绑定
+- 想快速恢复一个状态可疑的 agent
+
+尤其是在你改过这些内容之后：
+
+- `downcity.json`
+- `PROFILE.md`
+- `SOUL.md`
+- 渠道绑定
+- 环境变量
+
+## 和 stop + start 的区别
+
+效果上接近，但 `restart` 会把这条流程收敛成一个命令，适合日常操作。
+
+如果你平时主要是人工维护项目 agent，`restart` 通常会比手工拆成两条命令更顺手。
+
+## 相关文档
+
+- [city agent start](/zh/docs/agent/cli/lifecycle/start)
+- [city agent doctor](/zh/docs/agent/cli/maintenance/doctor)

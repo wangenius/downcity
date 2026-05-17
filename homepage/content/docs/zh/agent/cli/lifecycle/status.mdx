@@ -1,0 +1,72 @@
+---
+title: city agent status
+description: 查看目标 Agent 当前是否运行、停止或处于 stale 状态
+---
+
+# `city agent status`
+
+## 用法
+
+```bash
+city agent status [path]
+```
+
+## 常见状态
+
+- `running`
+- `stopped`
+- `stale`
+- `not initialized`
+
+## `running`
+
+说明 agent daemon 正在运行。
+
+这时你通常可以继续：
+
+```bash
+city agent chat
+```
+
+如果 `running`，但聊天仍然有问题，那下一步更应该查的是模型绑定、渠道绑定或具体消息链路，而不是“进程有没有起来”。
+
+## `stopped`
+
+说明项目已经初始化，但当前没有运行中的 daemon。
+
+处理方式通常是：
+
+```bash
+city agent start
+```
+
+这通常表示项目是健康的，只是当前没有后台进程。
+
+## `stale`
+
+说明状态文件还在，但进程已经不存在或状态不一致。
+
+处理方式通常是：
+
+```bash
+city agent doctor --fix
+```
+
+`stale` 的重点不是“项目坏了”，而是“状态文件和真实进程状态不一致”。
+
+## `not initialized`
+
+说明当前目录不是完整的 agent 项目。
+
+处理方式通常是：
+
+```bash
+city agent create .
+```
+
+它说明当前目录还没有成为一个完整的 agent 项目，后续所有 runtime 相关命令都不应该继续盲跑。
+
+## 相关文档
+
+- [city agent doctor](/zh/docs/agent/cli/maintenance/doctor)
+- [Agent 显示 stale](/zh/docs/agent/operations/troubleshooting/agent-shows-stale)

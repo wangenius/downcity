@@ -344,7 +344,7 @@ export async function runControlPlaneRuntimeCommand(
   });
   emitCliBlock({
     tone: "success",
-    title: "Console started",
+    title: "Control plane started",
     summary: "foreground",
     facts: buildControlPlanePortFacts(`http://${visibleHost}:${port}`, {
       publicUrl,
@@ -424,7 +424,7 @@ export async function startControlPlaneCommand(params: {
       : null;
     emitCliBlock({
       tone: sameEndpoint ? "info" : "warning",
-      title: "Console already running",
+      title: "Control plane already running",
       summary: sameEndpoint ? undefined : "different binding",
       facts: statusUrl
         ? buildControlPlanePortFacts(statusUrl, {
@@ -522,7 +522,7 @@ export async function startControlPlaneCommand(params: {
 
   emitCliBlock({
     tone: "success",
-    title: "Console started",
+    title: "Control plane started",
     facts: buildControlPlanePortFacts(`http://${normalizeHost(host)}:${port}`, {
       publicUrl: resolveControlPlanePublicUrl({
         bindHost: host,
@@ -578,7 +578,7 @@ export async function stopControlPlaneCommand(params?: {
     }
     emitCliBlock({
       tone: "info",
-      title: "Console not running",
+      title: "Control plane not running",
     });
     return;
   }

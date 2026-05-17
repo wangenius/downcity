@@ -45,7 +45,7 @@ export const modelsTable = sqliteTable(
 );
 
 /**
- * Console Env 统一存储表。
+ * 平台 Env 统一存储表。
  *
  * 关键点（中文）
  * - 全局 env 与 agent env 共用一张表，通过 `scope` + `agentId` 区分。

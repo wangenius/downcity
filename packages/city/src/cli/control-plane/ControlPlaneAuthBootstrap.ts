@@ -44,7 +44,7 @@ export async function ensureControlPlaneAuthBootstrap(
 
     emitCliBlock({
       tone: "success",
-      title: "Console token initialized",
+      title: "Control plane token initialized",
       summary: payload.user.username,
       facts: [
         {
@@ -61,7 +61,7 @@ export async function ensureControlPlaneAuthBootstrap(
         },
         {
           label: "Next",
-          value: "把上面的 Bearer Token 粘贴到 Console UI / Extension",
+          value: "把上面的 Bearer Token 粘贴到控制面 UI / Extension",
         },
       ],
       note: "明文 token 只会在本次初始化时显示一次。",

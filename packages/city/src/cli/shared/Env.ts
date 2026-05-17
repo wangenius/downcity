@@ -2,7 +2,7 @@
  * `city env` 命令树。
  *
  * 关键点（中文）
- * - `env` 是 Console Env 的资源命令，支持 list/set/delete。
+ * - `env` 是平台 Env 的资源命令，支持 list/set/delete。
  * - 默认不输出任何 secret value；只在显式 set 时写入值。
  * - global / agent 两层 env 共用统一 store，但 CLI 语义仍保持清晰。
  */
@@ -80,7 +80,7 @@ function formatDotenvValue(value: string): string {
 }
 
 /**
- * 把 Console Env 条目输出为 dotenv 文件内容。
+ * 把平台 Env 条目输出为 dotenv 文件内容。
  */
 function formatDotenvEntries(entries: StoredEnvEntry[]): string {
   if (entries.length === 0) return "";
@@ -225,7 +225,7 @@ async function emitKeysList(params: {
       tone: "info",
       title: "Env",
       summary: "0 configured",
-      note: "No Console Env entry matched the current filter.",
+      note: "No platform env entry matched the current filter.",
     });
     return;
   }
@@ -443,12 +443,12 @@ function deleteKeyEntry(params: {
 export function registerEnvCommand(program: Command): void {
   const env = program
     .command("env")
-    .description("管理 Console Env 中的 key")
+    .description("管理平台 Env 中的 key")
     .helpOption("--help", "display help for command");
 
   env
     .command("list")
-    .description("列出 Console Env 中已配置的 key")
+    .description("列出平台 Env 中已配置的 key")
     .option("--scope <scope>", "按作用域过滤：global|agent|all", "global")
     .option("--agent <agentId>", "仅列出指定 agent 的私有 env（会隐式使用 --scope agent）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean)
@@ -468,7 +468,7 @@ export function registerEnvCommand(program: Command): void {
 
   env
     .command("set <key> <value>")
-    .description("新增或更新 Console Env 中的 key")
+    .description("新增或更新平台 Env 中的 key")
     .option("--scope <scope>", "写入作用域：global|agent", "global")
     .option("--agent <agentId>", "指定 agent 私有 env（会隐式使用 --scope agent）")
     .option("-d, --description <description>", "设置 key 描述")
@@ -500,7 +500,7 @@ export function registerEnvCommand(program: Command): void {
 
   env
     .command("copy")
-    .description("按 .env 文件格式输出 Console Env 的明文值")
+    .description("按 .env 文件格式输出平台 Env 的明文值")
     .option("--scope <scope>", "按作用域复制：global|agent|all", "global")
     .option("--agent <agentId>", "复制指定 agent 的私有 env（会隐式使用 --scope agent）")
     .helpOption("--help", "display help for command")
@@ -519,7 +519,7 @@ export function registerEnvCommand(program: Command): void {
 
   env
     .command("delete <key>")
-    .description("删除 Console Env 中的 key")
+    .description("删除平台 Env 中的 key")
     .option("--scope <scope>", "删除作用域：global|agent", "global")
     .option("--agent <agentId>", "指定 agent 私有 env（会隐式使用 --scope agent）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean)

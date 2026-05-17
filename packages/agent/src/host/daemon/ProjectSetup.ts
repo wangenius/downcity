@@ -107,7 +107,7 @@ export function ensureRuntimeExecutionBindingReady(projectRoot: string): void {
   try {
     const model = store.getModel(primaryModelId);
     if (!model) {
-      console.error("❌ Model not found in console model pool");
+      console.error("❌ Model not found in platform model pool");
       console.error(`   project: ${projectRoot}`);
       console.error(`   execution.modelId: ${primaryModelId}`);
       console.error("   fix: run `city model create` or `city model list`");

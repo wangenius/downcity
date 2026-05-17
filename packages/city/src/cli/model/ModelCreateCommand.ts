@@ -49,7 +49,7 @@ export async function runInteractiveModelCreateFlow(options: { json?: boolean })
       printResult({
         asJson,
         success: false,
-        title: "console model create cancelled",
+        title: "platform model create cancelled",
         payload: { error: "Cancelled" },
       });
       return;
@@ -65,7 +65,7 @@ export async function runInteractiveModelCreateFlow(options: { json?: boolean })
     printResult({
       asJson,
       success: false,
-      title: "console model create failed",
+      title: "platform model create failed",
       payload: { error: error instanceof Error ? error.message : String(error) },
     });
     process.exitCode = 1;

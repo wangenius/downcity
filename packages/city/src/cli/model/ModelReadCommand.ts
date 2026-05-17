@@ -2,7 +2,7 @@
  * `city model` 查询与绑定命令。
  *
  * 关键点（中文）
- * - 这里只处理不修改 console model 池状态的命令。
+ * - 这里只处理不修改平台模型池状态的命令。
  * - `use` 虽然会写项目配置，但不会改动 console store，因此也归在这里。
  */
 
@@ -41,7 +41,7 @@ function registerListCommand(model: Command): void {
         const providers = (await store.listProviders()).map((item) => toSafeProviderView(item));
         const models = store.listModels();
         return {
-          title: "console models listed",
+          title: "platform models listed",
           payload: {
             providers,
             models,
@@ -175,7 +175,7 @@ function registerUseCommand(model: Command): void {
           const id = String(modelId || "").trim();
           if (!id) throw new Error("modelId cannot be empty");
           const exists = store.getModel(id);
-          if (!exists) throw new Error(`Model not found in console pool: ${id}`);
+          if (!exists) throw new Error(`Model not found in platform pool: ${id}`);
         } finally {
           store.close();
         }
@@ -196,7 +196,7 @@ function registerUseCommand(model: Command): void {
         printResult({
           asJson,
           success: false,
-          title: "console model use failed",
+          title: "platform model use failed",
           payload: {
             error: error instanceof Error ? error.message : String(error),
           },

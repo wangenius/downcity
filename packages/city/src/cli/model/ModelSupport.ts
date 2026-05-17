@@ -1,5 +1,5 @@
 /**
- * `console model` 支撑工具。
+ * `city model` 支撑工具。
  *
  * 关键点（中文）
  * - 收敛“路径处理、provider 模型发现、项目 model 绑定写入”等可复用逻辑。

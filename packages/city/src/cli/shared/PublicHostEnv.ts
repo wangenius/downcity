@@ -2,9 +2,9 @@
  * city 公网 host 自动环境配置。
  *
  * 关键点（中文）
- * - `city start` 时自动探测公网 IPv4，并写入 Console Env 的 `DOWNCITY_PUBLIC_HOST`。
+ * - `city start` 时自动探测公网 IPv4，并写入平台 Env 的 `DOWNCITY_PUBLIC_HOST`。
  * - 若部署环境已经注入 `DOWNCITY_PUBLIC_URL/HOST`，绝不覆盖。
- * - 写入 Console Env 后，后续 agent daemon 启动会通过 `context.globalEnv` 读取到该值。
+ * - 写入平台 Env 后，后续 agent daemon 启动会通过 `context.globalEnv` 读取到该值。
  */
 
 import { PlatformStore } from "@downcity/agent";

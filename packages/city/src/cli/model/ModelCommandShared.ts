@@ -111,12 +111,12 @@ export async function runStoreCommand(
     printResult({
       asJson,
       success: false,
-      title: "console model command failed",
+      title: "platform model command failed",
       payload: {
         error:
           error instanceof Error &&
           String(error.message || "").includes("unable to open database file")
-            ? 'Console model store is unavailable. Run "city init" first.'
+            ? 'Platform model store is unavailable. Run "city init" first.'
             : error instanceof Error
               ? error.message
               : String(error),

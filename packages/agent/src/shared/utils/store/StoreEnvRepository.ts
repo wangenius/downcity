@@ -1,5 +1,5 @@
 /**
- * ConsoleStore 环境变量仓储。
+ * PlatformStore 环境变量仓储。
  *
  * 关键点（中文）
  * - 统一管理 `env_entries` 单表。
@@ -16,7 +16,7 @@ import type {
   UpsertGlobalEnvEntryInput,
 } from "@/shared/types/Store.js";
 import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
-import type { ConsoleStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "./StoreShared.js";
 import { normalizeNonEmptyText, nowIso } from "./StoreShared.js";
 
 /**
@@ -99,7 +99,7 @@ async function buildEnvEntryFromRow(row: {
  * 同步列出 env 条目。
  */
 export function listEnvEntriesSync(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   scopeInput?: StoredEnvScope,
   agentIdInput?: string,
 ): StoredEnvEntry[] {
@@ -155,7 +155,7 @@ export function listEnvEntriesSync(
  * 异步列出 env 条目。
  */
 export async function listEnvEntries(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   scopeInput?: StoredEnvScope,
   agentIdInput?: string,
 ): Promise<StoredEnvEntry[]> {
@@ -211,7 +211,7 @@ export async function listEnvEntries(
  * 新增或更新 env 条目。
  */
 export async function upsertEnvEntry(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   input: UpsertEnvEntryInput,
 ): Promise<void> {
   const scope = normalizeEnvScope(input.scope);
@@ -258,7 +258,7 @@ export async function upsertEnvEntry(
  * 删除单个 env 条目。
  */
 export function removeEnvEntry(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   input: { scope: StoredEnvScope; agentId?: string; key: string },
 ): void {
   const scope = normalizeEnvScope(input.scope);
@@ -273,7 +273,7 @@ export function removeEnvEntry(
  * 同步列出全局环境变量。
  */
 export function listGlobalEnvEntriesSync(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
 ): StoredGlobalEnvEntry[] {
   return listEnvEntriesSync(context, "global");
 }
@@ -282,7 +282,7 @@ export function listGlobalEnvEntriesSync(
  * 同步读取全局环境变量映射。
  */
 export function getGlobalEnvMapSync(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
 ): Record<string, string> {
   const entries = listGlobalEnvEntriesSync(context);
   const map: Record<string, string> = {};
@@ -296,7 +296,7 @@ export function getGlobalEnvMapSync(
  * 异步列出全局环境变量。
  */
 export async function listGlobalEnvEntries(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
 ): Promise<StoredGlobalEnvEntry[]> {
   return listEnvEntries(context, "global");
 }
@@ -305,7 +305,7 @@ export async function listGlobalEnvEntries(
  * 异步读取全局环境变量映射。
  */
 export async function getGlobalEnvMap(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
 ): Promise<Record<string, string>> {
   const entries = await listGlobalEnvEntries(context);
   const map: Record<string, string> = {};
@@ -319,7 +319,7 @@ export async function getGlobalEnvMap(
  * 新增或更新全局环境变量。
  */
 export async function upsertGlobalEnvEntry(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   input: UpsertGlobalEnvEntryInput,
 ): Promise<void> {
   await upsertEnvEntry(context, {
@@ -333,7 +333,7 @@ export async function upsertGlobalEnvEntry(
  * 删除单个全局环境变量。
  */
 export function removeGlobalEnvEntry(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   keyInput: string,
 ): void {
   removeEnvEntry(context, {
@@ -345,7 +345,7 @@ export function removeGlobalEnvEntry(
 /**
  * 清空全局环境变量。
  */
-export function clearGlobalEnvEntries(context: ConsoleStoreContext): void {
+export function clearGlobalEnvEntries(context: PlatformStoreContext): void {
   context.sqlite.prepare("DELETE FROM env_entries WHERE scope = 'global';").run();
 }
 
@@ -353,7 +353,7 @@ export function clearGlobalEnvEntries(context: ConsoleStoreContext): void {
  * 同步列出指定 agent 的私有环境变量。
  */
 export function listAgentEnvEntriesSync(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   agentIdInput: string,
 ): StoredAgentEnvEntry[] {
   return listEnvEntriesSync(context, "agent", agentIdInput);
@@ -363,7 +363,7 @@ export function listAgentEnvEntriesSync(
  * 同步读取 agent 环境变量映射。
  */
 export function getAgentEnvMapSync(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   agentIdInput: string,
 ): Record<string, string> {
   const entries = listAgentEnvEntriesSync(context, agentIdInput);
@@ -378,7 +378,7 @@ export function getAgentEnvMapSync(
  * 异步列出指定 agent 的私有环境变量。
  */
 export async function listAgentEnvEntries(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   agentIdInput: string,
 ): Promise<StoredAgentEnvEntry[]> {
   return listEnvEntries(context, "agent", agentIdInput);
@@ -388,7 +388,7 @@ export async function listAgentEnvEntries(
  * 异步列出全部 agent 私有环境变量。
  */
 export async function listAllAgentEnvEntries(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
 ): Promise<StoredAgentEnvEntry[]> {
   return listEnvEntries(context, "agent");
 }
@@ -397,7 +397,7 @@ export async function listAllAgentEnvEntries(
  * 异步读取 agent 环境变量映射。
  */
 export async function getAgentEnvMap(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   agentIdInput: string,
 ): Promise<Record<string, string>> {
   const entries = await listAgentEnvEntries(context, agentIdInput);
@@ -412,7 +412,7 @@ export async function getAgentEnvMap(
  * 新增或更新 agent 私有环境变量。
  */
 export async function upsertAgentEnvEntry(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   input: UpsertAgentEnvEntryInput,
 ): Promise<void> {
   await upsertEnvEntry(context, {
@@ -427,7 +427,7 @@ export async function upsertAgentEnvEntry(
  * 删除指定 agent 的单个环境变量。
  */
 export function removeAgentEnvEntry(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   agentIdInput: string,
   keyInput: string,
 ): void {
@@ -442,7 +442,7 @@ export function removeAgentEnvEntry(
  * 清空指定 agent 的私有环境变量。
  */
 export function clearAgentEnvEntries(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   agentIdInput: string,
 ): void {
   const agentId = normalizeNonEmptyText(agentIdInput, "agentId");

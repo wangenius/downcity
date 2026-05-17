@@ -3,13 +3,13 @@
  *
  * 关键点（中文）
  * - 封装 provider/model 的增删改查与测试逻辑，供 UI 网关复用。
- * - 与 CLI `city model` 保持同一数据源（ConsoleStore）。
+ * - 与 CLI `city model` 保持同一数据源（PlatformStore）。
  * - Provider 的密钥仅返回脱敏视图，避免在 UI 接口中泄露明文。
  */
 
 import { generateText } from "ai";
 import type { LlmProviderType } from "@downcity/agent";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 import { createModel } from "@downcity/agent";
 import { discoverProviderModels } from "@/cli/model/ModelSupport.js";
 
@@ -97,7 +97,7 @@ export class ModelPoolService {
     providerIds: string[];
     modelIds: string[];
   }> {
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       const providersRaw = await store.listProviders();
       const models = store.listModels();
@@ -151,7 +151,7 @@ export class ModelPoolService {
       throw new Error("apiKey and clearApiKey cannot be used together");
     }
 
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       const current = await store.getProvider(id);
       const nextBaseUrl = input.clearBaseUrl === true
@@ -194,7 +194,7 @@ export class ModelPoolService {
   async removeProvider(providerId: string): Promise<void> {
     const id = String(providerId || "").trim();
     if (!id) throw new Error("providerId cannot be empty");
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       store.removeProvider(id);
     } finally {
@@ -213,7 +213,7 @@ export class ModelPoolService {
   }> {
     const id = String(providerId || "").trim();
     if (!id) throw new Error("providerId cannot be empty");
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       const provider = await store.getProvider(id);
       if (!provider) throw new Error(`Provider not found: ${id}`);
@@ -252,7 +252,7 @@ export class ModelPoolService {
   }> {
     const providerId = String(params.providerId || "").trim();
     if (!providerId) throw new Error("providerId cannot be empty");
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       const provider = await store.getProvider(providerId);
       if (!provider) throw new Error(`Provider not found: ${providerId}`);
@@ -316,7 +316,7 @@ export class ModelPoolService {
     const name = String(input.name || "").trim();
     if (!name) throw new Error("modelName cannot be empty");
 
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       store.upsertModel({
         id,
@@ -342,7 +342,7 @@ export class ModelPoolService {
   async removeModel(modelId: string): Promise<void> {
     const id = String(modelId || "").trim();
     if (!id) throw new Error("modelId cannot be empty");
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       store.removeModel(id);
     } finally {
@@ -356,7 +356,7 @@ export class ModelPoolService {
   async setModelPaused(modelId: string, isPaused: boolean): Promise<void> {
     const id = String(modelId || "").trim();
     if (!id) throw new Error("modelId cannot be empty");
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       store.setModelPaused(id, isPaused);
     } finally {

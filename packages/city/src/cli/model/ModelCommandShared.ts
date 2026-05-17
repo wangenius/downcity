@@ -10,9 +10,9 @@ import { printResult } from "@/utils/cli/CliOutput.js";
 import {
   ModelPresetManager,
   type ModelPreset,
-} from "@/store/model/ModelPresetManager.js";
+} from "@/cli/model/preset/ModelPresetManager.js";
 import type { LlmProviderType } from "@downcity/agent";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 
 const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [
   "anthropic",
@@ -91,15 +91,15 @@ export function resolveModelPresetOrThrow(input?: string): ModelPreset | undefin
 
 export async function runStoreCommand(
   options: { json?: boolean },
-  handler: (store: ConsoleStore) => Promise<{
+  handler: (store: PlatformStore) => Promise<{
     title: string;
     payload: Record<string, unknown>;
   }>,
 ): Promise<void> {
   const asJson = options.json !== false;
-  let store: ConsoleStore | null = null;
+  let store: PlatformStore | null = null;
   try {
-    store = new ConsoleStore();
+    store = new PlatformStore();
     const result = await handler(store);
     printResult({
       asJson,

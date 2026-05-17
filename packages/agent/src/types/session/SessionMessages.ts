@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里统一描述 session 消息落盘格式与元信息结构。
  * - session 的唯一事实源是 `UIMessage[]`，不会再维护第二套平行消息结构。
- * - 这些类型会被 history Composer、compact、dashboard、task runtime 共同复用。
+ * - 这些类型会被 history Composer、compact、control UI、task runtime 共同复用。
  */
 
 import type { UIMessage } from "ai";

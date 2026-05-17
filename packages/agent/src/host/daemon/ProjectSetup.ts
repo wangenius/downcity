@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { loadDowncityConfig } from "@/config/Config.js";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { PlatformStore } from "@/shared/utils/store/index.js";
 import {
   readProjectExecutionBinding,
   readProjectPrimaryModelId,
@@ -103,7 +103,7 @@ export function ensureRuntimeExecutionBindingReady(projectRoot: string): void {
     process.exit(1);
   }
 
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const model = store.getModel(primaryModelId);
     if (!model) {

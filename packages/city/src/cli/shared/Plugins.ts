@@ -22,7 +22,7 @@ import {
 import { printResult } from "@/utils/cli/CliOutput.js";
 import type { JsonValue } from "@downcity/agent";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { listConsoleAgents } from "@/process/registry/CityRegistry.js";
+import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { emitCliBlock } from "./CliReporter.js";
 import { parseBoolean } from "./IndexSupport.js";

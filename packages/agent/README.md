@@ -17,7 +17,7 @@
 - `@downcity/agent`
   - 单 Agent 宿主、执行、会话、服务、插件、HTTP/RPC、沙箱。
 - `@downcity/city`
-  - 多 Agent registry、console daemon、gateway/control plane、全局 store、用户入口 CLI。
+  - 多 Agent registry、control-plane runtime、gateway/control plane、用户入口 CLI。
 - `@downcity/ui`
   - React UI 组件与展示层，不承载运行时执行。
 
@@ -150,7 +150,7 @@ src
 - `http/control/`
   - 表示单 Agent control API。
   - 不等于 city 的 gateway/control plane。
-  - 当前 `/api/dashboard/*` 只是历史 URL 命名，后续若改路径，也不改变这层职责边界。
+  - 当前统一路径是 `/api/control/*`。
 
 - `city`
   - 不复制 agent 内部执行逻辑。

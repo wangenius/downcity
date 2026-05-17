@@ -19,7 +19,7 @@ import {
   CHAT_AUTHORIZATION_PERMISSIONS,
   createDefaultChatAuthorizationRoles,
 } from "@/shared/types/AuthPlugin.js";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { PlatformStore } from "@/shared/utils/store/index.js";
 
 const CHAT_AUTHORIZATION_STORE_KEY = "chat_authorization";
 const CHANNELS: ChatAuthorizationChannel[] = [...CHAT_AUTHORIZATION_CHANNELS];
@@ -142,7 +142,7 @@ function cloneAuthorizationConfig(
 function readAuthorizationConfigFromStoreSync(projectRoot: string): ChatAuthorizationConfig {
   const normalizedProjectRoot = normalizeText(projectRoot);
   if (!normalizedProjectRoot) return normalizeAuthorizationConfig({});
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     return normalizeAuthorizationConfig(
       store.getAgentSecureSettingJsonSync<ChatAuthorizationConfig>(
@@ -163,7 +163,7 @@ async function writeAuthorizationConfigToStore(params: {
 }): Promise<void> {
   const normalizedProjectRoot = normalizeText(params.projectRoot);
   if (!normalizedProjectRoot) throw new Error("projectRoot is required");
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     await store.setAgentSecureSettingJson(
       normalizedProjectRoot,

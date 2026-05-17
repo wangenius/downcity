@@ -1,30 +1,30 @@
 /**
- * CLI city/console 命令装配。
+ * CLI city/control-plane 命令装配。
  *
  * 关键点（中文）
  * - 这里的 `console` 更接近 city gateway / control plane 的运维入口，而不是单 agent API。
- * - 统一管理 top-level city 生命周期命令与 Console 模块命令。
+ * - 统一管理 top-level city 生命周期命令与 control plane 模块命令。
  * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
  */
 
 import { Command, Option } from "commander";
 import {
-  getConsoleRuntimeStatus,
-  restartConsoleCommand,
-  runConsoleRuntimeCommand,
-  startConsoleCommand,
-  stopConsoleCommand,
-} from "./Console.js";
+  getControlPlaneRuntimeStatus,
+  restartControlPlaneCommand,
+  runControlPlaneRuntimeCommand,
+  startControlPlaneCommand,
+  stopControlPlaneCommand,
+} from "./ControlPlaneRuntime.js";
 import { registerConfigCommand } from "../shared/Config.js";
 import { registerModelCommand } from "../model/Model.js";
-import { consoleInitCommand } from "./ConsoleInit.js";
+import { controlPlaneInitCommand } from "./ControlPlaneInit.js";
 import { parseBoolean, parsePort, createVersionBanner } from "../shared/IndexSupport.js";
 import { CliError } from "../shared/CliError.js";
 import { updateCommand } from "../shared/Update.js";
 import {
-  consoleStatusCommand,
-  printConsoleStatusPanel,
-} from "./IndexConsoleStatus.js";
+  controlPlaneStatusCommand,
+  printControlPlaneStatusPanel,
+} from "./ControlPlaneStatus.js";
 import {
   prepareForegroundAgent,
   ensureRegisteredAgentProjectRoot,
@@ -32,12 +32,12 @@ import {
   runCityRuntimeCommand,
   startCityRuntimeCommand,
   stopCityRuntimeCommand,
-} from "./IndexConsoleProcess.js";
+} from "./ControlPlaneProcess.js";
 
 /**
- * top-level city/Console 命令注册参数。
+ * top-level city/control-plane 命令注册参数。
  */
-export interface ConsoleCommandRegistrationContext {
+export interface ControlPlaneCommandRegistrationContext {
   /** 当前 CLI 版本号。 */
   version: string;
   /** 当前 CLI 入口文件绝对路径。 */
@@ -51,16 +51,16 @@ export interface ConsoleCommandRegistrationContext {
  * - `city ...` / `city console ...` 管的是平台控制面进程。
  * - 单 agent 控制能力统一留在 `@downcity/agent` 暴露的 runtime / HTTP control API。
  */
-export function registerConsoleCommands(
+export function registerControlPlaneCommands(
   program: Command,
-  context: ConsoleCommandRegistrationContext,
+  context: ControlPlaneCommandRegistrationContext,
 ): void {
   program
     .command("init")
     .description("初始化 city 全局配置（模型/插件等，写入 ~/.downcity/downcity.db）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
-      await consoleInitCommand();
+      await controlPlaneInitCommand();
     }));
 
   program
@@ -88,7 +88,7 @@ export function registerConsoleCommands(
         Boolean(String(options?.host || "").trim());
       await startCityRuntimeCommand(context.cliPath);
       if (shouldStartConsole) {
-        await startConsoleCommand({
+        await startControlPlaneCommand({
           options: {
             public: options?.public,
             host: options?.host,
@@ -112,7 +112,7 @@ export function registerConsoleCommands(
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
       await restartCityRuntimeCommand(context.cliPath);
-      await startConsoleCommand({
+      await startControlPlaneCommand({
         cliPath: context.cliPath,
       });
     }));
@@ -122,7 +122,7 @@ export function registerConsoleCommands(
     .description("查看 city 后台、Console 与已托管 agent 运行状态")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
-      await consoleStatusCommand();
+      await controlPlaneStatusCommand();
     }));
 
   program
@@ -154,9 +154,9 @@ export function registerConsoleCommands(
 
   const consoleCommand = program
     .command("console [action]")
-    .description("管理 Console 模块（start/stop/restart/status，默认 start）")
-    .option("-p, --public [enabled]", "以公网模式启动 Console（绑定 0.0.0.0）", parseBoolean)
-    .option("-h, --host <host>", "Console 主机（默认 127.0.0.1）")
+    .description("管理控制面模块（命令名保留为 console；start/stop/restart/status，默认 start）")
+    .option("-p, --public [enabled]", "以公网模式启动控制面（绑定 0.0.0.0）", parseBoolean)
+    .option("-h, --host <host>", "控制面主机（默认 127.0.0.1）")
     .addOption(new Option("--port <port>").argParser(parsePort).hideHelp())
     .helpOption("--help", "display help for command");
 
@@ -172,30 +172,30 @@ export function registerConsoleCommands(
           const options = command.opts<{ public?: boolean; host?: string; port?: number }>();
           const resolvedAction = String(action || "start").trim().toLowerCase();
           if (resolvedAction === "start") {
-            await startConsoleCommand({
+            await startControlPlaneCommand({
               options,
               cliPath: context.cliPath,
             });
             return;
           }
           if (resolvedAction === "run") {
-            await runConsoleRuntimeCommand(options);
+            await runControlPlaneRuntimeCommand(options);
             return;
           }
           if (resolvedAction === "stop") {
-            await stopConsoleCommand();
+            await stopControlPlaneCommand();
             return;
           }
           if (resolvedAction === "restart") {
-            await restartConsoleCommand({
+            await restartControlPlaneCommand({
               options,
               cliPath: context.cliPath,
             });
             return;
           }
           if (resolvedAction === "status") {
-            const status = await getConsoleRuntimeStatus();
-            printConsoleStatusPanel(status);
+            const status = await getControlPlaneRuntimeStatus();
+            printControlPlaneStatusPanel(status);
             return;
           }
           throw new CliError({

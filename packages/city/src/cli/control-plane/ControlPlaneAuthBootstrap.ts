@@ -1,5 +1,5 @@
 /**
- * Console 启动阶段的本机 token 初始化辅助。
+ * control plane 启动阶段的本机 token 初始化辅助。
  *
  * 关键点（中文）
  * - `city start` 首次启动时，如果还没有本机 CLI access token，这里负责初始化首个 token。
@@ -11,12 +11,12 @@
 import { AuthService } from "@/http/auth/AuthService.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 
-const DEFAULT_CONSOLE_BOOTSTRAP_TOKEN_NAME = "console-bootstrap";
+const DEFAULT_CONTROL_PLANE_BOOTSTRAP_TOKEN_NAME = "control-plane-bootstrap";
 
 /**
- * Console 启动期统一账户初始化参数。
+ * control plane 启动期统一账户初始化参数。
  */
-export interface EnsureConsoleAuthBootstrapOptions {
+export interface EnsureControlPlaneAuthBootstrapOptions {
   /**
    * 可选注入外部 AuthService，便于测试。
    */
@@ -26,10 +26,10 @@ export interface EnsureConsoleAuthBootstrapOptions {
 }
 
 /**
- * 确保 console 级至少存在一个本机 access token。
+ * 确保平台级至少存在一个本机 access token。
  */
-export async function ensureConsoleAuthBootstrap(
-  options: EnsureConsoleAuthBootstrapOptions = {},
+export async function ensureControlPlaneAuthBootstrap(
+  options: EnsureControlPlaneAuthBootstrapOptions = {},
 ): Promise<void> {
   const authService = options.authService || new AuthService();
   const ownsAuthService = !options.authService;
@@ -39,7 +39,7 @@ export async function ensureConsoleAuthBootstrap(
     }
 
     const payload = authService.ensureLocalCliAccess({
-      tokenName: DEFAULT_CONSOLE_BOOTSTRAP_TOKEN_NAME,
+      tokenName: DEFAULT_CONTROL_PLANE_BOOTSTRAP_TOKEN_NAME,
     });
 
     emitCliBlock({

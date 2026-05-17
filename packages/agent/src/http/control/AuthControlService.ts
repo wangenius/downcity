@@ -131,7 +131,7 @@ export async function readAuthControlPayload(
 }
 
 /**
- * 覆盖写入授权配置，并返回最新 dashboard payload。
+ * 覆盖写入授权配置，并返回最新 control payload。
  */
 export async function writeAuthControlConfig(params: {
   context: AgentContext;
@@ -145,7 +145,7 @@ export async function writeAuthControlConfig(params: {
 }
 
 /**
- * 设置用户角色，并返回最新 dashboard payload。
+ * 设置用户角色，并返回最新 control payload。
  */
 export async function setAuthControlUserRole(params: {
   context: AgentContext;

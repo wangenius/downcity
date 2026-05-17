@@ -183,7 +183,7 @@ async function handlePluginAction(params: {
 }
 
 function matchControlSessionExecutePath(pathname: string): string | null {
-  const match = /^\/api\/dashboard\/sessions\/([^/]+)\/execute$/.exec(
+  const match = /^\/api\/control\/sessions\/([^/]+)\/execute$/.exec(
     String(pathname || "").trim(),
   );
   if (!match) return null;
@@ -205,7 +205,7 @@ async function handleControlSessionExecute(params: {
     return createErrorResponse(
       params.requestId,
       500,
-      "Local RPC dashboard execute requires agent runtime",
+      "Local RPC control execute requires agent runtime",
     );
   }
   const body = isObjectRecord(params.body) ? params.body : {};

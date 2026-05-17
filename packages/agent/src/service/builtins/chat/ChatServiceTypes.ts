@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里定义 `new ChatService({...})` 的显式注入接口。
  * - 目标是让 `city`、`vibecape` 等上层产品通过构造参数提供渠道凭据与账户解析能力。
- * - 若未显式注入，则 ChatService 仍可回退到现有 `downcity.json + ConsoleStore` 读取路径。
+ * - 若未显式注入，则 ChatService 仍可回退到现有 `downcity.json + PlatformStore` 读取路径。
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";

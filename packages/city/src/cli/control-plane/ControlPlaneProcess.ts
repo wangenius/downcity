@@ -1,9 +1,9 @@
 /**
- * IndexConsoleProcess：city gateway / control plane 命令的 runtime/进程控制辅助。
+ * ControlPlaneProcess：city gateway / control plane 命令的 runtime/进程控制辅助。
  *
  * 关键点（中文）
  * - 聚合 control plane 与受管 agent 的后台进程控制逻辑。
- * - 让 `IndexConsoleCommand` 只保留命令树装配，不再混杂大量进程细节。
+ * - 让 `ControlPlaneCommand` 只保留命令树装配，不再混杂大量进程细节。
  */
 
 import { resolve } from "path";
@@ -19,11 +19,11 @@ import {
 import { ensureRuntimeExecutionBindingReady } from "@downcity/agent";
 import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
 import {
-  ensureConsoleAgentRegistry,
-  listConsoleAgents,
-  markConsoleAgentStopped,
+  ensureManagedAgentRegistry,
+  listManagedAgentEntries,
+  markManagedAgentStopped,
 } from "@/process/registry/CityRegistry.js";
-import type { ConsoleAgentProcessView } from "@downcity/agent";
+import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
   getCityLogPath,
   getCityPidPath,
@@ -46,8 +46,8 @@ import {
   sleep,
 } from "../shared/IndexSupport.js";
 import { buildRuntimePortFacts } from "../shared/PortHints.js";
-import { stopConsoleCommand } from "./Console.js";
-import { ensureConsoleAuthBootstrap } from "./ConsoleAuthBootstrap.js";
+import { stopControlPlaneCommand } from "./ControlPlaneRuntime.js";
+import { ensureControlPlaneAuthBootstrap } from "./ControlPlaneAuthBootstrap.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { runWithSpinner } from "@/utils/cli/Spinner.js";
 import { CliError } from "../shared/CliError.js";
@@ -61,7 +61,7 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
   const pidPath = getCityPidPath();
   const logPath = getCityLogPath();
   await fs.ensureDir(consoleDir);
-  await ensureConsoleAgentRegistry();
+  await ensureManagedAgentRegistry();
 
   const existingPid = await readCityPid();
   if (existingPid && isCityProcessAlive(existingPid)) {
@@ -69,7 +69,7 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
       tone: "info",
       title: "City runtime already running",
     });
-    await ensureConsoleAuthBootstrap();
+    await ensureControlPlaneAuthBootstrap();
     return;
   }
   if (existingPid) {
@@ -101,7 +101,7 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
     stdio: ["ignore", logFd, logFd],
     env: {
       ...process.env,
-      DOWNCITY_CONSOLE: "1",
+      DOWNCITY_CONTROL_PLANE: "1",
     },
   });
 
@@ -128,13 +128,13 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
     ],
   });
 
-  await ensureConsoleAuthBootstrap();
+  await ensureControlPlaneAuthBootstrap();
 }
 
 /**
- * 解析 console 维护的“正在运行” agent 列表。
+ * 解析 control plane 维护的“正在运行” managed agent 列表。
  */
-export async function resolveRunningConsoleAgents(params?: {
+export async function resolveRunningManagedAgents(params?: {
   /**
    * 是否在扫描过程中回写 registry。
    *
@@ -143,17 +143,17 @@ export async function resolveRunningConsoleAgents(params?: {
    * - stop/restart 等运维命令仍保留默认同步行为，确保 registry 最终状态收敛。
    */
   syncRegistry?: boolean;
-}): Promise<ConsoleAgentProcessView[]> {
+}): Promise<ManagedAgentProcessView[]> {
   const syncRegistry = params?.syncRegistry !== false;
-  const entries = await listConsoleAgents();
-  const views: ConsoleAgentProcessView[] = [];
+  const entries = await listManagedAgentEntries();
+  const views: ManagedAgentProcessView[] = [];
 
   for (const entry of entries) {
     const projectRoot = resolve(String(entry.projectRoot || "").trim() || ".");
     const daemonPid = await readDaemonPid(projectRoot);
     if (!daemonPid || !isDaemonProcessAlive(daemonPid)) {
       if (syncRegistry) {
-        await markConsoleAgentStopped(projectRoot);
+        await markManagedAgentStopped(projectRoot);
       }
       continue;
     }
@@ -187,10 +187,10 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
     title: "City runtime",
     summary: "stopping",
   });
-  await stopConsoleCommand();
+  await stopControlPlaneCommand();
 
   // Phase 2: Stop managed agents
-  const views = await resolveRunningConsoleAgents();
+  const views = await resolveRunningManagedAgents();
   if (views.length > 0) {
     emitCliBlock({
       tone: "info",
@@ -210,7 +210,7 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
           summary: result.stopped ? "stopped" : "already stopped",
           facts: [{ label: "project", value: item.projectRoot }],
         });
-        await markConsoleAgentStopped(item.projectRoot);
+        await markManagedAgentStopped(item.projectRoot);
       } catch (error) {
         emitCliBlock({
           tone: "error",
@@ -336,8 +336,8 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
 /**
  * 重启后恢复此前仍在运行的 agent daemon。
  */
-export async function restartManagedConsoleAgents(cliPath: string): Promise<void> {
-  const runningAgents = await resolveRunningConsoleAgents();
+export async function restartManagedAgents(cliPath: string): Promise<void> {
+  const runningAgents = await resolveRunningManagedAgents();
   const restartOptionsMap = new Map<string, StartOptions>();
   for (const item of runningAgents) {
     restartOptionsMap.set(
@@ -385,10 +385,10 @@ export async function restartManagedConsoleAgents(cliPath: string): Promise<void
 }
 
 /**
- * 重启 console 主进程。
+ * 重启 control plane 主进程。
  */
 export async function restartCityRuntimeCommand(cliPath: string): Promise<void> {
-  await restartManagedConsoleAgents(cliPath);
+  await restartManagedAgents(cliPath);
 }
 
 /**
@@ -398,7 +398,7 @@ export async function runCityRuntimeCommand(): Promise<void> {
   const consoleDir = getCityRuntimeDirPath();
   const pidPath = getCityPidPath();
   await fs.ensureDir(consoleDir);
-  await ensureConsoleAgentRegistry();
+  await ensureManagedAgentRegistry();
   await fs.writeFile(pidPath, String(process.pid), "utf-8");
 
   const shutdown = async (): Promise<void> => {
@@ -419,13 +419,13 @@ export async function runCityRuntimeCommand(): Promise<void> {
 }
 
 /**
- * 解析并校验目标 agent 是否已登记在 console registry。
+ * 解析并校验目标 agent 是否已登记在 managed agent registry。
  */
 async function resolveRegisteredAgentProjectRoot(
   cwd: string,
 ): Promise<string> {
   const projectRoot = resolve(String(cwd || "."));
-  const entries = await listConsoleAgents();
+  const entries = await listManagedAgentEntries();
   const matched = entries.some(
     (entry) =>
       resolve(String(entry.projectRoot || "").trim() || ".") === projectRoot,
@@ -433,14 +433,14 @@ async function resolveRegisteredAgentProjectRoot(
   if (matched) return projectRoot;
 
   throw new CliError({
-    title: "Agent is not registered in console registry",
+    title: "Agent is not registered in managed agent registry",
     note: `project: ${projectRoot}`,
     fix: "city agent start <path>",
   });
 }
 
 /**
- * 注册 `agent doctor` 对 console registry 的依赖校验。
+ * 注册 `agent doctor` 对 managed agent registry 的依赖校验。
  */
 export async function ensureRegisteredAgentProjectRoot(
   cwd: string,

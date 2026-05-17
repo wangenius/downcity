@@ -8,7 +8,7 @@
 import crypto from "node:crypto";
 import fs from "fs-extra";
 import path from "node:path";
-import { getConsoleModelDbKeyPath } from "@/host/runtime/CityPaths.js";
+import { getPlatformStoreKeyPath } from "@/host/runtime/CityPaths.js";
 
 const MODEL_DB_KEY_PATH = "model-db.key";
 const ENCRYPTION_ALGO = "aes-256-gcm";
@@ -26,7 +26,7 @@ export function resetModelDbKeyCache(): void {
 }
 
 function resolveKeyFilePathSync(): string {
-  const keyPath = getConsoleModelDbKeyPath();
+  const keyPath = getPlatformStoreKeyPath();
   fs.ensureDirSync(path.dirname(keyPath));
   return keyPath;
 }

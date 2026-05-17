@@ -1,5 +1,5 @@
 /**
- * InlineInstantSessionService：Inline Composer 即时模式执行服务。
+ * InstantSessionService：Inline Composer 即时模式执行服务。
  *
  * 关键点（中文）
  * - 统一承接 model 即时 executor。
@@ -25,20 +25,20 @@ import {
   Session,
 } from "@downcity/agent";
 import type { Logger } from "@downcity/agent";
-import type { ConsoleAgentOption } from "@downcity/agent";
+import type { PlatformAgentOption } from "@downcity/agent";
 import type {
-  ConsoleInlineInstantRunInput,
-  ConsoleInlineInstantRunResult,
-  ConsoleInlineInstantService,
+  PlatformInlineInstantRunInput,
+  PlatformInlineInstantRunResult,
+  PlatformInlineInstantService,
 } from "@downcity/agent";
-import { InlineInstantSystemComposer } from "@/control/InlineInstantSystemComposer.js";
+import { InstantSystemComposer } from "@/control/instant/InstantSystemComposer.js";
 import type { Logger as AgentLogger } from "@downcity/agent";
 
-type InlineInstantSessionServiceOptions = {
+type InstantSessionServiceOptions = {
   /**
    * 根据 agentId 解析项目配置。
    */
-  resolveAgentById?: (agentId: string) => Promise<ConsoleAgentOption | null>;
+  resolveAgentById?: (agentId: string) => Promise<PlatformAgentOption | null>;
 
   /**
    * 可选统一日志器。
@@ -111,18 +111,18 @@ function readAssistantMessageText(result: {
 /**
  * 即时模式服务默认实现。
  */
-export class InlineInstantSessionService implements ConsoleInlineInstantService {
-  private readonly resolveAgentById: InlineInstantSessionServiceOptions["resolveAgentById"];
+export class InstantSessionService implements PlatformInlineInstantService {
+  private readonly resolveAgentById: InstantSessionServiceOptions["resolveAgentById"];
   private readonly logger: Logger;
 
-  constructor(options?: InlineInstantSessionServiceOptions) {
+  constructor(options?: InstantSessionServiceOptions) {
     this.resolveAgentById = options?.resolveAgentById;
     this.logger = options?.logger || getLogger();
   }
 
   async run(
-    input: ConsoleInlineInstantRunInput,
-  ): Promise<ConsoleInlineInstantRunResult> {
+    input: PlatformInlineInstantRunInput,
+  ): Promise<PlatformInlineInstantRunResult> {
     const executorType = String(input.executorType || "").trim();
     if (executorType === "model") {
       return await this.runModelInstant({
@@ -187,7 +187,7 @@ export class InlineInstantSessionService implements ConsoleInlineInstantService 
           message: messageForPersistence,
           fallbackText: readAssistantFallbackText(userVisible, assistantText),
           extra: {
-            via: "console_inline_instant",
+            via: "control_plane_instant",
           },
         });
       }
@@ -214,8 +214,8 @@ export class InlineInstantSessionService implements ConsoleInlineInstantService 
   }
 
   private async runModelInstant(
-    input: ConsoleInlineInstantRunInput & { executorType: "model" },
-  ): Promise<ConsoleInlineInstantRunResult> {
+    input: PlatformInlineInstantRunInput & { executorType: "model" },
+  ): Promise<PlatformInlineInstantRunResult> {
     const modelId = String(input.modelId || "").trim();
     if (!modelId) throw new Error("modelId is required for inline model executor");
 
@@ -236,7 +236,7 @@ export class InlineInstantSessionService implements ConsoleInlineInstantService 
       },
     });
     const compactionComposer = new JsonlSessionCompactionComposer();
-    const systemComposer = new InlineInstantSystemComposer({
+    const systemComposer = new InstantSystemComposer({
       prompts: [String(input.system || "").trim()].filter(Boolean),
       projectRoot: rootPath,
     });

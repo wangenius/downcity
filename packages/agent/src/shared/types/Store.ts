@@ -2,7 +2,7 @@
  * 模型存储（SQLite）类型定义。
  *
  * 关键点（中文）
- * - 该类型用于 console 全局模型池（provider/model）的统一读写。
+ * - 该类型用于平台控制面全局模型池（provider/model）的统一读写。
  * - agent 项目只通过 `execution.modelId` 绑定模型 ID，不直接持有 provider 细节。
  */
 import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
@@ -40,6 +40,28 @@ export interface StoredModelProvider {
    * 更新时间（ISO 字符串）。
    */
   updatedAt: string;
+}
+
+/**
+ * provider 元信息。
+ *
+ * 关键点（中文）
+ * - 仅保留同步读取所需的轻量字段。
+ * - 不包含解密后的 API Key，避免在只读展示链路中泄露敏感信息。
+ */
+export interface StoredProviderMeta {
+  /**
+   * provider 主键 ID。
+   */
+  id: string;
+  /**
+   * provider 类型。
+   */
+  type: LlmProviderType;
+  /**
+   * provider 基础地址（可选）。
+   */
+  baseUrl?: string;
 }
 
 /**
@@ -174,14 +196,14 @@ export interface UpsertModelInput {
 export type StoredEnvScope = "global" | "agent";
 
 /**
- * Console Env 记录。
+ * 平台环境变量记录。
  */
 export interface StoredEnvEntry {
   /**
    * Env 作用域。
    *
    * 关键点（中文）
-   * - `global` 表示 Console 全局共享变量。
+   * - `global` 表示平台控制面全局共享变量。
    * - `agent` 表示仅某个 agent 可见的私有变量。
    */
   scope: StoredEnvScope;

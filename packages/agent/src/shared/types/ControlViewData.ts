@@ -1,17 +1,17 @@
 /**
- * Dashboard 数据视图类型定义。
+ * Control UI 数据视图类型定义。
  *
  * 关键点（中文）
- * - 统一承载 dashboard 路由内部共享的数据结构。
- * - 仅描述 UI 数据视图，不包含底层上下文原始协议类型。
+ * - 统一承载 single-agent control API 的内部视图数据结构。
+ * - 仅描述 control UI 所需的投影视图，不包含底层上下文原始协议类型。
  */
 
 import type { JsonObject } from "@/shared/types/Json.js";
 
 /**
- * Dashboard 时间线消息角色。
+ * Control 时间线消息角色。
  */
-export type DashboardTimelineRole =
+export type ControlTimelineRole =
   | "user"
   | "assistant"
   | "tool-call"
@@ -19,9 +19,9 @@ export type DashboardTimelineRole =
   | "system";
 
 /**
- * Dashboard 时间线事件。
+ * Control 时间线事件。
  */
-export interface DashboardTimelineEvent {
+export interface ControlTimelineEvent {
   /**
    * 事件唯一标识。
    */
@@ -30,7 +30,7 @@ export interface DashboardTimelineEvent {
   /**
    * 事件角色。
    */
-  role: DashboardTimelineRole;
+  role: ControlTimelineRole;
 
   /**
    * 事件时间戳（毫秒）。
@@ -59,9 +59,9 @@ export interface DashboardTimelineEvent {
 }
 
 /**
- * Dashboard 会话摘要。
+ * Control 会话摘要。
  */
-export interface DashboardSessionSummary {
+export interface ControlSessionSummary {
   /**
    * 会话 ID。
    *
@@ -122,9 +122,9 @@ export interface DashboardSessionSummary {
 }
 
 /**
- * Dashboard 日志项。
+ * Control 日志项。
  */
-export interface DashboardLogEntry {
+export interface ControlLogEntry {
   /**
    * 日志时间。
    */
@@ -152,9 +152,9 @@ export interface DashboardLogEntry {
 }
 
 /**
- * Dashboard 任务运行摘要。
+ * Control 任务运行摘要。
  */
-export interface DashboardTaskRunSummary {
+export interface ControlTaskRunSummary {
   /**
    * 运行时间戳目录名。
    */
@@ -237,9 +237,9 @@ export interface DashboardTaskRunSummary {
 }
 
 /**
- * Dashboard 任务运行详情。
+ * Control 任务运行详情。
  */
-export interface DashboardTaskRunDetail {
+export interface ControlTaskRunDetail {
   /**
    * 任务标题。
    */
@@ -388,5 +388,5 @@ export interface DashboardTaskRunDetail {
   /**
    * 运行消息时间线。
    */
-  messages: DashboardTimelineEvent[];
+  messages: ControlTimelineEvent[];
 }

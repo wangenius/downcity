@@ -1,26 +1,26 @@
 /**
- * ConsoleStore 加密配置仓储。
+ * PlatformStore 加密配置仓储。
  *
  * 关键点（中文）
- * - 管理 `console_secure_settings` 表。
- * - console 级与 agent 级敏感配置都复用这套存储。
+ * - 管理 `platform_secure_settings` 表。
+ * - 平台级与 agent 级敏感配置都复用这套存储。
  */
 
 import { decryptText, decryptTextSync, encryptText, encryptTextSync } from "./crypto.js";
-import type { ConsoleStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "./StoreShared.js";
 import { normalizeNonEmptyText, nowIso } from "./StoreShared.js";
 
 /**
  * 同步读取加密 JSON 配置。
  */
 export function getSecureSettingJsonSync<T>(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   key: string,
 ): T | null {
   const settingKey = normalizeNonEmptyText(key, "setting key");
   const row = context.sqlite
     .prepare(
-      "SELECT value_encrypted FROM console_secure_settings WHERE key = ? LIMIT 1;",
+      "SELECT value_encrypted FROM platform_secure_settings WHERE key = ? LIMIT 1;",
     )
     .get(settingKey) as { value_encrypted?: unknown } | undefined;
   if (!row || typeof row.value_encrypted !== "string" || !row.value_encrypted) {
@@ -34,7 +34,7 @@ export function getSecureSettingJsonSync<T>(
  * 同步写入加密 JSON 配置。
  */
 export function setSecureSettingJsonSync(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   key: string,
   value: unknown,
 ): void {
@@ -45,7 +45,7 @@ export function setSecureSettingJsonSync(
   context.sqlite
     .prepare(
       `
-      INSERT INTO console_secure_settings (key, value_encrypted, created_at, updated_at)
+      INSERT INTO platform_secure_settings (key, value_encrypted, created_at, updated_at)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET
         value_encrypted = excluded.value_encrypted,
@@ -59,12 +59,12 @@ export function setSecureSettingJsonSync(
  * 删除加密配置。
  */
 export function removeSecureSetting(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   key: string,
 ): void {
   const settingKey = normalizeNonEmptyText(key, "setting key");
   context.sqlite
-    .prepare("DELETE FROM console_secure_settings WHERE key = ?;")
+    .prepare("DELETE FROM platform_secure_settings WHERE key = ?;")
     .run(settingKey);
 }
 
@@ -72,13 +72,13 @@ export function removeSecureSetting(
  * 异步读取加密 JSON 配置。
  */
 export async function getSecureSettingJson<T>(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   key: string,
 ): Promise<T | null> {
   const settingKey = normalizeNonEmptyText(key, "setting key");
   const row = context.sqlite
     .prepare(
-      "SELECT value_encrypted FROM console_secure_settings WHERE key = ? LIMIT 1;",
+      "SELECT value_encrypted FROM platform_secure_settings WHERE key = ? LIMIT 1;",
     )
     .get(settingKey) as { value_encrypted?: unknown } | undefined;
   if (!row || typeof row.value_encrypted !== "string" || !row.value_encrypted) {
@@ -92,7 +92,7 @@ export async function getSecureSettingJson<T>(
  * 异步写入加密 JSON 配置。
  */
 export async function setSecureSettingJson(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   key: string,
   value: unknown,
 ): Promise<void> {
@@ -103,7 +103,7 @@ export async function setSecureSettingJson(
   context.sqlite
     .prepare(
       `
-      INSERT INTO console_secure_settings (key, value_encrypted, created_at, updated_at)
+      INSERT INTO platform_secure_settings (key, value_encrypted, created_at, updated_at)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET
         value_encrypted = excluded.value_encrypted,

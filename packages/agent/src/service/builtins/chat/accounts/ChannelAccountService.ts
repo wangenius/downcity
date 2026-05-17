@@ -8,7 +8,7 @@
  */
 
 import crypto from "node:crypto";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { PlatformStore } from "@/shared/utils/store/index.js";
 import type { StoredChannelAccountChannel } from "@/shared/types/Store.js";
 import { resolveChatChannelBotInfo } from "@/service/builtins/chat/channels/BotInfoProvider.js";
 import type {
@@ -82,7 +82,7 @@ export class ChatChannelAccountService {
   }): Promise<string> {
     const seed = normalizeChannelAccountIdToken(params.seed || "");
     const prefix = `${params.channel}-${seed}`.slice(0, 36);
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       for (let index = 0; index < 8; index += 1) {
         const suffix = crypto.randomBytes(3).toString("hex");
@@ -205,7 +205,7 @@ export class ChatChannelAccountService {
    * 列出账户池（脱敏）。
    */
   async list(): Promise<ChatChannelAccountListResult> {
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       const rows = await store.listChannelAccounts();
       return {
@@ -254,7 +254,7 @@ export class ChatChannelAccountService {
       throw new Error("appSecret and clearAppSecret cannot be used together");
     }
 
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       const current = await store.getChannelAccount(id);
       const nextBotToken = input.clearBotToken
@@ -307,7 +307,7 @@ export class ChatChannelAccountService {
   remove(idInput: string): void {
     const id = String(idInput || "").trim();
     if (!id) throw new Error("channel account id cannot be empty");
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       store.removeChannelAccount(id);
     } finally {

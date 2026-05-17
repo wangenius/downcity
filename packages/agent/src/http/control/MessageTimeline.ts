@@ -1,8 +1,8 @@
 /**
- * Dashboard 消息时间线 helper。
+ * Control 消息时间线 helper。
  *
  * 关键点（中文）
- * - 负责把上下文消息映射成 dashboard 可视时间线。
+ * - 负责把上下文消息映射成 control UI 可视时间线。
  * - 同时提供消息文件读取能力。
  */
 
@@ -19,7 +19,7 @@ import type {
 } from "@/types/session/SessionMessages.js";
 import { pickLastSuccessfulChatSendText } from "@/service/builtins/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@/service/builtins/chat/runtime/UIMessageTransformer.js";
-import type { DashboardTimelineEvent, DashboardTimelineRole } from "@/shared/types/DashboardData.js";
+import type { ControlTimelineEvent, ControlTimelineRole } from "@/shared/types/ControlViewData.js";
 import { truncateText } from "./CommonHelpers.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
@@ -119,11 +119,11 @@ function extractToolResultOutput(part: ToolPartCompatShape): unknown {
 
 function toUiMessageEvent(params: {
   message: SessionMessageV1;
-  role: DashboardTimelineRole;
+  role: ControlTimelineRole;
   text: string;
   sequence: number;
   toolName?: string;
-}): DashboardTimelineEvent {
+}): ControlTimelineEvent {
   const { message, role, text, sequence, toolName } = params;
   const metadata = (message.metadata || null) as SessionMetadataV1 | null;
 
@@ -151,11 +151,11 @@ function resolveUiMessageText(message: SessionMessageV1): string {
 }
 
 /**
- * 转成 dashboard 时间线。
+ * 转成 control 时间线。
  */
 export function toUiMessageTimeline(
   message: SessionMessageV1,
-): DashboardTimelineEvent[] {
+): ControlTimelineEvent[] {
   if (message.role !== "assistant") {
     return [
       toUiMessageEvent({
@@ -170,7 +170,7 @@ export function toUiMessageTimeline(
   const parts = Array.isArray(message.parts)
     ? (message.parts as AnyUiPart[])
     : [];
-  const events: DashboardTimelineEvent[] = [];
+  const events: ControlTimelineEvent[] = [];
   let sequence = 0;
 
   for (const part of parts) {
@@ -223,7 +223,7 @@ export function toUiMessageTimeline(
     }
   }
 
-  // 关键点（中文）：assistant 若没有文本 part，也要保留一条可见事件，避免 dashboard 空白。
+  // 关键点（中文）：assistant 若没有文本 part，也要保留一条可见事件，避免 control UI 空白。
   if (events.length === 0) {
     events.push(
       toUiMessageEvent({

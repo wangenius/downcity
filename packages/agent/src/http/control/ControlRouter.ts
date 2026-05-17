@@ -9,7 +9,7 @@
  * 命名说明（中文）
  * - 这里的 control 指“单 agent 控制域”。
  * - 它不是 city 的 gateway / control plane。
- * - 当前 `/api/dashboard/*` 只是历史 URL 前缀，语义上仍属于 single-agent control API。
+ * - 当前公开路径统一使用 `/api/control/*`。
  */
 
 import { Hono } from "hono";

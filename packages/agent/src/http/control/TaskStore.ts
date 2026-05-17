@@ -1,9 +1,9 @@
 /**
- * Dashboard 任务与日志数据 helper。
+ * Control 任务与日志数据 helper。
  *
  * 关键点（中文）
  * - 聚合 logs 与 task runs 读取逻辑。
- * - 仅负责磁盘侧读取与 dashboard 视图映射。
+ * - 仅负责磁盘侧读取与 control UI 视图映射。
  */
 
 import fs from "fs-extra";
@@ -11,10 +11,10 @@ import path from "node:path";
 import { getLogsDirPath, getDowncityTasksDirPath } from "@/config/Paths.js";
 import { resolveTaskIdByTitle } from "@/service/builtins/task/runtime/Store.js";
 import type {
-  DashboardLogEntry,
-  DashboardTaskRunDetail,
-  DashboardTaskRunSummary,
-} from "@/shared/types/DashboardData.js";
+  ControlLogEntry,
+  ControlTaskRunDetail,
+  ControlTaskRunSummary,
+} from "@/shared/types/ControlViewData.js";
 import { truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, toUiMessageTimeline } from "./MessageTimeline.js";
 
@@ -26,7 +26,7 @@ export const TASK_RUN_DIR_REGEX = /^\d{8}-\d{6}-\d{3}$/;
 export async function readRecentLogs(params: {
   projectRoot: string;
   limit: number;
-}): Promise<DashboardLogEntry[]> {
+}): Promise<ControlLogEntry[]> {
   const logsDir = getLogsDirPath(params.projectRoot);
   if (!(await fs.pathExists(logsDir))) return [];
 
@@ -36,7 +36,7 @@ export async function readRecentLogs(params: {
     .sort()
     .reverse();
 
-  const out: DashboardLogEntry[] = [];
+  const out: ControlLogEntry[] = [];
 
   for (const fileName of files) {
     if (out.length >= params.limit) break;
@@ -47,7 +47,7 @@ export async function readRecentLogs(params: {
     for (let index = lines.length - 1; index >= 0; index -= 1) {
       if (out.length >= params.limit) break;
       try {
-        const parsed = JSON.parse(lines[index]) as DashboardLogEntry;
+        const parsed = JSON.parse(lines[index]) as ControlLogEntry;
         if (!parsed || typeof parsed !== "object") continue;
         out.push({
           ...(typeof parsed.timestamp === "string" ? { timestamp: parsed.timestamp } : {}),
@@ -79,7 +79,7 @@ export async function listTaskRuns(params: {
   projectRoot: string;
   title: string;
   limit: number;
-}): Promise<DashboardTaskRunSummary[]> {
+}): Promise<ControlTaskRunSummary[]> {
   const taskDir = await resolveTaskDir(params.projectRoot, params.title);
   if (!(await fs.pathExists(taskDir))) return [];
 
@@ -91,7 +91,7 @@ export async function listTaskRuns(params: {
     .reverse()
     .slice(0, params.limit);
 
-  const out: DashboardTaskRunSummary[] = [];
+  const out: ControlTaskRunSummary[] = [];
 
   for (const timestamp of timestamps) {
     const runDir = path.join(taskDir, timestamp);
@@ -161,7 +161,7 @@ export async function readTaskRunDetail(params: {
   projectRoot: string;
   title: string;
   timestamp: string;
-}): Promise<DashboardTaskRunDetail | null> {
+}): Promise<ControlTaskRunDetail | null> {
   const taskDir = await resolveTaskDir(params.projectRoot, params.title);
   const runDir = path.join(taskDir, params.timestamp);
   if (!(await fs.pathExists(runDir))) return null;

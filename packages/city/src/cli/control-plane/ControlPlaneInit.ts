@@ -1,13 +1,13 @@
 /**
- * `city init`：初始化 console（全局中台）的默认配置（`~/.downcity/`）。
+ * `city init`：初始化平台级默认配置（`~/.downcity/`）。
  *
  * 生成内容
- * - `~/.downcity/downcity.db`：console 全局配置存储（敏感字段加密）
+ * - `~/.downcity/downcity.db`：平台级全局配置存储（敏感字段加密）
  * - `~/.downcity/schema/downcity.schema.json`：给项目 downcity.json 的 schema（可选）
  *
  * 关键点（中文）
  * - city 运行时是强依赖：`city start` + `city agent start` 都会使用这里的默认配置。
- * - console 级不再使用 `~/.downcity/downcity.json` 和 `~/.downcity/.env`。
+ * - 平台级配置不再使用 `~/.downcity/downcity.json` 和 `~/.downcity/.env`。
  * - agent 项目内 `downcity.json/.env` 仍保持项目级配置职责。
  */
 
@@ -16,16 +16,16 @@ import fs from "fs-extra";
 import { DOWNCITY_JSON_SCHEMA } from "@/config/DowncitySchema.js";
 import { saveJson } from "@/utils/storage.js";
 import {
-  getConsoleRootDirPath,
+  getPlatformRootDirPath,
 } from "@/process/registry/CityPaths.js";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 
 /**
- * console 初始化入口。
+ * 平台初始化入口。
  */
-export async function consoleInitCommand(): Promise<void> {
-  const operationRoot = getConsoleRootDirPath();
+export async function controlPlaneInitCommand(): Promise<void> {
+  const operationRoot = getPlatformRootDirPath();
   const schemaDir = path.join(operationRoot, "schema");
   const schemaPath = path.join(schemaDir, "downcity.schema.json");
 
@@ -35,13 +35,13 @@ export async function consoleInitCommand(): Promise<void> {
   await fs.ensureDir(schemaDir);
   await saveJson(schemaPath, DOWNCITY_JSON_SCHEMA);
 
-  const modelStore = new ConsoleStore();
+  const modelStore = new PlatformStore();
   let existingModelsCount = 0;
   try {
     existingModelsCount = modelStore.listModels().length;
     emitCliBlock({
       tone: "success",
-      title: "Console base initialized",
+      title: "Platform base initialized",
       facts: [
         {
           label: "Root",
@@ -66,7 +66,7 @@ export async function consoleInitCommand(): Promise<void> {
   }
   emitCliBlock({
     tone: "success",
-    title: "Console initialized",
+    title: "Platform initialized",
     summary: "base-only",
     note: "基础设施已初始化。下一步可执行 `city model create` 配置模型。",
   });
@@ -74,7 +74,7 @@ export async function consoleInitCommand(): Promise<void> {
     tone: "accent",
     title: "Created",
     items: [
-      { title: "encrypted console settings" },
+      { title: "encrypted platform settings" },
       { title: "downcity schema" },
     ],
   });

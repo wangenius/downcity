@@ -6,7 +6,7 @@
  * - 所有会泄漏上下文的字段都必须在这里截断或抽象。
  */
 
-import type { DashboardSessionSummary } from "@/shared/types/DashboardData.js";
+import type { ControlSessionSummary } from "@/shared/types/ControlViewData.js";
 import type { ServiceStateSnapshot } from "@/shared/types/ServiceState.js";
 import type { TaskListResponse } from "@/service/builtins/task/types/TaskCommand.js";
 import type {
@@ -59,7 +59,7 @@ function buildMomentum(params: { currentCount: number; recentCount: number }): s
   return "安静";
 }
 
-function buildRunningSummary(item: DashboardSessionSummary): string {
+function buildRunningSummary(item: ControlSessionSummary): string {
   const messageCount = typeof item.messageCount === "number" ? item.messageCount : 0;
   if (messageCount >= 24) return "正在延展一段较长的工作脉络，并持续生成新的内容。";
   if (messageCount >= 8) return "正在承接连续输入，逐步形成新的阶段结果。";
@@ -67,7 +67,7 @@ function buildRunningSummary(item: DashboardSessionSummary): string {
   return "当前处于活跃展开之中。";
 }
 
-function buildRecentSummary(item: DashboardSessionSummary, index: number): string {
+function buildRecentSummary(item: ControlSessionSummary, index: number): string {
   const messageCount = typeof item.messageCount === "number" ? item.messageCount : 0;
   if (index === 0 && messageCount > 0) return "刚刚完成一段新的展开，正在短暂停留。";
   if (messageCount >= 12) return "近期完成了一次较长的内容延展。";
@@ -103,7 +103,7 @@ export function toWorkboardAgentSummary(params: {
  * 将运行中的 session 映射为对外安全活动项。
  */
 export function toRunningActivity(params: {
-  item: DashboardSessionSummary;
+  item: ControlSessionSummary;
   index: number;
 }): WorkboardActivityItem {
   const title = params.index === 0 ? "当前主线" : `当前并行线 ${params.index + 1}`;
@@ -123,7 +123,7 @@ export function toRunningActivity(params: {
  * 将近期 session 映射为对外安全活动项。
  */
 export function toRecentActivity(params: {
-  item: DashboardSessionSummary;
+  item: ControlSessionSummary;
   index: number;
 }): WorkboardActivityItem {
   const title = params.index === 0 ? "最近一次更新" : `近期片段 ${params.index + 1}`;

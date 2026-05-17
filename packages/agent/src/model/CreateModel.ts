@@ -3,7 +3,7 @@
  *
  * 设计目标（中文，关键点）
  * - 这是“核心能力”，不应该依赖 server/RuntimeContext（避免隐式初始化时序）。
- * - `execution.type=api` 时，从 console 全局 `llm.models` / `llm.providers` 解析最终模型。
+ * - `execution.type=api` 时，从平台全局 `llm.models` / `llm.providers` 解析最终模型。
  * - 当前只有 `api` 执行模式。
  */
 
@@ -21,7 +21,7 @@ import { createLlmLoggingFetch } from "@shared/utils/logger/Fetch.js";
 import { getLogger } from "@shared/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
-import { ConsoleStore } from "@shared/utils/store/index.js";
+import { PlatformStore } from "@shared/utils/store/index.js";
 import { readProjectExecutionBinding } from "@/agent/project/ProjectExecutionBinding.js";
 
 type ModelLogContext = {
@@ -143,13 +143,13 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
  *
  * 解析策略（中文）
  * 1) 读取 `execution`，确认是 `api` 模式。
- * `api`：定位 console 全局 `llm.models[modelId]` 与 `llm.providers[providerKey]`。
+ * `api`：定位平台全局 `llm.models[modelId]` 与 `llm.providers[providerKey]`。
  * 创建带日志拦截的 fetch，并按 provider type 分发到 SDK 工厂。
  */
 export async function createModel(input: {
   config: DowncityConfig;
   getSessionRunScope?: () => ModelLogContext | undefined;
-  store?: ConsoleStore;
+  store?: PlatformStore;
   projectRoot?: string;
 }): Promise<LanguageModel> {
   const logger = getLogger();
@@ -174,7 +174,7 @@ export async function createModel(input: {
 
   const primaryModelId = execution.modelId;
 
-  const store = input.store || new ConsoleStore();
+  const store = input.store || new PlatformStore();
   const resolved = await store.getResolvedModel(primaryModelId);
   if (!input.store) {
     store.close();

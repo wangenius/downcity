@@ -2,7 +2,7 @@
  * Agent 项目初始化相关类型定义。
  *
  * 关键点（中文）
- * - 统一承载 CLI 与 Console 共用的初始化输入/输出结构。
+ * - 统一承载 CLI 与 control plane 共用的初始化输入/输出结构。
  * - 所有字段都面向"项目骨架创建"语义，不掺杂 runtime 状态。
  */
 
@@ -35,7 +35,7 @@ export interface AgentProjectInitializationInput {
    * 项目执行绑定配置。
    *
    * 说明（中文）
-   * - 绑定 console 全局模型池中的模型 ID。
+   * - 绑定平台全局模型池中的模型 ID。
    */
   execution: ExecutionBindingConfig;
 

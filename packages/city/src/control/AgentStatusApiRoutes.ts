@@ -1,5 +1,5 @@
 /**
- * Console Agent 状态探活路由。
+ * 平台 Agent 状态探活路由。
  *
  * 关键点（中文）
  * - 启动窗口期的 agent 状态探测放到 UI 网关内部执行，避免浏览器直接看到 500/503 噪音。
@@ -8,7 +8,7 @@
  */
 
 import type { Hono } from "hono";
-import type { ConsoleAgentOption } from "@downcity/agent";
+import type { PlatformAgentOption } from "@downcity/agent";
 
 type AgentStatusPayload = {
   success: boolean;
@@ -67,7 +67,7 @@ async function fetchStatusJson<T>(input: string, init?: RequestInit): Promise<T>
 }
 
 async function probeSelectedAgentStatus(
-  selectedAgent: ConsoleAgentOption,
+  selectedAgent: PlatformAgentOption,
 ): Promise<AgentStatusPayload> {
   const baseUrl = String(selectedAgent.baseUrl || "").trim();
   if (!selectedAgent.running || !baseUrl) {
@@ -97,7 +97,7 @@ async function probeSelectedAgentStatus(
   let servicesPayload: ServicesResponse;
   try {
     servicesPayload = await fetchStatusJson<ServicesResponse>(
-      new URL("/api/dashboard/services", baseUrl).toString(),
+      new URL("/api/control/services", baseUrl).toString(),
     );
   } catch (error) {
     return {
@@ -187,7 +187,7 @@ async function probeSelectedAgentStatus(
 /**
  * 注册 Agent 状态探活 API 路由。
  */
-export function registerConsoleAgentStatusRoutes(params: {
+export function registerPlatformAgentStatusRoutes(params: {
   /**
    * Hono 应用实例。
    */
@@ -199,7 +199,7 @@ export function registerConsoleAgentStatusRoutes(params: {
   /**
    * 解析当前应使用的 agent。
    */
-  resolveSelectedAgent: (requestedAgentId: string) => Promise<ConsoleAgentOption | null>;
+  resolveSelectedAgent: (requestedAgentId: string) => Promise<PlatformAgentOption | null>;
 }): void {
   const app = params.app;
 

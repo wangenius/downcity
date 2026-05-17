@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 本文件只做模块装配，不再承载具体业务逻辑。
  * - 单 agent control API 子路由按 overview/session/model/task/auth 五类拆分，便于继续维护。
- * - `/api/dashboard/*` 是历史路径命名，不代表这里是 city dashboard/gateway 层。
+ * - 单 agent control API 统一暴露在 `/api/control/*` 下。
  */
 
 import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";

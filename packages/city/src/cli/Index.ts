@@ -17,7 +17,7 @@ import { registerAllPluginsForCli } from "@downcity/agent";
 import { registerServicesCommand } from "./service/Services.js";
 import { registerPluginsCommand } from "./shared/Plugins.js";
 import { registerAllServicesForCli } from "./service/ServiceActionCommands.js";
-import { registerConsoleCommands } from "./console/IndexConsoleCommand.js";
+import { registerControlPlaneCommands } from "./control-plane/ControlPlaneCommand.js";
 import { registerAgentCommands } from "./shared/IndexAgentCommand.js";
 import { registerEnvCommand } from "./shared/Env.js";
 import { registerTokenCommand } from "./shared/Token.js";
@@ -45,7 +45,7 @@ program.helpOption("--help", "display help for command");
 program.option("-q, --quiet", "仅输出错误信息");
 program.option("--verbose", "输出详细进度");
 
-registerConsoleCommands(program, {
+registerControlPlaneCommands(program, {
   version: packageJson.version,
   cliPath,
 });

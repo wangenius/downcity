@@ -11,7 +11,8 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { listServiceStates } from "@/service/core/Manager.js";
 import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
-import { listControlSessionSummaries, readRecentLogs, toLimit } from "./Helpers.js";
+import { buildControlRouteAliases, toLimit } from "./CommonHelpers.js";
+import { listControlSessionSummaries, readRecentLogs } from "./Helpers.js";
 import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,62 +41,66 @@ export function registerControlOverviewRoutes(
 ): void {
   const { app } = params;
 
-  app.get("/api/dashboard/overview", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const sessionLimit = toLimit(
-        c.req.query("sessionLimit") || c.req.query("contextLimit"),
-        20,
-      );
-      const sessions = await listControlSessionSummaries({
-        projectRoot: runtime.rootPath,
-        executionContext: params.getAgentContext(),
-        limit: sessionLimit,
-      });
-      const services = listServiceStates();
-      const taskResult = await listTaskDefinitions({
-        projectRoot: runtime.rootPath,
-      });
-      const tasks = Array.isArray(taskResult.tasks) ? taskResult.tasks : [];
-      const logs = await readRecentLogs({
-        projectRoot: runtime.rootPath,
-        limit: 50,
-      });
+  for (const routePath of buildControlRouteAliases("/overview")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const sessionLimit = toLimit(
+          c.req.query("sessionLimit") || c.req.query("contextLimit"),
+          20,
+        );
+        const sessions = await listControlSessionSummaries({
+          projectRoot: runtime.rootPath,
+          executionContext: params.getAgentContext(),
+          limit: sessionLimit,
+        });
+        const services = listServiceStates();
+        const taskResult = await listTaskDefinitions({
+          projectRoot: runtime.rootPath,
+        });
+        const tasks = Array.isArray(taskResult.tasks) ? taskResult.tasks : [];
+        const logs = await readRecentLogs({
+          projectRoot: runtime.rootPath,
+          limit: 50,
+        });
 
-      const statusCount = {
-        enabled: tasks.filter((x) => x.status === "enabled").length,
-        paused: tasks.filter((x) => x.status === "paused").length,
-        disabled: tasks.filter((x) => x.status === "disabled").length,
-      };
+        const statusCount = {
+          enabled: tasks.filter((x) => x.status === "enabled").length,
+          paused: tasks.filter((x) => x.status === "paused").length,
+          disabled: tasks.filter((x) => x.status === "disabled").length,
+        };
 
+        return c.json({
+          success: true,
+          cityVersion: DC_VERSION,
+          now: new Date().toISOString(),
+          agent: {
+            name: runtime.config.name,
+            status: "running",
+          },
+          sessions: {
+            total: sessions.length,
+            items: sessions,
+          },
+          services,
+          tasks: {
+            total: tasks.length,
+            statusCount,
+          },
+          logs,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/services")) {
+    app.get(routePath, (c) => {
       return c.json({
         success: true,
-        cityVersion: DC_VERSION,
-        now: new Date().toISOString(),
-        agent: {
-          name: runtime.config.name,
-          status: "running",
-        },
-        sessions: {
-          total: sessions.length,
-          items: sessions,
-        },
-        services,
-        tasks: {
-          total: tasks.length,
-          statusCount,
-        },
-        logs,
+        services: listServiceStates(),
       });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.get("/api/dashboard/services", (c) => {
-    return c.json({
-      success: true,
-      services: listServiceStates(),
     });
-  });
+  }
 }

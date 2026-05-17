@@ -3,7 +3,7 @@
  *
  * 设计目标（中文）
  * - 将“provider 连接信息”与“model 选择/采样参数”解耦。
- * - 支持在 console 全局层配置多个 provider 与多个 model。
+ * - 支持在平台全局层配置多个 provider 与多个 model。
  * - 避免在每个 model 上重复填写 apiKey/baseUrl。
  */
 

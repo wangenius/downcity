@@ -3,11 +3,11 @@
  *
  * 关键点（中文）
  * - Plugin enable/disable 属于 city 级全局配置，不再写入 agent `downcity.json`。
- * - 当前实现把 lifecycle 配置存入 ConsoleStore 的统一 JSON 设置。
+ * - 当前实现把 lifecycle 配置存入 PlatformStore 的统一 JSON 设置。
  * - 默认策略：除显式关闭外，内建 plugin 视为启用。
  */
 
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { PlatformStore } from "@/shared/utils/store/index.js";
 import type {
   CityPluginLifecycleConfig,
   CityPluginLifecycleItem,
@@ -43,7 +43,7 @@ function normalizeLifecycleConfig(input: unknown): CityPluginLifecycleConfig {
  * 读取当前 city 级 plugin lifecycle 配置。
  */
 export function readCityPluginLifecycleConfig(): CityPluginLifecycleConfig {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     return normalizeLifecycleConfig(
       store.getSecureSettingJsonSync<CityPluginLifecycleConfig>(
@@ -62,7 +62,7 @@ export function writeCityPluginLifecycleConfig(
   value: CityPluginLifecycleConfig,
 ): CityPluginLifecycleConfig {
   const normalized = normalizeLifecycleConfig(value);
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     store.setSecureSettingJsonSync(PLUGIN_LIFECYCLE_SETTING_KEY, normalized);
     return normalized;

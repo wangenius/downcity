@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 作为全局共享类型，不挂在 console 目录下。
- * - 供 agent、services、console 宿主层多处复用，避免反向类型依赖。
+ * - 供 agent、services、control plane 宿主层多处复用，避免反向类型依赖。
  */
 import type { LlmConfig } from "@/shared/types/LlmConfig.js";
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
@@ -87,21 +87,21 @@ export interface DowncityConfig {
         telegram?: {
           enabled: boolean;
           /**
-           * 绑定的 channel account id（来源：console 全局 `~/.downcity/downcity.db`）。
+           * 绑定的 channel account id（来源：平台全局 `~/.downcity/downcity.db`）。
            */
           channelAccountId?: string;
         };
         feishu?: {
           enabled: boolean;
           /**
-           * 绑定的 channel account id（来源：console 全局 `~/.downcity/downcity.db`）。
+           * 绑定的 channel account id（来源：平台全局 `~/.downcity/downcity.db`）。
            */
           channelAccountId?: string;
         };
         qq?: {
           enabled: boolean;
           /**
-           * 绑定的 channel account id（来源：console 全局 `~/.downcity/downcity.db`）。
+           * 绑定的 channel account id（来源：平台全局 `~/.downcity/downcity.db`）。
            */
           channelAccountId?: string;
         };
@@ -128,7 +128,7 @@ export interface DowncityConfig {
    *
    * 关键点（中文）
    * - 项目只有一种执行模式：`api`。
-   * - 绑定 console 全局模型池中的模型 ID。
+   * - 绑定平台全局模型池中的模型 ID。
    */
   execution?: ExecutionBindingConfig;
   /**
@@ -140,7 +140,7 @@ export interface DowncityConfig {
    */
   sandbox?: SandboxProjectConfig;
   /**
-   * LLM 全量配置（通常来自 console 全局层合并结果）。
+   * LLM 全量配置（通常来自平台全局层合并结果）。
    *
    * 关键点（中文）
    * - 运行时会读取该字段创建真实模型实例。

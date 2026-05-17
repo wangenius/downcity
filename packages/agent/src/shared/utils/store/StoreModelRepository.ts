@@ -1,28 +1,29 @@
 /**
- * ConsoleStore 模型与 Provider 仓储。
+ * PlatformStore 模型与 Provider 仓储。
  *
  * 关键点（中文）
  * - 只负责 model/provider 相关读写，不处理 env、channel account、secure settings。
- * - 对外暴露纯函数，`ConsoleStore` 作为门面调用。
+ * - 对外暴露纯函数，`PlatformStore` 作为门面调用。
  */
 
 import { eq } from "drizzle-orm";
 import type {
   StoredModel,
   StoredModelProvider,
+  StoredProviderMeta,
   UpsertModelInput,
   UpsertModelProviderInput,
 } from "@/shared/types/Store.js";
 import { decryptText, encryptText } from "./crypto.js";
 import { modelProvidersTable, modelsTable } from "./schema.js";
-import type { ConsoleStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "./StoreShared.js";
 import { nowIso } from "./StoreShared.js";
 
 /**
  * 列出 providers。
  */
 export async function listStoredProviders(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
 ): Promise<StoredModelProvider[]> {
   const rows = context.db.select().from(modelProvidersTable).all();
   const result: StoredModelProvider[] = [];
@@ -44,10 +45,24 @@ export async function listStoredProviders(
 }
 
 /**
+ * 同步列出 provider 元信息（不含 API Key）。
+ */
+export function listStoredProviderMetas(
+  context: PlatformStoreContext,
+): StoredProviderMeta[] {
+  const rows = context.db.select().from(modelProvidersTable).all();
+  return rows.map((row) => ({
+    id: row.id,
+    type: row.type as StoredProviderMeta["type"],
+    baseUrl: row.baseUrl || undefined,
+  }));
+}
+
+/**
  * 获取单个 provider。
  */
 export async function getStoredProvider(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   providerId: string,
 ): Promise<StoredModelProvider | null> {
   const row = context.db
@@ -74,7 +89,7 @@ export async function getStoredProvider(
  * 新增或更新 provider。
  */
 export async function upsertStoredProvider(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   input: UpsertModelProviderInput,
 ): Promise<void> {
   const id = String(input.id || "").trim();
@@ -123,7 +138,7 @@ export async function upsertStoredProvider(
  * 删除 provider。
  */
 export function removeStoredProvider(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   providerId: string,
 ): void {
   const refs = context.db
@@ -145,7 +160,7 @@ export function removeStoredProvider(
 /**
  * 列出 models。
  */
-export function listStoredModels(context: ConsoleStoreContext): StoredModel[] {
+export function listStoredModels(context: PlatformStoreContext): StoredModel[] {
   const rows = context.db.select().from(modelsTable).all();
   return rows.map((row) => ({
     id: row.id,
@@ -167,7 +182,7 @@ export function listStoredModels(context: ConsoleStoreContext): StoredModel[] {
  * 获取单个 model。
  */
 export function getStoredModel(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   modelId: string,
 ): StoredModel | null {
   const row = context.db
@@ -196,7 +211,7 @@ export function getStoredModel(
  * 新增或更新 model。
  */
 export function upsertStoredModel(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   input: UpsertModelInput,
 ): void {
   const id = String(input.id || "").trim();
@@ -256,7 +271,7 @@ export function upsertStoredModel(
  * 切换 model 暂停状态。
  */
 export function setStoredModelPaused(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   modelId: string,
   paused: boolean,
 ): void {
@@ -278,7 +293,7 @@ export function setStoredModelPaused(
  * 删除 model。
  */
 export function removeStoredModel(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   modelId: string,
 ): void {
   context.db.delete(modelsTable).where(eq(modelsTable.id, modelId)).run();
@@ -288,7 +303,7 @@ export function removeStoredModel(
  * 获取“model + provider”聚合信息。
  */
 export async function getResolvedStoredModel(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   modelId: string,
 ): Promise<{ model: StoredModel; provider: StoredModelProvider } | null> {
   const model = getStoredModel(context, modelId);
@@ -302,7 +317,7 @@ export async function getResolvedStoredModel(
  * 清空模型相关表。
  */
 export function clearStoredModelsAndProviders(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
 ): void {
   context.sqlite.exec("DELETE FROM models;");
   context.sqlite.exec("DELETE FROM model_providers;");

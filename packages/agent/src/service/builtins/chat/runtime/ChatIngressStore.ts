@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - `exec` 入站既要写 `chat history`，也要写 `session messages`
  * - 把持久化职责固定在 ingress 边界，避免遗漏到 queue worker
- * - 后续 extension / dashboard / 其他外部入口都应复用这里
+ * - 后续 extension / control UI / 其他外部入口都应复用这里
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";

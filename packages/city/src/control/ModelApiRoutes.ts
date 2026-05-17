@@ -1,5 +1,5 @@
 /**
- * Console 模型管理路由。
+ * 平台模型管理路由。
  *
  * 关键点（中文）
  * - 聚合 `/api/ui/model*` 路由，避免网关主文件过长。
@@ -9,8 +9,8 @@
 import type { Hono } from "hono";
 import fs from "fs-extra";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { ConsoleStore } from "@/store/index.js";
-import type { ConsoleAgentOption } from "@downcity/agent";
+import { PlatformStore } from "@downcity/agent";
+import type { PlatformAgentOption } from "@downcity/agent";
 import { ModelPoolService } from "@/control/ModelPoolService.js";
 
 type ShipJsonLike = {
@@ -20,10 +20,10 @@ type ShipJsonLike = {
   };
 };
 
-export function registerConsoleModelRoutes(params: {
+export function registerPlatformModelRoutes(params: {
   app: Hono;
   readRequestedAgentId: (request: Request) => string;
-  resolveSelectedAgent: (requestedAgentId: string) => Promise<ConsoleAgentOption | null>;
+  resolveSelectedAgent: (requestedAgentId: string) => Promise<PlatformAgentOption | null>;
   buildModelResponse: (requestedAgentId: string) => Promise<{
     success: boolean;
     model: {
@@ -90,7 +90,7 @@ export function registerConsoleModelRoutes(params: {
         return c.json({ success: false, error: "Missing primaryModelId" }, 400);
       }
 
-      const store = new ConsoleStore();
+      const store = new PlatformStore();
       try {
         const targetModel = store.getModel(nextPrimaryModelId);
         if (!targetModel) {

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - city 后台负责统一管理/观测多个 agent daemon。
- * - 这里处理的是 city 后台自身的 pid 与判活，不涉及 Console 模块的 UI 进程。
+ * - 这里处理的是 city 后台自身的 pid 与判活，不涉及 control plane 进程。
  * - agent daemon 启动前必须确保 city 后台已启动（强约束）。
  */
 

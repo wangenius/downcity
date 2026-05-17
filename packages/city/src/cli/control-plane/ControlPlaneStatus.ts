@@ -1,5 +1,5 @@
 /**
- * IndexConsoleStatus：city gateway / control plane 命令的状态展示辅助。
+ * ControlPlaneStatus：city gateway / control plane 命令的状态展示辅助。
  *
  * 关键点（中文）
  * - 聚合 city 后台、gateway/control plane 与受管 agent 的状态面板输出。
@@ -7,21 +7,21 @@
  */
 
 import {
-  getConsoleRuntimeStatus,
-} from "./Console.js";
-import type { ConsoleAgentProcessView } from "@downcity/agent";
+  getControlPlaneRuntimeStatus,
+} from "./ControlPlaneRuntime.js";
+import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
-  getConsoleAgentRegistryPath,
+  getManagedAgentRegistryPath,
   getCityPidPath,
 } from "@/process/registry/CityPaths.js";
 import { isCityProcessAlive, readCityPid } from "@/process/registry/CityRuntime.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
-import { resolveRunningConsoleAgents } from "./IndexConsoleProcess.js";
+import { resolveRunningManagedAgents } from "./ControlPlaneProcess.js";
 
 /**
  * 打印当前受管 agent 面板。
  */
-export function printRunningConsoleAgents(views: ConsoleAgentProcessView[]): void {
+export function printRunningManagedAgents(views: ManagedAgentProcessView[]): void {
   if (views.length === 0) {
     emitCliBlock({
       tone: "info",
@@ -56,23 +56,23 @@ export function printRunningConsoleAgents(views: ConsoleAgentProcessView[]): voi
 }
 
 /**
- * 打印 city 后台、Console 与受管 agent 的状态面板。
+ * 打印 city 后台、control plane 与受管 agent 的状态面板。
  */
-export async function consoleStatusCommand(): Promise<void> {
+export async function controlPlaneStatusCommand(): Promise<void> {
   const pidPath = getCityPidPath();
 
-  const consolePid = await readCityPid();
-  const running = Boolean(consolePid && isCityProcessAlive(consolePid));
+  const cityPid = await readCityPid();
+  const running = Boolean(cityPid && isCityProcessAlive(cityPid));
   emitCliBlock({
-    tone: running ? "success" : consolePid ? "warning" : "info",
+    tone: running ? "success" : cityPid ? "warning" : "info",
     title: "City runtime",
-    summary: running ? "running" : consolePid ? "stale" : "stopped",
+    summary: running ? "running" : cityPid ? "stale" : "stopped",
     facts: [
       {
         label: "registry",
-        value: getConsoleAgentRegistryPath(),
+        value: getManagedAgentRegistryPath(),
       },
-      ...(consolePid && !running
+      ...(cityPid && !running
         ? [
             {
               label: "warning",
@@ -91,7 +91,7 @@ export async function consoleStatusCommand(): Promise<void> {
     ],
   });
 
-  const ui = await getConsoleRuntimeStatus();
+  const ui = await getControlPlaneRuntimeStatus();
   emitCliBlock({
     tone: ui.running ? "success" : "info",
     title: "Console",
@@ -107,10 +107,10 @@ export async function consoleStatusCommand(): Promise<void> {
   });
 
   try {
-    const runningAgents = await resolveRunningConsoleAgents({
+    const runningAgents = await resolveRunningManagedAgents({
       syncRegistry: false,
     });
-    printRunningConsoleAgents(runningAgents);
+    printRunningManagedAgents(runningAgents);
   } catch (error) {
     emitCliBlock({
       tone: "warning",
@@ -127,9 +127,9 @@ export async function consoleStatusCommand(): Promise<void> {
 }
 
 /**
- * 打印 Console 独立状态面板。
+ * 打印 control plane 独立状态面板。
  */
-export function printConsoleStatusPanel(status: {
+export function printControlPlaneStatusPanel(status: {
   running: boolean;
   pid?: number;
   pidPath: string;

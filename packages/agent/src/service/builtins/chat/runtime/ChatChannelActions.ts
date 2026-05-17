@@ -7,7 +7,7 @@
  * - 对外只暴露 action 级入口，供 ChatServiceActions 装配使用。
  */
 
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { PlatformStore } from "@/shared/utils/store/index.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import type {
@@ -264,7 +264,7 @@ export async function executeChatConfigureAction(params: {
   if (Object.prototype.hasOwnProperty.call(patch, "channelAccountId")) {
     const channelAccountId = String(patch.channelAccountId || "").trim();
     if (channelAccountId) {
-      const store = new ConsoleStore();
+      const store = new PlatformStore();
       try {
         const account = store.getChannelAccountSync(channelAccountId);
         if (!account) {

@@ -1,8 +1,8 @@
 /**
- * ConsoleStore 门面。
+ * PlatformStore 门面。
  *
  * 关键点（中文）
- * - 对外仍然只暴露一个 `ConsoleStore` 类，保持调用入口稳定。
+ * - 对外仍然只暴露一个 `PlatformStore` 类，保持调用入口稳定。
  * - 内部已经按职责拆成 schema、model/provider、secure settings、env、channel accounts 多个模块。
  * - 这样既能保持外部 API 简洁，也能把通用存储层控制在可维护的模块粒度内。
  */
@@ -10,9 +10,9 @@
 import fs from "fs-extra";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { getConsoleShipDbPath } from "@/host/runtime/CityPaths.js";
-import { ensureConsoleStoreSchema } from "./StoreSchema.js";
-import type { ConsoleStoreContext } from "./StoreShared.js";
+import { getPlatformStoreDbPath } from "@/host/runtime/CityPaths.js";
+import { ensurePlatformStoreSchema } from "./StoreSchema.js";
+import type { PlatformStoreContext } from "./StoreShared.js";
 import type {
   StoredAgentEnvEntry,
   StoredChannelAccount,
@@ -21,6 +21,7 @@ import type {
   StoredGlobalEnvEntry,
   StoredModel,
   StoredModelProvider,
+  StoredProviderMeta,
   UpsertAgentEnvEntryInput,
   UpsertChannelAccountInput,
   UpsertEnvEntryInput,
@@ -29,7 +30,7 @@ import type {
   UpsertModelProviderInput,
 } from "@/shared/types/Store.js";
 import {
-  getConsoleRootDirPath,
+  getPlatformRootDirPath,
 } from "@/host/runtime/CityPaths.js";
 import {
   clearStoredModelsAndProviders,
@@ -37,6 +38,7 @@ import {
   getStoredModel,
   getStoredProvider,
   listStoredModels,
+  listStoredProviderMetas,
   listStoredProviders,
   removeStoredModel,
   removeStoredProvider,
@@ -83,24 +85,25 @@ import {
 } from "./StoreChannelAccountRepository.js";
 
 /**
- * Console 模型存储。
+ * 平台控制面全局存储门面。
  */
-export class ConsoleStore {
+export class PlatformStore {
   private readonly sqlite: Database.Database;
   private readonly db: ReturnType<typeof drizzle>;
 
-  constructor(dbPath: string = getConsoleShipDbPath()) {
-    fs.ensureDirSync(getConsoleRootDirPath());
+  constructor(dbPath: string = getPlatformStoreDbPath()) {
+    fs.ensureDirSync(getPlatformRootDirPath());
     this.sqlite = new Database(dbPath);
+    this.sqlite.pragma("foreign_keys = ON");
     this.sqlite.pragma("journal_mode = WAL");
     this.db = drizzle(this.sqlite);
-    ensureConsoleStoreSchema(this.context);
+    ensurePlatformStoreSchema(this.context);
   }
 
   /**
    * 暴露给内部 helper 的只读上下文视图。
    */
-  private get context(): ConsoleStoreContext {
+  private get context(): PlatformStoreContext {
     return {
       sqlite: this.sqlite,
       db: this.db,
@@ -150,6 +153,13 @@ export class ConsoleStore {
   }
 
   /**
+   * 同步列出 provider 元信息（不含 API Key）。
+   */
+  listProvidersSync(): StoredProviderMeta[] {
+    return listStoredProviderMetas(this.context);
+  }
+
+  /**
    * 获取单个 model。
    */
   getModel(modelId: string): StoredModel | null {
@@ -192,7 +202,7 @@ export class ConsoleStore {
    */
   clearAll(): void {
     clearStoredModelsAndProviders(this.context);
-    this.sqlite.exec("DELETE FROM console_secure_settings;");
+    this.sqlite.exec("DELETE FROM platform_secure_settings;");
     this.sqlite.exec("DELETE FROM env_entries;");
     this.sqlite.exec("DELETE FROM global_env;");
     this.sqlite.exec("DELETE FROM agent_env;");
@@ -463,22 +473,22 @@ export class ConsoleStore {
 }
 
 /**
- * 在 ConsoleStore 上下文中执行操作。
+ * 在 PlatformStore 上下文中执行操作。
  *
  * 关键点（中文）
- * - 用于一次性数据库操作，无需手动管理 ConsoleStore 实例生命周期。
+ * - 用于一次性数据库操作，无需手动管理 PlatformStore 实例生命周期。
  * - 自动处理数据库连接和关闭。
  */
-export function withConsoleStore<T>(callback: (context: ConsoleStoreContext) => T): T {
-  const dbPath = getConsoleShipDbPath();
+export function withPlatformStore<T>(callback: (context: PlatformStoreContext) => T): T {
+  const dbPath = getPlatformStoreDbPath();
   fs.ensureDirSync(dbPath.replace(/\/[^/]+$/, ""));
   const sqlite = new Database(dbPath);
   sqlite.pragma("journal_mode = WAL");
-  const context: ConsoleStoreContext = {
+  const context: PlatformStoreContext = {
     sqlite,
     db: drizzle(sqlite),
   };
-  ensureConsoleStoreSchema(context);
+  ensurePlatformStoreSchema(context);
   try {
     return callback(context);
   } finally {

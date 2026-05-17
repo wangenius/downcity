@@ -120,13 +120,22 @@ export {
   resolveAssistantMessageForPersistence,
 } from "./service/builtins/chat/runtime/UserVisibleText.js";
 export { logger, getLogger, type Logger } from "./shared/utils/logger/Logger.js";
+export { PlatformStore, withPlatformStore } from "./shared/utils/store/index.js";
+export { ensurePlatformStoreSchema } from "./shared/utils/store/StoreSchema.js";
+export {
+  nowIso,
+  normalizeNonEmptyText,
+  optionalTrimmedText,
+  type PlatformDrizzleDb,
+  type PlatformStoreContext,
+} from "./shared/utils/store/StoreShared.js";
 
 // 共享协议类型与控制面常量
 export * from "./shared/types/AgentHost.js";
 export * from "./shared/types/AgentProject.js";
 export * from "./shared/types/AuthPlugin.js";
-export * from "./shared/types/Console.js";
-export * from "./shared/types/ConsoleGateway.js";
+export * from "./shared/types/Platform.js";
+export * from "./shared/types/PlatformGateway.js";
 export * from "./shared/types/Daemon.js";
 export * from "./shared/types/DowncityConfig.js";
 export * from "./shared/types/ExecutionBinding.js";
@@ -162,11 +171,11 @@ export { getDowncityJsonPath } from './config/Paths.js';
 // Agent 项目初始化
 export {
   normalizeDefaultAgentName,
-  listConsoleModelChoices,
+  listPlatformModelChoices,
   isAgentProjectInitialized,
   initializeAgentProject,
 } from "./agent/project/AgentInitializer.js";
-export type { ConsoleModelChoice } from "./agent/project/AgentInitializer.js";
+export type { PlatformModelChoice } from "./agent/project/AgentInitializer.js";
 export {
   readProjectExecutionBinding,
   readProjectPrimaryModelId,

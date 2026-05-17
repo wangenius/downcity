@@ -1,5 +1,5 @@
 /**
- * Console gateway 共享辅助函数。
+ * 平台控制面网关共享辅助函数。
  *
  * 关键点（中文）
  * - 提供与路由层正交的纯文本/纯 payload 组装能力。
@@ -7,9 +7,9 @@
  */
 
 /**
- * Console workload 安全检查结果。
+ * 平台工作负载安全检查结果。
  */
-export interface ConsoleWorkloadSafetyCheck {
+export interface PlatformWorkloadSafetyCheck {
   /**
    * 当前仍在运行的上下文列表。
    */
@@ -23,8 +23,8 @@ export interface ConsoleWorkloadSafetyCheck {
 /**
  * 生成 workload 阻塞详情文本。
  */
-export function buildConsoleWorkloadBlockDetail(
-  checks: ConsoleWorkloadSafetyCheck,
+export function buildPlatformWorkloadBlockDetail(
+  checks: PlatformWorkloadSafetyCheck,
 ): string {
   const contextLabel =
     checks.activeContexts.length > 0
@@ -38,16 +38,16 @@ export function buildConsoleWorkloadBlockDetail(
 /**
  * 生成 stop/restart 被阻塞时的统一响应 payload。
  */
-export function buildConsoleWorkloadBlockPayload(
+export function buildPlatformWorkloadBlockPayload(
   action: "stop" | "restart",
-  checks: ConsoleWorkloadSafetyCheck,
+  checks: PlatformWorkloadSafetyCheck,
 ): {
   success: false;
   error: string;
   activeContexts: string[];
   activeTasks: string[];
 } {
-  const detail = buildConsoleWorkloadBlockDetail(checks);
+  const detail = buildPlatformWorkloadBlockDetail(checks);
   return {
     success: false,
     error: detail

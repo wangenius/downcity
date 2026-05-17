@@ -9,7 +9,7 @@
 
 import prompts from "prompts";
 import type { Command } from "commander";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import {
   discoverProviderModels,
@@ -31,9 +31,9 @@ import {
  */
 export async function runInteractiveModelCreateFlow(options: { json?: boolean }): Promise<void> {
   const asJson = options.json !== false;
-  let store: ConsoleStore | null = null;
+  let store: PlatformStore | null = null;
   try {
-    store = new ConsoleStore();
+    store = new PlatformStore();
     const createChoice = await prompts({
       type: "select",
       name: "mode",
@@ -75,7 +75,7 @@ export async function runInteractiveModelCreateFlow(options: { json?: boolean })
 }
 
 async function runInteractiveProviderCreate(
-  store: ConsoleStore,
+  store: PlatformStore,
   asJson: boolean,
 ): Promise<void> {
   const providerResp = (await prompts([
@@ -198,7 +198,7 @@ async function runInteractiveProviderCreate(
 }
 
 async function runInteractiveModelCreate(
-  store: ConsoleStore,
+  store: PlatformStore,
   asJson: boolean,
 ): Promise<void> {
   const providers = await store.listProviders();
@@ -238,8 +238,8 @@ async function runInteractiveModelCreate(
  * - 自动跳过已存在的模型 ID。
  */
 async function runInteractiveModelDiscoverCreate(
-  store: ConsoleStore,
-  providers: Awaited<ReturnType<ConsoleStore["listProviders"]>>,
+  store: PlatformStore,
+  providers: Awaited<ReturnType<PlatformStore["listProviders"]>>,
   asJson: boolean,
 ): Promise<void> {
   const providerResp = await prompts([
@@ -329,8 +329,8 @@ async function runInteractiveModelDiscoverCreate(
  * - 保留原有手动创建能力，供需要自定义模型 ID 或参数的用户使用。
  */
 async function runInteractiveModelManualCreate(
-  store: ConsoleStore,
-  providers: Awaited<ReturnType<ConsoleStore["listProviders"]>>,
+  store: PlatformStore,
+  providers: Awaited<ReturnType<PlatformStore["listProviders"]>>,
   asJson: boolean,
 ): Promise<void> {
   const modelResp = (await prompts([

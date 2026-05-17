@@ -62,34 +62,34 @@ export const SERVER_AUTH_ROUTE_POLICIES: AuthRoutePolicy[] = [
     anyPermissions: ["plugin.write"],
   },
   {
-    path: "/api/dashboard/authorization",
+    path: "/api/control/authorization",
     method: "GET",
     requireAuth: true,
     anyPermissions: ["auth.read"],
   },
   {
-    path: "/api/dashboard/authorization/config",
+    path: "/api/control/authorization/config",
     method: "POST",
     requireAuth: true,
     anyPermissions: ["auth.write"],
   },
   {
-    path: "/api/dashboard/authorization/action",
+    path: "/api/control/authorization/action",
     method: "POST",
     requireAuth: true,
     anyPermissions: ["auth.write"],
   },
   {
-    path: "/api/dashboard/*",
+    path: "/api/control/*",
     method: "*",
     requireAuth: true,
   },
 ];
 
 /**
- * Console 网关侧路由权限矩阵。
+ * 控制面网关侧路由权限矩阵。
  */
-export const CONSOLE_AUTH_ROUTE_POLICIES: AuthRoutePolicy[] = [
+export const CONTROL_PLANE_AUTH_ROUTE_POLICIES: AuthRoutePolicy[] = [
   { path: "/api/auth/*", method: "*", requireAuth: false },
   { path: "/health", method: "GET", requireAuth: false },
   {

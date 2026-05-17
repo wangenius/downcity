@@ -1,5 +1,5 @@
 /**
- * Console agent 动作辅助。
+ * 平台 agent 动作辅助。
  *
  * 关键点（中文）
  * - 聚合 agent 进程控制、目录选择、命令执行等带副作用能力。
@@ -28,7 +28,7 @@ import {
   getDowncityJsonPath,
 } from "@/config/Paths.js";
 import { stripInvocationAuthEnv } from "@/http/auth/AuthEnv.js";
-import type { ConsoleAgentOption } from "@downcity/agent";
+import type { PlatformAgentOption } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
 import type {
   ExecutionBindingConfig,
@@ -48,9 +48,9 @@ function resolveExecutionInput(params: {
 }
 
 /**
- * 初始化 Console 选中的 agent 项目。
+ * 初始化平台控制面选中的 agent 项目。
  */
-export async function initializeConsoleAgentProject(params: {
+export async function initializePlatformAgentProject(params: {
   projectRoot: string;
   agentName?: unknown;
   modelId?: unknown;
@@ -69,7 +69,7 @@ export async function initializeConsoleAgentProject(params: {
 /**
  * 更新现有 agent 的执行绑定配置。
  */
-export async function updateConsoleAgentExecution(params: {
+export async function updatePlatformAgentExecution(params: {
   projectRoot: string;
   modelId?: unknown;
 }): Promise<{
@@ -103,7 +103,7 @@ export async function updateConsoleAgentExecution(params: {
 /**
  * 调起系统目录选择器。
  */
-export async function pickConsoleDirectoryPath(): Promise<string> {
+export async function pickPlatformAgentDirectoryPath(): Promise<string> {
   if (process.platform !== "darwin") {
     throw new Error("System directory picker is currently only supported on macOS.");
   }
@@ -127,7 +127,7 @@ export async function pickConsoleDirectoryPath(): Promise<string> {
 /**
  * 在 agent 项目目录中执行 shell 命令。
  */
-export async function executeConsoleShellCommand(params: {
+export async function executeAgentProjectShellCommand(params: {
   command: string;
   cwd: string;
   timeoutMs: number;
@@ -216,7 +216,7 @@ export async function executeConsoleShellCommand(params: {
 /**
  * 启动指定 agent。
  */
-export async function startConsoleAgentByProjectRoot(params: {
+export async function startManagedAgentByProjectRoot(params: {
   projectRoot: string;
   cliPath: string;
   initializeIfNeeded?: boolean;
@@ -291,9 +291,9 @@ export async function startConsoleAgentByProjectRoot(params: {
 /**
  * 检查 agent 重启/停止前是否存在运行中工作负载。
  */
-export async function inspectConsoleAgentRestartSafety(params: {
+export async function inspectManagedAgentRestartSafety(params: {
   projectRoot: string;
-  listKnownAgents: () => Promise<ConsoleAgentOption[]>;
+  listKnownAgents: () => Promise<PlatformAgentOption[]>;
 }): Promise<{
   activeContexts: string[];
   activeTasks: string[];
@@ -323,7 +323,7 @@ export async function inspectConsoleAgentRestartSafety(params: {
   );
   if (targetAgent?.running === true && targetAgent.baseUrl) {
     try {
-      const tasksUrl = new URL("/api/dashboard/tasks", targetAgent.baseUrl).toString();
+      const tasksUrl = new URL("/api/control/tasks", targetAgent.baseUrl).toString();
       const tasksResponse = await fetch(tasksUrl);
       if (tasksResponse.ok) {
         const payload = (await tasksResponse.json().catch(() => ({}))) as {
@@ -334,7 +334,7 @@ export async function inspectConsoleAgentRestartSafety(params: {
           const title = String(task?.title || "").trim();
           if (!title) continue;
           const runsUrl = new URL(
-            `/api/dashboard/tasks/${encodeURIComponent(title)}/runs?limit=1`,
+            `/api/control/tasks/${encodeURIComponent(title)}/runs?limit=1`,
             targetAgent.baseUrl,
           ).toString();
           const runsResponse = await fetch(runsUrl);
@@ -362,7 +362,7 @@ export async function inspectConsoleAgentRestartSafety(params: {
 /**
  * 重启指定 agent。
  */
-export async function restartConsoleAgentByProjectRoot(params: {
+export async function restartManagedAgentByProjectRoot(params: {
   projectRoot: string;
   cliPath: string;
 }): Promise<{
@@ -377,7 +377,7 @@ export async function restartConsoleAgentByProjectRoot(params: {
   await stopDaemonProcess({ projectRoot: normalizedRoot }).catch(() => ({
     stopped: false,
   }));
-  const started = await startConsoleAgentByProjectRoot({
+  const started = await startManagedAgentByProjectRoot({
     projectRoot: normalizedRoot,
     cliPath: params.cliPath,
   });
@@ -394,7 +394,7 @@ export async function restartConsoleAgentByProjectRoot(params: {
 /**
  * 停止指定 agent。
  */
-export async function stopConsoleAgentByProjectRoot(projectRoot: string): Promise<{
+export async function stopManagedAgentByProjectRoot(projectRoot: string): Promise<{
   success: boolean;
   projectRoot: string;
   stopped: boolean;

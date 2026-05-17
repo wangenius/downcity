@@ -18,7 +18,7 @@ import fg from "fast-glob";
 import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/config/Paths.js";
 import {
   initializeAgentProject,
-  listConsoleModelChoices,
+  listPlatformModelChoices,
   normalizeDefaultAgentName,
 } from "@downcity/agent";
 import type { AgentProjectChannel } from "@downcity/agent";
@@ -67,8 +67,8 @@ export async function initCommand(
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
-  const consoleModelChoices = await listConsoleModelChoices();
-  const consoleModelIds = consoleModelChoices.map((item) => item.value);
+  const platformModelChoices = await listPlatformModelChoices();
+  const platformModelIds = platformModelChoices.map((item) => item.value);
 
   // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
   if (existingShipJson) {
@@ -104,8 +104,8 @@ export async function initCommand(
     {
       type: "select",
       name: "primaryModelId",
-      message: "Select primary model (from console model pool)",
-      choices: consoleModelChoices,
+      message: "Select primary model (from platform model pool)",
+      choices: platformModelChoices,
       initial: 0,
     },
     {
@@ -126,9 +126,9 @@ export async function initCommand(
     String(response.name || "").trim() || defaultAgentName;
   const primaryModelId =
     String(response.primaryModelId || "").trim() || "default";
-  if (consoleModelIds.length === 0) {
+  if (platformModelIds.length === 0) {
     throw new CliError({
-      title: "Console model pool is empty",
+      title: "Platform model pool is empty",
       note: "Please configure at least one model first.",
       fix: "city model create",
     });

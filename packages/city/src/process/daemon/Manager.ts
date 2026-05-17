@@ -24,8 +24,8 @@ import {
   type DaemonStaleReason,
 } from "@downcity/agent";
 import {
-  markConsoleAgentStopped,
-  upsertConsoleAgentEntry,
+  markManagedAgentStopped,
+  upsertManagedAgentEntry,
 } from "@/process/registry/CityRegistry.js";
 import { signalDetachedProcess } from "@/process/registry/ProcessSweep.js";
 
@@ -193,7 +193,7 @@ export const cleanupStaleDaemonFiles = async (
   await fs.remove(getDaemonMetaPath(projectRoot));
   // 关键点（中文）：僵尸 daemon 清理时标记 stopped，保留历史记录。
   try {
-    await markConsoleAgentStopped(projectRoot);
+    await markManagedAgentStopped(projectRoot);
   } catch {
     // ignore registry sync errors
   }
@@ -267,9 +267,9 @@ export const startDaemonProcess = async (params: {
     platform: process.platform,
   });
 
-  // 关键点（中文）：启动成功后必须登记到 console registry，否则该 daemon 视为“无效启动”。
+  // 关键点（中文）：启动成功后必须登记到 managed agent registry，否则该 daemon 视为“无效启动”。
   try {
-    await upsertConsoleAgentEntry({
+    await upsertManagedAgentEntry({
       projectRoot,
       pid: child.pid,
       status: "running",
@@ -335,7 +335,7 @@ export const stopDaemonProcess = async (params: {
   await fs.remove(getDaemonMetaPath(projectRoot));
   // 关键点（中文）：停止后标记为 stopped，保留历史记录。
   try {
-    await markConsoleAgentStopped(projectRoot);
+    await markManagedAgentStopped(projectRoot);
   } catch {
     // ignore registry sync errors
   }

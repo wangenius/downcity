@@ -8,8 +8,8 @@
  */
 
 import type { Command } from "commander";
-import { ConsoleStore } from "@/store/index.js";
-import type { StoredEnvEntry, StoredEnvScope } from "@/store/StoreTypes.js";
+import { PlatformStore } from "@downcity/agent";
+import type { StoredEnvEntry, StoredEnvScope } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean } from "./IndexSupport.js";
@@ -165,7 +165,7 @@ async function listKeysEntries(params: {
    */
   agentId?: string;
 }): Promise<StoredEnvEntry[]> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     if (params.scope === "all") {
       return await store.listEnvEntries();
@@ -312,7 +312,7 @@ async function setKeyEntry(params: {
    */
   asJson?: boolean;
 }): Promise<void> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     await store.upsertEnvEntry({
       scope: params.scope,
@@ -390,7 +390,7 @@ function deleteKeyEntry(params: {
    */
   asJson?: boolean;
 }): void {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     store.removeEnvEntry({
       scope: params.scope,

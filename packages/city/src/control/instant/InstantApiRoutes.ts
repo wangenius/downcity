@@ -1,5 +1,5 @@
 /**
- * InlineInstantRoutes：Inline Composer 即时模式路由。
+ * InstantApiRoutes：Inline Composer 即时模式路由。
  *
  * 关键点（中文）
  * - 统一暴露 `/api/ui/inline/instant-run`，避免扩展直接区分 model/acp 两套后端路径。
@@ -7,13 +7,13 @@
  */
 
 import type { Hono } from "hono";
-import type { ConsoleAgentOption } from "@downcity/agent";
+import type { PlatformAgentOption } from "@downcity/agent";
 import type {
-  ConsoleInlineInstantRunInput,
-  ConsoleInlineInstantService,
+  PlatformInlineInstantRunInput,
+  PlatformInlineInstantService,
   InlineInstantExecutorType,
 } from "@downcity/agent";
-import { InlineInstantSessionService } from "@/control/InlineInstantSessionService.js";
+import { InstantSessionService } from "@/control/instant/InstantSessionService.js";
 
 function normalizeExecutorType(input: unknown): InlineInstantExecutorType | "" {
   const value = String(input || "").trim();
@@ -24,20 +24,20 @@ function normalizeExecutorType(input: unknown): InlineInstantExecutorType | "" {
 /**
  * 注册 Inline Composer 即时模式路由。
  */
-export function registerConsoleInlineInstantRoutes(params: {
+export function registerPlatformInstantRoutes(params: {
   app: Hono;
-  resolveAgentById: (requestedAgentId: string) => Promise<ConsoleAgentOption | null>;
-  instantSessionService?: ConsoleInlineInstantService;
+  resolveAgentById: (requestedAgentId: string) => Promise<PlatformAgentOption | null>;
+  instantSessionService?: PlatformInlineInstantService;
 }): void {
   const service =
     params.instantSessionService ||
-    new InlineInstantSessionService({
+    new InstantSessionService({
       resolveAgentById: (agentId) => params.resolveAgentById(agentId),
     });
 
   params.app.post("/api/ui/inline/instant-run", async (c) => {
     try {
-      const body = (await c.req.json().catch(() => ({}))) as Partial<ConsoleInlineInstantRunInput>;
+      const body = (await c.req.json().catch(() => ({}))) as Partial<PlatformInlineInstantRunInput>;
       const executorType = normalizeExecutorType(body.executorType);
       if (!executorType) {
         return c.json({ success: false, error: "Missing or invalid executorType" }, 400);

@@ -1,5 +1,5 @@
 /**
- * ControlGatewayRoutes：控制面网关路由注册。
+ * PlatformApiRoutes：平台控制面 API 路由注册。
  *
  * 关键点（中文）
  * - 路由注册从 `ControlGateway` 宿主类中拆出，避免网关门面继续膨胀。
@@ -7,31 +7,31 @@
  */
 
 import type { Hono, Context } from "hono";
-import { registerConsoleModelRoutes } from "@/control/ModelApiRoutes.js";
-import { registerConsoleInlineInstantRoutes } from "@/control/InlineInstantRoutes.js";
-import { registerConsoleChannelAccountRoutes } from "@/control/ChannelAccountApiRoutes.js";
-import { registerConsoleEnvRoutes } from "@/control/EnvApiRoutes.js";
-import { registerConsoleAgentStatusRoutes } from "@/control/AgentStatusApiRoutes.js";
-import { registerConsolePluginRoutes } from "@/control/PluginApiRoutes.js";
+import { registerPlatformModelRoutes } from "@/control/ModelApiRoutes.js";
+import { registerPlatformInstantRoutes } from "@/control/instant/InstantApiRoutes.js";
+import { registerPlatformChannelAccountRoutes } from "@/control/ChannelAccountApiRoutes.js";
+import { registerPlatformEnvRoutes } from "@/control/EnvApiRoutes.js";
+import { registerPlatformAgentStatusRoutes } from "@/control/AgentStatusApiRoutes.js";
+import { registerPlatformPluginRoutes } from "@/control/PluginApiRoutes.js";
 import type {
-  ConsoleAgentDirectoryInspection,
-  ConsoleAgentOption,
-  ConsoleAgentsResponse,
-  ConsoleConfigFileStatusItem,
-  ConsoleConfigStatusResponse,
-  ConsoleLocalModelsResponse,
+  PlatformAgentDirectoryInspection,
+  PlatformAgentOption,
+  PlatformAgentsResponse,
+  PlatformConfigFileStatusItem,
+  PlatformConfigStatusResponse,
+  PlatformLocalModelsResponse,
 } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
-import { buildConsoleWorkloadBlockPayload } from "@/control/gateway/GatewaySupport.js";
+import { buildPlatformWorkloadBlockPayload } from "@/control/gateway/GatewaySupport.js";
 
 /**
  * 控制面路由宿主能力。
  */
-export interface ControlGatewayRouteHandlers {
+export interface PlatformApiRouteHandlers {
   /** 读取请求中的 agentId。 */
   readRequestedAgentId(request: Request): string;
   /** 构建 agents 响应。 */
-  buildAgentsResponse(requestedAgentId: string): Promise<ConsoleAgentsResponse>;
+  buildAgentsResponse(requestedAgentId: string): Promise<PlatformAgentsResponse>;
   /** 初始化 agent 项目骨架。 */
   initializeAgentProject(projectRoot: string, initialization: {
     agentName?: unknown;
@@ -66,9 +66,9 @@ export interface ControlGatewayRouteHandlers {
   }>;
   /** 选择系统目录。 */
   pickDirectoryPath(): Promise<string>;
-  inspectAgentDirectory(projectRoot: string): Promise<ConsoleAgentDirectoryInspection>;
+  inspectAgentDirectory(projectRoot: string): Promise<PlatformAgentDirectoryInspection>;
   /** 列出本地 GGUF 模型。 */
-  listLocalModels(projectRoot?: string): Promise<ConsoleLocalModelsResponse>;
+  listLocalModels(projectRoot?: string): Promise<PlatformLocalModelsResponse>;
 
   /** 探测 agent 目录状态。 */
   /** 检查 agent 停止/重启安全性。 */
@@ -94,9 +94,9 @@ export interface ControlGatewayRouteHandlers {
     message?: string;
   }>;
   /** 构建 config-status 响应。 */
-  buildConfigStatusResponse(requestedAgentId: string): Promise<ConsoleConfigStatusResponse>;
+  buildConfigStatusResponse(requestedAgentId: string): Promise<PlatformConfigStatusResponse>;
   /** 根据 id 查找 agent。 */
-  resolveAgentById(requestedAgentId: string): Promise<ConsoleAgentOption | null>;
+  resolveAgentById(requestedAgentId: string): Promise<PlatformAgentOption | null>;
   /** 执行 shell 命令。 */
   executeShellCommand(params: {
     command: string;
@@ -132,7 +132,7 @@ export interface ControlGatewayRouteHandlers {
     };
   }>;
   /** 解析当前选中的 agent。 */
-  resolveSelectedAgent(requestedAgentId: string): Promise<ConsoleAgentOption | null>;
+  resolveSelectedAgent(requestedAgentId: string): Promise<PlatformAgentOption | null>;
   /** 构建 upstream URL。 */
   buildUpstreamUrl(requestUrl: URL, baseUrl: string): string;
   /** 代理请求。 */
@@ -142,11 +142,11 @@ export interface ControlGatewayRouteHandlers {
 }
 
 /**
- * 注册控制面网关路由。
+ * 注册平台控制面 API 路由。
  */
-export function registerControlGatewayRoutes(params: {
+export function registerPlatformApiRoutes(params: {
   app: Hono;
-  handlers: ControlGatewayRouteHandlers;
+  handlers: PlatformApiRouteHandlers;
 }): void {
   const { app, handlers } = params;
 
@@ -309,7 +309,7 @@ export function registerControlGatewayRoutes(params: {
         checks.activeContexts.length > 0 || checks.activeTasks.length > 0;
       if (hasBlocking && !forceRestart) {
         return c.json(
-          buildConsoleWorkloadBlockPayload("restart", checks),
+          buildPlatformWorkloadBlockPayload("restart", checks),
           409,
         );
       }
@@ -341,7 +341,7 @@ export function registerControlGatewayRoutes(params: {
         checks.activeContexts.length > 0 || checks.activeTasks.length > 0;
       if (hasBlocking && !forceStop) {
         return c.json(
-          buildConsoleWorkloadBlockPayload("stop", checks),
+          buildPlatformWorkloadBlockPayload("stop", checks),
           409,
         );
       }
@@ -389,7 +389,7 @@ export function registerControlGatewayRoutes(params: {
         return c.json(
           {
             success: false,
-            error: "Agent not found in console registry",
+            error: "Agent not found in managed agent registry",
           },
           404,
         );
@@ -415,7 +415,7 @@ export function registerControlGatewayRoutes(params: {
     }
   });
 
-  registerConsoleModelRoutes({
+  registerPlatformModelRoutes({
     app,
     readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
     resolveSelectedAgent: (requestedAgentId) =>
@@ -423,19 +423,19 @@ export function registerControlGatewayRoutes(params: {
     buildModelResponse: (requestedAgentId) =>
       handlers.buildModelResponse(requestedAgentId),
   });
-  registerConsoleInlineInstantRoutes({
+  registerPlatformInstantRoutes({
     app,
     resolveAgentById: (requestedAgentId) => handlers.resolveAgentById(requestedAgentId),
   });
-  registerConsoleChannelAccountRoutes({ app });
-  registerConsoleEnvRoutes({ app });
-  registerConsoleAgentStatusRoutes({
+  registerPlatformChannelAccountRoutes({ app });
+  registerPlatformEnvRoutes({ app });
+  registerPlatformAgentStatusRoutes({
     app,
     readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
     resolveSelectedAgent: (requestedAgentId) =>
       handlers.resolveSelectedAgent(requestedAgentId),
   });
-  registerConsolePluginRoutes({
+  registerPlatformPluginRoutes({
     app,
     readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
     resolveSelectedAgent: (requestedAgentId) =>

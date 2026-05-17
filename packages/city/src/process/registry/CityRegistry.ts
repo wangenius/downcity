@@ -10,16 +10,16 @@
 import fs from "fs-extra";
 import path from "node:path";
 import type {
-  ConsoleAgentRegistryEntry,
-  ConsoleAgentRegistryV1,
+  ManagedAgentRegistryEntry,
+  ManagedAgentRegistryV1,
 } from "@downcity/agent";
-import { getConsoleAgentRegistryPath, getCityRuntimeDirPath } from "./CityPaths.js";
+import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "./CityPaths.js";
 import { isCityRunning } from "./CityRuntime.js";
 
 const CONSOLE_DIR = getCityRuntimeDirPath();
-const CONSOLE_AGENTS_FILE = getConsoleAgentRegistryPath();
+const MANAGED_AGENTS_FILE = getManagedAgentRegistryPath();
 
-function buildEmptyRegistry(): ConsoleAgentRegistryV1 {
+function buildEmptyRegistry(): ManagedAgentRegistryV1 {
   return {
     v: 1,
     updatedAt: new Date().toISOString(),
@@ -49,8 +49,8 @@ function normalizeIsoTime(input: string | undefined): string {
 }
 
 function normalizeRegistryEntry(
-  entry: Partial<ConsoleAgentRegistryEntry>,
-): ConsoleAgentRegistryEntry | null {
+  entry: Partial<ManagedAgentRegistryEntry>,
+): ManagedAgentRegistryEntry | null {
   try {
     const projectRoot = normalizeProjectRoot(String(entry.projectRoot || ""));
     const pid = normalizePid(Number(entry.pid));
@@ -84,14 +84,14 @@ function normalizeRegistryEntry(
 }
 
 function normalizeRegistry(
-  value: Partial<ConsoleAgentRegistryV1> | null | undefined,
-): ConsoleAgentRegistryV1 {
+  value: Partial<ManagedAgentRegistryV1> | null | undefined,
+): ManagedAgentRegistryV1 {
   if (!value || typeof value !== "object") return buildEmptyRegistry();
   const source = Array.isArray(value.agents) ? value.agents : [];
-  const normalizedAgents: ConsoleAgentRegistryEntry[] = [];
+  const normalizedAgents: ManagedAgentRegistryEntry[] = [];
   for (const item of source) {
     if (!item || typeof item !== "object") continue;
-    const normalized = normalizeRegistryEntry(item as ConsoleAgentRegistryEntry);
+    const normalized = normalizeRegistryEntry(item as ManagedAgentRegistryEntry);
     if (!normalized) continue;
     const existingIndex = normalizedAgents.findIndex(
       (entry) => entry.projectRoot === normalized.projectRoot,
@@ -113,11 +113,11 @@ function normalizeRegistry(
   };
 }
 
-async function writeConsoleAgentRegistry(
-  registry: ConsoleAgentRegistryV1,
+async function writeManagedAgentRegistry(
+  registry: ManagedAgentRegistryV1,
 ): Promise<void> {
   await fs.ensureDir(CONSOLE_DIR);
-  await fs.writeJson(CONSOLE_AGENTS_FILE, normalizeRegistry(registry), {
+  await fs.writeJson(MANAGED_AGENTS_FILE, normalizeRegistry(registry), {
     spaces: 2,
   });
 }
@@ -129,19 +129,19 @@ async function writeConsoleAgentRegistry(
  * - 空 city 运行态也应拥有显式的空 registry，避免 Console 将“尚未启动任何 agent”误判为异常。
  * - 若文件已存在则不覆盖，保持历史记录不丢失。
  */
-export async function ensureConsoleAgentRegistry(): Promise<void> {
+export async function ensureManagedAgentRegistry(): Promise<void> {
   await fs.ensureDir(CONSOLE_DIR);
-  if (await fs.pathExists(CONSOLE_AGENTS_FILE)) {
+  if (await fs.pathExists(MANAGED_AGENTS_FILE)) {
     return;
   }
-  await writeConsoleAgentRegistry(buildEmptyRegistry());
+  await writeManagedAgentRegistry(buildEmptyRegistry());
 }
 
 /**
  * 获取 city agent registry 文件路径。
  */
-export function getConsoleAgentsRegistryPath(): string {
-  return CONSOLE_AGENTS_FILE;
+export function getManagedAgentsRegistryPath(): string {
+  return MANAGED_AGENTS_FILE;
 }
 
 /**
@@ -150,12 +150,12 @@ export function getConsoleAgentsRegistryPath(): string {
  * 关键点（中文）
  * - 文件不存在或损坏时返回空 registry，避免影响主流程。
  */
-export async function readConsoleAgentRegistry(): Promise<ConsoleAgentRegistryV1> {
+export async function readManagedAgentRegistry(): Promise<ManagedAgentRegistryV1> {
   try {
-    if (!(await fs.pathExists(CONSOLE_AGENTS_FILE))) {
+    if (!(await fs.pathExists(MANAGED_AGENTS_FILE))) {
       return buildEmptyRegistry();
     }
-    const raw = (await fs.readJson(CONSOLE_AGENTS_FILE)) as Partial<ConsoleAgentRegistryV1>;
+    const raw = (await fs.readJson(MANAGED_AGENTS_FILE)) as Partial<ManagedAgentRegistryV1>;
     return normalizeRegistry(raw);
   } catch {
     return buildEmptyRegistry();
@@ -165,15 +165,15 @@ export async function readConsoleAgentRegistry(): Promise<ConsoleAgentRegistryV1
 /**
  * 列出 city registry 中记录的 agent（按 projectRoot 排序）。
  */
-export async function listConsoleAgents(): Promise<ConsoleAgentRegistryEntry[]> {
-  const registry = await readConsoleAgentRegistry();
+export async function listManagedAgentEntries(): Promise<ManagedAgentRegistryEntry[]> {
+  const registry = await readManagedAgentRegistry();
   return [...registry.agents].sort((a, b) => a.projectRoot.localeCompare(b.projectRoot));
 }
 
 /**
  * 新增或更新一条 city agent 记录。
  */
-export async function upsertConsoleAgentEntry(input: {
+export async function upsertManagedAgentEntry(input: {
   projectRoot: string;
   pid: number;
   startedAt?: string;
@@ -189,7 +189,7 @@ export async function upsertConsoleAgentEntry(input: {
   const pid = normalizePid(input.pid);
   const nowIso = new Date().toISOString();
 
-  const registry = await readConsoleAgentRegistry();
+  const registry = await readManagedAgentRegistry();
   const index = registry.agents.findIndex((entry) => entry.projectRoot === projectRoot);
   if (index >= 0) {
     const existing = registry.agents[index];
@@ -219,15 +219,15 @@ export async function upsertConsoleAgentEntry(input: {
   }
 
   registry.updatedAt = nowIso;
-  await writeConsoleAgentRegistry(registry);
+  await writeManagedAgentRegistry(registry);
 }
 
 /**
  * 标记 agent 为 stopped（保留历史记录，不删除）。
  */
-export async function markConsoleAgentStopped(projectRoot: string): Promise<void> {
+export async function markManagedAgentStopped(projectRoot: string): Promise<void> {
   const key = normalizeProjectRoot(projectRoot);
-  const registry = await readConsoleAgentRegistry();
+  const registry = await readManagedAgentRegistry();
   const index = registry.agents.findIndex((entry) => entry.projectRoot === key);
   if (index < 0) return;
   const nowIso = new Date().toISOString();
@@ -239,18 +239,18 @@ export async function markConsoleAgentStopped(projectRoot: string): Promise<void
     updatedAt: nowIso,
   };
   registry.updatedAt = nowIso;
-  await writeConsoleAgentRegistry(registry);
+  await writeManagedAgentRegistry(registry);
 }
 
 /**
  * 按 projectRoot 移除一条 agent 记录。
  */
-export async function removeConsoleAgentEntry(projectRoot: string): Promise<void> {
+export async function removeManagedAgentEntry(projectRoot: string): Promise<void> {
   const key = normalizeProjectRoot(projectRoot);
-  const registry = await readConsoleAgentRegistry();
+  const registry = await readManagedAgentRegistry();
   const nextAgents = registry.agents.filter((entry) => entry.projectRoot !== key);
   if (nextAgents.length === registry.agents.length) return;
   registry.agents = nextAgents;
   registry.updatedAt = new Date().toISOString();
-  await writeConsoleAgentRegistry(registry);
+  await writeManagedAgentRegistry(registry);
 }

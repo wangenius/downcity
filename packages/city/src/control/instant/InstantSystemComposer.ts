@@ -1,5 +1,5 @@
 /**
- * InlineInstantSystemComposer：即时模式临时 session 的 system composer。
+ * InstantSystemComposer：即时模式临时 session 的 system composer。
  *
  * 关键点（中文）
  * - 只负责把传入的静态 prompt 文本转为 system messages。
@@ -13,7 +13,7 @@ import {
   transformPromptsIntoSystemMessages,
 } from "@downcity/agent";
 
-type InlineInstantSystemComposerOptions = {
+type InstantSystemComposerOptions = {
   /**
    * 当前要注入的静态 prompt 文本集合。
    */
@@ -31,13 +31,13 @@ type InlineInstantSystemComposerOptions = {
 /**
  * 即时模式 system composer 默认实现。
  */
-export class InlineInstantSystemComposer extends SessionSystemComposer {
+export class InstantSystemComposer extends SessionSystemComposer {
   readonly name = "inline_instant_system";
 
   private readonly prompts: string[];
   private readonly projectRoot: string;
 
-  constructor(options: InlineInstantSystemComposerOptions) {
+  constructor(options: InstantSystemComposerOptions) {
     super();
     this.prompts = Array.isArray(options.prompts)
       ? options.prompts

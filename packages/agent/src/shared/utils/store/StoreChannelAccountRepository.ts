@@ -1,5 +1,5 @@
 /**
- * ConsoleStore 渠道账号仓储。
+ * PlatformStore 渠道账号仓储。
  *
  * 关键点（中文）
  * - 统一管理 `channel_accounts` 表。
@@ -11,7 +11,7 @@ import type {
   UpsertChannelAccountInput,
 } from "@/shared/types/Store.js";
 import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
-import type { ConsoleStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "./StoreShared.js";
 import {
   normalizeChannelAccountChannel,
   normalizeNonEmptyText,
@@ -23,7 +23,7 @@ import {
  * 同步列出 channel accounts。
  */
 export function listChannelAccountsSync(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   channelInput?: string,
 ): StoredChannelAccount[] {
   const maybeChannel = optionalTrimmedText(channelInput);
@@ -61,7 +61,7 @@ export function listChannelAccountsSync(
  * 同步按 ID 获取 channel account。
  */
 export function getChannelAccountSync(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   accountIdInput: string,
 ): StoredChannelAccount | null {
   const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
@@ -73,7 +73,7 @@ export function getChannelAccountSync(
  * 异步列出 channel accounts。
  */
 export async function listChannelAccounts(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   channelInput?: string,
 ): Promise<StoredChannelAccount[]> {
   const maybeChannel = optionalTrimmedText(channelInput);
@@ -111,7 +111,7 @@ export async function listChannelAccounts(
  * 异步按 ID 获取 channel account。
  */
 export async function getChannelAccount(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   accountIdInput: string,
 ): Promise<StoredChannelAccount | null> {
   const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
@@ -123,7 +123,7 @@ export async function getChannelAccount(
  * 新增或更新 channel account。
  */
 export async function upsertChannelAccount(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   input: UpsertChannelAccountInput,
 ): Promise<void> {
   const id = normalizeNonEmptyText(input.id, "channel account id");
@@ -191,7 +191,7 @@ export async function upsertChannelAccount(
  * 删除 channel account。
  */
 export function removeChannelAccount(
-  context: ConsoleStoreContext,
+  context: PlatformStoreContext,
   accountIdInput: string,
 ): void {
   const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");

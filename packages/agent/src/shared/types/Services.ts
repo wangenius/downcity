@@ -78,7 +78,7 @@ export type ServiceCliBaseOptions = {
    */
   path?: string;
   /**
-   * agent 名称（从 console registry 解析到项目路径）。
+   * agent 名称（从 managed agent registry 解析到项目路径）。
    */
   agent?: string;
   /**

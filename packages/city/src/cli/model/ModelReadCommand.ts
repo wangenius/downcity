@@ -7,7 +7,7 @@
  */
 
 import type { Command } from "commander";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import {
   discoverProviderModels,
@@ -170,7 +170,7 @@ function registerUseCommand(model: Command): void {
     .action(async (modelId: string, options: { path?: string; json?: boolean }) => {
       const asJson = options.json !== false;
       try {
-        const store = new ConsoleStore();
+        const store = new PlatformStore();
         try {
           const id = String(modelId || "").trim();
           if (!id) throw new Error("modelId cannot be empty");

@@ -13,7 +13,7 @@ import {
   getDowncitySessionRootDirPath,
 } from "@/config/Paths.js";
 import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
-import type { DashboardSessionSummary } from "@/shared/types/DashboardData.js";
+import type { ControlSessionSummary } from "@/shared/types/ControlViewData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
 
@@ -25,12 +25,12 @@ export async function listControlSessionSummaries(params: {
   executionContext?: AgentContext;
   limit: number;
   executingSessionIds?: Set<string>;
-}): Promise<DashboardSessionSummary[]> {
+}): Promise<ControlSessionSummary[]> {
   const rootDir = getDowncitySessionRootDirPath(params.projectRoot);
   if (!(await fs.pathExists(rootDir))) return [];
 
   const entries = await fs.readdir(rootDir, { withFileTypes: true });
-  const items: DashboardSessionSummary[] = [];
+  const items: ControlSessionSummary[] = [];
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;

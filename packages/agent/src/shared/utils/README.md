@@ -3,7 +3,7 @@
 ## 模块定位
 
 `utils/` 放置可被多模块复用的基础工具实现。  
-当前主要包括日志、ConsoleStore、CLI 与时间等通用基础设施。
+当前主要包括日志、PlatformStore、CLI 与时间等通用基础设施。
 
 ## 实现概览
 
@@ -23,7 +23,7 @@
 6. `logger/FormatResponse.ts`
    - 解析 provider response / SSE payload，提取输出类型与 function call 摘要。
 7. `store/index.ts`
-   - 提供 `ConsoleStore` 门面。
+   - 提供 `PlatformStore` 门面。
    - 对外统一暴露 provider/model、secure settings、env、channel account 存储能力。
 8. `store/StoreSchema.ts`
    - 负责 SQLite 建表与轻量迁移。
@@ -41,7 +41,7 @@
 1. `main/model/CreateModel.ts` 创建模型时注入 `createLlmLoggingFetch`。
 2. `session/SessionRunScope.ts` 在运行期维护 `sessionId/requestId`。
 3. LLM 请求发出时，`utils/logger` 通过注入回调读取上下文并记录结构化日志。
-4. `main/modules/cli/Model*.ts`、`main/modules/console/*` 等控制面模块通过 `ConsoleStore` 访问 SQLite 配置数据。
+4. `main/modules/cli/Model*.ts`、控制面相关模块等通过 `PlatformStore` 访问 SQLite 配置数据。
 
 ## 边界约束
 

@@ -11,8 +11,8 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import prompts from "prompts";
 import { getDowncityJsonPath, getProfileMdPath } from "@/config/Paths.js";
-import { listConsoleAgents } from "@/process/registry/CityRegistry.js";
-import type { ConsoleAgentRegistryEntry } from "@downcity/agent";
+import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
+import type { ManagedAgentRegistryEntry } from "@downcity/agent";
 import type {
   CliAgentPromptChoice,
   CliRegisteredAgentView,
@@ -23,7 +23,7 @@ import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { CliError } from "../shared/CliError.js";
 import { resolveAgentName } from "../shared/IndexSupport.js";
-import { resolveRunningConsoleAgents } from "../console/IndexConsoleProcess.js";
+import { resolveRunningManagedAgents } from "../control-plane/ControlPlaneProcess.js";
 
 /**
  * 判断一个目录是否已经满足最小 agent 初始化条件。
@@ -36,7 +36,7 @@ function isInitializedAgentProject(projectRoot: string): boolean {
  * 将 registry entry 转换为 CLI 展示视图。
  */
 function toCliRegisteredAgentView(
-  entry: ConsoleAgentRegistryEntry,
+  entry: ManagedAgentRegistryEntry,
 ): CliRegisteredAgentView {
   const projectRoot = resolve(String(entry.projectRoot || "").trim() || ".");
   return {
@@ -50,8 +50,8 @@ function toCliRegisteredAgentView(
  * 读取当前 registry 中的已登记 agent 列表。
  */
 export async function listRegisteredAgentsForCli(): Promise<CliRegisteredAgentView[]> {
-  const entries = await listConsoleAgents();
-  const runningViews = await resolveRunningConsoleAgents({
+  const entries = await listManagedAgentEntries();
+  const runningViews = await resolveRunningManagedAgents({
     syncRegistry: false,
   });
   const runningProjectRoots = new Set(

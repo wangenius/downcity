@@ -15,7 +15,7 @@ import {
 } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { runServiceControlCommand } from "../service/ServiceCommandRemote.js";
-import type { StoredChannelAccountChannel } from "@/store/StoreTypes.js";
+import type { StoredChannelAccountChannel } from "@downcity/agent";
 import type {
   ChatChannelAccountAction,
   ChatManagerRootAction,

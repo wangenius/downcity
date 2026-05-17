@@ -42,7 +42,7 @@ export interface AgentRuntimeBase {
    */
   env: Record<string, string>;
   /**
-   * 当前 console 级全局环境变量快照。
+   * 当前平台级全局环境变量快照。
    */
   globalEnv: Record<string, string>;
   /**

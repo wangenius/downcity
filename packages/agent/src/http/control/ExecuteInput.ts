@@ -1,5 +1,5 @@
 /**
- * Dashboard execute 输入拼装 helper。
+ * Control execute 输入拼装 helper。
  *
  * 关键点（中文）
  * - 负责把 API 传入的附件规范化并落盘。

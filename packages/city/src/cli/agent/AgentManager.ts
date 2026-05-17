@@ -22,13 +22,13 @@ import {
 } from "./AgentSelection.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { injectAgentContext } from "../shared/IndexSupport.js";
-import { prepareForegroundAgent } from "../console/IndexConsoleCommand.js";
+import { prepareForegroundAgent } from "../control-plane/ControlPlaneCommand.js";
 import { CliError } from "../shared/CliError.js";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 import type { StartOptions } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
-import type { StoredChannelAccount, StoredChannelAccountChannel } from "@/store/StoreTypes.js";
+import type { StoredChannelAccount, StoredChannelAccountChannel } from "@downcity/agent";
 import type {
   AgentManagerAgentAction,
   AgentManagerAgentSummary,
@@ -113,7 +113,7 @@ function findDanglingChannelAccounts(config: DowncityConfig | null): DanglingCha
 }
 
 function loadChannelAccounts(channel?: StoredChannelAccountChannel): StoredChannelAccount[] {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     return store.listChannelAccountsSync(channel);
   } finally {

@@ -2,7 +2,7 @@
 
 ## 模块定位
 
-`types/` 是跨层共享的基础类型目录，用于承载可在 `agent`、`services`、`console` 等层之间复用的通用类型。  
+`types/` 是跨层共享的基础类型目录，用于承载可在 `agent`、`services`、`control plane` 等层之间复用的通用类型。  
 这里的类型应保持稳定、轻量、无业务副作用。
 
 ## 当前实现
@@ -33,10 +33,13 @@
   - 用于 plugin CLI / HTTP 桥接层，统一描述管理面协议。
 - `Sandbox.ts`
   - 定义 `SandboxConfig`、`SandboxProjectConfig`、`AgentSandboxConfigRecord` 等最小 sandbox 协议。
-  - 用于 console sandbox 配置层与 agent 执行层之间共享“命令执行边界”定义。
+  - 用于 control plane 配置层与 agent 执行层之间共享“命令执行边界”定义。
 - `AuthControl.ts`
   - 定义 `AuthControlPayload`。
-  - 用于 dashboard authorization 页面，统一描述 auth 管理面的返回结构。
+  - 用于 control authorization 页面，统一描述 auth 管理面的返回结构。
+- `ControlViewData.ts`
+  - 定义 `ControlSessionSummary`、`ControlTimelineEvent`、`ControlTaskRunDetail` 等。
+  - 用于 single-agent control UI 的会话、日志、任务等只读视图投影。
 - `types/auth/*`
   - 定义统一账户 V1 的用户、角色、权限、token、路由策略等基础类型。
   - 用于 `main/auth/*` 的 Bearer Token 认证链路，避免把 auth 协议散落到路由与存储层。

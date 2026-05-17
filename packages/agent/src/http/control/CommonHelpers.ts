@@ -1,13 +1,32 @@
 /**
- * Dashboard 通用 helper。
+ * 单 agent control API 通用 helper。
  *
  * 关键点（中文）
- * - 聚合 query/path/文本裁剪 等基础工具。
+ * - 聚合 control 路由、query/path/文本裁剪等基础工具。
+ * - 单 agent 控制面统一收敛到 `/api/control/*`。
  * - 不依赖任何业务状态。
  */
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 500;
+
+/**
+ * 单 agent control API 的公开路由前缀。
+ *
+ * 说明（中文）
+ * - 单 agent 控制面只暴露 `/api/control/*`。
+ */
+export const CONTROL_API_ROUTE_PREFIXES = ["/api/control"] as const;
+
+/**
+ * 为同一个 control 端点生成公开路径别名。
+ */
+export function buildControlRouteAliases(suffix: string): string[] {
+  const normalizedSuffix = String(suffix || "").startsWith("/")
+    ? String(suffix || "")
+    : `/${String(suffix || "")}`;
+  return CONTROL_API_ROUTE_PREFIXES.map((prefix) => `${prefix}${normalizedSuffix}`);
+}
 
 /**
  * 解析 limit 参数并做边界裁剪。

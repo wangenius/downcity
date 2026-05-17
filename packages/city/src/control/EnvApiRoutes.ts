@@ -1,14 +1,14 @@
 /**
- * Console Env 路由。
+ * 平台环境变量管理路由。
  *
  * 关键点（中文）
- * - 提供 Console 级与 Agent 级环境变量的统一读写接口。
+ * - 提供 control plane 级与 agent 级环境变量的统一读写接口。
  * - 所有 value 在 DB 中以密文存储，这里的接口只负责明文读写与删除。
  */
 
 import dotenv from "dotenv";
 import type { Hono } from "hono";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 
 type EnvScope = "global" | "agent";
 
@@ -65,7 +65,7 @@ function parseDotenvEntries(raw: unknown): Array<{ key: string; value: string }>
 /**
  * 注册 Env 管理 API 路由。
  */
-export function registerConsoleEnvRoutes(params: {
+export function registerPlatformEnvRoutes(params: {
   /**
    * Hono 应用实例。
    */
@@ -76,7 +76,7 @@ export function registerConsoleEnvRoutes(params: {
   app.get("/api/ui/env", async (c) => {
     const scope = normalizeScope(c.req.query("scope"));
     const agentIdRaw = c.req.query("agent");
-    const store = new ConsoleStore();
+    const store = new PlatformStore();
     try {
       if (scope === "agent") {
         const agentId = String(agentIdRaw || "").trim();
@@ -132,7 +132,7 @@ export function registerConsoleEnvRoutes(params: {
       const key = normalizeNonEmptyText(body.key, "env key");
       const description = String(body.description || "").trim();
       const value = String(body.value ?? "");
-      const store = new ConsoleStore();
+      const store = new PlatformStore();
       try {
         if (scope === "agent") {
           const agentId = normalizeNonEmptyText(body.agentId, "agentId");
@@ -177,7 +177,7 @@ export function registerConsoleEnvRoutes(params: {
       };
       const scope = normalizeScope(body.scope);
       const key = normalizeNonEmptyText(body.key, "env key");
-      const store = new ConsoleStore();
+      const store = new PlatformStore();
       try {
         if (scope === "agent") {
           const agentId = normalizeNonEmptyText(body.agentId, "agentId");
@@ -213,7 +213,7 @@ export function registerConsoleEnvRoutes(params: {
       };
       const scope = normalizeScope(body.scope);
       const entries = parseDotenvEntries(body.raw);
-      const store = new ConsoleStore();
+      const store = new PlatformStore();
       try {
         if (scope === "agent") {
           const agentId = normalizeNonEmptyText(body.agentId, "agentId");

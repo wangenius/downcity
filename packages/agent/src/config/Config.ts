@@ -4,23 +4,23 @@
  * 关键点（中文）
  * - `main/city/env/*` 放的是 city 全局运行态依赖的配置基础设施，不是通用小工具目录。
  * - 这里统一处理 `downcity.json`、项目 `.env`、全局 env store 三类配置来源。
- * - agent 运行时和 Console 模块都通过这里读取配置，避免各处重复拼装规则。
+ * - agent 运行时和 control plane 都通过这里读取配置，避免各处重复拼装规则。
  */
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import path from "path";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { PlatformStore } from "@/shared/utils/store/index.js";
 import { assertProjectExecutionTarget } from "@/agent/project/ProjectExecutionBinding.js";
 
 export type { DowncityConfig };
 
 /**
- * 读取 console 共享环境变量（`env_entries.scope=global`）。
+ * 读取平台共享环境变量（`env_entries.scope=global`）。
  */
 export function loadGlobalEnvFromStore(): Record<string, string> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     return store.getGlobalEnvMapSync();
   } catch {
@@ -36,7 +36,7 @@ export function loadGlobalEnvFromStore(): Record<string, string> {
 export function loadAgentEnvFromStore(agentId: string): Record<string, string> {
   const normalizedAgentId = String(agentId || "").trim();
   if (!normalizedAgentId) return {};
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     return store.getAgentEnvMapSync(normalizedAgentId);
   } catch {
@@ -67,11 +67,11 @@ export function loadAgentEnvSnapshot(projectRoot: string): Record<string, string
  *
  * 关键点（中文）
  * - 只返回当前 agent 项目自己的 env 映射，供 runtime 局部使用。
- * - 不再把 agent env 注入全局，避免多个 agent 在同一 console 进程里互相污染。
+ * - 不再把 agent env 注入全局，避免多个 agent 在同一 control plane 进程里互相污染。
  */
 export function loadProjectDotenv(projectRoot: string): Record<string, string> {
   // 关键点（中文）
-  // - console 级配置不再走 `~/.downcity/.env`（统一迁移到 downcity.db）
+  // - 平台级配置不再走 `~/.downcity/.env`（统一迁移到 downcity.db）
   // - 仅解析项目 `.env`（agent 级）
   const projectEnvPath = path.join(projectRoot, ".env");
   if (!fs.existsSync(projectEnvPath)) {

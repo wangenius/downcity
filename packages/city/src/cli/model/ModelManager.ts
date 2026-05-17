@@ -10,7 +10,7 @@
 import prompts from "prompts";
 import { generateText } from "ai";
 import { createModel } from "@downcity/agent";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 import { toSafeProviderView } from "./ModelCommandShared.js";
 import {
   discoverProviderModels,
@@ -32,7 +32,7 @@ function isInteractiveTerminal(): boolean {
 }
 
 async function loadProviderSummaries(): Promise<ModelManagerProviderSummary[]> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const providers = await store.listProviders();
     const models = store.listModels();
@@ -50,7 +50,7 @@ async function loadProviderSummaries(): Promise<ModelManagerProviderSummary[]> {
 }
 
 function loadModelSummaries(): ModelManagerModelSummary[] {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     return store
       .listModels()
@@ -226,7 +226,7 @@ async function promptModelAction(
 }
 
 async function printProviderDetails(providerId: string): Promise<void> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const provider = await store.getProvider(providerId);
     if (!provider) {
@@ -264,7 +264,7 @@ async function printProviderDetails(providerId: string): Promise<void> {
 }
 
 async function discoverProviderAndImport(providerId: string): Promise<void> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const provider = await store.getProvider(providerId);
     if (!provider) {
@@ -384,7 +384,7 @@ async function discoverProviderAndImport(providerId: string): Promise<void> {
 }
 
 async function printModelDetails(modelId: string): Promise<void> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const model = store.getModel(modelId);
     if (!model) {
@@ -424,7 +424,7 @@ async function printModelDetails(modelId: string): Promise<void> {
 }
 
 async function toggleModelPauseState(modelId: string): Promise<void> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const model = store.getModel(modelId);
     if (!model) {

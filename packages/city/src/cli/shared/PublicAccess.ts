@@ -1,5 +1,5 @@
 /**
- * Console 公网访问提示解析。
+ * control plane 公网访问提示解析。
  *
  * 关键点（中文）
  * - 优先使用用户显式声明的公网地址，避免 NAT / 反向代理场景误判。
@@ -41,9 +41,9 @@ export function detectPublicIpv4FromInterfaces(
 }
 
 /**
- * 解析 Console 对外可访问地址。
+ * 解析 control plane 对外可访问地址。
  */
-export function resolveConsolePublicUrl(params: {
+export function resolveControlPlanePublicUrl(params: {
   bindHost: string;
   port: number;
   publicMode?: boolean;

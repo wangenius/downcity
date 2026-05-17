@@ -1,5 +1,5 @@
 /**
- * Console 代理转发辅助。
+ * 平台控制面代理转发辅助。
  *
  * 关键点（中文）
  * - 负责把 `/api/*` 请求转发到选中 agent。
@@ -9,7 +9,7 @@
 /**
  * 构造上游请求地址。
  */
-export function buildConsoleUpstreamUrl(
+export function buildPlatformUpstreamUrl(
   requestUrl: URL,
   baseUrl: string,
 ): string {
@@ -21,7 +21,7 @@ export function buildConsoleUpstreamUrl(
 /**
  * 转发请求到目标 runtime。
  */
-export async function forwardConsoleRequest(
+export async function forwardPlatformRequest(
   request: Request,
   upstreamUrl: string,
 ): Promise<Response> {

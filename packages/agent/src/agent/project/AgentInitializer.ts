@@ -35,7 +35,7 @@ import {
 } from "@session/composer/system/default/InitPrompts.js";
 import { renderTemplateVariables } from "@/shared/utils/Template.js";
 import { ensureDir, saveJson } from "@/shared/utils/storage/index.js";
-import { ConsoleStore } from "@/shared/utils/store/index.js";
+import { PlatformStore } from "@/shared/utils/store/index.js";
 import type {
   AgentProjectChannel,
   AgentProjectInitializationInput,
@@ -45,9 +45,9 @@ import { assertProjectExecutionTarget } from "@/agent/project/ProjectExecutionBi
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
 
 /**
- * Console 模型选项。
+ * 平台模型选项。
  */
-export interface ConsoleModelChoice {
+export interface PlatformModelChoice {
   /**
    * 下拉展示文案。
    */
@@ -76,10 +76,10 @@ export function normalizeDefaultAgentName(input: string): string {
 }
 
 /**
- * 读取 console 全局模型选项。
+ * 读取平台全局模型选项。
  */
-export async function listConsoleModelChoices(): Promise<ConsoleModelChoice[]> {
-  const store = new ConsoleStore();
+export async function listPlatformModelChoices(): Promise<PlatformModelChoice[]> {
+  const store = new PlatformStore();
   try {
     const models = store.listModels();
     const providers = await store.listProviders();
@@ -100,7 +100,7 @@ export async function listConsoleModelChoices(): Promise<ConsoleModelChoice[]> {
           value: id,
         };
       })
-      .filter((item): item is ConsoleModelChoice => item !== null);
+      .filter((item): item is PlatformModelChoice => item !== null);
   } finally {
     store.close();
   }
@@ -188,11 +188,11 @@ function assertApiPrimaryModelReady(primaryModelId: string): void {
     throw new Error("execution.modelId is required");
   }
 
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const model = store.getModel(normalizedModelId);
     if (!model) {
-      throw new Error(`Model not found in console model pool: ${normalizedModelId}`);
+      throw new Error(`Model not found in platform model pool: ${normalizedModelId}`);
     }
     if (model.isPaused === true) {
       throw new Error(`Model is paused: ${normalizedModelId}`);
@@ -248,9 +248,9 @@ export async function initializeAgentProject(
     execution,
   });
   if (primaryModelId) {
-    const consoleModelChoices = await listConsoleModelChoices();
-    if (consoleModelChoices.length === 0) {
-      throw new Error("Console model pool is empty. Please configure at least one model first.");
+    const platformModelChoices = await listPlatformModelChoices();
+    if (platformModelChoices.length === 0) {
+      throw new Error("Platform model pool is empty. Please configure at least one model first.");
     }
     assertApiPrimaryModelReady(primaryModelId);
   }

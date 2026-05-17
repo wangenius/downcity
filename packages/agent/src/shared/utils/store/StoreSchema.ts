@@ -1,17 +1,17 @@
 /**
- * ConsoleStore Schema 管理。
+ * PlatformStore Schema 管理。
  *
  * 关键点（中文）
- * - 负责 `ConsoleStore` 的建表与轻量迁移。
+ * - 负责 `PlatformStore` 的建表与轻量迁移。
  * - 启动时执行，不承担任何查询写入业务逻辑。
  */
 
-import type { ConsoleStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "./StoreShared.js";
 
 /**
- * 初始化 ConsoleStore 所需表结构。
+ * 初始化 PlatformStore 所需表结构。
  */
-export function ensureConsoleStoreSchema(context: ConsoleStoreContext): void {
+export function ensurePlatformStoreSchema(context: PlatformStoreContext): void {
   context.sqlite.exec(`
     CREATE TABLE IF NOT EXISTS model_providers (
       id TEXT PRIMARY KEY NOT NULL,
@@ -44,7 +44,7 @@ export function ensureConsoleStoreSchema(context: ConsoleStoreContext): void {
     ON models(provider_id);
   `);
   context.sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS console_secure_settings (
+    CREATE TABLE IF NOT EXISTS platform_secure_settings (
       key TEXT PRIMARY KEY NOT NULL,
       value_encrypted TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -98,13 +98,13 @@ export function ensureConsoleStoreSchema(context: ConsoleStoreContext): void {
 }
 
 /**
- * 初始化 Console 认证与授权表结构。
+ * 初始化平台认证与授权表结构。
  *
  * 关键点（中文）
- * - 该 schema 属于 console 级全局能力，不依赖任何单个 agent 项目。
+ * - 该 schema 属于平台级全局能力，不依赖任何单个 agent 项目。
  * - V1 只建表与索引，不在这里写入默认数据，默认数据由 auth bootstrap 负责。
  */
-function ensureAuthSchema(context: ConsoleStoreContext): void {
+function ensureAuthSchema(context: PlatformStoreContext): void {
   context.sqlite.exec(`
     CREATE TABLE IF NOT EXISTS auth_users (
       id TEXT PRIMARY KEY NOT NULL,
@@ -250,7 +250,7 @@ function ensureAuthSchema(context: ConsoleStoreContext): void {
 /**
  * 补齐 models 表的增量列。
  */
-function ensureModelsTableColumns(context: ConsoleStoreContext): void {
+function ensureModelsTableColumns(context: PlatformStoreContext): void {
   const rows = context.sqlite
     .prepare("PRAGMA table_info(models)")
     .all() as Array<{ name?: unknown }>;
@@ -267,7 +267,7 @@ function ensureModelsTableColumns(context: ConsoleStoreContext): void {
 /**
  * 补齐 channel_accounts 表的增量列。
  */
-function ensureChannelAccountsTableColumns(context: ConsoleStoreContext): void {
+function ensureChannelAccountsTableColumns(context: PlatformStoreContext): void {
   const rows = context.sqlite
     .prepare("PRAGMA table_info(channel_accounts)")
     .all() as Array<{ name?: unknown }>;
@@ -285,7 +285,7 @@ function ensureChannelAccountsTableColumns(context: ConsoleStoreContext): void {
 /**
  * 迁移历史 env 双表到统一单表。
  */
-function ensureEnvEntriesMigration(context: ConsoleStoreContext): void {
+function ensureEnvEntriesMigration(context: PlatformStoreContext): void {
   const envEntryColumns = context.sqlite
     .prepare("PRAGMA table_info(env_entries)")
     .all() as Array<{ name?: unknown }>;

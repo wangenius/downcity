@@ -1,5 +1,5 @@
 /**
- * Console Channel Account 路由。
+ * 平台 Channel Account 路由。
  *
  * 关键点（中文）
  * - 提供全局 channel account 管理接口。
@@ -12,7 +12,7 @@ import { ChatChannelAccountService } from "@downcity/agent";
 /**
  * 注册 Channel Account API 路由。
  */
-export function registerConsoleChannelAccountRoutes(params: { app: Hono }): void {
+export function registerPlatformChannelAccountRoutes(params: { app: Hono }): void {
   const app = params.app;
   const service = new ChatChannelAccountService();
 

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 当 agent 启动失败（如 model not found）时，不必删除重建，直接重选模型。
- * - 从 console 全局模型池中选择可用模型，更新 downcity.json.execution.modelId。
+ * - 从平台全局模型池中选择可用模型，更新 downcity.json.execution.modelId。
  * - 仅修改 execution.modelId，不触碰 PROFILE.md / SOUL.md / channels 等其他配置。
  */
 
@@ -11,7 +11,7 @@ import path from "node:path";
 import fs from "fs-extra";
 import prompts from "prompts";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
 import { resolveAgentName } from "../shared/IndexSupport.js";
@@ -32,10 +32,10 @@ function readCurrentModelId(projectRoot: string): { shipJsonPath: string; curren
 }
 
 /**
- * 列出可用的 console 模型选项。
+ * 列出可用的平台模型选项。
  */
 function listModelChoices(): Array<{ title: string; value: string }> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const models = store.listModels();
     const providers = store.listProvidersSync();
@@ -80,7 +80,7 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   const choices = listModelChoices();
   if (choices.length === 0) {
     throw new CliError({
-      title: "No models available in console pool",
+      title: "No models available in platform pool",
       note: "请先配置 provider 并创建 model",
       fix: "city model create",
     });
@@ -134,15 +134,15 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
     ],
   });
 
-  // 关键点（中文）：检测 console 是否运行，决定能否即时重启。
+  // 关键点（中文）：检测控制面是否运行，决定能否即时重启。
   const { isCityRunning } = await import("@/process/registry/CityRuntime.js");
-  const consoleRunning = await isCityRunning();
+  const controlPlaneRunning = await isCityRunning();
 
-  if (!consoleRunning) {
+  if (!controlPlaneRunning) {
     emitCliBlock({
       tone: "warning",
-      title: "Console runtime is not running",
-      note: "请先启动 console 再重启 agent",
+      title: "Control plane is not running",
+      note: "请先启动控制面再重启 agent",
       facts: [
         { label: "step 1", value: "city start" },
         { label: "step 2", value: `city agent restart ${projectRoot}` },

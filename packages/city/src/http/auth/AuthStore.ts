@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 该模块只负责 `auth_*` 表的读写，不处理密码校验与 HTTP 语义。
- * - 数据仍落在 console 的 SQLite 中，与现有控制面共享底层存储。
+ * - 数据仍落在控制面全局 SQLite 中，与现有平台配置共享底层存储。
  */
 
 import fs from "fs-extra";
@@ -11,7 +11,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { nanoid } from "nanoid";
-import { getConsoleShipDbPath } from "@/process/registry/CityPaths.js";
+import { getPlatformStoreDbPath } from "@/process/registry/CityPaths.js";
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import {
   AUTH_DEFAULT_ROLES,
@@ -27,13 +27,13 @@ import type {
   AuthTokenRecord,
   AuthUser,
 } from "@downcity/agent";
-import { ensureConsoleStoreSchema } from "@/store/StoreSchema.js";
+import { ensurePlatformStoreSchema } from "@downcity/agent";
 import {
   nowIso,
   normalizeNonEmptyText,
   optionalTrimmedText,
-  type ConsoleStoreContext,
-} from "@/store/StoreShared.js";
+  type PlatformStoreContext,
+} from "@downcity/agent";
 
 /**
  * AuthStore 构造参数。
@@ -52,10 +52,10 @@ type SqliteRow = Record<string, unknown>;
  */
 export class AuthStore {
   private readonly sqlite: Database.Database;
-  private readonly context: ConsoleStoreContext;
+  private readonly context: PlatformStoreContext;
 
   constructor(options: AuthStoreOptions = {}) {
-    const dbPath = path.resolve(options.dbPath || getConsoleShipDbPath());
+    const dbPath = path.resolve(options.dbPath || getPlatformStoreDbPath());
     fs.ensureDirSync(path.dirname(dbPath));
     this.sqlite = new Database(dbPath);
     this.sqlite.pragma("journal_mode = WAL");
@@ -63,7 +63,7 @@ export class AuthStore {
       sqlite: this.sqlite,
       db: drizzle(this.sqlite),
     };
-    ensureConsoleStoreSchema(this.context);
+    ensurePlatformStoreSchema(this.context);
   }
 
   /**

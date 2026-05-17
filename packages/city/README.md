@@ -3,7 +3,7 @@
 `@downcity/city` 是 Downcity 的平台层与多 Agent 宿主管理包。
 
 它负责 CLI、控制面、city runtime 进程管理、全局配置存储，以及多个 agent 的注册与调度。  
-它依赖 `@downcity/agent` 提供单 Agent runtime、service、plugin、sandbox 与执行能力，但不重复实现这些内核。
+它依赖 `@downcity/agent` 提供单 Agent runtime、service、plugin、control API、sandbox 与执行能力，但不重复实现这些内核。
 
 ## 包定位
 
@@ -46,13 +46,15 @@ packages/city
 src
 ├── cli/
 │   ├── agent/
-│   ├── console/
+│   ├── control-plane/
 │   ├── model/
+│   │   └── preset/
 │   ├── service/
 │   ├── shared/
 │   └── Index.ts
 ├── config/
 ├── control/
+│   ├── instant/
 │   └── gateway/
 ├── http/
 │   └── auth/
@@ -60,8 +62,6 @@ src
 │   ├── daemon/
 │   ├── registry/
 │   └── rpc/
-├── store/
-│   └── model/
 ├── types/
 │   ├── chat/
 │   ├── contact/
@@ -80,13 +80,17 @@ src
   - `city agent ...` 命令。
   - 包括 agent create、start、stop、restart、status、chat、history、交互式 manager。
 
-- `src/cli/console/`
+- `src/cli/control-plane/`
   - `city` 顶层 runtime 命令与 `city console ...` 命令。
-  - 名字虽然叫 `console`，但语义更偏 control plane / gateway 宿主管理，而不是单 Agent API。
+  - 这层语义是 control plane / gateway 宿主管理，而不是单 Agent API。
 
 - `src/cli/model/`
   - `city model ...` 命令。
   - 面向 city 全局模型池的 CLI 管理。
+
+- `src/cli/model/preset/`
+  - city 侧模型预设目录。
+  - 只保留命令交互需要的预设定义，不再复制全局 store 实现。
 
 - `src/cli/service/`
   - `city service ...` 与服务 action 命令桥接。
@@ -105,22 +109,26 @@ src
   - 负责聚合多 Agent 视图、控制动作、前端资源、模型池与 channel account API。
   - 这是 gateway / control plane，不是单 Agent control API。
 
+- `src/control/instant/`
+  - control plane 下的即时执行子域。
+  - 放置 instant-run 路由、临时 session service 和即时 system composer。
+
 - `src/control/gateway/`
   - gateway 的读写辅助模块。
   - 包括 agent catalog、agent actions、proxy、frontend assets 等。
 
 ## 命名说明
 
-- `city/cli/console`
-  - 这里的 `console` 更像 city gateway / control plane 的命令面与进程管理面。
-  - 名字暂时保留，是为了不在这一轮先引入大规模逻辑迁移。
+- `city/cli/control-plane`
+  - 这里承载 city gateway / control plane 的命令面与进程管理面。
+  - CLI 命令对用户仍保留 `city console`，但源码结构已经按 control plane 语义命名。
 
 - `city/control`
   - 这里承载的是多 agent 聚合控制面，不是单 agent control API。
 
 - `@downcity/agent/http/control`
   - 这里承载的是 single-agent control API。
-  - 当前 `/api/dashboard/*` 只是历史 URL 命名，不代表它属于 city gateway/dashboard 层。
+  - 当前统一路径是 `/api/control/*`。
 
 - `src/http/auth/`
   - city 控制面自己的鉴权体系。
@@ -142,14 +150,6 @@ src
   - city 侧 local RPC 客户端辅助。
   - 用于本机调用 Agent 暴露的 IPC 接口。
 
-- `src/store/`
-  - city 全局持久化存储。
-  - 包括模型、provider、环境变量、安全设置、channel account。
-
-- `src/store/model/`
-  - city 全局模型池的“预设目录/预设管理”。
-  - 注意这里是 city 的模型预设与全局模型池辅助，不是 Agent runtime 的模型执行内核。
-
 - `src/types/`
   - 当前仅保留尚未进一步归位的领域类型。
   - 目前主要是 `chat / contact / task` 三组。
@@ -167,7 +167,7 @@ src
 
 ```text
 src/cli/Index.ts
-  -> console/
+  -> control-plane/
   -> agent/
   -> model/
   -> service/
@@ -178,8 +178,8 @@ src/cli/Index.ts
 
 ```text
 city start
-  -> src/cli/console/IndexConsoleCommand.ts
-  -> src/cli/console/IndexConsoleProcess.ts
+  -> src/cli/control-plane/ControlPlaneCommand.ts
+  -> src/cli/control-plane/ControlPlaneProcess.ts
   -> src/process/registry/*
   -> src/control/ControlGateway.ts
 ```
@@ -209,8 +209,8 @@ browser / UI
 ```text
 city model ...
   -> src/cli/model/*
-  -> src/store/index.ts
-  -> src/store/model/*
+  -> @downcity/agent PlatformStore
+  -> src/cli/model/preset/*
 ```
 
 ## 当前最重要的入口文件
@@ -218,8 +218,8 @@ city model ...
 - `src/cli/Index.ts`
   - CLI 主入口。
 
-- `src/cli/console/IndexConsoleCommand.ts`
-  - 顶层 city / console 命令装配。
+- `src/cli/control-plane/ControlPlaneCommand.ts`
+  - 顶层 city / control plane 命令装配。
 
 - `src/cli/shared/IndexAgentCommand.ts`
   - `city agent` 命令树装配。
@@ -233,13 +233,11 @@ city model ...
 - `src/process/registry/CityRegistry.ts`
   - 多 Agent registry 核心。
 
-- `src/store/index.ts`
-  - city 全局 store 门面。
-
 ## 维护约定
 
 - 不要把单 Agent 执行逻辑重新实现到这个包里。
 - sandbox、tool loop、session 执行、service 内核统一来自 `@downcity/agent`。
+- 全局 store 也统一来自 `@downcity/agent`，不要在 city 再复制一份持久化实现。
 - `control/` 是平台 gateway / control plane。
 - 单 Agent 的 HTTP control API 语义应该留在 `@downcity/agent`。
 - `process/` 统一放 city 的进程管理、registry、RPC，不要再散落回顶层。

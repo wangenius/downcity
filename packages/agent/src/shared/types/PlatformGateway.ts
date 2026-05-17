@@ -1,15 +1,15 @@
 /**
- * Console Gateway 内部类型定义。
+ * 平台控制面读取 agent 项目与 daemon 状态时使用的宽松类型。
  *
  * 关键点（中文）
- * - 仅承载网关模块内部使用的结构化类型。
+ * - 仅承载平台 gateway / control plane 内部使用的结构化类型。
  * - 所有字段保持宽松输入，便于兼容磁盘 JSON 与运行时 API 的非强约束数据。
  */
 
 /**
  * Daemon 元数据文件结构。
  */
-export interface ConsoleDaemonMeta {
+export interface PlatformAgentDaemonMeta {
   /**
    * 启动 daemon 时记录的原始参数列表。
    *
@@ -23,7 +23,7 @@ export interface ConsoleDaemonMeta {
 /**
  * downcity.json 中的 ACP agent 配置。
  */
-export interface ConsoleShipExecutionAgentConfig {
+export interface PlatformAgentShipExecutionAgentConfig {
   /**
    * ACP agent 类型。
    */
@@ -45,7 +45,7 @@ export interface ConsoleShipExecutionAgentConfig {
 /**
  * downcity.json 中的 execution 配置。
  */
-export interface ConsoleShipExecutionConfig {
+export interface PlatformAgentShipExecutionConfig {
   /**
    * 执行模式。
    */
@@ -57,13 +57,13 @@ export interface ConsoleShipExecutionConfig {
   /**
    * ACP 执行模式下的 agent 配置。
    */
-  agent?: ConsoleShipExecutionAgentConfig;
+  agent?: PlatformAgentShipExecutionAgentConfig;
 }
 
 /**
  * 单个聊天渠道配置。
  */
-export interface ConsoleShipSingleChannelConfig {
+export interface PlatformAgentShipSingleChannelConfig {
   /**
    * 渠道是否启用。
    */
@@ -78,47 +78,47 @@ export interface ConsoleShipSingleChannelConfig {
 /**
  * 聊天服务渠道配置集合。
  */
-export interface ConsoleShipChatChannelsConfig {
+export interface PlatformAgentShipChatChannelsConfig {
   /**
    * Telegram 渠道配置。
    */
-  telegram?: ConsoleShipSingleChannelConfig;
+  telegram?: PlatformAgentShipSingleChannelConfig;
 
   /**
    * 飞书渠道配置。
    */
-  feishu?: ConsoleShipSingleChannelConfig;
+  feishu?: PlatformAgentShipSingleChannelConfig;
 
   /**
    * QQ 渠道配置。
    */
-  qq?: ConsoleShipSingleChannelConfig;
+  qq?: PlatformAgentShipSingleChannelConfig;
 }
 
 /**
  * 聊天服务配置。
  */
-export interface ConsoleShipChatServiceConfig {
+export interface PlatformAgentShipChatServiceConfig {
   /**
    * 渠道配置集合。
    */
-  channels?: ConsoleShipChatChannelsConfig;
+  channels?: PlatformAgentShipChatChannelsConfig;
 }
 
 /**
  * downcity.json 中的 services 配置。
  */
-export interface ConsoleShipServicesConfig {
+export interface PlatformAgentShipServicesConfig {
   /**
    * chat 服务配置。
    */
-  chat?: ConsoleShipChatServiceConfig;
+  chat?: PlatformAgentShipChatServiceConfig;
 }
 
 /**
  * downcity.json 中的启动配置。
  */
-export interface ConsoleShipStartConfig {
+export interface PlatformAgentShipStartConfig {
   /**
    * agent server host。
    */
@@ -133,7 +133,7 @@ export interface ConsoleShipStartConfig {
 /**
  * downcity.json 宽松结构。
  */
-export interface ConsoleShipJson {
+export interface PlatformAgentShipJson {
   /**
    * agent 展示名称。
    */
@@ -142,23 +142,23 @@ export interface ConsoleShipJson {
   /**
    * 执行配置。
    */
-  execution?: ConsoleShipExecutionConfig;
+  execution?: PlatformAgentShipExecutionConfig;
 
   /**
    * 服务配置。
    */
-  services?: ConsoleShipServicesConfig;
+  services?: PlatformAgentShipServicesConfig;
 
   /**
    * 启动配置。
    */
-  start?: ConsoleShipStartConfig;
+  start?: PlatformAgentShipStartConfig;
 }
 
 /**
  * chat service status 返回中的单渠道状态。
  */
-export interface ConsoleChatChannelStatus {
+export interface PlatformAgentChatChannelStatus {
   /**
    * 渠道名。
    */

@@ -1,15 +1,16 @@
 /**
- * Console 相关类型定义。
+ * Platform：control plane / managed-agent 相关共享类型定义。
  *
  * 关键点（中文）
- * - UI 由 console 独立提供，不和单个 agent 进程绑定。
- * - 同一个 UI 进程可切换查看多个已登记的 agent。
+ * - control plane runtime 自身的进程状态类型仍保留在这里，因为它属于 city control plane 的公开契约。
+ * - 多 agent 平台视图、managed agent registry 结构也集中在这里，避免 city/agent 双侧重复维护。
+ * - 文件名使用 `Platform`，强调这些类型服务于平台控制面，而不是某个具体 UI 页面实现。
  */
 
 /**
- * Console 中单个 agent 选项。
+ * 平台控制面中的单个 agent 选项。
  */
-export interface ConsoleAgentOption {
+export interface PlatformAgentOption {
   /**
    * UI 侧唯一标识（使用 projectRoot 绝对路径）。
    */
@@ -89,18 +90,15 @@ export interface ConsoleAgentOption {
   }>;
 
   /**
-
-  /**
    * 当前 agent 绑定的 console 模型 ID（downcity.json.execution.modelId）。
    */
   modelId?: string;
-
 }
 
 /**
  * `/api/ui/agents` 响应体。
  */
-export interface ConsoleAgentsResponse {
+export interface PlatformAgentsResponse {
   /**
    * 请求是否成功。
    */
@@ -114,7 +112,7 @@ export interface ConsoleAgentsResponse {
   /**
    * 当前可选的 agent 列表。
    */
-  agents: ConsoleAgentOption[];
+  agents: PlatformAgentOption[];
 
   /**
    * 当前选中的 agent id（无可用 agent 时为空字符串）。
@@ -123,9 +121,9 @@ export interface ConsoleAgentsResponse {
 }
 
 /**
- * 本地 GGUF 模型列表响应。
+ * 平台控制面使用的本地 GGUF 模型列表响应。
  */
-export interface ConsoleLocalModelsResponse {
+export interface PlatformLocalModelsResponse {
   /**
    * 请求是否成功。
    */
@@ -143,9 +141,9 @@ export interface ConsoleLocalModelsResponse {
 }
 
 /**
- * 目录探测结果。
+ * 平台控制面使用的 agent 目录探测结果。
  */
-export interface ConsoleAgentDirectoryInspection {
+export interface PlatformAgentDirectoryInspection {
   /**
    * 探测的项目绝对路径。
    */
@@ -166,9 +164,7 @@ export interface ConsoleAgentDirectoryInspection {
    */
   hasProfileMd: boolean;
 
-  /**
-   * 该目录是否已出现在 console registry 中。
-   */
+  /** 该目录是否已出现在 managed agent registry 中。 */
   knownAgent: boolean;
 
   /**
@@ -186,14 +182,12 @@ export interface ConsoleAgentDirectoryInspection {
    */
   modelId?: string;
 
-  /**
-   */
 }
 
 /**
- * Console 后台进程元数据。
+ * 控制面运行时元数据。
  */
-export interface ConsoleRuntimeMeta {
+export interface ControlPlaneRuntimeMeta {
   /**
    * UI 进程 pid。
    */
@@ -216,9 +210,9 @@ export interface ConsoleRuntimeMeta {
 }
 
 /**
- * Console 运行状态视图。
+ * 控制面运行状态视图。
  */
-export interface ConsoleRuntimeStatus {
+export interface ControlPlaneRuntimeStatus {
   /**
    * UI 是否运行中。
    */
@@ -241,7 +235,7 @@ export interface ConsoleRuntimeStatus {
    * UI 实际绑定主机（运行中时有值）。
    *
    * 说明（中文）
-   * - 用于判断当前 Console 是否真的以公网模式监听。
+   * - 用于判断当前控制面是否真的以公网模式监听。
    * - 可能是 `127.0.0.1`、`0.0.0.0`、自定义 IP 或域名。
    */
   bindHost?: string;
@@ -268,18 +262,18 @@ export interface ConsoleRuntimeStatus {
 }
 
 /**
- * 配置文件状态项。
+ * 平台控制面使用的配置文件状态项。
  */
-export interface ConsoleConfigFileStatusItem {
+export interface PlatformConfigFileStatusItem {
   /**
-   * 配置文件逻辑名称（例如 `ship_json`、`console_pid`）。
+   * 配置文件逻辑名称（例如 `ship_json`、`control_plane_pid`）。
    */
   key: string;
 
   /**
-   * 配置文件分组（`console` 或 `agent`）。
+   * 配置文件分组（`platform` 或 `agent`）。
    */
-  scope: "console" | "agent";
+  scope: "platform" | "agent";
 
   /**
    * 配置文件展示标签。
@@ -330,7 +324,7 @@ export interface ConsoleConfigFileStatusItem {
 /**
  * `/api/ui/config-status` 响应体。
  */
-export interface ConsoleConfigStatusResponse {
+export interface PlatformConfigStatusResponse {
   /**
    * 请求是否成功。
    */
@@ -349,13 +343,13 @@ export interface ConsoleConfigStatusResponse {
   /**
    * 配置文件状态列表。
    */
-  items: ConsoleConfigFileStatusItem[];
+  items: PlatformConfigFileStatusItem[];
 }
 
 /**
- * city registry 中的单条 agent 记录。
+ * control plane 管理的单条 agent registry 记录。
  */
-export interface ConsoleAgentRegistryEntry {
+export interface ManagedAgentRegistryEntry {
   /**
    * agent 项目根目录绝对路径。
    */
@@ -388,9 +382,9 @@ export interface ConsoleAgentRegistryEntry {
 }
 
 /**
- * city registry 文件结构。
+ * control plane 管理的 agent registry 文件结构。
  */
-export interface ConsoleAgentRegistryV1 {
+export interface ManagedAgentRegistryV1 {
   /**
    * registry schema 版本。
    */
@@ -404,13 +398,13 @@ export interface ConsoleAgentRegistryV1 {
   /**
    * 当前登记的 agent 列表。
    */
-  agents: ConsoleAgentRegistryEntry[];
+  agents: ManagedAgentRegistryEntry[];
 }
 
 /**
- * `city agent list --running` 输出可复用的运行态视图。
+ * `city agent list --running` 输出可复用的受管 agent 运行态视图。
  */
-export interface ConsoleAgentProcessView {
+export interface ManagedAgentProcessView {
   /**
    * agent 项目根目录绝对路径。
    */

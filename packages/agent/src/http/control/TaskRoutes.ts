@@ -14,13 +14,16 @@ import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
 import { resolveTaskIdByTitle } from "@/service/builtins/task/runtime/Store.js";
 import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 import {
-  TASK_RUN_DIR_REGEX,
+  buildControlRouteAliases,
   decodeMaybe,
+  toLimit,
+  toOptionalString,
+} from "./CommonHelpers.js";
+import {
+  TASK_RUN_DIR_REGEX,
   listTaskRuns,
   readRecentLogs,
   readTaskRunDetail,
-  toLimit,
-  toOptionalString,
 } from "./Helpers.js";
 
 /**
@@ -65,308 +68,324 @@ export function registerControlTaskRoutes(
 ): void {
   const { app } = params;
 
-  app.get("/api/dashboard/tasks", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const status = toOptionalString(c.req.query("status"));
-      const result = await listTaskDefinitions({
-        projectRoot: runtime.rootPath,
-        ...(status ? { status: status as "enabled" | "paused" | "disabled" } : {}),
-      });
-      const tasks = Array.isArray(result.tasks) ? result.tasks : [];
-      const tasksWithRunning = await Promise.all(
-        tasks.map(async (task) => {
-          const running = await readTaskRunningState({
-            projectRoot: runtime.rootPath,
-            title: String(task.title || "").trim(),
-            lastRunTimestamp: task.lastRunTimestamp,
-          });
-          return running ? { ...task, running } : task;
-        }),
-      );
-      return c.json({
-        success: true,
-        tasks: tasksWithRunning,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.post("/api/dashboard/tasks/run", async (c) => {
-    try {
-      const body = (await c.req.json().catch(() => ({}))) as {
-        title?: string;
-        reason?: string;
-      };
-      const title = String(body.title || "").trim();
-      if (!title) {
-        return c.json({ success: false, error: "Invalid title" }, 400);
-      }
-
-      const reason = toOptionalString(body.reason);
-      const result = await runServiceCommand({
-        serviceName: "task",
-        command: "run",
-        payload: {
-          title,
-          ...(reason ? { reason } : {}),
-        },
-        context: params.getAgentContext(),
-      });
-      return c.json(result, result.success ? 200 : 400);
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.post("/api/dashboard/tasks/:title/status", async (c) => {
-    try {
-      const title = decodeMaybe(String(c.req.param("title") || "").trim());
-      const body = (await c.req.json().catch(() => ({}))) as {
-        status?: string;
-      };
-      const status = String(body.status || "").trim();
-      if (!title) {
-        return c.json({ success: false, error: "Invalid title" }, 400);
-      }
-      if (!["enabled", "paused", "disabled"].includes(status)) {
-        return c.json({ success: false, error: "Invalid status" }, 400);
-      }
-
-      const result = await runServiceCommand({
-        serviceName: "task",
-        command: "status",
-        payload: {
-          title,
-          status,
-        },
-        context: params.getAgentContext(),
-      });
-      if (!result.success) {
-        return c.json(
-          { success: false, error: result.message || "task status update failed" },
-          400,
-        );
-      }
-      const data =
-        result.data && typeof result.data === "object" && !Array.isArray(result.data)
-          ? result.data
-          : {};
-      return c.json({
-        success: true,
-        ...data,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.delete("/api/dashboard/tasks/:title", async (c) => {
-    try {
-      const title = decodeMaybe(String(c.req.param("title") || "").trim());
-      if (!title) {
-        return c.json({ success: false, error: "Invalid title" }, 400);
-      }
-
-      const result = await runServiceCommand({
-        serviceName: "task",
-        command: "delete",
-        payload: {
-          title,
-        },
-        context: params.getAgentContext(),
-      });
-      if (!result.success) {
-        return c.json({ success: false, error: result.message || "task delete failed" }, 400);
-      }
-      const data =
-        result.data && typeof result.data === "object" && !Array.isArray(result.data)
-          ? result.data
-          : {};
-      return c.json({
-        success: true,
-        ...data,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.delete("/api/dashboard/tasks/:title/runs/:timestamp", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const title = decodeMaybe(String(c.req.param("title") || "").trim());
-      const timestamp = String(c.req.param("timestamp") || "").trim();
-      if (!title) {
-        return c.json({ success: false, error: "Invalid title" }, 400);
-      }
-      if (!TASK_RUN_DIR_REGEX.test(timestamp)) {
-        return c.json({ success: false, error: "Invalid timestamp" }, 400);
-      }
-
-      let taskId = "";
+  for (const routePath of buildControlRouteAliases("/tasks")) {
+    app.get(routePath, async (c) => {
       try {
-        taskId = await resolveTaskIdByTitle({
+        const runtime = params.getAgentRuntime();
+        const status = toOptionalString(c.req.query("status"));
+        const result = await listTaskDefinitions({
           projectRoot: runtime.rootPath,
-          title,
+          ...(status ? { status: status as "enabled" | "paused" | "disabled" } : {}),
         });
-      } catch {
-        return c.json({ success: false, error: "Task not found" }, 404);
-      }
-      const runDir = join(getDowncityTasksDirPath(runtime.rootPath), taskId, timestamp);
-      if (!(await fs.pathExists(runDir))) {
-        return c.json({ success: false, error: "Run not found" }, 404);
-      }
-
-      const progressPath = join(runDir, "run-progress.json");
-      const progress = (await fs.readJson(progressPath).catch(() => null)) as {
-        status?: string;
-      } | null;
-      if (String(progress?.status || "").trim().toLowerCase() === "running") {
-        return c.json(
-          { success: false, error: "Run is still in progress and cannot be deleted" },
-          409,
+        const tasks = Array.isArray(result.tasks) ? result.tasks : [];
+        const tasksWithRunning = await Promise.all(
+          tasks.map(async (task) => {
+            const running = await readTaskRunningState({
+              projectRoot: runtime.rootPath,
+              title: String(task.title || "").trim(),
+              lastRunTimestamp: task.lastRunTimestamp,
+            });
+            return running ? { ...task, running } : task;
+          }),
         );
-      }
-
-      await fs.remove(runDir);
-      return c.json({
-        success: true,
-        title,
-        timestamp,
-        deleted: true,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.delete("/api/dashboard/tasks/:title/runs", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const title = decodeMaybe(String(c.req.param("title") || "").trim());
-      if (!title) {
-        return c.json({ success: false, error: "Invalid title" }, 400);
-      }
-
-      let taskId = "";
-      try {
-        taskId = await resolveTaskIdByTitle({
-          projectRoot: runtime.rootPath,
-          title,
-        });
-      } catch {
-        return c.json({ success: false, error: "Task not found" }, 404);
-      }
-
-      const taskDir = join(getDowncityTasksDirPath(runtime.rootPath), taskId);
-      if (!(await fs.pathExists(taskDir))) {
         return c.json({
           success: true,
-          title,
-          deletedCount: 0,
-          skippedRunningCount: 0,
-          deletedTimestamps: [],
-          skippedRunningTimestamps: [],
+          tasks: tasksWithRunning,
         });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
       }
+    });
+  }
 
-      const entries = await fs.readdir(taskDir, { withFileTypes: true });
-      const timestamps = entries
-        .filter((x) => x.isDirectory() && TASK_RUN_DIR_REGEX.test(x.name))
-        .map((x) => x.name)
-        .sort();
-      const deletedTimestamps: string[] = [];
-      const skippedRunningTimestamps: string[] = [];
+  for (const routePath of buildControlRouteAliases("/tasks/run")) {
+    app.post(routePath, async (c) => {
+      try {
+        const body = (await c.req.json().catch(() => ({}))) as {
+          title?: string;
+          reason?: string;
+        };
+        const title = String(body.title || "").trim();
+        if (!title) {
+          return c.json({ success: false, error: "Invalid title" }, 400);
+        }
 
-      for (const timestamp of timestamps) {
-        const runDir = join(taskDir, timestamp);
+        const reason = toOptionalString(body.reason);
+        const result = await runServiceCommand({
+          serviceName: "task",
+          command: "run",
+          payload: {
+            title,
+            ...(reason ? { reason } : {}),
+          },
+          context: params.getAgentContext(),
+        });
+        return c.json(result, result.success ? 200 : 400);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/tasks/:title/status")) {
+    app.post(routePath, async (c) => {
+      try {
+        const title = decodeMaybe(String(c.req.param("title") || "").trim());
+        const body = (await c.req.json().catch(() => ({}))) as {
+          status?: string;
+        };
+        const status = String(body.status || "").trim();
+        if (!title) {
+          return c.json({ success: false, error: "Invalid title" }, 400);
+        }
+        if (!["enabled", "paused", "disabled"].includes(status)) {
+          return c.json({ success: false, error: "Invalid status" }, 400);
+        }
+
+        const result = await runServiceCommand({
+          serviceName: "task",
+          command: "status",
+          payload: {
+            title,
+            status,
+          },
+          context: params.getAgentContext(),
+        });
+        if (!result.success) {
+          return c.json(
+            { success: false, error: result.message || "task status update failed" },
+            400,
+          );
+        }
+        const data =
+          result.data && typeof result.data === "object" && !Array.isArray(result.data)
+            ? result.data
+            : {};
+        return c.json({
+          success: true,
+          ...data,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/tasks/:title")) {
+    app.delete(routePath, async (c) => {
+      try {
+        const title = decodeMaybe(String(c.req.param("title") || "").trim());
+        if (!title) {
+          return c.json({ success: false, error: "Invalid title" }, 400);
+        }
+
+        const result = await runServiceCommand({
+          serviceName: "task",
+          command: "delete",
+          payload: {
+            title,
+          },
+          context: params.getAgentContext(),
+        });
+        if (!result.success) {
+          return c.json({ success: false, error: result.message || "task delete failed" }, 400);
+        }
+        const data =
+          result.data && typeof result.data === "object" && !Array.isArray(result.data)
+            ? result.data
+            : {};
+        return c.json({
+          success: true,
+          ...data,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/tasks/:title/runs/:timestamp")) {
+    app.delete(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const title = decodeMaybe(String(c.req.param("title") || "").trim());
+        const timestamp = String(c.req.param("timestamp") || "").trim();
+        if (!title) {
+          return c.json({ success: false, error: "Invalid title" }, 400);
+        }
+        if (!TASK_RUN_DIR_REGEX.test(timestamp)) {
+          return c.json({ success: false, error: "Invalid timestamp" }, 400);
+        }
+
+        let taskId = "";
+        try {
+          taskId = await resolveTaskIdByTitle({
+            projectRoot: runtime.rootPath,
+            title,
+          });
+        } catch {
+          return c.json({ success: false, error: "Task not found" }, 404);
+        }
+        const runDir = join(getDowncityTasksDirPath(runtime.rootPath), taskId, timestamp);
+        if (!(await fs.pathExists(runDir))) {
+          return c.json({ success: false, error: "Run not found" }, 404);
+        }
+
         const progressPath = join(runDir, "run-progress.json");
         const progress = (await fs.readJson(progressPath).catch(() => null)) as {
           status?: string;
         } | null;
         if (String(progress?.status || "").trim().toLowerCase() === "running") {
-          skippedRunningTimestamps.push(timestamp);
-          continue;
+          return c.json(
+            { success: false, error: "Run is still in progress and cannot be deleted" },
+            409,
+          );
         }
+
         await fs.remove(runDir);
-        deletedTimestamps.push(timestamp);
+        return c.json({
+          success: true,
+          title,
+          timestamp,
+          deleted: true,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
       }
+    });
+  }
 
-      return c.json({
-        success: true,
-        title,
-        deletedCount: deletedTimestamps.length,
-        skippedRunningCount: skippedRunningTimestamps.length,
-        deletedTimestamps,
-        skippedRunningTimestamps,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
+  for (const routePath of buildControlRouteAliases("/tasks/:title/runs")) {
+    app.delete(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const title = decodeMaybe(String(c.req.param("title") || "").trim());
+        if (!title) {
+          return c.json({ success: false, error: "Invalid title" }, 400);
+        }
 
-  app.get("/api/dashboard/tasks/:title/runs", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const title = decodeMaybe(String(c.req.param("title") || "").trim());
-      if (!title) {
-        return c.json({ success: false, error: "Invalid title" }, 400);
+        let taskId = "";
+        try {
+          taskId = await resolveTaskIdByTitle({
+            projectRoot: runtime.rootPath,
+            title,
+          });
+        } catch {
+          return c.json({ success: false, error: "Task not found" }, 404);
+        }
+
+        const taskDir = join(getDowncityTasksDirPath(runtime.rootPath), taskId);
+        if (!(await fs.pathExists(taskDir))) {
+          return c.json({
+            success: true,
+            title,
+            deletedCount: 0,
+            skippedRunningCount: 0,
+            deletedTimestamps: [],
+            skippedRunningTimestamps: [],
+          });
+        }
+
+        const entries = await fs.readdir(taskDir, { withFileTypes: true });
+        const timestamps = entries
+          .filter((x) => x.isDirectory() && TASK_RUN_DIR_REGEX.test(x.name))
+          .map((x) => x.name)
+          .sort();
+        const deletedTimestamps: string[] = [];
+        const skippedRunningTimestamps: string[] = [];
+
+        for (const timestamp of timestamps) {
+          const runDir = join(taskDir, timestamp);
+          const progressPath = join(runDir, "run-progress.json");
+          const progress = (await fs.readJson(progressPath).catch(() => null)) as {
+            status?: string;
+          } | null;
+          if (String(progress?.status || "").trim().toLowerCase() === "running") {
+            skippedRunningTimestamps.push(timestamp);
+            continue;
+          }
+          await fs.remove(runDir);
+          deletedTimestamps.push(timestamp);
+        }
+
+        return c.json({
+          success: true,
+          title,
+          deletedCount: deletedTimestamps.length,
+          skippedRunningCount: skippedRunningTimestamps.length,
+          deletedTimestamps,
+          skippedRunningTimestamps,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
       }
+    });
 
-      const limit = toLimit(c.req.query("limit"), 50);
-      const runs = await listTaskRuns({
-        projectRoot: runtime.rootPath,
-        title,
-        limit,
-      });
-      return c.json({ success: true, title, runs });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const title = decodeMaybe(String(c.req.param("title") || "").trim());
+        if (!title) {
+          return c.json({ success: false, error: "Invalid title" }, 400);
+        }
 
-  app.get("/api/dashboard/tasks/:title/runs/:timestamp", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const title = decodeMaybe(String(c.req.param("title") || "").trim());
-      const timestamp = String(c.req.param("timestamp") || "").trim();
-      if (!title) {
-        return c.json({ success: false, error: "Invalid title" }, 400);
+        const limit = toLimit(c.req.query("limit"), 50);
+        const runs = await listTaskRuns({
+          projectRoot: runtime.rootPath,
+          title,
+          limit,
+        });
+        return c.json({ success: true, title, runs });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
       }
-      if (!TASK_RUN_DIR_REGEX.test(timestamp)) {
-        return c.json({ success: false, error: "Invalid timestamp" }, 400);
-      }
+    });
+  }
 
-      const detail = await readTaskRunDetail({
-        projectRoot: runtime.rootPath,
-        title,
-        timestamp,
-      });
-      if (!detail) {
-        return c.json({ success: false, error: "Run not found" }, 404);
-      }
-      return c.json({ success: true, ...detail });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
+  for (const routePath of buildControlRouteAliases("/tasks/:title/runs/:timestamp")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const title = decodeMaybe(String(c.req.param("title") || "").trim());
+        const timestamp = String(c.req.param("timestamp") || "").trim();
+        if (!title) {
+          return c.json({ success: false, error: "Invalid title" }, 400);
+        }
+        if (!TASK_RUN_DIR_REGEX.test(timestamp)) {
+          return c.json({ success: false, error: "Invalid timestamp" }, 400);
+        }
 
-  app.get("/api/dashboard/logs", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const limit = toLimit(c.req.query("limit"), 200);
-      const logs = await readRecentLogs({
-        projectRoot: runtime.rootPath,
-        limit,
-      });
-      return c.json({
-        success: true,
-        logs,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
+        const detail = await readTaskRunDetail({
+          projectRoot: runtime.rootPath,
+          title,
+          timestamp,
+        });
+        if (!detail) {
+          return c.json({ success: false, error: "Run not found" }, 404);
+        }
+        return c.json({ success: true, ...detail });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/logs")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const limit = toLimit(c.req.query("limit"), 200);
+        const logs = await readRecentLogs({
+          projectRoot: runtime.rootPath,
+          limit,
+        });
+        return c.json({
+          success: true,
+          logs,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
 }

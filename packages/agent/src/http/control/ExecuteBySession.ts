@@ -1,5 +1,5 @@
 /**
- * Dashboard execute by session helper。
+ * Control execute by session helper。
  *
  * 关键点（中文）
  * - chatKey session 优先复用 chat 平台队列链路（与平台入站执行一致）。
@@ -77,7 +77,7 @@ export async function executeBySessionId(params: {
         extra: ingressExtra,
       });
     } catch (error) {
-      params.agentState.logger.warn("Dashboard execute ingress append failed", {
+      params.agentState.logger.warn("Control execute ingress append failed", {
         sessionId,
         error: String(error),
       });

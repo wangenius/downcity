@@ -13,9 +13,9 @@
 export type InlineInstantExecutorType = "model" | "acp";
 
 /**
- * Inline 即时执行请求输入。
+ * 平台 Inline 即时执行请求输入。
  */
-export interface ConsoleInlineInstantRunInput {
+export interface PlatformInlineInstantRunInput {
   /**
    * 本次即时执行选用的 executor 类型。
    */
@@ -54,9 +54,9 @@ export interface ConsoleInlineInstantRunInput {
 }
 
 /**
- * Inline 即时执行结果。
+ * 平台 Inline 即时执行结果。
  */
-export interface ConsoleInlineInstantRunResult {
+export interface PlatformInlineInstantRunResult {
   /**
    * 本次即时执行内部使用的临时 sessionId。
    */
@@ -84,13 +84,13 @@ export interface ConsoleInlineInstantRunResult {
 }
 
 /**
- * Inline 即时执行服务端口。
+ * 平台 Inline 即时执行服务端口。
  */
-export interface ConsoleInlineInstantService {
+export interface PlatformInlineInstantService {
   /**
    * 运行一次即时执行请求。
    */
   run(
-    input: ConsoleInlineInstantRunInput,
-  ): Promise<ConsoleInlineInstantRunResult>;
+    input: PlatformInlineInstantRunInput,
+  ): Promise<PlatformInlineInstantRunResult>;
 }

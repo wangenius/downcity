@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 聚合控制面会话消息、归档、system prompt 与执行相关接口。
  * - 仅负责编排请求与响应；消息读取、时间线映射、执行拼装复用 helper。
- * - 虽然当前 URL 前缀仍是 `/api/dashboard/*`，但语义上属于单 agent 控制域。
+ * - 会话控制接口统一暴露在 `/api/control/*` 下。
  */
 
 import type { SystemModelMessage } from "ai";
@@ -20,10 +20,13 @@ import {
 import type { ControlSessionExecuteRequestBody } from "@/shared/types/ControlSessionExecute.js";
 import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 import {
+  buildControlRouteAliases,
   decodeMaybe,
+  toLimit,
+} from "./CommonHelpers.js";
+import {
   listControlSessionSummaries,
   loadSessionMessagesFromFile,
-  toLimit,
   toUiMessageTimeline,
 } from "./Helpers.js";
 import { executeBySessionId } from "./ExecuteBySession.js";
@@ -49,7 +52,7 @@ function toSystemMessageText(message: SystemModelMessage): string {
 }
 
 /**
- * 把 system messages 转成 dashboard 可渲染结构。
+ * 把 system messages 转成 control UI 可渲染结构。
  */
 function toSystemPromptPayload(messages: SystemModelMessage[]): {
   sections: Array<{
@@ -91,305 +94,321 @@ export function registerControlSessionRoutes(
 ): void {
   const { app } = params;
 
-  app.get("/api/dashboard/sessions", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const limit = toLimit(c.req.query("limit"));
-      const executingSessionIds = new Set<string>(
-        runtime.listExecutingSessionIds(),
-      );
-      const sessions = await listControlSessionSummaries({
-        projectRoot: runtime.rootPath,
-        executionContext: params.getAgentContext(),
-        limit,
-        executingSessionIds,
-      });
-      const hasConsoleSession = sessions.some(
-        (item) => String(item.sessionId || "").trim() === CONSOLEUI_SESSION_ID,
-      );
-      const enrichedSessions = hasConsoleSession
-        ? sessions
-        : [
-            {
-              sessionId: CONSOLEUI_SESSION_ID,
-              messageCount: 0,
-              updatedAt: Date.now(),
-              lastRole: "system" as const,
-              lastText: "consoleui channel",
-              channel: "consoleui",
-              ...(executingSessionIds.has(CONSOLEUI_SESSION_ID) ? { executing: true } : {}),
-            },
-            ...sessions,
-          ];
-      return c.json({
-        success: true,
-        sessions: enrichedSessions,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.get("/api/dashboard/sessions/:sessionId/messages", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const limit = toLimit(c.req.query("limit"), 200);
-      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      if (!sessionId) {
-        return c.json({ success: false, error: "Missing sessionId" }, 400);
+  for (const routePath of buildControlRouteAliases("/sessions")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const limit = toLimit(c.req.query("limit"));
+        const executingSessionIds = new Set<string>(
+          runtime.listExecutingSessionIds(),
+        );
+        const sessions = await listControlSessionSummaries({
+          projectRoot: runtime.rootPath,
+          executionContext: params.getAgentContext(),
+          limit,
+          executingSessionIds,
+        });
+        const hasConsoleSession = sessions.some(
+          (item) => String(item.sessionId || "").trim() === CONSOLEUI_SESSION_ID,
+        );
+        const enrichedSessions = hasConsoleSession
+          ? sessions
+          : [
+              {
+                sessionId: CONSOLEUI_SESSION_ID,
+                messageCount: 0,
+                updatedAt: Date.now(),
+                lastRole: "system" as const,
+                lastText: "consoleui channel",
+                channel: "consoleui",
+                ...(executingSessionIds.has(CONSOLEUI_SESSION_ID) ? { executing: true } : {}),
+              },
+              ...sessions,
+            ];
+        return c.json({
+          success: true,
+          sessions: enrichedSessions,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
       }
+    });
+  }
 
-      const filePath = getDowncitySessionMessagesPath(runtime.rootPath, sessionId);
-      const messages = await loadSessionMessagesFromFile(filePath);
-      const sliced = messages
-        .slice(-limit)
-        .flatMap((message) => toUiMessageTimeline(message));
-      return c.json({
-        success: true,
-        sessionId,
-        total: sliced.length,
-        rawTotal: messages.length,
-        messages: sliced,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
+  for (const routePath of buildControlRouteAliases("/sessions/:sessionId/messages")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const limit = toLimit(c.req.query("limit"), 200);
+        const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+        if (!sessionId) {
+          return c.json({ success: false, error: "Missing sessionId" }, 400);
+        }
 
-  app.delete("/api/dashboard/sessions/:sessionId/messages", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      if (!sessionId) {
-        return c.json({ success: false, error: "Missing sessionId" }, 400);
-      }
-
-      const messagesPath = getDowncitySessionMessagesPath(runtime.rootPath, sessionId);
-      const messagesDirPath = dirname(messagesPath);
-      await fs.remove(messagesDirPath);
-      // 关键点（中文）：清理消息文件后，同步清掉内存中的 session runtime，避免旧上下文继续运行。
-      runtime.getSession(sessionId).clearExecutor();
-
-      return c.json({
-        success: true,
-        sessionId,
-        cleared: true,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.delete("/api/dashboard/sessions/:sessionId/chat-history", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      if (!sessionId) {
-        return c.json({ success: false, error: "Missing sessionId" }, 400);
-      }
-
-      const historyPath = getDowncityChatHistoryPath(runtime.rootPath, sessionId);
-      await fs.remove(historyPath);
-
-      return c.json({
-        success: true,
-        sessionId,
-        cleared: true,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.get("/api/dashboard/sessions/:sessionId/archives", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const limit = toLimit(c.req.query("limit"), 100);
-      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      if (!sessionId) {
-        return c.json({ success: false, error: "Missing sessionId" }, 400);
-      }
-
-      const archiveDirPath = getDowncitySessionMessagesArchiveDirPath(
-        runtime.rootPath,
-        sessionId,
-      );
-      if (!(await fs.pathExists(archiveDirPath))) {
+        const filePath = getDowncitySessionMessagesPath(runtime.rootPath, sessionId);
+        const messages = await loadSessionMessagesFromFile(filePath);
+        const sliced = messages
+          .slice(-limit)
+          .flatMap((message) => toUiMessageTimeline(message));
         return c.json({
           success: true,
           sessionId,
-          archives: [],
+          total: sliced.length,
+          rawTotal: messages.length,
+          messages: sliced,
         });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
       }
+    });
+  }
 
-      const entries = await fs.readdir(archiveDirPath, { withFileTypes: true });
-      const archives: Array<{
-        archiveId: string;
-        archivedAt?: number;
-        messageCount: number;
-      }> = [];
+  for (const routePath of buildControlRouteAliases("/sessions/:sessionId/messages")) {
+    app.delete(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+        if (!sessionId) {
+          return c.json({ success: false, error: "Missing sessionId" }, 400);
+        }
 
-      for (const entry of entries) {
-        if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-        const archiveId = decodeMaybe(entry.name.slice(0, -5));
-        if (!archiveId) continue;
+        const messagesPath = getDowncitySessionMessagesPath(runtime.rootPath, sessionId);
+        const messagesDirPath = dirname(messagesPath);
+        await fs.remove(messagesDirPath);
+        // 关键点（中文）：清理消息文件后，同步清掉内存中的 session runtime，避免旧上下文继续运行。
+        runtime.getSession(sessionId).clearExecutor();
+
+        return c.json({
+          success: true,
+          sessionId,
+          cleared: true,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/sessions/:sessionId/chat-history")) {
+    app.delete(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+        if (!sessionId) {
+          return c.json({ success: false, error: "Missing sessionId" }, 400);
+        }
+
+        const historyPath = getDowncityChatHistoryPath(runtime.rootPath, sessionId);
+        await fs.remove(historyPath);
+
+        return c.json({
+          success: true,
+          sessionId,
+          cleared: true,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/sessions/:sessionId/archives")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const limit = toLimit(c.req.query("limit"), 100);
+        const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+        if (!sessionId) {
+          return c.json({ success: false, error: "Missing sessionId" }, 400);
+        }
+
+        const archiveDirPath = getDowncitySessionMessagesArchiveDirPath(
+          runtime.rootPath,
+          sessionId,
+        );
+        if (!(await fs.pathExists(archiveDirPath))) {
+          return c.json({
+            success: true,
+            sessionId,
+            archives: [],
+          });
+        }
+
+        const entries = await fs.readdir(archiveDirPath, { withFileTypes: true });
+        const archives: Array<{
+          archiveId: string;
+          archivedAt?: number;
+          messageCount: number;
+        }> = [];
+
+        for (const entry of entries) {
+          if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+          const archiveId = decodeMaybe(entry.name.slice(0, -5));
+          if (!archiveId) continue;
+
+          const archivePath = getDowncitySessionMessagesArchivePath(
+            runtime.rootPath,
+            sessionId,
+            archiveId,
+          );
+          const payload = (await fs.readJson(archivePath).catch(() => null)) as
+            | {
+                archivedAt?: unknown;
+                messages?: unknown;
+              }
+            | null;
+          const archivedAtFromPayload =
+            typeof payload?.archivedAt === "number" &&
+            Number.isFinite(payload.archivedAt)
+              ? payload.archivedAt
+              : undefined;
+          const archivedAtFromStat =
+            typeof archivedAtFromPayload === "number"
+              ? undefined
+              : await fs
+                  .stat(archivePath)
+                  .then((stat) => stat.mtimeMs)
+                  .catch(() => undefined);
+          const messageCount = Array.isArray(payload?.messages)
+            ? payload.messages.length
+            : 0;
+
+          archives.push({
+            archiveId,
+            ...(typeof archivedAtFromPayload === "number"
+              ? { archivedAt: archivedAtFromPayload }
+              : typeof archivedAtFromStat === "number"
+                ? { archivedAt: archivedAtFromStat }
+                : {}),
+            messageCount,
+          });
+        }
+
+        archives.sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+
+        return c.json({
+          success: true,
+          sessionId,
+          archives: archives.slice(0, limit),
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/sessions/:sessionId/archives/:archiveId")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+        const archiveId = decodeMaybe(String(c.req.param("archiveId") || "").trim());
+        if (!sessionId) {
+          return c.json({ success: false, error: "Missing sessionId" }, 400);
+        }
+        if (!archiveId) {
+          return c.json({ success: false, error: "Missing archiveId" }, 400);
+        }
 
         const archivePath = getDowncitySessionMessagesArchivePath(
           runtime.rootPath,
           sessionId,
           archiveId,
         );
+        if (!(await fs.pathExists(archivePath))) {
+          return c.json(
+            { success: false, error: `Archive not found: ${archiveId}` },
+            404,
+          );
+        }
+
         const payload = (await fs.readJson(archivePath).catch(() => null)) as
           | {
               archivedAt?: unknown;
               messages?: unknown;
             }
           | null;
-        const archivedAtFromPayload =
+        const archivedAt =
           typeof payload?.archivedAt === "number" &&
           Number.isFinite(payload.archivedAt)
             ? payload.archivedAt
             : undefined;
-        const archivedAtFromStat =
-          typeof archivedAtFromPayload === "number"
-            ? undefined
-            : await fs
-                .stat(archivePath)
-                .then((stat) => stat.mtimeMs)
-                .catch(() => undefined);
-        const messageCount = Array.isArray(payload?.messages)
-          ? payload.messages.length
-          : 0;
-
-        archives.push({
-          archiveId,
-          ...(typeof archivedAtFromPayload === "number"
-            ? { archivedAt: archivedAtFromPayload }
-            : typeof archivedAtFromStat === "number"
-              ? { archivedAt: archivedAtFromStat }
-              : {}),
-          messageCount,
-        });
-      }
-
-      archives.sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
-
-      return c.json({
-        success: true,
-        sessionId,
-        archives: archives.slice(0, limit),
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.get("/api/dashboard/sessions/:sessionId/archives/:archiveId", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      const archiveId = decodeMaybe(String(c.req.param("archiveId") || "").trim());
-      if (!sessionId) {
-        return c.json({ success: false, error: "Missing sessionId" }, 400);
-      }
-      if (!archiveId) {
-        return c.json({ success: false, error: "Missing archiveId" }, 400);
-      }
-
-      const archivePath = getDowncitySessionMessagesArchivePath(
-        runtime.rootPath,
-        sessionId,
-        archiveId,
-      );
-      if (!(await fs.pathExists(archivePath))) {
-        return c.json(
-          { success: false, error: `Archive not found: ${archiveId}` },
-          404,
+        const archivedMessages = Array.isArray(payload?.messages)
+          ? payload.messages
+          : [];
+        const messages = archivedMessages.flatMap((message) =>
+          toUiMessageTimeline(message as Parameters<typeof toUiMessageTimeline>[0]),
         );
+
+        return c.json({
+          success: true,
+          sessionId,
+          archiveId,
+          ...(typeof archivedAt === "number" ? { archivedAt } : {}),
+          total: messages.length,
+          rawTotal: archivedMessages.length,
+          messages,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
       }
+    });
+  }
 
-      const payload = (await fs.readJson(archivePath).catch(() => null)) as
-        | {
-            archivedAt?: unknown;
-            messages?: unknown;
-          }
-        | null;
-      const archivedAt =
-        typeof payload?.archivedAt === "number" &&
-        Number.isFinite(payload.archivedAt)
-          ? payload.archivedAt
-          : undefined;
-      const archivedMessages = Array.isArray(payload?.messages)
-        ? payload.messages
-        : [];
-      const messages = archivedMessages.flatMap((message) =>
-        toUiMessageTimeline(message as Parameters<typeof toUiMessageTimeline>[0]),
-      );
-
-      return c.json({
-        success: true,
-        sessionId,
-        archiveId,
-        ...(typeof archivedAt === "number" ? { archivedAt } : {}),
-        total: messages.length,
-        rawTotal: archivedMessages.length,
-        messages,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.get("/api/dashboard/system-prompt", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const sessionId =
-        decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
-        CONSOLEUI_SESSION_ID;
-      const systemMessages = await resolveSessionSystemMessages({
-        projectRoot: runtime.rootPath,
-        sessionId,
-        profile: "chat",
-        staticSystemPrompts: runtime.systems,
-        context: params.getAgentContext(),
-      });
-      return c.json({
-        success: true,
-        sessionId,
-        ...toSystemPromptPayload(systemMessages),
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
-
-  app.post("/api/dashboard/sessions/:sessionId/execute", async (c) => {
-    try {
-      const runtime = params.getAgentRuntime();
-      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      const body = (await c.req.json().catch(() => ({}))) as Partial<ControlSessionExecuteRequestBody>;
-      const instructions = String(body.instructions || "").trim();
-      if (!sessionId) {
-        return c.json({ success: false, error: "Missing sessionId" }, 400);
+  for (const routePath of buildControlRouteAliases("/system-prompt")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const sessionId =
+          decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
+          CONSOLEUI_SESSION_ID;
+        const systemMessages = await resolveSessionSystemMessages({
+          projectRoot: runtime.rootPath,
+          sessionId,
+          profile: "chat",
+          staticSystemPrompts: runtime.systems,
+          context: params.getAgentContext(),
+        });
+        return c.json({
+          success: true,
+          sessionId,
+          ...toSystemPromptPayload(systemMessages),
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
       }
-      if (!instructions) {
-        return c.json({ success: false, error: "Missing instructions" }, 400);
-      }
+    });
+  }
 
-      const result = await executeBySessionId({
-        agentState: runtime,
-        executionContext: params.getAgentContext(),
-        sessionId,
-        instructions,
-        attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
-      });
-      return c.json({
-        success: true,
-        sessionId,
-        result,
-      });
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500);
-    }
-  });
+  for (const routePath of buildControlRouteAliases("/sessions/:sessionId/execute")) {
+    app.post(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+        const body = (await c.req.json().catch(() => ({}))) as Partial<ControlSessionExecuteRequestBody>;
+        const instructions = String(body.instructions || "").trim();
+        if (!sessionId) {
+          return c.json({ success: false, error: "Missing sessionId" }, 400);
+        }
+        if (!instructions) {
+          return c.json({ success: false, error: "Missing instructions" }, 400);
+        }
+
+        const result = await executeBySessionId({
+          agentState: runtime,
+          executionContext: params.getAgentContext(),
+          sessionId,
+          instructions,
+          attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
+        });
+        return c.json({
+          success: true,
+          sessionId,
+          result,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
 }

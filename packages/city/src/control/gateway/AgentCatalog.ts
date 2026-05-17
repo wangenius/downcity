@@ -1,5 +1,5 @@
 /**
- * Console agent 目录与状态辅助。
+ * 平台 agent 目录与状态辅助。
  *
  * 关键点（中文）
  * - 负责 agent 列表、选中逻辑、模型面板、配置文件状态等“只读聚合”能力。
@@ -23,28 +23,28 @@ import {
   getSoulMdPath,
 } from "@/config/Paths.js";
 import { isAgentProjectInitialized } from "@downcity/agent";
-import { listConsoleAgents } from "@/process/registry/CityRegistry.js";
+import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
 import {
-  getConsoleAgentRegistryPath,
+  getManagedAgentRegistryPath,
   getCityPidPath,
-  getConsolePidPath,
-  getConsoleShipDbPath,
+  getControlPlanePidPath,
+  getPlatformStoreDbPath,
 } from "@/process/registry/CityPaths.js";
 import type {
-  ConsoleAgentOption,
-  ConsoleAgentsResponse,
-  ConsoleConfigFileStatusItem,
-  ConsoleConfigStatusResponse,
-  ConsoleAgentDirectoryInspection,
-  ConsoleLocalModelsResponse,
+  PlatformAgentOption,
+  PlatformAgentsResponse,
+  PlatformConfigFileStatusItem,
+  PlatformConfigStatusResponse,
+  PlatformAgentDirectoryInspection,
+  PlatformLocalModelsResponse,
 } from "@downcity/agent";
 import type {
-  ConsoleChatChannelStatus,
-  ConsoleDaemonMeta,
-  ConsoleShipJson,
+  PlatformAgentChatChannelStatus,
+  PlatformAgentDaemonMeta,
+  PlatformAgentShipJson,
 } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 const DEFAULT_RUNTIME_PORT = 5314;
 
@@ -53,7 +53,7 @@ const DEFAULT_RUNTIME_PORT = 5314;
 /**
  * 从请求中读取当前指向的 agent id。
  */
-export function readRequestedConsoleAgentId(request: Request): string {
+export function readRequestedPlatformAgentId(request: Request): string {
   const requestUrl = new URL(request.url);
   const queryAgent = String(requestUrl.searchParams.get("agent") || "").trim();
   if (queryAgent) return queryAgent;
@@ -96,7 +96,7 @@ async function resolveRuntimeEndpoint(projectRoot: string): Promise<{
   try {
     const metaPath = getDaemonMetaPath(projectRoot);
     if (await fs.pathExists(metaPath)) {
-      const meta = (await fs.readJson(metaPath)) as ConsoleDaemonMeta;
+      const meta = (await fs.readJson(metaPath)) as PlatformAgentDaemonMeta;
       const args = Array.isArray(meta.args) ? meta.args.map((x) => String(x)) : [];
       daemonArgHost = normalizeHost(pickArgValue(args, "--host"));
       daemonArgPort = normalizePort(pickArgValue(args, "--port"));
@@ -135,7 +135,7 @@ async function resolveAgentChatProfiles(params: {
     const payload = (await response.json().catch(() => ({}))) as {
       success?: unknown;
       data?: {
-        channels?: ConsoleChatChannelStatus[];
+        channels?: PlatformAgentChatChannelStatus[];
       };
     };
     const rows = Array.isArray(payload?.data?.channels) ? payload.data.channels : [];
@@ -179,17 +179,17 @@ async function buildAgentOption(
   startedAt: string,
   updatedAt: string,
   stoppedAt?: string,
-): Promise<ConsoleAgentOption | null> {
+): Promise<PlatformAgentOption | null> {
   const daemonPid = await readDaemonPid(projectRoot);
   const running = Boolean(daemonPid && isProcessAlive(daemonPid));
   const endpoint = await resolveRuntimeEndpoint(projectRoot);
 
   let displayName = basename(projectRoot);
-  let ship: ConsoleShipJson | null = null;
+  let ship: PlatformAgentShipJson | null = null;
   try {
     const shipPath = getDowncityJsonPath(projectRoot);
     if (await fs.pathExists(shipPath)) {
-      ship = (await fs.readJson(shipPath)) as ConsoleShipJson;
+      ship = (await fs.readJson(shipPath)) as PlatformAgentShipJson;
       const name = String(ship?.name || "").trim();
       if (name) displayName = name;
     }
@@ -222,11 +222,11 @@ async function buildAgentOption(
 }
 
 /**
- * 枚举 console 注册表中的所有 agent。
+ * 枚举平台控制面注册表中的所有 agent。
  */
-export async function listKnownConsoleAgents(): Promise<ConsoleAgentOption[]> {
-  const entries = await listConsoleAgents();
-  const agents: ConsoleAgentOption[] = [];
+export async function listKnownPlatformAgents(): Promise<PlatformAgentOption[]> {
+  const entries = await listManagedAgentEntries();
+  const agents: PlatformAgentOption[] = [];
 
   for (const entry of entries) {
     const projectRoot = path.resolve(String(entry.projectRoot || "").trim());
@@ -250,7 +250,7 @@ export async function listKnownConsoleAgents(): Promise<ConsoleAgentOption[]> {
 }
 
 function selectAgentId(
-  agents: ConsoleAgentOption[],
+  agents: PlatformAgentOption[],
   requestedAgentId: string,
 ): string {
   const requested = String(requestedAgentId || "").trim();
@@ -267,11 +267,11 @@ function selectAgentId(
 /**
  * 构建 agent 列表响应。
  */
-export async function buildConsoleAgentsResponse(params: {
+export async function buildPlatformAgentsResponse(params: {
   requestedAgentId: string;
   cityVersion: string;
-}): Promise<ConsoleAgentsResponse> {
-  const agents = await listKnownConsoleAgents();
+}): Promise<PlatformAgentsResponse> {
+  const agents = await listKnownPlatformAgents();
   const selectedAgentId = selectAgentId(agents, params.requestedAgentId);
   return {
     success: true,
@@ -284,11 +284,11 @@ export async function buildConsoleAgentsResponse(params: {
 /**
  * 解析当前选中的运行中 agent。
  */
-export async function resolveSelectedConsoleAgent(
+export async function resolveSelectedPlatformAgent(
   requestedAgentId: string,
   cityVersion: string,
-): Promise<ConsoleAgentOption | null> {
-  const payload = await buildConsoleAgentsResponse({
+): Promise<PlatformAgentOption | null> {
+  const payload = await buildPlatformAgentsResponse({
     requestedAgentId,
     cityVersion,
   });
@@ -301,35 +301,35 @@ export async function resolveSelectedConsoleAgent(
 /**
  * 按 id 查找 agent，允许离线状态。
  */
-export async function resolveConsoleAgentById(
+export async function resolvePlatformAgentById(
   requestedAgentId: string,
-): Promise<ConsoleAgentOption | null> {
+): Promise<PlatformAgentOption | null> {
   const targetId = String(requestedAgentId || "").trim();
   if (!targetId) return null;
-  const agents = await listKnownConsoleAgents();
+  const agents = await listKnownPlatformAgents();
   return agents.find((item) => item.id === targetId) || null;
 }
 
 /**
  * 探测目录是否已具备 agent 运行条件。
  */
-export async function inspectConsoleAgentDirectory(
+export async function inspectPlatformAgentDirectory(
   projectRoot: string,
-): Promise<ConsoleAgentDirectoryInspection> {
+): Promise<PlatformAgentDirectoryInspection> {
   const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
   const shipPath = getDowncityJsonPath(normalizedRoot);
   const profilePath = getProfileMdPath(normalizedRoot);
   const hasShipJson = await fs.pathExists(shipPath);
   const hasProfileMd = await fs.pathExists(profilePath);
   const initialized = await isAgentProjectInitialized(normalizedRoot);
-  const knownAgents = await listKnownConsoleAgents();
+  const knownAgents = await listKnownPlatformAgents();
   const matched = knownAgents.find((item) => item.projectRoot === normalizedRoot) || null;
 
   let displayName = basename(normalizedRoot);
   let modelId = "";
   if (hasShipJson) {
     try {
-      const ship = (await fs.readJson(shipPath)) as ConsoleShipJson;
+      const ship = (await fs.readJson(shipPath)) as PlatformAgentShipJson;
       displayName = String(ship?.name || "").trim() || displayName;
       modelId = String(ship?.execution?.modelId || "").trim();
     } catch {
@@ -352,7 +352,7 @@ export async function inspectConsoleAgentDirectory(
 }
 
 /**
- * 读取 Console 可选的本地 GGUF 模型列表。
+ * 读取平台可选的本地 GGUF 模型列表。
  *
  * 关键点（中文）
  * - 如果项目已存在 `downcity.json`，优先尊重 `plugins.lmp.modelsDir`。
@@ -362,7 +362,7 @@ export async function inspectConsoleAgentDirectory(
 /**
  * 构建 Global Model 面板响应。
  */
-export async function buildConsoleModelResponse(params: {
+export async function buildPlatformModelResponse(params: {
   requestedAgentId: string;
   cityVersion: string;
 }): Promise<{
@@ -383,7 +383,7 @@ export async function buildConsoleModelResponse(params: {
     }>;
   };
 }> {
-  const selectedAgent = await resolveSelectedConsoleAgent(
+  const selectedAgent = await resolveSelectedPlatformAgent(
     params.requestedAgentId,
     params.cityVersion,
   );
@@ -392,7 +392,7 @@ export async function buildConsoleModelResponse(params: {
     try {
       const shipPath = getDowncityJsonPath(selectedAgent.projectRoot);
       if (await fs.pathExists(shipPath)) {
-        const ship = (await fs.readJson(shipPath)) as ConsoleShipJson;
+        const ship = (await fs.readJson(shipPath)) as PlatformAgentShipJson;
         agentPrimaryModelId = String(ship?.execution?.modelId || "").trim();
       }
     } catch {
@@ -400,7 +400,7 @@ export async function buildConsoleModelResponse(params: {
     }
   }
 
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     const models = store.listModels();
     const providers = await store.listProviders();
@@ -439,12 +439,12 @@ export async function buildConsoleModelResponse(params: {
 /**
  * 读取单个配置文件状态。
  */
-export async function readConsoleConfigFileStatus(params: {
+export async function readPlatformConfigFileStatus(params: {
   key: string;
-  scope: "console" | "agent";
+  scope: "platform" | "agent";
   label: string;
   filePath: string;
-}): Promise<ConsoleConfigFileStatusItem> {
+}): Promise<PlatformConfigFileStatusItem> {
   const filePath = path.resolve(String(params.filePath || ""));
   if (!filePath) {
 
@@ -529,71 +529,71 @@ export async function readConsoleConfigFileStatus(params: {
 /**
  * 构建配置状态响应。
  */
-export async function buildConsoleConfigStatusResponse(params: {
+export async function buildPlatformConfigStatusResponse(params: {
   requestedAgentId: string;
   cityVersion: string;
-}): Promise<ConsoleConfigStatusResponse> {
-  const selectedAgent = await resolveSelectedConsoleAgent(
+}): Promise<PlatformConfigStatusResponse> {
+  const selectedAgent = await resolveSelectedPlatformAgent(
     params.requestedAgentId,
     params.cityVersion,
   );
 
-  const consoleChecks = await Promise.all([
-    readConsoleConfigFileStatus({
-      key: "ship_db",
-      scope: "console",
-      label: "Console downcity.db",
-      filePath: getConsoleShipDbPath(),
+  const platformChecks = await Promise.all([
+    readPlatformConfigFileStatus({
+      key: "platform_store_db",
+      scope: "platform",
+      label: "Platform downcity.db",
+      filePath: getPlatformStoreDbPath(),
     }),
-    readConsoleConfigFileStatus({
-      key: "console_pid",
-      scope: "console",
-      label: "Console PID",
-      filePath: getConsolePidPath(),
+    readPlatformConfigFileStatus({
+      key: "control_plane_pid",
+      scope: "platform",
+      label: "Control Plane PID",
+      filePath: getControlPlanePidPath(),
     }),
-    readConsoleConfigFileStatus({
+    readPlatformConfigFileStatus({
       key: "ui_pid",
-      scope: "console",
+      scope: "platform",
       label: "City PID",
       filePath: getCityPidPath(),
     }),
-    readConsoleConfigFileStatus({
+    readPlatformConfigFileStatus({
       key: "agents_registry",
-      scope: "console",
+      scope: "platform",
       label: "Agents Registry",
-      filePath: getConsoleAgentRegistryPath(),
+      filePath: getManagedAgentRegistryPath(),
     }),
   ]);
 
-  let agentChecks: ConsoleConfigFileStatusItem[] = [];
+  let agentChecks: PlatformConfigFileStatusItem[] = [];
   if (selectedAgent) {
     const cwd = selectedAgent.projectRoot;
     agentChecks = await Promise.all([
-      readConsoleConfigFileStatus({
+      readPlatformConfigFileStatus({
         key: "profile_md",
         scope: "agent",
         label: "PROFILE.md",
         filePath: getProfileMdPath(cwd),
       }),
-      readConsoleConfigFileStatus({
+      readPlatformConfigFileStatus({
         key: "soul_md",
         scope: "agent",
         label: "SOUL.md",
         filePath: getSoulMdPath(cwd),
       }),
-      readConsoleConfigFileStatus({
+      readPlatformConfigFileStatus({
         key: "ship_json",
         scope: "agent",
         label: "Agent downcity.json",
         filePath: getDowncityJsonPath(cwd),
       }),
-      readConsoleConfigFileStatus({
+      readPlatformConfigFileStatus({
         key: "ship_schema",
         scope: "agent",
         label: ".downcity/schema/downcity.schema.json",
         filePath: getDowncitySchemaPath(cwd),
       }),
-      readConsoleConfigFileStatus({
+      readPlatformConfigFileStatus({
         key: "memory_index",
         scope: "agent",
         label: ".downcity/memory/index.sqlite",
@@ -606,6 +606,6 @@ export async function buildConsoleConfigStatusResponse(params: {
     success: true,
     selectedAgentId: selectedAgent?.id || "",
     selectedAgentName: selectedAgent?.name || "",
-    items: [...consoleChecks, ...agentChecks],
-  };
+      items: [...platformChecks, ...agentChecks],
+    };
 }

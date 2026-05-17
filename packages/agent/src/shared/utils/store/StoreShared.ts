@@ -1,8 +1,8 @@
 /**
- * ConsoleStore 共享内部工具。
+ * PlatformStore 共享内部工具。
  *
  * 关键点（中文）
- * - 这里只放 `ConsoleStore` 内部多个子模块共用的类型与纯函数。
+ * - 这里只放 `PlatformStore` 内部多个子模块共用的类型与纯函数。
  * - 对外不暴露业务语义，只服务 `utils/store/*` 内部实现。
  */
 
@@ -13,12 +13,12 @@ import type { StoredChannelAccountChannel } from "@/shared/types/Store.js";
 /**
  * Drizzle SQLite 实例类型。
  */
-export type ConsoleDrizzleDb = ReturnType<typeof drizzle>;
+export type PlatformDrizzleDb = ReturnType<typeof drizzle>;
 
 /**
- * ConsoleStore 子模块上下文。
+ * PlatformStore 子模块上下文。
  */
-export interface ConsoleStoreContext {
+export interface PlatformStoreContext {
   /**
    * 原始 SQLite 连接。
    */
@@ -26,7 +26,7 @@ export interface ConsoleStoreContext {
   /**
    * Drizzle 查询实例。
    */
-  db: ConsoleDrizzleDb;
+  db: PlatformDrizzleDb;
 }
 
 /**

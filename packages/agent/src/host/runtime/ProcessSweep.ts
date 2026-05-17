@@ -5,7 +5,7 @@
  * - 处理“pid 文件不存在，但旧的 detached 进程还活着”的场景。
  * - 仅匹配 Downcity CLI 自己拉起的 `run` / `console run` / `agent start --foreground true`。
  * - 作为 stop/start 的兜底清理层，避免旧版本进程占住端口却无法被当前 pid 文件追踪。
- * - `run` 指 city 后台，`console run` 指 Console 模块，二者需要明确区分。
+ * - `run` 指 city 后台，`console run` 指 control plane 命令，二者需要明确区分。
  */
 
 import { execFile as execFileCb } from "node:child_process";
@@ -71,7 +71,7 @@ export function isDowncityCliCommand(command: string): boolean {
  *
  * 关键点（中文）
  * - `Index.js run` 是 city runtime。
- * - `Index.js console run` 是 Console UI runtime。
+ * - `Index.js console run` 是 control plane runtime。
  * - 两者都包含 `run`，因此必须按完整子命令匹配，不能只查 `run` 词元。
  */
 export function shouldSweepDetachedCityCommand(

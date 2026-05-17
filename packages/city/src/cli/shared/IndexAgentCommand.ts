@@ -34,7 +34,7 @@ import {
 import {
   ensureRegisteredAgentProjectRoot,
   prepareForegroundAgent,
-} from "../console/IndexConsoleCommand.js";
+} from "../control-plane/ControlPlaneCommand.js";
 
 /**
  * agent 命令注册参数。

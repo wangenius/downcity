@@ -11,7 +11,7 @@ import path from "node:path";
 import fs from "node:fs";
 import type { Command } from "commander";
 import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
-import { listConsoleAgents } from "@/process/registry/CityRegistry.js";
+import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
 import { isCityRunning } from "@/process/registry/CityRuntime.js";
 import { ensureRuntimeExecutionBindingReady } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
@@ -137,7 +137,7 @@ export async function resolveProjectRootByAgentName(agentName: string): Promise<
     return { error: "--agent requires a non-empty value" };
   }
 
-  const entries = await listConsoleAgents();
+  const entries = await listManagedAgentEntries();
   const matchedRoots = entries
     .filter((entry) => isRegistryEntryRunning(entry))
     .map((entry) => path.resolve(String(entry.projectRoot || "").trim() || "."))
@@ -150,7 +150,7 @@ export async function resolveProjectRootByAgentName(agentName: string): Promise<
 
   if (matchedRoots.length === 0) {
     return {
-      error: `Agent not found in console registry: ${agentName}. Run "city agent list" to inspect names.`,
+      error: `Agent not found in managed agent registry: ${agentName}. Run "city agent list" to inspect names.`,
     };
   }
   if (matchedRoots.length > 1) {
@@ -188,7 +188,7 @@ export async function resolveServiceProjectRoot(options: ServiceCliBaseOptions):
   }
 
   const projectRoot = resolveProjectRoot(options.path);
-  const entries = await listConsoleAgents();
+  const entries = await listManagedAgentEntries();
   const registered = entries.some(
     (entry) =>
       isRegistryEntryRunning(entry) &&
@@ -197,7 +197,7 @@ export async function resolveServiceProjectRoot(options: ServiceCliBaseOptions):
   if (!registered) {
     return {
       error:
-        `Agent is not registered in console registry: ${projectRoot}. ` +
+        `Agent is not registered in managed agent registry: ${projectRoot}. ` +
         `Run "city agent list" to inspect registered agents.`,
     };
   }
@@ -257,7 +257,7 @@ export function parseCommandPayload(raw?: string): JsonValue | undefined {
 export function addServiceTargetOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--agent <name>", "agent 名称（从 console registry 解析）")
+    .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
@@ -270,6 +270,6 @@ export function addServiceTargetOptions(command: Command): Command {
 export function addServiceScheduleOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--agent <name>", "agent 名称（从 console registry 解析）")
+    .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }

@@ -7,7 +7,7 @@
  * - 写入 Console Env 后，后续 agent daemon 启动会通过 `context.globalEnv` 读取到该值。
  */
 
-import { ConsoleStore } from "@/store/index.js";
+import { PlatformStore } from "@downcity/agent";
 import type {
   CityPublicHostEnvEntry,
   CityPublicHostEnvResult,
@@ -48,7 +48,7 @@ async function resolvePublicIpv4FromNetwork(): Promise<string | null> {
 }
 
 function readGlobalEnvFromStore(): Record<string, string> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     return store.getGlobalEnvMapSync();
   } catch {
@@ -59,7 +59,7 @@ function readGlobalEnvFromStore(): Record<string, string> {
 }
 
 async function upsertGlobalEnvToStore(entry: CityPublicHostEnvEntry): Promise<void> {
-  const store = new ConsoleStore();
+  const store = new PlatformStore();
   try {
     await store.upsertEnvEntry({
       scope: "global",

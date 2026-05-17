@@ -13,47 +13,47 @@ import http from "node:http";
 import fs from "fs-extra";
 import path from "node:path";
 import { fileURLToPath } from "url";
-import { registerControlGatewayRoutes } from "@/control/ControlGatewayRoutes.js";
+import { registerPlatformApiRoutes } from "@/control/PlatformApiRoutes.js";
 import {
-  buildConsoleAgentsResponse,
-  buildConsoleConfigStatusResponse,
-  buildConsoleModelResponse,
-  inspectConsoleAgentDirectory,
-  listKnownConsoleAgents,
-  readConsoleConfigFileStatus,
-  readRequestedConsoleAgentId,
-  resolveConsoleAgentById,
-  resolveSelectedConsoleAgent,
+  buildPlatformAgentsResponse,
+  buildPlatformConfigStatusResponse,
+  buildPlatformModelResponse,
+  inspectPlatformAgentDirectory,
+  listKnownPlatformAgents,
+  readPlatformConfigFileStatus,
+  readRequestedPlatformAgentId,
+  resolvePlatformAgentById,
+  resolveSelectedPlatformAgent,
 } from "@/control/gateway/AgentCatalog.js";
 import {
-  executeConsoleShellCommand,
-  initializeConsoleAgentProject,
-  inspectConsoleAgentRestartSafety,
-  pickConsoleDirectoryPath,
-  restartConsoleAgentByProjectRoot,
-  startConsoleAgentByProjectRoot,
-  stopConsoleAgentByProjectRoot,
-  updateConsoleAgentExecution,
+  executeAgentProjectShellCommand,
+  initializePlatformAgentProject,
+  inspectManagedAgentRestartSafety,
+  pickPlatformAgentDirectoryPath,
+  restartManagedAgentByProjectRoot,
+  startManagedAgentByProjectRoot,
+  stopManagedAgentByProjectRoot,
+  updatePlatformAgentExecution,
 } from "@/control/gateway/AgentActions.js";
-import { serveConsoleFrontendPath } from "@/control/gateway/FrontendAssets.js";
+import { serveControlPlaneFrontendPath } from "@/control/gateway/FrontendAssets.js";
 import {
-  buildConsoleUpstreamUrl,
-  forwardConsoleRequest,
+  buildPlatformUpstreamUrl,
+  forwardPlatformRequest,
 } from "@/control/gateway/Proxy.js";
 import type {
-  ConsoleAgentOption,
-  ConsoleAgentsResponse,
-  ConsoleConfigFileStatusItem,
-  ConsoleConfigStatusResponse,
-  ConsoleAgentDirectoryInspection,
-  ConsoleLocalModelsResponse,
+  PlatformAgentOption,
+  PlatformAgentsResponse,
+  PlatformConfigFileStatusItem,
+  PlatformConfigStatusResponse,
+  PlatformAgentDirectoryInspection,
+  PlatformLocalModelsResponse,
 } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
 import { listBuiltinPluginRuntimeAuthPolicies } from "@downcity/agent";
 import { AuthService } from "@/http/auth/AuthService.js";
 import { registerAuthRoutes } from "@/http/auth/AuthRoutes.js";
 import {
-  CONSOLE_AUTH_ROUTE_POLICIES,
+  CONTROL_PLANE_AUTH_ROUTE_POLICIES,
   createRouteAuthGuardMiddleware,
 } from "@/http/auth/RoutePolicy.js";
 
@@ -61,7 +61,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * 当前 DC 版本号（用于 Console Overview 显示）。
+ * 当前 DC 版本号（用于 control plane overview 显示）。
  */
 const DC_VERSION = (() => {
   try {
@@ -119,7 +119,7 @@ export class ControlGateway {
       createRouteAuthGuardMiddleware(
         this.authService,
         [
-          ...CONSOLE_AUTH_ROUTE_POLICIES,
+          ...CONTROL_PLANE_AUTH_ROUTE_POLICIES,
           ...listBuiltinPluginRuntimeAuthPolicies(),
         ],
       ),
@@ -136,7 +136,7 @@ export class ControlGateway {
       app: this.app,
       authService: this.authService,
     });
-    registerControlGatewayRoutes({
+    registerPlatformApiRoutes({
       app: this.app,
       handlers: {
         readRequestedAgentId: (request) => this.readRequestedAgentId(request),
@@ -164,21 +164,21 @@ export class ControlGateway {
   }
 
   private readRequestedAgentId(request: Request): string {
-    return readRequestedConsoleAgentId(request);
+    return readRequestedPlatformAgentId(request);
   }
 
   private async pickDirectoryPath(): Promise<string> {
-    return pickConsoleDirectoryPath();
+    return pickPlatformAgentDirectoryPath();
   }
 
-  private async listKnownAgents(): Promise<ConsoleAgentOption[]> {
-    return listKnownConsoleAgents();
+  private async listKnownAgents(): Promise<PlatformAgentOption[]> {
+    return listKnownPlatformAgents();
   }
 
   private async buildAgentsResponse(
     requestedAgentId: string,
-  ): Promise<ConsoleAgentsResponse> {
-    return buildConsoleAgentsResponse({
+  ): Promise<PlatformAgentsResponse> {
+    return buildPlatformAgentsResponse({
       requestedAgentId,
       cityVersion: DC_VERSION,
     });
@@ -188,7 +188,7 @@ export class ControlGateway {
    * 构建 Global Model 面板响应。
    *
    * 关键点（中文）
-   * - 模型池来自 console 全局 SQLite，而不是某个 agent。
+   * - 模型池来自控制面全局 SQLite，而不是某个 agent。
    * - `agentPrimaryModelId` 仅用于展示当前选中 agent 的项目绑定。
    */
   private async buildModelResponse(requestedAgentId: string): Promise<{
@@ -209,7 +209,7 @@ export class ControlGateway {
       }>;
     };
   }> {
-    return buildConsoleModelResponse({
+    return buildPlatformModelResponse({
       requestedAgentId,
       cityVersion: DC_VERSION,
     });
@@ -224,24 +224,24 @@ export class ControlGateway {
    */
   private async readConfigFileStatus(params: {
     key: string;
-    scope: "console" | "agent";
+    scope: "platform" | "agent";
     label: string;
     filePath: string;
-  }): Promise<ConsoleConfigFileStatusItem> {
-    return readConsoleConfigFileStatus(params);
+  }): Promise<PlatformConfigFileStatusItem> {
+    return readPlatformConfigFileStatus(params);
   }
 
   /**
    * 构建配置文件状态响应。
    *
    * 关键点（中文）
-   * - `console` 维度始终返回。
+   * - `platform` 维度始终返回。
    * - `agent` 维度仅在存在选中 agent 时返回，避免误导。
    */
   private async buildConfigStatusResponse(
     requestedAgentId: string,
-  ): Promise<ConsoleConfigStatusResponse> {
-    return buildConsoleConfigStatusResponse({
+  ): Promise<PlatformConfigStatusResponse> {
+    return buildPlatformConfigStatusResponse({
       requestedAgentId,
       cityVersion: DC_VERSION,
     });
@@ -249,8 +249,8 @@ export class ControlGateway {
 
   private async resolveSelectedAgent(
     requestedAgentId: string,
-  ): Promise<ConsoleAgentOption | null> {
-    return resolveSelectedConsoleAgent(requestedAgentId, DC_VERSION);
+  ): Promise<PlatformAgentOption | null> {
+    return resolveSelectedPlatformAgent(requestedAgentId, DC_VERSION);
   }
 
   /**
@@ -258,8 +258,8 @@ export class ControlGateway {
    */
   private async resolveAgentById(
     requestedAgentId: string,
-  ): Promise<ConsoleAgentOption | null> {
-    return resolveConsoleAgentById(requestedAgentId);
+  ): Promise<PlatformAgentOption | null> {
+    return resolvePlatformAgentById(requestedAgentId);
   }
 
   /**
@@ -267,8 +267,8 @@ export class ControlGateway {
    */
   private async inspectAgentDirectory(
     projectRoot: string,
-  ): Promise<ConsoleAgentDirectoryInspection> {
-    return inspectConsoleAgentDirectory(projectRoot);
+  ): Promise<PlatformAgentDirectoryInspection> {
+    return inspectPlatformAgentDirectory(projectRoot);
   }
 
   /**
@@ -276,7 +276,7 @@ export class ControlGateway {
    */
   private async listLocalModels(
     projectRoot?: string,
-  ): Promise<ConsoleLocalModelsResponse> {
+  ): Promise<PlatformLocalModelsResponse> {
     return { success: true, modelsDir: "~/.models", models: [] };
   }
 
@@ -301,7 +301,7 @@ export class ControlGateway {
     stdout: string;
     stderr: string;
   }> {
-    return executeConsoleShellCommand(params);
+    return executeAgentProjectShellCommand(params);
   }
 
   private async initializeAgentProject(projectRoot: string, initialization: {
@@ -309,7 +309,7 @@ export class ControlGateway {
     modelId?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult> {
-    return initializeConsoleAgentProject({
+    return initializePlatformAgentProject({
       projectRoot,
       agentName: initialization.agentName,
       modelId: initialization.modelId,
@@ -332,7 +332,7 @@ export class ControlGateway {
     logPath?: string;
     message?: string;
   }> {
-    return startConsoleAgentByProjectRoot({
+    return startManagedAgentByProjectRoot({
       projectRoot,
       cliPath: path.resolve(__dirname, "../cli/Index.js"),
       initializeIfNeeded: options?.initializeIfNeeded,
@@ -346,7 +346,7 @@ export class ControlGateway {
     projectRoot: string;
     modelId: string;
   }> {
-    return updateConsoleAgentExecution({
+    return updatePlatformAgentExecution({
       projectRoot,
       modelId: input.modelId,
     });
@@ -357,7 +357,7 @@ export class ControlGateway {
     activeContexts: string[];
     activeTasks: string[];
   }> {
-    return inspectConsoleAgentRestartSafety({
+    return inspectManagedAgentRestartSafety({
       projectRoot,
       listKnownAgents: () => this.listKnownAgents(),
     });
@@ -371,7 +371,7 @@ export class ControlGateway {
     logPath?: string;
     message?: string;
   }> {
-    return restartConsoleAgentByProjectRoot({
+    return restartManagedAgentByProjectRoot({
       projectRoot,
       cliPath: path.resolve(__dirname, "../cli/Index.js"),
     });
@@ -384,22 +384,22 @@ export class ControlGateway {
     pid?: number;
     message?: string;
   }> {
-    return stopConsoleAgentByProjectRoot(projectRoot);
+    return stopManagedAgentByProjectRoot(projectRoot);
   }
 
   private buildUpstreamUrl(requestUrl: URL, baseUrl: string): string {
-    return buildConsoleUpstreamUrl(requestUrl, baseUrl);
+    return buildPlatformUpstreamUrl(requestUrl, baseUrl);
   }
 
   private async forwardRequest(
     request: Request,
     upstreamUrl: string,
   ): Promise<Response> {
-    return forwardConsoleRequest(request, upstreamUrl);
+    return forwardPlatformRequest(request, upstreamUrl);
   }
 
   private async serveFrontendPath(c: Context, reqPath: string): Promise<Response> {
-    return serveConsoleFrontendPath({
+    return serveControlPlaneFrontendPath({
       context: c,
       publicDir: this.publicDir,
       requestPath: reqPath,

@@ -7,7 +7,7 @@
  */
 
 export const DEFAULT_RUNTIME_API_PORT = 5314;
-export const DEFAULT_CONSOLE_UI_PORT = 5315;
+export const DEFAULT_CONTROL_PLANE_UI_PORT = 5315;
 
 /**
  * 生成 city runtime 启动提示。
@@ -29,9 +29,9 @@ export function buildRuntimePortFacts(): Array<{
 }
 
 /**
- * 生成 Console 启动提示。
+ * 生成 control plane 启动提示。
  */
-export function buildConsolePortFacts(
+export function buildControlPlanePortFacts(
   url: string,
   options?: {
     publicUrl?: string | null;
@@ -40,13 +40,13 @@ export function buildConsolePortFacts(
   label: string;
   value: string;
 }> {
-  return buildConsolePortFactsWithOptions(url, options);
+  return buildControlPlanePortFactsWithOptions(url, options);
 }
 
 /**
- * 生成 Console 启动提示。
+ * 生成 control plane 启动提示。
  */
-export function buildConsolePortFactsWithOptions(
+export function buildControlPlanePortFactsWithOptions(
   url: string,
   options?: {
     publicUrl?: string | null;
@@ -70,7 +70,7 @@ export function buildConsolePortFactsWithOptions(
       : []),
     {
       label: "Port",
-      value: String(DEFAULT_CONSOLE_UI_PORT),
+      value: String(DEFAULT_CONTROL_PLANE_UI_PORT),
     },
     {
       label: "Usage",

@@ -30,7 +30,7 @@ export interface AgentChatCliOptions {
 }
 
 /**
- * Dashboard execute 结果片段。
+ * Control execute 结果片段。
  */
 export interface AgentChatExecuteResult {
   /** 本轮执行是否成功。 */
@@ -48,7 +48,7 @@ export interface AgentChatExecuteResult {
 }
 
 /**
- * Dashboard execute 响应体。
+ * Control execute 响应体。
  */
 export interface AgentChatExecuteResponse {
   /** HTTP 路由层是否成功处理请求。 */

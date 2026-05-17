@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一覆盖交互式持续对话与一次性消息模式，不再保留独立 `quest` 命令。
- * - 目标 agent 始终按 console registry 名称解析，不依赖当前工作目录。
+ * - 目标 agent 始终按 managed agent registry 名称解析，不依赖当前工作目录。
  * - 默认使用独立 local-cli 主会话：`local-cli-chat-main`。
  */
 
@@ -180,7 +180,7 @@ export async function executeAgentChatTurn(params: {
 
   const remote = await callAgentTransport<AgentChatExecuteResponse>({
     projectRoot: resolved.projectRoot,
-    path: `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/execute`,
+    path: `/api/control/sessions/${encodeURIComponent(sessionId)}/execute`,
     method: "POST",
     timeoutMs: AGENT_CHAT_EXECUTE_TIMEOUT_MS,
     host: params.transport?.host,

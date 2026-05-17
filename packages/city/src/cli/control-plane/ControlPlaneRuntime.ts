@@ -11,9 +11,9 @@ import fs from "fs-extra";
 import { spawn } from "node:child_process";
 import {
   getCityRuntimeDirPath,
-  getConsoleLogPath,
-  getConsoleMetaPath,
-  getConsolePidPath,
+  getControlPlaneLogPath,
+  getControlPlaneMetaPath,
+  getControlPlanePidPath,
 } from "@/process/registry/CityPaths.js";
 import {
   isCityProcessAlive,
@@ -26,44 +26,44 @@ import {
 } from "@/process/registry/ProcessSweep.js";
 import { createControlGateway } from "@/control/ControlGateway.js";
 import type {
-  ConsoleRuntimeMeta,
-  ConsoleRuntimeStatus,
+  ControlPlaneRuntimeMeta,
+  ControlPlaneRuntimeStatus,
 } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
-import { buildConsolePortFacts } from "../shared/PortHints.js";
-import { resolveConsolePublicUrl } from "../shared/PublicAccess.js";
+import { buildControlPlanePortFacts } from "../shared/PortHints.js";
+import { resolveControlPlanePublicUrl } from "../shared/PublicAccess.js";
 
-const DEFAULT_CONSOLE_HOST = "127.0.0.1";
-const DEFAULT_CONSOLE_PORT = 5315;
-const PUBLIC_CONSOLE_HOST = "0.0.0.0";
+const DEFAULT_CONTROL_PLANE_HOST = "127.0.0.1";
+const DEFAULT_CONTROL_PLANE_PORT = 5315;
+const PUBLIC_CONTROL_PLANE_HOST = "0.0.0.0";
 
 /**
- * Console 模块启动参数。
+ * control plane 模块启动参数。
  */
-export interface ConsoleStartOptions {
+export interface ControlPlaneStartOptions {
   /**
-   * 是否以公网模式暴露 Console。
+   * 是否以公网模式暴露控制面。
    */
   public?: boolean;
 
   /**
-   * Console 监听端口。
+   * 控制面监听端口。
    */
   port?: number;
 
   /**
-   * Console 监听主机。
+   * 控制面监听主机。
    */
   host?: string;
 }
 
 /**
- * 安全读取 Console 模块 pid。
+ * 安全读取 control plane pid。
  */
-export async function readConsolePid(): Promise<number | null> {
+export async function readControlPlanePid(): Promise<number | null> {
   try {
-    const raw = await fs.readFile(getConsolePidPath(), "utf-8");
+    const raw = await fs.readFile(getControlPlanePidPath(), "utf-8");
     const pid = Number.parseInt(String(raw || "").trim(), 10);
     if (!Number.isFinite(pid) || Number.isNaN(pid) || pid < 1) return null;
     return pid;
@@ -73,11 +73,11 @@ export async function readConsolePid(): Promise<number | null> {
 }
 
 /**
- * 安全读取 Console 模块元数据。
+ * 安全读取 control plane 元数据。
  */
-async function readConsoleMeta(): Promise<ConsoleRuntimeMeta | null> {
+async function readControlPlaneMeta(): Promise<ControlPlaneRuntimeMeta | null> {
   try {
-    const raw = (await fs.readJson(getConsoleMetaPath())) as Partial<ConsoleRuntimeMeta>;
+    const raw = (await fs.readJson(getControlPlaneMetaPath())) as Partial<ControlPlaneRuntimeMeta>;
     const pid = Number(raw.pid);
     const host = String(raw.host || "").trim();
     const port = Number(raw.port);
@@ -93,16 +93,16 @@ async function readConsoleMeta(): Promise<ConsoleRuntimeMeta | null> {
 }
 
 /**
- * 清理 Console 模块状态文件。
+ * 清理 control plane 状态文件。
  */
-async function cleanupConsoleStateFiles(): Promise<void> {
+async function cleanupControlPlaneStateFiles(): Promise<void> {
   try {
-    await fs.remove(getConsolePidPath());
+    await fs.remove(getControlPlanePidPath());
   } catch {
     // ignore
   }
   try {
-    await fs.remove(getConsoleMetaPath());
+    await fs.remove(getControlPlaneMetaPath());
   } catch {
     // ignore
   }
@@ -113,7 +113,7 @@ async function cleanupConsoleStateFiles(): Promise<void> {
  */
 function normalizeHost(host: string): string {
   const value = String(host || "").trim();
-  if (!value) return DEFAULT_CONSOLE_HOST;
+  if (!value) return DEFAULT_CONTROL_PLANE_HOST;
   if (value === "0.0.0.0" || value === "::") return "127.0.0.1";
   return value;
 }
@@ -123,7 +123,7 @@ function normalizeHost(host: string): string {
  */
 function normalizeBindHost(host: string): string {
   const value = String(host || "").trim();
-  return value || DEFAULT_CONSOLE_HOST;
+  return value || DEFAULT_CONTROL_PLANE_HOST;
 }
 
 /**
@@ -133,7 +133,7 @@ function normalizeBindHost(host: string): string {
  * - `127.0.0.1` 和 `0.0.0.0` 不能视为同一个绑定端点。
  * - 这是 `start -p` 是否已经生效的核心判断，避免本机监听被误报成公网监听。
  */
-export function isConsoleBindingMatch(actualHost: string, expectedHost: string): boolean {
+export function isControlPlaneBindingMatch(actualHost: string, expectedHost: string): boolean {
   return normalizeBindHost(actualHost).toLowerCase() ===
     normalizeBindHost(expectedHost).toLowerCase();
 }
@@ -141,15 +141,15 @@ export function isConsoleBindingMatch(actualHost: string, expectedHost: string):
 /**
  * 生成重新绑定 Console 的命令提示。
  */
-function formatConsoleRestartHint(
-  options: ConsoleStartOptions | undefined,
+function formatControlPlaneRestartHint(
+  options: ControlPlaneStartOptions | undefined,
   port: number,
 ): string {
   const parts = ["city", "console", "restart"];
   if (options?.public === true) parts.push("-p");
   const explicitHost = String(options?.host || "").trim();
   if (explicitHost) parts.push("--host", explicitHost);
-  if (port !== DEFAULT_CONSOLE_PORT) parts.push("--port", String(port));
+  if (port !== DEFAULT_CONTROL_PLANE_PORT) parts.push("--port", String(port));
   return parts.join(" ");
 }
 
@@ -161,19 +161,19 @@ function formatConsoleRestartHint(
  * - 传 `--public` 时，默认切到 `0.0.0.0`，方便服务器直接对外暴露。
  * - 未传 host/public 时，仍保持本机模式 `127.0.0.1`。
  */
-export function resolveConsoleHostForBinding(
-  options?: ConsoleStartOptions,
+export function resolveControlPlaneHostForBinding(
+  options?: ControlPlaneStartOptions,
 ): string {
   const explicitHost = String(options?.host || "").trim();
   if (explicitHost) return explicitHost;
-  if (options?.public === true) return PUBLIC_CONSOLE_HOST;
-  return DEFAULT_CONSOLE_HOST;
+  if (options?.public === true) return PUBLIC_CONTROL_PLANE_HOST;
+  return DEFAULT_CONTROL_PLANE_HOST;
 }
 
 /**
  * 解析 detached Console 命令行中的 host/port。
  */
-export function parseConsoleProcessCommand(command: string): {
+export function parseControlPlaneProcessCommand(command: string): {
   host: string;
   port: number;
 } | null {
@@ -182,8 +182,8 @@ export function parseConsoleProcessCommand(command: string): {
 
   const hostMatch = normalized.match(/(?:^|\s)--host\s+(\S+)/);
   const portMatch = normalized.match(/(?:^|\s)--port\s+(\d+)/);
-  const host = normalizeBindHost(hostMatch?.[1] || DEFAULT_CONSOLE_HOST);
-  const port = Number.parseInt(portMatch?.[1] || String(DEFAULT_CONSOLE_PORT), 10);
+  const host = normalizeBindHost(hostMatch?.[1] || DEFAULT_CONTROL_PLANE_HOST);
+  const port = Number.parseInt(portMatch?.[1] || String(DEFAULT_CONTROL_PLANE_PORT), 10);
   if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
 
   return {
@@ -195,7 +195,7 @@ export function parseConsoleProcessCommand(command: string): {
 /**
  * 从 detached 进程列表中挑选可复用的 Console 进程。
  */
-export function findReusableConsoleProcess(
+export function findReusableControlPlaneProcess(
   processes: Array<{ pid: number; command: string }>,
   expected: {
     host?: string;
@@ -212,10 +212,10 @@ export function findReusableConsoleProcess(
   const expectedPort = expected.port;
 
   for (const item of processes) {
-    const parsed = parseConsoleProcessCommand(item.command);
+    const parsed = parseControlPlaneProcessCommand(item.command);
     if (!parsed) continue;
     if (parsed.port !== expectedPort) continue;
-    if (expectedHost && !isConsoleBindingMatch(parsed.host, expectedHost)) continue;
+    if (expectedHost && !isControlPlaneBindingMatch(parsed.host, expectedHost)) continue;
     return {
       pid: item.pid,
       host: parsed.host,
@@ -234,29 +234,29 @@ async function recoverDetachedConsoleStatus(
     host?: string;
     port?: number;
   },
-): Promise<ConsoleRuntimeStatus | null> {
+): Promise<ControlPlaneRuntimeStatus | null> {
   const host = String(expected?.host || "").trim()
     ? normalizeBindHost(String(expected?.host))
     : "";
   const port =
     typeof expected?.port === "number" && Number.isInteger(expected.port)
       ? expected.port
-      : DEFAULT_CONSOLE_PORT;
+      : DEFAULT_CONTROL_PLANE_PORT;
 
   const processes = await findDetachedCityProcesses({
     includeUi: true,
   });
-  const reusable = findReusableConsoleProcess(processes, { host, port });
+  const reusable = findReusableControlPlaneProcess(processes, { host, port });
   if (!reusable) return null;
 
-  const meta: ConsoleRuntimeMeta = {
+  const meta: ControlPlaneRuntimeMeta = {
     pid: reusable.pid,
     host: reusable.host,
     port: reusable.port,
     startedAt: new Date().toISOString(),
   };
-  await fs.writeFile(getConsolePidPath(), String(reusable.pid), "utf-8");
-  await fs.writeJson(getConsoleMetaPath(), meta, { spaces: 2 });
+  await fs.writeFile(getControlPlanePidPath(), String(reusable.pid), "utf-8");
+  await fs.writeJson(getControlPlaneMetaPath(), meta, { spaces: 2 });
 
   return {
     running: true,
@@ -265,19 +265,19 @@ async function recoverDetachedConsoleStatus(
     bindHost: reusable.host,
     port: reusable.port,
     url: `http://${normalizeHost(reusable.host)}:${reusable.port}`,
-    logPath: getConsoleLogPath(),
-    pidPath: getConsolePidPath(),
+    logPath: getControlPlaneLogPath(),
+    pidPath: getControlPlanePidPath(),
   };
 }
 
 /**
  * 获取 Console 当前运行状态。
  */
-export async function getConsoleRuntimeStatus(): Promise<ConsoleRuntimeStatus> {
-  const pidPath = getConsolePidPath();
-  const logPath = getConsoleLogPath();
-  const meta = await readConsoleMeta();
-  const pid = await readConsolePid();
+export async function getControlPlaneRuntimeStatus(): Promise<ControlPlaneRuntimeStatus> {
+  const pidPath = getControlPlanePidPath();
+  const logPath = getControlPlaneLogPath();
+  const meta = await readControlPlaneMeta();
+  const pid = await readControlPlanePid();
   if (!pid) {
     const recovered = await recoverDetachedConsoleStatus({
       host: meta?.host,
@@ -292,7 +292,7 @@ export async function getConsoleRuntimeStatus(): Promise<ConsoleRuntimeStatus> {
   }
 
   if (!isCityProcessAlive(pid)) {
-    await cleanupConsoleStateFiles();
+    await cleanupControlPlaneStateFiles();
     const recovered = await recoverDetachedConsoleStatus({
       host: meta?.host,
       port: meta?.port,
@@ -305,10 +305,10 @@ export async function getConsoleRuntimeStatus(): Promise<ConsoleRuntimeStatus> {
     };
   }
 
-  const bindHost = normalizeBindHost(meta?.host || DEFAULT_CONSOLE_HOST);
+  const bindHost = normalizeBindHost(meta?.host || DEFAULT_CONTROL_PLANE_HOST);
   const host = normalizeHost(bindHost);
   const port =
-    meta && Number.isInteger(meta.port) ? meta.port : DEFAULT_CONSOLE_PORT;
+    meta && Number.isInteger(meta.port) ? meta.port : DEFAULT_CONTROL_PLANE_PORT;
   return {
     running: true,
     pid,
@@ -324,20 +324,20 @@ export async function getConsoleRuntimeStatus(): Promise<ConsoleRuntimeStatus> {
 /**
  * 前台运行 Console 网关（内部 run 命令）。
  */
-export async function runConsoleRuntimeCommand(
-  options?: ConsoleStartOptions,
+export async function runControlPlaneRuntimeCommand(
+  options?: ControlPlaneStartOptions,
 ): Promise<void> {
-  const host = resolveConsoleHostForBinding(options);
+  const host = resolveControlPlaneHostForBinding(options);
   const port =
     typeof options?.port === "number" && Number.isInteger(options.port)
       ? options.port
-      : DEFAULT_CONSOLE_PORT;
+      : DEFAULT_CONTROL_PLANE_PORT;
 
   const gateway = createControlGateway();
   await gateway.start({ host, port });
 
   const visibleHost = normalizeHost(host);
-  const publicUrl = resolveConsolePublicUrl({
+  const publicUrl = resolveControlPlanePublicUrl({
     bindHost: host,
     port,
     publicMode: options?.public === true,
@@ -346,14 +346,14 @@ export async function runConsoleRuntimeCommand(
     tone: "success",
     title: "Console started",
     summary: "foreground",
-    facts: buildConsolePortFacts(`http://${visibleHost}:${port}`, {
+    facts: buildControlPlanePortFacts(`http://${visibleHost}:${port}`, {
       publicUrl,
     }),
     note: "单个 Console 实例可切换查看多个已运行 agent。",
   });
 
   const shutdown = async (signal: string): Promise<void> => {
-    console.log(`\nReceived ${signal}, stopping console...`);
+    console.log(`\nReceived ${signal}, stopping control plane...`);
     await gateway.stop();
     process.exit(0);
   };
@@ -388,8 +388,8 @@ async function waitForHttp(url: string, timeoutMs: number): Promise<boolean> {
   return false;
 }
 
-export async function startConsoleCommand(params: {
-  options?: ConsoleStartOptions;
+export async function startControlPlaneCommand(params: {
+  options?: ControlPlaneStartOptions;
   cliPath: string;
 }): Promise<void> {
   if (!(await isCityRunning())) {
@@ -399,24 +399,24 @@ export async function startConsoleCommand(params: {
     });
   }
 
-  const host = resolveConsoleHostForBinding(params.options);
+  const host = resolveControlPlaneHostForBinding(params.options);
   const port =
     typeof params.options?.port === "number" && Number.isInteger(params.options.port)
       ? params.options.port
-      : DEFAULT_CONSOLE_PORT;
+      : DEFAULT_CONTROL_PLANE_PORT;
 
-  const status = await getConsoleRuntimeStatus();
+  const status = await getControlPlaneRuntimeStatus();
   if (status.running) {
     const statusUrl = String(status.url || "").trim();
     const currentBindHost = normalizeBindHost(
-      status.bindHost || status.host || DEFAULT_CONSOLE_HOST,
+      status.bindHost || status.host || DEFAULT_CONTROL_PLANE_HOST,
     );
-    const currentPort = status.port || DEFAULT_CONSOLE_PORT;
+    const currentPort = status.port || DEFAULT_CONTROL_PLANE_PORT;
     const sameEndpoint =
-      isConsoleBindingMatch(currentBindHost, host) && currentPort === port;
-    const restartHint = formatConsoleRestartHint(params.options, port);
+      isControlPlaneBindingMatch(currentBindHost, host) && currentPort === port;
+    const restartHint = formatControlPlaneRestartHint(params.options, port);
     const publicUrl = sameEndpoint
-      ? resolveConsolePublicUrl({
+      ? resolveControlPlanePublicUrl({
           bindHost: currentBindHost,
           port: currentPort,
           publicMode: params.options?.public === true,
@@ -427,7 +427,7 @@ export async function startConsoleCommand(params: {
       title: "Console already running",
       summary: sameEndpoint ? undefined : "different binding",
       facts: statusUrl
-        ? buildConsolePortFacts(statusUrl, {
+        ? buildControlPlanePortFacts(statusUrl, {
             publicUrl,
           })
         : [
@@ -461,7 +461,7 @@ export async function startConsoleCommand(params: {
   }
 
   await fs.ensureDir(getCityRuntimeDirPath());
-  const logPath = getConsoleLogPath();
+  const logPath = getControlPlaneLogPath();
   const logFd = fs.openSync(logPath, "a");
 
   const child = spawn(
@@ -473,7 +473,7 @@ export async function startConsoleCommand(params: {
       stdio: ["ignore", logFd, logFd],
       env: {
         ...process.env,
-        DOWNCITY_CONSOLE_UI: "1",
+        DOWNCITY_CONTROL_PLANE_UI: "1",
       },
     },
   );
@@ -482,14 +482,14 @@ export async function startConsoleCommand(params: {
     throw new Error("Failed to start console process (missing pid)");
   }
 
-  const meta: ConsoleRuntimeMeta = {
+  const meta: ControlPlaneRuntimeMeta = {
     pid: child.pid,
     host,
     port,
     startedAt: new Date().toISOString(),
   };
-  await fs.writeFile(getConsolePidPath(), String(child.pid), "utf-8");
-  await fs.writeJson(getConsoleMetaPath(), meta, { spaces: 2 });
+  await fs.writeFile(getControlPlanePidPath(), String(child.pid), "utf-8");
+  await fs.writeJson(getControlPlaneMetaPath(), meta, { spaces: 2 });
 
   // 关键点（中文）：等待子进程完成实际监听，避免“启动命令成功但端口已被占用导致秒退”时误报成功。
   const startedAt = Date.now();
@@ -502,7 +502,7 @@ export async function startConsoleCommand(params: {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   if (!childAlive) {
-    await cleanupConsoleStateFiles();
+    await cleanupControlPlaneStateFiles();
     throw new CliError({
       title: "Console exited before becoming ready",
       note: `Check log: ${logPath}`,
@@ -513,7 +513,7 @@ export async function startConsoleCommand(params: {
   const healthUrl = `http://${normalizeHost(host)}:${port}/health`;
   const healthOk = await waitForHttp(healthUrl, 5_000);
   if (!healthOk) {
-    await cleanupConsoleStateFiles();
+    await cleanupControlPlaneStateFiles();
     throw new CliError({
       title: "Console health check failed",
       note: `Process is alive but ${healthUrl} is not responding. Check log: ${logPath}`,
@@ -523,8 +523,8 @@ export async function startConsoleCommand(params: {
   emitCliBlock({
     tone: "success",
     title: "Console started",
-    facts: buildConsolePortFacts(`http://${normalizeHost(host)}:${port}`, {
-      publicUrl: resolveConsolePublicUrl({
+    facts: buildControlPlanePortFacts(`http://${normalizeHost(host)}:${port}`, {
+      publicUrl: resolveControlPlanePublicUrl({
         bindHost: host,
         port,
         publicMode: params.options?.public === true,
@@ -540,22 +540,22 @@ export async function startConsoleCommand(params: {
  * - 先 stop 再 start，保证加载最新代码与路由。
  * - 支持通过 options 覆盖 host/port。
  */
-export async function restartConsoleCommand(params: {
-  options?: ConsoleStartOptions;
+export async function restartControlPlaneCommand(params: {
+  options?: ControlPlaneStartOptions;
   cliPath: string;
 }): Promise<void> {
-  await stopConsoleCommand();
-  await startConsoleCommand(params);
+  await stopControlPlaneCommand();
+  await startControlPlaneCommand(params);
 }
 
 /**
  * 停止后台 Console。
  */
-export async function stopConsoleCommand(params?: {
+export async function stopControlPlaneCommand(params?: {
   timeoutMs?: number;
 }): Promise<void> {
   const timeoutMs = params?.timeoutMs ?? 8000;
-  const status = await getConsoleRuntimeStatus();
+  const status = await getControlPlaneRuntimeStatus();
   if (!status.running || !status.pid) {
     const sweep = await sweepDetachedCityProcesses({
       includeUi: true,
@@ -600,7 +600,7 @@ export async function stopConsoleCommand(params?: {
     }
   }
 
-  await cleanupConsoleStateFiles();
+  await cleanupControlPlaneStateFiles();
 
   emitCliBlock({
     tone: isCityProcessAlive(pid) ? "warning" : "success",

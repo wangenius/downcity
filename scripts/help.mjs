@@ -51,6 +51,28 @@ const HELP_ITEMS = [
     detail: "走独立扩展构建脚本，不参与 downcity CLI 交付链路。",
   },
   {
+    name: "patch:build",
+    summary: "按 package 执行 patch bump + build。",
+    detail:
+      "支持 `npm run patch:build -- --agent --city`、`--ui`、`--all`、`--no-bump`，默认构建 agent + city。",
+  },
+  {
+    name: "agent:patch:build",
+    summary: "只对 @downcity/agent 执行 patch bump + build。",
+    detail: "等价于 `npm run patch:build -- --agent`。",
+  },
+  {
+    name: "city:patch:build",
+    summary: "只对 @downcity/city 执行 patch bump + build。",
+    detail:
+      "等价于 `npm run patch:build -- --city`，会先构建 agent 作为依赖，再构建并全局安装 city CLI。",
+  },
+  {
+    name: "all:patch:build",
+    summary: "对全部 packages 执行 patch bump + build。",
+    detail: "等价于 `npm run patch:build -- --all`，会处理 agent、ui、city 三个包。",
+  },
+  {
     name: "install:ws",
     summary: "安装整个 workspace 依赖。",
     detail: "等价于在仓库根目录执行 `pnpm install`。",
@@ -85,6 +107,11 @@ const HELP_ITEMS = [
     name: "publish:ui",
     summary: "执行 UI 发布脚本。",
     detail: "用于 UI 相关发布流程，与 downcity 主 CLI 发布分离。",
+  },
+  {
+    name: "build:packages",
+    summary: "packages 构建脚本底层入口。",
+    detail: "当前与 `patch:build` 指向同一个脚本，保留给已有使用习惯与兼容调用。",
   },
 ];
 

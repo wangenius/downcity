@@ -23,7 +23,11 @@
     "publish": "./scripts/publish.sh",
     "publish:ui": "./scripts/publish-ui.sh",
     "typecheck": "pnpm -C packages/agent typecheck && pnpm -C packages/city typecheck",
-    "build:packages": "bash ./scripts/build-packages.sh"
+    "build:packages": "bash ./scripts/build-packages.sh",
+    "patch:build": "bash ./scripts/build-packages.sh",
+    "agent:patch:build": "bash ./scripts/build-packages.sh --agent",
+    "city:patch:build": "bash ./scripts/build-packages.sh --city",
+    "all:patch:build": "bash ./scripts/build-packages.sh --all"
   },
   "devDependencies": {
     "@types/bun": "latest"

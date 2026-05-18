@@ -1,0 +1,97 @@
+---
+title: 当前有哪些内建 Service
+description: 说明 Downcity runtime 当前内建的 services，以及哪些适合作为 SDK public API 来理解
+---
+
+# 当前有哪些内建 Service
+
+当前 Downcity runtime 内建注册的 service 有 5 个：
+
+- `chat`
+- `contact`
+- `task`
+- `memory`
+- `shell`
+
+## 先区分两层概念
+
+### 1. runtime 内建 service
+
+这是当前 Downcity runtime 内部已经注册、已经使用的一组 service class。
+
+### 2. SDK 明确面向外部的 service 用法
+
+这是 `@downcity/agent` 作为公开包，适合直接面向使用者讲清楚的那一层。
+
+这两层不是完全等价的。
+
+今天从 SDK 使用者视角，最直接、最稳定的 public 用法主要是：
+
+- `ChatService`
+- `BaseService`（用于 custom service）
+
+## `chat`
+
+作用：
+
+- 承载 Telegram / Feishu / QQ 渠道
+- 持有 channel state
+- 持有 queue worker
+- 负责聊天消息入口与回复分发
+
+这是当前最典型、最适合 SDK 显式注入的 service。
+
+## `contact`
+
+作用：
+
+- 负责 agent 与 agent 之间的 contact link / approve
+- 维护 contact 关系
+- 处理 share / inbox / contact chat
+
+它更偏平台内部协作能力，而不是最常见的 SDK 本地嵌入入口。
+
+## `task`
+
+作用：
+
+- 负责 task 定义
+- 持有 cron runtime
+- 支持调度、重载与运行产物写入
+
+它非常适合“长期后台执行”语义，但从 SDK 显式注入视角看，目前不是最先给普通调用方讲的第一入口。
+
+## `memory`
+
+作用：
+
+- 负责 memory 索引
+- 搜索
+- 读取
+- flush
+
+它更像领域 service，而不是简单 tool，因为它持有更稳定的 runtime 状态。
+
+## `shell`
+
+作用：
+
+- 持有 shell session map
+- 管理 shell session 生命周期
+- 支持 start / read / write / wait / close / exec
+
+它很典型地说明了为什么某些能力更适合做 service，而不是只做一个瞬时 tool。
+
+## 从 SDK 文档怎么理解最稳妥
+
+如果你是 SDK 用户，最推荐的理解顺序是：
+
+1. 先把 `ChatService` 用清楚
+2. 再理解 `BaseService` 的 custom service 模式
+3. 把 `task / memory / shell / contact` 理解为 runtime 已经证明可行的 service 形态参考
+
+## 相关文档
+
+- [ChatService](/zh/docs/agent/sdk/services/chat-service)
+- [自定义 Service](/zh/docs/agent/sdk/services/custom-service)
+- [Service 和 Tool 的区别](/zh/docs/agent/sdk/services/service-vs-tools)

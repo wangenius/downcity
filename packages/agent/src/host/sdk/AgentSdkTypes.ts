@@ -3,13 +3,14 @@
  *
  * 关键点（中文）
  * - 这里集中声明 `Agent` / `RemoteAgent` / `Session` 面向外部调用方的稳定接口。
- * - 不把内部 `AgentRuntime`、`AgentContext`、service/plugin 管理细节暴露给 SDK 用户。
- * - v1 先聚焦本地/远程 session 运行与基础落盘能力。
+ * - SDK 用户通过显式 `tools` / `services` / `plugins` 装配能力，不直接依赖内部 runtime 单例。
+ * - 本地/远程 session 运行与基础落盘能力仍是 SDK 主路径。
  */
 
 import type { LanguageModel, Tool } from "ai";
 import type { BaseService } from "@/service/builtins/BaseService.js";
 import type { JsonValue } from "@/shared/types/Json.js";
+import type { Plugin } from "@/shared/types/Plugin.js";
 import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
 
 /**
@@ -48,6 +49,16 @@ export interface AgentOptions {
    * - v1 推荐显式传入 `new ChatService(...)` 这类实例，而不是依赖包内隐式注册表。
    */
   services?: BaseService[];
+
+  /**
+   * 当前 agent 显式注册的 plugin 定义集合。
+   *
+   * 关键点（中文）
+   * - 这里接收完整 plugin 定义对象，而不是 plugin 名称。
+   * - `Agent` 会为当前 SDK 实例创建独立 plugin registry，避免污染全局 runtime。
+   * - 同名 plugin 会直接报错，避免 action / hook / resolve 行为被静默覆盖。
+   */
+  plugins?: Plugin[];
 }
 
 /**

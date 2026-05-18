@@ -1,0 +1,108 @@
+---
+title: Common Bad vs Good Designs
+description: Use short bad-vs-good comparisons to show when to choose pipeline, guard, effect, resolve, or service
+---
+
+# Common Bad vs Good Designs
+
+## Misuse 1
+
+Need:
+
+- add default fields to a message
+
+Bad choice:
+
+- use `guard`
+
+Better choice:
+
+- use `pipeline`
+
+Reason:
+
+- this is value transformation, not blocking.
+
+## Misuse 2
+
+Need:
+
+- block the request if permission is missing
+
+Bad choice:
+
+- use `effect`
+
+Better choice:
+
+- use `guard`
+
+Reason:
+
+- `effect` is not a blocking semantic.
+
+## Misuse 3
+
+Need:
+
+- write one audit log after each execution
+
+Bad choice:
+
+- use `pipeline`
+
+Better choice:
+
+- use `effect`
+
+Reason:
+
+- there is no main-value transformation requirement here.
+
+## Misuse 4
+
+Need:
+
+- determine the user's final role
+
+Bad choice:
+
+- use `pipeline`
+
+Better choice:
+
+- use `resolve`
+
+Reason:
+
+- this demands one final answer, not progressive enrichment.
+
+## Misuse 5
+
+Need:
+
+- maintain a long-lived cache and background sync worker
+
+Bad choice:
+
+- put everything into plugin hooks
+
+Better choice:
+
+- let a `service` own the long-lived state
+- keep hooks focused on chain extension
+
+Reason:
+
+- long-lived runtime instances should not be forced into hook semantics.
+
+## Main takeaway
+
+Do not split by "where is it easiest to write this."
+
+Split by "what role does this capability actually play at runtime."
+
+## Related docs
+
+- [How to choose](/en/docs/agent/plugins/hooks/choose-the-right-one)
+- [Plugin and service composition](/en/docs/agent/plugins/examples/plugin-service-composition)

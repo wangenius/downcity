@@ -1,6 +1,6 @@
 ---
 title: Agent Constructor Options
-description: Detailed explanation of the local Agent id, path, tools, and services options
+description: Detailed explanation of the local Agent id, path, tools, services, and plugins options
 ---
 
 # Agent Constructor Options
@@ -13,6 +13,7 @@ new Agent({
   path,
   tools,
   services,
+  plugins,
 })
 ```
 
@@ -70,3 +71,29 @@ services: [new ChatService(...)]
 You do not pass the class itself, and you do not pass a raw config object.
 
 If two services with the same name are registered, the current implementation throws instead of silently overriding one of them.
+
+## `plugins`
+
+This accepts complete plugin definition objects.
+
+For example:
+
+```ts
+import { Agent, skillPlugin, webPlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [skillPlugin, webPlugin],
+});
+```
+
+The SDK creates an independent plugin registry for the current `Agent`.
+
+Key points:
+
+- it does not register every built-in plugin by default
+- it does not reuse the global runtime plugin manager
+- duplicate plugin names throw immediately
+- `agent.plugins` and `AgentContext.plugins` use this registry

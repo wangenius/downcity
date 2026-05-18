@@ -1,0 +1,169 @@
+---
+title: Built-in Plugins Today
+description: Explain which plugins Downcity currently includes, what they are responsible for, and which plugin capabilities they use
+---
+
+# Built-in Plugins Today
+
+The current built-in plugin set is:
+
+- `auth`
+- `skill`
+- `web`
+- `asr`
+- `tts`
+- `workboard`
+
+This list comes from the current single source of truth in code.
+
+## How to use built-in plugins in the SDK
+
+These built-in plugins can now be imported directly from `@downcity/agent`:
+
+```ts
+import {
+  Agent,
+  authPlugin,
+  skillPlugin,
+  webPlugin,
+} from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [authPlugin, skillPlugin, webPlugin],
+});
+
+const plugins = agent.plugins.list();
+```
+
+Important details:
+
+- the built-in plugin objects are publicly exported
+- but the SDK does not auto-register all of them into a local `Agent`
+- you still explicitly choose which plugins belong to this agent instance
+
+## `auth`
+
+Main responsibility:
+
+- authorize inbound chat entry
+- record observed users and chats
+- resolve the effective role for a given user
+
+Main plugin features it uses:
+
+- `availability`
+- `hooks.guard`
+- `hooks.effect`
+- `resolves`
+- `actions`
+
+This is a very strong example of a platform-rule plugin.
+
+## `skill`
+
+Main responsibility:
+
+- find skills
+- install skills
+- list and lookup skills
+- inject current skill knowledge into system prompts
+
+Main plugin features it uses:
+
+- `config`
+- `actions`
+- `system`
+
+This is the clearest catalog-style capability plugin today.
+
+## `web`
+
+Main responsibility:
+
+- choose the active web provider
+- check whether that provider is ready
+- manage web-access or agent-browser integration
+- inject provider-specific prompt guidance
+
+Main plugin features it uses:
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `system`
+
+It is one of the most complete examples of a plugin that spans installation, configuration, and runtime guidance.
+
+## `asr`
+
+Main responsibility:
+
+- manage speech-recognition dependencies
+- augment inbound chat messages with transcription
+- inject ASR-related system text
+
+Main plugin features it uses:
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `hooks`
+- `system`
+
+It is a good example of a plugin that provides both explicit actions and runtime chain augmentation.
+
+## `tts`
+
+Main responsibility:
+
+- manage TTS models and dependencies
+- generate local speech files
+- inject TTS-related system text
+
+Main plugin features it uses:
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `system`
+
+It is closer to an explicit capability plugin than a chain-augmentation plugin.
+
+## `workboard`
+
+Main responsibility:
+
+- expose structured workboard snapshots
+- provide runtime HTTP routes
+
+Main plugin features it uses:
+
+- `availability`
+- `http.runtime`
+
+This is the clearest current example of an HTTP-injection plugin.
+
+## Best learning order for plugin design
+
+If you want strong reference points:
+
+1. `skill` for actions plus system
+2. `web` for setup, usage, availability, and system together
+3. `asr` for actions plus hooks plus system
+4. `workboard` for runtime HTTP
+5. `auth` for platform rules and role resolution
+
+## Related docs
+
+- [Plugin configuration](/en/docs/agent/plugins/configuration)
+- [Plugin hooks](/en/docs/agent/plugins/plugin-hooks)
+- [Custom plugin](/en/docs/agent/plugins/custom-plugin)

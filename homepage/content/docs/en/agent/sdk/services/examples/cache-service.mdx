@@ -1,0 +1,148 @@
+---
+title: CacheService Scenario
+description: Use a lifecycle-based CacheService scenario to explain startup, state ownership, and idempotent design
+---
+
+# CacheService Scenario
+
+## Scenario
+
+You are building a local indexing assistant and want it to cache:
+
+- recently queried file summaries
+- recently parsed directory shapes
+- results from expensive external calls
+
+And you want:
+
+- service startup to record a start timestamp
+- service shutdown to clear the cache
+
+That is a strong fit for a lifecycle-aware service.
+
+## Example
+
+```ts
+import {
+  Agent,
+  BaseService,
+  type AgentContext,
+  type ServiceActions,
+} from "@downcity/agent";
+
+class CacheService extends BaseService {
+  readonly name = "cache";
+
+  private startedAt = 0;
+  private readonly store = new Map<string, string>();
+
+  readonly lifecycle = {
+    start: async (_context: AgentContext) => {
+      if (this.startedAt > 0) return;
+      this.startedAt = Date.now();
+    },
+    stop: async () => {
+      this.store.clear();
+      this.startedAt = 0;
+    },
+  };
+
+  setValue(key: string, value: string) {
+    const cleanKey = String(key || "").trim();
+    if (!cleanKey) {
+      throw new Error("key is required");
+    }
+    this.store.set(cleanKey, String(value || ""));
+  }
+
+  getValue(key: string) {
+    return this.store.get(String(key || "").trim()) || null;
+  }
+
+  readonly actions: ServiceActions = {
+    status: {
+      execute: async () => {
+        return {
+          success: true,
+          data: {
+            startedAt: this.startedAt || null,
+            size: this.store.size,
+          },
+        };
+      },
+    },
+    set: {
+      execute: async ({ payload }) => {
+        const body = payload as { key?: unknown; value?: unknown };
+        const key = String(body.key || "").trim();
+        const value = String(body.value || "");
+        this.setValue(key, value);
+        return {
+          success: true,
+          data: { key },
+        };
+      },
+    },
+    get: {
+      execute: async ({ payload }) => {
+        const body = payload as { key?: unknown };
+        const key = String(body.key || "").trim();
+        return {
+          success: true,
+          data: {
+            key,
+            value: this.getValue(key),
+          },
+        };
+      },
+    },
+  };
+}
+
+const cacheService = new CacheService();
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [cacheService],
+});
+
+await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+```
+
+## The design points that matter most
+
+### 1. `start` should be idempotent
+
+In the current SDK, the most stable automatic service startup points are:
+
+- `agent.http.start()`
+- `agent.rpc.start()`
+
+So repeated startup should not break the service.
+
+### 2. `stop` should be idempotent too
+
+Because the SDK still does not expose one full public service shutdown API.
+
+### 3. `status` is often the first action worth designing
+
+For runtime-like services, the most useful early action is often not business logic, but:
+
+- `status`
+
+That reduces troubleshooting cost dramatically.
+
+## What this scenario is good for
+
+It shows that service lifecycle is not about making every service heavy.  
+It is about giving startup and shutdown semantics a clean boundary when a capability really needs them.
+
+## Related docs
+
+- [Service lifecycle](/en/docs/agent/sdk/services/service-lifecycle)
+- [Custom service](/en/docs/agent/sdk/services/custom-service)

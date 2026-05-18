@@ -3,6 +3,7 @@
   "pages": [
     "overview",
     "local-agent",
+    "services",
     "remote-agent",
     "sessions",
     "integration-patterns",

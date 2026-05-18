@@ -1,0 +1,61 @@
+---
+title: AuditEffectPlugin Scenario
+description: Use an effect scenario to show how a plugin can do side effects without rewriting the main value
+---
+
+# AuditEffectPlugin Scenario
+
+## Scenario
+
+You want to record an event:
+
+- a message arrived
+- an action was triggered
+
+but you do not want to:
+
+- transform the value
+- block the flow
+
+That is a clean `effect` use case.
+
+## Example
+
+```ts
+import { Agent, type Plugin } from "@downcity/agent";
+
+export const auditEffectPlugin: Plugin = {
+  name: "audit_effect",
+  title: "Audit Effect",
+  description: "Writes one audit line for every observed event.",
+  hooks: {
+    effect: {
+      "audit.observe": [
+        async ({ value, plugin }) => {
+          console.log(`[${plugin}] observed`, value);
+        },
+      ],
+    },
+  },
+};
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [auditEffectPlugin],
+});
+
+await agent.plugins.effect("audit.observe", {
+  event: "incoming_message",
+  sessionId: "sess_001",
+});
+```
+
+## Why this is not a pipeline
+
+Because you do not care about returning a new value. The side effect is the whole point.
+
+## Related docs
+
+- [Plugin hooks and resolve](/en/docs/agent/plugins/plugin-hooks)

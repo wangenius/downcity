@@ -1,0 +1,84 @@
+---
+title: Service System 文本
+description: 说明 service.system(context) 的作用，以及它在当前 SDK local session 主路径中的实际边界
+---
+
+# Service System 文本
+
+service 可以实现：
+
+```ts
+system(context) {
+  return "some service-level system text";
+}
+```
+
+它的语义是：  
+这个 service 希望补充一段 service 维度的 system 文本。
+
+## 它适合承载什么
+
+- service 自己的使用规则
+- service 的行为边界
+- 需要长期稳定注入的一段领域说明
+
+## 但当前 SDK 有一个非常关键的边界
+
+当前 SDK local session 主路径，默认使用的是 `SdkSessionSystemComposer`。
+
+它现在主要注入：
+
+- `PROFILE.md`
+- `SOUL.md`
+- core prompt
+- runtime clock prompt
+
+它**暂时不会自动把 `service.system()` 注入进去**。
+
+## 这意味着什么
+
+这意味着在当前 SDK 里：
+
+- `service.system()` 是 service 契约的一部分
+- 但它不是 local SDK session 主链路里“写了就立即生效”的提示词入口
+
+如果你误以为“我写了一个 custom service 的 `system()`，模型就会自动看到”，你会得到错误预期。
+
+## 那现在该怎么用
+
+对当前 SDK 使用者，更务实的理解是：
+
+- 先把 `system()` 当作完整 service 契约的一部分
+- 把真正稳定生效的主提示词入口仍然放在 `PROFILE.md` / `SOUL.md`
+- 把 service 的主要价值放在运行态、状态和生命周期上
+
+## 什么时候它仍然值得写
+
+即使当前 local SDK 主路径还没自动注入，`system()` 仍然有价值：
+
+- 它让 custom service 的结构更完整
+- 它和 full runtime 的 service 模型保持一致
+- 如果后续 SDK 扩展这一能力，你的 service 不需要重写接口形状
+
+## 当前最稳妥的建议
+
+如果你有一段规则：
+
+- 必须马上影响本地 SDK session 的主提示词
+
+优先放到：
+
+- `PROFILE.md`
+- `SOUL.md`
+
+如果你有一段规则：
+
+- 从概念上属于 service 自己
+- 更偏未来扩展或完整 service 契约
+
+再考虑放到 `service.system()`。
+
+## 相关文档
+
+- [自定义 Service](/zh/docs/agent/sdk/services/custom-service)
+- [Services 总览](/zh/docs/agent/sdk/services/overview)

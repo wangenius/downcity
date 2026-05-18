@@ -1,0 +1,118 @@
+---
+title: WebhookRelayService Scenario
+description: Use a background-worker scenario to show what kinds of capabilities are obviously better as a service
+---
+
+# WebhookRelayService Scenario
+
+## Scenario
+
+You have an internal system that keeps pushing events into a local queue.  
+You want the agent process to own a relay worker that:
+
+- keeps reading events
+- does light normalization
+- forwards results into the rest of your application
+
+At that point, the shape is very clearly a service, not a plugin or a tool.
+
+## Why this is not a tool
+
+Because it needs:
+
+- long-lived execution
+- a background loop
+- an in-memory queue
+- clear start and stop boundaries
+
+## Simplified example
+
+```ts
+import {
+  Agent,
+  BaseService,
+  type AgentContext,
+  type ServiceActions,
+} from "@downcity/agent";
+
+class WebhookRelayService extends BaseService {
+  readonly name = "webhook_relay";
+
+  private timer: NodeJS.Timeout | null = null;
+  private readonly events: Array<{ id: string; body: string }> = [];
+
+  readonly lifecycle = {
+    start: async (_context: AgentContext) => {
+      if (this.timer) return;
+      this.timer = setInterval(() => {
+        const event = this.events.shift();
+        if (!event) return;
+        console.log("relay event", event.id, event.body);
+      }, 500);
+    },
+    stop: async () => {
+      if (!this.timer) return;
+      clearInterval(this.timer);
+      this.timer = null;
+    },
+  };
+
+  enqueue(body: string) {
+    this.events.push({
+      id: `evt-${Date.now()}`,
+      body: String(body || ""),
+    });
+  }
+
+  readonly actions: ServiceActions = {
+    status: {
+      execute: async () => {
+        return {
+          success: true,
+          data: {
+            running: Boolean(this.timer),
+            queued: this.events.length,
+          },
+        };
+      },
+    },
+  };
+}
+
+const relayService = new WebhookRelayService();
+
+const agent = new Agent({
+  id: "relay-agent",
+  path: "/path/to/project",
+  tools: {},
+  services: [relayService],
+});
+
+await agent.rpc.start();
+relayService.enqueue("build finished");
+```
+
+## The key lessons here
+
+### 1. The real center of gravity is long-lived execution
+
+not any one individual action.
+
+### 2. The worker belongs to the service instance
+
+not a module-level singleton that several agents could accidentally share.
+
+### 3. App code often keeps a typed service reference directly
+
+For example:
+
+```ts
+relayService.enqueue("build finished");
+```
+
+That is often more natural in the current SDK than pretending every internal capability should first become a generic action call.
+
+## Related docs
+
+- [Service lifecycle](/en/docs/agent/sdk/services/service-lifecycle)
+- [Service vs tools](/en/docs/agent/sdk/services/service-vs-tools)

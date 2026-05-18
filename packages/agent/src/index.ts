@@ -20,6 +20,7 @@ export type {
   AgentSessionMetadata,
   AgentSessionForkInput,
 } from "./host/sdk/AgentSdkTypes.js";
+export { BaseService } from "./service/builtins/BaseService.js";
 export { ChatService } from "./service/builtins/chat/ChatService.js";
 export { ChatChannelAccountService } from "./service/builtins/chat/accounts/ChannelAccountService.js";
 export type { ChatChannelAccountListItem } from "./service/builtins/chat/types/ChannelAccount.js";
@@ -188,6 +189,12 @@ export {
   setChatAuthorizationUserRole,
 } from "./plugins/auth/runtime/AuthorizationConfig.js";
 export { resolveAuthorizedUserRole } from "./plugins/auth/runtime/AuthorizationPolicy.js";
+export { authPlugin } from "./plugins/auth/Plugin.js";
+export { skillPlugin } from "./plugins/skill/Plugin.js";
+export { webPlugin } from "./plugins/web/Plugin.js";
+export { asrPlugin } from "./plugins/asr/Plugin.js";
+export { ttsPlugin } from "./plugins/tts/Plugin.js";
+export { workboardPlugin } from "./plugins/workboard/Plugin.js";
 
 // Agent 项目准备
 export {

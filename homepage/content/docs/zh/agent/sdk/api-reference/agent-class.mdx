@@ -10,6 +10,7 @@ description: 本地 Agent SDK 的核心公开接口
 - `new Agent(options)`
 - `agent.session(sessionId?)`
 - `agent.sessions()`
+- `agent.plugins`
 - `agent.http.start()`
 - `agent.rpc.start()`
 
@@ -19,6 +20,7 @@ description: 本地 Agent SDK 的核心公开接口
 - `path`
 - `tools`
 - `services`
+- `plugins`
 
 ## 核心语义
 
@@ -26,3 +28,15 @@ description: 本地 Agent SDK 的核心公开接口
 - 真正的执行对象是它创建出来的 session
 
 从 API 设计上看，它更像一个“session 工厂 + transport 暴露器”。
+
+`agent.plugins` 是当前本地 SDK 新增的重要公开面。
+
+你可以直接用它做：
+
+- `agent.plugins.list()`
+- `agent.plugins.availability(pluginName)`
+- `agent.plugins.runAction({ plugin, action, payload })`
+- `agent.plugins.pipeline(pointName, value)`
+- `agent.plugins.guard(pointName, value)`
+- `agent.plugins.effect(pointName, value)`
+- `agent.plugins.resolve(pointName, value)`

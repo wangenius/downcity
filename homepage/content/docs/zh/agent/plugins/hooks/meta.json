@@ -1,0 +1,13 @@
+{
+  "title": "Hooks",
+  "pages": [
+    "overview",
+    "call-flow",
+    "pipeline",
+    "guard",
+    "effect",
+    "resolve",
+    "choose-the-right-one",
+    "examples"
+  ]
+}

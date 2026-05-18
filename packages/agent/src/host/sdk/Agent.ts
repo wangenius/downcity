@@ -2,9 +2,9 @@
  * Agent SDK 本地入口。
  *
  * 关键点（中文）
- * - `new Agent({ id, path, tools, services })` 只做同步装配，不在构造阶段启动任何 I/O。
+ * - `new Agent({ id, path, tools, services, plugins })` 只做同步装配，不在构造阶段启动任何 I/O。
  * - session、HTTP、RPC、service lifecycle 都按需异步初始化。
- * - SDK Agent 通过最小 `AgentContext` 适配层复用现有 service/chat runtime，而不是重复实现一套执行链。
+ * - SDK Agent 通过最小 `AgentContext` 适配层复用现有 service/plugin/chat 运行协议，而不是重复实现一套执行链。
  */
 
 import fs from "fs-extra";
@@ -17,6 +17,12 @@ import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type {
+  Plugin,
+  PluginAvailability,
+  PluginPort,
+  PluginView,
+} from "@/shared/types/Plugin.js";
+import type {
   AgentOptions,
   AgentSessionMetadata,
 } from "@/host/sdk/AgentSdkTypes.js";
@@ -25,11 +31,17 @@ import { loadStaticSystemPrompts } from "@session/composer/system/default/Static
 import { getSdkAgentSessionsRootDirPath } from "@/host/sdk/Paths.js";
 import { SdkAgentHttpServer } from "@/host/sdk/HttpServer.js";
 import { SdkAgentRpcServer } from "@/host/sdk/RpcServer.js";
-import { createAgentPathRuntime } from "@/host/runtime/AgentHostRuntime.js";
+import {
+  createAgentPathRuntime,
+  createAgentPluginConfigRuntime,
+} from "@/host/runtime/AgentHostRuntime.js";
 import { loadDowncityConfig } from "@/config/Config.js";
 import { appendExecSessionMessage } from "@/service/builtins/chat/runtime/ChatIngressStore.js";
 import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
 import { resolveChatQueueStore } from "@/service/builtins/chat/runtime/ChatQueueStore.js";
+import { HookRegistry } from "@/plugin/HookRegistry.js";
+import { PluginRegistry } from "@/plugin/PluginRegistry.js";
+import { isPluginEnabled } from "@/plugin/Activation.js";
 
 function createFallbackSdkConfig(agentId: string): DowncityConfig {
   return {
@@ -48,11 +60,13 @@ export class Agent {
   readonly http: SdkAgentHttpServer;
   readonly rpc: SdkAgentRpcServer;
   readonly services: Map<string, BaseService>;
+  readonly plugins: PluginPort;
 
   private readonly logger: Logger;
   private readonly sessionsById = new Map<string, SdkSession>();
   private readonly runtime: AgentRuntime;
   private readonly serviceContext: AgentContext;
+  private readonly pluginRegistry: PluginRegistry;
   private readonly config: DowncityConfig;
   private systems: string[];
   private servicesStartPromise: Promise<void> | null = null;
@@ -79,6 +93,8 @@ export class Agent {
     for (const service of this.services.values()) {
       service.bindAgent(this.runtime);
     }
+    this.pluginRegistry = this.createPluginRegistry(options.plugins || []);
+    this.plugins = this.createPluginPort();
     this.serviceContext = this.createServiceContext();
     this.http = new SdkAgentHttpServer(this);
     this.rpc = new SdkAgentRpcServer(this);
@@ -167,6 +183,49 @@ export class Agent {
     return services;
   }
 
+  private createPluginRegistry(input: Plugin[]): PluginRegistry {
+    let pluginRegistryRef: PluginRegistry | null = null;
+    const hookRegistry = new HookRegistry({
+      contextResolver: () => this.serviceContext,
+      pluginEnabledChecker: (pluginName) => {
+        const plugin = pluginRegistryRef?.get(pluginName);
+        return plugin ? isPluginEnabled({ plugin }) : false;
+      },
+    });
+    const registry = new PluginRegistry({
+      contextResolver: () => this.serviceContext,
+      hookRegistry,
+    });
+    pluginRegistryRef = registry;
+
+    for (const plugin of input) {
+      registry.register(plugin);
+    }
+    return registry;
+  }
+
+  private createPluginPort(): PluginPort {
+    return {
+      list: (): PluginView[] => this.pluginRegistry.list(),
+      availability: async (pluginName: string): Promise<PluginAvailability> =>
+        await this.pluginRegistry.availability(pluginName),
+      runAction: async (params) => await this.pluginRegistry.runAction(params),
+      pipeline: async <T>(pointName: string, value: T): Promise<T> =>
+        await this.pluginRegistry.pipeline(pointName, value),
+      guard: async <T>(pointName: string, value: T): Promise<void> => {
+        await this.pluginRegistry.guard(pointName, value);
+      },
+      effect: async <T>(pointName: string, value: T): Promise<void> => {
+        await this.pluginRegistry.effect(pointName, value);
+      },
+      resolve: async <TInput, TOutput>(
+        pointName: string,
+        value: TInput,
+      ): Promise<TOutput> =>
+        await this.pluginRegistry.resolve<TInput, TOutput>(pointName, value),
+    };
+  }
+
   private createRuntime(): AgentRuntime {
     const runtime = {
       cwd: this.path,
@@ -177,11 +236,7 @@ export class Agent {
       globalEnv: {},
       systems: this.systems,
       paths: createAgentPathRuntime(this.path),
-      pluginConfig: {
-        async persistProjectPlugins(): Promise<string> {
-          return "";
-        },
-      },
+      pluginConfig: createAgentPluginConfigRuntime(this.path),
       model: undefined,
       getSession: (sessionId: string) => {
         return this.getOrCreateSession(sessionId).getServicePort() as never;
@@ -274,24 +329,7 @@ export class Agent {
         },
         enqueue: (params) => resolveChatQueueStore(context).enqueue(params),
       },
-      plugins: {
-        list: () => [],
-        availability: async () => ({
-          enabled: false,
-          available: false,
-          reasons: ["SDK Agent plugin runtime is not configured"],
-        }),
-        runAction: async () => ({
-          success: false,
-          error: "SDK Agent plugin runtime is not configured",
-        }),
-        pipeline: async <T>(_: string, value: T): Promise<T> => value,
-        guard: async (): Promise<void> => {},
-        effect: async (): Promise<void> => {},
-        resolve: async () => {
-          throw new Error("SDK Agent plugin resolve is not configured");
-        },
-      },
+      plugins: this.plugins,
     };
     return context;
   }

@@ -7,6 +7,8 @@ description: Manage the built-in TTS plugin and generate audio files from text
 
 `city tts` manages the built-in TTS plugin.
 
+> This page remains as a command entry point. For the fuller plugin structure, see [Plugin Overview](/en/docs/agent/plugins/overview), [Plugin Configuration](/en/docs/agent/plugins/configuration), and [Plugin Actions](/en/docs/agent/plugins/plugin-actions).
+
 ## What it manages
 
 - city-level plugin enable/disable
@@ -72,3 +74,8 @@ city tts synthesize "This is a TTS test"
 - It generates a local audio file and returns a reusable `<file type="audio">...</file>` tag for downstream sending.
 - Non-fatal Python runner `stderr` does not fail synthesis as long as the audio file is generated successfully.
 - Agent-local TTS parameters are persisted to project `downcity.json` under `plugins.tts`.
+
+## Related
+
+- [`city plugin`](/en/docs/commands/plugin/plugin)
+- [Plugin Docs Overview](/en/docs/agent/plugins/overview)

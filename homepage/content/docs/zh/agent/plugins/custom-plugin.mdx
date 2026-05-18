@@ -1,0 +1,221 @@
+---
+title: 自定义 Plugin
+description: 写一个 custom plugin 的最小骨架，包括 config、actions、hooks、system 和 availability 的常见实现方式
+---
+
+# 自定义 Plugin
+
+如果你要扩展的是：
+
+- 一组 action
+- 一组 hooks
+- 一段 system 文本
+- 一个 setup / usage 协议
+- 一组 runtime HTTP 路由
+
+那通常更适合写 custom plugin。
+
+## 当前公开入口
+
+现在 `@downcity/agent` 已经同时公开了：
+
+- plugin 类型契约
+- 内建 plugin 导出
+- 本地 `Agent` 的 `plugins: [...]` 装配入口
+
+这意味着 custom plugin 不再只是“看 shape”，而是可以直接挂到本地 SDK `Agent` 上。
+
+## 最小骨架
+
+```ts
+import type { Plugin } from "@downcity/agent";
+
+export const notesPlugin: Plugin = {
+  name: "notes",
+  title: "Notes Helper",
+  description: "Adds note-related actions and prompt guidance.",
+  actions: {
+    status: {
+      execute: async ({ context }) => {
+        return {
+          success: true,
+          data: {
+            rootPath: context.rootPath,
+          },
+        };
+      },
+    },
+  },
+};
+```
+
+## 把 custom plugin 接到本地 Agent 上
+
+```ts
+import { Agent, type Plugin } from "@downcity/agent";
+
+const notesPlugin: Plugin = {
+  name: "notes",
+  title: "Notes Helper",
+  description: "Adds note-related actions and runtime guidance.",
+  actions: {
+    status: {
+      allowWhenDisabled: true,
+      execute: async ({ context }) => ({
+        success: true,
+        data: {
+          rootPath: context.rootPath,
+        },
+      }),
+    },
+  },
+};
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [notesPlugin],
+});
+
+const result = await agent.plugins.runAction({
+  plugin: "notes",
+  action: "status",
+});
+```
+
+## 一个更完整的例子
+
+```ts
+import type { Plugin } from "@downcity/agent";
+
+export const notesPlugin: Plugin = {
+  name: "notes",
+  title: "Notes Helper",
+  description: "Adds note-related actions and runtime guidance.",
+  config: {
+    plugin: "notes",
+    scope: "project",
+    defaultValue: {
+      injectPrompt: true,
+      folder: ".notes",
+    },
+  },
+  availability(context) {
+    return {
+      enabled: true,
+      available: true,
+      reasons: [],
+    };
+  },
+  system(context) {
+    return `Current project notes folder: ${context.rootPath}/.notes`;
+  },
+  actions: {
+    status: {
+      allowWhenDisabled: true,
+      execute: async ({ context }) => {
+        return {
+          success: true,
+          data: {
+            rootPath: context.rootPath,
+          },
+        };
+      },
+    },
+  },
+  hooks: {
+    effect: {
+      "notes.observe": [
+        async ({ value }) => {
+          console.log(value);
+        },
+      ],
+    },
+  },
+};
+```
+
+## 设计 custom plugin 时最重要的几个问题
+
+### 1. 你是在扩展什么
+
+先想清楚你要的是：
+
+- action
+- hook
+- resolve
+- system
+- HTTP
+
+不要一上来把所有能力都塞进去。
+
+### 2. 它是不是其实更像 service
+
+如果你发现自己要长期持有：
+
+- worker
+- session 池
+- 长期连接
+- 长期实例状态
+
+那可能应该先回头想想，这是否更像 service。
+
+### 3. 你的 action 能否在 disabled 时运行
+
+像：
+
+- `status`
+- `install`
+- `configure`
+
+这类 action 很可能需要 `allowWhenDisabled: true`。
+
+## custom plugin 的一个重要实践
+
+plugin 的 `execute` 最好只依赖最小上下文能力，不要假设自己总能拿到完整 agent runtime 的所有长期对象。
+
+这会让你的 plugin：
+
+- 更容易在 CLI / Console / runtime 间复用
+- 不会过度耦合某条单一执行路径
+
+## 什么时候该再往下拆
+
+如果 plugin 已经变大，推荐结构通常是：
+
+- `Plugin.ts`
+- `Config.ts`
+- `Command.ts`
+- `Dependency.ts`
+- `runtime/*`
+- `types/*`
+
+也就是让 `Plugin.ts` 更多承担声明和装配角色，而不是把所有逻辑塞进一个文件。
+
+## 当前 SDK 边界
+
+现在本地 SDK 已经支持 plugin registry，但仍然要注意这几个边界：
+
+- SDK 不会自动注册全部内建 plugin
+- plugin 是否可运行，仍然会受 city 级 lifecycle 启用态影响
+- 当前本地 SDK session 主 prompt 组合器不会自动注入 `plugin.system()`
+- `plugin.http.runtime` 依赖完整 runtime HTTP 装配，不属于最小 SDK HTTP server 的能力范围
+
+## 如果你想看真正带场景的例子
+
+继续看这些场景页：
+
+- [NotesPlugin 场景](/zh/docs/agent/plugins/examples/notes-plugin)
+- [ReviewGuardPlugin 场景](/zh/docs/agent/plugins/examples/review-guard-plugin)
+- [MessageAugmentPlugin 场景](/zh/docs/agent/plugins/examples/message-augment-plugin)
+- [RoleResolverPlugin 场景](/zh/docs/agent/plugins/examples/role-resolver-plugin)
+- [SnapshotHttpPlugin 场景](/zh/docs/agent/plugins/examples/snapshot-http-plugin)
+- [Plugin 和 Service 协作场景](/zh/docs/agent/plugins/examples/plugin-service-composition)
+
+## 相关文档
+
+- [Plugin Actions](/zh/docs/agent/plugins/plugin-actions)
+- [Plugin Hooks 和 Resolve](/zh/docs/agent/plugins/plugin-hooks)
+- [Plugin HTTP 注入](/zh/docs/agent/plugins/plugin-http)
+- [Plugin 和 Service 的区别](/zh/docs/agent/plugins/plugin-vs-service)

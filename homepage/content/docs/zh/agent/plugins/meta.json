@@ -1,0 +1,17 @@
+{
+  "title": "Plugins",
+  "pages": [
+    "overview",
+    "built-in-plugins",
+    "configuration",
+    "plugin-actions",
+    "plugin-hooks",
+    "hooks",
+    "plugin-system",
+    "plugin-availability",
+    "plugin-http",
+    "custom-plugin",
+    "examples",
+    "plugin-vs-service"
+  ]
+}

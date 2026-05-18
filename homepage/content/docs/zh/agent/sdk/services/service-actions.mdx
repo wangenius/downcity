@@ -1,0 +1,137 @@
+---
+title: Service Actions
+description: 说明 service action 的 command、api、execute 三个层次，以及它们在 SDK 中各自的意义
+---
+
+# Service Actions
+
+service action 是 service 对外暴露能力的核心单元。
+
+一个 action 通常可以包含 3 层定义：
+
+- `command`
+- `api`
+- `execute`
+
+## 最核心的是 `execute`
+
+对 SDK 使用者来说，`execute` 是最本质的一层。
+
+示例：
+
+```ts
+readonly actions = {
+  ping: {
+    execute: async () => {
+      return {
+        success: true,
+        data: {
+          ok: true,
+        },
+      };
+    },
+  },
+};
+```
+
+它负责：
+
+- 接收结构化 payload
+- 执行业务逻辑
+- 返回 `success / data / error`
+
+## `command`
+
+`command` 主要用于 CLI 侧映射。
+
+它适合定义：
+
+- 描述文本
+- commander 参数
+- 从 CLI 输入到 payload 的映射
+
+## `api`
+
+`api` 主要用于 HTTP service action 路由映射。
+
+它适合定义：
+
+- HTTP method
+- route path
+- 从 HTTP 请求到 payload 的映射
+
+## 一个完整一点的例子
+
+```ts
+readonly actions = {
+  add: {
+    command: {
+      description: "add one item",
+      mapInput({ args }) {
+        return {
+          text: String(args[0] || ""),
+        };
+      },
+    },
+    api: {
+      method: "POST",
+      mapInput(ctx) {
+        return ctx.req.json();
+      },
+    },
+    execute: async ({ payload }) => {
+      const text = String((payload as { text?: unknown }).text || "").trim();
+      if (!text) {
+        return {
+          success: false,
+          error: "text is required",
+        };
+      }
+      return {
+        success: true,
+        data: {
+          text,
+        },
+      };
+    },
+  },
+};
+```
+
+## 在 SDK 里最容易误解的一点
+
+当前 Agent SDK 暴露出来的 HTTP 接口，是“session SDK HTTP 接口”，不是“任意 custom service action 都自动外露”的平台 API。
+
+也就是说，当前 SDK：
+
+- 会暴露 `session` 相关最小 HTTP 路由
+- 但不会因为你写了 `service.actions.api`，就自动把它挂到 `agent.http.start()` 的 SDK HTTP 路由里
+
+同样地，SDK local `Agent` 也不是一个自动替你生成 CLI service 子命令的外壳。
+
+## 那为什么还要理解 `command` 和 `api`
+
+因为这套 action 契约本身就是 Downcity service 模型的一部分。
+
+它的价值是：
+
+- custom service 结构和完整 runtime 一致
+- 你以后迁移到更完整的 service 管理路径时，心智模型不需要推翻
+- 你现在也可以把 `execute` 当成最核心入口，把 `command` / `api` 视为向外扩展时的附加层
+
+## 对 SDK 使用者的最实用建议
+
+如果你是纯本地嵌入式 SDK 用法，优先关注：
+
+- `execute`
+- 实例状态
+- `lifecycle`
+
+把 `command` / `api` 先理解为：
+
+- 统一 service 契约中的扩展槽位
+
+## 相关文档
+
+- [自定义 Service](/zh/docs/agent/sdk/services/custom-service)
+- [Service 生命周期](/zh/docs/agent/sdk/services/service-lifecycle)

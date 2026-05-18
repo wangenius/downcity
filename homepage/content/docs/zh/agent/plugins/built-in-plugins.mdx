@@ -1,0 +1,169 @@
+---
+title: 当前有哪些内建 Plugin
+description: 说明当前 Downcity 内建的 plugins、各自主要职责，以及它们分别使用了哪些 plugin 能力
+---
+
+# 当前有哪些内建 Plugin
+
+当前 Downcity 内建 plugin 清单是：
+
+- `auth`
+- `skill`
+- `web`
+- `asr`
+- `tts`
+- `workboard`
+
+这是当前代码里的单一事实源。
+
+## 在 SDK 里怎么用这些内建 plugin
+
+这些内建 plugin 现在也可以直接从 `@downcity/agent` 导入：
+
+```ts
+import {
+  Agent,
+  authPlugin,
+  skillPlugin,
+  webPlugin,
+} from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [authPlugin, skillPlugin, webPlugin],
+});
+
+const plugins = agent.plugins.list();
+```
+
+这里要注意：
+
+- 内建 plugin 已经公开导出
+- 但 SDK 不会默认自动把它们全部注册进本地 `Agent`
+- 你仍然需要显式决定当前这个 agent 应该挂哪些 plugin
+
+## `auth`
+
+主要职责：
+
+- 做 chat 入口的授权判断
+- 记录用户 / chat 观测信息
+- 解析某个用户当前的有效角色
+
+它主要使用了：
+
+- `availability`
+- `hooks.guard`
+- `hooks.effect`
+- `resolves`
+- `actions`
+
+这是一个非常典型的“平台规则型 plugin”。
+
+## `skill`
+
+主要职责：
+
+- 查找 skills
+- 安装 skills
+- 列表和 lookup
+- 把 skills 概览注入 system prompt
+
+它主要使用了：
+
+- `config`
+- `actions`
+- `system`
+
+这是“能力目录型 plugin”的代表。
+
+## `web`
+
+主要职责：
+
+- 选择联网 provider
+- 检查 provider 是否可用
+- 管理 web-access / agent-browser 对接
+- 注入 provider 对应的 system prompt
+
+它主要使用了：
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `system`
+
+这是“安装 + 配置 + 运行提示词增强”三者结合得最完整的 plugin 之一。
+
+## `asr`
+
+主要职责：
+
+- 处理语音转写依赖
+- 为 chat 入站消息增加转写增强
+- 注入 ASR 相关 system 文本
+
+它主要使用了：
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `hooks`
+- `system`
+
+它很适合用来理解“plugin 既能提供 action，也能挂到运行链路里”。
+
+## `tts`
+
+主要职责：
+
+- 管理 TTS 模型和依赖
+- 生成本地语音文件
+- 注入 TTS 相关 system 文本
+
+它主要使用了：
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `system`
+
+它更偏“显式能力调用型 plugin”。
+
+## `workboard`
+
+主要职责：
+
+- 对外暴露结构化 workboard 快照
+- 提供 runtime HTTP 路由
+
+它主要使用了：
+
+- `availability`
+- `http.runtime`
+
+这是当前最典型的“HTTP 注入型 plugin”。
+
+## 怎么理解这份清单最稳妥
+
+如果你是第一次设计 plugin，最推荐的参考顺序是：
+
+1. `skill`：最像传统 action + system plugin
+2. `web`：最像完整 setup / usage / availability plugin
+3. `asr`：最像 action + hooks + system 组合 plugin
+4. `workboard`：最像 runtime HTTP plugin
+5. `auth`：最像平台规则 plugin
+
+## 相关文档
+
+- [Plugin 配置](/zh/docs/agent/plugins/configuration)
+- [Plugin Hooks](/zh/docs/agent/plugins/plugin-hooks)
+- [自定义 Plugin](/zh/docs/agent/plugins/custom-plugin)

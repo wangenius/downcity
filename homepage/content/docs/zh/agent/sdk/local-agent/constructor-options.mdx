@@ -1,6 +1,6 @@
 ---
 title: Agent 构造参数
-description: 详细说明本地 Agent 的 id、path、tools 和 services 参数
+description: 详细说明本地 Agent 的 id、path、tools、services 和 plugins 参数
 ---
 
 # Agent 构造参数
@@ -13,6 +13,7 @@ new Agent({
   path,
   tools,
   services,
+  plugins,
 })
 ```
 
@@ -70,3 +71,29 @@ services: [new ChatService(...)]
 不是传 class，也不是传配置对象。
 
 如果同名 service 被重复注册，当前实现会直接报错，而不会静默覆盖。
+
+## `plugins`
+
+这里接收的是完整的 plugin 定义对象。
+
+例如：
+
+```ts
+import { Agent, skillPlugin, webPlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [skillPlugin, webPlugin],
+});
+```
+
+SDK 会为当前 `Agent` 创建独立的 plugin registry。
+
+关键点：
+
+- 它不会默认注册全部内建 plugin
+- 它不会复用全局 runtime 的 plugin manager
+- 同名 plugin 被重复注册时会直接报错
+- `agent.plugins` 与 `AgentContext.plugins` 会使用这份 registry

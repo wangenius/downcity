@@ -7,6 +7,8 @@ description: 管理内置 tts plugin，并把文本生成语音文件
 
 `city tts` 用于管理内置 tts plugin。
 
+> 这页保留为命令入口。更完整的 Plugin 结构说明见 [Plugin 总览](/zh/docs/agent/plugins/overview)、[Plugin 配置](/zh/docs/agent/plugins/configuration) 和 [Plugin Actions](/zh/docs/agent/plugins/plugin-actions)。
+
 ## 它负责什么
 
 - 启用或关闭 city 级 tts plugin
@@ -72,3 +74,8 @@ city tts synthesize "这是一段测试语音"
 - 它会生成一个本地音频文件，并返回可复用的 `<file type="audio">...</file>` 标签，后续发送阶段可直接复用。
 - 只要音频文件实际生成成功，非致命的 Python runner `stderr` 不再导致合成失败。
 - agent 侧的 TTS 参数会持久化到项目 `downcity.json` 的 `plugins.tts`。
+
+## 相关页面
+
+- [`city plugin`](/zh/docs/commands/plugin/plugin)
+- [Plugin 文档总览](/zh/docs/agent/plugins/overview)

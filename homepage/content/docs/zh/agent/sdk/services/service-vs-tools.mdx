@@ -1,0 +1,86 @@
+---
+title: Service 和 Tool 的区别
+description: 说明什么时候应该写 tool，什么时候应该写 service，以及两者怎么配合
+---
+
+# Service 和 Tool 的区别
+
+这是做 SDK 扩展时最容易混淆的问题之一。
+
+## 一句话版
+
+- tool 更适合“一次调用”
+- service 更适合“长期持有”
+
+## 更适合写成 tool 的场景
+
+- 单次纯函数式能力
+- 一次查询
+- 一次转换
+- 不需要长期状态
+- 不需要后台生命周期
+
+例如：
+
+- 读一个文件
+- 调一次外部 API
+- 做一次文本转换
+
+## 更适合写成 service 的场景
+
+- 要长期保存状态
+- 要启动 worker
+- 要持有连接或 session 池
+- 要在多个 session 之间共享能力
+- 要把一组相关 action 组织成一个长期对象
+
+例如：
+
+- 聊天渠道接入
+- shell session 管理
+- memory runtime
+- task scheduler
+
+## 典型判断题
+
+### “我只需要一次执行能力”
+
+优先考虑 tool。
+
+### “我需要一个会一直活着的运行态对象”
+
+优先考虑 service。
+
+### “我既需要长期状态，也希望模型能按工具方式调用某个能力”
+
+这时常见做法是：
+
+- service 持有长期状态
+- tool 作为上层门面，转发到 service 或其 runtime
+
+这类组合在 shell、chat 这类能力里尤其常见。
+
+## 对 SDK 使用者的建议
+
+第一次扩展时，不要一上来就把所有东西做成 service。
+
+更稳妥的顺序通常是：
+
+1. 先确认是不是一个简单 tool 就够了
+2. 只有当你明确需要长期状态时，再升级成 service
+
+## 一个经验法则
+
+如果你发现自己在 tool 外面又开始维护：
+
+- 全局 Map
+- 长期连接
+- worker
+- 缓存生命周期
+
+那通常说明这段能力已经开始长得像 service 了。
+
+## 相关文档
+
+- [自定义 Service](/zh/docs/agent/sdk/services/custom-service)
+- [当前有哪些内建 Service](/zh/docs/agent/sdk/services/built-in-services)

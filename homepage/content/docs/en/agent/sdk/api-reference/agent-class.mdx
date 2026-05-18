@@ -10,6 +10,7 @@ The local `Agent` exposes these core public entry points:
 - `new Agent(options)`
 - `agent.session(sessionId?)`
 - `agent.sessions()`
+- `agent.plugins`
 - `agent.http.start()`
 - `agent.rpc.start()`
 
@@ -19,6 +20,7 @@ The local `Agent` exposes these core public entry points:
 - `path`
 - `tools`
 - `services`
+- `plugins`
 
 ## Core semantics
 
@@ -26,3 +28,15 @@ The local `Agent` exposes these core public entry points:
 - the real execution object is the session it creates
 
 From an API-design perspective, it behaves more like a session factory plus transport exposer than a single-shot executor.
+
+`agent.plugins` is now an important public surface of the local SDK.
+
+You can use it directly for:
+
+- `agent.plugins.list()`
+- `agent.plugins.availability(pluginName)`
+- `agent.plugins.runAction({ plugin, action, payload })`
+- `agent.plugins.pipeline(pointName, value)`
+- `agent.plugins.guard(pointName, value)`
+- `agent.plugins.effect(pointName, value)`
+- `agent.plugins.resolve(pointName, value)`

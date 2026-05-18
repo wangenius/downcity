@@ -1,9 +1,9 @@
 ---
-title: tools and services
-description: How to inject tools and explicit service instances into a local Agent
+title: tools, services, and plugins
+description: How to inject tools, explicit service instances, and plugin definitions into a local Agent
 ---
 
-# tools and services
+# tools, services, and plugins
 
 ## tools
 
@@ -51,8 +51,55 @@ const agent = new Agent({
 
 You can think of this as: the caller explicitly decides which services are permanent capabilities of this local agent.
 
+## plugins
+
+If you want the local Agent to own plugins, pass explicit plugin definitions:
+
+```ts
+import { Agent, skillPlugin, webPlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [skillPlugin, webPlugin],
+});
+
+const plugins = agent.plugins.list();
+```
+
+Those plugins are registered into the current `Agent`'s own registry.
+
+That means:
+
+- plugin actions can be called through `agent.plugins.runAction(...)`
+- `context.plugins` inside services and plugin hooks points to the same registry
+- duplicate plugin names throw immediately
+- the SDK does not register every built-in plugin by default
+
+The local SDK currently wires the plugin registry and `AgentContext.plugins`.
+
+It does not automatically inject `plugin.system()` into session prompts, and it does not automatically mount `plugin.http.runtime` onto the SDK HTTP server started by `agent.http.start()`.
+
 ## Important boundary
 
 The SDK `services` field is the set of instances you hand to `Agent` yourself. It is not a mirror of some automatic project-runtime registry.
 
+The SDK `plugins` field is also the set of definitions you hand to `Agent` yourself. It is not a mirror of the global plugin manager.
+
 So do not think of SDK mode as "import everything from the project automatically." It is intentionally explicit assembly.
+
+If you want the next layer of detail:
+
+- which services exist today
+- where `ChatService` fits
+- how to build a custom service
+- how plugins attach to a local Agent
+
+continue with:
+
+- [Services overview](/en/docs/agent/sdk/services/overview)
+- [ChatService](/en/docs/agent/sdk/services/chat-service)
+- [Custom service](/en/docs/agent/sdk/services/custom-service)
+- [Plugin overview](/en/docs/agent/plugins/overview)
+- [Custom plugin](/en/docs/agent/plugins/custom-plugin)

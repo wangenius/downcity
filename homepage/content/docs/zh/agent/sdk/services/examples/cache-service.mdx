@@ -1,0 +1,148 @@
+---
+title: CacheService 场景
+description: 用一个带 lifecycle 的 CacheService 场景说明 service 启动、状态和幂等设计
+---
+
+# CacheService 场景
+
+## 场景
+
+你在做一个本地索引助手，希望它能缓存一些热点结果：
+
+- 最近查询过的文件摘要
+- 最近解析过的目录结构
+- 某些高成本外部请求结果
+
+而且你希望：
+
+- 在 service 启动时记录启动时间
+- 在 service 停止时清空缓存
+
+这时就适合写一个带 `lifecycle` 的 service。
+
+## 示例
+
+```ts
+import {
+  Agent,
+  BaseService,
+  type AgentContext,
+  type ServiceActions,
+} from "@downcity/agent";
+
+class CacheService extends BaseService {
+  readonly name = "cache";
+
+  private startedAt = 0;
+  private readonly store = new Map<string, string>();
+
+  readonly lifecycle = {
+    start: async (_context: AgentContext) => {
+      if (this.startedAt > 0) return;
+      this.startedAt = Date.now();
+    },
+    stop: async () => {
+      this.store.clear();
+      this.startedAt = 0;
+    },
+  };
+
+  setValue(key: string, value: string) {
+    const cleanKey = String(key || "").trim();
+    if (!cleanKey) {
+      throw new Error("key is required");
+    }
+    this.store.set(cleanKey, String(value || ""));
+  }
+
+  getValue(key: string) {
+    return this.store.get(String(key || "").trim()) || null;
+  }
+
+  readonly actions: ServiceActions = {
+    status: {
+      execute: async () => {
+        return {
+          success: true,
+          data: {
+            startedAt: this.startedAt || null,
+            size: this.store.size,
+          },
+        };
+      },
+    },
+    set: {
+      execute: async ({ payload }) => {
+        const body = payload as { key?: unknown; value?: unknown };
+        const key = String(body.key || "").trim();
+        const value = String(body.value || "");
+        this.setValue(key, value);
+        return {
+          success: true,
+          data: { key },
+        };
+      },
+    },
+    get: {
+      execute: async ({ payload }) => {
+        const body = payload as { key?: unknown };
+        const key = String(body.key || "").trim();
+        return {
+          success: true,
+          data: {
+            key,
+            value: this.getValue(key),
+          },
+        };
+      },
+    },
+  };
+}
+
+const cacheService = new CacheService();
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [cacheService],
+});
+
+await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+```
+
+## 这个场景最重要的设计点
+
+### 1. `start` 要幂等
+
+当前 SDK 下，service 自动启动最稳定的触发点是：
+
+- `agent.http.start()`
+- `agent.rpc.start()`
+
+所以 `start` 最好能反复调用而不出问题。
+
+### 2. `stop` 也要幂等
+
+因为当前 SDK 还没有一个面向 public 的完整 service shutdown 总控 API。
+
+### 3. `status` action 很重要
+
+很多 runtime 型 service，最值得先设计的 action 不是业务 action，而是：
+
+- `status`
+
+它能大幅降低排障成本。
+
+## 适合从这个例子学什么
+
+- service lifecycle 不是为了“每个 service 都必须很重”
+- 而是为了让“有启动/停止语义的能力”有明确边界
+
+## 相关文档
+
+- [Service 生命周期](/zh/docs/agent/sdk/services/service-lifecycle)
+- [自定义 Service](/zh/docs/agent/sdk/services/custom-service)

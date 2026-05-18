@@ -1,0 +1,237 @@
+---
+title: Custom Service
+description: Build a custom service with BaseService, including the minimum skeleton, state placement, and Agent integration
+---
+
+# Custom Service
+
+If your application needs a long-lived capability instance, the most natural extension path is a custom service.
+
+## When you should write a custom service
+
+These situations usually point to a service:
+
+- you need long-lived state
+- you need a worker, connection, cache, or session pool
+- you want a group of related actions under one runtime object
+- you want the agent process to own a domain object over time
+
+## The standard base class
+
+You can now import it directly from the public package:
+
+```ts
+import { BaseService } from "@downcity/agent";
+```
+
+That makes custom services a formal SDK extension path instead of just an internal implementation detail.
+
+## Minimal skeleton
+
+```ts
+import {
+  BaseService,
+  type ServiceActions,
+} from "@downcity/agent";
+
+class NotesService extends BaseService {
+  readonly name = "notes";
+
+  private readonly notes: string[] = [];
+
+  readonly actions: ServiceActions = {
+    add: {
+      execute: async ({ payload }) => {
+        const text = String((payload as { text?: unknown }).text || "").trim();
+        if (!text) {
+          return {
+            success: false,
+            error: "text is required",
+          };
+        }
+        this.notes.push(text);
+        return {
+          success: true,
+          data: {
+            count: this.notes.length,
+          },
+        };
+      },
+    },
+    list: {
+      execute: async () => {
+        return {
+          success: true,
+          data: {
+            items: [...this.notes],
+          },
+        };
+      },
+    },
+  };
+}
+```
+
+## Attach it to an Agent
+
+```ts
+import { Agent } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [
+    new NotesService(),
+  ],
+});
+```
+
+## What a custom service minimally needs
+
+### `name`
+
+A stable service name.
+
+It should be:
+
+- clear
+- stable
+- not duplicated
+
+The current SDK throws on duplicate service names instead of silently overriding one.
+
+### `actions`
+
+This is the action map exposed by the service.
+
+Even for a small service, a clear action surface is usually the right starting point.
+
+### Instance field state
+
+Store state like this:
+
+```ts
+private readonly notes: string[] = [];
+```
+
+not in module-level globals.
+
+This is one of the most important practices for custom services.
+
+## Optional capabilities
+
+### `lifecycle`
+
+If the service needs startup or shutdown behavior, implement:
+
+- `start`
+- `stop`
+- `command`
+
+### `system`
+
+If the service wants to provide system-level text, implement `system(context)`.
+
+But note: the current local SDK session path does not automatically inject `service.system()`. That is important enough to have its own page.
+
+## Do you need to call `bindAgent()` yourself?
+
+Usually no.
+
+The SDK handles binding when the service is assembled into `Agent`.
+
+So for most users:
+
+- instantiate your service normally
+- pass it through `services: [...]`
+
+and you are done.
+
+## A more realistic example
+
+```ts
+import {
+  Agent,
+  BaseService,
+  type AgentContext,
+  type ServiceActions,
+} from "@downcity/agent";
+
+class CacheService extends BaseService {
+  readonly name = "cache";
+
+  private startedAt = 0;
+  private readonly store = new Map<string, string>();
+
+  readonly lifecycle = {
+    start: async (_context: AgentContext) => {
+      this.startedAt = Date.now();
+    },
+    stop: async () => {
+      this.store.clear();
+    },
+  };
+
+  readonly actions: ServiceActions = {
+    set: {
+      execute: async ({ payload }) => {
+        const body = payload as { key?: unknown; value?: unknown };
+        const key = String(body.key || "").trim();
+        const value = String(body.value || "");
+        if (!key) {
+          return { success: false, error: "key is required" };
+        }
+        this.store.set(key, value);
+        return { success: true, data: { key } };
+      },
+    },
+    get: {
+      execute: async ({ payload }) => {
+        const body = payload as { key?: unknown };
+        const key = String(body.key || "").trim();
+        return {
+          success: true,
+          data: {
+            key,
+            value: this.store.get(key) || null,
+            startedAt: this.startedAt,
+          },
+        };
+      },
+    },
+  };
+}
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [new CacheService()],
+});
+```
+
+## The limitation worth knowing up front
+
+The current SDK does not expose one public "stop all services" API.
+
+So if your custom service strongly depends on deterministic startup and teardown, you should:
+
+- make `start` idempotent
+- make `stop` idempotent
+- avoid relying on a not-yet-public global shutdown hook as your only cleanup path
+
+## If you want real scenario-driven examples
+
+Continue with:
+
+- [NotesService scenario](/en/docs/agent/sdk/services/examples/notes-service)
+- [CacheService scenario](/en/docs/agent/sdk/services/examples/cache-service)
+- [WebhookRelayService scenario](/en/docs/agent/sdk/services/examples/webhook-relay-service)
+- [Service plus tool composition](/en/docs/agent/sdk/services/examples/service-tool-composition)
+
+## Continue reading
+
+- [Service lifecycle](/en/docs/agent/sdk/services/service-lifecycle)
+- [Service actions](/en/docs/agent/sdk/services/service-actions)
+- [Service vs tools](/en/docs/agent/sdk/services/service-vs-tools)

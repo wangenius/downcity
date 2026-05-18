@@ -133,7 +133,7 @@ If the service needs startup or shutdown behavior, implement:
 
 If the service wants to provide system-level text, implement `system(context)`.
 
-But note: the current local SDK session path does not automatically inject `service.system()`. That is important enough to have its own page.
+The current local SDK session path automatically injects `system(context)` text from explicitly provided services.
 
 ## Do you need to call `bindAgent()` yourself?
 

@@ -3,6 +3,7 @@
   "pages": [
     "overview",
     "built-in-plugins",
+    "builtins",
     "configuration",
     "plugin-actions",
     "plugin-hooks",

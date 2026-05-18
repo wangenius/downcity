@@ -1,6 +1,6 @@
 ---
 title: Service System Text
-description: Understand what service.system(context) is for and what its current boundary is in the local SDK session path
+description: Understand what service.system(context) is for and how it enters the local SDK session prompt
 ---
 
 # Service System Text
@@ -21,54 +21,39 @@ Semantically, that means the service wants to contribute a service-level system 
 - behavior boundaries for the service
 - stable domain instructions that conceptually belong to that service
 
-## But the current SDK has one very important boundary
+## How it works in the local SDK
 
-The current local SDK session path uses `SdkSessionSystemComposer`.
+The local SDK session path uses `SdkSessionSystemComposer`.
 
-Today it mainly injects:
+When you explicitly pass a service through `new Agent({ services: [...] })`, the SDK collects that service's `system(context)` text whenever it resolves system prompts for a session run.
+
+The injection order is:
 
 - `PROFILE.md`
 - `SOUL.md`
 - the core prompt
+- `service.system(context)`
+- registered plugins' `plugin.system(context)`
 - the runtime clock prompt
 
-It does **not currently auto-inject `service.system()`** into the main local SDK session prompt path.
+If one service's `system(context)` throws, the SDK skips that one service system block and does not block the current session run.
 
-## What that means in practice
+## Relationship With Lifecycle
 
-It means:
+`service.system(context)` does not require `service.lifecycle.start()` to have already run.
 
-- `service.system()` is part of the service contract
-- but it is not yet a "write this and the model immediately sees it every run" feature in the current local SDK path
+That means:
 
-If you assume "my custom service has `system()`, so the model must already see it," you will have the wrong expectation.
+- services that only provide prompt rules can take effect directly
+- system text that depends on background connections, queue workers, or external process state should handle the not-yet-started state inside the service
 
-## So how should you use it today
+## Where Rules Belong
 
-The more practical mental model for SDK users is:
+If a rule belongs to the whole agent's long-lived personality or project contract, prefer `PROFILE.md` or `SOUL.md`.
 
-- keep `system()` as part of a complete service shape
-- keep truly active local SDK prompt rules in `PROFILE.md` and `SOUL.md`
-- treat services primarily as runtime, state, and lifecycle holders
+If a rule belongs to a specific service, such as chat sending rules or a domain boundary owned by a business service, `service.system(context)` is the right place.
 
-## When it is still worth implementing
-
-Even though the current local SDK path does not auto-inject it, `system()` still has value:
-
-- it keeps your service shape complete
-- it stays aligned with the broader runtime service model
-- if the SDK expands this behavior later, your service shape does not need to change
-
-## Safest current recommendation
-
-If a rule must affect the local SDK session prompt right now, prefer:
-
-- `PROFILE.md`
-- `SOUL.md`
-
-If a rule conceptually belongs to a service and is more about full contract shape or future expansion, `service.system()` is still a reasonable place.
-
-## Related docs
+## Related Docs
 
 - [Custom service](/en/docs/agent/sdk/services/custom-service)
 - [Services overview](/en/docs/agent/sdk/services/overview)

@@ -1,0 +1,267 @@
+---
+title: tts Plugin
+description: A detailed guide to the tts built-in plugin, how it installs local synthesis dependencies, configures model and output parameters, generates audio files, and returns reusable audio tags
+---
+
+# tts Plugin
+
+`tts` is one of the clearest built-in examples of an explicit output-generation plugin.
+
+You give it text, and it produces:
+
+- a local audio file
+- a reusable audio file tag
+
+That allows a plain text answer to expand naturally into a spoken output artifact.
+
+## What it does
+
+`tts` is mainly responsible for:
+
+1. installing local text-to-speech dependencies
+2. managing default model, format, and speed configuration
+3. generating audio files from input text
+4. returning the result as a file path plus file tag
+
+Its center of gravity is different from `asr`.
+
+`asr` is input augmentation. `tts` is output artifact generation.
+
+## Which plugin capabilities it uses
+
+`tts` uses:
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `system`
+
+It does not use pipeline hooks, and it does not use runtime HTTP.
+
+That means:
+
+- `tts` does not automatically jump into the main message chain
+- it is best used through explicit calls when audio is actually needed
+
+## Typical scenarios
+
+### Scenario 1: the user wants the final answer sent as voice
+
+This is the most typical `tts` workflow.
+
+Generate the text answer first, then call `tts.synthesize`, and send the resulting audio file to the target channel.
+
+### Scenario 2: you want one default output format for a channel
+
+For example, only `wav`, or defaulting to `flac` for smaller files.
+
+That kind of requirement fits plugin config better than repeating the same override in every synthesis request.
+
+### Scenario 3: you want multi-language narration or different voices
+
+Then one synthesis request can override:
+
+- `language`
+- `voice`
+- `speed`
+
+without changing the project-wide defaults.
+
+## How to register it in the SDK
+
+```ts
+import { Agent, ttsPlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "speech-agent",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [ttsPlugin],
+});
+```
+
+## Key config fields
+
+| Config field | What it does | Notes |
+| --- | --- | --- |
+| `provider` | active provider | currently local by default |
+| `modelId` | default model | for example `qwen3-tts-0.6b` |
+| `format` | default output format | `wav` or `flac` |
+| `speed` | default speech speed | `1` means normal rate |
+| `language` | default language hint | can be overridden per call |
+| `voice` | default voice id | can be overridden per call |
+
+## Main actions
+
+| Action | What it does | When to use it |
+| --- | --- | --- |
+| `status` | inspect config and synthesizer status | confirm environment first |
+| `doctor` | diagnose dependency readiness | when model or runtime setup looks broken |
+| `models` | list available models | build a picker or control surface |
+| `install` | install synthesis dependencies | first-time TTS setup |
+| `configure` | update default config | change model, format, speed |
+| `on` | enable the plugin, optionally install too | one-step capability enablement |
+| `off` | disable the plugin | pause speech synthesis |
+| `use` | switch the active model | multi-model workflows |
+| `synthesize` | turn text into an audio file | the core action |
+
+## Scenario-driven usage examples
+
+### Check current status
+
+```ts
+const status = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "status",
+});
+```
+
+### List available models
+
+```ts
+const models = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "models",
+});
+```
+
+### Install TTS dependencies
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "install",
+  payload: {
+    modelIds: ["qwen3-tts-0.6b"],
+    activeModel: "qwen3-tts-0.6b",
+    format: "wav",
+    installDeps: true,
+  },
+});
+```
+
+### Switch the active model
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "use",
+  payload: {
+    modelId: "qwen3-tts-0.6b",
+  },
+});
+```
+
+### Generate a speech file
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "synthesize",
+  payload: {
+    text: "Hello, welcome to Downcity",
+    language: "en",
+    format: "wav",
+    speed: 1,
+  },
+});
+```
+
+On success, the result usually contains:
+
+- `outputPath`
+- `fileTag`
+- `bytes`
+
+The `fileTag` matters because it makes downstream audio delivery much easier.
+
+### Run dependency diagnosis
+
+```ts
+const diagnosis = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "doctor",
+});
+```
+
+## Why this is an explicit generation plugin
+
+Unlike the automatic augmentation shape of `asr`, the right mental model for `tts` is:
+
+- call it when you explicitly need an audio artifact
+
+That makes it closer to:
+
+- a file generator
+- an output transformer
+- a delivery-preparation layer before channel sending
+
+## What `system` does here
+
+The `tts` system text reminds the agent that:
+
+- the environment has TTS capability
+- `tts.synthesize` should be used for spoken output requests
+- successful generation returns both an audio path and a `<file type="audio">...</file>` tag
+
+That helps the agent move beyond text-only answers when the user asks for “a voice version.”
+
+## Its boundary relative to channel delivery
+
+`tts` is responsible for turning text into an audio file.
+
+It is not responsible for:
+
+- how one IM channel uploads audio
+- how one platform renders or sends an audio message
+
+The cleaner mental model is:
+
+- `tts` generates the artifact
+- the channel layer delivers the artifact
+
+## Its boundary relative to services
+
+`tts` may rely on local models and Python runtime underneath, but architecturally it is still a better fit as a plugin:
+
+- explicit invocation
+- structured result return
+- centralized config
+
+If your main problem is “generate an audio artifact that can be delivered,” a plugin is the more natural boundary.
+
+## Important boundaries
+
+### When the plugin is unavailable, synthesis should not be treated as usable
+
+If availability is false, `synthesize` will fail.
+
+### `format` and `speed` can be overridden per request
+
+Do not change the whole project default just to satisfy one one-off narration request.
+
+### `stderr` does not always mean failure
+
+The current implementation allows non-fatal stderr from the Python runner and returns a summary as extra context.
+
+So:
+
+- stderr output does not automatically mean synthesis failed
+
+## When to use it as a reference
+
+Use `tts` as a reference for:
+
+- explicit artifact-generation plugins
+- model and output-parameter configuration
+- returning file paths and reusable file tags
+- turning text output into audio output
+
+## Related docs
+
+- [Built-in Plugin Overview](/en/docs/agent/plugins/builtins/overview)
+- [Plugin actions](/en/docs/agent/plugins/plugin-actions)
+- [Plugin system](/en/docs/agent/plugins/plugin-system)
+- [Plugin vs service](/en/docs/agent/plugins/plugin-vs-service)

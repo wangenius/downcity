@@ -73,6 +73,16 @@ type SdkSessionOptions = {
    * 读取静态 system 文本集合。
    */
   getStaticSystemPrompts: () => string[];
+
+  /**
+   * 读取当前 agent 显式注入 service 的 system 文本集合。
+   */
+  getServiceSystemPrompts: () => Promise<string[]>;
+
+  /**
+   * 读取当前 agent 显式注册 plugin 的 system 文本集合。
+   */
+  getPluginSystemPrompts: () => Promise<string[]>;
 };
 
 /**
@@ -86,6 +96,8 @@ export class SdkSession {
   private readonly tools: Record<string, Tool>;
   private readonly logger: SdkSessionOptions["logger"];
   private readonly getStaticSystemPrompts: SdkSessionOptions["getStaticSystemPrompts"];
+  private readonly getServiceSystemPrompts: SdkSessionOptions["getServiceSystemPrompts"];
+  private readonly getPluginSystemPrompts: SdkSessionOptions["getPluginSystemPrompts"];
   private readonly historyComposer: JsonlSessionHistoryComposer;
   private readonly coreSession: CoreSession;
   private sessionConfig: AgentSessionConfigSnapshot = {};
@@ -99,6 +111,8 @@ export class SdkSession {
     this.tools = options.tools;
     this.logger = options.logger;
     this.getStaticSystemPrompts = options.getStaticSystemPrompts;
+    this.getServiceSystemPrompts = options.getServiceSystemPrompts;
+    this.getPluginSystemPrompts = options.getPluginSystemPrompts;
     if (!this.id) {
       throw new Error("SdkSession requires a non-empty sessionId");
     }
@@ -149,6 +163,8 @@ export class SdkSession {
           systemComposer: new SdkSessionSystemComposer({
             projectRoot: this.projectRoot,
             getStaticSystemPrompts: this.getStaticSystemPrompts,
+            getServiceSystemPrompts: this.getServiceSystemPrompts,
+            getPluginSystemPrompts: this.getPluginSystemPrompts,
           }),
           getTools: () => this.tools,
         });
@@ -356,6 +372,8 @@ export class SdkSession {
       tools: this.tools,
       logger: this.logger,
       getStaticSystemPrompts: this.getStaticSystemPrompts,
+      getServiceSystemPrompts: this.getServiceSystemPrompts,
+      getPluginSystemPrompts: this.getPluginSystemPrompts,
     });
     await forked.initialize();
     if (this.sessionConfig.model) {

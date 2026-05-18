@@ -1,6 +1,6 @@
 ---
 title: Service System 文本
-description: 说明 service.system(context) 的作用，以及它在当前 SDK local session 主路径中的实际边界
+description: 说明 service.system(context) 的作用，以及它如何进入本地 SDK session prompt
 ---
 
 # Service System 文本
@@ -13,8 +13,7 @@ system(context) {
 }
 ```
 
-它的语义是：  
-这个 service 希望补充一段 service 维度的 system 文本。
+它的语义是：这个 service 希望补充一段 service 维度的 system 文本。
 
 ## 它适合承载什么
 
@@ -22,61 +21,37 @@ system(context) {
 - service 的行为边界
 - 需要长期稳定注入的一段领域说明
 
-## 但当前 SDK 有一个非常关键的边界
+## 在本地 SDK 中如何生效
 
-当前 SDK local session 主路径，默认使用的是 `SdkSessionSystemComposer`。
+当前 SDK local session 使用 `SdkSessionSystemComposer`。
 
-它现在主要注入：
+当你把 service 显式传入 `new Agent({ services: [...] })` 后，SDK 会在每次 session run 解析 system prompt 时收集这些 service 的 `system(context)` 文本。
+
+注入顺序是：
 
 - `PROFILE.md`
 - `SOUL.md`
 - core prompt
+- `service.system(context)`
+- 已注册 plugin 的 `plugin.system(context)`
 - runtime clock prompt
 
-它**暂时不会自动把 `service.system()` 注入进去**。
+如果某个 service 的 `system(context)` 抛错，SDK 会跳过这一个 service system 文本，不会阻断本轮 session run。
 
-## 这意味着什么
+## 和 lifecycle 的关系
 
-这意味着在当前 SDK 里：
+`service.system(context)` 不要求 `service.lifecycle.start()` 已经执行。
 
-- `service.system()` 是 service 契约的一部分
-- 但它不是 local SDK session 主链路里“写了就立即生效”的提示词入口
+这意味着：
 
-如果你误以为“我写了一个 custom service 的 `system()`，模型就会自动看到”，你会得到错误预期。
+- 只提供提示词规则的 service 可以直接生效
+- 依赖后台连接、queue worker 或外部进程状态的 system 文本，需要自己在实现中处理未启动状态
 
-## 那现在该怎么用
+## 适合放在哪里
 
-对当前 SDK 使用者，更务实的理解是：
+如果一段规则属于整个 agent 的长期人格或项目约束，优先放在 `PROFILE.md` / `SOUL.md`。
 
-- 先把 `system()` 当作完整 service 契约的一部分
-- 把真正稳定生效的主提示词入口仍然放在 `PROFILE.md` / `SOUL.md`
-- 把 service 的主要价值放在运行态、状态和生命周期上
-
-## 什么时候它仍然值得写
-
-即使当前 local SDK 主路径还没自动注入，`system()` 仍然有价值：
-
-- 它让 custom service 的结构更完整
-- 它和 full runtime 的 service 模型保持一致
-- 如果后续 SDK 扩展这一能力，你的 service 不需要重写接口形状
-
-## 当前最稳妥的建议
-
-如果你有一段规则：
-
-- 必须马上影响本地 SDK session 的主提示词
-
-优先放到：
-
-- `PROFILE.md`
-- `SOUL.md`
-
-如果你有一段规则：
-
-- 从概念上属于 service 自己
-- 更偏未来扩展或完整 service 契约
-
-再考虑放到 `service.system()`。
+如果一段规则属于某个 service 自己，比如 chat service 的发送规则、某个业务 service 的领域边界，就适合放在 `service.system(context)`。
 
 ## 相关文档
 

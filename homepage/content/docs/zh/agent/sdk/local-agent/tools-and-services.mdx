@@ -51,6 +51,8 @@ const agent = new Agent({
 
 你可以把这里理解成：“由调用方自己决定，哪些 service 是这个本地 Agent 的常驻能力。”
 
+如果这些 service 实现了 `system(context)`，当前本地 SDK 会把它们的 system 文本注入 session prompt。
+
 ## plugins
 
 如果你需要让本地 Agent 持有一组 plugin，可以显式传入定义对象：
@@ -77,9 +79,9 @@ const plugins = agent.plugins.list();
 - 同名 plugin 重复注册会直接报错
 - SDK 不会默认注册全部内建 plugin
 
-当前本地 SDK 只接通 plugin registry 与 `AgentContext.plugins`。
+当前本地 SDK 会接通 plugin registry、`AgentContext.plugins`，并在 session prompt 中注入已注册 plugin 的 `system(context)` 文本。
 
-它不会自动把 `plugin.system()` 注入 session prompt，也不会把 `plugin.http.runtime` 自动挂到 `agent.http.start()` 的 SDK HTTP server 上。
+它不会把 `plugin.http.runtime` 自动挂到 `agent.http.start()` 的 SDK HTTP server 上。
 
 ## 一个重要边界
 

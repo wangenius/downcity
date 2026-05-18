@@ -67,6 +67,7 @@ export class Agent {
   private readonly runtime: AgentRuntime;
   private readonly serviceContext: AgentContext;
   private readonly pluginRegistry: PluginRegistry;
+  private readonly pluginSystemProviders: Plugin[];
   private readonly config: DowncityConfig;
   private systems: string[];
   private servicesStartPromise: Promise<void> | null = null;
@@ -93,7 +94,10 @@ export class Agent {
     for (const service of this.services.values()) {
       service.bindAgent(this.runtime);
     }
-    this.pluginRegistry = this.createPluginRegistry(options.plugins || []);
+    this.pluginSystemProviders = Array.isArray(options.plugins)
+      ? [...options.plugins]
+      : [];
+    this.pluginRegistry = this.createPluginRegistry(this.pluginSystemProviders);
     this.plugins = this.createPluginPort();
     this.serviceContext = this.createServiceContext();
     this.http = new SdkAgentHttpServer(this);
@@ -226,6 +230,41 @@ export class Agent {
     };
   }
 
+  private async loadPluginSystemPrompts(): Promise<string[]> {
+    const out: string[] = [];
+    for (const plugin of this.pluginSystemProviders) {
+      if (typeof plugin.system !== "function") continue;
+      try {
+        if (!isPluginEnabled({ plugin })) continue;
+        if (typeof plugin.availability === "function") {
+          const availability = await plugin.availability(this.serviceContext);
+          if (!availability.available) continue;
+        }
+        const text = String(await plugin.system(this.serviceContext)).trim();
+        if (!text) continue;
+        out.push(text);
+      } catch {
+        // 单个 plugin system 失败不应阻断 SDK session 主链路。
+      }
+    }
+    return out;
+  }
+
+  private async loadServiceSystemPrompts(): Promise<string[]> {
+    const out: string[] = [];
+    for (const service of this.services.values()) {
+      if (typeof service.system !== "function") continue;
+      try {
+        const text = String(await service.system(this.serviceContext)).trim();
+        if (!text) continue;
+        out.push(text);
+      } catch {
+        // 单个 service system 失败不应阻断 SDK session 主链路。
+      }
+    }
+    return out;
+  }
+
   private createRuntime(): AgentRuntime {
     const runtime = {
       cwd: this.path,
@@ -347,6 +386,8 @@ export class Agent {
       tools: this.tools,
       logger: this.logger,
       getStaticSystemPrompts: () => this.systems,
+      getServiceSystemPrompts: () => this.loadServiceSystemPrompts(),
+      getPluginSystemPrompts: () => this.loadPluginSystemPrompts(),
     });
     this.sessionsById.set(resolvedSessionId, created);
     return created;

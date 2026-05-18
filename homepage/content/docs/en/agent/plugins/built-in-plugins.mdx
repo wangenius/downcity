@@ -1,11 +1,11 @@
 ---
-title: Built-in Plugins Today
-description: Explain which plugins Downcity currently includes, what they are responsible for, and which plugin capabilities they use
+title: Built-in Plugin Guide
+description: Start from one entry page to understand the full built-in plugin set in Downcity, the best reading order, and where to find detailed docs for each plugin
 ---
 
-# Built-in Plugins Today
+# Built-in Plugin Guide
 
-The current built-in plugin set is:
+Downcity currently ships with six built-in plugins:
 
 - `auth`
 - `skill`
@@ -14,156 +14,79 @@ The current built-in plugin set is:
 - `tts`
 - `workboard`
 
-This list comes from the current single source of truth in code.
+These six plugins are the built-in set defined in code today, and they are also the best reference set for understanding the plugin system.
 
-## How to use built-in plugins in the SDK
+## How to read this section
 
-These built-in plugins can now be imported directly from `@downcity/agent`:
+If you are new to Downcity plugins, the best path is:
 
-```ts
-import {
-  Agent,
-  authPlugin,
-  skillPlugin,
-  webPlugin,
-} from "@downcity/agent";
+1. start with [Built-in Plugin Overview](/en/docs/agent/plugins/builtins/overview)
+2. then open the page for the capability you care about
+3. jump to topic pages whenever you want more detail about one runtime mechanism
 
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  tools: {},
-  plugins: [authPlugin, skillPlugin, webPlugin],
-});
+Recommended order:
 
-const plugins = agent.plugins.list();
-```
+1. [skill Plugin](/en/docs/agent/plugins/builtins/skill)
+2. [web Plugin](/en/docs/agent/plugins/builtins/web)
+3. [asr Plugin](/en/docs/agent/plugins/builtins/asr)
+4. [tts Plugin](/en/docs/agent/plugins/builtins/tts)
+5. [workboard Plugin](/en/docs/agent/plugins/builtins/workboard)
+6. [auth Plugin](/en/docs/agent/plugins/builtins/auth)
 
-Important details:
+## What each built-in plugin is for
 
-- the built-in plugin objects are publicly exported
-- but the SDK does not auto-register all of them into a local `Agent`
-- you still explicitly choose which plugins belong to this agent instance
+### `auth`
 
-## `auth`
+Handles chat entry authorization, observed user and chat recording, and effective role resolution.
 
-Main responsibility:
+It is not just an optional utility plugin. It is part of the current platform rule layer.
 
-- authorize inbound chat entry
-- record observed users and chats
-- resolve the effective role for a given user
+### `skill`
 
-Main plugin features it uses:
+Handles skill discovery, installation, listing, and lookup.
 
-- `availability`
-- `hooks.guard`
-- `hooks.effect`
-- `resolves`
-- `actions`
+If you want an agent to learn a new skill, this is usually the plugin you go through first.
 
-This is a very strong example of a platform-rule plugin.
+### `web`
 
-## `skill`
+Chooses the active web provider and connects web capability to the agent.
 
-Main responsibility:
+It is not itself a search engine or browser executor. It is the adapter layer for `web-access` and `agent-browser`.
 
-- find skills
-- install skills
-- list and lookup skills
-- inject current skill knowledge into system prompts
+### `asr`
 
-Main plugin features it uses:
+Handles speech transcription.
 
-- `config`
-- `actions`
-- `system`
+It can explicitly transcribe a local audio file, and it can also auto-augment inbound chat messages by turning voice attachments into text.
 
-This is the clearest catalog-style capability plugin today.
+### `tts`
 
-## `web`
+Handles text-to-speech generation.
 
-Main responsibility:
+It turns text into a local audio file and returns a reusable audio file tag for downstream channel delivery.
 
-- choose the active web provider
-- check whether that provider is ready
-- manage web-access or agent-browser integration
-- inject provider-specific prompt guidance
+### `workboard`
 
-Main plugin features it uses:
+Exposes runtime work snapshots.
 
-- `config`
-- `setup`
-- `usage`
-- `availability`
-- `actions`
-- `system`
+It is closer to an observability and control-plane plugin than to an action-first business plugin.
 
-It is one of the most complete examples of a plugin that spans installation, configuration, and runtime guidance.
+## Detailed pages
 
-## `asr`
+- [Built-in Plugin Overview](/en/docs/agent/plugins/builtins/overview)
+- [auth Plugin](/en/docs/agent/plugins/builtins/auth)
+- [skill Plugin](/en/docs/agent/plugins/builtins/skill)
+- [web Plugin](/en/docs/agent/plugins/builtins/web)
+- [asr Plugin](/en/docs/agent/plugins/builtins/asr)
+- [tts Plugin](/en/docs/agent/plugins/builtins/tts)
+- [workboard Plugin](/en/docs/agent/plugins/builtins/workboard)
 
-Main responsibility:
-
-- manage speech-recognition dependencies
-- augment inbound chat messages with transcription
-- inject ASR-related system text
-
-Main plugin features it uses:
-
-- `config`
-- `setup`
-- `usage`
-- `availability`
-- `actions`
-- `hooks`
-- `system`
-
-It is a good example of a plugin that provides both explicit actions and runtime chain augmentation.
-
-## `tts`
-
-Main responsibility:
-
-- manage TTS models and dependencies
-- generate local speech files
-- inject TTS-related system text
-
-Main plugin features it uses:
-
-- `config`
-- `setup`
-- `usage`
-- `availability`
-- `actions`
-- `system`
-
-It is closer to an explicit capability plugin than a chain-augmentation plugin.
-
-## `workboard`
-
-Main responsibility:
-
-- expose structured workboard snapshots
-- provide runtime HTTP routes
-
-Main plugin features it uses:
-
-- `availability`
-- `http.runtime`
-
-This is the clearest current example of an HTTP-injection plugin.
-
-## Best learning order for plugin design
-
-If you want strong reference points:
-
-1. `skill` for actions plus system
-2. `web` for setup, usage, availability, and system together
-3. `asr` for actions plus hooks plus system
-4. `workboard` for runtime HTTP
-5. `auth` for platform rules and role resolution
-
-## Related docs
+## Related topic docs
 
 - [Plugin configuration](/en/docs/agent/plugins/configuration)
+- [Plugin actions](/en/docs/agent/plugins/plugin-actions)
 - [Plugin hooks](/en/docs/agent/plugins/plugin-hooks)
-- [Custom plugin](/en/docs/agent/plugins/custom-plugin)
+- [Resolve hook](/en/docs/agent/plugins/hooks/resolve)
+- [Pipeline hook](/en/docs/agent/plugins/hooks/pipeline)
+- [Plugin HTTP injection](/en/docs/agent/plugins/plugin-http)
+- [Plugin vs service](/en/docs/agent/plugins/plugin-vs-service)

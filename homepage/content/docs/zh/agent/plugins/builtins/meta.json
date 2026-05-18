@@ -1,0 +1,12 @@
+{
+  "title": "内建 Plugins",
+  "pages": [
+    "overview",
+    "auth",
+    "skill",
+    "web",
+    "asr",
+    "tts",
+    "workboard"
+  ]
+}

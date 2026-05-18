@@ -96,24 +96,24 @@ In the current SDK:
 If your custom service only provides actions or instance methods, that is usually fine.  
 If it depends on an explicit startup phase, design around this boundary.
 
-## Another important boundary
+## System prompt injection
 
-The current local SDK session prompt path does not automatically inject `service.system()`.
+The current local SDK session prompt path injects `service.system(context)` from explicitly provided services.
 
-The default SDK path currently injects:
+The SDK path currently injects:
 
 - `PROFILE.md`
 - `SOUL.md`
 - the core prompt
+- `service.system(context)`
 - the runtime clock prompt
 
-So in the SDK today, the primary value of services is:
+So services in the SDK can provide:
 
 - lifecycle
 - long-lived state
 - channel and runtime capability ownership
-
-not "write a service and it automatically changes every model prompt."
+- stable service-owned system rules
 
 ## Recommended reading
 

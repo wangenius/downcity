@@ -96,24 +96,24 @@ Downcity 当前内建的 service 注册表包含：
 如果你的 custom service 没有后台运行态，只提供 actions 或实例方法，这通常不是问题。  
 如果它依赖明确的启动流程，你需要按这个边界去设计。
 
-## 另一个重要边界
+## system prompt 注入
 
-当前 SDK local session 的 system prompt 主路径，并不会自动把 `service.system()` 注入进去。
+当前 SDK local session 会把显式注入 service 的 `service.system(context)` 文本注入到 session prompt 中。
 
-SDK 当前默认注入的是：
+SDK 当前会注入：
 
 - `PROFILE.md`
 - `SOUL.md`
 - core prompt
+- `service.system(context)`
 - runtime clock prompt
 
-所以 service 在 SDK 里的主价值，首先是：
+所以 service 在 SDK 里的价值包括：
 
 - 生命周期
 - 长期状态
 - 渠道与运行时能力
-
-而不是“写了 service 就自动影响每轮提示词”。
+- 属于 service 自己的稳定 system 规则
 
 ## 推荐阅读
 

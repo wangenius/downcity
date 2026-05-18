@@ -51,6 +51,8 @@ const agent = new Agent({
 
 You can think of this as: the caller explicitly decides which services are permanent capabilities of this local agent.
 
+If those services implement `system(context)`, the local SDK injects their system text into the session prompt.
+
 ## plugins
 
 If you want the local Agent to own plugins, pass explicit plugin definitions:
@@ -77,9 +79,9 @@ That means:
 - duplicate plugin names throw immediately
 - the SDK does not register every built-in plugin by default
 
-The local SDK currently wires the plugin registry and `AgentContext.plugins`.
+The local SDK currently wires the plugin registry, `AgentContext.plugins`, and the registered plugins' `system(context)` text into the session prompt.
 
-It does not automatically inject `plugin.system()` into session prompts, and it does not automatically mount `plugin.http.runtime` onto the SDK HTTP server started by `agent.http.start()`.
+It does not automatically mount `plugin.http.runtime` onto the SDK HTTP server started by `agent.http.start()`.
 
 ## Important boundary
 

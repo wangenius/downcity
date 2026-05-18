@@ -133,7 +133,7 @@ private readonly notes: string[] = [];
 
 如果 service 需要补充 system 文本，可以实现 `system(context)`。
 
-但要注意，当前 SDK local session 主路径并不会自动注入 `service.system()`。这一点后面会专门讲。
+当前 SDK local session 会自动注入显式传入 service 的 `system(context)` 文本。
 
 ## `bindAgent()` 需要自己调吗
 

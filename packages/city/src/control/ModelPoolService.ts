@@ -9,7 +9,7 @@
 
 import { generateText } from "ai";
 import type { LlmProviderType } from "@downcity/agent";
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 import { createModel } from "@downcity/agent";
 import { discoverProviderModels } from "@/cli/model/ModelSupport.js";
 

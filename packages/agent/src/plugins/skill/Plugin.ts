@@ -126,8 +126,8 @@ export const skillPlugin: Plugin = {
       ...DEFAULT_SKILL_PLUGIN_CONFIG,
     },
   },
-  availability() {
-    if (!isPluginEnabled({ plugin: skillPlugin })) {
+  availability(context) {
+    if (!isPluginEnabled({ plugin: skillPlugin, context })) {
       return {
         enabled: false,
         available: false,

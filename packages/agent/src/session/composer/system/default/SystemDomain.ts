@@ -244,6 +244,7 @@ export async function loadPluginSystemPrompts(input: {
       if (
         !isPluginEnabled({
           plugin,
+          context: input.context,
         })
       ) {
         continue;

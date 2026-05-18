@@ -7,16 +7,20 @@
  */
 
 import type { Plugin } from "@/shared/types/Plugin.js";
-import { isCityPluginEnabled } from "@/plugin/Lifecycle.js";
+import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentRuntimeBase } from "@/agent/AgentRuntimeTypes.js";
 
 /**
  * 读取当前 city 配置下的 plugin 启用态。
  */
 export function isPluginEnabled(params: {
   plugin: Plugin;
+  context?: Pick<AgentContext, "platform">;
+  runtime?: Pick<AgentRuntimeBase, "platform">;
 }): boolean {
   const pluginName = String(params.plugin.name || "").trim();
   if (!pluginName) return false;
   if (pluginName === "auth") return true;
-  return isCityPluginEnabled(pluginName);
+  const platform = params.context?.platform || params.runtime?.platform;
+  return platform ? platform.isPluginEnabled(pluginName) : true;
 }

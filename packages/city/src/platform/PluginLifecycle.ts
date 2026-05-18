@@ -1,17 +1,37 @@
 /**
- * Plugin 生命周期配置模块。
+ * City 级 plugin 生命周期管理。
  *
  * 关键点（中文）
- * - Plugin enable/disable 属于 city 级全局配置，不再写入 agent `downcity.json`。
- * - 当前实现把 lifecycle 配置存入 PlatformStore 的统一 JSON 设置。
- * - 默认策略：除显式关闭外，内建 plugin 视为启用。
+ * - plugin 启用/关闭属于 city 全局配置，不应由 agent 自己写入。
+ * - 这里把状态落到平台安全配置中，由 city 统一读写。
+ * - 默认策略：未显式关闭时，一律视为启用。
  */
 
-import { PlatformStore } from "@/shared/utils/store/index.js";
-import type {
-  CityPluginLifecycleConfig,
-  CityPluginLifecycleItem,
-} from "@/shared/types/PluginLifecycle.js";
+import { PlatformStore } from "@/platform/store/index.js";
+
+/**
+ * 单个 plugin 的 city 级生命周期配置。
+ */
+export interface CityPluginLifecycleItem {
+  /**
+   * 当前 plugin 是否在 city 级被启用。
+   */
+  enabled: boolean;
+  /**
+   * 最近更新时间（ISO 字符串）。
+   */
+  updatedAt: string;
+}
+
+/**
+ * city 级 plugin 生命周期配置映射。
+ */
+export interface CityPluginLifecycleConfig {
+  /**
+   * 插件生命周期配置对象映射。
+   */
+  [pluginName: string]: CityPluginLifecycleItem | undefined;
+}
 
 const PLUGIN_LIFECYCLE_SETTING_KEY = "plugins.lifecycle";
 
@@ -19,10 +39,9 @@ function normalizeLifecycleItem(input: unknown): CityPluginLifecycleItem | null 
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const record = input as Record<string, unknown>;
   if (typeof record.enabled !== "boolean") return null;
-  const updatedAt = String(record.updatedAt || "").trim() || new Date().toISOString();
   return {
     enabled: record.enabled,
-    updatedAt,
+    updatedAt: String(record.updatedAt || "").trim() || new Date().toISOString(),
   };
 }
 
@@ -40,7 +59,7 @@ function normalizeLifecycleConfig(input: unknown): CityPluginLifecycleConfig {
 }
 
 /**
- * 读取当前 city 级 plugin lifecycle 配置。
+ * 读取 city 级 plugin 生命周期配置。
  */
 export function readCityPluginLifecycleConfig(): CityPluginLifecycleConfig {
   const store = new PlatformStore();
@@ -56,7 +75,7 @@ export function readCityPluginLifecycleConfig(): CityPluginLifecycleConfig {
 }
 
 /**
- * 写入完整 city 级 plugin lifecycle 配置。
+ * 写入完整 city 级 plugin 生命周期配置。
  */
 export function writeCityPluginLifecycleConfig(
   value: CityPluginLifecycleConfig,
@@ -72,7 +91,7 @@ export function writeCityPluginLifecycleConfig(
 }
 
 /**
- * 读取单个 plugin 的 city 级 lifecycle 状态。
+ * 读取单个 plugin 的 city 级生命周期状态。
  */
 export function readCityPluginLifecycleItem(
   pluginName: string,
@@ -83,10 +102,7 @@ export function readCityPluginLifecycleItem(
 }
 
 /**
- * 读取单个 plugin 是否启用。
- *
- * 关键点（中文）
- * - 除显式关闭外，一律默认启用。
+ * 判断单个 plugin 是否启用。
  */
 export function isCityPluginEnabled(pluginName: string): boolean {
   const item = readCityPluginLifecycleItem(pluginName);
@@ -95,7 +111,7 @@ export function isCityPluginEnabled(pluginName: string): boolean {
 }
 
 /**
- * 设置单个 plugin 的 city 级启用态。
+ * 设置单个 plugin 的启用态。
  */
 export function setCityPluginEnabled(
   pluginName: string,

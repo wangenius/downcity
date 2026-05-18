@@ -11,7 +11,6 @@ import fs from "fs-extra";
 import path from "path";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import { PlatformStore } from "@/shared/utils/store/index.js";
 import { assertProjectExecutionTarget } from "@/agent/project/ProjectExecutionBinding.js";
 
 export type { DowncityConfig };
@@ -20,14 +19,7 @@ export type { DowncityConfig };
  * 读取平台共享环境变量（`env_entries.scope=global`）。
  */
 export function loadGlobalEnvFromStore(): Record<string, string> {
-  const store = new PlatformStore();
-  try {
-    return store.getGlobalEnvMapSync();
-  } catch {
-    return {};
-  } finally {
-    store.close();
-  }
+  return {};
 }
 
 /**
@@ -36,14 +28,7 @@ export function loadGlobalEnvFromStore(): Record<string, string> {
 export function loadAgentEnvFromStore(agentId: string): Record<string, string> {
   const normalizedAgentId = String(agentId || "").trim();
   if (!normalizedAgentId) return {};
-  const store = new PlatformStore();
-  try {
-    return store.getAgentEnvMapSync(normalizedAgentId);
-  } catch {
-    return {};
-  } finally {
-    store.close();
-  }
+  return {};
 }
 
 /**

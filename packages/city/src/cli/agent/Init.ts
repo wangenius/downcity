@@ -25,6 +25,7 @@ import type { AgentProjectChannel } from "@downcity/agent";
 import type { ExecutionBindingConfig } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
+import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 type InitPromptResponse = {
   name?: string;
@@ -67,7 +68,8 @@ export async function initCommand(
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
-  const platformModelChoices = await listPlatformModelChoices();
+  const platform = createAgentPlatformRuntime();
+  const platformModelChoices = await listPlatformModelChoices(platform);
   const platformModelIds = platformModelChoices.map((item) => item.value);
 
   // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
@@ -140,13 +142,16 @@ export async function initCommand(
   const selectedChannels = Array.isArray(response.channels)
     ? (response.channels as AgentProjectChannel[])
     : [];
-  const initResult = await initializeAgentProject({
-    projectRoot,
-    agentName,
-    execution,
-    channels: selectedChannels,
-    forceOverwriteShipJson: allowOverwrite,
-  });
+  const initResult = await initializeAgentProject(
+    {
+      projectRoot,
+      agentName,
+      execution,
+      channels: selectedChannels,
+      forceOverwriteShipJson: allowOverwrite,
+    },
+    platform,
+  );
 
   const createdItems: string[] = [];
   const skippedItems: string[] = [];

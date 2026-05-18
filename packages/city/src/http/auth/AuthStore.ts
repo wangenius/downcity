@@ -27,13 +27,13 @@ import type {
   AuthTokenRecord,
   AuthUser,
 } from "@downcity/agent";
-import { ensurePlatformStoreSchema } from "@downcity/agent";
 import {
   nowIso,
   normalizeNonEmptyText,
   optionalTrimmedText,
   type PlatformStoreContext,
-} from "@downcity/agent";
+} from "@/platform/store/StoreShared.js";
+import { ensurePlatformStoreSchema } from "@/platform/store/StoreSchema.js";
 
 /**
  * AuthStore 构造参数。

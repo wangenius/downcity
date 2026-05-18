@@ -165,7 +165,7 @@ export class PluginRegistry {
     }
 
     const context = this.contextResolver();
-    const enabled = isPluginEnabled({ plugin });
+    const enabled = isPluginEnabled({ plugin, context });
 
     if (!enabled) {
       return {
@@ -217,7 +217,7 @@ export class PluginRegistry {
     }
 
     const context = this.contextResolver();
-    const enabled = isPluginEnabled({ plugin });
+    const enabled = isPluginEnabled({ plugin, context });
     if (!enabled && action.allowWhenDisabled !== true) {
       return {
         success: false,

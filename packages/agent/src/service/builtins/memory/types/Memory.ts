@@ -17,9 +17,9 @@ export type MemorySourceType = "longterm" | "daily" | "working";
  * 查询模式。
  *
  * 说明（中文）
- * - 当前实现以 FTS 为主，保留字段用于后续向量扩展。
+ * - 当前实现直接扫描 Markdown 文件，不再维护额外索引库。
  */
-export type MemorySearchMode = "fts";
+export type MemorySearchMode = "scan";
 
 /**
  * 单条记忆检索结果。
@@ -176,38 +176,6 @@ export interface MemoryStoreResponse {
 }
 
 /**
- * 手动索引请求。
- */
-export interface MemoryIndexPayload {
-  /**
-   * 是否强制全量重建。
-   */
-  force?: boolean;
-}
-
-/**
- * 手动索引响应。
- */
-export interface MemoryIndexResponse {
-  /**
-   * 本轮扫描文件总数。
-   */
-  totalFiles: number;
-  /**
-   * 本轮新增/变更并完成重建的文件数。
-   */
-  reindexedFiles: number;
-  /**
-   * 本轮删除的失效文件数。
-   */
-  removedFiles: number;
-  /**
-   * 本轮写入 chunk 总数。
-   */
-  totalChunks: number;
-}
-
-/**
  * Flush 请求。
  */
 export interface MemoryFlushPayload {
@@ -274,14 +242,6 @@ export interface MemoryStatusResponse {
    */
   mode: MemorySearchMode;
   /**
-   * 索引文件路径（相对项目根目录）。
-   */
-  dbPath: string;
-  /**
-   * 当前是否为 dirty 状态。
-   */
-  dirty: boolean;
-  /**
    * 文件总数。
    */
   files: number;
@@ -293,14 +253,6 @@ export interface MemoryStatusResponse {
    * 按来源统计。
    */
   sourceCounts: MemorySourceStat[];
-  /**
-   * 最近一次同步时间戳（ms）。
-   */
-  lastSyncAt?: number;
-  /**
-   * 最近一次同步错误。
-   */
-  lastError?: string;
 }
 
 /**
@@ -319,14 +271,6 @@ export interface MemoryDefaults {
    * 注入预算（字符）。
    */
   maxInjectedChars: number;
-  /**
-   * 文件变更 debounce 时间（毫秒）。
-   */
-  watchDebounceMs: number;
-  /**
-   * 后台同步周期（分钟）。
-   */
-  intervalMinutes: number;
 }
 
 /**
@@ -336,6 +280,5 @@ export type MemoryActionPayload =
   | MemorySearchPayload
   | MemoryGetPayload
   | MemoryStorePayload
-  | MemoryIndexPayload
   | MemoryFlushPayload
   | Record<string, JsonValue>;

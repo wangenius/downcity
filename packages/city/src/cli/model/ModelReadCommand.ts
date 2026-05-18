@@ -7,7 +7,7 @@
  */
 
 import type { Command } from "commander";
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import {
   discoverProviderModels,

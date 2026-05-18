@@ -14,7 +14,6 @@ import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type { AgentPluginConfigRuntime } from "@/shared/types/AgentHost.js";
 import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
 import { isPluginEnabled } from "@/plugin/Activation.js";
-import { setCityPluginEnabled } from "@/plugin/Lifecycle.js";
 import {
   listVoiceModels,
   resolveVoicePluginModelId,
@@ -228,7 +227,7 @@ export const asrPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    if (!isPluginEnabled({ plugin: asrPlugin })) {
+    if (!isPluginEnabled({ plugin: asrPlugin, context })) {
       return {
         enabled: false,
         available: false,
@@ -432,7 +431,7 @@ export const asrPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
-        setCityPluginEnabled("asr", true);
+        context.platform.setPluginEnabled?.("asr", true);
         const nextConfig = {
           ...readVoicePluginConfig(context),
           injectPrompt:
@@ -481,7 +480,7 @@ export const asrPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        setCityPluginEnabled("asr", false);
+        context.platform.setPluginEnabled?.("asr", false);
         return {
           success: true,
           data: {
@@ -629,7 +628,7 @@ export const asrPlugin: Plugin = {
   },
   system(context) {
     const config = readVoicePluginConfig(context);
-    if (!isPluginEnabled({ plugin: asrPlugin }) || config.injectPrompt !== true) {
+    if (!isPluginEnabled({ plugin: asrPlugin, context }) || config.injectPrompt !== true) {
       return "";
     }
     return [

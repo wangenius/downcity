@@ -18,9 +18,9 @@ import {
 import {
   getProfileMdPath,
   getDowncityJsonPath,
-  getDowncityMemoryIndexPath,
   getDowncitySchemaPath,
   getSoulMdPath,
+  getDowncityMemoryLongTermPath,
 } from "@/config/Paths.js";
 import { isAgentProjectInitialized } from "@downcity/agent";
 import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
@@ -44,7 +44,7 @@ import type {
   PlatformAgentShipJson,
 } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 const DEFAULT_RUNTIME_PORT = 5314;
 
@@ -596,8 +596,8 @@ export async function buildPlatformConfigStatusResponse(params: {
       readPlatformConfigFileStatus({
         key: "memory_index",
         scope: "agent",
-        label: ".downcity/memory/index.sqlite",
-        filePath: getDowncityMemoryIndexPath(cwd),
+        label: ".downcity/memory/MEMORY.md",
+        filePath: getDowncityMemoryLongTermPath(cwd),
       }),
     ]);
   }

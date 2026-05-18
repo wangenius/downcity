@@ -16,6 +16,7 @@ import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
 } from "@/host/runtime/AgentHostRuntime.js";
+import { getAgentRuntimeBase } from "@/agent/AgentRuntimeState.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type {
   PluginActionResult,
@@ -38,6 +39,26 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
 
   defaultLogger.bindProjectRoot(rootPath);
 
+  const platform = (() => {
+    try {
+      return getAgentRuntimeBase().platform;
+    } catch {
+      return {
+        getGlobalEnv: () => ({}),
+        getAgentEnv: () => ({}),
+        listModels: () => [],
+        listProviders: async () => [],
+        getModel: () => null,
+        getChannelAccount: () => null,
+        readChatAuthorizationConfig: () => ({ roles: {}, channels: {} }),
+        writeChatAuthorizationConfig: async (_projectRoot: string, nextConfig: unknown) =>
+          nextConfig as never,
+        setChatAuthorizationUserRole: async () => ({ roles: {}, channels: {} }),
+        isPluginEnabled: (pluginName: string) => pluginName === "auth",
+      };
+    }
+  })();
+
   return {
     cwd: rootPath,
     rootPath,
@@ -47,6 +68,7 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
     globalEnv,
     paths: createAgentPathRuntime(rootPath),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
+    platform,
   };
 }
 
@@ -78,7 +100,7 @@ export async function getLocalPluginAvailability(
     return await plugin.availability(context);
   }
 
-  const enabled = isPluginEnabled({ plugin });
+  const enabled = isPluginEnabled({ plugin, context });
   if (!enabled) {
     return {
       enabled: false,
@@ -131,7 +153,7 @@ export async function runLocalPluginAction(params: {
   }
 
   const context = createLocalPluginCommandContext(params.projectRoot);
-  const enabled = isPluginEnabled({ plugin });
+  const enabled = isPluginEnabled({ plugin, context });
   if (!enabled && action.allowWhenDisabled !== true) {
     return {
       success: false,

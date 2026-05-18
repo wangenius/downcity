@@ -7,7 +7,6 @@
  * - 目标是让 chat channel 子模块共享同一套最小公共基元。
  */
 
-import { PlatformStore } from "@/shared/utils/store/index.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { StoredChannelAccount } from "@/shared/types/Store.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
@@ -85,7 +84,7 @@ export function resolveChannelAccountId(
 }
 
 /**
- * 从 PlatformStore 中解析渠道 account。
+ * 从宿主平台能力中解析渠道 account。
  */
 export function resolveChannelAccount(
   context: AgentContext,
@@ -95,18 +94,14 @@ export function resolveChannelAccount(
   const explicit = service?.resolveChannelAccount?.(context, channel);
   if (explicit) return explicit;
   const channelAccountId = resolveChannelAccountId(context, channel);
-  if (!channelAccountId) return null;
-  const store = new PlatformStore();
-  try {
-    const account = store.getChannelAccountSync(channelAccountId);
-    if (!account) return null;
-    if (account.channel !== channel) return null;
-    return account;
-  } catch {
-    return null;
-  } finally {
-    store.close();
-  }
+  const account = context.platform.resolveChannelAccount?.({
+    projectRoot: context.rootPath,
+    channel,
+    ...(channelAccountId ? { channelAccountId } : {}),
+  }) || (channelAccountId ? context.platform.getChannelAccount(channelAccountId) : null);
+  if (!account) return null;
+  if (account.channel !== channel) return null;
+  return account;
 }
 
 /**

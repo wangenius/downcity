@@ -13,9 +13,6 @@ import path from "node:path";
 
 /**
  * 全局根目录（用户级）。
- *
- * 关键点（中文）
- * - 测试或多实例隔离场景可通过 `DC_PLATFORM_ROOT` 显式覆盖。
  */
 export function getPlatformRootDirPath(): string {
   const explicitRoot = String(process.env.DC_PLATFORM_ROOT || "").trim();

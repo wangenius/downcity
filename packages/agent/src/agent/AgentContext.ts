@@ -160,6 +160,7 @@ export function createAgentContext(input: AgentRuntime): AgentContext {
     systems: input.systems,
     paths: input.paths,
     pluginConfig: input.pluginConfig,
+    platform: input.platform,
     session: buildSessionPort(input),
     invoke: serviceInvokePort,
     chat: buildChatPort(() => context),

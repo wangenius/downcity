@@ -16,6 +16,7 @@ import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { JsonValue } from "@/shared/types/Json.js";
+import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
 import type {
   Plugin,
   PluginAvailability,
@@ -43,6 +44,25 @@ import { HookRegistry } from "@/plugin/HookRegistry.js";
 import { PluginRegistry } from "@/plugin/PluginRegistry.js";
 import { isPluginEnabled } from "@/plugin/Activation.js";
 
+const EMPTY_SDK_PLATFORM: AgentPlatformRuntime = {
+  getGlobalEnv: () => ({}),
+  getAgentEnv: () => ({}),
+  listModels: () => [],
+  listProviders: async () => [],
+  getModel: () => null,
+  getChannelAccount: () => null,
+  readChatAuthorizationConfig: () => ({
+    roles: {},
+    channels: {},
+  }),
+  writeChatAuthorizationConfig: async (_projectRoot, nextConfig) => nextConfig,
+  setChatAuthorizationUserRole: async () => ({
+    roles: {},
+    channels: {},
+  }),
+  isPluginEnabled: (pluginName) => pluginName === "auth",
+};
+
 function createFallbackSdkConfig(agentId: string): DowncityConfig {
   return {
     name: agentId,
@@ -69,6 +89,7 @@ export class Agent {
   private readonly pluginRegistry: PluginRegistry;
   private readonly pluginSystemProviders: Plugin[];
   private readonly config: DowncityConfig;
+  private readonly platform: AgentPlatformRuntime;
   private systems: string[];
   private servicesStartPromise: Promise<void> | null = null;
 
@@ -87,6 +108,7 @@ export class Agent {
 
     this.logger = new Logger();
     this.logger.bindProjectRoot(this.path);
+    this.platform = options.platform || EMPTY_SDK_PLATFORM;
     this.systems = loadStaticSystemPrompts(this.path);
     this.config = this.loadConfig();
     this.services = this.createServiceMap(options.services || []);
@@ -193,7 +215,7 @@ export class Agent {
       contextResolver: () => this.serviceContext,
       pluginEnabledChecker: (pluginName) => {
         const plugin = pluginRegistryRef?.get(pluginName);
-        return plugin ? isPluginEnabled({ plugin }) : false;
+        return plugin ? isPluginEnabled({ plugin, context: this.serviceContext }) : false;
       },
     });
     const registry = new PluginRegistry({
@@ -235,7 +257,7 @@ export class Agent {
     for (const plugin of this.pluginSystemProviders) {
       if (typeof plugin.system !== "function") continue;
       try {
-        if (!isPluginEnabled({ plugin })) continue;
+        if (!isPluginEnabled({ plugin, context: this.serviceContext })) continue;
         if (typeof plugin.availability === "function") {
           const availability = await plugin.availability(this.serviceContext);
           if (!availability.available) continue;
@@ -276,6 +298,7 @@ export class Agent {
       systems: this.systems,
       paths: createAgentPathRuntime(this.path),
       pluginConfig: createAgentPluginConfigRuntime(this.path),
+      platform: this.platform,
       model: undefined,
       getSession: (sessionId: string) => {
         return this.getOrCreateSession(sessionId).getServicePort() as never;
@@ -306,6 +329,7 @@ export class Agent {
       systems: this.systems,
       paths: this.runtime.paths,
       pluginConfig: this.runtime.pluginConfig,
+      platform: this.platform,
       session: {
         get: (sessionId) => this.getOrCreateSession(sessionId).getServicePort(),
         listExecutingSessionIds: () => this.runtime.listExecutingSessionIds(),

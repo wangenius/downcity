@@ -58,6 +58,7 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/host/runtime/AgentHostRuntime.js";
 import { updateAgentRuntimeConfig } from "@/agent/AgentRuntimeState.js";
+import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
 
 export type { AgentRuntimeBase, AgentRuntime } from "@/agent/AgentRuntimeState.js";
 export {
@@ -71,6 +72,19 @@ export { getAgentContext } from "@/agent/AgentContext.js";
 
 let staticPromptCatalog: StaticPromptCatalog | null = null;
 let configWatchPath: string | null = null;
+
+const EMPTY_RUNTIME_PLATFORM: AgentPlatformRuntime = {
+  getGlobalEnv: () => ({}),
+  getAgentEnv: () => ({}),
+  listModels: () => [],
+  listProviders: async () => [],
+  getModel: () => null,
+  getChannelAccount: () => null,
+  readChatAuthorizationConfig: () => ({ roles: {}, channels: {} }),
+  writeChatAuthorizationConfig: async (_projectRoot, nextConfig) => nextConfig,
+  setChatAuthorizationUserRole: async () => ({ roles: {}, channels: {} }),
+  isPluginEnabled: (pluginName) => pluginName === "auth",
+};
 
 /**
  * 原子更新 AgentRuntime.systems（同时覆盖 base + ready）。
@@ -212,7 +226,14 @@ function createSessionHistoryComposer(
  * 关键点（中文）
  * - 只有 api 执行模式：从 console 模型池创建模型 → LocalSessionExecutor → LocalSessionCore。
  */
-export async function initAgentRuntime(cwd: string): Promise<void> {
+export async function initAgentRuntime(
+  cwd: string,
+  options?: {
+    platform?: AgentPlatformRuntime;
+    globalEnv?: Record<string, string>;
+    projectEnv?: Record<string, string>;
+  },
+): Promise<void> {
   stopAgentHotReload();
   resetPluginManager();
 
@@ -222,8 +243,12 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
   defaultLogger.bindProjectRoot(rootPath);
   ensureRuntimeProjectReady(rootPath);
 
-  const globalEnv = loadGlobalEnvFromStore();
-  const projectEnv = loadAgentEnvSnapshot(rootPath);
+  const platform = options?.platform || EMPTY_RUNTIME_PLATFORM;
+  const globalEnv = options?.globalEnv || platform?.getGlobalEnv() || loadGlobalEnvFromStore();
+  const projectEnv =
+    options?.projectEnv ||
+    platform?.getAgentEnv(rootPath) ||
+    loadAgentEnvSnapshot(rootPath);
   const config = loadDowncityConfig(rootPath, {
     projectEnv,
     globalEnv,
@@ -242,6 +267,7 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     systems: [],
     paths: createAgentPathRuntime(rootPath),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
+    platform: platform,
   });
 
   const systems = loadStaticSystemPrompts(rootPath);
@@ -255,6 +281,7 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     systems,
     paths: createAgentPathRuntime(rootPath),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
+    platform: platform,
   });
 
   const primaryModelId = readProjectPrimaryModelId(config);
@@ -262,6 +289,7 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     config,
     getSessionRunScope: getSessionRunScope,
     projectRoot: rootPath,
+    platform,
   });
 
   const compactionComposer = new JsonlSessionCompactionComposer({
@@ -326,6 +354,7 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     systems,
     paths: createAgentPathRuntime(rootPath),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
+    platform: platform,
     model,
     getSession,
     listExecutingSessionIds: () =>

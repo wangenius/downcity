@@ -25,6 +25,7 @@ import {
 import type { StartOptions } from "@downcity/agent";
 import { logger } from "@downcity/agent";
 import { CliError } from "../shared/CliError.js";
+import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -41,7 +42,9 @@ export async function runCommand(
   options: StartOptions,
 ): Promise<void> {
   // 初始化加载（进程级单例状态：root / config / logger / chat / agents 等）
-  await initAgentRuntime(cwd);
+  await initAgentRuntime(cwd, {
+    platform: createAgentPlatformRuntime(),
+  });
   // 端口解析（中文）：允许 number / string；空值返回 undefined 以便走配置回退链。
   const parsePort = (
     value: string | number | undefined,

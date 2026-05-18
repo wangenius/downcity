@@ -19,8 +19,8 @@ export const workboardPlugin: Plugin = {
   title: "Workboard Snapshot",
   description:
     "Collects structured runtime activity snapshots so console surfaces can show what the current agent is doing now and what it recently worked on.",
-  availability() {
-    if (!isPluginEnabled({ plugin: workboardPlugin })) {
+  availability(context) {
+    if (!isPluginEnabled({ plugin: workboardPlugin, context })) {
       return {
         enabled: false,
         available: false,

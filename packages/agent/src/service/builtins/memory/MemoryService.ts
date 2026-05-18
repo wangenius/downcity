@@ -15,7 +15,6 @@ import { BaseService } from "@/service/builtins/BaseService.js";
 import {
   flushMemoryAction,
   getMemoryAction,
-  indexMemoryAction,
   searchMemoryAction,
   statusMemoryAction,
   storeMemoryAction,
@@ -76,11 +75,6 @@ function readOptionalNumber(body: JsonObject, key: string): number | undefined {
   return typeof value === "number" ? value : undefined;
 }
 
-function readOptionalBoolean(body: JsonObject, key: string): boolean | undefined {
-  const value = body[key];
-  return typeof value === "boolean" ? value : undefined;
-}
-
 /**
  * Memory service 类实现。
  */
@@ -124,7 +118,7 @@ export class MemoryService extends BaseService {
   readonly actions: ServiceActions = {
     status: {
       command: {
-        description: "查看 memory 状态（backend/files/chunks/dirty）",
+        description: "查看 memory 状态（backend/files/chunks）",
         mapInput() {
           return {};
         },
@@ -135,32 +129,6 @@ export class MemoryService extends BaseService {
       execute: async (params) => {
         const state = this.getOrCreateRuntimeState(params.context);
         return await statusMemoryAction(params.context, state);
-      },
-    },
-    index: {
-      command: {
-        description: "重建 memory 索引",
-        configure(command: Command) {
-          command.option("--force", "强制全量重建", false);
-        },
-        mapInput({ opts }) {
-          return {
-            force: opts.force === true,
-          };
-        },
-      },
-      api: {
-        method: "POST",
-        mapInput(ctx) {
-          return ctx.req.json();
-        },
-      },
-      execute: async (params) => {
-        const body = readBodyObject(params.payload);
-        const state = this.getOrCreateRuntimeState(params.context);
-        return await indexMemoryAction(params.context, state, {
-          force: readOptionalBoolean(body, "force"),
-        });
       },
     },
     search: {

@@ -24,10 +24,6 @@ export interface CliAuthStateStoreOptions {
 
 /**
  * 解析当前 CLI 应使用的 Bearer Token。
- *
- * 优先级（中文）
- * 1. 显式传入 token
- * 2. 环境变量 `DC_AUTH_TOKEN`
  */
 export function resolveCliAuthToken(params: {
   explicitToken?: string;

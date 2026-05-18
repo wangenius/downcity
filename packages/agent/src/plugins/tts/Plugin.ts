@@ -14,7 +14,6 @@ import type {
   TtsSynthesizeInput,
 } from "@/shared/types/TtsPlugin.js";
 import { isPluginEnabled } from "@/plugin/Activation.js";
-import { setCityPluginEnabled } from "@/plugin/Lifecycle.js";
 import {
   checkTtsSynthesizer,
   installTtsSynthesizer,
@@ -176,7 +175,7 @@ export const ttsPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    if (!isPluginEnabled({ plugin: ttsPlugin })) {
+    if (!isPluginEnabled({ plugin: ttsPlugin, context })) {
       return {
         enabled: false,
         available: false,
@@ -378,7 +377,7 @@ export const ttsPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
-        setCityPluginEnabled("tts", true);
+        context.platform.setPluginEnabled?.("tts", true);
         if ((payload as { install?: unknown }).install !== false) {
           const installResult = await installTtsSynthesizer({
             context,
@@ -411,7 +410,7 @@ export const ttsPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        setCityPluginEnabled("tts", false);
+        context.platform.setPluginEnabled?.("tts", false);
         return {
           success: true,
           data: {
@@ -535,7 +534,7 @@ export const ttsPlugin: Plugin = {
     },
   },
   system(context) {
-    if (!isPluginEnabled({ plugin: ttsPlugin })) {
+    if (!isPluginEnabled({ plugin: ttsPlugin, context })) {
       return "";
     }
     return [

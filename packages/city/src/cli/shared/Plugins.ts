@@ -17,7 +17,6 @@ import {
   findStaticPluginView,
   listStaticPluginViews,
   runLocalPluginAction,
-  setCityPluginEnabled,
 } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import type { JsonValue } from "@downcity/agent";
@@ -27,6 +26,7 @@ import type { PluginCliBaseOptions } from "@downcity/agent";
 import { emitCliBlock } from "./CliReporter.js";
 import { parseBoolean } from "./IndexSupport.js";
 import { resolveProjectRoot } from "../service/ServiceCommandSupport.js";
+import { setCityPluginEnabled } from "@/platform/PluginLifecycle.js";
 
 async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<{
   projectRoot?: string;

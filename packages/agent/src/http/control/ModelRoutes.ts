@@ -8,7 +8,6 @@
 
 import fs from "fs-extra";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { PlatformStore } from "@shared/utils/store/index.js";
 import type { ControlRouteRegistrationParams } from "@/shared/types/ControlRoutes.js";
 import { buildControlRouteAliases } from "@/http/control/CommonHelpers.js";
 
@@ -25,9 +24,8 @@ export function registerControlModelRoutes(
       try {
         const agentState = params.getAgentRuntime();
         const agentPrimaryModelId = String(agentState.config.execution?.type === "api" ? agentState.config.execution.modelId || "" : "").trim();
-        const store = new PlatformStore();
-        const models = store.listModels();
-        const providers = await store.listProviders();
+        const models = agentState.platform.listModels();
+        const providers = await agentState.platform.listProviders();
         const providerMap = new Map(providers.map((x) => [x.id, x] as const));
         const activeModel = agentPrimaryModelId
           ? models.find((x) => x.id === agentPrimaryModelId)
@@ -43,8 +41,6 @@ export function registerControlModelRoutes(
             providerType: String(providerConfig?.type || "").trim(),
           };
         });
-        store.close();
-
         return c.json({
           success: true,
           model: {
@@ -74,9 +70,7 @@ export function registerControlModelRoutes(
         if (!nextPrimaryModelId) {
           return c.json({ success: false, error: "Missing primaryModelId" }, 400);
         }
-        const store = new PlatformStore();
-        const targetModel = store.getModel(nextPrimaryModelId);
-        store.close();
+        const targetModel = agentState.platform.getModel(nextPrimaryModelId);
         if (!targetModel) {
           return c.json(
             { success: false, error: `Model not found: ${nextPrimaryModelId}` },

@@ -12,7 +12,7 @@ import {
   type ModelPreset,
 } from "@/cli/model/preset/ModelPresetManager.js";
 import type { LlmProviderType } from "@downcity/agent";
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 
 const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [
   "anthropic",

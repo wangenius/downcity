@@ -7,7 +7,7 @@
  * - 写入平台 Env 后，后续 agent daemon 启动会通过 `context.globalEnv` 读取到该值。
  */
 
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 import type {
   CityPublicHostEnvEntry,
   CityPublicHostEnvResult,

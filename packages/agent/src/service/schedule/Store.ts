@@ -2,16 +2,13 @@
  * Service Schedule 持久化存储。
  *
  * 关键点（中文）
- * - 使用项目内 SQLite 持久化 one-shot service action 调度任务。
- * - 当前模块只维护“当前状态”，不维护额外审计事件流。
+ * - 调度任务改为使用项目内 `jsonl` 事件流持久化，不再依赖 SQLite。
+ * - 这里采用“全量重放 + 内存归并”的最简实现，保持职责清晰且易于迁移。
+ * - 文件只记录状态事件；对外仍暴露稳定的调度任务查询与状态更新接口。
  */
 
 import fs from "fs-extra";
-import Database from "better-sqlite3";
 import path from "node:path";
-import { and, asc, desc, eq, inArray, lte } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { scheduledJobsTable } from "./Schema.js";
 import type {
   CreateScheduledJobInput,
   ScheduledJobRecord,
@@ -21,80 +18,137 @@ import type { JsonValue } from "@/shared/types/Json.js";
 import { generateId } from "@shared/utils/Id.js";
 import { getDowncityScheduleDbPath } from "@/config/Paths.js";
 
-type ScheduledJobRow = typeof scheduledJobsTable.$inferSelect;
+type ScheduledJobEvent =
+  | {
+      /**
+       * 事件版本号。
+       */
+      v: 1;
+      /**
+       * 事件类型：创建任务。
+       */
+      type: "created";
+      /**
+       * 调度任务快照。
+       */
+      job: ScheduledJobRecord;
+    }
+  | {
+      /**
+       * 事件版本号。
+       */
+      v: 1;
+      /**
+       * 事件类型：状态更新。
+       */
+      type: "status";
+      /**
+       * 目标任务 ID。
+       */
+      jobId: string;
+      /**
+       * 新状态。
+       */
+      status: ScheduledJobStatus;
+      /**
+       * 最新更新时间。
+       */
+      updatedAt: number;
+      /**
+       * 可选错误信息。
+       */
+      error?: string;
+    };
+
+function readJsonlLines(filePath: string): string[] {
+  if (!fs.existsSync(filePath)) return [];
+  const raw = fs.readFileSync(filePath, "utf-8");
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function normalizeJobRecord(input: ScheduledJobRecord): ScheduledJobRecord {
+  return {
+    id: String(input.id || "").trim(),
+    serviceName: String(input.serviceName || "").trim(),
+    actionName: String(input.actionName || "").trim(),
+    payload: input.payload ?? null,
+    runAtMs: Math.trunc(input.runAtMs),
+    status: input.status,
+    ...(typeof input.error === "string" && input.error ? { error: input.error } : {}),
+    createdAt: Math.trunc(input.createdAt),
+    updatedAt: Math.trunc(input.updatedAt),
+  };
+}
+
+function parseEvent(line: string): ScheduledJobEvent | null {
+  try {
+    const raw = JSON.parse(line) as Partial<ScheduledJobEvent> | null;
+    if (!raw || typeof raw !== "object") return null;
+    if (raw.type === "created" && raw.job) {
+      return {
+        v: 1,
+        type: "created",
+        job: normalizeJobRecord(raw.job as ScheduledJobRecord),
+      };
+    }
+    if (
+      raw.type === "status" &&
+      typeof raw.jobId === "string" &&
+      typeof raw.status === "string" &&
+      typeof raw.updatedAt === "number"
+    ) {
+      return {
+        v: 1,
+        type: "status",
+        jobId: raw.jobId,
+        status: raw.status as ScheduledJobStatus,
+        updatedAt: Math.trunc(raw.updatedAt),
+        ...(typeof raw.error === "string" ? { error: raw.error } : {}),
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function compareJobs(a: ScheduledJobRecord, b: ScheduledJobRecord): number {
+  if (a.runAtMs !== b.runAtMs) return a.runAtMs - b.runAtMs;
+  return b.createdAt - a.createdAt;
+}
 
 /**
  * Service Schedule Store。
  */
 export class ServiceScheduleStore {
-  private readonly sqlite: Database.Database;
-
-  private readonly db: ReturnType<typeof drizzle>;
+  private readonly filePath: string;
 
   constructor(projectRoot: string) {
-    const dbPath = getDowncityScheduleDbPath(projectRoot);
-    fs.ensureDirSync(path.dirname(dbPath));
-    this.sqlite = new Database(dbPath);
-    this.sqlite.pragma("journal_mode = WAL");
-    this.db = drizzle(this.sqlite);
-    this.ensureSchema();
+    this.filePath = getDowncityScheduleDbPath(projectRoot);
+    fs.ensureDirSync(path.dirname(this.filePath));
+    if (!fs.existsSync(this.filePath)) {
+      fs.writeFileSync(this.filePath, "", "utf-8");
+    }
   }
 
   /**
-   * 初始化表结构。
+   * 关闭存储。
+   *
+   * 说明（中文）
+   * - jsonl 版本无需保持长连接，因此 close 为 no-op。
    */
-  private ensureSchema(): void {
-    this.sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS scheduled_jobs (
-        id TEXT PRIMARY KEY NOT NULL,
-        service_name TEXT NOT NULL,
-        action_name TEXT NOT NULL,
-        payload_json TEXT NOT NULL,
-        run_at_ms INTEGER NOT NULL,
-        status TEXT NOT NULL,
-        error TEXT,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-    `);
-    this.sqlite.exec(`
-      CREATE INDEX IF NOT EXISTS scheduled_jobs_status_run_at_idx
-      ON scheduled_jobs(status, run_at_ms);
-    `);
-    this.sqlite.exec(`
-      CREATE INDEX IF NOT EXISTS scheduled_jobs_run_at_idx
-      ON scheduled_jobs(run_at_ms);
-    `);
-  }
-
-  /**
-   * 关闭数据库连接。
-   */
-  close(): void {
-    this.sqlite.close();
-  }
+  close(): void {}
 
   /**
    * 创建调度任务。
    */
   createJob(input: CreateScheduledJobInput): ScheduledJobRecord {
     const now = Date.now();
-    const id = `sched_${generateId()}`;
-    const payloadJson = JSON.stringify(input.payload ?? null);
-    this.db.insert(scheduledJobsTable).values({
-      id,
-      serviceName: String(input.serviceName || "").trim(),
-      actionName: String(input.actionName || "").trim(),
-      payloadJson,
-      runAtMs: Math.trunc(input.runAtMs),
-      status: "pending",
-      error: null,
-      createdAt: now,
-      updatedAt: now,
-    }).run();
-
-    return {
-      id,
+    const job: ScheduledJobRecord = {
+      id: `sched_${generateId()}`,
       serviceName: String(input.serviceName || "").trim(),
       actionName: String(input.actionName || "").trim(),
       payload: input.payload ?? null,
@@ -103,16 +157,21 @@ export class ServiceScheduleStore {
       createdAt: now,
       updatedAt: now,
     };
+    this.appendEvent({
+      v: 1,
+      type: "created",
+      job,
+    });
+    return job;
   }
 
   /**
    * 获取单个任务。
    */
   getJobById(jobId: string): ScheduledJobRecord | null {
-    const row = this.db.select().from(scheduledJobsTable)
-      .where(eq(scheduledJobsTable.id, String(jobId || "").trim()))
-      .get();
-    return row ? this.toJobRecord(row) : null;
+    const key = String(jobId || "").trim();
+    if (!key) return null;
+    return this.readJobMap().get(key) || null;
   }
 
   /**
@@ -120,19 +179,14 @@ export class ServiceScheduleStore {
    */
   listJobsByStatus(statuses: ScheduledJobStatus[]): ScheduledJobRecord[] {
     if (statuses.length === 0) return [];
-    const rows = this.db.select().from(scheduledJobsTable)
-      .where(inArray(scheduledJobsTable.status, statuses))
-      .orderBy(asc(scheduledJobsTable.runAtMs))
-      .all();
-    return rows.map((row) => this.toJobRecord(row));
+    const allowed = new Set(statuses);
+    return this.readJobs()
+      .filter((job) => allowed.has(job.status))
+      .sort(compareJobs);
   }
 
   /**
    * 列出任务。
-   *
-   * 说明（中文）
-   * - 默认按 `runAtMs` 升序返回，便于排查“接下来会执行什么”。
-   * - 可选状态过滤与数量限制，避免一次输出过多记录。
    */
   listJobs(params?: {
     status?: ScheduledJobStatus;
@@ -142,75 +196,44 @@ export class ServiceScheduleStore {
       typeof params?.limit === "number" && Number.isFinite(params.limit)
         ? Math.max(1, Math.trunc(params.limit))
         : 100;
-    const status = params?.status;
-    const query = this.db.select().from(scheduledJobsTable);
-    const rows =
-      typeof status === "string" && status
-        ? query
-            .where(eq(scheduledJobsTable.status, status))
-            .orderBy(asc(scheduledJobsTable.runAtMs), desc(scheduledJobsTable.createdAt))
-            .limit(limit)
-            .all()
-        : query
-            .orderBy(asc(scheduledJobsTable.runAtMs), desc(scheduledJobsTable.createdAt))
-            .limit(limit)
-            .all();
-    return rows.map((row) => this.toJobRecord(row));
+    const jobs = this.readJobs()
+      .filter((job) => !params?.status || job.status === params.status)
+      .sort(compareJobs);
+    return jobs.slice(0, limit);
   }
 
   /**
    * 列出已到点且待执行的任务。
    */
   listDuePendingJobs(nowMs: number): ScheduledJobRecord[] {
-    const rows = this.db.select().from(scheduledJobsTable)
-      .where(
-        and(
-          eq(scheduledJobsTable.status, "pending"),
-          lte(scheduledJobsTable.runAtMs, Math.trunc(nowMs)),
-        ),
-      )
-      .orderBy(asc(scheduledJobsTable.runAtMs))
-      .all();
-    return rows.map((row) => this.toJobRecord(row));
+    return this.readJobs()
+      .filter((job) => job.status === "pending" && job.runAtMs <= Math.trunc(nowMs))
+      .sort(compareJobs);
   }
 
   /**
    * 启动恢复时，把历史 `running` 回退到 `pending`。
    */
   resetRunningJobsToPending(): number {
+    const runningJobs = this.readJobs().filter((job) => job.status === "running");
     const now = Date.now();
-    const result = this.db.update(scheduledJobsTable)
-      .set({
+    for (const job of runningJobs) {
+      this.appendEvent({
+        v: 1,
+        type: "status",
+        jobId: job.id,
         status: "pending",
         updatedAt: now,
-        error: null,
-      })
-      .where(eq(scheduledJobsTable.status, "running"))
-      .run();
-    return Number(result.changes || 0);
+      });
+    }
+    return runningJobs.length;
   }
 
   /**
    * 将任务标记为执行中。
-   *
-   * 关键点（中文）
-   * - 仅允许从 `pending` 进入 `running`，避免重复领取。
    */
   markJobRunning(jobId: string): boolean {
-    const result = this.db.update(scheduledJobsTable)
-      .set({
-        status: "running",
-        updatedAt: Date.now(),
-        error: null,
-      })
-      .where(
-        and(
-          eq(scheduledJobsTable.id, String(jobId || "").trim()),
-          eq(scheduledJobsTable.status, "pending"),
-        ),
-      )
-      .run();
-    return Number(result.changes || 0) > 0;
+    return this.transitionPendingJob(jobId, "running");
   }
 
   /**
@@ -246,25 +269,68 @@ export class ServiceScheduleStore {
 
   /**
    * 取消待执行任务。
-   *
-   * 关键点（中文）
-   * - 仅允许取消 `pending`，避免打断已经开始执行的任务。
    */
   cancelPendingJob(jobId: string): boolean {
-    const result = this.db.update(scheduledJobsTable)
-      .set({
-        status: "cancelled",
-        updatedAt: Date.now(),
-        error: null,
-      })
-      .where(
-        and(
-          eq(scheduledJobsTable.id, String(jobId || "").trim()),
-          eq(scheduledJobsTable.status, "pending"),
-        ),
-      )
-      .run();
-    return Number(result.changes || 0) > 0;
+    return this.transitionPendingJob(jobId, "cancelled");
+  }
+
+  /**
+   * 仅读取当前任务快照。
+   */
+  private readJobs(): ScheduledJobRecord[] {
+    return [...this.readJobMap().values()];
+  }
+
+  /**
+   * 重放事件流，构造当前任务快照。
+   */
+  private readJobMap(): Map<string, ScheduledJobRecord> {
+    const jobs = new Map<string, ScheduledJobRecord>();
+    for (const line of readJsonlLines(this.filePath)) {
+      const event = parseEvent(line);
+      if (!event) continue;
+      if (event.type === "created") {
+        jobs.set(event.job.id, normalizeJobRecord(event.job));
+        continue;
+      }
+      const current = jobs.get(event.jobId);
+      if (!current) continue;
+      jobs.set(event.jobId, {
+        ...current,
+        status: event.status,
+        updatedAt: event.updatedAt,
+        ...(event.error ? { error: event.error } : {}),
+        ...(event.status === "succeeded" || event.status === "cancelled"
+          ? { error: undefined }
+          : {}),
+      });
+    }
+    return jobs;
+  }
+
+  /**
+   * 追加单条事件。
+   */
+  private appendEvent(event: ScheduledJobEvent): void {
+    fs.appendFileSync(this.filePath, `${JSON.stringify(event)}\n`, "utf-8");
+  }
+
+  /**
+   * 执行 pending -> target 的状态迁移。
+   */
+  private transitionPendingJob(jobId: string, status: "running" | "cancelled"): boolean {
+    const current = this.getJobById(jobId);
+    if (!current || current.status !== "pending") {
+      return false;
+    }
+    this.appendEvent({
+      v: 1,
+      type: "status",
+      jobId: current.id,
+      status,
+      updatedAt: Date.now(),
+    });
+    return true;
   }
 
   /**
@@ -275,42 +341,16 @@ export class ServiceScheduleStore {
     status: Exclude<ScheduledJobStatus, "pending" | "running">;
     error?: string;
   }): boolean {
-    const result = this.db.update(scheduledJobsTable)
-      .set({
-        status: params.status,
-        updatedAt: Date.now(),
-        error: params.error ? String(params.error) : null,
-      })
-      .where(eq(scheduledJobsTable.id, String(params.jobId || "").trim()))
-      .run();
-    return Number(result.changes || 0) > 0;
-  }
-
-  /**
-   * 行转业务对象。
-   */
-  private toJobRecord(row: ScheduledJobRow): ScheduledJobRecord {
-    return {
-      id: row.id,
-      serviceName: row.serviceName,
-      actionName: row.actionName,
-      payload: this.parsePayloadJson(row.payloadJson),
-      runAtMs: row.runAtMs,
-      status: row.status as ScheduledJobStatus,
-      ...(typeof row.error === "string" && row.error ? { error: row.error } : {}),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
-  }
-
-  /**
-   * 安全解析 payload JSON。
-   */
-  private parsePayloadJson(input: string): JsonValue {
-    try {
-      return JSON.parse(String(input || "null")) as JsonValue;
-    } catch {
-      return null;
-    }
+    const current = this.getJobById(params.jobId);
+    if (!current) return false;
+    this.appendEvent({
+      v: 1,
+      type: "status",
+      jobId: current.id,
+      status: params.status,
+      updatedAt: Date.now(),
+      ...(params.error ? { error: String(params.error) } : {}),
+    });
+    return true;
   }
 }

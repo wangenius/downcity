@@ -15,8 +15,10 @@ import type {
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type {
   AgentPathRuntime,
+  AgentPlatformRuntime,
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
+import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 export type { AgentRuntime, AgentRuntimeBase } from "@/agent/AgentRuntimeTypes.js";
 
 let baseState: AgentRuntimeBase | null = null;
@@ -29,7 +31,6 @@ const EMPTY_PATHS: AgentPathRuntime = {
   getDowncityChannelDirPath: () => ".downcity/channel",
   getDowncityChannelMetaPath: () => ".downcity/channel/meta.json",
   getDowncityChatHistoryPath: (sessionId) => `.downcity/chat/${sessionId}/history.jsonl`,
-  getDowncityMemoryIndexPath: () => ".downcity/memory/index.sqlite",
   getDowncityMemoryLongTermPath: () => ".downcity/memory/MEMORY.md",
   getDowncityMemoryDailyDirPath: () => ".downcity/memory/daily",
   getDowncityMemoryDailyPath: (date) => `.downcity/memory/daily/${date}.md`,
@@ -40,6 +41,53 @@ const EMPTY_PATHS: AgentPathRuntime = {
 const EMPTY_PLUGIN_CONFIG: AgentPluginConfigRuntime = {
   async persistProjectPlugins() {
     return "";
+  },
+};
+
+const EMPTY_PLATFORM: AgentPlatformRuntime = {
+  getGlobalEnv: () => ({}),
+  getAgentEnv: () => ({}),
+  listModels: () => [],
+  listProviders: async () => [],
+  getModel: () => null,
+  getChannelAccount: () => null,
+  listChannelAccounts: async () => [],
+  probeChannelAccount: async () => {
+    throw new Error("Channel account probing is not available in this runtime");
+  },
+  createChannelAccount: async () => {
+    throw new Error("Channel account creation is not available in this runtime");
+  },
+  updateChannelAccount: async () => {
+    throw new Error("Channel account update is not available in this runtime");
+  },
+  removeChannelAccount: async () => {
+    throw new Error("Channel account removal is not available in this runtime");
+  },
+  resolveChannelAccount: (_params: {
+    projectRoot: string;
+    channel: ChatChannelName;
+    channelAccountId?: string;
+  }) => null,
+  readChatAuthorizationConfig: () => ({
+    roles: {},
+    channels: {},
+  }),
+  writeChatAuthorizationConfig: async (_projectRoot, nextConfig) => nextConfig,
+  setChatAuthorizationUserRole: async () => ({
+    roles: {},
+    channels: {},
+  }),
+  isPluginEnabled: (pluginName) => pluginName === "auth",
+  setPluginEnabled: () => {
+    throw new Error("Plugin lifecycle management is not available in this runtime");
+  },
+  listPlatformModelChoices: async () => [],
+  initializeAgentProject: async () => {
+    throw new Error("Agent project initialization is not available in this runtime");
+  },
+  ensureRuntimeExecutionBindingReady: () => {
+    throw new Error("Execution binding validation is not available in this runtime");
   },
 };
 
@@ -58,6 +106,7 @@ function normalizeReadyState(input: AgentRuntime): AgentRuntime {
     systems: input.systems,
     paths: input.paths || EMPTY_PATHS,
     pluginConfig: input.pluginConfig || EMPTY_PLUGIN_CONFIG,
+    platform: input.platform || EMPTY_PLATFORM,
     model: input.model,
     getSession: input.getSession,
     listExecutingSessionIds:
@@ -68,11 +117,26 @@ function normalizeReadyState(input: AgentRuntime): AgentRuntime {
   };
 }
 
+function normalizeBaseState(input: AgentRuntimeBase): AgentRuntimeBase {
+  return {
+    cwd: input.cwd,
+    rootPath: input.rootPath,
+    logger: input.logger,
+    config: input.config,
+    env: input.env,
+    globalEnv: input.globalEnv,
+    systems: input.systems,
+    paths: input.paths || EMPTY_PATHS,
+    pluginConfig: input.pluginConfig || EMPTY_PLUGIN_CONFIG,
+    platform: input.platform || EMPTY_PLATFORM,
+  };
+}
+
 /**
  * 设置 agent 基础状态。
  */
 export function setAgentRuntimeBase(next: AgentRuntimeBase): void {
-  baseState = next;
+  baseState = normalizeBaseState(next);
   readyState = null;
 }
 

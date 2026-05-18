@@ -9,7 +9,7 @@
 import type {
   StoredChannelAccount,
   UpsertChannelAccountInput,
-} from "@/shared/types/Store.js";
+} from "@downcity/agent";
 import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
 import type { PlatformStoreContext } from "./StoreShared.js";
 import {

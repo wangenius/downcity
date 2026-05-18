@@ -2,7 +2,7 @@
  * Auth 授权配置读写工具。
  *
  * 关键点（中文）
- * - 静态授权规则统一写入 console `~/.downcity/downcity.db`。
+ * - 静态授权规则通过宿主注入的平台能力读写。
  * - 授权核心模型为 role / permission / binding。
  */
 
@@ -19,9 +19,7 @@ import {
   CHAT_AUTHORIZATION_PERMISSIONS,
   createDefaultChatAuthorizationRoles,
 } from "@/shared/types/AuthPlugin.js";
-import { PlatformStore } from "@/shared/utils/store/index.js";
 
-const CHAT_AUTHORIZATION_STORE_KEY = "chat_authorization";
 const CHANNELS: ChatAuthorizationChannel[] = [...CHAT_AUTHORIZATION_CHANNELS];
 
 export const DEFAULT_CHAT_AUTHORIZATION_PERMISSIONS: ChatAuthorizationPermission[] = [
@@ -139,40 +137,41 @@ function cloneAuthorizationConfig(
   return normalizeAuthorizationConfig(input ? JSON.parse(JSON.stringify(input)) : {});
 }
 
-function readAuthorizationConfigFromStoreSync(projectRoot: string): ChatAuthorizationConfig {
-  const normalizedProjectRoot = normalizeText(projectRoot);
+function readAuthorizationConfigFromPlatformSync(params: {
+  projectRoot: string;
+  readConfig: (projectRoot: string) => ChatAuthorizationConfig;
+}): ChatAuthorizationConfig {
+  const normalizedProjectRoot = normalizeText(params.projectRoot);
   if (!normalizedProjectRoot) return normalizeAuthorizationConfig({});
-  const store = new PlatformStore();
   try {
-    return normalizeAuthorizationConfig(
-      store.getAgentSecureSettingJsonSync<ChatAuthorizationConfig>(
-        normalizedProjectRoot,
-        CHAT_AUTHORIZATION_STORE_KEY,
-      ) || {},
-    );
+    return normalizeAuthorizationConfig(params.readConfig(normalizedProjectRoot) || {});
   } catch {
     return normalizeAuthorizationConfig({});
-  } finally {
-    store.close();
   }
 }
 
-async function writeAuthorizationConfigToStore(params: {
+function readAuthorizationConfigFromProjectRoot(projectRoot: string): ChatAuthorizationConfig {
+  const normalizedProjectRoot = normalizeText(projectRoot);
+  if (!normalizedProjectRoot) return normalizeAuthorizationConfig({});
+  throw new Error(
+    `Platform authorization runtime is not available for project: ${normalizedProjectRoot}`,
+  );
+}
+
+async function writeAuthorizationConfigToPlatform(params: {
   projectRoot: string;
   nextConfig: ChatAuthorizationConfig;
+  writeConfig: (
+    projectRoot: string,
+    nextConfig: ChatAuthorizationConfig,
+  ) => Promise<ChatAuthorizationConfig>;
 }): Promise<void> {
   const normalizedProjectRoot = normalizeText(params.projectRoot);
   if (!normalizedProjectRoot) throw new Error("projectRoot is required");
-  const store = new PlatformStore();
-  try {
-    await store.setAgentSecureSettingJson(
-      normalizedProjectRoot,
-      CHAT_AUTHORIZATION_STORE_KEY,
-      normalizeAuthorizationConfig(params.nextConfig),
-    );
-  } finally {
-    store.close();
-  }
+  await params.writeConfig(
+    normalizedProjectRoot,
+    normalizeAuthorizationConfig(params.nextConfig),
+  );
 }
 
 function ensureChannelConfig(
@@ -189,32 +188,37 @@ function ensureChannelConfig(
  * 同步读取当前 agent 的授权配置。
  */
 export function readChatAuthorizationConfigSync(projectRoot: string): ChatAuthorizationConfig {
-  return readAuthorizationConfigFromStoreSync(projectRoot);
+  return readAuthorizationConfigFromProjectRoot(projectRoot);
 }
 
 /**
  * 读取当前 agent 的授权配置。
  */
 export function readChatAuthorizationConfig(
-  contextOrProjectRoot: Pick<AgentContext, "rootPath"> | string,
+  contextOrProjectRoot: Pick<AgentContext, "rootPath" | "platform"> | string,
 ): ChatAuthorizationConfig {
-  const projectRoot =
-    typeof contextOrProjectRoot === "string"
-      ? contextOrProjectRoot
-      : contextOrProjectRoot.rootPath;
-  return readAuthorizationConfigFromStoreSync(projectRoot);
+  if (typeof contextOrProjectRoot === "string") {
+    return readAuthorizationConfigFromProjectRoot(contextOrProjectRoot);
+  }
+  return readAuthorizationConfigFromPlatformSync({
+    projectRoot: contextOrProjectRoot.rootPath,
+    readConfig: (projectRoot) =>
+      contextOrProjectRoot.platform.readChatAuthorizationConfig(projectRoot),
+  });
 }
 
 /**
  * 覆盖写入整份授权配置。
  */
 export async function writeChatAuthorizationConfig(params: {
-  context: Pick<AgentContext, "rootPath">;
+  context: Pick<AgentContext, "rootPath" | "platform">;
   nextConfig: ChatAuthorizationConfig;
 }): Promise<void> {
-  await writeAuthorizationConfigToStore({
+  await writeAuthorizationConfigToPlatform({
     projectRoot: params.context.rootPath,
     nextConfig: params.nextConfig,
+    writeConfig: (projectRoot, nextConfig) =>
+      params.context.platform.writeChatAuthorizationConfig(projectRoot, nextConfig),
   });
 }
 
@@ -232,7 +236,7 @@ export function listChatAuthorizationRoles(params: {
  * 设置用户角色。
  */
 export async function setChatAuthorizationUserRole(params: {
-  context: Pick<AgentContext, "rootPath">;
+  context: Pick<AgentContext, "rootPath" | "platform">;
   channel: ChatAuthorizationChannel;
   userId: string;
   roleId: string;
@@ -241,15 +245,21 @@ export async function setChatAuthorizationUserRole(params: {
   const roleId = normalizeText(params.roleId);
   if (!userId || !roleId) throw new Error("userId and roleId are required");
   const authorization = cloneAuthorizationConfig(
-    readAuthorizationConfigFromStoreSync(params.context.rootPath),
+    readAuthorizationConfigFromPlatformSync({
+      projectRoot: params.context.rootPath,
+      readConfig: (projectRoot) =>
+        params.context.platform.readChatAuthorizationConfig(projectRoot),
+    }),
   );
   authorization.roles = normalizeRoleMap(authorization.roles);
   const channelConfig = ensureChannelConfig(authorization, params.channel);
   if (!authorization.roles?.[roleId]) throw new Error(`Unknown roleId: ${roleId}`);
   channelConfig.userRoles ??= {};
   channelConfig.userRoles[userId] = roleId;
-  await writeAuthorizationConfigToStore({
+  await writeAuthorizationConfigToPlatform({
     projectRoot: params.context.rootPath,
     nextConfig: authorization,
+    writeConfig: (projectRoot, nextConfig) =>
+      params.context.platform.writeChatAuthorizationConfig(projectRoot, nextConfig),
   });
 }

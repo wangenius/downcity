@@ -13,7 +13,7 @@ import type {
   StoredProviderMeta,
   UpsertModelInput,
   UpsertModelProviderInput,
-} from "@/shared/types/Store.js";
+} from "@downcity/agent";
 import { decryptText, encryptText } from "./crypto.js";
 import { modelProvidersTable, modelsTable } from "./schema.js";
 import type { PlatformStoreContext } from "./StoreShared.js";

@@ -8,7 +8,7 @@
 
 import dotenv from "dotenv";
 import type { Hono } from "hono";
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 
 type EnvScope = "global" | "agent";
 

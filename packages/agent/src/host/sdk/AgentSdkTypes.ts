@@ -12,6 +12,7 @@ import type { BaseService } from "@/service/builtins/BaseService.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type { Plugin } from "@/shared/types/Plugin.js";
 import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
+import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
 
 /**
  * 本地 Agent 构造参数。
@@ -59,6 +60,15 @@ export interface AgentOptions {
    * - 同名 plugin 会直接报错，避免 action / hook / resolve 行为被静默覆盖。
    */
   plugins?: Plugin[];
+
+  /**
+   * 当前 agent 显式注入的平台能力集合。
+   *
+   * 关键点（中文）
+   * - SDK 侧若不提供，则使用最小空实现。
+   * - 推荐由宿主产品显式传入，避免 SDK 本地实例隐式依赖 city。
+   */
+  platform?: AgentPlatformRuntime;
 }
 
 /**

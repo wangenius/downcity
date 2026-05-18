@@ -2,32 +2,25 @@
  * Memory Store（文件与运行态管理）。
  *
  * 关键点（中文）
- * - 管理 Memory service 的运行时状态（dirty/sync/watcher）。
- * - 统一管理 memory 源文件枚举与路径白名单。
- * - 不承载检索算法，检索在 Search/Indexer 模块。
+ * - 管理 Memory service 的最小运行时状态。
+ * - 统一管理 memory 源文件枚举。
+ * - 不承载检索算法，检索在 Search 模块。
  * - 新版本不再使用 module-global state，状态归属 MemoryService 实例。
  */
 
-import fs from "node:fs";
+import type { Dirent } from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
-import type { FSWatcher } from "node:fs";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type {
   MemoryDefaults,
   MemorySourceType,
 } from "@/service/builtins/memory/types/Memory.js";
-import {
-  MemoryIndexer,
-  type MemoryIndexSyncResult,
-} from "./Indexer.js";
 
 export const MEMORY_DEFAULTS: MemoryDefaults = {
   maxResults: 6,
   minScore: 0.35,
   maxInjectedChars: 4000,
-  watchDebounceMs: 1500,
-  intervalMinutes: 5,
 };
 
 export type MemorySourceFile = {
@@ -54,38 +47,6 @@ export type MemoryRuntimeState = {
    * Memory 是否启用。
    */
   enabled: boolean;
-  /**
-   * 索引器实例。
-   */
-  indexer: MemoryIndexer;
-  /**
-   * 当前是否 dirty。
-   */
-  dirty: boolean;
-  /**
-   * 最近一次同步时间戳。
-   */
-  lastSyncAt?: number;
-  /**
-   * 最近一次同步错误。
-   */
-  lastError?: string;
-  /**
-   * 当前同步中的 Promise（用于并发合并）。
-   */
-  syncing: Promise<void> | null;
-  /**
-   * watcher 列表。
-   */
-  watchers: FSWatcher[];
-  /**
-   * debounce timer。
-   */
-  watchDebounceTimer: NodeJS.Timeout | null;
-  /**
-   * interval timer。
-   */
-  intervalTimer: NodeJS.Timeout | null;
 };
 
 function normalizeRelPath(rootPath: string, absPath: string): string {
@@ -107,7 +68,7 @@ async function pathExists(absPath: string): Promise<boolean> {
 
 async function listMarkdownFilesRecursively(dirPath: string): Promise<string[]> {
   const out: string[] = [];
-  let entries: fs.Dirent[] = [];
+  let entries: Dirent[] = [];
   try {
     entries = await fsp.readdir(dirPath, { withFileTypes: true });
   } catch {
@@ -156,7 +117,7 @@ export async function listMemorySourceFiles(
   }
 
   const sessionRootDir = path.join(rootPath, ".downcity", "session");
-  let sessions: fs.Dirent[] = [];
+  let sessions: Dirent[] = [];
   try {
     sessions = await fsp.readdir(sessionRootDir, { withFileTypes: true });
   } catch {
@@ -206,64 +167,15 @@ export function createMemoryRuntimeState(
   return {
     rootPath: context.rootPath,
     enabled: isMemoryEnabled(context),
-    indexer: new MemoryIndexer(context.rootPath),
-    dirty: true,
-    syncing: null,
-    watchers: [],
-    watchDebounceTimer: null,
-    intervalTimer: null,
   };
 }
 
 /**
- * 标记 dirty 并触发 debounce 同步。
- */
-export function markMemoryDirty(
-  context: AgentContext,
-  state: MemoryRuntimeState,
-  reason: string,
-): void {
-  state.dirty = true;
-  if (state.watchDebounceTimer) {
-    clearTimeout(state.watchDebounceTimer);
-  }
-  state.watchDebounceTimer = setTimeout(() => {
-    state.watchDebounceTimer = null;
-    void ensureMemoryIndexed(context, state, { reason: `watch:${reason}` });
-  }, MEMORY_DEFAULTS.watchDebounceMs);
-  if (typeof state.watchDebounceTimer.unref === "function") {
-    state.watchDebounceTimer.unref();
-  }
-}
-
-function registerWatcher(
-  context: AgentContext,
-  state: MemoryRuntimeState,
-  watchPath: string,
-): void {
-  try {
-    const watcher = fs.watch(
-      watchPath,
-      { recursive: true },
-      (_event, fileName) => {
-        const name = String(fileName || "").toLowerCase();
-        if (!name.endsWith(".md")) {
-          return;
-        }
-        markMemoryDirty(context, state, name || "unknown");
-      },
-    );
-    state.watchers.push(watcher);
-  } catch (error) {
-    context.logger.warn("[memory] watcher init skipped", {
-      watchPath,
-      error: String(error),
-    });
-  }
-}
-
-/**
- * 启动 memory 运行时（watcher + interval）。
+ * 启动 memory 运行时。
+ *
+ * 关键点（中文）
+ * - Markdown-only 方案下不再维护后台索引同步。
+ * - 这里只负责根据配置刷新 enabled 状态。
  */
 export async function startMemoryRuntime(
   context: AgentContext,
@@ -274,97 +186,13 @@ export async function startMemoryRuntime(
     context.logger.info("[memory] disabled by config");
     return;
   }
-
-  if (state.watchers.length === 0) {
-    registerWatcher(context, state, path.join(context.rootPath, ".downcity"));
-  }
-  if (!state.intervalTimer) {
-    state.intervalTimer = setInterval(() => {
-      void ensureMemoryIndexed(context, state, { reason: "interval" });
-    }, MEMORY_DEFAULTS.intervalMinutes * 60 * 1000);
-    if (typeof state.intervalTimer.unref === "function") {
-      state.intervalTimer.unref();
-    }
-  }
-
-  await ensureMemoryIndexed(context, state, { reason: "startup" });
 }
 
 /**
  * 停止 memory 运行时。
  */
 export async function stopMemoryRuntime(
-  state: MemoryRuntimeState,
+  _state: MemoryRuntimeState,
 ): Promise<void> {
-  if (state.watchDebounceTimer) {
-    clearTimeout(state.watchDebounceTimer);
-    state.watchDebounceTimer = null;
-  }
-  if (state.intervalTimer) {
-    clearInterval(state.intervalTimer);
-    state.intervalTimer = null;
-  }
-  for (const watcher of state.watchers) {
-    try {
-      watcher.close();
-    } catch {
-      // ignore
-    }
-  }
-  state.watchers = [];
-
-  if (state.syncing) {
-    try {
-      await state.syncing;
-    } catch {
-      // ignore
-    }
-  }
-  state.indexer.close();
-}
-
-/**
- * 确保索引已同步。
- */
-export async function ensureMemoryIndexed(
-  context: AgentContext,
-  state: MemoryRuntimeState,
-  params?: { force?: boolean; reason?: string },
-): Promise<MemoryIndexSyncResult | null> {
-  if (!state.enabled) {
-    return null;
-  }
-  const force = params?.force === true;
-  if (!force && !state.dirty) {
-    return null;
-  }
-  if (state.syncing) {
-    await state.syncing;
-    return null;
-  }
-  let syncResult: MemoryIndexSyncResult | null = null;
-  state.syncing = (async () => {
-    try {
-      const files = await listMemorySourceFiles(context.rootPath);
-      syncResult = await state.indexer.sync(files, { force });
-      state.dirty = false;
-      state.lastError = undefined;
-      state.lastSyncAt = Date.now();
-      context.logger.info("[memory] index synced", {
-        reason: params?.reason || "manual",
-        files: files.length,
-      });
-    } catch (error) {
-      state.lastError = String(error);
-      context.logger.error("[memory] index sync failed", {
-        reason: params?.reason || "manual",
-        error: state.lastError,
-      });
-      throw error;
-    } finally {
-      state.syncing = null;
-    }
-  })();
-  await state.syncing;
-  return syncResult;
+  void _state;
 }

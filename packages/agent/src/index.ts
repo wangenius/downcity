@@ -108,9 +108,8 @@ export {
   startServiceScheduleRuntime,
   stopServiceScheduleRuntime,
 } from './service/schedule/Runtime.js';
-export { runDueScheduledJobs } from "./service/schedule/Executor.js";
 export { ServiceScheduleStore } from "./service/schedule/Store.js";
-export { scheduledJobsTable } from "./service/schedule/Schema.js";
+export { runDueScheduledJobs } from "./service/schedule/Executor.js";
 export {
   normalizeRunAtMsOrThrow,
   parseScheduledRunAtMsOrThrow,
@@ -121,15 +120,6 @@ export {
   resolveAssistantMessageForPersistence,
 } from "./service/builtins/chat/runtime/UserVisibleText.js";
 export { logger, getLogger, type Logger } from "./shared/utils/logger/Logger.js";
-export { PlatformStore, withPlatformStore } from "./shared/utils/store/index.js";
-export { ensurePlatformStoreSchema } from "./shared/utils/store/StoreSchema.js";
-export {
-  nowIso,
-  normalizeNonEmptyText,
-  optionalTrimmedText,
-  type PlatformDrizzleDb,
-  type PlatformStoreContext,
-} from "./shared/utils/store/StoreShared.js";
 
 // 共享协议类型与控制面常量
 export * from "./shared/types/AgentHost.js";
@@ -157,6 +147,7 @@ export * from "./shared/types/ServiceSchedule.js";
 export * from "./shared/types/Services.js";
 export * from "./shared/types/Start.js";
 export * from "./shared/types/Store.js";
+export * from "./shared/types/PluginLifecycle.js";
 export * from "./shared/types/auth/AuthPermission.js";
 export * from "./shared/types/auth/AuthRoute.js";
 export * from "./shared/types/auth/AuthToken.js";
@@ -209,7 +200,6 @@ export {
   listStaticPluginViews,
   toStaticPluginView,
 } from "./plugin/Catalog.js";
-export { setCityPluginEnabled, isCityPluginEnabled } from "./plugin/Lifecycle.js";
 export { runLocalPluginAction, listLocalPlugins, getLocalPluginAvailability } from "./plugin/LocalExecution.js";
 export { registerAllPluginsForCli } from "./plugin/PluginCommand.js";
 export { listBuiltinPluginRuntimeAuthPolicies } from "./plugin/HttpRoutes.js";

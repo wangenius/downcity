@@ -140,6 +140,7 @@ export const authPlugin: Plugin = {
         channel,
         userId: String(input.userId || "").trim(),
         rootPath: context.rootPath,
+        platform: context.platform,
       });
       return ((role || null) as unknown) as JsonValue;
     },

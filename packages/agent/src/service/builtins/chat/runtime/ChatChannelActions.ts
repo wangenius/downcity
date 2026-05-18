@@ -7,7 +7,6 @@
  * - 对外只暴露 action 级入口，供 ChatServiceActions 装配使用。
  */
 
-import { PlatformStore } from "@/shared/utils/store/index.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import type {
@@ -264,23 +263,18 @@ export async function executeChatConfigureAction(params: {
   if (Object.prototype.hasOwnProperty.call(patch, "channelAccountId")) {
     const channelAccountId = String(patch.channelAccountId || "").trim();
     if (channelAccountId) {
-      const store = new PlatformStore();
-      try {
-        const account = store.getChannelAccountSync(channelAccountId);
-        if (!account) {
-          return {
-            success: false,
-            error: `Bot account not found: ${channelAccountId}`,
-          };
-        }
-        if (account.channel !== channel) {
-          return {
-            success: false,
-            error: `Bot account channel mismatch: expected ${channel}, got ${account.channel}`,
-          };
-        }
-      } finally {
-        store.close();
+      const account = params.context.platform.getChannelAccount(channelAccountId);
+      if (!account) {
+        return {
+          success: false,
+          error: `Bot account not found: ${channelAccountId}`,
+        };
+      }
+      if (account.channel !== channel) {
+        return {
+          success: false,
+          error: `Bot account channel mismatch: expected ${channel}, got ${account.channel}`,
+        };
       }
     }
   }

@@ -33,6 +33,7 @@ import type { AgentProjectInitializationResult } from "@downcity/agent";
 import type {
   ExecutionBindingConfig,
 } from "@downcity/agent";
+import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 function resolveExecutionInput(params: {
   modelId?: unknown;
@@ -56,14 +57,17 @@ export async function initializePlatformAgentProject(params: {
   modelId?: unknown;
   forceOverwriteShipJson?: unknown;
 }): Promise<AgentProjectInitializationResult> {
-  return initializeAgentProject({
-    projectRoot: params.projectRoot,
-    agentName: String(params.agentName || "").trim() || undefined,
-    execution: resolveExecutionInput({
-      modelId: params.modelId,
-    }),
-    forceOverwriteShipJson: params.forceOverwriteShipJson === true,
-  });
+  return initializeAgentProject(
+    {
+      projectRoot: params.projectRoot,
+      agentName: String(params.agentName || "").trim() || undefined,
+      execution: resolveExecutionInput({
+        modelId: params.modelId,
+      }),
+      forceOverwriteShipJson: params.forceOverwriteShipJson === true,
+    },
+    createAgentPlatformRuntime(),
+  );
 }
 
 /**
@@ -253,14 +257,17 @@ export async function startManagedAgentByProjectRoot(params: {
         `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and downcity.json`,
       );
     }
-    await initializeAgentProject({
-      projectRoot: normalizedRoot,
-      agentName: String(params.initialization?.agentName || "").trim() || undefined,
-      execution: resolveExecutionInput({
-        modelId: params.initialization?.modelId,
-      }),
-      forceOverwriteShipJson: params.initialization?.forceOverwriteShipJson === true,
-    });
+    await initializeAgentProject(
+      {
+        projectRoot: normalizedRoot,
+        agentName: String(params.initialization?.agentName || "").trim() || undefined,
+        execution: resolveExecutionInput({
+          modelId: params.initialization?.modelId,
+        }),
+        forceOverwriteShipJson: params.initialization?.forceOverwriteShipJson === true,
+      },
+      createAgentPlatformRuntime(),
+    );
   } else {
     const profilePath = getProfileMdPath(normalizedRoot);
     const shipPath = getDowncityJsonPath(normalizedRoot);
@@ -271,7 +278,7 @@ export async function startManagedAgentByProjectRoot(params: {
     }
   }
 
-  ensureRuntimeExecutionBindingReady(normalizedRoot);
+  ensureRuntimeExecutionBindingReady(normalizedRoot, createAgentPlatformRuntime());
   const args = await buildRunArgsFromOptions(normalizedRoot, {});
   const started = await startDaemonProcess({
     projectRoot: normalizedRoot,

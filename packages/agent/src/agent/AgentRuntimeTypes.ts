@@ -12,6 +12,7 @@ import type { Logger } from "@shared/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type {
   AgentPathRuntime,
+  AgentPlatformRuntime,
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
@@ -57,6 +58,10 @@ export interface AgentRuntimeBase {
    * 当前 agent 可见的 plugin 配置持久化能力集合。
    */
   pluginConfig: AgentPluginConfigRuntime;
+  /**
+   * 当前 agent 可见的平台能力集合。
+   */
+  platform: AgentPlatformRuntime;
 }
 
 /**

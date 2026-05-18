@@ -12,7 +12,6 @@ import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type { WebPluginConfig, WebPluginInstallInput } from "@/shared/types/WebPlugin.js";
 import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/shared/types/WebPlugin.js";
 import { isPluginEnabled } from "@/plugin/Activation.js";
-import { setCityPluginEnabled } from "@/plugin/Lifecycle.js";
 import {
   doctorWebPluginDependency,
   inspectWebPluginDependency,
@@ -179,7 +178,7 @@ export const webPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    if (!isPluginEnabled({ plugin: webPlugin })) {
+    if (!isPluginEnabled({ plugin: webPlugin, context })) {
       return {
         enabled: false,
         available: false,
@@ -361,7 +360,7 @@ export const webPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
-        setCityPluginEnabled("web", true);
+        context.platform.setPluginEnabled?.("web", true);
         const providerRaw = String((payload as { provider?: unknown }).provider || "").trim();
         const provider =
           providerRaw === "web-access" || providerRaw === "agent-browser"
@@ -403,7 +402,7 @@ export const webPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        setCityPluginEnabled("web", false);
+        context.platform.setPluginEnabled?.("web", false);
         return {
           success: true,
           data: {
@@ -497,7 +496,7 @@ export const webPlugin: Plugin = {
   },
   system(context) {
     const config = readWebPluginConfig(context);
-    if (!isPluginEnabled({ plugin: webPlugin }) || !config.injectPrompt) {
+    if (!isPluginEnabled({ plugin: webPlugin, context }) || !config.injectPrompt) {
       return "";
     }
     const providerPrompt =

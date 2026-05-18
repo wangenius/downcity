@@ -8,7 +8,7 @@
  */
 
 import type { Command } from "commander";
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 import type { StoredEnvEntry, StoredEnvScope } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";

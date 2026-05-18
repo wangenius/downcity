@@ -16,7 +16,6 @@ import type {
 } from "@/shared/types/AuthPlugin.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
-import { readChatAuthorizationConfigSync } from "@/plugins/auth/runtime/AuthorizationConfig.js";
 
 function getAuthorizationStatePath(rootPath: string): string {
   return path.join(rootPath, ".downcity", "chat", "authorization", "state.json");
@@ -145,8 +144,10 @@ async function writeState(rootPath: string, state: ChatAuthorizationStateFile): 
   await fs.writeJson(file, state, { spaces: 2 });
 }
 
-function readAuthorizationConfig(projectRoot: string): ChatAuthorizationSnapshot["config"] {
-  return readChatAuthorizationConfigSync(projectRoot);
+function readAuthorizationConfig(
+  context: Pick<AgentContext, "rootPath" | "platform">,
+): ChatAuthorizationSnapshot["config"] {
+  return context.platform.readChatAuthorizationConfig(context.rootPath);
 }
 
 /**
@@ -207,11 +208,11 @@ export async function recordObservedAuthorizationPrincipal(params: {
  * 读取授权快照（配置 + 动态状态）。
  */
 export async function readAuthorizationSnapshot(params: {
-  context: Pick<AgentContext, "rootPath">;
+  context: Pick<AgentContext, "rootPath" | "platform">;
 }): Promise<ChatAuthorizationSnapshot> {
   const state = await readState(params.context.rootPath);
   return {
-    config: readAuthorizationConfig(params.context.rootPath),
+    config: readAuthorizationConfig(params.context),
     users: Object.values(state.usersByKey).sort((a, b) => b.lastSeenAt - a.lastSeenAt),
     chats: Object.values(state.chatsByKey).sort((a, b) => b.lastSeenAt - a.lastSeenAt),
   };

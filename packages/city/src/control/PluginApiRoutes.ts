@@ -10,10 +10,8 @@
 import type { Hono } from "hono";
 import {
   findBuiltinPlugin,
-  isCityPluginEnabled,
   listStaticPluginViews,
   runLocalPluginAction,
-  setCityPluginEnabled,
 } from "@downcity/agent";
 import type { PlatformAgentOption } from "@downcity/agent";
 import type {
@@ -24,6 +22,10 @@ import type {
   PluginView,
 } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
+import {
+  isCityPluginEnabled,
+  setCityPluginEnabled,
+} from "@/platform/PluginLifecycle.js";
 
 type PluginActionConfigItem = {
   name: string;

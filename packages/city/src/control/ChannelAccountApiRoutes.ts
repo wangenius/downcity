@@ -8,13 +8,14 @@
 
 import type { Hono } from "hono";
 import { ChatChannelAccountService } from "@downcity/agent";
+import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 /**
  * 注册 Channel Account API 路由。
  */
 export function registerPlatformChannelAccountRoutes(params: { app: Hono }): void {
   const app = params.app;
-  const service = new ChatChannelAccountService();
+  const service = new ChatChannelAccountService(createAgentPlatformRuntime());
 
   app.get("/api/ui/channel-accounts", async (c) => {
     try {

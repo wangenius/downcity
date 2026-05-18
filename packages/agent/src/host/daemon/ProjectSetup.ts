@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { loadDowncityConfig } from "@/config/Config.js";
-import { PlatformStore } from "@/shared/utils/store/index.js";
+import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
 import {
   readProjectExecutionBinding,
   readProjectPrimaryModelId,
@@ -84,7 +84,10 @@ export function ensureRuntimeProjectReady(projectRoot: string): void {
  * - 若走 local 模式，则 `lmp` plugin 必须启用且本地模型文件必须存在。
  * - 若模型被 pause，也要在启动前直接拒绝，避免进程拉起后秒退。
  */
-export function ensureRuntimeExecutionBindingReady(projectRoot: string): void {
+export function ensureRuntimeExecutionBindingReady(
+  projectRoot: string,
+  platform?: Pick<AgentPlatformRuntime, "getModel">,
+): void {
   let primaryModelId = "";
   try {
     const config = loadDowncityConfig(projectRoot);
@@ -103,24 +106,19 @@ export function ensureRuntimeExecutionBindingReady(projectRoot: string): void {
     process.exit(1);
   }
 
-  const store = new PlatformStore();
-  try {
-    const model = store.getModel(primaryModelId);
-    if (!model) {
-      console.error("❌ Model not found in platform model pool");
-      console.error(`   project: ${projectRoot}`);
-      console.error(`   execution.modelId: ${primaryModelId}`);
-      console.error("   fix: run `city model create` or `city model list`");
-      process.exit(1);
-    }
-    if (model.isPaused === true) {
-      console.error("❌ Model is paused");
-      console.error(`   project: ${projectRoot}`);
-      console.error(`   execution.modelId: ${primaryModelId}`);
-      console.error(`   fix: run \`city model pause ${primaryModelId} --enabled false\``);
-      process.exit(1);
-    }
-  } finally {
-    store.close();
+  const model = platform?.getModel(primaryModelId);
+  if (!model) {
+    console.error("❌ Model not found in platform model pool");
+    console.error(`   project: ${projectRoot}`);
+    console.error(`   execution.modelId: ${primaryModelId}`);
+    console.error("   fix: run `city model create` or `city model list`");
+    process.exit(1);
+  }
+  if (model.isPaused === true) {
+    console.error("❌ Model is paused");
+    console.error(`   project: ${projectRoot}`);
+    console.error(`   execution.modelId: ${primaryModelId}`);
+    console.error(`   fix: run \`city model pause ${primaryModelId} --enabled false\``);
+    process.exit(1);
   }
 }

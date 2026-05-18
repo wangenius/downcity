@@ -111,20 +111,13 @@ export function getDowncityMemoryDailyPath(cwd: string, date: string): string {
 }
 
 /**
- * Memory 索引文件路径（V2）。
- */
-export function getDowncityMemoryIndexPath(cwd: string): string {
-  return path.join(getDowncityMemoryDirPath(cwd), "index.sqlite");
-}
-
-/**
- * Service Schedule SQLite 路径。
+ * Service Schedule JSONL 路径。
  *
  * 关键点（中文）
  * - 调度任务属于项目 runtime 本地状态，因此放在项目 `.downcity/` 下。
  */
 export function getDowncityScheduleDbPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "schedule.sqlite");
+  return path.join(getDowncityDirPath(cwd), "schedule.jsonl");
 }
 
 export function getDowncityDataDirPath(cwd: string): string {

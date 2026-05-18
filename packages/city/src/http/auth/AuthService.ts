@@ -8,10 +8,10 @@
 
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import type { AuthPrincipal, AuthTokenRecord, AuthUser } from "@downcity/agent";
-import { optionalTrimmedText } from "@downcity/agent";
 import { AuthError } from "./AuthError.js";
 import { AuthStore, type AuthStoreOptions } from "./AuthStore.js";
 import { extractBearerToken, generateAccessToken, hashAccessToken } from "./TokenService.js";
+import { optionalTrimmedText } from "@/platform/store/StoreShared.js";
 
 const LOCAL_CLI_USERNAME = "local-cli";
 const LOCAL_CLI_DISPLAY_NAME = "Local CLI";

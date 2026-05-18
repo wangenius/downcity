@@ -25,7 +25,7 @@ import { injectAgentContext } from "../shared/IndexSupport.js";
 import { prepareForegroundAgent } from "../control-plane/ControlPlaneCommand.js";
 import { CliError } from "../shared/CliError.js";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 import type { StartOptions } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
 import type { StoredChannelAccount, StoredChannelAccountChannel } from "@downcity/agent";

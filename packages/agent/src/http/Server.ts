@@ -21,12 +21,6 @@ import {
 import { pluginsRouter } from "@/http/plugins/plugins.js";
 import { staticRouter } from "@/http/static/static.js";
 import { controlRouter } from "@/http/control/ControlRouter.js";
-import { registerAuthRoutes } from "@/http/auth/AuthRoutes.js";
-import { AuthService } from "@/http/auth/AuthService.js";
-import {
-  createRouteAuthGuardMiddleware,
-  SERVER_AUTH_ROUTE_POLICIES,
-} from "@/http/auth/RoutePolicy.js";
 import {
   listBuiltinPluginRuntimeAuthPolicies,
   registerBuiltinPluginHttpRoutes,
@@ -60,11 +54,6 @@ export interface ServerInstance {
  */
 export function createServerApp(): Hono {
   const app = new Hono();
-  const authService = new AuthService();
-  const authPolicies = [
-    ...SERVER_AUTH_ROUTE_POLICIES,
-    ...listBuiltinPluginRuntimeAuthPolicies(),
-  ];
 
   app.use("*", logger());
   app.use(
@@ -75,7 +64,6 @@ export function createServerApp(): Hono {
       allowHeaders: ["Content-Type", "Authorization"],
     }),
   );
-  app.use("*", createRouteAuthGuardMiddleware(authService, authPolicies));
 
   // 关键点（中文）：service action 路由在 runtime ready 后再注册，避免命令级 import 副作用。
   ensureServiceActionRoutesRegistered();
@@ -91,7 +79,6 @@ export function createServerApp(): Hono {
     app,
     getContext: getAgentContext,
   });
-  registerAuthRoutes({ app, authService });
 
   return app;
 }

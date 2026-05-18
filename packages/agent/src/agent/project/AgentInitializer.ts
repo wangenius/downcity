@@ -35,7 +35,6 @@ import {
 } from "@session/composer/system/default/InitPrompts.js";
 import { renderTemplateVariables } from "@/shared/utils/Template.js";
 import { ensureDir, saveJson } from "@/shared/utils/storage/index.js";
-import { PlatformStore } from "@/shared/utils/store/index.js";
 import type {
   AgentProjectChannel,
   AgentProjectInitializationInput,
@@ -43,6 +42,7 @@ import type {
 } from "@/shared/types/AgentProject.js";
 import { assertProjectExecutionTarget } from "@/agent/project/ProjectExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
+import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
 
 /**
  * 平台模型选项。
@@ -78,32 +78,29 @@ export function normalizeDefaultAgentName(input: string): string {
 /**
  * 读取平台全局模型选项。
  */
-export async function listPlatformModelChoices(): Promise<PlatformModelChoice[]> {
-  const store = new PlatformStore();
-  try {
-    const models = store.listModels();
-    const providers = await store.listProviders();
-    const providerMap = new Map(providers.map((item) => [item.id, item] as const));
-    return models
-      .map((item) => {
-        const id = String(item.id || "").trim();
-        if (!id) return null;
-        const providerId = String(item.providerId || "").trim();
-        const providerType = String(providerMap.get(providerId)?.type || "").trim();
-        const providerLabel = providerId
-          ? providerType
-            ? `${providerId} (${providerType})`
-            : providerId
-          : "-";
-        return {
-          title: `${id} · ${providerLabel}`,
-          value: id,
-        };
-      })
-      .filter((item): item is PlatformModelChoice => item !== null);
-  } finally {
-    store.close();
-  }
+export async function listPlatformModelChoices(
+  platform: Pick<AgentPlatformRuntime, "listModels" | "listProviders">,
+): Promise<PlatformModelChoice[]> {
+  const models = platform.listModels();
+  const providers = await platform.listProviders();
+  const providerMap = new Map(providers.map((item) => [item.id, item] as const));
+  return models
+    .map((item) => {
+      const id = String(item.id || "").trim();
+      if (!id) return null;
+      const providerId = String(item.providerId || "").trim();
+      const providerType = String(providerMap.get(providerId)?.type || "").trim();
+      const providerLabel = providerId
+        ? providerType
+          ? `${providerId} (${providerType})`
+          : providerId
+        : "-";
+      return {
+        title: `${id} · ${providerLabel}`,
+        value: id,
+      };
+    })
+    .filter((item): item is PlatformModelChoice => item !== null);
 }
 
 function parseEnvKeys(content: string): Set<string> {
@@ -182,23 +179,20 @@ async function appendMissingEnvEntries(params: {
 /**
  * 校验 API 主模型可用。
  */
-function assertApiPrimaryModelReady(primaryModelId: string): void {
+function assertApiPrimaryModelReady(
+  primaryModelId: string,
+  platform: Pick<AgentPlatformRuntime, "getModel">,
+): void {
   const normalizedModelId = String(primaryModelId || "").trim();
   if (!normalizedModelId) {
     throw new Error("execution.modelId is required");
   }
-
-  const store = new PlatformStore();
-  try {
-    const model = store.getModel(normalizedModelId);
-    if (!model) {
-      throw new Error(`Model not found in platform model pool: ${normalizedModelId}`);
-    }
-    if (model.isPaused === true) {
-      throw new Error(`Model is paused: ${normalizedModelId}`);
-    }
-  } finally {
-    store.close();
+  const model = platform.getModel(normalizedModelId);
+  if (!model) {
+    throw new Error(`Model not found in platform model pool: ${normalizedModelId}`);
+  }
+  if (model.isPaused === true) {
+    throw new Error(`Model is paused: ${normalizedModelId}`);
   }
 }
 
@@ -228,6 +222,7 @@ export async function isAgentProjectInitialized(projectRoot: string): Promise<bo
  */
 export async function initializeAgentProject(
   input: AgentProjectInitializationInput,
+  platform?: Pick<AgentPlatformRuntime, "listModels" | "listProviders" | "getModel">,
 ): Promise<AgentProjectInitializationResult> {
   const projectRoot = path.resolve(String(input.projectRoot || "").trim() || ".");
   const projectBaseName = path.basename(projectRoot);
@@ -248,11 +243,14 @@ export async function initializeAgentProject(
     execution,
   });
   if (primaryModelId) {
-    const platformModelChoices = await listPlatformModelChoices();
+    if (!platform) {
+      throw new Error("initializeAgentProject requires platform runtime");
+    }
+    const platformModelChoices = await listPlatformModelChoices(platform);
     if (platformModelChoices.length === 0) {
       throw new Error("Platform model pool is empty. Please configure at least one model first.");
     }
-    assertApiPrimaryModelReady(primaryModelId);
+    assertApiPrimaryModelReady(primaryModelId, platform);
   }
 
   await ensureDir(projectRoot);

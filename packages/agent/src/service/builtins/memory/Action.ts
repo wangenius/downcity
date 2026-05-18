@@ -12,15 +12,16 @@ import type { JsonValue } from "@/shared/types/Json.js";
 import type {
   MemoryFlushPayload,
   MemoryGetPayload,
-  MemoryIndexPayload,
   MemorySearchPayload,
   MemoryStorePayload,
 } from "@/service/builtins/memory/types/Memory.js";
 import { flushMemory } from "./runtime/Flush.js";
-import { searchMemory } from "./runtime/Search.js";
+import {
+  collectMemoryStatus,
+  searchMemory,
+} from "./runtime/Search.js";
 import {
   MEMORY_DEFAULTS,
-  ensureMemoryIndexed,
   type MemoryRuntimeState,
 } from "./runtime/Store.js";
 import { getMemory, storeMemory } from "./runtime/Writer.js";
@@ -33,53 +34,11 @@ export async function statusMemoryAction(
   state: MemoryRuntimeState,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const stats = state.indexer.status();
+    const stats = await collectMemoryStatus(context, state);
     return {
       success: true,
-      data: {
-        enabled: state.enabled,
-        backend: "builtin",
-        mode: "fts",
-        dbPath: state.indexer.getRelativeDbPath(),
-        dirty: state.dirty,
-        files: stats.files,
-        chunks: stats.chunks,
-        sourceCounts: stats.sourceCounts,
-        ...(typeof state.lastSyncAt === "number"
-          ? { lastSyncAt: state.lastSyncAt }
-          : {}),
-        ...(state.lastError ? { lastError: state.lastError } : {}),
-      } as unknown as JsonValue,
+      data: stats as unknown as JsonValue,
     };
-  } catch (error) {
-    return {
-      success: false,
-      error: String(error),
-    };
-  }
-}
-
-/**
- * index action。
- */
-export async function indexMemoryAction(
-  context: AgentContext,
-  state: MemoryRuntimeState,
-  payload: MemoryIndexPayload,
-): Promise<ServiceActionResult<JsonValue>> {
-  try {
-    const result = await ensureMemoryIndexed(context, state, {
-      force: payload.force === true,
-      reason: payload.force ? "manual-force" : "manual",
-    });
-    const status = state.indexer.status();
-    const data = {
-      totalFiles: result?.totalFiles ?? status.files,
-      reindexedFiles: result?.reindexedFiles ?? 0,
-      removedFiles: result?.removedFiles ?? 0,
-      totalChunks: result?.totalChunks ?? 0,
-    };
-    return { success: true, data: data as unknown as JsonValue };
   } catch (error) {
     return {
       success: false,

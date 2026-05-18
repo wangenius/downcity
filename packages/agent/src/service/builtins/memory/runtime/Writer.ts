@@ -17,7 +17,6 @@ import type {
   MemoryStoreResponse,
 } from "@/service/builtins/memory/types/Memory.js";
 import type { MemoryRuntimeState } from "./Store.js";
-import { markMemoryDirty } from "./Store.js";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -88,6 +87,7 @@ export async function storeMemory(
   state: MemoryRuntimeState,
   payload: MemoryStorePayload,
 ): Promise<MemoryStoreResponse> {
+  void state;
   const target: MemorySourceType = payload.target ?? "daily";
   const content = String(payload.content || "").trim();
   if (!content) {
@@ -104,7 +104,6 @@ export async function storeMemory(
   }
   const entry = formatEntry(content);
   await fs.appendFile(resolved.absPath, `\n${entry}`, "utf-8");
-  markMemoryDirty(context, state, `store:${resolved.relPath}`);
   return {
     path: resolved.relPath,
     target,

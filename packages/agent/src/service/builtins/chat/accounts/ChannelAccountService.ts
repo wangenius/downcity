@@ -8,7 +8,7 @@
  */
 
 import crypto from "node:crypto";
-import { PlatformStore } from "@/shared/utils/store/index.js";
+import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
 import type { StoredChannelAccountChannel } from "@/shared/types/Store.js";
 import { resolveChatChannelBotInfo } from "@/service/builtins/chat/channels/BotInfoProvider.js";
 import type {
@@ -69,6 +69,12 @@ function pickFirstNonEmpty(inputs: unknown[]): string {
  * ChatChannelAccountService。
  */
 export class ChatChannelAccountService {
+  private readonly platform: AgentPlatformRuntime;
+
+  constructor(platform: AgentPlatformRuntime) {
+    this.platform = platform;
+  }
+
   /**
    * 生成唯一 channel account id。
    *
@@ -82,18 +88,13 @@ export class ChatChannelAccountService {
   }): Promise<string> {
     const seed = normalizeChannelAccountIdToken(params.seed || "");
     const prefix = `${params.channel}-${seed}`.slice(0, 36);
-    const store = new PlatformStore();
-    try {
-      for (let index = 0; index < 8; index += 1) {
-        const suffix = crypto.randomBytes(3).toString("hex");
-        const candidate = `${prefix}-${suffix}`.slice(0, 64);
-        const existing = await store.getChannelAccount(candidate);
-        if (!existing) return candidate;
-      }
-      return `${params.channel}-${Date.now().toString(36)}`;
-    } finally {
-      store.close();
+    for (let index = 0; index < 8; index += 1) {
+      const suffix = crypto.randomBytes(3).toString("hex");
+      const candidate = `${prefix}-${suffix}`.slice(0, 64);
+      const existing = this.platform.getChannelAccount(candidate);
+      if (!existing) return candidate;
     }
+    return `${params.channel}-${Date.now().toString(36)}`;
   }
 
   /**
@@ -205,32 +206,13 @@ export class ChatChannelAccountService {
    * 列出账户池（脱敏）。
    */
   async list(): Promise<ChatChannelAccountListResult> {
-    const store = new PlatformStore();
-    try {
-      const rows = await store.listChannelAccounts();
-      return {
-        items: rows.map((item) => ({
-          id: item.id,
-          channel: item.channel,
-          name: item.name,
-          identity: item.identity,
-          owner: item.owner,
-          creator: item.creator,
-          domain: item.domain,
-          sandbox: item.sandbox === true,
-          hasBotToken: !!String(item.botToken || "").trim(),
-          hasAppId: !!String(item.appId || "").trim(),
-          hasAppSecret: !!String(item.appSecret || "").trim(),
-          botTokenMasked: item.botToken ? maskSecret(item.botToken) : undefined,
-          appIdMasked: item.appId ? maskSecret(item.appId) : undefined,
-          appSecretMasked: item.appSecret ? maskSecret(item.appSecret) : undefined,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-        })),
-      };
-    } finally {
-      store.close();
+    const list = this.platform.listChannelAccounts;
+    if (!list) {
+      throw new Error("Channel account listing is not available in this runtime");
     }
+    return {
+      items: await list(),
+    };
   }
 
   /**
@@ -254,9 +236,7 @@ export class ChatChannelAccountService {
       throw new Error("appSecret and clearAppSecret cannot be used together");
     }
 
-    const store = new PlatformStore();
-    try {
-      const current = await store.getChannelAccount(id);
+    const current = this.platform.getChannelAccount(id);
       const nextBotToken = input.clearBotToken
         ? undefined
         : input.botToken !== undefined
@@ -282,36 +262,36 @@ export class ChatChannelAccountService {
         ? normalizeOptionalText(input.creator)
         : current?.creator;
 
-      await store.upsertChannelAccount({
-        id,
-        channel,
-        name,
-        identity: nextIdentity,
-        owner: nextOwner,
-        creator: nextCreator,
-        botToken: nextBotToken,
-        appId: nextAppId,
-        appSecret: nextAppSecret,
-        domain: normalizeOptionalText(input.domain),
-        sandbox: input.sandbox === true,
-      });
-      return { id };
-    } finally {
-      store.close();
+    const updateChannelAccount = this.platform.updateChannelAccount;
+    if (!updateChannelAccount) {
+      throw new Error("Channel account update is not available in this runtime");
     }
+    await updateChannelAccount({
+      id,
+      channel,
+      name,
+      identity: nextIdentity,
+      owner: nextOwner,
+      creator: nextCreator,
+      botToken: nextBotToken,
+      appId: nextAppId,
+      appSecret: nextAppSecret,
+      domain: normalizeOptionalText(input.domain),
+      sandbox: input.sandbox === true,
+    });
+    return { id };
   }
 
   /**
    * 删除账号。
    */
-  remove(idInput: string): void {
+  async remove(idInput: string): Promise<void> {
     const id = String(idInput || "").trim();
     if (!id) throw new Error("channel account id cannot be empty");
-    const store = new PlatformStore();
-    try {
-      store.removeChannelAccount(id);
-    } finally {
-      store.close();
+    const removeChannelAccount = this.platform.removeChannelAccount;
+    if (!removeChannelAccount) {
+      throw new Error("Channel account removal is not available in this runtime");
     }
+    await removeChannelAccount(id);
   }
 }

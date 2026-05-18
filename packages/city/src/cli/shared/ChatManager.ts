@@ -21,8 +21,13 @@ import type {
   ChatManagerRootAction,
 } from "./ChatManagerTypes.js";
 import { runInteractiveChatAuthSetFlow } from "./ChatAuth.js";
+import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 const CHAT_CHANNELS: StoredChannelAccountChannel[] = ["telegram", "feishu", "qq"];
+
+function createChannelAccountService(): ChatChannelAccountService {
+  return new ChatChannelAccountService(createAgentPlatformRuntime());
+}
 
 function isInteractiveTerminal(): boolean {
   return process.stdin.isTTY === true && process.stdout.isTTY === true;
@@ -44,7 +49,7 @@ function formatCredentialSummary(account: ChatChannelAccountListItem): string {
 }
 
 async function promptRootAction(): Promise<ChatManagerRootAction | null> {
-  const service = new ChatChannelAccountService();
+  const service = createChannelAccountService();
   const accounts = await service.list();
   const response = (await prompts({
     type: "select",
@@ -89,7 +94,7 @@ async function promptRootAction(): Promise<ChatManagerRootAction | null> {
 }
 
 async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | null> {
-  const service = new ChatChannelAccountService();
+  const service = createChannelAccountService();
   const accounts = await service.list();
   const response = (await prompts({
     type: "select",
@@ -134,7 +139,7 @@ async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | 
 }
 
 async function emitChannelAccountList(): Promise<void> {
-  const service = new ChatChannelAccountService();
+  const service = createChannelAccountService();
   const { items } = await service.list();
   if (items.length === 0) {
     emitCliBlock({
@@ -177,7 +182,7 @@ async function chooseChannel(): Promise<StoredChannelAccountChannel | null> {
 }
 
 async function chooseAccount(): Promise<ChatChannelAccountListItem | null> {
-  const service = new ChatChannelAccountService();
+  const service = createChannelAccountService();
   const { items } = await service.list();
   if (items.length === 0) {
     emitCliBlock({
@@ -291,7 +296,7 @@ async function addChannelAccount(): Promise<void> {
     initial: true,
   })) as { probe?: boolean };
 
-  const service = new ChatChannelAccountService();
+  const service = createChannelAccountService();
   const result = await service.create({
     channel,
     name,
@@ -319,7 +324,7 @@ async function editChannelAccount(): Promise<void> {
     channel: account.channel,
     current: account,
   });
-  const service = new ChatChannelAccountService();
+  const service = createChannelAccountService();
   await service.upsert({
     id: account.id,
     channel: account.channel,
@@ -351,7 +356,7 @@ async function removeChannelAccount(): Promise<void> {
 
   if (response.remove !== true) return;
 
-  const service = new ChatChannelAccountService();
+  const service = createChannelAccountService();
   service.remove(account.id);
   emitCliBlock({
     tone: "success",

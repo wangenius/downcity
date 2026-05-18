@@ -21,8 +21,8 @@ import { createLlmLoggingFetch } from "@shared/utils/logger/Fetch.js";
 import { getLogger } from "@shared/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
-import { PlatformStore } from "@shared/utils/store/index.js";
 import { readProjectExecutionBinding } from "@/agent/project/ProjectExecutionBinding.js";
+import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
 
 type ModelLogContext = {
   sessionId?: string;
@@ -149,7 +149,7 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
 export async function createModel(input: {
   config: DowncityConfig;
   getSessionRunScope?: () => ModelLogContext | undefined;
-  store?: PlatformStore;
+  platform?: AgentPlatformRuntime;
   projectRoot?: string;
 }): Promise<LanguageModel> {
   const logger = getLogger();
@@ -174,21 +174,23 @@ export async function createModel(input: {
 
   const primaryModelId = execution.modelId;
 
-  const store = input.store || new PlatformStore();
-  const resolved = await store.getResolvedModel(primaryModelId);
-  if (!input.store) {
-    store.close();
+  const platform = input.platform;
+  const modelConfig = platform?.getModel(primaryModelId) || null;
+  const providerConfigs = await (platform?.listProviders?.() || Promise.resolve([]));
+  const providerMap = new Map(providerConfigs.map((item) => [item.id, item] as const));
+  const providerConfig = modelConfig
+    ? providerMap.get(String(modelConfig.providerId || "").trim()) || null
+    : null;
+  if (!modelConfig || !providerConfig) {
+    await logger.log("warn", `LLM model config not found in platform runtime: ${primaryModelId}`);
+    throw Error(`LLM model config not found in platform runtime: ${primaryModelId}`);
   }
-  if (!resolved) {
-    await logger.log("warn", `LLM model config not found in sqlite store: ${primaryModelId}`);
-    throw Error(`LLM model config not found in sqlite store: ${primaryModelId}`);
-  }
-  const selectedModelConfig = resolved.model;
-  const selectedProviderConfig = resolved.provider;
+  const selectedModelConfig = modelConfig;
+  const selectedProviderConfig = providerConfig;
   if (selectedModelConfig.isPaused === true) {
     await logger.log(
       "warn",
-      `LLM model is paused in sqlite store: ${primaryModelId}`,
+      `LLM model is paused in platform runtime: ${primaryModelId}`,
     );
     throw Error(`LLM model is paused: ${primaryModelId}`);
   }

@@ -18,7 +18,7 @@ import { saveJson } from "@/utils/storage.js";
 import {
   getPlatformRootDirPath,
 } from "@/process/registry/CityPaths.js";
-import { PlatformStore } from "@downcity/agent";
+import { PlatformStore } from "@/platform/store/index.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 
 /**

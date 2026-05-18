@@ -1,0 +1,55 @@
+---
+title: memory 内建 Service
+description: 说明内建 memory service 如何持有 memory runtime state、检索写入能力和 service 级记忆规则
+---
+
+# memory 内建 Service
+
+`memory` 是负责持久记忆检索与写入的内建 service。
+
+它覆盖这些能力：
+
+- memory runtime state
+- 索引生命周期
+- search
+- 直接读取
+- 显式 store
+- 把 session 历史 flush 到 memory
+
+## 它持有什么
+
+从当前实现看，`memory` 会持有：
+
+- `runtimeState`
+- memory runtime 的 start / stop
+- `status`、`search`、`get`、`store`、`flush` 这些 memory 专属 action
+- 关于何时该使用 memory 的 service 级 system 规则
+
+## 为什么它是 service，而不是 tool
+
+`memory` 不只是一个辅助函数。
+
+它需要围绕这些能力维持长期且稳定的运行时语义：
+
+- memory 当前是否启用
+- 索引与检索如何保持可用
+- prompt 里如何指导模型使用 memory
+
+所以它更像一个领域 service。
+
+## 为什么 SDK 使用者应该关注它
+
+`memory` 是一个非常好的例子，展示 service 如何同时拥有：
+
+- 运行态状态
+- prompt 行为
+- 检索 action
+- 写入 action
+
+如果你要设计一个“持有领域知识，而不是只返回瞬时结果”的 custom service，它会是非常值得参考的内建样板。
+
+## 相关文档
+
+- [Memory Service](/zh/docs/services/memory-service)
+- [内建 Service 总览](/zh/agent-sdk-docs/services/builtins/overview)
+- [Service system](/zh/agent-sdk-docs/services/service-system)

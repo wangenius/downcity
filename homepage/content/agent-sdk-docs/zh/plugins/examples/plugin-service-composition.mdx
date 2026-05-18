@@ -1,0 +1,96 @@
+---
+title: Plugin 和 Service 协作场景
+description: 用一个组合场景说明 plugin 负责扩展点，service 负责长期状态的常见分层
+---
+
+# Plugin 和 Service 协作场景
+
+## 场景
+
+你在做一个“消息审核”能力：
+
+- plugin 负责在消息进入主链路前插入 guard / effect
+- service 负责长期保存审核缓存和统计
+
+这时最自然的分层往往是：
+
+- plugin 做扩展点
+- service 做长期运行态
+
+## 一个典型拆法
+
+### ReviewCacheService
+
+- 持有最近审核结果
+- 提供 `status`、`clear` 等长期状态能力
+
+### ReviewPolicyPlugin
+
+- 在某个 guard 点里检查输入
+- 在某个 effect 点里记录观察事件
+
+## 为什么不全做成 plugin
+
+因为 plugin 不应该天然承担：
+
+- 长期实例状态
+- worker / session 池
+
+## 为什么不全做成 service
+
+因为 service 也不是最适合表达：
+
+- pipeline
+- guard
+- effect
+- resolve
+
+## 最稳的经验
+
+如果一段能力同时需要：
+
+- 运行链路扩展
+- 长期状态
+
+那最值得优先考虑的就是 plugin + service 协作。
+
+## 一个最小落地骨架
+
+```ts
+import { Agent, BaseService, type Plugin } from "@downcity/agent";
+
+class ReviewCacheService extends BaseService {
+  readonly name = "review_cache";
+}
+
+const reviewPolicyPlugin: Plugin = {
+  name: "review_policy",
+  title: "Review Policy",
+  description: "Adds guard and effect logic to the review flow.",
+  hooks: {
+    guard: {
+      "review.require_checked": [
+        async ({ value }) => {
+          const body = value as { reviewed?: unknown };
+          if (body.reviewed !== true) {
+            throw new Error("review is required before continuing");
+          }
+        },
+      ],
+    },
+  },
+};
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [new ReviewCacheService()],
+  plugins: [reviewPolicyPlugin],
+});
+```
+
+## 相关文档
+
+- [Plugin 和 Service 的区别](/zh/agent-sdk-docs/plugins/plugin-vs-service)
+- [SDK Services 总览](/zh/agent-sdk-docs/services/overview)

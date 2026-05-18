@@ -47,6 +47,7 @@ export function Navbar() {
   const startPath = isZh ? "/zh/start" : "/start";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const devdocsPath = isZh ? "/zh/devdocs" : "/en/devdocs";
+  const agentSdkDocsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
   const uiSdkDocsPath = isZh ? "/zh/ui-sdk-docs" : "/en/ui-sdk-docs";
   const productBasePath = isZh ? "/zh/product" : "/product";
   const communityBasePath = isZh ? "/zh/community" : "/community";
@@ -56,6 +57,7 @@ export function Navbar() {
   const productConsoleUiPath = isZh ? "/zh/product/console-ui" : "/product/console-ui";
   const productChromeExtensionPath = isZh ? "/zh/product/chrome-extension" : "/product/chrome-extension";
   const productSdkPath = isZh ? "/zh/product/sdk" : "/product/sdk";
+  const productAgentSdkPath = isZh ? "/zh/product/agent-sdk" : "/product/agent-sdk";
   const productUiSdkPath = isZh ? "/zh/product/ui-sdk" : "/product/ui-sdk";
   const docsQuickstartPath = isZh ? "/zh/docs/quickstart/getting-started" : "/en/docs/quickstart/getting-started";
   const docsCliPath = isZh ? "/zh/docs/reference/cli" : "/en/docs/reference/cli";
@@ -81,7 +83,8 @@ export function Navbar() {
       { label: t("nav.productOverview"), description: isZh ? "完整产品矩阵" : "Full product index", path: productBasePath },
       { label: t("nav.productConsoleUi"), description: isZh ? "浏览器里的 Agent 控制台" : "Agent control surface", path: productConsoleUiPath },
       { label: t("nav.productChromeExtension"), description: isZh ? "把网页上下文送入 Agent" : "Send live web context", path: productChromeExtensionPath },
-      { label: t("nav.productSdk"), description: isZh ? "把 runtime 接入产品流程" : "Embed runtime flows", path: productSdkPath },
+      { label: t("nav.productSdk"), description: isZh ? "把 city runtime 接入产品流程" : "Embed city runtime flows", path: productSdkPath },
+      { label: t("nav.productAgentSdk"), description: isZh ? "把本地 Agent、Session、Service 嵌入应用" : "Embed local agents, sessions, and services", path: productAgentSdkPath },
       { label: t("nav.productUiSdk"), description: isZh ? "复用 Downcity 界面语言" : "Reuse the Downcity UI layer", path: productUiSdkPath },
     ],
   } as const;
@@ -89,14 +92,19 @@ export function Navbar() {
   const docsGroup = {
     kind: "group",
     label: t("nav.docs"),
-    activePaths: [docsPath, devdocsPath],
+    activePaths: [docsPath, devdocsPath, agentSdkDocsPath, uiSdkDocsPath],
     items: [
-      { label: t("nav.docs"), description: isZh ? "完整文档目录" : "Full documentation index", path: docsPath },
-      { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "从最短路径开始" : "Start with the shortest path", path: docsQuickstartPath },
+      { label: "City SDK", description: isZh ? "City runtime、CLI 与运行逻辑总入口" : "Main entry for city runtime, CLI, and operating logic", path: docsPath },
+      { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "先把 city 跑起来，再进入更深层结构" : "Start the city first, then go deeper into the structure", path: docsQuickstartPath },
       { label: "CLI", description: isZh ? "命令入口与参数" : "Command entry points and flags", path: docsCliPath },
       { label: t("nav.devdocs"), description: isZh ? "架构、实现与设计规范" : "Architecture, implementation, and design docs", path: devdocsPath },
       {
-        label: isZh ? "UI SDK 文档" : "UI SDK Docs",
+        label: "Agent SDK",
+        description: isZh ? "独立的 Agent SDK 接入、Session、Service 与 API 文档" : "Standalone docs for Agent SDK integration, sessions, services, and APIs",
+        path: agentSdkDocsPath,
+      },
+      {
+        label: "UI SDK",
         description: isZh ? "独立的 UI SDK 接入、模块与开发文档" : "Standalone docs for UI SDK integration, modules, and development",
         path: uiSdkDocsPath,
       },

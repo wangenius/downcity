@@ -1,0 +1,242 @@
+---
+title: 自定义 Service
+description: 用 BaseService 实现 custom service，包括最小骨架、状态放置方式和接入 Agent 的方式
+---
+
+# 自定义 Service
+
+如果你的应用需要一个“长期存在的能力实例”，最推荐的扩展方式就是 custom service。
+
+## 什么时候该写 custom service
+
+这些场景通常更适合 service：
+
+- 你需要长期持有状态
+- 你需要后台 worker、连接、缓存或 session 池
+- 你需要把一组相关 action 组织在一起
+- 你希望 agent 进程长期持有某个业务对象
+
+## 当前标准基类
+
+现在可以直接从公开包导入：
+
+```ts
+import { BaseService } from "@downcity/agent";
+```
+
+这让 custom service 不再只是内部实现方式，而成为正式的 SDK 扩展入口。
+
+## 一个最小骨架
+
+```ts
+import {
+  BaseService,
+  type ServiceActions,
+} from "@downcity/agent";
+
+class NotesService extends BaseService {
+  readonly name = "notes";
+
+  private readonly notes: string[] = [];
+
+  readonly actions: ServiceActions = {
+    add: {
+      execute: async ({ payload }) => {
+        const text = String((payload as { text?: unknown }).text || "").trim();
+        if (!text) {
+          return {
+            success: false,
+            error: "text is required",
+          };
+        }
+        this.notes.push(text);
+        return {
+          success: true,
+          data: {
+            count: this.notes.length,
+          },
+        };
+      },
+    },
+    list: {
+      execute: async () => {
+        return {
+          success: true,
+          data: {
+            items: [...this.notes],
+          },
+        };
+      },
+    },
+  };
+}
+```
+
+## 接到 Agent 上
+
+```ts
+import { Agent } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [
+    new NotesService(),
+  ],
+});
+```
+
+## custom service 至少需要什么
+
+### `name`
+
+稳定的 service 名称。
+
+它应该：
+
+- 清晰
+- 稳定
+- 不要和已有 service 重名
+
+SDK 当前如果遇到同名 service，会直接报错，而不是静默覆盖。
+
+### `actions`
+
+这是 service 的 action 映射表。
+
+哪怕你的 service 很简单，也至少应该有一组明确 actions。
+
+### 实例字段状态
+
+像这样放：
+
+```ts
+private readonly notes: string[] = [];
+```
+
+而不是放到模块级全局变量里。
+
+这是 custom service 最重要的实践之一。
+
+## 可选能力
+
+### `lifecycle`
+
+如果 service 需要启动或停止时机，可以实现：
+
+- `start`
+- `stop`
+- `command`
+
+### `system`
+
+如果 service 需要补充 system 文本，可以实现 `system(context)`。
+
+当前 SDK local session 会自动注入显式传入 service 的 `system(context)` 文本。
+
+## `bindAgent()` 需要自己调吗
+
+通常不需要。
+
+SDK 在把 service 装配进 `Agent` 时，会自动调用绑定逻辑。
+
+所以对大多数使用者来说：
+
+- 正常 `new MyService()`
+- 然后传进 `services: [...]`
+
+就够了。
+
+## 一个更接近真实使用的例子
+
+```ts
+import {
+  Agent,
+  BaseService,
+  type AgentContext,
+  type ServiceActions,
+} from "@downcity/agent";
+
+class CacheService extends BaseService {
+  readonly name = "cache";
+
+  private startedAt = 0;
+  private readonly store = new Map<string, string>();
+
+  readonly lifecycle = {
+    start: async (_context: AgentContext) => {
+      this.startedAt = Date.now();
+    },
+    stop: async () => {
+      this.store.clear();
+    },
+  };
+
+  readonly actions: ServiceActions = {
+    set: {
+      execute: async ({ payload }) => {
+        const body = payload as { key?: unknown; value?: unknown };
+        const key = String(body.key || "").trim();
+        const value = String(body.value || "");
+        if (!key) {
+          return { success: false, error: "key is required" };
+        }
+        this.store.set(key, value);
+        return { success: true, data: { key } };
+      },
+    },
+    get: {
+      execute: async ({ payload }) => {
+        const body = payload as { key?: unknown };
+        const key = String(body.key || "").trim();
+        return {
+          success: true,
+          data: {
+            key,
+            value: this.store.get(key) || null,
+            startedAt: this.startedAt,
+          },
+        };
+      },
+    },
+  };
+}
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [new CacheService()],
+});
+```
+
+## 当前最值得注意的限制
+
+当前 SDK 并没有一个对外公开的统一 “stop all services” API。
+
+所以如果你的 custom service 强依赖：
+
+- 明确启动
+- 明确释放
+
+你应该：
+
+- 优先把生命周期设计成幂等
+- 对 stop 行为保守设计
+- 不要把关键清理完全依赖在一个 SDK 还没公开承诺的统一关闭入口上
+
+## 如果你想看真正带场景的例子
+
+继续看这些场景页：
+
+- [NotesService 场景](/zh/agent-sdk-docs/services/examples/notes-service)
+- [CacheService 场景](/zh/agent-sdk-docs/services/examples/cache-service)
+- [WebhookRelayService 场景](/zh/agent-sdk-docs/services/examples/webhook-relay-service)
+- [Service 和 Tool 协作场景](/zh/agent-sdk-docs/services/examples/service-tool-composition)
+
+## 继续阅读
+
+- [Service 生命周期](/zh/agent-sdk-docs/services/service-lifecycle)
+- [Service Actions](/zh/agent-sdk-docs/services/service-actions)
+- [Service 和 Tool 的区别](/zh/agent-sdk-docs/services/service-vs-tools)

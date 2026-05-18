@@ -134,14 +134,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const isDocsPath =
     path === "/docs" ||
     path === "/devdocs" ||
+    path === "/agent-sdk-docs" ||
     path === "/ui-sdk-docs" ||
     path.startsWith("/docs/") ||
     path.startsWith("/devdocs/") ||
+    path.startsWith("/agent-sdk-docs/") ||
     path.startsWith("/ui-sdk-docs/") ||
     path.startsWith("/en/docs") ||
     path.startsWith("/zh/docs") ||
     path.startsWith("/en/devdocs") ||
     path.startsWith("/zh/devdocs") ||
+    path.startsWith("/en/agent-sdk-docs") ||
+    path.startsWith("/zh/agent-sdk-docs") ||
     path.startsWith("/en/ui-sdk-docs") ||
     path.startsWith("/zh/ui-sdk-docs");
   const showGlobalChrome = !isDocsPath;

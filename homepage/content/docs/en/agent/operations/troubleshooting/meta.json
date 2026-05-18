@@ -4,7 +4,6 @@
     "agent-wont-start",
     "agent-shows-stale",
     "chat-not-responding",
-    "sdk-session-has-no-model",
     "remote-agent-connection-failed",
     "missing-channel-account"
   ]

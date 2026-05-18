@@ -1,0 +1,56 @@
+---
+title: task Built-in Service
+description: Explain the built-in task service as the runtime owner of scheduling, cron state, and background execution
+---
+
+# task Built-in Service
+
+`task` is the built-in service for scheduling and background execution.
+
+It owns task definitions, recurring triggers, runtime reload behavior, and auditable execution flow.
+
+## What it owns
+
+From the current implementation, the core long-lived ownership is:
+
+- the per-service-instance cron engine
+- service lifecycle for start, stop, and reload
+- task action surfaces that mutate definitions and then reschedule
+- service-level system guidance through the task prompt
+
+## Why this is a service instead of a tool
+
+Scheduling is not a one-call capability.
+
+It needs:
+
+- a long-lived engine
+- a start boundary
+- a stop boundary
+- reload logic after mutations
+
+That runtime shape is exactly what services are for.
+
+## Why SDK users should care
+
+`task` is one of the best references when you need a service that keeps working beyond one foreground session.
+
+If you are designing:
+
+- cron-like automation
+- recurring background jobs
+- a service that owns a scheduler
+
+this page is a strong reference model.
+
+## Best mental model
+
+Think of `task` as the background automation runtime.
+
+The agent may define or modify work, but the service owns the scheduler that keeps that work alive over time.
+
+## Related docs
+
+- [Task Service](/en/docs/services/task/task-service)
+- [Built-in service overview](/en/agent-sdk-docs/services/builtins/overview)
+- [Service lifecycle](/en/agent-sdk-docs/services/service-lifecycle)

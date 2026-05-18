@@ -1,0 +1,47 @@
+---
+title: 本地 Agent 的 HTTP 和 RPC
+description: 如何把本地 Agent 暴露为 HTTP 服务或 RPC 服务
+---
+
+# 本地 Agent 的 HTTP 和 RPC
+
+本地 Agent 不只可以在当前进程里直接调用，也可以对外暴露服务端点。
+
+## 启动 HTTP
+
+```ts
+const http = await agent.http.start({
+  host: "127.0.0.1",
+  port: 15314,
+});
+
+console.log(http.baseUrl);
+```
+
+当前默认端口是 `15314`。
+
+如果你没有手动指定端口，这就是本地 SDK HTTP 的默认监听端口。
+
+## 启动 RPC
+
+```ts
+await agent.rpc.start();
+```
+
+## 什么时候用 HTTP
+
+- 你想让另一个进程通过 `RemoteAgent` 调它
+- 你想把本地 agent 暴露成一个轻量服务
+
+它特别适合“执行方和调用方分进程”的结构。
+
+## 启动前会发生什么
+
+调用 `agent.http.start()` 与 `agent.rpc.start()` 之前，SDK 会先确保显式注入的 services 已启动。
+
+这样可以减少“端点已经起来了，但关键 service 还没 ready”的不一致状态。
+
+## 相关文档
+
+- [RemoteAgent 快速开始](/zh/agent-sdk-docs/remote-agent/quickstart)
+- [SDK HTTP 端点](/zh/agent-sdk-docs/api-reference/sdk-http-endpoints)

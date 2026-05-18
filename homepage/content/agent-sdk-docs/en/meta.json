@@ -1,0 +1,17 @@
+{
+  "title": "Agent SDK Docs",
+  "pages": [
+    "index",
+    "local-agent",
+    "services",
+    "plugins",
+    "remote-agent",
+    "sessions",
+    "integration-patterns",
+    "api-reference",
+    "examples",
+    "storage",
+    "faq",
+    "troubleshooting"
+  ]
+}

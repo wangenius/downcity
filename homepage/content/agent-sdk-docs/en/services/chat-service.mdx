@@ -1,0 +1,139 @@
+---
+title: ChatService
+description: Understand what ChatService is for, how its options work, and when it starts in the SDK
+---
+
+# ChatService
+
+`ChatService` is the most direct built-in service you can use from `@downcity/agent` today.
+
+## Common use cases
+
+- let the SDK process itself own Telegram, Feishu, or QQ channels
+- keep chat channel lifecycle under your application code
+- expose a local agent with chat ingress without depending entirely on project-side auto-assembly
+
+## Minimal example
+
+```ts
+import { Agent, ChatService } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [
+    new ChatService({
+      telegram: {
+        botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      },
+    }),
+  ],
+});
+```
+
+## What it holds long-term
+
+A `ChatService` instance currently owns long-lived state such as:
+
+- `channelState`
+- `queueWorker`
+- `queueStore`
+
+That makes it a textbook service example: it is not just a function call, but a collection of runtime objects that stay alive over time.
+
+## What you can configure
+
+`ChatServiceOptions` currently includes:
+
+- `queue`
+- `telegram`
+- `feishu`
+- `qq`
+- `channelAccounts`
+
+### `queue`
+
+Use this to override queue worker runtime behavior.
+
+Typical uses:
+
+- concurrency
+- inbound message merge debounce
+- maximum wait time
+
+If you pass `queue` explicitly, it takes precedence over `downcity.json.services.chat.queue`.
+
+### `telegram` / `feishu` / `qq`
+
+These are explicit channel configs.
+
+Example for Telegram:
+
+```ts
+new ChatService({
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN!,
+    channelAccountId: "telegram-main",
+    name: "telegram",
+  },
+});
+```
+
+Explicit credentials are best when:
+
+- your app manages secrets itself
+- you do not want to depend on project-side `downcity.json` for those credentials
+- you want the SDK caller to fully control service behavior
+
+### `channelAccounts`
+
+This is an account-resolution provider.
+
+It is useful when:
+
+- your product already has its own account pool
+- you want account lookup to stay in the application layer
+- you do not want `ChatService` tied to one fixed global storage path
+
+## Channel-account precedence
+
+From the current implementation, the rough precedence is:
+
+1. explicit channel credentials
+2. `channelAccounts` provider
+3. project config under `services.chat.channels.*`
+
+So if you explicitly pass `botToken`, `appId`, or `appSecret`, that explicit config usually wins first.
+
+## When it starts
+
+In the current SDK, the most stable automatic trigger for `ChatService.lifecycle.start()` is:
+
+- `agent.http.start()`
+- `agent.rpc.start()`
+
+That is because the SDK calls `ensureServicesStarted()` before it exposes those endpoints.
+
+## One very important real-world boundary
+
+If you only do:
+
+- `new Agent(...)`
+- `agent.session()`
+- `session.run()`
+
+that does not automatically mean the full background ChatService lifecycle is already running.
+
+So if you want:
+
+- bots to start receiving messages
+- the queue worker to clearly enter running state
+
+the safer design is to treat HTTP or RPC startup as your service startup boundary.
+
+## Related docs
+
+- [Services overview](/en/agent-sdk-docs/services/overview)
+- [Service lifecycle](/en/agent-sdk-docs/services/service-lifecycle)
+- [Inject ChatService into a local Agent](/en/agent-sdk-docs/integration-patterns/add-chat-service)

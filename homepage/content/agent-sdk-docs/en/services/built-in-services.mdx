@@ -1,0 +1,57 @@
+---
+title: Built-in Services
+description: Entry page for the built-in service set in the Agent SDK docs
+---
+
+# Built-in Services
+
+The current Downcity runtime registry includes five built-in services:
+
+- `chat`
+- `contact`
+- `task`
+- `memory`
+- `shell`
+
+This page is the entry point. The actual service-by-service documentation now lives in a dedicated built-ins section, similar to built-in plugins.
+
+## Where to go next
+
+- [Built-in service overview](/en/agent-sdk-docs/services/builtins/overview)
+- [chat](/en/agent-sdk-docs/services/builtins/chat)
+- [contact](/en/agent-sdk-docs/services/builtins/contact)
+- [task](/en/agent-sdk-docs/services/builtins/task)
+- [memory](/en/agent-sdk-docs/services/builtins/memory)
+- [shell](/en/agent-sdk-docs/services/builtins/shell)
+
+## Two layers to keep separate
+
+### Runtime built-ins
+
+These are the services already registered by the full Downcity runtime.
+
+### Explicit SDK assembly
+
+This is the subset of service behavior that an `@downcity/agent` user can intentionally assemble into a local `Agent`.
+
+Those two layers overlap, but they are not identical.
+
+Today, the most direct explicit SDK path is still:
+
+- `ChatService`
+- `BaseService` for custom services
+
+The new built-ins pages document the whole runtime set from an SDK point of view, including the services that are more runtime-shaped than constructor-first.
+
+## Recommended reading order
+
+1. [Built-in service overview](/en/agent-sdk-docs/services/builtins/overview)
+2. [ChatService](/en/agent-sdk-docs/services/chat-service)
+3. [chat built-in service](/en/agent-sdk-docs/services/builtins/chat)
+4. [Custom service](/en/agent-sdk-docs/services/custom-service)
+
+## Related docs
+
+- [Services overview](/en/agent-sdk-docs/services/overview)
+- [Service lifecycle](/en/agent-sdk-docs/services/service-lifecycle)
+- [Service vs tools](/en/agent-sdk-docs/services/service-vs-tools)

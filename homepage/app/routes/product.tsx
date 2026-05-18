@@ -5,13 +5,14 @@ import { product } from "@/lib/product";
 /**
  * Product 路由容器。
  * 说明：
- * 1. 统一承载 product 子页面（overview/console-ui/chrome-extension/sdk/ui-sdk）。
+ * 1. 统一承载 product 子页面（overview/console-ui/chrome-extension/city-sdk/agent-sdk/ui-sdk）。
  * 2. 与 resources/community 保持一致，页面底部复用全站 Footer。
  */
 export function meta() {
   const baseUrl = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — Product`;
-  const description = "Product matrix: Console UI, Chrome Extension, Downcity SDK, and Downcity UI SDK.";
+  const description =
+    "Product matrix: Console UI, Chrome Extension, City SDK, Agent SDK, and Downcity UI SDK.";
 
   return [
     { charSet: "utf-8" },

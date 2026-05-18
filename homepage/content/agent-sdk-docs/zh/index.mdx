@@ -1,0 +1,84 @@
+---
+title: Agent SDK
+description: 理解 @downcity/agent 提供的本地 Agent、远程 Agent 和 Session 使用方式
+---
+
+# Agent SDK
+
+`@downcity/agent` 提供两类主要 SDK 入口：
+
+- `Agent`：本地嵌入式 agent
+- `RemoteAgent`：远程 HTTP 客户端
+
+## 什么时候用 `Agent`
+
+当你的应用和 agent 运行在同一进程，或者至少在同一个本地运行环境里，适合直接用：
+
+```ts
+import { Agent } from "@downcity/agent";
+```
+
+你可以显式传入：
+
+- `id`
+- `path`
+- `tools`
+- `services`
+- `plugins`
+
+它更像本地嵌入式执行壳。
+
+## 什么时候用 `RemoteAgent`
+
+当另一个进程已经把 agent 通过 HTTP 暴露出来时，适合用：
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+```
+
+然后通过 `baseUrl` 去调用它。
+
+它更像配套的远程客户端。
+
+## 共同的核心对象：Session
+
+无论是本地还是远程，SDK 的核心使用面都围绕 session：
+
+- `session()`
+- `run()`
+- `stream()`
+- `history()`
+- `fork()`
+
+大多数 SDK 使用问题，最终都会落到“session 应该怎么创建、配置和消费”。
+
+## 一个重要差异
+
+### 项目 runtime
+
+项目 runtime 的模型来自：
+
+- `downcity.json.execution.modelId`
+
+### 本地 SDK session
+
+本地 SDK session 的模型来自：
+
+```ts
+await session.set({ model });
+```
+
+### 远程 SDK session
+
+远程 session 当前不支持直接传本地模型实例。
+
+这是因为远程模式下，模型实例应该留在服务端本地持有，而不是由客户端携带。
+
+## 推荐阅读顺序
+
+1. [本地 Agent](/zh/agent-sdk-docs/local-agent/quickstart)
+2. [Services](/zh/agent-sdk-docs/services/overview)
+3. [Plugins](/zh/agent-sdk-docs/plugins/overview)
+4. [远程 Agent](/zh/agent-sdk-docs/remote-agent/quickstart)
+5. [Session](/zh/agent-sdk-docs/sessions/overview)
+6. [API 参考](/zh/agent-sdk-docs/api-reference/agent-class)

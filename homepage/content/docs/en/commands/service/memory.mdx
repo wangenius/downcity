@@ -1,6 +1,6 @@
 ---
 title: city memory
-description: Memory service actions (status/index/search/get/store/flush)
+description: Memory service actions (status/search/get/store/flush)
 ---
 
 # `city memory`
@@ -18,7 +18,6 @@ city memory <subcommand> [options]
 ## Subcommands
 
 - `status`
-- `index`
 - `search <query>`
 - `get <memoryPath> [--from <line>] [--lines <count>]`
 - `store --content <text> [--target <longterm|daily|working>] [--session-id <sessionId>]`
@@ -28,7 +27,6 @@ city memory <subcommand> [options]
 
 ```bash
 city memory status
-city memory index --force
 city memory search "release decision"
 city memory get .downcity/memory/MEMORY.md --from 10 --lines 20
 city memory store --target longterm --content "User prefers concise release notes."
@@ -61,7 +59,7 @@ $ city memory search "release decision"
   "success": true,
   "data": {
     "backend": "builtin",
-    "mode": "fts",
+    "mode": "scan",
     "results": []
   }
 }

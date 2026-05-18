@@ -1,0 +1,59 @@
+---
+title: Service System Text
+description: Understand what service.system(context) is for and how it enters the local SDK session prompt
+---
+
+# Service System Text
+
+A service can implement:
+
+```ts
+system(context) {
+  return "some service-level system text";
+}
+```
+
+Semantically, that means the service wants to contribute a service-level system block.
+
+## What it is good for
+
+- service-specific usage rules
+- behavior boundaries for the service
+- stable domain instructions that conceptually belong to that service
+
+## How it works in the local SDK
+
+The local SDK session path uses `SdkSessionSystemComposer`.
+
+When you explicitly pass a service through `new Agent({ services: [...] })`, the SDK collects that service's `system(context)` text whenever it resolves system prompts for a session run.
+
+The injection order is:
+
+- `PROFILE.md`
+- `SOUL.md`
+- the core prompt
+- `service.system(context)`
+- registered plugins' `plugin.system(context)`
+- the runtime clock prompt
+
+If one service's `system(context)` throws, the SDK skips that one service system block and does not block the current session run.
+
+## Relationship With Lifecycle
+
+`service.system(context)` does not require `service.lifecycle.start()` to have already run.
+
+That means:
+
+- services that only provide prompt rules can take effect directly
+- system text that depends on background connections, queue workers, or external process state should handle the not-yet-started state inside the service
+
+## Where Rules Belong
+
+If a rule belongs to the whole agent's long-lived personality or project contract, prefer `PROFILE.md` or `SOUL.md`.
+
+If a rule belongs to a specific service, such as chat sending rules or a domain boundary owned by a business service, `service.system(context)` is the right place.
+
+## Related Docs
+
+- [Custom service](/en/agent-sdk-docs/services/custom-service)
+- [Services overview](/en/agent-sdk-docs/services/overview)

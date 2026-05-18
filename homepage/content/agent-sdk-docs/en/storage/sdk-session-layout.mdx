@@ -1,0 +1,30 @@
+---
+title: SDK Session Layout
+description: Why local SDK Agent sessions live under .downcity/agents/<agentId>/...
+---
+
+# SDK Session Layout
+
+Local SDK Agent sessions are persisted under:
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
+```
+
+## Why `agentId` exists in the path
+
+Because several SDK Agents may coexist inside the same project directory.
+
+`agentId` isolates their session data.
+
+## What you will see there
+
+- `messages.jsonl`
+- session metadata
+- archive directories
+
+When you debug multiple sessions or multiple agents, this directory layout becomes very important because it defines how data stays isolated between different execution units.
+
+## Related docs
+
+- [Session metadata and storage](/en/agent-sdk-docs/sessions/metadata-and-storage)

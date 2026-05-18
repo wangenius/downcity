@@ -1,0 +1,76 @@
+---
+title: contact 内建 Service
+description: 说明内建 contact service 如何处理 agent 间 link、长期 contact chat、inbox share 与协作语义
+---
+
+# contact 内建 Service
+
+`contact` 是负责 agent 点对点关系的内建 service。
+
+它处理这些能力：
+
+- 可信 link 与 approve
+- inbound、outbound、bidirectional 三种可达关系
+- 每个 contact 一条长期 chat 线程
+- 文本、链接、文件、目录的分享
+- inbox 与 received 的接收流转
+
+## 它长期持有什么
+
+重点不只是命令，而是它长期拥有的一整套协作状态：
+
+- 已保存的 contact 关系
+- contact link 记录
+- contact chat 历史
+- inbox share 记录
+- 已接收的 share 材料
+
+这也是为什么 `contact` 属于 service，而不是一个一次性 tool。
+
+## 为什么 SDK 使用者也要理解它
+
+虽然 `contact` 通常不是第一个会被拿来当显式构造器示例的 service，但它是理解“持久关系型 service”最好的参考之一。
+
+它展示了一个内建 service 如何定义：
+
+- trust establishment
+- 长期通信通道
+- 可持久化的 transfer state
+- 围绕 reachability 的 service 专属规则
+
+## 核心 runtime 语义
+
+### `link` 和 `approve`
+
+这两个 action 用来建立两个 agent 之间的可信关系。
+
+最终关系可能是：
+
+- outbound-only
+- inbound-only
+- bidirectional
+
+### `chat`
+
+每个 contact 固定对应一条长期 chat history，用户不需要自己管理 session ID。
+
+### `share`、`inbox` 和 `receive`
+
+分享过来的内容不会自动执行，而是会先落到结构化 inbox，确认接收后再进入 received 区域。
+
+## 最好的理解方式
+
+可以把 `contact` 理解成 agent 的协作运行时。
+
+它不只是“发消息”而已，它同时包含：
+
+- 身份与信任
+- 可达性
+- 持久对话
+- 持久交接
+
+## 相关文档
+
+- [内建 Service 总览](/zh/agent-sdk-docs/services/builtins/overview)
+- [Service 和 Tool 的区别](/zh/agent-sdk-docs/services/service-vs-tools)
+- [`city contact`](/zh/docs/commands/service/contact)

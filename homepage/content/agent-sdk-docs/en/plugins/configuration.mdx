@@ -1,0 +1,121 @@
+---
+title: Plugin Configuration
+description: Understand city-level plugin enablement, project-level plugins config, and the role of setup and usage
+---
+
+# Plugin Configuration
+
+Plugin configuration is easiest to understand in three layers:
+
+- city-level enablement
+- project-level `plugins.*`
+- Console-facing `setup` and `usage` protocols
+
+## 1. City-level enablement
+
+Whether a plugin is enabled is not primarily stored in project `downcity.json`.
+
+It is a city-level fact.
+
+That means:
+
+- whether a plugin is switched on is a platform-level lifecycle decision
+- static plugin catalog views read city-level state first
+- `auth` is a special exception because it is always on
+
+## 2. Project-level `plugins.*`
+
+Runtime options for how an agent uses a plugin usually live in:
+
+```json
+{
+  "plugins": {
+    "web": {
+      "provider": "web-access",
+      "injectPrompt": true
+    }
+  }
+}
+```
+
+This expresses:
+
+- how the current agent uses the plugin
+
+not:
+
+- whether the plugin exists or is globally enabled
+
+## 3. `config.scope`
+
+Plugin config definitions support:
+
+- `global`
+- `project`
+
+This describes config scope. It does not describe plugin lifecycle enablement by itself.
+
+Many current built-in plugins keep agent-side runtime options at project scope.
+
+## What `setup` and `usage` mean
+
+### `setup`
+
+`setup` is about:
+
+- install
+- repair
+- dependency preparation
+
+Typical examples:
+
+- install a provider
+- download a model
+- install Python dependencies
+
+### `usage`
+
+`usage` is about:
+
+- how the current agent should use that plugin
+- which behavior choices should be saved
+
+Typical examples:
+
+- default provider
+- whether to inject prompts
+- default model
+- default format, language, or speed
+
+## Why `setup` and `usage` are separate
+
+Because they solve different problems:
+
+- `setup` makes the capability exist
+- `usage` controls how the current agent uses it
+
+That split lets Console present clearer surfaces for:
+
+- `Install / Repair`
+- `Options`
+
+## How plugin config is usually persisted
+
+Project-side plugin settings are generally written back into:
+
+- `downcity.json.plugins.*`
+
+The persistence path writes the `plugins` section instead of dumping the entire merged runtime state back into the project file.
+
+## Recommended mental model
+
+Remember these three lines:
+
+- enablement lives at city scope
+- runtime options often live at project scope
+- `setup` and `usage` are UI protocol layers
+
+## Related docs
+
+- [Plugin overview](/en/agent-sdk-docs/plugins/overview)
+- [Plugin availability](/en/agent-sdk-docs/plugins/plugin-availability)

@@ -1,0 +1,300 @@
+---
+title: web Plugin
+description: A detailed guide to the web built-in plugin, how it selects providers, installs dependencies, switches web modes, injects system prompts, and when to use web-access or agent-browser
+---
+
+# web Plugin
+
+`web` is the most complete external-capability adapter plugin in the current built-in set.
+
+It does not directly implement search or browser automation itself. Instead, it is responsible for connecting those external capabilities into the agent system in a stable way.
+
+It currently supports two providers:
+
+- `web-access`
+- `agent-browser`
+
+## What it does
+
+`web` is mainly responsible for:
+
+1. choosing which web provider the current project should use by default
+2. checking whether that provider is installed and usable
+3. triggering installation when needed
+4. injecting provider-specific usage constraints into the system prompt
+5. enabling or disabling the plugin at the city lifecycle level
+
+So its role is much closer to a unified web capability entry point than to a web executor itself.
+
+## What is the difference between `web-access` and `agent-browser`
+
+### `web-access`
+
+Best for:
+
+- web search
+- fact-checking
+- strategy-style web tasks
+
+If your need looks like “research, collect public information, search the web,” this is usually the default-first choice.
+
+### `agent-browser`
+
+Best for:
+
+- dynamic pages
+- logged-in pages
+- real browser interaction
+
+If your need looks more like “open a page, click, type, handle a complex frontend,” this is usually the better provider.
+
+## Which plugin capabilities it uses
+
+`web` uses:
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `system`
+
+It does not use hooks, and it does not use runtime HTTP.
+
+That tells you its center of gravity is:
+
+- provider configuration
+- enablement management
+- runtime prompt adaptation
+
+## Why it is such a good full-plugin reference
+
+Because `web` covers most of what a productized plugin often needs:
+
+- UI can begin with `setup`
+- day-to-day changes flow through `usage`
+- control planes can inspect `status` and `doctor`
+- CLI and SDK can invoke actions directly
+- the system prompt automatically gains provider guidance
+
+## Typical scenarios
+
+### Scenario 1: the project mainly does research
+
+Set the provider to `web-access`.
+
+That way the system prompt knows the agent should follow a search and web-skill path instead of assuming browser automation.
+
+### Scenario 2: the project must operate a logged-in dynamic admin app
+
+Switch to `agent-browser`.
+
+In this kind of task, it is not enough to “retrieve page content.” You usually need a real browser context.
+
+### Scenario 3: the project mixes research tasks and browser automation tasks
+
+The most common approach is:
+
+- keep `web-access` as the default provider
+- explicitly switch to `agent-browser` when real browser work is needed
+
+## How to register it in the SDK
+
+```ts
+import { Agent, webPlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "research-agent",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [webPlugin],
+});
+```
+
+## Key config fields
+
+| Config field | What it does | Notes |
+| --- | --- | --- |
+| `provider` | active provider | `web-access` or `agent-browser` |
+| `injectPrompt` | whether to inject provider guidance | recommended to keep on in most cases |
+| `repositoryUrl` | source repository record | mainly installation metadata |
+| `sourceVersion` | source version record | mainly installation metadata |
+| `browserCommand` | browser command name | only relevant for `agent-browser` |
+| `installScope` | installation location | `user` or `project` |
+
+## Main actions
+
+| Action | What it does | When to use it |
+| --- | --- | --- |
+| `status` | inspect config and current readiness | understand the environment first |
+| `providers` | list supported providers | build a picker or control surface |
+| `configure` | write config | update provider or prompt strategy |
+| `install` | install the current provider dependency | first-time setup |
+| `on` | enable the plugin | turn it on at city lifecycle level |
+| `off` | disable the plugin | turn it off at city lifecycle level |
+| `use` | switch the active provider | change web mode during project work |
+| `doctor` | diagnose dependency readiness | when you suspect provider setup problems |
+
+## Scenario-driven usage examples
+
+### Check current status
+
+```ts
+const status = await agent.plugins.runAction({
+  plugin: "web",
+  action: "status",
+});
+```
+
+This usually tells you:
+
+- current plugin config
+- current availability
+- readiness details for the active provider
+
+### List all providers
+
+```ts
+const providers = await agent.plugins.runAction({
+  plugin: "web",
+  action: "providers",
+});
+```
+
+### Install a provider
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "web",
+  action: "install",
+  payload: {
+    provider: "web-access",
+    installScope: "user",
+    injectPrompt: true,
+  },
+});
+```
+
+### Switch the active provider
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "web",
+  action: "use",
+  payload: {
+    provider: "agent-browser",
+    browserCommand: "agent-browser",
+    injectPrompt: true,
+  },
+});
+```
+
+### Update normal configuration
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "web",
+  action: "configure",
+  payload: {
+    provider: "web-access",
+    injectPrompt: true,
+  },
+});
+```
+
+### Run dependency diagnosis
+
+```ts
+const diagnosis = await agent.plugins.runAction({
+  plugin: "web",
+  action: "doctor",
+});
+```
+
+## What `setup` and `usage` each mean here
+
+`web` is one of the clearest built-in examples for understanding this distinction.
+
+### `setup`
+
+It is more about first-time connection:
+
+- choose a provider
+- choose installation scope
+- decide whether prompt injection should be on
+
+### `usage`
+
+It is more about day-to-day configuration after the capability already exists:
+
+- which provider is active now
+- whether guidance should still be injected
+- which browser command should be used
+
+A simple mental model is:
+
+- `setup` solves “connect it first”
+- `usage` solves “now control how it is used”
+
+## Why `system` matters so much here
+
+`web` injects provider-specific guidance into the system prompt.
+
+That matters because “the agent technically has web capability” is not the same thing as “the agent knows how it should use that capability.”
+
+For example:
+
+- `web-access` is more search and fact-gathering oriented
+- `agent-browser` is more real-browser operation oriented
+
+Without prompt adaptation, the agent can easily choose the wrong operating path.
+
+## Its boundary relative to services
+
+`web` does not manage a long-lived search engine instance or browser executor instance by itself.
+
+It is closer to:
+
+- a provider selector
+- an installation entry point
+- a prompt adaptation layer
+
+If you want to understand the split between “plugin connects capability” and “service or external tool executes capability,” `web` is one of the best examples.
+
+## Important boundaries
+
+### It does not directly perform web search itself
+
+The actual execution of web search or browser interaction lives outside this plugin.
+
+### `on/off` is city-level lifecycle, not just project config
+
+That means:
+
+- `configure` changes how the plugin should be used
+- `on/off` changes whether the platform lifecycle considers the plugin enabled at all
+
+Those are two different layers.
+
+### Switching provider does not magically migrate all runtime behavior unless guidance changes too
+
+When you switch from `web-access` to `agent-browser`, the system prompt needs to change accordingly.
+
+That is exactly why keeping `injectPrompt` enabled is a strong default.
+
+## When to use it as a reference
+
+Use `web` as a reference for:
+
+- provider adapter plugins
+- `setup` and `usage` dual-surface design
+- availability plus diagnosis patterns
+- system prompt behavior that changes with config
+
+## Related docs
+
+- [Built-in Plugin Overview](/en/agent-sdk-docs/plugins/builtins/overview)
+- [Plugin configuration](/en/agent-sdk-docs/plugins/configuration)
+- [Plugin system](/en/agent-sdk-docs/plugins/plugin-system)
+- [Plugin actions](/en/agent-sdk-docs/plugins/plugin-actions)
+- [Plugin vs service](/en/agent-sdk-docs/plugins/plugin-vs-service)

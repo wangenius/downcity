@@ -76,7 +76,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   return {
     path: page.path,
-    title: page.data.title ?? "Documentation",
+    title: page.data.title ?? "City SDK",
     description: page.data.description ?? "",
   };
 }
@@ -85,8 +85,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
 
   const baseUrl = "https://downcity.ai";
-  const title = `${loaderData.title} — Downcity Docs`;
-  const description = loaderData.description || "Downcity Documentation";
+  const title = `${loaderData.title} — Downcity City SDK`;
+  const description = loaderData.description || "Downcity City SDK documentation";
   const url = `${baseUrl}${loaderData.path}`;
 
   return [
@@ -100,7 +100,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     },
     {
       name: "keywords",
-      content: "Downcity, documentation, AI agent, GitHub, tutorial, guide",
+      content: "Downcity, city docs, runtime, control plane, CLI, guide",
     },
     {
       property: "og:title",

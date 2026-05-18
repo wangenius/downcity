@@ -1,85 +1,97 @@
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { marketingTheme } from "@/lib/marketing-theme";
 
 const PAGE = {
   zh: {
-    title: "Product · Downcity SDK",
-    subtitle: "把 Agent Runtime 能力接入你的业务流程，让自动化从命令行走向产品级集成。",
+    title: "Product · City SDK",
+    subtitle: "把 city runtime、CLI、control plane 与能力平台接入你的运行体系，让仓库、Agent 与运维边界保持统一。",
+    docsCtaLabel: "查看 City SDK 文档",
+    docsCtaHint: "Quick Start、CLI、配置、Service、Operations 都在主 docs 中。",
     highlights: [
       {
-        title: "把 Runtime 接进现有系统",
-        description: "通过 Downcity 的运行时与 API 接口，把 Agent 纳入你已有的业务链路。",
+        title: "统一 city runtime 与控制平面",
+        description: "围绕 CLI、daemon、Console 网关和平台能力组织同一套运行逻辑，而不是把执行链路拆散到多个入口。",
       },
       {
-        title: "统一任务与服务能力",
-        description: "围绕 chat、skill、task、memory 组织能力，方便你按场景组合。",
+        title: "以仓库为边界组织运行",
+        description: "让配置、命令、Service、任务与状态都围绕 city 的 repo-native 结构展开，降低运维与排障成本。",
       },
       {
-        title: "从试验到生产一致",
-        description: "同一套能力既能本地验证，也能迁移到团队协作环境持续运行。",
+        title: "从本地到团队部署一致",
+        description: "用同一套 city 入口承接本地验证、Console 暴露、渠道接入与生产运行，不必维护多套操作面。",
       },
     ],
     scenesTitle: "典型场景",
     scenes: [
-      "业务系统接入：在你自己的产品里触发 Agent 执行与回传。",
-      "流程自动化：把周期性任务交给 runtime 持续执行。",
-      "团队协作：统一入口管理模型、任务与消息通道。",
+      "团队运行入口：统一启动 city、Console、channel 和 service 运行态。",
+      "CLI 驱动运维：把 agent 创建、启动、重载、状态检查都收束到一套命令面。",
+      "平台化接入：在你自己的部署体系里承接模型、任务、联系人、记忆与 shell 能力。",
     ],
     factsTitle: "事实对齐",
     facts: [
-      "核心源码目录：packages/downcity/",
-      "安装命令：npm i -g downcity",
-      "README 快速流程：city start → city agent create . → city agent start",
+      "包名：@downcity/city",
+      "核心源码目录：packages/city/",
+      "CLI 命令：city / downcity",
     ],
   },
   en: {
-    title: "Product · Downcity SDK",
+    title: "Product · City SDK",
     subtitle:
-      "Integrate agent runtime capabilities into your business workflows, beyond standalone CLI usage.",
+      "Integrate the city runtime, CLI, control plane, and capability platform into one operating surface for your workflows.",
+    docsCtaLabel: "Open City SDK Docs",
+    docsCtaHint: "Quick start, CLI, configuration, services, and operations live in the main docs.",
     highlights: [
       {
-        title: "Embed runtime into existing systems",
-        description: "Use Downcity runtime and APIs to bring agent execution into your own product loops.",
+        title: "Unify runtime and control plane",
+        description: "Keep CLI, daemon, Console gateway, and platform capability flow inside one city runtime model instead of splitting operations across separate surfaces.",
       },
       {
-        title: "Unified service capabilities",
-        description: "Compose scenarios around chat, skill, task, and memory services.",
+        title: "Organize operations around the repo",
+        description: "Let configuration, commands, services, tasks, and state all follow one repo-native city structure.",
       },
       {
-        title: "From local trials to team operation",
-        description: "Use the same capability model from local validation to collaborative production workflows.",
+        title: "Keep local and team deployment aligned",
+        description: "Use the same city entry surface for local validation, Console exposure, channel access, and production operation.",
       },
     ],
     scenesTitle: "Typical Scenarios",
     scenes: [
-      "Product integration: trigger and consume agent runs from your app.",
-      "Workflow automation: run recurring tasks with runtime scheduling.",
-      "Team operation: unify model, task, and channel operations.",
+      "Team runtime entry: start city, Console, channels, and services from one operating surface.",
+      "CLI-driven operations: create, start, reload, and inspect agents through one command layer.",
+      "Platform integration: host model, task, contact, memory, and shell capabilities inside your own deployment boundary.",
     ],
     factsTitle: "Facts",
     facts: [
-      "Core source directory: packages/downcity/",
-      "Install command: npm i -g downcity",
-      "README quick flow: city start -> city agent create . -> city agent start",
+      "Package name: @downcity/city",
+      "Core source directory: packages/city/",
+      "CLI commands: city / downcity",
     ],
   },
 } as const;
 
 /**
- * Product Downcity SDK 页面。
+ * Product City SDK 页面。
  * 说明：
- * 1. 用用户集成场景说明 SDK 价值，而非堆叠底层实现。
- * 2. 事实项直接锚定 packages/downcity 与 README 的现有内容。
+ * 1. 这里聚焦 city runtime、CLI、control plane 这一条产品线。
+ * 2. Agent SDK 独立到 `/product/agent-sdk`，避免两种 SDK 语义混在一起。
  */
 export default function ProductSdkPage() {
   const { i18n } = useTranslation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
   const content = isZh ? PAGE.zh : PAGE.en;
+  const docsPath = isZh ? "/zh/docs" : "/en/docs";
 
   return (
     <div className={marketingTheme.pageNarrow}>
       <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
       <p className={`mt-4 ${marketingTheme.lead}`}>{content.subtitle}</p>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Link to={docsPath} className={marketingTheme.primaryButton}>
+          {content.docsCtaLabel}
+        </Link>
+        <p className="text-sm leading-7 text-muted-foreground">{content.docsCtaHint}</p>
+      </div>
 
       <div className="mt-8 grid gap-4 md:grid-cols-3">
         {content.highlights.map((item) => (

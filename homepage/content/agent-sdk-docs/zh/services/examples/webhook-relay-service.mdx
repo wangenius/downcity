@@ -1,0 +1,118 @@
+---
+title: WebhookRelayService 场景
+description: 用一个长期 worker 场景说明什么样的能力明显更适合 service
+---
+
+# WebhookRelayService 场景
+
+## 场景
+
+你有一个内部系统，会不断把事件推到本地队列里。  
+你希望 agent 进程长期持有一个 relay worker：
+
+- 持续读取事件
+- 做轻量清洗
+- 把结果分发给你的应用其他部分
+
+这时它已经非常明显是 service，而不是 plugin 或 tool。
+
+## 为什么不是 tool
+
+因为它需要：
+
+- 长期运行
+- 后台循环
+- 内存队列
+- 启停边界
+
+## 一个简化示例
+
+```ts
+import {
+  Agent,
+  BaseService,
+  type AgentContext,
+  type ServiceActions,
+} from "@downcity/agent";
+
+class WebhookRelayService extends BaseService {
+  readonly name = "webhook_relay";
+
+  private timer: NodeJS.Timeout | null = null;
+  private readonly events: Array<{ id: string; body: string }> = [];
+
+  readonly lifecycle = {
+    start: async (_context: AgentContext) => {
+      if (this.timer) return;
+      this.timer = setInterval(() => {
+        const event = this.events.shift();
+        if (!event) return;
+        console.log("relay event", event.id, event.body);
+      }, 500);
+    },
+    stop: async () => {
+      if (!this.timer) return;
+      clearInterval(this.timer);
+      this.timer = null;
+    },
+  };
+
+  enqueue(body: string) {
+    this.events.push({
+      id: `evt-${Date.now()}`,
+      body: String(body || ""),
+    });
+  }
+
+  readonly actions: ServiceActions = {
+    status: {
+      execute: async () => {
+        return {
+          success: true,
+          data: {
+            running: Boolean(this.timer),
+            queued: this.events.length,
+          },
+        };
+      },
+    },
+  };
+}
+
+const relayService = new WebhookRelayService();
+
+const agent = new Agent({
+  id: "relay-agent",
+  path: "/path/to/project",
+  tools: {},
+  services: [relayService],
+});
+
+await agent.rpc.start();
+relayService.enqueue("build finished");
+```
+
+## 这个例子的重点
+
+### 1. 这类能力真正关键的是“常驻运行”
+
+不是某一个 action 本身。
+
+### 2. worker 应该归属于 service 实例
+
+不要放到模块级单例里，否则多个 agent 会互相污染。
+
+### 3. app 代码常常会直接持有 service 引用
+
+比如这里直接：
+
+```ts
+relayService.enqueue("build finished");
+```
+
+这在当前 SDK 场景里比“假装所有东西都先转成 action 再调”更自然。
+
+## 相关文档
+
+- [Service 生命周期](/zh/agent-sdk-docs/services/service-lifecycle)
+- [Service 和 Tool 的区别](/zh/agent-sdk-docs/services/service-vs-tools)

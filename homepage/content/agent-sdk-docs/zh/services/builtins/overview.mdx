@@ -1,0 +1,104 @@
+---
+title: 内建 Service 总览
+description: 从 SDK 视角梳理 Downcity runtime 已注册的内建 service，以及它们各自代表的 service 形态
+---
+
+# 内建 Service 总览
+
+当前 Downcity runtime 注册表里有 5 个内建 service：
+
+- `chat`
+- `contact`
+- `task`
+- `memory`
+- `shell`
+
+这份列表来自代码里的 runtime 单一事实源，不是文档层自己整理出来的概念清单。
+
+## 从 SDK 视角应该怎么读
+
+这 5 个内建 service，并不都是同一种 public API 形态。
+
+从 SDK 视角看，可以先分成两组：
+
+### 明确偏 SDK 显式装配的入口
+
+- `ChatService`
+
+这是今天最直接、最像“构造后挂到本地 Agent 上”的内建 service 入口。
+
+### 更偏 runtime 形态，但对 SDK 理解仍然重要的内建 service
+
+- `contact`
+- `task`
+- `memory`
+- `shell`
+
+它们已经是完整的 runtime service，具有长期状态、生命周期、actions 和 system 语义。即使它们不是大多数 SDK 用户的第一个构造器示例，它们仍然是理解 service 模型最好的参考。
+
+## 为什么这 5 个都属于 service
+
+它们都持有以下能力中的一部分或多部分：
+
+- 长期运行态状态
+- service 生命周期
+- 稳定的 action surface
+- service 级 prompt / system 行为
+
+这也是它们应该属于 `services`，而不是属于一次性 tool 的原因。
+
+## 这 5 个 service 如何分工
+
+| Service | 主要职责 | 长期持有内容 | 最适合的理解方式 |
+| --- | --- | --- | --- |
+| `chat` | 聊天入口与回复分发 | channel state、queue worker、queue store | 渠道运行时 |
+| `contact` | agent 到 agent 的可达关系与交换 | contact 图、长期 contact chat、inbox/received share | 协作运行时 |
+| `task` | 调度与后台执行 | cron engine、scheduler reload 边界 | 后台自动化运行时 |
+| `memory` | 持久记忆检索与写入 | memory runtime state 与索引生命周期 | 记忆领域运行时 |
+| `shell` | 短命令与长命令执行 | shell session map 与 shell runtime 绑定 | 执行运行时 |
+
+## 最推荐的阅读顺序
+
+### 1. 先看 `chat`
+
+`chat` 最容易建立“service 会长期持有运行态对象”的直觉。
+
+如果你还想看更显式的 SDK 构造器用法，可以把 [ChatService](/zh/agent-sdk-docs/services/chat-service) 和这页一起看。
+
+### 2. 再看 `shell`
+
+`shell` 会把 service 边界表现得非常清楚：
+
+- session ownership 很重要
+- lifecycle 很重要
+- 一次性调用和长期状态调用都存在
+
+它是“为什么某个能力不能只做成函数”的最好例子之一。
+
+### 3. 然后看 `memory`
+
+`memory` 展示的是“领域 service”形态，它同时拥有 prompt 语义、索引生命周期和检索写入动作。
+
+### 4. 再看 `task`
+
+`task` 是后台 scheduler 的代表。如果你需要理解一个 service 如何跨 session 持续运转、如何拥有重复性工作，它是最好的参考之一。
+
+### 5. 最后看 `contact`
+
+`contact` 最偏协作运行时。它不一定是你第一个尝试的构造器，但它对“持久关系、双向可达、agent 间交换”这类 service 设计非常有参考价值。
+
+## 不同目标先看哪一页
+
+- 想理解 SDK 聊天接入：看 [chat](/zh/agent-sdk-docs/services/builtins/chat)
+- 想理解 agent 协作：看 [contact](/zh/agent-sdk-docs/services/builtins/contact)
+- 想理解后台调度：看 [task](/zh/agent-sdk-docs/services/builtins/task)
+- 想理解持久检索与记忆：看 [memory](/zh/agent-sdk-docs/services/builtins/memory)
+- 想理解执行会话：看 [shell](/zh/agent-sdk-docs/services/builtins/shell)
+
+## 相关文档
+
+- [内建 Services 入口](/zh/agent-sdk-docs/services/built-in-services)
+- [ChatService](/zh/agent-sdk-docs/services/chat-service)
+- [自定义 Service](/zh/agent-sdk-docs/services/custom-service)
+- [Service 生命周期](/zh/agent-sdk-docs/services/service-lifecycle)
+- [Service 和 Tool 的区别](/zh/agent-sdk-docs/services/service-vs-tools)

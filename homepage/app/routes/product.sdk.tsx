@@ -3,7 +3,7 @@ import { marketingTheme } from "@/lib/marketing-theme";
 
 const PAGE = {
   zh: {
-    title: "Product · Downcity SDK",
+    title: "Product · Agent SDK",
     subtitle: "把 Agent Runtime 能力接入你的业务流程，让自动化从命令行走向产品级集成。",
     highlights: [
       {
@@ -33,7 +33,7 @@ const PAGE = {
     ],
   },
   en: {
-    title: "Product · Downcity SDK",
+    title: "Product · Agent SDK",
     subtitle:
       "Integrate agent runtime capabilities into your business workflows, beyond standalone CLI usage.",
     highlights: [
@@ -66,7 +66,7 @@ const PAGE = {
 } as const;
 
 /**
- * Product Downcity SDK 页面。
+ * Product Agent SDK 页面。
  * 说明：
  * 1. 用用户集成场景说明 SDK 价值，而非堆叠底层实现。
  * 2. 事实项直接锚定 packages/downcity 与 README 的现有内容。

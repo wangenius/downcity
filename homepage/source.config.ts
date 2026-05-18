@@ -21,6 +21,10 @@ export const uiSdkDocs = defineDocs({
   dir: "content/ui-sdk-docs",
 });
 
+export const agentSdkDocs = defineDocs({
+  dir: "content/agent-sdk-docs",
+});
+
 export default defineConfig({
   mdxOptions: {
     remarkPlugins: (v) => [

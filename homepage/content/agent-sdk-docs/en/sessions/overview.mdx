@@ -1,0 +1,48 @@
+---
+title: Session Overview
+description: Understand the central role of Session in the Agent SDK and the most common usage sequence
+---
+
+# Session Overview
+
+In the SDK, the thing that actually executes work is the session.
+
+## Most common usage order
+
+### Local Agent
+
+```ts
+const session = await agent.session();
+await session.set({ model });
+const result = await session.run({ query: "Continue" });
+```
+
+### RemoteAgent
+
+```ts
+const session = await remoteAgent.session();
+const result = await session.run({ query: "Continue" });
+```
+
+## Methods you will use most often
+
+- `set`
+- `run`
+- `stream`
+- `history`
+- `fork`
+
+If you remember only one thing, remember this: the real working object in the SDK is not `Agent` itself, but the `session`.
+
+## One important difference
+
+- local sessions need `set({ model })` first
+- remote sessions cannot currently receive a model instance from the client
+
+So the biggest difference between local and remote usage is not `run()`. It is where the model is held and configured.
+
+## Continue reading
+
+- [set model](/en/agent-sdk-docs/sessions/set-model)
+- [run](/en/agent-sdk-docs/sessions/run)
+- [stream](/en/agent-sdk-docs/sessions/stream)

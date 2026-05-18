@@ -1,0 +1,82 @@
+---
+title: chat Built-in Service
+description: Explain what the built-in chat service owns, why it is a service, and how it relates to ChatService in the Agent SDK
+---
+
+# chat Built-in Service
+
+`chat` is the built-in service responsible for chat-channel runtime ownership.
+
+In the current runtime, it is the service behind Telegram, Feishu, and QQ channel ingress and reply dispatch.
+
+## What it owns
+
+From the current implementation, `chat` owns long-lived objects such as:
+
+- `channelState`
+- `queueWorker`
+- `queueStore`
+
+These objects are instance state, not just call-time parameters.
+
+## Why this is a service instead of a tool
+
+`chat` is not a single “send a message” function.
+
+It has to keep:
+
+- channel connections alive
+- queue state alive
+- reply dispatch behavior stable across multiple sessions
+
+That makes it a textbook service.
+
+## How it maps to the public SDK
+
+This is the clearest built-in service that already has an explicit SDK constructor path:
+
+```ts
+import { Agent, ChatService } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  services: [
+    new ChatService({
+      telegram: {
+        botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      },
+    }),
+  ],
+});
+```
+
+So there are two useful ways to read the docs:
+
+- this page explains the built-in runtime role of `chat`
+- [ChatService](/en/agent-sdk-docs/services/chat-service) explains the explicit SDK constructor surface
+
+## Best use cases
+
+Use the built-in `chat` mental model when you need:
+
+- channel bots owned by the agent process
+- a stable queue worker boundary
+- one service instance shared across many sessions
+- service-level system guidance for chat behavior
+
+## Startup boundary
+
+In the current SDK, the most stable automatic startup boundary is still:
+
+- `agent.http.start()`
+- `agent.rpc.start()`
+
+That is where service lifecycle start is most intentionally triggered.
+
+## Related docs
+
+- [ChatService](/en/agent-sdk-docs/services/chat-service)
+- [Built-in service overview](/en/agent-sdk-docs/services/builtins/overview)
+- [Service lifecycle](/en/agent-sdk-docs/services/service-lifecycle)

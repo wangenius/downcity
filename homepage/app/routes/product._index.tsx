@@ -25,8 +25,8 @@ const PAGE = {
       },
       {
         id: "sdk",
-        title: "Downcity SDK",
-        desc: "把 runtime 能力接入你自己的产品流程、服务接口与业务系统。",
+        title: "City SDK",
+        desc: "把 city runtime 能力接入你自己的产品流程、服务接口与业务系统。",
         source: "packages/downcity/",
       },
       {
@@ -48,7 +48,7 @@ const PAGE = {
     badge: "Product",
     title: "Downcity is not one isolated tool. It is a composed operating surface.",
     subtitle:
-      "The same runtime logic is distributed across browser control room, web entry, SDK, and UI layer. You are choosing operating contexts, not disconnected products.",
+      "The same runtime logic is distributed across browser control room, web entry, City SDK, and UI layer. You are choosing operating contexts, not disconnected products.",
     cards: [
       {
         id: "console-ui",
@@ -64,8 +64,8 @@ const PAGE = {
       },
       {
         id: "sdk",
-        title: "Downcity SDK",
-        desc: "Embed runtime capabilities into your own product flow, service layer, and business system.",
+        title: "City SDK",
+        desc: "Embed city runtime capabilities into your own product flow, service layer, and business system.",
         source: "packages/downcity/",
       },
       {

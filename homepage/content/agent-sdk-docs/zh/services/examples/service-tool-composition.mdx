@@ -1,0 +1,75 @@
+---
+title: Service 和 Tool 协作场景
+description: 用一个真实组合场景说明 service 持有状态、tool 只暴露调用面的典型做法
+---
+
+# Service 和 Tool 协作场景
+
+## 场景
+
+你有一个 `SearchIndexService`，它长期持有：
+
+- 已构建的索引
+- 最近搜索结果缓存
+
+但你又希望模型在对话里通过 tool 形式触发“搜索文档”。
+
+这时很常见的设计是：
+
+- service 持有长期状态
+- tool 只做薄门面
+
+## 示例思路
+
+```ts
+class SearchIndexService extends BaseService {
+  readonly name = "search_index";
+  private readonly documents = new Map<string, string>();
+
+  indexDocument(id: string, text: string) {
+    this.documents.set(id, text);
+  }
+
+  search(query: string) {
+    const clean = String(query || "").trim().toLowerCase();
+    return [...this.documents.entries()]
+      .filter(([, text]) => text.toLowerCase().includes(clean))
+      .map(([id, text]) => ({ id, text }));
+  }
+
+  readonly actions = {};
+}
+```
+
+tool 则只是：
+
+```ts
+const searchTool = {
+  description: "Search indexed project documents",
+  inputSchema: {},
+  execute: async ({ query }: { query: string }) => {
+    return searchIndexService.search(query);
+  },
+};
+```
+
+## 为什么这种分层常见
+
+因为两者职责不同：
+
+- service 解决“状态归谁”
+- tool 解决“模型怎么调用”
+
+## 什么时候不需要这么拆
+
+如果你的能力：
+
+- 没有长期状态
+- 只是一轮一次性查询
+
+那通常直接做 tool 就够了。
+
+## 相关文档
+
+- [NotesService 场景](/zh/agent-sdk-docs/services/examples/notes-service)
+- [Service 和 Tool 的区别](/zh/agent-sdk-docs/services/service-vs-tools)

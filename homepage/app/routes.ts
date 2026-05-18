@@ -24,6 +24,7 @@ export default [
     route("console-ui", "routes/product/console-ui.tsx"),
     route("chrome-extension", "routes/product/chrome-extension.tsx"),
     route("sdk", "routes/product/sdk.tsx"),
+    route("agent-sdk", "routes/product/agent-sdk.tsx"),
     route("ui-sdk", "routes/product/ui-sdk.tsx"),
   ]),
   route(
@@ -40,6 +41,9 @@ export default [
       }),
       route("sdk", "routes/product/sdk.tsx", {
         id: "routes/zh/product.sdk",
+      }),
+      route("agent-sdk", "routes/product/agent-sdk.tsx", {
+        id: "routes/zh/product.agent-sdk",
       }),
       route("ui-sdk", "routes/product/ui-sdk.tsx", {
         id: "routes/zh/product.ui-sdk",
@@ -108,6 +112,19 @@ export default [
     route("zh/devdocs/*", "routes/devdocs/page.tsx", { id: "devdocs-zh" }),
   ]),
 
+  // Agent SDK docs routes with layout
+  layout("routes/agent-sdk-docs/layout.tsx", [
+    route("en/agent-sdk-docs/*", "routes/agent-sdk-docs/page.tsx", {
+      id: "agent-sdk-docs-en",
+    }),
+    route("agent-sdk-docs/*", "routes/agent-sdk-docs/redirect.tsx", {
+      id: "agent-sdk-docs-redirect",
+    }),
+    route("zh/agent-sdk-docs/*", "routes/agent-sdk-docs/page.tsx", {
+      id: "agent-sdk-docs-zh",
+    }),
+  ]),
+
   // UI SDK docs routes with layout
   layout("routes/ui-sdk-docs/layout.tsx", [
     route("en/ui-sdk-docs/*", "routes/ui-sdk-docs/page.tsx", { id: "ui-sdk-docs-en" }),
@@ -120,5 +137,6 @@ export default [
   // API routes
   route("api/search", "routes/docs/search.ts"),
   route("api/devdocs/search", "routes/devdocs/search.ts"),
+  route("api/agent-sdk-docs/search", "routes/agent-sdk-docs/search.ts"),
   route("api/ui-sdk-docs/search", "routes/ui-sdk-docs/search.ts"),
 ] satisfies RouteConfig;

@@ -1,0 +1,73 @@
+---
+title: Plugin System 文本
+description: 说明 plugin.system(context) 的作用、什么时候会被注入，以及它和 service.system 的区别
+---
+
+# Plugin System 文本
+
+plugin 可以实现：
+
+```ts
+system(context) {
+  return "plugin-level system text";
+}
+```
+
+## 它的作用
+
+`plugin.system()` 表达的是：
+
+- 这个 plugin 希望向 agent 运行时补充一段 system 文本
+
+典型用途：
+
+- 注入 provider 使用规则
+- 注入某类能力的操作约束
+- 告诉 agent 当前有哪些外部能力已经准备好
+
+## 它和 `service.system()` 的区别
+
+这是一个非常重要的边界。
+
+### plugin.system
+
+在完整 runtime 的系统提示词收集链路里，plugin system 是正式注入的一层。
+
+当前 runtime 会：
+
+- 遍历全部内建 plugin
+- 只对启用的 plugin 取 `system()`
+- 单个 plugin 失败时 fail-open，不阻断主链路
+
+### service.system
+
+service 也有 `system()`，但你已经在 SDK services 文档里看到：
+
+- SDK local session 主路径不会自动把 `service.system()` 注入进去
+
+所以在当前产品语义里：
+
+- plugin.system 更像正式的运行时增强注入层
+- service.system 更像 service 契约的一部分，但不等于当前 SDK local prompt 的直接入口
+
+## 什么时候适合写 plugin.system
+
+这些内容更适合放到 plugin.system：
+
+- 某个 plugin 的使用方法论
+- 当前 provider 的工作约束
+- 已安装能力的统一说明
+
+## 哪些内建 plugin 典型用到了它
+
+- `skill`
+- `web`
+- `asr`
+- `tts`
+
+它们都非常适合注入“能力说明型 system 文本”。
+
+## 相关文档
+
+- [当前有哪些内建 Plugin](/zh/agent-sdk-docs/plugins/built-in-plugins)
+- [Plugin 和 Service 的区别](/zh/agent-sdk-docs/plugins/plugin-vs-service)

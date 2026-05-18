@@ -1,0 +1,121 @@
+---
+title: Plugin 配置
+description: 说明 plugin 的 city 级启用态、project 级 plugins 配置块，以及 setup 和 usage 的定位
+---
+
+# Plugin 配置
+
+plugin 配置要分成 3 层理解：
+
+- city 级启用态
+- project 级 `plugins.*`
+- Console 的 `setup / usage` 协议
+
+## 1. city 级启用态
+
+plugin 是否启用，不属于项目 `downcity.json`。
+
+它属于 city 级事实。
+
+这意味着：
+
+- 某个 plugin 是否开启，是平台级决定
+- 静态 catalog 视图优先读 city 配置
+- `auth` 是例外，它默认始终启用
+
+## 2. project 级 `plugins.*`
+
+plugin 的运行参数通常落到项目：
+
+```json
+{
+  "plugins": {
+    "web": {
+      "provider": "web-access",
+      "injectPrompt": true
+    }
+  }
+}
+```
+
+这类配置表达的是：
+
+- 当前 agent 怎么使用这个 plugin
+
+而不是：
+
+- 这个 plugin 在整个平台里是否已经打开
+
+## 3. `config.scope`
+
+plugin 类型里支持：
+
+- `global`
+- `project`
+
+这表示的是 plugin 配置定义的作用域，而不是 plugin lifecycle 的启停语义。
+
+当前常见内建 plugin，很多都把运行参数放在 `project`。
+
+## `setup` 和 `usage` 是什么
+
+### `setup`
+
+`setup` 面向：
+
+- 安装
+- 修复
+- 初次依赖准备
+
+典型内容：
+
+- 安装 provider
+- 下载模型
+- 安装 Python 依赖
+
+### `usage`
+
+`usage` 面向：
+
+- 当前 agent 如何使用这个 plugin
+- 行为选项怎么保存
+
+典型内容：
+
+- 默认 provider
+- 是否 inject prompt
+- 默认模型
+- 默认格式 / 语言 / 语速
+
+## 为什么要分 `setup` 和 `usage`
+
+因为这两件事不是一回事：
+
+- `setup` 负责把能力装起来
+- `usage` 负责告诉 agent 现在怎么用它
+
+把它们分开后，Console 可以更清楚地呈现：
+
+- `安装/修复`
+- `选项`
+
+## plugin 配置通常怎么持久化
+
+当前 project 级 plugin 参数一般会写回：
+
+- `downcity.json.plugins.*`
+
+对应的持久化工具会只写 `plugins` 配置块，而不会把整份执行期合并态直接落盘。
+
+## 推荐理解方式
+
+把 plugin 配置记成这三句：
+
+- 开关在 city 级
+- 参数在 project 级
+- setup 和 usage 是 UI 协议层
+
+## 相关文档
+
+- [Plugin 总览](/zh/agent-sdk-docs/plugins/overview)
+- [Plugin Availability](/zh/agent-sdk-docs/plugins/plugin-availability)

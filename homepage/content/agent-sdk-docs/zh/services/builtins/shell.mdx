@@ -1,0 +1,64 @@
+---
+title: shell 内建 Service
+description: 说明内建 shell service 如何持有 shell session 状态、执行生命周期和有状态命令交互
+---
+
+# shell 内建 Service
+
+`shell` 是负责短命令和长命令执行的内建 service。
+
+它负责这些能力：
+
+- 一次性命令执行
+- 有状态 shell session
+- 增量 read / write
+- 等待 session 状态变化
+- 关闭与清理 session
+
+## 它持有什么
+
+从当前实现看，`shell` 会持有：
+
+- shell service state 对象
+- 内存中的 shell session map
+- 到当前 agent context 的 runtime 绑定
+- 所有活跃 session 的生命周期清理逻辑
+
+## 为什么它是 service，而不是 tool
+
+shell 执行真正的问题并不是“运行一条命令”这么简单。
+
+更核心的是谁来长期拥有这些东西：
+
+- session identity
+- 缓冲输出
+- 长命令进程状态
+- 生命周期清理
+
+这也是 `shell` 应该属于 service 的原因。
+
+## 为什么 SDK 使用者应该关注它
+
+`shell` 是理解“有状态执行型 service”的最佳内建例子之一。
+
+如果你要设计一个 service，需要自己管理：
+
+- 资源池
+- 活跃会话
+- waiters
+- cleanup
+
+那 `shell` 的设计方式就很值得参考。
+
+## 最适合的理解方式
+
+可以把 `shell` 理解成执行运行时，而不是命令包装器。
+
+agent 负责推理和决策。  
+`shell` service 负责真正的进程级状态，使这项工作能够被持续查询和管理。
+
+## 相关文档
+
+- [Shell Service](/zh/docs/services/shell-service)
+- [内建 Service 总览](/zh/agent-sdk-docs/services/builtins/overview)
+- [Service 和 Tool 的区别](/zh/agent-sdk-docs/services/service-vs-tools)

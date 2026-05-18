@@ -6,7 +6,7 @@ const PAGE = {
   zh: {
     badge: "Product",
     title: "Downcity 产品矩阵",
-    subtitle: "不是一个单点工具，而是一组可组合的 Agent 产品：从 Console 到浏览器，再到 SDK 与 UI SDK。",
+    subtitle: "不是一个单点工具，而是一组可组合的 Agent 产品：从 Console 到浏览器，再到 City SDK、Agent SDK 与 UI SDK。",
     cards: [
       {
         id: "console-ui",
@@ -22,9 +22,15 @@ const PAGE = {
       },
       {
         id: "sdk",
-        title: "Downcity SDK",
-        desc: "把 Downcity Runtime 能力接入你的产品、流程和业务系统。",
-        source: "packages/downcity/",
+        title: "City SDK",
+        desc: "把 Downcity 的 city runtime、CLI 与 control plane 能力接入你的产品与运行体系。",
+        source: "packages/city/",
+      },
+      {
+        id: "agent-sdk",
+        title: "Agent SDK",
+        desc: "把本地 Agent、RemoteAgent、Session、Service 与 Plugin 组合进你的应用流程。",
+        source: "packages/agent/",
       },
       {
         id: "ui-sdk",
@@ -37,7 +43,8 @@ const PAGE = {
     facts: [
       "Console UI：独立前端包，目录为 products/console/。",
       "Chrome Extension：Manifest V3 插件，目录为 products/chrome-extension/。",
-      "Downcity SDK：核心 runtime 与命令入口位于 packages/downcity/。",
+      "City SDK：核心 runtime、CLI 与平台能力位于 packages/city/。",
+      "Agent SDK：本地 Agent / RemoteAgent SDK 位于 packages/agent/。",
       "Downcity UI SDK：React + Tailwind 组件包目录为 packages/ui/。",
     ],
   },
@@ -45,7 +52,7 @@ const PAGE = {
     badge: "Product",
     title: "Downcity Product Matrix",
     subtitle:
-      "Not a single tool, but a set of composable products for agents: Console, browser entry, SDK, and UI SDK.",
+      "Not a single tool, but a set of composable products for agents: Console, browser entry, City SDK, Agent SDK, and UI SDK.",
     cards: [
       {
         id: "console-ui",
@@ -61,9 +68,15 @@ const PAGE = {
       },
       {
         id: "sdk",
-        title: "Downcity SDK",
-        desc: "Integrate Downcity runtime capabilities into your own product flows.",
-        source: "packages/downcity/",
+        title: "City SDK",
+        desc: "Integrate Downcity city runtime, CLI, and control-plane capabilities into your operating flow.",
+        source: "packages/city/",
+      },
+      {
+        id: "agent-sdk",
+        title: "Agent SDK",
+        desc: "Embed local agents, RemoteAgent clients, sessions, services, and plugins into your application flow.",
+        source: "packages/agent/",
       },
       {
         id: "ui-sdk",
@@ -76,7 +89,8 @@ const PAGE = {
     facts: [
       "Console UI is a dedicated frontend package under products/console/.",
       "Chrome Extension is a Manifest V3 extension under products/chrome-extension/.",
-      "Downcity SDK core runtime and command entry are in packages/downcity/.",
+      "City SDK core runtime, CLI, and platform capabilities are in packages/city/.",
+      "Agent SDK local Agent and RemoteAgent runtime are in packages/agent/.",
       "Downcity UI SDK is the React + Tailwind component package under packages/ui/.",
     ],
   },

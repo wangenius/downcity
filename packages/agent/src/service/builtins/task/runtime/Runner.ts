@@ -36,7 +36,6 @@ import {
   buildUserSimulatorQuery,
   parseUserSimulatorDecision,
   runAgentRound,
-  runScriptTask,
   validateTaskResult,
 } from "./TaskRunnerRound.js";
 import {
@@ -45,6 +44,7 @@ import {
   writeTaskRunInputArtifact,
 } from "./TaskRunArtifacts.js";
 import { dispatchTaskRunCompletionToChat } from "./TaskRunChatDispatch.js";
+import { runScriptTaskBranch } from "./TaskRunnerScript.js";
 
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
 const DEFAULT_SINGLE_ROUND = 1;
@@ -170,68 +170,22 @@ export async function runTaskNow(params: {
   const dialogueRecords: DialogueRoundRecord[] = [];
 
   if (taskKind === "script") {
-    dialogueRounds = 1;
-    executionStatus = "success";
-    await runProgress.update({
-      status: "running",
-      phase: "script_running",
-      message: "正在执行 script 任务",
-      round: 1,
-      maxRounds: 1,
+    const scriptResult = await runScriptTaskBranch({
+      context,
+      runDirAbs,
+      sessionId: task.frontmatter.sessionId,
+      scriptBody: task.body,
+      runProgress,
     });
-    try {
-      const scriptResult = await runScriptTask({
-        context,
-        runDirAbs,
-        sessionId: task.frontmatter.sessionId,
-        scriptBody: task.body,
-      });
-      outputText = scriptResult.outputText;
-      await runProgress.update({
-        status: "running",
-        phase: "validating",
-        message: "script 执行完成，正在校验输出与产物",
-        round: 1,
-        maxRounds: 1,
-      });
-      const validation = await validateTaskResult({ outputText });
-      if (validation.errors.length === 0) {
-        ok = true;
-        status = "success";
-        resultStatus = "valid";
-        resultErrors = [];
-        userSimulatorSatisfied = true;
-      } else {
-        ok = false;
-        status = "failure";
-        resultStatus = "invalid";
-        resultErrors = [...validation.errors];
-        errorText = [
-          "Script task result validation failed.",
-          ...resultErrors.map((item) => `- ${item}`),
-        ].join("\n");
-        await runProgress.update({
-          status: "running",
-          phase: "validating",
-          message: "输出校验未通过，准备写入失败产物",
-          round: 1,
-          maxRounds: 1,
-        });
-      }
-    } catch (error) {
-      executionStatus = "failure";
-      status = "failure";
-      resultStatus = "not_checked";
-      resultErrors = [];
-      errorText = `Script task execution failed: ${String(error)}`;
-      await runProgress.update({
-        status: "running",
-        phase: "script_running",
-        message: `script 执行失败: ${summarizeText(String(error), 160)}`,
-        round: 1,
-        maxRounds: 1,
-      });
-    }
+    ok = scriptResult.ok;
+    status = scriptResult.status;
+    executionStatus = scriptResult.executionStatus;
+    resultStatus = scriptResult.resultStatus;
+    resultErrors = scriptResult.resultErrors;
+    dialogueRounds = scriptResult.dialogueRounds;
+    userSimulatorSatisfied = scriptResult.userSimulatorSatisfied;
+    outputText = scriptResult.outputText;
+    errorText = scriptResult.errorText;
   } else {
     let lastRoundRuleErrors: string[] = [];
     let lastRoundDecision: UserSimulatorDecision | null = null;

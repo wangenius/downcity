@@ -9,30 +9,32 @@
 import path from "node:path";
 import fs from "fs-extra";
 import type { AgentContext } from "@/runtime/AgentContextTypes.js";
-import { stripInvocationAuthEnv } from "@/server/http/auth/AuthEnv.js";
 import type {
   ShellServiceState,
   ShellSessionRuntimeState,
-  ShellSessionWaiter,
 } from "@/service/builtins/shell/ShellRuntimeTypes.js";
-import { getSessionRunScope } from "@session/SessionRunScope.js";
 import type {
-  ShellActionResponse,
-  ShellOutputChunk,
   ShellQueryRequest,
   ShellSessionSnapshot,
   ShellSessionStatus,
 } from "@/service/builtins/shell/types/ShellService.js";
 import { getShellOutputPath, getShellSnapshotPath } from "./Paths.js";
+import { resolveOwnerContextId } from "./ShellRuntimeEnvironment.js";
+export {
+  buildShellEnv,
+  resolveOwnerContextId,
+  resolveShellCwd,
+} from "./ShellRuntimeEnvironment.js";
+export {
+  buildActionResponse,
+  createOutputChunk,
+} from "./ShellActionResponse.js";
 
 const MAX_ACTIVE_SHELLS = 64;
 const SESSION_CLEANUP_DELAY_MS = 10 * 60 * 1000;
 const MAX_IN_MEMORY_OUTPUT_CHARS = 1_000_000;
 const MIN_WAIT_MS = 50;
 const MAX_WAIT_MS = 30_000;
-const DEFAULT_MAX_OUTPUT_CHARS = 12_000;
-const DEFAULT_MAX_OUTPUT_LINES = 200;
-const APPROX_CHARS_PER_TOKEN = 4;
 const OUTPUT_PREVIEW_CHARS = 280;
 
 /**
@@ -83,110 +85,6 @@ function normalizeOutputChunk(raw: string): string {
   return raw
     .replace(/\r\n/g, "\n")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
-}
-
-function resolveOutputLimits(params: {
-  context: AgentContext;
-  maxOutputTokens?: number;
-}): {
-  maxChars: number;
-  maxLines: number;
-} {
-  const byTokens =
-    typeof params.maxOutputTokens === "number" &&
-    Number.isFinite(params.maxOutputTokens) &&
-    params.maxOutputTokens > 0
-      ? Math.max(200, Math.floor(params.maxOutputTokens * APPROX_CHARS_PER_TOKEN))
-      : null;
-  return {
-    maxChars:
-      byTokens == null
-        ? DEFAULT_MAX_OUTPUT_CHARS
-        : Math.min(DEFAULT_MAX_OUTPUT_CHARS, byTokens),
-    maxLines: DEFAULT_MAX_OUTPUT_LINES,
-  };
-}
-
-function splitOutputByLimits(
-  text: string,
-  maxChars: number,
-  maxLines: number,
-): { head: string; tail: string } {
-  const limitedByChars = text.slice(0, Math.min(text.length, maxChars));
-  let head = limitedByChars;
-  if (maxLines > 0) {
-    const lines = limitedByChars.split("\n");
-    if (lines.length > maxLines) {
-      head = lines.slice(0, maxLines).join("\n");
-    }
-  }
-  return {
-    head,
-    tail: text.slice(head.length),
-  };
-}
-
-/**
- * 构造 shell 子进程环境变量。
- */
-export function buildShellEnv(context: AgentContext): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-
-  // 关键点（中文）
-  // - shell 子进程需要继承平台级 global env。
-  // - 这里显式从 store 读取，避免把 AgentContext.env 语义扩大成“全局+agent 混合态”。
-  // - 冲突时仍由后续 agent 私有 env 覆盖，保持文档声明的优先级。
-  for (const [key, value] of Object.entries(context.globalEnv || {})) {
-    const normalizedKey = String(key || "").trim();
-    const normalizedValue = String(value || "").trim();
-    if (!normalizedKey || !normalizedValue) continue;
-    env[normalizedKey] = normalizedValue;
-  }
-
-  for (const [key, value] of Object.entries(context.env || {})) {
-    const normalizedKey = String(key || "").trim();
-    const normalizedValue = String(value || "").trim();
-    if (!normalizedKey || !normalizedValue) continue;
-    env[normalizedKey] = normalizedValue;
-  }
-
-  const request = getSessionRunScope();
-  const sessionId = String(request?.sessionId || "").trim();
-  const agentPath = String(context.rootPath || "").trim();
-  const configuredAgentName = String(context.config?.name || "").trim();
-  const agentName = configuredAgentName || (agentPath ? path.basename(agentPath) : "");
-
-  // 关键点（中文）
-  // - agent 自己在 shell 里执行 `city <service> ...` 时，也需要显式知道“当前 agent 是谁”。
-  // - 否则 service CLI 会退回到当前终端 cwd / registry 猜测，在多 agent 或外部工作目录下
-  //   很容易把请求发到错误项目，最终误报 “Agent server 没启动”。
-  if (agentPath) env.DC_AGENT_PATH = agentPath;
-  if (agentName) env.DC_AGENT_NAME = agentName;
-  if (sessionId) env.DC_SESSION_ID = sessionId;
-  if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
-  if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;
-  stripInvocationAuthEnv(env);
-
-  return env;
-}
-
-/**
- * 解析 shell 执行目录。
- */
-export function resolveShellCwd(context: AgentContext, cwd?: string): string {
-  const raw = String(cwd || "").trim();
-  if (!raw) return context.rootPath;
-  return path.isAbsolute(raw) ? raw : path.resolve(context.rootPath, raw);
-}
-
-/**
- * 推断 shell 所属的 owner context。
- */
-export function resolveOwnerContextId(explicit?: string): string | undefined {
-  const fromInput = String(explicit || "").trim();
-  if (fromInput) return fromInput;
-  const fromRequest = String(getSessionRunScope()?.sessionId || "").trim();
-  return fromRequest || undefined;
 }
 
 function deriveExitStatus(exitCode: number | undefined): ShellSessionStatus {
@@ -460,58 +358,6 @@ export async function resolveSession(
     })
     .sort((a, b) => b.snapshot.updatedAt - a.snapshot.updatedAt);
   return matched[0] || null;
-}
-
-/**
- * 根据游标与 token 限制构造输出块。
- */
-export function createOutputChunk(params: {
-  shellId: string;
-  outputText: string;
-  fromCursor?: number;
-  context: AgentContext;
-  maxOutputTokens?: number;
-}): ShellOutputChunk {
-  const fromCursor =
-    typeof params.fromCursor === "number" && params.fromCursor >= 0
-      ? Math.floor(params.fromCursor)
-      : 0;
-  const available = params.outputText.slice(fromCursor);
-  const originalChars = available.length;
-  const originalLines = available ? available.split("\n").length : 0;
-  const limits = resolveOutputLimits({
-    context: params.context,
-    maxOutputTokens: params.maxOutputTokens,
-  });
-  const { head, tail } = splitOutputByLimits(
-    available,
-    limits.maxChars,
-    limits.maxLines,
-  );
-  return {
-    shellId: params.shellId,
-    output: head,
-    startCursor: fromCursor,
-    endCursor: fromCursor + head.length,
-    originalChars,
-    originalLines,
-    hasMoreOutput: tail.length > 0,
-  };
-}
-
-/**
- * 构造 shell action 标准返回。
- */
-export function buildActionResponse(params: {
-  shell: ShellSessionSnapshot;
-  chunk?: ShellOutputChunk;
-  note?: string;
-}): ShellActionResponse {
-  return {
-    shell: params.shell,
-    ...(params.chunk ? { chunk: params.chunk } : {}),
-    ...(params.note ? { note: params.note } : {}),
-  };
 }
 
 /**

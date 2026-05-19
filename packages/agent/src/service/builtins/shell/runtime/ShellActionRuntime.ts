@@ -28,7 +28,6 @@ import type {
 } from "@/service/builtins/shell/types/ShellService.js";
 import { getShellDir, getShellOutputPath, getShellSnapshotPath } from "./Paths.js";
 import {
-  appendSessionOutput,
   buildActionResponse,
   buildShellEnv,
   clampWaitMs,
@@ -38,7 +37,6 @@ import {
   DEFAULT_INLINE_WAIT_MS,
   DEFAULT_WAIT_TIMEOUT_MS,
   ensureCapacity,
-  finalizeExit,
   isInMemorySession,
   isTerminalStatus,
   nowMs,
@@ -49,6 +47,7 @@ import {
   scheduleCleanup,
   updateSessionSnapshot,
 } from "./ShellActionRuntimeSupport.js";
+import { attachShellProcessEventHandlers } from "./ShellProcessEvents.js";
 
 export { createShellServiceState } from "./ShellActionRuntimeSupport.js";
 
@@ -88,22 +87,6 @@ export async function closeAllShellSessions(
     });
   });
   await Promise.all(closing);
-}
-
-async function finalizeExitAfterOutputDrain(
-  state: ShellServiceState,
-  session: ShellSessionRuntimeState,
-  exitCode: number,
-): Promise<void> {
-  // 关键点（中文）
-  // - `close` 事件到达时，stdout / stderr 的异步 append 链可能刚刚开始收尾。
-  // - 这里先让出一个事件循环 tick，再等待当前 writeChain，可显著降低“终态已到但尾部输出尚未可读”的竞态。
-  await new Promise<void>((resolve) => {
-    const timer = setImmediate(resolve);
-    if (typeof timer.unref === "function") timer.unref();
-  });
-  await session.writeChain.catch(() => undefined);
-  await finalizeExit(state, session, exitCode);
 }
 
 /**
@@ -192,25 +175,7 @@ export async function startShellSession(
   // - 监听器必须在任何 `await` 之前挂上。
   // - 对于 `printf` 这类瞬时命令，进程可能在持久化 snapshot 期间就已经退出。
   // - 如果先 `await persistSnapshot()` 再注册 `close`，会错过退出事件，导致 session 永远停在 running。
-  child.stdout.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(session, String(chunk ?? "")).catch(() => undefined);
-  });
-  child.stderr.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(session, String(chunk ?? "")).catch(() => undefined);
-  });
-  child.on("error", (error: Error) => {
-    void appendSessionOutput(session, `\n[process error] ${String(error)}\n`).catch(
-      () => undefined,
-    );
-    void finalizeExitAfterOutputDrain(state, session, -1).catch(() => undefined);
-  });
-  child.on("close", (code: number | null) => {
-    void finalizeExitAfterOutputDrain(
-      state,
-      session,
-      typeof code === "number" ? code : -1,
-    ).catch(() => undefined);
-  });
+  attachShellProcessEventHandlers({ state, session });
   await persistSnapshot(session);
 
   const inlineWaitMs = clampWaitMs(request.inlineWaitMs, DEFAULT_INLINE_WAIT_MS);

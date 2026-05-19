@@ -8,15 +8,19 @@
  */
 
 import type { Plugin } from "@/plugin/types/Plugin.js";
-import type { ChatInboundAugmentInput } from "@/service/builtins/chat/types/ChatPlugin.js";
-import type { VoicePluginConfig } from "@/plugin/builtins/voice/types/VoicePlugin.js";
-import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { AgentPluginConfigRuntime } from "@/types/host/AgentHost.js";
 import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
 import {
   listVoiceModels,
   resolveVoicePluginModelId,
 } from "@/plugin/builtins/voice/ModelCatalog.js";
+import {
+  getBooleanOpt,
+  getStringOpt,
+  readVoicePluginConfig,
+  toJsonObject,
+  writeVoicePluginConfig,
+} from "@/plugin/builtins/voice/Config.js";
+import { augmentVoiceInboundMessage } from "@/plugin/builtins/voice/InboundAugment.js";
 import {
   checkVoiceTranscriber,
   installVoiceTranscriber,
@@ -24,122 +28,6 @@ import {
   transcribeWithVoiceDependency,
   writeVoiceTranscriberConfig,
 } from "@/plugin/builtins/voice/Dependency.js";
-
-function toJsonObject(input: Record<string, unknown> | null | undefined): JsonObject | null {
-  if (!input) return null;
-  const out: JsonObject = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value === undefined) continue;
-    if (
-      value === null ||
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
-      out[key] = value;
-      continue;
-    }
-    if (Array.isArray(value)) {
-      out[key] = value
-        .filter((item) => item !== undefined)
-        .map((item) => item as JsonValue);
-      continue;
-    }
-    if (typeof value === "object") {
-      out[key] = toJsonObject(value as Record<string, unknown>) || {};
-    }
-  }
-  return out;
-}
-
-function getStringOpt(
-  opts: Record<string, JsonValue>,
-  key: string,
-): string | undefined {
-  const value = opts[key];
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed || undefined;
-}
-
-function getBooleanOpt(
-  opts: Record<string, JsonValue>,
-  key: string,
-  defaultValue: boolean,
-): boolean {
-  const value = opts[key];
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
-    if (["0", "false", "no", "n", "off"].includes(normalized)) return false;
-  }
-  return defaultValue;
-}
-
-/**
- * 读取 Voice Plugin 配置。
- *
- * 关键点（中文）
- * - 行为配置与转写依赖配置统一收敛到 `plugins.voice`。
- */
-function readVoicePluginConfig(runtime: {
-  config: {
-    plugins?: Record<string, unknown>;
-  };
-}): VoicePluginConfig {
-  const current = runtime.config.plugins?.voice;
-  const normalized =
-    current && typeof current === "object" && !Array.isArray(current)
-      ? (current as VoicePluginConfig)
-      : {};
-  return {
-    enabled: normalized.enabled === true,
-    injectPrompt:
-      typeof normalized.injectPrompt === "boolean"
-        ? normalized.injectPrompt
-        : true,
-    augmentMessage:
-      typeof normalized.augmentMessage === "boolean"
-        ? normalized.augmentMessage
-        : true,
-    provider:
-      normalized.provider === "command" || normalized.provider === "local"
-        ? normalized.provider
-        : "local",
-    ...(typeof normalized.modelId === "string" ? { modelId: normalized.modelId } : {}),
-    ...(typeof normalized.modelsDir === "string" ? { modelsDir: normalized.modelsDir } : {}),
-    ...(typeof normalized.pythonBin === "string" ? { pythonBin: normalized.pythonBin } : {}),
-    ...(typeof normalized.command === "string" ? { command: normalized.command } : {}),
-    ...(typeof normalized.language === "string" ? { language: normalized.language } : {}),
-    ...(typeof normalized.timeoutMs === "number" ? { timeoutMs: normalized.timeoutMs } : {}),
-    ...(typeof normalized.strategy === "string" ? { strategy: normalized.strategy } : {}),
-    ...(Array.isArray(normalized.installedModels)
-      ? { installedModels: normalized.installedModels }
-      : {}),
-  };
-}
-
-/**
- * 写入完整 voice plugin 配置。
- */
-async function writeVoicePluginConfig(params: {
-  agentState: {
-    config: {
-      plugins?: Record<string, unknown>;
-    };
-    pluginConfig: AgentPluginConfigRuntime;
-  };
-  value: VoicePluginConfig;
-}): Promise<void> {
-  if (!params.agentState.config.plugins) {
-    params.agentState.config.plugins = {};
-  }
-  params.agentState.config.plugins.voice = (toJsonObject(params.value) || {}) as JsonObject;
-  await params.agentState.pluginConfig.persistProjectPlugins(
-    params.agentState.config.plugins as Record<string, JsonObject>,
-  );
-}
 
 /**
  * voicePlugin：声明式插件定义。
@@ -201,44 +89,7 @@ export const voicePlugin: Plugin = {
     pipeline: {
       [CHAT_PLUGIN_POINTS.augmentInbound]: [
         async ({ context, value }) => {
-          const input = value as unknown as ChatInboundAugmentInput;
-          const voiceAttachments = (Array.isArray(input.attachments) ? input.attachments : []).filter(
-            (item) =>
-              (item.kind === "voice" || item.kind === "audio") &&
-              typeof item.path === "string" &&
-              item.path.trim(),
-          );
-          if (voiceAttachments.length === 0) {
-            return input as unknown as JsonValue;
-          }
-
-          const pluginSections = Array.isArray(input.pluginSections)
-            ? [...input.pluginSections]
-            : [];
-
-          for (const attachment of voiceAttachments) {
-            try {
-              const result = await transcribeWithVoiceDependency({
-                context,
-                audioPath: String(attachment.path || "").trim(),
-              });
-              const text = typeof result.text === "string" ? result.text.trim() : "";
-              if (!text) continue;
-
-              const absPath = String(attachment.path || "").trim();
-              const rel = absPath.startsWith(`${context.rootPath}/`)
-                ? absPath.slice(context.rootPath.length + 1)
-                : absPath;
-              pluginSections.push(`【语音转写 ${attachment.kind}: ${rel}】\n${text}`);
-            } catch {
-              // 关键点（中文）：转写失败不阻塞主链路，保持 best-effort。
-            }
-          }
-
-          return {
-            ...input,
-            pluginSections,
-          } as unknown as JsonValue;
+          return await augmentVoiceInboundMessage({ context, value });
         },
       ],
     },

@@ -9,6 +9,7 @@
 import type { UIMessageChunk } from "ai";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { AgentSessionStreamEvent } from "@/sdk/AgentSdkTypes.js";
+import type { AsyncQueue } from "@/sdk/AsyncQueue.js";
 
 function toJsonValue(value: unknown): JsonValue {
   if (value === undefined) return null;
@@ -92,4 +93,46 @@ export function mapUiMessageChunkToSdkEvent(
     default:
       return null;
   }
+}
+
+/**
+ * 把 UI chunk 推入 SDK stream 队列。
+ *
+ * 关键点（中文）
+ * - `tool-output-*` chunk 本身不总是携带 toolName。
+ * - 这里用调用 id 维护一次流式执行内的工具名称映射，避免上层重复关心底层 chunk 细节。
+ */
+export function pushUiMessageChunkAsSdkEvent(params: {
+  /**
+   * SDK stream 事件队列。
+   */
+  queue: AsyncQueue<AgentSessionStreamEvent>;
+  /**
+   * 底层 AI SDK UI chunk。
+   */
+  chunk: UIMessageChunk;
+  /**
+   * 当前 stream 生命周期内的 toolCallId 到 toolName 映射。
+   */
+  toolNameByCallId: Map<string, string>;
+}): void {
+  const { queue, chunk, toolNameByCallId } = params;
+  if (chunk.type === "tool-input-start") {
+    toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
+    return;
+  }
+  const event = mapUiMessageChunkToSdkEvent(chunk);
+  if (!event) return;
+  if (event.type === "tool-call" || event.type === "tool-error") {
+    toolNameByCallId.set(event.toolCallId, event.toolName);
+  }
+  if (
+    (event.type === "tool-result" || event.type === "tool-error") &&
+    event.toolName === "unknown"
+  ) {
+    const toolName = toolNameByCallId.get(event.toolCallId);
+    queue.push(toolName ? { ...event, toolName } : event);
+    return;
+  }
+  queue.push(event);
 }

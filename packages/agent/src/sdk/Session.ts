@@ -8,12 +8,11 @@
  */
 
 import { nanoid } from "nanoid";
-import type { LanguageModel, Tool, UIMessageChunk } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import { Session as CoreSession } from "@session/Session.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
-import { resolveAssistantMessageForPersistence } from "@/service/builtins/chat/runtime/UserVisibleText.js";
 import { extractTextFromUiMessage } from "@/service/builtins/chat/runtime/UIMessageTransformer.js";
 import type {
   AgentSessionConfigSnapshot,
@@ -24,7 +23,6 @@ import type {
   AgentSessionSetInput,
   AgentSessionStreamEvent,
 } from "@/sdk/AgentSdkTypes.js";
-import type { SessionHistoryMetaV1 } from "@/session/types/SessionHistoryMeta.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import { SdkSessionSystemComposer } from "@/sdk/SdkSessionSystemComposer.js";
 import {
@@ -39,6 +37,12 @@ import {
 } from "@/sdk/Paths.js";
 import { AsyncQueue } from "@/sdk/AsyncQueue.js";
 import type { SessionPort } from "@/runtime/AgentContextTypes.js";
+import { pushUiMessageChunkAsSdkEvent } from "@/sdk/StreamEvents.js";
+import {
+  persistSdkAssistantResult,
+  touchSdkSessionMetadata,
+} from "@/sdk/SessionPersistence.js";
+import { createSdkSessionServicePort } from "@/sdk/SessionServicePort.js";
 
 type SdkSessionOptions = {
   /**
@@ -323,7 +327,11 @@ export class SdkSession {
         const result = await this.coreSession.run({
           query,
           onUiMessageChunkCallback: async (chunk) => {
-            this.pushChunkEvent(queue, chunk, toolNameByCallId);
+            pushUiMessageChunkAsSdkEvent({
+              queue,
+              chunk,
+              toolNameByCallId,
+            });
           },
         });
         await this.persistAssistantResult(result.assistantMessage);
@@ -410,173 +418,39 @@ export class SdkSession {
 
   /**
    * 返回供 chat service 使用的 session 端口。
-   *
-   * 关键点（中文）
-   * - 这里不走 SDK `run()` 包装层，而是直接暴露底层 `CoreSession` 协议。
-   * - 这样 chat queue worker 可以复用既有 `SessionPort` 契约，不会重复补写消息。
    */
   getServicePort(): SessionPort {
     if (this.servicePort) return this.servicePort;
-    this.servicePort = {
+    this.servicePort = createSdkSessionServicePort({
       sessionId: this.id,
-      getExecutor: () => this.coreSession.getExecutor(),
-      getHistoryComposer: () => this.historyComposer,
-      run: async (params) => {
-        return await this.coreSession.run(params);
-      },
-      clearExecutor: () => {
-        this.coreSession.clearExecutor();
-      },
-      afterSessionUpdatedAsync: async () => {
-        await this.coreSession.afterSessionUpdatedAsync();
-      },
-      appendUserMessage: async (params) => {
-        await this.coreSession.appendUserMessage(params);
+      coreSession: this.coreSession,
+      historyComposer: this.historyComposer,
+      touchMetadata: async () => {
         await this.touchMetadata();
       },
-      appendAssistantMessage: async (params) => {
-        await this.coreSession.appendAssistantMessage(params);
-        await this.touchMetadata();
-      },
-      isExecuting: () => this.coreSession.isExecuting(),
-    };
+    });
     return this.servicePort;
   }
 
   private async touchMetadata(): Promise<void> {
-    const current = await readSdkSessionMetadata({
+    await touchSdkSessionMetadata({
       projectRoot: this.projectRoot,
       agentId: this.agentId,
       sessionId: this.id,
-    });
-    const next: SessionHistoryMetaV1 = {
-      ...current,
-      agentId: this.agentId,
-      createdAt:
-        typeof current.createdAt === "number" ? current.createdAt : Date.now(),
-      updatedAt: Date.now(),
-      ...(this.sessionConfig.modelLabel
-        ? {
-            sdkConfig: {
-              ...(current.sdkConfig || {}),
-              modelLabel: this.sessionConfig.modelLabel,
-            },
-          }
-        : {}),
-    };
-    await writeSdkSessionMetadata({
-      projectRoot: this.projectRoot,
-      agentId: this.agentId,
-      sessionId: this.id,
-      meta: next,
+      sessionConfig: this.sessionConfig,
     });
   }
 
   private async persistAssistantResult(
     assistantMessage: SessionMessageV1,
   ): Promise<void> {
-    const persisted = resolveAssistantMessageForPersistence(assistantMessage);
-    await this.coreSession.appendAssistantMessage({
-      ...(persisted ? { message: persisted } : {}),
-      fallbackText: extractTextFromUiMessage(assistantMessage),
+    await persistSdkAssistantResult({
+      projectRoot: this.projectRoot,
+      agentId: this.agentId,
+      sessionId: this.id,
+      sessionConfig: this.sessionConfig,
+      coreSession: this.coreSession,
+      assistantMessage,
     });
-    await this.touchMetadata();
-  }
-
-  private pushChunkEvent(
-    queue: AsyncQueue<AgentSessionStreamEvent>,
-    chunk: UIMessageChunk,
-    toolNameByCallId: Map<string, string>,
-  ): void {
-    switch (chunk.type) {
-      case "text-delta":
-        queue.push({
-          type: "text-delta",
-          text: chunk.delta,
-        });
-        return;
-      case "reasoning-delta":
-        queue.push({
-          type: "reasoning-delta",
-          text: chunk.delta,
-        });
-        return;
-      case "tool-input-start":
-        toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
-        return;
-      case "tool-input-available":
-        toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
-        queue.push({
-          type: "tool-call",
-          toolCallId: chunk.toolCallId,
-          toolName: chunk.toolName,
-          args: this.toJsonValue(chunk.input),
-        });
-        return;
-      case "tool-output-available":
-        queue.push({
-          type: "tool-result",
-          toolCallId: chunk.toolCallId,
-          toolName: toolNameByCallId.get(chunk.toolCallId) || "unknown",
-          result: this.toJsonValue(chunk.output),
-        });
-        return;
-      case "tool-output-error":
-        queue.push({
-          type: "tool-error",
-          toolCallId: chunk.toolCallId,
-          toolName: toolNameByCallId.get(chunk.toolCallId) || "unknown",
-          error: chunk.errorText,
-        });
-        return;
-      case "tool-input-error":
-        toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
-        queue.push({
-          type: "tool-error",
-          toolCallId: chunk.toolCallId,
-          toolName: chunk.toolName,
-          error: chunk.errorText,
-        });
-        return;
-      case "error":
-        queue.push({
-          type: "error",
-          error: chunk.errorText,
-        });
-        return;
-      case "abort":
-        queue.push({
-          type: "error",
-          error: String(chunk.reason || "stream aborted"),
-        });
-        return;
-      case "finish":
-        queue.push({
-          type: "finish",
-          ...(typeof chunk.finishReason === "string"
-            ? { finishReason: chunk.finishReason }
-            : {}),
-        });
-        return;
-      default:
-        return;
-    }
-  }
-
-  private toJsonValue(value: unknown) {
-    if (value === undefined) return null;
-    if (value === null) return null;
-    if (
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
-      return value;
-    }
-    try {
-      return JSON.parse(JSON.stringify(value));
-    } catch {
-      return String(value);
-    }
   }
 }

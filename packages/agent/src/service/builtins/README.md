@@ -31,7 +31,9 @@
    - `runtime/ChatChannelConfig.ts` 负责状态快照与配置落盘。
    - `runtime/ChatChannelActions.ts` 负责渠道类 action 执行。
    - `runtime/ChatChannelFacade.ts` 只保留门面导出。
-   - `runtime/ChatActionInput.ts` 负责 CLI/API 输入映射。
+   - `runtime/ChatActionInput.ts` 负责非 send 类 CLI/API 输入映射与统一导出。
+   - `runtime/ChatSendActionInput.ts` 负责 `chat send` 正文协议、stdin/file 与定时发送输入映射。
+   - `runtime/ChatActionInputSupport.ts` 负责 chat action 输入映射共享解析辅助。
    - `runtime/ChatActionExecution.ts` 负责消息类 action 执行。
    - `runtime/ChatQueueSessionBridge.ts` 负责 queue 与 session 的桥接写入协议。
    - `runtime/ChatQueueWorkerSupport.ts` 负责 worker 辅助能力。
@@ -55,6 +57,9 @@
    - `channels/qq/QQMessageHandler.ts` 负责 QQ group/c2c/channel 入站主流程。
    - `channels/qq/QQSupport.ts` 负责 QQ READY 身份解析、命令映射与入站增强组装。
    - `channels/qq/QQGatewayClient.ts` 负责 QQ Gateway runtime 宿主、WS 编排与重连调度。
+   - `channels/qq/QQGatewayConnection.ts` 负责 QQ Gateway WebSocket 创建与事件绑定。
+   - `channels/qq/QQGatewayProtocol.ts` 负责 QQ Gateway op code 协议路由与 Identify。
+   - `channels/qq/QQGatewayHeartbeat.ts` 负责 QQ Gateway heartbeat payload 发送。
    - `channels/qq/QQGatewaySupport.ts` 负责 QQ Gateway 状态快照、心跳判断与 payload 解析。
    - `channels/qq/QQGatewayAuth.ts` 负责 QQ 鉴权、Gateway URL 与 HTTP 连通性测试。
    - `channels/qq/QQGatewaySend.ts` 负责 QQ 回发请求构造、超时与自动重试。
@@ -69,6 +74,7 @@
    - `runtime/TaskRunnerProgress.ts` 负责 progress 快照与文本辅助。
    - `runtime/TaskRunnerSession.ts` 负责 task 专用 session runtime。
    - `runtime/TaskRunnerRound.ts` 负责单轮执行与模拟用户判定。
+   - `runtime/TaskRunnerScript.ts` 负责 script 类型任务的 one-shot 执行与校验分支。
    - `runtime/TaskRunArtifacts.ts` 负责 run 产物写入与 markdown/json 摘要格式。
    - `runtime/Runner.ts` 负责主编排并协调 run 产物写入。
 3. `memory/`
@@ -79,6 +85,9 @@
    - `ShellService.ts` 持有实例级 shell session 状态。
    - `runtime/ShellActionRuntime.ts` 负责公开 action 编排。
    - `runtime/ShellActionRuntimeSupport.ts` 负责持久化、waiter 与 session 查找等共享运行时细节。
+   - `runtime/ShellRuntimeEnvironment.ts` 负责 shell cwd、env 与 owner context 解析。
+   - `runtime/ShellActionResponse.ts` 负责输出游标裁剪与标准 action response 构造。
+   - `runtime/ShellProcessEvents.ts` 负责 shell 子进程输出、错误与 close 事件绑定。
    - `session/tools/shell/ShellToolDefinition.ts` 作为 session tool facade，只做协议适配。
    - `session/tools/shell/ShellToolSchemas.ts` 负责 shell tool schema。
    - `session/tools/shell/ShellToolBridge.ts` 负责 runtime bridge 与响应整理。

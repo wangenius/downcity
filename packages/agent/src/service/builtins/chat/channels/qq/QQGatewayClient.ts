@@ -7,17 +7,14 @@
  * - QQBot 不再直接维护底层 ws / token 细节，只保留渠道编排职责。
  */
 
-import WebSocket, { type RawData } from "ws";
+import WebSocket from "ws";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type {
   QQEventCaptureConfig,
-  QQGatewayPayload,
   QqDispatchHandler,
   QqGatewayRuntimeStatus,
 } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
-import { EventType, OpCode } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
-import { captureQqWsPayload } from "./QQEventCapture.js";
 import {
   fetchQqAccessToken,
   fetchQqGatewayUrl,
@@ -25,14 +22,19 @@ import {
 } from "./QQGatewayAuth.js";
 import {
   buildQqGatewayRuntimeStatus,
-  getQqHeartbeatAckTimeoutMs,
-  hasQqHealthyHeartbeat,
-  hasQqHeartbeatTimeout,
-  parseQqGatewayPayload,
   resolveQqGatewayApiBase,
   resolveQqGatewayWsUrl,
 } from "./QQGatewaySupport.js";
 import { sendQqMessageWithRetry } from "./QQGatewaySend.js";
+import { connectQqGatewayWebSocket } from "./QQGatewayConnection.js";
+import {
+  handleQqGatewayPayload,
+  sendQqGatewayIdentify,
+} from "./QQGatewayProtocol.js";
+import {
+  normalizeQqHeartbeatIntervalMs,
+  sendQqGatewayHeartbeat,
+} from "./QQGatewayHeartbeat.js";
 
 /**
  * QQGatewayClient 构造参数。
@@ -264,41 +266,6 @@ export class QQGatewayClient {
   }
 
   /**
-   * 计算心跳 ACK 超时阈值。
-   */
-  private getHeartbeatAckTimeoutMs(): number {
-    return getQqHeartbeatAckTimeoutMs(this.heartbeatIntervalMs);
-  }
-
-  /**
-   * 是否发生心跳 ACK 超时。
-   */
-  private hasHeartbeatTimeout(nowMs: number = Date.now()): boolean {
-    return hasQqHeartbeatTimeout(
-      {
-        heartbeatIntervalMs: this.heartbeatIntervalMs,
-        pendingHeartbeatSinceMs: this.pendingHeartbeatSinceMs,
-        wsReadyAtMs: this.wsReadyAtMs,
-      },
-      nowMs,
-    );
-  }
-
-  /**
-   * 心跳是否健康。
-   */
-  private hasHealthyHeartbeat(nowMs: number = Date.now()): boolean {
-    return hasQqHealthyHeartbeat(
-      {
-        heartbeatIntervalMs: this.heartbeatIntervalMs,
-        pendingHeartbeatSinceMs: this.pendingHeartbeatSinceMs,
-        wsReadyAtMs: this.wsReadyAtMs,
-      },
-      nowMs,
-    );
-  }
-
-  /**
    * 重置网关活性状态。
    */
   private resetWsLivenessState(): void {
@@ -395,189 +362,63 @@ export class QQGatewayClient {
    * 建立 WebSocket 连接。
    */
   private async connectWebSocket(gatewayUrl: string): Promise<void> {
-    this.logger.info(`正在连接 WebSocket: ${gatewayUrl}`);
-    const previousWs = this.ws;
-    if (
-      previousWs &&
-      (previousWs.readyState === WebSocket.OPEN ||
-        previousWs.readyState === WebSocket.CONNECTING)
-    ) {
-      try {
-        previousWs.close();
-      } catch {
-        // ignore close failure
-      }
-    }
-    this.stopHeartbeat();
-    this.resetWsLivenessState();
-
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const resolveOnce = () => {
-        if (settled) return;
-        settled = true;
-        resolve();
-      };
-      const rejectOnce = (error: Error) => {
-        if (settled) return;
-        settled = true;
-        reject(error);
-      };
-
-      const ws = new WebSocket(gatewayUrl);
-      this.ws = ws;
-
-      ws.on("open", () => {
-        if (this.ws !== ws) return;
-        this.logger.info("WebSocket 连接已建立");
+    await connectQqGatewayWebSocket({
+      gatewayUrl,
+      logger: this.logger,
+      captureConfig: this.captureConfig,
+      getCurrentSocket: () => this.ws,
+      setCurrentSocket: (ws) => {
+        this.ws = ws;
+      },
+      resetLivenessState: () => this.resetWsLivenessState(),
+      stopHeartbeat: () => this.stopHeartbeat(),
+      clearReconnectTimer: () => this.clearReconnectTimer(),
+      resetReconnectAttempts: () => {
         this.reconnectAttempts = 0;
-        this.clearReconnectTimer();
-        this.resetWsLivenessState();
-        resolveOnce();
-      });
-
-      ws.on("message", async (data: RawData) => {
-        if (this.ws !== ws) return;
-        try {
-          const payload = this.parseGatewayPayload(data);
-          if (!payload) {
-            this.logger.warn("收到无法解析的 QQ WebSocket 消息，已忽略");
-            return;
-          }
-          this.logger.debug(
-            `收到 WebSocket 消息: op=${payload.op}, t=${payload.t || "N/A"}`,
-          );
-          await captureQqWsPayload({
-            config: this.captureConfig,
-            logger: this.logger,
-            payload,
-          });
-          await this.handleWebSocketMessage(payload);
-        } catch (error) {
-          this.logger.error("处理 WebSocket 消息失败", {
-            error: String(error),
-          });
-        }
-      });
-
-      ws.on("close", (code: number, reason: Buffer) => {
-        if (this.ws !== ws) return;
-        const reasonText = Buffer.isBuffer(reason)
-          ? reason.toString("utf-8")
-          : String(reason || "");
-        this.logger.warn(`WebSocket 连接关闭: ${code} - ${reasonText}`);
-        this.ws = null;
-        this.stopHeartbeat();
-        this.resetWsLivenessState();
-        this.scheduleReconnect(`ws_closed:${code}`);
-        rejectOnce(
-          new Error(`QQ websocket closed before ready: ${code} ${reasonText}`),
-        );
-      });
-
-      ws.on("error", (error: Error) => {
-        if (this.ws !== ws) return;
-        this.logger.error("WebSocket 错误", { error: String(error) });
-        rejectOnce(error);
-      });
-    });
-  }
-
-  /**
-   * 解析原始 Gateway 载荷。
-   */
-  private parseGatewayPayload(rawData: RawData): QQGatewayPayload | null {
-    return parseQqGatewayPayload(rawData);
-  }
-
-  /**
-   * 处理网关消息。
-   */
-  private async handleWebSocketMessage(payload: QQGatewayPayload): Promise<void> {
-    const { op, d, s, t } = payload;
-    if (s) {
-      this.lastSeq = s;
-    }
-
-    switch (op) {
-      case OpCode.Hello: {
-        const heartbeatIntervalMs =
-          typeof d?.heartbeat_interval === "number" ? d.heartbeat_interval : 30000;
-        this.startHeartbeat(heartbeatIntervalMs);
-        await this.sendIdentify();
-        break;
-      }
-      case OpCode.Dispatch: {
-        const eventType = String(t || "");
-        if (eventType === EventType.READY) {
-          this.wsContextId = typeof d?.context_id === "string" ? d.context_id : "";
-          this.wsReadyAtMs = Date.now();
-        } else if (eventType === EventType.RESUMED) {
-          this.wsReadyAtMs = Date.now();
-        }
-        await this.onDispatch({
-          eventType,
-          data: d || {},
-        });
-        break;
-      }
-      case OpCode.HeartbeatAck:
-        this.lastHeartbeatAckAtMs = Date.now();
-        this.pendingHeartbeatSinceMs = 0;
-        this.logger.debug("收到心跳响应");
-        break;
-      case OpCode.Reconnect:
-        this.logger.warn("服务端要求重连");
-        this.closeSocketForRecovery("server_reconnect_opcode");
-        break;
-      case OpCode.InvalidContext:
-        this.logger.error("无效的 Context，需要重新鉴权");
-        this.clearAccessTokenCache();
-        setTimeout(async () => {
-          try {
+      },
+      scheduleReconnect: (reason, delayMs) =>
+        this.scheduleReconnect(reason, delayMs),
+      handlePayload: async (payload) => {
+        await handleQqGatewayPayload({
+          logger: this.logger,
+          payload,
+          setLastSeq: (seq) => {
+            this.lastSeq = seq;
+          },
+          startHeartbeat: (intervalMs) => this.startHeartbeat(intervalMs),
+          sendIdentify: async () => {
             await this.sendIdentify();
-          } catch (error) {
-            this.logger.error("重新鉴权失败", { error: String(error) });
-          }
-        }, 2000);
-        break;
-    }
+          },
+          markReady: (contextId) => {
+            this.wsContextId = contextId;
+            this.wsReadyAtMs = Date.now();
+          },
+          markResumed: () => {
+            this.wsReadyAtMs = Date.now();
+          },
+          markHeartbeatAck: () => {
+            this.lastHeartbeatAckAtMs = Date.now();
+            this.pendingHeartbeatSinceMs = 0;
+          },
+          clearAccessTokenCache: () => this.clearAccessTokenCache(),
+          closeSocketForRecovery: (reason) => this.closeSocketForRecovery(reason),
+          onDispatch: async (dispatch) => {
+            await this.onDispatch(dispatch);
+          },
+        });
+      },
+    });
   }
 
   /**
    * 发送鉴权请求。
    */
   private async sendIdentify(): Promise<void> {
-    const authToken = await this.getAuthToken();
-    const intents = this.getIntents();
-    this.logger.info(`发送鉴权请求 (Identify)，intents: ${intents}`);
-
-    const identifyPayload = {
-      op: OpCode.Identify,
-      d: {
-        token: authToken,
-        intents,
-        shard: [0, 1],
-        properties: {
-          $os: "linux",
-          $browser: "downcity",
-          $device: "downcity",
-        },
-      },
-    };
-
-    this.logger.debug(`Identify payload: ${JSON.stringify(identifyPayload)}`);
-    this.ws?.send(JSON.stringify(identifyPayload));
-    this.logger.info("已发送鉴权请求");
-  }
-
-  /**
-   * 获取订阅事件位掩码。
-   */
-  private getIntents(): number {
-    const GROUP_AND_C2C_EVENT = 1 << 25;
-    const AUDIO_ACTION = 1 << 29;
-    return GROUP_AND_C2C_EVENT | AUDIO_ACTION;
+    await sendQqGatewayIdentify({
+      socket: this.ws,
+      logger: this.logger,
+      getAuthToken: () => this.getAuthToken(),
+    });
   }
 
   /**
@@ -585,8 +426,7 @@ export class QQGatewayClient {
    */
   private startHeartbeat(intervalMs: number): void {
     this.stopHeartbeat();
-    this.heartbeatIntervalMs =
-      Number.isFinite(intervalMs) && intervalMs > 0 ? Math.trunc(intervalMs) : 30000;
+    this.heartbeatIntervalMs = normalizeQqHeartbeatIntervalMs(intervalMs);
     this.pendingHeartbeatSinceMs = 0;
     this.lastHeartbeatSentAtMs = 0;
     this.sendHeartbeat();
@@ -599,35 +439,21 @@ export class QQGatewayClient {
    * 发送单次心跳。
    */
   private sendHeartbeat(): void {
-    const ws = this.ws;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const now = Date.now();
-    if (this.hasHeartbeatTimeout(now)) {
-      this.logger.warn("QQ 心跳 ACK 超时，准备重连", {
-        pendingHeartbeatSinceMs: this.pendingHeartbeatSinceMs,
-        heartbeatAckTimeoutMs: this.getHeartbeatAckTimeoutMs(),
-      });
-      this.closeSocketForRecovery("heartbeat_ack_timeout");
-      return;
-    }
-
-    const heartbeatPayload = {
-      op: OpCode.Heartbeat,
-      d: this.lastSeq || null,
-    };
-    try {
-      ws.send(JSON.stringify(heartbeatPayload));
-      this.lastHeartbeatSentAtMs = now;
-      if (!this.pendingHeartbeatSinceMs) {
-        this.pendingHeartbeatSinceMs = now;
-      }
-      this.logger.debug("发送心跳");
-    } catch (error) {
-      this.logger.warn("发送 QQ 心跳失败，准备重连", {
-        error: String(error),
-      });
-      this.closeSocketForRecovery("heartbeat_send_failed");
-    }
+    sendQqGatewayHeartbeat({
+      socket: this.ws,
+      logger: this.logger,
+      lastSeq: this.lastSeq,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      wsReadyAtMs: this.wsReadyAtMs,
+      pendingHeartbeatSinceMs: this.pendingHeartbeatSinceMs,
+      markHeartbeatSent: (nowMs) => {
+        this.lastHeartbeatSentAtMs = nowMs;
+      },
+      markPendingHeartbeat: (nowMs) => {
+        this.pendingHeartbeatSinceMs = nowMs;
+      },
+      closeSocketForRecovery: (reason) => this.closeSocketForRecovery(reason),
+    });
   }
 
   /**

@@ -27,6 +27,8 @@ export type SessionHistoryMetaV1 = {
   agentId?: string;
   /** 当前 session 首次创建时间戳（ms）。 */
   createdAt?: number;
+  /** 当前 session 初始化时解析到的系统时区。 */
+  timezone?: string;
   /** 最近一次更新元信息的时间戳（ms）。 */
   updatedAt: number;
   /** 固定注入到 Session 上下文的 skill id 列表。 */

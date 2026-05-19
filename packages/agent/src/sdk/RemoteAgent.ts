@@ -12,6 +12,7 @@ import type {
   AgentSessionRunResult,
   AgentSessionSetInput,
   AgentSessionStreamEvent,
+  AgentSessionSystemSnapshot,
   RemoteAgentOptions,
 } from "@/sdk/AgentSdkTypes.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
@@ -78,18 +79,23 @@ class RemoteSession {
   }
 
   /**
-   * 读取远程 session 当前生效的 system prompt 文本集合。
+   * 读取远程 session 当前生效的 system prompt 快照。
    */
-  async system(): Promise<string[]> {
+  async system(): Promise<AgentSessionSystemSnapshot> {
     const response = await fetch(
       `${this.baseUrl}/api/sdk/sessions/${encodeURIComponent(this.id)}/system`,
     );
     const payload = (await response.json()) as {
       success?: boolean;
       error?: string;
-      system?: string[];
+      system?: AgentSessionSystemSnapshot;
     };
-    if (!response.ok || !payload.success || !Array.isArray(payload.system)) {
+    if (
+      !response.ok ||
+      !payload.success ||
+      !payload.system ||
+      !Array.isArray(payload.system.blocks)
+    ) {
       throw new Error(String(payload.error || "Remote session system failed"));
     }
     return payload.system;

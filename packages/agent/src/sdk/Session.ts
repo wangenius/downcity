@@ -22,14 +22,19 @@ import type {
   AgentSessionRunResult,
   AgentSessionSetInput,
   AgentSessionStreamEvent,
+  AgentSessionSystemBlock,
+  AgentSessionSystemSnapshot,
 } from "@/sdk/AgentSdkTypes.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
-import { SdkSessionSystemComposer } from "@/sdk/SdkSessionSystemComposer.js";
-import { resolveSdkSessionSystemMessages } from "@/sdk/SdkSessionSystemComposer.js";
+import {
+  resolveSdkSessionSystemBlocks,
+  SdkSessionSystemComposer,
+} from "@/sdk/SdkSessionSystemComposer.js";
 import {
   inferModelLabel,
   patchSdkSessionModelLabel,
   readSdkSessionMetadata,
+  resolveSystemTimezone,
   writeSdkSessionMetadata,
 } from "@/sdk/SessionMetadata.js";
 import {
@@ -75,19 +80,19 @@ type SdkSessionOptions = {
   };
 
   /**
-   * 读取静态 system 文本集合。
+   * 读取当前 SDK 调用方传入的 instruction system blocks。
    */
-  getStaticSystemPrompts: () => string[];
+  getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
 
   /**
-   * 读取当前 agent 显式注入 service 的 system 文本集合。
+   * 读取当前 agent 显式注入 service 的 system blocks。
    */
-  getServiceSystemPrompts: () => Promise<string[]>;
+  getServiceSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 
   /**
-   * 读取当前 agent 显式注册 plugin 的 system 文本集合。
+   * 读取当前 agent 显式注册 plugin 的 system blocks。
    */
-  getPluginSystemPrompts: () => Promise<string[]>;
+  getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 };
 
 /**
@@ -100,12 +105,14 @@ export class SdkSession {
   private readonly projectRoot: string;
   private readonly tools: Record<string, Tool>;
   private readonly logger: SdkSessionOptions["logger"];
-  private readonly getStaticSystemPrompts: SdkSessionOptions["getStaticSystemPrompts"];
-  private readonly getServiceSystemPrompts: SdkSessionOptions["getServiceSystemPrompts"];
-  private readonly getPluginSystemPrompts: SdkSessionOptions["getPluginSystemPrompts"];
+  private readonly getInstructionSystemBlocks: SdkSessionOptions["getInstructionSystemBlocks"];
+  private readonly getServiceSystemBlocks: SdkSessionOptions["getServiceSystemBlocks"];
+  private readonly getPluginSystemBlocks: SdkSessionOptions["getPluginSystemBlocks"];
   private readonly historyComposer: JsonlSessionHistoryComposer;
   private readonly coreSession: CoreSession;
   private sessionConfig: AgentSessionConfigSnapshot = {};
+  private createdAt = Date.now();
+  private timezone = resolveSystemTimezone();
   private initializePromise: Promise<this> | null = null;
   private servicePort: SessionPort | null = null;
 
@@ -115,9 +122,9 @@ export class SdkSession {
     this.projectRoot = String(options.projectRoot || "").trim();
     this.tools = options.tools;
     this.logger = options.logger;
-    this.getStaticSystemPrompts = options.getStaticSystemPrompts;
-    this.getServiceSystemPrompts = options.getServiceSystemPrompts;
-    this.getPluginSystemPrompts = options.getPluginSystemPrompts;
+    this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
+    this.getServiceSystemBlocks = options.getServiceSystemBlocks;
+    this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     if (!this.id) {
       throw new Error("SdkSession requires a non-empty sessionId");
     }
@@ -166,10 +173,13 @@ export class SdkSession {
           historyComposer,
           compactionComposer: new JsonlSessionCompactionComposer(),
           systemComposer: new SdkSessionSystemComposer({
+            agentId: this.agentId,
             projectRoot: this.projectRoot,
-            getStaticSystemPrompts: this.getStaticSystemPrompts,
-            getServiceSystemPrompts: this.getServiceSystemPrompts,
-            getPluginSystemPrompts: this.getPluginSystemPrompts,
+            getSessionCreatedAt: () => this.createdAt,
+            getSessionTimezone: () => this.timezone,
+            getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+            getServiceSystemBlocks: this.getServiceSystemBlocks,
+            getPluginSystemBlocks: this.getPluginSystemBlocks,
           }),
           getTools: () => this.tools,
         });
@@ -190,6 +200,12 @@ export class SdkSession {
         agentId: this.agentId,
         sessionId: this.id,
       });
+      const createdAt =
+        typeof metadata.createdAt === "number" ? metadata.createdAt : Date.now();
+      const timezone =
+        typeof metadata.timezone === "string" && metadata.timezone.trim()
+          ? metadata.timezone.trim()
+          : resolveSystemTimezone();
       await writeSdkSessionMetadata({
         projectRoot: this.projectRoot,
         agentId: this.agentId,
@@ -197,10 +213,12 @@ export class SdkSession {
         meta: {
           ...metadata,
           agentId: this.agentId,
-          createdAt:
-            typeof metadata.createdAt === "number" ? metadata.createdAt : Date.now(),
+          createdAt,
+          timezone,
         },
       });
+      this.createdAt = createdAt;
+      this.timezone = timezone;
       this.sessionConfig = {
         ...(metadata.sdkConfig?.modelLabel
           ? { modelLabel: metadata.sdkConfig.modelLabel }
@@ -279,20 +297,31 @@ export class SdkSession {
    *
    * 关键点（中文）
    * - 返回内容与实际 run 时使用的 SDK system composer 同源。
-   * - 包含静态 system、显式注入 service system、显式注册 plugin system 与 runtime clock。
-   * - 这里只返回文本数组，不把 system prompt 写入会话历史。
+   * - 包含 instruction/core、显式注入 service system、显式注册 plugin system 与 session 上下文。
+   * - 返回结构化快照，不把 system prompt 写入会话历史。
    */
-  async system(): Promise<string[]> {
-    const messages = await resolveSdkSessionSystemMessages({
+  async system(): Promise<AgentSessionSystemSnapshot> {
+    const blocks = await resolveSdkSessionSystemBlocks({
+      agentId: this.agentId,
       projectRoot: this.projectRoot,
       sessionId: this.id,
-      getStaticSystemPrompts: this.getStaticSystemPrompts,
-      getServiceSystemPrompts: this.getServiceSystemPrompts,
-      getPluginSystemPrompts: this.getPluginSystemPrompts,
+      createdAt: this.createdAt,
+      timezone: this.timezone,
+      getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+      getServiceSystemBlocks: this.getServiceSystemBlocks,
+      getPluginSystemBlocks: this.getPluginSystemBlocks,
     });
-    return messages
-      .map((message) => String(message.content || ""))
-      .filter((content) => content.trim().length > 0);
+    return {
+      sessionId: this.id,
+      session: {
+        agentId: this.agentId,
+        sessionId: this.id,
+        projectRoot: this.projectRoot,
+        createdAt: new Date(this.createdAt).toISOString(),
+        timezone: this.timezone,
+      },
+      blocks,
+    };
   }
 
   /**
@@ -401,9 +430,9 @@ export class SdkSession {
       sessionId: `fork-${Date.now()}-${nanoid(8)}`,
       tools: this.tools,
       logger: this.logger,
-      getStaticSystemPrompts: this.getStaticSystemPrompts,
-      getServiceSystemPrompts: this.getServiceSystemPrompts,
-      getPluginSystemPrompts: this.getPluginSystemPrompts,
+      getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+      getServiceSystemBlocks: this.getServiceSystemBlocks,
+      getPluginSystemBlocks: this.getPluginSystemBlocks,
     });
     await forked.initialize();
     if (this.sessionConfig.model) {

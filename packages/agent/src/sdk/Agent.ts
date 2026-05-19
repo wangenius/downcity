@@ -2,7 +2,7 @@
  * Agent SDK 本地入口。
  *
  * 关键点（中文）
- * - `new Agent({ id, path, tools, services, plugins })` 只做同步装配，不在构造阶段启动任何 I/O。
+ * - `new Agent({ id, path, instruction, tools, services, plugins })` 只做同步装配，不在构造阶段启动任何 I/O。
  * - session、HTTP、RPC、service lifecycle 都按需异步初始化。
  * - SDK Agent 通过最小 `AgentContext` 适配层复用现有 service/plugin/chat 运行协议，而不是重复实现一套执行链。
  */
@@ -26,9 +26,10 @@ import type {
 import type {
   AgentOptions,
   AgentSessionMetadata,
+  AgentSessionSystemBlock,
 } from "@/sdk/AgentSdkTypes.js";
 import { SdkSession } from "@/sdk/Session.js";
-import { loadStaticSystemPrompts } from "@session/composer/system/default/StaticPromptCatalog.js";
+import { DEFAULT_SHIP_PROMPTS } from "@session/composer/system/default/SystemDomain.js";
 import { getSdkAgentSessionsRootDirPath } from "@/sdk/Paths.js";
 import { SdkAgentHttpServer } from "@/sdk/HttpServer.js";
 import { SdkAgentRpcServer } from "@/sdk/RpcServer.js";
@@ -70,6 +71,41 @@ function createFallbackSdkConfig(agentId: string): DowncityConfig {
   } as DowncityConfig;
 }
 
+function normalizeInstructionInput(input: string | string[] | undefined): string[] {
+  const items = Array.isArray(input) ? input : typeof input === "string" ? [input] : [];
+  return items
+    .map((item) => String(item || "").trim())
+    .filter((item) => item.length > 0);
+}
+
+function createCoreInstructionContent(projectRoot: string): string {
+  const currentYear = String(new Date().getFullYear());
+  return DEFAULT_SHIP_PROMPTS
+    .replaceAll("{{project_path}}", projectRoot)
+    .replaceAll("{{project_root}}", projectRoot)
+    .replaceAll("{{current_year}}", currentYear);
+}
+
+function createInstructionSystemBlocks(
+  instruction: string[],
+  projectRoot: string,
+): AgentSessionSystemBlock[] {
+  if (instruction.length === 0) {
+    return [
+      {
+        source: "core",
+        name: "default",
+        content: createCoreInstructionContent(projectRoot),
+      },
+    ];
+  }
+  return instruction.map((content, index) => ({
+    source: "instruction" as const,
+    name: instruction.length === 1 ? "agent" : `agent:${index + 1}`,
+    content,
+  }));
+}
+
 /**
  * SDK 本地 Agent。
  */
@@ -90,7 +126,7 @@ export class Agent {
   private readonly pluginSystemProviders: Plugin[];
   private readonly config: DowncityConfig;
   private readonly platform: AgentPlatformRuntime;
-  private systems: string[];
+  private instruction: string[];
   private servicesStartPromise: Promise<void> | null = null;
 
   constructor(options: AgentOptions) {
@@ -109,7 +145,7 @@ export class Agent {
     this.logger = new Logger();
     this.logger.bindProjectRoot(this.path);
     this.platform = options.platform || EMPTY_SDK_PLATFORM;
-    this.systems = loadStaticSystemPrompts(this.path);
+    this.instruction = normalizeInstructionInput(options.instruction);
     this.config = this.loadConfig();
     this.services = this.createServiceMap(options.services || []);
     this.runtime = this.createRuntime();
@@ -176,10 +212,14 @@ export class Agent {
   }
 
   /**
-   * 刷新静态 system 文本集合。
+   * 更新当前 SDK Agent 的静态基础指令。
+   *
+   * 关键点（中文）
+   * - instruction 不做动态变量替换。
+   * - 已创建的 session 后续 run 会读取最新 instruction blocks。
    */
-  reloadStaticPrompts(): void {
-    this.systems = loadStaticSystemPrompts(this.path);
+  setInstruction(input: string | string[]): void {
+    this.instruction = normalizeInstructionInput(input);
   }
 
   private loadConfig(): DowncityConfig {
@@ -252,8 +292,12 @@ export class Agent {
     };
   }
 
-  private async loadPluginSystemPrompts(): Promise<string[]> {
-    const out: string[] = [];
+  private loadInstructionSystemBlocks(): AgentSessionSystemBlock[] {
+    return createInstructionSystemBlocks(this.instruction, this.path);
+  }
+
+  private async loadPluginSystemBlocks(): Promise<AgentSessionSystemBlock[]> {
+    const out: AgentSessionSystemBlock[] = [];
     for (const plugin of this.pluginSystemProviders) {
       if (typeof plugin.system !== "function") continue;
       try {
@@ -264,7 +308,11 @@ export class Agent {
         }
         const text = String(await plugin.system(this.serviceContext)).trim();
         if (!text) continue;
-        out.push(text);
+        out.push({
+          source: "plugin",
+          name: plugin.name,
+          content: text,
+        });
       } catch {
         // 单个 plugin system 失败不应阻断 SDK session 主链路。
       }
@@ -272,14 +320,18 @@ export class Agent {
     return out;
   }
 
-  private async loadServiceSystemPrompts(): Promise<string[]> {
-    const out: string[] = [];
+  private async loadServiceSystemBlocks(): Promise<AgentSessionSystemBlock[]> {
+    const out: AgentSessionSystemBlock[] = [];
     for (const service of this.services.values()) {
       if (typeof service.system !== "function") continue;
       try {
         const text = String(await service.system(this.serviceContext)).trim();
         if (!text) continue;
-        out.push(text);
+        out.push({
+          source: "service",
+          name: service.name,
+          content: text,
+        });
       } catch {
         // 单个 service system 失败不应阻断 SDK session 主链路。
       }
@@ -295,7 +347,7 @@ export class Agent {
       config: this.config,
       env: {},
       globalEnv: {},
-      systems: this.systems,
+      systems: this.instruction,
       paths: createAgentPathRuntime(this.path),
       pluginConfig: createAgentPluginConfigRuntime(this.path),
       platform: this.platform,
@@ -326,7 +378,7 @@ export class Agent {
       config: this.config,
       env: {},
       globalEnv: {},
-      systems: this.systems,
+      systems: this.instruction,
       paths: this.runtime.paths,
       pluginConfig: this.runtime.pluginConfig,
       platform: this.platform,
@@ -409,9 +461,9 @@ export class Agent {
       sessionId: resolvedSessionId,
       tools: this.tools,
       logger: this.logger,
-      getStaticSystemPrompts: () => this.systems,
-      getServiceSystemPrompts: () => this.loadServiceSystemPrompts(),
-      getPluginSystemPrompts: () => this.loadPluginSystemPrompts(),
+      getInstructionSystemBlocks: () => this.loadInstructionSystemBlocks(),
+      getServiceSystemBlocks: () => this.loadServiceSystemBlocks(),
+      getPluginSystemBlocks: () => this.loadPluginSystemBlocks(),
     });
     this.sessionsById.set(resolvedSessionId, created);
     return created;

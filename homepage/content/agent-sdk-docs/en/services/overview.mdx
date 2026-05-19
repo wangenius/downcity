@@ -102,11 +102,11 @@ The current local SDK session prompt path injects `service.system(context)` from
 
 The SDK path currently injects:
 
-- `PROFILE.md`
-- `SOUL.md`
-- the core prompt
+- the SDK core fallback, when no `instruction` was provided
+- caller-provided static `instruction`
 - `service.system(context)`
-- the runtime clock prompt
+- registered `plugin.system(context)`
+- stable session context, including the session creation reference time and timezone
 
 So services in the SDK can provide:
 

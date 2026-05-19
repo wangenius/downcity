@@ -42,6 +42,16 @@ export interface AgentOptions {
   tools?: Record<string, Tool>;
 
   /**
+   * 调用方显式传入的静态基础指令。
+   *
+   * 关键点（中文）
+   * - `instruction` 是稳定、缓存友好的 system 前缀，不做动态变量替换。
+   * - SDK 不主动读取 `PROFILE.md` / `SOUL.md`；这类项目文件应由 city 或调用方读取后传入。
+   * - 未传入时，SDK 会使用包内最小 core instruction 作为 fallback。
+   */
+  instruction?: string | string[];
+
+  /**
    * 当前 agent 显式持有的 service 实例集合。
    *
    * 关键点（中文）
@@ -245,6 +255,109 @@ export type AgentSessionStreamEvent =
        */
       error: string;
     };
+
+/**
+ * Session system block 来源类型。
+ */
+export type AgentSessionSystemBlockSource =
+  | "core"
+  | "instruction"
+  | "service"
+  | "plugin"
+  | "session";
+
+/**
+ * Session system prompt 的单个组成块。
+ */
+export interface AgentSessionSystemBlock {
+  /**
+   * 当前 block 的来源层级。
+   */
+  source: AgentSessionSystemBlockSource;
+
+  /**
+   * 当前 block 在来源层级内的名称。
+   *
+   * 说明（中文）
+   * - `instruction` 通常使用 `agent`。
+   * - `service` / `plugin` 使用对应 service/plugin 名称。
+   * - `core` 使用 `default`。
+   * - `session` 使用当前 session 上下文名称。
+   */
+  name: string;
+
+  /**
+   * 已归一化后的 system 文本内容。
+   *
+   * 关键点（中文）
+   * - SDK 不对 instruction 做动态变量替换。
+   * - 动态上下文应由调用方放入 user message。
+   */
+  content: string;
+}
+
+/**
+ * 当前 session 的稳定上下文信息。
+ */
+export interface AgentSessionSystemSessionInfo {
+  /**
+   * 当前 session 所属 agentId。
+   */
+  agentId: string;
+
+  /**
+   * 当前 session 唯一标识。
+   */
+  sessionId: string;
+
+  /**
+   * 当前 agent 绑定的项目根目录。
+   */
+  projectRoot: string;
+
+  /**
+   * 当前 session 首次创建时间。
+   *
+   * 关键点（中文）
+   * - 这是 session 初始化时落盘的稳定参考时间，按 Date/ISO 字符串对外展示。
+   * - 它不是每轮运行的当前时间，不会随着 `run()` / `stream()` 改变。
+   */
+  createdAt: string;
+
+  /**
+   * 当前 session 初始化时解析到的系统时区。
+   *
+   * 关键点（中文）
+   * - 这是 session 级参考时区，随创建信息一起固定。
+   * - 它不是每轮运行重新解析的动态时区。
+   */
+  timezone: string;
+}
+
+/**
+ * 当前 session 生效的完整 system prompt 快照。
+ */
+export interface AgentSessionSystemSnapshot {
+  /**
+   * 当前 sessionId。
+   */
+  sessionId: string;
+
+  /**
+   * 当前 session 的稳定上下文信息。
+   *
+   * 关键点（中文）
+   * - 这里包含 session 创建时间这类稳定参考信息。
+   * - 这里不包含当前时间、轮次、用户输入等每轮变化的数据。
+   * - 每轮动态信息应由调用方放入 user message，避免破坏 instruction 缓存命中。
+   */
+  session: AgentSessionSystemSessionInfo;
+
+  /**
+   * 当前生效的 system blocks，按进入模型的顺序排列。
+   */
+  blocks: AgentSessionSystemBlock[];
+}
 
 /**
  * Session 元数据列表项。

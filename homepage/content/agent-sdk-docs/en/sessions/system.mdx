@@ -1,6 +1,6 @@
 ---
 title: session.system()
-description: Read the system prompt blocks currently active for a session
+description: Read the structured system prompt snapshot currently active for a session
 ---
 
 # `session.system()`
@@ -13,16 +13,64 @@ const system = await session.system();
 
 ## What It Returns
 
-It returns the current session's effective system prompt text blocks as a `string[]`.
+It returns a structured system snapshot:
 
-The array includes:
+```ts
+{
+  sessionId: string;
+  session: {
+    agentId: string;
+    sessionId: string;
+    projectRoot: string;
+    createdAt: string;
+    timezone: string;
+  };
+  blocks: Array<{
+    source: "core" | "instruction" | "service" | "plugin" | "session";
+    name: string;
+    content: string;
+  }>;
+}
+```
 
-- static project prompts
+The blocks can include:
+
+- the SDK core fallback, when no `instruction` was provided
+- caller-provided static `instruction`
 - explicitly injected service system text
 - registered plugin system text
-- the runtime clock prompt
+- stable session context, including `agentId`, `sessionId`, `projectRoot`, creation time, and timezone
 
-The returned text is resolved through the same SDK system composer used by `session.run()` and `session.stream()`.
+The returned blocks are the same stable system blocks used by `session.run()` and `session.stream()`.
+
+The session creation time and timezone are the reference time context for the conversation. Dynamic values such as current time should be placed in the user message, not in `instruction`.
+
+## Example Snapshot
+
+```json
+{
+  "sessionId": "design-review",
+  "session": {
+    "agentId": "city-dev",
+    "sessionId": "design-review",
+    "projectRoot": "/path/to/project",
+    "createdAt": "2026-05-19T14:16:25.048Z",
+    "timezone": "Asia/Shanghai"
+  },
+  "blocks": [
+    {
+      "source": "instruction",
+      "name": "agent",
+      "content": "You are the Downcity project assistant."
+    },
+    {
+      "source": "session",
+      "name": "context",
+      "content": "当前会话上下文：\n你正在服务 agent \"city-dev\" 的 session \"design-review\"。\n当前项目根目录是 \"/path/to/project\"。\n本会话创建于 2026-05-19T14:16:25.048Z，参考时区是 Asia/Shanghai。\n这个创建时间是当前会话的稳定参考时间，不代表每轮运行时的当前时间。\n如果用户消息中提供了新的当前时间、相对时间或其他动态上下文，应优先使用用户消息中的动态信息。"
+    }
+  ]
+}
+```
 
 ## What It Does Not Do
 

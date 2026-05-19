@@ -20,6 +20,10 @@ export type {
   AgentSessionRunResult,
   AgentSessionSetInput,
   AgentSessionStreamEvent,
+  AgentSessionSystemBlock,
+  AgentSessionSystemBlockSource,
+  AgentSessionSystemSessionInfo,
+  AgentSessionSystemSnapshot,
 } from "./sdk/AgentSdkTypes.js";
 
 // 服务与插件作者 API

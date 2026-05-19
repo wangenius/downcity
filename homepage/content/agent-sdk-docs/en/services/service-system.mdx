@@ -29,12 +29,11 @@ When you explicitly pass a service through `new Agent({ services: [...] })`, the
 
 The injection order is:
 
-- `PROFILE.md`
-- `SOUL.md`
-- the core prompt
+- SDK core fallback, when no `instruction` was provided
+- caller-provided static `instruction`
 - `service.system(context)`
 - registered plugins' `plugin.system(context)`
-- the runtime clock prompt
+- stable session context, including the session creation reference time and timezone
 
 If one service's `system(context)` throws, the SDK skips that one service system block and does not block the current session run.
 
@@ -49,7 +48,7 @@ That means:
 
 ## Where Rules Belong
 
-If a rule belongs to the whole agent's long-lived personality or project contract, prefer `PROFILE.md` or `SOUL.md`.
+If a rule belongs to the whole agent's long-lived personality or project contract, pass it through `new Agent({ instruction })`.
 
 If a rule belongs to a specific service, such as chat sending rules or a domain boundary owned by a business service, `service.system(context)` is the right place.
 

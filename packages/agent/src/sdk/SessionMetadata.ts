@@ -37,6 +37,21 @@ function normalizeModelLabel(input: unknown): string | undefined {
 }
 
 /**
+ * 读取当前系统时区。
+ */
+export function resolveSystemTimezone(): string {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return typeof timezone === "string" && timezone.trim()
+    ? timezone.trim()
+    : "UTC";
+}
+
+function normalizeTimezone(input: unknown): string | undefined {
+  const timezone = typeof input === "string" ? input.trim() : "";
+  return timezone || undefined;
+}
+
+/**
  * 从模型实例推导轻量可读标签。
  */
 export function inferModelLabel(
@@ -83,6 +98,7 @@ export async function readSdkSessionMetadata(
         typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
           ? raw.createdAt
           : Date.now(),
+      timezone: normalizeTimezone(raw.timezone) || resolveSystemTimezone(),
       updatedAt:
         typeof raw.updatedAt === "number" && Number.isFinite(raw.updatedAt)
           ? raw.updatedAt
@@ -116,6 +132,7 @@ export async function readSdkSessionMetadata(
       sessionId: input.sessionId,
       agentId: input.agentId,
       createdAt: Date.now(),
+      timezone: resolveSystemTimezone(),
       updatedAt: 0,
       pinnedSkillIds: [],
     };
@@ -160,6 +177,7 @@ export async function patchSdkSessionModelLabel(
     agentId: input.agentId,
     createdAt:
       typeof current.createdAt === "number" ? current.createdAt : Date.now(),
+    timezone: normalizeTimezone(current.timezone) || resolveSystemTimezone(),
     updatedAt: Date.now(),
     ...(modelLabel
       ? {

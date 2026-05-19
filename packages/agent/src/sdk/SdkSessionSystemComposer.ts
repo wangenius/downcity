@@ -3,19 +3,27 @@
  *
  * 关键点（中文）
  * - 面向 `Agent` SDK 的本地会话执行场景。
- * - 注入静态 PROFILE / SOUL / core prompt、显式注入 service system、显式注册 plugin system 与运行时时钟上下文。
+ * - 注入调用方显式传入的静态 instruction、显式注入 service system 与显式注册 plugin system。
+ * - SDK 不在 system 中注入动态变量；动态上下文应由调用方放入 user message。
  */
 
 import { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
 import { getSessionRunScope } from "@session/SessionRunScope.js";
-import { transformPromptsIntoSystemMessages } from "@session/composer/system/default/PromptRenderer.js";
-import { buildRuntimeClockSystemPrompt } from "@session/composer/system/default/variables/VariableReplacer.js";
 import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
+import type {
+  AgentSessionSystemBlock,
+  AgentSessionSystemSessionInfo,
+} from "@/sdk/AgentSdkTypes.js";
 
 /**
- * 解析 SDK session system messages 的输入。
+ * 解析 SDK session system blocks 的输入。
  */
-export interface ResolveSdkSessionSystemMessagesParams {
+export interface ResolveSdkSessionSystemBlocksParams {
+  /**
+   * 当前 agent 的稳定标识。
+   */
+  agentId: string;
+
   /**
    * 当前 agent 绑定的项目根目录。
    */
@@ -27,109 +35,177 @@ export interface ResolveSdkSessionSystemMessagesParams {
   sessionId: string;
 
   /**
-   * 读取当前生效的静态 system 文本集合。
+   * 当前 session 首次创建时间（ms）。
    */
-  getStaticSystemPrompts: () => string[];
+  createdAt: number;
 
   /**
-   * 读取当前显式注入 service 的 system 文本集合。
+   * 当前 session 初始化时解析到的系统时区。
    */
-  getServiceSystemPrompts: () => Promise<string[]>;
+  timezone: string;
 
   /**
-   * 读取当前显式注册 plugin 的 system 文本集合。
+   * 读取当前 SDK 调用方传入的 instruction system blocks。
    */
-  getPluginSystemPrompts: () => Promise<string[]>;
+  getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
+
+  /**
+   * 读取当前显式注入 service 的 system blocks。
+   */
+  getServiceSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+
+  /**
+   * 读取当前显式注册 plugin 的 system blocks。
+   */
+  getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 }
 
 type SdkSessionSystemComposerOptions = {
   /**
+   * 当前 agent 的稳定标识。
+   */
+  agentId: string;
+
+  /**
    * 当前 agent 绑定的项目根目录。
    */
   projectRoot: string;
 
   /**
-   * 读取当前生效的静态 system 文本集合。
+   * 读取当前 session 首次创建时间（ms）。
    */
-  getStaticSystemPrompts: () => string[];
+  getSessionCreatedAt: () => number;
 
   /**
-   * 读取当前显式注册 plugin 的 system 文本集合。
+   * 读取当前 session 初始化时解析到的系统时区。
    */
-  getPluginSystemPrompts: () => Promise<string[]>;
+  getSessionTimezone: () => string;
 
   /**
-   * 读取当前显式注入 service 的 system 文本集合。
+   * 读取当前 SDK 调用方传入的 instruction system blocks。
    */
-  getServiceSystemPrompts: () => Promise<string[]>;
+  getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
+
+  /**
+   * 读取当前显式注册 plugin 的 system blocks。
+   */
+  getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+
+  /**
+   * 读取当前显式注入 service 的 system blocks。
+   */
+  getServiceSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 };
 
-async function resolvePromptMessages(params: {
-  /**
-   * 原始 system prompt 文本集合。
-   */
-  prompts: string[];
-  /**
-   * 当前项目根目录。
-   */
-  projectRoot: string;
-  /**
-   * 当前 sessionId。
-   */
-  sessionId: string;
-}): Promise<SessionSystemMessage[]> {
-  const nonEmptyPrompts = params.prompts.filter((item) =>
-    String(item || "").trim(),
-  );
-  return await transformPromptsIntoSystemMessages(nonEmptyPrompts, {
-    projectPath: params.projectRoot,
-    sessionId: params.sessionId,
-    variableMode: "stable",
-  });
+function normalizeSystemBlocks(
+  blocks: AgentSessionSystemBlock[],
+): AgentSessionSystemBlock[] {
+  if (!Array.isArray(blocks)) return [];
+  return blocks
+    .map((block) => {
+      const content = String(block?.content || "").trim();
+      if (!content) return null;
+      const source = block.source;
+      if (
+        source !== "core" &&
+        source !== "instruction" &&
+        source !== "service" &&
+        source !== "plugin" &&
+        source !== "session"
+      ) {
+        return null;
+      }
+      return {
+        source,
+        name: String(block.name || source).trim() || source,
+        content,
+      } satisfies AgentSessionSystemBlock;
+    })
+    .filter((block): block is AgentSessionSystemBlock => Boolean(block));
+}
+
+function createSessionInfo(
+  params: Pick<
+    ResolveSdkSessionSystemBlocksParams,
+    "agentId" | "sessionId" | "projectRoot" | "createdAt" | "timezone"
+  >,
+): AgentSessionSystemSessionInfo {
+  const createdAt = Number.isFinite(params.createdAt) ? params.createdAt : 0;
+  return {
+    agentId: String(params.agentId || "").trim(),
+    sessionId: String(params.sessionId || "").trim(),
+    projectRoot: String(params.projectRoot || "").trim(),
+    createdAt: new Date(createdAt).toISOString(),
+    timezone: String(params.timezone || "").trim() || "UTC",
+  };
+}
+
+function createSessionSystemBlock(
+  session: AgentSessionSystemSessionInfo,
+): AgentSessionSystemBlock {
+  const content = [
+    "当前会话上下文：",
+    `你正在服务 agent "${session.agentId}" 的 session "${session.sessionId}"。`,
+    `当前项目根目录是 "${session.projectRoot}"。`,
+    `本会话创建于 ${session.createdAt}，参考时区是 ${session.timezone}。`,
+    "这个创建时间是当前会话的稳定参考时间，不代表每轮运行时的当前时间。",
+    "如果用户消息中提供了新的当前时间、相对时间或其他动态上下文，应优先使用用户消息中的动态信息。",
+  ].join("\n");
+  return {
+    source: "session",
+    name: "context",
+    content,
+  };
+}
+
+/**
+ * 解析 SDK session 当前生效的 system blocks。
+ */
+export async function resolveSdkSessionSystemBlocks(
+  params: ResolveSdkSessionSystemBlocksParams,
+): Promise<AgentSessionSystemBlock[]> {
+  const agentId = String(params.agentId || "").trim();
+  const projectRoot = String(params.projectRoot || "").trim();
+  const sessionId = String(params.sessionId || "").trim();
+  const createdAt = Number(params.createdAt || 0);
+  const timezone = String(params.timezone || "").trim();
+  if (!agentId) {
+    throw new Error("resolveSdkSessionSystemBlocks requires a non-empty agentId");
+  }
+  if (!projectRoot) {
+    throw new Error("resolveSdkSessionSystemBlocks requires a non-empty projectRoot");
+  }
+  if (!sessionId) {
+    throw new Error("resolveSdkSessionSystemBlocks requires a non-empty sessionId");
+  }
+  if (!Number.isFinite(createdAt) || createdAt <= 0) {
+    throw new Error("resolveSdkSessionSystemBlocks requires a valid createdAt");
+  }
+  if (!timezone) {
+    throw new Error("resolveSdkSessionSystemBlocks requires a non-empty timezone");
+  }
+  return [
+    ...normalizeSystemBlocks(params.getInstructionSystemBlocks()),
+    ...normalizeSystemBlocks(await params.getServiceSystemBlocks()),
+    ...normalizeSystemBlocks(await params.getPluginSystemBlocks()),
+    // session block 放在最后，尽量保留前缀 system blocks 的跨 session 缓存命中。
+    createSessionSystemBlock(
+      createSessionInfo({ agentId, projectRoot, sessionId, createdAt, timezone }),
+    ),
+  ];
 }
 
 /**
  * 解析 SDK session 当前生效的 system messages。
  */
 export async function resolveSdkSessionSystemMessages(
-  params: ResolveSdkSessionSystemMessagesParams,
+  params: ResolveSdkSessionSystemBlocksParams,
 ): Promise<SessionSystemMessage[]> {
-  const projectRoot = String(params.projectRoot || "").trim();
-  const sessionId = String(params.sessionId || "").trim();
-  if (!projectRoot) {
-    throw new Error("resolveSdkSessionSystemMessages requires a non-empty projectRoot");
-  }
-  if (!sessionId) {
-    throw new Error("resolveSdkSessionSystemMessages requires a non-empty sessionId");
-  }
-  const staticMessages = await resolvePromptMessages({
-    prompts: params.getStaticSystemPrompts(),
-    projectRoot,
-    sessionId,
-  });
-  const serviceMessages = await resolvePromptMessages({
-    prompts: await params.getServiceSystemPrompts(),
-    projectRoot,
-    sessionId,
-  });
-  const pluginMessages = await resolvePromptMessages({
-    prompts: await params.getPluginSystemPrompts(),
-    projectRoot,
-    sessionId,
-  });
-
-  return [
-    ...staticMessages,
-    ...serviceMessages,
-    ...pluginMessages,
-    {
-      role: "system" as const,
-      content: buildRuntimeClockSystemPrompt({
-        projectPath: projectRoot,
-        sessionId,
-      }),
-    },
-  ];
+  const blocks = await resolveSdkSessionSystemBlocks(params);
+  return blocks.map((block) => ({
+    role: "system" as const,
+    content: block.content,
+  }));
 }
 
 /**
@@ -138,17 +214,26 @@ export async function resolveSdkSessionSystemMessages(
 export class SdkSessionSystemComposer extends SessionSystemComposer {
   readonly name = "sdk_prompt_system";
 
+  private readonly agentId: string;
   private readonly projectRoot: string;
-  private readonly getStaticSystemPrompts: SdkSessionSystemComposerOptions["getStaticSystemPrompts"];
-  private readonly getServiceSystemPrompts: SdkSessionSystemComposerOptions["getServiceSystemPrompts"];
-  private readonly getPluginSystemPrompts: SdkSessionSystemComposerOptions["getPluginSystemPrompts"];
+  private readonly getSessionCreatedAt: SdkSessionSystemComposerOptions["getSessionCreatedAt"];
+  private readonly getSessionTimezone: SdkSessionSystemComposerOptions["getSessionTimezone"];
+  private readonly getInstructionSystemBlocks: SdkSessionSystemComposerOptions["getInstructionSystemBlocks"];
+  private readonly getServiceSystemBlocks: SdkSessionSystemComposerOptions["getServiceSystemBlocks"];
+  private readonly getPluginSystemBlocks: SdkSessionSystemComposerOptions["getPluginSystemBlocks"];
 
   constructor(options: SdkSessionSystemComposerOptions) {
     super();
+    this.agentId = String(options.agentId || "").trim();
     this.projectRoot = String(options.projectRoot || "").trim();
-    this.getStaticSystemPrompts = options.getStaticSystemPrompts;
-    this.getServiceSystemPrompts = options.getServiceSystemPrompts;
-    this.getPluginSystemPrompts = options.getPluginSystemPrompts;
+    this.getSessionCreatedAt = options.getSessionCreatedAt;
+    this.getSessionTimezone = options.getSessionTimezone;
+    this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
+    this.getServiceSystemBlocks = options.getServiceSystemBlocks;
+    this.getPluginSystemBlocks = options.getPluginSystemBlocks;
+    if (!this.agentId) {
+      throw new Error("SdkSessionSystemComposer requires a non-empty agentId");
+    }
     if (!this.projectRoot) {
       throw new Error("SdkSessionSystemComposer requires a non-empty projectRoot");
     }
@@ -163,11 +248,14 @@ export class SdkSessionSystemComposer extends SessionSystemComposer {
       throw new Error("SdkSessionSystemComposer.resolve requires a non-empty sessionId");
     }
     return await resolveSdkSessionSystemMessages({
+      agentId: this.agentId,
       projectRoot: this.projectRoot,
       sessionId,
-      getStaticSystemPrompts: this.getStaticSystemPrompts,
-      getServiceSystemPrompts: this.getServiceSystemPrompts,
-      getPluginSystemPrompts: this.getPluginSystemPrompts,
+      createdAt: this.getSessionCreatedAt(),
+      timezone: this.getSessionTimezone(),
+      getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+      getServiceSystemBlocks: this.getServiceSystemBlocks,
+      getPluginSystemBlocks: this.getPluginSystemBlocks,
     });
   }
 }

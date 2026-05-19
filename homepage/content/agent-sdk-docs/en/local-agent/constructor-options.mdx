@@ -1,6 +1,6 @@
 ---
 title: Agent Constructor Options
-description: Detailed explanation of the local Agent id, path, tools, services, and plugins options
+description: Detailed explanation of the local Agent id, path, instruction, tools, services, and plugins options
 ---
 
 # Agent Constructor Options
@@ -11,6 +11,7 @@ The local Agent is constructed like this:
 new Agent({
   id,
   path,
+  instruction,
   tools,
   services,
   plugins,
@@ -42,10 +43,33 @@ The project root directory bound to the current agent.
 The SDK uses it to:
 
 - load project config
-- load static system prompts
 - organize session storage
 
 If `path` is wrong, many later behaviors will feel confusing because the agent will read config and write data in the wrong context.
+
+## `instruction`
+
+Static caller-provided instructions for the local SDK Agent.
+
+```ts
+new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  instruction: [
+    "You are a concise code assistant.",
+    "Prefer direct file references when explaining code.",
+  ],
+});
+```
+
+Key points:
+
+- `instruction` is static and cache-friendly
+- the SDK does not render dynamic variables inside it
+- the SDK does not read `PROFILE.md` or `SOUL.md` by itself
+- if you omit `instruction`, the SDK uses its minimal core instruction fallback
+
+If a host such as `city` wants project markdown files to affect the agent, that host should read those files and pass their final text through `instruction`.
 
 ## `tools`
 

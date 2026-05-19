@@ -102,11 +102,11 @@ Downcity 当前内建的 service 注册表包含：
 
 SDK 当前会注入：
 
-- `PROFILE.md`
-- `SOUL.md`
-- core prompt
+- 未传入 `instruction` 时的 SDK core fallback
+- 调用方传入的静态 `instruction`
 - `service.system(context)`
-- runtime clock prompt
+- 已注册 plugin 的 `plugin.system(context)`
+- 稳定的 session 上下文，包括 session 创建参考时间和时区
 
 所以 service 在 SDK 里的价值包括：
 

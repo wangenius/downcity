@@ -1,6 +1,6 @@
 ---
 title: Agent 构造参数
-description: 详细说明本地 Agent 的 id、path、tools、services 和 plugins 参数
+description: 详细说明本地 Agent 的 id、path、instruction、tools、services 和 plugins 参数
 ---
 
 # Agent 构造参数
@@ -11,6 +11,7 @@ description: 详细说明本地 Agent 的 id、path、tools、services 和 plugi
 new Agent({
   id,
   path,
+  instruction,
   tools,
   services,
   plugins,
@@ -42,10 +43,33 @@ agent 的稳定标识。
 SDK 会基于它：
 
 - 读取项目配置
-- 读取静态系统提示词
 - 组织会话落盘目录
 
 如果 `path` 给错，后面很多行为都会变得不符合预期，因为 Agent 会在错误上下文里读取配置和写数据。
+
+## `instruction`
+
+调用方传入的本地 SDK Agent 静态基础指令。
+
+```ts
+new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  instruction: [
+    "你是一个简洁的代码助手。",
+    "解释代码时优先给出明确文件引用。",
+  ],
+});
+```
+
+关键点：
+
+- `instruction` 是静态的，应该保持缓存友好
+- SDK 不会对它做动态变量渲染
+- SDK 不会自己读取 `PROFILE.md` 或 `SOUL.md`
+- 如果省略 `instruction`，SDK 会使用包内最小 core instruction 作为 fallback
+
+如果 `city` 这类宿主希望项目 markdown 文件影响 agent，应由宿主自己读取文件，并把最终文本通过 `instruction` 传入。
 
 ## `tools`
 

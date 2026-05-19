@@ -41,14 +41,14 @@ system(context) {
 
 ### service.system
 
-service 也有 `system()`，但你已经在 SDK services 文档里看到：
+service 也有 `system()`。在本地 SDK session 主路径里，显式注入 service 的 system 文本和已注册 plugin 的 system 文本都会被 SDK system composer 收集。
 
-- SDK local session 主路径不会自动把 `service.system()` 注入进去
+你可以通过 `session.system()` 查看当前解析后的提示词文本块。
 
 所以在当前产品语义里：
 
 - plugin.system 更像正式的运行时增强注入层
-- service.system 更像 service 契约的一部分，但不等于当前 SDK local prompt 的直接入口
+- service.system 则是 service 自己承载长期服务规则的对应入口
 
 ## 什么时候适合写 plugin.system
 

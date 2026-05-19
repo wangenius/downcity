@@ -10,6 +10,37 @@ import { SessionSystemComposer } from "@session/composer/system/SessionSystemCom
 import { getSessionRunScope } from "@session/SessionRunScope.js";
 import { transformPromptsIntoSystemMessages } from "@session/composer/system/default/PromptRenderer.js";
 import { buildRuntimeClockSystemPrompt } from "@session/composer/system/default/variables/VariableReplacer.js";
+import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
+
+/**
+ * 解析 SDK session system messages 的输入。
+ */
+export interface ResolveSdkSessionSystemMessagesParams {
+  /**
+   * 当前 agent 绑定的项目根目录。
+   */
+  projectRoot: string;
+
+  /**
+   * 当前 sessionId。
+   */
+  sessionId: string;
+
+  /**
+   * 读取当前生效的静态 system 文本集合。
+   */
+  getStaticSystemPrompts: () => string[];
+
+  /**
+   * 读取当前显式注入 service 的 system 文本集合。
+   */
+  getServiceSystemPrompts: () => Promise<string[]>;
+
+  /**
+   * 读取当前显式注册 plugin 的 system 文本集合。
+   */
+  getPluginSystemPrompts: () => Promise<string[]>;
+}
 
 type SdkSessionSystemComposerOptions = {
   /**
@@ -32,6 +63,74 @@ type SdkSessionSystemComposerOptions = {
    */
   getServiceSystemPrompts: () => Promise<string[]>;
 };
+
+async function resolvePromptMessages(params: {
+  /**
+   * 原始 system prompt 文本集合。
+   */
+  prompts: string[];
+  /**
+   * 当前项目根目录。
+   */
+  projectRoot: string;
+  /**
+   * 当前 sessionId。
+   */
+  sessionId: string;
+}): Promise<SessionSystemMessage[]> {
+  const nonEmptyPrompts = params.prompts.filter((item) =>
+    String(item || "").trim(),
+  );
+  return await transformPromptsIntoSystemMessages(nonEmptyPrompts, {
+    projectPath: params.projectRoot,
+    sessionId: params.sessionId,
+    variableMode: "stable",
+  });
+}
+
+/**
+ * 解析 SDK session 当前生效的 system messages。
+ */
+export async function resolveSdkSessionSystemMessages(
+  params: ResolveSdkSessionSystemMessagesParams,
+): Promise<SessionSystemMessage[]> {
+  const projectRoot = String(params.projectRoot || "").trim();
+  const sessionId = String(params.sessionId || "").trim();
+  if (!projectRoot) {
+    throw new Error("resolveSdkSessionSystemMessages requires a non-empty projectRoot");
+  }
+  if (!sessionId) {
+    throw new Error("resolveSdkSessionSystemMessages requires a non-empty sessionId");
+  }
+  const staticMessages = await resolvePromptMessages({
+    prompts: params.getStaticSystemPrompts(),
+    projectRoot,
+    sessionId,
+  });
+  const serviceMessages = await resolvePromptMessages({
+    prompts: await params.getServiceSystemPrompts(),
+    projectRoot,
+    sessionId,
+  });
+  const pluginMessages = await resolvePromptMessages({
+    prompts: await params.getPluginSystemPrompts(),
+    projectRoot,
+    sessionId,
+  });
+
+  return [
+    ...staticMessages,
+    ...serviceMessages,
+    ...pluginMessages,
+    {
+      role: "system" as const,
+      content: buildRuntimeClockSystemPrompt({
+        projectPath: projectRoot,
+        sessionId,
+      }),
+    },
+  ];
+}
 
 /**
  * SDK Session system composer 实现。
@@ -63,51 +162,12 @@ export class SdkSessionSystemComposer extends SessionSystemComposer {
     if (!sessionId) {
       throw new Error("SdkSessionSystemComposer.resolve requires a non-empty sessionId");
     }
-    const staticPrompts = this.getStaticSystemPrompts().filter((item) =>
-      String(item || "").trim(),
-    );
-    const staticMessages = await transformPromptsIntoSystemMessages(
-      staticPrompts,
-      {
-        projectPath: this.projectRoot,
-        sessionId,
-        variableMode: "stable",
-      },
-    );
-    const servicePrompts = (await this.getServiceSystemPrompts()).filter((item) =>
-      String(item || "").trim(),
-    );
-    const serviceMessages = await transformPromptsIntoSystemMessages(
-      servicePrompts,
-      {
-        projectPath: this.projectRoot,
-        sessionId,
-        variableMode: "stable",
-      },
-    );
-    const pluginPrompts = (await this.getPluginSystemPrompts()).filter((item) =>
-      String(item || "").trim(),
-    );
-    const pluginMessages = await transformPromptsIntoSystemMessages(
-      pluginPrompts,
-      {
-        projectPath: this.projectRoot,
-        sessionId,
-        variableMode: "stable",
-      },
-    );
-
-    return [
-      ...staticMessages,
-      ...serviceMessages,
-      ...pluginMessages,
-      {
-        role: "system" as const,
-        content: buildRuntimeClockSystemPrompt({
-          projectPath: this.projectRoot,
-          sessionId,
-        }),
-      },
-    ];
+    return await resolveSdkSessionSystemMessages({
+      projectRoot: this.projectRoot,
+      sessionId,
+      getStaticSystemPrompts: this.getStaticSystemPrompts,
+      getServiceSystemPrompts: this.getServiceSystemPrompts,
+      getPluginSystemPrompts: this.getPluginSystemPrompts,
+    });
   }
 }

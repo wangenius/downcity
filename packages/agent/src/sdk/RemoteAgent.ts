@@ -78,6 +78,24 @@ class RemoteSession {
   }
 
   /**
+   * 读取远程 session 当前生效的 system prompt 文本集合。
+   */
+  async system(): Promise<string[]> {
+    const response = await fetch(
+      `${this.baseUrl}/api/sdk/sessions/${encodeURIComponent(this.id)}/system`,
+    );
+    const payload = (await response.json()) as {
+      success?: boolean;
+      error?: string;
+      system?: string[];
+    };
+    if (!response.ok || !payload.success || !Array.isArray(payload.system)) {
+      throw new Error(String(payload.error || "Remote session system failed"));
+    }
+    return payload.system;
+  }
+
+  /**
    * 分叉远程 session。
    */
   async fork(messageId?: string): Promise<RemoteSession> {

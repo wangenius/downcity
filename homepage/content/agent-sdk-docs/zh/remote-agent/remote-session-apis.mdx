@@ -10,6 +10,7 @@ description: RemoteAgent 下 session 可用的核心方法和能力边界
 - `run()`
 - `stream()`
 - `history()`
+- `system()`
 - `fork()`
 
 这些 API 尽量和本地 session 的使用面保持一致，方便你在本地和远程模式之间复用同一套心智模型。
@@ -42,6 +43,12 @@ for await (const event of session.stream({ query: "继续" })) {
 
 ```ts
 const messages = await session.history();
+```
+
+## System prompts
+
+```ts
+const system = await session.system();
 ```
 
 ## 分叉

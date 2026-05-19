@@ -1,0 +1,31 @@
+---
+title: session.system()
+description: Read the system prompt blocks currently active for a session
+---
+
+# `session.system()`
+
+## Example
+
+```ts
+const system = await session.system();
+```
+
+## What It Returns
+
+It returns the current session's effective system prompt text blocks as a `string[]`.
+
+The array includes:
+
+- static project prompts
+- explicitly injected service system text
+- registered plugin system text
+- the runtime clock prompt
+
+The returned text is resolved through the same SDK system composer used by `session.run()` and `session.stream()`.
+
+## What It Does Not Do
+
+`session.system()` does not write system prompts into `messages.jsonl`.
+
+Session history stays focused on visible user and assistant messages. Use `system()` when you need to inspect the prompt context that will be sent alongside that history.

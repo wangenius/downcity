@@ -6,6 +6,7 @@
     "run",
     "stream",
     "history",
+    "system",
     "fork",
     "metadata-and-storage"
   ]

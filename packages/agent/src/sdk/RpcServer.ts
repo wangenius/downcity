@@ -208,6 +208,24 @@ export class SdkAgentRpcServer {
         };
       }
 
+      const systemMatch =
+        /^\/api\/sdk\/sessions\/([^/]+)\/system$/.exec(request.path);
+      if (request.method === "GET" && systemMatch) {
+        const session = await this.agent.session(
+          decodeURIComponent(systemMatch[1] || ""),
+        );
+        return {
+          requestId,
+          status: 200,
+          success: true,
+          data: {
+            success: true,
+            sessionId: session.id,
+            system: await session.system(),
+          } as unknown as LocalRpcResponse["data"],
+        };
+      }
+
       return {
         requestId,
         status: 404,

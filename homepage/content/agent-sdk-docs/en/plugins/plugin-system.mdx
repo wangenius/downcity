@@ -41,14 +41,14 @@ The runtime currently:
 
 ### `service.system`
 
-Services also support `system()`, but as you already saw in the SDK services docs:
+Services also support `system()`. In the local SDK session path, both explicitly injected service system text and registered plugin system text are collected by the SDK system composer.
 
-- the local SDK session path does not automatically inject `service.system()`
+You can inspect the resolved prompt blocks with `session.system()`.
 
 So in current product semantics:
 
 - `plugin.system` is a true runtime prompt augmentation layer
-- `service.system` is part of the service contract, but not a guaranteed current local SDK prompt entry point
+- `service.system` is the service-owned counterpart for long-lived service rules
 
 ## When plugin.system is a good fit
 

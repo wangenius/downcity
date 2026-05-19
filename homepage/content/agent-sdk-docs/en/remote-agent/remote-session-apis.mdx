@@ -10,6 +10,7 @@ After you obtain a session from `RemoteAgent`, the most common methods are:
 - `run()`
 - `stream()`
 - `history()`
+- `system()`
 - `fork()`
 
 These APIs stay intentionally close to the local session surface so you can reuse nearly the same mental model across local and remote modes.
@@ -42,6 +43,12 @@ for await (const event of session.stream({ query: "Continue" })) {
 
 ```ts
 const messages = await session.history();
+```
+
+## System prompts
+
+```ts
+const system = await session.system();
 ```
 
 ## Fork

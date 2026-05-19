@@ -86,7 +86,7 @@ The most useful details are:
 
 - `status` declares `allowWhenDisabled: true`, so it can still support self-check style calls even if the plugin was explicitly disabled
 - `agent.plugins.runAction(...)` is the most direct explicit entry point
-- if you also implement `system()`, the current local SDK session prompt path still does not auto-inject it
+- if you also implement `system()`, the local SDK session prompt path injects it when this plugin is registered on the Agent
 
 ## Related docs
 

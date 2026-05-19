@@ -86,6 +86,15 @@ export class SdkAgentHttpServer {
       });
     });
 
+    app.get("/api/sdk/sessions/:sessionId/system", async (c) => {
+      const session = await this.agent.session(String(c.req.param("sessionId") || ""));
+      return c.json({
+        success: true,
+        sessionId: session.id,
+        system: await session.system(),
+      });
+    });
+
     app.post("/api/sdk/sessions/:sessionId/run", async (c) => {
       const session = await this.agent.session(String(c.req.param("sessionId") || ""));
       const body = await c.req.json().catch(() => ({}));

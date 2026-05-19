@@ -25,6 +25,7 @@ import type {
 } from "@/sdk/AgentSdkTypes.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import { SdkSessionSystemComposer } from "@/sdk/SdkSessionSystemComposer.js";
+import { resolveSdkSessionSystemMessages } from "@/sdk/SdkSessionSystemComposer.js";
 import {
   inferModelLabel,
   patchSdkSessionModelLabel,
@@ -271,6 +272,27 @@ export class SdkSession {
    */
   async history(): Promise<SessionMessageV1[]> {
     return await this.historyComposer.list();
+  }
+
+  /**
+   * 读取当前 session 生效的 system prompt 文本集合。
+   *
+   * 关键点（中文）
+   * - 返回内容与实际 run 时使用的 SDK system composer 同源。
+   * - 包含静态 system、显式注入 service system、显式注册 plugin system 与 runtime clock。
+   * - 这里只返回文本数组，不把 system prompt 写入会话历史。
+   */
+  async system(): Promise<string[]> {
+    const messages = await resolveSdkSessionSystemMessages({
+      projectRoot: this.projectRoot,
+      sessionId: this.id,
+      getStaticSystemPrompts: this.getStaticSystemPrompts,
+      getServiceSystemPrompts: this.getServiceSystemPrompts,
+      getPluginSystemPrompts: this.getPluginSystemPrompts,
+    });
+    return messages
+      .map((message) => String(message.content || ""))
+      .filter((content) => content.trim().length > 0);
   }
 
   /**

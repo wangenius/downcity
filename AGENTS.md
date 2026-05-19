@@ -6,6 +6,19 @@
 4. 每个模块都应该写详细的文档注释。
 5. 关键节点所有的注释都使用中文
 6. 类型统一放到 types/ 下面
+7. package 对外能力、SDK API、用户可见行为发生变化并准备提交时，必须使用 patch 脚本完成版本号自增与构建：
+   - 只改 `@downcity/agent`：`pnpm agent:patch:build`
+   - 只改 `@downcity/city`：`pnpm city:patch:build`
+   - 多 package 联动：`pnpm all:patch:build`
+   - 仅验证不需要 bump 时才允许使用 `pnpm patch:build -- --no-bump ...`
+
+
+# Patch + Commit
+
+1. commit 前先确认改动范围，只 stage 本次任务相关文件，不要混入用户未要求的改动。
+2. 如果属于 package 用户可见更新，先运行对应 patch 脚本，再补跑受影响区域的 typecheck / lint。
+3. patch 脚本通过后再 `git add`、`git commit`，commit message 使用明确作用域，例如 `feat(agent): add session system prompts api`。
+4. commit 完成后用 `git status --short` 确认没有遗漏本次任务应提交的文件。
 
 
 # Homepage

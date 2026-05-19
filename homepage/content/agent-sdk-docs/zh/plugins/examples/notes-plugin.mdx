@@ -86,7 +86,7 @@ const status = await agent.plugins.runAction({
 
 - `status` 因为声明了 `allowWhenDisabled: true`，即使 plugin 被显式禁用也能用于自检
 - `agent.plugins.runAction(...)` 是最直接的显式调用入口
-- 如果你再实现 `system()`，当前本地 SDK session 主路径也不会自动把它注入 prompt
+- 如果你再实现 `system()`，当这个 plugin 注册到 Agent 上时，本地 SDK session 主路径会注入这段 system 文本
 
 ## 相关文档
 

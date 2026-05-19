@@ -23,7 +23,7 @@ description: 说明当前 Memory 应该挂在哪里、谁驱动它、它和 Sess
 ```mermaid
 flowchart TB
   U["User / Channel"]
-  SA["LocalSessionExecutor"]
+  SA["Executor"]
   HS["History Store"]
   MS["Memory Service"]
   CA["Contextualization"]
@@ -41,7 +41,7 @@ flowchart TB
 
 ## 这张图该怎么读
 
-### LocalSessionExecutor 是前台执行者
+### Executor 是前台执行者
 
 它负责：
 
@@ -54,7 +54,7 @@ flowchart TB
 
 也就是说：
 
-- LocalSessionExecutor 不拥有 Memory
+- Executor 不拥有 Memory
 - 但它负责驱动 Memory
 
 ### Memory service 是后台治理者

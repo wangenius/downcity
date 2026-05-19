@@ -65,7 +65,7 @@ flowchart LR
   subgraph Session["Session Axis"]
     S1["SessionFacade"]
     S2["SessionExecutorRegistry"]
-    S3["LocalSessionExecutor"]
+    S3["Executor"]
     S4["SessionEngine"]
     S5["SessionHistoryStore / messages.jsonl"]
     S6["SessionRunScope"]
@@ -130,7 +130,7 @@ flowchart LR
 
 - 以 `sessionId` 为键
 - 以 `SessionFacade` 为入口
-- 由 `SessionExecutorRegistry / LocalSessionExecutor / SessionEngine / SessionHistoryStore / SessionRunScope / Model` 共同组成的一组执行机制
+- 由 `SessionExecutorRegistry / Executor / SessionEngine / SessionHistoryStore / SessionRunScope / Model` 共同组成的一组执行机制
 
 所以后面讨论 session runtime 时，更准确的说法应该是：
 

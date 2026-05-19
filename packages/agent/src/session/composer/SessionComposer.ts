@@ -15,7 +15,7 @@ export abstract class SessionComposer {
    * 可选初始化钩子。
    *
    * 关键点（中文）
-   * - LocalSessionExecutor 启动时可统一调用。
+   * - Executor / Runner 启动时可统一调用。
    * - 无需初始化的 Composer 可不实现。
    */
   async init(): Promise<void> {

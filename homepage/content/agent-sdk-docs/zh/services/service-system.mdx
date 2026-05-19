@@ -23,7 +23,7 @@ system(context) {
 
 ## 在本地 SDK 中如何生效
 
-当前 SDK local session 使用 `SdkSessionSystemComposer`。
+当前 SDK local session 使用 `SessionSystemBuilder`。
 
 当你把 service 显式传入 `new Agent({ services: [...] })` 后，SDK 会在每次 session run 解析 system prompt 时收集这些 service 的 `system(context)` 文本。
 

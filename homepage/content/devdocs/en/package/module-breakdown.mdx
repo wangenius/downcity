@@ -10,7 +10,7 @@ The single-agent execution kernel now lives in `packages/agent/`. The fastest wa
 - `AgentRuntime`
 - `AgentContext`
 - `Session`
-- `LocalSessionCore`
+- `Runner`
 - `BaseService`
 - `PluginRegistry`
 
@@ -96,10 +96,10 @@ It owns:
 
 - `Agent`
 - `RemoteAgent`
-- `SdkSession`
+- `Session`
 - SDK HTTP/RPC wrappers
 - SDK session metadata
-- SDK-specific system composer
+- SDK-specific system builder
 
 ## 5. `server/`
 
@@ -114,24 +114,20 @@ This is the single-agent server layer.
 
 This is the model execution axis.
 
-### `Session`
+### `Executor`
 
-One `sessionId` maps to one `Session` instance.
+One `sessionId` maps to one internal `Executor` instance.
 
 It owns:
 
 - `run`
 - `appendUserMessage`
 - `appendAssistantMessage`
-- executor caching
+- Runner caching
 - same-session concurrency protection
 - assistant step persistence
 
-### `LocalSessionExecutor`
-
-Assembles model, history composer, system composer, compaction composer, and execution composer into a runnable local executor.
-
-### `LocalSessionCore`
+### `Runner`
 
 This is the current model and tool-loop execution kernel.
 
@@ -259,9 +255,9 @@ HTTP routers, sandbox runners, internal service runners, and other implementatio
 1. `src/index.ts`
 2. `src/runtime/AgentRuntime.ts`
 3. `src/runtime/AgentContext.ts`
-4. `src/session/Session.ts`
-5. `src/session/executors/local/LocalSessionExecutor.ts`
-6. `src/session/executors/local/LocalSessionCore.ts`
+4. `src/sdk/Session.ts`
+5. `src/session/Executor.ts`
+6. `src/session/executors/local/Runner.ts`
 7. `src/session/executors/local/SessionToolLoopRunner.ts`
 8. `src/service/core/Services.ts`
 9. `src/service/core/ServiceClassRegistry.ts`

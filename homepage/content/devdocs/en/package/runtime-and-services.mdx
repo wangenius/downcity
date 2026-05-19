@@ -186,7 +186,7 @@ sequenceDiagram
   participant Agent as AgentRuntime
   participant Service as Service
   participant Session as Session
-  participant Core as LocalSessionCore
+  participant Core as Runner
   participant Plugin as PluginRegistry
 
   In->>Agent: CLI / HTTP / Chat / Task
@@ -202,5 +202,5 @@ sequenceDiagram
 ## In One Sentence
 
 ```text
-The current package is centered on AgentRuntime, uses Session and LocalSessionCore as the execution axis, lets services own workflows, and uses plugins only as extensions.
+The current package is centered on AgentRuntime, uses Session and Runner as the execution axis, lets services own workflows, and uses plugins only as extensions.
 ```

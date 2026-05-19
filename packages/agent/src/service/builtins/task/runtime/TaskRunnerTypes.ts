@@ -170,7 +170,7 @@ export type ScriptExecutionResult = {
  * task 运行专用的 session runtime 端口。
  *
  * 关键点（中文）
- * - task runner 不直接依赖具体 `LocalSessionExecutor` 实现。
+ * - task runner 不直接依赖具体 SDK `Session` 实现。
  * - 这里暴露的是 task 场景最小可用端口：执行器 + history Composer。
  */
 export type TaskSessionRuntimePort = {

@@ -4,15 +4,13 @@
  * 关键点（中文）
  * - 面向 `new Agent(...)` 的本地会话使用场景。
  * - 统一收口消息落盘、默认模型配置、run/stream/fork 等高层 API。
- * - 内部继续复用现有 `Session` / `JsonlSessionHistoryComposer` / `LocalSessionExecutor`。
+ * - 内部继续复用 `Executor` / `JsonlSessionHistoryComposer` / `Runner`。
  */
 
 import { nanoid } from "nanoid";
 import type { LanguageModel, Tool } from "ai";
-import { Session as CoreSession } from "@session/Session.js";
+import { Executor } from "@session/Executor.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
 import { extractTextFromUiMessage } from "@/service/builtins/chat/runtime/UIMessageTransformer.js";
 import type {
   AgentSessionConfigSnapshot,
@@ -27,15 +25,15 @@ import type {
 } from "@/sdk/AgentSdkTypes.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import {
-  resolveSdkSessionSystemBlocks,
-  SdkSessionSystemComposer,
-} from "@/sdk/SdkSessionSystemComposer.js";
+  buildSessionSystemBlocks,
+  SessionSystemBuilder,
+} from "@/sdk/SessionSystemBuilder.js";
 import {
   inferModelLabel,
-  patchSdkSessionModelLabel,
-  readSdkSessionMetadata,
+  patchSessionModelLabel,
+  readSessionMetadata,
   resolveSystemTimezone,
-  writeSdkSessionMetadata,
+  writeSessionMetadata,
 } from "@/sdk/SessionMetadata.js";
 import {
   getSdkAgentSessionArchiveDirPath,
@@ -46,11 +44,11 @@ import type { SessionPort } from "@/runtime/AgentContextTypes.js";
 import { pushUiMessageChunkAsSdkEvent } from "@/sdk/StreamEvents.js";
 import {
   persistSdkAssistantResult,
-  touchSdkSessionMetadata,
+  touchSessionMetadata,
 } from "@/sdk/SessionPersistence.js";
-import { createSdkSessionServicePort } from "@/sdk/SessionServicePort.js";
+import { createSessionServicePort } from "@/sdk/SessionServicePort.js";
 
-type SdkSessionOptions = {
+type SessionOptions = {
   /**
    * 当前 agent 稳定标识。
    */
@@ -98,25 +96,25 @@ type SdkSessionOptions = {
 /**
  * SDK 本地 Session。
  */
-export class SdkSession {
+export class Session {
   readonly id: string;
   readonly agentId: string;
 
   private readonly projectRoot: string;
   private readonly tools: Record<string, Tool>;
-  private readonly logger: SdkSessionOptions["logger"];
-  private readonly getInstructionSystemBlocks: SdkSessionOptions["getInstructionSystemBlocks"];
-  private readonly getServiceSystemBlocks: SdkSessionOptions["getServiceSystemBlocks"];
-  private readonly getPluginSystemBlocks: SdkSessionOptions["getPluginSystemBlocks"];
+  private readonly logger: SessionOptions["logger"];
+  private readonly getInstructionSystemBlocks: SessionOptions["getInstructionSystemBlocks"];
+  private readonly getServiceSystemBlocks: SessionOptions["getServiceSystemBlocks"];
+  private readonly getPluginSystemBlocks: SessionOptions["getPluginSystemBlocks"];
   private readonly historyComposer: JsonlSessionHistoryComposer;
-  private readonly coreSession: CoreSession;
+  private readonly executor: Executor;
   private sessionConfig: AgentSessionConfigSnapshot = {};
   private createdAt = Date.now();
   private timezone = resolveSystemTimezone();
   private initializePromise: Promise<this> | null = null;
   private servicePort: SessionPort | null = null;
 
-  constructor(options: SdkSessionOptions) {
+  constructor(options: SessionOptions) {
     this.id = String(options.sessionId || "").trim();
     this.agentId = String(options.agentId || "").trim();
     this.projectRoot = String(options.projectRoot || "").trim();
@@ -126,13 +124,13 @@ export class SdkSession {
     this.getServiceSystemBlocks = options.getServiceSystemBlocks;
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     if (!this.id) {
-      throw new Error("SdkSession requires a non-empty sessionId");
+      throw new Error("Session requires a non-empty sessionId");
     }
     if (!this.agentId) {
-      throw new Error("SdkSession requires a non-empty agentId");
+      throw new Error("Session requires a non-empty agentId");
     }
     if (!this.projectRoot) {
-      throw new Error("SdkSession requires a non-empty projectRoot");
+      throw new Error("Session requires a non-empty projectRoot");
     }
 
     const sessionDirPath = getSdkAgentSessionDirPath(
@@ -157,33 +155,21 @@ export class SdkSession {
       },
     });
 
-    this.coreSession = new CoreSession({
+    this.executor = new Executor({
       sessionId: this.id,
       historyComposer: this.historyComposer,
-      createExecutor: (historyComposer) => {
-        const model = this.sessionConfig.model;
-        if (!model) {
-          throw new Error(
-            `Session "${this.id}" has no model configured. Call session.set({ model }) first.`,
-          );
-        }
-        return new LocalSessionExecutor({
-          model,
-          logger: this.logger as never,
-          historyComposer,
-          compactionComposer: new JsonlSessionCompactionComposer(),
-          systemComposer: new SdkSessionSystemComposer({
-            agentId: this.agentId,
-            projectRoot: this.projectRoot,
-            getSessionCreatedAt: () => this.createdAt,
-            getSessionTimezone: () => this.timezone,
-            getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-            getServiceSystemBlocks: this.getServiceSystemBlocks,
-            getPluginSystemBlocks: this.getPluginSystemBlocks,
-          }),
-          getTools: () => this.tools,
-        });
-      },
+      getModel: () => this.sessionConfig.model,
+      logger: this.logger as never,
+      systemComposer: new SessionSystemBuilder({
+        agentId: this.agentId,
+        projectRoot: this.projectRoot,
+        getSessionCreatedAt: () => this.createdAt,
+        getSessionTimezone: () => this.timezone,
+        getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+        getServiceSystemBlocks: this.getServiceSystemBlocks,
+        getPluginSystemBlocks: this.getPluginSystemBlocks,
+      }),
+      getTools: () => this.tools,
     });
   }
 
@@ -195,7 +181,7 @@ export class SdkSession {
       return await this.initializePromise;
     }
     this.initializePromise = (async () => {
-      const metadata = await readSdkSessionMetadata({
+      const metadata = await readSessionMetadata({
         projectRoot: this.projectRoot,
         agentId: this.agentId,
         sessionId: this.id,
@@ -206,7 +192,7 @@ export class SdkSession {
         typeof metadata.timezone === "string" && metadata.timezone.trim()
           ? metadata.timezone.trim()
           : resolveSystemTimezone();
-      await writeSdkSessionMetadata({
+      await writeSessionMetadata({
         projectRoot: this.projectRoot,
         agentId: this.agentId,
         sessionId: this.id,
@@ -245,9 +231,9 @@ export class SdkSession {
     if (input.model) {
       this.sessionConfig.model = input.model;
       this.sessionConfig.modelLabel = inferModelLabel(input.model);
-      this.coreSession.clearExecutor();
+      this.executor.clearExecutor();
     }
-    await patchSdkSessionModelLabel({
+    await patchSessionModelLabel({
       projectRoot: this.projectRoot,
       agentId: this.agentId,
       sessionId: this.id,
@@ -264,7 +250,7 @@ export class SdkSession {
      */
     text: string;
   }): Promise<void> {
-    await this.coreSession.appendUserMessage({
+    await this.executor.appendUserMessage({
       text: String(input.text || "").trim(),
     });
     await this.touchMetadata();
@@ -279,7 +265,7 @@ export class SdkSession {
      */
     text: string;
   }): Promise<void> {
-    await this.coreSession.appendAssistantMessage({
+    await this.executor.appendAssistantMessage({
       fallbackText: String(input.text || "").trim(),
     });
     await this.touchMetadata();
@@ -301,7 +287,7 @@ export class SdkSession {
    * - 返回结构化快照，不把 system prompt 写入会话历史。
    */
   async system(): Promise<AgentSessionSystemSnapshot> {
-    const blocks = await resolveSdkSessionSystemBlocks({
+    const blocks = await buildSessionSystemBlocks({
       agentId: this.agentId,
       projectRoot: this.projectRoot,
       sessionId: this.id,
@@ -328,14 +314,14 @@ export class SdkSession {
    * 返回当前 session 是否正在执行。
    */
   isExecuting(): boolean {
-    return this.coreSession.isExecuting();
+    return this.executor.isExecuting();
   }
 
   /**
    * 清理当前 session 的执行器缓存。
    */
   clearExecutor(): void {
-    this.coreSession.clearExecutor();
+    this.executor.clearExecutor();
   }
 
   /**
@@ -347,7 +333,7 @@ export class SdkSession {
       throw new Error("session.run requires a non-empty query");
     }
     await this.appendUserMessage({ text: query });
-    const result = await this.coreSession.run({
+    const result = await this.executor.run({
       query,
     });
     await this.persistAssistantResult(result.assistantMessage);
@@ -375,7 +361,7 @@ export class SdkSession {
 
     const runPromise = (async () => {
       try {
-        const result = await this.coreSession.run({
+        const result = await this.executor.run({
           query,
           onUiMessageChunkCallback: async (chunk) => {
             pushUiMessageChunkAsSdkEvent({
@@ -406,7 +392,7 @@ export class SdkSession {
   /**
    * 从当前 session 创建一个分叉会话。
    */
-  async fork(input?: AgentSessionForkInput["messageId"]): Promise<SdkSession> {
+  async fork(input?: AgentSessionForkInput["messageId"]): Promise<Session> {
     const messageId = String(input || "").trim() || undefined;
     const messages = await this.historyComposer.list();
     const forkMessages =
@@ -424,7 +410,7 @@ export class SdkSession {
             return messages.slice(0, targetIndex + 1);
           })();
 
-    const forked = new SdkSession({
+    const forked = new Session({
       agentId: this.agentId,
       projectRoot: this.projectRoot,
       sessionId: `fork-${Date.now()}-${nanoid(8)}`,
@@ -451,7 +437,7 @@ export class SdkSession {
    * 生成当前 session 的元数据快照。
    */
   async toMetadata(): Promise<AgentSessionMetadata> {
-    const meta = await readSdkSessionMetadata({
+    const meta = await readSessionMetadata({
       projectRoot: this.projectRoot,
       agentId: this.agentId,
       sessionId: this.id,
@@ -472,9 +458,9 @@ export class SdkSession {
    */
   getServicePort(): SessionPort {
     if (this.servicePort) return this.servicePort;
-    this.servicePort = createSdkSessionServicePort({
+    this.servicePort = createSessionServicePort({
       sessionId: this.id,
-      coreSession: this.coreSession,
+      executor: this.executor,
       historyComposer: this.historyComposer,
       touchMetadata: async () => {
         await this.touchMetadata();
@@ -484,7 +470,7 @@ export class SdkSession {
   }
 
   private async touchMetadata(): Promise<void> {
-    await touchSdkSessionMetadata({
+    await touchSessionMetadata({
       projectRoot: this.projectRoot,
       agentId: this.agentId,
       sessionId: this.id,
@@ -500,7 +486,7 @@ export class SdkSession {
       agentId: this.agentId,
       sessionId: this.id,
       sessionConfig: this.sessionConfig,
-      coreSession: this.coreSession,
+      executor: this.executor,
       assistantMessage,
     });
   }

@@ -1,23 +1,31 @@
 /**
- * Session：单个会话实例。
+ * Executor：单个 session 的执行编排器。
  *
  * 关键点（中文）
- * - 一个 Session 只对应一个固定的 `sessionId`。
- * - 对外直接暴露 `run / appendUserMessage / appendAssistantMessage / getExecutor / getHistoryComposer`。
- * - 运行态（如 executing）直接收在实例内部，不再拆 `Facade / Runner / ExecutionRegistry`。
+ * - SDK 对外对象叫 `Session`，这里是内部执行层。
+ * - 一个 Executor 只对应一个固定的 `sessionId`。
+ * - 负责 history 写入、run scope、executing 状态与本地 Runner 的懒创建。
  */
 
+import type { LanguageModel, Tool } from "ai";
 import { SessionHistoryWriter } from "@session/composer/history/SessionHistoryWriter.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
 import { withSessionRunScope } from "@session/SessionRunScope.js";
 import type { SessionRunScope } from "@session/SessionRunScope.js";
 import { buildSessionStepEventMessages } from "@session/messages/SessionStepEventMapper.js";
+import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
+import { LocalSessionExecutionComposer } from "@session/composer/execution/LocalSessionExecutionComposer.js";
+import type { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
+import type { SessionExecutionComposer } from "@session/composer/execution/SessionExecutionComposer.js";
+import type { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
+import { Runner } from "@session/executors/local/Runner.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
 import type { SessionRunResult } from "@/session/types/SessionRun.js";
 
-type SessionOptions = {
+type ExecutorOptions = {
   /**
    * 当前会话 ID。
    */
@@ -29,9 +37,34 @@ type SessionOptions = {
   historyComposer: SessionHistoryComposer;
 
   /**
-   * 创建当前 session 对应的执行器。
+   * 读取当前 session 使用的模型实例。
    */
-  createExecutor: (historyComposer: SessionHistoryComposer) => SessionExecutor;
+  getModel: () => LanguageModel | undefined;
+
+  /**
+   * 统一日志器。
+   */
+  logger: Logger;
+
+  /**
+   * 当前 session 对应的 compaction Composer。
+   */
+  compactionComposer?: SessionCompactionComposer;
+
+  /**
+   * 当前 session 对应的 system Composer。
+   */
+  systemComposer: SessionSystemComposer;
+
+  /**
+   * 获取当前可用工具集合。
+   */
+  getTools: () => Record<string, Tool>;
+
+  /**
+   * 可选自定义 execution Composer。
+   */
+  executionComposer?: SessionExecutionComposer;
 
   /**
    * session 更新后的异步回调。
@@ -40,30 +73,41 @@ type SessionOptions = {
 };
 
 /**
- * Session 单实例实现。
+ * Executor 单实例实现。
  */
-export class Session {
+export class Executor implements SessionExecutor {
   /**
    * 当前 session 标识。
    */
   readonly sessionId: string;
 
   private readonly historyComposer: SessionHistoryComposer;
-  private readonly createExecutor: SessionOptions["createExecutor"];
+  private readonly getModel: ExecutorOptions["getModel"];
+  private readonly logger: Logger;
+  private readonly compactionComposer: SessionCompactionComposer;
+  private readonly systemComposer: SessionSystemComposer;
+  private readonly getTools: ExecutorOptions["getTools"];
+  private readonly runnerExecutionComposer?: SessionExecutionComposer;
   private readonly historyWriter: SessionHistoryWriter;
 
-  private executor: SessionExecutor | null = null;
+  private runner: Runner | null = null;
   private executing = false;
 
-  constructor(options: SessionOptions) {
+  constructor(options: ExecutorOptions) {
     const sessionId = String(options.sessionId || "").trim();
     if (!sessionId) {
-      throw new Error("Session requires a non-empty sessionId");
+      throw new Error("Executor requires a non-empty sessionId");
     }
 
     this.sessionId = sessionId;
     this.historyComposer = options.historyComposer;
-    this.createExecutor = options.createExecutor;
+    this.getModel = options.getModel;
+    this.logger = options.logger;
+    this.compactionComposer =
+      options.compactionComposer || new JsonlSessionCompactionComposer();
+    this.systemComposer = options.systemComposer;
+    this.getTools = options.getTools;
+    this.runnerExecutionComposer = options.executionComposer;
     this.historyWriter = new SessionHistoryWriter({
       sessionId,
       getHistoryComposer: () => this.getHistoryComposer(),
@@ -86,26 +130,52 @@ export class Session {
   }
 
   /**
-   * 获取当前 session 的执行器。
+   * 获取当前 session 的执行端口。
+   *
+   * 关键点（中文）
+   * - 兼容 runtime/service 端口语义：Executor 自己就是执行端口。
    */
   getExecutor(): SessionExecutor {
-    if (this.executor) return this.executor;
-    const created = this.createExecutor(this.getHistoryComposer());
-    this.executor = created;
+    return this;
+  }
+
+  /**
+   * 获取或创建当前本地 Runner。
+   */
+  private getRunner(): Runner {
+    if (this.runner) return this.runner;
+    const model = this.getModel();
+    if (!model) {
+      throw new Error(
+        `Executor for session "${this.sessionId}" requires a configured model`,
+      );
+    }
+    const created = new Runner({
+      model,
+      logger: this.logger,
+      historyComposer: this.getHistoryComposer(),
+      compactionComposer: this.compactionComposer,
+      systemComposer: this.systemComposer,
+      executionComposer:
+        this.runnerExecutionComposer ||
+        new LocalSessionExecutionComposer({
+          sessionId: this.sessionId,
+          getTools: this.getTools,
+        }),
+    });
+    this.runner = created;
     return created;
   }
 
   /**
-   * 清理当前 session 的执行器缓存。
+   * 清理当前 session 的 Runner 缓存。
    *
    * 关键点（中文）
-   * - 这里只清 executor，不清 history Composer。
-   * - history 是事实源，不应随着 executor 一起丢失。
+   * - 这里只清 Runner，不清 history Composer。
+   * - history 是事实源，不应随着 Runner 一起丢失。
    */
   clearExecutor(): void {
-    const current = this.executor;
-    this.executor = null;
-    
+    this.runner = null;
   }
 
   /**
@@ -153,7 +223,7 @@ export class Session {
     if (this.executing) {
       // 关键点（中文）：同一个 Session 实例只允许一个活跃 run，
       // 否则 step 回调、scope 与执行器状态都会互相污染。
-      throw new Error("Session.run does not support concurrent execution");
+      throw new Error("Executor.run does not support concurrent execution");
     }
     const query = String(params.query || "").trim();
     const sessionRunScope: Omit<SessionRunScope, "sessionId"> = {
@@ -206,7 +276,7 @@ export class Session {
           ...sessionRunScope,
           onAssistantStepCallback: wrappedOnAssistantStepCallback,
         },
-        () => this.getExecutor().run({ query }),
+        () => this.getRunner().run({ query }),
       );
       if (persistedAssistantStepCount <= 0) return result;
 

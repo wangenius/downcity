@@ -23,7 +23,7 @@ Semantically, that means the service wants to contribute a service-level system 
 
 ## How it works in the local SDK
 
-The local SDK session path uses `SdkSessionSystemComposer`.
+The local SDK session path uses `SessionSystemBuilder`.
 
 When you explicitly pass a service through `new Agent({ services: [...] })`, the SDK collects that service's `system(context)` text whenever it resolves system prompts for a session run.
 

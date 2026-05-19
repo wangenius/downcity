@@ -30,7 +30,7 @@ export type SessionCompactionInput = {
   system: SystemModelMessage[];
 
   /**
-   * 当前重试次数（由 LocalSessionCore 递增）。
+   * 当前重试次数（由 Runner 递增）。
    */
   retryCount: number;
 };
@@ -57,7 +57,7 @@ export abstract class SessionCompactionComposer extends SessionComposer {
    *
    * 关键点（中文）
    * - 由 compaction Composer 实现侧维护错误识别策略。
-   * - LocalSessionCore 不感知具体错误文案，只按该布尔结果决定是否重试。
+   * - Runner 不感知具体错误文案，只按该布尔结果决定是否重试。
    */
   abstract shouldCompactOnError(error: unknown): boolean;
 

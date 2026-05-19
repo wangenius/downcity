@@ -80,7 +80,7 @@ export function inferModelLabel(
 /**
  * 读取当前 session 的 meta.json。
  */
-export async function readSdkSessionMetadata(
+export async function readSessionMetadata(
   input: ReadSessionMetadataInput,
 ): Promise<SessionHistoryMetaV1> {
   const filePath = getSdkAgentSessionMetaPath(
@@ -142,7 +142,7 @@ export async function readSdkSessionMetadata(
 /**
  * 写回当前 session 的 meta.json。
  */
-export async function writeSdkSessionMetadata(
+export async function writeSessionMetadata(
   input: ReadSessionMetadataInput & {
     /**
      * 下一份 meta 数据。
@@ -162,7 +162,7 @@ export async function writeSdkSessionMetadata(
 /**
  * 更新当前 session 的 SDK 配置摘要。
  */
-export async function patchSdkSessionModelLabel(
+export async function patchSessionModelLabel(
   input: ReadSessionMetadataInput & {
     /**
      * 当前模型实例。
@@ -170,7 +170,7 @@ export async function patchSdkSessionModelLabel(
     model?: LanguageModel;
   },
 ): Promise<SessionHistoryMetaV1> {
-  const current = await readSdkSessionMetadata(input);
+  const current = await readSessionMetadata(input);
   const modelLabel = inferModelLabel(input.model);
   const next: SessionHistoryMetaV1 = {
     ...current,
@@ -188,7 +188,7 @@ export async function patchSdkSessionModelLabel(
         }
       : {}),
   };
-  await writeSdkSessionMetadata({
+  await writeSessionMetadata({
     ...input,
     meta: next,
   });

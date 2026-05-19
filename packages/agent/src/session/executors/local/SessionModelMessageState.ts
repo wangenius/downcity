@@ -2,7 +2,7 @@
  * Session 模型消息运行态。
  *
  * 关键点（中文）
- * - LocalSessionCore 同时维护 session 语义消息与模型消息。
+ * - Runner 同时维护 session 语义消息与模型消息。
  * - 新增 user 消息可优先做增量转换，失败时再回退为全量重算。
  * - assistant UI 消息只需要进入 session 语义基线；模型侧使用 SDK 返回的 response messages。
  */
@@ -15,7 +15,7 @@ import {
 } from "@session/messages/SessionMessageCodec.js";
 
 /**
- * LocalSessionCore 单轮执行期间的消息基线。
+ * Runner 单轮执行期间的消息基线。
  */
 export class SessionModelMessageState {
   /**

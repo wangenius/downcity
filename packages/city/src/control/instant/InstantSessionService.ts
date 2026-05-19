@@ -15,14 +15,13 @@ import { generateId } from "@/utils/Id.js";
 import {
   createModel,
   drainDeferredPersistedUserMessages,
+  Executor,
   getLogger,
   JsonlSessionCompactionComposer,
   JsonlSessionHistoryComposer,
   loadStaticSystemPrompts,
-  LocalSessionExecutor,
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
-  Session,
 } from "@downcity/agent";
 import type { Logger } from "@downcity/agent";
 import type { PlatformAgentOption } from "@downcity/agent";
@@ -60,7 +59,7 @@ type TempSessionRuntime = {
   /**
    * 当前临时 session 实例。
    */
-  session: Session;
+  session: Executor;
 };
 
 function buildInstantPrompt(input: {
@@ -241,18 +240,14 @@ export class InstantSessionService implements PlatformInlineInstantService {
       projectRoot: rootPath,
     });
 
-    const session = new Session({
+    const session = new Executor({
       sessionId,
       historyComposer,
-      createExecutor: (sessionHistoryComposer) =>
-        new LocalSessionExecutor({
-          model,
-          logger: this.logger as unknown as AgentLogger,
-          historyComposer: sessionHistoryComposer,
-          compactionComposer,
-          systemComposer,
-          getTools: () => ({}),
-        }),
+      getModel: () => model,
+      logger: this.logger as unknown as AgentLogger,
+      compactionComposer,
+      systemComposer,
+      getTools: () => ({}),
     });
 
     const text = await this.executeTempSession({

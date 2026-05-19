@@ -9,6 +9,7 @@
 
 // SDK 入口
 export { Agent } from "./sdk/Agent.js";
+export { Session } from "./sdk/Session.js";
 export { RemoteAgent } from "./sdk/RemoteAgent.js";
 export type {
   AgentOptions,
@@ -61,7 +62,7 @@ export type { AgentRuntime, AgentRuntimeBase } from "./runtime/AgentRuntimeState
 export type { AgentContext } from "./runtime/AgentContextTypes.js";
 
 // Session 与即时执行集成
-export { Session } from "./session/Session.js";
+export { Executor } from "./session/Executor.js";
 export {
   drainDeferredPersistedUserMessages,
   getSessionRunScope,
@@ -71,7 +72,6 @@ export { JsonlSessionCompactionComposer } from "./session/composer/compaction/js
 export { SessionSystemComposer } from "./session/composer/system/SessionSystemComposer.js";
 export { transformPromptsIntoSystemMessages } from "./session/composer/system/default/PromptRenderer.js";
 export { loadStaticSystemPrompts } from "./session/composer/system/default/StaticPromptCatalog.js";
-export { LocalSessionExecutor } from "./session/executors/local/LocalSessionExecutor.js";
 
 // Agent server 与 transport 集成
 export { startServer } from "./server/http/Server.js";

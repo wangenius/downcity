@@ -28,7 +28,7 @@ import type {
   AgentSessionMetadata,
   AgentSessionSystemBlock,
 } from "@/sdk/AgentSdkTypes.js";
-import { SdkSession } from "@/sdk/Session.js";
+import { Session } from "@/sdk/Session.js";
 import { DEFAULT_SHIP_PROMPTS } from "@session/composer/system/default/SystemDomain.js";
 import { getSdkAgentSessionsRootDirPath } from "@/sdk/Paths.js";
 import { SdkAgentHttpServer } from "@/sdk/HttpServer.js";
@@ -119,7 +119,7 @@ export class Agent {
   readonly plugins: PluginPort;
 
   private readonly logger: Logger;
-  private readonly sessionsById = new Map<string, SdkSession>();
+  private readonly sessionsById = new Map<string, Session>();
   private readonly runtime: AgentRuntime;
   private readonly serviceContext: AgentContext;
   private readonly pluginRegistry: PluginRegistry;
@@ -165,7 +165,7 @@ export class Agent {
   /**
    * 获取或创建一个 session。
    */
-  async session(sessionId?: string): Promise<SdkSession> {
+  async session(sessionId?: string): Promise<Session> {
     const session = this.getOrCreateSession(sessionId);
     await session.initialize();
     return session;
@@ -449,13 +449,13 @@ export class Agent {
     return context;
   }
 
-  private getOrCreateSession(sessionId?: string): SdkSession {
+  private getOrCreateSession(sessionId?: string): Session {
     const resolvedSessionId =
       String(sessionId || "").trim() || `session-${Date.now()}-${nanoid(8)}`;
     const cached = this.sessionsById.get(resolvedSessionId);
     if (cached) return cached;
 
-    const created = new SdkSession({
+    const created = new Session({
       agentId: this.id,
       projectRoot: this.path,
       sessionId: resolvedSessionId,

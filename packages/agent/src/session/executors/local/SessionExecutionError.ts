@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - AI SDK 的最终错误有时只是兜底包装，底层 provider 错误会先从 stream `onError` 暴露。
- * - LocalSessionCore 只需要消费这里输出的日志字段与最终错误文本。
+ * - Runner 只需要消费这里输出的日志字段与最终错误文本。
  */
 
 import type { JsonObject } from "@/types/common/Json.js";

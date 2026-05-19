@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 集中处理 session meta 更新时间、模型展示标签与 assistant 消息落盘。
- * - `SdkSession` 只负责调用这些能力，不直接拼装 meta 结构。
+ * - `Session` 只负责调用这些能力，不直接拼装 meta 结构。
  */
 
 import { resolveAssistantMessageForPersistence } from "@/service/builtins/chat/runtime/UserVisibleText.js";
@@ -12,14 +12,14 @@ import type { SessionHistoryMetaV1 } from "@/session/types/SessionHistoryMeta.js
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { AgentSessionConfigSnapshot } from "@/sdk/AgentSdkTypes.js";
 import {
-  readSdkSessionMetadata,
-  writeSdkSessionMetadata,
+  readSessionMetadata,
+  writeSessionMetadata,
 } from "@/sdk/SessionMetadata.js";
 
 /**
  * SDK Session 元数据写入参数。
  */
-export interface TouchSdkSessionMetadataParams {
+export interface TouchSessionMetadataParams {
   /**
    * 当前项目根目录。
    */
@@ -42,11 +42,11 @@ export interface TouchSdkSessionMetadataParams {
  * Assistant 结果落盘参数。
  */
 export interface PersistSdkAssistantResultParams
-  extends TouchSdkSessionMetadataParams {
+  extends TouchSessionMetadataParams {
   /**
-   * 追加 assistant 消息的底层 session 端口。
+   * 追加 assistant 消息的底层执行编排器。
    */
-  coreSession: {
+  executor: {
     appendAssistantMessage(params: {
       /**
        * 已构造好的完整消息。
@@ -67,10 +67,10 @@ export interface PersistSdkAssistantResultParams
 /**
  * 刷新 SDK session 元数据。
  */
-export async function touchSdkSessionMetadata(
-  params: TouchSdkSessionMetadataParams,
+export async function touchSessionMetadata(
+  params: TouchSessionMetadataParams,
 ): Promise<void> {
-  const current = await readSdkSessionMetadata({
+  const current = await readSessionMetadata({
     projectRoot: params.projectRoot,
     agentId: params.agentId,
     sessionId: params.sessionId,
@@ -90,7 +90,7 @@ export async function touchSdkSessionMetadata(
         }
       : {}),
   };
-  await writeSdkSessionMetadata({
+  await writeSessionMetadata({
     projectRoot: params.projectRoot,
     agentId: params.agentId,
     sessionId: params.sessionId,
@@ -105,9 +105,9 @@ export async function persistSdkAssistantResult(
   params: PersistSdkAssistantResultParams,
 ): Promise<void> {
   const persisted = resolveAssistantMessageForPersistence(params.assistantMessage);
-  await params.coreSession.appendAssistantMessage({
+  await params.executor.appendAssistantMessage({
     ...(persisted ? { message: persisted } : {}),
     fallbackText: extractTextFromUiMessage(params.assistantMessage),
   });
-  await touchSdkSessionMetadata(params);
+  await touchSessionMetadata(params);
 }

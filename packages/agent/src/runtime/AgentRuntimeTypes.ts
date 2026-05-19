@@ -16,7 +16,7 @@ import type {
   AgentPluginConfigRuntime,
 } from "@/types/host/AgentHost.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
-import type { Session } from "@session/Session.js";
+import type { Executor } from "@session/Executor.js";
 
 /**
  * AgentRuntime 启动早期的基础状态。
@@ -73,9 +73,9 @@ export interface AgentRuntime extends AgentRuntimeBase {
    */
   model?: LanguageModel;
   /**
-   * 读取指定 sessionId 对应的 Session 实例。
+   * 读取指定 sessionId 对应的内部 Executor 实例。
    */
-  getSession(sessionId: string): Session;
+  getSession(sessionId: string): Executor;
   /**
    * 返回当前执行中的 sessionId 列表。
    */

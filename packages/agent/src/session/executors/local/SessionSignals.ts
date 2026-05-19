@@ -1,10 +1,10 @@
 /**
- * SessionLoopSignals：LocalSessionCore 执行循环的信号判断与调试摘要工具。
+ * SessionLoopSignals：Runner 执行循环的信号判断与调试摘要工具。
  *
  * 关键点（中文）
  * - 这里只放“如何判断继续执行 / 如何输出调试摘要”的纯函数。
- * - 不放 LocalSessionCore 主流程，避免执行内核被大量辅助细节淹没。
- * - 目标是让 LocalSessionCore 保持“只看主链路就能理解”的结构。
+ * - 不放 Runner 主流程，避免执行内核被大量辅助细节淹没。
+ * - 目标是让 Runner 保持“只看主链路就能理解”的结构。
  */
 
 import {

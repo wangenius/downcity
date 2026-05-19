@@ -2,7 +2,7 @@
  * TaskRunnerSession：task runner 的 session 装配模块。
  *
  * 关键点（中文）
- * - 负责构建 task 专用 LocalSessionCore / JsonlSessionHistoryComposer 运行时。
+ * - 负责构建 task 专用 Runner / JsonlSessionHistoryComposer 运行时。
  * - 负责把每轮 user/assistant 消息写入 run 目录对应的 messages.jsonl。
  * - 这些能力与任务编排逻辑解耦后，Runner 主流程会更聚焦于状态流转。
  * - 当前只有 api 执行模式。
@@ -12,7 +12,7 @@ import path from "node:path";
 import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type { TaskSessionRuntimePort } from "@/service/builtins/task/runtime/TaskRunnerTypes.js";
-import { LocalSessionCore } from "@session/executors/local/LocalSessionCore.js";
+import { Runner } from "@session/executors/local/Runner.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
@@ -54,7 +54,7 @@ export async function appendTaskRoundUserMessage(params: {
  * 构建 task 专用 Session 运行时（独立于普通 Session 实例缓存）。
  *
  * 关键点（中文）
- * - 使用 LocalSessionCore 执行，模型来自 context.session.model（agent 级模型）。
+ * - 使用 Runner 执行，模型来自 context.session.model（agent 级模型）。
  */
 export function createTaskSessionRuntimePort(params: {
   context: AgentContext;
@@ -132,7 +132,7 @@ export function createTaskSessionRuntimePort(params: {
         sessionId: key,
         getTools: () => shellTools,
       });
-      const created = new LocalSessionCore({
+      const created = new Runner({
         model: context.session.model,
         logger: context.logger,
         historyComposer,

@@ -1,5 +1,5 @@
 /**
- * ChatSession：chat 专用 Session 实现。
+ * ChatSession：chat 专用 Executor 实现。
  *
  * 关键点（中文）
  * - ChatSession 在实例化时持有自己的 execution composer 实例。
@@ -7,10 +7,13 @@
  * - 外层仍只调用标准 `run(...)`；chat 语义由 ChatSession 内部收敛。
  */
 
-import { Session } from "@session/Session.js";
+import type { LanguageModel, Tool } from "ai";
+import { Executor } from "@session/Executor.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
+import type { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
+import type { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
 import type { ChatSessionExecutionComposer } from "@/service/builtins/chat/runtime/ChatSessionExecutionComposer.js";
-import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import type { SessionAssistantStepCallback } from "@/session/types/SessionRun.js";
 import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type { ChatSessionTurnState } from "@/service/builtins/chat/runtime/ChatSessionTypes.js";
@@ -27,17 +30,34 @@ type ChatSessionOptions = {
   historyComposer: SessionHistoryComposer;
 
   /**
+   * 读取当前 session 使用的模型实例。
+   */
+  getModel: () => LanguageModel | undefined;
+
+  /**
+   * 统一日志器。
+   */
+  logger: Logger;
+
+  /**
+   * 当前 session 对应的 compaction Composer。
+   */
+  compactionComposer: SessionCompactionComposer;
+
+  /**
+   * 当前 session 对应的 system Composer。
+   */
+  systemComposer: SessionSystemComposer;
+
+  /**
+   * 获取当前可用工具集合。
+   */
+  getTools: () => Record<string, Tool>;
+
+  /**
    * 当前 session 绑定的 chat execution composer。
    */
   executionComposer: ChatSessionExecutionComposer;
-
-  /**
-   * 创建当前 session 的执行器。
-   */
-  createExecutor: (
-    historyComposer: SessionHistoryComposer,
-    executionComposer: ChatSessionExecutionComposer,
-  ) => SessionExecutor;
 
   /**
    * session 更新后的异步回调。
@@ -48,7 +68,7 @@ type ChatSessionOptions = {
 /**
  * Chat 专用 Session。
  */
-export class ChatSession extends Session {
+export class ChatSession extends Executor {
   /**
    * ChatSession 持有的 composer 实例。
    */
@@ -61,8 +81,12 @@ export class ChatSession extends Session {
     super({
       sessionId: options.sessionId,
       historyComposer: options.historyComposer,
-      createExecutor: (historyComposer) =>
-        options.createExecutor(historyComposer, executionComposer),
+      getModel: options.getModel,
+      logger: options.logger,
+      compactionComposer: options.compactionComposer,
+      systemComposer: options.systemComposer,
+      getTools: options.getTools,
+      executionComposer,
       ...(options.runAfterSessionUpdated
         ? { runAfterSessionUpdated: options.runAfterSessionUpdated }
         : {}),

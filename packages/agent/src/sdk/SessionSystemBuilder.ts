@@ -18,7 +18,7 @@ import type {
 /**
  * 解析 SDK session system blocks 的输入。
  */
-export interface ResolveSdkSessionSystemBlocksParams {
+export interface BuildSessionSystemBlocksParams {
   /**
    * 当前 agent 的稳定标识。
    */
@@ -60,7 +60,7 @@ export interface ResolveSdkSessionSystemBlocksParams {
   getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 }
 
-type SdkSessionSystemComposerOptions = {
+type SessionSystemBuilderOptions = {
   /**
    * 当前 agent 的稳定标识。
    */
@@ -126,7 +126,7 @@ function normalizeSystemBlocks(
 
 function createSessionInfo(
   params: Pick<
-    ResolveSdkSessionSystemBlocksParams,
+    BuildSessionSystemBlocksParams,
     "agentId" | "sessionId" | "projectRoot" | "createdAt" | "timezone"
   >,
 ): AgentSessionSystemSessionInfo {
@@ -161,8 +161,8 @@ function createSessionSystemBlock(
 /**
  * 解析 SDK session 当前生效的 system blocks。
  */
-export async function resolveSdkSessionSystemBlocks(
-  params: ResolveSdkSessionSystemBlocksParams,
+export async function buildSessionSystemBlocks(
+  params: BuildSessionSystemBlocksParams,
 ): Promise<AgentSessionSystemBlock[]> {
   const agentId = String(params.agentId || "").trim();
   const projectRoot = String(params.projectRoot || "").trim();
@@ -170,19 +170,19 @@ export async function resolveSdkSessionSystemBlocks(
   const createdAt = Number(params.createdAt || 0);
   const timezone = String(params.timezone || "").trim();
   if (!agentId) {
-    throw new Error("resolveSdkSessionSystemBlocks requires a non-empty agentId");
+    throw new Error("buildSessionSystemBlocks requires a non-empty agentId");
   }
   if (!projectRoot) {
-    throw new Error("resolveSdkSessionSystemBlocks requires a non-empty projectRoot");
+    throw new Error("buildSessionSystemBlocks requires a non-empty projectRoot");
   }
   if (!sessionId) {
-    throw new Error("resolveSdkSessionSystemBlocks requires a non-empty sessionId");
+    throw new Error("buildSessionSystemBlocks requires a non-empty sessionId");
   }
   if (!Number.isFinite(createdAt) || createdAt <= 0) {
-    throw new Error("resolveSdkSessionSystemBlocks requires a valid createdAt");
+    throw new Error("buildSessionSystemBlocks requires a valid createdAt");
   }
   if (!timezone) {
-    throw new Error("resolveSdkSessionSystemBlocks requires a non-empty timezone");
+    throw new Error("buildSessionSystemBlocks requires a non-empty timezone");
   }
   return [
     ...normalizeSystemBlocks(params.getInstructionSystemBlocks()),
@@ -198,10 +198,10 @@ export async function resolveSdkSessionSystemBlocks(
 /**
  * 解析 SDK session 当前生效的 system messages。
  */
-export async function resolveSdkSessionSystemMessages(
-  params: ResolveSdkSessionSystemBlocksParams,
+export async function buildSessionSystemMessages(
+  params: BuildSessionSystemBlocksParams,
 ): Promise<SessionSystemMessage[]> {
-  const blocks = await resolveSdkSessionSystemBlocks(params);
+  const blocks = await buildSessionSystemBlocks(params);
   return blocks.map((block) => ({
     role: "system" as const,
     content: block.content,
@@ -211,18 +211,18 @@ export async function resolveSdkSessionSystemMessages(
 /**
  * SDK Session system composer 实现。
  */
-export class SdkSessionSystemComposer extends SessionSystemComposer {
+export class SessionSystemBuilder extends SessionSystemComposer {
   readonly name = "sdk_prompt_system";
 
   private readonly agentId: string;
   private readonly projectRoot: string;
-  private readonly getSessionCreatedAt: SdkSessionSystemComposerOptions["getSessionCreatedAt"];
-  private readonly getSessionTimezone: SdkSessionSystemComposerOptions["getSessionTimezone"];
-  private readonly getInstructionSystemBlocks: SdkSessionSystemComposerOptions["getInstructionSystemBlocks"];
-  private readonly getServiceSystemBlocks: SdkSessionSystemComposerOptions["getServiceSystemBlocks"];
-  private readonly getPluginSystemBlocks: SdkSessionSystemComposerOptions["getPluginSystemBlocks"];
+  private readonly getSessionCreatedAt: SessionSystemBuilderOptions["getSessionCreatedAt"];
+  private readonly getSessionTimezone: SessionSystemBuilderOptions["getSessionTimezone"];
+  private readonly getInstructionSystemBlocks: SessionSystemBuilderOptions["getInstructionSystemBlocks"];
+  private readonly getServiceSystemBlocks: SessionSystemBuilderOptions["getServiceSystemBlocks"];
+  private readonly getPluginSystemBlocks: SessionSystemBuilderOptions["getPluginSystemBlocks"];
 
-  constructor(options: SdkSessionSystemComposerOptions) {
+  constructor(options: SessionSystemBuilderOptions) {
     super();
     this.agentId = String(options.agentId || "").trim();
     this.projectRoot = String(options.projectRoot || "").trim();
@@ -232,10 +232,10 @@ export class SdkSessionSystemComposer extends SessionSystemComposer {
     this.getServiceSystemBlocks = options.getServiceSystemBlocks;
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     if (!this.agentId) {
-      throw new Error("SdkSessionSystemComposer requires a non-empty agentId");
+      throw new Error("SessionSystemBuilder requires a non-empty agentId");
     }
     if (!this.projectRoot) {
-      throw new Error("SdkSessionSystemComposer requires a non-empty projectRoot");
+      throw new Error("SessionSystemBuilder requires a non-empty projectRoot");
     }
   }
 
@@ -245,9 +245,9 @@ export class SdkSessionSystemComposer extends SessionSystemComposer {
   async resolve() {
     const sessionId = String(getSessionRunScope()?.sessionId || "").trim();
     if (!sessionId) {
-      throw new Error("SdkSessionSystemComposer.resolve requires a non-empty sessionId");
+      throw new Error("SessionSystemBuilder.resolve requires a non-empty sessionId");
     }
-    return await resolveSdkSessionSystemMessages({
+    return await buildSessionSystemMessages({
       agentId: this.agentId,
       projectRoot: this.projectRoot,
       sessionId,

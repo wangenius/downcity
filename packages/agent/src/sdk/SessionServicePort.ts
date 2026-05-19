@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 把 SDK 本地 session 适配成 chat service 依赖的 `SessionPort`。
- * - service 侧直接复用底层 `CoreSession` 协议，避免 SDK `run()` 包装层重复补写消息。
+ * - service 侧直接复用底层 `Executor` 协议，避免 SDK `run()` 包装层重复补写消息。
  */
 
 import type { SessionPort } from "@/runtime/AgentContextTypes.js";
@@ -11,15 +11,15 @@ import type { SessionPort } from "@/runtime/AgentContextTypes.js";
 /**
  * 构造 SDK SessionPort 的参数。
  */
-export interface CreateSdkSessionServicePortParams {
+export interface CreateSessionServicePortParams {
   /**
    * 当前 sessionId。
    */
   sessionId: string;
   /**
-   * 底层 session 实例。
+   * 底层执行编排器。
    */
-  coreSession: Omit<SessionPort, "sessionId" | "getHistoryComposer">;
+  executor: Omit<SessionPort, "sessionId" | "getHistoryComposer">;
   /**
    * 当前 session 历史持久化端口。
    */
@@ -33,30 +33,30 @@ export interface CreateSdkSessionServicePortParams {
 /**
  * 创建供 service 使用的 session 端口。
  */
-export function createSdkSessionServicePort(
-  params: CreateSdkSessionServicePortParams,
+export function createSessionServicePort(
+  params: CreateSessionServicePortParams,
 ): SessionPort {
   return {
     sessionId: params.sessionId,
-    getExecutor: () => params.coreSession.getExecutor(),
+    getExecutor: () => params.executor.getExecutor(),
     getHistoryComposer: () => params.historyComposer,
     run: async (runParams) => {
-      return await params.coreSession.run(runParams);
+      return await params.executor.run(runParams);
     },
     clearExecutor: () => {
-      params.coreSession.clearExecutor();
+      params.executor.clearExecutor();
     },
     afterSessionUpdatedAsync: async () => {
-      await params.coreSession.afterSessionUpdatedAsync();
+      await params.executor.afterSessionUpdatedAsync();
     },
     appendUserMessage: async (messageParams) => {
-      await params.coreSession.appendUserMessage(messageParams);
+      await params.executor.appendUserMessage(messageParams);
       await params.touchMetadata();
     },
     appendAssistantMessage: async (messageParams) => {
-      await params.coreSession.appendAssistantMessage(messageParams);
+      await params.executor.appendAssistantMessage(messageParams);
       await params.touchMetadata();
     },
-    isExecuting: () => params.coreSession.isExecuting(),
+    isExecuting: () => params.executor.isExecuting(),
   };
 }

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 专职负责“会话上下文 -> system messages”解析。
- * - 与 tools / step 编排解耦，避免 LocalSessionCore 过载。
+ * - 与 tools / step 编排解耦，避免 Runner 过载。
  */
 
 import type { SystemModelMessage } from "ai";

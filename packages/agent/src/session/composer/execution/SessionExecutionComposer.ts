@@ -65,7 +65,7 @@ export abstract class SessionExecutionComposer extends SessionComposer {
    * 构造 fallback assistant 消息。
    *
    * 关键点（中文）
- * - fallback 消息构造由 execution Composer 内部实现，LocalSessionCore 不直接依赖 history Composer。
+ * - fallback 消息构造由 execution Composer 内部实现，Runner 不直接依赖 history Composer。
    */
   abstract buildFallbackAssistantMessage(text: string): SessionMessageV1;
 }

@@ -39,7 +39,7 @@ export type SessionHistoryPrepareInput = {
   model: LanguageModel;
 
   /**
-   * 当前重试次数（由 LocalSessionCore 递增）。
+   * 当前重试次数（由 Runner 递增）。
    */
   retryCount: number;
 };

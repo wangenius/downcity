@@ -1,5 +1,5 @@
 /**
- * LocalSessionCore tool-loop 决策相关类型。
+ * Runner tool-loop 决策相关类型。
  *
  * 关键点（中文）
  * - 这里只描述“是否继续下一轮”的纯决策输入/输出。

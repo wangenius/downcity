@@ -5,13 +5,12 @@
  * - 这里是单 agent 宿主的主装配入口，负责把 config、model、session、service、plugin 串起来。
  * - 完整运行态类型仍由 `AgentRuntimeState.ts` 维护；本模块只负责装配与对外导出。
  * - 该模块同时负责热重载提示词系统与导出统一的 `getAgentContext()` 入口。
- * - 当前只有 `api` 执行模式：从 console 模型池取模型，走 LocalSessionCore。
+ * - 当前只有 `api` 执行模式：从 console 模型池取模型，走 Runner。
  */
 
 import path from "path";
 import fs from "fs";
 import { logger as defaultLogger } from "@/utils/logger/Logger.js";
-import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
 import { ensureRuntimeProjectReady } from "@/host/daemon/ProjectSetup.js";
 import { createModel } from "@/model/CreateModel.js";
 import {
@@ -29,7 +28,6 @@ import { getSessionRunScope } from "@session/SessionRunScope.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { DefaultSessionSystemComposer } from "@session/composer/system/default/DefaultSessionSystemComposer.js";
-import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
 import { ChatSession } from "@/service/builtins/chat/runtime/ChatSession.js";
 import { ChatSessionExecutionComposer } from "@/service/builtins/chat/runtime/ChatSessionExecutionComposer.js";
 import {
@@ -224,7 +222,7 @@ function createSessionHistoryComposer(
  * 初始化入口。
  *
  * 关键点（中文）
- * - 只有 api 执行模式：从 console 模型池创建模型 → LocalSessionExecutor → LocalSessionCore。
+ * - 只有 api 执行模式：从 console 模型池创建模型 → Executor → Runner。
  */
 export async function initAgentRuntime(
   cwd: string,
@@ -326,19 +324,11 @@ export async function initAgentRuntime(
       sessionId: key,
       historyComposer,
       executionComposer,
-      createExecutor: (
-        sessionHistoryComposer: SessionHistoryComposer,
-        chatExecutionComposer: ChatSessionExecutionComposer,
-      ) =>
-        new LocalSessionExecutor({
-          model,
-          logger: defaultLogger,
-          historyComposer: sessionHistoryComposer,
-          compactionComposer,
-          systemComposer,
-          getTools: () => shellTools,
-          executionComposer: chatExecutionComposer,
-        }),
+      getModel: () => model,
+      logger: defaultLogger,
+      compactionComposer,
+      systemComposer,
+      getTools: () => shellTools,
     });
     sessionsById.set(key, created);
     return created;

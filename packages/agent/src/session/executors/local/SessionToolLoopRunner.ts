@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只负责已准备好的 `SessionExecuteInput` 如何进入 `streamText` 循环。
- * - LocalSessionCore 保留入口、重试与输入准备职责，本模块负责 step 循环、续写、恢复和最终日志。
+ * - Runner 保留入口、重试与输入准备职责，本模块负责 step 循环、续写、恢复和最终日志。
  * - 运行过程中同时维护 UI assistant 消息、模型消息基线和 step 统计。
  */
 
@@ -334,7 +334,7 @@ export class SessionToolLoopRunner {
         streamError: lastObservedStreamError,
       });
 
-      await this.logger.log("error", "LocalSessionCore execution failed", {
+      await this.logger.log("error", "Runner execution failed", {
         error: errorMsg,
       });
 

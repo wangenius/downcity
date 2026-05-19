@@ -3,7 +3,7 @@
  *
  * 职责（中文）
  * - 创建 run 目录（timestamp）。
- * - 以“干净历史”调用当前 runtime 的 LocalSessionCore（逻辑与正常 chat 一致）。
+ * - 以“干净历史”调用当前 runtime 的 Runner（逻辑与正常 chat 一致）。
  * - 协调 script / agent 两类执行主链。
  * - 把最终产物写入 run 目录的具体格式委托给 `TaskRunArtifacts.ts`。
  */

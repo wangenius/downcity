@@ -1,5 +1,5 @@
 /**
- * LocalSessionCore：本地 Session 执行内核。
+ * Runner：本地 Session 执行内核。
  *
  * 关键点（中文）
  * - 这个类只做“流程编排”，不承载业务策略。
@@ -33,9 +33,9 @@ import { SessionToolLoopRunner } from "@session/executors/local/SessionToolLoopR
 const MAX_COMPACTION_RETRY_ATTEMPTS = 3;
 
 /**
- * LocalSessionCore 构造参数。
+ * Runner 构造参数。
  */
-type LocalSessionCoreOptions = {
+type RunnerOptions = {
   /** 当前模型实例。 */
   model: LanguageModel;
 
@@ -57,9 +57,9 @@ type LocalSessionCoreOptions = {
 };
 
 /**
- * LocalSessionCore 主类。
+ * Runner 主类。
  */
-export class LocalSessionCore {
+export class Runner {
   /** 模型实例：用于真正执行 streamText。 */
   private readonly model: LanguageModel;
 
@@ -78,7 +78,7 @@ export class LocalSessionCore {
   /** system 解析器：用于解析 system messages。 */
   private readonly systemComposer: SessionSystemComposer;
 
-  /** 运行互斥锁：防止同一个 LocalSessionCore 实例并发 run。 */
+  /** 运行互斥锁：防止同一个 Runner 实例并发 run。 */
   private isRunning = false;
 
   /** context-length 重试计数。 */
@@ -87,7 +87,7 @@ export class LocalSessionCore {
   /**
    * 构造函数。
    */
-  constructor(options: LocalSessionCoreOptions) {
+  constructor(options: RunnerOptions) {
     // 注入模型。
     this.model = options.model;
 
@@ -109,7 +109,7 @@ export class LocalSessionCore {
   }
 
   /**
-   * 执行一次 LocalSessionCore run。
+   * 执行一次 Runner run。
    *
    * 关键点（中文）
    * - 这里只做入口控制，不直接做模型调用。
@@ -118,7 +118,7 @@ export class LocalSessionCore {
   async run(input: SessionRunInput): Promise<SessionRunResult> {
     // 如果当前实例已经在运行，则直接拒绝并发调用。
     if (this.isRunning) {
-      throw new Error("LocalSessionCore.run does not support concurrent execution");
+      throw new Error("Runner.run does not support concurrent execution");
     }
 
     // 标记运行中。
@@ -140,7 +140,7 @@ export class LocalSessionCore {
   }
 
   /**
-   * 执行一次 LocalSessionCore run（带可压缩错误重试）。
+   * 执行一次 Runner run（带可压缩错误重试）。
    *
    * 关键点（中文）
    * - 正常：准备输入 -> 执行。
@@ -159,7 +159,7 @@ export class LocalSessionCore {
       // 执行组装好的运行输入。
       return await this.executePreparedRun(prepared);
     } catch (error) {
-      // 是否应压缩重试由 compaction Composer 决策，LocalSessionCore 只消费布尔结果。
+      // 是否应压缩重试由 compaction Composer 决策，Runner 只消费布尔结果。
       if (this.compactionComposer.shouldCompactOnError(error)) {
         // 记录压缩重试日志，便于观测问题频率。
         await this.logger.log("info", "[agent] compacting", {
@@ -187,7 +187,7 @@ export class LocalSessionCore {
       const errorMsg = String(error);
 
       // 记录错误日志。
-      await this.logger.log("error", "LocalSessionCore execution failed", {
+      await this.logger.log("error", "Runner execution failed", {
         error: errorMsg,
       });
 
@@ -213,7 +213,7 @@ export class LocalSessionCore {
   private async prepareExecuteInput(query: string): Promise<SessionExecuteInput> {
     // 基础安全检查：historyComposer 必须携带 sessionId。
     if (!String(this.historyComposer.sessionId || "").trim()) {
-      throw new Error("LocalSessionCore.run requires historyComposer.sessionId");
+      throw new Error("Runner.run requires historyComposer.sessionId");
     }
 
     // 让 execution Composer 组装运行上下文（例如 tools 与 request 作用域）。

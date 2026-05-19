@@ -28,7 +28,7 @@ Session 是长期会话容器，SessionRunScope 是单次 run 的临时上下文
 - `sessionId`
 - `SessionFacade`
 - `SessionExecutorRegistry`
-- `LocalSessionExecutor`
+- `Executor`
 - `SessionEngine`
 - `JsonlSessionHistoryStore`
 - `messages.jsonl`
@@ -65,7 +65,7 @@ Session 是长期会话容器，SessionRunScope 是单次 run 的临时上下文
 
 负责：
 
-- 按 `sessionId` 创建或复用 `LocalSessionExecutor`
+- 按 `sessionId` 创建或复用 `Executor`
 - 管理 history store 与 runtime 的绑定关系
 
 ### 3. `SessionEngine`
@@ -131,7 +131,7 @@ Session 不是“这次送给模型的完整上下文文本”。
 flowchart LR
   S["SessionFacade"]
   RS["SessionExecutorRegistry"]
-  RT["LocalSessionExecutor"]
+  RT["Executor"]
   CORE["SessionEngine"]
   RC["SessionRunScope"]
   MSG["messages.jsonl / meta / archive"]
@@ -169,5 +169,5 @@ flowchart LR
 ## 一句话定义
 
 ```text
-Session = 以 sessionId 标识、由 SessionFacade / LocalSessionExecutor / JsonlSessionHistoryStore 共同维护的长期会话执行状态。
+Session = 以 sessionId 标识、由 SessionFacade / Executor / JsonlSessionHistoryStore 共同维护的长期会话执行状态。
 ```

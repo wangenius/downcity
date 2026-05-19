@@ -6,7 +6,7 @@
  * - 供 services 与 process 统一复用
  */
 
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 
 export type ChatQueueItemKind = "exec" | "audit" | "control";
 

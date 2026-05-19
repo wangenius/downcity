@@ -6,7 +6,7 @@
  * - cron 调度执行器由 server 注入，service 不依赖具体实现。
  */
 
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import {
   isTaskWhenManual,
   resolveTaskWhenCronExpression,

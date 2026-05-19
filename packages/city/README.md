@@ -126,7 +126,7 @@ src
 - `city/control`
   - 这里承载的是多 agent 聚合控制面，不是单 agent control API。
 
-- `@downcity/agent/http/control`
+- `@downcity/agent` 内部的 `server/http/control`
   - 这里承载的是 single-agent control API。
   - 当前统一路径是 `/api/control/*`。
 

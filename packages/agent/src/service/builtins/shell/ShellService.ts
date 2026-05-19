@@ -7,10 +7,10 @@
  * - ShellActionRuntime 只保留纯运行时流程，不再承载模块级单例状态。
  */
 
-import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
+import type { AgentRuntime } from "@/runtime/AgentRuntimeTypes.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
 import type { ServiceActions } from "@/service/types/Service.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type {
   ShellServiceState,
   ShellSessionRuntimeState,

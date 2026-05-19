@@ -8,8 +8,8 @@
 
 import type { Hono } from "hono";
 import { PLUGINS } from "@/plugin/core/Plugins.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { AuthRoutePolicy } from "@/host/http/auth/types/AuthRoute.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AuthRoutePolicy } from "@/types/auth/AuthRoute.js";
 
 function dedupeAuthPolicies(policies: AuthRoutePolicy[]): AuthRoutePolicy[] {
   const records = new Map<string, AuthRoutePolicy>();

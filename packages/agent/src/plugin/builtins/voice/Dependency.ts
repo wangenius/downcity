@@ -8,7 +8,7 @@
 
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginCommandContext } from "@/plugin/types/Plugin.js";
 import type {
   VoicePluginConfig,

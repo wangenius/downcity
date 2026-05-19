@@ -8,7 +8,7 @@
  */
 
 import { getSessionRunScope } from "@session/SessionRunScope.js";
-import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
 import { setSessionAvailableSkills } from "./Store.js";

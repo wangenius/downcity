@@ -1,4 +1,4 @@
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 
 export const DOWNCITY_JSON_SCHEMA: JsonObject = {
   $schema: "https://json-schema.org/draft/2020-12/schema",

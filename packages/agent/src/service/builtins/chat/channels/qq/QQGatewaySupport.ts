@@ -7,7 +7,7 @@
  */
 
 import type { RawData } from "ws";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { QQGatewayPayload, QqGatewayRuntimeStatus } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
 import type {
   QqGatewayHeartbeatState,

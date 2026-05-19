@@ -7,7 +7,7 @@
  * - shell 命令不再允许回退到宿主机普通子进程执行。
  */
 
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type { SandboxSpawnResult } from "@/sandbox/types/SandboxRuntime.js";
 import { resolveSandboxConfig, resolveSandboxCwd } from "@/sandbox/SandboxConfigResolver.js";
 import { spawnMacOsSeatbeltSandbox } from "@/sandbox/MacOsSeatbeltSandbox.js";

@@ -2,9 +2,9 @@
  * PluginManager 单例。
  *
  * 关键点（中文）
- * - `main/plugin/*` 是 plugin 的管理层，不是具体 plugin 实现层。
+ * - `plugin/core/*` 是 plugin 的管理层，不是具体 plugin 实现层。
  * - plugin hook / resolve / system 注入所依赖的注册与调度统一收口到这里。
- * - PluginManager 属于 city runtime，不直接反向依赖 agent AgentContext 单例。
+ * - PluginManager 属于 agent runtime，不直接反向依赖 AgentContext 单例。
  * - agent 只是通过 AgentContext 调用统一 plugin manager。
  * - 具体 plugin 实现位于 `src/plugin/builtins/*`，CLI plugin 命令则直接走本地命令执行器。
  */

@@ -9,7 +9,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 
 type PersistableSections = {
   /**

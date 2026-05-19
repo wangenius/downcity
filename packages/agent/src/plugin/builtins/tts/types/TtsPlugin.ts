@@ -6,7 +6,7 @@
  * - Console 只需要理解 plugin setup，不需要理解底层 asset 细节。
  */
 
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import type { TtsAudioFormat, TtsProvider } from "@/plugin/builtins/tts/types/Tts.js";
 
 /**

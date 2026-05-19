@@ -3,11 +3,11 @@
  *
  * 关键点（中文）
  * - 这里集中放 QQ 渠道的网关载荷、消息结构、状态快照等共享契约。
- * - `services/chat/channels/qq/*` 只消费这些类型，不再在实现文件里内联大段局部类型。
+ * - `service/builtins/chat/channels/qq/*` 只消费这些类型，不再在实现文件里内联大段局部类型。
  * - 字段命名尽量保持与 QQ 官方事件/接口原始字段一致，降低映射心智负担。
  */
 
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 
 /**
  * QQ 渠道配置。

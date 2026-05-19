@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import { generateId } from "@/utils/Id.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type {
   ChannelContextMetaFileV1,
   ChannelContextRouteV1,

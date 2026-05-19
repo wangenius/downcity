@@ -6,7 +6,7 @@
  * - 当前阶段支持 list / availability / action 三类调用。
  */
 
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 
 /**
  * Plugin 概览视图。

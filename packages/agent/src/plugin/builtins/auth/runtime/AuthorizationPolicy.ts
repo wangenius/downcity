@@ -6,8 +6,8 @@
  * - 判定统一走“用户角色 + 权限集合”，群聊只看发言用户自身权限。
  */
 
-import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
-import type { AgentPlatformRuntime } from "@/host/types/AgentHost.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,

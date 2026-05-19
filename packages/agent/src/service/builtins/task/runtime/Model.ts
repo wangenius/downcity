@@ -17,7 +17,7 @@ import type {
   ShipTaskKind,
   ShipTaskStatus,
 } from "@/service/builtins/task/types/Task.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
 /**
  * 必填 frontmatter 字段清单。

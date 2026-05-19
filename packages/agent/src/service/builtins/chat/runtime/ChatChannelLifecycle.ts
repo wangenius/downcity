@@ -7,7 +7,7 @@
  * - 本模块不处理 downcity.json 写入，也不负责 action 输入输出包装。
  */
 
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 import { createTelegramBot } from "@/service/builtins/chat/channels/telegram/Bot.js";

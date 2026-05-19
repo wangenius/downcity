@@ -6,7 +6,7 @@
  * - 当前请求只注入当前 channel 的 prompt，避免平台规则串味。
  * - 该模块只负责 prompt 解析与拼装，不承担运行态控制职责。
  */
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import {
   buildCurrentChatEnvironmentPrompt,
   resolveCurrentChatEnvironmentPromptInput,

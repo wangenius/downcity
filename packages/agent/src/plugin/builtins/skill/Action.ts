@@ -11,7 +11,7 @@ import path from "node:path";
 import { discoverClaudeSkillsSync } from "@/plugin/builtins/skill/runtime/Discovery.js";
 import { loadDowncityConfig } from "@/config/Config.js";
 import type { ClaudeSkill } from "@/plugin/builtins/skill/types/ClaudeSkill.js";
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import type {
   SkillListResponse,
   SkillLookupRequest,

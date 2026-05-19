@@ -9,7 +9,7 @@
 import * as Lark from "@larksuiteoapi/node-sdk";
 import fs from "fs-extra";
 import path from "path";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type {
   FeishuDownloadedAttachment,
 } from "@/service/builtins/chat/channels/feishu/types/FeishuChannel.js";

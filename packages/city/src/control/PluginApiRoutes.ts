@@ -16,6 +16,7 @@ import {
 import type { PlatformAgentOption } from "@downcity/agent";
 import type {
   PluginActionResult,
+  PluginAction,
   PluginAvailability,
   PluginSetupDefinition,
   PluginUsageDefinition,
@@ -81,7 +82,8 @@ function buildPluginActionConfig(
   plugin: ReturnType<typeof findBuiltinPlugin>,
 ): PluginActionConfigItem[] {
   if (!plugin) return [];
-  return Object.entries(plugin.actions || {})
+  const actions = (plugin.actions || {}) as Record<string, PluginAction>;
+  return Object.entries(actions)
     .map(([actionName, action]) => ({
       name: actionName,
       supportsCommand: Boolean(action?.command),

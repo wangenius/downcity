@@ -7,7 +7,7 @@
  * - 具体“授权、入队、执行、回发”仍由 QQBot 负责编排。
  */
 
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { QqIncomingAttachment } from "@/service/builtins/chat/types/QqVoice.js";
 import type { QqActorIdentity, QQAuthor, QQMessageData } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
 import { extractQqIncomingAttachments } from "./VoiceInput.js";

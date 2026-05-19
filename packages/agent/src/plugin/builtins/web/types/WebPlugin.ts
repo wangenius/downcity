@@ -6,7 +6,7 @@
  * - 联网能力本身由外部实现承担：`web-access` 或 `agent-browser`。
  */
 
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 
 /**
  * Web plugin 默认依赖仓库地址。

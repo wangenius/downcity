@@ -7,8 +7,8 @@
  * - 目标是让 chat channel 子模块共享同一套最小公共基元。
  */
 
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { StoredChannelAccount } from "@/host/types/Store.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { StoredChannelAccount } from "@/types/host/Store.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 

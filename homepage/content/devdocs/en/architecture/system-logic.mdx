@@ -82,9 +82,9 @@ It owns:
 - `env`
 - `systems`
 - `model`
-- `sessionFacade`
+- `getSession(sessionId)`
 - `services`
-- `pluginRegistry`
+- plugin manager access ports
 
 So the most accurate high-level sentence is:
 
@@ -109,11 +109,10 @@ Session answers:
 
 The real objects here are:
 
-- `SessionFacade`
-- `SessionExecutorRegistry`
+- `Session`
 - `LocalSessionExecutor`
-- `SessionEngine`
-- `JsonlSessionHistoryStore`
+- `LocalSessionCore`
+- `JsonlSessionHistoryComposer`
 
 ### Service
 
@@ -161,12 +160,12 @@ flowchart TD
   E --> F["initialize AgentRuntime"]
   F --> G["load downcity.json / .env / global env"]
   G --> H["create LanguageModel"]
-  H --> I["create SessionExecutorRegistry"]
-  I --> J["create SessionFacade"]
-  J --> K["create PluginRegistry"]
-  K --> L["register auth / skill / voice"]
-  L --> M["create chat / task / memory / shell services"]
-  M --> N["start HTTP server and dashboard routes"]
+  H --> I["create session factory"]
+  I --> J["create service instances"]
+  J --> K["initialize PluginManager"]
+  K --> L["register auth / skill / web / voice plugins"]
+  L --> M["start HTTP server and Local RPC"]
+  M --> N["start services and schedule runtime"]
 ```
 
 ## Execution Path
@@ -179,8 +178,8 @@ flowchart TD
   SERVICE --> SID["choose sessionId"]
   SID --> APPEND["append message"]
   APPEND --> RUN["session.run"]
-  RUN --> CORE["SessionEngine"]
-  CORE --> MODEL["model / tools / prompt / history store / compaction"]
+  RUN --> CORE["LocalSessionCore"]
+  CORE --> MODEL["model / tools / prompt / history composer / compaction"]
   MODEL --> RES["assistant result"]
   RES --> SERVICE
   SERVICE --> OUT["reply / artifacts / side effects"]
@@ -205,8 +204,8 @@ These point names belong to the service. Plugins only implement some of them.
 
 - `AgentRuntime`: single-project runtime center
 - `AgentContext`: unified runtime surface
-- `SessionFacade`: session facade
-- `SessionEngine`: execution kernel
+- `Session`: single-session instance shell
+- `LocalSessionCore`: model and tool-loop execution kernel
 - `PluginRegistry`: plugin registration and dispatch
 - `BaseService`: service instance base class
 

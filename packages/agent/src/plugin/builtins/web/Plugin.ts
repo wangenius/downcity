@@ -6,7 +6,7 @@
  * - 真正的联网逻辑直接交给外部实现：`web-access` 或 `agent-browser`。
  */
 import type { Plugin } from "@/plugin/types/Plugin.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { WebPluginConfig, WebPluginInstallInput } from "@/plugin/builtins/web/types/WebPlugin.js";
 import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/plugin/builtins/web/types/WebPlugin.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";

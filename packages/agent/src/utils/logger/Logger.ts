@@ -10,7 +10,7 @@ import fs from "fs-extra";
 import path from "path";
 import { getLogsDirPath } from "@/config/Paths.js";
 import { getTimestamp } from "@/utils/Time.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 
 type LogDetails = {
   [key: string]: JsonObject[keyof JsonObject] | undefined;

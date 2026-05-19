@@ -8,7 +8,7 @@
  */
 
 import type { UIMessage } from "ai";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 
 /**
  * Session 消息：以 UIMessage[] 作为唯一事实源。

@@ -70,9 +70,9 @@ It owns:
 - `env`
 - `systems`
 - `model`
-- `sessionFacade`
+- `getSession(sessionId)`
 - `services`
-- `pluginRegistry`
+- plugin manager access ports
 
 So the real mental model is:
 
@@ -93,13 +93,13 @@ flowchart TD
   E --> F["initialize AgentRuntime"]
   F --> G["load downcity.json / .env / global env"]
   G --> H["create LanguageModel"]
-  H --> I["create SessionExecutorRegistry"]
-  I --> J["create SessionFacade"]
-  J --> K["create PluginRegistry"]
-  K --> L["register auth / skill / voice"]
-  L --> M["create chat / task / memory / shell services"]
-  M --> N["bind shell tool runtime"]
-  N --> O["start HTTP server"]
+  H --> I["create session factory"]
+  I --> J["create service instances"]
+  J --> K["initialize PluginManager"]
+  K --> L["register auth / skill / web / voice plugins"]
+  L --> M["bind shell tool runtime"]
+  M --> N["start HTTP server and Local RPC"]
+  N --> O["start services and schedule runtime"]
 ```
 
 ## How Services Get Runtime Access
@@ -185,8 +185,8 @@ sequenceDiagram
   participant In as External Input
   participant Agent as AgentRuntime
   participant Service as Service
-  participant Session as SessionFacade
-  participant Core as SessionEngine
+  participant Session as Session
+  participant Core as LocalSessionCore
   participant Plugin as PluginRegistry
 
   In->>Agent: CLI / HTTP / Chat / Task
@@ -202,5 +202,5 @@ sequenceDiagram
 ## In One Sentence
 
 ```text
-The current package is centered on AgentRuntime, uses SessionFacade as the execution axis, lets services own workflows, and uses plugins only as extensions.
+The current package is centered on AgentRuntime, uses Session and LocalSessionCore as the execution axis, lets services own workflows, and uses plugins only as extensions.
 ```

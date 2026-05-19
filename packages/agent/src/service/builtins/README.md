@@ -2,20 +2,20 @@
 
 ## 模块定位
 
-`services/` 是 Downcity 的主动业务层。  
+`service/builtins/` 是 Downcity 的内建主动业务层。  
 每个 service 对外暴露统一的 `Service` 契约，但在运行时已经逐步迁移为 `BaseService` 子类，由 agent 在启动时创建 `per-agent service instance`。
 
 ## 当前整体模型
 
-1. `main/service/Services.ts`
+1. `service/core/Services.ts`
    - 维护 service 的静态注册清单。
-2. `main/registries/ServiceClassRegistry.ts`
+2. `service/core/ServiceClassRegistry.ts`
    - 负责把静态 service 定义实例化为 `BaseService` 子类。
-3. `agent/AgentRuntime.ts`
+3. `runtime/AgentRuntime.ts`
    - agent 持有当前运行中的 service 实例集合。
-4. `main/service/Manager.ts`
+4. `service/core/Manager.ts`
    - 统一做 service lifecycle、action 调度、CLI/API 桥接。
-5. `src/types/Service.ts`
+5. `service/types/Service.ts`
    - 作为 service 共享契约的单一事实源。
 
 ## 当前内建 service
@@ -41,17 +41,21 @@
    - `channels/BaseChatChannelSupport.ts` 负责 session 映射、history 与 chat meta 辅助。
    - `channels/BaseChatChannelQueue.ts` 负责 audit/exec 入队编排。
    - `channels/telegram/Bot.ts` 现在只保留 Telegram 渠道门面与编排。
+   - `channels/telegram/TelegramMessageHandler.ts` 负责 Telegram 普通消息授权、附件与执行入队。
+   - `channels/telegram/TelegramPendingUpdates.ts` 负责 Telegram 积压 updates 的 audit 补录。
    - `channels/telegram/TelegramPlatformClient.ts` 负责 Telegram polling/API/发送主逻辑。
    - `channels/telegram/TelegramInbound.ts` 负责 Telegram 入站归一化辅助。
    - `channels/feishu/Feishu.ts` 现在只保留 Feishu 渠道门面与编排。
+   - `channels/feishu/FeishuMessageHandler.ts` 负责 Feishu 入站去重、授权、附件与执行入队。
    - `channels/feishu/FeishuPlatformClient.ts` 负责 Feishu runtime 宿主与 token/cache 状态。
    - `channels/feishu/FeishuPlatformLookup.ts` 负责 Feishu 用户/群聊/reply 查询与入站附件下载。
    - `channels/feishu/FeishuPlatformMessaging.ts` 负责 Feishu 消息发送与附件上传。
    - `channels/feishu/FeishuInbound.ts` 负责 Feishu 入站归一化辅助。
    - `channels/qq/QQ.ts` 现在只保留 QQ 渠道门面与编排。
+   - `channels/qq/QQMessageHandler.ts` 负责 QQ group/c2c/channel 入站主流程。
    - `channels/qq/QQSupport.ts` 负责 QQ READY 身份解析、命令映射与入站增强组装。
-  - `channels/qq/QQGatewayClient.ts` 负责 QQ Gateway runtime 宿主、WS 编排与重连调度。
-  - `channels/qq/QQGatewaySupport.ts` 负责 QQ Gateway 状态快照、心跳判断与 payload 解析。
+   - `channels/qq/QQGatewayClient.ts` 负责 QQ Gateway runtime 宿主、WS 编排与重连调度。
+   - `channels/qq/QQGatewaySupport.ts` 负责 QQ Gateway 状态快照、心跳判断与 payload 解析。
    - `channels/qq/QQGatewayAuth.ts` 负责 QQ 鉴权、Gateway URL 与 HTTP 连通性测试。
    - `channels/qq/QQGatewaySend.ts` 负责 QQ 回发请求构造、超时与自动重试。
    - `channels/qq/QQInbound.ts` 负责 QQ 入站归一化辅助。
@@ -78,6 +82,14 @@
    - `session/tools/shell/ShellToolDefinition.ts` 作为 session tool facade，只做协议适配。
    - `session/tools/shell/ShellToolSchemas.ts` 负责 shell tool schema。
    - `session/tools/shell/ShellToolBridge.ts` 负责 runtime bridge 与响应整理。
+5. `contact/`
+   - 负责 agent 点对点关系、长期 contact chat、内容分享与 inbox 接收。
+   - `ContactService.ts` 是实例入口，只保留 service 骨架与 contact 业务动作。
+   - `Action.ts` 负责 CLI/API action 注册表与输入映射。
+   - `runtime/ContactPayload.ts` 负责远端 HTTP payload 与 contact token 读取。
+   - `runtime/ContactStore.ts`、`LinkStore.ts`、`InboxStore.ts` 负责 contact/link/inbox 落盘。
+   - `runtime/LinkApproval.ts`、`ApproveCallback.ts` 负责建联与双向回连确认。
+   - `runtime/ShareBundle.ts` 负责分享内容打包与接收。
 
 ## 统一服务模式
 
@@ -86,11 +98,11 @@
 2. `<Domain>Service.ts`
    - 作为真正的 class service 实现。
 3. `Action.ts`
-   - 保留该领域的核心业务 helper，供 service/runtime 复用。
+   - 负责 action 注册表、CLI/API 输入映射与 handler 注入。
 4. `runtime/`
    - 承载具体运行时实现、状态管理与输入映射。
 5. `types/`
-   - 存放领域内部协议；跨层共享契约统一提升到 `src/types/`。
+   - 存放领域内部协议；跨层共享契约统一提升到 `service/types/` 或包级 `types/`。
 
 ## 边界约束
 

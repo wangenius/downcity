@@ -88,9 +88,9 @@ Agent 是单项目执行面，负责：
 - `env`
 - `systems`
 - `model`
-- `sessionFacade`
+- `getSession(sessionId)`
 - `services`
-- `pluginRegistry`
+- plugin manager 访问端口
 
 所以从代码视角看，当前最真实的主链是：
 
@@ -115,11 +115,10 @@ Session 回答：
 
 Session 的真实对象包括：
 
-- `SessionFacade`
-- `SessionExecutorRegistry`
+- `Session`
 - `LocalSessionExecutor`
-- `SessionEngine`
-- `JsonlSessionHistoryStore`
+- `LocalSessionCore`
+- `JsonlSessionHistoryComposer`
 
 ### Service
 
@@ -167,12 +166,12 @@ flowchart TD
   E --> F["初始化 AgentRuntime"]
   F --> G["读取 downcity.json / .env / global env"]
   G --> H["创建 LanguageModel"]
-  H --> I["创建 SessionExecutorRegistry"]
-  I --> J["创建 SessionFacade"]
-  J --> K["创建 PluginRegistry"]
-  K --> L["注册 auth / skill / voice"]
-  L --> M["创建 chat / task / memory / shell services"]
-  M --> N["启动 HTTP Server 与 dashboard routes"]
+  H --> I["创建 session factory"]
+  I --> J["创建 service instances"]
+  J --> K["初始化 PluginManager"]
+  K --> L["注册 auth / skill / web / voice 等 plugin"]
+  L --> M["启动 HTTP Server 与 Local RPC"]
+  M --> N["启动 services 与 schedule runtime"]
 ```
 
 ## 执行主链
@@ -185,8 +184,8 @@ flowchart TD
   SERVICE --> SID["确定 sessionId"]
   SID --> APPEND["append message"]
   APPEND --> RUN["session.run"]
-  RUN --> CORE["SessionEngine"]
-  CORE --> MODEL["model / tools / prompt / history store / compact"]
+  RUN --> CORE["LocalSessionCore"]
+  CORE --> MODEL["model / tools / prompt / history composer / compact"]
   MODEL --> RES["assistant result"]
   RES --> SERVICE
   SERVICE --> OUT["回复 / run artifact / side effects"]
@@ -216,8 +215,8 @@ flowchart TD
 
 - `AgentRuntime`：单项目 runtime 中心
 - `AgentContext`：统一能力面
-- `SessionFacade`：统一会话门面
-- `SessionEngine`：模型执行内核
+- `Session`：单 session 实例外壳
+- `LocalSessionCore`：模型与 tool loop 执行内核
 - `PluginRegistry`：plugin 注册与调度
 - `BaseService`：service 实例基类
 

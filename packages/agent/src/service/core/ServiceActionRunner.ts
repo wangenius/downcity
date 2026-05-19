@@ -7,8 +7,8 @@
  * - HTTP route 层不会直接实现业务分发，只调用这里的统一入口。
  */
 
-import type { JsonValue } from "@/utils/types/Json.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { JsonValue } from "@/types/common/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type { ServiceCommandScheduleInput } from "@/service/types/ServiceSchedule.js";
 import type {
   ServiceStateControlAction,

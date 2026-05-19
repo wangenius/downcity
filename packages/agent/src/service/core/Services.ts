@@ -6,7 +6,7 @@
  * - 这里只声明“有哪些 service class”，不承载运行态逻辑。
  */
 
-import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
+import type { AgentRuntime } from "@/runtime/AgentRuntimeTypes.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
 import { ChatService } from "@/service/builtins/chat/ChatService.js";
 import { TaskService } from "@/service/builtins/task/TaskService.js";

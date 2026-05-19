@@ -6,7 +6,7 @@
  * - 远端收到 chat 后运行本地 agent session，并返回 assistant 文本。
  */
 
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type { ContactChatResponse } from "@/service/builtins/contact/types/ContactChat.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import {

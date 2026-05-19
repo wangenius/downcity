@@ -6,7 +6,7 @@
  * - 日志里保留状态、内容类型、函数调用摘要，方便定位 provider 行为。
  */
 
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import {
   formatLogField,
   getArrayField,

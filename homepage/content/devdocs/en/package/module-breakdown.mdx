@@ -1,138 +1,65 @@
 ---
 title: Package Module Breakdown
-description: Explains the current main, agent, sessions, services, plugins, types, and utils structure inside packages/downcity
+description: Explains the current packages/agent runtime, server, SDK, session, service, plugin, and sandbox boundaries
 ---
 
 # Package Module Breakdown
 
-`packages/downcity/` is the runtime core. The fastest way to understand it is to follow the real runtime objects, not the old directory names.
+The single-agent execution kernel now lives in `packages/agent/`. The fastest way to understand it is to follow the real runtime objects:
 
-## Core Mental Model
+- `AgentRuntime`
+- `AgentContext`
+- `Session`
+- `LocalSessionCore`
+- `BaseService`
+- `PluginRegistry`
 
-- `main/` owns entry assembly
-- `agent/` owns the single-project runtime center
-- `session/` owns the execution axis
-- `services/` own workflows
-- `plugins/` own extensions
+In one sentence:
+
+```text
+agent assembles the single-project runtime, session owns the model execution axis, services own workflows, plugins extend those workflows, and server/sdk expose the runtime.
+```
 
 ## Current Directory Map
 
 ```mermaid
 flowchart TD
-  ROOT["packages/downcity/src"] --> MAIN["main/"]
-  ROOT --> AGENT["agent/"]
+  ROOT["packages/agent/src"] --> RUNTIME["runtime/"]
+  ROOT --> HOST["host/"]
+  ROOT --> PROJECT["project/"]
+  ROOT --> SDK["sdk/"]
+  ROOT --> SERVER["server/"]
   ROOT --> SESSION["session/"]
-  ROOT --> SERVICES["services/"]
-  ROOT --> PLUGINS["plugins/"]
+  ROOT --> TRANSPORT["transport/"]
+  ROOT --> SERVICE["service/"]
+  ROOT --> PLUGIN["plugin/"]
+  ROOT --> SANDBOX["sandbox/"]
+  ROOT --> MODEL["model/"]
+  ROOT --> CONFIG["config/"]
   ROOT --> TYPES["types/"]
   ROOT --> UTILS["utils/"]
 ```
 
-## 1. `main/`
-
-This is the current entry and assembly layer.
-
-It owns:
-
-- HTTP server startup and route mounting
-- service and plugin integration entrypoints
-- daemon and runtime process management
-- env, config, model, and project setup
-- dashboard and gateway APIs
-
-### Important subareas
-
-#### `main/index.ts`
-
-The current agent HTTP server entrypoint.
-
-It:
-
-- creates the Hono app
-- mounts `static / health / services / plugins / execute / dashboard`
-- starts and stops the Node HTTP server
-
-#### `main/service/`
-
-Owns:
-
-- service lifecycle control
-- service action execution
-- service API registration
-
-Key modules here are:
-
-- `ServiceStateController`
-- `ServiceActionRunner`
-- `ServiceActionApi`
-
-#### `main/plugin/`
-
-Owns:
-
-- plugin registration
-- hook execution
-- availability checks
-- built-in plugin registration
-
-Key objects here are:
-
-- `HookRegistry`
-- `PluginRegistry`
-
-#### `main/runtime/` and `main/daemon/`
-
-Own:
-
-- console and agent process state
-- pid, registry, path, and daemon metadata
-- agent process discovery and lifecycle
-
-#### `main/ui/`
-
-Owns:
-
-- dashboard and web UI APIs
-- gateway behavior
-- model, env, and channel-account control APIs
-
-## 2. `agent/`
+## 1. `runtime/`
 
 This is the single-project runtime center.
-
-The most important object here is:
-
-- `AgentRuntime`
-
-`AgentRuntime` holds:
-
-- `cwd`
-- `rootPath`
-- `config`
-- `env`
-- `systems`
-- `model`
-- `sessionFacade`
-- `services`
-- `pluginRegistry`
 
 ### `AgentRuntime.ts`
 
 Owns:
 
-- project runtime initialization
-- config, env, and static system loading
+- project config, project env, and global env loading
+- static system prompt loading
 - model creation
-- `SessionExecutorRegistry` and `SessionFacade` creation
-- plugin registry creation
-- per-agent service creation
-- prompt hot reload
+- session factory creation
+- per-agent service instance creation
+- plugin manager initialization
+- shell tool runtime binding
+- prompt and config hot reload
 
 ### `AgentContext.ts`
 
-Owns:
-
-- the unified execution surface derived from `AgentRuntime`
+Derives the unified runtime surface from `AgentRuntime` for services, plugins, and session tools.
 
 It exposes:
 
@@ -141,153 +68,207 @@ It exposes:
 - `logger`
 - `session`
 - `invoke`
+- `chat`
 - `plugins`
 
-## 3. `session/`
+## 2. `project/`
 
-This is the execution axis.
+Owns project initialization, model binding, execution binding, and project structure preparation.
 
-### `SessionFacade`
+- `AgentInitializer.ts`: agent project creation and default file writing.
+- `ProjectExecutionBinding.ts`: project execution target reading and validation.
+- `types/`: project initialization types.
 
-The agent-owned session facade.
+## 3. `host/`
 
-It exposes:
+This is the port layer between the agent runtime and its host environment.
 
-- `getExecutor`
-- `getHistoryStore`
-- `run`
-- `appendUserMessage`
-- `appendAssistantMessage`
+- `host/runtime/`: host ports, plugin config runtime, and plugin runtime resolver injected into `AgentRuntime`.
+- `host/daemon/`: agent-side daemon protocol, project setup, HTTP client, and project-level daemon meta paths.
 
-### `SessionExecutorRegistry`
+Daemon process start/stop, pid cleanup, registry sync, and other platform-level management responsibilities belong to `@downcity/city`.
 
-Owns:
+## 4. `sdk/`
 
-- runtime caching by `sessionId`
-- runtime to history store creation linkage
-
-### `LocalSessionExecutor`
-
-Owns:
-
-- runtime assembly for a single runnable session
-
-### `SessionEngine`
-
-This is the execution kernel.
+This is the local SDK facade.
 
 It owns:
 
-- input assembly
-- compaction retries
+- `Agent`
+- `RemoteAgent`
+- `SdkSession`
+- SDK HTTP/RPC wrappers
+- SDK session metadata
+- SDK-specific system composer
+
+## 5. `server/`
+
+This is the single-agent server layer.
+
+- `server/http/`: HTTP server and `control / execute / services / plugins / health / static` routes.
+- `server/http/auth/`: agent HTTP / CLI-token auth helpers.
+- `server/http/control/`: single-agent control API.
+- `server/rpc/`: local RPC server.
+
+## 6. `session/`
+
+This is the model execution axis.
+
+### `Session`
+
+One `sessionId` maps to one `Session` instance.
+
+It owns:
+
+- `run`
+- `appendUserMessage`
+- `appendAssistantMessage`
+- executor caching
+- same-session concurrency protection
+- assistant step persistence
+
+### `LocalSessionExecutor`
+
+Assembles model, history composer, system composer, compaction composer, and execution composer into a runnable local executor.
+
+### `LocalSessionCore`
+
+This is the current model and tool-loop execution kernel.
+
+It owns:
+
+- model input assembly
+- history compaction
 - tool loop execution
+- incomplete response recovery
 - final assistant message collection
 
-## 4. `services/`
+Related helpers:
 
-This is the workflow layer. The current core services are:
+- `SessionToolLoopRunner.ts`: drives the model-response tool loop and continuation decisions.
+- `SessionModelMessageState.ts`: maintains both session-level and model-level message baselines.
+- `SessionUiStreamCollector.ts`: consumes the UI stream and collects the final assistant message.
+- `SessionExecutionError.ts`: normalizes AI SDK / provider errors.
 
-- `chat`
-- `task`
-- `memory`
-- `shell`
+### `composer/`
 
-Each service extends `BaseService` and is created per agent.
+Owns the session run composition surfaces:
 
-### `chat`
+- `history/`: JSONL history read/write and recovery.
+- `system/`: static prompts, service/plugin system prompts, and variable rendering.
+- `execution/`: request-to-model-input mapping.
+- `compaction/`: context compression.
 
-Owns:
+## 7. `service/`
 
-- channel ingress
-- chat queue
-- session bridge
-- reply dispatch
-- chat plugin points
+This is the workflow layer.
 
-### `task`
+- `service/core/`: service class registration, state control, action dispatch, and HTTP route registration.
+- `service/builtins/`: built-in service implementations.
+- `service/schedule/`: persisted service action scheduling.
+- `service/types/`: shared service protocol types.
 
-Owns:
+The current built-in services are:
 
-- task definitions
-- cron scheduling
-- script and agent task execution
-- run artifacts
+- `chat`: channel ingress, chat queue, session bridge, reply dispatch, and chat plugin points.
+- `contact`: contact-related capabilities.
+- `task`: task definitions, scheduling, agent runs, and run artifacts.
+- `memory`: memory writes, search, flush, and system prompts.
+- `shell`: shell session lifecycle and command execution.
 
-### `memory`
-
-Owns:
-
-- memory writes
-- indexing
-- search
-- flush and status
-
-### `shell`
-
-Owns:
-
-- one-shot shell execution
-- long-lived shell sessions
-- read / write / wait / close
-
-## 5. `plugins/`
+## 8. `plugin/`
 
 This is the extension layer.
 
-The current built-in plugins are:
+- `plugin/core/`: registration, activation, hook dispatch, local actions, and HTTP route support.
+- `plugin/builtins/`: `auth`, `skill`, `web`, `asr`, `tts`, `voice`, and `workboard`.
+- `plugin/types/`: shared plugin protocol types.
 
-- `auth`
-- `skill`
-- `voice`
-
-Plugins provide:
+Plugins can provide:
 
 - explicit actions
 - system injection
 - hook implementations
 
-The runtime semantics are:
+Hook semantics are unified as:
 
 - `pipeline`
 - `guard`
 - `effect`
 - `resolve`
 
-## 6. `types/`
+The key rule:
 
-This is the cross-layer contract center.
+- services define plugin points
+- plugins implement some of those points
+- plugins do not own the main workflow
 
-It matters because:
+## 9. `sandbox/`
 
-- dashboard and APIs depend on it
-- `AgentRuntime`, `AgentContext`, `Service`, and `Plugin` depend on it
-- session and runtime result types depend on it
+This is the command execution isolation layer.
 
-## 7. `utils/`
+It owns:
 
-This is where shared infrastructure lives:
+- sandbox config resolution
+- safe cwd resolution
+- plain shell process spawning
+- macOS seatbelt sandbox spawning
 
-- logger
-- sqlite store
-- template
-- storage
-- id
-- time
+Shell tools, shell service, and task service eventually enter command execution through this layer.
+
+## 10. `transport/`
+
+This is the agent client transport protocol layer.
+
+- `transport/rpc/Client.ts`: local RPC client.
+- `transport/rpc/Transport.ts`: local IPC / external HTTP transport selector.
+- `transport/rpc/Paths.ts`: local RPC endpoint path resolution.
+- local RPC protocol types live in `types/rpc/`.
+
+## 11. `types/`
+
+This directory holds shared protocol types used across modules and packages.
+
+- `types/common/`: base JSON and template types.
+- `types/config/`: `downcity.json`, execution binding, LLM, and start option types.
+- `types/host/`: agent host port types.
+- `types/platform/`: city control plane / managed agent platform contracts.
+- `types/daemon/`, `types/rpc/`, `types/auth/`, and `types/http/`: daemon, local RPC, auth, and inline instant protocol types.
+
+Domain-local types remain in their domain directories, such as `service/types/`, `plugin/types/`, and `session/types/`.
+
+## 12. `config/`, `model/`, and `utils/`
+
+- `config/`: project config, schema, and project-level paths.
+- `model/`: model creation and model management helpers.
+- `utils/`: logger, CLI output, storage, id, and time helpers.
+
+## Public API Boundary
+
+`src/index.ts` is the only public entrypoint for `@downcity/agent`. It uses an explicit export list and exposes only:
+
+- SDK: `Agent`, `RemoteAgent`, and session configuration/run types.
+- plugin/service author APIs: `BaseService`, `ChatService`, built-in plugins, and plugin/service definition types.
+- city runtime integration APIs: runtime startup/shutdown, server/RPC startup, service scheduling, project initialization, and model creation.
+- cross-package protocol types: platform, daemon, RPC, auth, store, inline instant, and related control-plane contracts.
+
+HTTP routers, sandbox runners, internal service runners, and other implementation details are not exported from the root entrypoint.
 
 ## Suggested Reading Order
 
-1. `src/main/index.ts`
-2. `src/agent/AgentRuntime.ts`
-3. `src/agent/AgentContext.ts`
-4. `src/session/SessionFacade.ts`
-5. `src/session/execution/SessionExecutorRegistry.ts`
-6. `src/session/execution/local/SessionEngine.ts`
-7. `src/main/service/Services.ts`
-8. `src/main/registries/ServiceClassRegistry.ts`
-9. `src/services/chat/ChatService.ts`
-10. `src/services/task/TaskService.ts`
-11. `src/services/memory/MemoryService.ts`
-12. `src/services/shell/ShellService.ts`
-13. `src/main/plugin/Plugins.ts`
-14. `src/main/plugin/PluginRegistry.ts`
-15. `src/types/*`
+1. `src/index.ts`
+2. `src/runtime/AgentRuntime.ts`
+3. `src/runtime/AgentContext.ts`
+4. `src/session/Session.ts`
+5. `src/session/executors/local/LocalSessionExecutor.ts`
+6. `src/session/executors/local/LocalSessionCore.ts`
+7. `src/session/executors/local/SessionToolLoopRunner.ts`
+8. `src/service/core/Services.ts`
+9. `src/service/core/ServiceClassRegistry.ts`
+10. `src/service/builtins/chat/ChatService.ts`
+11. `src/service/builtins/task/TaskService.ts`
+12. `src/plugin/core/PluginManager.ts`
+13. `src/plugin/core/PluginRegistry.ts`
+14. `src/server/http/Server.ts`
+15. `src/server/rpc/Server.ts`
+16. `src/sdk/Agent.ts`

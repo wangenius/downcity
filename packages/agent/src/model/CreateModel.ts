@@ -19,10 +19,10 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { type LanguageModel } from "ai";
 import { createLlmLoggingFetch } from "@/utils/logger/Fetch.js";
 import { getLogger } from "@/utils/logger/Logger.js";
-import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
-import type { LlmProviderType } from "@/config/types/LlmConfig.js";
-import { readProjectExecutionBinding } from "@/agent/project/ProjectExecutionBinding.js";
-import type { AgentPlatformRuntime } from "@/host/types/AgentHost.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+import type { LlmProviderType } from "@/types/config/LlmConfig.js";
+import { readProjectExecutionBinding } from "@/project/ProjectExecutionBinding.js";
+import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
 
 type ModelLogContext = {
   sessionId?: string;

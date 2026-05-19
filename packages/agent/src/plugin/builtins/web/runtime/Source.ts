@@ -11,7 +11,7 @@ import os from "node:os";
 import fsp from "node:fs/promises";
 import { execa } from "execa";
 import fse from "fs-extra";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { PluginCommandContext } from "@/plugin/types/Plugin.js";
 import type {
   WebPluginDependencyCheckResult,

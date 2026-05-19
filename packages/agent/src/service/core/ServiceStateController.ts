@@ -7,14 +7,14 @@
  * - Manager.ts 只作为门面导出，真正逻辑在这里分层实现。
  */
 
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type {
   ServiceStateControlAction,
   ServiceStateControlResult,
   ServiceStateRecord,
   ServiceStateSnapshot,
 } from "@/service/types/ServiceState.js";
-import { getAgentRuntime } from "@/agent/AgentRuntimeState.js";
+import { getAgentRuntime } from "@/runtime/AgentRuntimeState.js";
 import {
   getRegisteredStaticServiceInstances,
   listRegisteredServices,

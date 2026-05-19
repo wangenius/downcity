@@ -10,8 +10,8 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { generateId } from "@/utils/Id.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 import type {
   ChatHistoryDirection,

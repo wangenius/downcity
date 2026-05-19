@@ -10,8 +10,8 @@
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { ChatInboundAugmentInput } from "@/service/builtins/chat/types/ChatPlugin.js";
 import type { VoicePluginConfig } from "@/plugin/builtins/voice/types/VoicePlugin.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
-import type { AgentPluginConfigRuntime } from "@/host/types/AgentHost.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { AgentPluginConfigRuntime } from "@/types/host/AgentHost.js";
 import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
 import {
   listVoiceModels,

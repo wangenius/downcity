@@ -9,8 +9,8 @@
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { JsonValue } from "@/types/common/Json.js";
 
 /**
  * 服务运行状态。

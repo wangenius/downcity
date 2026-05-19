@@ -2,12 +2,12 @@
  * ChatMetaStore：按 sessionId 维护 chat 路由元信息。
  *
  * 关键点（中文）
- * - 入站消息到达时由 services/chat 写入
- * - 出站按 sessionId/chatKey 发送时由 services/chat 读取
+ * - 入站消息到达时由 service/builtins/chat 写入
+ * - 出站按 sessionId/chatKey 发送时由 service/builtins/chat 读取
  * - 底层数据落在 `.downcity/channel/meta.json`，由 ChannelContextStore 统一维护
  */
 
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type { ChatMetaV1 } from "@/service/builtins/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 import {

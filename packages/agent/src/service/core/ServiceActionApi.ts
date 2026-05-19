@@ -8,8 +8,8 @@
  */
 
 import type { Context as HonoContext, Hono } from "hono";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type { ServiceCommandScheduleInput } from "@/service/types/ServiceSchedule.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
 import { parseScheduledRunAtMsOrThrow } from "../schedule/Time.js";

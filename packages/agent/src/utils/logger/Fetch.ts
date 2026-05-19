@@ -3,7 +3,7 @@ import {
   parseFetchResponseForLog,
   type ProviderFetch,
 } from "./Format.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 
 export type LlmLogContext = {
   sessionId?: string;

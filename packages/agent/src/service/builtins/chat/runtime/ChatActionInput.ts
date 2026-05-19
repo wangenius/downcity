@@ -9,7 +9,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { ServiceActionCommandInput } from "@/service/types/Service.js";
 import type {
   ChatConfigureActionPayload,

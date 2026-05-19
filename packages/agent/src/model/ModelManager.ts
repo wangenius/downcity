@@ -6,7 +6,7 @@
  * - 避免命令层直接依赖硬编码常量，提升可维护性与一致性。
  */
 
-import type { LlmProviderType } from "@/config/types/LlmConfig.js";
+import type { LlmProviderType } from "@/types/config/LlmConfig.js";
 
 /**
  * 单个模型预设定义。

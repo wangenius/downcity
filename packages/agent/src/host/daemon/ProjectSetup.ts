@@ -9,11 +9,11 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { loadDowncityConfig } from "@/config/Config.js";
-import type { AgentPlatformRuntime } from "@/host/types/AgentHost.js";
+import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
 import {
   readProjectExecutionBinding,
   readProjectPrimaryModelId,
-} from "@/agent/project/ProjectExecutionBinding.js";
+} from "@/project/ProjectExecutionBinding.js";
 import {
   getCacheDirPath,
   getLogsDirPath,

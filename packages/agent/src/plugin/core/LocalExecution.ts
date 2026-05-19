@@ -16,8 +16,8 @@ import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
 } from "@/host/runtime/AgentHostRuntime.js";
-import { getAgentRuntimeBase } from "@/agent/AgentRuntimeState.js";
-import type { JsonValue } from "@/utils/types/Json.js";
+import { getAgentRuntimeBase } from "@/runtime/AgentRuntimeState.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import type {
   PluginActionResult,
   PluginAvailability,

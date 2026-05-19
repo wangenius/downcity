@@ -8,7 +8,7 @@
  */
 
 import type { SkillRootSource } from "@/plugin/builtins/skill/types/SkillRoot.js";
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 
 /**
  * Claude Code-compatible skill。

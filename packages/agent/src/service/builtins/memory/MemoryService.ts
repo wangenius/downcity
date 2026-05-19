@@ -8,8 +8,8 @@
  */
 
 import type { Command } from "commander";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type { ServiceActions } from "@/service/types/Service.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
 import {

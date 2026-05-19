@@ -6,7 +6,7 @@
  * - 这里的类型名直接反映 plugin 自身能力，不再保留 asset 心智。
  */
 
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 
 /**
  * Voice Plugin 行为配置。

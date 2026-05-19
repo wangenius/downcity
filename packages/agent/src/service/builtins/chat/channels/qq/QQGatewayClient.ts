@@ -9,7 +9,7 @@
 
 import WebSocket, { type RawData } from "ws";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type {
   QQEventCaptureConfig,
   QQGatewayPayload,

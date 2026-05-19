@@ -7,7 +7,7 @@
  * - CLI / 只读场景也复用这里构造无宿主实例，避免维护第二套静态 definition。
  */
 
-import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
+import type { AgentRuntime } from "@/runtime/AgentRuntimeTypes.js";
 import { SERVICE_CLASSES } from "@/service/core/Services.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
 import type { Service } from "@/service/types/Service.js";

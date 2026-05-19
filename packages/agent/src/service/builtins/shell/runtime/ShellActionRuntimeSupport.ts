@@ -8,8 +8,8 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import { stripInvocationAuthEnv } from "@/host/http/auth/AuthEnv.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import { stripInvocationAuthEnv } from "@/server/http/auth/AuthEnv.js";
 import type {
   ShellServiceState,
   ShellSessionRuntimeState,

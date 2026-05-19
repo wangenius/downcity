@@ -6,7 +6,7 @@
  * - 所有会泄漏上下文的字段都必须在这里截断或抽象。
  */
 
-import type { ControlSessionSummary } from "@/host/http/control/types/ControlViewData.js";
+import type { ControlSessionSummary } from "@/server/http/control/types/ControlViewData.js";
 import type { ServiceStateSnapshot } from "@/service/types/ServiceState.js";
 import type { TaskListResponse } from "@/service/builtins/task/types/TaskCommand.js";
 import type {
@@ -15,7 +15,7 @@ import type {
   WorkboardSignalItem,
   WorkboardSummary,
 } from "@/plugin/builtins/workboard/types/Workboard.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 
 function toIsoString(timestamp?: number): string {
   if (!timestamp || !Number.isFinite(timestamp)) {

@@ -2,24 +2,27 @@
  * @downcity/agent — Agent 运行时公开 API。
  *
  * 关键点（中文）
- * - 这是 agent 包的唯一公开入口。
- * - city 包通过 `import { ... } from '@downcity/agent'` 使用代理运行时。
+ * - 这是 agent 包唯一稳定的公开入口。
+ * - 只导出 SDK、插件/服务作者 API、city 运行集成 API 与跨包协议类型。
+ * - HTTP router、sandbox runner、内部 service runner 等实现细节不从根入口暴露。
  */
 
 // SDK 入口
-export { Agent } from "./host/sdk/Agent.js";
-export { RemoteAgent } from "./host/sdk/RemoteAgent.js";
+export { Agent } from "./sdk/Agent.js";
+export { RemoteAgent } from "./sdk/RemoteAgent.js";
 export type {
   AgentOptions,
   RemoteAgentOptions,
-  AgentSessionSetInput,
   AgentSessionConfigSnapshot,
+  AgentSessionForkInput,
+  AgentSessionMetadata,
   AgentSessionRunInput,
   AgentSessionRunResult,
+  AgentSessionSetInput,
   AgentSessionStreamEvent,
-  AgentSessionMetadata,
-  AgentSessionForkInput,
-} from "./host/sdk/AgentSdkTypes.js";
+} from "./sdk/AgentSdkTypes.js";
+
+// 服务与插件作者 API
 export { BaseService } from "./service/builtins/BaseService.js";
 export { ChatService } from "./service/builtins/chat/ChatService.js";
 export { ChatChannelAccountService } from "./service/builtins/chat/accounts/ChannelAccountService.js";
@@ -31,155 +34,6 @@ export type {
   ChatServiceQqOptions,
   ChatServiceTelegramOptions,
 } from "./service/builtins/chat/ChatServiceTypes.js";
-
-// Agent 运行时
-export {
-  initAgentRuntime,
-  stopAgentHotReload,
-  getAgentContext,
-  getAgentRuntime,
-  getAgentRuntimeBase,
-  setAgentRuntime,
-  setAgentRuntimeBase,
-  requireAgentModel,
-} from "./agent/AgentRuntime.js";
-export type { AgentRuntime, AgentRuntimeBase } from './agent/AgentRuntimeState.js';
-
-// Agent 上下文
-export { createAgentContext } from "./agent/AgentContext.js";
-export type { AgentContext } from "./agent/AgentContextTypes.js";
-
-// 会话
-export { Session } from './session/Session.js';
-export { getSessionRunScope, drainDeferredPersistedUserMessages } from "./session/SessionRunScope.js";
-export { JsonlSessionHistoryComposer } from "./session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-export { JsonlSessionCompactionComposer } from "./session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-export { SessionSystemComposer } from "./session/composer/system/SessionSystemComposer.js";
-export { transformPromptsIntoSystemMessages } from "./session/composer/system/default/PromptRenderer.js";
-export { loadStaticSystemPrompts } from "./session/composer/system/default/StaticPromptCatalog.js";
-export { LocalSessionExecutor } from "./session/executors/local/LocalSessionExecutor.js";
-
-// HTTP 服务
-export { startServer } from "./host/http/Server.js";
-export { executeRouter } from "./host/http/execute/execute.js";
-export { healthRouter } from "./host/http/health/health.js";
-export { pluginsRouter } from "./host/http/plugins/plugins.js";
-export {
-  ensureServiceActionRoutesRegistered,
-  servicesRouter,
-} from "./host/http/services/services.js";
-export { staticRouter } from "./host/http/static/static.js";
-export { controlRouter } from "./host/http/control/ControlRouter.js";
-export { registerControlApiRoutes } from "./host/http/control/ControlApiRoutes.js";
-export { registerControlAuthorizationRoutes } from "./host/http/control/ControlAuthorizationRoutes.js";
-export { registerControlModelRoutes } from "./host/http/control/ModelRoutes.js";
-export { registerControlOverviewRoutes } from "./host/http/control/OverviewRoutes.js";
-export { registerControlSessionRoutes } from "./host/http/control/SessionRoutes.js";
-export { registerControlTaskRoutes } from "./host/http/control/TaskRoutes.js";
-export { executeBySessionId } from "./host/http/control/ExecuteBySession.js";
-
-// RPC
-export { startLocalRpcServer } from "./host/rpc/Server.js";
-export { callAgentTransport } from "./host/rpc/Transport.js";
-
-// 服务框架
-export {
-  invokeServiceAction,
-  resolveServiceAction,
-} from "./service/core/ServiceActionRunner.js";
-export { listRegisteredServices } from "./service/core/ServiceClassRegistry.js";
-export {
-  controlServiceState,
-  getServiceRootCommandNames,
-  getStaticServices,
-  isServiceRunning,
-  listServiceStates,
-  registerAllServicesForServer,
-  runServiceCommand,
-  startAllServices,
-  stopAllServices,
-} from "./service/core/Manager.js";
-export type {
-  ServiceStateControlAction,
-  ServiceStateControlResult,
-  ServiceStateSnapshot,
-} from "./service/core/Manager.js";
-export {
-  startServiceScheduleRuntime,
-  stopServiceScheduleRuntime,
-} from './service/schedule/Runtime.js';
-export { ServiceScheduleStore } from "./service/schedule/Store.js";
-export { runDueScheduledJobs } from "./service/schedule/Executor.js";
-export {
-  normalizeRunAtMsOrThrow,
-  parseScheduledRunAtMsOrThrow,
-  parseScheduleTimeOptionOrThrow,
-} from "./service/schedule/Time.js";
-export {
-  pickLastSuccessfulChatSendText,
-  resolveAssistantMessageForPersistence,
-} from "./service/builtins/chat/runtime/UserVisibleText.js";
-export { logger, getLogger, type Logger } from "./utils/logger/Logger.js";
-
-// 共享协议类型与控制面常量
-export * from "./host/types/AgentHost.js";
-export * from "./agent/project/types/AgentProject.js";
-export * from "./plugin/builtins/auth/types/AuthPlugin.js";
-export * from "./host/runtime/types/Platform.js";
-export * from "./host/runtime/types/PlatformGateway.js";
-export * from "./host/daemon/types/Daemon.js";
-export * from "./config/types/DowncityConfig.js";
-export * from "./config/types/ExecutionBinding.js";
-export * from "./host/http/execute/types/InlineInstant.js";
-export * from "./utils/types/Json.js";
-export * from "./config/types/LlmConfig.js";
-export * from "./host/rpc/types/LocalRpc.js";
-export * from "./plugin/types/Plugin.js";
-export type {
-  PluginCliBaseOptions,
-  PluginActionResponse,
-  PluginAvailabilityResponse,
-  PluginAvailabilityView,
-  PluginListResponse,
-} from "./plugin/types/PluginApi.js";
-export * from "./service/types/Service.js";
-export * from "./service/types/ServiceSchedule.js";
-export * from "./service/types/Services.js";
-export * from "./config/types/Start.js";
-export * from "./host/types/Store.js";
-export * from "./plugin/types/PluginLifecycle.js";
-export * from "./host/http/auth/types/AuthPermission.js";
-export * from "./host/http/auth/types/AuthRoute.js";
-export * from "./host/http/auth/types/AuthToken.js";
-export * from "./host/http/auth/types/AuthTypes.js";
-
-// 模型
-export { createModel } from './model/CreateModel.js';
-
-// 配置
-export { loadDowncityConfig, loadGlobalEnvFromStore, loadAgentEnvSnapshot } from './config/Config.js';
-export { getDowncityJsonPath } from './config/Paths.js';
-
-// Agent 项目初始化
-export {
-  normalizeDefaultAgentName,
-  listPlatformModelChoices,
-  isAgentProjectInitialized,
-  initializeAgentProject,
-} from "./agent/project/AgentInitializer.js";
-export type { PlatformModelChoice } from "./agent/project/AgentInitializer.js";
-export {
-  readProjectExecutionBinding,
-  readProjectPrimaryModelId,
-  hasProjectExecutionTarget,
-  assertProjectExecutionTarget,
-} from "./agent/project/ProjectExecutionBinding.js";
-export {
-  listChatAuthorizationRoles,
-  readChatAuthorizationConfigSync,
-  setChatAuthorizationUserRole,
-} from "./plugin/builtins/auth/runtime/AuthorizationConfig.js";
-export { resolveAuthorizedUserRole } from "./plugin/builtins/auth/runtime/AuthorizationPolicy.js";
 export { authPlugin } from "./plugin/builtins/auth/Plugin.js";
 export { skillPlugin } from "./plugin/builtins/skill/Plugin.js";
 export { webPlugin } from "./plugin/builtins/web/Plugin.js";
@@ -187,44 +41,307 @@ export { asrPlugin } from "./plugin/builtins/asr/Plugin.js";
 export { ttsPlugin } from "./plugin/builtins/tts/Plugin.js";
 export { workboardPlugin } from "./plugin/builtins/workboard/Plugin.js";
 
-// Agent 项目准备
+// Agent 运行时集成
 export {
-  ensureRuntimeProjectReady,
-  ensureRuntimeExecutionBindingReady,
-} from "./host/daemon/ProjectSetup.js";
+  getAgentContext,
+  getAgentRuntime,
+  getAgentRuntimeBase,
+  initAgentRuntime,
+  requireAgentModel,
+  setAgentRuntime,
+  setAgentRuntimeBase,
+  stopAgentHotReload,
+} from "./runtime/AgentRuntime.js";
+export { createAgentContext } from "./runtime/AgentContext.js";
+export type { AgentRuntime, AgentRuntimeBase } from "./runtime/AgentRuntimeState.js";
+export type { AgentContext } from "./runtime/AgentContextTypes.js";
+
+// Session 与即时执行集成
+export { Session } from "./session/Session.js";
+export {
+  drainDeferredPersistedUserMessages,
+  getSessionRunScope,
+} from "./session/SessionRunScope.js";
+export { JsonlSessionHistoryComposer } from "./session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+export { JsonlSessionCompactionComposer } from "./session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
+export { SessionSystemComposer } from "./session/composer/system/SessionSystemComposer.js";
+export { transformPromptsIntoSystemMessages } from "./session/composer/system/default/PromptRenderer.js";
+export { loadStaticSystemPrompts } from "./session/composer/system/default/StaticPromptCatalog.js";
+export { LocalSessionExecutor } from "./session/executors/local/LocalSessionExecutor.js";
+
+// Agent server 与 transport 集成
+export { startServer } from "./server/http/Server.js";
+export { startLocalRpcServer } from "./server/rpc/Server.js";
+export { callAgentTransport } from "./transport/rpc/Transport.js";
+
+// Service 运行集成
+export { listRegisteredServices } from "./service/core/ServiceClassRegistry.js";
+export {
+  startAllServices,
+  stopAllServices,
+} from "./service/core/Manager.js";
+export {
+  startServiceScheduleRuntime,
+  stopServiceScheduleRuntime,
+} from "./service/schedule/Runtime.js";
+export { ServiceScheduleStore } from "./service/schedule/Store.js";
+export { parseScheduledRunAtMsOrThrow } from "./service/schedule/Time.js";
+export {
+  pickLastSuccessfulChatSendText,
+  resolveAssistantMessageForPersistence,
+} from "./service/builtins/chat/runtime/UserVisibleText.js";
+
+// Plugin 与权限配置集成
+export {
+  listChatAuthorizationRoles,
+  readChatAuthorizationConfigSync,
+  setChatAuthorizationUserRole,
+} from "./plugin/builtins/auth/runtime/AuthorizationConfig.js";
+export { resolveAuthorizedUserRole } from "./plugin/builtins/auth/runtime/AuthorizationPolicy.js";
 export {
   buildStaticPluginAvailability,
   findBuiltinPlugin,
   findStaticPluginView,
-  listBuiltinPlugins,
   listStaticPluginViews,
-  toStaticPluginView,
 } from "./plugin/core/Catalog.js";
-export { runLocalPluginAction, listLocalPlugins, getLocalPluginAvailability } from "./plugin/core/LocalExecution.js";
+export { runLocalPluginAction } from "./plugin/core/LocalExecution.js";
 export { registerAllPluginsForCli } from "./plugin/core/PluginCommand.js";
 export { listBuiltinPluginRuntimeAuthPolicies } from "./plugin/core/HttpRoutes.js";
 export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js";
 
-// 沙箱
+// 项目、配置与模型集成
+export { createModel } from "./model/CreateModel.js";
 export {
-  spawnShellProcess,
-  runSandboxCommand,
-} from "./sandbox/SandboxRunner.js";
+  initializeAgentProject,
+  isAgentProjectInitialized,
+  listPlatformModelChoices,
+  normalizeDefaultAgentName,
+} from "./project/AgentInitializer.js";
+export type { PlatformModelChoice } from "./project/AgentInitializer.js";
 export {
-  resolveSandboxConfig,
-  resolveSandboxCwd,
-} from "./sandbox/SandboxConfigResolver.js";
-export { spawnMacOsSeatbeltSandbox } from "./sandbox/MacOsSeatbeltSandbox.js";
+  ensureRuntimeExecutionBindingReady,
+  ensureRuntimeProjectReady,
+} from "./host/daemon/ProjectSetup.js";
+export { assertProjectExecutionTarget } from "./project/ProjectExecutionBinding.js";
+
+// 日志
+export { getLogger, logger, type Logger } from "./utils/logger/Logger.js";
+
+// 宿主端口类型
 export type {
-  SandboxSessionStatus,
-  SandboxSessionSnapshot,
-  SandboxOutputChunk,
-  SandboxExecRequest,
-  SandboxStartRequest,
-  SandboxReadRequest,
-  SandboxWriteRequest,
-  SandboxWaitRequest,
-  ResolvedSandboxConfig,
-  SandboxSpawnParams,
-  SandboxSpawnResult,
-} from "./sandbox/types/SandboxRuntime.js";
+  AgentPathRuntime,
+  AgentPlatformRuntime,
+  AgentPluginConfigRuntime,
+} from "./types/host/AgentHost.js";
+
+// 项目协议类型
+export type {
+  AgentProjectChannel,
+  AgentProjectInitializationInput,
+  AgentProjectInitializationResult,
+} from "./project/types/AgentProject.js";
+export type { ExecutionBindingConfig } from "./types/config/ExecutionBinding.js";
+export type { StartOptions } from "./types/config/Start.js";
+
+// 配置与模型类型
+export type { DowncityConfig } from "./types/config/DowncityConfig.js";
+export type {
+  LlmConfig,
+  LlmModelConfig,
+  LlmProviderConfig,
+  LlmProviderType,
+} from "./types/config/LlmConfig.js";
+
+// JSON 基础类型
+export type { JsonObject, JsonPrimitive, JsonValue } from "./types/common/Json.js";
+
+// Platform / city 控制面协议类型
+export type {
+  ControlPlaneRuntimeMeta,
+  ControlPlaneRuntimeStatus,
+  ManagedAgentProcessView,
+  ManagedAgentRegistryEntry,
+  ManagedAgentRegistryV1,
+  PlatformAgentDirectoryInspection,
+  PlatformAgentOption,
+  PlatformAgentsResponse,
+  PlatformConfigFileStatusItem,
+  PlatformConfigStatusResponse,
+  PlatformLocalModelsResponse,
+} from "./types/platform/Platform.js";
+export type {
+  PlatformAgentChatChannelStatus,
+  PlatformAgentDaemonMeta,
+  PlatformAgentShipChatChannelsConfig,
+  PlatformAgentShipExecutionAgentConfig,
+  PlatformAgentShipExecutionConfig,
+  PlatformAgentShipJson,
+  PlatformAgentShipServicesConfig,
+  PlatformAgentShipSingleChannelConfig,
+  PlatformAgentShipStartConfig,
+} from "./types/platform/PlatformGateway.js";
+
+// Daemon / RPC 协议类型
+export {
+  DAEMON_LOG_FILENAME,
+  DAEMON_META_FILENAME,
+  DAEMON_PID_FILENAME,
+} from "./types/daemon/Daemon.js";
+export type { DaemonMeta, DaemonStaleReason } from "./types/daemon/Daemon.js";
+export type {
+  LocalRpcRequest,
+  LocalRpcResponse,
+} from "./types/rpc/LocalRpc.js";
+
+// Inline instant 协议类型
+export type {
+  InlineInstantExecutorType,
+  PlatformInlineInstantRunInput,
+  PlatformInlineInstantRunResult,
+  PlatformInlineInstantService,
+} from "./types/http/InlineInstant.js";
+
+// Plugin 作者与控制面类型
+export type {
+  Plugin,
+  PluginAction,
+  PluginActionApi,
+  PluginActionCommand,
+  PluginActionCommandInput,
+  PluginActionResult,
+  PluginActions,
+  PluginAvailability,
+  PluginConfigDefinition,
+  PluginEffectHook,
+  PluginGuardHook,
+  PluginHooks,
+  PluginHttpDefinition,
+  PluginPipelineHook,
+  PluginPort,
+  PluginResolveHook,
+  PluginRuntimeHttpRegistration,
+  PluginServiceInvokeParams,
+  PluginServiceInvokePort,
+  PluginServiceInvokeResult,
+  PluginSetupDefinition,
+  PluginSetupField,
+  PluginSetupFieldOption,
+  PluginUsageDefinition,
+  PluginUsageField,
+  PluginUsageFieldOption,
+  PluginView,
+} from "./plugin/types/Plugin.js";
+export type {
+  PluginActionResponse,
+  PluginAvailabilityResponse,
+  PluginAvailabilityView,
+  PluginCliBaseOptions,
+  PluginListResponse,
+} from "./plugin/types/PluginApi.js";
+
+// Service 作者与 CLI/control 协议类型
+export type {
+  Service,
+  ServiceAction,
+  ServiceActionApi,
+  ServiceActionCommand,
+  ServiceActionCommandInput,
+  ServiceActionResult,
+  ServiceActions,
+  ServiceCommandResult,
+  ServiceLifecycle,
+  ServiceState,
+} from "./service/types/Service.js";
+export type {
+  CreateScheduledJobInput,
+  ScheduledJobRecord,
+  ScheduledJobStatus,
+  ServiceCommandScheduleInput,
+} from "./service/types/ServiceSchedule.js";
+export type {
+  ServiceCliBaseOptions,
+  ServiceCommandResponse,
+  ServiceControlAction,
+  ServiceControlResponse,
+  ServiceListResponse,
+  ServiceStateView,
+} from "./service/types/Services.js";
+export type {
+  ServiceStateControlAction,
+  ServiceStateControlResult,
+  ServiceStateSnapshot,
+} from "./service/core/Manager.js";
+
+// Chat authorization plugin 协议类型
+export {
+  CHAT_AUTHORIZATION_CHANNELS,
+  createDefaultChatAuthorizationRoles,
+  isChatAuthorizationChannel,
+} from "./plugin/builtins/auth/types/AuthPlugin.js";
+export type {
+  AuthObservePrincipalPayload,
+  AuthObservePrincipalResult,
+  AuthResolveUserRolePayload,
+  AuthSetUserRolePayload,
+  AuthWriteConfigPayload,
+  ChatAuthorizationCatalog,
+  ChatAuthorizationChannel,
+  ChatAuthorizationConfig,
+  ChatAuthorizationDecision,
+  ChatAuthorizationEvaluateInput,
+  ChatAuthorizationEvaluateResult,
+  ChatAuthorizationObservedChat,
+  ChatAuthorizationObservedUser,
+  ChatAuthorizationPermission,
+  ChatAuthorizationPermissionMeta,
+  ChatAuthorizationRole,
+  ChatAuthorizationSnapshot,
+  ChatAuthorizationStateFile,
+  ChatChannelAuthorizationConfig,
+} from "./plugin/builtins/auth/types/AuthPlugin.js";
+
+// Platform store 类型
+export type {
+  StoredAgentEnvEntry,
+  StoredChannelAccount,
+  StoredChannelAccountChannel,
+  StoredEnvEntry,
+  StoredEnvScope,
+  StoredGlobalEnvEntry,
+  StoredModel,
+  StoredModelProvider,
+  StoredProviderMeta,
+  UpsertAgentEnvEntryInput,
+  UpsertChannelAccountInput,
+  UpsertEnvEntryInput,
+  UpsertGlobalEnvEntryInput,
+  UpsertModelInput,
+  UpsertModelProviderInput,
+} from "./types/host/Store.js";
+
+// HTTP auth 协议类型
+export {
+  AUTH_DEFAULT_ROLE_NAMES,
+  AUTH_DEFAULT_ROLES,
+  AUTH_PERMISSION_DESCRIPTIONS,
+  AUTH_PERMISSION_KEYS,
+} from "./types/auth/AuthPermission.js";
+export type {
+  AuthDefaultRoleDefinition,
+  AuthDefaultRoleName,
+  AuthPermissionKey,
+} from "./types/auth/AuthPermission.js";
+export type { AuthRoutePolicy } from "./types/auth/AuthRoute.js";
+export type {
+  AuthIssuedToken,
+  AuthTokenSummary,
+} from "./types/auth/AuthToken.js";
+export type {
+  AuthAuditLog,
+  AuthPermission,
+  AuthPrincipal,
+  AuthRole,
+  AuthTokenRecord,
+  AuthUser,
+  AuthUserStatus,
+} from "./types/auth/AuthTypes.js";

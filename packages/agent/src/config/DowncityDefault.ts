@@ -1,4 +1,4 @@
-import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 
 export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
   $schema: "./.downcity/schema/downcity.schema.json",

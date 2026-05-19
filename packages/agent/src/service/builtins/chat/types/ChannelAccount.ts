@@ -6,7 +6,7 @@
  * - 凭据明文只允许出现在写入输入中，读取结果必须是脱敏后的安全视图。
  */
 
-import type { StoredChannelAccountChannel } from "@/host/types/Store.js";
+import type { StoredChannelAccountChannel } from "@/types/host/Store.js";
 
 /**
  * 支持的 chat channel account 类型。

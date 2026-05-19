@@ -14,14 +14,14 @@ import type {
   ChatDispatchAction,
   ChatDispatchChannel,
 } from "@/service/builtins/chat/types/ChatDispatcher.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import { readChatMetaBySessionId } from "./ChatMetaStore.js";
 
 /**
  * 解析实际分发目标。
  *
  * 规则（中文）
- * - 仅使用 services/chat 维护的 session 路由映射。
+ * - 仅使用 service/builtins/chat 维护的 session 路由映射。
  * - 不再支持 legacy chatKey 字符串解析回退。
  */
 export async function resolveDispatchTargetByChatKey(params: {

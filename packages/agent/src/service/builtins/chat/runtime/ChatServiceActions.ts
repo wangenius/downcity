@@ -25,7 +25,7 @@ import type {
   ChatStatusActionPayload,
   ChatTestActionPayload,
 } from "@/service/builtins/chat/types/ChatService.js";
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 import {
   mapChatChannelApiInput,

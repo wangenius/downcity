@@ -8,11 +8,11 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import { stripInvocationAuthEnv } from "@/host/http/auth/AuthEnv.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import { stripInvocationAuthEnv } from "@/server/http/auth/AuthEnv.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import { runSandboxCommand } from "@/sandbox/SandboxRunner.js";
 import type { SessionRunResult } from "@/session/types/SessionRun.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type {
   ChatSendOutputPick,
   ScriptExecutionResult,

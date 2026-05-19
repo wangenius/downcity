@@ -6,7 +6,7 @@
  * - 请求侧和响应侧各自的业务规则放到独立模块，避免继续堆成单文件巨石。
  */
 
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
 /**
  * 允许被识别为日志 payload 的解析结果。

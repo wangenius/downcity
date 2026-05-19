@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 只描述“如何把 sessionId 路由回平台 chat”
- * - 由 services/chat 在接收入站消息时更新
+ * - 由 service/builtins/chat 在接收入站消息时更新
  * - 不属于 core context message schema
  */
 

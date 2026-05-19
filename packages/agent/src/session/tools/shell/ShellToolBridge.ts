@@ -7,11 +7,11 @@
  */
 
 import { generateId } from "@/utils/Id.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type {
   InvokeServicePort,
   InvokeServiceResult,
-} from "@/agent/AgentContextTypes.js";
+} from "@/runtime/AgentContextTypes.js";
 import type { ShellActionResponse } from "@/service/builtins/shell/types/ShellService.js";
 import {
   enqueueDeferredPersistedUserMessage,

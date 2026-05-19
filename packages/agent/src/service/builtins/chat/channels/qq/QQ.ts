@@ -11,29 +11,25 @@
 import { BaseChatChannel } from "@/service/builtins/chat/channels/BaseChatChannel.js";
 import { parseChatMessageMarkup } from "@/service/builtins/chat/runtime/ChatMessageMarkup.js";
 import { QqInboundDedupeStore } from "./QQInboundDedupe.js";
-import {
-  buildQqAuditText,
-  extractQqAuthorIdentity,
-  extractQqInboundAttachments,
-  extractQqTextContent,
-  resolveQqInboundChatTitle,
-  stripQqBotMention,
-} from "./QQInbound.js";
 import { getQqEventCaptureConfig } from "./QQEventCapture.js";
 import { QQGatewayClient } from "./QQGatewayClient.js";
 import {
-  buildQqInboundInstructions,
   extractQqReadyIdentity,
-  resolveQqC2cChatId,
   resolveQqCommandAction,
-  resolveQqGroupChatId,
 } from "./QQSupport.js";
+import {
+  handleQqC2CMessage,
+  handleQqChannelMessage,
+  handleQqGroupMessage,
+  type QQMessageHandlerOptions,
+  type QqMessageActor,
+} from "./QQMessageHandler.js";
 import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@/service/builtins/chat/channels/BaseChatChannel.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
 import type { QQConfig, QQMessageData } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
 import { EventType } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
@@ -243,299 +239,68 @@ export class QQBot extends BaseChatChannel {
     eventType: string;
     data: QQMessageData;
   }): Promise<void> {
-    const eventType = String(params.eventType || "").trim();
-    const data = params.data;
-    const messageId =
-      typeof data.id === "string" ? data.id.trim() : String(data.id || "").trim();
-    if (!messageId) return;
-
-    const groupId = resolveQqGroupChatId(data);
-    if (!groupId) {
-      this.logger.warn("QQ 群消息缺少 groupId，已忽略", {
-        eventType: eventType || EventType.GROUP_MESSAGE_CREATE,
-        messageId,
-      });
-      return;
-    }
-
-    await this.handleInboundMessage({
-      eventType: eventType || EventType.GROUP_MESSAGE_CREATE,
-      chatId: groupId,
-      chatType: "group",
-      data,
-    });
+    await handleQqGroupMessage(this.getMessageHandlerOptions(), params);
   }
 
   /**
    * 处理 C2C 私聊消息。
    */
   private async handleC2CMessage(data: QQMessageData): Promise<void> {
-    const messageId =
-      typeof data.id === "string" ? data.id.trim() : String(data.id || "").trim();
-    if (!messageId) return;
-
-    const actor = extractQqAuthorIdentity(data.author, data);
-    const chatId = resolveQqC2cChatId({
-      data,
-      actorUserId: actor.userId,
-    });
-    if (!chatId) {
-      this.logger.warn("QQ C2C 消息缺少 userId，已忽略", {
-        eventType: EventType.C2C_MESSAGE_CREATE,
-        messageId,
-      });
-      return;
-    }
-
-    await this.handleInboundMessage({
-      eventType: EventType.C2C_MESSAGE_CREATE,
-      chatId,
-      chatType: "c2c",
-      data,
-      actor,
-    });
-  }
-
-  /**
-   * QQ 入站主流程。
-   */
-  private async handleInboundMessage(params: {
-    eventType: string;
-    chatId: string;
-    chatType: "group" | "c2c";
-    data: QQMessageData;
-    actor?: { userId?: string; username?: string };
-  }): Promise<void> {
-    const eventType = String(params.eventType || "").trim();
-    const chatId = String(params.chatId || "").trim();
-    const messageId =
-      typeof params.data.id === "string"
-        ? params.data.id.trim()
-        : String(params.data.id || "").trim();
-    if (!chatId || !messageId) return;
-
-    if (await this.shouldSkipDuplicatedInboundMessage(eventType, messageId)) {
-      return;
-    }
-
-    const actor = params.actor || extractQqAuthorIdentity(params.data.author, params.data);
-    const chatType = params.chatType;
-    if (!actor.userId) {
-      this.logger.warn("QQ 入站消息缺少发送者 userId，已忽略", {
-        eventType,
-        chatId,
-        chatType,
-        messageId,
-      });
-      return;
-    }
-
-    const chatTitle = resolveQqInboundChatTitle({
-      chatType,
-      data: params.data,
-      actorName: actor.username,
-    });
-    const isGroup = chatType === "group";
-    const chatKey = this.getChatKey({ chatId, chatType });
-    const rawContent = String(params.data.content || "");
-    const incomingAttachments = extractQqInboundAttachments(params.data);
-    const hasIncomingAttachment = incomingAttachments.length > 0;
-    const cleanedText = isGroup
-      ? stripQqBotMention(rawContent, this.botUserId)
-      : extractQqTextContent(rawContent);
-
-    await this.observeIncomingAuthorization({
-      chatId,
-      chatType,
-      chatTitle,
-      userId: actor.userId,
-      username: actor.username,
-    });
-
-    const authResult = await this.evaluateIncomingAuthorization({
-      chatId,
-      chatType,
-      chatTitle,
-      userId: actor.userId,
-      username: actor.username,
-    });
-    if (authResult.decision !== "allow") {
-      if (!isGroup) {
-        await this.sendAuthorizationText({
-          chatId,
-          chatType,
-          text: this.buildUnauthorizedBlockedText({
-            chatId,
-            chatType,
-            userId: actor.userId,
-          }),
-        });
-      }
-      return;
-    }
-
-    const enqueueAudit = async (opts: { reason: string; kind?: string }): Promise<void> => {
-      await this.enqueueAuditMessage({
-        chatId,
-        messageId,
-        userId: actor.userId,
-        text: buildQqAuditText({
-          rawContent,
-          cleanedText,
-          hasIncomingAttachment,
-        }),
-        meta: {
-          chatType,
-          username: actor.username,
-          chatTitle,
-          eventType,
-          reason: opts.reason,
-          ...(opts.kind ? { kind: opts.kind } : {}),
-        },
-      });
-    };
-
-    if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
-      if (isGroup) {
-        await enqueueAudit({ reason: "bot_originated" });
-      }
-      this.logger.debug("忽略机器人自身消息", {
-        messageId,
-        chatId,
-        chatType,
-        botUserId: this.botUserId,
-      });
-      return;
-    }
-
-    this.logger.info(`收到 ${chatType} 消息 [${chatId}]: ${cleanedText}`);
-
-    if (!rawContent && !hasIncomingAttachment) {
-      if (isGroup) {
-        await enqueueAudit({ reason: "empty_payload" });
-      }
-      return;
-    }
-
-    if (cleanedText.startsWith("/")) {
-      await enqueueAudit({
-        reason: "command_received",
-        kind: "command",
-      });
-      await this.handleCommand(chatId, chatType, messageId, cleanedText);
-      return;
-    }
-
-    if (!cleanedText && !hasIncomingAttachment) {
-      await enqueueAudit({ reason: "empty_after_clean" });
-      return;
-    }
-
-    const instructions = await buildQqInboundInstructions({
-      context: this.context,
-      rootPath: this.rootPath,
-      chatId,
-      chatKey,
-      messageId,
-      userMessage: cleanedText,
-      attachments: incomingAttachments,
-      getAuthToken: () => this.gateway.getAuthToken(),
-    });
-    if (!instructions) {
-      await enqueueAudit({ reason: "empty_after_build" });
-      return;
-    }
-
-    await this.executeAndReply(
-      chatId,
-      chatType,
-      messageId,
-      instructions,
-      actor,
-      chatTitle,
-    );
+    await handleQqC2CMessage(this.getMessageHandlerOptions(), data);
   }
 
   /**
    * 处理频道消息。
    */
   private async handleChannelMessage(data: QQMessageData): Promise<void> {
-    const { id: messageId, channel_id: channelId, content, author } = data;
-    if (!channelId || !messageId) return;
-    const chatType = "channel";
-    if (
-      await this.shouldSkipDuplicatedInboundMessage(
-        EventType.AT_MESSAGE_CREATE,
-        messageId,
-      )
-    ) {
-      return;
-    }
+    await handleQqChannelMessage(this.getMessageHandlerOptions(), data);
+  }
 
-    const userMessage = extractQqTextContent(String(content || ""));
-    const incomingAttachments = extractQqInboundAttachments(data);
-    const actor = extractQqAuthorIdentity(author, data);
-    const chatTitle = resolveQqInboundChatTitle({
-      chatType,
-      data,
-      actorName: actor.username,
-    });
-
-    await this.observeIncomingAuthorization({
-      chatId: channelId,
-      chatType,
-      chatTitle,
-      userId: actor.userId,
-      username: actor.username,
-    });
-
-    const authResult = await this.evaluateIncomingAuthorization({
-      chatId: channelId,
-      chatType,
-      chatTitle,
-      userId: actor.userId,
-      username: actor.username,
-    });
-    if (authResult.decision !== "allow") {
-      return;
-    }
-
-    if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
-      this.logger.debug("忽略机器人自身消息（channel）", {
-        messageId,
-        channelId,
-        botUserId: this.botUserId,
-      });
-      return;
-    }
-
-    this.logger.info(`收到频道消息 [${channelId}]: ${userMessage}`);
-
-    if (userMessage.startsWith("/")) {
-      await this.handleCommand(channelId, "channel", messageId, userMessage);
-      return;
-    }
-
-    const instructions = await buildQqInboundInstructions({
+  /**
+   * 构造 QQ 入站处理依赖。
+   */
+  private getMessageHandlerOptions(): QQMessageHandlerOptions {
+    return {
       context: this.context,
       rootPath: this.rootPath,
-      chatId: channelId,
-      chatKey: this.getChatKey({ chatId: channelId, chatType }),
-      messageId,
-      userMessage,
-      attachments: incomingAttachments,
-      getAuthToken: () => this.gateway.getAuthToken(),
-    });
-    if (!instructions) return;
-
-    await this.executeAndReply(
-      channelId,
-      "channel",
-      messageId,
-      instructions,
-      actor,
-      chatTitle,
-    );
+      logger: this.logger,
+      getBotUserId: () => this.botUserId,
+      getChatKey: (params) => this.getChatKey(params),
+      observeIncomingAuthorization: async (params) => {
+        await this.observeIncomingAuthorization(params);
+      },
+      evaluateIncomingAuthorization: async (params) =>
+        await this.evaluateIncomingAuthorization(params),
+      sendAuthorizationText: async (params) => {
+        await this.sendAuthorizationText(params);
+      },
+      buildUnauthorizedBlockedText: (params) =>
+        this.buildUnauthorizedBlockedText(params),
+      shouldSkipDuplicatedInboundMessage: async (eventType, messageId) =>
+        await this.shouldSkipDuplicatedInboundMessage(eventType, messageId),
+      enqueueAuditMessage: async (params) => {
+        await this.enqueueAuditMessage(params);
+      },
+      handleCommand: async (params) => {
+        await this.handleCommand(
+          params.chatId,
+          params.chatType,
+          params.messageId,
+          params.command,
+        );
+      },
+      executeAndReply: async (params) => {
+        await this.executeAndReply(
+          params.chatId,
+          params.chatType,
+          params.messageId,
+          params.instructions,
+          params.actor,
+          params.chatTitle,
+        );
+      },
+      getAuthToken: async () => await this.gateway.getAuthToken(),
+    };
   }
 
   /**
@@ -588,7 +353,7 @@ export class QQBot extends BaseChatChannel {
     chatType: string,
     messageId: string,
     instructions: string,
-    actor?: { userId?: string; username?: string },
+    actor?: QqMessageActor,
     chatTitle?: string,
   ): Promise<void> {
     try {

@@ -2,8 +2,8 @@
  * AgentHostRuntime：装配 AgentRuntime 宿主能力。
  *
  * 关键点（中文）
- * - `main/agent/*` 负责创建这些宿主能力对象，再注入到 AgentRuntime。
- * - services / session / plugins 只消费这些对象，不再直接 import `main/*`。
+ * - agent runtime 负责创建这些宿主能力对象，再注入到 AgentRuntime。
+ * - service / session / plugin 只消费这些对象，不直接依赖具体宿主实现。
  * - 当前先收敛路径与 plugin 配置持久化两类宿主能力。
  */
 import {
@@ -22,8 +22,8 @@ import { persistProjectPluginConfig } from "@/plugin/core/ProjectConfigStore.js"
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
-} from "@/host/types/AgentHost.js";
-import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+} from "@/types/host/AgentHost.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 
 /**
  * 创建当前项目的路径能力集合。

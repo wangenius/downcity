@@ -1,277 +1,196 @@
 ---
 title: Package 模块拆解
-description: 按当前 packages/downcity 的真实目录和运行时对象，解释 main、agent、sessions、services、plugins 与 types 的职责
+description: 按当前 workspace 真实结构解释 packages/agent 的 runtime、server、SDK、session、service、plugin 与 sandbox 边界
 ---
 
 # Package 模块拆解
 
-`packages/downcity/` 是当前 runtime 内核。理解它最有效的方式，不是记旧目录名，而是先抓住几个真实中心对象：
+当前单 Agent 执行内核位于 `packages/agent/`。理解它最有效的方式，不是记旧目录名，而是先抓住这些真实中心对象：
 
 - `AgentRuntime`
 - `AgentContext`
-- `SessionFacade`
+- `Session`
+- `LocalSessionCore`
+- `BaseService`
 - `PluginRegistry`
-- `Service` instances
 
 一句话：
 
 ```text
-main 负责入口和装配
-agent 负责单项目运行时中心
-session 负责执行主轴
-services 负责主业务流程
-plugins 负责增强
+agent 负责装配单项目运行时，session 负责模型执行主轴，service 负责主业务流程，plugin 负责增强，server/sdk 负责把这些能力暴露出去。
 ```
 
 ## 当前目录级关系
 
 ```mermaid
 flowchart TD
-  ROOT["packages/downcity/src"] --> MAIN["main/"]
-  ROOT --> AGENT["agent/"]
+  ROOT["packages/agent/src"] --> RUNTIME["runtime/"]
+  ROOT --> HOST["host/"]
+  ROOT --> PROJECT["project/"]
+  ROOT --> SDK["sdk/"]
+  ROOT --> SERVER["server/"]
   ROOT --> SESSION["session/"]
-  ROOT --> SERVICES["services/"]
-  ROOT --> PLUGINS["plugins/"]
+  ROOT --> TRANSPORT["transport/"]
+  ROOT --> SERVICE["service/"]
+  ROOT --> PLUGIN["plugin/"]
+  ROOT --> SANDBOX["sandbox/"]
+  ROOT --> MODEL["model/"]
+  ROOT --> CONFIG["config/"]
   ROOT --> TYPES["types/"]
   ROOT --> UTILS["utils/"]
 ```
 
-## 1. `main/`
-
-这是当前 package 的入口装配层，不是旧文档里的 `console/`。
-
-它主要负责：
-
-- HTTP server 启动与路由挂载
-- service / plugin / dashboard 的主入口装配
-- daemon、runtime、UI gateway、service manager 等控制逻辑
-- model、env、config、project setup 等启动期装配
-
-### 重点子目录
-
-#### `main/index.ts`
-
-当前 agent HTTP server 的入口。
-
-负责：
-
-- 创建 Hono app
-- 挂载 `static / health / services / plugins / execute / dashboard` 路由
-- 启停 Node HTTP Server
-
-#### `main/service/`
-
-负责：
-
-- service 类注册表的控制入口
-- service 生命周期控制
-- service action 执行与 API 注册
-
-当前关键对象是：
-
-- `ServiceStateController`
-- `ServiceActionRunner`
-- `ServiceActionApi`
-
-#### `main/plugin/`
-
-负责：
-
-- plugin 注册
-- hook 注册与执行
-- availability 检查
-- builtin plugin 装配
-
-这里真正的核心对象是：
-
-- `HookRegistry`
-- `PluginRegistry`
-
-#### `main/runtime/` 与 `main/daemon/`
-
-负责：
-
-- console / agent 进程状态
-- pid、registry、路径与 daemon 元数据
-- agent 项目注册与前后台进程管理
-
-#### `main/ui/`
-
-负责：
-
-- dashboard / web UI API
-- gateway
-- model / env / channel account 等控制面接口
-
-## 2. `agent/`
+## 1. `runtime/`
 
 这是单项目 agent runtime 的中心层。
-
-当前最重要的对象不是旧命名 `host runtime`，而是：
-
-- `AgentRuntime`
-
-`AgentRuntime` 持有当前 agent 的长期运行状态：
-
-- `cwd`
-- `rootPath`
-- `config`
-- `env`
-- `systems`
-- `model`
-- `sessionFacade`
-- `services`
-- `pluginRegistry`
 
 ### `AgentRuntime.ts`
 
 负责：
 
-- 初始化项目级运行时
-- 读取 config / env / systems
-- 创建 model
-- 创建 `SessionExecutorRegistry` 与 `SessionFacade`
-- 创建 plugin registry
+- 读取项目配置、项目 env、全局 env
+- 加载静态 system prompt
+- 创建模型实例
+- 创建 session factory
 - 创建 per-agent service instances
-- 启动 prompt 热更新
+- 初始化 plugin manager
+- 绑定 shell tool runtime
+- 启动 prompt/config 热重载
 
 ### `AgentContext.ts`
 
-负责：
+负责从 `AgentRuntime` 派生统一能力面，给 service、plugin、session tool 使用。
 
-- 从 `AgentRuntime` 派生统一执行上下文
-- 为 service 和 plugin 提供统一能力面
-
-当前 service / plugin 拿到的是统一的：
-
-- `AgentContext`
-
-它里面主要有：
+它暴露：
 
 - `config`
 - `env`
 - `logger`
 - `session`
 - `invoke`
+- `chat`
 - `plugins`
 
-## 3. `session/`
+## 2. `project/`
 
-这是当前执行主轴层。
+负责项目初始化、模型绑定、execution binding 与项目结构准备。
 
-一句话：
+- `AgentInitializer.ts`：agent 项目创建与默认文件写入。
+- `ProjectExecutionBinding.ts`：项目执行目标读取与校验。
+- `types/`：项目初始化相关类型。
 
-```text
-session 是真正承接模型执行、消息持久化、compact、tools 和 run 协调的主轴。
-```
+## 3. `host/`
 
-### 关键对象
+这是 Agent 运行时与宿主环境之间的端口层。
 
-#### `SessionFacade`
+- `host/runtime/`：注入到 `AgentRuntime` 的宿主端口、plugin 配置能力与 plugin runtime resolver。
+- `host/daemon/`：agent 侧 daemon 协议、项目准备、HTTP client 与项目级 daemon meta 路径。
 
-这是 agent 持有的统一会话门面。
+daemon 进程启停、pid 清理、registry 同步等平台级管理职责属于 `@downcity/city`。
+
+## 4. `sdk/`
+
+这是本地 SDK facade。
 
 负责：
 
-- `getExecutor`
-- `getHistoryStore`
+- `Agent`
+- `RemoteAgent`
+- `SdkSession`
+- SDK HTTP/RPC wrapper
+- SDK session metadata
+- SDK 专用 system composer
+
+## 5. `server/`
+
+这是单 Agent server 层。
+
+- `server/http/`：HTTP server 与 `control / execute / services / plugins / health / static` 路由。
+- `server/http/auth/`：agent HTTP / CLI token 相关鉴权辅助。
+- `server/http/control/`：single-agent control API。
+- `server/rpc/`：本机 local RPC server。
+
+## 6. `session/`
+
+这是模型执行主轴。
+
+### `Session`
+
+单个 `sessionId` 对应一个 `Session` 实例。
+
+负责：
+
 - `run`
 - `appendUserMessage`
 - `appendAssistantMessage`
-- 会话执行状态管理
+- executor 缓存
+- 同一 session 的并发保护
+- assistant step 持久化
 
-#### `SessionExecutorRegistry`
+### `LocalSessionExecutor`
 
-负责：
+负责把 model、history composer、system composer、compaction composer、execution composer 装配成一次可运行的本地执行器。
 
-- 按 `sessionId` 缓存 `LocalSessionExecutor`
-- 管理 runtime 与 history store 的创建关系
+### `LocalSessionCore`
 
-#### `LocalSessionExecutor`
-
-负责：
-
-- 把 `model / history store / compactor / prompter / tools` 装配成一个可运行 session
-
-#### `SessionEngine`
-
-这是执行内核。
+这是当前模型与 tool loop 的执行内核。
 
 负责：
 
-- 组装当前轮模型输入
-- 处理 compact 重试
+- 拼装模型输入
+- 处理 history compaction
 - 驱动 tool loop
+- 处理 incomplete response 恢复
 - 收敛最终 assistant message
 
-## 4. `services/`
+相关 helper：
 
-这里是主业务层。当前注册的核心 service 包括：
+- `SessionToolLoopRunner.ts`：驱动模型响应后的 tool 调用循环与继续执行判断。
+- `SessionModelMessageState.ts`：维护 session 语义消息与模型消息两份运行基线。
+- `SessionUiStreamCollector.ts`：消费 UI stream 并收敛最终 assistant message。
+- `SessionExecutionError.ts`：归一化 AI SDK / provider 错误。
 
-- `chat`
-- `task`
-- `memory`
-- `shell`
+### `composer/`
 
-这些 service 都继承自 `BaseService`，由 agent 在启动时创建 per-agent 实例。
+负责 session 运行所需的不同组合面：
 
-### `chat`
+- `history/`：JSONL history 读写与恢复。
+- `system/`：静态 prompt、service/plugin system prompt 与变量渲染。
+- `execution/`：将请求输入映射成模型输入。
+- `compaction/`：上下文压缩。
 
-负责：
+## 7. `service/`
 
-- 渠道接入
-- chat queue
-- session bridge
-- 回复分发
-- chat plugin points
+这是主业务流程层。
 
-这是最典型的“实时输入 -> session run -> 回复出站”的 service。
+- `service/core/`：service class 注册、状态控制、action 调度、HTTP route 注册。
+- `service/builtins/`：内建 service 实现。
+- `service/schedule/`：持久化 service action 调度。
+- `service/types/`：service 公共协议类型。
 
-### `task`
+当前内建 service 包括：
 
-负责：
+- `chat`：渠道接入、chat queue、session bridge、回复分发、chat plugin points。
+- `contact`：联系人相关能力。
+- `task`：任务定义、计划调度、agent run、run artifacts。
+- `memory`：记忆写入、检索、flush 与 system prompt。
+- `shell`：shell session 生命周期与命令执行。
 
-- task 定义
-- cron 调度
-- script / agent 两类任务执行
-- run artifacts 落盘
-
-它不是单独一套模型执行引擎，而是围绕 task 定义创建受控 session run。
-
-### `memory`
-
-负责：
-
-- memory 文件写入
-- indexing
-- search
-- flush / status
-
-### `shell`
-
-负责：
-
-- one-shot shell exec
-- 长生命周期 shell session
-- read / write / wait / close
-
-## 5. `plugins/`
+## 8. `plugin/`
 
 这是增强层。
 
-当前内建 plugin 包括：
+- `plugin/core/`：注册、启用态、hook 调度、本地 action、HTTP route 支持。
+- `plugin/builtins/`：`auth`、`skill`、`web`、`asr`、`tts`、`voice`、`workboard`。
+- `plugin/types/`：plugin 公共协议类型。
 
-- `auth`
-- `skill`
-- `voice`
+plugin 可以提供：
 
-这些 plugin 的职责是：
+- 显式 action
+- system 注入
+- hook 实现
 
-- 提供显式 actions
-- 提供 system 注入
-- 实现 hook 点
-
-当前 plugin 体系的执行语义统一是：
+hook 语义统一是：
 
 - `pipeline`
 - `guard`
@@ -280,59 +199,80 @@ session 是真正承接模型执行、消息持久化、compact、tools 和 run 
 
 关键点：
 
-- plugin 点由 service 定义
-- plugin 负责实现其中某些点
-- plugin 不拥有主业务流程
+- plugin 点由 service 定义。
+- plugin 负责实现其中某些点。
+- plugin 不拥有主业务流程。
 
-## 6. `types/`
+## 9. `sandbox/`
 
-这里是跨层契约中心。
+这是命令执行隔离层。
 
-当前非常关键，因为：
+负责：
 
-- `AgentRuntime`
-- `AgentContext`
-- `Service`
-- `Plugin`
-- `SessionRun`
-- Dashboard / API 返回值
+- 解析 sandbox 配置
+- 解析安全 cwd
+- 启动普通 shell process
+- 在 macOS 上启动 seatbelt sandbox
 
-都在这里汇总契约。
+shell tool、shell service、task service 最终都会通过这里进入命令执行。
 
-## 7. `utils/`
+## 10. `transport/`
 
-这里放横切基础设施：
+这是 agent 调用端 transport 协议层。
 
-- logger
-- sqlite store
-- template
-- storage
-- id
-- time
+- `transport/rpc/Client.ts`：local RPC client。
+- `transport/rpc/Transport.ts`：本地 IPC / 外部 HTTP transport 选择器。
+- `transport/rpc/Paths.ts`：local RPC endpoint 路径解析。
+- local RPC 协议类型位于 `types/rpc/`。
 
-判断标准很简单：
+## 11. `types/`
 
-- 多个层都会复用
-- 但它本身不属于某一个具体业务语义
+这是跨模块、跨包共享协议类型目录。
+
+- `types/common/`：JSON、模板等基础类型。
+- `types/config/`：`downcity.json`、execution binding、LLM、start options 等配置类型。
+- `types/host/`：Agent 宿主端口类型。
+- `types/platform/`：city control plane / managed agent 平台协议类型。
+- `types/daemon/`、`types/rpc/`、`types/auth/`、`types/http/`：daemon、local RPC、鉴权、inline instant 等协议类型。
+
+领域内部类型仍留在对应领域目录，例如 `service/types/`、`plugin/types/`、`session/types/`。
+
+## 12. `config/`、`model/`、`utils/`
+
+- `config/`：项目配置、schema、项目级路径规则。
+- `model/`：模型创建与模型管理辅助。
+- `utils/`：日志、CLI 输出、storage、id、time。
+
+## 公开 API 边界
+
+`src/index.ts` 是 `@downcity/agent` 的唯一公开入口。它使用显式导出清单，只暴露：
+
+- SDK：`Agent`、`RemoteAgent` 与 session 配置/运行类型。
+- 插件/服务作者 API：`BaseService`、`ChatService`、内建 plugin 与插件/服务定义类型。
+- city 运行集成 API：runtime 启停、server/RPC 启动、service 调度、项目初始化、模型创建。
+- 跨包协议类型：platform、daemon、RPC、auth、store、inline instant 等控制面协议。
+
+HTTP router、sandbox runner、内部 service runner 等实现细节不从根入口导出。
 
 ## 推荐阅读顺序
 
-第一次读 package，建议按这条线：
+第一次读 `packages/agent`，建议按这条线：
 
-1. `src/main/index.ts`
-2. `src/agent/AgentRuntime.ts`
-3. `src/agent/AgentContext.ts`
-4. `src/session/SessionFacade.ts`
-5. `src/session/execution/SessionExecutorRegistry.ts`
-6. `src/session/execution/local/SessionEngine.ts`
-7. `src/main/service/Services.ts`
-8. `src/main/registries/ServiceClassRegistry.ts`
-9. `src/services/chat/ChatService.ts`
-10. `src/services/task/TaskService.ts`
-11. `src/services/memory/MemoryService.ts`
-12. `src/services/shell/ShellService.ts`
-13. `src/main/plugin/Plugins.ts`
-14. `src/main/plugin/PluginRegistry.ts`
-15. `src/types/*`
+1. `src/index.ts`
+2. `src/runtime/AgentRuntime.ts`
+3. `src/runtime/AgentContext.ts`
+4. `src/session/Session.ts`
+5. `src/session/executors/local/LocalSessionExecutor.ts`
+6. `src/session/executors/local/LocalSessionCore.ts`
+7. `src/session/executors/local/SessionToolLoopRunner.ts`
+8. `src/service/core/Services.ts`
+9. `src/service/core/ServiceClassRegistry.ts`
+10. `src/service/builtins/chat/ChatService.ts`
+11. `src/service/builtins/task/TaskService.ts`
+12. `src/plugin/core/PluginManager.ts`
+13. `src/plugin/core/PluginRegistry.ts`
+14. `src/server/http/Server.ts`
+14. `src/server/rpc/Server.ts`
+15. `src/sdk/Agent.ts`
 
 这个顺序最容易先建立真实主链，再进入具体业务模块。

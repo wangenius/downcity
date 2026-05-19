@@ -1,17 +1,16 @@
 /**
- * City Env Config：city 级环境与配置读取模块。
+ * Config：agent 项目环境与配置读取模块。
  *
  * 关键点（中文）
- * - `main/city/env/*` 放的是 city 全局运行态依赖的配置基础设施，不是通用小工具目录。
- * - 这里统一处理 `downcity.json`、项目 `.env`、全局 env store 三类配置来源。
- * - agent 运行时和 control plane 都通过这里读取配置，避免各处重复拼装规则。
+ * - 这里统一处理 `downcity.json`、项目 `.env`、全局 env 快照三类配置来源。
+ * - agent 运行时通过这里读取项目配置，避免各处重复拼装规则。
  */
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import path from "path";
-import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
-import { assertProjectExecutionTarget } from "@/agent/project/ProjectExecutionBinding.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import { assertProjectExecutionTarget } from "@/project/ProjectExecutionBinding.js";
 
 export type { DowncityConfig };
 

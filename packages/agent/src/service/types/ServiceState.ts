@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只放状态快照与控制结果，不放 service 契约本身。
- * - 目的是让 main/service 内部拆分后，仍能共享统一的状态结构。
+ * - 目的是让 service/core 内部拆分后，仍能共享统一的状态结构。
  */
 
 import type { ServiceState } from "@/service/types/Service.js";

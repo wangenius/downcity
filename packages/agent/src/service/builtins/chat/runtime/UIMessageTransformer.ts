@@ -15,7 +15,7 @@ import {
   type UITools,
 } from "ai";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
 type ToolNameReadablePart = Parameters<typeof getToolName>[0];

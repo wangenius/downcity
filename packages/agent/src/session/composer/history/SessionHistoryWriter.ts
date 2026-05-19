@@ -7,7 +7,7 @@
  * - 会话更新后的通知也收在这里，避免把写入细节散到 Session 主类里。
  */
 
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type {
   SessionMessageV1,
   SessionMetadataV1,

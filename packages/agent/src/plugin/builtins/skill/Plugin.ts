@@ -8,7 +8,7 @@
  */
 
 import type { Plugin } from "@/plugin/types/Plugin.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import type {
   SkillPluginFindPayload,

@@ -9,9 +9,9 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { StoredChannelAccount } from "@/host/types/Store.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { StoredChannelAccount } from "@/types/host/Store.js";
 import type {
   ChatChannelName,
   ChatChannelStateSnapshot,

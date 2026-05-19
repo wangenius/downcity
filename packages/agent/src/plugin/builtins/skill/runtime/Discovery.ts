@@ -16,7 +16,7 @@ import { parseFrontMatter } from "./Frontmatter.js";
 import { getClaudeSkillSearchRoots } from "./Paths.js";
 import { isSubpath } from "./Utils.js";
 import type { ClaudeSkill } from "@/plugin/builtins/skill/types/ClaudeSkill.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
 /**
  * 扫描并发现 Claude Code-compatible skills。

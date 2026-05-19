@@ -8,7 +8,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import { isMemoryEnabled } from "./Store.js";
 
 const MAX_SYSTEM_MEMORY_ITEMS = 6;

@@ -7,10 +7,10 @@
  * - 当前文件只保留实例骨架与 lifecycle，不再依赖旧的模块级 `taskService` 单例。
  */
 
-import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
+import type { AgentRuntime } from "@/runtime/AgentRuntimeTypes.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
 import type { ServiceActions } from "@/service/types/Service.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type {
   TaskCronRegisterResult,
   TaskSchedulerReloadResult,

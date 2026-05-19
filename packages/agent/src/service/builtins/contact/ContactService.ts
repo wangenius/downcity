@@ -7,10 +7,9 @@
  * - `share` 分享文本、链接、文件和目录，并进入对方 inbox。
  */
 
-import type { Command } from "commander";
-import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { AgentRuntime } from "@/runtime/AgentRuntimeTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import type { ServiceActions } from "@/service/types/Service.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
 import type {
@@ -18,7 +17,6 @@ import type {
   ContactChatCommandPayload,
   ContactCheckCommandPayload,
   ContactLinkCommandPayload,
-  ContactReceiveCommandPayload,
   ContactShareCommandPayload,
 } from "@/service/builtins/contact/types/ContactCommand.js";
 import type {
@@ -38,7 +36,6 @@ import {
   createStableContactId,
   findContact,
   findContactByInboundToken,
-  listContacts,
   normalizeContactEndpoint,
   readContactMessages,
   saveContact,
@@ -63,15 +60,8 @@ import {
   callContactPing,
   callContactShare,
 } from "./runtime/RemoteClient.js";
-import {
-  listContactInboxShares,
-  saveContactInboxShare,
-} from "./runtime/InboxStore.js";
-import {
-  createShareInput,
-  receiveShare,
-} from "./runtime/ShareBundle.js";
-import { receiveContactChatMessage } from "./runtime/ChatRuntime.js";
+import { saveContactInboxShare } from "./runtime/InboxStore.js";
+import { createShareInput } from "./runtime/ShareBundle.js";
 import { buildContactServiceSystemText } from "./runtime/SystemProvider.js";
 import { resolveContactSelfEndpoint } from "./runtime/EndpointResolver.js";
 import {
@@ -84,34 +74,11 @@ import {
   confirmContactLinkRequest,
 } from "./runtime/LinkApproval.js";
 import { buildContactApproveCallbackDecision } from "./runtime/ApproveCallback.js";
-
-function readObject(value: JsonValue): JsonObject {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as JsonObject)
-    : {};
-}
-
-function readString(body: JsonObject, key: string): string {
-  const value = body[key];
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function readNumber(body: JsonObject, key: string): number | undefined {
-  const value = body[key];
-  if (typeof value !== "number") return undefined;
-  return Number.isFinite(value) ? value : undefined;
-}
-
-function readBoolean(body: JsonObject, key: string): boolean | undefined {
-  const value = body[key];
-  return typeof value === "boolean" ? value : undefined;
-}
-
-function getHeaderToken(params: { headers?: Headers; body?: JsonObject }): string {
-  const fromHeader = String(params.headers?.get("x-downcity-contact-token") || "").trim();
-  if (fromHeader) return fromHeader;
-  return params.body ? readString(params.body, "token") : "";
-}
+import { createContactActions } from "./Action.js";
+import {
+  readContactObject,
+  readContactString,
+} from "./runtime/ContactPayload.js";
 
 async function resolveSelfEndpoint(
   context: AgentContext,
@@ -183,284 +150,23 @@ export class ContactService extends BaseService {
 
   constructor(agent: AgentRuntime | null) {
     super(agent);
-    this.actions = {
-      link: {
-        command: {
-          description: "生成一次性 contact link code，交给另一个 agent approve",
-          configure(command: Command) {
-            command.option("--ttl-seconds <seconds>", "link 过期秒数，默认 600", Number);
-          },
-          mapInput({ opts }) {
-            const payload: JsonObject = {};
-            if (typeof opts.ttlSeconds === "number") payload.ttlSeconds = opts.ttlSeconds;
-            return payload;
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.link(
-            params.context,
-            params.payload as ContactLinkCommandPayload,
-          )) as unknown as JsonValue,
-        }),
-      },
-      approve: {
-        command: {
-          description: "使用 contact link code 建立点对点联系",
-          configure(command: Command) {
-            command
-              .argument("<code>")
-              .option("--name <alias>", "本地 contact 别名");
-          },
-          mapInput({ args, opts }) {
-            const code = String(args[0] || "").trim();
-            if (!code) throw new Error("Missing link code");
-            const payload: JsonObject = { code };
-            if (typeof opts.name === "string") payload.name = opts.name;
-            return payload;
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.approve(
-            params.context,
-            params.payload as unknown as ContactApproveCommandPayload,
-          )) as unknown as JsonValue,
-        }),
-      },
-      list: {
-        command: {
-          description: "列出已建立的 contact",
-          mapInput() {
-            return {};
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: {
-            contacts: await listContacts(params.context.rootPath),
-          } as unknown as JsonValue,
-        }),
-      },
-      check: {
-        command: {
-          description: "检查 contact 或 endpoint 当前是否在线可用",
-          configure(command: Command) {
-            command
-              .argument("[target]")
-              .option("--to <endpoint>", "直接检查未保存的 endpoint");
-          },
-          mapInput({ args, opts }) {
-            const payload: JsonObject = {};
-            const target = String(args[0] || "").trim();
-            if (target) payload.target = target;
-            if (typeof opts.to === "string") payload.endpoint = opts.to;
-            return payload;
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.check(
-            params.context,
-            params.payload as ContactCheckCommandPayload,
-          )) as unknown as JsonValue,
-        }),
-      },
-      chat: {
-        command: {
-          description: "和某个 contact 的长期对话线聊天",
-          configure(command: Command) {
-            command.requiredOption("--to <contact>", "目标 contact").argument("[message...]");
-          },
-          mapInput({ args, opts }) {
-            const payload: JsonObject = {
-              to: String(opts.to || "").trim(),
-            };
-            const message = args.join(" ").trim();
-            if (message) payload.message = message;
-            return payload;
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.chat(
-            params.context,
-            params.payload as unknown as ContactChatCommandPayload,
-          )) as unknown as JsonValue,
-        }),
-      },
-      share: {
-        command: {
-          description: "向 contact 分享文本、链接、文件或目录",
-          configure(command: Command) {
-            command
-              .requiredOption("--to <contact>", "目标 contact")
-              .option("--text <text>", "分享文本")
-              .option("--link <url...>", "分享链接")
-              .argument("[paths...]");
-          },
-          mapInput({ args, opts }) {
-            const links = Array.isArray(opts.link)
-              ? opts.link.map((item) => String(item || "").trim()).filter(Boolean)
-              : typeof opts.link === "string"
-                ? [opts.link]
-                : [];
-            return {
-              to: String(opts.to || "").trim(),
-              ...(typeof opts.text === "string" ? { text: opts.text } : {}),
-              ...(links.length > 0 ? { links } : {}),
-              paths: args.map((item) => String(item || "").trim()).filter(Boolean),
-            };
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.share(
-            params.context,
-            params.payload as unknown as ContactShareCommandPayload,
-          )) as unknown as JsonValue,
-        }),
-      },
-      inbox: {
-        command: {
-          description: "查看 contact inbox",
-          mapInput() {
-            return {};
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: {
-            shares: await listContactInboxShares(params.context.rootPath),
-          } as unknown as JsonValue,
-        }),
-      },
-      receive: {
-        command: {
-          description: "接收 inbox 中的 share",
-          configure(command: Command) {
-            command.argument("<shareId>");
-          },
-          mapInput({ args, opts }) {
-            const shareId = String(args[0] || "").trim();
-            if (!shareId) throw new Error("Missing shareId");
-            return {
-              shareId,
-            };
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await receiveShare({
-            projectRoot: params.context.rootPath,
-            shareId: (params.payload as unknown as ContactReceiveCommandPayload).shareId,
-          })) as unknown as JsonValue,
-        }),
-      },
-      remoteping: {
-        api: {
-          method: "POST",
-          path: "/api/contact/ping",
-          async mapInput(ctx) {
-            const body = (await ctx.req.json().catch(() => ({}))) as JsonValue;
-            return {
-              body,
-              token: getHeaderToken({
-                headers: ctx.req.raw.headers,
-                body: readObject(body),
-              }),
-            } as unknown as JsonValue;
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.remotePing(
-            params.context,
-            params.payload as unknown as { token?: string },
-          )) as unknown as JsonValue,
-        }),
-      },
-      remoteapprove: {
-        api: {
-          method: "POST",
-          path: "/api/contact/approve",
-          async mapInput(ctx) {
-            return (await ctx.req.json()) as JsonValue;
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.remoteApprove(
-            params.context,
-            readObject(params.payload) as unknown as ContactApproveLinkRequest,
-          )) as unknown as JsonValue,
-        }),
-      },
-      remoteconfirm: {
-        api: {
-          method: "POST",
-          path: "/api/contact/confirm",
-          async mapInput(ctx) {
-            return (await ctx.req.json()) as JsonValue;
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.remoteConfirm(
-            params.context,
-            readObject(params.payload) as unknown as ContactConfirmRequest,
-          )) as unknown as JsonValue,
-        }),
-      },
-      remotechat: {
-        api: {
-          method: "POST",
-          path: "/api/contact/chat",
-          async mapInput(ctx) {
-            const body = (await ctx.req.json()) as JsonValue;
-            return {
-              body,
-              token: getHeaderToken({
-                headers: ctx.req.raw.headers,
-                body: readObject(body),
-              }),
-            } as unknown as JsonValue;
-          },
-        },
-        execute: async (params) => {
-          const payload = readObject(params.payload);
-          const body = readObject(payload.body);
-          return {
-            success: true,
-            data: (await receiveContactChatMessage({
-              context: params.context,
-              token: readString(payload, "token"),
-              message: readString(body, "message"),
-            })) as unknown as JsonValue,
-          };
-        },
-      },
-      remoteshare: {
-        api: {
-          method: "POST",
-          path: "/api/contact/share",
-          async mapInput(ctx) {
-            const body = (await ctx.req.json()) as JsonValue;
-            return {
-              body,
-              token: getHeaderToken({
-                headers: ctx.req.raw.headers,
-                body: readObject(body),
-              }),
-            } as unknown as JsonValue;
-          },
-        },
-        execute: async (params) => ({
-          success: true,
-          data: (await this.remoteShare(params.context, params.payload)) as unknown as JsonValue,
-        }),
-      },
-    };
+    this.actions = createContactActions({
+      link: async (context, payload) =>
+        (await this.link(context, payload)) as unknown as JsonValue,
+      approve: async (context, payload) =>
+        (await this.approve(context, payload)) as unknown as JsonValue,
+      check: async (context, payload) =>
+        (await this.check(context, payload)) as unknown as JsonValue,
+      chat: async (context, payload) =>
+        (await this.chat(context, payload)) as unknown as JsonValue,
+      share: async (context, payload) =>
+        (await this.share(context, payload)) as unknown as JsonValue,
+      remotePing: (context, payload) => this.remotePing(context, payload),
+      remoteApprove: (context, request) => this.remoteApprove(context, request),
+      remoteConfirm: (context, request) => this.remoteConfirm(context, request),
+      remoteShare: async (context, payload) =>
+        (await this.remoteShare(context, payload)) as unknown as JsonValue,
+    });
 
     this.lifecycle = {
       start: () => undefined,
@@ -771,9 +477,9 @@ export class ContactService extends BaseService {
   }
 
   private async remoteShare(context: AgentContext, rawPayload: JsonValue) {
-    const payload = readObject(rawPayload);
-    const token = readString(payload, "token");
-    const body = readObject(payload.body);
+    const payload = readContactObject(rawPayload);
+    const token = readContactString(payload, "token");
+    const body = readContactObject(payload.body);
     const contact = await findContactByInboundToken(context.rootPath, token);
     if (!contact || contact.status !== "trusted") {
       throw new Error("Invalid contact token");

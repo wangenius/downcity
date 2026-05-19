@@ -6,7 +6,7 @@
  * - 只有当用户显式改动时，才把 `plugins.web` 持久化到项目配置。
  */
 
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { PluginCommandContext } from "@/plugin/types/Plugin.js";
 import type { ResolvedWebPluginConfig, WebPluginConfig } from "@/plugin/builtins/web/types/WebPlugin.js";
 import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/plugin/builtins/web/types/WebPlugin.js";

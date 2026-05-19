@@ -8,7 +8,7 @@
  */
 
 import type { Plugin } from "@/plugin/types/Plugin.js";
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
 import {
   AUTH_ACTIONS,

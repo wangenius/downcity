@@ -8,7 +8,7 @@
  */
 
 import { generateId } from "@/utils/Id.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 
 type UnknownRecord = Record<string, unknown>;

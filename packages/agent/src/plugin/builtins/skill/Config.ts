@@ -6,7 +6,7 @@
  * - 这里负责把原始 JSON 配置归一化成 runtime 可直接消费的稳定结构。
  */
 
-import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type {
   ResolvedSkillPluginConfig,
   SkillPluginConfig,

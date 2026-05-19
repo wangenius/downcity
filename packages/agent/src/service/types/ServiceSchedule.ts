@@ -6,7 +6,7 @@
  * - 该模块只承载调度层状态，不耦合具体 service 的业务语义。
  */
 
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 
 /**
  * 调度任务状态。

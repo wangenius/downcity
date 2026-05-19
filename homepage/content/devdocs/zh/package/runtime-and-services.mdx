@@ -56,6 +56,7 @@ flowchart LR
   end
 
   subgraph Business["业务层"]
+    SESSION["Session"]
     SERVICES["Services"]
     PLUGINS["Plugins"]
   end
@@ -65,8 +66,10 @@ flowchart LR
   EXT --> CONSOLE
   API --> AGENT
   CONSOLE --> AGENT
+  AGENT --> SESSION
   AGENT --> SERVICES
   SERVICES --> PLUGINS
+  SERVICES --> SESSION
 ```
 
 这里最重要的不是抽象词，而是当前代码里真正存在的对象。
@@ -83,9 +86,9 @@ flowchart LR
 - `env`
 - `systems`
 - `model`
-- `sessionFacade`
+- `getSession(sessionId)`
 - `services`
-- `pluginRegistry`
+- plugin manager 访问端口
 
 也就是说，当前 runtime 的主概念已经稳定收敛到 `AgentRuntime`。
 
@@ -102,13 +105,13 @@ flowchart TD
   E --> F["初始化 AgentRuntime"]
   F --> G["读取 downcity.json / .env / global env"]
   G --> H["创建 LanguageModel"]
-  H --> I["创建 SessionExecutorRegistry"]
-  I --> J["创建 SessionFacade"]
-  J --> K["创建 PluginRegistry"]
-  K --> L["注册 auth / skill / voice"]
-  L --> M["创建 chat / task / memory / shell services"]
-  M --> N["绑定 shell tool runtime"]
-  N --> O["启动 HTTP Server"]
+  H --> I["创建 session factory"]
+  I --> J["创建 service instances"]
+  J --> K["初始化 PluginManager"]
+  K --> L["注册 auth / skill / web / voice 等 plugin"]
+  L --> M["绑定 shell tool runtime"]
+  M --> N["启动 HTTP Server 与 Local RPC"]
+  N --> O["启动 services 与 schedule runtime"]
 ```
 
 ### 详细顺序
@@ -223,8 +226,8 @@ sequenceDiagram
   participant In as 外部输入
   participant Agent as AgentRuntime
   participant Service as Service
-  participant Session as SessionFacade
-  participant Core as SessionEngine
+  participant Session as Session
+  participant Core as LocalSessionCore
   participant Plugin as PluginRegistry
 
   In->>Agent: CLI / HTTP / Chat / Task

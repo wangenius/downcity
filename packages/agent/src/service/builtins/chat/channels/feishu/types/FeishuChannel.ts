@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 集中声明 Feishu 渠道的配置、事件、消息体与上传下载中间结构。
- * - `services/chat/channels/feishu/*` 统一依赖这里，避免实现文件内联大量局部类型。
+ * - `service/builtins/chat/channels/feishu/*` 统一依赖这里，避免实现文件内联大量局部类型。
  */
 
 /**

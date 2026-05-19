@@ -7,7 +7,6 @@
  * - chatKey / audit / mention 清理 / 附件保存已下沉到 `TelegramInbound`。
  */
 
-import path from "path";
 import { BaseChatChannel } from "@/service/builtins/chat/channels/BaseChatChannel.js";
 import type {
   ChannelChatKeyParams,
@@ -19,34 +18,23 @@ import {
   handleTelegramCommand,
 } from "./Handlers.js";
 import {
-  getActorName,
-  getTelegramChatTitle,
   type TelegramConfig,
   type TelegramUpdate,
   type TelegramUser,
 } from "./Shared.js";
-import { extractTelegramReplyContext } from "./ReplyContext.js";
-import {
-  buildReplyContextExtra,
-  buildReplyContextInstruction,
-} from "@/service/builtins/chat/runtime/ReplyContextFormatter.js";
-import {
-  augmentChatInboundInput,
-  buildChatInboundText,
-} from "@/service/builtins/chat/runtime/InboundAugment.js";
-import { renderChatMessageFileTag } from "@/service/builtins/chat/runtime/ChatMessageMarkup.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
 import {
-  buildTelegramAuditText,
   buildTelegramChatKey,
-  isTelegramGroupChat,
   parseTelegramMessageId,
-  saveTelegramIncomingAttachments,
-  stripTelegramBotMention,
 } from "./TelegramInbound.js";
 import { TelegramPlatformClient } from "./TelegramPlatformClient.js";
+import {
+  drainTelegramPendingUpdatesToHistory,
+  type TelegramPendingDrainReason,
+} from "./TelegramPendingUpdates.js";
+import { handleTelegramMessage } from "./TelegramMessageHandler.js";
 
 /**
  * Telegram 平台适配器。
@@ -173,101 +161,16 @@ export class TelegramBot extends BaseChatChannel {
    * 把离线期间积压 updates 只入队，不执行/不回复。
    */
   private async drainPendingUpdatesToHistory(params: {
-    reason: "startup" | "webhook_conflict";
+    reason: TelegramPendingDrainReason;
   }): Promise<void> {
-    const drained = await this.platform.drainPendingUpdates({
+    await drainTelegramPendingUpdatesToHistory({
       reason: params.reason,
-      handleUpdate: async (update) => {
-        if (update.message?.chat?.id) {
-          const message = update.message;
-          const chatId = message.chat.id.toString();
-          const messageThreadId =
-            typeof message.message_thread_id === "number"
-              ? message.message_thread_id
-              : undefined;
-          const chatKey = buildTelegramChatKey(chatId, messageThreadId);
-          const from = message.from;
-          const chatTitle = getTelegramChatTitle(message.chat);
-          const botId = this.platform.getBotId();
-          const botUsername = this.platform.getBotUsername();
-          const fromIsBot =
-            from?.is_bot === true ||
-            (!!botId && typeof from?.id === "number" && from.id === botId) ||
-            (!!botUsername &&
-              typeof from?.username === "string" &&
-              from.username.toLowerCase() === botUsername.toLowerCase());
-          const isGroup = isTelegramGroupChat(message.chat.type);
-          if (fromIsBot && !isGroup) return;
-
-          const rawText =
-            typeof message.text === "string"
-              ? message.text
-              : typeof message.caption === "string"
-                ? message.caption
-                : "";
-          const hasIncomingAttachment =
-            !!message.document ||
-            (Array.isArray(message.photo) && message.photo.length > 0) ||
-            !!message.voice ||
-            !!message.audio ||
-            !!message.video;
-
-          const messageId =
-            typeof message.message_id === "number"
-              ? String(message.message_id)
-              : undefined;
-          const actorId = from?.id ? String(from.id) : undefined;
-
-          await this.enqueueAuditMessage({
-            chatId,
-            messageId,
-            userId: actorId,
-            text: buildTelegramAuditText({ rawText, hasIncomingAttachment, message }),
-            meta: {
-              kind: "pending",
-              pendingReason: params.reason,
-              updateId: update.update_id,
-              chatType: message.chat.type,
-              chatTitle,
-              messageThreadId,
-              username: from?.username,
-              fromIsBot,
-              chatKey,
-            },
-          });
-          return;
-        }
-
-        if (update.callback_query?.from?.id) {
-          const query = update.callback_query;
-          const chatId = query.message?.chat?.id?.toString?.() || "";
-          if (!chatId) return;
-          const messageThreadId =
-            typeof query.message?.message_thread_id === "number"
-              ? query.message.message_thread_id
-              : undefined;
-          await this.enqueueAuditMessage({
-            chatId,
-            messageId: undefined,
-            userId: query.from?.id ? String(query.from.id) : undefined,
-            text: `[callback_query] ${String(query.data || "").slice(0, 1000)}`.trim(),
-            meta: {
-              kind: "pending",
-              pendingReason: params.reason,
-              updateId: update.update_id,
-              messageThreadId,
-              username: query.from?.username,
-            },
-          });
-        }
+      platform: this.platform,
+      logger: this.logger,
+      enqueueAuditMessage: async (message) => {
+        await this.enqueueAuditMessage(message);
       },
     });
-
-    if (drained > 0) {
-      this.logger.info(`Drained ${drained} pending Telegram updates to queue`, {
-        reason: params.reason,
-      });
-    }
   }
 
   /**
@@ -276,250 +179,52 @@ export class TelegramBot extends BaseChatChannel {
   private async handleMessage(
     message: TelegramUpdate["message"],
   ): Promise<void> {
-    if (!message || !message.chat) return;
-
-    const chatId = message.chat.id.toString();
-    const rawText =
-      typeof message.text === "string"
-        ? message.text
-        : typeof message.caption === "string"
-          ? message.caption
-          : "";
-    const entities = message.entities || message.caption_entities;
-    const hasIncomingAttachment =
-      !!message.document ||
-      (Array.isArray(message.photo) && message.photo.length > 0) ||
-      !!message.voice ||
-      !!message.audio ||
-      !!message.video;
-    const messageId =
-      typeof message.message_id === "number" ? String(message.message_id) : undefined;
-    const messageThreadId =
-      typeof message.message_thread_id === "number"
-        ? message.message_thread_id
-        : undefined;
-    const from = message.from;
-    const botId = this.platform.getBotId();
-    const botUsername = this.platform.getBotUsername();
-    const fromIsBot =
-      from?.is_bot === true ||
-      (!!botId && typeof from?.id === "number" && from.id === botId) ||
-      (!!botUsername &&
-        typeof from?.username === "string" &&
-        from.username.toLowerCase() === botUsername.toLowerCase());
-    const actorId = from?.id ? String(from.id) : undefined;
-    const actorName = getActorName(from);
-    const chatTitle = getTelegramChatTitle(message.chat);
-    const isGroup = isTelegramGroupChat(message.chat.type);
-    const chatKey = buildTelegramChatKey(chatId, messageThreadId);
-
-    if (!actorId) {
-      this.logger.warn("Telegram 消息缺少发送者 userId，已忽略", {
-        chatId,
-        chatType: message.chat.type,
-        messageId,
-        messageThreadId,
-        hasFrom: !!from,
-      });
-      return;
-    }
-
-    await this.observeIncomingAuthorization({
-      chatId,
-      chatType: message.chat.type,
-      chatTitle,
-      userId: actorId,
-      username: actorName,
-    });
-
-    const authResult = await this.evaluateIncomingAuthorization({
-      chatId,
-      chatType: message.chat.type,
-      chatTitle,
-      userId: actorId,
-      username: actorName,
-    });
-    if (authResult.decision !== "allow") {
-      if (!isGroup) {
-        await this.sendAuthorizationText({
-          chatId,
-          chatType: message.chat.type,
-          messageThreadId,
-          text: this.buildUnauthorizedBlockedText({
-            chatId,
-            chatType: message.chat.type,
-            userId: actorId,
-          }),
-        });
-      }
-      return;
-    }
-
-    const enqueueGroupAudit = async (params: {
-      reason: string;
-      kind?: string;
-    }): Promise<void> => {
-      if (!isGroup) return;
-      await this.enqueueAuditMessage({
-        chatId,
-        messageId,
-        userId: actorId,
-        text: buildTelegramAuditText({ rawText, hasIncomingAttachment, message }),
-        meta: {
-          chatType: message.chat.type,
-          messageThreadId,
-          username: from?.username,
-          actorName,
-          chatTitle,
-          reason: params.reason,
-          ...(params.kind ? { kind: params.kind } : {}),
-          ...(fromIsBot ? { fromIsBot: true } : {}),
+    await handleTelegramMessage(
+      {
+        context: this.context,
+        rootPath: this.rootPath,
+        logger: this.logger,
+        inboundAckEmoji: TelegramBot.INBOUND_ACK_EMOJI,
+        platform: this.platform,
+        observeIncomingAuthorization: async (params) => {
+          await this.observeIncomingAuthorization(params);
         },
-      });
-    };
-
-    if (fromIsBot) {
-      await enqueueGroupAudit({ reason: "bot_originated" });
-      this.logger.debug("Ignored bot-originated message", {
-        chatId,
-        chatType: message.chat.type,
-        messageId,
-        fromId: from?.id,
-        fromUsername: from?.username,
-      });
-      return;
-    }
-
-    await this.runInChat(chatKey, async () => {
-      this.logger.debug("Telegram message received", {
-        chatId,
-        chatType: message.chat.type,
-        isGroup,
-        actorId,
-        actorUsername: from?.username,
-        actorName,
-        messageId,
-        messageThreadId,
-        chatKey,
-        hasIncomingAttachment,
-        textPreview: rawText.length > 240 ? `${rawText.slice(0, 240)}…` : rawText,
-        entityTypes: (entities || []).map((entity) => entity.type),
-        botUsername,
-        botId,
-      });
-
-      if (!rawText && !hasIncomingAttachment) {
-        await enqueueGroupAudit({ reason: "empty_payload" });
-        return;
-      }
-
-      await this.platform.sendInboundAckReaction({
-        chatId,
-        messageId: parseTelegramMessageId(messageId),
-        emoji: TelegramBot.INBOUND_ACK_EMOJI,
-      });
-
-      if (rawText.startsWith("/")) {
-        await this.enqueueAuditMessage({
-          chatId,
-          messageId,
-          userId: actorId,
-          text: buildTelegramAuditText({ rawText, hasIncomingAttachment, message }),
-          meta: {
-            chatType: message.chat.type,
-            chatTitle,
-            messageThreadId,
-            username: from?.username,
-            kind: "command",
-          },
-        });
-
-        await this.handleCommand(chatId, rawText, from, messageThreadId);
-        return;
-      }
-
-      const cleaned = isGroup
-        ? stripTelegramBotMention(rawText, botUsername)
-        : rawText;
-      if (!cleaned && !hasIncomingAttachment) {
-        await enqueueGroupAudit({ reason: "empty_after_clean" });
-        return;
-      }
-
-      const attachmentLines: string[] = [];
-      let incomingAttachments: Array<{
-        type: "photo" | "document" | "voice" | "audio" | "video";
-        path: string;
-        desc?: string;
-      }> = [];
-      try {
-        incomingAttachments = await saveTelegramIncomingAttachments({
-          downloader: this.platform,
-          message,
-        });
-        for (const attachment of incomingAttachments) {
-          const rel = path.relative(this.rootPath, attachment.path);
-          attachmentLines.push(
-            renderChatMessageFileTag({
-              type: attachment.type,
-              path: rel,
-              ...(attachment.desc ? { caption: attachment.desc } : {}),
-            }),
+        evaluateIncomingAuthorization: async (params) =>
+          await this.evaluateIncomingAuthorization(params),
+        sendAuthorizationText: async (params) => {
+          await this.sendAuthorizationText(params);
+        },
+        buildUnauthorizedBlockedText: (params) =>
+          this.buildUnauthorizedBlockedText(params),
+        enqueueAuditMessage: async (params) => {
+          await this.enqueueAuditMessage(params);
+        },
+        runInChat: async (chatKey, fn) => {
+          await this.runInChat(chatKey, fn);
+        },
+        handleCommand: async (params) => {
+          await this.handleCommand(
+            params.chatId,
+            params.command,
+            params.from,
+            params.messageThreadId,
           );
-        }
-      } catch (error) {
-        this.logger.warn("Failed to save incoming Telegram attachment(s)", {
-          error: String(error),
-          chatId,
-          messageId,
-          chatKey,
-        });
-      }
-      const replyContext = extractTelegramReplyContext(message);
-
-      const instructions = buildReplyContextInstruction({
-        text:
-          buildChatInboundText(
-            await augmentChatInboundInput({
-              context: this.context,
-              input: {
-                channel: "telegram",
-                chatId,
-                chatType: message.chat.type,
-                chatKey,
-                messageId,
-                rootPath: this.rootPath,
-                attachmentText:
-                  attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
-                bodyText: cleaned ? cleaned.trim() : undefined,
-                attachments: incomingAttachments.map((attachment) => ({
-                  channel: "telegram" as const,
-                  kind: attachment.type,
-                  path: attachment.path,
-                  desc: attachment.desc,
-                })),
-              },
-            }),
-          ) ||
-          (attachmentLines.length > 0
-            ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
-            : ""),
-        replyContext,
-      });
-
-      if (!instructions) return;
-
-      await this.executeAndReply(
-        chatId,
-        instructions,
-        from,
-        chatTitle,
-        messageId,
-        message.chat.type,
-        messageThreadId,
-        buildReplyContextExtra(replyContext),
-      );
-    });
+        },
+        executeAndReply: async (params) => {
+          await this.executeAndReply(
+            params.chatId,
+            params.instructions,
+            params.from,
+            params.chatTitle,
+            params.messageId,
+            params.chatType,
+            params.messageThreadId,
+            params.extra,
+          );
+        },
+      },
+      message,
+    );
   }
 
   /**

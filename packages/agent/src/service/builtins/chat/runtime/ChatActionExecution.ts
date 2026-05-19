@@ -8,8 +8,8 @@
  */
 
 import path from "node:path";
-import type { JsonObject } from "@/utils/types/Json.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { JsonObject } from "@/types/common/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 import type {
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,

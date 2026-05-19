@@ -6,7 +6,7 @@
  * - 供 init 模板与 runtime system prompt 渲染复用，避免重复实现。
  */
 
-import type { TemplateVariableMap } from "@/utils/types/Template.js";
+import type { TemplateVariableMap } from "@/types/common/Template.js";
 
 /**
  * 渲染模板中的 `{{variable}}` 占位符。

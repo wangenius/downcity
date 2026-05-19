@@ -6,14 +6,14 @@
  * - service 只依赖固定执行语义，不再自己拼装扩展调度逻辑。
  */
 
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import type {
   PluginEffectHook,
   PluginGuardHook,
   PluginPipelineHook,
   PluginResolveHook,
 } from "@/plugin/types/Plugin.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
 
 type ContextResolver = () => AgentContext;
 type PluginEnabledChecker = (pluginName: string, context: AgentContext) => boolean;

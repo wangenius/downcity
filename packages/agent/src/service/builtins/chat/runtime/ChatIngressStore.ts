@@ -7,8 +7,8 @@
  * - 后续 extension / control UI / 其他外部入口都应复用这里
  */
 
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 import { appendInboundChatHistory } from "./ChatHistoryStore.js";
 

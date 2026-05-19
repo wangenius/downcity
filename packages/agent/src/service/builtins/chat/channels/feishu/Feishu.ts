@@ -14,33 +14,18 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@/service/builtins/chat/channels/BaseChatChannel.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/utils/types/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@/service/builtins/chat/types/FeishuAttachment.js";
-import type { InboundReplyContext } from "@/service/builtins/chat/types/ReplyContext.js";
 import type {
   FeishuConfig,
   FeishuMessageEvent,
   FeishuMessagePayloadType,
 } from "@/service/builtins/chat/channels/feishu/types/FeishuChannel.js";
 import { parseFeishuAttachments } from "./Shared.js";
-import { parseFeishuInboundMessage } from "./InboundAttachment.js";
-import {
-  buildReplyContextExtra,
-  buildReplyContextInstruction,
-} from "@/service/builtins/chat/runtime/ReplyContextFormatter.js";
-import {
-  augmentChatInboundInput,
-  buildChatInboundText,
-} from "@/service/builtins/chat/runtime/InboundAugment.js";
-import { renderChatMessageFileTag } from "@/service/builtins/chat/runtime/ChatMessageMarkup.js";
-import {
-  extractFeishuSenderIdentity,
-  isFeishuGroupChat,
-  stripFeishuAtMentions,
-} from "./FeishuInbound.js";
 import { FeishuPlatformClient } from "./FeishuPlatformClient.js";
+import { handleFeishuMessage } from "./FeishuMessageHandler.js";
 
 /**
  * 飞书入站确认 reaction 类型。
@@ -198,222 +183,70 @@ export class FeishuBot extends BaseChatChannel {
    * 处理入站消息。
    */
   private async handleMessage(data: FeishuMessageEvent): Promise<void> {
-    try {
-      if (!data?.message) return;
-      const {
-        message: {
-          chat_id,
-          content,
-          message_type,
-          chat_type,
-          message_id,
-          parent_id,
-        },
-      } = data;
-
-      const threadId = this.buildChatKey(chat_id);
-      const senderIdentity = extractFeishuSenderIdentity(data);
-      const actorId = senderIdentity.senderId;
-      const normalizedMessageId = String(message_id || "").trim();
-      if (!normalizedMessageId) return;
-      if (!actorId) {
-        this.logger.warn("飞书消息缺少发送者 userId/open_id，已忽略", {
-          chatId: chat_id,
-          chatType: chat_type,
-          messageId: normalizedMessageId,
-        });
-        return;
-      }
-
-      if (this.processedMessages.has(normalizedMessageId)) {
-        this.logger.debug(`Message already processed, skipping: ${normalizedMessageId}`);
-        return;
-      }
-
-      const persisted = await this.loadDedupeSet(threadId);
-      if (persisted.has(normalizedMessageId)) {
-        this.logger.debug(
-          `Message already processed (persisted), skipping: ${normalizedMessageId}`,
+    await handleFeishuMessage({
+      context: this.context,
+      rootPath: this.rootPath,
+      logger: this.logger,
+      buildChatKey: (chatId) => this.buildChatKey(chatId),
+      processedMessages: this.processedMessages,
+      processingMessages: this.processingMessages,
+      loadDedupeSet: async (threadId) => await this.loadDedupeSet(threadId),
+      persistDedupeSet: async (threadId, set) =>
+        await this.persistDedupeSet(threadId, set),
+      downloadIncomingAttachments: async (params) =>
+        await this.platform.downloadIncomingAttachments(params),
+      resolveReplyContext: async (params) =>
+        await this.platform.resolveReplyContext(params),
+      resolveSenderName: async (params) =>
+        await this.platform.resolveSenderName(params),
+      resolveChatTitle: async (chatId) => await this.platform.resolveChatTitle(chatId),
+      sendInboundAckReaction: async (params) =>
+        await this.platform.sendInboundAckReaction(params),
+      rememberChat: (threadId, value) => {
+        this.knownChats.set(threadId, value);
+      },
+      observeIncomingAuthorization: async (params) => {
+        await this.observeIncomingAuthorization(params);
+      },
+      evaluateIncomingAuthorization: async (params) =>
+        await this.evaluateIncomingAuthorization(params),
+      sendAuthorizationText: async (params) => {
+        await this.sendAuthorizationText(params);
+      },
+      buildUnauthorizedBlockedText: (params) =>
+        this.buildUnauthorizedBlockedText(params),
+      runInChat: async (chatKey, fn) => {
+        await this.runInChat(chatKey, fn);
+      },
+      handleCommand: async (params) => {
+        await this.handleCommand(
+          params.chatId,
+          params.chatType,
+          params.messageId,
+          params.command,
         );
-        return;
-      }
-
-      if (this.processingMessages.has(normalizedMessageId)) {
-        this.logger.debug(
-          `Message is already being processed, skipping duplicate delivery: ${normalizedMessageId}`,
+      },
+      executeAndReply: async (params) => {
+        await this.executeAndReply(
+          params.chatId,
+          params.chatType,
+          params.messageId,
+          params.instructions,
+          params.actorId,
+          params.actorName,
+          params.chatTitle,
+          params.extra,
         );
-        return;
-      }
-      this.processingMessages.add(normalizedMessageId);
-
-      let handled = false;
-      try {
-        let userMessage = "";
-        let incomingAttachments = [] as Awaited<
-          ReturnType<FeishuPlatformClient["downloadIncomingAttachments"]>
-        >;
-        let replyContext: InboundReplyContext | undefined;
-        try {
-          const parsed = parseFeishuInboundMessage({
-            messageType: message_type,
-            content,
-          });
-          if (parsed.unsupportedType) {
-            await this.sendErrorMessage(
-              chat_id,
-              chat_type,
-              message_id,
-              `Unsupported Feishu message type: ${parsed.unsupportedType}`,
-            );
-            handled = true;
-            return;
-          }
-
-          userMessage = parsed.text;
-          incomingAttachments = await this.platform.downloadIncomingAttachments({
-            messageId: message_id,
-            attachments: parsed.attachments,
-          });
-          replyContext = await this.platform.resolveReplyContext({
-            parentMessageId: parent_id,
-          });
-        } catch (error) {
-          await this.sendErrorMessage(
-            chat_id,
-            chat_type,
-            message_id,
-            `Failed to parse message: ${String(error)}`,
-          );
-          handled = true;
-          return;
-        }
-
-        this.logger.info(`Received Feishu message: ${userMessage || "[attachment]"}`);
-        const actorName =
-          (await this.platform.resolveSenderName({
-            ...senderIdentity,
-            chatId: chat_id,
-          })) || undefined;
-        const resolvedChatTitle = await this.platform.resolveChatTitle(chat_id);
-        const chatTitle = resolvedChatTitle || (chat_type === "p2p" ? actorName : undefined);
-
-        await this.observeIncomingAuthorization({
-          chatId: chat_id,
-          chatType: chat_type,
-          chatTitle,
-          userId: actorId,
-          username: actorName,
-        });
-
-        const authResult = await this.evaluateIncomingAuthorization({
-          chatId: chat_id,
-          chatType: chat_type,
-          chatTitle,
-          userId: actorId,
-          username: actorName,
-        });
-        if (authResult.decision !== "allow") {
-          if (chat_type === "p2p") {
-            await this.sendAuthorizationText({
-              chatId: chat_id,
-              chatType: chat_type,
-              text: this.buildUnauthorizedBlockedText({
-                chatId: chat_id,
-                chatType: chat_type,
-                userId: actorId,
-              }),
-            });
-          }
-          handled = true;
-          return;
-        }
-
-        this.knownChats.set(threadId, {
-          chatId: chat_id,
-          chatType: chat_type,
-          ...(chatTitle ? { chatTitle } : {}),
-        });
-
-        await this.platform.sendInboundAckReaction({
-          messageId: message_id,
-        });
-
-        await this.runInChat(threadId, async () => {
-          if (userMessage.startsWith("/") && incomingAttachments.length === 0) {
-            await this.handleCommand(chat_id, chat_type, message_id, userMessage);
-            return;
-          }
-
-          const attachmentLines = incomingAttachments.map((attachment) => {
-            const rel = path.relative(this.rootPath, attachment.path);
-            return renderChatMessageFileTag({
-              type: attachment.type,
-              path: rel,
-              ...(attachment.desc ? { caption: attachment.desc } : {}),
-            });
-          });
-
-          if (isFeishuGroupChat(chat_type)) {
-            userMessage = stripFeishuAtMentions(userMessage);
-          }
-
-          const instructions = buildReplyContextInstruction({
-            text:
-              buildChatInboundText(
-                await augmentChatInboundInput({
-                  context: this.context,
-                  input: {
-                    channel: "feishu",
-                    chatId: chat_id,
-                    chatType: chat_type,
-                    chatKey: threadId,
-                    messageId: message_id,
-                    rootPath: this.rootPath,
-                    attachmentText:
-                      attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
-                    bodyText: userMessage ? userMessage.trim() : undefined,
-                    attachments: incomingAttachments.map((attachment) => ({
-                      channel: "feishu" as const,
-                      kind: attachment.type,
-                      path: attachment.path,
-                      desc: attachment.desc,
-                    })),
-                  },
-                }),
-              ) ||
-              (attachmentLines.length > 0
-                ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
-                : ""),
-            replyContext,
-          });
-
-          if (!instructions) return;
-
-          await this.executeAndReply(
-            chat_id,
-            chat_type,
-            message_id,
-            instructions,
-            actorId,
-            actorName,
-            chatTitle,
-            buildReplyContextExtra(replyContext),
-          );
-        });
-        handled = true;
-      } finally {
-        this.processingMessages.delete(normalizedMessageId);
-        if (handled) {
-          this.processedMessages.add(normalizedMessageId);
-          persisted.add(normalizedMessageId);
-          await this.persistDedupeSet(threadId, persisted);
-        }
-      }
-    } catch (error) {
-      this.logger.error("Failed to process Feishu message", {
-        error: String(error),
-      });
-    }
+      },
+      sendErrorMessage: async (params) => {
+        await this.sendErrorMessage(
+          params.chatId,
+          params.chatType,
+          params.messageId,
+          params.errorText,
+        );
+      },
+    }, data);
   }
 
   /**

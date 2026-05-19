@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 统一管理单个 agent 项目内 `.downcity` 及其子目录/文件路径规则。
  * - 避免路径字符串在不同模块重复拼接，降低维护成本。
- * - 这里描述的是“项目级路径约定”，与 `main/city/runtime/CityPaths.ts` 的全局路径约定分开。
+ * - 这里描述的是“项目级路径约定”，与 city 包中的全局运行态路径约定分开。
  */
 import path from "path";
 
@@ -185,7 +185,7 @@ export function getDowncityDebugDirPath(cwd: string): string {
 }
 
 /**
- * Chat 元信息目录（由 services/chat 维护）。
+ * Chat 元信息目录（由 service/builtins/chat 维护）。
  *
  * 关键点（中文）
  * - 该目录存放 `sessionId -> chat` 的最近映射快照

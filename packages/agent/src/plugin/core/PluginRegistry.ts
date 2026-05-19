@@ -14,8 +14,8 @@ import type {
   PluginAvailability,
   PluginView,
 } from "@/plugin/types/Plugin.js";
-import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonValue } from "@/utils/types/Json.js";
+import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { JsonValue } from "@/types/common/Json.js";
 
 type ContextResolver = () => AgentContext;
 

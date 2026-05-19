@@ -2,24 +2,29 @@
 
 `@downcity/agent` 是 Downcity 的单 Agent 运行时包。
 
-它负责把一个 agent 项目目录装配成可执行运行时，包括 session、service、plugin、HTTP、RPC、sandbox 与宿主能力。  
-`@downcity/city` 负责多 Agent 管理、控制面网关、console/daemon；真正的单 Agent 执行内核在这个包里。
+它负责把一个 agent 项目目录装配成可执行运行时，包括 session、service、plugin、HTTP/RPC、sandbox、SDK 与项目级宿主能力。`@downcity/city` 负责多 Agent 管理、控制面网关、console daemon 与平台级存储；单 Agent 执行内核放在这个包里。
 
 ## 包定位
 
-- 面向单个 Agent 运行时。
-- 对外暴露统一公开 API，供 `@downcity/city` 和其他调用方使用。
-- 负责执行层，不负责多 Agent 编排和全局控制面。
-- 包外调用统一从 `@downcity/agent` 根入口读取，不再依赖内部子路径。
+- 面向单个 Agent 项目的执行面。
+- 对外通过 `@downcity/agent` 根入口暴露公共 API。
+- 负责 session、service、plugin、sandbox、HTTP/RPC server、SDK 本地 Agent。
+- 不负责多 Agent registry、control plane daemon、console UI 聚合和平台级编排。
 
 ## 与其他包的边界
 
 - `@downcity/agent`
-  - 单 Agent 宿主、执行、会话、服务、插件、HTTP/RPC、沙箱。
+  - 单 Agent runtime。
+  - 单 Agent HTTP/RPC server。
+  - session 执行、service 框架、plugin 框架、sandbox。
+  - 本地 SDK facade。
 - `@downcity/city`
-  - 多 Agent registry、control-plane runtime、gateway/control plane、用户入口 CLI。
+  - 多 Agent registry。
+  - control plane / gateway。
+  - 平台 CLI、模型池、全局 env、channel account store。
+  - agent daemon 进程管理。
 - `@downcity/ui`
-  - React UI 组件与展示层，不承载运行时执行。
+  - React UI 组件与展示层。
 
 ## 根目录结构
 
@@ -29,198 +34,255 @@ packages/agent
 ├── scripts/            # 构建辅助脚本
 ├── src/                # 源码目录
 ├── package.json        # 包信息、导出面、脚本
-├── README.md           # 面向使用者的包说明
+├── README.md           # 包结构说明
 └── tsconfig.json       # TypeScript 配置
 ```
 
-## 源码结构树
+## 当前源码结构
 
 ```text
 src
 ├── index.ts
-├── agent/
 ├── config/
 ├── host/
 │   ├── daemon/
-│   ├── rpc/
-│   ├── runtime/
-│   └── sdk/
-├── http/
+│   └── runtime/
 ├── model/
 ├── plugin/
-├── plugins/
+│   ├── builtins/
+│   ├── core/
+│   └── types/
+├── project/
+│   └── types/
+├── runtime/
 ├── sandbox/
+│   └── types/
+├── sdk/
+├── server/
+│   ├── http/
+│   └── rpc/
 ├── service/
 │   ├── builtins/
 │   ├── core/
-│   └── schedule/
+│   ├── schedule/
+│   └── types/
 ├── session/
-├── shared/
-└── types/
+│   ├── composer/
+│   ├── executors/
+│   ├── ids/
+│   ├── messages/
+│   ├── tools/
+│   └── types/
+├── transport/
+│   └── rpc/
+├── types/
+│   ├── auth/
+│   ├── common/
+│   ├── config/
+│   ├── daemon/
+│   ├── host/
+│   ├── http/
+│   ├── platform/
+│   └── rpc/
+└── utils/
+    ├── cli/
+    ├── logger/
+    └── storage/
 ```
 
 ## 目录职责
 
 - `src/index.ts`
   - 包的唯一公开入口。
-  - 统一导出单 Agent 运行时最常用的能力，避免上层依赖内部目录树。
+  - `city` 和外部调用方应从这里导入公共能力，避免依赖内部子路径。
 
-- `src/agent/`
-  - Agent 宿主装配层。
-  - 负责初始化 runtime、构建 `AgentContext`、装配 model、session、service、plugin。
-  - `project/` 子目录负责项目初始化和 execution binding。
+- `src/runtime/`
+  - 单 Agent runtime 装配层。
+  - `AgentRuntime.ts` 负责初始化 config、model、session factory、services、plugins、hot reload。
+  - `AgentContext.ts` 负责从 `AgentRuntime` 派生统一能力面。
+
+- `src/project/`
+  - 项目初始化与 execution binding。
+  - 负责 agent 项目骨架、默认文件、模型绑定与初始化结果类型。
 
 - `src/config/`
-  - 配置与路径解析层。
-  - 负责读取 `downcity.json`、env 快照和 `.downcity` 相关路径。
+  - 项目配置与项目级路径解析。
+  - 负责 `downcity.json`、项目 env、`.downcity/*` 路径规则。
 
 - `src/host/`
-  - 单 Agent 宿主相关能力。
-  - `daemon/`：项目准备、宿主接入、启动前校验。
-  - `rpc/`：本地 IPC / RPC 入口与客户端。
-  - `runtime/`：宿主运行时辅助能力，例如路径与 plugin runtime 装配。
-  - `sdk/`：对外 SDK，包括 `Agent`、`RemoteAgent`、`Session` 等宿主访问封装。
+  - Agent 运行时与宿主环境之间的端口层。
+  - `runtime/` 只保留注入到 `AgentRuntime` 的宿主端口、plugin 配置能力与 plugin runtime resolver。
+  - `daemon/` 只保留 agent 侧 daemon 协议、项目准备、HTTP client 与项目级 daemon meta 路径。
+  - daemon 进程启停、pid 清理、registry 同步等平台级管理职责属于 `@downcity/city`。
 
-- `src/http/`
-  - 单 Agent HTTP 服务层。
-  - `auth/`：认证与路由鉴权。
-  - `control/`：单 Agent control API。
-  - `execute/`：直接执行入口。
-  - `health/`：健康检查。
-  - `plugins/`：插件相关 HTTP 入口。
-  - `services/`：service HTTP 路由挂载。
-  - `static/`：静态资源路由。
+- `src/types/`
+  - 跨模块、跨包共享协议类型。
+  - `common/` 放 JSON、模板等基础类型。
+  - `config/` 放 `downcity.json`、execution binding、LLM、start options 等配置类型。
+  - `host/`、`platform/`、`daemon/`、`rpc/`、`auth/`、`http/` 放 city/agent 共享控制面协议。
+  - 领域内部类型仍保留在对应领域目录，例如 `service/types/`、`plugin/types/`、`session/types/`。
+
+- `src/sdk/`
+  - 本地 SDK facade。
+  - 包括 `Agent`、`RemoteAgent`、`SdkSession`、SDK HTTP/RPC wrapper 与 session metadata。
+
+- `src/server/`
+  - 单 Agent server 层。
+  - `http/` 是 HTTP server 与路由，包含 `control / execute / services / plugins / health / static`。
+  - `rpc/` 是本机 local RPC server。
+
+- `src/transport/`
+  - agent 调用端 transport 协议。
+  - `rpc/` 放 local RPC client、endpoint path、transport 选择器与协议类型。
 
 - `src/model/`
-  - 模型创建与模型管理辅助层。
+  - 模型创建与模型运行辅助。
 
 - `src/plugin/`
-  - 插件框架层。
-  - 负责插件注册、启用态、命令桥接、HTTP 路由与生命周期。
-
-- `src/plugins/`
-  - 内建插件实现。
-  - 当前包括 `auth`、`skill`、`web`、`asr`、`tts`、`voice`、`workboard` 等。
-
-- `src/sandbox/`
-  - 命令执行沙箱实现。
-  - 负责 shell/task 等执行进入受限环境。
-  - 这是 agent 内部真实执行沙箱，不是 city 侧控制面概念。
+  - 插件框架与内建插件。
+  - `core/` 负责注册、启用态、hook 调度、本地 action。
+  - `builtins/` 放 `auth`、`skill`、`web`、`asr`、`tts`、`voice`、`workboard` 等内建插件。
+  - `types/` 放插件公共协议类型。
 
 - `src/service/`
   - 单 Agent service 域。
-  - `core/`：service 框架层，负责注册、生命周期控制、action 分发、系统提示注入。
-  - `builtins/`：内建 service 实现，例如 chat、task、memory、shell、contact。
-  - `schedule/`：service action 的调度与持久化。
+  - `core/` 负责 service class 注册、状态控制、action 调度、HTTP route 注册。
+  - `builtins/` 放 `chat`、`contact`、`task`、`memory`、`shell` 等内建 service。
+  - `schedule/` 负责持久化 service action 调度。
+  - `types/` 放 service 公共协议类型。
 
 - `src/session/`
   - 会话执行内核。
-  - 负责消息历史、system prompt、tools、compaction、executor。
+  - `Session.ts` 是单 session 实例外壳。
+  - `executors/local/LocalSessionExecutor.ts` 装配执行器。
+  - `executors/local/LocalSessionCore.ts` 执行模型/tool loop。
+  - `executors/local/SessionToolLoopRunner.ts` 承担 tool loop 的逐轮调度。
+  - `executors/local/SessionModelMessageState.ts` 维护 session/model 双消息基线。
+  - `executors/local/SessionUiStreamCollector.ts` 收敛 UI stream 最终 assistant 消息。
+  - `executors/local/SessionExecutionError.ts` 归一化 stream/provider 错误。
+  - `composer/` 负责 history、system、execution、compaction 的组合。
+  - `messages/` 负责消息编码、附件映射与 step event 映射。
+  - `tools/` 放 session 可用工具定义。
 
-- `src/shared/`
-  - 跨层共享常量、共享协议类型、共享工具。
-  - 适合包内跨层复用的内容。
-  - 这里的目录结构用于内部组织，不作为包外公开导入路径。
+- `src/sandbox/`
+  - 命令执行沙箱。
+  - shell/task 等执行最终通过这里进入受限环境。
 
-- `src/types/`
-  - 当前只保留少量基础运行时类型。
-  - 主要剩余 `session/` 与 `sandbox/` 这类仍适合集中维护的底层类型。
-  - 其他领域类型应优先放回各自模块旁边，避免重新形成“大一统 types 目录”。
+- `src/utils/`
+  - 包内通用工具、日志、CLI 输出、基础 JSON/Template 类型。
 
-## 导出约定
+## 当前运行主链
 
-- 唯一公开入口是 `@downcity/agent`。
-- `shared/types`、`host/*`、`service/*`、`session/*`、`plugin/*` 等目录只表达源码分层，不作为公开导入地址。
-- 如果 `city` 或其他包需要新能力，应先补到 `src/index.ts`，而不是直接依赖内部文件路径。
-
-## 关键边界
-
-- `host/`
-  - 表示“单 Agent 宿主能力”。
-  - 比旧的 `daemon/rpc/runtime/sdk` 平铺结构更清晰。
-
-- `service/core/`
-  - 表示 service 框架和管理层。
-  - 不放具体业务 service 实现。
-
-- `service/builtins/`
-  - 表示内建单 Agent service 实现。
-  - 这里的 `chat`、`task`、`memory`、`shell`、`contact` 都是业务 service。
-
-- `http/control/`
-  - 表示单 Agent control API。
-  - 不等于 city 的 gateway/control plane。
-  - 当前统一路径是 `/api/control/*`。
-
-- `city`
-  - 不复制 agent 内部执行逻辑。
-  - 应优先通过 `@downcity/agent` 根入口拿能力，而不是深入内部子路径。
-
-## 关键调用关系
-
-### 1. Agent 启动
+### Agent 启动
 
 ```text
-initAgentRuntime()
-  -> 读取 config / env
-  -> 创建 model
-  -> 创建 session 组件
-  -> 创建 service 实例
-  -> 初始化 plugins
-  -> 导出 AgentContext
+city agent start
+  -> @downcity/city cli/agent/Run.ts
+  -> initAgentRuntime()
+  -> ensureRuntimeProjectReady()
+  -> loadDowncityConfig() / load env / load static prompts
+  -> createModel()
+  -> create session factory
+  -> createRegisteredServiceInstances()
+  -> initializePluginManager()
+  -> startServer() / startLocalRpcServer()
+  -> startAllServices() / startServiceScheduleRuntime()
 ```
 
 关键入口：
 
-- `src/agent/AgentRuntime.ts`
-- `src/agent/AgentContext.ts`
+- `src/runtime/AgentRuntime.ts`
+- `src/runtime/AgentContext.ts`
+- `src/server/http/Server.ts`
+- `src/server/rpc/Server.ts`
 
-### 2. HTTP 执行
+### Session 执行
 
 ```text
-HTTP Request
-  -> src/http/Server.ts
-  -> src/http/execute or src/http/control
-  -> Session / Executor
-  -> tools / services / plugins
+外部输入
+  -> HTTP / RPC / service / SDK
+  -> AgentRuntime.getSession(sessionId)
+  -> Session.run()
+  -> LocalSessionExecutor
+  -> LocalSessionCore
+  -> model / tools / system / history / compaction
+  -> assistant message 持久化与回调
 ```
 
-### 3. Service 调用
+关键入口：
+
+- `src/session/Session.ts`
+- `src/session/executors/local/LocalSessionExecutor.ts`
+- `src/session/executors/local/LocalSessionCore.ts`
+- `src/session/executors/local/SessionToolLoopRunner.ts`
+
+### Service 调用
 
 ```text
 AgentContext.invoke
-  -> src/service/core/Manager.ts
-  -> src/service/core/ServiceActionRunner.ts
-  -> src/service/builtins/* 具体实现
+  -> service/core/ServiceActionRunner.ts
+  -> service/core/ServiceStateController.ts
+  -> service/builtins/* 具体 action
 ```
 
-### 4. 沙箱执行
+### Plugin 调用
 
 ```text
-task / shell service
-  -> src/sandbox/SandboxRunner.ts
-  -> src/sandbox/MacOsSeatbeltSandbox.ts
+AgentContext.plugins
+  -> plugin/core/PluginManager.ts
+  -> plugin/core/PluginRegistry.ts
+  -> plugin/builtins/* 具体 plugin
 ```
 
-## 当前最重要的入口文件
+### 沙箱执行
 
-- `src/index.ts`
-  - 包的统一公开入口。
-- `src/agent/AgentRuntime.ts`
-  - 单 Agent runtime 主装配入口。
-- `src/http/Server.ts`
-  - HTTP 服务装配入口。
-- `src/session/Session.ts`
-  - 单 Session 外层实例。
-- `src/service/core/Manager.ts`
-  - service 管理门面。
-- `src/host/sdk/Agent.ts`
-  - SDK 访问入口。
+```text
+shell tool / shell service / task service
+  -> sandbox/SandboxConfigResolver.ts
+  -> sandbox/SandboxRunner.ts
+  -> sandbox/MacOsSeatbeltSandbox.ts
+```
+
+## 公开导出约定
+
+- 包外只从 `@downcity/agent` 根入口导入。
+- `@downcity/agent/*` 子路径不是公共 API。
+- `src/index.ts` 必须使用显式导出清单，不使用 `export *` 扩大公共面。
+- 根入口只暴露 SDK、插件/服务作者 API、city 运行集成 API 与跨包协议类型。
+- HTTP router、sandbox runner、内部 service runner 等实现细节不从根入口导出。
+- 如果 `city` 需要新的 agent 能力，先补到 `src/index.ts`，再由 `city` 消费。
+- `packages/city/scripts/lint-import-boundaries.mjs` 会检查 city 不直接依赖 agent 内部子路径。
+
+## 后续整理方向
+
+当前 `packages/agent/src` 已按单 Agent 执行内核拆分，根入口也已改成显式公共 API 清单。后续推荐继续把跨包共享的基础类型集中到 `types/`：
+
+```text
+src
+├── runtime/          # AgentRuntime / AgentContext / runtime state
+├── project/          # 初始化、execution binding、项目准备
+├── server/           # http / rpc / auth / routes
+├── transport/        # agent client transport 协议
+├── sdk/              # SDK facade
+├── session/
+├── service/
+├── plugin/
+├── sandbox/
+├── model/
+├── config/
+├── types/            # 跨模块共享类型
+└── utils/
+```
+
+迁移优先级：
+
+1. 将跨模块共享类型继续集中到 `src/types/`，模块私有类型保留在本模块 `types/` 下。
+2. 大模块超过 800-1000 行时继续按职责拆分。
 
 ## 维护约定
 
 - 不要把多 Agent 管理逻辑写进这个包。
-- 不要在 `city` 中复制 agent 的执行期实现。
-- 上层产品优先从 `@downcity/agent` 根入口获取能力。
+- 不要在 `city` 中复制 agent 的 session/service/plugin/sandbox 执行内核。
 - `service/core` 和 `service/builtins` 必须保持边界清晰。
+- `plugin/core` 和 `plugin/builtins` 必须保持边界清晰。
 - `bin/` 是构建产物，不直接修改。

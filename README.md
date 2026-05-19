@@ -1,159 +1,158 @@
 # Downcity
 
-> **把一个代码仓库，启动成一个可对话、可审计的 Agent Runtime**
+> 把一个代码仓库启动成可对话、可执行、可观测的 Agent Runtime。
 
-Downcity 是一个 Agent Runtime，它将你的本地或远程代码仓库启动为一个可对话、可执行、可审计的 AI Agent。
+Downcity 是一个面向本地项目与团队工作流的 Agent 平台。它把代码仓库、模型、会话、工具、服务、插件和控制面组合在一起，让一个项目可以拥有长期运行的 Agent、可追踪的执行记录，以及可扩展的用户界面。
 
-> ⚠️ **当前版本说明（2026-02-03）**：已暂时移除 **权限/审批（Approvals）**，默认 **全权限** 直接执行；后续再重新设计权限体系。
+当前仓库是 monorepo，主要包含：
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org)
+- `@downcity/city`：平台层与 CLI，负责 city runtime、Console 网关、多 Agent 注册、模型池、全局配置与 daemon 管理。
+- `@downcity/agent`：单 Agent runtime，负责 session、tool loop、service、plugin、HTTP/RPC、sandbox 与 SDK。
+- `@downcity/ui`：React + Tailwind UI SDK，提供 Console 和宿主应用可复用的界面组件。
+- `products/console`：控制面 Console 前端。
+- `products/chrome-extension`：Chrome Extension，用于连接 Console、页面上下文和 Inline Composer。
+- `homepage`：官网与用户文档站点。
 
----
+## 核心能力
 
-## 为什么选择 Downcity？
-
-| 对比维度 | GitHub Copilot | ChatGPT/Claude | **Downcity** |
-|---------|---------------|----------------|-----------------|
-| **用户** | 个人开发者 | 个人用户 | **团队/企业** |
-| **能力** | 代码补全 | 问答对话 | **可执行的 AI 团队成员** |
-| **安全性** | 无保障 | 无保障 | ✅ **审计（日志/对话落盘）** |
-| **持久性** | 会话级 | 会话级 | ✅ **项目级长期记忆** |
-
-> 💼 **企业版咨询：** [点击了解企业私有化方案](docs/commercial-strategy.md)
-
----
-
-## 核心特性
-
-- **Repo is the Agent** - 你的代码仓库就是 Agent 的上下文和记忆
-- **可对话** - 通过 Telegram / Discord / 飞书与 Agent 交互
-- **可执行** - 通过 shell 工具（如 `shell_exec` / `shell_start` / `shell_status` / `shell_wait` / `shell_close`）直接操作仓库与环境
-- **完全可审计** - 日志与对话记录落盘（`.downcity/logs` / `.downcity/chat/.../conversations`）
-- **全权限（临时）** - 当前版本默认不做权限/审批拦截
-
----
+- **Repo is the Agent**：项目目录就是 Agent 的工作上下文，初始化后会生成 `PROFILE.md`、`SOUL.md`、`downcity.json` 和 `.downcity/` 运行目录。
+- **City 控制面**：`city start` 管理 city runtime，`city console` 启动控制面模块，Console 聚合多个 Agent 的状态和操作入口。
+- **Agent daemon 管理**：`city agent create/start/stop/restart/status/chat/history/doctor/reset` 覆盖单项目 Agent 的生命周期。
+- **全局模型池**：`city model` 管理 provider 与 model，项目通过 `downcity.json.execution.modelId` 绑定模型。
+- **配置与密钥管理**：`city config`、`city env`、`city token` 分别管理项目配置、平台环境变量和本机访问 token。
+- **内建 Services**：`chat`、`task`、`memory`、`shell`、`contact` 提供聊天通道、任务调度、记忆、命令执行和联系人能力。
+- **内建 Plugins**：`skill`、`auth`、`web`、`asr`、`tts`、`workboard` 提供技能加载、授权、联网适配、语音识别、语音合成和运行观测面板。
+- **SDK 接入**：`@downcity/agent` 暴露 `Agent`、`RemoteAgent`、`Session` 等 API，支持本地嵌入式和远程 HTTP 调用。
+- **UI SDK**：`@downcity/ui` 提供按钮、表单、浮层、反馈、Workboard 等组件与样式入口。
 
 ## 快速开始
 
-### 安装
+### 1. 安装 CLI
 
 ```bash
-npm install -g downcity
+npm install -g @downcity/city
 # 或
-pnpm add -g downcity
+pnpm add -g @downcity/city
 ```
 
-升级到最新版本：
+安装后可使用两个等价命令：
 
 ```bash
-city update
+city --version
+downcity --version
 ```
 
-### 初始化项目
-
-在你的项目根目录运行：
+### 2. 初始化 city 全局配置
 
 ```bash
-city start
-cd /path/to/your-repo
+city init
+```
+
+该命令会初始化 city 全局配置与存储，默认写入 `~/.downcity/downcity.db`。
+
+### 3. 配置模型池
+
+```bash
+city model create
+```
+
+`city model create` 会引导你创建 Provider，并可从 Provider 发现远端模型后加入全局模型池。后续 Agent 项目通过模型 ID 绑定执行模型。
+
+常用模型命令：
+
+```bash
+city model list
+city model use <modelId>
+city model test model <modelId>
+```
+
+### 4. 创建 Agent 项目
+
+在目标仓库中执行：
+
+```bash
 city agent create .
 ```
 
-这会创建以下文件：
+初始化会创建或更新：
 
-- `PROFILE.md` - Agent 宪法 / 行为规范
-- `downcity.json` - Runtime 配置
-- `.downcity/` - Agent 运行时目录
+```text
+your-project/
+├── PROFILE.md
+├── SOUL.md
+├── downcity.json
+├── .agents/
+│   └── skills/
+└── .downcity/
+    ├── cache/
+    ├── config/
+    ├── data/
+    ├── debug/
+    ├── logs/
+    ├── profile/
+    ├── public/
+    ├── schema/
+    ├── session/
+    └── tasks/
+```
 
-### 启动 Agent
+### 5. 启动并对话
 
 ```bash
-city agent start
+city agent start .
+city agent status .
+city agent chat -m "总结一下这个项目的结构"
 ```
 
-Agent 将启动并监听配置的通信渠道（如 Telegram Bot）。
+如果希望在当前终端前台运行：
 
----
-
-## 项目结构
-
-```
-your-project/
-├─ src/                  # 你的业务代码
-├─ PROFILE.md              # Agent 宪法（必选）
-├─ downcity.json             # Runtime 配置
-├─ .downcity/
-│   ├─ routes/           # 对外接口（webhook / command）
-│   ├─ logs/             # 行为日志
-│   ├─ chats/            # 对话记录
-│   └─ .cache/           # 运行缓存
-└─ README.md
+```bash
+city agent start . --foreground
 ```
 
----
+### 6. 启动 Console
 
-## 设计文档
-
-- Agent-Native 架构设计草案（vNext）：`docs/agent-native-architecture-design.md`
-
----
-
-## 配置说明
-
-### PROFILE.md - Agent 宪法
-
-定义 Agent 的角色、行为边界和决策原则：
-
-```markdown
-# Agent Role
-You are the maintainer agent of this repository.
-
-## Goals
-- Improve code quality
-- Reduce bugs
-- Assist humans, never override them
-
-## Constraints
-- Never modify files without approval
-- Never run shell commands unless explicitly allowed
-- Always explain your intent before acting
-
-## Communication Style
-- Concise
-- Technical
-- No speculation without evidence
+```bash
+city start --console
+# 或
+city console
 ```
 
-### downcity.json - Runtime 配置
+常用运行状态命令：
+
+```bash
+city status
+city agent list
+city console status
+```
+
+## 配置文件
+
+### downcity.json
+
+项目级配置默认保持最小化。一个典型配置如下：
 
 ```json
 {
-  "name": "my-project-agent",
+  "$schema": "./.downcity/schema/downcity.schema.json",
+  "name": "my-project",
   "version": "1.0.0",
-  "llm": {
-    "activeModel": "default",
-    "providers": {
-      "default": {
-        "type": "anthropic",
-        "baseUrl": "https://api.anthropic.com/v1",
-        "apiKey": "${LLM_API_KEY}"
-      }
-    },
-    "models": {
-      "default": {
-        "provider": "default",
-        "name": "claude-sonnet-4-5",
-        "temperature": 0.7
-      }
+  "execution": {
+    "type": "api",
+    "modelId": "default"
+  },
+  "plugins": {
+    "skill": {
+      "enabled": true,
+      "paths": [".agents/skills"],
+      "allowExternalPaths": false
     }
   },
   "services": {
     "chat": {
       "channels": {
         "telegram": {
-          "enabled": true,
-          "botToken": "${TELEGRAM_BOT_TOKEN}"
+          "enabled": true
         }
       }
     }
@@ -161,182 +160,201 @@ You are the maintainer agent of this repository.
 }
 ```
 
-shell 工具输出回灌到 LLM 的体积会由运行时内建限制控制（默认字符上限 `12000`、行数上限 `200`），可显著降低第三方 OpenAI-compatible 网关出现 `Parameter error` 的概率。
+关键字段：
 
-> 注：启动时会自动加载项目根目录的 `.env`，并把 `downcity.json` 里的 `${VAR_NAME}` 形式占位符替换为对应环境变量。
+- `execution.modelId`：绑定 city 全局模型池中的模型 ID。
+- `plugins`：配置项目启用的插件和插件私有选项。
+- `services.chat.channels`：配置 Telegram、Feishu、QQ 等聊天渠道。
+- `sandbox`：配置 shell / CLI 执行边界。
+- `context.messages`：配置会话上下文压缩与归档策略。
 
-你也可以在 `downcity.json` 里配置启动参数（`city agent start` 会读取），例如：
+### PROFILE.md 与 SOUL.md
 
-```json
-{
-  "start": {
-    "port": 3000,
-    "host": "0.0.0.0",
-    "webui": false,
-    "webport": 3001
-  }
-}
-```
+- `PROFILE.md`：Agent 的角色、目标、边界和沟通方式。
+- `SOUL.md`：Agent 的基础人格和长期行为倾向。
 
----
+这两个文件会参与 system prompt 组合，适合写用户可理解的行为规范，而不是代码实现细节。
 
-## 使用场景
-
-### 1. Agent as Project Collaborator
-
-让 Agent 成为项目的 24/7 AI 协作者：
+## CLI 入口
 
 ```bash
-# 启动 Agent
-city agent start
+city init                         # 初始化 city 全局配置
+city start --console              # 启动 city runtime，并同时启动 Console
+city stop                         # 停止 city runtime、Console 和受管 Agent
+city restart                      # 重启 city runtime 并恢复已运行 Agent
+city status                       # 查看 city、Console、Agent 状态
 
-# 在 Telegram 中与 Agent 对话
-/status          # 查看项目状态
+city agent create .               # 初始化当前项目为 Agent 项目
+city agent start .                # 后台启动 Agent daemon
+city agent chat -m "..."          # 一次性向 Agent 发送消息
+city agent doctor . --fix         # 诊断并清理僵尸 daemon 状态
+
+city model create                 # 创建 Provider 或 Model
+city model list                   # 查看模型池
+city env list                     # 查看平台环境变量键名
+city config get                   # 读取 downcity.json
+city token create <name>          # 创建本机访问 token
+city service list                 # 查看服务
+city plugin list                  # 查看插件
 ```
 
-### 3. Agent as Interface
+更多命令以本地 CLI 为准：
 
-直接通过自然语言操作项目，无需写 UI：
-
-```
-Telegram Bot = Your Project UI
-
-命令示例：
-  /status              # 查看状态
-  /clear               # 清空对话上下文
+```bash
+city --help
+city agent --help
+city model --help
+city service --help
+city plugin --help
 ```
 
----
+## SDK 使用
 
-## 权限与审批（当前版本）
+### 本地 Agent
 
-当前版本默认全权限执行，不包含审批流程；如果你需要“默认最小权限 + Human-in-the-Loop”，需要等待后续版本重新设计并回归。
+```ts
+import { Agent } from "@downcity/agent";
+import { createOpenAI } from "@ai-sdk/openai";
 
----
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY!
+});
 
-## 技术架构
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {}
+});
 
-```
-┌────────────┐
-│ Telegram   │
-│ Discord    │
-│ Feishu     │
-└─────┬──────┘
-      │
-┌─────▼──────┐
-│ Hono Server│  ← Webhook / API / Approval
-└─────┬──────┘
-      │
-┌─────▼────────────────────┐
-│ Agent Runtime (Node.js)   │
-│ - ToolLoopAgent (ai-sdk)  │
-│ - Tools (shell_exec/shell_start/shell_status/shell_wait/shell_close/chat_send/...) │
-│ - Approval Flow           │
-└─────┬────────────────────┘
-      │
-┌─────▼──────┐
-│ Project FS │
-│ Git Repo   │
-└────────────┘
+const session = await agent.session();
+await session.set({
+  model: openai.responses("gpt-5")
+});
+
+const result = await session.run({
+  query: "总结一下当前仓库结构"
+});
+
+console.log(result.text);
 ```
 
-### 技术栈
+### 远程 Agent
 
-- **Agent Core**: ai-sdk v6 ToolLoopAgent
-- **Server**: Hono
-- **Runtime**: Node.js >= 18.0.0
-- **Scheduler**: node-cron
-- **Storage**: FS + JSON
+```ts
+import { RemoteAgent } from "@downcity/agent";
 
----
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314"
+});
 
-## 开发路线图
+const session = await agent.session();
+const result = await session.run({
+  query: "检查最近一次任务执行状态"
+});
 
-### v1（当前版本）
+console.log(result.text);
+```
 
-- [x] 核心 Runtime
-- [x] Agent 宪法系统
-- [x] 权限引擎
-- [x] Telegram 集成
-- [x] 声明式任务
-- [ ] 完整文档
-- [ ] 测试覆盖
+## 工作区结构
 
-### v2（规划中）
+```text
+downcity/
+├── packages/
+│   ├── agent/              # 单 Agent runtime、SDK、service、plugin、session、sandbox
+│   ├── city/               # CLI、控制面、daemon、registry、多 Agent 管理
+│   └── ui/                 # React + Tailwind UI SDK
+├── products/
+│   ├── console/            # Console 前端应用
+│   └── chrome-extension/   # Chrome Extension
+├── homepage/               # 官网与用户文档
+├── scripts/                # 构建、发布和辅助脚本
+├── package.json
+└── pnpm-workspace.yaml
+```
 
-- Discord / Slack 集成
-- Agent snapshot / replay
-- GitHub App
-- 多 Agent 协作
+包边界：
 
-### v3（探索中）
+- `@downcity/city` 不重复实现单 Agent 执行逻辑；执行内核来自 `@downcity/agent`。
+- `@downcity/agent` 只通过根入口暴露公共 API；包外不要依赖内部子路径。
+- `@downcity/ui` 只承载可复用 UI 原语与 Workboard 相关组件。
+- Homepage 面向用户文档；开发者结构说明保留在子包 README 和源码模块注释中。
 
-- Remote Agent Hosting
-- Agent Marketplace
-- Web IDE 集成
+## 本地开发
 
----
+### 安装依赖
+
+```bash
+pnpm install
+```
+
+### 构建
+
+```bash
+pnpm build
+pnpm build:agent
+pnpm build:city
+pnpm build:homepage
+pnpm build:extension
+```
+
+### 类型检查
+
+```bash
+pnpm typecheck
+pnpm -C packages/ui typecheck
+pnpm -C homepage typecheck
+```
+
+### 开发模式
+
+```bash
+pnpm dev:city
+pnpm dev:agent
+pnpm dev:ui-sdk
+pnpm dev:console
+pnpm dev:homepage
+```
+
+### 发布辅助
+
+```bash
+pnpm build:packages
+pnpm agent:patch:build
+pnpm city:patch:build
+pnpm all:patch:build
+```
+
+## 文档入口
+
+仓库内当前主要文档在 `homepage/content` 和各包 README 中：
+
+- City 用户文档：`homepage/content/docs/zh/index.mdx`
+- Agent SDK 文档：`homepage/content/agent-sdk-docs/zh/index.mdx`
+- UI SDK 文档：`homepage/content/ui-sdk-docs/zh/index.mdx`
+- 开发文档：`homepage/content/devdocs/zh/index.mdx`
+- Agent 包结构：`packages/agent/README.md`
+- City 包结构：`packages/city/README.md`
+
+本地启动文档站：
+
+```bash
+pnpm dev:homepage
+```
+
+## 运行与安全建议
+
+Downcity 会执行 shell、读写项目文件、启动本地 daemon，并可能通过聊天渠道接收外部消息。建议：
+
+- 在干净 Git 分支上使用 Agent，并通过 `git status` / `git diff` 审计改动。
+- 通过 `city token` 管理 Console 和 HTTP 访问 token。
+- 通过 auth plugin 管理聊天渠道中的用户授权。
+- 通过 `sandbox` 配置收紧 shell / CLI 执行边界。
+- 不要把真实密钥写入仓库；优先使用 `city env` 或本地环境变量。
 
 ## 设计原则
 
-1. **Repo is the Agent** - 代码仓库是 Agent 的全部上下文
-2. **Everything is auditable** - 所有行为可追溯
-3. **Minimum privilege** - 默认最小权限
-4. **Human-in-the-loop** - 人机协作是第一原则
-5. **Declarative over imperative** - 声明式优于命令式
-
----
-
-## 贡献指南
-
-欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
-
-快速开始：
-
-```bash
-git clone https://github.com/wangenius/downcity.git
-cd downcity
-pnpm install
-pnpm build
-pnpm test
-```
-
----
-
-## 常见问题
-
-### Q: Agent 会修改我的代码吗？
-
-A: 会。当前版本是“简化模式”，默认全权限直接执行（不包含审批）。建议在干净分支上使用，并用 `git diff` / `git status` 随时检查改动。
-
-### Q: 支持哪些 LLM 模型？
-
-A: 支持所有 ai-sdk v6 兼容的模型，包括 Claude、GPT-4、等。
-
-### Q: 可以部署到远程服务器吗？
-
-A: v1 主要支持本地运行，v2 将支持远程部署。
-
-### Q: 安全性如何保证？
-
-A: 当前版本不提供最小权限与审批；只提供审计（`.downcity/logs` / `.downcity/chat/.../conversations`）与可追溯的执行过程。更严格的权限体系会在后续版本重新设计。
-
----
-
-## License
-
-MIT © [Your Name]
-
----
-
-## Links
-
-- [Documentation](https://downcity.ai)
-- [GitHub](https://github.com/wangenius/downcity)
-- [Twitter](https://twitter.com/downcity)
-
----
-
-**Downcity 不是"帮你写代码"，而是定义：一个项目如何被一个 AI 长期、安全、可控地维护。**
-
-
+1. **Repo is the Agent**：仓库提供上下文、规则、记忆和执行空间。
+2. **Runtime is observable**：会话、日志、状态和 Workboard 快照应可追踪。
+3. **Platform and agent are separated**：city 管平台，agent 管单项目执行。
+4. **Services and plugins are explicit**：用户能力通过 service / plugin 边界扩展。
+5. **Keep configuration small**：项目配置只写必要字段，模型和密钥放到平台层。

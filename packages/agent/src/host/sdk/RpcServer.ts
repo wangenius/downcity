@@ -14,7 +14,7 @@ import type { Agent } from "@/host/sdk/Agent.js";
 import type {
   LocalRpcRequest,
   LocalRpcResponse,
-} from "@/shared/types/LocalRpc.js";
+} from "@/host/rpc/types/LocalRpc.js";
 import { getSdkAgentRpcEndpointPath } from "@/host/sdk/Paths.js";
 
 /**

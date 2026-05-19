@@ -10,7 +10,7 @@
 
 import path from "path";
 import fs from "fs";
-import { logger as defaultLogger } from "@shared/utils/logger/Logger.js";
+import { logger as defaultLogger } from "@/utils/logger/Logger.js";
 import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
 import { ensureRuntimeProjectReady } from "@/host/daemon/ProjectSetup.js";
 import { createModel } from "@/model/CreateModel.js";
@@ -48,7 +48,7 @@ import {
 } from "@/agent/AgentRuntimeState.js";
 import { createRegisteredServiceInstances } from "@/service/core/ServiceClassRegistry.js";
 import { readProjectPrimaryModelId } from "@/agent/project/ProjectExecutionBinding.js";
-import { initializePluginManager, resetPluginManager } from "@/plugin/PluginManager.js";
+import { initializePluginManager, resetPluginManager } from "@/plugin/core/PluginManager.js";
 import {
   clearPluginRuntimeContextResolver,
   setPluginRuntimeContextResolver,
@@ -58,7 +58,7 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/host/runtime/AgentHostRuntime.js";
 import { updateAgentRuntimeConfig } from "@/agent/AgentRuntimeState.js";
-import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
+import type { AgentPlatformRuntime } from "@/host/types/AgentHost.js";
 
 export type { AgentRuntimeBase, AgentRuntime } from "@/agent/AgentRuntimeState.js";
 export {

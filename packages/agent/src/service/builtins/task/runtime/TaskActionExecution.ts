@@ -11,7 +11,7 @@ import type {
   TaskCronRegisterResult,
   TaskListActionPayload,
   TaskSchedulerReloadResult,
-} from "@/shared/types/TaskService.js";
+} from "@/service/builtins/task/types/TaskService.js";
 import type {
   TaskCreateRequest,
   TaskDeleteRequest,
@@ -55,7 +55,7 @@ export type TaskSchedulerReloadPort = (params: {
 /**
  * 启动后的 task cron runtime 统计结果。
  */
-export type { TaskCronRegisterResult } from "@/shared/types/TaskService.js";
+export type { TaskCronRegisterResult } from "@/service/builtins/task/types/TaskService.js";
 
 /**
  * 任务定义变更后重载 scheduler。

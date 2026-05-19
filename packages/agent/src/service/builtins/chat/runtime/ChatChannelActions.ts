@@ -8,7 +8,7 @@
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
+import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 import type {
   ChatCloseActionPayload,
   ChatConfigurationActionPayload,
@@ -17,7 +17,7 @@ import type {
   ChatReconnectActionPayload,
   ChatStatusActionPayload,
   ChatTestActionPayload,
-} from "@/shared/types/ChatService.js";
+} from "@/service/builtins/chat/types/ChatService.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
 import {
   describeChatChannelConfiguration,

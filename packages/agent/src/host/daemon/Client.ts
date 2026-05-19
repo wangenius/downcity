@@ -15,9 +15,9 @@ import {
 import {
   formatCliBearerHeaderValue,
   resolveCliAuthToken,
-} from "@/http/auth/CliAuthStateStore.js";
+} from "@/host/http/auth/CliAuthStateStore.js";
 import { getDaemonMetaPath } from "@/host/daemon/Manager.js";
-import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
 
 /**
  * 解析端口值。

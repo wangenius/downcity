@@ -7,7 +7,7 @@
  * - 该文件属于 `main/city/daemon/*` 的协议边界，而不是通用 HTTP 类型目录。
  */
 
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { JsonValue } from "@/utils/types/Json.js";
 
 /**
  * Daemon 服务端点。

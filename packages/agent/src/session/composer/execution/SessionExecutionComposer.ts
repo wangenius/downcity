@@ -7,8 +7,8 @@
  */
 
 import type { ModelMessage, Tool } from "ai";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
-import type { SessionSystemMessage } from "@/types/session/SessionPrompts.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
 import { SessionComposer } from "@session/composer/SessionComposer.js";
 
 /**

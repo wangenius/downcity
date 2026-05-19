@@ -1,9 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { SessionUserMessageV1 } from "@/types/session/SessionMessages.js";
+import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
 import type {
   SessionAssistantStepCallback,
   SessionUiMessageChunkCallback,
-} from "@/types/session/SessionRun.js";
+} from "@/session/types/SessionRun.js";
 
 /**
  * SessionRunScope（单次请求作用域）。

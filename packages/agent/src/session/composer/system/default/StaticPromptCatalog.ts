@@ -7,7 +7,7 @@
  */
 
 import { DEFAULT_SHIP_PROMPTS } from "@session/composer/system/default/SystemDomain.js";
-import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import {
   getProfileMdCandidatePaths,
   getProfileMdPath,

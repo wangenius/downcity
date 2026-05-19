@@ -8,9 +8,9 @@
  */
 
 import type { Command } from "commander";
-import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ServiceActions } from "@/shared/types/Service.js";
+import type { ServiceActions } from "@/service/types/Service.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
 import {
   flushMemoryAction,

@@ -9,8 +9,8 @@
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import path from "path";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
-import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
 import { assertProjectExecutionTarget } from "@/agent/project/ProjectExecutionBinding.js";
 
 export type { DowncityConfig };

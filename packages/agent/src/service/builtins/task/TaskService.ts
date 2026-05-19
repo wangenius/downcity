@@ -9,12 +9,12 @@
 
 import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
-import type { ServiceActions } from "@/shared/types/Service.js";
+import type { ServiceActions } from "@/service/types/Service.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type {
   TaskCronRegisterResult,
   TaskSchedulerReloadResult,
-} from "@/shared/types/TaskService.js";
+} from "@/service/builtins/task/types/TaskService.js";
 import { TaskCronTriggerEngine } from "@/service/builtins/task/runtime/CronTrigger.js";
 import { registerTaskCronJobs } from "@/service/builtins/task/Scheduler.js";
 import {

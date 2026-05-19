@@ -13,15 +13,15 @@ import type {
   InvokeServicePort,
   SessionCollectionPort,
 } from "@/agent/AgentContextTypes.js";
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { JsonValue } from "@/utils/types/Json.js";
 import type {
   PluginAvailability,
   PluginPort,
   PluginView,
-} from "@/shared/types/Plugin.js";
+} from "@/plugin/types/Plugin.js";
 import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
 import { runServiceCommand } from "@/service/core/Manager.js";
-import { getPluginManager } from "@/plugin/PluginManager.js";
+import { getPluginManager } from "@/plugin/core/PluginManager.js";
 import { getAgentRuntime } from "@/agent/AgentRuntimeState.js";
 import { appendExecSessionMessage } from "@/service/builtins/chat/runtime/ChatIngressStore.js";
 import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";

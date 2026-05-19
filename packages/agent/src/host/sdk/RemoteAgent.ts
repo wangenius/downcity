@@ -14,7 +14,7 @@ import type {
   AgentSessionStreamEvent,
   RemoteAgentOptions,
 } from "@/host/sdk/AgentSdkTypes.js";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 
 /**
  * 远程 Session 客户端。

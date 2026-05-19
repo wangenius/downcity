@@ -8,9 +8,9 @@
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { StoredChannelAccount } from "@/shared/types/Store.js";
+import type { StoredChannelAccount } from "@/host/types/Store.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
-import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
+import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 

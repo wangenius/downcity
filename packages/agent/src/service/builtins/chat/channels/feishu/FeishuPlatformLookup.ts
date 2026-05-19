@@ -9,10 +9,10 @@
 import * as Lark from "@larksuiteoapi/node-sdk";
 import fs from "fs-extra";
 import path from "path";
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import type {
   FeishuDownloadedAttachment,
-} from "@/shared/types/FeishuChannel.js";
+} from "@/service/builtins/chat/channels/feishu/types/FeishuChannel.js";
 import type { FeishuIncomingAttachmentDescriptor } from "@/service/builtins/chat/types/FeishuInboundAttachment.js";
 import type { InboundReplyContext } from "@/service/builtins/chat/types/ReplyContext.js";
 import { buildFeishuInboundCacheFileName } from "./InboundAttachment.js";

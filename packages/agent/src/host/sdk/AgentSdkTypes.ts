@@ -9,10 +9,10 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type { BaseService } from "@/service/builtins/BaseService.js";
-import type { JsonValue } from "@/shared/types/Json.js";
-import type { Plugin } from "@/shared/types/Plugin.js";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
-import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
+import type { JsonValue } from "@/utils/types/Json.js";
+import type { Plugin } from "@/plugin/types/Plugin.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { AgentPlatformRuntime } from "@/host/types/AgentHost.js";
 
 /**
  * 本地 Agent 构造参数。

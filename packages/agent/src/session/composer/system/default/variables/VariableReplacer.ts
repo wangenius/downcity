@@ -8,13 +8,13 @@
 
 import { resolvePromptGeoContext } from "@session/composer/system/default/variables/GeoContext.js";
 import type { PromptVariables } from "@session/composer/system/default/variables/PromptTypes.js";
-import { renderTemplateVariables } from "@/shared/utils/Template.js";
+import { renderTemplateVariables } from "@/utils/Template.js";
 import {
   formatDateInTimezone,
   formatDateTimeInTimezone,
   formatYearInTimezone,
   resolveRuntimeTimezone,
-} from "@/shared/utils/Time.js";
+} from "@/utils/Time.js";
 
 /**
  * Prompt 变量替换模式。

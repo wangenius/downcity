@@ -7,7 +7,7 @@
  */
 
 import type { UIMessageChunk } from "ai";
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { JsonValue } from "@/utils/types/Json.js";
 import type { AgentSessionStreamEvent } from "@/host/sdk/AgentSdkTypes.js";
 
 function toJsonValue(value: unknown): JsonValue {

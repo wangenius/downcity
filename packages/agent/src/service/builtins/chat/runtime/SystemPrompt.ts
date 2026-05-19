@@ -9,7 +9,7 @@
 
 import { getSessionRunScope } from "@session/SessionRunScope.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ChatEnvironmentPromptInput } from "@/shared/types/ChatPromptContext.js";
+import type { ChatEnvironmentPromptInput } from "@/service/builtins/chat/types/ChatPromptContext.js";
 import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
 
 function normalizePromptValue(value: unknown, fallback: string): string {

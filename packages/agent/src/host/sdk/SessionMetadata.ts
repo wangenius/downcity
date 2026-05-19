@@ -11,7 +11,7 @@ import type { LanguageModel } from "ai";
 import type {
   SessionHistoryMetaV1,
   SessionHistorySdkConfigV1,
-} from "@/types/session/SessionHistoryMeta.js";
+} from "@/session/types/SessionHistoryMeta.js";
 import { getSdkAgentSessionMetaPath } from "@/host/sdk/Paths.js";
 
 type ReadSessionMetadataInput = {

@@ -12,8 +12,8 @@ import {
   isTextUIPart,
   isToolUIPart,
 } from "ai";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 
 /**
  * 单次 tool-loop 允许的最大 step 数。

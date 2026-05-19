@@ -10,7 +10,7 @@
 
 import path from "node:path";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { SessionRunResult } from "@/types/session/SessionRun.js";
+import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type { TaskSessionRuntimePort } from "@/service/builtins/task/runtime/TaskRunnerTypes.js";
 import { LocalSessionCore } from "@session/executors/local/LocalSessionCore.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
@@ -19,7 +19,7 @@ import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jso
 import { LocalSessionExecutionComposer } from "@session/composer/execution/LocalSessionExecutionComposer.js";
 import { DefaultSessionSystemComposer } from "@session/composer/system/default/DefaultSessionSystemComposer.js";
 import { shellTools } from "@session/tools/shell/ShellToolDefinition.js";
-import type { SessionExecutor } from "@/types/session/SessionExecutor.js";
+import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
 
 /**
  * 把 task round 的 user query 落盘到对应 run context。

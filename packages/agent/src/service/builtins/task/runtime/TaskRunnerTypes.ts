@@ -7,7 +7,7 @@
  */
 
 import type { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import type { SessionExecutor } from "@/types/session/SessionExecutor.js";
+import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
 import type {
   ShipTaskRunExecutionStatusV1,
   ShipTaskRunProgressPhaseV1,

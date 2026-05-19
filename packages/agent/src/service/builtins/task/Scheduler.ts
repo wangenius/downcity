@@ -15,7 +15,7 @@ import {
 import { listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 import { ServiceCronEngine } from "./types/Cron.js";
-import { resolveRuntimeTimezone } from "@/shared/utils/Time.js";
+import { resolveRuntimeTimezone } from "@/utils/Time.js";
 
 const TASK_LOG_PREFIX = "[TASK]";
 

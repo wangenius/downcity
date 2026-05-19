@@ -24,8 +24,8 @@ import type {
   AgentSessionSetInput,
   AgentSessionStreamEvent,
 } from "@/host/sdk/AgentSdkTypes.js";
-import type { SessionHistoryMetaV1 } from "@/types/session/SessionHistoryMeta.js";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
+import type { SessionHistoryMetaV1 } from "@/session/types/SessionHistoryMeta.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import { SdkSessionSystemComposer } from "@/host/sdk/SdkSessionSystemComposer.js";
 import {
   inferModelLabel,

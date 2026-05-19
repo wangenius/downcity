@@ -60,23 +60,23 @@ export { loadStaticSystemPrompts } from "./session/composer/system/default/Stati
 export { LocalSessionExecutor } from "./session/executors/local/LocalSessionExecutor.js";
 
 // HTTP 服务
-export { startServer } from './http/Server.js';
-export { executeRouter } from "./http/execute/execute.js";
-export { healthRouter } from "./http/health/health.js";
-export { pluginsRouter } from "./http/plugins/plugins.js";
+export { startServer } from "./host/http/Server.js";
+export { executeRouter } from "./host/http/execute/execute.js";
+export { healthRouter } from "./host/http/health/health.js";
+export { pluginsRouter } from "./host/http/plugins/plugins.js";
 export {
   ensureServiceActionRoutesRegistered,
   servicesRouter,
-} from "./http/services/services.js";
-export { staticRouter } from "./http/static/static.js";
-export { controlRouter } from "./http/control/ControlRouter.js";
-export { registerControlApiRoutes } from "./http/control/ControlApiRoutes.js";
-export { registerControlAuthorizationRoutes } from "./http/control/ControlAuthorizationRoutes.js";
-export { registerControlModelRoutes } from "./http/control/ModelRoutes.js";
-export { registerControlOverviewRoutes } from "./http/control/OverviewRoutes.js";
-export { registerControlSessionRoutes } from "./http/control/SessionRoutes.js";
-export { registerControlTaskRoutes } from "./http/control/TaskRoutes.js";
-export { executeBySessionId } from "./http/control/ExecuteBySession.js";
+} from "./host/http/services/services.js";
+export { staticRouter } from "./host/http/static/static.js";
+export { controlRouter } from "./host/http/control/ControlRouter.js";
+export { registerControlApiRoutes } from "./host/http/control/ControlApiRoutes.js";
+export { registerControlAuthorizationRoutes } from "./host/http/control/ControlAuthorizationRoutes.js";
+export { registerControlModelRoutes } from "./host/http/control/ModelRoutes.js";
+export { registerControlOverviewRoutes } from "./host/http/control/OverviewRoutes.js";
+export { registerControlSessionRoutes } from "./host/http/control/SessionRoutes.js";
+export { registerControlTaskRoutes } from "./host/http/control/TaskRoutes.js";
+export { executeBySessionId } from "./host/http/control/ExecuteBySession.js";
 
 // RPC
 export { startLocalRpcServer } from "./host/rpc/Server.js";
@@ -119,39 +119,39 @@ export {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
 } from "./service/builtins/chat/runtime/UserVisibleText.js";
-export { logger, getLogger, type Logger } from "./shared/utils/logger/Logger.js";
+export { logger, getLogger, type Logger } from "./utils/logger/Logger.js";
 
 // 共享协议类型与控制面常量
-export * from "./shared/types/AgentHost.js";
-export * from "./shared/types/AgentProject.js";
-export * from "./shared/types/AuthPlugin.js";
-export * from "./shared/types/Platform.js";
-export * from "./shared/types/PlatformGateway.js";
-export * from "./shared/types/Daemon.js";
-export * from "./shared/types/DowncityConfig.js";
-export * from "./shared/types/ExecutionBinding.js";
-export * from "./shared/types/InlineInstant.js";
-export * from "./shared/types/Json.js";
-export * from "./shared/types/LlmConfig.js";
-export * from "./shared/types/LocalRpc.js";
-export * from "./shared/types/Plugin.js";
+export * from "./host/types/AgentHost.js";
+export * from "./agent/project/types/AgentProject.js";
+export * from "./plugin/builtins/auth/types/AuthPlugin.js";
+export * from "./host/runtime/types/Platform.js";
+export * from "./host/runtime/types/PlatformGateway.js";
+export * from "./host/daemon/types/Daemon.js";
+export * from "./config/types/DowncityConfig.js";
+export * from "./config/types/ExecutionBinding.js";
+export * from "./host/http/execute/types/InlineInstant.js";
+export * from "./utils/types/Json.js";
+export * from "./config/types/LlmConfig.js";
+export * from "./host/rpc/types/LocalRpc.js";
+export * from "./plugin/types/Plugin.js";
 export type {
   PluginCliBaseOptions,
   PluginActionResponse,
   PluginAvailabilityResponse,
   PluginAvailabilityView,
   PluginListResponse,
-} from "./shared/types/PluginApi.js";
-export * from "./shared/types/Service.js";
-export * from "./shared/types/ServiceSchedule.js";
-export * from "./shared/types/Services.js";
-export * from "./shared/types/Start.js";
-export * from "./shared/types/Store.js";
-export * from "./shared/types/PluginLifecycle.js";
-export * from "./shared/types/auth/AuthPermission.js";
-export * from "./shared/types/auth/AuthRoute.js";
-export * from "./shared/types/auth/AuthToken.js";
-export * from "./shared/types/auth/AuthTypes.js";
+} from "./plugin/types/PluginApi.js";
+export * from "./service/types/Service.js";
+export * from "./service/types/ServiceSchedule.js";
+export * from "./service/types/Services.js";
+export * from "./config/types/Start.js";
+export * from "./host/types/Store.js";
+export * from "./plugin/types/PluginLifecycle.js";
+export * from "./host/http/auth/types/AuthPermission.js";
+export * from "./host/http/auth/types/AuthRoute.js";
+export * from "./host/http/auth/types/AuthToken.js";
+export * from "./host/http/auth/types/AuthTypes.js";
 
 // 模型
 export { createModel } from './model/CreateModel.js';
@@ -178,14 +178,14 @@ export {
   listChatAuthorizationRoles,
   readChatAuthorizationConfigSync,
   setChatAuthorizationUserRole,
-} from "./plugins/auth/runtime/AuthorizationConfig.js";
-export { resolveAuthorizedUserRole } from "./plugins/auth/runtime/AuthorizationPolicy.js";
-export { authPlugin } from "./plugins/auth/Plugin.js";
-export { skillPlugin } from "./plugins/skill/Plugin.js";
-export { webPlugin } from "./plugins/web/Plugin.js";
-export { asrPlugin } from "./plugins/asr/Plugin.js";
-export { ttsPlugin } from "./plugins/tts/Plugin.js";
-export { workboardPlugin } from "./plugins/workboard/Plugin.js";
+} from "./plugin/builtins/auth/runtime/AuthorizationConfig.js";
+export { resolveAuthorizedUserRole } from "./plugin/builtins/auth/runtime/AuthorizationPolicy.js";
+export { authPlugin } from "./plugin/builtins/auth/Plugin.js";
+export { skillPlugin } from "./plugin/builtins/skill/Plugin.js";
+export { webPlugin } from "./plugin/builtins/web/Plugin.js";
+export { asrPlugin } from "./plugin/builtins/asr/Plugin.js";
+export { ttsPlugin } from "./plugin/builtins/tts/Plugin.js";
+export { workboardPlugin } from "./plugin/builtins/workboard/Plugin.js";
 
 // Agent 项目准备
 export {
@@ -199,11 +199,11 @@ export {
   listBuiltinPlugins,
   listStaticPluginViews,
   toStaticPluginView,
-} from "./plugin/Catalog.js";
-export { runLocalPluginAction, listLocalPlugins, getLocalPluginAvailability } from "./plugin/LocalExecution.js";
-export { registerAllPluginsForCli } from "./plugin/PluginCommand.js";
-export { listBuiltinPluginRuntimeAuthPolicies } from "./plugin/HttpRoutes.js";
-export { persistProjectPluginConfig } from "./plugin/ProjectConfigStore.js";
+} from "./plugin/core/Catalog.js";
+export { runLocalPluginAction, listLocalPlugins, getLocalPluginAvailability } from "./plugin/core/LocalExecution.js";
+export { registerAllPluginsForCli } from "./plugin/core/PluginCommand.js";
+export { listBuiltinPluginRuntimeAuthPolicies } from "./plugin/core/HttpRoutes.js";
+export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js";
 
 // 沙箱
 export {
@@ -227,4 +227,4 @@ export type {
   ResolvedSandboxConfig,
   SandboxSpawnParams,
   SandboxSpawnResult,
-} from "./types/sandbox/SandboxRuntime.js";
+} from "./sandbox/types/SandboxRuntime.js";

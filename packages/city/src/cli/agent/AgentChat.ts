@@ -37,6 +37,16 @@ function normalizeChatMessage(input: string): string {
   return String(input || "").trim();
 }
 
+/**
+ * 判断 readline 在交互期间抛出的 Ctrl+C 中断是否属于正常退出。
+ */
+function isReadlineAbortError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? String(error.code || "") : "";
+  const name = "name" in error ? String(error.name || "") : "";
+  return code === "ABORT_ERR" || name === "AbortError";
+}
+
 function isChatSuccess(payload: AgentChatExecuteResponse | undefined): boolean {
   if (!payload || payload.success !== true) return false;
   if (payload.result?.success === false) return false;
@@ -117,11 +127,11 @@ function printQueuedResult(params: {
       },
       ...(params.payload.result?.queueItemId
         ? [
-            {
-              label: "queue item",
-              value: params.payload.result.queueItemId,
-            },
-          ]
+          {
+            label: "queue item",
+            value: params.payload.result.queueItemId,
+          },
+        ]
         : []),
     ],
   });
@@ -210,10 +220,10 @@ export async function executeAgentChatTurn(params: {
     ...(isChatSuccess(remote.data)
       ? {}
       : {
-          error:
-            String(remote.data.result?.error || remote.data.error || "").trim() ||
-            "Daemon error (check `city agent status` and `city agent doctor`)",
-        }),
+        error:
+          String(remote.data.result?.error || remote.data.error || "").trim() ||
+          "Daemon error (check `city agent status` and `city agent doctor`)",
+      }),
   };
 }
 
@@ -312,7 +322,18 @@ async function runInteractiveChat(params: {
 
   try {
     while (true) {
-      const line = await rl.question(prompt);
+      let line = "";
+      try {
+        line = await rl.question(prompt);
+      } catch (error) {
+        // 关键点（中文）：Node 24 下 Ctrl+C 会让 readline.question 以 AbortError 拒绝。
+        // 这里按正常退出处理，避免把交互式 chat 变成未捕获异常。
+        if (isReadlineAbortError(error)) {
+          console.log();
+          break;
+        }
+        throw error;
+      }
       const text = normalizeChatMessage(line);
       if (!text) continue;
       if (text === "/exit" || text === "/quit") break;

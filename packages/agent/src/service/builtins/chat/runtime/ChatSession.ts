@@ -10,9 +10,9 @@
 import { Session } from "@session/Session.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
 import type { ChatSessionExecutionComposer } from "@/service/builtins/chat/runtime/ChatSessionExecutionComposer.js";
-import type { SessionExecutor } from "@/types/session/SessionExecutor.js";
-import type { SessionAssistantStepCallback } from "@/types/session/SessionRun.js";
-import type { SessionRunResult } from "@/types/session/SessionRun.js";
+import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
+import type { SessionAssistantStepCallback } from "@/session/types/SessionRun.js";
+import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type { ChatSessionTurnState } from "@/service/builtins/chat/runtime/ChatSessionTypes.js";
 
 type ChatSessionOptions = {

@@ -8,7 +8,7 @@
  */
 
 import type { Command } from "commander";
-import type { ServiceActions } from "@/shared/types/Service.js";
+import type { ServiceActions } from "@/service/types/Service.js";
 import type {
   ChatCloseActionPayload,
   ChatConfigurationActionPayload,
@@ -24,9 +24,9 @@ import type {
   ChatSessionActionPayload,
   ChatStatusActionPayload,
   ChatTestActionPayload,
-} from "@/shared/types/ChatService.js";
-import type { JsonValue } from "@/shared/types/Json.js";
-import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
+} from "@/service/builtins/chat/types/ChatService.js";
+import type { JsonValue } from "@/utils/types/Json.js";
+import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 import {
   mapChatChannelApiInput,
   mapChatChannelApiQueryInput,

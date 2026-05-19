@@ -14,7 +14,7 @@ import {
   isTextUIPart,
   type FileUIPart,
 } from "ai";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import { parseChatMessageMarkup } from "@/service/builtins/chat/runtime/ChatMessageMarkup.js";
 
 /**

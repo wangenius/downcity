@@ -8,9 +8,9 @@
  */
 
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
-import type { JsonObject } from "@/shared/types/Json.js";
-import type { SessionRunResult } from "@/types/session/SessionRun.js";
-import type { SessionUserMessageV1 } from "@/types/session/SessionMessages.js";
+import type { JsonObject } from "@/utils/types/Json.js";
+import type { SessionRunResult } from "@/session/types/SessionRun.js";
+import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
 import type { SessionPort } from "@/agent/AgentContextTypes.js";
 import type { ChatQueueItem } from "@/service/builtins/chat/types/ChatQueue.js";
 import { resolveAssistantMessageForPersistence } from "./UserVisibleText.js";

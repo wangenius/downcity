@@ -10,8 +10,8 @@ import type { LanguageModel, Tool } from "ai";
 import type {
   SessionMessageV1,
   SessionMetadataV1,
-} from "@/types/session/SessionMessages.js";
-import type { SessionSystemMessage } from "@/types/session/SessionPrompts.js";
+} from "@/session/types/SessionMessages.js";
+import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
 import { SessionComposer } from "@session/composer/SessionComposer.js";
 
 /**

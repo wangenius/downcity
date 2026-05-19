@@ -6,7 +6,7 @@
  * - 已建联后的敏感调用必须携带 contact token。
  */
 
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { JsonValue } from "@/utils/types/Json.js";
 
 type JsonRecord = Record<string, unknown>;
 

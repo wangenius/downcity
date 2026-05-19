@@ -9,8 +9,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@session/*": ["./src/session/*"],
-      "@services/*": ["./src/service/builtins/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@services/*": ["./src/service/builtins/*"]
     },
     "strict": true,
     "noImplicitAny": false,

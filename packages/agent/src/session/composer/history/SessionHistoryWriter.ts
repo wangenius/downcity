@@ -7,11 +7,11 @@
  * - 会话更新后的通知也收在这里，避免把写入细节散到 Session 主类里。
  */
 
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import type {
   SessionMessageV1,
   SessionMetadataV1,
-} from "@/types/session/SessionMessages.js";
+} from "@/session/types/SessionMessages.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
 
 type SessionHistoryWriterOptions = {

@@ -13,7 +13,7 @@ import fs from "fs-extra";
 import type {
   SandboxSpawnParams,
   SandboxSpawnResult,
-} from "@/types/sandbox/SandboxRuntime.js";
+} from "@/sandbox/types/SandboxRuntime.js";
 
 const DEFAULT_PATH_VALUE =
   "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";

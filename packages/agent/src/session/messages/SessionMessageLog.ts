@@ -8,8 +8,8 @@
  */
 
 import { isTextUIPart } from "ai";
-import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
+import type { Logger } from "@/utils/logger/Logger.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 
 /**
  * 从 UI message 中提取 assistant 文本部分。

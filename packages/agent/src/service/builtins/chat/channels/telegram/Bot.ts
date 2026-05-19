@@ -36,7 +36,7 @@ import {
 } from "@/service/builtins/chat/runtime/InboundAugment.js";
 import { renderChatMessageFileTag } from "@/service/builtins/chat/runtime/ChatMessageMarkup.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
 import {
   buildTelegramAuditText,

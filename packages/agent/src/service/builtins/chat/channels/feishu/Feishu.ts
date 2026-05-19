@@ -15,7 +15,7 @@ import type {
   ChannelSendTextParams,
 } from "@/service/builtins/chat/channels/BaseChatChannel.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@/service/builtins/chat/types/FeishuAttachment.js";
 import type { InboundReplyContext } from "@/service/builtins/chat/types/ReplyContext.js";
@@ -23,7 +23,7 @@ import type {
   FeishuConfig,
   FeishuMessageEvent,
   FeishuMessagePayloadType,
-} from "@/shared/types/FeishuChannel.js";
+} from "@/service/builtins/chat/channels/feishu/types/FeishuChannel.js";
 import { parseFeishuAttachments } from "./Shared.js";
 import { parseFeishuInboundMessage } from "./InboundAttachment.js";
 import {

@@ -17,16 +17,16 @@ import path from "node:path";
 import {
   type Tool,
 } from "ai";
-import { generateId } from "@shared/utils/Id.js";
-import { getLogger } from "@shared/utils/logger/Logger.js";
+import { generateId } from "@/utils/Id.js";
+import { getLogger } from "@/utils/logger/Logger.js";
 import { compactSessionMessagesIfNeeded } from "@session/composer/compaction/jsonl/JsonlSessionCompactionExecutor.js";
 import type {
   SessionMessageV1,
   SessionMetadataV1,
-} from "@/types/session/SessionMessages.js";
-import type { SessionSystemMessage } from "@/types/session/SessionPrompts.js";
-import type { SessionHistoryMetaV1 } from "@/types/session/SessionHistoryMeta.js";
-import type { SessionHistoryPathOverrides } from "@/types/session/SessionHistoryPaths.js";
+} from "@/session/types/SessionMessages.js";
+import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
+import type { SessionHistoryMetaV1 } from "@/session/types/SessionHistoryMeta.js";
+import type { SessionHistoryPathOverrides } from "@/session/types/SessionHistoryPaths.js";
 import {
   SessionHistoryComposer,
   type SessionHistoryCompactInput,

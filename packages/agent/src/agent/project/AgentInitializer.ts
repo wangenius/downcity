@@ -26,23 +26,23 @@ import {
   getDowncityTasksDirPath,
   getSoulMdPath,
 } from "@/config/Paths.js";
-import { DEFAULT_DOWNCITY_JSON } from "@/shared/constants/DowncityDefault.js";
-import { DOWNCITY_JSON_SCHEMA } from "@/shared/constants/DowncitySchema.js";
+import { DEFAULT_DOWNCITY_JSON } from "@/config/DowncityDefault.js";
+import { DOWNCITY_JSON_SCHEMA } from "@/config/DowncitySchema.js";
 import type { DowncityConfig } from "@/config/Config.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
 } from "@session/composer/system/default/InitPrompts.js";
-import { renderTemplateVariables } from "@/shared/utils/Template.js";
-import { ensureDir, saveJson } from "@/shared/utils/storage/index.js";
+import { renderTemplateVariables } from "@/utils/Template.js";
+import { ensureDir, saveJson } from "@/utils/storage/index.js";
 import type {
   AgentProjectChannel,
   AgentProjectInitializationInput,
   AgentProjectInitializationResult,
-} from "@/shared/types/AgentProject.js";
+} from "@/agent/project/types/AgentProject.js";
 import { assertProjectExecutionTarget } from "@/agent/project/ProjectExecutionBinding.js";
-import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
-import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
+import type { ExecutionBindingConfig } from "@/config/types/ExecutionBinding.js";
+import type { AgentPlatformRuntime } from "@/host/types/AgentHost.js";
 
 /**
  * 平台模型选项。
@@ -63,6 +63,43 @@ type EnvEntry = {
   key: string;
   value: string;
 };
+
+/**
+ * 确保 `.gitignore` 包含指定条目。
+ *
+ * 关键点（中文）
+ * - 只做最小追加，不重排用户已有内容。
+ * - 已存在同名规则时不重复写入，避免污染版本库。
+ */
+async function ensureGitignoreEntry(params: {
+  projectRoot: string;
+  entry: string;
+}): Promise<"created" | "updated" | "unchanged"> {
+  const projectRoot = path.resolve(String(params.projectRoot || "").trim() || ".");
+  const entry = String(params.entry || "").trim();
+  if (!entry) return "unchanged";
+
+  const gitignorePath = path.join(projectRoot, ".gitignore");
+  const hasGitignore = await fs.pathExists(gitignorePath);
+  const existingContent = hasGitignore
+    ? await fs.readFile(gitignorePath, "utf-8")
+    : "";
+  const normalizedLines = existingContent
+    .split(/\r?\n/)
+    .map((line) => String(line || "").trim());
+
+  if (normalizedLines.includes(entry)) {
+    return "unchanged";
+  }
+
+  const lines = existingContent ? [existingContent] : [];
+  if (existingContent && !existingContent.endsWith("\n")) {
+    lines.push("\n");
+  }
+  lines.push(`${entry}\n`);
+  await fs.writeFile(gitignorePath, lines.join(""), "utf-8");
+  return hasGitignore ? "updated" : "created";
+}
 
 /**
  * 规范化默认 Agent 名称。
@@ -337,6 +374,16 @@ export async function initializeAgentProject(
     sectionTitle: "Downcity Create Example",
     entries: [],
   });
+
+  const gitignoreStatus = await ensureGitignoreEntry({
+    projectRoot,
+    entry: ".downcity",
+  });
+  if (gitignoreStatus === "created" || gitignoreStatus === "updated") {
+    createdFiles.push(".gitignore");
+  } else {
+    skippedFiles.push(".gitignore");
+  }
 
   const dirs = [
     getDowncityDirPath(projectRoot),

@@ -8,8 +8,8 @@
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ChatQueueWorkerConfig } from "@/shared/types/ChatQueueWorker.js";
-import type { StoredChannelAccount } from "@/shared/types/Store.js";
+import type { ChatQueueWorkerConfig } from "@/service/builtins/chat/types/ChatQueueWorker.js";
+import type { StoredChannelAccount } from "@/host/types/Store.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 
 /**

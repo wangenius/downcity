@@ -7,12 +7,12 @@
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import type {
   AuthObservePrincipalPayload,
   ChatAuthorizationEvaluateInput,
   ChatAuthorizationRole,
-} from "@/shared/types/AuthPlugin.js";
+} from "@/plugin/builtins/auth/types/AuthPlugin.js";
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
 

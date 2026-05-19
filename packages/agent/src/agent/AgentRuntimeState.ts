@@ -12,12 +12,12 @@ import type {
   AgentRuntime,
   AgentRuntimeBase,
 } from "@/agent/AgentRuntimeTypes.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
+import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
 import type {
   AgentPathRuntime,
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
-} from "@/shared/types/AgentHost.js";
+} from "@/host/types/AgentHost.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 export type { AgentRuntime, AgentRuntimeBase } from "@/agent/AgentRuntimeTypes.js";
 

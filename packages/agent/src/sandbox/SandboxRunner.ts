@@ -8,7 +8,7 @@
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { SandboxSpawnResult } from "@/types/sandbox/SandboxRuntime.js";
+import type { SandboxSpawnResult } from "@/sandbox/types/SandboxRuntime.js";
 import { resolveSandboxConfig, resolveSandboxCwd } from "@/sandbox/SandboxConfigResolver.js";
 import { spawnMacOsSeatbeltSandbox } from "@/sandbox/MacOsSeatbeltSandbox.js";
 

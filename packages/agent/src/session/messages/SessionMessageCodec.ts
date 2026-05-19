@@ -14,7 +14,7 @@ import {
   type Tool,
   type ToolSet,
 } from "ai";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import { injectFilePartsFromAttachments } from "@session/messages/SessionAttachmentMapper.js";
 
 /**

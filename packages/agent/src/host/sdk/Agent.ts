@@ -10,19 +10,19 @@
 import fs from "fs-extra";
 import { nanoid } from "nanoid";
 import type { Tool } from "ai";
-import { Logger } from "@shared/utils/logger/Logger.js";
+import { Logger } from "@/utils/logger/Logger.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
-import type { JsonValue } from "@/shared/types/Json.js";
-import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
+import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { JsonValue } from "@/utils/types/Json.js";
+import type { AgentPlatformRuntime } from "@/host/types/AgentHost.js";
 import type {
   Plugin,
   PluginAvailability,
   PluginPort,
   PluginView,
-} from "@/shared/types/Plugin.js";
+} from "@/plugin/types/Plugin.js";
 import type {
   AgentOptions,
   AgentSessionMetadata,
@@ -40,9 +40,9 @@ import { loadDowncityConfig } from "@/config/Config.js";
 import { appendExecSessionMessage } from "@/service/builtins/chat/runtime/ChatIngressStore.js";
 import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
 import { resolveChatQueueStore } from "@/service/builtins/chat/runtime/ChatQueueStore.js";
-import { HookRegistry } from "@/plugin/HookRegistry.js";
-import { PluginRegistry } from "@/plugin/PluginRegistry.js";
-import { isPluginEnabled } from "@/plugin/Activation.js";
+import { HookRegistry } from "@/plugin/core/HookRegistry.js";
+import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
+import { isPluginEnabled } from "@/plugin/core/Activation.js";
 
 const EMPTY_SDK_PLATFORM: AgentPlatformRuntime = {
   getGlobalEnv: () => ({}),

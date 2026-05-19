@@ -8,15 +8,15 @@
  */
 
 import WebSocket, { type RawData } from "ws";
-import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { Logger } from "@/utils/logger/Logger.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import type {
   QQEventCaptureConfig,
   QQGatewayPayload,
   QqDispatchHandler,
   QqGatewayRuntimeStatus,
-} from "@/shared/types/QqChannel.js";
-import { EventType, OpCode } from "@/shared/types/QqChannel.js";
+} from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
+import { EventType, OpCode } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
 import { captureQqWsPayload } from "./QQEventCapture.js";
 import {
   fetchQqAccessToken,

@@ -7,7 +7,7 @@
  */
 
 import type { ModelMessage } from "ai";
-import { generateId } from "@shared/utils/Id.js";
+import { generateId } from "@/utils/Id.js";
 import {
   drainInjectedUserMessages,
   getSessionRunScope,
@@ -16,8 +16,8 @@ import { SessionExecutionComposer } from "@session/composer/execution/SessionExe
 import type {
   SessionExecutionComposeResult,
 } from "@session/composer/execution/SessionExecutionComposer.js";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
-import type { SessionSystemMessage } from "@/types/session/SessionPrompts.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
 import type { Tool } from "ai";
 
 type LocalSessionExecutionComposerOptions = {

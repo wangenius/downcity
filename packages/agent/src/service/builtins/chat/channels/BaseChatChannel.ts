@@ -14,7 +14,7 @@ import type {
   ChatDispatchSendActionParams,
   ChatDispatcher,
 } from "@/service/builtins/chat/types/ChatDispatcher.js";
-import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import { resolveChatQueueStore } from "@/service/builtins/chat/runtime/ChatQueue.js";
 import { deleteChatSessionById } from "@/service/builtins/chat/runtime/ChatSessionDelete.js";

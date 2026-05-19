@@ -8,13 +8,13 @@
  */
 
 import type { LanguageModel } from "ai";
-import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
+import type { Logger } from "@/utils/logger/Logger.js";
+import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
 import type {
   AgentPathRuntime,
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
-} from "@/shared/types/AgentHost.js";
+} from "@/host/types/AgentHost.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
 import type { Session } from "@session/Session.js";
 

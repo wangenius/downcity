@@ -9,7 +9,7 @@
 import path from "node:path";
 import type { ShipTaskStatus } from "./types/Task.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { JsonValue } from "@/utils/types/Json.js";
 import {
   deriveTaskIdFromTitle,
   normalizeTaskId,

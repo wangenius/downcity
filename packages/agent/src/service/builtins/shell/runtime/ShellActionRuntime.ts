@@ -15,7 +15,7 @@ import type {
   ShellSessionRuntimeState,
   ShellSessionWaiter,
 } from "@/service/builtins/shell/ShellRuntimeTypes.js";
-import { generateId } from "@shared/utils/Id.js";
+import { generateId } from "@/utils/Id.js";
 import type {
   ShellActionResponse,
   ShellCloseRequest,

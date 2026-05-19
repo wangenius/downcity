@@ -7,8 +7,8 @@
  */
 
 import { resolveSessionId } from "@session/ids/resolveSessionId.js";
-import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import type { ServiceActionCommandInput } from "@/shared/types/Service.js";
+import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { ServiceActionCommandInput } from "@/service/types/Service.js";
 import type { ShipTaskKind, ShipTaskStatus } from "@/service/builtins/task/types/Task.js";
 import type {
   TaskCreateRequest,
@@ -17,7 +17,7 @@ import type {
   TaskSetStatusRequest,
   TaskUpdateRequest,
 } from "@/service/builtins/task/types/TaskCommand.js";
-import type { TaskListActionPayload } from "@/shared/types/TaskService.js";
+import type { TaskListActionPayload } from "@/service/builtins/task/types/TaskService.js";
 
 function parseJsonBodyObject(rawBody: JsonValue): JsonObject {
   if (rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)) {

@@ -12,7 +12,7 @@ import path from "node:path";
 import type {
   ManagedAgentRegistryEntry,
   ManagedAgentRegistryV1,
-} from "@/shared/types/Platform.js";
+} from "@/host/runtime/types/Platform.js";
 import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "./CityPaths.js";
 import { isCityRunning } from "./CityRuntime.js";
 

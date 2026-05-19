@@ -8,7 +8,7 @@
  */
 
 import path from "node:path";
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import type {
   ChatDeleteActionPayload,
@@ -18,7 +18,7 @@ import type {
   ChatReactActionPayload,
   ChatSendActionPayload,
   ChatSessionActionPayload,
-} from "@/shared/types/ChatService.js";
+} from "@/service/builtins/chat/types/ChatService.js";
 import type { ChatHistoryEventV1 } from "@/service/builtins/chat/types/ChatHistory.js";
 import type { ChatListItemV1 } from "@/service/builtins/chat/types/ChatCommand.js";
 import {

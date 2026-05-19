@@ -14,7 +14,7 @@ import type {
   FeishuDownloadedAttachment,
   FeishuMessageEvent,
   FeishuMessagePayloadType,
-} from "@/shared/types/FeishuChannel.js";
+} from "@/service/builtins/chat/channels/feishu/types/FeishuChannel.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@/service/builtins/chat/types/FeishuAttachment.js";
 import type { FeishuIncomingAttachmentDescriptor } from "@/service/builtins/chat/types/FeishuInboundAttachment.js";

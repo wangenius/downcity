@@ -8,16 +8,16 @@
  */
 
 import type { LanguageModel } from "ai";
-import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
 import type {
   AgentPathRuntime,
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
-} from "@/shared/types/AgentHost.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
-import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import type { PluginPort } from "@/shared/types/Plugin.js";
+} from "@/host/types/AgentHost.js";
+import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { PluginPort } from "@/plugin/types/Plugin.js";
 import type { ChatMetaV1 } from "@/service/builtins/chat/types/ChatMeta.js";
 import type {
   ChatQueueEnqueueParams,
@@ -27,12 +27,12 @@ import type {
   SessionMetadataV1,
   SessionMessageV1,
   SessionUserMessageV1,
-} from "@/types/session/SessionMessages.js";
+} from "@/session/types/SessionMessages.js";
 import type {
   SessionAssistantStepCallback,
   SessionRunInput,
   SessionRunResult,
-} from "@/types/session/SessionRun.js";
+} from "@/session/types/SessionRun.js";
 
 /**
  * 跨 service 调用参数。

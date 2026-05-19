@@ -15,13 +15,13 @@ import {
   type LanguageModel,
   type SystemModelMessage,
 } from "ai";
-import { generateId } from "@shared/utils/Id.js";
-import { getLogger } from "@shared/utils/logger/Logger.js";
+import { generateId } from "@/utils/Id.js";
+import { getLogger } from "@/utils/logger/Logger.js";
 import type {
   SessionMessageV1,
   SessionMetadataV1,
-} from "@/types/session/SessionMessages.js";
-import type { SessionHistoryMetaV1 } from "@/types/session/SessionHistoryMeta.js";
+} from "@/session/types/SessionMessages.js";
+import type { SessionHistoryMetaV1 } from "@/session/types/SessionHistoryMeta.js";
 
 export type SessionCompactParams = {
   model: LanguageModel;

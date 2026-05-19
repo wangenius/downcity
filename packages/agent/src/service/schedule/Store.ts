@@ -13,9 +13,9 @@ import type {
   CreateScheduledJobInput,
   ScheduledJobRecord,
   ScheduledJobStatus,
-} from "@/shared/types/ServiceSchedule.js";
-import type { JsonValue } from "@/shared/types/Json.js";
-import { generateId } from "@shared/utils/Id.js";
+} from "@/service/types/ServiceSchedule.js";
+import type { JsonValue } from "@/utils/types/Json.js";
+import { generateId } from "@/utils/Id.js";
 import { getDowncityScheduleDbPath } from "@/config/Paths.js";
 
 type ScheduledJobEvent =

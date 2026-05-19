@@ -19,7 +19,7 @@ import {
   type LanguageModel,
   type ModelMessage,
 } from "ai";
-import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
 import { SessionExecutionComposer } from "@session/composer/execution/SessionExecutionComposer.js";
 import { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
@@ -52,9 +52,9 @@ import type {
   SessionExecuteInput,
   SessionRunResult,
   SessionRunInput,
-} from "@/types/session/SessionRun.js";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
-import type { JsonObject } from "@/shared/types/Json.js";
+} from "@/session/types/SessionRun.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 
 /**
  * 可压缩错误的最大重试次数。

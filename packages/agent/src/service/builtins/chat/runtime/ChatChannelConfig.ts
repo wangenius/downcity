@@ -9,15 +9,15 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { StoredChannelAccount } from "@/shared/types/Store.js";
+import type { StoredChannelAccount } from "@/host/types/Store.js";
 import type {
   ChatChannelName,
   ChatChannelStateSnapshot,
 } from "@/service/builtins/chat/types/ChannelStatus.js";
 import type { ChatChannelConfigurationField } from "@/service/builtins/chat/types/ChannelConfiguration.js";
-import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
+import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 import {
   getChatChannelConfiguration,
   listChatChannelConfigurations,

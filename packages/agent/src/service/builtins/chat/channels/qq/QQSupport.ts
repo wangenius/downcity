@@ -8,8 +8,8 @@
 
 import { buildChatInboundText, augmentChatInboundInput } from "@/service/builtins/chat/runtime/InboundAugment.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/shared/types/Json.js";
-import type { QQMessageData, QQReadyUser } from "@/shared/types/QqChannel.js";
+import type { JsonObject } from "@/utils/types/Json.js";
+import type { QQMessageData, QQReadyUser } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
 import type { QqIncomingAttachment } from "@/service/builtins/chat/types/QqVoice.js";
 import { resolveQqAttachmentLocalPath } from "./VoiceInput.js";
 

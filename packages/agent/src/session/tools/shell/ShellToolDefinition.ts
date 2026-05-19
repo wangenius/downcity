@@ -16,8 +16,8 @@ import type {
   ShellStatusInput,
   ShellWaitInput,
   ShellWriteInput,
-} from "@/shared/types/Shell.js";
-import type { JsonObject } from "@/shared/types/Json.js";
+} from "@/service/builtins/shell/types/Shell.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import { validateChatSendCommand } from "./ShellToolFormatting.js";
 import {
   bridgeCommandResponse,

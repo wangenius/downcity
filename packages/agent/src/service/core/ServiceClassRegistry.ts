@@ -10,7 +10,7 @@
 import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
 import { SERVICE_CLASSES } from "@/service/core/Services.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
-import type { Service } from "@/shared/types/Service.js";
+import type { Service } from "@/service/types/Service.js";
 
 let staticServiceInstances: Map<string, BaseService> | null = null;
 

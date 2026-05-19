@@ -33,10 +33,10 @@ import type {
   ChannelSendTextParams,
 } from "@/service/builtins/chat/channels/BaseChatChannel.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonObject } from "@/shared/types/Json.js";
+import type { JsonObject } from "@/utils/types/Json.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
-import type { QQConfig, QQMessageData } from "@/shared/types/QqChannel.js";
-import { EventType } from "@/shared/types/QqChannel.js";
+import type { QQConfig, QQMessageData } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
+import { EventType } from "@/service/builtins/chat/channels/qq/types/QqChannel.js";
 
 /**
  * QQ 平台适配器。

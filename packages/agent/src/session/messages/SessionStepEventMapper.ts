@@ -7,9 +7,9 @@
  * - 输出仍然是标准 SessionMessageV1，供 SessionHistoryWriter 直接落盘。
  */
 
-import { generateId } from "@shared/utils/Id.js";
-import type { JsonObject } from "@/shared/types/Json.js";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
+import { generateId } from "@/utils/Id.js";
+import type { JsonObject } from "@/utils/types/Json.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 
 type UnknownRecord = Record<string, unknown>;
 

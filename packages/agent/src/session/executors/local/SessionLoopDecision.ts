@@ -10,7 +10,7 @@ import type {
   SessionLoopDecision,
   SessionLoopDecisionInput,
   SessionTailMergeContinuationInput,
-} from "@/types/session/SessionLoop.js";
+} from "@/session/types/SessionLoop.js";
 
 /**
  * 评估当前 step 完成后，LocalSessionCore 是否应继续下一轮。

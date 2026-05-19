@@ -11,7 +11,7 @@ export type {
   ServiceStateControlAction,
   ServiceStateControlResult,
   ServiceStateSnapshot,
-} from "@/shared/types/ServiceState.js";
+} from "@/service/types/ServiceState.js";
 export {
   controlServiceState,
   getServiceRootCommandNames,

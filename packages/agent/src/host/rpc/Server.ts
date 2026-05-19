@@ -11,23 +11,23 @@ import net, { type Server } from "node:net";
 import path from "node:path";
 import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { JsonValue } from "@/shared/types/Json.js";
-import type { LocalRpcRequest, LocalRpcResponse, LocalRpcServerHandle } from "@/shared/types/LocalRpc.js";
-import type { ControlSessionExecuteRequestBody } from "@/shared/types/ControlSessionExecute.js";
+import type { JsonValue } from "@/utils/types/Json.js";
+import type { LocalRpcRequest, LocalRpcResponse, LocalRpcServerHandle } from "@/host/rpc/types/LocalRpc.js";
+import type { ControlSessionExecuteRequestBody } from "@/host/http/control/types/ControlSessionExecute.js";
 import type {
   PluginActionResponse,
   PluginAvailabilityResponse,
   PluginListResponse,
-} from "@/shared/types/PluginApi.js";
+} from "@/plugin/types/PluginApi.js";
 import type {
   ServiceControlAction,
   ServiceCommandResponse,
   ServiceControlResponse,
   ServiceListResponse,
-} from "@/shared/types/Services.js";
+} from "@/service/types/Services.js";
 import { listServiceStates, controlServiceState } from "@/service/core/ServiceStateController.js";
 import { runServiceCommand } from "@/service/core/ServiceActionRunner.js";
-import { executeBySessionId } from "@/http/control/ExecuteBySession.js";
+import { executeBySessionId } from "@/host/http/control/ExecuteBySession.js";
 import { getLocalRpcEndpoint } from "./Paths.js";
 
 async function isSocketEndpointActive(endpoint: string): Promise<boolean> {

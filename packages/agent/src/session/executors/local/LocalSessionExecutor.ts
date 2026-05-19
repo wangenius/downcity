@@ -7,14 +7,14 @@
  */
 
 import type { LanguageModel, Tool } from "ai";
-import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import { LocalSessionCore } from "@session/executors/local/LocalSessionCore.js";
 import { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
 import { SessionExecutionComposer } from "@session/composer/execution/SessionExecutionComposer.js";
 import { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
 import { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
 import { LocalSessionExecutionComposer } from "@session/composer/execution/LocalSessionExecutionComposer.js";
-import type { SessionRunResult, SessionRunInput } from "@/types/session/SessionRun.js";
+import type { SessionRunResult, SessionRunInput } from "@/session/types/SessionRun.js";
 
 type LocalSessionExecutorOptions = {
   /**

@@ -7,8 +7,8 @@
  * - 避免解析逻辑散落在多个模块中。
  */
 
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
-import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
+import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { ExecutionBindingConfig } from "@/config/types/ExecutionBinding.js";
 
 /**
  * 读取项目执行绑定。

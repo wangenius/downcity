@@ -6,8 +6,8 @@
  * - runtime 注入、桥接协议解析、输出扁平化都收敛在这里，避免 `Tool.ts` 继续膨胀。
  */
 
-import { generateId } from "@shared/utils/Id.js";
-import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import { generateId } from "@/utils/Id.js";
+import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
 import type {
   InvokeServicePort,
   InvokeServiceResult,

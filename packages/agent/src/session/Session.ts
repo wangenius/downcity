@@ -12,10 +12,10 @@ import type { SessionHistoryComposer } from "@session/composer/history/SessionHi
 import { withSessionRunScope } from "@session/SessionRunScope.js";
 import type { SessionRunScope } from "@session/SessionRunScope.js";
 import { buildSessionStepEventMessages } from "@session/messages/SessionStepEventMapper.js";
-import type { JsonObject } from "@/shared/types/Json.js";
-import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
-import type { SessionExecutor } from "@/types/session/SessionExecutor.js";
-import type { SessionRunResult } from "@/types/session/SessionRun.js";
+import type { JsonObject } from "@/utils/types/Json.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
+import type { SessionRunResult } from "@/session/types/SessionRun.js";
 
 type SessionOptions = {
   /**

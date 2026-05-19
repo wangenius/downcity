@@ -12,7 +12,7 @@ import type {
   DaemonJsonApiCallParams,
   DaemonJsonApiCallResult,
 } from "@/host/daemon/Api.js";
-import type { LocalRpcRequest, LocalRpcResponse } from "@/shared/types/LocalRpc.js";
+import type { LocalRpcRequest, LocalRpcResponse } from "@/host/rpc/types/LocalRpc.js";
 import { getLocalRpcEndpoint } from "./Paths.js";
 
 const LOCAL_RPC_TIMEOUT_MS = 5_000;

@@ -13,7 +13,7 @@ import type {
   ServiceStateControlResult,
   ServiceStateRecord,
   ServiceStateSnapshot,
-} from "@/shared/types/ServiceState.js";
+} from "@/service/types/ServiceState.js";
 import { getAgentRuntime } from "@/agent/AgentRuntimeState.js";
 import {
   getRegisteredStaticServiceInstances,
@@ -21,7 +21,7 @@ import {
   listRegisteredServiceNames,
 } from "@/service/core/ServiceClassRegistry.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
-import type { Service, ServiceState } from "@/shared/types/Service.js";
+import type { Service, ServiceState } from "@/service/types/Service.js";
 
 function nowMs(): number {
   return Date.now();

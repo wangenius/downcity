@@ -11,9 +11,9 @@ import type {
   Service,
   ServiceActions,
   ServiceLifecycle,
-} from "@/shared/types/Service.js";
+} from "@/service/types/Service.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ServiceStateRecord } from "@/shared/types/ServiceState.js";
+import type { ServiceStateRecord } from "@/service/types/ServiceState.js";
 
 /**
  * BaseService 抽象基类。

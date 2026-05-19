@@ -8,7 +8,7 @@
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
+import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 import { createTelegramBot } from "@/service/builtins/chat/channels/telegram/Bot.js";
 import { createFeishuBot } from "@/service/builtins/chat/channels/feishu/Feishu.js";

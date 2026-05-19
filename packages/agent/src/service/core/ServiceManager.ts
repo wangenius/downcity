@@ -17,4 +17,4 @@ export type {
   ServiceCommandResult,
   ServiceLifecycle,
   ServiceState,
-} from "@/shared/types/Service.js";
+} from "@/service/types/Service.js";

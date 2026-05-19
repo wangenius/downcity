@@ -7,13 +7,13 @@
  * - HTTP route 层不会直接实现业务分发，只调用这里的统一入口。
  */
 
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { JsonValue } from "@/utils/types/Json.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ServiceCommandScheduleInput } from "@/shared/types/ServiceSchedule.js";
+import type { ServiceCommandScheduleInput } from "@/service/types/ServiceSchedule.js";
 import type {
   ServiceStateControlAction,
   ServiceStateSnapshot,
-} from "@/shared/types/ServiceState.js";
+} from "@/service/types/ServiceState.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
 import { ServiceScheduleStore } from "../schedule/Store.js";
 import { normalizeRunAtMsOrThrow } from "../schedule/Time.js";
@@ -21,7 +21,7 @@ import type {
   ServiceAction,
   ServiceActionResult,
   ServiceCommandResult,
-} from "@/shared/types/Service.js";
+} from "@/service/types/Service.js";
 import {
   controlServiceState,
   ensureServiceStateRecord,

@@ -10,11 +10,11 @@
 
 import type { AgentRuntime } from "@/agent/AgentRuntimeTypes.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
-import type { ServiceActions } from "@/shared/types/Service.js";
+import type { ServiceActions } from "@/service/types/Service.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
-import type { StoredChannelAccount } from "@/shared/types/Store.js";
-import type { ChatQueueWorkerConfig } from "@/shared/types/ChatQueueWorker.js";
+import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
+import type { StoredChannelAccount } from "@/host/types/Store.js";
+import type { ChatQueueWorkerConfig } from "@/service/builtins/chat/types/ChatQueueWorker.js";
 import type {
   ChatServiceFeishuOptions,
   ChatServiceOptions,

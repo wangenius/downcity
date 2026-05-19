@@ -7,8 +7,8 @@
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ChatReplyDispatchInput, ChatReplyEffectInput } from "@/shared/types/ChatPlugin.js";
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { ChatReplyDispatchInput, ChatReplyEffectInput } from "@/service/builtins/chat/types/ChatPlugin.js";
+import type { JsonValue } from "@/utils/types/Json.js";
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
 import { resolveDispatchTargetByChatKey } from "@/service/builtins/chat/runtime/ChatkeySend.js";

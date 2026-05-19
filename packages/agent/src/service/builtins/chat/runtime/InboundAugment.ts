@@ -7,8 +7,8 @@
  */
 
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
-import type { ChatInboundAugmentInput } from "@/shared/types/ChatPlugin.js";
-import type { JsonValue } from "@/shared/types/Json.js";
+import type { ChatInboundAugmentInput } from "@/service/builtins/chat/types/ChatPlugin.js";
+import type { JsonValue } from "@/utils/types/Json.js";
 import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
 
 function normalizeText(value: string | undefined): string | undefined {

@@ -17,12 +17,12 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createXai } from "@ai-sdk/xai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { type LanguageModel } from "ai";
-import { createLlmLoggingFetch } from "@shared/utils/logger/Fetch.js";
-import { getLogger } from "@shared/utils/logger/Logger.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
-import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
+import { createLlmLoggingFetch } from "@/utils/logger/Fetch.js";
+import { getLogger } from "@/utils/logger/Logger.js";
+import type { DowncityConfig } from "@/config/types/DowncityConfig.js";
+import type { LlmProviderType } from "@/config/types/LlmConfig.js";
 import { readProjectExecutionBinding } from "@/agent/project/ProjectExecutionBinding.js";
-import type { AgentPlatformRuntime } from "@/shared/types/AgentHost.js";
+import type { AgentPlatformRuntime } from "@/host/types/AgentHost.js";
 
 type ModelLogContext = {
   sessionId?: string;

@@ -9,8 +9,8 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import type { ServiceActionCommandInput } from "@/shared/types/Service.js";
+import type { JsonObject, JsonValue } from "@/utils/types/Json.js";
+import type { ServiceActionCommandInput } from "@/service/types/Service.js";
 import type {
   ChatConfigureActionPayload,
   ChatDeleteActionPayload,
@@ -19,7 +19,7 @@ import type {
   ChatListActionPayload,
   ChatReactActionPayload,
   ChatSendActionPayload,
-} from "@/shared/types/ChatService.js";
+} from "@/service/builtins/chat/types/ChatService.js";
 import { buildChatMessageText, parseChatMessageMarkup } from "@/service/builtins/chat/runtime/ChatMessageMarkup.js";
 import { parseChatSendOptionsFromMetadata } from "@/service/builtins/chat/runtime/ChatSendMetadata.js";
 import { normalizeChatSendText, resolveChatKey } from "@/service/builtins/chat/Action.js";

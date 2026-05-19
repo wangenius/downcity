@@ -22,3 +22,13 @@ Its biggest advantages are:
 - full local context
 - direct debugging
 - no cross-process networking problems to solve first
+
+## Packaging behavior
+
+The built-in system prompts and init templates in `@downcity/agent` are now compiled directly into TypeScript modules.
+
+That means:
+
+- you do not need to copy extra runtime text assets such as `PROMPT.txt`
+- embedding the SDK into Electron main or another Node host no longer depends on preserving a prompt file directory structure
+- as long as your runtime can load the ESM entry of `@downcity/agent`, prompt asset path issues will not block startup

@@ -1,6 +1,6 @@
 {
   "name": "@downcity/city",
-  "version": "1.1.9",
+  "version": "1.1.11",
   "type": "module",
   "description": "Downcity City 平台 — CLI、daemon 管理、Console 网关、能力平台",
   "bin": {

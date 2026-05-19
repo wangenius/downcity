@@ -6,71 +6,22 @@
  * - 当前请求只注入当前 channel 的 prompt，避免平台规则串味。
  * - 该模块只负责 prompt 解析与拼装，不承担运行态控制职责。
  */
-
-import { readFileSync } from "node:fs";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import {
   buildCurrentChatEnvironmentPrompt,
   resolveCurrentChatEnvironmentPromptInput,
 } from "@/service/builtins/chat/runtime/SystemPrompt.js";
-
-const CHAT_DIRECT_PROMPT_FILE_URL = new URL("../PROMPT.direct.txt", import.meta.url);
-const TELEGRAM_DIRECT_PROMPT_FILE_URL = new URL(
-  "../channels/telegram/PROMPT.direct.txt",
-  import.meta.url,
-);
-const FEISHU_DIRECT_PROMPT_FILE_URL = new URL(
-  "../channels/feishu/PROMPT.direct.txt",
-  import.meta.url,
-);
-const QQ_DIRECT_PROMPT_FILE_URL = new URL(
-  "../channels/qq/PROMPT.direct.txt",
-  import.meta.url,
-);
-
-/**
- * 加载 chat service 使用说明提示词。
- *
- * 关键点（中文）
- * - 启动阶段即加载，缺失时直接抛错，避免静默失效。
- */
-function loadChatServicePrompt(fileUrl: URL): string {
-  try {
-    return readFileSync(fileUrl, "utf-8").trim();
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `failed to load chat service prompt from ${fileUrl.pathname}: ${reason}`,
-    );
-  }
-}
-
-const CHAT_SERVICE_PROMPT = loadChatServicePrompt(CHAT_DIRECT_PROMPT_FILE_URL);
-
-/**
- * 加载单个 channel 提示词。
- *
- * 关键点（中文）
- * - channel 提示词属于强依赖资产，缺失时直接抛错，避免运行时悄悄丢失规则。
- */
-function loadChatChannelPrompt(fileUrl: URL, channelName: string): string {
-  try {
-    return readFileSync(fileUrl, "utf-8").trim();
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `failed to load ${channelName} chat channel prompt from ${fileUrl.pathname}: ${reason}`,
-    );
-  }
-}
+import {
+  CHAT_SERVICE_PROMPT,
+  FEISHU_CHAT_CHANNEL_PROMPT,
+  QQ_CHAT_CHANNEL_PROMPT,
+  TELEGRAM_CHAT_CHANNEL_PROMPT,
+} from "@/service/builtins/chat/runtime/ChatPromptAssets.js";
 
 const CHAT_CHANNEL_PROMPTS: Record<"telegram" | "feishu" | "qq", string> = {
-  telegram: loadChatChannelPrompt(
-    TELEGRAM_DIRECT_PROMPT_FILE_URL,
-    "telegram-direct",
-  ),
-  feishu: loadChatChannelPrompt(FEISHU_DIRECT_PROMPT_FILE_URL, "feishu-direct"),
-  qq: loadChatChannelPrompt(QQ_DIRECT_PROMPT_FILE_URL, "qq-direct"),
+  telegram: TELEGRAM_CHAT_CHANNEL_PROMPT,
+  feishu: FEISHU_CHAT_CHANNEL_PROMPT,
+  qq: QQ_CHAT_CHANNEL_PROMPT,
 };
 
 function resolveCurrentChatPromptChannel(

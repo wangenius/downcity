@@ -6,27 +6,18 @@
  * - `DefaultSessionSystemComposer` 只做组件适配；核心逻辑统一在本文件。
  */
 
-import fs from "fs-extra";
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@session/composer/system/default/PromptRenderer.js";
-import { isPluginEnabled } from "@/plugin/Activation.js";
-import { PLUGINS } from "@/plugin/Plugins.js";
+import { isPluginEnabled } from "@/plugin/core/Activation.js";
+import { PLUGINS } from "@/plugin/core/Plugins.js";
 import { SERVICE_SYSTEM_PROVIDERS } from "@/service/core/ServiceSystemProviders.js";
 import type { AgentContext } from "@/agent/AgentContextTypes.js";
 import { buildRuntimeClockSystemPrompt } from "@session/composer/system/default/variables/VariableReplacer.js";
-
-const CORE_PROMPT_FILE_URL = new URL(
-  "./assets/core.prompt.txt",
-  import.meta.url,
-);
-const SERVICE_PROMPT_FILE_URL = new URL(
-  "./assets/service.prompt.txt",
-  import.meta.url,
-);
-const TASK_PROMPT_FILE_URL = new URL(
-  "./assets/task.prompt.txt",
-  import.meta.url,
-);
+import {
+  CORE_SYSTEM_PROMPT,
+  SERVICE_SYSTEM_PROMPT,
+  TASK_SYSTEM_PROMPT,
+} from "@session/composer/system/default/SystemPromptAssets.js";
 
 const DEFAULT_DISABLED_SERVICE_NAMES: string[] = [];
 
@@ -35,35 +26,11 @@ function normalizeSystemText(input: string | null | undefined): string {
 }
 
 /**
- * 从 system 资产读取 prompt 文本。
- */
-function loadSystemPromptAsset(fileUrl: URL, label: string): string {
-  try {
-    return fs.readFileSync(fileUrl, "utf-8").trim();
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `failed to load ${label} from ${fileUrl.pathname}: ${reason}`,
-    );
-  }
-}
-
-/**
  * Ship 默认系统提示模板。
  */
-export const DEFAULT_SHIP_PROMPTS = loadSystemPromptAsset(
-  CORE_PROMPT_FILE_URL,
-  "core system prompt",
-);
+export const DEFAULT_SHIP_PROMPTS = CORE_SYSTEM_PROMPT;
 
-const MAIN_SERVICE_PROMPT = loadSystemPromptAsset(
-  SERVICE_PROMPT_FILE_URL,
-  "service system prompt",
-);
-const TASK_SYSTEM_PROMPT = loadSystemPromptAsset(
-  TASK_PROMPT_FILE_URL,
-  "task system prompt",
-);
+const MAIN_SERVICE_PROMPT = SERVICE_SYSTEM_PROMPT;
 
 /**
  * 构建一次运行的运行时 system prompt。

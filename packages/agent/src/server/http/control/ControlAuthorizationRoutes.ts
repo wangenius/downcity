@@ -7,7 +7,7 @@
  */
 
 import type { Hono } from "hono";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import {
   readAuthControlPayload,
   setAuthControlUserRole,

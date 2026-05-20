@@ -2,7 +2,7 @@
  * contact 远端 HTTP 客户端。
  *
  * 关键点（中文）
- * - contact 的 agent-to-agent 调用走独立轻量路由，不依赖用户 CLI auth。
+ * - contact 的 agent-to-agent 调用统一走 `/api/services/command`。
  * - 已建联后的敏感调用必须携带 contact token。
  */
 
@@ -25,32 +25,51 @@ function normalizeEndpoint(endpoint: string): string {
   return url.toString().replace(/\/$/, "");
 }
 
-function unwrapServiceActionEnvelope<T>(value: T): T {
+function unwrapServiceCommandEnvelope<T>(value: T): T {
   if (!isRecord(value)) return value;
   const inner = value.data;
   if (typeof value.success === "boolean" && isRecord(inner)) {
-    // 关键点（中文）：远端 contact API 挂在统一 service action route 下，HTTP 返回会包一层 { success, data }。
+    // 关键点（中文）：统一 command 路由会包一层 `{ success, data }`。
     return inner as T;
   }
   return value;
 }
 
-async function postJson<T>(params: {
+async function postServiceCommand<T>(params: {
   endpoint: string;
-  path: string;
+  command: string;
   body?: JsonValue;
   token?: string;
+  wrapBody?: boolean;
 }): Promise<T> {
-  const url = new URL(params.path, normalizeEndpoint(params.endpoint)).toString();
+  const url = new URL("/api/services/command", normalizeEndpoint(params.endpoint)).toString();
+  const payloadBody =
+    params.wrapBody
+      ? {
+          ...(params.body !== undefined ? { body: params.body } : {}),
+          ...(params.token ? { token: params.token } : {}),
+        }
+      : params.body && isRecord(params.body)
+        ? {
+            ...params.body,
+            ...(params.token ? { token: params.token } : {}),
+          }
+        : {
+            ...(params.body !== undefined ? { body: params.body } : {}),
+            ...(params.token ? { token: params.token } : {}),
+          };
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  if (params.token) headers["X-Downcity-Contact-Token"] = params.token;
 
   const response = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify(params.body ?? {}),
+    body: JSON.stringify({
+      serviceName: "contact",
+      command: params.command,
+      payload: payloadBody,
+    }),
   });
   const data = (await response.json().catch(() => null)) as T & {
     error?: string;
@@ -59,7 +78,7 @@ async function postJson<T>(params: {
   if (!response.ok) {
     throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
   }
-  return unwrapServiceActionEnvelope<T>(data);
+  return unwrapServiceCommandEnvelope<T>(data);
 }
 
 /**
@@ -69,9 +88,9 @@ export async function callContactPing<T>(params: {
   endpoint: string;
   token?: string;
 }): Promise<T> {
-  return await postJson<T>({
+  return await postServiceCommand<T>({
     endpoint: params.endpoint,
-    path: "/api/contact/ping",
+    command: "remoteping",
     token: params.token,
   });
 }
@@ -83,9 +102,9 @@ export async function callContactApprove<T>(params: {
   endpoint: string;
   body: JsonValue;
 }): Promise<T> {
-  return await postJson<T>({
+  return await postServiceCommand<T>({
     endpoint: params.endpoint,
-    path: "/api/contact/approve",
+    command: "remoteapprove",
     body: params.body,
   });
 }
@@ -97,9 +116,9 @@ export async function callContactConfirm<T>(params: {
   endpoint: string;
   body: JsonValue;
 }): Promise<T> {
-  return await postJson<T>({
+  return await postServiceCommand<T>({
     endpoint: params.endpoint,
-    path: "/api/contact/confirm",
+    command: "remoteconfirm",
     body: params.body,
   });
 }
@@ -112,11 +131,12 @@ export async function callContactChat<T>(params: {
   token: string;
   body: JsonValue;
 }): Promise<T> {
-  return await postJson<T>({
+  return await postServiceCommand<T>({
     endpoint: params.endpoint,
-    path: "/api/contact/chat",
+    command: "remotechat",
     token: params.token,
     body: params.body,
+    wrapBody: true,
   });
 }
 
@@ -128,10 +148,11 @@ export async function callContactShare<T>(params: {
   token: string;
   body: JsonValue;
 }): Promise<T> {
-  return await postJson<T>({
+  return await postServiceCommand<T>({
     endpoint: params.endpoint,
-    path: "/api/contact/share",
+    command: "remoteshare",
     token: params.token,
     body: params.body,
+    wrapBody: true,
   });
 }

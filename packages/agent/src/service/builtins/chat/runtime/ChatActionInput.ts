@@ -1,8 +1,8 @@
 /**
- * ChatActionInput：chat service 的 CLI/API 输入映射模块。
+ * ChatActionInput：chat service 的 CLI 输入映射模块。
  *
  * 关键点（中文）
- * - 这里统一处理命令行与 HTTP 请求到 action payload 的转换。
+ * - 这里统一处理命令行到 action payload 的转换。
  * - 所有校验错误都尽量在输入层 fail-fast，避免进入执行层后才发现参数非法。
  * - `chat send` 的 frontmatter / <file> 协议也在这里完成标准化解析。
  */
@@ -28,7 +28,6 @@ import {
   readHistoryDirectionOrThrow,
 } from "./ChatActionInputSupport.js";
 export {
-  mapChatSendApiInput,
   mapChatSendCommandInput,
 } from "./ChatSendActionInput.js";
 
@@ -36,32 +35,6 @@ export function mapChatChannelCommandInput(
   input: ServiceActionCommandInput,
 ): { channel?: ReturnType<typeof resolveChatChannelNameOrThrow> } {
   const channelRaw = getStringOpt(input.opts, "channel");
-  if (!channelRaw) return {};
-  return {
-    channel: resolveChatChannelNameOrThrow(channelRaw),
-  };
-}
-
-export function mapChatChannelApiInput(
-  body: JsonValue,
-): { channel?: ReturnType<typeof resolveChatChannelNameOrThrow> } {
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return {};
-  }
-  const channelRaw =
-    typeof (body as JsonObject).channel === "string"
-      ? String((body as JsonObject).channel).trim()
-      : "";
-  if (!channelRaw) return {};
-  return {
-    channel: resolveChatChannelNameOrThrow(channelRaw),
-  };
-}
-
-export function mapChatChannelApiQueryInput(query?: {
-  channel?: string;
-}): { channel?: ReturnType<typeof resolveChatChannelNameOrThrow> } {
-  const channelRaw = String(query?.channel || "").trim();
   if (!channelRaw) return {};
   return {
     channel: resolveChatChannelNameOrThrow(channelRaw),
@@ -83,40 +56,11 @@ export function mapChatListCommandInput(
   };
 }
 
-export function mapChatListApiInput(query?: {
-  channel?: string;
-  limit?: string;
-  q?: string;
-}): ChatListActionPayload {
-  const channelRaw = String(query?.channel || "").trim();
-  const limitRaw = String(query?.limit || "").trim();
-  const q = String(query?.q || "").trim();
-  const channel = channelRaw ? resolveChatChannelNameOrThrow(channelRaw) : undefined;
-  const limit = limitRaw ? parsePositiveIntOptionOrThrow(limitRaw, "limit") : undefined;
-  return {
-    ...(channel ? { channel } : {}),
-    ...(typeof limit === "number" ? { limit } : {}),
-    ...(q ? { q } : {}),
-  };
-}
-
 export function mapChatInfoCommandInput(
   input: ServiceActionCommandInput,
 ): ChatInfoActionPayload {
   const chatKey = getStringOpt(input.opts, "chatKey");
   const sessionId = getStringOpt(input.opts, "sessionId");
-  return {
-    ...(chatKey ? { chatKey } : {}),
-    ...(sessionId ? { sessionId } : {}),
-  };
-}
-
-export function mapChatInfoApiInput(query?: {
-  chatKey?: string;
-  sessionId?: string;
-}): ChatInfoActionPayload {
-  const chatKey = String(query?.chatKey || "").trim();
-  const sessionId = String(query?.sessionId || "").trim();
   return {
     ...(chatKey ? { chatKey } : {}),
     ...(sessionId ? { sessionId } : {}),
@@ -148,31 +92,6 @@ export function mapChatConfigureCommandInput(
     channel,
     config: parsed as Record<string, JsonValue>,
     restart: getBooleanOpt(input.opts, "restart"),
-  };
-}
-
-export async function mapChatConfigureApiInput(c: {
-  req: {
-    json: () => Promise<JsonValue>;
-  };
-}): Promise<ChatConfigureActionPayload> {
-  const body = await c.req.json().catch(() => ({} as JsonValue));
-  if (!isJsonObject(body)) {
-    throw new Error("Invalid JSON body");
-  }
-  const channelRaw = typeof body.channel === "string" ? String(body.channel).trim() : "";
-  if (!channelRaw) {
-    throw new Error("Missing channel");
-  }
-  const configRaw = body.config;
-  if (!isJsonObject(configRaw)) {
-    throw new Error("Missing config object");
-  }
-  const restart = typeof body.restart === "boolean" ? body.restart : undefined;
-  return {
-    channel: resolveChatChannelNameOrThrow(channelRaw),
-    config: configRaw as Record<string, JsonValue>,
-    ...(typeof restart === "boolean" ? { restart } : {}),
   };
 }
 
@@ -213,47 +132,6 @@ export function mapChatHistoryCommandInput(
   };
 }
 
-export function mapChatHistoryApiInput(query: {
-  chatKey?: string;
-  sessionId?: string;
-  limit?: string;
-  direction?: string;
-  beforeTs?: string;
-  afterTs?: string;
-}): ChatHistoryActionPayload {
-  const direction = readHistoryDirectionOrThrow(String(query.direction || ""));
-  const limitText = String(query.limit || "").trim();
-  const limit = limitText
-    ? parsePositiveIntOptionOrThrow(limitText, "limit")
-    : undefined;
-  const beforeTs = parseOptionalTimestampOrThrow(
-    String(query.beforeTs || ""),
-    "beforeTs",
-  );
-  const afterTs = parseOptionalTimestampOrThrow(
-    String(query.afterTs || ""),
-    "afterTs",
-  );
-  if (
-    typeof beforeTs === "number" &&
-    typeof afterTs === "number" &&
-    afterTs >= beforeTs
-  ) {
-    throw new Error("Invalid range: afterTs must be less than beforeTs.");
-  }
-
-  const chatKey = String(query.chatKey || "").trim();
-  const sessionId = String(query.sessionId || "").trim();
-  return {
-    ...(chatKey ? { chatKey } : {}),
-    ...(sessionId ? { sessionId } : {}),
-    ...(typeof limit === "number" ? { limit } : {}),
-    ...(direction ? { direction } : {}),
-    ...(typeof beforeTs === "number" ? { beforeTs } : {}),
-    ...(typeof afterTs === "number" ? { afterTs } : {}),
-  };
-}
-
 export function mapChatReactCommandInput(
   input: ServiceActionCommandInput,
 ): ChatReactActionPayload {
@@ -277,45 +155,11 @@ export function mapChatReactCommandInput(
   };
 }
 
-export function mapChatReactApiInput(body: JsonValue): ChatReactActionPayload {
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    throw new Error("Invalid JSON body");
-  }
-  const payload = body as JsonObject;
-  const chatKey =
-    typeof payload.chatKey === "string" ? payload.chatKey.trim() : undefined;
-  const emoji = typeof payload.emoji === "string" ? payload.emoji.trim() : undefined;
-  const messageId =
-    typeof payload.messageId === "string" || typeof payload.messageId === "number"
-      ? String(payload.messageId).trim()
-      : undefined;
-  const big = payload.big === true;
-  return {
-    ...(chatKey ? { chatKey } : {}),
-    ...(emoji ? { emoji } : {}),
-    ...(messageId ? { messageId } : {}),
-    ...(big ? { big: true } : {}),
-  };
-}
-
 export function mapChatDeleteCommandInput(
   input: ServiceActionCommandInput,
 ): ChatDeleteActionPayload {
   const chatKey = getStringOpt(input.opts, "chatKey");
   const sessionId = getStringOpt(input.opts, "sessionId");
-  return {
-    ...(chatKey ? { chatKey } : {}),
-    ...(sessionId ? { sessionId } : {}),
-  };
-}
-
-export function mapChatDeleteApiInput(body: JsonValue): ChatDeleteActionPayload {
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return {};
-  }
-  const payload = body as JsonObject;
-  const chatKey = typeof payload.chatKey === "string" ? payload.chatKey.trim() : "";
-  const sessionId = typeof payload.sessionId === "string" ? payload.sessionId.trim() : "";
   return {
     ...(chatKey ? { chatKey } : {}),
     ...(sessionId ? { sessionId } : {}),

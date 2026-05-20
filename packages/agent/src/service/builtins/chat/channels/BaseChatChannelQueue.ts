@@ -15,7 +15,7 @@ import {
   prepareChatEnqueue,
 } from "@/service/builtins/chat/runtime/EnqueueDispatch.js";
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { IncomingChatMessage } from "./BaseChatChannel.js";
 import {

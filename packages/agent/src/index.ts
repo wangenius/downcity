@@ -11,8 +11,15 @@
 export { Agent } from "./sdk/Agent.js";
 export { Session } from "./sdk/Session.js";
 export { RemoteAgent } from "./sdk/RemoteAgent.js";
+export { AgentCore } from "./core/AgentCore.js";
 export type {
   AgentOptions,
+  AgentHttpBinding,
+  AgentHttpStartOptions,
+  AgentRpcBinding,
+  AgentStartOptions,
+  AgentStartResult,
+  AgentStopResult,
   RemoteAgentOptions,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
@@ -26,6 +33,19 @@ export type {
   AgentSessionSystemSessionInfo,
   AgentSessionSystemSnapshot,
 } from "./sdk/AgentSdkTypes.js";
+export type {
+  AgentRuntime as AgentCoreRuntime,
+  AgentRuntimeBase as AgentCoreRuntimeBase,
+} from "./core/AgentCoreTypes.js";
+export type {
+  AgentContext as AgentContext,
+  AgentContext as AgentCoreContext,
+  ChatRuntimePort,
+  InvokeServicePort,
+  SessionCollectionPort,
+  SessionPort,
+  StructuredConfig,
+} from "./core/AgentContextTypes.js";
 
 // 服务与插件作者 API
 export { BaseService } from "./service/builtins/BaseService.js";
@@ -46,21 +66,6 @@ export { asrPlugin } from "./plugin/builtins/asr/Plugin.js";
 export { ttsPlugin } from "./plugin/builtins/tts/Plugin.js";
 export { workboardPlugin } from "./plugin/builtins/workboard/Plugin.js";
 
-// Agent 运行时集成
-export {
-  getAgentContext,
-  getAgentRuntime,
-  getAgentRuntimeBase,
-  initAgentRuntime,
-  requireAgentModel,
-  setAgentRuntime,
-  setAgentRuntimeBase,
-  stopAgentHotReload,
-} from "./runtime/AgentRuntime.js";
-export { createAgentContext } from "./runtime/AgentContext.js";
-export type { AgentRuntime, AgentRuntimeBase } from "./runtime/AgentRuntimeState.js";
-export type { AgentContext } from "./runtime/AgentContextTypes.js";
-
 // Session 与即时执行集成
 export { Executor } from "./session/Executor.js";
 export {
@@ -71,7 +76,10 @@ export { JsonlSessionHistoryComposer } from "./session/composer/history/jsonl/Js
 export { JsonlSessionCompactionComposer } from "./session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 export { SessionSystemComposer } from "./session/composer/system/SessionSystemComposer.js";
 export { transformPromptsIntoSystemMessages } from "./session/composer/system/default/PromptRenderer.js";
-export { loadStaticSystemPrompts } from "./session/composer/system/default/StaticPromptCatalog.js";
+export {
+  loadStaticSystemPrompts,
+  StaticPromptCatalog,
+} from "./session/composer/system/default/StaticPromptCatalog.js";
 
 // Agent server 与 transport 集成
 export { startServer } from "./server/http/Server.js";
@@ -84,10 +92,6 @@ export {
   startAllServices,
   stopAllServices,
 } from "./service/core/Manager.js";
-export {
-  startServiceScheduleRuntime,
-  stopServiceScheduleRuntime,
-} from "./service/schedule/Runtime.js";
 export { ServiceScheduleStore } from "./service/schedule/Store.js";
 export { parseScheduledRunAtMsOrThrow } from "./service/schedule/Time.js";
 export {
@@ -247,7 +251,6 @@ export type {
 export type {
   Service,
   ServiceAction,
-  ServiceActionApi,
   ServiceActionCommand,
   ServiceActionCommandInput,
   ServiceActionResult,

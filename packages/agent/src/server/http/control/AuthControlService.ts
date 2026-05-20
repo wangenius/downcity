@@ -7,7 +7,7 @@
  * - 这样调用方不需要知道 plugin action 名称，也不需要依赖 `plugin/builtins/auth/*` 目录。
  */
 
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { AuthControlPayload } from "@/server/http/control/types/AuthControl.js";
 import type {

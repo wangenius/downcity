@@ -2,11 +2,11 @@
  * contact action 注册表。
  *
  * 关键点（中文）
- * - 这里只负责 CLI / HTTP action 映射，不承载 contact 业务实现。
+ * - 这里只负责 CLI action 与内部远端 command action 映射，不承载 contact 业务实现。
  * - 业务动作通过 handlers 注入，保持 `ContactService` 类本身更薄。
  */
 
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { ServiceActions } from "@/service/types/Service.js";
 import type {
@@ -31,7 +31,6 @@ import { receiveContactChatMessage } from "./runtime/ChatRuntime.js";
 import { listContactInboxShares } from "./runtime/InboxStore.js";
 import { receiveShare } from "./runtime/ShareBundle.js";
 import {
-  getContactHeaderToken,
   readContactObject,
   readContactString,
 } from "./runtime/ContactPayload.js";
@@ -267,20 +266,6 @@ export function createContactActions(handlers: ContactActionHandlers): ServiceAc
       }),
     },
     remoteping: {
-      api: {
-        method: "POST",
-        path: "/api/contact/ping",
-        async mapInput(ctx) {
-          const body = (await ctx.req.json().catch(() => ({}))) as JsonValue;
-          return {
-            body,
-            token: getContactHeaderToken({
-              headers: ctx.req.raw.headers,
-              body: readContactObject(body),
-            }),
-          } as unknown as JsonValue;
-        },
-      },
       execute: async (params) => ({
         success: true,
         data: (await handlers.remotePing(
@@ -290,13 +275,6 @@ export function createContactActions(handlers: ContactActionHandlers): ServiceAc
       }),
     },
     remoteapprove: {
-      api: {
-        method: "POST",
-        path: "/api/contact/approve",
-        async mapInput(ctx) {
-          return (await ctx.req.json()) as JsonValue;
-        },
-      },
       execute: async (params) => ({
         success: true,
         data: (await handlers.remoteApprove(
@@ -306,13 +284,6 @@ export function createContactActions(handlers: ContactActionHandlers): ServiceAc
       }),
     },
     remoteconfirm: {
-      api: {
-        method: "POST",
-        path: "/api/contact/confirm",
-        async mapInput(ctx) {
-          return (await ctx.req.json()) as JsonValue;
-        },
-      },
       execute: async (params) => ({
         success: true,
         data: (await handlers.remoteConfirm(
@@ -322,20 +293,6 @@ export function createContactActions(handlers: ContactActionHandlers): ServiceAc
       }),
     },
     remotechat: {
-      api: {
-        method: "POST",
-        path: "/api/contact/chat",
-        async mapInput(ctx) {
-          const body = (await ctx.req.json()) as JsonValue;
-          return {
-            body,
-            token: getContactHeaderToken({
-              headers: ctx.req.raw.headers,
-              body: readContactObject(body),
-            }),
-          } as unknown as JsonValue;
-        },
-      },
       execute: async (params) => {
         const payload = readContactObject(params.payload);
         const body = readContactObject(payload.body);
@@ -350,20 +307,6 @@ export function createContactActions(handlers: ContactActionHandlers): ServiceAc
       },
     },
     remoteshare: {
-      api: {
-        method: "POST",
-        path: "/api/contact/share",
-        async mapInput(ctx) {
-          const body = (await ctx.req.json()) as JsonValue;
-          return {
-            body,
-            token: getContactHeaderToken({
-              headers: ctx.req.raw.headers,
-              body: readContactObject(body),
-            }),
-          } as unknown as JsonValue;
-        },
-      },
       execute: async (params) => ({
         success: true,
         data: (await handlers.remoteShare(params.context, params.payload)) as unknown as JsonValue,

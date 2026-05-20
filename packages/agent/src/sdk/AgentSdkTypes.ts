@@ -13,6 +13,9 @@ import type { JsonValue } from "@/types/common/Json.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
+import type { LocalRpcServerHandle } from "@/types/rpc/LocalRpc.js";
+import type { ServerInstance } from "@/server/http/Server.js";
+import type { Session } from "@/sdk/Session.js";
 
 /**
  * 本地 Agent 构造参数。
@@ -62,6 +65,15 @@ export interface AgentOptions {
   services?: BaseService[];
 
   /**
+   * 是否自动装配全部内建 service。
+   *
+   * 关键点（中文）
+   * - 适合 city 这类宿主进程直接 `new Agent(...)` 的场景。
+   * - 未开启时，默认只使用显式传入的 `services`。
+   */
+  useBuiltinServices?: boolean;
+
+  /**
    * 当前 agent 显式注册的 plugin 定义集合。
    *
    * 关键点（中文）
@@ -72,6 +84,15 @@ export interface AgentOptions {
   plugins?: Plugin[];
 
   /**
+   * 是否自动装配全部内建 plugin。
+   *
+   * 关键点（中文）
+   * - 适合 city 这类宿主进程直接 `new Agent(...)` 的场景。
+   * - 未开启时，默认只使用显式传入的 `plugins`。
+   */
+  useBuiltinPlugins?: boolean;
+
+  /**
    * 当前 agent 显式注入的平台能力集合。
    *
    * 关键点（中文）
@@ -79,6 +100,143 @@ export interface AgentOptions {
    * - 推荐由宿主产品显式传入，避免 SDK 本地实例隐式依赖 city。
    */
   platform?: AgentPlatformRuntime;
+
+  /**
+   * 在 session 初始化后执行的宿主配置钩子。
+   *
+   * 关键点（中文）
+   * - SDK 不负责默认模型策略，宿主可在这里统一为 session 注入 model 等运行配置。
+   * - 该钩子只在 session 首次创建时触发一次，适合做实例级默认装配。
+   */
+  configureSession?: (session: Session) => Promise<void> | void;
+}
+
+/**
+ * Agent 启动参数。
+ */
+export interface AgentStartOptions {
+  /**
+   * 是否启动 HTTP 服务。
+   *
+   * 关键点（中文）
+   * - `false` 表示不启动。
+   * - 传对象时会按给定 host/port 启动。
+   * - 省略时默认不启动，避免 SDK 本地嵌入场景误开端口。
+   */
+  http?: false | AgentHttpStartOptions;
+
+  /**
+   * 是否启动本地 RPC 服务。
+   *
+   * 关键点（中文）
+   * - `true` 时启动主 local RPC server。
+   * - 省略或 `false` 时不启动。
+   */
+  rpc?: boolean;
+
+  /**
+   * 是否启动当前 agent 的 services。
+   *
+   * 关键点（中文）
+   * - 默认 `true`。
+   * - `false` 适合只需要 session 能力、不希望启动后台能力的嵌入场景。
+   */
+  services?: boolean;
+}
+
+/**
+ * Agent 停止结果快照。
+ */
+export interface AgentStopResult {
+  /**
+   * 本次是否实际停止了 HTTP 服务。
+   */
+  httpStopped: boolean;
+
+  /**
+   * 本次是否实际停止了本地 RPC 服务。
+   */
+  rpcStopped: boolean;
+
+  /**
+   * 本次是否实际停止了 services。
+   */
+  servicesStopped: boolean;
+}
+
+/**
+ * Agent 启动后的状态快照。
+ */
+export interface AgentStartResult {
+  /**
+   * 当前 agent 是否已启动 HTTP 服务。
+   */
+  http?: AgentHttpBinding;
+
+  /**
+   * 当前 agent 是否已启动本地 RPC 服务。
+   */
+  rpc?: AgentRpcBinding;
+
+  /**
+   * 当前 agent 是否已启动 services。
+   */
+  servicesStarted: boolean;
+}
+
+/**
+ * Agent HTTP 启动参数。
+ */
+export interface AgentHttpStartOptions {
+  /**
+   * HTTP 监听主机。
+   */
+  host?: string;
+
+  /**
+   * HTTP 监听端口。
+   */
+  port?: number;
+}
+
+/**
+ * Agent HTTP 绑定信息。
+ */
+export interface AgentHttpBinding {
+  /**
+   * 对外访问地址。
+   */
+  baseUrl: string;
+
+  /**
+   * 当前 host。
+   */
+  host: string;
+
+  /**
+   * 当前 port。
+   */
+  port: number;
+
+  /**
+   * HTTP server 句柄。
+   */
+  server: ServerInstance;
+}
+
+/**
+ * Agent RPC 绑定信息。
+ */
+export interface AgentRpcBinding {
+  /**
+   * 当前本地 RPC endpoint。
+   */
+  endpoint: string;
+
+  /**
+   * 本地 RPC server 句柄。
+   */
+  server: LocalRpcServerHandle;
 }
 
 /**

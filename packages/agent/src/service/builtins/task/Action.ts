@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import type { ShipTaskStatus } from "./types/Task.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import {
   deriveTaskIdFromTitle,

@@ -8,7 +8,7 @@
  */
 
 import type { JsonValue } from "@/types/common/Json.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ServiceCommandScheduleInput } from "@/service/types/ServiceSchedule.js";
 import type {
   ServiceStateControlAction,
@@ -147,7 +147,9 @@ export async function runServiceCommand(params: {
   schedule?: JsonValue | ServiceCommandScheduleInput;
   context: AgentContext;
 }): Promise<ServiceCommandResult & { service?: ServiceStateSnapshot }> {
-  const service = resolveServiceByName(params.serviceName);
+  const service = resolveServiceByName(params.serviceName, {
+    context: params.context,
+  });
   if (!service) {
     return {
       success: false,

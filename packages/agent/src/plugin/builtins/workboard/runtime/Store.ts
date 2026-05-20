@@ -6,7 +6,7 @@
  * - route 与 action 共享同一份快照，确保 workboard 展示一致。
  */
 
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { WorkboardSnapshot } from "@/plugin/builtins/workboard/types/Workboard.js";
 import { collectWorkboardSnapshot } from "@/plugin/builtins/workboard/runtime/Collector.js";
 

@@ -22,4 +22,3 @@ export {
   stopAllServices,
 } from "./ServiceStateController.js";
 export { runServiceCommand } from "./ServiceActionRunner.js";
-export { registerAllServicesForServer } from "./ServiceActionApi.js";

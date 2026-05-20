@@ -7,7 +7,29 @@ description: 如何把本地 Agent 暴露为 HTTP 服务或 RPC 服务
 
 本地 Agent 不只可以在当前进程里直接调用，也可以对外暴露服务端点。
 
-## 启动 HTTP
+## 推荐启动方式
+
+现在更推荐直接使用统一生命周期入口：
+
+```ts
+const started = await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
+  rpc: true,
+});
+
+console.log(started.http?.baseUrl);
+```
+
+这样会在一个调用里统一启动：
+
+- HTTP 服务
+- 本地 RPC 服务
+- service lifecycle（默认开启）
+
+## 单独启动 HTTP
 
 ```ts
 const http = await agent.http.start({
@@ -28,6 +50,27 @@ console.log(http.baseUrl);
 await agent.rpc.start();
 ```
 
+## `start()` 和不 `start()` 的区别
+
+不调用 `agent.start()` 时：
+
+- 你仍然可以直接 `await agent.session()`，再用 `session.run()` / `session.stream()`
+- 适合把 Agent 当作当前进程里的本地库
+- 不会启动 HTTP
+- 不会启动 RPC
+- 不会启动 service 的后台生命周期
+
+调用 `agent.start()` 之后：
+
+- Agent 会开始对外暴露 HTTP / RPC 端点
+- 默认会启动 services
+- chat、schedule 和其他后台 loop 才会真正持续运行
+
+可以把它理解成：
+
+- 不 `start`：library mode
+- `start`：long-lived runtime mode
+
 ## 什么时候用 HTTP
 
 - 你想让另一个进程通过 `RemoteAgent` 调它
@@ -37,7 +80,7 @@ await agent.rpc.start();
 
 ## 启动前会发生什么
 
-调用 `agent.http.start()` 与 `agent.rpc.start()` 之前，SDK 会先确保显式注入的 services 已启动。
+调用 `agent.start({ http, rpc })` 时，SDK 默认会先确保当前 agent 的 services 已启动。
 
 这样可以减少“端点已经起来了，但关键 service 还没 ready”的不一致状态。
 

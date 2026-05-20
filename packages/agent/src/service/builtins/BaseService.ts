@@ -6,13 +6,13 @@
  * - 各 service 的长期状态应归属于实例本身，而不是模块级单例。
  */
 
-import type { AgentRuntime } from "@/runtime/AgentRuntimeTypes.js";
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type {
   Service,
   ServiceActions,
   ServiceLifecycle,
 } from "@/service/types/Service.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ServiceStateRecord } from "@/service/types/ServiceState.js";
 
 /**

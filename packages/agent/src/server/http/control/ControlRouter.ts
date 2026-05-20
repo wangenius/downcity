@@ -13,19 +13,35 @@
  */
 
 import { Hono } from "hono";
-import {
-  getAgentRuntime,
-  getAgentContext,
-} from "@/runtime/AgentRuntime.js";
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { registerControlApiRoutes } from "@/server/http/control/ControlApiRoutes.js";
 
 /**
- * 单 agent control API 专用路由。
+ * control router 参数。
  */
-export const controlRouter = new Hono();
+type ControlRouterOptions = {
+  /**
+   * 读取当前 agent runtime。
+   */
+  getAgentRuntime: () => AgentRuntime;
+  /**
+   * 读取当前 agent 执行上下文。
+   */
+  getAgentContext: () => AgentContext;
+};
 
-registerControlApiRoutes({
-  app: controlRouter,
-  getAgentRuntime: getAgentRuntime,
-  getAgentContext: getAgentContext,
-});
+/**
+ * 创建单 agent control API 专用路由。
+ */
+export function createControlRouter(
+  options: ControlRouterOptions,
+): Hono {
+  const router = new Hono();
+  registerControlApiRoutes({
+    app: router,
+    getAgentRuntime: options.getAgentRuntime,
+    getAgentContext: options.getAgentContext,
+  });
+  return router;
+}

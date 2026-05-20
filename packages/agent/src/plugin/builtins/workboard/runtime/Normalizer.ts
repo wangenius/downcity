@@ -15,7 +15,7 @@ import type {
   WorkboardSignalItem,
   WorkboardSummary,
 } from "@/plugin/builtins/workboard/types/Workboard.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 
 function toIsoString(timestamp?: number): string {
   if (!timestamp || !Number.isFinite(timestamp)) {

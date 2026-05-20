@@ -9,7 +9,7 @@
 
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ServiceActions } from "@/service/types/Service.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
 import {
@@ -123,9 +123,6 @@ export class MemoryService extends BaseService {
           return {};
         },
       },
-      api: {
-        method: "GET",
-      },
       execute: async (params) => {
         const state = this.getOrCreateRuntimeState(params.context);
         return await statusMemoryAction(params.context, state);
@@ -151,12 +148,6 @@ export class MemoryService extends BaseService {
             payload.minScore = opts.minScore;
           }
           return payload;
-        },
-      },
-      api: {
-        method: "POST",
-        mapInput(ctx) {
-          return ctx.req.json();
         },
       },
       execute: async (params) => {
@@ -191,12 +182,6 @@ export class MemoryService extends BaseService {
           return payload;
         },
       },
-      api: {
-        method: "POST",
-        mapInput(ctx) {
-          return ctx.req.json();
-        },
-      },
       execute: async (params) => {
         const body = readBodyObject(params.payload);
         return await getMemoryAction(params.context, {
@@ -226,12 +211,6 @@ export class MemoryService extends BaseService {
             payload.sessionId = String(opts.sessionId).trim();
           }
           return payload;
-        },
-      },
-      api: {
-        method: "POST",
-        mapInput(ctx) {
-          return ctx.req.json();
         },
       },
       execute: async (params) => {
@@ -264,12 +243,6 @@ export class MemoryService extends BaseService {
             payload.maxMessages = opts.maxMessages;
           }
           return payload;
-        },
-      },
-      api: {
-        method: "POST",
-        mapInput(ctx) {
-          return ctx.req.json();
         },
       },
       execute: async (params) => {

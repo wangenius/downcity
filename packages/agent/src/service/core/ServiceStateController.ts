@@ -7,14 +7,14 @@
  * - Manager.ts 只作为门面导出，真正逻辑在这里分层实现。
  */
 
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type {
   ServiceStateControlAction,
   ServiceStateControlResult,
   ServiceStateRecord,
   ServiceStateSnapshot,
 } from "@/service/types/ServiceState.js";
-import { getAgentRuntime } from "@/runtime/AgentRuntimeState.js";
 import {
   getRegisteredStaticServiceInstances,
   listRegisteredServices,
@@ -31,17 +31,27 @@ function nowMs(): number {
  * 列出当前进程内可见的 service 实例。
  *
  * 关键点（中文）
- * - 若 agent 已就绪，则返回 per-agent service instances。
- * - 若 agent 尚未初始化，则退回静态装配实例，方便测试与只读场景。
+ * - 优先读取显式传入的实例级 context/runtime。
+ * - 若调用方未传入实例上下文，则只退回静态装配实例，方便测试与只读场景。
  */
-export function listServiceInstances(): BaseService[] {
-  try {
-    const agent = getAgentRuntime();
-    if (agent.services.size > 0) {
-      return [...agent.services.values()];
-    }
-  } catch {
-    // ignore and fallback
+export function listServiceInstances(input?: {
+  context?: AgentContext;
+  runtime?: AgentRuntime;
+}): BaseService[] {
+  return listServiceInstancesFor(input);
+}
+
+function listServiceInstancesFor(input?: {
+  context?: AgentContext;
+  runtime?: AgentRuntime;
+}): BaseService[] {
+  const contextServices = input?.context?.agent?.services;
+  if (contextServices instanceof Map && contextServices.size > 0) {
+    return [...contextServices.values()];
+  }
+  const runtimeServices = input?.runtime?.services;
+  if (runtimeServices instanceof Map && runtimeServices.size > 0) {
+    return [...runtimeServices.values()];
   }
   return [...getRegisteredStaticServiceInstances().values()];
 }
@@ -51,10 +61,14 @@ export function listServiceInstances(): BaseService[] {
  */
 export function resolveServiceByName(
   name: string,
+  input?: {
+    context?: AgentContext;
+    runtime?: AgentRuntime;
+  },
 ): BaseService | null {
   const key = String(name || "").trim();
   if (!key) return null;
-  return listServiceInstances().find((service) => service.name === key) || null;
+  return listServiceInstancesFor(input).find((service) => service.name === key) || null;
 }
 
 /**
@@ -153,8 +167,11 @@ export function getServiceRootCommandNames(): string[] {
 /**
  * 列出全部 service 状态快照。
  */
-export function listServiceStates(): ServiceStateSnapshot[] {
-  return listServiceInstances()
+export function listServiceStates(input?: {
+  context?: AgentContext;
+  runtime?: AgentRuntime;
+}): ServiceStateSnapshot[] {
+  return listServiceInstancesFor(input)
     .map((service) =>
       toServiceStateSnapshot(ensureServiceStateRecord(service), service),
     )
@@ -164,8 +181,14 @@ export function listServiceStates(): ServiceStateSnapshot[] {
 /**
  * 判断指定 service 是否处于运行中。
  */
-export function isServiceRunning(serviceName: string): boolean {
-  const service = resolveServiceByName(serviceName);
+export function isServiceRunning(
+  serviceName: string,
+  input?: {
+    context?: AgentContext;
+    runtime?: AgentRuntime;
+  },
+): boolean {
+  const service = resolveServiceByName(serviceName, input);
   if (!service) return false;
   return ensureServiceStateRecord(service).state === "running";
 }
@@ -238,7 +261,9 @@ export async function controlServiceState(params: {
   action: ServiceStateControlAction;
   context: AgentContext;
 }): Promise<ServiceStateControlResult> {
-  const service = resolveServiceByName(params.serviceName);
+  const service = resolveServiceByName(params.serviceName, {
+    context: params.context,
+  });
   if (!service) {
     return {
       success: false,
@@ -277,7 +302,7 @@ export async function startAllServices(
   results: ServiceStateControlResult[];
 }> {
   const results: ServiceStateControlResult[] = [];
-  for (const service of listServiceInstances()) {
+  for (const service of listServiceInstancesFor({ context })) {
     results.push(
       await controlServiceState({
         serviceName: service.name,
@@ -300,7 +325,7 @@ export async function stopAllServices(context: AgentContext): Promise<{
   results: ServiceStateControlResult[];
 }> {
   const results: ServiceStateControlResult[] = [];
-  for (const service of listServiceInstances()) {
+  for (const service of listServiceInstancesFor({ context })) {
     results.push(
       await controlServiceState({
         serviceName: service.name,

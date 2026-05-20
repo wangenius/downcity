@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 面向 `new Agent(...)` 的本地会话使用场景。
- * - 统一收口消息落盘、默认模型配置、run/stream/fork 等高层 API。
+ * - 统一收口消息落盘、session 级模型配置、run/stream/fork 等高层 API。
  * - 内部继续复用 `Executor` / `JsonlSessionHistoryComposer` / `Runner`。
  */
 
@@ -40,7 +40,7 @@ import {
   getSdkAgentSessionDirPath,
 } from "@/sdk/Paths.js";
 import { AsyncQueue } from "@/sdk/AsyncQueue.js";
-import type { SessionPort } from "@/runtime/AgentContextTypes.js";
+import type { SessionPort } from "@/core/AgentContextTypes.js";
 import { pushUiMessageChunkAsSdkEvent } from "@/sdk/StreamEvents.js";
 import {
   persistSdkAssistantResult,
@@ -332,6 +332,11 @@ export class Session {
     if (!query) {
       throw new Error("session.run requires a non-empty query");
     }
+    if (!this.sessionConfig.model) {
+      throw new Error(
+        `Session "${this.id}" requires a configured model. Call session.set({ model }) first or let the host configure the session during creation.`,
+      );
+    }
     await this.appendUserMessage({ text: query });
     const result = await this.executor.run({
       query,
@@ -354,6 +359,11 @@ export class Session {
     const query = String(input.query || "").trim();
     if (!query) {
       throw new Error("session.stream requires a non-empty query");
+    }
+    if (!this.sessionConfig.model) {
+      throw new Error(
+        `Session "${this.id}" requires a configured model. Call session.set({ model }) first or let the host configure the session during creation.`,
+      );
     }
     const queue = new AsyncQueue<AgentSessionStreamEvent>();
     const toolNameByCallId = new Map<string, string>();

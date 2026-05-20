@@ -10,7 +10,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { generateId } from "@/utils/Id.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 import type {

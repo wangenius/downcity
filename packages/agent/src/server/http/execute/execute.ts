@@ -9,112 +9,128 @@
 
 import { Hono } from "hono";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
-import { getAgentRuntime } from "@/runtime/AgentRuntime.js";
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
 } from "@/service/builtins/chat/runtime/UserVisibleText.js";
 
 /**
- * 执行入口路由。
+ * 执行入口路由参数。
  */
-export const executeRouter = new Hono();
+type ExecuteRouterOptions = {
+  /**
+   * 读取当前 agent runtime。
+   */
+  getAgentRuntime: () => AgentRuntime;
+};
 
-executeRouter.post("/api/execute", async (c) => {
-  let bodyText = "";
-  try {
-    bodyText = await c.req.text();
-  } catch {
-    return c.json(
-      { success: false, message: "Unable to read request body" },
-      400,
-    );
-  }
+/**
+ * 创建执行入口路由。
+ */
+export function createExecuteRouter(
+  options: ExecuteRouterOptions,
+): Hono {
+  const router = new Hono();
 
-  if (!bodyText) {
-    return c.json({ success: false, message: "Request body is empty" }, 400);
-  }
-
-  let body: {
-    instructions?: string;
-    chatId?: string;
-    userId?: string;
-    actorId?: string;
-    messageId?: string;
-  };
-  try {
-    body = JSON.parse(bodyText) as typeof body;
-  } catch {
-    return c.json(
-      {
-        success: false,
-        message: `JSON parse failed: ${bodyText.substring(0, 50)}...`,
-      },
-      400,
-    );
-  }
-
-  const instructions = body?.instructions;
-  const chatId =
-    typeof body?.chatId === "string" && body.chatId.trim()
-      ? body.chatId.trim()
-      : "default";
-  const actorId =
-    typeof body?.userId === "string" && body.userId.trim()
-      ? body.userId.trim()
-      : typeof body?.actorId === "string" && body.actorId.trim()
-        ? body.actorId.trim()
-        : "api";
-
-  if (!instructions) {
-    return c.json(
-      { success: false, message: "Missing instructions field" },
-      400,
-    );
-  }
-
-  try {
-    const sessionId = `api:chat:${chatId}`;
-    const agentState = getAgentRuntime();
-    const session = agentState.getSession(sessionId);
-    await session.appendUserMessage({
-      text: String(instructions),
-    });
-
-    const result = await session.run({
-      query: String(instructions),
-    });
-
-    const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
+  router.post("/api/execute", async (c) => {
+    let bodyText = "";
     try {
-      const messageForPersistence = resolveAssistantMessageForPersistence(
-        result.assistantMessage,
-      );
-      if (messageForPersistence) {
-        await session.appendAssistantMessage({
-          message: messageForPersistence,
-          fallbackText: userVisible,
-          extra: {
-            via: "api_execute",
-            note: "assistant_message_missing",
-            actorId,
-          },
-        });
-      }
-      const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-        sessionId,
-      );
-      for (const message of deferredInjectedMessages) {
-        await session.appendUserMessage({
-          message,
-        });
-      }
+      bodyText = await c.req.text();
     } catch {
-      // ignore
+      return c.json(
+        { success: false, message: "Unable to read request body" },
+        400,
+      );
     }
 
-    return c.json(result);
-  } catch (error) {
-    return c.json({ success: false, message: String(error) }, 500);
-  }
-});
+    if (!bodyText) {
+      return c.json({ success: false, message: "Request body is empty" }, 400);
+    }
+
+    let body: {
+      instructions?: string;
+      chatId?: string;
+      userId?: string;
+      actorId?: string;
+      messageId?: string;
+    };
+    try {
+      body = JSON.parse(bodyText) as typeof body;
+    } catch {
+      return c.json(
+        {
+          success: false,
+          message: `JSON parse failed: ${bodyText.substring(0, 50)}...`,
+        },
+        400,
+      );
+    }
+
+    const instructions = body?.instructions;
+    const chatId =
+      typeof body?.chatId === "string" && body.chatId.trim()
+        ? body.chatId.trim()
+        : "default";
+    const actorId =
+      typeof body?.userId === "string" && body.userId.trim()
+        ? body.userId.trim()
+        : typeof body?.actorId === "string" && body.actorId.trim()
+          ? body.actorId.trim()
+          : "api";
+
+    if (!instructions) {
+      return c.json(
+        { success: false, message: "Missing instructions field" },
+        400,
+      );
+    }
+
+    try {
+      const sessionId = `api:chat:${chatId}`;
+      const agentState = options.getAgentRuntime();
+      const session = agentState.getSession(sessionId);
+      await session.appendUserMessage({
+        text: String(instructions),
+      });
+
+      const result = await session.run({
+        query: String(instructions),
+      });
+
+      const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
+      try {
+        const messageForPersistence = resolveAssistantMessageForPersistence(
+          result.assistantMessage,
+        );
+        if (messageForPersistence) {
+          await session.appendAssistantMessage({
+            message: messageForPersistence,
+            fallbackText: userVisible,
+            extra: {
+              via: "api_execute",
+              note: "assistant_message_missing",
+              actorId,
+            },
+          });
+        }
+        const deferredInjectedMessages = drainDeferredPersistedUserMessages(
+          sessionId,
+        );
+        for (const message of deferredInjectedMessages) {
+          await session.appendUserMessage({
+            message,
+          });
+        }
+      } catch {
+        // ignore
+      }
+
+      return c.json(result);
+    } catch (error) {
+      return c.json({ success: false, message: String(error) }, 500);
+    }
+  });
+
+  return router;
+}

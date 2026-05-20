@@ -7,7 +7,7 @@
  * - 这样也能避开 `task -> runner -> prompt system -> service class registry` 的循环依赖。
  */
 
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { buildChatServiceSystem } from "@/service/builtins/chat/runtime/ChatServiceSystem.js";
 import { buildContactServiceSystemText } from "@/service/builtins/contact/runtime/SystemProvider.js";
 import { buildMemoryServiceSystemText } from "@/service/builtins/memory/runtime/SystemProvider.js";

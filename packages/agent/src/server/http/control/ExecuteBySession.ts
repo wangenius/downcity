@@ -6,8 +6,8 @@
  * - 非 chat session 保留原有直接执行语义。
  */
 
-import type { AgentRuntime } from "@/runtime/AgentRuntime.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ControlSessionExecuteAttachmentInput } from "@/server/http/control/types/ControlSessionExecute.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";

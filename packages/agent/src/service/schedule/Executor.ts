@@ -6,7 +6,7 @@
  * - 不负责调度入口和轮询生命周期管理。
  */
 
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ServiceScheduleStore } from "./Store.js";
 import { runServiceCommand } from "@/service/core/Manager.js";
 

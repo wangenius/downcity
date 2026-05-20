@@ -51,7 +51,33 @@ console.log(result.text);
 
 第一次上手时，建议先不要叠加复杂 tools、services、plugins 或 HTTP 暴露，先把最短执行链跑通。
 
+## 什么时候需要 `agent.start()`
+
+`new Agent(...)` 只是在当前进程里创建一个本地 agent 实例。
+
+如果你只是想在宿主代码里直接跑 session：
+
+```ts
+const session = await agent.session();
+await session.set({ model });
+await session.run({ query: "hello" });
+```
+
+通常不需要调用 `agent.start()`。
+
+只有在你需要这些长期运行能力时，才需要调用 `agent.start(...)`：
+
+- 启动 HTTP 端口，让别的进程通过 `RemoteAgent` 调用它
+- 启动本地 RPC 端口，让宿主或其他本机进程通过 RPC 调用它
+- 启动 service lifecycle，让 chat、schedule 或其他后台 loop 真正开始运行
+
+可以把它简单理解成：
+
+- 不 `start`：把 Agent 当本地库直接调用
+- `start`：把 Agent 变成一个会对外服务、会跑后台能力的长期运行实例
+
 ## 继续阅读
 
 - [构造参数](/zh/agent-sdk-docs/local-agent/constructor-options)
+- [本地 Agent 的 HTTP 和 RPC](/zh/agent-sdk-docs/local-agent/http-and-rpc)
 - [Session set / run / stream](/zh/agent-sdk-docs/sessions/overview)

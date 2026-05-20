@@ -54,7 +54,9 @@ export function registerControlOverviewRoutes(
           executionContext: params.getAgentContext(),
           limit: sessionLimit,
         });
-        const services = listServiceStates();
+        const services = listServiceStates({
+          context: params.getAgentContext(),
+        });
         const taskResult = await listTaskDefinitions({
           projectRoot: runtime.rootPath,
         });
@@ -99,7 +101,9 @@ export function registerControlOverviewRoutes(
     app.get(routePath, (c) => {
       return c.json({
         success: true,
-        services: listServiceStates(),
+        services: listServiceStates({
+          context: params.getAgentContext(),
+        }),
       });
     });
   }

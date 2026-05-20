@@ -6,7 +6,7 @@
  * - service 侧直接复用底层 `Executor` 协议，避免 SDK `run()` 包装层重复补写消息。
  */
 
-import type { SessionPort } from "@/runtime/AgentContextTypes.js";
+import type { SessionPort } from "@/core/AgentContextTypes.js";
 
 /**
  * 构造 SDK SessionPort 的参数。

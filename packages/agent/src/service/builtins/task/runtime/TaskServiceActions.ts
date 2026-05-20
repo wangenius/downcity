@@ -2,7 +2,7 @@
  * TaskServiceActions：task service 的 action 注册表模块。
  *
  * 关键点（中文）
- * - 这里专门负责把 task 的 CLI/API/execute 定义装配成 `ServiceActions`。
+ * - 这里专门负责把 task 的 CLI/execute 定义装配成 `ServiceActions`。
  * - TaskService 本体只保留实例状态与 lifecycle，不再承载大段 action 声明。
  */
 
@@ -26,19 +26,13 @@ import {
   type TaskSchedulerReloadPort,
 } from "./TaskActionExecution.js";
 import {
-  mapTaskCreateApiPayload,
   mapTaskCreateCommandPayload,
-  mapTaskDeleteApiPayload,
   mapTaskDeleteCommandPayload,
   mapTaskDisableCommandPayload,
   mapTaskEnableCommandPayload,
-  mapTaskListApiPayload,
   mapTaskListCommandPayload,
-  mapTaskRunApiPayload,
   mapTaskRunCommandPayload,
-  mapTaskStatusApiPayload,
   mapTaskStatusCommandPayload,
-  mapTaskUpdateApiPayload,
   mapTaskUpdateCommandPayload,
 } from "./TaskActionInput.js";
 
@@ -59,14 +53,6 @@ export function createTaskServiceActions(params: {
           );
         },
         mapInput: mapTaskListCommandPayload,
-      },
-      api: {
-        method: "GET",
-        mapInput(c) {
-          return mapTaskListApiPayload({
-            status: c.req.query("status"),
-          });
-        },
       },
       execute: async (actionParams) => {
         return executeTaskListAction({
@@ -103,10 +89,6 @@ export function createTaskServiceActions(params: {
         },
         mapInput: mapTaskCreateCommandPayload,
       },
-      api: {
-        method: "POST",
-        mapInput: mapTaskCreateApiPayload,
-      },
       execute: async (actionParams) => {
         return executeTaskCreateAction({
           context: actionParams.context,
@@ -125,10 +107,6 @@ export function createTaskServiceActions(params: {
         },
         mapInput: mapTaskRunCommandPayload,
       },
-      api: {
-        method: "POST",
-        mapInput: mapTaskRunApiPayload,
-      },
       execute: async (actionParams) => {
         return executeTaskRunAction({
           context: actionParams.context,
@@ -143,10 +121,6 @@ export function createTaskServiceActions(params: {
           command.argument("<title>");
         },
         mapInput: mapTaskDeleteCommandPayload,
-      },
-      api: {
-        method: "DELETE",
-        mapInput: mapTaskDeleteApiPayload,
       },
       execute: async (actionParams) => {
         return executeTaskDeleteAction({
@@ -180,10 +154,6 @@ export function createTaskServiceActions(params: {
         },
         mapInput: mapTaskUpdateCommandPayload,
       },
-      api: {
-        method: "PUT",
-        mapInput: mapTaskUpdateApiPayload,
-      },
       execute: async (actionParams) => {
         return executeTaskUpdateAction({
           context: actionParams.context,
@@ -199,10 +169,6 @@ export function createTaskServiceActions(params: {
           command.argument("<title>").argument("<status>");
         },
         mapInput: mapTaskStatusCommandPayload,
-      },
-      api: {
-        method: "PUT",
-        mapInput: mapTaskStatusApiPayload,
       },
       execute: async (actionParams) => {
         return executeTaskStatusAction({

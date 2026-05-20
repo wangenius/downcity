@@ -8,60 +8,76 @@
  */
 
 import { Hono } from "hono";
-import { getAgentContext } from "@/runtime/AgentRuntime.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 
 /**
- * Plugin 路由。
+ * Plugin 路由参数。
  */
-export const pluginsRouter = new Hono();
+type PluginsRouterOptions = {
+  /**
+   * 读取当前 agent 执行上下文。
+   */
+  getAgentContext: () => AgentContext;
+};
 
-pluginsRouter.get("/api/plugins/list", (c) => {
-  return c.json({
-    success: true,
-    plugins: getAgentContext().plugins.list(),
+/**
+ * 创建 plugin 路由。
+ */
+export function createPluginsRouter(
+  options: PluginsRouterOptions,
+): Hono {
+  const router = new Hono();
+
+  router.get("/api/plugins/list", (c) => {
+    return c.json({
+      success: true,
+      plugins: options.getAgentContext().plugins.list(),
+    });
   });
-});
 
-pluginsRouter.post("/api/plugins/availability", async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const pluginName = String(body?.pluginName || "").trim();
+  router.post("/api/plugins/availability", async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const pluginName = String(body?.pluginName || "").trim();
 
-  if (!pluginName) {
-    return c.json({ success: false, error: "pluginName is required" }, 400);
-  }
+    if (!pluginName) {
+      return c.json({ success: false, error: "pluginName is required" }, 400);
+    }
 
-  const availability =
-    await getAgentContext().plugins.availability(pluginName);
-  return c.json({
-    success: true,
-    pluginName,
-    availability,
-  });
-});
-
-pluginsRouter.post("/api/plugins/action", async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const pluginName = String(body?.pluginName || "").trim();
-  const actionName = String(body?.actionName || "").trim();
-
-  if (!pluginName) {
-    return c.json({ success: false, error: "pluginName is required" }, 400);
-  }
-  if (!actionName) {
-    return c.json({ success: false, error: "actionName is required" }, 400);
-  }
-
-  const result = await getAgentContext().plugins.runAction({
-    plugin: pluginName,
-    action: actionName,
-    payload: body?.payload,
-  });
-  return c.json(
-    {
-      ...result,
+    const availability =
+      await options.getAgentContext().plugins.availability(pluginName);
+    return c.json({
+      success: true,
       pluginName,
-      actionName,
-    },
-    result.success ? 200 : 400,
-  );
-});
+      availability,
+    });
+  });
+
+  router.post("/api/plugins/action", async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const pluginName = String(body?.pluginName || "").trim();
+    const actionName = String(body?.actionName || "").trim();
+
+    if (!pluginName) {
+      return c.json({ success: false, error: "pluginName is required" }, 400);
+    }
+    if (!actionName) {
+      return c.json({ success: false, error: "actionName is required" }, 400);
+    }
+
+    const result = await options.getAgentContext().plugins.runAction({
+      plugin: pluginName,
+      action: actionName,
+      payload: body?.payload,
+    });
+    return c.json(
+      {
+        ...result,
+        pluginName,
+        actionName,
+      },
+      result.success ? 200 : 400,
+    );
+  });
+
+  return router;
+}

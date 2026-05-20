@@ -12,20 +12,20 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import http from "node:http";
 import { logger as serverLogger } from "@/utils/logger/Logger.js";
-import { executeRouter } from "@/server/http/execute/execute.js";
+import { createExecuteRouter } from "@/server/http/execute/execute.js";
 import { healthRouter } from "@/server/http/health/health.js";
 import {
-  ensureServiceActionRoutesRegistered,
-  servicesRouter,
+  createServicesRouter,
 } from "@/server/http/services/services.js";
-import { pluginsRouter } from "@/server/http/plugins/plugins.js";
-import { staticRouter } from "@/server/http/static/static.js";
-import { controlRouter } from "@/server/http/control/ControlRouter.js";
+import { createPluginsRouter } from "@/server/http/plugins/plugins.js";
+import { createStaticRouter } from "@/server/http/static/static.js";
+import { createControlRouter } from "@/server/http/control/ControlRouter.js";
 import {
-  listBuiltinPluginRuntimeAuthPolicies,
   registerBuiltinPluginHttpRoutes,
 } from "@/plugin/core/HttpRoutes.js";
-import { getAgentContext } from "@/runtime/AgentRuntime.js";
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentCore } from "@/core/AgentCore.js";
 
 /**
  * Server 启动参数。
@@ -35,6 +35,12 @@ export interface ServerStartOptions {
   port: number;
   /** HTTP 服务监听主机。 */
   host: string;
+  /** 可选实例级 agent core。 */
+  core?: Pick<AgentCore, "getContext" | "getRuntime">;
+  /** 可选实例级 runtime 读取函数。 */
+  getAgentRuntime?: () => AgentRuntime;
+  /** 可选实例级 context 读取函数。 */
+  getAgentContext?: () => AgentContext;
 }
 
 /**
@@ -49,11 +55,41 @@ export interface ServerInstance {
   stop(): Promise<void>;
 }
 
+type AgentServerBindings = {
+  getAgentRuntime: () => AgentRuntime;
+  getAgentContext: () => AgentContext;
+};
+
+function resolveServerBindings(options: Pick<
+  ServerStartOptions,
+  "core" | "getAgentRuntime" | "getAgentContext"
+>): AgentServerBindings {
+  const core = options.core;
+  if (core) {
+    return {
+      getAgentRuntime: () => core.getRuntime(),
+      getAgentContext: () => core.getContext(),
+    };
+  }
+  if (options.getAgentRuntime && options.getAgentContext) {
+    return {
+      getAgentRuntime: options.getAgentRuntime,
+      getAgentContext: options.getAgentContext,
+    };
+  }
+  throw new Error(
+    "createServerApp/startServer requires either core or both getAgentRuntime/getAgentContext",
+  );
+}
+
 /**
  * 创建主 Hono 应用。
  */
-export function createServerApp(): Hono {
+export function createServerApp(
+  options: Pick<ServerStartOptions, "core" | "getAgentRuntime" | "getAgentContext">,
+): Hono {
   const app = new Hono();
+  const bindings = resolveServerBindings(options);
 
   app.use("*", logger());
   app.use(
@@ -65,19 +101,28 @@ export function createServerApp(): Hono {
     }),
   );
 
-  // 关键点（中文）：service action 路由在 runtime ready 后再注册，避免命令级 import 副作用。
-  ensureServiceActionRoutesRegistered();
-
   // 关键点（中文）：按路由域挂载，server 模块只保留装配职责。
-  app.route("/", staticRouter);
+  app.route("/", createStaticRouter({
+    getAgentRuntime: bindings.getAgentRuntime,
+  }));
   app.route("/", healthRouter);
+  const servicesRouter = createServicesRouter({
+    getAgentContext: bindings.getAgentContext,
+  });
   app.route("/", servicesRouter);
-  app.route("/", pluginsRouter);
-  app.route("/", executeRouter);
-  app.route("/", controlRouter);
+  app.route("/", createPluginsRouter({
+    getAgentContext: bindings.getAgentContext,
+  }));
+  app.route("/", createExecuteRouter({
+    getAgentRuntime: bindings.getAgentRuntime,
+  }));
+  app.route("/", createControlRouter({
+    getAgentRuntime: bindings.getAgentRuntime,
+    getAgentContext: bindings.getAgentContext,
+  }));
   registerBuiltinPluginHttpRoutes({
     app,
-    getContext: getAgentContext,
+    getContext: bindings.getAgentContext,
   });
 
   return app;
@@ -89,7 +134,7 @@ export function createServerApp(): Hono {
 export async function startServer(
   options: ServerStartOptions,
 ): Promise<ServerInstance> {
-  const app = createServerApp();
+  const app = createServerApp(options);
   const server = createNodeServer(app, options);
 
   await new Promise<void>((resolve) => {

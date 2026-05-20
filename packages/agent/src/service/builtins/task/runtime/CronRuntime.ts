@@ -6,7 +6,7 @@
  * - 该模块是 task service 内部实现细节，core 只通过 service lifecycle 间接调用。
  */
 
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { registerTaskCronJobs } from "@/service/builtins/task/Scheduler.js";
 import { TaskCronTriggerEngine } from "./CronTrigger.js";
 

@@ -12,7 +12,7 @@ import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type {
   SessionUserMessageV1,
 } from "@/session/types/SessionMessages.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ChatQueueWorkerConfig } from "@/service/builtins/chat/types/ChatQueueWorker.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatQueueItem } from "@/service/builtins/chat/types/ChatQueue.js";

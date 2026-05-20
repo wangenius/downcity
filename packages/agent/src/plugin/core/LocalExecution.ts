@@ -16,14 +16,30 @@ import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
 } from "@/host/runtime/AgentHostRuntime.js";
-import { getAgentRuntimeBase } from "@/runtime/AgentRuntimeState.js";
 import type { JsonValue } from "@/types/common/Json.js";
+import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
 import type {
   PluginActionResult,
   PluginAvailability,
   PluginCommandContext,
   PluginView,
 } from "@/plugin/types/Plugin.js";
+
+function createLocalFallbackPlatformRuntime(): AgentPlatformRuntime {
+  return {
+    getGlobalEnv: () => ({}),
+    getAgentEnv: () => ({}),
+    listModels: () => [],
+    listProviders: async () => [],
+    getModel: () => null,
+    getChannelAccount: () => null,
+    readChatAuthorizationConfig: () => ({ roles: {}, channels: {} }),
+    writeChatAuthorizationConfig: async (_projectRoot: string, nextConfig: unknown) =>
+      nextConfig as never,
+    setChatAuthorizationUserRole: async () => ({ roles: {}, channels: {} }),
+    isPluginEnabled: (pluginName: string) => pluginName === "auth",
+  };
+}
 
 /**
  * 创建本地 plugin 命令上下文。
@@ -39,25 +55,10 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
 
   defaultLogger.bindProjectRoot(rootPath);
 
-  const platform = (() => {
-    try {
-      return getAgentRuntimeBase().platform;
-    } catch {
-      return {
-        getGlobalEnv: () => ({}),
-        getAgentEnv: () => ({}),
-        listModels: () => [],
-        listProviders: async () => [],
-        getModel: () => null,
-        getChannelAccount: () => null,
-        readChatAuthorizationConfig: () => ({ roles: {}, channels: {} }),
-        writeChatAuthorizationConfig: async (_projectRoot: string, nextConfig: unknown) =>
-          nextConfig as never,
-        setChatAuthorizationUserRole: async () => ({ roles: {}, channels: {} }),
-        isPluginEnabled: (pluginName: string) => pluginName === "auth",
-      };
-    }
-  })();
+  // 关键点（中文）
+  // - 本地 plugin CLI 入口不应隐式依赖 agent 进程级 runtime。
+  // - 这里只提供最小宿主能力，保证离线/未启动 agent 的场景也能稳定执行。
+  const platform = createLocalFallbackPlatformRuntime();
 
   return {
     cwd: rootPath,

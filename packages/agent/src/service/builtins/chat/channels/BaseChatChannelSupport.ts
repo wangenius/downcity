@@ -8,7 +8,7 @@
 
 import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import {
   resolveSessionIdByChatTarget,

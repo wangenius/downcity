@@ -9,7 +9,7 @@
 import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
 import { listServiceStates } from "@/service/core/Manager.js";
 import { listControlSessionSummaries } from "@/server/http/control/SessionSummaryStore.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { WorkboardSnapshot } from "@/plugin/builtins/workboard/types/Workboard.js";
 import {
   buildIdleActivity,
@@ -36,7 +36,7 @@ export async function collectWorkboardSnapshot(
     limit: WORKBOARD_RECENT_LIMIT + Math.max(executingSessionIds.size, 1),
     executingSessionIds,
   });
-  const services = listServiceStates();
+  const services = listServiceStates({ context });
   const taskResult = await listTaskDefinitions({ projectRoot: context.rootPath });
   const degradedCount = services.filter((item) => item.state !== "running").length;
 

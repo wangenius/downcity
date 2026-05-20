@@ -17,7 +17,7 @@ import type {
 import type {
   AgentContext,
   StructuredConfig,
-} from "@/runtime/AgentContextTypes.js";
+} from "@/core/AgentContextTypes.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";

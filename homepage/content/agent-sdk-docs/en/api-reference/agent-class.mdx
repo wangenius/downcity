@@ -8,26 +8,73 @@ description: The core public interface of the local Agent SDK
 The local `Agent` exposes these core public entry points:
 
 - `new Agent(options)`
+- `agent.start(options?)`
+- `agent.stop()`
 - `agent.session(sessionId?)`
 - `agent.sessions()`
 - `agent.plugins`
-- `agent.http.start()`
-- `agent.rpc.start()`
+- `agent.http`
+- `agent.rpc`
 
 ## Constructor options
 
 - `id`
 - `path`
 - `tools`
+- `instruction`
 - `services`
 - `plugins`
+- `platform`
+- `configureSession`
 
 ## Core semantics
 
 - `Agent` itself is the local execution shell
 - the real execution object is the session it creates
 
-From an API-design perspective, it behaves more like a session factory plus transport exposer than a single-shot executor.
+From an API-design perspective, it behaves more like a session factory plus a long-lived runtime entry point.
+
+## `start()` and `stop()`
+
+`agent.start()` starts the long-lived runtime capabilities of the current agent.
+
+Typical examples include:
+
+- starting the HTTP server
+- starting the local RPC server
+- starting service lifecycles
+
+Recommended usage:
+
+```ts
+await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
+  rpc: true,
+});
+```
+
+If you do not call `agent.start()`:
+
+- you can still call `await agent.session()` and then `session.run()`
+- but no HTTP or RPC endpoint starts
+- and no background service lifecycle starts
+
+`agent.stop()` closes whichever long-lived capabilities are currently running.
+
+## `agent.http` and `agent.rpc`
+
+`agent.http` and `agent.rpc` still exist for fine-grained transport control.
+
+But for most user scenarios, the recommended entry is:
+
+```ts
+await agent.start({ http, rpc });
+```
+
+instead of calling `agent.http.start()` and `agent.rpc.start()` separately.
 
 `agent.plugins` is now an important public surface of the local SDK.
 

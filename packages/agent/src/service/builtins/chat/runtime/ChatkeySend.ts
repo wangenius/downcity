@@ -14,7 +14,7 @@ import type {
   ChatDispatchAction,
   ChatDispatchChannel,
 } from "@/service/builtins/chat/types/ChatDispatcher.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { readChatMetaBySessionId } from "./ChatMetaStore.js";
 
 /**

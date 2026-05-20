@@ -10,22 +10,17 @@
  *   `downcity agent restart` 管理。
  */
 
+import path from "node:path";
 import {
-  getAgentContext,
-  getAgentRuntime,
-  initAgentRuntime,
-  startAllServices,
-  startLocalRpcServer,
-  startServer,
-  startServiceScheduleRuntime,
-  stopAgentHotReload,
-  stopAllServices,
-  stopServiceScheduleRuntime,
+  Agent,
+  createModel,
+  loadStaticSystemPrompts,
+  StaticPromptCatalog,
 } from "@downcity/agent";
 import type { StartOptions } from "@downcity/agent";
-import { logger } from "@downcity/agent";
 import { CliError } from "../shared/CliError.js";
 import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
+import { resolveAgentName } from "../shared/IndexSupport.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -41,10 +36,8 @@ export async function runCommand(
   cwd: string = ".",
   options: StartOptions,
 ): Promise<void> {
-  // 初始化加载（进程级单例状态：root / config / logger / chat / agents 等）
-  await initAgentRuntime(cwd, {
-    platform: createAgentPlatformRuntime(),
-  });
+  const projectRoot = path.resolve(cwd);
+  const platform = createAgentPlatformRuntime();
   // 端口解析（中文）：允许 number / string；空值返回 undefined 以便走配置回退链。
   const parsePort = (
     value: string | number | undefined,
@@ -73,19 +66,60 @@ export async function runCommand(
   }
 
   const host = (options.host ?? "0.0.0.0").trim();
+  const agentName = resolveAgentName(projectRoot);
+  let currentSystems = loadStaticSystemPrompts(projectRoot);
+
+  const agent = new Agent({
+    id: agentName,
+    path: projectRoot,
+    instruction: currentSystems,
+    platform,
+    useBuiltinServices: true,
+    useBuiltinPlugins: true,
+    configureSession: async (session) => {
+      const model = await createModel({
+        config: agent.getRuntime().config,
+        projectRoot,
+        platform,
+      });
+      await session.set({
+        model,
+      });
+    },
+  });
+
+  const promptCatalog = new StaticPromptCatalog({
+    rootPath: projectRoot,
+    logger: agent.getRuntime().logger,
+    getCurrentSystems: () => currentSystems,
+    applySystems: (nextSystems) => {
+      currentSystems = nextSystems;
+      agent.setInstruction(nextSystems);
+    },
+  });
+  promptCatalog.start();
 
   process.env.DC_SERVER_PORT = String(port);
   process.env.DC_SERVER_HOST = host;
+  process.env.DC_AGENT_PATH = projectRoot;
+  process.env.DC_AGENT_NAME = agentName;
 
-  // Create and start server
-  const server = await startServer({
-    port,
-    host,
+  const startResult = await agent.start({
+    http: {
+      port,
+      host,
+    },
+    rpc: true,
+    services: true,
   });
-  const localRpc = await startLocalRpcServer({
-    context: getAgentContext(),
-    runtime: getAgentRuntime(),
-  });
+
+  const server = startResult.http?.server;
+  const localRpc = startResult.rpc?.server;
+  if (!server || !localRpc) {
+    throw new Error("Agent start did not return expected HTTP/RPC bindings");
+  }
+
+  const agentLogger = agent.getRuntime().logger;
 
   // 处理进程信号
   // 停机顺序（中文）：services -> API server -> flush logs。
@@ -94,58 +128,20 @@ export async function runCommand(
     if (isShuttingDown) return;
     isShuttingDown = true;
 
-    logger.info(`Received ${signal} signal, shutting down...`);
+    agentLogger.info(`Received ${signal} signal, shutting down...`);
+    promptCatalog.stop();
 
-    // 先停掉文件监听，避免关停阶段触发额外重载。
-    stopAgentHotReload();
-
-    // 先停持久化调度器，避免关停过程中继续触发新的 service action。
-    try {
-      await stopServiceScheduleRuntime();
-    } catch {
-      // ignore
-    }
-
-    // 停止全部 service
-    try {
-      await stopAllServices(getAgentContext());
-    } catch {
-      // ignore
-    }
-
-    // 停止服务器
-    await localRpc.stop();
-    await server.stop();
+    await agent.stop();
 
     // Save logs
-    await logger.saveAllLogs();
+    await agentLogger.saveAllLogs();
 
-    logger.info("👋 Downcity stopped");
+    agentLogger.info("👋 Downcity stopped");
     process.exit(0);
   };
 
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-  // 启动全部 service（含 task cron 等模块内生命周期逻辑）
-  // 调度策略（中文）：单服务失败不阻断主服务启动，仅记录日志。
-  try {
-    const lifecycle = await startAllServices(getAgentContext());
-    for (const item of lifecycle.results) {
-      if (item.success) continue;
-      logger.error(
-        `Service start failed: ${item.service?.name || "unknown"} - ${item.error || "unknown error"}`,
-      );
-    }
-  } catch (e) {
-    logger.error(`Service bootstrap failed: ${String(e)}`);
-  }
-
-  try {
-    await startServiceScheduleRuntime(getAgentContext());
-  } catch (e) {
-    logger.error(`Service schedule runtime bootstrap failed: ${String(e)}`);
-  }
-
-  logger.info("=== Downcity Started ===");
+  agentLogger.info("=== Downcity Started ===");
 }

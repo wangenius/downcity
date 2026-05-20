@@ -8,8 +8,7 @@
  */
 
 import type { Command } from "commander";
-import type { Context as HonoContext } from "hono";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonValue } from "@/types/common/Json.js";
 
 /**
@@ -95,24 +94,6 @@ export type ServiceActionCommand<P extends JsonValue = JsonValue> = {
 };
 
 /**
- * Action HTTP 定义。
- */
-export type ServiceActionApi<P extends JsonValue = JsonValue> = {
-  /**
-   * HTTP 方法。
-   */
-  method?: "GET" | "POST" | "PUT" | "DELETE";
-  /**
-   * 自定义路由路径；省略时走默认 `/service/<service>/<action>`。
-   */
-  path?: string;
-  /**
-   * 把 HTTP 请求映射为结构化 payload。
-   */
-  mapInput?: (ctx: HonoContext) => P | Promise<P>;
-};
-
-/**
  * 单个 service action 定义。
  */
 export type ServiceAction<
@@ -123,10 +104,6 @@ export type ServiceAction<
    * CLI 定义；省略则该 action 不暴露为 CLI 子命令。
    */
   command?: ServiceActionCommand<P>;
-  /**
-   * HTTP API 定义；省略则该 action 不注册 HTTP 路由。
-   */
-  api?: ServiceActionApi<P>;
   /**
    * action 的实际执行函数。
    */

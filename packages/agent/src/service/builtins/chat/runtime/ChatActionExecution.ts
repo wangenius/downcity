@@ -9,7 +9,7 @@
 
 import path from "node:path";
 import type { JsonObject } from "@/types/common/Json.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type {
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,

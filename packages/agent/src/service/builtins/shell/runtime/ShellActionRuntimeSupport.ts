@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type {
   ShellServiceState,
   ShellSessionRuntimeState,

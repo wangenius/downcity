@@ -1,10 +1,10 @@
 /**
- * AgentRuntime 类型定义。
+ * AgentCore 运行时类型定义。
  *
  * 关键点（中文）
- * - 这里表达的是“当前 agent 进程的长期运行状态”。
- * - 它不是抽象 host，也不是一次执行上下文。
- * - Session / Service / Plugin 这些长期对象都应从这里挂出。
+ * - 这里表达的是单个 `AgentCore` 实例持有的长期运行状态。
+ * - 它不再依赖 `runtime/*` 兼容层，而是作为实例级主类型来源。
+ * - Session / Service / Plugin 这些长期对象都从这里挂出。
  */
 
 import type { LanguageModel } from "ai";
@@ -19,7 +19,7 @@ import type { BaseService } from "@/service/builtins/BaseService.js";
 import type { Executor } from "@session/Executor.js";
 
 /**
- * AgentRuntime 启动早期的基础状态。
+ * AgentCore 启动早期的基础状态。
  */
 export interface AgentRuntimeBase {
   /**
@@ -65,7 +65,7 @@ export interface AgentRuntimeBase {
 }
 
 /**
- * Agent 进程完整运行状态。
+ * AgentCore 完整运行状态。
  */
 export interface AgentRuntime extends AgentRuntimeBase {
   /**

@@ -31,10 +31,7 @@ import {
 type PluginActionConfigItem = {
   name: string;
   supportsCommand: boolean;
-  supportsApi: boolean;
   commandDescription: string;
-  apiMethod: string;
-  apiPath: string;
 };
 
 type PluginUiItem = PluginView & {
@@ -87,10 +84,7 @@ function buildPluginActionConfig(
     .map(([actionName, action]) => ({
       name: actionName,
       supportsCommand: Boolean(action?.command),
-      supportsApi: Boolean(action?.api),
       commandDescription: String(action?.command?.description || "").trim(),
-      apiMethod: String(action?.api?.method || "").trim().toUpperCase(),
-      apiPath: String(action?.api?.path || "").trim(),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

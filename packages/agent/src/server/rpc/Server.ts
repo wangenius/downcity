@@ -9,8 +9,9 @@
 import fs from "fs-extra";
 import net, { type Server } from "node:net";
 import path from "node:path";
-import type { AgentRuntime } from "@/runtime/AgentRuntimeTypes.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentCore } from "@/core/AgentCore.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { LocalRpcRequest, LocalRpcResponse, LocalRpcServerHandle } from "@/types/rpc/LocalRpc.js";
 import type { ControlSessionExecuteRequestBody } from "@/server/http/control/types/ControlSessionExecute.js";
@@ -27,6 +28,7 @@ import type {
 } from "@/service/types/Services.js";
 import { listServiceStates, controlServiceState } from "@/service/core/ServiceStateController.js";
 import { runServiceCommand } from "@/service/core/ServiceActionRunner.js";
+import { parseServiceCommandRequestBody } from "@/service/core/ServiceCommandRequest.js";
 import { executeBySessionId } from "@/server/http/control/ExecuteBySession.js";
 import { getLocalRpcEndpoint } from "@/transport/rpc/Paths.js";
 
@@ -106,17 +108,20 @@ async function handleServiceCommand(params: {
   body: JsonValue | undefined;
   context: AgentContext;
 }): Promise<LocalRpcResponse> {
-  const body = isObjectRecord(params.body) ? params.body : {};
-  const serviceName = String(body.serviceName || "").trim();
-  const command = String(body.command || "").trim();
-  if (!serviceName || !command) {
+  let body;
+  try {
+    body = parseServiceCommandRequestBody(params.body);
+  } catch (error) {
+    return createErrorResponse(params.requestId, 400, String(error));
+  }
+  if (!body.serviceName || !body.command) {
     return createErrorResponse(params.requestId, 400, "serviceName and command are required");
   }
   const result = await runServiceCommand({
-    serviceName,
-    command,
-    payload: (body.payload ?? {}) as JsonValue,
-    ...(body.schedule !== undefined ? { schedule: body.schedule as JsonValue } : {}),
+    serviceName: body.serviceName,
+    command: body.command,
+    payload: body.payload,
+    schedule: body.schedule,
     context: params.context,
   });
   const payload: ServiceCommandResponse = {
@@ -249,7 +254,7 @@ async function dispatchRequest(params: {
   if (request.method === "GET" && request.path === "/api/services/list") {
     const payload: ServiceListResponse = {
       success: true,
-      services: listServiceStates(),
+      services: listServiceStates({ context: params.context }),
     };
     return createSuccessResponse(request.requestId, payload as unknown as JsonValue);
   }
@@ -363,17 +368,23 @@ function bindConnectionHandler(params: {
  * 启动本地 RPC server。
  */
 export async function startLocalRpcServer(params: {
-  context: AgentContext;
+  context?: AgentContext;
   runtime?: AgentRuntime;
+  core?: Pick<AgentCore, "getContext" | "getRuntime">;
 }): Promise<LocalRpcServerHandle> {
-  const endpoint = getLocalRpcEndpoint(params.context.rootPath);
+  const context = params.context || params.core?.getContext();
+  if (!context) {
+    throw new Error("startLocalRpcServer requires a context or core");
+  }
+  const runtime = params.runtime || params.core?.getRuntime();
+  const endpoint = getLocalRpcEndpoint(context.rootPath);
   await ensureEndpointReady(endpoint);
 
   const server = net.createServer();
   bindConnectionHandler({
     server,
-    context: params.context,
-    runtime: params.runtime,
+    context,
+    runtime,
   });
 
   await new Promise<void>((resolve, reject) => {

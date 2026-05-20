@@ -9,7 +9,7 @@
  */
 
 import path from "node:path";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type { TaskSessionRuntimePort } from "@/service/builtins/task/runtime/TaskRunnerTypes.js";
 import { Runner } from "@session/executors/local/Runner.js";

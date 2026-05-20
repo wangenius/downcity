@@ -7,7 +7,29 @@ description: How to expose a local Agent as an HTTP service or RPC service
 
 A local Agent can be called directly in-process, but it can also expose service endpoints.
 
-## Start HTTP
+## Recommended startup path
+
+The recommended entry is the unified lifecycle API:
+
+```ts
+const started = await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
+  rpc: true,
+});
+
+console.log(started.http?.baseUrl);
+```
+
+This starts the following in one place:
+
+- the HTTP server
+- the local RPC server
+- service lifecycles by default
+
+## Start HTTP only
 
 ```ts
 const http = await agent.http.start({
@@ -28,6 +50,27 @@ If you do not specify a port manually, this is the default local SDK HTTP listen
 await agent.rpc.start();
 ```
 
+## `start()` vs not calling `start()`
+
+If you do not call `agent.start()`:
+
+- you can still call `await agent.session()` and then use `session.run()` or `session.stream()`
+- this is the right shape when you use the Agent as a local in-process library
+- no HTTP server starts
+- no RPC server starts
+- no background service lifecycle starts
+
+After you call `agent.start()`:
+
+- the Agent exposes HTTP and RPC endpoints
+- services start by default
+- chat, schedule, and other background loops can keep running
+
+A simple mental model is:
+
+- no `start`: library mode
+- `start`: long-lived runtime mode
+
 ## When to use HTTP
 
 - another process should call the agent through `RemoteAgent`
@@ -37,7 +80,7 @@ This is especially useful when the caller and the executor live in different pro
 
 ## What happens before startup
 
-Before `agent.http.start()` and `agent.rpc.start()` expose endpoints, the SDK ensures that explicitly injected services have started.
+When you call `agent.start({ http, rpc })`, the SDK starts services first by default.
 
 That reduces the risk of ending up in a state where the endpoint is up but a critical service is still not ready.
 

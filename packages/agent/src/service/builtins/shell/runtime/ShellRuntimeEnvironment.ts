@@ -7,7 +7,7 @@
  */
 
 import path from "node:path";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { stripInvocationAuthEnv } from "@/server/http/auth/AuthEnv.js";
 import { getSessionRunScope } from "@session/SessionRunScope.js";
 

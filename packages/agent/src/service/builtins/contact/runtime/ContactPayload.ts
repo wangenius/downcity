@@ -24,15 +24,3 @@ export function readContactString(body: JsonObject, key: string): string {
   const value = body[key];
   return typeof value === "string" ? value.trim() : "";
 }
-
-/**
- * 从 contact HTTP header 或 body 中读取 contact token。
- */
-export function getContactHeaderToken(params: {
-  headers?: Headers;
-  body?: JsonObject;
-}): string {
-  const fromHeader = String(params.headers?.get("x-downcity-contact-token") || "").trim();
-  if (fromHeader) return fromHeader;
-  return params.body ? readContactString(params.body, "token") : "";
-}

@@ -2,7 +2,7 @@
  * ChatServiceActions：chat service 的 action 注册表模块。
  *
  * 关键点（中文）
- * - 这里专门负责把 chat 的 CLI/API/execute 定义装配成 `ServiceActions`。
+ * - 这里专门负责把 chat 的 CLI/execute 定义装配成 `ServiceActions`。
  * - ChatService 本体只保留实例状态与 lifecycle，不再承载大段 action 声明。
  * - action 执行仍然复用各 runtime 模块，确保行为与现有实现保持一致。
  */
@@ -25,25 +25,15 @@ import type {
   ChatStatusActionPayload,
   ChatTestActionPayload,
 } from "@/service/builtins/chat/types/ChatService.js";
-import type { JsonValue } from "@/types/common/Json.js";
 import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 import {
-  mapChatChannelApiInput,
-  mapChatChannelApiQueryInput,
   mapChatChannelCommandInput,
-  mapChatConfigureApiInput,
   mapChatConfigureCommandInput,
-  mapChatDeleteApiInput,
   mapChatDeleteCommandInput,
-  mapChatHistoryApiInput,
   mapChatHistoryCommandInput,
-  mapChatInfoApiInput,
   mapChatInfoCommandInput,
-  mapChatListApiInput,
   mapChatListCommandInput,
-  mapChatReactApiInput,
   mapChatReactCommandInput,
-  mapChatSendApiInput,
   mapChatSendCommandInput,
 } from "./ChatActionInput.js";
 import {
@@ -119,14 +109,6 @@ export function createChatServiceActions(params: {
         },
         mapInput: mapChatChannelCommandInput,
       },
-      api: {
-        method: "GET",
-        mapInput(c) {
-          return mapChatChannelApiQueryInput({
-            channel: c.req.query("channel"),
-          });
-        },
-      },
       execute: async (actionParams) => {
         return executeChatStatusAction({
           state: params.channelState,
@@ -142,12 +124,6 @@ export function createChatServiceActions(params: {
           command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
         },
         mapInput: mapChatChannelCommandInput,
-      },
-      api: {
-        method: "POST",
-        async mapInput(c) {
-          return mapChatChannelApiInput(await c.req.json().catch(() => ({})));
-        },
       },
       execute: async (actionParams) => {
         return executeChatTestAction({
@@ -165,12 +141,6 @@ export function createChatServiceActions(params: {
         },
         mapInput: mapChatChannelCommandInput,
       },
-      api: {
-        method: "POST",
-        async mapInput(c) {
-          return mapChatChannelApiInput(await c.req.json().catch(() => ({})));
-        },
-      },
       execute: async (actionParams) => {
         return executeChatReconnectAction({
           state: params.channelState,
@@ -186,12 +156,6 @@ export function createChatServiceActions(params: {
           command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
         },
         mapInput: mapChatChannelCommandInput,
-      },
-      api: {
-        method: "POST",
-        async mapInput(c) {
-          return mapChatChannelApiInput(await c.req.json().catch(() => ({})));
-        },
       },
       execute: async (actionParams) => {
         return executeChatOpenAction({
@@ -209,12 +173,6 @@ export function createChatServiceActions(params: {
         },
         mapInput: mapChatChannelCommandInput,
       },
-      api: {
-        method: "POST",
-        async mapInput(c) {
-          return mapChatChannelApiInput(await c.req.json().catch(() => ({})));
-        },
-      },
       execute: async (actionParams) => {
         return executeChatCloseAction({
           state: params.channelState,
@@ -230,14 +188,6 @@ export function createChatServiceActions(params: {
           command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
         },
         mapInput: mapChatChannelCommandInput,
-      },
-      api: {
-        method: "GET",
-        mapInput(c) {
-          return mapChatChannelApiQueryInput({
-            channel: c.req.query("channel"),
-          });
-        },
       },
       execute: async (actionParams) => {
         return executeChatConfigurationAction({
@@ -260,12 +210,6 @@ export function createChatServiceActions(params: {
         },
         mapInput: mapChatConfigureCommandInput,
       },
-      api: {
-        method: "POST",
-        async mapInput(c) {
-          return mapChatConfigureApiInput(c);
-        },
-      },
       execute: async (actionParams) => {
         return executeChatConfigureAction({
           state: params.channelState,
@@ -285,16 +229,6 @@ export function createChatServiceActions(params: {
         },
         mapInput: mapChatListCommandInput,
       },
-      api: {
-        method: "GET",
-        mapInput(c) {
-          return mapChatListApiInput({
-            channel: c.req.query("channel"),
-            limit: c.req.query("limit"),
-            q: c.req.query("q"),
-          });
-        },
-      },
       execute: async (actionParams) => {
         return executeChatListAction({
           context: actionParams.context,
@@ -311,15 +245,6 @@ export function createChatServiceActions(params: {
             .option("--session-id <sessionId>", "显式指定 sessionId（优先级更高）");
         },
         mapInput: mapChatInfoCommandInput,
-      },
-      api: {
-        method: "GET",
-        mapInput(c) {
-          return mapChatInfoApiInput({
-            chatKey: c.req.query("chatKey"),
-            sessionId: c.req.query("sessionId"),
-          });
-        },
       },
       execute: async (actionParams) => {
         return executeChatInfoAction({
@@ -346,12 +271,6 @@ export function createChatServiceActions(params: {
         },
         mapInput: mapChatSendCommandInput,
       },
-      api: {
-        method: "POST",
-        async mapInput(c) {
-          return mapChatSendApiInput(await c.req.json());
-        },
-      },
       execute: async (actionParams) => {
         return executeChatSendAction({
           context: actionParams.context,
@@ -375,12 +294,6 @@ export function createChatServiceActions(params: {
         },
         mapInput: mapChatReactCommandInput,
       },
-      api: {
-        method: "POST",
-        async mapInput(c) {
-          return mapChatReactApiInput(await c.req.json());
-        },
-      },
       execute: async (actionParams) => {
         return executeChatReactAction({
           context: actionParams.context,
@@ -402,17 +315,6 @@ export function createChatServiceActions(params: {
           };
         },
       },
-      api: {
-        method: "GET",
-        mapInput(c) {
-          const chatKey = String(c.req.query("chatKey") || "").trim();
-          const sessionId = String(c.req.query("sessionId") || "").trim();
-          return {
-            ...(chatKey ? { chatKey } : {}),
-            ...(sessionId ? { sessionId } : {}),
-          };
-        },
-      },
       execute: async (actionParams) => {
         return executeChatContextAction({
           context: actionParams.context,
@@ -429,12 +331,6 @@ export function createChatServiceActions(params: {
             .option("--session-id <sessionId>", "显式指定 sessionId");
         },
         mapInput: mapChatDeleteCommandInput,
-      },
-      api: {
-        method: "POST",
-        async mapInput(c) {
-          return mapChatDeleteApiInput(await c.req.json().catch(() => ({} as JsonValue)));
-        },
       },
       execute: async (actionParams) => {
         return executeChatDeleteAction({
@@ -459,19 +355,6 @@ export function createChatServiceActions(params: {
             .option("--after-ts <ts>", "仅返回 ts 大于该值的记录（毫秒）");
         },
         mapInput: mapChatHistoryCommandInput,
-      },
-      api: {
-        method: "GET",
-        mapInput(c) {
-          return mapChatHistoryApiInput({
-            chatKey: c.req.query("chatKey"),
-            sessionId: c.req.query("sessionId"),
-            limit: c.req.query("limit"),
-            direction: c.req.query("direction"),
-            beforeTs: c.req.query("beforeTs"),
-            afterTs: c.req.query("afterTs"),
-          });
-        },
       },
       execute: async (actionParams) => {
         return executeChatHistoryAction({

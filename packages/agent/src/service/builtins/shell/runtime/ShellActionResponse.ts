@@ -6,7 +6,7 @@
  * - 这里不读取文件、不修改 session，只基于传入文本构造返回对象。
  */
 
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type {
   ShellActionResponse,
   ShellOutputChunk,

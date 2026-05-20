@@ -1,15 +1,15 @@
 /**
- * AgentContext 类型定义。
+ * AgentCore 执行上下文类型定义。
  *
  * 关键点（中文）
  * - 这里定义 service / plugin / prompt system 共用的统一执行上下文。
  * - `AgentContext` 表达的是“当前一次执行可见的能力面”，不是宿主状态本体。
- * - `AgentRuntime` 才负责保存长期状态；`AgentContext` 只负责把这些状态暴露成执行接口。
+ * - `AgentRuntime` 负责保存长期状态；`AgentContext` 负责把这些状态暴露成执行接口。
  */
 
 import type { LanguageModel } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentRuntime } from "@/runtime/AgentRuntimeTypes.js";
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type {
   AgentPathRuntime,
   AgentPlatformRuntime,
@@ -169,10 +169,6 @@ export interface SessionExecutorPort {
 }
 
 /**
- * Session 集合入口。
- */
-
-/**
  * 单个 Session 实例端口。
  */
 export interface SessionPort {
@@ -253,6 +249,9 @@ export interface SessionPort {
   isExecuting(): boolean;
 }
 
+/**
+ * Session 集合入口。
+ */
 export interface SessionCollectionPort {
   /**
    * 获取指定 sessionId 对应的 Session 实例。

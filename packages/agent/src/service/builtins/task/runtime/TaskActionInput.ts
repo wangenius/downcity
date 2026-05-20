@@ -1,13 +1,13 @@
 /**
- * TaskActionInput：task service 的 CLI/API 输入映射模块。
+ * TaskActionInput：task service 的 CLI 输入映射模块。
  *
  * 关键点（中文）
- * - 统一处理命令行与 HTTP 请求到 task action payload 的转换。
+ * - 统一处理命令行到 task action payload 的转换。
  * - 参数校验尽量前置到输入层，避免进入执行层后才发现字段非法。
  */
 
 import { resolveSessionId } from "@session/ids/resolveSessionId.js";
-import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import type { ServiceActionCommandInput } from "@/service/types/Service.js";
 import type { ShipTaskKind, ShipTaskStatus } from "@/service/builtins/task/types/Task.js";
 import type {
@@ -19,30 +19,6 @@ import type {
 } from "@/service/builtins/task/types/TaskCommand.js";
 import type { TaskListActionPayload } from "@/service/builtins/task/types/TaskService.js";
 
-function parseJsonBodyObject(rawBody: JsonValue): JsonObject {
-  if (rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)) {
-    return rawBody as JsonObject;
-  }
-  return {};
-}
-
-function getStringField(body: JsonObject, key: string): string {
-  const value = body[key];
-  return typeof value === "string" ? value : "";
-}
-
-function getOptionalStringField(
-  body: JsonObject,
-  key: string,
-): string | undefined {
-  const value = body[key];
-  return typeof value === "string" ? value : undefined;
-}
-
-function getBooleanField(body: JsonObject, key: string): boolean {
-  return body[key] === true;
-}
-
 function parseBooleanLike(value: JsonValue | undefined): boolean | undefined {
   if (typeof value === "boolean") return value;
   if (typeof value !== "string") return undefined;
@@ -50,28 +26,6 @@ function parseBooleanLike(value: JsonValue | undefined): boolean | undefined {
   if (!normalized) return undefined;
   if (["true", "1", "yes", "on"].includes(normalized)) return true;
   if (["false", "0", "no", "off"].includes(normalized)) return false;
-  return undefined;
-}
-
-function getOptionalTaskStatusField(
-  body: JsonObject,
-  key: string,
-): ShipTaskStatus | undefined {
-  const value = body[key];
-  if (value === "enabled" || value === "paused" || value === "disabled") {
-    return value;
-  }
-  return undefined;
-}
-
-function getOptionalTaskKindField(
-  body: JsonObject,
-  key: string,
-): ShipTaskKind | undefined {
-  const value = body[key];
-  if (value === "agent" || value === "script") {
-    return value;
-  }
   return undefined;
 }
 
@@ -253,101 +207,6 @@ function mapTaskDeleteCommandInput(titleInput: string): TaskDeleteRequest {
   return { title };
 }
 
-function mapTaskListApiInput(query: { status?: string }): TaskListActionPayload {
-  const status = readTaskStatusOrThrow(
-    typeof query.status === "string" ? query.status.trim() : undefined,
-  );
-  return status ? { status } : {};
-}
-
-function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
-  const status = getOptionalTaskStatusField(body, "status");
-  const activate = getBooleanField(body, "activate");
-  if (activate && status && status !== "enabled") {
-    throw new Error("`activate` conflicts with `status` unless status=enabled");
-  }
-  const resolvedStatus = activate ? "enabled" : status;
-
-  return {
-    title: getStringField(body, "title"),
-    when: getStringField(body, "when"),
-    description: getStringField(body, "description"),
-    sessionId: getStringField(body, "sessionId"),
-    kind: getOptionalTaskKindField(body, "kind"),
-    ...(typeof parseBooleanLike(body.review) === "boolean"
-      ? { review: parseBooleanLike(body.review) }
-      : {}),
-    status: resolvedStatus,
-    body: getOptionalStringField(body, "body"),
-    overwrite: getBooleanField(body, "overwrite"),
-  };
-}
-
-function mapTaskRunApiInput(body: JsonObject): TaskRunRequest {
-  return {
-    title: getStringField(body, "title"),
-    ...(getOptionalStringField(body, "reason")
-      ? { reason: getOptionalStringField(body, "reason") }
-      : {}),
-  };
-}
-
-function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
-  const status = getOptionalTaskStatusField(body, "status");
-  const activate = getBooleanField(body, "activate");
-  if (activate && status && status !== "enabled") {
-    throw new Error("`activate` conflicts with `status` unless status=enabled");
-  }
-  const resolvedStatus = activate ? "enabled" : status;
-
-  return {
-    title: getStringField(body, "title"),
-    ...(getOptionalStringField(body, "titleNext")
-      ? { titleNext: getOptionalStringField(body, "titleNext") }
-      : {}),
-    ...(getOptionalStringField(body, "description")
-      ? { description: getOptionalStringField(body, "description") }
-      : {}),
-    ...(getOptionalStringField(body, "when")
-      ? { when: getOptionalStringField(body, "when") }
-      : {}),
-    ...(getOptionalStringField(body, "sessionId")
-      ? { sessionId: getOptionalStringField(body, "sessionId") }
-      : {}),
-    ...(getOptionalTaskKindField(body, "kind")
-      ? { kind: getOptionalTaskKindField(body, "kind") }
-      : {}),
-    ...(typeof parseBooleanLike(body.review) === "boolean"
-      ? { review: parseBooleanLike(body.review) }
-      : {}),
-    ...(getBooleanField(body, "clearWhen") ? { clearWhen: true } : {}),
-    ...(resolvedStatus ? { status: resolvedStatus } : {}),
-    ...(getOptionalStringField(body, "body")
-      ? { body: getOptionalStringField(body, "body") }
-      : {}),
-    ...(getBooleanField(body, "clearBody") ? { clearBody: true } : {}),
-  };
-}
-
-function mapTaskStatusApiInput(body: JsonObject): TaskSetStatusRequest {
-  const status = getOptionalTaskStatusField(body, "status");
-  if (!status) {
-    throw new Error("Missing or invalid status");
-  }
-  return {
-    title: getStringField(body, "title"),
-    status,
-  };
-}
-
-function mapTaskDeleteApiInput(body: JsonObject): TaskDeleteRequest {
-  const title = getStringField(body, "title");
-  if (!String(title || "").trim()) {
-    throw new Error("Missing title");
-  }
-  return { title };
-}
-
 export function mapTaskListCommandPayload(
   input: ServiceActionCommandInput,
 ): TaskListActionPayload {
@@ -419,45 +278,4 @@ export function mapTaskDisableCommandPayload(
     title,
     status: "disabled",
   });
-}
-
-export function mapTaskListApiPayload(query: {
-  status?: string;
-}): TaskListActionPayload {
-  return mapTaskListApiInput(query);
-}
-
-export async function mapTaskCreateApiPayload(c: {
-  req: { json: () => Promise<JsonValue> };
-}): Promise<TaskCreateRequest> {
-  const body = parseJsonBodyObject(await c.req.json());
-  return mapTaskCreateApiInput(body);
-}
-
-export async function mapTaskRunApiPayload(c: {
-  req: { json: () => Promise<JsonValue> };
-}): Promise<TaskRunRequest> {
-  const body = parseJsonBodyObject(await c.req.json());
-  return mapTaskRunApiInput(body);
-}
-
-export async function mapTaskUpdateApiPayload(c: {
-  req: { json: () => Promise<JsonValue> };
-}): Promise<TaskUpdateRequest> {
-  const body = parseJsonBodyObject(await c.req.json());
-  return mapTaskUpdateApiInput(body);
-}
-
-export async function mapTaskStatusApiPayload(c: {
-  req: { json: () => Promise<JsonValue> };
-}): Promise<TaskSetStatusRequest> {
-  const body = parseJsonBodyObject(await c.req.json());
-  return mapTaskStatusApiInput(body);
-}
-
-export async function mapTaskDeleteApiPayload(c: {
-  req: { json: () => Promise<JsonValue> };
-}): Promise<TaskDeleteRequest> {
-  const body = parseJsonBodyObject(await c.req.json());
-  return mapTaskDeleteApiInput(body);
 }

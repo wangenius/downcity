@@ -9,7 +9,6 @@
 export type {
   Service,
   ServiceAction,
-  ServiceActionApi,
   ServiceActionCommand,
   ServiceActionCommandInput,
   ServiceActionResult,

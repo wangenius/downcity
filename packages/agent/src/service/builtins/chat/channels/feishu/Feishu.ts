@@ -14,7 +14,7 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@/service/builtins/chat/channels/BaseChatChannel.js";
-import type { AgentContext } from "@/runtime/AgentContextTypes.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatChannelTestResult } from "@/service/builtins/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@/service/builtins/chat/types/FeishuAttachment.js";

@@ -13,7 +13,7 @@ import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { registerBuiltinPlugins } from "@/plugin/core/Plugins.js";
-import { getPluginRuntimeContextResolver } from "@/host/runtime/PluginRuntime.js";
+import { getPluginRuntimeContextResolver } from "@/runtime/host/PluginRuntime.js";
 
 let pluginManager: PluginRegistry | null = null;
 

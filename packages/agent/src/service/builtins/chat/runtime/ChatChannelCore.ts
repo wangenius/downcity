@@ -8,7 +8,7 @@
  */
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { StoredChannelAccount } from "@/types/host/Store.js";
+import type { StoredChannelAccount } from "@/types/runtime/host/Store.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
 

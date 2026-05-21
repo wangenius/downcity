@@ -16,7 +16,7 @@ import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
-import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
+import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type {
   Plugin,
   PluginAvailability,
@@ -34,7 +34,7 @@ import { getSdkAgentSessionsRootDirPath } from "@/sdk/session/index.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
-} from "@/host/runtime/AgentHostRuntime.js";
+} from "@/runtime/host/AgentHostRuntime.js";
 import { loadDowncityConfig } from "@/config/Config.js";
 import { appendExecSessionMessage } from "@/service/builtins/chat/runtime/ChatIngressStore.js";
 import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
@@ -400,7 +400,6 @@ export class AgentCore {
       paths: createAgentPathRuntime(this.path),
       pluginConfig: createAgentPluginConfigRuntime(this.path),
       platform: this.platform,
-      model: undefined,
       getSession: (sessionId: string) => {
         return this.getOrCreateSession(sessionId).getServicePort() as never;
       },
@@ -435,6 +434,10 @@ export class AgentCore {
         get: (sessionId) => this.getOrCreateSession(sessionId).getServicePort(),
         listExecutingSessionIds: () => this.runtime.listExecutingSessionIds(),
         getExecutingSessionCount: () => this.runtime.getExecutingSessionCount(),
+        resolveModel: async (sessionId) => {
+          const session = await this.session(sessionId);
+          return session.config.model;
+        },
       },
       invoke: {
         invoke: async (params: {

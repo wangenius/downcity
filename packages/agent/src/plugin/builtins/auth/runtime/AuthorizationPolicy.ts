@@ -7,7 +7,7 @@
  */
 
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
+import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,

@@ -7,7 +7,7 @@
  */
 
 import type { VoicePluginConfig } from "@/plugin/builtins/voice/types/VoicePlugin.js";
-import type { AgentPluginConfigRuntime } from "@/types/host/AgentHost.js";
+import type { AgentPluginConfigRuntime } from "@/types/runtime/host/AgentHost.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
 /**

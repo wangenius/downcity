@@ -6,7 +6,7 @@
  * - 所有会泄漏上下文的字段都必须在这里截断或抽象。
  */
 
-import type { ControlSessionSummary } from "@/server/http/control/types/ControlViewData.js";
+import type { ControlSessionSummary } from "@/runtime/server/http/control/types/ControlViewData.js";
 import type { ServiceStateSnapshot } from "@/service/types/ServiceState.js";
 import type { TaskListResponse } from "@/service/builtins/task/types/TaskCommand.js";
 import type {

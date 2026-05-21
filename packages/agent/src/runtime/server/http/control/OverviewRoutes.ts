@@ -1,0 +1,110 @@
+/**
+ * Control 概览路由。
+ *
+ * 关键点（中文）
+ * - 聚合 overview 与 services 两块轻量只读接口。
+ * - 只负责路由层拼装，不承载复杂业务状态机。
+ */
+
+import fs from "fs-extra";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import { listServiceStates } from "@/service/core/Manager.js";
+import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
+import { buildControlRouteAliases, toLimit } from "./CommonHelpers.js";
+import { listControlSessionSummaries, readRecentLogs } from "./Helpers.js";
+import type { ControlRouteRegistrationParams } from "@/runtime/server/http/control/types/ControlRoutes.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * 当前 DC 版本号（用于 Overview 显示）。
+ */
+const DC_VERSION = (() => {
+  try {
+    const pkg = fs.readJsonSync(join(__dirname, "../../../package.json")) as {
+      version?: string;
+    };
+    const version = String(pkg?.version || "").trim();
+    return version || "unknown";
+  } catch {
+    return "unknown";
+  }
+})();
+
+/**
+ * 注册概览与服务路由。
+ */
+export function registerControlOverviewRoutes(
+  params: ControlRouteRegistrationParams,
+): void {
+  const { app } = params;
+
+  for (const routePath of buildControlRouteAliases("/overview")) {
+    app.get(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const sessionLimit = toLimit(
+          c.req.query("sessionLimit") || c.req.query("contextLimit"),
+          20,
+        );
+        const sessions = await listControlSessionSummaries({
+          projectRoot: runtime.rootPath,
+          executionContext: params.getAgentContext(),
+          limit: sessionLimit,
+        });
+        const services = listServiceStates({
+          context: params.getAgentContext(),
+        });
+        const taskResult = await listTaskDefinitions({
+          projectRoot: runtime.rootPath,
+        });
+        const tasks = Array.isArray(taskResult.tasks) ? taskResult.tasks : [];
+        const logs = await readRecentLogs({
+          projectRoot: runtime.rootPath,
+          limit: 50,
+        });
+
+        const statusCount = {
+          enabled: tasks.filter((x) => x.status === "enabled").length,
+          paused: tasks.filter((x) => x.status === "paused").length,
+          disabled: tasks.filter((x) => x.status === "disabled").length,
+        };
+
+        return c.json({
+          success: true,
+          cityVersion: DC_VERSION,
+          now: new Date().toISOString(),
+          agent: {
+            name: runtime.config.name,
+            status: "running",
+          },
+          sessions: {
+            total: sessions.length,
+            items: sessions,
+          },
+          services,
+          tasks: {
+            total: tasks.length,
+            statusCount,
+          },
+          logs,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/services")) {
+    app.get(routePath, (c) => {
+      return c.json({
+        success: true,
+        services: listServiceStates({
+          context: params.getAgentContext(),
+        }),
+      });
+    });
+  }
+}

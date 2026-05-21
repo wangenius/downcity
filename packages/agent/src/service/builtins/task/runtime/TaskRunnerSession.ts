@@ -9,6 +9,7 @@
  */
 
 import path from "node:path";
+import type { LanguageModel } from "ai";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type { TaskSessionRuntimePort } from "@/service/builtins/task/runtime/TaskRunnerTypes.js";
@@ -54,15 +55,23 @@ export async function appendTaskRoundUserMessage(params: {
  * 构建 task 专用 Session 运行时（独立于普通 Session 实例缓存）。
  *
  * 关键点（中文）
- * - 使用 Runner 执行，模型来自 context.session.model（agent 级模型）。
+ * - 使用 Runner 执行，但模型显式来自“任务绑定 session”的 session 级配置。
+ * - task runner 自己维护独立 history，不复用原 session 的消息落盘。
  */
 export function createTaskSessionRuntimePort(params: {
   context: AgentContext;
+  model: LanguageModel;
   runDirAbs: string;
   runSessionId: string;
   userSimulatorSessionId: string;
 }): TaskSessionRuntimePort {
-  const { context, runDirAbs, runSessionId, userSimulatorSessionId } = params;
+  const {
+    context,
+    model,
+    runDirAbs,
+    runSessionId,
+    userSimulatorSessionId,
+  } = params;
   const compactionComposer = new JsonlSessionCompactionComposer({
     keepLastMessages: context.config.context?.messages?.keepLastMessages,
     maxInputTokensApprox: context.config.context?.messages?.maxInputTokensApprox,
@@ -125,15 +134,12 @@ export function createTaskSessionRuntimePort(params: {
       if (existing) return existing;
 
       const historyComposer = resolveTaskHistoryComposer(key);
-      if (!context.session.model) {
-        throw new Error("TaskSessionRuntimePort requires session.model");
-      }
       const executionComposer = new LocalSessionExecutionComposer({
         sessionId: key,
         getTools: () => shellTools,
       });
       const created = new Runner({
-        model: context.session.model,
+        model,
         logger: context.logger,
         historyComposer,
         compactionComposer,

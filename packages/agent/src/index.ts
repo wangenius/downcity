@@ -82,9 +82,9 @@ export {
 } from "./session/composer/system/default/StaticPromptCatalog.js";
 
 // Agent server 与 transport 集成
-export { startServer } from "./server/http/Server.js";
-export { startLocalRpcServer } from "./server/rpc/Server.js";
-export { callAgentTransport } from "./transport/rpc/Transport.js";
+export { startServer } from "./runtime/server/http/Server.js";
+export { startLocalRpcServer } from "./runtime/server/rpc/Server.js";
+export { callAgentTransport } from "./runtime/transport/rpc/Transport.js";
 
 // Service 运行集成
 export { listRegisteredServices } from "./service/core/ServiceClassRegistry.js";
@@ -117,19 +117,18 @@ export { registerAllPluginsForCli } from "./plugin/core/PluginCommand.js";
 export { listBuiltinPluginRuntimeAuthPolicies } from "./plugin/core/HttpRoutes.js";
 export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js";
 
-// 项目、配置与模型集成
-export { createModel } from "./model/CreateModel.js";
+// 项目与配置集成
 export {
   initializeAgentProject,
   isAgentProjectInitialized,
   listPlatformModelChoices,
   normalizeDefaultAgentName,
-} from "./project/AgentInitializer.js";
-export type { PlatformModelChoice } from "./project/AgentInitializer.js";
+} from "./config/project/AgentInitializer.js";
+export type { PlatformModelChoice } from "./config/project/AgentInitializer.js";
 export {
   ensureRuntimeExecutionBindingReady,
   ensureRuntimeProjectReady,
-} from "./host/daemon/ProjectSetup.js";
+} from "./runtime/host/daemon/ProjectSetup.js";
 export { assertProjectExecutionTarget } from "./config/ExecutionBinding.js";
 
 // 日志
@@ -140,14 +139,14 @@ export type {
   AgentPathRuntime,
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
-} from "./types/host/AgentHost.js";
+} from "./types/runtime/host/AgentHost.js";
 
 // 项目协议类型
 export type {
   AgentProjectChannel,
   AgentProjectInitializationInput,
   AgentProjectInitializationResult,
-} from "./project/types/AgentProject.js";
+} from "./config/project/types/AgentProject.js";
 export type { ExecutionBindingConfig } from "./types/config/ExecutionBinding.js";
 export type { StartOptions } from "./types/config/Start.js";
 
@@ -176,7 +175,7 @@ export type {
   PlatformConfigFileStatusItem,
   PlatformConfigStatusResponse,
   PlatformLocalModelsResponse,
-} from "./types/platform/Platform.js";
+} from "./types/runtime/platform/Platform.js";
 export type {
   PlatformAgentChatChannelStatus,
   PlatformAgentDaemonMeta,
@@ -187,19 +186,22 @@ export type {
   PlatformAgentShipServicesConfig,
   PlatformAgentShipSingleChannelConfig,
   PlatformAgentShipStartConfig,
-} from "./types/platform/PlatformGateway.js";
+} from "./types/runtime/platform/PlatformGateway.js";
 
 // Daemon / RPC 协议类型
 export {
   DAEMON_LOG_FILENAME,
   DAEMON_META_FILENAME,
   DAEMON_PID_FILENAME,
-} from "./types/daemon/Daemon.js";
-export type { DaemonMeta, DaemonStaleReason } from "./types/daemon/Daemon.js";
+} from "./types/runtime/daemon/Daemon.js";
+export type {
+  DaemonMeta,
+  DaemonStaleReason,
+} from "./types/runtime/daemon/Daemon.js";
 export type {
   LocalRpcRequest,
   LocalRpcResponse,
-} from "./types/rpc/LocalRpc.js";
+} from "./types/runtime/rpc/LocalRpc.js";
 
 // Inline instant 协议类型
 export type {
@@ -207,7 +209,7 @@ export type {
   PlatformInlineInstantRunInput,
   PlatformInlineInstantRunResult,
   PlatformInlineInstantService,
-} from "./types/http/InlineInstant.js";
+} from "./types/runtime/http/InlineInstant.js";
 
 // Plugin 作者与控制面类型
 export type {
@@ -324,7 +326,7 @@ export type {
   UpsertGlobalEnvEntryInput,
   UpsertModelInput,
   UpsertModelProviderInput,
-} from "./types/host/Store.js";
+} from "./types/runtime/host/Store.js";
 
 // HTTP auth 协议类型
 export {
@@ -332,17 +334,17 @@ export {
   AUTH_DEFAULT_ROLES,
   AUTH_PERMISSION_DESCRIPTIONS,
   AUTH_PERMISSION_KEYS,
-} from "./types/auth/AuthPermission.js";
+} from "./types/runtime/auth/AuthPermission.js";
 export type {
   AuthDefaultRoleDefinition,
   AuthDefaultRoleName,
   AuthPermissionKey,
-} from "./types/auth/AuthPermission.js";
-export type { AuthRoutePolicy } from "./types/auth/AuthRoute.js";
+} from "./types/runtime/auth/AuthPermission.js";
+export type { AuthRoutePolicy } from "./types/runtime/auth/AuthRoute.js";
 export type {
   AuthIssuedToken,
   AuthTokenSummary,
-} from "./types/auth/AuthToken.js";
+} from "./types/runtime/auth/AuthToken.js";
 export type {
   AuthAuditLog,
   AuthPermission,
@@ -351,4 +353,4 @@ export type {
   AuthTokenRecord,
   AuthUser,
   AuthUserStatus,
-} from "./types/auth/AuthTypes.js";
+} from "./types/runtime/auth/AuthTypes.js";

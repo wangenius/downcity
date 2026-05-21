@@ -148,8 +148,15 @@ export async function runTaskNow(params: {
 
   const runSessionId = createTaskRunSessionId(task.taskId, timestamp);
   const userSimulatorSessionId = `task-user-sim:${task.taskId}:${timestamp}`;
+  const taskModel = await context.session.resolveModel(task.frontmatter.sessionId);
+  if (!taskModel) {
+    throw new Error(
+      `Task "${task.taskId}" requires a configured model on session "${task.frontmatter.sessionId}"`,
+    );
+  }
   const taskSessionRuntime = createTaskSessionRuntimePort({
     context,
+    model: taskModel,
     runDirAbs,
     runSessionId,
     userSimulatorSessionId,

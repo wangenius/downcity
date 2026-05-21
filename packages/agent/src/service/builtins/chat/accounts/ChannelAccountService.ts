@@ -8,8 +8,8 @@
  */
 
 import crypto from "node:crypto";
-import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
-import type { StoredChannelAccountChannel } from "@/types/host/Store.js";
+import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
+import type { StoredChannelAccountChannel } from "@/types/runtime/host/Store.js";
 import { resolveChatChannelBotInfo } from "@/service/builtins/chat/channels/BotInfoProvider.js";
 import type {
   ChatChannelAccountCreateInput,

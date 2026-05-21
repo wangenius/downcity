@@ -8,8 +8,8 @@
 
 import type { Command } from "commander";
 import { generateText } from "ai";
-import { createModel } from "@downcity/agent";
 import type { LlmProviderType } from "@downcity/agent";
+import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 import {
   discoverProviderModels,
 } from "./ModelSupport.js";
@@ -491,7 +491,7 @@ function registerTestCommands(model: Command): void {
       await runStoreCommand(options, async () => {
         const id = String(modelId || "").trim();
         if (!id) throw new Error("modelId cannot be empty");
-        const runtimeModel = await createModel({
+        const runtimeModel = await createRuntimeModel({
           config: {
             name: "console-model-test",
             version: "1.0.0",

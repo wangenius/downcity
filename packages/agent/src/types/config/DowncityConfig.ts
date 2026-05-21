@@ -8,7 +8,7 @@
 import type { LlmConfig } from "@/types/config/LlmConfig.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
 import type { JsonObject } from "@/types/common/Json.js";
-import type { SandboxProjectConfig } from "@/sandbox/types/Sandbox.js";
+import type { SandboxProjectConfig } from "@/runtime/sandbox/types/Sandbox.js";
 
 export interface DowncityConfig {
   $schema?: string;
@@ -143,8 +143,9 @@ export interface DowncityConfig {
    * LLM 全量配置（通常来自平台全局层合并结果）。
    *
    * 关键点（中文）
-   * - 运行时会读取该字段创建真实模型实例。
-   * - 对于项目内 `downcity.json`，通常不需要显式写该字段。
+   * - `@downcity/agent` 本地 SDK 不直接消费该字段。
+   * - 宿主侧（例如 `@downcity/city`）可读取该字段控制模型工厂行为，例如 `llm.logMessages`。
+   * - 对于项目内 `downcity.json`，通常不需要显式写 provider/model 明细。
    */
   llm?: LlmConfig;
   /**

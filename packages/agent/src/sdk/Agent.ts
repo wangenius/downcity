@@ -27,8 +27,8 @@ import type {
 import { Session } from "@/sdk/Session.js";
 import { AgentCore } from "@/core/AgentCore.js";
 import { startAllServices, stopAllServices } from "@/service/core/Manager.js";
-import { startServer } from "@/server/http/Server.js";
-import { startLocalRpcServer } from "@/server/rpc/Server.js";
+import { startServer } from "@/runtime/server/http/Server.js";
+import { startLocalRpcServer } from "@/runtime/server/rpc/Server.js";
 
 /**
  * SDK 本地 Agent。

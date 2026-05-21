@@ -7,14 +7,13 @@
  * - Session / Service / Plugin 这些长期对象都从这里挂出。
  */
 
-import type { LanguageModel } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type {
   AgentPathRuntime,
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
-} from "@/types/host/AgentHost.js";
+} from "@/types/runtime/host/AgentHost.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
 import type { Executor } from "@session/Executor.js";
 
@@ -68,10 +67,6 @@ export interface AgentRuntimeBase {
  * AgentCore 完整运行状态。
  */
 export interface AgentRuntime extends AgentRuntimeBase {
-  /**
-   * 当前统一执行模型实例。
-   */
-  model?: LanguageModel;
   /**
    * 读取指定 sessionId 对应的内部 Executor 实例。
    */

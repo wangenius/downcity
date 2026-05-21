@@ -12,9 +12,9 @@ import type { BaseService } from "@/service/builtins/BaseService.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
-import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
-import type { LocalRpcServerHandle } from "@/types/rpc/LocalRpc.js";
-import type { ServerInstance } from "@/server/http/Server.js";
+import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
+import type { LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
+import type { ServerInstance } from "@/runtime/server/http/Server.js";
 import type { Session } from "@/sdk/Session.js";
 
 /**

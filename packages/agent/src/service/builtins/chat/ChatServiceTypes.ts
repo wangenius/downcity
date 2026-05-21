@@ -9,7 +9,7 @@
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ChatQueueWorkerConfig } from "@/service/builtins/chat/types/ChatQueueWorker.js";
-import type { StoredChannelAccount } from "@/types/host/Store.js";
+import type { StoredChannelAccount } from "@/types/runtime/host/Store.js";
 import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
 
 /**

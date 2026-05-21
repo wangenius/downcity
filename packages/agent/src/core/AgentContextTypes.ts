@@ -14,7 +14,7 @@ import type {
   AgentPathRuntime,
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
-} from "@/types/host/AgentHost.js";
+} from "@/types/runtime/host/AgentHost.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginPort } from "@/plugin/types/Plugin.js";
@@ -266,9 +266,13 @@ export interface SessionCollectionPort {
    */
   getExecutingSessionCount(): number;
   /**
-   * 当前统一模型实例。
+   * 解析指定 session 当前绑定的模型实例。
+   *
+   * 关键点（中文）
+   * - 模型归属于 session，而不是 agent 全局运行时。
+   * - 这里会触发 session 初始化/宿主配置，适合 task 等后台链路按 session 读取模型。
    */
-  model?: LanguageModel;
+  resolveModel(sessionId: string): Promise<LanguageModel | undefined>;
 }
 
 /**

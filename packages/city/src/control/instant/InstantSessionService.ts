@@ -13,7 +13,6 @@ import os from "node:os";
 import { mkdtemp } from "node:fs/promises";
 import { generateId } from "@/utils/Id.js";
 import {
-  createModel,
   drainDeferredPersistedUserMessages,
   Executor,
   getLogger,
@@ -31,6 +30,7 @@ import type {
   PlatformInlineInstantService,
 } from "@downcity/agent";
 import { InstantSystemComposer } from "@/control/instant/InstantSystemComposer.js";
+import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 import type { Logger as AgentLogger } from "@downcity/agent";
 
 type InstantSessionServiceOptions = {
@@ -224,7 +224,7 @@ export class InstantSessionService implements PlatformInlineInstantService {
       rootPath,
       sessionId,
     });
-    const model = await createModel({
+    const model = await createRuntimeModel({
       config: {
         name: "console-inline-instant-model",
         version: "1.0.0",

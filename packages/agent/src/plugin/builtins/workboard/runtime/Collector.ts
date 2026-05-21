@@ -8,7 +8,7 @@
 
 import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
 import { listServiceStates } from "@/service/core/Manager.js";
-import { listControlSessionSummaries } from "@/server/http/control/SessionSummaryStore.js";
+import { listControlSessionSummaries } from "@/runtime/server/http/control/SessionSummaryStore.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { WorkboardSnapshot } from "@/plugin/builtins/workboard/types/Workboard.js";
 import {

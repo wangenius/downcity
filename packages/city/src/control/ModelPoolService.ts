@@ -10,8 +10,8 @@
 import { generateText } from "ai";
 import type { LlmProviderType } from "@downcity/agent";
 import { PlatformStore } from "@/platform/store/index.js";
-import { createModel } from "@downcity/agent";
 import { discoverProviderModels } from "@/cli/model/ModelSupport.js";
+import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 
 const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [
   "anthropic",
@@ -375,7 +375,7 @@ export class ModelPoolService {
     const id = String(modelId || "").trim();
     if (!id) throw new Error("modelId cannot be empty");
     const actualPrompt = String(prompt || "").trim() || "Reply with exactly: OK";
-    const model = await createModel({
+    const model = await createRuntimeModel({
       config: {
         name: "console-model-test",
         version: "1.0.0",

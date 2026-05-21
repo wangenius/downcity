@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import { spawnShellProcess } from "@/sandbox/SandboxRunner.js";
+import { spawnShellProcess } from "@/runtime/sandbox/SandboxRunner.js";
 import type {
   ShellServiceState,
   ShellSessionRuntimeState,

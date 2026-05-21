@@ -13,7 +13,7 @@ import type {
   AgentPathRuntime,
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
-} from "@/types/host/AgentHost.js";
+} from "@/types/runtime/host/AgentHost.js";
 import type {
   AgentContext,
   StructuredConfig,
@@ -21,7 +21,7 @@ import type {
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { AuthRoutePolicy } from "@/types/auth/AuthRoute.js";
+import type { AuthRoutePolicy } from "@/types/runtime/auth/AuthRoute.js";
 
 /**
  * Plugin 命令执行上下文。

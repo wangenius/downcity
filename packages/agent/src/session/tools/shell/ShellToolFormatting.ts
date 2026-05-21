@@ -6,7 +6,7 @@
  * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验与 env 注入。
  */
 
-import { stripInvocationAuthEnv } from "@/server/http/auth/AuthEnv.js";
+import { stripInvocationAuthEnv } from "@/runtime/server/http/auth/AuthEnv.js";
 import { getSessionRunScope } from "@session/SessionRunScope.js";
 
 function setEnvString(

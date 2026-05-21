@@ -9,8 +9,8 @@
 
 import prompts from "prompts";
 import { generateText } from "ai";
-import { createModel } from "@downcity/agent";
 import { PlatformStore } from "@/platform/store/index.js";
+import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 import { toSafeProviderView } from "./ModelCommandShared.js";
 import {
   discoverProviderModels,
@@ -470,7 +470,7 @@ async function testModelCall(modelId: string): Promise<void> {
   }
 
   const promptText = String(promptInput.prompt || "").trim() || "Reply with exactly: OK";
-  const runtimeModel = await createModel({
+  const runtimeModel = await createRuntimeModel({
     config: {
       name: "console-model-test",
       version: "1.0.0",

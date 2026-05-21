@@ -13,13 +13,13 @@
 import path from "node:path";
 import {
   Agent,
-  createModel,
   loadStaticSystemPrompts,
   StaticPromptCatalog,
 } from "@downcity/agent";
 import type { StartOptions } from "@downcity/agent";
 import { CliError } from "../shared/CliError.js";
 import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
+import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 import { resolveAgentName } from "../shared/IndexSupport.js";
 
 /**
@@ -77,9 +77,8 @@ export async function runCommand(
     useBuiltinServices: true,
     useBuiltinPlugins: true,
     configureSession: async (session) => {
-      const model = await createModel({
+      const model = await createRuntimeModel({
         config: agent.getRuntime().config,
-        projectRoot,
         platform,
       });
       await session.set({

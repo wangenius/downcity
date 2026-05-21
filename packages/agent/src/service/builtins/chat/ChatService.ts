@@ -13,7 +13,7 @@ import { BaseService } from "@/service/builtins/BaseService.js";
 import type { ServiceActions } from "@/service/types/Service.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ChatChannelState } from "@/service/builtins/chat/types/ChatRuntime.js";
-import type { StoredChannelAccount } from "@/types/host/Store.js";
+import type { StoredChannelAccount } from "@/types/runtime/host/Store.js";
 import type { ChatQueueWorkerConfig } from "@/service/builtins/chat/types/ChatQueueWorker.js";
 import type {
   ChatServiceFeishuOptions,

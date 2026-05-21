@@ -144,6 +144,11 @@ src/
 
 ```ts
 import { Agent } from "@downcity/agent";
+import { createOpenAI } from "@ai-sdk/openai";
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
 const agent = new Agent({
   id: "demo",
@@ -152,6 +157,10 @@ const agent = new Agent({
 });
 
 const session = await agent.session();
+await session.set({
+  model: openai.responses("gpt-5"),
+});
+
 const result = await session.run({
   query: "总结一下当前仓库结构",
 });
@@ -175,3 +184,4 @@ console.log(started.http?.baseUrl);
 
 - 不调用 `start()`：library mode
 - 调用 `start()`：long-lived runtime mode
+- 模型由调用方创建并通过 `session.set({ model })` 注入，SDK 不提供默认模型策略

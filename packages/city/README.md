@@ -10,7 +10,7 @@
 - 面向平台层和宿主管理层。
 - 管理多个 Agent 项目与后台进程。
 - 提供控制面 gateway / control plane。
-- 提供全局模型池、全局环境变量、全局 chat channel account 存储。
+- 提供全局模型池、模型实例创建、全局环境变量、全局 chat channel account 存储。
 
 ## 与其他包的边界
 
@@ -18,6 +18,7 @@
   - 多 Agent 管理。
   - 平台 CLI。
   - 控制面 gateway / control plane。
+  - 全局模型池与 city 宿主侧模型工厂。
   - city 级全局 store。
 
 - `@downcity/agent`
@@ -58,6 +59,10 @@ src
 │   └── gateway/
 ├── http/
 │   └── auth/
+├── model/
+│   └── runtime/
+├── platform/
+│   └── store/
 ├── process/
 │   ├── daemon/
 │   ├── registry/
@@ -134,6 +139,15 @@ src
   - city 控制面自己的鉴权体系。
   - 包括 token、middleware、route policy、store。
 
+- `src/model/runtime/`
+  - city 宿主侧 `LanguageModel` 工厂。
+  - 负责把 `downcity.json.execution.modelId` 解析成 provider/model 配置，再创建可注入 Agent session 的模型实例。
+  - `@downcity/agent` 只消费 `LanguageModel`，不再负责模型池解析。
+
+- `src/platform/store/`
+  - city 平台持久化存储入口。
+  - 承载 provider、model、环境变量、channel account 等宿主级数据。
+
 - `src/process/`
   - city runtime 进程侧能力。
   - 统一承接 daemon、registry、local rpc，不再散落在顶层目录。
@@ -209,7 +223,8 @@ browser / UI
 ```text
 city model ...
   -> src/cli/model/*
-  -> @downcity/agent PlatformStore
+  -> src/platform/store/*
+  -> src/model/runtime/CreateRuntimeModel.ts
   -> src/cli/model/preset/*
 ```
 
@@ -233,11 +248,14 @@ city model ...
 - `src/process/registry/CityRegistry.ts`
   - 多 Agent registry 核心。
 
+- `src/model/runtime/CreateRuntimeModel.ts`
+  - city 宿主侧模型工厂，负责把项目 `execution.modelId` 转成 session 可用的 `LanguageModel`。
+
 ## 维护约定
 
 - 不要把单 Agent 执行逻辑重新实现到这个包里。
 - sandbox、tool loop、session 执行、service 内核统一来自 `@downcity/agent`。
-- 全局 store 也统一来自 `@downcity/agent`，不要在 city 再复制一份持久化实现。
+- 模型池、provider store 与模型创建逻辑留在 city 宿主层，不下沉回 `@downcity/agent`。
 - `control/` 是平台 gateway / control plane。
 - 单 Agent 的 HTTP control API 语义应该留在 `@downcity/agent`。
 - `process/` 统一放 city 的进程管理、registry、RPC，不要再散落回顶层。

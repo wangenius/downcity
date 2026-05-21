@@ -90,7 +90,7 @@ Downcity 当前内建的 service 注册表包含：
 当前 SDK 中：
 
 - `new Agent({ services: [...] })` 只做装配，不会在构造阶段启动 I/O
-- `agent.http.start()` 与 `agent.rpc.start()` 会先调用 `ensureServicesStarted()`
+- `agent.start({ http: { ... }, rpc: true })` 会先调用 `ensureServicesStarted()`
 - 也就是说，`service.lifecycle.start()` 当前最稳定的自动触发时机，是你把 agent 暴露为 HTTP / RPC 端点时
 
 如果你的 custom service 没有后台运行态，只提供 actions 或实例方法，这通常不是问题。  

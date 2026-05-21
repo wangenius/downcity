@@ -32,12 +32,14 @@ This starts the following in one place:
 ## Start HTTP only
 
 ```ts
-const http = await agent.http.start({
-  host: "127.0.0.1",
-  port: 15314,
+const started = await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
 });
 
-console.log(http.baseUrl);
+console.log(started.http?.baseUrl);
 ```
 
 The current default port is `15314`.
@@ -47,7 +49,9 @@ If you do not specify a port manually, this is the default local SDK HTTP listen
 ## Start RPC
 
 ```ts
-await agent.rpc.start();
+await agent.start({
+  rpc: true,
+});
 ```
 
 ## `start()` vs not calling `start()`
@@ -80,7 +84,7 @@ This is especially useful when the caller and the executor live in different pro
 
 ## What happens before startup
 
-When you call `agent.start({ http, rpc })`, the SDK starts services first by default.
+When you call `agent.start({ http: { ... }, rpc: true })`, the SDK starts services first by default.
 
 That reduces the risk of ending up in a state where the endpoint is up but a critical service is still not ready.
 

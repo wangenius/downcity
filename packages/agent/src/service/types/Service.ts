@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里集中声明 service 体系的共享契约。
  * - 这些类型会被 service 管理层、内建 service 与测试多处复用，因此收敛在 `service/types/`。
- * - `service/core/ServiceManager.ts` 之后只保留门面 re-export，不再承担类型源文件职责。
+ * - service 共享契约统一放在 `service/types/`，避免管理层门面文件承载类型来源职责。
  */
 
 import type { Command } from "commander";

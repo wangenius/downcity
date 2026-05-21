@@ -32,12 +32,14 @@ console.log(started.http?.baseUrl);
 ## 单独启动 HTTP
 
 ```ts
-const http = await agent.http.start({
-  host: "127.0.0.1",
-  port: 15314,
+const started = await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
 });
 
-console.log(http.baseUrl);
+console.log(started.http?.baseUrl);
 ```
 
 当前默认端口是 `15314`。
@@ -47,7 +49,9 @@ console.log(http.baseUrl);
 ## 启动 RPC
 
 ```ts
-await agent.rpc.start();
+await agent.start({
+  rpc: true,
+});
 ```
 
 ## `start()` 和不 `start()` 的区别
@@ -80,7 +84,7 @@ await agent.rpc.start();
 
 ## 启动前会发生什么
 
-调用 `agent.start({ http, rpc })` 时，SDK 默认会先确保当前 agent 的 services 已启动。
+调用 `agent.start({ http: { ... }, rpc: true })` 时，SDK 默认会先确保当前 agent 的 services 已启动。
 
 这样可以减少“端点已经起来了，但关键 service 还没 ready”的不一致状态。
 

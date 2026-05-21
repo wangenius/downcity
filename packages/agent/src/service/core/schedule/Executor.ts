@@ -7,7 +7,7 @@
  */
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { ServiceScheduleStore } from "./Store.js";
+import type { ServiceScheduleStore } from "@/service/core/schedule/Store.js";
 import { runServiceCommand } from "@/service/core/Manager.js";
 
 /**

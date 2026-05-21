@@ -79,7 +79,7 @@ const agent = new Agent({
 ```
 
 `services` 接收“已经实例化好的 service 对象”。  
-`agent.http.start()` 与 `agent.rpc.start()` 会在启动服务端点前自动启动这些 service。
+`agent.start({ http: { ... }, rpc: true })` 会在启动服务端点前自动启动这些 service。
 
 ## 流式执行
 
@@ -115,19 +115,20 @@ const fromMessage = await session.fork("message-id");
 ## 启动 HTTP / RPC
 
 ```ts
-const http = await agent.http.start({
-  host: "127.0.0.1",
-  port: 15314,
+const started = await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
+  rpc: true,
 });
 
-await agent.rpc.start();
-
-console.log(http.baseUrl);
+console.log(started.http?.baseUrl);
 ```
 
 ## 远程 Agent
 
-当另一个进程已经调用过 `agent.http.start()` 时，使用 `RemoteAgent`。
+当另一个进程已经调用过 `agent.start({ http: { ... } })` 时，使用 `RemoteAgent`。
 
 ```ts
 import { RemoteAgent } from "@downcity/agent";

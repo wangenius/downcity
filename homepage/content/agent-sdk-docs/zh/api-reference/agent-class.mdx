@@ -13,8 +13,6 @@ description: 本地 Agent SDK 的核心公开接口
 - `agent.session(sessionId?)`
 - `agent.sessions()`
 - `agent.plugins`
-- `agent.http`
-- `agent.rpc`
 
 ## 构造参数
 
@@ -64,17 +62,27 @@ await agent.start({
 
 `agent.stop()` 则负责关闭当前 agent 已启动的长期运行能力。
 
-## `agent.http` 和 `agent.rpc`
-
-`agent.http` 与 `agent.rpc` 仍然保留为更细粒度的 transport 控制入口。
+## 生命周期入口
 
 不过在大多数用户场景里，更推荐统一使用：
 
 ```ts
-await agent.start({ http, rpc });
+await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
+  rpc: true,
+});
 ```
 
-而不是分别手动调用 `agent.http.start()` 与 `agent.rpc.start()`。
+本地 `Agent` 不再暴露 `agent.http` 与 `agent.rpc` 这类细粒度 transport 入口。
+
+如果你需要：
+
+- 只启动 HTTP：`agent.start({ http: { host, port } })`
+- 只启动 RPC：`agent.start({ rpc: true })`
+- 同时启动两者：`agent.start({ http: { host, port }, rpc: true })`
 
 `agent.plugins` 是当前本地 SDK 新增的重要公开面。
 

@@ -61,7 +61,7 @@ export const snapshotHttpPlugin: Plugin = {
 也就是说：
 
 - `plugin.http.runtime` 不是 `agent.plugins.runAction(...)` 这一类显式调用
-- 当前最小 SDK `agent.http.start()` 只暴露 session API，不会自动把 plugin HTTP 路由挂进去
+- 当前最小 SDK `agent.start({ http: { ... } })` 只暴露 session API，不会自动把 plugin HTTP 路由挂进去
 - 如果你需要这一层，就应该把它理解成更完整的 host/runtime 集成能力
 
 ## 相关文档

@@ -15,8 +15,8 @@ import type {
   ServiceStateSnapshot,
 } from "@/service/types/ServiceState.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
-import { ServiceScheduleStore } from "../schedule/Store.js";
-import { normalizeRunAtMsOrThrow } from "../schedule/Time.js";
+import { ServiceScheduleStore } from "./schedule/Store.js";
+import { normalizeRunAtMsOrThrow } from "./schedule/Time.js";
 import type {
   ServiceAction,
   ServiceActionResult,

@@ -14,7 +14,6 @@ import type {
   ScheduledJobRecord,
   ScheduledJobStatus,
 } from "@/service/types/ServiceSchedule.js";
-import type { JsonValue } from "@/types/common/Json.js";
 import { generateId } from "@/utils/Id.js";
 import { getDowncityScheduleDbPath } from "@/config/Paths.js";
 
@@ -318,7 +317,10 @@ export class ServiceScheduleStore {
   /**
    * 执行 pending -> target 的状态迁移。
    */
-  private transitionPendingJob(jobId: string, status: "running" | "cancelled"): boolean {
+  private transitionPendingJob(
+    jobId: string,
+    status: "running" | "cancelled",
+  ): boolean {
     const current = this.getJobById(jobId);
     if (!current || current.status !== "pending") {
       return false;

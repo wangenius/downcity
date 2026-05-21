@@ -8,7 +8,7 @@ description: One process exposes an Agent service and another process calls it t
 This pattern usually looks like:
 
 - the server process owns the local `Agent`
-- the server calls `agent.http.start()`
+- the server calls `agent.start({ http: { ... } })`
 - the client process creates `RemoteAgent`
 
 The biggest advantage is a clean separation of responsibilities:

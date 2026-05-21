@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - `Agent` 现在是实例外观层，长期运行状态下沉到 `AgentCore`。
  * - session、HTTP、RPC、service lifecycle 都按需异步初始化。
- * - `start/stop` 负责统一收口当前 agent 实例的生命周期。
+ * - `start/stop` 是唯一公开的长期运行生命周期入口。
  */
 
 import type { Tool } from "ai";
@@ -19,13 +19,16 @@ import type {
   AgentStartOptions,
   AgentStartResult,
   AgentStopResult,
+  AgentHttpBinding,
+  AgentHttpStartOptions,
+  AgentRpcBinding,
   AgentSessionMetadata,
 } from "@/sdk/AgentSdkTypes.js";
 import { Session } from "@/sdk/Session.js";
-import { SdkAgentHttpServer } from "@/sdk/HttpServer.js";
-import { SdkAgentRpcServer } from "@/sdk/RpcServer.js";
 import { AgentCore } from "@/core/AgentCore.js";
 import { startAllServices, stopAllServices } from "@/service/core/Manager.js";
+import { startServer } from "@/server/http/Server.js";
+import { startLocalRpcServer } from "@/server/rpc/Server.js";
 
 /**
  * SDK 本地 Agent。
@@ -35,12 +38,12 @@ export class Agent {
   readonly id: string;
   readonly path: string;
   readonly tools: Record<string, Tool>;
-  readonly http: SdkAgentHttpServer;
-  readonly rpc: SdkAgentRpcServer;
   readonly services: Map<string, BaseService>;
   readonly plugins: PluginPort;
   private servicesStarted = false;
   private startPromise: Promise<AgentStartResult> | null = null;
+  private httpBinding: AgentHttpBinding | null = null;
+  private rpcBinding: AgentRpcBinding | null = null;
 
   constructor(options: AgentOptions) {
     this.core = new AgentCore(options);
@@ -49,8 +52,6 @@ export class Agent {
     this.tools = this.core.tools;
     this.services = this.core.services;
     this.plugins = this.core.plugins;
-    this.http = new SdkAgentHttpServer(this);
-    this.rpc = new SdkAgentRpcServer(this);
   }
 
   /**
@@ -100,10 +101,10 @@ export class Agent {
       const httpBinding =
         options?.http === false || options?.http === undefined
           ? undefined
-          : await this.http.start(options.http);
+          : await this.startHttp(options.http);
       const rpcBinding =
         options?.rpc === true
-          ? await this.rpc.start()
+          ? await this.startRpc()
           : undefined;
 
       return {
@@ -125,8 +126,8 @@ export class Agent {
    */
   async stop(): Promise<AgentStopResult> {
     const servicesStarted = this.servicesStarted;
-    const rpcStarted = this.rpc.isStarted();
-    const httpStarted = this.http.isStarted();
+    const rpcStarted = this.rpcBinding !== null;
+    const httpStarted = this.httpBinding !== null;
 
     if (servicesStarted) {
       await stopAllServices(this.getContext());
@@ -134,11 +135,11 @@ export class Agent {
     }
 
     if (rpcStarted) {
-      await this.rpc.stop();
+      await this.stopRpc();
     }
 
     if (httpStarted) {
-      await this.http.stop();
+      await this.stopHttp();
     }
 
     this.startPromise = null;
@@ -173,5 +174,70 @@ export class Agent {
    */
   getContext(): AgentContext {
     return this.core.getContext();
+  }
+
+  /**
+   * 启动当前 agent 的 HTTP server。
+   */
+  private async startHttp(
+    options?: AgentHttpStartOptions,
+  ): Promise<AgentHttpBinding> {
+    if (this.httpBinding) {
+      return this.httpBinding;
+    }
+    const host = String(options?.host || "127.0.0.1").trim() || "127.0.0.1";
+    const port =
+      typeof options?.port === "number" && Number.isInteger(options.port)
+        ? options.port
+        : 15314;
+    const server = await startServer({
+      host,
+      port,
+      core: this.core,
+    });
+    this.httpBinding = {
+      baseUrl: `http://${host}:${port}`,
+      host,
+      port,
+      server,
+    };
+    return this.httpBinding;
+  }
+
+  /**
+   * 停止当前 agent 的 HTTP server。
+   */
+  private async stopHttp(): Promise<void> {
+    if (!this.httpBinding) return;
+    const current = this.httpBinding;
+    this.httpBinding = null;
+    await current.server.stop();
+  }
+
+  /**
+   * 启动当前 agent 的本地 RPC server。
+   */
+  private async startRpc(): Promise<AgentRpcBinding> {
+    if (this.rpcBinding) {
+      return this.rpcBinding;
+    }
+    const server = await startLocalRpcServer({
+      core: this.core,
+    });
+    this.rpcBinding = {
+      endpoint: server.endpoint,
+      server,
+    };
+    return this.rpcBinding;
+  }
+
+  /**
+   * 停止当前 agent 的本地 RPC server。
+   */
+  private async stopRpc(): Promise<void> {
+    if (!this.rpcBinding) return;
+    const current = this.rpcBinding;
+    this.rpcBinding = null;
+    await current.server.stop();
   }
 }

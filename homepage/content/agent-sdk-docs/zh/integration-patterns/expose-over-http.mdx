@@ -8,9 +8,11 @@ description: 把本地 Agent 作为 HTTP 服务暴露给其它进程或客户端
 如果你的调用方和执行方不在同一个进程里，可以把本地 Agent 暴露成 HTTP 服务：
 
 ```ts
-await agent.http.start({
-  host: "127.0.0.1",
-  port: 15314,
+await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
 });
 ```
 

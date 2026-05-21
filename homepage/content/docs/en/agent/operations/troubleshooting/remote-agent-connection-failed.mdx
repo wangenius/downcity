@@ -7,7 +7,7 @@ description: Troubleshooting order when RemoteAgent cannot connect to the server
 
 Check these first:
 
-1. whether the server actually called `agent.http.start()`
+1. whether the server actually called `agent.start({ http: { ... } })`
 2. whether `baseUrl` is correct
 3. whether the server port is really listening
 

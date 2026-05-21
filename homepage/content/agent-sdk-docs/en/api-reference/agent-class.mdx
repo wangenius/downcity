@@ -13,8 +13,6 @@ The local `Agent` exposes these core public entry points:
 - `agent.session(sessionId?)`
 - `agent.sessions()`
 - `agent.plugins`
-- `agent.http`
-- `agent.rpc`
 
 ## Constructor options
 
@@ -64,17 +62,27 @@ If you do not call `agent.start()`:
 
 `agent.stop()` closes whichever long-lived capabilities are currently running.
 
-## `agent.http` and `agent.rpc`
-
-`agent.http` and `agent.rpc` still exist for fine-grained transport control.
+## Lifecycle entry
 
 But for most user scenarios, the recommended entry is:
 
 ```ts
-await agent.start({ http, rpc });
+await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
+  rpc: true,
+});
 ```
 
-instead of calling `agent.http.start()` and `agent.rpc.start()` separately.
+The local `Agent` no longer exposes fine-grained transport properties like `agent.http` or `agent.rpc`.
+
+If you need:
+
+- HTTP only: `agent.start({ http: { host, port } })`
+- RPC only: `agent.start({ rpc: true })`
+- both: `agent.start({ http: { host, port }, rpc: true })`
 
 `agent.plugins` is now an important public surface of the local SDK.
 

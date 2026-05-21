@@ -29,6 +29,6 @@ await session.set({ model });
 
 ## 另一个现实限制
 
-如果服务端没有启动 `agent.http.start()`，RemoteAgent 无法连接。
+如果服务端没有启动 `agent.start({ http: { ... } })`，RemoteAgent 无法连接。
 
 从体验上看，RemoteAgent 更像一个瘦客户端，而不是会自动替你补全服务端能力的智能代理。

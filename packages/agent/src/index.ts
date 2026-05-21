@@ -92,8 +92,8 @@ export {
   startAllServices,
   stopAllServices,
 } from "./service/core/Manager.js";
-export { ServiceScheduleStore } from "./service/schedule/Store.js";
-export { parseScheduledRunAtMsOrThrow } from "./service/schedule/Time.js";
+export { ServiceScheduleStore } from "./service/core/schedule/Store.js";
+export { parseScheduledRunAtMsOrThrow } from "./service/core/schedule/Time.js";
 export {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
@@ -130,7 +130,7 @@ export {
   ensureRuntimeExecutionBindingReady,
   ensureRuntimeProjectReady,
 } from "./host/daemon/ProjectSetup.js";
-export { assertProjectExecutionTarget } from "./project/ProjectExecutionBinding.js";
+export { assertProjectExecutionTarget } from "./config/ExecutionBinding.js";
 
 // 日志
 export { getLogger, logger, type Logger } from "./utils/logger/Logger.js";

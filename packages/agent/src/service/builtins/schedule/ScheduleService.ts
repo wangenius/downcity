@@ -10,9 +10,9 @@
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { BaseService } from "@/service/builtins/BaseService.js";
+import { runDueScheduledJobs } from "@/service/core/schedule/Executor.js";
+import { ServiceScheduleStore } from "@/service/core/schedule/Store.js";
 import type { ServiceActions } from "@/service/types/Service.js";
-import { ServiceScheduleStore } from "@/service/schedule/Store.js";
-import { runDueScheduledJobs } from "@/service/schedule/Executor.js";
 
 const SCHEDULE_POLL_INTERVAL_MS = 200;
 const SCHEDULE_LOG_PREFIX = "[SCHEDULE]";

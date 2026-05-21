@@ -12,7 +12,7 @@ import type {
   SessionHistoryMetaV1,
   SessionHistorySdkConfigV1,
 } from "@/session/types/SessionHistoryMeta.js";
-import { getSdkAgentSessionMetaPath } from "@/sdk/Paths.js";
+import { getSdkAgentSessionMetaPath } from "@/sdk/session/Paths.js";
 
 type ReadSessionMetadataInput = {
   /**

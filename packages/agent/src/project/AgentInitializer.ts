@@ -26,7 +26,7 @@ import {
   getDowncityTasksDirPath,
   getSoulMdPath,
 } from "@/config/Paths.js";
-import { DEFAULT_DOWNCITY_JSON } from "@/config/DowncityDefault.js";
+import { DEFAULT_DOWNCITY_JSON } from "@/config/Defaults.js";
 import { DOWNCITY_JSON_SCHEMA } from "@/config/DowncitySchema.js";
 import type { DowncityConfig } from "@/config/Config.js";
 import {
@@ -40,7 +40,7 @@ import type {
   AgentProjectInitializationInput,
   AgentProjectInitializationResult,
 } from "@/project/types/AgentProject.js";
-import { assertProjectExecutionTarget } from "@/project/ProjectExecutionBinding.js";
+import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
 import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
 

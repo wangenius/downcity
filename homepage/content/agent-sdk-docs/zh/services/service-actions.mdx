@@ -105,7 +105,7 @@ readonly actions = {
 也就是说，当前 SDK：
 
 - 会暴露 `session` 相关最小 HTTP 路由
-- 但不会因为你写了 `service.actions.api`，就自动把它挂到 `agent.http.start()` 的 SDK HTTP 路由里
+- 但不会因为你写了 `service.actions.api`，就自动把它挂到 `agent.start({ http: { ... } })` 的 SDK HTTP 路由里
 
 同样地，SDK local `Agent` 也不是一个自动替你生成 CLI service 子命令的外壳。
 

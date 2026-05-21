@@ -1,5 +1,16 @@
+/**
+ * Defaults：agent 项目默认配置模板。
+ *
+ * 关键点（中文）
+ * - 这里集中声明初始化项目时写入的默认 `downcity.json`。
+ * - 默认值只服务项目初始化，不参与运行时配置合并逻辑。
+ */
+
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 
+/**
+ * 默认 `downcity.json` 配置。
+ */
 export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
   $schema: "./.downcity/schema/downcity.schema.json",
   name: "downcity",

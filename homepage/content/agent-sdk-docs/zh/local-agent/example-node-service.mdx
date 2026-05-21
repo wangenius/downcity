@@ -21,5 +21,5 @@ description: 一个典型的本地 Agent 嵌入模式示例
 
 如果你需要跨进程访问，通常再叠加：
 
-- `agent.http.start()`
+- `agent.start({ http: { ... } })`
 - 另一个进程用 `RemoteAgent`

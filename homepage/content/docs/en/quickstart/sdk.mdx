@@ -79,7 +79,7 @@ const agent = new Agent({
 ```
 
 `services` accepts already-instantiated service objects.  
-`agent.http.start()` and `agent.rpc.start()` automatically start those services before exposing the endpoints.
+`agent.start({ http: { ... }, rpc: true })` automatically starts those services before exposing the endpoints.
 
 ## Stream a session
 
@@ -115,19 +115,20 @@ If `messageId` is provided, the new session copies history up to and including t
 ## Start HTTP / RPC
 
 ```ts
-const http = await agent.http.start({
-  host: "127.0.0.1",
-  port: 15314,
+const started = await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
+  rpc: true,
 });
 
-await agent.rpc.start();
-
-console.log(http.baseUrl);
+console.log(started.http?.baseUrl);
 ```
 
 ## Remote Agent
 
-Use `RemoteAgent` when another process has already started `agent.http.start()`.
+Use `RemoteAgent` when another process has already started `agent.start({ http: { ... } })`.
 
 ```ts
 import { RemoteAgent } from "@downcity/agent";

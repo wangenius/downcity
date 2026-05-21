@@ -21,7 +21,7 @@ import { createLlmLoggingFetch } from "@/utils/logger/Fetch.js";
 import { getLogger } from "@/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { LlmProviderType } from "@/types/config/LlmConfig.js";
-import { readProjectExecutionBinding } from "@/project/ProjectExecutionBinding.js";
+import { readProjectExecutionBinding } from "@/config/ExecutionBinding.js";
 import type { AgentPlatformRuntime } from "@/types/host/AgentHost.js";
 
 type ModelLogContext = {

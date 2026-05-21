@@ -111,8 +111,8 @@ new ChatService({
 
 当前 SDK 下，`ChatService.lifecycle.start()` 最稳定的自动触发点是：
 
-- `agent.http.start()`
-- `agent.rpc.start()`
+- `agent.start({ http: { ... } })`
+- `agent.start({ rpc: true })`
 
 这是因为 SDK 在暴露 HTTP / RPC 端点前，会先调用 `ensureServicesStarted()`。
 

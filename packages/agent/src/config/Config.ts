@@ -10,7 +10,7 @@ import fs from "fs-extra";
 import path from "path";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import { assertProjectExecutionTarget } from "@/project/ProjectExecutionBinding.js";
+import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
 
 export type { DowncityConfig };
 

@@ -1,5 +1,5 @@
 /**
- * ProjectExecutionBinding：项目执行绑定解析与校验。
+ * ExecutionBinding：项目执行绑定解析与校验。
  *
  * 关键点（中文）
  * - 项目只有一条执行路径：`execution.type = "api"`。

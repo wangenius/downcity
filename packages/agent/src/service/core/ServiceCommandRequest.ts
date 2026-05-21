@@ -12,7 +12,7 @@ import type { ServiceCommandScheduleInput } from "@/service/types/ServiceSchedul
 import {
   normalizeRunAtMsOrThrow,
   parseScheduledRunAtMsOrThrow,
-} from "@/service/schedule/Time.js";
+} from "@/service/core/schedule/Time.js";
 
 type JsonRecord = Record<string, unknown>;
 

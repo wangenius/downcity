@@ -29,6 +29,6 @@ If you move model control logic to the client, you are likely to run into the cu
 
 ## Another practical limitation
 
-If the server did not start `agent.http.start()`, `RemoteAgent` cannot connect.
+If the server did not start `agent.start({ http: { ... } })`, `RemoteAgent` cannot connect.
 
 From an operational perspective, `RemoteAgent` behaves more like a thin client than a smart proxy that can bootstrap missing server capability for you.

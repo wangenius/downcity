@@ -70,8 +70,8 @@ Use the built-in `chat` mental model when you need:
 
 In the current SDK, the most stable automatic startup boundary is still:
 
-- `agent.http.start()`
-- `agent.rpc.start()`
+- `agent.start({ http: { ... } })`
+- `agent.start({ rpc: true })`
 
 That is where service lifecycle start is most intentionally triggered.
 

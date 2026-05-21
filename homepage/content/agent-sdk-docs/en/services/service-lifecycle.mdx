@@ -68,8 +68,8 @@ This is the most important practical rule.
 
 In the current SDK, the stable automatic service startup points are mainly:
 
-- `agent.http.start()`
-- `agent.rpc.start()`
+- `agent.start({ http: { ... } })`
+- `agent.start({ rpc: true })`
 
 That is because those paths call `ensureServicesStarted()` before exposing endpoints.
 

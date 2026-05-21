@@ -8,9 +8,11 @@ description: Turn a local Agent into an HTTP service for other processes or clie
 If the caller and executor do not live in the same process, expose the local Agent as an HTTP service:
 
 ```ts
-await agent.http.start({
-  host: "127.0.0.1",
-  port: 15314,
+await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
 });
 ```
 

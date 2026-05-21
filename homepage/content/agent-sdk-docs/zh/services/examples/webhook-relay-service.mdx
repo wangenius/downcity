@@ -88,7 +88,9 @@ const agent = new Agent({
   services: [relayService],
 });
 
-await agent.rpc.start();
+await agent.start({
+  rpc: true,
+});
 relayService.enqueue("build finished");
 ```
 

@@ -34,19 +34,19 @@ import {
   readSessionMetadata,
   resolveSystemTimezone,
   writeSessionMetadata,
-} from "@/sdk/SessionMetadata.js";
+} from "@/sdk/session/index.js";
 import {
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
-} from "@/sdk/Paths.js";
+} from "@/sdk/session/index.js";
 import { AsyncQueue } from "@/sdk/AsyncQueue.js";
 import type { SessionPort } from "@/core/AgentContextTypes.js";
 import { pushUiMessageChunkAsSdkEvent } from "@/sdk/StreamEvents.js";
 import {
   persistSdkAssistantResult,
   touchSessionMetadata,
-} from "@/sdk/SessionPersistence.js";
-import { createSessionServicePort } from "@/sdk/SessionServicePort.js";
+} from "@/sdk/session/index.js";
+import { createSessionServicePort } from "@/sdk/session/index.js";
 
 type SessionOptions = {
   /**

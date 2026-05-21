@@ -90,7 +90,7 @@ This is an important real boundary.
 In the current SDK:
 
 - `new Agent({ services: [...] })` only assembles instances and does not start I/O during construction
-- `agent.http.start()` and `agent.rpc.start()` call `ensureServicesStarted()` first
+- `agent.start({ http: { ... }, rpc: true })` calls `ensureServicesStarted()` first
 - so the most stable automatic trigger for `service.lifecycle.start()` is when you expose the agent over HTTP or RPC
 
 If your custom service only provides actions or instance methods, that is usually fine.  

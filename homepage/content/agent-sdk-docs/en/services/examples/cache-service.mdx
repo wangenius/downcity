@@ -108,9 +108,11 @@ const agent = new Agent({
   services: [cacheService],
 });
 
-await agent.http.start({
-  host: "127.0.0.1",
-  port: 15314,
+await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
 });
 ```
 
@@ -120,8 +122,8 @@ await agent.http.start({
 
 In the current SDK, the most stable automatic service startup points are:
 
-- `agent.http.start()`
-- `agent.rpc.start()`
+- `agent.start({ http: { ... } })`
+- `agent.start({ rpc: true })`
 
 So repeated startup should not break the service.
 

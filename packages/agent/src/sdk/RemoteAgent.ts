@@ -2,7 +2,7 @@
  * RemoteAgent：远程 SDK 客户端。
  *
  * 关键点（中文）
- * - 面向已启动 `agent.http.start()` 的远程/本地 HTTP 服务。
+ * - 面向已通过 `agent.start({ http: { ... } })` 暴露出来的远程/本地 HTTP 服务。
  * - 与本地 `Agent` 尽量保持同一套 session 使用面。
  */
 

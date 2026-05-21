@@ -110,8 +110,8 @@ So if you explicitly pass `botToken`, `appId`, or `appSecret`, that explicit con
 
 In the current SDK, the most stable automatic trigger for `ChatService.lifecycle.start()` is:
 
-- `agent.http.start()`
-- `agent.rpc.start()`
+- `agent.start({ http: { ... } })`
+- `agent.start({ rpc: true })`
 
 That is because the SDK calls `ensureServicesStarted()` before it exposes those endpoints.
 

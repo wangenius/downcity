@@ -1,5 +1,5 @@
 /**
- * SDK Session 落盘路径规则。
+ * SDK Session 路径规则。
  *
  * 关键点（中文）
  * - 与旧 `.downcity/session/<sessionId>` 路径分开，避免不同 agent 在同一项目目录下互相污染。

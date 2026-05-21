@@ -10,9 +10,11 @@ description: 连接一个已经通过 HTTP 暴露出来的 Agent
 服务端代码：
 
 ```ts
-const http = await agent.http.start({
-  host: "127.0.0.1",
-  port: 15314,
+const started = await agent.start({
+  http: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
 });
 ```
 

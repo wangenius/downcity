@@ -30,7 +30,7 @@ import type {
 } from "@/sdk/AgentSdkTypes.js";
 import { Session } from "@/sdk/Session.js";
 import { DEFAULT_SHIP_PROMPTS } from "@session/composer/system/default/SystemDomain.js";
-import { getSdkAgentSessionsRootDirPath } from "@/sdk/Paths.js";
+import { getSdkAgentSessionsRootDirPath } from "@/sdk/session/index.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,

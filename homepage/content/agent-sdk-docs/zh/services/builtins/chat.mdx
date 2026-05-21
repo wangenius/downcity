@@ -70,8 +70,8 @@ const agent = new Agent({
 
 当前 SDK 里，最稳定的自动启动边界仍然是：
 
-- `agent.http.start()`
-- `agent.rpc.start()`
+- `agent.start({ http: { ... } })`
+- `agent.start({ rpc: true })`
 
 service lifecycle 的启动，目前主要是在这里被有意触发的。
 

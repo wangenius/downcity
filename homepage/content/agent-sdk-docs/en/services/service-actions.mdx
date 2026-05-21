@@ -105,7 +105,7 @@ The current Agent SDK HTTP server is a session SDK server. It is not a general p
 That means today:
 
 - the SDK exposes a minimal set of session HTTP routes
-- but writing `service.actions.api` does not automatically publish that action under `agent.http.start()`
+- but writing `service.actions.api` does not automatically publish that action under `agent.start({ http: { ... } })`
 
 Likewise, the local SDK `Agent` is not a wrapper that automatically generates CLI commands for your custom service.
 

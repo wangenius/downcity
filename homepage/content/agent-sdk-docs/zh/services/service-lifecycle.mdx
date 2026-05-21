@@ -69,8 +69,8 @@ readonly lifecycle = {
 
 当前 SDK 中，自动启动 service 的稳定时机主要是：
 
-- `agent.http.start()`
-- `agent.rpc.start()`
+- `agent.start({ http: { ... } })`
+- `agent.start({ rpc: true })`
 
 原因是这两个入口在真正暴露端点前，会先调用 `ensureServicesStarted()`。
 

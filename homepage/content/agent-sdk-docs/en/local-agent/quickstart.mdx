@@ -25,13 +25,10 @@ const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-});
-
-const session = await agent.session();
-await session.set({
   model: openai.responses("gpt-5"),
 });
 
+const session = await agent.session();
 const result = await session.run({
   query: "Summarize the current repository structure",
 });
@@ -43,11 +40,16 @@ console.log(result.text);
 
 1. `new Agent(...)`
 2. `await agent.session()`
-3. `await session.set({ model })`
+3. make sure the session has a model
 
 Step 3 is the easiest one to forget, and it is also the most common local SDK mistake.
 
-If you skip step 3, the local session has no model and cannot execute.
+You can satisfy step 3 in either way:
+
+- pass `model` to `new Agent({ model })` as the default for this agent
+- or call `await session.set({ model })` for one specific session
+
+If you skip step 3 entirely, the local session has no model and cannot execute.
 
 When you are using the SDK for the first time, avoid stacking complex tools, services, plugins, or HTTP exposure immediately. Get the shortest execution path working first.
 
@@ -59,7 +61,6 @@ If you only want to run sessions directly from host code:
 
 ```ts
 const session = await agent.session();
-await session.set({ model });
 await session.run({ query: "hello" });
 ```
 

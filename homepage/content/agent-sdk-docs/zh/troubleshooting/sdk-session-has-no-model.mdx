@@ -9,9 +9,19 @@ description: 本地 Agent SDK 执行时报 session 没有 model 时该怎么办
 
 ## 原因
 
-本地 SDK session 默认没有模型。
+本地 SDK session 默认没有模型，除非宿主主动提供。
 
-你必须显式调用：
+你可以用任一方式修复：
+
+```ts
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model,
+});
+```
+
+或者：
 
 ```ts
 await session.set({ model });
@@ -21,7 +31,6 @@ await session.set({ model });
 
 ```ts
 const session = await agent.session();
-await session.set({ model });
 await session.run({ query: "继续" });
 ```
 

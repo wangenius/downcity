@@ -26,6 +26,10 @@ export interface CreateSessionServicePortParams {
    */
   historyStore: SessionHistoryStore;
   /**
+   * 在执行前确保当前 session 已完成初始化与宿主级配置。
+   */
+  ensureReadyForExecution: () => Promise<void>;
+  /**
    * session 更新后需要同步执行的持久化回调。
    */
   touchMetadata: () => Promise<void>;
@@ -42,6 +46,7 @@ export function createSessionServicePort(
     getExecutor: () => params.executor.getExecutor(),
     getHistoryStore: () => params.historyStore,
     run: async (runParams) => {
+      await params.ensureReadyForExecution();
       return await params.executor.run(runParams);
     },
     clearExecutor: () => {

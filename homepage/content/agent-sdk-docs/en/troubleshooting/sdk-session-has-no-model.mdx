@@ -9,9 +9,19 @@ This is one of the most common local SDK problems.
 
 ## Reason
 
-Local SDK sessions do not have a model by default.
+Local SDK sessions do not have a model unless the host provides one.
 
-You must explicitly call:
+You can fix it in either way:
+
+```ts
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model,
+});
+```
+
+or:
 
 ```ts
 await session.set({ model });
@@ -21,7 +31,6 @@ await session.set({ model });
 
 ```ts
 const session = await agent.session();
-await session.set({ model });
 await session.run({ query: "Continue" });
 ```
 

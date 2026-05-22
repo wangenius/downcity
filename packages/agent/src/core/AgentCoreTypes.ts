@@ -15,7 +15,7 @@ import type {
   AgentPluginConfigRuntime,
 } from "@/types/runtime/host/AgentHost.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
-import type { Executor } from "@session/Executor.js";
+import type { SessionPort } from "@/core/AgentContextTypes.js";
 
 /**
  * AgentCore 启动早期的基础状态。
@@ -68,9 +68,13 @@ export interface AgentRuntimeBase {
  */
 export interface AgentRuntime extends AgentRuntimeBase {
   /**
-   * 读取指定 sessionId 对应的内部 Executor 实例。
+   * 读取指定 sessionId 对应的 session 端口。
+   *
+   * 关键点（中文）
+   * - 返回值是统一的 `SessionPort`，而不是裸 `Executor`。
+   * - 这样 HTTP / service / chat queue / contact 等入口都能复用同一层会话装配与执行兜底。
    */
-  getSession(sessionId: string): Executor;
+  getSession(sessionId: string): SessionPort;
   /**
    * 返回当前执行中的 sessionId 列表。
    */

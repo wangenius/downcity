@@ -4,15 +4,16 @@
  * 关键点（中文）
  * - 一个 `AgentCore` 只服务一个 agent 实例，不依赖进程级 singleton runtime。
  * - SDK `Agent`、实例绑定式 HTTP server、实例绑定式 local RPC 都应基于它工作。
- * - 宿主若需要统一 session 默认配置，应通过 `configureSession` 注入，而不是把策略写死在 SDK 中。
+ * - 宿主若需要统一 session 默认配置，应通过 `model` / `configureSession` 注入，而不是把策略写死在 SDK 中。
  */
 
 import fs from "fs-extra";
 import { nanoid } from "nanoid";
-import type { Tool } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import { Logger } from "@/utils/logger/Logger.js";
 import type { BaseService } from "@/service/builtins/BaseService.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { SessionPort } from "@/core/AgentContextTypes.js";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
@@ -127,6 +128,7 @@ export class AgentCore {
   private readonly platform: AgentPlatformRuntime;
   private readonly env: Record<string, string>;
   private readonly globalEnv: Record<string, string>;
+  private readonly defaultModel?: LanguageModel;
   private readonly configureSessionHook?: AgentOptions["configureSession"];
   private instruction: string[];
   private servicesStartPromise: Promise<void> | null = null;
@@ -151,6 +153,7 @@ export class AgentCore {
     this.globalEnv = this.platform.getGlobalEnv?.() || {};
     this.env = this.platform.getAgentEnv?.(this.path) || {};
     this.instruction = normalizeInstructionInput(options.instruction);
+    this.defaultModel = options.model;
     this.configureSessionHook = options.configureSession;
     this.config = this.loadConfig();
     this.services = new Map<string, BaseService>();
@@ -400,9 +403,8 @@ export class AgentCore {
       paths: createAgentPathRuntime(this.path),
       pluginConfig: createAgentPluginConfigRuntime(this.path),
       platform: this.platform,
-      getSession: (sessionId: string) => {
-        return this.getOrCreateSession(sessionId).getServicePort() as never;
-      },
+      getSession: (sessionId: string): SessionPort =>
+        this.getOrCreateSession(sessionId).getServicePort(),
       listExecutingSessionIds: () =>
         [...this.sessionsById.values()]
           .filter((session) => session.isExecuting())
@@ -410,10 +412,8 @@ export class AgentCore {
       getExecutingSessionCount: () =>
         [...this.sessionsById.values()].filter((session) => session.isExecuting()).length,
       services: this.services,
-    } satisfies Omit<AgentRuntime, "getSession"> & {
-      getSession(sessionId: string): never;
-    };
-    return runtime as unknown as AgentRuntime;
+    } satisfies AgentRuntime;
+    return runtime;
   }
 
   private createServiceContext(): AgentContext {
@@ -516,15 +516,24 @@ export class AgentCore {
       getInstructionSystemBlocks: () => this.loadInstructionSystemBlocks(),
       getServiceSystemBlocks: () => this.loadServiceSystemBlocks(),
       getPluginSystemBlocks: () => this.loadPluginSystemBlocks(),
+      ensureConfigured: async (session) => {
+        await this.configureSession(session);
+      },
     });
     this.sessionsById.set(resolvedSessionId, created);
     return created;
   }
 
   private async configureSession(session: Session): Promise<void> {
-    if (!this.configureSessionHook) return;
     if (this.configuredSessionIds.has(session.id)) return;
-    await this.configureSessionHook(session);
+    if (this.defaultModel) {
+      await session.set({
+        model: this.defaultModel,
+      });
+    }
+    if (this.configureSessionHook) {
+      await this.configureSessionHook(session);
+    }
     this.configuredSessionIds.add(session.id);
   }
 }

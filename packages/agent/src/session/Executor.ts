@@ -717,7 +717,7 @@ export class Executor implements SessionExecutor {
     const model = this.getModel();
     if (!model) {
       throw new Error(
-        `Executor for session "${this.sessionId}" requires a configured model`,
+        `Executor for session "${this.sessionId}" requires a configured model. Pass model to new Agent({ model }), call session.set({ model }), or let the host configure the session before execution.`,
       );
     }
     return model;

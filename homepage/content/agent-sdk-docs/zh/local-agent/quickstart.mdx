@@ -25,13 +25,10 @@ const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-});
-
-const session = await agent.session();
-await session.set({
   model: openai.responses("gpt-5"),
 });
 
+const session = await agent.session();
 const result = await session.run({
   query: "总结一下当前仓库结构",
 });
@@ -43,11 +40,16 @@ console.log(result.text);
 
 1. `new Agent(...)`
 2. `await agent.session()`
-3. `await session.set({ model })`
+3. 确保 session 有 model
 
 这三步里第 3 步最容易被遗漏，也是本地 SDK 最常见的踩坑点。
 
-如果你漏掉第 3 步，本地 session 没有模型，无法执行。
+第 3 步有两种做法：
+
+- 在 `new Agent({ model })` 里传默认模型
+- 或者对某个 session 单独调用 `await session.set({ model })`
+
+如果两种都没做，本地 session 没有模型，无法执行。
 
 第一次上手时，建议先不要叠加复杂 tools、services、plugins 或 HTTP 暴露，先把最短执行链跑通。
 
@@ -59,7 +61,6 @@ console.log(result.text);
 
 ```ts
 const session = await agent.session();
-await session.set({ model });
 await session.run({ query: "hello" });
 ```
 

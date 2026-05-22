@@ -11,6 +11,7 @@ The local Agent is constructed like this:
 new Agent({
   id,
   path,
+  model,
   instruction,
   tools,
   services,
@@ -70,6 +71,25 @@ Key points:
 - if you omit `instruction`, the SDK uses its minimal core instruction fallback
 
 If a host such as `city` wants project markdown files to affect the agent, that host should read those files and pass their final text through `instruction`.
+
+## `model`
+
+The default `LanguageModel` instance for sessions created under this agent.
+
+```ts
+new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model: openai.responses("gpt-5"),
+});
+```
+
+Key points:
+
+- the SDK does not resolve provider or model IDs for you
+- the host must still create the `LanguageModel` instance first
+- this becomes the default model for session execution
+- `session.set({ model })` can still override it for one specific session
 
 ## `tools`
 

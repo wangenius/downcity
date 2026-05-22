@@ -92,6 +92,15 @@ type SessionOptions = {
    * 读取当前 agent 显式注册 plugin 的 system blocks。
    */
   getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+
+  /**
+   * 在执行前确保当前 session 已完成宿主侧默认配置。
+   *
+   * 关键点（中文）
+   * - 这里通常由 `AgentCore` 注入，用于补齐默认 model、宿主覆写等一次性装配。
+   * - 所有执行入口都应通过这里兜底，避免只在 SDK `agent.session()` 链路上做配置。
+   */
+  ensureConfigured?: (session: Session) => Promise<void>;
 };
 
 /**
@@ -107,6 +116,7 @@ export class Session {
   private readonly getInstructionSystemBlocks: SessionOptions["getInstructionSystemBlocks"];
   private readonly getServiceSystemBlocks: SessionOptions["getServiceSystemBlocks"];
   private readonly getPluginSystemBlocks: SessionOptions["getPluginSystemBlocks"];
+  private readonly ensureConfiguredHook?: SessionOptions["ensureConfigured"];
   private readonly historyStore: JsonlSessionHistoryStore;
   private readonly historyComposer: JsonlSessionHistoryComposer;
   private readonly executor: Executor;
@@ -114,6 +124,7 @@ export class Session {
   private createdAt = Date.now();
   private timezone = resolveSystemTimezone();
   private initializePromise: Promise<this> | null = null;
+  private ensureConfiguredPromise: Promise<void> | null = null;
   private servicePort: SessionPort | null = null;
 
   constructor(options: SessionOptions) {
@@ -125,6 +136,7 @@ export class Session {
     this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
     this.getServiceSystemBlocks = options.getServiceSystemBlocks;
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
+    this.ensureConfiguredHook = options.ensureConfigured;
     if (!this.id) {
       throw new Error("Session requires a non-empty sessionId");
     }
@@ -338,9 +350,10 @@ export class Session {
     if (!query) {
       throw new Error("session.run requires a non-empty query");
     }
+    await this.ensureReadyForExecution();
     if (!this.sessionConfig.model) {
       throw new Error(
-        `Session "${this.id}" requires a configured model. Call session.set({ model }) first or let the host configure the session during creation.`,
+        `Session "${this.id}" requires a configured model. Pass model to new Agent({ model }), call session.set({ model }) first, or let the host configure the session during creation.`,
       );
     }
     await this.appendUserMessage({ text: query });
@@ -366,9 +379,10 @@ export class Session {
     if (!query) {
       throw new Error("session.stream requires a non-empty query");
     }
+    await this.ensureReadyForExecution();
     if (!this.sessionConfig.model) {
       throw new Error(
-        `Session "${this.id}" requires a configured model. Call session.set({ model }) first or let the host configure the session during creation.`,
+        `Session "${this.id}" requires a configured model. Pass model to new Agent({ model }), call session.set({ model }) first, or let the host configure the session during creation.`,
       );
     }
     const queue = new AsyncQueue<AgentSessionStreamEvent>();
@@ -478,11 +492,35 @@ export class Session {
       sessionId: this.id,
       executor: this.executor,
       historyStore: this.historyStore,
+      ensureReadyForExecution: async () => {
+        await this.ensureReadyForExecution();
+      },
       touchMetadata: async () => {
         await this.touchMetadata();
       },
     });
     return this.servicePort;
+  }
+
+  /**
+   * 在执行前确保 session 已完成初始化与宿主装配。
+   */
+  async ensureReadyForExecution(): Promise<void> {
+    await this.initialize();
+    if (this.ensureConfiguredPromise) {
+      await this.ensureConfiguredPromise;
+      return;
+    }
+    this.ensureConfiguredPromise = (async () => {
+      if (!this.ensureConfiguredHook) return;
+      await this.ensureConfiguredHook(this);
+    })();
+    try {
+      await this.ensureConfiguredPromise;
+    } catch (error) {
+      this.ensureConfiguredPromise = null;
+      throw error;
+    }
   }
 
   private async touchMetadata(): Promise<void> {

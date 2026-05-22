@@ -93,7 +93,7 @@ src/
   - `sandbox/` 放命令执行隔离与沙箱协议
   - `server/` 放 HTTP / RPC 服务端实现
   - `transport/` 放 agent client 侧 transport 协议与 RPC client
-  - 模型实例解析不在 `agent` 包内完成，而由宿主先创建 `LanguageModel` 再通过 `session.set({ model })` 注入
+  - 模型实例解析不在 `agent` 包内完成，而由宿主先创建 `LanguageModel`，再通过 `new Agent({ model })` 或 `session.set({ model })` 注入
 
 - `src/plugin/`
   - 插件框架与内建插件
@@ -157,12 +157,10 @@ const agent = new Agent({
   id: "demo",
   path: process.cwd(),
   tools: {},
+  model: openai.responses("gpt-5"),
 });
 
 const session = await agent.session();
-await session.set({
-  model: openai.responses("gpt-5"),
-});
 
 const result = await session.run({
   query: "总结一下当前仓库结构",
@@ -187,4 +185,5 @@ console.log(started.http?.baseUrl);
 
 - 不调用 `start()`：library mode
 - 调用 `start()`：long-lived runtime mode
-- 模型由调用方创建并通过 `session.set({ model })` 注入，SDK 不提供默认模型策略
+- 模型由调用方创建并通过 `new Agent({ model })` 或 `session.set({ model })` 注入，SDK 不提供默认模型策略
+- `new Agent({ model })` 适合给这个 Agent 的 session 提供统一默认模型；`session.set({ model })` 适合做单个 session 的覆写

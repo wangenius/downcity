@@ -11,6 +11,7 @@ description: 详细说明本地 Agent 的 id、path、instruction、tools、serv
 new Agent({
   id,
   path,
+  model,
   instruction,
   tools,
   services,
@@ -70,6 +71,25 @@ new Agent({
 - 如果省略 `instruction`，SDK 会使用包内最小 core instruction 作为 fallback
 
 如果 `city` 这类宿主希望项目 markdown 文件影响 agent，应由宿主自己读取文件，并把最终文本通过 `instruction` 传入。
+
+## `model`
+
+这个 agent 下新建 session 的默认 `LanguageModel` 实例。
+
+```ts
+new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model: openai.responses("gpt-5"),
+});
+```
+
+关键点：
+
+- SDK 不负责帮你解析 provider 或 model ID
+- 宿主仍然需要先自己创建 `LanguageModel` 实例
+- 它会成为这个 agent 的 session 默认执行模型
+- 你仍然可以对某个 session 单独调用 `session.set({ model })` 做覆写
 
 ## `tools`
 

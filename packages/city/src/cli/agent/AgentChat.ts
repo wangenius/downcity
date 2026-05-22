@@ -10,20 +10,22 @@
 import { createInterface } from "node:readline/promises";
 import chalk from "chalk";
 import prompts from "prompts";
-import { callAgentTransport } from "@downcity/agent";
-import { emitCliBlock } from "../shared/CliReporter.js";
 import {
-  createSpinner,
-  runWithSpinner,
-  shouldRenderSpinner,
-  type Spinner,
-} from "@/utils/cli/Spinner.js";
+  callAgentTransport,
+  type AgentSessionStreamEvent,
+} from "@downcity/agent";
+import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import {
   resolveProjectRootByAgentName,
   validateAgentProjectRoot,
 } from "../service/ServiceCommandSupport.js";
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
+import {
+  formatCliBearerHeaderValue,
+  resolveCliAuthToken,
+} from "@/http/auth/CliAuthStateStore.js";
+import { resolveDaemonEndpoint } from "@/process/daemon/Client.js";
 import type {
   AgentChatCliOptions,
   AgentChatExecutionOutcome,
@@ -33,6 +35,22 @@ import type {
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
 
 const AGENT_CHAT_EXECUTE_TIMEOUT_MS = 120_000;
+
+type ResolvedAgentChatTarget = {
+  /**
+   * 目标 agent 名称。
+   */
+  agentName: string;
+  /**
+   * 目标项目根目录。
+   */
+  projectRoot: string;
+  /**
+   * 当前 chat 绑定的 sessionId。
+   */
+  sessionId: string;
+};
+
 function normalizeChatMessage(input: string): string {
   return String(input || "").trim();
 }
@@ -45,6 +63,13 @@ function isReadlineAbortError(error: unknown): boolean {
   const code = "code" in error ? String(error.code || "") : "";
   const name = "name" in error ? String(error.name || "") : "";
   return code === "ABORT_ERR" || name === "AbortError";
+}
+
+function buildAgentChatFailureText(error?: string): string {
+  return (
+    String(error || "").trim() ||
+    "Agent daemon returned empty error (check config with `city agent status`)"
+  );
 }
 
 function isChatSuccess(payload: AgentChatExecuteResponse | undefined): boolean {
@@ -100,6 +125,69 @@ async function resolveChatTargetAgentName(inputName?: string): Promise<string | 
   return agentName;
 }
 
+async function resolveAgentChatTarget(
+  agentNameInput: string,
+): Promise<
+  | {
+      success: true;
+      target: ResolvedAgentChatTarget;
+    }
+  | {
+      success: false;
+      outcome: AgentChatExecutionOutcome;
+    }
+> {
+  const agentName = String(agentNameInput || "").trim();
+  const sessionId = AGENT_CHAT_DEFAULT_SESSION_ID;
+  if (!agentName) {
+    return {
+      success: false,
+      outcome: {
+        agentName: "",
+        sessionId,
+        success: false,
+        error: "Missing target agent name.",
+      },
+    };
+  }
+
+  const resolved = await resolveProjectRootByAgentName(agentName);
+  if (!resolved.projectRoot) {
+    return {
+      success: false,
+      outcome: {
+        agentName,
+        sessionId,
+        success: false,
+        error: resolved.error || "Failed to resolve agent project path",
+      },
+    };
+  }
+
+  const pathError = validateAgentProjectRoot(resolved.projectRoot);
+  if (pathError) {
+    return {
+      success: false,
+      outcome: {
+        agentName,
+        projectRoot: resolved.projectRoot,
+        sessionId,
+        success: false,
+        error: pathError,
+      },
+    };
+  }
+
+  return {
+    success: true,
+    target: {
+      agentName,
+      projectRoot: resolved.projectRoot,
+      sessionId,
+    },
+  };
+}
+
 function printAssistantReply(replyText: string): void {
   const text = String(replyText || "").trim();
   if (!text) {
@@ -137,6 +225,181 @@ function printQueuedResult(params: {
   });
 }
 
+function printAgentChatFailure(params: {
+  agentName: string;
+  error?: string;
+}): void {
+  emitCliBlock({
+    tone: "error",
+    title: "Agent chat failed",
+    facts: [
+      {
+        label: "agent",
+        value: params.agentName,
+      },
+      {
+        label: "error",
+        value: buildAgentChatFailureText(params.error),
+      },
+    ],
+  });
+}
+
+async function readStreamFailure(response: Response): Promise<string> {
+  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+  const text = await response.text().catch(() => "");
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = JSON.parse(text) as {
+        error?: string;
+        message?: string;
+      };
+      return (
+        String(payload.error || payload.message || "").trim() ||
+        `HTTP ${response.status}`
+      );
+    } catch {
+      // ignore malformed json payloads
+    }
+  }
+  return String(text || "").trim() || `HTTP ${response.status}`;
+}
+
+async function streamAgentChatTurn(params: {
+  agentName: string;
+  message: string;
+  transport?: AgentChatTransportOptions;
+}): Promise<{
+  success: boolean;
+  error?: string;
+  emittedVisibleText: boolean;
+}> {
+  const message = normalizeChatMessage(params.message);
+  if (!message) {
+    return {
+      success: false,
+      error: "Chat message is required.",
+      emittedVisibleText: false,
+    };
+  }
+
+  const resolved = await resolveAgentChatTarget(params.agentName);
+  if (!resolved.success) {
+    return {
+      success: false,
+      error: resolved.outcome.error,
+      emittedVisibleText: false,
+    };
+  }
+
+  const { target } = resolved;
+  const endpoint = resolveDaemonEndpoint({
+    projectRoot: target.projectRoot,
+    host: params.transport?.host,
+    port: params.transport?.port,
+  });
+  const authHeaderValue = formatCliBearerHeaderValue(
+    resolveCliAuthToken({
+      explicitToken: params.transport?.token,
+    }),
+  );
+  const response = await fetch(
+    new URL(
+      `/api/control/sessions/${encodeURIComponent(target.sessionId)}/stream`,
+      endpoint.baseUrl,
+    ).toString(),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeaderValue ? { Authorization: authHeaderValue } : {}),
+      },
+      body: JSON.stringify({
+        instructions: message,
+      }),
+    },
+  ).catch((error) => {
+    throw new Error(`Failed to call ${endpoint.baseUrl}: ${String(error)}`);
+  });
+
+  if (!response.ok || !response.body) {
+    return {
+      success: false,
+      error: await readStreamFailure(response),
+      emittedVisibleText: false,
+    };
+  }
+
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  let buffered = "";
+  let printedLeadingNewline = false;
+  let emittedVisibleText = false;
+
+  const renderEvent = (event: AgentSessionStreamEvent): void => {
+    if (event.type !== "text-delta" || !event.text) return;
+    if (!printedLeadingNewline) {
+      process.stdout.write("\n");
+      printedLeadingNewline = true;
+    }
+    process.stdout.write(event.text);
+    emittedVisibleText = true;
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffered += decoder.decode(value, { stream: true });
+      let newlineIndex = buffered.indexOf("\n");
+      while (newlineIndex >= 0) {
+        const line = buffered.slice(0, newlineIndex).trim();
+        buffered = buffered.slice(newlineIndex + 1);
+        if (line) {
+          const event = JSON.parse(line) as AgentSessionStreamEvent;
+          if (event.type === "error") {
+            return {
+              success: false,
+              error: event.error,
+              emittedVisibleText,
+            };
+          }
+          renderEvent(event);
+        }
+        newlineIndex = buffered.indexOf("\n");
+      }
+    }
+
+    const tail = buffered.trim();
+    if (tail) {
+      const event = JSON.parse(tail) as AgentSessionStreamEvent;
+      if (event.type === "error") {
+        return {
+          success: false,
+          error: event.error,
+          emittedVisibleText,
+        };
+      }
+      renderEvent(event);
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      emittedVisibleText,
+    };
+  }
+
+  if (printedLeadingNewline) {
+    process.stdout.write("\n\n");
+  }
+
+  return {
+    success: true,
+    emittedVisibleText,
+  };
+}
+
 /**
  * 向目标 agent 的 Console 主会话发送一轮消息。
  */
@@ -145,51 +408,24 @@ export async function executeAgentChatTurn(params: {
   message: string;
   transport?: AgentChatTransportOptions;
 }): Promise<AgentChatExecutionOutcome> {
-  const agentName = String(params.agentName || "").trim();
   const message = normalizeChatMessage(params.message);
   const sessionId = AGENT_CHAT_DEFAULT_SESSION_ID;
 
-  if (!agentName) {
-    return {
-      agentName: "",
-      sessionId,
-      success: false,
-      error: "Missing target agent name.",
-    };
-  }
-
   if (!message) {
     return {
-      agentName,
+      agentName: String(params.agentName || "").trim(),
       sessionId,
       success: false,
       error: "Chat message is required.",
     };
   }
 
-  const resolved = await resolveProjectRootByAgentName(agentName);
-  if (!resolved.projectRoot) {
-    return {
-      agentName,
-      sessionId,
-      success: false,
-      error: resolved.error || "Failed to resolve agent project path",
-    };
-  }
+  const resolved = await resolveAgentChatTarget(params.agentName);
+  if (!resolved.success) return resolved.outcome;
 
-  const pathError = validateAgentProjectRoot(resolved.projectRoot);
-  if (pathError) {
-    return {
-      agentName,
-      projectRoot: resolved.projectRoot,
-      sessionId,
-      success: false,
-      error: pathError,
-    };
-  }
-
+  const { target } = resolved;
   const remote = await callAgentTransport<AgentChatExecuteResponse>({
-    projectRoot: resolved.projectRoot,
+    projectRoot: target.projectRoot,
     path: `/api/control/sessions/${encodeURIComponent(sessionId)}/execute`,
     method: "POST",
     timeoutMs: AGENT_CHAT_EXECUTE_TIMEOUT_MS,
@@ -203,8 +439,8 @@ export async function executeAgentChatTurn(params: {
 
   if (!remote.success || !remote.data) {
     return {
-      agentName,
-      projectRoot: resolved.projectRoot,
+      agentName: target.agentName,
+      projectRoot: target.projectRoot,
       sessionId,
       success: false,
       error: remote.error || "Agent daemon unreachable or returned empty error (try `city agent restart`)",
@@ -212,8 +448,8 @@ export async function executeAgentChatTurn(params: {
   }
 
   return {
-    agentName,
-    projectRoot: resolved.projectRoot,
+    agentName: target.agentName,
+    projectRoot: target.projectRoot,
     sessionId: String(remote.data.sessionId || sessionId),
     success: isChatSuccess(remote.data),
     payload: remote.data,
@@ -232,8 +468,8 @@ async function runOneShotChat(params: {
   message: string;
   options: AgentChatCliOptions;
 }): Promise<void> {
-  const outcome = await runWithSpinner(async () => {
-    return await executeAgentChatTurn({
+  if (params.options.json === true) {
+    const outcome = await executeAgentChatTurn({
       agentName: params.agentName,
       message: params.message,
       transport: {
@@ -242,12 +478,6 @@ async function runOneShotChat(params: {
         token: params.options.token,
       },
     });
-  }, {
-    text: `${params.agentName} is replying...`,
-    disabled: params.options.json === true,
-  });
-
-  if (params.options.json === true) {
     printResult({
       asJson: true,
       success: outcome.success,
@@ -263,33 +493,25 @@ async function runOneShotChat(params: {
     return;
   }
 
-  if (!outcome.success || !outcome.payload) {
-    emitCliBlock({
-      tone: "error",
-      title: "Agent chat failed",
-      facts: [
-        {
-          label: "agent",
-          value: params.agentName,
-        },
-        {
-          label: "error",
-          value: outcome.error || "Agent daemon returned empty error (check config with `city agent status`)",
-        },
-      ],
-    });
-    return;
-  }
+  const outcome = await streamAgentChatTurn({
+    agentName: params.agentName,
+    message: params.message,
+    transport: {
+      host: params.options.host,
+      port: params.options.port,
+      token: params.options.token,
+    },
+  });
 
-  if (outcome.payload.result?.queued === true) {
-    printQueuedResult({
+  if (!outcome.success) {
+    printAgentChatFailure({
       agentName: params.agentName,
-      payload: outcome.payload,
+      error: outcome.error,
     });
     return;
   }
 
-  printAssistantReply(String(outcome.payload.result?.userVisible || ""));
+  if (!outcome.emittedVisibleText) printAssistantReply("");
 }
 
 /**
@@ -346,47 +568,25 @@ async function runInteractiveChat(params: {
         continue;
       }
 
-      const outcome = await runWithSpinner(async () => {
-        return await executeAgentChatTurn({
-          agentName: params.agentName,
-          message: text,
-          transport: {
-            host: params.options.host,
-            port: params.options.port,
-            token: params.options.token,
-          },
-        });
-      }, {
-        text: `${params.agentName} is replying...`,
+      const outcome = await streamAgentChatTurn({
+        agentName: params.agentName,
+        message: text,
+        transport: {
+          host: params.options.host,
+          port: params.options.port,
+          token: params.options.token,
+        },
       });
 
-      if (!outcome.success || !outcome.payload) {
-        emitCliBlock({
-          tone: "error",
-          title: "Agent chat failed",
-          facts: [
-            {
-              label: "agent",
-              value: params.agentName,
-            },
-            {
-              label: "error",
-              value: outcome.error || "Agent daemon returned empty error (check config with `city agent status`)",
-            },
-          ],
-        });
-        continue;
-      }
-
-      if (outcome.payload.result?.queued === true) {
-        printQueuedResult({
+      if (!outcome.success) {
+        printAgentChatFailure({
           agentName: params.agentName,
-          payload: outcome.payload,
+          error: outcome.error,
         });
         continue;
       }
 
-      printAssistantReply(String(outcome.payload.result?.userVisible || ""));
+      if (!outcome.emittedVisibleText) printAssistantReply("");
     }
   } finally {
     rl.close();

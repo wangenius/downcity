@@ -71,7 +71,7 @@ function pickArgValue(args: string[], key: string): string | undefined {
  * 3) daemon meta args（`downcity.daemon.json`）
  * 4) 默认 `127.0.0.1:5314`
  */
-function resolveDaemonEndpoint(params: {
+export function resolveDaemonEndpoint(params: {
   projectRoot: string;
   host?: string;
   port?: number;

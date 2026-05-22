@@ -11,6 +11,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import http from "node:http";
+import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
 import { logger as serverLogger } from "@/utils/logger/Logger.js";
 import { createExecuteRouter } from "@/runtime/server/http/execute/execute.js";
 import { healthRouter } from "@/runtime/server/http/health/health.js";
@@ -180,8 +182,15 @@ function createNodeServer(app: Hono, options: ServerStartOptions): http.Server {
       for (const [key, value] of response.headers.entries()) {
         res.setHeader(key, value);
       }
-      const body = await response.text();
-      res.end(body);
+      if (!response.body) {
+        res.end();
+        return;
+      }
+      const bodyStream = Readable.fromWeb(
+        response.body as unknown as globalThis.ReadableStream<Uint8Array>,
+      );
+      bodyStream.pipe(res);
+      await finished(bodyStream).catch(() => undefined);
     } catch {
       res.statusCode = 500;
       res.end("Internal Server Error");

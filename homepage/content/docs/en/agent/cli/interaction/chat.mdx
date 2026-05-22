@@ -44,6 +44,12 @@ Best for:
 - one-off analysis
 - terminal toolchain integration
 
+## Streaming behavior
+
+- In normal terminal mode, assistant text streams to stdout as it is generated.
+- `--json` remains non-streaming so machine-readable output stays stable.
+- The command still uses the dedicated `local-cli-chat-main` session by default.
+
 ## Target resolution
 
 - if `--to` is provided, it uses that agent name directly

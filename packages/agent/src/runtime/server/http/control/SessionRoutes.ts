@@ -30,6 +30,7 @@ import {
   toUiMessageTimeline,
 } from "./Helpers.js";
 import { executeBySessionId } from "./ExecuteBySession.js";
+import { createControlSessionStreamResponse } from "./StreamBySession.js";
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 
 function normalizeSystemText(input: string | null | undefined): string {
@@ -405,6 +406,33 @@ export function registerControlSessionRoutes(
           success: true,
           sessionId,
           result,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+  }
+
+  for (const routePath of buildControlRouteAliases("/sessions/:sessionId/stream")) {
+    app.post(routePath, async (c) => {
+      try {
+        const runtime = params.getAgentRuntime();
+        const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+        const body = (await c.req.json().catch(() => ({}))) as Partial<ControlSessionExecuteRequestBody>;
+        const instructions = String(body.instructions || "").trim();
+        if (!sessionId) {
+          return c.json({ success: false, error: "Missing sessionId" }, 400);
+        }
+        if (!instructions) {
+          return c.json({ success: false, error: "Missing instructions" }, 400);
+        }
+
+        return await createControlSessionStreamResponse({
+          agentState: runtime,
+          executionContext: params.getAgentContext(),
+          sessionId,
+          instructions,
+          attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
         });
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);

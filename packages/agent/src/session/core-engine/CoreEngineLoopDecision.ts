@@ -1,8 +1,8 @@
 /**
- * SessionLoopDecision：Runner 执行循环的纯决策模块。
+ * CoreEngineLoopDecision：模型/tool-loop 核心循环的纯决策模块。
  *
  * 关键点（中文）
- * - 把 “是否继续下一轮” 的分支优先级从 Runner 主流程中拆出。
+ * - 把 “是否继续下一轮” 的分支优先级从 CoreEngine 主流程中拆出。
  * - 保持纯函数，不依赖模型、持久化或 logger，便于直接测试。
  */
 
@@ -13,7 +13,7 @@ import type {
 } from "@/session/types/SessionLoop.js";
 
 /**
- * 评估当前 step 完成后，Runner 是否应继续下一轮。
+ * 评估当前 step 完成后，tool-loop 是否应继续下一轮。
  *
  * 优先级（中文）
  * 1. 不完整响应恢复
@@ -21,7 +21,7 @@ import type {
  * 3. text-only 自动续跑
  * 4. 停止
  */
-export function evaluateSessionLoopDecision(
+export function evaluateCoreEngineLoopDecision(
   input: SessionLoopDecisionInput,
 ): SessionLoopDecision {
   if (

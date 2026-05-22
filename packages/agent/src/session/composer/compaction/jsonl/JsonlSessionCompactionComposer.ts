@@ -3,11 +3,13 @@
  *
  * 关键点（中文）
  * - 只负责压缩参数策略（retry 越多，窗口越紧）。
- * - 真正的读写与 compact 执行交由 history Composer。
+ * - 真正的读写与 compact 执行交由 history Store。
  */
 
-import type { SessionCompactionInput } from "@session/composer/compaction/SessionCompactionComposer.js";
-import { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
+import type {
+  SessionCompactionComposer,
+  SessionCompactionInput,
+} from "@session/composer/compaction/SessionCompactionComposer.js";
 
 type JsonlSessionCompactionComposerOptions = {
   keepLastMessages?: number;
@@ -19,12 +21,11 @@ type JsonlSessionCompactionComposerOptions = {
 /**
  * JsonlSessionCompactionComposer 默认实现。
  */
-export class JsonlSessionCompactionComposer extends SessionCompactionComposer {
+export class JsonlSessionCompactionComposer implements SessionCompactionComposer {
   readonly name = "summary_compaction_composer";
   private readonly options: JsonlSessionCompactionComposerOptions;
 
   constructor(options?: JsonlSessionCompactionComposerOptions) {
-    super();
     this.options = options || {};
   }
 
@@ -71,7 +72,7 @@ export class JsonlSessionCompactionComposer extends SessionCompactionComposer {
     reason?: string;
   }> {
     const policy = this.resolvePolicy(input.retryCount);
-    return await input.historyComposer.compact({
+    return await input.historyStore.compact({
       model: input.model,
       system: input.system,
       keepLastMessages: policy.keepLastMessages,

@@ -73,8 +73,9 @@ export {
   getSessionRunScope,
 } from "./session/SessionRunScope.js";
 export { JsonlSessionHistoryComposer } from "./session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+export { JsonlSessionHistoryStore } from "./session/store/history/jsonl/JsonlSessionHistoryStore.js";
 export { JsonlSessionCompactionComposer } from "./session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-export { SessionSystemComposer } from "./session/composer/system/SessionSystemComposer.js";
+export type { SessionSystemComposer } from "./session/composer/system/SessionSystemComposer.js";
 export { transformPromptsIntoSystemMessages } from "./session/composer/system/default/PromptRenderer.js";
 export {
   loadStaticSystemPrompts,

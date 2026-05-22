@@ -1,8 +1,8 @@
 /**
- * Session 模型消息运行态。
+ * CoreEngine 模型消息运行态。
  *
  * 关键点（中文）
- * - Runner 同时维护 session 语义消息与模型消息。
+ * - CoreEngine 同时维护 session 语义消息与模型消息。
  * - 新增 user 消息可优先做增量转换，失败时再回退为全量重算。
  * - assistant UI 消息只需要进入 session 语义基线；模型侧使用 SDK 返回的 response messages。
  */
@@ -15,9 +15,9 @@ import {
 } from "@session/messages/SessionMessageCodec.js";
 
 /**
- * Runner 单轮执行期间的消息基线。
+ * CoreEngine 单轮执行期间的消息基线。
  */
-export class SessionModelMessageState {
+export class CoreEngineMessageState {
   /**
    * 当前运行时 session 语义消息。
    */
@@ -64,11 +64,11 @@ export class SessionModelMessageState {
      * 当前轮可用工具集合。
      */
     tools: Record<string, Tool>;
-  }): Promise<SessionModelMessageState> {
+  }): Promise<CoreEngineMessageState> {
     const sessionMessages = Array.isArray(params.messages)
       ? [...params.messages]
       : [];
-    return new SessionModelMessageState({
+    return new CoreEngineMessageState({
       sessionMessages,
       modelMessages: await toModelMessages(sessionMessages, params.tools),
       tools: params.tools,

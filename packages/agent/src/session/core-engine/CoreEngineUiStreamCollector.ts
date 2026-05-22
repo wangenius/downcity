@@ -15,7 +15,7 @@ import { getSessionRunScope } from "@session/SessionRunScope.js";
 import {
   summarizeUiMessageForDebug,
   toInlinePreview,
-} from "@session/executors/local/SessionSignals.js";
+} from "@session/core-engine/CoreEngineSignals.js";
 
 /**
  * 收敛 UI stream 中的最终 assistant 消息。

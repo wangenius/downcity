@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `SessionRunInput` 表示上层会话入口输入（例如 context query）。
- * - `SessionExecuteInput` 表示 Runner 通过 Composer 装配后的中间运行态。
+ * - `SessionExecuteInput` 表示 Executor 通过 Composer 装配后的中间运行态。
  * - 输出仅暴露 assistantMessage（UIMessage）。
  */
 
@@ -107,7 +107,7 @@ export interface SessionRunInput {
 }
 
 /**
- * Runner 通过 Composer 装配后的中间运行态。
+ * Executor 通过 Composer 装配后的中间运行态。
  */
 export interface SessionExecuteInput {
   /**

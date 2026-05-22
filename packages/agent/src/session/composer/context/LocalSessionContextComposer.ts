@@ -1,9 +1,9 @@
 /**
- * LocalSessionExecutionComposer：本地 session 运行时编排 Composer 实现。
+ * LocalSessionContextComposer：本地 session 运行时编排 Composer 实现。
  *
  * 关键点（中文）
  * - 统一组装 tools。
- * - step 边界回调从 SessionRunScope 读取，Runner 不直接管理来源。
+ * - step 边界回调从 SessionRunScope 读取，Executor 不直接管理来源。
  */
 
 import type { ModelMessage } from "ai";
@@ -12,15 +12,15 @@ import {
   drainInjectedUserMessages,
   getSessionRunScope,
 } from "@session/SessionRunScope.js";
-import { SessionExecutionComposer } from "@session/composer/execution/SessionExecutionComposer.js";
 import type {
-  SessionExecutionComposeResult,
-} from "@session/composer/execution/SessionExecutionComposer.js";
+  SessionContextComposer,
+  SessionContextComposeResult,
+} from "@session/composer/context/SessionContextComposer.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
 import type { Tool } from "ai";
 
-type LocalSessionExecutionComposerOptions = {
+type LocalSessionContextComposerOptions = {
   /**
    * 可选默认 session id。
    */
@@ -33,26 +33,25 @@ type LocalSessionExecutionComposerOptions = {
 };
 
 /**
- * LocalSessionExecutionComposer 默认 Composer 实现。
+ * LocalSessionContextComposer 默认 Composer 实现。
  */
-export class LocalSessionExecutionComposer extends SessionExecutionComposer {
-  readonly name = "runtime_execution_composer";
+export class LocalSessionContextComposer implements SessionContextComposer {
+  readonly name = "runtime_context_composer";
   private readonly sessionId: string;
-  private readonly getTools: LocalSessionExecutionComposerOptions["getTools"];
+  private readonly getTools: LocalSessionContextComposerOptions["getTools"];
 
-  constructor(options: LocalSessionExecutionComposerOptions) {
-    super();
+  constructor(options: LocalSessionContextComposerOptions) {
     this.sessionId = String(options.sessionId || "").trim();
     this.getTools = options.getTools;
   }
 
-  async compose(): Promise<SessionExecutionComposeResult> {
+  async compose(): Promise<SessionContextComposeResult> {
     const tools = this.getTools();
     const ctx = getSessionRunScope();
     const sessionId = String(ctx?.sessionId || this.sessionId || "").trim();
     if (!sessionId) {
       throw new Error(
-        "LocalSessionExecutionComposer.compose requires a sessionId from sessionRunScope or options.sessionId",
+        "LocalSessionContextComposer.compose requires a sessionId from sessionRunScope or options.sessionId",
       );
     }
     // 关键点（中文）：sessionId 统一回填到请求上下文，后续组件直接读取。
@@ -150,7 +149,7 @@ export class LocalSessionExecutionComposer extends SessionExecutionComposer {
     const sessionId = String(ctx?.sessionId || this.sessionId || "").trim();
     if (!sessionId) {
       throw new Error(
-        "LocalSessionExecutionComposer.buildFallbackAssistantMessage requires a sessionId from sessionRunScope or options.sessionId",
+        "LocalSessionContextComposer.buildFallbackAssistantMessage requires a sessionId from sessionRunScope or options.sessionId",
       );
     }
     return {

@@ -108,13 +108,15 @@ await agent.start({
 
 这里是模型执行主轴。
 
-- `Executor.ts`：单个 `sessionId` 的执行器入口。
-- `executors/local/Runner.ts`：当前模型与 tool loop 的执行内核。
-- `executors/local/SessionToolLoopRunner.ts`：处理模型响应后的工具循环与继续执行。
-- `composer/`：history、system、execution、compaction 等组合层。
+- `Executor.ts`：单个 `sessionId` 的执行引擎，负责 run scope、压缩重试、Composer 编排与 step 持久化。
+- `core-engine/`：Executor 内部的模型/tool-loop 核心机制。
+- `composer/`：history、system、context、compaction 等组合协议；没有公共运行时基类。
+- `store/`：session history 事实源、metadata、archive、lock 与 JSONL 持久化。
 - `tools/`：工具定义与工具运行时适配。
 
 它负责把“本轮 query”一路推进到最终 assistant 回复，并把过程中的消息、step 与输出持久化下来。
+
+Composer 在这里不是执行器，也不是状态容器，而是 `interface` 级别的装配协议。`Executor.prepareExecuteInput()` 会依次调用 `ContextComposer.compose()`、`SystemComposer.resolve()`、`CompactionComposer.run(historyStore)` 与 `HistoryComposer.prepare()`，把 tools、system、压缩策略和 history messages 组装成一次 `SessionExecuteInput`。真正的模型调用发生在 `Executor.runCoreEngine()`，CoreEngine 只维护本轮内存态与最终 assistant message，长期历史事实只由 `store/` 维护。
 
 ## 5. `service/`
 
@@ -196,7 +198,7 @@ HTTP router、sandbox runner、内部 service runner 等实现细节不从根入
 3. `src/core/AgentCore.ts`
 4. `src/core/AgentContextTypes.ts`
 5. `src/session/Executor.ts`
-6. `src/session/executors/local/Runner.ts`
+6. `src/session/core-engine/CoreEngineMessageState.ts`
 7. `src/service/core/Manager.ts`
 8. `src/service/builtins/chat/ChatService.ts`
 9. `src/plugin/core/PluginManager.ts`

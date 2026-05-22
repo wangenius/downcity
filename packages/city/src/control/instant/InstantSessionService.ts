@@ -18,6 +18,7 @@ import {
   getLogger,
   JsonlSessionCompactionComposer,
   JsonlSessionHistoryComposer,
+  JsonlSessionHistoryStore,
   loadStaticSystemPrompts,
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
@@ -138,12 +139,13 @@ export class InstantSessionService implements PlatformInlineInstantService {
     sessionId: string;
   }): Promise<{
     tempDirPath: string;
+    historyStore: JsonlSessionHistoryStore;
     historyComposer: JsonlSessionHistoryComposer;
   }> {
     const tempDirPath = await mkdtemp(
       path.join(os.tmpdir(), "downcity-inline-instant-"),
     );
-    const historyComposer = new JsonlSessionHistoryComposer({
+    const historyStore = new JsonlSessionHistoryStore({
       rootPath: params.rootPath,
       sessionId: params.sessionId,
       paths: {
@@ -154,8 +156,12 @@ export class InstantSessionService implements PlatformInlineInstantService {
         archiveDirPath: path.join(tempDirPath, "archive"),
       },
     });
+    const historyComposer = new JsonlSessionHistoryComposer({
+      store: historyStore,
+    });
     return {
       tempDirPath,
+      historyStore,
       historyComposer,
     };
   }
@@ -220,7 +226,7 @@ export class InstantSessionService implements PlatformInlineInstantService {
 
     const sessionId = this.buildSessionId();
     const rootPath = process.cwd();
-    const { tempDirPath, historyComposer } = await this.createTempHistoryComposer({
+    const { tempDirPath, historyStore, historyComposer } = await this.createTempHistoryComposer({
       rootPath,
       sessionId,
     });
@@ -242,6 +248,7 @@ export class InstantSessionService implements PlatformInlineInstantService {
 
     const session = new Executor({
       sessionId,
+      historyStore,
       historyComposer,
       getModel: () => model,
       logger: this.logger as unknown as AgentLogger,

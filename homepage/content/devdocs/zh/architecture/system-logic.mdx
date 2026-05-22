@@ -117,7 +117,7 @@ Session 的真实对象包括：
 
 - `Session`
 - `Executor`
-- `Runner`
+- `Executor.runCoreEngine()`
 - `JsonlSessionHistoryComposer`
 
 ### Service
@@ -184,7 +184,7 @@ flowchart TD
   SERVICE --> SID["确定 sessionId"]
   SID --> APPEND["append message"]
   APPEND --> RUN["session.run"]
-  RUN --> CORE["Runner"]
+  RUN --> CORE["Executor"]
   CORE --> MODEL["model / tools / prompt / history composer / compact"]
   MODEL --> RES["assistant result"]
   RES --> SERVICE
@@ -216,7 +216,8 @@ flowchart TD
 - `AgentRuntime`：单项目 runtime 中心
 - `AgentContext`：统一能力面
 - `Session`：单 session 实例外壳
-- `Runner`：模型与 tool loop 执行内核
+- `Executor`：单 session run pipeline
+- `CoreEngine`：`Executor` 内部的模型与 tool loop 执行内核
 - `PluginRegistry`：plugin 注册与调度
 - `BaseService`：service 实例基类
 

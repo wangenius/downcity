@@ -54,10 +54,10 @@ export async function flushMemory(
   const maxMessages = Number.isFinite(payload.maxMessages)
     ? Math.max(1, Math.floor(payload.maxMessages as number))
     : 30;
-  const historyComposer = context.session.get(sessionId).getHistoryComposer();
-  const total = await historyComposer.size();
+  const historyStore = context.session.get(sessionId).getHistoryStore();
+  const total = await historyStore.size();
   const start = Math.max(0, total - maxMessages);
-  const messages = await historyComposer.slice(start, total);
+  const messages = await historyStore.slice(start, total);
   const lines = messages
     .map((msg) => extractReadableLine(msg))
     .filter((line) => line.length > 0);

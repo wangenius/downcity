@@ -111,7 +111,7 @@ The real objects here are:
 
 - `Session`
 - `Executor`
-- `Runner`
+- `Executor.runCoreEngine()`
 - `JsonlSessionHistoryComposer`
 
 ### Service
@@ -178,7 +178,7 @@ flowchart TD
   SERVICE --> SID["choose sessionId"]
   SID --> APPEND["append message"]
   APPEND --> RUN["session.run"]
-  RUN --> CORE["Runner"]
+  RUN --> CORE["Executor"]
   CORE --> MODEL["model / tools / prompt / history composer / compaction"]
   MODEL --> RES["assistant result"]
   RES --> SERVICE
@@ -205,7 +205,8 @@ These point names belong to the service. Plugins only implement some of them.
 - `AgentRuntime`: single-project runtime center
 - `AgentContext`: unified runtime surface
 - `Session`: single-session instance shell
-- `Runner`: model and tool-loop execution kernel
+- `Executor`: single-session run pipeline
+- `CoreEngine`: model and tool-loop execution kernel inside `Executor`
 - `PluginRegistry`: plugin registration and dispatch
 - `BaseService`: service instance base class
 

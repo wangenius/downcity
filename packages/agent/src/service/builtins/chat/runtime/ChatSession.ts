@@ -2,7 +2,7 @@
  * ChatSession：chat 专用 Executor 实现。
  *
  * 关键点（中文）
- * - ChatSession 在实例化时持有自己的 execution composer 实例。
+ * - ChatSession 在实例化时持有自己的 context composer 实例。
  * - chat 当前 turn 的 step 合并/step 回发状态都绑定在 Session 自身，不再新增 `runChat` 一层入口。
  * - 外层仍只调用标准 `run(...)`；chat 语义由 ChatSession 内部收敛。
  */
@@ -10,9 +10,10 @@
 import type { LanguageModel, Tool } from "ai";
 import { Executor } from "@session/Executor.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
+import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
 import type { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
 import type { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
-import type { ChatSessionExecutionComposer } from "@/service/builtins/chat/runtime/ChatSessionExecutionComposer.js";
+import type { ChatSessionContextComposer } from "@/service/builtins/chat/runtime/ChatSessionContextComposer.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { SessionAssistantStepCallback } from "@/session/types/SessionRun.js";
 import type { SessionRunResult } from "@/session/types/SessionRun.js";
@@ -23,6 +24,11 @@ type ChatSessionOptions = {
    * 当前会话 ID。
    */
   sessionId: string;
+
+  /**
+   * 当前 session 的 history store。
+   */
+  historyStore: SessionHistoryStore;
 
   /**
    * 当前 session 的 history composer。
@@ -55,9 +61,9 @@ type ChatSessionOptions = {
   getTools: () => Record<string, Tool>;
 
   /**
-   * 当前 session 绑定的 chat execution composer。
+   * 当前 session 绑定的 chat context composer。
    */
-  executionComposer: ChatSessionExecutionComposer;
+  contextComposer: ChatSessionContextComposer;
 
   /**
    * session 更新后的异步回调。
@@ -72,26 +78,27 @@ export class ChatSession extends Executor {
   /**
    * ChatSession 持有的 composer 实例。
    */
-  readonly executionComposer: ChatSessionExecutionComposer;
+  readonly contextComposer: ChatSessionContextComposer;
 
   private activeTurnState: ChatSessionTurnState | null = null;
 
   constructor(options: ChatSessionOptions) {
-    const executionComposer = options.executionComposer;
+    const contextComposer = options.contextComposer;
     super({
       sessionId: options.sessionId,
+      historyStore: options.historyStore,
       historyComposer: options.historyComposer,
       getModel: options.getModel,
       logger: options.logger,
       compactionComposer: options.compactionComposer,
       systemComposer: options.systemComposer,
       getTools: options.getTools,
-      executionComposer,
+      contextComposer,
       ...(options.runAfterSessionUpdated
         ? { runAfterSessionUpdated: options.runAfterSessionUpdated }
         : {}),
     });
-    this.executionComposer = executionComposer;
+    this.contextComposer = contextComposer;
   }
 
   /**

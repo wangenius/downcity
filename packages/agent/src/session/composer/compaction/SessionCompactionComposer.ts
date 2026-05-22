@@ -3,21 +3,20 @@
  *
  * 关键点（中文）
  * - 负责“何时压缩 + 压缩策略参数”决策。
- * - 具体读写由 SessionHistoryComposer 执行（CompactionComposer 不直接落盘）。
+ * - 具体读写由 SessionHistoryStore 执行（CompactionComposer 不直接落盘）。
  */
 
 import type { LanguageModel, SystemModelMessage } from "ai";
-import { SessionComposer } from "@session/composer/SessionComposer.js";
-import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
+import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
 
 /**
  * compaction Composer 执行输入。
  */
 export type SessionCompactionInput = {
   /**
-   * 当前会话 history Composer。
+   * 当前会话 history Store。
    */
-  historyComposer: SessionHistoryComposer;
+  historyStore: SessionHistoryStore;
 
   /**
    * 当前模型实例。
@@ -30,24 +29,24 @@ export type SessionCompactionInput = {
   system: SystemModelMessage[];
 
   /**
-   * 当前重试次数（由 Runner 递增）。
+   * 当前重试次数（由 Executor 递增）。
    */
   retryCount: number;
 };
 
 /**
- * Compaction Composer 抽象类。
+ * Compaction Composer 协议。
  */
-export abstract class SessionCompactionComposer extends SessionComposer {
+export interface SessionCompactionComposer {
   /**
    * Composer 名（由具体实现声明）。
    */
-  abstract readonly name: string;
+  readonly name: string;
 
   /**
    * 执行 compact（best-effort）。
    */
-  abstract run(input: SessionCompactionInput): Promise<{
+  run(input: SessionCompactionInput): Promise<{
     compacted: boolean;
     reason?: string;
   }>;
@@ -57,12 +56,7 @@ export abstract class SessionCompactionComposer extends SessionComposer {
    *
    * 关键点（中文）
    * - 由 compaction Composer 实现侧维护错误识别策略。
-   * - Runner 不感知具体错误文案，只按该布尔结果决定是否重试。
+   * - Executor 不感知具体错误文案，只按该布尔结果决定是否重试。
    */
-  abstract shouldCompactOnError(error: unknown): boolean;
-
-  /**
-   * 可选初始化钩子。
-   */
-  // 生命周期沿用 SessionComposer 默认实现。
+  shouldCompactOnError(error: unknown): boolean;
 }

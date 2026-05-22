@@ -7,7 +7,7 @@
  * - SDK 不在 system 中注入动态变量；动态上下文应由调用方放入 user message。
  */
 
-import { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
+import type { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
 import { getSessionRunScope } from "@session/SessionRunScope.js";
 import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
 import type {
@@ -211,7 +211,7 @@ export async function buildSessionSystemMessages(
 /**
  * SDK Session system composer 实现。
  */
-export class SessionSystemBuilder extends SessionSystemComposer {
+export class SessionSystemBuilder implements SessionSystemComposer {
   readonly name = "sdk_prompt_system";
 
   private readonly agentId: string;
@@ -223,7 +223,6 @@ export class SessionSystemBuilder extends SessionSystemComposer {
   private readonly getPluginSystemBlocks: SessionSystemBuilderOptions["getPluginSystemBlocks"];
 
   constructor(options: SessionSystemBuilderOptions) {
-    super();
     this.agentId = String(options.agentId || "").trim();
     this.projectRoot = String(options.projectRoot || "").trim();
     this.getSessionCreatedAt = options.getSessionCreatedAt;

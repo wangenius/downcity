@@ -1,9 +1,9 @@
 /**
- * Session 执行错误归一化工具。
+ * CoreEngine 执行错误归一化工具。
  *
  * 关键点（中文）
  * - AI SDK 的最终错误有时只是兜底包装，底层 provider 错误会先从 stream `onError` 暴露。
- * - Runner 只需要消费这里输出的日志字段与最终错误文本。
+ * - Executor 内部 CoreEngine 流程只需要消费这里输出的日志字段与最终错误文本。
  */
 
 import type { JsonObject } from "@/types/common/Json.js";
@@ -28,7 +28,7 @@ export function summarizeStreamError(error: unknown): JsonObject {
 /**
  * 提取实际应返回给上层的错误文本。
  */
-export function resolveEffectiveExecutionError(params: {
+export function resolveEffectiveCoreEngineError(params: {
   /**
    * 外层捕获到的执行错误。
    */

@@ -110,7 +110,10 @@ src/
 
 - `src/session/`
   - 会话执行内核
-  - 负责 history、system、execution、tool loop、stream 与消息持久化
+  - `Session` 是 SDK 用户面对的会话整体，`Executor` 是单轮 run 的执行引擎
+  - Store 负责 history 事实源落盘，Composer 是纯 interface 协议，负责组装 system / history / context / compaction
+  - `Executor.prepareExecuteInput()` 串起四类 Composer，`Executor.runCoreEngine()` 负责进入模型 tool loop
+  - 负责 history、system、context、CoreEngine、stream 与消息持久化
 
 - `src/types/`
   - 跨模块、跨包共享协议类型

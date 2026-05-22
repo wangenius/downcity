@@ -7,6 +7,7 @@
  */
 
 import type { SessionPort } from "@/core/AgentContextTypes.js";
+import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
 
 /**
  * 构造 SDK SessionPort 的参数。
@@ -19,11 +20,11 @@ export interface CreateSessionServicePortParams {
   /**
    * 底层执行编排器。
    */
-  executor: Omit<SessionPort, "sessionId" | "getHistoryComposer">;
+  executor: Omit<SessionPort, "sessionId" | "getHistoryStore">;
   /**
    * 当前 session 历史持久化端口。
    */
-  historyComposer: ReturnType<SessionPort["getHistoryComposer"]>;
+  historyStore: SessionHistoryStore;
   /**
    * session 更新后需要同步执行的持久化回调。
    */
@@ -39,7 +40,7 @@ export function createSessionServicePort(
   return {
     sessionId: params.sessionId,
     getExecutor: () => params.executor.getExecutor(),
-    getHistoryComposer: () => params.historyComposer,
+    getHistoryStore: () => params.historyStore,
     run: async (runParams) => {
       return await params.executor.run(runParams);
     },

@@ -1,20 +1,19 @@
 /**
- * SessionExecutionComposer：单次 Session run 编排 Composer 抽象。
+ * SessionContextComposer：单次 Session run context 组装协议。
  *
  * 关键点（中文）
- * - 负责 tools/onStepCallback 等运行时编排。
+ * - 负责 tools / prepareStep / onStepFinish / fallback message factory 等运行上下文组装。
  * - 不负责历史读写，不负责 system 解析，不负责 compact。
  */
 
 import type { ModelMessage, Tool } from "ai";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
-import { SessionComposer } from "@session/composer/SessionComposer.js";
 
 /**
- * 本轮运行编排输出。
+ * 本轮运行上下文组装输出。
  */
-export type SessionExecutionComposeResult = {
+export type SessionContextComposeResult = {
   /**
    * 本轮工具集合。
    */
@@ -22,23 +21,23 @@ export type SessionExecutionComposeResult = {
 };
 
 /**
- * 运行编排 Composer 抽象类。
+ * 运行上下文 Composer 协议。
  */
-export abstract class SessionExecutionComposer extends SessionComposer {
+export interface SessionContextComposer {
   /**
    * Composer 名（由具体实现声明）。
    */
-  abstract readonly name: string;
+  readonly name: string;
 
   /**
-   * 组装一次 run 所需运行态。
+   * 组装一次 run 所需上下文。
    */
-  abstract compose(): Promise<SessionExecutionComposeResult>;
+  compose(): Promise<SessionContextComposeResult>;
 
   /**
    * 构造 prepareStep 回调。
    */
-  abstract createPrepareStepHandler(
+  createPrepareStepHandler(
     input: {
       /**
        * 当前轮 system 消息。
@@ -59,13 +58,13 @@ export abstract class SessionExecutionComposer extends SessionComposer {
   /**
    * 构造 onStepFinish 回调。
    */
-  abstract createOnStepFinishHandler(): (stepResult: unknown) => Promise<void>;
+  createOnStepFinishHandler(): (stepResult: unknown) => Promise<void>;
 
   /**
    * 构造 fallback assistant 消息。
    *
    * 关键点（中文）
- * - fallback 消息构造由 execution Composer 内部实现，Runner 不直接依赖 history Composer。
+   * - fallback 消息构造由 ContextComposer 内部实现，Executor 不直接依赖 history Composer。
    */
-  abstract buildFallbackAssistantMessage(text: string): SessionMessageV1;
+  buildFallbackAssistantMessage(text: string): SessionMessageV1;
 }

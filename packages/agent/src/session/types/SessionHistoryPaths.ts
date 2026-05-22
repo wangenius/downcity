@@ -1,8 +1,8 @@
 /**
- * JsonlSessionHistoryComposer 路径覆盖类型。
+ * JsonlSessionHistoryStore 路径覆盖类型。
  *
  * 关键点（中文）
- * - 用于把 history Composer 落盘路径定向到自定义目录（例如 task run 目录）。
+ * - 用于把 history Store 落盘路径定向到自定义目录（例如 task run 目录）。
  * - 每个字段都为可选，未提供时回退到默认 `.downcity/session/<encodedSessionId>/messages/*`。
  */
 export type SessionHistoryPathOverrides = {

@@ -6,7 +6,7 @@
  * - 具体“解析 / 加载 / 组装”下沉到 SystemDomain，保持类本身轻量。
  */
 
-import {
+import type {
   SessionSystemComposer,
 } from "@session/composer/system/SessionSystemComposer.js";
 import { getSessionRunScope } from "@session/SessionRunScope.js";
@@ -41,7 +41,7 @@ type DefaultSessionSystemComposerOptions = {
 /**
  * SessionSystemComposer 默认实现。
  */
-export class DefaultSessionSystemComposer extends SessionSystemComposer {
+export class DefaultSessionSystemComposer implements SessionSystemComposer {
   readonly name = "prompt_system";
 
   private readonly projectRoot: string;
@@ -50,7 +50,6 @@ export class DefaultSessionSystemComposer extends SessionSystemComposer {
   private readonly profile: SystemProfile;
 
   constructor(options: DefaultSessionSystemComposerOptions) {
-    super();
     const projectRoot = String(options.projectRoot || "").trim();
     if (!projectRoot) {
       throw new Error("DefaultSessionSystemComposer requires a non-empty projectRoot");

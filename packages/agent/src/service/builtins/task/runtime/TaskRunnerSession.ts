@@ -2,22 +2,23 @@
  * TaskRunnerSession：task runner 的 session 装配模块。
  *
  * 关键点（中文）
- * - 负责构建 task 专用 Runner / JsonlSessionHistoryComposer 运行时。
+ * - 负责构建 task 专用 Executor / JsonlSessionHistoryStore 运行时。
  * - 负责把每轮 user/assistant 消息写入 run 目录对应的 messages.jsonl。
- * - 这些能力与任务编排逻辑解耦后，Runner 主流程会更聚焦于状态流转。
+ * - 这些能力与任务编排逻辑解耦后，task 主流程会更聚焦于状态流转。
  * - 当前只有 api 执行模式。
  */
 
 import path from "node:path";
 import type { LanguageModel } from "ai";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
+import { Executor } from "@/session/Executor.js";
 import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type { TaskSessionRuntimePort } from "@/service/builtins/task/runtime/TaskRunnerTypes.js";
-import { Runner } from "@session/executors/local/Runner.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+import { JsonlSessionHistoryStore } from "@/session/store/history/jsonl/JsonlSessionHistoryStore.js";
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-import { LocalSessionExecutionComposer } from "@session/composer/execution/LocalSessionExecutionComposer.js";
+import { LocalSessionContextComposer } from "@session/composer/context/LocalSessionContextComposer.js";
 import { DefaultSessionSystemComposer } from "@session/composer/system/default/DefaultSessionSystemComposer.js";
 import { shellTools } from "@session/tools/shell/ShellToolDefinition.js";
 import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
@@ -35,9 +36,9 @@ export async function appendTaskRoundUserMessage(params: {
 }): Promise<void> {
   const text = String(params.query || "").trim();
   if (!text) return;
-  const historyComposer = params.taskSessionRuntime.getHistoryComposer(params.sessionId);
-  await historyComposer.append(
-    historyComposer.userText({
+  const historyStore = params.taskSessionRuntime.getHistoryStore(params.sessionId);
+  await historyStore.append(
+    historyStore.userText({
       text,
       metadata: {
         sessionId: params.sessionId,
@@ -55,7 +56,7 @@ export async function appendTaskRoundUserMessage(params: {
  * 构建 task 专用 Session 运行时（独立于普通 Session 实例缓存）。
  *
  * 关键点（中文）
- * - 使用 Runner 执行，但模型显式来自“任务绑定 session”的 session 级配置。
+ * - 使用 Executor 执行，但模型显式来自“任务绑定 session”的 session 级配置。
  * - task runner 自己维护独立 history，不复用原 session 的消息落盘。
  */
 export function createTaskSessionRuntimePort(params: {
@@ -84,11 +85,12 @@ export function createTaskSessionRuntimePort(params: {
     getContext: () => context,
     profile: "task",
   });
+  const historyStoresBySessionId = new Map<string, JsonlSessionHistoryStore>();
   const historyComposersBySessionId = new Map<string, JsonlSessionHistoryComposer>();
   const runtimesBySessionId = new Map<string, SessionExecutor>();
 
-  const resolveTaskHistoryComposer = (sessionId: string): JsonlSessionHistoryComposer => {
-    const existing = historyComposersBySessionId.get(sessionId);
+  const resolveTaskHistoryStore = (sessionId: string): JsonlSessionHistoryStore => {
+    const existing = historyStoresBySessionId.get(sessionId);
     if (existing) return existing;
 
     const key = String(sessionId || "").trim();
@@ -102,7 +104,7 @@ export function createTaskSessionRuntimePort(params: {
           ? path.join(runDirAbs, "user-simulator")
           : undefined;
 
-    const created = new JsonlSessionHistoryComposer({
+    const created = new JsonlSessionHistoryStore({
       rootPath: context.rootPath,
       sessionId: key,
       ...(runMessagesDirPath
@@ -117,13 +119,24 @@ export function createTaskSessionRuntimePort(params: {
           }
         : {}),
     });
+    historyStoresBySessionId.set(key, created);
+    return created;
+  };
+
+  const resolveTaskHistoryComposer = (sessionId: string): JsonlSessionHistoryComposer => {
+    const key = String(sessionId || "").trim();
+    const existing = historyComposersBySessionId.get(key);
+    if (existing) return existing;
+    const created = new JsonlSessionHistoryComposer({
+      store: resolveTaskHistoryStore(key),
+    });
     historyComposersBySessionId.set(key, created);
     return created;
   };
 
   return {
-    getHistoryComposer(sessionId: string): JsonlSessionHistoryComposer {
-      return resolveTaskHistoryComposer(sessionId);
+    getHistoryStore(sessionId: string): JsonlSessionHistoryStore {
+      return resolveTaskHistoryStore(sessionId);
     },
     getExecutor(sessionId: string): SessionExecutor {
       const key = String(sessionId || "").trim();
@@ -133,18 +146,22 @@ export function createTaskSessionRuntimePort(params: {
       const existing = runtimesBySessionId.get(key);
       if (existing) return existing;
 
+      const historyStore = resolveTaskHistoryStore(key);
       const historyComposer = resolveTaskHistoryComposer(key);
-      const executionComposer = new LocalSessionExecutionComposer({
+      const contextComposer = new LocalSessionContextComposer({
         sessionId: key,
         getTools: () => shellTools,
       });
-      const created = new Runner({
-        model,
+      const created = new Executor({
+        sessionId: key,
+        getModel: () => model,
         logger: context.logger,
+        historyStore,
         historyComposer,
         compactionComposer,
-        executionComposer,
+        contextComposer,
         systemComposer,
+        getTools: () => shellTools,
       });
       runtimesBySessionId.set(key, created);
       return created;
@@ -153,7 +170,7 @@ export function createTaskSessionRuntimePort(params: {
 }
 
 /**
- * 把 task session 的 assistant 消息落盘到对应 run context history Composer。
+ * 把 task session 的 assistant 消息落盘到对应 run context history Store。
  */
 export async function appendTaskAssistantMessage(params: {
   taskSessionRuntime: TaskSessionRuntimePort;
@@ -162,12 +179,12 @@ export async function appendTaskAssistantMessage(params: {
   rawResult: SessionRunResult;
 }): Promise<void> {
   const { taskSessionRuntime, sessionId, rawResult } = params;
-  const historyComposer = taskSessionRuntime.getHistoryComposer(sessionId);
+  const historyStore = taskSessionRuntime.getHistoryStore(sessionId);
   if (rawResult.assistantMessage) {
-    await historyComposer.append(rawResult.assistantMessage);
+    await historyStore.append(rawResult.assistantMessage);
   }
   const deferredUserMessages = drainDeferredPersistedUserMessages(sessionId);
   for (const deferred of deferredUserMessages) {
-    await historyComposer.append(deferred);
+    await historyStore.append(deferred);
   }
 }

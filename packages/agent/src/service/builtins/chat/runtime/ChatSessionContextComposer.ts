@@ -1,5 +1,5 @@
 /**
- * ChatSessionExecutionComposer：chat 专用 execution composer。
+ * ChatSessionContextComposer：chat 专用 context composer。
  *
  * 关键点（中文）
  * - 由 chat 层在 Session 实例化时注入，不再依赖 run 时层层传 callback。
@@ -9,12 +9,12 @@
 
 import type { ModelMessage, Tool } from "ai";
 import { drainInjectedUserMessages } from "@session/SessionRunScope.js";
-import { LocalSessionExecutionComposer } from "@session/composer/execution/LocalSessionExecutionComposer.js";
+import { LocalSessionContextComposer } from "@session/composer/context/LocalSessionContextComposer.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
 import type { ChatSessionTurnState } from "@/service/builtins/chat/runtime/ChatSessionTypes.js";
 
-type ChatSessionExecutionComposerOptions = {
+type ChatSessionContextComposerOptions = {
   /**
    * 当前 session 标识。
    */
@@ -32,12 +32,12 @@ type ChatSessionExecutionComposerOptions = {
 };
 
 /**
- * ChatSession 专用 execution composer。
+ * ChatSession 专用 context composer。
  */
-export class ChatSessionExecutionComposer extends LocalSessionExecutionComposer {
-  private readonly getTurnState: ChatSessionExecutionComposerOptions["getTurnState"];
+export class ChatSessionContextComposer extends LocalSessionContextComposer {
+  private readonly getTurnState: ChatSessionContextComposerOptions["getTurnState"];
 
-  constructor(options: ChatSessionExecutionComposerOptions) {
+  constructor(options: ChatSessionContextComposerOptions) {
     super({
       sessionId: options.sessionId,
       getTools: options.getTools,

@@ -108,13 +108,15 @@ Without `start()`, the agent stays in pure library mode.
 
 This is the model execution axis.
 
-- `Executor.ts`: execution entrypoint for a single `sessionId`.
-- `executors/local/Runner.ts`: the current model and tool-loop kernel.
-- `executors/local/SessionToolLoopRunner.ts`: handles post-response tool execution and continuation.
-- `composer/`: history, system, execution, and compaction composition layers.
+- `Executor.ts`: execution engine for a single `sessionId`; it owns run scope, compaction retry, Composer orchestration, and step persistence.
+- `core-engine/`: internal model/tool-loop core used by `Executor`.
+- `composer/`: history, system, context, and compaction protocols; there is no shared runtime base class.
+- `store/`: session history facts, metadata, archive, lock, and JSONL persistence.
 - `tools/`: tool definitions and tool runtime adapters.
 
 This layer takes a query and drives it all the way to the final assistant reply while persisting messages, steps, and outputs.
+
+Composer is not an executor or a state container here. It is an `interface`-level assembly protocol. `Executor.prepareExecuteInput()` calls `ContextComposer.compose()`, `SystemComposer.resolve()`, `CompactionComposer.run(historyStore)`, and `HistoryComposer.prepare()` to build one `SessionExecuteInput` from tools, system messages, compaction policy, and history messages. The actual model call happens inside `Executor.runCoreEngine()`. CoreEngine only maintains per-run memory state and returns the final assistant message; persisted history facts only live in `store/`.
 
 ## 5. `service/`
 
@@ -194,7 +196,7 @@ HTTP routers, sandbox runners, internal service runners, and other implementatio
 3. `src/core/AgentCore.ts`
 4. `src/core/AgentContextTypes.ts`
 5. `src/session/Executor.ts`
-6. `src/session/executors/local/Runner.ts`
+6. `src/session/core-engine/CoreEngineMessageState.ts`
 7. `src/service/core/Manager.ts`
 8. `src/service/builtins/chat/ChatService.ts`
 9. `src/plugin/core/PluginManager.ts`

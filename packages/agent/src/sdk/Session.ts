@@ -4,13 +4,14 @@
  * 关键点（中文）
  * - 面向 `new Agent(...)` 的本地会话使用场景。
  * - 统一收口消息落盘、session 级模型配置、run/stream/fork 等高层 API。
- * - 内部继续复用 `Executor` / `JsonlSessionHistoryComposer` / `Runner`。
+ * - 内部继续复用 `Executor` / `JsonlSessionHistoryStore` / Composer 体系。
  */
 
 import { nanoid } from "nanoid";
 import type { LanguageModel, Tool } from "ai";
 import { Executor } from "@session/Executor.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+import { JsonlSessionHistoryStore } from "@/session/store/history/jsonl/JsonlSessionHistoryStore.js";
 import { extractTextFromUiMessage } from "@/service/builtins/chat/runtime/UIMessageTransformer.js";
 import type {
   AgentSessionConfigSnapshot,
@@ -106,6 +107,7 @@ export class Session {
   private readonly getInstructionSystemBlocks: SessionOptions["getInstructionSystemBlocks"];
   private readonly getServiceSystemBlocks: SessionOptions["getServiceSystemBlocks"];
   private readonly getPluginSystemBlocks: SessionOptions["getPluginSystemBlocks"];
+  private readonly historyStore: JsonlSessionHistoryStore;
   private readonly historyComposer: JsonlSessionHistoryComposer;
   private readonly executor: Executor;
   private sessionConfig: AgentSessionConfigSnapshot = {};
@@ -139,7 +141,7 @@ export class Session {
       this.id,
     );
     const messagesDirPath = `${sessionDirPath}/messages`;
-    this.historyComposer = new JsonlSessionHistoryComposer({
+    this.historyStore = new JsonlSessionHistoryStore({
       rootPath: this.projectRoot,
       sessionId: this.id,
       paths: {
@@ -154,9 +156,13 @@ export class Session {
         ),
       },
     });
+    this.historyComposer = new JsonlSessionHistoryComposer({
+      store: this.historyStore,
+    });
 
     this.executor = new Executor({
       sessionId: this.id,
+      historyStore: this.historyStore,
       historyComposer: this.historyComposer,
       getModel: () => this.sessionConfig.model,
       logger: this.logger as never,
@@ -275,7 +281,7 @@ export class Session {
    * 读取完整消息历史。
    */
   async history(): Promise<SessionMessageV1[]> {
-    return await this.historyComposer.list();
+    return await this.historyStore.list();
   }
 
   /**
@@ -404,7 +410,7 @@ export class Session {
    */
   async fork(input?: AgentSessionForkInput["messageId"]): Promise<Session> {
     const messageId = String(input || "").trim() || undefined;
-    const messages = await this.historyComposer.list();
+    const messages = await this.historyStore.list();
     const forkMessages =
       !messageId
         ? messages
@@ -437,7 +443,7 @@ export class Session {
       });
     }
     for (const message of forkMessages) {
-      await forked.historyComposer.append(message);
+      await forked.historyStore.append(message);
     }
     await forked.touchMetadata();
     return forked;
@@ -452,7 +458,7 @@ export class Session {
       agentId: this.agentId,
       sessionId: this.id,
     });
-    const messageCount = await this.historyComposer.size();
+    const messageCount = await this.historyStore.size();
     return {
       agentId: this.agentId,
       sessionId: this.id,
@@ -471,7 +477,7 @@ export class Session {
     this.servicePort = createSessionServicePort({
       sessionId: this.id,
       executor: this.executor,
-      historyComposer: this.historyComposer,
+      historyStore: this.historyStore,
       touchMetadata: async () => {
         await this.touchMetadata();
       },

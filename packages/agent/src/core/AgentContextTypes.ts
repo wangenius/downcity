@@ -33,6 +33,7 @@ import type {
   SessionRunInput,
   SessionRunResult,
 } from "@/session/types/SessionRun.js";
+import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
 
 /**
  * 跨 service 调用参数。
@@ -81,76 +82,6 @@ export interface InvokeServicePort {
 }
 
 /**
- * Session 持久化端口。
- */
-export interface SessionHistoryComposerPort {
-  /**
-   * 读取全部消息。
-   */
-  list(): Promise<SessionMessageV1[]>;
-  /**
-   * 读取指定范围消息。
-   */
-  slice(start: number, end: number): Promise<SessionMessageV1[]>;
-  /**
-   * 追加一条消息。
-   */
-  append(message: SessionMessageV1): Promise<void>;
-  /**
-   * 获取当前消息数量。
-   */
-  size(): Promise<number>;
-  /**
-   * 读取附加元信息。
-   */
-  meta(): Promise<Record<string, unknown>>;
-  /**
-   * 构造一条 user 文本消息。
-   */
-  userText(params: {
-    /**
-     * 用户文本内容。
-     */
-    text: string;
-    /**
-     * 消息元信息。
-     */
-    metadata: Omit<SessionMetadataV1, "v" | "ts"> &
-      Partial<Pick<SessionMetadataV1, "ts">>;
-    /**
-     * 显式指定消息 id。
-     */
-    id?: string;
-  }): SessionMessageV1;
-  /**
-   * 构造一条 assistant 文本消息。
-   */
-  assistantText(params: {
-    /**
-     * 助手文本内容。
-     */
-    text: string;
-    /**
-     * 消息元信息。
-     */
-    metadata: Omit<SessionMetadataV1, "v" | "ts"> &
-      Partial<Pick<SessionMetadataV1, "ts">>;
-    /**
-     * 显式指定消息 id。
-     */
-    id?: string;
-    /**
-     * 消息逻辑类型。
-     */
-    kind?: "normal" | "summary";
-    /**
-     * 消息来源。
-     */
-    source?: "egress" | "compact";
-  }): SessionMessageV1;
-}
-
-/**
  * 单个 Session 执行端口。
  */
 export interface SessionExecutorPort {
@@ -183,7 +114,7 @@ export interface SessionPort {
   /**
    * 获取当前 session 的持久化端口。
    */
-  getHistoryComposer(): SessionHistoryComposerPort;
+  getHistoryStore(): SessionHistoryStore;
   /**
    * 执行当前 session 的一次请求。
    */

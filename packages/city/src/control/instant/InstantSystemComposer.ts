@@ -9,9 +9,9 @@
 
 import {
   getSessionRunScope,
-  SessionSystemComposer,
   transformPromptsIntoSystemMessages,
 } from "@downcity/agent";
+import type { SessionSystemComposer } from "@downcity/agent";
 
 type InstantSystemComposerOptions = {
   /**
@@ -31,14 +31,13 @@ type InstantSystemComposerOptions = {
 /**
  * 即时模式 system composer 默认实现。
  */
-export class InstantSystemComposer extends SessionSystemComposer {
+export class InstantSystemComposer implements SessionSystemComposer {
   readonly name = "inline_instant_system";
 
   private readonly prompts: string[];
   private readonly projectRoot: string;
 
   constructor(options: InstantSystemComposerOptions) {
-    super();
     this.prompts = Array.isArray(options.prompts)
       ? options.prompts
           .map((item) => String(item || "").trim())

@@ -42,6 +42,8 @@ import {
 export interface AgentCommandRegistrationContext {
   /** 当前 CLI 版本号。 */
   version: string;
+  /** 当前 city 绑定的 agent runtime 版本号。 */
+  agentVersion: string;
   /** commander 的隐藏 Option 构造器。 */
   hiddenPortOption: typeof Option;
 }
@@ -56,6 +58,7 @@ export function registerAgentCommands(
   const agent = program
     .command("agent")
     .description("管理 Agent：创建/列出/启停/重启（无参数时启动交互式管理器）")
+    .version(`city ${context.version} (agent ${context.agentVersion})`, "-v, --version")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
       if (process.stdin.isTTY === true && process.stdout.isTTY === true) {

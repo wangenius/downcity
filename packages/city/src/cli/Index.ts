@@ -11,6 +11,7 @@
 
 import { readFileSync } from "fs";
 import { basename, dirname, join } from "path";
+import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import { Command, Option } from "commander";
 import { registerAllPluginsForCli } from "@downcity/agent";
@@ -28,12 +29,45 @@ import { setCliVerbosity } from "./shared/CliReporter.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const cliPath = join(__dirname, "./Index.js");
+const require = createRequire(import.meta.url);
 
 const packageJson = JSON.parse(
   readFileSync(join(__dirname, "../../package.json"), "utf-8"),
 ) as { version: string };
 
+/**
+ * 解析当前 city 安装所绑定的 agent runtime 版本号。
+ *
+ * 关键点（中文）
+ * - 这里读取的是 city 当前安装依赖中的 `@downcity/agent` 版本，
+ *   不是 workspace 源码目录里的 package.json。
+ * - 这样 `city agent -v` 才能反映“这份 city CLI 实际会驱动哪个 agent runtime”。
+ */
+function resolveInstalledAgentVersion(): string {
+  try {
+    const agentEntryPath = require.resolve("@downcity/agent");
+    const agentPackageJson = JSON.parse(
+      readFileSync(join(dirname(agentEntryPath), "../package.json"), "utf-8"),
+    ) as { version?: string };
+    const version = String(agentPackageJson.version || "").trim();
+    return version || "unknown";
+  } catch {
+    try {
+      const siblingAgentPackageJson = JSON.parse(
+        readFileSync(join(__dirname, "../../../agent/package.json"), "utf-8"),
+      ) as { version?: string };
+      const version = String(siblingAgentPackageJson.version || "").trim();
+      return version || "unknown";
+    } catch {
+      return "unknown";
+    }
+  }
+}
+
+const installedAgentVersion = resolveInstalledAgentVersion();
+
 const program = new Command();
+const argv = process.argv.slice(2);
 
 program
   .name(basename(process.argv[1] || "downcity"))
@@ -52,6 +86,7 @@ registerControlPlaneCommands(program, {
 
 registerAgentCommands(program, {
   version: packageJson.version,
+  agentVersion: installedAgentVersion,
   hiddenPortOption: Option,
 });
 registerTokenCommand(program);
@@ -69,6 +104,23 @@ registerAllPluginsForCli(program);
 
 program.showHelpAfterError();
 program.showSuggestionAfterError();
+
+/**
+ * 处理 `city agent -v/--version`。
+ *
+ * 关键点（中文）
+ * - commander 根命令会优先消费全局 `-v`，导致 `city agent -v` 默认只显示 city 版本。
+ * - 这里在 parse 前做一次显式分流，确保 agent 命令能返回双版本信息。
+ */
+if (
+  argv[0] === "agent" &&
+  argv.length === 2 &&
+  (argv[1] === "-v" || argv[1] === "--version")
+) {
+  console.log(`city ${packageJson.version} (agent ${installedAgentVersion})`);
+  process.exit(0);
+}
+
 if (process.argv.length <= 2) {
   program.outputHelp();
   process.exit(0);

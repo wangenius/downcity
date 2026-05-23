@@ -81,6 +81,7 @@ export {
   loadStaticSystemPrompts,
   StaticPromptCatalog,
 } from "./session/composer/system/default/StaticPromptCatalog.js";
+export { shellTools } from "./session/tools/shell/ShellToolDefinition.js";
 
 // Agent server 与 transport 集成
 export { startServer } from "./runtime/server/http/Server.js";

@@ -14,6 +14,7 @@ import path from "node:path";
 import {
   Agent,
   loadStaticSystemPrompts,
+  shellTools,
   StaticPromptCatalog,
 } from "@downcity/agent";
 import type { StartOptions } from "@downcity/agent";
@@ -73,6 +74,7 @@ export async function runCommand(
     id: agentName,
     path: projectRoot,
     instruction: currentSystems,
+    tools: shellTools,
     platform,
     useBuiltinServices: true,
     useBuiltinPlugins: true,

@@ -617,10 +617,7 @@ export class Executor implements SessionExecutor {
           textOnlyContinuationCount += 1;
           incompleteResponseRecoveryCount = 0;
           const continuationMessage = this.historyStore.userText({
-            text: buildTextOnlyContinuationNudge(
-              textOnlyContinuationCount,
-              textOnlyContinuationReason,
-            ),
+            text: buildTextOnlyContinuationNudge(textOnlyContinuationCount),
             metadata: {
               sessionId,
               extra: {

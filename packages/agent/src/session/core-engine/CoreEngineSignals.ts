@@ -63,18 +63,6 @@ const TEXT_ONLY_CONTINUATION_PATTERNS: ReadonlyArray<{
   name: string;
   pattern: RegExp;
 }> = [
-  {
-    name: "pseudo_tool_protocol_dsml",
-    pattern: /<\s*｜｜DSML｜｜(?:tool_calls|invoke|parameter)\b/i,
-  },
-  {
-    name: "pseudo_tool_protocol_ascii",
-    pattern: /<\s*(?:tool_calls?|function_call|invoke)\b/i,
-  },
-  {
-    name: "pseudo_tool_protocol_json",
-    pattern: /"tool_calls"\s*:\s*\[/i,
-  },
   { name: "zh_start_now", pattern: /我现在开始/ },
   { name: "zh_next_will", pattern: /接下来我会/ },
   { name: "zh_will_do", pattern: /我会(?:先|继续|开始|基于|按)/ },
@@ -417,19 +405,8 @@ export function detectTextOnlyContinuationReason(
  */
 export function buildTextOnlyContinuationNudge(
   continuationIndex: number,
-  reason?: string | null,
 ): string {
   const round = Math.max(1, continuationIndex);
-  const normalizedReason = String(reason || "").trim();
-  if (normalizedReason.startsWith("pseudo_tool_protocol")) {
-    return [
-      `系统续跑提醒（第 ${round} 次）：上一轮输出了伪工具调用协议文本，但没有产生真实工具调用。`,
-      "不要把 DSML、XML、JSON tool_calls 或任何工具协议当作普通正文输出。",
-      "如果确实需要工具，请立刻使用当前运行时提供的原生工具重新发起调用；只能使用实际可用的工具名。",
-      "如果目标工具不可用，请明确说明不可用，并改用可用工具完成任务或说明受阻原因。",
-      "只有在任务真正完成、明确受阻、或必须等待用户提供信息时才停止。",
-    ].join("\n");
-  }
   return [
     `系统续跑提醒（第 ${round} 次）：继续执行当前任务。`,
     "不要只描述计划、下一步或“我接下来会做什么”。",

@@ -10,10 +10,7 @@
 import { createInterface } from "node:readline/promises";
 import chalk from "chalk";
 import prompts from "prompts";
-import {
-  callAgentTransport,
-  type AgentUiChunkEvent,
-} from "@downcity/agent";
+import type { AgentSessionEvent } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import {
@@ -34,7 +31,7 @@ import type {
 } from "./AgentChatTypes.js";
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
 
-const AGENT_CHAT_EXECUTE_TIMEOUT_MS = 120_000;
+const SDK_EVENTS_READY_TYPE = "sdk-events-ready";
 
 type ResolvedAgentChatTarget = {
   /**
@@ -70,12 +67,6 @@ function buildAgentChatFailureText(error?: string): string {
     String(error || "").trim() ||
     "Agent daemon returned empty error (check config with `city agent status`)"
   );
-}
-
-function isChatSuccess(payload: AgentChatExecuteResponse | undefined): boolean {
-  if (!payload || payload.success !== true) return false;
-  if (payload.result?.success === false) return false;
-  return true;
 }
 
 async function resolveChatTargetAgentName(inputName?: string): Promise<string | null> {
@@ -201,30 +192,6 @@ function printAssistantReply(replyText: string): void {
   console.log(`\n${text}\n`);
 }
 
-function printQueuedResult(params: {
-  agentName: string;
-  payload: AgentChatExecuteResponse;
-}): void {
-  emitCliBlock({
-    tone: "info",
-    title: "Turn queued",
-    facts: [
-      {
-        label: "agent",
-        value: params.agentName,
-      },
-      ...(params.payload.result?.queueItemId
-        ? [
-          {
-            label: "queue item",
-            value: params.payload.result.queueItemId,
-          },
-        ]
-        : []),
-    ],
-  });
-}
-
 function printAgentChatFailure(params: {
   agentName: string;
   error?: string;
@@ -245,7 +212,7 @@ function printAgentChatFailure(params: {
   });
 }
 
-async function readStreamFailure(response: Response): Promise<string> {
+async function readHttpFailure(response: Response): Promise<string> {
   const contentType = String(response.headers.get("content-type") || "").toLowerCase();
   const text = await response.text().catch(() => "");
   if (contentType.includes("application/json")) {
@@ -265,14 +232,81 @@ async function readStreamFailure(response: Response): Promise<string> {
   return String(text || "").trim() || `HTTP ${response.status}`;
 }
 
-async function streamAgentChatTurn(params: {
+function isSdkEventsReadyFrame(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    String((value as { type?: unknown }).type || "") === SDK_EVENTS_READY_TYPE
+  );
+}
+
+async function postSdkPrompt(params: {
+  endpointBaseUrl: string;
+  sessionId: string;
+  message: string;
+  authHeaderValue?: string;
+}): Promise<
+  | {
+      success: true;
+      turnId: string;
+    }
+  | {
+      success: false;
+      error: string;
+    }
+> {
+  const response = await fetch(
+    new URL(
+      `/api/sdk/sessions/${encodeURIComponent(params.sessionId)}/prompt`,
+      params.endpointBaseUrl,
+    ).toString(),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(params.authHeaderValue ? { Authorization: params.authHeaderValue } : {}),
+      },
+      body: JSON.stringify({
+        query: params.message,
+      }),
+    },
+  ).catch((error) => {
+    throw new Error(`Failed to call ${params.endpointBaseUrl}: ${String(error)}`);
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: string;
+    turn?: {
+      id?: string;
+    };
+  };
+  const turnId = String(payload.turn?.id || "").trim();
+  if (!response.ok || payload.success !== true || !turnId) {
+    return {
+      success: false,
+      error:
+        String(payload.error || "").trim() ||
+        `SDK prompt failed with HTTP ${response.status}`,
+    };
+  }
+  return {
+    success: true,
+    turnId,
+  };
+}
+
+async function runSdkPromptTurn(params: {
   agentName: string;
   message: string;
   transport?: AgentChatTransportOptions;
+  renderText?: boolean;
 }): Promise<{
   success: boolean;
   error?: string;
   emittedVisibleText: boolean;
+  text?: string;
 }> {
   const message = normalizeChatMessage(params.message);
   if (!message) {
@@ -280,6 +314,7 @@ async function streamAgentChatTurn(params: {
       success: false,
       error: "Chat message is required.",
       emittedVisibleText: false,
+      text: "",
     };
   }
 
@@ -289,10 +324,12 @@ async function streamAgentChatTurn(params: {
       success: false,
       error: resolved.outcome.error,
       emittedVisibleText: false,
+      text: "",
     };
   }
 
   const { target } = resolved;
+  const abortController = new AbortController();
   const endpoint = resolveDaemonEndpoint({
     projectRoot: target.projectRoot,
     host: params.transport?.host,
@@ -305,18 +342,14 @@ async function streamAgentChatTurn(params: {
   );
   const response = await fetch(
     new URL(
-      `/api/control/sessions/${encodeURIComponent(target.sessionId)}/stream`,
+      `/api/sdk/sessions/${encodeURIComponent(target.sessionId)}/events`,
       endpoint.baseUrl,
     ).toString(),
     {
-      method: "POST",
       headers: {
-        "Content-Type": "application/json",
         ...(authHeaderValue ? { Authorization: authHeaderValue } : {}),
       },
-      body: JSON.stringify({
-        instructions: message,
-      }),
+      signal: abortController.signal,
     },
   ).catch((error) => {
     throw new Error(`Failed to call ${endpoint.baseUrl}: ${String(error)}`);
@@ -325,8 +358,9 @@ async function streamAgentChatTurn(params: {
   if (!response.ok || !response.body) {
     return {
       success: false,
-      error: await readStreamFailure(response),
+      error: await readHttpFailure(response),
       emittedVisibleText: false,
+      text: "",
     };
   }
 
@@ -335,15 +369,87 @@ async function streamAgentChatTurn(params: {
   let buffered = "";
   let printedLeadingNewline = false;
   let emittedVisibleText = false;
+  let promptTurnId = "";
+  let promptPosted = false;
+  let finalText = "";
 
-  const renderEvent = (event: AgentUiChunkEvent): void => {
-    if (event.type !== "text-delta" || !event.text) return;
+  const renderEvent = (event: AgentSessionEvent): void => {
+    if (event.type !== "text-delta" || event.turnId !== promptTurnId || !event.text) return;
+    if (params.renderText === false) return;
     if (!printedLeadingNewline) {
       process.stdout.write("\n");
       printedLeadingNewline = true;
     }
     process.stdout.write(event.text);
     emittedVisibleText = true;
+  };
+
+  const handleLine = async (line: string): Promise<
+    | {
+        done: true;
+        error?: string;
+      }
+    | {
+        done: false;
+      }
+  > => {
+    const value = JSON.parse(line) as unknown;
+    if (isSdkEventsReadyFrame(value)) {
+      if (!promptPosted) {
+        promptPosted = true;
+        const promptResult = await postSdkPrompt({
+          endpointBaseUrl: endpoint.baseUrl,
+          sessionId: target.sessionId,
+          message,
+          authHeaderValue,
+        });
+        if (!promptResult.success) {
+          return {
+            done: true,
+            error: promptResult.error,
+          };
+        }
+        promptTurnId = promptResult.turnId;
+      }
+      return { done: false };
+    }
+
+    const event = value as AgentSessionEvent;
+    if (event.type === "error") {
+      return {
+        done: true,
+        error: event.message,
+      };
+    }
+    renderEvent(event);
+    if (event.type === "turn-finish" && event.turnId === promptTurnId) {
+      finalText = event.text;
+      return {
+        done: true,
+        ...(event.success ? {} : { error: event.error || "Agent turn failed" }),
+      };
+    }
+    return { done: false };
+  };
+
+  const finishTurn = (result: {
+    success: boolean;
+    error?: string;
+  }): {
+    success: boolean;
+    error?: string;
+    emittedVisibleText: boolean;
+    text: string;
+  } => {
+    if (printedLeadingNewline) {
+      process.stdout.write("\n\n");
+    }
+    return {
+      success: result.success,
+      ...(result.error ? { error: result.error } : {}),
+      emittedVisibleText,
+      text: finalText,
+    };
   };
 
   try {
@@ -356,15 +462,13 @@ async function streamAgentChatTurn(params: {
         const line = buffered.slice(0, newlineIndex).trim();
         buffered = buffered.slice(newlineIndex + 1);
         if (line) {
-          const event = JSON.parse(line) as AgentUiChunkEvent;
-          if (event.type === "error") {
-            return {
-              success: false,
-              error: event.error,
-              emittedVisibleText,
-            };
+          const result = await handleLine(line);
+          if (result.done) {
+            return finishTurn({
+              success: !result.error,
+              ...(result.error ? { error: result.error } : {}),
+            });
           }
-          renderEvent(event);
         }
         newlineIndex = buffered.indexOf("\n");
       }
@@ -372,36 +476,37 @@ async function streamAgentChatTurn(params: {
 
     const tail = buffered.trim();
     if (tail) {
-      const event = JSON.parse(tail) as AgentUiChunkEvent;
-      if (event.type === "error") {
-        return {
-          success: false,
-          error: event.error,
-          emittedVisibleText,
-        };
+      const result = await handleLine(tail);
+      if (result.done) {
+        return finishTurn({
+          success: !result.error,
+          ...(result.error ? { error: result.error } : {}),
+        });
       }
-      renderEvent(event);
     }
   } catch (error) {
-    return {
+    return finishTurn({
       success: false,
       error: error instanceof Error ? error.message : String(error),
-      emittedVisibleText,
-    };
+    });
+  } finally {
+    abortController.abort();
+    await reader.cancel().catch(() => undefined);
+    try {
+      reader.releaseLock();
+    } catch {
+      // ignore
+    }
   }
 
-  if (printedLeadingNewline) {
-    process.stdout.write("\n\n");
-  }
-
-  return {
-    success: true,
-    emittedVisibleText,
-  };
+  return finishTurn({
+    success: promptPosted && Boolean(promptTurnId),
+    ...(promptPosted && promptTurnId ? {} : { error: "SDK events connection closed before prompt was accepted." }),
+  });
 }
 
 /**
- * 向目标 agent 的 Console 主会话发送一轮消息。
+ * 向目标 agent 的 SDK actor session 发送一轮消息。
  */
 export async function executeAgentChatTurn(params: {
   agentName: string;
@@ -423,43 +528,29 @@ export async function executeAgentChatTurn(params: {
   const resolved = await resolveAgentChatTarget(params.agentName);
   if (!resolved.success) return resolved.outcome;
 
-  const { target } = resolved;
-  const remote = await callAgentTransport<AgentChatExecuteResponse>({
-    projectRoot: target.projectRoot,
-    path: `/api/control/sessions/${encodeURIComponent(sessionId)}/execute`,
-    method: "POST",
-    timeoutMs: AGENT_CHAT_EXECUTE_TIMEOUT_MS,
-    host: params.transport?.host,
-    port: params.transport?.port,
-    authToken: params.transport?.token,
-    body: {
-      instructions: message,
-    },
+  const outcome = await runSdkPromptTurn({
+    agentName: params.agentName,
+    message,
+    transport: params.transport,
+    renderText: false,
   });
 
-  if (!remote.success || !remote.data) {
-    return {
-      agentName: target.agentName,
-      projectRoot: target.projectRoot,
-      sessionId,
-      success: false,
-      error: remote.error || "Agent daemon unreachable or returned empty error (try `city agent restart`)",
-    };
-  }
-
   return {
-    agentName: target.agentName,
-    projectRoot: target.projectRoot,
-    sessionId: String(remote.data.sessionId || sessionId),
-    success: isChatSuccess(remote.data),
-    payload: remote.data,
-    ...(isChatSuccess(remote.data)
-      ? {}
-      : {
-        error:
-          String(remote.data.result?.error || remote.data.error || "").trim() ||
-          "Daemon error (check `city agent status` and `city agent doctor`)",
-      }),
+    agentName: params.agentName,
+    ...(resolved.target.projectRoot ? { projectRoot: resolved.target.projectRoot } : {}),
+    sessionId,
+    success: outcome.success,
+    payload: {
+      success: outcome.success,
+      sessionId,
+      result: {
+        success: outcome.success,
+        userVisible: outcome.text || "",
+        ...(outcome.error ? { error: outcome.error } : {}),
+      },
+      ...(outcome.error ? { error: outcome.error } : {}),
+    },
+    ...(outcome.error ? { error: outcome.error } : {}),
   };
 }
 
@@ -493,7 +584,7 @@ async function runOneShotChat(params: {
     return;
   }
 
-  const outcome = await streamAgentChatTurn({
+  const outcome = await runSdkPromptTurn({
     agentName: params.agentName,
     message: params.message,
     transport: {
@@ -568,7 +659,7 @@ async function runInteractiveChat(params: {
         continue;
       }
 
-      const outcome = await streamAgentChatTurn({
+      const outcome = await runSdkPromptTurn({
         agentName: params.agentName,
         message: text,
         transport: {

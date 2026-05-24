@@ -1,17 +1,17 @@
 /**
- * Agent UI chunk 事件类型定义。
+ * SDK 内部 UI chunk 事件类型定义。
  *
  * 关键点（中文）
- * - 这是内部传输/映射层事件，不是 Session 的公开订阅事件。
- * - 它用于把底层 AI SDK `UIMessageChunk` 归一化，再按不同宿主场景转成最终输出。
+ * - 这是 Session 事件映射器的内部中间态，不从包根入口导出。
+ * - 它只负责承接底层 AI SDK `UIMessageChunk`，再转成 `AgentSessionEvent`。
  */
 
 import type { JsonValue } from "@/types/common/Json.js";
 
 /**
- * 内部 UI chunk 事件。
+ * SDK 内部 UI chunk 事件。
  */
-export type AgentUiChunkEvent =
+export type InternalUiChunkEvent =
   | {
       /**
        * 文本增量事件。

@@ -40,14 +40,9 @@ export type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
 } from "./types/sdk/AgentSessionTurn.js";
-export type { AgentUiChunkEvent } from "./types/sdk/AgentUiChunkEvent.js";
+export type { AgentRuntime, AgentRuntimeBase } from "./core/AgentCoreTypes.js";
 export type {
-  AgentRuntime as AgentCoreRuntime,
-  AgentRuntimeBase as AgentCoreRuntimeBase,
-} from "./core/AgentCoreTypes.js";
-export type {
-  AgentContext as AgentContext,
-  AgentContext as AgentCoreContext,
+  AgentContext,
   ChatRuntimePort,
   InvokeServicePort,
   SessionCollectionPort,

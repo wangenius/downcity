@@ -30,17 +30,11 @@ export interface AgentChatCliOptions {
 }
 
 /**
- * Control execute 结果片段。
+ * SDK prompt 结果片段。
  */
 export interface AgentChatExecuteResult {
   /** 本轮执行是否成功。 */
   success?: boolean;
-  /** 是否已经进入队列。 */
-  queued?: boolean;
-  /** 队列项 ID。 */
-  queueItemId?: string;
-  /** 当前队列位置。 */
-  queuePosition?: number;
   /** 面向用户可直接阅读的回复文本。 */
   userVisible?: string;
   /** 错误信息。 */
@@ -48,7 +42,7 @@ export interface AgentChatExecuteResult {
 }
 
 /**
- * Control execute 响应体。
+ * SDK prompt 响应体。
  */
 export interface AgentChatExecuteResponse {
   /** HTTP 路由层是否成功处理请求。 */

@@ -2,14 +2,14 @@
  * Session 事件映射辅助。
  *
  * 关键点（中文）
- * - 把底层 AI SDK `UIMessageChunk` 归一到内部 `AgentUiChunkEvent`。
+ * - 把底层 AI SDK `UIMessageChunk` 归一到内部 `InternalUiChunkEvent`。
  * - 再把内部 chunk 事件转换为 `session.subscribe()` 可见的 Session 事件。
  */
 
 import type { UIMessageChunk } from "ai";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
-import type { AgentUiChunkEvent } from "@/types/sdk/AgentUiChunkEvent.js";
+import type { InternalUiChunkEvent } from "@/types/sdk/InternalUiChunkEvent.js";
 
 function toJsonValue(value: unknown): JsonValue {
   if (value === undefined) return null;
@@ -33,7 +33,7 @@ function toJsonValue(value: unknown): JsonValue {
  */
 export function mapUiMessageChunkToAgentEvent(
   chunk: UIMessageChunk,
-): AgentUiChunkEvent | null {
+): InternalUiChunkEvent | null {
   switch (chunk.type) {
     case "text-delta":
       return {
@@ -106,7 +106,7 @@ export function mapAgentEventToSessionEvent(params: {
   /**
    * 当前内部 chunk 事件。
    */
-  event: AgentUiChunkEvent;
+  event: InternalUiChunkEvent;
   /**
    * 当前 turn 标识。
    */

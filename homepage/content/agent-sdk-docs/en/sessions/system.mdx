@@ -41,7 +41,7 @@ The blocks can include:
 - registered plugin system text
 - stable session context, including `agentId`, `sessionId`, `projectRoot`, creation time, and timezone
 
-The returned blocks are the same stable system blocks used by `session.run()` and `session.stream()`.
+The returned blocks are the same stable system blocks used by `session.prompt()`.
 
 The session creation time and timezone are the reference time context for the conversation. Dynamic values such as current time should be placed in the user message, not in `instruction`.
 

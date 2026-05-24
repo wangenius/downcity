@@ -28,9 +28,11 @@ const agent = new RemoteAgent({
 });
 
 const session = await agent.session();
-const result = await session.run({
+const turn = await session.prompt({
   query: "总结一下当前仓库结构",
 });
+
+const result = await turn.finished;
 ```
 
 客户端在这里不需要关心项目提示词、模型池或 service 装配细节，它只消费远程已经暴露好的 session 能力。

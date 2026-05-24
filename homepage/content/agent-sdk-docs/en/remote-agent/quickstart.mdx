@@ -28,9 +28,11 @@ const agent = new RemoteAgent({
 });
 
 const session = await agent.session();
-const result = await session.run({
+const turn = await session.prompt({
   query: "Summarize the current repository structure",
 });
+
+const result = await turn.finished;
 ```
 
 On the client side, you do not need to care about project prompts, model pool details, or service assembly. You only consume the remote session capability that has already been exposed.

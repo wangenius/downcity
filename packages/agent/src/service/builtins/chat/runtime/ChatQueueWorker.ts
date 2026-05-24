@@ -371,7 +371,7 @@ export class ChatQueueWorker {
     const typing = this.startTypingHeartbeat(runItem);
     let result: SessionRunResult;
     try {
-      result = await serviceContext.run({
+      result = await serviceContext.execute({
         query: runItem.text,
         onStepCallback,
         onAssistantStepCallback,

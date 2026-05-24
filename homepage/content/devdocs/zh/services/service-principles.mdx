@@ -36,7 +36,7 @@ plugin 负责在流程节点做增强
 
 1. 它拥有明确的业务主流程
 2. 它能接住外部输入或内部调度输入
-3. 它会决定何时进入 `session.run`
+3. 它会决定何时进入 `session.prompt`
 4. 它会在流程节点调用 plugin
 5. 它通常有 action 或 lifecycle
 
@@ -119,7 +119,7 @@ service 只是围绕 session 工作：
 
 - 把外部输入归到某个 `sessionId`
 - 给 session 注入 user message
-- 决定何时调用 `session.run`
+- 决定何时调用 `session.prompt`
 - 把执行结果再送回业务出口
 
 所以正确口径不是：
@@ -182,7 +182,7 @@ service 通过 `lifecycle` 和 `actions` 暴露能力。
 flowchart TD
   IN["输入"] --> SERVICE["Service 主流程"]
   SERVICE --> PLUGIN["Plugin 点增强"]
-  SERVICE --> SESSION["session.run / append message"]
+  SERVICE --> SESSION["session.prompt / append message"]
   SESSION --> OUT["结果回到 Service"]
   OUT --> EXIT["业务出口"]
 ```

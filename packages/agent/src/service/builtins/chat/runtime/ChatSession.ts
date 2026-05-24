@@ -127,7 +127,7 @@ export class ChatSession extends Executor {
    * 运行当前 chat session 的一次请求。
    *
    * 关键点（中文）
-   * - 外层继续走统一的 `session.run(...)` 入口。
+   * - 外层继续走统一的内部执行入口。
    * - ChatSession 只是在 run 生命周期里临时绑定 turn 状态给自己的 composer。
    */
   override async run(params: {

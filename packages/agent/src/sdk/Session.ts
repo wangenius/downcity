@@ -3,12 +3,12 @@
  *
  * 关键点（中文）
  * - 面向 `new Agent(...)` 的本地会话使用场景。
- * - 统一收口消息落盘、session 级模型配置、run/stream/fork 等高层 API。
+ * - 统一收口消息落盘、session 级模型配置、prompt/subscribe/fork 等高层 API。
  * - 内部继续复用 `Executor` / `JsonlSessionHistoryStore` / Composer 体系。
  */
 
 import { nanoid } from "nanoid";
-import type { LanguageModel, Tool } from "ai";
+import type { Tool } from "ai";
 import { Executor } from "@session/Executor.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionHistoryStore } from "@/session/store/history/jsonl/JsonlSessionHistoryStore.js";
@@ -17,10 +17,7 @@ import type {
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
   AgentSessionMetadata,
-  AgentSessionRunInput,
-  AgentSessionRunResult,
   AgentSessionSetInput,
-  AgentSessionStreamEvent,
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
 } from "@/sdk/AgentSdkTypes.js";
@@ -40,14 +37,29 @@ import {
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
 } from "@/sdk/session/index.js";
-import { AsyncQueue } from "@/sdk/AsyncQueue.js";
 import type { SessionPort } from "@/core/AgentContextTypes.js";
-import { pushUiMessageChunkAsSdkEvent } from "@/sdk/StreamEvents.js";
+import {
+  mapAgentEventToSessionEvent,
+  mapUiMessageChunkToAgentEvent,
+} from "@/sdk/SessionEventMapper.js";
 import {
   persistSdkAssistantResult,
   touchSessionMetadata,
 } from "@/sdk/session/index.js";
 import { createSessionServicePort } from "@/sdk/session/index.js";
+import type {
+  AgentSessionSubscriber,
+  AgentSessionUnsubscribe,
+} from "@/types/sdk/AgentSessionEvent.js";
+import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
+import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
+import { SessionEventHub } from "@/sdk/session/runtime/SessionEventHub.js";
+import { SessionPromptRuntime } from "@/sdk/session/runtime/SessionPromptRuntime.js";
+import type {
+  SessionAssistantStepCallback,
+  SessionUiMessageChunkCallback,
+} from "@/session/types/SessionRun.js";
 
 type SessionOptions = {
   /**
@@ -120,12 +132,15 @@ export class Session {
   private readonly historyStore: JsonlSessionHistoryStore;
   private readonly historyComposer: JsonlSessionHistoryComposer;
   private readonly executor: Executor;
+  private readonly eventHub = new SessionEventHub();
+  private readonly promptRuntime: SessionPromptRuntime;
   private sessionConfig: AgentSessionConfigSnapshot = {};
   private createdAt = Date.now();
   private timezone = resolveSystemTimezone();
   private initializePromise: Promise<this> | null = null;
   private ensureConfiguredPromise: Promise<void> | null = null;
   private servicePort: SessionPort | null = null;
+  private directExecutionReserved = false;
 
   constructor(options: SessionOptions) {
     this.id = String(options.sessionId || "").trim();
@@ -188,6 +203,22 @@ export class Session {
         getPluginSystemBlocks: this.getPluginSystemBlocks,
       }),
       getTools: () => this.tools,
+    });
+    this.promptRuntime = new SessionPromptRuntime({
+      sessionId: this.id,
+      publish: (event) => {
+        this.eventHub.publish(event);
+      },
+      createAndPersistUserMessage: async (query) => {
+        return await this.createAndPersistUserPromptMessage(query);
+      },
+      executeTurn: async ({ turnId, query, onStepMerge }) => {
+        return await this.executePromptTurn({
+          turnId,
+          query,
+          onStepMerge,
+        });
+      },
     });
   }
 
@@ -257,6 +288,34 @@ export class Session {
       sessionId: this.id,
       model: this.sessionConfig.model,
     });
+  }
+
+  /**
+   * 追加一条新的 Session prompt。
+   *
+   * 关键点（中文）
+   * - 这是 Session actor 模型下唯一的输入入口。
+   * - 首条输入、运行中补充输入、排到下一轮的输入，调用方式完全一致。
+   */
+  async prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
+    const query = String(input.query || "").trim();
+    if (!query) {
+      throw new Error("session.prompt requires a non-empty query");
+    }
+    await this.ensureRunnable();
+    this.assertCanPrompt();
+    return await this.promptRuntime.prompt(query);
+  }
+
+  /**
+   * 订阅当前 Session 的未来事件。
+   *
+   * 关键点（中文）
+   * - 只广播订阅之后产生的事件。
+   * - 不做历史回放；历史仍通过 `history()` 读取。
+   */
+  subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
+    return this.eventHub.subscribe(subscriber);
   }
 
   /**
@@ -332,7 +391,11 @@ export class Session {
    * 返回当前 session 是否正在执行。
    */
   isExecuting(): boolean {
-    return this.executor.isExecuting();
+    return (
+      this.directExecutionReserved ||
+      this.promptRuntime.isActive() ||
+      this.executor.isExecuting()
+    );
   }
 
   /**
@@ -340,83 +403,6 @@ export class Session {
    */
   clearExecutor(): void {
     this.executor.clearExecutor();
-  }
-
-  /**
-   * 执行一轮非流式请求。
-   */
-  async run(input: AgentSessionRunInput): Promise<AgentSessionRunResult> {
-    const query = String(input.query || "").trim();
-    if (!query) {
-      throw new Error("session.run requires a non-empty query");
-    }
-    await this.ensureReadyForExecution();
-    if (!this.sessionConfig.model) {
-      throw new Error(
-        `Session "${this.id}" requires a configured model. Pass model to new Agent({ model }), call session.set({ model }) first, or let the host configure the session during creation.`,
-      );
-    }
-    await this.appendUserMessage({ text: query });
-    const result = await this.executor.run({
-      query,
-    });
-    await this.persistAssistantResult(result.assistantMessage);
-    return {
-      success: result.success,
-      ...(result.error ? { error: result.error } : {}),
-      text: extractTextFromUiMessage(result.assistantMessage),
-      assistantMessage: result.assistantMessage,
-    };
-  }
-
-  /**
-   * 执行一轮流式请求。
-   */
-  async *stream(
-    input: AgentSessionRunInput,
-  ): AsyncIterable<AgentSessionStreamEvent> {
-    const query = String(input.query || "").trim();
-    if (!query) {
-      throw new Error("session.stream requires a non-empty query");
-    }
-    await this.ensureReadyForExecution();
-    if (!this.sessionConfig.model) {
-      throw new Error(
-        `Session "${this.id}" requires a configured model. Pass model to new Agent({ model }), call session.set({ model }) first, or let the host configure the session during creation.`,
-      );
-    }
-    const queue = new AsyncQueue<AgentSessionStreamEvent>();
-    const toolNameByCallId = new Map<string, string>();
-    await this.appendUserMessage({ text: query });
-
-    const runPromise = (async () => {
-      try {
-        const result = await this.executor.run({
-          query,
-          onUiMessageChunkCallback: async (chunk) => {
-            pushUiMessageChunkAsSdkEvent({
-              queue,
-              chunk,
-              toolNameByCallId,
-            });
-          },
-        });
-        await this.persistAssistantResult(result.assistantMessage);
-      } catch (error) {
-        queue.push({
-          type: "error",
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } finally {
-        queue.close();
-      }
-    })();
-
-    for await (const event of queue) {
-      yield event;
-    }
-
-    await runPromise;
   }
 
   /**
@@ -490,7 +476,29 @@ export class Session {
     if (this.servicePort) return this.servicePort;
     this.servicePort = createSessionServicePort({
       sessionId: this.id,
-      executor: this.executor,
+      getExecutor: () => this.executor.getExecutor(),
+      executeDirect: async (runParams) => {
+        return await this.executeDirect(runParams);
+      },
+      prompt: async (input) => {
+        return await this.prompt(input);
+      },
+      subscribe: (subscriber) => {
+        return this.subscribe(subscriber);
+      },
+      clearExecutor: () => {
+        this.executor.clearExecutor();
+      },
+      afterSessionUpdatedAsync: async () => {
+        await this.executor.afterSessionUpdatedAsync();
+      },
+      appendUserMessage: async (messageParams) => {
+        await this.executor.appendUserMessage(messageParams);
+      },
+      appendAssistantMessage: async (messageParams) => {
+        await this.executor.appendAssistantMessage(messageParams);
+      },
+      isExecuting: () => this.isExecuting(),
       historyStore: this.historyStore,
       ensureReadyForExecution: async () => {
         await this.ensureReadyForExecution();
@@ -523,6 +531,43 @@ export class Session {
     }
   }
 
+  private async ensureRunnable(): Promise<void> {
+    await this.ensureReadyForExecution();
+    if (!this.sessionConfig.model) {
+      throw new Error(
+        `Session "${this.id}" requires a configured model. Pass model to new Agent({ model }), call session.set({ model }) first, or let the host configure the session during creation.`,
+      );
+    }
+  }
+
+  private assertCanPrompt(): void {
+    if (!this.directExecutionReserved && !this.executor.isExecuting()) {
+      return;
+    }
+    if (this.promptRuntime.isActive()) {
+      return;
+    }
+    throw new Error(
+      "session.prompt cannot attach to an active direct session execution. Use prompt()/subscribe() as the public interactive API, or wait for the current execution to finish.",
+    );
+  }
+
+  private beginDirectExecution(): void {
+    if (this.promptRuntime.isActive()) {
+      throw new Error(
+        "Direct session execution cannot start while session.prompt() is active. Keep SDK-facing interactive sessions on prompt()/subscribe(), or wait for the actor turn to finish.",
+      );
+    }
+    if (this.directExecutionReserved || this.executor.isExecuting()) {
+      throw new Error("Direct session execution does not support concurrent execution on the same session.");
+    }
+    this.directExecutionReserved = true;
+  }
+
+  private endDirectExecution(): void {
+    this.directExecutionReserved = false;
+  }
+
   private async touchMetadata(): Promise<void> {
     await touchSessionMetadata({
       projectRoot: this.projectRoot,
@@ -543,5 +588,109 @@ export class Session {
       executor: this.executor,
       assistantMessage,
     });
+  }
+
+  private async createAndPersistUserPromptMessage(
+    query: string,
+  ): Promise<SessionUserMessageV1> {
+    const message = this.historyStore.userText({
+      text: String(query || "").trim(),
+      metadata: {
+        sessionId: this.id,
+      },
+    }) as SessionUserMessageV1;
+    await this.executor.appendUserMessage({
+      message,
+    });
+    await this.touchMetadata();
+    return message;
+  }
+
+  private async executePromptTurn(input: {
+    turnId: string;
+    query: string;
+    onStepMerge: () => Promise<SessionUserMessageV1[]>;
+  }): Promise<{
+    text: string;
+    success: boolean;
+    error?: string;
+  }> {
+    const toolNameByCallId = new Map<string, string>();
+    const result = await this.executor.run({
+      query: input.query,
+      onStepCallback: input.onStepMerge,
+      onUiMessageChunkCallback: async (chunk) => {
+        if (chunk.type === "tool-input-start") {
+          toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
+          return;
+        }
+        const event = mapUiMessageChunkToAgentEvent(chunk);
+        if (!event) return;
+        const resolvedEvent =
+          (
+            event.type === "tool-result" ||
+            event.type === "tool-error"
+          ) &&
+          event.toolName === "unknown"
+            ? {
+                ...event,
+                toolName:
+                  toolNameByCallId.get(event.toolCallId) || event.toolName,
+              }
+            : event;
+        if (
+          resolvedEvent.type === "tool-call" ||
+          resolvedEvent.type === "tool-error"
+        ) {
+          toolNameByCallId.set(
+            resolvedEvent.toolCallId,
+            resolvedEvent.toolName,
+          );
+        }
+        const sessionEvent = mapAgentEventToSessionEvent({
+          event: resolvedEvent,
+          turnId: input.turnId,
+        });
+        if (sessionEvent) {
+          this.eventHub.publish(sessionEvent);
+        }
+      },
+    });
+    await this.persistAssistantResult(result.assistantMessage);
+    return {
+      text: extractTextFromUiMessage(result.assistantMessage),
+      success: result.success,
+      ...(result.error ? { error: result.error } : {}),
+    };
+  }
+
+  private async executeDirect(input: {
+    query: string;
+    onStepCallback?: () => Promise<SessionUserMessageV1[]>;
+    onAssistantStepCallback?: SessionAssistantStepCallback;
+    onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
+  }) {
+    const query = String(input.query || "").trim();
+    if (!query) {
+      throw new Error("Session direct execution requires a non-empty query");
+    }
+    await this.ensureRunnable();
+    this.beginDirectExecution();
+    try {
+      return await this.executor.run({
+        query,
+        ...(typeof input.onStepCallback === "function"
+          ? { onStepCallback: input.onStepCallback }
+          : {}),
+        ...(typeof input.onAssistantStepCallback === "function"
+          ? { onAssistantStepCallback: input.onAssistantStepCallback }
+          : {}),
+        ...(typeof input.onUiMessageChunkCallback === "function"
+          ? { onUiMessageChunkCallback: input.onUiMessageChunkCallback }
+          : {}),
+      });
+    } finally {
+      this.endDirectExecution();
+    }
   }
 }

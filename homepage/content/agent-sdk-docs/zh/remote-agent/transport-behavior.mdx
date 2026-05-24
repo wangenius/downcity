@@ -1,6 +1,6 @@
 ---
 title: 传输行为
-description: 理解 RemoteAgent 使用的 HTTP 传输方式、返回格式和流式行为
+description: 理解 RemoteAgent 使用的 HTTP 传输方式、返回格式和事件投递行为
 ---
 
 # 传输行为
@@ -13,23 +13,23 @@ RemoteAgent 当前通过 HTTP 调用服务端的 SDK 路由。
 
 - 创建 session
 - 列出 session
-- `run`
+- `prompt`
 - `history`
 - `fork`
 
 这些都走普通 JSON 请求响应。
 
-## 流式请求
+## 事件流请求
 
-`stream()` 走的是 NDJSON 风格的流式返回。
+`events` 走的是 NDJSON 风格的长连接返回。
 
 也就是说，客户端会不断收到一行一行的 JSON 事件。
 
-每一行都可以看成一条独立的 stream event。
+每一行都可以看成一条独立的 session event。
 
 ## 对调用方意味着什么
 
-- 如果你只是写脚本，用 `run()` 更简单
-- 如果你要做实时 UI，优先用 `stream()`
+- 如果你只关心某一轮最终结果，就等 `turn.finished`
+- 如果你要做实时 UI，就用 `subscribe()`
 
-如果你要展示工具调用过程、渐进输出或流式聊天 UI，`stream()` 通常明显比 `run()` 更合适。
+如果你要展示工具调用过程、渐进输出或实时聊天 UI，`subscribe()` 通常就是最合适的入口。

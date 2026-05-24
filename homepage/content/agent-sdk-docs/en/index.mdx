@@ -45,11 +45,17 @@ It behaves like the paired remote client.
 Whether you work locally or remotely, the SDK is really centered around sessions:
 
 - `session()`
-- `run()`
-- `stream()`
+- `prompt()`
+- `subscribe()`
 - `history()`
 - `system()`
 - `fork()`
+
+The shared interactive model is:
+
+- `const turn = await session.prompt(...)`
+- `session.subscribe(...)`
+- `await turn.finished`
 
 Most SDK questions eventually become "how should I create, configure, and consume the session?"
 

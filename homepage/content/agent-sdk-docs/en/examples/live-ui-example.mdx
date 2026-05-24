@@ -1,0 +1,29 @@
+---
+title: "Example: Live UI"
+description: Render Agent output in real time with session.subscribe()
+---
+
+# Example: Live UI
+
+```ts
+const unsubscribe = session.subscribe((event) => {
+  if (event.type === "text-delta") {
+    render(event.text);
+  }
+});
+
+const turn = await session.prompt({
+  query: "Continue",
+});
+
+await turn.finished;
+unsubscribe();
+```
+
+If you also want to show tool activity, handle:
+
+- `tool-call`
+- `tool-result`
+- `turn-finish`
+
+This pattern is especially good for terminal live output and web-based real-time chat UI.

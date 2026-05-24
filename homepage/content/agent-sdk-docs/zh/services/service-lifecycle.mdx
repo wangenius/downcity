@@ -80,7 +80,7 @@ readonly lifecycle = {
 
 - `new Agent(...)` 就会自动跑 `start`
 - `agent.session()` 就会自动跑 `start`
-- `session.run()` 就会自动把所有后台 service lifecycle 跑完
+- `session.prompt()` 就会自动把所有后台 service lifecycle 跑完
 
 当前代码并没有对这几条路径做统一自动启动承诺。
 

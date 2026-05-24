@@ -7,28 +7,36 @@ description: Understand the central role of Session in the Agent SDK and the mos
 
 In the SDK, the thing that actually executes work is the session.
 
-## Most common usage order
+## Preferred local interactive pattern
 
 ### Local Agent
 
 ```ts
 const session = await agent.session();
 await session.set({ model });
-const result = await session.run({ query: "Continue" });
+
+const turn = await session.prompt({ query: "Continue" });
+
+const unsubscribe = session.subscribe((event) => {
+  console.log(event);
+});
+
+await turn.finished;
 ```
 
 ### RemoteAgent
 
 ```ts
 const session = await remoteAgent.session();
-const result = await session.run({ query: "Continue" });
+const turn = await session.prompt({ query: "Continue" });
+await turn.finished;
 ```
 
 ## Methods you will use most often
 
 - `set`
-- `run`
-- `stream`
+- `prompt`
+- `subscribe`
 - `history`
 - `system`
 - `fork`
@@ -40,10 +48,16 @@ If you remember only one thing, remember this: the real working object in the SD
 - local sessions need `set({ model })` first
 - remote sessions cannot currently receive a model instance from the client
 
-So the biggest difference between local and remote usage is not `run()`. It is where the model is held and configured.
+So the biggest difference between local and remote usage is not the interaction shape. It is where the model is held and configured.
+
+## Usage guidance
+
+- Use `prompt()` to append new user input
+- Use `subscribe()` to observe future turn events
+- Use `turn.finished` when you need the final result of a specific turn
 
 ## Continue reading
 
 - [set model](/en/agent-sdk-docs/sessions/set-model)
-- [run](/en/agent-sdk-docs/sessions/run)
-- [stream](/en/agent-sdk-docs/sessions/stream)
+- [prompt](/en/agent-sdk-docs/sessions/prompt)
+- [subscribe](/en/agent-sdk-docs/sessions/subscribe)

@@ -56,7 +56,7 @@ await agent.start({
 
 如果你不调用 `agent.start()`：
 
-- 仍然可以直接 `await agent.session()` 然后 `session.run()`
+- 仍然可以直接 `await agent.session()` 然后 `session.prompt()`
 - 但不会启动 HTTP / RPC
 - 也不会启动后台 service lifecycle
 

@@ -50,9 +50,10 @@ await session.set({
   model: openai.responses("gpt-5"),
 });
 
-const result = await session.run({
+const turn = await session.prompt({
   query: "Rename the local file to match the new convention",
 });
+const result = await turn.finished;
 
 console.log(result.text);
 ```
@@ -81,26 +82,28 @@ const agent = new Agent({
 `services` accepts already-instantiated service objects.  
 `agent.start({ http: { ... }, rpc: true })` automatically starts those services before exposing the endpoints.
 
-## Stream a session
+## Observe a session
 
 ```ts
-for await (const event of session.stream({
-  query: "Continue the previous task",
-})) {
+const unsubscribe = session.subscribe((event) => {
   if (event.type === "text-delta") {
     process.stdout.write(event.text);
   }
-}
+});
+
+const turn = await session.prompt({
+  query: "Continue the previous task",
+});
+await turn.finished;
+unsubscribe();
 ```
 
-Current stream events include:
+Current session events include:
 
 - `text-delta`
 - `reasoning-delta`
 - `tool-call`
 - `tool-result`
-- `tool-error`
-- `finish`
 - `error`
 
 ## Fork a session
@@ -139,23 +142,26 @@ const agent = new RemoteAgent({
 
 const session = await agent.session();
 
-const result = await session.run({
+const turn = await session.prompt({
   query: "Summarize the repository structure",
 });
+const result = await turn.finished;
 
 console.log(result.text);
 ```
 
-Remote streaming uses the same API:
+Remote observation uses the same API:
 
 ```ts
-for await (const event of session.stream({
-  query: "Continue",
-})) {
+const unsubscribe = session.subscribe((event) => {
   if (event.type === "text-delta") {
     process.stdout.write(event.text);
   }
-}
+});
+
+const turn = await session.prompt({ query: "Continue" });
+await turn.finished;
+unsubscribe();
 ```
 
 ## Session storage

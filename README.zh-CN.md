@@ -153,9 +153,10 @@ await session.set({
   model: openai.responses("gpt-5"),
 });
 
-const result = await session.run({
+const turn = await session.prompt({
   query: "总结一下当前仓库结构",
 });
+const result = await turn.finished;
 
 console.log(result.text);
 ```
@@ -172,9 +173,10 @@ const agent = new RemoteAgent({
 });
 
 const session = await agent.session();
-const result = await session.run({
+const turn = await session.prompt({
   query: "检查最近一次任务执行状态",
 });
+const result = await turn.finished;
 
 console.log(result.text);
 ```

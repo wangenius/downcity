@@ -8,23 +8,33 @@ description: The most important fields and meanings in Session input and output 
 The most common input and output objects are:
 
 - `AgentSessionSetInput`
-- `AgentSessionRunInput`
-- `AgentSessionRunResult`
+- `AgentSessionPromptInput`
+- `AgentSessionTurnHandle`
+- `AgentSessionTurnResult`
+- `AgentSessionEvent`
 - `AgentSessionMetadata`
 
-## `AgentSessionRunInput`
+## `AgentSessionPromptInput`
 
 Core field:
 
 - `query`
 
-## `AgentSessionRunResult`
+## `AgentSessionTurnHandle`
 
 Core fields:
 
+- `id`
+- `result`
+- `finished`
+
+## `AgentSessionTurnResult`
+
+Core fields:
+
+- `turnId`
 - `success`
 - `error`
 - `text`
-- `assistantMessage`
 
-For most users, `text` is the field they consume most directly. `assistantMessage` is more useful for lower-level UI rendering, debugging, or advanced handling.
+For most users, `text` is the field they consume most directly. Use `session.subscribe()` when you need real-time UI updates before `finished` resolves.

@@ -9,11 +9,11 @@ The SDK routes currently exposed by a local Agent through `agent.start({ http: {
 
 - `GET /api/sdk/sessions`
 - `POST /api/sdk/sessions`
+- `POST /api/sdk/sessions/:sessionId/prompt`
+- `GET /api/sdk/sessions/:sessionId/events`
 - `GET /api/sdk/sessions/:sessionId/messages`
 - `GET /api/sdk/sessions/:sessionId/system`
-- `POST /api/sdk/sessions/:sessionId/run`
 - `POST /api/sdk/sessions/:sessionId/fork`
-- `POST /api/sdk/sessions/:sessionId/stream`
 
 ## Design goal
 

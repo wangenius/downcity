@@ -9,9 +9,7 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type { BaseService } from "@/service/builtins/BaseService.js";
-import type { JsonValue } from "@/types/common/Json.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
-import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type { LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
 import type { ServerInstance } from "@/runtime/server/http/Server.js";
@@ -293,140 +291,6 @@ export interface AgentSessionConfigSnapshot {
 }
 
 /**
- * Session 运行输入。
- */
-export interface AgentSessionRunInput {
-  /**
-   * 当前轮用户查询文本。
-   */
-  query: string;
-}
-
-/**
- * Session 运行结果。
- */
-export interface AgentSessionRunResult {
-  /**
-   * 本轮执行是否成功。
-   */
-  success: boolean;
-
-  /**
-   * 失败时的错误文本。
-   */
-  error?: string;
-
-  /**
-   * 最终 assistant 文本。
-   */
-  text: string;
-
-  /**
-   * 最终 assistant 原始 UIMessage。
-   */
-  assistantMessage: SessionMessageV1;
-}
-
-/**
- * SDK 对外的流式事件。
- */
-export type AgentSessionStreamEvent =
-  | {
-      /**
-       * 文本增量事件。
-       */
-      type: "text-delta";
-      /**
-       * 当前追加的文本片段。
-       */
-      text: string;
-    }
-  | {
-      /**
-       * reasoning 增量事件。
-       */
-      type: "reasoning-delta";
-      /**
-       * 当前追加的 reasoning 文本片段。
-       */
-      text: string;
-    }
-  | {
-      /**
-       * 工具调用可用事件。
-       */
-      type: "tool-call";
-      /**
-       * 当前工具调用唯一标识。
-       */
-      toolCallId: string;
-      /**
-       * 工具名称。
-       */
-      toolName: string;
-      /**
-       * 工具输入参数。
-       */
-      args: JsonValue;
-    }
-  | {
-      /**
-       * 工具调用结果事件。
-       */
-      type: "tool-result";
-      /**
-       * 当前工具调用唯一标识。
-       */
-      toolCallId: string;
-      /**
-       * 工具名称。
-       */
-      toolName: string;
-      /**
-       * 工具输出结果。
-       */
-      result: JsonValue;
-    }
-  | {
-      /**
-       * 工具调用失败事件。
-       */
-      type: "tool-error";
-      /**
-       * 当前工具调用唯一标识。
-       */
-      toolCallId: string;
-      /**
-       * 工具名称。
-       */
-      toolName: string;
-      /**
-       * 错误文本。
-       */
-      error: string;
-    }
-  | {
-      /**
-       * 运行结束事件。
-       */
-      type: "finish";
-      /**
-       * 最终完成原因（若底层可提供）。
-       */
-      finishReason?: string;
-    }
-  | {
-      /**
-       * 运行错误事件。
-       */
-      type: "error";
-      /**
-       * 错误文本。
-       */
-      error: string;
-    };
-
-/**
  * Session system block 来源类型。
  */
 export type AgentSessionSystemBlockSource =
@@ -490,7 +354,7 @@ export interface AgentSessionSystemSessionInfo {
    *
    * 关键点（中文）
    * - 这是 session 初始化时落盘的稳定参考时间，按 Date/ISO 字符串对外展示。
-   * - 它不是每轮运行的当前时间，不会随着 `run()` / `stream()` 改变。
+   * - 它不是每轮运行的当前时间，不会随着后续 turn 执行而改变。
    */
   createdAt: string;
 

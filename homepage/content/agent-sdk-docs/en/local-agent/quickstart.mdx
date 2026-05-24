@@ -29,10 +29,11 @@ const agent = new Agent({
 });
 
 const session = await agent.session();
-const result = await session.run({
+const turn = await session.prompt({
   query: "Summarize the current repository structure",
 });
 
+const result = await turn.finished;
 console.log(result.text);
 ```
 
@@ -61,7 +62,8 @@ If you only want to run sessions directly from host code:
 
 ```ts
 const session = await agent.session();
-await session.run({ query: "hello" });
+const turn = await session.prompt({ query: "hello" });
+await turn.finished;
 ```
 
 you usually do not need `agent.start()`.
@@ -81,4 +83,4 @@ A simple mental model is:
 
 - [Constructor options](/en/agent-sdk-docs/local-agent/constructor-options)
 - [Local Agent HTTP and RPC](/en/agent-sdk-docs/local-agent/http-and-rpc)
-- [Session set / run / stream](/en/agent-sdk-docs/sessions/overview)
+- [Session set / prompt / subscribe](/en/agent-sdk-docs/sessions/overview)

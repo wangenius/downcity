@@ -1,10 +1,10 @@
 /**
- * Control session 流式执行 helper。
+ * Control session 增量执行 helper。
  *
  * 关键点（中文）
- * - 仅用于单 agent control API 的本地 session 流式返回。
+ * - 仅用于单 agent control API 的本地 session 增量返回。
  * - chatKey 命中的平台 chat 队列仍保持原有入队语义，不在这里伪造“流式完成”。
- * - 输出协议复用 SDK `AgentSessionStreamEvent` 的 NDJSON 事件行，便于 CLI 直接消费。
+ * - 输出协议使用内部 `AgentUiChunkEvent` 的 NDJSON 事件行，便于 CLI 直接消费。
  */
 
 import type { AgentContext, SessionPort } from "@/core/AgentContextTypes.js";
@@ -14,8 +14,8 @@ import type {
 } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
 import { buildExecuteInputText } from "@/runtime/server/http/control/Helpers.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
-import { mapUiMessageChunkToSdkEvent } from "@/sdk/StreamEvents.js";
-import type { AgentSessionStreamEvent } from "@/sdk/AgentSdkTypes.js";
+import { mapUiMessageChunkToAgentEvent } from "@/sdk/SessionEventMapper.js";
+import type { AgentUiChunkEvent } from "@/types/sdk/AgentUiChunkEvent.js";
 import type {
   SessionRunResult,
   SessionUiMessageChunkCallback,
@@ -34,7 +34,7 @@ type StreamableSessionPort = SessionPort & {
    * - `SessionPort` 对外接口当前未显式暴露 `onUiMessageChunkCallback`，
    *   但本地 executor 已支持该回调，这里按本地 control runtime 语义做窄化使用。
    */
-  run(params: {
+  execute(params: {
     query: string;
     onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
   }): Promise<SessionRunResult>;
@@ -44,7 +44,7 @@ const NDJSON_CONTENT_TYPE = "application/x-ndjson; charset=utf-8";
 
 function encodeNdjsonLine(
   encoder: TextEncoder,
-  value: AgentSessionStreamEvent,
+  value: AgentUiChunkEvent,
 ): Uint8Array {
   return encoder.encode(`${JSON.stringify(value)}\n`);
 }
@@ -52,14 +52,14 @@ function encodeNdjsonLine(
 function resolveStreamEventFromUiChunk(params: {
   chunk: Parameters<NonNullable<SessionUiMessageChunkCallback>>[0];
   toolNameByCallId: Map<string, string>;
-}): AgentSessionStreamEvent | null {
+}): AgentUiChunkEvent | null {
   const { chunk, toolNameByCallId } = params;
   if (chunk.type === "tool-input-start") {
     toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
     return null;
   }
 
-  const event = mapUiMessageChunkToSdkEvent(chunk);
+  const event = mapUiMessageChunkToAgentEvent(chunk);
   if (!event) return null;
 
   if (event.type === "tool-call" || event.type === "tool-error") {
@@ -126,7 +126,7 @@ export async function createControlSessionStreamResponse(params: {
       void (async () => {
         const toolNameByCallId = new Map<string, string>();
 
-        const pushEvent = (event: AgentSessionStreamEvent): void => {
+        const pushEvent = (event: AgentUiChunkEvent): void => {
           controller.enqueue(encodeNdjsonLine(encoder, event));
         };
 
@@ -135,7 +135,7 @@ export async function createControlSessionStreamResponse(params: {
             text: executeInput,
           });
 
-          const result = await session.run({
+          const result = await session.execute({
             query: executeInput,
             onUiMessageChunkCallback: async (chunk) => {
               const event = resolveStreamEventFromUiChunk({

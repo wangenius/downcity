@@ -58,9 +58,9 @@ type TempSessionRuntime = {
   tempDirPath: string;
 
   /**
-   * 当前临时 session 实例。
+   * 当前临时执行器实例。
    */
-  session: Executor;
+  executor: Executor;
 };
 
 function buildInstantPrompt(input: {
@@ -175,11 +175,11 @@ export class InstantSessionService implements PlatformInlineInstantService {
 
     const { sessionRuntime } = params;
     try {
-      await sessionRuntime.session.appendUserMessage({
+      await sessionRuntime.executor.appendUserMessage({
         text: query,
       });
 
-      const result = await sessionRuntime.session.run({
+      const result = await sessionRuntime.executor.run({
         query,
       });
       const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
@@ -188,7 +188,7 @@ export class InstantSessionService implements PlatformInlineInstantService {
         result.assistantMessage,
       );
       if (messageForPersistence) {
-        await sessionRuntime.session.appendAssistantMessage({
+        await sessionRuntime.executor.appendAssistantMessage({
           message: messageForPersistence,
           fallbackText: readAssistantFallbackText(userVisible, assistantText),
           extra: {
@@ -200,7 +200,7 @@ export class InstantSessionService implements PlatformInlineInstantService {
         sessionRuntime.sessionId,
       );
       for (const message of deferredInjectedMessages) {
-        await sessionRuntime.session.appendUserMessage({
+        await sessionRuntime.executor.appendUserMessage({
           message,
         });
       }
@@ -209,7 +209,7 @@ export class InstantSessionService implements PlatformInlineInstantService {
         text: readAssistantFallbackText(userVisible, assistantText),
       };
     } finally {
-      sessionRuntime.session.clearExecutor();
+      sessionRuntime.executor.clearExecutor();
       await fs.remove(sessionRuntime.tempDirPath).catch(() => undefined);
     }
   }
@@ -246,7 +246,7 @@ export class InstantSessionService implements PlatformInlineInstantService {
       projectRoot: rootPath,
     });
 
-    const session = new Executor({
+    const executor = new Executor({
       sessionId,
       historyStore,
       historyComposer,
@@ -261,7 +261,7 @@ export class InstantSessionService implements PlatformInlineInstantService {
       sessionRuntime: {
         sessionId,
         tempDirPath,
-        session,
+        executor,
       },
       query: buildInstantPrompt({
         prompt: String(input.prompt || "").trim(),

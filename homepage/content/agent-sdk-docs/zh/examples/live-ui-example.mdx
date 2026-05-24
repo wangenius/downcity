@@ -1,0 +1,29 @@
+---
+title: 例子：实时 UI
+description: 用 session.subscribe() 实时渲染 Agent 输出
+---
+
+# 例子：实时 UI
+
+```ts
+const unsubscribe = session.subscribe((event) => {
+  if (event.type === "text-delta") {
+    render(event.text);
+  }
+});
+
+const turn = await session.prompt({
+  query: "继续",
+});
+
+await turn.finished;
+unsubscribe();
+```
+
+如果你还想显示工具过程，可以继续处理：
+
+- `tool-call`
+- `tool-result`
+- `turn-finish`
+
+这个模式特别适合终端实时输出和网页实时聊天 UI。

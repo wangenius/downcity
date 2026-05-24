@@ -31,7 +31,8 @@ await session.set({ model });
 
 ```ts
 const session = await agent.session();
-await session.run({ query: "Continue" });
+const turn = await session.prompt({ query: "Continue" });
+await turn.finished;
 ```
 
 If you already confirmed that local `Agent` construction succeeded but execution still fails, this is usually the first thing to check.

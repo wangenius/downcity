@@ -7,8 +7,8 @@ description: RemoteAgent 下 session 可用的核心方法和能力边界
 
 通过 `RemoteAgent` 拿到 session 后，最常用的方法有：
 
-- `run()`
-- `stream()`
+- `prompt()`
+- `subscribe()`
 - `history()`
 - `system()`
 - `fork()`
@@ -25,18 +25,21 @@ const session = await agent.session();
 
 这让你可以继续一条已有的远程会话，而不是每次都从头开始。
 
-## 非流式执行
+## 发起一轮 prompt
 
 ```ts
-await session.run({ query: "继续" });
+const turn = await session.prompt({ query: "继续" });
+await turn.finished;
 ```
 
-## 流式执行
+## 订阅后续事件
 
 ```ts
-for await (const event of session.stream({ query: "继续" })) {
-  // handle event
-}
+const unsubscribe = session.subscribe((event) => {
+  console.log(event);
+});
+
+unsubscribe();
 ```
 
 ## 历史消息

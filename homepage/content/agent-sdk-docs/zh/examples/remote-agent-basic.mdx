@@ -13,9 +13,11 @@ const agent = new RemoteAgent({
 });
 
 const session = await agent.session();
-const result = await session.run({
+const turn = await session.prompt({
   query: "总结一下这个项目",
 });
+
+const result = await turn.finished;
 ```
 
-建议先用这个最小例子验证远程连通性，再逐步叠加更复杂的 streaming 或多 session 行为。
+建议先用这个最小例子验证远程连通性，再逐步叠加更复杂的订阅式 UI 或多 session 行为。

@@ -22,6 +22,7 @@ import {
 import { createPluginsRouter } from "@/runtime/server/http/plugins/plugins.js";
 import { createStaticRouter } from "@/runtime/server/http/static/static.js";
 import { createControlRouter } from "@/runtime/server/http/control/ControlRouter.js";
+import { createSdkRouter } from "@/runtime/server/http/sdk/Router.js";
 import {
   registerBuiltinPluginHttpRoutes,
 } from "@/plugin/core/HttpRoutes.js";
@@ -38,7 +39,7 @@ export interface ServerStartOptions {
   /** HTTP 服务监听主机。 */
   host: string;
   /** 可选实例级 agent core。 */
-  core?: Pick<AgentCore, "getContext" | "getRuntime">;
+  core?: Pick<AgentCore, "getContext" | "getRuntime" | "session" | "sessions">;
   /** 可选实例级 runtime 读取函数。 */
   getAgentRuntime?: () => AgentRuntime;
   /** 可选实例级 context 读取函数。 */
@@ -122,6 +123,9 @@ export function createServerApp(
     getAgentRuntime: bindings.getAgentRuntime,
     getAgentContext: bindings.getAgentContext,
   }));
+  if (options.core) {
+    app.route("/", createSdkRouter(options.core));
+  }
   registerBuiltinPluginHttpRoutes({
     app,
     getContext: bindings.getAgentContext,

@@ -20,7 +20,8 @@ Then:
 ```ts
 const session = await agent.session();
 await session.set({ model });
-await session.run({ query: "Continue" });
+const turn = await session.prompt({ query: "Continue" });
+await turn.finished;
 ```
 
 This minimal example is useful for validating three things first:

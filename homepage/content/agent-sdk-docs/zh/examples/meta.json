@@ -4,6 +4,6 @@
     "minimal-local-agent",
     "local-agent-with-chat-service",
     "remote-agent-basic",
-    "streaming-ui-example"
+    "live-ui-example"
   ]
 }

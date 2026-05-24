@@ -41,7 +41,7 @@ const system = await session.system();
 - 已注册 plugin 的 system 文本
 - 稳定的 session 上下文，包括 `agentId`、`sessionId`、`projectRoot`、创建时间与时区
 
-返回内容和 `session.run()`、`session.stream()` 使用的是同一套稳定 system blocks。
+返回内容和 `session.prompt()` 使用的是同一套稳定 system blocks。
 
 session 创建时间和时区是当前会话的参考时间上下文。当前时间等动态值应放入 user message，不应放进 `instruction`。
 

@@ -129,7 +129,7 @@ task 在执行时会创建：
 
 `task` 依然依赖宿主 runtime，但方式和 `chat` 不完全一样。
 
-`chat` 更多是通过现成的 `AgentContext.session.run()` 进入宿主执行链。  
+`chat` 更多是通过现成的 `AgentContext.session.prompt()` 进入宿主执行链。
 `task` 在 run 阶段则会额外创建一个 task 专用 agent runtime：
 
 - 单独的 task session runtime
@@ -139,7 +139,7 @@ task 在执行时会创建：
 
 这意味着：
 
-- `task` 不只是“调用一下现成 session.run”
+- `task` 不只是“调用一下现成 session.prompt”
 - 它还要为单次 run 组装一个更隔离的执行环境
 
 ## Task 专用 agent runtime 做了什么

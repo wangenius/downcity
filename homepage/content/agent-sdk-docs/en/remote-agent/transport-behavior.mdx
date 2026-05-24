@@ -1,6 +1,6 @@
 ---
 title: Transport Behavior
-description: Understand the HTTP transport, response formats, and streaming behavior used by RemoteAgent
+description: Understand the HTTP transport, response formats, and event delivery behavior used by RemoteAgent
 ---
 
 # Transport Behavior
@@ -13,23 +13,23 @@ For example:
 
 - create session
 - list sessions
-- `run`
+- `prompt`
 - `history`
 - `fork`
 
 Those use normal JSON request-response exchanges.
 
-## Streaming requests
+## Event subscription requests
 
-`stream()` uses an NDJSON-style response stream.
+`events` uses an NDJSON-style long-lived response.
 
 That means the client receives JSON events one line at a time.
 
-Each line can be treated as an independent stream event.
+Each line can be treated as an independent session event.
 
 ## What this means for callers
 
-- if you are writing a script, `run()` is simpler
-- if you are building a real-time UI, prefer `stream()`
+- if you only care about one turn result, wait for `turn.finished`
+- if you are building a real-time UI, use `subscribe()`
 
-If you want to show tool activity, progressive output, or streaming chat UI, `stream()` is usually a much better fit than `run()`.
+If you want to show tool activity, progressive output, or real-time chat UI, `subscribe()` is usually the right fit.

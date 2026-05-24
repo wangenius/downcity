@@ -94,7 +94,7 @@ export function createExecuteRouter(
         text: String(instructions),
       });
 
-      const result = await session.run({
+      const result = await session.execute({
         query: String(instructions),
       });
 

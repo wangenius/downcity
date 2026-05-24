@@ -3,8 +3,8 @@
   "pages": [
     "overview",
     "set-model",
-    "run",
-    "stream",
+    "prompt",
+    "subscribe",
     "history",
     "system",
     "fork",

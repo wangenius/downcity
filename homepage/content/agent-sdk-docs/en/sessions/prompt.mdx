@@ -1,0 +1,58 @@
+---
+title: session.prompt()
+description: Add a new user input into a Session actor and get back a turn handle
+---
+
+# `session.prompt()`
+
+`session.prompt()` is the unified Session input API for both local `Agent` and `RemoteAgent`.
+
+You do not decide whether a new input is:
+
+- the first turn
+- a mid-run correction
+- a queued next turn
+
+You always call the same method:
+
+```ts
+const turn = await session.prompt({
+  query: "Analyze this repository",
+});
+
+await turn.finished;
+```
+
+## Example
+
+```ts
+const session = await agent.session("repo-analysis");
+
+const turn = await session.prompt({
+  query: "Analyze this repository",
+});
+
+await session.prompt({
+  query: "Only look at the VisibleBase path",
+});
+
+await turn.finished;
+```
+
+## What it returns
+
+`prompt()` resolves only after the new input has been attached to a concrete turn.
+
+The returned handle gives you:
+
+- `turn.id`
+- `turn.finished`
+- `turn.result`
+
+## What the Session does internally
+
+- if the session is idle, it starts a new turn
+- if the current turn can still absorb new user input, it merges it
+- otherwise it queues the input for the next turn
+
+The caller does not need to manage a second queue or a second runtime.

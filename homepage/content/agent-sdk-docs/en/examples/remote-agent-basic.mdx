@@ -13,9 +13,11 @@ const agent = new RemoteAgent({
 });
 
 const session = await agent.session();
-const result = await session.run({
+const turn = await session.prompt({
   query: "Summarize this project",
 });
+
+const result = await turn.finished;
 ```
 
-It is best to use this minimal example to validate remote connectivity first, and only then add more complex streaming or multi-session behavior.
+It is best to use this minimal example to validate remote connectivity first, and only then add more complex subscription or multi-session behavior.

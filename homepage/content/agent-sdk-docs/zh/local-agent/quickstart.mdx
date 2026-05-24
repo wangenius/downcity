@@ -29,10 +29,11 @@ const agent = new Agent({
 });
 
 const session = await agent.session();
-const result = await session.run({
+const turn = await session.prompt({
   query: "总结一下当前仓库结构",
 });
 
+const result = await turn.finished;
 console.log(result.text);
 ```
 
@@ -61,7 +62,8 @@ console.log(result.text);
 
 ```ts
 const session = await agent.session();
-await session.run({ query: "hello" });
+const turn = await session.prompt({ query: "hello" });
+await turn.finished;
 ```
 
 通常不需要调用 `agent.start()`。
@@ -81,4 +83,4 @@ await session.run({ query: "hello" });
 
 - [构造参数](/zh/agent-sdk-docs/local-agent/constructor-options)
 - [本地 Agent 的 HTTP 和 RPC](/zh/agent-sdk-docs/local-agent/http-and-rpc)
-- [Session set / run / stream](/zh/agent-sdk-docs/sessions/overview)
+- [Session set / prompt / subscribe](/zh/agent-sdk-docs/sessions/overview)

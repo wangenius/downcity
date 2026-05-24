@@ -34,6 +34,12 @@ import type {
   SessionRunResult,
 } from "@/session/types/SessionRun.js";
 import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
+import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type {
+  AgentSessionSubscriber,
+  AgentSessionUnsubscribe,
+} from "@/types/sdk/AgentSessionEvent.js";
+import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
  * 跨 service 调用参数。
@@ -116,9 +122,9 @@ export interface SessionPort {
    */
   getHistoryStore(): SessionHistoryStore;
   /**
-   * 执行当前 session 的一次请求。
+   * 执行当前 session 的一次内部请求。
    */
-  run(params: {
+  execute(params: {
     /**
      * 本轮输入文本。
      */
@@ -132,6 +138,22 @@ export interface SessionPort {
      */
     onAssistantStepCallback?: SessionAssistantStepCallback;
   }): Promise<SessionRunResult>;
+  /**
+   * 向当前 session actor 追加一条新的 prompt。
+   *
+   * 关键点（中文）
+   * - 这是面向 SDK / transport 的统一交互输入入口。
+   * - 返回值只有在当前输入被绑定到某个 turn 后才会兑现。
+   */
+  prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle>;
+  /**
+   * 订阅当前 session 后续产生的 future 事件。
+   *
+   * 关键点（中文）
+   * - 只广播订阅之后产生的事件。
+   * - 历史消息仍通过 `getHistoryStore()` / SDK `history()` 读取。
+   */
+  subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe;
   /**
    * 清理当前 session 的 executor 缓存。
    */

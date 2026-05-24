@@ -4,7 +4,7 @@
     "agent-class",
     "remote-agent-class",
     "session-types",
-    "stream-events",
+    "session-events",
     "sdk-http-endpoints"
   ]
 }

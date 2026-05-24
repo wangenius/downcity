@@ -112,7 +112,7 @@ export async function executeBySessionId(params: {
     text: executeInput,
   });
 
-  const result = await session.run({
+  const result = await session.execute({
     query: executeInput,
   });
 

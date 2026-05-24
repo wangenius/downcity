@@ -64,7 +64,7 @@ export async function receiveContactChatMessage(params: {
   });
 
   const sessionId = `contact_${contact.id}`;
-  const result = await params.context.session.get(sessionId).run({
+  const result = await params.context.session.get(sessionId).execute({
     query: params.message,
   });
   const reply = extractMessageText(result.assistantMessage);

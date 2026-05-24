@@ -2,12 +2,24 @@
  * SDK Session service 端口构造器。
  *
  * 关键点（中文）
- * - 把 SDK 本地 session 适配成 chat service 依赖的 `SessionPort`。
- * - service 侧直接复用底层 `Executor` 协议，避免 SDK `run()` 包装层重复补写消息。
+ * - 把 SDK 本地 session 适配成 runtime / service 依赖的 `SessionPort`。
+ * - SDK 公开面只保留 `prompt()` / `subscribe()`；内部单轮执行原语仍通过这里暴露给 service/runtime。
  */
 
 import type { SessionPort } from "@/core/AgentContextTypes.js";
 import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
+import type { SessionRunResult } from "@/session/types/SessionRun.js";
+import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
+import type {
+  SessionAssistantStepCallback,
+  SessionUiMessageChunkCallback,
+} from "@/session/types/SessionRun.js";
+import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type {
+  AgentSessionSubscriber,
+  AgentSessionUnsubscribe,
+} from "@/types/sdk/AgentSessionEvent.js";
+import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
  * 构造 SDK SessionPort 的参数。
@@ -18,9 +30,52 @@ export interface CreateSessionServicePortParams {
    */
   sessionId: string;
   /**
-   * 底层执行编排器。
+   * 读取当前 session 底层执行端口。
    */
-  executor: Omit<SessionPort, "sessionId" | "getHistoryStore">;
+  getExecutor: SessionPort["getExecutor"];
+  /**
+   * 运行一次内部 direct execution。
+   *
+   * 关键点（中文）
+   * - 这是 runtime / service 侧保留的内部原语。
+   * - 它不属于 SDK 用户推荐直接调用的公开模式。
+   */
+  executeDirect: (params: {
+    query: string;
+    onStepCallback?: () => Promise<SessionUserMessageV1[]>;
+    onAssistantStepCallback?: SessionAssistantStepCallback;
+    onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
+  }) => Promise<SessionRunResult>;
+  /**
+   * 追加一条新的 session prompt。
+   */
+  prompt: (input: AgentSessionPromptInput) => Promise<AgentSessionTurnHandle>;
+  /**
+   * 订阅当前 session 的 future 事件。
+   */
+  subscribe: (
+    subscriber: AgentSessionSubscriber,
+  ) => AgentSessionUnsubscribe;
+  /**
+   * 清理当前 session executor 状态。
+   */
+  clearExecutor: () => void;
+  /**
+   * session 更新后的异步通知回调。
+   */
+  afterSessionUpdatedAsync: () => Promise<void>;
+  /**
+   * 追加 user 消息到底层历史。
+   */
+  appendUserMessage: SessionPort["appendUserMessage"];
+  /**
+   * 追加 assistant 消息到底层历史。
+   */
+  appendAssistantMessage: SessionPort["appendAssistantMessage"];
+  /**
+   * 返回当前 session 是否正在执行。
+   */
+  isExecuting: () => boolean;
   /**
    * 当前 session 历史持久化端口。
    */
@@ -43,26 +98,33 @@ export function createSessionServicePort(
 ): SessionPort {
   return {
     sessionId: params.sessionId,
-    getExecutor: () => params.executor.getExecutor(),
+    getExecutor: () => params.getExecutor(),
     getHistoryStore: () => params.historyStore,
-    run: async (runParams) => {
+    execute: async (runParams) => {
       await params.ensureReadyForExecution();
-      return await params.executor.run(runParams);
+      return await params.executeDirect(runParams);
+    },
+    prompt: async (input) => {
+      await params.ensureReadyForExecution();
+      return await params.prompt(input);
+    },
+    subscribe: (subscriber) => {
+      return params.subscribe(subscriber);
     },
     clearExecutor: () => {
-      params.executor.clearExecutor();
+      params.clearExecutor();
     },
     afterSessionUpdatedAsync: async () => {
-      await params.executor.afterSessionUpdatedAsync();
+      await params.afterSessionUpdatedAsync();
     },
     appendUserMessage: async (messageParams) => {
-      await params.executor.appendUserMessage(messageParams);
+      await params.appendUserMessage(messageParams);
       await params.touchMetadata();
     },
     appendAssistantMessage: async (messageParams) => {
-      await params.executor.appendAssistantMessage(messageParams);
+      await params.appendAssistantMessage(messageParams);
       await params.touchMetadata();
     },
-    isExecuting: () => params.executor.isExecuting(),
+    isExecuting: () => params.isExecuting(),
   };
 }

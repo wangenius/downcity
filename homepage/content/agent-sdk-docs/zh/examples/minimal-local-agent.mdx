@@ -20,7 +20,8 @@ const agent = new Agent({
 ```ts
 const session = await agent.session();
 await session.set({ model });
-await session.run({ query: "继续" });
+const turn = await session.prompt({ query: "继续" });
+await turn.finished;
 ```
 
 这条最小例子适合先验证 3 件事：

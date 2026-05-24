@@ -12,7 +12,7 @@ import chalk from "chalk";
 import prompts from "prompts";
 import {
   callAgentTransport,
-  type AgentSessionStreamEvent,
+  type AgentUiChunkEvent,
 } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
@@ -336,7 +336,7 @@ async function streamAgentChatTurn(params: {
   let printedLeadingNewline = false;
   let emittedVisibleText = false;
 
-  const renderEvent = (event: AgentSessionStreamEvent): void => {
+  const renderEvent = (event: AgentUiChunkEvent): void => {
     if (event.type !== "text-delta" || !event.text) return;
     if (!printedLeadingNewline) {
       process.stdout.write("\n");
@@ -356,7 +356,7 @@ async function streamAgentChatTurn(params: {
         const line = buffered.slice(0, newlineIndex).trim();
         buffered = buffered.slice(newlineIndex + 1);
         if (line) {
-          const event = JSON.parse(line) as AgentSessionStreamEvent;
+          const event = JSON.parse(line) as AgentUiChunkEvent;
           if (event.type === "error") {
             return {
               success: false,
@@ -372,7 +372,7 @@ async function streamAgentChatTurn(params: {
 
     const tail = buffered.trim();
     if (tail) {
-      const event = JSON.parse(tail) as AgentSessionStreamEvent;
+      const event = JSON.parse(tail) as AgentUiChunkEvent;
       if (event.type === "error") {
         return {
           success: false,

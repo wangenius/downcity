@@ -31,7 +31,8 @@ await session.set({ model });
 
 ```ts
 const session = await agent.session();
-await session.run({ query: "继续" });
+const turn = await session.prompt({ query: "继续" });
+await turn.finished;
 ```
 
 如果你已经确认本地 `Agent` 创建成功，但执行仍然失败，这通常就是第一优先排查点。

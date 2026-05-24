@@ -58,7 +58,7 @@ await agent.start({
 
 If you do not call `agent.start()`:
 
-- you can still call `await agent.session()` and then use `session.run()` or `session.stream()`
+- you can still call `await agent.session()` and then use `session.prompt()` / `session.subscribe()`
 - this is the right shape when you use the Agent as a local in-process library
 - no HTTP server starts
 - no RPC server starts

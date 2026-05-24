@@ -1,0 +1,57 @@
+---
+title: session.subscribe()
+description: 订阅本地或远程 Session 后续产生的 Session turn 事件
+---
+
+# `session.subscribe()`
+
+`session.subscribe()` 通过回调暴露 session 级未来事件流。
+
+```ts
+const unsubscribe = session.subscribe((event) => {
+  console.log(event);
+});
+```
+
+## 例子
+
+```ts
+const session = await agent.session("repo-analysis");
+
+const unsubscribe = session.subscribe((event) => {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+});
+
+const turn = await session.prompt({
+  query: "分析这个仓库",
+});
+
+await session.prompt({
+  query: "只看 VisibleBase 这一条链路",
+});
+
+await turn.finished;
+
+unsubscribe();
+```
+
+## 事件模型
+
+当前本地 Session actor 暴露的最小 turn 事件集合包括：
+
+- `turn-start`
+- `text-delta`
+- `reasoning-delta`
+- `tool-call`
+- `tool-result`
+- `turn-finish`
+
+`subscribe()` 不负责历史回放。
+
+如果你要读过去的消息，请继续使用 `session.history()`。
+
+## 为什么选择回调订阅
+
+对于嵌入式 runtime、桌面应用、service host 和远程 HTTP 客户端，session 级 callback subscription 通常比“每次 prompt 都单独创建一个输出对象”更容易管理。

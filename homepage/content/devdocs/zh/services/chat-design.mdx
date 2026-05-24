@@ -34,7 +34,7 @@ chat service 再把结果发回聊天渠道
 3. 把渠道目标映射成内部 `sessionId`
 4. 追加 chat ingress message
 5. 把执行请求送进 queue
-6. 调用 `session.run`
+6. 调用 `session.prompt`
 7. 把结果分发回渠道
 
 不属于 `chat` 的事情：
@@ -75,7 +75,7 @@ flowchart LR
   end
 
   subgraph SESSION["Session Layer"]
-    S1["session.run"]
+    S1["session.prompt"]
     S2["SessionEngine"]
   end
 
@@ -165,7 +165,7 @@ lane 的关键语义是：
 - 追加 ingress message
 - 合并 burst 消息
 - 在需要时注册 step callback
-- 调用 `AgentContext.session.run`
+- 调用 `AgentContext.session.prompt`
 
 所以更准确的说法是：
 

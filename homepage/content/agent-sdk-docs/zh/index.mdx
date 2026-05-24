@@ -45,11 +45,17 @@ import { RemoteAgent } from "@downcity/agent";
 无论是本地还是远程，SDK 的核心使用面都围绕 session：
 
 - `session()`
-- `run()`
-- `stream()`
+- `prompt()`
+- `subscribe()`
 - `history()`
 - `system()`
 - `fork()`
+
+现在统一的交互模型是：
+
+- `const turn = await session.prompt(...)`
+- `session.subscribe(...)`
+- `await turn.finished`
 
 大多数 SDK 使用问题，最终都会落到“session 应该怎么创建、配置和消费”。
 

@@ -1,22 +1,23 @@
 # Session Module
 
-`session/` 是单 Agent 会话执行内核。它不直接面向普通 SDK 用户；普通用户通过 `sdk/Session.ts` 使用 `session.run()`、`session.stream()`、`session.history()` 等 API。
+`session/` 是单 Agent 会话执行内核。它不直接面向普通 SDK 用户；普通用户通过 `sdk/Session.ts` 使用 `session.prompt()`、`session.subscribe()`、`session.history()` 等 API。
 
 ## 核心概念
 
-- `Session`：用户/SDK 面向的完整会话对象，负责模型配置、历史入口、运行入口和分叉能力。
-- `Executor`：单个 session 的一轮 run 执行引擎，负责并发锁、run scope、Composer 编排、压缩重试、assistant step 持久化和 tool-loop 调用。
+- `Session`：用户/SDK 面向的完整会话对象，负责模型配置、历史入口、prompt 入口和分叉能力。
+- `Executor`：单个 session 的内部单轮执行引擎，负责并发锁、执行 scope、Composer 编排、压缩重试、assistant step 持久化和 tool-loop 调用。
 - `Composer`：执行前的材料组装协议，只负责把原材料组装成某一阶段输入，不直接执行模型，也没有公共运行时基类。
 - `HistoryStore`：历史事实源，负责 JSONL 读写、meta、archive、lock、compact 与消息工厂。
 - `HistoryComposer`：历史组装策略，只负责把 `HistoryStore` 中的历史组装成本轮模型输入。
 - `CoreEngine`：Executor 内部的模型/tool-loop 核心机制，负责模型流、tool calls、续写和最终 assistant message 合并。
 
-## 一轮 run 的调用链
+## 一轮 prompt 的调用链
 
 ```text
-sdk/Session.run({ query })
+sdk/Session.prompt({ query })
+  -> SessionPromptRuntime 绑定 turn
   -> append user message
-  -> session/Executor.run({ query })
+  -> session/Executor 执行当前 turn
      -> ContextComposer.compose()
      -> SystemComposer.resolve()
      -> CompactionComposer.run()
@@ -25,7 +26,7 @@ sdk/Session.run({ query })
         -> ai.streamText({ model, system, messages, tools })
      -> return assistantMessage
   -> append final assistant message
-  -> return SDK result
+  -> resolve turn.finished
 ```
 
 ## Composer 分工

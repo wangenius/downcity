@@ -1,15 +1,15 @@
 /**
- * SDK Stream 事件映射辅助。
+ * Session 事件映射辅助。
  *
  * 关键点（中文）
- * - 把底层 AI SDK `UIMessageChunk` 归一到 `AgentSessionStreamEvent`。
- * - 仅保留 SDK 当前需要的稳定事件，不把所有底层细节直接暴露出去。
+ * - 把底层 AI SDK `UIMessageChunk` 归一到内部 `AgentUiChunkEvent`。
+ * - 再把内部 chunk 事件转换为 `session.subscribe()` 可见的 Session 事件。
  */
 
 import type { UIMessageChunk } from "ai";
 import type { JsonValue } from "@/types/common/Json.js";
-import type { AgentSessionStreamEvent } from "@/sdk/AgentSdkTypes.js";
-import type { AsyncQueue } from "@/sdk/AsyncQueue.js";
+import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { AgentUiChunkEvent } from "@/types/sdk/AgentUiChunkEvent.js";
 
 function toJsonValue(value: unknown): JsonValue {
   if (value === undefined) return null;
@@ -29,11 +29,11 @@ function toJsonValue(value: unknown): JsonValue {
 }
 
 /**
- * 把单个 UI chunk 映射为 SDK stream 事件。
+ * 把单个 UI chunk 映射为内部 chunk 事件。
  */
-export function mapUiMessageChunkToSdkEvent(
+export function mapUiMessageChunkToAgentEvent(
   chunk: UIMessageChunk,
-): AgentSessionStreamEvent | null {
+): AgentUiChunkEvent | null {
   switch (chunk.type) {
     case "text-delta":
       return {
@@ -88,7 +88,7 @@ export function mapUiMessageChunkToSdkEvent(
     case "abort":
       return {
         type: "error",
-        error: String(chunk.reason || "stream aborted"),
+        error: String(chunk.reason || "execution aborted"),
       };
     default:
       return null;
@@ -96,43 +96,53 @@ export function mapUiMessageChunkToSdkEvent(
 }
 
 /**
- * 把 UI chunk 推入 SDK stream 队列。
+ * 把内部 chunk 事件映射为 Session actor 事件。
  *
  * 关键点（中文）
- * - `tool-output-*` chunk 本身不总是携带 toolName。
- * - 这里用调用 id 维护一次流式执行内的工具名称映射，避免上层重复关心底层 chunk 细节。
+ * - Session 级事件只保留 turn 维度所需的最小字段。
+ * - `finish` 与通用 `error` 由 turn 生命周期统一表达，不在这里直接透出。
  */
-export function pushUiMessageChunkAsSdkEvent(params: {
+export function mapAgentEventToSessionEvent(params: {
   /**
-   * SDK stream 事件队列。
+   * 当前内部 chunk 事件。
    */
-  queue: AsyncQueue<AgentSessionStreamEvent>;
+  event: AgentUiChunkEvent;
   /**
-   * 底层 AI SDK UI chunk。
+   * 当前 turn 标识。
    */
-  chunk: UIMessageChunk;
-  /**
-   * 当前 stream 生命周期内的 toolCallId 到 toolName 映射。
-   */
-  toolNameByCallId: Map<string, string>;
-}): void {
-  const { queue, chunk, toolNameByCallId } = params;
-  if (chunk.type === "tool-input-start") {
-    toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
-    return;
+  turnId: string;
+}): AgentSessionEvent | null {
+  const { event, turnId } = params;
+  switch (event.type) {
+    case "text-delta":
+      return {
+        type: "text-delta",
+        turnId,
+        text: event.text,
+      };
+    case "reasoning-delta":
+      return {
+        type: "reasoning-delta",
+        turnId,
+        text: event.text,
+      };
+    case "tool-call":
+      return {
+        type: "tool-call",
+        turnId,
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        args: event.args,
+      };
+    case "tool-result":
+      return {
+        type: "tool-result",
+        turnId,
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        result: event.result,
+      };
+    default:
+      return null;
   }
-  const event = mapUiMessageChunkToSdkEvent(chunk);
-  if (!event) return;
-  if (event.type === "tool-call" || event.type === "tool-error") {
-    toolNameByCallId.set(event.toolCallId, event.toolName);
-  }
-  if (
-    (event.type === "tool-result" || event.type === "tool-error") &&
-    event.toolName === "unknown"
-  ) {
-    const toolName = toolNameByCallId.get(event.toolCallId);
-    queue.push(toolName ? { ...event, toolName } : event);
-    return;
-  }
-  queue.push(event);
 }

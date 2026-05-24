@@ -30,7 +30,7 @@ service 的工作不是自己拥有所有能力，而是把外部输入组织成
 
 1. 它接什么输入
 2. 它的主流程是什么
-3. 它什么时候进入 `session.run`
+3. 它什么时候进入 `session.prompt`
 4. 它依赖哪些 runtime 能力
 5. 它的结果从哪里出去
 
@@ -88,12 +88,12 @@ service 的主流程不是“调用了哪些工具”，而是“如何把输入
 1. 解析输入
 2. 做权限或前置校验
 3. 归一化成内部语义对象
-4. 决定是否进入 `session.run`
+4. 决定是否进入 `session.prompt`
 5. 必要时写业务侧事实流
 6. 调用 plugin 点
 7. 产出结果并送到出口
 
-## 什么情况下应该进入 `session.run`
+## 什么情况下应该进入 `session.prompt`
 
 ### 应该进入 session 的情况
 
@@ -143,7 +143,7 @@ service 不是 session 宿主，但 service 会围绕 session 工作。
 更准确地说，service 会做三件事：
 
 1. 把输入归到某个 `sessionId`
-2. 决定何时调用 `session.run`
+2. 决定何时调用 `session.prompt`
 3. 决定结果如何从业务出口出去
 
 也就是说：
@@ -195,7 +195,7 @@ flowchart TD
   S --> CFG["config / logger / env"]
   S --> PLUG["plugins"]
   S --> SELF["service 自己的业务存储"]
-  S --> SES["session.run / append message"]
+  S --> SES["session.prompt / append message"]
   SES --> HOST["session 内核执行面"]
   HOST --> RES["result"]
   RES --> S

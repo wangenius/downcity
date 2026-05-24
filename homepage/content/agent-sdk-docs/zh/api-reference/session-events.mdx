@@ -1,18 +1,18 @@
 ---
-title: Stream 事件
-description: Session.stream() 会返回哪些事件类型以及各自表示什么
+title: Session 事件
+description: Session.subscribe() 会发出哪些事件类型以及各自表示什么
 ---
 
-# Stream 事件
+# Session 事件
 
-`session.stream()` 当前支持的核心事件类型：
+`session.subscribe()` 当前会发出的核心事件类型：
 
+- `turn-start`
 - `text-delta`
 - `reasoning-delta`
 - `tool-call`
 - `tool-result`
-- `tool-error`
-- `finish`
+- `turn-finish`
 - `error`
 
 ## 最常见的是 `text-delta`
@@ -27,7 +27,8 @@ if (event.type === "text-delta") {
 
 如果你要做更完整的体验，通常还应同时处理：
 
-- `finish`
+- `turn-start`
+- `turn-finish`
 - `error`
 - `tool-call`
 - `tool-result`

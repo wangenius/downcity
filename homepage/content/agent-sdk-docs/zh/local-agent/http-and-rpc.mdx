@@ -58,7 +58,7 @@ await agent.start({
 
 不调用 `agent.start()` 时：
 
-- 你仍然可以直接 `await agent.session()`，再用 `session.run()` / `session.stream()`
+- 你仍然可以直接 `await agent.session()`，再用 `session.prompt()` / `session.subscribe()`
 - 适合把 Agent 当作当前进程里的本地库
 - 不会启动 HTTP
 - 不会启动 RPC

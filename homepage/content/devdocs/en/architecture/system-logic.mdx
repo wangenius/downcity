@@ -177,7 +177,7 @@ flowchart TD
   SERVICE --> HOOK["plugin hooks as needed"]
   SERVICE --> SID["choose sessionId"]
   SID --> APPEND["append message"]
-  APPEND --> RUN["session.run"]
+  APPEND --> RUN["session.prompt"]
   RUN --> CORE["Executor"]
   CORE --> MODEL["model / tools / prompt / history composer / compaction"]
   MODEL --> RES["assistant result"]

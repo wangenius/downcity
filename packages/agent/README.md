@@ -5,7 +5,7 @@
 它负责把一个 agent 项目目录装配成可执行运行时，包括：
 
 - 本地 SDK：`Agent`、`Session`、`RemoteAgent`
-- 会话执行内核：history、system、tool loop、stream
+- 会话执行内核：history、system、tool loop、增量输出
 - Service 框架：生命周期、action、调度
 - Plugin 框架：hook、action、内建插件
 - 运行时实现：HTTP/RPC server、transport、sandbox、host
@@ -64,7 +64,7 @@ src/
 │   └── session/           # SDK session 的 metadata、落盘路径、持久化与 service 端口适配
 ├── service/               # Service 系统，负责内建服务、生命周期、调度与 service 类型
 │   └── core/              # Service 核心控制层，包含 schedule 基础设施
-├── session/               # 会话执行内核，负责历史、system、tool loop、stream 与消息持久化
+├── session/               # 会话执行内核，负责历史、system、tool loop、增量输出与消息持久化
 ├── types/                 # 跨模块共享协议类型，集中放置 common / config / runtime 等稳定契约
 └── utils/                 # 低层工具，负责 CLI、日志、存储与模板辅助
 ```
@@ -110,10 +110,10 @@ src/
 
 - `src/session/`
   - 会话执行内核
-  - `Session` 是 SDK 用户面对的会话整体，`Executor` 是单轮 run 的执行引擎
+  - `Session` 是 SDK 用户面对的会话整体，`Executor` 是内部单轮执行引擎
   - Store 负责 history 事实源落盘，Composer 是纯 interface 协议，负责组装 system / history / context / compaction
   - `Executor.prepareExecuteInput()` 串起四类 Composer，`Executor.runCoreEngine()` 负责进入模型 tool loop
-  - 负责 history、system、context、CoreEngine、stream 与消息持久化
+  - 负责 history、system、context、CoreEngine、增量输出与消息持久化
 
 - `src/types/`
   - 跨模块、跨包共享协议类型
@@ -162,9 +162,10 @@ const agent = new Agent({
 
 const session = await agent.session();
 
-const result = await session.run({
+const turn = await session.prompt({
   query: "总结一下当前仓库结构",
 });
+const result = await turn.finished;
 ```
 
 如果要把它暴露成长期运行实例：

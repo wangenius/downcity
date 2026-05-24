@@ -24,15 +24,23 @@ export type {
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
   AgentSessionMetadata,
-  AgentSessionRunInput,
-  AgentSessionRunResult,
   AgentSessionSetInput,
-  AgentSessionStreamEvent,
   AgentSessionSystemBlock,
   AgentSessionSystemBlockSource,
   AgentSessionSystemSessionInfo,
   AgentSessionSystemSnapshot,
 } from "./sdk/AgentSdkTypes.js";
+export type {
+  AgentSessionEvent,
+  AgentSessionSubscriber,
+  AgentSessionUnsubscribe,
+} from "./types/sdk/AgentSessionEvent.js";
+export type { AgentSessionPromptInput } from "./types/sdk/AgentSessionPrompt.js";
+export type {
+  AgentSessionTurnHandle,
+  AgentSessionTurnResult,
+} from "./types/sdk/AgentSessionTurn.js";
+export type { AgentUiChunkEvent } from "./types/sdk/AgentUiChunkEvent.js";
 export type {
   AgentRuntime as AgentCoreRuntime,
   AgentRuntimeBase as AgentCoreRuntimeBase,

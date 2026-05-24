@@ -1,0 +1,57 @@
+---
+title: session.subscribe()
+description: Subscribe to future Session turn events from a local or remote Session
+---
+
+# `session.subscribe()`
+
+`session.subscribe()` gives you a session-level future event sequence through a callback.
+
+```ts
+const unsubscribe = session.subscribe((event) => {
+  console.log(event);
+});
+```
+
+## Example
+
+```ts
+const session = await agent.session("repo-analysis");
+
+const unsubscribe = session.subscribe((event) => {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+});
+
+const turn = await session.prompt({
+  query: "Analyze this repository",
+});
+
+await session.prompt({
+  query: "Only look at the VisibleBase path",
+});
+
+await turn.finished;
+
+unsubscribe();
+```
+
+## Event model
+
+The local Session actor currently emits a minimal turn-oriented event set:
+
+- `turn-start`
+- `text-delta`
+- `reasoning-delta`
+- `tool-call`
+- `tool-result`
+- `turn-finish`
+
+`subscribe()` does not replay history.
+
+If you need past messages, use `session.history()`.
+
+## Why callback-based
+
+For embedded runtimes, desktop apps, service hosts, and remote HTTP clients, a session-level callback subscription is usually simpler than creating a separate per-prompt output object.

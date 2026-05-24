@@ -7,8 +7,8 @@ description: The core session methods available under RemoteAgent and their capa
 
 After you obtain a session from `RemoteAgent`, the most common methods are:
 
-- `run()`
-- `stream()`
+- `prompt()`
+- `subscribe()`
 - `history()`
 - `system()`
 - `fork()`
@@ -25,18 +25,21 @@ You can also pass an existing `sessionId`.
 
 That lets you continue an existing remote conversation instead of always starting over.
 
-## Non-streaming execution
+## Prompt a turn
 
 ```ts
-await session.run({ query: "Continue" });
+const turn = await session.prompt({ query: "Continue" });
+await turn.finished;
 ```
 
-## Streaming execution
+## Subscribe to future events
 
 ```ts
-for await (const event of session.stream({ query: "Continue" })) {
-  // handle event
-}
+const unsubscribe = session.subscribe((event) => {
+  console.log(event);
+});
+
+unsubscribe();
 ```
 
 ## Message history

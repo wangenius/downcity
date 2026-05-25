@@ -3,11 +3,11 @@
  *
  * 关键点（中文）
  * - 这里只做确定性采集，不引入 LLM 推理。
- * - 内部仍聚合 session、task、service 三类运行事实，但最终只输出对外安全的模糊状态。
+ * - 内部仍聚合 session、task、runtime plugin 三类运行事实，但最终只输出对外安全的模糊状态。
  */
 
-import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
-import { listServiceStates } from "@/service/core/Manager.js";
+import { listTaskDefinitions } from "@/plugin/builtins/task/Action.js";
+import { listPluginStates } from "@/plugin/core/Manager.js";
 import { listControlSessionSummaries } from "@/runtime/server/http/control/SessionSummaryStore.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { WorkboardSnapshot } from "@/plugin/builtins/workboard/types/Workboard.js";
@@ -36,9 +36,9 @@ export async function collectWorkboardSnapshot(
     limit: WORKBOARD_RECENT_LIMIT + Math.max(executingSessionIds.size, 1),
     executingSessionIds,
   });
-  const services = listServiceStates({ context });
+  const runtimePlugins = listPluginStates({ context });
   const taskResult = await listTaskDefinitions({ projectRoot: context.rootPath });
-  const degradedCount = services.filter((item) => item.state !== "running").length;
+  const degradedCount = runtimePlugins.filter((item) => item.state !== "running").length;
 
   const current = sessions
     .filter((item) => item.executing === true)
@@ -71,7 +71,7 @@ export async function collectWorkboardSnapshot(
     signals: toWorkboardSignals({
       currentCount: current.length,
       recentCount: recent.length,
-      services,
+      services: runtimePlugins,
       taskResult,
     }),
   };

@@ -17,13 +17,13 @@ import type {
   ChatChannelAccountListItem,
   ChatChannelAccountProbeResult,
   ChatChannelAccountUpsertInput,
-} from "@/service/builtins/chat/types/ChannelAccount.js";
+} from "@/plugin/builtins/chat/types/ChannelAccount.js";
 import type {
   StoredChannelAccount,
   StoredModel,
   StoredModelProvider,
 } from "@/types/runtime/host/Store.js";
-import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
+import type { ChatChannelName } from "@/plugin/builtins/chat/types/ChannelStatus.js";
 import type { AgentProjectInitializationInput } from "@/config/project/types/AgentProject.js";
 import type { PlatformModelChoice } from "@/config/project/AgentInitializer.js";
 

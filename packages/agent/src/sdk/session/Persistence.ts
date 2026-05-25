@@ -6,8 +6,8 @@
  * - `Session` 只负责调用这些能力，不直接拼装 meta 结构。
  */
 
-import { resolveAssistantMessageForPersistence } from "@/service/builtins/chat/runtime/UserVisibleText.js";
-import { extractTextFromUiMessage } from "@/service/builtins/chat/runtime/UIMessageTransformer.js";
+import { resolveAssistantMessageForPersistence } from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
+import { extractTextFromUiMessage } from "@/plugin/builtins/chat/runtime/UIMessageTransformer.js";
 import type { SessionHistoryMetaV1 } from "@/session/types/SessionHistoryMeta.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { AgentSessionConfigSnapshot } from "@/sdk/AgentSdkTypes.js";

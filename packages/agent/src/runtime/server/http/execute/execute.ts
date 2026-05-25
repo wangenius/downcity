@@ -13,7 +13,7 @@ import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
-} from "@/service/builtins/chat/runtime/UserVisibleText.js";
+} from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
 
 /**
  * 执行入口路由参数。

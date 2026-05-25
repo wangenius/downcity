@@ -11,14 +11,14 @@ import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
-import { resolveChatQueueStore } from "@/service/builtins/chat/runtime/ChatQueue.js";
-import { resolveDispatchTargetByChatKey } from "@/service/builtins/chat/runtime/ChatkeySend.js";
-import { appendExecIngress } from "@/service/builtins/chat/runtime/ChatIngressStore.js";
-import { buildQueuedUserMessageWithInfo } from "@/service/builtins/chat/runtime/QueuedUserMessage.js";
+import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueue.js";
+import { resolveDispatchTargetByChatKey } from "@/plugin/builtins/chat/runtime/ChatkeySend.js";
+import { appendExecIngress } from "@/plugin/builtins/chat/runtime/ChatIngressStore.js";
+import { buildQueuedUserMessageWithInfo } from "@/plugin/builtins/chat/runtime/QueuedUserMessage.js";
 import {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
-} from "@/service/builtins/chat/runtime/UserVisibleText.js";
+} from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
 import { buildExecuteInputText } from "./Helpers.js";
 
 /**

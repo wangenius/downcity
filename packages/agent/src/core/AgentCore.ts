@@ -11,7 +11,7 @@ import fs from "fs-extra";
 import { nanoid } from "nanoid";
 import type { LanguageModel, Tool } from "ai";
 import { Logger } from "@/utils/logger/Logger.js";
-import type { BaseService } from "@/service/builtins/BaseService.js";
+import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { SessionPort } from "@/core/AgentContextTypes.js";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
@@ -37,14 +37,14 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/runtime/host/AgentHostRuntime.js";
 import { loadDowncityConfig } from "@/config/Config.js";
-import { appendExecSessionMessage } from "@/service/builtins/chat/runtime/ChatIngressStore.js";
-import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
-import { resolveChatQueueStore } from "@/service/builtins/chat/runtime/ChatQueueStore.js";
+import { appendExecSessionMessage } from "@/plugin/builtins/chat/runtime/ChatIngressStore.js";
+import { readChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";
+import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueueStore.js";
 import { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { PLUGINS } from "@/plugin/core/Plugins.js";
-import { createRegisteredServiceInstances } from "@/service/core/ServiceClassRegistry.js";
+import { createRegisteredPluginInstances } from "@/plugin/core/PluginClassRegistry.js";
 import { setShellToolRuntime } from "@session/tools/shell/ShellToolDefinition.js";
 
 const EMPTY_SDK_PLATFORM: AgentPlatformRuntime = {
@@ -115,13 +115,13 @@ export class AgentCore {
   readonly id: string;
   readonly path: string;
   readonly tools: Record<string, Tool>;
-  readonly services: Map<string, BaseService>;
+  readonly runtimePlugins: Map<string, BasePlugin>;
   readonly plugins: PluginPort;
 
   private readonly logger: Logger;
   private readonly sessionsById = new Map<string, Session>();
   private readonly runtime: AgentRuntime;
-  private readonly serviceContext: AgentContext;
+  private readonly agentContext: AgentContext;
   private readonly pluginRegistry: PluginRegistry;
   private readonly pluginSystemProviders: Plugin[];
   private readonly config: DowncityConfig;
@@ -131,7 +131,7 @@ export class AgentCore {
   private readonly defaultModel?: LanguageModel;
   private readonly configureSessionHook?: AgentOptions["configureSession"];
   private instruction: string[];
-  private servicesStartPromise: Promise<void> | null = null;
+  private runtimePluginsStartPromise: Promise<void> | null = null;
   private configuredSessionIds = new Set<string>();
 
   constructor(options: AgentOptions) {
@@ -156,11 +156,11 @@ export class AgentCore {
     this.defaultModel = options.model;
     this.configureSessionHook = options.configureSession;
     this.config = this.loadConfig();
-    this.services = new Map<string, BaseService>();
+    this.runtimePlugins = new Map<string, BasePlugin>();
     this.runtime = this.createRuntime();
-    this.registerServices({
-      explicitServices: options.services || [],
-      useBuiltinServices: options.useBuiltinServices === true,
+    this.registerRuntimePlugins({
+      explicitRuntimePlugins: options.runtimePlugins || [],
+      useBuiltinRuntimePlugins: options.useBuiltinRuntimePlugins === true,
     });
     this.pluginSystemProviders = this.resolvePlugins({
       explicitPlugins: options.plugins,
@@ -168,8 +168,8 @@ export class AgentCore {
     });
     this.pluginRegistry = this.createPluginRegistry(this.pluginSystemProviders);
     this.plugins = this.createPluginPort();
-    this.serviceContext = this.createServiceContext();
-    setShellToolRuntime(this.serviceContext.invoke);
+    this.agentContext = this.createAgentContext();
+    setShellToolRuntime(this.agentContext.invoke);
   }
 
   /**
@@ -183,7 +183,7 @@ export class AgentCore {
    * 返回实例级执行上下文。
    */
   getContext(): AgentContext {
-    return this.serviceContext;
+    return this.agentContext;
   }
 
   /**
@@ -235,19 +235,19 @@ export class AgentCore {
   }
 
   /**
-   * 确保显式注入的 services 已启动。
+   * 确保显式注入的 runtime plugins 已启动。
    */
-  async ensureServicesStarted(): Promise<void> {
-    if (this.servicesStartPromise) {
-      await this.servicesStartPromise;
+  async ensureRuntimePluginsStarted(): Promise<void> {
+    if (this.runtimePluginsStartPromise) {
+      await this.runtimePluginsStartPromise;
       return;
     }
-    this.servicesStartPromise = (async () => {
-      for (const service of this.services.values()) {
-        await service.lifecycle?.start?.(this.serviceContext);
+    this.runtimePluginsStartPromise = (async () => {
+      for (const plugin of this.runtimePlugins.values()) {
+        await plugin.lifecycle?.start?.(this.agentContext);
       }
     })();
-    await this.servicesStartPromise;
+    await this.runtimePluginsStartPromise;
   }
 
   /**
@@ -269,24 +269,24 @@ export class AgentCore {
     }
   }
 
-  private registerServices(input: {
-    explicitServices: BaseService[];
-    useBuiltinServices: boolean;
+  private registerRuntimePlugins(input: {
+    explicitRuntimePlugins: BasePlugin[];
+    useBuiltinRuntimePlugins: boolean;
   }): void {
-    const explicitServices = input.explicitServices;
-    const builtinServices = input.useBuiltinServices
-      ? [...createRegisteredServiceInstances(this.runtime).values()]
+    const explicitRuntimePlugins = input.explicitRuntimePlugins;
+    const builtinRuntimePlugins = input.useBuiltinRuntimePlugins
+      ? [...createRegisteredPluginInstances(this.runtime).values()]
       : [];
-    for (const service of [...builtinServices, ...explicitServices]) {
-      const name = String(service?.name || "").trim();
+    for (const plugin of [...builtinRuntimePlugins, ...explicitRuntimePlugins]) {
+      const name = String(plugin?.name || "").trim();
       if (!name) {
-        throw new Error("Agent received a service without a valid name");
+        throw new Error("Agent received a runtime plugin without a valid name");
       }
-      if (this.services.has(name)) {
-        throw new Error(`Duplicate service registration: ${name}`);
+      if (this.runtimePlugins.has(name)) {
+        throw new Error(`Duplicate runtime plugin registration: ${name}`);
       }
-      service.bindAgent(this.runtime);
-      this.services.set(name, service);
+      plugin.bindAgent(this.runtime);
+      this.runtimePlugins.set(name, plugin);
     }
   }
 
@@ -304,14 +304,14 @@ export class AgentCore {
   private createPluginRegistry(input: Plugin[]): PluginRegistry {
     let pluginRegistryRef: PluginRegistry | null = null;
     const hookRegistry = new HookRegistry({
-      contextResolver: () => this.serviceContext,
+      contextResolver: () => this.agentContext,
       pluginEnabledChecker: (pluginName) => {
         const plugin = pluginRegistryRef?.get(pluginName);
-        return plugin ? isPluginEnabled({ plugin, context: this.serviceContext }) : false;
+        return plugin ? isPluginEnabled({ plugin, context: this.agentContext }) : false;
       },
     });
     const registry = new PluginRegistry({
-      contextResolver: () => this.serviceContext,
+      contextResolver: () => this.agentContext,
       hookRegistry,
     });
     pluginRegistryRef = registry;
@@ -353,12 +353,12 @@ export class AgentCore {
     for (const plugin of this.pluginSystemProviders) {
       if (typeof plugin.system !== "function") continue;
       try {
-        if (!isPluginEnabled({ plugin, context: this.serviceContext })) continue;
+        if (!isPluginEnabled({ plugin, context: this.agentContext })) continue;
         if (typeof plugin.availability === "function") {
-          const availability = await plugin.availability(this.serviceContext);
+          const availability = await plugin.availability(this.agentContext);
           if (!availability.available) continue;
         }
-        const text = String(await plugin.system(this.serviceContext)).trim();
+        const text = String(await plugin.system(this.agentContext)).trim();
         if (!text) continue;
         out.push({
           source: "plugin",
@@ -372,20 +372,20 @@ export class AgentCore {
     return out;
   }
 
-  private async loadServiceSystemBlocks(): Promise<AgentSessionSystemBlock[]> {
+  private async loadRuntimePluginSystemBlocks(): Promise<AgentSessionSystemBlock[]> {
     const out: AgentSessionSystemBlock[] = [];
-    for (const service of this.services.values()) {
-      if (typeof service.system !== "function") continue;
+    for (const plugin of this.runtimePlugins.values()) {
+      if (typeof plugin.system !== "function") continue;
       try {
-        const text = String(await service.system(this.serviceContext)).trim();
+        const text = String(await plugin.system(this.agentContext)).trim();
         if (!text) continue;
         out.push({
-          source: "service",
-          name: service.name,
+          source: "plugin",
+          name: plugin.name,
           content: text,
         });
       } catch {
-        // 单个 service system 失败不应阻断 SDK session 主链路。
+        // 单个 runtime plugin system 失败不应阻断 SDK session 主链路。
       }
     }
     return out;
@@ -404,19 +404,19 @@ export class AgentCore {
       pluginConfig: createAgentPluginConfigRuntime(this.path),
       platform: this.platform,
       getSession: (sessionId: string): SessionPort =>
-        this.getOrCreateSession(sessionId).getServicePort(),
+        this.getOrCreateSession(sessionId).getRuntimePort(),
       listExecutingSessionIds: () =>
         [...this.sessionsById.values()]
           .filter((session) => session.isExecuting())
           .map((session) => session.id),
       getExecutingSessionCount: () =>
         [...this.sessionsById.values()].filter((session) => session.isExecuting()).length,
-      services: this.services,
+      runtimePlugins: this.runtimePlugins,
     } satisfies AgentRuntime;
     return runtime;
   }
 
-  private createServiceContext(): AgentContext {
+  private createAgentContext(): AgentContext {
     let context!: AgentContext;
     context = {
       agent: this.runtime,
@@ -431,7 +431,7 @@ export class AgentCore {
       pluginConfig: this.runtime.pluginConfig,
       platform: this.platform,
       session: {
-        get: (sessionId) => this.getOrCreateSession(sessionId).getServicePort(),
+        get: (sessionId) => this.getOrCreateSession(sessionId).getRuntimePort(),
         listExecutingSessionIds: () => this.runtime.listExecutingSessionIds(),
         getExecutingSessionCount: () => this.runtime.getExecutingSessionCount(),
         resolveModel: async (sessionId) => {
@@ -441,30 +441,30 @@ export class AgentCore {
       },
       invoke: {
         invoke: async (params: {
-          service: string;
+          plugin: string;
           action: string;
           payload?: JsonValue;
         }) => {
-          const serviceName = String(params.service || "").trim();
+          const pluginName = String(params.plugin || "").trim();
           const actionName = String(params.action || "").trim();
-          const service = this.services.get(serviceName);
-          if (!service) {
+          const plugin = this.runtimePlugins.get(pluginName);
+          if (!plugin) {
             return {
               success: false,
-              error: `Unknown service: ${serviceName}`,
+              error: `Unknown plugin: ${pluginName}`,
             };
           }
-          const action = service.actions[actionName];
+          const action = plugin.actions[actionName];
           if (!action) {
             return {
               success: false,
-              error: `Unknown action: ${serviceName}.${actionName}`,
+              error: `Unknown action: ${pluginName}.${actionName}`,
             };
           }
           const result = await action.execute({
             context,
             payload: params.payload ?? null,
-            serviceName,
+            pluginName,
             actionName,
           });
           if (!result.success) {
@@ -514,7 +514,7 @@ export class AgentCore {
       tools: this.tools,
       logger: this.logger,
       getInstructionSystemBlocks: () => this.loadInstructionSystemBlocks(),
-      getServiceSystemBlocks: () => this.loadServiceSystemBlocks(),
+      getRuntimePluginSystemBlocks: () => this.loadRuntimePluginSystemBlocks(),
       getPluginSystemBlocks: () => this.loadPluginSystemBlocks(),
       ensureConfigured: async (session) => {
         await this.configureSession(session);

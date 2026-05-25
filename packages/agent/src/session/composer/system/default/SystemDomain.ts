@@ -10,7 +10,7 @@ import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@session/composer/system/default/PromptRenderer.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { PLUGINS } from "@/plugin/core/Plugins.js";
-import { SERVICE_SYSTEM_PROVIDERS } from "@/service/core/ServiceSystemProviders.js";
+import { SERVICE_SYSTEM_PROVIDERS } from "@/plugin/core/PluginSystemProviders.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { buildRuntimeClockSystemPrompt } from "@session/composer/system/default/variables/VariableReplacer.js";
 import {

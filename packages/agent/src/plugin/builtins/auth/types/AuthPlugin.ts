@@ -7,8 +7,8 @@
  * - chat / console / plugin 执行链路都从这里共享同一份边界定义。
  */
 
-import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
-import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
+import type { ChatDispatchChannel } from "@/plugin/builtins/chat/types/ChatDispatcher.js";
+import { CHAT_PLUGIN_POINTS } from "@/plugin/builtins/chat/runtime/PluginPoints.js";
 
 /**
  * auth plugin 稳定名称。

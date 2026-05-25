@@ -25,10 +25,10 @@ import type {
   ServiceCommandResponse,
   ServiceControlResponse,
   ServiceListResponse,
-} from "@/service/types/Services.js";
-import { listServiceStates, controlServiceState } from "@/service/core/ServiceStateController.js";
-import { runServiceCommand } from "@/service/core/ServiceActionRunner.js";
-import { parseServiceCommandRequestBody } from "@/service/core/ServiceCommandRequest.js";
+} from "@/plugin/types/Plugins.js";
+import { listPluginStates, controlPluginState } from "@/plugin/core/PluginStateController.js";
+import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
+import { parsePluginCommandRequestBody } from "@/plugin/core/PluginCommandRequest.js";
 import { executeBySessionId } from "@/runtime/server/http/control/ExecuteBySession.js";
 import { getLocalRpcEndpoint } from "@/runtime/transport/rpc/Paths.js";
 
@@ -85,19 +85,19 @@ async function handleServiceControl(params: {
   context: AgentContext;
 }): Promise<LocalRpcResponse> {
   const body = isObjectRecord(params.body) ? params.body : {};
-  const serviceName = String(body.serviceName || "").trim();
+  const pluginName = String(body.pluginName || "").trim();
   const action = String(body.action || "").trim() as ServiceControlAction;
-  if (!serviceName || !action) {
-    return createErrorResponse(params.requestId, 400, "serviceName and action are required");
+  if (!pluginName || !action) {
+    return createErrorResponse(params.requestId, 400, "pluginName and action are required");
   }
-  const result = await controlServiceState({
-    serviceName,
+  const result = await controlPluginState({
+    pluginName,
     action,
     context: params.context,
   });
   const payload: ServiceControlResponse = {
     success: result.success,
-    ...(result.service ? { service: result.service } : {}),
+    ...(result.plugin ? { plugin: result.plugin, service: result.plugin } : {}),
     ...(result.error ? { error: result.error } : {}),
   };
   return createSuccessResponse(params.requestId, payload as unknown as JsonValue);
@@ -110,15 +110,15 @@ async function handleServiceCommand(params: {
 }): Promise<LocalRpcResponse> {
   let body;
   try {
-    body = parseServiceCommandRequestBody(params.body);
+    body = parsePluginCommandRequestBody(params.body);
   } catch (error) {
     return createErrorResponse(params.requestId, 400, String(error));
   }
-  if (!body.serviceName || !body.command) {
-    return createErrorResponse(params.requestId, 400, "serviceName and command are required");
+  if (!body.pluginName || !body.command) {
+    return createErrorResponse(params.requestId, 400, "pluginName and command are required");
   }
-  const result = await runServiceCommand({
-    serviceName: body.serviceName,
+  const result = await runPluginCommand({
+    pluginName: body.pluginName,
     command: body.command,
     payload: body.payload,
     schedule: body.schedule,
@@ -126,7 +126,7 @@ async function handleServiceCommand(params: {
   });
   const payload: ServiceCommandResponse = {
     success: result.success,
-    ...(result.service ? { service: result.service } : {}),
+    ...(result.plugin ? { plugin: result.plugin, service: result.plugin } : {}),
     ...(result.data !== undefined ? { data: result.data } : {}),
     ...(result.message ? { message: result.message } : {}),
     ...(result.success ? {} : { error: result.message || "service command failed" }),
@@ -251,21 +251,31 @@ async function dispatchRequest(params: {
   runtime?: AgentRuntime;
 }): Promise<LocalRpcResponse> {
   const { request } = params;
-  if (request.method === "GET" && request.path === "/api/services/list") {
+  if (
+    request.method === "GET" &&
+    (request.path === "/api/plugins/runtime/list" || request.path === "/api/services/list")
+  ) {
     const payload: ServiceListResponse = {
       success: true,
-      services: listServiceStates({ context: params.context }),
+      plugins: listPluginStates({ context: params.context }),
+      services: listPluginStates({ context: params.context }),
     };
     return createSuccessResponse(request.requestId, payload as unknown as JsonValue);
   }
-  if (request.method === "POST" && request.path === "/api/services/control") {
+  if (
+    request.method === "POST" &&
+    (request.path === "/api/plugins/runtime/control" || request.path === "/api/services/control")
+  ) {
     return await handleServiceControl({
       requestId: request.requestId,
       body: request.body,
       context: params.context,
     });
   }
-  if (request.method === "POST" && request.path === "/api/services/command") {
+  if (
+    request.method === "POST" &&
+    (request.path === "/api/plugins/runtime/command" || request.path === "/api/services/command")
+  ) {
     return await handleServiceCommand({
       requestId: request.requestId,
       body: request.body,

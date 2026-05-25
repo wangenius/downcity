@@ -1,9 +1,9 @@
 /**
- * SDK Session service 端口构造器。
+ * SDK Session runtime plugin 端口构造器。
  *
  * 关键点（中文）
- * - 把 SDK 本地 session 适配成 runtime / service 依赖的 `SessionPort`。
- * - SDK 公开面只保留 `prompt()` / `subscribe()`；内部单轮执行原语仍通过这里暴露给 service/runtime。
+ * - 把 SDK 本地 session 适配成 runtime / runtime plugin 依赖的 `SessionPort`。
+ * - SDK 公开面只保留 `prompt()` / `subscribe()`；内部单轮执行原语仍通过这里暴露给 runtime plugin/runtime。
  */
 
 import type { SessionPort } from "@/core/AgentContextTypes.js";
@@ -24,7 +24,7 @@ import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 /**
  * 构造 SDK SessionPort 的参数。
  */
-export interface CreateSessionServicePortParams {
+export interface CreateRuntimeSessionPortParams {
   /**
    * 当前 sessionId。
    */
@@ -37,7 +37,7 @@ export interface CreateSessionServicePortParams {
    * 运行一次内部 direct execution。
    *
    * 关键点（中文）
-   * - 这是 runtime / service 侧保留的内部原语。
+   * - 这是 runtime / runtime plugin 侧保留的内部原语。
    * - 它不属于 SDK 用户推荐直接调用的公开模式。
    */
   executeDirect: (params: {
@@ -91,10 +91,10 @@ export interface CreateSessionServicePortParams {
 }
 
 /**
- * 创建供 service 使用的 session 端口。
+ * 创建供 runtime plugin 使用的 session 端口。
  */
-export function createSessionServicePort(
-  params: CreateSessionServicePortParams,
+export function createRuntimeSessionPort(
+  params: CreateRuntimeSessionPortParams,
 ): SessionPort {
   return {
     sessionId: params.sessionId,
@@ -128,3 +128,9 @@ export function createSessionServicePort(
     isExecuting: () => params.isExecuting(),
   };
 }
+
+/**
+ * 兼容旧命名导出。
+ */
+export type CreateSessionServicePortParams = CreateRuntimeSessionPortParams;
+export const createSessionServicePort = createRuntimeSessionPort;

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 面向 `Agent` SDK 的本地会话执行场景。
- * - 注入调用方显式传入的静态 instruction、显式注入 service system 与显式注册 plugin system。
+ * - 注入调用方显式传入的静态 instruction、显式注入 runtime plugin system 与显式注册 plugin system。
  * - SDK 不在 system 中注入动态变量；动态上下文应由调用方放入 user message。
  */
 
@@ -50,9 +50,9 @@ export interface BuildSessionSystemBlocksParams {
   getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
 
   /**
-   * 读取当前显式注入 service 的 system blocks。
+   * 读取当前显式注入 runtime plugin 的 system blocks。
    */
-  getServiceSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+  getRuntimePluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 
   /**
    * 读取当前显式注册 plugin 的 system blocks。
@@ -92,9 +92,9 @@ type SessionSystemBuilderOptions = {
   getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 
   /**
-   * 读取当前显式注入 service 的 system blocks。
+   * 读取当前显式注入 runtime plugin 的 system blocks。
    */
-  getServiceSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+  getRuntimePluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 };
 
 function normalizeSystemBlocks(
@@ -109,7 +109,6 @@ function normalizeSystemBlocks(
       if (
         source !== "core" &&
         source !== "instruction" &&
-        source !== "service" &&
         source !== "plugin" &&
         source !== "session"
       ) {
@@ -186,7 +185,7 @@ export async function buildSessionSystemBlocks(
   }
   return [
     ...normalizeSystemBlocks(params.getInstructionSystemBlocks()),
-    ...normalizeSystemBlocks(await params.getServiceSystemBlocks()),
+    ...normalizeSystemBlocks(await params.getRuntimePluginSystemBlocks()),
     ...normalizeSystemBlocks(await params.getPluginSystemBlocks()),
     // session block 放在最后，尽量保留前缀 system blocks 的跨 session 缓存命中。
     createSessionSystemBlock(
@@ -219,7 +218,7 @@ export class SessionSystemBuilder implements SessionSystemComposer {
   private readonly getSessionCreatedAt: SessionSystemBuilderOptions["getSessionCreatedAt"];
   private readonly getSessionTimezone: SessionSystemBuilderOptions["getSessionTimezone"];
   private readonly getInstructionSystemBlocks: SessionSystemBuilderOptions["getInstructionSystemBlocks"];
-  private readonly getServiceSystemBlocks: SessionSystemBuilderOptions["getServiceSystemBlocks"];
+  private readonly getRuntimePluginSystemBlocks: SessionSystemBuilderOptions["getRuntimePluginSystemBlocks"];
   private readonly getPluginSystemBlocks: SessionSystemBuilderOptions["getPluginSystemBlocks"];
 
   constructor(options: SessionSystemBuilderOptions) {
@@ -228,7 +227,7 @@ export class SessionSystemBuilder implements SessionSystemComposer {
     this.getSessionCreatedAt = options.getSessionCreatedAt;
     this.getSessionTimezone = options.getSessionTimezone;
     this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
-    this.getServiceSystemBlocks = options.getServiceSystemBlocks;
+    this.getRuntimePluginSystemBlocks = options.getRuntimePluginSystemBlocks;
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     if (!this.agentId) {
       throw new Error("SessionSystemBuilder requires a non-empty agentId");
@@ -253,7 +252,7 @@ export class SessionSystemBuilder implements SessionSystemComposer {
       createdAt: this.getSessionCreatedAt(),
       timezone: this.getSessionTimezone(),
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-      getServiceSystemBlocks: this.getServiceSystemBlocks,
+      getRuntimePluginSystemBlocks: this.getRuntimePluginSystemBlocks,
       getPluginSystemBlocks: this.getPluginSystemBlocks,
     });
   }

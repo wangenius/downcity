@@ -12,7 +12,7 @@ import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,
 } from "@/config/Paths.js";
-import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
+import { readChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";
 import type { ControlSessionSummary } from "@/runtime/server/http/control/types/ControlViewData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";

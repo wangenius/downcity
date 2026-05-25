@@ -14,9 +14,9 @@ import {
   listRegisteredServices,
   parseScheduledRunAtMsOrThrow,
 } from "@downcity/agent";
-import type { Service, ServiceAction } from "@downcity/agent";
+import type { Service, PluginAction as ServiceAction } from "@downcity/agent";
 import type { JsonObject, JsonValue } from "@downcity/agent";
-import type { ServiceCommandScheduleInput } from "@downcity/agent";
+import type { PluginCommandScheduleInput as ServiceCommandScheduleInput } from "@downcity/agent";
 import type { ServiceCommandResponse } from "@downcity/agent";
 import type { ServiceCliBaseOptions } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
@@ -403,7 +403,7 @@ export function registerAllServicesForCli(program: Command): void {
         program,
         service,
         actionName,
-        action,
+        action: action as ServiceAction<JsonValue, JsonValue>,
       });
     }
   }

@@ -3,12 +3,12 @@
  *
  * 关键点（中文）
  * - 这里集中声明 `Agent` / `RemoteAgent` / `Session` 面向外部调用方的稳定接口。
- * - SDK 用户通过显式 `tools` / `services` / `plugins` 装配能力，不直接依赖内部 runtime 单例。
+ * - SDK 用户通过显式 `tools` / `runtimePlugins` / `plugins` 装配能力，不直接依赖内部 runtime 单例。
  * - 本地/远程 session 运行与基础落盘能力仍是 SDK 主路径。
  */
 
 import type { LanguageModel, Tool } from "ai";
-import type { BaseService } from "@/service/builtins/BaseService.js";
+import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type { LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
@@ -63,23 +63,23 @@ export interface AgentOptions {
   model?: LanguageModel;
 
   /**
-   * 当前 agent 显式持有的 service 实例集合。
+   * 当前 agent 显式持有的 runtime plugin 实例集合。
    *
    * 关键点（中文）
-   * - 这里接收已经实例化好的 service，而不是 service class。
+   * - 这里接收已经实例化好的 runtime plugin，而不是 plugin class。
    * - `Agent` 会在构造阶段按名称注册这些实例，并在启动时自动绑定 runtime。
-   * - v1 推荐显式传入 `new ChatService(...)` 这类实例，而不是依赖包内隐式注册表。
+   * - v1 推荐显式传入 `new ChatPlugin(...)` 这类实例，而不是依赖包内隐式注册表。
    */
-  services?: BaseService[];
+  runtimePlugins?: BasePlugin[];
 
   /**
-   * 是否自动装配全部内建 service。
+   * 是否自动装配全部内建 runtime plugin。
    *
    * 关键点（中文）
    * - 适合 city 这类宿主进程直接 `new Agent(...)` 的场景。
-   * - 未开启时，默认只使用显式传入的 `services`。
+   * - 未开启时，默认只使用显式传入的 `runtimePlugins`。
    */
-  useBuiltinServices?: boolean;
+  useBuiltinRuntimePlugins?: boolean;
 
   /**
    * 当前 agent 显式注册的 plugin 定义集合。
@@ -145,13 +145,13 @@ export interface AgentStartOptions {
   rpc?: boolean;
 
   /**
-   * 是否启动当前 agent 的 services。
+   * 是否启动当前 agent 的 runtime plugins。
    *
    * 关键点（中文）
    * - 默认 `true`。
    * - `false` 适合只需要 session 能力、不希望启动后台能力的嵌入场景。
    */
-  services?: boolean;
+  runtimePlugins?: boolean;
 }
 
 /**
@@ -169,9 +169,9 @@ export interface AgentStopResult {
   rpcStopped: boolean;
 
   /**
-   * 本次是否实际停止了 services。
+   * 本次是否实际停止了 runtime plugins。
    */
-  servicesStopped: boolean;
+  runtimePluginsStopped: boolean;
 }
 
 /**
@@ -189,9 +189,9 @@ export interface AgentStartResult {
   rpc?: AgentRpcBinding;
 
   /**
-   * 当前 agent 是否已启动 services。
+   * 当前 agent 是否已启动 runtime plugins。
    */
-  servicesStarted: boolean;
+  runtimePluginsStarted: boolean;
 }
 
 /**
@@ -296,7 +296,6 @@ export interface AgentSessionConfigSnapshot {
 export type AgentSessionSystemBlockSource =
   | "core"
   | "instruction"
-  | "service"
   | "plugin"
   | "session";
 
@@ -314,7 +313,7 @@ export interface AgentSessionSystemBlock {
    *
    * 说明（中文）
    * - `instruction` 通常使用 `agent`。
-   * - `service` / `plugin` 使用对应 service/plugin 名称。
+   * - `plugin` 使用对应 plugin 名称。
    * - `core` 使用 `default`。
    * - `session` 使用当前 session 上下文名称。
    */

@@ -7,8 +7,8 @@
  */
 
 import type { ControlSessionSummary } from "@/runtime/server/http/control/types/ControlViewData.js";
-import type { ServiceStateSnapshot } from "@/service/types/ServiceState.js";
-import type { TaskListResponse } from "@/service/builtins/task/types/TaskCommand.js";
+import type { ServiceStateSnapshot } from "@/plugin/types/PluginState.js";
+import type { TaskListResponse } from "@/plugin/builtins/task/types/TaskCommand.js";
 import type {
   WorkboardActivityItem,
   WorkboardAgentSummary,

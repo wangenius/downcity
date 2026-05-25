@@ -9,7 +9,7 @@
 
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { VoicePluginConfig } from "@/plugin/builtins/voice/types/VoicePlugin.js";
-import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
+import { CHAT_PLUGIN_POINTS } from "@/plugin/builtins/chat/runtime/PluginPoints.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import {
   listVoiceModels,

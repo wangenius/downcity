@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { getLogsDirPath, getDowncityTasksDirPath } from "@/config/Paths.js";
-import { resolveTaskIdByTitle } from "@/service/builtins/task/runtime/Store.js";
+import { resolveTaskIdByTitle } from "@/plugin/builtins/task/runtime/Store.js";
 import type {
   ControlLogEntry,
   ControlTaskRunDetail,

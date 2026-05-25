@@ -2,7 +2,7 @@
  * AgentCore 执行上下文类型定义。
  *
  * 关键点（中文）
- * - 这里定义 service / plugin / prompt system 共用的统一执行上下文。
+ * - 这里定义 runtime plugin / plugin / prompt system 共用的统一执行上下文。
  * - `AgentContext` 表达的是“当前一次执行可见的能力面”，不是宿主状态本体。
  * - `AgentRuntime` 负责保存长期状态；`AgentContext` 负责把这些状态暴露成执行接口。
  */
@@ -18,11 +18,11 @@ import type {
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginPort } from "@/plugin/types/Plugin.js";
-import type { ChatMetaV1 } from "@/service/builtins/chat/types/ChatMeta.js";
+import type { ChatMetaV1 } from "@/plugin/builtins/chat/types/ChatMeta.js";
 import type {
   ChatQueueEnqueueParams,
   ChatQueueEnqueueResult,
-} from "@/service/builtins/chat/types/ChatQueue.js";
+} from "@/plugin/builtins/chat/types/ChatQueue.js";
 import type {
   SessionMetadataV1,
   SessionMessageV1,
@@ -42,13 +42,13 @@ import type {
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
- * 跨 service 调用参数。
+ * 跨 runtime plugin 调用参数。
  */
-export interface InvokeServiceParams {
+export interface InvokePluginParams {
   /**
-   * 目标 service 名称。
+   * 目标 plugin 名称。
    */
-  service: string;
+  plugin: string;
   /**
    * 目标 action 名称。
    */
@@ -60,9 +60,9 @@ export interface InvokeServiceParams {
 }
 
 /**
- * 跨 service 调用结果。
+ * 跨 runtime plugin 调用结果。
  */
-export interface InvokeServiceResult {
+export interface InvokePluginResult {
   /**
    * 调用是否成功。
    */
@@ -78,13 +78,13 @@ export interface InvokeServiceResult {
 }
 
 /**
- * 跨 service 调用端口。
+ * 跨 runtime plugin 调用端口。
  */
-export interface InvokeServicePort {
+export interface InvokePluginPort {
   /**
-   * 调用指定 service action。
+   * 调用指定 plugin action。
    */
-  invoke(params: InvokeServiceParams): Promise<InvokeServiceResult>;
+  invoke(params: InvokePluginParams): Promise<InvokePluginResult>;
 }
 
 /**
@@ -233,7 +233,7 @@ export interface SessionCollectionPort {
  *
  * 关键点（中文）
  * - 这是当前 agent 已装配好的 chat 运行时视图。
- * - 其他 service 只能通过这里消费 chat 能力，不能直接 import chat runtime 模块。
+ * - 其他 runtime plugin 只能通过这里消费 chat 能力，不能直接 import chat runtime 模块。
  */
 export interface ChatRuntimePort {
   /**
@@ -315,14 +315,14 @@ export interface AgentContext {
    * Session 能力入口。
    *
    * 关键点（中文）
-   * - service 与 plugin 都通过这里访问 session 执行与持久化能力。
+   * - runtime plugin 与 plugin 都通过这里访问 session 执行与持久化能力。
    * - 内外统一使用 `sessionId` 语义。
    */
   session: SessionCollectionPort;
   /**
-   * 跨 service 调用主入口。
+   * 跨 runtime plugin 调用主入口。
    */
-  invoke: InvokeServicePort;
+  invoke: InvokePluginPort;
   /**
    * Chat 运行时能力入口。
    */

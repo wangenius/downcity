@@ -104,10 +104,6 @@ export async function executeBySessionId(params: {
   const session = params.agentState.getSession(sessionId);
   const turn = await session.prompt({
     query: executeInput,
-    extra: {
-      ingressKind: "exec",
-      via: "tui_session_execute",
-    },
   });
   const result = await turn.finished;
 

@@ -129,7 +129,6 @@ export class SessionPromptRuntime {
     this.queue.push({
       input: {
         query: String(input.query || "").trim(),
-        ...(input.extra ? { extra: input.extra } : {}),
       },
       deferredHandle,
     });

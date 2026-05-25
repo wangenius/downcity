@@ -10,7 +10,6 @@
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ChatQueueWorkerConfig } from "@/plugin/builtins/chat/types/ChatQueueWorker.js";
-import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatQueueItem } from "@/plugin/builtins/chat/types/ChatQueue.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionTurnResult } from "@/types/sdk/AgentSessionTurn.js";
@@ -22,7 +21,6 @@ import {
   hasPersistedAssistantSteps,
   pickLastSuccessfulChatSendText,
 } from "./UserVisibleText.js";
-import { buildExecIngressExtra } from "./ChatIngressStore.js";
 import {
   buildChannelErrorText,
   collectInitialBurstItems,
@@ -183,16 +181,6 @@ export class ChatQueueWorker {
       return;
       // ignore
     }
-  }
-
-  /**
-   * 统一补齐入站消息分类标记。
-   *
-   * 关键点（中文）
-   * - 当前 message history 仅写入 `exec`，所以固定写 `ingressKind=exec`。
-   */
-  private buildIngressExtra(item: ChatQueueItem): JsonObject {
-    return buildExecIngressExtra(item.extra);
   }
 
   private handleControl(item: ChatQueueItem): boolean {
@@ -374,7 +362,6 @@ export class ChatQueueWorker {
     try {
       const turn = await params.serviceContext.prompt({
         query: item.text,
-        extra: this.buildIngressExtra(item),
       });
       if (params.lane.turnObservers.has(turn.id)) {
         return;

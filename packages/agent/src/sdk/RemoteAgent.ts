@@ -122,7 +122,6 @@ class RemoteSession {
         },
         body: JSON.stringify({
           query,
-          ...(input.extra ? { extra: input.extra } : {}),
         }),
       },
     );

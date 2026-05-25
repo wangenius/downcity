@@ -66,11 +66,6 @@ export async function receiveContactChatMessage(params: {
   const sessionId = `contact_${contact.id}`;
   const turn = await params.context.session.get(sessionId).prompt({
     query: params.message,
-    extra: {
-      ingressKind: "exec",
-      via: "contact_chat",
-      contactId: contact.id,
-    },
   });
   const result = await turn.finished;
   const reply = extractMessageText(result.assistantMessage);

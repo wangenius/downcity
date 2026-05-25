@@ -67,13 +67,6 @@ export function createExecuteRouter(
       typeof body?.chatId === "string" && body.chatId.trim()
         ? body.chatId.trim()
         : "default";
-    const actorId =
-      typeof body?.userId === "string" && body.userId.trim()
-        ? body.userId.trim()
-        : typeof body?.actorId === "string" && body.actorId.trim()
-          ? body.actorId.trim()
-          : "api";
-
     if (!instructions) {
       return c.json(
         { success: false, message: "Missing instructions field" },
@@ -87,11 +80,6 @@ export function createExecuteRouter(
       const session = agentState.getSession(sessionId);
       const turn = await session.prompt({
         query: String(instructions),
-        extra: {
-          ingressKind: "exec",
-          via: "api_execute",
-          actorId,
-        },
       });
       const result = await turn.finished;
 

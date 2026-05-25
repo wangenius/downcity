@@ -302,7 +302,6 @@ export class Session {
     await this.ensureRunnable();
     return await this.promptRuntime.prompt({
       query,
-      ...(input.extra ? { extra: input.extra } : {}),
     });
   }
 
@@ -561,7 +560,6 @@ export class Session {
       text: String(input.query || "").trim(),
       metadata: {
         sessionId: this.id,
-        extra: input.extra,
       },
     }) as SessionUserMessageV1;
     await this.executor.appendUserMessage({

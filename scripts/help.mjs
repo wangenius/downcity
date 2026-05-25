@@ -101,7 +101,7 @@ const HELP_ITEMS = [
     name: "publish",
     summary: "执行 downcity 发布脚本。",
     detail:
-      "同步 root、@downcity/agent、@downcity/city 版本并推送，触发 GitHub Actions 发布 npm 包。",
+      "同步 root、@downcity/agent、@downcity/city 版本并推送，触发 GitHub Actions 发布 @downcity/agent、@downcity/city 与 downcity。",
   },
   {
     name: "publish:ui",

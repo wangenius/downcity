@@ -1,5 +1,5 @@
 /**
- * `city update`：更新全局 downcity CLI。
+ * `city update`：更新当前全局安装来源对应的 Downcity CLI。
  *
  * 关键点（中文）
  * - 优先根据当前 CLI 所在的全局模块目录，自动判断是 npm 还是 pnpm 安装。
@@ -27,25 +27,60 @@ export interface UpdateCommandOptions {
   manager?: UpdateManager | "auto";
 }
 
-const GLOBAL_PACKAGE_NAME = "downcity";
+const FALLBACK_GLOBAL_PACKAGE_NAME = "downcity";
 
 /**
- * 构造全局更新命令。
+ * 解析当前 CLI 安装包根目录。
+ *
+ * 关键点（中文）
+ * - 开发态路径是 `src/cli/shared`，构建后路径是 `bin/cli/shared`。
+ * - 两种目录结构都可以通过回退三级拿到 package 根目录。
  */
-export function buildGlobalUpdateInvocation(manager: UpdateManager): {
+function resolveInstalledPackageRoot(): string {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  return path.resolve(__dirname, "../../..");
+}
+
+/**
+ * 读取当前 CLI 实际对应的 npm 包名。
+ */
+function readInstalledPackageName(packageRoot: string): string {
+  try {
+    const packageJsonPath = path.join(packageRoot, "package.json");
+    const raw = fs.readFileSync(packageJsonPath, "utf8");
+    const parsed = JSON.parse(raw) as { name?: unknown };
+    const packageName = typeof parsed.name === "string" ? parsed.name.trim() : "";
+    return packageName || FALLBACK_GLOBAL_PACKAGE_NAME;
+  } catch {
+    return FALLBACK_GLOBAL_PACKAGE_NAME;
+  }
+}
+
+/**
+ * 检测当前 CLI 实际安装来源的包名。
+ */
+export function detectInstalledPackageName(): string {
+  return readInstalledPackageName(resolveInstalledPackageRoot());
+}
+
+export function buildGlobalUpdateInvocation(
+  manager: UpdateManager,
+  packageName: string,
+): {
   command: string;
   args: string[];
 } {
   if (manager === "pnpm") {
     return {
       command: "pnpm",
-      args: ["add", "-g", `${GLOBAL_PACKAGE_NAME}@latest`],
+      args: ["add", "-g", `${packageName}@latest`],
     };
   }
 
   return {
     command: "npm",
-    args: ["install", "-g", `${GLOBAL_PACKAGE_NAME}@latest`],
+    args: ["install", "-g", `${packageName}@latest`],
   };
 }
 
@@ -98,9 +133,7 @@ function readGlobalRoot(manager: UpdateManager): string | null {
  * 自动判断当前全局安装使用的包管理器。
  */
 export function detectInstalledUpdateManager(): UpdateManager {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const packageRoot = path.resolve(__dirname, "../..");
+  const packageRoot = resolveInstalledPackageRoot();
   const detected = resolveUpdateManagerFromGlobalRoots({
     packageRoot,
     npmRoot: readGlobalRoot("npm") || undefined,
@@ -132,11 +165,12 @@ async function runCommand(command: string, args: string[]): Promise<void> {
 export async function updateCommand(
   options: UpdateCommandOptions = {},
 ): Promise<void> {
+  const packageName = detectInstalledPackageName();
   const manager =
     options.manager && options.manager !== "auto"
       ? options.manager
       : detectInstalledUpdateManager();
-  const invocation = buildGlobalUpdateInvocation(manager);
+  const invocation = buildGlobalUpdateInvocation(manager, packageName);
 
   emitCliBlock({
     tone: "accent",
@@ -156,7 +190,7 @@ export async function updateCommand(
   try {
     await runWithSpinner(
       () => runCommand(invocation.command, invocation.args),
-      { text: `Installing ${GLOBAL_PACKAGE_NAME}@latest via ${manager}...` },
+      { text: `Installing ${packageName}@latest via ${manager}...` },
     );
   } catch (error) {
     throw new CliError({
@@ -171,7 +205,7 @@ export async function updateCommand(
     facts: [
       {
         label: "Package",
-        value: `${GLOBAL_PACKAGE_NAME}@latest`,
+        value: `${packageName}@latest`,
       },
       {
         label: "Manager",

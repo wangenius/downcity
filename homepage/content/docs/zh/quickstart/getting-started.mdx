@@ -8,16 +8,24 @@ description: 用正确启动顺序在 10 分钟内跑通 Console + Agent
 ## 1. 安装
 
 ```bash
+npm install -g @downcity/city
+# 或
 npm install -g downcity
+# 或
+pnpm add -g @downcity/city
+# 或
+pnpm add -g downcity
 city --version
 downcity --version
 ```
 
 > `downcity` 与 `city` 都是同一个 CLI 可执行命令。
 >
+> `@downcity/city` 与 `downcity` 发布的是同一份 CLI 内容和版本线。
+>
 > 如果安装后仍然找不到 `city`，请先看 [FAQ](/zh/docs/operations/faq)。
 >
-> 后续升级可以直接执行 `city update`。
+> 后续升级可以直接执行 `city update`，它会更新你最初安装的那个包。
 
 ## 2. 初始化 Console（仅首次）
 

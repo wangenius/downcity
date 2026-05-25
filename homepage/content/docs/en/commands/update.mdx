@@ -1,13 +1,13 @@
 ---
 title: city update
-description: Update the global downcity CLI package to the latest version
+description: Update the currently installed global Downcity CLI package to the latest version
 ---
 
 # `city update`
 
-Update the globally installed `downcity` CLI package to the latest version.
+Update the currently installed global Downcity CLI package to the latest version.
 
-By default, Downcity tries to detect whether the current CLI was installed by `npm` or `pnpm`, then uses the same package manager to update.
+By default, Downcity detects both the package manager and the installed package name. If you installed the CLI from `@downcity/city`, `city update` upgrades `@downcity/city`; if you installed it from `downcity`, it upgrades `downcity`.
 
 ## Usage
 
@@ -29,7 +29,7 @@ city update --manager pnpm
 
 ## Important behavior
 
-- `city update` updates the global CLI package only.
+- `city update` updates only the currently installed global CLI package.
 - It does not automatically restart already running city runtime / Console processes.
 - After update completes, run [`city restart`](/en/docs/commands/restart) if you want running processes to load the new version.
 
@@ -46,10 +46,10 @@ downcity v1.0.0
 
 Updating downcity
   manager   npm
-  command   npm install -g downcity@latest
+  command   npm install -g @downcity/city@latest
 
 Downcity updated
-  package   downcity@latest
+  package   @downcity/city@latest
   manager   npm
   note      If city runtime / Console is already running, use `city restart` to load the new version.
 ```

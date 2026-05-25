@@ -41,7 +41,11 @@ Downcity is an agent platform for local projects and team workflows. It combines
 ```bash
 npm install -g @downcity/city
 # or
+npm install -g downcity
+# or
 pnpm add -g @downcity/city
+# or
+pnpm add -g downcity
 ```
 
 Both commands below are equivalent:
@@ -50,6 +54,8 @@ Both commands below are equivalent:
 city --version
 downcity --version
 ```
+
+`@downcity/city` and `downcity` publish the same CLI contents. `city update` upgrades whichever package you originally installed globally.
 
 ### 2. Initialize the platform
 

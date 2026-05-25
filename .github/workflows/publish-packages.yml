@@ -1,4 +1,4 @@
-name: Publish Downcity packages to npmjs
+name: Publish Downcity scoped packages to npmjs
 
 on:
   push:
@@ -10,11 +10,12 @@ on:
       - "pnpm-workspace.yaml"
       - "packages/agent/**"
       - "packages/city/**"
-      - ".github/workflows/publish.yml"
+      - ".github/workflows/publish-packages.yml"
+      - ".github/workflows/publish-downcity.yml"
   workflow_dispatch:
 
 concurrency:
-  group: publish-downcity-packages
+  group: publish-downcity-scoped-packages
   cancel-in-progress: false
 
 jobs:
@@ -54,7 +55,7 @@ jobs:
           set -euo pipefail
           WHOAMI="$(npm whoami)"
           echo "Authenticated npm user: ${WHOAMI}"
-          for PACKAGE_NAME in @downcity/agent @downcity/city downcity; do
+          for PACKAGE_NAME in @downcity/agent @downcity/city; do
             if npm view "${PACKAGE_NAME}" version >/dev/null 2>&1; then
               npm owner ls "${PACKAGE_NAME}"
               if ! npm owner ls "${PACKAGE_NAME}" | awk '{print $1}' | grep -qx "${WHOAMI}"; then
@@ -84,31 +85,19 @@ jobs:
             return 1
           }
 
-          publish_tarball() {
-            local package_name="$1"
-            local version="$2"
-            local tarball="$3"
+          publish_package() {
+            local package_dir="$1"
+            local package_name="$2"
+            local version
+            local pack_dir
+            local tarball
 
+            version="$(node -p "require('./${package_dir}/package.json').version")"
             if has_published_version "${package_name}" "${version}"; then
               echo "${package_name}@${version} already exists, skipping publish"
               return 0
             fi
 
-            npm publish "${tarball}" --access public
-          }
-
-          publish_package() {
-            local package_dir="$1"
-            local package_name="$2"
-            local version
-            version="$(node -p "require('./${package_dir}/package.json').version")"
-
-            if ! npm view "${package_name}" versions --json >/tmp/downcity-versions.json 2>/dev/null; then
-              echo "${package_name} has no published versions yet. Continuing with first publish."
-            fi
-
-            local pack_dir
-            local tarball
             pack_dir="$(mktemp -d)"
             pnpm -C "${package_dir}" pack --pack-destination "${pack_dir}"
             tarball="$(find "${pack_dir}" -maxdepth 1 -name "*.tgz" -print -quit)"
@@ -116,22 +105,9 @@ jobs:
               echo "No tarball generated for ${package_name}."
               exit 1
             fi
-            publish_tarball "${package_name}" "${version}" "${tarball}"
-          }
 
-          publish_city_mirror() {
-            local version
-            local tarball
-            version="$(node -p "require('./packages/city/package.json').version")"
-
-            if ! npm view downcity versions --json >/tmp/downcity-versions.json 2>/dev/null; then
-              echo "downcity has no published versions yet. Continuing with first publish."
-            fi
-
-            tarball="$(node ./scripts/prepare-city-mirror-package.mjs "${RUNNER_TEMP}/downcity-mirror")"
-            publish_tarball downcity "${version}" "${tarball}"
+            npm publish "${tarball}" --access public
           }
 
           publish_package packages/agent @downcity/agent
           publish_package packages/city @downcity/city
-          publish_city_mirror

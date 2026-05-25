@@ -1,0 +1,98 @@
+name: Publish Downcity mirror package to npmjs
+
+on:
+  workflow_run:
+    workflows:
+      - Publish Downcity scoped packages to npmjs
+    types:
+      - completed
+  workflow_dispatch:
+
+concurrency:
+  group: publish-downcity-mirror-package
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build city package
+        run: |
+          set -euo pipefail
+          pnpm -C packages/agent build
+          pnpm -C packages/city build
+
+      - name: Validate npm token and package ownership
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_DOWNCITY }}
+        run: |
+          set -euo pipefail
+          WHOAMI="$(npm whoami)"
+          echo "Authenticated npm user: ${WHOAMI}"
+          if npm view downcity version >/dev/null 2>&1; then
+            npm owner ls downcity
+            if ! npm owner ls downcity | awk '{print $1}' | grep -qx "${WHOAMI}"; then
+              echo "NPM_TOKEN_DOWNCITY user '${WHOAMI}' is not an owner of 'downcity'."
+              exit 1
+            fi
+          else
+            echo "downcity is not published yet. Skipping owner check for first publish."
+          fi
+
+      - name: Build mirror tarball and publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_DOWNCITY }}
+        run: |
+          set -euo pipefail
+
+          VERSION="$(node -p "require('./packages/city/package.json').version")"
+
+          if npm view downcity versions --json >/tmp/downcity-versions.json 2>/dev/null; then
+            if grep -q "\"${VERSION}\"" /tmp/downcity-versions.json; then
+              echo "downcity@${VERSION} already exists, skipping publish"
+              exit 0
+            fi
+          fi
+
+          PACK_DIR="$(mktemp -d)"
+          UNPACK_DIR="$(mktemp -d)"
+          pnpm -C packages/city pack --pack-destination "${PACK_DIR}" >/dev/null
+          SOURCE_TARBALL="$(find "${PACK_DIR}" -maxdepth 1 -name '*.tgz' -print -quit)"
+          if [[ -z "${SOURCE_TARBALL}" ]]; then
+            echo "No city tarball generated."
+            exit 1
+          fi
+
+          tar -xzf "${SOURCE_TARBALL}" -C "${UNPACK_DIR}"
+
+          node -e "const fs = require('fs'); const packageJsonPath = process.argv[1]; const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')); pkg.name = 'downcity'; fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');" "${UNPACK_DIR}/package/package.json"
+
+          MIRROR_TARBALL="${RUNNER_TEMP}/downcity-${VERSION}.tgz"
+          tar -czf "${MIRROR_TARBALL}" -C "${UNPACK_DIR}" package
+          npm publish "${MIRROR_TARBALL}" --access public

@@ -101,7 +101,7 @@ const HELP_ITEMS = [
     name: "publish",
     summary: "执行 downcity 发布脚本。",
     detail:
-      "同步 root、@downcity/agent、@downcity/city 版本并推送，触发 GitHub Actions 发布 @downcity/agent、@downcity/city 与 downcity。",
+      "同步 root、@downcity/agent、@downcity/city 版本并推送，触发 scoped 包发布 workflow，并在成功后触发 downcity 镜像包 workflow。",
   },
   {
     name: "publish:ui",

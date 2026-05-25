@@ -185,7 +185,7 @@ main() {
   echo
   if confirm "推送到远程仓库? (y/N): "; then
     git push
-    print_success "🎉 已推送到远程仓库，CI 将尝试发布 npm 版本 @downcity/agent@${new_version}、@downcity/city@${new_version} 与 downcity@${new_version}"
+    print_success "🎉 已推送到远程仓库，CI 将触发 scoped 包发布流程，并在成功后触发 downcity 镜像包发布流程"
   else
     print_warning "已提交到本地，但未推送到远程"
     print_status "运行 'git push' 手动推送"

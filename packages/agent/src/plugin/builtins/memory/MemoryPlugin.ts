@@ -1,9 +1,9 @@
 /**
- * MemoryService：memory service 的类实现。
+ * MemoryPlugin：memory plugin 的类实现。
  *
  * 关键点（中文）
- * - memory service state 现在归属于 service 实例。
- * - agent 持有 MemoryService 实例，从而天然形成 per-agent 状态边界。
+ * - memory plugin state 现在归属于 plugin 实例。
+ * - agent 持有 MemoryPlugin 实例，从而天然形成 per-agent 状态边界。
  * - 运行态只在实例内部缓存，不再放到模块级 Map。
  */
 
@@ -26,7 +26,7 @@ import {
   stopMemoryRuntime,
   type MemoryRuntimeState,
 } from "./runtime/Store.js";
-import { buildMemoryServiceSystemText } from "./runtime/SystemProvider.js";
+import { buildMemoryPluginSystemText } from "./runtime/SystemProvider.js";
 import { ensureMemoryDirectories } from "./runtime/Writer.js";
 
 function parsePositiveInteger(value: string): number {
@@ -76,28 +76,28 @@ function readOptionalNumber(body: JsonObject, key: string): number | undefined {
 }
 
 /**
- * Memory service 类实现。
+ * Memory plugin 类实现。
  */
-export class MemoryService extends BasePlugin {
+export class MemoryPlugin extends BasePlugin {
   /**
-   * service 名称。
+   * plugin 名称。
    */
   readonly name = "memory";
 
   /**
-   * 当前实例持有的 memory service state。
+   * 当前实例持有的 memory plugin state。
    */
   public runtimeState: MemoryRuntimeState | null = null;
 
   /**
-   * 当前 service 的 system 文本提供器。
+   * 当前 plugin 的 system 文本提供器。
    */
   async system(context: AgentContext): Promise<string> {
-    return await buildMemoryServiceSystemText(context);
+    return await buildMemoryPluginSystemText(context);
   }
 
   /**
-   * 当前 service 生命周期。
+   * 当前 plugin 生命周期。
    */
   readonly lifecycle = {
     start: async (context: AgentContext): Promise<void> => {
@@ -113,7 +113,7 @@ export class MemoryService extends BasePlugin {
   };
 
   /**
-   * 当前 service action 定义表。
+   * 当前 plugin action 定义表。
    */
   readonly actions: PluginActions = {
     status: {

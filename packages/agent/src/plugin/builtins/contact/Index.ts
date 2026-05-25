@@ -1,8 +1,8 @@
 /**
- * contact service 导出入口。
+ * contact plugin 导出入口。
  *
  * 关键点（中文）
- * - 保持 service 目录对外入口稳定，具体逻辑集中在 `ContactService`。
+ * - Index 只负责导出类实现，具体逻辑集中在 `ContactPlugin`。
  */
 
-export { ContactService } from "./ContactService.js";
+export { ContactPlugin } from "./ContactPlugin.js";

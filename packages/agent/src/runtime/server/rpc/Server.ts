@@ -21,10 +21,10 @@ import type {
   PluginListResponse,
 } from "@/plugin/types/PluginApi.js";
 import type {
-  ServiceControlAction,
-  ServiceCommandResponse,
-  ServiceControlResponse,
-  ServiceListResponse,
+  PluginControlAction,
+  PluginCommandResponse,
+  PluginControlResponse,
+  PluginListResponse as RuntimePluginListResponse,
 } from "@/plugin/types/Plugins.js";
 import { listPluginStates, controlPluginState } from "@/plugin/core/PluginStateController.js";
 import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
@@ -79,14 +79,14 @@ function createErrorResponse(
   };
 }
 
-async function handleServiceControl(params: {
+async function handlePluginControl(params: {
   requestId: string;
   body: JsonValue | undefined;
   context: AgentContext;
 }): Promise<LocalRpcResponse> {
   const body = isObjectRecord(params.body) ? params.body : {};
   const pluginName = String(body.pluginName || "").trim();
-  const action = String(body.action || "").trim() as ServiceControlAction;
+  const action = String(body.action || "").trim() as PluginControlAction;
   if (!pluginName || !action) {
     return createErrorResponse(params.requestId, 400, "pluginName and action are required");
   }
@@ -95,15 +95,15 @@ async function handleServiceControl(params: {
     action,
     context: params.context,
   });
-  const payload: ServiceControlResponse = {
+  const payload: PluginControlResponse = {
     success: result.success,
-    ...(result.plugin ? { plugin: result.plugin, service: result.plugin } : {}),
+    ...(result.plugin ? { plugin: result.plugin } : {}),
     ...(result.error ? { error: result.error } : {}),
   };
   return createSuccessResponse(params.requestId, payload as unknown as JsonValue);
 }
 
-async function handleServiceCommand(params: {
+async function handlePluginCommand(params: {
   requestId: string;
   body: JsonValue | undefined;
   context: AgentContext;
@@ -124,12 +124,12 @@ async function handleServiceCommand(params: {
     schedule: body.schedule,
     context: params.context,
   });
-  const payload: ServiceCommandResponse = {
+  const payload: PluginCommandResponse = {
     success: result.success,
-    ...(result.plugin ? { plugin: result.plugin, service: result.plugin } : {}),
+    ...(result.plugin ? { plugin: result.plugin } : {}),
     ...(result.data !== undefined ? { data: result.data } : {}),
     ...(result.message ? { message: result.message } : {}),
-    ...(result.success ? {} : { error: result.message || "service command failed" }),
+    ...(result.success ? {} : { error: result.message || "plugin command failed" }),
   };
   return createSuccessResponse(params.requestId, payload as unknown as JsonValue);
 }
@@ -253,20 +253,19 @@ async function dispatchRequest(params: {
   const { request } = params;
   if (
     request.method === "GET" &&
-    (request.path === "/api/plugins/runtime/list" || request.path === "/api/services/list")
+    request.path === "/api/plugins/runtime/list"
   ) {
-    const payload: ServiceListResponse = {
+    const payload: RuntimePluginListResponse = {
       success: true,
       plugins: listPluginStates({ context: params.context }),
-      services: listPluginStates({ context: params.context }),
     };
     return createSuccessResponse(request.requestId, payload as unknown as JsonValue);
   }
   if (
     request.method === "POST" &&
-    (request.path === "/api/plugins/runtime/control" || request.path === "/api/services/control")
+    request.path === "/api/plugins/runtime/control"
   ) {
-    return await handleServiceControl({
+    return await handlePluginControl({
       requestId: request.requestId,
       body: request.body,
       context: params.context,
@@ -274,9 +273,9 @@ async function dispatchRequest(params: {
   }
   if (
     request.method === "POST" &&
-    (request.path === "/api/plugins/runtime/command" || request.path === "/api/services/command")
+    request.path === "/api/plugins/runtime/command"
   ) {
-    return await handleServiceCommand({
+    return await handlePluginCommand({
       requestId: request.requestId,
       body: request.body,
       context: params.context,

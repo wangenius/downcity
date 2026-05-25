@@ -1,5 +1,5 @@
 /**
- * `city service schedule` 命令。
+ * `city plugin schedule` 命令。
  *
  * 关键点（中文）
  * - schedule 管理命令只依赖项目本地 schedule SQLite，不要求 runtime 在线。
@@ -7,31 +7,31 @@
  */
 
 import type { Command } from "commander";
-import { PluginScheduleStore as ServiceScheduleStore } from "@downcity/agent";
+import { PluginScheduleStore } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
-import type { ServiceCliBaseOptions } from "@downcity/agent";
+import type { PluginCliBaseOptions } from "@downcity/agent";
 import {
-  addServiceScheduleOptions,
+  addPluginScheduleOptions,
   normalizeScheduledJobStatus,
   parsePositiveIntOption,
-  resolveScheduleProjectRoot,
+  resolvePluginScheduleProjectRoot,
   validateAgentProjectRoot,
-} from "./ServiceCommandSupport.js";
+} from "./PluginRuntimeSupport.js";
 
 /**
- * 执行 `service schedule list`。
+ * 执行 `plugin schedule list`。
  */
-export async function runServiceScheduleListCommand(params: {
-  options: ServiceCliBaseOptions;
+export async function runPluginScheduleListCommand(params: {
+  options: PluginCliBaseOptions;
   statusRaw?: string;
   limitRaw?: string;
 }): Promise<void> {
-  const resolved = await resolveScheduleProjectRoot(params.options);
+  const resolved = await resolvePluginScheduleProjectRoot(params.options);
   if (!resolved.projectRoot) {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule list failed",
+      title: "plugin schedule list failed",
       payload: {
         error: resolved.error || "Failed to resolve agent project path",
       },
@@ -44,7 +44,7 @@ export async function runServiceScheduleListCommand(params: {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule list failed",
+      title: "plugin schedule list failed",
       payload: {
         error: pathError,
       },
@@ -57,13 +57,13 @@ export async function runServiceScheduleListCommand(params: {
     const limit = params.limitRaw
       ? parsePositiveIntOption(params.limitRaw, "limit")
       : 100;
-    const store = new ServiceScheduleStore(projectRoot);
+    const store = new PluginScheduleStore(projectRoot);
     try {
       const jobs = store.listJobs({ status, limit });
       printResult({
         asJson: params.options.json,
         success: true,
-        title: "service schedule listed",
+        title: "plugin schedule listed",
         payload: {
           ...(status ? { status } : {}),
           limit,
@@ -78,7 +78,7 @@ export async function runServiceScheduleListCommand(params: {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule list failed",
+      title: "plugin schedule list failed",
       payload: {
         error: String(error),
       },
@@ -87,18 +87,18 @@ export async function runServiceScheduleListCommand(params: {
 }
 
 /**
- * 执行 `service schedule info`。
+ * 执行 `plugin schedule info`。
  */
-export async function runServiceScheduleInfoCommand(params: {
+export async function runPluginScheduleInfoCommand(params: {
   jobId: string;
-  options: ServiceCliBaseOptions;
+  options: PluginCliBaseOptions;
 }): Promise<void> {
-  const resolved = await resolveScheduleProjectRoot(params.options);
+  const resolved = await resolvePluginScheduleProjectRoot(params.options);
   if (!resolved.projectRoot) {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule info failed",
+      title: "plugin schedule info failed",
       payload: {
         error: resolved.error || "Failed to resolve agent project path",
       },
@@ -111,7 +111,7 @@ export async function runServiceScheduleInfoCommand(params: {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule info failed",
+      title: "plugin schedule info failed",
       payload: {
         error: pathError,
       },
@@ -124,7 +124,7 @@ export async function runServiceScheduleInfoCommand(params: {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule info failed",
+      title: "plugin schedule info failed",
       payload: {
         error: "jobId is required",
       },
@@ -132,14 +132,14 @@ export async function runServiceScheduleInfoCommand(params: {
     return;
   }
 
-  const store = new ServiceScheduleStore(projectRoot);
+  const store = new PluginScheduleStore(projectRoot);
   try {
     const job = store.getJobById(jobId);
     if (!job) {
       printResult({
         asJson: params.options.json,
         success: false,
-        title: "service schedule info failed",
+        title: "plugin schedule info failed",
         payload: {
           error: `Scheduled job not found: ${jobId}`,
         },
@@ -149,7 +149,7 @@ export async function runServiceScheduleInfoCommand(params: {
     printResult({
       asJson: params.options.json,
       success: true,
-      title: "service schedule info ok",
+      title: "plugin schedule info ok",
       payload: {
         job,
       },
@@ -160,18 +160,18 @@ export async function runServiceScheduleInfoCommand(params: {
 }
 
 /**
- * 执行 `service schedule cancel`。
+ * 执行 `plugin schedule cancel`。
  */
-export async function runServiceScheduleCancelCommand(params: {
+export async function runPluginScheduleCancelCommand(params: {
   jobId: string;
-  options: ServiceCliBaseOptions;
+  options: PluginCliBaseOptions;
 }): Promise<void> {
-  const resolved = await resolveScheduleProjectRoot(params.options);
+  const resolved = await resolvePluginScheduleProjectRoot(params.options);
   if (!resolved.projectRoot) {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule cancel failed",
+      title: "plugin schedule cancel failed",
       payload: {
         error: resolved.error || "Failed to resolve agent project path",
       },
@@ -184,7 +184,7 @@ export async function runServiceScheduleCancelCommand(params: {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule cancel failed",
+      title: "plugin schedule cancel failed",
       payload: {
         error: pathError,
       },
@@ -197,7 +197,7 @@ export async function runServiceScheduleCancelCommand(params: {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service schedule cancel failed",
+      title: "plugin schedule cancel failed",
       payload: {
         error: "jobId is required",
       },
@@ -205,14 +205,14 @@ export async function runServiceScheduleCancelCommand(params: {
     return;
   }
 
-  const store = new ServiceScheduleStore(projectRoot);
+  const store = new PluginScheduleStore(projectRoot);
   try {
     const current = store.getJobById(jobId);
     if (!current) {
       printResult({
         asJson: params.options.json,
         success: false,
-        title: "service schedule cancel failed",
+        title: "plugin schedule cancel failed",
         payload: {
           error: `Scheduled job not found: ${jobId}`,
         },
@@ -223,7 +223,7 @@ export async function runServiceScheduleCancelCommand(params: {
       printResult({
         asJson: params.options.json,
         success: false,
-        title: "service schedule cancel failed",
+        title: "plugin schedule cancel failed",
         payload: {
           error: `Only pending jobs can be cancelled. Current status: ${current.status}`,
           job: current,
@@ -237,7 +237,7 @@ export async function runServiceScheduleCancelCommand(params: {
       printResult({
         asJson: params.options.json,
         success: false,
-        title: "service schedule cancel failed",
+        title: "plugin schedule cancel failed",
         payload: {
           error: `Failed to cancel scheduled job: ${jobId}`,
         },
@@ -248,7 +248,7 @@ export async function runServiceScheduleCancelCommand(params: {
     printResult({
       asJson: params.options.json,
       success: true,
-      title: "service schedule cancelled",
+      title: "plugin schedule cancelled",
       payload: {
         job: store.getJobById(jobId),
       },
@@ -259,45 +259,45 @@ export async function runServiceScheduleCancelCommand(params: {
 }
 
 /**
- * 注册 `service schedule` 子命令组。
+ * 注册 `plugin schedule` 子命令组。
  */
-export function registerServiceScheduleCommands(service: Command): void {
-  const schedule = service
+export function registerPluginScheduleCommands(plugin: Command): void {
+  const schedule = plugin
     .command("schedule")
     .description("查看和管理持久化 schedule 任务")
     .helpOption("--help", "display help for command");
 
-  addServiceScheduleOptions(
+  addPluginScheduleOptions(
     schedule
       .command("list")
       .description("列出当前 agent 的调度任务")
       .option("--status <status>", "状态过滤（pending|running|succeeded|failed|cancelled）")
       .option("--limit <n>", "返回条数（默认 100）"),
-  ).action(async (opts: ServiceCliBaseOptions & { status?: string; limit?: string }) => {
-    await runServiceScheduleListCommand({
+  ).action(async (opts: PluginCliBaseOptions & { status?: string; limit?: string }) => {
+    await runPluginScheduleListCommand({
       options: opts,
       statusRaw: opts.status,
       limitRaw: opts.limit,
     });
   });
 
-  addServiceScheduleOptions(
+  addPluginScheduleOptions(
     schedule
       .command("info <jobId>")
       .description("查看单个调度任务详情"),
-  ).action(async (jobId: string, opts: ServiceCliBaseOptions) => {
-    await runServiceScheduleInfoCommand({
+  ).action(async (jobId: string, opts: PluginCliBaseOptions) => {
+    await runPluginScheduleInfoCommand({
       jobId,
       options: opts,
     });
   });
 
-  addServiceScheduleOptions(
+  addPluginScheduleOptions(
     schedule
       .command("cancel <jobId>")
       .description("取消一个尚未执行的调度任务"),
-  ).action(async (jobId: string, opts: ServiceCliBaseOptions) => {
-    await runServiceScheduleCancelCommand({
+  ).action(async (jobId: string, opts: PluginCliBaseOptions) => {
+    await runPluginScheduleCancelCommand({
       jobId,
       options: opts,
     });

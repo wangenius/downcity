@@ -23,7 +23,7 @@ export function buildRuntimePortFacts(): Array<{
     },
     {
       label: "Usage",
-      value: "Runtime API / service endpoints (health, service, task, plugin)",
+      value: "Runtime API / plugin endpoints (health, runtime plugin, task, extension plugin)",
     },
   ];
 }

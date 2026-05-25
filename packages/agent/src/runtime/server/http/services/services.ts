@@ -20,7 +20,7 @@ import { parsePluginCommandRequestBody } from "@/plugin/core/PluginCommandReques
 /**
  * Runtime plugin 路由参数。
  */
-type ServicesRouterOptions = {
+type RuntimePluginRouterOptions = {
   /**
    * 读取当前 agent 执行上下文。
    */
@@ -31,12 +31,12 @@ type ServicesRouterOptions = {
  * 创建 runtime plugin 路由。
  */
 export function createServicesRouter(
-  options: ServicesRouterOptions,
+  options: RuntimePluginRouterOptions,
 ): Hono {
   const router = new Hono();
-  const listPaths = ["/api/plugins/runtime/list", "/api/services/list"];
-  const controlPaths = ["/api/plugins/runtime/control", "/api/services/control"];
-  const commandPaths = ["/api/plugins/runtime/command", "/api/services/command"];
+  const listPaths = ["/api/plugins/runtime/list"];
+  const controlPaths = ["/api/plugins/runtime/control"];
+  const commandPaths = ["/api/plugins/runtime/command"];
 
   for (const routePath of listPaths) {
     router.get(routePath, (c) => {
@@ -45,7 +45,6 @@ export function createServicesRouter(
       return c.json({
         success: true,
         plugins,
-        services: plugins,
       });
     });
   }
@@ -74,10 +73,7 @@ export function createServicesRouter(
         context: options.getAgentContext(),
       });
       return c.json(
-        {
-          ...result,
-          ...(result.plugin ? { service: result.plugin } : {}),
-        },
+        result,
         result.success ? 200 : 400,
       );
     });
@@ -108,10 +104,7 @@ export function createServicesRouter(
         context: options.getAgentContext(),
       });
       return c.json(
-        {
-          ...result,
-          ...(result.plugin ? { service: result.plugin } : {}),
-        },
+        result,
         result.success ? 200 : 400,
       );
     });

@@ -1,38 +1,38 @@
 /**
- * `city service` 远程 Agent server 调用辅助。
+ * `city plugin` 运行态远程 Agent server 调用辅助。
  *
  * 关键点（中文）
- * - 统一处理 list/control/command 三类需要访问 Agent server 的命令。
+ * - 统一处理 runtime list/control/command 三类需要访问 Agent server 的命令。
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 
 import { callAgentTransport } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import type {
-  ServiceCliBaseOptions,
-  ServiceCommandResponse,
-  ServiceControlAction,
-  ServiceControlResponse,
-  ServiceListResponse,
+  PluginCliBaseOptions,
+  PluginCommandResponse,
+  PluginControlAction,
+  PluginControlResponse,
+  PluginListResponse,
 } from "@downcity/agent";
 import {
   parseCommandPayload,
-  resolveServiceProjectRoot,
+  resolvePluginProjectRoot,
   validateAgentProjectRoot,
-} from "./ServiceCommandSupport.js";
+} from "./PluginRuntimeSupport.js";
 
-const SERVICE_COMMAND_TIMEOUT_MS = 120_000;
+const PLUGIN_COMMAND_TIMEOUT_MS = 120_000;
 
 /**
- * 执行 `service list`。
+ * 执行 `plugin list --runtime`。
  */
-export async function runServiceListCommand(options: ServiceCliBaseOptions): Promise<void> {
-  const resolved = await resolveServiceProjectRoot(options);
+export async function runPluginRuntimeListCommand(options: PluginCliBaseOptions): Promise<void> {
+  const resolved = await resolvePluginProjectRoot(options);
   if (!resolved.projectRoot) {
     printResult({
       asJson: options.json,
       success: false,
-      title: "service list failed",
+      title: "plugin runtime list failed",
       payload: {
         error: resolved.error || "Failed to resolve agent project path",
       },
@@ -45,16 +45,16 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
     printResult({
       asJson: options.json,
       success: false,
-      title: "service list failed",
+      title: "plugin runtime list failed",
       payload: {
         error: pathError,
       },
     });
     return;
   }
-  const remote = await callAgentTransport<ServiceListResponse>({
+  const remote = await callAgentTransport<PluginListResponse>({
     projectRoot,
-    path: "/api/services/list",
+    path: "/api/plugins/runtime/list",
     method: "GET",
     host: options.host,
     port: options.port,
@@ -65,9 +65,9 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
     printResult({
       asJson: options.json,
       success: Boolean(remote.data.success),
-      title: remote.data.success ? "services listed" : "service list failed",
+      title: remote.data.success ? "plugin runtime listed" : "plugin runtime list failed",
       payload: {
-        ...(Array.isArray(remote.data.services) ? { services: remote.data.services } : {}),
+        ...(Array.isArray(remote.data.plugins) ? { plugins: remote.data.plugins } : {}),
         ...(remote.data.error ? { error: remote.data.error } : {}),
       },
     });
@@ -77,7 +77,7 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
   printResult({
     asJson: options.json,
     success: false,
-    title: "service list failed",
+    title: "plugin runtime list failed",
     payload: {
       error: remote.error || "Unknown error",
     },
@@ -85,19 +85,19 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
 }
 
 /**
- * 执行 `service status/start/stop/restart`。
+ * 执行 `plugin status/start/stop/restart`。
  */
-export async function runServiceControlCommand(params: {
-  serviceName: string;
-  action: ServiceControlAction;
-  options: ServiceCliBaseOptions;
+export async function runPluginRuntimeControlCommand(params: {
+  pluginName: string;
+  action: PluginControlAction;
+  options: PluginCliBaseOptions;
 }): Promise<void> {
-  const resolved = await resolveServiceProjectRoot(params.options);
+  const resolved = await resolvePluginProjectRoot(params.options);
   if (!resolved.projectRoot) {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: `service ${params.action} failed`,
+      title: `plugin ${params.action} failed`,
       payload: {
         error: resolved.error || "Failed to resolve agent project path",
       },
@@ -110,22 +110,22 @@ export async function runServiceControlCommand(params: {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: `service ${params.action} failed`,
+      title: `plugin ${params.action} failed`,
       payload: {
         error: pathError,
       },
     });
     return;
   }
-  const remote = await callAgentTransport<ServiceControlResponse>({
+  const remote = await callAgentTransport<PluginControlResponse>({
     projectRoot,
-    path: "/api/services/control",
+    path: "/api/plugins/runtime/control",
     method: "POST",
     host: params.options.host,
     port: params.options.port,
     authToken: params.options.token,
     body: {
-      serviceName: params.serviceName,
+      pluginName: params.pluginName,
       action: params.action,
     },
   });
@@ -134,9 +134,9 @@ export async function runServiceControlCommand(params: {
     printResult({
       asJson: params.options.json,
       success: Boolean(remote.data.success),
-      title: remote.data.success ? `service ${params.action} ok` : `service ${params.action} failed`,
+      title: remote.data.success ? `plugin ${params.action} ok` : `plugin ${params.action} failed`,
       payload: {
-        ...(remote.data.service ? { service: remote.data.service } : {}),
+        ...(remote.data.plugin ? { plugin: remote.data.plugin } : {}),
         ...(remote.data.error ? { error: remote.data.error } : {}),
       },
     });
@@ -146,7 +146,7 @@ export async function runServiceControlCommand(params: {
   printResult({
     asJson: params.options.json,
     success: false,
-    title: `service ${params.action} failed`,
+    title: `plugin ${params.action} failed`,
     payload: {
       error: remote.error || "Unknown error",
     },
@@ -154,20 +154,20 @@ export async function runServiceControlCommand(params: {
 }
 
 /**
- * 执行 `service command` 桥接。
+ * 执行 `plugin command` 桥接。
  */
-export async function runServiceCommandBridge(params: {
-  serviceName: string;
+export async function runPluginRuntimeCommandBridge(params: {
+  pluginName: string;
   command: string;
   payloadRaw?: string;
-  options: ServiceCliBaseOptions;
+  options: PluginCliBaseOptions;
 }): Promise<void> {
-  const resolved = await resolveServiceProjectRoot(params.options);
+  const resolved = await resolvePluginProjectRoot(params.options);
   if (!resolved.projectRoot) {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service command failed",
+      title: "plugin command failed",
       payload: {
         error: resolved.error || "Failed to resolve agent project path",
       },
@@ -180,23 +180,23 @@ export async function runServiceCommandBridge(params: {
     printResult({
       asJson: params.options.json,
       success: false,
-      title: "service command failed",
+      title: "plugin command failed",
       payload: {
         error: pathError,
       },
     });
     return;
   }
-  const remote = await callAgentTransport<ServiceCommandResponse>({
+  const remote = await callAgentTransport<PluginCommandResponse>({
     projectRoot,
-    path: "/api/services/command",
+    path: "/api/plugins/runtime/command",
     method: "POST",
-    timeoutMs: SERVICE_COMMAND_TIMEOUT_MS,
+    timeoutMs: PLUGIN_COMMAND_TIMEOUT_MS,
     host: params.options.host,
     port: params.options.port,
     authToken: params.options.token,
     body: {
-      serviceName: params.serviceName,
+      pluginName: params.pluginName,
       command: params.command,
       ...(params.payloadRaw !== undefined
         ? { payload: parseCommandPayload(params.payloadRaw) }
@@ -208,9 +208,9 @@ export async function runServiceCommandBridge(params: {
     printResult({
       asJson: params.options.json,
       success: Boolean(remote.data.success),
-      title: remote.data.success ? "service command ok" : "service command failed",
+      title: remote.data.success ? "plugin command ok" : "plugin command failed",
       payload: {
-        ...(remote.data.service ? { service: remote.data.service } : {}),
+        ...(remote.data.plugin ? { plugin: remote.data.plugin } : {}),
         ...(remote.data.message ? { message: remote.data.message } : {}),
         ...(remote.data.data !== undefined ? { data: remote.data.data } : {}),
         ...(remote.data.error ? { error: remote.data.error } : {}),
@@ -222,7 +222,7 @@ export async function runServiceCommandBridge(params: {
   printResult({
     asJson: params.options.json,
     success: false,
-    title: "service command failed",
+    title: "plugin command failed",
     payload: {
       error: remote.error || "Unknown error",
     },

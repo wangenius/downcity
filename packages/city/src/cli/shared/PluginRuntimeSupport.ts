@@ -1,8 +1,8 @@
 /**
- * `city service` 命令共享辅助 + Agent 预检。
+ * `city plugin` 运行态命令共享辅助 + Agent 预检。
  *
  * 关键点（中文）
- * - 统一承载 service 命令的参数解析、目标 agent 路径解析与项目目录校验。
+ * - 统一承载 runtime plugin 命令的参数解析、目标 agent 路径解析与项目目录校验。
  * - 提供 `checkAgentPreflight` 供 start/restart/status 等命令统一使用。
  * - 保持 command 注册层只关注命令树，不再直接承载路径解析细节。
  */
@@ -15,11 +15,11 @@ import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
 import { isCityRunning } from "@/process/registry/CityRuntime.js";
 import { ensureRuntimeExecutionBindingReady } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
-import { parsePort, resolveAgentName } from "../shared/IndexSupport.js";
-import { CliError } from "../shared/CliError.js";
+import { parsePort, resolveAgentName } from "./IndexSupport.js";
+import { CliError } from "./CliError.js";
 import type { ScheduledJobStatus } from "@downcity/agent";
-import type { ServiceCliBaseOptions } from "@downcity/agent";
-import { parseBoolean } from "../shared/IndexSupport.js";
+import type { PluginCliBaseOptions } from "@downcity/agent";
+import { parseBoolean } from "./IndexSupport.js";
 import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 export function isRegistryEntryRunning(
@@ -164,9 +164,9 @@ export async function resolveProjectRootByAgentName(agentName: string): Promise<
 }
 
 /**
- * 统一解析 service 命令目标路径（agent 优先于 path）。
+ * 统一解析 runtime plugin 命令目标路径（agent 优先于 path）。
  */
-export async function resolveServiceProjectRoot(options: ServiceCliBaseOptions): Promise<{
+export async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<{
   projectRoot?: string;
   error?: string;
 }> {
@@ -208,7 +208,7 @@ export async function resolveServiceProjectRoot(options: ServiceCliBaseOptions):
 /**
  * 解析 schedule 管理命令目标路径。
  */
-export async function resolveScheduleProjectRoot(options: ServiceCliBaseOptions): Promise<{
+export async function resolvePluginScheduleProjectRoot(options: PluginCliBaseOptions): Promise<{
   projectRoot?: string;
   error?: string;
 }> {
@@ -238,7 +238,7 @@ export function validateAgentProjectRoot(projectRoot: string): string | null {
 }
 
 /**
- * 解析 service command payload。
+ * 解析 plugin command payload。
  */
 export function parseCommandPayload(raw?: string): JsonValue | undefined {
   if (typeof raw !== "string") return undefined;
@@ -253,9 +253,9 @@ export function parseCommandPayload(raw?: string): JsonValue | undefined {
 }
 
 /**
- * 注入 service 目标解析通用选项。
+ * 注入 plugin 目标解析通用选项。
  */
-export function addServiceTargetOptions(command: Command): Command {
+export function addPluginTargetOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
@@ -266,9 +266,9 @@ export function addServiceTargetOptions(command: Command): Command {
 }
 
 /**
- * 注入 schedule 管理命令通用选项。
+ * 注入 plugin schedule 管理命令通用选项。
  */
-export function addServiceScheduleOptions(command: Command): Command {
+export function addPluginScheduleOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")

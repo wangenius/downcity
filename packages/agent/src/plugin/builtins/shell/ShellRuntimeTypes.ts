@@ -9,7 +9,7 @@
 
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { ShellSessionSnapshot } from "@/plugin/builtins/shell/types/ShellService.js";
+import type { ShellSessionSnapshot } from "@/plugin/builtins/shell/types/ShellPlugin.js";
 
 /**
  * 单个 shell wait 调用挂起时注册的 waiter。

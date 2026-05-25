@@ -1,10 +1,10 @@
 /**
- * ScheduleService：通用延迟/定时 service action 调度器。
+ * SchedulePlugin：通用延迟/定时 plugin action 调度器。
  *
  * 关键点（中文）
- * - 这是 service 系统内部的基础设施 service，不直接承载业务 action。
- * - 它负责轮询 `PluginScheduleStore`，把到点任务重新派发回对应 service action。
- * - 这样调度能力就归属于 service lifecycle，而不是 Agent 顶层 lifecycle。
+ * - 这是 plugin 系统内部的基础设施 plugin，不直接承载业务 action。
+ * - 它负责轮询 `PluginScheduleStore`，把到点任务重新派发回对应 plugin action。
+ * - 这样调度能力就归属于 plugin lifecycle，而不是 Agent 顶层 lifecycle。
  */
 
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
@@ -29,16 +29,16 @@ type ScheduleRuntimeState = {
 };
 
 /**
- * 通用调度 service。
+ * 通用调度 plugin。
  */
-export class ScheduleService extends BasePlugin {
+export class SchedulePlugin extends BasePlugin {
   /**
-   * 当前 service 名称。
+   * 当前 plugin 名称。
    */
   readonly name = "schedule";
 
   /**
-   * 当前 service 不暴露业务 action。
+   * 当前 plugin 不暴露业务 action。
    */
   readonly actions: PluginActions = {};
 
@@ -55,14 +55,14 @@ export class ScheduleService extends BasePlugin {
         const started = await this.startRuntime(context);
         if (!started) return;
         context.logger.info(
-          formatScheduleLogMessage("Service scheduler started"),
+          formatScheduleLogMessage("Plugin scheduler started"),
         );
       },
       stop: async (context) => {
         const stopped = await this.stopRuntime();
         if (!stopped) return;
         context.logger.info(
-          formatScheduleLogMessage("Service scheduler stopped"),
+          formatScheduleLogMessage("Plugin scheduler stopped"),
         );
       },
     };

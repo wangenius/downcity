@@ -16,7 +16,7 @@ import type {
   ChatInfoActionPayload,
   ChatListActionPayload,
   ChatReactActionPayload,
-} from "@/plugin/builtins/chat/types/ChatService.js";
+} from "@/plugin/builtins/chat/types/ChatPluginActionPayload.js";
 import { resolveChatKey } from "@/plugin/builtins/chat/Action.js";
 import { resolveChatChannelNameOrThrow } from "@/plugin/builtins/chat/runtime/ChatChannelFacade.js";
 import {

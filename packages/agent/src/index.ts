@@ -51,17 +51,17 @@ export type {
 } from "./core/AgentContextTypes.js";
 
 // Plugin 作者 API
-export { BasePlugin, BasePlugin as Service } from "./plugin/core/BasePlugin.js";
-export { ChatService } from "./plugin/builtins/chat/ChatService.js";
+export { BasePlugin } from "./plugin/core/BasePlugin.js";
+export { ChatPlugin } from "./plugin/builtins/chat/ChatPlugin.js";
 export { ChatChannelAccountService } from "./plugin/builtins/chat/accounts/ChannelAccountService.js";
 export type { ChatChannelAccountListItem } from "./plugin/builtins/chat/types/ChannelAccount.js";
 export type {
-  ChatServiceChannelAccountProvider,
-  ChatServiceFeishuOptions,
-  ChatServiceOptions,
-  ChatServiceQqOptions,
-  ChatServiceTelegramOptions,
-} from "./plugin/builtins/chat/ChatServiceTypes.js";
+  ChatPluginChannelAccountProvider,
+  ChatPluginFeishuOptions,
+  ChatPluginOptions,
+  ChatPluginQqOptions,
+  ChatPluginTelegramOptions,
+} from "./plugin/builtins/chat/ChatPluginTypes.js";
 export { authPlugin } from "./plugin/builtins/auth/Plugin.js";
 export { skillPlugin } from "./plugin/builtins/skill/Plugin.js";
 export { webPlugin } from "./plugin/builtins/web/Plugin.js";
@@ -92,17 +92,12 @@ export { startLocalRpcServer } from "./runtime/server/rpc/Server.js";
 export { callAgentTransport } from "./runtime/transport/rpc/Transport.js";
 
 // Runtime plugin 运行集成
-export { listRegisteredServices } from "./plugin/core/PluginClassRegistry.js";
+export { listRegisteredPlugins } from "./plugin/core/PluginClassRegistry.js";
 export {
   startAllPlugins,
   stopAllPlugins,
-  startAllServices,
-  stopAllServices,
 } from "./plugin/core/Manager.js";
-export {
-  PluginScheduleStore,
-  PluginScheduleStore as ServiceScheduleStore,
-} from "./plugin/core/schedule/Store.js";
+export { PluginScheduleStore } from "./plugin/core/schedule/Store.js";
 export { parseScheduledRunAtMsOrThrow } from "./plugin/core/schedule/Time.js";
 export {
   pickLastSuccessfulChatSendText,
@@ -225,12 +220,9 @@ export type {
 export type {
   Plugin,
   PluginAction,
-  PluginAction as ServiceAction,
   PluginActionApi,
   PluginActionCommand,
-  PluginActionCommand as ServiceActionCommand,
   PluginActionCommandInput,
-  PluginActionCommandInput as ServiceActionCommandInput,
   PluginActionResult,
   PluginActions,
   PluginAvailability,
@@ -271,7 +263,6 @@ export type {
   ScheduledJobRecord,
   ScheduledJobStatus,
   PluginCommandScheduleInput,
-  ServiceCommandScheduleInput,
 } from "./plugin/types/PluginSchedule.js";
 export type {
   PluginCliBaseOptions,
@@ -280,12 +271,6 @@ export type {
   PluginControlResponse,
   PluginListResponse,
   PluginStateView,
-  ServiceCliBaseOptions,
-  ServiceCommandResponse,
-  ServiceControlAction,
-  ServiceControlResponse,
-  ServiceListResponse,
-  ServiceStateView,
 } from "./plugin/types/Plugins.js";
 export type {
   PluginStateControlAction,

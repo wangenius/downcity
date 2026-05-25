@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 仅注入一小段稳定长期记忆，不直接注入整份 memory 原文。
- * - 其余记忆统一通过 memory service action 按需获取。
+ * - 其余记忆统一通过 memory plugin action 按需获取。
  */
 
 import fs from "node:fs/promises";
@@ -104,26 +104,26 @@ export async function readStableSystemMemory(
 }
 
 /**
- * 构建 memory service 的 system 文本。
+ * 构建 memory plugin 的 system 文本。
  */
-export async function buildMemoryServiceSystemText(
+export async function buildMemoryPluginSystemText(
   context: AgentContext,
 ): Promise<string> {
   const enabled = isMemoryEnabled(context);
   if (!enabled) {
     return [
-      "# Memory Service",
+      "# Memory Plugin",
       "",
-      "Memory service is disabled by config (`context.memory.enabled=false`).",
+      "Memory plugin is disabled by config (`context.memory.enabled=false`).",
       "Do not assume historical memory is available in this session.",
     ].join("\n");
   }
 
   const stableMemory = await readStableSystemMemory(context);
   return [
-    "# Memory Service",
+    "# Memory Plugin",
     "",
-    "Use memory service actions for durable recall. Do not inject whole memory files directly.",
+    "Use memory plugin actions for durable recall. Do not inject whole memory files directly.",
     "Except for the minimal memory already present in system prompts, fetch additional memory on demand via actions.",
     ...(stableMemory.length > 0
       ? [

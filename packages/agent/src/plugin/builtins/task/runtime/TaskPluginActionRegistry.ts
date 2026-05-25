@@ -8,7 +8,7 @@
 
 import type { Command } from "commander";
 import type { PluginActions } from "@/plugin/types/Plugin.js";
-import type { TaskListActionPayload } from "@/plugin/builtins/task/types/TaskService.js";
+import type { TaskListActionPayload } from "@/plugin/builtins/task/types/TaskPluginTypes.js";
 import type {
   TaskCreateRequest,
   TaskDeleteRequest,

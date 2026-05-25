@@ -87,5 +87,3 @@ export interface PluginCommandScheduleInput {
    */
   runAtMs: number;
 }
-
-export type ServiceCommandScheduleInput = PluginCommandScheduleInput;

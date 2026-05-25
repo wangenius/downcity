@@ -326,19 +326,3 @@ export async function stopAllPlugins(context: AgentContext): Promise<{
     results,
   };
 }
-
-/**
- * 兼容旧 service 命名导出。
- */
-export const listServiceInstances = listPluginInstances;
-export const resolveServiceByName = resolvePluginByName;
-export const ensureServiceStateRecord = ensurePluginStateRecord;
-export const markServiceState = markPluginState;
-export const markServiceCommand = markPluginCommand;
-export const getStaticServices = getStaticPlugins;
-export const getServiceRootCommandNames = getPluginRootCommandNames;
-export const listServiceStates = listPluginStates;
-export const isServiceRunning = isPluginRunning;
-export const controlServiceState = controlPluginState;
-export const startAllServices = startAllPlugins;
-export const stopAllServices = stopAllPlugins;

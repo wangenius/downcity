@@ -1,9 +1,9 @@
 /**
- * ShellService：shell service 的类实现。
+ * ShellPlugin：shell plugin 的类实现。
  *
  * 关键点（中文）
- * - shell session map 与 bound runtime 都归属于 service 实例。
- * - agent 持有 ShellService 实例，从而形成 per-agent shell 状态边界。
+ * - shell session map 与 bound runtime 都归属于 plugin 实例。
+ * - agent 持有 ShellPlugin 实例，从而形成 per-agent shell 状态边界。
  * - ShellActionRuntime 只保留纯运行时流程，不再承载模块级单例状态。
  */
 
@@ -23,7 +23,7 @@ import type {
   ShellStartRequest,
   ShellWaitRequest,
   ShellWriteRequest,
-} from "@/plugin/builtins/shell/types/ShellService.js";
+} from "@/plugin/builtins/shell/types/ShellPlugin.js";
 import {
   bindShellRuntime,
   closeAllShellSessions,
@@ -38,11 +38,11 @@ import {
 } from "./runtime/ShellActionRuntime.js";
 
 /**
- * Shell service 类实现。
+ * Shell plugin 类实现。
  */
-export class ShellService extends BasePlugin {
+export class ShellPlugin extends BasePlugin {
   /**
-   * service 名称。
+   * plugin 名称。
    */
   readonly name = "shell";
 

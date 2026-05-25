@@ -17,7 +17,7 @@ import type {
   ShellQueryRequest,
   ShellSessionSnapshot,
   ShellSessionStatus,
-} from "@/plugin/builtins/shell/types/ShellService.js";
+} from "@/plugin/builtins/shell/types/ShellPlugin.js";
 import { getShellOutputPath, getShellSnapshotPath } from "./Paths.js";
 import { resolveOwnerContextId } from "./ShellRuntimeEnvironment.js";
 export {

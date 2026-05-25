@@ -128,9 +128,3 @@ export function createRuntimeSessionPort(
     isExecuting: () => params.isExecuting(),
   };
 }
-
-/**
- * 兼容旧命名导出。
- */
-export type CreateSessionServicePortParams = CreateRuntimeSessionPortParams;
-export const createSessionServicePort = createRuntimeSessionPort;

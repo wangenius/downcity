@@ -5,7 +5,6 @@
 import type { JsonValue } from "@/types/common/Json.js";
 
 export type PluginControlAction = "start" | "stop" | "restart" | "status";
-export type ServiceControlAction = PluginControlAction;
 
 /**
  * 单个 plugin 的对外状态视图。
@@ -28,7 +27,6 @@ export type PluginStateView = {
   /** 当前 plugin 是否支持 command/action 调用。 */
   supportsCommand: boolean;
 };
-export type ServiceStateView = PluginStateView;
 
 /**
  * plugin 列表响应。
@@ -38,12 +36,6 @@ export type PluginListResponse = {
   plugins?: PluginStateView[];
   error?: string;
 };
-export type ServiceListResponse = {
-  success: boolean;
-  plugins?: PluginStateView[];
-  services?: ServiceStateView[];
-  error?: string;
-};
 
 /**
  * plugin 生命周期控制响应。
@@ -51,12 +43,6 @@ export type ServiceListResponse = {
 export type PluginControlResponse = {
   success: boolean;
   plugin?: PluginStateView;
-  error?: string;
-};
-export type ServiceControlResponse = {
-  success: boolean;
-  plugin?: PluginStateView;
-  service?: ServiceStateView;
   error?: string;
 };
 
@@ -70,14 +56,6 @@ export type PluginCommandResponse = {
   data?: JsonValue;
   error?: string;
 };
-export type ServiceCommandResponse = {
-  success: boolean;
-  plugin?: PluginStateView;
-  service?: ServiceStateView;
-  message?: string;
-  data?: JsonValue;
-  error?: string;
-};
 
 export type PluginCliBaseOptions = {
   path?: string;
@@ -87,4 +65,3 @@ export type PluginCliBaseOptions = {
   token?: string;
   json?: boolean;
 };
-export type ServiceCliBaseOptions = PluginCliBaseOptions;

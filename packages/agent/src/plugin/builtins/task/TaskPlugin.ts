@@ -1,10 +1,10 @@
 /**
- * TaskService：task service 的类实例实现。
+ * TaskPlugin：task plugin 的类实例实现。
  *
  * 关键点（中文）
- * - task 的长期运行态（cron engine）归属于 TaskService 实例。
+ * - task 的长期运行态（cron engine）归属于 TaskPlugin 实例。
  * - task 的 prompt、action input、action execution 都已拆到独立模块。
- * - 当前文件只保留实例骨架与 lifecycle，不再依赖旧的模块级 `taskService` 单例。
+ * - 当前文件只保留实例骨架与 lifecycle，不再依赖旧的模块级单例。
  */
 
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
@@ -14,7 +14,7 @@ import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type {
   TaskCronRegisterResult,
   TaskSchedulerReloadResult,
-} from "@/plugin/builtins/task/types/TaskService.js";
+} from "@/plugin/builtins/task/types/TaskPluginTypes.js";
 import { TaskCronTriggerEngine } from "@/plugin/builtins/task/runtime/CronTrigger.js";
 import { registerTaskCronJobs } from "@/plugin/builtins/task/Scheduler.js";
 import {
@@ -23,7 +23,7 @@ import {
 import {
   reloadTaskSchedulerAfterMutation,
 } from "@/plugin/builtins/task/runtime/TaskActionExecution.js";
-import { TASK_SERVICE_PROMPT } from "@/plugin/builtins/task/runtime/TaskServiceSystem.js";
+import { TASK_PLUGIN_PROMPT } from "@/plugin/builtins/task/runtime/TaskPluginSystem.js";
 
 const TASK_LOG_PREFIX = "[TASK]";
 
@@ -32,21 +32,21 @@ function formatTaskLogMessage(message: string): string {
 }
 
 /**
- * task service 类实现。
+ * task plugin 类实现。
  */
-export class TaskService extends BasePlugin {
+export class TaskPlugin extends BasePlugin {
   /**
-   * 当前 service 名称。
+   * 当前 plugin 名称。
    */
   readonly name = "task";
 
   /**
-   * task service 的 system 文本提供器。
+   * task plugin 的 system 文本提供器。
    */
-  readonly system = (): string => TASK_SERVICE_PROMPT;
+  readonly system = (): string => TASK_PLUGIN_PROMPT;
 
   /**
-   * task service 的 action 定义表。
+   * task plugin 的 action 定义表。
    */
   readonly actions: PluginActions;
 
@@ -54,7 +54,7 @@ export class TaskService extends BasePlugin {
    * 当前实例持有的 cron engine。
    *
    * 关键点（中文）
-   * - 这是 per-service-instance 的长期运行态。
+   * - 这是 per-plugin-instance 的长期运行态。
    * - 不再复用 module-global 单例。
    */
   public cronEngine: TaskCronTriggerEngine | null = null;

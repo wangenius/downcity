@@ -31,5 +31,4 @@ export {
 } from "./Persistence.js";
 export {
   createRuntimeSessionPort,
-  createSessionServicePort,
-} from "./ServicePort.js";
+} from "./RuntimeSessionPort.js";

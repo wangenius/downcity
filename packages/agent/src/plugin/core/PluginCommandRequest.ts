@@ -91,9 +91,3 @@ export function parsePluginCommandRequestBody(
     ...(schedule ? { schedule } : {}),
   };
 }
-
-/**
- * 兼容旧命名导出。
- */
-export type ServiceCommandRequestBody = PluginCommandRequestBody;
-export const parseServiceCommandRequestBody = parsePluginCommandRequestBody;

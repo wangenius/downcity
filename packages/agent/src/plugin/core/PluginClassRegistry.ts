@@ -57,13 +57,3 @@ export function createRegisteredPluginInstances(
   }
   return plugins;
 }
-
-/**
- * 兼容旧 service 命名导出。
- */
-export const listRegisteredServiceNames = listRegisteredPluginNames;
-export const listRegisteredServices = listRegisteredPlugins;
-export const getRegisteredStaticServiceInstances =
-  getRegisteredStaticPluginInstances;
-export const createRegisteredServiceInstances =
-  createRegisteredPluginInstances;

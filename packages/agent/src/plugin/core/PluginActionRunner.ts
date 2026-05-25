@@ -266,22 +266,3 @@ export async function runPluginCommand(params: {
     message: `Plugin "${plugin.name}" does not implement command "${command}"`,
   };
 }
-
-/**
- * 兼容旧 service 命名导出。
- */
-export const resolveServiceAction = resolvePluginAction;
-export const invokeServiceAction = invokePluginAction;
-export async function runServiceCommand(params: {
-  pluginName: string;
-  command: string;
-  payload?: JsonValue;
-  schedule?: JsonValue | PluginCommandScheduleInput;
-  context: AgentContext;
-}): Promise<PluginCommandResult & { service?: PluginStateSnapshot }> {
-  const result = await runPluginCommand(params);
-  return {
-    ...result,
-    ...(result.plugin ? { service: result.plugin } : {}),
-  };
-}

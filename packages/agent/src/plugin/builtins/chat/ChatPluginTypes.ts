@@ -1,10 +1,10 @@
 /**
- * ChatService SDK / runtime 配置类型。
+ * ChatPlugin SDK / runtime 配置类型。
  *
  * 关键点（中文）
- * - 这里定义 `new ChatService({...})` 的显式注入接口。
+ * - 这里定义 `new ChatPlugin({...})` 的显式注入接口。
  * - 目标是让 `city`、`vibecape` 等上层产品通过构造参数提供渠道凭据与账户解析能力。
- * - 若未显式注入，则 ChatService 仍可回退到现有 `downcity.json + PlatformStore` 读取路径。
+ * - 若未显式注入，则 ChatPlugin 仍可回退到现有 `downcity.json + PlatformStore` 读取路径。
  */
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
@@ -15,7 +15,7 @@ import type { ChatChannelName } from "@/plugin/builtins/chat/types/ChannelStatus
 /**
  * Telegram 显式渠道配置。
  */
-export interface ChatServiceTelegramOptions {
+export interface ChatPluginTelegramOptions {
   /**
    * 是否启用当前渠道。
    *
@@ -45,7 +45,7 @@ export interface ChatServiceTelegramOptions {
 /**
  * Feishu 显式渠道配置。
  */
-export interface ChatServiceFeishuOptions {
+export interface ChatPluginFeishuOptions {
   /**
    * 是否启用当前渠道。
    */
@@ -75,7 +75,7 @@ export interface ChatServiceFeishuOptions {
 /**
  * QQ 显式渠道配置。
  */
-export interface ChatServiceQqOptions {
+export interface ChatPluginQqOptions {
   /**
    * 是否启用当前渠道。
    */
@@ -105,7 +105,7 @@ export interface ChatServiceQqOptions {
 /**
  * Chat 渠道账户解析提供器。
  */
-export interface ChatServiceChannelAccountProvider {
+export interface ChatPluginChannelAccountProvider {
   /**
    * 按渠道解析当前应使用的账户。
    *
@@ -130,9 +130,9 @@ export interface ChatServiceChannelAccountProvider {
 }
 
 /**
- * ChatService 显式构造参数。
+ * ChatPlugin 显式构造参数。
  */
-export interface ChatServiceOptions {
+export interface ChatPluginOptions {
   /**
    * Chat queue worker 运行配置。
    *
@@ -144,15 +144,15 @@ export interface ChatServiceOptions {
   /**
    * Telegram 渠道显式配置。
    */
-  telegram?: ChatServiceTelegramOptions;
+  telegram?: ChatPluginTelegramOptions;
   /**
    * Feishu 渠道显式配置。
    */
-  feishu?: ChatServiceFeishuOptions;
+  feishu?: ChatPluginFeishuOptions;
   /**
    * QQ 渠道显式配置。
    */
-  qq?: ChatServiceQqOptions;
+  qq?: ChatPluginQqOptions;
   /**
    * 渠道账户解析提供器。
    *
@@ -160,5 +160,5 @@ export interface ChatServiceOptions {
    * - 当 client 已经维护自己的 account 池时，应优先注入这个 provider。
    * - 若同时显式提供了渠道凭据，则显式凭据优先，provider 作为回退。
    */
-  channelAccounts?: ChatServiceChannelAccountProvider;
+  channelAccounts?: ChatPluginChannelAccountProvider;
 }

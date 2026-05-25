@@ -12,7 +12,7 @@ import type {
   InvokePluginPort,
   InvokePluginResult,
 } from "@/core/AgentContextTypes.js";
-import type { ShellActionResponse } from "@/plugin/builtins/shell/types/ShellService.js";
+import type { ShellActionResponse } from "@/plugin/builtins/shell/types/ShellPlugin.js";
 import {
   enqueueDeferredPersistedUserMessage,
   enqueueInjectedUserMessage,

@@ -1,8 +1,8 @@
 /**
- * ChatServiceSystem：chat service 的 system prompt 组装模块。
+ * ChatPluginSystem：chat plugin 的 system prompt 组装模块。
  *
  * 关键点（中文）
- * - chat service prompt 与 channel prompt 都属于静态资产。
+ * - chat plugin prompt 与 channel prompt 都属于静态资产。
  * - 当前请求只注入当前 channel 的 prompt，避免平台规则串味。
  * - 该模块只负责 prompt 解析与拼装，不承担运行态控制职责。
  */
@@ -55,9 +55,9 @@ export async function buildCurrentChannelPrompts(
 }
 
 /**
- * 构建 chat service 注入到 session 的 system 文本。
+ * 构建 chat plugin 注入到 session 的 system 文本。
  */
-export async function buildChatServiceSystem(
+export async function buildChatPluginSystem(
   context: AgentContext,
 ): Promise<string> {
   return [

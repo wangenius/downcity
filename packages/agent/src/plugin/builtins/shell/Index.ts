@@ -1,9 +1,9 @@
 /**
- * Shell Service 导出入口。
+ * Shell Plugin 导出入口。
  *
  * 关键点（中文）
  * - Index 只负责导出类实现。
- * - 真正运行时的 per-agent 实例由 ServiceClassRegistry 创建。
+ * - 真正运行时的 per-agent 实例由 PluginClassRegistry 创建。
  */
 
-export { ShellService } from "./ShellService.js";
+export { ShellPlugin } from "./ShellPlugin.js";

@@ -1,10 +1,10 @@
 /**
- * ChatService：chat service 的类实现。
+ * ChatPlugin：chat plugin 的类实现。
  *
  * 关键点（中文）
- * - chat 的渠道 bot 状态归属于 ChatService 实例。
- * - chat 的 queue worker 也归属于 ChatService 实例，而不是 agent 入口。
- * - Index 只保留静态导出入口，这里承接真正的 service class 实现。
+ * - chat 的渠道 bot 状态归属于 ChatPlugin 实例。
+ * - chat 的 queue worker 也归属于 ChatPlugin 实例，而不是 agent 入口。
+ * - Index 只保留静态导出入口，这里承接真正的 plugin class 实现。
  * - action 注册表已经拆到独立模块，当前文件只保留实例骨架。
  */
 
@@ -16,11 +16,11 @@ import type { ChatChannelState } from "@/plugin/builtins/chat/types/ChatRuntime.
 import type { StoredChannelAccount } from "@/types/runtime/host/Store.js";
 import type { ChatQueueWorkerConfig } from "@/plugin/builtins/chat/types/ChatQueueWorker.js";
 import type {
-  ChatServiceFeishuOptions,
-  ChatServiceOptions,
-  ChatServiceQqOptions,
-  ChatServiceTelegramOptions,
-} from "@/plugin/builtins/chat/ChatServiceTypes.js";
+  ChatPluginFeishuOptions,
+  ChatPluginOptions,
+  ChatPluginQqOptions,
+  ChatPluginTelegramOptions,
+} from "@/plugin/builtins/chat/ChatPluginTypes.js";
 import type { ChatChannelName } from "@/plugin/builtins/chat/types/ChannelStatus.js";
 import {
   createChatChannelState,
@@ -29,15 +29,15 @@ import {
 } from "./runtime/ChatChannelFacade.js";
 import { createChatPluginActions } from "./runtime/ChatPluginActions.js";
 import { ChatQueueWorker } from "./runtime/ChatQueueWorker.js";
-import { buildChatServiceSystem } from "./runtime/ChatServiceSystem.js";
+import { buildChatPluginSystem } from "./runtime/ChatPluginSystem.js";
 import { ChatQueueStore } from "./runtime/ChatQueueStore.js";
 
 /**
- * Chat service 类实现。
+ * Chat plugin 类实现。
  */
-export class ChatService extends BasePlugin {
+export class ChatPlugin extends BasePlugin {
   /**
-   * service 名称。
+   * plugin 名称。
    */
   readonly name = "chat";
 
@@ -50,7 +50,7 @@ export class ChatService extends BasePlugin {
    * 当前实例持有的 chat queue worker。
    *
    * 关键点（中文）
-   * - worker 生命周期与 chat service 保持一致。
+   * - worker 生命周期与 chat plugin 保持一致。
    * - 这样 agent 只负责装配，不直接持有 chat 领域长期状态。
    */
   public queueWorker: ChatQueueWorker | null = null;
@@ -65,19 +65,19 @@ export class ChatService extends BasePlugin {
   public readonly queueStore = new ChatQueueStore();
 
   /**
-   * 当前实例持有的显式 service 配置。
+   * 当前实例持有的显式 plugin 配置。
    */
-  public readonly options: ChatServiceOptions;
+  public readonly options: ChatPluginOptions;
 
   /**
-   * 当前 service 的 system 文本构建器。
+   * 当前 plugin 的 system 文本构建器。
    */
   readonly system = async (context: AgentContext): Promise<string> => {
-    return await buildChatServiceSystem(context);
+    return await buildChatPluginSystem(context);
   };
 
   /**
-   * 当前 service 的 action 定义表。
+   * 当前 plugin 的 action 定义表。
    */
   readonly actions: PluginActions;
 
@@ -106,7 +106,7 @@ export class ChatService extends BasePlugin {
     worker.stop();
   }
 
-  constructor(optionsOrAgent?: ChatServiceOptions | AgentRuntime | null) {
+  constructor(optionsOrAgent?: ChatPluginOptions | AgentRuntime | null) {
     super(isAgentRuntimeInput(optionsOrAgent) ? optionsOrAgent : null);
     this.options = isAgentRuntimeInput(optionsOrAgent)
       ? {}
@@ -185,7 +185,7 @@ export class ChatService extends BasePlugin {
 
   private getExplicitChannelOptions(
     channel: ChatChannelName,
-  ): ChatServiceTelegramOptions | ChatServiceFeishuOptions | ChatServiceQqOptions | undefined {
+  ): ChatPluginTelegramOptions | ChatPluginFeishuOptions | ChatPluginQqOptions | undefined {
     if (channel === "telegram") return this.options.telegram;
     if (channel === "feishu") return this.options.feishu;
     return this.options.qq;
@@ -247,7 +247,7 @@ export class ChatService extends BasePlugin {
 }
 
 function isAgentRuntimeInput(
-  input: ChatServiceOptions | AgentRuntime | null | undefined,
+  input: ChatPluginOptions | AgentRuntime | null | undefined,
 ): input is AgentRuntime | null {
   if (input === null) return true;
   if (!input || typeof input !== "object") return false;

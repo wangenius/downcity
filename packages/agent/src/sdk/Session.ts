@@ -511,13 +511,6 @@ export class Session {
   }
 
   /**
-   * 兼容旧命名，后续可移除。
-   */
-  getServicePort(): SessionPort {
-    return this.getRuntimePort();
-  }
-
-  /**
    * 在执行前确保 session 已完成初始化与宿主装配。
    */
   async ensureReadyForExecution(): Promise<void> {

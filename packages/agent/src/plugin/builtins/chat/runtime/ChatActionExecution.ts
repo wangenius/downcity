@@ -18,7 +18,7 @@ import type {
   ChatReactActionPayload,
   ChatSendActionPayload,
   ChatSessionActionPayload,
-} from "@/plugin/builtins/chat/types/ChatService.js";
+} from "@/plugin/builtins/chat/types/ChatPluginActionPayload.js";
 import type { ChatHistoryEventV1 } from "@/plugin/builtins/chat/types/ChatHistory.js";
 import type { ChatListItemV1 } from "@/plugin/builtins/chat/types/ChatCommand.js";
 import {

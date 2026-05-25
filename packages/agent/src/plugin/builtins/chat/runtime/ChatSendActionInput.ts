@@ -10,7 +10,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginActionCommandInput } from "@/plugin/types/Plugin.js";
-import type { ChatSendActionPayload } from "@/plugin/builtins/chat/types/ChatService.js";
+import type { ChatSendActionPayload } from "@/plugin/builtins/chat/types/ChatPluginActionPayload.js";
 import {
   buildChatMessageText,
   parseChatMessageMarkup,

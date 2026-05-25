@@ -1,5 +1,5 @@
 /**
- * ContactService：agent 点对点关系与分享服务。
+ * ContactPlugin：agent 点对点关系与分享插件。
  *
  * 关键点（中文）
  * - `link/approve` 建立可信 contact，支持 outbound/inbound/bidirectional 三种可达方向。
@@ -62,7 +62,7 @@ import {
 } from "./runtime/RemoteClient.js";
 import { saveContactInboxShare } from "./runtime/InboxStore.js";
 import { createShareInput } from "./runtime/ShareBundle.js";
-import { buildContactServiceSystemText } from "./runtime/SystemProvider.js";
+import { buildContactPluginSystemText } from "./runtime/SystemProvider.js";
 import { resolveContactSelfEndpoint } from "./runtime/EndpointResolver.js";
 import {
   buildContactApproveNotes,
@@ -135,16 +135,16 @@ function requireOutboundContact(contact: AgentContact): {
 }
 
 /**
- * Contact service 类实现。
+ * Contact plugin 类实现。
  */
-export class ContactService extends BasePlugin {
+export class ContactPlugin extends BasePlugin {
   /**
-   * service 名称。
+   * plugin 名称。
    */
   readonly name = "contact";
 
   /**
-   * 当前 service action 定义表。
+   * 当前 plugin action 定义表。
    */
   readonly actions: PluginActions;
 
@@ -178,7 +178,7 @@ export class ContactService extends BasePlugin {
    * contact system 文本。
    */
   system(): string {
-    return buildContactServiceSystemText();
+    return buildContactPluginSystemText();
   }
 
   private async link(context: AgentContext, payload: ContactLinkCommandPayload) {

@@ -1,29 +1,29 @@
 /**
- * Service action CLI 注册器。
+ * Runtime plugin action CLI 注册器。
  *
  * 关键点（中文）
- * - 负责把 service actions 挂到 commander（`city <service> <action>`）。
- * - 仅处理 CLI 参数映射与远程调用，不承载 service 状态机逻辑。
- * - service 注册表与调度时间解析统一复用 agent 包实现，避免 city 维护第二套事实源。
+ * - 负责把 runtime plugin actions 挂到 commander（`city <plugin> <action>`）。
+ * - 仅处理 CLI 参数映射与远程调用，不承载 plugin 状态机逻辑。
+ * - runtime plugin 注册表与调度时间解析统一复用 agent 包实现，避免 city 维护第二套事实源。
  */
 
 import path from "node:path";
 import type { Command } from "commander";
 import {
   callAgentTransport,
-  listRegisteredServices,
+  listRegisteredPlugins,
   parseScheduledRunAtMsOrThrow,
 } from "@downcity/agent";
-import type { Service, PluginAction as ServiceAction } from "@downcity/agent";
+import type { BasePlugin, PluginAction } from "@downcity/agent";
 import type { JsonObject, JsonValue } from "@downcity/agent";
-import type { PluginCommandScheduleInput as ServiceCommandScheduleInput } from "@downcity/agent";
-import type { ServiceCommandResponse } from "@downcity/agent";
-import type { ServiceCliBaseOptions } from "@downcity/agent";
+import type { PluginCommandScheduleInput } from "@downcity/agent";
+import type { PluginCommandResponse } from "@downcity/agent";
+import type { PluginCliBaseOptions } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
-import { parseBoolean, parsePort } from "../shared/IndexSupport.js";
-import { runServiceControlCommand } from "./ServiceCommandRemote.js";
+import { parseBoolean, parsePort } from "./IndexSupport.js";
+import { runPluginRuntimeControlCommand } from "./PluginRuntimeRemote.js";
 
-const CHAT_SERVICE_HELP_TEXT = [
+const CHAT_PLUGIN_HELP_TEXT = [
   "",
   "Chat quick guide:",
   "  直接输出 assistant 文本会发送到当前 chat channel。",
@@ -40,7 +40,7 @@ const CHAT_SERVICE_HELP_TEXT = [
 
 const CHAT_HELP_HOOK_ATTACHED = Symbol("chat-help-hook-attached");
 
-type ServiceCliBridgeOptions = {
+type PluginCliBridgeOptions = {
   path?: string;
   host?: string;
   port?: number;
@@ -85,7 +85,7 @@ function toJsonValue(input: unknown): JsonValue | undefined {
   return undefined;
 }
 
-function toServiceActionCommandOpts(
+function toPluginActionCommandOpts(
   options: Record<string, unknown>,
 ): Record<string, JsonValue> {
   const reservedKeys = new Set(["path", "host", "port", "token", "json", "delay", "time"]);
@@ -99,9 +99,9 @@ function toServiceActionCommandOpts(
   return normalized;
 }
 
-function toServiceCliBridgeOptions(
+function toPluginCliBridgeOptions(
   options: Record<string, unknown>,
-): ServiceCliBridgeOptions {
+): PluginCliBridgeOptions {
   return {
     path: typeof options.path === "string" ? options.path : ".",
     host: typeof options.host === "string" ? options.host : undefined,
@@ -111,7 +111,7 @@ function toServiceCliBridgeOptions(
   };
 }
 
-function flattenServiceActionCommandArgs(values: unknown[]): string[] {
+function flattenPluginActionCommandArgs(values: unknown[]): string[] {
   const out: string[] = [];
   const pushValue = (value: unknown): void => {
     if (value === undefined || value === null) return;
@@ -160,7 +160,7 @@ function hasLongOption(command: Command, longFlag: string): boolean {
  */
 function extractCommandScheduleInput(
   options: Record<string, unknown>,
-): ServiceCommandScheduleInput | undefined {
+): PluginCommandScheduleInput | undefined {
   const runAtMs = parseScheduledRunAtMsOrThrow({
     delay: options.delay as string | number | undefined,
     time: options.time as string | number | undefined,
@@ -169,38 +169,38 @@ function extractCommandScheduleInput(
   return { runAtMs };
 }
 
-function registerServiceActionCommand(params: {
+function registerPluginActionCommand(params: {
   program: Command;
-  service: Service;
+  plugin: BasePlugin;
   actionName: string;
-  action: ServiceAction<JsonValue, JsonValue>;
+  action: PluginAction<JsonValue, JsonValue>;
 }): void {
   const commandSpec = params.action.command;
   if (!commandSpec) return;
 
-  const serviceCommand =
-    params.program.commands.find((item) => item.name() === params.service.name) ||
+  const pluginCommand =
+    params.program.commands.find((item) => item.name() === params.plugin.name) ||
     params.program
-      .command(params.service.name)
-      .description(`${params.service.name} service actions`)
+      .command(params.plugin.name)
+      .description(`${params.plugin.name} plugin actions`)
       .helpOption("--help", "display help for command");
 
   if (
-    params.service.name === "chat" &&
-    !(serviceCommand as Command & { [CHAT_HELP_HOOK_ATTACHED]?: boolean })[
+    params.plugin.name === "chat" &&
+    !(pluginCommand as Command & { [CHAT_HELP_HOOK_ATTACHED]?: boolean })[
       CHAT_HELP_HOOK_ATTACHED
     ]
   ) {
-    const chatCommand = serviceCommand as Command & {
+    const chatCommand = pluginCommand as Command & {
       [CHAT_HELP_HOOK_ATTACHED]?: boolean;
     };
     chatCommand.on("--help", () => {
-      console.log(CHAT_SERVICE_HELP_TEXT);
+      console.log(CHAT_PLUGIN_HELP_TEXT);
     });
     chatCommand[CHAT_HELP_HOOK_ATTACHED] = true;
   }
 
-  const actionCommand = serviceCommand
+  const actionCommand = pluginCommand
     .command(params.actionName)
     .description(commandSpec.description)
     .helpOption("--help", "display help for command")
@@ -212,12 +212,12 @@ function registerServiceActionCommand(params: {
 
   commandSpec.configure?.(actionCommand);
   if (!hasLongOption(actionCommand, "--delay")) {
-    actionCommand.option("--delay <ms>", "延迟执行毫秒数（所有 service action 通用）");
+    actionCommand.option("--delay <ms>", "延迟执行毫秒数（所有 plugin action 通用）");
   }
   if (!hasLongOption(actionCommand, "--time")) {
     actionCommand.option(
       "--time <time>",
-      "定时执行时间（Unix 时间戳秒/毫秒或 ISO 时间，所有 service action 通用）",
+      "定时执行时间（Unix 时间戳秒/毫秒或 ISO 时间，所有 plugin action 通用）",
     );
   }
 
@@ -225,7 +225,7 @@ function registerServiceActionCommand(params: {
     const last = rawArgs.at(-1);
     const commandLike = isCommanderCommandLike(last) ? last : null;
     const positionalArgs = commandLike
-      ? flattenServiceActionCommandArgs(
+      ? flattenPluginActionCommandArgs(
           Array.isArray(commandLike.processedArgs)
             ? (commandLike.processedArgs as unknown[])
             : [],
@@ -235,7 +235,7 @@ function registerServiceActionCommand(params: {
           const fallbackPositional = isPlainOptionsObject(fallbackLast)
             ? rawArgs.slice(0, -1)
             : rawArgs;
-          return flattenServiceActionCommandArgs(fallbackPositional);
+          return flattenPluginActionCommandArgs(fallbackPositional);
         })();
     const allOptions = commandLike
       ? ((commandLike.opts() as Record<string, unknown>) || {})
@@ -243,16 +243,16 @@ function registerServiceActionCommand(params: {
           const fallbackLast = rawArgs.at(-1);
           return isPlainOptionsObject(fallbackLast) ? fallbackLast : {};
         })();
-    const actionOptions = toServiceActionCommandOpts(allOptions);
-    const bridgeOptions = toServiceCliBridgeOptions(allOptions);
-    let schedule: ServiceCommandScheduleInput | undefined;
+    const actionOptions = toPluginActionCommandOpts(allOptions);
+    const bridgeOptions = toPluginCliBridgeOptions(allOptions);
+    let schedule: PluginCommandScheduleInput | undefined;
     try {
       schedule = extractCommandScheduleInput(allOptions);
     } catch (error) {
       printResult({
         asJson: bridgeOptions.json,
         success: false,
-        title: `${params.service.name}.${params.actionName} failed`,
+        title: `${params.plugin.name}.${params.actionName} failed`,
         payload: {
           error: `Failed to parse schedule input: ${String(error)}`,
         },
@@ -270,7 +270,7 @@ function registerServiceActionCommand(params: {
       printResult({
         asJson: bridgeOptions.json,
         success: false,
-        title: `${params.service.name}.${params.actionName} failed`,
+        title: `${params.plugin.name}.${params.actionName} failed`,
         payload: {
           error: `Failed to parse command input: ${String(error)}`,
         },
@@ -278,15 +278,15 @@ function registerServiceActionCommand(params: {
       return;
     }
 
-    const remote = await callAgentTransport<ServiceCommandResponse>({
+    const remote = await callAgentTransport<PluginCommandResponse>({
       projectRoot: resolveProjectRoot(bridgeOptions.path),
-      path: "/api/services/command",
+      path: "/api/plugins/runtime/command",
       method: "POST",
       host: bridgeOptions.host,
       port: bridgeOptions.port,
       authToken: bridgeOptions.token,
       body: {
-        serviceName: params.service.name,
+        pluginName: params.plugin.name,
         command: params.actionName,
         payload,
         ...(schedule ? { schedule } : {}),
@@ -299,8 +299,8 @@ function registerServiceActionCommand(params: {
         asJson: bridgeOptions.json,
         success: Boolean(data.success),
         title: data.success
-          ? `${params.service.name}.${params.actionName} ok`
-          : `${params.service.name}.${params.actionName} failed`,
+          ? `${params.plugin.name}.${params.actionName} ok`
+          : `${params.plugin.name}.${params.actionName} failed`,
         payload: {
           ...(data.data !== undefined ? { data: data.data } : {}),
           ...(data.message ? { message: data.message } : {}),
@@ -313,7 +313,7 @@ function registerServiceActionCommand(params: {
     printResult({
       asJson: bridgeOptions.json,
       success: false,
-      title: `${params.service.name}.${params.actionName} failed`,
+      title: `${params.plugin.name}.${params.actionName} failed`,
       payload: {
         error: remote.error || "Unknown error",
       },
@@ -321,11 +321,11 @@ function registerServiceActionCommand(params: {
   });
 }
 
-function hasServiceSubcommand(command: Command, name: string): boolean {
+function hasPluginSubcommand(command: Command, name: string): boolean {
   return command.commands.some((item) => item.name() === name);
 }
 
-function attachServiceLifecycleOptions(command: Command): Command {
+function attachPluginLifecycleOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
@@ -334,57 +334,57 @@ function attachServiceLifecycleOptions(command: Command): Command {
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }
 
-function registerServiceLifecycleCommands(params: {
+function registerPluginLifecycleCommands(params: {
   program: Command;
-  service: Service;
+  plugin: BasePlugin;
 }): void {
-  if (!params.service.lifecycle?.start && !params.service.lifecycle?.stop) {
+  if (!params.plugin.lifecycle?.start && !params.plugin.lifecycle?.stop) {
     return;
   }
 
-  const serviceCommand =
-    params.program.commands.find((item) => item.name() === params.service.name) ||
+  const pluginCommand =
+    params.program.commands.find((item) => item.name() === params.plugin.name) ||
     params.program
-      .command(params.service.name)
-      .description(`${params.service.name} service actions`)
+      .command(params.plugin.name)
+      .description(`${params.plugin.name} plugin actions`)
       .helpOption("--help", "display help for command");
 
   const lifecycleCommands = [
     {
       name: "start",
-      description: `启动 ${params.service.name} service`,
+      description: `启动 ${params.plugin.name} plugin`,
       action: "start" as const,
     },
     {
       name: "stop",
-      description: `停止 ${params.service.name} service`,
+      description: `停止 ${params.plugin.name} plugin`,
       action: "stop" as const,
     },
     {
       name: "restart",
-      description: `重启 ${params.service.name} service`,
+      description: `重启 ${params.plugin.name} plugin`,
       action: "restart" as const,
     },
     {
       name: "status",
-      description: `查看 ${params.service.name} service 运行状态`,
+      description: `查看 ${params.plugin.name} plugin 运行状态`,
       action: "status" as const,
     },
   ];
 
   for (const item of lifecycleCommands) {
-    if (hasServiceSubcommand(serviceCommand, item.name)) {
+    if (hasPluginSubcommand(pluginCommand, item.name)) {
       continue;
     }
 
-    attachServiceLifecycleOptions(
-      serviceCommand
+    attachPluginLifecycleOptions(
+      pluginCommand
         .command(item.name)
         .description(item.description)
         .helpOption("--help", "display help for command"),
-    ).action(async (options: ServiceCliBaseOptions) => {
-      await runServiceControlCommand({
-        serviceName: params.service.name,
+    ).action(async (options: PluginCliBaseOptions) => {
+      await runPluginRuntimeControlCommand({
+        pluginName: params.plugin.name,
         action: item.action,
         options,
       });
@@ -393,24 +393,24 @@ function registerServiceLifecycleCommands(params: {
 }
 
 /**
- * 注册所有 service actions 的 CLI 命令。
+ * 注册所有 runtime plugin actions 的 CLI 命令。
  */
-export function registerAllServicesForCli(program: Command): void {
-  const services = listRegisteredServices();
-  for (const service of services) {
-    for (const [actionName, action] of Object.entries(service.actions)) {
-      registerServiceActionCommand({
+export function registerAllRuntimePluginsForCli(program: Command): void {
+  const plugins = listRegisteredPlugins();
+  for (const plugin of plugins) {
+    for (const [actionName, action] of Object.entries(plugin.actions)) {
+      registerPluginActionCommand({
         program,
-        service,
+        plugin,
         actionName,
-        action: action as ServiceAction<JsonValue, JsonValue>,
+        action: action as PluginAction<JsonValue, JsonValue>,
       });
     }
   }
-  for (const service of services) {
-    registerServiceLifecycleCommands({
+  for (const plugin of plugins) {
+    registerPluginLifecycleCommands({
       program,
-      service,
+      plugin,
     });
   }
 }

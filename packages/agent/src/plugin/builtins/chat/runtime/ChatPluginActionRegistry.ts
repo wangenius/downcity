@@ -24,7 +24,7 @@ import type {
   ChatSessionActionPayload,
   ChatStatusActionPayload,
   ChatTestActionPayload,
-} from "@/plugin/builtins/chat/types/ChatService.js";
+} from "@/plugin/builtins/chat/types/ChatPluginActionPayload.js";
 import type { ChatChannelState } from "@/plugin/builtins/chat/types/ChatRuntime.js";
 import {
   mapChatChannelCommandInput,

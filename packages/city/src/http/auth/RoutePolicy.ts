@@ -26,22 +26,22 @@ export const SERVER_AUTH_ROUTE_POLICIES: AuthRoutePolicy[] = [
     anyPermissions: ["agent.execute"],
   },
   {
-    path: "/api/services/list",
+    path: "/api/plugins/runtime/list",
     method: "GET",
     requireAuth: true,
-    anyPermissions: ["service.read"],
+    anyPermissions: ["plugin.read"],
   },
   {
-    path: "/api/services/control",
+    path: "/api/plugins/runtime/control",
     method: "POST",
     requireAuth: true,
-    anyPermissions: ["service.write"],
+    anyPermissions: ["plugin.write"],
   },
   {
-    path: "/api/services/command",
+    path: "/api/plugins/runtime/command",
     method: "POST",
     requireAuth: true,
-    anyPermissions: ["service.write"],
+    anyPermissions: ["plugin.write"],
   },
   {
     path: "/api/plugins/list",

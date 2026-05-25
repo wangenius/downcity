@@ -17,7 +17,7 @@ import type {
   TaskSetStatusRequest,
   TaskUpdateRequest,
 } from "@/plugin/builtins/task/types/TaskCommand.js";
-import type { TaskListActionPayload } from "@/plugin/builtins/task/types/TaskService.js";
+import type { TaskListActionPayload } from "@/plugin/builtins/task/types/TaskPluginTypes.js";
 
 function parseBooleanLike(value: JsonValue | undefined): boolean | undefined {
   if (typeof value === "boolean") return value;

@@ -1,50 +1,50 @@
 /**
- * ServiceSystemProviders：service system prompt 的静态提供器清单。
+ * PluginSystemProviders：plugin system prompt 的静态提供器清单。
  *
  * 关键点（中文）
- * - 这里仅负责收集各 service 的 system 文本提供器。
- * - 不依赖完整 service instance，避免把 system 域与 service 运行态耦合在一起。
- * - 这样也能避开 `task -> runner -> prompt system -> service class registry` 的循环依赖。
+ * - 这里仅负责收集各 plugin 的 system 文本提供器。
+ * - 不依赖完整 plugin instance，避免把 system 域与 plugin 运行态耦合在一起。
+ * - 这样也能避开 `task -> runner -> prompt system -> plugin class registry` 的循环依赖。
  */
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import { buildChatServiceSystem } from "@/plugin/builtins/chat/runtime/ChatServiceSystem.js";
-import { buildContactServiceSystemText } from "@/plugin/builtins/contact/runtime/SystemProvider.js";
-import { buildMemoryServiceSystemText } from "@/plugin/builtins/memory/runtime/SystemProvider.js";
-import { TASK_SERVICE_PROMPT } from "@/plugin/builtins/task/runtime/TaskServiceSystem.js";
+import { buildChatPluginSystem } from "@/plugin/builtins/chat/runtime/ChatPluginSystem.js";
+import { buildContactPluginSystemText } from "@/plugin/builtins/contact/runtime/SystemProvider.js";
+import { buildMemoryPluginSystemText } from "@/plugin/builtins/memory/runtime/SystemProvider.js";
+import { TASK_PLUGIN_PROMPT } from "@/plugin/builtins/task/runtime/TaskPluginSystem.js";
 
 /**
- * 单个 service 的 system provider。
+ * 单个 plugin 的 system provider。
  */
-export type ServiceSystemProvider = {
+export type PluginSystemProvider = {
   /**
-   * 对应的 service 名称。
+   * 对应的 plugin 名称。
    */
   name: string;
   /**
-   * 生成该 service system 文本的函数。
+   * 生成该 plugin system 文本的函数。
    */
   system: (context: AgentContext) => Promise<string> | string;
 };
 
 /**
- * 全部静态 service system providers。
+ * 全部静态 plugin system providers。
  */
-export const SERVICE_SYSTEM_PROVIDERS: ServiceSystemProvider[] = [
+export const PLUGIN_SYSTEM_PROVIDERS: PluginSystemProvider[] = [
   {
     name: "chat",
-    system: buildChatServiceSystem,
+    system: buildChatPluginSystem,
   },
   {
     name: "contact",
-    system: buildContactServiceSystemText,
+    system: buildContactPluginSystemText,
   },
   {
     name: "task",
-    system: () => TASK_SERVICE_PROMPT,
+    system: () => TASK_PLUGIN_PROMPT,
   },
   {
     name: "memory",
-    system: buildMemoryServiceSystemText,
+    system: buildMemoryPluginSystemText,
   },
 ];

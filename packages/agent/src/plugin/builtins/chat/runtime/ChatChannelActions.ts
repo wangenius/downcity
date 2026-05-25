@@ -17,7 +17,7 @@ import type {
   ChatReconnectActionPayload,
   ChatStatusActionPayload,
   ChatTestActionPayload,
-} from "@/plugin/builtins/chat/types/ChatService.js";
+} from "@/plugin/builtins/chat/types/ChatPluginActionPayload.js";
 import type { ChatChannelTestResult } from "@/plugin/builtins/chat/types/ChannelStatus.js";
 import {
   describeChatChannelConfiguration,

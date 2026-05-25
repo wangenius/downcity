@@ -15,15 +15,7 @@ export {
   listPluginStates,
   startAllPlugins,
   stopAllPlugins,
-  controlServiceState,
-  getServiceRootCommandNames,
-  getStaticServices,
-  isServiceRunning,
-  listServiceStates,
-  startAllServices,
-  stopAllServices,
 } from "@/plugin/core/PluginStateController.js";
 export {
   runPluginCommand,
-  runServiceCommand,
 } from "@/plugin/core/PluginActionRunner.js";

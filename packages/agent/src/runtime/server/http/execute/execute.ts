@@ -8,12 +8,7 @@
  */
 
 import { Hono } from "hono";
-import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
-import { persistAssistantResult } from "@/session/messages/AssistantResultPersistence.js";
-import {
-  pickLastSuccessfulChatSendText,
-} from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
 
 /**
  * 执行入口路由参数。
@@ -90,45 +85,21 @@ export function createExecuteRouter(
       const sessionId = `api:chat:${chatId}`;
       const agentState = options.getAgentRuntime();
       const session = agentState.getSession(sessionId);
-      await session.appendUserMessage({
-        text: String(instructions),
-      });
-
-      const result = await session.execute({
+      const turn = await session.prompt({
         query: String(instructions),
+        extra: {
+          ingressKind: "exec",
+          via: "api_execute",
+          actorId,
+        },
       });
+      const result = await turn.finished;
 
-      const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
-      try {
-        await persistAssistantResult({
-          writer: {
-            appendAssistantMessage: async (appendParams) => {
-              await session.appendAssistantMessage({
-                ...appendParams,
-                extra: {
-                  via: "api_execute",
-                  note: "assistant_message_missing",
-                  actorId,
-                },
-              });
-            },
-          },
-          assistantMessage: result.assistantMessage,
-          fallbackText: userVisible,
-        });
-        const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-          sessionId,
-        );
-        for (const message of deferredInjectedMessages) {
-          await session.appendUserMessage({
-            message,
-          });
-        }
-      } catch {
-        // ignore
-      }
-
-      return c.json(result);
+      return c.json({
+        success: result.success,
+        ...(result.error ? { error: result.error } : {}),
+        assistantMessage: result.assistantMessage,
+      });
     } catch (error) {
       return c.json({ success: false, message: String(error) }, 500);
     }

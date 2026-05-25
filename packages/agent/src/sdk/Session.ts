@@ -47,6 +47,7 @@ import {
   touchSessionMetadata,
 } from "@/sdk/session/index.js";
 import { createRuntimeSessionPort } from "@/sdk/session/index.js";
+import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import type {
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
@@ -56,10 +57,6 @@ import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
 import { SessionEventHub } from "@/sdk/session/runtime/SessionEventHub.js";
 import { SessionPromptRuntime } from "@/sdk/session/runtime/SessionPromptRuntime.js";
-import type {
-  SessionAssistantStepCallback,
-  SessionUiMessageChunkCallback,
-} from "@/session/types/SessionRun.js";
 
 type SessionOptions = {
   /**
@@ -140,7 +137,6 @@ export class Session {
   private initializePromise: Promise<this> | null = null;
   private ensureConfiguredPromise: Promise<void> | null = null;
   private runtimePort: SessionPort | null = null;
-  private directExecutionReserved = false;
 
   constructor(options: SessionOptions) {
     this.id = String(options.sessionId || "").trim();
@@ -210,13 +206,13 @@ export class Session {
       publish: (event) => {
         this.eventHub.publish(event);
       },
-      createAndPersistUserMessage: async (query) => {
-        return await this.createAndPersistUserPromptMessage(query);
+      createAndPersistUserMessage: async (input) => {
+        return await this.createAndPersistUserPromptMessage(input);
       },
-      executeTurn: async ({ turnId, query, onStepMerge }) => {
+      executeTurn: async ({ turnId, promptInput, onStepMerge }) => {
         return await this.executePromptTurn({
           turnId,
-          query,
+          promptInput,
           onStepMerge,
         });
       },
@@ -304,8 +300,10 @@ export class Session {
       throw new Error("session.prompt requires a non-empty query");
     }
     await this.ensureRunnable();
-    this.assertCanPrompt();
-    return await this.promptRuntime.prompt(query);
+    return await this.promptRuntime.prompt({
+      query,
+      ...(input.extra ? { extra: input.extra } : {}),
+    });
   }
 
   /**
@@ -392,11 +390,7 @@ export class Session {
    * 返回当前 session 是否正在执行。
    */
   isExecuting(): boolean {
-    return (
-      this.directExecutionReserved ||
-      this.promptRuntime.isActive() ||
-      this.executor.isExecuting()
-    );
+    return this.promptRuntime.isActive() || this.executor.isExecuting();
   }
 
   /**
@@ -478,9 +472,6 @@ export class Session {
     this.runtimePort = createRuntimeSessionPort({
       sessionId: this.id,
       getExecutor: () => this.executor.getExecutor(),
-      executeDirect: async (runParams) => {
-        return await this.executeDirect(runParams);
-      },
       prompt: async (input) => {
         return await this.prompt(input);
       },
@@ -541,34 +532,6 @@ export class Session {
     }
   }
 
-  private assertCanPrompt(): void {
-    if (!this.directExecutionReserved && !this.executor.isExecuting()) {
-      return;
-    }
-    if (this.promptRuntime.isActive()) {
-      return;
-    }
-    throw new Error(
-      "session.prompt cannot attach to an active direct session execution. Use prompt()/subscribe() as the public interactive API, or wait for the current execution to finish.",
-    );
-  }
-
-  private beginDirectExecution(): void {
-    if (this.promptRuntime.isActive()) {
-      throw new Error(
-        "Direct session execution cannot start while session.prompt() is active. Keep SDK-facing interactive sessions on prompt()/subscribe(), or wait for the actor turn to finish.",
-      );
-    }
-    if (this.directExecutionReserved || this.executor.isExecuting()) {
-      throw new Error("Direct session execution does not support concurrent execution on the same session.");
-    }
-    this.directExecutionReserved = true;
-  }
-
-  private endDirectExecution(): void {
-    this.directExecutionReserved = false;
-  }
-
   private async touchMetadata(): Promise<void> {
     await touchSessionMetadata({
       projectRoot: this.projectRoot,
@@ -592,12 +555,13 @@ export class Session {
   }
 
   private async createAndPersistUserPromptMessage(
-    query: string,
+    input: AgentSessionPromptInput,
   ): Promise<SessionUserMessageV1> {
     const message = this.historyStore.userText({
-      text: String(query || "").trim(),
+      text: String(input.query || "").trim(),
       metadata: {
         sessionId: this.id,
+        extra: input.extra,
       },
     }) as SessionUserMessageV1;
     await this.executor.appendUserMessage({
@@ -609,17 +573,27 @@ export class Session {
 
   private async executePromptTurn(input: {
     turnId: string;
-    query: string;
+    promptInput: AgentSessionPromptInput;
     onStepMerge: () => Promise<SessionUserMessageV1[]>;
   }): Promise<{
     text: string;
     success: boolean;
+    assistantMessage: SessionMessageV1;
     error?: string;
   }> {
     const toolNameByCallId = new Map<string, string>();
     const result = await this.executor.run({
-      query: input.query,
+      query: input.promptInput.query,
       onStepCallback: input.onStepMerge,
+      onAssistantStepCallback: async (step) => {
+        this.eventHub.publish({
+          type: "assistant-step",
+          turnId: input.turnId,
+          text: step.text,
+          stepIndex: step.stepIndex,
+          ...(step.visibility ? { visibility: step.visibility } : {}),
+        });
+      },
       onUiMessageChunkCallback: async (chunk) => {
         if (chunk.type === "tool-input-start") {
           toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
@@ -658,40 +632,24 @@ export class Session {
       },
     });
     await this.persistAssistantResult(result.assistantMessage);
+    await this.persistDeferredUserMessages();
     return {
       text: extractTextFromUiMessage(result.assistantMessage),
       success: result.success,
+      assistantMessage: result.assistantMessage,
       ...(result.error ? { error: result.error } : {}),
     };
   }
 
-  private async executeDirect(input: {
-    query: string;
-    onStepCallback?: () => Promise<SessionUserMessageV1[]>;
-    onAssistantStepCallback?: SessionAssistantStepCallback;
-    onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
-  }) {
-    const query = String(input.query || "").trim();
-    if (!query) {
-      throw new Error("Session direct execution requires a non-empty query");
-    }
-    await this.ensureRunnable();
-    this.beginDirectExecution();
-    try {
-      return await this.executor.run({
-        query,
-        ...(typeof input.onStepCallback === "function"
-          ? { onStepCallback: input.onStepCallback }
-          : {}),
-        ...(typeof input.onAssistantStepCallback === "function"
-          ? { onAssistantStepCallback: input.onAssistantStepCallback }
-          : {}),
-        ...(typeof input.onUiMessageChunkCallback === "function"
-          ? { onUiMessageChunkCallback: input.onUiMessageChunkCallback }
-          : {}),
+  private async persistDeferredUserMessages(): Promise<void> {
+    const deferredMessages = drainDeferredPersistedUserMessages(this.id);
+    for (const message of deferredMessages) {
+      await this.executor.appendUserMessage({
+        message,
       });
-    } finally {
-      this.endDirectExecution();
+    }
+    if (deferredMessages.length > 0) {
+      await this.touchMetadata();
     }
   }
 }

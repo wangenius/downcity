@@ -64,9 +64,15 @@ export async function receiveContactChatMessage(params: {
   });
 
   const sessionId = `contact_${contact.id}`;
-  const result = await params.context.session.get(sessionId).execute({
+  const turn = await params.context.session.get(sessionId).prompt({
     query: params.message,
+    extra: {
+      ingressKind: "exec",
+      via: "contact_chat",
+      contactId: contact.id,
+    },
   });
+  const result = await turn.finished;
   const reply = extractMessageText(result.assistantMessage);
   await appendContactMessage(params.context.rootPath, contact.id, {
     role: "local",

@@ -178,19 +178,6 @@ async function emitChatCompletionEvent(
   lines.push("请根据当前 shell 的状态，主动向用户简洁汇报结果或最新进展。");
   const text = lines.join("\n");
 
-  await context.chat.appendExecSessionMessage({
-    sessionId: ownerContextId,
-    text,
-    extra: {
-      note: "shell_session_auto_notify",
-      internal: true,
-      shellId: snapshot.shellId,
-      shellStatus: snapshot.status,
-      exitCode:
-        typeof snapshot.exitCode === "number" ? snapshot.exitCode : null,
-    },
-  });
-
   context.chat.enqueue({
     kind: "exec",
     channel: meta.channel,
@@ -202,7 +189,6 @@ async function emitChatCompletionEvent(
     ...(meta.messageId ? { messageId: meta.messageId } : {}),
     ...(meta.actorId ? { actorId: meta.actorId } : {}),
     ...(meta.actorName ? { actorName: meta.actorName } : {}),
-    sessionPersisted: true,
     extra: {
       note: "shell_session_auto_notify",
       internal: true,

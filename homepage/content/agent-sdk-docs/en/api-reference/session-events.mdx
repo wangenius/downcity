@@ -12,6 +12,7 @@ description: Which event types session.subscribe() emits and what each one means
 - `reasoning-delta`
 - `tool-call`
 - `tool-result`
+- `assistant-step`
 - `turn-finish`
 - `error`
 
@@ -30,5 +31,8 @@ If you want a fuller experience, you will usually also handle:
 - `turn-start`
 - `turn-finish`
 - `error`
+- `assistant-step`
 - `tool-call`
 - `tool-result`
+
+`assistant-step` is especially useful for transports such as chat bridges that want step-level visible reply chunks without owning Session history persistence themselves.

@@ -9,7 +9,9 @@
 
 import { nanoid } from "nanoid";
 import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
@@ -17,9 +19,9 @@ import type {
 
 type QueuedPrompt = {
   /**
-   * 当前排队中的用户文本。
+   * 当前排队中的 prompt 输入。
    */
-  query: string;
+  input: AgentSessionPromptInput;
 
   /**
    * 当前 prompt 对应的 turn handle Promise 控制器。
@@ -79,18 +81,21 @@ export interface SessionPromptRuntimeOptions {
   /**
    * 构造并持久化一条 user 消息。
    */
-  createAndPersistUserMessage: (query: string) => Promise<SessionUserMessageV1>;
+  createAndPersistUserMessage: (
+    input: AgentSessionPromptInput,
+  ) => Promise<SessionUserMessageV1>;
 
   /**
    * 执行单轮 turn。
    */
   executeTurn: (input: {
     turnId: string;
-    query: string;
+    promptInput: AgentSessionPromptInput;
     onStepMerge: () => Promise<SessionUserMessageV1[]>;
   }) => Promise<{
     text: string;
     success: boolean;
+    assistantMessage: SessionMessageV1;
     error?: string;
   }>;
 }
@@ -119,10 +124,13 @@ export class SessionPromptRuntime {
   /**
    * 追加一条新的 prompt。
    */
-  prompt(query: string): Promise<AgentSessionTurnHandle> {
+  prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
     const deferredHandle = createDeferred<AgentSessionTurnHandle>();
     this.queue.push({
-      query: String(query || "").trim(),
+      input: {
+        query: String(input.query || "").trim(),
+        ...(input.extra ? { extra: input.extra } : {}),
+      },
       deferredHandle,
     });
     this.ensureProcessing();
@@ -164,10 +172,10 @@ export class SessionPromptRuntime {
       current.deferredHandle.resolve(createTurnHandle(activeTurn));
 
       try {
-        await this.createAndPersistUserMessage(current.query);
+        await this.createAndPersistUserMessage(current.input);
         const result = await this.executeTurn({
           turnId,
-          query: current.query,
+          promptInput: current.input,
           onStepMerge: async () => {
             return await this.drainQueuedPromptsAsMessages(activeTurn);
           },
@@ -176,6 +184,7 @@ export class SessionPromptRuntime {
           turnId,
           text: result.text,
           success: result.success,
+          assistantMessage: result.assistantMessage,
           ...(result.error ? { error: result.error } : {}),
         };
         activeTurn.result = finalResult;
@@ -193,6 +202,10 @@ export class SessionPromptRuntime {
           turnId,
           text: "",
           success: false,
+          assistantMessage: buildPromptRuntimeErrorAssistantMessage({
+            sessionId: this.sessionId,
+            message,
+          }),
           error: message,
         };
         activeTurn.result = finalResult;
@@ -220,12 +233,12 @@ export class SessionPromptRuntime {
     const merged: SessionUserMessageV1[] = [];
 
     for (let index = 0; index < drained.length; index += 1) {
-      const item = drained[index];
-      try {
-        const message = await this.createAndPersistUserMessage(item.query);
-        item.deferredHandle.resolve(createTurnHandle(activeTurn));
-        merged.push(message);
-      } catch {
+        const item = drained[index];
+        try {
+          const message = await this.createAndPersistUserMessage(item.input);
+          item.deferredHandle.resolve(createTurnHandle(activeTurn));
+          merged.push(message);
+        } catch {
         // 关键点（中文）：若某条消息持久化失败，把未处理部分重新放回队列头部，避免静默丢失。
         const remaining = drained.slice(index);
         this.queue.unshift(...remaining);
@@ -235,6 +248,27 @@ export class SessionPromptRuntime {
 
     return merged;
   }
+}
+
+function buildPromptRuntimeErrorAssistantMessage(input: {
+  sessionId: string;
+  message: string;
+}): SessionMessageV1 {
+  return {
+    id: `a:${input.sessionId}:${Date.now()}:${nanoid(6)}`,
+    role: "assistant",
+    metadata: {
+      v: 1,
+      ts: Date.now(),
+      sessionId: input.sessionId,
+      source: "egress",
+      kind: "normal",
+      extra: {
+        note: "session_prompt_runtime_error",
+      },
+    },
+    parts: [{ type: "text", text: input.message }],
+  };
 }
 
 function createDeferred<T>(): Deferred<T> {

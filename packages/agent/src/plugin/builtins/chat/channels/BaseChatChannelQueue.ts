@@ -305,7 +305,6 @@ export async function enqueueExecChannelMessage(
     ...(typeof preparedExec.actorName === "string"
       ? { actorName: preparedExec.actorName }
       : {}),
-    sessionPersisted: true,
     extra: queuedExtra,
   });
   await emitChatEnqueueEffect({

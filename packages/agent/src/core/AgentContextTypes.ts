@@ -26,10 +26,8 @@ import type {
 import type {
   SessionMetadataV1,
   SessionMessageV1,
-  SessionUserMessageV1,
 } from "@/session/types/SessionMessages.js";
 import type {
-  SessionAssistantStepCallback,
   SessionRunInput,
   SessionRunResult,
 } from "@/session/types/SessionRun.js";
@@ -121,23 +119,6 @@ export interface SessionPort {
    * 获取当前 session 的持久化端口。
    */
   getHistoryStore(): SessionHistoryStore;
-  /**
-   * 执行当前 session 的一次内部请求。
-   */
-  execute(params: {
-    /**
-     * 本轮输入文本。
-     */
-    query: string;
-    /**
-     * step 边界回调。
-     */
-    onStepCallback?: () => Promise<SessionUserMessageV1[]>;
-    /**
-     * assistant step 回调。
-     */
-    onAssistantStepCallback?: SessionAssistantStepCallback;
-  }): Promise<SessionRunResult>;
   /**
    * 向当前 session actor 追加一条新的 prompt。
    *
@@ -240,23 +221,6 @@ export interface ChatRuntimePort {
    * 按 sessionId 读取 chat 路由元信息。
    */
   readMetaBySessionId(sessionId: string): Promise<ChatMetaV1 | null>;
-  /**
-   * 向指定 session 追加一条 exec 入站消息。
-   */
-  appendExecSessionMessage(params: {
-    /**
-     * 目标 session 标识。
-     */
-    sessionId: string;
-    /**
-     * 要写入的文本。
-     */
-    text: string;
-    /**
-     * 附加结构化元数据。
-     */
-    extra?: JsonObject;
-  }): Promise<void>;
   /**
    * 向 chat queue 入队一条消息。
    */

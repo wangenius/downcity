@@ -3,17 +3,11 @@
  *
  * 关键点（中文）
  * - 把 SDK 本地 session 适配成 runtime / runtime plugin 依赖的 `SessionPort`。
- * - SDK 公开面只保留 `prompt()` / `subscribe()`；内部单轮执行原语仍通过这里暴露给 runtime plugin/runtime。
+ * - SDK 公开面只保留 `prompt()` / `subscribe()`；runtime/service 若要 one-shot 等待结果，也统一委托给 `prompt()`。
  */
 
 import type { SessionPort } from "@/core/AgentContextTypes.js";
 import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
-import type { SessionRunResult } from "@/session/types/SessionRun.js";
-import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
-import type {
-  SessionAssistantStepCallback,
-  SessionUiMessageChunkCallback,
-} from "@/session/types/SessionRun.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   AgentSessionSubscriber,
@@ -33,19 +27,6 @@ export interface CreateRuntimeSessionPortParams {
    * 读取当前 session 底层执行端口。
    */
   getExecutor: SessionPort["getExecutor"];
-  /**
-   * 运行一次内部 direct execution。
-   *
-   * 关键点（中文）
-   * - 这是 runtime / runtime plugin 侧保留的内部原语。
-   * - 它不属于 SDK 用户推荐直接调用的公开模式。
-   */
-  executeDirect: (params: {
-    query: string;
-    onStepCallback?: () => Promise<SessionUserMessageV1[]>;
-    onAssistantStepCallback?: SessionAssistantStepCallback;
-    onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
-  }) => Promise<SessionRunResult>;
   /**
    * 追加一条新的 session prompt。
    */
@@ -100,10 +81,6 @@ export function createRuntimeSessionPort(
     sessionId: params.sessionId,
     getExecutor: () => params.getExecutor(),
     getHistoryStore: () => params.historyStore,
-    execute: async (runParams) => {
-      await params.ensureReadyForExecution();
-      return await params.executeDirect(runParams);
-    },
     prompt: async (input) => {
       await params.ensureReadyForExecution();
       return await params.prompt(input);

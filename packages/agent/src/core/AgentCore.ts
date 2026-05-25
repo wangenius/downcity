@@ -37,7 +37,6 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/runtime/host/AgentHostRuntime.js";
 import { loadDowncityConfig } from "@/config/Config.js";
-import { appendExecSessionMessage } from "@/plugin/builtins/chat/runtime/ChatIngressStore.js";
 import { readChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";
 import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueueStore.js";
 import { HookRegistry } from "@/plugin/core/HookRegistry.js";
@@ -484,14 +483,6 @@ export class AgentCore {
           return await readChatMetaBySessionId({
             context,
             sessionId,
-          });
-        },
-        appendExecSessionMessage: async (params) => {
-          await appendExecSessionMessage({
-            context,
-            sessionId: params.sessionId,
-            text: params.text,
-            extra: params.extra,
           });
         },
         enqueue: (params) => resolveChatQueueStore(context).enqueue(params),

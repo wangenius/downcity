@@ -19,6 +19,9 @@ description: Session 输入输出对象里最重要的字段和语义
 核心字段：
 
 - `query`
+- `extra`（可选）
+
+当你希望这次 prompt 对应的 user message 带上结构化 session history 元信息时，可以传 `extra`，例如 `ingressKind`、transport 来源、宿主侧标记等。
 
 ## `AgentSessionTurnHandle`
 
@@ -36,5 +39,6 @@ description: Session 输入输出对象里最重要的字段和语义
 - `success`
 - `error`
 - `text`
+- `assistantMessage`（本地 session 通常可用）
 
-对大多数用户来说，最常直接消费的是 `text`。如果你需要在 `finished` 兑现前实时更新 UI，配合 `session.subscribe()` 即可。
+对大多数用户来说，最常直接消费的是 `text`。如果你需要最终的结构化 assistant 结果，可以读取 `assistantMessage`；如果你需要在 `finished` 兑现前实时更新 UI，配合 `session.subscribe()` 即可。

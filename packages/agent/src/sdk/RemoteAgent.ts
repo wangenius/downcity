@@ -122,6 +122,7 @@ class RemoteSession {
         },
         body: JSON.stringify({
           query,
+          ...(input.extra ? { extra: input.extra } : {}),
         }),
       },
     );
@@ -540,6 +541,7 @@ function extractTurnId(event: AgentSessionEvent): string | null {
     case "reasoning-delta":
     case "tool-call":
     case "tool-result":
+    case "assistant-step":
     case "turn-finish":
       return event.turnId;
     default:

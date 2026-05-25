@@ -3,35 +3,26 @@
  *
  * 关键点（中文）
  * - 消费 services / chat 的队列模块
- * - 通过 SessionRunScope（ALS）透传 sessionId
- * - 支持 step 边界合并（同 lane 新消息可插入当前 run）
+ * - 只负责把 lane 中的新输入持续提交给 `session.prompt()`
+ * - turn 并入策略、history 落盘、assistant 收敛统一交给 Session
  */
 
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { SessionRunResult } from "@/session/types/SessionRun.js";
-import type {
-  SessionUserMessageV1,
-} from "@/session/types/SessionMessages.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ChatQueueWorkerConfig } from "@/plugin/builtins/chat/types/ChatQueueWorker.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatQueueItem } from "@/plugin/builtins/chat/types/ChatQueue.js";
+import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { AgentSessionTurnResult } from "@/types/sdk/AgentSessionTurn.js";
 import {
   getSharedChatQueueStore,
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
 import {
-  appendChatIngressMessageIfNeeded,
-  appendChatRunErrorMessage,
-  buildChatIngressExtra,
-  persistChatRunResult,
-  shouldAppendChatIngressMessage,
-  toMergedStepUserMessage,
-} from "./ChatQueueSessionBridge.js";
-import {
   hasPersistedAssistantSteps,
   pickLastSuccessfulChatSendText,
 } from "./UserVisibleText.js";
+import { buildExecIngressExtra } from "./ChatIngressStore.js";
 import {
   buildChannelErrorText,
   collectInitialBurstItems,
@@ -48,6 +39,16 @@ const TYPING_ACTION_INTERVAL_MS = 4_000;
 type LaneState = {
   key: string;
   running: boolean;
+  turnObservers: Map<string, TurnObservation>;
+  unsubscribeSessionEvents?: () => void;
+};
+
+type TurnObservation = {
+  turnId: string;
+  sessionId: string;
+  messageId?: string;
+  assistantStepDispatched: boolean;
+  typing: { stop: () => void };
 };
 
 export class ChatQueueWorker {
@@ -106,7 +107,11 @@ export class ChatQueueWorker {
   private getOrCreateLane(key: string): LaneState {
     const existing = this.lanes.get(key);
     if (existing) return existing;
-    const lane: LaneState = { key, running: false };
+    const lane: LaneState = {
+      key,
+      running: false,
+      turnObservers: new Map(),
+    };
     this.lanes.set(key, lane);
     return lane;
   }
@@ -180,10 +185,6 @@ export class ChatQueueWorker {
     }
   }
 
-  private shouldAppendSessionMessage(item: ChatQueueItem): boolean {
-    return shouldAppendChatIngressMessage(item);
-  }
-
   /**
    * 统一补齐入站消息分类标记。
    *
@@ -191,15 +192,7 @@ export class ChatQueueWorker {
    * - 当前 message history 仅写入 `exec`，所以固定写 `ingressKind=exec`。
    */
   private buildIngressExtra(item: ChatQueueItem): JsonObject {
-    return buildChatIngressExtra(item);
-  }
-
-  private async appendSessionMessageIfNeeded(item: ChatQueueItem): Promise<void> {
-    if (!this.shouldAppendSessionMessage(item)) return;
-    await appendChatIngressMessageIfNeeded({
-      session: this.requireContext(item.sessionId),
-      item,
-    });
+    return buildExecIngressExtra(item.extra);
   }
 
   private handleControl(item: ChatQueueItem): boolean {
@@ -300,18 +293,18 @@ export class ChatQueueWorker {
   }
 
   private async processOne(laneKey: string, first: ChatQueueItem): Promise<void> {
+    const lane = this.getOrCreateLane(laneKey);
     if (first.kind === "control") {
       this.handleControl(first);
       return;
     }
 
     if (first.kind === "audit") {
-      await this.appendSessionMessageIfNeeded(first);
       return;
     }
 
     const serviceContext = this.requireContext(first.sessionId);
-    let runItem = first;
+    this.ensureLaneSessionSubscription(lane, first.sessionId);
 
     let clearRequested = false;
     const initialBurstItems = await collectInitialBurstItems({
@@ -325,91 +318,112 @@ export class ChatQueueWorker {
         if (item.control?.type === "clear") clearRequested = true;
         continue;
       }
-      await this.appendSessionMessageIfNeeded(item);
       if (item.kind === "exec") {
-        runItem = item;
-      }
-    }
-
-    const onStepCallback = async (): Promise<SessionUserMessageV1[]> => {
-      const drainedItems = this.queueStore.drain(laneKey);
-      if (drainedItems.length === 0) return [];
-      const mergedExecMessages: SessionUserMessageV1[] = [];
-      for (const item of drainedItems) {
-        if (item.kind === "control") {
-          if (item.control?.type === "clear") clearRequested = true;
-          continue;
-        }
-
-        await this.appendSessionMessageIfNeeded(item);
-        if (item.kind === "exec") {
-          const mergedMessage = toMergedStepUserMessage(item);
-          if (mergedMessage) mergedExecMessages.push(mergedMessage);
-        }
-      }
-      return mergedExecMessages;
-    };
-    let assistantStepDispatched = false;
-    const onAssistantStepCallback = async (params: {
-      text: string;
-      stepIndex: number;
-      visibility?: "visible" | "internal";
-    }): Promise<void> => {
-      if (params.visibility === "internal") return;
-      const stepText = String(params.text || "").trim();
-      if (!stepText) return;
-      const dispatched = await this.dispatchAssistantStepMessage({
-        sessionId: runItem.sessionId,
-        text: stepText,
-        messageId: runItem.messageId,
-      });
-      if (dispatched) {
-        assistantStepDispatched = true;
-      }
-    };
-
-    const typing = this.startTypingHeartbeat(runItem);
-    let result: SessionRunResult;
-    try {
-      result = await serviceContext.execute({
-        query: runItem.text,
-        onStepCallback,
-        onAssistantStepCallback,
-      });
-    } catch (error) {
-      const channelErrorText = buildChannelErrorText(error);
-      this.logger.error("ChatQueueWorker execution failed", {
-        sessionId: runItem.sessionId,
-        error: String(error),
-      });
-
-      try {
-        await appendChatRunErrorMessage({
-          session: serviceContext,
-          text: channelErrorText,
+        await this.submitExecItem({
+          lane,
+          item,
+          serviceContext,
         });
-      } catch {
-        // ignore
       }
-
-      await dispatchTextToChannel({
-        logger: this.logger,
-        context: this.context,
-        sessionId: runItem.sessionId,
-        text: channelErrorText,
-        messageId: runItem.messageId,
-        phase: "error",
-      });
-      return;
-    } finally {
-      typing.stop();
     }
 
     if (clearRequested) {
       serviceContext.clearExecutor();
-      this.queueStore.clear(runItem.sessionId);
+      this.queueStore.clear(first.sessionId);
     }
+  }
 
+  private ensureLaneSessionSubscription(
+    lane: LaneState,
+    sessionId: string,
+  ): void {
+    if (lane.unsubscribeSessionEvents) return;
+    const session = this.requireContext(sessionId);
+    lane.unsubscribeSessionEvents = session.subscribe((event) => {
+      void this.handleLaneSessionEvent(lane, event);
+    });
+  }
+
+  private async handleLaneSessionEvent(
+    lane: LaneState,
+    event: AgentSessionEvent,
+  ): Promise<void> {
+    if (!("turnId" in event)) return;
+    const observation = lane.turnObservers.get(event.turnId);
+    if (!observation) return;
+    if (event.type !== "assistant-step") return;
+    if (event.visibility === "internal") return;
+    const stepText = String(event.text || "").trim();
+    if (!stepText) return;
+    const dispatched = await this.dispatchAssistantStepMessage({
+      sessionId: observation.sessionId,
+      text: stepText,
+      messageId: observation.messageId,
+    });
+    if (dispatched) {
+      observation.assistantStepDispatched = true;
+    }
+  }
+
+  private async submitExecItem(params: {
+    lane: LaneState;
+    item: ChatQueueItem;
+    serviceContext: ReturnType<ChatQueueWorker["requireContext"]>;
+  }): Promise<void> {
+    const item = params.item;
+    try {
+      const turn = await params.serviceContext.prompt({
+        query: item.text,
+        extra: this.buildIngressExtra(item),
+      });
+      if (params.lane.turnObservers.has(turn.id)) {
+        return;
+      }
+      const observation: TurnObservation = {
+        turnId: turn.id,
+        sessionId: item.sessionId,
+        messageId: item.messageId,
+        assistantStepDispatched: false,
+        typing: this.startTypingHeartbeat(item),
+      };
+      params.lane.turnObservers.set(turn.id, observation);
+      void turn.finished
+        .then(async (result) => {
+          await this.handleObservedTurnFinish(observation, result);
+        })
+        .finally(() => {
+          observation.typing.stop();
+          params.lane.turnObservers.delete(turn.id);
+          if (
+            params.lane.turnObservers.size === 0 &&
+            this.queueStore.getLaneSize(params.lane.key) === 0 &&
+            params.lane.unsubscribeSessionEvents
+          ) {
+            params.lane.unsubscribeSessionEvents();
+            params.lane.unsubscribeSessionEvents = undefined;
+          }
+        });
+    } catch (error) {
+      const channelErrorText = buildChannelErrorText(error);
+      this.logger.error("ChatQueueWorker prompt submit failed", {
+        sessionId: item.sessionId,
+        error: String(error),
+      });
+      await dispatchTextToChannel({
+        logger: this.logger,
+        context: this.context,
+        sessionId: item.sessionId,
+        text: channelErrorText,
+        messageId: item.messageId,
+        phase: "error",
+      });
+    }
+  }
+
+  private async handleObservedTurnFinish(
+    observation: TurnObservation,
+    result: AgentSessionTurnResult,
+  ): Promise<void> {
     const stopReason = String(
       result.assistantMessage?.metadata?.extra?.stopReason || "",
     ).trim();
@@ -423,50 +437,30 @@ export class ChatQueueWorker {
         result.error ||
         "Execution failed";
       const channelErrorText = buildChannelErrorText(resultErrorText);
-      this.logger.error("ChatQueueWorker execution returned failure", {
-        sessionId: runItem.sessionId,
+      this.logger.error("ChatQueueWorker turn finished with failure", {
+        sessionId: observation.sessionId,
         error: result.error || resultErrorText,
       });
-
-      try {
-        await appendChatRunErrorMessage({
-          session: serviceContext,
-          text: channelErrorText,
-        });
-      } catch {
-        // ignore
-      }
-
       await dispatchTextToChannel({
         logger: this.logger,
         context: this.context,
-        sessionId: runItem.sessionId,
+        sessionId: observation.sessionId,
         text: channelErrorText,
-        messageId: runItem.messageId,
+        messageId: observation.messageId,
         phase: "error",
       });
       return;
     }
 
-    try {
-      await persistChatRunResult({
-        session: serviceContext,
-        sessionId: runItem.sessionId,
-        result,
-      });
-    } catch {
-      // ignore
-    }
-
-    // 关键点（中文）：
-    // - 若 step 文本已经单独回发，则保持当前行为，不再重复发送最终 merged assistant。
-    // - 若本轮没有任何 step 回发，则必须把最终 assistant 文本补发到 chat channel，
-    //   否则会出现“context message 已写入，但 chat history / 实际渠道没有回复”的断链。
-    if (assistantStepDispatched || hasPersistedAssistantSteps(result.assistantMessage)) {
+    if (
+      observation.assistantStepDispatched ||
+      hasPersistedAssistantSteps(result.assistantMessage)
+    ) {
       return;
     }
 
-    const finalAssistantText = pickLastSuccessfulChatSendText(result.assistantMessage);
+    const finalAssistantText =
+      pickLastSuccessfulChatSendText(result.assistantMessage) || result.text;
     if (!finalAssistantText) {
       return;
     }
@@ -474,7 +468,7 @@ export class ChatQueueWorker {
     const dispatchedDirectly = await dispatchAssistantTextDirect({
       logger: this.logger,
       context: this.context,
-      sessionId: runItem.sessionId,
+      sessionId: observation.sessionId,
       assistantText: finalAssistantText,
       phase: "final",
     });
@@ -485,9 +479,9 @@ export class ChatQueueWorker {
     await dispatchTextToChannel({
       logger: this.logger,
       context: this.context,
-      sessionId: runItem.sessionId,
+      sessionId: observation.sessionId,
       text: finalAssistantText,
-      messageId: runItem.messageId,
+      messageId: observation.messageId,
       phase: "final",
     });
   }

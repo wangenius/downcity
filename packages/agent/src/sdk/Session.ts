@@ -12,7 +12,7 @@ import type { Tool } from "ai";
 import { Executor } from "@session/Executor.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionHistoryStore } from "@/session/store/history/jsonl/JsonlSessionHistoryStore.js";
-import { extractTextFromUiMessage } from "@/service/builtins/chat/runtime/UIMessageTransformer.js";
+import { extractTextFromUiMessage } from "@/plugin/builtins/chat/runtime/UIMessageTransformer.js";
 import type {
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
@@ -46,7 +46,8 @@ import {
   persistSdkAssistantResult,
   touchSessionMetadata,
 } from "@/sdk/session/index.js";
-import { createSessionServicePort } from "@/sdk/session/index.js";
+import { createRuntimeSessionPort } from "@/sdk/session/index.js";
+import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import type {
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
@@ -56,10 +57,6 @@ import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
 import { SessionEventHub } from "@/sdk/session/runtime/SessionEventHub.js";
 import { SessionPromptRuntime } from "@/sdk/session/runtime/SessionPromptRuntime.js";
-import type {
-  SessionAssistantStepCallback,
-  SessionUiMessageChunkCallback,
-} from "@/session/types/SessionRun.js";
 
 type SessionOptions = {
   /**
@@ -96,9 +93,9 @@ type SessionOptions = {
   getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
 
   /**
-   * 读取当前 agent 显式注入 service 的 system blocks。
+   * 读取当前 agent 显式注入 runtime plugin 的 system blocks。
    */
-  getServiceSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+  getRuntimePluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 
   /**
    * 读取当前 agent 显式注册 plugin 的 system blocks。
@@ -126,7 +123,7 @@ export class Session {
   private readonly tools: Record<string, Tool>;
   private readonly logger: SessionOptions["logger"];
   private readonly getInstructionSystemBlocks: SessionOptions["getInstructionSystemBlocks"];
-  private readonly getServiceSystemBlocks: SessionOptions["getServiceSystemBlocks"];
+  private readonly getRuntimePluginSystemBlocks: SessionOptions["getRuntimePluginSystemBlocks"];
   private readonly getPluginSystemBlocks: SessionOptions["getPluginSystemBlocks"];
   private readonly ensureConfiguredHook?: SessionOptions["ensureConfigured"];
   private readonly historyStore: JsonlSessionHistoryStore;
@@ -139,8 +136,7 @@ export class Session {
   private timezone = resolveSystemTimezone();
   private initializePromise: Promise<this> | null = null;
   private ensureConfiguredPromise: Promise<void> | null = null;
-  private servicePort: SessionPort | null = null;
-  private directExecutionReserved = false;
+  private runtimePort: SessionPort | null = null;
 
   constructor(options: SessionOptions) {
     this.id = String(options.sessionId || "").trim();
@@ -149,7 +145,7 @@ export class Session {
     this.tools = options.tools;
     this.logger = options.logger;
     this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
-    this.getServiceSystemBlocks = options.getServiceSystemBlocks;
+    this.getRuntimePluginSystemBlocks = options.getRuntimePluginSystemBlocks;
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     this.ensureConfiguredHook = options.ensureConfigured;
     if (!this.id) {
@@ -170,6 +166,7 @@ export class Session {
     const messagesDirPath = `${sessionDirPath}/messages`;
     this.historyStore = new JsonlSessionHistoryStore({
       rootPath: this.projectRoot,
+      agentId: this.agentId,
       sessionId: this.id,
       paths: {
         sessionDirPath,
@@ -199,7 +196,7 @@ export class Session {
         getSessionCreatedAt: () => this.createdAt,
         getSessionTimezone: () => this.timezone,
         getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-        getServiceSystemBlocks: this.getServiceSystemBlocks,
+        getRuntimePluginSystemBlocks: this.getRuntimePluginSystemBlocks,
         getPluginSystemBlocks: this.getPluginSystemBlocks,
       }),
       getTools: () => this.tools,
@@ -209,13 +206,13 @@ export class Session {
       publish: (event) => {
         this.eventHub.publish(event);
       },
-      createAndPersistUserMessage: async (query) => {
-        return await this.createAndPersistUserPromptMessage(query);
+      createAndPersistUserMessage: async (input) => {
+        return await this.createAndPersistUserPromptMessage(input);
       },
-      executeTurn: async ({ turnId, query, onStepMerge }) => {
+      executeTurn: async ({ turnId, promptInput, onStepMerge }) => {
         return await this.executePromptTurn({
           turnId,
-          query,
+          promptInput,
           onStepMerge,
         });
       },
@@ -303,8 +300,9 @@ export class Session {
       throw new Error("session.prompt requires a non-empty query");
     }
     await this.ensureRunnable();
-    this.assertCanPrompt();
-    return await this.promptRuntime.prompt(query);
+    return await this.promptRuntime.prompt({
+      query,
+    });
   }
 
   /**
@@ -360,7 +358,7 @@ export class Session {
    *
    * 关键点（中文）
    * - 返回内容与实际 run 时使用的 SDK system composer 同源。
-   * - 包含 instruction/core、显式注入 service system、显式注册 plugin system 与 session 上下文。
+   * - 包含 instruction/core、显式注入 runtime plugin system、显式注册 plugin system 与 session 上下文。
    * - 返回结构化快照，不把 system prompt 写入会话历史。
    */
   async system(): Promise<AgentSessionSystemSnapshot> {
@@ -371,7 +369,7 @@ export class Session {
       createdAt: this.createdAt,
       timezone: this.timezone,
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-      getServiceSystemBlocks: this.getServiceSystemBlocks,
+      getRuntimePluginSystemBlocks: this.getRuntimePluginSystemBlocks,
       getPluginSystemBlocks: this.getPluginSystemBlocks,
     });
     return {
@@ -391,11 +389,7 @@ export class Session {
    * 返回当前 session 是否正在执行。
    */
   isExecuting(): boolean {
-    return (
-      this.directExecutionReserved ||
-      this.promptRuntime.isActive() ||
-      this.executor.isExecuting()
-    );
+    return this.promptRuntime.isActive() || this.executor.isExecuting();
   }
 
   /**
@@ -433,7 +427,7 @@ export class Session {
       tools: this.tools,
       logger: this.logger,
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-      getServiceSystemBlocks: this.getServiceSystemBlocks,
+      getRuntimePluginSystemBlocks: this.getRuntimePluginSystemBlocks,
       getPluginSystemBlocks: this.getPluginSystemBlocks,
     });
     await forked.initialize();
@@ -470,16 +464,13 @@ export class Session {
   }
 
   /**
-   * 返回供 chat service 使用的 session 端口。
+   * 返回供 runtime plugin 使用的 session 端口。
    */
-  getServicePort(): SessionPort {
-    if (this.servicePort) return this.servicePort;
-    this.servicePort = createSessionServicePort({
+  getRuntimePort(): SessionPort {
+    if (this.runtimePort) return this.runtimePort;
+    this.runtimePort = createRuntimeSessionPort({
       sessionId: this.id,
       getExecutor: () => this.executor.getExecutor(),
-      executeDirect: async (runParams) => {
-        return await this.executeDirect(runParams);
-      },
       prompt: async (input) => {
         return await this.prompt(input);
       },
@@ -507,7 +498,7 @@ export class Session {
         await this.touchMetadata();
       },
     });
-    return this.servicePort;
+    return this.runtimePort;
   }
 
   /**
@@ -540,34 +531,6 @@ export class Session {
     }
   }
 
-  private assertCanPrompt(): void {
-    if (!this.directExecutionReserved && !this.executor.isExecuting()) {
-      return;
-    }
-    if (this.promptRuntime.isActive()) {
-      return;
-    }
-    throw new Error(
-      "session.prompt cannot attach to an active direct session execution. Use prompt()/subscribe() as the public interactive API, or wait for the current execution to finish.",
-    );
-  }
-
-  private beginDirectExecution(): void {
-    if (this.promptRuntime.isActive()) {
-      throw new Error(
-        "Direct session execution cannot start while session.prompt() is active. Keep SDK-facing interactive sessions on prompt()/subscribe(), or wait for the actor turn to finish.",
-      );
-    }
-    if (this.directExecutionReserved || this.executor.isExecuting()) {
-      throw new Error("Direct session execution does not support concurrent execution on the same session.");
-    }
-    this.directExecutionReserved = true;
-  }
-
-  private endDirectExecution(): void {
-    this.directExecutionReserved = false;
-  }
-
   private async touchMetadata(): Promise<void> {
     await touchSessionMetadata({
       projectRoot: this.projectRoot,
@@ -591,10 +554,10 @@ export class Session {
   }
 
   private async createAndPersistUserPromptMessage(
-    query: string,
+    input: AgentSessionPromptInput,
   ): Promise<SessionUserMessageV1> {
     const message = this.historyStore.userText({
-      text: String(query || "").trim(),
+      text: String(input.query || "").trim(),
       metadata: {
         sessionId: this.id,
       },
@@ -608,17 +571,27 @@ export class Session {
 
   private async executePromptTurn(input: {
     turnId: string;
-    query: string;
+    promptInput: AgentSessionPromptInput;
     onStepMerge: () => Promise<SessionUserMessageV1[]>;
   }): Promise<{
     text: string;
     success: boolean;
+    assistantMessage: SessionMessageV1;
     error?: string;
   }> {
     const toolNameByCallId = new Map<string, string>();
     const result = await this.executor.run({
-      query: input.query,
+      query: input.promptInput.query,
       onStepCallback: input.onStepMerge,
+      onAssistantStepCallback: async (step) => {
+        this.eventHub.publish({
+          type: "assistant-step",
+          turnId: input.turnId,
+          text: step.text,
+          stepIndex: step.stepIndex,
+          ...(step.visibility ? { visibility: step.visibility } : {}),
+        });
+      },
       onUiMessageChunkCallback: async (chunk) => {
         if (chunk.type === "tool-input-start") {
           toolNameByCallId.set(chunk.toolCallId, chunk.toolName);
@@ -657,40 +630,24 @@ export class Session {
       },
     });
     await this.persistAssistantResult(result.assistantMessage);
+    await this.persistDeferredUserMessages();
     return {
       text: extractTextFromUiMessage(result.assistantMessage),
       success: result.success,
+      assistantMessage: result.assistantMessage,
       ...(result.error ? { error: result.error } : {}),
     };
   }
 
-  private async executeDirect(input: {
-    query: string;
-    onStepCallback?: () => Promise<SessionUserMessageV1[]>;
-    onAssistantStepCallback?: SessionAssistantStepCallback;
-    onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
-  }) {
-    const query = String(input.query || "").trim();
-    if (!query) {
-      throw new Error("Session direct execution requires a non-empty query");
-    }
-    await this.ensureRunnable();
-    this.beginDirectExecution();
-    try {
-      return await this.executor.run({
-        query,
-        ...(typeof input.onStepCallback === "function"
-          ? { onStepCallback: input.onStepCallback }
-          : {}),
-        ...(typeof input.onAssistantStepCallback === "function"
-          ? { onAssistantStepCallback: input.onAssistantStepCallback }
-          : {}),
-        ...(typeof input.onUiMessageChunkCallback === "function"
-          ? { onUiMessageChunkCallback: input.onUiMessageChunkCallback }
-          : {}),
+  private async persistDeferredUserMessages(): Promise<void> {
+    const deferredMessages = drainDeferredPersistedUserMessages(this.id);
+    for (const message of deferredMessages) {
+      await this.executor.appendUserMessage({
+        message,
       });
-    } finally {
-      this.endDirectExecution();
+    }
+    if (deferredMessages.length > 0) {
+      await this.touchMetadata();
     }
   }
 }

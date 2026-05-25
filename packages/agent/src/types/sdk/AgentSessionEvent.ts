@@ -7,6 +7,7 @@
  */
 
 import type { JsonValue } from "@/types/common/Json.js";
+import type { SessionAssistantStepVisibility } from "@/session/types/SessionRun.js";
 
 /**
  * 单个 turn 开始事件。
@@ -128,6 +129,36 @@ export interface AgentSessionToolResultEvent {
 }
 
 /**
+ * assistant step 完成事件。
+ */
+export interface AgentSessionAssistantStepEvent {
+  /**
+   * 当前事件类型。
+   */
+  type: "assistant-step";
+
+  /**
+   * 当前 assistant step 所属 turn。
+   */
+  turnId: string;
+
+  /**
+   * 当前 step 文本。
+   */
+  text: string;
+
+  /**
+   * 当前 step 序号（从 1 开始）。
+   */
+  stepIndex: number;
+
+  /**
+   * 当前 step 可见性。
+   */
+  visibility?: SessionAssistantStepVisibility;
+}
+
+/**
  * 单个 turn 完成事件。
  */
 export interface AgentSessionTurnFinishEvent {
@@ -181,6 +212,7 @@ export type AgentSessionEvent =
   | AgentSessionReasoningDeltaEvent
   | AgentSessionToolCallEvent
   | AgentSessionToolResultEvent
+  | AgentSessionAssistantStepEvent
   | AgentSessionTurnFinishEvent
   | AgentSessionErrorEvent;
 

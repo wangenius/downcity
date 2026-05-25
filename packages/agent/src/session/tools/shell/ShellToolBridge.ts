@@ -2,17 +2,17 @@
  * Shell tool 运行时桥接与响应整理。
  *
  * 关键点（中文）
- * - tool 层只负责协议适配，不直接持有 shell service 具体实现。
+ * - tool 层只负责协议适配，不直接持有 shell runtime plugin 具体实现。
  * - runtime 注入、桥接协议解析、输出扁平化都收敛在这里，避免 `Tool.ts` 继续膨胀。
  */
 
 import { generateId } from "@/utils/Id.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type {
-  InvokeServicePort,
-  InvokeServiceResult,
+  InvokePluginPort,
+  InvokePluginResult,
 } from "@/core/AgentContextTypes.js";
-import type { ShellActionResponse } from "@/service/builtins/shell/types/ShellService.js";
+import type { ShellActionResponse } from "@/plugin/builtins/shell/types/ShellPlugin.js";
 import {
   enqueueDeferredPersistedUserMessage,
   enqueueInjectedUserMessage,
@@ -29,18 +29,18 @@ interface CommandBridgeState {
   bufferedOutput: string;
 }
 
-let shellToolRuntime: InvokeServicePort | null = null;
+let shellToolRuntime: InvokePluginPort | null = null;
 
 /**
  * 通用命令桥接状态表（按 shell_id）。
  */
 const commandBridgeStates = new Map<string, CommandBridgeState>();
 
-export function setShellToolRuntime(next: InvokeServicePort): void {
+export function setShellToolRuntime(next: InvokePluginPort): void {
   shellToolRuntime = next;
 }
 
-function requireShellToolRuntime(): InvokeServicePort {
+function requireShellToolRuntime(): InvokePluginPort {
   if (shellToolRuntime) return shellToolRuntime;
   throw new Error(
     "Shell tool runtime is not initialized. Ensure runtime startup has completed before using shell tools.",
@@ -191,11 +191,11 @@ export function clearShellCommandBridge(shellId: string): void {
 }
 
 /**
- * 将 shell service 响应整理为通用工具输出。
+ * 将 shell runtime plugin 响应整理为通用工具输出。
  */
 export function flattenShellActionResponse(params: {
   /**
-   * service 返回的 shell 响应。
+   * runtime plugin 返回的 shell 响应。
    */
   response: ShellActionResponse;
   /**
@@ -240,7 +240,7 @@ export function flattenShellActionResponse(params: {
  */
 export function flattenShellExecResponse(params: {
   /**
-   * service 返回的 shell 响应。
+   * runtime plugin 返回的 shell 响应。
    */
   response: ShellActionResponse;
   /**
@@ -346,7 +346,7 @@ export async function invokeShellAction<TPayload extends JsonValue = JsonValue>(
 }): Promise<ShellActionResponse> {
   const runtime = requireShellToolRuntime();
   const result = await runtime.invoke({
-    service: "shell",
+    plugin: "shell",
     action: params.action,
     payload: params.payload,
   });

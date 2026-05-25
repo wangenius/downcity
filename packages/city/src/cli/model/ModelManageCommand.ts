@@ -10,6 +10,7 @@ import type { Command } from "commander";
 import { generateText } from "ai";
 import type { LlmProviderType } from "@downcity/agent";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
+import { ModelPoolService } from "@/model/service/ModelPoolService.js";
 import {
   discoverProviderModels,
 } from "./ModelSupport.js";
@@ -201,7 +202,8 @@ function registerRemoveCommands(model: Command): void {
         if (!id) throw new Error("providerId cannot be empty");
         const provider = await store.getProvider(id);
         if (!provider) throw new Error(`Provider not found: ${id}`);
-        store.removeProvider(id);
+        const service = new ModelPoolService();
+        await service.removeProvider(id);
         return {
           title: "provider removed",
           payload: {
@@ -222,7 +224,8 @@ function registerRemoveCommands(model: Command): void {
         if (!id) throw new Error("modelId cannot be empty");
         const modelConfig = store.getModel(id);
         if (!modelConfig) throw new Error(`Model not found: ${id}`);
-        store.removeModel(id);
+        const service = new ModelPoolService();
+        await service.removeModel(id);
         return {
           title: "model removed",
           payload: {
@@ -294,16 +297,18 @@ function registerUpdateCommands(model: Command): void {
         if (options.apiKey !== undefined) nextProvider.apiKey = options.apiKey;
         if (options.clearBaseUrl) delete nextProvider.baseUrl;
         if (options.clearApiKey) nextProvider.apiKey = undefined;
-        await store.upsertProvider(nextProvider);
+        const service = new ModelPoolService();
+        const payload = await service.upsertProvider({
+          id,
+          type: nextProvider.type,
+          baseUrl: nextProvider.baseUrl,
+          apiKey: nextProvider.apiKey,
+          clearBaseUrl: options.clearBaseUrl,
+          clearApiKey: options.clearApiKey,
+        });
         return {
           title: "provider updated",
-          payload: {
-            providerId: id,
-            provider: {
-              ...nextProvider,
-              apiKey: nextProvider.apiKey ? "***encrypted-on-write***" : undefined,
-            },
-          },
+          payload,
         };
       });
     });
@@ -399,21 +404,20 @@ function registerUpdateCommands(model: Command): void {
 
         const preset = resolveModelPresetOrThrow(options.preset);
         const providerId = options.provider ? String(options.provider).trim() : current.providerId;
+        const provider = await store.getProvider(providerId);
+        if (!provider) throw new Error(`Provider not found: ${providerId}`);
         let name = options.name ? String(options.name).trim() : current.name;
         if (preset) {
           name = preset.id;
-          if (options.provider) {
-            const provider = await store.getProvider(providerId);
-            if (!provider) throw new Error(`Provider not found: ${providerId}`);
-            if (!preset.providerTypes.includes(provider.type)) {
-              throw new Error(
-                `Preset "${preset.id}" expects provider type in "${preset.providerTypes.join(", ")}", but provider "${providerId}" is "${provider.type}".`,
-              );
-            }
+          if (!preset.providerTypes.includes(provider.type)) {
+            throw new Error(
+              `Preset "${preset.id}" expects provider type in "${preset.providerTypes.join(", ")}", but provider "${providerId}" is "${provider.type}".`,
+            );
           }
         }
 
-        store.upsertModel({
+        const service = new ModelPoolService();
+        await service.upsertModel({
           id,
           providerId,
           name,

@@ -10,15 +10,10 @@ import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
-import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
-import { resolveChatQueueStore } from "@/service/builtins/chat/runtime/ChatQueue.js";
-import { resolveDispatchTargetByChatKey } from "@/service/builtins/chat/runtime/ChatkeySend.js";
-import { appendExecIngress } from "@/service/builtins/chat/runtime/ChatIngressStore.js";
-import { buildQueuedUserMessageWithInfo } from "@/service/builtins/chat/runtime/QueuedUserMessage.js";
-import {
-  pickLastSuccessfulChatSendText,
-  resolveAssistantMessageForPersistence,
-} from "@/service/builtins/chat/runtime/UserVisibleText.js";
+import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueue.js";
+import { resolveDispatchTargetByChatKey } from "@/plugin/builtins/chat/runtime/ChatkeySend.js";
+import { appendExecIngress } from "@/plugin/builtins/chat/runtime/ChatIngressStore.js";
+import { buildQueuedUserMessageWithInfo } from "@/plugin/builtins/chat/runtime/QueuedUserMessage.js";
 import { buildExecuteInputText } from "./Helpers.js";
 
 /**
@@ -94,7 +89,6 @@ export async function executeBySessionId(params: {
         ? { threadId: dispatchTarget.messageThreadId }
         : {}),
       ...(dispatchTarget.messageId ? { messageId: dispatchTarget.messageId } : {}),
-      sessionPersisted: true,
       extra: ingressExtra,
     });
 
@@ -108,44 +102,16 @@ export async function executeBySessionId(params: {
   }
 
   const session = params.agentState.getSession(sessionId);
-  await session.appendUserMessage({
-    text: executeInput,
-  });
-
-  const result = await session.execute({
+  const turn = await session.prompt({
     query: executeInput,
   });
-
-  const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
-  try {
-    const messageForPersistence = resolveAssistantMessageForPersistence(
-      result.assistantMessage,
-    );
-    if (messageForPersistence) {
-      await session.appendAssistantMessage({
-        message: messageForPersistence,
-        fallbackText: userVisible,
-        extra: {
-          via: "tui_session_execute",
-          note: "assistant_message_missing",
-        },
-      });
-    }
-    const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-      sessionId,
-    );
-    for (const message of deferredInjectedMessages) {
-      await session.appendUserMessage({
-        message,
-      });
-    }
-  } catch {
-    // ignore
-  }
+  const result = await turn.finished;
 
   return {
-    ...result,
-    userVisible,
+    success: result.success,
+    ...(result.error ? { error: result.error } : {}),
+    assistantMessage: result.assistantMessage,
+    userVisible: result.text.trim(),
     queued: false,
   };
 }

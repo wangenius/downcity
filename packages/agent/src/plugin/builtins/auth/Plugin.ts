@@ -9,7 +9,7 @@
 
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { JsonValue } from "@/types/common/Json.js";
-import { CHAT_PLUGIN_POINTS } from "@/service/builtins/chat/runtime/PluginPoints.js";
+import { CHAT_PLUGIN_POINTS } from "@/plugin/builtins/chat/runtime/PluginPoints.js";
 import {
   AUTH_ACTIONS,
   type AuthObservePrincipalPayload,
@@ -32,7 +32,7 @@ import {
   readAuthorizationSnapshot,
   recordObservedAuthorizationPrincipal,
 } from "@/plugin/builtins/auth/runtime/AuthorizationStore.js";
-import type { ChatDispatchChannel } from "@/service/builtins/chat/types/ChatDispatcher.js";
+import type { ChatDispatchChannel } from "@/plugin/builtins/chat/types/ChatDispatcher.js";
 
 function toChannel(value: unknown): ChatDispatchChannel | null {
   const text = String(value || "").trim().toLowerCase();

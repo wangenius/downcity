@@ -12,7 +12,7 @@ import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,
 } from "@/config/Paths.js";
-import { readChatMetaBySessionId } from "@/service/builtins/chat/runtime/ChatMetaStore.js";
+import { readChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";
 import type { ControlSessionSummary } from "@/runtime/server/http/control/types/ControlViewData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
@@ -22,11 +22,15 @@ import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageT
  */
 export async function listControlSessionSummaries(params: {
   projectRoot: string;
+  agentId: string;
   executionContext?: AgentContext;
   limit: number;
   executingSessionIds?: Set<string>;
 }): Promise<ControlSessionSummary[]> {
-  const rootDir = getDowncitySessionRootDirPath(params.projectRoot);
+  const rootDir = getDowncitySessionRootDirPath(
+    params.projectRoot,
+    params.agentId,
+  );
   if (!(await fs.pathExists(rootDir))) return [];
 
   const entries = await fs.readdir(rootDir, { withFileTypes: true });
@@ -37,7 +41,11 @@ export async function listControlSessionSummaries(params: {
     const sessionId = decodeMaybe(entry.name);
     if (!sessionId) continue;
 
-    const filePath = getDowncitySessionMessagesPath(params.projectRoot, sessionId);
+    const filePath = getDowncitySessionMessagesPath(
+      params.projectRoot,
+      params.agentId,
+      sessionId,
+    );
     const messages = await loadSessionMessagesFromFile(filePath);
     const last = messages.at(-1);
     const lastTs =

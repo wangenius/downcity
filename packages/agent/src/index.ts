@@ -3,8 +3,8 @@
  *
  * 关键点（中文）
  * - 这是 agent 包唯一稳定的公开入口。
- * - 只导出 SDK、插件/服务作者 API、city 运行集成 API 与跨包协议类型。
- * - HTTP router、sandbox runner、内部 service runner 等实现细节不从根入口暴露。
+ * - 只导出 SDK、plugin 作者 API、city 运行集成 API 与跨包协议类型。
+ * - HTTP router、sandbox runner、内部 runtime plugin runner 等实现细节不从根入口暴露。
  */
 
 // SDK 入口
@@ -44,24 +44,24 @@ export type { AgentRuntime, AgentRuntimeBase } from "./core/AgentCoreTypes.js";
 export type {
   AgentContext,
   ChatRuntimePort,
-  InvokeServicePort,
+  InvokePluginPort,
   SessionCollectionPort,
   SessionPort,
   StructuredConfig,
 } from "./core/AgentContextTypes.js";
 
-// 服务与插件作者 API
-export { BaseService } from "./service/builtins/BaseService.js";
-export { ChatService } from "./service/builtins/chat/ChatService.js";
-export { ChatChannelAccountService } from "./service/builtins/chat/accounts/ChannelAccountService.js";
-export type { ChatChannelAccountListItem } from "./service/builtins/chat/types/ChannelAccount.js";
+// Plugin 作者 API
+export { BasePlugin } from "./plugin/core/BasePlugin.js";
+export { ChatPlugin } from "./plugin/builtins/chat/ChatPlugin.js";
+export { ChatChannelAccountService } from "./plugin/builtins/chat/accounts/ChannelAccountService.js";
+export type { ChatChannelAccountListItem } from "./plugin/builtins/chat/types/ChannelAccount.js";
 export type {
-  ChatServiceChannelAccountProvider,
-  ChatServiceFeishuOptions,
-  ChatServiceOptions,
-  ChatServiceQqOptions,
-  ChatServiceTelegramOptions,
-} from "./service/builtins/chat/ChatServiceTypes.js";
+  ChatPluginChannelAccountProvider,
+  ChatPluginFeishuOptions,
+  ChatPluginOptions,
+  ChatPluginQqOptions,
+  ChatPluginTelegramOptions,
+} from "./plugin/builtins/chat/ChatPluginTypes.js";
 export { authPlugin } from "./plugin/builtins/auth/Plugin.js";
 export { skillPlugin } from "./plugin/builtins/skill/Plugin.js";
 export { webPlugin } from "./plugin/builtins/web/Plugin.js";
@@ -91,18 +91,18 @@ export { startServer } from "./runtime/server/http/Server.js";
 export { startLocalRpcServer } from "./runtime/server/rpc/Server.js";
 export { callAgentTransport } from "./runtime/transport/rpc/Transport.js";
 
-// Service 运行集成
-export { listRegisteredServices } from "./service/core/ServiceClassRegistry.js";
+// Runtime plugin 运行集成
+export { listRegisteredPlugins } from "./plugin/core/PluginClassRegistry.js";
 export {
-  startAllServices,
-  stopAllServices,
-} from "./service/core/Manager.js";
-export { ServiceScheduleStore } from "./service/core/schedule/Store.js";
-export { parseScheduledRunAtMsOrThrow } from "./service/core/schedule/Time.js";
+  startAllPlugins,
+  stopAllPlugins,
+} from "./plugin/core/Manager.js";
+export { PluginScheduleStore } from "./plugin/core/schedule/Store.js";
+export { parseScheduledRunAtMsOrThrow } from "./plugin/core/schedule/Time.js";
 export {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
-} from "./service/builtins/chat/runtime/UserVisibleText.js";
+} from "./plugin/builtins/chat/runtime/UserVisibleText.js";
 
 // Plugin 与权限配置集成
 export {
@@ -250,41 +250,33 @@ export type {
   PluginActionResponse,
   PluginAvailabilityResponse,
   PluginAvailabilityView,
-  PluginCliBaseOptions,
-  PluginListResponse,
 } from "./plugin/types/PluginApi.js";
 
-// Service 作者与 CLI/control 协议类型
+// 主动型 plugin 与 CLI/control 协议类型
 export type {
-  Service,
-  ServiceAction,
-  ServiceActionCommand,
-  ServiceActionCommandInput,
-  ServiceActionResult,
-  ServiceActions,
-  ServiceCommandResult,
-  ServiceLifecycle,
-  ServiceState,
-} from "./service/types/Service.js";
+  PluginCommandResult,
+  PluginLifecycle,
+  PluginState,
+} from "./plugin/types/Plugin.js";
 export type {
   CreateScheduledJobInput,
   ScheduledJobRecord,
   ScheduledJobStatus,
-  ServiceCommandScheduleInput,
-} from "./service/types/ServiceSchedule.js";
+  PluginCommandScheduleInput,
+} from "./plugin/types/PluginSchedule.js";
 export type {
-  ServiceCliBaseOptions,
-  ServiceCommandResponse,
-  ServiceControlAction,
-  ServiceControlResponse,
-  ServiceListResponse,
-  ServiceStateView,
-} from "./service/types/Services.js";
+  PluginCliBaseOptions,
+  PluginCommandResponse,
+  PluginControlAction,
+  PluginControlResponse,
+  PluginListResponse,
+  PluginStateView,
+} from "./plugin/types/Plugins.js";
 export type {
-  ServiceStateControlAction,
-  ServiceStateControlResult,
-  ServiceStateSnapshot,
-} from "./service/core/Manager.js";
+  PluginStateControlAction,
+  PluginStateControlResult,
+  PluginStateSnapshot,
+} from "./plugin/core/Manager.js";
 
 // Chat authorization plugin 协议类型
 export {

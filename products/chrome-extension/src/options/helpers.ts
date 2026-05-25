@@ -26,8 +26,14 @@ export interface OptionsStatus {
  * 读取错误文本。
  */
 export function readErrorText(error: unknown): string {
-  if (error instanceof Error) return decorateAuthErrorText(error.message);
-  return decorateAuthErrorText(error || "未知错误");
+  const decorated =
+    error instanceof Error
+      ? decorateAuthErrorText(error.message)
+      : decorateAuthErrorText(error || "未知错误");
+  if (/failed to fetch/i.test(decorated)) {
+    return "无法连接到 Server，请确认服务可访问，并检查当前连接的 Protocol / Host / Port / Base Path 配置。";
+  }
+  return decorated;
 }
 
 /**

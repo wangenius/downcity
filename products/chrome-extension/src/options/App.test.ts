@@ -2,8 +2,8 @@
  * Options 设置页结构测试。
  *
  * 关键点（中文）：
- * - Server 地址与鉴权属于同一组连接配置，不能拆成两个孤立 section。
- * - Agent / Channel 选择必须放在连接配置之后，避免用户先看见结果路由，再去补底层连接。
+ * - 设置页应先暴露多连接管理，再暴露鉴权与默认路由。
+ * - 用户可见命名应统一使用 Server / Session，不再出现旧的 Console / Channel Chat 文案。
  */
 
 import assert from "node:assert/strict";
@@ -13,21 +13,28 @@ import test from "node:test";
 const OPTIONS_APP_FILE_PATH =
   "/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/options/App.tsx";
 
-test("Options App groups server and auth above agent and channel selection", () => {
+test("Options App exposes server connections before auth and default routing", () => {
   const source = readFileSync(OPTIONS_APP_FILE_PATH, "utf8");
 
-  const serverAuthIndex = source.indexOf("Connect Console");
-  const agentChannelIndex = source.indexOf("Agent / Channel");
+  const connectionIndex = source.indexOf("Server Connections");
+  const authIndex = source.indexOf("Authentication");
+  const routingIndex = source.indexOf("Default Routing");
 
-  assert.notEqual(serverAuthIndex, -1);
-  assert.notEqual(agentChannelIndex, -1);
-  assert.ok(serverAuthIndex < agentChannelIndex);
+  assert.notEqual(connectionIndex, -1);
+  assert.notEqual(authIndex, -1);
+  assert.notEqual(routingIndex, -1);
+  assert.ok(connectionIndex < authIndex);
+  assert.ok(authIndex < routingIndex);
 
-  assert.match(source, />\s*IP \/ Host\s*</u);
-  assert.match(source, />\s*Port\s*</u);
-  assert.match(source, />\s*Access Token\s*</u);
+  assert.match(source, /Connection Name/u);
+  assert.match(source, /Protocol/u);
+  assert.match(source, /Host/u);
+  assert.match(source, /Port/u);
+  assert.match(source, /Base Path/u);
+  assert.match(source, /Bearer Token/u);
   assert.match(source, /city token create my-token/u);
-  assert.match(source, /city token/u);
-  assert.doesNotMatch(source, />\s*Connection\s*</u);
-  assert.doesNotMatch(source, />\s*Server \/ Auth\s*</u);
+  assert.match(source, /Default Session/u);
+  assert.doesNotMatch(source, /Connect Console/u);
+  assert.doesNotMatch(source, /Agent \/ Channel/u);
+  assert.doesNotMatch(source, /Channel Chat/u);
 });

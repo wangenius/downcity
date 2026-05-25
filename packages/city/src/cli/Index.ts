@@ -5,7 +5,7 @@
  *
  * 关键点（中文）
  * - 这里只负责 CLI 基础初始化与一级命令装配，不承载具体业务逻辑。
- * - 根命令层统一注册 city runtime、Console、agent、service、plugin 等入口模块。
+ * - 根命令层统一注册 city runtime、Console、agent、plugin 等入口模块。
  * - 所有具体命令树都继续下沉到各自模块，避免入口文件继续膨胀。
  */
 
@@ -15,9 +15,8 @@ import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import { Command, Option } from "commander";
 import { registerAllPluginsForCli } from "@downcity/agent";
-import { registerServicesCommand } from "./service/Services.js";
 import { registerPluginsCommand } from "./shared/Plugins.js";
-import { registerAllServicesForCli } from "./service/ServiceActionCommands.js";
+import { registerAllRuntimePluginsForCli } from "./shared/PluginRuntimeActionCommands.js";
 import { registerControlPlaneCommands } from "./control-plane/ControlPlaneCommand.js";
 import { registerAgentCommands } from "./shared/IndexAgentCommand.js";
 import { registerEnvCommand } from "./shared/Env.js";
@@ -94,11 +93,10 @@ registerEnvCommand(program);
 registerResetCommand(program);
 registerChatCommand(program);
 
-registerServicesCommand(program);
 registerPluginsCommand(program);
 
-// 服务命令统一注册（chat / task / memory / shell / future services）
-registerAllServicesForCli(program);
+// runtime plugin 命令统一注册（chat / task / memory / shell / future runtime plugins）
+registerAllRuntimePluginsForCli(program);
 // 插件命令统一注册（skill / asr / tts / future plugins）
 registerAllPluginsForCli(program);
 

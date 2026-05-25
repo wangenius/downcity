@@ -23,6 +23,7 @@ import type {
 } from "./AgentHistoryTypes.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
+import { resolveAgentName } from "../shared/IndexSupport.js";
 
 function normalizeText(input: unknown): string {
   return String(input || "").trim();
@@ -146,7 +147,11 @@ export async function agentHistoryCleanCommand(
     });
   }
 
-  const sessionDir = getDowncitySessionDirPath(projectRoot, sessionId);
+  const sessionDir = getDowncitySessionDirPath(
+    projectRoot,
+    resolveAgentName(projectRoot),
+    sessionId,
+  );
   const chatDir = getDowncityChatSessionDirPath(projectRoot, sessionId);
   const removedSessionDir = await fs.pathExists(sessionDir);
   const removedChatDir = await fs.pathExists(chatDir);

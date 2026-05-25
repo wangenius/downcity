@@ -13,8 +13,6 @@ export const AUTH_PERMISSION_KEYS = [
   "agent.read",
   "agent.write",
   "agent.execute",
-  "service.read",
-  "service.write",
   "task.read",
   "task.run",
   "model.read",
@@ -44,8 +42,6 @@ export const AUTH_PERMISSION_DESCRIPTIONS: Record<AuthPermissionKey, string> = {
   "agent.read": "读取 agent 基础信息与运行状态。",
   "agent.write": "修改 agent 配置与元信息。",
   "agent.execute": "触发 agent 执行与会话运行。",
-  "service.read": "查看 service 状态与元数据。",
-  "service.write": "启动、停止或修改 service。",
   "task.read": "查看 task 定义与运行结果。",
   "task.run": "创建或手动执行 task。",
   "model.read": "查看模型池与模型绑定。",
@@ -112,7 +108,6 @@ export const AUTH_DEFAULT_ROLES: AuthDefaultRoleDefinition[] = [
     description: "只读角色，可查看状态但不能执行高危变更。",
     permissions: [
       "agent.read",
-      "service.read",
       "task.read",
       "model.read",
       "env.read",
@@ -123,4 +118,3 @@ export const AUTH_DEFAULT_ROLES: AuthDefaultRoleDefinition[] = [
     ],
   },
 ];
-

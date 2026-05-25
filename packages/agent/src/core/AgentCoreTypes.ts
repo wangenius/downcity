@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里表达的是单个 `AgentCore` 实例持有的长期运行状态。
  * - 它不再依赖 `runtime/*` 兼容层，而是作为实例级主类型来源。
- * - Session / Service / Plugin 这些长期对象都从这里挂出。
+ * - Session / runtime plugin / plugin 这些长期对象都从这里挂出。
  */
 
 import type { Logger } from "@/utils/logger/Logger.js";
@@ -14,7 +14,7 @@ import type {
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
 } from "@/types/runtime/host/AgentHost.js";
-import type { BaseService } from "@/service/builtins/BaseService.js";
+import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { SessionPort } from "@/core/AgentContextTypes.js";
 
 /**
@@ -72,7 +72,7 @@ export interface AgentRuntime extends AgentRuntimeBase {
    *
    * 关键点（中文）
    * - 返回值是统一的 `SessionPort`，而不是裸 `Executor`。
-   * - 这样 HTTP / service / chat queue / contact 等入口都能复用同一层会话装配与执行兜底。
+   * - 这样 HTTP / runtime plugin / chat queue / contact 等入口都能复用同一层会话装配与执行兜底。
    */
   getSession(sessionId: string): SessionPort;
   /**
@@ -84,7 +84,7 @@ export interface AgentRuntime extends AgentRuntimeBase {
    */
   getExecutingSessionCount(): number;
   /**
-   * 当前 agent 持有的 service instances。
+   * 当前 agent 持有的 runtime plugin instances。
    */
-  services: Map<string, BaseService>;
+  runtimePlugins: Map<string, BasePlugin>;
 }

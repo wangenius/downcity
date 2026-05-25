@@ -24,6 +24,7 @@ import type {
   PluginCommandContext,
   PluginView,
 } from "@/plugin/types/Plugin.js";
+import type { AgentContext } from "@/core/AgentContextTypes.js";
 
 function createLocalFallbackPlatformRuntime(): AgentPlatformRuntime {
   return {
@@ -67,7 +68,10 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
     config,
     env,
     globalEnv,
-    paths: createAgentPathRuntime(rootPath),
+    paths: createAgentPathRuntime(
+      rootPath,
+      String(config.name || "").trim() || path.basename(rootPath) || "agent",
+    ),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
     platform,
   };
@@ -165,7 +169,7 @@ export async function runLocalPluginAction(params: {
 
   try {
     return await action.execute({
-      context,
+      context: context as unknown as AgentContext,
       payload: (params.payload ?? {}) as JsonValue,
       pluginName: plugin.name,
       actionName,

@@ -48,6 +48,19 @@ function resolveExecutionInput(params: {
   };
 }
 
+function resolveManagedAgentNameFromProjectRoot(projectRoot: string): string {
+  const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
+  const fallback = path.basename(normalizedRoot);
+  const configPath = getDowncityJsonPath(normalizedRoot);
+  try {
+    const raw = fs.readJsonSync(configPath) as { name?: unknown };
+    const name = typeof raw.name === "string" ? raw.name.trim() : "";
+    return name || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 /**
  * 初始化平台控制面选中的 agent 项目。
  */
@@ -308,8 +321,14 @@ export async function inspectManagedAgentRestartSafety(params: {
   const normalizedRoot = path.resolve(String(params.projectRoot || "").trim() || ".");
   const activeContexts: string[] = [];
   const activeTasks: string[] = [];
+  const knownAgents = await params.listKnownAgents();
+  const targetAgent = knownAgents.find(
+    (item) => path.resolve(String(item.projectRoot || "")) === normalizedRoot,
+  );
+  const agentId = String(targetAgent?.name || "").trim()
+    || resolveManagedAgentNameFromProjectRoot(normalizedRoot);
 
-  const sessionRootDir = getDowncitySessionRootDirPath(normalizedRoot);
+  const sessionRootDir = getDowncitySessionRootDirPath(normalizedRoot, agentId);
   if (await fs.pathExists(sessionRootDir)) {
     const entries = await fs.readdir(sessionRootDir, { withFileTypes: true });
     for (const entry of entries) {
@@ -324,10 +343,6 @@ export async function inspectManagedAgentRestartSafety(params: {
     }
   }
 
-  const knownAgents = await params.listKnownAgents();
-  const targetAgent = knownAgents.find(
-    (item) => path.resolve(String(item.projectRoot || "")) === normalizedRoot,
-  );
   if (targetAgent?.running === true && targetAgent.baseUrl) {
     try {
       const tasksUrl = new URL("/api/control/tasks", targetAgent.baseUrl).toString();

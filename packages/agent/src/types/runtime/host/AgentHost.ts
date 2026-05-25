@@ -17,13 +17,13 @@ import type {
   ChatChannelAccountListItem,
   ChatChannelAccountProbeResult,
   ChatChannelAccountUpsertInput,
-} from "@/service/builtins/chat/types/ChannelAccount.js";
+} from "@/plugin/builtins/chat/types/ChannelAccount.js";
 import type {
   StoredChannelAccount,
   StoredModel,
   StoredModelProvider,
 } from "@/types/runtime/host/Store.js";
-import type { ChatChannelName } from "@/service/builtins/chat/types/ChannelStatus.js";
+import type { ChatChannelName } from "@/plugin/builtins/chat/types/ChannelStatus.js";
 import type { AgentProjectInitializationInput } from "@/config/project/types/AgentProject.js";
 import type { PlatformModelChoice } from "@/config/project/AgentInitializer.js";
 
@@ -35,6 +35,10 @@ export interface AgentPathRuntime {
    * 当前项目根目录。
    */
   projectRoot: string;
+  /**
+   * 当前 agent 的稳定标识。
+   */
+  agentId: string;
   /**
    * `.downcity` 根目录路径。
    */
@@ -68,11 +72,11 @@ export interface AgentPathRuntime {
    */
   getDowncityMemoryDailyPath(date: string): string;
   /**
-   * `.downcity/session` 根目录路径。
+   * `.downcity/agents/<agentId>/sessions` 根目录路径。
    */
   getDowncitySessionRootDirPath(): string;
   /**
-   * `.downcity/session/<sessionId>` 目录路径。
+   * `.downcity/agents/<agentId>/sessions/<sessionId>` 目录路径。
    */
   getDowncitySessionDirPath(sessionId: string): string;
 }

@@ -1,59 +1,47 @@
 ---
 title: Chrome Extension Overview
-description: What the Chrome extension does, when to use it, and how it fits into the Agent workflow
+description: What the Chrome extension does now and how it fits into the Downcity Agent workflow
 ---
 
 # Chrome Extension Overview
 
-The Chrome extension is Downcity's web-context entry point.
+The Chrome extension is Downcity's web dispatch entry point.
 
-It connects "the page you're looking at" with "the task you want an Agent to do", so you do not need to manually copy content, switch to chat, and reconstruct context by hand.
+Its job is simple: capture the current page as a Markdown attachment, then send it to a chosen Downcity Server, Agent, and Session.
 
 ## Best Use Cases
 
-- You are reading an article and want an Agent to summarize, translate, rewrite, or extract actions
-- You selected a small part of a page and want to ask a local follow-up question
-- You want to send a page snapshot into an existing Channel Chat
-- You want a browser-native way to hand a live page to a local Agent
+- You are reading an article and want an Agent to summarize, translate, or extract actions
+- You want to send a live page snapshot into an existing Session
+- You have multiple local or remote Servers and want to switch between them quickly
 
-## Two Entry Points
+## What It Provides
 
 ### 1. Extension Popup
 
-Best for:
+The popup lets you:
 
-- explicitly choosing an Agent
-- writing a full task prompt
-- reviewing page-level send history
+- choose the active Server Connection
+- choose the target Agent
+- choose the target Session
+- write an Ask and send it
+- review recent page history for the current connection
 
-### 2. Inline Composer
+### 2. Settings Page
 
-Best for:
+The settings page lets you:
 
-- asking about a selected quote without leaving the page
-- switching between channel dispatch and immediate inline execution in the page context
-- starting from the live reading context
-- using `Cmd/Ctrl + U` to open the page-level composer
+- create multiple Server Connections
+- configure Host, Port, and Bearer Token for each connection
+- choose default Agent / Session per connection
+- set a default Ask for the popup
 
-## What Gets Sent
+## What It No Longer Does
 
-### Selection Mode
-
-- the selected text
-- wrapped as a Markdown attachment
-- optimized for focused follow-up questions
-
-### Full Page Mode
-
-- the strongest `main/article` content region
-- multiple strong content roots merged when needed
-- image references attached when they can be resolved
-
-## What It Does Not Do
-
-- wait for the full Agent execution result inside the popup
-- become a second Console UI
-- replace the original chat/context where results are returned
+- no Inline Composer
+- no on-page input panel
+- no waiting for the final execution result inside the popup
+- no replacement for the original Session UI
 
 ## Recommended Reading
 

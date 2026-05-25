@@ -23,6 +23,9 @@ import type {
   AgentPathRuntime,
   AgentPlatformRuntime,
   AgentPluginConfigRuntime,
+  ChatChannelAccountListItem,
+  StoredChannelAccount,
+  StoredChannelAccountChannel,
 } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
 import { PlatformStore } from "@/platform/store/index.js";
@@ -37,12 +40,70 @@ import {
 } from "@/platform/chatAuthorization/Store.js";
 
 /**
+ * 脱敏显示密钥。
+ *
+ * 关键点（中文）
+ * - channel account 列表只返回安全视图，避免在 CLI/UI 展示链路泄露明文。
+ * - 保持和现有 model provider 脱敏规则一致，减少用户心智负担。
+ */
+function maskSecret(value: string | undefined): string | undefined {
+  const raw = String(value || "").trim();
+  if (!raw) return undefined;
+  if (raw.length <= 8) return "***";
+  return `${raw.slice(0, 4)}***${raw.slice(-4)}`;
+}
+
+/**
+ * 将存储层 channel account 转成对外安全视图。
+ */
+function toChannelAccountListItem(
+  account: StoredChannelAccount,
+): ChatChannelAccountListItem {
+  return {
+    id: account.id,
+    channel: account.channel,
+    name: account.name,
+    identity: account.identity,
+    owner: account.owner,
+    creator: account.creator,
+    domain: account.domain,
+    sandbox: account.sandbox === true,
+    hasBotToken: !!String(account.botToken || "").trim(),
+    hasAppId: !!String(account.appId || "").trim(),
+    hasAppSecret: !!String(account.appSecret || "").trim(),
+    botTokenMasked: maskSecret(account.botToken),
+    appIdMasked: maskSecret(account.appId),
+    appSecretMasked: maskSecret(account.appSecret),
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  };
+}
+
+/**
+ * 归一化并校验 channel account 渠道名。
+ */
+function normalizeChannelAccountChannel(
+  channelInput: string,
+): StoredChannelAccountChannel {
+  const channel = String(channelInput || "").trim().toLowerCase();
+  if (channel === "telegram" || channel === "feishu" || channel === "qq") {
+    return channel;
+  }
+  throw new Error(`Unsupported channel account channel: ${channelInput}`);
+}
+
+/**
  * 创建当前项目的路径能力集合。
  */
-export function createAgentPathRuntime(projectRoot: string): AgentPathRuntime {
+export function createAgentPathRuntime(
+  projectRoot: string,
+  agentIdInput: string,
+): AgentPathRuntime {
   const rootPath = String(projectRoot || "").trim();
+  const agentId = String(agentIdInput || "").trim();
   return {
     projectRoot: rootPath,
+    agentId,
     getDowncityDirPath: () => getDowncityDirPath(rootPath),
     getCacheDirPath: () => getCacheDirPath(rootPath),
     getDowncityChannelDirPath: () => getDowncityChannelDirPath(rootPath),
@@ -51,9 +112,10 @@ export function createAgentPathRuntime(projectRoot: string): AgentPathRuntime {
     getDowncityMemoryLongTermPath: () => getDowncityMemoryLongTermPath(rootPath),
     getDowncityMemoryDailyDirPath: () => getDowncityMemoryDailyDirPath(rootPath),
     getDowncityMemoryDailyPath: (date) => getDowncityMemoryDailyPath(rootPath, date),
-    getDowncitySessionRootDirPath: () => getDowncitySessionRootDirPath(rootPath),
-    getDowncitySessionDirPath: (sessionId) => getDowncitySessionDirPath(rootPath, sessionId),
-  };
+    getDowncitySessionRootDirPath: () => getDowncitySessionRootDirPath(rootPath, agentId),
+    getDowncitySessionDirPath: (sessionId) =>
+      getDowncitySessionDirPath(rootPath, agentId, sessionId),
+  } as AgentPathRuntime;
 }
 
 /**
@@ -126,6 +188,34 @@ export function createAgentPlatformRuntime(): AgentPlatformRuntime {
       const store = new PlatformStore();
       try {
         return store.getChannelAccountSync(channelAccountId);
+      } finally {
+        store.close();
+      }
+    },
+    listChannelAccounts: async () => {
+      const store = new PlatformStore();
+      try {
+        const accounts = await store.listChannelAccounts();
+        return accounts.map(toChannelAccountListItem);
+      } finally {
+        store.close();
+      }
+    },
+    updateChannelAccount: async (input) => {
+      const store = new PlatformStore();
+      try {
+        await store.upsertChannelAccount({
+          ...input,
+          channel: normalizeChannelAccountChannel(input.channel),
+        });
+      } finally {
+        store.close();
+      }
+    },
+    removeChannelAccount: async (channelAccountId) => {
+      const store = new PlatformStore();
+      try {
+        store.removeChannelAccount(channelAccountId);
       } finally {
         store.close();
       }

@@ -2,15 +2,15 @@
  * Control 概览路由。
  *
  * 关键点（中文）
- * - 聚合 overview 与 services 两块轻量只读接口。
+ * - 聚合 overview 与 runtime plugins 两块轻量只读接口。
  * - 只负责路由层拼装，不承载复杂业务状态机。
  */
 
 import fs from "fs-extra";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { listServiceStates } from "@/service/core/Manager.js";
-import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
+import { listPluginStates } from "@/plugin/core/Manager.js";
+import { listTaskDefinitions } from "@/plugin/builtins/task/Action.js";
 import { buildControlRouteAliases, toLimit } from "./CommonHelpers.js";
 import { listControlSessionSummaries, readRecentLogs } from "./Helpers.js";
 import type { ControlRouteRegistrationParams } from "@/runtime/server/http/control/types/ControlRoutes.js";
@@ -34,7 +34,7 @@ const DC_VERSION = (() => {
 })();
 
 /**
- * 注册概览与服务路由。
+ * 注册概览与运行态 plugin 路由。
  */
 export function registerControlOverviewRoutes(
   params: ControlRouteRegistrationParams,
@@ -51,10 +51,11 @@ export function registerControlOverviewRoutes(
         );
         const sessions = await listControlSessionSummaries({
           projectRoot: runtime.rootPath,
+          agentId: runtime.paths.agentId,
           executionContext: params.getAgentContext(),
           limit: sessionLimit,
         });
-        const services = listServiceStates({
+        const runtimePlugins = listPluginStates({
           context: params.getAgentContext(),
         });
         const taskResult = await listTaskDefinitions({
@@ -84,7 +85,8 @@ export function registerControlOverviewRoutes(
             total: sessions.length,
             items: sessions,
           },
-          services,
+          services: runtimePlugins,
+          plugins: runtimePlugins,
           tasks: {
             total: tasks.length,
             statusCount,
@@ -101,7 +103,10 @@ export function registerControlOverviewRoutes(
     app.get(routePath, (c) => {
       return c.json({
         success: true,
-        services: listServiceStates({
+        services: listPluginStates({
+          context: params.getAgentContext(),
+        }),
+        plugins: listPluginStates({
           context: params.getAgentContext(),
         }),
       });

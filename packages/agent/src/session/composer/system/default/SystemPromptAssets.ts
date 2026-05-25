@@ -7,7 +7,7 @@
  */
 
 import coreSystemPromptText from "@session/composer/system/default/assets/core.prompt.js";
-import serviceSystemPromptText from "@session/composer/system/default/assets/service.prompt.js";
+import pluginSystemPromptText from "@session/composer/system/default/assets/plugin.prompt.js";
 import taskSystemPromptText from "@session/composer/system/default/assets/task.prompt.js";
 
 /**
@@ -16,9 +16,9 @@ import taskSystemPromptText from "@session/composer/system/default/assets/task.p
 export const CORE_SYSTEM_PROMPT = coreSystemPromptText.trim();
 
 /**
- * service 层稳定 system prompt。
+ * plugin 层稳定 system prompt。
  */
-export const SERVICE_SYSTEM_PROMPT = serviceSystemPromptText.trim();
+export const PLUGIN_SYSTEM_PROMPT = pluginSystemPromptText.trim();
 
 /**
  * task 模式专用 system prompt。

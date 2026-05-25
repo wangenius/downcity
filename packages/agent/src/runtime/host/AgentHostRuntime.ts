@@ -28,10 +28,15 @@ import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 /**
  * 创建当前项目的路径能力集合。
  */
-export function createAgentPathRuntime(projectRoot: string): AgentPathRuntime {
+export function createAgentPathRuntime(
+  projectRoot: string,
+  agentIdInput: string,
+): AgentPathRuntime {
   const rootPath = String(projectRoot || "").trim();
+  const agentId = String(agentIdInput || "").trim();
   return {
     projectRoot: rootPath,
+    agentId,
     getDowncityDirPath: () => getDowncityDirPath(rootPath),
     getCacheDirPath: () => getCacheDirPath(rootPath),
     getDowncityChannelDirPath: () => getDowncityChannelDirPath(rootPath),
@@ -40,8 +45,9 @@ export function createAgentPathRuntime(projectRoot: string): AgentPathRuntime {
     getDowncityMemoryLongTermPath: () => getDowncityMemoryLongTermPath(rootPath),
     getDowncityMemoryDailyDirPath: () => getDowncityMemoryDailyDirPath(rootPath),
     getDowncityMemoryDailyPath: (date) => getDowncityMemoryDailyPath(rootPath, date),
-    getDowncitySessionRootDirPath: () => getDowncitySessionRootDirPath(rootPath),
-    getDowncitySessionDirPath: (sessionId) => getDowncitySessionDirPath(rootPath, sessionId),
+    getDowncitySessionRootDirPath: () => getDowncitySessionRootDirPath(rootPath, agentId),
+    getDowncitySessionDirPath: (sessionId) =>
+      getDowncitySessionDirPath(rootPath, agentId, sessionId),
   };
 }
 

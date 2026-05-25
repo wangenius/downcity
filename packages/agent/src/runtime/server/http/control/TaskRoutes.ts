@@ -3,15 +3,15 @@
  *
  * 关键点（中文）
  * - 聚合 tasks/runs/logs 相关接口。
- * - 任务动作统一复用 task service command，不在 UI 层重复实现业务语义。
+ * - 任务动作统一复用 task runtime plugin command，不在 UI 层重复实现业务语义。
  */
 
 import fs from "fs-extra";
 import { join } from "path";
 import { getDowncityTasksDirPath } from "@/config/Paths.js";
-import { runServiceCommand } from "@/service/core/Manager.js";
-import { listTaskDefinitions } from "@/service/builtins/task/Action.js";
-import { resolveTaskIdByTitle } from "@/service/builtins/task/runtime/Store.js";
+import { runPluginCommand } from "@/plugin/core/Manager.js";
+import { listTaskDefinitions } from "@/plugin/builtins/task/Action.js";
+import { resolveTaskIdByTitle } from "@/plugin/builtins/task/runtime/Store.js";
 import type { ControlRouteRegistrationParams } from "@/runtime/server/http/control/types/ControlRoutes.js";
 import {
   buildControlRouteAliases,
@@ -111,8 +111,8 @@ export function registerControlTaskRoutes(
         }
 
         const reason = toOptionalString(body.reason);
-        const result = await runServiceCommand({
-          serviceName: "task",
+        const result = await runPluginCommand({
+          pluginName: "task",
           command: "run",
           payload: {
             title,
@@ -142,8 +142,8 @@ export function registerControlTaskRoutes(
           return c.json({ success: false, error: "Invalid status" }, 400);
         }
 
-        const result = await runServiceCommand({
-          serviceName: "task",
+        const result = await runPluginCommand({
+          pluginName: "task",
           command: "status",
           payload: {
             title,
@@ -179,8 +179,8 @@ export function registerControlTaskRoutes(
           return c.json({ success: false, error: "Invalid title" }, 400);
         }
 
-        const result = await runServiceCommand({
-          serviceName: "task",
+        const result = await runPluginCommand({
+          pluginName: "task",
           command: "delete",
           payload: {
             title,

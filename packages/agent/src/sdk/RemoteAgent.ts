@@ -540,6 +540,7 @@ function extractTurnId(event: AgentSessionEvent): string | null {
     case "reasoning-delta":
     case "tool-call":
     case "tool-result":
+    case "assistant-step":
     case "turn-finish":
       return event.turnId;
     default:

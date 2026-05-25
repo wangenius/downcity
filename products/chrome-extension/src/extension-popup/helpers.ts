@@ -6,8 +6,11 @@
  * - 避免主界面组件混入过多与状态无关的细节处理。
  */
 
-import { buildConsoleBaseUrl } from "../services/consoleBase";
 import { decorateAuthErrorText } from "../services/auth";
+import {
+  buildServerConnectionBaseUrl,
+  resolveSelectedConnection,
+} from "../services/serverConnection";
 import { DEFAULT_SETTINGS } from "../services/storage";
 import type { ActiveTabContext, ExtensionSettings } from "../types/extension";
 
@@ -29,14 +32,19 @@ export interface ExtensionPopupToastMessage {
  * 读取错误文本。
  */
 export function readErrorText(error: unknown): string {
-  if (error instanceof Error) return decorateAuthErrorText(error.message);
-  return decorateAuthErrorText(error || "未知错误");
+  const rawMessage =
+    error instanceof Error ? error.message : String(error || "未知错误");
+  const decorated = decorateAuthErrorText(rawMessage);
+  if (/failed to fetch/i.test(decorated)) {
+    return "无法连接到 Server，请确认 Server 正在运行，并检查扩展设置中的 Protocol / Host / Port / Base Path 是否可访问";
+  }
+  return decorated;
 }
 
 /**
  * 解析扩展弹窗当前应使用的 Console 地址。
  */
-export function resolveExtensionPopupConsoleBaseUrl(settings: ExtensionSettings): {
+export function resolveExtensionPopupServerBaseUrl(settings: ExtensionSettings): {
   /**
    * 最终 Base URL。
    */
@@ -47,11 +55,12 @@ export function resolveExtensionPopupConsoleBaseUrl(settings: ExtensionSettings)
   errorText?: string;
 } {
   try {
+    const connection = resolveSelectedConnection(settings);
+    if (!connection) {
+      throw new Error("未找到可用的 Server Connection");
+    }
     return {
-      baseUrl: buildConsoleBaseUrl({
-        host: settings.consoleHost,
-        port: settings.consolePort,
-      }),
+      baseUrl: buildServerConnectionBaseUrl(connection),
     };
   } catch (error) {
     return {

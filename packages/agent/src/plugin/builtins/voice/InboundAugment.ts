@@ -7,7 +7,7 @@
  */
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { ChatInboundAugmentInput } from "@/service/builtins/chat/types/ChatPlugin.js";
+import type { ChatInboundAugmentInput } from "@/plugin/builtins/chat/types/ChatPlugin.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import { transcribeWithVoiceDependency } from "@/plugin/builtins/voice/Dependency.js";
 

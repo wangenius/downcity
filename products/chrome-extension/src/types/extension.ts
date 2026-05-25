@@ -1,114 +1,115 @@
 /**
- * Chrome 插件内部类型定义。
+ * Chrome 扩展内部领域类型。
  *
  * 关键点（中文）：
- * - 统一收口扩展弹窗表单、运行状态与页面上下文类型。
- * - 避免在 UI 代码中散落匿名对象类型。
+ * - 扩展当前只保留 Popup + Options 两个入口。
+ * - 用户配置围绕「Server Connection -> Agent -> Session」三层关系组织。
+ * - 所有用户可见配置都集中定义在这里，避免 UI / storage 各自维护字段。
  */
 
 /**
- * Inline Composer 的发送模式。
+ * Server Connection 协议。
  */
-export type InlineComposerMode = "channel" | "instant";
+export type ExtensionServerProtocol = "http" | "https";
 
 /**
- * Inline Composer 即时模式执行器类型。
+ * Server Connection 配置。
  */
-export type InlineInstantExecutorType = "model" | "acp";
-
-/**
- * 插件设置。
- */
-export interface ExtensionSettings {
+export interface ExtensionServerConnection {
   /**
-   * 目标 Console IP/主机名。
+   * 本地生成的稳定连接 id。
    */
-  consoleHost: string;
+  id: string;
 
   /**
-   * 目标 Console 端口。
+   * 连接显示名称。
    */
-  consolePort: number;
+  name: string;
 
   /**
-   * 目标 Agent id（来自 `/api/ui/agents`）。
+   * 目标 Server 主机名或 IP。
+   */
+  host: string;
+
+  /**
+   * 目标 Server 使用的传输协议。
+   */
+  protocol: ExtensionServerProtocol;
+
+  /**
+   * 目标 Server 端口。
+   */
+  port: number;
+
+  /**
+   * 目标 Server 的可选基础路径。
+   *
+   * 例如：
+   * - 空字符串：`/`
+   * - `/downcity`
+   * - `/console/api`
+   */
+  basePath: string;
+}
+
+/**
+ * 单个连接的本地密钥配置。
+ */
+export interface ExtensionServerConnectionSecret {
+  /**
+   * 该连接对应的 Bearer Token 明文。
+   */
+  token: string;
+}
+
+/**
+ * 所有连接的本地密钥映射。
+ */
+export interface ExtensionServerConnectionSecretMap {
+  /**
+   * 以连接 id 为 key 的本地敏感配置。
+   */
+  [connectionId: string]: ExtensionServerConnectionSecret | undefined;
+}
+
+/**
+ * 单个连接的默认路由偏好。
+ */
+export interface ExtensionConnectionRoutePreference {
+  /**
+   * 该连接默认使用的 Agent id。
    */
   agentId: string;
 
   /**
-   * 结果回传目标 chatKey（来自可选列表）。
+   * 该连接默认使用的 Session id。
    */
-  chatKey: string;
+  sessionId: string;
+}
+
+/**
+ * 扩展设置。
+ */
+export interface ExtensionSettings {
+  /**
+   * 已保存的 Server Connection 列表。
+   */
+  connections: ExtensionServerConnection[];
 
   /**
-   * 即时模式默认模型 id（来自 `/api/ui/model/pool`）。
+   * 当前选中的连接 id。
    */
-  instantModelId: string;
+  selectedConnectionId: string;
 
   /**
-   * Inline Composer 默认采用的发送模式。
+   * 各连接独立的默认 Agent / Session 路由偏好。
    */
-  inlineMode: InlineComposerMode;
-
-  /**
-   * Inline Composer 即时模式默认使用的 executor。
-   */
-  instantExecutor: InlineInstantExecutorType;
-
-  /**
-   * Inline Composer 即时模式默认使用的 ACP Agent id。
-   */
-  instantAgentId: string;
+  routePreferences: Record<string, ExtensionConnectionRoutePreference | undefined>;
 
   /**
    * 用户补充任务说明。
    */
   taskPrompt: string;
-
-  /**
-   * 常用问题模板列表。
-   */
-  quickPrompts: ExtensionQuickPromptItem[];
-
-  /**
-   * 默认常用问题模板 id（用于扩展弹窗快速填入默认值）。
-   */
-  defaultQuickPromptId: string;
-}
-
-/**
- * 扩展本地鉴权状态。
- */
-export interface ExtensionAuthState {
-  /**
-   * Bearer Token 明文。
-   */
-  token: string;
-
-  /**
-   * 当前主体名。
-   */
-  username?: string;
-}
-
-/**
- * 常用问题模板项。
- */
-export interface ExtensionQuickPromptItem {
-  /**
-   * 模板唯一 id（本地生成，跨页面持久化）。
-   */
-  id: string;
-
-  /**
-   * 模板名称（用于下拉展示）。
-   */
-  title: string;
-
-  /**
-   * 模板正文（快速填入任务输入框）。
-   */
-  prompt: string;
 }
 
 /**
@@ -181,6 +182,11 @@ export interface ExtensionPageSendRecord {
   id: string;
 
   /**
+   * 所属 Server Connection id。
+   */
+  connectionId: string;
+
+  /**
    * 页面 URL（标准化后，用于当前页面筛选）。
    */
   pageUrl: string;
@@ -196,9 +202,9 @@ export interface ExtensionPageSendRecord {
   agentId: string;
 
   /**
-   * 发送目标上下文（当前沿用 chatKey 字段名）。
+   * 发送目标 Session id。
    */
-  chatKey: string;
+  sessionId: string;
 
   /**
    * 用户输入的任务说明快照。

@@ -9,6 +9,7 @@
 import {
   getControlPlaneRuntimeStatus,
 } from "./ControlPlaneRuntime.js";
+import { readControlPlanePublicModeSetting } from "./ControlPlanePublicMode.js";
 import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
   getManagedAgentRegistryPath,
@@ -92,18 +93,31 @@ export async function controlPlaneStatusCommand(): Promise<void> {
   });
 
   const ui = await getControlPlaneRuntimeStatus();
+  const publicMode = await readControlPlanePublicModeSetting();
   emitCliBlock({
     tone: ui.running ? "success" : "info",
     title: "Console",
     summary: ui.running ? "running" : "stopped",
-    facts: ui.url
-      ? [
-          {
-            label: "url",
-            value: ui.url,
-          },
-        ]
-      : [],
+    facts: [
+      ...(ui.url
+        ? [
+            {
+              label: "url",
+              value: ui.url,
+            },
+          ]
+        : []),
+      {
+        label: "public mode",
+        value: publicMode.enabled ? "enabled" : "disabled",
+      },
+      {
+        label: "public host",
+        value: publicMode.enabled
+          ? String(publicMode.host || "0.0.0.0")
+          : "127.0.0.1",
+      },
+    ],
   });
 
   try {

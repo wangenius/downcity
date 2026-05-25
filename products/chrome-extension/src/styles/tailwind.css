@@ -3,7 +3,7 @@
  *
  * 关键点（中文）：
  * - 统一扩展弹窗与 options 的设计令牌，避免双份样式漂移。
- * - React 页面直接使用 Tailwind；Inline Composer 则加载独立构建出的 Tailwind CSS 资源。
+ * - 当前只保留 Popup 与 Options 两个 React 页面，共享同一套主题。
  * - 使用 Tailwind v4 的 @theme inline 映射语法，直接暴露语义化颜色与圆角。
  */
 

@@ -11,7 +11,7 @@ import fs from "fs-extra";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { PlatformStore } from "@/platform/store/index.js";
 import type { PlatformAgentOption } from "@downcity/agent";
-import { ModelPoolService } from "@/control/ModelPoolService.js";
+import { ModelPoolService } from "@/model/service/ModelPoolService.js";
 
 type ShipJsonLike = {
   execution?: {

@@ -1,0 +1,75 @@
+---
+title: city public
+description: Manage persisted public exposure for Console
+---
+
+# `city public`
+
+`city public` manages the persisted public exposure mode for Console.
+
+This command only controls the Console / control plane bind behavior. It does not change how individual agents listen.
+
+## Usage
+
+```bash
+city public
+```
+
+```bash
+city public status
+```
+
+```bash
+city public on
+```
+
+```bash
+city public on --host 0.0.0.0
+```
+
+```bash
+city public off
+```
+
+## Actions
+
+- no action: open the interactive public-mode manager in a TTY
+- `status`: show persisted public mode and current Console runtime state
+- `on`: enable persisted public mode
+- `off`: disable persisted public mode
+
+## Common options
+
+- `--host <host>`: bind host to use when public mode is enabled, default `0.0.0.0`
+
+## Important behavior
+
+- `city public on` saves a persisted Console public-mode setting for future `city start` and `city console start`.
+- If Console is already running, `city public on` or `city public off` automatically restarts Console so the new binding takes effect.
+- Explicit runtime flags still win. For example, `city console start --host 127.0.0.1` overrides the persisted public setting for that launch.
+- `city public` only manages Console exposure. It is not a global switch for every runtime endpoint.
+
+## Typical flow
+
+```bash
+# 1) inspect current persisted mode
+city public status
+
+# 2) enable public exposure for future starts
+city public on
+
+# 3) or pin a custom host
+city public on --host 10.0.0.5
+
+# 4) start city as usual
+city start
+
+# 5) disable public exposure again
+city public off
+```
+
+## Related commands
+
+- [`city console`](/en/docs/commands/console/console)
+- [`city start`](/en/docs/commands/start)
+- [`city status`](/en/docs/commands/status)

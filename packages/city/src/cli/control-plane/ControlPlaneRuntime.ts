@@ -33,6 +33,7 @@ import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
 import { buildControlPlanePortFacts } from "../shared/PortHints.js";
 import { resolveControlPlanePublicUrl } from "../shared/PublicAccess.js";
+import { mergePersistedControlPlaneStartOptions } from "./ControlPlanePublicMode.js";
 
 const DEFAULT_CONTROL_PLANE_HOST = "127.0.0.1";
 const DEFAULT_CONTROL_PLANE_PORT = 5315;
@@ -399,10 +400,11 @@ export async function startControlPlaneCommand(params: {
     });
   }
 
-  const host = resolveControlPlaneHostForBinding(params.options);
+  const effectiveOptions = await mergePersistedControlPlaneStartOptions(params.options);
+  const host = resolveControlPlaneHostForBinding(effectiveOptions);
   const port =
-    typeof params.options?.port === "number" && Number.isInteger(params.options.port)
-      ? params.options.port
+    typeof effectiveOptions.port === "number" && Number.isInteger(effectiveOptions.port)
+      ? effectiveOptions.port
       : DEFAULT_CONTROL_PLANE_PORT;
 
   const status = await getControlPlaneRuntimeStatus();
@@ -414,12 +416,12 @@ export async function startControlPlaneCommand(params: {
     const currentPort = status.port || DEFAULT_CONTROL_PLANE_PORT;
     const sameEndpoint =
       isControlPlaneBindingMatch(currentBindHost, host) && currentPort === port;
-    const restartHint = formatControlPlaneRestartHint(params.options, port);
+    const restartHint = formatControlPlaneRestartHint(effectiveOptions, port);
     const publicUrl = sameEndpoint
       ? resolveControlPlanePublicUrl({
           bindHost: currentBindHost,
           port: currentPort,
-          publicMode: params.options?.public === true,
+          publicMode: effectiveOptions.public === true,
         })
       : null;
     emitCliBlock({
@@ -527,7 +529,7 @@ export async function startControlPlaneCommand(params: {
       publicUrl: resolveControlPlanePublicUrl({
         bindHost: host,
         port,
-        publicMode: params.options?.public === true,
+        publicMode: effectiveOptions.public === true,
       }),
     }),
   });

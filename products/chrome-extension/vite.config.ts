@@ -16,41 +16,13 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     rollupOptions: {
-        input: {
-          popup: path.resolve(__dirname, "index.html"),
-          options: path.resolve(__dirname, "options.html"),
-          background: path.resolve(__dirname, "src/background/main.ts"),
-          contentScript: path.resolve(__dirname, "src/inline-composer/main.ts"),
-          contentScriptStyle: path.resolve(
-            __dirname,
-            "src/inline-composer/content-script.css",
-          ),
-        },
+      input: {
+        popup: path.resolve(__dirname, "index.html"),
+        options: path.resolve(__dirname, "options.html"),
+      },
       output: {
-        entryFileNames(chunkInfo) {
-          if (chunkInfo.name === "contentScript") {
-            return "content-script.js";
-          }
-          if (chunkInfo.name === "background") {
-            return "background.js";
-          }
-          return "assets/[name]-[hash].js";
-        },
-        assetFileNames(assetInfo) {
-          const names = Array.isArray(assetInfo.names)
-            ? assetInfo.names
-            : assetInfo.name
-              ? [assetInfo.name]
-              : [];
-          if (
-            names.some((name) =>
-              /content-script\.css$|contentScriptStyle\.css$/u.test(String(name)),
-            )
-          ) {
-            return "content-script.css";
-          }
-          return "assets/[name]-[hash][extname]";
-        },
+        entryFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash][extname]",
       },
     },
   },

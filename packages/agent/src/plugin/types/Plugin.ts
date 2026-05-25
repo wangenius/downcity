@@ -24,6 +24,115 @@ import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { AuthRoutePolicy } from "@/types/runtime/auth/AuthRoute.js";
 
 /**
+ * Plugin 运行状态。
+ *
+ * 说明（中文）
+ * - `starting` / `stopping` 仅用于生命周期过渡态。
+ * - `error` 表示最近一次 lifecycle / command / action 执行失败后留下的状态标记。
+ */
+export type PluginState =
+  | "running"
+  | "stopped"
+  | "starting"
+  | "stopping"
+  | "error";
+
+/**
+ * 单个 plugin 实例内部持有的状态记录。
+ */
+export interface PluginStateRecord {
+  /**
+   * 当前运行状态。
+   */
+  state: PluginState;
+  /**
+   * 最近一次状态更新时间（毫秒时间戳）。
+   */
+  updatedAt: number;
+  /**
+   * 最近一次错误信息。
+   */
+  lastError?: string;
+  /**
+   * 最近一次执行的命令名。
+   */
+  lastCommand?: string;
+  /**
+   * 最近一次执行命令的时间（毫秒时间戳）。
+   */
+  lastCommandAt?: number;
+  /**
+   * 当前串行控制链。
+   */
+  chain: Promise<void>;
+}
+
+/**
+ * 单个 plugin 状态的对外快照。
+ */
+export interface PluginStateSnapshot {
+  /**
+   * plugin 名称。
+   */
+  name: string;
+  /**
+   * 当前运行状态。
+   */
+  state: PluginState;
+  /**
+   * 最近一次状态更新时间（毫秒时间戳）。
+   */
+  updatedAt: number;
+  /**
+   * 最近一次错误信息。
+   */
+  lastError?: string;
+  /**
+   * 最近一次执行的命令名。
+   */
+  lastCommand?: string;
+  /**
+   * 最近一次执行命令的时间（毫秒时间戳）。
+   */
+  lastCommandAt?: number;
+  /**
+   * 是否支持主动生命周期。
+   */
+  supportsLifecycle: boolean;
+  /**
+   * 是否支持 command/action。
+   */
+  supportsCommand: boolean;
+}
+
+/**
+ * plugin 状态控制动作。
+ */
+export type PluginStateControlAction =
+  | "start"
+  | "stop"
+  | "restart"
+  | "status";
+
+/**
+ * plugin 状态控制结果。
+ */
+export interface PluginStateControlResult {
+  /**
+   * 控制动作是否成功。
+   */
+  success: boolean;
+  /**
+   * 成功或失败后返回的最新 plugin 快照。
+   */
+  plugin?: PluginStateSnapshot;
+  /**
+   * 失败时的错误信息。
+   */
+  error?: string;
+}
+
+/**
  * Plugin 命令执行上下文。
  *
  * 关键点（中文）
@@ -116,6 +225,66 @@ export interface PluginServiceInvokePort {
   invoke(
     params: PluginServiceInvokeParams,
   ): Promise<PluginServiceInvokeResult>;
+}
+
+/**
+ * Plugin 非 action 命令执行参数。
+ */
+export interface PluginCommandParams {
+  /**
+   * 当前统一执行上下文。
+   */
+  context: AgentContext;
+  /**
+   * 当前命令名称。
+   */
+  command: string;
+  /**
+   * 命令附带 payload（可选）。
+   */
+  payload?: JsonValue;
+}
+
+/**
+ * Plugin 非 action 命令执行结果。
+ */
+export interface PluginCommandResult {
+  /**
+   * 本次命令是否成功。
+   */
+  success: boolean;
+  /**
+   * 人类可读消息。
+   */
+  message?: string;
+  /**
+   * 结构化返回数据。
+   */
+  data?: JsonValue;
+}
+
+/**
+ * Plugin 生命周期兼容定义。
+ *
+ * 关键点（中文）
+ * - 这是从旧 service lifecycle 过渡过来的兼容层。
+ * - 新代码优先直接实现 `start/stop/command`。
+ */
+export interface PluginLifecycle {
+  /**
+   * plugin 启动钩子。
+   */
+  start?(context: AgentContext): Promise<void> | void;
+  /**
+   * plugin 停止钩子。
+   */
+  stop?(context: AgentContext): Promise<void> | void;
+  /**
+   * plugin 非 action 命令钩子。
+   */
+  command?(
+    params: PluginCommandParams,
+  ): Promise<PluginCommandResult> | PluginCommandResult;
 }
 
 /**
@@ -430,7 +599,7 @@ export interface PluginAction<
     /**
      * 当前执行上下文。
      */
-    context: PluginCommandContext;
+    context: AgentContext;
     /**
      * 输入 payload。
      */
@@ -439,6 +608,10 @@ export interface PluginAction<
      * 当前插件名称。
      */
     pluginName: string;
+    /**
+     * 兼容旧 service action 参数名。
+     */
+    serviceName?: string;
     /**
      * 当前 Action 名称。
      */
@@ -736,10 +909,14 @@ export interface Plugin {
    */
   system?: (context: AgentContext) => string | Promise<string>;
   /**
+   * 旧 service lifecycle 兼容定义（可选）。
+   */
+  lifecycle?: PluginLifecycle;
+  /**
    * Plugin 可用性检查器（可选）。
    */
   availability?: (
-    context: PluginCommandContext,
+    context: PluginCommandContext | AgentContext,
   ) => Promise<PluginAvailability> | PluginAvailability;
   /**
    * Plugin HTTP 注入定义（可选）。

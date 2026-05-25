@@ -1,0 +1,28 @@
+# Plugin State
+
+你正在一个基于 plugin 的执行环境中工作。
+
+## 可用命令总览
+- plugin 状态管理（统一使用 `city plugin`）：
+  - `city plugin list`
+  - `city plugin status <pluginName>`
+  - `city plugin start <pluginName>`
+  - `city plugin stop <pluginName>`
+  - `city plugin restart <pluginName>`
+  - `city plugin command <pluginName> <command> [--payload '<json>']`
+  - `city plugin schedule list`
+  - `city plugin schedule info <jobId>`
+  - `city plugin schedule cancel <jobId>`
+- 当前内建 runtime plugin：`shell` / `chat` / `task` / `memory` / `contact` / `schedule`。
+- 当前内建 extension plugin：`auth` / `skill` / `asr` / `tts`。
+- 模块级 action 命令：
+  - `city shell <action> ...`
+  - `city chat <action> ...`
+  - `city task <action> ...`
+  - `city memory <action> ...`
+  - `city plugin action <plugin> <action> ...`
+  - `city skill <action> ...`
+  - `city asr <action> ...`
+  - `city tts <action> ...`
+
+具体 plugin 的执行参考对应文档。

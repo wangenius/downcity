@@ -14,7 +14,7 @@ import {
   type ChatChannelAccountListItem,
 } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { runServiceControlCommand } from "../service/ServiceCommandRemote.js";
+import { runPluginRuntimeControlCommand } from "./PluginRuntimeRemote.js";
 import type { StoredChannelAccountChannel } from "@downcity/agent";
 import type {
   ChatChannelAccountAction,
@@ -54,26 +54,26 @@ async function promptRootAction(): Promise<ChatManagerRootAction | null> {
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: "管理 chat service",
+    message: "管理 chat plugin",
     choices: [
       {
         title: "查看状态",
-        description: "查看当前项目 chat service 运行状态",
+        description: "查看当前项目 chat plugin 运行状态",
         value: "status",
       },
       {
         title: "启动",
-        description: "启动当前项目 chat service",
+        description: "启动当前项目 chat plugin",
         value: "start",
       },
       {
         title: "停止",
-        description: "停止当前项目 chat service",
+        description: "停止当前项目 chat plugin",
         value: "stop",
       },
       {
         title: "重启",
-        description: "重启当前项目 chat service",
+        description: "重启当前项目 chat plugin",
         value: "restart",
       },
       {
@@ -128,7 +128,7 @@ async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | 
       },
       {
         title: "返回",
-        description: "回到 chat service 菜单",
+        description: "回到 chat plugin 菜单",
         value: "back",
       },
     ],
@@ -403,8 +403,8 @@ async function runChannelAccountManager(): Promise<void> {
 async function runChatLifecycleAction(
   action: "start" | "stop" | "restart" | "status",
 ): Promise<void> {
-  await runServiceControlCommand({
-    serviceName: "chat",
+  await runPluginRuntimeControlCommand({
+    pluginName: "chat",
     action,
     options: {
       path: ".",

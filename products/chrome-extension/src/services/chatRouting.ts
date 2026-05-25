@@ -1,18 +1,18 @@
 /**
- * 扩展 chat 路由与会话选择工具。
+ * 扩展 Agent / Session 路由工具。
  *
  * 关键点（中文）：
- * - 统一处理 Agent 选择、已连接渠道过滤、默认 chatKey 选择。
- * - 扩展弹窗 / options / API 列表转换都复用同一套规则。
+ * - 统一处理 Agent 选择、已连接渠道过滤、默认 Session 选择。
+ * - Popup / Options / API 列表转换都复用同一套规则。
  */
 
 import type {
-  ChatKeyOption,
   ConsoleUiAgentOption,
+  SessionOption,
   TuiContextSummary,
 } from "../types/api";
 
-type ParsedChatKey =
+type ParsedSessionChannel =
   | {
       channel: "telegram";
       chatId: string;
@@ -38,9 +38,9 @@ function toDateText(timestamp?: number): string {
 }
 
 /**
- * 解析 chatKey（与 runtime 规则保持一致）。
+ * 解析 session channel。
  */
-export function parseChatKey(value: string): ParsedChatKey | null {
+export function parseSessionChannel(value: string): ParsedSessionChannel | null {
   const key = String(value || "").trim();
   if (!key) return null;
 
@@ -81,11 +81,13 @@ export function parseChatKey(value: string): ParsedChatKey | null {
   return null;
 }
 
-function resolveChatDisplayName(summary: TuiContextSummary, parsed: ParsedChatKey): string {
+function resolveSessionDisplayName(
+  summary: TuiContextSummary,
+  parsed: ParsedSessionChannel,
+): string {
   const chatTitle = String(summary.chatTitle || "").trim();
   const chatId = String(summary.chatId || "").trim();
 
-  // 关键点（中文）：优先展示明确的 chatTitle，避免把 chatId/openid 当成人类可读名称。
   if (chatTitle && (!chatId || chatTitle !== chatId)) {
     return chatTitle;
   }
@@ -102,13 +104,13 @@ function resolveChatDisplayName(summary: TuiContextSummary, parsed: ParsedChatKe
   return parsed.chatId;
 }
 
-function formatPlatformName(channel: ChatKeyOption["channel"]): string {
+function formatPlatformName(channel: SessionOption["channel"]): string {
   if (channel === "telegram") return "Telegram";
   if (channel === "feishu") return "Feishu";
   return "QQ";
 }
 
-function parseContextSummary(summary: TuiContextSummary): ParsedChatKey | null {
+function parseContextSummary(summary: TuiContextSummary): ParsedSessionChannel | null {
   const channel = String(summary.channel || "")
     .trim()
     .toLowerCase();
@@ -140,10 +142,10 @@ function parseContextSummary(summary: TuiContextSummary): ParsedChatKey | null {
 }
 
 /**
- * 将 context 摘要转换成 chat 选项。
+ * 将 session 摘要转换成 Session 选项。
  */
-export function toChatKeyOption(summary: TuiContextSummary): ChatKeyOption | null {
-  const chatKey = String(summary.sessionId || "").trim();
+export function toSessionOption(summary: TuiContextSummary): SessionOption | null {
+  const sessionId = String(summary.sessionId || "").trim();
   const parsed = parseContextSummary(summary);
   if (!parsed) return null;
 
@@ -151,10 +153,10 @@ export function toChatKeyOption(summary: TuiContextSummary): ChatKeyOption | nul
     ? Number(summary.messageCount)
     : 0;
   const lastText = String(summary.lastText || "").trim();
-  const displayName = resolveChatDisplayName(summary, parsed);
+  const displayName = resolveSessionDisplayName(summary, parsed);
 
   return {
-    chatKey,
+    sessionId,
     channel: parsed.channel,
     title: `${displayName} · ${formatPlatformName(parsed.channel)}`,
     subtitle: [
@@ -232,18 +234,18 @@ export function resolveAgentId(params: {
 }
 
 /**
- * 选择最终 chatKey。
+ * 选择最终 Session id。
  */
-export function resolveChatKey(
-  options: ChatKeyOption[],
-  preferredChatKey: string,
+export function resolveSessionId(
+  options: SessionOption[],
+  preferredSessionId: string,
 ): string {
-  const preferred = String(preferredChatKey || "").trim();
-  if (preferred && options.some((item) => item.chatKey === preferred)) {
+  const preferred = String(preferredSessionId || "").trim();
+  if (preferred && options.some((item) => item.sessionId === preferred)) {
     return preferred;
   }
   if (options.length === 1) {
-    return options[0]?.chatKey || "";
+    return options[0]?.sessionId || "";
   }
   return "";
 }

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里先注册裸 `city chat` 的交互式入口。
- * - 具体 service actions/lifecycle 命令仍由 service 注册器补充到同一个命令组。
+ * - 具体 runtime plugin actions/lifecycle 命令仍由 runtime plugin 注册器补充到同一个命令组。
  */
 
 import type { Command } from "commander";
@@ -16,7 +16,7 @@ import { runInteractiveChatManager } from "./ChatManager.js";
 export function registerChatCommand(program: Command): void {
   const chat = program
     .command("chat")
-    .description("管理 chat service（无参数时启动交互式管理器）")
+    .description("管理 chat plugin（无参数时启动交互式管理器）")
     .helpOption("--help", "display help for command")
     .action(async () => {
       if (process.stdin.isTTY === true && process.stdout.isTTY === true) {

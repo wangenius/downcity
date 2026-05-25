@@ -8,12 +8,7 @@
  */
 
 import { Hono } from "hono";
-import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
-import {
-  pickLastSuccessfulChatSendText,
-  resolveAssistantMessageForPersistence,
-} from "@/service/builtins/chat/runtime/UserVisibleText.js";
 
 /**
  * 执行入口路由参数。
@@ -72,13 +67,6 @@ export function createExecuteRouter(
       typeof body?.chatId === "string" && body.chatId.trim()
         ? body.chatId.trim()
         : "default";
-    const actorId =
-      typeof body?.userId === "string" && body.userId.trim()
-        ? body.userId.trim()
-        : typeof body?.actorId === "string" && body.actorId.trim()
-          ? body.actorId.trim()
-          : "api";
-
     if (!instructions) {
       return c.json(
         { success: false, message: "Missing instructions field" },
@@ -90,43 +78,16 @@ export function createExecuteRouter(
       const sessionId = `api:chat:${chatId}`;
       const agentState = options.getAgentRuntime();
       const session = agentState.getSession(sessionId);
-      await session.appendUserMessage({
-        text: String(instructions),
-      });
-
-      const result = await session.execute({
+      const turn = await session.prompt({
         query: String(instructions),
       });
+      const result = await turn.finished;
 
-      const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
-      try {
-        const messageForPersistence = resolveAssistantMessageForPersistence(
-          result.assistantMessage,
-        );
-        if (messageForPersistence) {
-          await session.appendAssistantMessage({
-            message: messageForPersistence,
-            fallbackText: userVisible,
-            extra: {
-              via: "api_execute",
-              note: "assistant_message_missing",
-              actorId,
-            },
-          });
-        }
-        const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-          sessionId,
-        );
-        for (const message of deferredInjectedMessages) {
-          await session.appendUserMessage({
-            message,
-          });
-        }
-      } catch {
-        // ignore
-      }
-
-      return c.json(result);
+      return c.json({
+        success: result.success,
+        ...(result.error ? { error: result.error } : {}),
+        assistantMessage: result.assistantMessage,
+      });
     } catch (error) {
       return c.json({ success: false, message: String(error) }, 500);
     }

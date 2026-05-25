@@ -16,7 +16,7 @@ import { printResult } from "@/utils/cli/CliOutput.js";
 import {
   resolveProjectRootByAgentName,
   validateAgentProjectRoot,
-} from "../service/ServiceCommandSupport.js";
+} from "../shared/PluginRuntimeSupport.js";
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
 import {
   formatCliBearerHeaderValue,

@@ -3,12 +3,12 @@
  *
  * 关键点（中文）
  * - `Agent` 现在是实例外观层，长期运行状态下沉到 `AgentCore`。
- * - session、HTTP、RPC、service lifecycle 都按需异步初始化。
+ * - session、HTTP、RPC、runtime plugin lifecycle 都按需异步初始化。
  * - `start/stop` 是唯一公开的长期运行生命周期入口。
  */
 
 import type { Tool } from "ai";
-import type { BaseService } from "@/service/builtins/BaseService.js";
+import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type {
@@ -26,7 +26,7 @@ import type {
 } from "@/sdk/AgentSdkTypes.js";
 import { Session } from "@/sdk/Session.js";
 import { AgentCore } from "@/core/AgentCore.js";
-import { startAllServices, stopAllServices } from "@/service/core/Manager.js";
+import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
 import { startServer } from "@/runtime/server/http/Server.js";
 import { startLocalRpcServer } from "@/runtime/server/rpc/Server.js";
 
@@ -38,9 +38,9 @@ export class Agent {
   readonly id: string;
   readonly path: string;
   readonly tools: Record<string, Tool>;
-  readonly services: Map<string, BaseService>;
+  readonly runtimePlugins: Map<string, BasePlugin>;
   readonly plugins: PluginPort;
-  private servicesStarted = false;
+  private runtimePluginsStarted = false;
   private startPromise: Promise<AgentStartResult> | null = null;
   private httpBinding: AgentHttpBinding | null = null;
   private rpcBinding: AgentRpcBinding | null = null;
@@ -50,7 +50,7 @@ export class Agent {
     this.id = this.core.id;
     this.path = this.core.path;
     this.tools = this.core.tools;
-    this.services = this.core.services;
+    this.runtimePlugins = this.core.runtimePlugins;
     this.plugins = this.core.plugins;
   }
 
@@ -69,16 +69,16 @@ export class Agent {
   }
 
   /**
-   * 确保显式注入的 services 已启动。
+   * 确保显式注入的 runtime plugins 已启动。
    */
-  async ensureServicesStarted(): Promise<void> {
-    if (this.servicesStarted) return;
-    const lifecycle = await startAllServices(this.getContext());
-    this.servicesStarted = true;
+  async ensureRuntimePluginsStarted(): Promise<void> {
+    if (this.runtimePluginsStarted) return;
+    const lifecycle = await startAllPlugins(this.getContext());
+    this.runtimePluginsStarted = true;
     for (const item of lifecycle.results) {
       if (!item.success) {
         this.getRuntime().logger.error(
-          `Service start failed: ${item.service?.name || "unknown"} - ${item.error || "unknown error"}`,
+          `Plugin start failed: ${item.plugin?.name || "unknown"} - ${item.error || "unknown error"}`,
         );
       }
     }
@@ -92,10 +92,10 @@ export class Agent {
       return await this.startPromise;
     }
     this.startPromise = (async () => {
-      const shouldStartServices = options?.services !== false;
+      const shouldStartRuntimePlugins = options?.runtimePlugins !== false;
 
-      if (shouldStartServices) {
-        await this.ensureServicesStarted();
+      if (shouldStartRuntimePlugins) {
+        await this.ensureRuntimePluginsStarted();
       }
 
       const httpBinding =
@@ -110,7 +110,7 @@ export class Agent {
       return {
         ...(httpBinding ? { http: httpBinding } : {}),
         ...(rpcBinding ? { rpc: rpcBinding } : {}),
-        servicesStarted: this.servicesStarted,
+        runtimePluginsStarted: this.runtimePluginsStarted,
       };
     })();
     try {
@@ -125,13 +125,13 @@ export class Agent {
    * 停止当前 agent 实例的长期运行能力。
    */
   async stop(): Promise<AgentStopResult> {
-    const servicesStarted = this.servicesStarted;
+    const runtimePluginsStarted = this.runtimePluginsStarted;
     const rpcStarted = this.rpcBinding !== null;
     const httpStarted = this.httpBinding !== null;
 
-    if (servicesStarted) {
-      await stopAllServices(this.getContext());
-      this.servicesStarted = false;
+    if (runtimePluginsStarted) {
+      await stopAllPlugins(this.getContext());
+      this.runtimePluginsStarted = false;
     }
 
     if (rpcStarted) {
@@ -147,7 +147,7 @@ export class Agent {
     return {
       httpStopped: httpStarted,
       rpcStopped: rpcStarted,
-      servicesStopped: servicesStarted,
+      runtimePluginsStopped: runtimePluginsStarted,
     };
   }
 

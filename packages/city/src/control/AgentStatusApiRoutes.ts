@@ -14,14 +14,14 @@ type AgentStatusPayload = {
   success: boolean;
   running: boolean;
   serverReady: boolean;
-  servicesReady: boolean;
-  hasChatService: boolean;
+  pluginsReady: boolean;
+  hasChatPlugin: boolean;
   reason?: string;
 };
 
-type ServicesResponse = {
+type PluginRuntimeListResponse = {
   success?: boolean;
-  services?: Array<{
+  plugins?: Array<{
     name?: unknown;
     state?: unknown;
   }>;
@@ -75,8 +75,8 @@ async function probeSelectedAgentStatus(
       success: true,
       running: false,
       serverReady: false,
-      servicesReady: false,
-      hasChatService: false,
+      pluginsReady: false,
+      hasChatPlugin: false,
       reason: "Selected agent endpoint is unavailable.",
     };
   }
@@ -88,44 +88,44 @@ async function probeSelectedAgentStatus(
       success: true,
       running: true,
       serverReady: false,
-      servicesReady: false,
-      hasChatService: false,
+      pluginsReady: false,
+      hasChatPlugin: false,
       reason: getErrorMessage(error),
     };
   }
 
-  let servicesPayload: ServicesResponse;
+  let pluginsPayload: PluginRuntimeListResponse;
   try {
-    servicesPayload = await fetchStatusJson<ServicesResponse>(
-      new URL("/api/control/services", baseUrl).toString(),
+    pluginsPayload = await fetchStatusJson<PluginRuntimeListResponse>(
+      new URL("/api/plugins/runtime/list", baseUrl).toString(),
     );
   } catch (error) {
     return {
       success: true,
       running: true,
       serverReady: true,
-      servicesReady: false,
-      hasChatService: false,
+      pluginsReady: false,
+      hasChatPlugin: false,
       reason: getErrorMessage(error),
     };
   }
 
-  const serviceList = Array.isArray(servicesPayload.services)
-    ? servicesPayload.services
+  const pluginList = Array.isArray(pluginsPayload.plugins)
+    ? pluginsPayload.plugins
     : [];
-  if (serviceList.length === 0) {
+  if (pluginList.length === 0) {
     return {
       success: true,
       running: true,
       serverReady: true,
-      servicesReady: false,
-      hasChatService: false,
-      reason: "Service list is empty.",
+      pluginsReady: false,
+      hasChatPlugin: false,
+      reason: "Plugin runtime list is empty.",
     };
   }
 
-  const allReady = serviceList.every((item) => isReadyState(item.state));
-  const hasChatService = serviceList.some((item) => {
+  const allReady = pluginList.every((item) => isReadyState(item.state));
+  const hasChatPlugin = pluginList.some((item) => {
     const name = String(item.name || "").trim().toLowerCase();
     return name === "chat";
   });
@@ -134,32 +134,32 @@ async function probeSelectedAgentStatus(
       success: true,
       running: true,
       serverReady: true,
-      servicesReady: false,
-      hasChatService,
-      reason: "Services are still starting.",
+      pluginsReady: false,
+      hasChatPlugin,
+      reason: "Plugins are still starting.",
     };
   }
 
-  if (!hasChatService) {
+  if (!hasChatPlugin) {
     return {
       success: true,
       running: true,
       serverReady: true,
-      servicesReady: true,
-      hasChatService: false,
+      pluginsReady: true,
+      hasChatPlugin: false,
     };
   }
 
   try {
     await fetchStatusJson<ChatStatusResponse>(
-      new URL("/api/services/command", baseUrl).toString(),
+      new URL("/api/plugins/runtime/command", baseUrl).toString(),
       {
         method: "POST",
         headers: {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          serviceName: "chat",
+          pluginName: "chat",
           command: "status",
           payload: {},
         }),
@@ -169,16 +169,16 @@ async function probeSelectedAgentStatus(
       success: true,
       running: true,
       serverReady: true,
-      servicesReady: true,
-      hasChatService: true,
+      pluginsReady: true,
+      hasChatPlugin: true,
     };
   } catch (error) {
     return {
       success: true,
       running: true,
       serverReady: true,
-      servicesReady: false,
-      hasChatService: true,
+      pluginsReady: false,
+      hasChatPlugin: true,
       reason: getErrorMessage(error),
     };
   }
@@ -212,8 +212,8 @@ export function registerPlatformAgentStatusRoutes(params: {
           success: true,
           running: false,
           serverReady: false,
-          servicesReady: false,
-          hasChatService: false,
+          pluginsReady: false,
+          hasChatPlugin: false,
           reason: "No running agent selected.",
         } satisfies AgentStatusPayload);
       }

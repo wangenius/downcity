@@ -2,597 +2,592 @@
  * Options 设置页。
  *
  * 关键点（中文）：
- * - 只保留扩展运行必需设置：Console 地址、频道模式默认目标、即时模式默认执行器。
- * - 请求流必须稳定，避免 effect/callback 互相依赖导致无限刷新。
- * - 只有初始化、手动刷新、切换 Agent 时才重新拉取数据。
+ * - 设置页围绕「Server Connection -> Token -> Agent / Session 默认路由」展开。
+ * - 每个连接独立维护 Bearer Token，并共享一份全局 taskPrompt 默认值。
+ * - Inline Composer 已移除，不再展示任何即时模式或 content script 相关配置。
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ConsoleUiAgentOption, SessionOption } from "../types/api";
+import type { ExtensionSelectOption } from "../types/ExtensionSelect";
 import type {
-  ChatKeyOption,
-  ConsoleModelOption,
-  ConsoleUiAgentOption,
-} from "../types/api";
-import type { ExtensionSettings } from "../types/extension";
-import {
-  fetchConsoleAuthStatus,
-  isAuthErrorMessage,
-  normalizeAuthToken,
-} from "../services/auth";
+  ExtensionSettings,
+  ExtensionServerConnection,
+  ExtensionServerProtocol,
+} from "../types/extension";
+import { fetchConsoleAuthStatus, isAuthErrorMessage, normalizeAuthToken } from "../services/auth";
 import {
   fetchAgents,
-  fetchChatKeyOptions,
-  fetchModelOptions,
+  fetchSessionOptions,
 } from "../services/downcityApi";
-import { resolveAgentId, resolveChatKey, resolveLinkedChannels } from "../services/chatRouting";
-import { buildConsoleBaseUrl, parsePortInput } from "../services/consoleBase";
 import {
-  clearAuthState,
+  resolveAgentId,
+  resolveLinkedChannels,
+  resolveSessionId,
+} from "../services/chatRouting";
+import {
+  buildServerConnectionBaseUrl,
+  formatServerConnectionLabel,
+  resolveRoutePreference,
+} from "../services/serverConnection";
+import {
+  clearConnectionToken,
   DEFAULT_SETTINGS,
-  loadAuthState,
+  loadConnectionToken,
   loadSettings,
-  saveAuthState,
+  saveConnectionToken,
   saveSettings,
 } from "../services/storage";
 import { getStatusClass, readErrorText, type OptionsStatus } from "./helpers";
-import type { ExtensionSelectOption } from "../types/ExtensionSelect";
 import { ExtensionPopupSelect } from "../extension-popup/ExtensionPopupSelect";
+
+function createConnectionId(): string {
+  return `conn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function normalizeConnectionName(input: string): string {
+  return String(input || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeConnectionHost(input: string): string {
+  const normalized = String(input || "").trim();
+  return normalized || "127.0.0.1";
+}
+
+function normalizeConnectionProtocol(input: string): ExtensionServerProtocol {
+  return String(input || "").trim().toLowerCase() === "https" ? "https" : "http";
+}
+
+function normalizeConnectionPort(input: string): number | null {
+  const parsed = Number.parseInt(String(input || "").trim(), 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return null;
+  if (parsed < 1 || parsed > 65535) return null;
+  return Math.trunc(parsed);
+}
+
+function normalizeConnectionBasePath(input: string): string {
+  const normalized = String(input || "").trim();
+  if (!normalized || normalized === "/") return "";
+  const withLeadingSlash = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+}
+
+function toConnectionOptions(
+  connections: ExtensionServerConnection[],
+): ExtensionSelectOption[] {
+  return connections.map((item) => ({
+    value: item.id,
+    label: item.name,
+    description: `${item.protocol}://${item.host}:${item.port}${item.basePath || ""}`,
+  }));
+}
+
+function toAgentOptions(agents: ConsoleUiAgentOption[]): ExtensionSelectOption[] {
+  return agents.map((item) => ({
+    value: item.id,
+    label: item.name,
+    description: item.running ? "在线" : "未运行",
+  }));
+}
+
+function toSessionOptions(sessions: SessionOption[]): ExtensionSelectOption[] {
+  return sessions.map((item) => ({
+    value: item.sessionId,
+    label: item.title,
+    description: item.subtitle,
+  }));
+}
+
+function toEmptyConnection(): ExtensionServerConnection {
+  return {
+    id: createConnectionId(),
+    name: "New Server",
+    protocol: "http",
+    host: "127.0.0.1",
+    port: 5315,
+    basePath: "",
+  };
+}
+
+function mergeRoutePreferenceSettings(params: {
+  settings: ExtensionSettings;
+  connectionId: string;
+  agentId?: string;
+  sessionId?: string;
+  taskPrompt?: string;
+}): ExtensionSettings {
+  const connectionId = String(params.connectionId || "").trim();
+  const currentPreference = resolveRoutePreference({
+    settings: params.settings,
+    connectionId,
+  });
+
+  return {
+    ...params.settings,
+    ...(params.taskPrompt !== undefined ? { taskPrompt: params.taskPrompt } : {}),
+    selectedConnectionId: connectionId || params.settings.selectedConnectionId,
+    routePreferences: {
+      ...params.settings.routePreferences,
+      [connectionId]: {
+        agentId:
+          params.agentId !== undefined ? String(params.agentId || "").trim() : currentPreference.agentId,
+        sessionId:
+          params.sessionId !== undefined
+            ? String(params.sessionId || "").trim()
+            : currentPreference.sessionId,
+      },
+    },
+  };
+}
 
 export function App() {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
-  const [consoleHost, setConsoleHost] = useState(DEFAULT_SETTINGS.consoleHost);
-  const [consolePortInput, setConsolePortInput] = useState(
-    String(DEFAULT_SETTINGS.consolePort),
+  const [selectedConnectionId, setSelectedConnectionId] = useState("");
+  const [connectionDraft, setConnectionDraft] = useState<ExtensionServerConnection>(
+    DEFAULT_SETTINGS.connections[0] || toEmptyConnection(),
   );
+  const [tokenInput, setTokenInput] = useState("");
+  const [taskPromptInput, setTaskPromptInput] = useState(DEFAULT_SETTINGS.taskPrompt);
   const [agents, setAgents] = useState<ConsoleUiAgentOption[]>([]);
-  const [chatOptions, setChatOptions] = useState<ChatKeyOption[]>([]);
-  const [models, setModels] = useState<ConsoleModelOption[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+  const [sessions, setSessions] = useState<SessionOption[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState("");
+  const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [isLoadingConnectionState, setIsLoadingConnectionState] = useState(true);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
-  const [isLoadingChats, setIsLoadingChats] = useState(false);
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [authInitializing, setAuthInitializing] = useState(true);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authToken, setAuthToken] = useState("");
-  const [authTokenInput, setAuthTokenInput] = useState("");
-  const [authUsername, setAuthUsername] = useState("");
   const [status, setStatus] = useState<OptionsStatus>({
     type: "idle",
     text: "修改后保存即可",
   });
 
-  const agentOptions = useMemo<ExtensionSelectOption[]>(
+  const selectedConnection = useMemo(
     () =>
-      agents.map((item) => ({
-        value: item.id,
-        label: item.name,
-        description: item.running ? "在线" : "未运行",
-      })),
-    [agents],
+      settings.connections.find((item) => item.id === selectedConnectionId) ||
+      settings.connections[0] ||
+      null,
+    [selectedConnectionId, settings.connections],
   );
-
-  const chatSelectOptions = useMemo<ExtensionSelectOption[]>(
+  const routePreference = useMemo(
     () =>
-      chatOptions.map((item) => ({
-        value: item.chatKey,
-        label: item.title,
-        description: item.subtitle,
-      })),
-    [chatOptions],
+      resolveRoutePreference({
+        settings,
+        connectionId: selectedConnection?.id || "",
+      }),
+    [selectedConnection?.id, settings],
   );
-
-  const modelSelectOptions = useMemo<ExtensionSelectOption[]>(
-    () =>
-      models.map((item) => ({
-        value: item.id,
-        label: item.id,
-        description: item.providerType
-          ? `${item.name} · ${item.providerType}`
-          : item.name,
-      })),
-    [models],
+  const connectionOptions = useMemo(
+    () => toConnectionOptions(settings.connections),
+    [settings.connections],
   );
+  const agentOptions = useMemo(() => toAgentOptions(agents), [agents]);
+  const sessionOptions = useMemo(() => toSessionOptions(sessions), [sessions]);
 
-  const modeOptions = useMemo<ExtensionSelectOption[]>(
-    () => [
-      {
-        value: "channel",
-        label: "频道模式",
-        description: "沿用 Agent / Channel 投递链路",
-      },
-      {
-        value: "instant",
-        label: "即时模式",
-        description: "执行完成后直接在页面内返回结果",
-      },
-    ],
+  const loadSessionsForAgent = useCallback(
+    async (params: {
+      connection: ExtensionServerConnection;
+      agentId: string;
+      preferredSessionId: string;
+      authToken: string;
+      agentList: ConsoleUiAgentOption[];
+    }): Promise<string> => {
+      const normalizedAgentId = String(params.agentId || "").trim();
+      if (!normalizedAgentId) {
+        setSessions([]);
+        setSelectedSessionId("");
+        return "";
+      }
+
+      setIsLoadingSessions(true);
+      try {
+        const serverBaseUrl = buildServerConnectionBaseUrl(params.connection);
+        const rawSessions = await fetchSessionOptions(normalizedAgentId, {
+          serverBaseUrl,
+          authToken: params.authToken,
+        });
+        const linked = resolveLinkedChannels(
+          params.agentList.find((item) => item.id === normalizedAgentId) || null,
+        );
+        const filtered =
+          linked.size > 0
+            ? rawSessions.filter((item) => linked.has(item.channel))
+            : rawSessions;
+        const nextSessionId = resolveSessionId(filtered, params.preferredSessionId);
+
+        setSessions(filtered);
+        setSelectedSessionId(nextSessionId);
+        return nextSessionId;
+      } catch (error) {
+        const errorText = readErrorText(error);
+        if (isAuthErrorMessage(errorText)) {
+          setAuthRequired(true);
+          setSessions([]);
+          setSelectedSessionId("");
+          setStatus({
+            type: "error",
+            text: "当前连接需要 Bearer Token，请先填写并保存 Token。",
+          });
+          return "";
+        }
+        setSessions([]);
+        setSelectedSessionId("");
+        setStatus({
+          type: "error",
+          text: `加载 Session 失败：${errorText}`,
+        });
+        return "";
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    },
     [],
   );
 
-  const instantExecutorOptions = useMemo<ExtensionSelectOption[]>(
-    () => [
-      {
-        value: "model",
-        label: "Model Executor",
-        description: "使用模型池中的 API 模型临时执行",
-      },
-      {
-        value: "acp",
-        label: "ACP Executor",
-        description: "使用 ACP Agent 临时执行一次编码代理请求",
-      },
-    ],
-    [],
-  );
-
-  const instantAgentOptions = useMemo<ExtensionSelectOption[]>(
-    () =>
-      agents
-        .filter((item) => item.executionMode === "acp")
-        .map((item) => ({
-          value: item.id,
-          label: item.name,
-          description: item.agentType ? `ACP · ${item.agentType}` : "ACP Agent",
-        })),
-    [agents],
-  );
-
-  const hasSavedToken = Boolean(normalizeAuthToken(authToken));
-  const hasDraftToken = Boolean(normalizeAuthToken(authTokenInput));
-
-  async function loadChats(params: {
-    agentId: string;
-    host: string;
-    port: string;
-    authToken: string;
-    preferredChatKey: string;
-    agentList?: ConsoleUiAgentOption[];
-  }): Promise<string> {
-    const agentId = String(params.agentId || "").trim();
-    if (!agentId) {
-      setChatOptions([]);
-      setSettings((prev) => ({ ...prev, chatKey: "" }));
-      return "";
-    }
-
-    const port = parsePortInput(params.port);
-    if (!port) {
-      setStatus({ type: "error", text: "端口范围应为 1-65535" });
-      return "";
-    }
-
-    const consoleBaseUrl = buildConsoleBaseUrl({
-      host: params.host,
-      port,
-    });
-
-    setIsLoadingChats(true);
-    try {
-      const rawOptions = await fetchChatKeyOptions(agentId, {
-        consoleBaseUrl,
-        authToken: params.authToken,
-      });
-      const sourceAgents = params.agentList || agents;
-      const linkedChannels = resolveLinkedChannels(
-        sourceAgents.find((item) => item.id === agentId) || null,
-      );
-      const filtered =
-        linkedChannels.size > 0
-          ? rawOptions.filter((item) => linkedChannels.has(item.channel))
-          : rawOptions;
-      const nextChatKey = resolveChatKey(filtered, params.preferredChatKey);
-
-      setChatOptions(filtered);
-      setSettings((prev) => ({
-        ...prev,
-        chatKey: nextChatKey,
-      }));
-      return nextChatKey;
-    } catch (error) {
-      const errorText = readErrorText(error);
-      if (isAuthErrorMessage(errorText)) {
-        await clearAuthState().catch(() => undefined);
-        setAuthRequired(true);
-        setIsAuthenticated(false);
-        setAuthToken("");
-        setAuthUsername("");
-        setChatOptions([]);
-        setSettings((prev) => ({ ...prev, chatKey: "" }));
-        setStatus({
-          type: "error",
-          text: "Token 已失效，请重新填写 Bearer Token。",
+  const loadAgentsForConnection = useCallback(
+    async (params: {
+      connection: ExtensionServerConnection;
+      preferredAgentId: string;
+      preferredSessionId: string;
+      authToken: string;
+    }): Promise<void> => {
+      setIsLoadingAgents(true);
+      try {
+        const payload = await fetchAgents({
+          serverBaseUrl: buildServerConnectionBaseUrl(params.connection),
+          authToken: params.authToken,
         });
-        return "";
-      }
-      setChatOptions([]);
-      setSettings((prev) => ({ ...prev, chatKey: "" }));
-      setStatus({
-        type: "error",
-        text: `加载 Channel Chat 失败：${errorText}`,
-      });
-      return "";
-    } finally {
-      setIsLoadingChats(false);
-    }
-  }
-
-  async function loadAgents(params: {
-    host: string;
-    port: string;
-    authToken: string;
-    preferredAgentId: string;
-    preferredChatKey: string;
-    preferredInstantAgentId: string;
-  }): Promise<boolean> {
-    const port = parsePortInput(params.port);
-    if (!port) {
-      setStatus({ type: "error", text: "端口范围应为 1-65535" });
-      return false;
-    }
-
-    const consoleBaseUrl = buildConsoleBaseUrl({
-      host: params.host,
-      port,
-    });
-
-    setIsLoadingAgents(true);
-    setStatus({ type: "loading", text: "加载 Agent 中..." });
-    try {
-      const response = await fetchAgents({
-        consoleBaseUrl,
-        authToken: params.authToken,
-      });
-      const nextAgents = response.agents || [];
-      const nextAgentId = resolveAgentId({
-        agents: nextAgents,
-        preferredAgentId: params.preferredAgentId,
-        selectedAgentId: response.selectedAgentId,
-      });
-      const acpAgents = nextAgents.filter((item) => item.executionMode === "acp");
-      const preferredInstantAgentId = String(params.preferredInstantAgentId || "").trim();
-      const nextInstantAgentId = acpAgents.some((item) => item.id === preferredInstantAgentId)
-        ? preferredInstantAgentId
-        : acpAgents[0]?.id || "";
-
-      setAgents(nextAgents);
-      setSettings((prev) => ({
-        ...prev,
-        consoleHost: params.host,
-        consolePort: port,
-        agentId: nextAgentId,
-        instantAgentId: nextInstantAgentId,
-      }));
-
-      await loadChats({
-        agentId: nextAgentId,
-        host: params.host,
-        port: String(port),
-        authToken: params.authToken,
-        preferredChatKey: params.preferredChatKey,
-        agentList: nextAgents,
-      });
-
-      setStatus({
-        type: "idle",
-        text:
-          nextAgents.length > 0
-            ? "已加载 Agent / Chat 配置"
-            : "未发现 Agent，请先启动 city agent start",
-      });
-    } catch (error) {
-      const errorText = readErrorText(error);
-      if (isAuthErrorMessage(errorText)) {
-        await clearAuthState().catch(() => undefined);
-        setAgents([]);
-        setChatOptions([]);
-        setAuthRequired(true);
-        setIsAuthenticated(false);
-        setAuthToken("");
-        setAuthUsername("");
-        setStatus({
-          type: "error",
-          text: "Token 已失效，请重新填写 Bearer Token。",
-        });
-        return false;
-      }
-      setAgents([]);
-      setChatOptions([]);
-      setStatus({
-        type: "error",
-        text: `加载 Agent 失败：${errorText}`,
-      });
-      return false;
-    } finally {
-      setIsLoadingAgents(false);
-    }
-    return true;
-  }
-
-  async function loadModels(params: {
-    host: string;
-    port: string;
-    authToken: string;
-    preferredModelId: string;
-  }): Promise<string> {
-    const port = parsePortInput(params.port);
-    if (!port) {
-      setStatus({ type: "error", text: "端口范围应为 1-65535" });
-      return "";
-    }
-
-    const consoleBaseUrl = buildConsoleBaseUrl({
-      host: params.host,
-      port,
-    });
-
-    setIsLoadingModels(true);
-    try {
-      const nextModels = await fetchModelOptions({
-        consoleBaseUrl,
-        authToken: params.authToken,
-      });
-      const preferredModelId = String(params.preferredModelId || "").trim();
-      const nextModelId = nextModels.some((item) => item.id === preferredModelId)
-        ? preferredModelId
-        : nextModels[0]?.id || "";
-
-      setModels(nextModels);
-      setSettings((prev) => ({
-        ...prev,
-        instantModelId: nextModelId,
-      }));
-      return nextModelId;
-    } catch (error) {
-      const errorText = readErrorText(error);
-      if (isAuthErrorMessage(errorText)) {
-        await clearAuthState().catch(() => undefined);
-        setAuthRequired(true);
-        setIsAuthenticated(false);
-        setAuthToken("");
-        setAuthUsername("");
-        setModels([]);
-        setSettings((prev) => ({ ...prev, instantModelId: "" }));
-        setStatus({
-          type: "error",
-          text: "Token 已失效，请重新填写 Bearer Token。",
-        });
-        return "";
-      }
-      setModels([]);
-      setSettings((prev) => ({ ...prev, instantModelId: "" }));
-      setStatus({
-        type: "error",
-        text: `加载模型失败：${errorText}`,
-      });
-      return "";
-    } finally {
-      setIsLoadingModels(false);
-    }
-  }
-
-  async function refreshAuthAndAgents(params: {
-    host: string;
-    port: string;
-    preferredAgentId: string;
-    preferredChatKey: string;
-    preferredInstantAgentId: string;
-    preferredModelId: string;
-  }): Promise<void> {
-    const port = parsePortInput(params.port);
-    if (!port) {
-      setStatus({ type: "error", text: "端口范围应为 1-65535" });
-      setAuthInitializing(false);
-      return;
-    }
-    const consoleBaseUrl = buildConsoleBaseUrl({
-      host: params.host,
-      port,
-    });
-
-    setAuthInitializing(true);
-    try {
-      const [authStatus, authState] = await Promise.all([
-        fetchConsoleAuthStatus({ consoleBaseUrl }),
-        loadAuthState(),
-      ]);
-      const token = String(authState.token || "").trim();
-      const username = String(authState.username || "").trim();
-      setAuthToken(token);
-      setAuthTokenInput(token);
-      setAuthUsername(username);
-
-      if (authStatus.requireToken && !token) {
-        setAuthRequired(true);
-        setIsAuthenticated(false);
-        setAuthToken("");
-        setAuthTokenInput("");
-        setAgents([]);
-        setChatOptions([]);
-        setModels([]);
-        setStatus({
-          type: "idle",
-          text: "Console 已开启统一鉴权，请先填写 Bearer Token。",
-        });
-        return;
-      }
-
-      setAuthRequired(false);
-      setIsAuthenticated(Boolean(token));
-      await Promise.all([
-        loadAgents({
-          host: params.host,
-          port: String(port),
-          authToken: token,
+        const list = Array.isArray(payload.agents) ? payload.agents : [];
+        const nextAgentId = resolveAgentId({
+          agents: list,
           preferredAgentId: params.preferredAgentId,
-          preferredChatKey: params.preferredChatKey,
-          preferredInstantAgentId: params.preferredInstantAgentId,
-        }),
-        loadModels({
-          host: params.host,
-          port: String(port),
+          selectedAgentId: payload.selectedAgentId,
+        });
+
+        setAgents(list);
+        setSelectedAgentId(nextAgentId);
+
+        if (list.length < 1) {
+          setSessions([]);
+          setSelectedSessionId("");
+          setStatus({
+            type: "error",
+            text: "未发现可用 Agent，请先启动 `city agent start`。",
+          });
+          return;
+        }
+
+        await loadSessionsForAgent({
+          connection: params.connection,
+          agentId: nextAgentId,
+          preferredSessionId: params.preferredSessionId,
+          authToken: params.authToken,
+          agentList: list,
+        });
+
+        setStatus({ type: "idle", text: "修改后保存即可" });
+      } catch (error) {
+        const errorText = readErrorText(error);
+        if (isAuthErrorMessage(errorText)) {
+          setAuthRequired(true);
+          setAgents([]);
+          setSessions([]);
+          setSelectedAgentId("");
+          setSelectedSessionId("");
+          setStatus({
+            type: "error",
+            text: "当前连接需要 Bearer Token，请先填写并保存 Token。",
+          });
+          return;
+        }
+        setAgents([]);
+        setSessions([]);
+        setSelectedAgentId("");
+        setSelectedSessionId("");
+        setStatus({
+          type: "error",
+          text: `加载 Agent 失败：${errorText}`,
+        });
+      } finally {
+        setIsLoadingAgents(false);
+      }
+    },
+    [loadSessionsForAgent],
+  );
+
+  const inspectConnection = useCallback(
+    async (connection: ExtensionServerConnection, nextSettings: ExtensionSettings): Promise<void> => {
+      setIsLoadingConnectionState(true);
+      try {
+        const token = await loadConnectionToken(connection.id);
+        setTokenInput(token);
+        setConnectionDraft(connection);
+
+        const authStatus = await fetchConsoleAuthStatus({
+          consoleBaseUrl: buildServerConnectionBaseUrl(connection),
+        });
+        const requiresToken = authStatus.requireToken === true;
+        setAuthRequired(requiresToken && !token);
+
+        const preference = resolveRoutePreference({
+          settings: nextSettings,
+          connectionId: connection.id,
+        });
+        setSelectedAgentId(preference.agentId);
+        setSelectedSessionId(preference.sessionId);
+
+        if (requiresToken && !token) {
+          setAgents([]);
+          setSessions([]);
+          setStatus({
+            type: "error",
+            text: "当前连接需要 Bearer Token，请先填写并保存 Token。",
+          });
+          return;
+        }
+
+        await loadAgentsForConnection({
+          connection,
+          preferredAgentId: preference.agentId,
+          preferredSessionId: preference.sessionId,
           authToken: token,
-          preferredModelId: params.preferredModelId,
-        }),
-      ]);
-    } catch (error) {
-      setStatus({
-        type: "error",
-        text: `初始化鉴权失败：${readErrorText(error)}`,
-      });
-    } finally {
-      setAuthInitializing(false);
-    }
-  }
+        });
+      } catch (error) {
+        setStatus({
+          type: "error",
+          text: `连接检查失败：${readErrorText(error)}`,
+        });
+      } finally {
+        setIsLoadingConnectionState(false);
+      }
+    },
+    [loadAgentsForConnection],
+  );
 
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
+
     void (async () => {
       try {
         const loaded = await loadSettings();
-        const authState = await loadAuthState();
-        if (!mounted) return;
+        if (!isMounted) return;
+
+        const nextConnectionId =
+          loaded.selectedConnectionId || loaded.connections[0]?.id || "";
+        const selected =
+          loaded.connections.find((item) => item.id === nextConnectionId) ||
+          loaded.connections[0] ||
+          toEmptyConnection();
+
         setSettings(loaded);
-        setConsoleHost(loaded.consoleHost);
-        setConsolePortInput(String(loaded.consolePort));
-        setAuthToken(String(authState.token || "").trim());
-        setAuthTokenInput(String(authState.token || "").trim());
-        setAuthUsername(String(authState.username || "").trim());
-        await refreshAuthAndAgents({
-          host: loaded.consoleHost,
-          port: String(loaded.consolePort),
-          preferredAgentId: loaded.agentId,
-          preferredChatKey: loaded.chatKey,
-          preferredInstantAgentId: loaded.instantAgentId,
-          preferredModelId: loaded.instantModelId,
-        });
+        setSelectedConnectionId(selected.id);
+        setTaskPromptInput(loaded.taskPrompt);
+        await inspectConnection(selected, loaded);
       } catch (error) {
-        if (!mounted) return;
-        setStatus({ type: "error", text: `初始化失败：${readErrorText(error)}` });
+        if (!isMounted) return;
+        setStatus({
+          type: "error",
+          text: `初始化失败：${readErrorText(error)}`,
+        });
       }
     })();
+
     return () => {
-      mounted = false;
+      isMounted = false;
     };
-  }, []);
+  }, [inspectConnection]);
 
-  async function handleRefreshAgents(): Promise<void> {
-    const host = String(consoleHost || "").trim() || "127.0.0.1";
-    const port = parsePortInput(consolePortInput);
-    if (!port) {
-      setStatus({ type: "error", text: "端口范围应为 1-65535" });
-      return;
-    }
+  const handleSelectConnection = useCallback(
+    async (connectionId: string) => {
+      const nextConnection =
+        settings.connections.find((item) => item.id === connectionId) || null;
+      if (!nextConnection) return;
+      const nextSettings = {
+        ...settings,
+        selectedConnectionId: nextConnection.id,
+      };
+      setSettings(nextSettings);
+      setSelectedConnectionId(nextConnection.id);
+      await inspectConnection(nextConnection, nextSettings);
+    },
+    [inspectConnection, settings],
+  );
 
-    const nextToken = normalizeAuthToken(authTokenInput);
-    if (nextToken) {
-      await saveAuthState({
-        token: nextToken,
-        ...(authUsername ? { username: authUsername } : {}),
+  const handleCreateConnection = useCallback(() => {
+    const nextConnection = toEmptyConnection();
+    const nextSettings = {
+      ...settings,
+      connections: [...settings.connections, nextConnection],
+      selectedConnectionId: nextConnection.id,
+      routePreferences: {
+        ...settings.routePreferences,
+        [nextConnection.id]: {
+          agentId: "",
+          sessionId: "",
+        },
+      },
+    };
+    setSettings(nextSettings);
+    setSelectedConnectionId(nextConnection.id);
+    setConnectionDraft(nextConnection);
+    setTokenInput("");
+    setAgents([]);
+    setSessions([]);
+    setSelectedAgentId("");
+    setSelectedSessionId("");
+    setAuthRequired(false);
+    setStatus({ type: "idle", text: "新连接已创建，填写后保存即可" });
+  }, [settings]);
+
+  const handleDeleteConnection = useCallback(() => {
+    if (!selectedConnection || settings.connections.length <= 1) {
+      setStatus({
+        type: "error",
+        text: "至少保留一个连接，不能删除最后一个连接。",
       });
-      setAuthToken(nextToken);
-      setAuthTokenInput(nextToken);
-      setIsAuthenticated(true);
-    } else {
-      await clearAuthState().catch(() => undefined);
-      setAuthToken("");
-      setAuthTokenInput("");
-      setAuthUsername("");
-      setIsAuthenticated(false);
-    }
-
-    await refreshAuthAndAgents({
-      host,
-      port: String(port),
-      preferredAgentId: settings.agentId,
-      preferredChatKey: settings.chatKey,
-      preferredInstantAgentId: settings.instantAgentId,
-      preferredModelId: settings.instantModelId,
-    });
-  }
-
-  async function handleSelectAgent(agentId: string): Promise<void> {
-    setSettings((prev) => ({
-      ...prev,
-      agentId,
-      chatKey: "",
-    }));
-    await loadChats({
-      agentId,
-      host: String(consoleHost || "").trim() || "127.0.0.1",
-      port: consolePortInput,
-      authToken,
-      preferredChatKey: "",
-      agentList: agents,
-    });
-  }
-
-  async function saveAllSettings(): Promise<void> {
-    const host = String(consoleHost || "").trim() || "127.0.0.1";
-    const port = parsePortInput(consolePortInput);
-    if (!port) {
-      setStatus({ type: "error", text: "端口范围应为 1-65535" });
       return;
     }
+
+    const nextConnections = settings.connections.filter(
+      (item) => item.id !== selectedConnection.id,
+    );
+    const nextSelectedConnection = nextConnections[0] || null;
+    const nextRoutePreferences = { ...settings.routePreferences };
+    delete nextRoutePreferences[selectedConnection.id];
 
     const nextSettings: ExtensionSettings = {
       ...settings,
-      consoleHost: host,
-      consolePort: port,
-      agentId: String(settings.agentId || "").trim(),
-      chatKey: String(settings.chatKey || "").trim(),
-      instantModelId: String(settings.instantModelId || "").trim(),
-      instantAgentId: String(settings.instantAgentId || "").trim(),
+      connections: nextConnections,
+      selectedConnectionId: nextSelectedConnection?.id || "",
+      routePreferences: nextRoutePreferences,
     };
+
+    setSettings(nextSettings);
+    setSelectedConnectionId(nextSelectedConnection?.id || "");
+    setConnectionDraft(nextSelectedConnection || toEmptyConnection());
+    setStatus({ type: "idle", text: "当前连接将会在保存后删除" });
+  }, [selectedConnection, settings]);
+
+  const handleRefreshConnection = useCallback(async () => {
+    if (!selectedConnection) return;
+    await inspectConnection(selectedConnection, settings);
+  }, [inspectConnection, selectedConnection, settings]);
+
+  const handleSelectAgent = useCallback(
+    async (agentId: string) => {
+      if (!selectedConnection) return;
+      const token = await loadConnectionToken(selectedConnection.id);
+      setSelectedAgentId(agentId);
+      const nextSessionId = await loadSessionsForAgent({
+        connection: selectedConnection,
+        agentId,
+        preferredSessionId: "",
+        authToken: token,
+        agentList: agents,
+      });
+      const nextSettings = mergeRoutePreferenceSettings({
+        settings,
+        connectionId: selectedConnection.id,
+        agentId,
+        sessionId: nextSessionId,
+        taskPrompt: taskPromptInput,
+      });
+      setSettings(nextSettings);
+    },
+    [agents, loadSessionsForAgent, selectedConnection, settings, taskPromptInput],
+  );
+
+  const handleSaveAllSettings = useCallback(async () => {
+    const currentConnectionId =
+      String(selectedConnectionId || "").trim() || settings.connections[0]?.id || "";
+    const normalizedName = normalizeConnectionName(connectionDraft.name);
+    const normalizedProtocol = normalizeConnectionProtocol(connectionDraft.protocol);
+    const normalizedHost = normalizeConnectionHost(connectionDraft.host);
+    const normalizedPort = normalizeConnectionPort(String(connectionDraft.port));
+    const normalizedBasePath = normalizeConnectionBasePath(connectionDraft.basePath);
+
+    if (!normalizedName) {
+      setStatus({ type: "error", text: "连接名称不能为空。" });
+      return;
+    }
+    if (!normalizedPort) {
+      setStatus({ type: "error", text: "端口范围应为 1-65535。" });
+      return;
+    }
+
+    const normalizedConnection: ExtensionServerConnection = {
+      ...connectionDraft,
+      id: currentConnectionId || connectionDraft.id || createConnectionId(),
+      name: normalizedName,
+      protocol: normalizedProtocol,
+      host: normalizedHost,
+      port: normalizedPort,
+      basePath: normalizedBasePath,
+    };
+
+    const nextConnections = settings.connections.map((item) =>
+      item.id === normalizedConnection.id ? normalizedConnection : item,
+    );
+    const connectionExists = nextConnections.some(
+      (item) => item.id === normalizedConnection.id,
+    );
+    const finalConnections = connectionExists
+      ? nextConnections
+      : [...nextConnections, normalizedConnection];
+
+    const nextSettings = mergeRoutePreferenceSettings({
+      settings: {
+        ...settings,
+        connections: finalConnections,
+        selectedConnectionId: normalizedConnection.id,
+      },
+      connectionId: normalizedConnection.id,
+      agentId: selectedAgentId,
+      sessionId: selectedSessionId,
+      taskPrompt: String(taskPromptInput || "").trim() || DEFAULT_SETTINGS.taskPrompt,
+    });
 
     setIsSaving(true);
     setStatus({ type: "loading", text: "保存中..." });
+
     try {
+      const normalizedToken = normalizeAuthToken(tokenInput);
       await saveSettings(nextSettings);
-      const nextToken = normalizeAuthToken(authTokenInput);
-      if (nextToken) {
-        await saveAuthState({
-          token: nextToken,
-          ...(authUsername ? { username: authUsername } : {}),
-        });
-        setAuthToken(nextToken);
-        setAuthTokenInput(nextToken);
-        setIsAuthenticated(true);
+      if (normalizedToken) {
+        await saveConnectionToken(normalizedConnection.id, normalizedToken);
       } else {
-        await clearAuthState().catch(() => undefined);
-        setAuthToken("");
-        setAuthTokenInput("");
-        setAuthUsername("");
-        setIsAuthenticated(false);
+        await clearConnectionToken(normalizedConnection.id);
       }
+
       setSettings(nextSettings);
-      setStatus({ type: "success", text: "已保存，扩展弹窗会使用新的连接与默认目标" });
+      setSelectedConnectionId(normalizedConnection.id);
+      setConnectionDraft(normalizedConnection);
+      await inspectConnection(normalizedConnection, nextSettings);
+      setStatus({
+        type: "success",
+        text: "已保存，Popup 会使用新的连接和默认路由。",
+      });
     } catch (error) {
-      setStatus({ type: "error", text: `保存失败：${readErrorText(error)}` });
+      setStatus({
+        type: "error",
+        text: `保存失败：${readErrorText(error)}`,
+      });
     } finally {
       setIsSaving(false);
     }
-  }
-
-  async function handleLogout(): Promise<void> {
-    await clearAuthState().catch(() => undefined);
-    setAuthRequired(false);
-    setIsAuthenticated(false);
-    setAuthToken("");
-    setAuthTokenInput("");
-    setAuthUsername("");
-    await refreshAuthAndAgents({
-      host: String(consoleHost || "").trim() || "127.0.0.1",
-      port: consolePortInput,
-      preferredAgentId: settings.agentId,
-      preferredChatKey: settings.chatKey,
-      preferredInstantAgentId: settings.instantAgentId,
-      preferredModelId: settings.instantModelId,
-    });
-  }
+  }, [
+    connectionDraft,
+    inspectConnection,
+    selectedAgentId,
+    selectedConnectionId,
+    selectedSessionId,
+    settings,
+    taskPromptInput,
+    tokenInput,
+  ]);
 
   return (
-    <main className="mx-auto my-6 flex w-[min(720px,calc(100vw-32px))] min-w-0 flex-col gap-4 overflow-x-hidden">
+    <main className="mx-auto my-6 flex w-[min(760px,calc(100vw-32px))] min-w-0 flex-col gap-4 overflow-x-hidden">
       <header className="rounded-[18px] border border-border bg-surface px-5 py-4">
         <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
           Extension
@@ -601,30 +596,100 @@ export function App() {
           Chrome Extension Settings
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          先连接 Console 并完成鉴权，再设置 Inline Composer 的默认模式、频道目标与即时执行器。
+          管理多个 Server Connection，并为每个连接设置独立的 Token、默认 Agent 与默认 Session。
         </p>
       </header>
 
       <section className="rounded-[18px] border border-border bg-surface p-5">
-        <div className="grid min-w-0 gap-4">
-          <div className="flex items-center justify-between gap-3">
+        <div className="grid gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-medium tracking-[-0.02em] text-foreground">
-              Connect Console
+              Server Connections
             </h2>
-            {authInitializing ? (
-              <span className="text-[11px] text-muted-foreground">
-                检查中...
-              </span>
-            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className="inline-flex min-h-10 items-center justify-center rounded-[12px] border border-border bg-muted px-4 text-[12px] font-medium text-foreground transition hover:bg-background"
+                type="button"
+                onClick={handleCreateConnection}
+              >
+                新建连接
+              </button>
+              <button
+                className="inline-flex min-h-10 items-center justify-center rounded-[12px] border border-border bg-muted px-4 text-[12px] font-medium text-foreground transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                onClick={handleDeleteConnection}
+                disabled={settings.connections.length <= 1}
+              >
+                删除当前连接
+              </button>
+              <button
+                className="inline-flex min-h-10 items-center justify-center rounded-[12px] border border-border bg-muted px-4 text-[12px] font-medium text-foreground transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                onClick={() => {
+                  void handleRefreshConnection();
+                }}
+                disabled={isLoadingConnectionState}
+              >
+                {isLoadingConnectionState ? "检查中..." : "重新检查"}
+              </button>
+            </div>
           </div>
 
-          <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+          <ExtensionPopupSelect
+            label="Current Connection"
+            value={selectedConnectionId}
+            placeholder="请选择连接"
+            options={connectionOptions}
+            onChange={(value) => {
+              void handleSelectConnection(value);
+            }}
+            disabled={settings.connections.length === 0}
+          />
+
+          <div className="grid gap-3 md:grid-cols-2">
             <label className="flex min-w-0 flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              IP / Host
+              Connection Name
               <input
                 className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
-                value={consoleHost}
-                onChange={(event) => setConsoleHost(event.target.value)}
+                value={connectionDraft.name}
+                onChange={(event) =>
+                  setConnectionDraft((prev) => ({
+                    ...prev,
+                    name: event.target.value,
+                  }))
+                }
+                placeholder="Local Server"
+              />
+            </label>
+
+            <label className="flex min-w-0 flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Protocol
+              <select
+                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
+                value={connectionDraft.protocol}
+                onChange={(event) =>
+                  setConnectionDraft((prev) => ({
+                    ...prev,
+                    protocol: normalizeConnectionProtocol(event.target.value),
+                  }))
+                }
+              >
+                <option value="http">http</option>
+                <option value="https">https</option>
+              </select>
+            </label>
+
+            <label className="flex min-w-0 flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Host
+              <input
+                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
+                value={connectionDraft.host}
+                onChange={(event) =>
+                  setConnectionDraft((prev) => ({
+                    ...prev,
+                    host: event.target.value,
+                  }))
+                }
                 placeholder="127.0.0.1"
               />
             </label>
@@ -633,177 +698,87 @@ export function App() {
               Port
               <input
                 className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
-                value={consolePortInput}
-                onChange={(event) => setConsolePortInput(event.target.value)}
+                value={String(connectionDraft.port || "")}
+                onChange={(event) =>
+                  setConnectionDraft((prev) => ({
+                    ...prev,
+                    port: Number.parseInt(event.target.value || "0", 10) || 0,
+                  }))
+                }
                 placeholder="5315"
               />
             </label>
 
-            <div className="flex items-end">
-              <button
-                className="inline-flex min-h-10 items-center justify-center rounded-[12px] border border-border bg-muted px-4 text-[12px] font-medium text-foreground transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-60"
-                type="button"
-                onClick={() => void handleRefreshAgents()}
-                disabled={isLoadingAgents}
-              >
-                {isLoadingAgents ? "连接中..." : "连接并加载"}
-              </button>
+            <label className="flex min-w-0 flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Base Path
+              <input
+                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
+                value={connectionDraft.basePath}
+                onChange={(event) =>
+                  setConnectionDraft((prev) => ({
+                    ...prev,
+                    basePath: event.target.value,
+                  }))
+                }
+                placeholder="/downcity"
+              />
+            </label>
+
+            <div className="rounded-[12px] border border-border bg-muted px-3 py-3 text-[12px] text-muted-foreground">
+              {selectedConnection
+                ? formatServerConnectionLabel(selectedConnection)
+                : "当前没有可用连接"}
             </div>
           </div>
-
-          {authInitializing ? null : (
-            <div className="grid min-w-0 gap-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border bg-muted px-3 py-3">
-                <div className="grid gap-1 text-[12px]">
-                  <div className="font-medium text-foreground">
-                    {authRequired
-                      ? hasDraftToken
-                        ? "将使用当前 Token"
-                        : "Console 需要鉴权"
-                      : hasDraftToken
-                        ? "当前将使用 Token"
-                        : "Console 当前公开访问"}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {authRequired
-                      ? hasDraftToken
-                        ? authUsername
-                          ? `当前身份：${authUsername}`
-                          : "已填写 Token，可直接请求私有接口。"
-                        : "填写 Token 后即可请求私有接口。"
-                      : hasDraftToken
-                        ? authUsername
-                          ? `当前身份：${authUsername}`
-                          : "当前会优先使用 Token。"
-                        : "未检测到鉴权要求，Token 可以留空。"}
-                  </div>
-                </div>
-                {(isAuthenticated || hasSavedToken || hasDraftToken) ? (
-                  <button
-                    className="inline-flex min-h-10 items-center justify-center rounded-[12px] border border-border bg-background px-4 text-[12px] font-medium text-foreground transition hover:bg-surface"
-                    type="button"
-                    onClick={() => void handleLogout()}
-                  >
-                    清空 Token
-                  </button>
-                ) : null}
-              </div>
-
-              <label className="flex min-w-0 flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Access Token
-                <textarea
-                  className="min-h-[76px] w-full resize-y rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] leading-[1.55] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
-                  value={authTokenInput}
-                  onChange={(event) => setAuthTokenInput(event.target.value)}
-                  placeholder="粘贴 Bearer Token；支持直接粘贴 Bearer xxx 或纯 token"
-                />
-                <span className="rounded-[12px] bg-muted px-3 py-2 text-[11px] normal-case tracking-normal text-muted-foreground">
-                  如何获取：在当前机器的终端执行 `city token create my-token`，或直接运行 `city token`。
-                </span>
-              </label>
-            </div>
-          )}
         </div>
       </section>
 
       <section className="rounded-[18px] border border-border bg-surface p-5">
-        <div className="grid min-w-0 gap-5">
+        <div className="grid gap-4">
           <div>
             <h2 className="text-lg font-medium tracking-[-0.02em] text-foreground">
-              Inline Composer
+              Authentication
             </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              当前 Token 只作用于选中的 Server Connection。
+            </p>
           </div>
 
-          <ExtensionPopupSelect
-            label="Default Mode"
-            value={settings.inlineMode}
-            placeholder="请选择默认模式"
-            options={modeOptions}
-            onChange={(value) =>
-              setSettings((prev) => ({
-                ...prev,
-                inlineMode: value === "instant" ? "instant" : "channel",
-              }))
-            }
-            disabled={authInitializing}
-          />
+          <label className="flex min-w-0 flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Bearer Token
+            <textarea
+              className="min-h-[92px] w-full resize-y rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] leading-[1.55] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
+              value={tokenInput}
+              onChange={(event) => setTokenInput(event.target.value)}
+              placeholder="粘贴 Bearer Token；支持直接粘贴 Bearer xxx 或纯 token"
+            />
+            <span className="rounded-[12px] bg-muted px-3 py-2 text-[11px] normal-case tracking-normal text-muted-foreground">
+              如何获取：在当前机器终端执行 `city token create my-token`，或直接运行 `city token`。
+            </span>
+          </label>
 
-          <ExtensionPopupSelect
-            label="Default Instant Executor"
-            value={settings.instantExecutor}
-            placeholder="请选择即时模式执行器"
-            options={instantExecutorOptions}
-            onChange={(value) =>
-              setSettings((prev) => ({
-                ...prev,
-                instantExecutor: value === "acp" ? "acp" : "model",
-              }))
-            }
-            disabled={authInitializing || authRequired}
-          />
-
-          <ExtensionPopupSelect
-            label="Default Instant Model"
-            value={settings.instantModelId}
-            placeholder={
-              isLoadingModels
-                ? "加载模型中..."
-                : modelSelectOptions.length > 0
-                  ? "请选择默认模型"
-                  : "暂无可用模型"
-            }
-            options={modelSelectOptions}
-            onChange={(value) =>
-              setSettings((prev) => ({
-                ...prev,
-                instantModelId: value,
-              }))
-            }
-            disabled={
-              authInitializing ||
-              authRequired ||
-              isLoadingModels ||
-              modelSelectOptions.length === 0 ||
-              settings.instantExecutor !== "model"
-            }
-          />
-
-          <ExtensionPopupSelect
-            label="Default Instant ACP Agent"
-            value={settings.instantAgentId}
-            placeholder={
-              instantAgentOptions.length > 0
-                ? "请选择 ACP Agent"
-                : "暂无可用 ACP Agent"
-            }
-            options={instantAgentOptions}
-            onChange={(value) =>
-              setSettings((prev) => ({
-                ...prev,
-                instantAgentId: value,
-              }))
-            }
-            disabled={
-              authInitializing ||
-              authRequired ||
-              instantAgentOptions.length === 0 ||
-              settings.instantExecutor !== "acp"
-            }
-          />
+          <div className="rounded-[12px] border border-border bg-muted px-3 py-3 text-[12px] text-muted-foreground">
+            {authRequired
+              ? "当前连接要求鉴权，保存 Token 后才能加载私有 Agent / Session。"
+              : "当前连接未检测到强制鉴权；如服务开启了 Token，也可以在这里填写。"}
+          </div>
         </div>
       </section>
 
       <section className="rounded-[18px] border border-border bg-surface p-5">
-        <div className="grid min-w-0 gap-5">
+        <div className="grid gap-5">
           <div>
             <h2 className="text-lg font-medium tracking-[-0.02em] text-foreground">
-              Agent / Channel
+              Default Routing
             </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              为当前连接选择 Popup 默认投递的 Agent 与 Session。
+            </p>
           </div>
 
           <ExtensionPopupSelect
             label="Default Agent"
-            value={settings.agentId}
+            value={selectedAgentId}
             placeholder={
               isLoadingAgents
                 ? "加载 Agent 中..."
@@ -812,43 +787,59 @@ export function App() {
                   : "暂无可用 Agent"
             }
             options={agentOptions}
-            onChange={(value) => void handleSelectAgent(value)}
-            disabled={authInitializing || authRequired || isLoadingAgents || agentOptions.length === 0}
+            onChange={(value) => {
+              void handleSelectAgent(value);
+            }}
+            disabled={isLoadingConnectionState || isLoadingAgents || agentOptions.length === 0}
           />
 
           <ExtensionPopupSelect
-            label="Default Chat"
-            value={settings.chatKey}
+            label="Default Session"
+            value={selectedSessionId}
             placeholder={
-              !settings.agentId
+              !selectedAgentId
                 ? "请先选择 Agent"
-                : isLoadingChats
-                  ? "加载 Chat 中..."
-                  : chatSelectOptions.length > 0
-                    ? "请选择目标 Channel Chat"
-                    : "暂无可用 Channel Chat"
+                : isLoadingSessions
+                  ? "加载 Session 中..."
+                  : sessionOptions.length > 0
+                    ? "请选择默认 Session"
+                    : "暂无可用 Session"
             }
-            options={chatSelectOptions}
-            onChange={(value) =>
-              setSettings((prev) => ({
-                ...prev,
-                chatKey: value,
-              }))
-            }
+            options={sessionOptions}
+            onChange={(value) => setSelectedSessionId(value)}
             disabled={
-              authInitializing ||
-              authRequired ||
-              !settings.agentId ||
-              isLoadingChats ||
-              chatSelectOptions.length === 0
+              isLoadingConnectionState ||
+              !selectedAgentId ||
+              isLoadingSessions ||
+              sessionOptions.length === 0
             }
           />
 
-          {!settings.chatKey && chatSelectOptions.length > 1 ? (
+          {!selectedSessionId && sessionOptions.length > 1 ? (
             <div className="rounded-[12px] border border-border bg-muted px-3 py-2 text-[12px] text-muted-foreground">
-              当前 Agent 有多个会话，请明确选择一个默认 Channel Chat，避免消息发到错误会话。
+              当前 Agent 下有多个 Session，建议明确选择默认目标，避免发送到错误会话。
             </div>
           ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-[18px] border border-border bg-surface p-5">
+        <div className="grid gap-4">
+          <div>
+            <h2 className="text-lg font-medium tracking-[-0.02em] text-foreground">
+              Default Ask
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Popup 会把这里的内容作为默认 Ask，用户仍可在发送前修改。
+            </p>
+          </div>
+
+          <textarea
+            className="min-h-[96px] w-full resize-y rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[13px] leading-6 text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
+            value={taskPromptInput}
+            onChange={(event) => setTaskPromptInput(event.target.value)}
+            placeholder="请阅读这个页面并给我一个可执行摘要。"
+          />
         </div>
       </section>
 
@@ -857,10 +848,12 @@ export function App() {
         <button
           className="inline-flex min-h-11 items-center justify-center rounded-[12px] border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
-          onClick={() => void saveAllSettings()}
+          onClick={() => {
+            void handleSaveAllSettings();
+          }}
           disabled={isSaving}
         >
-          {isSaving ? "保存中..." : "保存默认设置"}
+          {isSaving ? "保存中..." : "保存设置"}
         </button>
       </footer>
     </main>

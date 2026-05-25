@@ -1,59 +1,47 @@
 ---
 title: Chrome Extension 总览
-description: Chrome 扩展能做什么、适合什么场景，以及它和 Agent 工作流的关系
+description: Chrome 扩展现在提供什么能力，以及它和 Downcity Agent 工作流的关系
 ---
 
 # Chrome Extension 总览
 
-Chrome Extension 是 Downcity 的网页上下文入口。
+Chrome Extension 是 Downcity 的网页投递入口。
 
-它负责把“正在看的网页”和“想让 Agent 做的事”连接起来，让你不用来回复制正文、切换聊天窗口、手动整理引用内容。
+它的职责很简单：把你当前正在看的网页整理成 Markdown 附件，然后发送到指定的 Downcity Server、Agent 和 Session。
 
-## 它适合什么场景
+## 适合什么场景
 
-- 你正在读一篇文章，想立刻让 Agent 总结、改写、翻译或提炼要点
-- 你只选中了网页中的一小段内容，想就地发问
-- 你希望把网页上下文作为附件送进已有的 Channel Chat
-- 你想在浏览器里快速把页面交给某个本地 Agent 处理
+- 你正在读一篇文章，想立刻交给 Agent 总结、翻译或提炼重点
+- 你希望把某个网页快照发到既有 Session 中继续工作
+- 你有多个本地或远程 Server，需要在浏览器里快速切换
 
-## 它提供两种入口
+## 它现在提供什么
 
 ### 1. Extension Popup
 
-适合：
+Popup 负责：
 
-- 明确选择 Agent
-- 输入完整任务说明
-- 在 Agent 模式下查看当前页面发送历史
+- 选择当前使用的 Server Connection
+- 选择目标 Agent
+- 选择目标 Session
+- 输入 Ask 并发送
+- 查看当前页面在当前连接下的最近发送历史
 
-### 2. 页内输入框（Inline Composer）
+### 2. Settings Page
 
-适合：
+设置页负责：
 
-- 在网页里选中一段文字后立刻追问
-- 在页面现场切换“频道模式 / 即时模式”
-- 不离开当前阅读现场完成提问或投递
-- 使用 `Cmd/Ctrl + U` 打开页内输入框
-
-## 它会发送什么
-
-### 选区模式
-
-- 发送当前选中的文本
-- 以 Markdown 附件形式上传
-- 适合做局部分析、问答、解释
-
-### 全页模式
-
-- 优先抓取最像正文的 `main/article` 主体区块
-- 如果页面存在多个强相关主体区块，会合并输出
-- 会尽量附带页面中的图片引用
+- 创建多个 Server Connection
+- 配置每个连接的 Host、Port 和 Bearer Token
+- 为每个连接设置默认 Agent / Session
+- 设置 Popup 默认 Ask
 
 ## 它不会做什么
 
-- 不在 Extension Popup 里等待完整 Agent 执行结果
-- 不把自己做成第二个 Console UI
-- 不负责长期保存对话，结果仍然回到原本的 chat/context
+- 不再提供 Inline Composer
+- 不再在网页内注入输入框
+- 不在 Popup 中等待完整执行结果
+- 不替代原始 Session 的消息查看界面
 
 ## 推荐阅读
 

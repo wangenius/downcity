@@ -1,37 +1,37 @@
 /**
- * Downcity API 访问层。
+ * Downcity Server API 访问层。
  *
  * 关键点（中文）：
  * - 所有 HTTP 交互统一从这里走，UI 只关注业务流程。
- * - 默认走本地 Console，也支持外部传入自定义 IP/端口地址。
- * - 当前只保留设置页需要的拉取能力与频道模式投递能力。
+ * - 默认走本地 Server，也支持外部传入自定义 IP/端口地址。
+ * - 当前只保留设置页与 Popup 需要的 Agent / Session 拉取能力和任务投递能力。
  */
 
 import type {
-  ChatKeyOption,
   ConsoleUiAgentsResponse,
   ConsoleModelOption,
   ConsoleModelPoolResponse,
+  GenericApiResponse,
+  SessionOption,
   TuiContextExecuteRequestBody,
-  TuiContextSummary,
   TuiContextsResponse,
 } from "../types/api";
-import { buildAuthHeaders, shouldUseBeaconTransport, type ExtensionAuthOptions } from "./auth";
-import { resolveChatKey as resolveDefaultChatKey, toChatKeyOption } from "./chatRouting";
+import { type ExtensionAuthOptions } from "./auth";
+import { toSessionOption } from "./chatRouting";
 import { resolveConsoleBaseUrl } from "./consoleBase";
 import { requestJson } from "./http";
 
 type ApiRequestOptions = ExtensionAuthOptions & {
-  consoleBaseUrl?: string;
+  serverBaseUrl?: string;
 };
 
 /**
- * 拉取 Console 可用 Agent 列表。
+ * 拉取 Server 可用 Agent 列表。
  */
 export async function fetchAgents(
   options?: ApiRequestOptions,
 ): Promise<ConsoleUiAgentsResponse> {
-  const url = `${resolveConsoleBaseUrl(options?.consoleBaseUrl)}/api/ui/agents`;
+  const url = `${resolveConsoleBaseUrl(options?.serverBaseUrl)}/api/ui/agents`;
   const payload = await requestJson<ConsoleUiAgentsResponse>(url, {
     method: "GET",
   }, {
@@ -44,16 +44,16 @@ export async function fetchAgents(
 }
 
 /**
- * 拉取指定 Agent 可用的 chatKey 列表。
+ * 拉取指定 Agent 可用的 Session 列表。
  */
-export async function fetchChatKeyOptions(
+export async function fetchSessionOptions(
   agentId: string,
   options?: ApiRequestOptions,
-): Promise<ChatKeyOption[]> {
+): Promise<SessionOption[]> {
   const normalizedAgentId = String(agentId || "").trim();
   if (!normalizedAgentId) return [];
 
-  const url = `${resolveConsoleBaseUrl(options?.consoleBaseUrl)}/api/dashboard/sessions?agent=${encodeURIComponent(normalizedAgentId)}&limit=500`;
+  const url = `${resolveConsoleBaseUrl(options?.serverBaseUrl)}/api/dashboard/sessions?agent=${encodeURIComponent(normalizedAgentId)}&limit=500`;
   const payload = await requestJson<TuiContextsResponse>(url, {
     method: "GET",
   }, {
@@ -61,18 +61,18 @@ export async function fetchChatKeyOptions(
   });
 
   if (payload.success !== true) {
-    throw new Error(payload.error || "加载 chatKey 列表失败");
+    throw new Error(payload.error || "加载 Session 列表失败");
   }
 
   const contexts = Array.isArray(payload.sessions) ? payload.sessions : [];
   const seen = new Set<string>();
-  const outOptions: ChatKeyOption[] = [];
+  const outOptions: SessionOption[] = [];
 
   for (const item of contexts) {
-    const option = toChatKeyOption(item);
+    const option = toSessionOption(item);
     if (!option) continue;
-    if (seen.has(option.chatKey)) continue;
-    seen.add(option.chatKey);
+    if (seen.has(option.sessionId)) continue;
+    seen.add(option.sessionId);
     outOptions.push(option);
   }
 
@@ -85,12 +85,12 @@ export async function fetchChatKeyOptions(
 }
 
 /**
- * 拉取 Console 模型池中的可用模型。
+ * 拉取 Server 模型池中的可用模型。
  */
 export async function fetchModelOptions(
   options?: ApiRequestOptions,
 ): Promise<ConsoleModelOption[]> {
-  const url = `${resolveConsoleBaseUrl(options?.consoleBaseUrl)}/api/ui/model/pool`;
+  const url = `${resolveConsoleBaseUrl(options?.serverBaseUrl)}/api/ui/model/pool`;
   const payload = await requestJson<ConsoleModelPoolResponse>(
     url,
     {
@@ -111,55 +111,48 @@ export async function fetchModelOptions(
 }
 
 /**
- * 投递 Agent 任务（异步，不等待执行完成）。
+ * 投递 Agent 任务。
  *
  * 关键点（中文）：
- * - 优先使用 sendBeacon，支持扩展弹窗关闭后的请求续传。
- * - sendBeacon 不可用时，回退到 keepalive fetch。
- * - 只确认“请求已发起”，不等待后端执行结束。
+ * - Popup 侧必须拿到明确 HTTP 成功后，才能提示“发送成功”。
+ * - 避免把网络错误、鉴权错误、运行时 5xx 误报成“已发送”。
+ * - 继续保留 `keepalive`，尽量降低弹窗关闭带来的请求中断概率。
  */
-export function dispatchAgentTask(params: {
-  consoleBaseUrl?: string;
+export async function executeAgentTask(params: {
+  serverBaseUrl?: string;
   agentId: string;
   sessionId: string;
   authToken?: string;
   body: TuiContextExecuteRequestBody;
-}): boolean {
+}): Promise<void> {
   const agentId = String(params.agentId || "").trim();
   const sessionId = String(params.sessionId || "").trim();
-  if (!agentId) return false;
-  if (!sessionId) return false;
+  if (!agentId) {
+    throw new Error("缺少目标 Agent");
+  }
+  if (!sessionId) {
+    throw new Error("缺少目标 Session");
+  }
 
-  const url = `${resolveConsoleBaseUrl(params.consoleBaseUrl)}/api/dashboard/sessions/${encodeURIComponent(sessionId)}/execute?agent=${encodeURIComponent(agentId)}`;
-  const bodyText = JSON.stringify(params.body);
-
-  try {
-    if (
-      shouldUseBeaconTransport(params.authToken) &&
-      typeof navigator !== "undefined" &&
-      typeof navigator.sendBeacon === "function"
-    ) {
-      const queued = navigator.sendBeacon(
-        url,
-        new Blob([bodyText], { type: "text/plain;charset=UTF-8" }),
-      );
-      if (queued) return true;
-    }
-
-    void fetch(url, {
+  const url = `${resolveConsoleBaseUrl(params.serverBaseUrl)}/api/dashboard/sessions/${encodeURIComponent(sessionId)}/execute?agent=${encodeURIComponent(agentId)}`;
+  const payload = await requestJson<GenericApiResponse>(
+    url,
+    {
       method: "POST",
-      headers: buildAuthHeaders({
-        authToken: params.authToken,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }),
-      body: bodyText,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params.body),
       keepalive: true,
-    }).catch(() => {});
+    },
+    {
+      authToken: params.authToken,
+    },
+  );
 
-    return true;
-  } catch {
-    return false;
+  if (payload.success !== true) {
+    throw new Error(
+      String(payload.error || payload.message || "任务投递失败，请稍后重试"),
+    );
   }
 }

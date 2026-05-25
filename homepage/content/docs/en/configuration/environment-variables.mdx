@@ -157,6 +157,7 @@ Behavior:
 ## 10. Console public address
 
 When you use `city start -p` or `city console start -p`, the CLI tries to print `Public URL` in startup output.
+If you use `city public on`, future plain `city start` and `city console start` runs also reuse the saved public bind mode.
 
 These values are normally injected by `city start` or the deployment environment. They are not endpoint parameters that users enter for `contact link`:
 

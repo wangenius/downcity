@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Downcity Web Share",
-  "description": "分享当前网页给指定 Downcity，并将执行结果回传到 Channel Chat。",
-  "version": "0.2.69",
+  "description": "分享当前网页给指定 Downcity Server，并发送到目标 Agent Session。",
+  "version": "0.2.72",
   "icons": {
     "16": "icon-16.png",
     "32": "icon-32.png",
@@ -27,37 +27,8 @@
     "scripting",
     "activeTab"
   ],
-  "background": {
-    "service_worker": "background.js",
-    "type": "module"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
-      "all_frames": true,
-      "js": [
-        "content-script.js"
-      ],
-      "run_at": "document_idle"
-    }
-  ],
   "host_permissions": [
     "http://*/*",
     "https://*/*"
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "image.png",
-        "content-script.css"
-      ],
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ]
-    }
   ]
 }

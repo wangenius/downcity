@@ -13,6 +13,7 @@ description: 后台启动 city runtime
 
 如果你希望一并启动 Console，请使用 `city start --console`、`city start -a` 或 `city start -p`。
 如果你传入 `-p/--public` 或 `-h/--host`，CLI 也会自动一并启动 Console。
+如果你之前通过 [`city public`](/zh/docs/commands/public) 开启过持久化公网模式，那么普通 `city start` 也会沿用这份已保存的 Console 绑定，除非本次显式覆盖。
 
 ## 用法
 
@@ -40,6 +41,7 @@ city start -p
 - 默认 `city start` 只启动 runtime，不暴露 Web Console。
 - `city start --console` 默认仍绑定 `127.0.0.1:5315`。
 - `city start -p` 会自动启动 Console，并把监听地址切到 `0.0.0.0:5315`，适合服务器对外访问。
+- `city public on` 可以把这类公网 Console 行为持久化到后续普通 `city start`。
 - 如果绑定的是 `0.0.0.0`，外部访问时请使用服务器实际 IP 或域名，而不是 `127.0.0.1`。
 - 在公网模式下，启动结果会额外打印 `Public URL`。
 - 如果机器本身拿不到公网 IP（例如处在 NAT / SLB / 反向代理后面），请在可达服务器、域名或 tunnel 后启动 city。
@@ -54,6 +56,7 @@ city start -p
 
 - [`city stop`](/zh/docs/commands/stop)
 - [`city status`](/zh/docs/commands/status)
+- [`city public`](/zh/docs/commands/public)
 - [`city agent list --running`](/zh/docs/commands/agent/list)
 
 ## 示例输出（基于当前实现）

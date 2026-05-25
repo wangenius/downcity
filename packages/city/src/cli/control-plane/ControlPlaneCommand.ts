@@ -15,6 +15,9 @@ import {
   startControlPlaneCommand,
   stopControlPlaneCommand,
 } from "./ControlPlaneRuntime.js";
+import {
+  controlPlanePublicCommand,
+} from "./ControlPlanePublicManager.js";
 import { registerConfigCommand } from "../shared/Config.js";
 import { registerModelCommand } from "../model/Model.js";
 import { controlPlaneInitCommand } from "./ControlPlaneInit.js";
@@ -33,6 +36,9 @@ import {
   startCityRuntimeCommand,
   stopCityRuntimeCommand,
 } from "./ControlPlaneProcess.js";
+import {
+  shouldAutoStartControlPlaneFromPersistedMode,
+} from "./ControlPlanePublicMode.js";
 
 /**
  * top-level city/control-plane 命令注册参数。
@@ -81,11 +87,14 @@ export function registerControlPlaneCommands(
         public?: boolean;
         host?: string;
       }>();
+      const hasExplicitHost = Boolean(String(options?.host || "").trim());
+      const hasExplicitPublic = typeof options?.public === "boolean";
       const shouldStartConsole =
         options?.all === true ||
         options?.console === true ||
         options?.public === true ||
-        Boolean(String(options?.host || "").trim());
+        hasExplicitHost ||
+        (!hasExplicitPublic && (await shouldAutoStartControlPlaneFromPersistedMode()));
       await startCityRuntimeCommand(context.cliPath);
       if (shouldStartConsole) {
         await startControlPlaneCommand({
@@ -123,6 +132,24 @@ export function registerControlPlaneCommands(
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
       await controlPlaneStatusCommand();
+    }));
+
+  program
+    .command("public [action]")
+    .description("管理 Console 公网模式（支持交互式 manager 与 on/off/status）")
+    .option("-h, --host <host>", "公网模式绑定 host（默认 0.0.0.0）")
+    .helpOption("--help", "display help for command")
+    .action(createVersionBanner(context.version, async (
+      action: string | undefined,
+      _options: { host?: string },
+      command: Command,
+    ) => {
+      const options = command.opts<{ host?: string }>();
+      await controlPlanePublicCommand({
+        action,
+        host: options.host,
+        cliPath: context.cliPath,
+      });
     }));
 
   program

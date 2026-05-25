@@ -1,21 +1,20 @@
 ---
 title: 安装与连接
-description: 如何构建、加载并把 Chrome 扩展连接到本地 Downcity Console 和 Agent
+description: 如何构建、加载并把 Chrome 扩展连接到一个或多个 Downcity Server
 ---
 
 # 安装与连接
 
 ## 前置条件
 
-在使用扩展前，你通常需要先启动：
+在使用扩展前，通常需要先启动 Downcity 服务：
 
 ```bash
-city start
 city start
 city agent start
 ```
 
-如果你是从仓库本地加载扩展，还需要先构建扩展产物：
+如果你是从仓库本地加载扩展，还需要先构建产物：
 
 ```bash
 npm run build:extension
@@ -28,20 +27,37 @@ npm run build:extension
 3. 点击 `加载已解压的扩展程序`
 4. 选择 `products/chrome-extension/dist`
 
-## 第一次连接要配置什么
+## 第一次需要配置什么
 
-扩展默认连接：
+扩展默认会带一个连接，默认地址是：
 
+- Protocol: `http`
 - Host: `127.0.0.1`
 - Port: `5315`
+- Base Path: 空
 
-如果你的 Console UI 不在默认地址，打开扩展设置页。设置页分成三块：
+如果你的 Server 不在默认地址，打开扩展设置页进行修改。设置页现在主要分成四块：
 
-- `Connect Console`：填写 Console Host、Port，并粘贴 Bearer Token
-- `Inline Composer`：选择默认模式、即时执行器、即时模型和即时 ACP Agent
-- `Agent / Channel`：选择 Popup 默认投递的 Agent 和默认 Channel Chat
+- `Server Connections`：管理多个连接
+- `Authentication`：为当前连接配置 Bearer Token
+- `Default Routing`：为当前连接选择默认 Agent / Session
+- `Default Ask`：设置 Popup 默认 Ask
 
-如果你还没有 token，先在本机终端执行：
+## 如何新增多个连接
+
+你可以在设置页中：
+
+1. 点击 `新建连接`
+2. 填写连接名称、Host 和 Port
+3. 如果远程服务使用 HTTPS 或挂在子路径下，补充 `Protocol` 和 `Base Path`
+4. 如有需要，填写该连接专属的 Bearer Token
+5. 点击保存
+
+保存后，Popup 中就可以直接切换这些连接。
+
+## 如何获取 Token
+
+如果目标 Server 开启了统一鉴权，可以先在本机终端执行：
 
 ```bash
 city token create my-token
@@ -53,35 +69,20 @@ city token create my-token
 city token
 ```
 
-创建完成后可直接复制 token。
+然后把得到的 token 粘贴到设置页的 `Bearer Token`。
 
-然后把返回的 token 粘贴到扩展设置页的 `Access Token`。
+## Agent 和 Session 怎么选
 
-保存 Token 后，扩展会自动在后续请求里附加 `Authorization: Bearer ...`。
+扩展会先读取当前连接上的 Agent 列表，再读取该 Agent 下可用的 Session 列表。
 
-## Inline Composer 的两种模式怎么工作
+如果没有可用 Session，通常说明：
 
-页内输入框支持两种模式：
+- 对应聊天渠道还没有产生过历史会话
+- Agent 还没有运行
+- 当前连接地址配置错误
+- 远程 Console 没有以公网模式监听，或服务器防火墙未放行端口
 
-- `频道模式`：沿用默认 Agent / Channel Chat 投递
-- `即时模式`：创建临时 session，当场执行并直接回显结果
-
-`即时模式` 里还可以选择一个 executor：
-
-- `Model Executor`：使用这里选定的默认模型
-- `ACP Executor`：使用这里选定的 ACP Agent 项目
-
-如果你切到 `即时模式`，但当前 executor 没有配置可用目标，Inline Composer 会提示你先回设置页补齐配置。
-
-## Agent 和 Chat 怎么选
-
-扩展会先从 Console 拉取 Agent 列表，再读取该 Agent 的可用 chat context。
-
-如果没有可用 Chat，通常说明：
-
-- 对应渠道还没有产生过历史消息
-- Agent 还没运行
-- Console 地址配置错了
+如果是服务器部署，你可以选择用 `city start --public` 单次启动公网 Console，或者用 `city public on` 持久化公网模式。
 
 ## 更新扩展后该做什么
 
@@ -91,4 +92,4 @@ city token
 npm run build:extension
 ```
 
-然后回到 `chrome://extensions`，点击该扩展的刷新按钮。
+然后回到 `chrome://extensions`，点击扩展的刷新按钮。

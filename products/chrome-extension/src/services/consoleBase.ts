@@ -12,6 +12,16 @@
 export const DEFAULT_CONSOLE_BASE_URL = "http://127.0.0.1:5315";
 
 /**
+ * 归一化 Base Path。
+ */
+export function normalizeConsoleBasePath(input: string): string {
+  const trimmed = String(input || "").trim();
+  if (!trimmed || trimmed === "/") return "";
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+}
+
+/**
  * 归一化 Console 地址。
  */
 export function normalizeConsoleBaseUrl(input: string): string {
@@ -30,6 +40,10 @@ export function normalizeConsoleBaseUrl(input: string): string {
  */
 export function buildConsoleBaseUrl(params: {
   /**
+   * Console 访问协议。
+   */
+  protocol?: "http" | "https";
+  /**
    * Console 主机名或 IP。
    */
   host: string;
@@ -37,7 +51,12 @@ export function buildConsoleBaseUrl(params: {
    * Console 端口。
    */
   port: number;
+  /**
+   * Console 可选基础路径。
+   */
+  basePath?: string;
 }): string {
+  const protocol = params.protocol === "https" ? "https" : "http";
   const host = String(params.host || "").trim() || "127.0.0.1";
   const rawPort =
     typeof params.port === "number"
@@ -50,7 +69,8 @@ export function buildConsoleBaseUrl(params: {
   if (port < 1 || port > 65535) {
     throw new Error("端口范围应为 1-65535");
   }
-  return normalizeConsoleBaseUrl(`http://${host}:${port}`);
+  const basePath = normalizeConsoleBasePath(String(params.basePath || ""));
+  return normalizeConsoleBaseUrl(`${protocol}://${host}:${port}${basePath}`);
 }
 
 /**

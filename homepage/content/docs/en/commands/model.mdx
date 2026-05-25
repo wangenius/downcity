@@ -65,7 +65,10 @@ city model test model <modelId>
 ## Interactive Manager
 
 - `city model` is the human-first entrypoint for the global model pool.
-- It lets you browse providers and models, test connectivity, pause/resume models, bind a model to a project, and jump into the create flow.
+- It lets you browse providers and models, edit settings, remove entries, test connectivity, pause/resume models, bind a model to a project, and jump into the create flow.
+- Removal is guarded:
+  - provider removal is blocked while any model still references it
+  - model removal is blocked while any agent project still references it via `downcity.json.execution.modelId`
 - In non-interactive environments, `city model` falls back to normal help output.
 
 ## create Behavior
@@ -78,7 +81,9 @@ city model test model <modelId>
 
 - `get`: read a single provider/model detail.
 - `discover`: fetch provider model list and optionally `--auto-add` to local pool.
-- `remove`: remove provider/model (provider removal fails if referenced).
+- `remove`: remove provider/model.
+- Provider removal is rejected if any model still points at it.
+- Model removal is rejected if any agent project still points at it.
 - `use`: bind project `downcity.json.execution.modelId` to a model ID and switch execution mode to `api`.
 
 ## pause Behavior

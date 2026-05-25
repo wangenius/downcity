@@ -65,7 +65,10 @@ city model test model <modelId>
 ## 交互式 manager
 
 - `city model` 是面向人的全局模型池入口。
-- 可以直接浏览 provider 与 model、测试连通性、暂停/恢复模型、把模型绑定到项目，并可随时跳转到创建流程。
+- 可以直接浏览 provider 与 model、编辑配置、删除条目、测试连通性、暂停/恢复模型、把模型绑定到项目，并可随时跳转到创建流程。
+- 删除前会做保护检查：
+  - provider 仍被 model 引用时拒绝删除
+  - model 仍被 agent 项目的 `downcity.json.execution.modelId` 引用时拒绝删除
 - 在非交互环境中，裸 `city model` 会回退到普通 help 输出。
 
 ## create 行为
@@ -78,7 +81,9 @@ city model test model <modelId>
 
 - `get`：查询单个 provider/model 详情。
 - `discover`：发现 provider 模型列表，可选 `--auto-add` 批量写入。
-- `remove`：删除 provider/model（provider 若被引用会拒绝）。
+- `remove`：删除 provider/model。
+- 删除 provider 时，如果仍有 model 绑定它，会直接拒绝。
+- 删除 model 时，如果仍有 agent 项目绑定它，会直接拒绝，并提示先切换项目模型。
 - `use`：把项目 `downcity.json.execution.modelId` 绑定到指定模型 ID，并把执行模式切到 `api`。
 
 ## pause 行为

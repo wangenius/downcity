@@ -1,185 +1,253 @@
 /**
- * 插件设置存储服务。
+ * 扩展设置存储服务。
  *
  * 关键点（中文）：
- * - 使用 chrome.storage.sync 持久化用户配置。
- * - 读写统一 Promise 化，避免 callback 地狱。
+ * - `chrome.storage.sync` 保存非敏感配置：连接列表、默认连接、每连接默认路由、taskPrompt。
+ * - `chrome.storage.local` 保存敏感配置：各连接 token、发送历史。
+ * - 自动把旧版“单连接 + 全局 token + chatKey”结构迁移到新模型。
  */
 
 import type {
-  ExtensionAuthState,
-  InlineComposerMode,
-  InlineInstantExecutorType,
+  ExtensionServerConnection,
+  ExtensionConnectionRoutePreference,
   ExtensionPageSendRecord,
-  ExtensionQuickPromptItem,
+  ExtensionServerProtocol,
+  ExtensionServerConnectionSecretMap,
   ExtensionSettings,
 } from "../types/extension";
 import { normalizeAuthToken } from "./auth";
 
-const STORAGE_KEY = "downcity.extension.settings.v1";
-const AUTH_STORAGE_KEY = "downcity.extension.auth.v1";
-const SEND_HISTORY_STORAGE_KEY = "downcity.extension.send.history.v1";
+const SETTINGS_STORAGE_KEY = "downcity.extension.settings.v2";
+const LEGACY_SETTINGS_STORAGE_KEY = "downcity.extension.settings.v1";
+const SECRETS_STORAGE_KEY = "downcity.extension.server-secrets.v1";
+const LEGACY_AUTH_STORAGE_KEY = "downcity.extension.auth.v1";
+const SEND_HISTORY_STORAGE_KEY = "downcity.extension.send.history.v2";
+const LEGACY_SEND_HISTORY_STORAGE_KEY = "downcity.extension.send.history.v1";
 const SEND_HISTORY_MAX_COUNT = 120;
-const DEFAULT_CONSOLE_HOST = "127.0.0.1";
-const DEFAULT_CONSOLE_PORT = 5315;
+const DEFAULT_SERVER_PROTOCOL: ExtensionServerProtocol = "http";
+const DEFAULT_SERVER_HOST = "127.0.0.1";
+const DEFAULT_SERVER_PORT = 5315;
+const DEFAULT_SERVER_BASE_PATH = "";
+const DEFAULT_SERVER_CONNECTION_NAME = "Local Server";
+const DEFAULT_TASK_PROMPT = "请阅读这个页面并给我一个可执行摘要。";
 
 /**
- * 默认鉴权状态。
+ * 默认连接路由偏好。
  */
-export const DEFAULT_AUTH_STATE: ExtensionAuthState = {
-  token: "",
+const DEFAULT_ROUTE_PREFERENCE: ExtensionConnectionRoutePreference = {
+  agentId: "",
+  sessionId: "",
 };
 
-/**
- * 默认常用问题模板。
- */
-export const DEFAULT_QUICK_PROMPTS: ExtensionQuickPromptItem[] = [
-  {
-    id: "quick-summary",
-    title: "摘要 + 要点",
-    prompt: "阅读附件后，输出 5 条关键要点，并给出一句总结。",
-  },
-  {
-    id: "quick-actions",
-    title: "可执行建议",
-    prompt: "阅读附件后，给出 3 条可执行建议（含优先级与预期收益）。",
-  },
-  {
-    id: "quick-risk",
-    title: "风险检查",
-    prompt: "阅读附件后，列出主要风险与不确定性，并给出规避建议。",
-  },
-  {
-    id: "quick-brief",
-    title: "会议速记版",
-    prompt: "阅读附件后，整理成会议速记：背景、现状、决策点、待办。",
-  },
-];
-
-function normalizeHost(input: unknown): string {
+function normalizeServerHost(input: unknown): string {
   const value = String(input || "").trim();
-  return value || DEFAULT_CONSOLE_HOST;
+  return value || DEFAULT_SERVER_HOST;
 }
 
-function normalizePort(input: unknown): number {
+function normalizeServerProtocol(input: unknown): ExtensionServerProtocol {
+  return String(input || "").trim().toLowerCase() === "https" ? "https" : "http";
+}
+
+function normalizeServerBasePath(input: unknown): string {
+  const value = String(input || "").trim();
+  if (!value || value === "/") return DEFAULT_SERVER_BASE_PATH;
+  const withLeadingSlash = value.startsWith("/") ? value : `/${value}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+}
+
+function normalizeServerPort(input: unknown): number {
   const value =
     typeof input === "number"
       ? input
       : Number.parseInt(String(input || "").trim(), 10);
   if (!Number.isFinite(value) || Number.isNaN(value)) {
-    return DEFAULT_CONSOLE_PORT;
+    return DEFAULT_SERVER_PORT;
   }
-  if (value < 1 || value > 65535) return DEFAULT_CONSOLE_PORT;
+  if (value < 1 || value > 65535) return DEFAULT_SERVER_PORT;
   return Math.trunc(value);
 }
 
-function normalizeStoredAuthToken(input: unknown): string {
-  return normalizeAuthToken(input).slice(0, 4096);
+function normalizeConnectionName(input: unknown, fallback: string): string {
+  const value = String(input || "").replace(/\s+/g, " ").trim();
+  return value || fallback;
 }
 
-function normalizeQuickPromptId(input: unknown): string {
+function normalizeConnectionId(input: unknown): string {
   const value = String(input || "").trim();
   return value || "";
 }
 
-function normalizeInlineMode(input: unknown): InlineComposerMode {
-  return String(input || "").trim() === "instant" ? "instant" : "channel";
+function createConnectionId(): string {
+  return `conn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function normalizeInstantExecutor(input: unknown): InlineInstantExecutorType {
-  return String(input || "").trim() === "acp" ? "acp" : "model";
+function toDefaultConnectionName(params: {
+  host: string;
+  port: number;
+  protocol?: ExtensionServerProtocol;
+  basePath?: string;
+}): string {
+  const host = normalizeServerHost(params.host);
+  const port = normalizeServerPort(params.port);
+  const protocol = normalizeServerProtocol(params.protocol);
+  const basePath = normalizeServerBasePath(params.basePath);
+  const target = `${protocol}://${host}:${port}${basePath}`;
+  return target === `${DEFAULT_SERVER_PROTOCOL}://${DEFAULT_SERVER_HOST}:${DEFAULT_SERVER_PORT}${DEFAULT_SERVER_BASE_PATH}`
+    ? DEFAULT_SERVER_CONNECTION_NAME
+    : target;
 }
 
-function toQuickPromptIdFromTitle(title: string): string {
-  const ascii = String(title || "")
-    .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase()
-    .slice(0, 48);
-  return ascii ? `quick-${ascii}` : `quick-${Date.now()}`;
-}
-
-function normalizeQuickPromptItem(
-  input: Partial<ExtensionQuickPromptItem> | null | undefined,
-): ExtensionQuickPromptItem | null {
+function normalizeConnection(
+  input: Partial<ExtensionServerConnection> | null | undefined,
+): ExtensionServerConnection | null {
   if (!input || typeof input !== "object") return null;
-  const title = String(input.title || "").replace(/\s+/g, " ").trim();
-  const prompt = String(input.prompt || "").trim();
-  if (!title || !prompt) return null;
-  const id = normalizeQuickPromptId(input.id) || toQuickPromptIdFromTitle(title);
+  const host = normalizeServerHost(input.host);
+  const protocol = normalizeServerProtocol(input.protocol);
+  const port = normalizeServerPort(input.port);
+  const basePath = normalizeServerBasePath(input.basePath);
+  const id = normalizeConnectionId(input.id) || createConnectionId();
   return {
     id,
-    title: title.slice(0, 40),
-    prompt: prompt.slice(0, 5000),
+    name: normalizeConnectionName(
+      input.name,
+      toDefaultConnectionName({ host, port, protocol, basePath }),
+    ),
+    protocol,
+    host,
+    port,
+    basePath,
   };
 }
 
-function normalizeQuickPromptList(input: unknown): ExtensionQuickPromptItem[] {
-  const source = Array.isArray(input) ? input : [];
-  const out: ExtensionQuickPromptItem[] = [];
-  const idSet = new Set<string>();
-  for (const item of source) {
-    const normalized = normalizeQuickPromptItem(
-      item as Partial<ExtensionQuickPromptItem>,
-    );
-    if (!normalized) continue;
-    if (idSet.has(normalized.id)) continue;
-    out.push(normalized);
-    idSet.add(normalized.id);
-  }
-  if (out.length > 0) return out;
-  return DEFAULT_QUICK_PROMPTS.map((item) => ({ ...item }));
+function normalizeRoutePreference(
+  input: Partial<ExtensionConnectionRoutePreference> | null | undefined,
+): ExtensionConnectionRoutePreference {
+  return {
+    agentId: String(input?.agentId || "").trim(),
+    sessionId: String(input?.sessionId || "").trim(),
+  };
 }
 
-/**
- * 从历史 `consoleBaseUrl` 派生 host/port。
- *
- * 关键点（中文）：
- * - 向后兼容旧字段，避免升级后用户配置丢失。
- */
 function parseLegacyBaseUrl(input: unknown): {
-  consoleHost: string;
-  consolePort: number;
+  protocol: ExtensionServerProtocol;
+  host: string;
+  port: number;
+  basePath: string;
 } | null {
   const raw = String(input || "").trim();
   if (!raw) return null;
   const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
   try {
     const parsed = new URL(withProtocol);
-    const host = normalizeHost(parsed.hostname);
-    const port = normalizePort(parsed.port || DEFAULT_CONSOLE_PORT);
-    return { consoleHost: host, consolePort: port };
+    return {
+      protocol: normalizeServerProtocol(parsed.protocol.replace(":", "")),
+      host: normalizeServerHost(parsed.hostname),
+      port: normalizeServerPort(parsed.port || DEFAULT_SERVER_PORT),
+      basePath: normalizeServerBasePath(parsed.pathname),
+    };
   } catch {
     return null;
   }
+}
+
+function buildDefaultConnection(params?: {
+  id?: string;
+  protocol?: unknown;
+  host?: unknown;
+  port?: unknown;
+  basePath?: unknown;
+  name?: unknown;
+}): ExtensionServerConnection {
+  const protocol = normalizeServerProtocol(params?.protocol);
+  const host = normalizeServerHost(params?.host);
+  const port = normalizeServerPort(params?.port);
+  const basePath = normalizeServerBasePath(params?.basePath);
+  return {
+    id: normalizeConnectionId(params?.id) || createConnectionId(),
+    name: normalizeConnectionName(
+      params?.name,
+      toDefaultConnectionName({ host, port, protocol, basePath }),
+    ),
+    protocol,
+    host,
+    port,
+    basePath,
+  };
 }
 
 /**
  * 默认设置。
  */
 export const DEFAULT_SETTINGS: ExtensionSettings = {
-  consoleHost: DEFAULT_CONSOLE_HOST,
-  consolePort: DEFAULT_CONSOLE_PORT,
-  agentId: "",
-  chatKey: "",
-  instantModelId: "",
-  inlineMode: "channel",
-  instantExecutor: "model",
-  instantAgentId: "",
-  taskPrompt: "请阅读这个页面并给我一个可执行摘要。",
-  quickPrompts: DEFAULT_QUICK_PROMPTS.map((item) => ({ ...item })),
-  defaultQuickPromptId: DEFAULT_QUICK_PROMPTS[0]?.id || "",
+  connections: [buildDefaultConnection()],
+  selectedConnectionId: "",
+  routePreferences: {},
+  taskPrompt: DEFAULT_TASK_PROMPT,
 };
 
-/**
- * 加载设置。
- */
-export async function loadSettings(): Promise<ExtensionSettings> {
-  const stored = await new Promise<Record<string, unknown>>((resolve, reject) => {
-    chrome.storage.sync.get([STORAGE_KEY], (result) => {
+function normalizeSettings(
+  input: Partial<ExtensionSettings> | null | undefined,
+): ExtensionSettings {
+  const rawConnections = Array.isArray(input?.connections) ? input.connections : [];
+  const normalizedConnections: ExtensionServerConnection[] = [];
+  const connectionIdSet = new Set<string>();
+
+  for (const item of rawConnections) {
+    const normalized = normalizeConnection(item);
+    if (!normalized) continue;
+    if (connectionIdSet.has(normalized.id)) continue;
+    normalizedConnections.push(normalized);
+    connectionIdSet.add(normalized.id);
+  }
+
+  if (normalizedConnections.length < 1) {
+    const fallback = buildDefaultConnection();
+    normalizedConnections.push(fallback);
+    connectionIdSet.add(fallback.id);
+  }
+
+  const selectedConnectionId = String(input?.selectedConnectionId || "").trim();
+  const safeSelectedConnectionId = connectionIdSet.has(selectedConnectionId)
+    ? selectedConnectionId
+    : normalizedConnections[0]?.id || "";
+
+  const routePreferences: Record<string, ExtensionConnectionRoutePreference | undefined> = {};
+  const rawPreferences =
+    input?.routePreferences && typeof input.routePreferences === "object"
+      ? input.routePreferences
+      : {};
+
+  for (const connection of normalizedConnections) {
+    routePreferences[connection.id] = normalizeRoutePreference(
+      (rawPreferences as Record<string, Partial<ExtensionConnectionRoutePreference> | undefined>)[
+        connection.id
+      ],
+    );
+  }
+
+  return {
+    connections: normalizedConnections,
+    selectedConnectionId: safeSelectedConnectionId,
+    routePreferences,
+    taskPrompt:
+      typeof input?.taskPrompt === "string" && input.taskPrompt.trim()
+        ? input.taskPrompt
+        : DEFAULT_TASK_PROMPT,
+  };
+}
+
+type LegacyExtensionSettings = {
+  consoleHost?: unknown;
+  consolePort?: unknown;
+  consoleBaseUrl?: unknown;
+  agentId?: unknown;
+  chatKey?: unknown;
+  taskPrompt?: unknown;
+};
+
+async function readSyncStorage(key: string): Promise<Record<string, unknown>> {
+  return new Promise<Record<string, unknown>>((resolve, reject) => {
+    chrome.storage.sync.get([key], (result) => {
       const error = chrome.runtime.lastError;
       if (error) {
         reject(new Error(error.message));
@@ -188,162 +256,237 @@ export async function loadSettings(): Promise<ExtensionSettings> {
       resolve(result as Record<string, unknown>);
     });
   });
+}
 
-  const raw = stored[STORAGE_KEY];
-  if (!raw || typeof raw !== "object") {
-    return { ...DEFAULT_SETTINGS };
+async function writeSyncStorage(key: string, value: unknown): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    chrome.storage.sync.set({ [key]: value }, () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+async function readLocalStorage(key: string): Promise<Record<string, unknown>> {
+  return new Promise<Record<string, unknown>>((resolve, reject) => {
+    chrome.storage.local.get([key], (result) => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve(result as Record<string, unknown>);
+    });
+  });
+}
+
+async function writeLocalStorage(key: string, value: unknown): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    chrome.storage.local.set({ [key]: value }, () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+async function removeLocalStorageKey(key: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    chrome.storage.local.remove([key], () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+async function loadLegacySettings(): Promise<LegacyExtensionSettings | null> {
+  const stored = await readSyncStorage(LEGACY_SETTINGS_STORAGE_KEY);
+  const raw = stored[LEGACY_SETTINGS_STORAGE_KEY];
+  if (!raw || typeof raw !== "object") return null;
+  return raw as LegacyExtensionSettings;
+}
+
+async function loadLegacyAuthToken(): Promise<string> {
+  const [localStored, syncStored] = await Promise.all([
+    readLocalStorage(LEGACY_AUTH_STORAGE_KEY),
+    readSyncStorage(LEGACY_SETTINGS_STORAGE_KEY),
+  ]);
+
+  const localRaw = localStored[LEGACY_AUTH_STORAGE_KEY];
+  if (localRaw && typeof localRaw === "object") {
+    return normalizeAuthToken(
+      (localRaw as Record<string, unknown>).token,
+    ).slice(0, 4096);
   }
 
-  const value = raw as Partial<ExtensionSettings> & { consoleBaseUrl?: string };
-  const legacy = parseLegacyBaseUrl(value.consoleBaseUrl);
-  const quickPrompts = normalizeQuickPromptList(value.quickPrompts);
-  const defaultQuickPromptId = normalizeQuickPromptId(value.defaultQuickPromptId);
-  const safeDefaultQuickPromptId = quickPrompts.some(
-    (item) => item.id === defaultQuickPromptId,
-  )
-    ? defaultQuickPromptId
-    : quickPrompts[0]?.id || "";
+  const syncRaw = syncStored[LEGACY_SETTINGS_STORAGE_KEY];
+  if (syncRaw && typeof syncRaw === "object") {
+    return normalizeAuthToken(
+      (syncRaw as Record<string, unknown>).authToken,
+    ).slice(0, 4096);
+  }
 
-  return {
-    // 关键点（中文）：兼容旧存储结构（旧版本可能只保存 consoleBaseUrl）。
-    consoleHost: legacy?.consoleHost || normalizeHost(value.consoleHost),
-    consolePort: legacy?.consolePort || normalizePort(value.consolePort),
-    agentId: typeof value.agentId === "string" ? value.agentId.trim() : "",
-    chatKey: typeof value.chatKey === "string" ? value.chatKey.trim() : "",
-    instantModelId:
-      typeof value.instantModelId === "string" ? value.instantModelId.trim() : "",
-    inlineMode: normalizeInlineMode(value.inlineMode),
-    instantExecutor: normalizeInstantExecutor(value.instantExecutor),
-    instantAgentId:
-      typeof value.instantAgentId === "string" ? value.instantAgentId.trim() : "",
+  return "";
+}
+
+async function migrateLegacySettingsIfNeeded(): Promise<ExtensionSettings | null> {
+  const legacy = await loadLegacySettings();
+  if (!legacy) return null;
+
+  const legacyBaseUrl = parseLegacyBaseUrl(legacy.consoleBaseUrl);
+  const connection = buildDefaultConnection({
+    protocol: legacyBaseUrl?.protocol,
+    host: legacyBaseUrl?.host || legacy.consoleHost,
+    port: legacyBaseUrl?.port || legacy.consolePort,
+    basePath: legacyBaseUrl?.basePath,
+  });
+
+  const migrated = normalizeSettings({
+    connections: [connection],
+    selectedConnectionId: connection.id,
+    routePreferences: {
+      [connection.id]: {
+        agentId: String(legacy.agentId || "").trim(),
+        sessionId: String(legacy.chatKey || "").trim(),
+      },
+    },
     taskPrompt:
-      typeof value.taskPrompt === "string" && value.taskPrompt.trim()
-        ? value.taskPrompt
-        : DEFAULT_SETTINGS.taskPrompt,
-    quickPrompts,
-    defaultQuickPromptId: safeDefaultQuickPromptId,
-  };
+      typeof legacy.taskPrompt === "string" && legacy.taskPrompt.trim()
+        ? legacy.taskPrompt
+        : DEFAULT_TASK_PROMPT,
+  });
+
+  await writeSyncStorage(SETTINGS_STORAGE_KEY, migrated);
+
+  const legacyToken = await loadLegacyAuthToken();
+  if (legacyToken) {
+    await saveConnectionSecrets({
+      [connection.id]: {
+        token: legacyToken,
+      },
+    });
+  }
+
+  return migrated;
+}
+
+/**
+ * 加载设置。
+ */
+export async function loadSettings(): Promise<ExtensionSettings> {
+  const stored = await readSyncStorage(SETTINGS_STORAGE_KEY);
+  const raw = stored[SETTINGS_STORAGE_KEY];
+  if (raw && typeof raw === "object") {
+    return normalizeSettings(raw as Partial<ExtensionSettings>);
+  }
+
+  const migrated = await migrateLegacySettingsIfNeeded();
+  if (migrated) {
+    return normalizeSettings(migrated);
+  }
+
+  return normalizeSettings(DEFAULT_SETTINGS);
 }
 
 /**
  * 保存设置。
  */
 export async function saveSettings(settings: ExtensionSettings): Promise<void> {
-  const quickPrompts = normalizeQuickPromptList(settings.quickPrompts);
-  const defaultQuickPromptId = normalizeQuickPromptId(settings.defaultQuickPromptId);
-  const normalizedSettings: ExtensionSettings = {
-    consoleHost: normalizeHost(settings.consoleHost),
-    consolePort: normalizePort(settings.consolePort),
-    agentId: String(settings.agentId || "").trim(),
-    chatKey: String(settings.chatKey || "").trim(),
-    instantModelId: String(settings.instantModelId || "").trim(),
-    inlineMode: normalizeInlineMode(settings.inlineMode),
-    instantExecutor: normalizeInstantExecutor(settings.instantExecutor),
-    instantAgentId: String(settings.instantAgentId || "").trim(),
-    taskPrompt: String(settings.taskPrompt || "").trim() || DEFAULT_SETTINGS.taskPrompt,
-    quickPrompts,
-    defaultQuickPromptId: quickPrompts.some((item) => item.id === defaultQuickPromptId)
-      ? defaultQuickPromptId
-      : quickPrompts[0]?.id || "",
-  };
-  await new Promise<void>((resolve, reject) => {
-    chrome.storage.sync.set({ [STORAGE_KEY]: normalizedSettings }, () => {
-      const error = chrome.runtime.lastError;
-      if (error) {
-        reject(new Error(error.message));
-        return;
-      }
-      resolve();
-    });
-  });
+  const normalized = normalizeSettings(settings);
+  await writeSyncStorage(SETTINGS_STORAGE_KEY, normalized);
 }
 
-function normalizeAuthState(
-  input: Partial<ExtensionAuthState> | null | undefined,
-): ExtensionAuthState {
-  const token = normalizeStoredAuthToken(input?.token);
-  const username = String(input?.username || "").trim();
-  return {
-    token,
-    ...(username ? { username } : {}),
-  };
-}
-
-/**
- * 加载扩展鉴权状态。
- *
- * 关键点（中文）：
- * - 鉴权状态单独放在 `chrome.storage.local`，避免 sync 同步敏感 token。
- * - 兼容旧版本误存到 settings 里的 `authToken` 字段。
- */
-export async function loadAuthState(): Promise<ExtensionAuthState> {
-  const [localStored, syncStored] = await Promise.all([
-    new Promise<Record<string, unknown>>((resolve, reject) => {
-      chrome.storage.local.get([AUTH_STORAGE_KEY], (result) => {
-        const error = chrome.runtime.lastError;
-        if (error) {
-          reject(new Error(error.message));
-          return;
-        }
-        resolve(result as Record<string, unknown>);
-      });
-    }),
-    new Promise<Record<string, unknown>>((resolve, reject) => {
-      chrome.storage.sync.get([STORAGE_KEY], (result) => {
-        const error = chrome.runtime.lastError;
-        if (error) {
-          reject(new Error(error.message));
-          return;
-        }
-        resolve(result as Record<string, unknown>);
-      });
-    }),
-  ]);
-  const raw = localStored[AUTH_STORAGE_KEY];
-  if (raw && typeof raw === "object") {
-    return normalizeAuthState(raw as Partial<ExtensionAuthState>);
+function normalizeConnectionSecrets(
+  input: unknown,
+): ExtensionServerConnectionSecretMap {
+  const source =
+    input && typeof input === "object"
+      ? (input as Record<string, unknown>)
+      : {};
+  const out: ExtensionServerConnectionSecretMap = {};
+  for (const [connectionId, value] of Object.entries(source)) {
+    const normalizedId = normalizeConnectionId(connectionId);
+    if (!normalizedId) continue;
+    const token = normalizeAuthToken(
+      value && typeof value === "object"
+        ? (value as Record<string, unknown>).token
+        : "",
+    ).slice(0, 4096);
+    out[normalizedId] = { token };
   }
-  const legacySettings = syncStored[STORAGE_KEY];
-  if (legacySettings && typeof legacySettings === "object") {
-    const value = legacySettings as Record<string, unknown>;
-    return normalizeAuthState({
-      token: typeof value.authToken === "string" ? value.authToken : "",
-    });
-  }
-  return { ...DEFAULT_AUTH_STATE };
+  return out;
 }
 
 /**
- * 保存扩展鉴权状态。
+ * 加载所有连接密钥。
  */
-export async function saveAuthState(authState: ExtensionAuthState): Promise<void> {
-  const normalized = normalizeAuthState(authState);
-  await new Promise<void>((resolve, reject) => {
-    chrome.storage.local.set({ [AUTH_STORAGE_KEY]: normalized }, () => {
-      const error = chrome.runtime.lastError;
-      if (error) {
-        reject(new Error(error.message));
-        return;
-      }
-      resolve();
-    });
-  });
+export async function loadConnectionSecrets(): Promise<ExtensionServerConnectionSecretMap> {
+  const stored = await readLocalStorage(SECRETS_STORAGE_KEY);
+  return normalizeConnectionSecrets(stored[SECRETS_STORAGE_KEY]);
 }
 
 /**
- * 清理扩展鉴权状态。
+ * 保存所有连接密钥。
  */
-export async function clearAuthState(): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    chrome.storage.local.remove([AUTH_STORAGE_KEY], () => {
-      const error = chrome.runtime.lastError;
-      if (error) {
-        reject(new Error(error.message));
-        return;
-      }
-      resolve();
-    });
-  });
+export async function saveConnectionSecrets(
+  secrets: ExtensionServerConnectionSecretMap,
+): Promise<void> {
+  await writeLocalStorage(SECRETS_STORAGE_KEY, normalizeConnectionSecrets(secrets));
+}
+
+/**
+ * 读取单个连接的 Bearer Token。
+ */
+export async function loadConnectionToken(connectionId: string): Promise<string> {
+  const normalizedId = normalizeConnectionId(connectionId);
+  if (!normalizedId) return "";
+  const secrets = await loadConnectionSecrets();
+  return String(secrets[normalizedId]?.token || "").trim();
+}
+
+/**
+ * 保存单个连接的 Bearer Token。
+ */
+export async function saveConnectionToken(
+  connectionId: string,
+  token: string,
+): Promise<void> {
+  const normalizedId = normalizeConnectionId(connectionId);
+  if (!normalizedId) return;
+  const secrets = await loadConnectionSecrets();
+  secrets[normalizedId] = {
+    token: normalizeAuthToken(token).slice(0, 4096),
+  };
+  await saveConnectionSecrets(secrets);
+}
+
+/**
+ * 删除单个连接的 Bearer Token。
+ */
+export async function clearConnectionToken(connectionId: string): Promise<void> {
+  const normalizedId = normalizeConnectionId(connectionId);
+  if (!normalizedId) return;
+  const secrets = await loadConnectionSecrets();
+  delete secrets[normalizedId];
+  await saveConnectionSecrets(secrets);
+}
+
+/**
+ * 清理旧版全局鉴权状态。
+ */
+export async function clearLegacyAuthState(): Promise<void> {
+  await removeLocalStorageKey(LEGACY_AUTH_STORAGE_KEY);
 }
 
 function normalizePageUrl(value: string): string {
@@ -363,87 +506,131 @@ function normalizeSendRecord(
 ): ExtensionPageSendRecord | null {
   if (!input || typeof input !== "object") return null;
   const id = String(input.id || "").trim();
+  const connectionId = normalizeConnectionId(input.connectionId);
   const pageUrl = normalizePageUrl(String(input.pageUrl || ""));
   const pageTitle = String(input.pageTitle || "").trim();
   const agentId = String(input.agentId || "").trim();
-  const chatKey = String(input.chatKey || "").trim();
+  const sessionId = String(input.sessionId || "").trim();
   const taskPrompt = String(input.taskPrompt || "").trim();
   const attachmentFileName = String(input.attachmentFileName || "").trim();
   const sentAt =
     typeof input.sentAt === "number" && Number.isFinite(input.sentAt)
       ? Math.trunc(input.sentAt)
       : 0;
-  if (!id || !pageUrl || !agentId || !chatKey || !attachmentFileName || sentAt <= 0) {
+  if (
+    !id ||
+    !connectionId ||
+    !pageUrl ||
+    !agentId ||
+    !sessionId ||
+    !attachmentFileName ||
+    sentAt <= 0
+  ) {
     return null;
   }
   return {
     id,
+    connectionId,
     pageUrl,
     pageTitle,
     agentId,
-    chatKey,
+    sessionId,
     taskPrompt,
     attachmentFileName,
     sentAt,
   };
 }
 
+type LegacySendRecord = {
+  id?: unknown;
+  pageUrl?: unknown;
+  pageTitle?: unknown;
+  agentId?: unknown;
+  chatKey?: unknown;
+  taskPrompt?: unknown;
+  attachmentFileName?: unknown;
+  sentAt?: unknown;
+};
+
 async function loadAllSendRecords(): Promise<ExtensionPageSendRecord[]> {
-  const stored = await new Promise<Record<string, unknown>>((resolve, reject) => {
-    chrome.storage.local.get([SEND_HISTORY_STORAGE_KEY], (result) => {
-      const error = chrome.runtime.lastError;
-      if (error) {
-        reject(new Error(error.message));
-        return;
-      }
-      resolve(result as Record<string, unknown>);
-    });
-  });
-  const raw = stored[SEND_HISTORY_STORAGE_KEY];
-  if (!Array.isArray(raw)) return [];
+  const [currentStored, legacyStored, settings] = await Promise.all([
+    readLocalStorage(SEND_HISTORY_STORAGE_KEY),
+    readLocalStorage(LEGACY_SEND_HISTORY_STORAGE_KEY),
+    loadSettings(),
+  ]);
+
+  const currentRaw = currentStored[SEND_HISTORY_STORAGE_KEY];
   const out: ExtensionPageSendRecord[] = [];
-  for (const item of raw) {
-    const normalized = normalizeSendRecord(
-      item as Partial<ExtensionPageSendRecord>,
-    );
-    if (!normalized) continue;
-    out.push(normalized);
+  const dedup = new Set<string>();
+
+  if (Array.isArray(currentRaw)) {
+    for (const item of currentRaw) {
+      const normalized = normalizeSendRecord(
+        item as Partial<ExtensionPageSendRecord>,
+      );
+      if (!normalized) continue;
+      const dedupKey = `${normalized.id}:${normalized.sentAt}`;
+      if (dedup.has(dedupKey)) continue;
+      dedup.add(dedupKey);
+      out.push(normalized);
+    }
   }
+
+  const legacyRaw = legacyStored[LEGACY_SEND_HISTORY_STORAGE_KEY];
+  if (Array.isArray(legacyRaw)) {
+    const fallbackConnectionId =
+      settings.selectedConnectionId || settings.connections[0]?.id || "";
+    for (const item of legacyRaw) {
+      const value = item as LegacySendRecord;
+      const normalized = normalizeSendRecord({
+        id: String(value.id || "").trim(),
+        connectionId: fallbackConnectionId,
+        pageUrl: String(value.pageUrl || "").trim(),
+        pageTitle: String(value.pageTitle || "").trim(),
+        agentId: String(value.agentId || "").trim(),
+        sessionId: String(value.chatKey || "").trim(),
+        taskPrompt: String(value.taskPrompt || "").trim(),
+        attachmentFileName: String(value.attachmentFileName || "").trim(),
+        sentAt:
+          typeof value.sentAt === "number"
+            ? value.sentAt
+            : Number.parseInt(String(value.sentAt || ""), 10),
+      });
+      if (!normalized) continue;
+      const dedupKey = `${normalized.id}:${normalized.sentAt}`;
+      if (dedup.has(dedupKey)) continue;
+      dedup.add(dedupKey);
+      out.push(normalized);
+    }
+  }
+
   out.sort((a, b) => b.sentAt - a.sentAt);
   return out;
 }
 
 async function saveAllSendRecords(records: ExtensionPageSendRecord[]): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    chrome.storage.local.set({ [SEND_HISTORY_STORAGE_KEY]: records }, () => {
-      const error = chrome.runtime.lastError;
-      if (error) {
-        reject(new Error(error.message));
-        return;
-      }
-      resolve();
-    });
-  });
+  await writeLocalStorage(SEND_HISTORY_STORAGE_KEY, records);
 }
 
 /**
  * 记录一次页面发送事件。
  */
 export async function appendPageSendRecord(params: {
+  connectionId: string;
   pageUrl: string;
   pageTitle: string;
   agentId: string;
-  chatKey: string;
+  sessionId: string;
   taskPrompt: string;
   attachmentFileName: string;
 }): Promise<void> {
   const nextRecord: ExtensionPageSendRecord = {
-    // 关键点（中文）：本地记录 id 仅用于 UI 列表渲染，无需与服务端对齐。
     id: `send_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    connectionId: normalizeConnectionId(params.connectionId),
     pageUrl: normalizePageUrl(params.pageUrl),
     pageTitle: String(params.pageTitle || "").trim(),
     agentId: String(params.agentId || "").trim(),
-    chatKey: String(params.chatKey || "").trim(),
+    sessionId: String(params.sessionId || "").trim(),
     taskPrompt: String(params.taskPrompt || "").trim(),
     attachmentFileName: String(params.attachmentFileName || "").trim(),
     sentAt: Date.now(),
@@ -457,9 +644,11 @@ export async function appendPageSendRecord(params: {
  * 读取当前页面发送记录。
  */
 export async function loadPageSendRecords(params: {
+  connectionId?: string;
   pageUrl: string;
   limit?: number;
 }): Promise<ExtensionPageSendRecord[]> {
+  const connectionId = normalizeConnectionId(params.connectionId);
   const pageUrl = normalizePageUrl(params.pageUrl);
   if (!pageUrl) return [];
   const limit =
@@ -467,37 +656,8 @@ export async function loadPageSendRecords(params: {
       ? Math.max(1, Math.min(50, Math.trunc(params.limit)))
       : 8;
   const all = await loadAllSendRecords();
-  return all.filter((item) => item.pageUrl === pageUrl).slice(0, limit);
-}
-
-/**
- * 读取最近 ask 历史（按时间倒序去重）。
- *
- * 关键点（中文）：
- * - 仅返回 taskPrompt 文本，用于 UI 快速回填。
- * - 按 lower-case 去重，避免同一句重复出现。
- */
-export async function loadRecentAskHistory(params?: {
-  limit?: number;
-}): Promise<string[]> {
-  const limit =
-    typeof params?.limit === "number" && Number.isFinite(params.limit)
-      ? Math.max(1, Math.min(100, Math.trunc(params.limit)))
-      : 12;
-
-  const all = await loadAllSendRecords();
-  const out: string[] = [];
-  const seen = new Set<string>();
-
-  for (const item of all) {
-    const prompt = String(item.taskPrompt || "").trim();
-    if (!prompt) continue;
-    const dedupKey = prompt.toLowerCase();
-    if (seen.has(dedupKey)) continue;
-    seen.add(dedupKey);
-    out.push(prompt);
-    if (out.length >= limit) break;
-  }
-
-  return out;
+  return all
+    .filter((item) => item.pageUrl === pageUrl)
+    .filter((item) => (connectionId ? item.connectionId === connectionId : true))
+    .slice(0, limit);
 }

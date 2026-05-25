@@ -1,6 +1,6 @@
 ---
 title: Install and Connect
-description: How to build, load, and connect the Chrome extension to your local Downcity Console and Agent
+description: How to build, load, and connect the Chrome extension to one or more Downcity Servers
 ---
 
 # Install and Connect
@@ -10,7 +10,6 @@ description: How to build, load, and connect the Chrome extension to your local 
 Before using the extension, you will usually want these running:
 
 ```bash
-city start
 city start
 city agent start
 ```
@@ -30,18 +29,35 @@ npm run build:extension
 
 ## First-Time Configuration
 
-The default extension target is:
+The extension ships with one default connection:
 
+- Protocol: `http`
 - Host: `127.0.0.1`
 - Port: `5315`
+- Base Path: empty
 
-If your Console UI is elsewhere, open the extension settings page. The page is split into three parts:
+If your Server lives elsewhere, open the extension settings page. The page is now organized into:
 
-- `Connect Console`: set Console Host and Port, then paste a Bearer token
-- `Inline Composer`: choose the default mode, instant executor, instant model, and instant ACP agent
-- `Agent / Channel`: choose the default Agent and default Channel Chat used by the popup
+- `Server Connections`: manage multiple connections
+- `Authentication`: configure the Bearer Token for the current connection
+- `Default Routing`: choose the default Agent / Session for the current connection
+- `Default Ask`: set the popup's default Ask
 
-If you do not have a token yet, create one in the local terminal first:
+## How to Add Multiple Connections
+
+In the settings page:
+
+1. Click `新建连接`
+2. Fill in the connection name, Host, and Port
+3. If the remote service uses HTTPS or sits behind a sub-path, also set `Protocol` and `Base Path`
+4. Add a Bearer Token if that Server requires one
+5. Save
+
+After that, the popup can switch between those connections directly.
+
+## How to Get a Token
+
+If the target Server requires unified auth, create a token in the local terminal:
 
 ```bash
 city token create my-token
@@ -53,35 +69,20 @@ If you prefer the interactive flow, run:
 city token
 ```
 
-The flow can copy the newly issued token right away.
+Then paste the returned token into `Bearer Token`.
 
-Then paste the returned value into `Access Token`.
+## How Agent and Session Selection Works
 
-After token save succeeds, the extension will attach `Authorization: Bearer ...` to later requests automatically.
+The extension first loads the Agent list for the current connection, then loads the available Sessions under that Agent.
 
-## How Inline Composer Modes Work
+If no Session is available, it usually means:
 
-The inline composer supports two modes:
-
-- `Channel Mode`: uses the default Agent / Channel Chat delivery path
-- `Instant Mode`: runs a temporary session and returns the result directly on the page
-
-Inside `Instant Mode`, you can choose one executor:
-
-- `Model Executor`: runs against the selected Console model pool entry
-- `ACP Executor`: runs against the selected ACP agent project
-
-If the selected instant executor has no valid default target, the inline composer will ask you to go back to settings and complete that configuration first.
-
-## How Agent and Chat Selection Works
-
-The extension first asks Console for the Agent list, then reads the available chat contexts for that Agent.
-
-If no Chat is available, it usually means:
-
-- that channel has no message history yet
+- that chat channel has no session history yet
 - the Agent is not running
-- the Console address is wrong
+- the connection address is wrong
+- the remote Console is not listening publicly, or the server firewall blocks the port
+
+For a server deployment, you can either start Console once with `city start --public`, or persist public mode with `city public on`.
 
 ## After Updating the Extension
 

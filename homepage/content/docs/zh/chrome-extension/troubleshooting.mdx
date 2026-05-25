@@ -1,19 +1,21 @@
 ---
 title: 故障排查
-description: Chrome 扩展常见问题与排查方法，包括连接失败、快捷键无效、页内输入框不出现等
+description: Chrome 扩展常见问题与排查方法，包括连接失败、无可用 Agent、无可用 Session 等
 ---
 
 # 故障排查
 
-## 1. 看不到页内输入框
+## 1. 无法连接到 Server
 
 先检查：
 
-- 当前页面是否是 `http://` 或 `https://`
-- 扩展是否已在 `chrome://extensions` 中刷新到最新版本
-- 当前页面的 content script 是否正常加载
+- Protocol 是否正确
+- Host 和 Port 是否正确
+- Base Path 是否正确
+- 目标 Server 是否真的在运行
+- 浏览器当前是否能访问这个地址
 
-如果你刚更新过代码，先执行：
+如果你刚更新过扩展代码，先执行：
 
 ```bash
 npm run build:extension
@@ -21,34 +23,7 @@ npm run build:extension
 
 然后刷新扩展。
 
-## 2. `Cmd/Ctrl + U` 没反应
-
-可能原因：
-
-- content script 没有成功注入当前页面
-- 当前焦点在输入框、编辑器或 `contenteditable` 区域内
-- 你还没有刷新加载后的扩展版本
-
-建议先换一个普通网页测试，再看是否恢复。
-
-## 3. `Cmd/Ctrl + Enter` 无法发送
-
-先确认：
-
-- 页内输入框已经打开
-- 输入框里有内容
-- 当前 Agent 与 Chat 已正确选择
-- Console 和 Agent 正常运行
-
-如果页内脚本加载失败，发送快捷键也不会注册。
-
-## 4. 没有可用 Agent
-
-通常表示：
-
-- `city agent start` 还没启动
-- Console 地址不对
-- 当前 Agent 没有处于运行状态
+## 2. 当前连接要求 Token
 
 如果你看到：
 
@@ -56,33 +31,68 @@ npm run build:extension
 - `Invalid bearer token`
 - `Permission denied`
 
-通常说明 Console 已开启统一鉴权，但扩展还没有填写 token，或者 token 已失效。
+通常说明目标 Server 已开启统一鉴权，但当前连接还没有可用 Token。
 
 处理方式：
 
 1. 打开扩展设置页
-2. 在本机终端执行 `city token create my-token`
-3. 把 token 粘贴到扩展设置页
-4. 保存后点击 `刷新 Agent`
+2. 选中对应连接
+3. 在本机终端执行 `city token create my-token`
+4. 把 token 粘贴到设置页并保存
 
-## 5. 没有可用 Chat
+## 3. 远程机器上服务没有对外暴露
 
-扩展不会凭空创建 chat context。
+如果你访问的是远程机器，还需要确认 Console 本身不是只绑定在本机回环地址。
+
+从 `city` 的代码看：
+
+- 未传 `--host` / `--public` 时，Console 默认仍是本机模式 `127.0.0.1`
+- 传 `--public` 时，会绑定 `0.0.0.0`
+
+通常可以这样启动：
+
+```bash
+city start --public
+```
+
+或者：
+
+```bash
+city console start --public
+```
+
+如果你希望之后每次启动都沿用公网绑定，可以执行：
+
+```bash
+city public on
+```
+
+## 4. 没有可用 Agent
+
+通常表示：
+
+- `city agent start` 还没启动
+- 当前连接地址不对
+- 当前 Agent 没有处于运行状态
+
+## 5. 没有可用 Session
+
+扩展不会凭空创建 Session。
 
 这通常意味着：
 
-- 对应渠道还没收到过消息
-- 当前 Agent 没有已连接的聊天渠道
-- 你还没有在设置页选中目标 Chat
+- 对应渠道还没有产生过历史会话
+- 当前 Agent 没有关联的聊天渠道
+- 你当前连接下的默认 Session 已失效，需要重新选择
 
 ## 6. 抓到的正文不对
 
-全页模式是 best-effort 抓取，不是浏览器阅读模式的完全克隆。
+全页抓取是 best-effort，不是浏览器阅读模式的完全克隆。
 
 当前逻辑会：
 
 - 优先选择最像正文的 `main/article`
-- 过滤导航、侧边栏、隐藏内容
+- 过滤导航、侧边栏和隐藏内容
 - 尝试合并多个强相关主体区块
 
 如果页面结构非常特殊，仍然可能抓到多余内容。

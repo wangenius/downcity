@@ -1,27 +1,26 @@
 # Downcity Chrome Extension
 
-这个目录下是一个可直接加载到 Chrome 的插件，用于：
+Chrome 扩展现在只保留两类能力：
 
-1. 获取当前网页标题与 URL。
-2. 提取当前页面正文并转换成 Markdown 文档。
-3. 选择目标 Downcity Agent。
-4. 以 API 附件方式把 Markdown 文档发送给 Agent 执行。
-5. 投递成功后关闭插件窗口。
-6. 在网页内选中文本后，可通过 hoverbar 的消息按钮或 `Cmd/Ctrl + U` 打开选区附近的 Inline Composer 并发送到 Agent；点击扩展图标则打开 Extension Popup。
+1. 读取当前网页标题、URL 和正文。
+2. 以 Markdown 附件的形式，把页面发送到指定的 Downcity Server / Agent / Session。
+
+## 当前产品形态
+
+- 支持创建多个 `Server Connection`
+- 不同连接之间可以在 Popup 中快速切换
+- 每个连接独立保存自己的 Bearer Token
+- 每个连接独立保存默认 `Agent / Session`
+- 每个连接支持单独配置 `protocol / host / port / basePath`
+- 已移除 `Inline Composer`、content script 和 background service worker
 
 ## 技术栈
 
 - React 18
 - TypeScript 5.6
 - Vite 5
-- Tailwind CSS v4（Extension Popup / options / Inline Composer 样式资源）
+- Tailwind CSS v4
 - Chrome Extension Manifest V3
-
-说明：
-
-- `extension-popup` 与 `options` 页面直接使用 Tailwind v4。
-- 页面内选区输入面板现在也走 `src/inline-composer/` 下的 TypeScript 构建入口。
-- Shadow DOM 样式继续加载构建产物 `content-script.css`，既能统一 Tailwind 主题，又能保证宿主网页样式隔离。
 
 ## 目录结构
 
@@ -30,29 +29,29 @@ products/chrome-extension/
 ├─ public/
 │  └─ manifest.json
 ├─ src/
-│  ├─ inline-composer/
-│  │  ├─ main.ts
-│  │  ├─ ui.ts
-│  │  ├─ route.ts
-│  │  ├─ pageContext.ts
-│  │  └─ content-script.css
 │  ├─ extension-popup/
 │  │  ├─ App.tsx
-│  │  ├─ main.tsx
+│  │  ├─ ExtensionPopupSelect.tsx
+│  │  └─ main.tsx
 │  ├─ options/
 │  │  ├─ App.tsx
 │  │  └─ main.tsx
-│  ├─ styles/
-│  │  └─ tailwind.css
 │  ├─ services/
-│  │  ├─ pageMarkdown.ts
+│  │  ├─ auth.ts
+│  │  ├─ chatRouting.ts
 │  │  ├─ downcityApi.ts
+│  │  ├─ pageMarkdown.ts
+│  │  ├─ serverConnection.ts
 │  │  ├─ storage.ts
 │  │  └─ tab.ts
+│  ├─ styles/
+│  │  └─ tailwind.css
 │  └─ types/
 │     ├─ api.ts
-│     └─ extension.ts
+│     ├─ extension.ts
+│     └─ ExtensionSelect.ts
 ├─ index.html
+├─ options.html
 ├─ package.json
 ├─ tsconfig.json
 └─ vite.config.ts
@@ -66,14 +65,9 @@ npm install
 npm run dev
 ```
 
-`npm run dev` 会持续构建到 `products/chrome-extension/dist`，其中会同时产出：
+`npm run dev` 会持续构建到 `products/chrome-extension/dist`。
 
-- Extension Popup 页面
-- options 页面
-- `content-script.js`（由 `src/inline-composer/main.ts` 构建产出）
-- `content-script.css`（供 Shadow DOM 引入）
-
-如果执行构建：
+如果执行正式构建：
 
 ```bash
 npm run build
@@ -81,61 +75,44 @@ npm run build
 npm run build:release
 ```
 
-会复用仓库根目录的 `scripts/extbuild.sh`，并在构建前自动把 extension 的 `package.json` 与 `public/manifest.json` 版本号一起提升一个 patch。
-
-在仓库根目录也可以直接执行：
-
-```bash
-npm run build:extension
-```
+构建脚本会先把 `package.json` 与 `public/manifest.json` 的版本号同步提升一个 patch，再执行类型检查和打包。
 
 ## 在 Chrome 中加载
 
 1. 打开 `chrome://extensions`
 2. 打开右上角 `开发者模式`
 3. 点击 `加载已解压的扩展程序`
-4. 选择 `products/chrome-extension/dist` 目录
+4. 选择 `products/chrome-extension/dist`
 
 ## 使用说明
 
-1. 确保本地 Console/Agent 已启动：
-   - `city console start`
-   - `city console ui start --port 5315`
-   - `city agent start`
-2. 点击扩展图标，使用 Extension Popup 完成发送（在图标处打开扩展弹窗）。
-3. 若在页面内使用选区模式：选中文本后点击选区右下角消息按钮，或按 `Cmd/Ctrl + U`，输入框会在选区左下角展开。
-4. Extension Popup 只保留输入框、发送按钮、本页发送历史和设置按钮；再按 `Cmd/Ctrl + Enter` 或点击发送。
+1. 先启动 Downcity Server 和 Agent。
+2. 打开扩展设置页，创建一个或多个 `Server Connection`。
+3. 为每个连接按需填写 Bearer Token。
+4. 如果远程服务走 HTTPS 或反向代理，补上对应的 `Protocol` 与 `Base Path`。
+5. 为每个连接设置默认 `Agent / Session`。
+6. 点击浏览器扩展图标，在 Popup 中选择连接、确认 Agent / Session、输入 Ask 并发送。
 
-## 页面内快捷发送（新）
+如果目标是远程服务器，还要确认 Console 已对外监听：
 
-加载插件后，在任意网页：
+```bash
+city start --public
+```
 
-1. 先选中页面中的文本内容。
-2. 选区右下角会出现消息按钮，点击后会在选区左下角展开输入框（不再贴底部）。
-3. 点击浏览器扩展图标会打开 Extension Popup；按 `Cmd/Ctrl + U` 可直接打开页内输入框（Inline Composer）。
-4. 不再单独展示引用 `tag`，直接以当前选区作为发送上下文。
-5. 输入 `/` 可唤起历史提问菜单（来自最近 ask 记录，`↑/↓ + Enter` 或点击插入）。
-6. 输入需求后按 `Cmd/Ctrl + Enter` 或点击发送按钮提交（`Enter` 换行）。
-7. 按 `Esc` 关闭输入框。
-8. 若当前没有选区，发送时会自动按页面全文模式投递。
+或者把公网监听持久化下来：
 
-执行流程：
+```bash
+city public on
+```
 
-- 先抓取当前页面正文并生成 Markdown 文档（best-effort）。
-- 全页模式会优先挑选质量最高的 `main/article` 主体区块；若存在多个强相关主体区块，会合并输出。
-- 页面图片会尽量从 `currentSrc/src/srcset/data-*` 中解析真实地址，并在整页快照中附带图片引用。
-- 再调用 `POST /api/dashboard/contexts/<chatKey>/execute?agent=<agentId>`。
-- Markdown 会通过 `attachments` 字段上传，runtime 会落盘并注入 `<file>` 标签给 Agent。
-- 投递成功后立即关闭页面输入面板，结果在当前选中的 chatKey 会话查看。
+需要恢复成仅本机监听时：
 
-## 设计变更说明
+```bash
+city public off
+```
 
-- Console 地址默认：`127.0.0.1:5315`，也可在插件中修改
-- 支持在插件内自定义目标 Console 的 IP 与端口（用于远端/局域网 Agent）
-- `chatKey` 不再手填，改为下拉选择
-- 发送策略改为“投递即关闭”，不在插件内等待执行完成
+## 说明
 
-## 注意事项
-
-- 插件会使用 `chrome.storage.sync` 保存最近一次选择。
-- `chatKey` 列表来自该 Agent 的历史上下文；如果没有可选项，请先让聊天渠道产生过消息。
+- 发送历史按“当前页面 + 当前连接”隔离保存。
+- 结果仍然回到目标 Session 中查看。
+- 扩展不会在 Popup 中等待完整执行结果。

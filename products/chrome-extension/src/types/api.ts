@@ -107,11 +107,11 @@ export interface ConsoleUiAgentsResponse {
 }
 
 /**
- * TUI session 摘要。
+ * Session 摘要。
  */
 export interface TuiContextSummary {
   /**
-   * 会话唯一标识（chatKey）。
+   * 会话唯一标识（Session id）。
    */
   sessionId: string;
 
@@ -182,13 +182,13 @@ export interface TuiContextsResponse {
 }
 
 /**
- * 可选 chatKey 条目。
+ * 可选 Session 条目。
  */
-export interface ChatKeyOption {
+export interface SessionOption {
   /**
-   * 可发送的 chatKey。
+   * 可发送的 Session id。
    */
-  chatKey: string;
+  sessionId: string;
 
   /**
    * 渠道名称。

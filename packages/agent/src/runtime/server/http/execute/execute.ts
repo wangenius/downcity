@@ -10,9 +10,9 @@
 import { Hono } from "hono";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import { persistAssistantResult } from "@/session/messages/AssistantResultPersistence.js";
 import {
   pickLastSuccessfulChatSendText,
-  resolveAssistantMessageForPersistence,
 } from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
 
 /**
@@ -100,20 +100,22 @@ export function createExecuteRouter(
 
       const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
       try {
-        const messageForPersistence = resolveAssistantMessageForPersistence(
-          result.assistantMessage,
-        );
-        if (messageForPersistence) {
-          await session.appendAssistantMessage({
-            message: messageForPersistence,
-            fallbackText: userVisible,
-            extra: {
-              via: "api_execute",
-              note: "assistant_message_missing",
-              actorId,
+        await persistAssistantResult({
+          writer: {
+            appendAssistantMessage: async (appendParams) => {
+              await session.appendAssistantMessage({
+                ...appendParams,
+                extra: {
+                  via: "api_execute",
+                  note: "assistant_message_missing",
+                  actorId,
+                },
+              });
             },
-          });
-        }
+          },
+          assistantMessage: result.assistantMessage,
+          fallbackText: userVisible,
+        });
         const deferredInjectedMessages = drainDeferredPersistedUserMessages(
           sessionId,
         );

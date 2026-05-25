@@ -11,13 +11,13 @@ import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
 import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
+import { persistAssistantResult } from "@/session/messages/AssistantResultPersistence.js";
 import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@/plugin/builtins/chat/runtime/ChatkeySend.js";
 import { appendExecIngress } from "@/plugin/builtins/chat/runtime/ChatIngressStore.js";
 import { buildQueuedUserMessageWithInfo } from "@/plugin/builtins/chat/runtime/QueuedUserMessage.js";
 import {
   pickLastSuccessfulChatSendText,
-  resolveAssistantMessageForPersistence,
 } from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
 import { buildExecuteInputText } from "./Helpers.js";
 
@@ -118,19 +118,21 @@ export async function executeBySessionId(params: {
 
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
   try {
-    const messageForPersistence = resolveAssistantMessageForPersistence(
-      result.assistantMessage,
-    );
-    if (messageForPersistence) {
-      await session.appendAssistantMessage({
-        message: messageForPersistence,
-        fallbackText: userVisible,
-        extra: {
-          via: "tui_session_execute",
-          note: "assistant_message_missing",
+    await persistAssistantResult({
+      writer: {
+        appendAssistantMessage: async (appendParams) => {
+          await session.appendAssistantMessage({
+            ...appendParams,
+            extra: {
+              via: "tui_session_execute",
+              note: "assistant_message_missing",
+            },
+          });
         },
-      });
-    }
+      },
+      assistantMessage: result.assistantMessage,
+      fallbackText: userVisible,
+    });
     const deferredInjectedMessages = drainDeferredPersistedUserMessages(
       sessionId,
     );

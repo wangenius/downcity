@@ -13,7 +13,7 @@ import type { SessionRunResult } from "@/session/types/SessionRun.js";
 import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
 import type { SessionPort } from "@/core/AgentContextTypes.js";
 import type { ChatQueueItem } from "@/plugin/builtins/chat/types/ChatQueue.js";
-import { resolveAssistantMessageForPersistence } from "./UserVisibleText.js";
+import { persistAssistantResult } from "@/session/messages/AssistantResultPersistence.js";
 
 /**
  * 判断 queue item 是否需要补写到 session。
@@ -102,14 +102,10 @@ export async function persistChatRunResult(params: {
   sessionId: string;
   result: SessionRunResult;
 }): Promise<void> {
-  const messageForPersistence = resolveAssistantMessageForPersistence(
-    params.result.assistantMessage,
-  );
-  if (messageForPersistence) {
-    await params.session.appendAssistantMessage({
-      message: messageForPersistence,
-    });
-  }
+  await persistAssistantResult({
+    writer: params.session,
+    assistantMessage: params.result.assistantMessage,
+  });
 
   const deferredInjectedMessages = drainDeferredPersistedUserMessages(
     params.sessionId,

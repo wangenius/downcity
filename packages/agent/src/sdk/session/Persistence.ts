@@ -6,10 +6,10 @@
  * - `Session` 只负责调用这些能力，不直接拼装 meta 结构。
  */
 
-import { resolveAssistantMessageForPersistence } from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
 import { extractTextFromUiMessage } from "@/plugin/builtins/chat/runtime/UIMessageTransformer.js";
 import type { SessionHistoryMetaV1 } from "@/session/types/SessionHistoryMeta.js";
 import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import { persistAssistantResult } from "@/session/messages/AssistantResultPersistence.js";
 import type { AgentSessionConfigSnapshot } from "@/sdk/AgentSdkTypes.js";
 import {
   readSessionMetadata,
@@ -104,9 +104,9 @@ export async function touchSessionMetadata(
 export async function persistSdkAssistantResult(
   params: PersistSdkAssistantResultParams,
 ): Promise<void> {
-  const persisted = resolveAssistantMessageForPersistence(params.assistantMessage);
-  await params.executor.appendAssistantMessage({
-    ...(persisted ? { message: persisted } : {}),
+  await persistAssistantResult({
+    writer: params.executor,
+    assistantMessage: params.assistantMessage,
     fallbackText: extractTextFromUiMessage(params.assistantMessage),
   });
   await touchSessionMetadata(params);

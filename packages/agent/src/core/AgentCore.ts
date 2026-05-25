@@ -400,7 +400,7 @@ export class AgentCore {
       env: this.env,
       globalEnv: this.globalEnv,
       systems: this.instruction,
-      paths: createAgentPathRuntime(this.path),
+      paths: createAgentPathRuntime(this.path, this.id),
       pluginConfig: createAgentPluginConfigRuntime(this.path),
       platform: this.platform,
       getSession: (sessionId: string): SessionPort =>

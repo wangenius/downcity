@@ -118,7 +118,7 @@ function resolveAllowedReadPath(context: AgentContext, relPath: string): string 
   }
   const absPath = path.resolve(context.rootPath, normalized);
   const memoryRoot = path.resolve(path.join(context.rootPath, ".downcity", "memory"));
-  const sessionRoot = path.resolve(path.join(context.rootPath, ".downcity", "session"));
+  const sessionRoot = path.resolve(context.paths.getDowncitySessionRootDirPath());
   const isMemoryPath = isWithin(memoryRoot, absPath);
   const isWorkingPath =
     isWithin(sessionRoot, absPath) && normalized.endsWith("/memory/working.md");

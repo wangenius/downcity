@@ -2,8 +2,8 @@
  * SDK Session 路径规则。
  *
  * 关键点（中文）
- * - 与旧 `.downcity/session/<sessionId>` 路径分开，避免不同 agent 在同一项目目录下互相污染。
- * - 新 SDK 统一落盘到 `.downcity/agents/<agentId>/sessions/<sessionId>/...`。
+ * - 所有 agent session 统一落盘到 `.downcity/agents/<agentId>/sessions/<sessionId>/...`。
+ * - `agentId` 是唯一隔离维度，不再保留第二套旧 session 根目录。
  */
 
 import path from "node:path";

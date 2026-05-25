@@ -51,6 +51,7 @@ export function registerControlOverviewRoutes(
         );
         const sessions = await listControlSessionSummaries({
           projectRoot: runtime.rootPath,
+          agentId: runtime.paths.agentId,
           executionContext: params.getAgentContext(),
           limit: sessionLimit,
         });

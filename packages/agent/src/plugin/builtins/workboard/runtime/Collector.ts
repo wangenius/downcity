@@ -32,6 +32,7 @@ export async function collectWorkboardSnapshot(
   const executingSessionIds = new Set(context.session.listExecutingSessionIds());
   const sessions = await listControlSessionSummaries({
     projectRoot: context.rootPath,
+    agentId: context.paths.agentId,
     executionContext: context,
     limit: WORKBOARD_RECENT_LIMIT + Math.max(executingSessionIds.size, 1),
     executingSessionIds,

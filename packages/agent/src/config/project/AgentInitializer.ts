@@ -10,6 +10,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import {
   getCacheDirPath,
+  getDowncityAgentsRootDirPath,
   getLogsDirPath,
   getProfileMdPath,
   getDowncityConfigDirPath,
@@ -22,7 +23,6 @@ import {
   getDowncityProfilePrimaryPath,
   getDowncityPublicDirPath,
   getDowncitySchemaPath,
-  getDowncitySessionRootDirPath,
   getDowncityTasksDirPath,
   getSoulMdPath,
 } from "@/config/Paths.js";
@@ -392,7 +392,7 @@ export async function initializeAgentProject(
     getCacheDirPath(projectRoot),
     getDowncityProfileDirPath(projectRoot),
     getDowncityDataDirPath(projectRoot),
-    getDowncitySessionRootDirPath(projectRoot),
+    getDowncityAgentsRootDirPath(projectRoot),
     getDowncityPublicDirPath(projectRoot),
     getDowncityConfigDirPath(projectRoot),
     path.join(projectRoot, ".agents", "skills"),

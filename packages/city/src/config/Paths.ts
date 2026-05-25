@@ -124,50 +124,91 @@ export function getDowncityDataDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "data");
 }
 
-export function getDowncitySessionRootDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "session");
+export function getDowncityAgentsRootDirPath(cwd: string): string {
+  return path.join(getDowncityDirPath(cwd), "agents");
 }
 
-export function getDowncitySessionDirPath(cwd: string, sessionId: string): string {
-  return path.join(getDowncitySessionRootDirPath(cwd), encodeURIComponent(sessionId));
+export function getDowncityAgentDirPath(cwd: string, agentId: string): string {
+  return path.join(
+    getDowncityAgentsRootDirPath(cwd),
+    encodeURIComponent(String(agentId || "").trim()),
+  );
+}
+
+export function getDowncitySessionRootDirPath(
+  cwd: string,
+  agentId: string,
+): string {
+  return path.join(getDowncityAgentDirPath(cwd, agentId), "sessions");
+}
+
+export function getDowncitySessionDirPath(
+  cwd: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getDowncitySessionRootDirPath(cwd, agentId),
+    encodeURIComponent(String(sessionId || "").trim()),
+  );
 }
 
 /**
  * Session Messages（会话消息，唯一事实源）。
  *
  * 关键点（中文）
- * - `.downcity/session/<encodedSessionId>/messages/messages.jsonl`：每行一个 UIMessage（user/assistant）
+ * - `.downcity/agents/<encodedAgentId>/sessions/<encodedSessionId>/messages/messages.jsonl`：每行一个 UIMessage（user/assistant）
  * - compact 会把被折叠的原始段写入 `messages/archive/*`（可审计）
  */
 export function getDowncitySessionMessagesDirPath(
   cwd: string,
+  agentId: string,
   sessionId: string,
 ): string {
-  return path.join(getDowncitySessionDirPath(cwd, sessionId), "messages");
+  return path.join(getDowncitySessionDirPath(cwd, agentId, sessionId), "messages");
 }
 
-export function getDowncitySessionMessagesPath(cwd: string, sessionId: string): string {
-  return path.join(getDowncitySessionMessagesDirPath(cwd, sessionId), "messages.jsonl");
+export function getDowncitySessionMessagesPath(
+  cwd: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
+    "messages.jsonl",
+  );
 }
 
-export function getDowncitySessionHistoryMetaPath(cwd: string, sessionId: string): string {
-  return path.join(getDowncitySessionMessagesDirPath(cwd, sessionId), "meta.json");
+export function getDowncitySessionHistoryMetaPath(
+  cwd: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
+    "meta.json",
+  );
 }
 
 export function getDowncitySessionMessagesArchiveDirPath(
   cwd: string,
+  agentId: string,
   sessionId: string,
 ): string {
-  return path.join(getDowncitySessionMessagesDirPath(cwd, sessionId), "archive");
+  return path.join(
+    getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
+    "archive",
+  );
 }
 
 export function getDowncitySessionMessagesArchivePath(
   cwd: string,
+  agentId: string,
   sessionId: string,
   archiveId: string,
 ): string {
   return path.join(
-    getDowncitySessionMessagesArchiveDirPath(cwd, sessionId),
+    getDowncitySessionMessagesArchiveDirPath(cwd, agentId, sessionId),
     `${encodeURIComponent(String(archiveId || "").trim())}.json`,
   );
 }

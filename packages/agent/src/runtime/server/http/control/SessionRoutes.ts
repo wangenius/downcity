@@ -104,6 +104,7 @@ export function registerControlSessionRoutes(
         );
         const sessions = await listControlSessionSummaries({
           projectRoot: runtime.rootPath,
+          agentId: runtime.paths.agentId,
           executionContext: params.getAgentContext(),
           limit,
           executingSessionIds,
@@ -145,7 +146,11 @@ export function registerControlSessionRoutes(
           return c.json({ success: false, error: "Missing sessionId" }, 400);
         }
 
-        const filePath = getDowncitySessionMessagesPath(runtime.rootPath, sessionId);
+        const filePath = getDowncitySessionMessagesPath(
+          runtime.rootPath,
+          runtime.paths.agentId,
+          sessionId,
+        );
         const messages = await loadSessionMessagesFromFile(filePath);
         const sliced = messages
           .slice(-limit)
@@ -172,7 +177,11 @@ export function registerControlSessionRoutes(
           return c.json({ success: false, error: "Missing sessionId" }, 400);
         }
 
-        const messagesPath = getDowncitySessionMessagesPath(runtime.rootPath, sessionId);
+        const messagesPath = getDowncitySessionMessagesPath(
+          runtime.rootPath,
+          runtime.paths.agentId,
+          sessionId,
+        );
         const messagesDirPath = dirname(messagesPath);
         await fs.remove(messagesDirPath);
         // 关键点（中文）：清理消息文件后，同步清掉内存中的 session runtime，避免旧上下文继续运行。
@@ -224,6 +233,7 @@ export function registerControlSessionRoutes(
 
         const archiveDirPath = getDowncitySessionMessagesArchiveDirPath(
           runtime.rootPath,
+          runtime.paths.agentId,
           sessionId,
         );
         if (!(await fs.pathExists(archiveDirPath))) {
@@ -248,6 +258,7 @@ export function registerControlSessionRoutes(
 
           const archivePath = getDowncitySessionMessagesArchivePath(
             runtime.rootPath,
+            runtime.paths.agentId,
             sessionId,
             archiveId,
           );
@@ -312,6 +323,7 @@ export function registerControlSessionRoutes(
 
         const archivePath = getDowncitySessionMessagesArchivePath(
           runtime.rootPath,
+          runtime.paths.agentId,
           sessionId,
           archiveId,
         );

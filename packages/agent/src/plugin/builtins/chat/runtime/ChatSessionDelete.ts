@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 删除路由映射（`.downcity/channel/meta.json`）
  * - 删除 chat 审计目录（`.downcity/chat/<sessionId>/`）
- * - 删除 core session 目录（`.downcity/session/<sessionId>/`）
+ * - 删除 core session 目录（`.downcity/agents/<agentId>/sessions/<sessionId>/`）
  * - 清理运行中 agent 与队列，避免残留任务继续执行
  */
 

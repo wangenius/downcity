@@ -170,6 +170,7 @@ export class Session {
     const messagesDirPath = `${sessionDirPath}/messages`;
     this.historyStore = new JsonlSessionHistoryStore({
       rootPath: this.projectRoot,
+      agentId: this.agentId,
       sessionId: this.id,
       paths: {
         sessionDirPath,

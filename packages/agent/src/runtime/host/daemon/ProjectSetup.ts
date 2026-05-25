@@ -15,6 +15,7 @@ import {
 import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import {
   getCacheDirPath,
+  getDowncityAgentsRootDirPath,
   getLogsDirPath,
   getProfileMdPath,
   getDowncityConfigDirPath,
@@ -24,7 +25,6 @@ import {
   getDowncityJsonPath,
   getDowncityProfileDirPath,
   getDowncityPublicDirPath,
-  getDowncitySessionRootDirPath,
   getDowncityTasksDirPath,
 } from "@/config/Paths.js";
 
@@ -59,7 +59,7 @@ function ensureShipDirectories(projectRoot: string): void {
   fs.ensureDirSync(getCacheDirPath(projectRoot));
   fs.ensureDirSync(getDowncityProfileDirPath(projectRoot));
   fs.ensureDirSync(getDowncityDataDirPath(projectRoot));
-  fs.ensureDirSync(getDowncitySessionRootDirPath(projectRoot));
+  fs.ensureDirSync(getDowncityAgentsRootDirPath(projectRoot));
   fs.ensureDirSync(getDowncityPublicDirPath(projectRoot));
   fs.ensureDirSync(getDowncityConfigDirPath(projectRoot));
   fs.ensureDirSync(path.join(getDowncityDirPath(projectRoot), "schema"));

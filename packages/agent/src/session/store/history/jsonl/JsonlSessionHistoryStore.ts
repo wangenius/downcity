@@ -38,6 +38,14 @@ export type JsonlSessionHistoryStoreOptions = {
    */
   rootPath: string;
   /**
+   * 当前 agentId。
+   *
+   * 关键点（中文）
+   * - 仅在未提供 `paths` 覆盖时必需。
+   * - 默认目录统一收敛到 `.downcity/agents/<agentId>/sessions/...`。
+   */
+  agentId?: string;
+  /**
    * 当前 sessionId。
    */
   sessionId?: string;
@@ -51,22 +59,38 @@ function getDowncityDirPath(rootPath: string): string {
   return path.join(rootPath, ".downcity");
 }
 
-function getDowncitySessionRootDirPath(rootPath: string): string {
-  return path.join(getDowncityDirPath(rootPath), "session");
+function getDowncityAgentsRootDirPath(rootPath: string): string {
+  return path.join(getDowncityDirPath(rootPath), "agents");
 }
 
-function getDowncitySessionDirPath(rootPath: string, sessionId: string): string {
+function getDowncitySessionRootDirPath(rootPath: string, agentId: string): string {
   return path.join(
-    getDowncitySessionRootDirPath(rootPath),
+    getDowncityAgentsRootDirPath(rootPath),
+    encodeURIComponent(agentId),
+    "sessions",
+  );
+}
+
+function getDowncitySessionDirPath(
+  rootPath: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getDowncitySessionRootDirPath(rootPath, agentId),
     encodeURIComponent(sessionId),
   );
 }
 
 function getDowncitySessionMessagesDirPath(
   rootPath: string,
+  agentId: string,
   sessionId: string,
 ): string {
-  return path.join(getDowncitySessionDirPath(rootPath, sessionId), "messages");
+  return path.join(
+    getDowncitySessionDirPath(rootPath, agentId, sessionId),
+    "messages",
+  );
 }
 
 /**
@@ -76,6 +100,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
   readonly sessionId: string;
 
   private readonly rootPath: string;
+  private readonly agentId?: string;
   private readonly overrideSessionDirPath?: string;
   private readonly overrideMessagesDirPath?: string;
   private readonly overrideMessagesFilePath?: string;
@@ -94,6 +119,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
 
     this.rootPath = rootPath;
     this.sessionId = sessionId;
+    this.agentId = this.readOptionalPath(options.agentId);
     this.overrideSessionDirPath = this.readOptionalPath(
       options.paths?.sessionDirPath,
     );
@@ -121,7 +147,16 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     if (this.overrideSessionDirPath) {
       return path.join(this.overrideSessionDirPath, "messages");
     }
-    return getDowncitySessionMessagesDirPath(this.rootPath, this.sessionId);
+    if (!this.agentId) {
+      throw new Error(
+        "JsonlSessionHistoryStore requires agentId when default session paths are used",
+      );
+    }
+    return getDowncitySessionMessagesDirPath(
+      this.rootPath,
+      this.agentId,
+      this.sessionId,
+    );
   }
 
   private getMessagesFilePath(): string {

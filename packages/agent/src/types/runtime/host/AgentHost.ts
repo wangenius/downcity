@@ -36,6 +36,10 @@ export interface AgentPathRuntime {
    */
   projectRoot: string;
   /**
+   * 当前 agent 的稳定标识。
+   */
+  agentId: string;
+  /**
    * `.downcity` 根目录路径。
    */
   getDowncityDirPath(): string;
@@ -68,11 +72,11 @@ export interface AgentPathRuntime {
    */
   getDowncityMemoryDailyPath(date: string): string;
   /**
-   * `.downcity/session` 根目录路径。
+   * `.downcity/agents/<agentId>/sessions` 根目录路径。
    */
   getDowncitySessionRootDirPath(): string;
   /**
-   * `.downcity/session/<sessionId>` 目录路径。
+   * `.downcity/agents/<agentId>/sessions/<sessionId>` 目录路径。
    */
   getDowncitySessionDirPath(sessionId: string): string;
 }

@@ -68,7 +68,10 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
     config,
     env,
     globalEnv,
-    paths: createAgentPathRuntime(rootPath),
+    paths: createAgentPathRuntime(
+      rootPath,
+      String(config.name || "").trim() || path.basename(rootPath) || "agent",
+    ),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
     platform,
   };

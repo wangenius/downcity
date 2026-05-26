@@ -8,9 +8,4 @@ export type {
   PluginStateControlResult,
   PluginStateRecord,
   PluginStateSnapshot,
-  PluginState as ServiceState,
-  PluginStateControlAction as ServiceStateControlAction,
-  PluginStateControlResult as ServiceStateControlResult,
-  PluginStateRecord as ServiceStateRecord,
-  PluginStateSnapshot as ServiceStateSnapshot,
 } from "@/plugin/types/Plugin.js";

@@ -137,7 +137,7 @@ export interface PluginStateControlResult {
  *
  * 关键点（中文）
  * - 这里表达的是“CLI 命令执行 plugin 时真正需要的最小上下文”。
- * - plugin 命令不应依赖 session、service invoke、agent runtime 等长期宿主对象。
+ * - plugin 命令不应依赖 session、plugin invoke、agent runtime 等长期宿主对象。
  * - agent runtime 在需要复用 action 时，直接传入自身更完整的 AgentContext 即可。
  */
 export interface PluginCommandContext {
@@ -180,13 +180,13 @@ export interface PluginCommandContext {
 }
 
 /**
- * Service 调用参数。
+ * Plugin action 调用参数。
  */
-export interface PluginServiceInvokeParams {
+export interface PluginActionInvokeParams {
   /**
-   * 目标 service 名称。
+   * 目标 plugin 名称。
    */
-  service: string;
+  plugin: string;
   /**
    * 目标 action 名称。
    */
@@ -198,9 +198,9 @@ export interface PluginServiceInvokeParams {
 }
 
 /**
- * Service 调用结果。
+ * Plugin action 调用结果。
  */
-export interface PluginServiceInvokeResult {
+export interface PluginActionInvokeResult {
   /**
    * 调用是否成功。
    */
@@ -216,15 +216,15 @@ export interface PluginServiceInvokeResult {
 }
 
 /**
- * Service 调用端口。
+ * Plugin action 调用端口。
  */
-export interface PluginServiceInvokePort {
+export interface PluginActionInvokePort {
   /**
-   * 调用指定 service action。
+   * 调用指定 plugin action。
    */
   invoke(
-    params: PluginServiceInvokeParams,
-  ): Promise<PluginServiceInvokeResult>;
+    params: PluginActionInvokeParams,
+  ): Promise<PluginActionInvokeResult>;
 }
 
 /**
@@ -267,7 +267,7 @@ export interface PluginCommandResult {
  * Plugin 生命周期兼容定义。
  *
  * 关键点（中文）
- * - 这是从旧 service lifecycle 过渡过来的兼容层。
+ * - 这是从旧运行生命周期过渡过来的兼容层。
  * - 新代码优先直接实现 `start/stop/command`。
  */
 export interface PluginLifecycle {
@@ -609,10 +609,6 @@ export interface PluginAction<
      */
     pluginName: string;
     /**
-     * 兼容旧 service action 参数名。
-     */
-    serviceName?: string;
-    /**
      * 当前 Action 名称。
      */
     actionName: string;
@@ -909,7 +905,7 @@ export interface Plugin {
    */
   system?: (context: AgentContext) => string | Promise<string>;
   /**
-   * 旧 service lifecycle 兼容定义（可选）。
+   * 旧生命周期兼容定义（可选）。
    */
   lifecycle?: PluginLifecycle;
   /**

@@ -6,21 +6,21 @@
  * - 当前通过 plugin HTTP 注入暴露 `/api/workboard/snapshot`，供 console 代理与 UI 消费。
  */
 
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { getWorkboardSnapshotStore } from "@/plugin/builtins/workboard/runtime/Store.js";
 import type { WorkboardSnapshotResponse } from "@/plugin/builtins/workboard/types/Workboard.js";
 
-/**
- * Workboard 插件定义。
- */
-export const workboardPlugin: Plugin = {
-  name: "workboard",
+function createWorkboardPluginDefinition(plugin: Plugin): Plugin {
+  return {
+    name: "workboard",
   title: "Workboard Snapshot",
   description:
     "Collects structured runtime activity snapshots so console surfaces can show what the current agent is doing now and what it recently worked on.",
   availability(context) {
-    if (!isPluginEnabled({ plugin: workboardPlugin, context })) {
+    if (!isPluginEnabled({ plugin, context })) {
       return {
         enabled: false,
         available: false,
@@ -46,7 +46,7 @@ export const workboardPlugin: Plugin = {
       register({ app, getContext }) {
         app.get("/api/workboard/snapshot", async (c) => {
           try {
-            const availability = await workboardPlugin.availability?.(getContext());
+            const availability = await plugin.availability?.(getContext());
             if (availability && availability.available !== true) {
               return c.json(
                 {
@@ -78,4 +78,17 @@ export const workboardPlugin: Plugin = {
       },
     },
   },
-};
+  };
+}
+
+/**
+ * WorkboardPlugin：运行态观测面板插件。
+ */
+export class WorkboardPlugin extends BasePlugin {
+  readonly name = "workboard";
+
+  constructor(agent: AgentRuntime | null = null) {
+    super(agent);
+    Object.assign(this, createWorkboardPluginDefinition(this));
+  }
+}

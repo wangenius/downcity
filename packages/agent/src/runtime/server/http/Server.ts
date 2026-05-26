@@ -17,8 +17,8 @@ import { logger as serverLogger } from "@/utils/logger/Logger.js";
 import { createExecuteRouter } from "@/runtime/server/http/execute/execute.js";
 import { healthRouter } from "@/runtime/server/http/health/health.js";
 import {
-  createServicesRouter,
-} from "@/runtime/server/http/services/services.js";
+  createRuntimePluginsRouter,
+} from "@/runtime/server/http/runtime-plugins/RuntimePluginsRouter.js";
 import { createPluginsRouter } from "@/runtime/server/http/plugins/plugins.js";
 import { createStaticRouter } from "@/runtime/server/http/static/static.js";
 import { createControlRouter } from "@/runtime/server/http/control/ControlRouter.js";
@@ -109,10 +109,10 @@ export function createServerApp(
     getAgentRuntime: bindings.getAgentRuntime,
   }));
   app.route("/", healthRouter);
-  const servicesRouter = createServicesRouter({
+  const runtimePluginsRouter = createRuntimePluginsRouter({
     getAgentContext: bindings.getAgentContext,
   });
-  app.route("/", servicesRouter);
+  app.route("/", runtimePluginsRouter);
   app.route("/", createPluginsRouter({
     getAgentContext: bindings.getAgentContext,
   }));

@@ -19,18 +19,18 @@ import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type {
-  Plugin,
   PluginAvailability,
   PluginPort,
   PluginView,
 } from "@/plugin/types/Plugin.js";
 import type {
+  AgentMode,
   AgentOptions,
   AgentSessionMetadata,
   AgentSessionSystemBlock,
 } from "@/sdk/AgentSdkTypes.js";
 import { Session } from "@/sdk/Session.js";
-import { DEFAULT_SHIP_PROMPTS } from "@session/composer/system/default/SystemDomain.js";
+import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
 import { getSdkAgentSessionsRootDirPath } from "@/sdk/session/index.js";
 import {
   createAgentPathRuntime,
@@ -42,9 +42,9 @@ import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueueS
 import { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
-import { PLUGINS } from "@/plugin/core/Plugins.js";
+import { createBuiltinStaticPluginInstances } from "@/plugin/core/Plugins.js";
 import { createRegisteredPluginInstances } from "@/plugin/core/PluginClassRegistry.js";
-import { setShellToolRuntime } from "@session/tools/shell/ShellToolDefinition.js";
+import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.js";
 
 const EMPTY_SDK_PLATFORM: AgentPlatformRuntime = {
   getGlobalEnv: () => ({}),
@@ -114,7 +114,7 @@ export class AgentCore {
   readonly id: string;
   readonly path: string;
   readonly tools: Record<string, Tool>;
-  readonly runtimePlugins: Map<string, BasePlugin>;
+  readonly pluginInstances: Map<string, BasePlugin>;
   readonly plugins: PluginPort;
 
   private readonly logger: Logger;
@@ -122,7 +122,6 @@ export class AgentCore {
   private readonly runtime: AgentRuntime;
   private readonly agentContext: AgentContext;
   private readonly pluginRegistry: PluginRegistry;
-  private readonly pluginSystemProviders: Plugin[];
   private readonly config: DowncityConfig;
   private readonly platform: AgentPlatformRuntime;
   private readonly env: Record<string, string>;
@@ -130,7 +129,7 @@ export class AgentCore {
   private readonly defaultModel?: LanguageModel;
   private readonly configureSessionHook?: AgentOptions["configureSession"];
   private instruction: string[];
-  private runtimePluginsStartPromise: Promise<void> | null = null;
+  private pluginsStartPromise: Promise<void> | null = null;
   private configuredSessionIds = new Set<string>();
 
   constructor(options: AgentOptions) {
@@ -155,17 +154,13 @@ export class AgentCore {
     this.defaultModel = options.model;
     this.configureSessionHook = options.configureSession;
     this.config = this.loadConfig();
-    this.runtimePlugins = new Map<string, BasePlugin>();
+    this.pluginInstances = new Map<string, BasePlugin>();
     this.runtime = this.createRuntime();
-    this.registerRuntimePlugins({
-      explicitRuntimePlugins: options.runtimePlugins || [],
-      useBuiltinRuntimePlugins: options.useBuiltinRuntimePlugins === true,
+    this.registerPlugins({
+      explicitPlugins: options.plugins || [],
+      mode: options.mode || "custom",
     });
-    this.pluginSystemProviders = this.resolvePlugins({
-      explicitPlugins: options.plugins,
-      useBuiltinPlugins: options.useBuiltinPlugins === true,
-    });
-    this.pluginRegistry = this.createPluginRegistry(this.pluginSystemProviders);
+    this.pluginRegistry = this.createPluginRegistry([...this.pluginInstances.values()]);
     this.plugins = this.createPluginPort();
     this.agentContext = this.createAgentContext();
     setShellToolRuntime(this.agentContext.invoke);
@@ -234,19 +229,19 @@ export class AgentCore {
   }
 
   /**
-   * 确保显式注入的 runtime plugins 已启动。
+   * 确保当前 plugins 已启动。
    */
-  async ensureRuntimePluginsStarted(): Promise<void> {
-    if (this.runtimePluginsStartPromise) {
-      await this.runtimePluginsStartPromise;
+  async ensurePluginsStarted(): Promise<void> {
+    if (this.pluginsStartPromise) {
+      await this.pluginsStartPromise;
       return;
     }
-    this.runtimePluginsStartPromise = (async () => {
-      for (const plugin of this.runtimePlugins.values()) {
+    this.pluginsStartPromise = (async () => {
+      for (const plugin of this.pluginInstances.values()) {
         await plugin.lifecycle?.start?.(this.agentContext);
       }
     })();
-    await this.runtimePluginsStartPromise;
+    await this.pluginsStartPromise;
   }
 
   /**
@@ -268,39 +263,30 @@ export class AgentCore {
     }
   }
 
-  private registerRuntimePlugins(input: {
-    explicitRuntimePlugins: BasePlugin[];
-    useBuiltinRuntimePlugins: boolean;
+  private registerPlugins(input: {
+    explicitPlugins: BasePlugin[];
+    mode: AgentMode;
   }): void {
-    const explicitRuntimePlugins = input.explicitRuntimePlugins;
-    const builtinRuntimePlugins = input.useBuiltinRuntimePlugins
-      ? [...createRegisteredPluginInstances(this.runtime).values()]
+    const presetPlugins = input.mode === "preset"
+      ? [
+          ...createRegisteredPluginInstances(this.runtime).values(),
+          ...createBuiltinStaticPluginInstances(this.runtime),
+        ]
       : [];
-    for (const plugin of [...builtinRuntimePlugins, ...explicitRuntimePlugins]) {
+    for (const plugin of [...presetPlugins, ...input.explicitPlugins]) {
       const name = String(plugin?.name || "").trim();
       if (!name) {
-        throw new Error("Agent received a runtime plugin without a valid name");
+        throw new Error("Agent received a plugin without a valid name");
       }
-      if (this.runtimePlugins.has(name)) {
-        throw new Error(`Duplicate runtime plugin registration: ${name}`);
+      if (this.pluginInstances.has(name)) {
+        throw new Error(`Duplicate plugin registration: ${name}`);
       }
       plugin.bindAgent(this.runtime);
-      this.runtimePlugins.set(name, plugin);
+      this.pluginInstances.set(name, plugin);
     }
   }
 
-  private resolvePlugins(input: {
-    explicitPlugins?: Plugin[];
-    useBuiltinPlugins: boolean;
-  }): Plugin[] {
-    const plugins = input.useBuiltinPlugins ? [...PLUGINS] : [];
-    if (Array.isArray(input.explicitPlugins)) {
-      plugins.push(...input.explicitPlugins);
-    }
-    return plugins;
-  }
-
-  private createPluginRegistry(input: Plugin[]): PluginRegistry {
+  private createPluginRegistry(input: BasePlugin[]): PluginRegistry {
     let pluginRegistryRef: PluginRegistry | null = null;
     const hookRegistry = new HookRegistry({
       contextResolver: () => this.agentContext,
@@ -349,7 +335,7 @@ export class AgentCore {
 
   private async loadPluginSystemBlocks(): Promise<AgentSessionSystemBlock[]> {
     const out: AgentSessionSystemBlock[] = [];
-    for (const plugin of this.pluginSystemProviders) {
+    for (const plugin of this.pluginInstances.values()) {
       if (typeof plugin.system !== "function") continue;
       try {
         if (!isPluginEnabled({ plugin, context: this.agentContext })) continue;
@@ -366,25 +352,6 @@ export class AgentCore {
         });
       } catch {
         // 单个 plugin system 失败不应阻断 SDK session 主链路。
-      }
-    }
-    return out;
-  }
-
-  private async loadRuntimePluginSystemBlocks(): Promise<AgentSessionSystemBlock[]> {
-    const out: AgentSessionSystemBlock[] = [];
-    for (const plugin of this.runtimePlugins.values()) {
-      if (typeof plugin.system !== "function") continue;
-      try {
-        const text = String(await plugin.system(this.agentContext)).trim();
-        if (!text) continue;
-        out.push({
-          source: "plugin",
-          name: plugin.name,
-          content: text,
-        });
-      } catch {
-        // 单个 runtime plugin system 失败不应阻断 SDK session 主链路。
       }
     }
     return out;
@@ -410,7 +377,7 @@ export class AgentCore {
           .map((session) => session.id),
       getExecutingSessionCount: () =>
         [...this.sessionsById.values()].filter((session) => session.isExecuting()).length,
-      runtimePlugins: this.runtimePlugins,
+      pluginInstances: this.pluginInstances,
     } satisfies AgentRuntime;
     return runtime;
   }
@@ -446,7 +413,7 @@ export class AgentCore {
         }) => {
           const pluginName = String(params.plugin || "").trim();
           const actionName = String(params.action || "").trim();
-          const plugin = this.runtimePlugins.get(pluginName);
+          const plugin = this.pluginInstances.get(pluginName);
           if (!plugin) {
             return {
               success: false,
@@ -505,7 +472,7 @@ export class AgentCore {
       tools: this.tools,
       logger: this.logger,
       getInstructionSystemBlocks: () => this.loadInstructionSystemBlocks(),
-      getRuntimePluginSystemBlocks: () => this.loadRuntimePluginSystemBlocks(),
+      getRuntimePluginSystemBlocks: async () => [],
       getPluginSystemBlocks: () => this.loadPluginSystemBlocks(),
       ensureConfigured: async (session) => {
         await this.configureSession(session);

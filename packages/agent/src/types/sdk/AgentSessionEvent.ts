@@ -7,7 +7,7 @@
  */
 
 import type { JsonValue } from "@/types/common/Json.js";
-import type { SessionAssistantStepVisibility } from "@/session/types/SessionRun.js";
+import type { SessionAssistantStepVisibility } from "@/executor/types/SessionRun.js";
 
 /**
  * 单个 turn 开始事件。

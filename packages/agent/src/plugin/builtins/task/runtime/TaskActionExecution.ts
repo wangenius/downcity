@@ -1,5 +1,5 @@
 /**
- * TaskActionExecution：task service 的业务执行模块。
+ * TaskActionExecution：task runtime plugin 的业务执行模块。
  *
  * 关键点（中文）
  * - 这里只放 task 的领域执行逻辑，不放 CLI/API 声明。

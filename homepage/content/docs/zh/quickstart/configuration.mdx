@@ -48,13 +48,13 @@ agent 绑定模型 ID（映射到 city 全局模型池）：
 - 对当前项目 runtime 路径，`execution.type` 应写为 `api`
 - 旧的 `model.primary` 不再是推荐的项目侧写法
 
-### `services.chat`
+### `plugins.chat`
 
 聊天通道与队列控制：
 
 ```json
 {
-  "services": {
+  "plugins": {
     "chat": {
       "queue": {
         "maxConcurrency": 2,
@@ -74,7 +74,7 @@ agent 绑定模型 ID（映射到 city 全局模型池）：
 
 `channelAccountId` 会绑定到 `~/.downcity/downcity.db` 的全局 bot 账户池（`channel_accounts`）。
 
-`services.chat.queue` 说明：
+`plugins.chat.queue` 说明：
 - `maxConcurrency`：不同 chatKey lane 的全局并发上限。
 - `mergeDebounceMs`：连续入站消息的短防抖窗口，窗口内消息会尽量并入同一次 run。
 - `mergeMaxWaitMs`：合并等待的硬上限，避免持续来消息导致无限延迟。
@@ -112,7 +112,7 @@ city config get plugins.asr
 city config get
 city config get execution.modelId
 city model list
-city config unset services.chat.channels.telegram
+city config unset plugins.chat.channels.telegram
 ```
 
 ## 下一步

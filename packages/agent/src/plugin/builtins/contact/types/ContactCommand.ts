@@ -1,5 +1,5 @@
 /**
- * contact service command 类型。
+ * contact plugin command 类型。
  *
  * 关键点（中文）
  * - 这里只描述 action payload/response，不承载运行时存储逻辑。

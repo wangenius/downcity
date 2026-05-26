@@ -1,8 +1,8 @@
 /**
- * ChatQueueWorker：chat service 侧队列执行器。
+ * ChatQueueWorker：chat runtime plugin 侧队列执行器。
  *
  * 关键点（中文）
- * - 消费 services / chat 的队列模块
+ * - 消费 chat runtime plugin 持有的队列模块
  * - 只负责把 lane 中的新输入持续提交给 `session.prompt()`
  * - turn 并入策略、history 落盘、assistant 收敛统一交给 Session
  */
@@ -198,7 +198,7 @@ export class ChatQueueWorker {
    * 在单次执行期间维持“正在输入”心跳。
    *
    * 关键点（中文）
-   * - 通过 services / chat 的 dispatcher 发送动作（不经过 main bindings）
+   * - 通过 chat runtime plugin 的 dispatcher 发送动作（不经过 main bindings）
    * - 先发送一次，再按固定间隔续发
    * - 发送失败不影响主执行流程（best-effort）
    */

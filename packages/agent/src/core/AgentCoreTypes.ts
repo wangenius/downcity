@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里表达的是单个 `AgentCore` 实例持有的长期运行状态。
  * - 它不再依赖 `runtime/*` 兼容层，而是作为实例级主类型来源。
- * - Session / runtime plugin / plugin 这些长期对象都从这里挂出。
+ * - Session / plugin 这些长期对象都从这里挂出。
  */
 
 import type { Logger } from "@/utils/logger/Logger.js";
@@ -84,7 +84,7 @@ export interface AgentRuntime extends AgentRuntimeBase {
    */
   getExecutingSessionCount(): number;
   /**
-   * 当前 agent 持有的 runtime plugin instances。
+   * 当前 agent 持有的插件实例集合。
    */
-  runtimePlugins: Map<string, BasePlugin>;
+  pluginInstances: Map<string, BasePlugin>;
 }

@@ -2,9 +2,9 @@
  * ShellRuntime 类型定义。
  *
  * 关键点（中文）
- * - 这些类型描述 shell service 的实例级运行态。
- * - 状态所有权归属于 ShellService 实例，而不是模块级单例。
- * - 统一归档到 `src/service/builtins/shell/` 相邻层级，避免继续分散在跨域目录里。
+ * - 这些类型描述 shell runtime plugin 的实例级运行态。
+ * - 状态所有权归属于 `ShellPlugin` 实例，而不是模块级单例。
+ * - 统一归档到 `src/plugin/builtins/shell/` 相邻层级，避免继续分散在跨域目录里。
  */
 
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
@@ -76,7 +76,7 @@ export type ShellSessionRuntimeState = {
 };
 
 /**
- * ShellService 实例级状态。
+ * `ShellPlugin` 实例级状态。
  */
 export type ShellPluginState = {
   /**

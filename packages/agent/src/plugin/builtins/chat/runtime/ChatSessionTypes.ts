@@ -6,8 +6,8 @@
  * - 普通 Session 仍可复用基础 `run / append*` 能力，不强耦合 chat 语义。
  */
 
-import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
-import type { SessionAssistantStepCallback } from "@/session/types/SessionRun.js";
+import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionAssistantStepCallback } from "@/executor/types/SessionRun.js";
 
 /**
  * ChatSession 单次 turn 绑定的运行态。

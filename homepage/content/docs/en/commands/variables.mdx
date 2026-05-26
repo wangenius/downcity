@@ -34,7 +34,7 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`,
 | `city service start/stop/restart/command` | Target agent is running; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | Advanced targeting form; prefer `city <service> ...` for daily usage |
 | `city plugin list/status` | None | `--json` | Static console-level plugin catalog; does not resolve any agent |
 | `city plugin action ...` | Project has `downcity.json` | `--path` | Advanced local execution form; prefer `city <plugin> ...` for daily usage |
-| `city <service> <action>` (e.g. `city chat ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/services/command` |
+| `city <service> <action>` (e.g. `city chat ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/plugins/runtime/command` |
 | `city <plugin> <action>` (e.g. `city asr ...`) | Project has `downcity.json` | `--path` | Executes locally against the selected project |
 
 Additional notes:
@@ -122,7 +122,7 @@ check in this order:
 
 ### Chat channel credentials
 
-- The only path is binding `services.chat.channels.<channel>.channelAccountId` in `downcity.json`.
+- The only path is binding `plugins.chat.channels.<channel>.channelAccountId` in `downcity.json`.
 - Real credentials (`botToken` / `appId` / `appSecret`) are stored in global `~/.downcity/downcity.db` (`channel_accounts`).
 - `downcity.json` and agent `.env` no longer carry these credentials.
 
@@ -203,7 +203,7 @@ $ city service list --json
 {
   "success": true,
   "count": 4,
-  "services": []
+  "plugins": []
 }
 ```
 

@@ -11,7 +11,7 @@ import fs from "fs-extra";
 import { stripInvocationAuthEnv } from "@/runtime/server/http/auth/AuthEnv.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { runSandboxCommand } from "@/runtime/sandbox/SandboxRunner.js";
-import type { SessionRunResult } from "@/session/types/SessionRun.js";
+import type { SessionRunResult } from "@/executor/types/SessionRun.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type {
   ChatSendOutputPick,
@@ -20,7 +20,7 @@ import type {
   TaskSessionRuntimePort,
   UserSimulatorDecision,
 } from "@/plugin/builtins/task/runtime/TaskRunnerTypes.js";
-import { withSessionRunScope } from "@session/SessionRunScope.js";
+import { withSessionRunScope } from "@executor/SessionRunScope.js";
 import { appendTaskRoundUserMessage } from "./TaskRunnerSession.js";
 
 /**

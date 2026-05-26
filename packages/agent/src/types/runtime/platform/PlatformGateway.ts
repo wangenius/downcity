@@ -76,7 +76,7 @@ export interface PlatformAgentShipSingleChannelConfig {
 }
 
 /**
- * 聊天服务渠道配置集合。
+ * 聊天插件渠道配置集合。
  */
 export interface PlatformAgentShipChatChannelsConfig {
   /**
@@ -96,9 +96,9 @@ export interface PlatformAgentShipChatChannelsConfig {
 }
 
 /**
- * 聊天服务配置。
+ * 聊天插件配置。
  */
-export interface PlatformAgentShipChatServiceConfig {
+export interface PlatformAgentShipChatPluginConfig {
   /**
    * 渠道配置集合。
    */
@@ -106,13 +106,13 @@ export interface PlatformAgentShipChatServiceConfig {
 }
 
 /**
- * downcity.json 中的 services 配置。
+ * downcity.json 中的 plugins 配置。
  */
-export interface PlatformAgentShipServicesConfig {
+export interface PlatformAgentShipPluginsConfig {
   /**
-   * chat 服务配置。
+   * chat 插件配置。
    */
-  chat?: PlatformAgentShipChatServiceConfig;
+  chat?: PlatformAgentShipChatPluginConfig;
 }
 
 /**
@@ -145,9 +145,9 @@ export interface PlatformAgentShipJson {
   execution?: PlatformAgentShipExecutionConfig;
 
   /**
-   * 服务配置。
+   * 插件配置。
    */
-  services?: PlatformAgentShipServicesConfig;
+  plugins?: PlatformAgentShipPluginsConfig;
 
   /**
    * 启动配置。
@@ -156,7 +156,7 @@ export interface PlatformAgentShipJson {
 }
 
 /**
- * chat service status 返回中的单渠道状态。
+ * chat plugin status 返回中的单渠道状态。
  */
 export interface PlatformAgentChatChannelStatus {
   /**

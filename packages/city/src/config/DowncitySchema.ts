@@ -120,11 +120,11 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
         },
       },
     },
-    services: {
+    plugins: {
       type: "object",
       additionalProperties: true,
       properties: {
-        skills: {
+        skill: {
           type: "object",
           additionalProperties: true,
           properties: {
@@ -187,12 +187,6 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
             },
           },
         },
-      },
-    },
-    plugins: {
-      type: "object",
-      additionalProperties: true,
-      properties: {
         asr: {
           type: "object",
           additionalProperties: true,

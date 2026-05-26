@@ -1,9 +1,9 @@
 /**
- * ChatQueueStore：chat service 队列存储。
+ * ChatQueueStore：chat runtime plugin 队列存储。
  *
  * 关键点（中文）
  * - 这是 chat queue 的实例级状态容器。
- * - 允许 `ChatService` 持有自己的 queue store，而不是完全依赖模块级全局状态。
+ * - 允许 `ChatPlugin` 持有自己的 queue store，而不是完全依赖模块级全局状态。
  * - 旧的 `ChatQueue.ts` 会保留共享门面，逐步迁移到显式实例注入。
  */
 
@@ -20,7 +20,7 @@ import type {
 export type ChatQueueEnqueueListener = (laneKey: string) => void;
 
 /**
- * ChatService queue store 的最小能力接口。
+ * ChatPlugin queue store 的最小能力接口。
  */
 export interface ChatQueueStorePort {
   /**
@@ -171,11 +171,11 @@ export function getSharedChatQueueStore(): ChatQueueStore {
  * 从运行时解析 chat queue store。
  *
  * 关键点（中文）
- * - 新路径优先读取 `runtime.agent.runtimePlugins.chat.queueStore`。
+ * - 新路径优先读取 `runtime.agent.pluginInstances.chat.queueStore`。
  * - 迁移阶段若拿不到，则回退到共享 queue store，保证旧入口可继续工作。
  */
 export function resolveChatQueueStore(runtime?: AgentContext): ChatQueueStorePort {
-  const chatService = runtime?.agent?.runtimePlugins?.get?.("chat") as
+  const chatService = runtime?.agent?.pluginInstances?.get?.("chat") as
     | { queueStore?: ChatQueueStorePort }
     | undefined;
   if (chatService?.queueStore) {

@@ -9,9 +9,9 @@
 
 import { nanoid } from "nanoid";
 import type { Tool } from "ai";
-import { Executor } from "@session/Executor.js";
-import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import { JsonlSessionHistoryStore } from "@/session/store/history/jsonl/JsonlSessionHistoryStore.js";
+import { Executor } from "@executor/Executor.js";
+import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+import { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
 import { extractTextFromUiMessage } from "@/plugin/builtins/chat/runtime/UIMessageTransformer.js";
 import type {
   AgentSessionConfigSnapshot,
@@ -21,7 +21,7 @@ import type {
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
 } from "@/sdk/AgentSdkTypes.js";
-import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import {
   buildSessionSystemBlocks,
   SessionSystemBuilder,
@@ -47,14 +47,14 @@ import {
   touchSessionMetadata,
 } from "@/sdk/session/index.js";
 import { createRuntimeSessionPort } from "@/sdk/session/index.js";
-import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
+import { drainDeferredPersistedUserMessages } from "@executor/SessionRunScope.js";
 import type {
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
-import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
 import { SessionEventHub } from "@/sdk/session/runtime/SessionEventHub.js";
 import { SessionPromptRuntime } from "@/sdk/session/runtime/SessionPromptRuntime.js";
 

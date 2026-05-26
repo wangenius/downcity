@@ -119,12 +119,12 @@ export async function setChatChannelEnabled(params: {
 }): Promise<void> {
   const { context, channel, enabled } = params;
 
-  const configServices = ((context.config.services ??= {}) as {
+  const configPlugins = ((context.config.plugins ??= {}) as {
     chat?: {
       channels?: Record<string, Record<string, unknown>>;
     };
   });
-  const chatConfig = (configServices.chat ??= {});
+  const chatConfig = (configPlugins.chat ??= {});
   const channelConfigs = (chatConfig.channels ??= {});
   const channelConfig = (channelConfigs[channel] ??= {});
   channelConfig.enabled = enabled;
@@ -141,8 +141,8 @@ export async function setChatChannelEnabled(params: {
     shipJson = {};
   }
 
-  const shipServices = ((shipJson.services ??= {}) as Record<string, unknown>);
-  const shipChat = ((shipServices.chat ??= {}) as Record<string, unknown>);
+  const shipPlugins = ((shipJson.plugins ??= {}) as Record<string, unknown>);
+  const shipChat = ((shipPlugins.chat ??= {}) as Record<string, unknown>);
   const shipChannels = ((shipChat.channels ??= {}) as Record<string, unknown>);
   const shipChannel = ((shipChannels[channel] ??= {}) as Record<string, unknown>);
   shipChannel.enabled = enabled;
@@ -277,12 +277,12 @@ export async function setChatChannelConfig(params: {
   const { context, channel, patch } = params;
   if (Object.keys(patch).length === 0) return;
 
-  const configServices = ((context.config.services ??= {}) as {
+  const configPlugins = ((context.config.plugins ??= {}) as {
     chat?: {
       channels?: Record<string, Record<string, unknown>>;
     };
   });
-  const chatConfig = (configServices.chat ??= {});
+  const chatConfig = (configPlugins.chat ??= {});
   const channelConfigs = (chatConfig.channels ??= {});
   const channelConfig = (channelConfigs[channel] ??= {});
   applyChannelPatch(channelConfig, patch);
@@ -299,8 +299,8 @@ export async function setChatChannelConfig(params: {
     shipJson = {};
   }
 
-  const shipServices = ((shipJson.services ??= {}) as Record<string, unknown>);
-  const shipChat = ((shipServices.chat ??= {}) as Record<string, unknown>);
+  const shipPlugins = ((shipJson.plugins ??= {}) as Record<string, unknown>);
+  const shipChat = ((shipPlugins.chat ??= {}) as Record<string, unknown>);
   const shipChannels = ((shipChat.channels ??= {}) as Record<string, unknown>);
   const shipChannel = ((shipChannels[channel] ??= {}) as Record<string, unknown>);
   applyChannelPatch(shipChannel, patch);

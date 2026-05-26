@@ -32,25 +32,25 @@ description: Agent 对外 HTTP 接口与请求示例
 }
 ```
 
-## Service API
+## Runtime plugin API
 
-### `GET /api/services/list`
+### `GET /api/plugins/runtime/list`
 
-列出 service 运行状态。
+列出 runtime plugin 运行状态。
 
-### `POST /api/services/control`
+### `POST /api/plugins/runtime/control`
 
 ```json
-{ "serviceName": "chat", "action": "restart" }
+{ "pluginName": "chat", "action": "restart" }
 ```
 
 `action` 支持：`start | stop | restart | status`。
 
-### `POST /api/services/command`
+### `POST /api/plugins/runtime/command`
 
 ```json
 {
-  "serviceName": "task",
+  "pluginName": "task",
   "command": "list",
   "payload": { "status": "enabled" }
 }
@@ -142,22 +142,18 @@ description: Agent 对外 HTTP 接口与请求示例
 
 说明：
 
-- `sessionId` 应传 runtime 返回的目标会话 ID。聊天场景下该 ID 由 chat service 维护映射（不再要求可由平台字段直接拼接）。
+- `sessionId` 应传 runtime 返回的目标会话 ID。聊天场景下该 ID 由 chat runtime plugin 维护映射（不再要求可由平台字段直接拼接）。
 - 附件会先被 runtime 落盘，再以 `<file ...>` 标签自动注入到用户消息前部。
-- 当 `sessionId` 映射到 chat 会话时，会复用 chat 平台同一条执行队列（与平台入站消息一致），并在执行前写入 chat history。
+- 当 `sessionId` 映射到 chat 会话时，会复用 chat runtime plugin 的同一条执行队列（与平台入站消息一致），并在执行前写入 chat history。
 - chat 上下文调用会立即返回排队结果（`queued=true`、`queueItemId`、`queuePosition`）。
 
-## Action 直连路由
+## Action 路由
 
-每个 service/plugin action 还会暴露默认路由：
+plugin action 使用这些入口：
 
-- `/service/<serviceName>/<actionName>`
 - `/api/plugins/action`
-
-例如：
-
-- `POST /service/chat/send`
-- `POST /api/plugins/action`
+- `/api/plugins/runtime/control`
+- `/api/plugins/runtime/command`
 
 ## 调试建议
 

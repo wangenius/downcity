@@ -1,11 +1,11 @@
 ---
 title: city chat
-description: chat service 交互式管理与 actions（status/test/reconnect/open/close/configuration/configure/list/info/send/react/context/delete/history）
+description: chat runtime 交互式管理与 actions（status/test/reconnect/open/close/configuration/configure/list/info/send/react/context/delete/history）
 ---
 
 # `city chat`
 
-用于管理 chat service、配置 city 级 channel account、向指定会话发送消息、贴表情、查看上下文和读取历史。
+用于管理 chat runtime、配置 city 级 channel account、向指定会话发送消息、贴表情、查看上下文和读取历史。
 
 裸 `city chat` 会进入交互式管理器；脚本化场景仍可继续使用下列子命令。
 
@@ -20,12 +20,12 @@ city chat <subcommand> [options]
 
 运行 `city chat` 后可以：
 
-- 查看、启动、停止、重启当前项目的 chat service
+- 查看、启动、停止、重启当前项目的 chat runtime
 - 选择“配置 channel”管理 city 全局 Telegram / Feishu / QQ accounts
 - 新增、编辑、删除 channel account
 - 选择“配置 authorization”，给平台用户分配 auth role
 
-channel account 与 chat authorization 都写入 city 全局 `~/.downcity/downcity.db`。agent 项目只保存 `services.chat.channels.<channel>.channelAccountId` 绑定。
+channel account 与 chat authorization 都写入 city 全局 `~/.downcity/downcity.db`。agent 项目只保存 `plugins.chat.channels.<channel>.channelAccountId` 绑定。
 
 ## 子命令
 
@@ -98,7 +98,7 @@ city chat auth set telegram:12345678
 - 调度任务会写入当前 agent 项目的 `.downcity/schedule.sqlite`
 - 如果 runtime 重启，未完成消息会在下次启动后自动恢复
 - `--delay` 与 `--time` 不能同时使用
-- 该能力只面向 one-shot 延迟/定时发送；cron 或长期工作流仍建议使用 `task` service
+- 该能力只面向 one-shot 延迟/定时发送；cron 或长期工作流仍建议使用 `task` runtime plugin
 
 更详细的说明、恢复行为与 API 示例见：
 

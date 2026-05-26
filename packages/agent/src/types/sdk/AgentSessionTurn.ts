@@ -7,7 +7,7 @@
  * - 增量过程继续通过 `session.subscribe()` 观察；turn handle 只负责等待最终完成结果。
  */
 
-import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 
 /**
  * 单个 Session turn 的最终结果。

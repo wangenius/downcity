@@ -2,8 +2,8 @@
  * TaskService 类型定义。
  *
  * 关键点（中文）
- * - 这里集中声明 task service 在类化拆分后共享的 action payload 与调度结果类型。
- * - 跨模块复用的 task service 类型统一收敛在 `service/builtins/task/types/`。
+ * - 这里集中声明 task runtime plugin 在类化拆分后共享的 action payload 与调度结果类型。
+ * - 跨模块复用的 task runtime plugin 类型统一收敛在 `plugin/builtins/task/types/`。
  */
 
 import type { ShipTaskStatus } from "@/plugin/builtins/task/types/Task.js";

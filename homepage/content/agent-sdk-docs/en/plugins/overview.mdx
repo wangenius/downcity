@@ -25,13 +25,13 @@ You can think of it as a package that can:
 The local `Agent` now supports explicit plugin registration:
 
 ```ts
-import { Agent, skillPlugin, webPlugin } from "@downcity/agent";
+import { Agent, SkillPlugin, WebPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [skillPlugin, webPlugin],
+  plugins: [new SkillPlugin(), new WebPlugin()],
 });
 
 const plugins = agent.plugins.list();

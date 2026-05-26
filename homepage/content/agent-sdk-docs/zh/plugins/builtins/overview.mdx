@@ -23,12 +23,12 @@ description: 系统性梳理 Downcity 当前六个内建 plugins 的定位、差
 ```ts
 import {
   Agent,
-  authPlugin,
-  skillPlugin,
-  webPlugin,
-  asrPlugin,
-  ttsPlugin,
-  workboardPlugin,
+  AuthPlugin,
+  SkillPlugin,
+  WebPlugin,
+  AsrPlugin,
+  TtsPlugin,
+  WorkboardPlugin,
 } from "@downcity/agent";
 
 const agent = new Agent({
@@ -36,12 +36,12 @@ const agent = new Agent({
   path: "/path/to/project",
   tools: {},
   plugins: [
-    authPlugin,
-    skillPlugin,
-    webPlugin,
-    asrPlugin,
-    ttsPlugin,
-    workboardPlugin,
+    new AuthPlugin(),
+    new SkillPlugin(),
+    new WebPlugin(),
+    new AsrPlugin(),
+    new TtsPlugin(),
+    new WorkboardPlugin(),
   ],
 });
 
@@ -50,7 +50,7 @@ const installed = agent.plugins.list();
 
 这里最重要的语义是：
 
-- 内建 plugin 已经公开导出
+- 内建 plugin class 已经公开导出
 - SDK 不会默认自动注册全部内建 plugin
 - 当前 `Agent` 真正可用哪些 plugin，取决于你是否显式注册
 

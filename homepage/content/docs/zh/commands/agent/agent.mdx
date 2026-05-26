@@ -39,7 +39,7 @@ city agent <subcommand>
 
 它不会替代下面的子命令，只是把常用本地操作收进一个引导入口。
 
-聊天渠道凭据属于 `city chat` 中的 city 级 channel account。agent manager 只负责把当前 agent 连接到已有账号，即写入 `services.chat.channels.<channel>.channelAccountId`。如果发现 agent 绑定了不存在的 account，会自动清理这个悬空关联。
+聊天渠道凭据属于 `city chat` 中的 city 级 channel account。agent manager 只负责把当前 agent 连接到已有账号，即写入 `plugins.chat.channels.<channel>.channelAccountId`。如果发现 agent 绑定了不存在的 account，会自动清理这个悬空关联。
 
 ## 子命令
 

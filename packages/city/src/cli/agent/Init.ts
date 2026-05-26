@@ -208,7 +208,7 @@ export async function initCommand(
       facts: [
         {
           label: "Bind",
-          value: "services.chat.channels.feishu.channelAccountId",
+          value: "plugins.chat.channels.feishu.channelAccountId",
         },
         {
           label: "Manage",
@@ -223,7 +223,7 @@ export async function initCommand(
       facts: [
         {
           label: "Bind",
-          value: "services.chat.channels.telegram.channelAccountId",
+          value: "plugins.chat.channels.telegram.channelAccountId",
         },
         {
           label: "Manage",
@@ -238,7 +238,7 @@ export async function initCommand(
       facts: [
         {
           label: "Bind",
-          value: "services.chat.channels.qq.channelAccountId",
+          value: "plugins.chat.channels.qq.channelAccountId",
         },
         {
           label: "Manage",
@@ -267,17 +267,17 @@ export async function initCommand(
 
   if (selectedChannels.includes("telegram")) {
     nextSteps.push(
-      "Bind services.chat.channels.telegram.channelAccountId to an existing channel account",
+      "Bind plugins.chat.channels.telegram.channelAccountId to an existing channel account",
     );
   }
   if (selectedChannels.includes("feishu")) {
     nextSteps.push(
-      "Bind services.chat.channels.feishu.channelAccountId to an existing channel account",
+      "Bind plugins.chat.channels.feishu.channelAccountId to an existing channel account",
     );
   }
   if (selectedChannels.includes("qq")) {
     nextSteps.push(
-      "Bind services.chat.channels.qq.channelAccountId to an existing channel account",
+      "Bind plugins.chat.channels.qq.channelAccountId to an existing channel account",
     );
   }
   nextSteps.push('Run "city agent start" to start the agent');

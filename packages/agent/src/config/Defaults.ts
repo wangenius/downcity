@@ -31,7 +31,7 @@ export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
       compactRatio: 0.5,
     },
   },
-  services: {
+  plugins: {
     chat: {
       queue: {
         maxConcurrency: 2,

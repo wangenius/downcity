@@ -13,6 +13,7 @@ export { Session } from "./sdk/Session.js";
 export { RemoteAgent } from "./sdk/RemoteAgent.js";
 export { AgentCore } from "./core/AgentCore.js";
 export type {
+  AgentMode,
   AgentOptions,
   AgentHttpBinding,
   AgentHttpStartOptions,
@@ -62,29 +63,29 @@ export type {
   ChatPluginQqOptions,
   ChatPluginTelegramOptions,
 } from "./plugin/builtins/chat/ChatPluginTypes.js";
-export { authPlugin } from "./plugin/builtins/auth/Plugin.js";
-export { skillPlugin } from "./plugin/builtins/skill/Plugin.js";
-export { webPlugin } from "./plugin/builtins/web/Plugin.js";
-export { asrPlugin } from "./plugin/builtins/asr/Plugin.js";
-export { ttsPlugin } from "./plugin/builtins/tts/Plugin.js";
-export { workboardPlugin } from "./plugin/builtins/workboard/Plugin.js";
+export { AuthPlugin } from "./plugin/builtins/auth/Plugin.js";
+export { SkillPlugin } from "./plugin/builtins/skill/Plugin.js";
+export { WebPlugin } from "./plugin/builtins/web/Plugin.js";
+export { AsrPlugin } from "./plugin/builtins/asr/Plugin.js";
+export { TtsPlugin } from "./plugin/builtins/tts/Plugin.js";
+export { WorkboardPlugin } from "./plugin/builtins/workboard/Plugin.js";
 
 // Session 与即时执行集成
-export { Executor } from "./session/Executor.js";
+export { Executor } from "./executor/Executor.js";
 export {
   drainDeferredPersistedUserMessages,
   getSessionRunScope,
-} from "./session/SessionRunScope.js";
-export { JsonlSessionHistoryComposer } from "./session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-export { JsonlSessionHistoryStore } from "./session/store/history/jsonl/JsonlSessionHistoryStore.js";
-export { JsonlSessionCompactionComposer } from "./session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-export type { SessionSystemComposer } from "./session/composer/system/SessionSystemComposer.js";
-export { transformPromptsIntoSystemMessages } from "./session/composer/system/default/PromptRenderer.js";
+} from "./executor/SessionRunScope.js";
+export { JsonlSessionHistoryComposer } from "./executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+export { JsonlSessionHistoryStore } from "./executor/store/history/jsonl/JsonlSessionHistoryStore.js";
+export { JsonlSessionCompactionComposer } from "./executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
+export type { SessionSystemComposer } from "./executor/composer/system/SessionSystemComposer.js";
+export { transformPromptsIntoSystemMessages } from "./executor/composer/system/default/PromptRenderer.js";
 export {
   loadStaticSystemPrompts,
   StaticPromptCatalog,
-} from "./session/composer/system/default/StaticPromptCatalog.js";
-export { shellTools } from "./session/tools/shell/ShellToolDefinition.js";
+} from "./executor/composer/system/default/StaticPromptCatalog.js";
+export { shellTools } from "./executor/tools/shell/ShellToolDefinition.js";
 
 // Agent server 与 transport 集成
 export { startServer } from "./runtime/server/http/Server.js";
@@ -185,10 +186,11 @@ export type {
   PlatformAgentChatChannelStatus,
   PlatformAgentDaemonMeta,
   PlatformAgentShipChatChannelsConfig,
+  PlatformAgentShipChatPluginConfig,
   PlatformAgentShipExecutionAgentConfig,
   PlatformAgentShipExecutionConfig,
   PlatformAgentShipJson,
-  PlatformAgentShipServicesConfig,
+  PlatformAgentShipPluginsConfig,
   PlatformAgentShipSingleChannelConfig,
   PlatformAgentShipStartConfig,
 } from "./types/runtime/platform/PlatformGateway.js";
@@ -235,9 +237,9 @@ export type {
   PluginPort,
   PluginResolveHook,
   PluginRuntimeHttpRegistration,
-  PluginServiceInvokeParams,
-  PluginServiceInvokePort,
-  PluginServiceInvokeResult,
+  PluginActionInvokeParams,
+  PluginActionInvokePort,
+  PluginActionInvokeResult,
   PluginSetupDefinition,
   PluginSetupField,
   PluginSetupFieldOption,

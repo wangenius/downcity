@@ -7,6 +7,8 @@
  * - auth plugin 只负责统一暴露扩展点 / action 边界，不改变底层存储模型。
  */
 
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import { CHAT_PLUGIN_POINTS } from "@/plugin/builtins/chat/runtime/PluginPoints.js";
@@ -68,11 +70,9 @@ function toSnapshotData(snapshot: ChatAuthorizationSnapshot): JsonValue {
   };
 }
 
-/**
- * authPlugin：统一承载授权能力。
- */
-export const authPlugin: Plugin = {
-  name: "auth",
+function createAuthPluginDefinition(): Plugin {
+  return {
+    name: "auth",
   title: "User Authorization System",
   description:
     "Controls who can talk to the agent in chat channels, records observed users and chats, and resolves each user's effective role for downstream service decisions.",
@@ -206,4 +206,17 @@ export const authPlugin: Plugin = {
       },
     },
   },
-};
+  };
+}
+
+/**
+ * AuthPlugin：统一承载授权能力。
+ */
+export class AuthPlugin extends BasePlugin {
+  readonly name = "auth";
+
+  constructor(agent: AgentRuntime | null = null) {
+    super(agent);
+    Object.assign(this, createAuthPluginDefinition());
+  }
+}

@@ -6,8 +6,8 @@
  * - 这些类型服务于 task 运行链路，统一归档到 `src/types/task/`。
  */
 
-import type { JsonlSessionHistoryStore } from "@/session/store/history/jsonl/JsonlSessionHistoryStore.js";
-import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
+import type { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
+import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
 import type {
   ShipTaskRunExecutionStatusV1,
   ShipTaskRunProgressPhaseV1,

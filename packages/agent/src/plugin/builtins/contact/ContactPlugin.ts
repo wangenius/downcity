@@ -434,14 +434,14 @@ export class ContactPlugin extends BasePlugin {
       return {
         success: true,
         agentName: getAgentName(context),
-        service: "contact",
+        plugin: "contact",
       };
     }
     const contact = await findContactByInboundToken(context.rootPath, token);
     return {
       success: true,
       agentName: getAgentName(context),
-      service: "contact",
+      plugin: "contact",
       authenticated: Boolean(contact && contact.status === "trusted"),
     };
   }

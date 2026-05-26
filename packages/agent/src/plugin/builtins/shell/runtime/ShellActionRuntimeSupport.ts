@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一承载 ShellActionRuntime 的内部共享逻辑：环境组装、持久化、waiter 协调、session 查找。
- * - 对外暴露给 ShellActionRuntime 的只有纯运行时辅助函数，不直接承担 service action 编排。
+ * - 对外暴露给 ShellActionRuntime 的只有纯运行时辅助函数，不直接承担 plugin action 编排。
  */
 
 import path from "node:path";
@@ -53,7 +53,7 @@ export const DEFAULT_WAIT_TIMEOUT_MS = 10_000;
 export const DEFAULT_EXEC_TIMEOUT_MS = 60_000;
 
 /**
- * 创建 shell service 初始状态。
+ * 创建 shell runtime plugin 初始状态。
  */
 export function createShellPluginState(): ShellPluginState {
   return {

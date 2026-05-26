@@ -7,9 +7,9 @@
  * - SDK 不在 system 中注入动态变量；动态上下文应由调用方放入 user message。
  */
 
-import type { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
-import { getSessionRunScope } from "@session/SessionRunScope.js";
-import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
+import type { SessionSystemComposer } from "@executor/composer/system/SessionSystemComposer.js";
+import { getSessionRunScope } from "@executor/SessionRunScope.js";
+import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type {
   AgentSessionSystemBlock,
   AgentSessionSystemSessionInfo,

@@ -1,0 +1,54 @@
+---
+title: plugins Configuration
+description: Common plugin configuration patterns in an Agent project, especially chat channels
+---
+
+# `plugins` Configuration
+
+The `plugins` section declares agent-level plugin configuration for the project.
+
+## The most common case is chat
+
+For example:
+
+```json
+{
+  "plugins": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+For most users, this is also the first `plugins` block they will write.
+
+## What this does not mean
+
+This is not where you store the Telegram bot token.
+
+It only says:
+
+- this agent enables the Telegram channel
+- this project should bind to the city-level `telegram-main` account
+
+So when chat entry does not work, the first things to verify are usually:
+
+- whether the global channel account exists
+- whether `channelAccountId` is correct
+- whether the agent was restarted after the change
+
+## Recommended mental model
+
+- credentials live at the global level
+- bindings live at the project level
+
+## Continue reading
+
+- [Channel configuration overview](/en/docs/agent/configuration/channels/overview)
+- [channel account binding](/en/docs/agent/configuration/channels/channel-account-binding)

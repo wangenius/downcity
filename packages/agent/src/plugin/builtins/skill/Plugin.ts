@@ -7,6 +7,8 @@
  * - skills overview 文本通过 `plugin.system` 注入，不再依赖 service.system。
  */
 
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
@@ -90,11 +92,9 @@ function inferSkillQueryFromSpec(spec: string): string {
   return "";
 }
 
-/**
- * skillPlugin：技能发现、安装、读取与 system 注入。
- */
-export const skillPlugin: Plugin = {
-  name: "skill",
+function createSkillPluginDefinition(plugin: Plugin): Plugin {
+  return {
+    name: "skill",
   title: "Skill Catalog And Loader",
   description:
     "Finds, installs, lists, and reads local skills, and injects the current skill overview into system prompts so the agent knows what capabilities are available.",
@@ -106,7 +106,7 @@ export const skillPlugin: Plugin = {
     },
   },
   availability(context) {
-    if (!isPluginEnabled({ plugin: skillPlugin, context })) {
+    if (!isPluginEnabled({ plugin, context })) {
       return {
         enabled: false,
         available: false,
@@ -331,4 +331,17 @@ export const skillPlugin: Plugin = {
       },
     },
   },
-};
+  };
+}
+
+/**
+ * SkillPlugin：技能发现、安装、读取与 system 注入。
+ */
+export class SkillPlugin extends BasePlugin {
+  readonly name = "skill";
+
+  constructor(agent: AgentRuntime | null = null) {
+    super(agent);
+    Object.assign(this, createSkillPluginDefinition(this));
+  }
+}

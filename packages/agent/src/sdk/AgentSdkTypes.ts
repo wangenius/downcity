@@ -3,17 +3,21 @@
  *
  * 关键点（中文）
  * - 这里集中声明 `Agent` / `RemoteAgent` / `Session` 面向外部调用方的稳定接口。
- * - SDK 用户通过显式 `tools` / `runtimePlugins` / `plugins` 装配能力，不直接依赖内部 runtime 单例。
+ * - SDK 用户通过显式 `tools` / `plugins` 装配能力，不直接依赖内部 runtime 单例。
  * - 本地/远程 session 运行与基础落盘能力仍是 SDK 主路径。
  */
 
 import type { LanguageModel, Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type { LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
 import type { ServerInstance } from "@/runtime/server/http/Server.js";
 import type { Session } from "@/sdk/Session.js";
+
+/**
+ * SDK Agent 插件装配模式。
+ */
+export type AgentMode = "preset" | "custom";
 
 /**
  * 本地 Agent 构造参数。
@@ -63,42 +67,24 @@ export interface AgentOptions {
   model?: LanguageModel;
 
   /**
-   * 当前 agent 显式持有的 runtime plugin 实例集合。
+   * 当前 agent 的插件装配模式。
    *
    * 关键点（中文）
-   * - 这里接收已经实例化好的 runtime plugin，而不是 plugin class。
-   * - `Agent` 会在构造阶段按名称注册这些实例，并在启动时自动绑定 runtime。
-   * - v1 推荐显式传入 `new ChatPlugin(...)` 这类实例，而不是依赖包内隐式注册表。
+   * - `preset` 会自动装配内建插件集合。
+   * - `custom` 只使用显式传入的 `plugins`。
+   * - 默认值为 `custom`，避免本地嵌入场景隐式打开额外能力。
    */
-  runtimePlugins?: BasePlugin[];
+  mode?: AgentMode;
 
   /**
-   * 是否自动装配全部内建 runtime plugin。
+   * 当前 agent 显式持有的插件实例集合。
    *
    * 关键点（中文）
-   * - 适合 city 这类宿主进程直接 `new Agent(...)` 的场景。
-   * - 未开启时，默认只使用显式传入的 `runtimePlugins`。
-   */
-  useBuiltinRuntimePlugins?: boolean;
-
-  /**
-   * 当前 agent 显式注册的 plugin 定义集合。
-   *
-   * 关键点（中文）
-   * - 这里接收完整 plugin 定义对象，而不是 plugin 名称。
-   * - `Agent` 会为当前 SDK 实例创建独立 plugin registry，避免污染全局 runtime。
+   * - 这里接收已经实例化好的 `BasePlugin` 对象，而不是 plugin class。
+   * - `Agent` 会在构造阶段按名称注册这些实例，并自动绑定到当前 runtime。
    * - 同名 plugin 会直接报错，避免 action / hook / resolve 行为被静默覆盖。
    */
-  plugins?: Plugin[];
-
-  /**
-   * 是否自动装配全部内建 plugin。
-   *
-   * 关键点（中文）
-   * - 适合 city 这类宿主进程直接 `new Agent(...)` 的场景。
-   * - 未开启时，默认只使用显式传入的 `plugins`。
-   */
-  useBuiltinPlugins?: boolean;
+  plugins?: BasePlugin[];
 
   /**
    * 当前 agent 显式注入的平台能力集合。
@@ -145,13 +131,13 @@ export interface AgentStartOptions {
   rpc?: boolean;
 
   /**
-   * 是否启动当前 agent 的 runtime plugins。
+   * 是否启动当前 agent 的 plugins。
    *
    * 关键点（中文）
    * - 默认 `true`。
    * - `false` 适合只需要 session 能力、不希望启动后台能力的嵌入场景。
    */
-  runtimePlugins?: boolean;
+  plugins?: boolean;
 }
 
 /**
@@ -169,9 +155,9 @@ export interface AgentStopResult {
   rpcStopped: boolean;
 
   /**
-   * 本次是否实际停止了 runtime plugins。
+   * 本次是否实际停止了 plugins。
    */
-  runtimePluginsStopped: boolean;
+  pluginsStopped: boolean;
 }
 
 /**
@@ -189,9 +175,9 @@ export interface AgentStartResult {
   rpc?: AgentRpcBinding;
 
   /**
-   * 当前 agent 是否已启动 runtime plugins。
+   * 当前 agent 是否已启动 plugins。
    */
-  runtimePluginsStarted: boolean;
+  pluginsStarted: boolean;
 }
 
 /**

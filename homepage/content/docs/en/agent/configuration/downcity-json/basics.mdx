@@ -17,7 +17,7 @@ description: The core configuration file in an Agent project and the fields you 
     "type": "api",
     "modelId": "quality"
   },
-  "services": {}
+  "plugins": {}
 }
 ```
 
@@ -25,7 +25,7 @@ description: The core configuration file in an Agent project and the fields you 
 
 - `name`
 - `execution.modelId`
-- `services.chat.channels.*`
+- `plugins.chat.channels.*`
 
 If you keep only those fields healthy, that already covers most day-to-day agent usage.
 
@@ -35,7 +35,7 @@ Its main job is to:
 
 - declare the project name
 - declare which global model the project should use
-- configure project-level services
+- configure project-level plugins
 - bind channel accounts
 
 From a user perspective, the most important job of `downcity.json` is not "store everything." It is "declare how this project should be assembled at runtime."
@@ -56,4 +56,4 @@ Once those concerns get mixed into `downcity.json`, it becomes harder to tell:
 ## Continue reading
 
 - [Execution binding](/en/docs/agent/configuration/downcity-json/execution)
-- [Service configuration](/en/docs/agent/configuration/downcity-json/services)
+- [Plugin configuration](/en/docs/agent/configuration/downcity-json/plugins)

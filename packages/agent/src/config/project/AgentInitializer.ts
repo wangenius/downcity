@@ -29,10 +29,11 @@ import {
 import { DEFAULT_DOWNCITY_JSON } from "@/config/Defaults.js";
 import { DOWNCITY_JSON_SCHEMA } from "@/config/DowncitySchema.js";
 import type { DowncityConfig } from "@/config/Config.js";
+import type { DowncityChatPluginChannelsConfig } from "@/types/config/DowncityConfig.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
-} from "@session/composer/system/default/InitPrompts.js";
+} from "@executor/composer/system/default/InitPrompts.js";
 import { renderTemplateVariables } from "@/utils/Template.js";
 import { ensureDir, saveJson } from "@/utils/storage/index.js";
 import type {
@@ -325,9 +326,7 @@ export async function initializeAgentProject(
     createdFiles.push(file.filename);
   }
 
-  const channelsConfig: NonNullable<
-    NonNullable<NonNullable<DowncityConfig["services"]>["chat"]>["channels"]
-  > = {};
+  const channelsConfig: DowncityChatPluginChannelsConfig = {};
   if (channels.includes("telegram")) {
     channelsConfig.telegram = { enabled: true };
   }
@@ -353,7 +352,7 @@ export async function initializeAgentProject(
     },
     ...(Object.keys(channelsConfig).length > 0
       ? {
-          services: {
+          plugins: {
             chat: {
               channels: channelsConfig,
             },

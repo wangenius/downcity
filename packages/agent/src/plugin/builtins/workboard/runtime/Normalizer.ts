@@ -7,7 +7,7 @@
  */
 
 import type { ControlSessionSummary } from "@/runtime/server/http/control/types/ControlViewData.js";
-import type { ServiceStateSnapshot } from "@/plugin/types/PluginState.js";
+import type { PluginStateSnapshot } from "@/plugin/types/PluginState.js";
 import type { TaskListResponse } from "@/plugin/builtins/task/types/TaskCommand.js";
 import type {
   WorkboardActivityItem,
@@ -181,10 +181,10 @@ export function toWorkboardSummary(params: {
 export function toWorkboardSignals(params: {
   currentCount: number;
   recentCount: number;
-  services: ServiceStateSnapshot[];
+  plugins: PluginStateSnapshot[];
   taskResult: TaskListResponse;
 }): WorkboardSignalItem[] {
-  const degradedCount = params.services.filter((item) => item.state !== "running").length;
+  const degradedCount = params.plugins.filter((item) => item.state !== "running").length;
   const taskCount = Array.isArray(params.taskResult.tasks) ? params.taskResult.tasks.length : 0;
 
   return [

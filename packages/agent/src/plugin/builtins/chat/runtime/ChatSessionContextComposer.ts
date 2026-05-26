@@ -8,10 +8,10 @@
  */
 
 import type { ModelMessage, Tool } from "ai";
-import { drainInjectedUserMessages } from "@session/SessionRunScope.js";
-import { LocalSessionContextComposer } from "@session/composer/context/LocalSessionContextComposer.js";
-import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
-import type { SessionSystemMessage } from "@/session/types/SessionPrompts.js";
+import { drainInjectedUserMessages } from "@executor/SessionRunScope.js";
+import { LocalSessionContextComposer } from "@executor/composer/context/LocalSessionContextComposer.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { ChatSessionTurnState } from "@/plugin/builtins/chat/runtime/ChatSessionTypes.js";
 
 type ChatSessionContextComposerOptions = {

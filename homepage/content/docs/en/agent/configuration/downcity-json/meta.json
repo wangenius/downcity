@@ -3,7 +3,7 @@
   "pages": [
     "basics",
     "execution",
-    "services",
+    "plugins",
     "examples"
   ]
 }

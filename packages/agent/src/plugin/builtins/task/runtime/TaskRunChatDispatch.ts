@@ -2,7 +2,7 @@
  * TaskRunChatDispatch：task 执行完成后的 chat 回发模块。
  *
  * 关键点（中文）
- * - task 完成后统一通过 chat service `send` action 回发结果。
+ * - task 完成后统一通过 chat runtime plugin 的 `send` action 回发结果。
  * - 默认只发送最终结果正文，不额外包裹标题/状态摘要。
  * - 回发失败只记录日志，不影响 task run 自身状态。
  */
@@ -32,7 +32,7 @@ function resolveTaskFinalText(params: {
 }
 
 /**
- * 通过 chat service 发送 task 最终结果。
+ * 通过 chat runtime plugin 发送 task 最终结果。
  */
 export async function dispatchTaskRunCompletionToChat(params: {
   context: AgentContext;

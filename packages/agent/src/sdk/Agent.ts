@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `Agent` 现在是实例外观层，长期运行状态下沉到 `AgentCore`。
- * - session、HTTP、RPC、runtime plugin lifecycle 都按需异步初始化。
+ * - session、HTTP、RPC、plugin lifecycle 都按需异步初始化。
  * - `start/stop` 是唯一公开的长期运行生命周期入口。
  */
 
@@ -38,9 +38,9 @@ export class Agent {
   readonly id: string;
   readonly path: string;
   readonly tools: Record<string, Tool>;
-  readonly runtimePlugins: Map<string, BasePlugin>;
+  readonly pluginInstances: Map<string, BasePlugin>;
   readonly plugins: PluginPort;
-  private runtimePluginsStarted = false;
+  private pluginsStarted = false;
   private startPromise: Promise<AgentStartResult> | null = null;
   private httpBinding: AgentHttpBinding | null = null;
   private rpcBinding: AgentRpcBinding | null = null;
@@ -50,7 +50,7 @@ export class Agent {
     this.id = this.core.id;
     this.path = this.core.path;
     this.tools = this.core.tools;
-    this.runtimePlugins = this.core.runtimePlugins;
+    this.pluginInstances = this.core.pluginInstances;
     this.plugins = this.core.plugins;
   }
 
@@ -69,12 +69,12 @@ export class Agent {
   }
 
   /**
-   * 确保显式注入的 runtime plugins 已启动。
+   * 确保当前 plugins 已启动。
    */
-  async ensureRuntimePluginsStarted(): Promise<void> {
-    if (this.runtimePluginsStarted) return;
+  async ensurePluginsStarted(): Promise<void> {
+    if (this.pluginsStarted) return;
     const lifecycle = await startAllPlugins(this.getContext());
-    this.runtimePluginsStarted = true;
+    this.pluginsStarted = true;
     for (const item of lifecycle.results) {
       if (!item.success) {
         this.getRuntime().logger.error(
@@ -92,10 +92,10 @@ export class Agent {
       return await this.startPromise;
     }
     this.startPromise = (async () => {
-      const shouldStartRuntimePlugins = options?.runtimePlugins !== false;
+      const shouldStartPlugins = options?.plugins !== false;
 
-      if (shouldStartRuntimePlugins) {
-        await this.ensureRuntimePluginsStarted();
+      if (shouldStartPlugins) {
+        await this.ensurePluginsStarted();
       }
 
       const httpBinding =
@@ -110,7 +110,7 @@ export class Agent {
       return {
         ...(httpBinding ? { http: httpBinding } : {}),
         ...(rpcBinding ? { rpc: rpcBinding } : {}),
-        runtimePluginsStarted: this.runtimePluginsStarted,
+        pluginsStarted: this.pluginsStarted,
       };
     })();
     try {
@@ -125,13 +125,13 @@ export class Agent {
    * 停止当前 agent 实例的长期运行能力。
    */
   async stop(): Promise<AgentStopResult> {
-    const runtimePluginsStarted = this.runtimePluginsStarted;
+    const pluginsStarted = this.pluginsStarted;
     const rpcStarted = this.rpcBinding !== null;
     const httpStarted = this.httpBinding !== null;
 
-    if (runtimePluginsStarted) {
+    if (pluginsStarted) {
       await stopAllPlugins(this.getContext());
-      this.runtimePluginsStarted = false;
+      this.pluginsStarted = false;
     }
 
     if (rpcStarted) {
@@ -147,7 +147,7 @@ export class Agent {
     return {
       httpStopped: httpStarted,
       rpcStopped: rpcStarted,
-      runtimePluginsStopped: runtimePluginsStarted,
+      pluginsStopped: pluginsStarted,
     };
   }
 

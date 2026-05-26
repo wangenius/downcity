@@ -3,6 +3,6 @@
   "pages": [
     "startup-checklist",
     "restart-safely",
-    "recover-chat-service"
+    "recover-chat-runtime"
   ]
 }

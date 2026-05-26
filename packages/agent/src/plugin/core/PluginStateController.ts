@@ -35,11 +35,11 @@ export function listPluginInstances(input?: {
   context?: AgentContext;
   runtime?: AgentRuntime;
 }): BasePlugin[] {
-  const contextPlugins = input?.context?.agent?.runtimePlugins;
+  const contextPlugins = input?.context?.agent?.pluginInstances;
   if (contextPlugins instanceof Map && contextPlugins.size > 0) {
     return [...contextPlugins.values()];
   }
-  const runtimePlugins = input?.runtime?.runtimePlugins;
+  const runtimePlugins = input?.runtime?.pluginInstances;
   if (runtimePlugins instanceof Map && runtimePlugins.size > 0) {
     return [...runtimePlugins.values()];
   }

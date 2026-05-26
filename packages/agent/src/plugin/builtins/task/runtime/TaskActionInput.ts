@@ -1,12 +1,12 @@
 /**
- * TaskActionInput：task service 的 CLI 输入映射模块。
+ * TaskActionInput：task runtime plugin 的 CLI 输入映射模块。
  *
  * 关键点（中文）
  * - 统一处理命令行到 task action payload 的转换。
  * - 参数校验尽量前置到输入层，避免进入执行层后才发现字段非法。
  */
 
-import { resolveSessionId } from "@session/ids/resolveSessionId.js";
+import { resolveSessionId } from "@executor/ids/resolveSessionId.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { PluginActionCommandInput } from "@/plugin/types/Plugin.js";
 import type { ShipTaskKind, ShipTaskStatus } from "@/plugin/builtins/task/types/Task.js";

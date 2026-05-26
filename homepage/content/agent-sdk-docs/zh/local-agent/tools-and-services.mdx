@@ -1,9 +1,9 @@
 ---
-title: tools、services 和 plugins
-description: 如何给本地 Agent 注入工具、显式 service 实例和 plugin 定义
+title: tools 和 plugins
+description: 如何给本地 Agent 注入工具与显式 plugin 实例
 ---
 
-# tools、services 和 plugins
+# tools 和 plugins
 
 ## tools
 
@@ -23,19 +23,19 @@ const agent = new Agent({
 
 如果你的应用需要一套长期稳定的默认工具集合，这种 agent 级注入方式通常最顺手。
 
-## services
+## plugin 实例
 
-如果你需要本地 Agent 持有某些 service，可以显式传入实例：
+如果你希望本地 Agent 持有长期运行的 plugin 能力，比如 chat 渠道，可以显式传入 plugin 实例：
 
 ```ts
-import { Agent, ChatService } from "@downcity/agent";
+import { Agent, ChatPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  services: [
-    new ChatService({
+  plugins: [
+    new ChatPlugin({
       telegram: {
         botToken: process.env.TELEGRAM_BOT_TOKEN!,
       },
@@ -44,27 +44,23 @@ const agent = new Agent({
 });
 ```
 
-## 什么时候需要显式传 service
+这类写法适合：
 
 - 你希望 SDK 自己启动 chat 渠道
-- 你需要把 service 生命周期和应用代码绑定在一起
-
-你可以把这里理解成：“由调用方自己决定，哪些 service 是这个本地 Agent 的常驻能力。”
-
-如果这些 service 实现了 `system(context)`，当前本地 SDK 会把它们的 system 文本注入 session prompt。
+- 你需要把 plugin 生命周期和应用代码绑定在一起
 
 ## plugins
 
-如果你需要让本地 Agent 持有一组 plugin，可以显式传入定义对象：
+如果你需要让本地 Agent 持有一组 plugin，可以显式传入实例对象：
 
 ```ts
-import { Agent, skillPlugin, webPlugin } from "@downcity/agent";
+import { Agent, SkillPlugin, WebPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [skillPlugin, webPlugin],
+  plugins: [new SkillPlugin(), new WebPlugin()],
 });
 
 const plugins = agent.plugins.list();
@@ -75,7 +71,7 @@ const plugins = agent.plugins.list();
 这意味着：
 
 - plugin action 可以通过 `agent.plugins.runAction(...)` 调用
-- service 和 plugin hook 里拿到的 `context.plugins` 会指向同一份 registry
+- plugin hook 里拿到的 `context.plugins` 会指向同一份 registry
 - 同名 plugin 重复注册会直接报错
 - SDK 不会默认注册全部内建 plugin
 
@@ -85,24 +81,17 @@ const plugins = agent.plugins.list();
 
 ## 一个重要边界
 
-SDK 这里的 `services` 是“你主动交给 Agent 的实例集合”，不是项目 runtime 自动注册表的镜像。
-
-SDK 这里的 `plugins` 也是“你主动交给 Agent 的定义集合”，不是全局 plugin manager 的镜像。
+SDK 这里的 `plugins` 是“你主动交给 Agent 的实例集合”，不是全局 plugin manager 的镜像。
 
 所以不要把 SDK 模式想成“自动把项目里一切都搬进来”，它更强调显式装配。
 
+如果你希望自动带上内建集合，使用 `mode: "preset"`。
+
 如果你要进一步理解：
 
-- 当前有哪些 service 可以用
-- `ChatService` 适合放在哪里
-- custom service 应该怎么写
 - plugin 应该怎么挂到本地 Agent 上
 
 继续看：
 
-- [Services 总览](/zh/agent-sdk-docs/services/overview)
-- [内建 Service 总览](/zh/agent-sdk-docs/services/builtins/overview)
-- [ChatService](/zh/agent-sdk-docs/services/chat-service)
-- [自定义 Service](/zh/agent-sdk-docs/services/custom-service)
 - [Plugin 总览](/zh/agent-sdk-docs/plugins/overview)
 - [自定义 Plugin](/zh/agent-sdk-docs/plugins/custom-plugin)

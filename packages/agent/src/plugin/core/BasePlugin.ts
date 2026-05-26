@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 主动运行型能力与被动扩展型能力统一收敛到 plugin 概念。
  * - plugin 的长期状态归属于实例本身，而不是模块级单例。
- * - 旧 service 生命周期模型暂时通过 `lifecycle` 兼容，后续可逐步收敛到 `start/stop/command`。
+ * - 旧生命周期模型暂时通过 `lifecycle` 兼容，后续可逐步收敛到 `start/stop/command`。
  */
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
@@ -98,7 +98,7 @@ export abstract class BasePlugin implements Plugin {
   readonly http?: PluginHttpDefinition;
 
   /**
-   * 旧生命周期兼容层。
+   * 生命周期兼容层。
    */
   lifecycle?: PluginLifecycle;
 

@@ -1,0 +1,26 @@
+---
+title: Recover Chat Runtime
+description: Recommended recovery order when the Agent starts but chat entry points do not respond
+---
+
+# Recover Chat Runtime
+
+If the agent itself can start but chat entry points do not respond, check these first:
+
+1. whether the agent is `running`
+2. whether the channel is enabled
+3. whether `channelAccountId` is valid
+4. whether the agent was restarted after the last change
+
+Common recovery sequence:
+
+```bash
+city agent status
+city agent restart
+```
+
+If it still does not work, continue by checking:
+
+- model binding
+- `channelAccountId`
+- whether the message really reached the target agent

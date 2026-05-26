@@ -9,7 +9,7 @@
 import path from "node:path";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { stripInvocationAuthEnv } from "@/runtime/server/http/auth/AuthEnv.js";
-import { getSessionRunScope } from "@session/SessionRunScope.js";
+import { getSessionRunScope } from "@executor/SessionRunScope.js";
 
 /**
  * 构造 shell 子进程环境变量。

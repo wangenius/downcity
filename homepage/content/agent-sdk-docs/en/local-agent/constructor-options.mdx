@@ -1,6 +1,6 @@
 ---
 title: Agent Constructor Options
-description: Detailed explanation of the local Agent id, path, instruction, tools, services, and plugins options
+description: Detailed explanation of the local Agent id, path, instruction, tools, mode, and plugins options
 ---
 
 # Agent Constructor Options
@@ -11,10 +11,10 @@ The local Agent is constructed like this:
 new Agent({
   id,
   path,
+  mode,
   model,
   instruction,
   tools,
-  services,
   plugins,
 })
 ```
@@ -102,34 +102,38 @@ Key points:
 
 This is a good fit when multiple sessions should share a stable default tool set.
 
-## `services`
+## `mode`
 
-This accepts already-instantiated service objects.
-
-For example:
+This controls how built-in plugins are assembled.
 
 ```ts
-services: [new ChatService(...)]
+new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  mode: "preset",
+});
 ```
 
-You do not pass the class itself, and you do not pass a raw config object.
+Key points:
 
-If two services with the same name are registered, the current implementation throws instead of silently overriding one of them.
+- `preset` auto-registers the built-in plugin set
+- `custom` only uses the explicit `plugins` you pass
+- the default is `custom`
 
 ## `plugins`
 
-This accepts complete plugin definition objects.
+This accepts already-instantiated `BasePlugin` objects.
 
 For example:
 
 ```ts
-import { Agent, skillPlugin, webPlugin } from "@downcity/agent";
+import { Agent, SkillPlugin, WebPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [skillPlugin, webPlugin],
+  plugins: [new SkillPlugin(), new WebPlugin()],
 });
 ```
 
@@ -137,7 +141,8 @@ The SDK creates an independent plugin registry for the current `Agent`.
 
 Key points:
 
+- pass instances such as `new SkillPlugin()` rather than raw plugin definitions
 - it does not register every built-in plugin by default
-- it does not reuse the global runtime plugin manager
+- it does not reuse the global plugin manager
 - duplicate plugin names throw immediately
 - `agent.plugins` and `AgentContext.plugins` use this registry

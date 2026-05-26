@@ -76,8 +76,7 @@ export async function runCommand(
     instruction: currentSystems,
     tools: shellTools,
     platform,
-    useBuiltinRuntimePlugins: true,
-    useBuiltinPlugins: true,
+    mode: "preset",
     configureSession: async (session) => {
       const model = await createRuntimeModel({
         config: agent.getRuntime().config,
@@ -111,7 +110,7 @@ export async function runCommand(
       host,
     },
     rpc: true,
-    runtimePlugins: true,
+    plugins: true,
   });
 
   const server = startResult.http?.server;

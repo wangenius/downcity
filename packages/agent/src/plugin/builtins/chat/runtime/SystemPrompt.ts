@@ -7,7 +7,7 @@
  * - 统一从 request context + ChatMetaStore 读取当前 chat 元信息。
  */
 
-import { getSessionRunScope } from "@session/SessionRunScope.js";
+import { getSessionRunScope } from "@executor/SessionRunScope.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ChatEnvironmentPromptInput } from "@/plugin/builtins/chat/types/ChatPromptContext.js";
 import { readChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";

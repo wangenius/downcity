@@ -137,7 +137,7 @@ export interface ChatPluginOptions {
    * Chat queue worker 运行配置。
    *
    * 说明（中文）
-   * - 显式传入时优先级高于 `downcity.json.services.chat.queue`。
+   * - 显式传入时优先级高于 `downcity.json.plugins.chat.queue`。
    * - 可用于不同 client 定制并发、突发合并等行为。
    */
   queue?: Partial<ChatQueueWorkerConfig>;

@@ -7,7 +7,7 @@
  */
 
 import type { SessionPort } from "@/core/AgentContextTypes.js";
-import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
+import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   AgentSessionSubscriber,

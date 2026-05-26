@@ -13,7 +13,7 @@ import type {
   AgentSessionSystemSnapshot,
   RemoteAgentOptions,
 } from "@/sdk/AgentSdkTypes.js";
-import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type {
   AgentSessionEvent,
   AgentSessionSubscriber,

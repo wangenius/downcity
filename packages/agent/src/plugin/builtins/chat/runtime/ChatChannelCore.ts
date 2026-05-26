@@ -14,7 +14,7 @@ import type { ChatChannelState } from "@/plugin/builtins/chat/types/ChatRuntime.
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
-type ChatServiceRuntimeBindings = {
+type ChatPluginRuntimeBindings = {
   getChannelAccountId?(context: AgentContext, channel: ChatChannelName): string;
   resolveChannelAccount?(
     context: AgentContext,
@@ -23,11 +23,11 @@ type ChatServiceRuntimeBindings = {
   isChannelEnabled?(context: AgentContext, channel: ChatChannelName): boolean;
 };
 
-function resolveChatServiceBindings(
+function resolveChatPluginBindings(
   context: AgentContext,
-): ChatServiceRuntimeBindings | null {
-  const candidate = context.agent?.runtimePlugins?.get?.("chat") as
-    | ChatServiceRuntimeBindings
+): ChatPluginRuntimeBindings | null {
+  const candidate = context.agent?.pluginInstances?.get?.("chat") as
+    | ChatPluginRuntimeBindings
     | undefined;
   return candidate || null;
 }
@@ -74,10 +74,10 @@ export function resolveChannelAccountId(
   context: AgentContext,
   channel: ChatChannelName,
 ): string {
-  const service = resolveChatServiceBindings(context);
-  const explicit = String(service?.getChannelAccountId?.(context, channel) || "").trim();
+  const plugin = resolveChatPluginBindings(context);
+  const explicit = String(plugin?.getChannelAccountId?.(context, channel) || "").trim();
   if (explicit) return explicit;
-  const config = context.config.services?.chat?.channels?.[channel] as
+  const config = context.config.plugins?.chat?.channels?.[channel] as
     | { channelAccountId?: unknown }
     | undefined;
   return String(config?.channelAccountId || "").trim();
@@ -90,8 +90,8 @@ export function resolveChannelAccount(
   context: AgentContext,
   channel: ChatChannelName,
 ): StoredChannelAccount | null {
-  const service = resolveChatServiceBindings(context);
-  const explicit = service?.resolveChannelAccount?.(context, channel);
+  const plugin = resolveChatPluginBindings(context);
+  const explicit = plugin?.resolveChannelAccount?.(context, channel);
   if (explicit) return explicit;
   const channelAccountId = resolveChannelAccountId(context, channel);
   const account = context.platform.resolveChannelAccount?.({
@@ -125,11 +125,11 @@ export function isChatChannelEnabled(
   context: AgentContext,
   channel: ChatChannelName,
 ): boolean {
-  const service = resolveChatServiceBindings(context);
-  if (typeof service?.isChannelEnabled === "function") {
-    return service.isChannelEnabled(context, channel);
+  const plugin = resolveChatPluginBindings(context);
+  if (typeof plugin?.isChannelEnabled === "function") {
+    return plugin.isChannelEnabled(context, channel);
   }
-  return context.config.services?.chat?.channels?.[channel]?.enabled === true;
+  return context.config.plugins?.chat?.channels?.[channel]?.enabled === true;
 }
 
 /**

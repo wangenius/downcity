@@ -5,6 +5,8 @@
  * - `web` plugin 不再自实现联网与浏览器能力，只负责 provider 选择、状态检查与提示词注入。
  * - 真正的联网逻辑直接交给外部实现：`web-access` 或 `agent-browser`。
  */
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { WebPluginConfig, WebPluginInstallInput } from "@/plugin/builtins/web/types/WebPlugin.js";
@@ -82,11 +84,9 @@ function getInstallScopeOpt(
   return undefined;
 }
 
-/**
- * webPlugin：provider 选择器与提示词适配层。
- */
-export const webPlugin: Plugin = {
-  name: "web",
+function createWebPluginDefinition(plugin: Plugin): Plugin {
+  return {
+    name: "web",
   title: "Web Access",
   description:
     "Connects the agent to either web-access or agent-browser, checks provider readiness, and injects the matching guidance into the runtime prompt.",
@@ -164,7 +164,7 @@ export const webPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    if (!isPluginEnabled({ plugin: webPlugin, context })) {
+    if (!isPluginEnabled({ plugin, context })) {
       return {
         enabled: false,
         available: false,
@@ -189,7 +189,7 @@ export const webPlugin: Plugin = {
       },
       execute: async ({ context }) => {
         const config = readWebPluginConfig(context);
-        const availability = await webPlugin.availability!(context);
+        const availability = await plugin.availability!(context);
         const source = await inspectWebPluginDependency(context);
         return {
           success: true,
@@ -461,7 +461,7 @@ export const webPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        const availability = await webPlugin.availability!(context);
+        const availability = await plugin.availability!(context);
         const dependency = await doctorWebPluginDependency(context);
         return {
           success: true,
@@ -482,7 +482,7 @@ export const webPlugin: Plugin = {
   },
   system(context) {
     const config = readWebPluginConfig(context);
-    if (!isPluginEnabled({ plugin: webPlugin, context }) || !config.injectPrompt) {
+    if (!isPluginEnabled({ plugin, context }) || !config.injectPrompt) {
       return "";
     }
     const providerPrompt =
@@ -498,4 +498,17 @@ export const webPlugin: Plugin = {
       providerPrompt,
     ].join("\n");
   },
-};
+  };
+}
+
+/**
+ * WebPlugin：provider 选择器与提示词适配层。
+ */
+export class WebPlugin extends BasePlugin {
+  readonly name = "web";
+
+  constructor(agent: AgentRuntime | null = null) {
+    super(agent);
+    Object.assign(this, createWebPluginDefinition(this));
+  }
+}

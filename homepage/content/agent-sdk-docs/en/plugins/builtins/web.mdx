@@ -101,13 +101,13 @@ The most common approach is:
 ## How to register it in the SDK
 
 ```ts
-import { Agent, webPlugin } from "@downcity/agent";
+import { Agent, WebPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "research-agent",
   path: "/path/to/project",
   tools: {},
-  plugins: [webPlugin],
+  plugins: [new WebPlugin()],
 });
 ```
 

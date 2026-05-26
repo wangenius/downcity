@@ -72,7 +72,7 @@ export async function collectWorkboardSnapshot(
     signals: toWorkboardSignals({
       currentCount: current.length,
       recentCount: recent.length,
-      services: runtimePlugins,
+      plugins: runtimePlugins,
       taskResult,
     }),
   };

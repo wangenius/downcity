@@ -17,7 +17,7 @@ description: Agent 项目最核心的配置文件，以及最常修改的字段
     "type": "api",
     "modelId": "quality"
   },
-  "services": {}
+  "plugins": {}
 }
 ```
 
@@ -25,7 +25,7 @@ description: Agent 项目最核心的配置文件，以及最常修改的字段
 
 - `name`
 - `execution.modelId`
-- `services.chat.channels.*`
+- `plugins.chat.channels.*`
 
 如果你只维护这几个字段，已经足够覆盖大多数日常 Agent 项目使用场景。
 
@@ -35,7 +35,7 @@ description: Agent 项目最核心的配置文件，以及最常修改的字段
 
 - 声明项目名称
 - 声明项目要用哪个全局模型
-- 配置项目级 service
+- 配置项目级 plugin
 - 绑定渠道账号
 
 从用户角度看，`downcity.json` 最重要的职责不是“保存一切”，而是“声明这个项目运行时应该如何被装配”。
@@ -56,4 +56,4 @@ description: Agent 项目最核心的配置文件，以及最常修改的字段
 ## 继续阅读
 
 - [执行绑定](/zh/docs/agent/configuration/downcity-json/execution)
-- [Service 配置](/zh/docs/agent/configuration/downcity-json/services)
+- [Plugin 配置](/zh/docs/agent/configuration/downcity-json/plugins)

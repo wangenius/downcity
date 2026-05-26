@@ -7,6 +7,8 @@
  * - 当前作为 chat 入站消息增强中间件接入语音转写。
  */
 
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { VoicePluginConfig } from "@/plugin/builtins/voice/types/VoicePlugin.js";
 import { CHAT_PLUGIN_POINTS } from "@/plugin/builtins/chat/runtime/PluginPoints.js";
@@ -31,11 +33,9 @@ import {
   writeVoiceTranscriberConfig,
 } from "@/plugin/builtins/asr/Dependency.js";
 
-/**
- * asrPlugin：声明式插件定义。
- */
-export const asrPlugin: Plugin = {
-  name: "asr",
+function createAsrPluginDefinition(plugin: Plugin): Plugin {
+  return {
+    name: "asr",
   title: "Automatic Speech Recognition",
   description:
     "Detects voice and audio attachments in inbound chat messages, runs transcription through the configured ASR dependency, and appends readable text so the agent can work with spoken input like normal message content.",
@@ -113,7 +113,7 @@ export const asrPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    if (!isPluginEnabled({ plugin: asrPlugin, context })) {
+    if (!isPluginEnabled({ plugin, context })) {
       return {
         enabled: false,
         available: false,
@@ -147,7 +147,7 @@ export const asrPlugin: Plugin = {
       },
       execute: async ({ context }) => {
         const config = readVoicePluginConfig(context);
-        const availability = await asrPlugin.availability!(context);
+        const availability = await plugin.availability!(context);
         const transcriberConfig = readVoiceTranscriberConfig(context);
         return {
           success: true,
@@ -401,7 +401,7 @@ export const asrPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
-        const pluginStatus = await asrPlugin.availability!(context);
+        const pluginStatus = await plugin.availability!(context);
         if (!pluginStatus.enabled || !pluginStatus.available) {
           return {
             success: false,
@@ -450,7 +450,7 @@ export const asrPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        const availability = await asrPlugin.availability!(context);
+        const availability = await plugin.availability!(context);
         const dependencyStatus = await checkVoiceTranscriber(context);
         return {
           success: true,
@@ -477,7 +477,7 @@ export const asrPlugin: Plugin = {
   },
   system(context) {
     const config = readVoicePluginConfig(context);
-    if (!isPluginEnabled({ plugin: asrPlugin, context }) || config.injectPrompt !== true) {
+    if (!isPluginEnabled({ plugin, context }) || config.injectPrompt !== true) {
       return "";
     }
     return [
@@ -485,4 +485,17 @@ export const asrPlugin: Plugin = {
       "Audio attachments may be transcribed before agent execution.",
     ].join("\n");
   },
-};
+  };
+}
+
+/**
+ * AsrPlugin：语音识别插件。
+ */
+export class AsrPlugin extends BasePlugin {
+  readonly name = "asr";
+
+  constructor(agent: AgentRuntime | null = null) {
+    super(agent);
+    Object.assign(this, createAsrPluginDefinition(this));
+  }
+}

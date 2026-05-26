@@ -48,13 +48,13 @@ Notes:
 - for the current project runtime path, `execution.type` should be `api`
 - the old `model.primary` structure is no longer the recommended project-side format
 
-### `services.chat`
+### `plugins.chat`
 
 Chat channels and queue behavior:
 
 ```json
 {
-  "services": {
+  "plugins": {
     "chat": {
       "queue": {
         "maxConcurrency": 2,
@@ -74,7 +74,7 @@ Chat channels and queue behavior:
 
 `channelAccountId` binds to the global channel account registry in `~/.downcity/downcity.db` (`channel_accounts`).
 
-`services.chat.queue` notes:
+`plugins.chat.queue` notes:
 - `maxConcurrency`: max lane concurrency across different chat keys.
 - `mergeDebounceMs`: short debounce window for batching consecutive inbound messages in one run.
 - `mergeMaxWaitMs`: hard cap for the batching wait to avoid unbounded delay.
@@ -112,7 +112,7 @@ city config get plugins.asr
 city config get
 city config get execution.modelId
 city model list
-city config unset services.chat.channels.telegram
+city config unset plugins.chat.channels.telegram
 ```
 
 ## Next

@@ -32,25 +32,25 @@ Request body:
 }
 ```
 
-## Service state API
+## Runtime plugin API
 
-### `GET /api/services/list`
+### `GET /api/plugins/runtime/list`
 
-List service states.
+List runtime plugin states.
 
-### `POST /api/services/control`
+### `POST /api/plugins/runtime/control`
 
 ```json
-{ "serviceName": "chat", "action": "restart" }
+{ "pluginName": "chat", "action": "restart" }
 ```
 
 Supported `action`: `start | stop | restart | status`.
 
-### `POST /api/services/command`
+### `POST /api/plugins/runtime/command`
 
 ```json
 {
-  "serviceName": "task",
+  "pluginName": "task",
   "command": "list",
   "payload": { "status": "enabled" }
 }
@@ -142,22 +142,18 @@ Request body example with attachment:
 
 Notes:
 
-- `sessionId` should be the exact target session returned by agent. For chat sessions, this is an opaque ID managed by chat service (not a parseable platform key).
+- `sessionId` should be the exact target session returned by agent. For chat sessions, this is an opaque ID managed by the chat runtime plugin (not a parseable platform key).
 - Attachments are materialized by agent and injected as `<file ...>` tags before the user instruction.
-- If `sessionId` maps to a chat conversation, execution is enqueued into the same chat service queue (same behavior as platform inbound messages), and chat history is appended before execution.
+- If `sessionId` maps to a chat conversation, execution is enqueued into the same chat runtime plugin queue (same behavior as platform inbound messages), and chat history is appended before execution.
 - Chat-context calls return immediately with queue metadata (`queued=true`, `queueItemId`, `queuePosition`).
 
-## Direct action routes
+## Action routes
 
-Each service/plugin action also has a default route:
+Plugin actions use:
 
-- `/service/<serviceName>/<actionName>`
 - `/api/plugins/action`
-
-Examples:
-
-- `POST /service/chat/send`
-- `POST /api/plugins/action`
+- `/api/plugins/runtime/control`
+- `/api/plugins/runtime/command`
 
 ## Debug baseline
 

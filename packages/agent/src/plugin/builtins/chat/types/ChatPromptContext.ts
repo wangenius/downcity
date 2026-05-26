@@ -19,7 +19,7 @@ export interface ChatEnvironmentPromptInput {
    *
    * 说明（中文）
    * - 对外统一使用 `sessionId` 语义。
-   * - chat service 内部统一按 session 语义路由与持久化。
+   * - chat runtime plugin 内部统一按 session 语义路由与持久化。
    */
   sessionId: string;
 
@@ -27,7 +27,7 @@ export interface ChatEnvironmentPromptInput {
    * 当前 chatKey。
    *
    * 说明（中文）
-   * - chat service 里通常与 `sessionId` 一致。
+   * - chat runtime plugin 里通常与 `sessionId` 一致。
    * - 保留独立字段，避免未来路由键语义调整时影响调用方。
    */
   chatKey: string;

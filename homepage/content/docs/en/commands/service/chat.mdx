@@ -1,11 +1,11 @@
 ---
 title: city chat
-description: Interactive chat service management and actions (status/test/reconnect/open/close/configuration/configure/list/info/send/react/context/delete/history)
+description: Interactive chat runtime management and actions (status/test/reconnect/open/close/configuration/configure/list/info/send/react/context/delete/history)
 ---
 
 # `city chat`
 
-Manage the chat service, configure city-level channel accounts, send messages, react to messages, inspect context, and read chat history.
+Manage the chat runtime, configure city-level channel accounts, send messages, react to messages, inspect context, and read chat history.
 
 Bare `city chat` opens an interactive manager. Scripted usage can still call the subcommands below.
 
@@ -20,12 +20,12 @@ city chat <subcommand> [options]
 
 Running `city chat` lets you:
 
-- inspect, start, stop, and restart the current project's chat service
+- inspect, start, stop, and restart the current project's chat runtime
 - choose "Configure channel" to manage city-level Telegram / Feishu / QQ accounts
 - add, edit, and remove channel accounts
 - choose "Configure authorization" to assign auth roles to platform users
 
-Channel accounts and chat authorization are stored in the city-global `~/.downcity/downcity.db`. Agent projects only store `services.chat.channels.<channel>.channelAccountId` bindings.
+Channel accounts and chat authorization are stored in the city-global `~/.downcity/downcity.db`. Agent projects only store `plugins.chat.channels.<channel>.channelAccountId` bindings.
 
 ## Subcommands
 
@@ -98,7 +98,7 @@ About `--delay` / `--time`:
 - scheduled jobs are written to the current agent project's `.downcity/schedule.sqlite`
 - unfinished delayed/scheduled sends are restored after runtime restart
 - `--delay` and `--time` cannot be used together
-- this is intended for one-shot delayed/scheduled sends; use `task` service for cron or longer workflows
+- this is intended for one-shot delayed/scheduled sends; use the `task` runtime plugin for cron or longer workflows
 
 For detailed behavior, recovery rules, and API examples, see:
 

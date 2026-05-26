@@ -1,6 +1,6 @@
 ---
 title: Port and Instance Lifecycle
-description: How console, agent, service, and plugin coordinate on port allocation, routing, and runtime lifecycle
+description: How console, agent, runtime plugins, and plugins coordinate on port allocation, routing, and runtime lifecycle
 ---
 
 # Port and Instance Lifecycle
@@ -9,7 +9,7 @@ description: How console, agent, service, and plugin coordinate on port allocati
 
 - Agent ports are allocated by `console`.
 - `city agent start/restart` does not require users to manage ports manually.
-- `service` and `plugin` commands resolve target agent first, then endpoint.
+- runtime-plugin and plugin commands resolve target agent first, then endpoint.
 
 ## Runtime Roles
 
@@ -22,12 +22,12 @@ description: How console, agent, service, and plugin coordinate on port allocati
 ### agent
 
 - One project maps to one daemon
-- Runtime HTTP APIs include `/api/services/*` and `/api/plugins/*`
+- Runtime HTTP APIs include `/api/plugins/runtime/*` and `/api/plugins/*`
 - Debug metadata is persisted to `.downcity/.debug`
 
-### service / plugin
+### runtime plugin / plugin
 
-- `city service ...` calls service routes
+- `city service ...` calls runtime plugin routes
 - `city plugin ...` calls plugin routes
 - both are dispatched in the target runtime
 

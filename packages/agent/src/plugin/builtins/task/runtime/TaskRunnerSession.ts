@@ -11,17 +11,17 @@
 import path from "node:path";
 import type { LanguageModel } from "ai";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import { Executor } from "@/session/Executor.js";
-import type { SessionRunResult } from "@/session/types/SessionRun.js";
+import { Executor } from "@/executor/Executor.js";
+import type { SessionRunResult } from "@/executor/types/SessionRun.js";
 import type { TaskSessionRuntimePort } from "@/plugin/builtins/task/runtime/TaskRunnerTypes.js";
-import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
-import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import { JsonlSessionHistoryStore } from "@/session/store/history/jsonl/JsonlSessionHistoryStore.js";
-import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-import { LocalSessionContextComposer } from "@session/composer/context/LocalSessionContextComposer.js";
-import { DefaultSessionSystemComposer } from "@session/composer/system/default/DefaultSessionSystemComposer.js";
-import { shellTools } from "@session/tools/shell/ShellToolDefinition.js";
-import type { SessionExecutor } from "@/session/types/SessionExecutor.js";
+import { drainDeferredPersistedUserMessages } from "@executor/SessionRunScope.js";
+import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+import { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
+import { JsonlSessionCompactionComposer } from "@executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
+import { LocalSessionContextComposer } from "@executor/composer/context/LocalSessionContextComposer.js";
+import { DefaultSessionSystemComposer } from "@executor/composer/system/default/DefaultSessionSystemComposer.js";
+import { shellTools } from "@executor/tools/shell/ShellToolDefinition.js";
+import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
 
 /**
  * 把 task round 的 user query 落盘到对应 run context。

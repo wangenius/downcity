@@ -8,7 +8,7 @@
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { ContactChatResponse } from "@/plugin/builtins/contact/types/ContactChat.js";
-import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import {
   appendContactMessage,
   findContactByInboundToken,

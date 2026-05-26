@@ -16,7 +16,7 @@ import {
 import type {
   SessionMessageV1,
   SessionMetadataV1,
-} from "@/session/types/SessionMessages.js";
+} from "@/executor/types/SessionMessages.js";
 import { pickLastSuccessfulChatSendText } from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@/plugin/builtins/chat/runtime/UIMessageTransformer.js";
 import type { ControlTimelineEvent, ControlTimelineRole } from "@/runtime/server/http/control/types/ControlViewData.js";

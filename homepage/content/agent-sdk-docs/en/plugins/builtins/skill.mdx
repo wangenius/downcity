@@ -86,13 +86,13 @@ The agent needs the `SKILL.md` content in the current context before it can foll
 ## How to register it in the SDK
 
 ```ts
-import { Agent, skillPlugin } from "@downcity/agent";
+import { Agent, SkillPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "skill-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [skillPlugin],
+  plugins: [new SkillPlugin()],
 });
 ```
 

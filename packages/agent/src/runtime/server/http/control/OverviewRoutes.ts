@@ -85,7 +85,6 @@ export function registerControlOverviewRoutes(
             total: sessions.length,
             items: sessions,
           },
-          services: runtimePlugins,
           plugins: runtimePlugins,
           tasks: {
             total: tasks.length,
@@ -99,13 +98,10 @@ export function registerControlOverviewRoutes(
     });
   }
 
-  for (const routePath of buildControlRouteAliases("/services")) {
+  for (const routePath of buildControlRouteAliases("/plugins/runtime")) {
     app.get(routePath, (c) => {
       return c.json({
         success: true,
-        services: listPluginStates({
-          context: params.getAgentContext(),
-        }),
         plugins: listPluginStates({
           context: params.getAgentContext(),
         }),

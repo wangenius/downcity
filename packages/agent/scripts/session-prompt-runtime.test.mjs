@@ -37,6 +37,21 @@ function createUserMessage(query, index) {
   };
 }
 
+function createAssistantMessage(text, index) {
+  return {
+    id: `a:test:${String(index)}`,
+    role: "assistant",
+    metadata: {
+      v: 1,
+      ts: Date.now(),
+      sessionId: "test",
+      source: "sdk",
+      kind: "normal",
+    },
+    parts: [{ type: "text", text }],
+  };
+}
+
 async function waitUntil(readValue) {
   for (let index = 0; index < 20; index += 1) {
     const value = readValue();
@@ -69,8 +84,8 @@ test("SessionPromptRuntime merges queued prompts at the next step boundary", asy
     publish: (event) => {
       events.push(event);
     },
-    createAndPersistUserMessage: async (query) => {
-      const message = createUserMessage(query, persisted.length + 1);
+    createAndPersistUserMessage: async (input) => {
+      const message = createUserMessage(input.query, persisted.length + 1);
       persisted.push(message);
       return message;
     },
@@ -80,12 +95,13 @@ test("SessionPromptRuntime merges queued prompts at the next step boundary", asy
       return {
         text: "done",
         success: true,
+        assistantMessage: createAssistantMessage("done", 1),
       };
     },
   });
 
-  const firstTurn = await runtime.prompt("first");
-  const secondTurnPromise = runtime.prompt("second");
+  const firstTurn = await runtime.prompt({ query: "first" });
+  const secondTurnPromise = runtime.prompt({ query: "second" });
   const merge = await waitUntil(() => stepMerge);
 
   assert.equal(await isSettled(secondTurnPromise), false);
@@ -124,25 +140,29 @@ test("SessionPromptRuntime moves unmerged prompts into the next turn", async () 
     publish: (event) => {
       events.push(event);
     },
-    createAndPersistUserMessage: async (query) => {
-      return createUserMessage(query, events.length + 1);
+    createAndPersistUserMessage: async (input) => {
+      return createUserMessage(input.query, events.length + 1);
     },
     executeTurn: async (input) => {
       const deferred = createDeferred();
       finishQueue.push({
-        query: input.query,
+        query: input.promptInput.query,
         deferred,
       });
       await deferred.promise;
       return {
-        text: `done:${input.query}`,
+        text: `done:${input.promptInput.query}`,
         success: true,
+        assistantMessage: createAssistantMessage(
+          `done:${input.promptInput.query}`,
+          finishQueue.length,
+        ),
       };
     },
   });
 
-  const firstTurn = await runtime.prompt("first");
-  const secondTurnPromise = runtime.prompt("second");
+  const firstTurn = await runtime.prompt({ query: "first" });
+  const secondTurnPromise = runtime.prompt({ query: "second" });
   const firstExecution = await waitUntil(() => finishQueue[0]);
 
   assert.equal(await isSettled(secondTurnPromise), false);

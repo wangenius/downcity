@@ -2,8 +2,8 @@
  * ChatRuntime 类型定义。
  *
  * 关键点（中文）
- * - 这些类型描述 chat service 的实例级运行态。
- * - channel bots 的状态所有权归属于 ChatService 实例，而不是模块级单例。
+ * - 这些类型描述 chat runtime plugin 的实例级运行态。
+ * - channel bots 的状态所有权归属于 `ChatPlugin` 实例，而不是模块级单例。
  */
 
 import type { FeishuBot } from "@/plugin/builtins/chat/channels/feishu/Feishu.js";
@@ -11,7 +11,7 @@ import type { QQBot } from "@/plugin/builtins/chat/channels/qq/QQ.js";
 import type { TelegramBot } from "@/plugin/builtins/chat/channels/telegram/Bot.js";
 
 /**
- * ChatService 实例持有的渠道状态。
+ * `ChatPlugin` 实例持有的渠道状态。
  *
  * 关键点（中文）
  * - 这里显式把 3 个内建渠道拆成独立槽位，避免继续使用弱类型 map。

@@ -23,12 +23,12 @@ Each built-in plugin can be imported from `@downcity/agent` and explicitly regis
 ```ts
 import {
   Agent,
-  authPlugin,
-  skillPlugin,
-  webPlugin,
-  asrPlugin,
-  ttsPlugin,
-  workboardPlugin,
+  AuthPlugin,
+  SkillPlugin,
+  WebPlugin,
+  AsrPlugin,
+  TtsPlugin,
+  WorkboardPlugin,
 } from "@downcity/agent";
 
 const agent = new Agent({
@@ -36,12 +36,12 @@ const agent = new Agent({
   path: "/path/to/project",
   tools: {},
   plugins: [
-    authPlugin,
-    skillPlugin,
-    webPlugin,
-    asrPlugin,
-    ttsPlugin,
-    workboardPlugin,
+    new AuthPlugin(),
+    new SkillPlugin(),
+    new WebPlugin(),
+    new AsrPlugin(),
+    new TtsPlugin(),
+    new WorkboardPlugin(),
   ],
 });
 
@@ -50,7 +50,7 @@ const installed = agent.plugins.list();
 
 The important semantics are:
 
-- built-in plugin objects are publicly exported
+- built-in plugin classes are publicly exported
 - the SDK does not auto-register every built-in plugin
 - a plugin is only available to this local `Agent` if you explicitly register it
 

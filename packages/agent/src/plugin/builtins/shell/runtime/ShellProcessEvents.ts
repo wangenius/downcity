@@ -33,7 +33,7 @@ async function finalizeExitAfterOutputDrain(
  */
 export function attachShellProcessEventHandlers(params: {
   /**
-   * 当前 shell service 状态。
+   * 当前 shell runtime plugin 状态。
    */
   state: ShellPluginState;
   /**

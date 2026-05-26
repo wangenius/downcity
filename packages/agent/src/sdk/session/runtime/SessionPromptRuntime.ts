@@ -8,8 +8,8 @@
  */
 
 import { nanoid } from "nanoid";
-import type { SessionUserMessageV1 } from "@/session/types/SessionMessages.js";
-import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
+import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {

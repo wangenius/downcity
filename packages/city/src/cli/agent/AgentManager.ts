@@ -81,7 +81,7 @@ function readAgentModelId(config: DowncityConfig | null): string {
 
 function readAgentChannelSummaries(config: DowncityConfig | null): string[] {
   const accountsById = loadChannelAccountMap();
-  const channels = config?.services?.chat?.channels || {};
+  const channels = config?.plugins?.chat?.channels || {};
   const summaries: string[] = [];
   for (const channel of CHAT_CHANNELS) {
     const channelConfig = channels[channel];
@@ -101,7 +101,7 @@ function readAgentChannelSummaries(config: DowncityConfig | null): string[] {
 
 function findDanglingChannelAccounts(config: DowncityConfig | null): DanglingChannelAccount[] {
   const accountsById = loadChannelAccountMap();
-  const channels = config?.services?.chat?.channels || {};
+  const channels = config?.plugins?.chat?.channels || {};
   const dangling: DanglingChannelAccount[] = [];
   for (const channel of CHAT_CHANNELS) {
     const accountId = String(channels[channel]?.channelAccountId || "").trim();
@@ -453,7 +453,7 @@ async function connectAgentChannels(
 ): Promise<AgentManagerAgentSummary> {
   const shipJsonPath = getDowncityJsonPath(agent.projectRoot);
   const raw = fs.readJsonSync(shipJsonPath) as DowncityConfig;
-  const chatConfig = (raw.services ??= {}).chat ??= {};
+  const chatConfig = (((raw.plugins ??= {}) as NonNullable<DowncityConfig["plugins"]>).chat ??= {});
   const channelConfigs = chatConfig.channels ??= {};
   const dangling = findDanglingChannelAccounts(raw);
   if (dangling.length > 0) {

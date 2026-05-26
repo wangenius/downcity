@@ -34,7 +34,7 @@ export type ShellExternalRef = {
  * shell 会话快照。
  *
  * 说明（中文）
- * - 该对象是 shell service 对外暴露的统一状态视图。
+ * - 该对象是 shell runtime plugin 对外暴露的统一状态视图。
  * - 内部运行态（child process / waiter 集合）不会暴露给上层。
  */
 export type ShellSessionSnapshot = {
@@ -221,7 +221,7 @@ export type ShellOutputChunk = {
 };
 
 /**
- * shell service 对 agent tool 返回的统一数据结构。
+ * shell runtime plugin 对 agent tool 返回的统一数据结构。
  */
 export type ShellActionResponse = {
   /** shell 当前快照。 */

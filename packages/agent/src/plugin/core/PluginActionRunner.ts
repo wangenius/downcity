@@ -62,7 +62,6 @@ export async function invokePluginAction(params: {
       context: params.context,
       payload: (params.payload ?? {}) as JsonValue,
       pluginName: params.plugin.name,
-      serviceName: params.plugin.name,
       actionName: params.actionName,
     });
   } catch (error) {

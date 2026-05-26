@@ -7,9 +7,9 @@
  */
 
 import { extractTextFromUiMessage } from "@/plugin/builtins/chat/runtime/UIMessageTransformer.js";
-import type { SessionHistoryMetaV1 } from "@/session/types/SessionHistoryMeta.js";
-import type { SessionMessageV1 } from "@/session/types/SessionMessages.js";
-import { persistAssistantResult } from "@/session/messages/AssistantResultPersistence.js";
+import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import { persistAssistantResult } from "@/executor/messages/AssistantResultPersistence.js";
 import type { AgentSessionConfigSnapshot } from "@/sdk/AgentSdkTypes.js";
 import {
   readSessionMetadata,

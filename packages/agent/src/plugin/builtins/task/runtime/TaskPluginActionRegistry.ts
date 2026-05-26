@@ -1,5 +1,5 @@
 /**
- * TaskPluginActions：task service 的 action 注册表模块。
+ * TaskPluginActions：task runtime plugin 的 action 注册表模块。
  *
  * 关键点（中文）
  * - 这里专门负责把 task 的 CLI/execute 定义装配成 `PluginActions`。
@@ -37,7 +37,7 @@ import {
 } from "./TaskActionInput.js";
 
 /**
- * 创建 task service 的 action 定义表。
+ * 创建 task runtime plugin 的 action 定义表。
  */
 export function createTaskPluginActions(params: {
   reloadSchedulerAfterMutation: TaskSchedulerReloadPort;

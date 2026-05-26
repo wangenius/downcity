@@ -1,5 +1,5 @@
 /**
- * ChatActionInput：chat service 的 CLI 输入映射模块。
+ * ChatActionInput：chat runtime plugin 的 CLI 输入映射模块。
  *
  * 关键点（中文）
  * - 这里统一处理命令行到 action payload 的转换。

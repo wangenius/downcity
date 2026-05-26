@@ -10,7 +10,7 @@
 import type { SystemModelMessage } from "ai";
 import fs from "fs-extra";
 import { dirname } from "path";
-import { resolveSessionSystemMessages } from "@session/composer/system/default/SystemDomain.js";
+import { resolveSessionSystemMessages } from "@executor/composer/system/default/SystemDomain.js";
 import {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesArchiveDirPath,

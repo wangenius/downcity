@@ -5,18 +5,17 @@
 它负责把一个 agent 项目目录装配成可执行运行时，包括：
 
 - 本地 SDK：`Agent`、`Session`、`RemoteAgent`
-- 会话执行内核：history、system、tool loop、增量输出
-- Service 框架：生命周期、action、调度
+- 内部执行内核：history、system、tool loop、增量输出
 - Plugin 框架：hook、action、内建插件
 - 运行时实现：HTTP/RPC server、transport、sandbox、host
 
-`@downcity/city` 负责多 Agent 管理、控制面网关、平台 CLI、模型池与 daemon 进程管理；`@downcity/agent` 只负责单 Agent 执行内核。
+`@downcity/city` 负责多 Agent 管理、控制面网关、平台 CLI、模型池与 daemon 进程管理；`@downcity/agent` 只负责单 Agent 的执行面。
 
 ## 包定位
 
 - 面向单个 Agent 项目的执行面
 - 对外通过 `@downcity/agent` 根入口暴露公共 API
-- 负责 session、service、plugin、sandbox、HTTP/RPC server、SDK 本地 Agent
+- 负责 session SDK、executor 内核、plugin、sandbox、HTTP/RPC server、SDK 本地 Agent
 - 不负责多 Agent registry、control plane daemon、console UI 聚合和平台级编排
 
 ## 与其他包的边界
@@ -24,7 +23,7 @@
 - `@downcity/agent`
   - 单 Agent runtime
   - 单 Agent HTTP/RPC server
-  - session 执行、service 框架、plugin 框架、sandbox
+  - session SDK、executor 内核、plugin 框架、sandbox
   - 本地 SDK facade
 - `@downcity/city`
   - 多 Agent registry
@@ -54,6 +53,7 @@ src/
 ├── config/                # 配置与项目初始化，负责 downcity.json、默认配置、execution binding 与脚手架
 │   └── project/           # Agent 项目初始化与项目初始化类型
 ├── core/                  # 单 Agent 运行时装配中心，负责 AgentCore / AgentContext
+├── executor/              # 内部执行内核，负责历史、system、tool loop、增量输出与消息持久化
 ├── plugin/                # 插件系统，负责插件注册、hook、action、内建插件与插件类型
 ├── runtime/               # 运行时实现细节层，统一收纳 host / sandbox / server / transport
 │   ├── host/              # 宿主注入能力与 daemon 协议
@@ -61,10 +61,7 @@ src/
 │   ├── server/            # HTTP / RPC 服务端实现
 │   └── transport/         # 调用端 transport 协议与 RPC client
 ├── sdk/                   # 本地 SDK facade，提供 Agent / RemoteAgent / Session 等高层 API
-│   └── session/           # SDK session 的 metadata、落盘路径、持久化与 service 端口适配
-├── service/               # Service 系统，负责内建服务、生命周期、调度与 service 类型
-│   └── core/              # Service 核心控制层，包含 schedule 基础设施
-├── session/               # 会话执行内核，负责历史、system、tool loop、增量输出与消息持久化
+│   └── session/           # SDK session 的 metadata、落盘路径、持久化与 runtime 端口适配
 ├── types/                 # 跨模块共享协议类型，集中放置 common / config / runtime 等稳定契约
 └── utils/                 # 低层工具，负责 CLI、日志、存储与模板辅助
 ```
@@ -78,14 +75,27 @@ src/
 
 - `src/core/`
   - 单 Agent 装配中心
-  - `AgentCore` 负责把 config、session、service、plugin、runtime 组装成一个实例级执行内核
-  - `AgentContext` 提供统一能力面，供 session / service / plugin 复用
+  - `AgentCore` 负责把 config、session SDK、executor、plugin、runtime 组装成一个实例级执行内核
+  - `AgentContext` 提供统一能力面，供 session / executor / plugin 复用
 
 - `src/sdk/`
   - 本地 SDK facade
   - 包括 `Agent`、`RemoteAgent`、`Session` 与 `sdk/session/*`
   - `Agent.ts` 通过 `start()/stop()` 统一收口长期运行生命周期
-  - `sdk/session/*` 负责 SDK session metadata、落盘路径、持久化与 service 端口适配
+  - `sdk/session/*` 负责 SDK session metadata、落盘路径、持久化与 runtime 端口适配
+
+- `src/executor/`
+  - 内部执行内核
+  - `Session` 是 SDK 用户面对的会话整体，`Executor` 是内部单轮执行引擎
+  - Store 负责 history 事实源落盘，Composer 是纯 interface 协议，负责组装 system / history / context / compaction
+  - `Executor.prepareExecuteInput()` 串起四类 Composer，`Executor.runCoreEngine()` 负责进入模型 tool loop
+  - 负责 history、system、context、CoreEngine、增量输出与消息持久化
+
+- `src/plugin/`
+  - 插件框架与内建插件
+  - `core/` 负责注册、启用态、hook 调度、本地 action
+  - `builtins/` 放 `auth`、`chat`、`contact`、`memory`、`shell`、`skill`、`task`、`web`、`asr`、`tts`、`voice`、`workboard` 等内建插件
+  - `types/` 放插件公共协议类型
 
 - `src/runtime/`
   - 单 Agent 的运行时实现细节层
@@ -95,32 +105,12 @@ src/
   - `transport/` 放 agent client 侧 transport 协议与 RPC client
   - 模型实例解析不在 `agent` 包内完成，而由宿主先创建 `LanguageModel`，再通过 `new Agent({ model })` 或 `session.set({ model })` 注入
 
-- `src/plugin/`
-  - 插件框架与内建插件
-  - `core/` 负责注册、启用态、hook 调度、本地 action
-  - `builtins/` 放 `auth`、`skill`、`web`、`asr`、`tts`、`voice`、`workboard` 等内建插件
-  - `types/` 放插件公共协议类型
-
-- `src/service/`
-  - 单 Agent service 域
-  - `core/` 负责 service class 注册、状态控制、action 调度与系统提示
-  - `core/schedule/` 负责持久化 service action 调度基础设施
-  - `builtins/` 放 `chat`、`contact`、`task`、`memory`、`shell` 等内建 service
-  - `types/` 放 service 公共协议类型
-
-- `src/session/`
-  - 会话执行内核
-  - `Session` 是 SDK 用户面对的会话整体，`Executor` 是内部单轮执行引擎
-  - Store 负责 history 事实源落盘，Composer 是纯 interface 协议，负责组装 system / history / context / compaction
-  - `Executor.prepareExecuteInput()` 串起四类 Composer，`Executor.runCoreEngine()` 负责进入模型 tool loop
-  - 负责 history、system、context、CoreEngine、增量输出与消息持久化
-
 - `src/types/`
   - 跨模块、跨包共享协议类型
   - `common/` 放 JSON、模板等无领域依赖的基础类型
-  - `config/` 放 `downcity.json`、LLM、execution binding、start options 等配置契约
+  - `config/` 放 `downcity.json`、LLM、execution binding、plugin 配置、start options 等配置契约
   - `runtime/` 放 auth、daemon、host、http、platform、rpc 等运行时与控制面共享协议
-  - 领域内部类型仍保留在对应领域目录，例如 `service/types/`、`plugin/types/`、`session/types/`
+  - 领域内部类型仍保留在对应领域目录，例如 `plugin/types/`、`executor/types/`
 
 - `src/utils/`
   - 包内通用工具、日志、CLI 输出与存储辅助
@@ -130,61 +120,13 @@ src/
 `@downcity/agent` 的核心是一条单 Agent 执行链：
 
 ```text
-入口协议 -> AgentCore -> AgentContext -> Session / Service / Plugin -> Runtime 子系统 -> History / Reply
+入口协议 -> AgentCore -> AgentContext -> Session SDK / Executor / Plugin -> Runtime 子系统 -> History / Reply
 ```
 
 其中：
 
 - `sdk` 是用户 API 面
 - `core` 是实例级装配中心
-- `session / service / plugin` 是三大领域子系统
+- `session SDK / executor / plugin` 是三大核心分层
 - `runtime` 是 server / transport / sandbox / host 这类实现细节的统一容器
 - `types / utils` 提供横向公共支撑
-
-## 当前推荐启动方式
-
-本地嵌入时：
-
-```ts
-import { Agent } from "@downcity/agent";
-import { createOpenAI } from "@ai-sdk/openai";
-
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
-
-const agent = new Agent({
-  id: "demo",
-  path: process.cwd(),
-  tools: {},
-  model: openai.responses("gpt-5"),
-});
-
-const session = await agent.session();
-
-const turn = await session.prompt({
-  query: "总结一下当前仓库结构",
-});
-const result = await turn.finished;
-```
-
-如果要把它暴露成长期运行实例：
-
-```ts
-const started = await agent.start({
-  http: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
-  rpc: true,
-});
-
-console.log(started.http?.baseUrl);
-```
-
-也就是说：
-
-- 不调用 `start()`：library mode
-- 调用 `start()`：long-lived runtime mode
-- 模型由调用方创建并通过 `new Agent({ model })` 或 `session.set({ model })` 注入，SDK 不提供默认模型策略
-- `new Agent({ model })` 适合给这个 Agent 的 session 提供统一默认模型；`session.set({ model })` 适合做单个 session 的覆写

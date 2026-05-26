@@ -72,13 +72,13 @@ description: 详细说明 tts 内建 plugin 如何安装本地语音合成依赖
 ## 在 SDK 里怎么挂载
 
 ```ts
-import { Agent, ttsPlugin } from "@downcity/agent";
+import { Agent, TtsPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "speech-agent",
   path: "/path/to/project",
   tools: {},
-  plugins: [ttsPlugin],
+  plugins: [new TtsPlugin()],
 });
 ```
 

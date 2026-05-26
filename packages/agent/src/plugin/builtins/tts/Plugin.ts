@@ -6,6 +6,8 @@
  * - Console 只通过 setup / action 与插件交互，保持极简统一。
  */
 
+import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type {
   TtsInstallInput,
@@ -29,11 +31,9 @@ import {
   toJsonObject,
 } from "@/plugin/builtins/tts/PluginSupport.js";
 
-/**
- * ttsPlugin：文本转语音插件定义。
- */
-export const ttsPlugin: Plugin = {
-  name: "tts",
+function createTtsPluginDefinition(plugin: Plugin): Plugin {
+  return {
+    name: "tts",
   title: "Text To Speech",
   description:
     "Generates local speech audio files from plain text through an installed TTS model, then returns a reusable audio file tag for downstream sending.",
@@ -118,7 +118,7 @@ export const ttsPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    if (!isPluginEnabled({ plugin: ttsPlugin, context })) {
+    if (!isPluginEnabled({ plugin, context })) {
       return {
         enabled: false,
         available: false,
@@ -143,7 +143,7 @@ export const ttsPlugin: Plugin = {
       },
       execute: async ({ context }) => {
         const config = readTtsPluginConfig(context);
-        const availability = await ttsPlugin.availability!(context);
+        const availability = await plugin.availability!(context);
         const synthesizer = await checkTtsSynthesizer(context);
         return {
           success: true,
@@ -446,7 +446,7 @@ export const ttsPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
-        const pluginStatus = await ttsPlugin.availability!(context);
+        const pluginStatus = await plugin.availability!(context);
         if (!pluginStatus.enabled || !pluginStatus.available) {
           return {
             success: false,
@@ -477,7 +477,7 @@ export const ttsPlugin: Plugin = {
     },
   },
   system(context) {
-    if (!isPluginEnabled({ plugin: ttsPlugin, context })) {
+    if (!isPluginEnabled({ plugin, context })) {
       return "";
     }
     return [
@@ -493,4 +493,17 @@ export const ttsPlugin: Plugin = {
       "Example: `city tts synthesize \"你好，欢迎来到 Downcity\" --format wav`",
     ].join("\n");
   },
-};
+  };
+}
+
+/**
+ * TtsPlugin：文本转语音插件。
+ */
+export class TtsPlugin extends BasePlugin {
+  readonly name = "tts";
+
+  constructor(agent: AgentRuntime | null = null) {
+    super(agent);
+    Object.assign(this, createTtsPluginDefinition(this));
+  }
+}

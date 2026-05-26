@@ -132,7 +132,7 @@ export class ChatPlugin extends BasePlugin {
   getQueueWorkerConfig(
     context: AgentContext,
   ): Partial<ChatQueueWorkerConfig> | undefined {
-    return this.options.queue || context.config.services?.chat?.queue;
+    return this.options.queue || context.config.plugins?.chat?.queue;
   }
 
   /**
@@ -143,7 +143,7 @@ export class ChatPlugin extends BasePlugin {
     if (explicit) {
       return explicit.enabled !== false;
     }
-    return context.config.services?.chat?.channels?.[channel]?.enabled === true;
+    return context.config.plugins?.chat?.channels?.[channel]?.enabled === true;
   }
 
   /**
@@ -156,7 +156,7 @@ export class ChatPlugin extends BasePlugin {
     const explicit = this.getExplicitChannelOptions(channel);
     const explicitAccountId = String(explicit?.channelAccountId || "").trim();
     if (explicitAccountId) return explicitAccountId;
-    const config = context.config.services?.chat?.channels?.[channel] as
+    const config = context.config.plugins?.chat?.channels?.[channel] as
       | { channelAccountId?: unknown }
       | undefined;
     return String(config?.channelAccountId || "").trim();

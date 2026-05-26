@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只负责 CLI action 与内部远端 command action 映射，不承载 contact 业务实现。
- * - 业务动作通过 handlers 注入，保持 `ContactService` 类本身更薄。
+ * - 业务动作通过 handlers 注入，保持 `ContactPlugin` 类本身更薄。
  */
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
@@ -36,7 +36,7 @@ import {
 } from "./runtime/ContactPayload.js";
 
 /**
- * ContactService 注入给 action 注册表的业务动作。
+ * ContactPlugin 注入给 action 注册表的业务动作。
  */
 export type ContactActionHandlers = {
   /**
@@ -90,7 +90,7 @@ export type ContactActionHandlers = {
 };
 
 /**
- * 创建 contact service action 表。
+ * 创建 contact plugin action 表。
  */
 export function createContactActions(handlers: ContactActionHandlers): PluginActions {
   return {

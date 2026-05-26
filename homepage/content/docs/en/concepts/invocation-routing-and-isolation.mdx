@@ -1,6 +1,6 @@
 ---
 title: Invocation Routing & Isolation
-description: Explain why service and plugin calls do not cross agent environments and how routing works
+description: Explain why runtime plugin and plugin calls do not cross agent environments and how routing works
 ---
 
 # Invocation Routing & Isolation
@@ -8,21 +8,21 @@ description: Explain why service and plugin calls do not cross agent environment
 ## Short Answer
 
 - one running agent binds to one project root
-- `service` and `plugin` calls stay inside that agent by default
+- runtime plugin and plugin calls stay inside that agent by default
 - cross-agent routing only happens when you explicitly change host/port or target project
 
 ## Main Call Path
 
-### 1) CLI -> service / plugin
+### 1) CLI -> runtime plugin / plugin
 
 1. resolve the target project
 2. resolve the daemon endpoint
-3. call `/api/services/*` or `/api/plugins/*`
+3. call `/api/plugins/runtime/*` or `/api/plugins/*`
 4. dispatch inside the current agent
 
-### 2) service -> plugin points
+### 2) runtime plugin -> plugin points
 
-Services should not depend on plugin-private implementation. They only trigger the extension points they define.
+Runtime plugins should not depend on plugin-private implementation. They only trigger the extension points they define.
 
 - plugin-point dispatch is in-process
 - the same agent execution context is reused

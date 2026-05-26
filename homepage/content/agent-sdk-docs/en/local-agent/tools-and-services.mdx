@@ -1,9 +1,9 @@
 ---
-title: tools, services, and plugins
-description: How to inject tools, explicit service instances, and plugin definitions into a local Agent
+title: tools and plugins
+description: How to inject tools and explicit plugin instances into a local Agent
 ---
 
-# tools, services, and plugins
+# tools and plugins
 
 ## tools
 
@@ -23,19 +23,19 @@ Those tools become available during session execution.
 
 If your app needs a long-lived default tool set, agent-level injection is usually the cleanest choice.
 
-## services
+## plugin instances
 
-If you want the local Agent to own services, pass explicit instances:
+If you want the local Agent to own long-lived plugin behavior such as chat channels, pass explicit plugin instances:
 
 ```ts
-import { Agent, ChatService } from "@downcity/agent";
+import { Agent, ChatPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  services: [
-    new ChatService({
+  plugins: [
+    new ChatPlugin({
       telegram: {
         botToken: process.env.TELEGRAM_BOT_TOKEN!,
       },
@@ -44,27 +44,23 @@ const agent = new Agent({
 });
 ```
 
-## When explicit services are useful
+This is useful when:
 
 - you want the SDK process itself to start chat channels
-- you want service lifecycle to be controlled by your application code
-
-You can think of this as: the caller explicitly decides which services are permanent capabilities of this local agent.
-
-If those services implement `system(context)`, the local SDK injects their system text into the session prompt.
+- you want plugin lifecycle to be controlled by your application code
 
 ## plugins
 
-If you want the local Agent to own plugins, pass explicit plugin definitions:
+If you want the local Agent to own plugins, pass explicit plugin instances:
 
 ```ts
-import { Agent, skillPlugin, webPlugin } from "@downcity/agent";
+import { Agent, SkillPlugin, WebPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [skillPlugin, webPlugin],
+  plugins: [new SkillPlugin(), new WebPlugin()],
 });
 
 const plugins = agent.plugins.list();
@@ -75,7 +71,7 @@ Those plugins are registered into the current `Agent`'s own registry.
 That means:
 
 - plugin actions can be called through `agent.plugins.runAction(...)`
-- `context.plugins` inside services and plugin hooks points to the same registry
+- `context.plugins` inside plugin hooks points to the same registry
 - duplicate plugin names throw immediately
 - the SDK does not register every built-in plugin by default
 
@@ -85,24 +81,17 @@ It does not automatically mount `plugin.http.runtime` onto the SDK HTTP server s
 
 ## Important boundary
 
-The SDK `services` field is the set of instances you hand to `Agent` yourself. It is not a mirror of some automatic project-runtime registry.
-
-The SDK `plugins` field is also the set of definitions you hand to `Agent` yourself. It is not a mirror of the global plugin manager.
+The SDK `plugins` field is the set of instances you hand to `Agent` yourself. It is not a mirror of the global plugin manager.
 
 So do not think of SDK mode as "import everything from the project automatically." It is intentionally explicit assembly.
 
+If you do want the built-in set automatically, use `mode: "preset"`.
+
 If you want the next layer of detail:
 
-- which services exist today
-- where `ChatService` fits
-- how to build a custom service
 - how plugins attach to a local Agent
 
 continue with:
 
-- [Services overview](/en/agent-sdk-docs/services/overview)
-- [Built-in service overview](/en/agent-sdk-docs/services/builtins/overview)
-- [ChatService](/en/agent-sdk-docs/services/chat-service)
-- [Custom service](/en/agent-sdk-docs/services/custom-service)
 - [Plugin overview](/en/agent-sdk-docs/plugins/overview)
 - [Custom plugin](/en/agent-sdk-docs/plugins/custom-plugin)

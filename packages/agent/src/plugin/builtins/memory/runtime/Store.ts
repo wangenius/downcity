@@ -155,11 +155,11 @@ export function isMemoryEnabled(context: AgentContext): boolean {
 }
 
 /**
- * 创建一个新的 memory service state。
+ * 创建一个新的 memory plugin state。
  *
  * 关键点（中文）
- * - 每个 MemoryService 实例都持有自己的 state。
- * - 不再按 rootPath 落到模块级 Map，避免 service 实例之间共享状态。
+ * - 每个 `MemoryPlugin` 实例都持有自己的 state。
+ * - 不再按 rootPath 落到模块级 Map，避免 runtime plugin 实例之间共享状态。
  */
 export function createMemoryRuntimeState(
   context: AgentContext,

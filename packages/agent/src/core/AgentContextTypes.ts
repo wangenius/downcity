@@ -26,12 +26,12 @@ import type {
 import type {
   SessionMetadataV1,
   SessionMessageV1,
-} from "@/session/types/SessionMessages.js";
+} from "@/executor/types/SessionMessages.js";
 import type {
   SessionRunInput,
   SessionRunResult,
-} from "@/session/types/SessionRun.js";
-import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
+} from "@/executor/types/SessionRun.js";
+import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   AgentSessionSubscriber,

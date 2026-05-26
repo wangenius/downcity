@@ -1,5 +1,5 @@
 /**
- * ContactPromptAssets：contact service 静态提示词资产。
+ * ContactPromptAssets：contact runtime plugin 静态提示词资产。
  *
  * 关键点（中文）
  * - contact prompt 文本真实来源是 `PROMPT.ts.txt`。
@@ -9,6 +9,6 @@
 import contactPromptText from "@/plugin/builtins/contact/PROMPT.js";
 
 /**
- * contact service system prompt。
+ * contact runtime plugin system prompt。
  */
 export const CONTACT_SERVICE_PROMPT = contactPromptText.trim();

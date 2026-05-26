@@ -257,7 +257,7 @@ export class MemoryPlugin extends BasePlugin {
   };
 
   /**
-   * 获取或创建当前实例绑定的 memory service state。
+   * 获取或创建当前实例绑定的 memory plugin state。
    */
   private getOrCreateRuntimeState(context: AgentContext): MemoryRuntimeState {
     if (!this.runtimeState) {

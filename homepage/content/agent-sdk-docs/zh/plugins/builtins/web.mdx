@@ -101,13 +101,13 @@ description: 详细说明 web 内建 plugin 如何选择 provider、安装依赖
 ## 在 SDK 里怎么挂载
 
 ```ts
-import { Agent, webPlugin } from "@downcity/agent";
+import { Agent, WebPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "research-agent",
   path: "/path/to/project",
   tools: {},
-  plugins: [webPlugin],
+  plugins: [new WebPlugin()],
 });
 ```
 

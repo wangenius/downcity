@@ -8,8 +8,7 @@
     "rootDir": "src",
     "paths": {
       "@/*": ["./src/*"],
-      "@session/*": ["./src/session/*"],
-      "@services/*": ["./src/service/builtins/*"]
+      "@executor/*": ["./src/executor/*"]
     },
     "strict": true,
     "noImplicitAny": false,

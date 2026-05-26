@@ -229,7 +229,7 @@ export async function searchMemory(
       mode: "scan",
       results: [],
       disabled: true,
-      error: "memory service disabled",
+      error: "memory plugin disabled",
       action: "Set context.memory.enabled=true or remove the config override.",
     };
   }

@@ -106,13 +106,13 @@ In that case, downstream logic can use the resolve point instead of duplicating 
 ## How to register it in the SDK
 
 ```ts
-import { Agent, authPlugin } from "@downcity/agent";
+import { Agent, AuthPlugin } from "@downcity/agent";
 
 const agent = new Agent({
   id: "chat-agent",
   path: "/path/to/project",
   tools: {},
-  plugins: [authPlugin],
+  plugins: [new AuthPlugin()],
 });
 ```
 

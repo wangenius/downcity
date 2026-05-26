@@ -19,9 +19,9 @@ export interface ContactPingResponse {
    */
   agentName: string;
   /**
-   * 对方 contact service 是否可用。
+   * 对方 contact plugin 是否可用。
    */
-  service: "contact";
+  plugin: "contact";
   /**
    * token 校验是否通过。
    */

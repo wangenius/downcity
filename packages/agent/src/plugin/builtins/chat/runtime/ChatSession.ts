@@ -8,15 +8,15 @@
  */
 
 import type { LanguageModel, Tool } from "ai";
-import { Executor } from "@session/Executor.js";
-import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
-import type { SessionHistoryStore } from "@/session/store/history/SessionHistoryStore.js";
-import type { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
-import type { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
+import { Executor } from "@executor/Executor.js";
+import type { SessionHistoryComposer } from "@executor/composer/history/SessionHistoryComposer.js";
+import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
+import type { SessionCompactionComposer } from "@executor/composer/compaction/SessionCompactionComposer.js";
+import type { SessionSystemComposer } from "@executor/composer/system/SessionSystemComposer.js";
 import type { ChatSessionContextComposer } from "@/plugin/builtins/chat/runtime/ChatSessionContextComposer.js";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { SessionAssistantStepCallback } from "@/session/types/SessionRun.js";
-import type { SessionRunResult } from "@/session/types/SessionRun.js";
+import type { SessionAssistantStepCallback } from "@/executor/types/SessionRun.js";
+import type { SessionRunResult } from "@/executor/types/SessionRun.js";
 import type { ChatSessionTurnState } from "@/plugin/builtins/chat/runtime/ChatSessionTypes.js";
 
 type ChatSessionOptions = {

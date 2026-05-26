@@ -111,7 +111,7 @@ export function resolveChatSessionSnapshot(input?: {
  * 将 sessionId 映射为可发送的 chatKey。
  *
  * 关键点（中文）
- * - 当前实现下：chat runtime plugin 内部把 sessionId 视作可发送 chatKey。
+ * - 当前实现下：chat plugin runtime 内部把 sessionId 视作可发送 chatKey。
  * - 不再依赖字符串规则推导（sessionId 可为随机值）。
  */
 export function mapSessionIdToChatKey(sessionId?: string): string | undefined {
@@ -255,7 +255,7 @@ async function waitBeforeSend(params: {
  * 按 chatKey 发送文本。
  *
  * 关键点（中文）
- * - chat runtime plugin 不关心具体平台；由 runtime sender 做 channel 分发。
+ * - chat plugin runtime 不关心具体平台；由 runtime sender 做 channel 分发。
  * - 返回统一结构，便于上层链路做可观测与错误汇总。
  */
 export async function sendChatTextByChatKey(params: {
@@ -397,7 +397,7 @@ export async function sendChatActionByChatKey(params: {
  * 按 sessionId 发送文本。
  *
  * 关键点（中文）
- * - sessionId -> chatKey 映射关系只在 chat runtime plugin 内部维护。
+ * - sessionId -> chatKey 映射关系只在 chat plugin runtime 内部维护。
  */
 export async function sendChatTextBySessionId(params: {
   context: AgentContext;
@@ -439,7 +439,7 @@ export async function sendChatTextBySessionId(params: {
  * 按 chatKey/sessionId 彻底删除 chat 会话。
  *
  * 关键点（中文）
- * - chatKey 与 sessionId 在 chat runtime plugin 内部等价使用。
+ * - chatKey 与 sessionId 在 chat plugin runtime 内部等价使用。
  * - 删除包含：路由映射 + chat 审计目录 + session 目录 + 渠道状态清理。
  */
 export async function deleteChatByChatKey(params: {

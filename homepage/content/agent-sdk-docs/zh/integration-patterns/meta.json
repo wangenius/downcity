@@ -3,7 +3,6 @@
   "pages": [
     "embed-in-node-app",
     "multi-agent-in-one-repo",
-    "expose-over-http",
-    "add-chat-service"
+    "expose-over-http"
   ]
 }

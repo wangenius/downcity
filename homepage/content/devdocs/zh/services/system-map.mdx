@@ -43,11 +43,11 @@ flowchart LR
     S5["assistant result"]
   end
 
-  subgraph SERVICES["Services"]
-    SV1["ChatService"]
-    SV2["TaskService"]
-    SV3["MemoryService"]
-    SV4["ShellService"]
+  subgraph PLUGIN_RUNTIMES["Plugin Runtimes"]
+    SV1["chat"]
+    SV2["task"]
+    SV3["memory"]
+    SV4["shell"]
   end
 
   subgraph PLUGINS["Plugins"]

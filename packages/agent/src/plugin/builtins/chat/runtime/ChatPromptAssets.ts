@@ -1,5 +1,5 @@
 /**
- * ChatPromptAssets：chat runtime plugin 静态提示词资产。
+ * ChatPromptAssets：chat plugin runtime 静态提示词资产。
  *
  * 关键点（中文）
  * - prompt 文本真实来源是 `*.ts.txt` 文本文件。
@@ -12,7 +12,7 @@ import qqChatPromptText from "@/plugin/builtins/chat/channels/qq/PROMPT.direct.j
 import telegramChatPromptText from "@/plugin/builtins/chat/channels/telegram/PROMPT.direct.js";
 
 /**
- * chat runtime plugin 基础 prompt。
+ * chat plugin runtime 基础 prompt。
  */
 export const CHAT_SERVICE_PROMPT = chatServicePromptText.trim();
 

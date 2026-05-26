@@ -14,7 +14,7 @@ import type { ChatChannelState } from "@/plugin/builtins/chat/types/ChatRuntime.
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
-type ChatPluginRuntimeBindings = {
+type ChatRuntimeBindings = {
   getChannelAccountId?(context: AgentContext, channel: ChatChannelName): string;
   resolveChannelAccount?(
     context: AgentContext,
@@ -25,9 +25,9 @@ type ChatPluginRuntimeBindings = {
 
 function resolveChatPluginBindings(
   context: AgentContext,
-): ChatPluginRuntimeBindings | null {
+): ChatRuntimeBindings | null {
   const candidate = context.agent?.pluginInstances?.get?.("chat") as
-    | ChatPluginRuntimeBindings
+    | ChatRuntimeBindings
     | undefined;
   return candidate || null;
 }

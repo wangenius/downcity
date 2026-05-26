@@ -183,11 +183,11 @@ It should stay as horizontal infrastructure, not become a catch-all business lay
 `src/index.ts` is the only public entrypoint for `@downcity/agent`. It uses an explicit export list and exposes only:
 
 - SDK: `Agent`, `RemoteAgent`, and session configuration/run types.
-- plugin/service author APIs: `BaseService`, `ChatService`, built-in plugins, and plugin/service definition types.
-- city runtime integration APIs: runtime startup/shutdown, server/RPC startup, service scheduling, project initialization, and model creation.
+- plugin author APIs: `BasePlugin`, built-in plugins, and plugin definition types.
+- city runtime integration APIs: runtime startup/shutdown, server/RPC startup, plugin scheduling, project initialization, and model creation.
 - cross-package protocol types: platform, daemon, RPC, auth, store, inline instant, and related control-plane contracts.
 
-HTTP routers, sandbox runners, internal service runners, and other implementation details are not exported from the root entrypoint.
+HTTP routers, sandbox runners, internal plugin runtime runners, and other implementation details are not exported from the root entrypoint.
 
 ## Suggested Reading Order
 
@@ -197,9 +197,9 @@ HTTP routers, sandbox runners, internal service runners, and other implementatio
 4. `src/core/AgentContextTypes.ts`
 5. `src/session/Executor.ts`
 6. `src/session/core-engine/CoreEngineMessageState.ts`
-7. `src/service/core/Manager.ts`
-8. `src/service/builtins/chat/ChatService.ts`
-9. `src/plugin/core/PluginManager.ts`
+7. `src/executor/Executor.ts`
+8. `src/plugin/core/Manager.ts`
+9. `src/plugin/builtins/chat/ChatPlugin.ts`
 10. `src/runtime/server/http/Server.ts`
 11. `src/runtime/server/rpc/Server.ts`
 12. `src/runtime/transport/rpc/Transport.ts`

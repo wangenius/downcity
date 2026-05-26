@@ -19,7 +19,7 @@ type AgentStatusPayload = {
   reason?: string;
 };
 
-type PluginRuntimeListResponse = {
+type PluginStateListResponse = {
   success?: boolean;
   plugins?: Array<{
     name?: unknown;
@@ -94,10 +94,10 @@ async function probeSelectedAgentStatus(
     };
   }
 
-  let pluginsPayload: PluginRuntimeListResponse;
+  let pluginsPayload: PluginStateListResponse;
   try {
-    pluginsPayload = await fetchStatusJson<PluginRuntimeListResponse>(
-      new URL("/api/plugins/runtime/list", baseUrl).toString(),
+    pluginsPayload = await fetchStatusJson<PluginStateListResponse>(
+      new URL("/api/plugins/list", baseUrl).toString(),
     );
   } catch (error) {
     return {
@@ -152,7 +152,7 @@ async function probeSelectedAgentStatus(
 
   try {
     await fetchStatusJson<ChatStatusResponse>(
-      new URL("/api/plugins/runtime/command", baseUrl).toString(),
+      new URL("/api/plugins/command", baseUrl).toString(),
       {
         method: "POST",
         headers: {

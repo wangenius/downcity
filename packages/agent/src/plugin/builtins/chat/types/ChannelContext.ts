@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 描述渠道目标（platform target）与内部 sessionId 的映射结构。
- * - 映射由 chat runtime plugin 维护，sessionId 对外保持稳定但不可推导。
+ * - 映射由 chat plugin runtime 维护，sessionId 对外保持稳定但不可推导。
  */
 
 import type { ChatDispatchChannel } from "./ChatDispatcher.js";

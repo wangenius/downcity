@@ -10,7 +10,7 @@ In Downcity, an `agent` is a runtime for a single project.
 You can think of it as:
 
 - an AI execution unit bound to one repository
-- a project-level assistant that holds sessions, reads project config, calls tools, and runs runtime plugins
+- a project-level assistant that holds sessions, reads project config, calls tools, and runs plugins
 - an execution surface you can use through CLI, HTTP, chat channels, or the SDK
 
 It is not just a chat box, and it is not the global multi-project control plane.
@@ -24,7 +24,7 @@ Once an agent starts, it is responsible for the current project runtime:
 - binding the project to its selected model
 - creating and maintaining sessions
 - exposing project-level HTTP, RPC, and CLI entry points
-- starting enabled project runtime plugins
+- starting enabled project plugins
 - persisting messages, logs, and runtime artifacts into `.downcity/`
 
 From an execution point of view, the agent is the layer that assembles:
@@ -102,7 +102,7 @@ Prefer SDK when:
 
 - you already have a Node.js app or application runtime
 - you want agent capability inside an existing workflow
-- you want to control tools, runtime plugins, and session lifecycle programmatically
+- you want to control tools, plugins, and session lifecycle programmatically
 
 ## Recommended reading order
 

@@ -49,7 +49,7 @@ import type {
   PlatformLocalModelsResponse,
 } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
-import { listBuiltinPluginRuntimeAuthPolicies } from "@downcity/agent";
+import { listBuiltinPluginAuthPolicies } from "@downcity/agent";
 import { AuthService } from "@/http/auth/AuthService.js";
 import { registerAuthRoutes } from "@/http/auth/AuthRoutes.js";
 import {
@@ -120,7 +120,7 @@ export class ControlGateway {
         this.authService,
         [
           ...CONTROL_PLANE_AUTH_ROUTE_POLICIES,
-          ...listBuiltinPluginRuntimeAuthPolicies(),
+          ...listBuiltinPluginAuthPolicies(),
         ],
       ),
     );

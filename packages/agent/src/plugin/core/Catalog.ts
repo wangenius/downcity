@@ -3,11 +3,12 @@
  *
  * 关键点（中文）
  * - 这里承载 console 侧的静态 plugin 元数据视图。
- * - 目标是把“控制面可见的 plugin 定义”从 agent 执行态里拆出来复用。
+ * - 全部视图统一来源于 `BasePlugin` class 注册表，不再维护独立静态定义。
  * - 当前先服务 Console 与 `city plugin` CLI 的静态回退场景。
  */
 
-import { PLUGINS } from "@/plugin/core/Plugins.js";
+import { listRegisteredPlugins } from "@/plugin/core/PluginClassRegistry.js";
+import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import type {
   Plugin,
@@ -44,8 +45,8 @@ export function toStaticPluginView(plugin: Plugin): PluginView {
 /**
  * 列出全部内建 plugin 定义。
  */
-export function listBuiltinPlugins(): Plugin[] {
-  return [...PLUGINS];
+export function listBuiltinPlugins(): BasePlugin[] {
+  return listRegisteredPlugins();
 }
 
 /**
@@ -60,7 +61,7 @@ export function listStaticPluginViews(): PluginView[] {
 /**
  * 按名称查找内建 plugin 定义。
  */
-export function findBuiltinPlugin(pluginName: string): Plugin | null {
+export function findBuiltinPlugin(pluginName: string): BasePlugin | null {
   const key = String(pluginName || "").trim();
   if (!key) return null;
   return listBuiltinPlugins().find((plugin) => plugin.name === key) || null;

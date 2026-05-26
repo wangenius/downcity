@@ -12,7 +12,6 @@
     "plugin-availability",
     "plugin-http",
     "custom-plugin",
-    "examples",
-    "plugin-vs-service"
+    "examples"
   ]
 }

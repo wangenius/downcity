@@ -2,7 +2,7 @@
  * ChatRuntime 类型定义。
  *
  * 关键点（中文）
- * - 这些类型描述 chat runtime plugin 的实例级运行态。
+ * - 这些类型描述 chat plugin runtime 的实例级运行态。
  * - channel bots 的状态所有权归属于 `ChatPlugin` 实例，而不是模块级单例。
  */
 

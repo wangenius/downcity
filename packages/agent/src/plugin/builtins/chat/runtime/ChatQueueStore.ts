@@ -1,5 +1,5 @@
 /**
- * ChatQueueStore：chat runtime plugin 队列存储。
+ * ChatQueueStore：chat plugin runtime 队列存储。
  *
  * 关键点（中文）
  * - 这是 chat queue 的实例级状态容器。

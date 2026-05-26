@@ -119,7 +119,7 @@ async function resolveAgentChatProfiles(params: {
   statusText?: string;
 }>> {
   try {
-    const upstreamUrl = new URL("/api/plugins/runtime/command", params.baseUrl).toString();
+    const upstreamUrl = new URL("/api/plugins/command", params.baseUrl).toString();
     const response = await fetch(upstreamUrl, {
       method: "POST",
       headers: {

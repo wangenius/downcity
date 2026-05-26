@@ -2,7 +2,7 @@
  * `city plugin` 运行态命令共享辅助 + Agent 预检。
  *
  * 关键点（中文）
- * - 统一承载 runtime plugin 命令的参数解析、目标 agent 路径解析与项目目录校验。
+ * - 统一承载 plugin runtime 命令的参数解析、目标 agent 路径解析与项目目录校验。
  * - 提供 `checkAgentPreflight` 供 start/restart/status 等命令统一使用。
  * - 保持 command 注册层只关注命令树，不再直接承载路径解析细节。
  */
@@ -164,7 +164,7 @@ export async function resolveProjectRootByAgentName(agentName: string): Promise<
 }
 
 /**
- * 统一解析 runtime plugin 命令目标路径（agent 优先于 path）。
+ * 统一解析 plugin runtime 命令目标路径（agent 优先于 path）。
  */
 export async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<{
   projectRoot?: string;

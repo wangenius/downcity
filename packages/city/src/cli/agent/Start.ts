@@ -18,7 +18,7 @@ import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
 import type { StartOptions } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { resolveAgentName } from "../shared/IndexSupport.js";
-import { checkAgentPreflight } from "../shared/PluginRuntimeSupport.js";
+import { checkAgentPreflight } from "../shared/PluginTargetSupport.js";
 import { CliError } from "../shared/CliError.js";
 
 /**

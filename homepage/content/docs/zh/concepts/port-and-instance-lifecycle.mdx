@@ -1,6 +1,6 @@
 ---
 title: 端口与实例生命周期
-description: 说明 console、agent、runtime plugin、plugin 的端口分配、路由与生命周期
+description: 说明 console、agent 与 plugin 端点的端口分配、路由与生命周期
 ---
 
 # 端口与实例生命周期
@@ -9,7 +9,7 @@ description: 说明 console、agent、runtime plugin、plugin 的端口分配、
 
 - agent 端口由 `console` 分配。
 - `city agent start/restart` 不要求用户手工管端口。
-- runtime plugin / plugin 命令先找目标 agent，再找 endpoint。
+- plugin 命令先找目标 agent，再找 endpoint。
 
 ## 运行时角色
 
@@ -22,11 +22,10 @@ description: 说明 console、agent、runtime plugin、plugin 的端口分配、
 ### agent
 
 - 一个项目对应一个 daemon
-- runtime API 包括 `/api/plugins/runtime/*`、`/api/plugins/*`
+- runtime API 包括 `/api/plugins/list`、`/api/plugins/catalog` 和 `/api/plugins/*`
 - debug 信息写入 `.downcity/.debug`
 
-### runtime plugin / plugin
+### plugin 端点
 
-- `city service ...` 走 runtime plugin 路由
 - `city plugin ...` 走 plugin 路由
 - 都在目标 runtime 内部分发

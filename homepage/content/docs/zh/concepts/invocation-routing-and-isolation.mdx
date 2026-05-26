@@ -1,6 +1,6 @@
 ---
 title: 调用路由与隔离
-description: 解释 runtime plugin 与 plugin 的调用为什么不会串 agent 环境，以及路由如何解析
+description: 解释 plugin 调用为什么不会串 agent 环境，以及路由如何解析
 ---
 
 # 调用路由与隔离
@@ -8,21 +8,21 @@ description: 解释 runtime plugin 与 plugin 的调用为什么不会串 agent 
 ## 简短答案
 
 - 一个运行中的 agent 只绑定一个项目根目录。
-- runtime plugin 与 plugin 默认都在这个 agent 内执行。
+- plugin 默认都在这个 agent 内执行。
 - 只有显式改了 host/port 或 target project，才会跨 agent 路由。
 
 ## 主调用链
 
-### 1）CLI -> runtime plugin / plugin
+### 1）CLI -> plugin
 
 1. 解析目标项目
 2. 解析 daemon endpoint
-3. 调 `/api/plugins/runtime/*` 或 `/api/plugins/*`
+3. 调 `/api/plugins/list`、`/api/plugins/control`、`/api/plugins/command` 或其他 `/api/plugins/*`
 4. 在当前 agent 内分发
 
-### 2）runtime plugin -> plugin 点
+### 2）plugin -> plugin 点
 
-runtime plugin 不应该直接依赖 plugin 私有实现，而是只在自己定义好的扩展点上触发 plugin。
+plugin 不应该直接依赖 plugin 私有实现，而是只在自己定义好的扩展点上触发 plugin。
 
 - plugin 点调度发生在进程内
 - 复用同一份 agent execution context

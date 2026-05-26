@@ -1,5 +1,5 @@
 /**
- * contact runtime plugin 路径规则。
+ * contact plugin runtime 路径规则。
  *
  * 关键点（中文）
  * - 所有 contact 运行时状态都收敛在 `.downcity/contact`。

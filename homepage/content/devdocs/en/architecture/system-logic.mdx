@@ -208,10 +208,10 @@ These point names belong to the service. Plugins only implement some of them.
 - `Executor`: single-session run pipeline
 - `CoreEngine`: model and tool-loop execution kernel inside `Executor`
 - `PluginRegistry`: plugin registration and dispatch
-- `BaseService`: service instance base class
+- `BasePlugin`: plugin instance base class
 
 ## In One Sentence
 
 ```text
-The current system logic is: console manages many agents, each agent runtime is centered on AgentRuntime, and session, services, and plugins all hang off that runtime in clearly separated roles.
+The current system logic is: console manages many agents, each agent runtime is centered on AgentRuntime, and session plus plugin runtimes all hang off that runtime in clearly separated roles.
 ```

@@ -62,7 +62,7 @@ frontmatter 核心字段：
 
 - `title` 唯一；create 去重仅按 `title` 精确匹配。
 - `when=time:...` 触发后会自动置为 `paused`，并回退为 `when=@manual`。
-- `run` 为异步受理：立即返回 `accepted=true`、`message`、`executionId`；调用方应把它视为“任务已进入后台执行，结果会自动通过 chat runtime plugin 发送，当前流程无需阻塞等待”。
+- `run` 为异步受理：立即返回 `accepted=true`、`message`、`executionId`；调用方应把它视为“任务已进入后台执行，结果会自动通过 chat plugin runtime 发送，当前流程无需阻塞等待”。
 - 如果 `run` 返回 `accepted=true`：
   - 不要手动把 task 产出再转发给用户。
   - 不要主动读取 run 目录、`run-progress.json`、`output.md` 做轮询。
@@ -160,7 +160,7 @@ frontmatter 核心字段：
 
 ### 输出设计原则
 
-- task 完成后，系统会自动把**最终结果正文**通过 chat runtime plugin 的 `send` 发回 `sessionId` 绑定的 chat。
+- task 完成后，系统会自动把**最终结果正文**通过 chat plugin runtime 的 `send` 发回 `sessionId` 绑定的 chat。
 - 当前实现采用最简规则：**最后一条 assistant 返回**会被直接视为最终结果正文，并写入 `output.md`。
 - 因此正文里的“输出要求”要面向最终用户阅读，不要只写给开发者看。
 - 对于面向用户的 agent task，正文应要求“最后一条 assistant 返回直接输出最终交付物本身”，不要让执行器在最后回答里输出自己如何创建、检查、更新、触发或发送任务。

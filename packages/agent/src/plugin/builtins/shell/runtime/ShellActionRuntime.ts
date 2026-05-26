@@ -2,7 +2,7 @@
  * Shell action 运行时编排入口。
  *
  * 关键点（中文）
- * - 这里只负责编排 shell runtime plugin 的公开动作：start/status/read/write/wait/close/exec。
+ * - 这里只负责编排 shell plugin runtime 的公开动作：start/status/read/write/wait/close/exec。
  * - 持久化、输出裁剪、waiter 协调、session 查找等共享细节拆到 `ShellActionRuntimeSupport.ts`。
  * - 新版本所有状态都通过 ShellPluginState 显式传入，不再使用模块级单例。
  */
@@ -52,7 +52,7 @@ import { attachShellProcessEventHandlers } from "./ShellProcessEvents.js";
 export { createShellPluginState } from "./ShellActionRuntimeSupport.js";
 
 /**
- * 绑定当前 shell runtime plugin 实例的 execution runtime。
+ * 绑定当前 shell plugin runtime 实例的 execution runtime。
  */
 export function bindShellRuntime(
   state: ShellPluginState,

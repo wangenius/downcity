@@ -20,7 +20,6 @@ The local `Agent` exposes these core public entry points:
 - `path`
 - `tools`
 - `instruction`
-- `services`
 - `plugins`
 - `platform`
 - `configureSession`
@@ -40,7 +39,7 @@ Typical examples include:
 
 - starting the HTTP server
 - starting the local RPC server
-- starting service lifecycles
+- starting plugin lifecycles
 
 Recommended usage:
 
@@ -58,7 +57,7 @@ If you do not call `agent.start()`:
 
 - you can still call `await agent.session()` and then `session.prompt()`
 - but no HTTP or RPC endpoint starts
-- and no background service lifecycle starts
+- and no background plugin lifecycle starts
 
 `agent.stop()` closes whichever long-lived capabilities are currently running.
 

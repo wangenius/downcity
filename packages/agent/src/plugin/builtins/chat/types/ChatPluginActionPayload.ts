@@ -2,7 +2,7 @@
  * ChatPlugin action 类型定义。
  *
  * 关键点（中文）
- * - 这里集中声明 chat runtime plugin action 的输入 payload。
+ * - 这里集中声明 chat plugin runtime action 的输入 payload。
  * - 这些类型属于跨模块共享契约，因此统一放到 `types/` 下。
  * - 字段命名保持与 CLI/API 参数一致，降低映射心智负担。
  */

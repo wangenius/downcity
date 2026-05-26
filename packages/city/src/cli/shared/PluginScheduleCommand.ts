@@ -16,7 +16,7 @@ import {
   parsePositiveIntOption,
   resolvePluginScheduleProjectRoot,
   validateAgentProjectRoot,
-} from "./PluginRuntimeSupport.js";
+} from "./PluginTargetSupport.js";
 
 /**
  * 执行 `plugin schedule list`。

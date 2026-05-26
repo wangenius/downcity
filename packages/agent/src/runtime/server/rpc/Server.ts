@@ -18,13 +18,13 @@ import type { ControlSessionExecuteRequestBody } from "@/runtime/server/http/con
 import type {
   PluginActionResponse,
   PluginAvailabilityResponse,
-  PluginListResponse,
+  PluginCatalogResponse,
 } from "@/plugin/types/PluginApi.js";
 import type {
   PluginControlAction,
   PluginCommandResponse,
   PluginControlResponse,
-  PluginListResponse as RuntimePluginListResponse,
+  PluginStateListResponse,
 } from "@/plugin/types/Plugins.js";
 import { listPluginStates, controlPluginState } from "@/plugin/core/PluginStateController.js";
 import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
@@ -253,9 +253,9 @@ async function dispatchRequest(params: {
   const { request } = params;
   if (
     request.method === "GET" &&
-    request.path === "/api/plugins/runtime/list"
+    request.path === "/api/plugins/list"
   ) {
-    const payload: RuntimePluginListResponse = {
+    const payload: PluginStateListResponse = {
       success: true,
       plugins: listPluginStates({ context: params.context }),
     };
@@ -263,7 +263,7 @@ async function dispatchRequest(params: {
   }
   if (
     request.method === "POST" &&
-    request.path === "/api/plugins/runtime/control"
+    request.path === "/api/plugins/control"
   ) {
     return await handlePluginControl({
       requestId: request.requestId,
@@ -273,7 +273,7 @@ async function dispatchRequest(params: {
   }
   if (
     request.method === "POST" &&
-    request.path === "/api/plugins/runtime/command"
+    request.path === "/api/plugins/command"
   ) {
     return await handlePluginCommand({
       requestId: request.requestId,
@@ -281,8 +281,8 @@ async function dispatchRequest(params: {
       context: params.context,
     });
   }
-  if (request.method === "GET" && request.path === "/api/plugins/list") {
-    const payload: PluginListResponse = {
+  if (request.method === "GET" && request.path === "/api/plugins/catalog") {
+    const payload: PluginCatalogResponse = {
       success: true,
       plugins: params.context.plugins.list(),
     };

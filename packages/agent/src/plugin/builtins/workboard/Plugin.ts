@@ -16,68 +16,68 @@ import type { WorkboardSnapshotResponse } from "@/plugin/builtins/workboard/type
 function createWorkboardPluginDefinition(plugin: Plugin): Plugin {
   return {
     name: "workboard",
-  title: "Workboard Snapshot",
-  description:
-    "Collects structured runtime activity snapshots so console surfaces can show what the current agent is doing now and what it recently worked on.",
-  availability(context) {
-    if (!isPluginEnabled({ plugin, context })) {
+    title: "Workboard Snapshot",
+    description:
+      "Collects structured runtime activity snapshots so console surfaces can show what the current agent is doing now and what it recently worked on.",
+    availability(context) {
+      if (!isPluginEnabled({ plugin, context })) {
+        return {
+          enabled: false,
+          available: false,
+          reasons: ["workboard plugin disabled in city config"],
+        };
+      }
       return {
-        enabled: false,
-        available: false,
-        reasons: ["workboard plugin disabled in city config"],
+        enabled: true,
+        available: true,
+        reasons: [],
       };
-    }
-    return {
-      enabled: true,
-      available: true,
-      reasons: [],
-    };
-  },
-  http: {
-    runtime: {
-      authPolicies: [
-        {
-          path: "/api/workboard/*",
-          method: "GET",
-          requireAuth: true,
-          anyPermissions: ["agent.read"],
-        },
-      ],
-      register({ app, getContext }) {
-        app.get("/api/workboard/snapshot", async (c) => {
-          try {
-            const availability = await plugin.availability?.(getContext());
-            if (availability && availability.available !== true) {
+    },
+    http: {
+      server: {
+        authPolicies: [
+          {
+            path: "/api/workboard/*",
+            method: "GET",
+            requireAuth: true,
+            anyPermissions: ["agent.read"],
+          },
+        ],
+        register({ app, getContext }) {
+          app.get("/api/workboard/snapshot", async (c) => {
+            try {
+              const availability = await plugin.availability?.(getContext());
+              if (availability && availability.available !== true) {
+                return c.json(
+                  {
+                    success: false,
+                    error: availability.reasons.join("; ") || "workboard unavailable",
+                  },
+                  503,
+                );
+              }
+
+              const snapshot = await getWorkboardSnapshotStore({
+                contextResolver: getContext,
+              }).readSnapshot();
+              const payload: WorkboardSnapshotResponse = {
+                success: true,
+                snapshot,
+              };
+              return c.json(payload);
+            } catch (error) {
               return c.json(
                 {
                   success: false,
-                  error: availability.reasons.join("; ") || "workboard unavailable",
+                  error: error instanceof Error ? error.message : String(error),
                 },
-                503,
+                500,
               );
             }
-
-            const snapshot = await getWorkboardSnapshotStore({
-              contextResolver: getContext,
-            }).readSnapshot();
-            const payload: WorkboardSnapshotResponse = {
-              success: true,
-              snapshot,
-            };
-            return c.json(payload);
-          } catch (error) {
-            return c.json(
-              {
-                success: false,
-                error: error instanceof Error ? error.message : String(error),
-              },
-              500,
-            );
-          }
-        });
+          });
+        },
       },
     },
-  },
   };
 }
 

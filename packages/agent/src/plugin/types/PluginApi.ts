@@ -1,5 +1,5 @@
 /**
- * plugin 管理命令与 API 类型。
+ * plugin catalog / availability / action API 类型。
  *
  * 关键点（中文）
  * - 统一描述 CLI -> daemon 的 plugin 管理协议。
@@ -73,9 +73,9 @@ export interface PluginAvailabilityView {
 }
 
 /**
- * plugin list 响应。
+ * plugin catalog 响应。
  */
-export interface PluginListResponse {
+export interface PluginCatalogResponse {
   /**
    * 请求是否成功。
    */

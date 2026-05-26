@@ -122,7 +122,7 @@ export async function runCommand(
   const agentLogger = agent.getRuntime().logger;
 
   // 处理进程信号
-  // 停机顺序（中文）：runtime plugins -> API server -> flush logs。
+  // 停机顺序（中文）：plugin runtimes -> API server -> flush logs。
   let isShuttingDown = false;
   const shutdown = async (signal: string) => {
     if (isShuttingDown) return;

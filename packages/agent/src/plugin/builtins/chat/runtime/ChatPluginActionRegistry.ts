@@ -1,5 +1,5 @@
 /**
- * ChatPluginActions：chat runtime plugin 的 action 注册表模块。
+ * ChatPluginActions：chat plugin runtime 的 action 注册表模块。
  *
  * 关键点（中文）
  * - 这里专门负责把 chat 的 CLI/execute 定义装配成 `PluginActions`。
@@ -95,7 +95,7 @@ function attachCommandHelpText(command: Command, text: string): void {
 }
 
 /**
- * 创建 chat runtime plugin 的 action 定义表。
+ * 创建 chat plugin runtime 的 action 定义表。
  */
 export function createChatPluginActions(params: {
   channelState: ChatChannelState;

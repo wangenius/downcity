@@ -2,14 +2,14 @@
  * Plugin Action CLI 注册器。
  *
  * 关键点（中文）
- * - 负责把 plugin actions 挂到 commander（`city <plugin> <action>`）。
- * - plugin 命令默认直接在当前 CLI 进程内执行，不再桥接到 agent transport。
+ * - 负责把“本地可执行”的 plugin actions 挂到 commander（`city <plugin> <action>`）。
+ * - 需要运行中 agent 的 plugin 不在这里注册，避免和受托管命令桥接冲突。
  */
 
 import path from "node:path";
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import { PLUGINS } from "@/plugin/core/Plugins.js";
+import { listLocalPlugins } from "@/plugin/core/PluginClassRegistry.js";
 import type { Plugin, PluginAction } from "@/plugin/types/Plugin.js";
 import { runLocalPluginAction } from "@/plugin/core/LocalExecution.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
@@ -206,7 +206,7 @@ function registerPluginActionCommand(params: {
  * 注册全部 plugin actions 的 CLI 命令。
  */
 export function registerAllPluginsForCli(program: Command): void {
-  for (const plugin of PLUGINS) {
+  for (const plugin of listLocalPlugins()) {
     for (const [actionName, action] of Object.entries(plugin.actions || {})) {
       registerPluginActionCommand({
         program,

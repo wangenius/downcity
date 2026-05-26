@@ -2,8 +2,8 @@
  * Chat service plugin 交互类型定义。
  *
  * 关键点（中文）
- * - 统一描述 chat runtime plugin 与 plugin 之间的扩展 payload。
- * - chat runtime plugin 负责定义结构，plugin 只消费这些稳定字段。
+ * - 统一描述 chat plugin runtime 与 plugin 之间的扩展 payload。
+ * - chat plugin runtime 负责定义结构，plugin 只消费这些稳定字段。
  * - 字段全部保持 Json 兼容，避免把函数或运行时私有对象塞进 plugin 点。
  */
 

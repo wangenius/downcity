@@ -213,7 +213,7 @@ async function loadPluginViews(
   baseUrl: string,
   authHeaders?: RuntimeForwardAuthHeaders,
 ): Promise<PluginView[]> {
-  const listUrl = new URL("/api/plugins/list", baseUrl).toString();
+  const listUrl = new URL("/api/plugins/catalog", baseUrl).toString();
   const payload = await fetchJson<PluginListResponse>(listUrl, {
     headers: buildRuntimeRequestHeaders({ authHeaders }),
   });
@@ -221,7 +221,7 @@ async function loadPluginViews(
   return plugins.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function loadRuntimePluginAvailability(
+async function loadAgentPluginAvailability(
   baseUrl: string,
   pluginName: string,
   authHeaders?: RuntimeForwardAuthHeaders,
@@ -245,7 +245,7 @@ async function loadRuntimePluginAvailability(
   return payload.availability;
 }
 
-async function buildRuntimePluginPayload(
+async function buildAgentPluginPayloadFromRuntime(
   selectedAgent: PlatformAgentOption,
   authHeaders?: RuntimeForwardAuthHeaders,
 ): Promise<PluginUiResponse> {
@@ -256,7 +256,7 @@ async function buildRuntimePluginPayload(
     pluginViews.map(async (view) => {
       return {
         ...view,
-        availability: await loadRuntimePluginAvailability(
+        availability: await loadAgentPluginAvailability(
           baseUrl,
           view.name,
           authHeaders,
@@ -367,7 +367,7 @@ export function registerPlatformPluginRoutes(params: {
 
       try {
         return c.json(
-          await buildRuntimePluginPayload(
+          await buildAgentPluginPayloadFromRuntime(
             selectedAgent,
             readRuntimeForwardAuthHeaders(c.req.raw),
           ),

@@ -1,17 +1,17 @@
 /**
- * Runtime plugin action CLI 注册器。
+ * 受 agent 托管的 plugin action CLI 注册器。
  *
  * 关键点（中文）
- * - 负责把 runtime plugin actions 挂到 commander（`city <plugin> <action>`）。
+ * - 负责把需要运行中 agent 承载的 plugin actions 挂到 commander（`city <plugin> <action>`）。
  * - 仅处理 CLI 参数映射与远程调用，不承载 plugin 状态机逻辑。
- * - runtime plugin 注册表与调度时间解析统一复用 agent 包实现，避免 city 维护第二套事实源。
+ * - 命令注册表与调度时间解析统一复用 agent 包实现，避免 city 维护第二套事实源。
  */
 
 import path from "node:path";
 import type { Command } from "commander";
 import {
   callAgentTransport,
-  listRegisteredPlugins,
+  listManagedPlugins,
   parseScheduledRunAtMsOrThrow,
 } from "@downcity/agent";
 import type { BasePlugin, PluginAction } from "@downcity/agent";
@@ -21,7 +21,7 @@ import type { PluginCommandResponse } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean, parsePort } from "./IndexSupport.js";
-import { runPluginRuntimeControlCommand } from "./PluginRuntimeRemote.js";
+import { runManagedPluginControlCommand } from "./ManagedPluginRemote.js";
 
 const CHAT_PLUGIN_HELP_TEXT = [
   "",
@@ -280,7 +280,7 @@ function registerPluginActionCommand(params: {
 
     const remote = await callAgentTransport<PluginCommandResponse>({
       projectRoot: resolveProjectRoot(bridgeOptions.path),
-      path: "/api/plugins/runtime/command",
+      path: "/api/plugins/command",
       method: "POST",
       host: bridgeOptions.host,
       port: bridgeOptions.port,
@@ -383,7 +383,7 @@ function registerPluginLifecycleCommands(params: {
         .description(item.description)
         .helpOption("--help", "display help for command"),
     ).action(async (options: PluginCliBaseOptions) => {
-      await runPluginRuntimeControlCommand({
+      await runManagedPluginControlCommand({
         pluginName: params.plugin.name,
         action: item.action,
         options,
@@ -393,10 +393,10 @@ function registerPluginLifecycleCommands(params: {
 }
 
 /**
- * 注册所有 runtime plugin actions 的 CLI 命令。
+ * 注册所有受 agent 托管的 plugin actions CLI 命令。
  */
-export function registerAllRuntimePluginsForCli(program: Command): void {
-  const plugins = listRegisteredPlugins();
+export function registerManagedPluginCommandsForCli(program: Command): void {
+  const plugins = listManagedPlugins();
   for (const plugin of plugins) {
     for (const [actionName, action] of Object.entries(plugin.actions)) {
       registerPluginActionCommand({

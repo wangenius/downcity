@@ -1,6 +1,6 @@
 ---
 title: Plugin System Text
-description: Understand what plugin.system(context) is for, when it is injected, and how it differs from service.system
+description: Understand what plugin.system(context) is for and when it is injected into runtime prompt assembly
 ---
 
 # Plugin System Text
@@ -25,12 +25,6 @@ Typical uses:
 - capability-specific usage constraints
 - telling the agent which installed capability surface is currently available
 
-## Difference from `service.system()`
-
-This boundary matters a lot.
-
-### `plugin.system`
-
 In the full runtime prompt collection path, plugin system text is part of the formal runtime system assembly.
 
 The runtime currently:
@@ -38,17 +32,6 @@ The runtime currently:
 - iterates over built-in plugins
 - only reads `system()` from enabled plugins
 - fail-opens if one plugin system loader throws
-
-### `service.system`
-
-Services also support `system()`. In the local SDK session path, both explicitly injected service system text and registered plugin system text are collected by the SDK system composer.
-
-You can inspect the resolved prompt blocks with `session.system()`.
-
-So in current product semantics:
-
-- `plugin.system` is a true runtime prompt augmentation layer
-- `service.system` is the service-owned counterpart for long-lived service rules
 
 ## When plugin.system is a good fit
 
@@ -70,4 +53,4 @@ These are all good examples of capability-description system text.
 ## Related docs
 
 - [Built-in plugins today](/en/agent-sdk-docs/plugins/built-in-plugins)
-- [Plugin vs service](/en/agent-sdk-docs/plugins/plugin-vs-service)
+- [Custom plugin](/en/agent-sdk-docs/plugins/custom-plugin)

@@ -53,7 +53,7 @@ export const DEFAULT_WAIT_TIMEOUT_MS = 10_000;
 export const DEFAULT_EXEC_TIMEOUT_MS = 60_000;
 
 /**
- * 创建 shell runtime plugin 初始状态。
+ * 创建 shell plugin runtime 初始状态。
  */
 export function createShellPluginState(): ShellPluginState {
   return {

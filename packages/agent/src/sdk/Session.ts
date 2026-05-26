@@ -93,9 +93,9 @@ type SessionOptions = {
   getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
 
   /**
-   * 读取当前 agent 显式注入 runtime plugin 的 system blocks。
+   * 读取当前 agent 显式注入的受托管 plugin system blocks。
    */
-  getRuntimePluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+  getManagedPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 
   /**
    * 读取当前 agent 显式注册 plugin 的 system blocks。
@@ -123,7 +123,7 @@ export class Session {
   private readonly tools: Record<string, Tool>;
   private readonly logger: SessionOptions["logger"];
   private readonly getInstructionSystemBlocks: SessionOptions["getInstructionSystemBlocks"];
-  private readonly getRuntimePluginSystemBlocks: SessionOptions["getRuntimePluginSystemBlocks"];
+  private readonly getManagedPluginSystemBlocks: SessionOptions["getManagedPluginSystemBlocks"];
   private readonly getPluginSystemBlocks: SessionOptions["getPluginSystemBlocks"];
   private readonly ensureConfiguredHook?: SessionOptions["ensureConfigured"];
   private readonly historyStore: JsonlSessionHistoryStore;
@@ -145,7 +145,7 @@ export class Session {
     this.tools = options.tools;
     this.logger = options.logger;
     this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
-    this.getRuntimePluginSystemBlocks = options.getRuntimePluginSystemBlocks;
+    this.getManagedPluginSystemBlocks = options.getManagedPluginSystemBlocks;
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     this.ensureConfiguredHook = options.ensureConfigured;
     if (!this.id) {
@@ -196,7 +196,7 @@ export class Session {
         getSessionCreatedAt: () => this.createdAt,
         getSessionTimezone: () => this.timezone,
         getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-        getRuntimePluginSystemBlocks: this.getRuntimePluginSystemBlocks,
+        getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
         getPluginSystemBlocks: this.getPluginSystemBlocks,
       }),
       getTools: () => this.tools,
@@ -358,7 +358,7 @@ export class Session {
    *
    * 关键点（中文）
    * - 返回内容与实际 run 时使用的 SDK system composer 同源。
-   * - 包含 instruction/core、显式注入 runtime plugin system、显式注册 plugin system 与 session 上下文。
+   * - 包含 instruction/core、受托管 plugin system、显式注册 plugin system 与 session 上下文。
    * - 返回结构化快照，不把 system prompt 写入会话历史。
    */
   async system(): Promise<AgentSessionSystemSnapshot> {
@@ -369,7 +369,7 @@ export class Session {
       createdAt: this.createdAt,
       timezone: this.timezone,
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-      getRuntimePluginSystemBlocks: this.getRuntimePluginSystemBlocks,
+      getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
       getPluginSystemBlocks: this.getPluginSystemBlocks,
     });
     return {
@@ -427,7 +427,7 @@ export class Session {
       tools: this.tools,
       logger: this.logger,
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-      getRuntimePluginSystemBlocks: this.getRuntimePluginSystemBlocks,
+      getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
       getPluginSystemBlocks: this.getPluginSystemBlocks,
     });
     await forked.initialize();
@@ -464,7 +464,7 @@ export class Session {
   }
 
   /**
-   * 返回供 runtime plugin 使用的 session 端口。
+   * 返回供受托管 plugin 使用的 session 端口。
    */
   getRuntimePort(): SessionPort {
     if (this.runtimePort) return this.runtimePort;

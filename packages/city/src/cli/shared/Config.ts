@@ -14,7 +14,7 @@ import { getDowncityJsonPath } from "@/config/Paths.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { aliasCommand } from "./Alias.js";
 import { parseBoolean } from "./IndexSupport.js";
-import { resolveProjectRoot } from "./PluginRuntimeSupport.js";
+import { resolveProjectRoot } from "./PluginTargetSupport.js";
 import type { DowncityConfig } from "@downcity/agent";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - skill 不再作为 service 存在，而是作为显式 action + system 提供者接入 plugin 体系。
  * - `find/install/list/lookup` 全部通过 plugin actions 暴露。
- * - skills overview 文本通过 `plugin.system` 注入，不再依赖 service.system。
+ * - skills overview 文本通过 `plugin.system` 注入，不再依赖 plugin.system。
  */
 
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";

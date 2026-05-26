@@ -9,7 +9,7 @@
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@executor/composer/system/default/PromptRenderer.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
-import { PLUGINS } from "@/plugin/core/Plugins.js";
+import { listLocalPlugins } from "@/plugin/core/PluginClassRegistry.js";
 import { PLUGIN_SYSTEM_PROVIDERS } from "@/plugin/core/PluginSystemProviders.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import { buildRuntimeClockSystemPrompt } from "@executor/composer/system/default/variables/VariableReplacer.js";
@@ -19,7 +19,7 @@ import {
   TASK_SYSTEM_PROMPT,
 } from "@executor/composer/system/default/SystemPromptAssets.js";
 
-const DEFAULT_DISABLED_RUNTIME_PLUGIN_NAMES: string[] = [];
+const DEFAULT_DISABLED_MANAGED_PLUGIN_NAMES: string[] = [];
 
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
@@ -135,7 +135,7 @@ export function resolveSystemContextProfile(
   if (profile !== "task") {
     return {
       mode: "chat",
-      disablePluginSystems: [...DEFAULT_DISABLED_RUNTIME_PLUGIN_NAMES],
+      disablePluginSystems: [...DEFAULT_DISABLED_MANAGED_PLUGIN_NAMES],
     };
   }
   return {
@@ -146,13 +146,13 @@ export function resolveSystemContextProfile(
 }
 
 /**
- * 收集 runtime plugin 维度的 system 文本。
+ * 收集受 agent 托管的 plugin system 文本。
  *
  * 关键点（中文）
  * - 顺序：main plugin prompt -> plugin.system。
  * - 单个加载失败走 fail-open，不阻断主链路。
  */
-export async function loadRuntimePluginSystemPrompts(input: {
+export async function loadManagedPluginSystemPrompts(input: {
   /**
    * 当前执行上下文。
    */
@@ -190,14 +190,14 @@ export async function loadRuntimePluginSystemPrompts(input: {
 }
 
 /**
- * 收集扩展型 plugin 的 system 文本。
+ * 收集本地 plugin 的 system 文本。
  *
  * 关键点（中文）
- * - extension plugin 的 `plugin.system` 在语义上属于“增强注入”。
+ * - 本地 plugin 的 `plugin.system` 在语义上属于“增强注入”。
  * - 若 plugin 显式声明 availability 且当前 unavailable，则跳过其 system 注入。
  * - 单个 plugin 加载失败走 fail-open，不阻断主链路。
  */
-export async function loadExtensionPluginSystemPrompts(input: {
+export async function loadLocalPluginSystemPrompts(input: {
   /**
    * 当前统一执行上下文。
    */
@@ -205,7 +205,7 @@ export async function loadExtensionPluginSystemPrompts(input: {
 }): Promise<string[]> {
   const out: string[] = [];
 
-  for (const plugin of PLUGINS) {
+  for (const plugin of listLocalPlugins()) {
     if (typeof plugin.system !== "function") continue;
     try {
       if (
@@ -264,14 +264,14 @@ export async function buildSessionSystemMessages(input: {
   staticSystemPrompts: string[];
 
   /**
-   * runtime plugin system 文本集合（main plugin + builtin runtime plugins）。
+   * 受 agent 托管的 plugin system 文本集合（main plugin + managed plugins）。
    */
-  runtimePluginSystemPrompts: string[];
+  managedPluginSystemPrompts: string[];
 
   /**
-   * extension plugin system 文本集合。
+   * 本地 plugin system 文本集合。
    */
-  extensionPluginSystemPrompts: string[];
+  localPluginSystemPrompts: string[];
 }): Promise<SystemModelMessage[]> {
   const runtimeClockText = buildRuntimeClockSystemPrompt({
     projectPath: input.projectRoot,
@@ -300,9 +300,9 @@ export async function buildSessionSystemMessages(input: {
     },
   );
 
-  const runtimePluginSystemMessages = await transformPromptsIntoSystemMessages(
-    Array.isArray(input.runtimePluginSystemPrompts)
-      ? input.runtimePluginSystemPrompts
+  const managedPluginSystemMessages = await transformPromptsIntoSystemMessages(
+    Array.isArray(input.managedPluginSystemPrompts)
+      ? input.managedPluginSystemPrompts
       : [],
     {
       projectPath: input.projectRoot,
@@ -310,9 +310,9 @@ export async function buildSessionSystemMessages(input: {
     },
   );
 
-  const extensionPluginSystemMessages = await transformPromptsIntoSystemMessages(
-    Array.isArray(input.extensionPluginSystemPrompts)
-      ? input.extensionPluginSystemPrompts
+  const localPluginSystemMessages = await transformPromptsIntoSystemMessages(
+    Array.isArray(input.localPluginSystemPrompts)
+      ? input.localPluginSystemPrompts
       : [],
     {
       projectPath: input.projectRoot,
@@ -322,8 +322,8 @@ export async function buildSessionSystemMessages(input: {
 
   return [
     ...staticSystemMessages,
-    ...runtimePluginSystemMessages,
-    ...extensionPluginSystemMessages,
+    ...managedPluginSystemMessages,
+    ...localPluginSystemMessages,
     ...runtimeRuleMessages,
     ...runtimeClockMessages,
   ];
@@ -366,11 +366,11 @@ export async function resolveSessionSystemMessages(input: {
     mode: profile.mode,
     replaceDefaultCorePrompt: profile.replaceDefaultCorePrompt,
     staticSystemPrompts: input.staticSystemPrompts,
-    runtimePluginSystemPrompts: await loadRuntimePluginSystemPrompts({
+    managedPluginSystemPrompts: await loadManagedPluginSystemPrompts({
       context: input.context,
       disabledPluginNames: profile.disablePluginSystems,
     }),
-    extensionPluginSystemPrompts: await loadExtensionPluginSystemPrompts({
+    localPluginSystemPrompts: await loadLocalPluginSystemPrompts({
       context: input.context,
     }),
   });

@@ -14,7 +14,7 @@ import {
   type ChatChannelAccountListItem,
 } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { runPluginRuntimeControlCommand } from "./PluginRuntimeRemote.js";
+import { runManagedPluginControlCommand } from "./ManagedPluginRemote.js";
 import type { StoredChannelAccountChannel } from "@downcity/agent";
 import type {
   ChatChannelAccountAction,
@@ -403,7 +403,7 @@ async function runChannelAccountManager(): Promise<void> {
 async function runChatLifecycleAction(
   action: "start" | "stop" | "restart" | "status",
 ): Promise<void> {
-  await runPluginRuntimeControlCommand({
+  await runManagedPluginControlCommand({
     pluginName: "chat",
     action,
     options: {

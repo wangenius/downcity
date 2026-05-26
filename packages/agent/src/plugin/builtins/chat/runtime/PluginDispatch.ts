@@ -2,7 +2,7 @@
  * PluginDispatch：chat 领域的 plugin 调用辅助。
  *
  * 关键点（中文）
- * - chat runtime plugin 只依赖这里，不直接依赖某个具体 plugin 模块路径。
+ * - chat plugin runtime 只依赖这里，不直接依赖某个具体 plugin 模块路径。
  * - 这里封装 chat 领域的 plugin 点调用语义，保持 service 边界稳定。
  */
 
@@ -48,7 +48,7 @@ export async function observeIncomingChatPrincipal(params: {
  *
  * 关键点（中文）
  * - 这是 guard 语义：允许则静默返回，拒绝则直接抛错。
- * - 这样 chat runtime plugin 可以像处理中间件一样串联 guard 点。
+ * - 这样 chat plugin runtime 可以像处理中间件一样串联 guard 点。
  */
 export async function guardIncomingChat(params: {
   context: AgentContext;

@@ -219,10 +219,10 @@ flowchart TD
 - `Executor`：单 session run pipeline
 - `CoreEngine`：`Executor` 内部的模型与 tool loop 执行内核
 - `PluginRegistry`：plugin 注册与调度
-- `BaseService`：service 实例基类
+- `BasePlugin`：plugin 实例基类
 
 ## 一句话总结
 
 ```text
-Downcity 当前的真实系统逻辑，是 console 管多个 agent，agent 用 AgentRuntime 持有 session、services、plugins，再通过统一 session 内核承接 chat、task、api 等多入口执行。
+Downcity 当前的真实系统逻辑，是 console 管多个 agent，agent 用 AgentRuntime 持有 session 与各类 plugin runtime，再通过统一 session 内核承接 chat、task、api 等多入口执行。
 ```

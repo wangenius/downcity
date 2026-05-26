@@ -27,7 +27,7 @@ console.log(started.http?.baseUrl);
 
 - HTTP 服务
 - 本地 RPC 服务
-- service lifecycle（默认开启）
+- plugin lifecycle（默认开启）
 
 ## 单独启动 HTTP
 
@@ -62,12 +62,12 @@ await agent.start({
 - 适合把 Agent 当作当前进程里的本地库
 - 不会启动 HTTP
 - 不会启动 RPC
-- 不会启动 service 的后台生命周期
+- 不会启动 plugin 的后台生命周期
 
 调用 `agent.start()` 之后：
 
 - Agent 会开始对外暴露 HTTP / RPC 端点
-- 默认会启动 services
+- 默认会启动 plugins
 - chat、schedule 和其他后台 loop 才会真正持续运行
 
 可以把它理解成：
@@ -84,9 +84,9 @@ await agent.start({
 
 ## 启动前会发生什么
 
-调用 `agent.start({ http: { ... }, rpc: true })` 时，SDK 默认会先确保当前 agent 的 services 已启动。
+调用 `agent.start({ http: { ... }, rpc: true })` 时，SDK 默认会先确保当前 agent 的 plugins 已启动。
 
-这样可以减少“端点已经起来了，但关键 service 还没 ready”的不一致状态。
+这样可以减少“端点已经起来了，但关键 plugin 还没 ready”的不一致状态。
 
 ## 相关文档
 

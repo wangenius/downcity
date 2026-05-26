@@ -10,7 +10,7 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 你可以把它理解成：
 
 - 一个绑定到代码仓库的 AI 执行实例
-- 一个能保存会话、读取项目配置、调用工具、运行 runtime plugin 的项目级助手
+- 一个能保存会话、读取项目配置、调用工具、运行 plugin 的项目级助手
 - 一个既能通过 CLI 使用，也能通过 SDK 嵌入到你自己的应用里的执行单元
 
 它不是一个“网页聊天窗口”，也不是一个“多项目控制台”。
@@ -24,7 +24,7 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 - 绑定项目选择的模型
 - 创建和维护会话
 - 暴露 HTTP / RPC / CLI 入口
-- 启动项目配置中启用的 runtime plugin
+- 启动项目配置中启用的 plugin
 - 把消息、日志和运行产物落盘到 `.downcity/`
 
 从执行视角看，agent 更像一个“项目级上下文装配器”：
@@ -100,7 +100,7 @@ import { Agent } from "@downcity/agent";
 
 - 你已经有自己的 Node.js 服务、脚本或产品
 - 你要把 agent 作为能力嵌入到某个调用链里
-- 你希望自己掌控 tools、runtime plugins 和 session 生命周期
+- 你希望自己掌控 tools、plugins 和 session 生命周期
 
 ## 一个推荐的阅读顺序
 

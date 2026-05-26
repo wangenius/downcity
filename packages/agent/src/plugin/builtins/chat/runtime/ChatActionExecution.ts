@@ -1,5 +1,5 @@
 /**
- * ChatActionExecution：chat runtime plugin 的业务 action 执行模块。
+ * ChatActionExecution：chat plugin runtime 的业务 action 执行模块。
  *
  * 关键点（中文）
  * - 这里只放与会话/消息相关的执行逻辑。
@@ -263,7 +263,7 @@ export async function executeChatSendAction(params: {
     text: String(params.payload.text || ""),
     delayMs: params.payload.delayMs,
     sendAtMs: params.payload.sendAtMs,
-    // 关键点（中文）：runtime plugin action 面向 CLI/API，定时或延迟发送应立即返回，
+    // 关键点（中文）：plugin runtime action 面向 CLI/API，定时或延迟发送应立即返回，
     // 由 runtime 在后台内存中继续等待并到点投递，避免 HTTP 请求长时间挂起。
     ...(shouldScheduleInBackground ? { nonBlockingDelay: true } : {}),
     replyToMessage: params.payload.replyToMessage === true,

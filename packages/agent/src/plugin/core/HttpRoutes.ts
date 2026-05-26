@@ -2,12 +2,12 @@
  * Plugin HTTP 路由装配。
  *
  * 关键点（中文）
- * - 这里统一装配内建 plugin 的 runtime HTTP 路由与鉴权策略。
+ * - 这里统一装配内建 plugin 的 HTTP 路由与鉴权策略。
  * - plugin 自己声明路由；server 与 console 只负责消费这份声明。
  */
 
 import type { Hono } from "hono";
-import { PLUGINS } from "@/plugin/core/Plugins.js";
+import { listRegisteredPlugins } from "@/plugin/core/PluginClassRegistry.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
 import type { AuthRoutePolicy } from "@/types/runtime/auth/AuthRoute.js";
 
@@ -27,9 +27,9 @@ function dedupeAuthPolicies(policies: AuthRoutePolicy[]): AuthRoutePolicy[] {
 /**
  * 列出全部内建 plugin runtime 鉴权策略。
  */
-export function listBuiltinPluginRuntimeAuthPolicies(): AuthRoutePolicy[] {
+export function listBuiltinPluginAuthPolicies(): AuthRoutePolicy[] {
   return dedupeAuthPolicies(
-    PLUGINS.flatMap((plugin) => plugin.http?.runtime?.authPolicies || []),
+    listRegisteredPlugins().flatMap((plugin) => plugin.http?.server?.authPolicies || []),
   );
 }
 
@@ -40,8 +40,8 @@ export function registerBuiltinPluginHttpRoutes(params: {
   app: Hono;
   getContext: () => AgentContext;
 }): void {
-  for (const plugin of PLUGINS) {
-    plugin.http?.runtime?.register({
+  for (const plugin of listRegisteredPlugins()) {
+    plugin.http?.server?.register({
       app: params.app,
       getContext: params.getContext,
       pluginName: plugin.name,

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只做确定性采集，不引入 LLM 推理。
- * - 内部仍聚合 session、task、runtime plugin 三类运行事实，但最终只输出对外安全的模糊状态。
+ * - 内部仍聚合 session、task、plugin runtime 三类运行事实，但最终只输出对外安全的模糊状态。
  */
 
 import { listTaskDefinitions } from "@/plugin/builtins/task/Action.js";

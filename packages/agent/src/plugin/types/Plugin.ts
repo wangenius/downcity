@@ -812,13 +812,13 @@ export interface PluginUsageDefinition {
 }
 
 /**
- * Plugin runtime HTTP 注入参数。
+ * Plugin HTTP 注入参数。
  *
  * 关键点（中文）
  * - plugin 只声明自己的路由与鉴权策略，不感知 server 装配细节。
  * - console 会复用相同路径策略保护代理请求，但不会重复注册路由本身。
  */
-export interface PluginRuntimeHttpRegistration {
+export interface PluginHttpRegistration {
   /**
    * 该组路由对应的鉴权策略列表。
    */
@@ -847,9 +847,9 @@ export interface PluginRuntimeHttpRegistration {
  */
 export interface PluginHttpDefinition {
   /**
-   * runtime HTTP 路由注入（可选）。
+   * server HTTP 路由注入（可选）。
    */
-  runtime?: PluginRuntimeHttpRegistration;
+  server?: PluginHttpRegistration;
 }
 
 /**

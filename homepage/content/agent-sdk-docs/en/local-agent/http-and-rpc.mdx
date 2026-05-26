@@ -27,7 +27,7 @@ This starts the following in one place:
 
 - the HTTP server
 - the local RPC server
-- service lifecycles by default
+- plugin lifecycles by default
 
 ## Start HTTP only
 
@@ -62,12 +62,12 @@ If you do not call `agent.start()`:
 - this is the right shape when you use the Agent as a local in-process library
 - no HTTP server starts
 - no RPC server starts
-- no background service lifecycle starts
+- no background plugin lifecycle starts
 
 After you call `agent.start()`:
 
 - the Agent exposes HTTP and RPC endpoints
-- services start by default
+- plugins start by default
 - chat, schedule, and other background loops can keep running
 
 A simple mental model is:
@@ -84,9 +84,9 @@ This is especially useful when the caller and the executor live in different pro
 
 ## What happens before startup
 
-When you call `agent.start({ http: { ... }, rpc: true })`, the SDK starts services first by default.
+When you call `agent.start({ http: { ... }, rpc: true })`, the SDK starts plugins first by default.
 
-That reduces the risk of ending up in a state where the endpoint is up but a critical service is still not ready.
+That reduces the risk of ending up in a state where the endpoint is up but a critical plugin is still not ready.
 
 ## Related docs
 

@@ -2,7 +2,7 @@
  * Chat inbound augment helper。
  *
  * 关键点（中文）
- * - chat runtime plugin 先构造基础输入，再交给 plugin pipeline 做增强。
+ * - chat plugin runtime 先构造基础输入，再交给 plugin pipeline 做增强。
  * - 最终拼装顺序固定为：attachmentText -> pluginSections -> bodyText。
  */
 

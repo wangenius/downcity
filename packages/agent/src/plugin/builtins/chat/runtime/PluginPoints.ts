@@ -2,7 +2,7 @@
  * Chat service plugin 点定义。
  *
  * 关键点（中文）
- * - plugin 点由 chat runtime plugin 定义，不由具体 plugin 定义。
+ * - plugin 点由 chat plugin runtime 定义，不由具体 plugin 定义。
  * - service 只依赖这些稳定点名，具体 plugin 负责实现其中某些点。
  * - 后续新增 chat 生命周期 plugin 点，也应统一收敛到这里。
  */

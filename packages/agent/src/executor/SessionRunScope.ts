@@ -46,7 +46,7 @@ export type SessionRunScope = {
    *
    * 关键点（中文）
    * - 用于在 tool 执行后向下一 step 注入结构化 user 消息。
-   * - 队列内容由上层 runtime plugin 通过统一协议下发，main 不感知业务语义。
+   * - 队列内容由上层 plugin runtime 通过统一协议下发，main 不感知业务语义。
    */
   injectedUserMessages?: SessionUserMessageV1[];
 };

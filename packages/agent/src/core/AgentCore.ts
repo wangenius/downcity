@@ -42,7 +42,6 @@ import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueueS
 import { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
-import { createBuiltinStaticPluginInstances } from "@/plugin/core/Plugins.js";
 import { createRegisteredPluginInstances } from "@/plugin/core/PluginClassRegistry.js";
 import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.js";
 
@@ -268,10 +267,7 @@ export class AgentCore {
     mode: AgentMode;
   }): void {
     const presetPlugins = input.mode === "preset"
-      ? [
-          ...createRegisteredPluginInstances(this.runtime).values(),
-          ...createBuiltinStaticPluginInstances(this.runtime),
-        ]
+      ? [...createRegisteredPluginInstances(this.runtime).values()]
       : [];
     for (const plugin of [...presetPlugins, ...input.explicitPlugins]) {
       const name = String(plugin?.name || "").trim();
@@ -472,7 +468,7 @@ export class AgentCore {
       tools: this.tools,
       logger: this.logger,
       getInstructionSystemBlocks: () => this.loadInstructionSystemBlocks(),
-      getRuntimePluginSystemBlocks: async () => [],
+      getManagedPluginSystemBlocks: async () => [],
       getPluginSystemBlocks: () => this.loadPluginSystemBlocks(),
       ensureConfigured: async (session) => {
         await this.configureSession(session);

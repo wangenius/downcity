@@ -2,7 +2,7 @@
  * Control 概览路由。
  *
  * 关键点（中文）
- * - 聚合 overview 与 runtime plugins 两块轻量只读接口。
+ * - 聚合 overview 与 plugin 运行态两块轻量只读接口。
  * - 只负责路由层拼装，不承载复杂业务状态机。
  */
 
@@ -98,7 +98,7 @@ export function registerControlOverviewRoutes(
     });
   }
 
-  for (const routePath of buildControlRouteAliases("/plugins/runtime")) {
+  for (const routePath of buildControlRouteAliases("/plugins/list")) {
     app.get(routePath, (c) => {
       return c.json({
         success: true,

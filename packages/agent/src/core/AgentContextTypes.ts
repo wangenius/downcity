@@ -2,7 +2,7 @@
  * AgentCore 执行上下文类型定义。
  *
  * 关键点（中文）
- * - 这里定义 runtime plugin / plugin / prompt system 共用的统一执行上下文。
+ * - 这里定义 plugin runtime / plugin / prompt system 共用的统一执行上下文。
  * - `AgentContext` 表达的是“当前一次执行可见的能力面”，不是宿主状态本体。
  * - `AgentRuntime` 负责保存长期状态；`AgentContext` 负责把这些状态暴露成执行接口。
  */
@@ -40,7 +40,7 @@ import type {
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
- * 跨 runtime plugin 调用参数。
+ * 跨 plugin runtime 调用参数。
  */
 export interface InvokePluginParams {
   /**
@@ -58,7 +58,7 @@ export interface InvokePluginParams {
 }
 
 /**
- * 跨 runtime plugin 调用结果。
+ * 跨 plugin runtime 调用结果。
  */
 export interface InvokePluginResult {
   /**
@@ -76,7 +76,7 @@ export interface InvokePluginResult {
 }
 
 /**
- * 跨 runtime plugin 调用端口。
+ * 跨 plugin runtime 调用端口。
  */
 export interface InvokePluginPort {
   /**
@@ -214,7 +214,7 @@ export interface SessionCollectionPort {
  *
  * 关键点（中文）
  * - 这是当前 agent 已装配好的 chat 运行时视图。
- * - 其他 runtime plugin 只能通过这里消费 chat 能力，不能直接 import chat runtime 模块。
+ * - 其他 plugin runtime 只能通过这里消费 chat 能力，不能直接 import chat runtime 模块。
  */
 export interface ChatRuntimePort {
   /**
@@ -279,12 +279,12 @@ export interface AgentContext {
    * Session 能力入口。
    *
    * 关键点（中文）
-   * - runtime plugin 与 plugin 都通过这里访问 session 执行与持久化能力。
+   * - plugin runtime 与 plugin 都通过这里访问 session 执行与持久化能力。
    * - 内外统一使用 `sessionId` 语义。
    */
   session: SessionCollectionPort;
   /**
-   * 跨 runtime plugin 调用主入口。
+   * 跨 plugin runtime 调用主入口。
    */
   invoke: InvokePluginPort;
   /**

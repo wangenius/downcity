@@ -2,7 +2,7 @@
  * `city plugin` 运行态远程 Agent server 调用辅助。
  *
  * 关键点（中文）
- * - 统一处理 runtime list/control/command 三类需要访问 Agent server 的命令。
+ * - 统一处理 list/control/command 三类需要访问 Agent server 的命令。
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 
@@ -13,26 +13,26 @@ import type {
   PluginCommandResponse,
   PluginControlAction,
   PluginControlResponse,
-  PluginListResponse,
+  PluginStateListResponse,
 } from "@downcity/agent";
 import {
   parseCommandPayload,
   resolvePluginProjectRoot,
   validateAgentProjectRoot,
-} from "./PluginRuntimeSupport.js";
+} from "./PluginTargetSupport.js";
 
 const PLUGIN_COMMAND_TIMEOUT_MS = 120_000;
 
 /**
- * 执行 `plugin list --runtime`。
+ * 执行 `plugin list`。
  */
-export async function runPluginRuntimeListCommand(options: PluginCliBaseOptions): Promise<void> {
+export async function runManagedPluginListCommand(options: PluginCliBaseOptions): Promise<void> {
   const resolved = await resolvePluginProjectRoot(options);
   if (!resolved.projectRoot) {
     printResult({
       asJson: options.json,
       success: false,
-      title: "plugin runtime list failed",
+      title: "plugin list failed",
       payload: {
         error: resolved.error || "Failed to resolve agent project path",
       },
@@ -45,16 +45,16 @@ export async function runPluginRuntimeListCommand(options: PluginCliBaseOptions)
     printResult({
       asJson: options.json,
       success: false,
-      title: "plugin runtime list failed",
+      title: "plugin list failed",
       payload: {
         error: pathError,
       },
     });
     return;
   }
-  const remote = await callAgentTransport<PluginListResponse>({
+  const remote = await callAgentTransport<PluginStateListResponse>({
     projectRoot,
-    path: "/api/plugins/runtime/list",
+    path: "/api/plugins/list",
     method: "GET",
     host: options.host,
     port: options.port,
@@ -65,7 +65,7 @@ export async function runPluginRuntimeListCommand(options: PluginCliBaseOptions)
     printResult({
       asJson: options.json,
       success: Boolean(remote.data.success),
-      title: remote.data.success ? "plugin runtime listed" : "plugin runtime list failed",
+      title: remote.data.success ? "plugin listed" : "plugin list failed",
       payload: {
         ...(Array.isArray(remote.data.plugins) ? { plugins: remote.data.plugins } : {}),
         ...(remote.data.error ? { error: remote.data.error } : {}),
@@ -77,7 +77,7 @@ export async function runPluginRuntimeListCommand(options: PluginCliBaseOptions)
   printResult({
     asJson: options.json,
     success: false,
-    title: "plugin runtime list failed",
+    title: "plugin list failed",
     payload: {
       error: remote.error || "Unknown error",
     },
@@ -87,7 +87,7 @@ export async function runPluginRuntimeListCommand(options: PluginCliBaseOptions)
 /**
  * 执行 `plugin status/start/stop/restart`。
  */
-export async function runPluginRuntimeControlCommand(params: {
+export async function runManagedPluginControlCommand(params: {
   pluginName: string;
   action: PluginControlAction;
   options: PluginCliBaseOptions;
@@ -119,7 +119,7 @@ export async function runPluginRuntimeControlCommand(params: {
   }
   const remote = await callAgentTransport<PluginControlResponse>({
     projectRoot,
-    path: "/api/plugins/runtime/control",
+    path: "/api/plugins/control",
     method: "POST",
     host: params.options.host,
     port: params.options.port,
@@ -156,7 +156,7 @@ export async function runPluginRuntimeControlCommand(params: {
 /**
  * 执行 `plugin command` 桥接。
  */
-export async function runPluginRuntimeCommandBridge(params: {
+export async function runManagedPluginCommandBridge(params: {
   pluginName: string;
   command: string;
   payloadRaw?: string;
@@ -189,7 +189,7 @@ export async function runPluginRuntimeCommandBridge(params: {
   }
   const remote = await callAgentTransport<PluginCommandResponse>({
     projectRoot,
-    path: "/api/plugins/runtime/command",
+    path: "/api/plugins/command",
     method: "POST",
     timeoutMs: PLUGIN_COMMAND_TIMEOUT_MS,
     host: params.options.host,

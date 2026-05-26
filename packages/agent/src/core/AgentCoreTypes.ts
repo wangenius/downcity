@@ -72,7 +72,7 @@ export interface AgentRuntime extends AgentRuntimeBase {
    *
    * 关键点（中文）
    * - 返回值是统一的 `SessionPort`，而不是裸 `Executor`。
-   * - 这样 HTTP / runtime plugin / chat queue / contact 等入口都能复用同一层会话装配与执行兜底。
+   * - 这样 HTTP / plugin runtime / chat queue / contact 等入口都能复用同一层会话装配与执行兜底。
    */
   getSession(sessionId: string): SessionPort;
   /**

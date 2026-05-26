@@ -1,5 +1,5 @@
 /**
- * TaskActionInput：task runtime plugin 的 CLI 输入映射模块。
+ * TaskActionInput：task plugin runtime 的 CLI 输入映射模块。
  *
  * 关键点（中文）
  * - 统一处理命令行到 task action payload 的转换。

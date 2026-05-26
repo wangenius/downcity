@@ -29,9 +29,9 @@ export type PluginStateView = {
 };
 
 /**
- * plugin 列表响应。
+ * plugin 状态列表响应。
  */
-export type PluginListResponse = {
+export type PluginStateListResponse = {
   success: boolean;
   plugins?: PluginStateView[];
   error?: string;

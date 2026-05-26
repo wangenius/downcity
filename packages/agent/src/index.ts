@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这是 agent 包唯一稳定的公开入口。
  * - 只导出 SDK、plugin 作者 API、city 运行集成 API 与跨包协议类型。
- * - HTTP router、sandbox runner、内部 runtime plugin runner 等实现细节不从根入口暴露。
+ * - HTTP router、sandbox runner、内部 plugin runtime runner 等实现细节不从根入口暴露。
  */
 
 // SDK 入口
@@ -94,6 +94,8 @@ export { callAgentTransport } from "./runtime/transport/rpc/Transport.js";
 
 // Runtime plugin 运行集成
 export { listRegisteredPlugins } from "./plugin/core/PluginClassRegistry.js";
+export { listManagedPlugins } from "./plugin/core/PluginClassRegistry.js";
+export { listLocalPlugins } from "./plugin/core/PluginClassRegistry.js";
 export {
   startAllPlugins,
   stopAllPlugins,
@@ -120,7 +122,7 @@ export {
 } from "./plugin/core/Catalog.js";
 export { runLocalPluginAction } from "./plugin/core/LocalExecution.js";
 export { registerAllPluginsForCli } from "./plugin/core/PluginCommand.js";
-export { listBuiltinPluginRuntimeAuthPolicies } from "./plugin/core/HttpRoutes.js";
+export { listBuiltinPluginAuthPolicies } from "./plugin/core/HttpRoutes.js";
 export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js";
 
 // 项目与配置集成
@@ -236,7 +238,7 @@ export type {
   PluginPipelineHook,
   PluginPort,
   PluginResolveHook,
-  PluginRuntimeHttpRegistration,
+  PluginHttpRegistration,
   PluginActionInvokeParams,
   PluginActionInvokePort,
   PluginActionInvokeResult,
@@ -250,6 +252,7 @@ export type {
 } from "./plugin/types/Plugin.js";
 export type {
   PluginActionResponse,
+  PluginCatalogResponse,
   PluginAvailabilityResponse,
   PluginAvailabilityView,
 } from "./plugin/types/PluginApi.js";
@@ -271,7 +274,7 @@ export type {
   PluginCommandResponse,
   PluginControlAction,
   PluginControlResponse,
-  PluginListResponse,
+  PluginStateListResponse,
   PluginStateView,
 } from "./plugin/types/Plugins.js";
 export type {

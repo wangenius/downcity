@@ -2,7 +2,6 @@
   "title": "SDK Examples",
   "pages": [
     "minimal-local-agent",
-    "local-agent-with-chat-service",
     "remote-agent-basic",
     "live-ui-example"
   ]

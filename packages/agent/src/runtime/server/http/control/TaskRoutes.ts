@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 聚合 tasks/runs/logs 相关接口。
- * - 任务动作统一复用 task runtime plugin command，不在 UI 层重复实现业务语义。
+ * - 任务动作统一复用 task plugin runtime command，不在 UI 层重复实现业务语义。
  */
 
 import fs from "fs-extra";

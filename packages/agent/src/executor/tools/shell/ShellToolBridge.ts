@@ -2,7 +2,7 @@
  * Shell tool 运行时桥接与响应整理。
  *
  * 关键点（中文）
- * - tool 层只负责协议适配，不直接持有 shell runtime plugin 具体实现。
+ * - tool 层只负责协议适配，不直接持有 shell plugin runtime 具体实现。
  * - runtime 注入、桥接协议解析、输出扁平化都收敛在这里，避免 `Tool.ts` 继续膨胀。
  */
 
@@ -191,11 +191,11 @@ export function clearShellCommandBridge(shellId: string): void {
 }
 
 /**
- * 将 shell runtime plugin 响应整理为通用工具输出。
+ * 将 shell plugin runtime 响应整理为通用工具输出。
  */
 export function flattenShellActionResponse(params: {
   /**
-   * runtime plugin 返回的 shell 响应。
+   * plugin runtime 返回的 shell 响应。
    */
   response: ShellActionResponse;
   /**
@@ -240,7 +240,7 @@ export function flattenShellActionResponse(params: {
  */
 export function flattenShellExecResponse(params: {
   /**
-   * runtime plugin 返回的 shell 响应。
+   * plugin runtime 返回的 shell 响应。
    */
   response: ShellActionResponse;
   /**
@@ -332,7 +332,7 @@ export async function bridgeCommandResponse(params: {
 }
 
 /**
- * 调用 shell runtime plugin action。
+ * 调用 shell plugin runtime action。
  */
 export async function invokeShellAction<TPayload extends JsonValue = JsonValue>(params: {
   /**

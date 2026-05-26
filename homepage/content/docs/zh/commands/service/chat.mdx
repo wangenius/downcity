@@ -98,7 +98,7 @@ city chat auth set telegram:12345678
 - 调度任务会写入当前 agent 项目的 `.downcity/schedule.sqlite`
 - 如果 runtime 重启，未完成消息会在下次启动后自动恢复
 - `--delay` 与 `--time` 不能同时使用
-- 该能力只面向 one-shot 延迟/定时发送；cron 或长期工作流仍建议使用 `task` runtime plugin
+- 该能力只面向 one-shot 延迟/定时发送；cron 或长期工作流仍建议使用 `task` plugin
 
 更详细的说明、恢复行为与 API 示例见：
 

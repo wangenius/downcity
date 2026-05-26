@@ -34,7 +34,7 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`,
 | `city service start/stop/restart/command` | Target agent is running; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | Advanced targeting form; prefer `city <service> ...` for daily usage |
 | `city plugin list/status` | None | `--json` | Static console-level plugin catalog; does not resolve any agent |
 | `city plugin action ...` | Project has `downcity.json` | `--path` | Advanced local execution form; prefer `city <plugin> ...` for daily usage |
-| `city <service> <action>` (e.g. `city chat ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/plugins/runtime/command` |
+| `city <service> <action>` (e.g. `city chat ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/plugins/command` |
 | `city <plugin> <action>` (e.g. `city asr ...`) | Project has `downcity.json` | `--path` | Executes locally against the selected project |
 
 Additional notes:

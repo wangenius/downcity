@@ -11,7 +11,7 @@ You want one plugin to provide a read-only snapshot endpoint:
 
 - `GET /api/notes/snapshot`
 
-That is a clean fit for `plugin.http.runtime`.
+That is a clean fit for `plugin.http.server`.
 
 ## Example
 
@@ -60,7 +60,7 @@ This capability belongs to the full runtime HTTP assembly path.
 
 That means:
 
-- `plugin.http.runtime` is not the same kind of explicit call as `agent.plugins.runAction(...)`
+- `plugin.http.server` is not the same kind of explicit call as `agent.plugins.runAction(...)`
 - the current minimal SDK `agent.start({ http: { ... } })` only exposes session APIs and does not auto-mount plugin HTTP routes
 - if you need this, think of it as a fuller host/runtime integration capability
 

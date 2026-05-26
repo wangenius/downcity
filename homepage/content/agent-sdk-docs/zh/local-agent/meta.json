@@ -3,7 +3,7 @@
   "pages": [
     "quickstart",
     "constructor-options",
-    "tools-and-services",
+    "tools-and-plugins",
     "http-and-rpc",
     "example-node-service"
   ]

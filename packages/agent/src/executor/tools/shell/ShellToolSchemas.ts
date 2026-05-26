@@ -35,7 +35,7 @@ export const shellStartInputSchema = z.object({
   auto_notify_on_exit: z
     .boolean()
     .optional()
-    .describe("Whether the shell runtime plugin should auto-return to the owning chat agent when the command exits."),
+    .describe("Whether the shell plugin runtime should auto-return to the owning chat agent when the command exits."),
 });
 
 export const shellExecInputSchema = z.object({

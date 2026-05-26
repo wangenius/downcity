@@ -16,7 +16,7 @@ import { fileURLToPath } from "url";
 import { Command, Option } from "commander";
 import { registerAllPluginsForCli } from "@downcity/agent";
 import { registerPluginsCommand } from "./shared/Plugins.js";
-import { registerAllRuntimePluginsForCli } from "./shared/PluginRuntimeActionCommands.js";
+import { registerManagedPluginCommandsForCli } from "./shared/ManagedPluginActionCommands.js";
 import { registerControlPlaneCommands } from "./control-plane/ControlPlaneCommand.js";
 import { registerAgentCommands } from "./shared/IndexAgentCommand.js";
 import { registerEnvCommand } from "./shared/Env.js";
@@ -95,8 +95,8 @@ registerChatCommand(program);
 
 registerPluginsCommand(program);
 
-// runtime plugin 命令统一注册（chat / task / memory / shell / future runtime plugins）
-registerAllRuntimePluginsForCli(program);
+// 受 agent 托管的 plugin 命令统一注册（chat / task / memory / shell / future managed plugins）
+registerManagedPluginCommandsForCli(program);
 // 插件命令统一注册（skill / asr / tts / future plugins）
 registerAllPluginsForCli(program);
 

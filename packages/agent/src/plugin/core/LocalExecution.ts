@@ -12,6 +12,7 @@ import { logger as defaultLogger } from "@/utils/logger/Logger.js";
 import { loadAgentEnvSnapshot, loadDowncityConfig, loadGlobalEnvFromStore } from "@/config/Config.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { findBuiltinPlugin, listStaticPluginViews } from "@/plugin/core/Catalog.js";
+import { isManagedPlugin } from "@/plugin/core/PluginClassRegistry.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
@@ -99,6 +100,13 @@ export async function getLocalPluginAvailability(
       reasons: [`Unknown plugin: ${pluginName}`],
     };
   }
+  if (isManagedPlugin(plugin)) {
+    return {
+      enabled: false,
+      available: false,
+      reasons: [`Plugin "${plugin.name}" must run through an active agent.`],
+    };
+  }
 
   const context = createLocalPluginCommandContext(projectRoot);
   if (plugin.availability) {
@@ -136,6 +144,13 @@ export async function runLocalPluginAction(params: {
       success: false,
       error: `Unknown plugin: ${params.pluginName}`,
       message: `Unknown plugin: ${params.pluginName}`,
+    };
+  }
+  if (isManagedPlugin(plugin)) {
+    return {
+      success: false,
+      error: `Plugin "${plugin.name}" must run through an active agent`,
+      message: `Plugin "${plugin.name}" must run through an active agent`,
     };
   }
 

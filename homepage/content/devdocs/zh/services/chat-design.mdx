@@ -1,13 +1,13 @@
 ---
 title: Chat 设计原理
-description: 从当前 ChatService 的视角解释渠道消息如何进入系统、归到 session、执行并回发
+description: 从当前 chat plugin runtime 的视角解释渠道消息如何进入系统、归到 session、执行并回发
 ---
 
 # Chat 设计原理
 
 这页只解释一件事：
 
-- 当前 `chat` service 到底怎么工作
+- 当前 `chat` plugin runtime 到底怎么工作
 
 先给结论：
 
@@ -19,15 +19,15 @@ description: 从当前 ChatService 的视角解释渠道消息如何进入系统
 ## 一句话模型
 
 ```text
-用户消息先进入 chat service
-chat service 把消息整理并归到 session
+用户消息先进入 chat plugin runtime
+chat plugin runtime 把消息整理并归到 session
 session 内核负责真正执行
-chat service 再把结果发回聊天渠道
+chat plugin runtime 再把结果发回聊天渠道
 ```
 
 ## Chat 的真实职责
 
-`chat` service 负责：
+`chat` plugin runtime 负责：
 
 1. 接住 Telegram / Feishu / QQ 等渠道消息
 2. 做 principal 观测、鉴权、角色解析
@@ -52,7 +52,7 @@ chat service 再把结果发回聊天渠道
 
 - agent 持有 `AgentRuntime`
 - `AgentRuntime` 持有 `SessionFacade`
-- `ChatService` 通过 `AgentContext.session` 使用 `SessionFacade`
+- `chat` plugin runtime 通过 `AgentContext.session` 使用 `SessionFacade`
 
 ```mermaid
 flowchart LR
@@ -63,7 +63,7 @@ flowchart LR
     A4["PluginRegistry"]
   end
 
-  subgraph CHAT["Chat Service"]
+  subgraph CHAT["Chat Plugin Runtime"]
     C1["渠道适配"]
     C2["鉴权 / 角色解析"]
     C3["入站增强"]

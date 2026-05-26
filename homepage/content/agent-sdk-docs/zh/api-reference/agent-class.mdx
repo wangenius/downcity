@@ -20,7 +20,6 @@ description: 本地 Agent SDK 的核心公开接口
 - `path`
 - `tools`
 - `instruction`
-- `services`
 - `plugins`
 - `platform`
 - `configureSession`
@@ -40,7 +39,7 @@ description: 本地 Agent SDK 的核心公开接口
 
 - 启动 HTTP 服务
 - 启动本地 RPC 服务
-- 启动 service lifecycle
+- 启动 plugin lifecycle
 
 推荐写法：
 
@@ -58,7 +57,7 @@ await agent.start({
 
 - 仍然可以直接 `await agent.session()` 然后 `session.prompt()`
 - 但不会启动 HTTP / RPC
-- 也不会启动后台 service lifecycle
+- 也不会启动后台 plugin lifecycle
 
 `agent.stop()` 则负责关闭当前 agent 已启动的长期运行能力。
 

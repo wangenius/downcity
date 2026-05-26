@@ -181,7 +181,7 @@ export async function discoverProviderModels(params: {
   }
 }
 
-export { resolveProjectRoot } from "../shared/PluginRuntimeSupport.js";
+export { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
 
 /**
  * 设置项目 `downcity.json.execution.modelId`。

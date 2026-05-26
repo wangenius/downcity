@@ -15,7 +15,8 @@ import {
   buildStaticPluginAvailability,
   findBuiltinPlugin,
   findStaticPluginView,
-  listRegisteredPlugins,
+  listLocalPlugins,
+  listManagedPlugins,
   listStaticPluginViews,
   runLocalPluginAction,
 } from "@downcity/agent";
@@ -25,18 +26,18 @@ import { getDowncityJsonPath } from "@/config/Paths.js";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { emitCliBlock } from "./CliReporter.js";
 import { parseBoolean, parsePort } from "./IndexSupport.js";
-import { resolveProjectRoot } from "./PluginRuntimeSupport.js";
+import { resolveProjectRoot } from "./PluginTargetSupport.js";
 import {
-  runPluginRuntimeCommandBridge,
-  runPluginRuntimeControlCommand,
-} from "./PluginRuntimeRemote.js";
+  runManagedPluginCommandBridge,
+  runManagedPluginControlCommand,
+} from "./ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
 import { setCityPluginEnabled } from "@/platform/PluginLifecycle.js";
 
 type StaticCatalogEntry = {
   name: string;
   title: string;
-  kind: "runtime" | "extension";
+  kind: "managed" | "local";
   enabled: boolean;
   available: boolean;
   actionCount: number;
@@ -122,7 +123,7 @@ function truncateCell(input: string, width: number): string {
 function renderPluginCatalogTable(rows: Array<{
   name: string;
   title: string;
-  kind: "runtime" | "extension";
+  kind: "managed" | "local";
   enabled: boolean;
   available: boolean;
   actionCount: number;
@@ -166,24 +167,27 @@ function renderPluginCatalogTable(rows: Array<{
 }
 
 function listStaticCatalogEntries(): StaticCatalogEntry[] {
-  const runtimeEntries = listRegisteredPlugins().map((plugin) => ({
+  const managedEntries = listManagedPlugins().map((plugin) => ({
     name: plugin.name,
-    title: `${plugin.name} runtime plugin`,
-    kind: "runtime" as const,
+    title: String(plugin.title || plugin.name || "").trim() || plugin.name,
+    kind: "managed" as const,
     enabled: true,
     available: true,
     actionCount: Object.keys(plugin.actions || {}).length,
     actions: Object.keys(plugin.actions || {}).sort((left, right) => left.localeCompare(right)),
     hasSystem: typeof plugin.system === "function",
-    note: "Runtime plugin. Use `city plugin start/stop/restart/status` with an agent target for live state.",
+    note: "Managed plugin. Use `city plugin start/stop/restart/status` with an agent target for live state.",
   }));
 
-  const extensionEntries = listStaticPluginViews().map((plugin) => {
+  const localNames = new Set(listLocalPlugins().map((plugin) => plugin.name));
+  const localEntries = listStaticPluginViews()
+    .filter((plugin) => localNames.has(plugin.name))
+    .map((plugin) => {
     const availability = buildSafeStaticPluginAvailability(plugin.name);
     return {
       name: plugin.name,
       title: plugin.title,
-      kind: "extension" as const,
+      kind: "local" as const,
       enabled: availability.enabled,
       available: availability.available,
       actionCount: plugin.actions.length,
@@ -193,7 +197,7 @@ function listStaticCatalogEntries(): StaticCatalogEntry[] {
     };
   });
 
-  const merged = [...runtimeEntries, ...extensionEntries];
+  const merged = [...managedEntries, ...localEntries];
   const unique = new Map<string, StaticCatalogEntry>();
   for (const entry of merged) {
     if (!unique.has(entry.name)) {
@@ -609,7 +613,7 @@ export function registerPluginsCommand(program: Command): void {
 
   plugin
     .command("status <pluginName>")
-    .description("按 agent 目标查看 runtime plugin 运行状态")
+    .description("按 agent 目标查看托管 plugin 运行状态")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
@@ -617,7 +621,7 @@ export function registerPluginsCommand(program: Command): void {
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (pluginName: string, opts: PluginCliBaseOptions) => {
-      await runPluginRuntimeControlCommand({
+      await runManagedPluginControlCommand({
         pluginName,
         action: "status",
         options: opts,
@@ -626,7 +630,7 @@ export function registerPluginsCommand(program: Command): void {
 
   plugin
     .command("start <pluginName>")
-    .description("按 agent 目标启动 runtime plugin")
+    .description("按 agent 目标启动托管 plugin")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
@@ -634,7 +638,7 @@ export function registerPluginsCommand(program: Command): void {
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (pluginName: string, opts: PluginCliBaseOptions) => {
-      await runPluginRuntimeControlCommand({
+      await runManagedPluginControlCommand({
         pluginName,
         action: "start",
         options: opts,
@@ -643,7 +647,7 @@ export function registerPluginsCommand(program: Command): void {
 
   plugin
     .command("stop <pluginName>")
-    .description("按 agent 目标停止 runtime plugin")
+    .description("按 agent 目标停止托管 plugin")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
@@ -651,7 +655,7 @@ export function registerPluginsCommand(program: Command): void {
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (pluginName: string, opts: PluginCliBaseOptions) => {
-      await runPluginRuntimeControlCommand({
+      await runManagedPluginControlCommand({
         pluginName,
         action: "stop",
         options: opts,
@@ -660,7 +664,7 @@ export function registerPluginsCommand(program: Command): void {
 
   plugin
     .command("restart <pluginName>")
-    .description("按 agent 目标重启 runtime plugin")
+    .description("按 agent 目标重启托管 plugin")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
@@ -668,7 +672,7 @@ export function registerPluginsCommand(program: Command): void {
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
     .action(async (pluginName: string, opts: PluginCliBaseOptions) => {
-      await runPluginRuntimeControlCommand({
+      await runManagedPluginControlCommand({
         pluginName,
         action: "restart",
         options: opts,
@@ -677,7 +681,7 @@ export function registerPluginsCommand(program: Command): void {
 
   plugin
     .command("command <pluginName> <command>")
-    .description("按 agent 目标转发 runtime plugin command")
+    .description("按 agent 目标转发托管 plugin command")
     .option("--payload <json>", "可选 payload（JSON 字符串或普通字符串）")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
@@ -690,7 +694,7 @@ export function registerPluginsCommand(program: Command): void {
       command: string,
       opts: PluginCliBaseOptions & { payload?: string },
     ) => {
-      await runPluginRuntimeCommandBridge({
+      await runManagedPluginCommandBridge({
         pluginName,
         command,
         payloadRaw: opts.payload,

@@ -1,9 +1,9 @@
 /**
- * PluginCommandRequest：统一 runtime plugin command 请求解析模块。
+ * PluginCommandRequest：统一 plugin runtime command 请求解析模块。
  *
  * 关键点（中文）
  * - 统一收口 HTTP / RPC 两种入口的请求体解析。
- * - runtime plugin 远程调用统一走 runtime command 协议，不再让 action 自带 HTTP route。
+ * - plugin runtime 远程调用统一走 runtime command 协议，不再让 action 自带 HTTP route。
  * - 通用调度参数（`schedule` / `delay` / `time`）也在这里一次性归一化。
  */
 
@@ -17,7 +17,7 @@ import {
 type JsonRecord = Record<string, unknown>;
 
 /**
- * 统一 runtime plugin command 请求体。
+ * 统一 plugin runtime command 请求体。
  */
 export type PluginCommandRequestBody = {
   /**
@@ -77,7 +77,7 @@ function readScheduleInput(
 }
 
 /**
- * 解析统一 runtime plugin command 请求体。
+ * 解析统一 plugin runtime command 请求体。
  */
 export function parsePluginCommandRequestBody(
   rawBody: JsonValue | undefined,

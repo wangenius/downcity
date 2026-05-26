@@ -2,7 +2,7 @@
  * contact 远端 HTTP 客户端。
  *
  * 关键点（中文）
- * - contact 的 agent-to-agent 调用统一走 runtime plugin command 接口。
+ * - contact 的 agent-to-agent 调用统一走 plugin runtime command 接口。
  * - 已建联后的敏感调用必须携带 contact token。
  */
 
@@ -42,7 +42,7 @@ async function postPluginCommand<T>(params: {
   token?: string;
   wrapBody?: boolean;
 }): Promise<T> {
-  const url = new URL("/api/plugins/runtime/command", normalizeEndpoint(params.endpoint)).toString();
+  const url = new URL("/api/plugins/command", normalizeEndpoint(params.endpoint)).toString();
   const payloadBody =
     params.wrapBody
       ? {

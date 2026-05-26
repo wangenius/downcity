@@ -201,7 +201,7 @@ The local SDK now supports a real plugin registry, but a few boundaries still ma
 - the SDK does not auto-register every built-in plugin
 - whether a plugin can run is still affected by city-level lifecycle enablement
 - the local SDK session prompt path injects `plugin.system()` for plugins explicitly registered on that SDK Agent
-- `plugin.http.runtime` depends on the full runtime HTTP assembly path, not the minimal SDK HTTP server
+- `plugin.http.server` depends on the full runtime HTTP assembly path, not the minimal SDK HTTP server
 
 ## If you want real scenario-driven examples
 
@@ -219,4 +219,3 @@ Continue with:
 - [Plugin actions](/en/agent-sdk-docs/plugins/plugin-actions)
 - [Plugin hooks and resolve](/en/agent-sdk-docs/plugins/plugin-hooks)
 - [Plugin HTTP injection](/en/agent-sdk-docs/plugins/plugin-http)
-- [Plugin vs service](/en/agent-sdk-docs/plugins/plugin-vs-service)

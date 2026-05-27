@@ -22,7 +22,7 @@
       "deployment": "Deployment",
       "general": "General",
       "features": "Features",
-      "service": "Service"
+      "service": "Features"
     },
     "items": {
       "modify-code": {
@@ -56,9 +56,9 @@
         "category": "features"
       },
       "custom-services": {
-        "question": "Can I add custom services?",
-        "answer": "Absolutely. Downcity is designed to be extensible. You can add custom webhooks, integrate with your existing tools, and build custom skills. The webhook API makes it easy to connect with any service.",
-        "category": "service"
+        "question": "Can I add custom plugins or integrations?",
+        "answer": "Absolutely. Downcity is designed to be extensible. You can add custom webhooks, integrate with your existing tools, and build custom skills. The webhook API makes it easy to connect with external systems.",
+        "category": "features"
       },
       "pricing": {
         "question": "What's the pricing model?",
@@ -93,7 +93,7 @@
             "desc": "Behavior rules & guidelines"
           },
           "telegram": {
-            "name": "Telegram Service",
+            "name": "Telegram Integration",
             "desc": "Chat interface"
           },
           "tasks": {
@@ -108,10 +108,10 @@
       },
       "v2": {
         "title": "Team Collaboration",
-        "description": "Enhanced services for team workflows and multi-agent scenarios.",
+        "description": "Enhanced integrations for team workflows and multi-agent scenarios.",
         "features": {
           "slack": {
-            "name": "Slack Service",
+            "name": "Slack Integration",
             "desc": "Enterprise chat"
           },
           "snapshot": {
@@ -120,7 +120,7 @@
           },
           "githubApp": {
             "name": "GitHub App",
-            "desc": "Native service"
+            "desc": "Native integration"
           },
           "multiAgent": {
             "name": "Multi-Agent",
@@ -142,10 +142,10 @@
           },
           "remoteHosting": {
             "name": "Remote Hosting",
-            "desc": "Managed service"
+            "desc": "Managed runtime"
           },
           "webIde": {
-            "name": "Web IDE Service",
+            "name": "Web IDE Integration",
             "desc": "Browser-based dev"
           },
           "sso": {

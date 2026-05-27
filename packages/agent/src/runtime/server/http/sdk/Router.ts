@@ -7,16 +7,16 @@
  */
 
 import { Hono } from "hono";
-import type { AgentCore } from "@/core/AgentCore.js";
+import type { AgentSessionCollection } from "@/sdk/AgentSdkTypes.js";
 import { registerSdkSessionRoutes } from "@/runtime/server/http/sdk/SessionRoutes.js";
 
 /**
  * 创建 SDK HTTP router。
  */
 export function createSdkRouter(
-  core: Pick<AgentCore, "session" | "sessions">,
+  sessionCollection: AgentSessionCollection,
 ): Hono {
   const router = new Hono();
-  registerSdkSessionRoutes(router, core);
+  registerSdkSessionRoutes(router, sessionCollection);
   return router;
 }

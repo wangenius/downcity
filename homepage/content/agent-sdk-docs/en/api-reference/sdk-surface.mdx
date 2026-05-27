@@ -1,0 +1,164 @@
+---
+title: SDK Surface
+description: The practical public API surface of Agent, RemoteAgent, and Session from a developer's point of view
+---
+
+# SDK Surface
+
+If you only want the practical developer-facing API shape, remember this:
+
+- `Agent` is the local runtime entry
+- `RemoteAgent` is the remote HTTP client
+- `AgentSession` is the local working object
+- `RemoteAgentSession` is the remote working object
+
+## Recommended mental model
+
+The SDK is session-first.
+
+In most apps, the real object you work with is not `Agent` itself, but the session returned by:
+
+- `agent.createSession()`
+- `agent.getSession(sessionId)`
+- `remoteAgent.createSession()`
+- `remoteAgent.getSession(sessionId)`
+
+## Typical local flow
+
+```ts
+import { Agent } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "demo",
+  path: process.cwd(),
+});
+
+const session = await agent.createSession();
+await session.set({ model });
+
+const turn = await session.prompt({
+  query: "Summarize this repository",
+});
+
+await turn.finished;
+```
+
+## Typical remote flow
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314",
+});
+
+const session = await agent.getSession("repo-analysis");
+const turn = await session.prompt({
+  query: "Continue",
+});
+
+await turn.finished;
+```
+
+## `Agent`
+
+Use `Agent` when the agent runtime lives in the same local process or host environment.
+
+Core methods:
+
+- `new Agent(options)`
+- `agent.start(options?)`
+- `agent.stop()`
+- `agent.createSession(input?)`
+- `agent.getSession(sessionId)`
+- `agent.listSessions(input?)`
+- `agent.setInstruction(input)`
+- `agent.getConfig()`
+- `agent.getLogger()`
+- `agent.plugins`
+
+Typical responsibilities:
+
+- create and resume local sessions
+- start HTTP / RPC runtime capabilities
+- expose plugin integration
+- provide narrow advanced helpers for config and logging
+
+## `RemoteAgent`
+
+Use `RemoteAgent` when another process already exposed an agent over HTTP.
+
+Core methods:
+
+- `new RemoteAgent({ baseUrl })`
+- `agent.createSession(input?)`
+- `agent.getSession(sessionId)`
+- `agent.listSessions(input?)`
+
+Typical responsibilities:
+
+- connect to an existing remote agent server
+- switch to a known remote session
+- browse available remote sessions
+
+## `AgentSession`
+
+`AgentSession` is the main local execution object.
+
+Core methods:
+
+- `session.id`
+- `session.agentId`
+- `session.config`
+- `session.set(input)`
+- `session.getInfo()`
+- `session.prompt(input)`
+- `session.subscribe(subscriber)`
+- `session.history(input?)`
+- `session.system()`
+- `session.fork(input?)`
+
+Typical usage order:
+
+1. `await agent.createSession()`
+2. `await session.set({ model })`
+3. `const turn = await session.prompt({ query })`
+4. `await turn.finished`
+5. optional: `session.history()` / `session.getInfo()` / `session.fork()`
+
+## `RemoteAgentSession`
+
+`RemoteAgentSession` keeps nearly the same interaction shape as local sessions, but without local model injection.
+
+Core methods:
+
+- `session.id`
+- `session.getInfo()`
+- `session.prompt(input)`
+- `session.subscribe(subscriber)`
+- `session.history(input?)`
+- `session.system()`
+- `session.fork(input?)`
+
+Important difference:
+
+- local `AgentSession` supports `set({ model })`
+- remote `RemoteAgentSession` does not accept a local model instance from the client
+
+## Which method to use for what
+
+- Use `createSession()` when you want a brand new conversation
+- Use `getSession(sessionId)` when you want to continue a known session
+- Use `listSessions()` when you want a session picker, history sidebar, or third-party session browser
+- Use `getInfo()` when you want one session's current summary/detail snapshot
+- Use `history()` when you want paged conversation content
+- Use `subscribe()` when you want future turn events
+- Use `system()` when you want the current effective system prompt snapshot
+- Use `fork()` when you want to branch from the current conversation state
+
+## Reading next
+
+- [Agent Class](/en/agent-sdk-docs/api-reference/agent-class)
+- [RemoteAgent Class](/en/agent-sdk-docs/api-reference/remote-agent-class)
+- [Session Overview](/en/agent-sdk-docs/sessions/overview)
+- [Session Types and Results](/en/agent-sdk-docs/api-reference/session-types)

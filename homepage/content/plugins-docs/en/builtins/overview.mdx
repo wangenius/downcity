@@ -1,0 +1,98 @@
+---
+title: Built-ins Overview
+description: The full built-in plugin map in Downcity, including public SDK plugins and platform-managed infrastructure plugins
+---
+
+# Built-ins Overview
+
+The current built-in plugin set in code includes:
+
+- `auth`
+- `skill`
+- `web`
+- `asr`
+- `tts`
+- `workboard`
+- `chat`
+- `contact`
+- `schedule`
+- `task`
+- `memory`
+- `shell`
+
+## Two groups matter
+
+### Public SDK-facing built-ins
+
+These are the ones most developers are likely to read first:
+
+- `auth`
+- `skill`
+- `web`
+- `asr`
+- `tts`
+- `workboard`
+- `chat`
+
+These are the clearest examples for:
+
+- action plugins
+- hook or resolve plugins
+- system text plugins
+- runtime HTTP plugins
+- lifecycle plugins that normal SDK users may still understand directly
+
+### Platform-managed or infrastructure built-ins
+
+These are also built-ins in code, but they are more platform-oriented:
+
+- `contact`
+- `schedule`
+- `task`
+- `memory`
+- `shell`
+
+These plugins are usually read to understand how the platform is assembled, not because every SDK user should manually attach them to a local `Agent`.
+
+## How to read this section
+
+- If you want user-facing capability plugins, start with `skill`, `web`, `asr`, `tts`, and `chat`
+- If you want platform rule layers, read `auth`
+- If you want control-plane or status surfaces, read `workboard`
+- If you want infrastructure patterns, read `schedule`, `task`, `memory`, and `shell`
+
+## Responsibility map
+
+| Plugin | Main role | Shape |
+| --- | --- | --- |
+| `auth` | authorization and role resolution | rule layer |
+| `skill` | skill discovery and installation | action + system |
+| `web` | web provider strategy | config + setup + usage + actions + system |
+| `asr` | speech input and augmentation | action + pipeline + system |
+| `tts` | text-to-speech generation | action + setup + usage + system |
+| `workboard` | work snapshots and status surfaces | availability + runtime HTTP |
+| `chat` | channel runtime and queue worker | lifecycle + actions + system |
+| `contact` | peer-to-peer agent linking and sharing | action + system + lifecycle shell |
+| `schedule` | plugin action scheduling infrastructure | lifecycle-only infrastructure |
+| `task` | task scheduler and cron execution | lifecycle + actions + system |
+| `memory` | memory storage and retrieval | lifecycle + actions + system |
+| `shell` | shell session runtime | lifecycle + actions |
+
+## Important distinction
+
+Do not read “built-in” as “all of these are equally public.”
+
+Some built-ins are best understood as:
+
+- public capability plugins
+- platform integration plugins
+- infrastructure plugins
+
+That distinction is one of the reasons the plugin concept docs stay in Agent SDK Docs, while concrete plugin guides live here.
+
+## Related concept docs
+
+- [Plugin Overview](/en/agent-sdk-docs/plugins/overview)
+- [Plugin Design Patterns](/en/agent-sdk-docs/plugins/design-patterns)
+- [Plugin Lifecycle](/en/agent-sdk-docs/plugins/lifecycle)
+- [Plugin Availability](/en/agent-sdk-docs/plugins/plugin-availability)

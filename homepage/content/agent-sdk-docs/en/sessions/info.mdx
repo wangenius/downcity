@@ -1,0 +1,41 @@
+---
+title: session.getInfo()
+description: Read the current Session summary and detail snapshot
+---
+
+# `session.getInfo()`
+
+`session.getInfo()` returns the current summary/detail snapshot for one session.
+
+## Example
+
+```ts
+const session = await agent.getSession("repo-analysis");
+
+const info = await session.getInfo();
+
+console.log(info.sessionId);
+console.log(info.previewText);
+console.log(info.messageCount);
+```
+
+## What it returns
+
+Typical fields include:
+
+- `agentId`
+- `sessionId`
+- `title`
+- `previewText`
+- `messageCount`
+- `createdAt`
+- `updatedAt`
+- `modelLabel`
+- `executing`
+- `timezone`
+
+## Good use cases
+
+- rendering the selected session header in UI
+- checking whether a session is currently executing
+- reading lightweight session detail before loading full history

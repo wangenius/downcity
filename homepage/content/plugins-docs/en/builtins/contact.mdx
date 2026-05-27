@@ -1,0 +1,44 @@
+---
+title: contact Plugin
+description: Agent-to-agent linking, approval, chat, and share flows for trusted peer connections
+---
+
+# `contact` Plugin
+
+`contact` is a peer-to-peer agent relationship plugin.
+
+It handles:
+
+- link and approve flows
+- trusted contact establishment
+- point-to-point chat
+- text, link, file, and directory sharing
+
+## Main shape
+
+- `actions`
+- `system`
+- minimal `lifecycle`
+
+## What it is for
+
+Use `contact` when one agent needs to:
+
+- link with another agent instance
+- approve or confirm a trusted contact
+- send direct chat or share payloads into the other side's inbox
+
+## Important semantics
+
+- each contact keeps a long-lived contact history
+- the plugin itself is built-in, but it is more platform-integration-oriented than general SDK-first
+- its lifecycle is effectively a lightweight shell; most behavior is action-driven
+
+## Public status
+
+`ContactPlugin` is built-in in code, but it is not one of the main public SDK-facing plugin exports from the package root today.
+
+## Related docs
+
+- [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions)
+- [Built-ins Overview](/en/plugins-docs/builtins/overview)

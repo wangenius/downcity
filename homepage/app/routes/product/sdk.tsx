@@ -7,7 +7,7 @@ const PAGE = {
     title: "Product · City SDK",
     subtitle: "把 city runtime、CLI、control plane 与能力平台接入你的运行体系，让仓库、Agent 与运维边界保持统一。",
     docsCtaLabel: "查看 City SDK 文档",
-    docsCtaHint: "Quick Start、CLI、配置、Service、Operations 都在主 docs 中。",
+    docsCtaHint: "Quick Start、CLI、配置、Plugins、Operations 都在主 docs 中。",
     highlights: [
       {
         title: "统一 city runtime 与控制平面",
@@ -15,7 +15,7 @@ const PAGE = {
       },
       {
         title: "以仓库为边界组织运行",
-        description: "让配置、命令、Service、任务与状态都围绕 city 的 repo-native 结构展开，降低运维与排障成本。",
+        description: "让配置、命令、Plugin、任务与状态都围绕 city 的 repo-native 结构展开，降低运维与排障成本。",
       },
       {
         title: "从本地到团队部署一致",
@@ -24,7 +24,7 @@ const PAGE = {
     ],
     scenesTitle: "典型场景",
     scenes: [
-      "团队运行入口：统一启动 city、Console、channel 和 service 运行态。",
+      "团队运行入口：统一启动 city、Console、channel 和 plugin 运行态。",
       "CLI 驱动运维：把 agent 创建、启动、重载、状态检查都收束到一套命令面。",
       "平台化接入：在你自己的部署体系里承接模型、任务、联系人、记忆与 shell 能力。",
     ],
@@ -40,7 +40,7 @@ const PAGE = {
     subtitle:
       "Integrate the city runtime, CLI, control plane, and capability platform into one operating surface for your workflows.",
     docsCtaLabel: "Open City SDK Docs",
-    docsCtaHint: "Quick start, CLI, configuration, services, and operations live in the main docs.",
+    docsCtaHint: "Quick start, CLI, configuration, plugins, and operations live in the main docs.",
     highlights: [
       {
         title: "Unify runtime and control plane",
@@ -48,7 +48,7 @@ const PAGE = {
       },
       {
         title: "Organize operations around the repo",
-        description: "Let configuration, commands, services, tasks, and state all follow one repo-native city structure.",
+        description: "Let configuration, commands, plugins, tasks, and state all follow one repo-native city structure.",
       },
       {
         title: "Keep local and team deployment aligned",
@@ -57,7 +57,7 @@ const PAGE = {
     ],
     scenesTitle: "Typical Scenarios",
     scenes: [
-      "Team runtime entry: start city, Console, channels, and services from one operating surface.",
+      "Team runtime entry: start city, Console, channels, and plugins from one operating surface.",
       "CLI-driven operations: create, start, reload, and inspect agents through one command layer.",
       "Platform integration: host model, task, contact, memory, and shell capabilities inside your own deployment boundary.",
     ],

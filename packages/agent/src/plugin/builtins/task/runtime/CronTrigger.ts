@@ -9,19 +9,19 @@
 import cron from "node-cron";
 import type { ScheduledTask } from "node-cron";
 import {
-  ServiceCronEngine,
-  ServiceCronTriggerDefinition,
+  TaskCronEngine,
+  TaskCronTriggerDefinition,
 } from "../types/Cron.js";
 
-export class TaskCronTriggerEngine implements ServiceCronEngine {
-  private readonly definitions: Map<string, ServiceCronTriggerDefinition> =
+export class TaskCronTriggerEngine implements TaskCronEngine {
+  private readonly definitions: Map<string, TaskCronTriggerDefinition> =
     new Map();
   private readonly scheduledJobs: Map<string, ScheduledTask> = new Map();
   private started = false;
 
-  register(definition: ServiceCronTriggerDefinition): void {
+  register(definition: TaskCronTriggerDefinition): void {
     const id = String(definition.id || "").trim();
-    if (!id) throw new Error("ServiceCronTriggerDefinition.id is required");
+    if (!id) throw new Error("TaskCronTriggerDefinition.id is required");
 
     const expression = String(definition.expression || "").trim();
     if (!expression)
@@ -30,7 +30,7 @@ export class TaskCronTriggerEngine implements ServiceCronEngine {
       throw new Error(`Invalid cron expression for job ${id}: ${expression}`);
     }
 
-    const normalized: ServiceCronTriggerDefinition = {
+    const normalized: TaskCronTriggerDefinition = {
       ...definition,
       id,
       expression,
@@ -82,7 +82,7 @@ export class TaskCronTriggerEngine implements ServiceCronEngine {
     this.scheduledJobs.clear();
   }
 
-  private scheduleOne(definition: ServiceCronTriggerDefinition): void {
+  private scheduleOne(definition: TaskCronTriggerDefinition): void {
     const previous = this.scheduledJobs.get(definition.id);
     if (previous) {
       try {

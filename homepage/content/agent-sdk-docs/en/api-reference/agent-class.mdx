@@ -10,9 +10,16 @@ The local `Agent` exposes these core public entry points:
 - `new Agent(options)`
 - `agent.start(options?)`
 - `agent.stop()`
-- `agent.session(sessionId?)`
-- `agent.sessions()`
+- `agent.createSession(input?)`
+- `agent.getSession(sessionId)`
+- `agent.listSessions(input?)`
+- `agent.getConfig()`
+- `agent.getLogger()`
 - `agent.plugins`
+
+`agent.createSession()` and `agent.getSession()` return `AgentSession`.
+
+`agent.getConfig()` and `agent.getLogger()` are the narrow advanced-integration helpers. The local SDK no longer exposes `agent.getRuntime()` or `agent.getContext()` as public entry points.
 
 ## Constructor options
 
@@ -55,7 +62,7 @@ await agent.start({
 
 If you do not call `agent.start()`:
 
-- you can still call `await agent.session()` and then `session.prompt()`
+- you can still call `await agent.createSession()` and then `session.prompt()`
 - but no HTTP or RPC endpoint starts
 - and no background plugin lifecycle starts
 

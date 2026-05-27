@@ -30,7 +30,7 @@ await session.set({ model });
 ## Correct order
 
 ```ts
-const session = await agent.session();
+const session = await agent.createSession();
 const turn = await session.prompt({ query: "Continue" });
 await turn.finished;
 ```

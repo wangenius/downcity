@@ -111,7 +111,7 @@ export function getDowncityMemoryDailyPath(cwd: string, date: string): string {
 }
 
 /**
- * Service Schedule JSONL 路径。
+ * Plugin Schedule JSONL 路径。
  *
  * 关键点（中文）
  * - 调度任务属于项目 runtime 本地状态，因此放在项目 `.downcity/` 下。
@@ -226,7 +226,7 @@ export function getDowncityDebugDirPath(cwd: string): string {
 }
 
 /**
- * Chat 元信息目录（由 services/chat 维护）。
+ * Chat 元信息目录（由 chat plugin runtime 维护）。
  *
  * 关键点（中文）
  * - 该目录存放 `sessionId -> chat` 的最近映射快照

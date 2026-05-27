@@ -8,13 +8,15 @@
  */
 
 import type { Tool } from "ai";
-import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type {
   PluginPort,
 } from "@/plugin/types/Plugin.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import type {
+  AgentSession,
+  AgentCreateSessionInput,
+  AgentListSessionsInput,
   AgentOptions,
   AgentStartOptions,
   AgentStartResult,
@@ -22,9 +24,9 @@ import type {
   AgentHttpBinding,
   AgentHttpStartOptions,
   AgentRpcBinding,
-  AgentSessionMetadata,
+  AgentSessionCollection,
+  AgentSessionSummaryPage,
 } from "@/sdk/AgentSdkTypes.js";
-import { Session } from "@/sdk/Session.js";
 import { AgentCore } from "@/core/AgentCore.js";
 import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
 import { startServer } from "@/runtime/server/http/Server.js";
@@ -34,50 +36,63 @@ import { startLocalRpcServer } from "@/runtime/server/rpc/Server.js";
  * SDK 本地 Agent。
  */
 export class Agent {
-  readonly core: AgentCore;
+  private readonly core: AgentCore;
   readonly id: string;
   readonly path: string;
   readonly tools: Record<string, Tool>;
-  readonly pluginInstances: Map<string, BasePlugin>;
   readonly plugins: PluginPort;
   private pluginsStarted = false;
   private startPromise: Promise<AgentStartResult> | null = null;
   private httpBinding: AgentHttpBinding | null = null;
   private rpcBinding: AgentRpcBinding | null = null;
+  private readonly sessionCollection: AgentSessionCollection;
 
   constructor(options: AgentOptions) {
     this.core = new AgentCore(options);
     this.id = this.core.id;
     this.path = this.core.path;
     this.tools = this.core.tools;
-    this.pluginInstances = this.core.pluginInstances;
     this.plugins = this.core.plugins;
+    this.sessionCollection = {
+      createSession: async (input) => await this.core.createSession(input),
+      getSession: async (sessionId) => await this.core.getSession(sessionId),
+      listSessions: async (input) => await this.core.listSessions(input),
+    };
   }
 
   /**
-   * 获取或创建一个 session。
+   * 新建一个 session。
    */
-  async session(sessionId?: string): Promise<Session> {
-    return await this.core.session(sessionId);
+  async createSession(input?: AgentCreateSessionInput): Promise<AgentSession> {
+    return await this.core.createSession(input);
   }
 
   /**
-   * 列出当前 agent 的全部 session 元数据。
+   * 获取一个已存在的 session。
    */
-  async sessions(): Promise<AgentSessionMetadata[]> {
-    return await this.core.sessions();
+  async getSession(sessionId: string): Promise<AgentSession> {
+    return await this.core.getSession(sessionId);
+  }
+
+  /**
+   * 列出当前 agent 的 session 摘要页。
+   */
+  async listSessions(
+    input?: AgentListSessionsInput,
+  ): Promise<AgentSessionSummaryPage> {
+    return await this.core.listSessions(input);
   }
 
   /**
    * 确保当前 plugins 已启动。
    */
-  async ensurePluginsStarted(): Promise<void> {
+  private async ensurePluginsStarted(): Promise<void> {
     if (this.pluginsStarted) return;
-    const lifecycle = await startAllPlugins(this.getContext());
+    const lifecycle = await startAllPlugins(this.core.getContext());
     this.pluginsStarted = true;
     for (const item of lifecycle.results) {
       if (!item.success) {
-        this.getRuntime().logger.error(
+        this.core.getLogger().error(
           `Plugin start failed: ${item.plugin?.name || "unknown"} - ${item.error || "unknown error"}`,
         );
       }
@@ -130,7 +145,7 @@ export class Agent {
     const httpStarted = this.httpBinding !== null;
 
     if (pluginsStarted) {
-      await stopAllPlugins(this.getContext());
+      await stopAllPlugins(this.core.getContext());
       this.pluginsStarted = false;
     }
 
@@ -163,17 +178,17 @@ export class Agent {
   }
 
   /**
-   * 返回实例级 runtime 视图。
+   * 返回当前项目根目录解析后的配置快照。
    */
-  getRuntime(): AgentRuntime {
-    return this.core.getRuntime();
+  getConfig(): DowncityConfig {
+    return this.core.getConfig();
   }
 
   /**
-   * 返回实例级执行上下文。
+   * 返回当前 agent 绑定的统一日志器。
    */
-  getContext(): AgentContext {
-    return this.core.getContext();
+  getLogger(): Logger {
+    return this.core.getLogger();
   }
 
   /**
@@ -193,7 +208,9 @@ export class Agent {
     const server = await startServer({
       host,
       port,
-      core: this.core,
+      getAgentRuntime: () => this.core.getRuntime(),
+      getAgentContext: () => this.core.getContext(),
+      sessionCollection: this.sessionCollection,
     });
     this.httpBinding = {
       baseUrl: `http://${host}:${port}`,
@@ -222,7 +239,8 @@ export class Agent {
       return this.rpcBinding;
     }
     const server = await startLocalRpcServer({
-      core: this.core,
+      context: this.core.getContext(),
+      runtime: this.core.getRuntime(),
     });
     this.rpcBinding = {
       endpoint: server.endpoint,

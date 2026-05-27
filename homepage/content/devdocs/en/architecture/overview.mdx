@@ -1,46 +1,43 @@
 ---
 title: Workspace Architecture
-description: Repo-level structure, build responsibilities, and documentation boundaries
+description: Repo structure, package boundaries, and documentation ownership across the current workspace
 ---
 
 # Workspace Architecture
 
-The repository is organized around one runtime package and multiple product surfaces around it.
+The repository is organized around two runtime packages and several product surfaces.
 
-## Primary Workspaces
+## Primary workspaces
 
-- `packages/downcity/`: the runtime package, CLI entry, console process, agent runtime, service system, plugin system, and HTTP routes
-- `products/console/`: the browser control surface built with Vite + React
-- `products/chrome-extension/`: the browser extension for sending live page context into agents
-- `homepage/`: the marketing site plus both `/docs` and `/devdocs`
-- `docs/`: historical draft notes that have now been consolidated into `/devdocs`
+- `packages/agent/`: local agent kernel, session execution, plugin runtime, HTTP/RPC host, SDK
+- `packages/city/`: control plane, CLI, project orchestration, model pool, console-facing gateway
+- `packages/ui/`: reusable UI primitives and app-facing components
+- `products/console/`: browser control surface
+- `products/chrome-extension/`: extension that sends live page context into agents
+- `homepage/`: marketing site, user docs, devdocs, SDK docs, and plugin docs
 
-## Boundary Rules
+## Boundary rules
 
 - `/docs` is user-facing only
-- `/devdocs` is developer-facing only
-- Package runtime logic stays in `packages/downcity/`
-- Product surfaces should consume runtime APIs instead of duplicating runtime logic
+- `/devdocs` is contributor-facing only
+- `packages/agent` owns single-agent execution
+- `packages/city` owns control-plane and multi-project coordination
+- product surfaces should consume runtime APIs instead of duplicating runtime logic
 
-## Current Architecture Philosophy
+## Current architecture philosophy
 
-- `console` owns global governance, not per-agent business execution
-- `agent` owns a single-project runtime, not cross-project orchestration
-- `service` owns lifecycle and business workflow
-- `plugin` is a passive extension layer that attaches through service-defined points
-- `asset` owns low-level dependencies, not workflow logic
+- `console` owns global governance
+- `agent host` owns one project runtime
+- `session` owns execution
+- `plugin` owns capability exposure and augmentation
+- durable traces stay close to the workspace
 
-## Build Relationships
+## Build relationships
 
 ```text
-console-ui build -> packages/downcity/public
-chrome-extension build -> products/chrome-extension/dist
-homepage build -> standalone docs + marketing site
-packages/downcity build -> CLI/runtime package
+packages/agent build -> SDK and runtime package
+packages/city build -> CLI and control-plane package
+products/console build -> browser control surface
+products/chrome-extension build -> extension bundle
+homepage build -> docs and marketing site
 ```
-
-## Documentation Policy
-
-- User-impacting package changes should update `/docs`
-- Implementation, architecture, and design rationale should live in `/devdocs`
-- Historical drafts can stay in `<root>/docs`, but `/devdocs` is the maintained surface

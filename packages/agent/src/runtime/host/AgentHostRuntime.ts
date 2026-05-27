@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - agent runtime 负责创建这些宿主能力对象，再注入到 AgentRuntime。
- * - service / session / plugin 只消费这些对象，不直接依赖具体宿主实现。
+ * - plugin runtime / session / plugin 作者 API 只消费这些对象，不直接依赖具体宿主实现。
  * - 当前先收敛路径与 plugin 配置持久化两类宿主能力。
  */
 import {

@@ -1,68 +1,14 @@
 ---
-title: RoleResolverPlugin Scenario
-description: Use a resolve scenario to show why some extension points must produce exactly one final answer
+title: Role Resolver Plugin Example Moved
+description: This concrete plugin example now lives in Plugins Docs
 ---
 
-# RoleResolverPlugin Scenario
+# Role Resolver Plugin Example Moved
 
-## Scenario
+This example now lives at [Plugins Docs / role-resolver-plugin](/en/plugins-docs/examples/role-resolver-plugin).
 
-You want one runtime path to ask:
+For concept-first reading, continue with:
 
-- "what is this user's current role?"
+- [Plugin Hooks Overview](/en/agent-sdk-docs/plugins/hooks/overview)
+- [Plugin Design Patterns](/en/agent-sdk-docs/plugins/design-patterns)
 
-That is not a collaborative transformation problem. It is a single-answer resolution problem.
-
-That makes it a classic `resolve` case.
-
-## Example
-
-```ts
-import { Agent, type Plugin } from "@downcity/agent";
-
-export const roleResolverPlugin: Plugin = {
-  name: "role_resolver",
-  title: "Role Resolver",
-  description: "Resolves one final role for a user.",
-  resolves: {
-    "auth.resolve_role": async ({ value }) => {
-      const body = value as { userId?: unknown };
-      const userId = String(body.userId || "").trim();
-      if (!userId) {
-        throw new Error("userId is required");
-      }
-      if (userId === "owner") return "admin" as never;
-      return "member" as never;
-    },
-  },
-};
-
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  tools: {},
-  plugins: [roleResolverPlugin],
-});
-
-const role = await agent.plugins.resolve<{ userId: string }, string>(
-  "auth.resolve_role",
-  { userId: "owner" },
-);
-```
-
-## Why there cannot be two resolvers
-
-Because the semantic question is not:
-
-- "let several plugins each add something"
-
-It is:
-
-- "who is the final authority for this answer?"
-
-That is why duplicate resolve registration fails in the current implementation.
-
-## Related docs
-
-- [Plugin hooks and resolve](/en/agent-sdk-docs/plugins/plugin-hooks)
-- [Plugin availability](/en/agent-sdk-docs/plugins/plugin-availability)

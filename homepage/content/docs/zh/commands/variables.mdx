@@ -1,217 +1,78 @@
 ---
-title: 命令环境要求总览
-description: 说明所有 city 命令所需的运行环境、配置文件与环境变量优先级
+title: 命令环境要求
+description: 解释当前 city 命令组需要什么环境、文件与变量优先级
 ---
 
-# 命令环境要求总览
+# 命令环境要求
 
-这页用于集中回答一个问题：每类 `city` 命令运行时，依赖哪些环境。
+这页只回答一个问题：不同 `city` 命令组运行时，各自需要什么环境。
 
-## 0) 一级命令边界
+## 0）一级命令边界
 
-一级命令组有：
+一级命令组只有：
 
-- `city env`
 - `city console`
 - `city agent`
-- `city service`
 - `city plugin`
 
-像 `city chat`、`city task`、`city memory`、`city skill`、`city asr`、`city tts` 都是挂载在 service/plugin 体系下的动作命令，不是一级命令。
+像 `city chat`、`city task`、`city memory`、`city shell`、`city skill`、`city asr`、`city tts` 这些，都是 plugin 命令，不是一级根命令。
 
-## 1) 各命令组所需环境
+## 1）按命令组看环境要求
 
-| 命令组 | 必需环境 | 可选环境 | 备注 |
+| 命令组 | 必需环境 | 可选环境 | 说明 |
 | --- | --- | --- | --- |
-| `city init` | 可写 `~/.downcity/` 目录 | 无 | 会写 `~/.downcity/downcity.db`（加密存储敏感字段） |
+| `city init` | 可写 `~/.downcity/` | 无 | 写入 `~/.downcity/downcity.db` |
 | `city start/stop/restart/status` | 可写 `~/.downcity/console/` | 无 | 管理全局 console 进程与 registry |
-| `city console` | console 已启动；浏览器可访问 UI 端口 | `--host`、`--port` | 单 UI 实例可切换查看多个运行中的 agent |
-| `city agent create` | 目标目录可写 | 无 | 会生成 `downcity.json`、`PROFILE.md`、`.downcity/` |
-| `city agent start` | console 已启动；项目含 `downcity.json` + `PROFILE.md` | `--host` | agent 端口始终由 console 自动分配，并登记到 console registry |
-| `city agent restart/status/doctor` | 目标 agent 已在 console registry 注册 | 无 | 不是“任意路径直接操作”，先走 registry 解析 |
-| `city config ...` | 目标路径下 `downcity.json` 存在且合法 | `--path` | 读写的是 agent 项目配置，不是 runtime API |
-| `city config alias` | 可写 `~/.zshrc` 或 `~/.bashrc` | `--shell zsh|bash` | 仅写 alias，不依赖 agent |
-| `city service list/status` | 无 | `--json` | 静态 console 级 service catalog，不解析任何 agent |
-| `city service start/stop/restart/command` | 目标 agent 已运行；项目已在 registry；项目含 `downcity.json` + `PROFILE.md` | `--agent`、`--path`、`--host`、`--port` | 高级定向形式；日常更推荐 `city <service> ...` |
-| `city plugin list/status` | 无 | `--json` | 静态 console 级 plugin catalog，不解析任何 agent |
-| `city plugin action ...` | 项目含 `downcity.json` | `--path` | 高级本地执行形式；日常更推荐 `city <plugin> ...` |
-| `city <service> <action>`（如 `city chat ...`） | 目标 agent 已运行 | `--path`、`--host`、`--port` | 默认通过本地 IPC 转发；显式远程时走 `/api/plugins/command` |
-| `city <plugin> <action>`（如 `city asr ...`） | 项目含 `downcity.json` | `--path` | 直接在本地对目标项目执行 |
+| `city console` | Console 已运行；浏览器可访问 UI 端口 | `--host`、`--port` | 一个 UI 可切换多个运行中的 agent |
+| `city agent create` | 目标目录可写 | 无 | 生成 `downcity.json`、`PROFILE.md`、`.downcity/` |
+| `city agent start` | Console 已运行；项目包含 `downcity.json` + `PROFILE.md` | `--host` | agent 端口由 console 分配并登记进 registry |
+| `city agent restart/status/doctor` | 目标 agent 已登记在 console registry | 无 | 通过 registry 解析 |
+| `city config ...` | 目标路径下存在合法 `downcity.json` | `--path` | 只读写项目配置，不调用 agent API |
+| `city plugin list/status` | 无 | `--json` | 静态 plugin catalog，不解析 agent |
+| `city plugin start/stop/restart/command` | 目标 agent 正在运行 | `--agent`、`--path`、`--host`、`--port` | 面向托管 plugin |
+| `city plugin action ...` | 项目存在 `downcity.json` | `--path` | 高级本地执行形式 |
+| `city <managed-plugin> <action>` | 目标 agent 正在运行 | `--path`、`--host`、`--port` | 如 `city chat`、`city task`、`city memory`、`city shell` |
+| `city <local-plugin> <action>` | 项目存在 `downcity.json` | `--path` | 如 `city skill`、`city web`、`city asr`、`city tts` |
 
-补充：
+## 2）运行时传输
 
-- `city service list/status` 和 `city plugin list/status` 是静态的 console catalog 读取。
-- 本地 `city service start/stop/restart/command`、`city task`、`city chat` 等运行时命令默认不走 HTTP，而是直接走本地 IPC。
-- 本地 `city plugin action` 和 `city <plugin> <action>` 会直接读取目标项目，并在当前 CLI 进程内执行。
-- 只有你显式传了 `--host` 或 `--port`，这次调用才会被视为远程 HTTP 调用，并进入 Bearer Token 解析。
-- 远程 HTTP 调用时，token 解析优先级：`--token` > `DC_AUTH_TOKEN`。
-- `sessionId` / `chatKey` 只是执行上下文，不是认证 token。
+默认规则：
 
-## 1.1) `DC_AUTH_TOKEN`
+1. 不传 `--host` / `--port`：托管 runtime 命令默认走本地 IPC
+2. 传了 `--host` 或 `--port`：改走远程 HTTP
 
-先说最重要的一条：
+只有进入远程 HTTP 模式之后，Bearer Token 解析才有意义。
 
-- 对大多数用户来说，本地运行 `city ...` 时通常不需要关心 token 环境变量
+## 3）`DC_AUTH_TOKEN`
 
-因为本地默认已经改成 IPC 调用，只有显式远程 HTTP 调用时，token 变量才会参与认证。
+对大多数本地使用场景，你不需要关心 auth 环境变量。
 
-| 变量 | 主要用途 | 谁来设置 | 典型场景 |
-| --- | --- | --- | --- |
-| `DC_AUTH_TOKEN` | 用户显式覆盖本次 CLI/API 调用身份 | 用户、脚本、CI | 你自己拿一个 token，手动指定本次 `city ...` 用哪个身份 |
+本地调用默认走 IPC。`DC_AUTH_TOKEN` 只在你显式走远程 HTTP 时才生效。
 
-当前推荐规则：
-
-- 你手动在终端、CI、脚本里发起远程 HTTP 调用时，优先使用 `--token` 或 `DC_AUTH_TOKEN`
-- 不要把 `sessionId`、`chatKey` 当成 token；它们只负责“在哪个上下文里执行”，不负责“谁在调用”
-
-### 统一优先级
-
-当一次 `city ...` 调用被明确视为远程 HTTP 调用时，最终 token 解析顺序是：
+优先级顺序：
 
 1. 显式 `--token`
 2. `DC_AUTH_TOKEN`
 
-这意味着：
-
-- 你显式传了 `--token`，一定覆盖其他来源
-- 你设置了 `DC_AUTH_TOKEN`，这次远程 HTTP 调用就会使用它
-- 如果两者都没有，显式远程 HTTP 调用会报 `Missing bearer token`
-
-### 常见误区
-
-- 误区 1：`sessionId` 可以代替 token
-  不是。`sessionId` 只决定输出回到哪个 chat/session。
-- 误区 2：本地 `city task` / `city chat` 一定要先拿 token
-  不是。默认本地调用已经走 IPC，不需要 Bearer Token。
-- 误区 3：agent 内部 shell/script 会自动继承一个可用 token
-  不是。通用子进程默认不再继承 Bearer Token；如果你刻意走远程 HTTP，就要显式传 token。
-- 误区 4：本地命令和远程命令的认证方式是同一套
-  不是。本地默认走 IPC；只有显式远程 HTTP 才解析 `DC_AUTH_TOKEN`。
-
-### `Missing bearer token` 怎么看
-
-如果你执行显式远程 HTTP 调用，例如：
-
-- `city service list --host 127.0.0.1 --port 5314`
-- `city task create --host 127.0.0.1 --port 5314 ...`
-
-并收到：
-
-- `Missing bearer token`
-
-优先按这个顺序排查：
-
-1. 你是否显式传了 `--token`
-2. 当前 shell 是否设置了 `DC_AUTH_TOKEN`
-3. 你这次调用是否真的需要远程 HTTP，而不是本地 IPC
-
-## 2) 常见命令的上下文变量要求
+## 4）常见命令的上下文变量
 
 ### `city chat ...`
 
-- `--chat-key` 未传时，会尝试读取 `DC_CTX_CHAT_KEY`
-- `--session-id` 未传时，会优先尝试读取 `DC_SESSION_ID`
-- 在 agent shell 内执行时，这些 `DC_CTX_*` 通常由运行时自动注入
+- 省略 `--chat-key` 时，会尝试 `DC_CTX_CHAT_KEY`
+- 省略 `--session-id` 时，会先尝试 `DC_SESSION_ID`
 
 ### `city task ...`
 
-- 创建/运行任务需要 `sessionId`
-- 可显式传 `--session-id`
-- 未传时可优先回退读取 `DC_SESSION_ID`
-- 本地默认走 IPC，不需要 Bearer Token
-- 只有显式远程 HTTP 调用时，才会按 `--token` / `DC_AUTH_TOKEN` 的顺序解析 token
+- task 创建与运行需要 `sessionId`
+- 可以显式传 `--session-id`，或依赖 `DC_SESSION_ID`
 
-### chat channel 凭据
+## 5）推荐用法
 
-- 唯一方式：在 `downcity.json` 中绑定 `plugins.chat.channels.<channel>.channelAccountId`。
-- 真实密钥（`botToken`/`appId`/`appSecret` 等）统一存放在 `~/.downcity/downcity.db` 的 `channel_accounts`。
-- `downcity.json` 与 agent `.env` 不再承载这些凭据。
-
-## 3) `city service` 目标 agent 解析顺序
-
-`city service start/stop/restart/command`：
-
-1. 显式 `--agent <name>`（最高优先级）
-2. 若未传 `--agent` 且 `--path` 为默认 `.`，先尝试 `DC_AGENT_NAME`
-3. 回退到 `--path` 或默认 `.`
-4. 若默认 `.` 且存在 `DC_AGENT_PATH`，优先解析为该路径
-
-最终仍要求：
-
-- 目标路径已登记在 console registry
-- 路径内存在 `downcity.json` 与 `PROFILE.md`
-
-## 4) Runtime 连接方式与地址解析顺序（`host/port`）
-
-默认规则：
-
-1. 没传 `--host` / `--port`：走本地 IPC
-2. 传了 `--host` 或 `--port`：走远程 HTTP
-
-只有进入远程 HTTP 模式后，下面的地址解析顺序才生效。
-
-调用 runtime API（service/plugin/action 命令）时，地址优先级：
-
-1. CLI 显式参数：`--host` / `--port`
-2. 环境变量：`DC_SERVER_HOST/PORT`
-3. 环境变量：`DC_CTX_SERVER_HOST/PORT`
-4. daemon meta 参数（`.downcity/.debug/downcity.daemon.json`）
-5. 默认值：`127.0.0.1:5314`
-
-补充规则：
-
-- `0.0.0.0` 或 `::` 会被归一化为 `127.0.0.1`
-
-## 5) 变量注入来源
-
-### runtime 启动后注入
-
-- `DC_AGENT_PATH`
-- `DC_AGENT_NAME`
-- `DC_SERVER_HOST`
-- `DC_SERVER_PORT`
-
-### agent shell 子进程注入
-
-- `DC_SESSION_ID`
-- `DC_CTX_REQUEST_ID`
-- `DC_CTX_SERVER_HOST`
-- `DC_CTX_SERVER_PORT`
-
-## 6) 推荐实践
-
-多 agent 并行场景，建议只在高级定向命令中显式指定目标：
+日常操作优先直接使用 plugin 根命令：
 
 ```bash
-city service restart task --agent my-agent
-# 或
-city service restart task --path /abs/path/to/agent
-```
-
-查看 catalog 时，不需要指定目标：
-
-```bash
-city service list
+city chat send --chat-key ctx_xxx --text "hi"
+city task list
+city memory search "release decision"
 city plugin list
-```
-
-## 示例输出（基于当前实现）
-
-以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
-
-```text
-$ city service list --json
-{
-  "success": true,
-  "count": 4,
-  "plugins": []
-}
-```
-
-```text
-$ city chat send --text "hi"
-{
-  "success": false,
-  "error": "Failed to parse command input: <error>"
-}
 ```

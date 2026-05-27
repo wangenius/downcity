@@ -26,7 +26,7 @@ It returns a structured system snapshot:
     timezone: string;
   };
   blocks: Array<{
-    source: "core" | "instruction" | "service" | "plugin" | "session";
+    source: "core" | "instruction" | "plugin" | "session";
     name: string;
     content: string;
   }>;
@@ -37,7 +37,6 @@ The blocks can include:
 
 - the SDK core fallback, when no `instruction` was provided
 - caller-provided static `instruction`
-- explicitly injected service system text
 - registered plugin system text
 - stable session context, including `agentId`, `sessionId`, `projectRoot`, creation time, and timezone
 

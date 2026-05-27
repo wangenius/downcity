@@ -68,7 +68,7 @@ flowchart LR
 
 ### 1. History 的真实落点
 
-最明确的原始历史层，是 chat service 的事件流。
+最明确的原始历史层，是 chat managed plugin runtime 的事件流。
 
 它的职责非常清楚：
 
@@ -117,7 +117,7 @@ History 是原始事件流，不是 prompt，也不是长期记忆。
 
 ### 4. Memory 的真实落点
 
-当前 memory service 已经是一个独立能力层。
+当前 memory runtime 已经是一个独立长期状态层。
 
 它真实提供的是：
 
@@ -142,9 +142,9 @@ History 是原始事件流，不是 prompt，也不是长期记忆。
 - request scope
 - 后续 memory 写回
 
-### 不是围绕 service
+### 不是围绕独立工作流层
 
-因为 service 是能力层，不是执行主体。
+因为托管 plugin runtime 是能力层，不是执行主体。
 
 ### 不是围绕 Context
 
@@ -165,12 +165,12 @@ History 是原始事件流，不是 prompt，也不是长期记忆。
 - 可以持续追加消息
 - 可以挂接 compact / archive
 - 可以承接 request scope
-- 可以被多个 service 协作访问
+- 可以被多个托管 runtime 协作访问
 
 所以在当前架构里，最稳的主句应该是：
 
 ```text
-系统围绕 Session 运转，service 围绕 Session 工作，Context 由 Session 在每次运行中临时投影出来。
+系统围绕 Session 运转，托管 runtime 围绕 Session 工作，Context 由 Session 在每次运行中临时投影出来。
 ```
 
 ## 一句话总结

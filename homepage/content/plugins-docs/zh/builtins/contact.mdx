@@ -1,0 +1,46 @@
+---
+title: contact Plugin
+description: agent 间点对点连接、审批、聊天和分享流的说明
+---
+
+# `contact` Plugin
+
+`contact` 是 agent 间点对点关系 plugin。
+
+它主要处理：
+
+- link / approve 流程
+- 可信 contact 建立
+- 点对点 chat
+- 文本、链接、文件、目录分享
+
+## 主要形状
+
+- `actions`
+- `system`
+- 极轻量的 `lifecycle`
+
+## 它主要解决什么问题
+
+当一个 agent 需要：
+
+- 和另一个 agent 建立联系
+- 审批或确认可信 contact
+- 向对方 inbox 发送聊天或分享内容
+
+就应该关注 `contact`。
+
+## 关键语义
+
+- 每个 contact 都会维护一条长期 contact history
+- 这个 plugin 虽然是 built-in，但比起通用 SDK 插件，更偏平台集成能力
+- 它的 lifecycle 更像轻量外壳，主要行为还是 action 驱动
+
+## 公开性说明
+
+`ContactPlugin` 在代码里是 built-in，但当前并不是包根主公开的 SDK-facing plugin 之一。
+
+## 相关文档
+
+- [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
+- [Built-ins Overview](/zh/plugins-docs/builtins/overview)

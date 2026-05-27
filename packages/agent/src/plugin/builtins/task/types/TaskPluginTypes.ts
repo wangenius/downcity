@@ -1,5 +1,5 @@
 /**
- * TaskService 类型定义。
+ * Task plugin runtime 类型定义。
  *
  * 关键点（中文）
  * - 这里集中声明 task plugin runtime 在类化拆分后共享的 action payload 与调度结果类型。

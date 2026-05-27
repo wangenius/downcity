@@ -2,7 +2,7 @@
  * Shell 工具辅助函数。
  *
  * 关键点（中文）
- * - shell 会话生命周期已经迁移到 `shellService`。
+ * - shell 会话生命周期已经统一收敛到 shell plugin runtime。
  * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验与 env 注入。
  */
 
@@ -63,7 +63,7 @@ export function validateChatSendCommand(cmd: string): string | null {
  * 构建 shell 子进程环境变量。
  *
  * 关键点（中文）
- * - 当前仍用于 shell tool/service 与相关测试。
+ * - 当前仍用于 shell tool / shell runtime 与相关测试。
  * - 优先级：显式注入 > 当前请求上下文变量 > 宿主进程环境。
  * - 默认剥离 Bearer Token，避免通用 shell 隐式走本地 HTTP。
  */

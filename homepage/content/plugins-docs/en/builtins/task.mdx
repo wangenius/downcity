@@ -1,0 +1,44 @@
+---
+title: task Plugin
+description: Task definitions, task actions, and cron-trigger runtime owned by one plugin instance
+---
+
+# `task` Plugin
+
+`task` is the task runtime plugin.
+
+It owns:
+
+- task-facing actions
+- task system text
+- one cron trigger engine per plugin instance
+
+## Main shape
+
+- `lifecycle`
+- `actions`
+- `system`
+
+## What it is for
+
+Use `task` when you need:
+
+- task definitions and mutations
+- cron-triggered task execution
+- scheduler reload after task changes
+
+## Important semantics
+
+- long-lived cron runtime belongs to the plugin instance
+- task scheduler reload is triggered after create, update, delete, or status mutation
+- the plugin can also accept lifecycle commands such as reload or reschedule
+
+## Public status
+
+`TaskPlugin` is built-in in code, but it is primarily a platform runtime plugin rather than one of the main package-root public SDK plugin exports.
+
+## Related docs
+
+- [Plugin Lifecycle](/en/agent-sdk-docs/plugins/lifecycle)
+- [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions)
+- [Built-ins Overview](/en/plugins-docs/builtins/overview)

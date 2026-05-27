@@ -1,96 +1,35 @@
 ---
-title: Runtime Relationship & Process
-description: Collaboration model and startup/process order across console, agent, execution context, session, service, and plugin
+title: Runtime Relationship And Process
+description: Collaboration model and startup/process order across console, agent, execution context, session, and plugin runtime
 ---
 
-# Runtime Relationship & Process
+# Runtime Relationship And Process
 
-## 1. Role Summary
+Current runtime relationship can be summarized as:
 
-- `console`: manages registry, model pool, shared storage, and UI
-- `agent`: the host process for one project
-- `execution context`: the unified capability surface used during execution
-- `session`: a concrete execution instance
-- `service`: the main path module
-- `plugin`: an extension module that joins only at fixed points
+- `console` governs
+- `agent` hosts
+- `execution context` exposes shared capability
+- `session` executes
+- `plugin runtime` adds or owns capability modules
 
-In one sentence:
+## Startup order
 
-`console` governs, `agent` hosts, `execution context` injects, `session` executes, `service` orchestrates, and `plugin` augments.
+1. console starts
+2. agent starts under console registry
+3. agent initializes model access, session store, and plugin registry
+4. managed plugins become ready
 
-## 2. What Happens at Startup
+## Request path
 
-When you run:
+1. a caller reaches one managed plugin or one local SDK surface
+2. plugin resolves target session context if needed
+3. plugin triggers hooks or actions
+4. execution enters `context.session`
+5. session produces the result
 
-```bash
-city agent start
-```
+## Main takeaway
 
-The usual order is:
+The system no longer needs a separate public extra layer to explain request ownership.
 
-1. the agent reads project config and env
-2. the agent initializes logger, model, session store, plugin registry, and service instances
-3. the agent exposes the shared `execution context`
-4. services become available
-5. plugin extension points become available
-6. project-local traces continue to be written into `.downcity/*`
-
-The key point:
-
-- services and plugins are available after startup
-- but no specific session execution has started yet
-
-## 3. When Real Execution Starts
-
-Real execution begins only when an external request arrives, for example:
-
-- Telegram delivers a message
-- dashboard executes a target session
-- task scheduler triggers one task run
-
-Then the order is usually:
-
-1. the request enters a service
-2. the service resolves the target `sessionId`
-3. the service creates or reuses a session
-4. the service triggers plugins at fixed points
-5. the service enters execution through `context.session`
-6. the session returns a result
-7. the service decides how to reply or persist state
-
-## 4. One Timeline Diagram
-
-```mermaid
-sequenceDiagram
-  participant Console as console
-  participant Agent as agent
-  participant Context as execution context
-  participant Service as service
-  participant Plugin as plugin
-  participant Session as session
-
-  Console->>Agent: city agent start
-  Agent->>Context: expose execution context
-  Agent->>Service: create service instances
-  Agent->>Plugin: register plugins
-
-  Service->>Plugin: trigger fixed points on request
-  Service->>Session: run through context.session
-  Session-->>Service: result
-```
-
-## 5. The Most Common Confusion
-
-Do not mix up these 2 states:
-
-1. `agent` has started
-2. a `session` is actively executing
-
-`agent` is the long-lived host.
-`session` is the execution instance created or reused on demand.
-
-So:
-
-- one agent can host many sessions
-- one service routes different requests into different sessions
-- plugins do not create a separate execution axis
+Capability modules are plugins; execution still belongs to session.

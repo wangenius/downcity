@@ -1,0 +1,18 @@
+{
+  "title": "Built-ins",
+  "pages": [
+    "overview",
+    "auth",
+    "skill",
+    "web",
+    "asr",
+    "tts",
+    "workboard",
+    "chat",
+    "contact",
+    "schedule",
+    "task",
+    "memory",
+    "shell"
+  ]
+}

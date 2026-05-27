@@ -48,6 +48,7 @@ export function Navbar() {
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const devdocsPath = isZh ? "/zh/devdocs" : "/en/devdocs";
   const agentSdkDocsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
+  const pluginsDocsPath = isZh ? "/zh/plugins-docs" : "/en/plugins-docs";
   const uiSdkDocsPath = isZh ? "/zh/ui-sdk-docs" : "/en/ui-sdk-docs";
   const productBasePath = isZh ? "/zh/product" : "/product";
   const communityBasePath = isZh ? "/zh/community" : "/community";
@@ -84,7 +85,7 @@ export function Navbar() {
       { label: t("nav.productConsoleUi"), description: isZh ? "浏览器里的 Agent 控制台" : "Agent control surface", path: productConsoleUiPath },
       { label: t("nav.productChromeExtension"), description: isZh ? "把网页上下文送入 Agent" : "Send live web context", path: productChromeExtensionPath },
       { label: t("nav.productSdk"), description: isZh ? "把 city runtime 接入产品流程" : "Embed city runtime flows", path: productSdkPath },
-      { label: t("nav.productAgentSdk"), description: isZh ? "把本地 Agent、Session、Service 嵌入应用" : "Embed local agents, sessions, and services", path: productAgentSdkPath },
+      { label: t("nav.productAgentSdk"), description: isZh ? "把本地 Agent、Session、Plugin 嵌入应用" : "Embed local agents, sessions, and plugins", path: productAgentSdkPath },
       { label: t("nav.productUiSdk"), description: isZh ? "复用 Downcity 界面语言" : "Reuse the Downcity UI layer", path: productUiSdkPath },
     ],
   } as const;
@@ -92,7 +93,7 @@ export function Navbar() {
   const docsGroup = {
     kind: "group",
     label: t("nav.docs"),
-    activePaths: [docsPath, devdocsPath, agentSdkDocsPath, uiSdkDocsPath],
+    activePaths: [docsPath, devdocsPath, agentSdkDocsPath, pluginsDocsPath, uiSdkDocsPath],
     items: [
       { label: "City SDK", description: isZh ? "City runtime、CLI 与运行逻辑总入口" : "Main entry for city runtime, CLI, and operating logic", path: docsPath },
       { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "先把 city 跑起来，再进入更深层结构" : "Start the city first, then go deeper into the structure", path: docsQuickstartPath },
@@ -100,8 +101,13 @@ export function Navbar() {
       { label: t("nav.devdocs"), description: isZh ? "架构、实现与设计规范" : "Architecture, implementation, and design docs", path: devdocsPath },
       {
         label: "Agent SDK",
-        description: isZh ? "独立的 Agent SDK 接入、Session、Service 与 API 文档" : "Standalone docs for Agent SDK integration, sessions, services, and APIs",
+        description: isZh ? "独立的 Agent SDK 接入、Session、Plugin 与 API 文档" : "Standalone docs for Agent SDK integration, sessions, plugins, and APIs",
         path: agentSdkDocsPath,
+      },
+      {
+        label: "Plugins Docs",
+        description: isZh ? "具体 built-in plugin 手册与场景示例" : "Concrete built-in plugin manuals and scenario guides",
+        path: pluginsDocsPath,
       },
       {
         label: "UI SDK",

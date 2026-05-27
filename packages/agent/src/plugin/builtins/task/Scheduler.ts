@@ -2,8 +2,8 @@
  * Task 调度注册（集成层）。
  *
  * 关键点（中文）
- * - task 语义（status/when/串行保护）放在 service。
- * - cron 调度执行器由 server 注入，service 不依赖具体实现。
+ * - task 语义（status/when/串行保护）放在 task plugin runtime。
+ * - cron 调度执行器由宿主注入，task runtime 不依赖具体实现。
  */
 
 import type { AgentContext } from "@/core/AgentContextTypes.js";
@@ -14,7 +14,7 @@ import {
 } from "./runtime/Model.js";
 import { listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
-import { ServiceCronEngine } from "./types/Cron.js";
+import { TaskCronEngine } from "./types/Cron.js";
 import { resolveRuntimeTimezone } from "@/utils/Time.js";
 
 const TASK_LOG_PREFIX = "[TASK]";
@@ -25,7 +25,7 @@ function formatTaskLogMessage(message: string): string {
 
 export async function registerTaskCronJobs(params: {
   context: AgentContext;
-  engine: ServiceCronEngine;
+  engine: TaskCronEngine;
 }): Promise<{ tasksFound: number; jobsScheduled: number }> {
   const context = params.context;
   const logger = context.logger;

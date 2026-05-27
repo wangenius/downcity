@@ -1,6 +1,6 @@
 ---
 title: Custom Plugin
-description: Build a custom plugin with config, actions, hooks, system text, availability checks, and optional runtime HTTP routes
+description: Build a custom plugin with config, actions, hooks, system text, availability checks, lifecycle, and optional runtime HTTP routes
 ---
 
 # Custom Plugin
@@ -10,20 +10,18 @@ If the thing you want to add is mainly:
 - a set of actions
 - a set of hooks
 - one system text layer
-- one setup or usage protocol
+- one lifecycle-owned runtime boundary
 - one set of runtime HTTP routes
 
 then a custom plugin is usually the right extension point.
 
 ## Current public entry points
 
-`@downcity/agent` now exposes all of these:
+`@downcity/agent` exposes:
 
 - plugin types and contracts
 - built-in plugin exports
 - the local `Agent` `plugins: [...]` assembly entry point
-
-That means custom plugins are no longer only conceptual shapes. You can attach them directly to a local SDK `Agent`.
 
 ## Minimal skeleton
 
@@ -77,63 +75,6 @@ const agent = new Agent({
   tools: {},
   plugins: [notesPlugin],
 });
-
-const result = await agent.plugins.runAction({
-  plugin: "notes",
-  action: "status",
-});
-```
-
-## A fuller example
-
-```ts
-import type { Plugin } from "@downcity/agent";
-
-export const notesPlugin: Plugin = {
-  name: "notes",
-  title: "Notes Helper",
-  description: "Adds note-related actions and runtime guidance.",
-  config: {
-    plugin: "notes",
-    scope: "project",
-    defaultValue: {
-      injectPrompt: true,
-      folder: ".notes",
-    },
-  },
-  availability(context) {
-    return {
-      enabled: true,
-      available: true,
-      reasons: [],
-    };
-  },
-  system(context) {
-    return `Current project notes folder: ${context.rootPath}/.notes`;
-  },
-  actions: {
-    status: {
-      allowWhenDisabled: true,
-      execute: async ({ context }) => {
-        return {
-          success: true,
-          data: {
-            rootPath: context.rootPath,
-          },
-        };
-      },
-    },
-  },
-  hooks: {
-    effect: {
-      "notes.observe": [
-        async ({ value }) => {
-          console.log(value);
-        },
-      ],
-    },
-  },
-};
 ```
 
 ## The most important design questions
@@ -146,22 +87,12 @@ Be explicit about whether you need:
 - hooks
 - resolve points
 - system text
+- lifecycle
 - HTTP
 
 Do not default to implementing every field.
 
-### 2. Is this actually a service instead
-
-If you find yourself needing:
-
-- long-lived workers
-- session pools
-- durable runtime instances
-- long-lived connections
-
-then you should pause and ask whether the core should really be a service instead.
-
-### 3. Should some actions run while disabled
+### 2. Should some actions run while disabled
 
 Actions like:
 
@@ -171,51 +102,25 @@ Actions like:
 
 often need `allowWhenDisabled: true`.
 
+### 3. Should runtime state stay inside lifecycle
+
+If the capability must:
+
+- start and stop with the plugin
+- keep runtime state in memory
+- recover after restart
+
+then model that inside plugin lifecycle instead of hiding it in unrelated hooks.
+
 ## One practical rule
 
-Your plugin `execute` logic should rely on the minimal stable command-context shape when possible instead of assuming access to every possible runtime singleton.
+Your plugin logic should rely on the minimal stable plugin context when possible instead of assuming access to every runtime singleton.
 
-That keeps the plugin easier to reuse across:
+## If you want scenario-driven examples
 
-- CLI
-- Console
-- runtime invocation paths
-
-## When to split plugin code into modules
-
-Once a plugin grows, the healthier structure is usually:
-
-- `Plugin.ts`
-- `Config.ts`
-- `Command.ts`
-- `Dependency.ts`
-- `runtime/*`
-- `types/*`
-
-That keeps `Plugin.ts` closer to declaration and assembly instead of turning it into a giant logic file.
-
-## Current SDK boundaries
-
-The local SDK now supports a real plugin registry, but a few boundaries still matter:
-
-- the SDK does not auto-register every built-in plugin
-- whether a plugin can run is still affected by city-level lifecycle enablement
-- the local SDK session prompt path injects `plugin.system()` for plugins explicitly registered on that SDK Agent
-- `plugin.http.server` depends on the full runtime HTTP assembly path, not the minimal SDK HTTP server
-
-## If you want real scenario-driven examples
-
-Continue with:
-
-- [NotesPlugin scenario](/en/agent-sdk-docs/plugins/examples/notes-plugin)
-- [ReviewGuardPlugin scenario](/en/agent-sdk-docs/plugins/examples/review-guard-plugin)
-- [MessageAugmentPlugin scenario](/en/agent-sdk-docs/plugins/examples/message-augment-plugin)
-- [RoleResolverPlugin scenario](/en/agent-sdk-docs/plugins/examples/role-resolver-plugin)
-- [SnapshotHttpPlugin scenario](/en/agent-sdk-docs/plugins/examples/snapshot-http-plugin)
-- [Plugin plus service composition](/en/agent-sdk-docs/plugins/examples/plugin-service-composition)
-
-## Related docs
-
-- [Plugin actions](/en/agent-sdk-docs/plugins/plugin-actions)
-- [Plugin hooks and resolve](/en/agent-sdk-docs/plugins/plugin-hooks)
-- [Plugin HTTP injection](/en/agent-sdk-docs/plugins/plugin-http)
+- [NotesPlugin scenario](/en/plugins-docs/examples/notes-plugin)
+- [ReviewGuardPlugin scenario](/en/plugins-docs/examples/review-guard-plugin)
+- [MessageAugmentPlugin scenario](/en/plugins-docs/examples/message-augment-plugin)
+- [RoleResolverPlugin scenario](/en/plugins-docs/examples/role-resolver-plugin)
+- [SnapshotHttpPlugin scenario](/en/plugins-docs/examples/snapshot-http-plugin)
+- [Plugin Runtime Composition](/en/plugins-docs/examples/plugin-runtime-composition)

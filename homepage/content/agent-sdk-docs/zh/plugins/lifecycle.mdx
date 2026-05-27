@@ -1,0 +1,102 @@
+---
+title: Plugin Lifecycle
+description: 理解 lifecycle-owned plugin、plugin runtime 状态，以及 start/stop/command 和 enablement/availability 的区别
+---
+
+# Plugin Lifecycle
+
+Plugin lifecycle 讨论的是“长期运行状态由谁持有”。
+
+它和这些概念都不是一回事：
+
+- 静态 enablement
+- runtime availability
+- 一次性 actions
+
+## lifecycle 使用面
+
+一个具备 lifecycle 的 plugin 可以声明：
+
+- `lifecycle.start`
+- `lifecycle.stop`
+- `lifecycle.command`
+
+这些接口是给 plugin-owned runtime 用的，不是普通一次性能力调用。
+
+## 什么场景适合 lifecycle
+
+当 plugin 必须持有这些能力时，就更适合 lifecycle：
+
+- workers
+- poll loops
+- 长连接
+- 内存 runtime state
+- 可恢复的 runtime engines
+
+典型例子：
+
+- `chat`
+- `task`
+- `schedule`
+- `memory`
+- `shell`
+
+## runtime state 不等于 enablement
+
+下面这些是不同事实：
+
+- `enabled`：city 级 lifecycle 策略是否允许插件开启
+- `available`：运行时检查是否认为插件当前可用
+- `running`：lifecycle runtime 当前是否真的已经启动
+
+## runtime state 快照
+
+当前 runtime state 快照常见状态包括：
+
+- `running`
+- `stopped`
+- `starting`
+- `stopping`
+- `error`
+
+## 什么会启动 lifecycle plugins
+
+在本地 SDK 里，plugin lifecycle 一般通过下面这类入口启动：
+
+```ts
+await agent.start({
+  plugins: true,
+});
+```
+
+更高级的 runtime 代码也可以直接使用这些导出 helper：
+
+- `startAllPlugins(context)`
+- `stopAllPlugins(context)`
+
+## lifecycle command 和 action 的区别
+
+当 plugin 需要一个 runtime-control 命令时，例如：
+
+- reload
+- reschedule
+- restart
+
+更适合用 `lifecycle.command`。
+
+当 plugin 暴露的是普通能力工作时，更适合用 `actions`。
+
+`task` 就是同时具备两者的一个典型例子。
+
+## managed 和 local plugin 的心智模型
+
+有一个很有用的区分是：
+
+- local plugin：不依赖运行中的 lifecycle
+- managed plugin：持有 lifecycle 行为
+
+## 相关文档
+
+- [Plugin Availability](/zh/agent-sdk-docs/plugins/plugin-availability)
+- [Plugin Design Patterns](/zh/agent-sdk-docs/plugins/design-patterns)
+- [Built-ins Overview](/zh/plugins-docs/builtins/overview)

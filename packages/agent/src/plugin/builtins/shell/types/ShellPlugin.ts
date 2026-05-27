@@ -1,9 +1,9 @@
 /**
- * Shell service 类型定义。
+ * Shell plugin runtime 类型定义。
  *
  * 关键点（中文）
  * - `shell_id` 是 shell 会话的唯一标识，与 chat `sessionId` 严格区分。
- * - 这些类型同时服务于 service 层状态管理与 agent tool 协议。
+ * - 这些类型同时服务于 shell runtime 状态管理与 agent tool 协议。
  */
 
 export type ShellSessionStatus =

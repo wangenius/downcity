@@ -43,7 +43,10 @@ import { RemoteAgent } from "@downcity/agent";
 
 无论是本地还是远程，SDK 的核心使用面都围绕 session：
 
-- `session()`
+- `createSession()`
+- `getSession()`
+- `listSessions()`
+- `getInfo()`
 - `prompt()`
 - `subscribe()`
 - `history()`
@@ -83,7 +86,9 @@ await session.set({ model });
 ## 推荐阅读顺序
 
 1. [本地 Agent](/zh/agent-sdk-docs/local-agent/quickstart)
-2. [Plugins](/zh/agent-sdk-docs/plugins/overview)
-3. [远程 Agent](/zh/agent-sdk-docs/remote-agent/quickstart)
-4. [Session](/zh/agent-sdk-docs/sessions/overview)
-5. [API 参考](/zh/agent-sdk-docs/api-reference/agent-class)
+2. [Plugin Concepts](/zh/agent-sdk-docs/plugins/overview)
+3. [Plugins Docs](/zh/plugins-docs)
+4. [远程 Agent](/zh/agent-sdk-docs/remote-agent/quickstart)
+5. [Session](/zh/agent-sdk-docs/sessions/overview)
+6. [SDK Surface](/zh/agent-sdk-docs/api-reference/sdk-surface)
+7. [API 参考](/zh/agent-sdk-docs/api-reference/agent-class)

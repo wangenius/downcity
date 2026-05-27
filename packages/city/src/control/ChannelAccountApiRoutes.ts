@@ -7,7 +7,7 @@
  */
 
 import type { Hono } from "hono";
-import { ChatChannelAccountService } from "@downcity/agent";
+import { ChatChannelAccountManager } from "@downcity/agent";
 import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 /**
@@ -15,11 +15,11 @@ import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.
  */
 export function registerPlatformChannelAccountRoutes(params: { app: Hono }): void {
   const app = params.app;
-  const service = new ChatChannelAccountService(createAgentPlatformRuntime());
+  const manager = new ChatChannelAccountManager(createAgentPlatformRuntime());
 
   app.get("/api/ui/channel-accounts", async (c) => {
     try {
-      const payload = await service.list();
+      const payload = await manager.list();
       return c.json({
         success: true,
         ...payload,
@@ -47,7 +47,7 @@ export function registerPlatformChannelAccountRoutes(params: { app: Hono }): voi
         clearAppId?: boolean;
         clearAppSecret?: boolean;
       };
-      const payload = await service.upsert({
+      const payload = await manager.upsert({
         id: String(body.id || "").trim(),
         channel: String(body.channel || "").trim(),
         name: String(body.name || "").trim(),
@@ -82,7 +82,7 @@ export function registerPlatformChannelAccountRoutes(params: { app: Hono }): voi
         domain?: string;
         sandbox?: boolean;
       };
-      const payload = await service.probe({
+      const payload = await manager.probe({
         channel: String(body.channel || "").trim(),
         botToken: body.botToken,
         appId: body.appId,
@@ -108,7 +108,7 @@ export function registerPlatformChannelAccountRoutes(params: { app: Hono }): voi
       if (!id) {
         return c.json({ success: false, error: "Missing id" }, 400);
       }
-      await service.remove(id);
+      await manager.remove(id);
       return c.json({
         success: true,
         id,

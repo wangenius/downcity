@@ -1,0 +1,48 @@
+---
+title: city task
+description: 托管 task plugin 命令，用于任务定义、执行与自动化
+---
+
+# `city task`
+
+`city task` 是托管 task plugin 的命令组。
+
+当你要定义“可复用、可长期存在的自动化任务”时，优先使用它，而不是一次性的延迟 plugin action。
+
+## 用法
+
+```bash
+city task <subcommand> [options]
+```
+
+## 主要子命令
+
+- `list`
+- `create`
+- `run <title>`
+- `update <title>`
+- `delete <title>`
+- `status <title> <enabled|paused|disabled>`
+- `enable <title>`
+- `disable <title>`
+
+## 边界
+
+- `city task` 适合可复用、长期存在的自动化。
+- `city chat --delay/--time`、`city memory --delay/--time` 适合“把现成 action 稍后执行一次”。
+- 任务定义可以使用 `@manual`、cron，或 `time:<ISO8601>`。
+
+## 示例
+
+```bash
+city task list
+city task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+city task run daily-check
+city task update daily-check --when "@manual"
+city task disable daily-check
+```
+
+## 相关页面
+
+- [`Plugin 调度`](/zh/docs/commands/plugin/schedule)
+- [`Plugins Docs / task`](/zh/plugins-docs/builtins/task)

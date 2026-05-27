@@ -1,6 +1,7 @@
 {
   "title": "API Reference",
   "pages": [
+    "sdk-surface",
     "agent-class",
     "remote-agent-class",
     "session-types",

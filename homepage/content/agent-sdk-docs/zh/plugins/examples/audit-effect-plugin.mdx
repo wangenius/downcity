@@ -1,61 +1,13 @@
 ---
-title: AuditEffectPlugin 场景
-description: 用一个 effect 场景说明 plugin 如何只做副作用，而不改主值
+title: Audit Effect Plugin 示例已迁移
+description: 这个具体 plugin 示例已经迁移到 Plugins Docs
 ---
 
-# AuditEffectPlugin 场景
+# Audit Effect Plugin 示例已迁移
 
-## 场景
+这个示例现在位于 [Plugins Docs / audit-effect-plugin](/zh/plugins-docs/examples/audit-effect-plugin)。
 
-你想记录某类事件：
+如果你想先看概念层内容，请继续阅读：
 
-- 某条消息进来了
-- 某个动作被触发了
-
-但你不想：
-
-- 改写主值
-- 阻断流程
-
-这时最适合 `effect`。
-
-## 示例
-
-```ts
-import { Agent, type Plugin } from "@downcity/agent";
-
-export const auditEffectPlugin: Plugin = {
-  name: "audit_effect",
-  title: "Audit Effect",
-  description: "Writes one audit line for every observed event.",
-  hooks: {
-    effect: {
-      "audit.observe": [
-        async ({ value, plugin }) => {
-          console.log(`[${plugin}] observed`, value);
-        },
-      ],
-    },
-  },
-};
-
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  tools: {},
-  plugins: [auditEffectPlugin],
-});
-
-await agent.plugins.effect("audit.observe", {
-  event: "incoming_message",
-  sessionId: "sess_001",
-});
-```
-
-## 为什么这里不是 pipeline
-
-因为你并不关心返回一个新值，只关心副作用本身。
-
-## 相关文档
-
-- [Plugin Hooks 和 Resolve](/zh/agent-sdk-docs/plugins/plugin-hooks)
+- [Plugin Hooks Overview](/zh/agent-sdk-docs/plugins/hooks/overview)
+- [Plugin Design Patterns](/zh/agent-sdk-docs/plugins/design-patterns)

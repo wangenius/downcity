@@ -25,13 +25,18 @@ import type {
 } from "@/plugin/types/Plugin.js";
 import type {
   AgentMode,
+  AgentCreateSessionInput,
+  AgentListSessionsInput,
   AgentOptions,
-  AgentSessionMetadata,
+  AgentSessionSummaryPage,
   AgentSessionSystemBlock,
 } from "@/sdk/AgentSdkTypes.js";
 import { Session } from "@/sdk/Session.js";
 import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
-import { getSdkAgentSessionsRootDirPath } from "@/sdk/session/index.js";
+import {
+  getSdkAgentSessionDirPath,
+  listAgentSessionSummaryPage,
+} from "@/sdk/session/index.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
@@ -194,37 +199,62 @@ export class AgentCore {
   }
 
   /**
-   * 获取或创建一个 session。
+   * 新建一个 session。
    */
-  async session(sessionId?: string): Promise<Session> {
-    const session = this.getOrCreateSession(sessionId);
+  async createSession(input?: AgentCreateSessionInput): Promise<Session> {
+    const explicitSessionId = String(input?.sessionId || "").trim() || undefined;
+    if (
+      explicitSessionId &&
+      (this.sessionsById.has(explicitSessionId) ||
+        (await fs.pathExists(
+          getSdkAgentSessionDirPath(this.path, this.id, explicitSessionId),
+        )))
+    ) {
+      throw new Error(`Session "${explicitSessionId}" already exists`);
+    }
+    const session = this.getOrCreateSession(explicitSessionId);
     await session.initialize();
     await this.configureSession(session);
     return session;
   }
 
   /**
-   * 列出当前 agent 的全部 session 元数据。
+   * 获取一个已存在的 session。
    */
-  async sessions(): Promise<AgentSessionMetadata[]> {
-    const rootDir = getSdkAgentSessionsRootDirPath(this.path, this.id);
-    if (!(await fs.pathExists(rootDir))) return [];
-    const entries = await fs.readdir(rootDir, { withFileTypes: true });
-    const items: AgentSessionMetadata[] = [];
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      let sessionId = "";
-      try {
-        sessionId = decodeURIComponent(entry.name);
-      } catch {
-        sessionId = entry.name;
-      }
-      if (!sessionId) continue;
-      const session = await this.session(sessionId);
-      items.push(await session.toMetadata());
+  async getSession(sessionId: string): Promise<Session> {
+    const resolvedSessionId = String(sessionId || "").trim();
+    if (!resolvedSessionId) {
+      throw new Error("getSession requires a non-empty sessionId");
     }
-    items.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    return items;
+    const sessionDirPath = getSdkAgentSessionDirPath(
+      this.path,
+      this.id,
+      resolvedSessionId,
+    );
+    if (
+      !this.sessionsById.has(resolvedSessionId) &&
+      !(await fs.pathExists(sessionDirPath))
+    ) {
+      throw new Error(`Session "${resolvedSessionId}" not found`);
+    }
+    const session = this.getOrCreateSession(resolvedSessionId);
+    await session.initialize();
+    await this.configureSession(session);
+    return session;
+  }
+
+  /**
+   * 列出当前 agent 的 session 摘要页。
+   */
+  async listSessions(
+    input?: AgentListSessionsInput,
+  ): Promise<AgentSessionSummaryPage> {
+    return await listAgentSessionSummaryPage({
+      projectRoot: this.path,
+      agentId: this.id,
+      input,
+      executingSessionIds: new Set(this.runtime.listExecutingSessionIds()),
+    });
   }
 
   /**
@@ -397,7 +427,7 @@ export class AgentCore {
         listExecutingSessionIds: () => this.runtime.listExecutingSessionIds(),
         getExecutingSessionCount: () => this.runtime.getExecutingSessionCount(),
         resolveModel: async (sessionId) => {
-          const session = await this.session(sessionId);
+          const session = await this.getSession(sessionId);
           return session.config.model;
         },
       },

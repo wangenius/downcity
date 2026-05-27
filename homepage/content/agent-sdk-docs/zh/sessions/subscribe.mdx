@@ -16,7 +16,7 @@ const unsubscribe = session.subscribe((event) => {
 ## 例子
 
 ```ts
-const session = await agent.session("repo-analysis");
+const session = await agent.getSession("repo-analysis");
 
 const unsubscribe = session.subscribe((event) => {
   if (event.type === "text-delta") {
@@ -50,8 +50,8 @@ unsubscribe();
 
 `subscribe()` 不负责历史回放。
 
-如果你要读过去的消息，请继续使用 `session.history()`。
+如果你要读过去的消息，请继续使用 `session.history({ limit })`。
 
 ## 为什么选择回调订阅
 
-对于嵌入式 runtime、桌面应用、service host 和远程 HTTP 客户端，session 级 callback subscription 通常比“每次 prompt 都单独创建一个输出对象”更容易管理。
+对于嵌入式 runtime、桌面应用、agent host 和远程 HTTP 客户端，session 级 callback subscription 通常比“每次 prompt 都单独创建一个输出对象”更容易管理。

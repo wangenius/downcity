@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里专门负责把 task 的 CLI/execute 定义装配成 `PluginActions`。
- * - TaskService 本体只保留实例状态与 lifecycle，不再承载大段 action 声明。
+ * - task plugin runtime 本体只保留实例状态与 lifecycle，不再承载大段 action 声明。
  */
 
 import type { Command } from "commander";

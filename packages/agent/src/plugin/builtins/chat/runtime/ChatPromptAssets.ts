@@ -6,7 +6,7 @@
  * - 这里统一做 `trim()`，避免多渠道 prompt 行为不一致。
  */
 
-import chatServicePromptText from "@/plugin/builtins/chat/PROMPT.direct.js";
+import chatPluginPromptText from "@/plugin/builtins/chat/PROMPT.direct.js";
 import feishuChatPromptText from "@/plugin/builtins/chat/channels/feishu/PROMPT.direct.js";
 import qqChatPromptText from "@/plugin/builtins/chat/channels/qq/PROMPT.direct.js";
 import telegramChatPromptText from "@/plugin/builtins/chat/channels/telegram/PROMPT.direct.js";
@@ -14,7 +14,7 @@ import telegramChatPromptText from "@/plugin/builtins/chat/channels/telegram/PRO
 /**
  * chat plugin runtime 基础 prompt。
  */
-export const CHAT_SERVICE_PROMPT = chatServicePromptText.trim();
+export const CHAT_PLUGIN_PROMPT = chatPluginPromptText.trim();
 
 /**
  * 飞书 channel prompt。

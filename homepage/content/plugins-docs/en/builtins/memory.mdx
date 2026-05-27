@@ -1,0 +1,47 @@
+---
+title: memory Plugin
+description: Memory storage, retrieval, runtime state, and session-aware memory flushing
+---
+
+# `memory` Plugin
+
+`memory` is the agent memory plugin.
+
+It provides:
+
+- memory storage
+- memory search
+- memory file reads
+- session-to-memory flushing
+- memory system text
+
+## Main shape
+
+- `lifecycle`
+- `actions`
+- `system`
+
+## What it is for
+
+Use `memory` when you need:
+
+- searchable long-term or daily memory
+- explicit memory writes
+- reading memory file fragments
+- flushing one session's recent messages into memory
+
+## Important semantics
+
+- runtime state belongs to the plugin instance
+- memory enablement is separate from whether the plugin exists in code
+- some actions are session-aware, especially `flush`
+
+## Public status
+
+`MemoryPlugin` is built-in in code, but it is primarily a platform runtime plugin rather than a main package-root SDK plugin export.
+
+## Related docs
+
+- [Plugin System](/en/agent-sdk-docs/plugins/plugin-system)
+- [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions)
+- [Built-ins Overview](/en/plugins-docs/builtins/overview)

@@ -1,0 +1,38 @@
+---
+title: schedule Plugin
+description: Internal scheduling infrastructure for plugin actions and delayed or timed redispatch
+---
+
+# `schedule` Plugin
+
+`schedule` is an infrastructure plugin.
+
+It is responsible for polling scheduled jobs and redispatching due plugin actions.
+
+## Main shape
+
+- `lifecycle`
+- no business actions
+
+## What it is for
+
+Use `schedule` as a mental model when you want to understand:
+
+- why scheduling belongs to plugin lifecycle instead of the top-level agent shell
+- how delayed plugin actions are re-invoked
+- how infrastructure plugins can exist without user-facing business actions
+
+## Important semantics
+
+- it mainly polls `PluginScheduleStore`
+- it restarts interrupted running jobs back to pending on startup recovery
+- it is a core infrastructure pattern, not a normal user-facing plugin
+
+## Public status
+
+`SchedulePlugin` is built-in in code, but it is primarily a platform infrastructure plugin rather than a normal public SDK capability plugin.
+
+## Related docs
+
+- [Plugin Lifecycle](/en/agent-sdk-docs/plugins/lifecycle)
+- [Built-ins Overview](/en/plugins-docs/builtins/overview)

@@ -1,220 +1,71 @@
 ---
 title: Runtime 演进方向
-description: 基于当前 package 实现，说明后续更清晰的控制面、执行面、session、service、plugin 分层方向
+description: 基于当前 package 实现，说明后续怎样继续强化控制面、执行面、session 主轴与 plugin runtime 边界
 ---
 
 # Runtime 演进方向
 
-这页不描述当前实现“已经是什么”，而是回答另一个问题：
+这页不描述“已经是什么”，而是回答：
 
-- 结合现在的 package 代码，后续应该往什么方向调，才能让 console、agent、session、service、plugin 的边界更顺
+- 基于现在的代码，后续最稳的演进方向是什么
 
-先给结论：
+## 先说结论
 
-- `console runtime` 应该越来越像 control plane
-- `agent runtime` 应该越来越像 execution plane
-- `session` 应该继续保持为统一执行主轴
-- `service` 只保留主流程所有权
-- `plugin` 只保留增强逻辑与显式插件动作
+- `console` 应该越来越像纯控制面
+- `agent host` 应该越来越像纯执行面
+- `session` 应继续保持统一执行主轴
+- `plugin` 应继续承担能力暴露与运行时增强
+- 托管 plugin runtime 应只在确实需要长期状态时存在
 
-## 为什么需要演进
+## 为什么还需要继续演进
 
-当前实现已经完成了很多正确收敛，例如：
+当前实现已经完成了很多关键收敛：
 
-- plugin 统一到 `pipeline / guard / effect / resolve`
-- `PluginRegistry` 已支持 action 与 availability
-- `skill` 已迁到 plugin
-- runtime 中心已经收敛到 `AgentRuntime`
+- plugin hooks 统一到 `pipeline / guard / effect / resolve`
+- `AgentCore` 已经收束成实例级内核
+- `skill`、`web`、`auth` 这类能力已经清楚回到 plugin 体系
 
-但仍然有几处边界可以继续变顺。
+但还有几个方向值得继续强化。
 
-### 1. 控制面和执行面的语义还可以更清晰
-
-当前已经基本形成：
-
-- console 管控制与观测
-- agent 管执行
-
-但文档、部分历史心智和少量实现边缘还可能把这两层混起来。
-
-### 2. session 应继续保持主执行轴，不要被重新揉进 service
-
-当前这条主链已经很清晰：
-
-- `AgentRuntime`
-- `SessionFacade`
-- `SessionExecutorRegistry`
-- `SessionEngine`
-
-后续演进时不应该把 session 执行权再散回某个 service 内部。
-
-### 3. plugin 的管理和执行语义还可以继续收干净
+## 1. 控制面和执行面继续分清
 
 更稳的方向是：
 
-- console 侧更偏 plugin 清单、启用、可见性和控制语义
-- agent 侧继续负责 plugin 执行注册与运行
+- console 只管理 registry、模型池、共享配置、可见性和控制入口
+- agent host 只负责项目执行、runtime 装配与会话推进
 
-## 理论上更顺的结构
+## 2. session 始终保持执行主轴
 
-```mermaid
-flowchart LR
-  subgraph Control["控制面"]
-    CONSOLE["Console Runtime"]
-    META["Agent / Plugin Metadata"]
-    REG["Registry / Visibility / Config"]
-  end
+后续演进时，不要把执行权重新打散到额外层里。
 
-  subgraph Execution["执行面"]
-    AGENT["Agent Runtime"]
-    SESSION["Session Axis"]
-    SERVICES["Services"]
-    PLUGINS["Plugin Executor / Plugins"]
-  end
+最稳定的链路仍然应该是：
 
-  CONSOLE --> META
-  META --> REG
-  REG --> AGENT
-  AGENT --> SESSION
-  AGENT --> SERVICES
-  SERVICES --> SESSION
-  SERVICES --> PLUGINS
-```
+- `AgentCore`
+- `Session`
+- `Executor`
 
-这张图里有几个关键判断。
+## 3. plugin runtime 继续收口
 
-### Console Runtime
+更稳的方向是：
 
-它应该只管控制面：
+- 显式能力继续做 action
+- 运行时增强继续走 hook
+- 长期模块继续做托管 runtime
 
-- agent 的启动、停止、观测
-- 模型配置、共享 env、registry
-- plugin 的可见性与控制语义
+不要再引入一套和这些平行的旧式能力层表达。
 
-它不应该承担某个 agent 的真实业务执行。
+## 4. 文档和代码命名继续统一
 
-### Agent Runtime
+最容易拖慢协作的不是功能缺失，而是名字和心智对不上。
 
-它应该只管执行面：
+所以后续继续重构时，优先级应该是：
 
-- 加载当前项目 config / env / systems
-- 初始化 `AgentRuntime`
-- 创建 session、services、plugins
-- 运行当前项目的业务流程
-
-### Session
-
-它应该继续作为统一执行主轴：
-
-- 负责消息历史
-- 负责 run
-- 负责 history store、compact、tools、prompt、model 协调
-
-### Service
-
-它只负责主流程：
-
-- 定义 workflow
-- 定义 action
-- 定义 plugin points
-- 决定调用时机
-
-### Plugin
-
-它只负责增强逻辑：
-
-- hook
-- resolve
-- guard
-- effect
-- 显式 plugin action
-
-## 当前实现和目标之间的差距
-
-### 现状
-
-```mermaid
-flowchart TD
-  CLI["CLI / UI"] --> CONSOLE["Console Runtime"]
-  CONSOLE --> AGENT["Agent Runtime"]
-  AGENT --> AST["AgentRuntime"]
-  AST --> SESS["SessionFacade"]
-  AST --> SVC["Services"]
-  AST --> PR["PluginRegistry"]
-  SVC --> PR
-  SVC --> SESS
-```
-
-当前实现里的关键点：
-
-- runtime 中心已经是 `AgentRuntime`
-- session 已经收敛到 `SessionFacade` 一套主链
-- plugin registry 在 agent runtime 内实例化
-- builtin plugin 在 agent runtime 初始化时注册
-
-### 目标
-
-```mermaid
-flowchart TD
-  CLI["CLI / UI"] --> CONSOLE["Console Runtime"]
-  CONSOLE --> META["Agent / Plugin Metadata"]
-  META --> AGENT["Agent Runtime"]
-  AGENT --> AST["AgentRuntime"]
-  AST --> SESS["Session Axis"]
-  AST --> SVC["Services"]
-  SVC --> PX["Plugin Execution"]
-```
-
-核心变化不是推翻重来，而是三条：
-
-1. 控制面语义继续往 console 侧收
-2. 执行语义继续留在 agent 侧
-3. session 主轴继续保持独立稳定
-
-## 建议的分阶段迁移
-
-### Phase 1：统一命名与文档心智
-
-优先持续统一到当前真实对象：
-
-- `AgentRuntime`
-- `SessionFacade`
-- `AgentContext`
-- `SessionEngine`
-
-### Phase 2：继续收紧控制面和执行面边界
-
-目标是让：
-
-- console 更清楚地负责 registry / config / daemon / visibility
-- agent 更清楚地负责 session / services / plugins 的执行装配
-
-### Phase 3：保持 session 主轴稳定
-
-后续即使继续重构 service 或 plugin，也尽量不要破坏：
-
-- `SessionFacade -> SessionExecutorRegistry -> SessionEngine`
-
-这条执行主链。
-
-## 不建议现在就做的事
-
-### 1. 不要为了抽象统一而重新发明 runtime 名词
-
-当前代码里最稳定的对象已经是：
-
-- `AgentRuntime`
-- `AgentContext`
-- `SessionFacade`
-
-所以不建议再引入一套平行主概念把它们重新包一层。
-
-### 2. 不要把 service、session、plugin 混成同一个层
-
-如果三者重新揉在一起，会直接损失当前已经收敛出来的边界。
+1. 先统一执行主轴的叫法
+2. 再统一 plugin runtime 的叫法
+3. 最后再处理历史遗留类名或注释
 
 ## 一句话总结
 
 ```text
-后续最稳的演进方向，不是重做一套新 runtime，而是继续强化 console 作为控制面、agent 作为执行面、session 作为执行主轴、service 作为主流程、plugin 作为增强层的边界。
+后续最稳的方向，不是重新发明一套 runtime，而是继续强化 console 作为控制面、agent host 作为执行面、session 作为执行主轴、plugin 作为能力层的边界。
 ```

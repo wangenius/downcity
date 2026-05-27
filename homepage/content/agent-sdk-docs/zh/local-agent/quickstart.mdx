@@ -28,7 +28,7 @@ const agent = new Agent({
   model: openai.responses("gpt-5"),
 });
 
-const session = await agent.session();
+const session = await agent.createSession();
 const turn = await session.prompt({
   query: "总结一下当前仓库结构",
 });
@@ -40,7 +40,7 @@ console.log(result.text);
 ## 最重要的三步
 
 1. `new Agent(...)`
-2. `await agent.session()`
+2. `await agent.createSession()`
 3. 确保 session 有 model
 
 这三步里第 3 步最容易被遗漏，也是本地 SDK 最常见的踩坑点。
@@ -52,7 +52,7 @@ console.log(result.text);
 
 如果两种都没做，本地 session 没有模型，无法执行。
 
-第一次上手时，建议先不要叠加复杂 tools、services、plugins 或 HTTP 暴露，先把最短执行链跑通。
+第一次上手时，建议先不要叠加复杂 tools、托管 plugin、额外 plugin 或 HTTP 暴露，先把最短执行链跑通。
 
 ## 什么时候需要 `agent.start()`
 
@@ -61,7 +61,7 @@ console.log(result.text);
 如果你只是想在宿主代码里直接跑 session：
 
 ```ts
-const session = await agent.session();
+const session = await agent.createSession();
 const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```

@@ -2,8 +2,8 @@
  * ChatMetaStore：按 sessionId 维护 chat 路由元信息。
  *
  * 关键点（中文）
- * - 入站消息到达时由 service/builtins/chat 写入
- * - 出站按 sessionId/chatKey 发送时由 service/builtins/chat 读取
+ * - 入站消息到达时由 chat plugin runtime 写入
+ * - 出站按 sessionId/chatKey 发送时由 chat plugin runtime 读取
  * - 底层数据落在 `.downcity/channel/meta.json`，由 ChannelContextStore 统一维护
  */
 

@@ -6,9 +6,9 @@
  * - 这里统一做 `trim()`，保持 plugin system 文本行为稳定。
  */
 
-import taskServicePromptText from "@/plugin/builtins/task/PROMPT.js";
+import taskPluginPromptText from "@/plugin/builtins/task/PROMPT.js";
 
 /**
  * task plugin 固定 system prompt 文本。
  */
-export const TASK_PLUGIN_PROMPT = taskServicePromptText.trim();
+export const TASK_PLUGIN_PROMPT = taskPluginPromptText.trim();

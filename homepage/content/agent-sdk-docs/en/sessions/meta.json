@@ -3,6 +3,7 @@
   "pages": [
     "overview",
     "set-model",
+    "info",
     "prompt",
     "subscribe",
     "history",

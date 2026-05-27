@@ -17,7 +17,7 @@ memoryAgent 到底是什么，它到底怎么工作？
 
 它更准确的定义是：
 
-- `memory service` 内部的后台整理角色
+- `memory runtime` 内部的后台整理角色
 
 它的核心职责只有一句话：
 
@@ -65,7 +65,7 @@ Session 负责现在，memoryAgent 负责时间。
 ```mermaid
 flowchart LR
   S["Session"]
-  MS["memory service"]
+  MS["memory runtime"]
   MA["memoryAgent"]
   CORE["Scratchpad / Journal / Canon"]
   MODEL["AgentRuntime.model"]
@@ -79,7 +79,7 @@ flowchart LR
 
 这张图有两个重点：
 
-1. `memoryAgent` 是从属于 `memory service` 的
+1. `memoryAgent` 是从属于 `memory runtime` 的
 2. 它需要模型时，借用 runtime 已有的 model，而不是自己长一套新的
 
 ## memoryAgent 更像“角色”，不一定先是“类”
@@ -177,7 +177,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  DAY["白天<br/>Session 持续执行"] --> CAP["memory service 轻量 capture"]
+  DAY["白天<br/>Session 持续执行"] --> CAP["memory runtime 轻量 capture"]
   CAP --> NIGHT["夜里 / 空闲时"]
   NIGHT --> MA["memoryAgent 整理 Journal / Canon"]
   MA --> VIEW["更新 Projection 与索引"]
@@ -206,5 +206,5 @@ flowchart TD
 ## 一句话总结
 
 ```text
-memoryAgent 不是第二个主执行体，而是 memory service 内部负责把长期状态慢慢整理好的后台角色。
+memoryAgent 不是第二个主执行体，而是 memory runtime 内部负责把长期状态慢慢整理好的后台角色。
 ```

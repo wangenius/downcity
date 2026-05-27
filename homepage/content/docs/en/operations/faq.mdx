@@ -11,7 +11,7 @@ No. `city` is the short alias of the same binary.
 
 ## Why does `city task ...` fail with connection errors?
 
-`task/chat/skill/asr/tts/service/plugin` commands typically require a running daemon:
+`task/chat/memory/contact/shell/skill/asr/tts/plugin` commands typically require a running daemon:
 
 ```bash
 city agent start
@@ -32,7 +32,6 @@ city config get model.primary
 
 ```bash
 city agent list --running
-city service list
 city plugin list
 city memory status
 ```

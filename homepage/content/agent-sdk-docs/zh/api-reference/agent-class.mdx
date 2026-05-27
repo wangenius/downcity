@@ -10,9 +10,16 @@ description: 本地 Agent SDK 的核心公开接口
 - `new Agent(options)`
 - `agent.start(options?)`
 - `agent.stop()`
-- `agent.session(sessionId?)`
-- `agent.sessions()`
+- `agent.createSession(input?)`
+- `agent.getSession(sessionId)`
+- `agent.listSessions(input?)`
+- `agent.getConfig()`
+- `agent.getLogger()`
 - `agent.plugins`
+
+`agent.createSession()` 和 `agent.getSession()` 返回 `AgentSession`。
+
+`agent.getConfig()` 和 `agent.getLogger()` 是更窄的高级集成辅助入口。本地 SDK 不再把 `agent.getRuntime()` 与 `agent.getContext()` 作为公开使用面。
 
 ## 构造参数
 
@@ -55,7 +62,7 @@ await agent.start({
 
 如果你不调用 `agent.start()`：
 
-- 仍然可以直接 `await agent.session()` 然后 `session.prompt()`
+- 仍然可以直接 `await agent.createSession()` 然后 `session.prompt()`
 - 但不会启动 HTTP / RPC
 - 也不会启动后台 plugin lifecycle
 

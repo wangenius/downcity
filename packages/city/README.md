@@ -3,7 +3,7 @@
 `@downcity/city` 是 Downcity 的平台层与多 Agent 宿主管理包。
 
 它负责 CLI、控制面、city runtime 进程管理、全局配置存储，以及多个 agent 的注册与调度。  
-它依赖 `@downcity/agent` 提供单 Agent runtime、service、plugin、control API、sandbox 与执行能力，但不重复实现这些内核。
+它依赖 `@downcity/agent` 提供单 Agent runtime、plugin、control API、sandbox 与执行能力，但不重复实现这些内核。
 
 ## 包定位
 
@@ -24,7 +24,7 @@
 - `@downcity/agent`
   - 单 Agent runtime。
   - 单 Agent control API。
-  - service / plugin / sandbox / tool loop / session 执行。
+  - plugin / sandbox / tool loop / session 执行。
 
 - `@downcity/ui`
   - React UI 组件与前端展示层。
@@ -50,7 +50,6 @@ src
 │   ├── control-plane/
 │   ├── model/
 │   │   └── preset/
-│   ├── service/
 │   ├── shared/
 │   └── Index.ts
 ├── config/
@@ -97,13 +96,9 @@ src
   - city 侧模型预设目录。
   - 只保留命令交互需要的预设定义，不再复制全局 store 实现。
 
-- `src/cli/service/`
-  - `city service ...` 与服务 action 命令桥接。
-  - 负责把 CLI 命令转发到单 Agent runtime。
-
 - `src/cli/shared/`
   - 多个 CLI 子域共用的基础能力。
-  - 包括 reporter、错误类型、env、token、plugin、chat manager、命令参数辅助等。
+  - 包括 reporter、错误类型、env、token、plugin、chat manager、命令参数辅助，以及托管 plugin action 命令桥接等。
 
 - `src/config/`
   - city 自己的静态配置结构。
@@ -116,7 +111,7 @@ src
 
 - `src/control/instant/`
   - control plane 下的即时执行子域。
-  - 放置 instant-run 路由、临时 session service 和即时 system composer。
+  - 放置 instant-run 路由、临时 session runner 和即时 system composer。
 
 - `src/control/gateway/`
   - gateway 的读写辅助模块。
@@ -184,7 +179,6 @@ src/cli/Index.ts
   -> control-plane/
   -> agent/
   -> model/
-  -> service/
   -> shared/
 ```
 
@@ -254,7 +248,7 @@ city model ...
 ## 维护约定
 
 - 不要把单 Agent 执行逻辑重新实现到这个包里。
-- sandbox、tool loop、session 执行、service 内核统一来自 `@downcity/agent`。
+- sandbox、tool loop、session 执行与 plugin runtime 内核统一来自 `@downcity/agent`。
 - 模型池、provider store 与模型创建逻辑留在 city 宿主层，不下沉回 `@downcity/agent`。
 - `control/` 是平台 gateway / control plane。
 - 单 Agent 的 HTTP control API 语义应该留在 `@downcity/agent`。

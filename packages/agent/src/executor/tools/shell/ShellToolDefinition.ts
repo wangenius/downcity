@@ -1,8 +1,8 @@
 /**
- * Shell tools（service 化版本）。
+ * Shell tools。
  *
  * 设计目标（中文）
- * - shell 子进程生命周期统一由 `shellService` 承担。
+ * - shell 子进程生命周期统一由 shell plugin runtime 承担。
  * - tool 只负责 Session/tool 协议适配、参数校验与日志语义。
  * - 复杂桥接和 schema 已拆到旁路模块，当前文件只保留公开 tool 定义。
  */

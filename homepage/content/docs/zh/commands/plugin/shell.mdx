@@ -1,0 +1,26 @@
+---
+title: city shell
+description: 托管 shell plugin 命令，用于 runtime shell 执行与会话归属
+---
+
+# `city shell`
+
+`city shell` 是托管 shell plugin 的命令组。
+
+当你需要“属于 agent runtime 的 shell 执行”而不是临时本地终端步骤时，使用它。
+
+## 这类 plugin 的含义
+
+- shell session 的归属在托管 shell plugin runtime 上
+- start/stop 时的清理归属于 plugin lifecycle
+- 命令执行与会话状态都绑定到目标 agent
+
+## 推荐阅读路径
+
+- 先看 [Plugins Docs / shell](/zh/plugins-docs/builtins/shell) 理解 lifecycle 与边界
+- 如果需要 lifecycle 级控制，使用 `city plugin status shell`、`city plugin start shell`、`city plugin restart shell`
+
+## 相关页面
+
+- [`city plugin`](/zh/docs/commands/plugin/plugin)
+- [`Plugins Docs / shell`](/zh/plugins-docs/builtins/shell)

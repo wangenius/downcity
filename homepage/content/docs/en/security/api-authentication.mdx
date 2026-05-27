@@ -126,7 +126,7 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
 Main rule first:
 
 - only external HTTP calls need a Bearer token
-- local `city service`, `city plugin`, `city task`, `city chat`, and similar commands use IPC by default and do not need a token first
+- local `city plugin`, `city task`, `city chat`, `city memory`, and similar commands use IPC by default and do not need a token first
 
 For direct API usage, the important rule is:
 

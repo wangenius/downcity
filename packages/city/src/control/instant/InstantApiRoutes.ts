@@ -3,17 +3,17 @@
  *
  * 关键点（中文）
  * - 统一暴露 `/api/ui/inline/instant-run`，避免扩展直接区分 model/acp 两套后端路径。
- * - 接口层只做轻量参数校验，具体临时 session 执行逻辑下沉到 service。
+ * - 接口层只做轻量参数校验，具体临时 session 执行逻辑下沉到 runner。
  */
 
 import type { Hono } from "hono";
 import type { PlatformAgentOption } from "@downcity/agent";
 import type {
   PlatformInlineInstantRunInput,
-  PlatformInlineInstantService,
+  PlatformInlineInstantRunner,
   InlineInstantExecutorType,
 } from "@downcity/agent";
-import { InstantSessionService } from "@/control/instant/InstantSessionService.js";
+import { InstantSessionRunner } from "@/control/instant/InstantSessionRunner.js";
 
 function normalizeExecutorType(input: unknown): InlineInstantExecutorType | "" {
   const value = String(input || "").trim();
@@ -27,11 +27,11 @@ function normalizeExecutorType(input: unknown): InlineInstantExecutorType | "" {
 export function registerPlatformInstantRoutes(params: {
   app: Hono;
   resolveAgentById: (requestedAgentId: string) => Promise<PlatformAgentOption | null>;
-  instantSessionService?: PlatformInlineInstantService;
+  instantRunner?: PlatformInlineInstantRunner;
 }): void {
-  const service =
-    params.instantSessionService ||
-    new InstantSessionService({
+  const runner =
+    params.instantRunner ||
+    new InstantSessionRunner({
       resolveAgentById: (agentId) => params.resolveAgentById(agentId),
     });
 
@@ -55,7 +55,7 @@ export function registerPlatformInstantRoutes(params: {
         return c.json({ success: false, error: "Missing agentId" }, 400);
       }
 
-      const payload = await service.run({
+      const payload = await runner.run({
         executorType,
         prompt,
         system: String(body.system || "").trim(),

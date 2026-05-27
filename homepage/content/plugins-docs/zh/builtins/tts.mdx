@@ -1,0 +1,266 @@
+---
+title: tts Plugin
+description: 详细说明 tts 内建 plugin 如何安装本地语音合成依赖、配置模型与输出参数、生成音频文件，以及返回可复用的音频文件标签
+---
+
+# tts Plugin
+
+`tts` 是当前最典型的“显式生成结果型 plugin”之一。
+
+你给它一段文本，它负责产出：
+
+- 本地音频文件
+- 可复用的音频文件标签
+
+这让文字输出可以自然扩展成“可听版本”的输出。
+
+## 它到底做什么
+
+`tts` 主要负责：
+
+1. 安装本地文本转语音依赖
+2. 管理默认模型、格式、语速等配置
+3. 根据输入文本生成音频文件
+4. 把结果以路径和文件标签形式返回
+
+它的设计重心和 `asr` 不同。
+
+`asr` 偏输入增强，`tts` 偏输出产物生成。
+
+## 它使用了哪些 plugin 能力
+
+`tts` 用到了：
+
+- `config`
+- `setup`
+- `usage`
+- `availability`
+- `actions`
+- `system`
+
+它没有使用 pipeline hook，也没有使用 runtime HTTP。
+
+这意味着：
+
+- `tts` 不会自动拦进消息主链路
+- 它更适合在明确需要生成语音时显式调用
+
+## 典型场景
+
+### 场景一：用户希望把最终答案转成语音发出去
+
+这是 `tts` 最典型的使用方式。
+
+先生成文本回答，再调用 `tts.synthesize`，得到音频文件后发送到渠道。
+
+### 场景二：你想为某个渠道统一固定输出格式
+
+例如只允许 `wav`，或者想默认压缩成 `flac`。
+
+这类需求适合通过 plugin 配置统一管理，而不是每次调用都手工指定。
+
+### 场景三：你想做“多语言播报”或“不同音色播报”
+
+这时可以在一次合成调用里覆盖：
+
+- `language`
+- `voice`
+- `speed`
+
+而不需要改动全局默认值。
+
+## 在 SDK 里怎么挂载
+
+```ts
+import { Agent, TtsPlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "speech-agent",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [new TtsPlugin()],
+});
+```
+
+## 关键配置项
+
+| 配置项 | 作用 | 说明 |
+| --- | --- | --- |
+| `provider` | 当前 provider | 当前默认是本地 provider |
+| `modelId` | 默认模型 | 例如 `qwen3-tts-0.6b` |
+| `format` | 默认输出格式 | `wav` 或 `flac` |
+| `speed` | 默认语速 | `1` 表示正常语速 |
+| `language` | 默认语言提示 | 可按场景覆盖 |
+| `voice` | 默认音色 | 可按场景覆盖 |
+
+## 主要动作
+
+| Action | 作用 | 什么时候用 |
+| --- | --- | --- |
+| `status` | 查看配置与合成器状态 | 先确认环境 |
+| `doctor` | 诊断依赖是否就绪 | 怀疑模型或依赖没准备好时 |
+| `models` | 列出可用模型 | 给 UI 或控制面做选择 |
+| `install` | 安装合成依赖 | 首次接入 TTS |
+| `configure` | 更新默认配置 | 调整模型、格式、语速 |
+| `on` | 启用 plugin，可选顺带安装 | 一步打开能力 |
+| `off` | 关闭 plugin | 暂停语音合成 |
+| `use` | 切换当前模型 | 多模型切换 |
+| `synthesize` | 把文本生成音频文件 | 核心调用动作 |
+
+## 场景化用法示例
+
+### 查看当前状态
+
+```ts
+const status = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "status",
+});
+```
+
+### 列出可用模型
+
+```ts
+const models = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "models",
+});
+```
+
+### 安装 TTS 依赖
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "install",
+  payload: {
+    modelIds: ["qwen3-tts-0.6b"],
+    activeModel: "qwen3-tts-0.6b",
+    format: "wav",
+    installDeps: true,
+  },
+});
+```
+
+### 切换当前模型
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "use",
+  payload: {
+    modelId: "qwen3-tts-0.6b",
+  },
+});
+```
+
+### 生成语音文件
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "synthesize",
+  payload: {
+    text: "你好，欢迎来到 Downcity",
+    language: "zh",
+    format: "wav",
+    speed: 1,
+  },
+});
+```
+
+成功时，结果里通常会包含：
+
+- `outputPath`
+- `fileTag`
+- `bytes`
+
+这里的 `fileTag` 很重要，因为它让后续发送音频到下游渠道变得更直接。
+
+### 做依赖诊断
+
+```ts
+const diagnosis = await agent.plugins.runAction({
+  plugin: "tts",
+  action: "doctor",
+});
+```
+
+## 为什么它是“显式生成型 plugin”
+
+和 `asr` 的自动增强不同，`tts` 的最佳心智是：
+
+- 当你明确需要一个音频产物时，再调用它
+
+所以它更接近：
+
+- 文件生成器
+- 输出变换器
+- 下游分发前的产物准备层
+
+## `system` 在这里起什么作用
+
+`tts` 的 system 文本会提醒 agent：
+
+- 当前环境有 TTS 能力
+- 什么时候该调用 `tts.synthesize`
+- 成功后会返回音频文件路径和 `<file type="audio">...</file>` 标签
+
+这能帮助 agent 在用户要求“请发个语音版”时，主动选择合适动作，而不是只停在文本回复层。
+
+## 它和渠道发送的边界
+
+`tts` 负责的是“把文字变成音频文件”。
+
+它不负责：
+
+- 某个 IM 渠道怎么上传音频
+- 某个平台怎么展示音频消息
+
+所以更准确地说：
+
+- `tts` 负责产物生成
+- 渠道层负责产物发送
+
+## 它的自然边界
+
+`tts` 背后可能依赖本地模型和 Python 环境，但从架构角色看，它仍然是 plugin 更合适：
+
+- 显式调用
+- 返回结构化结果
+- 配置统一收口
+
+如果你的主要问题是“怎么生成一个可交付的音频产物”，plugin 本身就是更自然的边界。
+
+## 需要注意的边界
+
+### 关闭 plugin 后，合成动作就不应被当作可用
+
+如果 availability 不可用，`synthesize` 会失败。
+
+### `format` 和 `speed` 可以按次覆盖
+
+不要为了单次播报去改整个项目的默认配置。
+
+### `stderr` 不一定代表失败
+
+当前实现允许底层 Python 进程输出非致命 stderr，并把摘要作为附加上下文返回。
+
+也就是说：
+
+- 有 stderr 不等于这次合成失败
+
+## 什么时候优先参考它
+
+当你要设计这些能力时，优先参考 `tts`：
+
+- 显式产物生成型 plugin
+- 模型与输出参数配置
+- 返回文件路径和可复用文件标签
+- 文本输出向音频输出转换
+
+## 相关文档
+
+- [内建 Plugin 总览](/zh/plugins-docs/builtins/overview)
+- [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
+- [Plugin System](/zh/agent-sdk-docs/plugins/plugin-system)

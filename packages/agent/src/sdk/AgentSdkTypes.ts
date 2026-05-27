@@ -12,7 +12,13 @@ import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type { LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
 import type { ServerInstance } from "@/runtime/server/http/Server.js";
-import type { Session } from "@/sdk/Session.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  AgentSessionSubscriber,
+  AgentSessionUnsubscribe,
+} from "@/types/sdk/AgentSessionEvent.js";
+import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
  * SDK Agent 插件装配模式。
@@ -102,9 +108,9 @@ export interface AgentOptions {
    * - SDK 不负责默认模型策略，宿主可在这里统一为 session 注入 model 等运行配置。
    * - 若同时传入 `model`，则会先写入默认模型，再执行这里的宿主覆写逻辑。
    * - 该钩子对每个 session 只触发一次，适合做实例级默认装配。
-   * - 触发时机可能来自显式 `agent.session()`，也可能来自该 session 的首次执行入口。
+   * - 触发时机可能来自显式 `agent.createSession()` / `agent.getSession()`，也可能来自该 session 的首次执行入口。
    */
-  configureSession?: (session: Session) => Promise<void> | void;
+  configureSession?: (session: AgentSession) => Promise<void> | void;
 }
 
 /**
@@ -248,6 +254,53 @@ export interface RemoteAgentOptions {
 }
 
 /**
+ * 新建 session 的输入参数。
+ */
+export interface AgentCreateSessionInput {
+  /**
+   * 可选显式 sessionId。
+   *
+   * 关键点（中文）
+   * - 传入时表达“创建意图”。
+   * - 若该 session 已存在，SDK 应直接报错，而不是静默复用。
+   * - 省略时由 SDK 自动生成稳定且不可推导的 sessionId。
+   */
+  sessionId?: string;
+}
+
+/**
+ * Session 列表查询输入。
+ */
+export interface AgentListSessionsInput {
+  /**
+   * 当前页返回上限。
+   *
+   * 说明（中文）
+   * - 省略时由 SDK 使用默认值。
+   * - 建议宿主 UI 明确传入，避免在大量 session 下拉取过多数据。
+   */
+  limit?: number;
+
+  /**
+   * 分页游标。
+   *
+   * 说明（中文）
+   * - 当前使用 SDK 自身生成的透明字符串游标。
+   * - 调用方只负责透传，不应自行解析其内部格式。
+   */
+  cursor?: string;
+
+  /**
+   * 关键词过滤。
+   *
+   * 说明（中文）
+   * - 推荐用于匹配 `sessionId`、标题与预览文本。
+   * - 属于轻量包含匹配，不承诺复杂搜索语义。
+   */
+  query?: string;
+}
+
+/**
  * Session 可变配置。
  */
 export interface AgentSessionSetInput {
@@ -274,6 +327,57 @@ export interface AgentSessionConfigSnapshot {
    * 当前模型的轻量可读标签。
    */
   modelLabel?: string;
+}
+
+/**
+ * Session 历史视图类型。
+ */
+export type AgentSessionHistoryView = "message" | "timeline";
+
+/**
+ * Session 时间线事件。
+ */
+export interface AgentSessionTimelineEvent {
+  /**
+   * 当前事件唯一标识。
+   */
+  id: string;
+
+  /**
+   * 当前事件角色。
+   *
+   * 说明（中文）
+   * - `tool-call` / `tool-result` 用于把 assistant 内部工具过程平铺给 UI。
+   */
+  role: "user" | "assistant" | "tool-call" | "tool-result";
+
+  /**
+   * 事件时间戳（毫秒）。
+   */
+  ts?: number;
+
+  /**
+   * 事件所属消息种类。
+   */
+  kind?: string;
+
+  /**
+   * 事件来源。
+   */
+  source?: string;
+
+  /**
+   * 当前事件展示文本。
+   */
+  text: string;
+
+  /**
+   * 当前事件对应工具名称。
+   *
+   * 说明（中文）
+   * - 仅 `tool-call` / `tool-result` 这类事件通常会携带该字段。
+   */
+  toolName?: string;
 }
 
 /**
@@ -379,9 +483,9 @@ export interface AgentSessionSystemSnapshot {
 }
 
 /**
- * Session 元数据列表项。
+ * Session 摘要。
  */
-export interface AgentSessionMetadata {
+export interface AgentSessionSummary {
   /**
    * 当前 session 所属 agentId。
    */
@@ -391,6 +495,24 @@ export interface AgentSessionMetadata {
    * 当前 session 唯一标识。
    */
   sessionId: string;
+
+  /**
+   * 当前 session 可读标题。
+   *
+   * 说明（中文）
+   * - 当前 SDK 不要求标题一定存在。
+   * - 若调用方需要展示列表标题，可优先使用这里；为空时再回退到 `sessionId`。
+   */
+  title?: string;
+
+  /**
+   * 当前 session 的最近预览文本。
+   *
+   * 说明（中文）
+   * - 通常来自最后一条用户可见消息的裁剪文本。
+   * - 适合用于侧边栏、列表卡片或 session picker。
+   */
+  previewText?: string;
 
   /**
    * 当前 session 首次创建时间（ms）。
@@ -411,6 +533,126 @@ export interface AgentSessionMetadata {
    * 当前 session 绑定模型的可读标签。
    */
   modelLabel?: string;
+
+  /**
+   * 当前 session 是否处于执行中。
+   */
+  executing?: boolean;
+}
+
+/**
+ * Session 详情。
+ */
+export interface AgentSessionInfo extends AgentSessionSummary {
+  /**
+   * 当前 session 初始化时记录的时区。
+   */
+  timezone?: string;
+}
+
+/**
+ * Session 摘要分页结果。
+ */
+export interface AgentSessionSummaryPage {
+  /**
+   * 当前页 session 摘要列表。
+   */
+  items: AgentSessionSummary[];
+
+  /**
+   * 当前页所对应的总条数。
+   *
+   * 说明（中文）
+   * - 这里表示过滤后的总数，不是仅当前页数量。
+   * - 对分页 UI、结果统计和空态判断更友好。
+   */
+  total: number;
+
+  /**
+   * 下一页游标。
+   */
+  nextCursor?: string;
+
+  /**
+   * 是否仍有更多结果。
+   */
+  hasMore: boolean;
+}
+
+/**
+ * Session 历史读取输入。
+ */
+export interface AgentSessionHistoryInput {
+  /**
+   * 当前页返回上限。
+   */
+  limit?: number;
+
+  /**
+   * 分页游标。
+   */
+  cursor?: string;
+
+  /**
+   * 返回顺序。
+   *
+   * 说明（中文）
+   * - `asc`：从旧到新
+   * - `desc`：从新到旧
+   */
+  order?: "asc" | "desc";
+
+  /**
+   * 返回视图类型。
+   *
+   * 说明（中文）
+   * - `message`：原始 session 消息
+   * - `timeline`：适合直接渲染 UI 的平铺事件
+   */
+  view?: AgentSessionHistoryView;
+}
+
+/**
+ * Session 历史分页结果。
+ */
+export interface AgentSessionHistoryPage {
+  /**
+   * 当前读取所对应的 session 信息。
+   */
+  session: AgentSessionInfo;
+
+  /**
+   * 当前页实际返回视图。
+   */
+  view: AgentSessionHistoryView;
+
+  /**
+   * 当前页数据列表。
+   *
+   * 说明（中文）
+   * - `view=message` 时返回 `SessionMessageV1[]`
+   * - `view=timeline` 时返回 `AgentSessionTimelineEvent[]`
+   */
+  items: SessionMessageV1[] | AgentSessionTimelineEvent[];
+
+  /**
+   * 过滤前后的总条数。
+   *
+   * 说明（中文）
+   * - 对 `view=message` 表示消息条数。
+   * - 对 `view=timeline` 表示时间线事件条数。
+   */
+  total: number;
+
+  /**
+   * 下一页游标。
+   */
+  nextCursor?: string;
+
+  /**
+   * 是否仍有更多数据。
+   */
+  hasMore: boolean;
 }
 
 /**
@@ -425,4 +667,94 @@ export interface AgentSessionForkInput {
    * - 传入时复制到该消息为止（包含该消息）。
    */
   messageId?: string;
+}
+
+/**
+ * SDK Session 集合绑定。
+ */
+export interface AgentSessionCollection {
+  /**
+   * 新建一个 session。
+   */
+  createSession(input?: AgentCreateSessionInput): Promise<AgentSession>;
+
+  /**
+   * 获取一个已存在的 session。
+   */
+  getSession(sessionId: string): Promise<AgentSession>;
+
+  /**
+   * 列出当前 agent 的 session 摘要页。
+   */
+  listSessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage>;
+}
+
+/**
+ * Session actor 公共能力。
+ */
+export interface AgentSessionActor {
+  /**
+   * 当前 session 稳定标识。
+   */
+  readonly id: string;
+
+  /**
+   * 读取当前 session 详情。
+   */
+  getInfo(): Promise<AgentSessionInfo>;
+
+  /**
+   * 追加一条新的 prompt。
+   */
+  prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle>;
+
+  /**
+   * 订阅当前 session 的未来事件。
+   */
+  subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe;
+
+  /**
+   * 读取当前 session 历史分页。
+   */
+  history(input?: AgentSessionHistoryInput): Promise<AgentSessionHistoryPage>;
+
+  /**
+   * 读取当前 session 生效的 system 快照。
+   */
+  system(): Promise<AgentSessionSystemSnapshot>;
+}
+
+/**
+ * 本地 Agent 返回的公开 session 接口。
+ */
+export interface AgentSession extends AgentSessionActor {
+  /**
+   * 当前 session 所属 agentId。
+   */
+  readonly agentId: string;
+
+  /**
+   * 当前 session 配置快照。
+   */
+  readonly config: AgentSessionConfigSnapshot;
+
+  /**
+   * 写入当前 session 默认配置。
+   */
+  set(input: AgentSessionSetInput): Promise<void>;
+
+  /**
+   * 从当前 session 创建一个分叉会话。
+   */
+  fork(input?: AgentSessionForkInput | string): Promise<AgentSession>;
+}
+
+/**
+ * 远程 Agent 返回的公开 session 接口。
+ */
+export interface RemoteAgentSession extends AgentSessionActor {
+  /**
+   * 从当前远程 session 创建一个分叉会话。
+   */
+  fork(input?: AgentSessionForkInput | string): Promise<RemoteAgentSession>;
 }

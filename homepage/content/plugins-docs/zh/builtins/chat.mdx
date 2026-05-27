@@ -1,0 +1,48 @@
+---
+title: chat Plugin
+description: 渠道 runtime、queue worker、chat system text 和 chat 相关 action 的说明
+---
+
+# `chat` Plugin
+
+`chat` 是渠道运行时 plugin。
+
+它主要持有：
+
+- channel state
+- chat queue worker
+- chat queue store
+- chat 相关 actions
+- chat system text
+
+## 主要形状
+
+- `lifecycle`
+- `actions`
+- `system`
+
+## 它主要解决什么问题
+
+当你需要这些能力时，应该关注 `chat`：
+
+- Telegram、Feishu、QQ 这类 chat 渠道 runtime
+- 每个 agent/plugin 实例一条独立 queue worker
+- 消息入站后的执行与消息出站发送
+
+## 关键运行语义
+
+- queue worker 的生命周期归属于 plugin 实例
+- 渠道 bot 状态也归属于 plugin 实例
+- `Agent` 只负责装配，不直接持有 chat 领域长期状态
+
+## 公开性说明
+
+`ChatPlugin` 从 `@downcity/agent` 包根导出。
+
+所以它是少数“虽然偏 lifecycle，但本地嵌入 SDK 用户也可能直接理解和装配”的 built-in 之一。
+
+## 相关文档
+
+- [Plugin Lifecycle](/zh/agent-sdk-docs/plugins/lifecycle)
+- [Plugin System](/zh/agent-sdk-docs/plugins/plugin-system)
+- [Built-ins Overview](/zh/plugins-docs/builtins/overview)

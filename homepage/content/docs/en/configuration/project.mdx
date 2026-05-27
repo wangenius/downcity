@@ -19,8 +19,7 @@ description: Most-used project-level fields and practical cautions
   "start": {
     "host": "127.0.0.1",
     "port": 5314
-  },
-  "services": {}
+  }
 }
 ```
 
@@ -29,7 +28,7 @@ description: Most-used project-level fields and practical cautions
 1. A project now must declare `execution`, and the mode is `api`, `acp`, or `local`.
 2. `execution.type="acp"` switches session execution to an ACP coding agent. Current supported values are `codex`, `claude`, and `kimi`.
 3. `start.host/start.port` affects default CLI routing.
-4. Keep project-level config in `downcity.json`, including `services` and `plugins`.
+4. Keep project-level config in `downcity.json`, including `plugins` and execution behavior.
 5. Local shell / CLI commands now always run inside a sandbox. Top-level `sandbox` only adjusts the boundary.
 
 ## Execution Modes
@@ -114,7 +113,7 @@ In the current version, `shell` / CLI commands always run inside a sandbox. Proj
 
 Current behavior:
 
-- Affects both the shell service path and `kind=script` task execution
+- Affects both the shell plugin path and `kind=script` task execution
 - Current first-class backend is macOS using built-in `sandbox-exec`
 - Sandbox cannot be disabled and shell execution does not fall back to an unrestricted host process
 - Host paths not mounted into the sandbox are not visible

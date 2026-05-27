@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里放的是 agent 执行层内部使用的最小 sandbox 运行时类型。
  * - 当前只围绕 `SandboxRunner` 设计，不引入复杂 provider / policy / binding 对象。
- * - 目标是让 `ShellService` 可以直接把命令交给 `SandboxRunner` 执行。
+ * - 目标是让 shell plugin runtime 可以直接把命令交给 `SandboxRunner` 执行。
  */
 
 import type { ChildProcessWithoutNullStreams } from "node:child_process";

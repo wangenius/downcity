@@ -1,0 +1,53 @@
+---
+title: Console Registration, Execution Context, and Shell Flow
+description: Explains console registry writes, how the execution context surface connects runtime capability, and how shell injects environment
+---
+
+# Console Registration, Execution Context, and Shell Flow
+
+## 1. Console Registration
+
+- registry file: `~/.downcity/console/agents.json`
+- stores known agents and their latest daemon metadata
+- daemon startup must complete the registry write or roll back
+
+## 2. Execution Context Flow
+
+- one agent process binds to one `rootPath`
+- the agent assembles an execution context surface
+- the execution context exposes `session`, `invoke`, and `plugins`
+- plugins register `pipeline`, `guard`, `effect`, and `resolve` handlers
+- plugin actions and managed runtimes trigger those points during their main path
+
+## 3. Shell Flow
+
+- shell state is owned by the shell runtime, not by an ad-hoc tool-local process table
+- `shell_start` returns a `shell_id`; it is not the same thing as a chat `contextId`
+- for long-running commands, prefer `shell_status` and `shell_wait` instead of empty polling loops
+- the default working directory is the current project root
+- subprocesses receive injected `DC_CTX_*` environment variables
+- when a shell task ends and belongs to a real chat context, the shell runtime can enqueue an internal chat message back to the main reply path
+
+## Relationship Diagram
+
+```mermaid
+flowchart TD
+  A["city agent start"] --> B["start daemon"]
+  B --> C["write debug metadata"]
+  B --> D["upsert console registry"]
+  D --> E["console registry"]
+
+  F["city managed plugin or city plugin"] --> G["agent API"]
+  G --> H["execution context"]
+  H --> I["managed plugin runtime"]
+  I --> J["plugin point dispatch"]
+
+  L["agent shell_start"] --> M["shell runtime"]
+  M --> N["shell session"]
+  N --> O["inject DC_CTX env"]
+  O --> P["shell subprocess"]
+  P --> Q["shell_status and shell_wait and shell_read"]
+  P --> R["shell exit event"]
+  R --> S["enqueue internal chat message"]
+  S --> T["main agent reply path"]
+```

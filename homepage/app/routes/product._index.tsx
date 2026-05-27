@@ -65,7 +65,7 @@ const PAGE = {
       {
         id: "sdk",
         title: "City SDK",
-        desc: "Embed city runtime capabilities into your own product flow, service layer, and business system.",
+        desc: "Embed city runtime capabilities into your own product flow, execution layer, and business system.",
         source: "packages/downcity/",
       },
       {

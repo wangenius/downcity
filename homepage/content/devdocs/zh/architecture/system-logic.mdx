@@ -1,24 +1,20 @@
 ---
 title: 系统架构逻辑
-description: 从控制面、执行面、session 主轴、service 与 plugin 层，解释 Downcity 当前真实的系统逻辑
+description: 从控制面、agent host、session 执行与 plugin runtime 的关系解释当前系统逻辑
 ---
 
 # 系统架构逻辑
 
-这一页回答的是：
-
-- 当前系统到底怎么运转
-
-不是旧概念图里的抽象推演，而是和现在 package 对齐的真实主链。
+这页讲的是当前系统到底怎么跑。
 
 ## 总体分层
 
-Downcity 当前可以先粗分成四层：
+Downcity 现在最适合按四层理解：
 
 1. 入口层：CLI、Console UI、Chrome Extension、HTTP API
 2. 控制层：console
-3. 执行层：agent runtime
-4. 业务层：session / services / plugins
+3. 执行层：agent host
+4. 能力层：session 与 plugins
 
 ```mermaid
 flowchart LR
@@ -34,12 +30,11 @@ flowchart LR
   end
 
   subgraph Runtime["执行层"]
-    AGENT["Agent Runtime<br/>single project"]
+    AGENT["Agent Host<br/>single project"]
   end
 
-  subgraph Business["业务层"]
+  subgraph Capability["能力层"]
     SESSION["Session"]
-    SERVICES["Services"]
     PLUGINS["Plugins"]
   end
 
@@ -49,106 +44,62 @@ flowchart LR
   API --> AGENT
   CONSOLE --> AGENT
   AGENT --> SESSION
-  AGENT --> SERVICES
-  SERVICES --> PLUGINS
-  SERVICES --> SESSION
+  AGENT --> PLUGINS
+  PLUGINS --> SESSION
 ```
 
 ## 为什么要分 console 和 agent
 
 ### Console
 
-Console 是全局控制面，负责：
+console 是全局控制面。它负责：
 
-- 管理多个 agent 项目
-- 维护 registry
-- 管理全局模型配置、共享 env、控制状态
-- 给 Console UI 和扩展提供统一入口
+- 管多个项目 agent
+- 维护 registry 与共享状态
+- 协调模型池与 gateway
+- 给 UI 与扩展提供统一入口
 
-### Agent
+### Agent host
 
-Agent 是单项目执行面，负责：
+agent host 是单项目执行面。它负责：
 
-- 加载当前项目配置
-- 提供当前项目的 HTTP runtime
-- 持有 `AgentRuntime`
-- 驱动 session、services、plugins
+- 加载项目配置
+- 创建 `AgentCore`
+- 按需暴露 HTTP / RPC runtime
+- 协调 session 执行和托管 plugin runtime
 
-## 当前真正的运行时中心
+## 当前运行时中心
 
-当前代码里，最重要的中心对象是：
-
-- `AgentRuntime`
-
-它不是旧文档里那种泛化的 “host runtime” 概念，而是实际存在的运行时对象。
+真正的中心对象是 `AgentCore`。
 
 它持有：
 
-- `config`
-- `env`
-- `systems`
-- `model`
-- `getSession(sessionId)`
-- `services`
-- plugin manager 访问端口
+- config 与 env
+- plugin registry 访问
+- session 创建与读取能力
+- 宿主集成端口
+- 统一的 `AgentContext`
 
-所以从代码视角看，当前最真实的主链是：
-
-```text
-console 管多个 agent
-agent 用 AgentRuntime 持有当前项目运行时
-AgentRuntime 再挂 session / services / plugins
-```
-
-## 业务层为什么要分 session / service / plugin
-
-这不是为了抽象漂亮，而是因为它们回答的是不同问题。
+## 为什么要分 session 和 plugin
 
 ### Session
 
-Session 回答：
+session 回答：
 
-- 输入最终归到哪个 `sessionId`
-- 消息如何持久化
-- 什么时候进入模型执行
-- 执行结果如何写回
-
-Session 的真实对象包括：
-
-- `Session`
-- `Executor`
-- `Executor.runCoreEngine()`
-- `JsonlSessionHistoryComposer`
-
-### Service
-
-Service 回答：
-
-- 哪类输入由谁承接
-- 主业务流程怎么走
-- 哪一步进入 session
-- 哪些节点开放给 plugin
-
-当前 service 包括：
-
-- `chat`
-- `task`
-- `memory`
-- `shell`
+- 当前输入属于哪个 `sessionId`
+- 历史怎样持久化
+- 什么时候进入模型循环
+- 结果如何收束
 
 ### Plugin
 
-Plugin 回答：
+plugin 回答：
 
-- 在不改主流程所有权的前提下，如何增强系统
+- 暴露什么能力面
+- 增强哪个运行时点
+- 哪些模块需要跟着 host 一起存活
 
-它的典型能力包括：
-
-- action
-- system 注入
-- hooks
-
-当前 hooks 的统一语义是：
+当前稳定的 hook 语义是：
 
 - `pipeline`
 - `guard`
@@ -160,69 +111,33 @@ Plugin 回答：
 ```mermaid
 flowchart TD
   A["city console start"] --> B["启动 console 控制面"]
-  B --> C["维护 registry / model store / gateway"]
+  B --> C["registry / model store / gateway"]
 
   D["city agent start"] --> E["校验 console 与项目状态"]
-  E --> F["初始化 AgentRuntime"]
-  F --> G["读取 downcity.json / .env / global env"]
-  G --> H["创建 LanguageModel"]
-  H --> I["创建 session factory"]
-  I --> J["创建 service instances"]
-  J --> K["初始化 PluginManager"]
-  K --> L["注册 auth / skill / web / voice 等 plugin"]
-  L --> M["启动 HTTP Server 与 Local RPC"]
-  M --> N["启动 services 与 schedule runtime"]
+  E --> F["创建 AgentCore"]
+  F --> G["加载 downcity.json / env"]
+  G --> H["准备 model binding"]
+  H --> I["创建 session 层"]
+  I --> J["注册 plugins"]
+  J --> K["按需启动托管 runtime"]
+  K --> L["按需启动 HTTP / RPC"]
 ```
 
 ## 执行主链
 
 ```mermaid
-flowchart TD
-  IN["外部输入"] --> ROUTE["CLI / HTTP / Chat / Task 入口"]
-  ROUTE --> SERVICE["对应 service"]
-  SERVICE --> HOOK["plugin hooks（按需）"]
-  SERVICE --> SID["确定 sessionId"]
-  SID --> APPEND["append message"]
-  APPEND --> RUN["session.prompt"]
-  RUN --> CORE["Executor"]
-  CORE --> MODEL["model / tools / prompt / history composer / compact"]
-  MODEL --> RES["assistant result"]
-  RES --> SERVICE
-  SERVICE --> OUT["回复 / run artifact / side effects"]
-```
+sequenceDiagram
+  participant In as 外部输入
+  participant Agent as AgentCore
+  participant Plugin as Managed Plugin Runtime
+  participant Session as Session
+  participant Exec as Executor
 
-## 当前 chat plugin 点
-
-当前 `chat` service 已定义并实际使用这些 plugin 点：
-
-- `chat.augmentInbound`
-- `chat.observePrincipal`
-- `chat.authorizeIncoming`
-- `chat.resolveUserRole`
-- `chat.beforeEnqueue`
-- `chat.afterEnqueue`
-- `chat.beforeReply`
-- `chat.afterReply`
-
-这些点由 chat service 定义，plugin 负责实现部分逻辑。
-
-关键点：
-
-- plugin 点不是 plugin 自己命名自己的私有协议
-- 而是 service 对外暴露的稳定扩展点
-
-## 当前代码中的核心对象
-
-- `AgentRuntime`：单项目 runtime 中心
-- `AgentContext`：统一能力面
-- `Session`：单 session 实例外壳
-- `Executor`：单 session run pipeline
-- `CoreEngine`：`Executor` 内部的模型与 tool loop 执行内核
-- `PluginRegistry`：plugin 注册与调度
-- `BasePlugin`：plugin 实例基类
-
-## 一句话总结
-
-```text
-Downcity 当前的真实系统逻辑，是 console 管多个 agent，agent 用 AgentRuntime 持有 session 与各类 plugin runtime，再通过统一 session 内核承接 chat、task、api 等多入口执行。
+  In->>Agent: CLI / HTTP / Chat / Task
+  Agent->>Plugin: 分发 route 或 action
+  Plugin->>Session: append message / run
+  Session->>Exec: 执行当前 turn
+  Exec-->>Session: assistant result
+  Session-->>Plugin: run result
+  Plugin-->>In: 回复 / 产物 / 副作用
 ```

@@ -1,0 +1,53 @@
+---
+title: city plugin schedule
+description: 查看并取消一次性 plugin 调度任务
+---
+
+# `city plugin schedule`
+
+`city plugin schedule` 用来管理本地的一次性 plugin 调度存储。
+
+当某个 plugin action 因为 `--delay` 或 `--time` 被接受为延迟任务后，你可以用它来查看或取消任务。
+
+## 用法
+
+```bash
+city plugin schedule list [options]
+city plugin schedule info <jobId> [options]
+city plugin schedule cancel <jobId> [options]
+```
+
+## 支持的子命令
+
+- `list`
+- `info <jobId>`
+- `cancel <jobId>`
+
+## 适用范围
+
+- `city chat send --delay/--time`
+- `city memory flush --delay/--time`
+- `city plugin command <plugin> <command> --delay/--time`
+
+这里只负责一次性调度。若要可复用工作流或 cron 自动化，请使用 `city task`。
+
+## 存储位置
+
+调度任务写入当前 agent 项目的：
+
+```text
+.downcity/schedule.sqlite
+```
+
+## 示例
+
+```bash
+city plugin schedule list --path /abs/path/to/agent
+city plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+city plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+```
+
+## 相关页面
+
+- [`city plugin`](/zh/docs/commands/plugin/plugin)
+- [`city task`](/zh/docs/commands/plugin/task)

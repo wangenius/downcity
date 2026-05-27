@@ -1,6 +1,6 @@
 ---
 title: session.history()
-description: Read the complete message history for the current Session
+description: Read paged history for the current Session
 ---
 
 # `session.history()`
@@ -8,16 +8,41 @@ description: Read the complete message history for the current Session
 ## Example
 
 ```ts
-const messages = await session.history();
+const history = await session.history({
+  limit: 50,
+});
+
+console.log(history.items);
 ```
 
 ## What it returns
 
-It returns the full persisted message history for the current session.
+It returns a paged history object for the current session.
+
+Common fields include:
+
+- `history.session`
+- `history.view`
+- `history.items`
+- `history.total`
+- `history.nextCursor`
+- `history.hasMore`
+
+The default view is `message`.
+
+If you want a flattened UI-oriented event stream, pass:
+
+```ts
+const history = await session.history({
+  view: "timeline",
+  limit: 100,
+});
+```
 
 ## Good use cases
 
 - replaying a conversation in UI
+- loading only the latest page in a transcript or sidebar
 - debugging the current context
 - exporting session history
 

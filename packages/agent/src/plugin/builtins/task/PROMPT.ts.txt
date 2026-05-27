@@ -1,4 +1,4 @@
-# Task Service
+# Task Plugin
 
 你可以通过 `task` plugin 管理任务定义、执行、调度与状态控制。
 

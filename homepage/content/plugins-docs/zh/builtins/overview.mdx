@@ -1,0 +1,98 @@
+---
+title: Built-ins Overview
+description: Downcity 当前全部内建插件的完整地图，包括公开 SDK 插件和平台内部基础设施插件
+---
+
+# Built-ins Overview
+
+当前代码里的 built-in plugin 集合包括：
+
+- `auth`
+- `skill`
+- `web`
+- `asr`
+- `tts`
+- `workboard`
+- `chat`
+- `contact`
+- `schedule`
+- `task`
+- `memory`
+- `shell`
+
+## 这里有两个重要分组
+
+### 面向 SDK 用户的公开能力型 built-ins
+
+这组通常最值得普通开发者先读：
+
+- `auth`
+- `skill`
+- `web`
+- `asr`
+- `tts`
+- `workboard`
+- `chat`
+
+它们最适合理解这些 plugin 形状：
+
+- action plugin
+- hook / resolve plugin
+- system text plugin
+- runtime HTTP plugin
+- 一般 SDK 用户也能直接理解的 lifecycle plugin
+
+### 平台内建或基础设施型 built-ins
+
+这组也是 built-in，但更偏平台内部集成：
+
+- `contact`
+- `schedule`
+- `task`
+- `memory`
+- `shell`
+
+这类 plugin 更适合拿来理解平台组装方式，而不是默认假设所有 SDK 用户都会手工挂到本地 `Agent` 上。
+
+## 推荐怎么读
+
+- 如果你关心用户能力型 plugin：先读 `skill`、`web`、`asr`、`tts`、`chat`
+- 如果你关心平台规则层：读 `auth`
+- 如果你关心控制面和状态面：读 `workboard`
+- 如果你关心基础设施模式：读 `schedule`、`task`、`memory`、`shell`
+
+## 职责地图
+
+| Plugin | 主要职责 | 主要形状 |
+| --- | --- | --- |
+| `auth` | 授权与角色解析 | rule layer |
+| `skill` | 技能发现与安装 | action + system |
+| `web` | 联网 provider 策略 | config + setup + usage + actions + system |
+| `asr` | 语音输入与增强 | action + pipeline + system |
+| `tts` | 文本转语音 | action + setup + usage + system |
+| `workboard` | 工作快照与状态面 | availability + runtime HTTP |
+| `chat` | 渠道 runtime 与队列 worker | lifecycle + actions + system |
+| `contact` | agent 间点对点连接与分享 | action + system + lifecycle shell |
+| `schedule` | plugin action 调度基础设施 | lifecycle-only infrastructure |
+| `task` | task 调度与 cron 执行 | lifecycle + actions + system |
+| `memory` | memory 存取 | lifecycle + actions + system |
+| `shell` | shell session runtime | lifecycle + actions |
+
+## 一个关键区别
+
+不要把“built-in”理解成“它们的公开性完全一样”。
+
+这些内建 plugin 其实分成三类：
+
+- 公开能力型 plugin
+- 平台集成型 plugin
+- 基础设施型 plugin
+
+也正因为如此，plugin 的概念页保留在 Agent SDK Docs，而具体 plugin 手册单独放在这里。
+
+## 相关概念文档
+
+- [Plugin Overview](/zh/agent-sdk-docs/plugins/overview)
+- [Plugin Design Patterns](/zh/agent-sdk-docs/plugins/design-patterns)
+- [Plugin Lifecycle](/zh/agent-sdk-docs/plugins/lifecycle)
+- [Plugin Availability](/zh/agent-sdk-docs/plugins/plugin-availability)

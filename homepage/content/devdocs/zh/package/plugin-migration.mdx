@@ -1,157 +1,71 @@
 ---
 title: Plugin 迁移方案
-description: 从旧的 capability 导向设计迁到现在的 service-owned plugin points 模型
+description: 把旧的工作流导向逻辑迁到当前的 session 与 plugin 模型
 ---
 
 # Plugin 迁移方案
 
-这页不是抽象讨论，而是给后续继续改代码时直接使用的迁移规则。
+这页是后续继续重构时可以直接复用的迁移规则。
 
 ## 迁移目标
 
-把旧模型：
+把旧的工作流导向逻辑迁到当前模型：
 
-- plugin 提供 capability
-- service 主动调用 capability
-- plugin 同时混合显式调用、hook、provider 语义
-
-迁到新模型：
-
-- service 定义自己的扩展点
-- runtime 统一提供 `pipeline / guard / effect / resolve`
-- plugin 只实现这些点
-- asset 只负责依赖
+- session 负责执行
+- plugin 负责暴露显式能力
+- hooks 统一使用 `pipeline / guard / effect / resolve`
+- 托管 plugin 只在确实需要长期运行态时承担 runtime 行为
 
 ## 判断规则
 
-### 什么应该是 service
+### 继续留在执行主轴附近的情况
 
-满足任一特征就优先考虑 service：
+- 它改变一轮执行如何被装配或执行
+- 它依赖 history、prompt 或 model loop
+- 它本身就是 turn ownership 的一部分
 
-- 有生命周期
-- 主动参与 agent 执行周期
-- 与 agent 当前状态强相关
-- 承接一整段主业务流程
+### 迁到 plugin 的情况
 
-### 什么应该是 plugin
+- 它是在对外暴露能力
+- 它是在增强一个稳定运行时点
+- 它在注入 system 指导
+- 它拥有一个托管 runtime 模块
 
-满足这些特征就优先考虑 plugin：
-
-- 只是在某个流程节点插逻辑
-- 没有独立生命周期
-- 不主动跑
-- 更像中间件、校验器、提供器
-
-### 什么应该是 asset
-
-- 模型
-- CLI 依赖
-- 外部二进制
-- 底层资源安装与配置
-
-## 四种 plugin 语义怎么选
+## 四种 hook 语义怎么选
 
 ### `pipeline`
 
 用于串行改写值。
 
-适合：
-
-- 入站消息增强
-- 回复文本重写
-- metadata 补充
-
 ### `guard`
 
-用于串行校验，抛错即阻断。
-
-适合：
-
-- 鉴权
-- 输入合法性检查
-- 执行前拦截
+用于可阻断的校验。
 
 ### `effect`
 
-用于副作用，不返回值。
-
-适合：
-
-- 观测记录
-- 统计埋点
-- 审计日志
+只做副作用。
 
 ### `resolve`
 
-用于单点单实现，返回确定结果。
-
-适合：
-
-- 角色解析
-- 语音转写
-- 某个领域唯一 provider
+用于单点单实现的值解析。
 
 ## 标准迁移步骤
 
-1. 先确定这段逻辑是不是应该继续存在于 service
-2. 如果不是主流程，就先找它属于哪一种 plugin 语义
-3. 由 service 新建稳定点名
-4. 把旧 plugin 逻辑迁到对应 `hooks` 或 `resolves`
-5. 把 service 里的旧 capability 调用替换成 `runtime.plugins.*`
-6. 把依赖安装与可用性检查下沉到 asset
-7. 更新 `/docs` 或 `/devdocs`
+1. 先判断这段逻辑属于执行拥有权，还是能力拥有权。
+2. 如果属于能力拥有权，再判断它是 action、hook、system 还是 managed runtime。
+3. 把临时扩展行为替换成四种稳定 hook 语义之一。
+4. 把依赖检查与 availability 逻辑收回 plugin 边界。
+5. 只要公开行为或协作者心智变了，就同步更新文档。
 
-## 伪代码模板
+## 推荐参考样板
 
-```ts
-// service 定义点名
-export const TASK_PLUGIN_POINTS = {
-  beforeRun: "task.beforeRun",
-  afterRun: "task.afterRun",
-  resolveExecutor: "task.resolveExecutor",
-} as const;
+- chat ingress 周围的 auth
+- 语音转写作为 inbound augmentation
+- skill lookup / install 作为显式 action
+- shell runtime 作为托管 plugin
 
-// service 使用点
-await runtime.plugins.guard(TASK_PLUGIN_POINTS.beforeRun, input);
-const executor = await runtime.plugins.resolve(
-  TASK_PLUGIN_POINTS.resolveExecutor,
-  input,
-);
-await runtime.plugins.effect(TASK_PLUGIN_POINTS.afterRun, result);
+## 迁移时重点检查什么
 
-// plugin 实现点
-export const somePlugin: Plugin = {
-  name: "some",
-  hooks: {
-    guard: {
-      [TASK_PLUGIN_POINTS.beforeRun]: [async ({ value }) => {
-        // ...
-      }],
-    },
-    effect: {
-      [TASK_PLUGIN_POINTS.afterRun]: [async ({ value }) => {
-        // ...
-      }],
-    },
-  },
-  resolves: {
-    [TASK_PLUGIN_POINTS.resolveExecutor]: async ({ value }) => {
-      return { /* ... */ };
-    },
-  },
-};
-```
-
-## 当前已完成迁移的参考样板
-
-- `chat.observePrincipal`：auth
-- `chat.authorizeIncoming`：auth
-- `chat.resolveUserRole`：auth
-- `chat.augmentInbound`：voice
-
-## 下一步继续迁移时重点检查什么
-
-- service 里是否还存在直接依赖具体 plugin 模块路径
-- plugin 是否在定义自己的主流程，而不是实现 service 点
-- 依赖安装逻辑是否还混在 plugin action 之外
-- 文档里是否还把 capability 当成核心抽象
+- 文档里是否还在描述一层独立的顶层扩展层
+- 工作流拥有权和能力暴露权是否又被混在一起
+- 某个 plugin 是否在试图替代 session 执行，而不是增强它

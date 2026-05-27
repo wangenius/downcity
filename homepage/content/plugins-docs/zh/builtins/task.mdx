@@ -1,0 +1,44 @@
+---
+title: task Plugin
+description: task 定义、task actions，以及归属于 plugin 实例的 cron trigger runtime
+---
+
+# `task` Plugin
+
+`task` 是任务运行时 plugin。
+
+它主要持有：
+
+- task 相关 actions
+- task system text
+- 每个 plugin 实例一套 cron trigger engine
+
+## 主要形状
+
+- `lifecycle`
+- `actions`
+- `system`
+
+## 它主要解决什么问题
+
+当你需要这些能力时，应该关注 `task`：
+
+- task 定义和变更
+- cron 触发的 task 执行
+- task 变更后的 scheduler reload
+
+## 关键语义
+
+- 长期 cron runtime 归属于 plugin 实例
+- create / update / delete / status 变更后会触发 scheduler reload
+- plugin 也支持 reload / reschedule 这类 lifecycle command
+
+## 公开性说明
+
+`TaskPlugin` 在代码里是 built-in，但更偏平台运行时 plugin，而不是包根主公开的 SDK 能力插件。
+
+## 相关文档
+
+- [Plugin Lifecycle](/zh/agent-sdk-docs/plugins/lifecycle)
+- [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
+- [Built-ins Overview](/zh/plugins-docs/builtins/overview)

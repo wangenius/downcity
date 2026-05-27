@@ -1,0 +1,53 @@
+---
+title: city plugin schedule
+description: Inspect and cancel one-shot scheduled plugin jobs
+---
+
+# `city plugin schedule`
+
+`city plugin schedule` manages the local one-shot plugin schedule store.
+
+Use it when a plugin action was accepted with `--delay` or `--time` and you want to inspect or cancel the resulting scheduled job.
+
+## Usage
+
+```bash
+city plugin schedule list [options]
+city plugin schedule info <jobId> [options]
+city plugin schedule cancel <jobId> [options]
+```
+
+## Supported subcommands
+
+- `list`
+- `info <jobId>`
+- `cancel <jobId>`
+
+## What it applies to
+
+- `city chat send --delay/--time`
+- `city memory flush --delay/--time`
+- `city plugin command <plugin> <command> --delay/--time`
+
+This is one-shot scheduling only. For reusable workflows or cron-style automation, use `city task`.
+
+## Storage
+
+Scheduled jobs are stored in the current agent project's:
+
+```text
+.downcity/schedule.sqlite
+```
+
+## Examples
+
+```bash
+city plugin schedule list --path /abs/path/to/agent
+city plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+city plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+```
+
+## Related
+
+- [`city plugin`](/en/docs/commands/plugin/plugin)
+- [`city task`](/en/docs/commands/plugin/task)

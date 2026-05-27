@@ -28,7 +28,7 @@ const agent = new Agent({
   model: openai.responses("gpt-5"),
 });
 
-const session = await agent.session();
+const session = await agent.createSession();
 const turn = await session.prompt({
   query: "Summarize the current repository structure",
 });
@@ -40,7 +40,7 @@ console.log(result.text);
 ## The three most important steps
 
 1. `new Agent(...)`
-2. `await agent.session()`
+2. `await agent.createSession()`
 3. make sure the session has a model
 
 Step 3 is the easiest one to forget, and it is also the most common local SDK mistake.
@@ -52,7 +52,7 @@ You can satisfy step 3 in either way:
 
 If you skip step 3 entirely, the local session has no model and cannot execute.
 
-When you are using the SDK for the first time, avoid stacking complex tools, services, plugins, or HTTP exposure immediately. Get the shortest execution path working first.
+When you are using the SDK for the first time, avoid stacking complex tools, managed plugins, extra plugins, or HTTP exposure immediately. Get the shortest execution path working first.
 
 ## When you need `agent.start()`
 
@@ -61,7 +61,7 @@ When you are using the SDK for the first time, avoid stacking complex tools, ser
 If you only want to run sessions directly from host code:
 
 ```ts
-const session = await agent.session();
+const session = await agent.createSession();
 const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```

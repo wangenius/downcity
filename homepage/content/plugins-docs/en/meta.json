@@ -1,0 +1,8 @@
+{
+  "title": "Plugins Docs",
+  "pages": [
+    "index",
+    "builtins",
+    "examples"
+  ]
+}

@@ -1,5 +1,5 @@
 /**
- * Service Schedule 持久化存储。
+ * Plugin Schedule 持久化存储。
  *
  * 关键点（中文）
  * - 调度任务改为使用项目内 `jsonl` 事件流持久化，不再依赖 SQLite。
@@ -120,7 +120,7 @@ function compareJobs(a: ScheduledJobRecord, b: ScheduledJobRecord): number {
 }
 
 /**
- * Service Schedule Store。
+ * Plugin Schedule Store。
  */
 export class PluginScheduleStore {
   private readonly filePath: string;

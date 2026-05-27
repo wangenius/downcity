@@ -27,7 +27,7 @@ const agent = new RemoteAgent({
   baseUrl: "http://127.0.0.1:15314",
 });
 
-const session = await agent.session();
+const session = await agent.createSession();
 const turn = await session.prompt({
   query: "Summarize the current repository structure",
 });
@@ -35,7 +35,7 @@ const turn = await session.prompt({
 const result = await turn.finished;
 ```
 
-On the client side, you do not need to care about project prompts, model pool details, or service assembly. You only consume the remote session capability that has already been exposed.
+On the client side, you do not need to care about project prompts, model pool details, or runtime assembly. You only consume the remote session capability that has already been exposed.
 
 ## Good fit for
 
@@ -43,4 +43,4 @@ On the client side, you do not need to care about project prompts, model pool de
 - you only want to consume agent capability through HTTP
 - you want to separate the caller from the executor
 
-If you have a frontend and backend, a local daemon plus callers, or several consumers sharing one agent service, this mode feels very natural.
+If you have a frontend and backend, a local daemon plus callers, or several consumers sharing one agent host, this mode feels very natural.

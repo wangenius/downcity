@@ -26,7 +26,7 @@ const faqs = [
   { id: "comparison-copilot", category: "general" },
   { id: "memory", category: "features" },
   { id: "multi-agent", category: "features" },
-  { id: "custom-services", category: "service" },
+  { id: "custom-services", category: "features" },
   { id: "pricing", category: "general" },
 ] as const;
 

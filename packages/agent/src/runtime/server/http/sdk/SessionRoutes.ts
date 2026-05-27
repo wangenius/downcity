@@ -8,7 +8,10 @@
  */
 
 import { Hono } from "hono";
-import type { AgentCore } from "@/core/AgentCore.js";
+import type {
+  AgentListSessionsInput,
+  AgentSessionCollection,
+} from "@/sdk/AgentSdkTypes.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 
@@ -22,14 +25,20 @@ const SDK_EVENTS_READY_FRAME = {
  */
 export function registerSdkSessionRoutes(
   app: Hono,
-  core: Pick<AgentCore, "session" | "sessions">,
+  sessionCollection: AgentSessionCollection,
 ): void {
   app.get("/api/sdk/sessions", async (c) => {
     try {
-      const sessions = await core.sessions();
+      const input: AgentListSessionsInput = {
+        ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
+        ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
+        ...(c.req.query("query") ? { query: c.req.query("query") } : {}),
+      };
+      const page = await sessionCollection.listSessions(input);
       return c.json({
         success: true,
-        sessions,
+        page,
+        sessions: page.items,
       });
     } catch (error) {
       return c.json(
@@ -47,11 +56,34 @@ export function registerSdkSessionRoutes(
       const body = (await c.req.json().catch(() => ({}))) as {
         sessionId?: unknown;
       };
-      const rawSessionId = String(body.sessionId || "").trim();
-      const session = await core.session(rawSessionId || undefined);
+      const session = await sessionCollection.createSession({
+        ...(body.sessionId ? { sessionId: String(body.sessionId).trim() } : {}),
+      });
       return c.json({
         success: true,
-        session: await session.toMetadata(),
+        session: await session.getInfo(),
+      });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  });
+
+  app.get("/api/sdk/sessions/:sessionId", async (c) => {
+    try {
+      const sessionId = String(c.req.param("sessionId") || "").trim();
+      if (!sessionId) {
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
+      }
+      const session = await sessionCollection.getSession(sessionId);
+      return c.json({
+        success: true,
+        session: await session.getInfo(),
       });
     } catch (error) {
       return c.json(
@@ -71,7 +103,7 @@ export function registerSdkSessionRoutes(
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       const body = (await c.req.json()) as AgentSessionPromptInput;
-      const session = await core.session(sessionId);
+      const session = await sessionCollection.getSession(sessionId);
       const turn = await session.prompt(body);
       return c.json({
         success: true,
@@ -97,7 +129,7 @@ export function registerSdkSessionRoutes(
     }
 
     try {
-      const session = await core.session(sessionId);
+      const session = await sessionCollection.getSession(sessionId);
       const encoder = new TextEncoder();
       const requestSignal = c.req.raw.signal;
 
@@ -158,16 +190,52 @@ export function registerSdkSessionRoutes(
     }
   });
 
+  app.get("/api/sdk/sessions/:sessionId/history", async (c) => {
+    try {
+      const sessionId = String(c.req.param("sessionId") || "").trim();
+      if (!sessionId) {
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
+      }
+      const session = await sessionCollection.getSession(sessionId);
+      const history = await session.history({
+        ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
+        ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
+        ...(c.req.query("order")
+          ? { order: c.req.query("order") as "asc" | "desc" }
+          : {}),
+        ...(c.req.query("view")
+          ? { view: c.req.query("view") as "message" | "timeline" }
+          : {}),
+      });
+      return c.json({
+        success: true,
+        history,
+      });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  });
+
   app.get("/api/sdk/sessions/:sessionId/messages", async (c) => {
     try {
       const sessionId = String(c.req.param("sessionId") || "").trim();
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
-      const session = await core.session(sessionId);
+      const session = await sessionCollection.getSession(sessionId);
+      const history = await session.history({
+        view: "message",
+      });
       return c.json({
         success: true,
-        messages: await session.history(),
+        messages: history.items,
+        history,
       });
     } catch (error) {
       return c.json(
@@ -186,7 +254,7 @@ export function registerSdkSessionRoutes(
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
-      const session = await core.session(sessionId);
+      const session = await sessionCollection.getSession(sessionId);
       return c.json({
         success: true,
         system: await session.system(),
@@ -211,13 +279,13 @@ export function registerSdkSessionRoutes(
       const body = (await c.req.json().catch(() => ({}))) as {
         messageId?: unknown;
       };
-      const session = await core.session(sessionId);
+      const session = await sessionCollection.getSession(sessionId);
       const forked = await session.fork(
         String(body.messageId || "").trim() || undefined,
       );
       return c.json({
         success: true,
-        session: await forked.toMetadata(),
+        session: await forked.getInfo(),
       });
     } catch (error) {
       return c.json(

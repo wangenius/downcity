@@ -2,8 +2,8 @@
   "title": "Plugins",
   "pages": [
     "overview",
-    "built-in-plugins",
-    "builtins",
+    "design-patterns",
+    "lifecycle",
     "configuration",
     "plugin-actions",
     "plugin-hooks",
@@ -11,7 +11,6 @@
     "plugin-system",
     "plugin-availability",
     "plugin-http",
-    "custom-plugin",
-    "examples"
+    "custom-plugin"
   ]
 }

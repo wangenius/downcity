@@ -18,7 +18,7 @@ const agent = new Agent({
 Then:
 
 ```ts
-const session = await agent.session();
+const session = await agent.createSession();
 await session.set({ model });
 const turn = await session.prompt({ query: "Continue" });
 await turn.finished;

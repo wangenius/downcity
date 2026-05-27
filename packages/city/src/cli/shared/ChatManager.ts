@@ -2,7 +2,7 @@
  * `city chat` 交互式管理器。
  *
  * 关键点（中文）
- * - 裸 `city chat` 进入 chat service 管理，而不是只输出静态 help。
+ * - 裸 `city chat` 进入 chat plugin 管理，而不是只输出静态 help。
  * - chat channel account 属于 city 级配置，在这里通过“配置 channel”管理。
  * - agent 只绑定 channel account，不在 agent 流程中维护密钥。
  */
@@ -10,7 +10,7 @@
 import prompts from "prompts";
 import type { PromptObject } from "prompts";
 import {
-  ChatChannelAccountService,
+  ChatChannelAccountManager,
   type ChatChannelAccountListItem,
 } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
@@ -25,8 +25,8 @@ import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.
 
 const CHAT_CHANNELS: StoredChannelAccountChannel[] = ["telegram", "feishu", "qq"];
 
-function createChannelAccountService(): ChatChannelAccountService {
-  return new ChatChannelAccountService(createAgentPlatformRuntime());
+function createChannelAccountManager(): ChatChannelAccountManager {
+  return new ChatChannelAccountManager(createAgentPlatformRuntime());
 }
 
 function isInteractiveTerminal(): boolean {
@@ -49,8 +49,8 @@ function formatCredentialSummary(account: ChatChannelAccountListItem): string {
 }
 
 async function promptRootAction(): Promise<ChatManagerRootAction | null> {
-  const service = createChannelAccountService();
-  const accounts = await service.list();
+  const manager = createChannelAccountManager();
+  const accounts = await manager.list();
   const response = (await prompts({
     type: "select",
     name: "action",
@@ -94,8 +94,8 @@ async function promptRootAction(): Promise<ChatManagerRootAction | null> {
 }
 
 async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | null> {
-  const service = createChannelAccountService();
-  const accounts = await service.list();
+  const manager = createChannelAccountManager();
+  const accounts = await manager.list();
   const response = (await prompts({
     type: "select",
     name: "action",
@@ -139,8 +139,8 @@ async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | 
 }
 
 async function emitChannelAccountList(): Promise<void> {
-  const service = createChannelAccountService();
-  const { items } = await service.list();
+  const manager = createChannelAccountManager();
+  const { items } = await manager.list();
   if (items.length === 0) {
     emitCliBlock({
       tone: "info",
@@ -182,8 +182,8 @@ async function chooseChannel(): Promise<StoredChannelAccountChannel | null> {
 }
 
 async function chooseAccount(): Promise<ChatChannelAccountListItem | null> {
-  const service = createChannelAccountService();
-  const { items } = await service.list();
+  const manager = createChannelAccountManager();
+  const { items } = await manager.list();
   if (items.length === 0) {
     emitCliBlock({
       tone: "info",
@@ -296,8 +296,8 @@ async function addChannelAccount(): Promise<void> {
     initial: true,
   })) as { probe?: boolean };
 
-  const service = createChannelAccountService();
-  const result = await service.create({
+  const manager = createChannelAccountManager();
+  const result = await manager.create({
     channel,
     name,
     botToken: input.botToken,
@@ -324,8 +324,8 @@ async function editChannelAccount(): Promise<void> {
     channel: account.channel,
     current: account,
   });
-  const service = createChannelAccountService();
-  await service.upsert({
+  const manager = createChannelAccountManager();
+  await manager.upsert({
     id: account.id,
     channel: account.channel,
     name: String(input.name || account.name).trim(),
@@ -356,8 +356,8 @@ async function removeChannelAccount(): Promise<void> {
 
   if (response.remove !== true) return;
 
-  const service = createChannelAccountService();
-  service.remove(account.id);
+  const manager = createChannelAccountManager();
+  await manager.remove(account.id);
   emitCliBlock({
     tone: "success",
     title: "Channel account removed",

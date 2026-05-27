@@ -1,5 +1,5 @@
 /**
- * Chat service plugin 交互类型定义。
+ * Chat plugin 交互类型定义。
  *
  * 关键点（中文）
  * - 统一描述 chat plugin runtime 与 plugin 之间的扩展 payload。
@@ -36,7 +36,7 @@ export interface ChatPluginAttachment {
    * 附件本地绝对路径。
    *
    * 说明（中文）
-   * - 若 service 尚未把附件落地，则该字段可为空。
+   * - 若 chat plugin runtime 尚未把附件落地，则该字段可为空。
    * - 依赖本地文件的 plugin 应在缺失时跳过处理。
    */
   path?: string;
@@ -87,14 +87,14 @@ export interface ChatInboundAugmentInput {
    */
   rootPath: string;
   /**
-   * service 已生成的附件文本块。
+   * chat plugin runtime 已生成的附件文本块。
    *
    * 说明（中文）
    * - 一般是 `<file ...>` 标签拼接后的结果。
    */
   attachmentText?: string;
   /**
-   * service 已抽取的正文文本。
+   * chat plugin runtime 已抽取的正文文本。
    */
   bodyText?: string;
   /**

@@ -81,7 +81,7 @@ sequenceDiagram
 1. 项目层 `downcity.json` 的 `${ENV_KEY}` 解析。
 2. agent 进程 env 注入（`env_entries` 中的 agent scope env + `.env`）。
 3. `shell` 子进程注入（global env + 当前 agent env + `DC_CTX_*`）。
-4. 少数 service auth 的本地兜底读取。
+4. 少数 plugin auth helper 的本地兜底读取。
 
 ### 4.2 不会读取项目 `.env`
 

@@ -1,0 +1,48 @@
+---
+title: Runtime Context
+description: Explain what execution context is, what session is, and how plugins connect to them
+---
+
+# Runtime Context
+
+This page answers three questions:
+
+1. what execution context is
+2. what session is
+3. how plugins connect to them
+
+## Execution context
+
+Execution context is the shared capability surface exposed during one run.
+
+Plugins consume it to access stable runtime abilities without depending on every concrete host implementation.
+
+## Session
+
+Session is the execution owner.
+
+It is responsible for:
+
+- prompt execution
+- model/tool flow
+- run-local state
+- output production
+
+Plugins do not replace session. They participate around it.
+
+## Plugin connection model
+
+Plugins connect to runtime through:
+
+- actions
+- hooks
+- system text
+- lifecycle
+- HTTP
+
+Managed plugins may also own long-lived runtime state, but session remains the execution core.
+
+## Practical reading rule
+
+- if you are tracing “who actually runs the turn”, look at `session`
+- if you are tracing “who exposes or augments capability”, look at `plugin`

@@ -1,0 +1,48 @@
+---
+title: city contact
+description: Managed contact plugin commands for agent linking, availability checks, chat, and sharing
+---
+
+# `city contact`
+
+`city contact` is the managed contact plugin command group.
+
+Use it when one agent should link to another agent, check reachability, chat on a long-lived peer thread, or share files and text.
+
+## Usage
+
+```bash
+city contact <subcommand> [options]
+```
+
+## Main subcommands
+
+- `link`
+- `approve <link_code>`
+- `list`
+- `check <contact_name>`
+- `chat --to <contact_name> [message]`
+- `share --to <contact_name> [paths...]`
+- `inbox`
+- `receive <share_id>`
+
+## Boundaries
+
+- Contact is point-to-point, not group messaging.
+- A contact may be one-way if only one side is reachable.
+- `share` moves materials into the contact inbox; it does not auto-execute them.
+
+## Examples
+
+```bash
+city contact link
+city contact approve dc-link-v1...
+city contact check writer-agent
+city contact chat --to writer-agent "Which web skills do you have?"
+city contact share --to writer-agent ./notes.md
+city contact inbox
+```
+
+## Related
+
+- [`Plugins Docs / contact`](/en/plugins-docs/builtins/contact)

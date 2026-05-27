@@ -1,0 +1,48 @@
+---
+title: chat Plugin
+description: Channel runtime, queue worker, chat system text, and chat-facing plugin actions
+---
+
+# `chat` Plugin
+
+`chat` is the channel runtime plugin.
+
+It owns:
+
+- channel state
+- the chat queue worker
+- the chat queue store
+- chat-facing actions
+- chat system text
+
+## Main shape
+
+- `lifecycle`
+- `actions`
+- `system`
+
+## What it is for
+
+Use `chat` when you need:
+
+- Telegram, Feishu, or QQ chat channel runtime
+- one queue worker per agent/plugin instance
+- chat delivery and inbound message execution
+
+## Important runtime semantics
+
+- queue worker lifecycle belongs to the plugin instance
+- channel bot state also belongs to the plugin instance
+- `Agent` only assembles it; it does not own chat domain state itself
+
+## Public status
+
+`ChatPlugin` is exported from `@downcity/agent`.
+
+That makes it one of the few lifecycle-oriented built-ins that SDK users may still directly understand and attach in local embedded scenarios.
+
+## Related docs
+
+- [Plugin Lifecycle](/en/agent-sdk-docs/plugins/lifecycle)
+- [Plugin System](/en/agent-sdk-docs/plugins/plugin-system)
+- [Built-ins Overview](/en/plugins-docs/builtins/overview)

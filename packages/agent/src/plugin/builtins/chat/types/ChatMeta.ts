@@ -1,9 +1,9 @@
 /**
- * ChatMeta：chat 服务维护的 session 路由元信息。
+ * ChatMeta：chat plugin runtime 维护的 session 路由元信息。
  *
  * 关键点（中文）
  * - 只描述“如何把 sessionId 路由回平台 chat”
- * - 由 service/builtins/chat 在接收入站消息时更新
+ * - 由 chat plugin runtime 在接收入站消息时更新
  * - 不属于 core context message schema
  */
 

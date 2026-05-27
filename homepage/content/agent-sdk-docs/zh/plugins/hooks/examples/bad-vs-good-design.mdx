@@ -1,9 +1,9 @@
 ---
-title: 常见误用对比
-description: 用几组 bad vs good 对比，说明什么时候该用 pipeline、guard、effect、resolve、service
+title: 常见 Bad vs Good 设计
+description: 用短对比说明什么时候该选 pipeline、guard、effect、resolve 或 lifecycle runtime
 ---
 
-# 常见误用对比
+# 常见 Bad vs Good 设计
 
 ## 误用 1
 
@@ -11,98 +11,72 @@ description: 用几组 bad vs good 对比，说明什么时候该用 pipeline、
 
 - 给消息补默认字段
 
-错误做法：
+坏选择：
 
 - 用 `guard`
 
-更好做法：
+更好选择：
 
 - 用 `pipeline`
-
-原因：
-
-- 这是改值，不是拦截。
 
 ## 误用 2
 
 需求：
 
-- 没权限就阻断
+- 权限缺失时立刻阻断请求
 
-错误做法：
+坏选择：
 
 - 用 `effect`
 
-更好做法：
+更好选择：
 
 - 用 `guard`
-
-原因：
-
-- `effect` 不是拦截语义。
 
 ## 误用 3
 
 需求：
 
-- 每次执行完都写审计日志
+- 每次执行后写一条审计日志
 
-错误做法：
+坏选择：
 
 - 用 `pipeline`
 
-更好做法：
+更好选择：
 
 - 用 `effect`
-
-原因：
-
-- 这里没有主值加工需求。
 
 ## 误用 4
 
 需求：
 
-- 最终用户角色是什么
+- 判断用户最终角色
 
-错误做法：
+坏选择：
 
 - 用 `pipeline`
 
-更好做法：
+更好选择：
 
 - 用 `resolve`
-
-原因：
-
-- 这要求唯一答案，不是逐步增强。
 
 ## 误用 5
 
 需求：
 
-- 维护一个长期缓存和后台同步 worker
+- 维护长期缓存和后台同步 worker
 
-错误做法：
+坏选择：
 
-- 全塞进 plugin hook
+- 把所有逻辑都塞进 plugin hooks
 
-更好做法：
+更好选择：
 
-- 用 `service` 持有长期状态
-- hook 只保留链路扩展部分
-
-原因：
-
-- 长期运行实例不应该硬塞进 hook 语义里。
-
-## 读完这篇最该留下的感觉
-
-不要按“我在哪写起来方便”来分层。
-
-要按“当前这段能力在运行时到底扮演什么角色”来分层。
+- 让 plugin `lifecycle` 拥有长期状态
+- 让 hooks 继续聚焦链路扩展
 
 ## 相关文档
 
 - [怎么选](/zh/agent-sdk-docs/plugins/hooks/choose-the-right-one)
-- [Plugin 和 Service 协作场景](/zh/agent-sdk-docs/plugins/examples/plugin-service-composition)
+- [Plugin Runtime Composition](/zh/plugins-docs/examples/plugin-runtime-composition)

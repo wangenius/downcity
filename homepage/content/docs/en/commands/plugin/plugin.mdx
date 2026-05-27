@@ -1,21 +1,22 @@
 ---
 title: city plugin
-description: Inspect the global plugin catalog and use advanced local plugin action execution
+description: Inspect plugin catalog, manage managed-plugin lifecycle, and use advanced plugin command forms
 ---
 
 # `city plugin`
 
-`city plugin` is the generic entry for the new plugin system.
+`city plugin` is the generic entry for the current plugin system.
 
-> Recommended reading: the full Plugin documentation now lives in a dedicated docs domain. Start with [Plugin Overview](/en/agent-sdk-docs/plugins/overview) and [Built-in Plugins Today](/en/agent-sdk-docs/plugins/built-in-plugins).
+> Recommended reading: conceptual plugin docs live in [Agent SDK / Plugins](/en/agent-sdk-docs/plugins/overview), and concrete manuals live in [Plugins Docs](/en/plugins-docs).
 
 Use it when you want to:
 
 - inspect which plugins are registered
 - inspect a plugin's static enabled state and capability surface
-- enable or disable plugin lifecycle globally in city config
-- dispatch a plugin action without using the plugin's short alias
-- execute a plugin action directly inside the current local project
+- start, stop, or restart one managed plugin against a target agent
+- dispatch a managed plugin command without using a short alias
+- execute a local plugin action directly inside the current project
+- inspect or cancel one-shot scheduled plugin jobs
 
 ## Common examples
 
@@ -23,34 +24,31 @@ Use it when you want to:
 city plugin
 city plugin list
 city plugin status asr
+city plugin start chat --agent my-agent
+city plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
 city plugin action asr status
+city plugin schedule list --path /path/to/agent
 ```
 
 ## Notes
 
 - Running bare `city plugin` in an interactive terminal opens a plugin manager.
-- The interactive manager supports:
-  - status
-  - global enable
-  - global disable
-- `city plugin status` also supports interactive selection when `pluginName` is omitted.
 - `city plugin list` and `city plugin status` are static console-level catalog views.
-- They do not require `--path`, `--agent`, or a running agent.
-- `city plugin list` renders a human-readable table by default; add `--json` for scripts.
-- Global enable/disable also works without agent context because plugin lifecycle is stored at city scope.
-- `city plugin action ...` is the advanced execution form and runs directly inside the current local project by default.
-- Add `--path <path>` only when you intentionally want to operate on another project.
-- For day-to-day usage, prefer concrete plugin roots such as `city web ...`, `city skill ...`, `city asr ...`, and `city tts ...`.
-- Plugin enablement is now a city-level fact. Static status does not read agent `downcity.json`.
-- In the Console agent plugin page, configuration is now split into two surfaces:
-  - `Install / Repair` handles plugin-owned dependencies, assets, providers, and other control-plane setup.
-  - `Options` handles how the current agent uses that plugin at runtime.
+- Managed plugins such as `chat`, `task`, `memory`, `contact`, and `shell` support `start/stop/restart/command`.
+- `city plugin action ...` is the local execution form and runs directly inside the current project by default.
+- For day-to-day usage, prefer concrete command roots such as `city chat ...`, `city task ...`, `city memory ...`, `city shell ...`, `city web ...`, `city skill ...`, `city asr ...`, and `city tts ...`.
 
 ## Related
 
-- [`city web`](/en/docs/commands/plugin/web)
+- [`city chat`](/en/docs/commands/plugin/chat)
+- [`city task`](/en/docs/commands/plugin/task)
+- [`city memory`](/en/docs/commands/plugin/memory)
+- [`city contact`](/en/docs/commands/plugin/contact)
+- [`city shell`](/en/docs/commands/plugin/shell)
+- [`Plugin Scheduling`](/en/docs/commands/plugin/schedule)
 - [`city skill`](/en/docs/commands/plugin/skill)
+- [`city web`](/en/docs/commands/plugin/web)
 - [`city asr`](/en/docs/commands/plugin/asr)
 - [`city tts`](/en/docs/commands/plugin/tts)
-- [Plugin Docs Overview](/en/agent-sdk-docs/plugins/overview)
-- [`CLI Commands`](/en/docs/reference/cli)
+- [Agent SDK Plugin Concepts](/en/agent-sdk-docs/plugins/overview)
+- [Plugins Docs](/en/plugins-docs)

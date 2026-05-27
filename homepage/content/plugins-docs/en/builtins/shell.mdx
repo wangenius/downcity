@@ -1,0 +1,43 @@
+---
+title: shell Plugin
+description: Shell session lifecycle, one-shot exec, and per-agent shell runtime state
+---
+
+# `shell` Plugin
+
+`shell` is the shell runtime plugin.
+
+It provides:
+
+- one-shot shell execution
+- persistent shell sessions
+- status, read, write, wait, and close actions
+
+## Main shape
+
+- `lifecycle`
+- `actions`
+
+## What it is for
+
+Use `shell` when you need:
+
+- a shell session map owned by one plugin instance
+- per-agent shell state boundaries
+- a runtime action layer around shell execution
+
+## Important semantics
+
+- shell sessions belong to the plugin instance, not to a module-global singleton
+- `start` lifecycle binds runtime
+- `stop` lifecycle closes all shell sessions and clears in-memory state
+
+## Public status
+
+`ShellPlugin` exists as a built-in runtime plugin in code, but it is not one of the main package-root public plugin exports today.
+
+## Related docs
+
+- [Plugin Lifecycle](/en/agent-sdk-docs/plugins/lifecycle)
+- [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions)
+- [Built-ins Overview](/en/plugins-docs/builtins/overview)

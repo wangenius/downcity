@@ -8,8 +8,11 @@ description: The core public interface of the remote Agent client
 `RemoteAgent` exposes these core public entry points:
 
 - `new RemoteAgent({ baseUrl })`
-- `agent.session(sessionId?)`
-- `agent.sessions()`
+- `agent.createSession(input?)`
+- `agent.getSession(sessionId)`
+- `agent.listSessions(input?)`
+
+`agent.createSession()` and `agent.getSession()` return `RemoteAgentSession`.
 
 ## Core semantics
 

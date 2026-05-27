@@ -1,5 +1,5 @@
 /**
- * Service Schedule 时间解析工具。
+ * Plugin Schedule 时间解析工具。
  *
  * 关键点（中文）
  * - 统一解析 `--delay` / `--time` 对应的调度时间。

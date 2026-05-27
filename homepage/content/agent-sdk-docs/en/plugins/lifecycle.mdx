@@ -1,0 +1,100 @@
+---
+title: Plugin Lifecycle
+description: Understand lifecycle-owned plugins, plugin runtime states, and how start, stop, and command differ from enablement and availability
+---
+
+# Plugin Lifecycle
+
+Plugin lifecycle is about long-lived runtime ownership.
+
+It is not the same thing as:
+
+- static enablement
+- runtime availability
+- one-shot actions
+
+## The lifecycle surface
+
+A lifecycle-capable plugin may declare:
+
+- `lifecycle.start`
+- `lifecycle.stop`
+- `lifecycle.command`
+
+These hooks are for plugin-owned runtime behavior, not for normal one-shot capability calls.
+
+## When lifecycle is the right shape
+
+Use lifecycle when the plugin must own:
+
+- workers
+- poll loops
+- long-lived connections
+- in-memory runtime state
+- recoverable runtime engines
+
+Typical examples:
+
+- `chat`
+- `task`
+- `schedule`
+- `memory`
+- `shell`
+
+## Runtime state is not enablement
+
+These are different facts:
+
+- `enabled`: whether city-level lifecycle policy says the plugin is on
+- `available`: whether runtime checks say the plugin is usable now
+- `running`: whether the lifecycle runtime is currently started
+
+## Runtime state snapshots
+
+Current runtime state snapshots use states such as:
+
+- `running`
+- `stopped`
+- `starting`
+- `stopping`
+- `error`
+
+## What starts lifecycle plugins
+
+In the local SDK, plugin lifecycles normally start through:
+
+```ts
+await agent.start({
+  plugins: true,
+});
+```
+
+Advanced runtime code may also use exported helpers such as:
+
+- `startAllPlugins(context)`
+- `stopAllPlugins(context)`
+
+## Lifecycle command vs action
+
+Use `lifecycle.command` when the plugin needs one runtime-control command such as:
+
+- reload
+- reschedule
+- restart
+
+Use `actions` when the plugin is exposing normal capability work.
+
+`task` is a good example of a plugin that has both.
+
+## Managed vs local plugin mental model
+
+One useful distinction is:
+
+- local plugin: does not depend on a running lifecycle
+- managed plugin: owns lifecycle behavior
+
+## Related docs
+
+- [Plugin Availability](/en/agent-sdk-docs/plugins/plugin-availability)
+- [Plugin Design Patterns](/en/agent-sdk-docs/plugins/design-patterns)
+- [Built-ins Overview](/en/plugins-docs/builtins/overview)

@@ -1,28 +1,62 @@
 ---
 title: Plugin Overview
-description: Understand what plugins are in Downcity, how they differ from services, and what they are responsible for in the runtime
+description: Understand how plugins are modeled in Downcity, how local and managed plugins differ, and how plugin capability is assembled
 ---
 
 # Plugin Overview
 
-In Downcity, a plugin is closer to an extension layer or enhancement layer.
+In current Downcity, plugin is the extension unit.
 
-You can think of it as a package that can:
+That means:
 
-- add explicit actions
-- register hooks or resolve points into the runtime
-- provide system text
-- expose `setup` and `usage` protocols to Console
-- inject runtime HTTP routes when needed
+- capability is exposed through plugins
+- runtime participation is exposed through plugins
+- long-lived managed runtime modules are also modeled as plugins
+
+If you want concrete built-in plugin manuals, continue with [Plugins Docs](/en/plugins-docs).
 
 ## One-sentence mental model
 
-- a service is closer to a long-lived runtime instance
-- a plugin is closer to an extension package and capability layer
+A plugin is the unit that owns one capability boundary in Downcity.
+
+That plugin may be:
+
+- action-first
+- hook-oriented
+- system-oriented
+- lifecycle-owned
+- HTTP-exposing
+
+## Two important families
+
+### Local plugins
+
+These are usually attached directly inside one local SDK `Agent`.
+
+Typical examples:
+
+- `skill`
+- `web`
+- `asr`
+- `tts`
+- `auth`
+
+### Managed plugins
+
+These are runtime-owned plugins that participate in one target agent lifecycle.
+
+Typical examples:
+
+- `chat`
+- `task`
+- `memory`
+- `contact`
+- `shell`
+- `schedule`
+
+Managed plugins are the reason the old split runtime language is no longer the right model.
 
 ## How plugins attach in the local SDK
-
-The local `Agent` now supports explicit plugin registration:
 
 ```ts
 import { Agent, SkillPlugin, WebPlugin } from "@downcity/agent";
@@ -37,43 +71,16 @@ const agent = new Agent({
 const plugins = agent.plugins.list();
 ```
 
-The important part is:
+Important points:
 
 - `plugins` is a registry owned by this specific `Agent`
 - the SDK does not auto-register every built-in plugin
 - you can use `agent.plugins.list()`, `availability()`, and `runAction()` directly
-- `context.plugins` inside services and plugin hooks points to the same registry
+- prompt-time plugin system text comes only from plugins registered on that SDK `Agent`
 
-## What plugins are good for
+## What a plugin may contain
 
-Plugins are especially good for:
-
-- adding explicit commands and actions for one domain
-- inserting logic into existing runtime chains
-- providing system prompt augmentation
-- exposing setup or usage protocols to UI
-- injecting runtime HTTP routes
-
-## What plugins are not
-
-Plugins should not automatically be treated as:
-
-- a long-lived background instance
-- a synonym for a service
-- a project-local lifecycle pool of stateful runtime objects
-
-If you really need:
-
-- a queue worker
-- a shell session pool
-- long-lived connections
-- cron runtime
-
-you should usually think about a service first.
-
-## The main pieces a plugin can include
-
-A full plugin may contain:
+A full plugin may include:
 
 - `config`
 - `actions`
@@ -84,64 +91,27 @@ A full plugin may contain:
 - `system`
 - `availability`
 - `http`
+- `lifecycle`
 
 Not every plugin needs all of them.
 
-## Plugin enablement is not the same as project config
+## What “plugin enabled” means now
 
-This distinction is important.
+There are multiple layers:
 
-### Enablement
+- agent-level: did this local SDK `Agent` register the plugin
+- runtime-level: is this managed plugin currently started or stopped
+- plugin-level: does `availability()` currently say it is usable
+- project-level: what runtime options exist under `downcity.json.plugins.*`
 
-Whether a plugin is enabled is currently a city-level fact.
-
-That means:
-
-- plugin enable or disable is not primarily a `downcity.json` concern
-- static catalog views read city-level lifecycle state first
-
-### Project-side config
-
-Runtime options for how an agent uses a plugin can still live under:
-
-- `downcity.json.plugins.*`
-
-So keep these two layers separate:
-
-- city-level: is the plugin enabled at all
-- project-level: how does this agent use it
-
-In the SDK, there is one more layer to keep in mind:
-
-- agent-level: which plugin definitions did this local `Agent` register
-
-In practice, a plugin usually becomes active only when:
-
-- you registered it into the current `Agent`
-- it was not explicitly disabled in the city-level lifecycle config
-- its own `availability()` check still reports usable
-
-## `auth` is a special plugin
-
-`auth` is currently a built-in required plugin.
-
-It does not behave like a normal optional enable-or-disable plugin.
-
-## Current built-in plugins
-
-The built-in plugin set currently includes:
-
-- `auth`
-- `skill`
-- `web`
-- `asr`
-- `tts`
-- `workboard`
+Do not collapse these into one idea.
 
 ## Recommended reading order
 
-1. [Which built-in plugins exist today](/en/agent-sdk-docs/plugins/built-in-plugins)
-2. [Plugin configuration](/en/agent-sdk-docs/plugins/configuration)
-3. [Plugin actions](/en/agent-sdk-docs/plugins/plugin-actions)
-4. [Plugin hooks](/en/agent-sdk-docs/plugins/plugin-hooks)
-5. [Custom plugin](/en/agent-sdk-docs/plugins/custom-plugin)
+1. [Plugin Design Patterns](/en/agent-sdk-docs/plugins/design-patterns)
+2. [Plugin Lifecycle](/en/agent-sdk-docs/plugins/lifecycle)
+3. [Plugin Configuration](/en/agent-sdk-docs/plugins/configuration)
+4. [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions)
+5. [Plugin Hooks](/en/agent-sdk-docs/plugins/plugin-hooks)
+6. [Plugins Docs](/en/plugins-docs)
+7. [Custom Plugin](/en/agent-sdk-docs/plugins/custom-plugin)

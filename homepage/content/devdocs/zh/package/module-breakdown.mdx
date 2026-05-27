@@ -1,209 +1,119 @@
 ---
 title: Package 模块拆解
-description: 按当前 workspace 真实结构解释 packages/agent 的 runtime、server、SDK、session、service、plugin 与 sandbox 边界
+description: 按当前 packages/agent 的真实结构解释 SDK、core、executor、plugin、runtime 与共享类型边界
 ---
 
 # Package 模块拆解
 
-当前单 Agent 执行内核位于 `packages/agent/`。现在最适合理解它的方式，不是继续记旧的 `host/`、`server/`、`project/` 顶层目录，而是直接按当前真实结构来看：
+当前单 Agent 执行内核位于 `packages/agent/`。
 
-- `sdk/`：用户 API 面
-- `core/`：实例级装配中心
-- `session/`：模型执行主轴
-- `service/`：业务流程层
-- `plugin/`：增强层
-- `runtime/`：HTTP/RPC、sandbox、transport、host、model 等运行时实现
+现在最适合理解它的方式，是直接跟着真实顶层目录走：
 
-一句话：
+- `sdk/`：公开本地与远程 API
+- `core/`：实例装配中心
+- `executor/`：session 执行引擎、composer、tools 与持久化
+- `plugin/`：plugin 定义、hook 调度与内建 plugin runtime
+- `runtime/`：host、HTTP/RPC、sandbox、transport 等运行时基础设施
+- `config/`、`types/`、`utils/`：支撑域
 
-```text
-sdk 负责暴露能力，core 负责装配实例，session / service / plugin 负责执行域，runtime 负责把这些能力接到真实宿主、网络与命令执行环境上。
-```
-
-## 当前目录结构
+## 当前目录图
 
 ```mermaid
 flowchart TD
   ROOT["packages/agent/src"] --> CONFIG["config/"]
   ROOT --> CORE["core/"]
+  ROOT --> EXEC["executor/"]
   ROOT --> PLUGIN["plugin/"]
   ROOT --> RUNTIME["runtime/"]
   ROOT --> SDK["sdk/"]
-  ROOT --> SERVICE["service/"]
-  ROOT --> SESSION["session/"]
   ROOT --> TYPES["types/"]
   ROOT --> UTILS["utils/"]
 ```
 
-## 模块依赖主链
+## 模块主链
 
-```mermaid
-flowchart LR
-  SDK["sdk"] --> CORE["core"]
-  CORE --> SESSION["session"]
-  CORE --> SERVICE["service"]
-  CORE --> PLUGIN["plugin"]
-  CORE --> RUNTIME["runtime"]
-  SESSION --> TYPES["types"]
-  SERVICE --> TYPES
-  PLUGIN --> TYPES
-  RUNTIME --> TYPES
-  CORE --> CONFIG["config"]
-  SESSION --> UTILS["utils"]
-  SERVICE --> UTILS
-  PLUGIN --> UTILS
-  RUNTIME --> UTILS
-```
+- `sdk` 暴露公开能力面
+- `core` 装配一个 `AgentCore`
+- `executor` 负责真正执行一轮
+- `plugin` 负责能力暴露与增强
+- `runtime` 把 agent 接到真实宿主环境
 
-## 1. `config/`
+## 1. `sdk/`
 
-这里负责项目配置与项目初始化。
+这里是 `@downcity/agent` 的公开 API。
 
-- `config/project/AgentInitializer.ts`：创建 agent 项目、写入默认文件、给出初始化结果。
-- `config/project/types/`：项目初始化返回值与输入协议。
-- `config/ExecutionBinding.ts`：execution binding 读取、校验与断言。
-
-现在 `project/` 已经不再是顶层目录，而是归并进 `config/project/`，因为它本质上属于“项目配置与初始化”域。
+- `Agent.ts`：本地嵌入入口
+- `RemoteAgent.ts`：远程 HTTP client
+- `Session.ts`：session facade
+- `AgentSdkTypes.ts`：SDK 侧类型
 
 ## 2. `core/`
 
-这里是单个 Agent 实例的装配中心。
+这里是单个 agent 实例的装配中心。
 
-- `AgentCore.ts`：把 config、session、service、plugin、runtime 组装成一个实例级执行内核。
-- `AgentCoreTypes.ts`：定义实例运行时视图。
-- `AgentContextTypes.ts`：定义 service / plugin / session 共用的统一能力面。
+- `AgentCore.ts`：装配 config、session 访问、plugins 与 runtime hooks
+- `AgentCoreTypes.ts`：实例运行时视图
+- `AgentContextTypes.ts`：给 plugin runtime 使用的统一执行能力面
 
-关键点：
+## 3. `executor/`
 
-- 一个 `AgentCore` 只对应一个 agent 实例。
-- SDK `Agent`、HTTP server、local RPC server 都应该围绕这个实例内核工作。
-- 默认策略尽量由宿主注入，而不是写死在 SDK 中。
+这里是执行主轴。
 
-## 3. `sdk/`
+- 执行引擎
+- history 与 system composer
+- tools 与 tool-runtime adapter
+- 持久化与 step facts
 
-这里是本地使用 `@downcity/agent` 时看到的高层 API。
+真正的模型与 tool loop 就在这里。
 
-- `Agent.ts`：本地嵌入入口，统一通过 `start()` / `stop()` 管理长期运行能力。
-- `Session.ts`：session facade。
-- `RemoteAgent.ts`：远端 agent 调用入口。
-- `sdk/session/`：SDK session metadata、落盘路径、持久化与 service 端口适配。
+## 4. `plugin/`
 
-当前推荐的长期运行方式是：
+这里是能力层。
 
-```ts
-const agent = new Agent({
-  id: "demo",
-  path: process.cwd(),
-});
+- `chat`、`task`、`memory`、`shell`、`schedule`、`skill`、`web`、`auth` 等内建 plugin
+- plugin 注册与 hook 调度
+- plugin runtime 局部类型
 
-await agent.start({
-  http: { host: "127.0.0.1", port: 5314 },
-  rpc: true,
-});
-```
+这里最重要的边界很简单：
 
-不调用 `start()` 时，就是纯 library mode。
+- session 负责执行
+- plugin 负责暴露或增强能力
 
-## 4. `session/`
+## 5. `runtime/`
 
-这里是模型执行主轴。
+这里是运行时基础设施层。
 
-- `Executor.ts`：单个 `sessionId` 的执行引擎，负责 run scope、压缩重试、Composer 编排与 step 持久化。
-- `core-engine/`：Executor 内部的模型/tool-loop 核心机制。
-- `composer/`：history、system、context、compaction 等组合协议；没有公共运行时基类。
-- `store/`：session history 事实源、metadata、archive、lock 与 JSONL 持久化。
-- `tools/`：工具定义与工具运行时适配。
+- host integration
+- HTTP server
+- local RPC server
+- transport 协议
+- sandbox runtime
 
-它负责把“本轮 query”一路推进到最终 assistant 回复，并把过程中的消息、step 与输出持久化下来。
+这些模块是 runtime 设施，不是产品业务域。
 
-Composer 在这里不是执行器，也不是状态容器，而是 `interface` 级别的装配协议。`Executor.prepareExecuteInput()` 会依次调用 `ContextComposer.compose()`、`SystemComposer.resolve()`、`CompactionComposer.run(historyStore)` 与 `HistoryComposer.prepare()`，把 tools、system、压缩策略和 history messages 组装成一次 `SessionExecuteInput`。真正的模型调用发生在 `Executor.runCoreEngine()`，CoreEngine 只维护本轮内存态与最终 assistant message，长期历史事实只由 `store/` 维护。
+## 6. `types/`
 
-## 5. `service/`
+这里放稳定共享契约：
 
-这里是主业务流程层。
+- config types
+- runtime protocol types
+- SDK 侧执行类型
+- 公共 JSON 与工具类型
 
-- `service/core/`：service class 注册、实例启动停止、action 调度、system provider、状态控制。
-- `service/core/schedule/`：持久化的 service action 调度基础设施。
-- `service/builtins/`：`chat`、`contact`、`memory`、`shell`、`task` 等内建 service。
-- `service/types/`：service 共享协议类型。
+## 7. `config/` 与 `utils/`
 
-这里有一个重要边界：`schedule` 现在不再是独立顶层概念，而是 `service/core/schedule/` 的一部分，因为它本质上只是 service action 的延迟执行设施。
-
-## 6. `plugin/`
-
-这里是增强层。
-
-- `plugin/core/`：注册、启用态、hook 调度、本地 action、HTTP route 支持。
-- `plugin/builtins/`：`auth`、`skill`、`web`、`asr`、`tts`、`voice`、`workboard` 等内建插件。
-- `plugin/types/`：插件公共协议类型。
-
-关键边界：
-
-- service 定义主业务流程与 plugin points
-- plugin 负责实现某些扩展点
-- plugin 不拥有主业务流程本身
-
-## 7. `runtime/`
-
-这里统一收纳运行时实现细节，不再把这些能力散落在顶层目录。
-
-- `runtime/host/`：宿主注入能力、plugin runtime、daemon 协议与项目准备。
-- `runtime/sandbox/`：命令执行隔离与沙箱协议。
-- `runtime/server/`：单 Agent HTTP / RPC 服务端实现。
-- `runtime/transport/`：agent client 侧 transport 协议与 local RPC client。
-
-这次重构的核心目标之一，就是把 `host/`、`server/`、`transport/`、`sandbox/` 都收进 `runtime/`，让目录语义更清晰：这些模块不是一等业务域，而是运行时基础设施。
-
-模型实例本身不在 `@downcity/agent` 内解析。宿主应先把 provider / modelId 解析成 `LanguageModel`，再通过 `session.set({ model })` 注入。
-
-## 8. `types/`
-
-这里放跨模块、跨包共享协议类型。
-
-- `types/common/`：JSON、模板等基础类型。
-- `types/config/`：`downcity.json`、LLM、execution binding、start options 等配置协议。
-- `types/runtime/host/`：Agent 宿主端口类型。
-- `types/runtime/platform/`：city control plane / managed agent 平台协议。
-- `types/runtime/daemon/`、`types/runtime/rpc/`、`types/runtime/auth/`、`types/runtime/http/`：daemon、local RPC、鉴权、inline instant 等运行时协议。
-
-领域内部类型仍留在自己的目录里，比如 `service/types/`、`plugin/types/`、`session/types/`。只有需要跨领域、跨包复用的稳定契约，才进入 `types/`。
-
-## 9. `utils/`
-
-这里放低层通用工具。
-
-- `utils/logger/`：日志。
-- `utils/storage/`：存储辅助。
-- `utils/cli/`：CLI 输出辅助。
-
-它应该保持“横向支撑”角色，而不是反向承载业务语义。
+- `config/` 负责项目配置与初始化支持
+- `utils/` 负责日志、存储等低层辅助能力
 
 ## 公开 API 边界
 
-`src/index.ts` 是 `@downcity/agent` 的唯一公开入口。它使用显式导出清单，只暴露：
+`src/index.ts` 是唯一公开入口。
 
-- SDK：`Agent`、`RemoteAgent` 与 session 配置/运行类型。
-- 插件作者 API：`BasePlugin`、内建 plugin 与 plugin 定义类型。
-- city 运行集成 API：runtime 启停、server/RPC 启动、plugin 调度、项目初始化、模型创建。
-- 跨包协议类型：platform、daemon、RPC、auth、store、inline instant 等控制面协议。
+它应该只暴露：
 
-HTTP router、sandbox runner、内部 plugin runtime runner 等实现细节不从根入口导出。
+- SDK API
+- plugin author API
+- runtime integration API
+- 稳定共享协议类型
 
-## 推荐阅读顺序
-
-第一次读 `packages/agent`，建议按这条线：
-
-1. `src/index.ts`
-2. `src/sdk/Agent.ts`
-3. `src/core/AgentCore.ts`
-4. `src/core/AgentContextTypes.ts`
-5. `src/session/Executor.ts`
-6. `src/session/core-engine/CoreEngineMessageState.ts`
-7. `src/executor/Executor.ts`
-8. `src/plugin/core/Manager.ts`
-9. `src/plugin/builtins/chat/ChatPlugin.ts`
-10. `src/runtime/server/http/Server.ts`
-11. `src/runtime/server/rpc/Server.ts`
-12. `src/runtime/transport/rpc/Transport.ts`
-
-这个顺序最容易先抓住公开 API，再顺着实例装配主链进入执行内核与运行时基础设施。
+它不应该暴露私有 router 装配、sandbox runner 或内部 runtime helper。

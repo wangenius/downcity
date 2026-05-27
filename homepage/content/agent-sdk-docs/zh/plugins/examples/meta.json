@@ -7,6 +7,6 @@
     "audit-effect-plugin",
     "role-resolver-plugin",
     "snapshot-http-plugin",
-    "plugin-service-composition"
+    "plugin-runtime-composition"
   ]
 }

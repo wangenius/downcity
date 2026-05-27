@@ -1,0 +1,164 @@
+---
+title: SDK Surface
+description: 从开发者视角理解 Agent、RemoteAgent 和 Session 的实际公开 API 使用面
+---
+
+# SDK Surface
+
+如果你只想记住开发者真正会用到的 API 形态，可以先记这四个对象：
+
+- `Agent`：本地 runtime 入口
+- `RemoteAgent`：远程 HTTP 客户端
+- `AgentSession`：本地工作对象
+- `RemoteAgentSession`：远程工作对象
+
+## 推荐心智模型
+
+这个 SDK 本质上是 session-first 的。
+
+大多数应用里，真正承载执行的不是 `Agent` 本身，而是下面这些方法返回的 session：
+
+- `agent.createSession()`
+- `agent.getSession(sessionId)`
+- `remoteAgent.createSession()`
+- `remoteAgent.getSession(sessionId)`
+
+## 本地典型流程
+
+```ts
+import { Agent } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "demo",
+  path: process.cwd(),
+});
+
+const session = await agent.createSession();
+await session.set({ model });
+
+const turn = await session.prompt({
+  query: "总结一下这个仓库",
+});
+
+await turn.finished;
+```
+
+## 远程典型流程
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  baseUrl: "http://127.0.0.1:15314",
+});
+
+const session = await agent.getSession("repo-analysis");
+const turn = await session.prompt({
+  query: "继续",
+});
+
+await turn.finished;
+```
+
+## `Agent`
+
+当 agent runtime 和你的应用运行在同一本地进程或同一个宿主环境里时，用 `Agent`。
+
+核心方法：
+
+- `new Agent(options)`
+- `agent.start(options?)`
+- `agent.stop()`
+- `agent.createSession(input?)`
+- `agent.getSession(sessionId)`
+- `agent.listSessions(input?)`
+- `agent.setInstruction(input)`
+- `agent.getConfig()`
+- `agent.getLogger()`
+- `agent.plugins`
+
+典型职责：
+
+- 创建和恢复本地 session
+- 启动 HTTP / RPC 这类长期运行能力
+- 暴露 plugin 集成入口
+- 提供配置与日志这两个较窄的高级辅助能力
+
+## `RemoteAgent`
+
+当另一个进程已经通过 HTTP 暴露了 agent 时，用 `RemoteAgent`。
+
+核心方法：
+
+- `new RemoteAgent({ baseUrl })`
+- `agent.createSession(input?)`
+- `agent.getSession(sessionId)`
+- `agent.listSessions(input?)`
+
+典型职责：
+
+- 连接一个已有的远程 agent 服务
+- 切换到已知的远程 session
+- 浏览可用的远程 session 列表
+
+## `AgentSession`
+
+`AgentSession` 是本地模式下最核心的执行对象。
+
+核心方法：
+
+- `session.id`
+- `session.agentId`
+- `session.config`
+- `session.set(input)`
+- `session.getInfo()`
+- `session.prompt(input)`
+- `session.subscribe(subscriber)`
+- `session.history(input?)`
+- `session.system()`
+- `session.fork(input?)`
+
+典型顺序：
+
+1. `await agent.createSession()`
+2. `await session.set({ model })`
+3. `const turn = await session.prompt({ query })`
+4. `await turn.finished`
+5. 按需再用 `session.history()` / `session.getInfo()` / `session.fork()`
+
+## `RemoteAgentSession`
+
+`RemoteAgentSession` 尽量保持和本地 session 一样的交互形状，但不负责客户端侧模型注入。
+
+核心方法：
+
+- `session.id`
+- `session.getInfo()`
+- `session.prompt(input)`
+- `session.subscribe(subscriber)`
+- `session.history(input?)`
+- `session.system()`
+- `session.fork(input?)`
+
+一个关键差异：
+
+- 本地 `AgentSession` 支持 `set({ model })`
+- 远程 `RemoteAgentSession` 不接受客户端直接传本地模型实例
+
+## 什么时候用哪个方法
+
+- 需要一条全新的会话：`createSession()`
+- 需要继续一个已知 session：`getSession(sessionId)`
+- 需要做 session 切换器、历史侧边栏或第三方 session 浏览器：`listSessions()`
+- 需要读取单个 session 的当前摘要/详情：`getInfo()`
+- 需要分页读取会话内容：`history()`
+- 需要监听后续 turn 事件：`subscribe()`
+- 需要查看当前实际生效的 system prompt 快照：`system()`
+- 需要从当前状态分叉一条新会话：`fork()`
+
+## 继续阅读
+
+- [Agent 类](/zh/agent-sdk-docs/api-reference/agent-class)
+- [RemoteAgent 类](/zh/agent-sdk-docs/api-reference/remote-agent-class)
+- [Session 总览](/zh/agent-sdk-docs/sessions/overview)
+- [Session 类型与结果](/zh/agent-sdk-docs/api-reference/session-types)

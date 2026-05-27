@@ -14,9 +14,12 @@ import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/Js
 import { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
 import { extractTextFromUiMessage } from "@/plugin/builtins/chat/runtime/UIMessageTransformer.js";
 import type {
+  AgentSession,
+  AgentSessionHistoryInput,
+  AgentSessionHistoryPage,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionMetadata,
+  AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
@@ -28,6 +31,8 @@ import {
 } from "@/sdk/SessionSystemBuilder.js";
 import {
   inferModelLabel,
+  buildSessionHistoryPage,
+  buildSessionInfo,
   patchSessionModelLabel,
   readSessionMetadata,
   resolveSystemTimezone,
@@ -107,7 +112,7 @@ type SessionOptions = {
    *
    * 关键点（中文）
    * - 这里通常由 `AgentCore` 注入，用于补齐默认 model、宿主覆写等一次性装配。
-   * - 所有执行入口都应通过这里兜底，避免只在 SDK `agent.session()` 链路上做配置。
+   * - 所有执行入口都应通过这里兜底，避免只在 SDK `agent.createSession()` / `agent.getSession()` 链路上做配置。
    */
   ensureConfigured?: (session: Session) => Promise<void>;
 };
@@ -115,7 +120,7 @@ type SessionOptions = {
 /**
  * SDK 本地 Session。
  */
-export class Session {
+export class Session implements AgentSession {
   readonly id: string;
   readonly agentId: string;
 
@@ -347,10 +352,40 @@ export class Session {
   }
 
   /**
-   * 读取完整消息历史。
+   * 读取当前 session 详情。
    */
-  async history(): Promise<SessionMessageV1[]> {
-    return await this.historyStore.list();
+  async getInfo(): Promise<AgentSessionInfo> {
+    const [metadata, messages] = await Promise.all([
+      readSessionMetadata({
+        projectRoot: this.projectRoot,
+        agentId: this.agentId,
+        sessionId: this.id,
+      }),
+      this.historyStore.list(),
+    ]);
+    return buildSessionInfo({
+      projectRoot: this.projectRoot,
+      agentId: this.agentId,
+      sessionId: this.id,
+      metadata,
+      messages,
+      executing: this.isExecuting(),
+    });
+  }
+
+  /**
+   * 读取当前 session 历史分页。
+   */
+  async history(input?: AgentSessionHistoryInput): Promise<AgentSessionHistoryPage> {
+    const [session, messages] = await Promise.all([
+      this.getInfo(),
+      this.historyStore.list(),
+    ]);
+    return buildSessionHistoryPage({
+      session,
+      messages,
+      input,
+    });
   }
 
   /**
@@ -402,8 +437,11 @@ export class Session {
   /**
    * 从当前 session 创建一个分叉会话。
    */
-  async fork(input?: AgentSessionForkInput["messageId"]): Promise<Session> {
-    const messageId = String(input || "").trim() || undefined;
+  async fork(input?: AgentSessionForkInput | string): Promise<Session> {
+    const messageId =
+      typeof input === "string"
+        ? String(input || "").trim() || undefined
+        : String(input?.messageId || "").trim() || undefined;
     const messages = await this.historyStore.list();
     const forkMessages =
       !messageId
@@ -441,26 +479,6 @@ export class Session {
     }
     await forked.touchMetadata();
     return forked;
-  }
-
-  /**
-   * 生成当前 session 的元数据快照。
-   */
-  async toMetadata(): Promise<AgentSessionMetadata> {
-    const meta = await readSessionMetadata({
-      projectRoot: this.projectRoot,
-      agentId: this.agentId,
-      sessionId: this.id,
-    });
-    const messageCount = await this.historyStore.size();
-    return {
-      agentId: this.agentId,
-      sessionId: this.id,
-      messageCount,
-      ...(typeof meta.createdAt === "number" ? { createdAt: meta.createdAt } : {}),
-      ...(typeof meta.updatedAt === "number" ? { updatedAt: meta.updatedAt } : {}),
-      ...(meta.sdkConfig?.modelLabel ? { modelLabel: meta.sdkConfig.modelLabel } : {}),
-    };
   }
 
   /**

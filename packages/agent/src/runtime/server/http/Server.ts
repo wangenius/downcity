@@ -25,7 +25,7 @@ import {
 } from "@/plugin/core/HttpRoutes.js";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { AgentCore } from "@/core/AgentCore.js";
+import type { AgentSessionCollection } from "@/sdk/AgentSdkTypes.js";
 
 /**
  * Server 启动参数。
@@ -35,12 +35,12 @@ export interface ServerStartOptions {
   port: number;
   /** HTTP 服务监听主机。 */
   host: string;
-  /** 可选实例级 agent core。 */
-  core?: Pick<AgentCore, "getContext" | "getRuntime" | "session" | "sessions">;
-  /** 可选实例级 runtime 读取函数。 */
-  getAgentRuntime?: () => AgentRuntime;
-  /** 可选实例级 context 读取函数。 */
-  getAgentContext?: () => AgentContext;
+  /** 当前 agent runtime 读取函数。 */
+  getAgentRuntime: () => AgentRuntime;
+  /** 当前 agent context 读取函数。 */
+  getAgentContext: () => AgentContext;
+  /** 可选 SDK Session 集合绑定。 */
+  sessionCollection?: AgentSessionCollection;
 }
 
 /**
@@ -55,41 +55,16 @@ export interface ServerInstance {
   stop(): Promise<void>;
 }
 
-type AgentServerBindings = {
-  getAgentRuntime: () => AgentRuntime;
-  getAgentContext: () => AgentContext;
-};
-
-function resolveServerBindings(options: Pick<
-  ServerStartOptions,
-  "core" | "getAgentRuntime" | "getAgentContext"
->): AgentServerBindings {
-  const core = options.core;
-  if (core) {
-    return {
-      getAgentRuntime: () => core.getRuntime(),
-      getAgentContext: () => core.getContext(),
-    };
-  }
-  if (options.getAgentRuntime && options.getAgentContext) {
-    return {
-      getAgentRuntime: options.getAgentRuntime,
-      getAgentContext: options.getAgentContext,
-    };
-  }
-  throw new Error(
-    "createServerApp/startServer requires either core or both getAgentRuntime/getAgentContext",
-  );
-}
-
 /**
  * 创建主 Hono 应用。
  */
 export function createServerApp(
-  options: Pick<ServerStartOptions, "core" | "getAgentRuntime" | "getAgentContext">,
+  options: Pick<
+    ServerStartOptions,
+    "getAgentRuntime" | "getAgentContext" | "sessionCollection"
+  >,
 ): Hono {
   const app = new Hono();
-  const bindings = resolveServerBindings(options);
 
   app.use("*", logger());
   app.use(
@@ -103,25 +78,25 @@ export function createServerApp(
 
   // 关键点（中文）：按路由域挂载，server 模块只保留装配职责。
   app.route("/", createStaticRouter({
-    getAgentRuntime: bindings.getAgentRuntime,
+    getAgentRuntime: options.getAgentRuntime,
   }));
   app.route("/", healthRouter);
   app.route("/", createPluginsRouter({
-    getAgentContext: bindings.getAgentContext,
+    getAgentContext: options.getAgentContext,
   }));
   app.route("/", createExecuteRouter({
-    getAgentRuntime: bindings.getAgentRuntime,
+    getAgentRuntime: options.getAgentRuntime,
   }));
   app.route("/", createControlRouter({
-    getAgentRuntime: bindings.getAgentRuntime,
-    getAgentContext: bindings.getAgentContext,
+    getAgentRuntime: options.getAgentRuntime,
+    getAgentContext: options.getAgentContext,
   }));
-  if (options.core) {
-    app.route("/", createSdkRouter(options.core));
+  if (options.sessionCollection) {
+    app.route("/", createSdkRouter(options.sessionCollection));
   }
   registerBuiltinPluginHttpRoutes({
     app,
-    getContext: bindings.getAgentContext,
+    getContext: options.getAgentContext,
   });
 
   return app;

@@ -1,0 +1,48 @@
+---
+title: Runtime Context
+description: 说明 execution context 是什么、session 是什么，以及 plugin 怎么接进来
+---
+
+# Runtime Context
+
+这页只回答三个问题：
+
+1. execution context 是什么
+2. session 是什么
+3. plugin 怎么接进来
+
+## Execution context
+
+execution context 是一次执行期间暴露出来的统一能力面。
+
+plugin 通过它消费稳定运行时能力，而不需要直接依赖具体宿主实现。
+
+## Session
+
+session 是执行拥有者。
+
+它负责：
+
+- prompt 执行
+- model / tool flow
+- run-local 状态
+- 输出生成
+
+plugin 不会取代 session，它只是围绕 session 参与运行。
+
+## Plugin 的接入方式
+
+plugin 通过这些形态接入 runtime：
+
+- actions
+- hooks
+- system text
+- lifecycle
+- HTTP
+
+托管 plugin 也可能拥有长期运行态，但 session 仍然是执行核心。
+
+## 一个实用判断
+
+- 如果你在追“到底是谁执行这一轮”，看 `session`
+- 如果你在追“到底是谁暴露或增强能力”，看 `plugin`

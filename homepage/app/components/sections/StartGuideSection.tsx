@@ -85,7 +85,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
       },
       {
         title: "Run a health check",
-        description: "Verify service state first, then add skills, channels, and scheduled tasks. Boundaries before expansion.",
+        description: "Verify runtime state first, then add skills, channels, and scheduled tasks. Boundaries before expansion.",
         command: "curl http://localhost:3000/health\ncurl http://localhost:3000/api/status",
       },
     ],

@@ -94,7 +94,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     },
     {
       name: "keywords",
-      content: "Downcity, Agent SDK, agent-sdk-docs, sessions, services, api",
+      content: "Downcity, Agent SDK, agent-sdk-docs, sessions, plugins, api",
     },
     {
       property: "og:title",

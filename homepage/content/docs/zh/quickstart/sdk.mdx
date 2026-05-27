@@ -45,7 +45,7 @@ const agent = new Agent({
   tools: {},
 });
 
-const session = await agent.session();
+const session = await agent.createSession();
 await session.set({
   model: openai.responses("gpt-5"),
 });
@@ -140,7 +140,7 @@ const agent = new RemoteAgent({
   baseUrl: "http://127.0.0.1:15314",
 });
 
-const session = await agent.session();
+const session = await agent.createSession();
 
 const turn = await session.prompt({
   query: "总结一下当前仓库结构",

@@ -1,7 +1,7 @@
 {
   "title": "Package",
   "pages": [
-    "runtime-and-services",
+    "runtime-and-plugins",
     "runtime-evolution",
     "session-sandbox-execution",
     "console-sandbox-module",

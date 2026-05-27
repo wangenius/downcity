@@ -1,0 +1,45 @@
+---
+title: city memory
+description: 托管 memory plugin 命令，用于检索、读取、写入与 flush
+---
+
+# `city memory`
+
+`city memory` 是托管 memory plugin 的命令组。
+
+当 agent 或操作者需要显式查看、写入、整理 memory，而不是只依赖 prompt 注入时，使用它。
+
+## 用法
+
+```bash
+city memory <subcommand> [options]
+```
+
+## 主要子命令
+
+- `status`
+- `search <query>`
+- `get <memoryPath> [--from <line>] [--lines <count>]`
+- `store --content <text> [--target <longterm|daily|working>] [--session-id <sessionId>]`
+- `flush --session-id <sessionId> [--max-messages <count>]`
+
+## 说明
+
+- memory 默认启用，归属于托管 plugin runtime。
+- system prompt 只会注入受控的长期记忆包；更深的检索仍然走 `memory.search` 与 `memory.get`。
+- 所有 memory action 都支持一次性 `--delay` / `--time`。
+
+## 示例
+
+```bash
+city memory status
+city memory search "release decision"
+city memory get .downcity/memory/MEMORY.md --from 10 --lines 20
+city memory store --target longterm --content "User prefers concise release notes."
+city memory flush --session-id telegram-chat-123 --max-messages 40
+```
+
+## 相关页面
+
+- [`Plugin 调度`](/zh/docs/commands/plugin/schedule)
+- [`Plugins Docs / memory`](/zh/plugins-docs/builtins/memory)

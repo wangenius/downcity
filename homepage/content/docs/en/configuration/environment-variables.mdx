@@ -48,7 +48,7 @@ sequenceDiagram
   CLI->>JSON: Read and merge downcity.json layers
   CLI->>CLI: Resolve placeholders using scoped env maps
   CLI->>DB: Resolve channel channel account by channelAccountId
-  CLI->>RT: Start services/channels
+  CLI->>RT: Start plugins/channels
 ```
 
 ## 3. Load Priority (who wins)
@@ -81,7 +81,7 @@ So key precedence inside `shell` sessions is: `DC_CTX_*` > agent env > global en
 1. Project-layer `${ENV_KEY}` resolution.
 2. Agent process env injection (`agent env in env_entries + .env`).
 3. `shell` subprocess injection (global env + current agent env + `DC_CTX_*`).
-4. Optional fallback paths in some service auth helpers.
+4. Optional fallback paths in some plugin auth helpers.
 
 ### 4.2 Does not read project `.env`
 

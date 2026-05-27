@@ -1,28 +1,62 @@
 ---
 title: Plugin 总览
-description: 理解 Downcity plugin 的定位、它和 service 的区别，以及 plugin 在 agent 运行时中负责什么
+description: 理解 Downcity 里 plugin 的建模方式、本地 plugin 与托管 plugin 的区别，以及 plugin 能力如何组装
 ---
 
 # Plugin 总览
 
-在 Downcity 里，plugin 更像“扩展层”和“增强层”。
+在当前 Downcity 里，plugin 就是能力扩展单元。
 
-你可以把它理解成：
+这意味着：
 
-- 为 agent 增加一组显式 action
-- 向运行时注册 hooks / resolve 点
-- 提供 system 文本
-- 提供 setup / usage 协议给 Console
-- 在需要时向 runtime 注入 HTTP 路由
+- 能力通过 plugin 暴露
+- 运行时参与点通过 plugin 暴露
+- 长生命周期的托管 runtime 模块，也统一建模成 plugin
+
+如果你想看具体 built-in plugin 手册，请继续阅读 [Plugins Docs](/zh/plugins-docs)。
 
 ## 一句话理解
 
-- service 更像长期运行实例
-- plugin 更像扩展点和能力包
+plugin 是 Downcity 里“一个能力边界”的统一承载单元。
+
+它可以是：
+
+- action-first
+- hook-oriented
+- system-oriented
+- lifecycle-owned
+- HTTP-exposing
+
+## 两类最重要的 plugin
+
+### 本地 plugin
+
+这类 plugin 通常直接挂到一个本地 SDK `Agent` 上。
+
+典型例子：
+
+- `skill`
+- `web`
+- `asr`
+- `tts`
+- `auth`
+
+### 托管 plugin
+
+这类 plugin 属于 runtime 管理对象，会跟随目标 agent lifecycle 参与运行。
+
+典型例子：
+
+- `chat`
+- `task`
+- `memory`
+- `contact`
+- `shell`
+- `schedule`
+
+正因为存在这类托管 plugin，旧的“分层对立”语言已经不再适合当前模型。
 
 ## 在本地 SDK 里怎么接入 plugin
-
-现在本地 `Agent` 已经支持显式注册 plugin：
 
 ```ts
 import { Agent, SkillPlugin, WebPlugin } from "@downcity/agent";
@@ -37,43 +71,16 @@ const agent = new Agent({
 const plugins = agent.plugins.list();
 ```
 
-这里的关键点是：
+关键点：
 
 - `plugins` 是当前这个 `Agent` 私有的 registry
-- SDK 不会自动把所有内建 plugin 都注册进来
-- 你可以通过 `agent.plugins.list()`、`availability()`、`runAction()` 直接使用它们
-- service 和 plugin hook 里拿到的 `context.plugins` 也会指向同一份 registry
+- SDK 不会自动注册所有 built-in plugin
+- 你可以直接使用 `agent.plugins.list()`、`availability()`、`runAction()`
+- prompt 阶段的 plugin system 文本，只来自这个 SDK `Agent` 已注册的 plugin
 
-## plugin 适合承载什么
+## 一个 plugin 可能包含什么
 
-plugin 特别适合这些事情：
-
-- 给某个领域增加显式命令和 action
-- 在现有运行链路里插入 hooks
-- 提供 system prompt 增强文本
-- 暴露一个 setup / usage 协议给 UI
-- 为 runtime 注入特定 HTTP 路由
-
-## plugin 不是什么
-
-plugin 不应该被理解成：
-
-- 一定长期持有后台状态的对象
-- service 的别名
-- 每个项目自己各自维护生命周期的实例池
-
-如果你真正需要：
-
-- queue worker
-- shell session 池
-- 长期连接
-- cron runtime
-
-那通常先想到的应该是 service，而不是 plugin。
-
-## 当前 plugin 的几个关键组成
-
-一个完整 plugin 可能包含：
+完整 plugin 可能包含：
 
 - `config`
 - `actions`
@@ -84,62 +91,27 @@ plugin 不应该被理解成：
 - `system`
 - `availability`
 - `http`
+- `lifecycle`
 
 不是每个 plugin 都需要把这些全部实现。
 
-## plugin 的启用态和项目配置不是一回事
+## 现在“plugin 启用”到底是什么意思
 
-这点非常重要。
+要分多层理解：
 
-### 启用态
+- agent 级：这个本地 SDK `Agent` 有没有注册该 plugin
+- runtime 级：这个托管 plugin 当前是启动还是停止
+- plugin 自身级：`availability()` 当前是否判定可用
+- project 级：`downcity.json.plugins.*` 里有什么运行参数
 
-plugin 是否启用，当前属于 city 级事实。
-
-也就是说：
-
-- plugin enable / disable 不属于项目 `downcity.json`
-- 它是平台级生命周期开关
-
-### 项目侧配置
-
-plugin 的运行参数则可以落到项目 `downcity.json.plugins.*`。
-
-所以要把两层分开理解：
-
-- city 级：这个 plugin 是否打开
-- project 级：当前 agent 怎么使用这个 plugin
-
-在 SDK 里还要再加一层理解：
-
-- agent 级：这个本地 `Agent` 到底注册了哪些 plugin 定义
-
-也就是说，一个 plugin 真正生效通常同时取决于：
-
-- 你有没有把它注册进当前 `Agent`
-- 它在 city 级 lifecycle 里有没有被显式关闭
-- 它自己的 `availability()` 当前是否返回可用
-
-## `auth` 是特殊 plugin
-
-当前 `auth` plugin 是一个内建且必需的特殊 plugin。
-
-它不走普通可选启停语义，而是始终可用。
-
-## 当前内建 plugin
-
-当前内建 plugin 有：
-
-- `auth`
-- `skill`
-- `web`
-- `asr`
-- `tts`
-- `workboard`
+不要把它们混成一个概念。
 
 ## 推荐阅读顺序
 
-1. [当前有哪些内建 Plugin](/zh/agent-sdk-docs/plugins/built-in-plugins)
-2. [Plugin 配置](/zh/agent-sdk-docs/plugins/configuration)
-3. [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
-4. [Plugin Hooks](/zh/agent-sdk-docs/plugins/plugin-hooks)
-5. [自定义 Plugin](/zh/agent-sdk-docs/plugins/custom-plugin)
+1. [Plugin Design Patterns](/zh/agent-sdk-docs/plugins/design-patterns)
+2. [Plugin Lifecycle](/zh/agent-sdk-docs/plugins/lifecycle)
+3. [Plugin 配置](/zh/agent-sdk-docs/plugins/configuration)
+4. [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
+5. [Plugin Hooks](/zh/agent-sdk-docs/plugins/plugin-hooks)
+6. [Plugins Docs](/zh/plugins-docs)
+7. [自定义 Plugin](/zh/agent-sdk-docs/plugins/custom-plugin)

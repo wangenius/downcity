@@ -1,7 +1,7 @@
 /**
  * cron 触发定义。
  */
-export type ServiceCronTriggerDefinition = {
+export type TaskCronTriggerDefinition = {
   id: string;
   expression: string;
   timezone?: string;
@@ -11,6 +11,6 @@ export type ServiceCronTriggerDefinition = {
 /**
  * cron 引擎端口。
  */
-export type ServiceCronEngine = {
-  register(definition: ServiceCronTriggerDefinition): void;
+export type TaskCronEngine = {
+  register(definition: TaskCronTriggerDefinition): void;
 };

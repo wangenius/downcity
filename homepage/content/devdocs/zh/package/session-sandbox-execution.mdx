@@ -180,7 +180,7 @@ description: 基于当前 shell 和 task 的真实协议，说明为什么默认
 一句话：
 
 ```text
-ShellService 和 TaskService 仍然在宿主侧，沙箱只是它们的执行后端。
+`shell` plugin runtime 和 `task` plugin runtime 仍然在宿主侧，沙箱只是它们的执行后端。
 ```
 
 ## 推荐的对象边界
@@ -257,7 +257,7 @@ ShellService 和 TaskService 仍然在宿主侧，沙箱只是它们的执行后
 flowchart TD
   U["User"] --> A["Agent"]
   A --> S["shell_start"]
-  S --> H["ShellService (宿主)"]
+  S --> H["shell plugin runtime (宿主)"]
   H --> P["SandboxPolicyResolver"]
   P --> X["SandboxExecutor"]
   X --> C["会话级隔离容器"]
@@ -278,7 +278,7 @@ flowchart TD
 
 - `shell_id` 仍然由宿主侧生成和管理
 - 容器不直接承担 chat 语义
-- 中途状态查询仍然走 `ShellService`
+- 中途状态查询仍然走宿主侧 `shell` plugin runtime
 - shell 结束后仍然回到主 agent 继续回复
 
 ## task 的完整链路
@@ -289,7 +289,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  T["Task trigger"] --> TS["TaskService (宿主)"]
+  T["Task trigger"] --> TS["task plugin runtime (宿主)"]
   TS --> R["create run dir"]
   R --> P["SandboxPolicyResolver"]
   P --> X["SandboxExecutor"]

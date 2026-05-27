@@ -12,7 +12,7 @@ import {
   resolveCurrentChatEnvironmentPromptInput,
 } from "@/plugin/builtins/chat/runtime/SystemPrompt.js";
 import {
-  CHAT_SERVICE_PROMPT,
+  CHAT_PLUGIN_PROMPT,
   FEISHU_CHAT_CHANNEL_PROMPT,
   QQ_CHAT_CHANNEL_PROMPT,
   TELEGRAM_CHAT_CHANNEL_PROMPT,
@@ -61,7 +61,7 @@ export async function buildChatPluginSystem(
   context: AgentContext,
 ): Promise<string> {
   return [
-    CHAT_SERVICE_PROMPT,
+    CHAT_PLUGIN_PROMPT,
     await buildCurrentChatEnvironmentPrompt(context),
     ...(await buildCurrentChannelPrompts(context)),
   ]

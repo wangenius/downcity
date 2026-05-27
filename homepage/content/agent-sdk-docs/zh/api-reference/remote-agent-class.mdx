@@ -8,8 +8,11 @@ description: 远程 Agent 客户端的核心公开接口
 `RemoteAgent` 的核心公开使用面包括：
 
 - `new RemoteAgent({ baseUrl })`
-- `agent.session(sessionId?)`
-- `agent.sessions()`
+- `agent.createSession(input?)`
+- `agent.getSession(sessionId)`
+- `agent.listSessions(input?)`
+
+`agent.createSession()` 和 `agent.getSession()` 返回 `RemoteAgentSession`。
 
 ## 核心语义
 

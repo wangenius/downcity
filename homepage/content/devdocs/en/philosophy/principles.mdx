@@ -1,21 +1,29 @@
 ---
 title: Design Philosophy and Principles
-description: The first-principles view behind Downcity's structure, responsibilities, and product direction
+description: The first-principles view behind Downcity's repo-native runtime, session model, and plugin architecture
 ---
 
 # Design Philosophy and Principles
 
-Downcity is not trying to replace people with an abstract agent platform. It is trying to let agents inherit the structure humans already use to run real work.
+This page explains the design pressure behind the current architecture.
 
-## Core Thesis
+## Core thesis
 
-- Humans should not migrate into an agent platform
-- Agents should drop into the human workspace
-- Managing folders, docs, config, and context is how you manage the agent
+Downcity is not trying to move humans into an agent platform.
 
-## What Downcity Pushes Against
+It is trying to let agents inherit the structure humans already use to run real work.
 
-Many agent systems start by extracting business state into a new platform. That usually creates:
+That means:
+
+- humans keep the workspace
+- agents execute inside that workspace
+- durable state stays visible in files, logs, and session history
+
+## What Downcity pushes against
+
+Many agent systems start by extracting business state into a new control layer.
+
+That usually creates:
 
 - context loss
 - ownership loss
@@ -23,37 +31,31 @@ Many agent systems start by extracting business state into a new platform. That 
 
 Downcity treats that as the wrong default.
 
-## Human With Agent
+## First principles
 
-The target is not `Human or Agent`, but `Human with Agent`:
+1. Repo-native structure comes first.
+2. Humans retain interpretive control.
+3. Control plane and execution plane stay separate.
+4. Session owns execution.
+5. Plugins own capability, not the turn itself.
 
-- humans define boundaries and fallback responsibility
-- agents execute inside those boundaries
-- durable traces stay in human-readable forms such as files, logs, and conversation history
+## Practical reading rule
 
-## First Principles
+When a new design appears, ask:
 
-1. Business-native structure comes first
-2. Humans retain interpretive control
-3. Control plane and execution plane stay separate
-4. Workflow ownership and enhancement ownership stay separate
-5. Services define extension points; plugins only implement them
+- is this moving state closer to the real workspace or farther away from it?
+- is this making session execution clearer or hiding it?
+- is this capability best expressed as a plugin action, hook, system block, or managed runtime?
 
-The service/plugin split is especially important:
-
-- `service` has lifecycle and actively participates in the agent runtime cycle
-- `plugin` has no lifecycle and should attach through hooks or providers
-
-## Philosophy-to-Architecture Map
+## Philosophy-to-architecture map
 
 ```mermaid
 flowchart TD
-  H["Human business structure"] --> C["Console control plane"]
-  H --> A["Agent execution plane"]
+  H["Human workspace<br/>repo / folders / docs / rules"] --> C["Console control plane"]
+  H --> A["Agent host"]
   C --> A
-  A --> S["Services"]
-  S --> HP["Hook plugins"]
-  S --> PP["Provider plugins"]
-  PP --> T["Assets"]
-  A --> D["Durable traces"]
+  A --> S["Session execution"]
+  A --> P["Plugins"]
+  P --> T["Tools / models / dependencies"]
+  S --> D["Durable traces<br/>history / artifacts / logs"]
 ```

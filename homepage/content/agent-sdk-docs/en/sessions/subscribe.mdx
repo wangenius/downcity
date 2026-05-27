@@ -16,7 +16,7 @@ const unsubscribe = session.subscribe((event) => {
 ## Example
 
 ```ts
-const session = await agent.session("repo-analysis");
+const session = await agent.getSession("repo-analysis");
 
 const unsubscribe = session.subscribe((event) => {
   if (event.type === "text-delta") {
@@ -50,8 +50,8 @@ The local Session actor currently emits a minimal turn-oriented event set:
 
 `subscribe()` does not replay history.
 
-If you need past messages, use `session.history()`.
+If you need past messages, use `session.history({ limit })`.
 
 ## Why callback-based
 
-For embedded runtimes, desktop apps, service hosts, and remote HTTP clients, a session-level callback subscription is usually simpler than creating a separate per-prompt output object.
+For embedded runtimes, desktop apps, agent hosts, and remote HTTP clients, a session-level callback subscription is usually simpler than creating a separate per-prompt output object.

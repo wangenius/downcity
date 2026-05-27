@@ -1,0 +1,47 @@
+---
+title: memory Plugin
+description: memory 存储、检索、运行态，以及 session 到 memory 的刷写能力
+---
+
+# `memory` Plugin
+
+`memory` 是 agent 的记忆 plugin。
+
+它提供：
+
+- memory 存储
+- memory 检索
+- memory 文件读取
+- session 到 memory 的刷写
+- memory system text
+
+## 主要形状
+
+- `lifecycle`
+- `actions`
+- `system`
+
+## 它主要解决什么问题
+
+当你需要这些能力时，应该关注 `memory`：
+
+- 可检索的 long-term 或 daily memory
+- 显式写入记忆
+- 读取记忆文件片段
+- 把某个 session 的最近消息刷写进 memory
+
+## 关键语义
+
+- runtime state 归属于 plugin 实例
+- memory 是否启用，和代码里是否存在这个 plugin 不是一回事
+- 部分 action 具备 session-aware 语义，尤其是 `flush`
+
+## 公开性说明
+
+`MemoryPlugin` 在代码里是 built-in，但更偏平台 runtime plugin，不属于包根主公开的 SDK plugin export。
+
+## 相关文档
+
+- [Plugin System](/zh/agent-sdk-docs/plugins/plugin-system)
+- [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
+- [Built-ins Overview](/zh/plugins-docs/builtins/overview)

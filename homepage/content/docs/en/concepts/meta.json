@@ -6,8 +6,8 @@
     "logic-map",
     "port-and-instance-lifecycle",
     "invocation-routing-and-isolation",
-    "runtime-registration-service-shell-flow",
-    "service-runtime",
+    "console-registration-and-shell-flow",
+    "runtime-context",
     "runtime-relationship-and-process",
     "context-engineering",
     "message-processing"

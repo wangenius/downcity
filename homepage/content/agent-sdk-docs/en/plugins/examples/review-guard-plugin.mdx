@@ -1,64 +1,14 @@
 ---
-title: ReviewGuardPlugin Scenario
-description: Use a guard scenario to show how a plugin can block a flow before the main chain continues
+title: Review Guard Plugin Example Moved
+description: This concrete plugin example now lives in Plugins Docs
 ---
 
-# ReviewGuardPlugin Scenario
+# Review Guard Plugin Example Moved
 
-## Scenario
+This example now lives at [Plugins Docs / review-guard-plugin](/en/plugins-docs/examples/review-guard-plugin).
 
-You want to enforce one rule in a runtime chain:
+For concept-first reading, continue with:
 
-- if a request does not carry `reviewed = true`
-- block the rest of the flow
+- [Plugin Hooks Overview](/en/agent-sdk-docs/plugins/hooks/overview)
+- [Plugin Design Patterns](/en/agent-sdk-docs/plugins/design-patterns)
 
-That is the most natural kind of `guard` scenario.
-
-## Example
-
-```ts
-import { Agent, type Plugin } from "@downcity/agent";
-
-export const reviewGuardPlugin: Plugin = {
-  name: "review_guard",
-  title: "Review Guard",
-  description: "Blocks requests that were not reviewed.",
-  hooks: {
-    guard: {
-      "review.require_checked": [
-        async ({ value }) => {
-          const body = value as { reviewed?: unknown };
-          if (body.reviewed !== true) {
-            throw new Error("review is required before continuing");
-          }
-        },
-      ],
-    },
-  },
-};
-
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  tools: {},
-  plugins: [reviewGuardPlugin],
-});
-
-await agent.plugins.guard("review.require_checked", {
-  reviewed: true,
-});
-```
-
-## Why this is not a pipeline
-
-Because you are not trying to rewrite a value. You are trying to:
-
-- allow the flow
-- or stop it immediately
-
-That is exactly what guards are for.
-
-## Related docs
-
-- [Plugin hooks and resolve](/en/agent-sdk-docs/plugins/plugin-hooks)
-- [Custom plugin](/en/agent-sdk-docs/plugins/custom-plugin)

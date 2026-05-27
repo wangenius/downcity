@@ -1,6 +1,6 @@
 ---
 title: Common Bad vs Good Designs
-description: Use short bad-vs-good comparisons to show when to choose pipeline, guard, effect, resolve, or service
+description: Use short bad-vs-good comparisons to show when to choose pipeline, guard, effect, resolve, or lifecycle runtime
 ---
 
 # Common Bad vs Good Designs
@@ -19,10 +19,6 @@ Better choice:
 
 - use `pipeline`
 
-Reason:
-
-- this is value transformation, not blocking.
-
 ## Misuse 2
 
 Need:
@@ -36,10 +32,6 @@ Bad choice:
 Better choice:
 
 - use `guard`
-
-Reason:
-
-- `effect` is not a blocking semantic.
 
 ## Misuse 3
 
@@ -55,10 +47,6 @@ Better choice:
 
 - use `effect`
 
-Reason:
-
-- there is no main-value transformation requirement here.
-
 ## Misuse 4
 
 Need:
@@ -73,10 +61,6 @@ Better choice:
 
 - use `resolve`
 
-Reason:
-
-- this demands one final answer, not progressive enrichment.
-
 ## Misuse 5
 
 Need:
@@ -89,20 +73,10 @@ Bad choice:
 
 Better choice:
 
-- let a `service` own the long-lived state
+- let plugin `lifecycle` own the long-lived state
 - keep hooks focused on chain extension
-
-Reason:
-
-- long-lived runtime instances should not be forced into hook semantics.
-
-## Main takeaway
-
-Do not split by "where is it easiest to write this."
-
-Split by "what role does this capability actually play at runtime."
 
 ## Related docs
 
 - [How to choose](/en/agent-sdk-docs/plugins/hooks/choose-the-right-one)
-- [Plugin and service composition](/en/agent-sdk-docs/plugins/examples/plugin-service-composition)
+- [Plugin Runtime Composition](/en/plugins-docs/examples/plugin-runtime-composition)

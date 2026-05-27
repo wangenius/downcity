@@ -49,7 +49,7 @@ city start -p
 
 ## Port meanings
 
-- `5314`: city runtime API port for `health`, `service`, `task`, `plugin`, and related endpoints.
+- `5314`: city runtime API port for `health`, managed plugin, plugin, and related endpoints.
 - `5315`: Console Web UI port for browser access.
 
 ## Related commands
@@ -70,7 +70,7 @@ city version: 1.0.0
    pid: <runtimePid>
    log: <cityRuntimeLogPath>
    port: 5314
-   usage: Runtime API / service endpoints (health, service, task, plugin)
+   usage: Runtime API / managed-plugin endpoints (health, plugin, task, chat)
 ✅ Console started
    pid: <consolePid>
    url: http://127.0.0.1:5315
@@ -92,5 +92,5 @@ city version: 1.0.0
    pid: <runtimePid>
    log: <cityRuntimeLogPath>
    port: 5314
-   usage: Runtime API / service endpoints (health, service, task, plugin)
+   usage: Runtime API / managed-plugin endpoints (health, plugin, task, chat)
 ```

@@ -8,12 +8,18 @@
  */
 
 import type {
-  AgentSessionMetadata,
+  AgentCreateSessionInput,
+  AgentListSessionsInput,
+  AgentSessionHistoryInput,
+  AgentSessionHistoryPage,
+  AgentSessionInfo,
+  AgentSessionForkInput,
   AgentSessionSetInput,
+  AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  RemoteAgentSession,
   RemoteAgentOptions,
 } from "@/sdk/AgentSdkTypes.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type {
   AgentSessionEvent,
   AgentSessionSubscriber,
@@ -77,7 +83,7 @@ type SdkEventsReadyFrame = {
 /**
  * 远程 Session 客户端。
  */
-class RemoteSession {
+class RemoteSession implements RemoteAgentSession {
   readonly id: string;
   private readonly baseUrl: string;
   private readonly eventHub = new SessionEventHub();
@@ -100,6 +106,24 @@ class RemoteSession {
     throw new Error(
       "Remote session.set({ model }) is not supported in v1. Configure the model on the server-side local Agent session instead.",
     );
+  }
+
+  /**
+   * 读取当前远程 session 详情。
+   */
+  async getInfo(): Promise<AgentSessionInfo> {
+    const response = await fetch(
+      `${this.baseUrl}/api/sdk/sessions/${encodeURIComponent(this.id)}`,
+    );
+    const payload = (await response.json()) as {
+      success?: boolean;
+      error?: string;
+      session?: AgentSessionInfo;
+    };
+    if (!response.ok || !payload.success || !payload.session?.sessionId) {
+      throw new Error(String(payload.error || "Remote session info failed"));
+    }
+    return payload.session;
   }
 
   /**
@@ -162,19 +186,31 @@ class RemoteSession {
   /**
    * 读取远程消息历史。
    */
-  async history(): Promise<SessionMessageV1[]> {
+  async history(input?: AgentSessionHistoryInput): Promise<AgentSessionHistoryPage> {
+    const query = new URLSearchParams();
+    if (input?.limit !== undefined) query.set("limit", String(input.limit));
+    if (input?.cursor) query.set("cursor", input.cursor);
+    if (input?.order) query.set("order", input.order);
+    if (input?.view) query.set("view", input.view);
     const response = await fetch(
-      `${this.baseUrl}/api/sdk/sessions/${encodeURIComponent(this.id)}/messages`,
+      `${this.baseUrl}/api/sdk/sessions/${encodeURIComponent(this.id)}/history${
+        query.size > 0 ? `?${query.toString()}` : ""
+      }`,
     );
     const payload = (await response.json()) as {
       success?: boolean;
       error?: string;
-      messages?: SessionMessageV1[];
+      history?: AgentSessionHistoryPage;
     };
-    if (!response.ok || !payload.success || !Array.isArray(payload.messages)) {
+    if (
+      !response.ok ||
+      !payload.success ||
+      !payload.history ||
+      !Array.isArray(payload.history.items)
+    ) {
       throw new Error(String(payload.error || "Remote session history failed"));
     }
-    return payload.messages;
+    return payload.history;
   }
 
   /**
@@ -203,7 +239,11 @@ class RemoteSession {
   /**
    * 分叉远程 session。
    */
-  async fork(messageId?: string): Promise<RemoteSession> {
+  async fork(input?: AgentSessionForkInput | string): Promise<RemoteAgentSession> {
+    const messageId =
+      typeof input === "string"
+        ? String(input || "").trim() || undefined
+        : String(input?.messageId || "").trim() || undefined;
     const response = await fetch(
       `${this.baseUrl}/api/sdk/sessions/${encodeURIComponent(this.id)}/fork`,
       {
@@ -219,7 +259,7 @@ class RemoteSession {
     const payload = (await response.json()) as {
       success?: boolean;
       error?: string;
-      session?: AgentSessionMetadata;
+      session?: AgentSessionInfo;
     };
     if (!response.ok || !payload.success || !payload.session?.sessionId) {
       throw new Error(String(payload.error || "Remote session fork failed"));
@@ -426,43 +466,75 @@ export class RemoteAgent {
   }
 
   /**
-   * 获取或创建一个远程 session。
+   * 新建一个远程 session。
    */
-  async session(sessionId?: string): Promise<RemoteSession> {
+  async createSession(
+    input?: AgentCreateSessionInput,
+  ): Promise<RemoteAgentSession> {
     const response = await fetch(`${this.baseUrl}/api/sdk/sessions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        ...(sessionId ? { sessionId } : {}),
+        ...(input?.sessionId ? { sessionId: input.sessionId } : {}),
       }),
     });
     const payload = (await response.json()) as {
       success?: boolean;
       error?: string;
-      session?: AgentSessionMetadata;
+      session?: AgentSessionInfo;
     };
     if (!response.ok || !payload.success || !payload.session?.sessionId) {
-      throw new Error(String(payload.error || "Remote session load failed"));
+      throw new Error(String(payload.error || "Remote session create failed"));
     }
     return new RemoteSession(this.baseUrl, payload.session.sessionId);
   }
 
   /**
-   * 列出远程 agent 的全部 session 元数据。
+   * 获取一个已存在的远程 session。
    */
-  async sessions(): Promise<AgentSessionMetadata[]> {
-    const response = await fetch(`${this.baseUrl}/api/sdk/sessions`);
+  async getSession(sessionId: string): Promise<RemoteAgentSession> {
+    const resolvedSessionId = String(sessionId || "").trim();
+    if (!resolvedSessionId) {
+      throw new Error("getSession requires a non-empty sessionId");
+    }
+    const response = await fetch(
+      `${this.baseUrl}/api/sdk/sessions/${encodeURIComponent(resolvedSessionId)}`,
+    );
     const payload = (await response.json()) as {
       success?: boolean;
       error?: string;
-      sessions?: AgentSessionMetadata[];
+      session?: AgentSessionInfo;
     };
-    if (!response.ok || !payload.success || !Array.isArray(payload.sessions)) {
+    if (!response.ok || !payload.success || !payload.session?.sessionId) {
+      throw new Error(String(payload.error || "Remote session get failed"));
+    }
+    return new RemoteSession(this.baseUrl, payload.session.sessionId);
+  }
+
+  /**
+   * 列出远程 agent 的 session 摘要页。
+   */
+  async listSessions(
+    input?: AgentListSessionsInput,
+  ): Promise<AgentSessionSummaryPage> {
+    const query = new URLSearchParams();
+    if (input?.limit !== undefined) query.set("limit", String(input.limit));
+    if (input?.cursor) query.set("cursor", input.cursor);
+    if (input?.query) query.set("query", input.query);
+    const response = await fetch(
+      `${this.baseUrl}/api/sdk/sessions${query.size > 0 ? `?${query.toString()}` : ""}`,
+    );
+    const payload = (await response.json()) as {
+      success?: boolean;
+      error?: string;
+      page?: AgentSessionSummaryPage;
+    };
+    if (!response.ok || !payload.success || !payload.page) {
       throw new Error(String(payload.error || "Remote sessions list failed"));
     }
-    return payload.sessions;
+    return payload.page;
   }
 }
 

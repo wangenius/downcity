@@ -11,7 +11,6 @@ import net, { type Server } from "node:net";
 import path from "node:path";
 import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
 import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { AgentCore } from "@/core/AgentCore.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { LocalRpcRequest, LocalRpcResponse, LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
 import type { ControlSessionExecuteRequestBody } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
@@ -377,23 +376,17 @@ function bindConnectionHandler(params: {
  * 启动本地 RPC server。
  */
 export async function startLocalRpcServer(params: {
-  context?: AgentContext;
-  runtime?: AgentRuntime;
-  core?: Pick<AgentCore, "getContext" | "getRuntime">;
+  context: AgentContext;
+  runtime: AgentRuntime;
 }): Promise<LocalRpcServerHandle> {
-  const context = params.context || params.core?.getContext();
-  if (!context) {
-    throw new Error("startLocalRpcServer requires a context or core");
-  }
-  const runtime = params.runtime || params.core?.getRuntime();
-  const endpoint = getLocalRpcEndpoint(context.rootPath);
+  const endpoint = getLocalRpcEndpoint(params.context.rootPath);
   await ensureEndpointReady(endpoint);
 
   const server = net.createServer();
   bindConnectionHandler({
     server,
-    context,
-    runtime,
+    context: params.context,
+    runtime: params.runtime,
   });
 
   await new Promise<void>((resolve, reject) => {

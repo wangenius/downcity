@@ -1,6 +1,6 @@
 ---
 title: How to Choose
-description: Use short decision rules to separate action, pipeline, guard, effect, resolve, and service
+description: Use short decision rules to separate action, pipeline, guard, effect, resolve, and lifecycle runtime
 ---
 
 # How to Choose
@@ -18,7 +18,7 @@ If you want to:
 - block before the flow continues, use `guard`
 - keep the main value unchanged and record or sync something, use `effect`
 - get one final authoritative answer, use `resolve`
-- own long-lived state, connections, or workers, use a `service`
+- own long-lived state, workers, or connections, use plugin `lifecycle`
 
 ## Common questions
 
@@ -26,51 +26,31 @@ If you want to:
 
 Use `pipeline`.
 
-That is value transformation.
-
 ### "I want to stop the request immediately if permission is missing"
 
 Use `guard`.
-
-That is a continuation decision.
 
 ### "I want to write one audit log every time this happens"
 
 Use `effect`.
 
-That is a side effect.
-
 ### "I want to know the user's final role"
 
 Use `resolve`.
-
-That is a unique-answer problem.
 
 ### "I want an external caller to trigger a named command"
 
 Use an `action`.
 
-That is an explicit invocation entry point.
-
 ### "I want a long-lived cache, connection pool, or background worker"
 
-Use a `service`.
-
-That is no longer just an extension point.
+Use plugin `lifecycle`.
 
 ## Common bad splits
 
-### using `resolve` for multi-plugin enrichment
-
-That is usually wrong and should go back to `pipeline`.
-
-### using `effect` as a hidden reliable job queue
-
-That is usually too heavy and should move into a `service` or fuller background system.
-
-### using `guard` while also rewriting values
-
-That muddies the semantic role. Put the value rewrite back into `pipeline`.
+- using `resolve` for multi-plugin enrichment
+- using `effect` as a hidden reliable job queue
+- using `guard` while also rewriting values
 
 ## One practical decomposition pattern
 
@@ -84,10 +64,10 @@ then the clean split is often:
 
 - `action` for explicit invocation
 - `pipeline / guard / effect / resolve` for runtime-chain extension
-- `service` for long-lived state
+- `lifecycle` for long-lived state
 
 ## Related scenarios
 
 - [One full message flow](/en/agent-sdk-docs/plugins/hooks/examples/end-to-end-message-flow)
 - [Common bad vs good designs](/en/agent-sdk-docs/plugins/hooks/examples/bad-vs-good-design)
-- [Plugin and service composition](/en/agent-sdk-docs/plugins/examples/plugin-service-composition)
+- [Plugin Runtime Composition](/en/plugins-docs/examples/plugin-runtime-composition)

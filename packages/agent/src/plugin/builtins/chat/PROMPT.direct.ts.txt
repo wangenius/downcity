@@ -1,4 +1,4 @@
-# Chat Service 使用说明
+# Chat Plugin 使用说明
 
 ## 用户可见回复规则
 

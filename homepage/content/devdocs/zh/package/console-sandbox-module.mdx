@@ -27,7 +27,7 @@ description: 为 Downcity 设计一个最小可落地的 Sandbox 模块，只解
 当前 package 里，最直接的改造点就是：
 
 ```text
-ShellService
+shell plugin runtime
   -> SandboxRunner
   -> sandbox 内命令执行
   -> 返回 stdout / stderr / exit code
@@ -47,7 +47,7 @@ ShellService
 
 当前代码里的风险非常直接：
 
-- `ShellService` 最终还是宿主机直接 `spawn(...)`
+- `shell` plugin runtime 最终还是宿主机直接 `spawn(...)`
 - `cwd` 只是默认收敛到 `projectRoot`
 - 这不是 sandbox，只是执行位置默认值
 
@@ -133,11 +133,11 @@ v1 里建议边界如下：
 
 负责：
 
-- 持有 `ShellService`
+- 持有 `shell` plugin runtime
 - 在运行时读取 sandbox 配置
 - 创建并调用 `SandboxRunner`
 
-### `ShellService`
+### `shell` plugin runtime
 
 负责：
 
@@ -151,7 +151,7 @@ v1 里建议边界如下：
 关键变化是：
 
 ```text
-ShellService 不再直接 spawn，而是调用 SandboxRunner。
+shell plugin runtime 不再直接 spawn，而是调用 SandboxRunner。
 ```
 
 ### `SandboxRunner`
@@ -171,7 +171,7 @@ ShellService 不再直接 spawn，而是调用 SandboxRunner。
 
 ```mermaid
 flowchart LR
-  U["CLI / Tool 调用"] --> S["ShellService"]
+  U["CLI / Tool 调用"] --> S["shell plugin runtime"]
   S --> R["SandboxRunner"]
   R --> X["Sandbox Session"]
   X --> P["sandbox process"]
@@ -276,7 +276,7 @@ type SandboxRunner = {
 建议只做：
 
 - `SandboxApiRoutes`
-- `SandboxConfigService`
+- `SandboxConfigStore`
 
 功能也只要：
 
@@ -333,27 +333,27 @@ v1 里只需要在文档上留出这个概念：
 关键点不是 provider 花样，而是先把：
 
 ```text
-ShellService -> 宿主直接 spawn
+shell plugin runtime -> 宿主直接 spawn
 ```
 
 改成：
 
 ```text
-ShellService -> SandboxRunner
+shell plugin runtime -> SandboxRunner
 ```
 
-## 与 shell service 的接入关系
+## 与 shell plugin runtime 的接入关系
 
-当前 `ShellService` 保持不变的部分：
+当前 `shell` plugin runtime 保持不变的部分：
 
-- service action 名称
+- 对外 action 名称
 - `shell_start/status/read/write/wait/close`
 - shell output 落盘
 - chat 自动回投逻辑
 
 变化的只有一层：
 
-- `runtime/ShellActionRuntime.ts` 内部不再直接 `spawn`
+- shell 执行适配层内部不再直接 `spawn`
 - 改成通过 `SandboxRunner` 启动和管理 sandbox 里的进程
 
 这能最大程度保持协议稳定。

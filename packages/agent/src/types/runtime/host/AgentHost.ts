@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里统一描述由 agent runtime 装配、再挂入 AgentRuntime 的宿主能力。
- * - service / session / plugin 只能消费这些稳定能力，不应直接依赖具体宿主实现。
+ * - plugin runtime / session / plugin 作者 API 只能消费这些稳定能力，不应直接依赖具体宿主实现。
  * - 当前先收敛路径、认证、plugin 配置持久化三类高频能力。
  */
 

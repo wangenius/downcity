@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `main/agent/*` 负责创建这些宿主能力对象，再注入到 AgentRuntime。
- * - services / session / plugins 只消费这些对象，不再直接 import `main/*`。
+ * - plugin runtimes / session / plugins 只消费这些对象，不再直接 import `main/*`。
  * - 当前由 city 在这里统一装配路径、plugin 配置持久化与平台能力三类宿主对象。
  */
 import {

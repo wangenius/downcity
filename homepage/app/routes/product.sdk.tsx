@@ -42,8 +42,8 @@ const PAGE = {
         description: "Use Downcity runtime and APIs to bring agent execution into your own product loops.",
       },
       {
-        title: "Unified service capabilities",
-        description: "Compose scenarios around chat, skill, task, and memory services.",
+        title: "Unified plugin capabilities",
+        description: "Compose scenarios around chat, skill, task, and memory plugins.",
       },
       {
         title: "From local trials to team operation",

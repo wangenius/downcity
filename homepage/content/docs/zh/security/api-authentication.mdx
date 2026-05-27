@@ -126,7 +126,7 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
 先说结论：
 
 - 只有对外 HTTP 调用才需要 Bearer Token
-- 本地 `city service`、`city plugin`、`city task`、`city chat` 默认已经走 IPC，不需要先拿 token
+- 本地 `city plugin`、`city task`、`city chat`、`city memory` 默认已经走 IPC，不需要先拿 token
 
 对于直接调用 API 的用户，只需要记住一条：
 

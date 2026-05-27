@@ -1,6 +1,7 @@
 import { source } from "@/lib/source";
 import { devSource } from "@/lib/dev-source";
 import { agentSdkDocsSource } from "@/lib/agent-sdk-docs-source";
+import { pluginsDocsSource } from "@/lib/plugins-docs-source";
 import { uiSdkDocsSource } from "@/lib/ui-sdk-docs-source";
 import { product } from "@/lib/product";
 
@@ -11,6 +12,7 @@ export const loader = async () => {
   const pages = source.getPages();
   const devPages = devSource.getPages();
   const agentSdkPages = agentSdkDocsSource.getPages();
+  const pluginsDocsPages = pluginsDocsSource.getPages();
   const uiSdkPages = uiSdkDocsSource.getPages();
 
   const staticPages = [
@@ -87,6 +89,12 @@ export const loader = async () => {
       priority: 0.7,
     },
     {
+      url: `${baseUrl}/plugins-docs`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    },
+    {
       url: `${baseUrl}/ui-sdk-docs`,
       lastModified: new Date().toISOString(),
       changeFrequency: "weekly" as const,
@@ -116,6 +124,13 @@ export const loader = async () => {
     priority: 0.7,
   }));
 
+  const pluginsDocumentationPages = pluginsDocsPages.map((page) => ({
+    url: `${baseUrl}${page.path}`,
+    lastModified: new Date().toISOString(),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
   const uiSdkDocumentationPages = uiSdkPages.map((page) => ({
     url: `${baseUrl}${page.path}`,
     lastModified: new Date().toISOString(),
@@ -128,6 +143,7 @@ export const loader = async () => {
     ...docsPages,
     ...developerDocsPages,
     ...agentSdkDocumentationPages,
+    ...pluginsDocumentationPages,
     ...uiSdkDocumentationPages,
   ];
 

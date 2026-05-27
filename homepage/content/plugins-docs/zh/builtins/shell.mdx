@@ -1,0 +1,43 @@
+---
+title: shell Plugin
+description: shell session 生命周期、单次 exec，以及 per-agent shell runtime 状态
+---
+
+# `shell` Plugin
+
+`shell` 是 shell 运行时 plugin。
+
+它提供：
+
+- one-shot shell 执行
+- 持久 shell session
+- status、read、write、wait、close 这些 action
+
+## 主要形状
+
+- `lifecycle`
+- `actions`
+
+## 它主要解决什么问题
+
+如果你需要这些能力，就应该关注 `shell`：
+
+- 归属于 plugin 实例的 shell session map
+- per-agent 的 shell 状态边界
+- 一套围绕 shell 执行的 runtime action 层
+
+## 关键语义
+
+- shell sessions 归属于 plugin 实例，而不是模块级全局单例
+- `start` lifecycle 负责绑定 runtime
+- `stop` lifecycle 会关闭全部 shell sessions，并清空内存状态
+
+## 公开性说明
+
+`ShellPlugin` 在代码里是 built-in runtime plugin，但当前并不是包根主公开的 plugin export 之一。
+
+## 相关文档
+
+- [Plugin Lifecycle](/zh/agent-sdk-docs/plugins/lifecycle)
+- [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
+- [Built-ins Overview](/zh/plugins-docs/builtins/overview)

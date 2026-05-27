@@ -29,7 +29,7 @@ const PAGE = {
       {
         id: "agent-sdk",
         title: "Agent SDK",
-        desc: "把本地 Agent、RemoteAgent、Session、Service 与 Plugin 组合进你的应用流程。",
+        desc: "把本地 Agent、RemoteAgent、Session 与 Plugin 组合进你的应用流程。",
         source: "packages/agent/",
       },
       {
@@ -75,7 +75,7 @@ const PAGE = {
       {
         id: "agent-sdk",
         title: "Agent SDK",
-        desc: "Embed local agents, RemoteAgent clients, sessions, services, and plugins into your application flow.",
+        desc: "Embed local agents, RemoteAgent clients, sessions, and plugins into your application flow.",
         source: "packages/agent/",
       },
       {

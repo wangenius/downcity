@@ -1,0 +1,259 @@
+---
+title: skill Plugin
+description: A detailed guide to the skill built-in plugin, how it handles skill discovery, installation, lookup, and system injection, and why the best workflow is find, install, then lookup
+---
+
+# skill Plugin
+
+`skill` is the built-in plugin that most clearly shows how a plugin is used by real users.
+
+It centralizes skill-related capability into one plugin:
+
+- find a skill
+- install a skill
+- list locally learned skills
+- read skill content
+- inject the current skill overview into the system prompt
+
+## What it does
+
+You can think of `skill` as the agent's skill catalog layer.
+
+It is not the skill itself. It manages what the agent has already learned and what the next step should be before a skill is actually used.
+
+Its main value is not to replace skills, but to create one consistent entry point around them.
+
+## Which plugin capabilities it uses
+
+`skill` uses:
+
+- `config`
+- `availability`
+- `actions`
+- `system`
+
+That means it combines:
+
+- configuration
+- explicit action invocation
+- runtime prompt augmentation
+
+## Why it is a great first reference
+
+Its runtime shape is straightforward:
+
+- you explicitly call an action
+- the plugin returns structured data
+- the system prompt automatically knows about learned skills
+
+There is no provider-installation mental model and no complicated hook chain to understand first.
+
+## Best workflow order
+
+For a skill the agent has not learned yet, the recommended order is:
+
+1. `find`
+2. `install`
+3. `lookup`
+
+Why not stop after `install`?
+
+Because `install` only means the skill now exists locally. Before using it correctly, the agent should still read the skill's `SKILL.md`.
+
+That is what `lookup` prepares: it reads the skill content and gets it ready for injection as a user message.
+
+## Typical scenarios
+
+### Scenario 1: the user says “find me a skill for web access”
+
+Start with `find` so you can determine:
+
+- whether the skill already exists locally
+- whether installation is needed next
+
+### Scenario 2: the user says “install this new skill”
+
+Use `install`.
+
+After installation, do not assume the agent already knows how to use it. The next step should still be `lookup`.
+
+### Scenario 3: the skill already exists locally, but the agent has not read its instructions yet
+
+In that case, `lookup` matters more than `find`.
+
+The agent needs the `SKILL.md` content in the current context before it can follow the skill's rules correctly.
+
+## How to register it in the SDK
+
+```ts
+import { Agent, SkillPlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "skill-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [new SkillPlugin()],
+});
+```
+
+## What the config layer does
+
+`skill` currently uses project-scoped config.
+
+That means:
+
+- the current project can carry its own skill-plugin settings
+- those settings belong to the plugin, not to one specific skill's content
+
+For most users, the real center of gravity is the action workflow, not advanced configuration.
+
+## Main actions
+
+| Action | What it does | Recommended use |
+| --- | --- | --- |
+| `find` | search for an unlearned skill and suggest the next step | decide whether install is needed |
+| `install` | install a skill | follow immediately with `lookup` |
+| `list` | list locally learned skills | inspect the current capability catalog |
+| `lookup` | read the skill's `SKILL.md` | required before real skill use |
+
+## Scenario-driven usage examples
+
+### Find a skill first
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "skill",
+  action: "find",
+  payload: {
+    query: "web-access",
+  },
+});
+```
+
+The main value is not “automatically do everything.”
+
+The real value is that it clarifies the current state:
+
+- is the skill already local
+- if not, should the next step be install
+
+### Install a skill
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "skill",
+  action: "install",
+  payload: {
+    spec: "web-access",
+    global: true,
+    yes: true,
+    agent: "claude-code",
+  },
+});
+```
+
+On success, the plugin still points you to `lookup` as the next step.
+
+### List learned skills
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "skill",
+  action: "list",
+});
+```
+
+This is especially useful for:
+
+- capability dashboards
+- debugging what the current environment already learned
+- checking the local catalog before task execution
+
+### Read skill content
+
+```ts
+const result = await agent.plugins.runAction({
+  plugin: "skill",
+  action: "lookup",
+  payload: {
+    name: "web-access",
+  },
+});
+```
+
+`lookup` is important because it:
+
+- finds skill metadata
+- reads `SKILL.md`
+- prepares the skill content as a message that can be injected next
+
+That makes it the most important step before actually using a skill.
+
+## What `system` does here
+
+`skill` is not only an action collection.
+
+It also injects the current skill overview into the system prompt so the agent knows:
+
+- which skills exist in the environment
+- which ones are already learned
+- how skills should be treated as external capability boundaries
+
+This reduces the common problem where a skill is installed locally but the agent does not know it exists in the current runtime context.
+
+## Its boundary relative to the skill itself
+
+The easiest confusion is this:
+
+- the `skill` plugin is not the skill
+- the `skill` plugin manages skill discovery, installation, lookup, and visibility
+
+In other words:
+
+- the plugin is the catalog system
+- the skill is the capability unit inside that catalog
+
+## Its natural boundary
+
+`skill` does not need a long-lived background instance.
+
+It is closer to:
+
+- a catalog query layer
+- an installation entry layer
+- a content injection layer
+
+If your main job is to discover and bring external capability instructions into the agent context, a plugin like this is usually the right first design.
+
+## Common boundaries and mistakes
+
+### `install` does not mean “the agent can already use it correctly”
+
+Installation is only step one.
+
+If the agent has not read the skill content, it still may not know how to use the skill correctly.
+
+### `lookup` is essential
+
+In many real scenarios, what makes a skill “actually learned” is not only that files exist locally, but that the current execution context has read the instructions.
+
+### This plugin is mostly about workflow orchestration
+
+Its strength is not long-lived runtime state.
+
+Its strength is turning “find, install, read, use” into a clean workflow.
+
+## When to use it as a reference
+
+Use `skill` as your main reference for:
+
+- explicit action-driven plugins
+- local catalog discovery
+- install-then-read workflows
+- exposing learned capability through `system`
+
+## Related docs
+
+- [Built-in Plugin Overview](/en/plugins-docs/builtins/overview)
+- [Plugin actions](/en/agent-sdk-docs/plugins/plugin-actions)
+- [Plugin system](/en/agent-sdk-docs/plugins/plugin-system)

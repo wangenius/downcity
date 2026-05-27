@@ -7,6 +7,7 @@ description: RemoteAgent 下 session 可用的核心方法和能力边界
 
 通过 `RemoteAgent` 拿到 session 后，最常用的方法有：
 
+- `getInfo()`
 - `prompt()`
 - `subscribe()`
 - `history()`
@@ -18,12 +19,16 @@ description: RemoteAgent 下 session 可用的核心方法和能力边界
 ## 获取 session
 
 ```ts
-const session = await agent.session();
+const session = await agent.createSession();
 ```
 
-也可以传入已有的 `sessionId`。
+如果你要继续一个已有远程会话：
 
-这让你可以继续一条已有的远程会话，而不是每次都从头开始。
+```ts
+const session = await agent.getSession("repo-analysis");
+```
+
+这样就可以切换到一个已知远程 session，而不是每次都从头开始。
 
 ## 发起一轮 prompt
 
@@ -45,7 +50,9 @@ unsubscribe();
 ## 历史消息
 
 ```ts
-const messages = await session.history();
+const history = await session.history({
+  limit: 50,
+});
 ```
 
 ## System prompts

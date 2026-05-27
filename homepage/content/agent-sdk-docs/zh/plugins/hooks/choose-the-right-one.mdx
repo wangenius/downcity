@@ -1,78 +1,58 @@
 ---
 title: 怎么选
-description: 用一句句判断题，快速区分 action、pipeline、guard、effect、resolve、service
+description: 用简短判断规则区分 action、pipeline、guard、effect、resolve 与 lifecycle runtime
 ---
 
 # 怎么选
 
-这一页只回答一个问题：
+这页只回答一个问题：
 
-- 当前这个需求，到底该放哪一层
+- 这段能力到底应该放在哪里
 
-## 先看最短判断
+## 先看最短版本
 
-如果你想：
+如果你想要：
 
-- 主动调用一个明确能力，用 `action`
-- 把一个值逐步加工，用 `pipeline`
-- 在继续前做拦截判断，用 `guard`
-- 不改主值，只做记录或同步，用 `effect`
-- 拿到一个最终唯一答案，用 `resolve`
-- 持有长期状态、连接、worker，用 `service`
+- 显式调用一个命名能力，用 `action`
+- 逐步变换一个值，用 `pipeline`
+- 在流程继续前阻断，用 `guard`
+- 不改主值，只顺手记录或同步一些东西，用 `effect`
+- 得到一个最终唯一答案，用 `resolve`
+- 持有长期状态、worker 或连接，用 plugin `lifecycle`
 
-## 一组常见问题
+## 常见问题
 
 ### “我想给输入补默认字段”
 
 用 `pipeline`。
 
-因为你是在改值。
-
-### “我想没有权限就直接拦住”
+### “我想在没有权限时立刻拦住请求”
 
 用 `guard`。
 
-因为你是在决定能不能继续。
-
-### “我想每次都顺手写一条审计日志”
+### “我想每次都写一条审计日志”
 
 用 `effect`。
 
-因为你只是在做副作用。
-
-### “我想查这个用户最终是什么角色”
+### “我想知道用户最终角色”
 
 用 `resolve`。
 
-因为你要的是唯一答案。
-
-### “我想让外部显式执行一个命令”
+### “我想让外部调用者触发一个具名命令”
 
 用 `action`。
 
-因为你要的是一个可直接调用的能力入口。
+### “我想要长期缓存、连接池或后台 worker”
 
-### “我想维护一个长期缓存、连接池或后台 worker”
+用 plugin `lifecycle`。
 
-用 `service`。
+## 常见坏拆分
 
-因为这已经是长期运行实例，不再只是 plugin 扩展点。
+- 用 `resolve` 做多 plugin 富化
+- 把 `effect` 当隐藏可靠任务队列
+- `guard` 一边阻断一边还改值
 
-## 最常见的误分层
-
-### 用 `resolve` 做多插件协同增强
-
-这通常是错的，应该回到 `pipeline`。
-
-### 用 `effect` 偷偷承担可靠任务队列
-
-这通常太重了，应该拆到 `service` 或更完整的后台能力。
-
-### 用 `guard` 顺手改值
-
-这会让语义变混乱，改值应该放回 `pipeline`。
-
-## 一个很实用的拆法
+## 一个实用拆分模式
 
 如果一个能力同时需要：
 
@@ -80,14 +60,14 @@ description: 用一句句判断题，快速区分 action、pipeline、guard、ef
 - 运行链路扩展
 - 长期状态
 
-那很可能应该拆成：
+那更干净的拆法通常是：
 
 - `action` 负责显式调用
 - `pipeline / guard / effect / resolve` 负责链路扩展
-- `service` 负责长期状态
+- `lifecycle` 负责长期状态
 
 ## 相关场景
 
-- [一条消息的完整流转](/zh/agent-sdk-docs/plugins/hooks/examples/end-to-end-message-flow)
-- [常见误用对比](/zh/agent-sdk-docs/plugins/hooks/examples/bad-vs-good-design)
-- [Plugin 和 Service 协作场景](/zh/agent-sdk-docs/plugins/examples/plugin-service-composition)
+- [完整消息流](/zh/agent-sdk-docs/plugins/hooks/examples/end-to-end-message-flow)
+- [常见 bad vs good 设计](/zh/agent-sdk-docs/plugins/hooks/examples/bad-vs-good-design)
+- [Plugin Runtime Composition](/zh/plugins-docs/examples/plugin-runtime-composition)

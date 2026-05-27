@@ -9,11 +9,14 @@
 
 // SDK 入口
 export { Agent } from "./sdk/Agent.js";
-export { Session } from "./sdk/Session.js";
 export { RemoteAgent } from "./sdk/RemoteAgent.js";
-export { AgentCore } from "./core/AgentCore.js";
 export type {
   AgentMode,
+  AgentSessionCollection,
+  AgentSessionActor,
+  AgentSession,
+  AgentCreateSessionInput,
+  AgentListSessionsInput,
   AgentOptions,
   AgentHttpBinding,
   AgentHttpStartOptions,
@@ -24,12 +27,19 @@ export type {
   RemoteAgentOptions,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionMetadata,
+  AgentSessionHistoryInput,
+  AgentSessionHistoryPage,
+  AgentSessionHistoryView,
+  AgentSessionInfo,
   AgentSessionSetInput,
+  AgentSessionSummary,
+  AgentSessionSummaryPage,
   AgentSessionSystemBlock,
   AgentSessionSystemBlockSource,
   AgentSessionSystemSessionInfo,
   AgentSessionSystemSnapshot,
+  AgentSessionTimelineEvent,
+  RemoteAgentSession,
 } from "./sdk/AgentSdkTypes.js";
 export type {
   AgentSessionEvent,
@@ -54,7 +64,7 @@ export type {
 // Plugin 作者 API
 export { BasePlugin } from "./plugin/core/BasePlugin.js";
 export { ChatPlugin } from "./plugin/builtins/chat/ChatPlugin.js";
-export { ChatChannelAccountService } from "./plugin/builtins/chat/accounts/ChannelAccountService.js";
+export { ChatChannelAccountManager } from "./plugin/builtins/chat/accounts/ChannelAccountManager.js";
 export type { ChatChannelAccountListItem } from "./plugin/builtins/chat/types/ChannelAccount.js";
 export type {
   ChatPluginChannelAccountProvider,
@@ -217,7 +227,7 @@ export type {
   InlineInstantExecutorType,
   PlatformInlineInstantRunInput,
   PlatformInlineInstantRunResult,
-  PlatformInlineInstantService,
+  PlatformInlineInstantRunner,
 } from "./types/runtime/http/InlineInstant.js";
 
 // Plugin 作者与控制面类型

@@ -36,7 +36,7 @@ city asr transcribe ./demo.ogg
 
 - `city asr on` 会在一步里完成“切换 city 级 plugin 启用态 + 可选安装转写依赖”。
 - Console UI 的 `Plugins -> asr` 卡片里也提供了依赖修复台，可以直接读取状态、下载模型、切换当前模型，并填写 Python / models 目录等配置。
-- asr plugin 会接入 `chat` service 定义的语音相关扩展点，Telegram / QQ 的语音消息会通过这些点完成转写与正文增强。
+- asr plugin 会接入 `chat` runtime 的语音扩展点，Telegram / QQ 的语音消息会通过这些点完成转写与正文增强。
 - agent 侧的 ASR 参数会持久化到项目 `downcity.json` 的 `plugins.asr`。
 
 ## 相关页面
@@ -44,5 +44,5 @@ city asr transcribe ./demo.ogg
 - [`city plugin`](/zh/docs/commands/plugin/plugin)
 - [`city tts`](/zh/docs/commands/plugin/tts)
 - [Plugin 文档总览](/zh/agent-sdk-docs/plugins/overview)
-- [`Telegram`](/zh/docs/services/chat/telegram)
-- [`QQ`](/zh/docs/services/chat/qq)
+- [Plugins Docs / asr](/zh/plugins-docs/builtins/asr)
+- [Plugins Docs / chat](/zh/plugins-docs/builtins/chat)

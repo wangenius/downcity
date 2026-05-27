@@ -9,7 +9,7 @@ import type {
  * SessionRunScope（单次请求作用域）。
  *
  * 关键点（中文）
- * - 这是 session run 层请求作用域上下文，不属于具体 service 模块。
+ * - 这是 session run 层请求作用域上下文，不属于具体 plugin 业务模块。
  * - 统一承载请求链需要透传的字段（如 `sessionId`）。
  */
 export type SessionRunScope = {
@@ -56,7 +56,7 @@ export type SessionRunScope = {
  *
  * 关键点（中文）
  * - 同一条异步调用链内可读取一致的 SessionRunScope。
- * - 用于把 `sessionId` 从入口透传到 service 与工具层。
+ * - 用于把 `sessionId` 从入口透传到 plugin runtime 与工具层。
  */
 export const sessionRunScopeStorage = new AsyncLocalStorage<SessionRunScope>();
 

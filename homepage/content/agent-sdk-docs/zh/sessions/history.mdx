@@ -1,6 +1,6 @@
 ---
 title: session.history()
-description: 读取当前 Session 的完整消息历史
+description: 分页读取当前 Session 的历史
 ---
 
 # `session.history()`
@@ -8,16 +8,41 @@ description: 读取当前 Session 的完整消息历史
 ## 示例
 
 ```ts
-const messages = await session.history();
+const history = await session.history({
+  limit: 50,
+});
+
+console.log(history.items);
 ```
 
 ## 它返回什么
 
-返回的是当前 session 已落盘的完整消息历史。
+返回的是当前 session 的历史分页结果。
+
+常见字段包括：
+
+- `history.session`
+- `history.view`
+- `history.items`
+- `history.total`
+- `history.nextCursor`
+- `history.hasMore`
+
+默认视图是 `message`。
+
+如果你要拿适合 UI 平铺渲染的时间线视图，可以传：
+
+```ts
+const history = await session.history({
+  view: "timeline",
+  limit: 100,
+});
+```
 
 ## 适合什么场景
 
 - 在 UI 中重放对话
+- 在 transcript / sidebar 中按页加载最近内容
 - 调试当前上下文
 - 做会话导出
 

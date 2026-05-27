@@ -107,9 +107,9 @@ hooks: {
 这时更合适的分层通常是：
 
 - effect 只负责触发
-- 真正可靠处理放进 service 或更完整的后台能力
+- 真正可靠处理放进 plugin `lifecycle` 或更完整的后台 runtime
 
 ## 相关场景
 
 - [一条消息的完整流转](/zh/agent-sdk-docs/plugins/hooks/examples/end-to-end-message-flow)
-- [AuditEffectPlugin 场景](/zh/agent-sdk-docs/plugins/examples/audit-effect-plugin)
+- [AuditEffectPlugin 场景](/zh/plugins-docs/examples/audit-effect-plugin)

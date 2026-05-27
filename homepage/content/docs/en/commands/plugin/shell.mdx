@@ -1,0 +1,26 @@
+---
+title: city shell
+description: Managed shell plugin commands for runtime shell execution and session ownership
+---
+
+# `city shell`
+
+`city shell` is the managed shell plugin command group.
+
+Use it when you want shell execution that belongs to the agent runtime instead of an ad-hoc local terminal step.
+
+## What this plugin shape means
+
+- shell session ownership belongs to the managed shell plugin runtime
+- start/stop cleanup belongs to plugin lifecycle
+- command execution and session state stay tied to the target agent
+
+## Recommended path
+
+- inspect lifecycle and boundaries in [Plugins Docs / shell](/en/plugins-docs/builtins/shell)
+- use `city plugin status shell`, `city plugin start shell`, or `city plugin restart shell` when you need lifecycle-level control
+
+## Related
+
+- [`city plugin`](/en/docs/commands/plugin/plugin)
+- [`Plugins Docs / shell`](/en/plugins-docs/builtins/shell)

@@ -1,0 +1,41 @@
+---
+title: session.getInfo()
+description: 读取当前 Session 的摘要与详情快照
+---
+
+# `session.getInfo()`
+
+`session.getInfo()` 用来读取单个 session 当前的摘要/详情快照。
+
+## 示例
+
+```ts
+const session = await agent.getSession("repo-analysis");
+
+const info = await session.getInfo();
+
+console.log(info.sessionId);
+console.log(info.previewText);
+console.log(info.messageCount);
+```
+
+## 它返回什么
+
+常见字段包括：
+
+- `agentId`
+- `sessionId`
+- `title`
+- `previewText`
+- `messageCount`
+- `createdAt`
+- `updatedAt`
+- `modelLabel`
+- `executing`
+- `timezone`
+
+## 适合什么场景
+
+- 在 UI 中渲染当前选中 session 的头部信息
+- 判断某个 session 当前是否正在执行
+- 在真正加载完整 history 之前先读取轻量详情

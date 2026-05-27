@@ -79,7 +79,7 @@ export async function runCommand(
     mode: "preset",
     configureSession: async (session) => {
       const model = await createRuntimeModel({
-        config: agent.getRuntime().config,
+        config: agent.getConfig(),
         platform,
       });
       await session.set({
@@ -90,7 +90,7 @@ export async function runCommand(
 
   const promptCatalog = new StaticPromptCatalog({
     rootPath: projectRoot,
-    logger: agent.getRuntime().logger,
+    logger: agent.getLogger(),
     getCurrentSystems: () => currentSystems,
     applySystems: (nextSystems) => {
       currentSystems = nextSystems;
@@ -119,7 +119,7 @@ export async function runCommand(
     throw new Error("Agent start did not return expected HTTP/RPC bindings");
   }
 
-  const agentLogger = agent.getRuntime().logger;
+  const agentLogger = agent.getLogger();
 
   // 处理进程信号
   // 停机顺序（中文）：plugin runtimes -> API server -> flush logs。

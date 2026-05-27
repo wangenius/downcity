@@ -1,103 +1,65 @@
 ---
-title: Architecture Overview
-description: "Core architecture layers in Downcity: console, agent, execution context, session, service, and plugin"
+title: Architecture
+description: "Core architecture layers in Downcity: console, agent, execution context, session, and plugin runtime"
 ---
 
-# Architecture Overview
+# Architecture
 
-To understand Downcity, start with 6 concepts:
+Current Downcity is best understood through five layers:
 
-- `console`: the global control plane
-- `agent`: the per-project host process
-- `execution context`: the unified capability surface exposed during execution
-- `session`: the actual execution instance for one conversation or one task run
-- `service`: the main workflow module
-- `plugin`: the passive extension module
+1. `console`
+2. `agent`
+3. `execution context`
+4. `session`
+5. `plugin runtime`
 
-## The Most Important Reading Order
+## Layers
 
-Read the system from top to bottom:
+### `console`
 
-1. `console` manages globally
-2. `agent` hosts one project
-3. `execution context` exposes a unified execution surface
-4. `session` is where one real execution happens
-5. `service` owns the main path
-6. `plugin` augments that path at fixed points
+- global control plane
+- process registry
+- city-level configuration and inspection
 
-That means:
+### `agent`
 
-- `agent` is not each individual conversation turn
-- `session` is the real execution unit for chat and task runs
-- `plugin` is neither a service nor an independent runtime
+- owns one project runtime
+- holds model access, session store, plugin registry, and runtime host state
 
-## Layered Structure
+### `execution context`
 
-1. **Console Layer**
-- owns registry, model pool, global config, and UI gateway
-- resolves the target agent for commands and UI requests
+- shared capability surface exposed during execution
+- the place plugins read stable runtime abilities
 
-2. **Agent Layer**
-- one project maps to one agent process
-- loads project config and model
-- owns the session facade, service instances, and plugin registry
-- persists project-local runtime traces into `.downcity/`
+### `session`
 
-3. **Execution Context Layer**
-- exposes `session`, `invoke`, `plugins`, `logger`, `config`, and `env`
-- is the shared execution-facing surface used by services and plugins
-- is not a second host process, only a view derived from the agent
+- owns one execution thread and its prompt/run state
+- the unit that actually runs model + tool flow
 
-4. **Session Layer**
-- one chat conversation is one session
-- one task run is also one session
-- prompt assembly, history, tools, and model execution all happen around the session
+### `plugin runtime`
 
-5. **Service Layer**
-- domains such as `chat`, `task`, `memory`, and `shell`
-- own main-path orchestration and domain state
-- decide when to create, reuse, or clear sessions
+- all capability modules are modeled as plugins
+- some are local and action-first
+- some are managed and lifecycle-owned
 
-6. **Plugin Layer**
-- modules such as `skill`, `asr`, `tts`, and `auth`
-- attach only through service-defined extension points
-- do not own lifecycle and do not own a separate runtime
+## Managed vs local plugins
 
-## One Diagram
+### Local plugins
 
-```mermaid
-flowchart TD
-  C["Console"] --> A["Agent"]
-  A --> EC["Execution Context"]
-  A --> SR["Session Facade"]
-  SR --> S["Session"]
-  EC --> SV["Services"]
-  EC --> PL["Plugins"]
-  SV --> S
-  SV -. trigger plugin points .-> PL
-```
+- usually attached directly to one SDK `Agent`
+- examples: `skill`, `web`, `asr`, `tts`, `auth`
 
-## The Most Important Boundary
+### Managed plugins
 
-- `service` actively participates in the main path
-- `plugin` joins only at fixed points
-- `session` owns execution state
-- `agent` owns host state
+- runtime-owned modules that start and stop with one target agent
+- examples: `chat`, `task`, `memory`, `contact`, `shell`, `schedule`
 
-So:
+## Main takeaway
 
-- main orchestration belongs in services
-- execution state belongs in sessions
-- host state belongs in the agent
-- extension logic belongs in plugins
-- plugin dependencies stay inside the plugin
+Do not use the old split-layer language for the current system.
 
-## A Concrete Example
+The current model is:
 
-In chat flows:
-
-- the `chat` service owns ingress, queueing, session selection, execution, and replies
-- the `execution context` injects unified access to session and plugin capabilities
-- the `asr` plugin adds transcription at voice-related points
-- the `auth` plugin joins authorization-related points
-- the real model run still happens inside the target `session`
+- session executes
+- plugins expose capability
+- managed plugins own long-lived runtime modules

@@ -31,12 +31,13 @@ CLI 文档按“单命令页面 + 命令组”组织。
   - [`city config`](/zh/docs/commands/config)
   - [`city model`](/zh/docs/commands/model)
   - [`city env`](/zh/docs/commands/env)
-  - [`city service`](/zh/docs/commands/service/service)
   - [`city plugin`](/zh/docs/commands/plugin/plugin)
 - 动态 action 命令：
-  - [`city chat`](/zh/docs/commands/service/chat)
-  - [`city task`](/zh/docs/commands/service/task)
-  - [`city memory`](/zh/docs/commands/service/memory)
+  - [`city chat`](/zh/docs/commands/plugin/chat)
+  - [`city task`](/zh/docs/commands/plugin/task)
+  - [`city memory`](/zh/docs/commands/plugin/memory)
+  - [`city contact`](/zh/docs/commands/plugin/contact)
+  - [`city shell`](/zh/docs/commands/plugin/shell)
   - [`city skill`](/zh/docs/commands/plugin/skill)
   - [`city web`](/zh/docs/commands/plugin/web)
   - [`city asr`](/zh/docs/commands/plugin/asr)
@@ -58,13 +59,9 @@ CLI 文档按“单命令页面 + 命令组”组织。
 - `city agent stop`：停止项目 agent daemon
 - `city agent chat`：在终端中与 agent 对话，也可通过 `--message` 发送一次性消息
 - `city console`：管理 Console 模块本身
-- `city service ...`：查看静态 service catalog，或使用高级定向 service 控制
-- `city plugin ...`：查看静态 plugin catalog，或使用高级本地 plugin action 执行入口
-- `city chat/task/memory ...`：日常面向 agent 的 service 运行态命令
-- `city web/skill/asr/tts ...`：日常面向 agent 的 plugin 命令
-- `city web ...`：运维内置 web plugin
-- `city asr ...`：运维内置 asr plugin
-- `city tts ...`：运维内置 tts plugin
+- `city plugin ...`：查看 plugin catalog、管理 plugin lifecycle，或使用高级 plugin command 形式
+- `city chat/task/memory/contact/shell ...`：日常托管 plugin runtime 命令
+- `city web/skill/asr/tts ...`：日常本地 plugin 命令
 - `city model`：在 TTY 中打开交互式全局模型管理器
 - `city model ...`：管理运行时模型配置与自动化脚本入口
 

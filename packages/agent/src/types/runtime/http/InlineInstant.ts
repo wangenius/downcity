@@ -84,9 +84,9 @@ export interface PlatformInlineInstantRunResult {
 }
 
 /**
- * 平台 Inline 即时执行服务端口。
+ * 平台 Inline 即时执行运行端口。
  */
-export interface PlatformInlineInstantService {
+export interface PlatformInlineInstantRunner {
   /**
    * 运行一次即时执行请求。
    */

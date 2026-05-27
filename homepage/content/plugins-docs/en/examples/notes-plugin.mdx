@@ -1,0 +1,94 @@
+---
+title: NotesPlugin Scenario
+description: Use a small but real NotesPlugin scenario to show how actions, config, and system text can work together
+---
+
+# NotesPlugin Scenario
+
+## Scenario
+
+You want to add a project-notes capability to one agent:
+
+- inspect current notes config
+- save notes-folder behavior
+- inject a little system guidance about how notes should be used
+
+That is a very natural plugin use case.
+
+## Why this looks like a plugin
+
+Because what you want is:
+
+- explicit actions
+- one system augmentation block
+- one project-scoped config block
+
+not a long-lived background worker.
+
+## Example
+
+```ts
+import { Agent, type Plugin } from "@downcity/agent";
+
+export const notesPlugin: Plugin = {
+  name: "notes",
+  title: "Project Notes",
+  description: "Save and describe a project notes folder.",
+  config: {
+    plugin: "notes",
+    scope: "project",
+    defaultValue: {
+      injectPrompt: true,
+      folder: ".notes",
+    },
+  },
+  system(context) {
+    return `Project notes folder: ${context.rootPath}/.notes`;
+  },
+  actions: {
+    status: {
+      allowWhenDisabled: true,
+      execute: async ({ context }) => {
+        return {
+          success: true,
+          data: {
+            rootPath: context.rootPath,
+          },
+        };
+      },
+    },
+  },
+};
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [notesPlugin],
+});
+
+const status = await agent.plugins.runAction({
+  plugin: "notes",
+  action: "status",
+});
+```
+
+## What this scenario is good for
+
+- a plugin can already be useful with only `config + actions + system`
+- it does not need a worker or long-lived runtime state to be a valid plugin
+
+## How this lands in the local SDK
+
+This pattern now runs directly inside a local `Agent`.
+
+The most useful details are:
+
+- `status` declares `allowWhenDisabled: true`, so it can still support self-check style calls even if the plugin was explicitly disabled
+- `agent.plugins.runAction(...)` is the most direct explicit entry point
+- if you also implement `system()`, the local SDK session prompt path injects it when this plugin is registered on the Agent
+
+## Related docs
+
+- [Custom plugin](/en/agent-sdk-docs/plugins/custom-plugin)
+- [Plugin actions](/en/agent-sdk-docs/plugins/plugin-actions)

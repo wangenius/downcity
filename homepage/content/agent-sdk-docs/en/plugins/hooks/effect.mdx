@@ -109,9 +109,9 @@ If your effect is mission-critical and needs retries, durable storage, or guaran
 In that case, a healthier split is often:
 
 - the effect triggers something
-- a service or fuller background system owns the reliable processing
+- plugin `lifecycle` or fuller background runtime owns the reliable processing
 
 ## Related scenarios
 
 - [One full message flow](/en/agent-sdk-docs/plugins/hooks/examples/end-to-end-message-flow)
-- [AuditEffectPlugin scenario](/en/agent-sdk-docs/plugins/examples/audit-effect-plugin)
+- [AuditEffectPlugin scenario](/en/plugins-docs/examples/audit-effect-plugin)

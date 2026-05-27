@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "pnpm-lock.yaml"
-      - "packages/ui/**"
-      - ".github/workflows/publish-ui.yml"
   workflow_dispatch:
 
 concurrency:

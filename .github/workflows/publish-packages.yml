@@ -4,14 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "packages/agent/**"
-      - "packages/city/**"
-      - ".github/workflows/publish-packages.yml"
-      - ".github/workflows/publish-downcity.yml"
   workflow_dispatch:
 
 concurrency:

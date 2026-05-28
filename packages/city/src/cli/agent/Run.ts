@@ -13,6 +13,7 @@
 import path from "node:path";
 import {
   Agent,
+  loadDowncityConfig,
   loadStaticSystemPrompts,
   shellTools,
   StaticPromptCatalog,
@@ -67,6 +68,10 @@ export async function runCommand(
   const host = (options.host ?? "0.0.0.0").trim();
   const agentName = resolveAgentName(projectRoot);
   let currentSystems = loadStaticSystemPrompts(projectRoot);
+  const config = loadDowncityConfig(projectRoot);
+  const model = await createRuntimeModel({
+    config,
+  });
 
   const agent = new Agent({
     id: agentName,
@@ -74,14 +79,7 @@ export async function runCommand(
     instruction: currentSystems,
     tools: shellTools,
     mode: "preset",
-    configureSession: async (session) => {
-      const model = await createRuntimeModel({
-        config: agent.getConfig(),
-      });
-      await session.set({
-        model,
-      });
-    },
+    model,
   });
 
   const promptCatalog = new StaticPromptCatalog({

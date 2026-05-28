@@ -1,6 +1,6 @@
 ---
 title: Agent Constructor Options
-description: Detailed explanation of the local Agent id, path, instruction, model, env, configureSession, tools, mode, and plugins options
+description: Detailed explanation of the local Agent id, path, instruction, model, env, tools, mode, and plugins options
 ---
 
 # Agent Constructor Options
@@ -14,7 +14,6 @@ new Agent({
   mode,
   model,
   env,
-  configureSession,
   instruction,
   tools,
   plugins,
@@ -113,28 +112,6 @@ Key points:
 - the SDK no longer splits global env and agent env
 - if a host needs layered env merging, it should merge first and then pass the final result through `env`
 - these values participate in config resolution and runtime context assembly, but are not written back to the system environment automatically
-
-## `configureSession`
-
-A host hook that runs after session initialization.
-
-```ts
-new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  configureSession: async (session) => {
-    await session.set({
-      model: openai.responses("gpt-5"),
-    });
-  },
-});
-```
-
-Key points:
-
-- this is a good place for the host to inject a default model or other runtime settings into each session
-- if `model` is also provided, the SDK applies that default `model` first and then runs `configureSession`
-- this hook runs once per session
 
 ## `tools`
 

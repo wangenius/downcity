@@ -129,7 +129,6 @@ export class Agent {
   private readonly config: DowncityConfig;
   private readonly env: Record<string, string>;
   private readonly defaultModel?: LanguageModel;
-  private readonly configureSessionHook?: AgentOptions["configureSession"];
   private readonly pluginInstances: Map<string, BasePlugin>;
   private readonly sessionCollection: AgentSessionCollection;
 
@@ -158,7 +157,6 @@ export class Agent {
     this.env = options.env ? { ...options.env } : {};
     this.instruction = normalizeInstructionInput(options.instruction);
     this.defaultModel = options.model;
-    this.configureSessionHook = options.configureSession;
     this.config = this.loadConfig();
     this.pluginInstances = new Map<string, BasePlugin>();
     this.runtime = this.createRuntime();
@@ -185,7 +183,7 @@ export class Agent {
    *
    * 关键点（中文）
    * - 若调用方显式传入 `sessionId`，这里会先检查缓存与磁盘目录，避免重复创建。
-   * - session 初始化完成后会立即应用默认模型与宿主覆写配置。
+   * - session 初始化完成后会立即应用默认模型。
    */
   async createSession(input?: AgentCreateSessionInput): Promise<AgentSession> {
     const explicitSessionId = String(input?.sessionId || "").trim() || undefined;
@@ -200,7 +198,7 @@ export class Agent {
     }
     const session = this.getOrCreateSession(explicitSessionId);
     await session.initialize();
-    await this.configureSession(session);
+    await this.applySessionDefaults(session);
     return session;
   }
 
@@ -209,7 +207,7 @@ export class Agent {
    *
    * 关键点（中文）
    * - 若缓存中没有该 session，会根据磁盘目录决定是否允许懒加载恢复。
-   * - 返回前同样会兜底执行一次 session 配置装配。
+   * - 返回前同样会兜底执行一次默认配置装配。
    */
   async getSession(sessionId: string): Promise<AgentSession> {
     const resolvedSessionId = String(sessionId || "").trim();
@@ -229,7 +227,7 @@ export class Agent {
     }
     const session = this.getOrCreateSession(resolvedSessionId);
     await session.initialize();
-    await this.configureSession(session);
+    await this.applySessionDefaults(session);
     return session;
   }
 
@@ -710,7 +708,7 @@ export class Agent {
       getManagedPluginSystemBlocks: async () => [],
       getPluginSystemBlocks: () => this.loadPluginSystemBlocks(),
       ensureConfigured: async (session) => {
-        await this.configureSession(session);
+        await this.applySessionDefaults(session);
       },
     });
     this.sessionsById.set(resolvedSessionId, created);
@@ -718,21 +716,18 @@ export class Agent {
   }
 
   /**
-   * 为 session 应用默认模型与宿主覆写配置。
+   * 为 session 应用默认模型。
    *
    * 关键点（中文）
    * - 同一个 session 在单个 Agent 实例中只会执行一次配置装配。
-   * - 默认模型先应用，随后再执行宿主传入的 `configureSession` 钩子。
+   * - 默认模型会在首次访问/首次执行前写入当前 session。
    */
-  private async configureSession(session: Session): Promise<void> {
+  private async applySessionDefaults(session: Session): Promise<void> {
     if (this.configuredSessionIds.has(session.id)) return;
     if (this.defaultModel) {
       await session.set({
         model: this.defaultModel,
       });
-    }
-    if (this.configureSessionHook) {
-      await this.configureSessionHook(session);
     }
     this.configuredSessionIds.add(session.id);
   }

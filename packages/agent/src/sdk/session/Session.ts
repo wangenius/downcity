@@ -111,7 +111,7 @@ type SessionOptions = {
    * 在执行前确保当前 session 已完成宿主侧默认配置。
    *
    * 关键点（中文）
-   * - 这里通常由 `Agent` 注入，用于补齐默认 model、宿主覆写等一次性装配。
+   * - 这里通常由 `Agent` 注入，用于补齐默认 model 等一次性装配。
    * - 所有执行入口都应通过这里兜底，避免只在 SDK `agent.createSession()` / `agent.getSession()` 链路上做配置。
    */
   ensureConfigured?: (session: Session) => Promise<void>;
@@ -544,7 +544,7 @@ export class Session implements AgentSession {
     await this.ensureReadyForExecution();
     if (!this.sessionConfig.model) {
       throw new Error(
-        `Session "${this.id}" requires a configured model. Pass model to new Agent({ model }), call session.set({ model }) first, or let the host configure the session during creation.`,
+        `Session "${this.id}" requires a configured model. Pass model to new Agent({ model }) or call session.set({ model }) first.`,
       );
     }
   }

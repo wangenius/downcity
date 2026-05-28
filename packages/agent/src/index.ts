@@ -140,6 +140,7 @@ export {
   isAgentProjectInitialized,
   normalizeDefaultAgentName,
 } from "./config/AgentInitializer.js";
+export { loadDowncityConfig } from "./config/Config.js";
 export {
   ensureRuntimeProjectReady,
 } from "./runtime/host/daemon/ProjectSetup.js";

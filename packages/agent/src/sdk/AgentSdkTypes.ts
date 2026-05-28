@@ -67,7 +67,6 @@ export interface AgentOptions {
    * 关键点（中文）
    * - SDK 仍不负责“选择哪个模型”，这里只接收宿主已经创建好的 `LanguageModel`。
    * - 该模型会作为 session 首次执行前的默认注入值。
-   * - 若同时提供 `configureSession`，则先应用这里的默认模型，再允许宿主继续覆写。
    */
   model?: LanguageModel;
 
@@ -101,16 +100,6 @@ export interface AgentOptions {
    */
   env?: Record<string, string>;
 
-  /**
-   * 在 session 初始化后执行的宿主配置钩子。
-   *
-   * 关键点（中文）
-   * - SDK 不负责默认模型策略，宿主可在这里统一为 session 注入 model 等运行配置。
-   * - 若同时传入 `model`，则会先写入默认模型，再执行这里的宿主覆写逻辑。
-   * - 该钩子对每个 session 只触发一次，适合做实例级默认装配。
-   * - 触发时机可能来自显式 `agent.createSession()` / `agent.getSession()`，也可能来自该 session 的首次执行入口。
-   */
-  configureSession?: (session: AgentSession) => Promise<void> | void;
 }
 
 /**

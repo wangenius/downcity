@@ -28,7 +28,7 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@/plugin/builtins/chat/channels/BaseChatChannel.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatChannelTestResult } from "@/plugin/builtins/chat/types/ChannelStatus.js";
 import type { QQConfig, QQMessageData } from "@/plugin/builtins/chat/channels/qq/types/QqChannel.js";

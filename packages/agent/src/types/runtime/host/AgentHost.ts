@@ -24,8 +24,8 @@ import type {
   StoredModelProvider,
 } from "@/types/runtime/host/Store.js";
 import type { ChatChannelName } from "@/plugin/builtins/chat/types/ChannelStatus.js";
-import type { AgentProjectInitializationInput } from "@/config/project/types/AgentProject.js";
-import type { PlatformModelChoice } from "@/config/project/AgentInitializer.js";
+import type { AgentProjectInitializationInput } from "@/types/config/AgentProject.js";
+import type { PlatformModelChoice } from "@/config/AgentInitializer.js";
 
 /**
  * Agent 路径能力集合。

@@ -2,7 +2,7 @@
  * PluginActionRunner：主动型 plugin action/command 执行模块。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type {
   PluginAction,

@@ -2,8 +2,8 @@
  * PluginStateController：主动型 plugin 状态控制与状态记录模块。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
   Plugin,
   PluginLifecycle,

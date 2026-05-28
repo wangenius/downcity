@@ -9,7 +9,7 @@
 import { listTaskDefinitions } from "@/plugin/builtins/task/Action.js";
 import { listPluginStates } from "@/plugin/core/Manager.js";
 import { listControlSessionSummaries } from "@/runtime/server/http/control/SessionSummaryStore.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { WorkboardSnapshot } from "@/plugin/builtins/workboard/types/Workboard.js";
 import {
   buildIdleActivity,

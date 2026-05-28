@@ -22,7 +22,7 @@ import {
   type TelegramUpdate,
   type TelegramUser,
 } from "./Shared.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatChannelTestResult } from "@/plugin/builtins/chat/types/ChannelStatus.js";
 import {

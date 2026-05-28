@@ -7,7 +7,7 @@
  * - skills overview 文本通过 `plugin.system` 注入，不再依赖 plugin.system。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";

@@ -6,7 +6,7 @@
  * - 不负责调度入口和轮询生命周期管理。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { PluginScheduleStore } from "@/plugin/core/schedule/Store.js";
 import { runPluginCommand } from "@/plugin/core/Manager.js";
 

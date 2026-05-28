@@ -51,7 +51,7 @@ export type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
 } from "./types/sdk/AgentSessionTurn.js";
-export type { AgentRuntime, AgentRuntimeBase } from "./core/AgentCoreTypes.js";
+export type { AgentRuntime, AgentRuntimeBase } from "./types/runtime/agent/AgentRuntime.js";
 export type {
   AgentContext,
   ChatRuntimePort,
@@ -59,7 +59,7 @@ export type {
   SessionCollectionPort,
   SessionPort,
   StructuredConfig,
-} from "./core/AgentContextTypes.js";
+} from "./types/runtime/agent/AgentContext.js";
 
 // Plugin 作者 API
 export { BasePlugin } from "./plugin/core/BasePlugin.js";
@@ -141,8 +141,8 @@ export {
   isAgentProjectInitialized,
   listPlatformModelChoices,
   normalizeDefaultAgentName,
-} from "./config/project/AgentInitializer.js";
-export type { PlatformModelChoice } from "./config/project/AgentInitializer.js";
+} from "./config/AgentInitializer.js";
+export type { PlatformModelChoice } from "./config/AgentInitializer.js";
 export {
   ensureRuntimeExecutionBindingReady,
   ensureRuntimeProjectReady,
@@ -164,7 +164,7 @@ export type {
   AgentProjectChannel,
   AgentProjectInitializationInput,
   AgentProjectInitializationResult,
-} from "./config/project/types/AgentProject.js";
+} from "./types/config/AgentProject.js";
 export type { ExecutionBindingConfig } from "./types/config/ExecutionBinding.js";
 export type { StartOptions } from "./types/config/Start.js";
 
@@ -194,6 +194,7 @@ export type {
   PlatformConfigStatusResponse,
   PlatformLocalModelsResponse,
 } from "./types/runtime/platform/Platform.js";
+
 export type {
   PlatformAgentChatChannelStatus,
   PlatformAgentDaemonMeta,

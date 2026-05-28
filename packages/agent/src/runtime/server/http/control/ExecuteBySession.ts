@@ -6,8 +6,8 @@
  * - 非 chat session 保留原有直接执行语义。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
 import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueue.js";

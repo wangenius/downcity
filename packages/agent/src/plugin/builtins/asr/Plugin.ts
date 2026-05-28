@@ -7,7 +7,7 @@
  * - 当前作为 chat 入站消息增强中间件接入语音转写。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { VoicePluginConfig } from "@/plugin/builtins/voice/types/VoicePlugin.js";

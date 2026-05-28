@@ -9,8 +9,8 @@
 import fs from "fs-extra";
 import net, { type Server } from "node:net";
 import path from "node:path";
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { LocalRpcRequest, LocalRpcResponse, LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
 import type { ControlSessionExecuteRequestBody } from "@/runtime/server/http/control/types/ControlSessionExecute.js";

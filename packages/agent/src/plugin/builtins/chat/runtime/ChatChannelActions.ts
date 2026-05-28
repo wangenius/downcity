@@ -7,7 +7,7 @@
  * - 对外只暴露 action 级入口，供 ChatPluginActions 装配使用。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatChannelState } from "@/plugin/builtins/chat/types/ChatRuntime.js";
 import type {
   ChatCloseActionPayload,

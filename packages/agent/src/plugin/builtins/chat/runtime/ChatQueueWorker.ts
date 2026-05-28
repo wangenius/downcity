@@ -8,7 +8,7 @@
  */
 
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatQueueWorkerConfig } from "@/plugin/builtins/chat/types/ChatQueueWorker.js";
 import type { ChatQueueItem } from "@/plugin/builtins/chat/types/ChatQueue.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";

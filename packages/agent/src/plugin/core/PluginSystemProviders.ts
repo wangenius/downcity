@@ -7,7 +7,7 @@
  * - 这样也能避开 `task -> runner -> prompt system -> plugin class registry` 的循环依赖。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { buildChatPluginSystem } from "@/plugin/builtins/chat/runtime/ChatPluginSystem.js";
 import { buildContactPluginSystemText } from "@/plugin/builtins/contact/runtime/SystemProvider.js";
 import { buildMemoryPluginSystemText } from "@/plugin/builtins/memory/runtime/SystemProvider.js";

@@ -7,8 +7,8 @@
  * - 这样调度能力就归属于 plugin lifecycle，而不是 Agent 顶层 lifecycle。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import { runDueScheduledJobs } from "@/plugin/core/schedule/Executor.js";
 import { PluginScheduleStore } from "@/plugin/core/schedule/Store.js";

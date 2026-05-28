@@ -6,7 +6,7 @@
  * - “是否由运行中的 agent 承载”不再由独立类型区分，而是从 plugin 能力推导。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import { BUILTIN_PLUGIN_CLASSES } from "@/plugin/core/BuiltinPluginClasses.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 

@@ -8,7 +8,7 @@
  */
 
 import * as Lark from "@larksuiteoapi/node-sdk";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
   FeishuConfig,
   FeishuDownloadedAttachment,

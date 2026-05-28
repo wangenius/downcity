@@ -9,7 +9,7 @@
 
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { PluginActions } from "@/plugin/types/Plugin.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import {

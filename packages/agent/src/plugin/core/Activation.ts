@@ -7,8 +7,8 @@
  */
 
 import type { Plugin } from "@/plugin/types/Plugin.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { AgentRuntimeBase } from "@/core/AgentCoreTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentRuntimeBase } from "@/types/runtime/agent/AgentRuntime.js";
 
 /**
  * 读取当前 city 配置下的 plugin 启用态。

@@ -7,7 +7,7 @@
  */
 
 import fs from "fs-extra";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,

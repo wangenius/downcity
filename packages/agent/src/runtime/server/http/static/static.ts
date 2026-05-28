@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import fs from "fs-extra";
 import path from "path";
 import { getDowncityPublicDirPath } from "@/config/Paths.js";
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 
 /**
  * 静态资源路由参数。

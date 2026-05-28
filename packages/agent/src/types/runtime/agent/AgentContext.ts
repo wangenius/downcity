@@ -1,15 +1,18 @@
 /**
- * AgentCore 执行上下文类型定义。
+ * Agent 执行上下文类型定义。
  *
- * 关键点（中文）
- * - 这里定义 plugin runtime / plugin / prompt system 共用的统一执行上下文。
+ * 职责说明（中文）
+ * - 这里定义 plugin runtime、plugin、prompt system 共用的统一执行上下文。
  * - `AgentContext` 表达的是“当前一次执行可见的能力面”，不是宿主状态本体。
+ *
+ * 边界说明（中文）
  * - `AgentRuntime` 负责保存长期状态；`AgentContext` 负责把这些状态暴露成执行接口。
+ * - 这里只定义协议，不负责任何上下文装配逻辑。
  */
 
 import type { LanguageModel } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
   AgentPathRuntime,
   AgentPlatformRuntime,

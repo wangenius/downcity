@@ -25,7 +25,7 @@ import type {
   PluginCommandContext,
   PluginView,
 } from "@/plugin/types/Plugin.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 
 function createLocalFallbackPlatformRuntime(): AgentPlatformRuntime {
   return {

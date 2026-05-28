@@ -6,7 +6,7 @@
  * - SDK 公开面只保留 `prompt()` / `subscribe()`；runtime/service 若要 one-shot 等待结果，也统一委托给 `prompt()`。
  */
 
-import type { SessionPort } from "@/core/AgentContextTypes.js";
+import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {

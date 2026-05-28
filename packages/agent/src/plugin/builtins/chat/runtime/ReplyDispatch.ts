@@ -6,7 +6,7 @@
  * - 仅服务 agent 执行生命周期，不覆盖手动 `chat send`。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatReplyDispatchInput, ChatReplyEffectInput } from "@/plugin/builtins/chat/types/ChatPlugin.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { ChatDispatchChannel } from "@/plugin/builtins/chat/types/ChatDispatcher.js";

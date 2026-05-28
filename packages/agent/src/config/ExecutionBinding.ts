@@ -1,10 +1,14 @@
 /**
- * ExecutionBinding：项目执行绑定解析与校验。
+ * 项目执行绑定解析与校验模块。
  *
- * 关键点（中文）
- * - 项目只有一条执行路径：`execution.type = "api"`。
- * - 所有 create / start / runtime 读写都通过这里统一解析。
- * - 避免解析逻辑散落在多个模块中。
+ * 职责说明（中文）
+ * - 统一负责从 `downcity.json` 中读取 agent 的执行目标定义。
+ * - 负责提供最小的存在性判断、主模型读取与错误断言，避免调用方重复解析结构。
+ * - 让初始化、配置装配、运行时启动都复用同一套执行目标解释规则。
+ *
+ * 边界说明（中文）
+ * - 这里只解析配置结构，不负责验证模型是否真实存在于平台模型池中。
+ * - 当前只接受 agent 包已经落地支持的执行绑定格式。
  */
 
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
@@ -12,6 +16,10 @@ import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js"
 
 /**
  * 读取项目执行绑定。
+ *
+ * 关键点（中文）
+ * - 当前只接受 `execution.type = "api"` 且存在非空 `modelId` 的配置。
+ * - 若结构不满足最小要求，则返回 `null`，由调用方决定是兜底还是报错。
  */
 export function readProjectExecutionBinding(
   config: DowncityConfig,
@@ -29,6 +37,10 @@ export function readProjectExecutionBinding(
 
 /**
  * 读取项目绑定的主模型 ID。
+ *
+ * 关键点（中文）
+ * - 当项目尚未声明可用执行目标时，返回空字符串而不是抛错。
+ * - 适合用于展示层或非强制校验场景读取默认值。
  */
 export function readProjectPrimaryModelId(config: DowncityConfig): string {
   const execution = readProjectExecutionBinding(config);
@@ -37,6 +49,9 @@ export function readProjectPrimaryModelId(config: DowncityConfig): string {
 
 /**
  * 判断项目是否存在执行目标。
+ *
+ * 关键点（中文）
+ * - 该函数只判断结构是否合法，不判断目标模型是否可运行。
  */
 export function hasProjectExecutionTarget(config: DowncityConfig): boolean {
   return readProjectExecutionBinding(config) !== null;
@@ -44,6 +59,10 @@ export function hasProjectExecutionTarget(config: DowncityConfig): boolean {
 
 /**
  * 断言项目已经声明执行目标。
+ *
+ * 关键点（中文）
+ * - 适合在配置加载完成后的早期阶段调用，尽早暴露缺失执行目标的问题。
+ * - 失败时抛出稳定错误文案，便于 CLI 和上层界面直接展示。
  */
 export function assertProjectExecutionTarget(config: DowncityConfig): void {
   if (hasProjectExecutionTarget(config)) return;

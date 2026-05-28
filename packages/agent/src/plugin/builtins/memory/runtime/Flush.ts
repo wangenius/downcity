@@ -8,7 +8,7 @@
 
 import type { UIDataTypes, UIMessagePart, UITools } from "ai";
 import { isTextUIPart } from "ai";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
   MemoryFlushPayload,
   MemoryFlushResponse,

@@ -7,8 +7,8 @@
  * - `share` 分享文本、链接、文件和目录，并进入对方 inbox。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { PluginActions } from "@/plugin/types/Plugin.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";

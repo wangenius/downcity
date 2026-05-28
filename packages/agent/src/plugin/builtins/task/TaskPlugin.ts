@@ -7,10 +7,10 @@
  * - 当前文件只保留实例骨架与 lifecycle，不再依赖旧的模块级单例。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { PluginActions } from "@/plugin/types/Plugin.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
   TaskCronRegisterResult,
   TaskSchedulerReloadResult,

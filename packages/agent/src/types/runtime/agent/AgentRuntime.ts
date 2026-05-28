@@ -1,10 +1,13 @@
 /**
- * AgentCore 运行时类型定义。
+ * Agent 实例运行时类型定义。
  *
- * 关键点（中文）
- * - 这里表达的是单个 `AgentCore` 实例持有的长期运行状态。
- * - 它不再依赖 `runtime/*` 兼容层，而是作为实例级主类型来源。
- * - Session / plugin 这些长期对象都从这里挂出。
+ * 职责说明（中文）
+ * - 这里定义单个 `Agent` 实例持有的长期运行状态视图。
+ * - Session、plugin、server 等长期对象都通过这组类型共享统一状态结构。
+ *
+ * 边界说明（中文）
+ * - 这些类型描述的是“实例级长期状态”，不是某一次执行的上下文视图。
+ * - 运行时实现细节仍分散在各模块中，这里只保留稳定的共享结构定义。
  */
 
 import type { Logger } from "@/utils/logger/Logger.js";
@@ -15,10 +18,10 @@ import type {
   AgentPluginConfigRuntime,
 } from "@/types/runtime/host/AgentHost.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import type { SessionPort } from "@/core/AgentContextTypes.js";
+import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 
 /**
- * AgentCore 启动早期的基础状态。
+ * Agent 实例启动早期的基础状态。
  */
 export interface AgentRuntimeBase {
   /**
@@ -64,7 +67,7 @@ export interface AgentRuntimeBase {
 }
 
 /**
- * AgentCore 完整运行状态。
+ * Agent 实例完整运行状态。
  */
 export interface AgentRuntime extends AgentRuntimeBase {
   /**

@@ -6,7 +6,7 @@
  * - 授权核心模型为 role / permission / binding。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,

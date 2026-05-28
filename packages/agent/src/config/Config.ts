@@ -1,21 +1,34 @@
 /**
- * Config：agent 项目环境与配置读取模块。
+ * Agent 项目配置读取与装配模块。
  *
- * 关键点（中文）
- * - 这里统一处理 `downcity.json`、项目 `.env`、全局 env 快照三类配置来源。
- * - agent 运行时通过这里读取项目配置，避免各处重复拼装规则。
+ * 职责说明（中文）
+ * - 统一负责读取 `downcity.json`、项目 `.env` 与外部注入的环境变量快照。
+ * - 负责把祖先目录中的多个 `downcity.json` 逐层合并成当前项目的最终配置。
+ * - 负责在配置读取阶段完成 `${ENV_NAME}` 占位符替换与最小结构校验。
+ *
+ * 边界说明（中文）
+ * - 这里只做“配置文件 -> 运行时配置对象”的装配，不负责项目初始化写文件。
+ * - 这里只校验配置是否满足 agent 运行最低要求，不负责平台模型是否真实可用。
  */
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import path from "path";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { ResolvedConfigValue } from "@/types/common/ResolvedConfigValue.js";
 import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
+import { resolveEnvPlaceholdersDeep } from "@/config/ConfigEnvResolver.js";
+import { deepMerge } from "@/utils/object/DeepMerge.js";
+import { isPlainObject } from "@/utils/object/ObjectGuards.js";
+import { collectAncestorNamedFilePaths } from "@/utils/path/AncestorFiles.js";
 
 export type { DowncityConfig };
 
 /**
  * 读取平台共享环境变量（`env_entries.scope=global`）。
+ *
+ * 关键点（中文）
+ * - 当前 agent 包内仍保留空实现占位，等待后续接入平台级持久化存储。
+ * - 保持独立函数是为了让配置读取逻辑不依赖具体存储后端。
  */
 export function loadGlobalEnvFromStore(): Record<string, string> {
   return {};
@@ -23,6 +36,10 @@ export function loadGlobalEnvFromStore(): Record<string, string> {
 
 /**
  * 读取 agent 私有环境变量（`env_entries.scope=agent`）。
+ *
+ * 关键点（中文）
+ * - 当前 agent 包内仍保留空实现占位，避免把平台存储细节耦合进运行时。
+ * - 当 `agentId` 为空时直接返回空对象，表示没有可用私有环境变量。
  */
 export function loadAgentEnvFromStore(agentId: string): Record<string, string> {
   const normalizedAgentId = String(agentId || "").trim();
@@ -76,71 +93,13 @@ export function loadProjectDotenv(projectRoot: string): Record<string, string> {
   }
 }
 
-type ResolvedConfigValue =
-  | JsonValue
-  | undefined
-  | { [key: string]: ResolvedConfigValue }
-  | ResolvedConfigValue[];
-
-function resolveEnvPlaceholdersDeep(
-  value: ResolvedConfigValue,
-  resolveEnvVar: (name: string) => string | undefined,
-): ResolvedConfigValue {
-  if (typeof value === "string") {
-    const match = value.match(/^\$\{([A-Z0-9_]+)\}$/);
-    if (!match) return value;
-    const envVar = match[1];
-    return resolveEnvVar(envVar);
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => resolveEnvPlaceholdersDeep(item, resolveEnvVar));
-  }
-
-  if (value && typeof value === "object") {
-    const obj = value as JsonObject;
-    const out: { [key: string]: ResolvedConfigValue } = {};
-    for (const [k, v] of Object.entries(obj)) {
-      out[k] = resolveEnvPlaceholdersDeep(v as ResolvedConfigValue, resolveEnvVar);
-    }
-    return out;
-  }
-
-  return value;
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
 /**
- * 深合并：对象递归合并，数组与标量以 override 为准。
+ * 读取单层 `downcity.json` 并完成环境变量占位符替换。
  *
  * 关键点（中文）
- * - downcity.json 的“继承/覆盖”语义：越靠近 agent 项目的配置优先级越高。
- * - 数组不做 concat，避免出现重复 paths / models。
+ * - 单层读取不做字段语义校验，便于后续统一合并后再做最终断言。
+ * - 环境变量解析策略由调用方注入，保持该函数只负责“遍历 + 替换”。
  */
-function deepMerge(base: unknown, override: unknown): unknown {
-  if (!isPlainObject(base) || !isPlainObject(override)) {
-    return override === undefined ? base : override;
-  }
-
-  const out: Record<string, unknown> = { ...base };
-  for (const [key, overrideValue] of Object.entries(override)) {
-    const baseValue = (base as Record<string, unknown>)[key];
-    if (Array.isArray(overrideValue)) {
-      out[key] = overrideValue;
-      continue;
-    }
-    if (isPlainObject(overrideValue) && isPlainObject(baseValue)) {
-      out[key] = deepMerge(baseValue, overrideValue);
-      continue;
-    }
-    out[key] = overrideValue === undefined ? baseValue : overrideValue;
-  }
-  return out;
-}
-
 function readShipJsonLayer(
   filePath: string,
   resolveEnvVar: (name: string) => string | undefined,
@@ -167,21 +126,14 @@ function assertNoProjectExtensionsLayer(
   );
 }
 
-function collectAncestorShipJsonPaths(projectRoot: string): string[] {
-  const paths: string[] = [];
-  const resolvedRoot = path.resolve(projectRoot);
-  let dir = resolvedRoot;
-  while (true) {
-    const candidate = path.join(dir, "downcity.json");
-    if (fs.existsSync(candidate)) paths.push(candidate);
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  // root -> leaf
-  return paths.reverse();
-}
-
+/**
+ * 加载当前项目最终生效的 `downcity.json` 配置。
+ *
+ * 关键点（中文）
+ * - 读取顺序为“祖先目录 -> 当前项目目录”，后层配置覆盖前层配置。
+ * - `.env` 只影响占位符解析，不会把值写回配置文件。
+ * - 返回前会断言最小执行目标，保证 agent 至少知道该如何执行。
+ */
 export function loadDowncityConfig(
   projectRoot: string,
   options?: {
@@ -209,7 +161,10 @@ export function loadDowncityConfig(
     return projectValue || undefined;
   };
 
-  const ancestorShipJsonPaths = collectAncestorShipJsonPaths(projectRoot);
+  const ancestorShipJsonPaths = collectAncestorNamedFilePaths(
+    projectRoot,
+    "downcity.json",
+  );
   if (ancestorShipJsonPaths.length === 0) {
     throw new Error("downcity.json not found in project directory");
   }

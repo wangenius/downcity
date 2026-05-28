@@ -13,8 +13,8 @@
  */
 
 import { Hono } from "hono";
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { registerControlApiRoutes } from "@/runtime/server/http/control/ControlApiRoutes.js";
 
 /**

@@ -6,7 +6,7 @@
  * - 业务动作通过 handlers 注入，保持 `ContactPlugin` 类本身更薄。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginActions } from "@/plugin/types/Plugin.js";
 import type {

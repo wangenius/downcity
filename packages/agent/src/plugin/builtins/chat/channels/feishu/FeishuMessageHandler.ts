@@ -9,7 +9,7 @@
 
 import path from "path";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
   IncomingAuthorizationParams,
   IncomingAuthorizationResult,

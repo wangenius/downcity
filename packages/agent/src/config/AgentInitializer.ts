@@ -1,9 +1,14 @@
 /**
- * AgentInitializer：创建/初始化 agent 项目的复用模块。
+ * Agent 项目初始化模块。
  *
- * 关键点（中文）
+ * 职责说明（中文）
  * - CLI `city agent create` 与 Console 共用同一套初始化逻辑，避免模板与目录结构分叉。
- * - 只负责项目骨架与配置文件，不处理 daemon 启停。
+ * - 负责创建项目骨架、静态 prompt、默认 `downcity.json`、基础目录与 schema 文件。
+ * - 负责把用户在创建阶段提供的最小执行配置与渠道配置写入项目。
+ *
+ * 边界说明（中文）
+ * - 这里只处理“初始化一个新项目”所需的静态文件与目录，不处理 daemon 启停。
+ * - 这里只校验项目创建阶段依赖的最小平台条件，不承担后续运行时配置合并职责。
  */
 
 import fs from "fs-extra";
@@ -34,13 +39,16 @@ import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
 } from "@executor/composer/system/default/InitPrompts.js";
+import type { EnvFileEntry } from "@/types/common/EnvFile.js";
+import { appendMissingEnvEntries } from "@/config/EnvFile.js";
+import { ensureGitignoreEntry } from "@/config/Gitignore.js";
 import { renderTemplateVariables } from "@/utils/Template.js";
 import { ensureDir, saveJson } from "@/utils/storage/index.js";
 import type {
   AgentProjectChannel,
   AgentProjectInitializationInput,
   AgentProjectInitializationResult,
-} from "@/config/project/types/AgentProject.js";
+} from "@/types/config/AgentProject.js";
 import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
 import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
@@ -56,54 +64,20 @@ export interface PlatformModelChoice {
 
   /**
    * 模型 ID。
+   *
+   * 关键点（中文）
+   * - 该值直接对应平台模型池中的稳定标识。
+   * - 调用方应把它视为可写入 `execution.modelId` 的候选值。
    */
   value: string;
 }
 
-type EnvEntry = {
-  key: string;
-  value: string;
-};
-
-/**
- * 确保 `.gitignore` 包含指定条目。
- *
- * 关键点（中文）
- * - 只做最小追加，不重排用户已有内容。
- * - 已存在同名规则时不重复写入，避免污染版本库。
- */
-async function ensureGitignoreEntry(params: {
-  projectRoot: string;
-  entry: string;
-}): Promise<"created" | "updated" | "unchanged"> {
-  const projectRoot = path.resolve(String(params.projectRoot || "").trim() || ".");
-  const entry = String(params.entry || "").trim();
-  if (!entry) return "unchanged";
-
-  const gitignorePath = path.join(projectRoot, ".gitignore");
-  const hasGitignore = await fs.pathExists(gitignorePath);
-  const existingContent = hasGitignore
-    ? await fs.readFile(gitignorePath, "utf-8")
-    : "";
-  const normalizedLines = existingContent
-    .split(/\r?\n/)
-    .map((line) => String(line || "").trim());
-
-  if (normalizedLines.includes(entry)) {
-    return "unchanged";
-  }
-
-  const lines = existingContent ? [existingContent] : [];
-  if (existingContent && !existingContent.endsWith("\n")) {
-    lines.push("\n");
-  }
-  lines.push(`${entry}\n`);
-  await fs.writeFile(gitignorePath, lines.join(""), "utf-8");
-  return hasGitignore ? "updated" : "created";
-}
-
 /**
  * 规范化默认 Agent 名称。
+ *
+ * 关键点（中文）
+ * - 把目录名中的 `_` / `-` 统一折叠为空格，产出更适合作为展示名的默认值。
+ * - 这里只做轻量字符串清洗，不负责长度限制或唯一性处理。
  */
 export function normalizeDefaultAgentName(input: string): string {
   return String(input || "")
@@ -115,6 +89,10 @@ export function normalizeDefaultAgentName(input: string): string {
 
 /**
  * 读取平台全局模型选项。
+ *
+ * 关键点（中文）
+ * - 输出结果面向创建向导或控制台下拉框，而不是运行时模型解析。
+ * - 当 provider 存在时会把 provider 信息拼到展示标题中，便于用户区分同名模型。
  */
 export async function listPlatformModelChoices(
   platform: Pick<AgentPlatformRuntime, "listModels" | "listProviders">,
@@ -141,81 +119,12 @@ export async function listPlatformModelChoices(
     .filter((item): item is PlatformModelChoice => item !== null);
 }
 
-function parseEnvKeys(content: string): Set<string> {
-  const out = new Set<string>();
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = String(rawLine || "").trim();
-    if (!line || line.startsWith("#")) continue;
-    const matched = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=/);
-    if (!matched) continue;
-    out.add(matched[1]);
-  }
-  return out;
-}
-
-function escapeRegExp(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 /**
- * 仅追加缺失 env 项。
- */
-async function appendMissingEnvEntries(params: {
-  filePath: string;
-  sectionTitle: string;
-  entries: EnvEntry[];
-  overwriteKeys?: Set<string>;
-}): Promise<void> {
-  const filePath = String(params.filePath || "").trim();
-  if (!filePath) return;
-  const entries = Array.isArray(params.entries)
-    ? params.entries.filter((item) => Boolean(String(item?.key || "").trim()))
-    : [];
-  const overwriteKeys = params.overwriteKeys || new Set<string>();
-
-  let existing = "";
-  if (await fs.pathExists(filePath)) {
-    existing = await fs.readFile(filePath, "utf-8");
-  }
-  const existingKeys = parseEnvKeys(existing);
-  let nextContent = existing;
-  const appendedEntries: EnvEntry[] = [];
-
-  for (const entry of entries) {
-    if (!existingKeys.has(entry.key)) {
-      appendedEntries.push(entry);
-      continue;
-    }
-    if (!overwriteKeys.has(entry.key)) continue;
-    const linePattern = new RegExp(`^${escapeRegExp(entry.key)}\\s*=.*$`, "gm");
-    if (linePattern.test(nextContent)) {
-      nextContent = nextContent.replace(linePattern, `${entry.key}=${entry.value}`);
-    }
-  }
-
-  if (appendedEntries.length > 0) {
-    const lines: string[] = [];
-    if (!nextContent.trim()) {
-      lines.push("# Downcity 环境变量");
-    }
-    lines.push("", `# ${params.sectionTitle}`);
-    for (const entry of appendedEntries) {
-      lines.push(`${entry.key}=${entry.value}`);
-    }
-    let chunk = lines.join("\n");
-    if (nextContent && !nextContent.endsWith("\n")) {
-      chunk = `\n${chunk}`;
-    }
-    nextContent = `${nextContent}${chunk}\n`;
-  }
-
-  if (appendedEntries.length > 0 || !(await fs.pathExists(filePath))) {
-    await fs.writeFile(filePath, nextContent, "utf-8");
-  }
-}
-
-/**
- * 校验 API 主模型可用。
+ * 校验 API 主模型在平台模型池中可用。
+ *
+ * 关键点（中文）
+ * - 创建阶段直接失败，比写入一个不可启动项目更安全。
+ * - 当前只校验“存在且未暂停”，不在这里探测供应商侧网络连通性。
  */
 function assertApiPrimaryModelReady(
   primaryModelId: string,
@@ -234,6 +143,13 @@ function assertApiPrimaryModelReady(
   }
 }
 
+/**
+ * 规范化用户选择的渠道列表。
+ *
+ * 关键点（中文）
+ * - 只保留当前 agent 初始化流程支持的渠道。
+ * - 会自动去重并统一为小写，避免调用方在外部重复做清洗。
+ */
 function normalizeChannels(input: AgentProjectChannel[] | undefined): AgentProjectChannel[] {
   const allowed = new Set<AgentProjectChannel>(["telegram", "feishu", "qq"]);
   const seen = new Set<AgentProjectChannel>();
@@ -247,6 +163,10 @@ function normalizeChannels(input: AgentProjectChannel[] | undefined): AgentProje
 
 /**
  * 判断项目是否已经具备最小初始化文件。
+ *
+ * 关键点（中文）
+ * - 当前只检查 `PROFILE.md` 与 `downcity.json`，用于快速判断是否已初始化过。
+ * - 不把 `.downcity/` 目录作为硬性条件，避免用户手动清理缓存后被误判为未初始化。
  */
 export async function isAgentProjectInitialized(projectRoot: string): Promise<boolean> {
   const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
@@ -257,6 +177,11 @@ export async function isAgentProjectInitialized(projectRoot: string): Promise<bo
 
 /**
  * 初始化 agent 项目骨架。
+ *
+ * 关键点（中文）
+ * - 会创建 prompt 文件、配置文件、`.downcity` 目录结构以及 schema 快照。
+ * - 对已存在文件采取“能跳过就跳过、明确冲突则报错”的策略，降低误覆盖风险。
+ * - 返回结果只描述本次初始化写入摘要，方便 CLI 与控制台直接展示。
  */
 export async function initializeAgentProject(
   input: AgentProjectInitializationInput,
@@ -363,21 +288,18 @@ export async function initializeAgentProject(
   await saveJson(shipJsonPath, shipConfig);
   createdFiles.push("downcity.json");
 
-  await appendMissingEnvEntries({
-    filePath: dotEnvPath,
-    sectionTitle: "Downcity Create",
-    entries: [],
-  });
-  await appendMissingEnvEntries({
-    filePath: dotEnvExamplePath,
-    sectionTitle: "Downcity Create Example",
-    entries: [],
-  });
+  await appendMissingEnvEntries(
+    dotEnvPath,
+    "Downcity Create",
+    [] satisfies EnvFileEntry[],
+  );
+  await appendMissingEnvEntries(
+    dotEnvExamplePath,
+    "Downcity Create Example",
+    [] satisfies EnvFileEntry[],
+  );
 
-  const gitignoreStatus = await ensureGitignoreEntry({
-    projectRoot,
-    entry: ".downcity",
-  });
+  const gitignoreStatus = await ensureGitignoreEntry(projectRoot, ".downcity");
   if (gitignoreStatus === "created" || gitignoreStatus === "updated") {
     createdFiles.push(".gitignore");
   } else {

@@ -15,7 +15,7 @@ import type {
   ChatDispatcher,
 } from "@/plugin/builtins/chat/types/ChatDispatcher.js";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueue.js";
 import { deleteChatSessionById } from "@/plugin/builtins/chat/runtime/ChatSessionDelete.js";
 import {

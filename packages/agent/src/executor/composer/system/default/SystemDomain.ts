@@ -11,7 +11,7 @@ import { transformPromptsIntoSystemMessages } from "@executor/composer/system/de
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { listLocalPlugins } from "@/plugin/core/PluginClassRegistry.js";
 import { PLUGIN_SYSTEM_PROVIDERS } from "@/plugin/core/PluginSystemProviders.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { buildRuntimeClockSystemPrompt } from "@executor/composer/system/default/variables/VariableReplacer.js";
 import {
   CORE_SYSTEM_PROMPT,

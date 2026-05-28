@@ -7,7 +7,7 @@
  * - 若未显式注入，则 ChatPlugin 仍可回退到现有 `downcity.json + PlatformStore` 读取路径。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatQueueWorkerConfig } from "@/plugin/builtins/chat/types/ChatQueueWorker.js";
 import type { StoredChannelAccount } from "@/types/runtime/host/Store.js";
 import type { ChatChannelName } from "@/plugin/builtins/chat/types/ChannelStatus.js";

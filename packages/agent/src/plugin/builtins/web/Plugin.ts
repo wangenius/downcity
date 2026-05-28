@@ -5,7 +5,7 @@
  * - `web` plugin 不再自实现联网与浏览器能力，只负责 provider 选择、状态检查与提示词注入。
  * - 真正的联网逻辑直接交给外部实现：`web-access` 或 `agent-browser`。
  */
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";

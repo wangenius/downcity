@@ -6,7 +6,7 @@
  * - 最终拼装顺序固定为：attachmentText -> pluginSections -> bodyText。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatInboundAugmentInput } from "@/plugin/builtins/chat/types/ChatPlugin.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import { CHAT_PLUGIN_POINTS } from "@/plugin/builtins/chat/runtime/PluginPoints.js";

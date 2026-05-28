@@ -7,7 +7,7 @@
  * - 运行方式差异只通过 plugin 自身能力体现，例如是否声明 `lifecycle`。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import { AuthPlugin } from "@/plugin/builtins/auth/Plugin.js";
 import { SkillPlugin } from "@/plugin/builtins/skill/Plugin.js";

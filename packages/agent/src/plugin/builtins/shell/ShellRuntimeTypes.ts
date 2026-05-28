@@ -8,7 +8,7 @@
  */
 
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ShellSessionSnapshot } from "@/plugin/builtins/shell/types/ShellPlugin.js";
 
 /**

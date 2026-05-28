@@ -7,8 +7,8 @@
  * - 旧生命周期模型暂时通过 `lifecycle` 兼容，后续可逐步收敛到 `start/stop/command`。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
   Plugin,
   PluginActions,
@@ -23,7 +23,7 @@ import type {
   PluginStateRecord,
   PluginUsageDefinition,
 } from "@/plugin/types/Plugin.js";
-import type { StructuredConfig } from "@/core/AgentContextTypes.js";
+import type { StructuredConfig } from "@/types/runtime/agent/AgentContext.js";
 
 /**
  * BasePlugin 抽象基类。

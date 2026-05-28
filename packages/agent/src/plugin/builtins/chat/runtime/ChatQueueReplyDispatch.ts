@@ -7,7 +7,7 @@
  */
 
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 import { sendActionByChatKey } from "./ChatkeySend.js";
 import { sendChatTextByChatKey } from "../Action.js";

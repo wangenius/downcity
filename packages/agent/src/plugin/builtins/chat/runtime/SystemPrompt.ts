@@ -8,7 +8,7 @@
  */
 
 import { getSessionRunScope } from "@executor/SessionRunScope.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatEnvironmentPromptInput } from "@/plugin/builtins/chat/types/ChatPromptContext.js";
 import { readChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";
 

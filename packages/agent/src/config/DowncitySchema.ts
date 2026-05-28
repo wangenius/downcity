@@ -1,5 +1,23 @@
+/**
+ * `downcity.json` Schema 定义模块。
+ *
+ * 职责说明（中文）
+ * - 提供项目初始化时写入本地的 JSON Schema 常量。
+ * - 统一维护用户可编辑配置的结构约束、字段说明与编辑器联想元数据。
+ *
+ * 边界说明（中文）
+ * - 这里是静态 schema 常量，不负责运行时配置装配或业务校验逻辑。
+ * - 当 schema 与运行时实现存在差异时，应同时更新配置解析与用户文档。
+ */
 import type { JsonObject } from "@/types/common/Json.js";
 
+/**
+ * `downcity.json` 的本地 Schema 常量。
+ *
+ * 关键点（中文）
+ * - 初始化流程会把该常量写入 `.downcity/schema/downcity.schema.json`。
+ * - 该结构主要面向 IDE 校验与用户编辑体验，不替代运行时断言。
+ */
 export const DOWNCITY_JSON_SCHEMA: JsonObject = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://downcity.ai/schemas/downcity.schema.json",

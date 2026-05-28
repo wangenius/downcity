@@ -6,7 +6,7 @@
  * - task 定义变更后的 scheduler reload 通过回调注入，避免执行层依赖具体 service 实现。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
   TaskCronRegisterResult,
   TaskListActionPayload,

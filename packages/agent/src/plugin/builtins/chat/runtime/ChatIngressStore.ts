@@ -7,7 +7,7 @@
  * - 只有极少数非 turn 场景才允许显式补写 `session messages`
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { ChatDispatchChannel } from "@/plugin/builtins/chat/types/ChatDispatcher.js";
 import { appendInboundChatHistory } from "./ChatHistoryStore.js";

@@ -42,7 +42,7 @@ import {
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
 } from "@/sdk/session/index.js";
-import type { SessionPort } from "@/core/AgentContextTypes.js";
+import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import {
   mapAgentEventToSessionEvent,
   mapUiMessageChunkToAgentEvent,
@@ -111,7 +111,7 @@ type SessionOptions = {
    * 在执行前确保当前 session 已完成宿主侧默认配置。
    *
    * 关键点（中文）
-   * - 这里通常由 `AgentCore` 注入，用于补齐默认 model、宿主覆写等一次性装配。
+   * - 这里通常由 `Agent` 注入，用于补齐默认 model、宿主覆写等一次性装配。
    * - 所有执行入口都应通过这里兜底，避免只在 SDK `agent.createSession()` / `agent.getSession()` 链路上做配置。
    */
   ensureConfigured?: (session: Session) => Promise<void>;

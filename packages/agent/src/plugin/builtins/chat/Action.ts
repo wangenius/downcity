@@ -6,7 +6,7 @@
  * - 通过 SessionRunScope（ALS）读取当前请求上下文
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { getSessionRunScope } from "@executor/SessionRunScope.js";
 import {
   sendActionByChatKey,

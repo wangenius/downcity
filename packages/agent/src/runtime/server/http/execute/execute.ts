@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono";
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 
 /**
  * 执行入口路由参数。

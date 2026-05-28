@@ -9,7 +9,7 @@
 import crypto from "node:crypto";
 import fs from "fs-extra";
 import path from "node:path";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
   ContactInboxShareFileInput,
   ContactInboxShareMeta,

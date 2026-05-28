@@ -6,7 +6,7 @@
  * - Console 只通过 setup / action 与插件交互，保持极简统一。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type {

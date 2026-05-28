@@ -7,7 +7,7 @@
  * - auth plugin 只负责统一暴露扩展点 / action 边界，不改变底层存储模型。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { JsonValue } from "@/types/common/Json.js";

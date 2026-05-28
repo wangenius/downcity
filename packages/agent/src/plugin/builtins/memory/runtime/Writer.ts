@@ -8,7 +8,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
   MemoryGetPayload,
   MemoryGetResponse,

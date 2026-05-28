@@ -10,7 +10,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueue.js";
 import { removeChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";
 

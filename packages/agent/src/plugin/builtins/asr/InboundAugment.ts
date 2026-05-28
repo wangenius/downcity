@@ -6,7 +6,7 @@
  * - 转写失败不阻塞主链路，保持 best-effort。
  */
 
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatInboundAugmentInput } from "@/plugin/builtins/chat/types/ChatPlugin.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import { transcribeWithVoiceDependency } from "@/plugin/builtins/asr/Dependency.js";

@@ -9,7 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { stripInvocationAuthEnv } from "@/runtime/server/http/auth/AuthEnv.js";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { runSandboxCommand } from "@/runtime/sandbox/SandboxRunner.js";
 import type { SessionRunResult } from "@/executor/types/SessionRun.js";
 import type { JsonObject } from "@/types/common/Json.js";

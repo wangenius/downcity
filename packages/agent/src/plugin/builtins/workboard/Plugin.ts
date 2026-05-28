@@ -6,7 +6,7 @@
  * - 当前通过 plugin HTTP 注入暴露 `/api/workboard/snapshot`，供 console 代理与 UI 消费。
  */
 
-import type { AgentRuntime } from "@/core/AgentCoreTypes.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";

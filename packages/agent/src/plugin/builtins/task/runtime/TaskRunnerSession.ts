@@ -10,7 +10,7 @@
 
 import path from "node:path";
 import type { LanguageModel } from "ai";
-import type { AgentContext } from "@/core/AgentContextTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { Executor } from "@/executor/Executor.js";
 import type { SessionRunResult } from "@/executor/types/SessionRun.js";
 import type { TaskSessionRuntimePort } from "@/plugin/builtins/task/runtime/TaskRunnerTypes.js";

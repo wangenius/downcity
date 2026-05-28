@@ -17,7 +17,6 @@ import { TtsPlugin } from "@/tts/Plugin.js";
 import { WorkboardPlugin } from "@/workboard/Plugin.js";
 import { ChatPlugin } from "@/chat/ChatPlugin.js";
 import { ContactPlugin } from "@/contact/ContactPlugin.js";
-import { SchedulePlugin } from "@/schedule/SchedulePlugin.js";
 import { TaskPlugin } from "@/task/TaskPlugin.js";
 import { MemoryPlugin } from "@/memory/MemoryPlugin.js";
 import { ShellPlugin } from "@/shell/ShellPlugin.js";
@@ -41,7 +40,6 @@ export const BUILTIN_PLUGIN_CLASSES: BuiltinPluginClass[] = [
   WorkboardPlugin,
   ChatPlugin,
   ContactPlugin,
-  SchedulePlugin,
   TaskPlugin,
   MemoryPlugin,
   ShellPlugin,

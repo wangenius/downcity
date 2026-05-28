@@ -1,21 +1,22 @@
 /**
- * Runtime plugin Schedule 执行器。
+ * ActionSchedule 到期执行器。
  *
  * 关键点（中文）
- * - 只负责“把到点任务执行掉并更新状态”。
- * - 不负责调度入口和轮询生命周期管理。
+ * - 只负责“把到点的 action schedule 任务执行掉并更新状态”。
+ * - 不负责调度入口、持久化初始化和轮询生命周期管理。
+ * - 到期后重新走 `runPluginCommand`，复用 plugin action 的统一执行规则。
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { PluginScheduleStore } from "@/plugin/core/schedule/Store.js";
+import type { ActionScheduleStore } from "@/plugin/core/ActionScheduleStore.js";
 import { runPluginCommand } from "@/plugin/core/Manager.js";
 
 /**
  * 执行当前已到点的 pending 任务。
  */
-export async function runDueScheduledJobs(params: {
+export async function runDueActionScheduleJobs(params: {
   context: AgentContext;
-  store: PluginScheduleStore;
+  store: ActionScheduleStore;
 }): Promise<void> {
   const dueJobs = params.store.listDuePendingJobs(Date.now());
   for (const job of dueJobs) {
@@ -30,12 +31,15 @@ export async function runDueScheduledJobs(params: {
         context: params.context,
       });
       if (!result.success) {
-        params.store.markJobFailed(job.id, result.message || "scheduled job failed");
-        params.context.logger.warn("[schedule] job failed", {
+        params.store.markJobFailed(
+          job.id,
+          result.message || "scheduled action failed",
+        );
+        params.context.logger.warn("[action-schedule] job failed", {
           jobId: job.id,
           pluginName: job.pluginName,
           actionName: job.actionName,
-          error: result.message || "scheduled job failed",
+          error: result.message || "scheduled action failed",
         });
         continue;
       }
@@ -43,7 +47,7 @@ export async function runDueScheduledJobs(params: {
       params.store.markJobSucceeded(job.id);
     } catch (error) {
       params.store.markJobFailed(job.id, String(error));
-      params.context.logger.warn("[schedule] job failed", {
+      params.context.logger.warn("[action-schedule] job failed", {
         jobId: job.id,
         pluginName: job.pluginName,
         actionName: job.actionName,

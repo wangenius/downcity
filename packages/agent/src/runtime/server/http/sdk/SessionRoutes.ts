@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import type {
   AgentListSessionsInput,
   AgentSessionCollection,
-} from "@/sdk/AgentSdkTypes.js";
+} from "@/types/agent/AgentTypes.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 

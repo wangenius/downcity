@@ -16,7 +16,7 @@ import { isCityRunning } from "@/process/registry/CityRuntime.js";
 import type { JsonValue } from "@downcity/agent";
 import { parsePort, resolveAgentName } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
-import type { ScheduledJobStatus } from "@downcity/agent";
+import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { parseBoolean } from "./IndexSupport.js";
 import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
@@ -95,7 +95,7 @@ export function parsePositiveIntOption(value: string, fieldName: string): number
  */
 export function normalizeScheduledJobStatus(
   value: string | undefined,
-): ScheduledJobStatus | undefined {
+): ActionScheduleJobStatus | undefined {
   const text = String(value || "").trim().toLowerCase();
   if (!text) return undefined;
   if (
@@ -205,7 +205,7 @@ export async function resolvePluginProjectRoot(options: PluginCliBaseOptions): P
 }
 
 /**
- * 解析 schedule 管理命令目标路径。
+ * 解析 ActionSchedule 管理命令目标路径。
  */
 export async function resolvePluginScheduleProjectRoot(options: PluginCliBaseOptions): Promise<{
   projectRoot?: string;
@@ -265,7 +265,7 @@ export function addPluginTargetOptions(command: Command): Command {
 }
 
 /**
- * 注入 plugin schedule 管理命令通用选项。
+ * 注入 ActionSchedule 管理命令通用选项。
  */
 export function addPluginScheduleOptions(command: Command): Command {
   return command

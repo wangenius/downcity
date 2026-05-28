@@ -19,7 +19,7 @@ import type {
   AgentSessionSystemSnapshot,
   RemoteAgentSession,
   RemoteAgentOptions,
-} from "@/sdk/AgentSdkTypes.js";
+} from "@/types/agent/AgentTypes.js";
 import type {
   AgentSessionEvent,
   AgentSessionSubscriber,
@@ -30,7 +30,7 @@ import type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
 } from "@/types/sdk/AgentSessionTurn.js";
-import { SessionEventHub } from "@/sdk/session/runtime/SessionEventHub.js";
+import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 
 type Deferred<T> = {
   /**

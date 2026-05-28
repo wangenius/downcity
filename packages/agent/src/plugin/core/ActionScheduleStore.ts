@@ -1,8 +1,9 @@
 /**
- * Plugin Schedule 持久化存储。
+ * ActionSchedule 持久化存储。
  *
  * 关键点（中文）
- * - 调度任务改为使用项目内 `jsonl` 事件流持久化，不再依赖 SQLite。
+ * - ActionSchedule 是 plugin action 的延迟执行能力，不是一个独立 plugin。
+ * - 任务使用项目内 `jsonl` 事件流持久化，不再依赖 SQLite。
  * - 这里采用“全量重放 + 内存归并”的最简实现，保持职责清晰且易于迁移。
  * - 文件只记录状态事件；对外仍暴露稳定的调度任务查询与状态更新接口。
  */
@@ -10,14 +11,14 @@
 import fs from "fs-extra";
 import path from "node:path";
 import type {
-  CreateScheduledJobInput,
-  ScheduledJobRecord,
-  ScheduledJobStatus,
-} from "@/plugin/types/PluginSchedule.js";
+  ActionScheduleJobRecord,
+  ActionScheduleJobStatus,
+  CreateActionScheduleJobInput,
+} from "@/plugin/types/ActionSchedule.js";
 import { generateId } from "@/utils/Id.js";
 import { getDowncityScheduleDbPath } from "@/config/Paths.js";
 
-type ScheduledJobEvent =
+type ActionScheduleJobEvent =
   | {
       /**
        * 事件版本号。
@@ -28,9 +29,9 @@ type ScheduledJobEvent =
        */
       type: "created";
       /**
-       * 调度任务快照。
+       * ActionSchedule 任务快照。
        */
-      job: ScheduledJobRecord;
+      job: ActionScheduleJobRecord;
     }
   | {
       /**
@@ -48,7 +49,7 @@ type ScheduledJobEvent =
       /**
        * 新状态。
        */
-      status: ScheduledJobStatus;
+      status: ActionScheduleJobStatus;
       /**
        * 最新更新时间。
        */
@@ -68,7 +69,9 @@ function readJsonlLines(filePath: string): string[] {
     .filter(Boolean);
 }
 
-function normalizeJobRecord(input: ScheduledJobRecord): ScheduledJobRecord {
+function normalizeJobRecord(
+  input: ActionScheduleJobRecord,
+): ActionScheduleJobRecord {
   return {
     id: String(input.id || "").trim(),
     pluginName: String(input.pluginName || "").trim(),
@@ -76,21 +79,23 @@ function normalizeJobRecord(input: ScheduledJobRecord): ScheduledJobRecord {
     payload: input.payload ?? null,
     runAtMs: Math.trunc(input.runAtMs),
     status: input.status,
-    ...(typeof input.error === "string" && input.error ? { error: input.error } : {}),
+    ...(typeof input.error === "string" && input.error
+      ? { error: input.error }
+      : {}),
     createdAt: Math.trunc(input.createdAt),
     updatedAt: Math.trunc(input.updatedAt),
   };
 }
 
-function parseEvent(line: string): ScheduledJobEvent | null {
+function parseEvent(line: string): ActionScheduleJobEvent | null {
   try {
-    const raw = JSON.parse(line) as Partial<ScheduledJobEvent> | null;
+    const raw = JSON.parse(line) as Partial<ActionScheduleJobEvent> | null;
     if (!raw || typeof raw !== "object") return null;
     if (raw.type === "created" && raw.job) {
       return {
         v: 1,
         type: "created",
-        job: normalizeJobRecord(raw.job as ScheduledJobRecord),
+        job: normalizeJobRecord(raw.job as ActionScheduleJobRecord),
       };
     }
     if (
@@ -103,7 +108,7 @@ function parseEvent(line: string): ScheduledJobEvent | null {
         v: 1,
         type: "status",
         jobId: raw.jobId,
-        status: raw.status as ScheduledJobStatus,
+        status: raw.status as ActionScheduleJobStatus,
         updatedAt: Math.trunc(raw.updatedAt),
         ...(typeof raw.error === "string" ? { error: raw.error } : {}),
       };
@@ -114,15 +119,18 @@ function parseEvent(line: string): ScheduledJobEvent | null {
   }
 }
 
-function compareJobs(a: ScheduledJobRecord, b: ScheduledJobRecord): number {
+function compareJobs(
+  a: ActionScheduleJobRecord,
+  b: ActionScheduleJobRecord,
+): number {
   if (a.runAtMs !== b.runAtMs) return a.runAtMs - b.runAtMs;
   return b.createdAt - a.createdAt;
 }
 
 /**
- * Plugin Schedule Store。
+ * ActionSchedule Store。
  */
-export class PluginScheduleStore {
+export class ActionScheduleStore {
   private readonly filePath: string;
 
   constructor(projectRoot: string) {
@@ -144,9 +152,9 @@ export class PluginScheduleStore {
   /**
    * 创建调度任务。
    */
-  createJob(input: CreateScheduledJobInput): ScheduledJobRecord {
+  createJob(input: CreateActionScheduleJobInput): ActionScheduleJobRecord {
     const now = Date.now();
-    const job: ScheduledJobRecord = {
+    const job: ActionScheduleJobRecord = {
       id: `sched_${generateId()}`,
       pluginName: String(input.pluginName || "").trim(),
       actionName: String(input.actionName || "").trim(),
@@ -167,7 +175,7 @@ export class PluginScheduleStore {
   /**
    * 获取单个任务。
    */
-  getJobById(jobId: string): ScheduledJobRecord | null {
+  getJobById(jobId: string): ActionScheduleJobRecord | null {
     const key = String(jobId || "").trim();
     if (!key) return null;
     return this.readJobMap().get(key) || null;
@@ -176,7 +184,9 @@ export class PluginScheduleStore {
   /**
    * 列出指定状态的任务。
    */
-  listJobsByStatus(statuses: ScheduledJobStatus[]): ScheduledJobRecord[] {
+  listJobsByStatus(
+    statuses: ActionScheduleJobStatus[],
+  ): ActionScheduleJobRecord[] {
     if (statuses.length === 0) return [];
     const allowed = new Set(statuses);
     return this.readJobs()
@@ -188,9 +198,9 @@ export class PluginScheduleStore {
    * 列出任务。
    */
   listJobs(params?: {
-    status?: ScheduledJobStatus;
+    status?: ActionScheduleJobStatus;
     limit?: number;
-  }): ScheduledJobRecord[] {
+  }): ActionScheduleJobRecord[] {
     const limit =
       typeof params?.limit === "number" && Number.isFinite(params.limit)
         ? Math.max(1, Math.trunc(params.limit))
@@ -204,9 +214,12 @@ export class PluginScheduleStore {
   /**
    * 列出已到点且待执行的任务。
    */
-  listDuePendingJobs(nowMs: number): ScheduledJobRecord[] {
+  listDuePendingJobs(nowMs: number): ActionScheduleJobRecord[] {
     return this.readJobs()
-      .filter((job) => job.status === "pending" && job.runAtMs <= Math.trunc(nowMs))
+      .filter(
+        (job) =>
+          job.status === "pending" && job.runAtMs <= Math.trunc(nowMs),
+      )
       .sort(compareJobs);
   }
 
@@ -276,15 +289,15 @@ export class PluginScheduleStore {
   /**
    * 仅读取当前任务快照。
    */
-  private readJobs(): ScheduledJobRecord[] {
+  private readJobs(): ActionScheduleJobRecord[] {
     return [...this.readJobMap().values()];
   }
 
   /**
    * 重放事件流，构造当前任务快照。
    */
-  private readJobMap(): Map<string, ScheduledJobRecord> {
-    const jobs = new Map<string, ScheduledJobRecord>();
+  private readJobMap(): Map<string, ActionScheduleJobRecord> {
+    const jobs = new Map<string, ActionScheduleJobRecord>();
     for (const line of readJsonlLines(this.filePath)) {
       const event = parseEvent(line);
       if (!event) continue;
@@ -310,7 +323,7 @@ export class PluginScheduleStore {
   /**
    * 追加单条事件。
    */
-  private appendEvent(event: ScheduledJobEvent): void {
+  private appendEvent(event: ActionScheduleJobEvent): void {
     fs.appendFileSync(this.filePath, `${JSON.stringify(event)}\n`, "utf-8");
   }
 
@@ -340,7 +353,7 @@ export class PluginScheduleStore {
    */
   private updateTerminalStatus(params: {
     jobId: string;
-    status: Exclude<ScheduledJobStatus, "pending" | "running">;
+    status: Exclude<ActionScheduleJobStatus, "pending" | "running">;
     error?: string;
   }): boolean {
     const current = this.getJobById(params.jobId);

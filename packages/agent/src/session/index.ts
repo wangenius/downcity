@@ -1,9 +1,9 @@
 /**
- * SDK Session 模块聚合入口。
+ * Session 模块聚合入口。
  *
  * 职责说明（中文）
- * - 统一暴露 `sdk/session/` 目录下的本地 Session 实现与相关辅助能力。
- * - 让 `Session` 相关代码收敛在一个目录树中，避免实现继续散落在 `sdk/` 顶层。
+ * - 统一暴露 `session/` 目录下的本地 Session 实现与相关辅助能力。
+ * - 让 `Session` 相关代码收敛在一个目录树中，避免实现散落在 Agent 入口模块里。
  */
 
 export { Session } from "./Session.js";

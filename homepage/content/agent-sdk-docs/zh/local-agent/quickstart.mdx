@@ -72,7 +72,7 @@ await turn.finished;
 
 - 启动 HTTP 端口，让别的进程通过 `RemoteAgent` 调用它
 - 启动本地 RPC 端口，让宿主或其他本机进程通过 RPC 调用它
-- 启动 plugin lifecycle，让 chat、schedule 或其他后台 loop 真正开始运行
+- 启动 plugin lifecycle 和 Agent 的 ActionSchedule loop，让长期后台能力真正开始运行
 
 可以把它简单理解成：
 

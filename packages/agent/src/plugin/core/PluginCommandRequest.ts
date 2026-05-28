@@ -4,15 +4,15 @@
  * 关键点（中文）
  * - 统一收口 HTTP / RPC 两种入口的请求体解析。
  * - plugin runtime 远程调用统一走 runtime command 协议，不再让 action 自带 HTTP route。
- * - 通用调度参数（`schedule` / `delay` / `time`）也在这里一次性归一化。
+ * - ActionSchedule 参数（`schedule` / `delay` / `time`）也在这里一次性归一化。
  */
 
 import type { JsonValue } from "@/types/common/Json.js";
-import type { PluginCommandScheduleInput } from "@/plugin/types/PluginSchedule.js";
+import type { PluginActionScheduleInput } from "@/plugin/types/ActionSchedule.js";
 import {
   normalizeRunAtMsOrThrow,
-  parseScheduledRunAtMsOrThrow,
-} from "@/plugin/core/schedule/Time.js";
+  parseActionScheduleRunAtMsOrThrow,
+} from "@/plugin/core/ActionScheduleTime.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -35,7 +35,7 @@ export type PluginCommandRequestBody = {
   /**
    * 可选调度信息。
    */
-  schedule?: PluginCommandScheduleInput;
+  schedule?: PluginActionScheduleInput;
 };
 
 function isJsonRecord(value: unknown): value is JsonRecord {
@@ -47,7 +47,7 @@ function isJsonRecord(value: unknown): value is JsonRecord {
  */
 function readScheduleInput(
   body: JsonRecord,
-): PluginCommandScheduleInput | undefined {
+): PluginActionScheduleInput | undefined {
   const nestedSchedule = isJsonRecord(body.schedule) ? body.schedule : undefined;
   const nestedRunAtMs = nestedSchedule?.runAtMs;
   const topLevelDelay = body.delayMs ?? body.delay;
@@ -68,7 +68,7 @@ function readScheduleInput(
     };
   }
 
-  const runAtMs = parseScheduledRunAtMsOrThrow({
+  const runAtMs = parseActionScheduleRunAtMsOrThrow({
     delay: topLevelDelay as string | number | undefined,
     time: topLevelTime as string | number | undefined,
   });

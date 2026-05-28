@@ -2,12 +2,13 @@
  * `city plugin schedule` 命令。
  *
  * 关键点（中文）
- * - schedule 管理命令只依赖项目本地 schedule SQLite，不要求 runtime 在线。
- * - 这里同时承载 schedule 子命令注册与本地存储读写流程。
+ * - 命令名保留 schedule，是用户侧“延迟执行任务”的操作语义。
+ * - 内部使用 Agent 的 ActionScheduleStore，不依赖独立 schedule plugin。
+ * - 这里同时承载 schedule 子命令注册与 ActionSchedule 本地存储读写流程。
  */
 
 import type { Command } from "commander";
-import { PluginScheduleStore } from "@downcity/agent";
+import { ActionScheduleStore } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import {
@@ -57,7 +58,7 @@ export async function runPluginScheduleListCommand(params: {
     const limit = params.limitRaw
       ? parsePositiveIntOption(params.limitRaw, "limit")
       : 100;
-    const store = new PluginScheduleStore(projectRoot);
+    const store = new ActionScheduleStore(projectRoot);
     try {
       const jobs = store.listJobs({ status, limit });
       printResult({
@@ -132,7 +133,7 @@ export async function runPluginScheduleInfoCommand(params: {
     return;
   }
 
-  const store = new PluginScheduleStore(projectRoot);
+  const store = new ActionScheduleStore(projectRoot);
   try {
     const job = store.getJobById(jobId);
     if (!job) {
@@ -205,7 +206,7 @@ export async function runPluginScheduleCancelCommand(params: {
     return;
   }
 
-  const store = new PluginScheduleStore(projectRoot);
+  const store = new ActionScheduleStore(projectRoot);
   try {
     const current = store.getJobById(jobId);
     if (!current) {
@@ -264,13 +265,13 @@ export async function runPluginScheduleCancelCommand(params: {
 export function registerPluginScheduleCommands(plugin: Command): void {
   const schedule = plugin
     .command("schedule")
-    .description("查看和管理持久化 schedule 任务")
+    .description("查看和管理持久化延迟 action 任务")
     .helpOption("--help", "display help for command");
 
   addPluginScheduleOptions(
     schedule
       .command("list")
-      .description("列出当前 agent 的调度任务")
+      .description("列出当前 agent 的延迟 action 任务")
       .option("--status <status>", "状态过滤（pending|running|succeeded|failed|cancelled）")
       .option("--limit <n>", "返回条数（默认 100）"),
   ).action(async (opts: PluginCliBaseOptions & { status?: string; limit?: string }) => {
@@ -284,7 +285,7 @@ export function registerPluginScheduleCommands(plugin: Command): void {
   addPluginScheduleOptions(
     schedule
       .command("info <jobId>")
-      .description("查看单个调度任务详情"),
+      .description("查看单个延迟 action 任务详情"),
   ).action(async (jobId: string, opts: PluginCliBaseOptions) => {
     await runPluginScheduleInfoCommand({
       jobId,
@@ -295,7 +296,7 @@ export function registerPluginScheduleCommands(plugin: Command): void {
   addPluginScheduleOptions(
     schedule
       .command("cancel <jobId>")
-      .description("取消一个尚未执行的调度任务"),
+      .description("取消一个尚未执行的延迟 action 任务"),
   ).action(async (jobId: string, opts: PluginCliBaseOptions) => {
     await runPluginScheduleCancelCommand({
       jobId,

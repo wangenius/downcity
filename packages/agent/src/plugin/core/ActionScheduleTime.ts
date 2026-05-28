@@ -1,9 +1,10 @@
 /**
- * Plugin Schedule 时间解析工具。
+ * ActionSchedule 时间解析工具。
  *
  * 关键点（中文）
- * - 统一解析 `--delay` / `--time` 对应的调度时间。
- * - 输出统一毫秒时间戳，供 command 层与持久化层复用。
+ * - 统一解析 plugin action 通用 `--delay` / `--time` 参数。
+ * - 输出统一毫秒时间戳，供 command 请求解析与持久化层复用。
+ * - 该模块只处理“action 延迟执行时间”，不表达独立 schedule plugin。
  */
 
 /**
@@ -81,7 +82,7 @@ export function parseScheduleTimeOptionOrThrow(
  * - `delayMs` 与 `time` 只能二选一。
  * - 未传时返回 `undefined`，表示立即执行。
  */
-export function parseScheduledRunAtMsOrThrow(params: {
+export function parseActionScheduleRunAtMsOrThrow(params: {
   delay?: string | number | undefined;
   time?: string | number | undefined;
 }): number | undefined {

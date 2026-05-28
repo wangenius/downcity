@@ -23,16 +23,16 @@ import type {
   AgentSessionSummary,
   AgentSessionSummaryPage,
   AgentSessionTimelineEvent,
-} from "@/sdk/AgentSdkTypes.js";
+} from "@/types/agent/AgentTypes.js";
 import type {
   SessionMessageV1,
   SessionMetadataV1,
 } from "@/executor/types/SessionMessages.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleText.js";
-import { getSdkAgentSessionMessagesPath } from "@/sdk/session/storage/Paths.js";
-import { getSdkAgentSessionsRootDirPath } from "@/sdk/session/storage/Paths.js";
-import { readSessionMetadata } from "@/sdk/session/storage/Metadata.js";
+import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
+import { getSdkAgentSessionsRootDirPath } from "@/session/storage/Paths.js";
+import { readSessionMetadata } from "@/session/storage/Metadata.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
 

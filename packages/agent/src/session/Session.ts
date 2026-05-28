@@ -23,12 +23,12 @@ import type {
   AgentSessionSetInput,
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
-} from "@/sdk/AgentSdkTypes.js";
+} from "@/types/agent/AgentTypes.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import {
   buildSessionSystemBlocks,
   SessionSystemBuilder,
-} from "@/sdk/session/SessionSystemBuilder.js";
+} from "@/session/SessionSystemBuilder.js";
 import {
   inferModelLabel,
   buildSessionHistoryPage,
@@ -37,21 +37,21 @@ import {
   readSessionMetadata,
   resolveSystemTimezone,
   writeSessionMetadata,
-} from "@/sdk/session/index.js";
+} from "@/session/index.js";
 import {
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
-} from "@/sdk/session/index.js";
+} from "@/session/index.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import {
   mapAgentEventToSessionEvent,
   mapUiMessageChunkToAgentEvent,
-} from "@/sdk/session/SessionEventMapper.js";
+} from "@/session/SessionEventMapper.js";
 import {
   persistSdkAssistantResult,
   touchSessionMetadata,
-} from "@/sdk/session/index.js";
-import { createRuntimeSessionPort } from "@/sdk/session/index.js";
+} from "@/session/index.js";
+import { createRuntimeSessionPort } from "@/session/index.js";
 import { drainDeferredPersistedUserMessages } from "@executor/SessionRunScope.js";
 import type {
   AgentSessionSubscriber,
@@ -60,8 +60,8 @@ import type {
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
-import { SessionEventHub } from "@/sdk/session/runtime/SessionEventHub.js";
-import { SessionPromptRuntime } from "@/sdk/session/runtime/SessionPromptRuntime.js";
+import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
+import { SessionPromptRuntime } from "@/session/runtime/SessionPromptRuntime.js";
 
 type SessionOptions = {
   /**

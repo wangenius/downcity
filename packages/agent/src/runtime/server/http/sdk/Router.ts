@@ -7,7 +7,7 @@
  */
 
 import { Hono } from "hono";
-import type { AgentSessionCollection } from "@/sdk/AgentSdkTypes.js";
+import type { AgentSessionCollection } from "@/types/agent/AgentTypes.js";
 import { registerSdkSessionRoutes } from "@/runtime/server/http/sdk/SessionRoutes.js";
 
 /**

@@ -1,10 +1,10 @@
 /**
- * Agent SDK 对外类型定义。
+ * Agent 对外类型定义。
  *
  * 关键点（中文）
  * - 这里集中声明 `Agent` / `RemoteAgent` / `Session` 面向外部调用方的稳定接口。
- * - SDK 用户通过显式 `tools` / `plugins` 装配能力，不直接依赖内部 runtime 单例。
- * - 本地/远程 session 运行与基础落盘能力仍是 SDK 主路径。
+ * - 宿主通过显式 `tools` / `plugins` 装配能力，不直接依赖内部 runtime 单例。
+ * - 本地/远程 session 运行与基础落盘能力仍是 Agent 对外主路径。
  */
 
 import type { LanguageModel, Tool } from "ai";

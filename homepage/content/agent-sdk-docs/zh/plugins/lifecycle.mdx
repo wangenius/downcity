@@ -37,9 +37,10 @@ Plugin lifecycle 讨论的是“长期运行状态由谁持有”。
 
 - `chat`
 - `task`
-- `schedule`
 - `memory`
 - `shell`
+
+ActionSchedule 不是 plugin；它是跟随 `agent.start()` 启动的 Agent 级 action 调度 loop。
 
 ## runtime state 不等于 enablement
 

@@ -11,10 +11,10 @@ import type {
   PluginStateControlAction,
   PluginStateSnapshot,
 } from "@/plugin/types/Plugin.js";
-import type { PluginCommandScheduleInput } from "@/plugin/types/PluginSchedule.js";
+import type { PluginActionScheduleInput } from "@/plugin/types/ActionSchedule.js";
 import type { JsonValue } from "@/types/common/Json.js";
-import { PluginScheduleStore } from "@/plugin/core/schedule/Store.js";
-import { normalizeRunAtMsOrThrow } from "@/plugin/core/schedule/Time.js";
+import { ActionScheduleStore } from "@/plugin/core/ActionScheduleStore.js";
+import { normalizeRunAtMsOrThrow } from "@/plugin/core/ActionScheduleTime.js";
 import {
   controlPluginState,
   ensurePluginStateRecord,
@@ -90,17 +90,17 @@ async function schedulePluginAction(params: {
   plugin: BasePlugin;
   command: string;
   payload?: JsonValue;
-  schedule: JsonValue | PluginCommandScheduleInput;
+  schedule: JsonValue | PluginActionScheduleInput;
   recordSnapshot: PluginStateSnapshot;
   context: AgentContext;
 }): Promise<PluginCommandResult & { plugin?: PluginStateSnapshot }> {
   try {
-    const scheduleInput = params.schedule as Partial<PluginCommandScheduleInput>;
+    const scheduleInput = params.schedule as Partial<PluginActionScheduleInput>;
     const runAtMs = normalizeRunAtMsOrThrow(
       scheduleInput.runAtMs,
       "schedule.runAtMs",
     );
-    const store = new PluginScheduleStore(params.context.rootPath);
+    const store = new ActionScheduleStore(params.context.rootPath);
     try {
       const job = store.createJob({
         pluginName: params.plugin.name,
@@ -137,7 +137,7 @@ export async function runPluginCommand(params: {
   pluginName: string;
   command: string;
   payload?: JsonValue;
-  schedule?: JsonValue | PluginCommandScheduleInput;
+  schedule?: JsonValue | PluginActionScheduleInput;
   context: AgentContext;
 }): Promise<PluginCommandResult & { plugin?: PluginStateSnapshot }> {
   const plugin = resolvePluginByName(params.pluginName, {

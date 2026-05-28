@@ -1,8 +1,8 @@
 /**
- * Agent SDK 本地入口与实例装配中心。
+ * Agent 本地入口与实例装配中心。
  *
  * 职责说明（中文）
- * - 对外暴露 `Agent` 这一唯一的本地 SDK 实例类。
+ * - 对外暴露 `Agent` 这一唯一的本地实例类。
  * - 统一承接单个 agent 实例的配置加载、plugin 装配、session 创建、HTTP/RPC 启停。
  * - 把原先独立的实例内核装配逻辑收敛到 `Agent` 内部，避免 facade 与 core 双层跳转。
  *
@@ -41,14 +41,14 @@ import type {
   AgentSessionCollection,
   AgentSessionSummaryPage,
   AgentSessionSystemBlock,
-} from "@/sdk/AgentSdkTypes.js";
+} from "@/types/agent/AgentTypes.js";
 import { Logger } from "@/utils/logger/Logger.js";
-import { Session } from "@/sdk/session/Session.js";
+import { Session } from "@/session/Session.js";
 import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
 import {
   getSdkAgentSessionDirPath,
   listAgentSessionSummaryPage,
-} from "@/sdk/session/index.js";
+} from "@/session/index.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
@@ -59,6 +59,8 @@ import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.js";
 import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
+import type { ActionScheduleRuntimeHandle } from "@/plugin/core/ActionScheduleRuntime.js";
+import { startActionScheduleRuntime } from "@/plugin/core/ActionScheduleRuntime.js";
 import { startServer } from "@/runtime/server/http/Server.js";
 import { startLocalRpcServer } from "@/runtime/server/rpc/Server.js";
 
@@ -131,6 +133,7 @@ export class Agent {
   private instruction: string[];
   private configuredSessionIds = new Set<string>();
   private pluginsStarted = false;
+  private actionScheduleRuntime: ActionScheduleRuntimeHandle | null = null;
   private startPromise: Promise<AgentStartResult> | null = null;
   private httpBinding: AgentHttpBinding | null = null;
   private rpcBinding: AgentRpcBinding | null = null;
@@ -292,6 +295,7 @@ export class Agent {
     const httpStarted = this.httpBinding !== null;
 
     if (pluginsStarted) {
+      await this.stopActionScheduleRuntime();
       await stopAllPlugins(this.agentContext);
       this.pluginsStarted = false;
     }
@@ -356,6 +360,39 @@ export class Agent {
         );
       }
     }
+    await this.ensureActionScheduleRuntimeStarted();
+  }
+
+  /**
+   * 确保 ActionSchedule runtime 已随 Agent 长期生命周期启动。
+   *
+   * 关键点（中文）
+   * - ActionSchedule 不作为 plugin 注册，但它依赖 plugin action 执行能力。
+   * - 因此这里放在普通 plugins 启动之后，避免到期任务执行到尚未启动的 plugin。
+   */
+  private async ensureActionScheduleRuntimeStarted(): Promise<void> {
+    if (this.actionScheduleRuntime) return;
+    try {
+      this.actionScheduleRuntime = await startActionScheduleRuntime(
+        this.agentContext,
+      );
+    } catch (error) {
+      this.logger.error(
+        `ActionSchedule start failed: ${String(error)}`,
+      );
+    }
+  }
+
+  /**
+   * 停止 ActionSchedule runtime。
+   *
+   * 关键点（中文）
+   * - Agent 停止时先停 ActionSchedule，再停普通 plugin，避免关停期间继续触发 action。
+   */
+  private async stopActionScheduleRuntime(): Promise<void> {
+    const runtime = this.actionScheduleRuntime;
+    this.actionScheduleRuntime = null;
+    runtime?.stop();
   }
 
   /**

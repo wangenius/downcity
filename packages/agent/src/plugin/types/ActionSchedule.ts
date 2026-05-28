@@ -1,13 +1,18 @@
 /**
- * PluginSchedule：plugin action 调度相关共享类型。
+ * ActionSchedule：plugin action 延迟执行能力的共享类型。
+ *
+ * 关键点（中文）
+ * - 这里描述的是“某个 plugin action 在未来某个时间执行”的通用记录。
+ * - 它不是独立 plugin，也不表达业务语义，只服务于 plugin command/action 协议。
+ * - 外部请求字段仍可叫 `schedule`，但内部类型统一归入 ActionSchedule 模块。
  */
 
 import type { JsonValue } from "@/types/common/Json.js";
 
 /**
- * 调度任务状态。
+ * ActionSchedule 任务状态。
  */
-export type ScheduledJobStatus =
+export type ActionScheduleJobStatus =
   | "pending"
   | "running"
   | "succeeded"
@@ -15,11 +20,11 @@ export type ScheduledJobStatus =
   | "cancelled";
 
 /**
- * 调度任务完整记录。
+ * ActionSchedule 任务完整记录。
  */
-export interface ScheduledJobRecord {
+export interface ActionScheduleJobRecord {
   /**
-   * 调度任务唯一 ID。
+   * ActionSchedule 任务唯一 ID。
    */
   id: string;
   /**
@@ -39,9 +44,9 @@ export interface ScheduledJobRecord {
    */
   runAtMs: number;
   /**
-   * 当前调度状态。
+   * 当前任务状态。
    */
-  status: ScheduledJobStatus;
+  status: ActionScheduleJobStatus;
   /**
    * 最近一次错误文本。
    */
@@ -57,9 +62,9 @@ export interface ScheduledJobRecord {
 }
 
 /**
- * 创建调度任务所需输入。
+ * 创建 ActionSchedule 任务所需输入。
  */
-export interface CreateScheduledJobInput {
+export interface CreateActionScheduleJobInput {
   /**
    * 目标 plugin 名称。
    */
@@ -79,9 +84,9 @@ export interface CreateScheduledJobInput {
 }
 
 /**
- * 统一 plugin command 调度输入。
+ * 统一 plugin action 延迟执行输入。
  */
-export interface PluginCommandScheduleInput {
+export interface PluginActionScheduleInput {
   /**
    * 计划执行时间（毫秒时间戳）。
    */

@@ -11,12 +11,12 @@ import path from "node:path";
 import type { Command } from "commander";
 import {
   callAgentTransport,
-  parseScheduledRunAtMsOrThrow,
+  parseActionScheduleRunAtMsOrThrow,
 } from "@downcity/agent";
 import { listPluginsWithLifecycle } from "@downcity/agent";
 import type { BasePlugin, PluginAction } from "@downcity/agent";
 import type { JsonObject, JsonValue } from "@downcity/agent";
-import type { PluginCommandScheduleInput } from "@downcity/agent";
+import type { PluginActionScheduleInput } from "@downcity/agent";
 import type { PluginCommandResponse } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
@@ -160,8 +160,8 @@ function hasLongOption(command: Command, longFlag: string): boolean {
  */
 function extractCommandScheduleInput(
   options: Record<string, unknown>,
-): PluginCommandScheduleInput | undefined {
-  const runAtMs = parseScheduledRunAtMsOrThrow({
+): PluginActionScheduleInput | undefined {
+  const runAtMs = parseActionScheduleRunAtMsOrThrow({
     delay: options.delay as string | number | undefined,
     time: options.time as string | number | undefined,
   });
@@ -245,7 +245,7 @@ function registerPluginActionCommand(params: {
         })();
     const actionOptions = toPluginActionCommandOpts(allOptions);
     const bridgeOptions = toPluginCliBridgeOptions(allOptions);
-    let schedule: PluginCommandScheduleInput | undefined;
+    let schedule: PluginActionScheduleInput | undefined;
     try {
       schedule = extractCommandScheduleInput(allOptions);
     } catch (error) {

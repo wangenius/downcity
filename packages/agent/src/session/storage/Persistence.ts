@@ -10,11 +10,11 @@ import { extractTextFromUiMessage } from "@/executor/messages/UIMessageTransform
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import { persistAssistantResult } from "@/executor/messages/AssistantResultPersistence.js";
-import type { AgentSessionConfigSnapshot } from "@/sdk/AgentSdkTypes.js";
+import type { AgentSessionConfigSnapshot } from "@/types/agent/AgentTypes.js";
 import {
   readSessionMetadata,
   writeSessionMetadata,
-} from "@/sdk/session/storage/Metadata.js";
+} from "@/session/storage/Metadata.js";
 
 /**
  * SDK Session 元数据写入参数。

@@ -13,7 +13,7 @@ import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type {
   AgentSessionSystemBlock,
   AgentSessionSystemSessionInfo,
-} from "@/sdk/AgentSdkTypes.js";
+} from "@/types/agent/AgentTypes.js";
 
 /**
  * 解析 SDK session system blocks 的输入。

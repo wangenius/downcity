@@ -3,13 +3,13 @@
  *
  * 关键点（中文）
  * - 这是 agent 包唯一稳定的公开入口。
- * - 只导出 SDK、plugin 作者 API、city 运行集成 API 与跨包协议类型。
+ * - 只导出 Agent、plugin 作者 API、city 运行集成 API 与跨包协议类型。
  * - HTTP router、sandbox runner、内部 plugin runtime runner 等实现细节不从根入口暴露。
  */
 
-// SDK 入口
-export { Agent } from "./sdk/Agent.js";
-export { RemoteAgent } from "./sdk/RemoteAgent.js";
+// Agent 入口
+export { Agent } from "./agent/Agent.js";
+export { RemoteAgent } from "./agent/RemoteAgent.js";
 export type {
   AgentSessionCollection,
   AgentSessionActor,
@@ -39,7 +39,7 @@ export type {
   AgentSessionSystemSnapshot,
   AgentSessionTimelineEvent,
   RemoteAgentSession,
-} from "./sdk/AgentSdkTypes.js";
+} from "./types/agent/AgentTypes.js";
 export type {
   AgentSessionEvent,
   AgentSessionSubscriber,
@@ -113,8 +113,8 @@ export {
   startAllPlugins,
   stopAllPlugins,
 } from "./plugin/core/Manager.js";
-export { PluginScheduleStore } from "./plugin/core/schedule/Store.js";
-export { parseScheduledRunAtMsOrThrow } from "./plugin/core/schedule/Time.js";
+export { ActionScheduleStore } from "./plugin/core/ActionScheduleStore.js";
+export { parseActionScheduleRunAtMsOrThrow } from "./plugin/core/ActionScheduleTime.js";
 export {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
@@ -260,11 +260,11 @@ export type {
   PluginState,
 } from "./plugin/types/Plugin.js";
 export type {
-  CreateScheduledJobInput,
-  ScheduledJobRecord,
-  ScheduledJobStatus,
-  PluginCommandScheduleInput,
-} from "./plugin/types/PluginSchedule.js";
+  ActionScheduleJobRecord,
+  ActionScheduleJobStatus,
+  CreateActionScheduleJobInput,
+  PluginActionScheduleInput,
+} from "./plugin/types/ActionSchedule.js";
 export type {
   PluginCliBaseOptions,
   PluginCommandResponse,

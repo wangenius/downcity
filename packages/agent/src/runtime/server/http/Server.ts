@@ -22,7 +22,7 @@ import { createControlRouter } from "@/runtime/server/http/control/ControlRouter
 import { createSdkRouter } from "@/runtime/server/http/sdk/Router.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentSessionCollection } from "@/sdk/AgentSdkTypes.js";
+import type { AgentSessionCollection } from "@/types/agent/AgentTypes.js";
 
 /**
  * Server 启动参数。

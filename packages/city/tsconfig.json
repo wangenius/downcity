@@ -8,7 +8,8 @@
     "rootDir": "src",
     "paths": {
       "@/*": ["./src/*"],
-      "@downcity/agent": ["../agent/bin/index.d.ts"]
+      "@downcity/agent": ["../agent/bin/index.d.ts"],
+      "@downcity/plugins": ["../plugins/bin/index.d.ts"]
     },
     "strict": true,
     "noImplicitAny": false,

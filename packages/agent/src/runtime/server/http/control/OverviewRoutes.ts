@@ -10,7 +10,6 @@ import fs from "fs-extra";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { listPluginStates } from "@/plugin/core/Manager.js";
-import { listTaskDefinitions } from "@/plugin/builtins/task/Action.js";
 import { buildControlRouteAliases, toLimit } from "./CommonHelpers.js";
 import { listControlSessionSummaries, readRecentLogs } from "./Helpers.js";
 import type { ControlRouteRegistrationParams } from "@/runtime/server/http/control/types/ControlRoutes.js";
@@ -58,10 +57,15 @@ export function registerControlOverviewRoutes(
         const runtimePlugins = listPluginStates({
           context: params.getAgentContext(),
         });
-        const taskResult = await listTaskDefinitions({
-          projectRoot: runtime.rootPath,
+        const taskResult = await params.getAgentContext().plugins.runAction({
+          plugin: "task",
+          action: "list",
         });
-        const tasks = Array.isArray(taskResult.tasks) ? taskResult.tasks : [];
+        const taskData =
+          taskResult.data && typeof taskResult.data === "object" && !Array.isArray(taskResult.data)
+            ? taskResult.data as { tasks?: Array<{ status?: string }> }
+            : {};
+        const tasks = Array.isArray(taskData.tasks) ? taskData.tasks : [];
         const logs = await readRecentLogs({
           projectRoot: runtime.rootPath,
           limit: 50,

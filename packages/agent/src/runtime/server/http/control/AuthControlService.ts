@@ -4,35 +4,39 @@
  * 关键点（中文）
  * - 这是 control 侧的 auth 管理面 facade。
  * - 它通过 auth plugin action 读取与写入授权数据，但自身不属于 plugin 内核。
- * - 这样调用方不需要知道 plugin action 名称，也不需要依赖 `plugin/builtins/auth/*` 目录。
+ * - 这样调用方不需要知道 plugin action 名称，也不需要依赖具体 auth plugin 源码目录。
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { AuthControlPayload } from "@/runtime/server/http/control/types/AuthControl.js";
-import type {
-  AuthSetUserRolePayload,
-  AuthWriteConfigPayload,
-  ChatAuthorizationConfig,
-  ChatAuthorizationSnapshot,
-} from "@/plugin/builtins/auth/types/AuthPlugin.js";
-import {
-  AUTH_ACTIONS,
-  AUTH_PLUGIN_NAME,
-  CHAT_AUTHORIZATION_CATALOG,
-} from "@/plugin/builtins/auth/types/AuthPlugin.js";
+
+const AUTH_PLUGIN_NAME = "auth";
+const AUTH_ACTIONS = {
+  snapshot: "snapshot",
+  readConfig: "readConfig",
+  writeConfig: "writeConfig",
+  setUserRole: "setUserRole",
+} as const;
+const CHAT_AUTHORIZATION_CATALOG: JsonObject = {
+  channels: ["telegram", "feishu", "qq"],
+};
 
 function toRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
 }
 
-function readSnapshot(value: unknown): ChatAuthorizationSnapshot {
+function readSnapshot(value: unknown): {
+  config: JsonObject;
+  users: JsonObject[];
+  chats: JsonObject[];
+} {
   const record = toRecord(value);
   return {
-    config: toRecord(record.config) as unknown as ChatAuthorizationConfig,
-    users: (Array.isArray(record.users) ? record.users : []) as ChatAuthorizationSnapshot["users"],
-    chats: (Array.isArray(record.chats) ? record.chats : []) as ChatAuthorizationSnapshot["chats"],
+    config: toRecord(record.config) as JsonObject,
+    users: (Array.isArray(record.users) ? record.users : []) as JsonObject[],
+    chats: (Array.isArray(record.chats) ? record.chats : []) as JsonObject[],
   };
 }
 
@@ -41,7 +45,7 @@ function readSnapshot(value: unknown): ChatAuthorizationSnapshot {
  */
 async function readAuthorizationSnapshotViaPlugin(
   context: AgentContext,
-): Promise<ChatAuthorizationSnapshot> {
+): Promise<ReturnType<typeof readSnapshot>> {
   const result = await context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
     action: AUTH_ACTIONS.snapshot,
@@ -57,7 +61,7 @@ async function readAuthorizationSnapshotViaPlugin(
  */
 async function readAuthorizationConfigViaPlugin(
   context: AgentContext,
-): Promise<ChatAuthorizationConfig> {
+): Promise<JsonObject> {
   const result = await context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
     action: AUTH_ACTIONS.readConfig,
@@ -65,7 +69,7 @@ async function readAuthorizationConfigViaPlugin(
   if (!result.success) {
     throw new Error(result.error || result.message || "auth read-config failed");
   }
-  return toRecord(result.data) as unknown as ChatAuthorizationConfig;
+  return toRecord(result.data) as JsonObject;
 }
 
 /**
@@ -73,19 +77,19 @@ async function readAuthorizationConfigViaPlugin(
  */
 async function writeAuthorizationConfigViaPlugin(params: {
   context: AgentContext;
-  config: ChatAuthorizationConfig;
-}): Promise<ChatAuthorizationConfig> {
+  config: JsonObject;
+}): Promise<JsonObject> {
   const result = await params.context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
     action: AUTH_ACTIONS.writeConfig,
     payload: {
       config: params.config,
-    } as AuthWriteConfigPayload as unknown as JsonObject,
+    },
   });
   if (!result.success) {
     throw new Error(result.error || result.message || "auth write-config failed");
   }
-  return toRecord(result.data) as unknown as ChatAuthorizationConfig;
+  return toRecord(result.data) as JsonObject;
 }
 
 /**
@@ -96,7 +100,7 @@ async function setAuthorizationUserRoleViaPlugin(params: {
   channel: string;
   userId: string;
   roleId: string;
-}): Promise<ChatAuthorizationConfig> {
+}): Promise<JsonObject> {
   const result = await params.context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
     action: AUTH_ACTIONS.setUserRole,
@@ -104,12 +108,12 @@ async function setAuthorizationUserRoleViaPlugin(params: {
       channel: params.channel,
       userId: params.userId,
       roleId: params.roleId,
-    } as AuthSetUserRolePayload as unknown as JsonObject,
+    },
   });
   if (!result.success) {
     throw new Error(result.error || result.message || "auth set-user-role failed");
   }
-  return toRecord(result.data) as unknown as ChatAuthorizationConfig;
+  return toRecord(result.data) as JsonObject;
 }
 
 /**
@@ -135,7 +139,7 @@ export async function readAuthControlPayload(
  */
 export async function writeAuthControlConfig(params: {
   context: AgentContext;
-  config: ChatAuthorizationConfig;
+  config: JsonObject;
 }): Promise<AuthControlPayload> {
   await writeAuthorizationConfigViaPlugin({
     context: params.context,
@@ -149,7 +153,11 @@ export async function writeAuthControlConfig(params: {
  */
 export async function setAuthControlUserRole(params: {
   context: AgentContext;
-  input: AuthSetUserRolePayload;
+  input: {
+    channel: string;
+    userId: string;
+    roleId: string;
+  };
 }): Promise<AuthControlPayload> {
   await setAuthorizationUserRoleViaPlugin({
     context: params.context,

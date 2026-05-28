@@ -28,7 +28,6 @@ import type {
   PluginView,
 } from "@/plugin/types/Plugin.js";
 import type {
-  AgentMode,
   AgentSession,
   AgentCreateSessionInput,
   AgentListSessionsInput,
@@ -55,12 +54,9 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/runtime/host/AgentHostRuntime.js";
 import { loadDowncityConfig } from "@/config/Config.js";
-import { readChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";
-import { resolveChatQueueStore } from "@/plugin/builtins/chat/runtime/ChatQueueStore.js";
 import { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
-import { createRegisteredPluginInstances } from "@/plugin/core/PluginClassRegistry.js";
 import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.js";
 import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
 import { startServer } from "@/runtime/server/http/Server.js";
@@ -160,10 +156,7 @@ export class Agent {
     this.config = this.loadConfig();
     this.pluginInstances = new Map<string, BasePlugin>();
     this.runtime = this.createRuntime();
-    this.registerPlugins({
-      explicitPlugins: options.plugins || [],
-      mode: options.mode || "custom",
-    });
+    this.registerPlugins(options.plugins || []);
     this.pluginRegistry = this.createPluginRegistry([
       ...this.pluginInstances.values(),
     ]);
@@ -456,18 +449,11 @@ export class Agent {
    * 注册当前 agent 可见的 plugin 实例。
    *
    * 关键点（中文）
-   * - `preset` 模式会先装配内建 plugin，再叠加显式传入 plugin。
+   * - SDK 只注册宿主显式传入的 plugin 实例，不再隐式装配 built-in 集合。
    * - 所有 plugin 在注册前都会绑定到当前实例 runtime。
    */
-  private registerPlugins(input: {
-    explicitPlugins: BasePlugin[];
-    mode: AgentMode;
-  }): void {
-    const presetPlugins =
-      input.mode === "preset"
-        ? [...createRegisteredPluginInstances(this.runtime).values()]
-        : [];
-    for (const plugin of [...presetPlugins, ...input.explicitPlugins]) {
+  private registerPlugins(plugins: BasePlugin[]): void {
+    for (const plugin of plugins) {
       const name = String(plugin?.name || "").trim();
       if (!name) {
         throw new Error("Agent received a plugin without a valid name");
@@ -670,15 +656,6 @@ export class Agent {
             ...(result.data !== undefined ? { data: result.data } : {}),
           };
         },
-      },
-      chat: {
-        readMetaBySessionId: async (sessionId: string) => {
-          return await readChatMetaBySessionId({
-            context,
-            sessionId,
-          });
-        },
-        enqueue: (params) => resolveChatQueueStore(context).enqueue(params),
       },
       plugins: this.plugins,
     };

@@ -11,18 +11,16 @@ import path from "node:path";
 import prompts from "prompts";
 import type { Command } from "commander";
 import {
+  isChatAuthorizationChannel,
   listChatAuthorizationRoles,
   readChatAuthorizationConfigSync,
   resolveAuthorizedUserRole,
   setChatAuthorizationUserRole,
-} from "@downcity/agent";
-import { emitCliBlock } from "./CliReporter.js";
-import { parseBoolean } from "./IndexSupport.js";
-import {
-  isChatAuthorizationChannel,
   type ChatAuthorizationChannel,
   type ChatAuthorizationRole,
-} from "@downcity/agent";
+} from "@downcity/plugins";
+import { emitCliBlock } from "./CliReporter.js";
+import { parseBoolean } from "./IndexSupport.js";
 
 type ChatAuthSetOptions = {
   /**

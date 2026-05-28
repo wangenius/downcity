@@ -27,13 +27,18 @@ const HELP_ITEMS = [
     name: "build",
     summary: "完整构建整个仓库。",
     detail:
-      "等价于 `build:all`，会构建 packages/ui、homepage、console、packages/agent 与 packages/city。",
+      "等价于 `build:all`，会构建 packages/agent、packages/plugins、packages/ui、homepage、console 与 packages/city。",
   },
   {
     name: "build:all",
     summary: "执行完整仓库构建链路。",
     detail:
       "按仓库构建脚本完成全量构建；发布版本由 release commit 显式控制。",
+  },
+  {
+    name: "build:plugins",
+    summary: "只构建 Plugins 包。",
+    detail: "执行 `pnpm -C packages/plugins build`，不会修改 package version。",
   },
   {
     name: "build:city",
@@ -54,7 +59,7 @@ const HELP_ITEMS = [
     name: "patch:build",
     summary: "按 package 执行 patch bump + build。",
     detail:
-      "支持 `npm run patch:build -- --agent --city`、`--ui`、`--all`、`--no-bump`，默认构建 agent + city。",
+      "支持 `npm run patch:build -- --agent --plugins --city`、`--ui`、`--all`、`--no-bump`，默认构建 agent + plugins + city。",
   },
   {
     name: "agent:patch:build",
@@ -62,15 +67,20 @@ const HELP_ITEMS = [
     detail: "等价于 `npm run patch:build -- --agent`。",
   },
   {
+    name: "plugins:patch:build",
+    summary: "只对 @downcity/plugins 执行 patch bump + build。",
+    detail: "等价于 `npm run patch:build -- --plugins`，会先构建 agent 作为依赖。",
+  },
+  {
     name: "city:patch:build",
     summary: "只对 @downcity/city 执行 patch bump + build。",
     detail:
-      "等价于 `npm run patch:build -- --city`，会先构建 agent 作为依赖，再构建并全局安装 city CLI。",
+      "等价于 `npm run patch:build -- --city`，会先构建 agent 与 plugins 作为依赖，再构建并全局安装 city CLI。",
   },
   {
     name: "all:patch:build",
     summary: "对全部 packages 执行 patch bump + build。",
-    detail: "等价于 `npm run patch:build -- --all`，会处理 agent、ui、city 三个包。",
+    detail: "等价于 `npm run patch:build -- --all`，会处理 agent、plugins、ui、city 四个包。",
   },
   {
     name: "install:ws",
@@ -101,7 +111,7 @@ const HELP_ITEMS = [
     name: "publish",
     summary: "执行 downcity 发布脚本。",
     detail:
-      "同步 root、@downcity/agent、@downcity/city 版本并推送，触发 scoped 包发布 workflow，并在成功后触发 downcity 镜像包 workflow。",
+      "同步 root、@downcity/agent、@downcity/plugins、@downcity/city 版本并推送，触发 scoped 包发布 workflow，并在成功后触发 downcity 镜像包 workflow。",
   },
   {
     name: "publish:ui",

@@ -2,6 +2,7 @@ packages:
   - products/console
   - homepage
   - packages/agent
+  - packages/plugins
   - packages/city
   - packages/ui
   - products/chrome-extension

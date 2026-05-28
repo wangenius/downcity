@@ -11,7 +11,7 @@ import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import {
   hasPersistedAssistantSteps,
   resolveAssistantMessageForPersistence,
-} from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
+} from "@/executor/messages/UserVisibleText.js";
 
 /**
  * assistant 写入端口。

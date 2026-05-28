@@ -48,6 +48,7 @@ if (!newVersion) {
 const files = [
   'package.json',
   'packages/agent/package.json',
+  'packages/plugins/package.json',
   'packages/city/package.json',
 ];
 

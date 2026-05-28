@@ -16,7 +16,7 @@ import type {
   ShellStatusInput,
   ShellWaitInput,
   ShellWriteInput,
-} from "@/plugin/builtins/shell/types/Shell.js";
+} from "@/executor/tools/shell/types/Shell.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import { validateChatSendCommand } from "./ShellToolFormatting.js";
 import {

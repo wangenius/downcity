@@ -12,7 +12,7 @@ import type { Tool } from "ai";
 import { Executor } from "@executor/Executor.js";
 import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
-import { extractTextFromUiMessage } from "@/plugin/builtins/chat/runtime/UIMessageTransformer.js";
+import { extractTextFromUiMessage } from "@/executor/messages/UIMessageTransformer.js";
 import type {
   AgentSession,
   AgentSessionHistoryInput,

@@ -49,7 +49,7 @@ import type {
   PlatformLocalModelsResponse,
 } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
-import { listBuiltinPluginAuthPolicies } from "@downcity/agent";
+import { listBuiltinPluginAuthPolicies } from "@downcity/plugins";
 import { AuthService } from "@/http/auth/AuthService.js";
 import { registerAuthRoutes } from "@/http/auth/AuthRoutes.js";
 import {

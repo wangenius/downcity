@@ -7,11 +7,9 @@
  */
 
 import fs from "fs-extra";
-import { join } from "path";
+import { basename, dirname, join } from "path";
 import { getDowncityTasksDirPath } from "@/config/Paths.js";
 import { runPluginCommand } from "@/plugin/core/Manager.js";
-import { listTaskDefinitions } from "@/plugin/builtins/task/Action.js";
-import { resolveTaskIdByTitle } from "@/plugin/builtins/task/runtime/Store.js";
 import type { ControlRouteRegistrationParams } from "@/runtime/server/http/control/types/ControlRoutes.js";
 import {
   buildControlRouteAliases,
@@ -26,11 +24,58 @@ import {
   readTaskRunDetail,
 } from "./Helpers.js";
 
+type TaskListItem = {
+  title?: string;
+  status?: string;
+  taskMdPath?: string;
+  lastRunTimestamp?: string;
+  [key: string]: unknown;
+};
+
+function resolveTaskIdFromTaskMdPath(taskMdPath: unknown): string {
+  const text = String(taskMdPath || "").trim();
+  if (!text) return "";
+  return basename(dirname(text));
+}
+
+async function listTasksViaPlugin(params: {
+  routes: ControlRouteRegistrationParams;
+  status?: string;
+}): Promise<TaskListItem[]> {
+  const result = await params.routes.getAgentContext().plugins.runAction({
+    plugin: "task",
+    action: "list",
+    payload: params.status ? { status: params.status } : undefined,
+  });
+  if (!result.success) {
+    throw new Error(result.error || result.message || "task list failed");
+  }
+  const data =
+    result.data && typeof result.data === "object" && !Array.isArray(result.data)
+      ? result.data as { tasks?: TaskListItem[] }
+      : {};
+  return Array.isArray(data.tasks) ? data.tasks : [];
+}
+
+async function resolveTaskIdByTitleViaPlugin(params: {
+  routes: ControlRouteRegistrationParams;
+  title: string;
+}): Promise<string> {
+  const title = String(params.title || "").trim();
+  const tasks = await listTasksViaPlugin({ routes: params.routes });
+  const matched = tasks.filter((task) => String(task.title || "").trim() === title);
+  if (matched.length !== 1) throw new Error(`Task not found: ${title}`);
+  const taskId = resolveTaskIdFromTaskMdPath(matched[0]?.taskMdPath);
+  if (!taskId) throw new Error(`Task id not found: ${title}`);
+  return taskId;
+}
+
 /**
  * 读取任务当前是否仍在执行。
  */
 async function readTaskRunningState(params: {
   projectRoot: string;
+  routes: ControlRouteRegistrationParams;
   title: string;
   lastRunTimestamp?: string;
 }): Promise<boolean> {
@@ -40,8 +85,8 @@ async function readTaskRunningState(params: {
 
   let taskId = "";
   try {
-    taskId = await resolveTaskIdByTitle({
-      projectRoot: params.projectRoot,
+    taskId = await resolveTaskIdByTitleViaPlugin({
+      routes: params.routes,
       title,
     });
   } catch {
@@ -73,15 +118,15 @@ export function registerControlTaskRoutes(
       try {
         const runtime = params.getAgentRuntime();
         const status = toOptionalString(c.req.query("status"));
-        const result = await listTaskDefinitions({
-          projectRoot: runtime.rootPath,
-          ...(status ? { status: status as "enabled" | "paused" | "disabled" } : {}),
+        const tasks = await listTasksViaPlugin({
+          routes: params,
+          ...(status ? { status } : {}),
         });
-        const tasks = Array.isArray(result.tasks) ? result.tasks : [];
         const tasksWithRunning = await Promise.all(
           tasks.map(async (task) => {
             const running = await readTaskRunningState({
               projectRoot: runtime.rootPath,
+              routes: params,
               title: String(task.title || "").trim(),
               lastRunTimestamp: task.lastRunTimestamp,
             });
@@ -219,8 +264,8 @@ export function registerControlTaskRoutes(
 
         let taskId = "";
         try {
-          taskId = await resolveTaskIdByTitle({
-            projectRoot: runtime.rootPath,
+          taskId = await resolveTaskIdByTitleViaPlugin({
+            routes: params,
             title,
           });
         } catch {
@@ -266,8 +311,8 @@ export function registerControlTaskRoutes(
 
         let taskId = "";
         try {
-          taskId = await resolveTaskIdByTitle({
-            projectRoot: runtime.rootPath,
+          taskId = await resolveTaskIdByTitleViaPlugin({
+            routes: params,
             title,
           });
         } catch {

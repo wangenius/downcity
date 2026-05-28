@@ -20,9 +20,6 @@ import { createPluginsRouter } from "@/runtime/server/http/plugins/plugins.js";
 import { createStaticRouter } from "@/runtime/server/http/static/static.js";
 import { createControlRouter } from "@/runtime/server/http/control/ControlRouter.js";
 import { createSdkRouter } from "@/runtime/server/http/sdk/Router.js";
-import {
-  registerBuiltinPluginHttpRoutes,
-} from "@/plugin/core/HttpRoutes.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentSessionCollection } from "@/sdk/AgentSdkTypes.js";
@@ -94,10 +91,13 @@ export function createServerApp(
   if (options.sessionCollection) {
     app.route("/", createSdkRouter(options.sessionCollection));
   }
-  registerBuiltinPluginHttpRoutes({
-    app,
-    getContext: options.getAgentContext,
-  });
+  for (const plugin of options.getAgentContext().agent.pluginInstances.values()) {
+    plugin.http?.server?.register({
+      app,
+      getContext: options.getAgentContext,
+      pluginName: plugin.name,
+    });
+  }
 
   return app;
 }

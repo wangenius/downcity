@@ -20,11 +20,6 @@ import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js"
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
- * SDK Agent 插件装配模式。
- */
-export type AgentMode = "preset" | "custom";
-
-/**
  * 本地 Agent 构造参数。
  */
 export interface AgentOptions {
@@ -71,22 +66,13 @@ export interface AgentOptions {
   model?: LanguageModel;
 
   /**
-   * 当前 agent 的插件装配模式。
-   *
-   * 关键点（中文）
-   * - `preset` 会自动装配内建插件集合。
-   * - `custom` 只使用显式传入的 `plugins`。
-   * - 默认值为 `custom`，避免本地嵌入场景隐式打开额外能力。
-   */
-  mode?: AgentMode;
-
-  /**
    * 当前 agent 显式持有的插件实例集合。
    *
    * 关键点（中文）
    * - 这里接收已经实例化好的 `BasePlugin` 对象，而不是 plugin class。
    * - `Agent` 会在构造阶段按名称注册这些实例，并自动绑定到当前 runtime。
    * - 同名 plugin 会直接报错，避免 action / hook / resolve 行为被静默覆盖。
+   * - SDK 不再自动注入任何 built-in plugin；需要的能力都应由宿主显式传入。
    */
   plugins?: BasePlugin[];
 

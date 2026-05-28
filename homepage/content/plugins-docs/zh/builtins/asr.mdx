@@ -92,7 +92,8 @@ description: 详细说明 asr 内建 plugin 如何安装转写依赖、配置模
 ## 在 SDK 里怎么挂载
 
 ```ts
-import { Agent, AsrPlugin } from "@downcity/agent";
+import { Agent } from "@downcity/agent";
+import { AsrPlugin } from "@downcity/plugins";
 
 const agent = new Agent({
   id: "voice-agent",

@@ -14,7 +14,7 @@ import { basename, dirname, join } from "path";
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import { Command, Option } from "commander";
-import { registerAllPluginsForCli } from "@downcity/agent";
+import { registerAllPluginsForCli } from "@downcity/plugins";
 import { registerPluginsCommand } from "./shared/Plugins.js";
 import { registerManagedPluginCommandsForCli } from "./shared/ManagedPluginActionCommands.js";
 import { registerControlPlaneCommands } from "./control-plane/ControlPlaneCommand.js";

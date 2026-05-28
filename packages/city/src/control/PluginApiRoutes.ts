@@ -12,7 +12,7 @@ import {
   findBuiltinPlugin,
   listStaticPluginViews,
   runLocalPluginAction,
-} from "@downcity/agent";
+} from "@downcity/plugins";
 import type { PlatformAgentOption } from "@downcity/agent";
 import type {
   PluginActionResult,

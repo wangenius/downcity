@@ -12,7 +12,6 @@ import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,
 } from "@/config/Paths.js";
-import { readChatMetaBySessionId } from "@/plugin/builtins/chat/runtime/ChatMetaStore.js";
 import type { ControlSessionSummary } from "@/runtime/server/http/control/types/ControlViewData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
@@ -55,12 +54,6 @@ export async function listControlSessionSummaries(params: {
       .then((s) => s)
       .catch(() => null);
     const updatedAt = lastTs || (stat ? stat.mtimeMs : undefined);
-    const chatMeta = params.executionContext
-      ? await readChatMetaBySessionId({
-          context: params.executionContext,
-          sessionId,
-        })
-      : null;
 
     items.push({
       sessionId,
@@ -70,11 +63,6 @@ export async function listControlSessionSummaries(params: {
       ...(last
         ? { lastText: truncateText(resolveUiMessagePreview(last), 180) }
         : {}),
-      ...(typeof chatMeta?.channel === "string" ? { channel: chatMeta.channel } : {}),
-      ...(typeof chatMeta?.chatId === "string" ? { chatId: chatMeta.chatId } : {}),
-      ...(typeof chatMeta?.chatTitle === "string" ? { chatTitle: chatMeta.chatTitle } : {}),
-      ...(typeof chatMeta?.targetType === "string" ? { chatType: chatMeta.targetType } : {}),
-      ...(typeof chatMeta?.threadId === "number" ? { threadId: chatMeta.threadId } : {}),
       ...(params.executingSessionIds?.has(sessionId) ? { executing: true } : {}),
     });
   }

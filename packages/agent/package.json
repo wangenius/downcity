@@ -1,6 +1,6 @@
 {
   "name": "@downcity/agent",
-  "version": "1.1.39",
+  "version": "1.1.40",
   "type": "module",
   "description": "Downcity Agent 运行时 — 执行壳，通过 RPC/HTTP 调用 City 的能力",
   "main": "./bin/index.js",
@@ -9,6 +9,10 @@
     ".": {
       "import": "./bin/index.js",
       "types": "./bin/index.d.ts"
+    },
+    "./internal/*": {
+      "import": "./bin/*.js",
+      "types": "./bin/*.d.ts"
     }
   },
   "scripts": {

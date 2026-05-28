@@ -3,25 +3,26 @@ set -euo pipefail
 
 # 关键点（中文）：
 # 1) 这个脚本负责“packages 级 patch bump + build”，不承担 homepage / console 的全仓交付链路。
-# 2) 统一入口支持按包选择：agent、city、ui；默认构建 agent + city。
+# 2) 统一入口支持按包选择：agent、plugins、city、ui；默认构建 agent + plugins + city。
 # 3) bump 只作用于本次显式选中的 package，避免误改无关包版本号。
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 PACKAGES=()
-ALL_PACKAGES=("agent" "ui" "city")
+ALL_PACKAGES=("agent" "plugins" "ui" "city")
 BUILD_PACKAGES=()
 BUMP=true
 
 usage() {
-  echo "Usage: npm run patch:build -- [--agent] [--city] [--ui] [--all] [--no-bump]"
+  echo "Usage: npm run patch:build -- [--agent] [--plugins] [--city] [--ui] [--all] [--no-bump]"
   echo ""
-  echo "  默认构建 agent + city，并自增对应 package 的 patch 版本号"
+  echo "  默认构建 agent + plugins + city，并自增对应 package 的 patch 版本号"
   echo "  --agent    构建 @downcity/agent"
+  echo "  --plugins  构建 @downcity/plugins"
   echo "  --city     构建 @downcity/city"
   echo "  --ui       构建 @downcity/ui"
-  echo "  --all      构建全部 packages（agent + ui + city）"
+  echo "  --all      构建全部 packages（agent + plugins + ui + city）"
   echo "  --no-bump  跳过 patch 版本号自增"
   exit 1
 }
@@ -58,6 +59,26 @@ resolve_build_packages() {
   for selected in "${PACKAGES[@]}"; do
     if [[ "$selected" == "city" ]]; then
       local has_agent=false
+      local has_plugins=false
+      local item
+      for item in "${resolved[@]}"; do
+        if [[ "$item" == "agent" ]]; then
+          has_agent=true
+        fi
+        if [[ "$item" == "plugins" ]]; then
+          has_plugins=true
+        fi
+      done
+      if [[ "$has_agent" == false ]]; then
+        resolved+=("agent")
+      fi
+      if [[ "$has_plugins" == false ]]; then
+        resolved+=("plugins")
+      fi
+      break
+    fi
+    if [[ "$selected" == "plugins" ]]; then
+      local has_agent=false
       local item
       for item in "${resolved[@]}"; do
         if [[ "$item" == "agent" ]]; then
@@ -68,7 +89,6 @@ resolve_build_packages() {
       if [[ "$has_agent" == false ]]; then
         resolved+=("agent")
       fi
-      break
     fi
   done
 
@@ -100,9 +120,10 @@ run_build() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --agent)    add_package "agent" ;;
+    --plugins)  add_package "plugins" ;;
     --city)     add_package "city" ;;
     --ui)       add_package "ui" ;;
-    --all)      PACKAGES=("agent" "ui" "city") ; shift ; continue ;;
+    --all)      PACKAGES=("agent" "plugins" "ui" "city") ; shift ; continue ;;
     --no-bump)  BUMP=false ;;
     -h|--help)  usage ;;
     *)          usage ;;
@@ -111,7 +132,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ ${#PACKAGES[@]} -eq 0 ]]; then
-  PACKAGES=("agent" "city")
+  PACKAGES=("agent" "plugins" "city")
 fi
 normalize_packages
 resolve_build_packages

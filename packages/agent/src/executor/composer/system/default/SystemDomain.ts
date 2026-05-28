@@ -9,8 +9,6 @@
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@executor/composer/system/default/PromptRenderer.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
-import { listLocalPlugins } from "@/plugin/core/PluginClassRegistry.js";
-import { PLUGIN_SYSTEM_PROVIDERS } from "@/plugin/core/PluginSystemProviders.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { buildRuntimeClockSystemPrompt } from "@executor/composer/system/default/variables/VariableReplacer.js";
 import {
@@ -175,9 +173,15 @@ export async function loadManagedPluginSystemPrompts(input: {
       .filter(Boolean),
   );
 
-  for (const plugin of PLUGIN_SYSTEM_PROVIDERS) {
+  for (const plugin of input.context.agent.pluginInstances.values()) {
     if (disabledPluginNames.has(plugin.name)) continue;
+    if (typeof plugin.system !== "function") continue;
     try {
+      if (!isPluginEnabled({ plugin, context: input.context })) continue;
+      if (typeof plugin.availability === "function") {
+        const availability = await plugin.availability(input.context);
+        if (!availability.available) continue;
+      }
       const text = normalizeSystemText(await plugin.system(input.context));
       if (!text) continue;
       out.push(text);
@@ -203,32 +207,8 @@ export async function loadLocalPluginSystemPrompts(input: {
    */
   context: AgentContext;
 }): Promise<string[]> {
-  const out: string[] = [];
-
-  for (const plugin of listLocalPlugins()) {
-    if (typeof plugin.system !== "function") continue;
-    try {
-      if (
-        !isPluginEnabled({
-          plugin,
-          context: input.context,
-        })
-      ) {
-        continue;
-      }
-      if (typeof plugin.availability === "function") {
-        const availability = await plugin.availability(input.context);
-        if (!availability.available) continue;
-      }
-      const text = normalizeSystemText(await plugin.system(input.context));
-      if (!text) continue;
-      out.push(text);
-    } catch {
-      // fail-open
-    }
-  }
-
-  return out;
+  void input;
+  return [];
 }
 
 /**

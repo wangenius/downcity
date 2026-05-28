@@ -12,7 +12,7 @@ import type { PromptObject } from "prompts";
 import {
   ChatChannelAccountManager,
   type ChatChannelAccountListItem,
-} from "@downcity/agent";
+} from "@downcity/plugins";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { runManagedPluginControlCommand } from "./ManagedPluginRemote.js";
 import type { StoredChannelAccountChannel } from "@downcity/agent";

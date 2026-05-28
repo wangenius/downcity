@@ -11,9 +11,9 @@ import path from "node:path";
 import type { Command } from "commander";
 import {
   callAgentTransport,
-  listManagedPlugins,
   parseScheduledRunAtMsOrThrow,
 } from "@downcity/agent";
+import { listManagedPlugins } from "@downcity/plugins";
 import type { BasePlugin, PluginAction } from "@downcity/agent";
 import type { JsonObject, JsonValue } from "@downcity/agent";
 import type { PluginCommandScheduleInput } from "@downcity/agent";

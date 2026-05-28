@@ -13,11 +13,6 @@ import type {
   PluginStateRecord,
   PluginStateSnapshot,
 } from "@/plugin/types/Plugin.js";
-import {
-  getRegisteredStaticPluginInstances,
-  listRegisteredPluginNames,
-  listRegisteredPlugins,
-} from "@/plugin/core/PluginClassRegistry.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 
 function nowMs(): number {
@@ -43,7 +38,7 @@ export function listPluginInstances(input?: {
   if (runtimePlugins instanceof Map && runtimePlugins.size > 0) {
     return [...runtimePlugins.values()];
   }
-  return [...getRegisteredStaticPluginInstances().values()];
+  return [];
 }
 
 /**
@@ -141,14 +136,14 @@ export function markPluginCommand(
  * 返回静态主动型 plugin 定义清单。
  */
 export function getStaticPlugins(): Plugin[] {
-  return listRegisteredPlugins();
+  return [];
 }
 
 /**
  * 返回主动型 plugin 根命令名清单。
  */
 export function getPluginRootCommandNames(): string[] {
-  return listRegisteredPluginNames();
+  return [];
 }
 
 /**

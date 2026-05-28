@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 AGENT_PKG="$ROOT_DIR/packages/agent/package.json"
+PLUGINS_PKG="$ROOT_DIR/packages/plugins/package.json"
 CITY_PKG="$ROOT_DIR/packages/city/package.json"
 BUILD_SCOPE="${1:-all}"
 
@@ -31,12 +32,14 @@ install_city_globally() {
 }
 
 if [[ "$BUILD_SCOPE" == "all" || "$BUILD_SCOPE" == "city" ]]; then
+  node "$ROOT_DIR/scripts/bump-package-version.mjs" "$PLUGINS_PKG"
   node "$ROOT_DIR/scripts/bump-package-version.mjs" "$CITY_PKG"
 fi
 
 if [[ "$BUILD_SCOPE" == "all" ]]; then
-  # 构建顺序：agent → city（city 依赖 agent）
+  # 构建顺序：agent → plugins → city（city 依赖 agent 与 plugins）
   run_build "$ROOT_DIR/packages/agent"
+  run_build "$ROOT_DIR/packages/plugins"
   run_build "$ROOT_DIR/packages/ui"
   run_build "$ROOT_DIR/homepage"
   run_build "$ROOT_DIR/products/console"
@@ -47,5 +50,6 @@ fi
 
 # build:city — 仅构建 city 交付链路
 run_build "$ROOT_DIR/packages/agent"
+run_build "$ROOT_DIR/packages/plugins"
 run_build "$ROOT_DIR/products/console"
 run_build "$ROOT_DIR/packages/city"

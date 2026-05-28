@@ -1,6 +1,6 @@
 ---
 title: Agent Constructor Options
-description: Detailed explanation of the local Agent id, path, instruction, model, env, tools, mode, and plugins options
+description: Detailed explanation of the local Agent id, path, instruction, model, env, tools, and plugins options
 ---
 
 # Agent Constructor Options
@@ -11,7 +11,6 @@ The local Agent is constructed like this:
 new Agent({
   id,
   path,
-  mode,
   model,
   env,
   instruction,
@@ -124,24 +123,6 @@ Key points:
 
 This is a good fit when multiple sessions should share a stable default tool set.
 
-## `mode`
-
-This controls how built-in plugins are assembled.
-
-```ts
-new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  mode: "preset",
-});
-```
-
-Key points:
-
-- `preset` auto-registers the built-in plugin set
-- `custom` only uses the explicit `plugins` you pass
-- the default is `custom`
-
 ## `plugins`
 
 This accepts already-instantiated `BasePlugin` objects.
@@ -149,7 +130,8 @@ This accepts already-instantiated `BasePlugin` objects.
 For example:
 
 ```ts
-import { Agent, SkillPlugin, WebPlugin } from "@downcity/agent";
+import { Agent } from "@downcity/agent";
+import { SkillPlugin, WebPlugin } from "@downcity/plugins";
 
 const agent = new Agent({
   id: "repo-helper",
@@ -168,3 +150,4 @@ Key points:
 - it does not reuse the global plugin manager
 - duplicate plugin names throw immediately
 - `agent.plugins` and `AgentContext.plugins` use this registry
+- if you want the full built-in set, pass `plugins: listRegisteredPlugins()` from `@downcity/plugins`

@@ -27,6 +27,12 @@ description: 以本地嵌入式 Agent 或远程 Agent Client 的方式使用 Dow
 pnpm add @downcity/agent
 ```
 
+如果你要使用 `ChatPlugin` 这类内建 plugin class，还需要额外安装：
+
+```bash
+pnpm add @downcity/plugins
+```
+
 ## 本地 Agent
 
 当你的应用与 Agent 运行在同一进程，并且可以直接注入 tools、plugins 与 model 时，使用 `new Agent(...)`。
@@ -63,7 +69,8 @@ console.log(result.text);
 如果你的 client 需要直接在 `@downcity/agent` 内启动 chat 渠道，可以显式传入 `ChatPlugin` 实例：
 
 ```ts
-import { Agent, ChatPlugin } from "@downcity/agent";
+import { Agent } from "@downcity/agent";
+import { ChatPlugin } from "@downcity/plugins";
 
 const agent = new Agent({
   id: "vibecape-official",

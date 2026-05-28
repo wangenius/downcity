@@ -9,7 +9,6 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { getLogsDirPath, getDowncityTasksDirPath } from "@/config/Paths.js";
-import { resolveTaskIdByTitle } from "@/plugin/builtins/task/runtime/Store.js";
 import type {
   ControlLogEntry,
   ControlTaskRunDetail,
@@ -19,6 +18,27 @@ import { truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, toUiMessageTimeline } from "./MessageTimeline.js";
 
 export const TASK_RUN_DIR_REGEX = /^\d{8}-\d{6}-\d{3}$/;
+const TASK_ID_REGEXP = /^[\p{L}\p{N}][\p{L}\p{N}_\-\s]{0,63}$/u;
+
+function normalizeTaskId(input: string): string {
+  const id = String(input || "").trim();
+  if (!TASK_ID_REGEXP.test(id)) {
+    throw new Error(`Invalid taskId: "${id}"`);
+  }
+  return id;
+}
+
+function deriveTaskIdFromTitle(title: string): string {
+  const normalized = String(title || "")
+    .normalize("NFKC")
+    .replace(/[\\/:\u0000]/g, " ")
+    .replace(/[^\p{L}\p{N}_\-\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 64)
+    .trim();
+  return normalizeTaskId(normalized);
+}
 
 /**
  * 读取近期日志。
@@ -68,7 +88,7 @@ export async function readRecentLogs(params: {
 }
 
 async function resolveTaskDir(projectRoot: string, title: string): Promise<string> {
-  const taskId = await resolveTaskIdByTitle({ projectRoot, title });
+  const taskId = deriveTaskIdFromTitle(title);
   return path.join(getDowncityTasksDirPath(projectRoot), taskId);
 }
 

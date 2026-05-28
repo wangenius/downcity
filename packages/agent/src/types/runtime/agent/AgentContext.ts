@@ -20,11 +20,6 @@ import type {
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginPort } from "@/plugin/types/Plugin.js";
-import type { ChatMetaV1 } from "@/plugin/builtins/chat/types/ChatMeta.js";
-import type {
-  ChatQueueEnqueueParams,
-  ChatQueueEnqueueResult,
-} from "@/plugin/builtins/chat/types/ChatQueue.js";
 import type {
   SessionMetadataV1,
   SessionMessageV1,
@@ -212,24 +207,6 @@ export interface SessionCollectionPort {
 }
 
 /**
- * Chat 运行时能力入口。
- *
- * 关键点（中文）
- * - 这是当前 agent 已装配好的 chat 运行时视图。
- * - 其他 plugin runtime 只能通过这里消费 chat 能力，不能直接 import chat runtime 模块。
- */
-export interface ChatRuntimePort {
-  /**
-   * 按 sessionId 读取 chat 路由元信息。
-   */
-  readMetaBySessionId(sessionId: string): Promise<ChatMetaV1 | null>;
-  /**
-   * 向 chat queue 入队一条消息。
-   */
-  enqueue(params: ChatQueueEnqueueParams): ChatQueueEnqueueResult;
-}
-
-/**
  * 统一执行上下文。
  */
 export interface AgentContext {
@@ -281,10 +258,6 @@ export interface AgentContext {
    * 跨 plugin runtime 调用主入口。
    */
   invoke: InvokePluginPort;
-  /**
-   * Chat 运行时能力入口。
-   */
-  chat: ChatRuntimePort;
   /**
    * Plugin 调用入口。
    */

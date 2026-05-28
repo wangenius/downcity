@@ -29,7 +29,7 @@ import type {
   SessionMetadataV1,
 } from "@/executor/types/SessionMessages.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
-import { pickLastSuccessfulChatSendText } from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
+import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleText.js";
 import { getSdkAgentSessionMessagesPath } from "@/sdk/session/storage/Paths.js";
 import { getSdkAgentSessionsRootDirPath } from "@/sdk/session/storage/Paths.js";
 import { readSessionMetadata } from "@/sdk/session/storage/Metadata.js";

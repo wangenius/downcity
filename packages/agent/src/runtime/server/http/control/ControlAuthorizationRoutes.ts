@@ -8,22 +8,17 @@
 
 import type { Hono } from "hono";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import {
   readAuthControlPayload,
   setAuthControlUserRole,
   writeAuthControlConfig,
 } from "@/runtime/server/http/control/AuthControlService.js";
-import {
-  isChatAuthorizationChannel,
-  type AuthSetUserRolePayload,
-  type ChatAuthorizationConfig,
-} from "@/plugin/builtins/auth/types/AuthPlugin.js";
-import type { ChatAuthorizationChannel } from "@/plugin/builtins/auth/types/AuthPlugin.js";
 import { buildControlRouteAliases } from "@/runtime/server/http/control/CommonHelpers.js";
 
-function normalizeChatChannel(value: unknown): ChatAuthorizationChannel | null {
+function normalizeChatChannel(value: unknown): string | null {
   const text = String(value || "").trim().toLowerCase();
-  if (isChatAuthorizationChannel(text)) return text;
+  if (text === "telegram" || text === "feishu" || text === "qq") return text;
   return null;
 }
 
@@ -54,7 +49,7 @@ export function registerControlAuthorizationRoutes(params: {
     app.post(routePath, async (c) => {
       try {
         const body = (await c.req.json().catch(() => ({}))) as {
-          config?: ChatAuthorizationConfig;
+          config?: JsonObject;
         };
         const payload = await writeAuthControlConfig({
           context: getAgentContext(),
@@ -94,7 +89,7 @@ export function registerControlAuthorizationRoutes(params: {
             channel,
             userId: String(body.userId || "").trim(),
             roleId: String(body.roleId || "").trim(),
-          } as AuthSetUserRolePayload,
+          },
         });
         return c.json({
           success: true,

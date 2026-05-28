@@ -19,7 +19,7 @@ import {
   listManagedPlugins,
   listStaticPluginViews,
   runLocalPluginAction,
-} from "@downcity/agent";
+} from "@downcity/plugins";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import type { JsonValue } from "@downcity/agent";
 import { getDowncityJsonPath } from "@/config/Paths.js";

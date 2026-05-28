@@ -27,6 +27,12 @@ The `@downcity/agent` package now exposes two primary SDK entries:
 pnpm add @downcity/agent
 ```
 
+If you want to use built-in plugin classes such as `ChatPlugin`, install the built-in plugin package too:
+
+```bash
+pnpm add @downcity/plugins
+```
+
 ## Local Agent
 
 Use `new Agent(...)` when your app runs in the same process and can provide tools, plugins, and models directly.
@@ -63,7 +69,8 @@ console.log(result.text);
 If your client needs to start chat channels directly inside `@downcity/agent`, pass an explicit `ChatPlugin` instance:
 
 ```ts
-import { Agent, ChatPlugin } from "@downcity/agent";
+import { Agent } from "@downcity/agent";
+import { ChatPlugin } from "@downcity/plugins";
 
 const agent = new Agent({
   id: "vibecape-official",

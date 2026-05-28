@@ -11,7 +11,6 @@
 export { Agent } from "./sdk/Agent.js";
 export { RemoteAgent } from "./sdk/RemoteAgent.js";
 export type {
-  AgentMode,
   AgentSessionCollection,
   AgentSessionActor,
   AgentSession,
@@ -54,7 +53,6 @@ export type {
 export type { AgentRuntime, AgentRuntimeBase } from "./types/runtime/agent/AgentRuntime.js";
 export type {
   AgentContext,
-  ChatRuntimePort,
   InvokePluginPort,
   SessionCollectionPort,
   SessionPort,
@@ -63,21 +61,6 @@ export type {
 
 // Plugin 作者 API
 export { BasePlugin } from "./plugin/core/BasePlugin.js";
-export { ChatPlugin } from "./plugin/builtins/chat/ChatPlugin.js";
-export { ChatChannelAccountManager } from "./plugin/builtins/chat/accounts/ChannelAccountManager.js";
-export type { ChatChannelAccountListItem } from "./plugin/builtins/chat/types/ChannelAccount.js";
-export type {
-  ChatPluginFeishuOptions,
-  ChatPluginOptions,
-  ChatPluginQqOptions,
-  ChatPluginTelegramOptions,
-} from "./plugin/builtins/chat/ChatPluginTypes.js";
-export { AuthPlugin } from "./plugin/builtins/auth/Plugin.js";
-export { SkillPlugin } from "./plugin/builtins/skill/Plugin.js";
-export { WebPlugin } from "./plugin/builtins/web/Plugin.js";
-export { AsrPlugin } from "./plugin/builtins/asr/Plugin.js";
-export { TtsPlugin } from "./plugin/builtins/tts/Plugin.js";
-export { WorkboardPlugin } from "./plugin/builtins/workboard/Plugin.js";
 
 // Session 与即时执行集成
 export { Executor } from "./executor/Executor.js";
@@ -102,9 +85,6 @@ export { startLocalRpcServer } from "./runtime/server/rpc/Server.js";
 export { callAgentTransport } from "./runtime/transport/rpc/Transport.js";
 
 // Runtime plugin 运行集成
-export { listRegisteredPlugins } from "./plugin/core/PluginClassRegistry.js";
-export { listManagedPlugins } from "./plugin/core/PluginClassRegistry.js";
-export { listLocalPlugins } from "./plugin/core/PluginClassRegistry.js";
 export {
   startAllPlugins,
   stopAllPlugins,
@@ -114,24 +94,9 @@ export { parseScheduledRunAtMsOrThrow } from "./plugin/core/schedule/Time.js";
 export {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
-} from "./plugin/builtins/chat/runtime/UserVisibleText.js";
+} from "./executor/messages/UserVisibleText.js";
 
 // Plugin 与权限配置集成
-export {
-  listChatAuthorizationRoles,
-  readChatAuthorizationConfigSync,
-  setChatAuthorizationUserRole,
-} from "./plugin/builtins/auth/runtime/AuthorizationConfig.js";
-export { resolveAuthorizedUserRole } from "./plugin/builtins/auth/runtime/AuthorizationPolicy.js";
-export {
-  buildStaticPluginAvailability,
-  findBuiltinPlugin,
-  findStaticPluginView,
-  listStaticPluginViews,
-} from "./plugin/core/Catalog.js";
-export { runLocalPluginAction } from "./plugin/core/LocalExecution.js";
-export { registerAllPluginsForCli } from "./plugin/core/PluginCommand.js";
-export { listBuiltinPluginAuthPolicies } from "./plugin/core/HttpRoutes.js";
 export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js";
 
 // 项目与配置集成
@@ -289,34 +254,6 @@ export type {
   PluginStateControlResult,
   PluginStateSnapshot,
 } from "./plugin/core/Manager.js";
-
-// Chat authorization plugin 协议类型
-export {
-  CHAT_AUTHORIZATION_CHANNELS,
-  createDefaultChatAuthorizationRoles,
-  isChatAuthorizationChannel,
-} from "./plugin/builtins/auth/types/AuthPlugin.js";
-export type {
-  AuthObservePrincipalPayload,
-  AuthObservePrincipalResult,
-  AuthResolveUserRolePayload,
-  AuthSetUserRolePayload,
-  AuthWriteConfigPayload,
-  ChatAuthorizationCatalog,
-  ChatAuthorizationChannel,
-  ChatAuthorizationConfig,
-  ChatAuthorizationDecision,
-  ChatAuthorizationEvaluateInput,
-  ChatAuthorizationEvaluateResult,
-  ChatAuthorizationObservedChat,
-  ChatAuthorizationObservedUser,
-  ChatAuthorizationPermission,
-  ChatAuthorizationPermissionMeta,
-  ChatAuthorizationRole,
-  ChatAuthorizationSnapshot,
-  ChatAuthorizationStateFile,
-  ChatChannelAuthorizationConfig,
-} from "./plugin/builtins/auth/types/AuthPlugin.js";
 
 // Platform store 类型
 export type {

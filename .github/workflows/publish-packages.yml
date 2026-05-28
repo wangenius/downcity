@@ -38,6 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm -C packages/agent build
+          pnpm -C packages/plugins build
           pnpm -C packages/city build
 
       - name: Validate npm token and package ownership
@@ -47,7 +48,7 @@ jobs:
           set -euo pipefail
           WHOAMI="$(npm whoami)"
           echo "Authenticated npm user: ${WHOAMI}"
-          for PACKAGE_NAME in @downcity/agent @downcity/city; do
+          for PACKAGE_NAME in @downcity/agent @downcity/plugins @downcity/city; do
             if npm view "${PACKAGE_NAME}" version >/dev/null 2>&1; then
               npm owner ls "${PACKAGE_NAME}"
               if ! npm owner ls "${PACKAGE_NAME}" | awk '{print $1}' | grep -qx "${WHOAMI}"; then
@@ -102,4 +103,5 @@ jobs:
           }
 
           publish_package packages/agent @downcity/agent
+          publish_package packages/plugins @downcity/plugins
           publish_package packages/city @downcity/city

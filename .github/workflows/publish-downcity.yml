@@ -46,6 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm -C packages/agent build
+          pnpm -C packages/plugins build
           pnpm -C packages/city build
 
       - name: Validate npm token and package ownership

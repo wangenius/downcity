@@ -199,7 +199,7 @@ export interface StoredEnvEntry {
    *
    * 关键点（中文）
    * - 当前版本只保留 `global` 单一作用域。
-   * - 所有平台 Env 都视为宿主级共享变量，由宿主决定是否注入 `process.env`。
+   * - 所有平台 Env 都视为宿主级共享变量，由宿主决定是否注入具体运行实例。
    */
   scope: "global";
   /**

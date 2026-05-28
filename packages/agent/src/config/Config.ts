@@ -2,9 +2,9 @@
  * Agent 项目配置读取与装配模块。
  *
  * 职责说明（中文）
- * - 统一负责读取 `downcity.json`、项目 `.env`、当前进程环境与外部覆盖 env。
+ * - 统一负责读取 `downcity.json`、项目 `.env` 与宿主显式注入的基础 env。
  * - 负责把祖先目录中的多个 `downcity.json` 逐层合并成当前项目的最终配置。
- * - 负责在配置读取阶段完成 `${ENV_NAME}` 占位符替换与最小结构校验。
+ * - 负责在配置读取阶段完成最小结构校验。
  *
  * 边界说明（中文）
  * - 这里只做“配置文件 -> 运行时配置对象”的装配，不负责项目初始化写文件。
@@ -14,33 +14,12 @@ import dotenv from "dotenv";
 import fs from "fs-extra";
 import path from "path";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { ResolvedConfigValue } from "@/types/common/ResolvedConfigValue.js";
 import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
-import { resolveEnvPlaceholdersDeep } from "@/config/ConfigEnvResolver.js";
 import { deepMerge } from "@/utils/object/DeepMerge.js";
 import { isPlainObject } from "@/utils/object/ObjectGuards.js";
 import { collectAncestorNamedFilePaths } from "@/utils/path/AncestorFiles.js";
 
 export type { DowncityConfig };
-
-/**
- * 从当前进程读取全局环境变量快照。
- *
- * 关键点（中文）
- * - `@downcity/agent` 不直接依赖平台 store。
- * - 若宿主（例如 `@downcity/city`）需要把平台全局 env 暴露给 agent，
- *   应先写入当前进程 `process.env`，这里再统一读取。
- */
-export function loadGlobalProcessEnv(): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    const normalizedKey = String(key || "").trim();
-    if (!normalizedKey) continue;
-    if (value === undefined || value === null) continue;
-    out[normalizedKey] = String(value);
-  }
-  return out;
-}
 
 /**
  * 读取项目 `.env` 快照（不污染全局 process.env）。
@@ -75,33 +54,28 @@ export function loadProjectDotenv(projectRoot: string): Record<string, string> {
  * 解析当前 agent 最终用户环境变量。
  *
  * 关键点（中文）
- * - 合并顺序固定为：`process.env` < 项目 `.env` < 调用方显式 `env` 覆盖。
+ * - 合并顺序固定为：宿主显式 `env` < 项目 `.env`。
+ * - `@downcity/agent` 不再自动读取当前进程 `process.env`。
  * - 这里返回的是“用户可感知”的最终 env，不包含 session/server 运行时元信息。
  */
 export function resolveAgentEnv(
   projectRoot: string,
-  envOverrides?: Record<string, string>,
+  hostEnv?: Record<string, string>,
 ): Record<string, string> {
   return {
-    ...loadGlobalProcessEnv(),
+    ...(hostEnv ? { ...hostEnv } : {}),
     ...loadProjectDotenv(projectRoot),
-    ...(envOverrides ? { ...envOverrides } : {}),
   };
 }
 
 /**
- * 读取单层 `downcity.json` 并完成环境变量占位符替换。
+ * 读取单层 `downcity.json`。
  *
  * 关键点（中文）
  * - 单层读取不做字段语义校验，便于后续统一合并后再做最终断言。
- * - 环境变量解析策略由调用方注入，保持该函数只负责“遍历 + 替换”。
  */
-function readShipJsonLayer(
-  filePath: string,
-  resolveEnvVar: (name: string) => string | undefined,
-): ResolvedConfigValue {
-  const raw = fs.readJsonSync(filePath) as ResolvedConfigValue;
-  return resolveEnvPlaceholdersDeep(raw, resolveEnvVar);
+function readShipJsonLayer(filePath: string): unknown {
+  return fs.readJsonSync(filePath) as unknown;
 }
 
 /**
@@ -113,7 +87,7 @@ function readShipJsonLayer(
  */
 function assertNoProjectExtensionsLayer(
   filePath: string,
-  layer: ResolvedConfigValue,
+  layer: unknown,
 ): void {
   if (!isPlainObject(layer)) return;
   if (!Object.prototype.hasOwnProperty.call(layer, "extensions")) return;
@@ -127,21 +101,9 @@ function assertNoProjectExtensionsLayer(
  *
  * 关键点（中文）
  * - 读取顺序为“祖先目录 -> 当前项目目录”，后层配置覆盖前层配置。
- * - `.env` 只影响占位符解析，不会把值写回配置文件。
  * - 返回前会断言最小执行目标，保证 agent 至少知道该如何执行。
  */
-export function loadDowncityConfig(
-  projectRoot: string,
-  options?: {
-    env?: Record<string, string>;
-  },
-): DowncityConfig {
-  const resolvedEnv = options?.env ?? resolveAgentEnv(projectRoot);
-  const resolveProjectEnvVar = (name: string): string | undefined => {
-    const projectValue = String(resolvedEnv[name] || "").trim();
-    return projectValue || undefined;
-  };
-
+export function loadDowncityConfig(projectRoot: string): DowncityConfig {
   const ancestorShipJsonPaths = collectAncestorNamedFilePaths(
     projectRoot,
     "downcity.json",
@@ -152,7 +114,7 @@ export function loadDowncityConfig(
 
   let merged: unknown = undefined;
   for (const p of ancestorShipJsonPaths) {
-    const layer = readShipJsonLayer(p, resolveProjectEnvVar);
+    const layer = readShipJsonLayer(p);
     assertNoProjectExtensionsLayer(p, layer);
     merged = deepMerge(merged, layer);
   }

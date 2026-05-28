@@ -22,7 +22,7 @@ import { createBuiltinPlugins } from "@downcity/plugins";
 import type { StartOptions } from "@downcity/agent";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
-import { applyPlatformGlobalEnvToProcess } from "@/env/ProcessEnv.js";
+import { readPlatformGlobalEnv } from "@/env/ProcessEnv.js";
 import { resolveAgentName } from "../shared/IndexSupport.js";
 
 /**
@@ -39,8 +39,8 @@ export async function runCommand(
   cwd: string = ".",
   options: StartOptions,
 ): Promise<void> {
-  applyPlatformGlobalEnvToProcess();
   const projectRoot = path.resolve(cwd);
+  const hostEnv = readPlatformGlobalEnv();
   // 端口解析（中文）：允许 number / string；空值返回 undefined 以便走配置回退链。
   const parsePort = (
     value: string | number | undefined,
@@ -74,6 +74,7 @@ export async function runCommand(
   const config = loadDowncityConfig(projectRoot);
   const model = await createRuntimeModel({
     config,
+    env: hostEnv,
   });
 
   const agent = new Agent({
@@ -83,6 +84,7 @@ export async function runCommand(
     tools: shellTools,
     plugins: createBuiltinPlugins(),
     model,
+    env: hostEnv,
   });
 
   const promptCatalog = new StaticPromptCatalog({

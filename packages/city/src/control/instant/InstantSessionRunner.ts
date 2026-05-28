@@ -32,6 +32,7 @@ import type {
 } from "@downcity/agent";
 import { InstantSystemComposer } from "@/control/instant/InstantSystemComposer.js";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
 import type { Logger as AgentLogger } from "@downcity/agent";
 
 type InstantSessionRunnerOptions = {
@@ -239,6 +240,7 @@ export class InstantSessionRunner implements PlatformInlineInstantRunner {
           modelId,
         },
       },
+      env: mergeProcessEnvWithPlatformGlobalEnv(process.env),
     });
     const compactionComposer = new JsonlSessionCompactionComposer();
     const systemComposer = new InstantSystemComposer({

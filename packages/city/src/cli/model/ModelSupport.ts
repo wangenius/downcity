@@ -34,14 +34,6 @@ export type ProviderDiscoveryResult = {
   error?: string;
 };
 
-export function resolveEnvPlaceholder(value: string | undefined): string | undefined {
-  const raw = String(value || "").trim();
-  if (!raw) return undefined;
-  const matched = raw.match(/^\$\{([A-Z0-9_]+)\}$/);
-  if (!matched) return raw;
-  return process.env[matched[1]];
-}
-
 export function resolveProviderDefaultBaseUrl(
   providerType: LlmProviderType,
 ): string | undefined {
@@ -88,14 +80,14 @@ export async function discoverProviderModels(params: {
   const providerId = String(params.providerId || "").trim();
   const providerType = params.providerType;
   const baseUrl = normalizeBaseUrl(params.baseUrl) || resolveProviderDefaultBaseUrl(providerType);
-  const apiKey = resolveEnvPlaceholder(params.apiKey);
+  const apiKey = String(params.apiKey || "").trim() || undefined;
   if (!apiKey) {
     return {
       providerId,
       providerType,
       ok: false,
       models: [],
-      error: "Missing apiKey (or unresolved ${ENV_VAR})",
+      error: "Missing apiKey",
     };
   }
 

@@ -17,9 +17,14 @@ No. `city` is the short alias of the same binary.
 city agent start
 ```
 
-## `${VAR}` in `downcity.json` is not resolved. Why?
+## Why does `${VAR}` not resolve inside `downcity.json`?
 
-Make sure env vars are available in process env or project `.env`, then restart the agent.
+Current versions no longer support env placeholder resolution inside `downcity.json`.
+
+Use one of these instead:
+
+1. keep runtime values in project `.env`
+2. inject them explicitly from the host through `new Agent({ env })`
 
 ## How do I switch model quickly?
 

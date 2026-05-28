@@ -41,16 +41,15 @@ So the split is:
 
 Current versions use explicit layers:
 
-1. Host process env: `process.env`
+1. Host-injected env: `new Agent({ env })`
 2. Agent-local env overlay: `<agent>/.env` (user-managed)
-3. SDK explicit override: `new Agent({ env })`
-4. Chat channel credentials: `channel_accounts` (bound by `downcity.json` `channelAccountId`)
-5. Chat user authorization: `chat_auth_*` structured tables (city-global)
+3. Chat channel credentials: `channel_accounts` (bound by `downcity.json` `channelAccountId`)
+4. Chat user authorization: `chat_auth_*` structured tables (city-global)
 
 Key behavior:
 
-1. Agent runtime env map is `process.env + <agent>/.env + optional new Agent({ env })` (`env` wins).
-2. When the host is `city`, Console-global env can be injected into `process.env` before Agent startup.
+1. Agent runtime env map is `new Agent({ env }) + <agent>/.env` (`.env` wins).
+2. When the host is `city`, Console-global env is read from `downcity.db` and passed explicitly to `Agent`.
 3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
 5. Chat user permissions are resolved from `chat_auth_*` tables, not from an agent project.

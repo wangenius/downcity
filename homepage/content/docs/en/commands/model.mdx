@@ -41,7 +41,7 @@ city model discover <providerId>
 city model discover <providerId> --auto-add true --prefix openai_
 
 # Update provider
-city model update provider <providerId> --api-key '${OPENAI_API_KEY}'
+city model update provider <providerId> --api-key "$OPENAI_API_KEY"
 city model update provider kimi_cn --type moonshot-cn
 city model update provider kimi_ai --type moonshot-ai
 

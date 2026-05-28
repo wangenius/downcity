@@ -31,7 +31,7 @@ import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 export function createLocalPluginCommandContext(projectRoot: string): PluginCommandContext {
   const rootPath = path.resolve(String(projectRoot || "").trim() || ".");
   const env = resolveAgentEnv(rootPath);
-  const config = loadDowncityConfig(rootPath, { env });
+  const config = loadDowncityConfig(rootPath);
 
   defaultLogger.bindProjectRoot(rootPath);
 

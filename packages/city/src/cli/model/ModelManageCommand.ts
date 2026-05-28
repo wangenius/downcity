@@ -11,6 +11,7 @@ import { generateText } from "ai";
 import type { LlmProviderType } from "@downcity/agent";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 import { ModelPoolService } from "@/model/service/ModelPoolService.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
 import {
   discoverProviderModels,
 } from "./ModelSupport.js";
@@ -45,7 +46,7 @@ function registerAddCommands(model: Command): void {
     .description("新增 provider")
     .requiredOption("--type <type>", "provider 类型")
     .option("--base-url <baseUrl>", "provider baseUrl")
-    .requiredOption("--api-key <apiKey>", "provider apiKey（支持 ${ENV_VAR}）")
+    .requiredOption("--api-key <apiKey>", "provider apiKey")
     .option("--json [enabled]", "以 JSON 输出", parseBooleanOption, true)
     .helpOption("--help", "display help for command")
     .action(async (
@@ -247,7 +248,7 @@ function registerUpdateCommands(model: Command): void {
     .description("更新 provider")
     .option("--type <type>", "provider 类型")
     .option("--base-url <baseUrl>", "provider baseUrl")
-    .option("--api-key <apiKey>", "provider apiKey（支持 ${ENV_VAR}）")
+    .option("--api-key <apiKey>", "provider apiKey")
     .option("--clear-base-url", "清空 baseUrl", false)
     .option("--clear-api-key", "清空 apiKey", false)
     .option("--json [enabled]", "以 JSON 输出", parseBooleanOption, true)
@@ -501,6 +502,7 @@ function registerTestCommands(model: Command): void {
             version: "1.0.0",
             execution: { type: "api", modelId: id },
           },
+          env: mergeProcessEnvWithPlatformGlobalEnv(process.env),
         });
         const prompt = String(options.prompt || "").trim() || "Reply with exactly: OK";
         const result = await generateText({

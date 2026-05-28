@@ -17,9 +17,14 @@ description: 使用 Downcity 的高频问题
 city agent start
 ```
 
-## `downcity.json` 里的 `${VAR}` 没有被替换怎么办？
+## `downcity.json` 里为什么不能写 `${VAR}`？
 
-确认变量存在于运行环境或项目根目录 `.env`，然后重启 runtime。
+当前版本已经移除了 `downcity.json` 的环境变量占位符解析。
+
+请改用这两种方式之一：
+
+1. 运行时需要的值放到项目根目录 `.env`
+2. 由宿主在 `new Agent({ env })` 时显式注入
 
 ## 如何切换模型？
 

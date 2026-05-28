@@ -472,7 +472,7 @@ export class Agent {
    */
   private loadConfig(): DowncityConfig {
     try {
-      return loadDowncityConfig(this.path, { env: this.env });
+      return loadDowncityConfig(this.path);
     } catch {
       return createFallbackSdkConfig(this.id);
     }

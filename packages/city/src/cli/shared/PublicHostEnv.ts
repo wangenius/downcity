@@ -4,8 +4,7 @@
  * 关键点（中文）
  * - `city start` 时自动探测公网 IPv4，并写入平台 Env 的 `DOWNCITY_PUBLIC_HOST`。
  * - 若部署环境已经注入 `DOWNCITY_PUBLIC_URL/HOST`，绝不覆盖。
- * - 写入平台 Env 后，后续 agent daemon 启动会先把平台 global env 注入 `process.env`，
- *   再由 `@downcity/agent` 统一读取。
+ * - 写入平台 Env 后，后续 city 宿主会在启动 Agent/模型运行时前显式读取并传入。
  */
 
 import { PlatformStore } from "@/platform/store/index.js";

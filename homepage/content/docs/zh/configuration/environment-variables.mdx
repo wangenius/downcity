@@ -1,12 +1,12 @@
 ---
-title: 环境变量配置逻辑（宿主 Env、项目 .env、SDK 显式覆盖）
-description: 说明 process.env、项目 .env、SDK env 覆盖与运行时元信息的实际优先级
+title: 环境变量配置逻辑（宿主 Env、项目 .env、运行时元信息）
+description: 说明宿主注入 env、项目 .env 与运行时元信息的实际优先级
 ---
 
 > 标准设计文档： [Env 与 downcity.db 数据库设计](/zh/docs/configuration/env-downcitydb-design)
 
 
-# 环境变量配置逻辑（宿主 Env、项目 `.env`、SDK 显式覆盖）
+# 环境变量配置逻辑（宿主 Env、项目 `.env`、运行时元信息）
 
 这篇文档专门回答 4 个问题：
 
@@ -19,18 +19,17 @@ description: 说明 process.env、项目 .env、SDK env 覆盖与运行时元信
 
 | 层 | 数据源 | 是否持久化 | 作用范围 | 典型内容 |
 |---|---|---|---|---|
-| 宿主进程 env | `process.env` | 取决于宿主 | 当前进程 | 共享 API Key、部署变量、CI/CD 变量 |
+| 宿主注入 env | `new Agent({ env })` | 否 | 单个 agent 实例 | 共享 API Key、嵌入宿主参数、city 全局 env |
 | 项目 env 文件 | `<agent>/.env` | 用户文件 | 单个 agent | 项目本地运行时叠加值 |
-| SDK 显式覆盖 | `new Agent({ env })` | 否 | 单个 agent 实例 | 测试场景、嵌入宿主覆盖 |
 | 运行时元信息 | 进程内存（`DC_SESSION_ID`、`DC_CTX_*`、`DC_AGENT_*`） | 否 | 单次请求 / 单个进程 | session 与服务端元信息 |
 | Bot 凭据池 | `~/.downcity/downcity.db` `channel_accounts` | 是（敏感字段加密） | 被多个 agent 绑定复用 | Telegram/Feishu/QQ 密钥 |
 | Console Env 记录 | `~/.downcity/downcity.db` `env_entries` | 是（加密） | Console 侧管理存储 | 全局共享 env 注册表 |
 
 关键点：
 
-1. `@downcity/agent` 会自动读取 `process.env` 和 `<agent>/.env`。
-2. `new Agent({ env })` 是唯一显式暴露给 SDK 调用方的 env 覆盖入口。
-3. 当宿主是 `city` 时，可以在创建 Agent 前先把 Console 全局 env 注入到 `process.env`。
+1. `@downcity/agent` 不会自动读取宿主 `process.env`。
+2. `new Agent({ env })` 是宿主注入 env 的唯一入口。
+3. 当宿主是 `city` 时，会先从 `downcity.db` 读取 Console 全局 env，再显式传给 `Agent`。
 4. `downcity.json` 只做绑定（如 `channelAccountId`），不保存明文凭据。
 
 ## 2. 运行时数据流（图示）
@@ -39,18 +38,17 @@ description: 说明 process.env、项目 .env、SDK env 覆盖与运行时元信
 sequenceDiagram
   participant CLI as city agent start
   participant DB as ~/.downcity/downcity.db
-  participant PROC as process.env
+  participant HOST as new Agent({ env })
   participant ENV as <agent>/.env
   participant JSON as downcity.json(项目层)
   participant RT as Agent Process
 
   CLI->>DB: 读取 env_entries(scope=global)
-  CLI->>PROC: 把 Console 全局 env 注入 process.env
-  RT->>PROC: 读取宿主 env 快照
+  CLI->>HOST: 显式传入 Console 全局 env
+  RT->>HOST: 读取宿主 env 快照
   RT->>ENV: 解析项目 .env
-  RT->>RT: 应用可选的 new Agent({ env }) 显式覆盖
+  RT->>RT: 用项目 .env 覆盖同名宿主键
   RT->>JSON: 读取并合并 downcity.json
-  RT->>RT: 使用最终 agent env 解析 ${ENV_KEY}
   CLI->>DB: 按 channelAccountId 解析渠道账户
   RT->>RT: 最后注入运行时元信息变量
   CLI->>RT: 启动服务与渠道
@@ -60,18 +58,17 @@ sequenceDiagram
 
 ### 3.1 Agent 级 env 合并优先级
 
-1. 先读取宿主进程 `process.env`。
+1. 先读取宿主注入的 `new Agent({ env })`。
 2. 再叠加 `<agent>/.env`。
-3. 最后叠加 `new Agent({ env })`。
 
-因此，Agent 级同名键覆盖顺序是：SDK 显式 `env` > 项目 `.env` > 宿主 `process.env`。
+因此，Agent 级同名键覆盖顺序是：项目 `.env` > 宿主注入 `env`。
 
 ### 3.2 运行时元信息注入优先级
 
 1. 运行时 helper 先从已经解析好的 agent env 快照出发。
 2. `DC_SESSION_ID`、`DC_CTX_*` 等请求级元信息最后注入。
 
-因此，带运行时元信息时的优先级是：`DC_CTX_*` / `DC_SESSION_ID` > SDK 显式 `env` > 项目 `.env` > 宿主 `process.env`。
+因此，带运行时元信息时的优先级是：`DC_CTX_*` / `DC_SESSION_ID` > 项目 `.env` > 宿主注入 `env`。
 
 ### 3.3 渠道凭据优先级
 
@@ -83,10 +80,9 @@ sequenceDiagram
 
 ### 4.1 会读取项目 `.env`
 
-1. 项目层 `downcity.json` 的 `${ENV_KEY}` 解析。
-2. Agent 运行时 env 组装（`process.env` + `.env` + 可选 SDK 覆盖）。
-3. 本地 plugin 命令上下文组装。
-4. 在已解析 env 之上继续叠加请求元信息的运行时 helper。
+1. Agent 运行时 env 组装（`new Agent({ env })` + `.env`）。
+2. 本地 plugin 命令上下文组装。
+3. 在已解析 env 之上继续叠加请求元信息的运行时 helper。
 
 ### 4.2 不会读取项目 `.env`
 
@@ -107,7 +103,7 @@ sequenceDiagram
 补充说明：
 
 1. `env_entries` 属于 Console 侧管理存储。
-2. 如果宿主希望这些值参与 Agent 运行时 env，应该在 `new Agent(...)` 之前先把它们注入 `process.env`。
+2. 如果宿主希望这些值参与 Agent 运行时 env，应该通过 `new Agent({ env })` 显式传入。
 
 ## 6. 常见问题与排查
 
@@ -116,14 +112,14 @@ sequenceDiagram
 常见原因：
 
 1. 新 agent 绑定到了已有 `channelAccountId`。
-2. 当前宿主 `process.env` 已经带了共享凭据键。
+2. 宿主显式传给了 Agent 共享凭据键。
 3. 新项目 `.env` 中已有回退凭据键。
 
 ```mermaid
 flowchart TD
   A["channel 显示已配置"] --> B["先看 downcity.json 的 channelAccountId"]
   B -->|有绑定| C["到 channel_accounts 查对应 account"]
-  B -->|无绑定| D["检查 process.env 与 <agent>/.env 回退键"]
+  B -->|无绑定| D["检查宿主注入 env 与 <agent>/.env 回退键"]
   C --> E["来源是 channel account"]
   D --> F["来源是宿主 env 或项目 env"]
 ```
@@ -138,7 +134,7 @@ city model create
 city plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 ```
 
-2. 在 Console UI `Global / Env` 维护共享 env，或者由部署宿主直接注入 `process.env`。
+2. 在 Console UI `Global / Env` 维护共享 env，或由宿主在 `new Agent({ env })` 时显式传入。
 3. 在 Console UI `Global / Channel Accounts` 创建账号。
 4. 在 agent `downcity.json` 里绑定 `channelAccountId`。
 5. 仅在需要时使用 `<agent>/.env` 做项目级运行时覆盖。
@@ -150,7 +146,7 @@ city plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 3. `<agent>/.env` 仅作项目本地运行时叠加。
 4. `new Agent({ env })` 只用于明确的宿主侧覆盖。
 5. 渠道配置变更后执行 `chat status` 进行验收。
-6. 出现“像复用旧值”的情况时，优先检查 `channelAccountId`、宿主 `process.env` 与项目 `.env`。
+6. 出现“像复用旧值”的情况时，优先检查 `channelAccountId`、宿主注入 env 与项目 `.env`。
 
 ## 9. Homepage Agent 社区资源
 

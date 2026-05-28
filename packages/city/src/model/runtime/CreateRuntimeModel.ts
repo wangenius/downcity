@@ -54,7 +54,29 @@ type RuntimeModelFactoryInput = {
    * - 仅用于把 sessionId 透传到 LLM 请求日志元数据。
    */
   getSessionRunScope?: () => ModelLogContext | undefined;
+  /**
+   * 宿主显式注入的运行时 env。
+   *
+   * 关键点（中文）
+   * - 这里只作为 provider apiKey 的回退来源。
+   * - 不再从 `downcity.json` 或 provider 配置里解析 `${ENV_KEY}` 占位符。
+   */
+  env?: Record<string, string> | NodeJS.ProcessEnv;
 };
+
+function normalizeRuntimeEnv(
+  env: Record<string, string> | NodeJS.ProcessEnv | undefined,
+): Record<string, string> {
+  const resolved: Record<string, string> = {};
+  if (!env) return resolved;
+  for (const [key, value] of Object.entries(env)) {
+    const normalizedKey = String(key || "").trim();
+    if (!normalizedKey) continue;
+    if (value === undefined || value === null) continue;
+    resolved[normalizedKey] = String(value);
+  }
+  return resolved;
+}
 
 function readProjectExecutionBinding(
   config: DowncityConfig,
@@ -98,63 +120,58 @@ function resolveProviderDefaultBaseUrl(
   return undefined;
 }
 
-function resolveEnvPlaceholder(value: string | undefined): string | undefined {
-  if (!value) return value;
-  if (value.startsWith("${") && value.endsWith("}")) {
-    const envVar = value.slice(2, -1);
-    return process.env[envVar];
-  }
-  return value;
-}
-
-function resolveApiKeyFallback(providerType: LlmProviderType): string | undefined {
+function resolveApiKeyFallback(
+  providerType: LlmProviderType,
+  env: Record<string, string> | undefined,
+): string | undefined {
+  const runtimeEnv = env || {};
   if (providerType === "gemini") {
     return (
-      process.env.GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY ||
-      process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
-      process.env.API_KEY
+      runtimeEnv.GEMINI_API_KEY ||
+      runtimeEnv.GOOGLE_API_KEY ||
+      runtimeEnv.GOOGLE_GENERATIVE_AI_API_KEY ||
+      runtimeEnv.API_KEY
     );
   }
   if (providerType === "anthropic") {
-    return process.env.ANTHROPIC_API_KEY || process.env.API_KEY;
+    return runtimeEnv.ANTHROPIC_API_KEY || runtimeEnv.API_KEY;
   }
   if (providerType === "deepseek") {
     return (
-      process.env.DEEPSEEK_API_KEY ||
-      process.env.OPENAI_API_KEY ||
-      process.env.API_KEY
+      runtimeEnv.DEEPSEEK_API_KEY ||
+      runtimeEnv.OPENAI_API_KEY ||
+      runtimeEnv.API_KEY
     );
   }
   if (providerType === "xai") {
-    return process.env.XAI_API_KEY || process.env.API_KEY;
+    return runtimeEnv.XAI_API_KEY || runtimeEnv.API_KEY;
   }
   if (providerType === "huggingface") {
     return (
-      process.env.HUGGINGFACE_API_KEY ||
-      process.env.HF_TOKEN ||
-      process.env.API_KEY
+      runtimeEnv.HUGGINGFACE_API_KEY ||
+      runtimeEnv.HF_TOKEN ||
+      runtimeEnv.API_KEY
     );
   }
   if (providerType === "openrouter") {
-    return process.env.OPENROUTER_API_KEY || process.env.API_KEY;
+    return runtimeEnv.OPENROUTER_API_KEY || runtimeEnv.API_KEY;
   }
   if (providerType === "moonshot-cn" || providerType === "moonshot-ai") {
     return (
-      process.env.MOONSHOT_API_KEY ||
-      process.env.KIMI_API_KEY ||
-      process.env.API_KEY
+      runtimeEnv.MOONSHOT_API_KEY ||
+      runtimeEnv.KIMI_API_KEY ||
+      runtimeEnv.API_KEY
     );
   }
   if (providerType === "kimi-code") {
     return (
-      process.env.KIMI_CODE_API_KEY ||
-      process.env.KIMI_API_KEY ||
-      process.env.MOONSHOT_API_KEY ||
-      process.env.API_KEY
+      runtimeEnv.KIMI_CODE_API_KEY ||
+      runtimeEnv.KIMI_API_KEY ||
+      runtimeEnv.MOONSHOT_API_KEY ||
+      runtimeEnv.API_KEY
     );
   }
-  return process.env.OPENAI_API_KEY || process.env.API_KEY;
+  return runtimeEnv.OPENAI_API_KEY || runtimeEnv.API_KEY;
 }
 
 function normalizeProviderType(value: unknown): LlmProviderType | null {
@@ -262,6 +279,7 @@ export async function createRuntimeModel(
   input: RuntimeModelFactoryInput,
 ): Promise<LanguageModel> {
   const logger = getLogger();
+  const runtimeEnv = normalizeRuntimeEnv(input.env);
   const execution = readProjectExecutionBinding(input.config);
   if (!execution) {
     await logger.log("warn", "No agent execution configured");
@@ -300,20 +318,19 @@ export async function createRuntimeModel(
     throw new Error(`Unsupported LLM provider type: ${providerConfig.type}`);
   }
 
-  const resolvedModel = resolveEnvPlaceholder(modelConfig.name);
-  if (!resolvedModel || resolvedModel === "${}") {
+  const resolvedModel = String(modelConfig.name || "").trim();
+  if (!resolvedModel) {
     await logger.log("warn", "No LLM model name configured");
     throw new Error("No LLM model name configured");
   }
 
   const resolvedBaseUrl = normalizeOptionalBaseUrl(
-    resolveEnvPlaceholder(providerConfig.baseUrl) ||
-      resolveProviderDefaultBaseUrl(providerType),
+    providerConfig.baseUrl || resolveProviderDefaultBaseUrl(providerType),
   );
 
-  let resolvedApiKey = resolveEnvPlaceholder(providerConfig.apiKey);
+  let resolvedApiKey = String(providerConfig.apiKey || "").trim() || undefined;
   if (!resolvedApiKey) {
-    resolvedApiKey = resolveApiKeyFallback(providerType);
+    resolvedApiKey = resolveApiKeyFallback(providerType, runtimeEnv);
   }
   if (!resolvedApiKey) {
     await logger.log("warn", "No API Key configured, will use simulation mode");

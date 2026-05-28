@@ -1,12 +1,12 @@
 ---
-title: Environment Variable Strategy (Host Env, Project .env, SDK Override)
-description: Explain runtime env precedence for process.env, project .env, SDK env overrides, and runtime metadata
+title: Environment Variable Strategy (Host Env, Project .env, Runtime Metadata)
+description: Explain runtime env precedence for host-injected env, project .env, and runtime metadata
 ---
 
 > Canonical schema doc: [Env and downcity.db Database Design](/en/docs/configuration/env-downcitydb-design)
 
 
-# Environment Variable Strategy (Host Env, Project `.env`, SDK Override)
+# Environment Variable Strategy (Host Env, Project `.env`, Runtime Metadata)
 
 This page answers 4 practical questions:
 
@@ -19,18 +19,17 @@ This page answers 4 practical questions:
 
 | Layer | Source | Persisted | Scope | Typical content |
 |---|---|---|---|---|
-| Host process env | `process.env` | Depends on host | Current process | shared API keys, deployment vars, CI/CD env |
+| Host-injected env | `new Agent({ env })` | No | One agent instance | shared API keys, embedded host values, city global env |
 | Project env file | `<agent>/.env` | User-managed file | One agent | project-local runtime overlay values |
-| SDK explicit override | `new Agent({ env })` | No | One agent instance | tests, embedded host overrides |
 | Runtime metadata vars | process memory (`DC_SESSION_ID`, `DC_CTX_*`, `DC_AGENT_*`) | No | single request / process | session and server metadata |
 | Bot credentials | `~/.downcity/downcity.db` `channel_accounts` | Yes (encrypted fields) | Reusable by binding | Telegram/Feishu/QQ bot secrets |
 | Console env records | `~/.downcity/downcity.db` `env_entries` | Yes (encrypted) | Console-managed storage | global/shared env registry |
 
 Key points:
 
-1. `@downcity/agent` automatically reads `process.env` and `<agent>/.env`.
-2. `new Agent({ env })` is the only explicit SDK env override entrypoint.
-3. When the host is `city`, Console-global env can be injected into `process.env` before Agent startup.
+1. `@downcity/agent` does not auto-read host `process.env`.
+2. `new Agent({ env })` is the host injection entrypoint.
+3. When the host is `city`, Console-global env is read from `downcity.db` and passed explicitly into `Agent`.
 4. `downcity.json` stores bindings (`model.primary`, `channel.channelAccountId`), not plaintext credentials.
 
 ## 2. Data Flow (diagram)
@@ -39,18 +38,17 @@ Key points:
 sequenceDiagram
   participant CLI as city agent start
   participant DB as ~/.downcity/downcity.db
-  participant PROC as process.env
+  participant HOST as new Agent({ env })
   participant ENV as <agent>/.env
   participant JSON as downcity.json(project layers)
   participant RT as Agent Process
 
   CLI->>DB: Read env_entries where scope=global
-  CLI->>PROC: Inject Console-global env into process.env
-  RT->>PROC: Read host env snapshot
+  CLI->>HOST: Pass Console-global env explicitly
+  RT->>HOST: Read host env snapshot
   RT->>ENV: Parse project .env
-  RT->>RT: Apply optional new Agent({ env }) overrides
+  RT->>RT: Overlay project .env on host env
   RT->>JSON: Read and merge downcity.json layers
-  RT->>RT: Resolve placeholders using final agent env
   CLI->>DB: Resolve channel channel account by channelAccountId
   RT->>RT: Inject runtime metadata vars last
   CLI->>RT: Start plugins/channels
@@ -60,18 +58,17 @@ sequenceDiagram
 
 ### 3.1 Agent env merge
 
-1. Host process `process.env` loads first.
+1. Host-injected `new Agent({ env })` loads first.
 2. `<agent>/.env` overlays it.
-3. `new Agent({ env })` overlays both.
 
-So the agent-level merge order is: explicit SDK `env` > project `.env` > host `process.env`.
+So the agent-level merge order is: project `.env` > host-injected `env`.
 
 ### 3.2 Runtime metadata injection
 
 1. Runtime helpers start from the resolved agent env snapshot.
 2. Request-scoped metadata such as `DC_SESSION_ID` and `DC_CTX_*` is injected last.
 
-So key precedence for runtime metadata is: `DC_CTX_*` / `DC_SESSION_ID` > explicit SDK `env` > project `.env` > host `process.env`.
+So key precedence for runtime metadata is: `DC_CTX_*` / `DC_SESSION_ID` > project `.env` > host-injected `env`.
 
 ### 3.3 Channel credential resolution
 
@@ -83,10 +80,9 @@ So key precedence for runtime metadata is: `DC_CTX_*` / `DC_SESSION_ID` > explic
 
 ### 4.1 Reads project `.env`
 
-1. Project-layer `${ENV_KEY}` resolution.
-2. Agent runtime env assembly (`process.env` + `.env` + optional SDK override).
-3. Local plugin command context assembly.
-4. Runtime helpers that append request metadata on top of the resolved agent env.
+1. Agent runtime env assembly (`new Agent({ env })` + `.env`).
+2. Local plugin command context assembly.
+3. Runtime helpers that append request metadata on top of the resolved agent env.
 
 ### 4.2 Does not read project `.env`
 
@@ -107,7 +103,7 @@ So key precedence for runtime metadata is: `DC_CTX_*` / `DC_SESSION_ID` > explic
 Note:
 
 1. `env_entries` is Console-managed storage.
-2. If a host wants Console-managed env to participate in Agent runtime, it should inject those values into `process.env` before creating `new Agent(...)`.
+2. If a host wants Console-managed env to participate in Agent runtime, it should pass those values through `new Agent({ env })`.
 
 ## 6. FAQ and Troubleshooting
 
@@ -116,14 +112,14 @@ Note:
 Most common reasons:
 
 1. The channel is bound to an existing `channelAccountId`.
-2. The current host `process.env` already has shared keys.
+2. The host injected shared keys into `Agent`.
 3. The new project `.env` already contains fallback keys.
 
 ```mermaid
 flowchart TD
   A["Channel appears configured"] --> B["Check channel.channelAccountId in downcity.json"]
   B -->|bound| C["Find account in channel_accounts table"]
-  B -->|empty| D["Check process.env and <agent>/.env fallback keys"]
+  B -->|empty| D["Check host-injected env and <agent>/.env fallback keys"]
   C --> E["Credential source is channel account"]
   D --> F["Credential source is host env or project env"]
 ```
@@ -138,7 +134,7 @@ city model create
 city plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 ```
 
-2. Manage shared env in Console UI `Global / Env`, or inject them from your deployment host into `process.env`.
+2. Manage shared env in Console UI `Global / Env`, or pass them explicitly through `new Agent({ env })`.
 3. Create channel accounts in Console UI `Global / Channel Accounts`.
 4. In each agent `downcity.json`, bind channel to `channelAccountId`.
 5. Keep agent-private runtime keys in `<agent>/.env` only when needed.
@@ -150,7 +146,7 @@ city plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 3. Use `<agent>/.env` as project-local runtime overlay only.
 4. Use `new Agent({ env })` only for explicit host-side overrides.
 5. Validate channel status via `chat status` after changing bindings.
-6. If values look inherited, check `channelAccountId`, host `process.env`, and project `.env`.
+6. If values look inherited, check `channelAccountId`, host-injected `env`, and project `.env`.
 
 ## 9. Homepage Agent Marketplace
 

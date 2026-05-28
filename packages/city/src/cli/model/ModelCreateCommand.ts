@@ -102,7 +102,7 @@ async function runInteractiveProviderCreate(
     {
       type: "text",
       name: "apiKey",
-      message: "API Key（支持 ${ENV_VAR}）",
+      message: "API Key",
       validate: (value: string) =>
         String(value || "").trim().length > 0 ? true : "apiKey 不能为空",
     },

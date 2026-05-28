@@ -47,7 +47,7 @@ export interface LlmProviderConfig {
   baseUrl?: string;
   /**
    * Provider API 密钥。
-   * 建议使用 `${ENV_VAR}` 形式，启动时会自动解析环境变量。
+   * 建议由 Console 模型池直接保存，或由宿主在运行时显式注入 env 后再回退读取。
    */
   apiKey?: string;
 }

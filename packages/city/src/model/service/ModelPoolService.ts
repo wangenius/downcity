@@ -19,6 +19,7 @@ import { PlatformStore } from "@/platform/store/index.js";
 import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
 import { discoverProviderModels } from "@/cli/model/ModelSupport.js";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
 
 const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [
   "anthropic",
@@ -511,6 +512,7 @@ export class ModelPoolService {
         version: "1.0.0",
         execution: { type: "api", modelId: id },
       },
+      env: mergeProcessEnvWithPlatformGlobalEnv(process.env),
     });
     const result = await generateText({
       model,

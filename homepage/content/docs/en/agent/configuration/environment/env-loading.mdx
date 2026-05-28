@@ -1,27 +1,31 @@
 ---
 title: Environment Variable Loading
-description: How project agents read .env values and resolve ${VAR} placeholders in configuration
+description: How project agents combine host-provided env and project .env
 ---
 
 # Environment Variable Loading
 
-When a project agent starts, it loads project environment variables and resolves `${VAR}` placeholders inside `downcity.json`.
+When a project agent starts, it only combines two user-facing env layers:
+
+1. host-provided `new Agent({ env })`
+2. project-root `.env`
 
 ## Common use cases
 
-- referencing secrets from config
-- avoiding plain-text secrets inside `downcity.json`
+- sharing common secrets from the host
+- overriding host values per project with `.env`
 
 ## Recommended practice
 
-- keep secrets in project `.env` files or a controlled runtime environment
-- keep only `${VAR_NAME}` references in config
+- let the host inject shared secrets into `Agent`
+- keep project-local overrides in `.env`
+- keep `downcity.json` structural only; `${VAR}` placeholders are no longer supported
 
 Benefits:
 
-- config is easier to share
-- secrets are less likely to be committed by accident
-- changing environments is easier
+- env flow is explicit
+- config stays stable
+- there is no hidden string replacement during config loading
 
 ## What to do after changes
 
@@ -31,4 +35,4 @@ Usually you should restart the agent:
 city agent restart
 ```
 
-The agent reads and resolves this configuration at startup, so changing environment variables alone does not automatically refresh the current runtime process.
+The agent snapshots env at startup, so changing `.env` or host-injected values does not automatically refresh the current runtime process.

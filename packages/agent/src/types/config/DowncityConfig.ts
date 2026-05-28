@@ -151,7 +151,6 @@ export interface DowncityConfig {
   $schema?: string;
   name: string;
   version: string;
-  description?: string;
   /**
    * Runtime startup configuration used by `downcity agent start`.
    * CLI flags (if provided) take precedence over this config.
@@ -195,69 +194,4 @@ export interface DowncityConfig {
    * - 对于项目内 `downcity.json`，通常不需要显式写 provider/model 明细。
    */
   llm?: LlmConfig;
-  /**
-   * 上下文管理（工程向配置）。
-   *
-   * 说明
-   * - 对话消息以 UIMessage[] 为唯一事实源（`.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl`）。
-   * - Agent 每次执行直接把 UIMessage[] 转成 ModelMessage[] 作为 messages 输入。
-   * - 超出上下文窗口时会自动 compact（更早段压缩为摘要 + 保留最近窗口）。
-   */
-  context?: {
-    /**
-     * messages（唯一上下文消息来源）的 compact 策略。
-     */
-    messages?: {
-      /**
-       * 历史兼容字段（保留）。
-       *
-       * 说明（中文）
-       * - 当前默认策略按 `compactRatio` 压缩前段消息。
-       * - 该字段仍会写入 compact 元信息，便于观测与旧配置兼容。
-       *
-       * 默认：30
-       */
-      keepLastMessages?: number;
-      /**
-       * 输入预算（近似 token 数）。
-       *
-       * 说明（中文）
-       * - 这里是近似值，用于在调用 provider 前提前触发 compact
-       * - 实际超窗仍会被 provider 拒绝并进入 retry（更激进 compact）
-       *
-       * 默认：128000
-       */
-      maxInputTokensApprox?: number;
-      /**
-       * compact 时是否归档被折叠的原始消息段（写入 messages/archive/）。
-       * 默认：true
-       */
-      archiveOnCompact?: boolean;
-
-      /**
-       * 前段压缩比例（0-1）。
-       *
-       * 说明（中文）
-       * - 触发 compact 后，优先压缩最早一段消息。
-       * - `0.5` 代表优先压缩“最早 50% 的 UIMessage”。
-       * - 实际切分会做边界保护（至少保留 1 条最近消息）。
-       *
-       * 默认：0.5
-       */
-      compactRatio?: number;
-    };
-    /**
-     * 记忆管理配置。
-     *
-     * 设计目标
-     * - 默认开启，开箱即用（零配置）
-     * - 仅保留总开关，避免复杂配置负担
-     */
-    memory?: {
-      /**
-       * 是否启用 memory plugin。
-       */
-      enabled?: boolean;
-    };
-  };
 }

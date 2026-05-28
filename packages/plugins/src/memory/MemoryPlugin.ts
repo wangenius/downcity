@@ -21,7 +21,6 @@ import {
 } from "./Action.js";
 import {
   createMemoryRuntimeState,
-  isMemoryEnabled,
   startMemoryRuntime,
   stopMemoryRuntime,
   type MemoryRuntimeState,
@@ -262,9 +261,7 @@ export class MemoryPlugin extends BasePlugin {
   private getOrCreateRuntimeState(context: AgentContext): MemoryRuntimeState {
     if (!this.runtimeState) {
       this.runtimeState = createMemoryRuntimeState(context);
-      return this.runtimeState;
     }
-    this.runtimeState.enabled = isMemoryEnabled(context);
     return this.runtimeState;
   }
 }

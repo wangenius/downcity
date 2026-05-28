@@ -184,6 +184,7 @@ export async function collectMemoryStatus(
   context: AgentContext,
   state: MemoryRuntimeState,
 ): Promise<MemoryStatusResponse> {
+  void state;
   const files = await listMemorySourceFiles(context.rootPath);
   const sourceCounts: MemorySourceStat[] = [
     { source: "longterm", files: 0, chunks: 0 },
@@ -206,7 +207,6 @@ export async function collectMemoryStatus(
   }
 
   return {
-    enabled: state.enabled,
     backend: "builtin",
     mode: "scan",
     files: files.length,
@@ -223,16 +223,7 @@ export async function searchMemory(
   state: MemoryRuntimeState,
   payload: MemorySearchPayload,
 ): Promise<MemorySearchResponse> {
-  if (!state.enabled) {
-    return {
-      backend: "builtin",
-      mode: "scan",
-      results: [],
-      disabled: true,
-      error: "memory plugin disabled",
-      action: "Set context.memory.enabled=true or remove the config override.",
-    };
-  }
+  void state;
 
   const query = String(payload.query || "").trim();
   if (!query) {
@@ -322,7 +313,6 @@ export async function searchMemory(
       backend: "builtin",
       mode: "scan",
       results: [],
-      disabled: true,
       error: message,
       action: "Check the Markdown memory files under `.downcity/memory/`.",
     };

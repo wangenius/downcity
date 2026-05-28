@@ -9,7 +9,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { isMemoryEnabled } from "./Store.js";
 
 const MAX_SYSTEM_MEMORY_ITEMS = 6;
 const MAX_SYSTEM_MEMORY_ITEM_CHARS = 240;
@@ -109,16 +108,6 @@ export async function readStableSystemMemory(
 export async function buildMemoryPluginSystemText(
   context: AgentContext,
 ): Promise<string> {
-  const enabled = isMemoryEnabled(context);
-  if (!enabled) {
-    return [
-      "# Memory Plugin",
-      "",
-      "Memory plugin is disabled by config (`context.memory.enabled=false`).",
-      "Do not assume historical memory is available in this session.",
-    ].join("\n");
-  }
-
   const stableMemory = await readStableSystemMemory(context);
   return [
     "# Memory Plugin",

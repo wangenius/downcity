@@ -73,12 +73,7 @@ export function createTaskSessionRuntimePort(params: {
     runSessionId,
     userSimulatorSessionId,
   } = params;
-  const compactionComposer = new JsonlSessionCompactionComposer({
-    keepLastMessages: context.config.context?.messages?.keepLastMessages,
-    maxInputTokensApprox: context.config.context?.messages?.maxInputTokensApprox,
-    archiveOnCompact: context.config.context?.messages?.archiveOnCompact,
-    compactRatio: context.config.context?.messages?.compactRatio,
-  });
+  const compactionComposer = new JsonlSessionCompactionComposer();
   const systemComposer = new DefaultSessionSystemComposer({
     projectRoot: context.rootPath,
     getStaticSystemPrompts: () => context.systems,

@@ -90,10 +90,6 @@ export interface MemorySearchResponse {
    */
   backend: "builtin";
   /**
-   * 若不可用则标记为 true。
-   */
-  disabled?: boolean;
-  /**
    * 错误原因文本（失败场景）。
    */
   error?: string;
@@ -229,10 +225,6 @@ export interface MemorySourceStat {
  * status 返回结构。
  */
 export interface MemoryStatusResponse {
-  /**
-   * Memory 功能是否启用。
-   */
-  enabled: boolean;
   /**
    * 后端标识。
    */

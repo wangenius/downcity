@@ -43,10 +43,6 @@ export type MemoryRuntimeState = {
    * 项目根目录。
    */
   rootPath: string;
-  /**
-   * Memory 是否启用。
-   */
-  enabled: boolean;
 };
 
 function normalizeRelPath(rootPath: string, absPath: string): string {
@@ -147,14 +143,6 @@ export async function listMemorySourceFiles(
 }
 
 /**
- * 判断 Memory 功能是否启用（默认 true）。
- */
-export function isMemoryEnabled(context: AgentContext): boolean {
-  const enabled = context.config?.context?.memory?.enabled;
-  return enabled !== false;
-}
-
-/**
  * 创建一个新的 memory plugin state。
  *
  * 关键点（中文）
@@ -166,7 +154,6 @@ export function createMemoryRuntimeState(
 ): MemoryRuntimeState {
   return {
     rootPath: context.rootPath,
-    enabled: isMemoryEnabled(context),
   };
 }
 
@@ -175,17 +162,14 @@ export function createMemoryRuntimeState(
  *
  * 关键点（中文）
  * - Markdown-only 方案下不再维护后台索引同步。
- * - 这里只负责根据配置刷新 enabled 状态。
+ * - 注册了 memory plugin 就视为启用，不再额外读取项目配置开关。
  */
 export async function startMemoryRuntime(
-  context: AgentContext,
+  _context: AgentContext,
   state: MemoryRuntimeState,
 ): Promise<void> {
-  state.enabled = isMemoryEnabled(context);
-  if (!state.enabled) {
-    context.logger.info("[memory] disabled by config");
-    return;
-  }
+  void _context;
+  void state;
 }
 
 /**

@@ -11,10 +11,8 @@ description: downcity.json 中用户最常用字段与注意事项
 {
   "name": "my-agent",
   "execution": {
-    "type": "acp",
-    "agent": {
-      "type": "kimi"
-    }
+    "type": "api",
+    "modelId": "quality"
   },
   "start": {
     "host": "127.0.0.1",
@@ -25,8 +23,8 @@ description: downcity.json 中用户最常用字段与注意事项
 
 ## 注意事项
 
-1. 项目现在必须声明 `execution`，执行模式有三种：`api`、`acp`、`local`。
-2. `execution.type="acp"` 可把 session 执行切到 ACP coding agent，目前只支持 `codex`、`claude`、`kimi`。
+1. 项目现在必须声明 `execution`，执行模式固定为 `api`。
+2. `execution.modelId` 必须存在于 console 模型池中。
 3. `start.host/start.port` 会影响 CLI 的默认路由目标。
 4. 项目层统一在 `downcity.json` 中维护 `plugins` 与执行相关配置。
 5. 本地 shell / CLI 命令默认强制运行在 sandbox 中，顶层 `sandbox` 只用于调整边界参数。
@@ -43,59 +41,6 @@ description: downcity.json 中用户最常用字段与注意事项
   }
 }
 ```
-
-如果你希望项目直接使用 `~/.models/` 里的 GGUF：
-
-```json
-{
-  "execution": {
-    "type": "local",
-    "local": {
-      "model": "gemma-4-E4B-it-UD-Q4_K_XL.gguf"
-    }
-  }
-}
-```
-
-如果你希望聊天 session 走外部 coding agent，而不是模型执行链：
-
-```json
-{
-  "execution": {
-    "type": "acp",
-    "agent": {
-      "type": "kimi"
-    }
-  }
-}
-```
-
-当前支持：
-
-- `kimi`：默认启动 `kimi acp`
-- `claude`：默认启动 `npx -y @zed-industries/claude-code-acp`
-- `codex`：默认启动 `npx -y @zed-industries/codex-acp`
-
-如果你本机命令不同，可以覆盖：
-
-```json
-{
-  "execution": {
-    "type": "acp",
-    "agent": {
-      "type": "codex",
-      "command": "codex-acp",
-      "args": []
-    }
-  }
-}
-```
-
-当前边界：
-
-- `execution.type="acp"` 只影响 session/chat/task 这条执行链。
-- `execution.type="api"` 时，`execution.modelId` 必须能在 console 模型池中找到。
-- `execution.type="local"` 时，本地模型与 llama 参数从 `plugins.lmp` 读取，默认目录是 `~/.models`，并要求本机安装 `llama-server`。
 
 ## Shell Sandbox
 

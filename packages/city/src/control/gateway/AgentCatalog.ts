@@ -352,15 +352,11 @@ export async function inspectPlatformAgentDirectory(
 }
 
 /**
- * 读取平台可选的本地 GGUF 模型列表。
+ * 构建 Global Model 面板响应。
  *
  * 关键点（中文）
- * - 如果项目已存在 `downcity.json`，优先尊重 `plugins.lmp.modelsDir`。
- * - 若项目未初始化，则回退到默认 `~/.models`，保证首次创建 agent 时也能直接选择。
- */
-
-/**
- * 构建 Global Model 面板响应。
+ * - 读取当前选中 agent 的 `execution.modelId`，再去平台模型池里补全 provider/model 信息。
+ * - 这里只返回全局模型池视图，不解析项目内本地模型目录。
  */
 export async function buildPlatformModelResponse(params: {
   requestedAgentId: string;

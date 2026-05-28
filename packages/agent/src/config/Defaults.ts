@@ -31,14 +31,6 @@ export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
     type: "api",
     modelId: "default",
   },
-  context: {
-    messages: {
-      keepLastMessages: 30,
-      maxInputTokensApprox: 128000,
-      archiveOnCompact: true,
-      compactRatio: 0.5,
-    },
-  },
   plugins: {
     chat: {
       queue: {

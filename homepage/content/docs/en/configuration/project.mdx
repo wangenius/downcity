@@ -11,10 +11,8 @@ description: Most-used project-level fields and practical cautions
 {
   "name": "my-agent",
   "execution": {
-    "type": "acp",
-    "agent": {
-      "type": "kimi"
-    }
+    "type": "api",
+    "modelId": "quality"
   },
   "start": {
     "host": "127.0.0.1",
@@ -25,8 +23,8 @@ description: Most-used project-level fields and practical cautions
 
 ## Cautions
 
-1. A project now must declare `execution`, and the mode is `api`, `acp`, or `local`.
-2. `execution.type="acp"` switches session execution to an ACP coding agent. Current supported values are `codex`, `claude`, and `kimi`.
+1. A project now must declare `execution`, and the mode is fixed to `api`.
+2. `execution.modelId` must exist in the console model pool.
 3. `start.host/start.port` affects default CLI routing.
 4. Keep project-level config in `downcity.json`, including `plugins` and execution behavior.
 5. Local shell / CLI commands now always run inside a sandbox. Top-level `sandbox` only adjusts the boundary.
@@ -43,59 +41,6 @@ If you want to use the console-global model pool:
   }
 }
 ```
-
-If you want the project to use a GGUF file from `~/.models` directly:
-
-```json
-{
-  "execution": {
-    "type": "local",
-    "local": {
-      "model": "gemma-4-E4B-it-UD-Q4_K_XL.gguf"
-    }
-  }
-}
-```
-
-If you want chat/task sessions to run through an external coding agent instead of the model execution path:
-
-```json
-{
-  "execution": {
-    "type": "acp",
-    "agent": {
-      "type": "kimi"
-    }
-  }
-}
-```
-
-Currently supported:
-
-- `kimi`: defaults to `kimi acp`
-- `claude`: defaults to `npx -y @zed-industries/claude-code-acp`
-- `codex`: defaults to `npx -y @zed-industries/codex-acp`
-
-Override the launch command when your local installation differs:
-
-```json
-{
-  "execution": {
-    "type": "acp",
-    "agent": {
-      "type": "codex",
-      "command": "codex-acp",
-      "args": []
-    }
-  }
-}
-```
-
-Current scope:
-
-- `execution.type="acp"` only changes the session/chat/task execution path.
-- `execution.type="api"` requires `execution.modelId` to exist in the console model pool.
-- `execution.type="local"` reads local-model and llama settings from `plugins.lmp`, defaults to `~/.models`, and requires a working `llama-server`.
 
 ## Shell Sandbox
 

@@ -36,28 +36,6 @@ export function readProjectExecutionBinding(
 }
 
 /**
- * 读取项目绑定的主模型 ID。
- *
- * 关键点（中文）
- * - 当项目尚未声明可用执行目标时，返回空字符串而不是抛错。
- * - 适合用于展示层或非强制校验场景读取默认值。
- */
-export function readProjectPrimaryModelId(config: DowncityConfig): string {
-  const execution = readProjectExecutionBinding(config);
-  return execution ? execution.modelId : "";
-}
-
-/**
- * 判断项目是否存在执行目标。
- *
- * 关键点（中文）
- * - 该函数只判断结构是否合法，不判断目标模型是否可运行。
- */
-export function hasProjectExecutionTarget(config: DowncityConfig): boolean {
-  return readProjectExecutionBinding(config) !== null;
-}
-
-/**
  * 断言项目已经声明执行目标。
  *
  * 关键点（中文）
@@ -65,7 +43,7 @@ export function hasProjectExecutionTarget(config: DowncityConfig): boolean {
  * - 失败时抛出稳定错误文案，便于 CLI 和上层界面直接展示。
  */
 export function assertProjectExecutionTarget(config: DowncityConfig): void {
-  if (hasProjectExecutionTarget(config)) return;
+  if (readProjectExecutionBinding(config) !== null) return;
   throw new Error(
     'Invalid downcity.json: "execution" is required and must be { "type": "api", "modelId": "..." }',
   );

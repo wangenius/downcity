@@ -28,7 +28,7 @@ import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import {
   buildSessionSystemBlocks,
   SessionSystemBuilder,
-} from "@/sdk/SessionSystemBuilder.js";
+} from "@/sdk/session/SessionSystemBuilder.js";
 import {
   inferModelLabel,
   buildSessionHistoryPage,
@@ -46,7 +46,7 @@ import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import {
   mapAgentEventToSessionEvent,
   mapUiMessageChunkToAgentEvent,
-} from "@/sdk/SessionEventMapper.js";
+} from "@/sdk/session/SessionEventMapper.js";
 import {
   persistSdkAssistantResult,
   touchSessionMetadata,

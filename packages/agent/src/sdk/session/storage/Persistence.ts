@@ -14,7 +14,7 @@ import type { AgentSessionConfigSnapshot } from "@/sdk/AgentSdkTypes.js";
 import {
   readSessionMetadata,
   writeSessionMetadata,
-} from "@/sdk/session/Metadata.js";
+} from "@/sdk/session/storage/Metadata.js";
 
 /**
  * SDK Session 元数据写入参数。

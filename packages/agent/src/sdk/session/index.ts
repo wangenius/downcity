@@ -1,10 +1,12 @@
 /**
- * SDK Session 辅助模块聚合入口。
+ * SDK Session 模块聚合入口。
  *
- * 关键点（中文）
- * - 这里收口 `Session.ts` 依赖的路径、元数据、持久化与 plugin runtime 端口适配能力。
- * - 避免这些实现继续平铺在 `sdk/` 顶层，提升目录语义清晰度。
+ * 职责说明（中文）
+ * - 统一暴露 `sdk/session/` 目录下的本地 Session 实现与相关辅助能力。
+ * - 让 `Session` 相关代码收敛在一个目录树中，避免实现继续散落在 `sdk/` 顶层。
  */
+
+export { Session } from "./Session.js";
 
 export {
   getSdkAgentDirPath,
@@ -17,21 +19,21 @@ export {
   getSdkAgentSessionsRootDirPath,
   getSdkAgentsRootDirPath,
   getSdkDowncityDirPath,
-} from "./Paths.js";
+} from "./storage/Paths.js";
 export {
   inferModelLabel,
   patchSessionModelLabel,
   readSessionMetadata,
   resolveSystemTimezone,
   writeSessionMetadata,
-} from "./Metadata.js";
+} from "./storage/Metadata.js";
 export {
   persistSdkAssistantResult,
   touchSessionMetadata,
-} from "./Persistence.js";
+} from "./storage/Persistence.js";
 export {
   createRuntimeSessionPort,
-} from "./RuntimeSessionPort.js";
+} from "./storage/RuntimeSessionPort.js";
 export {
   buildSessionHistoryPage,
   buildSessionInfo,
@@ -40,4 +42,4 @@ export {
   resolveSessionMessagePreview,
   resolveSessionTitle,
   toSessionTimelineEvents,
-} from "./Browse.js";
+} from "./browse/Browse.js";

@@ -30,9 +30,9 @@ import type {
 } from "@/executor/types/SessionMessages.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { pickLastSuccessfulChatSendText } from "@/plugin/builtins/chat/runtime/UserVisibleText.js";
-import { getSdkAgentSessionMessagesPath } from "@/sdk/session/Paths.js";
-import { getSdkAgentSessionsRootDirPath } from "@/sdk/session/Paths.js";
-import { readSessionMetadata } from "@/sdk/session/Metadata.js";
+import { getSdkAgentSessionMessagesPath } from "@/sdk/session/storage/Paths.js";
+import { getSdkAgentSessionsRootDirPath } from "@/sdk/session/storage/Paths.js";
+import { readSessionMetadata } from "@/sdk/session/storage/Metadata.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
 

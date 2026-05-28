@@ -45,7 +45,7 @@ import type {
   AgentSessionSystemBlock,
 } from "@/sdk/AgentSdkTypes.js";
 import { Logger } from "@/utils/logger/Logger.js";
-import { Session } from "@/sdk/Session.js";
+import { Session } from "@/sdk/session/Session.js";
 import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
 import {
   getSdkAgentSessionDirPath,

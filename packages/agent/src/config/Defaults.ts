@@ -21,7 +21,7 @@ import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
  */
 export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
   $schema: "./.downcity/schema/downcity.schema.json",
-  name: "downcity",
+  id: "downcity",
   version: "1.0.0",
   start: {
     port: 5314,

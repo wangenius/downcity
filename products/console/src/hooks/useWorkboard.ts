@@ -46,7 +46,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 function buildStandbySnapshot(agent: UiAgentOption, collectedAt: string): UiWorkboardAgentSnapshot {
-  const name = String(agent.name || agent.id || "agent").trim() || "agent"
+  const name = String(agent.agentId || agent.id || "agent").trim() || "agent"
   return {
     name,
     running: false,

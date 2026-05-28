@@ -14,7 +14,7 @@ import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
 import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
 import { isCityRunning } from "@/process/registry/CityRuntime.js";
 import type { JsonValue } from "@downcity/agent";
-import { parsePort, resolveAgentName } from "./IndexSupport.js";
+import { parsePort, resolveAgentId } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
 import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
@@ -126,13 +126,13 @@ export function resolveProjectRoot(pathInput?: string): string {
 }
 
 /**
- * 通过 agent 名称解析 projectRoot。
+ * 通过 agent id 解析 projectRoot。
  */
-export async function resolveProjectRootByAgentName(agentName: string): Promise<{
+export async function resolveProjectRootByAgentId(agentId: string): Promise<{
   projectRoot?: string;
   error?: string;
 }> {
-  const target = String(agentName || "").trim().toLowerCase();
+  const target = String(agentId || "").trim().toLowerCase();
   if (!target) {
     return { error: "--agent requires a non-empty value" };
   }
@@ -144,18 +144,18 @@ export async function resolveProjectRootByAgentName(agentName: string): Promise<
     .filter((root, index, all) => all.indexOf(root) === index)
     .filter((root) => {
       const byDirName = path.basename(root).toLowerCase() === target;
-      const byShipName = resolveAgentName(root).toLowerCase() === target;
-      return byDirName || byShipName;
+      const byProjectId = resolveAgentId(root).toLowerCase() === target;
+      return byDirName || byProjectId;
     });
 
   if (matchedRoots.length === 0) {
     return {
-      error: `Agent not found in managed agent registry: ${agentName}. Run "city agent list" to inspect names.`,
+      error: `Agent not found in managed agent registry: ${agentId}. Run "city agent list" to inspect ids.`,
     };
   }
   if (matchedRoots.length > 1) {
     return {
-      error: `Agent name is ambiguous: ${agentName}. Matched paths: ${matchedRoots.join(", ")}`,
+      error: `Agent id is ambiguous: ${agentId}. Matched paths: ${matchedRoots.join(", ")}`,
     };
   }
 
@@ -171,18 +171,18 @@ export async function resolvePluginProjectRoot(options: PluginCliBaseOptions): P
 }> {
   const explicitAgent = String(options.agent || "").trim();
   if (explicitAgent) {
-    return resolveProjectRootByAgentName(explicitAgent);
+    return resolveProjectRootByAgentId(explicitAgent);
   }
 
   const rawPath = String(options.path || ".").trim() || ".";
   // 关键点（中文）：在 agent shell 中，未显式传 --agent 且 path 走默认值时，
-  // 优先使用注入的 DC_AGENT_NAME 走 registry 解析，确保多 agent 下目标稳定。
+  // 优先使用注入的 DC_AGENT_ID 走 registry 解析，确保多 agent 下目标稳定。
   if (rawPath === ".") {
-    const envAgentName = String(process.env.DC_AGENT_NAME || "").trim();
-    if (envAgentName) {
-      const byName = await resolveProjectRootByAgentName(envAgentName);
-      if (byName.projectRoot) {
-        return byName;
+    const envAgentId = String(process.env.DC_AGENT_ID || "").trim();
+    if (envAgentId) {
+      const byId = await resolveProjectRootByAgentId(envAgentId);
+      if (byId.projectRoot) {
+        return byId;
       }
     }
   }
@@ -213,7 +213,7 @@ export async function resolvePluginScheduleProjectRoot(options: PluginCliBaseOpt
 }> {
   const explicitAgent = String(options.agent || "").trim();
   if (explicitAgent) {
-    return resolveProjectRootByAgentName(explicitAgent);
+    return resolveProjectRootByAgentId(explicitAgent);
   }
   return {
     projectRoot: resolveProjectRoot(options.path),
@@ -257,7 +257,7 @@ export function parseCommandPayload(raw?: string): JsonValue | undefined {
 export function addPluginTargetOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
+    .option("--agent <id>", "agent id（从 managed agent registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
@@ -270,6 +270,6 @@ export function addPluginTargetOptions(command: Command): Command {
 export function addPluginScheduleOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--agent <name>", "agent 名称（从 managed agent registry 解析）")
+    .option("--agent <id>", "agent id（从 managed agent registry 解析）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }

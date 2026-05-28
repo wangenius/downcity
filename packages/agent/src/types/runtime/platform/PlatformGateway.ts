@@ -135,9 +135,9 @@ export interface PlatformAgentShipStartConfig {
  */
 export interface PlatformAgentShipJson {
   /**
-   * agent 展示名称。
+   * agent 稳定标识。
    */
-  name?: unknown;
+  id?: unknown;
 
   /**
    * 执行配置。

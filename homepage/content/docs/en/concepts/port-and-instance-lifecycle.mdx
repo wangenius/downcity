@@ -44,13 +44,12 @@ description: How console, agent, and plugin endpoints coordinate on port allocat
 For plugin API calls:
 
 1. explicit CLI `--host` / `--port`
-2. `DC_SERVER_HOST/PORT`
-3. `DC_CTX_SERVER_HOST/PORT`
+2. `DC_CITY_HOST/DC_CITY_PORT`
 4. daemon metadata
 5. default `127.0.0.1:5314`
 
 ## Recommendations
 
-- In multi-agent scenarios, prefer `city plugin ... --agent <name>`. Plugin actions run locally against the selected project path.
-- Do not keep stale `DC_SERVER_PORT` in your shell profile.
+- In multi-agent scenarios, prefer `city plugin ... --agent <id>`. Plugin actions run locally against the selected project path.
+- Do not keep stale `DC_CITY_PORT` in your shell profile.
 - If runtime status is abnormal, run `city agent doctor --fix` and inspect daemon logs.

@@ -119,7 +119,7 @@ export function registerAgentCommands(
   agent
     .command("chat")
     .description("在终端中与指定 Agent 对话（交互式或一次性）")
-    .option("-t, --to <name>", "目标 agent 名称（省略时交互选择）")
+    .option("-t, --to <id>", "目标 agent id（省略时交互选择）")
     .option("-m, --message <text>", "一次性发送一轮消息并退出")
     .option("--json [enabled]", "一次性模式下以 JSON 输出", parseBoolean)
     .option("--host <host>", "Server host（覆盖自动解析）")

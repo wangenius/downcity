@@ -50,14 +50,14 @@ function resolveExecutionInput(params: {
   };
 }
 
-function resolveManagedAgentNameFromProjectRoot(projectRoot: string): string {
+function resolveManagedAgentIdFromProjectRoot(projectRoot: string): string {
   const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
   const fallback = path.basename(normalizedRoot);
   const configPath = getDowncityJsonPath(normalizedRoot);
   try {
-    const raw = fs.readJsonSync(configPath) as { name?: unknown };
-    const name = typeof raw.name === "string" ? raw.name.trim() : "";
-    return name || fallback;
+    const raw = fs.readJsonSync(configPath) as { id?: unknown };
+    const agentId = typeof raw.id === "string" ? raw.id.trim() : "";
+    return agentId || fallback;
   } catch {
     return fallback;
   }
@@ -68,7 +68,7 @@ function resolveManagedAgentNameFromProjectRoot(projectRoot: string): string {
  */
 export async function initializePlatformAgentProject(params: {
   projectRoot: string;
-  agentName?: unknown;
+  id?: unknown;
   modelId?: unknown;
   forceOverwriteShipJson?: unknown;
 }): Promise<AgentProjectInitializationResult> {
@@ -79,7 +79,7 @@ export async function initializePlatformAgentProject(params: {
   return initializeAgentProject(
     {
       projectRoot: params.projectRoot,
-      agentName: String(params.agentName || "").trim() || undefined,
+      id: String(params.id || "").trim() || undefined,
       execution,
       forceOverwriteShipJson: params.forceOverwriteShipJson === true,
     },
@@ -242,7 +242,7 @@ export async function startManagedAgentByProjectRoot(params: {
   cliPath: string;
   initializeIfNeeded?: boolean;
     initialization?: {
-      agentName?: unknown;
+      id?: unknown;
       modelId?: unknown;
       forceOverwriteShipJson?: unknown;
     };
@@ -281,7 +281,7 @@ export async function startManagedAgentByProjectRoot(params: {
     await initializeAgentProject(
       {
         projectRoot: normalizedRoot,
-        agentName: String(params.initialization?.agentName || "").trim() || undefined,
+        id: String(params.initialization?.id || "").trim() || undefined,
         execution,
         forceOverwriteShipJson: params.initialization?.forceOverwriteShipJson === true,
       },
@@ -330,8 +330,8 @@ export async function inspectManagedAgentRestartSafety(params: {
   const targetAgent = knownAgents.find(
     (item) => path.resolve(String(item.projectRoot || "")) === normalizedRoot,
   );
-  const agentId = String(targetAgent?.name || "").trim()
-    || resolveManagedAgentNameFromProjectRoot(normalizedRoot);
+  const agentId = String(targetAgent?.agentId || "").trim()
+    || resolveManagedAgentIdFromProjectRoot(normalizedRoot);
 
   const sessionRootDir = getDowncitySessionRootDirPath(normalizedRoot, agentId);
   if (await fs.pathExists(sessionRootDir)) {

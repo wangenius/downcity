@@ -103,18 +103,24 @@ export const sleep = async (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * 从项目根目录推断 agent 名称。
+ * 从项目根目录推断 agent id。
  */
-export function resolveAgentName(projectRoot: string): string {
-  const fallback = basename(projectRoot);
+export function resolveAgentId(projectRoot: string): string {
+  const fallback = basename(projectRoot)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_{2,}/g, "_")
+    .trim() || basename(projectRoot);
   const shipJsonPath = join(projectRoot, "downcity.json");
   if (!existsSync(shipJsonPath)) return fallback;
 
   try {
     const raw = readFileSync(shipJsonPath, "utf-8");
-    const parsed = JSON.parse(raw) as { name?: unknown };
-    if (typeof parsed.name === "string" && parsed.name.trim()) {
-      return parsed.name.trim();
+    const parsed = JSON.parse(raw) as { id?: unknown };
+    if (typeof parsed.id === "string" && parsed.id.trim()) {
+      return parsed.id.trim();
     }
   } catch {
     // ignore parse errors and fallback to dirname
@@ -128,11 +134,11 @@ export function resolveAgentName(projectRoot: string): string {
  */
 export function injectAgentContext(pathInput: string = "."): {
   projectRoot: string;
-  agentName: string;
+  agentId: string;
 } {
   const projectRoot = resolve(String(pathInput || "."));
-  const agentName = resolveAgentName(projectRoot);
+  const agentId = resolveAgentId(projectRoot);
   process.env.DC_AGENT_PATH = projectRoot;
-  process.env.DC_AGENT_NAME = agentName;
-  return { projectRoot, agentName };
+  process.env.DC_AGENT_ID = agentId;
+  return { projectRoot, agentId };
 }

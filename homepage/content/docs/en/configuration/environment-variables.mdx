@@ -21,7 +21,7 @@ This page answers 4 practical questions:
 |---|---|---|---|---|
 | Host-injected env | `new Agent({ env })` | No | One agent instance | shared API keys, embedded host values, city global env |
 | Project env file | `<agent>/.env` | User-managed file | One agent | project-local runtime overlay values |
-| Runtime metadata vars | process memory (`DC_SESSION_ID`, `DC_CTX_*`, `DC_AGENT_*`) | No | single request / process | session and server metadata |
+| Runtime metadata vars | process memory (`DC_CITY_*`, `DC_AGENT_*`, `DC_SESSION_ID`) | No | single request / process | runtime endpoint, agent identity, session metadata |
 | Bot credentials | `~/.downcity/downcity.db` `channel_accounts` | Yes (encrypted fields) | Reusable by binding | Telegram/Feishu/QQ bot secrets |
 | Console env records | `~/.downcity/downcity.db` `env_entries` | Yes (encrypted) | Console-managed storage | global/shared env registry |
 
@@ -66,9 +66,9 @@ So the agent-level merge order is: project `.env` > host-injected `env`.
 ### 3.2 Runtime metadata injection
 
 1. Runtime helpers start from the resolved agent env snapshot.
-2. Request-scoped metadata such as `DC_SESSION_ID` and `DC_CTX_*` is injected last.
+2. Request-scoped metadata such as `DC_SESSION_ID`, `DC_CITY_*`, and `DC_AGENT_*` is injected last.
 
-So key precedence for runtime metadata is: `DC_CTX_*` / `DC_SESSION_ID` > project `.env` > host-injected `env`.
+So key precedence for runtime metadata is: `DC_CITY_*` / `DC_AGENT_*` / `DC_SESSION_ID` > project `.env` > host-injected `env`.
 
 ### 3.3 Channel credential resolution
 

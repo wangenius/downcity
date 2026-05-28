@@ -18,7 +18,7 @@ city agent create [path]
 ## Arguments
 
 - `path` (optional): project path. Defaults to current directory.
-- The interactive default `Agent name` is derived from the directory name and replaces `_`/`-` with spaces (default only; you can edit it).
+- The interactive default `Agent id` is derived from the directory name and normalized to snake_case (default only; you can edit it).
 - The interactive flow now asks for a model from the console-global model pool and writes it into `downcity.json.execution.modelId`.
 - Created projects now keep execution binding in `downcity.json.execution` instead of splitting config across `model.primary` and `session.agent`.
 

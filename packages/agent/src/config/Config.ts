@@ -124,8 +124,8 @@ export function loadDowncityConfig(projectRoot: string): DowncityConfig {
   }
 
   const candidate = merged as Partial<DowncityConfig>;
-  if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
-    throw new Error("Invalid downcity.json: missing required fields name/version");
+  if (typeof candidate.id !== "string" || typeof candidate.version !== "string") {
+    throw new Error("Invalid downcity.json: missing required fields id/version");
   }
   const config = candidate as DowncityConfig;
   assertProjectExecutionTarget(config);

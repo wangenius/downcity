@@ -23,7 +23,7 @@ import type { StartOptions } from "@downcity/agent";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 import { readPlatformGlobalEnv } from "@/env/ProcessEnv.js";
-import { resolveAgentName } from "../shared/IndexSupport.js";
+import { resolveAgentId } from "../shared/IndexSupport.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -69,7 +69,7 @@ export async function runCommand(
   }
 
   const host = (options.host ?? "0.0.0.0").trim();
-  const agentName = resolveAgentName(projectRoot);
+  const agentId = resolveAgentId(projectRoot);
   let currentSystems = loadStaticSystemPrompts(projectRoot);
   const config = loadDowncityConfig(projectRoot);
   const model = await createRuntimeModel({
@@ -78,7 +78,7 @@ export async function runCommand(
   });
 
   const agent = new Agent({
-    id: agentName,
+    id: agentId,
     path: projectRoot,
     instruction: currentSystems,
     tools: shellTools,
@@ -98,10 +98,10 @@ export async function runCommand(
   });
   promptCatalog.start();
 
-  process.env.DC_SERVER_PORT = String(port);
-  process.env.DC_SERVER_HOST = host;
+  process.env.DC_CITY_PORT = String(port);
+  process.env.DC_CITY_HOST = host;
+  process.env.DC_AGENT_ID = agentId;
   process.env.DC_AGENT_PATH = projectRoot;
-  process.env.DC_AGENT_NAME = agentName;
 
   const startResult = await agent.start({
     http: {

@@ -187,7 +187,7 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
           <div className="flex min-w-0 items-start gap-2">
             <img src="/image.png" alt="bot" className="mt-0.5 size-8 shrink-0 rounded-[4px] object-cover" />
             <div className="min-w-0 space-y-1">
-              <div className="truncate text-xl font-semibold leading-none text-foreground/74">{agent.name || "Unknown Agent"}</div>
+              <div className="truncate text-xl font-semibold leading-none text-foreground/74">{agent.agentId || "Unknown Agent"}</div>
               <div className="truncate text-xs text-muted-foreground">{path}</div>
             </div>
           </div>

@@ -91,10 +91,10 @@ async function resolveSelfEndpoint(
     ...process.env,
     ...context.env,
   };
-  const runtimePort = Number(process.env.DC_SERVER_PORT || env.DC_SERVER_PORT || "");
+  const runtimePort = Number(process.env.DC_CITY_PORT || env.DC_CITY_PORT || "");
   // 关键点（中文）：link code 必须写入当前 runtime 的真实监听端口，不能使用可能已经过期的配置端口。
   const port = Number.isFinite(runtimePort) && runtimePort > 0 ? runtimePort : start.port;
-  const runtimeHost = String(process.env.DC_SERVER_HOST || env.DC_SERVER_HOST || "").trim();
+  const runtimeHost = String(process.env.DC_CITY_HOST || env.DC_CITY_HOST || "").trim();
   return normalizeContactEndpoint(
     await resolveContactSelfEndpoint({
       host: runtimeHost || start.host,
@@ -116,7 +116,7 @@ function hasRuntimePublicEndpointEnv(context: AgentContext): boolean {
 }
 
 function getAgentName(context: AgentContext): string {
-  return String(context.config.name || "downcity-agent").trim() || "downcity-agent";
+  return String(context.config.id || "downcity-agent").trim() || "downcity-agent";
 }
 
 function requireOutboundContact(contact: AgentContact): {

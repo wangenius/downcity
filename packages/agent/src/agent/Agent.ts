@@ -66,7 +66,7 @@ import { startLocalRpcServer } from "@/runtime/server/rpc/Server.js";
 
 function createFallbackSdkConfig(agentId: string): DowncityConfig {
   return {
-    name: agentId,
+    id: agentId,
     version: "0.0.0",
   } as DowncityConfig;
 }

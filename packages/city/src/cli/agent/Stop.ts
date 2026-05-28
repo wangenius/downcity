@@ -10,7 +10,7 @@
 import path from "path";
 import { stopDaemonProcess } from "@/process/daemon/Manager.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
-import { resolveAgentName } from "../shared/IndexSupport.js";
+import { resolveAgentId } from "../shared/IndexSupport.js";
 
 /**
  * stop 命令执行流程。
@@ -26,7 +26,7 @@ export async function stopCommand(cwd: string = "."): Promise<void> {
   emitCliBlock({
     tone: result.stopped ? "success" : "info",
     title: result.stopped ? "Agent daemon stopped" : "Agent daemon not running",
-    summary: resolveAgentName(projectRoot),
+    summary: resolveAgentId(projectRoot),
     facts: [
       {
         label: "Project",

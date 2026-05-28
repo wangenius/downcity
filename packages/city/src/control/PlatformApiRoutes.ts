@@ -34,7 +34,7 @@ export interface PlatformApiRouteHandlers {
   buildAgentsResponse(requestedAgentId: string): Promise<PlatformAgentsResponse>;
   /** 初始化 agent 项目骨架。 */
   initializeAgentProject(projectRoot: string, initialization: {
-    agentName?: unknown;
+    id?: unknown;
     modelId?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult>;
@@ -42,7 +42,7 @@ export interface PlatformApiRouteHandlers {
   startAgentByProjectRoot(projectRoot: string, options?: {
     initializeIfNeeded?: boolean;
     initialization?: {
-      agentName?: unknown;
+      id?: unknown;
       modelId?: unknown;
       localModel?: unknown;
       agentType?: unknown;
@@ -174,7 +174,7 @@ export function registerPlatformApiRoutes(params: {
         projectRoot?: unknown;
         initializeIfNeeded?: unknown;
         initialization?: {
-          agentName?: unknown;
+          id?: unknown;
           modelId?: unknown;
           forceOverwriteShipJson?: unknown;
         };
@@ -197,7 +197,7 @@ export function registerPlatformApiRoutes(params: {
     try {
       const body = (await c.req.json().catch(() => ({}))) as {
         projectRoot?: unknown;
-        agentName?: unknown;
+        id?: unknown;
         modelId?: unknown;
         autoStart?: unknown;
         forceOverwriteShipJson?: unknown;
@@ -207,7 +207,7 @@ export function registerPlatformApiRoutes(params: {
         return c.json({ success: false, error: "projectRoot is required" }, 400);
       }
       const initResult = await handlers.initializeAgentProject(rawProject, {
-        agentName: body.agentName,
+        id: body.id,
         modelId: body.modelId,
         forceOverwriteShipJson: body.forceOverwriteShipJson,
       });
@@ -217,7 +217,7 @@ export function registerPlatformApiRoutes(params: {
           created: true,
           started: false,
           projectRoot: initResult.projectRoot,
-          agentName: initResult.agentName,
+          id: initResult.id,
           message: "created",
         });
       }

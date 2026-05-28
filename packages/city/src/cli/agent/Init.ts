@@ -18,7 +18,7 @@ import fg from "fast-glob";
 import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/config/Paths.js";
 import {
   initializeAgentProject,
-  normalizeDefaultAgentName,
+  normalizeDefaultAgentId,
 } from "@downcity/agent";
 import type { AgentProjectChannel } from "@downcity/agent";
 import type { ExecutionBindingConfig } from "@downcity/agent";
@@ -30,7 +30,7 @@ import {
 } from "@/model/runtime/ExecutionModelBinding.js";
 
 type InitPromptResponse = {
-  name?: string;
+  id?: string;
   primaryModelId?: string;
   channels?: string[];
 };
@@ -51,8 +51,8 @@ export async function initCommand(
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
   const projectBaseName = path.basename(projectRoot);
-  const defaultAgentName =
-    normalizeDefaultAgentName(projectBaseName) || projectBaseName;
+  const default_agent_id =
+    normalizeDefaultAgentId(projectBaseName) || projectBaseName;
   let allowOverwrite = Boolean(options.force);
 
   emitCliBlock({
@@ -96,13 +96,13 @@ export async function initCommand(
   }
 
   // Collect configuration information
-  // 交互采集（中文）：agent name + model + channels。
+  // 交互采集（中文）：agent id + model + channels。
   const response = (await prompts([
     {
       type: "text",
-      name: "name",
-      message: "Agent name",
-      initial: defaultAgentName,
+      name: "id",
+      message: "Agent id",
+      initial: default_agent_id,
     },
     {
       type: "select",
@@ -124,9 +124,9 @@ export async function initCommand(
     },
   ])) as InitPromptResponse;
 
-  // 关键点（中文）：agent_name 同时用于 `downcity.json.name` 与 init 模板变量渲染，避免两处来源不一致。
-  const agentName =
-    String(response.name || "").trim() || defaultAgentName;
+  // 关键点（中文）：agent_id 同时用于 `downcity.json.id` 与 init 模板变量渲染，避免两处来源不一致。
+  const agent_id =
+    String(response.id || "").trim() || default_agent_id;
   const primaryModelId =
     String(response.primaryModelId || "").trim() || "default";
   if (modelChoiceIds.length === 0) {
@@ -147,7 +147,7 @@ export async function initCommand(
   const initResult = await initializeAgentProject(
     {
       projectRoot,
-      agentName,
+      id: agent_id,
       execution,
       channels: selectedChannels,
       forceOverwriteShipJson: allowOverwrite,
@@ -172,7 +172,7 @@ export async function initCommand(
   emitCliBlock({
     tone: "success",
     title: "Initialization complete",
-    summary: agentName,
+    summary: agent_id,
   });
   emitCliList({
     tone: "accent",

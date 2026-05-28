@@ -306,13 +306,13 @@ export class ControlGateway {
   }
 
   private async initializeAgentProject(projectRoot: string, initialization: {
-    agentName?: unknown;
+    id?: unknown;
     modelId?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult> {
     return initializePlatformAgentProject({
       projectRoot,
-      agentName: initialization.agentName,
+      id: initialization.id,
       modelId: initialization.modelId,
       forceOverwriteShipJson: initialization.forceOverwriteShipJson,
     });
@@ -321,7 +321,7 @@ export class ControlGateway {
   private async startAgentByProjectRoot(projectRoot: string, options?: {
     initializeIfNeeded?: boolean;
     initialization?: {
-      agentName?: unknown;
+      id?: unknown;
       modelId?: unknown;
       forceOverwriteShipJson?: unknown;
     };

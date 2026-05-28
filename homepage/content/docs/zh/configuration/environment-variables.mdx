@@ -21,7 +21,7 @@ description: 说明宿主注入 env、项目 .env 与运行时元信息的实际
 |---|---|---|---|---|
 | 宿主注入 env | `new Agent({ env })` | 否 | 单个 agent 实例 | 共享 API Key、嵌入宿主参数、city 全局 env |
 | 项目 env 文件 | `<agent>/.env` | 用户文件 | 单个 agent | 项目本地运行时叠加值 |
-| 运行时元信息 | 进程内存（`DC_SESSION_ID`、`DC_CTX_*`、`DC_AGENT_*`） | 否 | 单次请求 / 单个进程 | session 与服务端元信息 |
+| 运行时元信息 | 进程内存（`DC_CITY_*`、`DC_AGENT_*`、`DC_SESSION_ID`） | 否 | 单次请求 / 单个进程 | runtime 地址、agent 身份与 session 元信息 |
 | Bot 凭据池 | `~/.downcity/downcity.db` `channel_accounts` | 是（敏感字段加密） | 被多个 agent 绑定复用 | Telegram/Feishu/QQ 密钥 |
 | Console Env 记录 | `~/.downcity/downcity.db` `env_entries` | 是（加密） | Console 侧管理存储 | 全局共享 env 注册表 |
 
@@ -66,9 +66,9 @@ sequenceDiagram
 ### 3.2 运行时元信息注入优先级
 
 1. 运行时 helper 先从已经解析好的 agent env 快照出发。
-2. `DC_SESSION_ID`、`DC_CTX_*` 等请求级元信息最后注入。
+2. `DC_SESSION_ID`、`DC_CITY_*`、`DC_AGENT_*` 等请求级元信息最后注入。
 
-因此，带运行时元信息时的优先级是：`DC_CTX_*` / `DC_SESSION_ID` > 项目 `.env` > 宿主注入 `env`。
+因此，带运行时元信息时的优先级是：`DC_CITY_*` / `DC_AGENT_*` / `DC_SESSION_ID` > 项目 `.env` > 宿主注入 `env`。
 
 ### 3.3 渠道凭据优先级
 

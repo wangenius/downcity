@@ -22,7 +22,7 @@ import type {
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { CliError } from "../shared/CliError.js";
-import { resolveAgentName } from "../shared/IndexSupport.js";
+import { resolveAgentId } from "../shared/IndexSupport.js";
 import { resolveRunningManagedAgents } from "../control-plane/ControlPlaneProcess.js";
 
 /**
@@ -40,7 +40,7 @@ function toCliRegisteredAgentView(
 ): CliRegisteredAgentView {
   const projectRoot = resolve(String(entry.projectRoot || "").trim() || ".");
   return {
-    name: resolveAgentName(projectRoot),
+    id: resolveAgentId(projectRoot),
     projectRoot,
     status: entry.status === "stopped" ? "stopped" : "running",
   };
@@ -66,7 +66,7 @@ export async function listRegisteredAgentsForCli(): Promise<CliRegisteredAgentVi
       } satisfies CliRegisteredAgentView;
     })
     .sort((left, right) =>
-      left.name.localeCompare(right.name) || left.projectRoot.localeCompare(right.projectRoot),
+      left.id.localeCompare(right.id) || left.projectRoot.localeCompare(right.projectRoot),
     );
 }
 
@@ -77,7 +77,7 @@ export function buildCliAgentPromptChoices(
   agents: CliRegisteredAgentView[],
 ): CliAgentPromptChoice[] {
   return agents.map((agent) => ({
-    title: agent.name,
+    title: agent.id,
     value: agent.projectRoot,
     description: `${agent.status} · ${agent.projectRoot}`,
   }));
@@ -165,7 +165,7 @@ export async function emitRegisteredAgentList(): Promise<void> {
     summary: `${filteredAgents.length} registered`,
     items: filteredAgents.map((agent) => ({
       tone: agent.status === "running" ? "success" : "info",
-      title: agent.name,
+      title: agent.id,
       facts: [
         {
           label: "Project",
@@ -232,7 +232,7 @@ export async function emitRegisteredAgentListWithOptions(options?: {
       : `${agents.length} registered`,
     items: agents.map((agent) => ({
       tone: agent.status === "running" ? "success" : "info",
-      title: agent.name,
+      title: agent.id,
       facts: [
         {
           label: "Project",

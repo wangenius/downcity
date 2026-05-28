@@ -233,7 +233,7 @@ export class InstantSessionRunner implements PlatformInlineInstantRunner {
     });
     const model = await createRuntimeModel({
       config: {
-        name: "console-inline-instant-model",
+        id: "console_inline_instant_model",
         version: "1.0.0",
         execution: {
           type: "api",

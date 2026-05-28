@@ -121,7 +121,7 @@ export async function resolveContactSelfEndpoint(
   input: ResolveContactSelfEndpointInput,
 ): Promise<string> {
   const env = input.env || process.env;
-  const port = Number(input.port || env.DC_SERVER_PORT || 5314);
+  const port = Number(input.port || env.DC_CITY_PORT || 5314);
 
   // 关键点（中文）：公开 URL 是最可靠来源，适配域名、反向代理和 tunnel。
   const publicUrl = String(env.DOWNCITY_PUBLIC_URL || "").trim();
@@ -130,7 +130,7 @@ export async function resolveContactSelfEndpoint(
   const publicHost = String(env.DOWNCITY_PUBLIC_HOST || "").trim();
   if (publicHost) return formatUrl(publicHost, port);
 
-  const host = String(input.host || env.DC_SERVER_HOST || "127.0.0.1").trim();
+  const host = String(input.host || env.DC_CITY_HOST || "127.0.0.1").trim();
   if (!isWildcardHost(host) && !isLoopbackHost(host)) return formatUrl(host, port);
 
   const lanIp = detectLanIpv4FromInterfaces(input.interfaces);

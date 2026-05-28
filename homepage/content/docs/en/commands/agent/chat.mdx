@@ -14,13 +14,13 @@ This command uses a dedicated local CLI main session: `local-cli-chat-main`.
 ## Usage
 
 ```bash
-city agent chat [--to <agentName>]
-city agent chat [--to <agentName>] --message <text> [--json]
+city agent chat [--to <id>]
+city agent chat [--to <id>] --message <text> [--json]
 ```
 
 ## Key options
 
-- `-t, --to <name>`: target agent name; if omitted, the CLI opens an interactive picker from running agents
+- `-t, --to <id>`: target agent id; if omitted, the CLI opens an interactive picker from running agents
 - `-m, --message <text>`: send one message and exit instead of entering the REPL
 - `--json`: print structured output for one-shot mode
 - `--host <host>` / `--port <port>`: force remote HTTP transport

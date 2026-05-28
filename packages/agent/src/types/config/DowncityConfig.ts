@@ -149,7 +149,14 @@ export interface DowncityPluginConfigMap {
 
 export interface DowncityConfig {
   $schema?: string;
-  name: string;
+  /**
+   * agent 唯一标识。
+   *
+   * 关键点（中文）
+   * - `@downcity/agent` 只关心稳定标识，不承担展示名语义。
+   * - 该字段同时用于 session/runtime/storage 目录归属。
+   */
+  id: string;
   version: string;
   /**
    * Runtime startup configuration used by `downcity agent start`.

@@ -498,7 +498,7 @@ function registerTestCommands(model: Command): void {
         if (!id) throw new Error("modelId cannot be empty");
         const runtimeModel = await createRuntimeModel({
           config: {
-            name: "console-model-test",
+            id: "console_model_test",
             version: "1.0.0",
             execution: { type: "api", modelId: id },
           },

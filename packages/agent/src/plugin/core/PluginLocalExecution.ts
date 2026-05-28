@@ -43,7 +43,7 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
     env,
     paths: createAgentPathRuntime(
       rootPath,
-      String(config.name || "").trim() || path.basename(rootPath) || "agent",
+      String(config.id || "").trim() || path.basename(rootPath) || "agent",
     ),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
   };

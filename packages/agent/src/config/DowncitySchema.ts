@@ -30,7 +30,7 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
       description:
         "JSON Schema reference for editor/IDE validation (e.g. ./.downcity/schema/downcity.schema.json).",
     },
-    name: { type: "string" },
+    id: { type: "string" },
     version: { type: "string" },
     start: {
       type: "object",

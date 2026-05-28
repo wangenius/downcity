@@ -56,9 +56,8 @@ async function loadAgentSummaries(): Promise<AgentManagerAgentSummary[]> {
   const agents = await listRegisteredAgentsForCli();
   return agents.map((agent) => {
     const config = readAgentConfig(agent.projectRoot);
-    const configuredName = String(config?.name || "").trim();
     return {
-      name: configuredName || agent.name,
+      id: String(config?.id || "").trim() || agent.id,
       projectRoot: agent.projectRoot,
       status: agent.status,
       modelId: readAgentModelId(config),
@@ -149,7 +148,7 @@ async function emitAgentManagerList(): Promise<void> {
     summary: `${agents.length} registered`,
     items: agents.map((agent) => ({
       tone: agent.status === "running" ? "success" : "info",
-      title: agent.name,
+      title: agent.id,
       facts: [
         { label: "Status", value: agent.status },
         { label: "Model", value: agent.modelId || "not configured" },
@@ -219,7 +218,7 @@ async function promptAgentProjectRoot(): Promise<AgentManagerAgentSummary | null
     name: "projectRoot",
     message: "选择要管理的 Agent",
     choices: agents.map((agent) => ({
-      title: agent.name,
+      title: agent.id,
       description: `${formatAgentListDescription(agent)} · ${agent.projectRoot}`,
       value: agent.projectRoot,
     })),
@@ -237,7 +236,7 @@ async function promptAgentAction(
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: `管理 agent · ${agent.name}`,
+    message: `管理 agent · ${agent.id}`,
     choices: [
       {
         title: "查看状态",
@@ -265,9 +264,9 @@ async function promptAgentAction(
         value: "chat",
       },
       {
-        title: "配置名称",
-        description: `当前：${agent.name}`,
-        value: "configureName",
+        title: "配置 ID",
+        description: `当前：${agent.id}`,
+        value: "configureId",
       },
       {
         title: "配置模型",
@@ -363,50 +362,50 @@ async function runStartFlow(): Promise<void> {
   await startAgentProject(projectRoot);
 }
 
-async function configureAgentName(agent: AgentManagerAgentSummary): Promise<AgentManagerAgentSummary> {
+async function configureAgentId(agent: AgentManagerAgentSummary): Promise<AgentManagerAgentSummary> {
   const response = (await prompts({
     type: "text",
-    name: "name",
-    message: "Agent 名称",
-    initial: agent.name,
+    name: "id",
+    message: "Agent ID",
+    initial: agent.id,
     validate: (value) =>
-      String(value || "").trim().length > 0 ? true : "Agent 名称不能为空",
-  })) as { name?: string };
+      String(value || "").trim().length > 0 ? true : "Agent ID 不能为空",
+  })) as { id?: string };
 
-  if (response.name === undefined) {
+  if (response.id === undefined) {
     emitCliBlock({
       tone: "info",
-      title: "Agent name unchanged",
+      title: "Agent id unchanged",
     });
     return agent;
   }
 
-  const nextName = String(response.name || "").trim();
-  if (nextName === agent.name) {
+  const nextId = String(response.id || "").trim();
+  if (nextId === agent.id) {
     emitCliBlock({
       tone: "info",
-      title: "Agent name unchanged",
-      summary: agent.name,
+      title: "Agent id unchanged",
+      summary: agent.id,
     });
     return agent;
   }
 
   const shipJsonPath = getDowncityJsonPath(agent.projectRoot);
   const raw = fs.readJsonSync(shipJsonPath) as DowncityConfig;
-  raw.name = nextName;
+  raw.id = nextId;
   await fs.writeJson(shipJsonPath, raw, { spaces: 2 });
   emitCliBlock({
     tone: "success",
-    title: "Agent name updated",
+    title: "Agent id updated",
     facts: [
-      { label: "previous", value: agent.name },
-      { label: "current", value: nextName },
+      { label: "previous", value: agent.id },
+      { label: "current", value: nextId },
       { label: "project", value: agent.projectRoot },
     ],
   });
   return {
     ...agent,
-    name: nextName,
+    id: nextId,
   };
 }
 
@@ -595,11 +594,11 @@ async function runSelectedAgentManager(): Promise<void> {
         continue;
       }
       if (action === "chat") {
-        await chatCommand({ to: agent.name });
+        await chatCommand({ to: agent.id });
         continue;
       }
-      if (action === "configureName") {
-        agent = await configureAgentName(agent);
+      if (action === "configureId") {
+        agent = await configureAgentId(agent);
         continue;
       }
       if (action === "configureModel") {

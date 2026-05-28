@@ -101,9 +101,9 @@ export type PluginsSectionProps =
        */
       hasRunningAgent: boolean
       /**
-       * 当前选中 agent 的展示名。
+       * 当前选中 agent 的项目 id。
        */
-      selectedAgentName?: string
+      selectedAgentProjectId?: string
     })
 
 function hasAction(actionItems: UiPluginActionItem[], actionName: string): boolean {
@@ -361,7 +361,7 @@ function buildUsagePayload(
 export function PluginsSection(props: PluginsSectionProps) {
   const { scope, plugins, onRunAction } = props
   const hasRunningAgent = scope === "agent" ? props.hasRunningAgent : false
-  const selectedAgentName = scope === "agent" ? props.selectedAgentName : undefined
+  const selectedAgentProjectId = scope === "agent" ? props.selectedAgentProjectId : undefined
   const confirm = useConfirmDialog()
   const [search, setSearch] = React.useState("")
   const [pendingActions, setPendingActions] = React.useState<Record<string, PendingActionKind | null>>({})
@@ -688,8 +688,8 @@ export function PluginsSection(props: PluginsSectionProps) {
       >
         {scope === "agent" && !hasRunningAgent && filtered.length === 0 ? (
           <div className="rounded-[18px] border border-border/70 bg-secondary/45 px-4 py-6 text-sm text-muted-foreground">
-            {selectedAgentName
-              ? `${selectedAgentName} 当前未运行，Console UI 无法读取 runtime plugins。先启动 agent 再查看。`
+            {selectedAgentProjectId
+              ? `${selectedAgentProjectId} 当前未运行，Console UI 无法读取 runtime plugins。先启动 agent 再查看。`
               : "当前没有运行中的 agent，Console UI 无法读取 runtime plugins。先启动 agent 再查看。"}
           </div>
         ) : filtered.length === 0 ? (

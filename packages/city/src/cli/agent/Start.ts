@@ -17,7 +17,7 @@ import { startDaemonProcess } from "@/process/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
 import type { StartOptions } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
-import { resolveAgentName } from "../shared/IndexSupport.js";
+import { resolveAgentId } from "../shared/IndexSupport.js";
 import { checkAgentPreflight } from "../shared/PluginTargetSupport.js";
 import { CliError } from "../shared/CliError.js";
 
@@ -55,7 +55,7 @@ export async function startCommand(
     emitCliBlock({
       tone: "success",
       title: "Agent daemon started",
-      summary: resolveAgentName(projectRoot),
+      summary: resolveAgentId(projectRoot),
       facts: [
         {
           label: "Project",

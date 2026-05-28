@@ -78,11 +78,11 @@ function formatModelIds(modelIds: string[]): string {
 function formatAgentReference(reference: {
   projectRoot: string;
   shipJsonPath: string;
-  agentName?: string;
+  agentId?: string;
 }): string {
-  const agentName = String(reference.agentName || "").trim();
-  if (agentName) {
-    return `${agentName} (${reference.projectRoot})`;
+  const agentId = String(reference.agentId || "").trim();
+  if (agentId) {
+    return `${agentId} (${reference.projectRoot})`;
   }
   return reference.projectRoot;
 }
@@ -90,12 +90,12 @@ function formatAgentReference(reference: {
 async function listModelReferences(modelId: string): Promise<Array<{
   projectRoot: string;
   shipJsonPath: string;
-  agentName?: string;
+  agentId?: string;
 }>> {
   const references: Array<{
     projectRoot: string;
     shipJsonPath: string;
-    agentName?: string;
+    agentId?: string;
   }> = [];
   const entries = await listManagedAgentEntries();
   for (const entry of entries) {
@@ -105,7 +105,7 @@ async function listModelReferences(modelId: string): Promise<Array<{
     if (!(await fs.pathExists(shipJsonPath))) continue;
     try {
       const raw = (await fs.readJson(shipJsonPath)) as {
-        name?: unknown;
+        id?: unknown;
         execution?: {
           type?: unknown;
           modelId?: unknown;
@@ -114,11 +114,11 @@ async function listModelReferences(modelId: string): Promise<Array<{
       const executionType = String(raw?.execution?.type || "").trim();
       const candidateModelId = String(raw?.execution?.modelId || "").trim();
       if (executionType !== "api" || candidateModelId !== modelId) continue;
-      const agentName = String(raw?.name || "").trim() || undefined;
+      const agentId = String(raw?.id || "").trim() || undefined;
       references.push({
         projectRoot,
         shipJsonPath,
-        agentName,
+        agentId,
       });
     } catch {
       continue;
@@ -219,7 +219,7 @@ export class ModelPoolService {
     references: Array<{
       projectRoot: string;
       shipJsonPath: string;
-      agentName?: string;
+      agentId?: string;
     }>;
   }> {
     const id = String(modelId || "").trim();
@@ -508,7 +508,7 @@ export class ModelPoolService {
     const actualPrompt = String(prompt || "").trim() || "Reply with exactly: OK";
     const model = await createRuntimeModel({
       config: {
-        name: "console-model-test",
+        id: "console_model_test",
         version: "1.0.0",
         execution: { type: "api", modelId: id },
       },

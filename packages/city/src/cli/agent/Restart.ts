@@ -13,7 +13,7 @@ import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
 import { startDaemonProcess, stopDaemonProcess } from "@/process/daemon/Manager.js";
 import type { StartOptions } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
-import { resolveAgentName } from "../shared/IndexSupport.js";
+import { resolveAgentId } from "../shared/IndexSupport.js";
 import { checkAgentPreflight } from "../shared/PluginTargetSupport.js";
 import { CliError } from "../shared/CliError.js";
 
@@ -51,7 +51,7 @@ export async function restartCommand(
     emitCliBlock({
       tone: "success",
       title: "Agent daemon restarted",
-      summary: resolveAgentName(projectRoot),
+      summary: resolveAgentId(projectRoot),
       facts: [
         {
           label: "Project",

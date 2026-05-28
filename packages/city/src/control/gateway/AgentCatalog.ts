@@ -184,14 +184,14 @@ async function buildAgentOption(
   const running = Boolean(daemonPid && isProcessAlive(daemonPid));
   const endpoint = await resolveRuntimeEndpoint(projectRoot);
 
-  let displayName = basename(projectRoot);
+  let agentId = basename(projectRoot);
   let ship: PlatformAgentShipJson | null = null;
   try {
     const shipPath = getDowncityJsonPath(projectRoot);
     if (await fs.pathExists(shipPath)) {
       ship = (await fs.readJson(shipPath)) as PlatformAgentShipJson;
-      const name = String(ship?.name || "").trim();
-      if (name) displayName = name;
+      const configuredAgentId = String(ship?.id || "").trim();
+      if (configuredAgentId) agentId = configuredAgentId;
     }
   } catch {
     // ignore
@@ -205,7 +205,7 @@ async function buildAgentOption(
 
   return {
     id: projectRoot,
-    name: displayName,
+    agentId,
     projectRoot,
     running,
     host: running ? endpoint.host : undefined,
@@ -245,7 +245,7 @@ export async function listKnownPlatformAgents(): Promise<PlatformAgentOption[]> 
     const runningA = a.running === true ? 1 : 0;
     const runningB = b.running === true ? 1 : 0;
     if (runningA !== runningB) return runningB - runningA;
-    return a.name.localeCompare(b.name);
+    return a.agentId.localeCompare(b.agentId);
   });
 }
 
@@ -325,18 +325,18 @@ export async function inspectPlatformAgentDirectory(
   const knownAgents = await listKnownPlatformAgents();
   const matched = knownAgents.find((item) => item.projectRoot === normalizedRoot) || null;
 
-  let displayName = basename(normalizedRoot);
+  let agentId = basename(normalizedRoot);
   let modelId = "";
   if (hasShipJson) {
     try {
       const ship = (await fs.readJson(shipPath)) as PlatformAgentShipJson;
-      displayName = String(ship?.name || "").trim() || displayName;
+      agentId = String(ship?.id || "").trim() || agentId;
       modelId = String(ship?.execution?.modelId || "").trim();
     } catch {
       // ignore parse failures
     }
-  } else if (matched?.name) {
-    displayName = matched.name;
+  } else if (matched?.agentId) {
+    agentId = matched.agentId;
   }
 
   return {
@@ -346,8 +346,8 @@ export async function inspectPlatformAgentDirectory(
     hasProfileMd,
     knownAgent: matched !== null,
     running: matched?.running === true,
-    displayName,
-        
+    ...(agentId ? { agentId } : {}),
+    ...(modelId ? { modelId } : {}),
   };
 }
 
@@ -601,7 +601,7 @@ export async function buildPlatformConfigStatusResponse(params: {
   return {
     success: true,
     selectedAgentId: selectedAgent?.id || "",
-    selectedAgentName: selectedAgent?.name || "",
-      items: [...platformChecks, ...agentChecks],
-    };
+    selectedAgentProjectId: selectedAgent?.agentId || "",
+    items: [...platformChecks, ...agentChecks],
+  };
 }

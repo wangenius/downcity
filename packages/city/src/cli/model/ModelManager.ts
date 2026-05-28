@@ -55,10 +55,10 @@ function parseOptionalPositiveIntegerInput(input: string): number | undefined {
 
 function formatManagerAgentReference(reference: {
   projectRoot: string;
-  agentName?: string;
+  agentId?: string;
 }): string {
-  const agentName = String(reference.agentName || "").trim();
-  if (agentName) return `${agentName} (${reference.projectRoot})`;
+  const agentId = String(reference.agentId || "").trim();
+  if (agentId) return `${agentId} (${reference.projectRoot})`;
   return reference.projectRoot;
 }
 

@@ -15,13 +15,13 @@ export type AgentManagerAgentAction =
   | "stop"
   | "restart"
   | "chat"
-  | "configureName"
+  | "configureId"
   | "configureModel"
   | "connectChannels"
   | "back";
 
 export interface AgentManagerAgentSummary {
-  name: string;
+  id: string;
   projectRoot: string;
   status: "running" | "stopped";
   modelId?: string;

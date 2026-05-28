@@ -14,7 +14,7 @@ import type { AgentSessionEvent } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import {
-  resolveProjectRootByAgentName,
+  resolveProjectRootByAgentId,
   validateAgentProjectRoot,
 } from "../shared/PluginTargetSupport.js";
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
@@ -35,9 +35,9 @@ const SDK_EVENTS_READY_TYPE = "sdk-events-ready";
 
 type ResolvedAgentChatTarget = {
   /**
-   * 目标 agent 名称。
+   * 目标 agent id。
    */
-  agentName: string;
+  agentId: string;
   /**
    * 目标项目根目录。
    */
@@ -69,15 +69,15 @@ function buildAgentChatFailureText(error?: string): string {
   );
 }
 
-async function resolveChatTargetAgentName(inputName?: string): Promise<string | null> {
-  const explicit = String(inputName || "").trim();
+async function resolveChatTargetAgentId(inputId?: string): Promise<string | null> {
+  const explicit = String(inputId || "").trim();
   if (explicit) return explicit;
 
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     emitCliBlock({
       tone: "error",
-      title: "Agent name is required",
-      note: "Use `city agent chat --to <agentName>` or run this command in an interactive terminal.",
+      title: "Agent id is required",
+      note: "Use `city agent chat --to <id>` or run this command in an interactive terminal.",
     });
     return null;
   }
@@ -96,28 +96,28 @@ async function resolveChatTargetAgentName(inputName?: string): Promise<string | 
 
   const response = (await prompts({
     type: "select",
-    name: "agentName",
+    name: "agentId",
     message: "选择要聊天的 Agent",
     choices: runningAgents.map((agent) => ({
-      title: agent.name,
+      title: agent.id,
       description: agent.projectRoot,
-      value: agent.name,
+      value: agent.id,
     })),
     initial: 0,
-  })) as { agentName?: string };
-  const agentName = String(response.agentName || "").trim();
-  if (!agentName) {
+  })) as { agentId?: string };
+  const agentId = String(response.agentId || "").trim();
+  if (!agentId) {
     emitCliBlock({
       tone: "info",
       title: "Agent chat cancelled",
     });
     return null;
   }
-  return agentName;
+  return agentId;
 }
 
 async function resolveAgentChatTarget(
-  agentNameInput: string,
+  agentIdInput: string,
 ): Promise<
   | {
       success: true;
@@ -128,26 +128,26 @@ async function resolveAgentChatTarget(
       outcome: AgentChatExecutionOutcome;
     }
 > {
-  const agentName = String(agentNameInput || "").trim();
+  const agentId = String(agentIdInput || "").trim();
   const sessionId = AGENT_CHAT_DEFAULT_SESSION_ID;
-  if (!agentName) {
+  if (!agentId) {
     return {
       success: false,
       outcome: {
-        agentName: "",
+        agentId: "",
         sessionId,
         success: false,
-        error: "Missing target agent name.",
+        error: "Missing target agent id.",
       },
     };
   }
 
-  const resolved = await resolveProjectRootByAgentName(agentName);
+  const resolved = await resolveProjectRootByAgentId(agentId);
   if (!resolved.projectRoot) {
     return {
       success: false,
       outcome: {
-        agentName,
+        agentId,
         sessionId,
         success: false,
         error: resolved.error || "Failed to resolve agent project path",
@@ -160,7 +160,7 @@ async function resolveAgentChatTarget(
     return {
       success: false,
       outcome: {
-        agentName,
+        agentId,
         projectRoot: resolved.projectRoot,
         sessionId,
         success: false,
@@ -172,7 +172,7 @@ async function resolveAgentChatTarget(
   return {
     success: true,
     target: {
-      agentName,
+      agentId,
       projectRoot: resolved.projectRoot,
       sessionId,
     },
@@ -193,7 +193,7 @@ function printAssistantReply(replyText: string): void {
 }
 
 function printAgentChatFailure(params: {
-  agentName: string;
+  agentId: string;
   error?: string;
 }): void {
   emitCliBlock({
@@ -202,7 +202,7 @@ function printAgentChatFailure(params: {
     facts: [
       {
         label: "agent",
-        value: params.agentName,
+        value: params.agentId,
       },
       {
         label: "error",
@@ -298,7 +298,7 @@ async function postSdkPrompt(params: {
 }
 
 async function runSdkPromptTurn(params: {
-  agentName: string;
+  agentId: string;
   message: string;
   transport?: AgentChatTransportOptions;
   renderText?: boolean;
@@ -318,7 +318,7 @@ async function runSdkPromptTurn(params: {
     };
   }
 
-  const resolved = await resolveAgentChatTarget(params.agentName);
+  const resolved = await resolveAgentChatTarget(params.agentId);
   if (!resolved.success) {
     return {
       success: false,
@@ -509,7 +509,7 @@ async function runSdkPromptTurn(params: {
  * 向目标 agent 的 SDK actor session 发送一轮消息。
  */
 export async function executeAgentChatTurn(params: {
-  agentName: string;
+  agentId: string;
   message: string;
   transport?: AgentChatTransportOptions;
 }): Promise<AgentChatExecutionOutcome> {
@@ -518,25 +518,25 @@ export async function executeAgentChatTurn(params: {
 
   if (!message) {
     return {
-      agentName: String(params.agentName || "").trim(),
+      agentId: String(params.agentId || "").trim(),
       sessionId,
       success: false,
       error: "Chat message is required.",
     };
   }
 
-  const resolved = await resolveAgentChatTarget(params.agentName);
+  const resolved = await resolveAgentChatTarget(params.agentId);
   if (!resolved.success) return resolved.outcome;
 
   const outcome = await runSdkPromptTurn({
-    agentName: params.agentName,
+    agentId: params.agentId,
     message,
     transport: params.transport,
     renderText: false,
   });
 
   return {
-    agentName: params.agentName,
+    agentId: params.agentId,
     ...(resolved.target.projectRoot ? { projectRoot: resolved.target.projectRoot } : {}),
     sessionId,
     success: outcome.success,
@@ -555,13 +555,13 @@ export async function executeAgentChatTurn(params: {
 }
 
 async function runOneShotChat(params: {
-  agentName: string;
+  agentId: string;
   message: string;
   options: AgentChatCliOptions;
 }): Promise<void> {
   if (params.options.json === true) {
     const outcome = await executeAgentChatTurn({
-      agentName: params.agentName,
+      agentId: params.agentId,
       message: params.message,
       transport: {
         host: params.options.host,
@@ -574,7 +574,7 @@ async function runOneShotChat(params: {
       success: outcome.success,
       title: "agent chat",
       payload: {
-        agent: params.agentName,
+        agent: params.agentId,
         ...(outcome.projectRoot ? { projectRoot: outcome.projectRoot } : {}),
         sessionId: outcome.sessionId,
         ...(outcome.payload?.result ? { result: outcome.payload.result } : {}),
@@ -585,7 +585,7 @@ async function runOneShotChat(params: {
   }
 
   const outcome = await runSdkPromptTurn({
-    agentName: params.agentName,
+    agentId: params.agentId,
     message: params.message,
     transport: {
       host: params.options.host,
@@ -596,7 +596,7 @@ async function runOneShotChat(params: {
 
   if (!outcome.success) {
     printAgentChatFailure({
-      agentName: params.agentName,
+      agentId: params.agentId,
       error: outcome.error,
     });
     return;
@@ -609,10 +609,10 @@ async function runOneShotChat(params: {
  * 启动交互式持续对话。
  */
 async function runInteractiveChat(params: {
-  agentName: string;
+  agentId: string;
   options: AgentChatCliOptions;
 }): Promise<void> {
-  const prompt = `${chalk.cyan(params.agentName)} ${chalk.dim("›")} `;
+  const prompt = `${chalk.cyan(params.agentId)} ${chalk.dim("›")} `;
   const helpText = [
     `${chalk.dim("/exit, /quit  — 退出对话")}`,
     `${chalk.dim("/clear       — 清屏")}`,
@@ -622,7 +622,7 @@ async function runInteractiveChat(params: {
 
   emitCliBlock({
     tone: "info",
-    title: `Agent chat · ${params.agentName}`,
+    title: `Agent chat · ${params.agentId}`,
     note: `Session: local-cli-chat-main · ${helpText[0].replace(chalk.dim(""), "").trim()}`,
   });
   console.log(helpText.join("\n"));
@@ -660,7 +660,7 @@ async function runInteractiveChat(params: {
       }
 
       const outcome = await runSdkPromptTurn({
-        agentName: params.agentName,
+        agentId: params.agentId,
         message: text,
         transport: {
           host: params.options.host,
@@ -671,7 +671,7 @@ async function runInteractiveChat(params: {
 
       if (!outcome.success) {
         printAgentChatFailure({
-          agentName: params.agentName,
+          agentId: params.agentId,
           error: outcome.error,
         });
         continue;
@@ -689,13 +689,13 @@ async function runInteractiveChat(params: {
  * `city agent chat` 统一入口。
  */
 export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
-  const agentName = await resolveChatTargetAgentName(options.to);
-  if (!agentName) return;
+  const agentId = await resolveChatTargetAgentId(options.to);
+  if (!agentId) return;
 
   const oneShotMessage = normalizeChatMessage(String(options.message || ""));
   if (oneShotMessage) {
     await runOneShotChat({
-      agentName,
+      agentId,
       message: oneShotMessage,
       options,
     });
@@ -721,7 +721,7 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
   }
 
   await runInteractiveChat({
-    agentName,
+    agentId,
     options,
   });
 }

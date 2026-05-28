@@ -184,9 +184,9 @@ export function App() {
       const agentId = String(agentIdInput || "").trim()
       if (agentId) {
         const target = agents.find((agent) => agent.id === agentId)
-        if (target) return toAgentRouteSegment(target.name || target.id)
+        if (target) return toAgentRouteSegment(target.agentId || target.id)
       }
-      if (selectedAgent) return toAgentRouteSegment(selectedAgent.name || selectedAgent.id)
+      if (selectedAgent) return toAgentRouteSegment(selectedAgent.agentId || selectedAgent.id)
       if (selectedAgentId) return toAgentRouteSegment(selectedAgentId)
       return "agent"
     },
@@ -228,9 +228,9 @@ export function App() {
       const segment = toAgentRouteSegment(String(segmentInput || ""))
       if (!segment) return ""
       const matched = agents.find((agent) => {
-        const byName = toAgentRouteSegment(String(agent.name || ""))
+        const byProjectId = toAgentRouteSegment(String(agent.agentId || ""))
         const byId = toAgentRouteSegment(String(agent.id || ""))
-        return segment === byName || segment === byId
+        return segment === byProjectId || segment === byId
       })
       return String(matched?.id || "")
     },
@@ -552,7 +552,7 @@ export function App() {
                   initializeIfNeeded: true,
                   initialization: {
                     projectRoot: agentId,
-                    agentName: options.agentName,
+                    id: options.id,
                     executionMode: options.executionMode,
                     modelId: options.modelId,
                     localModel: options.localModel,
@@ -611,7 +611,7 @@ export function App() {
               writable
               agentOptions={agents.map((item) => ({
                 id: item.id,
-                name: String(item.name || item.id || "").trim() || item.id,
+                name: String(item.agentId || item.id || "").trim() || item.id,
               }))}
               onUpsert={(input) => {
                 if (input.scope === "agent") {
@@ -665,7 +665,7 @@ export function App() {
           <section className="flex min-h-0 flex-1">
             <AgentCommandSection
               selectedAgentId={selectedAgentId}
-              selectedAgentName={String(selectedAgent?.name || "").trim() || "agent"}
+              selectedAgentProjectId={String(selectedAgent?.agentId || "").trim() || "agent"}
               agents={agents}
               persistSelectionInUrl={false}
               onExecute={(input) => executeAgentCommand(input)}
@@ -690,7 +690,7 @@ export function App() {
                   initializeIfNeeded: true,
                   initialization: {
                     projectRoot: agentId,
-                    agentName: options.agentName,
+                    id: options.id,
                     executionMode: options.executionMode,
                     modelId: options.modelId,
                     localModel: options.localModel,
@@ -738,7 +738,7 @@ export function App() {
           <section className="flex min-h-0 flex-1">
             <AgentCommandSection
               selectedAgentId={selectedAgentId}
-              selectedAgentName={String(selectedAgent?.name || "").trim() || "agent"}
+              selectedAgentProjectId={String(selectedAgent?.agentId || "").trim() || "agent"}
               agents={agents}
               persistSelectionInUrl
               onExecute={(input) => executeAgentCommand(input)}
@@ -764,7 +764,7 @@ export function App() {
               scope="agent"
               plugins={agentPlugins}
               hasRunningAgent={selectedAgent?.running === true}
-              selectedAgentName={String(selectedAgent?.name || "").trim()}
+              selectedAgentProjectId={String(selectedAgent?.agentId || "").trim()}
               formatTime={uiHelpers.formatTime}
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
               onRunAction={(name, action, payload) => runPluginAction(name, action, payload)}

@@ -75,8 +75,8 @@ export function buildShellContextEnv(
 
   applyEnvMap(env, injected);
   setEnvString(env, "DC_SESSION_ID", contextCtx?.sessionId);
-  setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
-  setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);
+  setEnvString(env, "DC_CITY_HOST", process.env.DC_CITY_HOST);
+  setEnvString(env, "DC_CITY_PORT", process.env.DC_CITY_PORT);
   stripInvocationAuthEnv(env);
 
   return env;

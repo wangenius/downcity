@@ -9,8 +9,23 @@ When the CLI runs agent-related commands, it derives the current agent context a
 
 The most common ones are:
 
+- `DC_CITY_HOST`
+- `DC_CITY_PORT`
+- `DC_AGENT_ID`
 - `DC_AGENT_PATH`
-- `DC_AGENT_NAME`
+- `DC_SESSION_ID`
+
+## `DC_CITY_HOST` / `DC_CITY_PORT`
+
+The current city runtime endpoint inherited by nested `city` invocations.
+
+They are mainly used when an agent shell or tool launches another `city` command and that child process needs to route back to the current runtime.
+
+## `DC_AGENT_ID`
+
+The current agent runtime id.
+
+Current city runtime uses the same resolved id value that is passed into `new Agent({ id })`.
 
 ## `DC_AGENT_PATH`
 
@@ -18,14 +33,10 @@ The absolute path of the current agent project.
 
 This is useful in scripts, logs, and debugging workflows.
 
-## `DC_AGENT_NAME`
+## `DC_SESSION_ID`
 
-The display name of the current agent.
+The current execution session id.
 
-It usually comes from:
-
-- `downcity.json.name`
-
-If that is missing, it falls back to the directory name.
+This is mainly injected for runtime tool execution so child processes can stay associated with the current session.
 
 These variables are injected for the current command execution context. They are not permanently written back into your current shell session.

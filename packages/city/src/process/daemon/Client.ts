@@ -67,7 +67,7 @@ function pickArgValue(args: string[], key: string): string | undefined {
  *
  * 优先级（中文）
  * 1) 显式入参 `host/port`
- * 2) 环境变量 `DC_SERVER_*` / `DC_CTX_SERVER_*`
+ * 2) 环境变量 `DC_CITY_HOST/DC_CITY_PORT`
  * 3) daemon meta args（`downcity.daemon.json`）
  * 4) 默认 `127.0.0.1:5314`
  */
@@ -79,12 +79,8 @@ export function resolveDaemonEndpoint(params: {
   const explicitHost = normalizeHost(params.host);
   const explicitPort = parsePortLike(params.port);
 
-  const envHost =
-    normalizeHost(process.env.DC_SERVER_HOST) ||
-    normalizeHost(process.env.DC_CTX_SERVER_HOST);
-  const envPort =
-    parsePortLike(process.env.DC_SERVER_PORT) ||
-    parsePortLike(process.env.DC_CTX_SERVER_PORT);
+  const envHost = normalizeHost(process.env.DC_CITY_HOST);
+  const envPort = parsePortLike(process.env.DC_CITY_PORT);
 
   let daemonArgHost: string | undefined;
   let daemonArgPort: number | undefined;

@@ -23,7 +23,7 @@ import type {
 } from "./AgentHistoryTypes.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
-import { resolveAgentName } from "../shared/IndexSupport.js";
+import { resolveAgentId } from "../shared/IndexSupport.js";
 
 function normalizeText(input: unknown): string {
   return String(input || "").trim();
@@ -149,7 +149,7 @@ export async function agentHistoryCleanCommand(
 
   const sessionDir = getDowncitySessionDirPath(
     projectRoot,
-    resolveAgentName(projectRoot),
+    resolveAgentId(projectRoot),
     sessionId,
   );
   const chatDir = getDowncityChatSessionDirPath(projectRoot, sessionId);

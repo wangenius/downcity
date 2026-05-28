@@ -42,7 +42,7 @@ import { startCommand } from "../agent/Start.js";
 import type { StartOptions } from "@downcity/agent";
 import {
   injectAgentContext,
-  resolveAgentName,
+  resolveAgentId,
   sleep,
 } from "../shared/IndexSupport.js";
 import { buildRuntimePortFacts } from "../shared/PortHints.js";
@@ -202,11 +202,11 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
       try {
         const result = await runWithSpinner(
           () => stopDaemonProcess({ projectRoot: item.projectRoot }),
-          { text: `Stopping ${resolveAgentName(item.projectRoot)}...` },
+          { text: `Stopping ${resolveAgentId(item.projectRoot)}...` },
         );
         emitCliBlock({
           tone: result.stopped ? "success" : "info",
-          title: resolveAgentName(item.projectRoot),
+          title: resolveAgentId(item.projectRoot),
           summary: result.stopped ? "stopped" : "already stopped",
           facts: [{ label: "project", value: item.projectRoot }],
         });
@@ -214,7 +214,7 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
       } catch (error) {
         emitCliBlock({
           tone: "error",
-          title: resolveAgentName(item.projectRoot),
+          title: resolveAgentId(item.projectRoot),
           summary: "failed",
           facts: [
             { label: "project", value: item.projectRoot },
@@ -368,7 +368,7 @@ export async function restartManagedAgents(cliPath: string): Promise<void> {
       emitCliBlock({
         tone: "error",
         title: "Managed agent restart failed",
-        summary: resolveAgentName(item.projectRoot),
+        summary: resolveAgentId(item.projectRoot),
         facts: [
           {
             label: "Project",

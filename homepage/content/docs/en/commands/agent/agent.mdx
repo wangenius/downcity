@@ -35,7 +35,7 @@ The interactive manager lets you:
 - create an agent project
 - start an agent
 - pick an agent and see current status, name, model, and chat channel connections before choosing an action
-- configure the agent name, model binding, or city-level chat channel account connections
+- configure the agent id, model binding, or city-level chat channel account connections
 
 It does not replace the subcommands below. It is a guided entry point for common local operations.
 
@@ -67,8 +67,8 @@ Chat channel credentials stay in city-level channel accounts managed from `city 
 
 On every `city` execution, CLI resolves current agent context and injects variables into the `city` process and its child processes:
 
+- `DC_AGENT_ID`: current agent runtime id
 - `DC_AGENT_PATH`: absolute path of current agent
-- `DC_AGENT_NAME`: agent name (prefer `downcity.json.name`, fallback to directory name)
 
 > Note: this is process-scoped injection and does not mutate your parent shell session.
 

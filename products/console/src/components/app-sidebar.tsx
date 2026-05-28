@@ -383,7 +383,7 @@ export function AppSidebar({
                 "text-[0.92rem] font-medium tracking-[-0.03em]",
               )}
             >
-              <span>{sidebarMode === "agent-detail" ? (selectedAgent?.name || "Agent") : "DOWNCITY"}</span>
+              <span>{sidebarMode === "agent-detail" ? (selectedAgent?.agentId || "Agent") : "DOWNCITY"}</span>
             </span>
 
             {/* Status icon button - moved from footer */}
@@ -482,7 +482,7 @@ export function AppSidebar({
                               <BotIcon className="size-4 shrink-0" />
                             </span>
                             <span className="min-w-0">
-                              <span className="truncate">{agent.name || "unknown-agent"}</span>
+                              <span className="truncate">{agent.agentId || "unknown-agent"}</span>
                             </span>
                             {isRunning ? (
                               <span className="relative inline-flex h-6 w-6 items-center justify-center">

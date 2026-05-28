@@ -41,9 +41,9 @@ export interface AgentCommandSectionProps {
    */
   selectedAgentId: string
   /**
-   * 当前选中 agent 展示名。
+   * 当前选中 agent 项目 id。
    */
-  selectedAgentName: string
+  selectedAgentProjectId: string
   /**
    * 可切换 agent 列表（全局 command 场景）。
    */
@@ -225,7 +225,7 @@ const QUICK_COMMAND_CANDIDATES = QUICK_COMMAND_GROUPS.flatMap((group) =>
 export function AgentCommandSection(props: AgentCommandSectionProps) {
   const {
     selectedAgentId,
-    selectedAgentName,
+    selectedAgentProjectId,
     agents = [],
     onSelectAgent,
     persistSelectionInUrl = true,
@@ -296,7 +296,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
     () => agents.find((item) => String(item.id || "") === activeAgentId) ?? null,
     [activeAgentId, agents],
   )
-  const activeAgentName = String(activeAgent?.name || selectedAgentName || activeAgentId || "agent").trim() || "agent"
+  const activeAgentName = String(activeAgent?.agentId || selectedAgentProjectId || activeAgentId || "agent").trim() || "agent"
 
   /**
    * 解析最终执行命令（中文）
@@ -577,7 +577,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
                               agent.running ? "bg-emerald-500" : "bg-muted-foreground/40",
                             )}
                           />
-                          <span className="truncate">{agent.name || id}</span>
+                          <span className="truncate">{agent.agentId || id}</span>
                         </span>
                         {isActive ? <CheckIcon className="size-3.5 shrink-0 text-primary" /> : null}
                       </DropdownMenuItem>

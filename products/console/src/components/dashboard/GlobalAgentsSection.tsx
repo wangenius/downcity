@@ -38,7 +38,7 @@ type AgentAcpType = "kimi" | "claude" | "codex"
 
 type AgentFormState = {
   projectRoot: string
-  agentName: string
+  agentId: string
   executionType: AgentExecutionType
   agentType: AgentAcpType
   modelId: string
@@ -48,7 +48,7 @@ type AgentFormState = {
 function createEmptyForm(defaultModelId: string): AgentFormState {
   return {
     projectRoot: "",
-    agentName: "",
+    agentId: "",
     executionType: defaultModelId ? "api" : "acp",
     agentType: "kimi",
     modelId: defaultModelId,
@@ -141,7 +141,7 @@ export interface GlobalAgentsSectionProps {
   onStopAgent: (agentId: string) => void
   onStartAgent: (agentId: string) => void
   onStartAgentWithInitialization: (agentId: string, input: {
-    agentName?: string
+    id?: string
     executionMode: "api" | "acp" | "local"
     modelId?: string
     localModel?: string
@@ -217,7 +217,7 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
     const openExecutionDialog = React.useCallback((input: {
       agentId?: string
       projectRoot: string
-      agentName?: string
+      id?: string
       executionMode?: "api" | "acp" | "local"
       modelId?: string
       localModel?: string
@@ -226,7 +226,7 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
       setDialogTargetAgentId(String(input.agentId || input.projectRoot || "").trim())
       setForm({
         projectRoot: String(input.projectRoot || "").trim(),
-        agentName: String(input.agentName || "").trim(),
+        agentId: String(input.id || "").trim(),
         ...deriveExecutionState({
           executionMode: input.executionMode,
           agentType: input.agentType,
@@ -260,7 +260,7 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
         openExecutionDialog({
           agentId: inspection.knownAgent ? inspection.projectRoot : "",
           projectRoot: inspection.projectRoot,
-          agentName: inspection.displayName,
+          id: inspection.agentId,
           executionMode: inspection.executionMode,
           modelId: inspection.modelId,
           localModel: inspection.localModel,
@@ -306,7 +306,7 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
         setForm((current) => ({
           ...current,
           projectRoot: inspection.projectRoot,
-          agentName: inspection.displayName || current.agentName,
+          agentId: inspection.agentId || current.agentId,
           ...deriveExecutionState({
             executionMode: inspection.executionMode,
             agentType: inspection.agentType,
@@ -341,7 +341,7 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
           Boolean(String(form.localModel || "").trim())) ||
         form.executionType === "acp"
       )
-    const resolvedAgentName = String(form.agentName || "").trim() || deriveFolderName(form.projectRoot)
+    const resolvedAgentId = String(form.agentId || "").trim() || deriveFolderName(form.projectRoot)
     const selectedModelLabel = React.useMemo(() => {
       const matched = activeModelOptions.find(
         (item) => String(item.id || "").trim() === String(form.modelId || "").trim(),
@@ -388,7 +388,7 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
                       </div>
                       <div className="min-w-0">
                         <div className={isRunning ? "truncate text-[15px] font-semibold text-foreground" : "truncate text-[15px] font-semibold text-foreground/72"}>
-                          {agent.name || "unknown-agent"}
+                          {agent.agentId || "unknown-agent"}
                         </div>
                         <div className="truncate font-mono text-[11px] text-muted-foreground">{agent.id}</div>
                       </div>
@@ -433,7 +433,7 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
                                 void (async () => {
                                   const confirmed = await confirm({
                                     title: "停止 Agent",
-                                    description: `确认停止 "${agent.name || "unknown-agent"}"？停止前会检查当前是否有正在执行的 context 和 task。`,
+                                    description: `确认停止 "${agent.agentId || "unknown-agent"}"？停止前会检查当前是否有正在执行的 context 和 task。`,
                                     confirmText: "停止",
                                     confirmVariant: "destructive",
                                   })
@@ -506,9 +506,9 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
                   </div>
                 </div>
                 <div className="rounded-[18px] border border-border/75 bg-background/78 px-3 py-3">
-                  <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Agent Name</div>
-                  <div className="mt-1 truncate text-sm font-medium text-foreground" title={resolvedAgentName}>
-                    {resolvedAgentName}
+                  <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Agent ID</div>
+                  <div className="mt-1 truncate text-sm font-medium text-foreground" title={resolvedAgentId}>
+                    {resolvedAgentId}
                   </div>
                 </div>
                 <div className="rounded-[18px] border border-border/75 bg-background/78 px-3 py-3">
@@ -562,20 +562,20 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Identity</div>
-                      <div className="mt-1 text-sm font-medium text-foreground">确认这个文件夹在 Console 里的名称</div>
+                      <div className="mt-1 text-sm font-medium text-foreground">确认这个文件夹在 Console 里的 agent id</div>
                     </div>
                     <span className="inline-flex items-center rounded-full border border-border/70 bg-secondary/75 px-2.5 py-1 text-[11px] text-muted-foreground">
                       step 2
                     </span>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="agent-name" className="text-[12px] font-medium text-foreground/82">Agent 名称</Label>
+                    <Label htmlFor="agent-id" className="text-[12px] font-medium text-foreground/82">Agent ID</Label>
                     <Input
-                      id="agent-name"
-                      value={form.agentName}
+                      id="agent-id"
+                      value={form.agentId}
                       placeholder={deriveFolderName(form.projectRoot)}
                       className="h-11 rounded-[14px] border-border/80 bg-background px-3 text-sm"
-                      onChange={(event) => setForm((current) => ({ ...current, agentName: event.target.value }))}
+                      onChange={(event) => setForm((current) => ({ ...current, agentId: event.target.value }))}
                     />
                   </div>
                 </div>
@@ -700,7 +700,7 @@ export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgen
                     await Promise.resolve(onStartAgentWithInitialization(
                       dialogTargetAgentId || form.projectRoot.trim(),
                       {
-                        agentName: form.agentName.trim() || undefined,
+                        id: form.agentId.trim() || undefined,
                         ...executionPayload,
                       },
                     ))

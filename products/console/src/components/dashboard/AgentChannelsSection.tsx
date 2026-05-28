@@ -69,7 +69,7 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
   return (
     <DashboardModule
       title="Agent Channels"
-      description={`当前 agent：${selectedAgent.name || "-"}`}
+      description={`当前 agent：${selectedAgent.agentId || "-"}`}
       actions={
         <Button
           type="button"

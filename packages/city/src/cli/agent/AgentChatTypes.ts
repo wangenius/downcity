@@ -15,7 +15,7 @@ export const AGENT_CHAT_DEFAULT_SESSION_ID = "local-cli-chat-main";
  * `city agent chat` 命令选项。
  */
 export interface AgentChatCliOptions {
-  /** 目标 agent 名称。 */
+  /** 目标 agent id。 */
   to?: string;
   /** 一次性发送的消息文本。 */
   message?: string;
@@ -71,8 +71,8 @@ export interface AgentChatTransportOptions {
  * 单轮 chat 执行结果。
  */
 export interface AgentChatExecutionOutcome {
-  /** 目标 agent 名称。 */
-  agentName: string;
+  /** 目标 agent id。 */
+  agentId: string;
   /** 目标 agent 项目根目录。 */
   projectRoot?: string;
   /** 实际执行使用的 sessionId。 */

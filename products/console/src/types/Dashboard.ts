@@ -15,9 +15,9 @@ export interface UiAgentOption {
    */
   id: string;
   /**
-   * Agent 展示名（downcity.json.name 或目录名）。
+   * Agent 项目自身的稳定 id（优先 `downcity.json.id`，回退目录名）。
    */
-  name: string;
+  agentId: string;
   /**
    * agent 项目根路径。
    */
@@ -94,9 +94,9 @@ export interface UiAgentInitializationInput {
    */
   projectRoot: string;
   /**
-   * agent 名称。
+   * agent 项目 id（会写入 `downcity.json.id`）。
    */
-  agentName?: string;
+  id?: string;
   /**
    * 执行模式。
    */
@@ -154,9 +154,9 @@ export interface UiAgentDirectoryInspection {
    */
   running: boolean;
   /**
-   * 展示名（优先 downcity.json.name，回退目录名）。
+   * 当前目录解析出的 agent 项目 id。
    */
-  displayName: string;
+  agentId?: string;
   /**
    * 当前读取到的执行模式。
    */
@@ -290,9 +290,9 @@ export interface UiConfigStatusResponse {
    */
   selectedAgentId?: string;
   /**
-   * 当前选中的 agent 名称。
+   * 当前选中的 agent 项目 id。
    */
-  selectedAgentName?: string;
+  selectedAgentProjectId?: string;
   /**
    * 配置文件状态列表。
    */

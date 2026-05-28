@@ -82,7 +82,7 @@ export function registerControlOverviewRoutes(
           cityVersion: DC_VERSION,
           now: new Date().toISOString(),
           agent: {
-            name: runtime.config.name,
+            id: runtime.config.id,
             status: "running",
           },
           sessions: {

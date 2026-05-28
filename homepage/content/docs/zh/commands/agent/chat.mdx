@@ -14,13 +14,13 @@ description: 在终端中与选定 agent 对话，支持交互式和一次性模
 ## 用法
 
 ```bash
-city agent chat [--to <agentName>]
-city agent chat [--to <agentName>] --message <text> [--json]
+city agent chat [--to <id>]
+city agent chat [--to <id>] --message <text> [--json]
 ```
 
 ## 常用参数
 
-- `-t, --to <name>`：目标 agent 名称；省略时会从当前运行中的 agent 里交互选择
+- `-t, --to <id>`：目标 agent id；省略时会从当前运行中的 agent 里交互选择
 - `-m, --message <text>`：发送一轮消息后直接退出，不进入 REPL
 - `--json`：一次性模式下输出结构化结果
 - `--host <host>` / `--port <port>`：强制走远程 HTTP transport

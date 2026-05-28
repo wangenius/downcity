@@ -127,7 +127,7 @@ export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js"
 export {
   initializeAgentProject,
   isAgentProjectInitialized,
-  normalizeDefaultAgentName,
+  normalizeDefaultAgentId,
 } from "./config/AgentInitializer.js";
 export { loadDowncityConfig } from "./config/Config.js";
 export {

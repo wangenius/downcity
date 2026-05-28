@@ -17,9 +17,9 @@ export interface PlatformAgentOption {
   id: string;
 
   /**
-   * agent 显示名称（优先 downcity.json.name，回退目录名）。
+   * agent 项目自身的稳定标识（优先 downcity.json.id，回退目录名推导）。
    */
-  name: string;
+  agentId: string;
 
   /**
    * agent 项目根目录（绝对路径）。
@@ -173,9 +173,9 @@ export interface PlatformAgentDirectoryInspection {
   running: boolean;
 
   /**
-   * 展示名称（优先 downcity.json.name，回退目录名）。
+   * 当前目录解析出的 agent id（若存在）。
    */
-  displayName: string;
+  agentId?: string;
 
   /**
    * 当前读取到的主模型 ID（若存在）。
@@ -336,9 +336,9 @@ export interface PlatformConfigStatusResponse {
   selectedAgentId: string;
 
   /**
-   * 当前选中的 agent 名称（可能为空）。
+   * 当前选中的 agent 项目 id（即 `downcity.json.id`，可能为空）。
    */
-  selectedAgentName: string;
+  selectedAgentProjectId: string;
 
   /**
    * 配置文件状态列表。

@@ -534,7 +534,7 @@ export async function startAgentFromHistoryMutation(params: {
           initializeIfNeeded: params.options?.initializeIfNeeded === true,
           initialization: params.options?.initialization
             ? {
-                agentName: params.options.initialization.agentName,
+                id: params.options.initialization.id,
                 executionMode: params.options.initialization.executionMode,
                 modelId: params.options.initialization.modelId,
                 localModel: params.options.initialization.localModel,
@@ -581,12 +581,12 @@ export async function createAgentMutation(params: {
       started?: boolean;
       pid?: number;
       projectRoot?: string;
-      agentName?: string;
+      id?: string;
     }>(dashboardApiRoutes.uiAgentCreate(), {
       method: "POST",
       body: JSON.stringify({
         projectRoot,
-        agentName: params.input.agentName,
+        id: params.input.id,
         executionMode: params.input.executionMode,
         modelId: params.input.modelId,
         localModel: params.input.localModel,
@@ -597,7 +597,7 @@ export async function createAgentMutation(params: {
 
     if (params.input.autoStart === false || data.started !== true) {
       await params.refreshDashboard(projectRoot);
-      params.showToast(`agent 已创建：${String(data.agentName || projectRoot)}`, "success");
+      params.showToast(`agent 已创建：${String(data.id || projectRoot)}`, "success");
       return;
     }
 

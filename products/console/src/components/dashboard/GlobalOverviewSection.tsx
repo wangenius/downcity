@@ -61,7 +61,7 @@ export interface GlobalOverviewSectionProps {
    * 初始化并启动 agent。
    */
   onStartAgentWithInitialization: (agentId: string, input: {
-    agentName?: string
+    id?: string
     executionMode: "api" | "acp" | "local"
     modelId?: string
     localModel?: string

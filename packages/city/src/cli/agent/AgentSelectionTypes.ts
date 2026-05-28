@@ -3,7 +3,7 @@
  */
 
 export type CliRegisteredAgentView = {
-  name: string;
+  id: string;
   projectRoot: string;
   status: "running" | "stopped";
 };

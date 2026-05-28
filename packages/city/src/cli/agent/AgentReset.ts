@@ -14,7 +14,7 @@ import { getDowncityJsonPath } from "@/config/Paths.js";
 import { PlatformStore } from "@/platform/store/index.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
-import { resolveAgentName } from "../shared/IndexSupport.js";
+import { resolveAgentId } from "../shared/IndexSupport.js";
 
 /**
  * 读取当前 agent 的 execution.modelId。
@@ -100,7 +100,7 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
     emitCliBlock({
       tone: "info",
       title: "Agent reset cancelled",
-      summary: resolveAgentName(projectRoot),
+      summary: resolveAgentId(projectRoot),
     });
     return;
   }
@@ -109,7 +109,7 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
     emitCliBlock({
       tone: "info",
       title: "Model unchanged",
-      summary: resolveAgentName(projectRoot),
+      summary: resolveAgentId(projectRoot),
       facts: [
         { label: "modelId", value: current },
         { label: "project", value: projectRoot },
@@ -126,7 +126,7 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   emitCliBlock({
     tone: "success",
     title: "Agent reconfigured",
-    summary: resolveAgentName(projectRoot),
+    summary: resolveAgentId(projectRoot),
     facts: [
       { label: "previous", value: current || "(none)" },
       { label: "current", value: nextModelId },

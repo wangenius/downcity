@@ -59,8 +59,8 @@ function readDowncityConfigByPath(
     throw new Error("Invalid downcity.json: expected object");
   }
   const candidate = raw as Partial<DowncityConfig>;
-  if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
-    throw new Error("Invalid downcity.json: missing required fields name/version");
+  if (typeof candidate.id !== "string" || typeof candidate.version !== "string") {
+    throw new Error("Invalid downcity.json: missing required fields id/version");
   }
   return { downcityJsonPath, config: candidate as DowncityConfig };
 }

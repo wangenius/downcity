@@ -53,17 +53,19 @@ import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
 
 /**
- * 规范化默认 Agent 名称。
+ * 规范化默认 Agent ID。
  *
  * 关键点（中文）
- * - 把目录名中的 `_` / `-` 统一折叠为空格，产出更适合作为展示名的默认值。
- * - 这里只做轻量字符串清洗，不负责长度限制或唯一性处理。
+ * - 把目录名清洗为稳定、可重复的 snake_case 标识，避免展示名语义混入 SDK。
+ * - 这里只做最小格式规整，不负责跨项目唯一性分配。
  */
-export function normalizeDefaultAgentName(input: string): string {
+export function normalizeDefaultAgentId(input: string): string {
   return String(input || "")
     .trim()
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_{2,}/g, "_")
     .trim();
 }
 
@@ -112,8 +114,8 @@ export async function initializeAgentProject(
 ): Promise<AgentProjectInitializationResult> {
   const projectRoot = path.resolve(String(input.projectRoot || "").trim() || ".");
   const projectBaseName = path.basename(projectRoot);
-  const fallbackAgentName = normalizeDefaultAgentName(projectBaseName) || projectBaseName;
-  const agentName = String(input.agentName || "").trim() || fallbackAgentName;
+  const fallback_agent_id = normalizeDefaultAgentId(projectBaseName) || projectBaseName;
+  const agent_id = String(input.id || "").trim() || fallback_agent_id;
   const execution = input.execution as ExecutionBindingConfig;
 
   const channels = normalizeChannels(input.channels);
@@ -123,7 +125,7 @@ export async function initializeAgentProject(
   const skippedFiles: string[] = [];
 
   assertProjectExecutionTarget({
-    name: agentName,
+    id: agent_id,
     version: "1.0.0",
     execution,
   });
@@ -139,7 +141,7 @@ export async function initializeAgentProject(
   }
 
   const initTemplateVariables = {
-    agent_name: agentName,
+    agent_id,
   };
   const staticPromptFiles = [
     {
@@ -176,7 +178,7 @@ export async function initializeAgentProject(
 
   const shipConfig: DowncityConfig = {
     $schema: DEFAULT_DOWNCITY_JSON.$schema,
-    name: agentName,
+    id: agent_id,
     version: "1.0.0",
     execution,
     plugins: {
@@ -251,7 +253,7 @@ export async function initializeAgentProject(
 
   return {
     projectRoot,
-    agentName,
+    id: agent_id,
     ...(execution?.type === "api" && String(execution.modelId || "").trim()
       ? { modelId: String(execution.modelId || "").trim() }
       : {}),

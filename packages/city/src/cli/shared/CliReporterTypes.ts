@@ -101,7 +101,7 @@ export type CliReportListItem = {
    * 当前列表项的主标题。
    *
    * 说明（中文）
-   * - 一般展示 agent 名称、服务名或项目名。
+   * - 一般展示 agent id、服务名或项目名。
    * - 尽量避免直接塞入大量详情信息。
    */
   title: string;

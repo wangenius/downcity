@@ -24,12 +24,13 @@ export interface AgentProjectInitializationInput {
   projectRoot: string;
 
   /**
-   * agent 展示名。
+   * agent 唯一标识。
    *
    * 关键点（中文）
-   * - 为空时会自动回退到目录名推导出的默认名称。
+   * - 为空时会自动回退到目录名推导出的默认 id。
+   * - 该字段会直接写入 `downcity.json.id`。
    */
-  agentName?: string;
+  id?: string;
 
   /**
    * 项目执行绑定配置。
@@ -71,9 +72,9 @@ export interface AgentProjectInitializationResult {
   projectRoot: string;
 
   /**
-   * 最终写入的 agent 名称。
+   * 最终写入的 agent id。
    */
-  agentName: string;
+  id: string;
 
   /**
    * 最终启用的 chat channels。

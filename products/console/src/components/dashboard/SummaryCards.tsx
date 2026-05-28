@@ -494,7 +494,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                     void (async () => {
                       const confirmed = await confirm({
                         title: "停止 Agent",
-                        description: `确认停止 "${selectedAgent.name || "unknown-agent"}"？`,
+                        description: `确认停止 "${selectedAgent.agentId || "unknown-agent"}"？`,
                         confirmText: "停止",
                         confirmVariant: "destructive",
                       })
@@ -544,7 +544,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                 />
                 <div className="min-w-0 space-y-1">
                   <div className="truncate text-base font-medium text-foreground">
-                    {selectedAgent.name || "-"}
+                    {selectedAgent.agentId || "-"}
                   </div>
                   <div className="truncate text-sm text-muted-foreground">
                     {selectedAgent.projectRoot || selectedAgent.id || "-"}

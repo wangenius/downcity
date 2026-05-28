@@ -487,7 +487,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
     <section className="space-y-4">
       <DashboardModule
         title="Authorization"
-        description={normalizeText(selectedAgent?.name || selectedAgent?.id || "未选择")}
+        description={normalizeText(selectedAgent?.agentId || selectedAgent?.id || "未选择")}
         bodyClassName="space-y-2.5"
         actions={
           <>

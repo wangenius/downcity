@@ -77,12 +77,12 @@ export interface AgentOptions {
   plugins?: BasePlugin[];
 
   /**
-   * 当前 agent 实例可见的环境变量快照。
+   * 当前 agent 的显式环境变量覆盖项。
    *
    * 关键点（中文）
-   * - 这里传入的是已经在宿主侧完成合并的最终环境变量集合。
-   * - SDK 不再区分 global env 与 agent env；如需区分，应由更上层在传入前自行处理。
-   * - 该快照会参与配置解析与运行时上下文装配，但不会回写到宿主环境。
+   * - `Agent` 会自动加载当前进程 `process.env` 与项目 `.env`。
+   * - 这里仅用于在默认加载结果之上再做显式覆盖。
+   * - 覆盖后的最终 env 会参与配置解析与运行时上下文装配，但不会回写到宿主环境。
    */
   env?: Record<string, string>;
 

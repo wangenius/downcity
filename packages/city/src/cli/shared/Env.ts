@@ -4,36 +4,15 @@
  * 关键点（中文）
  * - `env` 是平台 Env 的资源命令，支持 list/set/delete。
  * - 默认不输出任何 secret value；只在显式 set 时写入值。
- * - global / agent 两层 env 共用统一 store，但 CLI 语义仍保持清晰。
+ * - 当前只保留平台全局 env，不再区分 agent 私有层。
  */
 
 import type { Command } from "commander";
 import { PlatformStore } from "@/platform/store/index.js";
-import type { StoredEnvEntry, StoredEnvScope } from "@downcity/agent";
+import type { StoredEnvEntry } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean } from "./IndexSupport.js";
-
-/**
- * env 子命令的 scope 类型。
- */
-type KeysScope = StoredEnvScope | "all";
-
-/**
- * 规范化 env scope。
- */
-function normalizeKeysScope(value: string | undefined, options?: {
-  /**
-   * 是否允许 `all`。
-   */
-  allowAll?: boolean;
-}): KeysScope {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (!normalized || normalized === "global") return "global";
-  if (normalized === "agent") return "agent";
-  if (options?.allowAll === true && normalized === "all") return "all";
-  throw new Error(`Unsupported scope: ${value}`);
-}
 
 /**
  * 规范化 env key。
@@ -44,17 +23,6 @@ function normalizeEnvKey(value: string): string {
     throw new Error(`Invalid env key: ${value}`);
   }
   return key;
-}
-
-/**
- * 规范化非空文本。
- */
-function normalizeRequiredText(value: string | undefined, fieldName: string): string {
-  const normalized = String(value || "").trim();
-  if (!normalized) {
-    throw new Error(`${fieldName} is required`);
-  }
-  return normalized;
 }
 
 /**
@@ -111,66 +79,10 @@ function assertEnvCopyAllowedFromLocalCli(): void {
   throw new Error("city env copy can only be run from the local CLI, not from an agent shell.");
 }
 
-/**
- * 解析命令输入最终使用的 env scope。
- */
-function resolveKeysCommandScope(params: {
-  /**
-   * 命令行 `--scope` 原始值。
-   */
-  scope?: string;
-  /**
-   * 命令行 `--agent` 原始值。
-   */
-  agentId?: string;
-  /**
-   * 当前命令是否允许 `all`。
-   */
-  allowAll?: boolean;
-}): {
-  /**
-   * 最终 env scope。
-   */
-  scope: KeysScope;
-  /**
-   * 规范化后的 agentId。
-   */
-  agentId?: string;
-} {
-  const agentId = String(params.agentId || "").trim();
-  if (agentId) {
-    return {
-      scope: "agent",
-      agentId,
-    };
-  }
-
-  return {
-    scope: normalizeKeysScope(params.scope, {
-      allowAll: params.allowAll === true,
-    }),
-  };
-}
-
-/**
- * 读取指定范围的 env 条目。
- */
-async function listKeysEntries(params: {
-  /**
-   * scope 过滤。
-   */
-  scope: KeysScope;
-  /**
-   * agent 过滤。
-   */
-  agentId?: string;
-}): Promise<StoredEnvEntry[]> {
+async function listKeysEntries(): Promise<StoredEnvEntry[]> {
   const store = new PlatformStore();
   try {
-    if (params.scope === "all") {
-      return await store.listEnvEntries();
-    }
-    return await store.listEnvEntries(params.scope, params.agentId);
+    return await store.listEnvEntries();
   } finally {
     store.close();
   }
@@ -181,22 +93,11 @@ async function listKeysEntries(params: {
  */
 async function emitKeysList(params: {
   /**
-   * scope 过滤。
-   */
-  scope: KeysScope;
-  /**
-   * agent 过滤。
-   */
-  agentId?: string;
-  /**
    * 是否以 JSON 输出。
    */
   asJson?: boolean;
 }): Promise<void> {
-  const entries = await listKeysEntries({
-    scope: params.scope,
-    agentId: params.agentId,
-  });
+  const entries = await listKeysEntries();
 
   if (params.asJson === true) {
     printResult({
@@ -204,14 +105,11 @@ async function emitKeysList(params: {
       success: true,
       title: "env list",
       payload: {
-        scope: params.scope,
-        agentId: params.agentId,
         count: entries.length,
         keys: entries.map((item) => ({
           key: item.key,
           description: item.description || "",
           scope: item.scope,
-          ...(item.agentId ? { agentId: item.agentId } : {}),
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
         })),
@@ -240,16 +138,8 @@ async function emitKeysList(params: {
       facts: [
         {
           label: "Scope",
-          value: item.scope,
+          value: "global",
         },
-        ...(item.agentId
-          ? [
-              {
-                label: "Agent",
-                value: item.agentId,
-              },
-            ]
-          : []),
         ...(item.description
           ? [
               {
@@ -266,20 +156,8 @@ async function emitKeysList(params: {
 /**
  * 输出 dotenv 格式的 env 内容。
  */
-async function emitDotenvCopy(params: {
-  /**
-   * scope 过滤。
-   */
-  scope: KeysScope;
-  /**
-   * agent 过滤。
-   */
-  agentId?: string;
-}): Promise<void> {
-  const entries = await listKeysEntries({
-    scope: params.scope,
-    agentId: params.agentId,
-  });
+async function emitDotenvCopy(): Promise<void> {
+  const entries = await listKeysEntries();
   process.stdout.write(formatDotenvEntries(entries));
 }
 
@@ -287,14 +165,6 @@ async function emitDotenvCopy(params: {
  * 写入单个 env 条目。
  */
 async function setKeyEntry(params: {
-  /**
-   * scope。
-   */
-  scope: StoredEnvScope;
-  /**
-   * agentId。
-   */
-  agentId?: string;
   /**
    * env key。
    */
@@ -315,8 +185,7 @@ async function setKeyEntry(params: {
   const store = new PlatformStore();
   try {
     await store.upsertEnvEntry({
-      scope: params.scope,
-      agentId: params.agentId,
+      scope: "global",
       key: params.key,
       value: params.value,
       description: String(params.description || "").trim(),
@@ -332,8 +201,7 @@ async function setKeyEntry(params: {
       title: "env set",
       payload: {
         action: "set",
-        scope: params.scope,
-        agentId: params.agentId,
+        scope: "global",
         key: params.key,
       },
     });
@@ -347,16 +215,8 @@ async function setKeyEntry(params: {
     facts: [
       {
         label: "Scope",
-        value: params.scope,
+        value: "global",
       },
-      ...(params.agentId
-        ? [
-            {
-              label: "Agent",
-              value: params.agentId,
-            },
-          ]
-        : []),
       ...(params.description
         ? [
             {
@@ -374,14 +234,6 @@ async function setKeyEntry(params: {
  */
 function deleteKeyEntry(params: {
   /**
-   * scope。
-   */
-  scope: StoredEnvScope;
-  /**
-   * agentId。
-   */
-  agentId?: string;
-  /**
    * env key。
    */
   key: string;
@@ -392,11 +244,7 @@ function deleteKeyEntry(params: {
 }): void {
   const store = new PlatformStore();
   try {
-    store.removeEnvEntry({
-      scope: params.scope,
-      agentId: params.agentId,
-      key: params.key,
-    });
+    store.removeEnvEntry(params.key);
   } finally {
     store.close();
   }
@@ -408,8 +256,7 @@ function deleteKeyEntry(params: {
       title: "env delete",
       payload: {
         action: "delete",
-        scope: params.scope,
-        agentId: params.agentId,
+        scope: "global",
         key: params.key,
       },
     });
@@ -423,16 +270,8 @@ function deleteKeyEntry(params: {
     facts: [
       {
         label: "Scope",
-        value: params.scope,
+        value: "global",
       },
-      ...(params.agentId
-        ? [
-            {
-              label: "Agent",
-              value: params.agentId,
-            },
-          ]
-        : []),
     ],
   });
 }
@@ -449,19 +288,10 @@ export function registerEnvCommand(program: Command): void {
   env
     .command("list")
     .description("列出平台 Env 中已配置的 key")
-    .option("--scope <scope>", "按作用域过滤：global|agent|all", "global")
-    .option("--agent <agentId>", "仅列出指定 agent 的私有 env（会隐式使用 --scope agent）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean)
     .helpOption("--help", "display help for command")
-    .action(async (options: { scope?: string; agent?: string; json?: boolean }) => {
-      const resolved = resolveKeysCommandScope({
-        scope: options.scope,
-        agentId: options.agent,
-        allowAll: true,
-      });
+    .action(async (options: { json?: boolean }) => {
       await emitKeysList({
-        scope: resolved.scope,
-        agentId: resolved.agentId,
         asJson: options.json === true,
       });
     });
@@ -469,28 +299,15 @@ export function registerEnvCommand(program: Command): void {
   env
     .command("set <key> <value>")
     .description("新增或更新平台 Env 中的 key")
-    .option("--scope <scope>", "写入作用域：global|agent", "global")
-    .option("--agent <agentId>", "指定 agent 私有 env（会隐式使用 --scope agent）")
     .option("-d, --description <description>", "设置 key 描述")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean)
     .helpOption("--help", "display help for command")
     .action(async (
       keyInput: string,
       valueInput: string,
-      options: { scope?: string; agent?: string; description?: string; json?: boolean },
+      options: { description?: string; json?: boolean },
     ) => {
-      const resolved = resolveKeysCommandScope({
-        scope: options.scope,
-        agentId: options.agent,
-        allowAll: false,
-      });
-      if (resolved.scope === "all") {
-        throw new Error("env set does not support scope=all");
-      }
-
       await setKeyEntry({
-        scope: resolved.scope,
-        agentId: resolved.agentId,
         key: normalizeEnvKey(keyInput),
         value: String(valueInput ?? ""),
         description: String(options.description || "").trim(),
@@ -501,54 +318,29 @@ export function registerEnvCommand(program: Command): void {
   env
     .command("copy")
     .description("按 .env 文件格式输出平台 Env 的明文值")
-    .option("--scope <scope>", "按作用域复制：global|agent|all", "global")
-    .option("--agent <agentId>", "复制指定 agent 的私有 env（会隐式使用 --scope agent）")
     .helpOption("--help", "display help for command")
-    .action(async (options: { scope?: string; agent?: string }) => {
+    .action(async () => {
       assertEnvCopyAllowedFromLocalCli();
-      const resolved = resolveKeysCommandScope({
-        scope: options.scope,
-        agentId: options.agent,
-        allowAll: true,
-      });
-      await emitDotenvCopy({
-        scope: resolved.scope,
-        agentId: resolved.agentId,
-      });
+      await emitDotenvCopy();
     });
 
   env
     .command("delete <key>")
     .description("删除平台 Env 中的 key")
-    .option("--scope <scope>", "删除作用域：global|agent", "global")
-    .option("--agent <agentId>", "指定 agent 私有 env（会隐式使用 --scope agent）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean)
     .helpOption("--help", "display help for command")
     .action(async (
       keyInput: string,
-      options: { scope?: string; agent?: string; json?: boolean },
+      options: { json?: boolean },
     ) => {
-      const resolved = resolveKeysCommandScope({
-        scope: options.scope,
-        agentId: options.agent,
-        allowAll: false,
-      });
-      if (resolved.scope === "all") {
-        throw new Error("env delete does not support scope=all");
-      }
-
       deleteKeyEntry({
-        scope: resolved.scope,
-        agentId: resolved.agentId,
         key: normalizeEnvKey(keyInput),
         asJson: options.json === true,
       });
     });
 
   env.action(async () => {
-    await emitKeysList({
-      scope: "global",
-    });
+    await emitKeysList({});
   });
 
   env.showHelpAfterError();

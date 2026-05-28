@@ -19,8 +19,7 @@ Console 全局配置统一存储在：
 `downcity.db` 中主要包含以下数据域：
 
 1. 模型池（providers/models）
-2. Console 共享 env（`global_env`）
-3. Agent 私有 env（`agent_env`）
+2. Console 侧管理的 env 记录（`env_entries`）
 4. Bot 账号凭据池（`channel_accounts`）
 5. Chat 用户授权（`chat_auth_roles`、`chat_auth_role_permissions`、`chat_auth_channel_defaults`、`chat_auth_user_roles`）
 
@@ -42,16 +41,16 @@ Console 全局配置统一存储在：
 
 当前版本按明确分层工作：
 
-1. Console 共享 env：`global_env`
-2. Agent 私有 DB env：`agent_env`
-3. Agent 本地运行时覆盖：`<agent>/.env`（用户维护）
+1. 宿主进程 env：`process.env`
+2. Agent 本地运行时覆盖：`<agent>/.env`（用户维护）
+3. SDK 显式覆盖：`new Agent({ env })`
 4. Chat 渠道凭据：`channel_accounts`（由 `downcity.json` 的 `channelAccountId` 绑定）
 5. Chat 用户授权：`chat_auth_*` 结构化表（city 全局生效）
 
 关键行为：
 
-1. agent env 最终是 `agent_env + <agent>/.env`（`.env` 优先）。
-2. Agent 的 `.env` 只在当前 agent 内生效，不污染全局 `process.env`。
+1. Agent 运行时 env 最终是 `process.env + <agent>/.env + 可选 new Agent({ env })`（`env` 优先）。
+2. 当宿主是 `city` 时，可以在创建 Agent 前先把 Console 全局 env 注入到 `process.env`。
 3. `downcity.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
 4. 渠道真实凭据来自 `channel_accounts`。
 5. 用户聊天权限来自 `chat_auth_*` 表，不保存在 agent 项目里。

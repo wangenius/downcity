@@ -191,11 +191,6 @@ export interface UpsertModelInput {
 }
 
 /**
- * Env 条目作用域。
- */
-export type StoredEnvScope = "global" | "agent";
-
-/**
  * 平台环境变量记录。
  */
 export interface StoredEnvEntry {
@@ -203,18 +198,10 @@ export interface StoredEnvEntry {
    * Env 作用域。
    *
    * 关键点（中文）
-   * - `global` 表示平台控制面全局共享变量。
-   * - `agent` 表示仅某个 agent 可见的私有变量。
+   * - 当前版本只保留 `global` 单一作用域。
+   * - 所有平台 Env 都视为宿主级共享变量，由宿主决定是否注入 `process.env`。
    */
-  scope: StoredEnvScope;
-  /**
-   * Agent 唯一标识（使用 projectRoot 绝对路径）。
-   *
-   * 关键点（中文）
-   * - 仅当 `scope=agent` 时有值。
-   * - `scope=global` 时为空。
-   */
-  agentId?: string;
+  scope: "global";
   /**
    * 环境变量 key（例如 `OPENAI_API_KEY`）。
    */
@@ -247,16 +234,12 @@ export interface StoredEnvEntry {
 export interface UpsertEnvEntryInput {
   /**
    * Env 作用域。
-   */
-  scope: StoredEnvScope;
-  /**
-   * Agent 唯一标识（projectRoot）。
    *
    * 关键点（中文）
-   * - 仅 `scope=agent` 时必填。
-   * - `scope=global` 时忽略。
+   * - 当前只允许写入 `global`。
+   * - 保留该字段是为了让宿主侧调用点显式表达“这是平台全局 env 写入”。
    */
-  agentId?: string;
+  scope: "global";
   /**
    * 环境变量 key。
    */
@@ -276,42 +259,13 @@ export interface UpsertEnvEntryInput {
 
 /**
  * 全局环境变量记录。
- *
- * 关键点（中文）
- * - 作为统一 `StoredEnvEntry` 的别名保留。
- * - 调用方可继续按全局 env 语义使用。
  */
 export type StoredGlobalEnvEntry = StoredEnvEntry;
 
 /**
- * Agent 私有环境变量记录。
- *
- * 关键点（中文）
- * - 作为统一 `StoredEnvEntry` 的别名保留。
- * - 调用方可继续按 agent env 语义使用。
- */
-export type StoredAgentEnvEntry = StoredEnvEntry;
-
-/**
  * 全局环境变量写入参数。
- *
- * 关键点（中文）
- * - 作为统一 `UpsertEnvEntryInput` 的别名保留。
  */
-export type UpsertGlobalEnvEntryInput = Omit<UpsertEnvEntryInput, "scope" | "agentId">;
-
-/**
- * Agent 私有环境变量写入参数。
- *
- * 关键点（中文）
- * - 作为统一 `UpsertEnvEntryInput` 的别名保留。
- */
-export type UpsertAgentEnvEntryInput = Omit<UpsertEnvEntryInput, "scope"> & {
-  /**
-   * Agent 唯一标识（projectRoot）。
-   */
-  agentId: string;
-};
+export type UpsertGlobalEnvEntryInput = Omit<UpsertEnvEntryInput, "scope">;
 
 /**
  * Channel Account 记录。

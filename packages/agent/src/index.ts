@@ -281,16 +281,13 @@ export type {
 
 // Platform store 类型
 export type {
-  StoredAgentEnvEntry,
   StoredChannelAccount,
   StoredChannelAccountChannel,
   StoredEnvEntry,
-  StoredEnvScope,
   StoredGlobalEnvEntry,
   StoredModel,
   StoredModelProvider,
   StoredProviderMeta,
-  UpsertAgentEnvEntryInput,
   UpsertChannelAccountInput,
   UpsertEnvEntryInput,
   UpsertGlobalEnvEntryInput,

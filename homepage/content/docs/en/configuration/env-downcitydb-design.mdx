@@ -35,9 +35,11 @@ Use one rule:
 
 ## Runtime load order
 
-1. read global env from `downcity.db`
-2. read agent-private env from `downcity.db`
-3. read project `.env`
-4. read project `downcity.json`
-5. resolve `plugins.*`
-6. resolve channel credentials, chat authorization rules, and model pool from `downcity.db`
+1. the host may read Console-managed env from `downcity.db`
+2. the host injects runtime-needed values into `process.env`
+3. Agent reads host `process.env`
+4. Agent reads project `.env`
+5. optional `new Agent({ env })` overrides both
+6. Agent reads project `downcity.json`
+7. resolve `plugins.*`
+8. resolve channel credentials, chat authorization rules, and model pool from `downcity.db`

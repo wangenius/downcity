@@ -28,6 +28,7 @@ import {
   upsertManagedAgentEntry,
 } from "@/process/registry/CityRegistry.js";
 import { signalDetachedProcess } from "@/process/registry/ProcessSweep.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
 
 /**
  * 异步睡眠工具。
@@ -239,7 +240,7 @@ export const startDaemonProcess = async (params: {
   const logFd = fs.openSync(logPath, "a");
 
   const childEnv: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...mergeProcessEnvWithPlatformGlobalEnv(process.env),
     DOWNCITY_DAEMON: "1",
   };
 

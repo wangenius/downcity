@@ -2,21 +2,13 @@
  * 平台环境变量管理路由。
  *
  * 关键点（中文）
- * - 提供 control plane 级与 agent 级环境变量的统一读写接口。
+ * - 当前只提供平台全局 env 的统一读写接口。
  * - 所有 value 在 DB 中以密文存储，这里的接口只负责明文读写与删除。
  */
 
 import dotenv from "dotenv";
 import type { Hono } from "hono";
 import { PlatformStore } from "@/platform/store/index.js";
-
-type EnvScope = "global" | "agent";
-
-function normalizeScope(input: string | undefined): EnvScope {
-  const value = String(input || "").trim().toLowerCase();
-  if (value === "agent") return "agent";
-  return "global";
-}
 
 function normalizeNonEmptyText(value: unknown, fieldName: string): string {
   const text = String(value || "").trim();
@@ -74,32 +66,9 @@ export function registerPlatformEnvRoutes(params: {
   const app = params.app;
 
   app.get("/api/ui/env", async (c) => {
-    const scope = normalizeScope(c.req.query("scope"));
-    const agentIdRaw = c.req.query("agent");
     const store = new PlatformStore();
     try {
-      if (scope === "agent") {
-        const agentId = String(agentIdRaw || "").trim();
-        const rows = agentId
-          ? await store.listAgentEnvEntries(agentId)
-          : await store.listAllAgentEnvEntries();
-        return c.json({
-          success: true,
-          scope,
-          agentId: agentId || undefined,
-          items: rows.map((item) => ({
-            scope: "agent" as const,
-            agentId: item.agentId,
-            key: item.key,
-            description: item.description,
-            value: item.value,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-          })),
-        });
-      }
-
-      const rows = await store.listGlobalEnvEntries();
+      const rows = await store.listEnvEntries();
       return c.json({
         success: true,
         scope: "global",
@@ -122,35 +91,17 @@ export function registerPlatformEnvRoutes(params: {
   app.post("/api/ui/env/upsert", async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as {
-        scope?: string;
-        agentId?: string;
         key?: string;
         description?: string;
         value?: string;
       };
-      const scope = normalizeScope(body.scope);
       const key = normalizeNonEmptyText(body.key, "env key");
       const description = String(body.description || "").trim();
       const value = String(body.value ?? "");
       const store = new PlatformStore();
       try {
-        if (scope === "agent") {
-          const agentId = normalizeNonEmptyText(body.agentId, "agentId");
-          await store.upsertAgentEnvEntry({
-            agentId,
-            key,
-            description,
-            value,
-          });
-          return c.json({
-            success: true,
-            scope,
-            agentId,
-            key,
-          });
-        }
-
-        await store.upsertGlobalEnvEntry({
+        await store.upsertEnvEntry({
+          scope: "global",
           key,
           description,
           value,
@@ -171,26 +122,12 @@ export function registerPlatformEnvRoutes(params: {
   app.post("/api/ui/env/remove", async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as {
-        scope?: string;
-        agentId?: string;
         key?: string;
       };
-      const scope = normalizeScope(body.scope);
       const key = normalizeNonEmptyText(body.key, "env key");
       const store = new PlatformStore();
       try {
-        if (scope === "agent") {
-          const agentId = normalizeNonEmptyText(body.agentId, "agentId");
-          store.removeAgentEnvEntry(agentId, key);
-          return c.json({
-            success: true,
-            scope,
-            agentId,
-            key,
-          });
-        }
-
-        store.removeGlobalEnvEntry(key);
+        store.removeEnvEntry(key);
         return c.json({
           success: true,
           scope: "global",
@@ -207,35 +144,14 @@ export function registerPlatformEnvRoutes(params: {
   app.post("/api/ui/env/import", async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as {
-        scope?: string;
-        agentId?: string;
         raw?: string;
       };
-      const scope = normalizeScope(body.scope);
       const entries = parseDotenvEntries(body.raw);
       const store = new PlatformStore();
       try {
-        if (scope === "agent") {
-          const agentId = normalizeNonEmptyText(body.agentId, "agentId");
-          for (const entry of entries) {
-            await store.upsertAgentEnvEntry({
-              agentId,
-              key: entry.key,
-              description: "",
-              value: entry.value,
-            });
-          }
-          return c.json({
-            success: true,
-            scope,
-            agentId,
-            count: entries.length,
-            keys: entries.map((entry) => entry.key),
-          });
-        }
-
         for (const entry of entries) {
-          await store.upsertGlobalEnvEntry({
+          await store.upsertEnvEntry({
+            scope: "global",
             key: entry.key,
             description: "",
             value: entry.value,

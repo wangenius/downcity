@@ -9,7 +9,7 @@
 
 import path from "node:path";
 import { logger as defaultLogger } from "@/utils/logger/Logger.js";
-import { loadAgentEnvSnapshot, loadDowncityConfig } from "@/config/Config.js";
+import { loadDowncityConfig, resolveAgentEnv } from "@/config/Config.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { findPluginByName } from "@/plugin/core/PluginCatalog.js";
 import {
@@ -30,12 +30,8 @@ import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
  */
 export function createLocalPluginCommandContext(projectRoot: string): PluginCommandContext {
   const rootPath = path.resolve(String(projectRoot || "").trim() || ".");
-  const env = loadAgentEnvSnapshot(rootPath);
-  const config = loadDowncityConfig(rootPath, {
-    projectEnv: env,
-    agentEnv: env,
-    globalEnv: {},
-  });
+  const env = resolveAgentEnv(rootPath);
+  const config = loadDowncityConfig(rootPath, { env });
 
   defaultLogger.bindProjectRoot(rootPath);
 

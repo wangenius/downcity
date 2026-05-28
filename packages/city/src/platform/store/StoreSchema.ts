@@ -71,7 +71,7 @@ export function ensurePlatformStoreSchema(context: PlatformStoreContext): void {
     CREATE INDEX IF NOT EXISTS env_entries_agent_id_idx
     ON env_entries(agent_id);
   `);
-  ensureEnvEntriesMigration(context);
+  ensureEnvEntriesColumns(context);
   context.sqlite.exec(`
     CREATE TABLE IF NOT EXISTS channel_accounts (
       id TEXT PRIMARY KEY NOT NULL,
@@ -283,9 +283,9 @@ function ensureChannelAccountsTableColumns(context: PlatformStoreContext): void 
 }
 
 /**
- * 迁移历史 env 双表到统一单表。
+ * 补齐 env_entries 表的增量列。
  */
-function ensureEnvEntriesMigration(context: PlatformStoreContext): void {
+function ensureEnvEntriesColumns(context: PlatformStoreContext): void {
   const envEntryColumns = context.sqlite
     .prepare("PRAGMA table_info(env_entries)")
     .all() as Array<{ name?: unknown }>;
@@ -294,51 +294,5 @@ function ensureEnvEntriesMigration(context: PlatformStoreContext): void {
   );
   if (!envEntryColumnNames.has("description")) {
     context.sqlite.exec("ALTER TABLE env_entries ADD COLUMN description TEXT;");
-  }
-
-  const tableRows = context.sqlite
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('global_env', 'agent_env');",
-    )
-    .all() as Array<{ name?: unknown }>;
-  const tableNames = new Set(
-    tableRows.map((row) => String(row.name || "").trim()).filter(Boolean),
-  );
-  if (tableNames.has("global_env")) {
-    context.sqlite.exec(`
-      INSERT OR IGNORE INTO env_entries (
-        scope, agent_id, key, description, value_encrypted, created_at, updated_at
-      )
-      SELECT
-        'global',
-        '',
-        key,
-        NULL,
-        value_encrypted,
-        created_at,
-        updated_at
-      FROM global_env;
-    `);
-  }
-  if (tableNames.has("agent_env")) {
-    context.sqlite.exec(`
-      INSERT OR IGNORE INTO env_entries (
-        scope, agent_id, key, description, value_encrypted, created_at, updated_at
-      )
-      SELECT
-        'agent',
-        agent_id,
-        key,
-        NULL,
-        value_encrypted,
-        created_at,
-        updated_at
-      FROM agent_env;
-    `);
-    context.sqlite.exec(`
-      UPDATE env_entries
-      SET agent_id = ''
-      WHERE scope = 'global' AND agent_id IS NULL;
-    `);
   }
 }

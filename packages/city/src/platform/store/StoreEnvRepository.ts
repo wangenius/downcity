@@ -3,41 +3,18 @@
  *
  * 关键点（中文）
  * - 统一管理 `env_entries` 单表。
- * - 同时暴露 global / agent 两层语义化包装。
+ * - 当前版本只保留平台全局 env，不再区分 agent 私有层。
  */
 
 import type {
-  StoredAgentEnvEntry,
   StoredEnvEntry,
-  StoredEnvScope,
   StoredGlobalEnvEntry,
-  UpsertAgentEnvEntryInput,
   UpsertEnvEntryInput,
   UpsertGlobalEnvEntryInput,
 } from "@downcity/agent";
 import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
 import type { PlatformStoreContext } from "./StoreShared.js";
 import { normalizeNonEmptyText, nowIso } from "./StoreShared.js";
-
-/**
- * 规范化 env scope。
- */
-export function normalizeEnvScope(input: string): StoredEnvScope {
-  const scope = String(input || "").trim().toLowerCase();
-  if (scope === "agent") return "agent";
-  return "global";
-}
-
-/**
- * 规范化 env 的 agent 目标。
- */
-export function normalizeEnvAgentTarget(
-  scope: StoredEnvScope,
-  agentIdInput?: string,
-): string {
-  if (scope === "global") return "";
-  return normalizeNonEmptyText(agentIdInput || "", "agentId");
-}
 
 /**
  * 同步构造 env 条目。
@@ -51,14 +28,12 @@ function buildEnvEntryFromRowSync(row: {
   created_at?: unknown;
   updated_at?: unknown;
 }): StoredEnvEntry | null {
-  const scope = normalizeEnvScope(String(row.scope || ""));
-  const agentId = String(row.agent_id || "").trim();
   const key = String(row.key || "").trim();
   const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
+  if (String(row.scope || "").trim() !== "global") return null;
   if (!key || !encrypted) return null;
   return {
-    scope,
-    agentId: scope === "agent" ? agentId : undefined,
+    scope: "global",
     key,
     description: String(row.description || "").trim() || undefined,
     value: decryptTextSync(encrypted),
@@ -79,14 +54,12 @@ async function buildEnvEntryFromRow(row: {
   created_at?: unknown;
   updated_at?: unknown;
 }): Promise<StoredEnvEntry | null> {
-  const scope = normalizeEnvScope(String(row.scope || ""));
-  const agentId = String(row.agent_id || "").trim();
   const key = String(row.key || "").trim();
   const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
+  if (String(row.scope || "").trim() !== "global") return null;
   if (!key || !encrypted) return null;
   return {
-    scope,
-    agentId: scope === "agent" ? agentId : undefined,
+    scope: "global",
     key,
     description: String(row.description || "").trim() || undefined,
     value: await decryptText(encrypted),
@@ -100,49 +73,15 @@ async function buildEnvEntryFromRow(row: {
  */
 export function listEnvEntriesSync(
   context: PlatformStoreContext,
-  scopeInput?: StoredEnvScope,
-  agentIdInput?: string,
 ): StoredEnvEntry[] {
-  const hasScope = Boolean(scopeInput);
-  const scope = hasScope ? normalizeEnvScope(scopeInput || "global") : undefined;
-  const hasAgentFilter = scope === "agent" && Boolean(String(agentIdInput || "").trim());
-  const agentId = hasAgentFilter
-    ? normalizeEnvAgentTarget(scope, agentIdInput)
-    : undefined;
-  const rows = hasAgentFilter
-    ? context.sqlite.prepare(
-        `
-        SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
-        FROM env_entries
-        WHERE scope = 'agent' AND agent_id = ?
-        ORDER BY key ASC;
-        `,
-      ).all(agentId)
-    : scope === "agent"
-      ? context.sqlite.prepare(
-          `
-          SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
-          FROM env_entries
-          WHERE scope = 'agent'
-          ORDER BY agent_id ASC, key ASC;
-          `,
-        ).all()
-      : scope === "global"
-        ? context.sqlite.prepare(
-            `
-            SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
-            FROM env_entries
-            WHERE scope = 'global'
-            ORDER BY key ASC;
-            `,
-          ).all()
-        : context.sqlite.prepare(
-            `
-            SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
-            FROM env_entries
-            ORDER BY scope ASC, agent_id ASC, key ASC;
-            `,
-          ).all();
+  const rows = context.sqlite.prepare(
+    `
+    SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
+    FROM env_entries
+    WHERE scope = 'global'
+    ORDER BY key ASC;
+    `,
+  ).all();
   const out: StoredEnvEntry[] = [];
   for (const row of rows as Array<Record<string, unknown>>) {
     const entry = buildEnvEntryFromRowSync(row);
@@ -156,49 +95,15 @@ export function listEnvEntriesSync(
  */
 export async function listEnvEntries(
   context: PlatformStoreContext,
-  scopeInput?: StoredEnvScope,
-  agentIdInput?: string,
 ): Promise<StoredEnvEntry[]> {
-  const hasScope = Boolean(scopeInput);
-  const scope = hasScope ? normalizeEnvScope(scopeInput || "global") : undefined;
-  const hasAgentFilter = scope === "agent" && Boolean(String(agentIdInput || "").trim());
-  const agentId = hasAgentFilter
-    ? normalizeEnvAgentTarget(scope, agentIdInput)
-    : undefined;
-  const rows = hasAgentFilter
-    ? context.sqlite.prepare(
-        `
-        SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
-        FROM env_entries
-        WHERE scope = 'agent' AND agent_id = ?
-        ORDER BY key ASC;
-        `,
-      ).all(agentId)
-    : scope === "agent"
-      ? context.sqlite.prepare(
-          `
-          SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
-          FROM env_entries
-          WHERE scope = 'agent'
-          ORDER BY agent_id ASC, key ASC;
-          `,
-        ).all()
-      : scope === "global"
-        ? context.sqlite.prepare(
-            `
-            SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
-            FROM env_entries
-            WHERE scope = 'global'
-            ORDER BY key ASC;
-            `,
-          ).all()
-        : context.sqlite.prepare(
-            `
-            SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
-            FROM env_entries
-            ORDER BY scope ASC, agent_id ASC, key ASC;
-            `,
-          ).all();
+  const rows = context.sqlite.prepare(
+    `
+    SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
+    FROM env_entries
+    WHERE scope = 'global'
+    ORDER BY key ASC;
+    `,
+  ).all();
   const out: StoredEnvEntry[] = [];
   for (const row of rows as Array<Record<string, unknown>>) {
     const entry = await buildEnvEntryFromRow(row);
@@ -214,9 +119,9 @@ export async function upsertEnvEntry(
   context: PlatformStoreContext,
   input: UpsertEnvEntryInput,
 ): Promise<void> {
-  const scope = normalizeEnvScope(input.scope);
-  const agentId = normalizeEnvAgentTarget(scope, input.agentId);
-  const key = normalizeNonEmptyText(input.key, `${scope} env key`);
+  const scope = "global";
+  const agentId = "";
+  const key = normalizeNonEmptyText(input.key, "global env key");
   const description = String(input.description || "").trim();
   const value = String(input.value ?? "");
   const existing = context.sqlite
@@ -259,14 +164,12 @@ export async function upsertEnvEntry(
  */
 export function removeEnvEntry(
   context: PlatformStoreContext,
-  input: { scope: StoredEnvScope; agentId?: string; key: string },
+  keyInput: string,
 ): void {
-  const scope = normalizeEnvScope(input.scope);
-  const agentId = normalizeEnvAgentTarget(scope, input.agentId);
-  const key = normalizeNonEmptyText(input.key, `${scope} env key`);
+  const key = normalizeNonEmptyText(keyInput, "global env key");
   context.sqlite
     .prepare("DELETE FROM env_entries WHERE scope = ? AND agent_id = ? AND key = ?;")
-    .run(scope, agentId, key);
+    .run("global", "", key);
 }
 
 /**
@@ -275,7 +178,7 @@ export function removeEnvEntry(
 export function listGlobalEnvEntriesSync(
   context: PlatformStoreContext,
 ): StoredGlobalEnvEntry[] {
-  return listEnvEntriesSync(context, "global");
+  return listEnvEntriesSync(context);
 }
 
 /**
@@ -298,7 +201,7 @@ export function getGlobalEnvMapSync(
 export async function listGlobalEnvEntries(
   context: PlatformStoreContext,
 ): Promise<StoredGlobalEnvEntry[]> {
-  return listEnvEntries(context, "global");
+  return listEnvEntries(context);
 }
 
 /**
@@ -324,8 +227,7 @@ export async function upsertGlobalEnvEntry(
 ): Promise<void> {
   await upsertEnvEntry(context, {
     scope: "global",
-    key: input.key,
-    value: input.value,
+    ...input,
   });
 }
 
@@ -336,10 +238,7 @@ export function removeGlobalEnvEntry(
   context: PlatformStoreContext,
   keyInput: string,
 ): void {
-  removeEnvEntry(context, {
-    scope: "global",
-    key: keyInput,
-  });
+  removeEnvEntry(context, keyInput);
 }
 
 /**
@@ -347,106 +246,4 @@ export function removeGlobalEnvEntry(
  */
 export function clearGlobalEnvEntries(context: PlatformStoreContext): void {
   context.sqlite.prepare("DELETE FROM env_entries WHERE scope = 'global';").run();
-}
-
-/**
- * 同步列出指定 agent 的私有环境变量。
- */
-export function listAgentEnvEntriesSync(
-  context: PlatformStoreContext,
-  agentIdInput: string,
-): StoredAgentEnvEntry[] {
-  return listEnvEntriesSync(context, "agent", agentIdInput);
-}
-
-/**
- * 同步读取 agent 环境变量映射。
- */
-export function getAgentEnvMapSync(
-  context: PlatformStoreContext,
-  agentIdInput: string,
-): Record<string, string> {
-  const entries = listAgentEnvEntriesSync(context, agentIdInput);
-  const map: Record<string, string> = {};
-  for (const item of entries) {
-    map[item.key] = item.value;
-  }
-  return map;
-}
-
-/**
- * 异步列出指定 agent 的私有环境变量。
- */
-export async function listAgentEnvEntries(
-  context: PlatformStoreContext,
-  agentIdInput: string,
-): Promise<StoredAgentEnvEntry[]> {
-  return listEnvEntries(context, "agent", agentIdInput);
-}
-
-/**
- * 异步列出全部 agent 私有环境变量。
- */
-export async function listAllAgentEnvEntries(
-  context: PlatformStoreContext,
-): Promise<StoredAgentEnvEntry[]> {
-  return listEnvEntries(context, "agent");
-}
-
-/**
- * 异步读取 agent 环境变量映射。
- */
-export async function getAgentEnvMap(
-  context: PlatformStoreContext,
-  agentIdInput: string,
-): Promise<Record<string, string>> {
-  const entries = await listAgentEnvEntries(context, agentIdInput);
-  const map: Record<string, string> = {};
-  for (const item of entries) {
-    map[item.key] = item.value;
-  }
-  return map;
-}
-
-/**
- * 新增或更新 agent 私有环境变量。
- */
-export async function upsertAgentEnvEntry(
-  context: PlatformStoreContext,
-  input: UpsertAgentEnvEntryInput,
-): Promise<void> {
-  await upsertEnvEntry(context, {
-    scope: "agent",
-    agentId: input.agentId,
-    key: input.key,
-    value: input.value,
-  });
-}
-
-/**
- * 删除指定 agent 的单个环境变量。
- */
-export function removeAgentEnvEntry(
-  context: PlatformStoreContext,
-  agentIdInput: string,
-  keyInput: string,
-): void {
-  removeEnvEntry(context, {
-    scope: "agent",
-    agentId: agentIdInput,
-    key: keyInput,
-  });
-}
-
-/**
- * 清空指定 agent 的私有环境变量。
- */
-export function clearAgentEnvEntries(
-  context: PlatformStoreContext,
-  agentIdInput: string,
-): void {
-  const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
-  context.sqlite
-    .prepare("DELETE FROM env_entries WHERE scope = 'agent' AND agent_id = ?;")
-    .run(agentId);
 }

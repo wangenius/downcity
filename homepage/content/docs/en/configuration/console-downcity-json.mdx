@@ -19,8 +19,7 @@ Console-global config is unified in:
 `downcity.db` contains these major groups:
 
 1. Model pool (providers/models)
-2. Console-global env (`global_env`)
-3. Agent-private env (`agent_env`)
+2. Console-managed env records (`env_entries`)
 4. Bot account vault (`channel_accounts`)
 5. Chat user authorization (`chat_auth_roles`, `chat_auth_role_permissions`, `chat_auth_channel_defaults`, `chat_auth_user_roles`)
 
@@ -42,16 +41,16 @@ So the split is:
 
 Current versions use explicit layers:
 
-1. Console-global shared env: `global_env`
-2. Agent-private env in DB: `agent_env`
-3. Agent-local env overlay: `<agent>/.env` (user-managed)
+1. Host process env: `process.env`
+2. Agent-local env overlay: `<agent>/.env` (user-managed)
+3. SDK explicit override: `new Agent({ env })`
 4. Chat channel credentials: `channel_accounts` (bound by `downcity.json` `channelAccountId`)
 5. Chat user authorization: `chat_auth_*` structured tables (city-global)
 
 Key behavior:
 
-1. Agent env map is `agent_env + <agent>/.env` (`.env` wins).
-2. `.env` remains agent-local and does not mutate global `process.env`.
+1. Agent runtime env map is `process.env + <agent>/.env + optional new Agent({ env })` (`env` wins).
+2. When the host is `city`, Console-global env can be injected into `process.env` before Agent startup.
 3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
 5. Chat user permissions are resolved from `chat_auth_*` tables, not from an agent project.

@@ -48,8 +48,8 @@ export const modelsTable = sqliteTable(
  * 平台 Env 统一存储表。
  *
  * 关键点（中文）
- * - 全局 env 与 agent env 共用一张表，通过 `scope` + `agentId` 区分。
- * - `agentId` 在 `scope=global` 时固定为空字符串，避免 SQLite 复合主键中的 NULL 语义问题。
+ * - 当前只保留平台全局 env。
+ * - 仍使用 `scope + agent_id + key` 复合主键，其中运行时固定写入 `global + ''`。
  * - value 采用密文存储，解密仅在运行时内存中进行。
  */
 export const envEntriesTable = sqliteTable(

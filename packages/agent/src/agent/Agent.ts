@@ -53,7 +53,7 @@ import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
 } from "@/runtime/host/AgentHostRuntime.js";
-import { loadDowncityConfig } from "@/config/Config.js";
+import { loadDowncityConfig, resolveAgentEnv } from "@/config/Config.js";
 import { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
@@ -153,7 +153,7 @@ export class Agent {
 
     this.logger = new Logger();
     this.logger.bindProjectRoot(this.path);
-    this.env = options.env ? { ...options.env } : {};
+    this.env = resolveAgentEnv(this.path, options.env);
     this.instruction = normalizeInstructionInput(options.instruction);
     this.defaultModel = options.model;
     this.config = this.loadConfig();
@@ -472,11 +472,7 @@ export class Agent {
    */
   private loadConfig(): DowncityConfig {
     try {
-      return loadDowncityConfig(this.path, {
-        projectEnv: this.env,
-        agentEnv: this.env,
-        globalEnv: {},
-      });
+      return loadDowncityConfig(this.path, { env: this.env });
     } catch {
       return createFallbackSdkConfig(this.id);
     }

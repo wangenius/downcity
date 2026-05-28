@@ -14,15 +14,12 @@ import { getPlatformStoreDbPath } from "@/process/registry/CityPaths.js";
 import { ensurePlatformStoreSchema } from "./StoreSchema.js";
 import type { PlatformStoreContext } from "./StoreShared.js";
 import type {
-  StoredAgentEnvEntry,
   StoredChannelAccount,
   StoredEnvEntry,
-  StoredEnvScope,
   StoredGlobalEnvEntry,
   StoredModel,
   StoredModelProvider,
   StoredProviderMeta,
-  UpsertAgentEnvEntryInput,
   UpsertChannelAccountInput,
   UpsertEnvEntryInput,
   UpsertGlobalEnvEntryInput,
@@ -55,23 +52,15 @@ import {
   setSecureSettingJsonSync,
 } from "./StoreSecureSettings.js";
 import {
-  clearAgentEnvEntries,
   clearGlobalEnvEntries,
-  getAgentEnvMap,
-  getAgentEnvMapSync,
   getGlobalEnvMap,
   getGlobalEnvMapSync,
-  listAgentEnvEntries,
-  listAgentEnvEntriesSync,
-  listAllAgentEnvEntries,
   listEnvEntries,
   listEnvEntriesSync,
   listGlobalEnvEntries,
   listGlobalEnvEntriesSync,
-  removeAgentEnvEntry,
   removeEnvEntry,
   removeGlobalEnvEntry,
-  upsertAgentEnvEntry,
   upsertEnvEntry,
   upsertGlobalEnvEntry,
 } from "./StoreEnvRepository.js";
@@ -204,8 +193,6 @@ export class PlatformStore {
     clearStoredModelsAndProviders(this.context);
     this.sqlite.exec("DELETE FROM platform_secure_settings;");
     this.sqlite.exec("DELETE FROM env_entries;");
-    this.sqlite.exec("DELETE FROM global_env;");
-    this.sqlite.exec("DELETE FROM agent_env;");
     this.sqlite.exec("DELETE FROM channel_accounts;");
   }
 
@@ -299,15 +286,15 @@ export class PlatformStore {
   /**
    * 查询 env 条目（同步）。
    */
-  listEnvEntriesSync(scopeInput?: StoredEnvScope, agentIdInput?: string): StoredEnvEntry[] {
-    return listEnvEntriesSync(this.context, scopeInput, agentIdInput);
+  listEnvEntriesSync(): StoredEnvEntry[] {
+    return listEnvEntriesSync(this.context);
   }
 
   /**
    * 查询 env 条目（异步）。
    */
-  async listEnvEntries(scopeInput?: StoredEnvScope, agentIdInput?: string): Promise<StoredEnvEntry[]> {
-    return await listEnvEntries(this.context, scopeInput, agentIdInput);
+  async listEnvEntries(): Promise<StoredEnvEntry[]> {
+    return await listEnvEntries(this.context);
   }
 
   /**
@@ -320,8 +307,8 @@ export class PlatformStore {
   /**
    * 删除单个 env 条目。
    */
-  removeEnvEntry(input: { scope: StoredEnvScope; agentId?: string; key: string }): void {
-    removeEnvEntry(this.context, input);
+  removeEnvEntry(keyInput: string): void {
+    removeEnvEntry(this.context, keyInput);
   }
 
   /**
@@ -332,23 +319,23 @@ export class PlatformStore {
   }
 
   /**
-   * 读取全局环境变量映射（同步解密）。
+   * 读取环境变量映射（同步解密）。
    */
-  getGlobalEnvMapSync(): Record<string, string> {
+  getEnvMapSync(): Record<string, string> {
     return getGlobalEnvMapSync(this.context);
   }
 
   /**
-   * 列出全局环境变量（解密后）。
+   * 列出环境变量（解密后）。
    */
   async listGlobalEnvEntries(): Promise<StoredGlobalEnvEntry[]> {
     return await listGlobalEnvEntries(this.context);
   }
 
   /**
-   * 读取全局环境变量映射（解密后）。
+   * 读取环境变量映射（解密后）。
    */
-  async getGlobalEnvMap(): Promise<Record<string, string>> {
+  async getEnvMap(): Promise<Record<string, string>> {
     return await getGlobalEnvMap(this.context);
   }
 
@@ -371,62 +358,6 @@ export class PlatformStore {
    */
   clearGlobalEnvEntries(): void {
     clearGlobalEnvEntries(this.context);
-  }
-
-  /**
-   * 列出指定 agent 的私有环境变量（同步解密）。
-   */
-  listAgentEnvEntriesSync(agentIdInput: string): StoredAgentEnvEntry[] {
-    return listAgentEnvEntriesSync(this.context, agentIdInput);
-  }
-
-  /**
-   * 读取指定 agent 的私有环境变量映射（同步解密）。
-   */
-  getAgentEnvMapSync(agentIdInput: string): Record<string, string> {
-    return getAgentEnvMapSync(this.context, agentIdInput);
-  }
-
-  /**
-   * 列出指定 agent 的私有环境变量（解密后）。
-   */
-  async listAgentEnvEntries(agentIdInput: string): Promise<StoredAgentEnvEntry[]> {
-    return await listAgentEnvEntries(this.context, agentIdInput);
-  }
-
-  /**
-   * 列出全部 agent 私有环境变量（解密后）。
-   */
-  async listAllAgentEnvEntries(): Promise<StoredAgentEnvEntry[]> {
-    return await listAllAgentEnvEntries(this.context);
-  }
-
-  /**
-   * 读取指定 agent 的私有环境变量映射（解密后）。
-   */
-  async getAgentEnvMap(agentIdInput: string): Promise<Record<string, string>> {
-    return await getAgentEnvMap(this.context, agentIdInput);
-  }
-
-  /**
-   * 新增或更新 agent 私有环境变量。
-   */
-  async upsertAgentEnvEntry(input: UpsertAgentEnvEntryInput): Promise<void> {
-    await upsertAgentEnvEntry(this.context, input);
-  }
-
-  /**
-   * 删除指定 agent 的单个环境变量。
-   */
-  removeAgentEnvEntry(agentIdInput: string, keyInput: string): void {
-    removeAgentEnvEntry(this.context, agentIdInput, keyInput);
-  }
-
-  /**
-   * 清空指定 agent 的私有环境变量。
-   */
-  clearAgentEnvEntries(agentIdInput: string): void {
-    clearAgentEnvEntries(this.context, agentIdInput);
   }
 
   /**

@@ -51,26 +51,6 @@ import type {
 } from "@/types/config/AgentProject.js";
 import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
-import type { AgentModelCatalogRuntime } from "@/types/runtime/host/AgentHost.js";
-
-/**
- * 模型目录候选项。
- */
-export interface ModelCatalogChoice {
-  /**
-   * 下拉展示文案。
-   */
-  title: string;
-
-  /**
-   * 模型 ID。
-   *
-   * 关键点（中文）
-   * - 该值直接对应平台模型池中的稳定标识。
-   * - 调用方应把它视为可写入 `execution.modelId` 的候选值。
-   */
-  value: string;
-}
 
 /**
  * 规范化默认 Agent 名称。
@@ -85,62 +65,6 @@ export function normalizeDefaultAgentName(input: string): string {
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-/**
- * 读取模型目录候选项。
- *
- * 关键点（中文）
- * - 输出结果面向创建向导或控制台下拉框，而不是运行时模型解析。
- * - 当 provider 存在时会把 provider 信息拼到展示标题中，便于用户区分同名模型。
- */
-export async function listModelCatalogChoices(
-  modelCatalog: Pick<AgentModelCatalogRuntime, "listModels" | "listProviders">,
-): Promise<ModelCatalogChoice[]> {
-  const models = modelCatalog.listModels();
-  const providers = await modelCatalog.listProviders();
-  const providerMap = new Map(providers.map((item) => [item.id, item] as const));
-  return models
-    .map((item) => {
-      const id = String(item.id || "").trim();
-      if (!id) return null;
-      const providerId = String(item.providerId || "").trim();
-      const providerType = String(providerMap.get(providerId)?.type || "").trim();
-      const providerLabel = providerId
-        ? providerType
-          ? `${providerId} (${providerType})`
-          : providerId
-        : "-";
-      return {
-        title: `${id} · ${providerLabel}`,
-        value: id,
-      };
-    })
-    .filter((item): item is ModelCatalogChoice => item !== null);
-}
-
-/**
- * 校验 API 主模型在模型目录中可用。
- *
- * 关键点（中文）
- * - 创建阶段直接失败，比写入一个不可启动项目更安全。
- * - 当前只校验“存在且未暂停”，不在这里探测供应商侧网络连通性。
- */
-function assertApiPrimaryModelReady(
-  primaryModelId: string,
-  modelCatalog: Pick<AgentModelCatalogRuntime, "getModel">,
-): void {
-  const normalizedModelId = String(primaryModelId || "").trim();
-  if (!normalizedModelId) {
-    throw new Error("execution.modelId is required");
-  }
-  const model = modelCatalog.getModel(normalizedModelId);
-  if (!model) {
-    throw new Error(`Model not found in model catalog: ${normalizedModelId}`);
-  }
-  if (model.isPaused === true) {
-    throw new Error(`Model is paused: ${normalizedModelId}`);
-  }
 }
 
 /**
@@ -185,14 +109,12 @@ export async function isAgentProjectInitialized(projectRoot: string): Promise<bo
  */
 export async function initializeAgentProject(
   input: AgentProjectInitializationInput,
-  modelCatalog?: Pick<AgentModelCatalogRuntime, "listModels" | "listProviders" | "getModel">,
 ): Promise<AgentProjectInitializationResult> {
   const projectRoot = path.resolve(String(input.projectRoot || "").trim() || ".");
   const projectBaseName = path.basename(projectRoot);
   const fallbackAgentName = normalizeDefaultAgentName(projectBaseName) || projectBaseName;
   const agentName = String(input.agentName || "").trim() || fallbackAgentName;
   const execution = input.execution as ExecutionBindingConfig;
-  const primaryModelId = String(execution?.modelId || "").trim();
 
   const channels = normalizeChannels(input.channels);
   const dotEnvPath = path.join(projectRoot, ".env");
@@ -205,16 +127,6 @@ export async function initializeAgentProject(
     version: "1.0.0",
     execution,
   });
-  if (primaryModelId) {
-    if (!modelCatalog) {
-      throw new Error("initializeAgentProject requires model catalog runtime");
-    }
-    const modelChoices = await listModelCatalogChoices(modelCatalog);
-    if (modelChoices.length === 0) {
-      throw new Error("Model catalog is empty. Please configure at least one model first.");
-    }
-    assertApiPrimaryModelReady(primaryModelId, modelCatalog);
-  }
 
   await ensureDir(projectRoot);
 
@@ -340,7 +252,9 @@ export async function initializeAgentProject(
   return {
     projectRoot,
     agentName,
-    ...(primaryModelId ? { modelId: primaryModelId } : {}),
+    ...(execution?.type === "api" && String(execution.modelId || "").trim()
+      ? { modelId: String(execution.modelId || "").trim() }
+      : {}),
     channels,
     createdFiles,
     skippedFiles,

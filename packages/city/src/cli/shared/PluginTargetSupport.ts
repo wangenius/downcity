@@ -13,14 +13,13 @@ import type { Command } from "commander";
 import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
 import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
 import { isCityRunning } from "@/process/registry/CityRuntime.js";
-import { ensureRuntimeExecutionBindingReady } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
 import { parsePort, resolveAgentName } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
 import type { ScheduledJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { parseBoolean } from "./IndexSupport.js";
-import { createAgentModelCatalogRuntime } from "@/process/registry/AgentHostRuntime.js";
+import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
 
 export function isRegistryEntryRunning(
   entry: { status?: "running" | "stopped" },
@@ -77,7 +76,7 @@ export async function checkAgentPreflight(
   }
 
   // 关键点（中文）：提前校验 execution binding，避免"启动成功后秒退"。
-  ensureRuntimeExecutionBindingReady(projectRoot, createAgentModelCatalogRuntime());
+  assertProjectExecutionModelReady(projectRoot);
 }
 
 /**

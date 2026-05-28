@@ -14,7 +14,6 @@ import type { Logger } from "@/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type {
   AgentPathRuntime,
-  AgentModelCatalogRuntime,
   AgentPluginConfigRuntime,
 } from "@/types/runtime/host/AgentHost.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
@@ -56,10 +55,6 @@ export interface AgentRuntimeBase {
    * 当前 agent 可见的 plugin 配置持久化能力集合。
    */
   pluginConfig: AgentPluginConfigRuntime;
-  /**
-   * 当前 agent 可见的模型目录能力集合（可选）。
-   */
-  modelCatalog?: AgentModelCatalogRuntime;
 }
 
 /**

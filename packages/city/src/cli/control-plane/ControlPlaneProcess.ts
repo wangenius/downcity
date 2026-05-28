@@ -16,8 +16,7 @@ import {
   readDaemonPid,
   stopDaemonProcess,
 } from "@/process/daemon/Manager.js";
-import { ensureRuntimeExecutionBindingReady } from "@downcity/agent";
-import { createAgentModelCatalogRuntime } from "@/process/registry/AgentHostRuntime.js";
+import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
 import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
 import {
   ensureManagedAgentRegistry,
@@ -469,7 +468,7 @@ export async function prepareForegroundAgent(
 
   injectAgentContext(cwd);
   const projectRoot = resolve(String(cwd || "."));
-    ensureRuntimeExecutionBindingReady(projectRoot, createAgentModelCatalogRuntime());
+    assertProjectExecutionModelReady(projectRoot);
 
   const shouldForeground = options.foreground === true;
   if (!shouldForeground) {

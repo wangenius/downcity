@@ -8,11 +8,6 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { loadDowncityConfig } from "@/config/Config.js";
-import {
-  readProjectPrimaryModelId,
-} from "@/config/ExecutionBinding.js";
-import type { AgentModelCatalogRuntime } from "@/types/runtime/host/AgentHost.js";
 import {
   getCacheDirPath,
   getDowncityAgentsRootDirPath,
@@ -72,52 +67,4 @@ function ensureShipDirectories(projectRoot: string): void {
 export function ensureRuntimeProjectReady(projectRoot: string): void {
   ensureContextFiles(projectRoot);
   ensureShipDirectories(projectRoot);
-}
-
-/**
- * 校验项目执行绑定是否可用于启动。
- *
- * 关键点（中文）
- * - `downcity.json.execution` 必须存在且合法。
- * - 若走 API 模式，则 `execution.modelId` 必须在 console 模型池中可解析。
- * - 若走 local 模式，则 `lmp` plugin 必须启用且本地模型文件必须存在。
- * - 若模型被 pause，也要在启动前直接拒绝，避免进程拉起后秒退。
- */
-export function ensureRuntimeExecutionBindingReady(
-  projectRoot: string,
-  modelCatalog?: Pick<AgentModelCatalogRuntime, "getModel">,
-): void {
-  let primaryModelId = "";
-  try {
-    const config = loadDowncityConfig(projectRoot);
-    primaryModelId = readProjectPrimaryModelId(config);
-  } catch (error) {
-    console.error("❌ Invalid downcity.json execution binding");
-    console.error(`   project: ${projectRoot}`);
-    console.error(`   error: ${error instanceof Error ? error.message : String(error)}`);
-    process.exit(1);
-  }
-
-  if (!primaryModelId) {
-    console.error("❌ Invalid downcity.json execution binding");
-    console.error(`   project: ${projectRoot}`);
-    console.error('   error: "execution" must be { "type": "api", "modelId": "..." }');
-    process.exit(1);
-  }
-
-  const model = modelCatalog?.getModel(primaryModelId);
-  if (!model) {
-    console.error("❌ Model not found in model catalog");
-    console.error(`   project: ${projectRoot}`);
-    console.error(`   execution.modelId: ${primaryModelId}`);
-    console.error("   fix: run `city model create` or `city model list`");
-    process.exit(1);
-  }
-  if (model.isPaused === true) {
-    console.error("❌ Model is paused");
-    console.error(`   project: ${projectRoot}`);
-    console.error(`   execution.modelId: ${primaryModelId}`);
-    console.error(`   fix: run \`city model pause ${primaryModelId} --enabled false\``);
-    process.exit(1);
-  }
 }

@@ -1,6 +1,6 @@
 ---
 title: Agent Constructor Options
-description: Detailed explanation of the local Agent id, path, instruction, model, env, modelCatalog, configureSession, tools, mode, and plugins options
+description: Detailed explanation of the local Agent id, path, instruction, model, env, configureSession, tools, mode, and plugins options
 ---
 
 # Agent Constructor Options
@@ -14,7 +14,6 @@ new Agent({
   mode,
   model,
   env,
-  modelCatalog,
   configureSession,
   instruction,
   tools,
@@ -114,24 +113,6 @@ Key points:
 - the SDK no longer splits global env and agent env
 - if a host needs layered env merging, it should merge first and then pass the final result through `env`
 - these values participate in config resolution and runtime context assembly, but are not written back to the system environment automatically
-
-## `modelCatalog`
-
-An optional host-provided model catalog capability.
-
-```ts
-new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  modelCatalog,
-});
-```
-
-Key points:
-
-- this is a read-only host port and does not create `LanguageModel` instances
-- it is mainly used for initialization, startup validation, control-plane display, and model switching
-- if omitted, normal session execution can still work, but related control-plane capabilities are downgraded
 
 ## `configureSession`
 

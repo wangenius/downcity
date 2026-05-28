@@ -19,7 +19,6 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { LanguageModel } from "ai";
 import {
   getLogger,
-  type AgentModelCatalogRuntime,
   type DowncityConfig,
   type LlmProviderType,
   type StoredModel,
@@ -55,14 +54,6 @@ type RuntimeModelFactoryInput = {
    * - 仅用于把 sessionId 透传到 LLM 请求日志元数据。
    */
   getSessionRunScope?: () => ModelLogContext | undefined;
-  /**
-   * 可选宿主模型目录能力。
-   *
-   * 关键点（中文）
-   * - 若传入，则优先通过模型目录端口读取 provider/model。
-   * - 未传入时回退到 city 自己的 `PlatformStore`。
-   */
-  modelCatalog?: AgentModelCatalogRuntime;
 };
 
 function readProjectExecutionBinding(
@@ -245,22 +236,6 @@ async function resolveConfiguredModel(input: RuntimeModelFactoryInput & {
   model: StoredModel;
   provider: StoredModelProvider;
 }> {
-  const modelCatalog = input.modelCatalog;
-  if (modelCatalog) {
-    const model = modelCatalog.getModel(input.primaryModelId);
-    const providers = await modelCatalog.listProviders();
-    const providerMap = new Map(providers.map((item) => [item.id, item] as const));
-    const provider = model
-      ? providerMap.get(String(model.providerId || "").trim()) || null
-      : null;
-    if (model && provider) {
-      return {
-        model,
-        provider,
-      };
-    }
-  }
-
   const store = new PlatformStore();
   try {
     const resolved = await store.getResolvedModel(input.primaryModelId);
@@ -280,7 +255,7 @@ async function resolveConfiguredModel(input: RuntimeModelFactoryInput & {
  *
  * 解析策略（中文）
  * 1) 读取 `execution.modelId`。
- * 2) 从宿主模型目录或 `PlatformStore` 解析 provider/model。
+ * 2) 从 city 平台模型池解析 provider/model。
  * 3) 按 provider type 分发到对应 AI SDK 工厂。
  */
 export async function createRuntimeModel(

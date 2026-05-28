@@ -138,12 +138,9 @@ export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js"
 export {
   initializeAgentProject,
   isAgentProjectInitialized,
-  listModelCatalogChoices,
   normalizeDefaultAgentName,
 } from "./config/AgentInitializer.js";
-export type { ModelCatalogChoice } from "./config/AgentInitializer.js";
 export {
-  ensureRuntimeExecutionBindingReady,
   ensureRuntimeProjectReady,
 } from "./runtime/host/daemon/ProjectSetup.js";
 export { assertProjectExecutionTarget } from "./config/ExecutionBinding.js";
@@ -154,7 +151,6 @@ export { getLogger, logger, type Logger } from "./utils/logger/Logger.js";
 // 宿主端口类型
 export type {
   AgentPathRuntime,
-  AgentModelCatalogRuntime,
   AgentPluginConfigRuntime,
 } from "./types/runtime/host/AgentHost.js";
 

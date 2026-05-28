@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - `main/agent/*` 负责创建这些宿主能力对象，再注入到 AgentRuntime。
  * - plugin runtimes / session / plugins 只消费这些对象，不再直接 import `main/*`。
- * - 当前由 city 在这里统一装配路径、plugin 配置持久化与模型目录三类宿主对象。
+ * - 当前由 city 在这里统一装配路径与 plugin 配置持久化两类宿主对象。
  */
 import {
   getCacheDirPath,
@@ -21,11 +21,9 @@ import {
 import { persistProjectPluginConfig } from "@downcity/agent";
 import type {
   AgentPathRuntime,
-  AgentModelCatalogRuntime,
   AgentPluginConfigRuntime,
 } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
-import { PlatformStore } from "@/platform/store/index.js";
 
 /**
  * 创建当前项目的路径能力集合。
@@ -66,42 +64,6 @@ export function createAgentPluginConfigRuntime(projectRoot: string): AgentPlugin
           ...(plugins !== undefined ? { plugins } : {}),
         },
       });
-    },
-  };
-}
-
-/**
- * 创建当前项目的模型目录能力集合。
- *
- * 关键点（中文）
- * - 这里只暴露 agent 当前仍需要的最小模型池只读能力。
- * - 具体平台数据仍由 city 自己管理，agent 只消费这一层接口。
- */
-export function createAgentModelCatalogRuntime(): AgentModelCatalogRuntime {
-  return {
-    listModels: () => {
-      const store = new PlatformStore();
-      try {
-        return store.listModels();
-      } finally {
-        store.close();
-      }
-    },
-    listProviders: async () => {
-      const store = new PlatformStore();
-      try {
-        return await store.listProviders();
-      } finally {
-        store.close();
-      }
-    },
-    getModel: (modelId) => {
-      const store = new PlatformStore();
-      try {
-        return store.getModel(modelId);
-      } finally {
-        store.close();
-      }
     },
   };
 }

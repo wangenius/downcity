@@ -18,7 +18,6 @@ import {
 } from "@/process/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
 import {
-  ensureRuntimeExecutionBindingReady,
   initializeAgentProject,
   isAgentProjectInitialized,
 } from "@downcity/agent";
@@ -33,7 +32,10 @@ import type { AgentProjectInitializationResult } from "@downcity/agent";
 import type {
   ExecutionBindingConfig,
 } from "@downcity/agent";
-import { createAgentModelCatalogRuntime } from "@/process/registry/AgentHostRuntime.js";
+import {
+  assertPlatformModelReady,
+  assertProjectExecutionModelReady,
+} from "@/model/runtime/ExecutionModelBinding.js";
 
 function resolveExecutionInput(params: {
   modelId?: unknown;
@@ -70,16 +72,17 @@ export async function initializePlatformAgentProject(params: {
   modelId?: unknown;
   forceOverwriteShipJson?: unknown;
 }): Promise<AgentProjectInitializationResult> {
+  const execution = resolveExecutionInput({
+    modelId: params.modelId,
+  });
+  assertPlatformModelReady(execution.modelId);
   return initializeAgentProject(
     {
       projectRoot: params.projectRoot,
       agentName: String(params.agentName || "").trim() || undefined,
-      execution: resolveExecutionInput({
-        modelId: params.modelId,
-      }),
+      execution,
       forceOverwriteShipJson: params.forceOverwriteShipJson === true,
     },
-    createAgentModelCatalogRuntime(),
   );
 }
 
@@ -103,6 +106,7 @@ export async function updatePlatformAgentExecution(params: {
   if (!modelId) {
     throw new Error("modelId is required");
   }
+  assertPlatformModelReady(modelId);
   ship.execution = {
     type: "api",
     modelId,
@@ -270,16 +274,17 @@ export async function startManagedAgentByProjectRoot(params: {
         `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and downcity.json`,
       );
     }
+    const execution = resolveExecutionInput({
+      modelId: params.initialization?.modelId,
+    });
+    assertPlatformModelReady(execution.modelId);
     await initializeAgentProject(
       {
         projectRoot: normalizedRoot,
         agentName: String(params.initialization?.agentName || "").trim() || undefined,
-        execution: resolveExecutionInput({
-          modelId: params.initialization?.modelId,
-        }),
+        execution,
         forceOverwriteShipJson: params.initialization?.forceOverwriteShipJson === true,
       },
-      createAgentModelCatalogRuntime(),
     );
   } else {
     const profilePath = getProfileMdPath(normalizedRoot);
@@ -291,7 +296,7 @@ export async function startManagedAgentByProjectRoot(params: {
     }
   }
 
-  ensureRuntimeExecutionBindingReady(normalizedRoot, createAgentModelCatalogRuntime());
+  assertProjectExecutionModelReady(normalizedRoot);
   const args = await buildRunArgsFromOptions(normalizedRoot, {});
   const started = await startDaemonProcess({
     projectRoot: normalizedRoot,

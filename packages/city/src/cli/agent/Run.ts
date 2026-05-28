@@ -19,7 +19,6 @@ import {
 } from "@downcity/agent";
 import type { StartOptions } from "@downcity/agent";
 import { CliError } from "../shared/CliError.js";
-import { createAgentModelCatalogRuntime } from "@/process/registry/AgentHostRuntime.js";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 import { resolveAgentName } from "../shared/IndexSupport.js";
 
@@ -38,7 +37,6 @@ export async function runCommand(
   options: StartOptions,
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
-  const modelCatalog = createAgentModelCatalogRuntime();
   // 端口解析（中文）：允许 number / string；空值返回 undefined 以便走配置回退链。
   const parsePort = (
     value: string | number | undefined,
@@ -76,11 +74,9 @@ export async function runCommand(
     instruction: currentSystems,
     tools: shellTools,
     mode: "preset",
-    modelCatalog,
     configureSession: async (session) => {
       const model = await createRuntimeModel({
         config: agent.getConfig(),
-        modelCatalog,
       });
       await session.set({
         model,

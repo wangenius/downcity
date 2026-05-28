@@ -15,7 +15,6 @@ import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
   AgentPathRuntime,
-  AgentModelCatalogRuntime,
   AgentPluginConfigRuntime,
 } from "@/types/runtime/host/AgentHost.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
@@ -270,14 +269,6 @@ export interface AgentContext {
    * 当前可见的 plugin 配置持久化能力集合。
    */
   pluginConfig: AgentPluginConfigRuntime;
-  /**
-   * 当前可见的模型目录能力集合。
-   *
-   * 关键点（中文）
-   * - 这里只保留给控制面等少数链路使用的模型池只读视图。
-   * - 常规 plugin / prompt / session 执行链路不应依赖该字段。
-   */
-  modelCatalog?: AgentModelCatalogRuntime;
   /**
    * Session 能力入口。
    *

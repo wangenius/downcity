@@ -22,7 +22,6 @@ import type {
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
-import type { AgentModelCatalogRuntime } from "@/types/runtime/host/AgentHost.js";
 import type {
   PluginAvailability,
   PluginPort,
@@ -128,7 +127,6 @@ export class Agent {
   private readonly agentContext: AgentContext;
   private readonly pluginRegistry: PluginRegistry;
   private readonly config: DowncityConfig;
-  private readonly modelCatalog?: AgentModelCatalogRuntime;
   private readonly env: Record<string, string>;
   private readonly defaultModel?: LanguageModel;
   private readonly configureSessionHook?: AgentOptions["configureSession"];
@@ -157,7 +155,6 @@ export class Agent {
 
     this.logger = new Logger();
     this.logger.bindProjectRoot(this.path);
-    this.modelCatalog = options.modelCatalog || undefined;
     this.env = options.env ? { ...options.env } : {};
     this.instruction = normalizeInstructionInput(options.instruction);
     this.defaultModel = options.model;
@@ -595,7 +592,6 @@ export class Agent {
       systems: this.instruction,
       paths: createAgentPathRuntime(this.path, this.id),
       pluginConfig: createAgentPluginConfigRuntime(this.path),
-      ...(this.modelCatalog ? { modelCatalog: this.modelCatalog } : {}),
       getSession: (sessionId: string): SessionPort =>
         this.getOrCreateSession(sessionId).getRuntimePort(),
       listExecutingSessionIds: () =>
@@ -628,7 +624,6 @@ export class Agent {
       systems: this.instruction,
       paths: this.runtime.paths,
       pluginConfig: this.runtime.pluginConfig,
-      ...(this.modelCatalog ? { modelCatalog: this.modelCatalog } : {}),
       session: {
         get: (sessionId) => this.getOrCreateSession(sessionId).getRuntimePort(),
         listExecutingSessionIds: () => this.runtime.listExecutingSessionIds(),

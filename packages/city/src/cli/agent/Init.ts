@@ -18,14 +18,16 @@ import fg from "fast-glob";
 import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/config/Paths.js";
 import {
   initializeAgentProject,
-  listModelCatalogChoices,
   normalizeDefaultAgentName,
 } from "@downcity/agent";
 import type { AgentProjectChannel } from "@downcity/agent";
 import type { ExecutionBindingConfig } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
-import { createAgentModelCatalogRuntime } from "@/process/registry/AgentHostRuntime.js";
+import {
+  assertPlatformModelReady,
+  listPlatformModelChoices,
+} from "@/model/runtime/ExecutionModelBinding.js";
 
 type InitPromptResponse = {
   name?: string;
@@ -68,8 +70,7 @@ export async function initCommand(
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
-  const modelCatalog = createAgentModelCatalogRuntime();
-  const modelChoices = await listModelCatalogChoices(modelCatalog);
+  const modelChoices = await listPlatformModelChoices();
   const modelChoiceIds = modelChoices.map((item) => item.value);
 
   // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
@@ -139,6 +140,7 @@ export async function initCommand(
     type: "api",
     modelId: primaryModelId,
   };
+  assertPlatformModelReady(primaryModelId);
   const selectedChannels = Array.isArray(response.channels)
     ? (response.channels as AgentProjectChannel[])
     : [];
@@ -150,7 +152,6 @@ export async function initCommand(
       channels: selectedChannels,
       forceOverwriteShipJson: allowOverwrite,
     },
-    modelCatalog,
   );
 
   const createdItems: string[] = [];

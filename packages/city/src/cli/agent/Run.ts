@@ -18,7 +18,7 @@ import {
   shellTools,
   StaticPromptCatalog,
 } from "@downcity/agent";
-import { listRegisteredPlugins } from "@downcity/plugins";
+import { createBuiltinPlugins } from "@downcity/plugins";
 import type { StartOptions } from "@downcity/agent";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
@@ -79,7 +79,7 @@ export async function runCommand(
     path: projectRoot,
     instruction: currentSystems,
     tools: shellTools,
-    plugins: listRegisteredPlugins(),
+    plugins: createBuiltinPlugins(),
     model,
   });
 

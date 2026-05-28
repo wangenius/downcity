@@ -79,6 +79,30 @@ export {
 } from "./executor/composer/system/default/StaticPromptCatalog.js";
 export { shellTools } from "./executor/tools/shell/ShellToolDefinition.js";
 
+// 通用 plugin 宿主工具
+export {
+  buildStaticPluginAvailability,
+  findPluginByName,
+  hasPluginLifecycle,
+  listPluginViews,
+  listPluginsWithLifecycle,
+  listPluginsWithoutLifecycle,
+  resolvePluginAvailability,
+  toPluginView,
+} from "./plugin/core/PluginCatalog.js";
+export {
+  listPluginAuthPolicies,
+  registerPluginHttpRoutes,
+} from "./plugin/core/PluginHttpRoutes.js";
+export {
+  createLocalPluginCommandContext,
+  getLocalPluginAvailability,
+  runLocalPluginAction,
+} from "./plugin/core/PluginLocalExecution.js";
+export {
+  registerPluginActionCommandsForCli,
+} from "./plugin/core/PluginCommand.js";
+
 // Agent server 与 transport 集成
 export { startServer } from "./runtime/server/http/Server.js";
 export { startLocalRpcServer } from "./runtime/server/rpc/Server.js";

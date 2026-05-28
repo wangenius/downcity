@@ -13,7 +13,7 @@ import {
   callAgentTransport,
   parseScheduledRunAtMsOrThrow,
 } from "@downcity/agent";
-import { listManagedPlugins } from "@downcity/plugins";
+import { listPluginsWithLifecycle } from "@downcity/agent";
 import type { BasePlugin, PluginAction } from "@downcity/agent";
 import type { JsonObject, JsonValue } from "@downcity/agent";
 import type { PluginCommandScheduleInput } from "@downcity/agent";
@@ -395,8 +395,11 @@ function registerPluginLifecycleCommands(params: {
 /**
  * 注册所有受 agent 托管的 plugin actions CLI 命令。
  */
-export function registerManagedPluginCommandsForCli(program: Command): void {
-  const plugins = listManagedPlugins();
+export function registerManagedPluginCommandsForCli(
+  program: Command,
+  pluginsInput: BasePlugin[],
+): void {
+  const plugins = listPluginsWithLifecycle(pluginsInput);
   for (const plugin of plugins) {
     for (const [actionName, action] of Object.entries(plugin.actions)) {
       registerPluginActionCommand({

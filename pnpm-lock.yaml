@@ -383,9 +383,6 @@ importers:
       fs-extra:
         specifier: ^11.2.0
         version: 11.3.4
-      hono:
-        specifier: ^4.0.0
-        version: 4.12.9
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1

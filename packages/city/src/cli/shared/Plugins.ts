@@ -13,13 +13,13 @@ import type { Command } from "commander";
 import prompts from "prompts";
 import {
   buildStaticPluginAvailability,
-  findBuiltinPlugin,
-  findStaticPluginView,
-  listLocalPlugins,
-  listManagedPlugins,
-  listStaticPluginViews,
+  findPluginByName,
+  listPluginViews,
+  listPluginsWithLifecycle,
+  listPluginsWithoutLifecycle,
   runLocalPluginAction,
-} from "@downcity/plugins";
+} from "@downcity/agent";
+import { createBuiltinPlugins } from "@downcity/plugins";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import type { JsonValue } from "@downcity/agent";
 import { getDowncityJsonPath } from "@/config/Paths.js";
@@ -45,6 +45,10 @@ type StaticCatalogEntry = {
   hasSystem: boolean;
   note?: string;
 };
+
+function createPluginCatalog() {
+  return createBuiltinPlugins();
+}
 
 async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<{
   projectRoot?: string;
@@ -80,6 +84,7 @@ function buildSafeStaticPluginAvailability(pluginName: string): {
 } {
   try {
     const availability = buildStaticPluginAvailability({
+      plugins: createPluginCatalog(),
       pluginName,
     });
     const normalizedReasons = availability.reasons.map((reason) => {
@@ -167,7 +172,8 @@ function renderPluginCatalogTable(rows: Array<{
 }
 
 function listStaticCatalogEntries(): StaticCatalogEntry[] {
-  const managedEntries = listManagedPlugins().map((plugin) => ({
+  const plugins = createPluginCatalog();
+  const managedEntries = listPluginsWithLifecycle(plugins).map((plugin) => ({
     name: plugin.name,
     title: String(plugin.title || plugin.name || "").trim() || plugin.name,
     kind: "managed" as const,
@@ -179,9 +185,8 @@ function listStaticCatalogEntries(): StaticCatalogEntry[] {
     note: "Managed plugin. Use `city plugin start/stop/restart/status` with an agent target for live state.",
   }));
 
-  const localNames = new Set(listLocalPlugins().map((plugin) => plugin.name));
-  const localEntries = listStaticPluginViews()
-    .filter((plugin) => localNames.has(plugin.name))
+  const localPlugins = listPluginsWithoutLifecycle(plugins);
+  const localEntries = listPluginViews(localPlugins)
     .map((plugin) => {
     const availability = buildSafeStaticPluginAvailability(plugin.name);
     return {
@@ -420,7 +425,7 @@ async function runPluginLifecycleCommand(params: {
   enabled: boolean;
   asJson?: boolean;
 }): Promise<void> {
-  const plugin = findBuiltinPlugin(params.pluginName);
+  const plugin = findPluginByName(createPluginCatalog(), params.pluginName);
   if (!plugin) {
     printResult({
       asJson: params.asJson === true,
@@ -556,6 +561,7 @@ async function runPluginActionCommand(params: {
 
   const payload = parseCommandPayload(params.payload);
   const local = await runLocalPluginAction({
+    plugins: createPluginCatalog(),
     projectRoot: resolved.projectRoot,
     pluginName: params.pluginName,
     actionName: params.actionName,

@@ -9,15 +9,17 @@
 
 import type { Hono } from "hono";
 import {
-  findBuiltinPlugin,
-  listStaticPluginViews,
+  findPluginByName,
+  listPluginViews,
   runLocalPluginAction,
-} from "@downcity/plugins";
+} from "@downcity/agent";
+import { createBuiltinPlugins } from "@downcity/plugins";
 import type { PlatformAgentOption } from "@downcity/agent";
 import type {
   PluginActionResult,
   PluginAction,
   PluginAvailability,
+  Plugin,
   PluginSetupDefinition,
   PluginUsageDefinition,
   PluginView,
@@ -75,8 +77,12 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function createPluginCatalog() {
+  return createBuiltinPlugins();
+}
+
 function buildPluginActionConfig(
-  plugin: ReturnType<typeof findBuiltinPlugin>,
+  plugin: Plugin | null,
 ): PluginActionConfigItem[] {
   if (!plugin) return [];
   const actions = (plugin.actions || {}) as Record<string, PluginAction>;
@@ -94,19 +100,19 @@ function buildPluginConfigMap(): Map<string, {
   setup?: PluginSetupDefinition;
   usage?: PluginUsageDefinition;
 }> {
+  const plugins = createPluginCatalog();
   return new Map(
-    listStaticPluginViews().map((view) => [
-      view.name,
-      {
-        actions: buildPluginActionConfig(findBuiltinPlugin(view.name)),
-        ...(findBuiltinPlugin(view.name)?.setup
-          ? { setup: findBuiltinPlugin(view.name)?.setup }
-          : {}),
-        ...(findBuiltinPlugin(view.name)?.usage
-          ? { usage: findBuiltinPlugin(view.name)?.usage }
-          : {}),
-      },
-    ] as const),
+    listPluginViews(plugins).map((view) => {
+      const plugin = findPluginByName(plugins, view.name);
+      return [
+        view.name,
+        {
+          actions: buildPluginActionConfig(plugin),
+          ...(plugin?.setup ? { setup: plugin.setup } : {}),
+          ...(plugin?.usage ? { usage: plugin.usage } : {}),
+        },
+      ] as const;
+    }),
   );
 }
 
@@ -114,16 +120,18 @@ function buildGlobalPluginConfigMap(): Map<string, {
   actions: PluginActionConfigItem[];
   setup?: PluginSetupDefinition;
 }> {
+  const plugins = createPluginCatalog();
   return new Map(
-    listStaticPluginViews().map((view) => [
-      view.name,
-      {
-        actions: buildPluginActionConfig(findBuiltinPlugin(view.name)),
-        ...(findBuiltinPlugin(view.name)?.setup
-          ? { setup: findBuiltinPlugin(view.name)?.setup }
-          : {}),
-      },
-    ] as const),
+    listPluginViews(plugins).map((view) => {
+      const plugin = findPluginByName(plugins, view.name);
+      return [
+        view.name,
+        {
+          actions: buildPluginActionConfig(plugin),
+          ...(plugin?.setup ? { setup: plugin.setup } : {}),
+        },
+      ] as const;
+    }),
   );
 }
 
@@ -132,7 +140,7 @@ function buildGlobalPluginPayload(): PluginUiResponse {
   return {
     success: true,
     runtimeConnected: false,
-    plugins: listStaticPluginViews().map((view) => ({
+    plugins: listPluginViews(createPluginCatalog()).map((view) => ({
       ...view,
       availability: {
         enabled: isCityPluginEnabled(view.name),
@@ -157,7 +165,7 @@ function buildAgentPluginPayload(params?: {
     success: true,
     runtimeConnected: params?.runtimeConnected === true,
     ...(reason ? { runtimeError: reason } : {}),
-    plugins: listStaticPluginViews().map((view) => ({
+    plugins: listPluginViews(createPluginCatalog()).map((view) => ({
       ...view,
       availability: {
         enabled: isCityPluginEnabled(view.name),
@@ -282,7 +290,8 @@ async function runGlobalPluginAction(input: {
 }): Promise<PluginActionResult<JsonValue>> {
   const pluginName = String(input.pluginName || "").trim();
   const actionName = String(input.actionName || "").trim();
-  const plugin = findBuiltinPlugin(pluginName);
+  const plugins = createPluginCatalog();
+  const plugin = findPluginByName(plugins, pluginName);
   if (!plugin) {
     return {
       success: false,
@@ -320,6 +329,7 @@ async function runGlobalPluginAction(input: {
   }
 
   return runLocalPluginAction({
+    plugins,
     projectRoot,
     pluginName: plugin.name,
     actionName,

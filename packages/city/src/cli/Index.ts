@@ -14,7 +14,11 @@ import { basename, dirname, join } from "path";
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import { Command, Option } from "commander";
-import { registerAllPluginsForCli } from "@downcity/plugins";
+import {
+  listPluginsWithoutLifecycle,
+  registerPluginActionCommandsForCli,
+} from "@downcity/agent";
+import { createBuiltinPlugins } from "@downcity/plugins";
 import { registerPluginsCommand } from "./shared/Plugins.js";
 import { registerManagedPluginCommandsForCli } from "./shared/ManagedPluginActionCommands.js";
 import { registerControlPlaneCommands } from "./control-plane/ControlPlaneCommand.js";
@@ -67,6 +71,7 @@ const installedAgentVersion = resolveInstalledAgentVersion();
 
 const program = new Command();
 const argv = process.argv.slice(2);
+const builtinPlugins = createBuiltinPlugins();
 
 program
   .name(basename(process.argv[1] || "downcity"))
@@ -96,9 +101,12 @@ registerChatCommand(program);
 registerPluginsCommand(program);
 
 // 受 agent 托管的 plugin 命令统一注册（chat / task / memory / shell / future managed plugins）
-registerManagedPluginCommandsForCli(program);
+registerManagedPluginCommandsForCli(program, builtinPlugins);
 // 插件命令统一注册（skill / asr / tts / future plugins）
-registerAllPluginsForCli(program);
+registerPluginActionCommandsForCli({
+  program,
+  plugins: listPluginsWithoutLifecycle(builtinPlugins),
+});
 
 program.showHelpAfterError();
 program.showSuggestionAfterError();

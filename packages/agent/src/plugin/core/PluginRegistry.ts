@@ -7,6 +7,7 @@
  */
 
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
+import { toPluginView } from "@/plugin/core/PluginCatalog.js";
 import type { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import type {
   Plugin,
@@ -122,28 +123,7 @@ export class PluginRegistry {
    */
   list(): PluginView[] {
     return Array.from(this.plugins.values())
-      .map((plugin) => ({
-        name: plugin.name,
-        title: String(plugin.title || plugin.name || "").trim(),
-        description: String(plugin.description || "").trim(),
-        actions: Object.keys(plugin.actions || {}).sort((a, b) =>
-          a.localeCompare(b),
-        ),
-        pipelines: Object.keys(plugin.hooks?.pipeline || {}).sort((a, b) =>
-          a.localeCompare(b),
-        ),
-        guards: Object.keys(plugin.hooks?.guard || {}).sort((a, b) =>
-          a.localeCompare(b),
-        ),
-        effects: Object.keys(plugin.hooks?.effect || {}).sort((a, b) =>
-          a.localeCompare(b),
-        ),
-        resolves: Object.keys(plugin.resolves || {}).sort((a, b) =>
-          a.localeCompare(b),
-        ),
-        hasSystem: typeof plugin.system === "function",
-        hasAvailability: typeof plugin.availability === "function",
-      }))
+      .map((plugin) => toPluginView(plugin))
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 

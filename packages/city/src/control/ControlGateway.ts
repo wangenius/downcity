@@ -40,6 +40,7 @@ import {
   buildPlatformUpstreamUrl,
   forwardPlatformRequest,
 } from "@/control/gateway/Proxy.js";
+import { listPluginAuthPolicies } from "@downcity/agent";
 import type {
   PlatformAgentOption,
   PlatformAgentsResponse,
@@ -49,7 +50,7 @@ import type {
   PlatformLocalModelsResponse,
 } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
-import { listBuiltinPluginAuthPolicies } from "@downcity/plugins";
+import { createBuiltinPlugins } from "@downcity/plugins";
 import { AuthService } from "@/http/auth/AuthService.js";
 import { registerAuthRoutes } from "@/http/auth/AuthRoutes.js";
 import {
@@ -120,7 +121,7 @@ export class ControlGateway {
         this.authService,
         [
           ...CONTROL_PLANE_AUTH_ROUTE_POLICIES,
-          ...listBuiltinPluginAuthPolicies(),
+          ...listPluginAuthPolicies(createBuiltinPlugins()),
         ],
       ),
     );

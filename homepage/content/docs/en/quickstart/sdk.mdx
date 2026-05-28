@@ -87,7 +87,7 @@ const agent = new Agent({
 ```
 
 `plugins` accepts already-instantiated plugin objects.  
-`agent.start({ http: { ... }, rpc: true })` automatically starts those plugins before exposing the endpoints.
+`agent.start({ http: { ... } })` automatically starts those plugins before exposing the endpoints.
 
 ## Observe a session
 
@@ -122,7 +122,7 @@ const fromMessage = await session.fork("message-id");
 
 If `messageId` is provided, the new session copies history up to and including that message.
 
-## Start HTTP / RPC
+## Start HTTP
 
 ```ts
 const started = await agent.start({
@@ -130,7 +130,6 @@ const started = await agent.start({
     host: "127.0.0.1",
     port: 15314,
   },
-  rpc: true,
 });
 
 console.log(started.http?.baseUrl);

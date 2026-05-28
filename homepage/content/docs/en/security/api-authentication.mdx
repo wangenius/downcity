@@ -126,7 +126,7 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
 Main rule first:
 
 - only external HTTP calls need a Bearer token
-- local `city plugin`, `city task`, `city chat`, `city memory`, and similar commands use IPC by default and do not need a token first
+- local managed commands now call the local agent daemon over HTTP by default
 
 For direct API usage, the important rule is:
 
@@ -138,7 +138,7 @@ Inside the CLI/runtime, the only auth env var most users need is:
 | --- | --- | --- |
 | `DC_AUTH_TOKEN` | users, scripts, CI | explicitly choose which token a CLI/API invocation should use |
 
-Only explicit remote HTTP calls use this resolution order:
+HTTP calls that need auth use this resolution order:
 
 1. `--token`
 2. `DC_AUTH_TOKEN`
@@ -146,15 +146,14 @@ Only explicit remote HTTP calls use this resolution order:
 So:
 
 - `DC_AUTH_TOKEN` is the explicit override
-- local IPC calls do not need a token
-- explicit remote HTTP calls normalize `DC_AUTH_TOKEN` into the Bearer header
+- protected HTTP calls normalize `DC_AUTH_TOKEN` into the Bearer header
 
 If you see `Missing bearer token`:
 
 - do not start by suspecting `sessionId`
-- first confirm that the invocation is actually using remote HTTP
+- first confirm that the target HTTP endpoint is actually protected
 - then check whether the current process has any valid token source
-- if this happens inside an agent/Bash/ACP subprocess, first check whether the call should be local IPC instead of remote HTTP
+- if this happens inside an agent/Bash/ACP subprocess, first check whether the command should receive an explicit token
 
 ## Current scope
 

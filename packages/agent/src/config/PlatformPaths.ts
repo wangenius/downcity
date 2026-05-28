@@ -30,8 +30,12 @@ export function getPlatformRootDirPath(): string {
 
 /**
  * 返回平台级运行目录。
+ *
+ * 关键点（中文）
+ * - 当前仅供本模块内部拼接平台级派生路径使用。
+ * - 不再对外导出，避免暴露未被实际消费的路径 API。
  */
-export function getPlatformRuntimeDirPath(): string {
+function getPlatformRuntimeDirPath(): string {
   return path.join(getPlatformRootDirPath(), "main");
 }
 

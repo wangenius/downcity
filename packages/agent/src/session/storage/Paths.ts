@@ -114,13 +114,3 @@ export function getSdkAgentSessionArchiveDirPath(
     "archive",
   );
 }
-
-/**
- * 单个 agent 的本地 RPC socket 路径。
- */
-export function getSdkAgentRpcEndpointPath(
-  projectRoot: string,
-  agentId: string,
-): string {
-  return path.join(getSdkAgentDirPath(projectRoot, agentId), "agent.rpc.sock");
-}

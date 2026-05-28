@@ -39,7 +39,7 @@ export type DaemonJsonApiCallParams = {
    * 单次调用超时（毫秒）。
    *
    * 说明（中文）
-   * - 仅本地 IPC transport 当前会消费该参数。
+   * - 当前 HTTP daemon client 会消费该参数。
    * - 用于 `session execute`、`plugin command` 这类可能持续几十秒的请求，
    *   避免被默认短超时误判成“Agent server 未启动”。
    */

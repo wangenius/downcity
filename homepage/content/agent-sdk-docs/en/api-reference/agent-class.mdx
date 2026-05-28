@@ -46,7 +46,6 @@ From an API-design perspective, it behaves more like a session factory plus a lo
 Typical examples include:
 
 - starting the HTTP server
-- starting the local RPC server
 - starting plugin lifecycles
 
 Recommended usage:
@@ -57,14 +56,13 @@ await agent.start({
     host: "127.0.0.1",
     port: 15314,
   },
-  rpc: true,
 });
 ```
 
 If you do not call `agent.start()`:
 
 - you can still call `await agent.createSession()` and then `session.prompt()`
-- but no HTTP or RPC endpoint starts
+- but no HTTP endpoint starts
 - and no background plugin lifecycle starts
 
 `agent.stop()` closes whichever long-lived capabilities are currently running.
@@ -79,17 +77,14 @@ await agent.start({
     host: "127.0.0.1",
     port: 15314,
   },
-  rpc: true,
 });
 ```
 
-The local `Agent` no longer exposes fine-grained transport properties like `agent.http` or `agent.rpc`.
+The local `Agent` no longer exposes fine-grained runtime internals.
 
-If you need:
+If you need an endpoint, use:
 
-- HTTP only: `agent.start({ http: { host, port } })`
-- RPC only: `agent.start({ rpc: true })`
-- both: `agent.start({ http: { host, port }, rpc: true })`
+- HTTP: `agent.start({ http: { host, port } })`
 
 `agent.plugins` is now an important public surface of the local SDK.
 

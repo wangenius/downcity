@@ -9,7 +9,6 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import type { LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
 import type { ServerInstance } from "@/runtime/server/http/Server.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type {
@@ -103,15 +102,6 @@ export interface AgentStartOptions {
   http?: false | AgentHttpStartOptions;
 
   /**
-   * 是否启动本地 RPC 服务。
-   *
-   * 关键点（中文）
-   * - `true` 时启动主 local RPC server。
-   * - 省略或 `false` 时不启动。
-   */
-  rpc?: boolean;
-
-  /**
    * 是否启动当前 agent 的 plugins。
    *
    * 关键点（中文）
@@ -131,11 +121,6 @@ export interface AgentStopResult {
   httpStopped: boolean;
 
   /**
-   * 本次是否实际停止了本地 RPC 服务。
-   */
-  rpcStopped: boolean;
-
-  /**
    * 本次是否实际停止了 plugins。
    */
   pluginsStopped: boolean;
@@ -149,11 +134,6 @@ export interface AgentStartResult {
    * 当前 agent 是否已启动 HTTP 服务。
    */
   http?: AgentHttpBinding;
-
-  /**
-   * 当前 agent 是否已启动本地 RPC 服务。
-   */
-  rpc?: AgentRpcBinding;
 
   /**
    * 当前 agent 是否已启动 plugins。
@@ -199,21 +179,6 @@ export interface AgentHttpBinding {
    * HTTP server 句柄。
    */
   server: ServerInstance;
-}
-
-/**
- * Agent RPC 绑定信息。
- */
-export interface AgentRpcBinding {
-  /**
-   * 当前本地 RPC endpoint。
-   */
-  endpoint: string;
-
-  /**
-   * 本地 RPC server 句柄。
-   */
-  server: LocalRpcServerHandle;
 }
 
 /**

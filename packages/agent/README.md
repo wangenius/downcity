@@ -7,7 +7,7 @@
 - 本地 SDK：`Agent`、`Session`、`RemoteAgent`
 - 内部执行内核：history、system、tool loop、增量输出
 - Plugin 框架：hook、action、内建插件
-- 运行时实现：HTTP/RPC server、transport、sandbox、host
+- 运行时实现：HTTP server、sandbox、host
 
 `@downcity/city` 负责多 Agent 管理、控制面网关、平台 CLI、模型池与 daemon 进程管理；`@downcity/agent` 只负责单 Agent 的执行面。
 
@@ -15,14 +15,14 @@
 
 - 面向单个 Agent 项目的执行面
 - 对外通过 `@downcity/agent` 根入口暴露公共 API
-- 负责 session SDK、executor 内核、plugin、sandbox、HTTP/RPC server、SDK 本地 Agent
+- 负责 session SDK、executor 内核、plugin、sandbox、HTTP server、SDK 本地 Agent
 - 不负责多 Agent registry、control plane daemon、console UI 聚合和平台级编排
 
 ## 与其他包的边界
 
 - `@downcity/agent`
   - 单 Agent runtime
-  - 单 Agent HTTP/RPC server
+  - 单 Agent HTTP server
   - session SDK、executor 内核、plugin 框架、sandbox
   - 本地 SDK facade
 - `@downcity/city`
@@ -58,8 +58,7 @@ src/
 ├── runtime/               # 运行时实现细节层，统一收纳 host / sandbox / server / transport
 │   ├── host/              # 宿主注入能力与 daemon 协议
 │   ├── sandbox/           # 命令沙箱与沙箱协议
-│   ├── server/            # HTTP / RPC 服务端实现
-│   └── transport/         # 调用端 transport 协议与 RPC client
+│   └── server/            # HTTP 服务端实现
 ├── sdk/                   # 本地 SDK facade，提供 Agent / RemoteAgent / Session 等高层 API
 │   └── session/           # SDK session 的 metadata、落盘路径、持久化与 runtime 端口适配
 ├── types/                 # 跨模块共享协议类型，集中放置 common / config / runtime 等稳定契约
@@ -101,15 +100,14 @@ src/
   - 单 Agent 的运行时实现细节层
   - `host/` 放宿主注入能力与 daemon 协议
   - `sandbox/` 放命令执行隔离与沙箱协议
-  - `server/` 放 HTTP / RPC 服务端实现
-  - `transport/` 放 agent client 侧 transport 协议与 RPC client
+  - `server/` 放 HTTP 服务端实现
   - 模型实例解析不在 `agent` 包内完成，而由宿主先创建 `LanguageModel`，再通过 `new Agent({ model })` 或 `session.set({ model })` 注入
 
 - `src/types/`
   - 跨模块、跨包共享协议类型
   - `common/` 放 JSON、模板等无领域依赖的基础类型
   - `config/` 放 `downcity.json`、LLM、execution binding、plugin 配置、start options 等配置契约
-  - `runtime/` 放 auth、daemon、host、http、platform、rpc 等运行时与控制面共享协议
+  - `runtime/` 放 auth、daemon、host、http、platform 等运行时与控制面共享协议
   - 领域内部类型仍保留在对应领域目录，例如 `plugin/types/`、`executor/types/`
 
 - `src/utils/`

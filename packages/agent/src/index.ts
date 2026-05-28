@@ -19,7 +19,6 @@ export type {
   AgentOptions,
   AgentHttpBinding,
   AgentHttpStartOptions,
-  AgentRpcBinding,
   AgentStartOptions,
   AgentStartResult,
   AgentStopResult,
@@ -103,10 +102,8 @@ export {
   registerPluginActionCommandsForCli,
 } from "./plugin/core/PluginCommand.js";
 
-// Agent server 与 transport 集成
+// Agent server 集成
 export { startServer } from "./runtime/server/http/Server.js";
-export { startLocalRpcServer } from "./runtime/server/rpc/Server.js";
-export { callAgentTransport } from "./runtime/transport/rpc/Transport.js";
 
 // Runtime plugin 运行集成
 export {
@@ -193,7 +190,7 @@ export type {
   PlatformAgentShipStartConfig,
 } from "./types/runtime/platform/PlatformGateway.js";
 
-// Daemon / RPC 协议类型
+// Daemon 协议类型
 export {
   DAEMON_LOG_FILENAME,
   DAEMON_META_FILENAME,
@@ -203,10 +200,6 @@ export type {
   DaemonMeta,
   DaemonStaleReason,
 } from "./types/runtime/daemon/Daemon.js";
-export type {
-  LocalRpcRequest,
-  LocalRpcResponse,
-} from "./types/runtime/rpc/LocalRpc.js";
 
 // Inline instant 协议类型
 export type {

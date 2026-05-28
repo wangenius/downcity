@@ -15,14 +15,10 @@ import path from "path";
  * - 统一使用大写文件名：`PROFILE.md`。
  * - 与 SOUL 一起作为静态 prompt 入口。
  */
-export const PROFILE_MD_FILE_CANDIDATES = ["PROFILE.md"] as const;
+const PROFILE_MD_FILE_CANDIDATES = ["PROFILE.md"] as const;
 
 export function getProfileMdPath(cwd: string): string {
   return path.join(cwd, PROFILE_MD_FILE_CANDIDATES[0]);
-}
-
-export function getProfileMdCandidatePaths(cwd: string): string[] {
-  return PROFILE_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
 }
 
 /**
@@ -32,14 +28,10 @@ export function getProfileMdCandidatePaths(cwd: string): string[] {
  * - 统一使用大写文件名：`SOUL.md`。
  * - 统一由 Paths 模块暴露，避免调用方散落硬编码。
  */
-export const SOUL_MD_FILE_CANDIDATES = ["SOUL.md"] as const;
+const SOUL_MD_FILE_CANDIDATES = ["SOUL.md"] as const;
 
 export function getSoulMdPath(cwd: string): string {
   return path.join(cwd, SOUL_MD_FILE_CANDIDATES[0]);
-}
-
-export function getSoulMdCandidatePaths(cwd: string): string[] {
-  return SOUL_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
 }
 
 export function getDowncityJsonPath(cwd: string): string {
@@ -54,28 +46,12 @@ export function getDowncitySchemaPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "schema", "downcity.schema.json");
 }
 
-export function getDowncityConfigDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "config");
-}
-
-export function getLogsDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "logs");
-}
-
 export function getCacheDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), ".cache");
 }
 
-export function getDowncityProfileDirPath(cwd: string): string {
+function getDowncityProfileDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "profile");
-}
-
-export function getDowncityProfilePrimaryPath(cwd: string): string {
-  return path.join(getDowncityProfileDirPath(cwd), "Primary.md");
-}
-
-export function getDowncityProfileOtherPath(cwd: string): string {
-  return path.join(getDowncityProfileDirPath(cwd), "other.md");
 }
 
 /**
@@ -84,7 +60,7 @@ export function getDowncityProfileOtherPath(cwd: string): string {
  * 关键点（中文）
  * - `.downcity/memory` 为跨会话记忆目录。
  */
-export function getDowncityMemoryDirPath(cwd: string): string {
+function getDowncityMemoryDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "memory");
 }
 
@@ -116,19 +92,11 @@ export function getDowncityMemoryDailyPath(cwd: string, date: string): string {
  * 关键点（中文）
  * - 调度任务属于项目 runtime 本地状态，因此放在项目 `.downcity/` 下。
  */
-export function getDowncityScheduleDbPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "schedule.jsonl");
-}
-
-export function getDowncityDataDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "data");
-}
-
-export function getDowncityAgentsRootDirPath(cwd: string): string {
+function getDowncityAgentsRootDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "agents");
 }
 
-export function getDowncityAgentDirPath(cwd: string, agentId: string): string {
+function getDowncityAgentDirPath(cwd: string, agentId: string): string {
   return path.join(
     getDowncityAgentsRootDirPath(cwd),
     encodeURIComponent(String(agentId || "").trim()),
@@ -168,29 +136,7 @@ export function getDowncitySessionMessagesDirPath(
   return path.join(getDowncitySessionDirPath(cwd, agentId, sessionId), "messages");
 }
 
-export function getDowncitySessionMessagesPath(
-  cwd: string,
-  agentId: string,
-  sessionId: string,
-): string {
-  return path.join(
-    getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
-    "messages.jsonl",
-  );
-}
-
-export function getDowncitySessionHistoryMetaPath(
-  cwd: string,
-  agentId: string,
-  sessionId: string,
-): string {
-  return path.join(
-    getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
-    "meta.json",
-  );
-}
-
-export function getDowncitySessionMessagesArchiveDirPath(
+function getDowncitySessionMessagesArchiveDirPath(
   cwd: string,
   agentId: string,
   sessionId: string,
@@ -199,26 +145,6 @@ export function getDowncitySessionMessagesArchiveDirPath(
     getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
     "archive",
   );
-}
-
-export function getDowncitySessionMessagesArchivePath(
-  cwd: string,
-  agentId: string,
-  sessionId: string,
-  archiveId: string,
-): string {
-  return path.join(
-    getDowncitySessionMessagesArchiveDirPath(cwd, agentId, sessionId),
-    `${encodeURIComponent(String(archiveId || "").trim())}.json`,
-  );
-}
-
-export function getDowncityPublicDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "public");
-}
-
-export function getDowncityTasksDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "task");
 }
 
 export function getDowncityDebugDirPath(cwd: string): string {
@@ -232,7 +158,7 @@ export function getDowncityDebugDirPath(cwd: string): string {
  * - 该目录存放 `sessionId -> chat` 的最近映射快照
  * - 与 core session messages 分离，避免把平台路由细节耦合进 core
  */
-export function getDowncityChatDirPath(cwd: string): string {
+function getDowncityChatDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "chat");
 }
 
@@ -257,15 +183,8 @@ export function getDowncityChannelMetaPath(cwd: string): string {
   return path.join(getDowncityChannelDirPath(cwd), "meta.json");
 }
 
-export function getDowncityChatMetaDirPath(cwd: string): string {
+function getDowncityChatMetaDirPath(cwd: string): string {
   return path.join(getDowncityChatDirPath(cwd), "meta");
-}
-
-export function getDowncityChatMetaPath(cwd: string, sessionId: string): string {
-  return path.join(
-    getDowncityChatMetaDirPath(cwd),
-    `${encodeURIComponent(String(sessionId || "").trim())}.json`,
-  );
 }
 
 /**

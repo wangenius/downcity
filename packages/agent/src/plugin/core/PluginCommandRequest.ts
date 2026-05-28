@@ -2,7 +2,7 @@
  * PluginCommandRequest：统一 plugin runtime command 请求解析模块。
  *
  * 关键点（中文）
- * - 统一收口 HTTP / RPC 两种入口的请求体解析。
+ * - 统一收口当前 HTTP 入口的请求体解析。
  * - plugin runtime 远程调用统一走 runtime command 协议，不再让 action 自带 HTTP route。
  * - ActionSchedule 参数（`schedule` / `delay` / `time`）也在这里一次性归一化。
  */

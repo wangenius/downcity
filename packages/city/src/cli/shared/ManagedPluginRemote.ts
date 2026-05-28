@@ -6,7 +6,6 @@
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 
-import { callAgentTransport } from "@downcity/agent";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import type {
   PluginCliBaseOptions,
@@ -20,6 +19,7 @@ import {
   resolvePluginProjectRoot,
   validateAgentProjectRoot,
 } from "./PluginTargetSupport.js";
+import { callServer } from "@/process/daemon/Client.js";
 
 const PLUGIN_COMMAND_TIMEOUT_MS = 120_000;
 
@@ -52,7 +52,7 @@ export async function runManagedPluginListCommand(options: PluginCliBaseOptions)
     });
     return;
   }
-  const remote = await callAgentTransport<PluginStateListResponse>({
+  const remote = await callServer<PluginStateListResponse>({
     projectRoot,
     path: "/api/plugins/list",
     method: "GET",
@@ -117,7 +117,7 @@ export async function runManagedPluginControlCommand(params: {
     });
     return;
   }
-  const remote = await callAgentTransport<PluginControlResponse>({
+  const remote = await callServer<PluginControlResponse>({
     projectRoot,
     path: "/api/plugins/control",
     method: "POST",
@@ -187,7 +187,7 @@ export async function runManagedPluginCommandBridge(params: {
     });
     return;
   }
-  const remote = await callAgentTransport<PluginCommandResponse>({
+  const remote = await callServer<PluginCommandResponse>({
     projectRoot,
     path: "/api/plugins/command",
     method: "POST",

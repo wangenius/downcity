@@ -64,8 +64,7 @@ src
 │   └── store/
 ├── process/
 │   ├── daemon/
-│   ├── registry/
-│   └── rpc/
+│   └── registry/
 ├── types/
 │   ├── chat/
 │   ├── contact/
@@ -145,7 +144,7 @@ src
 
 - `src/process/`
   - city runtime 进程侧能力。
-  - 统一承接 daemon、registry、local rpc，不再散落在顶层目录。
+  - 统一承接 daemon 与 registry，不再散落在顶层目录。
 
 - `src/process/daemon/`
   - Agent daemon 的 pid/log/meta/启停管理。
@@ -154,10 +153,6 @@ src
 - `src/process/registry/`
   - city runtime 与多 Agent registry 状态。
   - 记录哪些 agent 已登记、哪些 daemon 正在运行、Console/city pid 路径等。
-
-- `src/process/rpc/`
-  - city 侧 local RPC 客户端辅助。
-  - 用于本机调用 Agent 暴露的 IPC 接口。
 
 - `src/types/`
   - 当前仅保留尚未进一步归位的领域类型。
@@ -209,7 +204,7 @@ browser / UI
   -> src/control/ControlGateway.ts
   -> src/control/gateway/*
   -> src/process/registry/*
-  -> 转发到单 Agent HTTP / RPC
+  -> 转发到单 Agent HTTP
 ```
 
 ### 5. 全局模型池
@@ -252,6 +247,6 @@ city model ...
 - 模型池、provider store 与模型创建逻辑留在 city 宿主层，不下沉回 `@downcity/agent`。
 - `control/` 是平台 gateway / control plane。
 - 单 Agent 的 HTTP control API 语义应该留在 `@downcity/agent`。
-- `process/` 统一放 city 的进程管理、registry、RPC，不要再散落回顶层。
+- `process/` 统一放 city 的进程管理与 registry，不要再散落回顶层。
 - `config/` 只放静态配置/schema/路径，不混入运行时 store 逻辑。
 - CLI 类型、store 类型、city 自有小类型优先就近放在对应模块旁边。

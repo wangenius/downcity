@@ -128,6 +128,12 @@ export async function callServer<T>(
   const method = params.method || "GET";
   const hasBody = params.body !== undefined && method !== "GET";
   const headers: Record<string, string> = {};
+  const timeoutMs =
+    typeof params.timeoutMs === "number" &&
+    Number.isFinite(params.timeoutMs) &&
+    params.timeoutMs > 0
+      ? Math.floor(params.timeoutMs)
+      : undefined;
   const authHeaderValue = formatCliBearerHeaderValue(
     resolveCliAuthToken({
       explicitToken: params.authToken,
@@ -141,11 +147,19 @@ export async function callServer<T>(
   }
 
   try {
+    const abortController = timeoutMs ? new AbortController() : undefined;
+    const timeoutHandle = timeoutMs
+      ? setTimeout(() => abortController?.abort(), timeoutMs)
+      : undefined;
     const response = await fetch(url, {
       method,
       headers: Object.keys(headers).length > 0 ? headers : undefined,
       body: hasBody ? JSON.stringify(params.body) : undefined,
+      signal: abortController?.signal,
     });
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
 
     let data: JsonValue | null = null;
     try {
@@ -170,6 +184,12 @@ export async function callServer<T>(
       data: data as T,
     };
   } catch (error) {
+    if (timeoutMs && error instanceof Error && error.name === "AbortError") {
+      return {
+        success: false,
+        error: `Failed to call ${url}: timeout after ${timeoutMs}ms`,
+      };
+    }
     return {
       success: false,
       error: `Failed to call ${url}: ${String(error)}`,

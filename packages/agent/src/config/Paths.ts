@@ -127,6 +127,10 @@ export function getCacheDirPath(cwd: string): string {
 
 /**
  * 返回 profile 运行态目录路径。
+ *
+ * 关键点（中文）
+ * - 初始化流程会统一创建该目录，并在其中写入 profile 相关文件。
+ * - 单独保留目录级 API，避免调用方散落 `path.join(..., "profile")`。
  */
 export function getDowncityProfileDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "profile");
@@ -157,8 +161,9 @@ export function getDowncityProfileOtherPath(cwd: string): string {
  *
  * 关键点（中文）
  * - `.downcity/memory` 为跨会话记忆目录。
+ * - 当前仅供本模块内部继续拼接长期记忆与每日记忆路径。
  */
-export function getDowncityMemoryDirPath(cwd: string): string {
+function getDowncityMemoryDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "memory");
 }
 
@@ -216,8 +221,9 @@ export function getDowncityAgentsRootDirPath(cwd: string): string {
  *
  * 关键点（中文）
  * - `agentId` 会做 URL 编码，避免特殊字符污染文件系统结构。
+ * - 当前仅供本模块内部拼接 session 根目录使用。
  */
-export function getDowncityAgentDirPath(cwd: string, agentId: string): string {
+function getDowncityAgentDirPath(cwd: string, agentId: string): string {
   return path.join(
     getDowncityAgentsRootDirPath(cwd),
     encodeURIComponent(String(agentId || "").trim()),
@@ -280,23 +286,6 @@ export function getDowncitySessionMessagesPath(
   return path.join(
     getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
     "messages.jsonl",
-  );
-}
-
-/**
- * 返回 session 历史元信息文件路径。
- *
- * 关键点（中文）
- * - 该文件保存 compaction、更新时间、SDK 配置等附加元信息。
- */
-export function getDowncitySessionHistoryMetaPath(
-  cwd: string,
-  agentId: string,
-  sessionId: string,
-): string {
-  return path.join(
-    getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
-    "meta.json",
   );
 }
 
@@ -368,8 +357,9 @@ export function getDowncityDebugDirPath(cwd: string): string {
  * 关键点（中文）
  * - 该目录存放 `sessionId -> chat` 的最近映射快照
  * - 与 core session messages 分离，避免把平台路由细节耦合进 core
+ * - 当前仅供本模块内部继续拼接 chat 会话与 meta 子目录。
  */
-export function getDowncityChatDirPath(cwd: string): string {
+function getDowncityChatDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "chat");
 }
 
@@ -392,29 +382,6 @@ export function getDowncityChannelDirPath(cwd: string): string {
  */
 export function getDowncityChannelMetaPath(cwd: string): string {
   return path.join(getDowncityChannelDirPath(cwd), "meta.json");
-}
-
-/**
- * 返回 chat 元信息目录路径。
- *
- * 关键点（中文）
- * - 用于按 sessionId 存放最近聊天路由快照与附加索引信息。
- */
-export function getDowncityChatMetaDirPath(cwd: string): string {
-  return path.join(getDowncityChatDirPath(cwd), "meta");
-}
-
-/**
- * 返回指定 session 的 chat 元信息文件路径。
- *
- * 关键点（中文）
- * - 文件名按 `sessionId` 编码，避免不同会话之间互相覆盖。
- */
-export function getDowncityChatMetaPath(cwd: string, sessionId: string): string {
-  return path.join(
-    getDowncityChatMetaDirPath(cwd),
-    `${encodeURIComponent(String(sessionId || "").trim())}.json`,
-  );
 }
 
 /**

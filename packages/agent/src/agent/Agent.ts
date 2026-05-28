@@ -3,7 +3,7 @@
  *
  * 职责说明（中文）
  * - 对外暴露 `Agent` 这一唯一的本地实例类。
- * - 统一承接单个 agent 实例的配置加载、plugin 装配、session 创建、HTTP/RPC 启停。
+ * - 统一承接单个 agent 实例的配置加载、plugin 装配、session 创建、HTTP 启停。
  * - 把原先独立的实例内核装配逻辑收敛到 `Agent` 内部，避免 facade 与 core 双层跳转。
  *
  * 边界说明（中文）
@@ -37,7 +37,6 @@ import type {
   AgentStopResult,
   AgentHttpBinding,
   AgentHttpStartOptions,
-  AgentRpcBinding,
   AgentSessionCollection,
   AgentSessionSummaryPage,
   AgentSessionSystemBlock,
@@ -62,7 +61,6 @@ import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
 import type { ActionScheduleRuntimeHandle } from "@/plugin/core/ActionScheduleRuntime.js";
 import { startActionScheduleRuntime } from "@/plugin/core/ActionScheduleRuntime.js";
 import { startServer } from "@/runtime/server/http/Server.js";
-import { startLocalRpcServer } from "@/runtime/server/rpc/Server.js";
 
 function createFallbackSdkConfig(agentId: string): DowncityConfig {
   return {
@@ -136,7 +134,6 @@ export class Agent {
   private actionScheduleRuntime: ActionScheduleRuntimeHandle | null = null;
   private startPromise: Promise<AgentStartResult> | null = null;
   private httpBinding: AgentHttpBinding | null = null;
-  private rpcBinding: AgentRpcBinding | null = null;
 
   constructor(options: AgentOptions) {
     this.id = String(options.id || "").trim();
@@ -263,14 +260,9 @@ export class Agent {
         options?.http === false || options?.http === undefined
           ? undefined
           : await this.startHttp(options.http);
-      const rpcBinding =
-        options?.rpc === true
-          ? await this.startRpc()
-          : undefined;
 
       return {
         ...(httpBinding ? { http: httpBinding } : {}),
-        ...(rpcBinding ? { rpc: rpcBinding } : {}),
         pluginsStarted: this.pluginsStarted,
       };
     })();
@@ -286,22 +278,17 @@ export class Agent {
    * 停止当前 agent 实例的长期运行能力。
    *
    * 关键点（中文）
-   * - 停止顺序保持为 plugins -> rpc -> http，与当前运行语义一致。
+   * - 停止顺序保持为 plugins -> http，与当前运行语义一致。
    * - 停止后会清空 `startPromise`，允许后续再次 `start()`。
    */
   async stop(): Promise<AgentStopResult> {
     const pluginsStarted = this.pluginsStarted;
-    const rpcStarted = this.rpcBinding !== null;
     const httpStarted = this.httpBinding !== null;
 
     if (pluginsStarted) {
       await this.stopActionScheduleRuntime();
       await stopAllPlugins(this.agentContext);
       this.pluginsStarted = false;
-    }
-
-    if (rpcStarted) {
-      await this.stopRpc();
     }
 
     if (httpStarted) {
@@ -312,7 +299,6 @@ export class Agent {
 
     return {
       httpStopped: httpStarted,
-      rpcStopped: rpcStarted,
       pluginsStopped: pluginsStarted,
     };
   }
@@ -346,7 +332,7 @@ export class Agent {
    * 确保当前 plugins 已启动。
    *
    * 关键点（中文）
-   * - 这里只负责托管 plugin 的生命周期启动，不隐式启动 HTTP/RPC 能力。
+   * - 这里只负责托管 plugin 的生命周期启动，不隐式启动 HTTP 能力。
    * - 启动失败的 plugin 会记录日志，但保留与原行为一致的整体启动流程。
    */
   private async ensurePluginsStarted(): Promise<void> {
@@ -432,34 +418,6 @@ export class Agent {
     if (!this.httpBinding) return;
     const current = this.httpBinding;
     this.httpBinding = null;
-    await current.server.stop();
-  }
-
-  /**
-   * 启动当前 agent 的本地 RPC server。
-   */
-  private async startRpc(): Promise<AgentRpcBinding> {
-    if (this.rpcBinding) {
-      return this.rpcBinding;
-    }
-    const server = await startLocalRpcServer({
-      context: this.agentContext,
-      runtime: this.runtime,
-    });
-    this.rpcBinding = {
-      endpoint: server.endpoint,
-      server,
-    };
-    return this.rpcBinding;
-  }
-
-  /**
-   * 停止当前 agent 的本地 RPC server。
-   */
-  private async stopRpc(): Promise<void> {
-    if (!this.rpcBinding) return;
-    const current = this.rpcBinding;
-    this.rpcBinding = null;
     await current.server.stop();
   }
 

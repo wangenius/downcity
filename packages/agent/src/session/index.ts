@@ -10,7 +10,6 @@ export { Session } from "./Session.js";
 
 export {
   getSdkAgentDirPath,
-  getSdkAgentRpcEndpointPath,
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
   getSdkAgentSessionMessagesDirPath,

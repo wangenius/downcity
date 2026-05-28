@@ -65,7 +65,7 @@ export type SessionAssistantStepCallback = (
  *
  * 关键点（中文）
  * - 这里直接复用 AI SDK 的 `UIMessageChunk` 结构，避免在 session 内核层再复制一套协议。
- * - SDK / HTTP / RPC 若需要自己的事件模型，应在更上层做映射。
+ * - SDK / HTTP 若需要自己的事件模型，应在更上层做映射。
  */
 export type SessionUiMessageChunk = UIMessageChunk;
 

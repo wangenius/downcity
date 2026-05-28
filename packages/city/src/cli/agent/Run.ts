@@ -108,14 +108,12 @@ export async function runCommand(
       port,
       host,
     },
-    rpc: true,
     plugins: true,
   });
 
   const server = startResult.http?.server;
-  const localRpc = startResult.rpc?.server;
-  if (!server || !localRpc) {
-    throw new Error("Agent start did not return expected HTTP/RPC bindings");
+  if (!server) {
+    throw new Error("Agent start did not return expected HTTP binding");
   }
 
   const agentLogger = agent.getLogger();

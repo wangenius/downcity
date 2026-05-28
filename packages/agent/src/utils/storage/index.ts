@@ -17,10 +17,3 @@ export async function ensureDir(dir: string): Promise<void> {
 export async function saveJson(filePath: string, data: JsonValue | object): Promise<void> {
   await fs.writeJson(filePath, data, { spaces: 2 });
 }
-
-export async function loadJson<T>(filePath: string): Promise<T | null> {
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-  return fs.readJson(filePath) as Promise<T>;
-}

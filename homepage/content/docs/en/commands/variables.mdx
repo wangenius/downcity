@@ -38,16 +38,16 @@ Commands like `city chat`, `city task`, `city memory`, `city shell`, `city skill
 
 Default rule:
 
-1. no `--host` / `--port`: use local IPC when the command is managed-runtime oriented
-2. `--host` or `--port` provided: use remote HTTP
+1. no `--host` / `--port`: use the local agent daemon HTTP endpoint resolved from the target project
+2. `--host` or `--port` provided: override the endpoint and use HTTP with the given host/port
 
-Only after a command enters remote HTTP mode does Bearer-token resolution matter.
+Bearer-token resolution matters only when the target HTTP endpoint currently requires auth.
 
 ## 3) `DC_AUTH_TOKEN`
 
 For most local usage, you do not need to care about auth env vars.
 
-Local calls default to IPC. `DC_AUTH_TOKEN` matters only when you explicitly use remote HTTP.
+Managed-runtime calls default to the local daemon HTTP endpoint. `DC_AUTH_TOKEN` matters only when that HTTP endpoint requires auth.
 
 Priority order:
 

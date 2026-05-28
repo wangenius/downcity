@@ -1,8 +1,8 @@
 {
   "name": "@downcity/agent",
-  "version": "1.1.48",
+  "version": "1.1.49",
   "type": "module",
-  "description": "Downcity Agent 运行时 — 执行壳，通过 RPC/HTTP 调用 City 的能力",
+  "description": "Downcity Agent 运行时 — 单 Agent 执行壳与 HTTP 服务能力",
   "main": "./bin/index.js",
   "types": "./bin/index.d.ts",
   "exports": {

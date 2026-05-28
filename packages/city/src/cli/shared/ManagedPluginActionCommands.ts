@@ -10,7 +10,6 @@
 import path from "node:path";
 import type { Command } from "commander";
 import {
-  callAgentTransport,
   parseActionScheduleRunAtMsOrThrow,
 } from "@downcity/agent";
 import { listPluginsWithLifecycle } from "@downcity/agent";
@@ -19,6 +18,7 @@ import type { JsonObject, JsonValue } from "@downcity/agent";
 import type { PluginActionScheduleInput } from "@downcity/agent";
 import type { PluginCommandResponse } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
+import { callServer } from "@/process/daemon/Client.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean, parsePort } from "./IndexSupport.js";
 import { runManagedPluginControlCommand } from "./ManagedPluginRemote.js";
@@ -207,7 +207,7 @@ function registerPluginActionCommand(params: {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
+    .option("--token <token>", "覆盖 Bearer Token（按 HTTP daemon 调用时可选）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 
   commandSpec.configure?.(actionCommand);
@@ -278,7 +278,7 @@ function registerPluginActionCommand(params: {
       return;
     }
 
-    const remote = await callAgentTransport<PluginCommandResponse>({
+    const remote = await callServer<PluginCommandResponse>({
       projectRoot: resolveProjectRoot(bridgeOptions.path),
       path: "/api/plugins/command",
       method: "POST",
@@ -330,7 +330,7 @@ function attachPluginLifecycleOptions(command: Command): Command {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
+    .option("--token <token>", "覆盖 Bearer Token（按 HTTP daemon 调用时可选）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }
 

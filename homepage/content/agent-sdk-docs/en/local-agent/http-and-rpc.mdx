@@ -1,9 +1,9 @@
 ---
-title: Local Agent HTTP and RPC
-description: How to expose a local Agent as an HTTP service or RPC service
+title: Local Agent HTTP Server
+description: How to expose a local Agent as an HTTP service
 ---
 
-# Local Agent HTTP and RPC
+# Local Agent HTTP Server
 
 A local Agent can be called directly in-process, but it can also expose service endpoints.
 
@@ -17,7 +17,6 @@ const started = await agent.start({
     host: "127.0.0.1",
     port: 15314,
   },
-  rpc: true,
 });
 
 console.log(started.http?.baseUrl);
@@ -26,7 +25,6 @@ console.log(started.http?.baseUrl);
 This starts the following in one place:
 
 - the HTTP server
-- the local RPC server
 - plugin lifecycles by default
 
 ## Start HTTP only
@@ -46,14 +44,6 @@ The current default port is `15314`.
 
 If you do not specify a port manually, this is the default local SDK HTTP listener port.
 
-## Start RPC
-
-```ts
-await agent.start({
-  rpc: true,
-});
-```
-
 ## `start()` vs not calling `start()`
 
 If you do not call `agent.start()`:
@@ -61,12 +51,11 @@ If you do not call `agent.start()`:
 - you can still call `await agent.createSession()` and then use `session.prompt()` / `session.subscribe()`
 - this is the right shape when you use the Agent as a local in-process library
 - no HTTP server starts
-- no RPC server starts
 - no background plugin lifecycle starts
 
 After you call `agent.start()`:
 
-- the Agent exposes HTTP and RPC endpoints
+- the Agent exposes HTTP endpoints
 - plugins start by default
 - chat, task, ActionSchedule, and other background loops can keep running
 
@@ -84,7 +73,7 @@ This is especially useful when the caller and the executor live in different pro
 
 ## What happens before startup
 
-When you call `agent.start({ http: { ... }, rpc: true })`, the SDK starts plugins first by default.
+When you call `agent.start({ http: { ... } })`, the SDK starts plugins first by default.
 
 That reduces the risk of ending up in a state where the endpoint is up but a critical plugin is still not ready.
 

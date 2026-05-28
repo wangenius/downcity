@@ -55,7 +55,7 @@ export function resolveInvocationToken(params: {
  *
  * 关键点（中文）
  * - shell / task script / ACP 等通用执行面不应默认继承任何 HTTP 鉴权信息。
- * - 这样可以强制这些链路优先走 RPC，而不是通过环境变量隐式改走本地 HTTP。
+ * - 这样可以避免这些链路因为环境变量而隐式带上本地/远程 HTTP 鉴权。
  */
 export function stripInvocationAuthEnv(targetEnv: NodeJS.ProcessEnv): void {
   delete targetEnv[CLI_AUTH_TOKEN_ENV_KEY];

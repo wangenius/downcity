@@ -21,12 +21,11 @@ import type {
   ChatManagerRootAction,
 } from "./ChatManagerTypes.js";
 import { runInteractiveChatAuthSetFlow } from "./ChatAuth.js";
-import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 const CHAT_CHANNELS: StoredChannelAccountChannel[] = ["telegram", "feishu", "qq"];
 
 function createChannelAccountManager(): ChatChannelAccountManager {
-  return new ChatChannelAccountManager(createAgentPlatformRuntime());
+  return new ChatChannelAccountManager();
 }
 
 function isInteractiveTerminal(): boolean {

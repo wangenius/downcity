@@ -89,7 +89,6 @@ async function resolveSelfEndpoint(
   const start = context.config.start || {};
   const env = {
     ...process.env,
-    ...context.globalEnv,
     ...context.env,
   };
   const runtimePort = Number(process.env.DC_SERVER_PORT || env.DC_SERVER_PORT || "");
@@ -107,9 +106,8 @@ async function resolveSelfEndpoint(
 
 function hasRuntimePublicEndpointEnv(context: AgentContext): boolean {
   const env = {
-    ...context.globalEnv,
-    ...context.env,
     ...process.env,
+    ...context.env,
   };
   return Boolean(
     String(env.DOWNCITY_PUBLIC_URL || "").trim() ||

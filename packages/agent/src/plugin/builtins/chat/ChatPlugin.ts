@@ -27,6 +27,7 @@ import {
   startChatChannels,
   stopChatChannels,
 } from "./runtime/ChatChannelFacade.js";
+import { getStoredChannelAccountSync } from "./accounts/Store.js";
 import { createChatPluginActions } from "./runtime/ChatPluginActions.js";
 import { ChatQueueWorker } from "./runtime/ChatQueueWorker.js";
 import { buildChatPluginSystem } from "./runtime/ChatPluginSystem.js";
@@ -171,16 +172,9 @@ export class ChatPlugin extends BasePlugin {
   ): StoredChannelAccount | null {
     const explicit = this.buildExplicitChannelAccount(channel);
     if (explicit) return explicit;
-
-    const provider = this.options.channelAccounts;
-    if (provider) {
-      return provider.getChannelAccount({
-        channel,
-        context,
-        channelAccountId: this.getChannelAccountId(context, channel) || undefined,
-      });
-    }
-    return null;
+    const channelAccountId = this.getChannelAccountId(context, channel);
+    if (!channelAccountId) return null;
+    return getStoredChannelAccountSync(channelAccountId);
   }
 
   private getExplicitChannelOptions(

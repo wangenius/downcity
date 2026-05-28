@@ -33,7 +33,7 @@ import type { AgentProjectInitializationResult } from "@downcity/agent";
 import type {
   ExecutionBindingConfig,
 } from "@downcity/agent";
-import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
+import { createAgentModelCatalogRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 function resolveExecutionInput(params: {
   modelId?: unknown;
@@ -79,7 +79,7 @@ export async function initializePlatformAgentProject(params: {
       }),
       forceOverwriteShipJson: params.forceOverwriteShipJson === true,
     },
-    createAgentPlatformRuntime(),
+    createAgentModelCatalogRuntime(),
   );
 }
 
@@ -279,7 +279,7 @@ export async function startManagedAgentByProjectRoot(params: {
         }),
         forceOverwriteShipJson: params.initialization?.forceOverwriteShipJson === true,
       },
-      createAgentPlatformRuntime(),
+      createAgentModelCatalogRuntime(),
     );
   } else {
     const profilePath = getProfileMdPath(normalizedRoot);
@@ -291,7 +291,7 @@ export async function startManagedAgentByProjectRoot(params: {
     }
   }
 
-  ensureRuntimeExecutionBindingReady(normalizedRoot, createAgentPlatformRuntime());
+  ensureRuntimeExecutionBindingReady(normalizedRoot, createAgentModelCatalogRuntime());
   const args = await buildRunArgsFromOptions(normalizedRoot, {});
   const started = await startDaemonProcess({
     projectRoot: normalizedRoot,

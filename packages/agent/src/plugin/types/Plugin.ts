@@ -11,7 +11,6 @@ import type { Command } from "commander";
 import type { Context as HonoContext, Hono } from "hono";
 import type {
   AgentPathRuntime,
-  AgentPlatformRuntime,
   AgentPluginConfigRuntime,
 } from "@/types/runtime/host/AgentHost.js";
 import type {
@@ -159,12 +158,12 @@ export interface PluginCommandContext {
   config: DowncityConfig;
   /**
    * 当前项目环境变量快照。
+   *
+   * 关键点（中文）
+   * - 这里约定为宿主已经整理好的最终可见 env 视图。
+   * - plugin 不再区分 global env 与 agent env，避免上下文语义膨胀。
    */
   env: Record<string, string>;
-  /**
-   * 当前平台级全局环境变量快照。
-   */
-  globalEnv: Record<string, string>;
   /**
    * 当前可见的路径能力集合。
    */
@@ -173,10 +172,6 @@ export interface PluginCommandContext {
    * 当前可见的 plugin 配置持久化能力集合。
    */
   pluginConfig: AgentPluginConfigRuntime;
-  /**
-   * 当前可见的平台能力集合。
-   */
-  platform: AgentPlatformRuntime;
 }
 
 /**

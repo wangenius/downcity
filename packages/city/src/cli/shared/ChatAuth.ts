@@ -12,7 +12,9 @@ import prompts from "prompts";
 import type { Command } from "commander";
 import {
   listChatAuthorizationRoles,
+  readChatAuthorizationConfigSync,
   resolveAuthorizedUserRole,
+  setChatAuthorizationUserRole,
 } from "@downcity/agent";
 import { emitCliBlock } from "./CliReporter.js";
 import { parseBoolean } from "./IndexSupport.js";
@@ -21,8 +23,6 @@ import {
   type ChatAuthorizationChannel,
   type ChatAuthorizationRole,
 } from "@downcity/agent";
-import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
-import { readChatAuthorizationConfigSync } from "@/platform/chatAuthorization/Store.js";
 
 type ChatAuthSetOptions = {
   /**
@@ -141,9 +141,10 @@ export async function runChatAuthSet(params: {
 
   if (!nextRole) return;
 
-  const platform = createAgentPlatformRuntime();
-  await platform.setChatAuthorizationUserRole({
-    projectRoot,
+  await setChatAuthorizationUserRole({
+    context: {
+      rootPath: projectRoot,
+    },
     channel: principal.channel,
     userId: principal.userId,
     roleId: nextRole.roleId,

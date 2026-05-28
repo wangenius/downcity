@@ -3,8 +3,8 @@
  *
  * 关键点（中文）
  * - auth 是内建且必需的 plugin，不走可选启停语义。
- * - 所有 chat 授权配置仍然保存在 `downcity.db`，动态观测态仍落 `.downcity/chat/authorization/state.json`。
- * - auth plugin 只负责统一暴露扩展点 / action 边界，不改变底层存储模型。
+ * - 静态授权配置与动态观测态都收敛在项目 `.downcity/chat/authorization/`。
+ * - auth plugin 只负责统一暴露扩展点 / action 边界，不再依赖宿主平台读写授权配置。
  */
 
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
@@ -140,7 +140,6 @@ function createAuthPluginDefinition(): Plugin {
         channel,
         userId: String(input.userId || "").trim(),
         rootPath: context.rootPath,
-        platform: context.platform,
       });
       return ((role || null) as unknown) as JsonValue;
     },

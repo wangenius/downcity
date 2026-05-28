@@ -14,7 +14,7 @@ import type { Logger } from "@/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type {
   AgentPathRuntime,
-  AgentPlatformRuntime,
+  AgentModelCatalogRuntime,
   AgentPluginConfigRuntime,
 } from "@/types/runtime/host/AgentHost.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
@@ -45,10 +45,6 @@ export interface AgentRuntimeBase {
    */
   env: Record<string, string>;
   /**
-   * 当前平台级全局环境变量快照。
-   */
-  globalEnv: Record<string, string>;
-  /**
    * 当前生效的静态 system 文本集合。
    */
   systems: string[];
@@ -61,9 +57,9 @@ export interface AgentRuntimeBase {
    */
   pluginConfig: AgentPluginConfigRuntime;
   /**
-   * 当前 agent 可见的平台能力集合。
+   * 当前 agent 可见的模型目录能力集合（可选）。
    */
-  platform: AgentPlatformRuntime;
+  modelCatalog?: AgentModelCatalogRuntime;
 }
 
 /**

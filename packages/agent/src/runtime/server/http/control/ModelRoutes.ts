@@ -23,9 +23,13 @@ export function registerControlModelRoutes(
     app.get(routePath, async (c) => {
       try {
         const agentState = params.getAgentRuntime();
+        const modelCatalog = agentState.modelCatalog;
+        if (!modelCatalog) {
+          return c.json({ success: false, error: "Model catalog is not available" }, 503);
+        }
         const agentPrimaryModelId = String(agentState.config.execution?.type === "api" ? agentState.config.execution.modelId || "" : "").trim();
-        const models = agentState.platform.listModels();
-        const providers = await agentState.platform.listProviders();
+        const models = modelCatalog.listModels();
+        const providers = await modelCatalog.listProviders();
         const providerMap = new Map(providers.map((x) => [x.id, x] as const));
         const activeModel = agentPrimaryModelId
           ? models.find((x) => x.id === agentPrimaryModelId)
@@ -63,6 +67,10 @@ export function registerControlModelRoutes(
     app.post(routePath, async (c) => {
       try {
         const agentState = params.getAgentRuntime();
+        const modelCatalog = agentState.modelCatalog;
+        if (!modelCatalog) {
+          return c.json({ success: false, error: "Model catalog is not available" }, 503);
+        }
         const body = (await c.req.json().catch(() => ({}))) as {
           primaryModelId?: string;
         };
@@ -70,7 +78,7 @@ export function registerControlModelRoutes(
         if (!nextPrimaryModelId) {
           return c.json({ success: false, error: "Missing primaryModelId" }, 400);
         }
-        const targetModel = agentState.platform.getModel(nextPrimaryModelId);
+        const targetModel = modelCatalog.getModel(nextPrimaryModelId);
         if (!targetModel) {
           return c.json(
             { success: false, error: `Model not found: ${nextPrimaryModelId}` },

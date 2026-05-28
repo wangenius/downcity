@@ -3,14 +3,11 @@
  *
  * 关键点（中文）
  * - 这里定义 `new ChatPlugin({...})` 的显式注入接口。
- * - 目标是让 `city`、`vibecape` 等上层产品通过构造参数提供渠道凭据与账户解析能力。
- * - 若未显式注入，则 ChatPlugin 仍可回退到现有 `downcity.json + PlatformStore` 读取路径。
+ * - 构造参数只承载显式渠道配置与 queue 行为，不再承载自定义存储/解析器注入。
+ * - 若未显式提供渠道凭据，ChatPlugin 会直接回退到默认全局账号池 `~/.downcity/downcity.db`。
  */
 
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatQueueWorkerConfig } from "@/plugin/builtins/chat/types/ChatQueueWorker.js";
-import type { StoredChannelAccount } from "@/types/runtime/host/Store.js";
-import type { ChatChannelName } from "@/plugin/builtins/chat/types/ChannelStatus.js";
 
 /**
  * Telegram 显式渠道配置。
@@ -103,33 +100,6 @@ export interface ChatPluginQqOptions {
 }
 
 /**
- * Chat 渠道账户解析提供器。
- */
-export interface ChatPluginChannelAccountProvider {
-  /**
-   * 按渠道解析当前应使用的账户。
-   *
-   * 说明（中文）
-   * - 返回值需要已经包含解密后的凭据。
-   * - 该接口使用同步返回，确保 chat runtime 中的同步读取点不需要重写为 async。
-   */
-  getChannelAccount(params: {
-    /**
-     * 当前请求的渠道名。
-     */
-    channel: ChatChannelName;
-    /**
-     * 当前 Agent 上下文。
-     */
-    context: AgentContext;
-    /**
-     * 可选的显式账户 ID。
-     */
-    channelAccountId?: string;
-  }): StoredChannelAccount | null;
-}
-
-/**
  * ChatPlugin 显式构造参数。
  */
 export interface ChatPluginOptions {
@@ -153,12 +123,4 @@ export interface ChatPluginOptions {
    * QQ 渠道显式配置。
    */
   qq?: ChatPluginQqOptions;
-  /**
-   * 渠道账户解析提供器。
-   *
-   * 说明（中文）
-   * - 当 client 已经维护自己的 account 池时，应优先注入这个 provider。
-   * - 若同时显式提供了渠道凭据，则显式凭据优先，provider 作为回退。
-   */
-  channelAccounts?: ChatPluginChannelAccountProvider;
 }

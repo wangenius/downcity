@@ -7,7 +7,6 @@
  */
 
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,
@@ -18,6 +17,7 @@ import type {
   ChatChannelAuthorizationConfig,
 } from "@/plugin/builtins/auth/types/AuthPlugin.js";
 import { createDefaultChatAuthorizationRoles } from "@/plugin/builtins/auth/types/AuthPlugin.js";
+import { readChatAuthorizationConfigSync } from "@/plugin/builtins/auth/runtime/AuthorizationConfig.js";
 
 function normalizeText(value: unknown): string | undefined {
   const text = String(value || "").trim();
@@ -92,14 +92,13 @@ export function resolveAuthorizedUserRole(params: {
   userId?: string;
   authorizationConfig?: ChatAuthorizationConfig;
   rootPath?: string;
-  platform?: Pick<AgentPlatformRuntime, "readChatAuthorizationConfig">;
 }): ChatAuthorizationRole | undefined {
   const userId = normalizeText(params.userId);
   if (!userId) return undefined;
   const authorizationConfig =
     params.authorizationConfig ||
-    (params.rootPath && params.platform
-      ? params.platform.readChatAuthorizationConfig(params.rootPath)
+    (params.rootPath
+      ? readChatAuthorizationConfigSync(params.rootPath)
       : undefined);
   const roles = resolveAuthorizationRoles(authorizationConfig);
   const channelConfig = resolveChannelAuthorizationConfig(params.channel, authorizationConfig);

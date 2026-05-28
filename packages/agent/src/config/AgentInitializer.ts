@@ -51,12 +51,12 @@ import type {
 } from "@/types/config/AgentProject.js";
 import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
-import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
+import type { AgentModelCatalogRuntime } from "@/types/runtime/host/AgentHost.js";
 
 /**
- * 平台模型选项。
+ * 模型目录候选项。
  */
-export interface PlatformModelChoice {
+export interface ModelCatalogChoice {
   /**
    * 下拉展示文案。
    */
@@ -88,17 +88,17 @@ export function normalizeDefaultAgentName(input: string): string {
 }
 
 /**
- * 读取平台全局模型选项。
+ * 读取模型目录候选项。
  *
  * 关键点（中文）
  * - 输出结果面向创建向导或控制台下拉框，而不是运行时模型解析。
  * - 当 provider 存在时会把 provider 信息拼到展示标题中，便于用户区分同名模型。
  */
-export async function listPlatformModelChoices(
-  platform: Pick<AgentPlatformRuntime, "listModels" | "listProviders">,
-): Promise<PlatformModelChoice[]> {
-  const models = platform.listModels();
-  const providers = await platform.listProviders();
+export async function listModelCatalogChoices(
+  modelCatalog: Pick<AgentModelCatalogRuntime, "listModels" | "listProviders">,
+): Promise<ModelCatalogChoice[]> {
+  const models = modelCatalog.listModels();
+  const providers = await modelCatalog.listProviders();
   const providerMap = new Map(providers.map((item) => [item.id, item] as const));
   return models
     .map((item) => {
@@ -116,11 +116,11 @@ export async function listPlatformModelChoices(
         value: id,
       };
     })
-    .filter((item): item is PlatformModelChoice => item !== null);
+    .filter((item): item is ModelCatalogChoice => item !== null);
 }
 
 /**
- * 校验 API 主模型在平台模型池中可用。
+ * 校验 API 主模型在模型目录中可用。
  *
  * 关键点（中文）
  * - 创建阶段直接失败，比写入一个不可启动项目更安全。
@@ -128,15 +128,15 @@ export async function listPlatformModelChoices(
  */
 function assertApiPrimaryModelReady(
   primaryModelId: string,
-  platform: Pick<AgentPlatformRuntime, "getModel">,
+  modelCatalog: Pick<AgentModelCatalogRuntime, "getModel">,
 ): void {
   const normalizedModelId = String(primaryModelId || "").trim();
   if (!normalizedModelId) {
     throw new Error("execution.modelId is required");
   }
-  const model = platform.getModel(normalizedModelId);
+  const model = modelCatalog.getModel(normalizedModelId);
   if (!model) {
-    throw new Error(`Model not found in platform model pool: ${normalizedModelId}`);
+    throw new Error(`Model not found in model catalog: ${normalizedModelId}`);
   }
   if (model.isPaused === true) {
     throw new Error(`Model is paused: ${normalizedModelId}`);
@@ -185,7 +185,7 @@ export async function isAgentProjectInitialized(projectRoot: string): Promise<bo
  */
 export async function initializeAgentProject(
   input: AgentProjectInitializationInput,
-  platform?: Pick<AgentPlatformRuntime, "listModels" | "listProviders" | "getModel">,
+  modelCatalog?: Pick<AgentModelCatalogRuntime, "listModels" | "listProviders" | "getModel">,
 ): Promise<AgentProjectInitializationResult> {
   const projectRoot = path.resolve(String(input.projectRoot || "").trim() || ".");
   const projectBaseName = path.basename(projectRoot);
@@ -206,14 +206,14 @@ export async function initializeAgentProject(
     execution,
   });
   if (primaryModelId) {
-    if (!platform) {
-      throw new Error("initializeAgentProject requires platform runtime");
+    if (!modelCatalog) {
+      throw new Error("initializeAgentProject requires model catalog runtime");
     }
-    const platformModelChoices = await listPlatformModelChoices(platform);
-    if (platformModelChoices.length === 0) {
-      throw new Error("Platform model pool is empty. Please configure at least one model first.");
+    const modelChoices = await listModelCatalogChoices(modelCatalog);
+    if (modelChoices.length === 0) {
+      throw new Error("Model catalog is empty. Please configure at least one model first.");
     }
-    assertApiPrimaryModelReady(primaryModelId, platform);
+    assertApiPrimaryModelReady(primaryModelId, modelCatalog);
   }
 
   await ensureDir(projectRoot);

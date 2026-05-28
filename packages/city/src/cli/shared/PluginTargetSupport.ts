@@ -20,7 +20,7 @@ import { CliError } from "./CliError.js";
 import type { ScheduledJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { parseBoolean } from "./IndexSupport.js";
-import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
+import { createAgentModelCatalogRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 export function isRegistryEntryRunning(
   entry: { status?: "running" | "stopped" },
@@ -77,7 +77,7 @@ export async function checkAgentPreflight(
   }
 
   // 关键点（中文）：提前校验 execution binding，避免"启动成功后秒退"。
-  ensureRuntimeExecutionBindingReady(projectRoot, createAgentPlatformRuntime());
+  ensureRuntimeExecutionBindingReady(projectRoot, createAgentModelCatalogRuntime());
 }
 
 /**

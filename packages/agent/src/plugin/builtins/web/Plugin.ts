@@ -12,6 +12,7 @@ import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { WebPluginConfig, WebPluginInstallInput } from "@/plugin/builtins/web/types/WebPlugin.js";
 import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/plugin/builtins/web/types/WebPlugin.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
+import { writeProjectPluginEnabled } from "@/plugin/core/ProjectConfigStore.js";
 import {
   doctorWebPluginDependency,
   inspectWebPluginDependency,
@@ -168,7 +169,7 @@ function createWebPluginDefinition(plugin: Plugin): Plugin {
       return {
         enabled: false,
         available: false,
-        reasons: ["web plugin disabled in city config"],
+        reasons: ["web plugin disabled in project config"],
       };
     }
     const dependency = await inspectWebPluginDependency(context);
@@ -346,7 +347,11 @@ function createWebPluginDefinition(plugin: Plugin): Plugin {
         },
       },
       execute: async ({ context, payload }) => {
-        context.platform.setPluginEnabled?.("web", true);
+        await writeProjectPluginEnabled({
+          pluginName: "web",
+          enabled: true,
+          context,
+        });
         const providerRaw = String((payload as { provider?: unknown }).provider || "").trim();
         const provider =
           providerRaw === "web-access" || providerRaw === "agent-browser"
@@ -388,7 +393,11 @@ function createWebPluginDefinition(plugin: Plugin): Plugin {
         },
       },
       execute: async ({ context }) => {
-        context.platform.setPluginEnabled?.("web", false);
+        await writeProjectPluginEnabled({
+          pluginName: "web",
+          enabled: false,
+          context,
+        });
         return {
           success: true,
           data: {

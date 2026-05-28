@@ -9,21 +9,8 @@
  */
 
 import crypto from "node:crypto";
-import os from "node:os";
 import path from "node:path";
-
-/**
- * 读取 Downcity 平台级根目录。
- *
- * 关键点（中文）
- * - local RPC socket 必须和 city 包使用同一个全局 runtime 目录。
- * - 这里保留路径约定，但不引入 city runtime/registry 实现。
- */
-function getPlatformRootDirPath(): string {
-  const explicitRoot = String(process.env.DC_PLATFORM_ROOT || "").trim();
-  if (explicitRoot) return path.resolve(explicitRoot);
-  return path.join(os.homedir(), ".downcity");
-}
+import { getPlatformRootDirPath } from "@/config/PlatformPaths.js";
 
 /**
  * 读取平台级运行目录。

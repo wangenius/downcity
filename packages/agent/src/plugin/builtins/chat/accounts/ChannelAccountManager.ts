@@ -8,15 +8,23 @@
  */
 
 import crypto from "node:crypto";
-import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type { StoredChannelAccountChannel } from "@/types/runtime/host/Store.js";
 import { resolveChatChannelBotInfo } from "@/plugin/builtins/chat/channels/BotInfoProvider.js";
+import {
+  getStoredChannelAccountSync,
+  listStoredChannelAccountsSync,
+  normalizeChannelAccountChannel,
+  removeStoredChannelAccount,
+  upsertStoredChannelAccount,
+} from "./Store.js";
 import type {
   ChatChannelAccountCreateInput,
+  ChatChannelAccountListItem,
   ChatChannelAccountListResult,
   ChatChannelAccountProbeResult,
   ChatChannelAccountUpsertInput,
 } from "@/plugin/builtins/chat/types/ChannelAccount.js";
+import type { StoredChannelAccount } from "@/types/runtime/host/Store.js";
 
 const SUPPORTED_CHANNELS: readonly StoredChannelAccountChannel[] = [
   "telegram",
@@ -69,11 +77,7 @@ function pickFirstNonEmpty(inputs: unknown[]): string {
  * ChatChannelAccountManager。
  */
 export class ChatChannelAccountManager {
-  private readonly platform: AgentPlatformRuntime;
-
-  constructor(platform: AgentPlatformRuntime) {
-    this.platform = platform;
-  }
+  constructor() {}
 
   /**
    * 生成唯一 channel account id。
@@ -91,7 +95,7 @@ export class ChatChannelAccountManager {
     for (let index = 0; index < 8; index += 1) {
       const suffix = crypto.randomBytes(3).toString("hex");
       const candidate = `${prefix}-${suffix}`.slice(0, 64);
-      const existing = this.platform.getChannelAccount(candidate);
+      const existing = getStoredChannelAccountSync(candidate);
       if (!existing) return candidate;
     }
     return `${params.channel}-${Date.now().toString(36)}`;
@@ -206,12 +210,10 @@ export class ChatChannelAccountManager {
    * 列出账户池（脱敏）。
    */
   async list(): Promise<ChatChannelAccountListResult> {
-    const list = this.platform.listChannelAccounts;
-    if (!list) {
-      throw new Error("Channel account listing is not available in this runtime");
-    }
     return {
-      items: await list(),
+      items: listStoredChannelAccountsSync().map((account) =>
+        toChannelAccountListItem(account),
+      ),
     };
   }
 
@@ -224,7 +226,7 @@ export class ChatChannelAccountManager {
     const name = String(input.name || "").trim();
     if (!name) throw new Error("channel account name cannot be empty");
 
-    const channel = assertChannel(input.channel);
+    const channel = normalizeChannelAccountChannel(input.channel);
 
     if (input.botToken !== undefined && input.clearBotToken === true) {
       throw new Error("botToken and clearBotToken cannot be used together");
@@ -236,37 +238,33 @@ export class ChatChannelAccountManager {
       throw new Error("appSecret and clearAppSecret cannot be used together");
     }
 
-    const current = this.platform.getChannelAccount(id);
-      const nextBotToken = input.clearBotToken
-        ? undefined
-        : input.botToken !== undefined
-          ? normalizeOptionalText(input.botToken)
-          : current?.botToken;
-      const nextAppId = input.clearAppId
-        ? undefined
-        : input.appId !== undefined
-          ? normalizeOptionalText(input.appId)
-          : current?.appId;
-      const nextAppSecret = input.clearAppSecret
-        ? undefined
-        : input.appSecret !== undefined
-          ? normalizeOptionalText(input.appSecret)
-          : current?.appSecret;
-      const nextIdentity = Object.prototype.hasOwnProperty.call(input, "identity")
-        ? normalizeOptionalText(input.identity)
-        : current?.identity;
-      const nextOwner = Object.prototype.hasOwnProperty.call(input, "owner")
-        ? normalizeOptionalText(input.owner)
-        : current?.owner;
-      const nextCreator = Object.prototype.hasOwnProperty.call(input, "creator")
-        ? normalizeOptionalText(input.creator)
-        : current?.creator;
+    const current = getStoredChannelAccountSync(id);
+    const nextBotToken = input.clearBotToken
+      ? undefined
+      : input.botToken !== undefined
+        ? normalizeOptionalText(input.botToken)
+        : current?.botToken;
+    const nextAppId = input.clearAppId
+      ? undefined
+      : input.appId !== undefined
+        ? normalizeOptionalText(input.appId)
+        : current?.appId;
+    const nextAppSecret = input.clearAppSecret
+      ? undefined
+      : input.appSecret !== undefined
+        ? normalizeOptionalText(input.appSecret)
+        : current?.appSecret;
+    const nextIdentity = Object.prototype.hasOwnProperty.call(input, "identity")
+      ? normalizeOptionalText(input.identity)
+      : current?.identity;
+    const nextOwner = Object.prototype.hasOwnProperty.call(input, "owner")
+      ? normalizeOptionalText(input.owner)
+      : current?.owner;
+    const nextCreator = Object.prototype.hasOwnProperty.call(input, "creator")
+      ? normalizeOptionalText(input.creator)
+      : current?.creator;
 
-    const updateChannelAccount = this.platform.updateChannelAccount;
-    if (!updateChannelAccount) {
-      throw new Error("Channel account update is not available in this runtime");
-    }
-    await updateChannelAccount({
+    await upsertStoredChannelAccount({
       id,
       channel,
       name,
@@ -288,10 +286,29 @@ export class ChatChannelAccountManager {
   async remove(idInput: string): Promise<void> {
     const id = String(idInput || "").trim();
     if (!id) throw new Error("channel account id cannot be empty");
-    const removeChannelAccount = this.platform.removeChannelAccount;
-    if (!removeChannelAccount) {
-      throw new Error("Channel account removal is not available in this runtime");
-    }
-    await removeChannelAccount(id);
+    await removeStoredChannelAccount(id);
   }
+}
+
+function toChannelAccountListItem(
+  account: StoredChannelAccount,
+): ChatChannelAccountListItem {
+  return {
+    id: account.id,
+    channel: account.channel,
+    name: account.name,
+    identity: account.identity,
+    owner: account.owner,
+    creator: account.creator,
+    domain: account.domain,
+    sandbox: account.sandbox === true,
+    hasBotToken: !!String(account.botToken || "").trim(),
+    hasAppId: !!String(account.appId || "").trim(),
+    hasAppSecret: !!String(account.appSecret || "").trim(),
+    botTokenMasked: maskSecret(account.botToken),
+    appIdMasked: maskSecret(account.appId),
+    appSecretMasked: maskSecret(account.appSecret),
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  };
 }

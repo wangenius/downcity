@@ -22,7 +22,7 @@ import type {
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
-import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
+import type { AgentModelCatalogRuntime } from "@/types/runtime/host/AgentHost.js";
 import type {
   PluginAvailability,
   PluginPort,
@@ -66,25 +66,6 @@ import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.j
 import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
 import { startServer } from "@/runtime/server/http/Server.js";
 import { startLocalRpcServer } from "@/runtime/server/rpc/Server.js";
-
-const EMPTY_SDK_PLATFORM: AgentPlatformRuntime = {
-  getGlobalEnv: () => ({}),
-  getAgentEnv: () => ({}),
-  listModels: () => [],
-  listProviders: async () => [],
-  getModel: () => null,
-  getChannelAccount: () => null,
-  readChatAuthorizationConfig: () => ({
-    roles: {},
-    channels: {},
-  }),
-  writeChatAuthorizationConfig: async (_projectRoot, nextConfig) => nextConfig,
-  setChatAuthorizationUserRole: async () => ({
-    roles: {},
-    channels: {},
-  }),
-  isPluginEnabled: (pluginName) => pluginName === "auth",
-};
 
 function createFallbackSdkConfig(agentId: string): DowncityConfig {
   return {
@@ -147,9 +128,8 @@ export class Agent {
   private readonly agentContext: AgentContext;
   private readonly pluginRegistry: PluginRegistry;
   private readonly config: DowncityConfig;
-  private readonly platform: AgentPlatformRuntime;
+  private readonly modelCatalog?: AgentModelCatalogRuntime;
   private readonly env: Record<string, string>;
-  private readonly globalEnv: Record<string, string>;
   private readonly defaultModel?: LanguageModel;
   private readonly configureSessionHook?: AgentOptions["configureSession"];
   private readonly pluginInstances: Map<string, BasePlugin>;
@@ -177,9 +157,8 @@ export class Agent {
 
     this.logger = new Logger();
     this.logger.bindProjectRoot(this.path);
-    this.platform = options.platform || EMPTY_SDK_PLATFORM;
-    this.globalEnv = this.platform.getGlobalEnv?.() || {};
-    this.env = this.platform.getAgentEnv?.(this.path) || {};
+    this.modelCatalog = options.modelCatalog || undefined;
+    this.env = options.env ? { ...options.env } : {};
     this.instruction = normalizeInstructionInput(options.instruction);
     this.defaultModel = options.model;
     this.configureSessionHook = options.configureSession;
@@ -471,7 +450,7 @@ export class Agent {
       return loadDowncityConfig(this.path, {
         projectEnv: this.env,
         agentEnv: this.env,
-        globalEnv: this.globalEnv,
+        globalEnv: {},
       });
     } catch {
       return createFallbackSdkConfig(this.id);
@@ -613,11 +592,10 @@ export class Agent {
       logger: this.logger,
       config: this.config,
       env: this.env,
-      globalEnv: this.globalEnv,
       systems: this.instruction,
       paths: createAgentPathRuntime(this.path, this.id),
       pluginConfig: createAgentPluginConfigRuntime(this.path),
-      platform: this.platform,
+      ...(this.modelCatalog ? { modelCatalog: this.modelCatalog } : {}),
       getSession: (sessionId: string): SessionPort =>
         this.getOrCreateSession(sessionId).getRuntimePort(),
       listExecutingSessionIds: () =>
@@ -647,11 +625,10 @@ export class Agent {
       logger: this.logger,
       config: this.config,
       env: this.env,
-      globalEnv: this.globalEnv,
       systems: this.instruction,
       paths: this.runtime.paths,
       pluginConfig: this.runtime.pluginConfig,
-      platform: this.platform,
+      ...(this.modelCatalog ? { modelCatalog: this.modelCatalog } : {}),
       session: {
         get: (sessionId) => this.getOrCreateSession(sessionId).getRuntimePort(),
         listExecutingSessionIds: () => this.runtime.listExecutingSessionIds(),

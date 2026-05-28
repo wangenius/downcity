@@ -18,14 +18,14 @@ import fg from "fast-glob";
 import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/config/Paths.js";
 import {
   initializeAgentProject,
-  listPlatformModelChoices,
+  listModelCatalogChoices,
   normalizeDefaultAgentName,
 } from "@downcity/agent";
 import type { AgentProjectChannel } from "@downcity/agent";
 import type { ExecutionBindingConfig } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
-import { createAgentPlatformRuntime } from "@/process/registry/AgentHostRuntime.js";
+import { createAgentModelCatalogRuntime } from "@/process/registry/AgentHostRuntime.js";
 
 type InitPromptResponse = {
   name?: string;
@@ -68,9 +68,9 @@ export async function initCommand(
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
-  const platform = createAgentPlatformRuntime();
-  const platformModelChoices = await listPlatformModelChoices(platform);
-  const platformModelIds = platformModelChoices.map((item) => item.value);
+  const modelCatalog = createAgentModelCatalogRuntime();
+  const modelChoices = await listModelCatalogChoices(modelCatalog);
+  const modelChoiceIds = modelChoices.map((item) => item.value);
 
   // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
   if (existingShipJson) {
@@ -107,7 +107,7 @@ export async function initCommand(
       type: "select",
       name: "primaryModelId",
       message: "Select primary model (from platform model pool)",
-      choices: platformModelChoices,
+      choices: modelChoices,
       initial: 0,
     },
     {
@@ -128,7 +128,7 @@ export async function initCommand(
     String(response.name || "").trim() || defaultAgentName;
   const primaryModelId =
     String(response.primaryModelId || "").trim() || "default";
-  if (platformModelIds.length === 0) {
+  if (modelChoiceIds.length === 0) {
     throw new CliError({
       title: "Platform model pool is empty",
       note: "Please configure at least one model first.",
@@ -150,7 +150,7 @@ export async function initCommand(
       channels: selectedChannels,
       forceOverwriteShipJson: allowOverwrite,
     },
-    platform,
+    modelCatalog,
   );
 
   const createdItems: string[] = [];

@@ -9,6 +9,7 @@
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatChannelState } from "@/plugin/builtins/chat/types/ChatRuntime.js";
+import { getStoredChannelAccountSync } from "@/plugin/builtins/chat/accounts/Store.js";
 import type {
   ChatCloseActionPayload,
   ChatConfigurationActionPayload,
@@ -263,7 +264,7 @@ export async function executeChatConfigureAction(params: {
   if (Object.prototype.hasOwnProperty.call(patch, "channelAccountId")) {
     const channelAccountId = String(patch.channelAccountId || "").trim();
     if (channelAccountId) {
-      const account = params.context.platform.getChannelAccount(channelAccountId);
+      const account = getStoredChannelAccountSync(channelAccountId);
       if (!account) {
         return {
           success: false,

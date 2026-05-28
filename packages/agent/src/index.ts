@@ -67,7 +67,6 @@ export { ChatPlugin } from "./plugin/builtins/chat/ChatPlugin.js";
 export { ChatChannelAccountManager } from "./plugin/builtins/chat/accounts/ChannelAccountManager.js";
 export type { ChatChannelAccountListItem } from "./plugin/builtins/chat/types/ChannelAccount.js";
 export type {
-  ChatPluginChannelAccountProvider,
   ChatPluginFeishuOptions,
   ChatPluginOptions,
   ChatPluginQqOptions,
@@ -139,10 +138,10 @@ export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js"
 export {
   initializeAgentProject,
   isAgentProjectInitialized,
-  listPlatformModelChoices,
+  listModelCatalogChoices,
   normalizeDefaultAgentName,
 } from "./config/AgentInitializer.js";
-export type { PlatformModelChoice } from "./config/AgentInitializer.js";
+export type { ModelCatalogChoice } from "./config/AgentInitializer.js";
 export {
   ensureRuntimeExecutionBindingReady,
   ensureRuntimeProjectReady,
@@ -155,7 +154,7 @@ export { getLogger, logger, type Logger } from "./utils/logger/Logger.js";
 // 宿主端口类型
 export type {
   AgentPathRuntime,
-  AgentPlatformRuntime,
+  AgentModelCatalogRuntime,
   AgentPluginConfigRuntime,
 } from "./types/runtime/host/AgentHost.js";
 

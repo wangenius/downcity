@@ -9,7 +9,7 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
+import type { AgentModelCatalogRuntime } from "@/types/runtime/host/AgentHost.js";
 import type { LocalRpcServerHandle } from "@/types/runtime/rpc/LocalRpc.js";
 import type { ServerInstance } from "@/runtime/server/http/Server.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
@@ -93,13 +93,23 @@ export interface AgentOptions {
   plugins?: BasePlugin[];
 
   /**
-   * 当前 agent 显式注入的平台能力集合。
+   * 当前 agent 实例可见的环境变量快照。
    *
    * 关键点（中文）
-   * - SDK 侧若不提供，则使用最小空实现。
-   * - 推荐由宿主产品显式传入，避免 SDK 本地实例隐式依赖 city。
+   * - 这里传入的是已经在宿主侧完成合并的最终环境变量集合。
+   * - SDK 不再区分 global env 与 agent env；如需区分，应由更上层在传入前自行处理。
+   * - 该快照会参与配置解析与运行时上下文装配，但不会回写到宿主环境。
    */
-  platform?: AgentPlatformRuntime;
+  env?: Record<string, string>;
+
+  /**
+   * 当前 agent 可选注入的模型目录能力集合。
+   *
+   * 关键点（中文）
+   * - 该能力主要服务控制面模型展示与切换，不参与常规 session 执行。
+   * - SDK 侧若不提供，则相关控制面能力会自动降级为不可用。
+   */
+  modelCatalog?: AgentModelCatalogRuntime;
 
   /**
    * 在 session 初始化后执行的宿主配置钩子。

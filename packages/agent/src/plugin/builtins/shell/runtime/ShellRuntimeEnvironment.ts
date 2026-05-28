@@ -18,16 +18,8 @@ export function buildShellEnv(context: AgentContext): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
 
   // 关键点（中文）
-  // - shell 子进程需要继承平台级 global env。
-  // - 这里显式从 store 读取，避免把 AgentContext.env 语义扩大成“全局+agent 混合态”。
-  // - 冲突时仍由后续 agent 私有 env 覆盖，保持文档声明的优先级。
-  for (const [key, value] of Object.entries(context.globalEnv || {})) {
-    const normalizedKey = String(key || "").trim();
-    const normalizedValue = String(value || "").trim();
-    if (!normalizedKey || !normalizedValue) continue;
-    env[normalizedKey] = normalizedValue;
-  }
-
+  // - AgentContext.env 现在就是宿主已经整理好的最终 env 视图。
+  // - shell 只消费这一份显式上下文，避免再次引入 platform/global env 隐式来源。
   for (const [key, value] of Object.entries(context.env || {})) {
     const normalizedKey = String(key || "").trim();
     const normalizedValue = String(value || "").trim();

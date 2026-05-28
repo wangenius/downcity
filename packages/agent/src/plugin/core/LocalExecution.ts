@@ -9,7 +9,7 @@
 
 import path from "node:path";
 import { logger as defaultLogger } from "@/utils/logger/Logger.js";
-import { loadAgentEnvSnapshot, loadDowncityConfig, loadGlobalEnvFromStore } from "@/config/Config.js";
+import { loadAgentEnvSnapshot, loadDowncityConfig } from "@/config/Config.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { findBuiltinPlugin, listStaticPluginViews } from "@/plugin/core/Catalog.js";
 import { isManagedPlugin } from "@/plugin/core/PluginClassRegistry.js";
@@ -18,7 +18,6 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/runtime/host/AgentHostRuntime.js";
 import type { JsonValue } from "@/types/common/Json.js";
-import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
 import type {
   PluginActionResult,
   PluginAvailability,
@@ -27,40 +26,19 @@ import type {
 } from "@/plugin/types/Plugin.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 
-function createLocalFallbackPlatformRuntime(): AgentPlatformRuntime {
-  return {
-    getGlobalEnv: () => ({}),
-    getAgentEnv: () => ({}),
-    listModels: () => [],
-    listProviders: async () => [],
-    getModel: () => null,
-    getChannelAccount: () => null,
-    readChatAuthorizationConfig: () => ({ roles: {}, channels: {} }),
-    writeChatAuthorizationConfig: async (_projectRoot: string, nextConfig: unknown) =>
-      nextConfig as never,
-    setChatAuthorizationUserRole: async () => ({ roles: {}, channels: {} }),
-    isPluginEnabled: (pluginName: string) => pluginName === "auth",
-  };
-}
-
 /**
  * 创建本地 plugin 命令上下文。
  */
 export function createLocalPluginCommandContext(projectRoot: string): PluginCommandContext {
   const rootPath = path.resolve(String(projectRoot || "").trim() || ".");
-  const globalEnv = loadGlobalEnvFromStore();
   const env = loadAgentEnvSnapshot(rootPath);
   const config = loadDowncityConfig(rootPath, {
     projectEnv: env,
-    globalEnv,
+    agentEnv: env,
+    globalEnv: {},
   });
 
   defaultLogger.bindProjectRoot(rootPath);
-
-  // 关键点（中文）
-  // - 本地 plugin CLI 入口不应隐式依赖 agent 进程级 runtime。
-  // - 这里只提供最小宿主能力，保证离线/未启动 agent 的场景也能稳定执行。
-  const platform = createLocalFallbackPlatformRuntime();
 
   return {
     cwd: rootPath,
@@ -68,13 +46,11 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
     logger: defaultLogger,
     config,
     env,
-    globalEnv,
     paths: createAgentPathRuntime(
       rootPath,
       String(config.name || "").trim() || path.basename(rootPath) || "agent",
     ),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
-    platform,
   };
 }
 

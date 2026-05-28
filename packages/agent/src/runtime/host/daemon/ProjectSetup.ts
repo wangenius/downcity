@@ -12,7 +12,7 @@ import { loadDowncityConfig } from "@/config/Config.js";
 import {
   readProjectPrimaryModelId,
 } from "@/config/ExecutionBinding.js";
-import type { AgentPlatformRuntime } from "@/types/runtime/host/AgentHost.js";
+import type { AgentModelCatalogRuntime } from "@/types/runtime/host/AgentHost.js";
 import {
   getCacheDirPath,
   getDowncityAgentsRootDirPath,
@@ -85,7 +85,7 @@ export function ensureRuntimeProjectReady(projectRoot: string): void {
  */
 export function ensureRuntimeExecutionBindingReady(
   projectRoot: string,
-  platform?: Pick<AgentPlatformRuntime, "getModel">,
+  modelCatalog?: Pick<AgentModelCatalogRuntime, "getModel">,
 ): void {
   let primaryModelId = "";
   try {
@@ -105,9 +105,9 @@ export function ensureRuntimeExecutionBindingReady(
     process.exit(1);
   }
 
-  const model = platform?.getModel(primaryModelId);
+  const model = modelCatalog?.getModel(primaryModelId);
   if (!model) {
-    console.error("❌ Model not found in platform model pool");
+    console.error("❌ Model not found in model catalog");
     console.error(`   project: ${projectRoot}`);
     console.error(`   execution.modelId: ${primaryModelId}`);
     console.error("   fix: run `city model create` or `city model list`");

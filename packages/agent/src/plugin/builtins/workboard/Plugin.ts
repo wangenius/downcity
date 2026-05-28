@@ -24,7 +24,7 @@ function createWorkboardPluginDefinition(plugin: Plugin): Plugin {
         return {
           enabled: false,
           available: false,
-          reasons: ["workboard plugin disabled in city config"],
+          reasons: ["workboard plugin disabled in project config"],
         };
       }
       return {

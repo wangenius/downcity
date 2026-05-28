@@ -11,6 +11,7 @@ import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { StoredChannelAccount } from "@/types/runtime/host/Store.js";
 import type { ChatChannelName } from "@/plugin/builtins/chat/types/ChannelStatus.js";
 import type { ChatChannelState } from "@/plugin/builtins/chat/types/ChatRuntime.js";
+import { getStoredChannelAccountSync } from "@/plugin/builtins/chat/accounts/Store.js";
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
@@ -84,7 +85,11 @@ export function resolveChannelAccountId(
 }
 
 /**
- * 从宿主平台能力中解析渠道 account。
+ * 解析渠道 account。
+ *
+ * 关键点（中文）
+ * - 优先使用 ChatPlugin 实例上的显式解析逻辑。
+ * - 若未命中，再回退到默认全局账号池 `~/.downcity/downcity.db`。
  */
 export function resolveChannelAccount(
   context: AgentContext,
@@ -94,11 +99,9 @@ export function resolveChannelAccount(
   const explicit = plugin?.resolveChannelAccount?.(context, channel);
   if (explicit) return explicit;
   const channelAccountId = resolveChannelAccountId(context, channel);
-  const account = context.platform.resolveChannelAccount?.({
-    projectRoot: context.rootPath,
-    channel,
-    ...(channelAccountId ? { channelAccountId } : {}),
-  }) || (channelAccountId ? context.platform.getChannelAccount(channelAccountId) : null);
+  const account = channelAccountId
+    ? getStoredChannelAccountSync(channelAccountId)
+    : null;
   if (!account) return null;
   if (account.channel !== channel) return null;
   return account;

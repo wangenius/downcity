@@ -110,7 +110,7 @@ function createSkillPluginDefinition(plugin: Plugin): Plugin {
       return {
         enabled: false,
         available: false,
-        reasons: ["skill plugin disabled in city config"],
+        reasons: ["skill plugin disabled in project config"],
       };
     }
     return {

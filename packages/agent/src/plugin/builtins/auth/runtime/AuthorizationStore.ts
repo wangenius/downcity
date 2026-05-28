@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 所有动态状态（观测用户 / 会话）统一落盘到 `.downcity/chat/authorization/state.json`。
- * - 静态授权配置保存在 console `downcity.db`，不和运行时观测数据混写。
+ * - 静态授权配置保存在同目录下的 `config.json`，不和运行时观测数据混写。
  */
 
 import fs from "fs-extra";
@@ -16,6 +16,7 @@ import type {
 } from "@/plugin/builtins/auth/types/AuthPlugin.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ChatDispatchChannel } from "@/plugin/builtins/chat/types/ChatDispatcher.js";
+import { readChatAuthorizationConfig } from "@/plugin/builtins/auth/runtime/AuthorizationConfig.js";
 
 function getAuthorizationStatePath(rootPath: string): string {
   return path.join(rootPath, ".downcity", "chat", "authorization", "state.json");
@@ -145,9 +146,9 @@ async function writeState(rootPath: string, state: ChatAuthorizationStateFile): 
 }
 
 function readAuthorizationConfig(
-  context: Pick<AgentContext, "rootPath" | "platform">,
+  context: Pick<AgentContext, "rootPath">,
 ): ChatAuthorizationSnapshot["config"] {
-  return context.platform.readChatAuthorizationConfig(context.rootPath);
+  return readChatAuthorizationConfig(context.rootPath);
 }
 
 /**
@@ -208,7 +209,7 @@ export async function recordObservedAuthorizationPrincipal(params: {
  * 读取授权快照（配置 + 动态状态）。
  */
 export async function readAuthorizationSnapshot(params: {
-  context: Pick<AgentContext, "rootPath" | "platform">;
+  context: Pick<AgentContext, "rootPath">;
 }): Promise<ChatAuthorizationSnapshot> {
   const state = await readState(params.context.rootPath);
   return {

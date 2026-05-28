@@ -13,6 +13,7 @@ import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { VoicePluginConfig } from "@/plugin/builtins/voice/types/VoicePlugin.js";
 import { CHAT_PLUGIN_POINTS } from "@/plugin/builtins/chat/runtime/PluginPoints.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
+import { writeProjectPluginEnabled } from "@/plugin/core/ProjectConfigStore.js";
 import {
   listVoiceModels,
   resolveVoicePluginModelId,
@@ -117,7 +118,7 @@ function createAsrPluginDefinition(plugin: Plugin): Plugin {
       return {
         enabled: false,
         available: false,
-        reasons: ["asr plugin disabled in city config"],
+        reasons: ["asr plugin disabled in project config"],
       };
     }
     const dependencyStatus = await checkVoiceTranscriber(context);
@@ -280,7 +281,11 @@ function createAsrPluginDefinition(plugin: Plugin): Plugin {
         },
       },
       execute: async ({ context, payload }) => {
-        context.platform.setPluginEnabled?.("asr", true);
+        await writeProjectPluginEnabled({
+          pluginName: "asr",
+          enabled: true,
+          context,
+        });
         const nextConfig = {
           ...readVoicePluginConfig(context),
           injectPrompt:
@@ -329,7 +334,11 @@ function createAsrPluginDefinition(plugin: Plugin): Plugin {
         },
       },
       execute: async ({ context }) => {
-        context.platform.setPluginEnabled?.("asr", false);
+        await writeProjectPluginEnabled({
+          pluginName: "asr",
+          enabled: false,
+          context,
+        });
         return {
           success: true,
           data: {

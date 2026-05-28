@@ -81,8 +81,8 @@ export function findStaticPluginView(
  * 构建静态 plugin 可用性视图。
  *
  * 关键点（中文）
- * - 这里表达的是“控制面视角下可见的 city 配置事实”，不是执行链路中的最终可用性。
- * - `enabled` 只对齐 city 级 plugin lifecycle，不再读取 agent 项目配置。
+ * - 这里表达的是“静态目录视角下的项目配置事实”，不是执行链路中的最终可用性。
+ * - 调用方若未提供项目配置上下文，这里会按默认启用态返回 `enabled: true`。
  * - `available` 仅在无需执行上下文即可明确判断为 false 时返回 false；否则静态层视为可用。
  */
 export function buildStaticPluginAvailability(params: {
@@ -104,7 +104,7 @@ export function buildStaticPluginAvailability(params: {
     return {
       enabled: false,
       available: false,
-      reasons: [`Plugin "${plugin.name}" is disabled in city config.`],
+      reasons: [`Plugin "${plugin.name}" is disabled in project config.`],
     };
   }
 

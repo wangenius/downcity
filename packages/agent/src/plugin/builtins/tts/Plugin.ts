@@ -15,6 +15,7 @@ import type {
   TtsSynthesizeInput,
 } from "@/plugin/builtins/tts/types/TtsPlugin.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
+import { writeProjectPluginEnabled } from "@/plugin/core/ProjectConfigStore.js";
 import {
   checkTtsSynthesizer,
   installTtsSynthesizer,
@@ -122,7 +123,7 @@ function createTtsPluginDefinition(plugin: Plugin): Plugin {
       return {
         enabled: false,
         available: false,
-        reasons: ["tts plugin disabled in city config"],
+        reasons: ["tts plugin disabled in project config"],
       };
     }
     const dependencyStatus = await checkTtsSynthesizer(context);
@@ -320,7 +321,11 @@ function createTtsPluginDefinition(plugin: Plugin): Plugin {
         },
       },
       execute: async ({ context, payload }) => {
-        context.platform.setPluginEnabled?.("tts", true);
+        await writeProjectPluginEnabled({
+          pluginName: "tts",
+          enabled: true,
+          context,
+        });
         if ((payload as { install?: unknown }).install !== false) {
           const installResult = await installTtsSynthesizer({
             context,
@@ -353,7 +358,11 @@ function createTtsPluginDefinition(plugin: Plugin): Plugin {
         },
       },
       execute: async ({ context }) => {
-        context.platform.setPluginEnabled?.("tts", false);
+        await writeProjectPluginEnabled({
+          pluginName: "tts",
+          enabled: false,
+          context,
+        });
         return {
           success: true,
           data: {

@@ -51,7 +51,7 @@ POST /v1/payment.stripe/webhook
 
 ## 当前阶段真正同步什么
 
-这层不是同步 entitlement，也不是复制 Stripe 全量对象。
+这层不是发放产品权益，也不是复制 Stripe 全量对象。
 
 当前阶段真正做的是：
 
@@ -59,6 +59,25 @@ POST /v1/payment.stripe/webhook
 - 找到它关联的 topup
 - 在支付成功时调用 `balance.finishTopup()`
 - 把支付记录标记成 `paid` / `expired` / `failed`
+
+## 事件范围
+
+一次性充值链路只需要很小的 Stripe 事件面：
+
+- `checkout.session.completed`：必须打通的成功路径，用它完成 topup
+- `checkout.session.expired`：把支付记录标记为过期
+- `payment_intent.payment_failed`：把支付记录标记为失败
+
+其他 Stripe 事件可以先忽略，等产品明确需要新的支付流再接。
+
+## 幂等规则
+
+webhook 处理必须在两层保证幂等：
+
+- 事件级幂等：重复的 Stripe `event_id` 不能重复应用
+- 到账级幂等：重复成功事件不能让同一笔 topup 重复到账
+
+实践里，先检查已保存的 payment 状态，再让 `balance.finishTopup()` 成为唯一的钱包到账入口。
 
 ## 常见场景
 

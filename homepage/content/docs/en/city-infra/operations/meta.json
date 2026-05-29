@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "production-checklist",
+    "deploy-cloudflare-workers",
     "deploy-dokploy",
     "env-rotation",
     "logging-and-usage",

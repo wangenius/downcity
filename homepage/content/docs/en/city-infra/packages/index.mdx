@@ -9,12 +9,12 @@ Downcity keeps the package graph intentionally small: start with `@downcity/infr
 
 That order maps to four clear roles:
 
-- `core` is the Kernel for the InfraRuntime itself
+- `infra` is the Kernel for the InfraRuntime itself
 - `services` are Capabilities that add official behavior
-- `client` and `city terminal` are Interfaces for product and operator entry
-- `products/*` is the Composition layer that assembles runnable examples
+- `conduit` and `city terminal` are Interfaces for product and operator entry
+- `blocks/*` is the Composition layer that assembles runnable examples
 
-If you only care about npm packages, the three most important pieces to remember first are `core`, `services`, and `client`.
+If you only care about npm packages, the three most important pieces to remember first are `infra`, `services`, and `conduit`.
 
 ## Recommended order
 
@@ -119,7 +119,7 @@ If you want to deploy InfraRuntime in Cloudflare Workers, you do not need an ext
 - `@downcity/conduit`
 - `@downcity/services`
 
-### Payment entitlements
+### One-time Stripe topups
 
 - `@downcity/infra`
 - `@downcity/conduit`

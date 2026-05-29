@@ -51,7 +51,7 @@ If redirect URLs are not configured explicitly, the service uses `DOWNCITY_INFRA
 
 ## What gets synced in this version
 
-This layer does not sync entitlements and does not mirror every Stripe object.
+This layer does not grant product access and does not mirror every Stripe object.
 
 In this version it does four concrete things:
 
@@ -59,6 +59,25 @@ In this version it does four concrete things:
 - find the linked topup
 - call `balance.finishTopup()` when payment succeeds
 - mark the payment record as `paid`, `expired`, or `failed`
+
+## Event scope
+
+The one-time topup flow only needs a small Stripe event surface:
+
+- `checkout.session.completed`: the required success path; this is what completes the topup
+- `checkout.session.expired`: marks the payment as expired
+- `payment_intent.payment_failed`: marks the payment as failed
+
+Other Stripe events can be ignored until the product explicitly needs a new payment flow.
+
+## Idempotency rules
+
+Webhook handling must be idempotent at two levels:
+
+- event idempotency: repeated Stripe `event_id` values should not apply twice
+- crediting idempotency: repeated success events must not credit the same topup twice
+
+In practice, inspect the stored payment status first, then let `balance.finishTopup()` be the single wallet-crediting path.
 
 ## Common scenarios
 

@@ -76,7 +76,7 @@ const checkout = await user.service("payment.stripe").action("checkout/create").
 
 前端跳转到 `checkout_url` 即可。
 
-### 3. Stripe 回调 webhook
+### 4. Stripe 回调 webhook
 
 Stripe 直接请求服务路由：
 
@@ -94,7 +94,7 @@ POST /v1/payment.stripe/webhook
 
 当收到 `checkout.session.completed` 时，服务会自动调用 `balance.finishTopup()`，真正把余额充进去。
 
-如果你部署在 Worker bindings 这类宿主环境里，`STRIPE_SECRET_KEY` 和 `STRIPE_WEBHOOK_SECRET` 都要显式提供给运行时。
+如果你部署在 Workers 里，`STRIPE_SECRET_KEY` 和 `STRIPE_WEBHOOK_SECRET` 都应该在部署后写入 InfraRuntime env。
 
 如果你没有单独配置 `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL`，服务会按下面顺序自动生成默认跳转页：
 

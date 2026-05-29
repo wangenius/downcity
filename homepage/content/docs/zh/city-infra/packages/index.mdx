@@ -9,12 +9,12 @@ Downcity 的 package 设计很克制：先用 `@downcity/infra` 搭出 InfraRunt
 
 这套顺序背后的意思是，Downcity 其实有 4 个清晰角色：
 
-- `core` 是 Kernel，负责 InfraRuntime 本体
+- `infra` 是 Kernel，负责 InfraRuntime 本体
 - `services` 是 Capabilities，负责官方能力
-- `client` / `city terminal` 是 Interfaces，负责接入与操作
-- `products/*` 是 Composition，负责把这些东西组装成可运行实例
+- `conduit` / `city terminal` 是 Interfaces，负责接入与操作
+- `blocks/*` 是 Composition，负责把这些东西组装成可运行实例
 
-如果你只从 npm package 角度理解，最值得先记住的是前 3 个：`core`、`services`、`client`。
+如果你只从 npm package 角度理解，最值得先记住的是前 3 个：`infra`、`services`、`conduit`。
 
 ## 推荐理解顺序
 
@@ -119,7 +119,7 @@ Composition   -> blocks/node + blocks/edge
 - `@downcity/conduit`
 - `@downcity/services`
 
-### 要支付权益
+### 要 Stripe 一次性充值
 
 - `@downcity/infra`
 - `@downcity/conduit`

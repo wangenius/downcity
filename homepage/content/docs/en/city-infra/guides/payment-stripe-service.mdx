@@ -7,7 +7,7 @@ The Stripe payment service currently does one thing:
 
 > after a user completes a one-time Stripe payment, sync that result into a `balance topup`.
 
-It does not handle subscriptions or entitlements.
+It does not handle subscriptions or product access grants.
 
 ## Enable
 
@@ -76,7 +76,7 @@ The response includes:
 
 The frontend can redirect to `checkout_url`.
 
-### 3. Stripe calls the webhook
+### 4. Stripe calls the webhook
 
 Stripe should call:
 
@@ -94,7 +94,7 @@ When `webhook_secret` or `STRIPE_WEBHOOK_SECRET` is configured, the service veri
 
 When it receives `checkout.session.completed`, the service calls `balance.finishTopup()` and credits the wallet.
 
-If you deploy on a bindings-based runtime such as Workers, provide both `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` to the host runtime explicitly.
+If you deploy on Workers, write both `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` into InfraRuntime env after deployment.
 
 If `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL` are not configured explicitly, the service derives default redirect pages in this order:
 

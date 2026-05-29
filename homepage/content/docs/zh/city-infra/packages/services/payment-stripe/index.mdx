@@ -16,9 +16,9 @@ description: "把一次性 Stripe 支付同步成用户全局余额充值。"
 
 建议按下面顺序读：
 
-1. 先读 [充值单与 Checkout](/docs/city-infra/packages/services/payment-stripe/entitlements)，理解为什么这条链路一定要建立在 topup 上。
+1. 先读 [充值单与 Checkout](/docs/city-infra/packages/services/payment-stripe/topups-and-checkout)，理解为什么这条链路一定要建立在 topup 上。
 2. 再读 [Webhook 与同步](/docs/city-infra/packages/services/payment-stripe/webhooks-and-sync)，理解 Stripe 支付结果怎么进入 InfraRuntime。
-3. 最后读 [到账与余额](/docs/city-infra/packages/services/payment-stripe/gating-and-access)，理解为什么真正入账必须统一走 `balance.finishTopup()`。
+3. 最后读 [到账与余额](/docs/city-infra/packages/services/payment-stripe/crediting-balance)，理解为什么真正入账必须统一走 `balance.finishTopup()`。
 
 ## 它提供什么
 

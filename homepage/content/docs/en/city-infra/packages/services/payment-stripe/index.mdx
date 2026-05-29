@@ -16,9 +16,9 @@ It is not an entitlement service and does not handle subscriptions.
 
 The recommended order is:
 
-1. Start with [Topups and Checkout](/en/docs/city-infra/packages/services/payment-stripe/entitlements) to understand why this flow is built on top of topups.
+1. Start with [Topups and Checkout](/en/docs/city-infra/packages/services/payment-stripe/topups-and-checkout) to understand why this flow is built on top of topups.
 2. Continue with [Webhooks and sync](/en/docs/city-infra/packages/services/payment-stripe/webhooks-and-sync) to understand how Stripe payment results enter InfraRuntime.
-3. Finish with [Crediting balance](/en/docs/city-infra/packages/services/payment-stripe/gating-and-access) to understand why wallet crediting must go through `balance.finishTopup()`.
+3. Finish with [Crediting balance](/en/docs/city-infra/packages/services/payment-stripe/crediting-balance) to understand why wallet crediting must go through `balance.finishTopup()`.
 
 ## What it provides
 
@@ -31,7 +31,7 @@ The recommended order is:
 ## What it does not own
 
 - subscriptions
-- entitlements
+- product access grants
 - wallet account or ledger storage
 - replacement for `@downcity/services`
 

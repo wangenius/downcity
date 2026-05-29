@@ -27,6 +27,7 @@ import { registerEnvCommand } from "./shared/Env.js";
 import { registerTokenCommand } from "./shared/Token.js";
 import { registerResetCommand } from "./shared/Reset.js";
 import { registerChatCommand } from "./shared/Chat.js";
+import { registerTerminalCommand } from "./shared/Terminal.js";
 import { setCliVerbosity } from "./shared/CliReporter.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -97,6 +98,7 @@ registerTokenCommand(program);
 registerEnvCommand(program);
 registerResetCommand(program);
 registerChatCommand(program);
+registerTerminalCommand(program, packageJson.version);
 
 registerPluginsCommand(program);
 

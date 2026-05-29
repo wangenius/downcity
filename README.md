@@ -20,7 +20,11 @@ Downcity is an agent platform for local projects and team workflows. It combines
 | --- | --- |
 | `@downcity/city` | Platform layer and CLI for city runtime, Console gateway, multi-agent registration, model pool, global config, and daemon management. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
+| `@downcity/infra` | Infrastructure runtime for service registration, actions, auth, env, product-scoped access, and HTTP routing. |
+| `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
+| `@downcity/conduit` | User and admin SDK for calling Downcity services over HTTP. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
+| `blocks/*` | Deployable city blocks that compose infra and services for Node or edge runtimes. |
 | `products/chrome-extension` | Chrome extension for Console connectivity, page context, and inline composition workflows. |
 | `homepage` | Official website and end-user documentation site. |
 
@@ -194,7 +198,14 @@ downcity/
 ├── packages/
 │   ├── agent/
 │   ├── city/
+│   ├── conduit/
+│   ├── infra/
+│   ├── services/
 │   └── ui/
+├── blocks/
+│   ├── edge/
+│   ├── node/
+│   └── shared/
 ├── products/
 │   └── chrome-extension/
 ├── homepage/
@@ -210,7 +221,7 @@ downcity/
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Developer docs: [downcity.ai/devdocs](https://downcity.ai/devdocs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
-- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/ui/README.md](./packages/ui/README.md)
+- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/infra/README.md](./packages/infra/README.md), [packages/services/README.md](./packages/services/README.md), [packages/conduit/README.md](./packages/conduit/README.md), [packages/city/README.md](./packages/city/README.md), [packages/ui/README.md](./packages/ui/README.md)
 
 ## Local Development
 

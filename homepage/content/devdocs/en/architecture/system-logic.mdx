@@ -9,12 +9,14 @@ This page explains how the current system actually runs.
 
 ## Overall layers
 
-Downcity is easiest to read as four layers:
+Downcity is easiest to read as six layers:
 
 1. Entry surfaces: CLI, Console UI, Chrome Extension, HTTP API
 2. Control plane: console
 3. Execution plane: agent host
 4. Capability layer: session and plugins
+5. Infrastructure layer: infra runtime, auth, env, product-scoped routing
+6. Public services: accounts, balance, usage, payment, and service SDK access
 
 ```mermaid
 flowchart LR
@@ -38,6 +40,12 @@ flowchart LR
     PLUGINS["Plugins"]
   end
 
+  subgraph Infra["Infrastructure"]
+    INFRA["Infra<br/>service runtime / auth / env / products"]
+    SERVICES["Services<br/>accounts / balance / usage / payment"]
+    CONDUIT["Conduit<br/>user and admin SDK"]
+  end
+
   CLI --> CONSOLE
   UI --> CONSOLE
   EXT --> CONSOLE
@@ -46,6 +54,9 @@ flowchart LR
   AGENT --> SESSION
   AGENT --> PLUGINS
   PLUGINS --> SESSION
+  API --> INFRA
+  CONDUIT --> INFRA
+  INFRA --> SERVICES
 ```
 
 ## Why split console and agent
@@ -67,6 +78,16 @@ The agent host is the single-project execution plane. It:
 - creates one `AgentCore`
 - exposes project HTTP or RPC runtime when needed
 - coordinates session execution and managed plugin runtime
+
+### Infra and services
+
+Infra is the reusable city infrastructure for service-style runtimes. It:
+
+- mounts services and actions behind HTTP routes
+- owns product-scoped auth, runtime env, and built-in product/env tables
+- gives blocks a shared foundation for Node and edge deployments
+
+Services are public city services. They provide accounts, balance, usage, payment, and Stripe payment flows without owning city-level model governance.
 
 ## Current runtime center
 

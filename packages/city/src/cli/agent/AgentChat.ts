@@ -5,12 +5,17 @@
  * - 统一覆盖交互式持续对话与一次性消息模式，不再保留独立 `quest` 命令。
  * - 目标 agent 始终按 managed agent registry 名称解析，不依赖当前工作目录。
  * - 默认使用独立 local-cli 主会话：`local-cli-chat-main`。
+ * - 远程访问统一走 `RemoteAgent({ url })`，不再在 CLI 侧维护第二套 HTTP SDK transport。
  */
 
 import { createInterface } from "node:readline/promises";
 import chalk from "chalk";
 import prompts from "prompts";
-import type { AgentSessionEvent } from "@downcity/agent";
+import {
+  RemoteAgent,
+  type AgentSessionEvent,
+  type RemoteAgentSession,
+} from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import {
@@ -18,11 +23,7 @@ import {
   validateAgentProjectRoot,
 } from "../shared/PluginTargetSupport.js";
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
-import {
-  formatCliBearerHeaderValue,
-  resolveCliAuthToken,
-} from "@/http/auth/CliAuthStateStore.js";
-import { resolveDaemonEndpoint } from "@/process/daemon/Client.js";
+import { resolveDaemonRpcEndpoint } from "@/process/daemon/Client.js";
 import type {
   AgentChatCliOptions,
   AgentChatExecutionOutcome,
@@ -30,8 +31,6 @@ import type {
   AgentChatTransportOptions,
 } from "./AgentChatTypes.js";
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
-
-const SDK_EVENTS_READY_TYPE = "sdk-events-ready";
 
 type ResolvedAgentChatTarget = {
   /**
@@ -212,89 +211,31 @@ function printAgentChatFailure(params: {
   });
 }
 
-async function readHttpFailure(response: Response): Promise<string> {
-  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-  const text = await response.text().catch(() => "");
-  if (contentType.includes("application/json")) {
-    try {
-      const payload = JSON.parse(text) as {
-        error?: string;
-        message?: string;
-      };
-      return (
-        String(payload.error || payload.message || "").trim() ||
-        `HTTP ${response.status}`
-      );
-    } catch {
-      // ignore malformed json payloads
-    }
-  }
-  return String(text || "").trim() || `HTTP ${response.status}`;
-}
-
-function isSdkEventsReadyFrame(value: unknown): boolean {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "type" in value &&
-    String((value as { type?: unknown }).type || "") === SDK_EVENTS_READY_TYPE
-  );
-}
-
-async function postSdkPrompt(params: {
-  endpointBaseUrl: string;
-  sessionId: string;
-  message: string;
-  authHeaderValue?: string;
-}): Promise<
-  | {
-      success: true;
-      turnId: string;
-    }
-  | {
-      success: false;
-      error: string;
-    }
-> {
-  const response = await fetch(
-    new URL(
-      `/api/sdk/sessions/${encodeURIComponent(params.sessionId)}/prompt`,
-      params.endpointBaseUrl,
-    ).toString(),
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(params.authHeaderValue ? { Authorization: params.authHeaderValue } : {}),
-      },
-      body: JSON.stringify({
-        query: params.message,
-      }),
-    },
-  ).catch((error) => {
-    throw new Error(`Failed to call ${params.endpointBaseUrl}: ${String(error)}`);
+function createRemoteAgent(params: {
+  projectRoot: string;
+  transport?: AgentChatTransportOptions;
+}): RemoteAgent {
+  const endpoint = resolveDaemonRpcEndpoint({
+    projectRoot: params.projectRoot,
+    host: params.transport?.host,
+    port: params.transport?.port,
   });
+  return new RemoteAgent({
+    url: `rpc://${endpoint.host}:${endpoint.port}`,
+  });
+}
 
-  const payload = (await response.json().catch(() => ({}))) as {
-    success?: boolean;
-    error?: string;
-    turn?: {
-      id?: string;
-    };
-  };
-  const turnId = String(payload.turn?.id || "").trim();
-  if (!response.ok || payload.success !== true || !turnId) {
-    return {
-      success: false,
-      error:
-        String(payload.error || "").trim() ||
-        `SDK prompt failed with HTTP ${response.status}`,
-    };
+async function getOrCreateRemoteSession(params: {
+  remote_agent: RemoteAgent;
+  session_id: string;
+}): Promise<RemoteAgentSession> {
+  try {
+    return await params.remote_agent.getSession(params.session_id);
+  } catch {
+    return await params.remote_agent.createSession({
+      sessionId: params.session_id,
+    });
   }
-  return {
-    success: true,
-    turnId,
-  };
 }
 
 async function runSdkPromptTurn(params: {
@@ -328,181 +269,69 @@ async function runSdkPromptTurn(params: {
     };
   }
 
-  const { target } = resolved;
-  const abortController = new AbortController();
-  const endpoint = resolveDaemonEndpoint({
-    projectRoot: target.projectRoot,
-    host: params.transport?.host,
-    port: params.transport?.port,
+  const remote_agent = createRemoteAgent({
+    projectRoot: resolved.target.projectRoot,
+    transport: params.transport,
   });
-  const authHeaderValue = formatCliBearerHeaderValue(
-    resolveCliAuthToken({
-      explicitToken: params.transport?.token,
-    }),
-  );
-  const response = await fetch(
-    new URL(
-      `/api/sdk/sessions/${encodeURIComponent(target.sessionId)}/events`,
-      endpoint.baseUrl,
-    ).toString(),
-    {
-      headers: {
-        ...(authHeaderValue ? { Authorization: authHeaderValue } : {}),
-      },
-      signal: abortController.signal,
-    },
-  ).catch((error) => {
-    throw new Error(`Failed to call ${endpoint.baseUrl}: ${String(error)}`);
+  const session = await getOrCreateRemoteSession({
+    remote_agent,
+    session_id: resolved.target.sessionId,
   });
 
-  if (!response.ok || !response.body) {
-    return {
-      success: false,
-      error: await readHttpFailure(response),
-      emittedVisibleText: false,
-      text: "",
-    };
-  }
-
-  const decoder = new TextDecoder();
-  const reader = response.body.getReader();
-  let buffered = "";
-  let printedLeadingNewline = false;
-  let emittedVisibleText = false;
-  let promptTurnId = "";
-  let promptPosted = false;
-  let finalText = "";
+  let printed_leading_newline = false;
+  let emitted_visible_text = false;
+  let final_text = "";
+  let target_turn_id = "";
 
   const renderEvent = (event: AgentSessionEvent): void => {
-    if (event.type !== "text-delta" || event.turnId !== promptTurnId || !event.text) return;
+    if (event.type !== "text-delta" || event.turnId !== target_turn_id || !event.text) {
+      return;
+    }
     if (params.renderText === false) return;
-    if (!printedLeadingNewline) {
+    if (!printed_leading_newline) {
       process.stdout.write("\n");
-      printedLeadingNewline = true;
+      printed_leading_newline = true;
     }
     process.stdout.write(event.text);
-    emittedVisibleText = true;
+    emitted_visible_text = true;
   };
 
-  const handleLine = async (line: string): Promise<
-    | {
-        done: true;
-        error?: string;
-      }
-    | {
-        done: false;
-      }
-  > => {
-    const value = JSON.parse(line) as unknown;
-    if (isSdkEventsReadyFrame(value)) {
-      if (!promptPosted) {
-        promptPosted = true;
-        const promptResult = await postSdkPrompt({
-          endpointBaseUrl: endpoint.baseUrl,
-          sessionId: target.sessionId,
-          message,
-          authHeaderValue,
-        });
-        if (!promptResult.success) {
-          return {
-            done: true,
-            error: promptResult.error,
-          };
-        }
-        promptTurnId = promptResult.turnId;
-      }
-      return { done: false };
-    }
-
-    const event = value as AgentSessionEvent;
-    if (event.type === "error") {
-      return {
-        done: true,
-        error: event.message,
-      };
-    }
+  const unsubscribe = session.subscribe((event) => {
     renderEvent(event);
-    if (event.type === "turn-finish" && event.turnId === promptTurnId) {
-      finalText = event.text;
-      return {
-        done: true,
-        ...(event.success ? {} : { error: event.error || "Agent turn failed" }),
-      };
+    if (event.type === "turn-finish" && event.turnId === target_turn_id) {
+      final_text = event.text;
     }
-    return { done: false };
-  };
+  });
 
-  const finishTurn = (result: {
-    success: boolean;
-    error?: string;
-  }): {
-    success: boolean;
-    error?: string;
-    emittedVisibleText: boolean;
-    text: string;
-  } => {
-    if (printedLeadingNewline) {
+  try {
+    const turn = await session.prompt({ query: message });
+    target_turn_id = turn.id;
+    const result = await turn.finished;
+    final_text = result.text;
+
+    if (printed_leading_newline) {
       process.stdout.write("\n\n");
     }
+
     return {
       success: result.success,
       ...(result.error ? { error: result.error } : {}),
-      emittedVisibleText,
-      text: finalText,
+      emittedVisibleText: emitted_visible_text,
+      text: final_text,
     };
-  };
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffered += decoder.decode(value, { stream: true });
-      let newlineIndex = buffered.indexOf("\n");
-      while (newlineIndex >= 0) {
-        const line = buffered.slice(0, newlineIndex).trim();
-        buffered = buffered.slice(newlineIndex + 1);
-        if (line) {
-          const result = await handleLine(line);
-          if (result.done) {
-            return finishTurn({
-              success: !result.error,
-              ...(result.error ? { error: result.error } : {}),
-            });
-          }
-        }
-        newlineIndex = buffered.indexOf("\n");
-      }
-    }
-
-    const tail = buffered.trim();
-    if (tail) {
-      const result = await handleLine(tail);
-      if (result.done) {
-        return finishTurn({
-          success: !result.error,
-          ...(result.error ? { error: result.error } : {}),
-        });
-      }
-    }
   } catch (error) {
-    return finishTurn({
+    if (printed_leading_newline) {
+      process.stdout.write("\n\n");
+    }
+    return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
-    });
+      emittedVisibleText: emitted_visible_text,
+      text: final_text,
+    };
   } finally {
-    abortController.abort();
-    await reader.cancel().catch(() => undefined);
-    try {
-      reader.releaseLock();
-    } catch {
-      // ignore
-    }
+    unsubscribe();
   }
-
-  return finishTurn({
-    success: promptPosted && Boolean(promptTurnId),
-    ...(promptPosted && promptTurnId ? {} : { error: "SDK events connection closed before prompt was accepted." }),
-  });
 }
 
 /**
@@ -566,7 +395,6 @@ async function runOneShotChat(params: {
       transport: {
         host: params.options.host,
         port: params.options.port,
-        token: params.options.token,
       },
     });
     printResult({
@@ -590,7 +418,6 @@ async function runOneShotChat(params: {
     transport: {
       host: params.options.host,
       port: params.options.port,
-      token: params.options.token,
     },
   });
 
@@ -639,8 +466,6 @@ async function runInteractiveChat(params: {
       try {
         line = await rl.question(prompt);
       } catch (error) {
-        // 关键点（中文）：Node 24 下 Ctrl+C 会让 readline.question 以 AbortError 拒绝。
-        // 这里按正常退出处理，避免把交互式 chat 变成未捕获异常。
         if (isReadlineAbortError(error)) {
           console.log();
           break;
@@ -665,7 +490,6 @@ async function runInteractiveChat(params: {
         transport: {
           host: params.options.host,
           port: params.options.port,
-          token: params.options.token,
         },
       });
 

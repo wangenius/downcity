@@ -21,12 +21,10 @@ export interface AgentChatCliOptions {
   message?: string;
   /** 是否输出 JSON。 */
   json?: boolean;
-  /** 覆盖目标 runtime host。 */
+  /** 覆盖目标 RPC host。 */
   host?: string;
-  /** 覆盖目标 runtime port。 */
+  /** 覆盖目标 RPC port。 */
   port?: number;
-  /** 显式覆盖 Bearer Token。 */
-  token?: string;
 }
 
 /**
@@ -45,7 +43,7 @@ export interface AgentChatExecuteResult {
  * SDK prompt 响应体。
  */
 export interface AgentChatExecuteResponse {
-  /** HTTP 路由层是否成功处理请求。 */
+  /** 本轮 chat 执行是否成功。 */
   success: boolean;
   /** 实际执行使用的 sessionId。 */
   sessionId?: string;
@@ -59,12 +57,10 @@ export interface AgentChatExecuteResponse {
  * 复用 chat transport 时的基础选项。
  */
 export interface AgentChatTransportOptions {
-  /** 覆盖目标 runtime host。 */
+  /** 覆盖目标 RPC host。 */
   host?: string;
-  /** 覆盖目标 runtime port。 */
+  /** 覆盖目标 RPC port。 */
   port?: number;
-  /** 显式覆盖 Bearer Token。 */
-  token?: string;
 }
 
 /**

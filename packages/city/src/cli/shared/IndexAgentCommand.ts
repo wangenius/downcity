@@ -97,6 +97,7 @@ export function registerAgentCommands(
     .command("start [path]")
     .description("启动 Agent 进程（后台/前台）")
     .addOption(new context.hiddenPortOption("--port <port>").argParser(parsePort).hideHelp())
+    .addOption(new context.hiddenPortOption("--rpc-port <port>").argParser(parsePort).hideHelp())
     .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
     .option("--foreground [enabled]", "前台启动（仅当前终端）", parseBoolean)
     .helpOption("--help", "display help for command")
@@ -122,9 +123,8 @@ export function registerAgentCommands(
     .option("-t, --to <id>", "目标 agent id（省略时交互选择）")
     .option("-m, --message <text>", "一次性发送一轮消息并退出")
     .option("--json [enabled]", "一次性模式下以 JSON 输出", parseBoolean)
-    .option("--host <host>", "Server host（覆盖自动解析）")
+    .option("--host <host>", "RPC host（覆盖自动解析）")
     .addOption(new context.hiddenPortOption("--port <port>").argParser(parsePort).hideHelp())
-    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(
       context.version,
@@ -135,7 +135,6 @@ export function registerAgentCommands(
           json?: boolean;
           host?: string;
           port?: number;
-          token?: string;
         },
       ) => {
         await chatCommand(options);

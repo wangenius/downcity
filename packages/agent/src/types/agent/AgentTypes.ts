@@ -9,7 +9,7 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import type { ServerInstance } from "@/runtime/server/http/Server.js";
+import type { RpcServerInstance } from "@/rpc/Server.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type {
   AgentSessionSubscriber,
@@ -92,14 +92,14 @@ export interface AgentOptions {
  */
 export interface AgentStartOptions {
   /**
-   * 是否启动 HTTP 服务。
+   * 是否启动本机 RPC 服务。
    *
    * 关键点（中文）
    * - `false` 表示不启动。
    * - 传对象时会按给定 host/port 启动。
    * - 省略时默认不启动，避免 SDK 本地嵌入场景误开端口。
    */
-  http?: false | AgentHttpStartOptions;
+  rpc?: false | AgentRpcStartOptions;
 
   /**
    * 是否启动当前 agent 的 plugins。
@@ -116,9 +116,9 @@ export interface AgentStartOptions {
  */
 export interface AgentStopResult {
   /**
-   * 本次是否实际停止了 HTTP 服务。
+   * 本次是否实际停止了本机 RPC 服务。
    */
-  httpStopped: boolean;
+  rpcStopped: boolean;
 
   /**
    * 本次是否实际停止了 plugins。
@@ -131,9 +131,9 @@ export interface AgentStopResult {
  */
 export interface AgentStartResult {
   /**
-   * 当前 agent 是否已启动 HTTP 服务。
+   * 当前 agent 是否已启动本机 RPC 服务。
    */
-  http?: AgentHttpBinding;
+  rpc?: AgentRpcBinding;
 
   /**
    * 当前 agent 是否已启动 plugins。
@@ -142,28 +142,28 @@ export interface AgentStartResult {
 }
 
 /**
- * Agent HTTP 启动参数。
+ * Agent RPC 启动参数。
  */
-export interface AgentHttpStartOptions {
+export interface AgentRpcStartOptions {
   /**
-   * HTTP 监听主机。
+   * RPC 监听主机。
    */
   host?: string;
 
   /**
-   * HTTP 监听端口。
+   * RPC 监听端口。
    */
   port?: number;
 }
 
 /**
- * Agent HTTP 绑定信息。
+ * Agent RPC 绑定信息。
  */
-export interface AgentHttpBinding {
+export interface AgentRpcBinding {
   /**
-   * 对外访问地址。
+   * 远程访问地址。
    */
-  baseUrl: string;
+  url: string;
 
   /**
    * 当前 host。
@@ -176,9 +176,9 @@ export interface AgentHttpBinding {
   port: number;
 
   /**
-   * HTTP server 句柄。
+   * RPC server 句柄。
    */
-  server: ServerInstance;
+  server: RpcServerInstance;
 }
 
 /**
@@ -186,11 +186,12 @@ export interface AgentHttpBinding {
  */
 export interface RemoteAgentOptions {
   /**
-   * 远程 SDK HTTP 基础地址。
+   * 远程 agent 访问地址。
    *
-   * 例如：`http://127.0.0.1:15314`
+   * 例如：`https://city.example.com`、`http://127.0.0.1:15314`
+   * 或 `rpc://127.0.0.1:5314`
    */
-  baseUrl: string;
+  url: string;
 }
 
 /**

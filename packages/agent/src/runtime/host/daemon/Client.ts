@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 业务模块统一通过 daemon API 与运行时通信。
- * - 地址解析优先级：CLI 参数 > 环境变量 > daemon meta > 默认值。
+ * - HTTP gateway 与本机 RPC 的地址解析分开，避免端口语义混淆。
  */
 
 import fs from "fs-extra";
@@ -62,25 +62,27 @@ function pickArgValue(args: string[], key: string): string | undefined {
   return next || undefined;
 }
 
-/**
- * 解析 daemon endpoint。
- *
- * 优先级（中文）
- * 1) 显式入参 `host/port`
- * 2) 环境变量 `DC_CITY_HOST/DC_CITY_PORT`
- * 3) daemon meta args（`downcity.daemon.json`）
- * 4) 默认 `127.0.0.1:5314`
- */
-function resolveDaemonEndpoint(params: {
+type ResolveDaemonEndpointParams = {
   projectRoot: string;
   host?: string;
   port?: number;
-}): DaemonEndpoint {
-  const explicitHost = normalizeHost(params.host);
-  const explicitPort = parsePortLike(params.port);
+};
 
-  const envHost = normalizeHost(process.env.DC_CITY_HOST);
-  const envPort = parsePortLike(process.env.DC_CITY_PORT);
+function resolveDaemonEndpointFromSources(params: {
+  projectRoot: string;
+  explicit_host?: string;
+  explicit_port?: number;
+  env_host_name: string;
+  env_port_name: string;
+  arg_port_name: string;
+  default_host: string;
+  default_port: number;
+}): DaemonEndpoint {
+  const explicitHost = normalizeHost(params.explicit_host);
+  const explicitPort = parsePortLike(params.explicit_port);
+
+  const envHost = normalizeHost(process.env[params.env_host_name]);
+  const envPort = parsePortLike(process.env[params.env_port_name]);
 
   let daemonArgHost: string | undefined;
   let daemonArgPort: number | undefined;
@@ -92,20 +94,44 @@ function resolveDaemonEndpoint(params: {
         ? raw.args.map((item) => String(item))
         : [];
       daemonArgHost = normalizeHost(pickArgValue(args, "--host"));
-      daemonArgPort = parsePortLike(pickArgValue(args, "--port"));
+      daemonArgPort = parsePortLike(pickArgValue(args, params.arg_port_name));
     }
   } catch {
     // ignore daemon meta errors, fallback to other sources
   }
 
-  const host = explicitHost || envHost || daemonArgHost || "127.0.0.1";
-  const port = explicitPort || envPort || daemonArgPort || 5314;
+  const host = explicitHost || envHost || daemonArgHost || params.default_host;
+  const port = explicitPort || envPort || daemonArgPort || params.default_port;
 
   return {
     host,
     port,
     baseUrl: `http://${host}:${port}`,
   };
+}
+
+/**
+ * 解析 daemon endpoint。
+ *
+ * 优先级（中文）
+ * 1) 显式入参 `host/port`
+ * 2) 环境变量 `DC_CITY_HOST/DC_CITY_PORT`
+ * 3) daemon meta args（`downcity.daemon.json`）
+ * 4) 默认 `127.0.0.1:5314`
+ */
+function resolveDaemonEndpoint(
+  params: ResolveDaemonEndpointParams,
+): DaemonEndpoint {
+  return resolveDaemonEndpointFromSources({
+    projectRoot: params.projectRoot,
+    explicit_host: params.host,
+    explicit_port: params.port,
+    env_host_name: "DC_CITY_HOST",
+    env_port_name: "DC_CITY_PORT",
+    arg_port_name: "--port",
+    default_host: "127.0.0.1",
+    default_port: 5314,
+  });
 }
 
 /**

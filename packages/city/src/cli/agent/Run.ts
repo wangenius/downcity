@@ -16,6 +16,7 @@ import {
   loadDowncityConfig,
   loadStaticSystemPrompts,
   shellTools,
+  startServer,
   StaticPromptCatalog,
 } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
@@ -31,7 +32,7 @@ import { resolveAgentId } from "../shared/IndexSupport.js";
  * 职责（中文）
  * - 初始化 agent 状态（配置、日志、services 依赖）
  * - 解析并合并启动参数（CLI > downcity.json > 默认值）
- * - 启动主 HTTP 服务
+ * - 启动 agent 本机 RPC 与 city 托管的 HTTP gateway（双端口）
  * - 启动 services（例如 task cron）
  * - 统一处理进程信号并优雅停机
  */
@@ -59,16 +60,25 @@ export async function runCommand(
   };
   // Resolve startup options: CLI flags override built-in defaults.
   let port: number;
+  let rpc_port: number;
   try {
     port = parsePort(options.port, "port") ?? 5314;
+    rpc_port = parsePort(options.rpcPort, "rpcPort") ?? 15314;
   } catch (error) {
     throw new CliError({
       title: "Invalid start options",
       note: error instanceof Error ? error.message : String(error),
     });
   }
+  if (port === rpc_port) {
+    throw new CliError({
+      title: "Invalid start options",
+      note: "port and rpcPort must be different",
+    });
+  }
 
   const host = (options.host ?? "0.0.0.0").trim();
+  const rpc_host = "127.0.0.1";
   const agentId = resolveAgentId(projectRoot);
   let currentSystems = loadStaticSystemPrompts(projectRoot);
   const config = loadDowncityConfig(projectRoot);
@@ -100,26 +110,34 @@ export async function runCommand(
 
   process.env.DC_CITY_PORT = String(port);
   process.env.DC_CITY_HOST = host;
+  process.env.DC_AGENT_RPC_PORT = String(rpc_port);
+  process.env.DC_AGENT_RPC_HOST = rpc_host;
   process.env.DC_AGENT_ID = agentId;
   process.env.DC_AGENT_PATH = projectRoot;
 
   const startResult = await agent.start({
-    http: {
-      port,
-      host,
+    rpc: {
+      port: rpc_port,
+      host: rpc_host,
     },
     plugins: true,
   });
-
-  const server = startResult.http?.server;
-  if (!server) {
-    throw new Error("Agent start did not return expected HTTP binding");
+  if (!startResult.rpc?.server) {
+    throw new Error("Agent start did not return expected RPC binding");
   }
+
+  const server = await startServer({
+    host,
+    port,
+    getAgentRuntime: () => agent.getRuntime(),
+    getAgentContext: () => agent.getContext(),
+    sessionCollection: agent.getSessionCollection(),
+  });
 
   const agentLogger = agent.getLogger();
 
   // 处理进程信号
-  // 停机顺序（中文）：plugin runtimes -> API server -> flush logs。
+  // 停机顺序（中文）：HTTP gateway -> plugin runtimes / RPC server -> flush logs。
   let isShuttingDown = false;
   const shutdown = async (signal: string) => {
     if (isShuttingDown) return;
@@ -128,6 +146,7 @@ export async function runCommand(
     agentLogger.info(`Received ${signal} signal, shutting down...`);
     promptCatalog.stop();
 
+    await server.stop();
     await agent.stop();
 
     // Save logs

@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - ".github/scripts/resolve-publish-matrix.mjs"
+      - ".github/workflows/publish-packages.yml"
+      - "packages/*/package.json"
   workflow_dispatch:
 
 concurrency:
@@ -11,10 +15,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  detect:
+    name: Detect version bumps
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      has_packages: ${{ steps.detect.outputs.has_packages }}
     permissions:
       contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch comparison baseline
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GITHUB_EVENT_BEFORE:-}" ] || [ "$GITHUB_EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            exit 0
+          fi
+
+          git fetch --no-tags --depth=1 origin "$GITHUB_EVENT_BEFORE"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.1"
+
+      - name: Resolve publish matrix
+        id: detect
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: node .github/scripts/resolve-publish-matrix.mjs
+
+  publish:
+    name: Publish ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.has_packages == 'true'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,42 +73,56 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version: "22.13.1"
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        run: |
-          set -euo pipefail
-          pnpm -C packages/agent build
-          pnpm -C packages/plugins build
-          pnpm -C packages/city build
-
       - name: Validate npm token and package ownership
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGE_NAME: ${{ matrix.name }}
         run: |
           set -euo pipefail
           WHOAMI="$(npm whoami)"
           echo "Authenticated npm user: ${WHOAMI}"
-          for PACKAGE_NAME in @downcity/agent @downcity/plugins @downcity/city; do
-            if npm view "${PACKAGE_NAME}" version >/dev/null 2>&1; then
-              npm owner ls "${PACKAGE_NAME}"
-              if ! npm owner ls "${PACKAGE_NAME}" | awk '{print $1}' | grep -qx "${WHOAMI}"; then
-                echo "NPM_TOKEN user '${WHOAMI}' is not an owner of '${PACKAGE_NAME}'."
-                exit 1
-              fi
-            else
-              echo "${PACKAGE_NAME} is not published yet. Skipping owner check for first publish."
-            fi
-          done
 
-      - name: Check versions and publish
+          if npm view "${PACKAGE_NAME}" version >/dev/null 2>&1; then
+            npm owner ls "${PACKAGE_NAME}"
+            if ! npm owner ls "${PACKAGE_NAME}" | awk '{print $1}' | grep -qx "${WHOAMI}"; then
+              echo "NPM_TOKEN user '${WHOAMI}' is not an owner of '${PACKAGE_NAME}'."
+              exit 1
+            fi
+          else
+            echo "${PACKAGE_NAME} is not published yet. Skipping owner check for first publish."
+          fi
+
+      - name: Build workspace packages
+        run: pnpm -r --filter './packages/*' build
+
+      - name: Run package tests
+        env:
+          PACKAGE_PATH: ${{ matrix.path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          has_test_script="$(node -e "const p=require('./${PACKAGE_PATH}/package.json'); console.log(p.scripts && p.scripts.test ? 'true' : 'false')")"
+
+          if [ "$has_test_script" = "true" ]; then
+            pnpm -C "${PACKAGE_PATH}" test
+          else
+            pnpm -C "${PACKAGE_PATH}" build
+          fi
+
+      - name: Check version and publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGE_NAME: ${{ matrix.name }}
+          PACKAGE_PATH: ${{ matrix.path }}
+          PACKAGE_VERSION: ${{ matrix.version }}
         run: |
           set -euo pipefail
 
@@ -78,30 +138,17 @@ jobs:
             return 1
           }
 
-          publish_package() {
-            local package_dir="$1"
-            local package_name="$2"
-            local version
-            local pack_dir
-            local tarball
+          if has_published_version "${PACKAGE_NAME}" "${PACKAGE_VERSION}"; then
+            echo "${PACKAGE_NAME}@${PACKAGE_VERSION} already exists, skipping publish"
+            exit 0
+          fi
 
-            version="$(node -p "require('./${package_dir}/package.json').version")"
-            if has_published_version "${package_name}" "${version}"; then
-              echo "${package_name}@${version} already exists, skipping publish"
-              return 0
-            fi
+          PACK_DIR="$(mktemp -d)"
+          pnpm -C "${PACKAGE_PATH}" pack --pack-destination "${PACK_DIR}"
+          TARBALL="$(find "${PACK_DIR}" -maxdepth 1 -name "*.tgz" -print -quit)"
+          if [[ -z "${TARBALL}" ]]; then
+            echo "No tarball generated for ${PACKAGE_NAME}."
+            exit 1
+          fi
 
-            pack_dir="$(mktemp -d)"
-            pnpm -C "${package_dir}" pack --pack-destination "${pack_dir}"
-            tarball="$(find "${pack_dir}" -maxdepth 1 -name "*.tgz" -print -quit)"
-            if [[ -z "${tarball}" ]]; then
-              echo "No tarball generated for ${package_name}."
-              exit 1
-            fi
-
-            npm publish "${tarball}" --access public
-          }
-
-          publish_package packages/agent @downcity/agent
-          publish_package packages/plugins @downcity/plugins
-          publish_package packages/city @downcity/city
+          npm publish "${TARBALL}" --access public

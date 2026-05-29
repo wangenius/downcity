@@ -1,0 +1,49 @@
+# Downcity Node 街区的 Dokploy / Docker Compose 部署入口。
+#
+# 关键说明（中文）
+# - Dokploy 使用 Compose 模式时，Compose 文件路径填写 ./docker-compose.yml。
+# - 镜像构建逻辑内联在 Compose 里，部署入口只保留这一个文件。
+# - /data 必须持久化，否则 SQLite 数据库、用户、usage、payment 和 InfraRuntime env 会在重建后丢失。
+services:
+  downcity-infra:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:22.13.1-bookworm-slim
+
+        ENV PNPM_HOME="/pnpm"
+        ENV PATH="/pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        ENV HOST="0.0.0.0"
+        ENV PORT="43127"
+        ENV DOWNCITY_INFRA_DATABASE_URL="file:/data/downcity.sqlite"
+
+        WORKDIR /app
+
+        RUN corepack enable && corepack prepare pnpm@10.22.0 --activate
+
+        COPY . .
+
+        RUN pnpm install --frozen-lockfile
+        RUN pnpm -C packages/infra build
+        RUN pnpm -C packages/services build
+        RUN pnpm -C blocks/shared typecheck
+        RUN pnpm -C blocks/node typecheck
+
+        EXPOSE 43127
+        VOLUME ["/data"]
+
+        CMD ["pnpm", "-C", "blocks/node", "start"]
+    environment:
+      HOST: 0.0.0.0
+      PORT: 43127
+      DOWNCITY_INFRA_DATABASE_URL: file:/data/downcity.sqlite
+      DOWNCITY_INFRA_ADMIN_SECRET_KEY: ${DOWNCITY_INFRA_ADMIN_SECRET_KEY:-}
+      DOWNCITY_INFRA_TOKEN_SIGNING_KEY: ${DOWNCITY_INFRA_TOKEN_SIGNING_KEY:-}
+    ports:
+      - "43127:43127"
+    volumes:
+      - downcity_infra_data:/data
+    restart: unless-stopped
+
+volumes:
+  downcity_infra_data:

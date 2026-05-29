@@ -1,4 +1,4 @@
-# Dokploy 部署 Downcity Product Server
+# Dokploy 部署 Downcity Node 街区
 
 ## 部署配置
 
@@ -10,14 +10,20 @@
 
 镜像构建逻辑已经内联在 `docker-compose.yml` 中，不需要单独配置 Dockerfile。
 
-Dokploy 里只需要配置这两个环境变量：
+Dokploy 里必须配置这两个稳定的 bootstrap secret：
 
 ```env
 DOWNCITY_INFRA_ADMIN_SECRET_KEY=admin_xxx
 DOWNCITY_INFRA_TOKEN_SIGNING_KEY=sign_xxx
 ```
 
-`HOST`、`PORT` 和 `DOWNCITY_INFRA_DATABASE_URL` 已经写在 `docker-compose.yml` 中。`/data` 已经配置为持久化 volume。SQLite 数据库、product、model、auth session、usage、payment 和 InfraRuntime env 都会保存在这里。
+`HOST`、`PORT` 和 `DOWNCITY_INFRA_DATABASE_URL` 已经写在 `docker-compose.yml` 中。容器内数据库路径是：
+
+```env
+DOWNCITY_INFRA_DATABASE_URL=file:/data/downcity.sqlite
+```
+
+`/data` 已经配置为持久化 volume。SQLite 数据库、product、model、auth session、usage、payment 和 InfraRuntime env 都会保存在这里。
 
 容器启动命令已经写在 Compose 的内联构建配置里：
 
@@ -40,44 +46,32 @@ curl -X POST https://your-domain/v1/env/upsert \
 
 `DOWNCITY_INFRA_ADMIN_SECRET_KEY` 和 `DOWNCITY_INFRA_TOKEN_SIGNING_KEY` 是启动级 bootstrap secret，生产环境必须在 Dokploy env 中固定配置。
 
-## 本地 Client 连接 VPS
+## 本地验证
 
-本地运行：
-
-```bash
-npm run client
-```
-
-启动后在 `server URL` 输入远程 InfraRuntime 地址。可以只输入 VPS IP：
-
-```txt
-1.2.3.4
-```
-
-client 会自动补成：
-
-```txt
-http://1.2.3.4:43127
-```
-
-如果已经绑定域名，也可以输入完整地址：
-
-```txt
-https://your-domain
-```
-
-这个地址会缓存到 `~/.downcity/product-client-config.json`。之后可以在 CLI 里用 `/base` 修改。
-
-如果 terminal 提示 health 失败，可以先在本机验证：
+部署后先验证健康检查：
 
 ```bash
-curl http://your-domain/health
+curl https://your-domain/health
 ```
 
 只用 IP 和端口时：
 
-```bash
+```txt
 curl http://your-vps-ip:43127/health
 ```
 
 如果这里超时，说明 Dokploy 服务没有对外暴露、VPS 防火墙没放行 `43127`，或还没有绑定可访问的域名。
+
+## 本地运行
+
+本地开发仍然可以直接启动：
+
+```bash
+pnpm -C blocks/node start
+```
+
+默认监听 `127.0.0.1:43127`，并使用 `blocks/node/data.sqlite`。如果要模拟容器路径，可以临时传入：
+
+```bash
+HOST=0.0.0.0 DOWNCITY_INFRA_DATABASE_URL=file:/tmp/downcity.sqlite pnpm -C blocks/node start
+```

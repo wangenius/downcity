@@ -1,0 +1,27 @@
+node_modules
+**/node_modules
+.git
+.DS_Store
+.env
+**/.env
+
+# 构建产物与缓存
+homepage/build
+homepage/.source
+homepage/.react-router
+homepage/.vercel
+packages/*/bin
+blocks/**/.wrangler
+
+# 本地数据库与临时运行状态
+blocks/node/data.sqlite
+blocks/node/data.sqlite-shm
+blocks/node/data.sqlite-wal
+blocks/node/.base
+blocks/edge/.wrangler
+
+# 旧 products 时代的本地状态，避免误打进镜像
+products/**/.base
+products/**/*.sqlite
+products/**/*.sqlite-shm
+products/**/*.sqlite-wal

@@ -34,6 +34,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 - City control plane: run `city start` or `city console` to manage agents and access the control surface.
 - Agent daemon lifecycle: create, start, stop, restart, inspect, chat with, and diagnose project agents.
 - Global model pool: manage providers and models through `city model`, then bind projects to model IDs.
+- City Infra: reuse one shared service infrastructure across products with `@downcity/infra`, `@downcity/services`, `@downcity/conduit`, and deployable `blocks/*`.
 - Built-in services: `chat`, `task`, `memory`, `shell`, and `contact`.
 - Built-in plugins: `skill`, `auth`, `web`, `asr`, `tts`, and `workboard`.
 - SDK access: embed a local agent or call a remote agent over HTTP.
@@ -217,6 +218,7 @@ downcity/
 ## Documentation
 
 - Product docs: [downcity.ai/docs](https://downcity.ai/docs)
+- City Infra docs: [downcity.ai/docs/city-infra](https://downcity.ai/docs/city-infra)
 - Agent SDK docs: [downcity.ai/agent-sdk-docs](https://downcity.ai/agent-sdk-docs)
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Developer docs: [downcity.ai/devdocs](https://downcity.ai/devdocs)

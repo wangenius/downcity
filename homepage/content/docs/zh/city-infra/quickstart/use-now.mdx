@@ -1,0 +1,121 @@
+---
+title: 现在怎么用
+description: 用默认数据库、AdminClient 和 UserClient 跑通一条完整调用链。
+---
+
+如果你想先按仓库里的现成产品体验，入口是：
+
+- `blocks/node`
+- `packages/city-terminal`
+
+跑通后，你会得到这个调用链：
+
+```plaintext
+Product Client
+    ↓ AdminClient 创建 product / 签发 user_token
+Downcity InfraRuntime
+    ↓ UserClient 携带 user_token + product_id 调用 service
+Provider → AIService → handler
+```
+
+## 1. 启动 InfraRuntime
+
+```ts
+import { InfraRuntime, AIService, Provider } from "@downcity/infra";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+
+const sqlite = new Database("./data.sqlite");
+sqlite.pragma("journal_mode = WAL");
+
+const db = Object.assign(drizzle(sqlite), {
+  $client: { exec: (sql: string) => sqlite.exec(sql) },
+});
+
+const base = new InfraRuntime({ db, dialect: "sqlite", raw: sqlite });
+
+// 注册一个 echo 模型
+const echo = new Provider("echo", {
+  text: async (ctx) => ({
+    id: crypto.randomUUID(),
+    role: "assistant",
+    parts: [{ type: "text", text: `Echo: ${ctx.input.prompt}` }],
+  }),
+  stream: async (ctx) => {
+    const { createUIMessageStreamResponse } = await import("ai");
+    return createUIMessageStreamResponse({
+      execute: async ({ writer }) => {
+        writer.write({ type: "text-delta", textDelta: `Echo: ${ctx.input.prompt}` });
+      },
+    });
+  },
+});
+
+const ai = new AIService();
+ai.use(echo.model({ id: "local-echo", name: "Local Echo", default: true }));
+base.use(ai);
+
+import { serve } from "@hono/node-server";
+
+await base.health();
+serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
+```
+
+## 2. 创建 product 并签发 token
+
+```ts
+import { AdminClient } from "@downcity/conduit";
+
+const admin = new AdminClient({
+  base_url: "http://127.0.0.1:43127",
+  admin_secret_key: process.env.DOWNCITY_INFRA_ADMIN_SECRET_KEY,
+});
+
+const product = await admin.products.create({ name: "Demo Product" });
+const token = await admin.products.tokens.apply({
+  product_id: product.product_id,
+  user_id: "user_123",
+  metadata: { plan: "pro" },
+  ttl: "7d",
+});
+```
+
+## 3. 产品侧调用
+
+```ts
+import { UserClient } from "@downcity/conduit";
+
+const client = new UserClient({
+  base_url: "http://127.0.0.1:43127",
+  product_id: product.product_id,
+  user_token: token.user_token,
+});
+
+const catalog = await client.ai.listModels();
+
+// SDK 通路
+const result = await client.ai.text({
+  model: catalog.default(),
+  prompt: "你好 Downcity",
+});
+
+// OpenAI 兼容通路（curl）
+// POST /v1/ai/chat/completions
+// { model: "local-echo", messages: [{ role: "user", content: "hello" }] }
+```
+
+## 4. 你真正复用的是什么
+
+多个产品接入后，复用的是这些东西：
+
+- `.env` 中的 provider key
+- `user_token` 校验
+- AIService 的模型路由
+- hook 里的套餐、限额、日志和扣费
+
+下一步：
+
+- [Provider 与模型注册](/docs/city-infra/service/ai/provider)
+- [调用 AI 服务](/docs/city-infra/service/ai/calling)
+- [创建 InfraRuntime](/docs/city-infra/quickstart/create-infra)
+- [签发 user_token](/docs/city-infra/quickstart/issue-token)

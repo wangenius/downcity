@@ -1,0 +1,11 @@
+{
+  "title": "Accounts Service",
+  "pages": [
+    "index",
+    "register-and-login",
+    "oauth-and-session",
+    "google-login",
+    "wechat-login",
+    "admin-operations"
+  ]
+}

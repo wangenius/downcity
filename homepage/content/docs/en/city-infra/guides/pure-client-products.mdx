@@ -1,0 +1,59 @@
+---
+title: Pure-Client Products
+description: How new AI products can start as frontend-first products.
+---
+
+“Pure-client product” does not mean “no backend at all.” It means you stop rebuilding the AI backend for every product.
+
+Downcity lets a new product start from the frontend, extension, or app and connect to an already deployed InfraRuntime. You can validate the product UX first, then decide how much product-specific backend you really need.
+
+## Good fits
+
+- lightweight web tools
+- Chrome extensions
+- desktop shells
+- mobile entries
+- client demos
+- internal tools
+
+## Recommended boundary
+
+The client owns:
+
+- UI and interaction
+- calling `UserClient`
+- holding `product_id`
+- storing or refreshing `user_token`
+
+InfraRuntime owns:
+
+- provider keys
+- model directory
+- `user_token` verification
+- service routing
+- usage records
+- hooks and billing logic
+
+## The most common minimum shape
+
+```plaintext
+Product frontend
+  ↓
+Your login / token-issuing endpoint
+  ↓
+Downcity InfraRuntime
+```
+
+That product backend can stay very thin at first:
+
+- user login
+- `AdminClient.tokens.apply()`
+- returning `user_token + product_id` to the client
+
+## Why this fits early products better
+
+- you stop copying provider integrations for every AI idea
+- the frontend can ship much earlier
+- multiple products share one AI calling, logging, and quota layer
+
+If the product gets more complex later, then add more business backend. Do not duplicate the whole AI infrastructure on day one.

@@ -1,0 +1,11 @@
+{
+  "title": "上线与运维",
+  "pages": [
+    "index",
+    "production-checklist",
+    "deploy-dokploy",
+    "env-rotation",
+    "logging-and-usage",
+    "troubleshooting"
+  ]
+}

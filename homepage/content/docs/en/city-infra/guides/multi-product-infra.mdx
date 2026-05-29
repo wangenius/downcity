@@ -1,0 +1,130 @@
+---
+title: Many Products, One InfraRuntime
+description: How one InfraRuntime can serve multiple products without mixing product differences with shared infrastructure.
+---
+
+When many products share one InfraRuntime, the goal is not “save one server.” The goal is to separate **shared infrastructure** from **product-specific differences**.
+
+What should be shared:
+
+- provider env
+- model directory
+- service routing
+- hooks, usage, and logs
+- `user_token` verification
+
+What should stay in each product:
+
+- pages and interaction
+- the user system
+- plan, order, and balance rules
+- product-specific brand, positioning, and pricing
+
+## One diagram for the reuse boundary
+
+<div className="dc-doc-flow" aria-label="Many products share one InfraRuntime">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Product A</strong>
+      <span>For example, a web tool.</span>
+      <code>product_id = prod_web</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Product B</strong>
+      <span>For example, a Chrome extension.</span>
+      <code>product_id = prod_extension</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Product C</strong>
+      <span>For example, a client demo or internal tool.</span>
+      <code>product_id = prod_demo</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>One Downcity</strong>
+      <span>Reuses the model directory, provider env, service logic, usage records, and hooks.</span>
+    </div>
+  </div>
+</div>
+
+## How to think about `product_id`
+
+`product_id` is a product boundary, not a model boundary.
+
+It is useful for:
+
+- identifying which product sent the call
+- deciding whether a product is still `active`
+- telling hooks where usage should be recorded
+- separating one user’s activity across different products
+
+A common pattern is one stable `product_id` per product:
+
+```ts
+const product = await admin.products.create({
+  name: "Chrome Extension",
+});
+
+const issued = await admin.products.tokens.apply({
+  product_id: product.product_id,
+  user_id: "user_123",
+  metadata: {
+    plan: "starter",
+    channel: "extension",
+  },
+});
+```
+
+## What belongs in token metadata
+
+`product_id` says *which product this is*. Token metadata is better for *the user’s business state inside that product*.
+
+Common fields:
+
+- `plan`
+- `organization_id`
+- `channel`
+- `feature_flag`
+- `team_id`
+
+That lets hooks differentiate behavior with `ctx.product` and `ctx.user.metadata` instead of cloning InfraRuntime for each product.
+
+## Recommended layering
+
+### Product side
+
+- keeps routes, UI, and business experience
+- uses `UserClient`
+- only holds `product_id + user_token`
+
+### Business backend
+
+- owns login, orders, balance, subscriptions, and business data
+- uses `AdminClient` in a trusted environment
+- issues `user_token` after a successful login
+
+### InfraRuntime
+
+- owns the model directory
+- owns provider calls
+- owns usage and hooks
+- owns the reusable AI service layer
+
+## When to create a new product
+
+Usually worth creating a new product when:
+
+- it is a separate product or market
+- it needs to be paused or activated independently
+- it needs independent usage reporting or business strategy
+- you need to separate web app, extension, client demo, and other product surfaces
+
+Usually not worth creating a new product when:
+
+- it is only another page in the same product
+- it is only a feature flag inside the same product
+- it is just another conversation/session for one user
+
+Those are better kept inside your own business system or token metadata.

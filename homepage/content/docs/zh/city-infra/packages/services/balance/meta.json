@@ -1,0 +1,10 @@
+{
+  "title": "Balance 服务",
+  "pages": [
+    "index",
+    "global-wallet",
+    "hook-charging",
+    "topups-and-ledger",
+    "redeem-codes"
+  ]
+}

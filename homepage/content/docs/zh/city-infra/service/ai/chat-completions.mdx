@@ -1,0 +1,48 @@
+---
+title: /chat/completions
+description: OpenAI 兼容端点，让 pi-agent、OpenAI SDK 等第三方工具直接调用任何注册模型。
+---
+
+`POST /v1/ai/chat/completions` 是 AIService 的 OpenAI 兼容端点。
+
+## 工作原理
+
+```
+第三方工具
+  → POST /v1/ai/chat/completions
+  → { model, messages, stream, ... }
+  → AIService 解析 model → Provider action
+  → Provider openai action（或自动透传）
+  → 上游 API
+  → Response 原样返回
+```
+
+## 自动透传
+
+当 Provider 有 `baseURL` + `envKey` 但没有 `openai` action 时：
+
+- 请求 body 原样转发到 `{baseURL}/chat/completions`
+- `body.model` 被替换为 `passthroughModel`（有则替换）
+- 上游 Response（JSON 或 SSE）原样返回
+- 不经过 ai-sdk，零转换开销
+
+适用：DeepSeek、Moonshot 等 OpenAI 兼容的 API。
+
+## 自定义转换
+
+非 OpenAI 格式的 Provider（如 Anthropic）需要提供 `openai` action：
+
+```ts
+const kimiCode = new Provider("kimi-code", {
+  text: anthropicTextAction,
+  stream: anthropicStreamAction,
+  openai: async (ctx) => {
+    // Anthropic ↔ OpenAI 格式双向转换
+    const anthropicBody = openaiToAnthropic(ctx.input);
+    const response = await fetch(anthropicURL, { body: anthropicBody });
+    return ctx.input.stream
+      ? anthropicStreamToOpenAI(response)
+      : anthropicToOpenAI(await response.json());
+  },
+});
+```

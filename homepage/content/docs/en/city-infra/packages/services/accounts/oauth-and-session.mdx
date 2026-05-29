@@ -1,0 +1,51 @@
+---
+title: OAuth and Session
+description: "Where OAuth entry points, sessions, me, and logout sit in the product flow of @downcity/services."
+---
+
+Besides password-based registration and login, the accounts service also owns OAuth and session-related actions.
+
+## How to think about the OAuth entry points
+
+There are usually two phases:
+
+- `providers`
+- `oauth/start`
+- `oauth/result`
+
+In a typical product flow, `providers` tells the frontend which login methods are actually enabled on the current InfraRuntime, `oauth/start` begins the OAuth flow, and `oauth/result` confirms or polls for the result.
+
+The official accounts service can expose GitHub, Google, and WeChat Website App login depending on server-side configuration. The frontend should always trust `providers` instead of hardcoding third-party login buttons.
+
+If you want to actually wire up Google login next, continue with [Google Login Setup](/en/docs/city-infra/packages/services/accounts/google-login).
+
+If you want to actually wire up WeChat website login next, continue with [WeChat Login Setup](/en/docs/city-infra/packages/services/accounts/wechat-login).
+
+## `me` and `logout`
+
+These already belong to logged-in user context, not guest access.
+
+```ts
+const me = await user.service("accounts").get("me");
+
+await user.service("accounts").action("logout").invoke();
+```
+
+## Why session still matters here
+
+Even if the product mainly uses `user_token` to call InfraRuntime later, the account system still needs:
+
+- better-auth auth tables
+- a session table
+- login-state facts
+- product-facing profile data
+
+That is why the service is not just "a few routes," but a minimal account infrastructure layer.
+
+## What `me` returns now
+
+`GET /v1/accounts/me` no longer returns only the runtime `user`. It also returns:
+
+- `profile`: product-facing display data such as display name and avatar
+
+That keeps product clients and admin tools from reconstructing user state directly from auth rows.

@@ -1,0 +1,82 @@
+---
+title: Model Pathways
+description: The two-pathway architecture of Provider + AIService.
+---
+
+Downcity's AI service has **two independent pathways** sharing a single model registry:
+
+```
+                    Provider.model({ id: "deepseek-v4-flash", ... })
+                                    │
+                              ai.use(model)
+                                    │
+              ┌─────────────────────┴─────────────────────┐
+              │                                           │
+         SDK Pathway                            OpenAI-Compatible Pathway
+  For UserClient                              For pi-agent / curl / OpenAI SDK
+              │                                           │
+   POST /v1/ai/text               POST /v1/ai/chat/completions
+   POST /v1/ai/stream                  ↑
+              │                         OpenAI-format body
+              ▼                        { model, messages, stream }
+   provider.handlers.text                            │
+   provider.handlers.stream                          ▼
+      (ai-sdk wrapper)                  provider.handlers.openai
+              │                         (passthrough or format conversion)
+              ▼                                    │
+         UIMessage                                ▼
+      UIMessageStream                          Response
+                                           (upstream raw response)
+```
+
+## Provider Pattern
+
+```ts
+// OpenAI-compatible: no openai handler → auto-passthrough
+const deepseek = new Provider("deepseek", {
+  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+  baseURL: "https://api.deepseek.com",
+  envKey: "DEEPSEEK_API_KEY",
+  text: deepseekTextHandler,
+  stream: deepseekStreamHandler,
+});
+
+// Non-OpenAI format: must provide openai handler
+const kimiCode = new Provider("kimi-code", {
+  env: { KIMI_CODE_API_KEY: "Kimi Code API Key" },
+  text: kimiTextHandler,
+  stream: kimiStreamHandler,
+  openai: kimiOpenAIHandler,  // Anthropic ↔ OpenAI conversion
+});
+```
+
+## Auto Passthrough
+
+When no `openai` handler but `baseURL` + `envKey` exist, AIService auto-generates a passthrough:
+
+```
+POST /chat/completions → fetch(baseURL + body) → raw upstream Response
+```
+
+Zero adapter code. Fully OpenAI-compatible.
+
+## Format Conversion
+
+For non-OpenAI providers (e.g., Anthropic), the `openai` handler does bidirectional conversion:
+
+- Downstream: OpenAI body → Provider format (e.g., Anthropic messages)
+- Upstream (non-streaming): Provider JSON → OpenAI JSON
+- Upstream (streaming): Provider SSE events → OpenAI SSE chunks (event by event)
+
+## Routes
+
+| Route | Pathway |
+|---|---|
+| `POST /v1/ai/text` | SDK |
+| `POST /v1/ai/stream` | SDK |
+| `POST /v1/ai/image` | SDK |
+| `POST /v1/ai/video` | SDK |
+| `POST /v1/ai/tts` | SDK |
+| `POST /v1/ai/asr` | SDK |
+| `POST /v1/ai/chat/completions` | OpenAI-Compatible |
+| `GET /v1/ai/models` | Model Catalog |

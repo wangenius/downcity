@@ -1,0 +1,55 @@
+---
+title: Add a Model
+description: Register models with Provider + AIService. OpenAI-compatible providers auto-passthrough.
+---
+
+## Scenario 1: OpenAI-Compatible Provider (Auto Passthrough)
+
+For DeepSeek, Moonshot, Groq, vLLM, Ollama, and others:
+
+```ts
+import { Provider, AIService } from "@downcity/infra";
+
+const deepseek = new Provider("deepseek", {
+  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+  baseURL: "https://api.deepseek.com",
+  envKey: "DEEPSEEK_API_KEY",       // auto-passthrough uses this
+  text: deepseekTextHandler,        // SDK pathway
+  stream: deepseekStreamHandler,    // SDK pathway
+  // no openai → auto-passthrough
+});
+
+const ai = new AIService();
+ai.use(deepseek.model({
+  id: "deepseek-v4-flash",
+  name: "DeepSeek V4 Flash",
+  description: "DeepSeek text model",
+  default: true,
+}));
+base.use(ai);
+```
+
+## Scenario 2: Non-OpenAI Provider (Need openai Handler)
+
+For Anthropic, Gemini, and other providers with different API formats:
+
+```ts
+const kimiCode = new Provider("kimi-code", {
+  env: { KIMI_CODE_API_KEY: "Kimi Code API Key" },
+  text: kimiTextHandler,
+  stream: kimiStreamHandler,
+  openai: async (ctx) => {
+    // Downstream: OpenAI body → Anthropic body
+    // Upstream: Anthropic response → OpenAI response
+    // (streaming: SSE event-by-event conversion)
+  },
+});
+```
+
+## Handler Signatures
+
+| Pathway | ctx.input | Return |
+|---|---|---|
+| `text` | `{ prompt }` | `UIMessage` |
+| `stream` | `{ prompt }` | `Response` (SSE) or `UIMessageStream` |
+| `openai` | `{ model, messages, stream, ... }` | `Response` |

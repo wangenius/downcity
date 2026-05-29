@@ -1,0 +1,100 @@
+---
+title: Dokploy 部署
+description: 把 Downcity Product Server 部署到 Dokploy，并让本地 client 连接 VPS。
+---
+
+Downcity Product Server 推荐用仓库根目录的 `./docker-compose.yml` 部署到 Dokploy。
+
+## Dokploy 配置
+
+在 Dokploy 里创建应用，选择当前 Git 仓库：
+
+| 配置项 | 值 |
+| --- | --- |
+| 部署模式 | Compose |
+| Compose 文件 | `./docker-compose.yml` |
+| Container port | `43127` |
+| Volume | Compose 自动创建 `downcity_product_data` |
+
+Dokploy 里只需要配置这两个环境变量：
+
+```txt
+DOWNCITY_INFRA_ADMIN_SECRET_KEY=admin_xxx
+DOWNCITY_INFRA_TOKEN_SIGNING_KEY=sign_xxx
+```
+
+`HOST`、`PORT` 和 `DOWNCITY_INFRA_DATABASE_URL` 已经写在 `docker-compose.yml` 中。`/data` 必须是持久化 volume。SQLite 数据库、product、model、用户、session、usage、payment 和 InfraRuntime env 都会保存在这里。
+
+## 域名路径
+
+Product Server 默认监听 `43127`，InfraRuntime API 直接挂在服务根路径下，例如 `/v1/env/upsert` 和 `/health`。
+
+如果你的域名是 `https://base.example.com`，本地 client 应该连接：
+
+```txt
+DOWNCITY_INFRA_BASE_URL=https://base.example.com
+```
+
+如果你在反向代理里主动把服务挂到 `` 子路径，再把 `base_url` 写成 `https://base.example.com`。
+
+## Provider Key
+
+Provider API key 不建议写在 Dokploy env 里。部署完成后，通过 Admin API 写入 InfraRuntime 数据库：
+
+```bash
+curl -X POST https://base.example.com/v1/env/upsert \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer admin_xxx' \
+  -d '{"key":"MOONSHOT_API_KEY","value":"your_api_key"}'
+
+curl -X POST https://base.example.com/v1/env/upsert \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer admin_xxx' \
+  -d '{"key":"DEEPSEEK_API_KEY","value":"your_api_key"}'
+```
+
+运行时 `ctx.env.MOONSHOT_API_KEY` 和 `ctx.env.DEEPSEEK_API_KEY` 会优先从 InfraRuntime 数据库读取。
+
+`DOWNCITY_INFRA_ADMIN_SECRET_KEY` 和 `DOWNCITY_INFRA_TOKEN_SIGNING_KEY` 是启动级 bootstrap secret，生产环境仍然需要固定配置在 Dokploy env 中。
+
+## 本地 Client
+
+本地运行：
+
+```bash
+npm run client
+```
+
+启动后在 `base url` 输入远程 InfraRuntime 地址。可以只输入 VPS IP：
+
+```txt
+1.2.3.4
+```
+
+client 会自动补成：
+
+```txt
+http://1.2.3.4:43127
+```
+
+如果已经绑定域名，也可以输入完整地址：
+
+```txt
+https://base.example.com
+```
+
+client 会连接 VPS 上的 Product Server。启动后选择 `admin` 或 `user` 模式，本地会缓存 base URL、admin token 和 user session，不需要每次重新登录。后续可以在 CLI 里用 `/base` 修改远程地址。
+
+如果 client 提示 health 失败，可以先在本机验证：
+
+```bash
+curl http://base.example.com/health
+```
+
+只用 IP 和端口时：
+
+```bash
+curl http://1.2.3.4:43127/health
+```
+
+如果这里超时，说明 Dokploy 服务没有对外暴露、VPS 防火墙没放行 `43127`，或还没有绑定可访问的域名。

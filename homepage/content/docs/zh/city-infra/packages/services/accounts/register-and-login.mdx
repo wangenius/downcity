@@ -1,0 +1,47 @@
+---
+title: 注册与登录
+description: "@downcity/services 下最常见的 register、login 和 user_token 返回链路。"
+---
+
+`@downcity/services` 最直接解决的问题，就是让产品在没有自建账号系统的情况下先跑通注册登录。
+
+## register
+
+```ts
+const session = await guest.service("accounts").action("register").invoke({
+  email: "user@example.com",
+  password: "password123",
+  product_id: "prod_demo",
+});
+```
+
+## login
+
+```ts
+const session = await guest.service("accounts").action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  product_id: "prod_demo",
+});
+```
+
+## 为什么这里要带 `product_id`
+
+因为 service 在登录或注册成功后，通常会顺手向 InfraRuntime 申请该 product 下的 `user_token`。
+
+所以它需要知道：
+
+- 当前是哪个产品
+- 当前要给哪个产品上下文签 token
+
+## 登录成功后要做什么
+
+不是继续一直用 guest client，而是切到正常用户态：
+
+```ts
+const user = new UserClient({
+  base_url,
+  product_id: "prod_demo",
+  user_token: session.user_token,
+});
+```

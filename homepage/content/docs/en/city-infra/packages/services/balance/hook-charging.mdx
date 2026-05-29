@@ -1,0 +1,60 @@
+---
+title: Charge directly from hooks
+description: "The recommended pattern is to call balance service methods from business hooks instead of storing pricing rules in service config."
+---
+
+The recommended pattern is not declarative pricing.
+
+Instead:
+
+1. register `balanceService()`
+2. call it directly from business hooks
+3. `require()` before execution
+4. `sub()` after a successful call
+
+## Why this is more flexible
+
+Pricing usually belongs to business logic:
+
+- which actions should charge
+- whether one model costs more
+- whether one product should be free
+- whether one user segment gets discounts
+
+That logic fits your own hooks better than service config.
+
+```ts
+const balance = balanceService({
+  init: 100,
+  unit: "credits",
+});
+
+base.use(balance);
+
+const ai = new AIService();
+
+ai.hook.before(async (ctx) => {
+  if (ctx.identity?.kind !== "user") return;
+  if (ctx.action?.id !== "chat/completions") return;
+
+  await balance.require(ctx.user!.user_id, 10);
+  ctx.locals.balance_amount = 10;
+});
+
+ai.hook.after(async (ctx) => {
+  if (ctx.identity?.kind !== "user") return;
+  if (ctx.action?.id !== "chat/completions") return;
+  if (ctx.output instanceof Response && ctx.output.status >= 400) return;
+
+  const amount = Number(ctx.locals.balance_amount ?? 0);
+  if (amount <= 0) return;
+
+  await balance.sub(ctx.user!.user_id, amount, {
+    note: "agent chat",
+    meta: {
+      product_id: ctx.product?.product_id,
+      model_id: ctx.variant?.id,
+    },
+  });
+});
+```

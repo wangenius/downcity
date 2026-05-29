@@ -1,0 +1,17 @@
+{
+  "title": "场景指南",
+  "pages": [
+    "index",
+    "pure-client-products",
+    "multi-product-infra",
+    "cloudflare-workers",
+    "services",
+    "accounts-service",
+    "usage-service",
+    "payment-stripe-service",
+    "auth-and-user-token",
+    "provider-env",
+    "model-adapters",
+    "hooks-and-billing"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "title": "Packages",
+  "pages": [
+    "index",
+    "infra",
+    "conduit",
+    "city-terminal",
+    "services"
+  ]
+}

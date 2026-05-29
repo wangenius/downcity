@@ -1,0 +1,38 @@
+---
+title: Auth and `user_token`
+description: Connect your login system to Downcity token issuance.
+---
+
+Downcity does not host your user system. It only requires a verifiable `user_token` on product-side requests.
+
+## If you already have login
+
+After a user logs in, issue a Downcity token through `AdminClient`:
+
+```ts
+const user = await admin.products.tokens.apply({
+  product_id: "prod_xxx",
+  user_id: session.user.id,
+  metadata: {
+    plan: session.user.plan,
+  },
+  ttl: "7d",
+});
+```
+
+Then give the product side two values:
+
+- `product_id`
+- `user_token`
+
+## If you do not have a heavy backend yet
+
+For new pure-client products, keep token issuance near one shared InfraRuntime instead of building a separate service per product.
+
+## What the token should not do
+
+- Do not put provider keys into the token.
+- Do not put private billing rules into the token.
+- Do not let the client hold `DOWNCITY_INFRA_ADMIN_SECRET_KEY`.
+
+The token only needs to express who the user is and which business metadata should travel with the request.

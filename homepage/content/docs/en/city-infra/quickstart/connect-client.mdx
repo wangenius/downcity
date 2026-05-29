@@ -1,0 +1,44 @@
+---
+title: Connect Client
+description: Call InfraRuntime from the product with UserClient.
+---
+
+Product clients use `UserClient`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
+
+```ts
+import { UserClient } from "@downcity/conduit";
+
+const client = new UserClient({
+  base_url: "https://base.example.com",
+  product_id: "prod_xxx",
+  user_token: "ub_xxx",
+});
+
+const catalog = await client.ai.listModels();
+
+const result = await client.ai.text({
+  model: catalog.default(),
+  prompt: "Write a welcome message for the product",
+});
+```
+
+If you already know the target model, select it directly from the directory:
+
+```ts
+const body = await client.ai.stream({
+  model: catalog.get("gpt-5.4"),
+  prompt: "Stream a short paragraph",
+});
+```
+
+`ai.text()` returns an AI SDK `UIMessage`. `ai.stream()` returns `ReadableStream<UIMessageChunk>` when the InfraRuntime-side stream handler returns an AI SDK UIMessage stream response.
+
+One InfraRuntime can serve many client surfaces:
+
+- `https://app.example.com`
+- a Chrome extension
+- a desktop tool
+- a mobile app
+- an internal operations tool
+
+Those clients do not need to manage provider keys, model routing, or usage tracking on their own.

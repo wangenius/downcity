@@ -1,0 +1,78 @@
+---
+title: InfraRuntime
+description: InfraRuntime is a set of SDK capabilities + an HTTP routing engine. Extend with Service and AIService.
+---
+
+`InfraRuntime` is the core instance. It encapsulates HTTP routing, auth, env vars, and database infrastructure.
+
+## Minimal Usage
+
+```ts
+import { InfraRuntime } from "@downcity/infra";
+
+const base = new InfraRuntime({ db });
+```
+
+## Service Registration
+
+```ts
+import { AIService, Provider } from "@downcity/infra";
+
+const deepseek = new Provider("deepseek", {
+  baseURL: "https://api.deepseek.com",
+  envKey: "DEEPSEEK_API_KEY",
+  text: myTextHandler,
+  stream: myStreamHandler,
+});
+
+const ai = new AIService();
+ai.use(deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }));
+base.use(ai);
+```
+
+See [Provider & Model Registration](/en/docs/city-infra/service/ai/provider).
+
+## Official Service Registration
+
+```ts
+import { accountsService } from "@downcity/services";
+base.use(accountsService());
+```
+
+## Routing
+
+```ts
+import { serve } from "@hono/node-server";
+serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
+```
+
+## instruction aggregation
+
+`InfraRuntime` can return a plain-text instruction document for the current instance:
+
+```ts
+const text = await base.instruction();
+```
+
+The text aggregates:
+
+- how to use the InfraRuntime itself
+- which services are currently mounted
+- env requirements declared by each module
+- extra usage notes contributed by services
+
+To read the same document remotely from a trusted admin side, call:
+
+```txt
+GET /v1/base/instruction
+```
+
+This route is admin-only and returns `text/plain`.
+
+## Auth
+
+InfraRuntime automatically validates `user_token` and `admin_secret_key`. Access current user via `ctx.user`.
+
+## Database
+
+`ctx.db["table_name"]` provides InfraRuntimeTableApi. Supports SQLite and PostgreSQL.

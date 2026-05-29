@@ -1,0 +1,100 @@
+---
+title: Deploy With Dokploy
+description: Deploy the Downcity Product Server to Dokploy and connect a local client to the VPS.
+---
+
+The Downcity Product Server should be deployed to Dokploy with the repository-root `./docker-compose.yml`.
+
+## Dokploy Settings
+
+Create an app in Dokploy from this Git repository:
+
+| Setting | Value |
+| --- | --- |
+| Deployment mode | Compose |
+| Compose file | `./docker-compose.yml` |
+| Container port | `43127` |
+| Volume | Compose creates `downcity_product_data` |
+
+Configure these two environment variables in Dokploy:
+
+```txt
+DOWNCITY_INFRA_ADMIN_SECRET_KEY=admin_xxx
+DOWNCITY_INFRA_TOKEN_SIGNING_KEY=sign_xxx
+```
+
+`HOST`, `PORT`, and `DOWNCITY_INFRA_DATABASE_URL` are already defined in `docker-compose.yml`. `/data` must be persistent. SQLite data, products, models, users, sessions, usage, payments, and InfraRuntime env entries are stored there.
+
+## Domain Path
+
+The Product Server listens on `43127`, and the InfraRuntime API is mounted at the service root, for example `/v1/env/upsert` and `/health`.
+
+If your domain is `https://base.example.com`, the local client should connect to:
+
+```txt
+DOWNCITY_INFRA_BASE_URL=https://base.example.com
+```
+
+If your reverse proxy intentionally mounts the service under ``, then set `base_url` to `https://base.example.com`.
+
+## Provider Keys
+
+Provider API keys should not be stored in Dokploy env. After deployment, write them into the InfraRuntime database through the Admin API:
+
+```bash
+curl -X POST https://base.example.com/v1/env/upsert \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer admin_xxx' \
+  -d '{"key":"MOONSHOT_API_KEY","value":"your_api_key"}'
+
+curl -X POST https://base.example.com/v1/env/upsert \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer admin_xxx' \
+  -d '{"key":"DEEPSEEK_API_KEY","value":"your_api_key"}'
+```
+
+At runtime, `ctx.env.MOONSHOT_API_KEY` and `ctx.env.DEEPSEEK_API_KEY` are read from the InfraRuntime database first.
+
+`DOWNCITY_INFRA_ADMIN_SECRET_KEY` and `DOWNCITY_INFRA_TOKEN_SIGNING_KEY` are bootstrap secrets and should still be configured in Dokploy env.
+
+## Local Client
+
+Run locally:
+
+```bash
+npm run client
+```
+
+When prompted for `base url`, you can enter only the VPS IP:
+
+```txt
+1.2.3.4
+```
+
+The client expands it to:
+
+```txt
+http://1.2.3.4:43127
+```
+
+If you already configured a domain, you can enter the full URL:
+
+```txt
+https://base.example.com
+```
+
+The client connects to the Product Server on the VPS. Choose `admin` or `user` mode after startup. The local base URL, admin token, and user session are cached so you do not need to log in every time. Use `/base` inside the CLI to change the remote URL later.
+
+If the client reports a health failure, verify it locally first:
+
+```bash
+curl http://base.example.com/health
+```
+
+When using an IP and port:
+
+```bash
+curl http://1.2.3.4:43127/health
+```
+
+If the request times out, the Dokploy service is not exposed publicly, the VPS firewall does not allow `43127`, or a reachable domain has not been bound yet.

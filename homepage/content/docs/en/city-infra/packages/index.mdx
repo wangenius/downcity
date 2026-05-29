@@ -1,0 +1,126 @@
+---
+title: Packages
+description: "Understand Downcity Infra package by package: responsibilities, composition, and adoption order."
+---
+
+If you already know which package you want to inspect, this section is the fastest route.
+
+Downcity keeps the package graph intentionally small: start with `@downcity/infra` for the InfraRuntime itself, add `@downcity/conduit` for product calls, create a Drizzle db in your host runtime, and add official services only when the product needs them.
+
+That order maps to four clear roles:
+
+- `core` is the Kernel for the InfraRuntime itself
+- `services` are Capabilities that add official behavior
+- `client` and `city terminal` are Interfaces for product and operator entry
+- `products/*` is the Composition layer that assembles runnable examples
+
+If you only care about npm packages, the three most important pieces to remember first are `core`, `services`, and `client`.
+
+## Recommended order
+
+1. Start with [@downcity/infra](/en/docs/city-infra/packages/infra) to understand the InfraRuntime itself
+2. Then read [@downcity/conduit](/en/docs/city-infra/packages/conduit) to see how products call it
+3. If you want terminal tooling, read [@downcity/city](/en/docs/city-infra/packages/city-terminal)
+4. Add `@downcity/services` when your product needs auth, wallet, usage, or Stripe payment flows
+
+## If you only want the integration picture first
+
+Read the package layer as this chain:
+
+```txt
+@downcity/infra
+  -> provides the InfraRuntime Kernel
+@downcity/services
+  -> adds official capabilities into InfraRuntime
+@downcity/conduit
+  -> uses UserClient and AdminClient to call those capabilities
+```
+
+So `@downcity/conduit` is not only for AI calls.
+
+It also unifies:
+
+- AI service calls
+- custom service calls
+- official service calls
+- trusted-side product, token, and env management calls
+
+## One responsibility map
+
+```txt
+Kernel        -> @downcity/infra
+Capabilities  -> @downcity/services
+Interfaces    -> @downcity/conduit + @downcity/city
+Composition   -> blocks/node + blocks/edge
+```
+
+## Infra packages
+
+<div className="dc-doc-grid">
+  <a className="dc-doc-card" href="/en/docs/city-infra/packages/infra">
+    <strong>@downcity/infra</strong>
+    <p>The InfraRuntime core: services, AIService, routes, auth, and model catalogs.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city-infra/packages/conduit">
+    <strong>@downcity/conduit</strong>
+    <p>The product SDK that exposes `UserClient` and `AdminClient`, and unifies AI, custom service, service, and trusted-side call boundaries.</p>
+  </a>
+</div>
+
+If you want to deploy InfraRuntime in Cloudflare Workers, you do not need an extra edge package. Read [Cloudflare Workers](/en/docs/city-infra/guides/cloudflare-workers) and use `blocks/edge` as the reference implementation.
+
+## Tooling and services
+
+<div className="dc-doc-grid">
+  <a className="dc-doc-card" href="/en/docs/city-infra/packages/city-terminal">
+    <strong>@downcity/city</strong>
+    <p>An interactive terminal city terminal for admin flows, user flows, model checks, and direct runtime inspection through `downcity`.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city-infra/packages/services/accounts">
+    <strong>Accounts Service</strong>
+    <p>The auth capability inside `@downcity/services` for registration, login, sessions, OAuth entry points, and `user_token` issuance.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city-infra/packages/services/balance">
+    <strong>Balance Service</strong>
+    <p>The wallet capability inside `@downcity/services` for user balance, topups, and ledger records while keeping charging policy in your hooks.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city-infra/packages/services/usage">
+    <strong>Usage Service</strong>
+    <p>The usage capability inside `@downcity/services` that records service-call facts for analytics, metering, and billing pipelines.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city-infra/packages/services/payment-stripe">
+    <strong>Stripe Payment Service</strong>
+    <p>The Stripe topup capability inside `@downcity/services` for Checkout creation, webhook records, and wallet credit after payment succeeds.</p>
+  </a>
+</div>
+
+## Typical combinations
+
+### Minimal AI product
+
+- `@downcity/infra`
+- `@downcity/conduit`
+
+### Minimal registration and login
+
+- `@downcity/infra`
+- `@downcity/conduit`
+- `@downcity/services`
+
+### Usage metering
+
+- `@downcity/infra`
+- `@downcity/conduit`
+- `@downcity/services`
+
+### Global wallet and topup orders
+
+- `@downcity/infra`
+- `@downcity/conduit`
+- `@downcity/services`
+
+### Payment entitlements
+
+- `@downcity/infra`
+- `@downcity/conduit`
+- `@downcity/services`

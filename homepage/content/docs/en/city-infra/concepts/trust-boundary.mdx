@@ -1,0 +1,33 @@
+---
+title: Trust Boundary
+description: What can live in the client and what must stay in InfraRuntime or another trusted service.
+---
+
+The Downcity security model depends on a clear trust boundary.
+
+## Safe to keep in the client
+
+- `UserClient`
+- `base_url`
+- `user_token`
+- model IDs
+- user input such as prompt, messages, size, and voice
+
+## Must stay in a trusted environment
+
+- provider API keys
+- `DOWNCITY_INFRA_ADMIN_SECRET_KEY`
+- Runtime env management permissions
+- token issuance logic
+- plans, balances, billing, and risk-control decisions
+
+## InfraRuntime's boundary
+
+InfraRuntime validates `user_token`, reads Runtime env, and calls the real model through service handlers. The client does not need to know the provider key, and it does not need to know how your internal billing works.
+
+```plaintext
+the client can know: which model to call
+the client should not know: which provider key powers that model
+```
+
+This boundary allows pure-client products to connect directly to InfraRuntime without exposing sensitive configuration.

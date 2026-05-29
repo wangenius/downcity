@@ -1,0 +1,78 @@
+---
+title: official services
+description: Add accounts, usage, and payment capabilities to InfraRuntime through package services.
+---
+
+Services package backend capabilities that many client products reuse. InfraRuntime users do not define database tables for these official services.
+
+## Minimal Setup
+
+```ts
+import { accountsService } from "@downcity/services";
+import { balanceService } from "@downcity/services";
+import { paymentService } from "@downcity/services";
+import { stripePaymentMethod } from "@downcity/services";
+import { usageService } from "@downcity/services";
+import { stripePaymentService } from "@downcity/services";
+
+const balance = balanceService();
+
+base.use(accountsService());
+base.use(balance);
+base.use(paymentService({
+  methods: [
+    stripePaymentMethod(),
+  ],
+}));
+base.use(usageService());
+base.use(stripePaymentService({
+  balance: {
+    readTopup: async (topup_id) => await balance.readTopup(topup_id),
+    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  },
+  secret_key: process.env.STRIPE_SECRET_KEY,
+  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+}));
+```
+
+Services register their own actions and tables into InfraRuntime. The product example also registers `EnvService`, `ProductsService`, and `AIService` explicitly.
+
+## Calling Services From Clients
+
+UserClient calls guest-access service entry points with `base_url` only:
+
+```ts
+const guest = new UserClient({
+  base_url: "https://base.example.com",
+});
+
+const accounts = guest.service("accounts");
+
+const session = await accounts.action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  product_id: "prod_demo",
+});
+```
+
+UserClient calls authenticated service entry points after it has `product_id + user_token`:
+
+```ts
+const usage = user.service("usage");
+
+const myUsage = await usage.get("me");
+```
+
+AdminClient calls `/v1/{serviceId}`:
+
+```ts
+const usage = admin.service("usage");
+
+const events = await usage.get("events");
+```
+
+## Next
+
+- [accounts service](/en/docs/city-infra/guides/accounts-service)
+- [usage service](/en/docs/city-infra/guides/usage-service)
+- [Stripe payment service](/en/docs/city-infra/guides/payment-stripe-service)

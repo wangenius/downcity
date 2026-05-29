@@ -1,0 +1,66 @@
+---
+title: 常见问题
+description: 调试 InfraRuntime、client、token 和 env 的常见路径。
+---
+
+## client 返回 401
+
+检查：
+
+- 请求是否带了 `Authorization: Bearer <user_token>`。
+- token 是否过期。
+- InfraRuntime 是否配置了 `DOWNCITY_INFRA_TOKEN_SIGNING_KEY`。
+- token 是否由当前 InfraRuntime 签发。
+- `product_id` 是否和 token 里的 product 一致。
+
+## client 返回 403
+
+检查：
+
+- 请求体里的 `product_id` 是否和当前 `user_token` 所属 product 一致。
+- token 所属 product 是否已经被暂停。
+- 管理端签发 token 时，目标 product 是否是 `active`。
+
+## client 返回 404
+
+检查：
+
+- 调用的 HTTP 路由是否正确。
+- 目标 service 是否已经在 InfraRuntime 里注册。
+- 管理端签发 token 时，目标 product 是否存在。
+
+## 模型不存在或没有命中 handler
+
+检查：
+
+- client 传入的 `model` 是否已通过 `Provider.model()` + `AIService.use()` 注册
+- 目标 model 是否包含当前通路的 action，例如 `text`、`stream` 或 `image`。
+- 当前通路是否有默认 model，例如 `default: true` 或 `default: ["text"]`。
+- `client.ai.listModels()` 是否能看到这个 model。
+
+这类问题通常会返回 `422`。
+
+## InfraRuntime 返回 500
+
+检查：
+
+- InfraRuntime 是否配置了 `DOWNCITY_INFRA_TOKEN_SIGNING_KEY` 和 `DOWNCITY_INFRA_ADMIN_SECRET_KEY`。
+- 目标 service 是否已经注册 handler。
+- handler 或 provider 调用是否抛出了没有 `statusCode` 的错误。
+- `onError` hook 是否记录了原始错误。
+
+## provider 调用失败
+
+检查：
+
+- InfraRuntime `.env` 是否存在对应 key。
+- handler 是否读取了正确的 `ctx.env` 字段。
+- model `meta` 是否和当前 provider 调用方式匹配。
+
+## usage 没有记录
+
+检查：
+
+- `after` hook 是否注册到目标 service，或是否启用了 `usageService()`。
+- 记录逻辑是否依赖某个 output 字段但 handler 没有返回。
+- 日志服务是否吞掉了异常。

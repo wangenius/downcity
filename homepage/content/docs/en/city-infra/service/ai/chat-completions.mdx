@@ -1,0 +1,87 @@
+---
+title: /chat/completions Endpoint
+description: Auto-passthrough mechanism, format conversion, SSE event mapping, and calling methods.
+---
+
+`POST /v1/ai/chat/completions` is the OpenAI-compatible endpoint.
+
+## How It Works
+
+```
+POST /v1/ai/chat/completions
+  { model, messages, stream }
+              │
+              ▼
+       resolve(mode: "openai")
+              │
+    ┌─────────┴──────────┐
+    │                    │
+  Has openai handler  No openai handler
+  (non-OpenAI format) (OpenAI-compatible)
+    │                    │
+    ▼                    ▼
+  Custom conversion    Auto passthrough
+    │                    │
+    ▼                    ▼
+  Response            Response
+```
+
+## Auto Passthrough
+
+When a provider has `baseURL` + `envKey` but no `openai` handler, AIService auto-generates a passthrough:
+
+```ts
+async (ctx) => {
+  const apiKey = ctx.env(envKey);
+  return fetch(`${baseURL}/chat/completions`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(ctx.input),  // forward as-is
+  });
+};
+```
+
+No ai-sdk. No type conversion. Fully transparent.
+
+## Format Conversion
+
+For non-OpenAI providers (e.g., Anthropic), the `openai` handler does bidirectional conversion.
+
+### SSE Event Mapping (Anthropic → OpenAI)
+
+| Anthropic SSE Event | OpenAI SSE Chunk |
+|---|---|
+| `message_start` | `delta: { role: "assistant" }` |
+| `content_block_delta` (text_delta) | `delta: { content: "..." }` |
+| `content_block_delta` (input_json_delta) | `delta: { tool_calls: [...] }` |
+| `message_delta` | `finish_reason: "stop"` + `usage` |
+| `message_stop` | `data: [DONE]` |
+
+### stop_reason Mapping
+
+| Anthropic | OpenAI |
+|---|---|
+| `end_turn` | `stop` |
+| `max_tokens` | `length` |
+| `tool_use` | `tool_calls` |
+
+## Calling
+
+```bash
+# curl streaming
+curl http://127.0.0.1:43127/v1/ai/chat/completions \
+  -H "Authorization: Bearer ub_xxx" \
+  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hello"}],"stream":true}'
+```
+
+```ts
+// OpenAI SDK
+const openai = new OpenAI({
+  baseURL: "http://127.0.0.1:43127/v1/ai",
+  apiKey: "ub_xxx",
+});
+await openai.chat.completions.create({
+  model: "kimi-k2.6",
+  messages: [{ role: "user", content: "hello" }],
+  stream: true,
+});
+```

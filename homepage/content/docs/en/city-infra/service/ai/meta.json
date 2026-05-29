@@ -1,0 +1,9 @@
+{
+  "title": "AI Services",
+  "pages": [
+    "index",
+    "provider",
+    "chat-completions",
+    "calling"
+  ]
+}

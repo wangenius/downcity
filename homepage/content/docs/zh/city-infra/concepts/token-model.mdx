@@ -1,0 +1,74 @@
+---
+title: token 模型
+description: admin_secret_key 和 user_token 如何配合。
+---
+
+Downcity 使用 `admin_secret_key` 管理 InfraRuntime，并使用 `user_token` 让终端 client 调用 service。
+
+<div className="dc-doc-flow" aria-label="admin_secret_key 和 user_token 的边界图">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>可信后端</strong>
+      <span>你的后端使用 AdminClient，并持有 `admin_secret_key`。</span>
+      <code>创建 product / 申请 user_token</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Downcity</strong>
+      <span>校验 `admin_secret_key`，签发 `user_token`，并在内部保存 provider key。</span>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>终端 client</strong>
+      <span>前端、扩展或 App 只拿 `user_token + product_id`，使用 UserClient 调 service。</span>
+      <code>拿不到 admin_secret_key</code>
+    </div>
+  </div>
+</div>
+
+## user_token
+
+`user_token` 是给终端用户或产品 client 使用的调用凭证。它由 `AdminClient` 基于 `product_id + user_id` 向 InfraRuntime 申请。
+
+- `product_id`
+- `user_id`
+- `metadata`
+- `ttl`
+
+client 只携带 `user_token` 和 `product_id`，不接触 provider key，也不接触 `admin_secret_key`。
+
+## admin_secret_key
+
+`DOWNCITY_INFRA_ADMIN_SECRET_KEY` 用于管理 InfraRuntime：创建 product、管理 env、为某个 product 下的用户签发 `user_token`。InfraRuntime 首次启动时会自动生成并写入 `.env`。
+
+```ts
+const client = new AdminClient({
+  base_url: "https://base.example.com",
+  admin_secret_key: process.env.DOWNCITY_INFRA_ADMIN_SECRET_KEY,
+});
+
+const product = await client.products.create({
+  name: "Chrome Extension",
+});
+```
+
+## 多产品复用
+
+多个 client 可以归属同一个 product。签发 token 时明确写入 `product_id`：
+
+```ts
+const user = await client.products.tokens.apply({
+  product_id: product.product_id,
+  user_id: "user_123",
+  metadata: {
+    plan: "pro",
+  },
+  ttl: "7d",
+});
+
+console.log(user.user_token);
+```

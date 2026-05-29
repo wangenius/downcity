@@ -1,0 +1,251 @@
+---
+title: HTTP API
+description: "统一 `/v1/*` 路由下的鉴权边界、请求方式和返回形态。"
+---
+
+如果你已经在用 SDK，通常不需要手写 HTTP 请求。
+
+## 路由规则
+
+所有 Action 自动映射为 HTTP 路由：
+
+```
+动作                     URL
+────                     ───
+普通 action              POST /v1/{service}/{action}
+GET action               GET  /v1/{service}/{action}
+Admin action             POST /v1/{service}/{action}
+Admin GET                GET  /v1/{service}/{action}
+```
+
+### 产品侧路由
+
+| 路由 | 方法 | 用途 |
+| --- | --- | --- |
+| `/v1/ai/text` | `POST` | 文本生成（SDK 通路） |
+| `/v1/ai/stream` | `POST` | 流式生成（SDK 通路） |
+| `/v1/ai/image` | `POST` | 图片生成 |
+| `/v1/ai/video` | `POST` | 视频生成 |
+| `/v1/ai/chat/completions` | `POST` | OpenAI 兼容端点 |
+| `/v1/ai/models` | `GET` | 按身份返回模型目录 |
+| `/v1/accounts/login` | `POST` | Accounts 登录 |
+| `/v1/accounts/oauth/start` | `POST` | 发起 OAuth |
+| `/v1/accounts/oauth/result` | `GET` | 轮询 OAuth 结果 |
+| `/v1/accounts/oauth/callback` | `GET` | 第三方 OAuth 回调入口 |
+| `/v1/{service}/{action}` | `POST` | 通用 Action 调用 |
+| `/v1/services` | `GET` | Service 列表 |
+
+`/v1/accounts/oauth/callback` 是给 GitHub / Google 这类第三方 OAuth 平台回跳用的固定地址。产品前端通常不直接调用它。
+
+### 管理端常用路由
+
+| 路由 | 方法 | 用途 |
+| --- | --- | --- |
+| `/v1/products/list` | `GET` | Product 列表 |
+| `/v1/products/create` | `POST` | 创建 Product |
+| `/v1/products/pause` | `POST` | 暂停 Product |
+| `/v1/products/activate` | `POST` | 启用 Product |
+| `/v1/products/remove` | `POST` | 删除 Product |
+| `/v1/products/tokens/apply` | `POST` | 签发 user_token |
+| `/v1/env/list` | `GET` | 环境变量列表 |
+| `/v1/env/upsert` | `POST` | 写入环境变量 |
+| `/v1/env/remove` | `POST` | 删除环境变量 |
+| `/v1/env/import` | `POST` | 批量导入 .env |
+同一条 `/v1/{service}/{action}` 路由会根据 bearer 凭证决定身份：
+
+- 不带 token：`guest`
+- 带 `user_token`：`user`
+- 带 `admin_secret_key`：`admin`
+
+Action 自己声明允许哪些身份访问。默认是 `["user"]`；传 `[]` 表示免登录。
+
+## 产品侧请求格式
+
+### 认证头
+
+```http
+Authorization: Bearer <user_token>
+Content-Type: application/json
+```
+
+同一个 `/v1/ai/models`：
+
+- `user_token` 访问时，只返回当前可调用模型
+- `admin_secret_key` 访问时，返回全部代码注册模型，并附带 `env_requirements`
+
+### `GET /v1/ai/models`
+
+`user_token` 示例：
+
+```json
+{
+  "items": [
+    {
+      "id": "deepseek-v4-flash",
+      "name": "DeepSeek V4 Flash",
+      "description": "DeepSeek text model",
+      "modalities": ["text", "stream"],
+      "tags": ["deepseek", "text"],
+      "meta": {}
+    }
+  ]
+}
+```
+
+`admin_secret_key` 示例：
+
+```json
+{
+  "items": [
+    {
+      "id": "deepseek-v4-flash",
+      "name": "DeepSeek V4 Flash",
+      "description": "",
+      "modalities": ["text", "stream", "openai"],
+      "tags": ["deepseek", "text"],
+      "meta": {},
+      "env_requirements": [
+        {
+          "key": "DEEPSEEK_API_KEY",
+          "description": "deepseek API Key",
+          "required": true
+        }
+      ],
+      "default_modes": ["text", "stream", "openai"]
+    }
+  ]
+}
+```
+
+### `POST /v1/ai/text`
+
+请求（SDK 通路）：
+
+```json
+{
+  "product_id": "prod_xxx",
+  "model": "deepseek-v4-flash",
+  "prompt": "写一段欢迎语"
+}
+```
+
+返回：
+
+```json
+{
+  "id": "msg_xxx",
+  "role": "assistant",
+  "parts": [
+    { "type": "text", "text": "欢迎使用 Downcity" }
+  ]
+}
+```
+
+### `POST /v1/ai/stream`
+
+请求体和 `text` 类似。返回值是 AI SDK UIMessage 流式响应（SSE）。
+
+### `POST /v1/ai/chat/completions`
+
+**OpenAI 兼容端点**。接收标准 OpenAI `chat/completions` 格式：
+
+```json
+{
+  "model": "deepseek-v4-flash",
+  "messages": [{ "role": "user", "content": "写一段欢迎语" }],
+  "stream": true
+}
+```
+
+返回 SSE 流：
+
+```
+data: {"id":"chatcmpl-xxx","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"chatcmpl-xxx","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"欢迎"},"finish_reason":null}]}
+data: {"id":"chatcmpl-xxx","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{...}}
+data: [DONE]
+```
+
+直接用 OpenAI SDK：
+
+```ts
+const openai = new OpenAI({
+  baseURL: "http://127.0.0.1:43127/v1/ai",
+  apiKey: "ub_xxx",
+});
+await openai.chat.completions.create({
+  model: "kimi-k2.6",
+  messages: [{ role: "user", content: "你好" }],
+  stream: true,
+});
+```
+
+### `GET /v1/services`
+
+```json
+{
+  "items": [
+    { "id": "ai", "name": "AI", "env": [] },
+    { "id": "accounts", "name": "Accounts", "env": [] }
+  ]
+}
+```
+
+`env` 用于暴露该 service 声明的运行时环境变量需求，便于管理端或调试界面展示依赖项。
+
+### `POST /v1/{service}/{action}`
+
+```json
+{ "text": "你好" }
+```
+
+## 管理端请求格式
+
+### 认证头
+
+```http
+Authorization: Bearer <admin_secret_key>
+Content-Type: application/json
+```
+
+### `POST /v1/products/create`
+
+```json
+{ "name": "Chrome Extension" }
+```
+
+```json
+{ "product_id": "prod_xxx", "name": "Chrome Extension", "status": "active", ... }
+```
+
+### `POST /v1/products/tokens/apply`
+
+```json
+{
+  "product_id": "prod_xxx",
+  "user_id": "user_123",
+  "metadata": { "plan": "pro" },
+  "ttl": "7d"
+}
+```
+
+```json
+{ "user_token": "ub_xxx", "product_id": "prod_xxx", "user_id": "user_123", ... }
+```
+
+### `POST /v1/env/upsert`
+
+```json
+{ "key": "DEEPSEEK_API_KEY", "value": "sk-xxx" }
+```
+
+## 常见状态码
+
+| 状态码 | 什么时候返回 |
+| --- | --- |
+| `200` | 请求成功 |
+| `401` | token 缺失、过期、签名无效 |
+| `403` | product_id 不匹配、product 已暂停 |
+| `404` | 路由不存在、service 未注册 |
+| `422` | model 不存在、action 未命中 |
+| `500` | action 逻辑抛出未指定 statusCode 的错误 |

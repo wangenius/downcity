@@ -1,0 +1,82 @@
+---
+title: 模型与通路
+description: Provider + AIService 两条独立通路的架构与工作原理。
+---
+
+Downcity 的 AI 服务有 **两条独立通路**，共用同一个模型注册：
+
+```
+                    Provider.model({ id: "deepseek-v4-flash", ... })
+                                    │
+                              ai.use(model)
+                                    │
+              ┌─────────────────────┴─────────────────────┐
+              │                                           │
+        SDK 通路                                    OpenAI 兼容通路
+  给 UserClient 用                              给 pi-agent / curl / OpenAI SDK 用
+              │                                           │
+   POST /v1/ai/text                      POST /v1/ai/chat/completions
+   POST /v1/ai/stream                         ↑
+              │                            OpenAI 格式 body
+              ▼                           { model, messages, stream }
+   Provider text action                              │
+   Provider stream action                            ▼
+      (ai-sdk 封装)                       Provider openai action
+              │                            (透传 或 格式转换)
+              ▼                                    │
+         UIMessage                               ▼
+      UIMessageStream                         Response
+                                           (上游原始响应)
+```
+
+## 自动透传
+
+当 Provider 不提供 `openai` action 但提供了 `baseURL` + `envKey` 时：
+
+```
+POST /v1/ai/chat/completions
+  body: { model: "deepseek-v4-flash", messages: [...], stream: true }
+              │
+              ▼
+       resolve → model.actions.openai 不存在 → baseURL+envKey 存在
+       → 自动透传
+              │
+              ▼
+       fetch("https://api.deepseek.com/v1/chat/completions", {
+         body: JSON.stringify(originalBody),   // 原样转发
+       })
+              │
+              ▼
+       上游 Response 原样返回（SSE 或 JSON）
+```
+
+## 格式转换
+
+非 OpenAI 格式 Provider 需要 `openai` action 做双向转换：
+
+```ts
+const kimiCode = new Provider("kimi-code", {
+  text: anthropicTextAction,
+  stream: anthropicStreamAction,
+  openai: async (ctx) => {
+    const body = openaiToAnthropic(ctx.input);
+    const res = await fetch("https://api.kimi.com/coding/v1/messages", { body: JSON.stringify(body) });
+    return ctx.input.stream ? convertStream(res) : convertJSON(await res.json());
+  },
+});
+```
+
+## SDK 调用
+
+```ts
+const client = new UserClient({ base_url, product_id, user_token });
+const result = await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
+```
+
+## OpenAI 兼容调用
+
+```bash
+curl http://127.0.0.1:43127/v1/ai/chat/completions \
+  -H "Authorization: Bearer ub_xxx" \
+  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hello"}],"stream":true}'
+```

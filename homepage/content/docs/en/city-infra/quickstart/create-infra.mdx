@@ -1,0 +1,93 @@
+---
+title: Create InfraRuntime
+description: Initialize a Downcity InfraRuntime with the default database and HTTP service.
+---
+
+Install the packages:
+
+```bash
+pnpm add @downcity/infra @downcity/conduit drizzle-orm better-sqlite3
+```
+
+The database is the only thing you need before boot. On first boot InfraRuntime fills `DOWNCITY_INFRA_ADMIN_SECRET_KEY`, `DOWNCITY_INFRA_TOKEN_SIGNING_KEY`, and `BETTER_AUTH_SECRET` automatically. Provider keys are written later through City Terminal or the Admin API:
+
+```bash
+OPENAI_API_KEY="..."
+OPENAI_BASE_URL="https://api.openai.com/v1"
+```
+
+Create InfraRuntime:
+
+```ts
+import { InfraRuntime } from "@downcity/infra";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+
+const sqlite = new Database("./data.sqlite");
+sqlite.pragma("journal_mode = WAL");
+
+const db = Object.assign(drizzle(sqlite), {
+  $client: { exec: (sql: string) => sqlite.exec(sql) },
+});
+
+const base = new InfraRuntime({ db, dialect: "sqlite", raw: sqlite });
+```
+
+The default database is stored at:
+
+```plaintext
+./data.sqlite
+```
+
+For local SQLite, `better-sqlite3` is the recommended path. For production Postgres, create a Drizzle pg db and pass that db to `InfraRuntime` the same way.
+
+For Cloudflare Workers / D1, pass the D1 Drizzle db:
+
+```ts
+import { drizzle } from "drizzle-orm/d1";
+
+const db = drizzle(env.DB);
+const base = new InfraRuntime({ db, dialect: "sqlite", raw: env.DB });
+```
+
+InfraRuntime initializes itself automatically on the first `health()`, `handleRequest()`, `table()`, or similar runtime call.
+
+If your InfraRuntime needs its own business tables, declare them on a Service or service:
+
+```ts
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { Service } from "@downcity/infra";
+
+const notes = sqliteTable("notes", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  status: text("status").notNull(),
+});
+
+const notesService = new Service({
+  id: "notes",
+  tables: { notes },
+});
+
+base.use(notesService);
+
+const table = await base.table("notes.notes");
+await table.insert({
+  id: "note_1",
+  title: "First note",
+  status: "draft",
+});
+```
+
+Tables declared by services use the same database connection as InfraRuntime. Regular projects do not need manual table creation.
+
+Start the HTTP service:
+
+```ts
+import { serve } from "@hono/node-server";
+
+await base.health();
+serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
+```
+
+This service is the shared InfraRuntime used by later products. Management and business data are handled through your own database and product backend for now.

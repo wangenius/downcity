@@ -1,0 +1,95 @@
+---
+title: Provider & Model Registration
+description: Provider constructor, model(), handler signatures, and ModelConfig fields.
+---
+
+## Provider Constructor
+
+```ts
+new Provider(id: string, opts: ProviderOptions)
+```
+
+### ProviderOptions
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `env` | `Record<string, string>` | No | Env var key → description |
+| `baseURL` | `string` | No | Provider API URL, for auto-passthrough |
+| `envKey` | `string` | No | Env var name for API key, for auto-passthrough |
+| `text` | `ServiceHandler` | **Yes** | SDK text handler |
+| `stream` | `ServiceHandler` | **Yes** | SDK stream handler |
+| `image` | `ServiceHandler` | No | SDK image handler |
+| `video` | `ServiceHandler` | No | SDK video handler |
+| `openai` | `ServiceHandler` | No | OpenAI-compatible handler. Auto-passthrough if omitted |
+
+## Two Patterns
+
+### Pattern 1: OpenAI-Compatible (Auto Passthrough)
+
+Provide `baseURL` + `envKey`, skip `openai`:
+
+```ts
+const deepseek = new Provider("deepseek", {
+  baseURL: "https://api.deepseek.com",
+  envKey: "DEEPSEEK_API_KEY",
+  text: myTextHandler,
+  stream: myStreamHandler,
+  // no openai → auto-passthrough
+});
+```
+
+### Pattern 2: Non-OpenAI Format (Write openai Handler)
+
+Must provide `openai` handler for format conversion:
+
+```ts
+const kimiCode = new Provider("kimi-code", {
+  env: { KIMI_CODE_API_KEY: "Kimi Code API Key" },
+  text: myTextHandler,
+  stream: myStreamHandler,
+  openai: async (ctx) => {
+    // ctx.input is standard OpenAI body
+    // Downstream: OpenAI → Provider format
+    // Upstream: Provider response → OpenAI format
+  },
+});
+```
+
+## Handler Signatures
+
+```ts
+type ServiceHandler = (ctx: Context) => unknown | Response | Promise<unknown | Response>;
+```
+
+| Pathway | ctx.input | Recommended Return |
+|---|---|---|
+| `text` | `{ prompt }` | `UIMessage` |
+| `stream` | `{ prompt }` | `Response` (SSE) or `UIMessageStream` |
+| `openai` | `{ model, messages, stream, tools, ... }` | `Response` |
+
+## model() Method
+
+```ts
+provider.model(spec): ModelConfig
+```
+
+### spec
+
+| Field | Type | Required |
+|---|---|---|
+| `id` | `string` | **Yes** |
+| `name` | `string` | **Yes** |
+| `description` | `string` | No |
+| `tags` | `string[]` | No |
+| `meta` | `Record<string, unknown>` | No |
+| `default` | `boolean \| string[]` | No |
+
+## Registration
+
+```ts
+const ai = new AIService();
+ai.use(
+  deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash", default: true }),
+);
+base.use(ai);
+```

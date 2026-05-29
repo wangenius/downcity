@@ -1,0 +1,10 @@
+{
+  "title": "@downcity/services",
+  "pages": [
+    "index",
+    "accounts",
+    "balance",
+    "usage",
+    "payment-stripe"
+  ]
+}

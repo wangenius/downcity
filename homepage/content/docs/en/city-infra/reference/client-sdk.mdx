@@ -1,0 +1,81 @@
+---
+title: SDK Overview
+description: "The Downcity SDK is split by role: UserClient owns product-runtime calls, while AdminClient owns trusted-side management calls."
+---
+
+This page does one job: it pulls the calling model of `@downcity/conduit` into one reference overview.
+
+If you want the integration story first, start with [@downcity/conduit](/en/docs/city-infra/packages/conduit). If you need concrete method details, continue to [UserClient](/en/docs/city-infra/reference/user-client) and [AdminClient](/en/docs/city-infra/reference/admin-client).
+
+## Two roles
+
+| | UserClient | AdminClient |
+|---|---|---|
+| Used by | frontend, app, extension, desktop client | product backend, ops scripts, internal tools |
+| Owns | AI services, custom services, public services | products, tokens, runtime env, admin-side services |
+| Common auth | `user_token` | `admin_secret_key` |
+| Safe in browser | yes | no |
+
+## Four common call types
+
+```ts
+// Product side
+const client = new UserClient({ base_url, product_id, user_token });
+
+// AI Service
+await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
+await client.ai.stream({ prompt: "hello" });
+
+// Custom Service
+await client.service("translate").action("zh2en").invoke({ text: "hello" });
+await client.service("accounts").action("login").invoke({ email: "a@b.com", password: "..." });
+
+// GET action
+const items = await client.service("products").get("list");
+
+// Payment methods
+const methods = await client.payment.methods();
+const checkout = await client.payment.method("stripe").invoke({
+  topup_id: "topup_demo",
+});
+
+// Admin side
+const admin = new AdminClient({ base_url, admin_secret_key });
+await admin.service("products").action("create").invoke({ name: "My App" });
+```
+
+## Relationship between service, service, and AI service
+
+- AI service: called through `client.ai.*`
+- custom service: called through `client.service(name)...`
+- service: still called through `client.service(name)...`, but the service comes from a service
+
+Examples:
+
+- `rewrite`, `translate`: custom services you registered yourself
+- `accounts`, `usage`, `payment`, `payment.stripe`: services exposed by official packages
+
+From the caller's point of view, they all live in the same InfraRuntime service route space.
+
+## Where registration and login fit in the SDK model
+
+The two most common paths are:
+
+1. your backend finishes login first, then uses `AdminClient` to request `user_token`
+2. the frontend uses a guest `UserClient` to call `accounts.login/register`, and the accounts service returns `user_token`
+
+Both paths end in the same user context:
+
+```txt
+base_url + product_id + user_token
+  -> new UserClient(...)
+  -> client.ai.* or client.service(...)
+```
+
+## Which page to read next
+
+1. To understand package composition, read [Packages](/en/docs/city-infra/packages)
+2. To understand product integration, read [@downcity/conduit](/en/docs/city-infra/packages/conduit)
+3. For detailed product-side calls, read [UserClient](/en/docs/city-infra/reference/user-client)
+4. For trusted-side management, read [AdminClient](/en/docs/city-infra/reference/admin-client)
+5. For minimal auth, read [@downcity/services](/en/docs/city-infra/packages/services) and [Accounts Service](/en/docs/city-infra/guides/accounts-service)

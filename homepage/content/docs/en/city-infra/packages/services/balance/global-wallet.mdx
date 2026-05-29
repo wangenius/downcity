@@ -1,0 +1,38 @@
+---
+title: Global wallet model
+description: "Why @downcity/services stores balance by user instead of creating one wallet per product."
+---
+
+`@downcity/services` keeps balance by user, not by product.
+
+That means:
+
+- user A spends inside product X
+- user A spends inside product Y
+- both consume the same shared balance
+
+## Why this fits Downcity better
+
+The typical Downcity shape is:
+
+- one InfraRuntime serving multiple client products
+- the same user moving across those products
+- one shared AI account layer behind them
+
+If balance is split per product, both product UX and operations become fragmented.
+
+## Does product still matter
+
+Yes, but it belongs in ledger metadata rather than in the wallet primary key.
+
+```ts
+await balance.sub(ctx.user!.user_id, 10, {
+  note: "agent chat",
+  meta: {
+    product_id: ctx.product?.product_id,
+    model_id: ctx.variant?.id,
+  },
+});
+```
+
+That keeps the wallet global while still preserving where the spend came from.

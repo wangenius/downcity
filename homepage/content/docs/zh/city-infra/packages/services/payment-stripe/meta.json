@@ -1,0 +1,9 @@
+{
+  "title": "Stripe Payment 服务",
+  "pages": [
+    "index",
+    "entitlements",
+    "webhooks-and-sync",
+    "gating-and-access"
+  ]
+}

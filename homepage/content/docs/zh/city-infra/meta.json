@@ -1,0 +1,13 @@
+{
+  "title": "Downcity Infra 文档",
+  "pages": [
+    "index",
+    "concepts",
+    "quickstart",
+    "guides",
+    "packages",
+    "service",
+    "operations",
+    "reference"
+  ]
+}

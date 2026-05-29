@@ -12,7 +12,6 @@
    - 多 package 联动：`pnpm all:patch:build`
    - 仅验证不需要 bump 时才允许使用 `pnpm patch:build -- --no-bump ...`
 
-
 # Patch + Commit
 
 1. commit 前先确认改动范围，只 stage 本次任务相关文件，不要混入用户未要求的改动。
@@ -32,3 +31,4 @@
 2. 保证最简 + 最佳实践
 3. 所有的模块必须添加文件注释/模块注释
 4. 你在创建任何 type 类型的时候，都需要每个字段都给到详细的注释说明。
+5. 变量命名使用snaker，例如 current_time, 不要使用驼峰命名。

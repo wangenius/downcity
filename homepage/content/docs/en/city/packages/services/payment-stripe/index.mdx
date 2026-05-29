@@ -1,0 +1,106 @@
+---
+title: "Stripe Payment Service"
+description: "Turn one-time Stripe payments into global balance topups."
+---
+
+`@downcity/services` now has a narrow responsibility:
+
+- create Stripe Checkout Sessions
+- store Stripe payment records
+- store webhook events
+- finish a `balance topup` after payment succeeds
+
+It is not an entitlement service and does not handle subscriptions.
+
+## How to read this section
+
+The recommended order is:
+
+1. Start with [Topups and Checkout](/en/docs/city/packages/services/payment-stripe/topups-and-checkout) to understand why this flow is built on top of topups.
+2. Continue with [Webhooks and sync](/en/docs/city/packages/services/payment-stripe/webhooks-and-sync) to understand how Stripe payment results enter City.
+3. Finish with [Crediting balance](/en/docs/city/packages/services/payment-stripe/crediting-balance) to understand why wallet crediting must go through `balance.finishTopup()`.
+
+## What it provides
+
+- a Stripe payment table
+- a Stripe webhook event table
+- Stripe Checkout creation
+- automatic topup completion after successful payment
+- exposed Stripe env requirements for admin tooling
+
+## What it does not own
+
+- subscriptions
+- studio access grants
+- wallet account or ledger storage
+- replacement for `@downcity/services`
+
+## Use it when
+
+- you already chose Stripe for one-time wallet recharge
+- you want successful payments to become global user balance
+- you want one service to own webhook records, payment records, and topup completion
+
+## Install
+
+```bash
+pnpm add @downcity/services
+```
+
+## Enable it
+
+```ts
+import { balanceService } from "@downcity/services";
+import {
+  paymentService,
+  stripePaymentMethod,
+  stripePaymentService,
+  type StripePaymentServiceBalanceBridge,
+} from "@downcity/services";
+
+const balance = balanceService();
+const stripeBalanceBridge: StripePaymentServiceBalanceBridge = {
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+};
+
+base.use(balance);
+base.use(paymentService({
+  methods: [
+    stripePaymentMethod(),
+  ],
+}));
+base.use(stripePaymentService({
+  balance: stripeBalanceBridge,
+  secret_key: process.env.STRIPE_SECRET_KEY,
+  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+}));
+```
+
+If `success_url` / `cancel_url` are not filled manually, the service derives default redirect-page URLs from `DOWNCITY_CITY_BASE_URL` first and then falls back to the current request origin.
+
+## What the frontend should read first
+
+If you want payment UI to behave like login-method discovery, start with:
+
+```ts
+const methods = await guest.service("payment").get("methods");
+```
+
+`methods.items` tells the frontend whether the current City actually exposes Stripe Checkout.
+
+## Most common combinations
+
+- Pair it with [@downcity/services](/en/docs/city/packages/services) for the full "topup -> Stripe payment -> wallet credit" flow
+- Pair it with [@downcity/gate](/en/docs/city/packages/gate) so the frontend can trigger Checkout creation
+- Pair it with [@downcity/studio-cli](/en/docs/city/packages/studio-cli-terminal) so a CLI user can start Stripe Checkout and open the browser
+- Pair it with [@downcity/services](/en/docs/city/packages/services) to keep "how much was funded" separate from "how much was consumed"
+
+## Routes
+
+- `GET /v1/payment/methods`
+- `POST /v1/payment.stripe/checkout/create`
+- `GET /v1/payment.stripe/payments/me`
+- `GET /v1/payment.stripe/payments`
+- `GET /v1/payment.stripe/events`
+- `POST /v1/payment.stripe/webhook`

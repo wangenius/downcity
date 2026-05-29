@@ -1,18 +1,18 @@
 ---
-title: city config
+title: studio config
 description: 管理项目 downcity.json 与 alias（不含模型池管理）
 ---
 
-# `city config`
+# `studio config`
 
 管理项目 `downcity.json` 与 alias。
 
-> 命令名说明：配置命令是 `city config`，不是 `city console config`。
+> 命令名说明：配置命令是 `studio config`，不是 `studio console config`。
 
 ## 用法
 
 ```bash
-city config <subcommand>
+studio config <subcommand>
 ```
 
 ## 子命令
@@ -22,31 +22,31 @@ city config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> 模型池管理已迁移到独立命令：[`city model`](/zh/docs/commands/model)。
+> 模型池管理已迁移到独立命令：[`studio model`](/zh/docs/commands/model)。
 
 ## Plugin 配置
 
-`city config` 现在只读写项目 `downcity.json`。
+`studio config` 现在只读写项目 `downcity.json`。
 
 插件相关配置请改为：
 
 - `plugins.*` 只管理当前 agent 的插件参数
-- plugin 启停请使用 `city <plugin> on/off`
+- plugin 启停请使用 `studio <plugin> on/off`
 
 示例：
 
 ```bash
-city config get plugins.asr
-city config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+studio config get plugins.asr
+studio config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
 ## 示例
 
 ```bash
-city config get model.primary
-city config set model.primary fast
-city config unset plugins.chat.channels.telegram
-city config alias --dry-run
+studio config get model.primary
+studio config set model.primary fast
+studio config unset plugins.chat.channels.telegram
+studio config alias --dry-run
 ```
 
 ## 延伸阅读
@@ -58,7 +58,7 @@ city config alias --dry-run
 以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city config get model.primary
+$ studio config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
@@ -69,7 +69,7 @@ $ city config get model.primary
 ```
 
 ```text
-$ city config set model.primary gpt-5.4
+$ studio config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",

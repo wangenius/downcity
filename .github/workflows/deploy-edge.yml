@@ -12,9 +12,9 @@ on:
       - main
     paths:
       - ".github/workflows/deploy-edge.yml"
-      - "blocks/edge/**"
-      - "blocks/shared/**"
-      - "packages/infra/**"
+      - "cities/edge/**"
+      - "cities/shared/**"
+      - "packages/city/**"
       - "packages/services/**"
       - "pnpm-lock.yaml"
       - "package.json"
@@ -68,14 +68,14 @@ jobs:
       - name: 构建 Worker 依赖包
         run: |
           set -euo pipefail
-          pnpm -C packages/infra build
+          pnpm -C packages/city build
           pnpm -C packages/services build
 
       - name: 检查 Edge 街区类型
-        run: pnpm -C blocks/edge typecheck
+        run: pnpm -C cities/edge typecheck
 
       - name: 部署 Worker
-        working-directory: blocks/edge
+        working-directory: cities/edge
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

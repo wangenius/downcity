@@ -30,8 +30,8 @@ const PAGE = {
     ],
     factsTitle: "事实对齐",
     facts: [
-      "包名：@downcity/city",
-      "核心源码目录：packages/city/",
+      "包名：@downcity/studio-cli",
+      "核心源码目录：packages/studio-cli/",
       "CLI 命令：city / downcity",
     ],
   },
@@ -63,8 +63,8 @@ const PAGE = {
     ],
     factsTitle: "Facts",
     facts: [
-      "Package name: @downcity/city",
-      "Core source directory: packages/city/",
+      "Package name: @downcity/studio-cli",
+      "Core source directory: packages/studio-cli/",
       "CLI commands: city / downcity",
     ],
   },

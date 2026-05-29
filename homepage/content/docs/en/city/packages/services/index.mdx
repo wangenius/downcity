@@ -1,0 +1,67 @@
+---
+title: "@downcity/services"
+description: "Install one Downcity package for accounts, balance, usage, and Stripe payment services."
+---
+
+`@downcity/services` combines the official Downcity services into one package while keeping the capability boundaries clear.
+
+With one installation, you can opt into:
+
+- `accountsService()` for registration, login, OAuth, sessions, and `user_token`
+- `balanceService()` for global wallet, ledger, topups, and redeem codes
+- `paymentService()` for exposing which payment methods the current City supports
+- `usageService()` for real user-side service-call facts
+- `stripePaymentService()` for translating Stripe one-time payments into wallet credit
+
+## Install
+
+```bash
+pnpm add @downcity/services
+```
+
+## Minimal setup
+
+```ts
+import { City } from "@downcity/city";
+import {
+  accountsService,
+  balanceService,
+  paymentService,
+  stripePaymentMethod,
+  stripePaymentService,
+  usageService,
+} from "@downcity/services";
+
+const base = new City();
+const balance = balanceService();
+
+base.use(accountsService());
+base.use(balance);
+base.use(paymentService({
+  methods: [
+    stripePaymentMethod(),
+  ],
+}));
+base.use(usageService());
+base.use(stripePaymentService({
+  balance: {
+    readTopup: async (topup_id) => await balance.readTopup(topup_id),
+    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  },
+}));
+```
+
+On the studio side, the usual first call is:
+
+```ts
+const methods = await guest.service("payment").get("methods");
+```
+
+Then the frontend can choose the concrete method from `methods.items`, such as `payment.stripe`.
+
+## Read by capability
+
+1. For auth, read [Accounts Service](/en/docs/city/packages/services/accounts)
+2. For wallet flows, read [Balance Service](/en/docs/city/packages/services/balance)
+3. For usage events, read [Usage Service](/en/docs/city/packages/services/usage)
+4. For Stripe topups, read [Stripe Payment Service](/en/docs/city/packages/services/payment-stripe)

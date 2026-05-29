@@ -1,33 +1,33 @@
 ---
-title: city status
+title: studio status
 description: 查看 city runtime、Console 与托管 agent 状态
 ---
 
-# `city status`
+# `studio status`
 
 查看 city runtime、Console 与当前托管 agent 概览。
 
 ## 用法
 
 ```bash
-city status
+studio status
 ```
 
 ## 相关命令
 
-- [`city agent list --running`](/zh/docs/commands/agent/list)
-- [`city console`](/zh/docs/commands/console/console)
-- [`city public`](/zh/docs/commands/public)
+- [`studio agent list --running`](/zh/docs/commands/agent/list)
+- [`studio console`](/zh/docs/commands/console/console)
+- [`studio public`](/zh/docs/commands/public)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city status
-city version: 1.0.0
+$ studio status
+downcity v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK city status                                   │
+│ OK studio status                                   │
 │   state    : running                                    │
 │   pid      : <pid>                                      │
 │   pid_file : <cityPidPath>                              │

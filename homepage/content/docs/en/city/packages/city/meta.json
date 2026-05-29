@@ -1,0 +1,10 @@
+{
+  "title": "@downcity/city",
+  "pages": [
+    "index",
+    "city-runtime",
+    "service-and-action",
+    "hooks-and-service",
+    "store-and-table"
+  ]
+}

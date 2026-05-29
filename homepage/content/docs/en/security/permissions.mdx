@@ -46,10 +46,10 @@ The backing storage is structured tables, not a key-value JSON blob:
 
 ### Where to manage it
 
-Use the interactive `city chat` menu and choose "configure channel → configure authorization", or use the CLI directly:
+Use the interactive `studio chat` menu and choose "configure channel → configure authorization", or use the CLI directly:
 
 ```bash
-city chat auth set telegram:12345678
+studio chat auth set telegram:12345678
 ```
 
 The CLI then lets you choose the target permission group interactively. Common management tasks include:
@@ -59,7 +59,7 @@ The CLI then lets you choose the target permission group interactively. Common m
 - choose the default group
 - assign users to groups
 
-When a chat user is denied, the denial message includes a command like `city chat auth set telegram:12345678` that they can forward to an admin.
+When a chat user is denied, the denial message includes a command like `studio chat auth set telegram:12345678` that they can forward to an admin.
 
 ### A common group layout
 

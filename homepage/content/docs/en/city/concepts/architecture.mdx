@@ -1,0 +1,152 @@
+---
+title: Architecture
+description: How Downcity is organized into Kernel, Capabilities, Interfaces, and Composition.
+---
+
+The most stable way to understand Downcity is not to start from a single API, but from its four layers:
+
+```txt
+Interfaces
+  -> studios enter City through client or studio terminal
+Composition
+  -> server / worker assemble City, official services, and models
+Kernel
+  -> City handles routing, auth, context, and hook scheduling
+Capabilities
+  -> AIService and official services provide the actual behavior
+```
+
+Together they create the runtime flow:
+
+```txt
+studio UI / app / internal tool
+  -> UserClient / AdminClient / studio terminal
+  -> City
+  -> Service / AIService
+  -> Provider / Database
+```
+
+Many clients can share one self-deployed City. Studio clients stay lightweight and focus on UX; City centralizes auth, model routing, runtime env, hooks, and reusable capabilities.
+
+## 1. Interfaces: who calls City
+
+Downcity has two main external entry points:
+
+- Studio-side entry: `UserClient` and `AdminClient` from `@downcity/gate`
+- Operator entry: `@downcity/studio-cli`
+
+Neither one implements the City itself. They both send requests into the same City.
+
+## 2. Composition: who assembles City
+
+Running Downcity is not just `new City(...)`. There is also an assembly layer:
+
+- `cities/node` is the Node.js + SQLite server example
+- `cities/edge` is the Cloudflare Workers + D1 deployment example
+- `cities/shared` reuses the common City assembly logic between server and worker
+
+This layer is responsible for assembling `City + AIService + official services + models` into a runnable instance.
+
+## 3. Kernel: what City itself owns
+
+When an HTTP request reaches City, City does the following:
+
+1. Refresh the runtime env view
+2. Validate the `user_token` or admin key
+3. Resolve identity, `studio_id`, and `user_id`
+4. Find the target Service and Action
+5. Build one shared `ctx`
+6. Run hooks and the Action
+
+If the token is invalid, expired, or the `studio_id` does not match, City returns 401 or 403 directly.
+
+## 4. Capabilities: Service and Action
+
+Each Service is a group of Actions. An Action is the first-class capability unit inside a Service.
+
+```ts
+const translate = new Service({ id: "translate" });
+
+translate.action("zh2en", async (ctx) => {
+  // ctx.input = { text: "你好" }
+  // ctx.user  = { user_id: "user_1" }
+  return { translated: await api.translate(ctx.input.text) };
+});
+```
+
+City automatically creates a route for every Action:
+
+```txt
+POST /v1/translate/zh2en  ->  translate.action("zh2en")
+```
+
+City itself does not care what “translation” or “payment” means as business concepts. It only routes the request to the right Action.
+
+## 5. Two AIService pathways
+
+### SDK pathway
+
+Used by `UserClient`:
+
+```txt
+UserClient.ai.text({ prompt: "hello", model: "kimi-k2.6" })
+  -> POST /v1/ai/text
+  -> Provider text action(ctx)
+  -> generateText / streamText (ai-sdk)
+  -> UIMessage / UIMessageStream
+```
+
+### OpenAI-compatible pathway
+
+Used by pi-agent, the OpenAI SDK, curl, and other third-party tools:
+
+```txt
+POST /v1/ai/chat/completions
+  { model: "deepseek-v4-flash", messages: [...], stream: true }
+  -> Provider openai action(ctx) or automatic passthrough
+  -> upstream API raw Response (SSE or JSON)
+```
+
+The two pathways are **fully decoupled** and operate independently.
+
+## 6. Automatic passthrough
+
+When a Provider has `baseURL` + `envKey` but no `openai` action, AIService generates a passthrough action automatically. The OpenAI request body from the third-party tool is forwarded upstream as-is, and the upstream Response is returned as-is.
+
+No adapter code is required.
+
+## 7. Three hook layers
+
+Every Action has its own hooks. Hook execution runs from outer to inner layers:
+
+```txt
+global.before
+  -> service.before    <- shared by all actions in the service
+    -> action.before   <- only this action
+      -> action.run()  <- core logic
+    -> action.after    <- billing, usage records
+  -> service.after     <- aggregated metrics
+-> global.after        <- global monitoring
+```
+
+```ts
+// Action-level hook
+const zh2en = svc.action("zh2en", fn);
+zh2en.before(checkBalance).after(deductFee);
+
+// Service-level hook shared by all actions
+svc.hook.after(async (ctx) => {
+  console.log(`${ctx.user.id} used ${ctx.service.id}.${ctx.action.id}`);
+});
+```
+
+## 8. The one-line model
+
+You can remember Downcity like this:
+
+```txt
+Interfaces handle entry
+Composition handles assembly
+Kernel handles runtime rules
+Capabilities handle actual behavior
+```

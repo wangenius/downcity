@@ -11,7 +11,7 @@ import {
   InstallableService,
   httpError,
   type ServiceInstallContext,
-} from "@downcity/infra";
+} from "@downcity/city";
 import { rawAll, rawFirst, rawRun } from "./raw.js";
 import { registerBalanceRoutes } from "./routes.js";
 import {

@@ -10,7 +10,7 @@ description: 启动后台 Agent、查看状态，并在需要时停止或重启
 默认后台启动：
 
 ```bash
-city agent start
+studio agent start
 ```
 
 如果当前目录不是已初始化项目，也没有显式传路径，CLI 会尝试从已登记 agent 中让你选择。
@@ -26,7 +26,7 @@ city agent start
 如果你只是临时在当前终端观察运行过程，可以用：
 
 ```bash
-city agent start --foreground
+studio agent start --foreground
 ```
 
 前台模式适合调试，不适合长期挂着。
@@ -36,7 +36,7 @@ city agent start --foreground
 ## 查看状态
 
 ```bash
-city agent status
+studio agent status
 ```
 
 常见状态：
@@ -51,7 +51,7 @@ city agent status
 ## 停止
 
 ```bash
-city agent stop
+studio agent stop
 ```
 
 这会停止目标项目的 daemon，并清理对应状态文件。
@@ -61,7 +61,7 @@ city agent stop
 ## 重启
 
 ```bash
-city agent restart
+studio agent restart
 ```
 
 当你改了模型绑定、渠道配置或项目提示词后，重启通常是最稳妥的做法。
@@ -79,9 +79,9 @@ city agent restart
 对大多数配置变更，推荐：
 
 ```bash
-city agent status
-city agent restart
-city agent status
+studio agent status
+studio agent restart
+studio agent status
 ```
 
 这样你能在每一步都确认状态是否符合预期。

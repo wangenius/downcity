@@ -1,6 +1,6 @@
 {
   "name": "@downcity/services",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Downcity public services package for accounts, balance, usage, and Stripe payment flows.",
   "type": "module",
   "main": "./bin/index.js",
@@ -54,7 +54,7 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
-    "@downcity/infra": "workspace:*",
+    "@downcity/city": "workspace:*",
     "better-auth": "^1.6.0",
     "drizzle-orm": "^0.45.2"
   }

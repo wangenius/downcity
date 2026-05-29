@@ -1,17 +1,17 @@
 ---
-title: city agent chat
+title: studio agent chat
 description: Chat with a running Agent from the terminal in interactive or one-shot mode
 ---
 
-# `city agent chat`
+# `studio agent chat`
 
 ## Usage
 
 ```bash
-city agent chat
-city agent chat --to my-agent
-city agent chat --to my-agent --message "Summarize this repo"
-city agent chat --to my-agent --message "Return JSON" --json
+studio agent chat
+studio agent chat --to my-agent
+studio agent chat --to my-agent --message "Summarize this repo"
+studio agent chat --to my-agent --message "Return JSON" --json
 ```
 
 ## Two modes
@@ -21,7 +21,7 @@ city agent chat --to my-agent --message "Return JSON" --json
 Without `--message`, you enter a persistent terminal conversation:
 
 ```bash
-city agent chat --to my-agent
+studio agent chat --to my-agent
 ```
 
 Best for:
@@ -35,7 +35,7 @@ Best for:
 With `--message`, the CLI sends one turn and exits:
 
 ```bash
-city agent chat --to my-agent --message "Summarize the current repository structure"
+studio agent chat --to my-agent --message "Summarize the current repository structure"
 ```
 
 Best for:

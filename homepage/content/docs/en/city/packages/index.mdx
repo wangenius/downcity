@@ -1,0 +1,126 @@
+---
+title: Packages
+description: "Understand Downcity City package by package: responsibilities, composition, and adoption order."
+---
+
+If you already know which package you want to inspect, this section is the fastest route.
+
+Downcity keeps the package graph intentionally small: start with `@downcity/city` for the City itself, add `@downcity/gate` for studio calls, create a Drizzle db in your host runtime, and add official services only when the studio needs them.
+
+That order maps to four clear roles:
+
+- `infra` is the Kernel for the City itself
+- `services` are Capabilities that add official behavior
+- `conduit` and `studio terminal` are Interfaces for studio and operator entry
+- `cities/*` is the Composition layer that assembles runnable examples
+
+If you only care about npm packages, the three most important pieces to remember first are `infra`, `services`, and `conduit`.
+
+## Recommended order
+
+1. Start with [@downcity/city](/en/docs/city/packages/city) to understand the City itself
+2. Then read [@downcity/gate](/en/docs/city/packages/gate) to see how studios call it
+3. If you want terminal tooling, read [@downcity/studio-cli](/en/docs/city/packages/studio-cli-terminal)
+4. Add `@downcity/services` when your studio needs auth, wallet, usage, or Stripe payment flows
+
+## If you only want the integration picture first
+
+Read the package layer as this chain:
+
+```txt
+@downcity/city
+  -> provides the City Kernel
+@downcity/services
+  -> adds official capabilities into City
+@downcity/gate
+  -> uses UserClient and AdminClient to call those capabilities
+```
+
+So `@downcity/gate` is not only for AI calls.
+
+It also unifies:
+
+- AI service calls
+- custom service calls
+- official service calls
+- trusted-side studio, token, and env management calls
+
+## One responsibility map
+
+```txt
+Kernel        -> @downcity/city
+Capabilities  -> @downcity/services
+Interfaces    -> @downcity/gate + @downcity/studio-cli
+Composition   -> cities/node + cities/edge
+```
+
+## Infra packages
+
+<div className="dc-doc-grid">
+  <a className="dc-doc-card" href="/en/docs/city/packages/city">
+    <strong>@downcity/city</strong>
+    <p>The City core: services, AIService, routes, auth, and model catalogs.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city/packages/gate">
+    <strong>@downcity/gate</strong>
+    <p>The studio SDK that exposes `UserClient` and `AdminClient`, and unifies AI, custom service, service, and trusted-side call boundaries.</p>
+  </a>
+</div>
+
+If you want to deploy City in Cloudflare Workers, you do not need an extra edge package. Read [Cloudflare Workers](/en/docs/city/guides/cloudflare-workers) and use `cities/edge` as the reference implementation.
+
+## Tooling and services
+
+<div className="dc-doc-grid">
+  <a className="dc-doc-card" href="/en/docs/city/packages/studio-cli-terminal">
+    <strong>@downcity/studio-cli</strong>
+    <p>An interactive terminal studio terminal for admin flows, user flows, model checks, and direct runtime inspection through `downcity`.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city/packages/services/accounts">
+    <strong>Accounts Service</strong>
+    <p>The auth capability inside `@downcity/services` for registration, login, sessions, OAuth entry points, and `user_token` issuance.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city/packages/services/balance">
+    <strong>Balance Service</strong>
+    <p>The wallet capability inside `@downcity/services` for user balance, topups, and ledger records while keeping charging policy in your hooks.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city/packages/services/usage">
+    <strong>Usage Service</strong>
+    <p>The usage capability inside `@downcity/services` that records service-call facts for analytics, metering, and billing pipelines.</p>
+  </a>
+  <a className="dc-doc-card" href="/en/docs/city/packages/services/payment-stripe">
+    <strong>Stripe Payment Service</strong>
+    <p>The Stripe topup capability inside `@downcity/services` for Checkout creation, webhook records, and wallet credit after payment succeeds.</p>
+  </a>
+</div>
+
+## Typical combinations
+
+### Minimal AI studio
+
+- `@downcity/city`
+- `@downcity/gate`
+
+### Minimal registration and login
+
+- `@downcity/city`
+- `@downcity/gate`
+- `@downcity/services`
+
+### Usage metering
+
+- `@downcity/city`
+- `@downcity/gate`
+- `@downcity/services`
+
+### Global wallet and topup orders
+
+- `@downcity/city`
+- `@downcity/gate`
+- `@downcity/services`
+
+### One-time Stripe topups
+
+- `@downcity/city`
+- `@downcity/gate`
+- `@downcity/services`

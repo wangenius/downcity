@@ -5,43 +5,43 @@ description: Typical installation, startup, and config failures
 
 # Common Issues
 
-## Command not found (`city: command not found` / `downcity: command not found`)
+## Command not found (`studio: command not found` / `downstudio: command not found`)
 
 ```bash
 npm config get prefix
 echo $PATH
 export PATH=$(npm config get prefix)/bin:$PATH
 rehash
-city --version
+studio --version
 ```
 
 Or run directly with:
 
 ```bash
-npx downcity --version
+npx downstudio --version
 ```
 
 Notes:
 
-- `city` and `downcity` are the same binary.
+- `studio` and `downcity` are the same binary.
 - New installs should not require manual `chmod +x`.
-- If `sudo city ...` fails but `city ...` works, it is usually a `sudo` PATH issue rather than an install failure.
+- If `sudo studio ...` fails but `studio ...` works, it is usually a `sudo` PATH issue rather than an install failure.
 
 ## Port conflict (5314 already in use)
 
 ```bash
 lsof -nP -iTCP:5314 -sTCP:LISTEN
-city agent doctor . --fix
-city agent restart .
+studio agent doctor . --fix
+studio agent restart .
 ```
 
-## `city task/chat/...` cannot connect
+## `studio task/chat/...` cannot connect
 
 Make sure daemon is running:
 
 ```bash
-city agent start
-city plugin list
+studio agent start
+studio plugin list
 ```
 
 ## LLM configuration mismatch
@@ -49,8 +49,8 @@ city plugin list
 Check:
 
 ```bash
-city model list
-city config get model.primary
+studio model list
+studio config get model.primary
 ```
 
 Ensure:

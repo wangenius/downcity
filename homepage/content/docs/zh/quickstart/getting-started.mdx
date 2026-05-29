@@ -8,29 +8,29 @@ description: 用正确启动顺序在 10 分钟内跑通 Console + Agent
 ## 1. 安装
 
 ```bash
-npm install -g @downcity/city
+npm install -g @downcity/studio-cli
 # 或
 npm install -g downcity
 # 或
-pnpm add -g @downcity/city
+pnpm add -g @downcity/studio-cli
 # 或
 pnpm add -g downcity
-city --version
-downcity --version
+studio --version
+downstudio --version
 ```
 
-> `downcity` 与 `city` 都是同一个 CLI 可执行命令。
+> `downcity` 与 `studio` 都是同一个 CLI 可执行命令。
 >
-> `@downcity/city` 与 `downcity` 发布的是同一份 CLI 内容和版本线。
+> `@downcity/studio-cli` 与 `downcity` 发布的是同一份 CLI 内容和版本线。
 >
-> 如果安装后仍然找不到 `city`，请先看 [FAQ](/zh/docs/operations/faq)。
+> 如果安装后仍然找不到 `studio`，请先看 [FAQ](/zh/docs/operations/faq)。
 >
-> 后续升级可以直接执行 `city update`，它会更新你最初安装的那个包。
+> 后续升级可以直接执行 `studio update`，它会更新你最初安装的那个包。
 
 ## 2. 初始化 Console（仅首次）
 
 ```bash
-city init
+studio init
 ```
 
 该命令会生成 Console 全局配置（位于 `~/.downcity/`）。
@@ -38,16 +38,16 @@ city init
 ## 3. 启动 Console
 
 ```bash
-city start
+studio start
 ```
 
-> `city agent start` 依赖 console 先运行。
+> `studio agent start` 依赖 console 先运行。
 
 ## 4. 初始化项目
 
 ```bash
 cd /path/to/your-repo
-city agent create .
+studio agent create .
 ```
 
 初始化后会生成：
@@ -85,7 +85,7 @@ city agent create .
 启动（默认后台 daemon，适合长期运行）：
 
 ```bash
-city agent start
+studio agent start
 ```
 
 如果你当前不在已初始化的 agent 目录里，Downcity 会从已登记 agent 中提供交互式选择。
@@ -93,15 +93,15 @@ city agent start
 需要在当前终端前台观察日志时再用：
 
 ```bash
-city agent start --foreground
+studio agent start --foreground
 ```
 
 ## 7. 验证 Agent 状态
 
 ```bash
-city agent list
-city agent status
-city agent list --running
+studio agent list
+studio agent status
+studio agent list --running
 ```
 
 说明：
@@ -112,7 +112,7 @@ city agent list --running
 ## 8. 可选：启动 Console UI
 
 ```bash
-city start
+studio start
 ```
 
 ## 9. 可选：Chrome 扩展网页选区直发 Agent
@@ -133,6 +133,6 @@ city start
 
 - [配置详解](/zh/docs/quickstart/configuration)
 - [Agent 文档总览](/zh/docs/agent/overview/what-is-agent)
-- [`city skill`](/zh/docs/commands/plugin/skill)
-- [`city task`](/zh/docs/commands/plugin/task)
+- [`studio skill`](/zh/docs/commands/plugin/skill)
+- [`studio task`](/zh/docs/commands/plugin/task)
 - [FAQ](/zh/docs/operations/faq)

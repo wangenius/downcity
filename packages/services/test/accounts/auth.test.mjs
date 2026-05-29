@@ -3,11 +3,11 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { InfraRuntime } from "@downcity/infra"
+import { City } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { accountsService } from "../../bin/index.js"
 
-test("accountsService registers users, logs in, and issues InfraRuntime tokens", async () => {
+test("accountsService registers users, logs in, and issues City tokens", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-service-"))
 
@@ -16,7 +16,7 @@ test("accountsService registers users, logs in, and issues InfraRuntime tokens",
     const { base, adminSecret } = await setupBase(tempDir)
 
     const product = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/create",
+      path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
 
@@ -32,7 +32,7 @@ test("accountsService registers users, logs in, and issues InfraRuntime tokens",
     if (registered.verification_token) {
       const verifyResponse = await base.handleRequest(jsonRequest("/v1/accounts/verify-email", {
         token: registered.verification_token,
-        product_id: product.product_id,
+        studio_id: product.studio_id,
       }))
       assert.equal(verifyResponse.status, 200)
       const verified = await verifyResponse.json()
@@ -42,7 +42,7 @@ test("accountsService registers users, logs in, and issues InfraRuntime tokens",
     const loginResponse = await base.handleRequest(jsonRequest("/v1/accounts/login", {
       email: "user@example.com",
       password: "password123",
-      product_id: product.product_id,
+      studio_id: product.studio_id,
     }))
     assert.equal(loginResponse.status, 200)
     const loggedIn = await loginResponse.json()
@@ -124,13 +124,13 @@ test("accountsService completes Google OAuth callback and resolves the state tok
     })
 
     const product = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/create",
+      path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
 
     const startResponse = await base.handleRequest(jsonRequest("/v1/accounts/oauth/start", {
       provider: "google",
-      product_id: product.product_id,
+      studio_id: product.studio_id,
     }))
     assert.equal(startResponse.status, 200)
     const start = await startResponse.json()
@@ -202,13 +202,13 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
     })
 
     const product = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/create",
+      path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
 
     const startResponse = await base.handleRequest(jsonRequest("/v1/accounts/oauth/start", {
       provider: "wechat",
-      product_id: product.product_id,
+      studio_id: product.studio_id,
     }))
     assert.equal(startResponse.status, 200)
     const start = await startResponse.json()
@@ -282,7 +282,7 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
 
 async function setupBase(tempDir, env = {}) {
   const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-  const base = new InfraRuntime({ db, dialect: "sqlite", raw: db.raw })
+  const base = new City({ db, dialect: "sqlite", raw: db.raw })
   base.use(accountsService({ token_ttl: "7d" }))
   await base.health()
 
@@ -293,7 +293,7 @@ async function setupBase(tempDir, env = {}) {
 
   return {
     base,
-    adminSecret: await readEnvValue(base, "DOWNCITY_INFRA_ADMIN_SECRET_KEY"),
+    adminSecret: await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY"),
   }
 }
 

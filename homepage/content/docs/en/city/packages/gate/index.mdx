@@ -1,0 +1,311 @@
+---
+title: "@downcity/gate"
+description: "Provides UserClient and AdminClient, and unifies AI, custom service, and service calls behind one SDK boundary."
+---
+
+`@downcity/gate` is the main SDK that studios use to connect to Downcity.
+
+It is not only a thin wrapper for AI calls. It unifies these studio-facing call surfaces into one package:
+
+- `UserClient`: end-user studio calls to AI services, custom services, and public services
+- `AdminClient`: trusted-side management of studios, `user_token`, and runtime env
+- `service(name)`: the common entry for your own services and the services exposed by official packages
+
+If your question is "how does a studio actually connect to City?", this page should be the first package-level entry.
+
+## Two clients
+
+| Client | Used by | Responsibility |
+| --- | --- | --- |
+| `UserClient` | Frontends, apps, extensions, desktop clients | Calls AI services, custom services, and public services with `studio_id + user_token` |
+| `AdminClient` | Studio backends, admin scripts, internal tools | Manages studios, issues tokens, writes runtime env, and calls admin-side services |
+
+## Use it when
+
+- your studio already has `studio_id + user_token`
+- you want studio clients to call `text()`, `stream()`, `image()`, custom services, or services
+- you want a trusted backend to issue tokens or manage City data
+- you want registration, login, OAuth, usage, and payment-related capabilities to follow the same call model
+
+## Install
+
+```bash
+pnpm add @downcity/gate
+```
+
+## What this package actually owns
+
+The clearest way to think about it is in three layers:
+
+1. `client.ai.*`
+   The high-level AIService entry for `text()`, `stream()`, `image()`, `video()`, and similar AI capabilities.
+2. `client.service(name).action(name).invoke()`
+   The generic Action entry for your own services and for business Actions exposed by services.
+3. `client.service(name).get(path)`
+   The GET Action entry for OAuth polling, list queries, current-user reads, and other read-oriented endpoints.
+
+In practice, `@downcity/gate` unifies:
+
+- AI calls
+- calls to services you wrote yourself
+- calls to services exposed by official services
+- trusted-side management calls for studio, token, and env
+
+## The four most common call types
+
+### 1. AI service
+
+```ts
+const result = await client.ai.text({
+  model: "deepseek-v4-flash",
+  prompt: "Hello Downcity",
+});
+```
+
+Use this for model inference, images, video, speech, and other AI-facing capabilities.
+
+### 2. Custom service
+
+```ts
+const rewritten = await client
+  .service("rewrite")
+  .action("formal")
+  .invoke<{ text: string }>({
+    prompt: "Rewrite this in a more professional tone",
+  });
+```
+
+Use this for business services that you register yourself in City.
+
+### 3. Official Service
+
+```ts
+const session = await guest.service("accounts").action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+
+const usage = await user.service("usage").get("me");
+```
+
+Use this for services exposed by official packages such as `@downcity/services`, `@downcity/services`, and `@downcity/services`.
+
+### 4. Trusted-side management
+
+```ts
+const issued = await admin.studios.tokens.apply({
+  studio_id: "studio_demo",
+  user_id: "user_123",
+  ttl: "7d",
+});
+```
+
+Use this for studio, token, and runtime env actions that must stay in trusted environments.
+
+## What is a service
+
+A service is not a separate protocol.
+
+From the perspective of `@downcity/gate`, it is the same kind of thing as one of your own services: a service mounted inside City under the shared `/v1/*` route space. The only difference is where it came from.
+
+- Your own service: `rewrite`, `translate`, `workspace`
+- A service: `accounts`, `usage`, `payment`, `payment.stripe`
+
+So the studio side does not need to learn two call patterns. Everything stays:
+
+```ts
+client.service("service_id").action("action_id").invoke(...)
+client.service("service_id").get("path", query)
+```
+
+## Minimal `UserClient` example
+
+```ts
+import { UserClient } from "@downcity/gate";
+
+const client = new UserClient({
+  base_url: "https://base.example.com",
+  studio_id: "studio_demo",
+  user_token: "ub_xxx",
+});
+
+const models = await client.ai.listModels();
+
+const result = await client.ai.text({
+  model: models.primary(),
+  prompt: "Hello Downcity",
+});
+```
+
+This stage assumes you already have:
+
+- `base_url`
+- `studio_id`
+- `user_token`
+
+If you do not have `user_token` yet, you normally start with one of the auth flows below.
+
+## Minimal `AdminClient` example
+
+```ts
+import { AdminClient } from "@downcity/gate";
+
+const admin = new AdminClient({
+  base_url: "https://base.example.com",
+  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+});
+
+const studio = await admin.studios.create({
+  name: "Demo Studio",
+});
+
+const token = await admin.studios.tokens.apply({
+  studio_id: studio.studio_id,
+  user_id: "user_123",
+  ttl: "30m",
+});
+```
+
+## How registration and login fit together
+
+The two most common flows are:
+
+### Pattern A: you already have your own backend
+
+```txt
+frontend submits login data
+  -> your backend validates the user
+  -> your backend uses AdminClient to request user_token from City
+  -> backend returns studio_id + user_token
+  -> frontend creates UserClient
+  -> frontend starts calling client.ai.* or client.service(...)
+```
+
+Use this when you already have a mature account system.
+
+### Pattern B: use the accounts service directly
+
+```txt
+frontend creates a guest UserClient with base_url only
+  -> calls guest.service("accounts").action("register" / "login")
+  -> accounts service returns user_token
+  -> frontend creates a normal UserClient with base_url + studio_id + user_token
+  -> frontend continues with AI calls or other service calls
+```
+
+Use this when you want the fastest path to a minimal auth system.
+
+## Login with the accounts service
+
+```ts
+const guest = new UserClient({
+  base_url: "https://base.example.com",
+});
+
+const session = await guest.service("accounts").action("login").invoke<{
+  user_token: string;
+  user_id: string;
+  email: string;
+}>({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+
+const user = new UserClient({
+  base_url: "https://base.example.com",
+  studio_id: "studio_demo",
+  user_token: session.user_token,
+});
+
+const reply = await user.ai.text({
+  prompt: "Write a welcome message for a new user",
+});
+```
+
+The key detail is:
+
+- guest entry points such as `register`, `login`, `oauth/start`, and `oauth/result` are usually guest-access Actions
+- they still run through `UserClient`, but at this stage you only need `base_url`
+- once you enter the logged-in user context, you switch to a normal `UserClient` with `studio_id + user_token`
+
+## Custom services and service routes
+
+Besides `client.ai.*`, both studio and admin clients can use `service(name)` against the shared `/v1/*` route system:
+
+```ts
+const session = await client.service("accounts").action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+```
+
+Here are a few fuller examples:
+
+```ts
+// Your own business service
+const draft = await client.service("writer").action("draft").invoke({
+  topic: "Downcity onboarding",
+});
+
+// accounts service
+const me = await client.service("accounts").get("me");
+
+// usage service
+const usage = await client.service("usage").get("me");
+
+// discover payment methods first
+const methods = await client.payment.methods();
+
+// trusted-side route
+const payments = await admin.service("payment.stripe").get("payments");
+
+// then execute the concrete payment method
+const checkout = await client.payment.method("stripe").invoke({
+  topup_id: "topup_demo",
+});
+```
+
+## Common package combinations
+
+### Minimal AI studio integration
+
+- `@downcity/city`
+- `@downcity/gate`
+
+### Registration and login without building your own account system first
+
+- `@downcity/city`
+- `@downcity/gate`
+- `@downcity/services`
+
+### Usage records, metering, or plan logic
+
+- `@downcity/city`
+- `@downcity/gate`
+- `@downcity/services`
+
+### Stripe topup integration
+
+- `@downcity/city`
+- `@downcity/gate`
+- `@downcity/services`
+
+## Recommended reading order
+
+If this is your first Downcity studio integration, read in this order:
+
+1. Start here to build the mental model for `UserClient`, `AdminClient`, and `service(...)`
+2. Then read [UserClient](/en/docs/city/reference/user-client) for detailed studio-side calls
+3. Then read [AdminClient](/en/docs/city/reference/admin-client) for trusted-side token issuance
+4. If you want minimal registration/login, continue to [@downcity/services](/en/docs/city/packages/services)
+5. If you want the full login scenario, read [Accounts Service](/en/docs/city/guides/accounts-service)
+
+## Read next
+
+- To understand the City side, go back to [@downcity/city](/en/docs/city/packages/city)
+- For full SDK surfaces, read [UserClient](/en/docs/city/reference/user-client) and [AdminClient](/en/docs/city/reference/admin-client)
+- To see how auth can return `user_token` directly, read [@downcity/services](/en/docs/city/packages/services)
+- To see the full login flow, read [Accounts Service](/en/docs/city/guides/accounts-service)

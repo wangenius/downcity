@@ -33,7 +33,7 @@ function applyEnvMap(
 }
 
 /**
- * 对 `city chat send` 命令做前置安全校验。
+ * 对 `studio chat send` 命令做前置安全校验。
  *
  * 关键点（中文）
  * - 历史上模型会把长文本直接拼进多行 shell 命令，导致后续行被 zsh 当作独立命令解析。
@@ -54,8 +54,8 @@ export function validateChatSendCommand(cmd: string): string | null {
     return null;
   }
   return [
-    "Unsafe `city chat send` command: real newlines are not allowed.",
-    "If your message is multi-line, use `city chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
+    "Unsafe `studio chat send` command: real newlines are not allowed.",
+    "If your message is multi-line, use `studio chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
   ].join(" ");
 }
 

@@ -25,14 +25,14 @@ Downcity 现在只保留一种对外认证模型：
 如果你执行：
 
 ```bash
-city start --console
+studio start --console
 ```
 
 首次启动时，Downcity 会自动初始化一个本机 token，并在启动日志里显示一次明文 token。启动日志里会看到类似输出：
 
 ```text
-$ city start --console
-city version: 1.0.0
+$ studio start --console
+downcity v1.0.0
 ✅ city runtime started
    pid: <runtimePid>
    log: <cityRuntimeLogPath>
@@ -50,7 +50,7 @@ city version: 1.0.0
 如果你想手动签发 token，可以直接在本机终端执行：
 
 ```bash
-city token create my-token
+studio token create my-token
 ```
 
 这里的名称只是便于你自己识别和管理，不代表不同权限或不同渠道类型。
@@ -58,7 +58,7 @@ city token create my-token
 如果你想直接走交互模式，也可以执行：
 
 ```bash
-city token
+studio token
 ```
 
 交互式模式会继续引导你：
@@ -81,19 +81,19 @@ curl http://127.0.0.1:3000/api/auth/me \
 列出当前机器已签发的 token：
 
 ```bash
-city token list
+studio token list
 ```
 
 创建一个新的 token：
 
 ```bash
-city token create my-token
+studio token create my-token
 ```
 
 删除 token：
 
 ```bash
-city token delete <tokenId>
+studio token delete <tokenId>
 ```
 
 如果你更习惯直接调用 HTTP，也可以继续用 Bearer Token 管理 token：

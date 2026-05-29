@@ -1,0 +1,74 @@
+---
+title: Token Model
+description: How `admin_secret_key` and `user_token` work together.
+---
+
+Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-user clients call services.
+
+<div className="dc-doc-flow" aria-label="Boundary between admin_secret_key and user_token">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Trusted backend</strong>
+      <span>Your backend uses AdminClient and holds `admin_secret_key`.</span>
+      <code>Create studio / request user_token</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Downcity</strong>
+      <span>Validates `admin_secret_key`, issues `user_token`, and stores provider keys internally.</span>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>End-user client</strong>
+      <span>The frontend, extension, or app only gets `user_token + studio_id` and uses UserClient to call services.</span>
+      <code>No access to admin_secret_key</code>
+    </div>
+  </div>
+</div>
+
+## user_token
+
+`user_token` is the call credential used by the end user or studio client. `AdminClient` requests it from City using `studio_id + user_id`.
+
+- `studio_id`
+- `user_id`
+- `metadata`
+- `ttl`
+
+The client only carries `user_token` and `studio_id`. It never touches provider keys or `admin_secret_key`.
+
+## admin_secret_key
+
+`DOWNCITY_CITY_ADMIN_SECRET_KEY` is used to manage City: create studios, manage env, and issue `user_token` for users under a given studio. City generates it automatically and writes it into `.env` on first startup.
+
+```ts
+const client = new AdminClient({
+  base_url: "https://base.example.com",
+  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+});
+
+const studio = await client.studios.create({
+  name: "Chrome Extension",
+});
+```
+
+## Multi-studio reuse
+
+Many clients can belong to the same studio. When issuing a token, write `studio_id` explicitly:
+
+```ts
+const user = await client.studios.tokens.apply({
+  studio_id: studio.studio_id,
+  user_id: "user_123",
+  metadata: {
+    plan: "pro",
+  },
+  ttl: "7d",
+});
+
+console.log(user.user_token);
+```

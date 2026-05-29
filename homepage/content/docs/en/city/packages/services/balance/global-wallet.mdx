@@ -1,0 +1,38 @@
+---
+title: Global wallet model
+description: "Why @downcity/services stores balance by user instead of creating one wallet per studio."
+---
+
+`@downcity/services` keeps balance by user, not by studio.
+
+That means:
+
+- user A spends inside studio X
+- user A spends inside studio Y
+- both consume the same shared balance
+
+## Why this fits Downcity better
+
+The typical Downcity shape is:
+
+- one City serving multiple client studios
+- the same user moving across those studios
+- one shared AI account layer behind them
+
+If balance is split per studio, both studio UX and operations become fragmented.
+
+## Does studio still matter
+
+Yes, but it belongs in ledger metadata rather than in the wallet primary key.
+
+```ts
+await balance.sub(ctx.user!.user_id, 10, {
+  note: "agent chat",
+  meta: {
+    studio_id: ctx.studio?.studio_id,
+    model_id: ctx.variant?.id,
+  },
+});
+```
+
+That keeps the wallet global while still preserving where the spend came from.

@@ -6,7 +6,7 @@
  */
 
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
-import type { ServiceDefinition, Context } from "@downcity/infra";
+import type { ServiceDefinition, Context } from "@downcity/city";
 
 export interface UsageServiceOptions {
   /**
@@ -20,7 +20,7 @@ export interface UsageServiceOptions {
 /** Usage 事件表 */
 export const usageEvents = sqliteTable("service_usage_events", {
   event_id: text("event_id").primaryKey(),
-  product_id: text("product_id").notNull(),
+  studio_id: text("studio_id").notNull(),
   user_id: text("user_id").notNull(),
   service: text("service").notNull(),
   model_id: text("model_id").notNull(),
@@ -83,7 +83,7 @@ export function usageService(options: UsageServiceOptions = {}): ServiceDefiniti
           return requestCtx.jsonResponse({
             items: await events.select({
               user_id: requestCtx.user?.user_id ?? "",
-              product_id: requestCtx.product?.product_id ?? "",
+              studio_id: requestCtx.studio?.studio_id ?? "",
             }),
           });
         },
@@ -99,11 +99,11 @@ export function usageService(options: UsageServiceOptions = {}): ServiceDefiniti
  * 产生 usage 事件，否则统计接口会污染自身结果。
  */
 function shouldRecordUsage(ctx: Context): boolean {
-  return Boolean(ctx.user?.user_id && ctx.product?.product_id && ctx.service?.id !== "usage");
+  return Boolean(ctx.user?.user_id && ctx.studio?.studio_id && ctx.service?.id !== "usage");
 }
 
 interface UsageEventRow extends Record<string, unknown> {
-  event_id: string; product_id: string; user_id: string;
+  event_id: string; studio_id: string; user_id: string;
   service: string; model_id: string; status: string;
   metadata_json: string; created_at: string;
 }
@@ -111,7 +111,7 @@ interface UsageEventRow extends Record<string, unknown> {
 function createUsageEvent(ctx: Context, status: "success" | "error"): UsageEventRow {
   return {
     event_id: `usage_${randomId()}`,
-    product_id: ctx.product?.product_id ?? "",
+    studio_id: ctx.studio?.studio_id ?? "",
     user_id: ctx.user?.user_id ?? "",
     service: ctx.service?.id ?? "",
     model_id: ctx.variant?.id ?? "",
@@ -127,15 +127,15 @@ function createUsageEvent(ctx: Context, status: "success" | "error"): UsageEvent
 }
 
 function summarizeUsage(rows: UsageEventRow[]) {
-  const byKey = new Map<string, { product_id: string; service: string; status: string; count: number }>();
+  const byKey = new Map<string, { studio_id: string; service: string; status: string; count: number }>();
   for (const row of rows) {
-    const key = `${row.product_id}\u0000${row.service}\u0000${row.status}`;
-    const current = byKey.get(key) ?? { product_id: row.product_id, service: row.service, status: row.status, count: 0 };
+    const key = `${row.studio_id}\u0000${row.service}\u0000${row.status}`;
+    const current = byKey.get(key) ?? { studio_id: row.studio_id, service: row.service, status: row.status, count: 0 };
     current.count += 1;
     byKey.set(key, current);
   }
   return [...byKey.values()].sort((a, b) =>
-    `${a.product_id}:${a.service}:${a.status}`.localeCompare(`${b.product_id}:${b.service}:${b.status}`),
+    `${a.studio_id}:${a.service}:${a.status}`.localeCompare(`${b.studio_id}:${b.service}:${b.status}`),
   );
 }
 

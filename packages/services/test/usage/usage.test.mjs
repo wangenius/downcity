@@ -3,7 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { InfraRuntime, AIService } from "@downcity/infra"
+import { City, AIService } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { usageService } from "../../bin/index.js"
 
@@ -14,7 +14,7 @@ test("usageService records successful service calls", async () => {
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new InfraRuntime({ db, dialect: "sqlite", raw: db.raw })
+    const base = new City({ db, dialect: "sqlite", raw: db.raw })
     base.use(usageService())
 
     const ai = new AIService()
@@ -33,15 +33,15 @@ test("usageService records successful service calls", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_INFRA_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
     const product = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/create",
+      path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/tokens/apply",
-      body: { product_id: product.product_id, user_id: "user_1" },
+      path: "/v1/studios/tokens/apply",
+      body: { studio_id: product.studio_id, user_id: "user_1" },
     }))).json()
 
     const invokeResponse = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
@@ -72,7 +72,7 @@ test("usageService records successful service calls", async () => {
     assert.deepEqual(await summaryResponse.json(), {
       items: [
         {
-          product_id: product.product_id,
+          studio_id: product.studio_id,
           service: "ai",
           status: "success",
           count: 1,

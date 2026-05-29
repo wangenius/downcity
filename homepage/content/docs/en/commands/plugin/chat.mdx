@@ -1,19 +1,19 @@
 ---
-title: city chat
+title: studio chat
 description: Managed chat plugin commands for channel runtime, messaging, conversation inspection, and authorization
 ---
 
-# `city chat`
+# `studio chat`
 
-`city chat` is the managed chat plugin command group.
+`studio chat` is the managed chat plugin command group.
 
 Use it when you want to manage channel runtime, inspect conversations, send messages, react to messages, or manage platform-user authorization.
 
 ## Usage
 
 ```bash
-city chat
-city chat <subcommand> [options]
+studio chat
+studio chat <subcommand> [options]
 ```
 
 ## Main subcommands
@@ -41,21 +41,21 @@ city chat <subcommand> [options]
 - `--delay <ms>`
 - `--time <time>`
 
-Use this for “send one existing message later”. For reusable automations or cron-style work, use `city task`.
+Use this for “send one existing message later”. For reusable automations or cron-style work, use `studio task`.
 
 ## Examples
 
 ```bash
-city chat list --limit 20
-city chat info --chat-key ctx_xxxxxxxxxxxxxxxx
-city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
-city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
-city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
-city chat auth set telegram:12345678 --role admin
+studio chat list --limit 20
+studio chat info --chat-key ctx_xxxxxxxxxxxxxxxx
+studio chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
+studio chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
+studio chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
+studio chat auth set telegram:12345678 --role admin
 ```
 
 ## Related
 
 - [`Plugin Scheduling`](/en/docs/commands/plugin/schedule)
-- [`city task`](/en/docs/commands/plugin/task)
+- [`studio task`](/en/docs/commands/plugin/task)
 - [`Plugins Docs / chat`](/en/plugins-docs/builtins/chat)

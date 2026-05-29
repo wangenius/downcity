@@ -31,9 +31,9 @@ This is usually a state-consistency issue, not a broken project configuration is
 ## Recommended recovery sequence
 
 ```bash
-city agent status
-city agent doctor --fix
-city agent start
+studio agent status
+studio agent doctor --fix
+studio agent start
 ```
 
 That order is useful because it first restores state consistency, then restores execution.
@@ -51,5 +51,5 @@ If behavior is wrong but daemon state is healthy, the better next suspects are:
 
 Continue with:
 
-- [city agent doctor](/en/docs/agent/cli/maintenance/doctor)
+- [studio agent doctor](/en/docs/agent/cli/maintenance/doctor)
 - [Agent won't start](/en/docs/agent/operations/troubleshooting/agent-wont-start)

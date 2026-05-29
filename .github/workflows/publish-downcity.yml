@@ -42,12 +42,12 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build city package
+      - name: Build studio-cli package
         run: |
           set -euo pipefail
           pnpm -C packages/agent build
           pnpm -C packages/plugins build
-          pnpm -C packages/city build
+          pnpm -C packages/studio-cli build
 
       - name: Validate npm token and package ownership
         env:
@@ -72,7 +72,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="$(node -p "require('./packages/city/package.json').version")"
+          VERSION="$(node -p "require('./packages/studio-cli/package.json').version")"
 
           if npm view downcity versions --json >/tmp/downcity-versions.json 2>/dev/null; then
             if grep -q "\"${VERSION}\"" /tmp/downcity-versions.json; then
@@ -83,10 +83,10 @@ jobs:
 
           PACK_DIR="$(mktemp -d)"
           UNPACK_DIR="$(mktemp -d)"
-          pnpm -C packages/city pack --pack-destination "${PACK_DIR}" >/dev/null
+          pnpm -C packages/studio-cli pack --pack-destination "${PACK_DIR}" >/dev/null
           SOURCE_TARBALL="$(find "${PACK_DIR}" -maxdepth 1 -name '*.tgz' -print -quit)"
           if [[ -z "${SOURCE_TARBALL}" ]]; then
-            echo "No city tarball generated."
+            echo "No studio-cli tarball generated."
             exit 1
           fi
 

@@ -31,7 +31,7 @@ export interface PaymentMethodItem {
   type: PaymentMethodType;
 
   /**
-   * 当前 InfraRuntime 是否实际开放该支付方式。
+   * 当前 City 是否实际开放该支付方式。
    */
   enabled: boolean;
 
@@ -89,7 +89,7 @@ export interface PaymentMethodDefinition {
  */
 export interface PaymentServiceOptions {
   /**
-   * 当前 InfraRuntime 挂载的支付方式列表。
+   * 当前 City 挂载的支付方式列表。
    */
   methods: PaymentMethodDefinition[];
 }

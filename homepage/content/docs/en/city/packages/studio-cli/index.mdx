@@ -1,0 +1,64 @@
+---
+title: "@downcity/studio-cli"
+description: "Manage City models and tables from the terminal for setup, debugging, and routine operations."
+---
+
+`@downcity/studio-cli` is a terminal tool for City operators. It is not part of studio runtime traffic. It is the operational entry you use during setup, inspection, and debugging.
+
+If `AdminClient` owns "trusted programmatic calls", `@downcity/studio-cli` owns "a human operating City directly from the terminal".
+
+## How to read this section
+
+The recommended order is:
+
+1. Start with [Quickstart](/en/docs/city/packages/studio-cli-terminal/quickstart) to learn how the CLI connects to your City database.
+2. Continue with [Models and tables](/en/docs/city/packages/studio-cli-terminal/models-and-tables) for the most common table inspection and model-management workflows.
+3. Finish with [Operations and debugging](/en/docs/city/packages/studio-cli-terminal/operations-and-debug) to connect routine checks, incident diagnosis, and manual fixes.
+
+## Use it when
+
+- you want to inspect which tables exist in the City database
+- you need to add, update, or remove entries in `downcity_models`
+- you want to debug runtime data directly from the terminal
+
+## Install
+
+```bash
+npm i -g @downcity/studio-cli
+```
+
+## Default usage
+
+```bash
+downcity
+```
+
+The default entry opens an interactive panel. If no server exists yet, the CLI first requires you to add one. After that, you can:
+
+- manage multiple City servers from `Manage Servers`
+- enter the Admin flow for env / models / studios / payment
+- enter the User flow for login, recharge, and service calls
+
+## Common commands
+
+```bash
+downcity models
+downcity models add
+downcity models update
+studio --database-url "$DOWNCITY_CITY_DATABASE_URL"
+```
+
+## Boundaries with other packages
+
+- It does not replace `AdminClient` from [@downcity/gate](/en/docs/city/packages/gate).
+- It does not replace the runtime capabilities in [@downcity/city](/en/docs/city/packages/city).
+- It is better for human-operated inspection and maintenance than for code you embed into a studio.
+
+- `AdminClient` is for trusted programmatic calls
+- `@downcity/studio-cli` is for human-operated terminal workflows
+
+## Read next
+
+- To connect the CLI first, read [Quickstart](/en/docs/city/packages/studio-cli-terminal/quickstart)
+- To manage `downcity_models` and inspect data, read [Models and tables](/en/docs/city/packages/studio-cli-terminal/models-and-tables)
+- To learn the troubleshooting workflow, read [Operations and debugging](/en/docs/city/packages/studio-cli-terminal/operations-and-debug)

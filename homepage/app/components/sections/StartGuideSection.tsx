@@ -36,7 +36,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
       {
         title: "安装 CLI",
         description: "先让本地有一个明确的运行入口。`downcity` 与 `city` 都可作为命令名使用。",
-        command: "npm install -g downcity\ndowncity --version",
+        command: "npm install -g downcity\ndownstudio --version",
       },
       {
         title: "在仓库里创建 Agent",
@@ -71,7 +71,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
       {
         title: "Install the CLI",
         description: "Establish one local runtime entry point first. Both `downcity` and `city` are valid command names.",
-        command: "npm install -g downcity\ndowncity --version",
+        command: "npm install -g downcity\ndownstudio --version",
       },
       {
         title: "Create the agent inside your repo",

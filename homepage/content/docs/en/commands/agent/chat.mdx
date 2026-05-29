@@ -1,9 +1,9 @@
 ---
-title: city agent chat
+title: studio agent chat
 description: Chat with a selected agent in interactive or one-shot mode
 ---
 
-# `city agent chat`
+# `studio agent chat`
 
 Chat with a target agent from the terminal.
 
@@ -14,8 +14,8 @@ This command uses a dedicated local CLI main session: `local-cli-chat-main`.
 ## Usage
 
 ```bash
-city agent chat [--to <id>]
-city agent chat [--to <id>] --message <text> [--json]
+studio agent chat [--to <id>]
+studio agent chat [--to <id>] --message <text> [--json]
 ```
 
 ## Key options
@@ -36,13 +36,13 @@ city agent chat [--to <id>] --message <text> [--json]
 
 ## Related commands
 
-- [`city agent list`](/en/docs/commands/agent/list)
-- [`city agent start`](/en/docs/commands/agent/start)
+- [`studio agent list`](/en/docs/commands/agent/list)
+- [`studio agent start`](/en/docs/commands/agent/start)
 
 ## Examples
 
 ```text
-$ city agent chat --to lucas_whitman
+$ studio agent chat --to lucas_whitman
 downcity v1.0.439
 
 INFO Agent chat · lucas_whitman
@@ -53,5 +53,5 @@ Today you completed the plugin interactive CLI redesign and validated the update
 ```
 
 ```bash
-$ city agent chat --to lucas_whitman --message "summarize today's work" --json
+$ studio agent chat --to lucas_whitman --message "summarize today's work" --json
 ```

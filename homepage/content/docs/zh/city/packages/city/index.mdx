@@ -1,0 +1,121 @@
+---
+title: "@downcity/city"
+description: "Downcity 的 City 运行时内核，负责 service、模型、鉴权和统一路由。"
+---
+
+`@downcity/city` 是 Downcity 的 City 本体。只要你真的要部署一个能服务多个产品的 City，最后都会落到这个包。
+
+这不是“某个 AI SDK 的补充包”，而是整个 server-side City 的核心运行时。你注册的 AI service、自定义 service、官方服务，以及统一的 `/v1/*` 调用边界，都会在这里汇合。
+
+## 这组文档怎么读
+
+建议按下面顺序读：
+
+1. 先读 [City 运行时与启动方式](/docs/city/packages/city/city-runtime)，理解 `City` 实例到底承载什么。
+2. 再读 [Service 与 Action 设计](/docs/city/packages/city/service-and-action)，理解为什么 AI service、custom service 最后都能走统一路由。
+3. 需要扩展能力时读 [Hooks 与服务挂载机制](/docs/city/packages/city/hooks-and-service)，理解服务和钩子怎么接入。
+4. 需要理解持久化与表结构时读 [Store 与 Table 数据模型](/docs/city/packages/city/store-and-table)。
+
+如果你只想先建立总体印象，可以先看完本页，再按顺序读上面四页。
+
+## 这个包真正负责什么
+
+- 创建 `City` 实例
+- 注册 `Service`、官方服务和 `AIService`
+- 管理内置的 studio、env 和 token 相关能力
+- 暴露统一的 `/v1/*` 路由与调用边界
+
+## 它不负责什么
+
+- 不负责产品侧调用 SDK，这部分在 [@downcity/gate](/docs/city/packages/gate)
+- 不负责创建具体数据库连接；你用 Drizzle ORM 创建 db 后传给 `new City({ db })`
+- 不负责现成账号、usage、支付业务，这些通过官方服务接入
+
+## 什么时候应该先看它
+
+- 你要搭一个真正可运行的 City
+- 你要声明自己的 AI service 或自定义 service
+- 你要把多产品共用的鉴权、hooks、模型目录放进同一个后端
+
+## 最常见的组合关系
+
+| 目标 | 组合方式 |
+| --- | --- |
+| 本地或常规 Node 部署 | `@downcity/city` + Drizzle SQLite / Postgres |
+| 产品前端或 App 调用 | `@downcity/city` + `@downcity/gate` |
+| 账号、usage、支付 | `@downcity/city` + 对应官方服务 |
+
+## 安装
+
+```bash
+pnpm add @downcity/city drizzle-orm better-sqlite3
+```
+
+## 最小示例
+
+```ts
+import { City, AIService } from "@downcity/city";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+
+const sqlite = new Database("./data.sqlite");
+sqlite.pragma("journal_mode = WAL");
+
+const db = Object.assign(drizzle(sqlite), {
+  $client: { exec: (sql: string) => sqlite.exec(sql) },
+});
+
+const base = new City({ db, dialect: "sqlite", raw: sqlite });
+
+const ai = new AIService();
+
+ai.use({
+  id: "local-echo",
+  name: "Local Echo",
+  default: ["text"],
+  actions: {
+    text: async (ctx) => ({
+      id: crypto.randomUUID(),
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          text: String(ctx.input.prompt ?? ""),
+          state: "done",
+        },
+      ],
+    }),
+  },
+});
+
+base.use(ai);
+```
+
+这个示例只说明一件事：`@downcity/city` 负责把数据库、service 和服务挂到同一个 City 上；它本身不解决产品怎么登录、前端怎么调这些外围问题。
+
+## 典型理解路径
+
+### 如果你要自己写业务 service
+
+- 先看 [Service 与 Action 设计](/docs/city/packages/city/service-and-action)
+- 再看 [@downcity/gate](/docs/city/packages/gate)，理解产品怎么调用你写的 service
+
+### 如果你要接官方服务
+
+- 先看 [Hooks 与服务挂载机制](/docs/city/packages/city/hooks-and-service)
+- 再看对应服务页：
+  - [@downcity/services](/docs/city/packages/services)
+  - [@downcity/services](/docs/city/packages/services)
+  - [@downcity/services](/docs/city/packages/services)
+
+### 如果你要部署上线
+
+- 先看 [City 运行时与启动方式](/docs/city/packages/city/city-runtime)
+- 再看 [@downcity/studio-cli](/docs/city/packages/studio-cli-terminal) 了解初始化与排查工具
+
+## 下一步读什么
+
+- 想按主题深入，直接进入上面的四个子页面
+- 想看产品怎么调用它，继续读 [@downcity/gate](/docs/city/packages/gate)
+- 想看 Worker 怎么接进来，继续读 [Cloudflare Workers](/docs/city/guides/cloudflare-workers)
+- 想直接查接口，再去 [City API](/docs/city/reference/city-runtime)

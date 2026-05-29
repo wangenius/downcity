@@ -1,0 +1,46 @@
+---
+title: Environment and Key Rotation
+description: How to maintain provider keys and Downcity keys safely.
+---
+
+The main benefit of managing keys in City is that many studios do not need separate config updates.
+
+## provider keys
+
+Provider keys can be managed through Runtime env and saved into the City database:
+
+```ts
+await admin.env.upsert({
+  key: "OPENAI_API_KEY",
+  value: "sk_new",
+});
+```
+
+After rotation, every service handler connected to this City reads the new value. Env values in the database take priority over `.env`.
+
+## Downcity's own keys
+
+Downcity maintains two critical keys of its own:
+
+- `DOWNCITY_CITY_ADMIN_SECRET_KEY`
+- `DOWNCITY_CITY_TOKEN_SIGNING_KEY`
+
+### admin secret
+
+`DOWNCITY_CITY_ADMIN_SECRET_KEY` is used by `AdminClient` to manage City.
+
+### token signing key
+
+`DOWNCITY_CITY_TOKEN_SIGNING_KEY` is used internally by City to issue and validate `user_token`.
+
+## What to watch during rotation
+
+- Rotating a provider key usually does not affect existing `user_token`
+- Rotating `DOWNCITY_CITY_TOKEN_SIGNING_KEY` invalidates old tokens
+- If you rotate the signing key in production, shorten token TTL ahead of time or schedule a clear cutover window
+
+## Recommendations
+
+- assign an internal owner for every provider key
+- record key rotation time
+- put production key rotation in a trusted backend or ops workflow instead of relying on manual browser actions

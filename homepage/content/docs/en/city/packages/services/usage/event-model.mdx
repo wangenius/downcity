@@ -1,0 +1,86 @@
+---
+title: Usage Event Model
+description: "@downcity/services records service-call facts, not prices or plans directly."
+---
+
+`@downcity/services` is not mainly about billing. It is about persisting service-call facts.
+
+## What this concept really means
+
+The usage service records:
+
+- which studio made the call
+- which user made the call
+- which service or model was used
+- whether the call succeeded or failed
+
+It does not directly decide pricing, plan structure, or balance deduction.
+
+## Why that boundary matters
+
+If usage, plans, balances, and pricing are fused too early, it becomes harder to change business rules later. As a fact layer, usage can feed analytics, metering, billing, and plan analysis.
+
+## Enable it
+
+```ts
+import { usageService } from "@downcity/services";
+
+base.use(usageService({
+  record_errors: true,
+}));
+```
+
+## How trusted-side readers consume those facts
+
+```ts
+const events = await admin.service("usage").get("events");
+const summary = await admin.service("usage").get("summary");
+```
+
+## How studio-side users read their own usage
+
+```ts
+const me = await user.service("usage").get("me");
+```
+
+Useful for:
+
+- account usage pages
+- plan consumption displays
+- self-serve usage awareness inside the studio
+
+## Common scenarios
+
+### Scenario 1: track first, price later
+
+First persist the facts, then later decide which models are billable, which calls count toward quotas, and which studios or flows are exempt.
+
+### Scenario 2: debugging and operations
+
+If you need to know whether calls really happened, whether one studio is consuming abnormally, or whether one model is being hit far more than expected, the usage fact layer is often the first place to look.
+
+## Common API surface
+
+- `usageService({ record_errors })`
+- `admin.service("usage").get("events")`
+- `admin.service("usage").get("summary")`
+- `user.service("usage").get("me")`
+
+## Common misunderstandings
+
+### The usage service is not a full billing system
+
+It is a common input layer for billing, not the whole charging system.
+
+### Recording failed calls is not redundant
+
+Many operational questions depend on whether failed calls happened and how often.
+
+### Usage is not only for operators
+
+User-facing "you have used X" experiences are often direct consumers of usage data.
+
+## Read next
+
+- For read surfaces, read [Querying and Summary](/en/docs/city/packages/services/usage/querying-and-summary)
+- For how usage combines with billing logic, read [Billing Integration](/en/docs/city/packages/services/usage/billing-integration)

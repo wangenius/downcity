@@ -1,20 +1,20 @@
 ---
-title: city plugin schedule
+title: studio plugin schedule
 description: 查看并取消一次性 plugin 调度任务
 ---
 
-# `city plugin schedule`
+# `studio plugin schedule`
 
-`city plugin schedule` 用来管理本地的一次性 plugin 调度存储。
+`studio plugin schedule` 用来管理本地的一次性 plugin 调度存储。
 
 当某个 plugin action 因为 `--delay` 或 `--time` 被接受为延迟任务后，你可以用它来查看或取消任务。
 
 ## 用法
 
 ```bash
-city plugin schedule list [options]
-city plugin schedule info <jobId> [options]
-city plugin schedule cancel <jobId> [options]
+studio plugin schedule list [options]
+studio plugin schedule info <jobId> [options]
+studio plugin schedule cancel <jobId> [options]
 ```
 
 ## 支持的子命令
@@ -25,11 +25,11 @@ city plugin schedule cancel <jobId> [options]
 
 ## 适用范围
 
-- `city chat send --delay/--time`
-- `city memory flush --delay/--time`
-- `city plugin command <plugin> <command> --delay/--time`
+- `studio chat send --delay/--time`
+- `studio memory flush --delay/--time`
+- `studio plugin command <plugin> <command> --delay/--time`
 
-这里只负责一次性调度。若要可复用工作流或 cron 自动化，请使用 `city task`。
+这里只负责一次性调度。若要可复用工作流或 cron 自动化，请使用 `studio task`。
 
 ## 存储位置
 
@@ -42,12 +42,12 @@ city plugin schedule cancel <jobId> [options]
 ## 示例
 
 ```bash
-city plugin schedule list --path /abs/path/to/agent
-city plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
-city plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+studio plugin schedule list --path /abs/path/to/agent
+studio plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+studio plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
 ```
 
 ## 相关页面
 
-- [`city plugin`](/zh/docs/commands/plugin/plugin)
-- [`city task`](/zh/docs/commands/plugin/task)
+- [`studio plugin`](/zh/docs/commands/plugin/plugin)
+- [`studio task`](/zh/docs/commands/plugin/task)

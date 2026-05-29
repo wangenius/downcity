@@ -5,43 +5,43 @@ description: 安装、启动与配置中的常见错误
 
 # 常见问题
 
-## 命令找不到（`city: command not found` / `downcity: command not found`）
+## 命令找不到（`studio: command not found` / `downstudio: command not found`）
 
 ```bash
 npm config get prefix
 echo $PATH
 export PATH=$(npm config get prefix)/bin:$PATH
 rehash
-city --version
+studio --version
 ```
 
 或直接用：
 
 ```bash
-npx downcity --version
+npx downstudio --version
 ```
 
 说明：
 
-- `city` 与 `downcity` 是同一个可执行命令。
+- `studio` 与 `downcity` 是同一个可执行命令。
 - 新版本安装后不应该再需要手动 `chmod +x`。
-- 如果 `sudo city ...` 失败，但普通 `city ...` 正常，通常是 `sudo` 的 PATH 问题，不是安装失败。
+- 如果 `sudo studio ...` 失败，但普通 `studio ...` 正常，通常是 `sudo` 的 PATH 问题，不是安装失败。
 
 ## 端口冲突（5314 被占用）
 
 ```bash
 lsof -nP -iTCP:5314 -sTCP:LISTEN
-city agent doctor . --fix
-city agent restart .
+studio agent doctor . --fix
+studio agent restart .
 ```
 
-## 启动后无法调用 `city task/chat/...`
+## 启动后无法调用 `studio task/chat/...`
 
 先确认 daemon 运行中：
 
 ```bash
-city agent start
-city plugin list
+studio agent start
+studio plugin list
 ```
 
 ## LLM 配置错误
@@ -49,8 +49,8 @@ city plugin list
 检查：
 
 ```bash
-city model list
-city config get model.primary
+studio model list
+studio config get model.primary
 ```
 
 并确认：

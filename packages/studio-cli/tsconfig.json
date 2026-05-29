@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "outDir": "./bin",
+    "rootDir": "src",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@downcity/agent": ["../agent/bin/index.d.ts"],
+      "@downcity/plugins": ["../plugins/bin/index.d.ts"]
+    },
+    "strict": true,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "bin"]
+}

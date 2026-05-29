@@ -1,31 +1,31 @@
 ---
-title: city agent
+title: studio agent
 description: Manage agents interactively, or use subcommands for scripts
 ---
 
-# `city agent`
+# `studio agent`
 
 Manage agent lifecycle and registry-aware operations.
 
 > Recommended reading: the new complete Agent documentation now lives in a dedicated docs domain. Start with [Agent Overview](/en/docs/agent/overview/what-is-agent) and [Agent CLI Overview](/en/docs/agent/cli/overview).
 
-Run `city agent` without a subcommand in an interactive terminal to open the agent manager. Use subcommands when you want a scriptable command.
+Run `studio agent` without a subcommand in an interactive terminal to open the agent manager. Use subcommands when you want a scriptable command.
 
 ## Command hierarchy
 
-Top-level command groups are: `city console`, `city agent`, `city plugin`.
+Top-level command groups are: `studio console`, `studio agent`, `studio plugin`.
 
 ## Usage
 
 ```bash
-city agent
-city agent <subcommand>
+studio agent
+studio agent <subcommand>
 ```
 
 ## Version inspection
 
-- `city -v` shows the city CLI version only.
-- `city agent -v` shows both the current city version and the `@downcity/agent` runtime version actually bundled with that city installation.
+- `studio -v` shows the city CLI version only.
+- `studio agent -v` shows both the current city version and the `@downcity/agent` runtime version actually bundled with that city installation.
 
 ## Interactive manager
 
@@ -39,7 +39,7 @@ The interactive manager lets you:
 
 It does not replace the subcommands below. It is a guided entry point for common local operations.
 
-Chat channel credentials stay in city-level channel accounts managed from `city chat`. The agent manager only connects an agent to those existing accounts through `plugins.chat.channels.<channel>.channelAccountId`. If an agent points at a missing account, the manager removes that dangling binding automatically.
+Chat channel credentials stay in city-level channel accounts managed from `studio chat`. The agent manager only connects an agent to those existing accounts through `plugins.chat.channels.<channel>.channelAccountId`. If an agent points at a missing account, the manager removes that dangling binding automatically.
 
 ## Subcommands
 
@@ -54,18 +54,18 @@ Chat channel credentials stay in city-level channel accounts managed from `city 
 
 ## Subcommand docs
 
-- [`city agent create`](/en/docs/commands/agent/create)
-- [`city agent list`](/en/docs/commands/agent/list)
-- [`city agent start`](/en/docs/commands/agent/start)
-- [`city agent stop`](/en/docs/commands/agent/stop)
-- [`city agent chat`](/en/docs/commands/agent/chat)
-- [`city agent status`](/en/docs/commands/agent/status)
-- [`city agent restart`](/en/docs/commands/agent/restart)
-- [`city agent doctor`](/en/docs/commands/agent/doctor)
+- [`studio agent create`](/en/docs/commands/agent/create)
+- [`studio agent list`](/en/docs/commands/agent/list)
+- [`studio agent start`](/en/docs/commands/agent/start)
+- [`studio agent stop`](/en/docs/commands/agent/stop)
+- [`studio agent chat`](/en/docs/commands/agent/chat)
+- [`studio agent status`](/en/docs/commands/agent/status)
+- [`studio agent restart`](/en/docs/commands/agent/restart)
+- [`studio agent doctor`](/en/docs/commands/agent/doctor)
 
 ## Environment variable injection
 
-On every `city` execution, CLI resolves current agent context and injects variables into the `city` process and its child processes:
+On every `studio` execution, CLI resolves current agent context and injects variables into the `studio` process and its child processes:
 
 - `DC_AGENT_ID`: current agent runtime id
 - `DC_AGENT_PATH`: absolute path of current agent
@@ -74,15 +74,15 @@ On every `city` execution, CLI resolves current agent context and injects variab
 
 ## Related command
 
-- Start console first: [`city start`](/en/docs/commands/start)
+- Start console first: [`studio start`](/en/docs/commands/start)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ city agent
-city version: 1.0.0
+$ studio agent
+downcity v1.0.0
 ? 管理 Agent
   查看 agents
   创建 agent

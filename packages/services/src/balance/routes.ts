@@ -6,7 +6,7 @@
  * - 余额读写、充值单和兑换码状态变更仍然收敛在 BalanceService 内部
  */
 
-import type { ServiceInstallContext, ServiceRouteContext } from "@downcity/infra";
+import type { ServiceInstallContext, ServiceRouteContext } from "@downcity/city";
 import type { BalanceService } from "./service.js";
 import type { BalanceExtra } from "./types.js";
 import { normalizeUserId, readRequired } from "./utils.js";

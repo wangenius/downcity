@@ -1,0 +1,130 @@
+---
+title: Many Studios, One City
+description: How one City can serve multiple studios without mixing studio differences with shared infrastructure.
+---
+
+When many studios share one City, the goal is not “save one server.” The goal is to separate **shared infrastructure** from **studio-specific differences**.
+
+What should be shared:
+
+- provider env
+- model directory
+- service routing
+- hooks, usage, and logs
+- `user_token` verification
+
+What should stay in each studio:
+
+- pages and interaction
+- the user system
+- plan, order, and balance rules
+- studio-specific brand, positioning, and pricing
+
+## One diagram for the reuse boundary
+
+<div className="dc-doc-flow" aria-label="Many studios share one City">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Studio A</strong>
+      <span>For example, a web tool.</span>
+      <code>studio_id = studio_web</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Studio B</strong>
+      <span>For example, a Chrome extension.</span>
+      <code>studio_id = studio_extension</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Studio C</strong>
+      <span>For example, a client demo or internal tool.</span>
+      <code>studio_id = studio_demo</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>One Downcity</strong>
+      <span>Reuses the model directory, provider env, service logic, usage records, and hooks.</span>
+    </div>
+  </div>
+</div>
+
+## How to think about `studio_id`
+
+`studio_id` is a studio boundary, not a model boundary.
+
+It is useful for:
+
+- identifying which studio sent the call
+- deciding whether a studio is still `active`
+- telling hooks where usage should be recorded
+- separating one user’s activity across different studios
+
+A common pattern is one stable `studio_id` per studio:
+
+```ts
+const studio = await admin.studios.create({
+  name: "Chrome Extension",
+});
+
+const issued = await admin.studios.tokens.apply({
+  studio_id: studio.studio_id,
+  user_id: "user_123",
+  metadata: {
+    plan: "starter",
+    channel: "extension",
+  },
+});
+```
+
+## What belongs in token metadata
+
+`studio_id` says *which studio this is*. Token metadata is better for *the user’s business state inside that studio*.
+
+Common fields:
+
+- `plan`
+- `organization_id`
+- `channel`
+- `feature_flag`
+- `team_id`
+
+That lets hooks differentiate behavior with `ctx.studio` and `ctx.user.metadata` instead of cloning City for each studio.
+
+## Recommended layering
+
+### Studio side
+
+- keeps routes, UI, and business experience
+- uses `UserClient`
+- only holds `studio_id + user_token`
+
+### Business backend
+
+- owns login, orders, balance, subscriptions, and business data
+- uses `AdminClient` in a trusted environment
+- issues `user_token` after a successful login
+
+### City
+
+- owns the model directory
+- owns provider calls
+- owns usage and hooks
+- owns the reusable AI service layer
+
+## When to create a new studio
+
+Usually worth creating a new studio when:
+
+- it is a separate studio or market
+- it needs to be paused or activated independently
+- it needs independent usage reporting or business strategy
+- you need to separate web app, extension, client demo, and other studio surfaces
+
+Usually not worth creating a new studio when:
+
+- it is only another page in the same studio
+- it is only a feature flag inside the same studio
+- it is just another conversation/session for one user
+
+Those are better kept inside your own business system or token metadata.

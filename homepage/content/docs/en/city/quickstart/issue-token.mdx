@@ -1,0 +1,50 @@
+---
+title: Issue `user_token`
+description: Give the studio client a user-scoped credential that can call City.
+---
+
+`user_token` must be issued by a trusted environment. Your backend uses `AdminClient` and asks City for a token based on `studio_id + user_id`.
+
+```ts
+import { AdminClient } from "@downcity/gate";
+
+const client = new AdminClient({
+  base_url: "https://base.example.com",
+  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+});
+
+const studio = await client.studios.create({
+  name: "Web App",
+});
+
+const user = await client.studios.tokens.apply({
+  studio_id: studio.studio_id,
+  user_id: "user_123",
+  metadata: {
+    plan: "pro",
+  },
+  ttl: "7d",
+});
+```
+
+Return `user.user_token` and `studio.studio_id` to the studio client.
+
+## What `metadata` is for
+
+`metadata` carries business context such as plan or organization into hooks:
+
+```ts
+const action = service.action("generate", async (ctx) => {
+  return generateSomething(ctx.input);
+});
+
+action.before(async (ctx) => {
+  await quotaService.check({
+    studio_id: ctx.studio?.studio_id,
+    user_id: ctx.user?.user_id,
+    plan: ctx.user?.metadata?.plan,
+  });
+});
+```
+
+This is how multiple studio clients share one auth and quota layer cleanly.

@@ -1,15 +1,15 @@
 ---
-title: city agent doctor
+title: studio agent doctor
 description: Diagnose and repair stale Agent daemon state
 ---
 
-# `city agent doctor`
+# `studio agent doctor`
 
 ## Usage
 
 ```bash
-city agent doctor [path]
-city agent doctor [path] --fix
+studio agent doctor [path]
+studio agent doctor [path] --fix
 ```
 
 ## What problem it solves
@@ -25,7 +25,7 @@ It is not a universal repair command for every runtime issue.
 Diagnostic only:
 
 ```bash
-city agent doctor
+studio agent doctor
 ```
 
 ## With `--fix`
@@ -33,13 +33,13 @@ city agent doctor
 Repair stale state:
 
 ```bash
-city agent doctor --fix
+studio agent doctor --fix
 ```
 
 Then, if you want to restore execution:
 
 ```bash
-city agent start
+studio agent start
 ```
 
 Use `doctor` first when:

@@ -5,7 +5,7 @@ import http from "node:http"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { InfraRuntime } from "@downcity/infra"
+import { City } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { paymentService, stripePaymentMethod, stripePaymentService } from "../../bin/index.js"
 
@@ -17,7 +17,7 @@ test("paymentService lists enabled payment methods for guests", async () => {
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new InfraRuntime({ db, dialect: "sqlite", raw: db.raw })
+    const base = new City({ db, dialect: "sqlite", raw: db.raw })
     base.use(paymentService({
       methods: [
         stripePaymentMethod({
@@ -57,7 +57,7 @@ test("paymentService marks payment methods as disabled when Stripe is not config
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new InfraRuntime({ db, dialect: "sqlite", raw: db.raw })
+    const base = new City({ db, dialect: "sqlite", raw: db.raw })
     base.use(paymentService({
       methods: [
         stripePaymentMethod({
@@ -98,7 +98,7 @@ test("stripePaymentService creates checkout sessions and finishes topups through
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new InfraRuntime({ db, dialect: "sqlite", raw: db.raw })
+    const base = new City({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
     base.use(stripePaymentService({
       balance,
@@ -112,15 +112,15 @@ test("stripePaymentService creates checkout sessions and finishes topups through
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_INFRA_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
     const product = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/create",
+      path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/tokens/apply",
-      body: { product_id: product.product_id, user_id: "user_1" },
+      path: "/v1/studios/tokens/apply",
+      body: { studio_id: product.studio_id, user_id: "user_1" },
     }))).json()
 
     const topup = await balance.createTopup("user_1", 50, { note: "recharge" })
@@ -241,7 +241,7 @@ test("stripePaymentService creates checkout sessions and finishes topups through
   }
 })
 
-test("stripePaymentService falls back to DOWNCITY_INFRA_BASE_URL for redirect URLs and exposes HTML pages", async () => {
+test("stripePaymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and exposes HTML pages", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-redirect-"))
   const stripeStub = await createStripeStub()
@@ -250,7 +250,7 @@ test("stripePaymentService falls back to DOWNCITY_INFRA_BASE_URL for redirect UR
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new InfraRuntime({ db, dialect: "sqlite", raw: db.raw })
+    const base = new City({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
     base.use(stripePaymentService({
       balance,
@@ -260,16 +260,16 @@ test("stripePaymentService falls back to DOWNCITY_INFRA_BASE_URL for redirect UR
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_INFRA_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_INFRA_BASE_URL", value: "https://base.example.com/" })
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const product = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/create",
+      path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/tokens/apply",
-      body: { product_id: product.product_id, user_id: "user_3" },
+      path: "/v1/studios/tokens/apply",
+      body: { studio_id: product.studio_id, user_id: "user_3" },
     }))).json()
 
     const topup = await balance.createTopup("user_3", 80, { note: "redirect fallback" })
@@ -313,7 +313,7 @@ test("stripePaymentService derives redirect URLs from request origin without bas
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new InfraRuntime({ db, dialect: "sqlite", raw: db.raw })
+    const base = new City({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
     base.use(stripePaymentService({
       balance,
@@ -323,15 +323,15 @@ test("stripePaymentService derives redirect URLs from request origin without bas
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_INFRA_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
     const product = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/create",
+      path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/tokens/apply",
-      body: { product_id: product.product_id, user_id: "user_4" },
+      path: "/v1/studios/tokens/apply",
+      body: { studio_id: product.studio_id, user_id: "user_4" },
     }))).json()
 
     const topup = await balance.createTopup("user_4", 120, { note: "request origin fallback" })
@@ -366,7 +366,7 @@ test("stripePaymentService marks failed and expired payments without crediting b
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new InfraRuntime({ db, dialect: "sqlite", raw: db.raw })
+    const base = new City({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
     base.use(stripePaymentService({
       balance,
@@ -378,15 +378,15 @@ test("stripePaymentService marks failed and expired payments without crediting b
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_INFRA_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
     const product = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/create",
+      path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/products/tokens/apply",
-      body: { product_id: product.product_id, user_id: "user_2" },
+      path: "/v1/studios/tokens/apply",
+      body: { studio_id: product.studio_id, user_id: "user_2" },
     }))).json()
 
     const expiredTopup = await balance.createTopup("user_2", 30, { note: "expired" })

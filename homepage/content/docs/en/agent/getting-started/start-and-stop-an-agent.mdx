@@ -10,7 +10,7 @@ description: Start a background Agent, inspect status, and stop or restart it sa
 Default startup runs the agent in the background:
 
 ```bash
-city agent start
+studio agent start
 ```
 
 If you do not pass a path and the current directory is not already an initialized agent project, the CLI may prompt you to select one from registered agents.
@@ -26,7 +26,7 @@ The decision rule is:
 If you want to watch runtime behavior in the current terminal:
 
 ```bash
-city agent start --foreground
+studio agent start --foreground
 ```
 
 Foreground mode is for debugging, not long-running production usage.
@@ -36,7 +36,7 @@ When background startup fails but the cause is unclear, foreground mode is often
 ## Check status
 
 ```bash
-city agent status
+studio agent status
 ```
 
 Common states:
@@ -51,7 +51,7 @@ Understanding these states is more useful than repeatedly running `start`.
 ## Stop
 
 ```bash
-city agent stop
+studio agent stop
 ```
 
 This stops the target project's daemon and cleans up the corresponding state files.
@@ -61,7 +61,7 @@ If the target is already stopped, the command remains idempotent.
 ## Restart
 
 ```bash
-city agent restart
+studio agent restart
 ```
 
 Restart is usually the safest move after changing:
@@ -84,9 +84,9 @@ Some of those values are loaded during startup, so editing files alone does not 
 For most runtime changes, this is a stable pattern:
 
 ```bash
-city agent status
-city agent restart
-city agent status
+studio agent status
+studio agent restart
+studio agent status
 ```
 
 Next:

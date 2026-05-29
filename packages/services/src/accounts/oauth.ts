@@ -34,7 +34,7 @@ export interface AccountsProviderItem {
   type: "password" | "oauth";
 
   /**
-   * 当前 InfraRuntime 是否实际启用该登录方式。
+   * 当前 City 是否实际启用该登录方式。
    */
   enabled: boolean;
 

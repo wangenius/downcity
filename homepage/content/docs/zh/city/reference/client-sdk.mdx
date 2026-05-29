@@ -1,0 +1,81 @@
+---
+title: SDK 概览
+description: Downcity SDK 按角色拆分：UserClient 负责产品运行时调用，AdminClient 负责可信侧管理调用。
+---
+
+这一页只做一件事：把 `@downcity/gate` 里的调用方式总览收口到一张图里。
+
+如果你想先看接入场景，优先读 [@downcity/gate](/docs/city/packages/gate)。如果你要查具体方法签名，再往下读 [UserClient](/docs/city/reference/user-client) 和 [AdminClient](/docs/city/reference/admin-client)。
+
+## 两个角色
+
+| | UserClient | AdminClient |
+|---|---|---|
+| 面向谁 | 前端、App、扩展、桌面端 | 产品后端、运维脚本、内部工具 |
+| 负责什么 | AI service、custom service、公开 service | studio、token、runtime env、管理侧 service |
+| 常见鉴权 | `user_token` | `admin_secret_key` |
+| 是否可放浏览器 | 可以 | 不可以 |
+
+## 四类常见调用
+
+```ts
+// 产品侧
+const client = new UserClient({ base_url, studio_id, user_token });
+
+// AI Service
+await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
+await client.ai.stream({ prompt: "hello" });
+
+// 自定义 Service
+await client.service("translate").action("zh2en").invoke({ text: "hello" });
+await client.service("accounts").action("login").invoke({ email: "a@b.com", password: "..." });
+
+// GET action
+const items = await client.service("studios").get("list");
+
+// 支付方式
+const methods = await client.payment.methods();
+const checkout = await client.payment.method("stripe").invoke({
+  topup_id: "topup_demo",
+});
+
+// 管理端
+const admin = new AdminClient({ base_url, admin_secret_key });
+await admin.service("studios").action("create").invoke({ name: "My App" });
+```
+
+## service、AI service 的关系
+
+- AI service：走 `client.ai.*`
+- custom service：走 `client.service(name)...`
+- service：本质上还是 `client.service(name)...`，只是 service 来源于 service
+
+例如：
+
+- `rewrite`、`translate` 是你自己注册的 custom service
+- `accounts`、`usage`、`payment`、`payment.stripe` 是 service
+
+对调用方来说，统一都是 City 的 service 路由空间。
+
+## 注册登录链路在 SDK 里的位置
+
+最常见的两种方式：
+
+1. 你的业务后端完成登录，再用 `AdminClient` 申请 `user_token`
+2. 前端直接用 guest `UserClient` 调 `accounts.login/register`，由 accounts service 返回 `user_token`
+
+这两条路最终都会进入同一个用户态：
+
+```txt
+base_url + studio_id + user_token
+  -> new UserClient(...)
+  -> client.ai.* 或 client.service(...)
+```
+
+## 什么时候看哪一页
+
+1. 想理解 package 组合方式，读 [Packages 包](/docs/city/packages)
+2. 想理解产品接入路径，读 [@downcity/gate](/docs/city/packages/gate)
+3. 想看产品侧细节，读 [UserClient](/docs/city/reference/user-client)
+4. 想看可信侧细节，读 [AdminClient](/docs/city/reference/admin-client)
+5. 想看最小注册登录，读 [@downcity/services](/docs/city/packages/services) 和 [Accounts 服务指南](/docs/city/guides/accounts-service)

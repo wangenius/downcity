@@ -1,17 +1,17 @@
 ---
-title: city agent chat
+title: studio agent chat
 description: 在终端里与运行中的 Agent 对话，支持交互式和一次性模式
 ---
 
-# `city agent chat`
+# `studio agent chat`
 
 ## 用法
 
 ```bash
-city agent chat
-city agent chat --to my-agent
-city agent chat --to my-agent --message "总结一下今天做了什么"
-city agent chat --to my-agent --message "输出 JSON" --json
+studio agent chat
+studio agent chat --to my-agent
+studio agent chat --to my-agent --message "总结一下今天做了什么"
+studio agent chat --to my-agent --message "输出 JSON" --json
 ```
 
 ## 两种模式
@@ -21,7 +21,7 @@ city agent chat --to my-agent --message "输出 JSON" --json
 不带 `--message` 时进入持续对话：
 
 ```bash
-city agent chat --to my-agent
+studio agent chat --to my-agent
 ```
 
 适合：
@@ -35,7 +35,7 @@ city agent chat --to my-agent
 带 `--message` 时只发一轮：
 
 ```bash
-city agent chat --to my-agent --message "总结一下当前仓库结构"
+studio agent chat --to my-agent --message "总结一下当前仓库结构"
 ```
 
 适合：

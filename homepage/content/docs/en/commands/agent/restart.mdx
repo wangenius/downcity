@@ -1,9 +1,9 @@
 ---
-title: city agent restart
+title: studio agent restart
 description: Restart target agent process
 ---
 
-# `city agent restart`
+# `studio agent restart`
 
 Restart the process for a target agent.
 
@@ -12,7 +12,7 @@ Restart the process for a target agent.
 ## Usage
 
 ```bash
-city agent restart [path] [options]
+studio agent restart [path] [options]
 ```
 
 ## Key options
@@ -27,24 +27,24 @@ city agent restart [path] [options]
 
 ## Related commands
 
-- [`city agent start`](/en/docs/commands/agent/start)
-- [`city agent restart`](/en/docs/commands/agent/restart)
-- [`city agent status`](/en/docs/commands/agent/status)
+- [`studio agent start`](/en/docs/commands/agent/start)
+- [`studio agent restart`](/en/docs/commands/agent/restart)
+- [`studio agent status`](/en/docs/commands/agent/status)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ city agent restart .
-city version: 1.0.0
+$ studio agent restart .
+downcity v1.0.0
 ✅ Downcity daemon restarted
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ city agent restart .
-city version: 1.0.0
+$ studio agent restart .
+downcity v1.0.0
 ❌ Failed to restart daemon: <error>
 ```

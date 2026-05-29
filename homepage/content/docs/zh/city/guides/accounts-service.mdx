@@ -1,0 +1,218 @@
+---
+title: Accounts 服务
+description: 用 @downcity/services 提供注册、登录、OAuth 入口、profile 数据和 user_token 签发。
+---
+
+Accounts 服务适合还没有复杂用户系统的产品。它提供 better-auth 认证事实表、产品层 profile 资料表、密码注册登录，并在注册或登录后签发 City `user_token`。
+
+这一页重点不是“服务内部怎么实现”，而是用户真正怎么把它接进产品调用链。
+
+## 安装与启用
+
+```ts
+import { accountsService } from "@downcity/services";
+
+base.use(accountsService({
+  token_ttl: "7d",
+}));
+```
+
+## 它在整条产品链路里的位置
+
+```txt
+产品前端
+  -> guest UserClient（只有 base_url）
+  -> 调 accounts 的 guest action
+  -> accounts service 返回 user_token
+  -> 前端创建正常 UserClient（base_url + studio_id + user_token）
+  -> 前端继续调 AI service 或 custom service
+```
+
+如果你已经有自己的业务后端，也可以不用服务直接做登录鉴权，然后让后端用 `AdminClient` 去签 `user_token`。Accounts 服务只是“最小账号系统”的官方现成方案。
+
+## 模式选择
+
+### 模式 A：直接用 accounts 服务
+
+适合：
+
+- 你想最快跑通注册登录
+- 你不想先自己设计认证表、profile 表和 session 表
+- 你希望注册或登录之后直接拿到 `user_token`
+
+### 模式 B：你自己的后端做登录
+
+适合：
+
+- 你已经有成熟账号系统
+- 你要接复杂组织、邀请、权限、风控逻辑
+- 你只想把 `user_token` 签发交给 City
+
+这两种模式最终都会收敛到同一件事：前端拿到 `studio_id + user_token`，然后用正常 `UserClient` 调 City。
+
+## 登录
+
+```ts
+import { UserClient } from "@downcity/gate";
+
+const guest = new UserClient({
+  base_url: "https://base.example.com",
+});
+
+const accounts = guest.service("accounts");
+
+const session = await accounts.action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+```
+
+返回结果里包含 `user_token`、`user_id` 和 `email`。产品 client 拿到 token 后，再创建常规 `UserClient` 调 AI service。
+
+## 注册
+
+```ts
+const session = await accounts.action("register").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+```
+
+如果你的服务配置要求邮箱验证，接下来通常要继续走 `verify-email`。
+
+## OAuth 入口
+
+```ts
+const start = await accounts.action("oauth/start").invoke({
+  provider: "github",
+  studio_id: "studio_demo",
+});
+
+const result = await guest.service("accounts").get("oauth/result", {
+  state: start.state,
+});
+```
+
+这里不需要前端自己传 `redirect_uri`。Accounts 服务会用当前 City 的公网地址自动生成第三方登录回调：
+
+```txt
+https://你的-base-域名/v1/accounts/oauth/callback
+```
+
+所以 GitHub / Google OAuth 应用后台，或者 WeChat 网站应用后台里登记的回调地址，也必须和这个地址完全一致。
+
+如果你要接微信登录，这里指的是“微信开放平台 -> 网站应用 -> 微信登录”这条链路，不是公众号登录，也不是小程序登录。
+
+如果你现在要配具体 provider，可以继续看：
+
+- [Google 登录配置](/docs/city/packages/services/accounts/google-login)
+- [微信登录配置](/docs/city/packages/services/accounts/wechat-login)
+
+这一组接口通常分成两段：
+
+- `oauth/start`：拿跳转地址或 state
+- `oauth/result`：轮询或确认登录结果
+
+## 从 guest UserClient 切换到正常 UserClient
+
+```ts
+const guest = new UserClient({
+  base_url: "https://base.example.com",
+});
+
+const session = await guest.service("accounts").action("login").invoke<{
+  user_token: string;
+}>({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+
+const user = new UserClient({
+  base_url: "https://base.example.com",
+  studio_id: "studio_demo",
+  user_token: session.user_token,
+});
+
+const reply = await user.ai.text({
+  prompt: "写一段欢迎语",
+});
+```
+
+这个切换动作是 accounts 服务接入里最关键的一步。
+
+## 路由约定
+
+Accounts 服务也走统一的 `/v1/*` 路由体系：
+
+```txt
+POST /v1/accounts/register
+POST /v1/accounts/verify-email
+POST /v1/accounts/login
+POST /v1/accounts/oauth/start
+GET  /v1/accounts/oauth/result
+GET  /v1/accounts/oauth/callback
+GET  /v1/accounts/me
+POST /v1/accounts/logout
+GET  /v1/accounts/users
+GET  /v1/accounts/sessions
+```
+
+其中 `register`、`verify-email`、`login`、`oauth/start`、`oauth/result` 是免登录入口；`me` 和 `logout` 需要 `user_token`。
+
+## 哪些 Action 是免登录的
+
+通常可以先按这个心智理解：
+
+- 免登录：`register`、`verify-email`、`login`、`oauth/start`、`oauth/result`
+- 已登录用户：`me`、`logout`
+- 管理侧：`users`、`sessions` 这类列表或维护接口
+
+也就是说：
+
+- 免登录 Action 仍然通过 `UserClient` 调
+- 只是这个阶段的 `UserClient` 可以只有 `base_url`
+- 进入用户态后，再要求 `studio_id + user_token`
+
+## 当前用户和退出登录
+
+```ts
+const me = await user.service("accounts").get("me");
+
+await user.service("accounts").action("logout").invoke();
+```
+
+`logout` 当前返回 `{ success: true }`。如果你需要更严格的 session 失效语义，可以在自己的业务后端或服务 hook 里继续扩展。
+
+`me` 会同时返回：
+
+- `user`：当前运行时用户
+- `profile`：产品层资料
+
+## 管理用户
+
+```ts
+const users = await admin.service("accounts").get("users");
+const sessions = await admin.service("accounts").get("sessions");
+```
+
+服务会自动维护：
+
+- better-auth 认证事实表：`auth_users`、`auth_accounts`、`auth_sessions`、`auth_verifications`
+- 业务资料表：`auth_profiles`
+- OAuth 轮询 state 表：`service_accounts_oauth_states`
+
+City 使用者不需要手写这些表。
+
+## 和 `@downcity/gate` 的关系
+
+Accounts 服务不会替代 `@downcity/gate`。
+
+更准确地说：
+
+- `@downcity/services` 负责把 `accounts` service 注册进 City
+- `@downcity/gate` 负责在产品侧和可信环境里调用这个 service
+
+也就是说，注册登录能力是服务提供的；调用方式仍然统一通过 `UserClient` / `AdminClient` 完成。

@@ -15,7 +15,7 @@ Downcity is easiest to read as six layers:
 2. Control plane: console
 3. Execution plane: agent host
 4. Capability layer: session and plugins
-5. Infrastructure layer: infra runtime, auth, env, product-scoped routing
+5. Infrastructure layer: city runtime, auth, env, product-scoped routing
 6. Public services: accounts, balance, usage, payment, and service SDK access
 
 ```mermaid
@@ -131,10 +131,10 @@ The stable hook semantics are:
 
 ```mermaid
 flowchart TD
-  A["city console start"] --> B["start console control plane"]
+  A["studio console start"] --> B["start console control plane"]
   B --> C["registry / model store / gateway"]
 
-  D["city agent start"] --> E["validate console and project state"]
+  D["studio agent start"] --> E["validate console and project state"]
   E --> F["create AgentCore"]
   F --> G["load downcity.json / env"]
   G --> H["prepare model binding"]

@@ -1,0 +1,130 @@
+---
+title: HTTP API
+description: "Auth, requests, and responses under the unified `/v1/*` route space."
+---
+
+All actions are exposed through the same shape:
+
+```txt
+POST /v1/{service}/{action}
+GET  /v1/{service}/{action}
+```
+
+The bearer credential decides the request identity:
+
+- no token: `guest`
+- `user_token`: `user`
+- `admin_secret_key`: `admin`
+
+Each action declares which identities it allows. The default is `["user"]`; `[]` means guest access is allowed.
+
+## Studio Routes (common user-side routes)
+
+| Route | Method | Purpose | Pathway |
+| --- | --- | --- | --- |
+| `/v1/ai/models` | `GET` | Model catalog | — |
+| `/v1/ai/text` | `POST` | Text generation | SDK |
+| `/v1/ai/stream` | `POST` | Streaming generation | SDK |
+| `/v1/ai/image` | `POST` | Image generation | SDK |
+| `/v1/ai/video` | `POST` | Video generation | SDK |
+| `/v1/ai/tts` | `POST` | Text-to-speech | SDK |
+| `/v1/ai/asr` | `POST` | Speech recognition | SDK |
+| `/v1/ai/chat/completions` | `POST` | OpenAI-compatible endpoint | OpenAI |
+| `/v1/accounts/login` | `POST` | Accounts login | — |
+| `/v1/accounts/oauth/start` | `POST` | Start OAuth | — |
+| `/v1/accounts/oauth/result` | `GET` | Poll OAuth result | — |
+| `/v1/accounts/oauth/callback` | `GET` | Third-party OAuth callback entry | — |
+| `/v1/services` | `GET` | Registered service list | — |
+| `/v1/{service}/{action}` | `POST` | Generic action call | — |
+
+`/v1/accounts/oauth/callback` is the fixed return URL for GitHub, Google, and other third-party OAuth providers. Studio clients usually do not call it directly.
+
+## Admin Routes (same route space, admin credential required)
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/v1/studios/list` | `GET` | List studios |
+| `/v1/studios/create` | `POST` | Create studio |
+| `/v1/studios/pause` | `POST` | Pause studio |
+| `/v1/studios/activate` | `POST` | Activate studio |
+| `/v1/studios/remove` | `POST` | Remove studio |
+| `/v1/studios/tokens/apply` | `POST` | Issue user_token |
+| `/v1/env/list` | `GET` | View runtime env |
+| `/v1/env/upsert` | `POST` | Write env variable |
+| `/v1/env/remove` | `POST` | Delete env variable |
+| `/v1/env/import` | `POST` | Bulk import .env |
+
+## Auth Header
+
+```http
+Authorization: Bearer <user_token>
+Content-Type: application/json
+```
+
+## `GET /v1/ai/models`
+
+The same route returns different visibility by identity:
+
+- with `user_token`: only currently callable models
+- with `admin_secret_key`: the full code-registered model list plus `env_requirements`
+
+```json
+{ "items": [
+  { "id": "deepseek-v4-flash", "name": "DeepSeek V4 Flash",
+    "description": "...", "modalities": ["text","stream"],
+    "tags": ["deepseek"], "meta": {} }
+]}
+```
+
+```json
+{ "items": [
+  { "id": "deepseek-v4-flash", "name": "DeepSeek V4 Flash",
+    "description": "", "modalities": ["text","stream","openai"],
+    "tags": ["deepseek"], "meta": {},
+    "env_requirements": [
+      { "key": "DEEPSEEK_API_KEY", "description": "deepseek API Key", "required": true }
+    ],
+    "default_modes": ["text","stream","openai"] }
+]}
+```
+
+## `POST /v1/ai/text`
+
+Request:
+```json
+{ "studio_id": "studio_xxx", "model": "deepseek-v4-flash", "prompt": "Hello" }
+```
+
+Response:
+```json
+{ "id": "msg_xxx", "role": "assistant", "parts": [{ "type": "text", "text": "Hi!" }] }
+```
+
+If the request body includes `studio_id`, it must match the studio bound to the `user_token`. Otherwise City returns `403`.
+
+## `GET /v1/services`
+
+```json
+{
+  "items": [
+    { "id": "ai", "name": "AI", "env": [] },
+    { "id": "accounts", "name": "Accounts", "env": [] }
+  ]
+}
+```
+
+`env` exposes the runtime env requirements declared by the service so admin or debugging surfaces can render dependencies.
+
+## `POST /v1/ai/chat/completions`
+
+OpenAI-compatible endpoint. Accepts standard `{ model, messages, stream }` format.
+
+Non-streaming returns OpenAI `chat.completion` JSON. Streaming returns OpenAI SSE.
+
+Fully compatible with OpenAI SDK:
+```ts
+  const openai = new OpenAI({
+  baseURL: "http://127.0.0.1:43127/v1/ai",
+  apiKey: "ub_xxx",
+});
+```

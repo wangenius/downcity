@@ -1,0 +1,13 @@
+{
+  "title": "Downcity City Docs",
+  "pages": [
+    "index",
+    "concepts",
+    "quickstart",
+    "guides",
+    "packages",
+    "service",
+    "operations",
+    "reference"
+  ]
+}

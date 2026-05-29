@@ -1,9 +1,9 @@
 ---
-title: city agent doctor
+title: studio agent doctor
 description: 诊断并可修复 agent 的僵尸状态文件
 ---
 
-# `city agent doctor`
+# `studio agent doctor`
 
 诊断指定 agent 的状态文件，并可清理僵尸 pid/meta。
 
@@ -12,7 +12,7 @@ description: 诊断并可修复 agent 的僵尸状态文件
 ## 用法
 
 ```bash
-city agent doctor [path] [--fix]
+studio agent doctor [path] [--fix]
 ```
 
 ## 常用参数
@@ -27,26 +27,26 @@ city agent doctor [path] [--fix]
 
 ## 相关命令
 
-- [`city agent status`](/zh/docs/commands/agent/status)
-- [`city agent restart`](/zh/docs/commands/agent/restart)
+- [`studio agent status`](/zh/docs/commands/agent/status)
+- [`studio agent restart`](/zh/docs/commands/agent/restart)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city agent doctor .
-city version: 1.0.0
+$ studio agent doctor .
+downcity v1.0.0
 ⚠️  Stale daemon state detected
    project: <projectRoot>
    stalePid: <pid>
    reason: <reasons>
    log: <daemonLogPath>
-   Run `city agent doctor <path> --fix` to clean stale pid/meta.
+   Run `studio agent doctor <path> --fix` to clean stale pid/meta.
 ```
 
 ```text
-$ city agent doctor . --fix
-city version: 1.0.0
+$ studio agent doctor . --fix
+downcity v1.0.0
 ✅ Cleaned stale daemon pid/meta files
 ```

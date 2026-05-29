@@ -1,9 +1,9 @@
 ---
-title: city agent chat
+title: studio agent chat
 description: 在终端中与选定 agent 对话，支持交互式和一次性模式
 ---
 
-# `city agent chat`
+# `studio agent chat`
 
 在终端中与指定 agent 对话。
 
@@ -14,8 +14,8 @@ description: 在终端中与选定 agent 对话，支持交互式和一次性模
 ## 用法
 
 ```bash
-city agent chat [--to <id>]
-city agent chat [--to <id>] --message <text> [--json]
+studio agent chat [--to <id>]
+studio agent chat [--to <id>] --message <text> [--json]
 ```
 
 ## 常用参数
@@ -37,13 +37,13 @@ city agent chat [--to <id>] --message <text> [--json]
 
 ## 相关命令
 
-- [`city agent list`](/zh/docs/commands/agent/list)
-- [`city agent start`](/zh/docs/commands/agent/start)
+- [`studio agent list`](/zh/docs/commands/agent/list)
+- [`studio agent start`](/zh/docs/commands/agent/start)
 
 ## 示例
 
 ```text
-$ city agent chat --to lucas_whitman
+$ studio agent chat --to lucas_whitman
 downcity v1.0.439
 
 INFO Agent chat · lucas_whitman
@@ -55,5 +55,5 @@ lucas_whitman> 总结一下今天做了什么
 ```
 
 ```bash
-$ city agent chat --to lucas_whitman --message "总结一下今天做了什么" --json
+$ studio agent chat --to lucas_whitman --message "总结一下今天做了什么" --json
 ```

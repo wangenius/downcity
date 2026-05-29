@@ -8,29 +8,29 @@ description: Correct startup sequence for Console + Agent in about 10 minutes
 ## 1. Install
 
 ```bash
-npm install -g @downcity/city
+npm install -g @downcity/studio-cli
 # or
 npm install -g downcity
 # or
-pnpm add -g @downcity/city
+pnpm add -g @downcity/studio-cli
 # or
 pnpm add -g downcity
-city --version
-downcity --version
+studio --version
+downstudio --version
 ```
 
-> `downcity` and `city` are the same CLI binary.
+> `downcity` and `studio` are the same CLI binary.
 >
-> `@downcity/city` and `downcity` publish the same CLI contents and version line.
+> `@downcity/studio-cli` and `downcity` publish the same CLI contents and version line.
 >
-> If `city` is not found after install, see [FAQ](/en/docs/operations/faq).
+> If `studio` is not found after install, see [FAQ](/en/docs/operations/faq).
 >
-> To upgrade later, run `city update`. It upgrades the package you originally installed.
+> To upgrade later, run `studio update`. It upgrades the package you originally installed.
 
 ## 2. Initialize Console (first time only)
 
 ```bash
-city init
+studio init
 ```
 
 This creates console-global config under `~/.downcity/`.
@@ -38,16 +38,16 @@ This creates console-global config under `~/.downcity/`.
 ## 3. Start Console
 
 ```bash
-city start
+studio start
 ```
 
-> `city agent start` requires console to be running first.
+> `studio agent start` requires console to be running first.
 
 ## 4. Initialize a repository
 
 ```bash
 cd /path/to/your-repo
-city agent create .
+studio agent create .
 ```
 
 Initialization generates:
@@ -85,7 +85,7 @@ Notes:
 Start the agent (default: background daemon):
 
 ```bash
-city agent start
+studio agent start
 ```
 
 If you run this outside an initialized agent directory, Downcity can let you pick from registered agents interactively.
@@ -93,15 +93,15 @@ If you run this outside an initialized agent directory, Downcity can let you pic
 Use foreground mode when you want logs in the current terminal:
 
 ```bash
-city agent start --foreground
+studio agent start --foreground
 ```
 
 ## 7. Verify agent state
 
 ```bash
-city agent list
-city agent status
-city agent list --running
+studio agent list
+studio agent status
+studio agent list --running
 ```
 
 Notes:
@@ -112,7 +112,7 @@ Notes:
 ## 8. Optional: start Console UI
 
 ```bash
-city start
+studio start
 ```
 
 ## 9. Optional: Chrome extension quick-send from page selection
@@ -133,6 +133,6 @@ If you use the repo's `chrome-extension`:
 
 - [Configuration](/en/docs/quickstart/configuration)
 - [Agent Overview](/en/docs/agent/overview/what-is-agent)
-- [`city skill`](/en/docs/commands/plugin/skill)
-- [`city task`](/en/docs/commands/plugin/task)
+- [`studio skill`](/en/docs/commands/plugin/skill)
+- [`studio task`](/en/docs/commands/plugin/task)
 - [FAQ](/en/docs/operations/faq)

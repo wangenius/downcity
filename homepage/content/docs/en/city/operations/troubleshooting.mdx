@@ -1,0 +1,66 @@
+---
+title: Troubleshooting
+description: Common debugging paths for City, client, token, and env.
+---
+
+## client returns 401
+
+Check:
+
+- whether the request includes `Authorization: Bearer <user_token>`
+- whether the token has expired
+- whether City has `DOWNCITY_CITY_TOKEN_SIGNING_KEY` configured
+- whether the token was issued by the current City
+- whether `studio_id` matches the studio embedded in the token
+
+## client returns 403
+
+Check:
+
+- whether the `studio_id` in the request matches the studio bound to the current `user_token`
+- whether the studio bound to the token has been paused
+- whether the target studio was `active` when the admin side issued the token
+
+## client returns 404
+
+Check:
+
+- whether the HTTP route is correct
+- whether the target service has been registered in City
+- whether the target studio existed when the admin side issued the token
+
+## model not found or handler not hit
+
+Check:
+
+- whether the client-provided `model` has been registered through `Provider.model()` + `AIService.use()`
+- whether the target model includes the required action for the current pathway, such as `text`, `stream`, or `image`
+- whether the current pathway has a default model, such as `default: true` or `default: ["text"]`
+- whether `client.ai.listModels()` can see the model
+
+These cases usually return `422`.
+
+## City returns 500
+
+Check:
+
+- whether City has both `DOWNCITY_CITY_TOKEN_SIGNING_KEY` and `DOWNCITY_CITY_ADMIN_SECRET_KEY`
+- whether the target service has a registered handler
+- whether the handler or provider call threw an error without `statusCode`
+- whether the `onError` hook recorded the original error
+
+## provider call failed
+
+Check:
+
+- whether the matching key exists in City `.env`
+- whether the handler reads the correct `ctx.env` field
+- whether model `meta` matches the current provider calling style
+
+## usage not recorded
+
+Check:
+
+- whether the `after` hook is registered on the target service, or whether `usageService()` is enabled
+- whether the record logic depends on an output field that the handler did not return
+- whether the logging service swallowed an exception

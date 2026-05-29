@@ -52,11 +52,11 @@ frontmatter 核心字段：
 
 ## CLI 示例
 
-- `city task list [--status enabled|paused|disabled]`
-- `city task create --title '...' --description '...' --session-id <sessionId> [--when '@manual'] [--kind agent|script] [--status ...|--activate]`
-- `city task run <title> [--reason '...']`
-- `city task update <title> [--title ...] [--description ...] [--when ...] [--status ...|--activate] [--session-id ...]`
-- `city task delete <title>`
+- `studio task list [--status enabled|paused|disabled]`
+- `studio task create --title '...' --description '...' --session-id <sessionId> [--when '@manual'] [--kind agent|script] [--status ...|--activate]`
+- `studio task run <title> [--reason '...']`
+- `studio task update <title> [--title ...] [--description ...] [--when ...] [--status ...|--activate] [--session-id ...]`
+- `studio task delete <title>`
 
 ## 关键约束
 
@@ -165,8 +165,8 @@ frontmatter 核心字段：
 - 因此正文里的“输出要求”要面向最终用户阅读，不要只写给开发者看。
 - 对于面向用户的 agent task，正文应要求“最后一条 assistant 返回直接输出最终交付物本身”，不要让执行器在最后回答里输出自己如何创建、检查、更新、触发或发送任务。
 - 如果任务是内容生成类（例如日报、提醒、晨读、摘要），最后输出应直接是那段内容本身，不要附带“我来为你处理”“任务已发送”“任务状态总结”等过程汇报。
-- 默认不要在正文里再次要求执行器调用 `city chat send`。
-- 只有在“跨会话发送”“额外抄送”“多渠道通知”这类场景下，才显式要求 `city chat send`。
+- 默认不要在正文里再次要求执行器调用 `studio chat send`。
+- 只有在“跨会话发送”“额外抄送”“多渠道通知”这类场景下，才显式要求 `studio chat send`。
 
 ### `when` / `status` 怎么选
 
@@ -200,7 +200,7 @@ frontmatter 核心字段：
 - 最后一条 assistant 返回直接作为最终结果，不要附带冗长日志。
 - 最后一条 assistant 返回直接输出交付物本身，不要输出任务管理过程、发送过程或状态汇报。
 - 不要使用“我来为你…… / 首先让我…… / 已发送……”这类元话术。
-- 默认不要再次调用 `city chat send`。
+- 默认不要再次调用 `studio chat send`。
 
 # 触发与状态建议
 
@@ -208,7 +208,7 @@ frontmatter 核心字段：
 
 # 注意事项
 
-- 仅在明确需要跨会话或额外通知时，才调用 `city chat send`。
+- 仅在明确需要跨会话或额外通知时，才调用 `studio chat send`。
 ```
 
 ### script 模板

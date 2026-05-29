@@ -9,6 +9,8 @@
 7. package 对外能力、SDK API、用户可见行为发生变化并准备提交时，必须使用 patch 脚本完成版本号自增与构建：
    - 只改 `@downcity/agent`：`pnpm agent:patch:build`
    - 只改 `@downcity/city`：`pnpm city:patch:build`
+   - 只改 `@downcity/gate`：`pnpm gate:patch:build`
+   - 只改 `@downcity/studio-cli`：`pnpm studio-cli:patch:build`
    - 多 package 联动：`pnpm all:patch:build`
    - 仅验证不需要 bump 时才允许使用 `pnpm patch:build -- --no-bump ...`
 

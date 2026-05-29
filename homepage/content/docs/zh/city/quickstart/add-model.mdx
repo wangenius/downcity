@@ -1,0 +1,31 @@
+---
+title: 添加模型
+description: 用 Provider 注册模型，AIService 自动生成路由。
+---
+
+```ts
+import { AIService, Provider } from "@downcity/city";
+
+const deepseek = new Provider("deepseek", {
+  baseURL: "https://api.deepseek.com/v1",
+  envKey: "DEEPSEEK_API_KEY",
+  passthroughModel: "deepseek-chat",
+  text: myTextAction,
+  stream: myStreamAction,
+});
+
+const ai = new AIService();
+ai.use(deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }));
+base.use(ai);
+```
+
+注册后自动生成路由：
+
+```
+POST /v1/ai/text              → SDK 通路
+POST /v1/ai/stream            → SDK 通路
+POST /v1/ai/chat/completions  → 自动透传到 DeepSeek
+GET  /v1/ai/models            → 模型目录
+```
+
+`passthroughModel` 控制自动透传时发往上游的 model 值。

@@ -1,0 +1,132 @@
+---
+title: Deploy With Dokploy
+description: Deploy the Downcity Node block to Dokploy with a persistent City database.
+---
+
+The Node block is the standard Docker / Dokploy deployment shape for Downcity City Infra.
+
+It runs `cities/node`, exposes the City HTTP API, and stores SQLite data in a persistent `/data` volume. Use it when you want a long-running city service layer for studios, apps, agents, or internal tools.
+
+## Dokploy Settings
+
+Create an app in Dokploy from this Git repository:
+
+| Setting | Value |
+| --- | --- |
+| Deployment mode | Compose |
+| Compose file | `./docker-compose.yml` |
+| Container port | `43127` |
+| Volume | Compose creates `downcity_infra_data` |
+
+Configure these two stable bootstrap secrets in Dokploy:
+
+```txt
+DOWNCITY_CITY_ADMIN_SECRET_KEY=admin_xxx
+DOWNCITY_CITY_TOKEN_SIGNING_KEY=sign_xxx
+```
+
+`HOST`, `PORT`, and `DOWNCITY_CITY_DATABASE_URL` are already defined in `docker-compose.yml`:
+
+```txt
+HOST=0.0.0.0
+PORT=43127
+DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
+```
+
+`/data` must stay persistent. Studios, models, users, sessions, usage, payments, and City env entries are stored in that SQLite database.
+
+## Domain Path
+
+The Node block listens on `43127`, and the City API is mounted at the service root:
+
+```txt
+GET  /health
+POST /v1/env/upsert
+GET  /v1/services
+POST /v1/ai/text
+```
+
+If your domain is `https://base.example.com`, studio-side SDKs and trusted backends should use:
+
+```txt
+base_url=https://base.example.com
+```
+
+If Stripe redirect URLs are not configured directly, write `DOWNCITY_CITY_BASE_URL` into City env so payment pages can derive default success and cancel URLs:
+
+```bash
+curl -X POST https://base.example.com/v1/env/upsert \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer admin_xxx' \
+  -d '{"key":"DOWNCITY_CITY_BASE_URL","value":"https://base.example.com"}'
+```
+
+## Provider Keys
+
+Provider API keys should not be stored in Dokploy env. After deployment, write them into the City database through the Admin API:
+
+```bash
+curl -X POST https://base.example.com/v1/env/upsert \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer admin_xxx' \
+  -d '{"key":"MOONSHOT_API_KEY","value":"your_api_key"}'
+
+curl -X POST https://base.example.com/v1/env/upsert \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer admin_xxx' \
+  -d '{"key":"DEEPSEEK_API_KEY","value":"your_api_key"}'
+```
+
+At runtime, `ctx.env.MOONSHOT_API_KEY` and `ctx.env.DEEPSEEK_API_KEY` are read from the City database first.
+
+## Verify
+
+After Dokploy finishes the deployment, verify the public service:
+
+```bash
+curl https://base.example.com/health
+```
+
+When using an IP and port:
+
+```bash
+curl http://1.2.3.4:43127/health
+```
+
+Expected shape:
+
+```json
+{
+  "ok": true,
+  "services": ["env", "studios", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+}
+```
+
+If the request times out, the Dokploy service is not exposed publicly, the VPS firewall does not allow `43127`, or a reachable domain has not been bound yet.
+
+## Call From Studios
+
+Studio frontends and apps should call the Node block through `@downcity/gate`:
+
+```ts
+import { UserClient } from "@downcity/gate";
+
+const client = new UserClient({
+  base_url: "https://base.example.com",
+  studio_id: "my-studio",
+  user_token: "user_token",
+});
+```
+
+Trusted backends should use `AdminClient` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
+
+```ts
+import { AdminClient } from "@downcity/gate";
+
+const admin = new AdminClient({
+  base_url: "https://base.example.com",
+  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+});
+```
+
+See [UserClient](/en/docs/city/reference/user-client) and [AdminClient](/en/docs/city/reference/admin-client) for the full SDK surface.

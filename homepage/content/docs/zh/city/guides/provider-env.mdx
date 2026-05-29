@@ -1,0 +1,56 @@
+---
+title: Provider 环境变量
+description: 如何在 City 运行环境中配置 Provider API Key。
+---
+
+所有 Provider 需要的 API Key 都通过 City 自己的 env 表统一管理。
+
+## 声明环境变量
+
+在 `Provider` 构造时声明：
+
+```ts
+const deepseek = new Provider("deepseek", {
+  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+  baseURL: "https://api.deepseek.com",
+  envKey: "DEEPSEEK_API_KEY",
+  text: deepseekTextHandler,
+  stream: deepseekStreamHandler,
+});
+```
+
+`env` 字段声明环境变量需求（key → 描述），`envKey` 指定自动透传时读取的 key。
+
+## 设置环境变量
+
+通过 Admin API 写入：
+
+```bash
+curl -X POST http://127.0.0.1:43127/v1/env/upsert \
+  -H "Authorization: Bearer <admin_secret_key>" \
+  -H "Content-Type: application/json" \
+  -d '{"key": "DEEPSEEK_API_KEY", "value": "sk-xxx"}'
+```
+
+或批量导入 `.env` 文件：
+
+```bash
+curl -X POST http://127.0.0.1:43127/v1/env/import \
+  -H "Authorization: Bearer <admin_secret_key>" \
+  -H "Content-Type: application/json" \
+  -d '{"raw": "DEEPSEEK_API_KEY=sk-xxx\nMOONSHOT_API_KEY=sk-yyy"}'
+```
+
+## 在 handler 中读取
+
+```ts
+text: async (ctx) => {
+  const apiKey = ctx.env("DEEPSEEK_API_KEY");
+  // 或使用 readApiKey 辅助函数（找不到时抛错）
+  const apiKey2 = readApiKey(ctx, "DEEPSEEK_API_KEY");
+}
+```
+
+`ctx.env(key)` 从 City 当前运行时绑定的 env 表读取。AIService 的自动透传 handler 也通过 `ctx.env(envKey)` 读取 API Key。
+
+详见 [HTTP API - env 管理](/docs/city/reference/http-api#管理端请求格式)。

@@ -1,0 +1,95 @@
+---
+title: Operations and Debugging
+description: "The boundary between @downcity/studio-cli, AdminClient, and direct database inspection, and when the CLI is the better tool."
+---
+
+The CLI and `AdminClient` can both help you manage City, but they are better at different kinds of operational work.
+
+## The simplest rule first
+
+If your thought is:
+
+- "I need to see the facts right now"
+
+start with the CLI.
+
+If your thought is:
+
+- "this action should live in the system long term"
+
+move toward `AdminClient` or a trusted script.
+
+## CLI, AdminClient, and direct DB inspection each fit different work
+
+### Better fits for the CLI
+
+- fast local inspection
+- checking whether a service actually wrote the expected tables
+- inspecting models, schema, and rows
+- one-off debugging without writing code first
+
+### Better fits for `AdminClient`
+
+- backend-owned actions
+- automated token issuance
+- formal management workflows
+- internal admin surfaces
+
+### Better fits for direct database inspection
+
+- when the issue has clearly reached the lower database layer
+- when the CLI already narrowed the problem but you need deeper SQL-level facts
+
+## Common CLI debugging actions
+
+```bash
+studio --database-url "$DOWNCITY_CITY_DATABASE_URL"
+downcity models
+```
+
+## A common debugging chain
+
+1. confirm City is connected to the database you think it is
+2. confirm the expected models and tables exist
+3. confirm the service actually wrote data
+4. only then suspect deeper business logic
+
+## Example: usage seems missing
+
+A good first reaction is not "change code" but "confirm facts":
+
+- is the usage service enabled?
+- was the usage table created?
+- is this really the database instance you expect?
+- were any events written at all?
+
+## Example: payment completed but access is still denied
+
+Check these facts first:
+
+- did the webhook reach City?
+- was the webhook event persisted?
+- did the entitlement become active?
+
+## Common misunderstandings
+
+### The CLI is not just a one-time development tool
+
+If you operate many studios, services, or model configurations, it remains a frequent operations entry.
+
+### `AdminClient` is not just a more advanced CLI
+
+They are different modes:
+
+- `AdminClient`: trusted programmatic management
+- CLI: human terminal inspection
+
+### Direct SQL should not always be your first instinct
+
+In many cases the CLI is already enough to narrow the problem sharply.
+
+## Read next
+
+- For the basic agent entry, read [Studio CLI Quickstart](/en/docs/city/packages/studio-cli-terminal/quickstart)
+- For model and table inspection, read [Models and Tables](/en/docs/city/packages/studio-cli-terminal/models-and-tables)
+- For the data layer behind those facts, read [Store and Table](/en/docs/city/packages/city/store-and-table)

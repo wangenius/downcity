@@ -1,0 +1,218 @@
+---
+title: Accounts Service
+description: Use @downcity/services for registration, login, OAuth entry points, profile data, and user_token issuance.
+---
+
+The accounts service fits studios that do not yet have a complex user system. It provides better-auth auth tables, a studio-facing profile table, password registration/login, and City `user_token` issuing after registration or login.
+
+This page focuses on how the service fits into the real studio call chain, not only what tables it creates.
+
+## Install And Enable
+
+```ts
+import { accountsService } from "@downcity/services";
+
+base.use(accountsService({
+  token_ttl: "7d",
+}));
+```
+
+## Where it sits in the studio flow
+
+```txt
+studio frontend
+  -> guest UserClient with base_url only
+  -> call guest accounts actions
+  -> accounts service returns user_token
+  -> frontend creates a normal UserClient with base_url + studio_id + user_token
+  -> frontend continues with AI services or custom services
+```
+
+If you already have your own backend, you can skip the service for login itself and let your backend validate users first, then use `AdminClient` to issue `user_token`. The accounts service is the official ready-made service path for a minimal auth system.
+
+## Choosing the pattern
+
+### Pattern A: use the accounts service directly
+
+Good fit when:
+
+- you want the fastest path to registration and login
+- you do not want to design your own auth, profile, and session tables yet
+- you want registration or login to return `user_token` immediately
+
+### Pattern B: your backend owns login
+
+Good fit when:
+
+- you already have a mature account system
+- you need complex org, invitation, permission, or risk-control logic
+- you only want City to handle `user_token` issuance
+
+Both patterns converge to the same end state: the frontend gets `studio_id + user_token`, then uses a normal `UserClient` to call City.
+
+## Login
+
+```ts
+import { UserClient } from "@downcity/gate";
+
+const guest = new UserClient({
+  base_url: "https://base.example.com",
+});
+
+const accounts = guest.service("accounts");
+
+const session = await accounts.action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+```
+
+The response includes `user_token`, `user_id`, and `email`. The studio client can then create a normal `UserClient` and call AI services.
+
+## Registration
+
+```ts
+const session = await accounts.action("register").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+```
+
+If your service configuration requires email verification, the next step is usually `verify-email`.
+
+## OAuth entry points
+
+```ts
+const start = await accounts.action("oauth/start").invoke({
+  provider: "github",
+  studio_id: "studio_demo",
+});
+
+const result = await guest.service("accounts").get("oauth/result", {
+  state: start.state,
+});
+```
+
+The studio client does not need to pass `redirect_uri`. The accounts service generates the third-party OAuth callback automatically from the current public City origin:
+
+```txt
+https://your-base-domain/v1/accounts/oauth/callback
+```
+
+So the callback URL registered in the GitHub or Google OAuth app, or the WeChat Website App console, must match that exact URL.
+
+If you enable WeChat login here, it specifically means the "WeChat Open Platform -> Website App -> WeChat Login" flow, not Official Account login and not Mini Program login.
+
+If you want provider-specific setup next, continue with:
+
+- [Google Login Setup](/en/docs/city/packages/services/accounts/google-login)
+- [WeChat Login Setup](/en/docs/city/packages/services/accounts/wechat-login)
+
+This set of endpoints usually comes in two phases:
+
+- `oauth/start`: get the redirect URL or state
+- `oauth/result`: poll or confirm the login result
+
+## Switching from guest UserClient to normal UserClient
+
+```ts
+const guest = new UserClient({
+  base_url: "https://base.example.com",
+});
+
+const session = await guest.service("accounts").action("login").invoke<{
+  user_token: string;
+}>({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+
+const user = new UserClient({
+  base_url: "https://base.example.com",
+  studio_id: "studio_demo",
+  user_token: session.user_token,
+});
+
+const reply = await user.ai.text({
+  prompt: "Write a welcome message",
+});
+```
+
+This switch is the most important transition in an accounts-service integration.
+
+## Route Convention
+
+The accounts service uses the same unified `/v1/*` route space:
+
+```txt
+POST /v1/accounts/register
+POST /v1/accounts/verify-email
+POST /v1/accounts/login
+POST /v1/accounts/oauth/start
+GET  /v1/accounts/oauth/result
+GET  /v1/accounts/oauth/callback
+GET  /v1/accounts/me
+POST /v1/accounts/logout
+GET  /v1/accounts/users
+GET  /v1/accounts/sessions
+```
+
+`register`, `verify-email`, `login`, `oauth/start`, and `oauth/result` are guest-access entry points. `me` and `logout` require a `user_token`.
+
+## Which Actions are guest-access
+
+As a first mental model:
+
+- guest-access: `register`, `verify-email`, `login`, `oauth/start`, `oauth/result`
+- logged-in user: `me`, `logout`
+- admin-side: user and session maintenance endpoints
+
+That means:
+
+- guest Actions still run through `UserClient`
+- but at that stage the `UserClient` only needs `base_url`
+- once you enter user context, you move to `studio_id + user_token`
+
+## Current User And Logout
+
+```ts
+const me = await user.service("accounts").get("me");
+
+await user.service("accounts").action("logout").invoke();
+```
+
+`logout` currently returns `{ success: true }`. If you need stricter session invalidation, extend it in your own backend or service hook.
+
+`me` now returns:
+
+- `user`: the current runtime user
+- `profile`: studio-facing profile data
+
+## Manage Users
+
+```ts
+const users = await admin.service("accounts").get("users");
+const sessions = await admin.service("accounts").get("sessions");
+```
+
+The service now maintains:
+
+- better-auth auth tables: `auth_users`, `auth_accounts`, `auth_sessions`, `auth_verifications`
+- business-facing profile table: `auth_profiles`
+- oauth polling table: `service_accounts_oauth_states`
+
+City users do not write these tables by hand.
+
+## Relationship with `@downcity/gate`
+
+The accounts service does not replace `@downcity/gate`.
+
+More precisely:
+
+- `@downcity/services` registers the `accounts` service into City
+- `@downcity/gate` is what studio-side and trusted-side callers use to call that service
+
+So the service provides the auth capability, while the SDK still provides the calling surface through `UserClient` and `AdminClient`.

@@ -1,0 +1,393 @@
+---
+title: UserClient
+description: How studio clients read the model directory and call AIService or custom services.
+---
+
+`UserClient` is the runtime client for studio-facing calls.
+
+It binds one user inside one studio:
+
+- `base_url`
+- `studio_id`, automatically injected into AI service and user action calls
+- `user_token`, required for AI service calls and authenticated actions
+
+For guest-access actions such as login, registration, or webhooks, you can pass `base_url` only.
+
+You can use it inside browsers, extensions, mobile apps, desktop apps, or your own backend acting on behalf of a user.
+
+## Build the right mental model first
+
+The most important point is not the method list. `UserClient` unifies three kinds of studio-side calls:
+
+- AI service: `client.ai.*`
+- custom service: services you registered in City yourself
+- service: services registered into City by services, such as `accounts`, `usage`, or `payment`
+
+So from the studio side, `UserClient` is not only "the thing that calls models." It is the unified user-context entry into City.
+
+## Minimal example
+
+```ts
+import { UserClient } from "@downcity/gate";
+import type { UIMessageChunk } from "ai";
+
+const client = new UserClient({
+  base_url: "https://base.example.com",
+  studio_id: "studio_xxx",
+  user_token: "ub_xxx",
+});
+
+const catalog = await client.ai.listModels();
+
+const result = await client.ai.text({
+  model: catalog.default(),
+  prompt: "Write a welcome message",
+});
+```
+
+## Public Actions
+
+```ts
+const guest = new UserClient({
+  base_url: "https://base.example.com",
+});
+
+const session = await guest.service("accounts").action("login").invoke<{
+  user_token: string;
+  user_id?: string;
+  email?: string;
+}>({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_xxx",
+});
+```
+
+After receiving `session.user_token`, create a UserClient with `studio_id + user_token` for AI service calls.
+
+## Guest calls vs logged-in user calls
+
+It helps to think about `UserClient` in two phases:
+
+### Guest phase
+
+Pass `base_url` only. This is for guest-access Actions such as:
+
+- `accounts.register`
+- `accounts.login`
+- `accounts.oauth/start`
+- `accounts.oauth/result`
+
+### Logged-in user phase
+
+Pass `base_url + studio_id + user_token`. This is for:
+
+- AI services
+- custom services that require user context
+- services that require user context, such as `accounts.me`
+
+The most common transition looks like this:
+
+```ts
+const guest = new UserClient({ base_url });
+
+const session = await guest.service("accounts").action("login").invoke<{
+  user_token: string;
+}>({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_xxx",
+});
+
+const user = new UserClient({
+  base_url,
+  studio_id: "studio_xxx",
+  user_token: session.user_token,
+});
+```
+
+## Why `ai.listModels()` Comes First
+
+`client.ai.listModels()` returns a `ModelCatalog`:
+
+```ts
+const catalog = await client.ai.listModels();
+
+catalog.get("deepseek-v4-flash");
+catalog.default();
+catalog.all();
+catalog.forModality("stream");
+```
+
+Recommended usage:
+
+```ts
+const catalog = await client.ai.listModels();
+const model = catalog.get("deepseek-v4-flash") ?? catalog.default();
+```
+
+This keeps raw model IDs from scattering across your studio code.
+
+## `ai.text()`
+
+```ts
+const result = await client.ai.text({
+  model: catalog.default(),
+  prompt: "Write a welcome message",
+});
+```
+
+`ai.text()` returns an AI SDK `UIMessage`: a complete message that UI code can store and render directly.
+
+The input object is still intentionally open:
+
+- `model` is optional
+- other fields are defined by the Provider `text` action resolved by `AIService`
+- the handler result should be a `UIMessage`
+
+If no model is provided, AIService uses the default model for the current modality.
+
+If you call a custom service with a non-`UIMessage` result shape, use `client.service(...).action(...).invoke<T>()`.
+
+## `ai.stream()`
+
+```ts
+const body = await client.ai.stream({
+  model: catalog.get("deepseek-v4-flash"),
+  prompt: "Stream a short paragraph",
+});
+```
+
+`ai.stream()` returns an AI SDK `UIMessageChunk` stream:
+
+```ts
+const stream: ReadableStream<UIMessageChunk> = await client.ai.stream({
+  prompt: "Stream a short paragraph",
+});
+```
+
+It is not the raw HTTP byte stream. The SDK parses the AI SDK UIMessage SSE body returned by City into chunk objects.
+
+You can consume it chunk by chunk:
+
+```ts
+const reader = stream.getReader();
+const first = await reader.read();
+```
+
+The City-side stream handler should return the result of AI SDK `createUIMessageStreamResponse()` or `streamText().toUIMessageStreamResponse()`.
+
+If you want a single JSON result, use `text()` instead of `stream()`.
+
+## `ai.image()` / `ai.video()`
+
+`image()` and `video()` return AI SDK `UIMessage`. Use file parts inside `parts` to represent generated image or video files:
+
+```ts
+const imageMessage = await client.ai.image({
+  prompt: "A fox standing in the snow",
+  model: catalog.get("image-basic"),
+});
+```
+
+The City-side Provider `image` / `video` actions should also return `UIMessage`.
+
+## `ai.tts()` / `ai.asr()`
+
+`tts()` and `asr()` keep open return types because audio input and output transport shapes vary more across studios:
+
+```ts
+await client.ai.tts({
+  text: "Hello",
+  voice: "alloy",
+});
+```
+
+If you need a stricter result shape, wrap it in a custom service action.
+
+## Service List
+
+`client.listServices()` returns the registered service summaries for the current City:
+
+```ts
+const services = await client.listServices();
+
+services[0];
+// {
+//   id: "ai",
+//   name: "AI",
+//   env: []
+// }
+```
+
+This is useful for dynamic menus, debug tooling, or studio-side discovery of callable services.
+
+## Custom services and official services
+
+From the perspective of `UserClient`, both are called the same way.
+
+### Custom service
+
+This is a service you registered into City yourself:
+
+```ts
+const rewritten = await client
+  .service("rewrite")
+  .action("formal")
+  .invoke<{ text: string }>({
+    prompt: "Rewrite this in a more professional tone",
+  });
+```
+
+### Official service
+
+This is a service added into City by an official package:
+
+```ts
+const me = await client.service("accounts").get("me");
+const usage = await client.service("usage").get("me");
+```
+
+### Payment
+
+If you want the studio code to think in terms of "payment methods" instead of hand-writing `service + action`, use:
+
+```ts
+const methods = await client.payment.methods();
+
+const checkout = await client.payment.method("stripe").invoke({
+  topup_id: "topup_demo",
+});
+```
+
+Here:
+
+- `client.payment.methods()` maps to `GET /v1/payment/methods`
+- `client.payment.method("stripe").invoke(...)` first reads the payment-method definition, then dispatches to the concrete service, such as `payment.stripe/checkout/create`
+
+You do not need a second protocol for services. Just remember:
+
+- the source is different
+- the calling pattern is the same
+- both end up in the unified `/v1/*` route space inside City
+
+## Common service examples
+
+### accounts
+
+```ts
+const session = await guest.service("accounts").action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_xxx",
+});
+```
+
+### usage
+
+```ts
+const usage = await client.service("usage").get("me");
+```
+
+### payment
+
+```ts
+const methods = await client.payment.methods();
+
+const checkout = await client.payment.method("stripe").invoke({
+  topup_id: "topup_demo",
+});
+```
+
+### When to switch back to AI service
+
+If what you want is model capability itself, prefer:
+
+- `client.ai.text()`
+- `client.ai.stream()`
+- `client.ai.image()`
+
+If what you want is a business action, use:
+
+- `client.service(...).action(...).invoke()`
+- `client.service(...).get(...)`
+
+## Custom Services
+
+For your own Service, get a service-scoped invoker and then choose an action:
+
+```ts
+const result = await client
+  .service("rewrite")
+  .action("formal")
+  .invoke<{ text: string }>({
+  prompt: "Rewrite this in a more professional tone",
+});
+```
+
+This is useful when:
+
+- the frontend picks a service from configuration
+- you added custom services and do not want to wrap each of them manually
+
+## GET Actions
+
+For actions registered with `method: "GET"`, use `get()` and pass query fields:
+
+```ts
+const result = await client.service("accounts").get("oauth/result", {
+  state: "oauth_state_xxx",
+});
+```
+
+## Common errors
+
+When `UserClient` receives a non-2xx HTTP response, it throws an `Error` with two extra fields:
+
+- `status`: the HTTP status code.
+- `body`: the raw response body from City, usually `{"error":"..."}`.
+
+```ts
+try {
+  await client.ai.text({
+    model: "gpt-5.4",
+    prompt: "Hello",
+  });
+} catch (error) {
+  const status = error instanceof Error && "status" in error ? error.status : undefined;
+  const body = error instanceof Error && "body" in error ? error.body : undefined;
+
+  console.log(status, body);
+}
+```
+
+`client.ai.stream()` can fail in two stages: when HTTP returns a non-2xx status, it throws the same `status/body` error; when HTTP succeeds but the body is empty or is not an AI SDK UIMessage stream, the stream parser throws a normal parsing error.
+
+### 401 / 403
+
+Usually one of these:
+
+- `user_token` is missing
+- the token expired
+- the token signature is invalid
+- the request `studio_id` does not match the studio bound to the token
+
+### 422
+
+Usually one of these:
+
+- the final `query.model` is empty
+- the request references a model that does not exist
+- the current model does not support the requested modality
+
+## When not to use `UserClient`
+
+Do not use `UserClient` for:
+
+- creating studios
+- issuing `user_token`
+- modifying runtime env
+- maintaining production provider keys
+- pausing or re-activating studios
+
+Those are trusted-side actions and belong in [AdminClient](/en/docs/city/reference/admin-client) or your own backend.

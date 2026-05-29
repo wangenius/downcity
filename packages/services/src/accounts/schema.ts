@@ -72,7 +72,7 @@ export interface AccountsOAuthStateRow extends Record<string, unknown> {
   /**
    * 登录成功后要签发到哪个 product。
    */
-  product_id: string;
+  studio_id: string;
 
   /**
    * 第三方 provider 标识。
@@ -80,7 +80,7 @@ export interface AccountsOAuthStateRow extends Record<string, unknown> {
   provider: string;
 
   /**
-   * 完成登录后回填的 InfraRuntime user_token。
+   * 完成登录后回填的 City user_token。
    */
   user_token: string;
 
@@ -139,7 +139,7 @@ export const accountsOAuthStates = sqliteTable(ACCOUNTS_OAUTH_STATE_TABLE, {
   /**
    * 登录成功后要签发到哪个 product。
    */
-  product_id: text("product_id").notNull(),
+  studio_id: text("studio_id").notNull(),
 
   /**
    * provider 标识。
@@ -147,7 +147,7 @@ export const accountsOAuthStates = sqliteTable(ACCOUNTS_OAUTH_STATE_TABLE, {
   provider: text("provider").notNull(),
 
   /**
-   * 完成登录后回填的 InfraRuntime user_token。
+   * 完成登录后回填的 City user_token。
    */
   user_token: text("user_token").notNull(),
 

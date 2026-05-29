@@ -1,9 +1,9 @@
 ---
-title: city agent restart
+title: studio agent restart
 description: 重启指定 agent 进程
 ---
 
-# `city agent restart`
+# `studio agent restart`
 
 重启指定 agent 的 runtime。
 
@@ -12,7 +12,7 @@ description: 重启指定 agent 进程
 ## 用法
 
 ```bash
-city agent restart [path] [options]
+studio agent restart [path] [options]
 ```
 
 ## 常用参数
@@ -27,24 +27,24 @@ city agent restart [path] [options]
 
 ## 相关命令
 
-- [`city agent start`](/zh/docs/commands/agent/start)
-- [`city agent restart`](/zh/docs/commands/agent/restart)
-- [`city agent status`](/zh/docs/commands/agent/status)
+- [`studio agent start`](/zh/docs/commands/agent/start)
+- [`studio agent restart`](/zh/docs/commands/agent/restart)
+- [`studio agent status`](/zh/docs/commands/agent/status)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city agent restart .
-city version: 1.0.0
+$ studio agent restart .
+downcity v1.0.0
 ✅ Downcity daemon restarted
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ city agent restart .
-city version: 1.0.0
+$ studio agent restart .
+downcity v1.0.0
 ❌ Failed to restart daemon: <error>
 ```

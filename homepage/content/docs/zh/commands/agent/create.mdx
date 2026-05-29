@@ -1,9 +1,9 @@
 ---
-title: city agent create
+title: studio agent create
 description: 创建/初始化一个 Downcity Agent 项目
 ---
 
-# `city agent create`
+# `studio agent create`
 
 在目标路径创建/初始化一个 Downcity Agent 项目。
 
@@ -12,7 +12,7 @@ description: 创建/初始化一个 Downcity Agent 项目
 ## 用法
 
 ```bash
-city agent create [path]
+studio agent create [path]
 ```
 
 ## 参数
@@ -30,10 +30,10 @@ city agent create [path]
 
 ```bash
 # 在当前目录初始化
-city agent create .
+studio agent create .
 
 # 在指定目录初始化
-city agent create ./my-agent-project
+studio agent create ./my-agent-project
 ```
 
 ## 示例输出（基于当前实现）
@@ -41,8 +41,8 @@ city agent create ./my-agent-project
 以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city agent create .
-city version: 1.0.0
+$ studio agent create .
+downcity v1.0.0
 🚀 Initializing Downcity project: <projectRoot>
 ✅ Created PROFILE.md
 ✅ Created SOUL.md
@@ -54,6 +54,6 @@ city version: 1.0.0
 常用后续命令：
 
 ```bash
-city model list
-city model get provider openai_main
+studio model list
+studio model get provider openai_main
 ```

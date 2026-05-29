@@ -2,7 +2,7 @@
  * Agent 项目初始化模块。
  *
  * 职责说明（中文）
- * - CLI `city agent create` 与 Console 共用同一套初始化逻辑，避免模板与目录结构分叉。
+ * - CLI `studio agent create` 与 Console 共用同一套初始化逻辑，避免模板与目录结构分叉。
  * - 负责创建项目骨架、静态 prompt、默认 `downcity.json`、基础目录与 schema 文件。
  * - 负责把用户在创建阶段提供的最小执行配置与渠道配置写入项目。
  *

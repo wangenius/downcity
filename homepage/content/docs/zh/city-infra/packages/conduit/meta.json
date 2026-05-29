@@ -1,9 +1,0 @@
-{
-  "title": "@downcity/conduit",
-  "pages": [
-    "index",
-    "service-calls",
-    "auth-flows",
-    "patterns-and-errors"
-  ]
-}

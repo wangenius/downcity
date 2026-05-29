@@ -12,17 +12,17 @@ importers:
         specifier: latest
         version: 1.3.14
 
-  blocks/edge:
+  cities/edge:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^2.0.0
         version: 2.0.106(zod@4.3.6)
-      '@downcity/block-shared':
+      '@downcity/city-shared':
         specifier: workspace:*
         version: link:../shared
-      '@downcity/infra':
+      '@downcity/city':
         specifier: workspace:*
-        version: link:../../packages/infra
+        version: link:../../packages/city
       '@downcity/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -43,7 +43,7 @@ importers:
         specifier: ^4.20.0
         version: 4.95.0(@cloudflare/workers-types@4.20260529.1)
 
-  blocks/node:
+  cities/node:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: ^3.0.73
@@ -51,12 +51,12 @@ importers:
       '@ai-sdk/openai':
         specifier: ^3.0.53
         version: 3.0.66(zod@4.3.6)
-      '@downcity/block-shared':
+      '@downcity/city-shared':
         specifier: workspace:*
         version: link:../shared
-      '@downcity/infra':
+      '@downcity/city':
         specifier: workspace:*
-        version: link:../../packages/infra
+        version: link:../../packages/city
       '@downcity/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -86,11 +86,11 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  blocks/shared:
+  cities/shared:
     dependencies:
-      '@downcity/infra':
+      '@downcity/city':
         specifier: workspace:*
-        version: link:../../packages/infra
+        version: link:../../packages/city
       '@downcity/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -316,7 +316,7 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/city:
+  packages/studio-cli:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: ^3.0.28
@@ -348,9 +348,9 @@ importers:
       '@downcity/agent':
         specifier: workspace:^
         version: link:../agent
-      '@downcity/conduit':
+      '@downcity/gate':
         specifier: workspace:^
-        version: link:../conduit
+        version: link:../gate
       '@downcity/plugins':
         specifier: workspace:^
         version: link:../plugins
@@ -449,7 +449,7 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/conduit:
+  packages/gate:
     dependencies:
       ai:
         specifier: ^6.0.168
@@ -459,7 +459,7 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/infra:
+  packages/city:
     dependencies:
       ai:
         specifier: ^6.0.168
@@ -544,9 +544,9 @@ importers:
 
   packages/services:
     dependencies:
-      '@downcity/infra':
+      '@downcity/city':
         specifier: workspace:*
-        version: link:../infra
+        version: link:../city
       better-auth:
         specifier: ^1.6.0
         version: 1.6.11(@cloudflare/workers-types@4.20260529.1)(@opentelemetry/api@1.9.0)(better-sqlite3@11.10.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260529.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)(bun-types@1.3.14)(kysely@0.28.17)(postgres@3.4.8))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

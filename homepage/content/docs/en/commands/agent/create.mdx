@@ -1,9 +1,9 @@
 ---
-title: city agent create
+title: studio agent create
 description: Create/initialize a Downcity agent project
 ---
 
-# `city agent create`
+# `studio agent create`
 
 Create/initialize a Downcity agent project in the target path.
 
@@ -12,7 +12,7 @@ Create/initialize a Downcity agent project in the target path.
 ## Usage
 
 ```bash
-city agent create [path]
+studio agent create [path]
 ```
 
 ## Arguments
@@ -30,10 +30,10 @@ city agent create [path]
 
 ```bash
 # Initialize in current directory
-city agent create .
+studio agent create .
 
 # Initialize in another directory
-city agent create ./my-agent-project
+studio agent create ./my-agent-project
 ```
 
 ## Example Output (Based on Current Implementation)
@@ -41,8 +41,8 @@ city agent create ./my-agent-project
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ city agent create .
-city version: 1.0.0
+$ studio agent create .
+downcity v1.0.0
 🚀 Initializing Downcity project: <projectRoot>
 ✅ Created PROFILE.md
 ✅ Created SOUL.md
@@ -54,6 +54,6 @@ city version: 1.0.0
 Common follow-up commands:
 
 ```bash
-city model list
-city model get provider openai_main
+studio model list
+studio model get provider openai_main
 ```

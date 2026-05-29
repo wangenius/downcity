@@ -1,0 +1,152 @@
+---
+title: 架构
+description: Downcity 如何按 Kernel、Capabilities、Interfaces 和 Composition 组织运行时。
+---
+
+理解 Downcity City 最稳的方式，不是先看某一个 API，而是先看它的四层结构：
+
+```txt
+Interfaces
+  -> studios 通过 client / studio terminal 接入 City
+Composition
+  -> server / worker 把 City、官方服务、模型组装起来
+Kernel
+  -> City 负责路由、鉴权、上下文、hook 调度
+Capabilities
+  -> AIService 与 accounts / usage / balance / payment 等服务提供真实能力
+```
+
+这四层合在一起，形成 Downcity 的运行链路：
+
+```txt
+产品前端 / App / 内部工具
+  -> UserClient / AdminClient / studio terminal
+  -> City
+  -> Service / AIService
+  -> Provider / Database
+```
+
+多个 client 可以共用一个自部署 City。产品端保持轻量，专注自己的用户体验；City 统一处理鉴权、模型路由、运行时 env、hooks 和官方服务能力。
+
+## 1. Interfaces：谁来调用 City
+
+Downcity 对外有两类主要入口：
+
+- 产品侧入口：`@downcity/gate` 的 `UserClient` 与 `AdminClient`
+- 运维入口：`@downcity/studio-cli`
+
+它们都不实现 City 本身，只负责把请求送进同一个 City。
+
+## 2. Composition：谁来把 City 组装起来
+
+Downcity 的运行时不是“new 一个 City 就结束”，中间还有一层装配：
+
+- `cities/node` 负责 Node.js + SQLite 的本地 server 示例
+- `cities/edge` 负责 Cloudflare Workers + D1 的部署示例
+- `cities/shared` 负责复用 server / worker 之间共同的 City 组装逻辑
+
+这一层的职责，是把 `City + AIService + 官方服务 + 模型` 组装成真正可跑的实例。
+
+## 3. Kernel：City 本体负责什么
+
+HTTP 请求进入 City 后，City 会先做这些事情：
+
+1. 刷新运行时 env 视图
+2. 校验 `user_token` 或 admin key
+3. 解析 `studio_id`、`user_id` 和身份级别
+4. 找到目标 Service / Action
+5. 组装统一 `ctx`
+6. 执行 hook 和 action
+
+如果 token 无效、过期或 `studio_id` 不匹配，City 会直接返回 401 或 403。
+
+## 4. Capabilities：Service 与 Action
+
+每个 Service 是一组 Action。Action 是 Service 的一等能力单元。
+
+```ts
+const translate = new Service({ id: "translate" });
+
+translate.action("zh2en", async (ctx) => {
+  // ctx.input = { text: "你好" }
+  // ctx.user  = { user_id: "user_1" }
+  return { translated: await api.translate(ctx.input.text) };
+});
+```
+
+City 自动为每个 Action 生成路由：
+
+```
+POST /v1/translate/zh2en  →  translate.action("zh2en")
+```
+
+City 本身不关心“翻译”或“支付”是什么业务，它只负责把请求路由到对应 Action。
+
+## 5. AIService 两条通路
+
+### SDK 通路
+
+给 `UserClient` 调用：
+
+```txt
+UserClient.ai.text({ prompt: "hello", model: "kimi-k2.6" })
+  -> POST /v1/ai/text
+  -> Provider text action(ctx)
+  -> generateText / streamText (ai-sdk)
+  -> UIMessage / UIMessageStream
+```
+
+### OpenAI 兼容通路
+
+给 pi-agent、OpenAI SDK、curl 等第三方工具调用：
+
+```txt
+POST /v1/ai/chat/completions
+  { model: "deepseek-v4-flash", messages: [...], stream: true }
+  -> Provider openai action(ctx)  或  自动透传
+  -> 上游 API 原始 Response（SSE 或 JSON）
+```
+
+两条通路**完全解耦**，各自独立运作。
+
+## 6. 自动透传
+
+当 Provider 有 `baseURL` + `envKey` 但没有 `openai` action 时，AIService 自动生成透传 action。第三方工具发送的 OpenAI body 原样转发到上游 API，Response 原样返回。
+
+不需要任何适配代码。
+
+## 7. Hook 三层
+
+每个 Action 有独立的 hook。hook 执行顺序从外层到内层：
+
+```
+global.before
+  → service.before    ← 该 service 下所有 action 共享
+    → action.before   ← 只这个 action
+      → action.run()  ← 核心逻辑
+    → action.after    ← 计费、记录 usage
+  → service.after     ← 聚合统计
+→ global.after        ← 全局监控
+```
+
+```ts
+// Action 级 hook
+const zh2en = svc.action("zh2en", fn);
+zh2en.before(checkBalance).after(deductFee);
+
+// Service 级 hook（所有 action 共享）
+svc.hook.after(async (ctx) => {
+  console.log(`${ctx.user.id} used ${ctx.service.id}.${ctx.action.id}`);
+});
+```
+
+## 8. 一句话记住
+
+可以把 Downcity 记成一句话：
+
+```txt
+Interfaces 负责接入
+Composition 负责装配
+Kernel 负责运行时规则
+Capabilities 负责真实能力
+```

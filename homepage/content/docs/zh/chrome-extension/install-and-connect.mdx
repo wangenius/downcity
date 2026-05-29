@@ -10,8 +10,8 @@ description: 如何构建、加载并把 Chrome 扩展连接到一个或多个 D
 在使用扩展前，通常需要先启动 Downcity 服务：
 
 ```bash
-city start
-city agent start
+studio start
+studio agent start
 ```
 
 如果你是从仓库本地加载扩展，还需要先构建产物：
@@ -60,13 +60,13 @@ npm run build:extension
 如果目标 Server 开启了统一鉴权，可以先在本机终端执行：
 
 ```bash
-city token create my-token
+studio token create my-token
 ```
 
 如果你更喜欢交互式流程，也可以直接执行：
 
 ```bash
-city token
+studio token
 ```
 
 然后把得到的 token 粘贴到设置页的 `Bearer Token`。
@@ -82,7 +82,7 @@ city token
 - 当前连接地址配置错误
 - 远程 Console 没有以公网模式监听，或服务器防火墙未放行端口
 
-如果是服务器部署，你可以选择用 `city start --public` 单次启动公网 Console，或者用 `city public on` 持久化公网模式。
+如果是服务器部署，你可以选择用 `studio start --public` 单次启动公网 Console，或者用 `studio public on` 持久化公网模式。
 
 ## 更新扩展后该做什么
 

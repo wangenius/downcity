@@ -17,7 +17,7 @@
   - 只负责 UI 组件、样式和组件类型。
 - `@downcity/agent`
   - 负责 Agent 运行时，不依赖这个包做执行。
-- `@downcity/city`
+- `@downcity/studio-cli`
   - 可能消费这个包的组件，但平台逻辑不在这里。
 
 ## 根目录结构

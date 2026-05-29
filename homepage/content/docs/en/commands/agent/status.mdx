@@ -1,9 +1,9 @@
 ---
-title: city agent status
+title: studio agent status
 description: Show target agent status
 ---
 
-# `city agent status`
+# `studio agent status`
 
 Show process status for a target agent.
 
@@ -12,7 +12,7 @@ Show process status for a target agent.
 ## Usage
 
 ```bash
-city agent status [path]
+studio agent status [path]
 ```
 
 ## Behavior
@@ -24,19 +24,19 @@ city agent status [path]
 
 ## Related commands
 
-- [`city agent start`](/en/docs/commands/agent/start)
-- [`city agent restart`](/en/docs/commands/agent/restart)
-- [`city agent list --running`](/en/docs/commands/agent/list)
+- [`studio agent start`](/en/docs/commands/agent/start)
+- [`studio agent restart`](/en/docs/commands/agent/restart)
+- [`studio agent list --running`](/en/docs/commands/agent/list)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ city agent status .
-city version: 1.0.0
+$ studio agent status .
+downcity v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK city agent status                                    │
+│ OK studio agent status                                    │
 │   project    : <projectRoot>                           │
 │   log        : <daemonLogPath>                         │
 │   state      : running                                 │
@@ -46,15 +46,15 @@ city version: 1.0.0
 ```
 
 ```text
-$ city agent status .
-city version: 1.0.0
+$ studio agent status .
+downcity v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ WARN city agent status                                  │
+│ WARN studio agent status                                  │
 │   project      : <projectRoot>                         │
 │   log          : <daemonLogPath>                       │
 │   state        : stale                                 │
 │   stale_pid    : <pid>                                 │
 │   stale_reason : <reason>                              │
-│   fix          : city agent doctor <projectRoot> --fix  │
+│   fix          : studio agent doctor <projectRoot> --fix  │
 └─────────────────────────────────────────────────────────┘
 ```

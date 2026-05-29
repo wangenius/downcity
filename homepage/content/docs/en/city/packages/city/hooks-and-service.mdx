@@ -1,0 +1,154 @@
+---
+title: Hooks and Service Mounting
+description: "The three hook layers, service mounting, and why they are the shared extension points of City."
+---
+
+A lot of shared capability in Downcity is not created by copying logic into every action. It enters City through hooks and services.
+
+## What each concept solves
+
+The easiest split is:
+
+- hooks: insert rules into an existing call lifecycle
+- services: add a full reusable capability set into City
+
+That is why auth, usage, and payment do not become separate systems. They become extension points inside the same City.
+
+## When to think hook first
+
+- you want logic before or after existing calls
+- the logic is cross-cutting and should not live in every action
+- the capability is local to your project and does not need to be its own package
+
+Typical examples:
+
+- quotas
+- logging
+- risk checks
+- charging after a successful call
+
+## When to think service first
+
+- the capability should be reused across many studios
+- it is more than before or after logic and needs its own service or tables
+- you want studio-side callers to reach it through a stable service boundary
+
+Typical examples:
+
+- `@downcity/services`
+- `@downcity/services`
+- `@downcity/services`
+
+## First understand the three hook positions
+
+```txt
+global
+  -> service
+    -> action
+```
+
+Their meanings are:
+
+- global: shared by all services and actions
+- service: shared by all actions in one service
+- action: only affects one concrete action
+
+## Common service mounting example
+
+```ts
+import { City } from "@downcity/city";
+import { accountsService } from "@downcity/services";
+import { balanceService } from "@downcity/services";
+import { paymentService } from "@downcity/services";
+import { stripePaymentMethod } from "@downcity/services";
+import { usageService } from "@downcity/services";
+import { stripePaymentService } from "@downcity/services";
+
+const base = new City({ db });
+const balance = balanceService();
+
+base.use(accountsService({
+  token_ttl: "7d",
+}));
+
+base.use(balance);
+base.use(paymentService({
+  methods: [
+    stripePaymentMethod(),
+  ],
+}));
+base.use(usageService({
+  record_errors: true,
+}));
+
+base.use(stripePaymentService({
+  balance: {
+    readTopup: async (topup_id) => await balance.readTopup(topup_id),
+    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  },
+  secret_key: process.env.STRIPE_SECRET_KEY,
+  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+}));
+```
+
+## How studio-side callers reach services
+
+Once mounted, services still look like normal services from the studio side:
+
+```ts
+const session = await guest.service("accounts").action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+
+const usage = await admin.service("usage").get("summary");
+
+const methods = await guest.service("payment").get("methods");
+
+const checkout = await user.service("payment.stripe").action("checkout/create").invoke({
+  topup_id: "topup_demo",
+});
+```
+
+That means `payment` can be the discovery entry while `payment.stripe` remains the execution entry.
+
+## Relationship between hooks, services, and services
+
+A useful chain is:
+
+```txt
+service / action
+  -> hooks add lifecycle rules
+  -> services add reusable services, tables, and management capability
+  -> clients still call everything through /v1/*
+```
+
+## Common API surface
+
+- `base.use(service)`
+- `guest.service("accounts")...`
+- `guest.service("payment").get("methods")`
+- `user.service("usage")...`
+- `admin.service("payment.stripe")...`
+
+## Common misunderstandings
+
+### A service is not just another npm package
+
+It often represents a whole boundary of services, tables, admin surfaces, and optional hook behavior.
+
+### Hooks are not a place to hide full business features
+
+Hooks are best for cross-cutting governance logic, not for turning every feature into middleware.
+
+### Services do not replace the conduit SDK
+
+Services add capability into City. The studio-side calling surface is still [@downcity/gate](/en/docs/city/packages/gate).
+
+## Read next
+
+- For unified studio-side service calls, read [@downcity/gate](/en/docs/city/packages/gate)
+- For auth capability, read [@downcity/services](/en/docs/city/packages/services)
+- For usage recording, read [@downcity/services](/en/docs/city/packages/services)
+- For one-time Stripe topups, read [@downcity/services](/en/docs/city/packages/services)

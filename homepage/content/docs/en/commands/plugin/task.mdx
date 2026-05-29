@@ -1,18 +1,18 @@
 ---
-title: city task
+title: studio task
 description: Managed task plugin commands for task definition, execution, and automation
 ---
 
-# `city task`
+# `studio task`
 
-`city task` is the managed task plugin command group.
+`studio task` is the managed task plugin command group.
 
 Use it when you want a reusable automation definition instead of a one-shot delayed plugin action.
 
 ## Usage
 
 ```bash
-city task <subcommand> [options]
+studio task <subcommand> [options]
 ```
 
 ## Main subcommands
@@ -28,18 +28,18 @@ city task <subcommand> [options]
 
 ## Key boundaries
 
-- Use `city task` for reusable or long-lived automation.
-- Use `city chat --delay/--time` or `city memory --delay/--time` for one existing action that should happen later once.
+- Use `studio task` for reusable or long-lived automation.
+- Use `studio chat --delay/--time` or `studio memory --delay/--time` for one existing action that should happen later once.
 - Task definitions live in project storage and can use `@manual`, cron, or `time:<ISO8601>`.
 
 ## Examples
 
 ```bash
-city task list
-city task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
-city task run daily-check
-city task update daily-check --when "@manual"
-city task disable daily-check
+studio task list
+studio task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+studio task run daily-check
+studio task update daily-check --when "@manual"
+studio task disable daily-check
 ```
 
 ## Related

@@ -1,0 +1,86 @@
+---
+title: Calling AI Service
+description: SDK pathway (UserClient) and OpenAI-compatible pathway (curl / OpenAI SDK / pi-agent) calling examples.
+---
+
+## SDK Pathway
+
+```ts
+const client = new UserClient({
+  base_url: "http://127.0.0.1:43127",
+  studio_id: "studio_downcity",
+  user_token: "ub_xxx",
+});
+
+// List models
+const catalog = await client.ai.listModels();
+
+// Text generation
+const result = await client.ai.text({
+  model: catalog.get("deepseek-v4-flash"),
+  prompt: "Hello",
+});
+
+// Stream
+const stream = await client.ai.stream({
+  model: "kimi-k2.6",
+  prompt: "Stream a text",
+});
+
+// ModelHandle - bind model, skip model on subsequent calls
+const handle = client.ai.model(catalog.get("deepseek-v4-flash"));
+const text = await handle.text({ prompt: "Hello" });
+const stream = await handle.stream({ prompt: "Continue" });
+
+// handle also carries endpoint + token for external SDKs
+handle.url()       // "http://127.0.0.1:43127/v1/ai"
+handle.modelName() // "deepseek-v4-flash"
+handle.token       // "ub_xxx"
+```
+
+With `user_token`, `client.ai.listModels()` returns only models whose required runtime env is already configured. The same route called with `admin_secret_key` returns the full code-registered model list plus `env_requirements`.
+
+## OpenAI-Compatible Pathway
+
+```bash
+# curl
+curl http://127.0.0.1:43127/v1/ai/chat/completions \
+  -H "Authorization: Bearer ub_xxx" \
+  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hello"}],"stream":true}'
+```
+
+```ts
+// OpenAI SDK
+const handle = client.ai.model(catalog.get("deepseek-v4-flash"));
+const openai = new OpenAI({
+  baseURL: handle.url(),
+  apiKey: handle.token,
+});
+await openai.chat.completions.create({
+  model: handle.modelName(),
+  messages: [{ role: "user", content: "hello" }],
+  stream: true,
+});
+```
+
+```ts
+// pi-agent
+const handle = client.ai.model(catalog.get("deepseek-v4-flash"));
+const session = await createPiAgentSession({
+  model: handle,
+  tools: "agent",
+  onText: (text) => process.stdout.write(text),
+});
+await session.ask("Write an HTTP server");
+```
+
+## Pathway Selection
+
+| Scenario | Pathway |
+|---|---|
+| Your own studio code, simple prompt → text | SDK |
+| Streaming output to your own UI | SDK |
+| pi-agent agent conversations | OpenAI-Compatible |
+| OpenAI SDK or compatible clients | OpenAI-Compatible |
+| curl debugging | OpenAI-Compatible |
+| Full multi-turn message history | OpenAI-Compatible |

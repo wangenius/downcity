@@ -1,65 +1,56 @@
 {
   "name": "@downcity/city",
-  "version": "1.1.47",
+  "version": "0.2.16",
+  "description": "Downcity City runtime foundation for services, actions, auth, env, and studio-scoped gates.",
   "type": "module",
-  "description": "Downcity City 平台 — CLI、daemon 管理、Console 网关、能力平台",
-  "bin": {
-    "downcity": "./bin/cli/Index.js",
-    "city": "./bin/cli/Index.js"
+  "main": "./bin/index.js",
+  "module": "./bin/index.js",
+  "exports": {
+    ".": {
+      "types": "./bin/index.d.ts",
+      "import": "./bin/index.js"
+    }
   },
+  "types": "./bin/index.d.ts",
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangenius/downcity.git",
+    "directory": "packages/city"
+  },
+  "homepage": "https://downcity.ai",
+  "bugs": {
+    "url": "https://github.com/wangenius/downcity/issues"
+  },
+  "keywords": [
+    "downcity",
+    "city",
+    "ai",
+    "runtime",
+    "services"
+  ],
   "scripts": {
-    "build": "rm -rf bin tsconfig.tsbuildinfo && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs && node scripts/ensure-cli-executable.mjs",
+    "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node bin/cli/Index.js",
-    "typecheck": "tsc --noEmit",
-    "lint:boundaries": "node scripts/lint-import-boundaries.mjs",
-    "lint": "npm run lint:boundaries"
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
+    "test": "tsc && tsc -p tsconfig.test.json && node --test test/*.test.mjs",
+    "prepack": "npm run build",
+    "version:patch": "node ../../scripts/bump-package-version.mjs ./package.json"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "better-sqlite3": "^11.0.0",
+    "typescript": "^5.7.0"
   },
   "dependencies": {
-    "@downcity/agent": "workspace:^",
-    "@downcity/conduit": "workspace:^",
-    "@downcity/plugins": "workspace:^",
-    "@ai-sdk/anthropic": "^3.0.28",
-    "@ai-sdk/google": "^3.0.6",
-    "@ai-sdk/huggingface": "^1.0.37",
-    "@ai-sdk/moonshotai": "^2.0.10",
-    "@ai-sdk/open-responses": "^1.0.6",
-    "@ai-sdk/openai": "^3.0.21",
-    "@ai-sdk/openai-compatible": "^2.0.0",
-    "@ai-sdk/xai": "^3.0.67",
-    "@clack/prompts": "^1.2.0",
-    "@larksuiteoapi/node-sdk": "^1.40.0",
-    "@mariozechner/pi-ai": "^0.70.0",
-    "@mariozechner/pi-coding-agent": "^0.70.0",
-    "@openrouter/ai-sdk-provider": "^2.2.3",
-    "ai": "^6.0.57",
-    "better-sqlite3": "^11.10.0",
-    "chalk": "^5.4.0",
-    "commander": "^12.0.0",
-    "dotenv": "^16.4.0",
-    "drizzle-orm": "^0.36.4",
-    "execa": "^9.5.0",
-    "fast-glob": "^3.3.0",
-    "fs-extra": "^11.2.0",
-    "hono": "^4.0.0",
-    "js-yaml": "^4.1.0",
-    "nanoid": "^5.1.6",
-    "node-cron": "^3.0.0",
-    "openai": "^4.0.0",
-    "ora": "^8.2.0",
-    "prompts": "^2.4.0",
-    "ws": "^8.19.0",
-    "zod": "^3.24.0"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/fs-extra": "^11.0.4",
-    "@types/js-yaml": "^4.0.0",
-    "@types/node": "^22.0.0",
-    "@types/node-cron": "^3.0.0",
-    "@types/prompts": "^2.4.0",
-    "@types/ws": "^8.18.1",
-    "tsc-alias": "^1.8.16",
-    "typescript": "^5.7.0"
+    "ai": "^6.0.168",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.1.0"
   }
 }

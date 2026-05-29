@@ -1,0 +1,102 @@
+---
+title: Studio Model
+description: Why Downcity is a reusable AI infrastructure runtime instead of a separate backend per project.
+---
+
+The core mental model of Downcity is not "one studio, one backend." It is:
+
+> one long-running City serving many AI studios.
+
+The reason is simple. What gets rebuilt again and again is usually not your business backend, but the AI call layer:
+
+- provider key storage
+- model catalog
+- token validation
+- usage records
+- hooks, quotas, billing, and logs
+
+Once you ship a second or third AI studio, these capabilities repeat everywhere.
+
+## One City, many studios
+
+<div className="dc-doc-flow" aria-label="One City serves many studios">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Studio A</strong>
+      <span>Web tools, content studios, workflow utilities.</span>
+      <code>studio_id = studio_a</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Studio B</strong>
+      <span>Chrome extensions, desktop tools, mobile entry points.</span>
+      <code>studio_id = studio_b</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Studio C</strong>
+      <span>Client demos, internal tools, vertical sites.</span>
+      <code>studio_id = studio_c</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Downcity</strong>
+      <span>Shared model catalog, provider env, service routes, token validation, usage, and hooks.</span>
+    </div>
+  </div>
+</div>
+
+## What should stay in City
+
+- Model catalog and provider configuration
+- `user_token` validation
+- AI service calls such as `client.ai.text()`, `client.ai.stream()`, and `client.ai.image()`
+- Usage records, logs, quotas, and business hooks
+- Shared call logic reused across multiple studios
+
+## What should stay in the studio or business system
+
+- User registration, login, and account systems
+- Orders, subscriptions, balances, and CRM
+- Pages, interactions, workflows, and content data
+- Each studio's own brand, pricing, and go-to-market strategy
+
+In other words, Downcity centralizes the **AI infrastructure** layer, not your whole business system.
+
+## Why this is more stable than "one backend per project"
+
+If every new studio copies a separate AI backend, the same issues appear quickly:
+
+- provider keys scattered across many places
+- inconsistent token rules
+- inconsistent usage and logging conventions
+- every new provider, model, or quota strategy requires edits in many repos
+
+Once the AI call layer is centralized into one City, a new studio usually only needs two steps:
+
+1. create a new `studio_id`
+2. connect `UserClient` in the studio
+
+## What `studio_id` means in this model
+
+`studio_id` is not a model name, and it is not the full abstraction of your tenant system.
+
+It is closer to City's primary key for the "studio boundary." It answers questions like:
+
+- which studio started this call
+- whether this studio is currently `active`
+- which studio dimension hooks and usage should record against
+- whether a user's calls should be separated across different studios
+
+If you are building a multi-studio portfolio, `studio_id` is the most stable boundary.
+
+## The role of model at the studio layer
+
+In the current implementation, a model is a runtime capability unit registered in Runtime, not something owned by a specific studio.
+
+At the studio layer, a model is more like a visible capability:
+
+- you can pass it explicitly into `client.ai.text({ model })`
+- or omit it and let AIService use the default model for the current pathway
+
+This means the studio sees stable model IDs, not upstream provider details.

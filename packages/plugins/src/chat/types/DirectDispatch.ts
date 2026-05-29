@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 仅用于当前 chat assistant 出站解析。
- * - frontmatter metadata 语义与 `city chat send` 保持一致，再额外支持 `react`。
+ * - frontmatter metadata 语义与 `studio chat send` 保持一致，再额外支持 `react`。
  */
 
 import type {
@@ -53,7 +53,7 @@ export interface ResolvedDirectTextPayload {
    * 是否以 reply 语义发送正文。
    *
  * 说明（中文）
- * - 语义与 `city chat send --reply` 一致。
+ * - 语义与 `studio chat send --reply` 一致。
  * - 当 metadata 提供 `reply: true` 或显式 `messageId` 时自动为 true。
   */
   replyToMessage: boolean;
@@ -70,7 +70,7 @@ export interface ResolvedDirectTextPayload {
    * 可选延迟发送毫秒数。
    *
    * 说明（中文）
-   * - 与 `city chat send --delay` 对齐。
+   * - 与 `studio chat send --delay` 对齐。
    */
   delayMs?: number;
 
@@ -78,7 +78,7 @@ export interface ResolvedDirectTextPayload {
    * 可选定时发送毫秒时间戳。
    *
    * 说明（中文）
-   * - 与 `city chat send --time` 对齐。
+   * - 与 `studio chat send --time` 对齐。
    */
   sendAtMs?: number;
 }

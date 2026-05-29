@@ -1,18 +1,18 @@
 ---
-title: city task
+title: studio task
 description: 托管 task plugin 命令，用于任务定义、执行与自动化
 ---
 
-# `city task`
+# `studio task`
 
-`city task` 是托管 task plugin 的命令组。
+`studio task` 是托管 task plugin 的命令组。
 
 当你要定义“可复用、可长期存在的自动化任务”时，优先使用它，而不是一次性的延迟 plugin action。
 
 ## 用法
 
 ```bash
-city task <subcommand> [options]
+studio task <subcommand> [options]
 ```
 
 ## 主要子命令
@@ -28,18 +28,18 @@ city task <subcommand> [options]
 
 ## 边界
 
-- `city task` 适合可复用、长期存在的自动化。
-- `city chat --delay/--time`、`city memory --delay/--time` 适合“把现成 action 稍后执行一次”。
+- `studio task` 适合可复用、长期存在的自动化。
+- `studio chat --delay/--time`、`studio memory --delay/--time` 适合“把现成 action 稍后执行一次”。
 - 任务定义可以使用 `@manual`、cron，或 `time:<ISO8601>`。
 
 ## 示例
 
 ```bash
-city task list
-city task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
-city task run daily-check
-city task update daily-check --when "@manual"
-city task disable daily-check
+studio task list
+studio task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+studio task run daily-check
+studio task update daily-check --when "@manual"
+studio task disable daily-check
 ```
 
 ## 相关页面

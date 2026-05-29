@@ -1,0 +1,60 @@
+---
+title: 调用 AI
+description: 通过 UserClient 和第三方工具调用 AIService。
+---
+
+## SDK 通路
+
+```ts
+import { UserClient } from "@downcity/gate";
+
+const client = new UserClient({ base_url, studio_id, user_token });
+
+// 获取模型目录
+const catalog = await client.ai.listModels();
+const model = catalog.get("deepseek-v4-flash");
+
+// 文本生成
+const msg = await client.ai.text({ prompt: "hello", model });
+console.log(msg.parts[0].text);
+
+// 流式生成
+const stream = await client.ai.stream({ prompt: "hello", model });
+const reader = stream.getReader();
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  if (value.type === "text-delta") process.stdout.write(value.textDelta);
+}
+```
+
+`client.ai.listModels()` 在 `user_token` 身份下只返回当前已经满足运行时 `env` 的模型；同一条路由在 `admin_secret_key` 身份下会返回全部代码注册模型和它们的 `env_requirements`。
+
+## OpenAI 兼容通路
+
+### curl
+
+```bash
+curl http://127.0.0.1:43127/v1/ai/chat/completions \
+  -H "Authorization: Bearer <user_token>" \
+  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hello"}],"stream":true}'
+```
+
+### OpenAI SDK
+
+```ts
+import OpenAI from "openai";
+
+const handle = client.ai.model(catalog.get("deepseek-v4-flash"));
+const openai = new OpenAI({ baseURL: handle.url(), apiKey: handle.token });
+
+const stream = await openai.chat.completions.create({
+  model: handle.modelName(),
+  messages: [{ role: "user", content: "你好" }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.choices[0]?.delta?.content || "");
+}
+```

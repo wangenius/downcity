@@ -1,0 +1,36 @@
+---
+title: 连接 Client
+description: 用 UserClient 调用 City 的 Service 和 Action。
+---
+
+`UserClient` 有两条常用通路：
+
+- `client.ai.*` 调内置 AIService
+- `client.service(id).action(name).invoke()` 调自定义 Service 或服务 Service
+
+```ts
+import { UserClient } from "@downcity/gate";
+
+const client = new UserClient({
+  base_url: "http://127.0.0.1:43127",
+  studio_id: "studio_downcity",
+  user_token: "ub_xxx",
+});
+
+// AI Service — SDK 通路
+const msg = await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
+const stream = await client.ai.stream({ prompt: "hello" });
+
+// AI Service — OpenAI 通路（用 OpenAI SDK 直接调）
+import OpenAI from "openai";
+const openai = new OpenAI({ baseURL: "http://127.0.0.1:43127/v1/ai", apiKey: "ub_xxx" });
+await openai.chat.completions.create({ model: "kimi-k2.6", messages: [...] });
+
+// 自定义 Service
+const result = await client.service("translate").action("zh2en").invoke({ text: "你好" });
+
+// GET action（如轮询 OAuth 结果）
+const oauth = await client.service("accounts").get("oauth/result", { state: "state_xxx" });
+```
+
+创建 studio、暂停 studio、签发 `user_token` 和维护 Runtime env 都属于可信环境动作，用 `AdminClient` 完成，不放到产品前端。

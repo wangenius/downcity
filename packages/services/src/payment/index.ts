@@ -7,7 +7,7 @@
  * - 具体支付链路仍由 `payment.stripe` 之类的具体服务承接
  */
 
-import type { ServiceDefinition } from "@downcity/infra";
+import type { ServiceDefinition } from "@downcity/city";
 import type {
   PaymentMethodDefinition,
   PaymentMethodItem,
@@ -24,7 +24,7 @@ export function paymentService(options: PaymentServiceOptions): ServiceDefinitio
     name: "Payment",
     version: "0.1.0",
     instruction: [
-      "统一暴露当前 InfraRuntime 可用的支付方式列表。",
+      "统一暴露当前 City 可用的支付方式列表。",
       "前端应该先读取 methods，再决定展示哪种支付入口。",
       "具体支付动作仍然由具体服务处理，例如 payment.stripe。",
     ].join("\n"),

@@ -5,16 +5,16 @@ description: Frequently asked questions for Downcity users
 
 # FAQ
 
-## Is there any difference between `downcity` and `city`?
+## Is there any difference between `downcity` and `studio`?
 
-No. `city` is the short alias of the same binary.
+No. `studio` is the short alias of the same binary.
 
-## Why does `city task ...` fail with connection errors?
+## Why does `studio task ...` fail with connection errors?
 
 `task/chat/memory/contact/shell/skill/asr/tts/plugin` commands typically require a running daemon:
 
 ```bash
-city agent start
+studio agent start
 ```
 
 ## Why does `${VAR}` not resolve inside `downcity.json`?
@@ -29,16 +29,16 @@ Use one of these instead:
 ## How do I switch model quickly?
 
 ```bash
-city model list
-city config get model.primary
+studio model list
+studio config get model.primary
 ```
 
 ## How can I check agent state?
 
 ```bash
-city agent list --running
-city plugin list
-city memory status
+studio agent list --running
+studio plugin list
+studio memory status
 ```
 
 ## I see `deprecated eslint@8` and deprecated subdependencies during install. Is this critical?
@@ -48,7 +48,7 @@ Usually no. These warnings are typically from dev-tooling dependency chains and 
 - `deprecated eslint@8`: your resolved tree still includes ESLint 8.x.
 - `glob@7`, `rimraf@3`, `inflight`, etc.: usually transitive dependencies from upstream tools.
 
-If you only run `city`, you can proceed. To reduce warnings:
+If you only run `studio`, you can proceed. To reduce warnings:
 
 1. Upgrade direct `eslint` dependency to 9.x.
 2. Upgrade upstream tooling packages to newer major versions when available.

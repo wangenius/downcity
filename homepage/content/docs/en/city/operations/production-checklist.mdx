@@ -1,0 +1,34 @@
+---
+title: Studioion Checklist
+description: What to confirm before putting City into production.
+---
+
+Before launch, confirm at least the following:
+
+## Security
+
+- `DOWNCITY_CITY_ADMIN_SECRET_KEY` exists only in trusted environments.
+- Clients only receive `user_token`, not provider keys.
+- `DOWNCITY_CITY_TOKEN_SIGNING_KEY` is configured in City.
+- Admin env endpoints only accept trusted requests.
+
+## Stability
+
+- Every service that should be exposed has been registered through `base.use(service)`.
+- AI models have been registered through `Provider.model()` + `AIService.use()` and include the required actions.
+- Critical provider env values have been configured.
+- The studio table uses an explicit database URL.
+- before hooks block over-quota users.
+- after hooks record usage and error clues.
+
+## Multi-studio setup
+
+- `studio_id` clearly separates studios.
+- Usage records include `studio_id`, `user_id`, and `model`.
+- Different studios have default quota strategies.
+
+## Rollback
+
+- Provider keys can be rotated quickly.
+- Model definitions can be paused or replaced quickly through code deployment.
+- Service errors are captured by `onError` or your logging system.

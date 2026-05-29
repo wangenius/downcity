@@ -15,7 +15,7 @@ Downcity 的核心配置由 3 部分组成：
 
 ### `start`（仅高级场景）
 
-`city agent start` 的端口由 console 自动分配。
+`studio agent start` 的端口由 console 自动分配。
 
 因此常规场景不需要在项目 `downcity.json` 配置 `start.port`。
 
@@ -102,17 +102,17 @@ agent 绑定模型 ID（映射到 city 全局模型池）：
 例如 asr：
 
 ```bash
-city asr on SenseVoiceSmall
-city config get plugins.asr
+studio asr on SenseVoiceSmall
+studio config get plugins.asr
 ```
 
 ## 常用命令
 
 ```bash
-city config get
-city config get execution.modelId
-city model list
-city config unset plugins.chat.channels.telegram
+studio config get
+studio config get execution.modelId
+studio model list
+studio config unset plugins.chat.channels.telegram
 ```
 
 ## 下一步

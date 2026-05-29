@@ -157,13 +157,13 @@ export function HeroSection() {
 
               <div className="space-y-2">
                 <div className={commandClass}>
-                  <p className="text-muted-foreground">$ city agent create .</p>
+                  <p className="text-muted-foreground">$ studio agent create .</p>
                   <p className="mt-1 text-emerald-600 dark:text-emerald-300">
                     {t("tutorial:mock.terminal.step1.ready")}
                   </p>
                 </div>
                 <div className={commandClass}>
-                  <p className="text-muted-foreground">$ city agent start</p>
+                  <p className="text-muted-foreground">$ studio agent start</p>
                   <p className="mt-1 text-emerald-600 dark:text-emerald-300">
                     {t("tutorial:mock.terminal.step2.online")}
                   </p>

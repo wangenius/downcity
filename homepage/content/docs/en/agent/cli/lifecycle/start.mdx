@@ -1,16 +1,16 @@
 ---
-title: city agent start
+title: studio agent start
 description: Start an Agent process in background or foreground mode
 ---
 
-# `city agent start`
+# `studio agent start`
 
 ## Usage
 
 ```bash
-city agent start [path]
-city agent start [path] --foreground
-city agent start [path] --host 0.0.0.0
+studio agent start [path]
+studio agent start [path] --foreground
+studio agent start [path] --host 0.0.0.0
 ```
 
 ## Default behavior
@@ -32,7 +32,7 @@ This makes scripted usage predictable while keeping human usage convenient.
 ## `--foreground`
 
 ```bash
-city agent start --foreground
+studio agent start --foreground
 ```
 
 Use this when you want to:
@@ -53,7 +53,7 @@ Before startup, the following must be valid:
 
 If these conditions are missing, repeated `start` attempts are less useful than checking:
 
-- `city agent status`
+- `studio agent status`
 - [Agent won't start](/en/docs/agent/operations/troubleshooting/agent-wont-start)
 
 Continue with:

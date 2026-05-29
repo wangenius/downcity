@@ -42,9 +42,9 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 - 不负责 city 级 channel account 的保存
 - 不负责全局控制面和 Console UI
 
-这些属于 `city` 和 console 的职责。
+这些属于 `studio` 和 console 的职责。
 
-如果你把 `city` 和 `agent` 的职责混在一起理解，后面就会很容易遇到这些困惑：
+如果你把 `studio` 和 `agent` 的职责混在一起理解，后面就会很容易遇到这些困惑：
 
 - 不知道模型应该去哪里配
 - 不知道 channel account 应该改项目还是改全局
@@ -55,7 +55,7 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 ## 你会在什么场景下用它
 
 - 让一个项目变成可对话的 agent
-- 通过 `city agent chat` 在终端里直接和项目对话
+- 通过 `studio agent chat` 在终端里直接和项目对话
 - 通过 Telegram、飞书、QQ 等渠道把消息送进项目 agent
 - 在 Node.js 应用里通过 `@downcity/agent` 嵌入本地 agent
 - 通过 `RemoteAgent` 调用另一个进程里已经运行的 agent
@@ -69,9 +69,9 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 你在项目目录里运行：
 
 ```bash
-city agent create .
-city agent start
-city agent chat
+studio agent create .
+studio agent start
+studio agent chat
 ```
 
 这条路径适合“把一个代码仓库启动成一个 agent”。

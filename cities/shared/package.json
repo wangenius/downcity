@@ -1,0 +1,13 @@
+{
+  "name": "@downcity/city-shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@downcity/city": "workspace:*",
+    "@downcity/services": "workspace:*"
+  }
+}

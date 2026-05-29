@@ -7,7 +7,7 @@
  * - 支付成功后统一调用 balance.finishTopup() 完成到账
  */
 
-import type { ServiceDefinition, EnvRequirement } from "@downcity/infra";
+import type { ServiceDefinition, EnvRequirement } from "@downcity/city";
 import { stripeEvents, stripePayments } from "./schema.js";
 import {
   createStripeCheckoutSession,
@@ -88,8 +88,8 @@ const stripePaymentEnv: EnvRequirement[] = [
     required: false,
   },
   {
-    key: "DOWNCITY_INFRA_BASE_URL",
-    description: "InfraRuntime 对外访问地址；未显式配置 success/cancel URL 时，会自动生成 Stripe 默认跳转页地址",
+    key: "DOWNCITY_CITY_BASE_URL",
+    description: "City 对外访问地址；未显式配置 success/cancel URL 时，会自动生成 Stripe 默认跳转页地址",
     required: false,
   },
   {
@@ -140,7 +140,7 @@ export function stripePaymentService(options: StripePaymentServiceOptions): Serv
       "使用 Stripe 创建一次性充值 Checkout，并在 webhook 成功后完成 balance topup。",
       "这个服务不处理 entitlement，也不处理 subscription。",
       "当 options 未显式传入时，会回退读取 STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET / STRIPE_SUCCESS_URL / STRIPE_CANCEL_URL。",
-      "如果 success/cancel URL 仍未配置，会继续尝试基于 DOWNCITY_INFRA_BASE_URL 自动生成默认跳转页地址。",
+      "如果 success/cancel URL 仍未配置，会继续尝试基于 DOWNCITY_CITY_BASE_URL 自动生成默认跳转页地址。",
       `currency=${normalized.currency}，success_url=${normalized.success_url || "read from STRIPE_SUCCESS_URL or route input"}。`,
       "支付成功后统一通过 balance.finishTopup() 完成到账。",
     ].join("\n"),
@@ -558,7 +558,7 @@ function pickRedirectURL(value: unknown, fallback: string | undefined, label: st
  * 关键说明（中文）
  * - 优先使用请求级显式传入值
  * - 再回退到服务配置或 runtime env
- * - 再回退到 DOWNCITY_INFRA_BASE_URL
+ * - 再回退到 DOWNCITY_CITY_BASE_URL
  * - 最后使用当前请求 origin 自动生成服务内置结果页
  */
 function resolveCheckoutRedirectURL(input: {
@@ -570,7 +570,7 @@ function resolveCheckoutRedirectURL(input: {
   request: Request;
 }): string {
   const configured = normalizeOptionalText(input.fallback);
-  const fromBaseURL = buildBaseURLRedirect(input.ctx.env("DOWNCITY_INFRA_BASE_URL"), input.redirectPath);
+  const fromBaseURL = buildBaseURLRedirect(input.ctx.env("DOWNCITY_CITY_BASE_URL"), input.redirectPath);
   const fromRequestOrigin = buildRequestOriginRedirect(input.request, input.redirectPath);
   return pickRedirectURL(input.value, configured || fromBaseURL || fromRequestOrigin, input.label);
 }
@@ -627,7 +627,7 @@ function resolveApiBaseURL(
 }
 
 /**
- * 基于 InfraRuntime 对外地址生成默认跳转页 URL。
+ * 基于 City 对外地址生成默认跳转页 URL。
  */
 function buildBaseURLRedirect(baseURL: string | undefined, path: string): string {
   const normalizedBaseURL = normalizeOptionalText(baseURL).replace(/\/+$/, "");

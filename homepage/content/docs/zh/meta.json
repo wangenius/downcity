@@ -3,7 +3,7 @@
   "pages": [
     "index",
     "quickstart",
-    "city-infra",
+    "city",
     "agent",
     "chrome-extension",
     "concepts",

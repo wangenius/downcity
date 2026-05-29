@@ -1,0 +1,47 @@
+---
+title: Registration and Login
+description: "The most common register, login, and user_token-returning flow in @downcity/services."
+---
+
+The most direct problem solved by `@downcity/services` is letting a studio ship registration and login before building a full account system.
+
+## register
+
+```ts
+const session = await guest.service("accounts").action("register").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+```
+
+## login
+
+```ts
+const session = await guest.service("accounts").action("login").invoke({
+  email: "user@example.com",
+  password: "password123",
+  studio_id: "studio_demo",
+});
+```
+
+## Why `studio_id` is included here
+
+Because after successful login or registration, the service will usually request a `user_token` for that studio context from City.
+
+So it needs to know:
+
+- which studio is currently being entered
+- which studio context the token should be issued for
+
+## What happens after login succeeds
+
+Do not keep using the guest client forever. Switch into a normal user-context client:
+
+```ts
+const user = new UserClient({
+  base_url,
+  studio_id: "studio_demo",
+  user_token: session.user_token,
+});
+```

@@ -1,11 +1,11 @@
 ---
-title: city plugin
+title: studio plugin
 description: Inspect plugin catalog, manage managed-plugin lifecycle, and use advanced plugin command forms
 ---
 
-# `city plugin`
+# `studio plugin`
 
-`city plugin` is the generic entry for the current plugin system.
+`studio plugin` is the generic entry for the current plugin system.
 
 > Recommended reading: conceptual plugin docs live in [Agent SDK / Plugins](/en/agent-sdk-docs/plugins/overview), and concrete manuals live in [Plugins Docs](/en/plugins-docs).
 
@@ -21,34 +21,34 @@ Use it when you want to:
 ## Common examples
 
 ```bash
-city plugin
-city plugin list
-city plugin status asr
-city plugin start chat --agent my-agent
-city plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
-city plugin action asr status
-city plugin schedule list --path /path/to/agent
+studio plugin
+studio plugin list
+studio plugin status asr
+studio plugin start chat --agent my-agent
+studio plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
+studio plugin action asr status
+studio plugin schedule list --path /path/to/agent
 ```
 
 ## Notes
 
-- Running bare `city plugin` in an interactive terminal opens a plugin manager.
-- `city plugin list` and `city plugin status` are static console-level catalog views.
+- Running bare `studio plugin` in an interactive terminal opens a plugin manager.
+- `studio plugin list` and `studio plugin status` are static console-level catalog views.
 - Managed plugins such as `chat`, `task`, `memory`, `contact`, and `shell` support `start/stop/restart/command`.
-- `city plugin action ...` is the local execution form and runs directly inside the current project by default.
-- For day-to-day usage, prefer concrete command roots such as `city chat ...`, `city task ...`, `city memory ...`, `city shell ...`, `city web ...`, `city skill ...`, `city asr ...`, and `city tts ...`.
+- `studio plugin action ...` is the local execution form and runs directly inside the current project by default.
+- For day-to-day usage, prefer concrete command roots such as `studio chat ...`, `studio task ...`, `studio memory ...`, `studio shell ...`, `studio web ...`, `studio skill ...`, `studio asr ...`, and `studio tts ...`.
 
 ## Related
 
-- [`city chat`](/en/docs/commands/plugin/chat)
-- [`city task`](/en/docs/commands/plugin/task)
-- [`city memory`](/en/docs/commands/plugin/memory)
-- [`city contact`](/en/docs/commands/plugin/contact)
-- [`city shell`](/en/docs/commands/plugin/shell)
+- [`studio chat`](/en/docs/commands/plugin/chat)
+- [`studio task`](/en/docs/commands/plugin/task)
+- [`studio memory`](/en/docs/commands/plugin/memory)
+- [`studio contact`](/en/docs/commands/plugin/contact)
+- [`studio shell`](/en/docs/commands/plugin/shell)
 - [`Plugin Scheduling`](/en/docs/commands/plugin/schedule)
-- [`city skill`](/en/docs/commands/plugin/skill)
-- [`city web`](/en/docs/commands/plugin/web)
-- [`city asr`](/en/docs/commands/plugin/asr)
-- [`city tts`](/en/docs/commands/plugin/tts)
+- [`studio skill`](/en/docs/commands/plugin/skill)
+- [`studio web`](/en/docs/commands/plugin/web)
+- [`studio asr`](/en/docs/commands/plugin/asr)
+- [`studio tts`](/en/docs/commands/plugin/tts)
 - [Agent SDK Plugin Concepts](/en/agent-sdk-docs/plugins/overview)
 - [Plugins Docs](/en/plugins-docs)

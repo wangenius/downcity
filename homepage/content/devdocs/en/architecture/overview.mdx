@@ -10,12 +10,12 @@ The repository is organized around the agent runtime, city control plane, shared
 ## Primary workspaces
 
 - `packages/agent/`: local agent kernel, session execution, plugin runtime, HTTP/RPC host, SDK
-- `packages/city/`: control plane, CLI, project orchestration, model pool, console-facing gateway
-- `packages/infra/`: infrastructure runtime for services, actions, auth, env, product-scoped access, and routing
+- `packages/studio-cli/`: control plane, CLI, project orchestration, model pool, console-facing gateway
+- `packages/city/`: infrastructure runtime for services, actions, auth, env, product-scoped access, and routing
 - `packages/services/`: public services such as accounts, balance, usage, payment, and Stripe flows
-- `packages/conduit/`: user and admin SDK for service calls
+- `packages/gate/`: user and admin SDK for service calls
 - `packages/ui/`: reusable UI primitives and app-facing components
-- `blocks/`: deployable city blocks that compose infra and services for Node or edge runtimes
+- `cities/`: deployable city blocks that compose infra and services for Node or edge runtimes
 - `products/console/`: browser control surface
 - `products/chrome-extension/`: extension that sends live page context into agents
 - `homepage/`: marketing site, user docs, devdocs, SDK docs, and plugin docs
@@ -25,10 +25,10 @@ The repository is organized around the agent runtime, city control plane, shared
 - `/docs` is user-facing only
 - `/devdocs` is contributor-facing only
 - `packages/agent` owns single-agent execution
-- `packages/city` owns control-plane and multi-project coordination
-- `packages/infra` owns reusable service runtime infrastructure
+- `packages/studio-cli` owns control-plane and multi-project coordination
+- `packages/city` owns reusable service runtime infrastructure
 - `packages/services` owns public service capabilities
-- `packages/conduit` owns service access over HTTP
+- `packages/gate` owns service access over HTTP
 - product surfaces should consume runtime APIs instead of duplicating runtime logic
 
 ## Current architecture philosophy
@@ -43,12 +43,12 @@ The repository is organized around the agent runtime, city control plane, shared
 
 ```text
 packages/agent build -> SDK and runtime package
-packages/infra build -> infrastructure runtime package
+packages/city build -> infrastructure runtime package
 packages/services build -> public services package
-packages/conduit build -> service SDK package
-packages/city build -> CLI and control-plane package
-blocks/node typecheck -> Node service block
-blocks/edge typecheck -> edge service block
+packages/gate build -> service SDK package
+packages/studio-cli build -> CLI and control-plane package
+cities/node typecheck -> Node service block
+cities/edge typecheck -> edge service block
 products/console build -> browser control surface
 products/chrome-extension build -> extension bundle
 homepage build -> docs and marketing site

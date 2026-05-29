@@ -10,17 +10,17 @@ description: 使用终端聊天命令与运行中的 Agent 进行交互
 确保 agent 已经运行，然后执行：
 
 ```bash
-city agent chat
+studio agent chat
 ```
 
 如果你没有显式指定目标 agent，并且当前终端是交互式环境，CLI 会让你从运行中的 agent 里选择一个。
 
-这意味着 `city agent chat` 的默认交互体验更偏向人工使用，而不是脚本化调用。
+这意味着 `studio agent chat` 的默认交互体验更偏向人工使用，而不是脚本化调用。
 
 ## 指定目标 Agent
 
 ```bash
-city agent chat --to my-agent
+studio agent chat --to my-agent
 ```
 
 如果你同时维护多个 agent，建议在文档、脚本和日常命令里都尽量显式写出 `--to`，这样行为更稳定、可复现。
@@ -28,7 +28,7 @@ city agent chat --to my-agent
 ## 一次性发送消息
 
 ```bash
-city agent chat --to my-agent --message "总结一下这个仓库的结构"
+studio agent chat --to my-agent --message "总结一下这个仓库的结构"
 ```
 
 这适合脚本化调用，发送一轮消息后就退出。
@@ -38,7 +38,7 @@ city agent chat --to my-agent --message "总结一下这个仓库的结构"
 ## JSON 输出
 
 ```bash
-city agent chat --to my-agent --message "列出今天的变更" --json
+studio agent chat --to my-agent --message "列出今天的变更" --json
 ```
 
 适合把结果接到别的脚本或工具链里。
@@ -62,7 +62,7 @@ city agent chat --to my-agent --message "列出今天的变更" --json
 
 优先检查：
 
-1. `city agent status`
+1. `studio agent status`
 2. 模型绑定是否正确
 3. agent 是否真的处于 `running`
 

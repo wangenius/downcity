@@ -80,7 +80,7 @@ export interface StripePaymentServiceBalanceBridge {
  */
 export interface StripePaymentServiceOptions {
   /**
-   * 已挂载到 InfraRuntime 的 balance 服务实例。
+   * 已挂载到 City 的 balance 服务实例。
    *
    * Stripe 服务会通过它读取 topup 并在支付成功后调用
    * `finishTopup()` 真正完成到账。
@@ -90,14 +90,14 @@ export interface StripePaymentServiceOptions {
   /**
    * Stripe Secret Key。
    *
-   * 未传入时会读取 InfraRuntime env 中的 `STRIPE_SECRET_KEY`。
+   * 未传入时会读取 City env 中的 `STRIPE_SECRET_KEY`。
    */
   secret_key?: string;
 
   /**
    * Stripe webhook 签名密钥。
    *
-   * 未传入时会读取 InfraRuntime env 中的 `STRIPE_WEBHOOK_SECRET`。
+   * 未传入时会读取 City env 中的 `STRIPE_WEBHOOK_SECRET`。
    */
   webhook_secret?: string;
 
@@ -105,7 +105,7 @@ export interface StripePaymentServiceOptions {
    * 默认支付成功跳转地址。
    *
    * 当 `checkout/create` 未显式传入 `success_url` 时使用。
-   * 如果这里也未配置，服务会继续尝试基于 `DOWNCITY_INFRA_BASE_URL`
+   * 如果这里也未配置，服务会继续尝试基于 `DOWNCITY_CITY_BASE_URL`
    * 自动生成默认结果页地址。
    */
   success_url?: string;
@@ -114,7 +114,7 @@ export interface StripePaymentServiceOptions {
    * 默认支付取消跳转地址。
    *
    * 当 `checkout/create` 未显式传入 `cancel_url` 时使用。
-   * 如果这里也未配置，服务会继续尝试基于 `DOWNCITY_INFRA_BASE_URL`
+   * 如果这里也未配置，服务会继续尝试基于 `DOWNCITY_CITY_BASE_URL`
    * 自动生成默认结果页地址。
    */
   cancel_url?: string;

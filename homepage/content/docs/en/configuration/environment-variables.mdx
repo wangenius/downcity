@@ -29,14 +29,14 @@ Key points:
 
 1. `@downcity/agent` does not auto-read host `process.env`.
 2. `new Agent({ env })` is the host injection entrypoint.
-3. When the host is `city`, Console-global env is read from `downcity.db` and passed explicitly into `Agent`.
+3. When the host is `studio`, Console-global env is read from `downcity.db` and passed explicitly into `Agent`.
 4. `downcity.json` stores bindings (`model.primary`, `channel.channelAccountId`), not plaintext credentials.
 
 ## 2. Data Flow (diagram)
 
 ```mermaid
 sequenceDiagram
-  participant CLI as city agent start
+  participant CLI as studio agent start
   participant DB as ~/.downcity/downcity.db
   participant HOST as new Agent({ env })
   participant ENV as <agent>/.env
@@ -96,7 +96,7 @@ So key precedence for runtime metadata is: `DC_CITY_*` / `DC_AGENT_*` / `DC_SESS
 1. Console UI `Global / Env` writes `env_entries` for Console-side env management.
 2. Bot account CRUD (UI): writes `channel_accounts`.
 3. Model CRUD (CLI/UI): writes `model_providers`, `models`.
-4. Plugin config (`city plugin action ...`, `city asr ...`, or `city tts ...`): writes project `downcity.json`.
+4. Plugin config (`studio plugin action ...`, `studio asr ...`, or `studio tts ...`): writes project `downcity.json`.
 5. Channel configure action: writes `downcity.json` (`enabled`, `channelAccountId`).
 6. User manual `.env` edit: affects that agent only.
 
@@ -129,9 +129,9 @@ flowchart TD
 1. Initialize console-global data once:
 
 ```bash
-city init
-city model create
-city plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
+studio init
+studio model create
+studio plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 ```
 
 2. Manage shared env in Console UI `Global / Env`, or pass them explicitly through `new Agent({ env })`.
@@ -164,15 +164,15 @@ Behavior:
 
 ## 10. Console public address
 
-When you use `city start -p` or `city console start -p`, the CLI tries to print `Public URL` in startup output.
-If you use `city public on`, future plain `city start` and `city console start` runs also reuse the saved public bind mode.
+When you use `studio start -p` or `studio console start -p`, the CLI tries to print `Public URL` in startup output.
+If you use `studio public on`, future plain `studio start` and `studio console start` runs also reuse the saved public bind mode.
 
-These values are normally injected by `city start` or the deployment environment. They are not endpoint parameters that users enter for `contact link`:
+These values are normally injected by `studio start` or the deployment environment. They are not endpoint parameters that users enter for `contact link`:
 
 1. `DOWNCITY_PUBLIC_URL`: full external URL, for example `https://console.example.com`
 2. `DOWNCITY_PUBLIC_HOST`: external host only; the CLI expands it to `http://<host>:5315`
 
-`city start` automatically detects the public IP and stores it in global Console Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
+`studio start` automatically detects the public IP and stores it in global Console Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
 
 Priority:
 

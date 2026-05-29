@@ -2,10 +2,10 @@
  * Stripe 支付服务类型契约测试。
  */
 
-import { InfraRuntime } from "@downcity/infra";
+import { City } from "@downcity/city";
 import { stripePaymentService } from "../../src/index.js";
 
-const base = new InfraRuntime({
+const base = new City({
   db: {} as never,
 });
 

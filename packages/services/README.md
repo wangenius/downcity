@@ -42,6 +42,6 @@ const checkout = await user.service("payment.stripe").action("checkout/create").
 
 - `accountsService()`：注册、登录、邮箱验证、GitHub/Google OAuth 与 `user_token` 签发
 - `balanceService()`：全局余额账户、流水、充值单与兑换码
-- `paymentService()`：统一暴露当前 InfraRuntime 可用的支付方式列表
+- `paymentService()`：统一暴露当前 City 可用的支付方式列表
 - `usageService()`：记录真实用户侧 service 调用事件
 - `stripePaymentService()`：把 Stripe 一次性支付同步成 balance topup 到账

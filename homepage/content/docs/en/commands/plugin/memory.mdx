@@ -1,18 +1,18 @@
 ---
-title: city memory
+title: studio memory
 description: Managed memory plugin commands for search, retrieval, storage, and flush
 ---
 
-# `city memory`
+# `studio memory`
 
-`city memory` is the managed memory plugin command group.
+`studio memory` is the managed memory plugin command group.
 
 Use it when the agent or operator needs to inspect or write memory explicitly instead of relying only on prompt-time memory injection.
 
 ## Usage
 
 ```bash
-city memory <subcommand> [options]
+studio memory <subcommand> [options]
 ```
 
 ## Main subcommands
@@ -32,11 +32,11 @@ city memory <subcommand> [options]
 ## Examples
 
 ```bash
-city memory status
-city memory search "release decision"
-city memory get .downcity/memory/MEMORY.md --from 10 --lines 20
-city memory store --target longterm --content "User prefers concise release notes."
-city memory flush --session-id telegram-chat-123 --max-messages 40
+studio memory status
+studio memory search "release decision"
+studio memory get .downcity/memory/MEMORY.md --from 10 --lines 20
+studio memory store --target longterm --content "User prefers concise release notes."
+studio memory flush --session-id telegram-chat-123 --max-messages 40
 ```
 
 ## Related

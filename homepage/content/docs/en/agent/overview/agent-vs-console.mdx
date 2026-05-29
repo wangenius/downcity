@@ -8,16 +8,16 @@ description: Understand the boundary between the single-project Agent runtime an
 Two concepts appear constantly in Downcity:
 
 - `agent`: the runtime for one project
-- `city` / Console: the global control plane
+- `studio` / Console: the global control plane
 
 ## The short version
 
 - `agent` owns how one project runs
-- `city` owns which projects exist, which global resources exist, and how they are managed
+- `studio` owns which projects exist, which global resources exist, and how they are managed
 
 If you prefer a control-plane vs execution-plane mental model:
 
-- `city` / Console is the control plane
+- `studio` / Console is the control plane
 - `agent` is the execution plane
 
 ## What Console owns
@@ -55,7 +55,7 @@ Without this split, the system quickly becomes muddy:
 
 This split is also what keeps many CLI and HTTP behaviors understandable:
 
-- `city` locates or manages the target project
+- `studio` locates or manages the target project
 - the project `agent` actually executes the work
 
 ## What this means in practice
@@ -91,16 +91,16 @@ instead of raw credentials.
 
 ### Runtime status
 
-- use `city agent status` to inspect one project runtime
-- use `city agent list` to inspect the set of known agents globally
+- use `studio agent status` to inspect one project runtime
+- use `studio agent list` to inspect the set of known agents globally
 
 ## A common misunderstanding
 
-People often ask: "If I run `city agent ...`, is the agent really separate?"
+People often ask: "If I run `studio agent ...`, is the agent really separate?"
 
 Yes.
 
-`city agent ...` is the user-facing entry point. The actual runtime being started, queried, or stopped is the single-project agent runtime.
+`studio agent ...` is the user-facing entry point. The actual runtime being started, queried, or stopped is the single-project agent runtime.
 
 Continue with:
 

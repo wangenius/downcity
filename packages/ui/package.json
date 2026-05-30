@@ -43,28 +43,28 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   },
   "dependencies": {
-    "@base-ui/react": "^1.3.0",
-    "@pxlkit/core": "^1.2.2",
-    "@pxlkit/effects": "^1.2.2",
-    "@pxlkit/feedback": "^1.2.2",
-    "@pxlkit/gamification": "^1.2.2",
-    "@pxlkit/parallax": "^1.2.2",
-    "@pxlkit/ui": "^1.2.2",
+    "@base-ui/react": "^1.5.0",
+    "@pxlkit/core": "^1.3.3",
+    "@pxlkit/effects": "^1.2.3",
+    "@pxlkit/feedback": "^1.2.5",
+    "@pxlkit/gamification": "^1.2.4",
+    "@pxlkit/parallax": "^1.2.3",
+    "@pxlkit/ui": "^1.2.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.17.0",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
-    "tsup": "^8.5.0",
-    "typescript": "^5.9.2"
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3"
   },
   "keywords": [
     "downcity",

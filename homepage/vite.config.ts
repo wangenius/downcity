@@ -7,7 +7,6 @@
  * - 因此这里显式把 `@downcity/ui` 解析到源码入口，避免依赖未生成的 dist 产物。
  */
 import { reactRouter } from "@react-router/dev/vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 import mdx from "fumadocs-mdx/vite";
 import * as MdxConfig from "./source.config";
 import tailwindcss from "@tailwindcss/vite";
@@ -16,8 +15,9 @@ import path from "path";
 
 export default defineConfig({
   base: "/",
-  plugins: [tailwindcss(), mdx(MdxConfig), reactRouter(), tsconfigPaths()],
+  plugins: [tailwindcss(), mdx(MdxConfig), reactRouter()],
   resolve: {
+    tsconfigPaths: true,
     dedupe: ["react", "react-dom"],
     alias: [
       {

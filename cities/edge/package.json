@@ -9,16 +9,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.0",
-    "@downcity/city-shared": "workspace:*",
+    "@ai-sdk/openai": "^3.0.67",
     "@downcity/city": "workspace:*",
+    "@downcity/city-shared": "workspace:*",
     "@downcity/services": "workspace:*",
-    "ai": "^6.0.168",
+    "ai": "^6.0.193",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250420.0",
-    "typescript": "^5.7.0",
-    "wrangler": "^4.20.0"
+    "@cloudflare/workers-types": "^4.20260530.1",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.95.0"
   }
 }

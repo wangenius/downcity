@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只保留 agent 侧访问 daemon meta 所需的项目级路径。
- * - daemon 进程启停、pid 清理、registry 同步属于 `@downcity/cli`，不放在 agent 包内。
+ * - daemon 进程启停、pid 清理、registry 同步属于 `downcity`，不放在 agent 包内。
  */
 
 import path from "node:path";

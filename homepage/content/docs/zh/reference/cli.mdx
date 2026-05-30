@@ -50,7 +50,7 @@ CLI 文档按“单命令页面 + 命令组”组织。
 - `city console start`：只启动 Console，前提是 city runtime 已经运行
 - `city stop`：先停止 Console，再停止 city runtime 与托管 agent
 - `city restart`：重启 city runtime，恢复之前运行中的 agent，再重启 Console
-- `city update`：更新当前全局安装来源对应的 Downcity CLI 包
+- `city update`：更新当前全局安装来源对应的 `downcity` CLI 聚合包
 - `city public`：管理 Console 的持久化公网暴露，支持交互式 manager 和 `on/off/status`
 - `studio agent`：在交互式终端中打开 agent manager
 - `studio agent create`：初始化项目运行文件
@@ -70,6 +70,8 @@ CLI 文档按“单命令页面 + 命令组”组织。
 本地帮助输出永远是最新的：
 
 ```bash
+city --help
+city <command> --help
 studio --help
 studio <command> --help
 ```

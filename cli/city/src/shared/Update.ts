@@ -1,5 +1,5 @@
 /**
- * `city update`：更新当前全局安装来源对应的 Downcity CLI。
+ * `city update`：更新当前全局安装来源对应的 downcity CLI 聚合包。
  *
  * 关键点（中文）
  * - 优先根据当前 CLI 所在的全局模块目录，自动判断是 npm 还是 pnpm 安装。
@@ -27,7 +27,7 @@ export interface UpdateCommandOptions {
   manager?: UpdateManager | "auto";
 }
 
-const FALLBACK_GLOBAL_PACKAGE_NAME = "@downcity/cli";
+const FALLBACK_GLOBAL_PACKAGE_NAME = "downcity";
 
 /**
  * 解析当前 CLI 安装包根目录。

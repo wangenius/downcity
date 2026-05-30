@@ -1,11 +1,11 @@
 ---
-title: "@downcity/cli"
+title: "City CLI"
 description: "Manage City models and tables from the terminal for setup, debugging, and routine operations."
 ---
 
-`@downcity/cli` is a terminal tool for City operators. It is not part of studio runtime traffic. It is the operational entry you use during setup, inspection, and debugging.
+`downcity` is the global installation package for Downcity's terminal products. It installs two commands: `city` for City administration and `studio` for local Agent hosting.
 
-If `AdminClient` owns "trusted programmatic calls", `@downcity/cli` owns "a human operating City directly from the terminal".
+If `AdminClient` owns "trusted programmatic calls", `city` owns "a human operating City directly from the terminal".
 
 ## How to read this section
 
@@ -24,16 +24,16 @@ The recommended order is:
 ## Install
 
 ```bash
-npm i -g @downcity/cli
+npm i -g downcity
 ```
 
 ## Default usage
 
 ```bash
-downcity
+city
 ```
 
-The default entry opens an interactive panel. If no server exists yet, the CLI first requires you to add one. After that, you can:
+The default `city` entry opens an interactive panel. If no server exists yet, the CLI first requires you to add one. After that, you can:
 
 - manage multiple City servers from `Manage Servers`
 - enter the Admin flow for env / models / studios / payment
@@ -42,10 +42,10 @@ The default entry opens an interactive panel. If no server exists yet, the CLI f
 ## Common commands
 
 ```bash
-downcity models
-downcity models add
-downcity models update
-studio --database-url "$DOWNCITY_CITY_DATABASE_URL"
+city model list
+city model create
+city model manage
+studio agent start .
 ```
 
 ## Boundaries with other packages
@@ -55,7 +55,7 @@ studio --database-url "$DOWNCITY_CITY_DATABASE_URL"
 - It is better for human-operated inspection and maintenance than for code you embed into a studio.
 
 - `AdminClient` is for trusted programmatic calls
-- `@downcity/cli` is for human-operated terminal workflows
+- `city` is for human-operated terminal workflows
 
 ## Read next
 

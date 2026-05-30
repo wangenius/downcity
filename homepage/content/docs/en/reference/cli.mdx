@@ -50,7 +50,7 @@ CLI docs are organized by command pages and command groups.
 - `city console start`: start Console only, after city runtime is already running
 - `city stop`: stop Console, then stop city runtime and managed agents
 - `city restart`: restart city runtime, restore managed agents, then restart Console
-- `city update`: update the currently installed global Downcity CLI package
+- `city update`: update the currently installed global `downcity` CLI bundle
 - `city public`: manage persisted public exposure for Console, with interactive mode plus `on/off/status`
 - `studio agent`: open the interactive agent manager in a TTY
 - `studio agent create`: initialize project runtime files
@@ -70,6 +70,8 @@ CLI docs are organized by command pages and command groups.
 Use local help for latest flags:
 
 ```bash
+city --help
+city <command> --help
 studio --help
 studio <command> --help
 ```

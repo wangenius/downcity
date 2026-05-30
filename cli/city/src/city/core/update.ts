@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - 在 downcity 仓库内执行时，优先走本地 workspace 刷新全局安装
- * - 普通全局安装环境下，退化为 `npm install -g @downcity/cli@latest`
+ * - 普通全局安装环境下，退化为 `npm install -g downcity@latest`
  * - 更新完成后建议重新运行 CLI，避免当前进程继续使用旧代码
  */
 
@@ -13,7 +13,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import os from "node:os";
 
-const CLI_PACKAGE_NAME = "@downcity/cli";
+const CLI_PACKAGE_NAME = "downcity";
 
 /**
  * 执行 CLI 自更新。
@@ -25,7 +25,9 @@ export async function updateCli(cwd = process.cwd()): Promise<{
   const workspaceRoot = findDowncityWorkspaceRoot(cwd);
 
   if (workspaceRoot) {
-    await run(commandOf("pnpm"), ["-C", "packages/cli", "build"], workspaceRoot);
+    await run(commandOf("pnpm"), ["-C", "cli/city", "build"], workspaceRoot);
+    await run(commandOf("pnpm"), ["-C", "cli/studio", "build"], workspaceRoot);
+    await run(commandOf("pnpm"), ["-C", "cli/downcity", "build"], workspaceRoot);
     const deploy_dir = path.join(os.tmpdir(), `downcity-cli-deploy-${Date.now()}`);
     await run(commandOf("pnpm"), ["--filter", CLI_PACKAGE_NAME, "deploy", "--legacy", deploy_dir], workspaceRoot);
     await installCliDeployGlobally(deploy_dir, workspaceRoot);
@@ -65,15 +67,15 @@ async function installCliDeployGlobally(deploy_dir: string, cwd: string): Promis
   const global_paths = await resolveGlobalCliPaths(cwd);
 
   // 关键点（中文）：绕开 npm install -g 本地目录，避免 npm 11 Arborist 对本地包的崩溃。
-  await mkdir(global_paths.package_scope_dir, { recursive: true });
+  await mkdir(global_paths.global_modules, { recursive: true });
   await mkdir(global_paths.global_bin, { recursive: true });
   await rm(global_paths.package_dir, { recursive: true, force: true });
   await cp(deploy_dir, global_paths.package_dir, { recursive: true, force: true });
   await chmod(global_paths.studio_entry, 0o755);
   await chmod(global_paths.city_entry, 0o755);
 
-  await recreateSymlink(global_paths.studio_bin, "../lib/node_modules/@downcity/cli/bin/studio/index.js");
-  await recreateSymlink(global_paths.city_bin, "../lib/node_modules/@downcity/cli/bin/city/index.js");
+  await recreateSymlink(global_paths.studio_bin, "../lib/node_modules/downcity/bin/studio/index.js");
+  await recreateSymlink(global_paths.city_bin, "../lib/node_modules/downcity/bin/city/index.js");
 }
 
 /**
@@ -83,7 +85,6 @@ async function resolveGlobalCliPaths(cwd: string): Promise<{
   npm_prefix: string;
   global_modules: string;
   global_bin: string;
-  package_scope_dir: string;
   package_dir: string;
   studio_entry: string;
   city_entry: string;
@@ -93,14 +94,12 @@ async function resolveGlobalCliPaths(cwd: string): Promise<{
   const npm_prefix = (await capture(commandOf("npm"), ["prefix", "-g"], cwd)).trim();
   const global_modules = path.join(npm_prefix, "lib", "node_modules");
   const global_bin = path.join(npm_prefix, "bin");
-  const package_scope_dir = path.join(global_modules, "@downcity");
-  const package_dir = path.join(package_scope_dir, "cli");
+  const package_dir = path.join(global_modules, "downcity");
 
   return {
     npm_prefix,
     global_modules,
     global_bin,
-    package_scope_dir,
     package_dir,
     studio_entry: path.join(package_dir, "bin", "studio", "index.js"),
     city_entry: path.join(package_dir, "bin", "city", "index.js"),

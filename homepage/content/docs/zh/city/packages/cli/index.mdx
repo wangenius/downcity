@@ -1,11 +1,11 @@
 ---
-title: "@downcity/cli"
+title: "City CLI"
 description: "用终端管理 City 的模型和数据表，适合初始化、排查和日常运维。"
 ---
 
-`@downcity/cli` 是给 City 管理者用的终端工具。它不是产品运行时的一部分，而是你在开发、初始化和排查阶段的运维入口。
+`downcity` 是 Downcity 的全局安装聚合包。它会安装两个命令：`city` 负责 City 管理，`studio` 负责本机 Agent 宿主。
 
-如果说 `AdminClient` 负责“程序里的可信调用”，那 `@downcity/cli` 负责“人坐在终端前的直接操作”。
+如果说 `AdminClient` 负责“程序里的可信调用”，那 `city` 负责“人坐在终端前的直接操作”。
 
 ## 这组文档怎么读
 
@@ -24,16 +24,16 @@ description: "用终端管理 City 的模型和数据表，适合初始化、排
 ## 安装
 
 ```bash
-npm i -g @downcity/cli
+npm i -g downcity
 ```
 
 ## 默认用法
 
 ```bash
-downcity
+city
 ```
 
-默认会进入交互式面板。没有 server 时，CLI 会先要求你添加一个 server；之后你可以：
+默认 `city` 会进入交互式面板。没有 server 时，CLI 会先要求你添加一个 server；之后你可以：
 
 - 通过 `Manage Servers` 管理多个 City server
 - 进入 Admin 流程管理 env / models / studios / payment
@@ -42,10 +42,10 @@ downcity
 ## 常用命令
 
 ```bash
-downcity models
-downcity models add
-downcity models update
-studio --database-url "$DOWNCITY_CITY_DATABASE_URL"
+city model list
+city model create
+city model manage
+studio agent start .
 ```
 
 ## 它和其他 package 的边界
@@ -57,7 +57,7 @@ studio --database-url "$DOWNCITY_CITY_DATABASE_URL"
 更准确地说：
 
 - `AdminClient` 负责程序里的可信调用
-- `@downcity/cli` 负责终端里的人工运维和排查
+- `city` 负责终端里的人工运维和排查
 
 ## 下一步读什么
 

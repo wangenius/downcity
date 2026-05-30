@@ -20,7 +20,7 @@ Downcity 的 package 设计很克制：先用 `@downcity/city` 搭出 City，再
 
 1. 先读 [@downcity/city](/docs/city/packages/city)，理解 City 本体负责什么
 2. 再读 [@downcity/gate](/docs/city/packages/gate)，理解产品怎么调用它
-3. 需要运维工具时读 [@downcity/cli](/docs/city/packages/cli)
+3. 需要运维工具时读 [City CLI](/docs/city/packages/cli)
 4. 需要账号、余额、usage 或 Stripe 支付能力时，再看 `@downcity/services`
 
 ## 如果你只想先搞清接入关系
@@ -50,7 +50,7 @@ Downcity 的 package 设计很克制：先用 `@downcity/city` 搭出 City，再
 ```txt
 Kernel        -> @downcity/city
 Capabilities  -> @downcity/services
-Interfaces    -> @downcity/gate + @downcity/cli
+Interfaces    -> @downcity/gate + downcity
 Composition   -> cities/node + cities/edge
 ```
 
@@ -73,7 +73,7 @@ Composition   -> cities/node + cities/edge
 
 <div className="dc-doc-grid">
   <a className="dc-doc-card" href="/docs/city/packages/cli">
-    <strong>@downcity/cli</strong>
+    <strong>downcity</strong>
     <p>官方 CLI 包。`city` 管理 City runtime，`studio` 负责本机 Agent 宿主与运行操作。</p>
   </a>
   <a className="dc-doc-card" href="/docs/city/packages/services/accounts">

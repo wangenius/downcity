@@ -101,7 +101,7 @@ export class ControlGateway {
   private readonly authService: AuthService;
 
   constructor() {
-    // 关键点（中文）：旧的 ui 构建产物路径都统一回退到 packages/downcity/public。
+    // 关键点（中文）：Console UI 构建产物统一由 cli/city/public 托管。
     this.publicDir = path.join(__dirname, "../../public");
     this.app = new Hono();
     this.authService = new AuthService();

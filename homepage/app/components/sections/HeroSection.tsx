@@ -11,7 +11,7 @@ import {
 } from "@tabler/icons-react";
 import { marketingTheme } from "@/lib/marketing-theme";
 
-const INSTALL_COMMAND = "npm i -g @downcity/cli";
+const INSTALL_COMMAND = "npm i -g downcity";
 
 /**
  * 首页首屏模块（高级重构版）。

@@ -203,7 +203,7 @@ pnpm typecheck
 - 优先使用 `const`/`let` 而不是 `var`
 - 回调使用箭头函数
 - 为公共 API 编写文档
-- 在 `packages/downcity/src` 内可使用 `@/` 路径别名（映射到 `src`），`pnpm build` 会自动回写为 `bin` 中可运行的相对路径
+- 在 `cli/city/src` 内可使用 `@/` 路径别名（映射到 `src`），`pnpm build` 会自动回写为 `bin` 中可运行的相对路径
 
 ### 测试
 
@@ -328,7 +328,7 @@ git commit -s -m "feat: 添加新功能"
 
 ### CLI 更改
 
-对于 `packages/cli` 的更改：
+对于 `cli/city` 的更改：
 - 更新 CLI 帮助文本
 - 添加使用示例
 - 为新命令编写文档

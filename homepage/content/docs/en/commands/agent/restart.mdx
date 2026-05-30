@@ -33,11 +33,11 @@ studio agent restart [path] [options]
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/city/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
 $ studio agent restart .
-downcity v1.0.0
+studio v1.0.0
 ✅ Downcity daemon restarted
    pid: <pid>
    log: <daemonLogPath>
@@ -45,6 +45,6 @@ downcity v1.0.0
 
 ```text
 $ studio agent restart .
-downcity v1.0.0
+studio v1.0.0
 ❌ Failed to restart daemon: <error>
 ```

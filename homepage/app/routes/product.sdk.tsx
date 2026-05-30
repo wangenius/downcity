@@ -27,8 +27,8 @@ const PAGE = {
     ],
     factsTitle: "事实对齐",
     facts: [
-      "核心源码目录：packages/cli/",
-      "安装命令：npm i -g @downcity/cli",
+      "核心源码目录：cli/city/",
+      "安装命令：npm i -g downcity",
       "README 快速流程：city start → studio agent create . → studio agent start",
     ],
   },
@@ -58,8 +58,8 @@ const PAGE = {
     ],
     factsTitle: "Facts",
     facts: [
-      "Core source directory: packages/cli/",
-      "Install command: npm i -g @downcity/cli",
+      "Core source directory: cli/city/",
+      "Install command: npm i -g downcity",
       "README quick flow: city start -> studio agent create . -> studio agent start",
     ],
   },
@@ -69,7 +69,7 @@ const PAGE = {
  * Product Agent SDK 页面。
  * 说明：
  * 1. 用用户集成场景说明 SDK 价值，而非堆叠底层实现。
- * 2. 事实项直接锚定 packages/downcity 与 README 的现有内容。
+ * 2. 事实项直接锚定 cli/city 与 README 的现有内容。
  */
 export default function ProductSdkPage() {
   const { i18n } = useTranslation();

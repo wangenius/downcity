@@ -164,4 +164,12 @@ export type CliRenderOptions = {
    * - 不传时沿用 chalk 默认探测行为。
    */
   color?: boolean;
+  /**
+   * 当前输出所属的终端命令名。
+   *
+   * 说明（中文）
+   * - `downcity` 只是安装聚合包，实际运行身份应该是 `city` 或 `studio`。
+   * - 这里用于让 banner 与用户敲下的命令保持一致。
+   */
+  command_name?: string;
 };

@@ -1,0 +1,19 @@
+{
+  "name": "@downcity/studio-cli",
+  "version": "1.1.52",
+  "type": "module",
+  "description": "Downcity Studio CLI — 本机 Agent 宿主与运行入口",
+  "bin": {
+    "studio": "./bin/studio/index.js"
+  },
+  "scripts": {
+    "build": "node scripts/ensure-cli-executable.mjs",
+    "dev": "node bin/studio/index.js",
+    "start": "node bin/studio/index.js",
+    "typecheck": "node scripts/verify-entry.mjs"
+  },
+  "dependencies": {
+    "@downcity/city-cli": "workspace:^"
+  },
+  "devDependencies": {}
+}

@@ -9,7 +9,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 ## Why Downcity
 
 - Repo-native agent runtime: the repository is the working context, memory boundary, and execution surface.
-- Platform plus runtime separation: `@downcity/cli` manages the platform; `@downcity/agent` focuses on single-agent execution.
+- Platform plus runtime separation: `downcity` manages the platform; `@downcity/agent` focuses on single-agent execution.
 - Long-running operations: run agents as managed daemons, inspect status, review history, and interact through CLI or Console.
 - Observable by default: sessions, logs, runtime state, and operational surfaces are designed to be inspectable.
 - Extensible architecture: services, plugins, SDK APIs, and UI components are all designed as explicit integration surfaces.
@@ -18,7 +18,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 
 | Package | Purpose |
 | --- | --- |
-| `@downcity/cli` | Platform layer and CLI for city runtime, Console gateway, multi-agent registration, model pool, global config, and daemon management. |
+| `downcity` | Platform layer and CLI for city runtime, Console gateway, multi-agent registration, model pool, global config, and daemon management. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
 | `@downcity/city` | City runtime for service registration, actions, auth, env, studio-scoped access, and HTTP routing. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
@@ -44,9 +44,9 @@ Downcity is an agent platform for local projects and team workflows. It combines
 ### 1. Install the CLI
 
 ```bash
-npm install -g @downcity/cli
+npm install -g downcity
 # or
-pnpm add -g @downcity/cli
+pnpm add -g downcity
 ```
 
 The package exposes both commands:
@@ -195,10 +195,13 @@ downcity/
 ├── packages/
 │   ├── agent/
 │   ├── city/
-│   ├── cli/
 │   ├── gate/
 │   ├── services/
 │   └── ui/
+├── cli/
+│   ├── city/
+│   ├── studio/
+│   └── downcity/
 ├── cities/
 │   ├── edge/
 │   ├── node/
@@ -219,7 +222,7 @@ downcity/
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Developer docs: [downcity.ai/devdocs](https://downcity.ai/devdocs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
-- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/services/README.md](./packages/services/README.md), [packages/gate/README.md](./packages/gate/README.md), [packages/cli/README.md](./packages/cli/README.md), [packages/ui/README.md](./packages/ui/README.md)
+- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/services/README.md](./packages/services/README.md), [packages/gate/README.md](./packages/gate/README.md), [cli/city/README.md](./cli/city/README.md), [cli/studio/README.md](./cli/studio/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
 
 ## Local Development
 

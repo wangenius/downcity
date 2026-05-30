@@ -18,7 +18,7 @@ description: React 前端结构、数据流与当前信息架构模型
 ## 构建与运行
 
 - 开发态通过 Vite proxy 把 `/api`、`/health` 转发到 Console UI gateway
-- 生产构建直接输出到 `packages/downcity/public`
+- 生产构建直接输出到 `cli/city/public`
 - `city console ui` 负责托管这些静态产物
 
 ## 代码组织
@@ -43,6 +43,6 @@ description: React 前端结构、数据流与当前信息架构模型
 
 Console UI 只做 API client：
 
-- runtime 所有权留在 `packages/downcity/`
+- runtime 所有权留在 `cli/city/`
 - 视图组装放在 `products/console/`
 - 设计规范与 IA 约束写进文档，而不是散落在单个组件文件里

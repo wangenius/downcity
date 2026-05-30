@@ -1,0 +1,21 @@
+{
+  "name": "downcity",
+  "version": "1.1.52",
+  "type": "module",
+  "description": "Downcity terminal product bundle — installs city and studio commands",
+  "bin": {
+    "city": "./bin/city/index.js",
+    "studio": "./bin/studio/index.js"
+  },
+  "scripts": {
+    "build": "node scripts/ensure-cli-executable.mjs",
+    "dev": "node bin/city/index.js",
+    "start": "node bin/city/index.js",
+    "typecheck": "node scripts/verify-entry.mjs"
+  },
+  "dependencies": {
+    "@downcity/city-cli": "workspace:^",
+    "@downcity/studio-cli": "workspace:^"
+  },
+  "devDependencies": {}
+}

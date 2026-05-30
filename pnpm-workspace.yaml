@@ -6,7 +6,7 @@ packages:
   - packages/services
   - packages/gate
   - packages/plugins
-  - packages/cli
+  - cli/*
   - packages/ui
   - products/chrome-extension
   - cities/*

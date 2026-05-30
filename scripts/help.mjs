@@ -52,8 +52,8 @@ const HELP_ITEMS = [
   },
   {
     name: "build:cli",
-    summary: "只构建 @downcity/cli 包。",
-    detail: "执行 `pnpm -C packages/cli build`，不会修改 package version。",
+    summary: "构建 Downcity CLI 产品包。",
+    detail: "依次构建 `cli/city`、`cli/studio`、`cli/downcity`，不会修改 package version。",
   },
   {
     name: "build:homepage",
@@ -93,9 +93,9 @@ const HELP_ITEMS = [
   },
   {
     name: "cli:patch:build",
-    summary: "只对 @downcity/cli 执行 patch bump + build。",
+    summary: "只对 downcity 执行 patch bump + build。",
     detail:
-      "等价于 `npm run patch:build -- --cli`，会构建 city、services、gate、agent 与 plugins 作为依赖，再构建并全局安装 city/studio 两个命令。",
+      "等价于 `npm run patch:build -- --cli`，会构建 city、services、gate、agent 与 plugins 作为依赖，再构建 cli/city、cli/studio、cli/downcity 并全局安装 city/studio 两个命令。",
   },
   {
     name: "all:patch:build",
@@ -131,7 +131,7 @@ const HELP_ITEMS = [
     name: "publish",
     summary: "执行 downcity 发布脚本。",
     detail:
-      "同步 root、@downcity/agent、@downcity/plugins、@downcity/cli 版本并推送，触发 scoped 包发布 workflow，并在成功后触发 downcity 镜像包 workflow。",
+      "同步 root、@downcity/agent、@downcity/plugins、downcity 版本并推送，触发 scoped 包发布 workflow，并在成功后触发 downcity 镜像包 workflow。",
   },
   {
     name: "publish:ui",

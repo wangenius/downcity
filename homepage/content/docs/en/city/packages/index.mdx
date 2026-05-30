@@ -20,7 +20,7 @@ If you only care about npm packages, the three most important pieces to remember
 
 1. Start with [@downcity/city](/en/docs/city/packages/city) to understand the City itself
 2. Then read [@downcity/gate](/en/docs/city/packages/gate) to see how studios call it
-3. If you want terminal tooling, read [@downcity/cli](/en/docs/city/packages/cli)
+3. If you want terminal tooling, read [City CLI](/en/docs/city/packages/cli)
 4. Add `@downcity/services` when your studio needs auth, wallet, usage, or Stripe payment flows
 
 ## If you only want the integration picture first
@@ -50,7 +50,7 @@ It also unifies:
 ```txt
 Kernel        -> @downcity/city
 Capabilities  -> @downcity/services
-Interfaces    -> @downcity/gate + @downcity/cli
+Interfaces    -> @downcity/gate + downcity
 Composition   -> cities/node + cities/edge
 ```
 
@@ -73,7 +73,7 @@ If you want to deploy City in Cloudflare Workers, you do not need an extra edge 
 
 <div className="dc-doc-grid">
   <a className="dc-doc-card" href="/en/docs/city/packages/cli">
-    <strong>@downcity/cli</strong>
+    <strong>downcity</strong>
     <p>The official CLI package. `city` manages City runtime; `studio` hosts and operates local agents.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/packages/services/accounts">

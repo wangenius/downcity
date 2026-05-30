@@ -1,8 +1,8 @@
 /**
- * 每次 build 自动递增 @downcity/cli 的 patch 版本号。
+ * 每次 build 自动递增 @downcity/city-cli 的 patch 版本号。
  *
  * 关键点（中文）
- * - 直接修改 packages/cli/package.json 的 version 字段。
+ * - 直接修改 cli/city/package.json 的 version 字段。
  * - 遵循 semver：major.minor.patch，仅递增 patch。
  * - 递增后的版本号回写到文件，后续 tsc 构建使用新版本。
  */

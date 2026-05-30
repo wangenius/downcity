@@ -32,11 +32,11 @@ studio agent doctor [path] [--fix]
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/city/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
 $ studio agent doctor .
-downcity v1.0.0
+studio v1.0.0
 ⚠️  Stale daemon state detected
    project: <projectRoot>
    stalePid: <pid>
@@ -47,6 +47,6 @@ downcity v1.0.0
 
 ```text
 $ studio agent doctor . --fix
-downcity v1.0.0
+studio v1.0.0
 ✅ Cleaned stale daemon pid/meta files
 ```

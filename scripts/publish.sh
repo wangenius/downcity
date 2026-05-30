@@ -31,7 +31,7 @@ print_error() {
 }
 
 get_current_version() {
-  node -p "require('./packages/cli/package.json').version"
+  node -p "require('./cli/downcity/package.json').version"
 }
 
 set_new_version() {
@@ -49,7 +49,9 @@ const files = [
   'package.json',
   'packages/agent/package.json',
   'packages/plugins/package.json',
-  'packages/cli/package.json',
+  'cli/city/package.json',
+  'cli/studio/package.json',
+  'cli/downcity/package.json',
 ];
 
 for (const file of files) {

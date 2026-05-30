@@ -1,13 +1,13 @@
 ---
 title: city update
-description: 更新当前全局安装来源对应的 Downcity CLI 到最新版本
+description: 更新当前全局安装来源对应的 downcity CLI 聚合包到最新版本
 ---
 
 # `city update`
 
-更新当前全局安装来源对应的 Downcity CLI 到最新版本。
+更新当前全局安装来源对应的 `downcity` CLI 聚合包到最新版本。
 
-默认情况下，Downcity 会同时判断当前 CLI 的安装包名和包管理器。如果你安装的是 `@downcity/cli`，`city update` 会升级 `@downcity/cli`；
+默认情况下，Downcity 会同时判断当前 CLI 的安装包名和包管理器。如果你安装的是 `downcity`，`city update` 会升级 `downcity`；
 
 ## 用法
 
@@ -42,14 +42,14 @@ city update --manager pnpm
 
 ```text
 $ city update
-downcity v1.0.0
+city v1.0.0
 
 Updating downcity
   manager   npm
-  command   npm install -g @downcity/cli@latest
+  command   npm install -g downcity@latest
 
 Downcity updated
-  package   @downcity/cli@latest
+  package   downcity@latest
   manager   npm
   note      如果当前已有 city runtime / Console 在运行，建议执行 `city restart` 载入最新版本。
 ```

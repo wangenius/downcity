@@ -1,11 +1,11 @@
 ---
-title: Downcity CLI Quickstart
-description: "The most common first-time entry points, connection patterns, and use cases for @downcity/cli."
+title: City CLI Quickstart
+description: "The most common first-time entry points, connection patterns, and use cases for the city command."
 ---
 
-`@downcity/cli` is a terminal tool for City operators, not a studio runtime SDK.
+The `downcity` package installs the `city` command for City operators. `city` is not a studio runtime SDK.
 
-## When you should open the agent first
+## When you should open city first
 
 - you want to confirm what is actually in the database
 - you are initializing City locally
@@ -15,21 +15,21 @@ description: "The most common first-time entry points, connection patterns, and 
 ## Install
 
 ```bash
-npm i -g @downcity/cli
+npm i -g downcity
 ```
 
 If you are iterating on `city manage` inside this repository, run:
 
 ```bash
-npm run build:city manage
+pnpm build:cli
 ```
 
-That command builds the local `packages/cli` package, then refreshes the global `city` and `studio` commands on your machine. After the build passes, the next `city` or `studio` run uses the version from this workspace.
+That command builds the local `cli/city` package, then refreshes the global `city` and `studio` commands on your machine. After the build passes, the next `city` or `studio` run uses the version from this workspace.
 
 If `city` / `studio` is already installed, you can also run:
 
 ```bash
-downcity update
+city update
 ```
 
 When executed inside the repository, it prefers rebuilding from the current workspace and refreshing the global install. Outside the repository, it updates to the latest npm version.
@@ -37,7 +37,7 @@ When executed inside the repository, it prefers rebuilding from the current work
 ## First run
 
 ```bash
-downcity
+city
 ```
 
 That first shows the current CLI version, then opens the interactive panel, which is often the fastest first inspection entry.
@@ -70,8 +70,8 @@ Instead of a temporary "switch current server" flow, everything is now unified u
 ## A common first workflow
 
 ```bash
-npm i -g @downcity/cli
-downcity
+npm i -g downcity
+city
 ```
 
 That is often enough for the first round of confirmation:
@@ -89,7 +89,7 @@ If your real question is whether data actually got written, whether usage was re
 ### Scenario 2: model initialization or repair
 
 ```bash
-downcity
+city
 ```
 
 Those tasks now start from the interactive menu instead of assuming a default server.
@@ -121,7 +121,7 @@ Those are better owned by `AdminClient` or trusted backend scripts.
 ## Common entry points
 
 - `city` / `studio`
-- `downcity update`
+- `city update`
 - `Manage Servers`
 - `Admin`
 - `User`

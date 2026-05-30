@@ -9,7 +9,7 @@
 - Plugin 框架：hook、action、内建插件
 - 运行时实现：HTTP server、sandbox、host
 
-`@downcity/cli` 负责多 Agent 管理、控制面网关、平台 CLI、模型池与 daemon 进程管理；`@downcity/agent` 只负责单 Agent 的执行面。
+`downcity` 负责多 Agent 管理、控制面网关、平台 CLI、模型池与 daemon 进程管理；`@downcity/agent` 只负责单 Agent 的执行面。
 
 ## 包定位
 
@@ -25,7 +25,7 @@
   - 单 Agent HTTP server
   - session SDK、executor 内核、plugin 框架、sandbox
   - 本地 SDK facade
-- `@downcity/cli`
+- `downcity`
   - 多 Agent registry
   - control plane / gateway
   - 平台 CLI、模型池、模型工厂、全局 env、channel account store

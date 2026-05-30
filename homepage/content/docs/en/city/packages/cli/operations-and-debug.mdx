@@ -1,6 +1,6 @@
 ---
 title: Operations and Debugging
-description: "The boundary between @downcity/cli, AdminClient, and direct database inspection, and when the CLI is the better tool."
+description: "The boundary between downcity, AdminClient, and direct database inspection, and when the CLI is the better tool."
 ---
 
 The CLI and `AdminClient` can both help you manage City, but they are better at different kinds of operational work.
@@ -43,8 +43,8 @@ move toward `AdminClient` or a trusted script.
 ## Common CLI debugging actions
 
 ```bash
-studio --database-url "$DOWNCITY_CITY_DATABASE_URL"
-downcity models
+city
+city model list
 ```
 
 ## A common debugging chain
@@ -90,6 +90,6 @@ In many cases the CLI is already enough to narrow the problem sharply.
 
 ## Read next
 
-- For the basic agent entry, read [Downcity CLI Quickstart](/en/docs/city/packages/cli/quickstart)
+- For the basic agent entry, read [City CLI Quickstart](/en/docs/city/packages/cli/quickstart)
 - For model and table inspection, read [Models and Tables](/en/docs/city/packages/cli/models-and-tables)
 - For the data layer behind those facts, read [Store and Table](/en/docs/city/packages/city/store-and-table)

@@ -1,13 +1,13 @@
 ---
 title: city update
-description: Update the currently installed global Downcity CLI package to the latest version
+description: Update the currently installed global downcity CLI bundle to the latest version
 ---
 
 # `city update`
 
-Update the currently installed global Downcity CLI package to the latest version.
+Update the currently installed global `downcity` CLI bundle to the latest version.
 
-By default, Downcity detects both the package manager and the installed package name. If you installed the CLI from `@downcity/cli`, `city update` upgrades `@downcity/cli`; 
+By default, Downcity detects both the package manager and the installed package name. If you installed the CLI from `downcity`, `city update` upgrades `downcity`;
 
 ## Usage
 
@@ -42,14 +42,14 @@ city update --manager pnpm
 
 ```text
 $ city update
-downcity v1.0.0
+city v1.0.0
 
 Updating downcity
   manager   npm
-  command   npm install -g @downcity/cli@latest
+  command   npm install -g downcity@latest
 
 Downcity updated
-  package   @downcity/cli@latest
+  package   downcity@latest
   manager   npm
   note      If city runtime / Console is already running, use `city restart` to load the new version.
 ```

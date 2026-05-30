@@ -284,7 +284,8 @@ export function formatCliHeader(
   options?: CliRenderOptions,
 ): string {
   const palette = resolveChalk(options);
-  return `${palette.bold("downcity")} ${palette.dim(`v${version}`)}`;
+  const command_name = String(options?.command_name || "downcity").trim() || "downcity";
+  return `${palette.bold(command_name)} ${palette.dim(`v${version}`)}`;
 }
 
 /**

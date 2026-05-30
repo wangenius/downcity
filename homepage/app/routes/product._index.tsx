@@ -27,7 +27,7 @@ const PAGE = {
         id: "sdk",
         title: "City SDK",
         desc: "把 city runtime 能力接入你自己的产品流程、服务接口与业务系统。",
-        source: "packages/downcity/",
+        source: "packages/city/ + cli/city/",
       },
       {
         id: "ui-sdk",
@@ -40,7 +40,7 @@ const PAGE = {
     facts: [
       "Console UI 是独立前端包，目录为 products/console/。",
       "Chrome Extension 基于 Manifest V3，目录为 products/chrome-extension/。",
-      "SDK 的核心 runtime 与命令入口位于 packages/downcity/。",
+      "City runtime 位于 packages/city/，终端命令入口位于 cli/city/。",
       "UI SDK 当前以 console-ui-kit 方向沉淀组件能力。",
     ],
   },
@@ -66,7 +66,7 @@ const PAGE = {
         id: "sdk",
         title: "City SDK",
         desc: "Embed city runtime capabilities into your own product flow, execution layer, and business system.",
-        source: "packages/downcity/",
+        source: "packages/city/ + cli/city/",
       },
       {
         id: "ui-sdk",
@@ -79,7 +79,7 @@ const PAGE = {
     facts: [
       "Console UI is a dedicated frontend package in products/console/.",
       "Chrome Extension is a Manifest V3 extension in products/chrome-extension/.",
-      "The core runtime and command entry live in packages/downcity/.",
+      "City runtime lives in packages/city/; terminal command entry lives in cli/city/.",
       "UI SDK direction is currently documented as console-ui-kit extraction.",
     ],
   },

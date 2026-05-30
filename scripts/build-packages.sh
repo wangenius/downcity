@@ -23,7 +23,7 @@ usage() {
   echo "  --services 构建 @downcity/services"
   echo "  --gate     构建 @downcity/gate"
   echo "  --plugins  构建 @downcity/plugins"
-  echo "  --cli      构建 @downcity/cli"
+  echo "  --cli      构建 Downcity CLI 产品包（@downcity/city-cli + @downcity/studio-cli + downcity）"
   echo "  --ui       构建 @downcity/ui"
   echo "  --all      构建全部 packages（agent + city + services + gate + plugins + ui + cli）"
   echo "  --no-bump  跳过 patch 版本号自增"
@@ -138,6 +138,19 @@ resolve_build_packages() {
 run_build() {
   local pkg="$1"
   echo ""
+  if [[ "$pkg" == "cli" ]]; then
+    echo "--- Downcity CLI products ---"
+    if command -v pnpm >/dev/null 2>&1; then
+      pnpm -C "cli/city" build
+      pnpm -C "cli/studio" build
+      pnpm -C "cli/downcity" build
+    else
+      npm --prefix "cli/city" run build
+      npm --prefix "cli/studio" run build
+      npm --prefix "cli/downcity" run build
+    fi
+    return 0
+  fi
   echo "--- @downcity/$pkg ---"
   if command -v pnpm >/dev/null 2>&1; then
     pnpm -C "packages/$pkg" build
@@ -151,32 +164,28 @@ install_cli_globally() {
   local npm_prefix
   local global_modules
   local global_bin
-  local package_scope_dir
   local package_dir
-  local cli_entry
   deploy_dir="$(mktemp -d "${TMPDIR:-/tmp}/downcity-cli-deploy.XXXXXX")"
   trap 'rm -rf "$deploy_dir"' RETURN
 
   npm_prefix="$(npm prefix -g)"
   global_modules="$npm_prefix/lib/node_modules"
   global_bin="$npm_prefix/bin"
-  package_scope_dir="$global_modules/@downcity"
-  package_dir="$package_scope_dir/cli"
-  cli_entry="$package_dir/bin/studio/index.js"
+  package_dir="$global_modules/downcity"
 
-  pnpm --filter @downcity/cli deploy --legacy "$deploy_dir"
+  pnpm --filter downcity deploy --legacy "$deploy_dir"
 
   # 关键点（中文）：npm 11 对本地目录执行 install -g 时偶发 Arborist 崩溃。
   # 这里沿用 pnpm deploy 产物，但手动落盘到 npm 全局目录，并重建命令入口。
-  mkdir -p "$package_scope_dir" "$global_bin"
+  mkdir -p "$global_modules" "$global_bin"
   rm -rf "$package_dir"
   cp -R "$deploy_dir" "$package_dir"
-  chmod +x "$cli_entry"
+  chmod +x "$package_dir/bin/studio/index.js"
   chmod +x "$package_dir/bin/city/index.js"
 
   rm -f "$global_bin/studio" "$global_bin/city" 2>/dev/null || true
-  ln -s "../lib/node_modules/@downcity/cli/bin/studio/index.js" "$global_bin/studio"
-  ln -s "../lib/node_modules/@downcity/cli/bin/city/index.js" "$global_bin/city"
+  ln -s "../lib/node_modules/downcity/bin/studio/index.js" "$global_bin/studio"
+  ln -s "../lib/node_modules/downcity/bin/city/index.js" "$global_bin/city"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -205,7 +214,13 @@ resolve_build_packages
 if $BUMP; then
   echo "==> patch bump: ${PACKAGES[*]}"
   for pkg in "${PACKAGES[@]}"; do
-    node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/packages/$pkg/package.json"
+    if [[ "$pkg" == "cli" ]]; then
+      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/city/package.json"
+      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/studio/package.json"
+      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/downcity/package.json"
+    else
+      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/packages/$pkg/package.json"
+    fi
   done
 else
   echo "==> patch bump skipped"

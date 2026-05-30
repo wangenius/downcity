@@ -19,7 +19,7 @@ The recommended model is a three-layer split:
 
 ## Why this split is better
 
-- no dependency on `packages/downcity/*` internal source paths
+- no dependency on `cli/city/*` internal source paths
 - safer production builds
 - UI primitives stay reusable across hosts
 - runtime logic, business orchestration, and presentation stay separate
@@ -27,7 +27,7 @@ The recommended model is a three-layer split:
 ## What to avoid
 
 ```tsx
-import { someInternalRuntimeMethod } from "../../../packages/downcity/src/console/ui/xxx";
+import { someInternalRuntimeMethod } from "../../../cli/city/src/console/ui/xxx";
 ```
 
 Avoid this pattern because it couples UI code to the source layout of the main package.
@@ -35,7 +35,7 @@ Avoid this pattern because it couples UI code to the source layout of the main p
 ## Recommended package boundary
 
 ```text
-packages/downcity
+cli/city
   └─ exposes /api/ui/* and /api/dashboard/* gateway capabilities
 
 console-ui
@@ -57,8 +57,8 @@ Do not merge that responsibility into `@downcity/ui`.
 
 These files already define a strong runtime boundary:
 
-- `packages/downcity/src/console/ui/ConsoleUIGateway.ts`
-- `packages/downcity/src/types/ConsoleUI.ts`
+- `cli/city/src/console/ui/ConsoleUIGateway.ts`
+- `cli/city/src/types/ConsoleUI.ts`
 - `products/console/src/lib/dashboard-api.ts`
 - `products/console/src/hooks/useConsoleDashboard.ts`
 
@@ -244,7 +244,7 @@ Keep:
 - page-level hooks
 - container components
 
-### `packages/downcity`
+### `cli/city`
 
 Keep:
 

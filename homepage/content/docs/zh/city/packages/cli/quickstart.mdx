@@ -1,11 +1,11 @@
 ---
-title: Downcity CLI 快速开始
-description: "第一次安装和运行 @downcity/cli 时最常见的入口、连接方式和使用场景。"
+title: City CLI 快速开始
+description: "第一次安装和运行 city 命令时最常见的入口、连接方式和使用场景。"
 ---
 
-`@downcity/cli` 是给 City 管理者使用的终端工具，不是产品运行时 SDK。
+`downcity` 包会安装给 City 管理者使用的 `city` 命令。`city` 不是产品运行时 SDK。
 
-## 什么时候应该先打开 city manage
+## 什么时候应该先打开 city
 
 - 你想快速确认数据库里到底写了什么
 - 你在本地初始化 City
@@ -15,21 +15,21 @@ description: "第一次安装和运行 @downcity/cli 时最常见的入口、连
 ## 安装
 
 ```bash
-npm i -g @downcity/cli
+npm i -g downcity
 ```
 
 如果你正在当前仓库里迭代 `city manage`，可以直接运行：
 
 ```bash
-npm run build:city manage
+pnpm build:cli
 ```
 
-这个命令会先构建本地 `packages/cli`，然后自动刷新你机器上的全局 `city` / `studio` 命令。构建通过后，下一次执行 `city` / `studio` 时就是当前仓库这份代码。
+这个命令会先构建本地 `cli/city`，然后自动刷新你机器上的全局 `city` / `studio` 命令。构建通过后，下一次执行 `city` / `studio` 时就是当前仓库这份代码。
 
 如果你已经装过 `city` / `studio`，之后也可以直接运行：
 
 ```bash
-downcity update
+city update
 ```
 
 在仓库里运行时，它会优先用当前 workspace 重新 build 并刷新全局安装；不在仓库里时，则会更新到 npm 上的最新版本。
@@ -37,7 +37,7 @@ downcity update
 ## 第一次运行
 
 ```bash
-downcity
+city
 ```
 
 默认会先显示当前 CLI 版本，再进入交互式面板。这通常是第一次排查时最直接的入口。
@@ -70,8 +70,8 @@ downcity
 ## 一个最常见的上手流程
 
 ```bash
-npm i -g @downcity/cli
-downcity
+npm i -g downcity
+city
 ```
 
 这三步通常就足够你做第一轮确认：
@@ -95,7 +95,7 @@ CLI 往往比写脚本更快。
 ### 场景二：初始化或补录模型
 
 ```bash
-downcity
+city
 ```
 
 适合：
@@ -136,7 +136,7 @@ Stripe webhook endpoint 本身则固定是：
 这一页最常见的 CLI 入口就是：
 
 - `city` / `studio`
-- `downcity update`
+- `city update`
 - `Manage Servers`
 - `Admin`
 - `User`

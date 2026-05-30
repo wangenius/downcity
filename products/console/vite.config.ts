@@ -2,7 +2,7 @@
  * Console UI（React）构建配置。
  *
  * 关键点（中文）
- * - 直接输出到 `packages/cli/public`，作为 `city console ui` 的静态资源目录。
+ * - 直接输出到 `cli/city/public`，作为 `city console ui` 的静态资源目录。
  * - 开发模式下代理 API 到 console 网关。
  */
 
@@ -37,7 +37,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../../packages/cli/public",
+    outDir: "../../cli/city/public",
     emptyOutDir: true,
     sourcemap: false,
     rollupOptions: {

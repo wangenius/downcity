@@ -8,7 +8,9 @@ CITY_PKG="$ROOT_DIR/packages/city/package.json"
 SERVICES_PKG="$ROOT_DIR/packages/services/package.json"
 GATE_PKG="$ROOT_DIR/packages/gate/package.json"
 PLUGINS_PKG="$ROOT_DIR/packages/plugins/package.json"
-CLI_PKG="$ROOT_DIR/packages/cli/package.json"
+CITY_CLI_PKG="$ROOT_DIR/cli/city/package.json"
+STUDIO_CLI_PKG="$ROOT_DIR/cli/studio/package.json"
+DOWNCITY_CLI_PKG="$ROOT_DIR/cli/downcity/package.json"
 BUILD_SCOPE="${1:-all}"
 
 case "$BUILD_SCOPE" in
@@ -35,32 +37,28 @@ install_cli_globally() {
   local npm_prefix
   local global_modules
   local global_bin
-  local package_scope_dir
   local package_dir
-  local cli_entry
   deploy_dir="$(mktemp -d "${TMPDIR:-/tmp}/downcity-cli-deploy.XXXXXX")"
   trap 'rm -rf "$deploy_dir"' RETURN
 
   npm_prefix="$(npm prefix -g)"
   global_modules="$npm_prefix/lib/node_modules"
   global_bin="$npm_prefix/bin"
-  package_scope_dir="$global_modules/@downcity"
-  package_dir="$package_scope_dir/cli"
-  cli_entry="$package_dir/bin/studio/index.js"
+  package_dir="$global_modules/downcity"
 
-  pnpm --filter @downcity/cli deploy --legacy "$deploy_dir"
+  pnpm --filter downcity deploy --legacy "$deploy_dir"
 
   # 关键点（中文）：npm 11 对本地目录执行 install -g 时偶发 Arborist 崩溃。
   # 这里沿用 pnpm deploy 产物，但手动落盘到 npm 全局目录，并重建命令入口。
-  mkdir -p "$package_scope_dir" "$global_bin"
+  mkdir -p "$global_modules" "$global_bin"
   rm -rf "$package_dir"
   cp -R "$deploy_dir" "$package_dir"
-  chmod +x "$cli_entry"
+  chmod +x "$package_dir/bin/studio/index.js"
   chmod +x "$package_dir/bin/city/index.js"
 
   rm -f "$global_bin/studio" "$global_bin/city" 2>/dev/null || true
-  ln -s "../lib/node_modules/@downcity/cli/bin/studio/index.js" "$global_bin/studio"
-  ln -s "../lib/node_modules/@downcity/cli/bin/city/index.js" "$global_bin/city"
+  ln -s "../lib/node_modules/downcity/bin/studio/index.js" "$global_bin/studio"
+  ln -s "../lib/node_modules/downcity/bin/city/index.js" "$global_bin/city"
 }
 
 if [[ "$BUILD_SCOPE" == "all" || "$BUILD_SCOPE" == "cli" ]]; then
@@ -68,7 +66,9 @@ if [[ "$BUILD_SCOPE" == "all" || "$BUILD_SCOPE" == "cli" ]]; then
   node "$ROOT_DIR/scripts/bump-package-version.mjs" "$CITY_PKG"
   node "$ROOT_DIR/scripts/bump-package-version.mjs" "$SERVICES_PKG"
   node "$ROOT_DIR/scripts/bump-package-version.mjs" "$GATE_PKG"
-  node "$ROOT_DIR/scripts/bump-package-version.mjs" "$CLI_PKG"
+  node "$ROOT_DIR/scripts/bump-package-version.mjs" "$CITY_CLI_PKG"
+  node "$ROOT_DIR/scripts/bump-package-version.mjs" "$STUDIO_CLI_PKG"
+  node "$ROOT_DIR/scripts/bump-package-version.mjs" "$DOWNCITY_CLI_PKG"
 fi
 
 if [[ "$BUILD_SCOPE" == "all" ]]; then
@@ -81,7 +81,9 @@ if [[ "$BUILD_SCOPE" == "all" ]]; then
   run_build "$ROOT_DIR/packages/ui"
   run_build "$ROOT_DIR/homepage"
   run_build "$ROOT_DIR/products/console"
-  run_build "$ROOT_DIR/packages/cli"
+  run_build "$ROOT_DIR/cli/city"
+  run_build "$ROOT_DIR/cli/studio"
+  run_build "$ROOT_DIR/cli/downcity"
   install_cli_globally
   exit 0
 fi
@@ -93,5 +95,7 @@ run_build "$ROOT_DIR/packages/services"
 run_build "$ROOT_DIR/packages/gate"
 run_build "$ROOT_DIR/packages/plugins"
 run_build "$ROOT_DIR/products/console"
-run_build "$ROOT_DIR/packages/cli"
+run_build "$ROOT_DIR/cli/city"
+run_build "$ROOT_DIR/cli/studio"
+run_build "$ROOT_DIR/cli/downcity"
 install_cli_globally

@@ -95,6 +95,154 @@ importers:
         specifier: workspace:*
         version: link:../../packages/services
 
+  cli/city:
+    dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^3.0.28
+        version: 3.0.81(zod@3.25.76)
+      '@ai-sdk/google':
+        specifier: ^3.0.6
+        version: 3.0.53(zod@3.25.76)
+      '@ai-sdk/huggingface':
+        specifier: ^1.0.37
+        version: 1.0.39(zod@3.25.76)
+      '@ai-sdk/moonshotai':
+        specifier: ^2.0.10
+        version: 2.0.12(zod@3.25.76)
+      '@ai-sdk/open-responses':
+        specifier: ^1.0.6
+        version: 1.0.8(zod@3.25.76)
+      '@ai-sdk/openai':
+        specifier: ^3.0.21
+        version: 3.0.66(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^2.0.0
+        version: 2.0.37(zod@3.25.76)
+      '@ai-sdk/xai':
+        specifier: ^3.0.67
+        version: 3.0.74(zod@3.25.76)
+      '@clack/prompts':
+        specifier: ^1.2.0
+        version: 1.4.0
+      '@downcity/agent':
+        specifier: workspace:^
+        version: link:../../packages/agent
+      '@downcity/gate':
+        specifier: workspace:^
+        version: link:../../packages/gate
+      '@downcity/plugins':
+        specifier: workspace:^
+        version: link:../../packages/plugins
+      '@larksuiteoapi/node-sdk':
+        specifier: ^1.40.0
+        version: 1.59.0
+      '@mariozechner/pi-ai':
+        specifier: ^0.70.0
+        version: 0.70.6(@modelcontextprotocol/sdk@1.28.0(zod@3.25.76))(ws@8.20.1)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent':
+        specifier: ^0.70.0
+        version: 0.70.6(@modelcontextprotocol/sdk@1.28.0(zod@3.25.76))(ws@8.20.1)(zod@3.25.76)
+      '@openrouter/ai-sdk-provider':
+        specifier: ^2.2.3
+        version: 2.3.3(ai@6.0.193(zod@3.25.76))(zod@3.25.76)
+      ai:
+        specifier: ^6.0.57
+        version: 6.0.193(zod@3.25.76)
+      better-sqlite3:
+        specifier: ^12.0.0
+        version: 12.10.0
+      chalk:
+        specifier: ^5.4.0
+        version: 5.6.2
+      commander:
+        specifier: ^12.0.0
+        version: 12.1.0
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
+      drizzle-orm:
+        specifier: ^0.36.4
+        version: 0.36.4(@cloudflare/workers-types@4.20260529.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@12.10.0)(bun-types@1.3.14)(kysely@0.28.17)(postgres@3.4.8)(react@19.2.4)
+      execa:
+        specifier: ^9.5.0
+        version: 9.6.1
+      fast-glob:
+        specifier: ^3.3.0
+        version: 3.3.3
+      fs-extra:
+        specifier: ^11.2.0
+        version: 11.3.4
+      hono:
+        specifier: ^4.0.0
+        version: 4.12.9
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.1
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.7
+      node-cron:
+        specifier: ^3.0.0
+        version: 3.0.3
+      openai:
+        specifier: ^4.0.0
+        version: 4.104.0(ws@8.20.1)(zod@3.25.76)
+      ora:
+        specifier: ^8.2.0
+        version: 8.2.0
+      prompts:
+        specifier: ^2.4.0
+        version: 2.4.2
+      ws:
+        specifier: ^8.19.0
+        version: 8.20.1
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/fs-extra':
+        specifier: ^11.0.4
+        version: 11.0.4
+      '@types/js-yaml':
+        specifier: ^4.0.0
+        version: 4.0.9
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      '@types/node-cron':
+        specifier: ^3.0.0
+        version: 3.0.11
+      '@types/prompts':
+        specifier: ^2.4.0
+        version: 2.4.9
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  cli/downcity:
+    dependencies:
+      '@downcity/city-cli':
+        specifier: workspace:^
+        version: link:../city
+      '@downcity/studio-cli':
+        specifier: workspace:^
+        version: link:../studio
+
+  cli/studio:
+    dependencies:
+      '@downcity/city-cli':
+        specifier: workspace:^
+        version: link:../city
+
   homepage:
     dependencies:
       '@base-ui/react':
@@ -334,139 +482,6 @@ importers:
       better-sqlite3:
         specifier: ^12.0.0
         version: 12.10.0
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-
-  packages/cli:
-    dependencies:
-      '@ai-sdk/anthropic':
-        specifier: ^3.0.28
-        version: 3.0.81(zod@3.25.76)
-      '@ai-sdk/google':
-        specifier: ^3.0.6
-        version: 3.0.53(zod@3.25.76)
-      '@ai-sdk/huggingface':
-        specifier: ^1.0.37
-        version: 1.0.39(zod@3.25.76)
-      '@ai-sdk/moonshotai':
-        specifier: ^2.0.10
-        version: 2.0.12(zod@3.25.76)
-      '@ai-sdk/open-responses':
-        specifier: ^1.0.6
-        version: 1.0.8(zod@3.25.76)
-      '@ai-sdk/openai':
-        specifier: ^3.0.21
-        version: 3.0.66(zod@3.25.76)
-      '@ai-sdk/openai-compatible':
-        specifier: ^2.0.0
-        version: 2.0.37(zod@3.25.76)
-      '@ai-sdk/xai':
-        specifier: ^3.0.67
-        version: 3.0.74(zod@3.25.76)
-      '@clack/prompts':
-        specifier: ^1.2.0
-        version: 1.4.0
-      '@downcity/agent':
-        specifier: workspace:^
-        version: link:../agent
-      '@downcity/gate':
-        specifier: workspace:^
-        version: link:../gate
-      '@downcity/plugins':
-        specifier: workspace:^
-        version: link:../plugins
-      '@larksuiteoapi/node-sdk':
-        specifier: ^1.40.0
-        version: 1.59.0
-      '@mariozechner/pi-ai':
-        specifier: ^0.70.0
-        version: 0.70.6(@modelcontextprotocol/sdk@1.28.0(zod@3.25.76))(ws@8.20.1)(zod@3.25.76)
-      '@mariozechner/pi-coding-agent':
-        specifier: ^0.70.0
-        version: 0.70.6(@modelcontextprotocol/sdk@1.28.0(zod@3.25.76))(ws@8.20.1)(zod@3.25.76)
-      '@openrouter/ai-sdk-provider':
-        specifier: ^2.2.3
-        version: 2.3.3(ai@6.0.193(zod@3.25.76))(zod@3.25.76)
-      ai:
-        specifier: ^6.0.57
-        version: 6.0.193(zod@3.25.76)
-      better-sqlite3:
-        specifier: ^12.0.0
-        version: 12.10.0
-      chalk:
-        specifier: ^5.4.0
-        version: 5.6.2
-      commander:
-        specifier: ^12.0.0
-        version: 12.1.0
-      dotenv:
-        specifier: ^16.4.0
-        version: 16.6.1
-      drizzle-orm:
-        specifier: ^0.36.4
-        version: 0.36.4(@cloudflare/workers-types@4.20260529.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@12.10.0)(bun-types@1.3.14)(kysely@0.28.17)(postgres@3.4.8)(react@19.2.4)
-      execa:
-        specifier: ^9.5.0
-        version: 9.6.1
-      fast-glob:
-        specifier: ^3.3.0
-        version: 3.3.3
-      fs-extra:
-        specifier: ^11.2.0
-        version: 11.3.4
-      hono:
-        specifier: ^4.0.0
-        version: 4.12.9
-      js-yaml:
-        specifier: ^4.1.0
-        version: 4.1.1
-      nanoid:
-        specifier: ^5.1.6
-        version: 5.1.7
-      node-cron:
-        specifier: ^3.0.0
-        version: 3.0.3
-      openai:
-        specifier: ^4.0.0
-        version: 4.104.0(ws@8.20.1)(zod@3.25.76)
-      ora:
-        specifier: ^8.2.0
-        version: 8.2.0
-      prompts:
-        specifier: ^2.4.0
-        version: 2.4.2
-      ws:
-        specifier: ^8.19.0
-        version: 8.20.1
-      zod:
-        specifier: ^3.24.0
-        version: 3.25.76
-    devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.13
-        version: 7.6.13
-      '@types/fs-extra':
-        specifier: ^11.0.4
-        version: 11.0.4
-      '@types/js-yaml':
-        specifier: ^4.0.0
-        version: 4.0.9
-      '@types/node':
-        specifier: ^22.0.0
-        version: 22.19.15
-      '@types/node-cron':
-        specifier: ^3.0.0
-        version: 3.0.11
-      '@types/prompts':
-        specifier: ^2.4.0
-        version: 2.4.9
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.1
-      tsc-alias:
-        specifier: ^1.8.16
-        version: 1.8.16
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -8118,7 +8133,7 @@ snapshots:
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@standard-schema/spec': 1.1.0
-      eventsource-parser: 3.0.6
+      eventsource-parser: 3.1.0
       zod: 3.25.76
 
   '@ai-sdk/provider-utils@4.0.27(zod@3.25.76)':
@@ -9480,7 +9495,7 @@ snapshots:
       lodash.pickby: 4.6.0
       protobufjs: 7.5.4
       qs: 6.15.0
-      ws: 8.20.0
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - debug
@@ -12139,7 +12154,7 @@ snapshots:
 
   eventsource@3.0.7:
     dependencies:
-      eventsource-parser: 3.0.6
+      eventsource-parser: 3.1.0
 
   execa@5.1.1:
     dependencies:

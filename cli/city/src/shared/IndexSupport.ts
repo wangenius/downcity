@@ -7,12 +7,12 @@
  */
 
 import { readFileSync, existsSync } from "fs";
-import { basename, join, resolve } from "path";
+import { basename, dirname, join, resolve } from "path";
 import { emitCliHeader, emitCliBlock, resetCliSectionFlow } from "./CliReporter.js";
 import { CliError } from "./CliError.js";
 
 /**
- * 在关键运行命令执行前打印当前 city 版本。
+ * 在关键运行命令执行前打印当前终端命令版本。
  *
  * 说明（中文）
  * - 仅用于 runtime 相关命令，避免影响 `config --json` 等结构化输出。
@@ -21,6 +21,7 @@ import { CliError } from "./CliError.js";
 export function createVersionBanner<TArgs extends unknown[]>(
   version: string,
   action: (...args: TArgs) => Promise<void> | void,
+  command_name: string = resolveCurrentCommandName(),
 ): (...args: TArgs) => Promise<void> {
   return async (...args: TArgs): Promise<void> => {
     // 关键点（中文）：`--json` 场景禁止在 stdout 混入 banner，避免破坏机器可解析输出。
@@ -31,7 +32,7 @@ export function createVersionBanner<TArgs extends unknown[]>(
     });
     if (!hasJsonMode) {
       resetCliSectionFlow();
-      emitCliHeader(version);
+      emitCliHeader(version, { command_name });
     }
 
     try {
@@ -66,6 +67,24 @@ export function createVersionBanner<TArgs extends unknown[]>(
       throw error;
     }
   };
+}
+
+/**
+ * 从当前入口文件推断 banner 应展示的命令名。
+ *
+ * 关键点（中文）
+ * - 用户全局安装的是 `downcity` 聚合包，但实际执行的是 `city` 或 `studio`。
+ * - 聚合包与拆分包的入口都位于 `bin/<command>/index.js`，优先读取父目录名。
+ */
+function resolveCurrentCommandName(): string {
+  const entry_path = process.argv[1] || "";
+  const command_name = basename(dirname(entry_path));
+  if (command_name === "city" || command_name === "studio") return command_name;
+
+  const file_name = basename(entry_path).replace(/\.[cm]?js$/, "");
+  if (file_name === "city" || file_name === "studio") return file_name;
+
+  return "downcity";
 }
 
 /**

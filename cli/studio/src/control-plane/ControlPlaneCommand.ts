@@ -33,10 +33,10 @@ import {
 import {
   prepareForegroundAgent,
   ensureRegisteredAgentProjectRoot,
-  restartCityRuntimeCommand,
-  runCityRuntimeCommand,
-  startCityRuntimeCommand,
-  stopCityRuntimeCommand,
+  restartStudioRuntimeCommand,
+  runStudioRuntimeCommand,
+  startStudioRuntimeCommand,
+  stopStudioRuntimeCommand,
 } from "./ControlPlaneProcess.js";
 import {
   shouldAutoStartControlPlaneFromPersistedMode,
@@ -97,7 +97,7 @@ export function registerControlPlaneCommands(
         options?.public === true ||
         hasExplicitHost ||
         (!hasExplicitPublic && (await shouldAutoStartControlPlaneFromPersistedMode()));
-      await startCityRuntimeCommand(context.cliPath);
+      await startStudioRuntimeCommand(context.cliPath);
       if (shouldStartConsole) {
         await startControlPlaneCommand({
           options: {
@@ -114,7 +114,7 @@ export function registerControlPlaneCommands(
     .description("停止 Studio（先停 Console，再停 studio 后台与受管 agent）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
-      await stopCityRuntimeCommand();
+      await stopStudioRuntimeCommand();
     }));
 
   program
@@ -122,7 +122,7 @@ export function registerControlPlaneCommands(
     .description("重启 Studio（重启 studio 后台并恢复已运行 agent，再拉起 Console）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
-      await restartCityRuntimeCommand(context.cliPath);
+      await restartStudioRuntimeCommand(context.cliPath);
       await startControlPlaneCommand({
         cliPath: context.cliPath,
       });
@@ -179,7 +179,7 @@ export function registerControlPlaneCommands(
   program
     .command("run", { hidden: true })
     .description("Studio 内部运行时（不直接使用）")
-    .action(runCityRuntimeCommand);
+    .action(runStudioRuntimeCommand);
 
   const consoleCommand = program
     .command("console [action]")

@@ -61,7 +61,7 @@ function formatDotenvEntries(entries: StoredEnvEntry[]): string {
  * 判断当前命令是否处在 agent shell 执行上下文。
  *
  * 关键点（中文）
- * - agent shell 会注入 `DC_AGENT_PATH/DC_AGENT_ID`，用于嵌套 city CLI 定位当前 agent。
+ * - agent shell 会注入 `DC_AGENT_PATH/DC_AGENT_ID`，用于嵌套 Studio CLI 定位当前 agent。
  * - `env copy` 会导出 secret 明文，不能允许 agent 自己调用。
  */
 function isAgentShellExecution(): boolean {

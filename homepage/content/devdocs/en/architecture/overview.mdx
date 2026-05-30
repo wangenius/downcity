@@ -10,12 +10,13 @@ The repository is organized around the agent runtime, city control plane, shared
 ## Primary workspaces
 
 - `packages/agent/`: local agent kernel, session execution, plugin runtime, HTTP/RPC host, SDK
-- `cli/city/`: control plane, CLI, project orchestration, model pool, console-facing gateway
+- `cli/city/`: City management command for deployed service resources
+- `cli/studio/`: local Agent host, Console gateway, model pool, project orchestration, and daemon control
 - `packages/city/`: City runtime for services, actions, auth, env, studio-scoped access, and routing
 - `packages/services/`: public services such as accounts, balance, usage, payment, and Stripe flows
 - `packages/gate/`: user and admin SDK for service calls
 - `packages/ui/`: reusable UI primitives and app-facing components
-- `cities/`: deployable City compositions that assemble city runtime and services for Node or edge runtimes
+- `cities/`: deployable City compositions that assemble City runtime and services for Node or edge runtimes
 - `products/console/`: browser control surface
 - `products/chrome-extension/`: extension that sends live page context into agents
 - `homepage/`: marketing site, user docs, devdocs, SDK docs, and plugin docs
@@ -46,7 +47,8 @@ packages/agent build -> SDK and runtime package
 packages/city build -> infrastructure runtime package
 packages/services build -> public services package
 packages/gate build -> service SDK package
-cli/city build -> CLI and control-plane package
+cli/city build -> City management command
+cli/studio build -> local Studio host command
 cities/node typecheck -> Node service block
 cities/edge typecheck -> edge service block
 products/console build -> browser control surface

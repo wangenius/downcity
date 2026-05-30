@@ -79,7 +79,7 @@ export function registerAgentCommands(
 
   agent
     .command("list")
-    .description("列出已登记到 city 的 Agent 项目")
+    .description("列出已登记到 Studio 的 Agent 项目")
     .option("--running [enabled]", "仅列出当前运行中的 Agent", parseBoolean)
     .option("--json [enabled]", "以 JSON 输出", parseBoolean)
     .helpOption("--help", "display help for command")

@@ -178,7 +178,7 @@ export async function discoverProviderModels(params: {
  *
  * 关键点（中文）
  * - `studio model use --path` 只需要一个纯路径解析能力。
- * - 不再依赖 Studio plugin 的目标解析模块，避免 City 包继续编译 Studio-only 代码。
+ * - 不再依赖 Studio plugin 的目标解析模块，避免模型配置能力耦合 agent 目标解析。
  */
 export function resolveProjectRoot(pathInput?: string): string {
   return path.resolve(String(pathInput || "."));

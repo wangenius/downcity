@@ -32,7 +32,7 @@ export async function forwardPlatformRequest(
     if (
       lower === "host" ||
       lower === "content-length" ||
-      lower === "x-city-agent"
+      lower === "x-studio-agent"
     ) {
       continue;
     }

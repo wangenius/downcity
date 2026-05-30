@@ -1,9 +1,9 @@
 /**
- * CreateRuntimeModel：city 宿主侧 LanguageModel 工厂。
+ * CreateRuntimeModel：Studio 宿主侧 LanguageModel 工厂。
  *
  * 关键点（中文）
  * - `@downcity/agent` 只消费 `LanguageModel`，不再负责模型池解析。
- * - `city` 负责把 `execution.modelId` 解析成平台模型池中的 provider/model 配置。
+ * - Studio 负责把 `execution.modelId` 解析成平台模型池中的 provider/model 配置。
  * - 这里统一承接 CLI、control plane、inline instant 等宿主场景的模型创建逻辑。
  */
 
@@ -223,7 +223,7 @@ function createRuntimeModelLoggingFetch(args: {
     try {
       const response = await baseFetch(input, init);
       if (args.enabled) {
-        void logger.log("info", "[city] llm.fetch", {
+        void logger.log("info", "[studio] llm.fetch", {
           kind: "llm_fetch",
           url,
           method,
@@ -234,7 +234,7 @@ function createRuntimeModelLoggingFetch(args: {
       return response;
     } catch (error) {
       if (args.enabled) {
-        void logger.log("error", "[city] llm.fetch.error", {
+        void logger.log("error", "[studio] llm.fetch.error", {
           kind: "llm_fetch_error",
           url,
           method,
@@ -272,7 +272,7 @@ async function resolveConfiguredModel(input: RuntimeModelFactoryInput & {
  *
  * 解析策略（中文）
  * 1) 读取 `execution.modelId`。
- * 2) 从 city 平台模型池解析 provider/model。
+ * 2) 从 Studio 平台模型池解析 provider/model。
  * 3) 按 provider type 分发到对应 AI SDK 工厂。
  */
 export async function createRuntimeModel(

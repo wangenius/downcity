@@ -1,10 +1,10 @@
 /**
- * City Env Paths：项目与运行目录路径规则模块。
+ * Studio Env Paths：项目与运行目录路径规则模块。
  *
  * 关键点（中文）
  * - 统一管理单个 agent 项目内 `.downcity` 及其子目录/文件路径规则。
  * - 避免路径字符串在不同模块重复拼接，降低维护成本。
- * - 这里描述的是“项目级路径约定”，与 `main/city/runtime/CityPaths.ts` 的全局路径约定分开。
+ * - 这里描述的是“项目级路径约定”，与 `process/registry/StudioPaths.ts` 的全局路径约定分开。
  */
 import path from "path";
 

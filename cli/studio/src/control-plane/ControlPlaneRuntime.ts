@@ -1,5 +1,5 @@
 /**
- * `studio console`：city gateway / control plane 进程管理与前台运行入口。
+ * `studio console`：Studio gateway / control plane 进程管理与前台运行入口。
  *
  * 关键点（中文）
  * - 默认 `studio console` 等同于 `studio console start`。
@@ -10,19 +10,19 @@
 import fs from "fs-extra";
 import { spawn } from "node:child_process";
 import {
-  getCityRuntimeDirPath,
+  getStudioRuntimeDirPath,
   getControlPlaneLogPath,
   getControlPlaneMetaPath,
   getControlPlanePidPath,
-} from "@/process/registry/CityPaths.js";
+} from "@/process/registry/StudioPaths.js";
 import {
-  isCityProcessAlive,
-  isCityRunning,
-} from "@/process/registry/CityRuntime.js";
+  isStudioProcessAlive,
+  isStudioRunning,
+} from "@/process/registry/StudioRuntime.js";
 import {
-  findDetachedCityProcesses,
+  findDetachedStudioProcesses,
   signalDetachedProcess,
-  sweepDetachedCityProcesses,
+  sweepDetachedStudioProcesses,
 } from "@/process/registry/ProcessSweep.js";
 import { createControlGateway } from "@/control/ControlGateway.js";
 import type {
@@ -146,7 +146,7 @@ function formatControlPlaneRestartHint(
   options: ControlPlaneStartOptions | undefined,
   port: number,
 ): string {
-  const parts = ["city", "console", "restart"];
+  const parts = ["studio", "console", "restart"];
   if (options?.public === true) parts.push("-p");
   const explicitHost = String(options?.host || "").trim();
   if (explicitHost) parts.push("--host", explicitHost);
@@ -244,7 +244,7 @@ async function recoverDetachedConsoleStatus(
       ? expected.port
       : DEFAULT_CONTROL_PLANE_PORT;
 
-  const processes = await findDetachedCityProcesses({
+  const processes = await findDetachedStudioProcesses({
     includeUi: true,
   });
   const reusable = findReusableControlPlaneProcess(processes, { host, port });
@@ -292,7 +292,7 @@ export async function getControlPlaneRuntimeStatus(): Promise<ControlPlaneRuntim
     };
   }
 
-  if (!isCityProcessAlive(pid)) {
+  if (!isStudioProcessAlive(pid)) {
     await cleanupControlPlaneStateFiles();
     const recovered = await recoverDetachedConsoleStatus({
       host: meta?.host,
@@ -393,7 +393,7 @@ export async function startControlPlaneCommand(params: {
   options?: ControlPlaneStartOptions;
   cliPath: string;
 }): Promise<void> {
-  if (!(await isCityRunning())) {
+  if (!(await isStudioRunning())) {
     throw new CliError({
       title: "studio runtime is not running",
       fix: "studio start",
@@ -446,7 +446,7 @@ export async function startControlPlaneCommand(params: {
   }
 
   // 关键点（中文）：没有 pid 文件但可能还有旧版 UI 孤儿进程占着端口，先做一次兜底清扫。
-  const sweep = await sweepDetachedCityProcesses({
+  const sweep = await sweepDetachedStudioProcesses({
     includeUi: true,
   });
   for (const item of sweep.stopped) {
@@ -462,7 +462,7 @@ export async function startControlPlaneCommand(params: {
     });
   }
 
-  await fs.ensureDir(getCityRuntimeDirPath());
+  await fs.ensureDir(getStudioRuntimeDirPath());
   const logPath = getControlPlaneLogPath();
   const logFd = fs.openSync(logPath, "a");
 
@@ -497,7 +497,7 @@ export async function startControlPlaneCommand(params: {
   const startedAt = Date.now();
   let childAlive = true;
   while (Date.now() - startedAt < 1_500) {
-    if (!isCityProcessAlive(child.pid)) {
+    if (!isStudioProcessAlive(child.pid)) {
       childAlive = false;
       break;
     }
@@ -559,7 +559,7 @@ export async function stopControlPlaneCommand(params?: {
   const timeoutMs = params?.timeoutMs ?? 8000;
   const status = await getControlPlaneRuntimeStatus();
   if (!status.running || !status.pid) {
-    const sweep = await sweepDetachedCityProcesses({
+    const sweep = await sweepDetachedStudioProcesses({
       includeUi: true,
       timeoutMs,
     });
@@ -590,11 +590,11 @@ export async function stopControlPlaneCommand(params?: {
 
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
-    if (!isCityProcessAlive(pid)) break;
+    if (!isStudioProcessAlive(pid)) break;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
-  if (isCityProcessAlive(pid)) {
+  if (isStudioProcessAlive(pid)) {
     try {
       signalDetachedProcess(pid, "SIGKILL");
     } catch {
@@ -605,8 +605,8 @@ export async function stopControlPlaneCommand(params?: {
   await cleanupControlPlaneStateFiles();
 
   emitCliBlock({
-    tone: isCityProcessAlive(pid) ? "warning" : "success",
-    title: isCityProcessAlive(pid)
+    tone: isStudioProcessAlive(pid) ? "warning" : "success",
+    title: isStudioProcessAlive(pid)
       ? "Console may still be running"
       : "Console stopped",
   });

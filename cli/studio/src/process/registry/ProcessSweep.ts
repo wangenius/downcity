@@ -90,7 +90,7 @@ export function isDowncityCliCommand(command: string): boolean {
  * - `Index.js console run` 是 control plane runtime。
  * - 两者都包含 `run`，因此必须按完整子命令匹配，不能只查 `run` 词元。
  */
-export function shouldSweepDetachedCityCommand(
+export function shouldSweepDetachedStudioCommand(
   command: string,
   params: {
     includeConsole?: boolean;
@@ -122,7 +122,7 @@ export function shouldSweepDetachedCityCommand(
   return false;
 }
 
-async function listDetachedCityProcesses(params: {
+async function listDetachedStudioProcesses(params: {
   includeConsole?: boolean;
   includeUi?: boolean;
   includeAgent?: boolean;
@@ -151,7 +151,7 @@ async function listDetachedCityProcesses(params: {
       }))
       .filter((item) => Number.isInteger(item.pid) && item.pid > 0)
       .filter((item) => !params.excludePids.has(item.pid))
-      .filter((item) => shouldSweepDetachedCityCommand(item.command, params));
+      .filter((item) => shouldSweepDetachedStudioCommand(item.command, params));
   } catch {
     return [];
   }
@@ -160,7 +160,7 @@ async function listDetachedCityProcesses(params: {
 /**
  * 只探测失联的 Downcity detached 进程，不执行停止动作。
  */
-export async function findDetachedCityProcesses(params?: {
+export async function findDetachedStudioProcesses(params?: {
   includeConsole?: boolean;
   includeUi?: boolean;
   includeAgent?: boolean;
@@ -171,7 +171,7 @@ export async function findDetachedCityProcesses(params?: {
     ...(Array.isArray(params?.excludePids) ? params.excludePids : []),
   ]);
 
-  return listDetachedCityProcesses({
+  return listDetachedStudioProcesses({
     includeConsole: params?.includeConsole,
     includeUi: params?.includeUi,
     includeAgent: params?.includeAgent,
@@ -212,7 +212,7 @@ async function stopPid(pid: number, timeoutMs: number): Promise<boolean> {
 /**
  * 清扫失联的 Downcity detached 进程。
  */
-export async function sweepDetachedCityProcesses(params?: {
+export async function sweepDetachedStudioProcesses(params?: {
   includeConsole?: boolean;
   includeUi?: boolean;
   includeAgent?: boolean;
@@ -228,7 +228,7 @@ export async function sweepDetachedCityProcesses(params?: {
     process.pid,
     ...(Array.isArray(params?.excludePids) ? params.excludePids : []),
   ]);
-  const matched = await listDetachedCityProcesses({
+  const matched = await listDetachedStudioProcesses({
     includeConsole: params?.includeConsole,
     includeUi: params?.includeUi,
     includeAgent: params?.includeAgent,

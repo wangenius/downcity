@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这是单个 agent 的生命周期命令，只停止目标项目的 daemon。
- * - 底层 stop 会同步清理 pid/meta，并把 city registry 中对应 agent 标记为 stopped。
+ * - 底层 stop 会同步清理 pid/meta，并把 Studio registry 中对应 agent 标记为 stopped。
  * - 若目标 agent 未运行，命令保持幂等，只输出 not running。
  */
 

@@ -1,5 +1,5 @@
 /**
- * ControlPlaneStatus：city gateway / control plane 命令的状态展示辅助。
+ * ControlPlaneStatus：Studio gateway / control plane 命令的状态展示辅助。
  *
  * 关键点（中文）
  * - 聚合 studio 后台、gateway/control plane 与受管 agent 的状态面板输出。
@@ -13,9 +13,9 @@ import { readControlPlanePublicModeSetting } from "./ControlPlanePublicMode.js";
 import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
   getManagedAgentRegistryPath,
-  getCityPidPath,
-} from "@/process/registry/CityPaths.js";
-import { isCityProcessAlive, readCityPid } from "@/process/registry/CityRuntime.js";
+  getStudioPidPath,
+} from "@/process/registry/StudioPaths.js";
+import { isStudioProcessAlive, readStudioPid } from "@/process/registry/StudioRuntime.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { resolveRunningManagedAgents } from "./ControlPlaneProcess.js";
 
@@ -60,20 +60,20 @@ export function printRunningManagedAgents(views: ManagedAgentProcessView[]): voi
  * 打印 studio 后台、control plane 与受管 agent 的状态面板。
  */
 export async function controlPlaneStatusCommand(): Promise<void> {
-  const pidPath = getCityPidPath();
+  const pidPath = getStudioPidPath();
 
-  const cityPid = await readCityPid();
-  const running = Boolean(cityPid && isCityProcessAlive(cityPid));
+  const studioPid = await readStudioPid();
+  const running = Boolean(studioPid && isStudioProcessAlive(studioPid));
   emitCliBlock({
-    tone: running ? "success" : cityPid ? "warning" : "info",
+    tone: running ? "success" : studioPid ? "warning" : "info",
     title: "Studio runtime",
-    summary: running ? "running" : cityPid ? "stale" : "stopped",
+    summary: running ? "running" : studioPid ? "stale" : "stopped",
     facts: [
       {
         label: "registry",
         value: getManagedAgentRegistryPath(),
       },
-      ...(cityPid && !running
+      ...(studioPid && !running
         ? [
             {
               label: "warning",

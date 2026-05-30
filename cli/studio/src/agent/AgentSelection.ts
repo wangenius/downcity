@@ -11,7 +11,7 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import prompts from "prompts";
 import { getDowncityJsonPath, getProfileMdPath } from "@/config/Paths.js";
-import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
+import { listManagedAgentEntries } from "@/process/registry/StudioRegistry.js";
 import type { ManagedAgentRegistryEntry } from "@downcity/agent";
 import type {
   CliAgentPromptChoice,
@@ -154,7 +154,7 @@ export async function emitRegisteredAgentList(): Promise<void> {
       tone: "info",
       title: "Agents",
       summary: "0 registered",
-      note: "Run `studio agent start <path>` once to register an agent with city.",
+      note: "Run `studio agent start <path>` once to register an agent with Studio.",
     });
     return;
   }
@@ -219,7 +219,7 @@ export async function emitRegisteredAgentListWithOptions(options?: {
       summary: options?.runningOnly === true ? "0 running" : "0 registered",
       note: options?.runningOnly === true
         ? "No agent daemon is currently running."
-        : "Run `studio agent start <path>` once to register an agent with city.",
+        : "Run `studio agent start <path>` once to register an agent with Studio.",
     });
     return;
   }

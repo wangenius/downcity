@@ -1,5 +1,5 @@
 /**
- * CityPaths：city 全局运行态与 control plane 共享的路径规则。
+ * StudioPaths：Studio 全局运行态与 control plane 共享的路径规则。
  *
  * 关键点（中文）
  * - Downcity 的全局根目录固定在用户目录 `~/.downcity/`。
@@ -31,9 +31,9 @@ export function getPlatformStoreDbPath(): string {
 }
 
 /**
- * city 全局运行目录（pid/log/registry）。
+ * Studio 全局运行目录（pid/log/registry）。
  */
-export function getCityRuntimeDirPath(): string {
+export function getStudioRuntimeDirPath(): string {
   return path.join(getPlatformRootDirPath(), "main");
 }
 
@@ -41,47 +41,49 @@ export function getCityRuntimeDirPath(): string {
  * 全局模型存储密钥文件路径。
  */
 export function getPlatformStoreKeyPath(): string {
-  return path.join(getCityRuntimeDirPath(), "model-db.key");
+  return path.join(getStudioRuntimeDirPath(), "model-db.key");
 }
 
 /**
  * studio 后台 pid 文件路径。
  */
-export function getCityPidPath(): string {
-  return path.join(getCityRuntimeDirPath(), "city.pid");
+export function getStudioPidPath(): string {
+  // 关键点（中文）：暂时保留旧文件名，避免已运行的本机 Studio 状态失联。
+  return path.join(getStudioRuntimeDirPath(), "city.pid");
 }
 
 /**
  * studio 后台日志路径（stdout/stderr 合并）。
  */
-export function getCityLogPath(): string {
-  return path.join(getCityRuntimeDirPath(), "city.log");
+export function getStudioLogPath(): string {
+  // 关键点（中文）：暂时保留旧文件名，避免历史日志路径突然断裂。
+  return path.join(getStudioRuntimeDirPath(), "city.log");
 }
 
 /**
  * control plane pid 文件路径。
  */
 export function getControlPlanePidPath(): string {
-  return path.join(getCityRuntimeDirPath(), "control-plane.pid");
+  return path.join(getStudioRuntimeDirPath(), "control-plane.pid");
 }
 
 /**
  * control plane 日志路径（stdout/stderr 合并）。
  */
 export function getControlPlaneLogPath(): string {
-  return path.join(getCityRuntimeDirPath(), "control-plane.log");
+  return path.join(getStudioRuntimeDirPath(), "control-plane.log");
 }
 
 /**
  * control plane 元数据路径。
  */
 export function getControlPlaneMetaPath(): string {
-  return path.join(getCityRuntimeDirPath(), "control-plane.json");
+  return path.join(getStudioRuntimeDirPath(), "control-plane.json");
 }
 
 /**
- * 受管 agent registry 文件路径（city 维护的 agent 清单）。
+ * 受管 agent registry 文件路径（Studio 维护的 agent 清单）。
  */
 export function getManagedAgentRegistryPath(): string {
-  return path.join(getCityRuntimeDirPath(), "agents.json");
+  return path.join(getStudioRuntimeDirPath(), "agents.json");
 }

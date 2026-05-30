@@ -11,7 +11,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { nanoid } from "nanoid";
-import { getPlatformStoreDbPath } from "@/process/registry/CityPaths.js";
+import { getPlatformStoreDbPath } from "@/process/registry/StudioPaths.js";
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import {
   AUTH_DEFAULT_ROLES,

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `studio plugin` 提供 console 侧静态 plugin catalog 入口。
- * - `list/status` 不依赖 agent，只展示内建 plugin 定义与 city 配置事实。
+ * - `list/status` 不依赖 agent，只展示内建 plugin 定义与 Studio 配置事实。
  * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 
@@ -32,7 +32,7 @@ import {
   runManagedPluginControlCommand,
 } from "./ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
-import { setCityPluginEnabled } from "@/platform/PluginLifecycle.js";
+import { setStudioPluginEnabled } from "@/platform/PluginLifecycle.js";
 
 type StaticCatalogEntry = {
   name: string;
@@ -252,7 +252,7 @@ async function promptPluginManagerAction(params: {
       },
       {
         title: "全局启用",
-        description: availability.enabled ? "当前已启用" : "写入 city 级 lifecycle 配置",
+        description: availability.enabled ? "当前已启用" : "写入 Studio 级 lifecycle 配置",
         value: "enable",
       },
       {
@@ -260,7 +260,7 @@ async function promptPluginManagerAction(params: {
         description:
           params.pluginName === "auth"
             ? "auth plugin 不允许全局关闭"
-            : "写入 city 级 lifecycle 配置",
+            : "写入 Studio 级 lifecycle 配置",
         value: "disable",
       },
       {
@@ -410,7 +410,7 @@ function printPluginLifecycleResult(params: {
     facts: [
       {
         label: "scope",
-        value: "city",
+        value: "studio",
       },
       {
         label: "mode",
@@ -451,7 +451,7 @@ async function runPluginLifecycleCommand(params: {
     return;
   }
 
-  setCityPluginEnabled(plugin.name, params.enabled);
+  setStudioPluginEnabled(plugin.name, params.enabled);
   if (params.asJson === true) {
     printResult({
       asJson: true,
@@ -460,7 +460,7 @@ async function runPluginLifecycleCommand(params: {
       payload: {
         pluginName: plugin.name,
         enabled: params.enabled,
-        scope: "city",
+        scope: "studio",
       },
     });
     return;

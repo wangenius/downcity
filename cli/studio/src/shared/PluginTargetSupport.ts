@@ -11,8 +11,8 @@ import path from "node:path";
 import fs from "node:fs";
 import type { Command } from "commander";
 import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
-import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
-import { isCityRunning } from "@/process/registry/CityRuntime.js";
+import { listManagedAgentEntries } from "@/process/registry/StudioRegistry.js";
+import { isStudioRunning } from "@/process/registry/StudioRuntime.js";
 import type { JsonValue } from "@downcity/agent";
 import { parsePort, resolveAgentId } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
@@ -40,7 +40,7 @@ export interface AgentPreflightOptions {
  *
  * 关键点（中文）
  * - 收敛 start/restart/status 等命令的前置校验逻辑。
- * - 按顺序检查，首个失败即抛 CliError（city running → PROFILE.md → downcity.json → binding）。
+ * - 按顺序检查，首个失败即抛 CliError（Studio running → PROFILE.md → downcity.json → binding）。
  *
  * @throws {CliError} 任一校验失败时抛出。
  */
@@ -49,7 +49,7 @@ export async function checkAgentPreflight(
   options?: AgentPreflightOptions,
 ): Promise<void> {
   if (options?.requireCityRunning !== false) {
-    if (!(await isCityRunning())) {
+    if (!(await isStudioRunning())) {
       throw new CliError({
         title: "studio runtime is not running",
         fix: "studio start",

@@ -94,8 +94,8 @@ flowchart TD
 
 | 目录 | package 名 | 定位 | 主要产物 |
 | --- | --- | --- | --- |
-| `cli/city` | private workspace | City 管理命令、Console gateway、控制面 | `bin/`、`public/` |
-| `cli/studio` | private workspace | 本机 Agent 宿主命令 | `bin/` |
+| `cli/city` | private workspace | City 服务管理命令 | `bin/` |
+| `cli/studio` | private workspace | 本机 Agent 宿主、Console gateway、控制面 | `bin/` |
 | `cli/downcity` | `downcity` | 唯一对外全局安装包，暴露 `city` / `studio` | `bin/`、复制后的命令 runtime |
 | `packages/city` | `@downcity/city` | 可复用 City runtime、service/action 基建 | `dist/` |
 | `packages/ui` | `@downcity/ui` | React UI SDK | `dist/` |

@@ -1,5 +1,5 @@
 /**
- * CityRuntime：studio 后台进程状态工具。
+ * StudioRuntime：studio 后台进程状态工具。
  *
  * 关键点（中文）
  * - studio 后台负责统一管理/观测多个 agent daemon。
@@ -8,14 +8,14 @@
  */
 
 import fs from "fs-extra";
-import { getCityPidPath } from "./CityPaths.js";
+import { getStudioPidPath } from "./StudioPaths.js";
 
 /**
  * 读取 studio 后台 pid（读取失败或内容非法返回 null）。
  */
-export async function readCityPid(): Promise<number | null> {
+export async function readStudioPid(): Promise<number | null> {
   try {
-    const raw = await fs.readFile(getCityPidPath(), "utf-8");
+    const raw = await fs.readFile(getStudioPidPath(), "utf-8");
     const pid = Number.parseInt(String(raw).trim(), 10);
     return Number.isFinite(pid) && pid > 0 ? pid : null;
   } catch {
@@ -26,7 +26,7 @@ export async function readCityPid(): Promise<number | null> {
 /**
  * 判断 studio 后台进程是否存活。
  */
-export function isCityProcessAlive(pid: number): boolean {
+export function isStudioProcessAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
@@ -38,8 +38,8 @@ export function isCityProcessAlive(pid: number): boolean {
 /**
  * 判断 studio 后台是否在运行（基于 pid file + 判活）。
  */
-export async function isCityRunning(): Promise<boolean> {
-  const pid = await readCityPid();
+export async function isStudioRunning(): Promise<boolean> {
+  const pid = await readStudioPid();
   if (!pid) return false;
-  return isCityProcessAlive(pid);
+  return isStudioProcessAlive(pid);
 }

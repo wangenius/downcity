@@ -23,13 +23,13 @@ import {
   getDowncityMemoryLongTermPath,
 } from "@/config/Paths.js";
 import { isAgentProjectInitialized } from "@downcity/agent";
-import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
+import { listManagedAgentEntries } from "@/process/registry/StudioRegistry.js";
 import {
   getManagedAgentRegistryPath,
-  getCityPidPath,
+  getStudioPidPath,
   getControlPlanePidPath,
   getPlatformStoreDbPath,
-} from "@/process/registry/CityPaths.js";
+} from "@/process/registry/StudioPaths.js";
 import type {
   PlatformAgentOption,
   PlatformAgentsResponse,
@@ -57,7 +57,7 @@ export function readRequestedPlatformAgentId(request: Request): string {
   const requestUrl = new URL(request.url);
   const queryAgent = String(requestUrl.searchParams.get("agent") || "").trim();
   if (queryAgent) return queryAgent;
-  const headerAgent = String(request.headers.get("x-city-agent") || "").trim();
+  const headerAgent = String(request.headers.get("x-studio-agent") || "").trim();
   if (headerAgent) return headerAgent;
   return "";
 }
@@ -550,8 +550,8 @@ export async function buildPlatformConfigStatusResponse(params: {
     readPlatformConfigFileStatus({
       key: "ui_pid",
       scope: "platform",
-      label: "City PID",
-      filePath: getCityPidPath(),
+      label: "Studio PID",
+      filePath: getStudioPidPath(),
     }),
     readPlatformConfigFileStatus({
       key: "agents_registry",

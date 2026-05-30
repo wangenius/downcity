@@ -43,7 +43,7 @@ type DanglingChannelAccount = {
    */
   channel: StoredChannelAccountChannel;
   /**
-   * agent 配置中引用但 city 全局账号池不存在的 account id。
+   * agent 配置中引用但 Studio 全局账号池不存在的 account id。
    */
   accountId: string;
 };
@@ -137,7 +137,7 @@ async function emitAgentManagerList(): Promise<void> {
       tone: "info",
       title: "Agents",
       summary: "0 registered",
-      note: "Run `studio agent start <path>` once to register an agent with city.",
+      note: "Run `studio agent start <path>` once to register an agent with Studio.",
     });
     return;
   }
@@ -494,7 +494,7 @@ async function connectAgentChannels(
     if (allAccountsAfterCleanup.length === 0) {
       emitCliBlock({
         tone: "info",
-        title: "No city channel accounts found",
+        title: "No Studio channel accounts found",
         note: "已清理悬空关联。请先运行 `studio chat`，选择“配置 channel”来配置 Telegram、Feishu 或 QQ account；agent 这里只做 connect。",
       });
       return cleanedAgent;
@@ -507,7 +507,7 @@ async function connectAgentChannels(
   if (allAccounts.length === 0) {
     emitCliBlock({
       tone: "info",
-      title: "No city channel accounts found",
+      title: "No Studio channel accounts found",
       note: "请先运行 `studio chat`，选择“配置 channel”来配置 Telegram、Feishu 或 QQ account；agent 这里只做 connect。",
     });
     return agent;

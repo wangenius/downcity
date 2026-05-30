@@ -32,7 +32,7 @@ import { resolveAgentId } from "../shared/IndexSupport.js";
  * 职责（中文）
  * - 初始化 agent 状态（配置、日志、services 依赖）
  * - 解析并合并启动参数（CLI > downcity.json > 默认值）
- * - 启动 agent 本机 RPC 与 city 托管的 HTTP gateway（双端口）
+ * - 启动 agent 本机 RPC 与 Studio 托管的 HTTP gateway（双端口）
  * - 启动 services（例如 task cron）
  * - 统一处理进程信号并优雅停机
  */

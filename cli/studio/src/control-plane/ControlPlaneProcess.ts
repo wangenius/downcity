@@ -1,5 +1,5 @@
 /**
- * ControlPlaneProcess：city gateway / control plane 命令的 runtime/进程控制辅助。
+ * ControlPlaneProcess：Studio gateway / control plane 命令的 runtime/进程控制辅助。
  *
  * 关键点（中文）
  * - 聚合 control plane 与受管 agent 的后台进程控制逻辑。
@@ -24,21 +24,21 @@ import {
   ensureManagedAgentRegistry,
   listManagedAgentEntries,
   markManagedAgentStopped,
-} from "@/process/registry/CityRegistry.js";
+} from "@/process/registry/StudioRegistry.js";
 import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
-  getCityLogPath,
-  getCityPidPath,
-  getCityRuntimeDirPath,
-} from "@/process/registry/CityPaths.js";
+  getStudioLogPath,
+  getStudioPidPath,
+  getStudioRuntimeDirPath,
+} from "@/process/registry/StudioPaths.js";
 import {
-  isCityProcessAlive,
-  isCityRunning,
-  readCityPid,
-} from "@/process/registry/CityRuntime.js";
+  isStudioProcessAlive,
+  isStudioRunning,
+  readStudioPid,
+} from "@/process/registry/StudioRuntime.js";
 import {
   signalDetachedProcess,
-  sweepDetachedCityProcesses,
+  sweepDetachedStudioProcesses,
 } from "@/process/registry/ProcessSweep.js";
 import type { StartOptions } from "@downcity/agent";
 import {
@@ -52,21 +52,21 @@ import { ensureControlPlaneAuthBootstrap } from "./ControlPlaneAuthBootstrap.js"
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { runWithSpinner } from "@/utils/cli/Spinner.js";
 import { CliError } from "../shared/CliError.js";
-import { ensureCityPublicHostEnv } from "../shared/PublicHostEnv.js";
+import { ensureStudioPublicHostEnv } from "../shared/PublicHostEnv.js";
 import { resolveStudioCliPath } from "../shared/StudioCliPath.js";
 
 /**
  * 启动 studio runtime 后台进程。
  */
-export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
-  const consoleDir = getCityRuntimeDirPath();
-  const pidPath = getCityPidPath();
-  const logPath = getCityLogPath();
+export async function startStudioRuntimeCommand(cliPath: string): Promise<void> {
+  const consoleDir = getStudioRuntimeDirPath();
+  const pidPath = getStudioPidPath();
+  const logPath = getStudioLogPath();
   await fs.ensureDir(consoleDir);
   await ensureManagedAgentRegistry();
 
-  const existingPid = await readCityPid();
-  if (existingPid && isCityProcessAlive(existingPid)) {
+  const existingPid = await readStudioPid();
+  if (existingPid && isStudioProcessAlive(existingPid)) {
     emitCliBlock({
       tone: "info",
       title: "Studio runtime already running",
@@ -79,7 +79,7 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
   }
 
   // 关键点（中文）：若 pid 文件已丢失，但旧 studio runtime 进程仍在后台存活，这里先清理孤儿进程。
-  const sweep = await sweepDetachedCityProcesses({
+  const sweep = await sweepDetachedStudioProcesses({
     includeConsole: true,
   });
   for (const item of sweep.stopped) {
@@ -96,7 +96,7 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
   }
 
   const logFd = fs.openSync(logPath, "a");
-  const publicHost = await ensureCityPublicHostEnv();
+  const publicHost = await ensureStudioPublicHostEnv();
   const child = spawn(process.execPath, [cliPath, "run"], {
     cwd: process.cwd(),
     detached: true,
@@ -177,10 +177,10 @@ export async function resolveRunningManagedAgents(params?: {
 /**
  * 停止 studio runtime 后台进程（先停 Console，再停受管 agent，最后停 studio runtime）。
  */
-export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): Promise<void> {
+export async function stopStudioRuntimeCommand(params?: { timeoutMs?: number }): Promise<void> {
   const timeoutMs = params?.timeoutMs ?? 10_000;
-  const consoleDir = getCityRuntimeDirPath();
-  const pidPath = getCityPidPath();
+  const consoleDir = getStudioRuntimeDirPath();
+  const pidPath = getStudioPidPath();
   await fs.ensureDir(consoleDir);
 
   // Phase 1: Stop Console
@@ -229,7 +229,7 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
 
   // Phase 3: Stop studio runtime process
   const sweepOrphans = async (): Promise<void> => {
-    const orphanSweep = await sweepDetachedCityProcesses({
+    const orphanSweep = await sweepDetachedStudioProcesses({
       includeConsole: true,
       includeUi: true,
       includeAgent: true,
@@ -249,7 +249,7 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
     }
   };
 
-  const consolePid = await readCityPid();
+  const consolePid = await readStudioPid();
   if (!consolePid) {
     emitCliBlock({
       tone: "info",
@@ -265,7 +265,7 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
     return;
   }
 
-  if (!isCityProcessAlive(consolePid)) {
+  if (!isStudioProcessAlive(consolePid)) {
     await fs.remove(pidPath);
     emitCliBlock({
       tone: "warning",
@@ -285,22 +285,22 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
 
   const startAt = Date.now();
   while (Date.now() - startAt < timeoutMs) {
-    if (!isCityProcessAlive(consolePid)) break;
+    if (!isStudioProcessAlive(consolePid)) break;
     await sleep(200);
   }
 
-  if (isCityProcessAlive(consolePid)) {
+  if (isStudioProcessAlive(consolePid)) {
     signalDetachedProcess(consolePid, "SIGKILL");
     const forceStartAt = Date.now();
     while (Date.now() - forceStartAt < 2_000) {
-      if (!isCityProcessAlive(consolePid)) break;
+      if (!isStudioProcessAlive(consolePid)) break;
       await sleep(100);
     }
   }
 
   await fs.remove(pidPath);
 
-  const stillAlive = isCityProcessAlive(consolePid);
+  const stillAlive = isStudioProcessAlive(consolePid);
   emitCliBlock({
     tone: stillAlive ? "warning" : "success",
     title: "Studio runtime process",
@@ -349,8 +349,8 @@ export async function restartManagedAgents(cliPath: string): Promise<void> {
     );
   }
 
-  await stopCityRuntimeCommand();
-  await startCityRuntimeCommand(cliPath);
+  await stopStudioRuntimeCommand();
+  await startStudioRuntimeCommand(cliPath);
 
   if (runningAgents.length === 0) {
     return;
@@ -396,16 +396,16 @@ export async function restartManagedAgents(cliPath: string): Promise<void> {
 /**
  * 重启 control plane 主进程。
  */
-export async function restartCityRuntimeCommand(cliPath: string): Promise<void> {
+export async function restartStudioRuntimeCommand(cliPath: string): Promise<void> {
   await restartManagedAgents(cliPath);
 }
 
 /**
  * 执行 studio runtime 常驻进程。
  */
-export async function runCityRuntimeCommand(): Promise<void> {
-  const consoleDir = getCityRuntimeDirPath();
-  const pidPath = getCityPidPath();
+export async function runStudioRuntimeCommand(): Promise<void> {
+  const consoleDir = getStudioRuntimeDirPath();
+  const pidPath = getStudioPidPath();
   await fs.ensureDir(consoleDir);
   await ensureManagedAgentRegistry();
   await fs.writeFile(pidPath, String(process.pid), "utf-8");
@@ -468,7 +468,7 @@ export async function prepareForegroundAgent(
   options: StartOptions & { foreground?: boolean };
   shouldForeground: boolean;
 }> {
-  if (!(await isCityRunning())) {
+  if (!(await isStudioRunning())) {
     throw new CliError({
       title: "studio runtime is not running",
       fix: "studio start",

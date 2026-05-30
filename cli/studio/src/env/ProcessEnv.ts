@@ -3,7 +3,7 @@
  *
  * 职责说明（中文）
  * - 从平台 store 读取 global env。
- * - 为 city 宿主提供显式 env 合并能力，避免让 `@downcity/agent` 直接依赖 `process.env`。
+ * - 为 Studio 宿主提供显式 env 合并能力，避免让 `@downcity/agent` 直接依赖 `process.env`。
  *
  * 边界说明（中文）
  * - 这里只处理 global env，不处理项目 `.env`。

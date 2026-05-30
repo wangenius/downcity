@@ -20,8 +20,8 @@ import type { DowncityConfig } from "@downcity/agent";
  * 解析项目根目录。
  *
  * 关键点（中文）
- * - `studio config` 是 City 管理命令，只需要纯路径解析能力。
- * - 不依赖 Studio plugin 目标解析模块，避免 City 包继续编译 Studio-only 代码。
+ * - `studio config` 是本机 Studio 配置命令，只需要纯路径解析能力。
+ * - 不依赖 Studio plugin 目标解析模块，避免配置命令耦合运行态目标解析。
  */
 function resolveProjectRoot(pathInput?: string): string {
   return path.resolve(String(pathInput || "."));
@@ -296,7 +296,7 @@ export function registerConfigCommand(program: Command): void {
 
   config
     .command("alias")
-    .description("在 .zshrc / .bashrc 中写入 `alias city=\"downcity\"`")
+    .description("在 .zshrc / .bashrc 中写入 Downcity 推荐 alias")
     .option("--shell <shell>", "指定写入的 shell: zsh | bash | both", "both")
     .option("--dry-run", "只打印将要修改的文件，不实际写入", false)
     .option("--print", "仅打印 alias 内容（用于 eval）", false)

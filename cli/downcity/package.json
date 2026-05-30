@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.1.54",
+  "version": "1.1.55",
   "type": "module",
   "description": "Downcity terminal product bundle — installs city and studio commands",
   "bin": {

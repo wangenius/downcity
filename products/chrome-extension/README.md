@@ -96,19 +96,19 @@ npm run build:release
 如果目标是远程服务器，还要确认 Console 已对外监听：
 
 ```bash
-city start --public
+studio start --public
 ```
 
 或者把公网监听持久化下来：
 
 ```bash
-city public on
+studio public on
 ```
 
 需要恢复成仅本机监听时：
 
 ```bash
-city public off
+studio public off
 ```
 
 ## 说明

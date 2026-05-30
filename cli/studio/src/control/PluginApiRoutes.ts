@@ -26,8 +26,8 @@ import type {
 } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
 import {
-  isCityPluginEnabled,
-  setCityPluginEnabled,
+  isStudioPluginEnabled,
+  setStudioPluginEnabled,
 } from "@/platform/PluginLifecycle.js";
 
 type PluginActionConfigItem = {
@@ -143,7 +143,7 @@ function buildGlobalPluginPayload(): PluginUiResponse {
     plugins: listPluginViews(createPluginCatalog()).map((view) => ({
       ...view,
       availability: {
-        enabled: isCityPluginEnabled(view.name),
+        enabled: isStudioPluginEnabled(view.name),
         available: true,
         reasons: [],
       },
@@ -168,7 +168,7 @@ function buildAgentPluginPayload(params?: {
     plugins: listPluginViews(createPluginCatalog()).map((view) => ({
       ...view,
       availability: {
-        enabled: isCityPluginEnabled(view.name),
+        enabled: isStudioPluginEnabled(view.name),
         available: false,
         reasons: reason
           ? [`Agent server unavailable: ${reason}`]
@@ -308,7 +308,7 @@ async function runGlobalPluginAction(input: {
       };
     }
 
-    setCityPluginEnabled(plugin.name, actionName === "on");
+    setStudioPluginEnabled(plugin.name, actionName === "on");
     return {
       success: true,
       message: `Plugin "${plugin.name}" ${actionName === "on" ? "enabled" : "disabled"} in studio config`,

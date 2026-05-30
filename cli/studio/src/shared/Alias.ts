@@ -1,5 +1,5 @@
 /**
- * `studio config alias`：向 shell rc 文件写入 Studio 相关 alias。
+ * `studio config alias`：向 shell rc 文件写入 Studio/City 的便捷 alias。
  *
  * 关键点（中文）
  * - 通过标记块（start/end）实现幂等更新。
@@ -25,7 +25,7 @@ interface AliasOptions {
  *
  * 算法（中文）
  * 1) 若已存在 downcity 标记块：原位替换该块
- * 2) 若已存在 `alias city=`：视为用户自定义，跳过
+ * 2) 若未存在标记块：追加当前 Downcity 推荐 alias
  * 3) 否则追加到文件末尾
  */
 function upsertAliasBlock(content: string, aliasLines: string[]): { next: string; changed: boolean } {
@@ -43,7 +43,7 @@ function upsertAliasBlock(content: string, aliasLines: string[]): { next: string
     return { next, changed: next !== content };
   }
 
-  const aliasRegex = /^\s*alias\s+city\s*=/m;
+  const aliasRegex = /^\s*alias\s+(dc-city|dc-studio)\s*=/m;
   if (aliasRegex.test(content)) {
     return { next: content, changed: false };
   }
@@ -58,7 +58,10 @@ function upsertAliasBlock(content: string, aliasLines: string[]): { next: string
  * 写入 alias 到目标 shell rc 文件。
  */
 export async function aliasCommand(options: AliasOptions = {}): Promise<void> {
-  const aliasLines = [`alias city="downcity"`];
+  const aliasLines = [
+    `alias dc-city="city"`,
+    `alias dc-studio="studio"`,
+  ];
 
   if (options.print) {
     emitCliBlock({

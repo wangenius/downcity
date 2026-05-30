@@ -1,5 +1,5 @@
 /**
- * ExecutionModelBinding：city 宿主侧执行模型绑定辅助。
+ * ExecutionModelBinding：Studio 宿主侧执行模型绑定辅助。
  *
  * 职责说明（中文）
  * - 统一承接平台模型池读取、模型候选列表构建与项目 execution.modelId 校验。
@@ -99,7 +99,7 @@ export function assertPlatformModelReady(modelId: string): void {
  * 断言项目 execution 绑定已声明且目标模型可用。
  *
  * 关键点（中文）
- * - 这里是 city 启动/控制面入口的宿主前置校验。
+ * - 这里是 Studio 启动/控制面入口的宿主前置校验。
  * - 失败时抛出稳定错误，交由 CLI 或 HTTP 层决定如何展示。
  */
 export function assertProjectExecutionModelReady(projectRoot: string): void {

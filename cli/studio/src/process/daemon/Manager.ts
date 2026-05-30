@@ -26,7 +26,7 @@ import {
 import {
   markManagedAgentStopped,
   upsertManagedAgentEntry,
-} from "@/process/registry/CityRegistry.js";
+} from "@/process/registry/StudioRegistry.js";
 import { signalDetachedProcess } from "@/process/registry/ProcessSweep.js";
 import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
 

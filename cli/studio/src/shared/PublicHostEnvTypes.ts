@@ -1,8 +1,8 @@
 /**
- * city 公网 host 环境变量类型。
+ * Studio 公网 host 环境变量类型。
  */
 
-export type CityPublicHostEnvResult =
+export type StudioPublicHostEnvResult =
   | {
       changed: true;
       key: "DOWNCITY_PUBLIC_HOST";
@@ -13,15 +13,15 @@ export type CityPublicHostEnvResult =
       reason: "configured" | "unavailable";
     };
 
-export interface CityPublicHostEnvEntry {
+export interface StudioPublicHostEnvEntry {
   key: "DOWNCITY_PUBLIC_HOST";
   value: string;
   description: string;
 }
 
-export interface EnsureCityPublicHostEnvInput {
+export interface EnsureStudioPublicHostEnvInput {
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   readGlobalEnv?: () => Record<string, string>;
   resolvePublicIpv4?: () => Promise<string | null> | string | null;
-  upsertGlobalEnv?: (entry: CityPublicHostEnvEntry) => Promise<void>;
+  upsertGlobalEnv?: (entry: StudioPublicHostEnvEntry) => Promise<void>;
 }

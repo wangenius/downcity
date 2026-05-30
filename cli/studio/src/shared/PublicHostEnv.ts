@@ -1,17 +1,17 @@
 /**
- * city 公网 host 自动环境配置。
+ * Studio 公网 host 自动环境配置。
  *
  * 关键点（中文）
  * - `studio start` 时自动探测公网 IPv4，并写入平台 Env 的 `DOWNCITY_PUBLIC_HOST`。
  * - 若部署环境已经注入 `DOWNCITY_PUBLIC_URL/HOST`，绝不覆盖。
- * - 写入平台 Env 后，后续 city 宿主会在启动 Agent/模型运行时前显式读取并传入。
+ * - 写入平台 Env 后，后续 Studio 宿主会在启动 Agent/模型运行时前显式读取并传入。
  */
 
 import { PlatformStore } from "@/platform/store/index.js";
 import type {
-  CityPublicHostEnvEntry,
-  CityPublicHostEnvResult,
-  EnsureCityPublicHostEnvInput,
+  StudioPublicHostEnvEntry,
+  StudioPublicHostEnvResult,
+  EnsureStudioPublicHostEnvInput,
 } from "./PublicHostEnvTypes.js";
 
 const PUBLIC_HOST_DESCRIPTION = "Auto-detected public host for agent contact links.";
@@ -58,7 +58,7 @@ function readGlobalEnvFromStore(): Record<string, string> {
   }
 }
 
-async function upsertGlobalEnvToStore(entry: CityPublicHostEnvEntry): Promise<void> {
+async function upsertGlobalEnvToStore(entry: StudioPublicHostEnvEntry): Promise<void> {
   const store = new PlatformStore();
   try {
     await store.upsertEnvEntry({
@@ -73,11 +73,11 @@ async function upsertGlobalEnvToStore(entry: CityPublicHostEnvEntry): Promise<vo
 }
 
 /**
- * 确保 city 全局环境中存在自动探测的公网 host。
+ * 确保 Studio 全局环境中存在自动探测的公网 host。
  */
-export async function ensureCityPublicHostEnv(
-  input: EnsureCityPublicHostEnvInput = {},
-): Promise<CityPublicHostEnvResult> {
+export async function ensureStudioPublicHostEnv(
+  input: EnsureStudioPublicHostEnvInput = {},
+): Promise<StudioPublicHostEnvResult> {
   const env = input.env || process.env;
   const globalEnv = input.readGlobalEnv ? input.readGlobalEnv() : readGlobalEnvFromStore();
   const hasRuntimePublicAddress = Boolean(
@@ -101,7 +101,7 @@ export async function ensureCityPublicHostEnv(
     };
   }
 
-  const entry: CityPublicHostEnvEntry = {
+  const entry: StudioPublicHostEnvEntry = {
     key: "DOWNCITY_PUBLIC_HOST",
     value: resolved,
     description: PUBLIC_HOST_DESCRIPTION,

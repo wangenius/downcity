@@ -1,8 +1,8 @@
 /**
- * CityRegistry：studio 后台维护的 agent registry（`~/.downcity/main/agents.json`）。
+ * StudioRegistry：studio 后台维护的 agent registry（`~/.downcity/main/agents.json`）。
  *
  * 关键点（中文）
- * - registry 只维护“city 认知到的 agent 项目列表”，用于统一观测与批量管理。
+ * - registry 只维护“Studio 认知到的 agent 项目列表”，用于统一观测与批量管理。
  * - registry 不承载实时健康检查：status/list 会读取每个项目的 daemon pid 并判活。
  * - agent daemon 启动成功后必须登记到 studio 后台（强约束）。
  */
@@ -13,10 +13,10 @@ import type {
   ManagedAgentRegistryEntry,
   ManagedAgentRegistryV1,
 } from "@downcity/agent";
-import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "./CityPaths.js";
-import { isCityRunning } from "./CityRuntime.js";
+import { getManagedAgentRegistryPath, getStudioRuntimeDirPath } from "./StudioPaths.js";
+import { isStudioRunning } from "./StudioRuntime.js";
 
-const CONSOLE_DIR = getCityRuntimeDirPath();
+const CONSOLE_DIR = getStudioRuntimeDirPath();
 const MANAGED_AGENTS_FILE = getManagedAgentRegistryPath();
 
 function buildEmptyRegistry(): ManagedAgentRegistryV1 {
@@ -126,7 +126,7 @@ async function writeManagedAgentRegistry(
  * 确保 studio agent registry 文件存在。
  *
  * 关键点（中文）
- * - 空 city 运行态也应拥有显式的空 registry，避免 Console 将“尚未启动任何 agent”误判为异常。
+ * - 空 Studio 运行态也应拥有显式的空 registry，避免 Console 将“尚未启动任何 agent”误判为异常。
  * - 若文件已存在则不覆盖，保持历史记录不丢失。
  */
 export async function ensureManagedAgentRegistry(): Promise<void> {
@@ -163,7 +163,7 @@ export async function readManagedAgentRegistry(): Promise<ManagedAgentRegistryV1
 }
 
 /**
- * 列出 city registry 中记录的 agent（按 projectRoot 排序）。
+ * 列出 Studio registry 中记录的 agent（按 projectRoot 排序）。
  */
 export async function listManagedAgentEntries(): Promise<ManagedAgentRegistryEntry[]> {
   const registry = await readManagedAgentRegistry();
@@ -180,8 +180,8 @@ export async function upsertManagedAgentEntry(input: {
   status?: "running" | "stopped";
   stoppedAt?: string;
 }): Promise<void> {
-  // 关键点（中文）：agent 必须登记到 studio 后台才“有效”，因此 city 未启动时拒绝写入 registry。
-  if (!(await isCityRunning())) {
+  // 关键点（中文）：agent 必须登记到 studio 后台才“有效”，因此 Studio 未启动时拒绝写入 registry。
+  if (!(await isStudioRunning())) {
     throw new Error("studio runtime is not running");
   }
 

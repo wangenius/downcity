@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 裸 `studio chat` 进入 chat plugin 管理，而不是只输出静态 help。
- * - chat channel account 属于 city 级配置，在这里通过“配置 channel”管理。
+ * - chat channel account 属于 Studio 级配置，在这里通过“配置 channel”管理。
  * - agent 只绑定 channel account，不在 agent 流程中维护密钥。
  */
 
@@ -77,7 +77,7 @@ async function promptRootAction(): Promise<ChatManagerRootAction | null> {
       },
       {
         title: "配置 channel",
-        description: `${accounts.items.length} 个 city 级 channel account`,
+        description: `${accounts.items.length} 个 Studio 级 channel account`,
         value: "configureChannels",
       },
       {
@@ -117,7 +117,7 @@ async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | 
       },
       {
         title: "删除 account",
-        description: "从 city 全局账号池删除",
+        description: "从 Studio 全局账号池删除",
         value: "remove",
       },
       {
@@ -186,7 +186,7 @@ async function chooseAccount(): Promise<ChatChannelAccountListItem | null> {
   if (items.length === 0) {
     emitCliBlock({
       tone: "info",
-      title: "No city channel accounts found",
+      title: "No Studio channel accounts found",
       note: "先新增一个 Telegram、Feishu 或 QQ account。",
     });
     return null;

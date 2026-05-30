@@ -1,5 +1,5 @@
 /**
- * CLI Reporter：统一渲染 city 命令行输出。
+ * CLI Reporter：统一渲染 Studio 命令行输出。
  *
  * 关键点（中文）
  * - 为 lifecycle 类命令提供稳定、统一、层级清晰的文本版式。

@@ -1,20 +1,20 @@
 /**
- * City 级 plugin 生命周期管理。
+ * Studio 级 plugin 生命周期管理。
  *
  * 关键点（中文）
- * - plugin 启用/关闭属于 city 全局配置，不应由 agent 自己写入。
- * - 这里把状态落到平台安全配置中，由 city 统一读写。
+ * - plugin 启用/关闭属于 Studio 全局配置，不应由 agent 自己写入。
+ * - 这里把状态落到平台安全配置中，由 Studio 统一读写。
  * - 默认策略：未显式关闭时，一律视为启用。
  */
 
 import { PlatformStore } from "@/platform/store/index.js";
 
 /**
- * 单个 plugin 的 city 级生命周期配置。
+ * 单个 plugin 的 Studio 级生命周期配置。
  */
-export interface CityPluginLifecycleItem {
+export interface StudioPluginLifecycleItem {
   /**
-   * 当前 plugin 是否在 city 级被启用。
+   * 当前 plugin 是否在 Studio 级被启用。
    */
   enabled: boolean;
   /**
@@ -24,18 +24,18 @@ export interface CityPluginLifecycleItem {
 }
 
 /**
- * city 级 plugin 生命周期配置映射。
+ * Studio 级 plugin 生命周期配置映射。
  */
-export interface CityPluginLifecycleConfig {
+export interface StudioPluginLifecycleConfig {
   /**
    * 插件生命周期配置对象映射。
    */
-  [pluginName: string]: CityPluginLifecycleItem | undefined;
+  [pluginName: string]: StudioPluginLifecycleItem | undefined;
 }
 
 const PLUGIN_LIFECYCLE_SETTING_KEY = "plugins.lifecycle";
 
-function normalizeLifecycleItem(input: unknown): CityPluginLifecycleItem | null {
+function normalizeLifecycleItem(input: unknown): StudioPluginLifecycleItem | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const record = input as Record<string, unknown>;
   if (typeof record.enabled !== "boolean") return null;
@@ -45,9 +45,9 @@ function normalizeLifecycleItem(input: unknown): CityPluginLifecycleItem | null 
   };
 }
 
-function normalizeLifecycleConfig(input: unknown): CityPluginLifecycleConfig {
+function normalizeLifecycleConfig(input: unknown): StudioPluginLifecycleConfig {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
-  const out: CityPluginLifecycleConfig = {};
+  const out: StudioPluginLifecycleConfig = {};
   for (const [pluginName, raw] of Object.entries(input as Record<string, unknown>)) {
     const key = String(pluginName || "").trim();
     if (!key) continue;
@@ -59,13 +59,13 @@ function normalizeLifecycleConfig(input: unknown): CityPluginLifecycleConfig {
 }
 
 /**
- * 读取 city 级 plugin 生命周期配置。
+ * 读取 Studio 级 plugin 生命周期配置。
  */
-export function readCityPluginLifecycleConfig(): CityPluginLifecycleConfig {
+export function readStudioPluginLifecycleConfig(): StudioPluginLifecycleConfig {
   const store = new PlatformStore();
   try {
     return normalizeLifecycleConfig(
-      store.getSecureSettingJsonSync<CityPluginLifecycleConfig>(
+      store.getSecureSettingJsonSync<StudioPluginLifecycleConfig>(
         PLUGIN_LIFECYCLE_SETTING_KEY,
       ),
     );
@@ -75,11 +75,11 @@ export function readCityPluginLifecycleConfig(): CityPluginLifecycleConfig {
 }
 
 /**
- * 写入完整 city 级 plugin 生命周期配置。
+ * 写入完整 Studio 级 plugin 生命周期配置。
  */
-export function writeCityPluginLifecycleConfig(
-  value: CityPluginLifecycleConfig,
-): CityPluginLifecycleConfig {
+export function writeStudioPluginLifecycleConfig(
+  value: StudioPluginLifecycleConfig,
+): StudioPluginLifecycleConfig {
   const normalized = normalizeLifecycleConfig(value);
   const store = new PlatformStore();
   try {
@@ -91,21 +91,21 @@ export function writeCityPluginLifecycleConfig(
 }
 
 /**
- * 读取单个 plugin 的 city 级生命周期状态。
+ * 读取单个 plugin 的 Studio 级生命周期状态。
  */
-export function readCityPluginLifecycleItem(
+export function readStudioPluginLifecycleItem(
   pluginName: string,
-): CityPluginLifecycleItem | null {
+): StudioPluginLifecycleItem | null {
   const key = String(pluginName || "").trim();
   if (!key) return null;
-  return readCityPluginLifecycleConfig()[key] || null;
+  return readStudioPluginLifecycleConfig()[key] || null;
 }
 
 /**
  * 判断单个 plugin 是否启用。
  */
-export function isCityPluginEnabled(pluginName: string): boolean {
-  const item = readCityPluginLifecycleItem(pluginName);
+export function isStudioPluginEnabled(pluginName: string): boolean {
+  const item = readStudioPluginLifecycleItem(pluginName);
   if (!item) return true;
   return item.enabled === true;
 }
@@ -113,16 +113,16 @@ export function isCityPluginEnabled(pluginName: string): boolean {
 /**
  * 设置单个 plugin 的启用态。
  */
-export function setCityPluginEnabled(
+export function setStudioPluginEnabled(
   pluginName: string,
   enabled: boolean,
-): CityPluginLifecycleConfig {
+): StudioPluginLifecycleConfig {
   const key = String(pluginName || "").trim();
   if (!key) {
     throw new Error("pluginName is required");
   }
-  const current = readCityPluginLifecycleConfig();
-  return writeCityPluginLifecycleConfig({
+  const current = readStudioPluginLifecycleConfig();
+  return writeStudioPluginLifecycleConfig({
     ...current,
     [key]: {
       enabled,

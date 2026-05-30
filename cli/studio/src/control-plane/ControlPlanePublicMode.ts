@@ -10,7 +10,7 @@
 import { PlatformStore } from "@/platform/store/index.js";
 import type { ControlPlaneStartOptions } from "./ControlPlaneRuntime.js";
 
-const CONTROL_PLANE_PUBLIC_MODE_SETTING_KEY = "city.controlPlane.publicMode";
+const CONTROL_PLANE_PUBLIC_MODE_SETTING_KEY = "studio.controlPlane.publicMode";
 const DEFAULT_PUBLIC_BIND_HOST = "0.0.0.0";
 
 /**

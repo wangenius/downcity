@@ -18,8 +18,8 @@ import {
 import {
   listManagedAgentEntries,
   markManagedAgentStopped,
-} from "@/process/registry/CityRegistry.js";
-import { isCityRunning } from "@/process/registry/CityRuntime.js";
+} from "@/process/registry/StudioRegistry.js";
+import { isStudioRunning } from "@/process/registry/StudioRuntime.js";
 import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
 import { CliError } from "./CliError.js";
 import { injectAgentContext } from "./IndexSupport.js";
@@ -62,7 +62,7 @@ export async function resolveRunningManagedAgents(params?: {
 }
 
 /**
- * 确认目标 agent 已登记到 City registry。
+ * 确认目标 agent 已登记到 Studio registry。
  */
 export async function ensureRegisteredAgentProjectRoot(cwd: string): Promise<string> {
   const project_root = resolve(String(cwd || "."));
@@ -90,7 +90,7 @@ export async function prepareForegroundAgent(
   options: StartOptions & { foreground?: boolean };
   shouldForeground: boolean;
 }> {
-  if (!(await isCityRunning())) {
+  if (!(await isStudioRunning())) {
     throw new CliError({
       title: "studio runtime is not running",
       fix: "studio start",

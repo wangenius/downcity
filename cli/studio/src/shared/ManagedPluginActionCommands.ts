@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 负责把需要运行中 agent 承载的 plugin actions 挂到 commander（`studio <plugin> <action>`）。
  * - 仅处理 CLI 参数映射与远程调用，不承载 plugin 状态机逻辑。
- * - 命令注册表与调度时间解析统一复用 agent 包实现，避免 city 维护第二套事实源。
+ * - 命令注册表与调度时间解析统一复用 agent 包实现，避免 Studio 维护第二套事实源。
  */
 
 import path from "node:path";

@@ -31,7 +31,7 @@ Downcity 的核心配置由 3 部分组成：
 
 ### `execution`
 
-agent 绑定模型 ID（映射到 city 全局模型池）：
+agent 绑定模型 ID（映射到 Studio 全局模型池）：
 
 ```json
 {
@@ -103,16 +103,16 @@ agent 绑定模型 ID（映射到 city 全局模型池）：
 
 ```bash
 studio asr on SenseVoiceSmall
-city config get plugins.asr
+studio config get plugins.asr
 ```
 
 ## 常用命令
 
 ```bash
-city config get
-city config get execution.modelId
-city model list
-city config unset plugins.chat.channels.telegram
+studio config get
+studio config get execution.modelId
+studio model list
+studio config unset plugins.chat.channels.telegram
 ```
 
 ## 下一步

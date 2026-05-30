@@ -19,20 +19,20 @@ city --version
 >
 > If `studio` is not found after install, see [FAQ](/en/docs/operations/faq).
 >
-> To upgrade later, run `city update`. It upgrades the package you originally installed.
+> To upgrade later, run `studio update`. It upgrades the package you originally installed.
 
-## 2. Initialize City (first time only)
+## 2. Initialize Studio (first time only)
 
 ```bash
-city init
+studio init
 ```
 
 This creates console-global config under `~/.downcity/`.
 
-## 3. Start City
+## 3. Start Studio
 
 ```bash
-city start
+studio start
 ```
 
 > `studio agent start` requires console to be running first.
@@ -70,7 +70,7 @@ The minimal `downcity.json` example should be:
 
 Notes:
 
-- `modelId` points to a model in the city global model pool
+- `modelId` points to a model in the Studio global model pool
 - the project no longer stores the old `model.primary` structure
 - if you have not prepared a model pool yet, do that first at the global level
 
@@ -106,7 +106,7 @@ Notes:
 ## 8. Optional: start Console UI
 
 ```bash
-city start --console
+studio start --console
 ```
 
 ## 9. Optional: Chrome extension quick-send from page selection

@@ -58,7 +58,7 @@ export function AuthGatePage(props: AuthGatePageProps) {
             {checking
               ? "验证访问权限..."
               : bootstrapRequired
-                ? "请先在本机终端执行 city token create"
+                ? "请先在本机终端执行 studio token create"
                 : "Console UI Bearer Token"}
           </p>
         </div>
@@ -83,13 +83,13 @@ export function AuthGatePage(props: AuthGatePageProps) {
                 placeholder="支持直接粘贴 Bearer xxx 或纯 token"
               />
               <div className="rounded-[11px] bg-secondary/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                如何获取：在当前机器的终端执行 `city token create my-token`，或直接运行 `city token`。
+                如何获取：在当前机器的终端执行 `studio token create my-token`，或直接运行 `studio token`。
               </div>
             </div>
 
             {bootstrapRequired && (
               <div className="rounded-[11px] bg-secondary/70 px-3 py-2 text-xs text-muted-foreground">
-                先在当前机器的终端执行 `city token create my-token`，拿到 token 后再粘贴到这里。
+                先在当前机器的终端执行 `studio token create my-token`，拿到 token 后再粘贴到这里。
               </div>
             )}
 

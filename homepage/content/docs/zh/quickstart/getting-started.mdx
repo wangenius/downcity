@@ -19,20 +19,20 @@ city --version
 >
 > 如果安装后仍然找不到 `studio`，请先看 [FAQ](/zh/docs/operations/faq)。
 >
-> 后续升级可以直接执行 `city update`，它会更新你最初安装的那个包。
+> 后续升级可以直接执行 `studio update`，它会更新你最初安装的那个包。
 
-## 2. 初始化 City（仅首次）
+## 2. 初始化 Studio（仅首次）
 
 ```bash
-city init
+studio init
 ```
 
 该命令会生成 Console 全局配置（位于 `~/.downcity/`）。
 
-## 3. 启动 City
+## 3. 启动 Studio
 
 ```bash
-city start
+studio start
 ```
 
 > `studio agent start` 依赖 console 先运行。
@@ -70,7 +70,7 @@ studio agent create .
 
 说明：
 
-- `modelId` 指向 city 全局模型池中的某个模型
+- `modelId` 指向 Studio 全局模型池中的某个模型
 - 项目本身不再直接保存旧的 `model.primary` 结构
 - 如果你还没准备模型池，请先到全局模型管理中准备一个可用模型
 
@@ -106,7 +106,7 @@ studio agent list --running
 ## 8. 可选：启动 Console UI
 
 ```bash
-city start --console
+studio start --console
 ```
 
 ## 9. 可选：Chrome 扩展网页选区直发 Agent

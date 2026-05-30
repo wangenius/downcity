@@ -100,11 +100,22 @@ interface CommandRecordTone {
  * 允许自动补 `city` 前缀的一级命令。
  *
  * 关键点（中文）
- * - `city` 是 City runtime / 控制面入口；
- * - 仅对已知 City 命令做自动补全；
+ * - `city` 只负责管理已部署的 City；
+ * - 仅对明确的 City 管理命令做自动补全；
  * - 其他 shell 内建/系统命令（如 `clear`/`cd`/`ls`）保持原样执行。
  */
 const CITY_COMMAND_ROOTS = new Set([
+  "manage",
+])
+
+/**
+ * 允许自动补 `studio` 前缀的一级命令。
+ *
+ * 关键点（中文）
+ * - `studio` 是本机 Agent 宿主环境入口；
+ * - 本机 runtime、Console、模型、配置、agent 与插件相关命令都应通过 studio 执行。
+ */
+const STUDIO_COMMAND_ROOTS = new Set([
   "init",
   "start",
   "stop",
@@ -117,18 +128,6 @@ const CITY_COMMAND_ROOTS = new Set([
   "model",
   "token",
   "env",
-  "reset",
-  "manage",
-])
-
-/**
- * 允许自动补 `studio` 前缀的一级命令。
- *
- * 关键点（中文）
- * - `studio` 是本机 Agent 宿主环境入口；
- * - agent 与插件相关命令都应通过 studio 执行。
- */
-const STUDIO_COMMAND_ROOTS = new Set([
   "agent",
   "chat",
   "plugin",
@@ -144,15 +143,14 @@ const STUDIO_COMMAND_ROOTS = new Set([
 
 const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> = [
   {
-    label: "City",
+    label: "Studio Runtime",
     items: [
-      { label: "Version", command: "-v", description: "查看 CLI 版本" },
-      { label: "City Status", command: "status", description: "查看 city 后台、Console 与托管 agent 状态" },
-      { label: "City Start", command: "start", description: "启动 city runtime" },
-      { label: "City Start All", command: "start --all", description: "启动 city、Console 与公网模式" },
-      { label: "City Restart", command: "restart", description: "重启 city 后台并恢复已运行 agent" },
-      { label: "City Stop", command: "stop", description: "停止 Console、city 后台与受管 agent" },
-      { label: "City Manage", command: "manage", description: "打开 City 交互式管理界面" },
+      { label: "Version", command: "studio -v", description: "查看 Studio CLI 版本" },
+      { label: "Studio Status", command: "status", description: "查看 studio 后台、Console 与托管 agent 状态" },
+      { label: "Studio Start", command: "start", description: "启动本机 Studio runtime" },
+      { label: "Studio Start All", command: "start --all", description: "启动 Studio、Console 与公网模式" },
+      { label: "Studio Restart", command: "restart", description: "重启 Studio 后台并恢复已运行 agent" },
+      { label: "Studio Stop", command: "stop", description: "停止 Console、Studio 后台与受管 agent" },
     ],
   },
   {
@@ -181,14 +179,21 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
     ],
   },
   {
-    label: "City Config",
+    label: "Studio Config",
     items: [
       { label: "Config", command: "config", description: "管理 downcity.json 配置与 alias" },
-      { label: "Model", command: "model", description: "打开 city 全局模型池管理器" },
+      { label: "Model", command: "model", description: "打开 Studio 全局模型池管理器" },
       { label: "Token", command: "token", description: "管理本机 Bearer Token" },
       { label: "Env", command: "env", description: "管理平台 Env key" },
-      { label: "City Init", command: "init", description: "初始化 city 全局配置" },
-      { label: "City Update", command: "update", description: "更新全局 downcity CLI 聚合包" },
+      { label: "Studio Init", command: "init", description: "初始化 Studio 全局配置" },
+      { label: "Studio Update", command: "update", description: "更新全局 downcity CLI 聚合包" },
+    ],
+  },
+  {
+    label: "City Admin",
+    items: [
+      { label: "City Version", command: "city -v", description: "查看 City 管理命令版本" },
+      { label: "City Manage", command: "manage", description: "打开 City 交互式管理界面" },
     ],
   },
   {
@@ -324,8 +329,8 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
   /**
    * 解析最终执行命令（中文）
    * - 已显式输入 `city|studio ...`：保持原样。
-   * - 首 token 是 City 已知命令/全局参数（`-v`）：自动补 `city`。
-   * - 首 token 是 Studio 已知命令：自动补 `studio`。
+   * - 首 token 是 Studio 已知命令/全局参数（`-v`）：自动补 `studio`。
+   * - 首 token 是 City 已知命令：自动补 `city`。
    * - 其他命令（clear/cd/ls/...）：按原始 shell 命令执行。
    */
   const resolveExecutionCommand = React.useCallback((commandTextInput: string): string => {
@@ -334,8 +339,8 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
     if (/^(?:city|studio)(?:\s|$)/i.test(raw)) return raw
     const first_token = String(raw.split(/\s+/, 1)[0] || "").trim().toLowerCase()
     if (!first_token) return ""
-    if (first_token.startsWith("-") || CITY_COMMAND_ROOTS.has(first_token)) return `city ${raw}`
-    if (STUDIO_COMMAND_ROOTS.has(first_token)) return `studio ${raw}`
+    if (first_token.startsWith("-") || STUDIO_COMMAND_ROOTS.has(first_token)) return `studio ${raw}`
+    if (CITY_COMMAND_ROOTS.has(first_token)) return `city ${raw}`
     return raw
   }, [])
 

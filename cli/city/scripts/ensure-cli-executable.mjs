@@ -6,8 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packageRoot = path.resolve(__dirname, "..");
 const cliEntryPaths = [
-  path.join(packageRoot, "bin/city/index.js"),
-  path.join(packageRoot, "bin/studio/index.js"),
+  path.join(packageRoot, "bin/index.js"),
 ];
 
 for (const cliEntryPath of cliEntryPaths) {

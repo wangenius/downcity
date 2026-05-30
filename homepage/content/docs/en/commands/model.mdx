@@ -1,15 +1,15 @@
 ---
-title: city model
+title: studio model
 description: Dedicated management for console-global language models (provider/model)
 ---
 
-# `city model`
+# `studio model`
 
 Dedicated model management command group for language models only.
 
 ## Design Rules
 
-- Bare `city model` opens an interactive manager in a TTY.
+- Bare `studio model` opens an interactive manager in a TTY.
 - `create` remains a direct shortcut into the create flow.
 - Script subcommands (`list/pause/update/test/...`) remain available for automation.
 - Provider `apiKey` is stored in `~/.downcity/downcity.db` and encrypted on write.
@@ -20,56 +20,56 @@ Dedicated model management command group for language models only.
 
 ```bash
 # Interactive manager
-city model
+studio model
 
 # Interactive create (choose provider or model)
-city model create
+studio model create
 
 # List
-city model list
+studio model list
 
 # Read details
-city model get provider <providerId>
-city model get model <modelId>
+studio model get provider <providerId>
+studio model get model <modelId>
 
 # Pause model (enabled defaults to true)
-city model pause <modelId>
-city model pause <modelId> --enabled false
+studio model pause <modelId>
+studio model pause <modelId> --enabled false
 
 # Discover provider models (optionally auto-add)
-city model discover <providerId>
-city model discover <providerId> --auto-add true --prefix openai_
+studio model discover <providerId>
+studio model discover <providerId> --auto-add true --prefix openai_
 
 # Update provider
-city model update provider <providerId> --api-key "$OPENAI_API_KEY"
-city model update provider kimi_cn --type moonshot-cn
-city model update provider kimi_ai --type moonshot-ai
+studio model update provider <providerId> --api-key "$OPENAI_API_KEY"
+studio model update provider kimi_cn --type moonshot-cn
+studio model update provider kimi_ai --type moonshot-ai
 
 # Update model
-city model update model <modelId> --name gpt-4o-mini --provider openai_main
+studio model update model <modelId> --name gpt-4o-mini --provider openai_main
 
 # Remove provider/model
-city model remove provider <providerId>
-city model remove model <modelId>
+studio model remove provider <providerId>
+studio model remove model <modelId>
 
 # Bind model to project (set downcity.json.execution.modelId)
-city model use <modelId> --path /path/to/agent
+studio model use <modelId> --path /path/to/agent
 
 # Test provider
-city model test provider <providerId>
+studio model test provider <providerId>
 
 # Test model (real call)
-city model test model <modelId>
+studio model test model <modelId>
 ```
 
 ## Interactive Manager
 
-- `city model` is the human-first entrypoint for the global model pool.
+- `studio model` is the human-first entrypoint for the global model pool.
 - It lets you browse providers and models, edit settings, remove entries, test connectivity, pause/resume models, bind a model to a project, and jump into the create flow.
 - Removal is guarded:
   - provider removal is blocked while any model still references it
   - model removal is blocked while any agent project still references it via `downcity.json.execution.modelId`
-- In non-interactive environments, `city model` falls back to normal help output.
+- In non-interactive environments, `studio model` falls back to normal help output.
 
 ## create Behavior
 
@@ -99,16 +99,16 @@ city model test model <modelId>
 
 ## Related Commands
 
-- [`city config`](/en/docs/commands/config)
+- [`studio config`](/en/docs/commands/config)
 - [`studio agent create`](/en/docs/commands/agent/create)
 - [`studio agent start`](/en/docs/commands/agent/start)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/city/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ city model list
+$ studio model list
 {
   "success": true,
   "providers": [
@@ -133,7 +133,7 @@ $ city model list
 ```
 
 ```text
-$ city model pause <modelId>
+$ studio model pause <modelId>
 {
   "success": true,
   "modelId": "<modelId>",

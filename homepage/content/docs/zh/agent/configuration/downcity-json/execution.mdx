@@ -1,6 +1,6 @@
 ---
 title: execution 配置
-description: 当前 Agent 项目如何绑定到 city 全局模型池中的模型
+description: 当前 Agent 项目如何绑定到 Studio 全局模型池中的模型
 ---
 
 # `execution` 配置
@@ -19,7 +19,7 @@ description: 当前 Agent 项目如何绑定到 city 全局模型池中的模型
 ## 含义
 
 - `type` 固定为 `api`
-- `modelId` 指向 city 全局模型池中的某个模型 ID
+- `modelId` 指向 Studio 全局模型池中的某个模型 ID
 
 在当前代码里，项目执行绑定就是围绕这条约束统一解析的。
 
@@ -32,7 +32,7 @@ description: 当前 Agent 项目如何绑定到 city 全局模型池中的模型
 - 模型名
 - 其它全局模型细节
 
-统一放在 city 全局模型池里管理。
+统一放在 Studio 全局模型池里管理。
 
 项目只需要声明“我用哪个模型”。
 

@@ -18,6 +18,9 @@ bin
 bun.*
 # Package build output
 package/bin
+cli/downcity/city-cli/
+cli/downcity/studio-cli/
+cli/downcity/public/
 !examples/demo-agent/bin
 # Runtime data
 .downcity/logs/

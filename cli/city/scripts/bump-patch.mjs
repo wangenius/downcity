@@ -1,5 +1,5 @@
 /**
- * 每次 build 自动递增 @downcity/city-cli 的 patch 版本号。
+ * 每次 build 自动递增内部 city 命令构建单元的 patch 版本号。
  *
  * 关键点（中文）
  * - 直接修改 cli/city/package.json 的 version 字段。

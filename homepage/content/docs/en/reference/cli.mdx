@@ -15,22 +15,22 @@ CLI docs are organized by command pages and command groups.
 ## Primary command groups
 
 - Fixed root commands:
-  - [`city init`](/en/docs/commands/init)
-  - [`city start`](/en/docs/commands/start)
-  - [`city stop`](/en/docs/commands/stop)
-  - [`city restart`](/en/docs/commands/restart)
-  - [`city update`](/en/docs/commands/update)
-  - [`city status`](/en/docs/commands/status)
-  - [`city public`](/en/docs/commands/public)
+  - [`studio init`](/en/docs/commands/init)
+  - [`studio start`](/en/docs/commands/start)
+  - [`studio stop`](/en/docs/commands/stop)
+  - [`studio restart`](/en/docs/commands/restart)
+  - [`studio update`](/en/docs/commands/update)
+  - [`studio status`](/en/docs/commands/status)
+  - [`studio public`](/en/docs/commands/public)
 - Fixed module commands:
-  - [`city console`](/en/docs/commands/console/console)
+  - [`studio console`](/en/docs/commands/console/console)
   - [`studio agent`](/en/docs/commands/agent/agent)
   - [`studio agent create`](/en/docs/commands/agent/create)
   - [`studio agent list`](/en/docs/commands/agent/list)
   - [`studio agent chat`](/en/docs/commands/agent/chat)
-  - [`city config`](/en/docs/commands/config)
-  - [`city model`](/en/docs/commands/model)
-  - [`city env`](/en/docs/commands/env)
+  - [`studio config`](/en/docs/commands/config)
+  - [`studio model`](/en/docs/commands/model)
+  - [`studio env`](/en/docs/commands/env)
   - [`studio plugin`](/en/docs/commands/plugin/plugin)
 - Dynamic action commands:
   - [`studio chat`](/en/docs/commands/plugin/chat)
@@ -45,25 +45,25 @@ CLI docs are organized by command pages and command groups.
 
 ## Runtime model (short)
 
-- `city start`: start city runtime only
-- `city start --console` / `city start -a`: start city runtime and Console together
-- `city console start`: start Console only, after city runtime is already running
-- `city stop`: stop Console, then stop city runtime and managed agents
-- `city restart`: restart city runtime, restore managed agents, then restart Console
-- `city update`: update the currently installed global `downcity` CLI bundle
-- `city public`: manage persisted public exposure for Console, with interactive mode plus `on/off/status`
+- `studio start`: start Studio runtime only
+- `studio start --console` / `studio start -a`: start Studio runtime and Console together
+- `studio console start`: start Console only, after Studio runtime is already running
+- `studio stop`: stop Console, then stop Studio runtime and managed agents
+- `studio restart`: restart Studio runtime, restore managed agents, then restart Console
+- `studio update`: update the currently installed global `downcity` CLI bundle
+- `studio public`: manage persisted public exposure for Console, with interactive mode plus `on/off/status`
 - `studio agent`: open the interactive agent manager in a TTY
 - `studio agent create`: initialize project runtime files
 - `studio agent list`: inspect registered agents, or use `--running` for active ones only
 - `studio agent start`: start project agent daemon
 - `studio agent stop`: stop project agent daemon
 - `studio agent chat`: chat with an agent in interactive mode or send one-shot messages with `--message`
-- `city console`: manage the Console module itself
+- `studio console`: manage the Console module itself
 - `studio plugin ...`: inspect plugin catalog, manage plugin lifecycle, or use advanced plugin command forms
 - `studio chat/task/memory/contact/shell ...`: normal managed-plugin runtime commands
 - `studio web/skill/asr/tts ...`: normal local plugin commands
-- `city model`: open the interactive global model manager in a TTY
-- `city model ...`: manage model config for runtime and automation
+- `studio model`: open the interactive global model manager in a TTY
+- `studio model ...`: manage model config for runtime and automation
 
 ## Always up to date
 

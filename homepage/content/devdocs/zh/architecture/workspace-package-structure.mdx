@@ -94,9 +94,9 @@ flowchart TD
 
 | 目录 | package 名 | 定位 | 主要产物 |
 | --- | --- | --- | --- |
-| `cli/city` | `@downcity/city-cli` | City 管理命令、Console gateway、控制面 | `bin/`、`public/` |
-| `cli/studio` | `@downcity/studio-cli` | 本机 Agent 宿主命令 | `bin/` |
-| `cli/downcity` | `downcity` | 全局安装聚合包，暴露 `city` / `studio` | `bin/` |
+| `cli/city` | private workspace | City 管理命令、Console gateway、控制面 | `bin/`、`public/` |
+| `cli/studio` | private workspace | 本机 Agent 宿主命令 | `bin/` |
+| `cli/downcity` | `downcity` | 唯一对外全局安装包，暴露 `city` / `studio` | `bin/`、复制后的命令 runtime |
 | `packages/city` | `@downcity/city` | 可复用 City runtime、service/action 基建 | `dist/` |
 | `packages/ui` | `@downcity/ui` | React UI SDK | `dist/` |
 | `products/console` | `@downcity/console-ui` | 浏览器 Console 前端 | 直接输出到 `cli/city/public/` |
@@ -132,8 +132,8 @@ flowchart LR
 flowchart TD
     ConsoleSrc["products/console"] -- vite build --> ConsolePublic["cli/city/public"]
     CityCliSrc["cli/city"] -- tsc --> CityCliBin["cli/city/bin"]
-    StudioCliSrc["cli/studio"] -- shim build --> StudioCliBin["cli/studio/bin"]
-    BundleSrc["cli/downcity"] -- shim build --> BundleBin["cli/downcity/bin"]
+    StudioCliSrc["cli/studio"] -- tsc --> StudioCliBin["cli/studio/bin"]
+    BundleSrc["cli/downcity"] -- copy runtime --> BundleBin["cli/downcity/bin + city-cli + studio-cli + public"]
     RuntimeSrc["packages/city"] -- tsc --> RuntimeDist["packages/city/dist"]
     UISrc["packages/ui"] -- tsup --> UIDist["packages/ui/dist"]
     ExtensionSrc["products/chrome-extension"] -- vite build --> ExtensionDist["products/chrome-extension/dist"]

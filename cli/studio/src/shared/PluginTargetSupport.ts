@@ -1,0 +1,275 @@
+/**
+ * `studio plugin` 运行态命令共享辅助 + Agent 预检。
+ *
+ * 关键点（中文）
+ * - 统一承载 plugin runtime 命令的参数解析、目标 agent 路径解析与项目目录校验。
+ * - 提供 `checkAgentPreflight` 供 start/restart/status 等命令统一使用。
+ * - 保持 command 注册层只关注命令树，不再直接承载路径解析细节。
+ */
+
+import path from "node:path";
+import fs from "node:fs";
+import type { Command } from "commander";
+import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
+import { listManagedAgentEntries } from "@/process/registry/CityRegistry.js";
+import { isCityRunning } from "@/process/registry/CityRuntime.js";
+import type { JsonValue } from "@downcity/agent";
+import { parsePort, resolveAgentId } from "./IndexSupport.js";
+import { CliError } from "./CliError.js";
+import type { ActionScheduleJobStatus } from "@downcity/agent";
+import type { PluginCliBaseOptions } from "@downcity/agent";
+import { parseBoolean } from "./IndexSupport.js";
+import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
+
+export function isRegistryEntryRunning(
+  entry: { status?: "running" | "stopped" },
+): boolean {
+  return entry.status !== "stopped";
+}
+
+/**
+ * Agent 启动前预检选项。
+ */
+export interface AgentPreflightOptions {
+  /** 是否要求 studio runtime 已运行。 */
+  requireCityRunning?: boolean;
+}
+
+/**
+ * Agent 启动前统一预检。
+ *
+ * 关键点（中文）
+ * - 收敛 start/restart/status 等命令的前置校验逻辑。
+ * - 按顺序检查，首个失败即抛 CliError（city running → PROFILE.md → downcity.json → binding）。
+ *
+ * @throws {CliError} 任一校验失败时抛出。
+ */
+export async function checkAgentPreflight(
+  projectRoot: string,
+  options?: AgentPreflightOptions,
+): Promise<void> {
+  if (options?.requireCityRunning !== false) {
+    if (!(await isCityRunning())) {
+      throw new CliError({
+        title: "studio runtime is not running",
+        fix: "studio start",
+      });
+    }
+  }
+
+  const profilePath = getProfileMdPath(projectRoot);
+  if (!fs.existsSync(profilePath)) {
+    throw new CliError({
+      title: "Project not initialized",
+      note: `PROFILE.md not found at ${projectRoot}`,
+      fix: "studio agent create",
+    });
+  }
+
+  const downcityJsonPath = getDowncityJsonPath(projectRoot);
+  if (!fs.existsSync(downcityJsonPath)) {
+    throw new CliError({
+      title: "downcity.json not found",
+      note: `project: ${projectRoot}`,
+      fix: "studio agent create",
+    });
+  }
+
+  // 关键点（中文）：提前校验 execution binding，避免"启动成功后秒退"。
+  assertProjectExecutionModelReady(projectRoot);
+}
+
+/**
+ * 解析正整数参数。
+ */
+export function parsePositiveIntOption(value: string, fieldName: string): number {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+    throw new Error(`Invalid ${fieldName}: ${value}`);
+  }
+  return parsed;
+}
+
+/**
+ * 归一化 schedule 状态过滤参数。
+ */
+export function normalizeScheduledJobStatus(
+  value: string | undefined,
+): ActionScheduleJobStatus | undefined {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return undefined;
+  if (
+    text === "pending" ||
+    text === "running" ||
+    text === "succeeded" ||
+    text === "failed" ||
+    text === "cancelled"
+  ) {
+    return text;
+  }
+  throw new Error(
+    `Invalid schedule status: ${value}. Use pending|running|succeeded|failed|cancelled.`,
+  );
+}
+
+/**
+ * 解析项目根目录。
+ */
+export function resolveProjectRoot(pathInput?: string): string {
+  const raw = String(pathInput || ".").trim() || ".";
+  // 关键点（中文）：在 agent shell 中，默认 path="." 时优先使用注入的 DC_AGENT_PATH。
+  if (raw === ".") {
+    const envAgentPath = String(process.env.DC_AGENT_PATH || "").trim();
+    if (envAgentPath) return path.resolve(envAgentPath);
+  }
+  return path.resolve(raw);
+}
+
+/**
+ * 通过 agent id 解析 projectRoot。
+ */
+export async function resolveProjectRootByAgentId(agentId: string): Promise<{
+  projectRoot?: string;
+  error?: string;
+}> {
+  const target = String(agentId || "").trim().toLowerCase();
+  if (!target) {
+    return { error: "--agent requires a non-empty value" };
+  }
+
+  const entries = await listManagedAgentEntries();
+  const matchedRoots = entries
+    .filter((entry) => isRegistryEntryRunning(entry))
+    .map((entry) => path.resolve(String(entry.projectRoot || "").trim() || "."))
+    .filter((root, index, all) => all.indexOf(root) === index)
+    .filter((root) => {
+      const byDirName = path.basename(root).toLowerCase() === target;
+      const byProjectId = resolveAgentId(root).toLowerCase() === target;
+      return byDirName || byProjectId;
+    });
+
+  if (matchedRoots.length === 0) {
+    return {
+      error: `Agent not found in managed agent registry: ${agentId}. Run "studio agent list" to inspect ids.`,
+    };
+  }
+  if (matchedRoots.length > 1) {
+    return {
+      error: `Agent id is ambiguous: ${agentId}. Matched paths: ${matchedRoots.join(", ")}`,
+    };
+  }
+
+  return { projectRoot: matchedRoots[0] };
+}
+
+/**
+ * 统一解析 plugin runtime 命令目标路径（agent 优先于 path）。
+ */
+export async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<{
+  projectRoot?: string;
+  error?: string;
+}> {
+  const explicitAgent = String(options.agent || "").trim();
+  if (explicitAgent) {
+    return resolveProjectRootByAgentId(explicitAgent);
+  }
+
+  const rawPath = String(options.path || ".").trim() || ".";
+  // 关键点（中文）：在 agent shell 中，未显式传 --agent 且 path 走默认值时，
+  // 优先使用注入的 DC_AGENT_ID 走 registry 解析，确保多 agent 下目标稳定。
+  if (rawPath === ".") {
+    const envAgentId = String(process.env.DC_AGENT_ID || "").trim();
+    if (envAgentId) {
+      const byId = await resolveProjectRootByAgentId(envAgentId);
+      if (byId.projectRoot) {
+        return byId;
+      }
+    }
+  }
+
+  const projectRoot = resolveProjectRoot(options.path);
+  const entries = await listManagedAgentEntries();
+  const registered = entries.some(
+    (entry) =>
+      isRegistryEntryRunning(entry) &&
+      path.resolve(String(entry.projectRoot || "").trim() || ".") === projectRoot,
+  );
+  if (!registered) {
+    return {
+      error:
+        `Agent is not registered in managed agent registry: ${projectRoot}. ` +
+        `Run "studio agent list" to inspect registered agents.`,
+    };
+  }
+  return { projectRoot };
+}
+
+/**
+ * 解析 ActionSchedule 管理命令目标路径。
+ */
+export async function resolvePluginScheduleProjectRoot(options: PluginCliBaseOptions): Promise<{
+  projectRoot?: string;
+  error?: string;
+}> {
+  const explicitAgent = String(options.agent || "").trim();
+  if (explicitAgent) {
+    return resolveProjectRootByAgentId(explicitAgent);
+  }
+  return {
+    projectRoot: resolveProjectRoot(options.path),
+  };
+}
+
+/**
+ * 校验路径是否为有效 agent 项目目录。
+ */
+export function validateAgentProjectRoot(projectRoot: string): string | null {
+  const missing: string[] = [];
+  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
+    missing.push("downcity.json");
+  }
+  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
+    missing.push("PROFILE.md");
+  }
+
+  if (missing.length === 0) return null;
+  return `Invalid agent path: ${projectRoot}. Missing: ${missing.join(", ")}`;
+}
+
+/**
+ * 解析 plugin command payload。
+ */
+export function parseCommandPayload(raw?: string): JsonValue | undefined {
+  if (typeof raw !== "string") return undefined;
+  const text = raw.trim();
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text) as JsonValue;
+  } catch {
+    // 关键点（中文）：payload 不是 JSON 时按字符串透传，避免强制格式。
+    return text;
+  }
+}
+
+/**
+ * 注入 plugin 目标解析通用选项。
+ */
+export function addPluginTargetOptions(command: Command): Command {
+  return command
+    .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <id>", "agent id（从 managed agent registry 解析）")
+    .option("--host <host>", "Server host（覆盖自动解析）")
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
+    .option("--token <token>", "覆盖 Bearer Token（按 HTTP daemon 调用时可选）")
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
+}
+
+/**
+ * 注入 ActionSchedule 管理命令通用选项。
+ */
+export function addPluginScheduleOptions(command: Command): Command {
+  return command
+    .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <id>", "agent id（从 managed agent registry 解析）")
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
+}

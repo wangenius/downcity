@@ -1,18 +1,18 @@
 ---
-title: city config
+title: studio config
 description: Manage project downcity.json and alias (model pool is separate)
 ---
 
-# `city config`
+# `studio config`
 
 Manage project `downcity.json` and alias.
 
-> Naming note: configuration command is `city config`, not `city console config`.
+> Naming note: configuration command is `studio config`, not `studio console config`.
 
 ## Usage
 
 ```bash
-city config <subcommand>
+studio config <subcommand>
 ```
 
 ## Subcommands
@@ -22,11 +22,11 @@ city config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> Model pool management has moved to [`city model`](/en/docs/commands/model).
+> Model pool management has moved to [`studio model`](/en/docs/commands/model).
 
 ## Plugin config
 
-`city config` now reads and writes project `downcity.json` only.
+`studio config` now reads and writes project `downcity.json` only.
 
 For plugin configuration, edit:
 
@@ -36,25 +36,25 @@ For plugin configuration, edit:
 Examples:
 
 ```bash
-city config get plugins.asr
-city config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+studio config get plugins.asr
+studio config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
 ## Examples
 
 ```bash
-city config get model.primary
-city config set model.primary fast
-city config unset plugins.chat.channels.telegram
-city config alias --dry-run
+studio config get model.primary
+studio config set model.primary fast
+studio config unset plugins.chat.channels.telegram
+studio config alias --dry-run
 ```
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/city/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ city config get model.primary
+$ studio config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
@@ -65,7 +65,7 @@ $ city config get model.primary
 ```
 
 ```text
-$ city config set model.primary gpt-5.4
+$ studio config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",

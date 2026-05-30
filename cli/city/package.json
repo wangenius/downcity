@@ -1,16 +1,16 @@
 {
-  "name": "@downcity/city-cli",
-  "version": "1.1.52",
+  "name": "downcity-city-command",
+  "version": "1.1.54",
+  "private": true,
   "type": "module",
-  "description": "Downcity City CLI — City 管理、Console control plane 与运维入口",
+  "description": "Downcity City CLI — City 服务、账户、模型与资源管理入口",
   "bin": {
-    "city": "./bin/city/index.js"
+    "city": "./bin/index.js"
   },
   "scripts": {
     "build": "rm -rf bin tsconfig.tsbuildinfo && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs && node scripts/ensure-cli-executable.mjs",
     "dev": "tsc --watch",
-    "start": "node bin/city/index.js",
-    "start:studio-internal": "node bin/studio/index.js",
+    "start": "node bin/index.js",
     "typecheck": "tsc --noEmit",
     "lint:boundaries": "node scripts/lint-import-boundaries.mjs",
     "lint": "npm run lint:boundaries"
@@ -29,8 +29,6 @@
     "@ai-sdk/xai": "^3.0.67",
     "@clack/prompts": "^1.2.0",
     "@larksuiteoapi/node-sdk": "^1.40.0",
-    "@mariozechner/pi-ai": "^0.70.0",
-    "@mariozechner/pi-coding-agent": "^0.70.0",
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "ai": "^6.0.57",
     "better-sqlite3": "^12.0.0",

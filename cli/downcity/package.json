@@ -1,21 +1,59 @@
 {
   "name": "downcity",
-  "version": "1.1.52",
+  "version": "1.1.54",
   "type": "module",
   "description": "Downcity terminal product bundle — installs city and studio commands",
   "bin": {
     "city": "./bin/city/index.js",
     "studio": "./bin/studio/index.js"
   },
+  "files": [
+    "bin/",
+    "city-cli/",
+    "studio-cli/",
+    "public/",
+    "README.md",
+    "package.json"
+  ],
   "scripts": {
-    "build": "node scripts/ensure-cli-executable.mjs",
+    "build": "node scripts/copy-cli-products.mjs && node scripts/ensure-cli-executable.mjs",
     "dev": "node bin/city/index.js",
     "start": "node bin/city/index.js",
     "typecheck": "node scripts/verify-entry.mjs"
   },
   "dependencies": {
-    "@downcity/city-cli": "workspace:^",
-    "@downcity/studio-cli": "workspace:^"
+    "@ai-sdk/anthropic": "^3.0.28",
+    "@ai-sdk/google": "^3.0.6",
+    "@ai-sdk/huggingface": "^1.0.37",
+    "@ai-sdk/moonshotai": "^2.0.10",
+    "@ai-sdk/open-responses": "^1.0.6",
+    "@ai-sdk/openai": "^3.0.21",
+    "@ai-sdk/openai-compatible": "^2.0.0",
+    "@ai-sdk/xai": "^3.0.67",
+    "@clack/prompts": "^1.2.0",
+    "@downcity/agent": "workspace:^",
+    "@downcity/gate": "workspace:^",
+    "@downcity/plugins": "workspace:^",
+    "@larksuiteoapi/node-sdk": "^1.40.0",
+    "@openrouter/ai-sdk-provider": "^2.2.3",
+    "ai": "^6.0.57",
+    "better-sqlite3": "^12.0.0",
+    "chalk": "^5.4.0",
+    "commander": "^12.0.0",
+    "dotenv": "^16.4.0",
+    "drizzle-orm": "^0.36.4",
+    "execa": "^9.5.0",
+    "fast-glob": "^3.3.0",
+    "fs-extra": "^11.2.0",
+    "hono": "^4.0.0",
+    "js-yaml": "^4.1.0",
+    "nanoid": "^5.1.6",
+    "node-cron": "^3.0.0",
+    "openai": "^4.0.0",
+    "ora": "^8.2.0",
+    "prompts": "^2.4.0",
+    "ws": "^8.19.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {}
 }

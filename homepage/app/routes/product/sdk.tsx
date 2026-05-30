@@ -5,67 +5,67 @@ import { marketingTheme } from "@/lib/marketing-theme";
 const PAGE = {
   zh: {
     title: "Product · City SDK",
-    subtitle: "把 city runtime、CLI、control plane 与能力平台接入你的运行体系，让仓库、Agent 与运维边界保持统一。",
+    subtitle: "把 City runtime、Gate 调用方式与公共服务接入你的产品体系，让多个 Studio 复用同一座服务城市。",
     docsCtaLabel: "查看 City SDK 文档",
     docsCtaHint: "Quick Start、CLI、配置、Plugins、Operations 都在主 docs 中。",
     highlights: [
       {
-        title: "统一 city runtime 与控制平面",
-        description: "围绕 CLI、daemon、Console 网关和平台能力组织同一套运行逻辑，而不是把执行链路拆散到多个入口。",
+        title: "统一 City runtime 与公共服务",
+        description: "围绕 service、action、auth、env 和 studio 访问边界组织同一套服务城市，而不是每个产品重建一套后端。",
       },
       {
         title: "以仓库为边界组织运行",
-        description: "让配置、命令、Plugin、任务与状态都围绕 city 的 repo-native 结构展开，降低运维与排障成本。",
+        description: "让服务、模型、账户、用量与支付都围绕 City 的共享边界展开，降低多产品复用成本。",
       },
       {
         title: "从本地到团队部署一致",
-        description: "用同一套 city 入口承接本地验证、Console 暴露、渠道接入与生产运行，不必维护多套操作面。",
+        description: "用同一套 City 组合承接本地验证、Node 部署与 Edge 部署，不必维护多套服务底座。",
       },
     ],
     scenesTitle: "典型场景",
     scenes: [
-      "团队运行入口：统一启动 city、Console、channel 和 plugin 运行态。",
-      "CLI 驱动运维：把 agent 创建、启动、重载、状态检查都收束到一套命令面。",
-      "平台化接入：在你自己的部署体系里承接模型、任务、联系人、记忆与 shell 能力。",
+      "共享服务城市：让多个 Studio 或产品共用一套账户、模型、用量和支付服务。",
+      "Gate 接入：前端、扩展或后端通过 Gate 访问 City，而不是直接耦合数据库。",
+      "部署组合：用 cities/node 或 cities/edge 组合适配不同运行环境。",
     ],
     factsTitle: "事实对齐",
     facts: [
-      "包名：downcity",
-      "核心源码目录：cli/city/",
-      "CLI 命令：city / studio",
+      "核心包名：@downcity/city",
+      "核心源码目录：packages/city/",
+      "管理入口：city manage",
     ],
   },
   en: {
     title: "Product · City SDK",
     subtitle:
-      "Integrate the city runtime, CLI, control plane, and capability platform into one operating surface for your workflows.",
+      "Integrate the City runtime, Gate access, and public services into one shared service city for multiple studios.",
     docsCtaLabel: "Open City SDK Docs",
     docsCtaHint: "Quick start, CLI, configuration, plugins, and operations live in the main docs.",
     highlights: [
       {
-        title: "Unify runtime and control plane",
-        description: "Keep CLI, daemon, Console gateway, and platform capability flow inside one city runtime model instead of splitting operations across separate surfaces.",
+        title: "Unify City runtime and public services",
+        description: "Keep services, actions, auth, env, and studio boundaries inside one shared service city instead of rebuilding a backend per product.",
       },
       {
         title: "Organize operations around the repo",
-        description: "Let configuration, commands, plugins, tasks, and state all follow one repo-native city structure.",
+        description: "Let service data, model records, accounts, usage, and payment state follow one reusable City boundary.",
       },
       {
         title: "Keep local and team deployment aligned",
-        description: "Use the same city entry surface for local validation, Console exposure, channel access, and production operation.",
+        description: "Use the same City composition across local validation, Node deployment, and edge deployment.",
       },
     ],
     scenesTitle: "Typical Scenarios",
     scenes: [
-      "Team runtime entry: start city, Console, channels, and plugins from one operating surface.",
-      "CLI-driven operations: create, start, reload, and inspect agents through one command layer.",
-      "Platform integration: host model, task, contact, memory, and shell capabilities inside your own deployment boundary.",
+      "Shared service city: let multiple studios or products reuse accounts, models, usage, and payment services.",
+      "Gate access: call City from frontend, extension, or backend code without coupling to database internals.",
+      "Deployment composition: use cities/node or cities/edge for different runtime targets.",
     ],
     factsTitle: "Facts",
     facts: [
-      "Package name: downcity",
-      "Core source directory: cli/city/",
-      "CLI commands: city / studio",
+      "Core package: @downcity/city",
+      "Core source directory: packages/city/",
+      "Management entry: city manage",
     ],
   },
 } as const;
@@ -73,7 +73,7 @@ const PAGE = {
 /**
  * Product City SDK 页面。
  * 说明：
- * 1. 这里聚焦 city runtime、CLI、control plane 这一条产品线。
+ * 1. 这里聚焦 City runtime、Gate 与 services 这一条产品线。
  * 2. Agent SDK 独立到 `/product/agent-sdk`，避免两种 SDK 语义混在一起。
  */
 export default function ProductSdkPage() {

@@ -1,4 +1,4 @@
-name: Publish Downcity mirror package to npmjs
+name: Publish downcity CLI package to npmjs
 
 on:
   workflow_run:
@@ -6,16 +6,29 @@ on:
       - Publish Downcity scoped packages to npmjs
     types:
       - completed
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/publish-downcity.yml"
+      - "cli/city/**"
+      - "cli/studio/**"
+      - "cli/downcity/**"
+      - "packages/agent/package.json"
+      - "packages/gate/package.json"
+      - "packages/plugins/package.json"
+      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 concurrency:
-  group: publish-downcity-mirror-package
+  group: publish-downcity-cli-package
   cancel-in-progress: false
 
 jobs:
   publish:
     if: >
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
@@ -35,19 +48,22 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version: "22.13.1"
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build studio-cli package
+      - name: Build downcity CLI package
         run: |
           set -euo pipefail
           pnpm -C packages/agent build
+          pnpm -C packages/gate build
           pnpm -C packages/plugins build
-          pnpm -C packages/studio-cli build
+          pnpm -C cli/city build
+          pnpm -C cli/studio build
+          pnpm -C cli/downcity build
 
       - name: Validate npm token and package ownership
         env:
@@ -66,13 +82,13 @@ jobs:
             echo "downcity is not published yet. Skipping owner check for first publish."
           fi
 
-      - name: Build mirror tarball and publish
+      - name: Pack and publish downcity
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_DOWNCITY }}
         run: |
           set -euo pipefail
 
-          VERSION="$(node -p "require('./packages/studio-cli/package.json').version")"
+          VERSION="$(node -p "require('./cli/downcity/package.json').version")"
 
           if npm view downcity versions --json >/tmp/downcity-versions.json 2>/dev/null; then
             if grep -q "\"${VERSION}\"" /tmp/downcity-versions.json; then
@@ -82,18 +98,11 @@ jobs:
           fi
 
           PACK_DIR="$(mktemp -d)"
-          UNPACK_DIR="$(mktemp -d)"
-          pnpm -C packages/studio-cli pack --pack-destination "${PACK_DIR}" >/dev/null
-          SOURCE_TARBALL="$(find "${PACK_DIR}" -maxdepth 1 -name '*.tgz' -print -quit)"
-          if [[ -z "${SOURCE_TARBALL}" ]]; then
-            echo "No studio-cli tarball generated."
+          pnpm -C cli/downcity pack --pack-destination "${PACK_DIR}" >/dev/null
+          DOWNCITY_TARBALL="$(find "${PACK_DIR}" -maxdepth 1 -name '*.tgz' -print -quit)"
+          if [[ -z "${DOWNCITY_TARBALL}" ]]; then
+            echo "No downcity tarball generated."
             exit 1
           fi
 
-          tar -xzf "${SOURCE_TARBALL}" -C "${UNPACK_DIR}"
-
-          node -e "const fs = require('fs'); const packageJsonPath = process.argv[1]; const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')); pkg.name = 'downcity'; fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');" "${UNPACK_DIR}/package/package.json"
-
-          MIRROR_TARBALL="${RUNNER_TEMP}/downcity-${VERSION}.tgz"
-          tar -czf "${MIRROR_TARBALL}" -C "${UNPACK_DIR}" package
-          npm publish "${MIRROR_TARBALL}" --access public
+          npm publish "${DOWNCITY_TARBALL}" --access public

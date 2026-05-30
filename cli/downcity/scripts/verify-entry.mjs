@@ -2,7 +2,7 @@
  * downcity 聚合包入口校验脚本。
  *
  * 关键点（中文）
- * - typecheck 阶段不需要编译，只需要确认两个转发入口存在。
+ * - typecheck 阶段不需要重新编译，只确认两个源码入口存在。
  * - 这个检查保护 `npm i -g downcity` 后能同时得到 `city` 与 `studio`。
  */
 import fs from "node:fs/promises";

@@ -1,17 +1,17 @@
 ---
-title: city restart
-description: Restart city runtime, restore managed agents, then restart Console
+title: studio restart
+description: Restart Studio runtime, restore managed agents, then restart Console
 ---
 
-# `city restart`
+# `studio restart`
 
-Restart the full city runtime stack.
+Restart the full Studio runtime stack.
 
 Current behavior:
 
 1. stop Console
-2. stop city runtime
-3. restart city runtime
+2. stop Studio runtime
+3. restart Studio runtime
 4. restore managed agents that were running before restart
 5. restart Console
 
@@ -20,27 +20,27 @@ During the stop phase, Downcity stops the matching process group first. ACP exec
 ## Usage
 
 ```bash
-city restart
+studio restart
 ```
 
 ## Related commands
 
-- [`city start`](/en/docs/commands/start)
-- [`city stop`](/en/docs/commands/stop)
-- [`city status`](/en/docs/commands/status)
-- [`city console`](/en/docs/commands/console/console)
+- [`studio start`](/en/docs/commands/start)
+- [`studio stop`](/en/docs/commands/stop)
+- [`studio status`](/en/docs/commands/status)
+- [`studio console`](/en/docs/commands/console/console)
 
 ## Example output
 
 ```text
-$ city restart
-city v1.0.0
+$ studio restart
+studio v1.0.0
 ✅ Console stopped
    pid: <consolePid>
-✅ DC console stopped
-   pid: <cityPid>
-✅ DC console started
-   pid: <newCityPid>
+✅ Studio runtime stopped
+   pid: <studioPid>
+✅ Studio runtime started
+   pid: <newStudioPid>
 Restarting 2 managed agents...
 ✅ Console started
    pid: <newConsolePid>

@@ -23,7 +23,7 @@ usage() {
   echo "  --services 构建 @downcity/services"
   echo "  --gate     构建 @downcity/gate"
   echo "  --plugins  构建 @downcity/plugins"
-  echo "  --cli      构建 Downcity CLI 产品包（@downcity/city-cli + @downcity/studio-cli + downcity）"
+  echo "  --cli      构建 Downcity CLI 产品包（内部 city/studio 构建单元 + downcity）"
   echo "  --ui       构建 @downcity/ui"
   echo "  --all      构建全部 packages（agent + city + services + gate + plugins + ui + cli）"
   echo "  --no-bump  跳过 patch 版本号自增"

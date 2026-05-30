@@ -37,7 +37,7 @@ Fix it by:
 
 1. opening the extension settings page
 2. selecting the matching connection
-3. running `city token create my-token` in the local terminal
+3. running `studio token create my-token` in the local terminal
 4. pasting the token into settings and saving
 
 ## 3. The Remote Service Is Not Exposed Publicly
@@ -52,19 +52,19 @@ From the `studio` CLI code:
 Typical commands:
 
 ```bash
-city start --public
+studio start --public
 ```
 
 or:
 
 ```bash
-city console start --public
+studio console start --public
 ```
 
 If you want that public binding to persist across later restarts, use:
 
 ```bash
-city public on
+studio public on
 ```
 
 ## 4. No Available Agent

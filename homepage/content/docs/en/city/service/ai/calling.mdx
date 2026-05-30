@@ -1,6 +1,6 @@
 ---
 title: Calling AI Service
-description: SDK pathway (UserClient) and OpenAI-compatible pathway (curl / OpenAI SDK / pi-agent) calling examples.
+description: SDK pathway (UserClient) and OpenAI-compatible pathway (curl / OpenAI SDK / downcity agent) calling examples.
 ---
 
 ## SDK Pathway
@@ -64,7 +64,7 @@ await openai.chat.completions.create({
 ```
 
 ```ts
-// pi-agent
+// downcity agent
 const handle = client.ai.model(catalog.get("deepseek-v4-flash"));
 const session = await createPiAgentSession({
   model: handle,
@@ -80,7 +80,7 @@ await session.ask("Write an HTTP server");
 |---|---|
 | Your own studio code, simple prompt → text | SDK |
 | Streaming output to your own UI | SDK |
-| pi-agent agent conversations | OpenAI-Compatible |
+| downcity agent agent conversations | OpenAI-Compatible |
 | OpenAI SDK or compatible clients | OpenAI-Compatible |
 | curl debugging | OpenAI-Compatible |
 | Full multi-turn message history | OpenAI-Compatible |

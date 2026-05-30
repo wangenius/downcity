@@ -1,16 +1,16 @@
 ---
-title: city init
+title: studio init
 description: 初始化全局 console 配置（统一写入 ~/.downcity/downcity.db）
 ---
 
-# `city init`
+# `studio init`
 
 初始化全局 console 基础设施。
 
 ## 用法
 
 ```bash
-city init
+studio init
 ```
 
 ## 行为
@@ -21,24 +21,24 @@ city init
 ## 说明
 
 - 这是 console 级命令，不依赖 agent 项目路径。
-- 后续项目级配置请使用 [`city config`](/zh/docs/commands/config)。
-- `city init` 不会创建或更新模型。
-- 后续可通过 `city model create` 配置模型。
+- 后续项目级配置请使用 [`studio config`](/zh/docs/commands/config)。
+- `studio init` 不会创建或更新模型。
+- 后续可通过 `studio model create` 配置模型。
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/city/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/studio/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city init
-city v1.0.0
+$ studio init
+studio v1.0.0
 Console base initialized
 Console initialized
 ```
 
 ```text
-$ city init
-city v1.0.0
+$ studio init
+studio v1.0.0
 Console base initialized
 Console initialized
 ```

@@ -18,7 +18,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 
 | Package | Purpose |
 | --- | --- |
-| `downcity` | Platform layer and CLI for city runtime, Console gateway, multi-agent registration, model pool, global config, and daemon management. |
+| `downcity` | Public CLI bundle that installs `studio` for local Agent hosting and `city` for deployed City administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
 | `@downcity/city` | City runtime for service registration, actions, auth, env, studio-scoped access, and HTTP routing. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
@@ -31,9 +31,9 @@ Downcity is an agent platform for local projects and team workflows. It combines
 ## Core Capabilities
 
 - Repo is the Agent: initialize a project with `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/`.
-- City control plane: run `city start` or `city console` to manage agents and access the control surface.
+- Studio control plane: run `studio start` or `studio console` to host local agents and access the control surface.
 - Agent daemon lifecycle: create, start, stop, restart, inspect, chat with, and diagnose project agents.
-- Global model pool: manage providers and models through `city model`, then bind projects to model IDs.
+- Global model pool: manage providers and models through `studio model`, then bind projects to model IDs.
 - City runtime: reuse one shared service city across studios with `@downcity/city`, `@downcity/services`, `@downcity/gate`, and deployable `cities/*`.
 - Built-in services: `chat`, `task`, `memory`, `shell`, and `contact`.
 - Built-in plugins: `skill`, `auth`, `web`, `asr`, `tts`, and `workboard`.
@@ -56,12 +56,12 @@ studio --version
 city --version
 ```
 
-`studio` is the local Agent host command. `city` is the City administration command. Use `city update` to upgrade the global CLI.
+`studio` is the local Agent host command. `city` is the deployed City administration command. Use `studio update` to upgrade the global CLI.
 
 ### 2. Initialize the platform
 
 ```bash
-city init
+studio init
 ```
 
 This sets up the global Downcity storage and configuration, by default under `~/.downcity/`.
@@ -69,10 +69,10 @@ This sets up the global Downcity storage and configuration, by default under `~/
 ### 3. Configure a model
 
 ```bash
-city model create
-city model list
-city model use <modelId>
-city model test model <modelId>
+studio model create
+studio model list
+studio model use <modelId>
+studio model test model <modelId>
 ```
 
 `studio` resolves `downcity.json.execution.modelId` into a runtime `LanguageModel` and injects it into agent sessions.
@@ -124,17 +124,17 @@ studio agent start . --foreground
 ### 6. Start Console
 
 ```bash
-city start --console
+studio start --console
 # or
-city console
+studio console
 ```
 
 Useful status commands:
 
 ```bash
-city status
+studio status
 studio agent list
-city console status
+studio console status
 ```
 
 ## SDK Example
@@ -264,6 +264,6 @@ pnpm dev:homepage
 
 - Downcity can execute shell commands, read and write project files, start local daemons, and receive external messages through chat channels.
 - Use a clean Git branch and audit changes with `git status` and `git diff`.
-- Keep secrets out of the repository; prefer local environment variables or `city env`.
+- Keep secrets out of the repository; prefer local environment variables or `studio env`.
 - Use tokens and auth boundaries for Console, HTTP access, and chat channel integrations.
 - Tighten command execution boundaries through sandbox configuration where appropriate.

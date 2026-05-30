@@ -1,19 +1,46 @@
 {
-  "name": "@downcity/studio-cli",
-  "version": "1.1.52",
+  "name": "downcity-studio-command",
+  "version": "1.1.54",
+  "private": true,
   "type": "module",
   "description": "Downcity Studio CLI — 本机 Agent 宿主与运行入口",
   "bin": {
-    "studio": "./bin/studio/index.js"
+    "studio": "./bin/index.js"
   },
   "scripts": {
-    "build": "node scripts/ensure-cli-executable.mjs",
-    "dev": "node bin/studio/index.js",
-    "start": "node bin/studio/index.js",
-    "typecheck": "node scripts/verify-entry.mjs"
+    "build": "rm -rf bin tsconfig.tsbuildinfo && tsc && tsc-alias -f && node scripts/ensure-cli-executable.mjs",
+    "dev": "tsc --watch",
+    "start": "node bin/index.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@downcity/city-cli": "workspace:^"
+    "@ai-sdk/anthropic": "^3.0.28",
+    "@ai-sdk/google": "^3.0.6",
+    "@ai-sdk/huggingface": "^1.0.37",
+    "@ai-sdk/moonshotai": "^2.0.10",
+    "@ai-sdk/open-responses": "^1.0.6",
+    "@ai-sdk/openai": "^3.0.21",
+    "@ai-sdk/openai-compatible": "^2.0.0",
+    "@ai-sdk/xai": "^3.0.67",
+    "@downcity/agent": "workspace:^",
+    "@downcity/plugins": "workspace:^",
+    "@openrouter/ai-sdk-provider": "^2.2.3",
+    "ai": "^6.0.57",
+    "better-sqlite3": "^12.0.0",
+    "chalk": "^5.4.0",
+    "commander": "^12.0.0",
+    "drizzle-orm": "^0.36.4",
+    "fast-glob": "^3.3.0",
+    "fs-extra": "^11.2.0",
+    "nanoid": "^5.1.6",
+    "prompts": "^2.4.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.0.0",
+    "@types/prompts": "^2.4.0",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.7.0"
+  }
 }

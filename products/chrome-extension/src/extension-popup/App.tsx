@@ -364,7 +364,7 @@ export function ExtensionPopupApp() {
           setSessionId("");
           setStatus({
             type: "error",
-            text: "未发现可用 Agent，请先启动 `city agent start`。",
+            text: "未发现可用 Agent，请先启动 `studio agent start`。",
           });
           return;
         }

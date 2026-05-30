@@ -1,9 +1,9 @@
 ---
-title: studio start
+title: city start
 description: Start city runtime in background mode
 ---
 
-# `studio start`
+# `city start`
 
 Start city runtime in background mode.
 
@@ -11,22 +11,22 @@ Startup initializes the city runtime registry and process state.
 If no local token exists yet, startup automatically creates a `console-bootstrap` token and prints the plain token once in startup output.
 Startup also tries to discover the machine's public IP and saves it to Console Env as `DOWNCITY_PUBLIC_HOST`. Later, agent `contact link` generation prefers this address so link codes do not fall back to `127.0.0.1`.
 
-If you also want to start Console in one step, use `studio start --console`, `studio start -a`, or `studio start -p`.
+If you also want to start Console in one step, use `city start --console`, `city start -a`, or `city start -p`.
 If you pass `-p/--public` or `-h/--host`, the CLI also starts Console automatically.
-If you previously enabled persisted public mode with [`studio public`](/en/docs/commands/public), plain `studio start` also reuses that saved Console binding unless you override it explicitly.
+If you previously enabled persisted public mode with [`city public`](/en/docs/commands/public), plain `city start` also reuses that saved Console binding unless you override it explicitly.
 
 ## Usage
 
 ```bash
-studio start
+city start
 ```
 
 ```bash
-studio start --console
+city start --console
 ```
 
 ```bash
-studio start -p
+city start -p
 ```
 
 ## Common options
@@ -38,14 +38,14 @@ studio start -p
 
 ## External access
 
-- Plain `studio start` only starts the runtime and does not expose the Web Console.
-- `studio start --console` still binds Console to `127.0.0.1:5315` by default.
-- `studio start -p` starts Console automatically and switches the bind address to `0.0.0.0:5315`, which is suitable for server access from outside.
-- `studio public on` makes that public Console behavior persist for future plain `studio start` runs.
+- Plain `city start` only starts the runtime and does not expose the Web Console.
+- `city start --console` still binds Console to `127.0.0.1:5315` by default.
+- `city start -p` starts Console automatically and switches the bind address to `0.0.0.0:5315`, which is suitable for server access from outside.
+- `city public on` makes that public Console behavior persist for future plain `city start` runs.
 - When Console is bound to `0.0.0.0`, use the server IP or domain to connect, not `127.0.0.1`.
 - In public mode, startup output also prints `Public URL`.
 - If the machine cannot determine a real public IP by itself (for example behind NAT / reverse proxy / load balancer), start city behind a reachable server, domain, or tunnel.
-- `studio start` saves the auto-detected public IP as global `DOWNCITY_PUBLIC_HOST`; if the deployment environment already injects `DOWNCITY_PUBLIC_URL` or `DOWNCITY_PUBLIC_HOST`, it does not overwrite the existing value.
+- `city start` saves the auto-detected public IP as global `DOWNCITY_PUBLIC_HOST`; if the deployment environment already injects `DOWNCITY_PUBLIC_URL` or `DOWNCITY_PUBLIC_HOST`, it does not overwrite the existing value.
 
 ## Port meanings
 
@@ -54,9 +54,9 @@ studio start -p
 
 ## Related commands
 
-- [`studio stop`](/en/docs/commands/stop)
-- [`studio status`](/en/docs/commands/status)
-- [`studio public`](/en/docs/commands/public)
+- [`city stop`](/en/docs/commands/stop)
+- [`city status`](/en/docs/commands/status)
+- [`city public`](/en/docs/commands/public)
 - [`studio agent list --running`](/en/docs/commands/agent/list)
 
 ## Example Output (Based on Current Implementation)
@@ -64,7 +64,7 @@ studio start -p
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio start --console
+$ city start --console
 downcity v1.0.0
 ✅ city runtime started
    pid: <runtimePid>
@@ -86,7 +86,7 @@ downcity v1.0.0
 ```
 
 ```text
-$ studio start
+$ city start
 downcity v1.0.0
 ✅ city runtime started
    pid: <runtimePid>

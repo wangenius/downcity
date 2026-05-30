@@ -37,7 +37,7 @@ npm run build:extension
 
 1. 打开扩展设置页
 2. 选中对应连接
-3. 在本机终端执行 `studio token create my-token`
+3. 在本机终端执行 `city token create my-token`
 4. 把 token 粘贴到设置页并保存
 
 ## 3. 远程机器上服务没有对外暴露
@@ -52,19 +52,19 @@ npm run build:extension
 通常可以这样启动：
 
 ```bash
-studio start --public
+city start --public
 ```
 
 或者：
 
 ```bash
-studio console start --public
+city console start --public
 ```
 
 如果你希望之后每次启动都沿用公网绑定，可以执行：
 
 ```bash
-studio public on
+city public on
 ```
 
 ## 4. 没有可用 Agent

@@ -8,37 +8,31 @@ description: 用正确启动顺序在 10 分钟内跑通 Console + Agent
 ## 1. 安装
 
 ```bash
-npm install -g @downcity/studio-cli
+npm install -g @downcity/cli
 # 或
-npm install -g downcity
-# 或
-pnpm add -g @downcity/studio-cli
-# 或
-pnpm add -g downcity
+pnpm add -g @downcity/cli
 studio --version
-downstudio --version
+city --version
 ```
 
-> `downcity` 与 `studio` 都是同一个 CLI 可执行命令。
->
-> `@downcity/studio-cli` 与 `downcity` 发布的是同一份 CLI 内容和版本线。
+> `@downcity/cli` 安装后会提供 `studio` 和 `city` 两个命令。
 >
 > 如果安装后仍然找不到 `studio`，请先看 [FAQ](/zh/docs/operations/faq)。
 >
-> 后续升级可以直接执行 `studio update`，它会更新你最初安装的那个包。
+> 后续升级可以直接执行 `city update`，它会更新你最初安装的那个包。
 
-## 2. 初始化 Console（仅首次）
+## 2. 初始化 City（仅首次）
 
 ```bash
-studio init
+city init
 ```
 
 该命令会生成 Console 全局配置（位于 `~/.downcity/`）。
 
-## 3. 启动 Console
+## 3. 启动 City
 
 ```bash
-studio start
+city start
 ```
 
 > `studio agent start` 依赖 console 先运行。
@@ -112,7 +106,7 @@ studio agent list --running
 ## 8. 可选：启动 Console UI
 
 ```bash
-studio start
+city start --console
 ```
 
 ## 9. 可选：Chrome 扩展网页选区直发 Agent

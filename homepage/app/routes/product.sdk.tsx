@@ -27,9 +27,9 @@ const PAGE = {
     ],
     factsTitle: "事实对齐",
     facts: [
-      "核心源码目录：packages/downcity/",
-      "安装命令：npm i -g downcity",
-      "README 快速流程：studio start → studio agent create . → studio agent start",
+      "核心源码目录：packages/cli/",
+      "安装命令：npm i -g @downcity/cli",
+      "README 快速流程：city start → studio agent create . → studio agent start",
     ],
   },
   en: {
@@ -58,9 +58,9 @@ const PAGE = {
     ],
     factsTitle: "Facts",
     facts: [
-      "Core source directory: packages/downcity/",
-      "Install command: npm i -g downcity",
-      "README quick flow: studio start -> studio agent create . -> studio agent start",
+      "Core source directory: packages/cli/",
+      "Install command: npm i -g @downcity/cli",
+      "README quick flow: city start -> studio agent create . -> studio agent start",
     ],
   },
 } as const;

@@ -8,37 +8,31 @@ description: Correct startup sequence for Console + Agent in about 10 minutes
 ## 1. Install
 
 ```bash
-npm install -g @downcity/studio-cli
+npm install -g @downcity/cli
 # or
-npm install -g downcity
-# or
-pnpm add -g @downcity/studio-cli
-# or
-pnpm add -g downcity
+pnpm add -g @downcity/cli
 studio --version
-downstudio --version
+city --version
 ```
 
-> `downcity` and `studio` are the same CLI binary.
->
-> `@downcity/studio-cli` and `downcity` publish the same CLI contents and version line.
+> `@downcity/cli` exposes `studio` for local agents and `city` for City administration.
 >
 > If `studio` is not found after install, see [FAQ](/en/docs/operations/faq).
 >
-> To upgrade later, run `studio update`. It upgrades the package you originally installed.
+> To upgrade later, run `city update`. It upgrades the package you originally installed.
 
-## 2. Initialize Console (first time only)
+## 2. Initialize City (first time only)
 
 ```bash
-studio init
+city init
 ```
 
 This creates console-global config under `~/.downcity/`.
 
-## 3. Start Console
+## 3. Start City
 
 ```bash
-studio start
+city start
 ```
 
 > `studio agent start` requires console to be running first.
@@ -112,7 +106,7 @@ Notes:
 ## 8. Optional: start Console UI
 
 ```bash
-studio start
+city start --console
 ```
 
 ## 9. Optional: Chrome extension quick-send from page selection

@@ -1,16 +1,16 @@
 ---
-title: studio init
+title: city init
 description: Initialize global console config (stored in ~/.downcity/downcity.db)
 ---
 
-# `studio init`
+# `city init`
 
 Initialize global console infrastructure.
 
 ## Usage
 
 ```bash
-studio init
+city init
 ```
 
 ## Behavior
@@ -21,23 +21,23 @@ studio init
 ## Notes
 
 - This is a console-level command and does not depend on an agent project path.
-- For project-level configuration, use [`studio config`](/en/docs/commands/config).
-- `studio init` does not create or update models.
-- Configure models later with `studio model create`.
+- For project-level configuration, use [`city config`](/en/docs/commands/config).
+- `city init` does not create or update models.
+- Configure models later with `city model create`.
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio init
+$ city init
 downcity v1.0.0
 Console base initialized
 Console initialized
 ```
 
 ```text
-$ studio init
+$ city init
 downcity v1.0.0
 Console base initialized
 Console initialized

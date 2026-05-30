@@ -4,7 +4,7 @@
     "index",
     "city",
     "gate",
-    "studio-cli",
+    "cli",
     "services"
   ]
 }

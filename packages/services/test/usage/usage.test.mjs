@@ -35,13 +35,13 @@ test("usageService records successful service calls", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
-    const product = await (await base.handleRequest(adminRequest(adminSecret, {
+    const studio = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/studios/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/studios/tokens/apply",
-      body: { studio_id: product.studio_id, user_id: "user_1" },
+      body: { studio_id: studio.studio_id, user_id: "user_1" },
     }))).json()
 
     const invokeResponse = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
@@ -72,7 +72,7 @@ test("usageService records successful service calls", async () => {
     assert.deepEqual(await summaryResponse.json(), {
       items: [
         {
-          studio_id: product.studio_id,
+          studio_id: studio.studio_id,
           service: "ai",
           status: "success",
           count: 1,

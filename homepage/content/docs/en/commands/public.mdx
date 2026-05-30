@@ -1,34 +1,34 @@
 ---
-title: studio public
+title: city public
 description: Manage persisted public exposure for Console
 ---
 
-# `studio public`
+# `city public`
 
-`studio public` manages the persisted public exposure mode for Console.
+`city public` manages the persisted public exposure mode for Console.
 
 This command only controls the Console / control plane bind behavior. It does not change how individual agents listen.
 
 ## Usage
 
 ```bash
-studio public
+city public
 ```
 
 ```bash
-studio public status
+city public status
 ```
 
 ```bash
-studio public on
+city public on
 ```
 
 ```bash
-studio public on --host 0.0.0.0
+city public on --host 0.0.0.0
 ```
 
 ```bash
-studio public off
+city public off
 ```
 
 ## Actions
@@ -44,32 +44,32 @@ studio public off
 
 ## Important behavior
 
-- `studio public on` saves a persisted Console public-mode setting for future `studio start` and `studio console start`.
-- If Console is already running, `studio public on` or `studio public off` automatically restarts Console so the new binding takes effect.
-- Explicit runtime flags still win. For example, `studio console start --host 127.0.0.1` overrides the persisted public setting for that launch.
-- `studio public` only manages Console exposure. It is not a global switch for every runtime endpoint.
+- `city public on` saves a persisted Console public-mode setting for future `city start` and `city console start`.
+- If Console is already running, `city public on` or `city public off` automatically restarts Console so the new binding takes effect.
+- Explicit runtime flags still win. For example, `city console start --host 127.0.0.1` overrides the persisted public setting for that launch.
+- `city public` only manages Console exposure. It is not a global switch for every runtime endpoint.
 
 ## Typical flow
 
 ```bash
 # 1) inspect current persisted mode
-studio public status
+city public status
 
 # 2) enable public exposure for future starts
-studio public on
+city public on
 
 # 3) or pin a custom host
-studio public on --host 10.0.0.5
+city public on --host 10.0.0.5
 
 # 4) start city as usual
-studio start
+city start
 
 # 5) disable public exposure again
-studio public off
+city public off
 ```
 
 ## Related commands
 
-- [`studio console`](/en/docs/commands/console/console)
-- [`studio start`](/en/docs/commands/start)
-- [`studio status`](/en/docs/commands/status)
+- [`city console`](/en/docs/commands/console/console)
+- [`city start`](/en/docs/commands/start)
+- [`city status`](/en/docs/commands/status)

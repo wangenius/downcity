@@ -5,7 +5,7 @@ description: 安装、启动与配置中的常见错误
 
 # 常见问题
 
-## 命令找不到（`studio: command not found` / `downstudio: command not found`）
+## 命令找不到（`studio: command not found` / `studio: command not found`）
 
 ```bash
 npm config get prefix
@@ -18,12 +18,12 @@ studio --version
 或直接用：
 
 ```bash
-npx downstudio --version
+studio --version
 ```
 
 说明：
 
-- `studio` 与 `downcity` 是同一个可执行命令。
+- `studio` 和 `city` 来自同一个 `@downcity/cli` 包，但负责不同命令面。
 - 新版本安装后不应该再需要手动 `chmod +x`。
 - 如果 `sudo studio ...` 失败，但普通 `studio ...` 正常，通常是 `sudo` 的 PATH 问题，不是安装失败。
 
@@ -49,8 +49,8 @@ studio plugin list
 检查：
 
 ```bash
-studio model list
-studio config get model.primary
+city model list
+city config get model.primary
 ```
 
 并确认：

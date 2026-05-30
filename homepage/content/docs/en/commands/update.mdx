@@ -1,26 +1,26 @@
 ---
-title: studio update
+title: city update
 description: Update the currently installed global Downcity CLI package to the latest version
 ---
 
-# `studio update`
+# `city update`
 
 Update the currently installed global Downcity CLI package to the latest version.
 
-By default, Downcity detects both the package manager and the installed package name. If you installed the CLI from `@downcity/studio-cli`, `studio update` upgrades `@downcity/studio-cli`; if you installed it from `downcity`, it upgrades `downcity`.
+By default, Downcity detects both the package manager and the installed package name. If you installed the CLI from `@downcity/cli`, `city update` upgrades `@downcity/cli`; 
 
 ## Usage
 
 ```bash
-studio update
+city update
 ```
 
 ```bash
-studio update --manager npm
+city update --manager npm
 ```
 
 ```bash
-studio update --manager pnpm
+city update --manager pnpm
 ```
 
 ## Options
@@ -29,27 +29,27 @@ studio update --manager pnpm
 
 ## Important behavior
 
-- `studio update` updates only the currently installed global CLI package.
+- `city update` updates only the currently installed global CLI package.
 - It does not automatically restart already running city runtime / Console processes.
-- After update completes, run [`studio restart`](/en/docs/commands/restart) if you want running processes to load the new version.
+- After update completes, run [`city restart`](/en/docs/commands/restart) if you want running processes to load the new version.
 
 ## Related commands
 
-- [`studio restart`](/en/docs/commands/restart)
-- [`studio status`](/en/docs/commands/status)
+- [`city restart`](/en/docs/commands/restart)
+- [`city status`](/en/docs/commands/status)
 
 ## Example output
 
 ```text
-$ studio update
+$ city update
 downcity v1.0.0
 
 Updating downcity
   manager   npm
-  command   npm install -g @downcity/studio-cli@latest
+  command   npm install -g @downcity/cli@latest
 
 Downcity updated
-  package   @downcity/studio-cli@latest
+  package   @downcity/cli@latest
   manager   npm
-  note      If city runtime / Console is already running, use `studio restart` to load the new version.
+  note      If city runtime / Console is already running, use `city restart` to load the new version.
 ```

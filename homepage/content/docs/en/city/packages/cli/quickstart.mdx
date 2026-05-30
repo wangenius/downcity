@@ -1,0 +1,147 @@
+---
+title: Downcity CLI Quickstart
+description: "The most common first-time entry points, connection patterns, and use cases for @downcity/cli."
+---
+
+`@downcity/cli` is a terminal tool for City operators, not a studio runtime SDK.
+
+## When you should open the agent first
+
+- you want to confirm what is actually in the database
+- you are initializing City locally
+- you suspect a service did not create or write the expected data
+- you do not want to write a one-off script just to inspect models or tables
+
+## Install
+
+```bash
+npm i -g @downcity/cli
+```
+
+If you are iterating on `city manage` inside this repository, run:
+
+```bash
+npm run build:city manage
+```
+
+That command builds the local `packages/cli` package, then refreshes the global `city` and `studio` commands on your machine. After the build passes, the next `city` or `studio` run uses the version from this workspace.
+
+If `city` / `studio` is already installed, you can also run:
+
+```bash
+downcity update
+```
+
+When executed inside the repository, it prefers rebuilding from the current workspace and refreshing the global install. Outside the repository, it updates to the latest npm version.
+
+## First run
+
+```bash
+downcity
+```
+
+That first shows the current CLI version, then opens the interactive panel, which is often the fastest first inspection entry.
+
+If you do not have any configured server yet, the CLI does not inject a default address. It first asks you to add a server.
+
+## First add a server
+
+`city manage` now treats servers as first-class managed resources. On first launch, you need to provide:
+
+- `base_url`
+- `admin_secret_key`
+
+After saving, that server automatically becomes the current active server. From there, the top-level menu leads into:
+
+- `Admin`
+- `User`
+- `Manage Servers`
+
+## How server management works afterward
+
+Instead of a temporary "switch current server" flow, everything is now unified under `Manage Servers`:
+
+- `List Servers`
+- `Add Server`
+- `Select Active Server`
+- `Edit Server`
+- `Remove Server`
+
+## A common first workflow
+
+```bash
+npm i -g @downcity/cli
+downcity
+```
+
+That is often enough for the first round of confirmation:
+
+1. add a working City server
+2. save the current active server
+3. continue into the Admin or User flow
+
+## What the CLI is best at
+
+### Scenario 1: human inspection
+
+If your real question is whether data actually got written, whether usage was recorded, or whether model configuration is wrong in the DB, the CLI is often faster than writing temporary code.
+
+### Scenario 2: model initialization or repair
+
+```bash
+downcity
+```
+
+Those tasks now start from the interactive menu instead of assuming a default server.
+
+### Scenario 3: manual Stripe recharge
+
+If your City enables `payment.stripe`, the CLI can now:
+
+- read Stripe env requirements exposed by the service
+- let an admin configure `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`
+- show the Stripe webhook endpoint for the current server in `Admin -> Payment`
+- create a topup as a user
+- create a Stripe Checkout Session and open the browser for payment
+
+If `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL` are not configured explicitly, the Stripe service derives default success / cancel pages from `DOWNCITY_CITY_BASE_URL` first and then falls back to the current request origin.
+
+The Stripe webhook endpoint itself is fixed:
+
+- `{base_url}/v1/payment.stripe/webhook`
+
+## What it is not for
+
+- embedding into studio code
+- replacing backend management workflows
+- long-lived automation
+
+Those are better owned by `AdminClient` or trusted backend scripts.
+
+## Common entry points
+
+- `city` / `studio`
+- `downcity update`
+- `Manage Servers`
+- `Admin`
+- `User`
+
+## Common misunderstandings
+
+### The CLI is not for end users
+
+It is for City operators, developers, and maintainers.
+
+### The CLI does not replace AdminClient
+
+The CLI is for a human at a terminal. `AdminClient` is for trusted programmatic workflows.
+
+### The CLI is not only for table inspection
+
+It is also a practical entry for initialization, model maintenance, and debugging.
+
+## Read next
+
+- For models and tables specifically, read [Models and Tables](/en/docs/city/packages/cli/models-and-tables)
+- For CLI versus AdminClient in operations, read [Operations and Debugging](/en/docs/city/packages/cli/operations-and-debug)
+- For the runtime and data layer behind those tables, read [@downcity/city](/en/docs/city/packages/city)

@@ -1,33 +1,33 @@
 ---
-title: studio status
+title: city status
 description: Show city runtime, Console, and managed agent status
 ---
 
-# `studio status`
+# `city status`
 
 Show city runtime, Console, and managed active agents.
 
 ## Usage
 
 ```bash
-studio status
+city status
 ```
 
 ## Related commands
 
 - [`studio agent list --running`](/en/docs/commands/agent/list)
-- [`studio console`](/en/docs/commands/console/console)
-- [`studio public`](/en/docs/commands/public)
+- [`city console`](/en/docs/commands/console/console)
+- [`city public`](/en/docs/commands/public)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio status
+$ city status
 downcity v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK studio status                                   │
+│ OK city status                                   │
 │   state    : running                                    │
 │   pid      : <pid>                                      │
 │   pid_file : <cityPidPath>                              │

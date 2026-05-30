@@ -5,7 +5,7 @@ description: Typical installation, startup, and config failures
 
 # Common Issues
 
-## Command not found (`studio: command not found` / `downstudio: command not found`)
+## Command not found (`studio: command not found` / `studio: command not found`)
 
 ```bash
 npm config get prefix
@@ -18,12 +18,12 @@ studio --version
 Or run directly with:
 
 ```bash
-npx downstudio --version
+studio --version
 ```
 
 Notes:
 
-- `studio` and `downcity` are the same binary.
+- `studio` and `city` come from the same `@downcity/cli` package but expose different command surfaces.
 - New installs should not require manual `chmod +x`.
 - If `sudo studio ...` fails but `studio ...` works, it is usually a `sudo` PATH issue rather than an install failure.
 
@@ -49,8 +49,8 @@ studio plugin list
 Check:
 
 ```bash
-studio model list
-studio config get model.primary
+city model list
+city config get model.primary
 ```
 
 Ensure:

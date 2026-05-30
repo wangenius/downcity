@@ -35,18 +35,18 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
     steps: [
       {
         title: "安装 CLI",
-        description: "先让本地有一个明确的运行入口。`downcity` 与 `city` 都可作为命令名使用。",
-        command: "npm install -g downcity\ndownstudio --version",
+        description: "先让本地有一个明确的运行入口。安装后会得到 `studio` 和 `city` 两个命令。",
+        command: "npm install -g @downcity/cli\nstudio --version\ncity --version",
       },
       {
         title: "在仓库里创建 Agent",
         description: "进入真实项目目录后初始化，让规则、权限和产物落在仓库本身，而不是外部平台。",
-        command: "cd /path/to/your-repo\ncity agent create .",
+        command: "cd /path/to/your-repo\nstudio agent create .",
       },
       {
         title: "配置模型并启动 Runtime",
         description: "写入 `.env` 后启动 runtime。默认后台运行，需要观察日志时再切前台模式。",
-        command: "LLM_API_KEY=your_key\n\ncity start\ncity agent start\n# 调试时\ncity agent start --foreground",
+        command: "LLM_API_KEY=your_key\n\ncity start\nstudio agent start\n# 调试时\nstudio agent start --foreground",
       },
       {
         title: "做一次健康检查",
@@ -70,18 +70,18 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
     steps: [
       {
         title: "Install the CLI",
-        description: "Establish one local runtime entry point first. Both `downcity` and `city` are valid command names.",
-        command: "npm install -g downcity\ndownstudio --version",
+        description: "Establish one local runtime entry point first. Installing exposes `studio` and `city` as separate commands.",
+        command: "npm install -g @downcity/cli\nstudio --version\ncity --version",
       },
       {
         title: "Create the agent inside your repo",
         description: "Initialize inside a real project so rules, permissions, and artifacts stay in the repo instead of a separate platform.",
-        command: "cd /path/to/your-repo\ncity agent create .",
+        command: "cd /path/to/your-repo\nstudio agent create .",
       },
       {
         title: "Configure model and start runtime",
         description: "Create `.env`, then start the runtime. Use foreground mode only when you need live logs in the current shell.",
-        command: "LLM_API_KEY=your_key\n\ncity start\ncity agent start\n# for debugging\ncity agent start --foreground",
+        command: "LLM_API_KEY=your_key\n\ncity start\nstudio agent start\n# for debugging\nstudio agent start --foreground",
       },
       {
         title: "Run a health check",

@@ -27,7 +27,7 @@ const HELP_ITEMS = [
     name: "build",
     summary: "完整构建整个仓库。",
     detail:
-      "等价于 `build:all`，会构建 city、services、gate、studio-cli、homepage 与 console 等主要交付物。",
+      "等价于 `build:all`，会构建 city、services、gate、cli、homepage 与 console 等主要交付物。",
   },
   {
     name: "build:all",
@@ -51,25 +51,25 @@ const HELP_ITEMS = [
     detail: "执行 `pnpm -C packages/gate build`，不会修改 package version。",
   },
   {
-    name: "build:studio-cli",
-    summary: "只构建 Studio CLI 包。",
-    detail: "执行 `pnpm -C packages/studio-cli build`，不会修改 package version。",
+    name: "build:cli",
+    summary: "只构建 @downcity/cli 包。",
+    detail: "执行 `pnpm -C packages/cli build`，不会修改 package version。",
   },
   {
     name: "build:homepage",
     summary: "只构建 homepage。",
-    detail: "适合单独验证官网改动，不会触发 studio-cli 构建。",
+    detail: "适合单独验证官网改动，不会触发 cli 构建。",
   },
   {
     name: "build:extension",
     summary: "构建 chrome-extension。",
-    detail: "走独立扩展构建脚本，不参与 studio-cli 交付链路。",
+    detail: "走独立扩展构建脚本，不参与 cli 交付链路。",
   },
   {
     name: "patch:build",
     summary: "按 package 执行 patch bump + build。",
     detail:
-      "支持 `npm run patch:build -- --agent --city --services --gate --plugins --studio-cli`、`--ui`、`--all`、`--no-bump`，默认构建 agent + plugins + studio-cli。",
+      "支持 `npm run patch:build -- --agent --city --services --gate --plugins --cli`、`--ui`、`--all`、`--no-bump`，默认构建 agent + plugins + cli。",
   },
   {
     name: "agent:patch:build",
@@ -92,15 +92,15 @@ const HELP_ITEMS = [
     detail: "等价于 `npm run patch:build -- --gate`，会先构建 city 作为依赖。",
   },
   {
-    name: "studio-cli:patch:build",
-    summary: "只对 @downcity/studio-cli 执行 patch bump + build。",
+    name: "cli:patch:build",
+    summary: "只对 @downcity/cli 执行 patch bump + build。",
     detail:
-      "等价于 `npm run patch:build -- --studio-cli`，会构建 city、services、gate、agent 与 plugins 作为依赖，再构建并全局安装 studio CLI。",
+      "等价于 `npm run patch:build -- --cli`，会构建 city、services、gate、agent 与 plugins 作为依赖，再构建并全局安装 city/studio 两个命令。",
   },
   {
     name: "all:patch:build",
     summary: "对全部 packages 执行 patch bump + build。",
-    detail: "等价于 `npm run patch:build -- --all`，会处理 agent、city、services、gate、plugins、ui、studio-cli。",
+    detail: "等价于 `npm run patch:build -- --all`，会处理 agent、city、services、gate、plugins、ui、cli。",
   },
   {
     name: "install:ws",
@@ -131,7 +131,7 @@ const HELP_ITEMS = [
     name: "publish",
     summary: "执行 downcity 发布脚本。",
     detail:
-      "同步 root、@downcity/agent、@downcity/plugins、@downcity/studio-cli 版本并推送，触发 scoped 包发布 workflow，并在成功后触发 downcity 镜像包 workflow。",
+      "同步 root、@downcity/agent、@downcity/plugins、@downcity/cli 版本并推送，触发 scoped 包发布 workflow，并在成功后触发 downcity 镜像包 workflow。",
   },
   {
     name: "publish:ui",

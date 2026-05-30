@@ -162,7 +162,7 @@ export class AccountsService extends InstallableService {
     ]);
     this.instruction = ({ actions }) => [
       "提供 Downcity 的账号、邮箱验证、GitHub/Google/WeChat OAuth 登录能力。",
-      "注册或登录时传入 studio_id 后，接口会返回绑定该 product 的 City user_token。",
+      "注册或登录时传入 studio_id 后，接口会返回绑定该 studio 的 City user_token。",
       "OAuth 回调地址固定为 /v1/accounts/oauth/callback，服务会根据 City 公网地址生成完整回调 URL。",
       `当前暴露 ${actions.length} 个动作，常用流程是 register/login -> verify-email 或 oauth/start -> me。`,
     ].join("\n");

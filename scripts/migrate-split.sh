@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="/Users/wangenius/Documents/github/downcity"
 OLD_SRC="$ROOT/packages/downcity/src"
 AGENT_SRC="$ROOT/packages/agent/src"
-CITY_SRC="$ROOT/packages/studio-cli/src"
+CITY_SRC="$ROOT/packages/cli/src"
 
 echo "=== Copying entire src to both packages ==="
 rm -rf "$AGENT_SRC" "$CITY_SRC"

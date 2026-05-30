@@ -1,6 +1,6 @@
 {
   "name": "@downcity/services",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Downcity public services package for accounts, balance, usage, and Stripe payment flows.",
   "type": "module",
   "main": "./bin/index.js",
@@ -50,7 +50,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
-    "better-sqlite3": "^11.0.0",
+    "better-sqlite3": "^12.0.0",
     "typescript": "^5.7.0"
   },
   "dependencies": {

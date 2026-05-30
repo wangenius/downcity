@@ -100,7 +100,7 @@ AgentCore 再协调 session 执行与 plugin runtime
 
 ```mermaid
 flowchart TD
-  A["studio console start"] --> B["启动 console 控制面"]
+  A["city console start"] --> B["启动 console 控制面"]
   B --> C["维护 registry / model store / gateway"]
 
   D["studio agent start"] --> E["校验 console 与项目状态"]
@@ -115,7 +115,7 @@ flowchart TD
   M --> N["按需启动托管 plugin runtime"]
 ```
 
-`studio console start` 拉起的是全局控制面，负责 registry、共享配置、模型池与 UI 网关。
+`city console start` 拉起的是全局控制面，负责 registry、共享配置、模型池与 UI 网关。
 
 `studio agent start` 则把某个项目装配成可运行的 agent host。这个过程会读取项目配置、准备模型绑定、创建 session 层、注册 plugin，并在需要时启动托管 runtime。
 

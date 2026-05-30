@@ -1,6 +1,6 @@
 {
   "name": "@downcity/plugins",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
   "description": "Downcity 内建 plugin 集合包",
   "main": "./bin/index.js",
@@ -20,7 +20,7 @@
     "@downcity/agent": "workspace:^",
     "@larksuiteoapi/node-sdk": "^1.40.0",
     "ai": "^6.0.57",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^12.0.0",
     "commander": "^12.0.0",
     "execa": "^9.5.0",
     "fs-extra": "^11.2.0",

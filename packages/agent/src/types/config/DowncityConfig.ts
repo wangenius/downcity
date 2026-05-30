@@ -159,7 +159,7 @@ export interface DowncityConfig {
   id: string;
   version: string;
   /**
-   * Runtime startup configuration used by `downcity agent start`.
+   * Runtime startup configuration used by `studio agent start`.
    * CLI flags (if provided) take precedence over this config.
    */
   start?: {
@@ -197,7 +197,7 @@ export interface DowncityConfig {
    *
    * 关键点（中文）
    * - `@downcity/agent` 本地 SDK 不直接消费该字段。
-   * - 宿主侧（例如 `@downcity/studio-cli`）可读取该字段控制模型工厂行为，例如 `llm.logMessages`。
+   * - 宿主侧（例如 `@downcity/cli`）可读取该字段控制模型工厂行为，例如 `llm.logMessages`。
    * - 对于项目内 `downcity.json`，通常不需要显式写 provider/model 明细。
    */
   llm?: LlmConfig;

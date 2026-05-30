@@ -1,26 +1,26 @@
 ---
-title: studio update
+title: city update
 description: 更新当前全局安装来源对应的 Downcity CLI 到最新版本
 ---
 
-# `studio update`
+# `city update`
 
 更新当前全局安装来源对应的 Downcity CLI 到最新版本。
 
-默认情况下，Downcity 会同时判断当前 CLI 的安装包名和包管理器。如果你安装的是 `@downcity/studio-cli`，`studio update` 会升级 `@downcity/studio-cli`；如果安装的是 `downcity`，则会升级 `downcity`。
+默认情况下，Downcity 会同时判断当前 CLI 的安装包名和包管理器。如果你安装的是 `@downcity/cli`，`city update` 会升级 `@downcity/cli`；
 
 ## 用法
 
 ```bash
-studio update
+city update
 ```
 
 ```bash
-studio update --manager npm
+city update --manager npm
 ```
 
 ```bash
-studio update --manager pnpm
+city update --manager pnpm
 ```
 
 ## 常用参数
@@ -29,27 +29,27 @@ studio update --manager pnpm
 
 ## 关键行为
 
-- `studio update` 只更新当前全局安装来源对应的 CLI 包本身。
+- `city update` 只更新当前全局安装来源对应的 CLI 包本身。
 - 不会自动重启已经运行中的 city runtime / Console 进程。
-- 更新完成后，如果你希望运行中的进程也加载新版本，请执行 [`studio restart`](/zh/docs/commands/restart)。
+- 更新完成后，如果你希望运行中的进程也加载新版本，请执行 [`city restart`](/zh/docs/commands/restart)。
 
 ## 相关命令
 
-- [`studio restart`](/zh/docs/commands/restart)
-- [`studio status`](/zh/docs/commands/status)
+- [`city restart`](/zh/docs/commands/restart)
+- [`city status`](/zh/docs/commands/status)
 
 ## 示例输出
 
 ```text
-$ studio update
+$ city update
 downcity v1.0.0
 
 Updating downcity
   manager   npm
-  command   npm install -g @downcity/studio-cli@latest
+  command   npm install -g @downcity/cli@latest
 
 Downcity updated
-  package   @downcity/studio-cli@latest
+  package   @downcity/cli@latest
   manager   npm
-  note      如果当前已有 city runtime / Console 在运行，建议执行 `studio restart` 载入最新版本。
+  note      如果当前已有 city runtime / Console 在运行，建议执行 `city restart` 载入最新版本。
 ```

@@ -129,8 +129,8 @@ flowchart TD
 1. Initialize console-global data once:
 
 ```bash
-studio init
-studio model create
+city init
+city model create
 studio plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 ```
 
@@ -164,15 +164,15 @@ Behavior:
 
 ## 10. Console public address
 
-When you use `studio start -p` or `studio console start -p`, the CLI tries to print `Public URL` in startup output.
-If you use `studio public on`, future plain `studio start` and `studio console start` runs also reuse the saved public bind mode.
+When you use `city start -p` or `city console start -p`, the CLI tries to print `Public URL` in startup output.
+If you use `city public on`, future plain `city start` and `city console start` runs also reuse the saved public bind mode.
 
-These values are normally injected by `studio start` or the deployment environment. They are not endpoint parameters that users enter for `contact link`:
+These values are normally injected by `city start` or the deployment environment. They are not endpoint parameters that users enter for `contact link`:
 
 1. `DOWNCITY_PUBLIC_URL`: full external URL, for example `https://console.example.com`
 2. `DOWNCITY_PUBLIC_HOST`: external host only; the CLI expands it to `http://<host>:5315`
 
-`studio start` automatically detects the public IP and stores it in global Console Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
+`city start` automatically detects the public IP and stores it in global Console Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
 
 Priority:
 

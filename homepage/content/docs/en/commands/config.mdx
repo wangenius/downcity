@@ -1,18 +1,18 @@
 ---
-title: studio config
+title: city config
 description: Manage project downcity.json and alias (model pool is separate)
 ---
 
-# `studio config`
+# `city config`
 
 Manage project `downcity.json` and alias.
 
-> Naming note: configuration command is `studio config`, not `studio console config`.
+> Naming note: configuration command is `city config`, not `city console config`.
 
 ## Usage
 
 ```bash
-studio config <subcommand>
+city config <subcommand>
 ```
 
 ## Subcommands
@@ -22,11 +22,11 @@ studio config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> Model pool management has moved to [`studio model`](/en/docs/commands/model).
+> Model pool management has moved to [`city model`](/en/docs/commands/model).
 
 ## Plugin config
 
-`studio config` now reads and writes project `downcity.json` only.
+`city config` now reads and writes project `downcity.json` only.
 
 For plugin configuration, edit:
 
@@ -36,17 +36,17 @@ For plugin configuration, edit:
 Examples:
 
 ```bash
-studio config get plugins.asr
-studio config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+city config get plugins.asr
+city config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
 ## Examples
 
 ```bash
-studio config get model.primary
-studio config set model.primary fast
-studio config unset plugins.chat.channels.telegram
-studio config alias --dry-run
+city config get model.primary
+city config set model.primary fast
+city config unset plugins.chat.channels.telegram
+city config alias --dry-run
 ```
 
 ## Example Output (Based on Current Implementation)
@@ -54,7 +54,7 @@ studio config alias --dry-run
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio config get model.primary
+$ city config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
@@ -65,7 +65,7 @@ $ studio config get model.primary
 ```
 
 ```text
-$ studio config set model.primary gpt-5.4
+$ city config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",

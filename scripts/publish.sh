@@ -31,7 +31,7 @@ print_error() {
 }
 
 get_current_version() {
-  node -p "require('./packages/studio-cli/package.json').version"
+  node -p "require('./packages/cli/package.json').version"
 }
 
 set_new_version() {
@@ -49,7 +49,7 @@ const files = [
   'package.json',
   'packages/agent/package.json',
   'packages/plugins/package.json',
-  'packages/studio-cli/package.json',
+  'packages/cli/package.json',
 ];
 
 for (const file of files) {

@@ -10,7 +10,7 @@ description: How to build, load, and connect the Chrome extension to one or more
 Before using the extension, you will usually want these running:
 
 ```bash
-studio start
+city start
 studio agent start
 ```
 
@@ -60,13 +60,13 @@ After that, the popup can switch between those connections directly.
 If the target Server requires unified auth, create a token in the local terminal:
 
 ```bash
-studio token create my-token
+city token create my-token
 ```
 
 If you prefer the interactive flow, run:
 
 ```bash
-studio token
+city token
 ```
 
 Then paste the returned token into `Bearer Token`.
@@ -82,7 +82,7 @@ If no Session is available, it usually means:
 - the connection address is wrong
 - the remote Console is not listening publicly, or the server firewall blocks the port
 
-For a server deployment, you can either start Console once with `studio start --public`, or persist public mode with `studio public on`.
+For a server deployment, you can either start Console once with `city start --public`, or persist public mode with `city public on`.
 
 ## After Updating the Extension
 

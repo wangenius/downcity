@@ -70,7 +70,7 @@ export interface AccountsOAuthStateRow extends Record<string, unknown> {
   state: string;
 
   /**
-   * 登录成功后要签发到哪个 product。
+   * 登录成功后要签发到哪个 studio。
    */
   studio_id: string;
 
@@ -137,7 +137,7 @@ export const accountsOAuthStates = sqliteTable(ACCOUNTS_OAUTH_STATE_TABLE, {
   state: text("state").primaryKey(),
 
   /**
-   * 登录成功后要签发到哪个 product。
+   * 登录成功后要签发到哪个 studio。
    */
   studio_id: text("studio_id").notNull(),
 

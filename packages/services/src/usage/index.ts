@@ -95,7 +95,7 @@ export function usageService(options: UsageServiceOptions = {}): ServiceDefiniti
 /**
  * 只记录真实用户侧调用。
  *
- * 管理端操作没有 user/product 上下文，usage 服务自己的查询也不应反过来
+ * 管理端操作没有 user/studio 上下文，usage 服务自己的查询也不应反过来
  * 产生 usage 事件，否则统计接口会污染自身结果。
  */
 function shouldRecordUsage(ctx: Context): boolean {

@@ -18,7 +18,7 @@ const useCases = [
   {
     id: "collaborator",
     bulletKeys: ["review", "answer", "onboard", "bugs", "docs"],
-    example: `# Create/init the Agent project\ncity agent create .\n\n# Start the Agent (default: daemon)\ncity agent start\n\n# In Telegram, chat with your Agent:\n/status          # Check project status\nSuggest refactor auth  # Suggest how to refactor auth module\nRun tests              # Run tests`,
+    example: `# Create/init the Agent project\nstudio agent create .\n\n# Start the Agent (default: daemon)\nstudio agent start\n\n# In Telegram, chat with your Agent:\n/status          # Check project status\nSuggest refactor auth  # Suggest how to refactor auth module\nRun tests              # Run tests`,
   },
   {
     id: "worker",
@@ -28,7 +28,7 @@ const useCases = [
   {
     id: "interface",
     bulletKeys: ["deploy", "query", "infra", "workflows", "logs"],
-    example: `# Telegram Bot = Your Project UI\n\n/status              # Check status\n/clear               # Clear conversation history\n<any message>        # Execute instruction\n\n# Hard clean one broken chat session\ncity agent history clean . \\\n  --channel telegram \\\n  --chat-id <chat-id> \\\n  --hard`,
+    example: `# Telegram Bot = Your Project UI\n\n/status              # Check status\n/clear               # Clear conversation history\n<any message>        # Execute instruction\n\n# Hard clean one broken chat session\nstudio agent history clean . \\\n  --channel telegram \\\n  --chat-id <chat-id> \\\n  --hard`,
   },
   {
     id: "maintainer",

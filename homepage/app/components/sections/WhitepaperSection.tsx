@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IconCheck, IconCopy, IconDownload } from "@tabler/icons-react";
 import { marketingTheme } from "@/lib/marketing-theme";
 
-const INSTALL_COMMAND = "npm i -g downcity";
+const INSTALL_COMMAND = "npm i -g @downcity/cli";
 const WHITEPAPER_DOWNLOAD_PATH = "/agent-strategy-whitepaper-2026-03-09.md";
 const WHITEPAPER_DOWNLOAD_FILENAME = "agent-strategy-whitepaper-2026-03-09.md";
 

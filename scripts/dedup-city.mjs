@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const AGENT_SRC = path.join(ROOT, 'packages/agent/src');
-const CITY_SRC = path.join(ROOT, 'packages/studio-cli/src');
+const CITY_SRC = path.join(ROOT, 'packages/cli/src');
 
 async function collectFiles(dir) {
   const result = [];
@@ -185,7 +185,7 @@ async function main() {
     exclude: ["node_modules", "bin"],
   };
   
-  await fs.writeJson(path.join(ROOT, 'packages/studio-cli/tsconfig.json'), tsconfig, { spaces: 2 });
+  await fs.writeJson(path.join(ROOT, 'packages/cli/tsconfig.json'), tsconfig, { spaces: 2 });
   console.log('\nUpdated city tsconfig to reference agent source');
   
   // Now delete the duplicate directories from city

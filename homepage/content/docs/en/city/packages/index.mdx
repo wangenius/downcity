@@ -9,18 +9,18 @@ Downcity keeps the package graph intentionally small: start with `@downcity/city
 
 That order maps to four clear roles:
 
-- `infra` is the Kernel for the City itself
+- `city` is the Kernel for the City itself
 - `services` are Capabilities that add official behavior
-- `conduit` and `studio terminal` are Interfaces for studio and operator entry
+- `gate` and `cli` are Interfaces for studio and operator entry
 - `cities/*` is the Composition layer that assembles runnable examples
 
-If you only care about npm packages, the three most important pieces to remember first are `infra`, `services`, and `conduit`.
+If you only care about npm packages, the three most important pieces to remember first are `city`, `services`, and `gate`.
 
 ## Recommended order
 
 1. Start with [@downcity/city](/en/docs/city/packages/city) to understand the City itself
 2. Then read [@downcity/gate](/en/docs/city/packages/gate) to see how studios call it
-3. If you want terminal tooling, read [@downcity/studio-cli](/en/docs/city/packages/studio-cli-terminal)
+3. If you want terminal tooling, read [@downcity/cli](/en/docs/city/packages/cli)
 4. Add `@downcity/services` when your studio needs auth, wallet, usage, or Stripe payment flows
 
 ## If you only want the integration picture first
@@ -50,7 +50,7 @@ It also unifies:
 ```txt
 Kernel        -> @downcity/city
 Capabilities  -> @downcity/services
-Interfaces    -> @downcity/gate + @downcity/studio-cli
+Interfaces    -> @downcity/gate + @downcity/cli
 Composition   -> cities/node + cities/edge
 ```
 
@@ -72,9 +72,9 @@ If you want to deploy City in Cloudflare Workers, you do not need an extra edge 
 ## Tooling and services
 
 <div className="dc-doc-grid">
-  <a className="dc-doc-card" href="/en/docs/city/packages/studio-cli-terminal">
-    <strong>@downcity/studio-cli</strong>
-    <p>An interactive terminal studio terminal for admin flows, user flows, model checks, and direct runtime inspection through `downcity`.</p>
+  <a className="dc-doc-card" href="/en/docs/city/packages/cli">
+    <strong>@downcity/cli</strong>
+    <p>The official CLI package. `city` manages City runtime; `studio` hosts and operates local agents.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/packages/services/accounts">
     <strong>Accounts Service</strong>

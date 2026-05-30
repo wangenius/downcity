@@ -93,7 +93,7 @@ const methods = await guest.service("payment").get("methods");
 
 - 和 [@downcity/services](/docs/city/packages/services) 配合，建立“充值单 -> Stripe 支付 -> 到账”的闭环
 - 和 [@downcity/gate](/docs/city/packages/gate) 配合，由前端触发 Checkout 创建
-- 和 [@downcity/studio-cli](/docs/city/packages/studio-cli-terminal) 配合，由 CLI 发起 Stripe 充值并打开浏览器
+- 和 [@downcity/cli](/docs/city/packages/cli) 配合，由 CLI 发起 Stripe 充值并打开浏览器
 - 和 [@downcity/services](/docs/city/packages/services) 配合，把“充了多少”和“用了多少”拆开治理
 
 ## 路由

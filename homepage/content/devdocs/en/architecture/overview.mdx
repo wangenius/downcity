@@ -10,12 +10,12 @@ The repository is organized around the agent runtime, city control plane, shared
 ## Primary workspaces
 
 - `packages/agent/`: local agent kernel, session execution, plugin runtime, HTTP/RPC host, SDK
-- `packages/studio-cli/`: control plane, CLI, project orchestration, model pool, console-facing gateway
-- `packages/city/`: infrastructure runtime for services, actions, auth, env, product-scoped access, and routing
+- `packages/cli/`: control plane, CLI, project orchestration, model pool, console-facing gateway
+- `packages/city/`: City runtime for services, actions, auth, env, studio-scoped access, and routing
 - `packages/services/`: public services such as accounts, balance, usage, payment, and Stripe flows
 - `packages/gate/`: user and admin SDK for service calls
 - `packages/ui/`: reusable UI primitives and app-facing components
-- `cities/`: deployable city blocks that compose infra and services for Node or edge runtimes
+- `cities/`: deployable City compositions that assemble city runtime and services for Node or edge runtimes
 - `products/console/`: browser control surface
 - `products/chrome-extension/`: extension that sends live page context into agents
 - `homepage/`: marketing site, user docs, devdocs, SDK docs, and plugin docs
@@ -25,7 +25,7 @@ The repository is organized around the agent runtime, city control plane, shared
 - `/docs` is user-facing only
 - `/devdocs` is contributor-facing only
 - `packages/agent` owns single-agent execution
-- `packages/studio-cli` owns control-plane and multi-project coordination
+- `packages/cli` owns control-plane and multi-project coordination
 - `packages/city` owns reusable service runtime infrastructure
 - `packages/services` owns public service capabilities
 - `packages/gate` owns service access over HTTP
@@ -46,7 +46,7 @@ packages/agent build -> SDK and runtime package
 packages/city build -> infrastructure runtime package
 packages/services build -> public services package
 packages/gate build -> service SDK package
-packages/studio-cli build -> CLI and control-plane package
+packages/cli build -> CLI and control-plane package
 cities/node typecheck -> Node service block
 cities/edge typecheck -> edge service block
 products/console build -> browser control surface

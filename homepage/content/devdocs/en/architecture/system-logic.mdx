@@ -15,7 +15,7 @@ Downcity is easiest to read as six layers:
 2. Control plane: console
 3. Execution plane: agent host
 4. Capability layer: session and plugins
-5. Infrastructure layer: city runtime, auth, env, product-scoped routing
+5. Infrastructure layer: city runtime, auth, env, studio-scoped routing
 6. Public services: accounts, balance, usage, payment, and service SDK access
 
 ```mermaid
@@ -41,9 +41,9 @@ flowchart LR
   end
 
   subgraph Infra["Infrastructure"]
-    INFRA["Infra<br/>service runtime / auth / env / products"]
+    INFRA["City<br/>service runtime / auth / env / studios"]
     SERVICES["Services<br/>accounts / balance / usage / payment"]
-    CONDUIT["Conduit<br/>user and admin SDK"]
+    CONDUIT["Gate<br/>user and admin SDK"]
   end
 
   CLI --> CONSOLE
@@ -79,13 +79,13 @@ The agent host is the single-project execution plane. It:
 - exposes project HTTP or RPC runtime when needed
 - coordinates session execution and managed plugin runtime
 
-### Infra and services
+### City and services
 
-Infra is the reusable city infrastructure for service-style runtimes. It:
+City is the reusable infrastructure for service-style runtimes. It:
 
 - mounts services and actions behind HTTP routes
-- owns product-scoped auth, runtime env, and built-in product/env tables
-- gives blocks a shared foundation for Node and edge deployments
+- owns studio-scoped auth, runtime env, and built-in studio/env tables
+- gives City compositions a shared foundation for Node and edge deployments
 
 Services are public city services. They provide accounts, balance, usage, payment, and Stripe payment flows without owning city-level model governance.
 
@@ -131,7 +131,7 @@ The stable hook semantics are:
 
 ```mermaid
 flowchart TD
-  A["studio console start"] --> B["start console control plane"]
+  A["city console start"] --> B["start console control plane"]
   B --> C["registry / model store / gateway"]
 
   D["studio agent start"] --> E["validate console and project state"]

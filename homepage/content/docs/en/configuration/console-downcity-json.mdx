@@ -60,14 +60,14 @@ Key behavior:
 Initialize Console (writes into `downcity.db`):
 
 ```bash
-studio init
+city init
 ```
 
 Read/update project plugin parameters:
 
 ```bash
-studio config get plugins.asr
-studio config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+city config get plugins.asr
+city config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
 Toggle city-level plugin lifecycle:
@@ -80,8 +80,8 @@ studio asr off
 Manage model pool:
 
 ```bash
-studio model list
-studio model create
+city model list
+city model create
 ```
 
 ## Related docs

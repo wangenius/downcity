@@ -10,7 +10,7 @@
    - 只改 `@downcity/agent`：`pnpm agent:patch:build`
    - 只改 `@downcity/city`：`pnpm city:patch:build`
    - 只改 `@downcity/gate`：`pnpm gate:patch:build`
-   - 只改 `@downcity/studio-cli`：`pnpm studio-cli:patch:build`
+   - 只改 `@downcity/cli`：`pnpm cli:patch:build`
    - 多 package 联动：`pnpm all:patch:build`
    - 仅验证不需要 bump 时才允许使用 `pnpm patch:build -- --no-bump ...`
 

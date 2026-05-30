@@ -100,72 +100,95 @@ interface CommandRecordTone {
  * 允许自动补 `city` 前缀的一级命令。
  *
  * 关键点（中文）
- * - 仅对已知 CITY 命令做自动补全；
+ * - `city` 是 City runtime / 控制面入口；
+ * - 仅对已知 City 命令做自动补全；
  * - 其他 shell 内建/系统命令（如 `clear`/`cd`/`ls`）保持原样执行。
  */
-const DC_COMMAND_ROOTS = new Set([
+const CITY_COMMAND_ROOTS = new Set([
   "init",
   "start",
   "stop",
+  "restart",
+  "status",
+  "public",
+  "update",
   "console",
+  "config",
+  "model",
+  "token",
+  "env",
+  "reset",
+  "manage",
+])
+
+/**
+ * 允许自动补 `studio` 前缀的一级命令。
+ *
+ * 关键点（中文）
+ * - `studio` 是本机 Agent 宿主环境入口；
+ * - agent 与插件相关命令都应通过 studio 执行。
+ */
+const STUDIO_COMMAND_ROOTS = new Set([
   "agent",
-  "service",
-  "plugin",
   "chat",
-  "skill",
+  "plugin",
+  "contact",
   "task",
   "memory",
+  "shell",
+  "skill",
+  "web",
   "asr",
   "tts",
 ])
 
 const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> = [
   {
-    label: "Console",
+    label: "City",
     items: [
       { label: "Version", command: "-v", description: "查看 CLI 版本" },
-      { label: "Start DC", command: "start", description: "启动 console 与 console ui" },
-      { label: "Stop DC", command: "stop", description: "停止 console（含 agent）" },
-      { label: "Console Status", command: "console status", description: "查看 console 与托管 agent 状态" },
-      { label: "Console Agents", command: "console agents", description: "查看 console 托管 agent 列表" },
-      { label: "UI Status", command: "console ui status", description: "查看 console UI 运行状态" },
-      { label: "UI Restart", command: "console ui restart", description: "重启 console UI" },
+      { label: "City Status", command: "status", description: "查看 city 后台、Console 与托管 agent 状态" },
+      { label: "City Start", command: "start", description: "启动 city runtime" },
+      { label: "City Start All", command: "start --all", description: "启动 city、Console 与公网模式" },
+      { label: "City Restart", command: "restart", description: "重启 city 后台并恢复已运行 agent" },
+      { label: "City Stop", command: "stop", description: "停止 Console、city 后台与受管 agent" },
+      { label: "City Manage", command: "manage", description: "打开 City 交互式管理界面" },
     ],
   },
   {
-    label: "Agent",
+    label: "Console",
+    items: [
+      { label: "Console Start", command: "console start", description: "启动浏览器控制面" },
+      { label: "Console Status", command: "console status", description: "查看控制面运行状态" },
+      { label: "Console Restart", command: "console restart", description: "重启浏览器控制面" },
+      { label: "Console Stop", command: "console stop", description: "停止浏览器控制面" },
+      { label: "Public Status", command: "public status", description: "查看 Console 公网模式状态" },
+      { label: "Public On", command: "public on", description: "开启 Console 公网模式" },
+      { label: "Public Off", command: "public off", description: "关闭 Console 公网模式" },
+    ],
+  },
+  {
+    label: "Studio Agent",
     items: [
       { label: "Agent Create", command: "agent create .", description: "初始化当前目录为 agent 项目" },
-      { label: "Agent Status", command: "agent status", description: "查看当前项目 agent 状态" },
-      { label: "Agent Start", command: "agent start", description: "启动当前项目 agent" },
-      { label: "Agent Foreground", command: "agent start --foreground", description: "以前台模式运行当前 agent" },
-      { label: "Agent Restart", command: "agent restart", description: "重启当前项目 agent" },
-      { label: "Agent Doctor", command: "agent doctor", description: "诊断并修复 daemon 状态文件" },
-      { label: "Agent Doctor Fix", command: "agent doctor --fix", description: "自动清理僵尸 pid/meta" },
+      { label: "Agent List", command: "agent list", description: "列出本机 agent 项目" },
+      { label: "Agent Status", command: "agent status .", description: "查看当前项目 agent 状态" },
+      { label: "Agent Start", command: "agent start .", description: "启动当前项目 agent" },
+      { label: "Agent Foreground", command: "agent start . --foreground", description: "以前台模式运行当前 agent" },
+      { label: "Agent Restart", command: "agent restart .", description: "重启当前项目 agent" },
+      { label: "Agent Doctor", command: "agent doctor .", description: "诊断 daemon 状态文件" },
+      { label: "Agent Doctor Fix", command: "agent doctor . --fix", description: "自动清理僵尸 pid/meta" },
     ],
   },
   {
-    label: "Config & Model",
+    label: "City Config",
     items: [
-      { label: "Config Get", command: "console config get", description: "读取当前 downcity.json 配置" },
-      { label: "Config Primary", command: "console config get model.primary", description: "读取当前项目主模型绑定" },
-      { label: "Config Alias", command: "console config alias --print", description: "打印 alias city 配置片段" },
-      { label: "Model List", command: "console model list", description: "列出 provider 与模型池" },
-      { label: "Model Create", command: "console model create", description: "交互式创建 provider 或 model" },
-      { label: "Model Discover", command: "console model discover <providerId>", description: "探测 provider 可用模型" },
-      { label: "Model Use", command: "console model use <modelId>", description: "绑定当前项目 model.primary" },
-      { label: "Model Test", command: "console model test provider <providerId>", description: "测试 provider 连通性" },
-    ],
-  },
-  {
-    label: "Service",
-    items: [
-      { label: "Service List", command: "service list", description: "列出 service 运行状态" },
-      { label: "Service Chat", command: "service status chat", description: "查看 chat service 状态" },
-      { label: "Service Task", command: "service status task", description: "查看 task service 状态" },
-      { label: "Service Memory", command: "service status memory", description: "查看 memory service 状态" },
-      { label: "Service Restart", command: "service restart chat", description: "重启 chat service" },
-      { label: "Task Reload", command: "service command task reload", description: "触发 task scheduler 重载" },
+      { label: "Config", command: "config", description: "管理 downcity.json 配置与 alias" },
+      { label: "Model", command: "model", description: "打开 city 全局模型池管理器" },
+      { label: "Token", command: "token", description: "管理本机 Bearer Token" },
+      { label: "Env", command: "env", description: "管理平台 Env key" },
+      { label: "City Init", command: "init", description: "初始化 city 全局配置" },
+      { label: "City Update", command: "update", description: "更新全局 downcity CLI 聚合包" },
     ],
   },
   {
@@ -176,7 +199,7 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
       { label: "Chat Reconnect", command: "chat reconnect", description: "重连 chat 渠道" },
       { label: "Chat Context", command: "chat context", description: "查看当前会话上下文快照" },
       { label: "Chat History", command: "chat history --limit 30", description: "读取最近聊天历史" },
-      { label: "Chat Send", command: "chat send --text \"hello from city\"", description: "向当前 chatKey 发送消息" },
+      { label: "Chat Send", command: "chat send --text \"hello from studio\"", description: "向当前 chatKey 发送消息" },
     ],
   },
   {
@@ -206,7 +229,7 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
       { label: "ASR Off", command: "asr off", description: "关闭 asr plugin" },
       { label: "TTS Status", command: "tts status", description: "查看 tts plugin 配置" },
       { label: "TTS On", command: "tts on", description: "启用 tts plugin" },
-      { label: "TTS Synthesize", command: "tts synthesize \"hello from city\"", description: "生成可发送的语音文件" },
+      { label: "TTS Synthesize", command: "tts synthesize \"hello from studio\"", description: "生成可发送的语音文件" },
     ],
   },
 ]
@@ -300,18 +323,19 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
 
   /**
    * 解析最终执行命令（中文）
-   * - 已显式输入 `city|downcity ...`：保持原样。
-   * - 首 token 是 CITY 已知命令/全局参数（`-v`）：自动补 `city`。
+   * - 已显式输入 `city|studio ...`：保持原样。
+   * - 首 token 是 City 已知命令/全局参数（`-v`）：自动补 `city`。
+   * - 首 token 是 Studio 已知命令：自动补 `studio`。
    * - 其他命令（clear/cd/ls/...）：按原始 shell 命令执行。
    */
   const resolveExecutionCommand = React.useCallback((commandTextInput: string): string => {
     const raw = String(commandTextInput || "").trim()
     if (!raw) return ""
-    if (/^(?:city|downcity)(?:\s|$)/i.test(raw)) return raw
-    const firstToken = String(raw.split(/\s+/, 1)[0] || "").trim().toLowerCase()
-    if (!firstToken) return ""
-    const shouldPrefix = firstToken.startsWith("-") || DC_COMMAND_ROOTS.has(firstToken)
-    if (shouldPrefix) return `city ${raw}`
+    if (/^(?:city|studio)(?:\s|$)/i.test(raw)) return raw
+    const first_token = String(raw.split(/\s+/, 1)[0] || "").trim().toLowerCase()
+    if (!first_token) return ""
+    if (first_token.startsWith("-") || CITY_COMMAND_ROOTS.has(first_token)) return `city ${raw}`
+    if (STUDIO_COMMAND_ROOTS.has(first_token)) return `studio ${raw}`
     return raw
   }, [])
 
@@ -740,7 +764,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
                     navigateCommandHistory("down")
                   }
                 }}
-                placeholder="输入命令后按回车执行（CITY 命令可省略 city）"
+                placeholder="输入命令后按回车执行（city / studio 可自动补全）"
                 className="relative z-10 h-8 w-full bg-transparent font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground/80"
               />
             </div>

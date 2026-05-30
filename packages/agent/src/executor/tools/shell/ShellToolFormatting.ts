@@ -42,15 +42,15 @@ function applyEnvMap(
  */
 export function validateChatSendCommand(cmd: string): string | null {
   const source = String(cmd ?? "");
-  if (!/\b(?:city|downcity)\s+chat\s+send\b/.test(source)) return null;
+  if (!/\bstudio\s+chat\s+send\b/.test(source)) return null;
   if (!/[\r\n]/.test(source)) return null;
-  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) {
+  if (/\bstudio\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) {
     return null;
   }
-  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) {
+  if (/\bstudio\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) {
     return null;
   }
-  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source)) {
+  if (/\bstudio\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source)) {
     return null;
   }
   return [

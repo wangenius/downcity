@@ -18,18 +18,18 @@ const workspace_root = path.resolve(package_root, "../..");
 
 const copy_targets = [
   {
-    label: "city runtime",
+    label: "city command runtime",
     source_path: path.join(workspace_root, "cli/city/bin"),
-    target_path: path.join(package_root, "city-cli"),
+    target_path: path.join(package_root, "city"),
   },
   {
-    label: "studio runtime",
+    label: "studio command runtime",
     source_path: path.join(workspace_root, "cli/studio/bin"),
-    target_path: path.join(package_root, "studio-cli"),
+    target_path: path.join(package_root, "studio"),
   },
   {
     label: "console assets",
-    source_path: path.join(workspace_root, "cli/city/public"),
+    source_path: path.join(workspace_root, "cli/studio/public"),
     target_path: path.join(package_root, "public"),
   },
 ];

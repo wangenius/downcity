@@ -20,7 +20,7 @@ const __dirname = path.dirname(__filename);
 export function resolveStudioCliPath(): string {
   const candidates = [
     process.env.DOWNCITY_STUDIO_CLI_PATH,
-    // downcity 发布包：studio runtime 被复制到 `<pkg>/studio-cli`，studio wrapper 位于 `<pkg>/bin/studio`。
+    // downcity 发布包：studio runtime 被复制到 `<pkg>/studio`，studio wrapper 位于 `<pkg>/bin/studio`。
     path.resolve(__dirname, "../../bin/studio/index.js"),
     // workspace 开发态：studio 构建产物在 `cli/studio/bin/index.js`。
     path.resolve(__dirname, "../../../studio/bin/index.js"),

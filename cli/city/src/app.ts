@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Downcity Agent 入口与状态机调度。
+ * Downcity City 管理入口与状态机调度。
  *
  * 状态流转：
  *   selectIdentity → Admin → adminLoop → selectIdentity (switch identity)
@@ -24,7 +24,7 @@ import { adminLoop } from "./admin/loop.js";
 import { show, showError, showSuccess } from "./core/ui.js";
 import { updateCli } from "./core/update.js";
 
-export async function runTerminalApp(argv: string[] = []): Promise<void> {
+export async function runCityApp(argv: string[] = []): Promise<void> {
   const cli = parseArgs(argv);
   if (cli.command === "update") {
     await runSelfUpdate();

@@ -67,7 +67,7 @@ const __dirname = path.dirname(__filename);
  */
 const DC_VERSION = (() => {
   const candidate_package_paths = [
-    // 关键点（中文）：downcity 聚合包复制后的 studio runtime 位于 `<pkg>/studio-cli/control`。
+    // 关键点（中文）：downcity 聚合包复制后的 studio runtime 位于 `<pkg>/studio/control`。
     path.join(__dirname, "../package.json"),
     // 关键点（中文）：workspace 内部包构建后位于 `cli/studio/bin/control`。
     path.join(__dirname, "../../package.json"),

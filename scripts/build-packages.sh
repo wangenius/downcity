@@ -143,10 +143,12 @@ run_build() {
     if command -v pnpm >/dev/null 2>&1; then
       pnpm -C "cli/city" build
       pnpm -C "cli/studio" build
+      pnpm -C "products/console" build
       pnpm -C "cli/downcity" build
     else
       npm --prefix "cli/city" run build
       npm --prefix "cli/studio" run build
+      npm --prefix "products/console" run build
       npm --prefix "cli/downcity" run build
     fi
     return 0

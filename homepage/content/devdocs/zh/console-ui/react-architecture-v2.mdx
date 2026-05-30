@@ -32,7 +32,7 @@ flowchart TD
   Gateway["ConsoleUIGateway<br/>静态资源托管 + API 代理"]
   App["products/console<br/>React 应用层"]
   UI["packages/ui<br/>设计 token + 通用组件"]
-  Runtime["cli/city<br/>console / agent runtime API"]
+  Runtime["cli/studio<br/>console / agent runtime API"]
 
   UI --> App
   App --> Gateway
@@ -44,7 +44,7 @@ flowchart TD
 `studio console start` 时：
 
 1. 启动 Console UI Gateway
-2. Gateway 读取 `cli/city/public`
+2. Gateway 读取 `cli/studio/public`
 3. 浏览器访问 UI 端口时，返回 React 构建产物
 4. React 前端通过同域 `/api/*` 调用现有 console / agent API
 
@@ -54,7 +54,7 @@ flowchart TD
 
 ```text
 downcity/
-├─ cli/city/
+├─ cli/studio/
 ├─ packages/ui/
 ├─ products/console/
 └─ homepage/
@@ -64,7 +64,7 @@ downcity/
 
 - `products/console/` 是前端源码工作区
 - `packages/ui/` 是复用 UI SDK
-- `cli/city/public/` 是最终托管的静态产物目录
+- `cli/studio/public/` 是最终托管的静态产物目录
 
 ## 当前关键约束
 

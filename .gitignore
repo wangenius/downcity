@@ -20,6 +20,8 @@ bun.*
 package/bin
 cli/downcity/city-cli/
 cli/downcity/studio-cli/
+cli/downcity/city/
+cli/downcity/studio/
 cli/downcity/public/
 !examples/demo-agent/bin
 # Runtime data

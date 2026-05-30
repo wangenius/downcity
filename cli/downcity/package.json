@@ -1,16 +1,16 @@
 {
   "name": "downcity",
-  "version": "1.1.55",
+  "version": "1.1.56",
   "type": "module",
-  "description": "Downcity terminal product bundle — installs city and studio commands",
+  "description": "Downcity CLI bundle — installs city and studio commands",
   "bin": {
     "city": "./bin/city/index.js",
     "studio": "./bin/studio/index.js"
   },
   "files": [
     "bin/",
-    "city-cli/",
-    "studio-cli/",
+    "city/",
+    "studio/",
     "public/",
     "README.md",
     "package.json"

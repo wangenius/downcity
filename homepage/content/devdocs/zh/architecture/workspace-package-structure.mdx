@@ -99,14 +99,14 @@ flowchart TD
 | `cli/downcity` | `downcity` | 唯一对外全局安装包，暴露 `city` / `studio` | `bin/`、复制后的命令 runtime |
 | `packages/city` | `@downcity/city` | 可复用 City runtime、service/action 基建 | `dist/` |
 | `packages/ui` | `@downcity/ui` | React UI SDK | `dist/` |
-| `products/console` | `@downcity/console-ui` | 浏览器 Console 前端 | 直接输出到 `cli/city/public/` |
+| `products/console` | `@downcity/console-ui` | 浏览器 Console 前端 | 直接输出到 `cli/studio/public/` |
 | `products/chrome-extension` | `downcity-chrome-extension` | 浏览器扩展 | `dist/` |
 | `homepage` | `downcity-homepage` | 官网、用户文档、开发文档 | `build/` |
 
 这里最容易误解的一点是：
 
 - `products/console` 的源码在 `products/console/`
-- 但它的生产构建产物不保存在自己目录，而是直接写入 `cli/city/public/`
+- 但它的生产构建产物不保存在自己目录，而是直接写入 `cli/studio/public/`
 
 ## 依赖关系图
 
@@ -115,13 +115,14 @@ flowchart LR
     UI["packages/ui<br/>@downcity/ui"]
     Console["products/console<br/>@downcity/console-ui"]
     Homepage["homepage<br/>downcity-homepage"]
+    StudioCli["cli/studio<br/>studio command"]
     Runtime["packages/city<br/>@downcity/city"]
     CliBundle["cli/downcity<br/>downcity"]
     Extension["products/chrome-extension<br/>downcity-chrome-extension"]
 
     UI --> Console
     UI --> Homepage
-    Console --> Runtime
+    Console --> StudioCli
     Console --> CliBundle
     Extension --> Runtime
 ```
@@ -130,10 +131,10 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    ConsoleSrc["products/console"] -- vite build --> ConsolePublic["cli/city/public"]
+    ConsoleSrc["products/console"] -- vite build --> ConsolePublic["cli/studio/public"]
     CityCliSrc["cli/city"] -- tsc --> CityCliBin["cli/city/bin"]
     StudioCliSrc["cli/studio"] -- tsc --> StudioCliBin["cli/studio/bin"]
-    BundleSrc["cli/downcity"] -- copy runtime --> BundleBin["cli/downcity/bin + city-cli + studio-cli + public"]
+    BundleSrc["cli/downcity"] -- copy runtime --> BundleBin["cli/downcity/bin + city + studio + public"]
     RuntimeSrc["packages/city"] -- tsc --> RuntimeDist["packages/city/dist"]
     UISrc["packages/ui"] -- tsup --> UIDist["packages/ui/dist"]
     ExtensionSrc["products/chrome-extension"] -- vite build --> ExtensionDist["products/chrome-extension/dist"]

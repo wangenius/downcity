@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
-import { runTerminalApp } from "./app.js";
+import { runCityApp } from "./app.js";
 import { createVersionBanner } from "./shared/IndexSupport.js";
 import { setCliVerbosity } from "./shared/CliReporter.js";
 
@@ -40,7 +40,7 @@ program
   .description("打开 City 交互式管理界面")
   .helpOption("--help", "display help for command")
   .action(createVersionBanner(packageJson.version, async (action?: string) => {
-    await runTerminalApp(action ? [action] : []);
+    await runCityApp(action ? [action] : []);
   }));
 
 program.showHelpAfterError();
@@ -55,7 +55,7 @@ program.hook("preAction", (thisCommand) => {
 
 if (process.argv.length <= 2) {
   if (process.stdin.isTTY === true && process.stdout.isTTY === true) {
-    await runTerminalApp();
+    await runCityApp();
     process.exit(0);
   }
   program.outputHelp();

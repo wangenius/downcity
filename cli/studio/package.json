@@ -1,6 +1,6 @@
 {
   "name": "downcity-studio-command",
-  "version": "1.1.55",
+  "version": "1.1.56",
   "private": true,
   "type": "module",
   "description": "Downcity Studio CLI — 本机 Agent 宿主与运行入口",

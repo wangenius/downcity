@@ -39,11 +39,12 @@ Services register their own actions and tables into City. The studio example als
 
 ## Calling Services From Clients
 
-UserClient calls guest-access service entry points with `base_url` only:
+User Gate calls guest-access service entry points with `city_url` only:
 
 ```ts
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 
 const accounts = guest.service("accounts");
@@ -55,7 +56,7 @@ const session = await accounts.action("login").invoke({
 });
 ```
 
-UserClient calls authenticated service entry points after it has `studio_id + user_token`:
+User Gate calls authenticated service entry points after it has `studio_id + user_token`:
 
 ```ts
 const usage = user.service("usage");
@@ -63,7 +64,7 @@ const usage = user.service("usage");
 const myUsage = await usage.get("me");
 ```
 
-AdminClient calls `/v1/{serviceId}`:
+Admin Gate calls `/v1/{serviceId}`:
 
 ```ts
 const usage = admin.service("usage");

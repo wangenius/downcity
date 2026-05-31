@@ -39,8 +39,9 @@ const session = await guest.service("accounts").action("login").invoke({
 不是继续一直用 guest client，而是切到正常用户态：
 
 ```ts
-const user = new UserClient({
-  base_url,
+const user = new Gate({
+  role: "user",
+  city_url,
   studio_id: "studio_demo",
   user_token: session.user_token,
 });

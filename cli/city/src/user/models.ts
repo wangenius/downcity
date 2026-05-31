@@ -4,13 +4,13 @@
  * 从 server 获取模型目录，显示并允许用户切换。
  */
 
-import type { UserClient, ModelCatalog } from "@downcity/city";
+import type { Gate, ModelCatalog } from "@downcity/city";
 import { type UserContext } from "../auth/user.js";
 import { askModel, type ModelOption, show, showError, showSuccess } from "../core/ui.js";
 import { readConfig, writeConfig } from "../core/session.js";
 
 /** 列出模型并选择切换 */
-export async function doModels(c: UserClient, ctx: UserContext): Promise<void> {
+export async function doModels(c: Gate, ctx: UserContext): Promise<void> {
   let catalog: ModelCatalog;
   try {
     catalog = await c.ai.listModels();

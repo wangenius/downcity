@@ -86,7 +86,7 @@ export interface UserTokenPayload {
  */
 export interface UserTokenIssueResult {
   /**
-   * 可交给 UserClient 使用的 token。
+   * 可交给 User Gate 使用的 token。
    */
   user_token: string;
 

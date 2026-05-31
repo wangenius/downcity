@@ -109,24 +109,26 @@ curl http://1.2.3.4:43127/health
 产品前端和应用应该通过 `@downcity/city` 调用 Node 街区：
 
 ```ts
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const client = new UserClient({
-  base_url: "https://base.example.com",
+const client = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "my-studio",
   user_token: "user_token",
 });
 ```
 
-可信后端应该用 `AdminClient` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
+可信后端应该用 `Admin Gate` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
 
 ```ts
-import { AdminClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const admin = new AdminClient({
-  base_url: "https://base.example.com",
+const admin = new Gate({
+  role: "admin",
+  city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
 
-完整 SDK 能力继续看 [UserClient](/docs/city/reference/user-client) 和 [AdminClient](/docs/city/reference/admin-client)。
+完整 SDK 能力继续看 [User Gate](/docs/city/reference/gate-user) 和 [Admin Gate](/docs/city/reference/gate-admin)。

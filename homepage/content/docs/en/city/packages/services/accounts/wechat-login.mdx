@@ -111,8 +111,9 @@ After WeChat login succeeds, the accounts service still returns a normal City `u
 So the studio does not need a special post-login client flow just because the user came from WeChat:
 
 ```ts
-const user = new UserClient({
-  base_url: "https://base.example.com",
+const user = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_demo",
   user_token: result.user_token,
 });

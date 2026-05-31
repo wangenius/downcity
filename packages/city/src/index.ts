@@ -3,7 +3,7 @@
  *
  * City 包同时提供服务端运行时与 Gate 访问入口：
  * - `City` 用来创建和部署城市
- * - `Gate` / `UserClient` / `AdminClient` 用来访问城市
+ * - `Gate` 用来以 user 或 admin 角色访问城市
  */
 
 // ===========================================================================
@@ -117,17 +117,16 @@ export type {
   AdminGateOptions,
   GateBaseOptions,
   GateOptions,
+  GateOptionsForRole,
   GateRole,
   UserGateOptions,
 } from "./gate/types/gate.js";
 
-export { UserClient } from "./gate/user/index.js";
 export { AIInvoker, ModelCatalog, ModelHandle } from "./gate/invoker/ai/index.js";
 export { PaymentInvoker, PaymentMethodHandle } from "./gate/invoker/payment/index.js";
 export { ServiceClient, ActionClient } from "./gate/invoker/invoker.js";
 
 export type {
-  UserClientOptions,
   UserPaymentMethod,
   UserPaymentMethodReason,
   UserPaymentMethodType,
@@ -151,13 +150,11 @@ export type {
   UserModelInput,
 } from "./gate/invoker/ai/types.js";
 
-export { AdminClient } from "./gate/admin/index.js";
 export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./gate/invoker/balance/index.js";
 export { EnvInvoker } from "./gate/invoker/env/index.js";
 export { StudiosInvoker } from "./gate/invoker/studios/index.js";
 
 export type {
-  AdminClientOptions,
   AdminInstructionResult,
   AdminModelRecord,
   AdminServiceSummary,

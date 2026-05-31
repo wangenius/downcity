@@ -129,7 +129,7 @@ Stripe webhook endpoint 本身则固定是：
 - 不适合替代管理后台逻辑
 - 不适合做长期自动化流程
 
-这类需求更适合交给 `AdminClient` 或你自己的后端脚本。
+这类需求更适合交给 `Admin Gate` 或你自己的后端脚本。
 
 ## 常用入口
 
@@ -147,9 +147,9 @@ Stripe webhook endpoint 本身则固定是：
 
 它是给 City 管理者、开发者、运维者用的，不是产品用户入口。
 
-### CLI 不是 AdminClient 的替代品
+### CLI 不是 Admin Gate 的替代品
 
-CLI 适合“人坐在终端前的操作”；`AdminClient` 适合“程序里长期存在的可信调用”。
+CLI 适合“人坐在终端前的操作”；`Admin Gate` 适合“程序里长期存在的可信调用”。
 
 ### CLI 不只是在看表
 

@@ -1,6 +1,6 @@
 {
   "name": "@downcity/city",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "description": "Downcity City runtime and Gate access SDK for services, actions, auth, env, and studios.",
   "type": "module",
   "main": "./bin/index.js",

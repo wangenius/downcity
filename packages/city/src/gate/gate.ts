@@ -2,48 +2,48 @@
  * Gate 统一访问入口。
  *
  * Gate 面向开发者表达“我以某种角色进入 City”，内部再委托给
- * AdminClient 或 UserClient，避免用户在第一层概念上关心 client 拆分。
+ * admin / user 访问层，避免用户在第一层概念上关心 client 拆分。
  */
 
-import { AdminClient } from "./admin/index.js";
-import { UserClient } from "./user/index.js";
+import { AdminGateAccess } from "./admin/index.js";
+import { UserGateAccess } from "./user/index.js";
 import type { ServiceClient } from "./invoker/invoker.js";
-import type { GateOptions, GateRole } from "./types/gate.js";
+import type { GateOptionsForRole, GateRole } from "./types/gate.js";
 import type { AdminModelRecord, AdminServiceSummary } from "./admin/types.js";
 import type { UserServiceSummary } from "./user/types.js";
 
 /**
  * Downcity Gate。
  */
-export class Gate {
+export class Gate<TRole extends GateRole = GateRole> {
   /**
    * 当前 Gate 访问角色。
    */
-  readonly role: GateRole;
+  readonly role: TRole;
 
   /**
    * Admin 能力面。
    *
    * 仅 `role: "admin"` 时可用。
    */
-  readonly admin?: AdminClient;
+  private readonly admin_access?: AdminGateAccess;
 
   /**
    * User 能力面。
    *
    * 仅 `role: "user"` 时可用。
    */
-  readonly user?: UserClient;
+  private readonly user_access?: UserGateAccess;
 
-  constructor(options: GateOptions) {
+  constructor(options: GateOptionsForRole<TRole>) {
     if (!options || typeof options !== "object") {
       throw new TypeError("Gate options are required");
     }
 
-    this.role = options.role;
+    this.role = options.role as TRole;
 
     if (options.role === "admin") {
-      this.admin = new AdminClient({
+      this.admin_access = new AdminGateAccess({
         base_url: options.city_url,
         admin_secret_key: options.admin_secret_key,
         fetch: options.fetch,
@@ -51,7 +51,7 @@ export class Gate {
       return;
     }
 
-    this.user = new UserClient({
+    this.user_access = new UserGateAccess({
       base_url: options.city_url,
       studio_id: options.studio_id,
       user_token: options.user_token,
@@ -62,35 +62,35 @@ export class Gate {
   /**
    * User Gate 的 AI 调用入口。
    */
-  get ai(): UserClient["ai"] {
+  get ai(): UserGateAccess["ai"] {
     return this.require_user().ai;
   }
 
   /**
    * User Gate 的支付入口。
    */
-  get payment(): UserClient["payment"] {
+  get payment(): UserGateAccess["payment"] {
     return this.require_user().payment;
   }
 
   /**
    * Admin Gate 的余额服务入口。
    */
-  get balance(): AdminClient["balance"] {
+  get balance(): AdminGateAccess["balance"] {
     return this.require_admin().balance;
   }
 
   /**
    * Admin Gate 的环境变量服务入口。
    */
-  get env(): AdminClient["env"] {
+  get env(): AdminGateAccess["env"] {
     return this.require_admin().env;
   }
 
   /**
    * Admin Gate 的 Studio 管理入口。
    */
-  get studios(): AdminClient["studios"] {
+  get studios(): AdminGateAccess["studios"] {
     return this.require_admin().studios;
   }
 
@@ -98,14 +98,14 @@ export class Gate {
    * 获取普通 service 调用器。
    */
   service(name: string): ServiceClient {
-    return this.admin?.service(name) ?? this.require_user().service(name);
+    return this.admin_access?.service(name) ?? this.require_user().service(name);
   }
 
   /**
    * 列出当前 City 暴露的 service。
    */
   listServices(): Promise<AdminServiceSummary[] | UserServiceSummary[]> {
-    return this.admin?.listServices() ?? this.require_user().listServices();
+    return this.admin_access?.listServices() ?? this.require_user().listServices();
   }
 
   /**
@@ -122,17 +122,17 @@ export class Gate {
     return this.require_admin().instruction();
   }
 
-  private require_admin(): AdminClient {
-    if (!this.admin) {
+  private require_admin(): AdminGateAccess {
+    if (!this.admin_access) {
       throw new TypeError("Gate role admin is required for this operation");
     }
-    return this.admin;
+    return this.admin_access;
   }
 
-  private require_user(): UserClient {
-    if (!this.user) {
+  private require_user(): UserGateAccess {
+    if (!this.user_access) {
       throw new TypeError("Gate role user is required for this operation");
     }
-    return this.user;
+    return this.user_access;
   }
 }

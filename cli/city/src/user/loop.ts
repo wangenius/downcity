@@ -6,7 +6,7 @@
  * - me / services / service 保持内联（逻辑简单）。
  */
 
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 import { type UserContext } from "../auth/user.js";
 import { clearUserSession } from "../core/session.js";
 import { askUserCommand, askText, show, showError, showSuccess } from "../core/ui.js";
@@ -16,8 +16,9 @@ import { doModels } from "./models.js";
 type Result = "logout" | "quit" | "switch_identity";
 
 export async function userLoop(ctx: UserContext): Promise<Result> {
-  const client = new UserClient({
-    base_url: ctx.session.base_url,
+  const client = new Gate({
+    role: "user",
+    city_url: ctx.session.base_url,
     studio_id: ctx.session.studio_id,
     user_token: ctx.session.user_token,
   });
@@ -38,7 +39,7 @@ export async function userLoop(ctx: UserContext): Promise<Result> {
 }
 
 async function execute(
-  c: UserClient,
+  c: Gate,
   ctx: UserContext,
   cmd: string,
 ): Promise<"continue" | "logout" | "quit"> {
@@ -60,7 +61,7 @@ async function execute(
       return "continue";
 
     case "recharge":
-      await rechargeWithStripe(c);
+      await rechargeWithStripe(c, ctx.session.base_url);
       return "continue";
 
     case "topup_create":

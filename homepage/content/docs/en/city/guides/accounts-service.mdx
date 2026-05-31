@@ -21,14 +21,14 @@ base.use(accountsService({
 
 ```txt
 studio frontend
-  -> guest UserClient with base_url only
+  -> guest User Gate with city_url only
   -> call guest accounts actions
   -> accounts service returns user_token
-  -> frontend creates a normal UserClient with base_url + studio_id + user_token
+  -> frontend creates a normal User Gate with city_url + studio_id + user_token
   -> frontend continues with AI services or custom services
 ```
 
-If you already have your own backend, you can skip the service for login itself and let your backend validate users first, then use `AdminClient` to issue `user_token`. The accounts service is the official ready-made service path for a minimal auth system.
+If you already have your own backend, you can skip the service for login itself and let your backend validate users first, then use `Admin Gate` to issue `user_token`. The accounts service is the official ready-made service path for a minimal auth system.
 
 ## Choosing the pattern
 
@@ -48,15 +48,16 @@ Good fit when:
 - you need complex org, invitation, permission, or risk-control logic
 - you only want City to handle `user_token` issuance
 
-Both patterns converge to the same end state: the frontend gets `studio_id + user_token`, then uses a normal `UserClient` to call City.
+Both patterns converge to the same end state: the frontend gets `studio_id + user_token`, then uses a normal `User Gate` to call City.
 
 ## Login
 
 ```ts
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 
 const accounts = guest.service("accounts");
@@ -68,7 +69,7 @@ const session = await accounts.action("login").invoke({
 });
 ```
 
-The response includes `user_token`, `user_id`, and `email`. The studio client can then create a normal `UserClient` and call AI services.
+The response includes `user_token`, `user_id`, and `email`. The studio client can then create a normal `User Gate` and call AI services.
 
 ## Registration
 
@@ -115,11 +116,12 @@ This set of endpoints usually comes in two phases:
 - `oauth/start`: get the redirect URL or state
 - `oauth/result`: poll or confirm the login result
 
-## Switching from guest UserClient to normal UserClient
+## Switching from guest User Gate to normal User Gate
 
 ```ts
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 
 const session = await guest.service("accounts").action("login").invoke<{
@@ -130,8 +132,9 @@ const session = await guest.service("accounts").action("login").invoke<{
   studio_id: "studio_demo",
 });
 
-const user = new UserClient({
-  base_url: "https://base.example.com",
+const user = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_demo",
   user_token: session.user_token,
 });
@@ -172,8 +175,8 @@ As a first mental model:
 
 That means:
 
-- guest Actions still run through `UserClient`
-- but at that stage the `UserClient` only needs `base_url`
+- guest Actions still run through `User Gate`
+- but at that stage the `User Gate` only needs `city_url`
 - once you enter user context, you move to `studio_id + user_token`
 
 ## Current User And Logout
@@ -215,4 +218,4 @@ More precisely:
 - `@downcity/services` registers the `accounts` service into City
 - `@downcity/city` is what studio-side and trusted-side callers use to call that service
 
-So the service provides the auth capability, while the SDK still provides the calling surface through `UserClient` and `AdminClient`.
+So the service provides the auth capability, while the SDK still provides the calling surface through `User Gate` and `Admin Gate`.

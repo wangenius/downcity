@@ -2,7 +2,7 @@
  * Admin 命令循环。返回 "logout" | "quit" | "switch_identity"。
  */
 
-import { AdminClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { type AdminSession } from "../core/session.js";
 import { showError, showSuccess } from "../core/ui.js";
@@ -17,7 +17,7 @@ import { manageCustom } from "./commands/custom.js";
 import { manageModels } from "./commands/models.js";
 import { manageInstruction } from "./commands/instruction.js";
 
-const commands: Record<string, (a: AdminClient, baseUrl: string) => Promise<void>> = {
+const commands: Record<string, (a: Gate, baseUrl: string) => Promise<void>> = {
   env: manageEnv,
   instruction: manageInstruction,
   models: manageModels,
@@ -30,7 +30,11 @@ const commands: Record<string, (a: AdminClient, baseUrl: string) => Promise<void
 };
 
 export async function adminLoop(session: AdminSession): Promise<"logout" | "quit" | "switch_identity"> {
-  const admin = new AdminClient({ base_url: session.base_url, admin_secret_key: session.admin_secret_key });
+  const admin = new Gate({
+    role: "admin",
+    city_url: session.base_url,
+    admin_secret_key: session.admin_secret_key,
+  });
 
   while (true) {
     const svc = await select({

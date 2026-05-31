@@ -20,7 +20,7 @@ Capabilities
 
 ```txt
 产品前端 / App / 内部工具
-  -> UserClient / AdminClient / studio terminal
+  -> User Gate / Admin Gate / studio terminal
   -> City
   -> Service / AIService
   -> Provider / Database
@@ -32,7 +32,7 @@ Capabilities
 
 Downcity 对外有两类主要入口：
 
-- 产品侧入口：`@downcity/city` 的 `UserClient` 与 `AdminClient`
+- 产品侧入口：`@downcity/city` 的 `User Gate` 与 `Admin Gate`
 - 运维入口：`downcity`
 
 它们都不实现 City 本身，只负责把请求送进同一个 City。
@@ -86,10 +86,10 @@ City 本身不关心“翻译”或“支付”是什么业务，它只负责把
 
 ### SDK 通路
 
-给 `UserClient` 调用：
+给 `User Gate` 调用：
 
 ```txt
-UserClient.ai.text({ prompt: "hello", model: "kimi-k2.6" })
+User Gate.ai.text({ prompt: "hello", model: "kimi-k2.6" })
   -> POST /v1/ai/text
   -> Provider text action(ctx)
   -> generateText / streamText (ai-sdk)

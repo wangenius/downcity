@@ -18,21 +18,20 @@ export type {
   AdminGateOptions,
   GateBaseOptions,
   GateOptions,
+  GateOptionsForRole,
   GateRole,
   UserGateOptions,
 } from "./types/gate.js";
 
 // ===========================================================================
-// 用户端
+// Gate 能力类型
 // ===========================================================================
 
-export { UserClient } from "./user/index.js";
 export { AIInvoker, ModelCatalog, ModelHandle } from "./invoker/ai/index.js";
 export { PaymentInvoker, PaymentMethodHandle } from "./invoker/payment/index.js";
 export { ServiceClient, ActionClient } from "./invoker/invoker.js";
 
 export type {
-  UserClientOptions,
   UserPaymentMethod,
   UserPaymentMethodReason,
   UserPaymentMethodType,
@@ -56,17 +55,11 @@ export type {
   UserModelInput,
 } from "./invoker/ai/types.js";
 
-// ===========================================================================
-// 管理端
-// ===========================================================================
-
-export { AdminClient } from "./admin/index.js";
 export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./invoker/balance/index.js";
 export { EnvInvoker } from "./invoker/env/index.js";
 export { StudiosInvoker } from "./invoker/studios/index.js";
 
 export type {
-  AdminClientOptions,
   AdminInstructionResult,
   AdminModelRecord,
   AdminServiceSummary,

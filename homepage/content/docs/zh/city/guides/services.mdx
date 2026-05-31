@@ -40,11 +40,12 @@ base.use(stripePaymentService({
 
 ## 客户端调用服务
 
-UserClient 调免登录服务入口时，只需要 `base_url`：
+User Gate 调免登录服务入口时，只需要 `city_url`：
 
 ```ts
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 
 const accounts = guest.service("accounts");
@@ -56,7 +57,7 @@ const session = await accounts.action("login").invoke({
 });
 ```
 
-UserClient 带上 `studio_id + user_token` 后，调需要用户鉴权的服务入口：
+User Gate 带上 `studio_id + user_token` 后，调需要用户鉴权的服务入口：
 
 ```ts
 const usage = user.service("usage");
@@ -64,7 +65,7 @@ const usage = user.service("usage");
 const myUsage = await usage.get("me");
 ```
 
-AdminClient 调 `/v1/{serviceId}`：
+Admin Gate 调 `/v1/{serviceId}`：
 
 ```ts
 const usage = admin.service("usage");

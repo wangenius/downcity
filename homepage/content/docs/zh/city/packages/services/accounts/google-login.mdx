@@ -117,8 +117,9 @@ Google 登录完成后，accounts service 仍然会按统一方式返回 City `u
 也就是说，产品侧不需要因为换成 Google 登录，就改掉后面的用户态调用方式：
 
 ```ts
-const user = new UserClient({
-  base_url: "https://base.example.com",
+const user = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_demo",
   user_token: result.user_token,
 });

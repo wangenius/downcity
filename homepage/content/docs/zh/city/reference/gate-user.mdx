@@ -1,38 +1,39 @@
 ---
-title: UserClient
+title: User Gate
 description: 产品侧如何读取模型目录，并调用 AIService 或自定义 Service。
 ---
 
-`UserClient` 是给终端产品用的 SDK。
+`User Gate` 是给终端产品用的 SDK。
 
 它绑定的是一个用户在某个产品下的调用上下文：
 
-- `base_url`
+- `city_url`
 - `studio_id`，调用 AI service 或自定义 user action 时会自动注入
 - `user_token`，调用 AI service 或用户鉴权 action 时需要
 
-只调用登录、注册、webhook 这类免登录 action 时，可以只传 `base_url`。
+只调用登录、注册、webhook 这类免登录 action 时，可以只传 `city_url`。
 
 你可以把它放在浏览器、扩展、App、桌面端，或者产品后端代用户调用 City。
 
 ## 先建立一个心智
 
-对 `UserClient` 来说，最重要的不是方法名，而是它统一承载了三类产品调用：
+对 `User Gate` 来说，最重要的不是方法名，而是它统一承载了三类产品调用：
 
 - AI service：`client.ai.*`
 - custom service：你自己注册到 City 的 service
 - service：服务注册到 City 的 service，例如 `accounts`、`usage`、`payment`
 
-所以从产品视角看，`UserClient` 不是“只用来调模型”，而是“用户态调用 City 的统一入口”。
+所以从产品视角看，`User Gate` 不是“只用来调模型”，而是“用户态调用 City 的统一入口”。
 
 ## 最小示例
 
 ```ts
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 import type { UIMessageChunk } from "ai";
 
-const client = new UserClient({
-  base_url: "https://base.example.com",
+const client = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_xxx",
   user_token: "ub_xxx",
 });
@@ -48,8 +49,9 @@ const result = await client.ai.text({
 ## 免登录 Action
 
 ```ts
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 
 const session = await guest.service("accounts").action("login").invoke<{
@@ -63,15 +65,15 @@ const session = await guest.service("accounts").action("login").invoke<{
 });
 ```
 
-拿到 `session.user_token` 后，再创建带 `studio_id + user_token` 的 UserClient 调 AI service。
+拿到 `session.user_token` 后，再创建带 `studio_id + user_token` 的 User Gate 调 AI service。
 
 ## guest 调用和用户态调用的区别
 
-可以把 `UserClient` 分成两个阶段理解：
+可以把 `User Gate` 分成两个阶段理解：
 
 ### guest 阶段
 
-只传 `base_url`，适合免登录 Action：
+只传 `city_url`，适合免登录 Action：
 
 - `accounts.register`
 - `accounts.login`
@@ -80,7 +82,7 @@ const session = await guest.service("accounts").action("login").invoke<{
 
 ### 用户态阶段
 
-传 `base_url + studio_id + user_token`，适合：
+传 `city_url + studio_id + user_token`，适合：
 
 - AI service
 - 需要用户身份的 custom service
@@ -89,7 +91,10 @@ const session = await guest.service("accounts").action("login").invoke<{
 最常见的切换就是：
 
 ```ts
-const guest = new UserClient({ base_url });
+const guest = new Gate({
+  role: "user",
+  city_url,
+});
 
 const session = await guest.service("accounts").action("login").invoke<{
   user_token: string;
@@ -99,8 +104,9 @@ const session = await guest.service("accounts").action("login").invoke<{
   studio_id: "studio_xxx",
 });
 
-const user = new UserClient({
-  base_url,
+const user = new Gate({
+  role: "user",
+  city_url,
   studio_id: "studio_xxx",
   user_token: session.user_token,
 });
@@ -224,7 +230,7 @@ services[0];
 
 ## custom service 和 service
 
-对 `UserClient` 来说，这两类 service 的调用方式完全一样。
+对 `User Gate` 来说，这两类 service 的调用方式完全一样。
 
 ### custom service
 
@@ -342,7 +348,7 @@ const result = await client.service("accounts").get("oauth/result", {
 
 ## 常见错误
 
-`UserClient` 收到非 2xx HTTP 响应时会抛出 `Error`。这个错误会带两个额外字段：
+`User Gate` 收到非 2xx HTTP 响应时会抛出 `Error`。这个错误会带两个额外字段：
 
 - `status`：HTTP 状态码。
 - `body`：City 返回的原始响应文本，通常是 `{"error":"..."}`。
@@ -380,9 +386,9 @@ try {
 - 请求里传了不存在的 model
 - 当前 model 没有对应 modality 的 action
 
-## 什么时候不要用 `UserClient`
+## 什么时候不要用 `User Gate`
 
-这些动作不应该交给 `UserClient`：
+这些动作不应该交给 `User Gate`：
 
 - 创建 studio
 - 签发 `user_token`
@@ -390,4 +396,4 @@ try {
 - 维护生产环境 provider key
 - 暂停或恢复 studio
 
-这些都属于可信环境动作，应该交给 [AdminClient](/docs/city/reference/admin-client) 或你自己的后端。
+这些都属于可信环境动作，应该交给 [Admin Gate](/docs/city/reference/gate-admin) 或你自己的后端。

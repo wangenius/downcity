@@ -11,7 +11,7 @@ What you end up with is not just a demo page. It is the smallest studio-shaped s
 - one model record
 - one `studio_id`
 - one `user_token` that an end user can actually use
-- one `UserClient` that successfully calls City
+- one `User Gate` that successfully calls City
 
 You do not need a separate AI backend for every new studio. A new project can start as a client first and connect to an already deployed City.
 
@@ -27,7 +27,7 @@ You do not need a separate AI backend for every new studio. A new project can st
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>UserClient</strong>
+      <strong>User Gate</strong>
       <span>Reads `ai.listModels()` and then calls `ai.text()`, `ai.stream()`, `ai.image()`, or another service.</span>
     </div>
   </div>
@@ -53,14 +53,14 @@ You do not need a separate AI backend for every new studio. A new project can st
 2. [Create City](/en/docs/city/quickstart/create-city): create City and let the first startup initialize the default database automatically
 3. [Add model](/en/docs/city/quickstart/add-model): register models with Provider and AIService
 4. [Issue `user_token`](/en/docs/city/quickstart/issue-token): give a studio user a valid call credential
-5. [Connect client](/en/docs/city/quickstart/connect-client): call City from the studio with `UserClient`
+5. [Connect client](/en/docs/city/quickstart/connect-client): call City from the studio with `User Gate`
 
 ## Which path should you choose
 
 <div className="dc-doc-grid">
   <a className="dc-doc-card" href="/en/docs/city/quickstart/use-now">
     <strong>I only want one working flow first</strong>
-    <p>Starting from the templates is the fastest option. Verify City, studio, token, and UserClient first, then come back for the details.</p>
+    <p>Starting from the templates is the fastest option. Verify City, studio, token, and User Gate first, then come back for the details.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/quickstart/create-city">
     <strong>I want to start in my own project</strong>

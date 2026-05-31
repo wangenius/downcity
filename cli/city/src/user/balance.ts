@@ -9,7 +9,7 @@
  * - 兑换 redeem_code
  */
 
-import type { UserClient } from "@downcity/city";
+import type { Gate } from "@downcity/city";
 import { openBrowser } from "../core/browser.js";
 import { buildStripeEndpoints } from "../core/stripe.js";
 import { askText, show, showError, showSuccess } from "../core/ui.js";
@@ -85,7 +85,7 @@ interface BalanceRedeemResult {
 }
 
 /** 展示当前余额 */
-export async function showBalance(c: UserClient): Promise<void> {
+export async function showBalance(c: Gate): Promise<void> {
   const account = await c.service("balance").get<BalanceAccount>("me");
   show([
     `user_id: ${account.user_id}`,
@@ -94,7 +94,7 @@ export async function showBalance(c: UserClient): Promise<void> {
 }
 
 /** 展示个人流水 */
-export async function showBalanceHistory(c: UserClient): Promise<void> {
+export async function showBalanceHistory(c: Gate): Promise<void> {
   const response = await c.service("balance").get<{ items: BalanceLedgerItem[] }>("history/me", { limit: 20 });
   if (response.items.length === 0) {
     show("No balance history yet.");
@@ -109,7 +109,7 @@ export async function showBalanceHistory(c: UserClient): Promise<void> {
 }
 
 /** 展示个人充值单 */
-export async function showTopups(c: UserClient): Promise<void> {
+export async function showTopups(c: Gate): Promise<void> {
   const response = await c.service("balance").get<{ items: BalanceTopupItem[] }>("topups/me", { limit: 20 });
   if (response.items.length === 0) {
     show("No topup orders yet.");
@@ -124,7 +124,7 @@ export async function showTopups(c: UserClient): Promise<void> {
 }
 
 /** 发起充值 */
-export async function createTopup(c: UserClient): Promise<void> {
+export async function createTopup(c: Gate): Promise<void> {
   const result = await createTopupOrder(c);
   if (!result) return;
   showSuccess(`topup created: ${result.topup_id} (${result.amount} ${result.unit}, ${result.status})`);
@@ -138,10 +138,10 @@ export async function createTopup(c: UserClient): Promise<void> {
  * - 再调用 payment.stripe 创建 Checkout
  * - 成功后尽量自动打开浏览器
  */
-export async function rechargeWithStripe(c: UserClient): Promise<void> {
+export async function rechargeWithStripe(c: Gate, city_url: string): Promise<void> {
   const topup = await createTopupOrder(c);
   if (!topup) return;
-  const endpoints = buildStripeEndpoints(c.serverUrl);
+  const endpoints = buildStripeEndpoints(city_url);
 
   showSuccess(`topup created: ${topup.topup_id} (${topup.amount} ${topup.unit}, ${topup.status})`);
 
@@ -184,7 +184,7 @@ export async function rechargeWithStripe(c: UserClient): Promise<void> {
 /**
  * 创建充值单。
  */
-async function createTopupOrder(c: UserClient): Promise<BalanceTopupItem | undefined> {
+async function createTopupOrder(c: Gate): Promise<BalanceTopupItem | undefined> {
   const rawAmount = await askText("topup amount");
   if (!rawAmount) return undefined;
 
@@ -202,7 +202,7 @@ async function createTopupOrder(c: UserClient): Promise<BalanceTopupItem | undef
 }
 
 /** 兑换 redeem_code */
-export async function redeemCode(c: UserClient): Promise<void> {
+export async function redeemCode(c: Gate): Promise<void> {
   const code = await askText("redeem_code");
   if (!code) return;
 

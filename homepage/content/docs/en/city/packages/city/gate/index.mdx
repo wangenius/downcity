@@ -1,14 +1,14 @@
 ---
 title: "Gate"
-description: "Provides UserClient and AdminClient, and unifies AI, custom service, and service calls behind one SDK boundary."
+description: "Provides User Gate and Admin Gate, and unifies AI, custom service, and service calls behind one SDK boundary."
 ---
 
 Gate is the access layer exported by `@downcity/city`. It is how studios connect to a City.
 
 It is not only a thin wrapper for AI calls. It unifies these studio-facing call surfaces into one package:
 
-- `UserClient`: end-user studio calls to AI services, custom services, and public services
-- `AdminClient`: trusted-side management of studios, `user_token`, and runtime env
+- `User Gate`: end-user studio calls to AI services, custom services, and public services
+- `Admin Gate`: trusted-side management of studios, `user_token`, and runtime env
 - `service(name)`: the common entry for your own services and the services exposed by official packages
 
 If your question is "how does a studio actually connect to City?", this page should be the first package-level entry.
@@ -17,8 +17,8 @@ If your question is "how does a studio actually connect to City?", this page sho
 
 | Client | Used by | Responsibility |
 | --- | --- | --- |
-| `UserClient` | Frontends, apps, extensions, desktop clients | Calls AI services, custom services, and public services with `studio_id + user_token` |
-| `AdminClient` | Studio backends, admin scripts, internal tools | Manages studios, issues tokens, writes runtime env, and calls admin-side services |
+| `User Gate` | Frontends, apps, extensions, desktop clients | Calls AI services, custom services, and public services with `studio_id + user_token` |
+| `Admin Gate` | Studio backends, admin scripts, internal tools | Manages studios, issues tokens, writes runtime env, and calls admin-side services |
 
 ## Use it when
 
@@ -119,13 +119,14 @@ client.service("service_id").action("action_id").invoke(...)
 client.service("service_id").get("path", query)
 ```
 
-## Minimal `UserClient` example
+## Minimal `User Gate` example
 
 ```ts
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const client = new UserClient({
-  base_url: "https://base.example.com",
+const client = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_demo",
   user_token: "ub_xxx",
 });
@@ -140,19 +141,20 @@ const result = await client.ai.text({
 
 This stage assumes you already have:
 
-- `base_url`
+- `city_url`
 - `studio_id`
 - `user_token`
 
 If you do not have `user_token` yet, you normally start with one of the auth flows below.
 
-## Minimal `AdminClient` example
+## Minimal `Admin Gate` example
 
 ```ts
-import { AdminClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const admin = new AdminClient({
-  base_url: "https://base.example.com",
+const admin = new Gate({
+  role: "admin",
+  city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
@@ -176,9 +178,9 @@ The two most common flows are:
 ```txt
 frontend submits login data
   -> your backend validates the user
-  -> your backend uses AdminClient to request user_token from City
+  -> your backend uses Admin Gate to request user_token from City
   -> backend returns studio_id + user_token
-  -> frontend creates UserClient
+  -> frontend creates User Gate
   -> frontend starts calling client.ai.* or client.service(...)
 ```
 
@@ -187,10 +189,10 @@ Use this when you already have a mature account system.
 ### Pattern B: use the accounts service directly
 
 ```txt
-frontend creates a guest UserClient with base_url only
+frontend creates a guest User Gate with city_url only
   -> calls guest.service("accounts").action("register" / "login")
   -> accounts service returns user_token
-  -> frontend creates a normal UserClient with base_url + studio_id + user_token
+  -> frontend creates a normal User Gate with city_url + studio_id + user_token
   -> frontend continues with AI calls or other service calls
 ```
 
@@ -199,8 +201,9 @@ Use this when you want the fastest path to a minimal auth system.
 ## Login with the accounts service
 
 ```ts
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 
 const session = await guest.service("accounts").action("login").invoke<{
@@ -213,8 +216,9 @@ const session = await guest.service("accounts").action("login").invoke<{
   studio_id: "studio_demo",
 });
 
-const user = new UserClient({
-  base_url: "https://base.example.com",
+const user = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_demo",
   user_token: session.user_token,
 });
@@ -227,8 +231,8 @@ const reply = await user.ai.text({
 The key detail is:
 
 - guest entry points such as `register`, `login`, `oauth/start`, and `oauth/result` are usually guest-access Actions
-- they still run through `UserClient`, but at this stage you only need `base_url`
-- once you enter the logged-in user context, you switch to a normal `UserClient` with `studio_id + user_token`
+- they still run through `User Gate`, but at this stage you only need `city_url`
+- once you enter the logged-in user context, you switch to a normal `User Gate` with `studio_id + user_token`
 
 ## Custom services and service routes
 
@@ -297,15 +301,15 @@ const checkout = await client.payment.method("stripe").invoke({
 
 If this is your first Downcity studio integration, read in this order:
 
-1. Start here to build the mental model for `UserClient`, `AdminClient`, and `service(...)`
-2. Then read [UserClient](/en/docs/city/reference/user-client) for detailed studio-side calls
-3. Then read [AdminClient](/en/docs/city/reference/admin-client) for trusted-side token issuance
+1. Start here to build the mental model for `User Gate`, `Admin Gate`, and `service(...)`
+2. Then read [User Gate](/en/docs/city/reference/gate-user) for detailed studio-side calls
+3. Then read [Admin Gate](/en/docs/city/reference/gate-admin) for trusted-side token issuance
 4. If you want minimal registration/login, continue to [@downcity/services](/en/docs/city/packages/services)
 5. If you want the full login scenario, read [Accounts Service](/en/docs/city/guides/accounts-service)
 
 ## Read next
 
 - To understand the City side, go back to [@downcity/city](/en/docs/city/packages/city)
-- For full SDK surfaces, read [UserClient](/en/docs/city/reference/user-client) and [AdminClient](/en/docs/city/reference/admin-client)
+- For full SDK surfaces, read [User Gate](/en/docs/city/reference/gate-user) and [Admin Gate](/en/docs/city/reference/gate-admin)
 - To see how auth can return `user_token` directly, read [@downcity/services](/en/docs/city/packages/services)
 - To see the full login flow, read [Accounts Service](/en/docs/city/guides/accounts-service)

@@ -33,7 +33,7 @@ Downcity 的 package 设计很克制：先用 `@downcity/city` 搭出 City 和 G
 @downcity/services
   -> 把官方 capabilities 装进 City
 Gate from @downcity/city
-  -> 用 UserClient / AdminClient 调这些能力
+  -> 用 User Gate / Admin Gate 调这些能力
 ```
 
 也就是说，Gate 不只是调 AI。
@@ -63,7 +63,7 @@ Composition   -> cities/node + cities/edge
   </a>
   <a className="dc-doc-card" href="/docs/city/packages/city/gate">
     <strong>Gate</strong>
-    <p>产品侧 SDK。提供 `UserClient` 和 `AdminClient`，统一承载 AI、custom service 和管理侧调用边界。</p>
+    <p>产品侧 SDK。提供 `User Gate` 和 `Admin Gate`，统一承载 AI、custom service 和管理侧调用边界。</p>
   </a>
 </div>
 

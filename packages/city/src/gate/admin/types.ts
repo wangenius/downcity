@@ -6,8 +6,8 @@ import type { FetchLike } from "../http.js";
 import type { UserModelRef } from "../invoker/ai/types.js";
 import type { UserServiceSummary } from "../user/types.js";
 
-/** 管理端 SDK 构造参数 */
-export interface AdminClientOptions {
+/** Admin Gate 内部访问层构造参数 */
+export interface AdminGateAccessOptions {
   /** City 管理端 server URL */
   base_url: string;
   /** 管理密钥 */

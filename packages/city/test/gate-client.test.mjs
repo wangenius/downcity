@@ -1,13 +1,14 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { AdminClient, Gate, UserClient } from "../bin/index.js"
+import { Gate } from "../bin/index.js"
 
 test("AIInvoker.text() posts to /v1/ai/text", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
-  const client = new UserClient({
-    base_url: "https://api.example.com/base/",
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "studio_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
@@ -19,7 +20,7 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", studio_id: "studio_demo" })
 })
 
-test("Gate user role delegates AI calls", async () => {
+test("User Gate delegates AI calls", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
   const gate = new Gate({
@@ -36,8 +37,9 @@ test("Gate user role delegates AI calls", async () => {
 })
 
 test("AIInvoker.listModels() returns ModelCatalog", async () => {
-  const client = new UserClient({
-    base_url: "https://api.example.com/base/",
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "studio_demo", user_token: "ub_test",
     fetch: async () => json({ items: [
       { id: "gpt-5.4", name: "GPT-5.4", description: "P", modalities: ["text", "stream"], tags: [], meta: {}, env: {} },
@@ -53,8 +55,9 @@ test("AIInvoker.listModels() returns ModelCatalog", async () => {
 })
 
 test("AIInvoker.model(string) builds a correct ModelHandle", async () => {
-  const client = new UserClient({
-    base_url: "https://api.example.com/base/",
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "studio_demo",
     user_token: "ub_test",
     fetch: async () => json({ ok: true }),
@@ -68,8 +71,9 @@ test("AIInvoker.model(string) builds a correct ModelHandle", async () => {
 
 test("AIInvoker.stream() returns parsed chunks", async () => {
   const chunks = [{ type: "start", messageId: "msg_1" }, { type: "text-delta", id: "t1", delta: "hi" }, { type: "finish" }]
-  const client = new UserClient({
-    base_url: "https://api.example.com/base/", studio_id: "studio_demo", user_token: "ub_test",
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/", studio_id: "studio_demo", user_token: "ub_test",
     fetch: async () => streamResponse(chunks),
   })
   const stream = await client.ai.stream({ prompt: "hi" })
@@ -78,9 +82,10 @@ test("AIInvoker.stream() returns parsed chunks", async () => {
   assert.deepEqual(received, chunks)
 })
 
-test("UserClient.listServices()", async () => {
-  const client = new UserClient({
-    base_url: "https://api.example.com/base/",
+test("User Gate listServices()", async () => {
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "p",
     user_token: "t",
     fetch: async () => json({
@@ -96,9 +101,11 @@ test("UserClient.listServices()", async () => {
   ])
 })
 
-test("UserClient.service() → ServiceInvoker", async () => {
+test("User Gate service() → ServiceInvoker", async () => {
   const requests = []
-  const client = new UserClient({ base_url: "https://api.example.com/base/", studio_id: "p", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/", studio_id: "p", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
   const result = await client.service("notes").action("create").invoke({ title: "hello" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "https://api.example.com/base/v1/notes/create")
@@ -107,8 +114,9 @@ test("UserClient.service() → ServiceInvoker", async () => {
 
 test("ServiceClient.get() appends query params for GET actions", async () => {
   const requests = []
-  const client = new UserClient({
-    base_url: "https://api.example.com/base/",
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "p",
     user_token: "t",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
@@ -119,10 +127,11 @@ test("ServiceClient.get() appends query params for GET actions", async () => {
   assert.equal(requests[0].init.method, "GET")
 })
 
-test("UserClient.payment.methods() reads the unified payment directory", async () => {
+test("User Gate payment.methods() reads the unified payment directory", async () => {
   const requests = []
-  const client = new UserClient({
-    base_url: "https://api.example.com/base/",
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "p",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -159,10 +168,11 @@ test("UserClient.payment.methods() reads the unified payment directory", async (
   assert.equal(requests[0].init.method, "GET")
 })
 
-test("UserClient.payment.method(id).invoke() dispatches to the concrete payment service", async () => {
+test("User Gate payment.method(id).invoke() dispatches to the concrete payment service", async () => {
   const requests = []
-  const client = new UserClient({
-    base_url: "https://api.example.com/base/",
+  const client = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "p",
     user_token: "t",
     fetch: async (url, init) => {
@@ -202,9 +212,10 @@ test("UserClient.payment.method(id).invoke() dispatches to the concrete payment 
   })
 })
 
-test("UserClient.payment.method(id).invoke() rejects disabled or user-required methods early", async () => {
-  const disabledClient = new UserClient({
-    base_url: "https://api.example.com/base/",
+test("User Gate payment.method(id).invoke() rejects disabled or user-required methods early", async () => {
+  const disabledClient = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "p",
     fetch: async () => json({
       items: [
@@ -228,8 +239,9 @@ test("UserClient.payment.method(id).invoke() rejects disabled or user-required m
     /payment method "stripe" is disabled: not_configured/,
   )
 
-  const guestClient = new UserClient({
-    base_url: "https://api.example.com/base/",
+  const guestClient = new Gate({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     studio_id: "p",
     fetch: async () => json({
       items: [
@@ -253,18 +265,22 @@ test("UserClient.payment.method(id).invoke() rejects disabled or user-required m
   )
 })
 
-test("AdminClient.service() uses the shared /v1 route prefix", async () => {
+test("Admin Gate service() uses the shared /v1 route prefix", async () => {
   const requests = []
-  const admin = new AdminClient({ base_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
+  const admin = new Gate({
+    role: "admin",
+    city_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
   const result = await admin.service("usage").action("report").invoke({ range: "today" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "http://localhost:3001/v1/usage/report")
   assert.equal(requests[0].init.headers.authorization, "Bearer sk")
 })
 
-test("AdminClient.env list / catalog / upsert / remove", async () => {
+test("Admin Gate env list / catalog / upsert / remove", async () => {
   const requests = []
-  const admin = new AdminClient({ base_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
+  const admin = new Gate({
+    role: "admin",
+    city_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/env/list")) return json({ items: [{ key: "K", value: "V", source: "database" }] })
     if (url.endsWith("/v1/env/catalog")) {
@@ -296,9 +312,11 @@ test("AdminClient.env list / catalog / upsert / remove", async () => {
   assert.equal(requests[3].url, "http://localhost:3001/v1/env/remove")
 })
 
-test("AdminClient.studios CRUD + tokens.apply", async () => {
+test("Admin Gate studios CRUD + tokens.apply", async () => {
   const requests = []; const p = { studio_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
-  const admin = new AdminClient({ base_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
+  const admin = new Gate({
+    role: "admin",
+    city_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/studios/list")) return json({ items: [p] })
     if (url.endsWith("/v1/studios/create")) return json(p)
@@ -317,10 +335,11 @@ test("AdminClient.studios CRUD + tokens.apply", async () => {
   })
 })
 
-test("AdminClient.listServices() / listModels() / instruction()", async () => {
+test("Admin Gate listServices() / listModels() / instruction()", async () => {
   const requests = []
-  const admin = new AdminClient({
-    base_url: "http://localhost:3001/",
+  const admin = new Gate({
+    role: "admin",
+    city_url: "http://localhost:3001/",
     admin_secret_key: "sk",
     fetch: async (url, init) => {
       requests.push({ url, init })

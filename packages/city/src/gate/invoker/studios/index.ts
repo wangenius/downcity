@@ -12,7 +12,7 @@ const PREFIX = "/v1/studios";
 /**
  * Studio 和 Token 管理调用器。
  *
- * 通过 AdminClient.studios 访问：
+ * 通过 Admin Gate .studios 访问：
  * ```ts
  * await admin.studios.list();
  * await admin.studios.create({ name: "My App" });

@@ -1,20 +1,20 @@
 ---
 title: 登录与 token 链路
-description: "guest UserClient、accounts 服务、自有后端、user_token 和正常 UserClient 的衔接方式。"
+description: "guest User Gate、accounts 服务、自有后端、user_token 和正常 User Gate 的衔接方式。"
 ---
 
 Gate 的登录问题，最终都落到一个目标：
 
-> 让产品前端拿到 `studio_id + user_token`，然后进入正常 `UserClient` 调用。
+> 让产品前端拿到 `studio_id + user_token`，然后进入正常 `User Gate` 调用。
 
 ## 方式一：你的后端做登录
 
 ```txt
 前端提交登录信息
   -> 你的后端完成账号校验
-  -> 后端用 AdminClient 申请 user_token
+  -> 后端用 Admin Gate 申请 user_token
   -> 返回 studio_id + user_token
-  -> 前端创建正常 UserClient
+  -> 前端创建正常 User Gate
 ```
 
 适合：
@@ -25,10 +25,10 @@ Gate 的登录问题，最终都落到一个目标：
 ## 方式二：accounts 服务做登录
 
 ```txt
-前端创建 guest UserClient
+前端创建 guest User Gate
   -> 调 accounts.register / login
   -> service 返回 user_token
-  -> 前端创建正常 UserClient
+  -> 前端创建正常 User Gate
 ```
 
 适合：
@@ -36,13 +36,14 @@ Gate 的登录问题，最终都落到一个目标：
 - 想最快跑通最小注册登录
 - 不想先自己维护用户表和 session 表
 
-## guest UserClient 是什么
+## guest User Gate 是什么
 
-它只是一个只有 `base_url` 的 `UserClient`：
+它只是一个只有 `city_url` 的 `User Gate`：
 
 ```ts
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 ```
 
@@ -53,11 +54,12 @@ const guest = new UserClient({
 - `accounts.oauth/start`
 - `accounts.oauth/result`
 
-## 切到正常 UserClient
+## 切到正常 User Gate
 
 ```ts
-const user = new UserClient({
-  base_url: "https://base.example.com",
+const user = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_xxx",
   user_token: session.user_token,
 });

@@ -1,6 +1,6 @@
 ---
 title: AI Model Service
-description: "AIService's two independent pathways: SDK pathway (UserClient) and OpenAI-compatible pathway (downcity agent / curl / OpenAI SDK)."
+description: "AIService's two independent pathways: SDK pathway (User Gate) and OpenAI-compatible pathway (downcity agent / curl / OpenAI SDK)."
 ---
 
 `AIService` is Downcity's built-in AI model service. One `AIService` manages all registered models and provides **two independent pathways** for each model.
@@ -15,7 +15,7 @@ description: "AIService's two independent pathways: SDK pathway (UserClient) and
        ┌─────────────────┴─────────────────┐
        │                                   │
   SDK Pathway                   OpenAI-Compatible Pathway
-  For UserClient                For downcity agent / curl / OpenAI SDK
+  For User Gate                For downcity agent / curl / OpenAI SDK
        │                                   │
   POST /v1/ai/text      POST /v1/ai/chat/completions
   POST /v1/ai/stream         ↑

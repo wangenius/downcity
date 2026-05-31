@@ -30,11 +30,15 @@ export interface UserServiceSummary {
   }>;
 }
 
-/** UserClient 构造参数 */
-export interface UserClientOptions {
+/** User Gate 内部访问层构造参数 */
+export interface UserGateAccessOptions {
+  /** City 的 HTTP 入口地址。 */
   base_url: string;
+  /** 当前 user_token 绑定的 Studio ID。 */
   studio_id?: string;
+  /** 终端用户访问 token。 */
   user_token?: string;
+  /** 自定义 fetch 实现。 */
   fetch?: FetchLike;
 }
 

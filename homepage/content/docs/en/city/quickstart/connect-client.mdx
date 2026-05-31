@@ -1,15 +1,16 @@
 ---
 title: Connect Client
-description: Call City from the studio with UserClient.
+description: Call City from the studio with User Gate.
 ---
 
-Studio clients use `UserClient`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
+Studio clients use `User Gate`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
 
 ```ts
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const client = new UserClient({
-  base_url: "https://base.example.com",
+const client = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_xxx",
   user_token: "ub_xxx",
 });

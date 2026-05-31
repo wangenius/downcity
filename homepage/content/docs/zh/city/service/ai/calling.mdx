@@ -1,14 +1,19 @@
 ---
 title: 调用 AI
-description: 通过 UserClient 和第三方工具调用 AIService。
+description: 通过 User Gate 和第三方工具调用 AIService。
 ---
 
 ## SDK 通路
 
 ```ts
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const client = new UserClient({ base_url, studio_id, user_token });
+const client = new Gate({
+  role: "user",
+  city_url,
+  studio_id,
+  user_token,
+});
 
 // 获取模型目录
 const catalog = await client.ai.listModels();

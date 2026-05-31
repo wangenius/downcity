@@ -96,13 +96,13 @@ That lets hooks differentiate behavior with `ctx.studio` and `ctx.user.metadata`
 ### Studio side
 
 - keeps routes, UI, and business experience
-- uses `UserClient`
+- uses `User Gate`
 - only holds `studio_id + user_token`
 
 ### Business backend
 
 - owns login, orders, balance, subscriptions, and business data
-- uses `AdminClient` in a trusted environment
+- uses `Admin Gate` in a trusted environment
 - issues `user_token` after a successful login
 
 ### City

@@ -7,7 +7,7 @@
  *
  * 关键说明（中文）
  * - `/chat/completions` 仍由 AIService 的自动透传处理
- * - 这里专门补齐 UserClient.ai.text() / stream() 所需的 server 侧 action
+ * - 这里专门补齐 User Gate .ai.text() / stream() 所需的 server 侧 action
  * - 不在请求热路径里做动态导入，减少首请求和冷启动额外开销
  */
 

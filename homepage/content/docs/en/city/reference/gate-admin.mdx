@@ -1,9 +1,9 @@
 ---
-title: AdminClient
+title: Admin Gate
 description: How trusted environments manage studios, issue user tokens, and maintain runtime env.
 ---
 
-`AdminClient` should only run in trusted environments.
+`Admin Gate` should only run in trusted environments.
 
 Typical cases:
 
@@ -16,7 +16,7 @@ Do not expose `admin_secret_key` to browsers, public frontends, or uncontrolled 
 
 ## What it owns in the full system
 
-The most accurate mental model is: `AdminClient` is the trusted-side bridge into City management.
+The most accurate mental model is: `Admin Gate` is the trusted-side bridge into City management.
 
 It usually owns three things:
 
@@ -25,15 +25,16 @@ It usually owns three things:
 - maintaining runtime env
 - running trusted-side balance / redeem_code administration
 
-If `UserClient` owns "how a user-context studio call reaches City," then `AdminClient` owns "how the trusted side prepares that call environment."
+If `User Gate` owns "how a user-context studio call reaches City," then `Admin Gate` owns "how the trusted side prepares that call environment."
 
 ## Minimal example
 
 ```ts
-import { AdminClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const admin = new AdminClient({
-  base_url: "https://base.example.com",
+const admin = new Gate({
+  role: "admin",
+  city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
@@ -42,7 +43,7 @@ If `admin_secret_key` is omitted, the SDK tries to read `process.env.DOWNCITY_CI
 
 ## Typical call chain
 
-<div className="dc-doc-flow" aria-label="AdminClient call flow">
+<div className="dc-doc-flow" aria-label="Admin Gate call flow">
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>Trusted backend</strong>
@@ -52,7 +53,7 @@ If `admin_secret_key` is omitted, the SDK tries to read `process.env.DOWNCITY_CI
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>AdminClient</strong>
+      <strong>Admin Gate</strong>
       <span>Calls `/v1/studios/*`, `/v1/studios/tokens/apply`, `/v1/env/*`, `/v1/ai/models`, and `/v1/base/instruction`.</span>
     </div>
   </div>
@@ -165,29 +166,29 @@ That means:
 1. your backend handles user login first
 2. the trusted backend asks City for `user_token`
 3. it returns `studio_id + user_token` to the client
-4. the client calls City through `UserClient`
+4. the client calls City through `User Gate`
 
 ## Relationship with the accounts service
 
-`AdminClient` does not replace the accounts service, and the service does not replace `AdminClient`.
+`Admin Gate` does not replace the accounts service, and the service does not replace `Admin Gate`.
 
 The two common patterns are:
 
 ### Pattern A: your backend owns login
 
 - your backend validates user credentials or session
-- your backend uses `AdminClient` to request `user_token`
+- your backend uses `Admin Gate` to request `user_token`
 - the frontend receives `studio_id + user_token`
 
 ### Pattern B: the accounts service owns login
 
-- the frontend uses a guest `UserClient` to call `accounts.login/register`
+- the frontend uses a guest `User Gate` to call `accounts.login/register`
 - the accounts service returns `user_token` directly
-- the frontend switches to a normal `UserClient`
+- the frontend switches to a normal `User Gate`
 
 So:
 
-- `AdminClient` owns trusted-side management actions
+- `Admin Gate` owns trusted-side management actions
 - the accounts service owns the minimal auth capability
 - they are not replacements for each other, but two different login patterns
 
@@ -270,9 +271,9 @@ It maps to `GET /v1/base/instruction` and returns the aggregated plain-text City
 - checking which env keys each module declares
 - feeding runtime guidance into a CLI or agent
 
-## AdminClient can also call service-provided admin services
+## Admin Gate can also call service-provided admin services
 
-Besides `studios.*` and `env.*`, `AdminClient` can call admin-side services exposed by official packages.
+Besides `studios.*` and `env.*`, `Admin Gate` can call admin-side services exposed by official packages.
 
 For example:
 
@@ -296,11 +297,11 @@ await admin.balance.redeemCodes.disable({
 });
 ```
 
-In other words, `AdminClient` is not only for built-in studios/env endpoints. It is also the trusted-side entry into the same unified service route space.
+In other words, `Admin Gate` is not only for built-in studios/env endpoints. It is also the trusted-side entry into the same unified service route space.
 
 ## Error handling
 
-When `AdminClient` receives a non-2xx HTTP response, it throws an `Error` with two extra fields:
+When `Admin Gate` receives a non-2xx HTTP response, it throws an `Error` with two extra fields:
 
 - `status`: the HTTP status code.
 - `body`: the raw response body from City, usually `{"error":"..."}`.
@@ -326,9 +327,9 @@ Common statuses:
 - `404`: the target studio does not exist.
 - `500`: City is missing required config, or the admin action failed internally.
 
-## What `AdminClient` does not manage right now
+## What `Admin Gate` does not manage right now
 
-These do not belong to `AdminClient` yet:
+These do not belong to `Admin Gate` yet:
 
 - model configuration
 - direct edits to the `models` table
@@ -341,4 +342,4 @@ Those belong to:
 - the database layer
 - the `City` runtime layer
 
-In other words, `AdminClient` owns env maintenance; runtime model definitions and mounting still belong to the `City` runtime layer.
+In other words, `Admin Gate` owns env maintenance; runtime model definitions and mounting still belong to the `City` runtime layer.

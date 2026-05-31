@@ -9,7 +9,7 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>Trusted backend</strong>
-      <span>Your backend uses AdminClient and holds `admin_secret_key`.</span>
+      <span>Your backend uses Admin Gate and holds `admin_secret_key`.</span>
       <code>Create studio / request user_token</code>
     </div>
   </div>
@@ -24,7 +24,7 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>End-user client</strong>
-      <span>The frontend, extension, or app only gets `user_token + studio_id` and uses UserClient to call services.</span>
+      <span>The frontend, extension, or app only gets `user_token + studio_id` and uses User Gate to call services.</span>
       <code>No access to admin_secret_key</code>
     </div>
   </div>
@@ -32,7 +32,7 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
 
 ## user_token
 
-`user_token` is the call credential used by the end user or studio client. `AdminClient` requests it from City using `studio_id + user_id`.
+`user_token` is the call credential used by the end user or studio client. `Admin Gate` requests it from City using `studio_id + user_id`.
 
 - `studio_id`
 - `user_id`
@@ -46,8 +46,9 @@ The client only carries `user_token` and `studio_id`. It never touches provider 
 `DOWNCITY_CITY_ADMIN_SECRET_KEY` is used to manage City: create studios, manage env, and issue `user_token` for users under a given studio. City generates it automatically and writes it into `.env` on first startup.
 
 ```ts
-const client = new AdminClient({
-  base_url: "https://base.example.com",
+const client = new Gate({
+  role: "admin",
+  city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 

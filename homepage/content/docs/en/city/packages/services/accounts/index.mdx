@@ -5,7 +5,7 @@ description: "Use the official accounts service for registration, login, OAuth e
 
 `@downcity/services` is a good fit when you do not want to build a full account system first. It packages the common registration, login, session, and OAuth entry flows into one official service.
 
-The important point is not "another SDK." It adds a ready-made `accounts` service into City, so studio-side callers can use it through `UserClient` and `AdminClient`.
+The important point is not "another SDK." It adds a ready-made `accounts` service into City, so studio-side callers can use it through `User Gate` and `Admin Gate`.
 
 ## How to read this section
 
@@ -121,15 +121,16 @@ const session = await guest.service("accounts").action("login").invoke({
 });
 ```
 
-Successful registration or login returns `user_token`. After that, the studio client can switch to a normal `UserClient` for AI calls.
+Successful registration or login returns `user_token`. After that, the studio client can switch to a normal `User Gate` for AI calls.
 
 `GET /v1/accounts/me` also returns the current `profile`, so studio-side callers can render account data directly from one endpoint.
 
 ## The most common studio-side integration
 
 ```ts
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 
 const session = await guest.service("accounts").action("login").invoke<{
@@ -140,8 +141,9 @@ const session = await guest.service("accounts").action("login").invoke<{
   studio_id: "studio_demo",
 });
 
-const user = new UserClient({
-  base_url: "https://base.example.com",
+const user = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_demo",
   user_token: session.user_token,
 });
@@ -158,4 +160,4 @@ This is why `accountsService()` and `@downcity/city` are usually read together: 
 - For the step-by-step flows, continue with the three subpages in this section
 - For the full scenario guide, read [Accounts Service](/en/docs/city/guides/accounts-service)
 - For the studio SDK, read [@downcity/city](/en/docs/city/packages/city/gate)
-- For more detailed studio-side calling patterns, read [UserClient](/en/docs/city/reference/user-client)
+- For more detailed studio-side calling patterns, read [User Gate](/en/docs/city/reference/gate-user)

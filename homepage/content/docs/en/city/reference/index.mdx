@@ -1,6 +1,6 @@
 ---
 title: Reference
-description: Read City, UserClient, AdminClient, HTTP API, and environment variables by role.
+description: Read City, User Gate, Admin Gate, HTTP API, and environment variables by role.
 ---
 
 This section answers one question only: **how do I use it concretely?**
@@ -14,12 +14,12 @@ If you are still unsure what Downcity is, why it is split this way, or where the
     <strong>City</strong>
     <p>The server runtime entry. It initializes state, registers services, runs hooks, and exposes `handleRequest()`, `serve()`, and `router()`.</p>
   </a>
-  <a className="dc-doc-card" href="/en/docs/city/reference/user-client">
-    <strong>UserClient</strong>
+  <a className="dc-doc-card" href="/en/docs/city/reference/gate-user">
+    <strong>User Gate</strong>
     <p>The studio-side entry. It reads `ai.listModels()`, calls `ai.text()`, `ai.stream()`, `ai.image()`, and invokes Service actions.</p>
   </a>
-  <a className="dc-doc-card" href="/en/docs/city/reference/admin-client">
-    <strong>AdminClient</strong>
+  <a className="dc-doc-card" href="/en/docs/city/reference/gate-admin">
+    <strong>Admin Gate</strong>
     <p>The trusted-side entry. It manages studios, `user_token`, and runtime env.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/reference/http-api">
@@ -34,7 +34,7 @@ If you are still unsure what Downcity is, why it is split this way, or where the
 
 ## Suggested order
 
-1. Writing studio-side code: start with [UserClient](/en/docs/city/reference/user-client)
+1. Writing studio-side code: start with [User Gate](/en/docs/city/reference/gate-user)
 2. Wiring server-side runtime: continue with [City](/en/docs/city/reference/city-runtime)
-3. Writing login and token issuance: read [AdminClient](/en/docs/city/reference/admin-client)
+3. Writing login and token issuance: read [Admin Gate](/en/docs/city/reference/gate-admin)
 4. Hand-writing requests: finish with [HTTP API](/en/docs/city/reference/http-api)

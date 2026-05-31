@@ -4,22 +4,20 @@
 
 import type { UIMessage, UIMessageChunk } from "ai";
 import type {
-  AdminClient,
   AIInvoker,
   Gate,
   ModelCatalog,
   ModelHandle,
   PaymentMethodHandle,
-  UserClient,
   UserModelRef,
   UserPaymentMethod,
   UserServiceSummary,
 } from "../src/index.js";
 
-declare const client: UserClient;
-declare const admin: AdminClient;
-declare const user_gate: Gate;
-declare const admin_gate: Gate;
+declare const client: Gate<"user">;
+declare const admin: Gate<"admin">;
+declare const user_gate: Gate<"user">;
+declare const admin_gate: Gate<"admin">;
 
 const ai: AIInvoker = client.ai;
 

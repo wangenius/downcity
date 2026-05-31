@@ -1,6 +1,6 @@
 ---
 title: Try It Now
-description: Run a complete call chain with the default database, AdminClient, and UserClient.
+description: Run a complete call chain with the default database, Admin Gate, and User Gate.
 ---
 
 ## 1. Start City
@@ -39,8 +39,9 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ## 2. Create Studio & Token
 
 ```ts
-const admin = new AdminClient({
-  base_url: "http://127.0.0.1:43127",
+const admin = new Gate({
+  role: "admin",
+  city_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 const studio = await admin.studios.create({ name: "Demo Studio" });
@@ -54,8 +55,9 @@ const token = await admin.studios.tokens.apply({
 ## 3. Client Call
 
 ```ts
-const client = new UserClient({
-  base_url: "http://127.0.0.1:43127",
+const client = new Gate({
+  role: "user",
+  city_url: "http://127.0.0.1:43127",
   studio_id: studio.studio_id,
   user_token: token.user_token,
 });

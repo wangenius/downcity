@@ -1,9 +1,9 @@
 ---
-title: AdminClient
+title: Admin Gate
 description: 可信环境如何管理 studio、签发 user_token，并维护 Runtime env。
 ---
 
-`AdminClient` 只应该运行在可信环境里。
+`Admin Gate` 只应该运行在可信环境里。
 
 典型场景：
 
@@ -16,7 +16,7 @@ description: 可信环境如何管理 studio、签发 user_token，并维护 Run
 
 ## 它在整条链路里负责什么
 
-把 `AdminClient` 看成“可信侧和 City 的管理桥”最准确。
+把 `Admin Gate` 看成“可信侧和 City 的管理桥”最准确。
 
 它最常负责三件事：
 
@@ -25,15 +25,16 @@ description: 可信环境如何管理 studio、签发 user_token，并维护 Run
 - 维护 runtime env
 - 执行可信侧 balance / redeem_code 管理动作
 
-如果 `UserClient` 负责“用户态怎么调用 City”，那 `AdminClient` 负责“可信侧怎么把这个调用环境准备好”。
+如果 `User Gate` 负责“用户态怎么调用 City”，那 `Admin Gate` 负责“可信侧怎么把这个调用环境准备好”。
 
 ## 最小示例
 
 ```ts
-import { AdminClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const admin = new AdminClient({
-  base_url: "https://base.example.com",
+const admin = new Gate({
+  role: "admin",
+  city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
@@ -42,7 +43,7 @@ const admin = new AdminClient({
 
 ## 典型调用链
 
-<div className="dc-doc-flow" aria-label="AdminClient 的调用链">
+<div className="dc-doc-flow" aria-label="Admin Gate 的调用链">
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>可信后端</strong>
@@ -52,7 +53,7 @@ const admin = new AdminClient({
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>AdminClient</strong>
+      <strong>Admin Gate</strong>
       <span>调用 `/v1/studios/*`、`/v1/studios/tokens/apply`、`/v1/env/*`、`/v1/ai/models`、`/v1/base/instruction`。</span>
     </div>
   </div>
@@ -165,29 +166,29 @@ router.post("/login", async (c) => {
 1. 你的业务后端先完成用户登录
 2. 再由可信后端向 City 申请 `user_token`
 3. 把 `studio_id + user_token` 返回给前端
-4. 前端再用 `UserClient` 调 City
+4. 前端再用 `User Gate` 调 City
 
 ## 它和 accounts 服务是什么关系
 
-`AdminClient` 不会替代 accounts 服务，反过来也一样。
+`Admin Gate` 不会替代 accounts 服务，反过来也一样。
 
 两种典型模式是：
 
 ### 模式 A：你自己的后端做登录
 
 - 业务后端自己校验用户名密码或 session
-- 业务后端再用 `AdminClient` 申请 `user_token`
+- 业务后端再用 `Admin Gate` 申请 `user_token`
 - 前端拿到 `studio_id + user_token`
 
 ### 模式 B：accounts 服务做登录
 
-- 前端先用 guest `UserClient` 调 `accounts.login/register`
+- 前端先用 guest `User Gate` 调 `accounts.login/register`
 - accounts service 直接返回 `user_token`
-- 前端切换到正常 `UserClient`
+- 前端切换到正常 `User Gate`
 
 所以：
 
-- `AdminClient` 负责可信侧管理动作
+- `Admin Gate` 负责可信侧管理动作
 - accounts 服务负责最小账号能力
 - 两者不是替代关系，而是两种不同的登录接法
 
@@ -270,9 +271,9 @@ console.log(text);
 - 确认每个模块声明了哪些 env 依赖
 - 给 CLI 或 agent 读取运行时说明
 
-## AdminClient 也可以调 service 的管理侧 service
+## Admin Gate 也可以调 service 的管理侧 service
 
-除了 `studios.*` 和 `env.*`，`AdminClient` 也可以调用 service 暴露出来的管理侧 service。
+除了 `studios.*` 和 `env.*`，`Admin Gate` 也可以调用 service 暴露出来的管理侧 service。
 
 例如：
 
@@ -296,11 +297,11 @@ await admin.balance.redeemCodes.disable({
 });
 ```
 
-也就是说，`AdminClient` 不只是在调内建 studios/env 接口，它同样是可信侧调用统一 service 路由的入口。
+也就是说，`Admin Gate` 不只是在调内建 studios/env 接口，它同样是可信侧调用统一 service 路由的入口。
 
 ## 错误处理
 
-`AdminClient` 收到非 2xx HTTP 响应时会抛出 `Error`。这个错误会带两个额外字段：
+`Admin Gate` 收到非 2xx HTTP 响应时会抛出 `Error`。这个错误会带两个额外字段：
 
 - `status`：HTTP 状态码。
 - `body`：City 返回的原始响应文本，通常是 `{"error":"..."}`。
@@ -326,9 +327,9 @@ try {
 - `404`：目标 studio 不存在。
 - `500`：City 缺少必要配置，或管理动作内部执行失败。
 
-## 当前不归 `AdminClient` 管的事情
+## 当前不归 `Admin Gate` 管的事情
 
-这几件事当前不走 `AdminClient`：
+这几件事当前不走 `Admin Gate`：
 
 - 模型配置
 - 注册 service handler
@@ -339,4 +340,4 @@ try {
 
 - `City` 运行时层
 
-也就是说，`AdminClient` 负责维护 studio、token 和 env；模型定义和 service 挂载方式仍然属于 `City` 运行时层。
+也就是说，`Admin Gate` 负责维护 studio、token 和 env；模型定义和 service 挂载方式仍然属于 `City` 运行时层。

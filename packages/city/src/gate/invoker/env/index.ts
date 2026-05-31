@@ -12,7 +12,7 @@ const PREFIX = "/v1/env";
 /**
  * 环境变量管理调用器。
  *
- * 通过 AdminClient.env 访问：
+ * 通过 Admin Gate .env 访问：
  * ```ts
  * await admin.env.list();
  * await admin.env.upsert({ key: "KEY", value: "val" });

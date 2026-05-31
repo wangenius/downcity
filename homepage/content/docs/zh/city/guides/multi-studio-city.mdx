@@ -96,13 +96,13 @@ const issued = await admin.studios.tokens.apply({
 ### 产品侧
 
 - 保存自己的路由、界面和业务体验
-- 用 `UserClient` 调 City
+- 用 `User Gate` 调 City
 - 只持有 `studio_id + user_token`
 
 ### 业务后端
 
 - 负责登录、订单、余额、订阅和业务数据
-- 在可信环境里使用 `AdminClient`
+- 在可信环境里使用 `Admin Gate`
 - 在登录成功后申请 `user_token`
 
 ### City

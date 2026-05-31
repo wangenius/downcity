@@ -8,7 +8,7 @@ Downcity is a shared AI infrastructure runtime for AI studios. It gives you one 
 What City exposes to studios is not a raw provider API. It exposes a stable **studio-facing calling boundary**:
 
 - the studio holds `studio_id + user_token`
-- it calls `text()`, `stream()`, `image()`, and other services through `UserClient`
+- it calls `text()`, `stream()`, `image()`, and other services through `User Gate`
 - City keeps the model directory, provider routing, hooks, usage, and env behind the boundary
 
 ## Pick your reading path
@@ -37,7 +37,7 @@ What City exposes to studios is not a raw provider API. It exposes a stable **st
   <a className="dc-doc-card" href="/en/docs/city/reference">
     <em>API</em>
     <strong>I only need the interfaces</strong>
-    <p>Jump straight to City, UserClient, AdminClient, HTTP API, and environment variables.</p>
+    <p>Jump straight to City, User Gate, Admin Gate, HTTP API, and environment variables.</p>
   </a>
 </div>
 
@@ -48,7 +48,7 @@ What City exposes to studios is not a raw provider API. It exposes a stable **st
     <div className="dc-doc-node">
       <strong>Many studio clients</strong>
       <span>Web apps, extensions, apps, desktop tools, client demos, and internal tools.</span>
-      <code>UserClient + studio_id + user_token</code>
+      <code>User Gate + studio_id + user_token</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>

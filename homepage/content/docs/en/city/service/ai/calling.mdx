@@ -1,13 +1,14 @@
 ---
 title: Calling AI Service
-description: SDK pathway (UserClient) and OpenAI-compatible pathway (curl / OpenAI SDK / downcity agent) calling examples.
+description: SDK pathway (User Gate) and OpenAI-compatible pathway (curl / OpenAI SDK / downcity agent) calling examples.
 ---
 
 ## SDK Pathway
 
 ```ts
-const client = new UserClient({
-  base_url: "http://127.0.0.1:43127",
+const client = new Gate({
+  role: "user",
+  city_url: "http://127.0.0.1:43127",
   studio_id: "studio_downcity",
   user_token: "ub_xxx",
 });

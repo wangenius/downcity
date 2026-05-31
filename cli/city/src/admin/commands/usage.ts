@@ -2,12 +2,12 @@
  * Admin Usage 管理命令。
  */
 
-import { AdminClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { showError } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 
-export async function manageUsage(a: AdminClient): Promise<void> {
+export async function manageUsage(a: Gate): Promise<void> {
   const svc = a.service("usage");
   while (true) {
     const act = await select({

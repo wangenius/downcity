@@ -1,18 +1,19 @@
 ---
 title: 连接 Client
-description: 用 UserClient 调用 City 的 Service 和 Action。
+description: 用 User Gate 调用 City 的 Service 和 Action。
 ---
 
-`UserClient` 有两条常用通路：
+`User Gate` 有两条常用通路：
 
 - `client.ai.*` 调内置 AIService
 - `client.service(id).action(name).invoke()` 调自定义 Service 或服务 Service
 
 ```ts
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const client = new UserClient({
-  base_url: "http://127.0.0.1:43127",
+const client = new Gate({
+  role: "user",
+  city_url: "http://127.0.0.1:43127",
   studio_id: "studio_downcity",
   user_token: "ub_xxx",
 });
@@ -33,4 +34,4 @@ const result = await client.service("translate").action("zh2en").invoke({ text: 
 const oauth = await client.service("accounts").get("oauth/result", { state: "state_xxx" });
 ```
 
-创建 studio、暂停 studio、签发 `user_token` 和维护 Runtime env 都属于可信环境动作，用 `AdminClient` 完成，不放到产品前端。
+创建 studio、暂停 studio、签发 `user_token` 和维护 Runtime env 都属于可信环境动作，用 `Admin Gate` 完成，不放到产品前端。

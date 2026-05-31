@@ -109,24 +109,26 @@ If the request times out, the Dokploy service is not exposed publicly, the VPS f
 Studio frontends and apps should call the Node block through `@downcity/city`:
 
 ```ts
-import { UserClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const client = new UserClient({
-  base_url: "https://base.example.com",
+const client = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "my-studio",
   user_token: "user_token",
 });
 ```
 
-Trusted backends should use `AdminClient` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
+Trusted backends should use `Admin Gate` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
 
 ```ts
-import { AdminClient } from "@downcity/city";
+import { Gate } from "@downcity/city";
 
-const admin = new AdminClient({
-  base_url: "https://base.example.com",
+const admin = new Gate({
+  role: "admin",
+  city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
 
-See [UserClient](/en/docs/city/reference/user-client) and [AdminClient](/en/docs/city/reference/admin-client) for the full SDK surface.
+See [User Gate](/en/docs/city/reference/gate-user) and [Admin Gate](/en/docs/city/reference/gate-admin) for the full SDK surface.

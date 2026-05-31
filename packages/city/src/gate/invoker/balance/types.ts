@@ -2,7 +2,7 @@
  * Balance 管理端类型。
  *
  * 关键说明（中文）
- * - 这里描述的是 AdminClient 看到的 balance service 结构
+ * - 这里描述的是 Admin Gate 看到的 balance service 结构
  * - redeem_code 明文只在创建结果中返回一次
  */
 

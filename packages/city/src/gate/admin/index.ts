@@ -16,12 +16,12 @@ import {
   type RequestInitLike,
 } from "../http.js";
 import type {
-  AdminClientOptions,
+  AdminGateAccessOptions,
   AdminModelRecord,
   AdminServiceSummary,
 } from "./types.js";
 
-export class AdminClient {
+export class AdminGateAccess {
   readonly balance: BalanceInvoker;
   readonly env: EnvInvoker;
   readonly studios: StudiosInvoker;
@@ -30,9 +30,9 @@ export class AdminClient {
   private readonly secret: string;
   private readonly fetchImpl: FetchLike;
 
-  constructor(options: AdminClientOptions) {
+  constructor(options: AdminGateAccessOptions) {
     if (!options || typeof options !== "object") {
-      throw new TypeError("AdminClient options are required");
+      throw new TypeError("Admin Gate options are required");
     }
 
     this.base_url = normalizeBaseURL(options.base_url, "base_url");
@@ -48,7 +48,7 @@ export class AdminClient {
     this.studios = new StudiosInvoker({ requestJSON: req });
   }
 
-  /** 获取 Service 调用器（与 UserClient 共用同一路由） */
+  /** 获取 Service 调用器（与 User Gate 共用同一路由） */
   service(name: string): ServiceClient {
     const id = String(name ?? "").trim();
     if (!id) throw new TypeError("service name is required");

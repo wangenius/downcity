@@ -5,7 +5,7 @@
 import { AIInvoker, serializeModel } from "../invoker/ai/index.js";
 import { PaymentInvoker } from "../invoker/payment/index.js";
 import { ServiceClient } from "../invoker/invoker.js";
-import type { UserClientOptions, UserServiceInput, UserServiceSummary } from "./types.js";
+import type { UserGateAccessOptions, UserServiceInput, UserServiceSummary } from "./types.js";
 import {
   defaultFetch,
   normalizeBaseURL,
@@ -16,7 +16,7 @@ import {
   type RequestInitLike,
 } from "../http.js";
 
-export class UserClient {
+export class UserGateAccess {
   readonly ai: AIInvoker;
   readonly payment: PaymentInvoker;
 
@@ -26,9 +26,9 @@ export class UserClient {
   private readonly studio_id?: string;
   private readonly fetchImpl: FetchLike;
 
-  constructor(options: UserClientOptions) {
+  constructor(options: UserGateAccessOptions) {
     if (!options || typeof options !== "object") {
-      throw new TypeError("UserClient options are required");
+      throw new TypeError("User Gate options are required");
     }
 
     this.serverUrl = normalizeBaseURL(options.base_url, "base_url");

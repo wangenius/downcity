@@ -1,20 +1,20 @@
 ---
 title: Login and Token Flow
-description: "How guest UserClient, the accounts service, your own backend, user_token, and normal UserClient connect together."
+description: "How guest User Gate, the accounts service, your own backend, user_token, and normal User Gate connect together."
 ---
 
 Every login flow around Gate converges to one goal:
 
-> get `studio_id + user_token` into the studio frontend, then enter normal `UserClient` calls.
+> get `studio_id + user_token` into the studio frontend, then enter normal `User Gate` calls.
 
 ## Pattern one: your backend owns login
 
 ```txt
 frontend submits login data
   -> your backend validates the account
-  -> backend uses AdminClient to request user_token
+  -> backend uses Admin Gate to request user_token
   -> returns studio_id + user_token
-  -> frontend creates a normal UserClient
+  -> frontend creates a normal User Gate
 ```
 
 Good fit when:
@@ -25,10 +25,10 @@ Good fit when:
 ## Pattern two: the accounts service owns login
 
 ```txt
-frontend creates a guest UserClient
+frontend creates a guest User Gate
   -> calls accounts.register / login
   -> service returns user_token
-  -> frontend creates a normal UserClient
+  -> frontend creates a normal User Gate
 ```
 
 Good fit when:
@@ -36,13 +36,14 @@ Good fit when:
 - you want the fastest path to minimal registration and login
 - you do not want to maintain your own user and session tables first
 
-## What a guest UserClient is
+## What a guest User Gate is
 
-It is simply a `UserClient` with `base_url` only:
+It is simply a `User Gate` with `city_url` only:
 
 ```ts
-const guest = new UserClient({
-  base_url: "https://base.example.com",
+const guest = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
 });
 ```
 
@@ -53,11 +54,12 @@ At this stage it is usually used only for guest-access Actions such as:
 - `accounts.oauth/start`
 - `accounts.oauth/result`
 
-## Switching to a normal UserClient
+## Switching to a normal User Gate
 
 ```ts
-const user = new UserClient({
-  base_url: "https://base.example.com",
+const user = new Gate({
+  role: "user",
+  city_url: "https://base.example.com",
   studio_id: "studio_xxx",
   user_token: session.user_token,
 });

@@ -21,7 +21,7 @@ Downcity lets a new city start from the frontend, extension, or app and connect 
 The client owns:
 
 - UI and interaction
-- calling `UserClient`
+- calling `User Gate`
 - holding `studio_id`
 - storing or refreshing `user_token`
 
@@ -47,7 +47,7 @@ Downcity City
 That studio backend can stay very thin at first:
 
 - user login
-- `AdminClient.tokens.apply()`
+- `Admin Gate.tokens.apply()`
 - returning `user_token + studio_id` to the client
 
 ## Why this fits early studios better

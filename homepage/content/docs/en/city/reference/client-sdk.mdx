@@ -1,15 +1,15 @@
 ---
 title: SDK Overview
-description: "The Downcity SDK is split by role: UserClient owns studio-runtime calls, while AdminClient owns trusted-side management calls."
+description: "The Downcity SDK is split by role: User Gate owns studio-runtime calls, while Admin Gate owns trusted-side management calls."
 ---
 
 This page does one job: it pulls the calling model of `@downcity/city` into one reference overview.
 
-If you want the integration story first, start with [@downcity/city](/en/docs/city/packages/city/gate). If you need concrete method details, continue to [UserClient](/en/docs/city/reference/user-client) and [AdminClient](/en/docs/city/reference/admin-client).
+If you want the integration story first, start with [@downcity/city](/en/docs/city/packages/city/gate). If you need concrete method details, continue to [User Gate](/en/docs/city/reference/gate-user) and [Admin Gate](/en/docs/city/reference/gate-admin).
 
 ## Two roles
 
-| | UserClient | AdminClient |
+| | User Gate | Admin Gate |
 |---|---|---|
 | Used by | frontend, app, extension, desktop client | studio backend, ops scripts, internal tools |
 | Owns | AI services, custom services, public services | studios, tokens, runtime env, admin-side services |
@@ -20,7 +20,12 @@ If you want the integration story first, start with [@downcity/city](/en/docs/ci
 
 ```ts
 // Studio side
-const client = new UserClient({ base_url, studio_id, user_token });
+const client = new Gate({
+  role: "user",
+  city_url,
+  studio_id,
+  user_token,
+});
 
 // AI Service
 await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
@@ -40,7 +45,11 @@ const checkout = await client.payment.method("stripe").invoke({
 });
 
 // Admin side
-const admin = new AdminClient({ base_url, admin_secret_key });
+const admin = new Gate({
+  role: "admin",
+  city_url,
+  admin_secret_key,
+});
 await admin.service("studios").action("create").invoke({ name: "My App" });
 ```
 
@@ -61,14 +70,14 @@ From the caller's point of view, they all live in the same City service route sp
 
 The two most common paths are:
 
-1. your backend finishes login first, then uses `AdminClient` to request `user_token`
-2. the frontend uses a guest `UserClient` to call `accounts.login/register`, and the accounts service returns `user_token`
+1. your backend finishes login first, then uses `Admin Gate` to request `user_token`
+2. the frontend uses a guest `User Gate` to call `accounts.login/register`, and the accounts service returns `user_token`
 
 Both paths end in the same user context:
 
 ```txt
-base_url + studio_id + user_token
-  -> new UserClient(...)
+city_url + studio_id + user_token
+  -> new Gate({ role: "user", ... })
   -> client.ai.* or client.service(...)
 ```
 
@@ -76,6 +85,6 @@ base_url + studio_id + user_token
 
 1. To understand package composition, read [Packages](/en/docs/city/packages)
 2. To understand studio integration, read [@downcity/city](/en/docs/city/packages/city/gate)
-3. For detailed studio-side calls, read [UserClient](/en/docs/city/reference/user-client)
-4. For trusted-side management, read [AdminClient](/en/docs/city/reference/admin-client)
+3. For detailed studio-side calls, read [User Gate](/en/docs/city/reference/gate-user)
+4. For trusted-side management, read [Admin Gate](/en/docs/city/reference/gate-admin)
 5. For minimal auth, read [@downcity/services](/en/docs/city/packages/services) and [Accounts Service](/en/docs/city/guides/accounts-service)

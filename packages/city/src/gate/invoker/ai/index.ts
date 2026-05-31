@@ -20,7 +20,7 @@ const PREFIX = "/v1/ai";
 /**
  * AI 服务调用器。
  *
- * 通过 UserClient.ai 访问：
+ * 通过 User Gate .ai 访问：
  * ```ts
  * await client.ai.text({ prompt: "hello" });
  * const catalog = await client.ai.listModels();

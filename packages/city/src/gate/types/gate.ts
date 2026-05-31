@@ -43,7 +43,7 @@ export interface AdminGateOptions extends GateBaseOptions {
   /**
    * City 管理密钥。
    *
-   * 未传入时会由 AdminClient 回退读取 `DOWNCITY_CITY_ADMIN_SECRET_KEY`。
+   * 未传入时会由 Gate 回退读取 `DOWNCITY_CITY_ADMIN_SECRET_KEY`。
    */
   admin_secret_key?: string;
 }
@@ -74,3 +74,10 @@ export interface UserGateOptions extends GateBaseOptions {
  * Gate 构造参数。
  */
 export type GateOptions = AdminGateOptions | UserGateOptions;
+
+/**
+ * 按角色收窄后的 Gate 构造参数。
+ */
+export type GateOptionsForRole<TRole extends GateRole> = TRole extends "admin"
+  ? AdminGateOptions
+  : UserGateOptions;

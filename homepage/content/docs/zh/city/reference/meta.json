@@ -3,8 +3,8 @@
   "pages": [
     "index",
     "city-runtime",
-    "user-client",
-    "admin-client",
+    "gate-user",
+    "gate-admin",
     "http-api",
     "env-vars"
   ]

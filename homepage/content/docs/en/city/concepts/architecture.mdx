@@ -20,7 +20,7 @@ Together they create the runtime flow:
 
 ```txt
 studio UI / app / internal tool
-  -> UserClient / AdminClient / studio terminal
+  -> User Gate / Admin Gate / studio terminal
   -> City
   -> Service / AIService
   -> Provider / Database
@@ -32,7 +32,7 @@ Many clients can share one self-deployed City. Studio clients stay lightweight a
 
 Downcity has two main external entry points:
 
-- Studio-side entry: `UserClient` and `AdminClient` from `@downcity/city`
+- Studio-side entry: `User Gate` and `Admin Gate` from `@downcity/city`
 - Operator entry: `downcity`
 
 Neither one implements the City itself. They both send requests into the same City.
@@ -86,10 +86,10 @@ City itself does not care what “translation” or “payment” means as busin
 
 ### SDK pathway
 
-Used by `UserClient`:
+Used by `User Gate`:
 
 ```txt
-UserClient.ai.text({ prompt: "hello", model: "kimi-k2.6" })
+User Gate.ai.text({ prompt: "hello", model: "kimi-k2.6" })
   -> POST /v1/ai/text
   -> Provider text action(ctx)
   -> generateText / streamText (ai-sdk)

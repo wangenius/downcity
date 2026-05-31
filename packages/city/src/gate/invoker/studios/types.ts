@@ -27,7 +27,7 @@ export interface TokenApplyInput {
 
 /** token 签发结果 */
 export interface TokenApplyResult {
-  /** 可交给 UserClient 使用的 token */
+  /** 可交给 User Gate 使用的 token */
   user_token: string;
   /** token 所属 Studio ID */
   studio_id: string;

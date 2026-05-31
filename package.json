@@ -18,6 +18,7 @@
     "build:studio-command": "pnpm -C cli/studio build",
     "build:homepage": "pnpm -C homepage build",
     "build:extension": "bash ./scripts/extbuild.sh",
+    "build:extension:release": "bash ./scripts/extbuild.sh --release",
     "install:ws": "pnpm install",
     "dev:console": "pnpm -C products/console dev",
     "dev:cli": "pnpm -C cli/city dev",

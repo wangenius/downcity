@@ -5,8 +5,31 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EXT_PACKAGE_JSON="$ROOT_DIR/products/chrome-extension/package.json"
 EXT_MANIFEST_JSON="$ROOT_DIR/products/chrome-extension/public/manifest.json"
+RELEASE_BUILD=false
 
-node --input-type=module - "$EXT_PACKAGE_JSON" "$EXT_MANIFEST_JSON" <<'NODE'
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --release)
+      RELEASE_BUILD=true
+      ;;
+    -h|--help)
+      echo "Usage: bash ./scripts/extbuild.sh [--release]"
+      echo ""
+      echo "  默认只执行类型检查与打包，不修改版本号"
+      echo "  --release  先同步提升 package.json / manifest.json patch 版本，再打包"
+      exit 0
+      ;;
+    *)
+      echo "Unsupported option: $1"
+      echo "Usage: bash ./scripts/extbuild.sh [--release]"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+if [[ "$RELEASE_BUILD" == true ]]; then
+  node --input-type=module - "$EXT_PACKAGE_JSON" "$EXT_MANIFEST_JSON" <<'NODE'
 import fs from 'node:fs';
 
 const packageFile = process.argv[2];
@@ -46,10 +69,13 @@ fs.writeFileSync(manifestFile, JSON.stringify(manifestJson, null, 2) + '\n', 'ut
 
 console.log(`Extension version patched: ${currentVersion} -> ${nextVersion}`);
 NODE
+else
+  echo "Extension version patch skipped (use --release to bump)"
+fi
 
 # 关键点（中文）：
-# 1) 该脚本对应 extension 的统一 build 入口：先自动提升 patch 版本，再执行类型检查与打包。
-# 2) 真正构建命令只放在这个脚本里，package.json 仅做脚本转发。
+# 1) 普通 build 不修改版本号，避免验证构建污染 package.json / manifest.json。
+# 2) release build 才自动提升 patch 版本，并复用同一套类型检查与打包流程。
 cd "$ROOT_DIR/products/chrome-extension"
 npx tsc --noEmit
 npx vite build

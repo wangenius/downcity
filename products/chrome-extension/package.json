@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bash ../../scripts/extdev.sh",
     "build": "bash ../../scripts/extbuild.sh",
-    "build:release": "bash ../../scripts/extbuild.sh"
+    "build:release": "bash ../../scripts/extbuild.sh --release"
   },
   "dependencies": {
     "react": "^19.2.6",

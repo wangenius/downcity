@@ -3,55 +3,21 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { requestConsoleApiJson } from "../lib/dashboard-api";
 import {
-  clearConsoleAuthState,
-  dashboardApiRoutes,
-  type ConsoleAuthStatusResponse,
-  readConsoleAuthState,
-  requestConsoleApiJson,
-  writeConsoleAuthState,
-} from "../lib/dashboard-api";
-import {
-  queryAgentEnv,
-  queryAgents,
-  queryAuthorization,
-  queryChannelAccounts,
-  queryChannelHistory,
-  queryChatChannels,
-  queryConfigStatus,
-  querySessionArchiveDetail,
-  querySessionArchives,
-  querySessionMessages,
-  querySessions,
-  queryGlobalEnv,
-  queryLocalMessages,
-  queryLogs,
-  queryLocalModels,
-  queryModel,
-  queryModelPool,
-  queryOverview,
-  queryPlugins,
-  queryPrompt,
-  queryServices,
-  querySkills,
-  queryTasks,
+  queryAgentEnv, queryAgents, queryAuthorization, queryChannelAccounts,
+  queryChannelHistory, queryChatChannels, queryConfigStatus, queryGlobalEnv,
+  queryLocalMessages, queryLocalModels, queryLogs, queryModel,
+  queryModelPool, queryOverview, queryPlugins, queryPrompt,
+  queryServices, querySessionArchiveDetail, querySessionArchives,
+  querySessionMessages, querySessions, querySkills, queryTasks,
 } from "../lib/dashboard-queries";
 import {
-  configureChatChannelMutation,
-  controlServiceMutation,
-  clearTaskRunsMutation,
-  deleteTaskMutation,
-  deleteTaskRunMutation,
-  loadTaskRunDetailMutation,
-  loadTaskRunsMutation,
-  runTaskMutation,
-  runAuthorizationActionMutation,
-  runChatChannelActionMutation,
-  runPluginActionMutation,
-  runSkillFindMutation,
-  runSkillInstallMutation,
-  runSkillLookupMutation,
-  saveAuthorizationConfigMutation,
+  clearTaskRunsMutation, configureChatChannelMutation, controlServiceMutation,
+  deleteTaskMutation, deleteTaskRunMutation, loadTaskRunDetailMutation,
+  loadTaskRunsMutation, runAuthorizationActionMutation, runChatChannelActionMutation,
+  runPluginActionMutation, runSkillFindMutation, runSkillInstallMutation,
+  runSkillLookupMutation, runTaskMutation, saveAuthorizationConfigMutation,
   setTaskStatusMutation,
 } from "../lib/dashboard-mutations";
 import {
@@ -66,6 +32,10 @@ import { useDashboardRefresh } from "./dashboard/useDashboardRefresh";
 import { useDashboardSessionActions } from "./dashboard/useDashboardSessionActions";
 import { useDashboardResourceActions } from "./dashboard/useDashboardResourceActions";
 import { useDashboardAccess } from "./dashboard/useDashboardAccess";
+import { useDashboardAuth } from "./dashboard/useDashboardAuth";
+import { useDashboardToast } from "./dashboard/useDashboardToast";
+import { useDashboardAutoRefresh } from "./dashboard/useDashboardAutoRefresh";
+import { useDashboardSelectionRefs } from "./dashboard/useDashboardSelectionRefs";
 import type {
   UiAgentOption,
   UiChatChannelStatus,
@@ -96,21 +66,9 @@ import type {
   UiTaskStatusValue,
   UiEnvItem,
 } from "../types/Dashboard";
-import type {
-  DashboardToastState,
-  DashboardToastType,
-  UseConsoleDashboardResult,
-} from "../types/DashboardHook";
+import type { UseConsoleDashboardResult } from "../types/DashboardHook";
 
 export function useConsoleDashboard(): UseConsoleDashboardResult {
-  const initialAuthState = readConsoleAuthState()
-  const [authInitializing, setAuthInitializing] = useState(!Boolean(initialAuthState?.token))
-  const [authBootstrapRequired, setAuthBootstrapRequired] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialAuthState?.token))
-  const [authUsername, setAuthUsername] = useState(String(initialAuthState?.username || "").trim())
-  const [authRequired, setAuthRequired] = useState(false)
-  const [authSubmitting, setAuthSubmitting] = useState(false)
-  const [authErrorMessage, setAuthErrorMessage] = useState("")
   const [agents, setAgents] = useState<UiAgentOption[]>([]);
   const [cityVersion, setCityVersion] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState("");
@@ -149,48 +107,37 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [clearingChatHistory, setClearingChatHistory] = useState(false);
   const [deletingSessionId, setDeletingSessionId] = useState("");
   const [chatInput, setChatInput] = useState("");
-  const [toast, setToast] = useState<DashboardToastState | null>(null);
-  const toastTimerRef = useRef<number | null>(null);
-  const selectedSessionIdRef = useRef("");
-  const selectedArchiveIdRef = useRef("");
   const refreshDashboardRef = useRef<((preferredAgentId?: string) => Promise<void>) | null>(null);
   const archiveApiStateRef = useRef<"unknown" | "supported" | "unsupported">("unknown");
+  const {
+    selected_session_id_ref: selectedSessionIdRef,
+    selected_archive_id_ref: selectedArchiveIdRef,
+  } = useDashboardSelectionRefs(selectedSessionId, selectedArchiveId);
 
-  useEffect(() => {
-    selectedSessionIdRef.current = selectedSessionId;
-  }, [selectedSessionId]);
-
-  useEffect(() => {
-    selectedArchiveIdRef.current = selectedArchiveId;
-  }, [selectedArchiveId]);
+  const {
+    authInitializing,
+    authBootstrapRequired,
+    isAuthenticated,
+    authUsername,
+    authRequired,
+    authSubmitting,
+    authErrorMessage,
+    enterAuthRequiredState,
+    submitAuthToken,
+    logout,
+    setAuthRequiredState,
+  } = useDashboardAuth({
+    refresh_dashboard_ref: refreshDashboardRef,
+    set_topbar_status: setTopbarStatus,
+    set_topbar_error: setTopbarError,
+  });
 
   const selectedAgent = useMemo(
     () => agents.find((agent) => agent.id === selectedAgentId) || null,
     [agents, selectedAgentId],
   );
 
-  const showToast = useCallback((message: string, type: DashboardToastType = "info") => {
-    setToast({ message, type });
-    if (toastTimerRef.current) {
-      window.clearTimeout(toastTimerRef.current);
-    }
-    toastTimerRef.current = window.setTimeout(() => {
-      setToast(null);
-      toastTimerRef.current = null;
-    }, 2200);
-  }, []);
-
-  const enterAuthRequiredState = useCallback(() => {
-    clearConsoleAuthState()
-    setAuthInitializing(false)
-    setAuthBootstrapRequired(false)
-    setIsAuthenticated(false)
-    setAuthUsername("")
-    setAuthRequired(true)
-    setAuthErrorMessage("")
-    setTopbarStatus("需要 Bearer Token")
-    setTopbarError(false)
-  }, [])
+  const { toast, showToast } = useDashboardToast();
 
   const requestJson = useCallback(
     async <T,>(path: string, options: RequestInit = {}, preferredAgentId?: string): Promise<T> => {
@@ -225,55 +172,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     requestJson,
     showToast,
   })
-
-  const submitAuthToken = useCallback(
-    async (input: { token: string }) => {
-      setAuthSubmitting(true)
-      setAuthErrorMessage("")
-      try {
-        const rawToken = String(input.token || "").trim()
-        if (!rawToken) throw new Error("请先输入 Bearer Token")
-
-        const response = await requestConsoleApiJson<{
-          user?: { username?: string }
-        }>({
-          path: dashboardApiRoutes.authMe(),
-          selectedAgentId: "",
-          options: {
-            headers: {
-              Authorization: /^Bearer\s+/i.test(rawToken) ? rawToken : `Bearer ${rawToken}`,
-            },
-          },
-        })
-        const token = rawToken.replace(/^Bearer\s+/i, "").trim()
-        const username = String(response?.user?.username || "").trim()
-        writeConsoleAuthState({
-          token,
-          ...(username ? { username } : {}),
-        })
-        setAuthInitializing(false)
-        setAuthBootstrapRequired(false)
-        setIsAuthenticated(true)
-        setAuthUsername(username)
-        setAuthRequired(false)
-        await refreshDashboardRef.current?.()
-      } catch (error) {
-        clearConsoleAuthState()
-        setIsAuthenticated(false)
-        setAuthUsername("")
-        setAuthRequired(true)
-        setAuthErrorMessage(getErrorMessage(error))
-        throw error
-      } finally {
-        setAuthSubmitting(false)
-      }
-    },
-    [],
-  )
-
-  const logout = useCallback(() => {
-    enterAuthRequiredState()
-  }, [enterAuthRequiredState])
 
   const clearPanelDataForNoAgent = useCallback(() => {
     setOverview(null);
@@ -590,7 +488,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshSessionArchives,
     refreshPrompt,
     showToast,
-    setAuthRequired,
+    setAuthRequired: setAuthRequiredState,
   });
 
   const controlService = useCallback(
@@ -943,83 +841,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshDashboardRef.current = refreshDashboard;
   }, [refreshDashboard]);
 
-  useEffect(() => {
-    let disposed = false
-
-    const bootstrapDashboard = async () => {
-      const authState = readConsoleAuthState()
-      const hasToken = Boolean(authState?.token)
-
-      setIsAuthenticated(hasToken)
-      setAuthUsername(String(authState?.username || "").trim())
-
-      if (hasToken) {
-        if (disposed) return
-        setAuthBootstrapRequired(false)
-        setAuthRequired(false)
-        setAuthInitializing(false)
-        return
-      }
-
-      try {
-        const authStatus = await requestConsoleApiJson<ConsoleAuthStatusResponse>({
-          path: dashboardApiRoutes.authStatus(),
-          selectedAgentId: "",
-        })
-
-        if (!authStatus.initialized) {
-          if (disposed) return
-          setAuthBootstrapRequired(true)
-          setAuthRequired(true)
-          setAuthInitializing(false)
-          setTopbarStatus("需要先创建 Token")
-          setTopbarError(false)
-          return
-        }
-
-        if (authStatus.requireToken && !hasToken) {
-          if (disposed) return
-          setAuthBootstrapRequired(false)
-          setAuthRequired(true)
-          setAuthInitializing(false)
-          setTopbarStatus("需要 Bearer Token")
-          setTopbarError(false)
-          return
-        }
-      } catch {
-        // 关键点（中文）：状态探测失败时也不允许直接进入 dashboard，改为停在 token 入口页。
-      }
-
-      if (disposed) return
-      setAuthBootstrapRequired(false)
-      setAuthRequired(true)
-      setTopbarStatus("需要 Bearer Token")
-      setTopbarError(false)
-      setAuthInitializing(false)
-    }
-
-    void bootstrapDashboard()
-
-    return () => {
-      disposed = true
-    }
-  }, [])
-
-  useEffect(() => {
-    if (authInitializing) return
-    if (authRequired && !isAuthenticated) return
-    void refreshDashboardRef.current?.();
-    const timer = window.setInterval(() => {
-      if (authRequired && !isAuthenticated) return
-      void refreshDashboardRef.current?.();
-    }, 12000);
-    return () => {
-      window.clearInterval(timer);
-      if (toastTimerRef.current) {
-        window.clearTimeout(toastTimerRef.current);
-      }
-    };
-  }, [authInitializing, authRequired, isAuthenticated]);
+  useDashboardAutoRefresh({
+    auth_initializing: authInitializing,
+    auth_required: authRequired,
+    is_authenticated: isAuthenticated,
+    refresh_dashboard_ref: refreshDashboardRef,
+  });
 
   return {
     authInitializing,

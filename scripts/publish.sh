@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 交互式发布脚本：检查状态、同步版本、提交并推送触发 CI 发布。
+# 交互式发布脚本：检查状态、同步核心版本、提交并推送触发 CI 发布。
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -48,6 +48,9 @@ if (!newVersion) {
 const files = [
   'package.json',
   'packages/agent/package.json',
+  'packages/city/package.json',
+  'packages/services/package.json',
+  'packages/gate/package.json',
   'packages/plugins/package.json',
   'cli/city/package.json',
   'cli/studio/package.json',
@@ -170,8 +173,17 @@ main() {
   esac
   set_new_version "$new_version"
 
-  # 6. 暂存所有变更
-  git add -A
+  # 6. 暂存发布版本文件。UI SDK 仍走独立 publish:ui 流程。
+  git add \
+    package.json \
+    packages/agent/package.json \
+    packages/city/package.json \
+    packages/services/package.json \
+    packages/gate/package.json \
+    packages/plugins/package.json \
+    cli/city/package.json \
+    cli/studio/package.json \
+    cli/downcity/package.json
   
   # 7. 输入提交信息
   local default_msg="chore: release v${new_version}"
@@ -188,7 +200,7 @@ main() {
   echo
   if confirm "推送到远程仓库? (y/N): "; then
     git push
-    print_success "🎉 已推送到远程仓库，CI 将触发 scoped 包发布流程，并在成功后触发 downcity 镜像包发布流程"
+    print_success "🎉 已推送到远程仓库，CI 将触发核心 scoped 包发布流程，并在成功后触发 downcity 镜像包发布流程"
   else
     print_warning "已提交到本地，但未推送到远程"
     print_status "运行 'git push' 手动推送"

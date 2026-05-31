@@ -63,7 +63,12 @@ const HELP_ITEMS = [
   {
     name: "build:extension",
     summary: "构建 chrome-extension。",
-    detail: "走独立扩展构建脚本，不参与 cli 交付链路。",
+    detail: "走独立扩展构建脚本，不参与 cli 交付链路；普通构建不会修改扩展版本号。",
+  },
+  {
+    name: "build:extension:release",
+    summary: "构建并提升 chrome-extension patch 版本。",
+    detail: "用于准备扩展发布包，会同步更新 package.json 与 manifest.json 的 patch 版本号。",
   },
   {
     name: "patch:build",

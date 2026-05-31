@@ -8,6 +8,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/lib/build-common.sh"
 
 PACKAGES=()
 ALL_PACKAGES=("agent" "city" "services" "gate" "plugins" "ui" "cli")
@@ -140,54 +141,14 @@ run_build() {
   echo ""
   if [[ "$pkg" == "cli" ]]; then
     echo "--- Downcity CLI products ---"
-    if command -v pnpm >/dev/null 2>&1; then
-      pnpm -C "cli/city" build
-      pnpm -C "cli/studio" build
-      pnpm -C "products/console" build
-      pnpm -C "cli/downcity" build
-    else
-      npm --prefix "cli/city" run build
-      npm --prefix "cli/studio" run build
-      npm --prefix "products/console" run build
-      npm --prefix "cli/downcity" run build
-    fi
+    run_project_build "$ROOT_DIR/cli/city"
+    run_project_build "$ROOT_DIR/cli/studio"
+    run_project_build "$ROOT_DIR/products/console"
+    run_project_build "$ROOT_DIR/cli/downcity"
     return 0
   fi
   echo "--- @downcity/$pkg ---"
-  if command -v pnpm >/dev/null 2>&1; then
-    pnpm -C "packages/$pkg" build
-  else
-    npm --prefix "packages/$pkg" run build
-  fi
-}
-
-install_cli_globally() {
-  local deploy_dir
-  local npm_prefix
-  local global_modules
-  local global_bin
-  local package_dir
-  deploy_dir="$(mktemp -d "${TMPDIR:-/tmp}/downcity-cli-deploy.XXXXXX")"
-  trap 'rm -rf "$deploy_dir"' RETURN
-
-  npm_prefix="$(npm prefix -g)"
-  global_modules="$npm_prefix/lib/node_modules"
-  global_bin="$npm_prefix/bin"
-  package_dir="$global_modules/downcity"
-
-  pnpm --filter downcity deploy --legacy "$deploy_dir"
-
-  # 关键点（中文）：npm 11 对本地目录执行 install -g 时偶发 Arborist 崩溃。
-  # 这里沿用 pnpm deploy 产物，但手动落盘到 npm 全局目录，并重建命令入口。
-  mkdir -p "$global_modules" "$global_bin"
-  rm -rf "$package_dir"
-  cp -R "$deploy_dir" "$package_dir"
-  chmod +x "$package_dir/bin/studio/index.js"
-  chmod +x "$package_dir/bin/city/index.js"
-
-  rm -f "$global_bin/studio" "$global_bin/city" 2>/dev/null || true
-  ln -s "../lib/node_modules/downcity/bin/studio/index.js" "$global_bin/studio"
-  ln -s "../lib/node_modules/downcity/bin/city/index.js" "$global_bin/city"
+  run_project_build "$ROOT_DIR/packages/$pkg"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -240,5 +201,5 @@ echo "==> 完成"
 if [[ " ${PACKAGES[*]} " =~ " cli " ]]; then
   echo ""
   echo "==> 全局安装 Downcity CLI ..."
-  install_cli_globally
+  install_downcity_cli_globally "$ROOT_DIR"
 fi

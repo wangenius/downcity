@@ -5,27 +5,27 @@
 import * as React from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { ApiKeysSection } from "@/components/dashboard/ApiKeysSection"
-import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
-import { AuthorizationSection } from "@/components/dashboard/AuthorizationSection"
 import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
+import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
+import { ApiKeysSection } from "@/components/dashboard/ApiKeysSection"
 import { AuthGatePage } from "@/components/dashboard/AuthGatePage"
-import { GlobalChannelAccountsSection } from "@/components/dashboard/GlobalChannelAccountsSection"
+import { AuthorizationSection } from "@/components/dashboard/AuthorizationSection"
 import { EnvSection } from "@/components/dashboard/EnvSection"
+import { GlobalChannelAccountsSection } from "@/components/dashboard/GlobalChannelAccountsSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
-import { SessionOverviewSection } from "@/components/dashboard/SessionOverviewSection"
-import { SessionWorkspaceSection } from "@/components/dashboard/SessionWorkspaceSection"
-import { PluginsSection } from "@/components/dashboard/PluginsSection"
 import { GlobalOverviewSection } from "@/components/dashboard/GlobalOverviewSection"
 import { LogsSection } from "@/components/dashboard/LogsSection"
+import { PluginsSection } from "@/components/dashboard/PluginsSection"
+import { SessionOverviewSection } from "@/components/dashboard/SessionOverviewSection"
+import { SessionWorkspaceSection } from "@/components/dashboard/SessionWorkspaceSection"
 import { SkillsSection } from "@/components/dashboard/SkillsSection"
 import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { TasksSection } from "@/components/dashboard/TasksSection"
 import { ToastMessage } from "@/components/dashboard/ToastMessage"
 import { WorkboardSection } from "@/components/dashboard/WorkboardSection"
 import { SiteHeader } from "@/components/site-header"
-import { Button } from "@downcity/ui"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { DEBUG_PANELS_COLLAPSED_STORAGE_KEY, useAppRouteState } from "@/hooks/useAppRouteState"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 import { useWorkboard } from "@/hooks/useWorkboard"
 import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
@@ -33,145 +33,47 @@ import { resolveSessionChannel } from "@/lib/context-groups"
 import { parseDashboardPath, toAgentRouteSegment, toDashboardPath } from "@/lib/dashboard-route"
 import { cn } from "@/lib/utils"
 import type { DashboardView } from "@/types/Navigation"
+import { Button } from "@downcity/ui"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
-const DEBUG_PANELS_COLLAPSED_STORAGE_KEY = "city.console-ui.context.debug-panels-collapsed"
-
 export function App() {
-  const [routePathname, setRoutePathname] = React.useState<string>(() => {
-    if (typeof window === "undefined") return "/global/overview"
-    return window.location.pathname
-  })
-  const [activeView, setActiveView] = React.useState<DashboardView>(() => {
-    if (typeof window === "undefined") return "globalOverview"
-    return parseDashboardPath(window.location.pathname).view
-  })
-  const [routeHydrated, setRouteHydrated] = React.useState(false)
-  const [selectedTaskTitle, setSelectedTaskTitle] = React.useState<string>(() => {
-    if (typeof window === "undefined") return ""
-    return String(parseDashboardPath(window.location.pathname).taskTitle || "").trim()
-  })
-  const [focusedChatChannel, setFocusedChatChannel] = React.useState<string>("")
-  const [debugPanelsCollapsed, setDebugPanelsCollapsed] = React.useState<boolean>(() => {
-    if (typeof window === "undefined") return false
-    try {
-      return window.localStorage.getItem(DEBUG_PANELS_COLLAPSED_STORAGE_KEY) === "1"
-    } catch {
-      return false
-    }
-  })
+  const {
+    routePathname, setRoutePathname,
+    activeView, setActiveView,
+    routeHydrated, setRouteHydrated,
+    selectedTaskTitle, setSelectedTaskTitle,
+    focusedChatChannel, setFocusedChatChannel,
+    debugPanelsCollapsed, setDebugPanelsCollapsed,
+  } = useAppRouteState()
 
   const {
-    agents,
-    authInitializing,
-    authBootstrapRequired,
-    isAuthenticated,
-    authRequired,
-    authSubmitting,
-    authErrorMessage,
-    cityVersion,
-    selectedAgentId,
-    selectedAgent,
-    overview,
-    authorization,
-    accessUser,
-    accessTokens,
-    accessLoading,
-    latestIssuedAccessToken,
-    services,
-    skills,
-    plugins,
-    agentPlugins,
-    chatChannels,
-    sessions,
-    selectedSessionId,
-    channelHistory,
-    sessionMessages,
-    sessionArchives,
-    selectedArchiveId,
-    sessionArchiveMessages,
-    tasks,
-    logs,
-    model,
-    configStatus,
-    modelProviders,
-    modelPoolItems,
-    channelAccounts,
-    globalEnvItems,
-    agentEnvItems,
-    prompt,
-    topbarStatus,
-    topbarError,
-    loading,
-    sending,
-    clearingSessionMessages,
-    clearingChatHistory,
-    deletingSessionId,
-    chatInput,
-    toast,
-    setChatInput,
-    handleAgentChange,
-    handleSessionChange,
-    refreshDashboard,
-    refreshSkills,
-    refreshSessionArchives,
-    controlService,
-    runGlobalPluginAction,
-    runPluginAction,
-    runChatChannelAction,
-    configureChatChannel,
-    refreshAuthorization,
-    refreshAccess,
-    saveAuthorizationConfig,
-    runAuthorizationAction,
-    clearLatestIssuedAccessToken,
-    createAccessToken,
-    deleteAccessToken,
-    runSkillFind,
-    runSkillInstall,
-    runTask,
-    setTaskStatus,
-    deleteTask,
-    loadTaskRuns,
-    deleteTaskRun,
-    clearTaskRuns,
-    loadTaskRunDetail,
-    sendConsoleUiMessage,
-    clearSessionMessages,
-    clearChatHistory,
-    deleteChatSession,
-    loadSessionArchiveMessages,
-    switchModel,
-    switchModelForAgent,
-    updateAgentExecution,
-    startAgentFromHistory,
-    loadLocalModels,
-    pickAgentDirectory,
-    inspectAgentDirectory,
-    restartAgentFromHistory,
-    stopAgentFromHistory,
-    upsertModelProvider,
-    removeModelProvider,
-    testModelProvider,
-    discoverModelProvider,
-    upsertModelPoolItem,
-    removeModelPoolItem,
-    setModelPoolItemPaused,
-    testModelPoolItem,
-    upsertChannelAccount,
-    probeChannelAccount,
-    removeChannelAccount,
-    upsertGlobalEnv,
-    removeGlobalEnv,
-    importGlobalEnv,
-    upsertAgentEnv,
-    removeAgentEnv,
-    importAgentEnv,
-    executeAgentCommand,
-    constants,
-    uiHelpers,
-    submitAuthToken,
-    logout,
+    agents, cityVersion, selectedAgentId, selectedAgent,
+    authInitializing, authBootstrapRequired, isAuthenticated, authRequired,
+    authSubmitting, authErrorMessage, submitAuthToken, logout,
+    overview, authorization, services, skills, plugins, agentPlugins,
+    chatChannels, sessions, selectedSessionId, channelHistory,
+    sessionMessages, sessionArchives, selectedArchiveId, sessionArchiveMessages,
+    tasks, logs, model, configStatus, modelProviders, modelPoolItems,
+    channelAccounts, globalEnvItems, agentEnvItems, prompt,
+    accessUser, accessTokens, accessLoading, latestIssuedAccessToken,
+    topbarStatus, topbarError, loading, sending, clearingSessionMessages,
+    clearingChatHistory, deletingSessionId, chatInput, toast, setChatInput,
+    handleAgentChange, handleSessionChange, refreshDashboard, refreshSkills,
+    refreshSessionArchives, refreshAuthorization, refreshAccess,
+    controlService, runGlobalPluginAction, runPluginAction, runChatChannelAction,
+    configureChatChannel, saveAuthorizationConfig, runAuthorizationAction,
+    clearLatestIssuedAccessToken, createAccessToken, deleteAccessToken,
+    runSkillFind, runSkillInstall, runTask, setTaskStatus, deleteTask,
+    loadTaskRuns, deleteTaskRun, clearTaskRuns, loadTaskRunDetail,
+    sendConsoleUiMessage, clearSessionMessages, clearChatHistory, deleteChatSession,
+    loadSessionArchiveMessages, switchModel, switchModelForAgent, updateAgentExecution,
+    startAgentFromHistory, loadLocalModels, pickAgentDirectory, inspectAgentDirectory,
+    restartAgentFromHistory, stopAgentFromHistory, upsertModelProvider,
+    removeModelProvider, testModelProvider, discoverModelProvider, upsertModelPoolItem,
+    removeModelPoolItem, setModelPoolItemPaused, testModelPoolItem,
+    upsertChannelAccount, probeChannelAccount, removeChannelAccount,
+    upsertGlobalEnv, removeGlobalEnv, importGlobalEnv, upsertAgentEnv,
+    removeAgentEnv, importAgentEnv, executeAgentCommand, constants, uiHelpers,
   } = useConsoleDashboard()
   const workboard = useWorkboard({
     agents,

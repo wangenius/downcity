@@ -95,8 +95,8 @@ export function Navbar() {
     label: t("nav.docs"),
     activePaths: [docsPath, devdocsPath, agentSdkDocsPath, pluginsDocsPath, uiSdkDocsPath],
     items: [
-      { label: "Downcity Docs", description: isZh ? "Studio、City 与运行逻辑总入口" : "Main entry for Studio, City, and operating logic", path: docsPath },
-      { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "先把 Studio 跑起来，再进入更深层结构" : "Start Studio first, then go deeper into the structure", path: docsQuickstartPath },
+      { label: "Downcity Docs", description: isZh ? "Bay、City 与运行逻辑总入口" : "Main entry for Bay, City, and operating logic", path: docsPath },
+      { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "先把 Bay 跑起来，再进入更深层结构" : "Start Bay first, then go deeper into the structure", path: docsQuickstartPath },
       { label: "CLI", description: isZh ? "命令入口与参数" : "Command entry points and flags", path: docsCliPath },
       { label: t("nav.devdocs"), description: isZh ? "架构、实现与设计规范" : "Architecture, implementation, and design docs", path: devdocsPath },
       {

@@ -6,7 +6,7 @@
 
 ## 输出协议
 
-- 需要普通回复时，直接输出文本即可。文本顶部可用 frontmatter metadata (optional)，字段语义与 `studio chat send` 保持一致：
+- 需要普通回复时，直接输出文本即可。文本顶部可用 frontmatter metadata (optional)，字段语义与 `bay chat send` 保持一致：
 
 - `delay` / `delayMs`：延迟发送毫秒数。
 - `time` / `sendAt` / `sendAtMs`：定时发送时间。
@@ -39,13 +39,13 @@ react:
 
 ## 跨协议/跨平台操作
 
-- 当任务需要跨会话、跨平台或复杂路由，必须使用 `studio chat send` / `studio chat react`。
+- 当任务需要跨会话、跨平台或复杂路由，必须使用 `bay chat send` / `bay chat react`。
 - metadata 只适用于当前会话内的 direct 出站，不要拿 metadata 做跨 chat 路由。
-- 如果需要跨 chat 发送，或者不清楚怎么发送，直接先调用 `studio chat --help` 查看方法。
+- 如果需要跨 chat 发送，或者不清楚怎么发送，直接先调用 `bay chat --help` 查看方法。
 - 如不确定参数或正文协议，先自行调用：
-  - `studio chat --help`
-  - `studio chat send --help`
-  - `studio chat react --help`
+  - `bay chat --help`
+  - `bay chat send --help`
+  - `bay chat react --help`
 
 ## 入站消息结构（仅供内部理解）
 

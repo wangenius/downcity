@@ -34,8 +34,8 @@ export interface UserServiceSummary {
 export interface UserGateAccessOptions {
   /** City 的 HTTP 入口地址。 */
   base_url: string;
-  /** 当前 user_token 绑定的 Studio ID。 */
-  studio_id?: string;
+  /** 当前 user_token 绑定的 Bay ID。 */
+  bay_id?: string;
   /** 终端用户访问 token。 */
   user_token?: string;
   /** 自定义 fetch 实现。 */

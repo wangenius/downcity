@@ -10,7 +10,7 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
     <div className="dc-doc-node">
       <strong>Trusted backend</strong>
       <span>Your backend uses Admin Gate and holds `admin_secret_key`.</span>
-      <code>Create studio / request user_token</code>
+      <code>Create bay / request user_token</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -24,7 +24,7 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>End-user client</strong>
-      <span>The frontend, extension, or app only gets `user_token + studio_id` and uses User Gate to call services.</span>
+      <span>The frontend, extension, or app only gets `user_token + bay_id` and uses User Gate to call services.</span>
       <code>No access to admin_secret_key</code>
     </div>
   </div>
@@ -32,18 +32,18 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
 
 ## user_token
 
-`user_token` is the call credential used by the end user or studio client. `Admin Gate` requests it from City using `studio_id + user_id`.
+`user_token` is the call credential used by the end user or bay client. `Admin Gate` requests it from City using `bay_id + user_id`.
 
-- `studio_id`
+- `bay_id`
 - `user_id`
 - `metadata`
 - `ttl`
 
-The client only carries `user_token` and `studio_id`. It never touches provider keys or `admin_secret_key`.
+The client only carries `user_token` and `bay_id`. It never touches provider keys or `admin_secret_key`.
 
 ## admin_secret_key
 
-`DOWNCITY_CITY_ADMIN_SECRET_KEY` is used to manage City: create studios, manage env, and issue `user_token` for users under a given studio. City generates it automatically and writes it into `.env` on first startup.
+`DOWNCITY_CITY_ADMIN_SECRET_KEY` is used to manage City: create bays, manage env, and issue `user_token` for users under a given bay. City generates it automatically and writes it into `.env` on first startup.
 
 ```ts
 const client = new Gate({
@@ -52,18 +52,18 @@ const client = new Gate({
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const studio = await client.studios.create({
+const bay = await client.bays.create({
   name: "Chrome Extension",
 });
 ```
 
-## Multi-studio reuse
+## Multi-bay reuse
 
-Many clients can belong to the same studio. When issuing a token, write `studio_id` explicitly:
+Many clients can belong to the same bay. When issuing a token, write `bay_id` explicitly:
 
 ```ts
-const user = await client.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const user = await client.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",

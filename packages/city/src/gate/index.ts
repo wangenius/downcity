@@ -57,7 +57,7 @@ export type {
 
 export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./invoker/balance/index.js";
 export { EnvInvoker } from "./invoker/env/index.js";
-export { StudiosInvoker } from "./invoker/studios/index.js";
+export { BaysInvoker } from "./invoker/bays/index.js";
 
 export type {
   AdminInstructionResult,
@@ -88,8 +88,8 @@ export type {
 } from "./invoker/env/types.js";
 
 export type {
-  Studio,
-  StudioCreateInput,
+  Bay,
+  BayCreateInput,
   TokenApplyInput,
   TokenApplyResult,
-} from "./invoker/studios/types.js";
+} from "./invoker/bays/types.js";

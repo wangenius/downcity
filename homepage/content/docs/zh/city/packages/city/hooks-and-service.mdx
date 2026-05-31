@@ -108,7 +108,7 @@ base.use(stripePaymentService({
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 
 const usage = await admin.service("usage").get("summary");
@@ -172,7 +172,7 @@ service 负责把能力挂进 City，真正的产品调用入口仍然是 [@down
 
 ## 继续阅读
 
-- 想看 studio 端怎么统一调用 service，读 [@downcity/city](/docs/city/packages/city/gate)
+- 想看 bay 端怎么统一调用 service，读 [@downcity/city](/docs/city/packages/city/gate)
 - 想看账号能力，读 [@downcity/services](/docs/city/packages/services)
 - 想看 usage 记录，读 [@downcity/services](/docs/city/packages/services)
 - 想看 Stripe 一次性充值，读 [@downcity/services](/docs/city/packages/services)

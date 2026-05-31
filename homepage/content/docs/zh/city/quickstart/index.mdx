@@ -9,7 +9,7 @@ description: 部署一个可复用的 City，让新 AI 产品直接接入。
 
 - 一个可复用的 City
 - 一条模型记录
-- 一个 `studio_id`
+- 一个 `bay_id`
 - 一个可给终端用户使用的 `user_token`
 - 一个能成功调到 City 的 `User Gate`
 
@@ -23,7 +23,7 @@ description: 部署一个可复用的 City，让新 AI 产品直接接入。
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>产品前端 / 服务 / App</strong>
-      <span>你的产品只拿 `studio_id + user_token`，先把体验做出来。</span>
+      <span>你的产品只拿 `bay_id + user_token`，先把体验做出来。</span>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -62,7 +62,7 @@ description: 部署一个可复用的 City，让新 AI 产品直接接入。
 <div className="dc-doc-grid">
   <a className="dc-doc-card" href="/docs/city/quickstart/use-now">
     <strong>只想先体验一次完整调用</strong>
-    <p>从模板开始最快。你可以先确认 City、studio、token 和 User Gate 的链路都通了，再回过头看细节。</p>
+    <p>从模板开始最快。你可以先确认 City、bay、token 和 User Gate 的链路都通了，再回过头看细节。</p>
   </a>
   <a className="dc-doc-card" href="/docs/city/quickstart/create-city">
     <strong>准备从自己的项目开始</strong>
@@ -74,5 +74,5 @@ description: 部署一个可复用的 City，让新 AI 产品直接接入。
 
 - 示例 City 使用 `sqlite:./data.sqlite`
 - model 来自运行时代码注册，不需要手写模型表
-- 所有 studio 当前共享同一套 AIService 模型目录
+- 所有 bay 当前共享同一套 AIService 模型目录
 - 默认模型由 `Provider.model({ default })` 决定

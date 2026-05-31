@@ -34,7 +34,7 @@ import {
 import {
   ensureRegisteredAgentProjectRoot,
   prepareForegroundAgent,
-} from "./StudioAgentRuntime.js";
+} from "./BayAgentRuntime.js";
 
 /**
  * agent 命令注册参数。

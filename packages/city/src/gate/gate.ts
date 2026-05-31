@@ -53,7 +53,7 @@ export class Gate<TRole extends GateRole = GateRole> {
 
     this.user_access = new UserGateAccess({
       base_url: options.city_url,
-      studio_id: options.studio_id,
+      bay_id: options.bay_id,
       user_token: options.user_token,
       fetch: options.fetch,
     });
@@ -88,10 +88,10 @@ export class Gate<TRole extends GateRole = GateRole> {
   }
 
   /**
-   * Admin Gate 的 Studio 管理入口。
+   * Admin Gate 的 Bay 管理入口。
    */
-  get studios(): AdminGateAccess["studios"] {
-    return this.require_admin().studios;
+  get bays(): AdminGateAccess["bays"] {
+    return this.require_admin().bays;
   }
 
   /**

@@ -17,15 +17,15 @@ Before launch, confirm at least the following:
 - Every service that should be exposed has been registered through `base.use(service)`.
 - AI models have been registered through `Provider.model()` + `AIService.use()` and include the required actions.
 - Critical provider env values have been configured.
-- The studio table uses an explicit database URL.
+- The bay table uses an explicit database URL.
 - before hooks block over-quota users.
 - after hooks record usage and error clues.
 
-## Multi-studio setup
+## Multi-bay setup
 
-- `studio_id` clearly separates studios.
-- Usage records include `studio_id`, `user_id`, and `model`.
-- Different studios have default quota strategies.
+- `bay_id` clearly separates bays.
+- Usage records include `bay_id`, `user_id`, and `model`.
+- Different bays have default quota strategies.
 
 ## Rollback
 

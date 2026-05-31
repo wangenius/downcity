@@ -6,7 +6,7 @@
  * 关键点（中文）
  * - `city` 是 Downcity 官方的 City 管理命令，负责连接和管理 City 服务资源。
  * - 默认无参数时打开交互式 City 管理界面，脚本化场景则使用显式子命令。
- * - 本机 Agent 宿主、Console、daemon、start/status/run 等运行态命令属于 `studio`。
+ * - 本机 Agent 宿主、Console、daemon、start/status/run 等运行态命令属于 `bay`。
  */
 
 import { readFileSync } from "node:fs";

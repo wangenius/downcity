@@ -11,7 +11,7 @@ Downcity 的 package 设计很克制：先用 `@downcity/city` 搭出 City 和 G
 
 - `city` 是 Kernel，负责 City 本体
 - `services` 是 Capabilities，负责官方能力
-- Gate / `cli` 是 Interfaces，负责 studio 接入与运维操作
+- Gate / `cli` 是 Interfaces，负责 bay 接入与运维操作
 - `cities/*` 是 Composition，负责把这些东西组装成可运行实例
 
 如果你只从 npm package 角度理解，最值得先记住的是两个包：`city` 和 `services`。
@@ -43,7 +43,7 @@ Gate from @downcity/city
 - AI service 调用
 - custom service 调用
 - 官方 service 调用
-- 管理侧 studio / token / env 调用
+- 管理侧 bay / token / env 调用
 
 ## 一张图理解职责
 

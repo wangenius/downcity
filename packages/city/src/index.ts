@@ -77,7 +77,7 @@ export type {
 } from "./core/auth/types.js";
 
 // ===========================================================================
-// 场景 4：管理 Studio 与环境变量（内置 Service）
+// 场景 4：管理 Bay 与环境变量（内置 Service）
 // ===========================================================================
 
 export { EnvService } from "./service/env/env-service.js";
@@ -89,8 +89,8 @@ export type {
 } from "./service/env/types.js";
 export { EnvStore } from "./service/env/env-store.js";
 
-export { StudiosService } from "./service/studios/studios-service.js";
-export type { Studio, StudioCreateInput, StudioStatus } from "./service/studios/types.js";
+export { BaysService } from "./service/bays/bays-service.js";
+export type { Bay, BayCreateInput, BayStatus } from "./service/bays/types.js";
 
 // ===========================================================================
 // 场景 5：数据库工具
@@ -158,7 +158,7 @@ export type {
 
 export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./gate/invoker/balance/index.js";
 export { EnvInvoker } from "./gate/invoker/env/index.js";
-export { StudiosInvoker } from "./gate/invoker/studios/index.js";
+export { BaysInvoker } from "./gate/invoker/bays/index.js";
 
 export type {
   AdminInstructionResult,
@@ -184,13 +184,13 @@ export type {
 export type {
   TokenApplyInput,
   TokenApplyResult,
-} from "./gate/invoker/studios/types.js";
+} from "./gate/invoker/bays/types.js";
 
 // ===========================================================================
 // 场景 7：内置表 Schema
 // ===========================================================================
 
-export { sqliteStudios, pgStudios } from "./service/studios/schema.js";
+export { sqliteBays, pgBays } from "./service/bays/schema.js";
 export { sqliteEnv, pgEnv } from "./service/env/schema.js";
 
 // ===========================================================================

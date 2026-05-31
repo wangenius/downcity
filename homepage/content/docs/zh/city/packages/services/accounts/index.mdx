@@ -117,7 +117,7 @@ const providers = await guest.service("accounts").get("providers");
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 
@@ -140,13 +140,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 
 const user = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: session.user_token,
 });
 

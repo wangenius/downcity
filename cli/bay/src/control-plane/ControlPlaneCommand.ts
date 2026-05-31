@@ -33,10 +33,10 @@ import {
 import {
   prepareForegroundAgent,
   ensureRegisteredAgentProjectRoot,
-  restartStudioRuntimeCommand,
-  runStudioRuntimeCommand,
-  startStudioRuntimeCommand,
-  stopStudioRuntimeCommand,
+  restartBayRuntimeCommand,
+  runBayRuntimeCommand,
+  startBayRuntimeCommand,
+  stopBayRuntimeCommand,
 } from "./ControlPlaneProcess.js";
 import {
   shouldAutoStartControlPlaneFromPersistedMode,
@@ -97,7 +97,7 @@ export function registerControlPlaneCommands(
         options?.public === true ||
         hasExplicitHost ||
         (!hasExplicitPublic && (await shouldAutoStartControlPlaneFromPersistedMode()));
-      await startStudioRuntimeCommand(context.cliPath);
+      await startBayRuntimeCommand(context.cliPath);
       if (shouldStartConsole) {
         await startControlPlaneCommand({
           options: {
@@ -114,7 +114,7 @@ export function registerControlPlaneCommands(
     .description("停止 Bay（先停 Console，再停 bay 后台与受管 agent）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
-      await stopStudioRuntimeCommand();
+      await stopBayRuntimeCommand();
     }));
 
   program
@@ -122,7 +122,7 @@ export function registerControlPlaneCommands(
     .description("重启 Bay（重启 bay 后台并恢复已运行 agent，再拉起 Console）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
-      await restartStudioRuntimeCommand(context.cliPath);
+      await restartBayRuntimeCommand(context.cliPath);
       await startControlPlaneCommand({
         cliPath: context.cliPath,
       });
@@ -179,7 +179,7 @@ export function registerControlPlaneCommands(
   program
     .command("run", { hidden: true })
     .description("Bay 内部运行时（不直接使用）")
-    .action(runStudioRuntimeCommand);
+    .action(runBayRuntimeCommand);
 
   const consoleCommand = program
     .command("console [action]")

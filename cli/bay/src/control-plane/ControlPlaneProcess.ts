@@ -24,21 +24,21 @@ import {
   ensureManagedAgentRegistry,
   listManagedAgentEntries,
   markManagedAgentStopped,
-} from "@/process/registry/StudioRegistry.js";
+} from "@/process/registry/BayRegistry.js";
 import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
-  getStudioLogPath,
-  getStudioPidPath,
-  getStudioRuntimeDirPath,
-} from "@/process/registry/StudioPaths.js";
+  getBayLogPath,
+  getBayPidPath,
+  getBayRuntimeDirPath,
+} from "@/process/registry/BayPaths.js";
 import {
-  isStudioProcessAlive,
-  isStudioRunning,
-  readStudioPid,
-} from "@/process/registry/StudioRuntime.js";
+  isBayProcessAlive,
+  isBayRunning,
+  readBayPid,
+} from "@/process/registry/BayRuntime.js";
 import {
   signalDetachedProcess,
-  sweepDetachedStudioProcesses,
+  sweepDetachedBayProcesses,
 } from "@/process/registry/ProcessSweep.js";
 import type { StartOptions } from "@downcity/agent";
 import {
@@ -52,21 +52,21 @@ import { ensureControlPlaneAuthBootstrap } from "./ControlPlaneAuthBootstrap.js"
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { runWithSpinner } from "@/utils/cli/Spinner.js";
 import { CliError } from "../shared/CliError.js";
-import { ensureStudioPublicHostEnv } from "../shared/PublicHostEnv.js";
-import { resolveStudioCliPath } from "../shared/StudioCliPath.js";
+import { ensureBayPublicHostEnv } from "../shared/PublicHostEnv.js";
+import { resolveBayCliPath } from "../shared/BayCliPath.js";
 
 /**
  * 启动 bay runtime 后台进程。
  */
-export async function startStudioRuntimeCommand(cliPath: string): Promise<void> {
-  const consoleDir = getStudioRuntimeDirPath();
-  const pidPath = getStudioPidPath();
-  const logPath = getStudioLogPath();
+export async function startBayRuntimeCommand(cliPath: string): Promise<void> {
+  const consoleDir = getBayRuntimeDirPath();
+  const pidPath = getBayPidPath();
+  const logPath = getBayLogPath();
   await fs.ensureDir(consoleDir);
   await ensureManagedAgentRegistry();
 
-  const existingPid = await readStudioPid();
-  if (existingPid && isStudioProcessAlive(existingPid)) {
+  const existingPid = await readBayPid();
+  if (existingPid && isBayProcessAlive(existingPid)) {
     emitCliBlock({
       tone: "info",
       title: "Bay runtime already running",
@@ -79,7 +79,7 @@ export async function startStudioRuntimeCommand(cliPath: string): Promise<void> 
   }
 
   // 关键点（中文）：若 pid 文件已丢失，但旧 bay runtime 进程仍在后台存活，这里先清理孤儿进程。
-  const sweep = await sweepDetachedStudioProcesses({
+  const sweep = await sweepDetachedBayProcesses({
     includeConsole: true,
   });
   for (const item of sweep.stopped) {
@@ -96,7 +96,7 @@ export async function startStudioRuntimeCommand(cliPath: string): Promise<void> 
   }
 
   const logFd = fs.openSync(logPath, "a");
-  const publicHost = await ensureStudioPublicHostEnv();
+  const publicHost = await ensureBayPublicHostEnv();
   const child = spawn(process.execPath, [cliPath, "run"], {
     cwd: process.cwd(),
     detached: true,
@@ -177,10 +177,10 @@ export async function resolveRunningManagedAgents(params?: {
 /**
  * 停止 bay runtime 后台进程（先停 Console，再停受管 agent，最后停 bay runtime）。
  */
-export async function stopStudioRuntimeCommand(params?: { timeoutMs?: number }): Promise<void> {
+export async function stopBayRuntimeCommand(params?: { timeoutMs?: number }): Promise<void> {
   const timeoutMs = params?.timeoutMs ?? 10_000;
-  const consoleDir = getStudioRuntimeDirPath();
-  const pidPath = getStudioPidPath();
+  const consoleDir = getBayRuntimeDirPath();
+  const pidPath = getBayPidPath();
   await fs.ensureDir(consoleDir);
 
   // Phase 1: Stop Console
@@ -229,7 +229,7 @@ export async function stopStudioRuntimeCommand(params?: { timeoutMs?: number }):
 
   // Phase 3: Stop bay runtime process
   const sweepOrphans = async (): Promise<void> => {
-    const orphanSweep = await sweepDetachedStudioProcesses({
+    const orphanSweep = await sweepDetachedBayProcesses({
       includeConsole: true,
       includeUi: true,
       includeAgent: true,
@@ -249,7 +249,7 @@ export async function stopStudioRuntimeCommand(params?: { timeoutMs?: number }):
     }
   };
 
-  const consolePid = await readStudioPid();
+  const consolePid = await readBayPid();
   if (!consolePid) {
     emitCliBlock({
       tone: "info",
@@ -265,7 +265,7 @@ export async function stopStudioRuntimeCommand(params?: { timeoutMs?: number }):
     return;
   }
 
-  if (!isStudioProcessAlive(consolePid)) {
+  if (!isBayProcessAlive(consolePid)) {
     await fs.remove(pidPath);
     emitCliBlock({
       tone: "warning",
@@ -285,22 +285,22 @@ export async function stopStudioRuntimeCommand(params?: { timeoutMs?: number }):
 
   const startAt = Date.now();
   while (Date.now() - startAt < timeoutMs) {
-    if (!isStudioProcessAlive(consolePid)) break;
+    if (!isBayProcessAlive(consolePid)) break;
     await sleep(200);
   }
 
-  if (isStudioProcessAlive(consolePid)) {
+  if (isBayProcessAlive(consolePid)) {
     signalDetachedProcess(consolePid, "SIGKILL");
     const forceStartAt = Date.now();
     while (Date.now() - forceStartAt < 2_000) {
-      if (!isStudioProcessAlive(consolePid)) break;
+      if (!isBayProcessAlive(consolePid)) break;
       await sleep(100);
     }
   }
 
   await fs.remove(pidPath);
 
-  const stillAlive = isStudioProcessAlive(consolePid);
+  const stillAlive = isBayProcessAlive(consolePid);
   emitCliBlock({
     tone: stillAlive ? "warning" : "success",
     title: "Bay runtime process",
@@ -340,7 +340,7 @@ export async function stopStudioRuntimeCommand(params?: { timeoutMs?: number }):
  */
 export async function restartManagedAgents(cliPath: string): Promise<void> {
   const runningAgents = await resolveRunningManagedAgents();
-  const studioCliPath = resolveStudioCliPath();
+  const bayCliPath = resolveBayCliPath();
   const restartOptionsMap = new Map<string, StartOptions>();
   for (const item of runningAgents) {
     restartOptionsMap.set(
@@ -349,8 +349,8 @@ export async function restartManagedAgents(cliPath: string): Promise<void> {
     );
   }
 
-  await stopStudioRuntimeCommand();
-  await startStudioRuntimeCommand(cliPath);
+  await stopBayRuntimeCommand();
+  await startBayRuntimeCommand(cliPath);
 
   if (runningAgents.length === 0) {
     return;
@@ -370,7 +370,7 @@ export async function restartManagedAgents(cliPath: string): Promise<void> {
       );
       await startDaemonProcess({
         projectRoot: item.projectRoot,
-        cliPath: studioCliPath,
+        cliPath: bayCliPath,
         args,
       });
     } catch (error) {
@@ -396,16 +396,16 @@ export async function restartManagedAgents(cliPath: string): Promise<void> {
 /**
  * 重启 control plane 主进程。
  */
-export async function restartStudioRuntimeCommand(cliPath: string): Promise<void> {
+export async function restartBayRuntimeCommand(cliPath: string): Promise<void> {
   await restartManagedAgents(cliPath);
 }
 
 /**
  * 执行 bay runtime 常驻进程。
  */
-export async function runStudioRuntimeCommand(): Promise<void> {
-  const consoleDir = getStudioRuntimeDirPath();
-  const pidPath = getStudioPidPath();
+export async function runBayRuntimeCommand(): Promise<void> {
+  const consoleDir = getBayRuntimeDirPath();
+  const pidPath = getBayPidPath();
   await fs.ensureDir(consoleDir);
   await ensureManagedAgentRegistry();
   await fs.writeFile(pidPath, String(process.pid), "utf-8");
@@ -468,7 +468,7 @@ export async function prepareForegroundAgent(
   options: StartOptions & { foreground?: boolean };
   shouldForeground: boolean;
 }> {
-  if (!(await isStudioRunning())) {
+  if (!(await isBayRunning())) {
     throw new CliError({
       title: "bay runtime is not running",
       fix: "bay start",

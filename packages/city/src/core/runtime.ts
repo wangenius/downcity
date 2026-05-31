@@ -87,12 +87,12 @@ export interface EnvProvider {
 /**
  * City 内置表定义。
  *
- * 包含 studios 和 env 两个内置表。
+ * 包含 bays 和 env 两个内置表。
  * 适配器根据数据库类型（SQLite / Postgres）提供对应的表定义。
  */
 export interface BuiltinTables {
   /** 产品表 */
-  studios: TableDef;
+  bays: TableDef;
   /** 环境变量表 */
   env: TableDef;
 }
@@ -127,7 +127,7 @@ export interface Runtime {
   env: EnvProvider;
 
   /**
-   * City 内置表定义（studios + env）。
+   * City 内置表定义（bays + env）。
    *
    * 适配器根据数据库类型提供正确的 Drizzle 表定义。
    */

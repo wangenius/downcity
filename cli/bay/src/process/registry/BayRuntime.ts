@@ -1,5 +1,5 @@
 /**
- * StudioRuntime：bay 后台进程状态工具。
+ * BayRuntime：bay 后台进程状态工具。
  *
  * 关键点（中文）
  * - bay 后台负责统一管理/观测多个 agent daemon。
@@ -8,14 +8,14 @@
  */
 
 import fs from "fs-extra";
-import { getStudioPidPath } from "./StudioPaths.js";
+import { getBayPidPath } from "./BayPaths.js";
 
 /**
  * 读取 bay 后台 pid（读取失败或内容非法返回 null）。
  */
-export async function readStudioPid(): Promise<number | null> {
+export async function readBayPid(): Promise<number | null> {
   try {
-    const raw = await fs.readFile(getStudioPidPath(), "utf-8");
+    const raw = await fs.readFile(getBayPidPath(), "utf-8");
     const pid = Number.parseInt(String(raw).trim(), 10);
     return Number.isFinite(pid) && pid > 0 ? pid : null;
   } catch {
@@ -26,7 +26,7 @@ export async function readStudioPid(): Promise<number | null> {
 /**
  * 判断 bay 后台进程是否存活。
  */
-export function isStudioProcessAlive(pid: number): boolean {
+export function isBayProcessAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
@@ -38,8 +38,8 @@ export function isStudioProcessAlive(pid: number): boolean {
 /**
  * 判断 bay 后台是否在运行（基于 pid file + 判活）。
  */
-export async function isStudioRunning(): Promise<boolean> {
-  const pid = await readStudioPid();
+export async function isBayRunning(): Promise<boolean> {
+  const pid = await readBayPid();
   if (!pid) return false;
-  return isStudioProcessAlive(pid);
+  return isBayProcessAlive(pid);
 }

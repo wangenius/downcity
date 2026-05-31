@@ -57,7 +57,7 @@ import {
   CONTROL_PLANE_AUTH_ROUTE_POLICIES,
   createRouteAuthGuardMiddleware,
 } from "@/http/auth/RoutePolicy.js";
-import { resolveStudioCliPath } from "@/shared/StudioCliPath.js";
+import { resolveBayCliPath } from "@/shared/BayCliPath.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -347,7 +347,7 @@ export class ControlGateway {
   }> {
     return startManagedAgentByProjectRoot({
       projectRoot,
-      cliPath: resolveStudioCliPath(),
+      cliPath: resolveBayCliPath(),
       initializeIfNeeded: options?.initializeIfNeeded,
       initialization: options?.initialization,
     });
@@ -386,7 +386,7 @@ export class ControlGateway {
   }> {
     return restartManagedAgentByProjectRoot({
       projectRoot,
-      cliPath: resolveStudioCliPath(),
+      cliPath: resolveBayCliPath(),
     });
   }
 

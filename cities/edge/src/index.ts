@@ -84,7 +84,7 @@ async function init_city(env: Env): Promise<City> {
     await balance.sub(ctx.user!.user_id, amount, {
       note: "agent chat",
       meta: {
-        studio_id: ctx.studio?.studio_id,
+        bay_id: ctx.bay?.bay_id,
         action: ctx.action?.id,
         model_id: ctx.variant?.id,
       },

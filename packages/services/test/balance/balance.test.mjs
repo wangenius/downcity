@@ -26,13 +26,13 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
-    const studio = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/studios/create",
+    const bay = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/bays/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/studios/tokens/apply",
-      body: { studio_id: studio.studio_id, user_id: "user_1" },
+      path: "/v1/bays/tokens/apply",
+      body: { bay_id: bay.bay_id, user_id: "user_1" },
     }))).json()
 
     assert.equal((await balance.read("user_1")).balance, 100)

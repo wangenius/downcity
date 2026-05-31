@@ -29,7 +29,7 @@ const PAGE = {
     facts: [
       "核心源码目录：packages/agent/",
       "安装命令：npm i -g downcity",
-      "README 快速流程：studio start → studio agent create . → studio agent start",
+      "README 快速流程：bay start → bay agent create . → bay agent start",
     ],
   },
   en: {
@@ -60,7 +60,7 @@ const PAGE = {
     facts: [
       "Core source directory: packages/agent/",
       "Install command: npm i -g downcity",
-      "README quick flow: studio start -> studio agent create . -> studio agent start",
+      "README quick flow: bay start -> bay agent create . -> bay agent start",
     ],
   },
 } as const;

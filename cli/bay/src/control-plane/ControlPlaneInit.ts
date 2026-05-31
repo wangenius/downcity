@@ -17,7 +17,7 @@ import { DOWNCITY_JSON_SCHEMA } from "@/config/DowncitySchema.js";
 import { saveJson } from "@/utils/storage.js";
 import {
   getPlatformRootDirPath,
-} from "@/process/registry/StudioPaths.js";
+} from "@/process/registry/BayPaths.js";
 import { PlatformStore } from "@/platform/store/index.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 

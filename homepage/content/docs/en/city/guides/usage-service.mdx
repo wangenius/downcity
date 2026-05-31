@@ -3,7 +3,7 @@ title: Usage Service
 description: Use @downcity/services to record service call events automatically.
 ---
 
-The usage service records service events through hooks. It records facts only; your studio still decides pricing, plans, and charging rules.
+The usage service records service events through hooks. It records facts only; your bay still decides pricing, plans, and charging rules.
 
 ## Enable
 
@@ -28,6 +28,6 @@ End users can query their own usage:
 const events = await user.service("usage").get("me");
 ```
 
-`summary` groups counts by studio, service, and status, which is useful for admin dashboards.
+`summary` groups counts by bay, service, and status, which is useful for admin dashboards.
 
-The service creates `service_usage_events` automatically and records studio, user, service, model, and call status.
+The service creates `service_usage_events` automatically and records bay, user, service, model, and call status.

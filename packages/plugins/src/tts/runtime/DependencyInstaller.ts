@@ -2,7 +2,7 @@
  * TTS 依赖安装器。
  *
  * 关键点（中文）
- * - 统一管理 `studio tts` 的 Python 依赖安装逻辑。
+ * - 统一管理 `bay tts` 的 Python 依赖安装逻辑。
  * - 根据模型自动推导 runner（qwen3 / kokoro）并执行 `python -m pip install`。
  */
 

@@ -28,6 +28,6 @@ const summary = await admin.service("usage").get("summary");
 const events = await user.service("usage").get("me");
 ```
 
-`summary` 会按 studio、service 和状态汇总调用次数，适合管理后台快速展示总览。
+`summary` 会按 bay、service 和状态汇总调用次数，适合管理后台快速展示总览。
 
-服务会自动创建 `service_usage_events`，并记录 studio、user、service、model 和调用状态。
+服务会自动创建 `service_usage_events`，并记录 bay、user、service、model 和调用状态。

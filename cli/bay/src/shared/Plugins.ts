@@ -32,7 +32,7 @@ import {
   runManagedPluginControlCommand,
 } from "./ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
-import { setStudioPluginEnabled } from "@/platform/PluginLifecycle.js";
+import { setBayPluginEnabled } from "@/platform/PluginLifecycle.js";
 
 type StaticCatalogEntry = {
   name: string;
@@ -451,7 +451,7 @@ async function runPluginLifecycleCommand(params: {
     return;
   }
 
-  setStudioPluginEnabled(plugin.name, params.enabled);
+  setBayPluginEnabled(plugin.name, params.enabled);
   if (params.asJson === true) {
     printResult({
       asJson: true,

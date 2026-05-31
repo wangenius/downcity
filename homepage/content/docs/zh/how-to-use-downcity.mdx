@@ -268,7 +268,7 @@ import { Gate } from "@downcity/city";
 const gate = new Gate({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  studio_id: "studio_xxx",
+  bay_id: "bay_xxx",
   user_token: "ub_xxx",
 });
 
@@ -495,12 +495,12 @@ const admin = new Gate({
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const bay = await admin.studios.create({
+const bay = await admin.bays.create({
   name: "Demo Bay",
 });
 
-const user = await admin.studios.tokens.apply({
-  studio_id: bay.studio_id,
+const user = await admin.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -509,12 +509,12 @@ const user = await admin.studios.tokens.apply({
 });
 
 console.log({
-  studio_id: bay.studio_id,
+  bay_id: bay.bay_id,
   user_token: user.user_token,
 });
 ```
 
-你的产品后端把 `studio_id` 和 `user_token` 返回给产品侧 client。后续所有用户侧请求都带这两个值。
+你的产品后端把 `bay_id` 和 `user_token` 返回给产品侧 client。后续所有用户侧请求都带这两个值。
 
 ### 10.4 产品侧调用 City
 
@@ -526,7 +526,7 @@ import { Gate } from "@downcity/city";
 const client = new Gate({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  studio_id: "studio_xxx",
+  bay_id: "bay_xxx",
   user_token: "ub_xxx",
 });
 
@@ -614,7 +614,7 @@ City SDK 的核心调用链是：
 
 ```text
 产品前端 / 产品后端
-  -> User Gate 携带 studio_id + user_token
+  -> User Gate 携带 bay_id + user_token
   -> City 校验 token
   -> AIService / 自定义 Service
   -> Provider 或业务 action

@@ -29,9 +29,9 @@ Typical examples:
 
 ## When to think service first
 
-- the capability should be reused across many studios
+- the capability should be reused across many bays
 - it is more than before or after logic and needs its own service or tables
-- you want studio-side callers to reach it through a stable service boundary
+- you want bay-side callers to reach it through a stable service boundary
 
 Typical examples:
 
@@ -91,15 +91,15 @@ base.use(stripePaymentService({
 }));
 ```
 
-## How studio-side callers reach services
+## How bay-side callers reach services
 
-Once mounted, services still look like normal services from the studio side:
+Once mounted, services still look like normal services from the bay side:
 
 ```ts
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 
 const usage = await admin.service("usage").get("summary");
@@ -144,11 +144,11 @@ Hooks are best for cross-cutting governance logic, not for turning every feature
 
 ### Services do not replace Gate
 
-Services add capability into City. The studio-side calling surface is still [@downcity/city](/en/docs/city/packages/city/gate).
+Services add capability into City. The bay-side calling surface is still [@downcity/city](/en/docs/city/packages/city/gate).
 
 ## Read next
 
-- For unified studio-side service calls, read [@downcity/city](/en/docs/city/packages/city/gate)
+- For unified bay-side service calls, read [@downcity/city](/en/docs/city/packages/city/gate)
 - For auth capability, read [@downcity/services](/en/docs/city/packages/services)
 - For usage recording, read [@downcity/services](/en/docs/city/packages/services)
 - For one-time Stripe topups, read [@downcity/services](/en/docs/city/packages/services)

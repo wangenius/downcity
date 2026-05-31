@@ -8,7 +8,7 @@ import { type AdminSession } from "../core/session.js";
 import { showError, showSuccess } from "../core/ui.js";
 import { adminErrorMessage, isAdminAuthError } from "./auth-error.js";
 import { manageEnv } from "./commands/service-env.js";
-import { manageStudios } from "./commands/studios.js";
+import { manageBays } from "./commands/bays.js";
 import { manageAccounts } from "./commands/accounts.js";
 import { manageBalance } from "./commands/balance.js";
 import { manageUsage } from "./commands/usage.js";
@@ -21,7 +21,7 @@ const commands: Record<string, (a: Gate, baseUrl: string) => Promise<void>> = {
   env: manageEnv,
   instruction: manageInstruction,
   models: manageModels,
-  studios: manageStudios,
+  bays: manageBays,
   accounts: manageAccounts,
   balance: manageBalance,
   usage: manageUsage,
@@ -43,7 +43,7 @@ export async function adminLoop(session: AdminSession): Promise<"logout" | "quit
         { label: "Env", value: "env", hint: "View & configure environment variables" },
         { label: "City Instruction", value: "instruction", hint: "Read aggregated city/service guidance" },
         { label: "Models", value: "models", hint: "Read model readiness and missing env" },
-        { label: "Studios", value: "studios" },
+        { label: "Bays", value: "bays" },
         { label: "Accounts", value: "accounts" },
         { label: "Balance", value: "balance" },
         { label: "Usage", value: "usage" },

@@ -16,7 +16,7 @@ import type {
 } from "@downcity/agent";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { PlatformStore } from "@/platform/store/index.js";
-import { listManagedAgentEntries } from "@/process/registry/StudioRegistry.js";
+import { listManagedAgentEntries } from "@/process/registry/BayRegistry.js";
 import { discoverProviderModels } from "@/model/ModelSupport.js";
 import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
 import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";

@@ -23,7 +23,7 @@ export class UserGateAccess {
   readonly serverUrl: string;
   readonly token: string | undefined;
 
-  private readonly studio_id?: string;
+  private readonly bay_id?: string;
   private readonly fetchImpl: FetchLike;
 
   constructor(options: UserGateAccessOptions) {
@@ -33,7 +33,7 @@ export class UserGateAccess {
 
     this.serverUrl = normalizeBaseURL(options.base_url, "base_url");
     this.token = readOptional(options.user_token);
-    this.studio_id = readOptional(options.studio_id);
+    this.bay_id = readOptional(options.bay_id);
     this.fetchImpl = options.fetch ?? defaultFetch();
 
     this.ai = new AIInvoker({
@@ -62,7 +62,7 @@ export class UserGateAccess {
       (path, init) => this.json(path, init),
       "/v1",
       id,
-      this.studio_id,
+      this.bay_id,
     );
   }
 
@@ -106,13 +106,13 @@ export class UserGateAccess {
     return {
       ...input,
       model: serializeModel(input.model),
-      studio_id: this.requireStudioId(),
+      bay_id: this.requireBayId(),
     };
   }
 
-  private requireStudioId(): string {
-    if (!this.studio_id) throw new TypeError("studio_id is required for AI calls");
-    return this.studio_id;
+  private requireBayId(): string {
+    if (!this.bay_id) throw new TypeError("bay_id is required for AI calls");
+    return this.bay_id;
   }
 
   private requireToken(): void {

@@ -92,7 +92,7 @@ const providers = await guest.service("accounts").get("providers");
 ```ts
 const start = await guest.service("accounts").action("oauth/start").invoke({
   provider: "wechat",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 
@@ -114,7 +114,7 @@ const result = await guest.service("accounts").get("oauth/result", {
 const user = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: result.user_token,
 });
 ```

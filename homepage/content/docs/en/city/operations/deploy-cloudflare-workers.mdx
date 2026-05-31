@@ -66,7 +66,7 @@ https://downcity.<your-subdomain>.workers.dev
 
 ## 4. Initialize City
 
-Call `/health` once. This lets the Worker boot City and create the built-in `env` / `studios` tables.
+Call `/health` once. This lets the Worker boot City and create the built-in `env` / `bays` tables.
 
 ```bash
 curl https://downcity.<your-subdomain>.workers.dev/health
@@ -77,7 +77,7 @@ Expected shape:
 ```json
 {
   "ok": true,
-  "services": ["env", "studios", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+  "services": ["env", "bays", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
 }
 ```
 
@@ -155,4 +155,4 @@ cd cities/edge
 pnpm deploy
 ```
 
-Runtime env lives in D1, so redeploying the Worker does not erase provider keys, OAuth secrets, studios, balances, usage records, or Stripe payment records.
+Runtime env lives in D1, so redeploying the Worker does not erase provider keys, OAuth secrets, bays, balances, usage records, or Stripe payment records.

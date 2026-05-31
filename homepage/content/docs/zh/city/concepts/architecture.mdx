@@ -7,7 +7,7 @@ description: Downcity 如何按 Kernel、Capabilities、Interfaces 和 Compositi
 
 ```txt
 Interfaces
-  -> studios 通过 client / Bay terminal 接入 City
+  -> bays 通过 client / Bay terminal 接入 City
 Composition
   -> server / worker 把 City、官方服务、模型组装起来
 Kernel
@@ -53,12 +53,12 @@ HTTP 请求进入 City 后，City 会先做这些事情：
 
 1. 刷新运行时 env 视图
 2. 校验 `user_token` 或 admin key
-3. 解析 `studio_id`、`user_id` 和身份级别
+3. 解析 `bay_id`、`user_id` 和身份级别
 4. 找到目标 Service / Action
 5. 组装统一 `ctx`
 6. 执行 hook 和 action
 
-如果 token 无效、过期或 `studio_id` 不匹配，City 会直接返回 401 或 403。
+如果 token 无效、过期或 `bay_id` 不匹配，City 会直接返回 401 或 403。
 
 ## 4. Capabilities：Service 与 Action
 

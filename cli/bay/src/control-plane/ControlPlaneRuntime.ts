@@ -10,19 +10,19 @@
 import fs from "fs-extra";
 import { spawn } from "node:child_process";
 import {
-  getStudioRuntimeDirPath,
+  getBayRuntimeDirPath,
   getControlPlaneLogPath,
   getControlPlaneMetaPath,
   getControlPlanePidPath,
-} from "@/process/registry/StudioPaths.js";
+} from "@/process/registry/BayPaths.js";
 import {
-  isStudioProcessAlive,
-  isStudioRunning,
-} from "@/process/registry/StudioRuntime.js";
+  isBayProcessAlive,
+  isBayRunning,
+} from "@/process/registry/BayRuntime.js";
 import {
-  findDetachedStudioProcesses,
+  findDetachedBayProcesses,
   signalDetachedProcess,
-  sweepDetachedStudioProcesses,
+  sweepDetachedBayProcesses,
 } from "@/process/registry/ProcessSweep.js";
 import { createControlGateway } from "@/control/ControlGateway.js";
 import type {
@@ -244,7 +244,7 @@ async function recoverDetachedConsoleStatus(
       ? expected.port
       : DEFAULT_CONTROL_PLANE_PORT;
 
-  const processes = await findDetachedStudioProcesses({
+  const processes = await findDetachedBayProcesses({
     includeUi: true,
   });
   const reusable = findReusableControlPlaneProcess(processes, { host, port });
@@ -292,7 +292,7 @@ export async function getControlPlaneRuntimeStatus(): Promise<ControlPlaneRuntim
     };
   }
 
-  if (!isStudioProcessAlive(pid)) {
+  if (!isBayProcessAlive(pid)) {
     await cleanupControlPlaneStateFiles();
     const recovered = await recoverDetachedConsoleStatus({
       host: meta?.host,
@@ -393,7 +393,7 @@ export async function startControlPlaneCommand(params: {
   options?: ControlPlaneStartOptions;
   cliPath: string;
 }): Promise<void> {
-  if (!(await isStudioRunning())) {
+  if (!(await isBayRunning())) {
     throw new CliError({
       title: "bay runtime is not running",
       fix: "bay start",
@@ -446,7 +446,7 @@ export async function startControlPlaneCommand(params: {
   }
 
   // 关键点（中文）：没有 pid 文件但可能还有旧版 UI 孤儿进程占着端口，先做一次兜底清扫。
-  const sweep = await sweepDetachedStudioProcesses({
+  const sweep = await sweepDetachedBayProcesses({
     includeUi: true,
   });
   for (const item of sweep.stopped) {
@@ -462,7 +462,7 @@ export async function startControlPlaneCommand(params: {
     });
   }
 
-  await fs.ensureDir(getStudioRuntimeDirPath());
+  await fs.ensureDir(getBayRuntimeDirPath());
   const logPath = getControlPlaneLogPath();
   const logFd = fs.openSync(logPath, "a");
 
@@ -497,7 +497,7 @@ export async function startControlPlaneCommand(params: {
   const startedAt = Date.now();
   let childAlive = true;
   while (Date.now() - startedAt < 1_500) {
-    if (!isStudioProcessAlive(child.pid)) {
+    if (!isBayProcessAlive(child.pid)) {
       childAlive = false;
       break;
     }
@@ -559,7 +559,7 @@ export async function stopControlPlaneCommand(params?: {
   const timeoutMs = params?.timeoutMs ?? 8000;
   const status = await getControlPlaneRuntimeStatus();
   if (!status.running || !status.pid) {
-    const sweep = await sweepDetachedStudioProcesses({
+    const sweep = await sweepDetachedBayProcesses({
       includeUi: true,
       timeoutMs,
     });
@@ -590,11 +590,11 @@ export async function stopControlPlaneCommand(params?: {
 
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
-    if (!isStudioProcessAlive(pid)) break;
+    if (!isBayProcessAlive(pid)) break;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
-  if (isStudioProcessAlive(pid)) {
+  if (isBayProcessAlive(pid)) {
     try {
       signalDetachedProcess(pid, "SIGKILL");
     } catch {
@@ -605,8 +605,8 @@ export async function stopControlPlaneCommand(params?: {
   await cleanupControlPlaneStateFiles();
 
   emitCliBlock({
-    tone: isStudioProcessAlive(pid) ? "warning" : "success",
-    title: isStudioProcessAlive(pid)
+    tone: isBayProcessAlive(pid) ? "warning" : "success",
+    title: isBayProcessAlive(pid)
       ? "Console may still be running"
       : "Console stopped",
   });

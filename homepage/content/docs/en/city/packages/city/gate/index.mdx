@@ -3,27 +3,27 @@ title: "Gate"
 description: "Provides User Gate and Admin Gate, and unifies AI, custom service, and service calls behind one SDK boundary."
 ---
 
-Gate is the access layer exported by `@downcity/city`. It is how studios connect to a City.
+Gate is the access layer exported by `@downcity/city`. It is how bays connect to a City.
 
-It is not only a thin wrapper for AI calls. It unifies these studio-facing call surfaces into one package:
+It is not only a thin wrapper for AI calls. It unifies these bay-facing call surfaces into one package:
 
-- `User Gate`: end-user studio calls to AI services, custom services, and public services
-- `Admin Gate`: trusted-side management of studios, `user_token`, and runtime env
+- `User Gate`: end-user bay calls to AI services, custom services, and public services
+- `Admin Gate`: trusted-side management of bays, `user_token`, and runtime env
 - `service(name)`: the common entry for your own services and the services exposed by official packages
 
-If your question is "how does a studio actually connect to City?", this page should be the first package-level entry.
+If your question is "how does a bay actually connect to City?", this page should be the first package-level entry.
 
 ## Two clients
 
 | Client | Used by | Responsibility |
 | --- | --- | --- |
-| `User Gate` | Frontends, apps, extensions, desktop clients | Calls AI services, custom services, and public services with `studio_id + user_token` |
-| `Admin Gate` | Studio backends, admin scripts, internal tools | Manages studios, issues tokens, writes runtime env, and calls admin-side services |
+| `User Gate` | Frontends, apps, extensions, desktop clients | Calls AI services, custom services, and public services with `bay_id + user_token` |
+| `Admin Gate` | Bay backends, admin scripts, internal tools | Manages bays, issues tokens, writes runtime env, and calls admin-side services |
 
 ## Use it when
 
-- your studio already has `studio_id + user_token`
-- you want studio clients to call `text()`, `stream()`, `image()`, custom services, or services
+- your bay already has `bay_id + user_token`
+- you want bay clients to call `text()`, `stream()`, `image()`, custom services, or services
 - you want a trusted backend to issue tokens or manage City data
 - you want registration, login, OAuth, usage, and payment-related capabilities to follow the same call model
 
@@ -49,7 +49,7 @@ In practice, Gate unifies:
 - AI calls
 - calls to services you wrote yourself
 - calls to services exposed by official services
-- trusted-side management calls for studio, token, and env
+- trusted-side management calls for bay, token, and env
 
 ## The four most common call types
 
@@ -83,7 +83,7 @@ Use this for business services that you register yourself in City.
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 
 const usage = await user.service("usage").get("me");
@@ -94,14 +94,14 @@ Use this for services exposed by official packages such as `@downcity/services`,
 ### 4. Trusted-side management
 
 ```ts
-const issued = await admin.studios.tokens.apply({
-  studio_id: "studio_demo",
+const issued = await admin.bays.tokens.apply({
+  bay_id: "bay_demo",
   user_id: "user_123",
   ttl: "7d",
 });
 ```
 
-Use this for studio, token, and runtime env actions that must stay in trusted environments.
+Use this for bay, token, and runtime env actions that must stay in trusted environments.
 
 ## What is a service
 
@@ -112,7 +112,7 @@ From the perspective of `@downcity/city`, it is the same kind of thing as one of
 - Your own service: `rewrite`, `translate`, `workspace`
 - A service: `accounts`, `usage`, `payment`, `payment.stripe`
 
-So the studio side does not need to learn two call patterns. Everything stays:
+So the bay side does not need to learn two call patterns. Everything stays:
 
 ```ts
 client.service("service_id").action("action_id").invoke(...)
@@ -127,7 +127,7 @@ import { Gate } from "@downcity/city";
 const client = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: "ub_xxx",
 });
 
@@ -142,7 +142,7 @@ const result = await client.ai.text({
 This stage assumes you already have:
 
 - `city_url`
-- `studio_id`
+- `bay_id`
 - `user_token`
 
 If you do not have `user_token` yet, you normally start with one of the auth flows below.
@@ -158,12 +158,12 @@ const admin = new Gate({
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const studio = await admin.studios.create({
-  name: "Demo Studio",
+const bay = await admin.bays.create({
+  name: "Demo Bay",
 });
 
-const token = await admin.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const token = await admin.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   ttl: "30m",
 });
@@ -179,7 +179,7 @@ The two most common flows are:
 frontend submits login data
   -> your backend validates the user
   -> your backend uses Admin Gate to request user_token from City
-  -> backend returns studio_id + user_token
+  -> backend returns bay_id + user_token
   -> frontend creates User Gate
   -> frontend starts calling client.ai.* or client.service(...)
 ```
@@ -192,7 +192,7 @@ Use this when you already have a mature account system.
 frontend creates a guest User Gate with city_url only
   -> calls guest.service("accounts").action("register" / "login")
   -> accounts service returns user_token
-  -> frontend creates a normal User Gate with city_url + studio_id + user_token
+  -> frontend creates a normal User Gate with city_url + bay_id + user_token
   -> frontend continues with AI calls or other service calls
 ```
 
@@ -213,13 +213,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 
 const user = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: session.user_token,
 });
 
@@ -232,17 +232,17 @@ The key detail is:
 
 - guest entry points such as `register`, `login`, `oauth/start`, and `oauth/result` are usually guest-access Actions
 - they still run through `User Gate`, but at this stage you only need `city_url`
-- once you enter the logged-in user context, you switch to a normal `User Gate` with `studio_id + user_token`
+- once you enter the logged-in user context, you switch to a normal `User Gate` with `bay_id + user_token`
 
 ## Custom services and service routes
 
-Besides `client.ai.*`, both studio and admin clients can use `service(name)` against the shared `/v1/*` route system:
+Besides `client.ai.*`, both bay and admin clients can use `service(name)` against the shared `/v1/*` route system:
 
 ```ts
 const session = await client.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 
@@ -274,7 +274,7 @@ const checkout = await client.payment.method("stripe").invoke({
 
 ## Common package combinations
 
-### Minimal AI studio integration
+### Minimal AI bay integration
 
 - `@downcity/city`
 - `@downcity/city`
@@ -299,10 +299,10 @@ const checkout = await client.payment.method("stripe").invoke({
 
 ## Recommended reading order
 
-If this is your first Downcity studio integration, read in this order:
+If this is your first Downcity bay integration, read in this order:
 
 1. Start here to build the mental model for `User Gate`, `Admin Gate`, and `service(...)`
-2. Then read [User Gate](/en/docs/city/reference/gate-user) for detailed studio-side calls
+2. Then read [User Gate](/en/docs/city/reference/gate-user) for detailed bay-side calls
 3. Then read [Admin Gate](/en/docs/city/reference/gate-admin) for trusted-side token issuance
 4. If you want minimal registration/login, continue to [@downcity/services](/en/docs/city/packages/services)
 5. If you want the full login scenario, read [Accounts Service](/en/docs/city/guides/accounts-service)

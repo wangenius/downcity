@@ -3,15 +3,15 @@ title: Auth and `user_token`
 description: Connect your login system to Downcity token issuance.
 ---
 
-Downcity does not host your user system. It only requires a verifiable `user_token` on studio-side requests.
+Downcity does not host your user system. It only requires a verifiable `user_token` on bay-side requests.
 
 ## If you already have login
 
 After a user logs in, issue a Downcity token through `Admin Gate`:
 
 ```ts
-const user = await admin.studios.tokens.apply({
-  studio_id: "studio_xxx",
+const user = await admin.bays.tokens.apply({
+  bay_id: "bay_xxx",
   user_id: session.user.id,
   metadata: {
     plan: session.user.plan,
@@ -20,14 +20,14 @@ const user = await admin.studios.tokens.apply({
 });
 ```
 
-Then give the studio side two values:
+Then give the bay side two values:
 
-- `studio_id`
+- `bay_id`
 - `user_token`
 
 ## If you do not have a heavy backend yet
 
-For new pure-client studios, keep token issuance near one shared City instead of building a separate service per studio.
+For new pure-client bays, keep token issuance near one shared City instead of building a separate service per bay.
 
 ## What the token should not do
 

@@ -16,13 +16,13 @@ It does not decide:
 
 - which actions should charge
 - how much each call should cost
-- which studios are free or paid
+- which bays are free or paid
 
 Those rules should stay in your own business hooks.
 
 ## Reading order
 
-1. Start with [Global wallet model](/en/docs/city/packages/services/balance/global-wallet) to understand why balance is not bound to studio.
+1. Start with [Global wallet model](/en/docs/city/packages/services/balance/global-wallet) to understand why balance is not bound to bay.
 2. Continue with [Charge directly from hooks](/en/docs/city/packages/services/balance/hook-charging) for the recommended integration pattern.
 3. Continue with [Topups and ledger](/en/docs/city/packages/services/balance/topups-and-ledger) for create-first, confirm-later recharge flows.
 4. Finish with [redeem_code flows](/en/docs/city/packages/services/balance/redeem-codes) for one-time gift code credits.
@@ -44,7 +44,7 @@ base.use(balance);
 
 ### Balance is one global user wallet
 
-One user shares the same balance across multiple studios.
+One user shares the same balance across multiple bays.
 
 ### Charging policy stays in business code
 

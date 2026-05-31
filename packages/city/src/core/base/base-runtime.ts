@@ -7,7 +7,7 @@
 
 import { pgEnv, sqliteEnv } from "../../service/env/schema.js";
 import { EnvStore } from "../../service/env/env-store.js";
-import { pgStudios, sqliteStudios } from "../../service/studios/schema.js";
+import { pgBays, sqliteBays } from "../../service/bays/schema.js";
 import { normalizeEnvKey, parseDotenvEntries } from "../../utils/helpers.js";
 import type { CityOptions } from "../types.js";
 import type { DbClient } from "../../store/db.js";
@@ -36,8 +36,8 @@ export function create_runtime_from_db(options: CityOptions): Runtime {
  */
 function builtin_tables_for(dialect: "pg" | "sqlite"): BuiltinTables {
   return dialect === "pg"
-    ? { studios: pgStudios, env: pgEnv }
-    : { studios: sqliteStudios, env: sqliteEnv };
+    ? { bays: pgBays, env: pgEnv }
+    : { bays: sqliteBays, env: sqliteEnv };
 }
 
 /**

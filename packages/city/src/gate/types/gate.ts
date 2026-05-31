@@ -58,11 +58,11 @@ export interface UserGateOptions extends GateBaseOptions {
   role: "user";
 
   /**
-   * 当前 user_token 绑定的 Studio ID。
+   * 当前 user_token 绑定的 Bay ID。
    *
-   * AI 与普通 service action 调用会自动把该值注入为 `studio_id`。
+   * AI 与普通 service action 调用会自动把该值注入为 `bay_id`。
    */
-  studio_id?: string;
+  bay_id?: string;
 
   /**
    * 终端用户访问 token。

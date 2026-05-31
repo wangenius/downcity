@@ -22,17 +22,17 @@ export async function manageUsage(a: Gate): Promise<void> {
 
     try {
       if (act === "events") {
-        const b = await svc.get<{ items: { studio_id: string; service: string; status: string; created_at: string }[] }>("events");
+        const b = await svc.get<{ items: { bay_id: string; service: string; status: string; created_at: string }[] }>("events");
         console.log(`\n${b.items.length} events:\n`);
         for (const e of b.items.slice(-20)) {
-          console.log(`  ${e.created_at.slice(0, 19)}  ${e.studio_id.padEnd(22)} ${e.service.padEnd(15)} [${e.status}]`);
+          console.log(`  ${e.created_at.slice(0, 19)}  ${e.bay_id.padEnd(22)} ${e.service.padEnd(15)} [${e.status}]`);
         }
         console.log("");
       } else {
-        const b = await svc.get<{ items: { studio_id: string; service: string; status: string; count: number }[] }>("summary");
+        const b = await svc.get<{ items: { bay_id: string; service: string; status: string; count: number }[] }>("summary");
         console.log(`\nSummary:\n`);
         for (const s of b.items) {
-          console.log(`  ${s.studio_id.padEnd(22)} ${s.service.padEnd(15)} ${String(s.count).padStart(5)} [${s.status}]`);
+          console.log(`  ${s.bay_id.padEnd(22)} ${s.service.padEnd(15)} ${String(s.count).padStart(5)} [${s.status}]`);
         }
         console.log("");
       }

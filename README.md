@@ -20,7 +20,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 | --- | --- |
 | `downcity` | Public CLI bundle that installs `bay` for local Agent hosting and `city` for deployed City administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
-| `@downcity/city` | City runtime plus Gate access SDK for service registration, actions, auth, env, studio-scoped access, and HTTP calling. |
+| `@downcity/city` | City runtime plus Gate access SDK for service registration, actions, auth, env, bay-scoped access, and HTTP calling. |
 | `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by Gate. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
@@ -34,7 +34,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 - Bay control plane: run `bay start` or `bay console` to host local agents and access the control surface.
 - Agent daemon lifecycle: create, start, stop, restart, inspect, chat with, and diagnose project agents.
 - Global model pool: manage providers and models through `bay model`, then bind projects to model IDs.
-- City runtime: reuse one shared service city across studios with `@downcity/city`, `@downcity/services`, and deployable `cities/*`.
+- City runtime: reuse one shared service city across bays with `@downcity/city`, `@downcity/services`, and deployable `cities/*`.
 - Built-in services: `chat`, `task`, `memory`, `shell`, and `contact`.
 - Built-in plugins: `skill`, `auth`, `web`, `asr`, `tts`, and `workboard`.
 - SDK access: embed a local agent or call a remote agent over HTTP.

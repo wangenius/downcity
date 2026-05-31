@@ -41,12 +41,12 @@ Admin GET                GET  /v1/{service}/{action}
 
 | 路由 | 方法 | 用途 |
 | --- | --- | --- |
-| `/v1/studios/list` | `GET` | Studio 列表 |
-| `/v1/studios/create` | `POST` | 创建 Studio |
-| `/v1/studios/pause` | `POST` | 暂停 Studio |
-| `/v1/studios/activate` | `POST` | 启用 Studio |
-| `/v1/studios/remove` | `POST` | 删除 Studio |
-| `/v1/studios/tokens/apply` | `POST` | 签发 user_token |
+| `/v1/bays/list` | `GET` | Bay 列表 |
+| `/v1/bays/create` | `POST` | 创建 Bay |
+| `/v1/bays/pause` | `POST` | 暂停 Bay |
+| `/v1/bays/activate` | `POST` | 启用 Bay |
+| `/v1/bays/remove` | `POST` | 删除 Bay |
+| `/v1/bays/tokens/apply` | `POST` | 签发 user_token |
 | `/v1/env/list` | `GET` | 环境变量列表 |
 | `/v1/env/upsert` | `POST` | 写入环境变量 |
 | `/v1/env/remove` | `POST` | 删除环境变量 |
@@ -123,7 +123,7 @@ Content-Type: application/json
 
 ```json
 {
-  "studio_id": "studio_xxx",
+  "bay_id": "bay_xxx",
   "model": "deepseek-v4-flash",
   "prompt": "写一段欢迎语"
 }
@@ -208,21 +208,21 @@ Authorization: Bearer <admin_secret_key>
 Content-Type: application/json
 ```
 
-### `POST /v1/studios/create`
+### `POST /v1/bays/create`
 
 ```json
 { "name": "Chrome Extension" }
 ```
 
 ```json
-{ "studio_id": "studio_xxx", "name": "Chrome Extension", "status": "active", ... }
+{ "bay_id": "bay_xxx", "name": "Chrome Extension", "status": "active", ... }
 ```
 
-### `POST /v1/studios/tokens/apply`
+### `POST /v1/bays/tokens/apply`
 
 ```json
 {
-  "studio_id": "studio_xxx",
+  "bay_id": "bay_xxx",
   "user_id": "user_123",
   "metadata": { "plan": "pro" },
   "ttl": "7d"
@@ -230,7 +230,7 @@ Content-Type: application/json
 ```
 
 ```json
-{ "user_token": "ub_xxx", "studio_id": "studio_xxx", "user_id": "user_123", ... }
+{ "user_token": "ub_xxx", "bay_id": "bay_xxx", "user_id": "user_123", ... }
 ```
 
 ### `POST /v1/env/upsert`
@@ -245,7 +245,7 @@ Content-Type: application/json
 | --- | --- |
 | `200` | 请求成功 |
 | `401` | token 缺失、过期、签名无效 |
-| `403` | studio_id 不匹配、studio 已暂停 |
+| `403` | bay_id 不匹配、bay 已暂停 |
 | `404` | 路由不存在、service 未注册 |
 | `422` | model 不存在、action 未命中 |
 | `500` | action 逻辑抛出未指定 statusCode 的错误 |

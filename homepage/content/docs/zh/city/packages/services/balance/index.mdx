@@ -24,7 +24,7 @@ description: "给用户维护一份全局余额、流水、充值单和 redeem_c
 
 建议按下面顺序读：
 
-1. 先读 [全局钱包模型](/docs/city/packages/services/balance/global-wallet)，理解为什么余额不和 studio 绑定。
+1. 先读 [全局钱包模型](/docs/city/packages/services/balance/global-wallet)，理解为什么余额不和 bay 绑定。
 2. 再读 [Hook 中直接扣费](/docs/city/packages/services/balance/hook-charging)，看推荐接法。
 3. 再读 [充值单与流水](/docs/city/packages/services/balance/topups-and-ledger)，看“先创建、后确认”的充值链路。
 4. 最后读 [redeem_code 兑换](/docs/city/packages/services/balance/redeem-codes)，看一次性礼品码如何直接入账。
@@ -46,7 +46,7 @@ base.use(balance);
 
 ### 余额是全局用户钱包
 
-一个用户在多个 studio 之间共用同一份余额。
+一个用户在多个 bay 之间共用同一份余额。
 
 ### 扣费策略在业务层
 

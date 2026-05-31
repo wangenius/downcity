@@ -36,7 +36,7 @@ await base.health();
 serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ```
 
-## 2. Create Studio & Token
+## 2. Create Bay & Token
 
 ```ts
 const admin = new Gate({
@@ -44,9 +44,9 @@ const admin = new Gate({
   city_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
-const studio = await admin.studios.create({ name: "Demo Studio" });
-const token = await admin.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const bay = await admin.bays.create({ name: "Demo Bay" });
+const token = await admin.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   ttl: "7d",
 });
@@ -58,7 +58,7 @@ const token = await admin.studios.tokens.apply({
 const client = new Gate({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  studio_id: studio.studio_id,
+  bay_id: bay.bay_id,
   user_token: token.user_token,
 });
 

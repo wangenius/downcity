@@ -20,7 +20,7 @@ Every Action is simultaneously:
 
 ## When you should write a custom service
 
-- you want studio business actions, not raw model inference only
+- you want bay business actions, not raw model inference only
 - you want one business entry shared across frontend, app, and internal tools
 - you want that capability to participate in hooks, auth, usage, and service governance
 
@@ -73,7 +73,7 @@ POST /v1/translate/zh2en
 GET  /v1/translate/list
 ```
 
-That is why the studio side can stay unified:
+That is why the bay side can stay unified:
 
 ```ts
 const result = await client
@@ -88,7 +88,7 @@ const list = await client.service("translate").get("list");
 
 ## Common scenarios
 
-### Scenario 1: studio business action
+### Scenario 1: bay business action
 
 ```ts
 const writer = new Service({ id: "writer", name: "Writer" });
@@ -140,7 +140,7 @@ It eventually becomes a route, an auth boundary, a hook target, and a usage reco
 
 ### Official services and custom services do not need separate call patterns
 
-From the studio side, both still go through `client.service("service_id").action("action_id").invoke(...)`.
+From the bay side, both still go through `client.service("service_id").action("action_id").invoke(...)`.
 
 ### GET and POST are not cosmetic
 
@@ -149,5 +149,5 @@ Read-oriented operations fit GET better. Execution and mutation fit POST better.
 ## Read next
 
 - For hooks and extension around actions, read [Hooks and Service Mounting](/en/docs/city/packages/city/hooks-and-service)
-- For studio-side calling, read [@downcity/city](/en/docs/city/packages/city/gate)
+- For bay-side calling, read [@downcity/city](/en/docs/city/packages/city/gate)
 - For lower-level method details, read [City API](/en/docs/city/reference/city-runtime)

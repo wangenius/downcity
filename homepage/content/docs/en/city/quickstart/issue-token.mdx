@@ -1,9 +1,9 @@
 ---
 title: Issue `user_token`
-description: Give the studio client a user-scoped credential that can call City.
+description: Give the bay client a user-scoped credential that can call City.
 ---
 
-`user_token` must be issued by a trusted environment. Your backend uses `Admin Gate` and asks City for a token based on `studio_id + user_id`.
+`user_token` must be issued by a trusted environment. Your backend uses `Admin Gate` and asks City for a token based on `bay_id + user_id`.
 
 ```ts
 import { Gate } from "@downcity/city";
@@ -14,12 +14,12 @@ const client = new Gate({
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const studio = await client.studios.create({
+const bay = await client.bays.create({
   name: "Web App",
 });
 
-const user = await client.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const user = await client.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -28,7 +28,7 @@ const user = await client.studios.tokens.apply({
 });
 ```
 
-Return `user.user_token` and `studio.studio_id` to the studio client.
+Return `user.user_token` and `bay.bay_id` to the bay client.
 
 ## What `metadata` is for
 
@@ -41,11 +41,11 @@ const action = service.action("generate", async (ctx) => {
 
 action.before(async (ctx) => {
   await quotaService.check({
-    studio_id: ctx.studio?.studio_id,
+    bay_id: ctx.bay?.bay_id,
     user_id: ctx.user?.user_id,
     plan: ctx.user?.metadata?.plan,
   });
 });
 ```
 
-This is how multiple studio clients share one auth and quota layer cleanly.
+This is how multiple bay clients share one auth and quota layer cleanly.

@@ -39,8 +39,8 @@ export interface ServiceInstallContext {
 export interface ServiceRouteContext {
   /** 当前 user_token 解析出的用户；免登录或 admin 请求时可能为空 */
   user?: RuntimeUser;
-  /** 当前 user_token 对应的 studio；免登录或 admin 请求时可能为空 */
-  studio?: { studio_id: string; status: string };
+  /** 当前 user_token 对应的 bay；免登录或 admin 请求时可能为空 */
+  bay?: { bay_id: string; status: string };
   /** 原始 HTTP 请求 */
   request: Request;
   /** 读取已解析 JSON 请求体 */
@@ -91,7 +91,7 @@ export abstract class InstallableService extends Service {
         self.action(actionId, async (svcCtx: Context) => {
           return await config.handler({
             user: svcCtx.user,
-            studio: svcCtx.studio,
+            bay: svcCtx.bay,
             request: svcCtx.request ?? new Request("http://local"),
             json: async <T extends Record<string, unknown> = Record<string, unknown>>() => svcCtx.input as T,
             text: async () => svcCtx.raw_body ?? JSON.stringify(svcCtx.input),

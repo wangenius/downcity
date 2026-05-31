@@ -9,7 +9,7 @@ description: SDK pathway (User Gate) and OpenAI-compatible pathway (curl / OpenA
 const client = new Gate({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  studio_id: "studio_downcity",
+  bay_id: "bay_downcity",
   user_token: "ub_xxx",
 });
 
@@ -79,7 +79,7 @@ await session.ask("Write an HTTP server");
 
 | Scenario | Pathway |
 |---|---|
-| Your own studio code, simple prompt → text | SDK |
+| Your own bay code, simple prompt → text | SDK |
 | Streaming output to your own UI | SDK |
 | downcity agent agent conversations | OpenAI-Compatible |
 | OpenAI SDK or compatible clients | OpenAI-Compatible |

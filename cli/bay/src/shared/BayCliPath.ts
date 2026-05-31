@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 /**
  * 解析当前安装环境中的 `bay` CLI 入口。
  */
-export function resolveStudioCliPath(): string {
+export function resolveBayCliPath(): string {
   const candidates = [
     process.env.DOWNCITY_BAY_CLI_PATH,
     // downcity 发布包：bay runtime 被复制到 `<pkg>/bay`，bay wrapper 位于 `<pkg>/bin/bay`。

@@ -18,8 +18,8 @@ description: React app structure, data flow, and the current information archite
 ## Build and Runtime
 
 - Dev mode proxies `/api` and `/health` to the Console UI gateway
-- Production build outputs directly into `cli/studio/public`
-- `studio console` serves those assets through the gateway
+- Production build outputs directly into `cli/bay/public`
+- `bay console` serves those assets through the gateway
 
 ## App Shape
 
@@ -43,6 +43,6 @@ This avoids mixing global controls, agent runtime state, and context-level debug
 
 Console UI should remain an API client:
 
-- runtime ownership stays in `cli/studio/`
+- runtime ownership stays in `cli/bay/`
 - view composition stays in `products/console/`
 - design conventions and IA rules should be documented here, not buried inside one component file

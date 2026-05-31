@@ -24,9 +24,9 @@ export interface RuntimeUser {
  */
 export interface CreateUserTokenInput {
   /**
-   * token 所属的 Studio ID。
+   * token 所属的 Bay ID。
    */
-  studio_id: string;
+  bay_id: string;
 
   /**
    * token 所属的终端用户 ID。
@@ -56,9 +56,9 @@ export interface UserTokenPayload {
   aud: "downcity:user";
 
   /**
-   * token 所属 Studio ID。
+   * token 所属 Bay ID。
    */
-  studio_id: string;
+  bay_id: string;
 
   /**
    * token 所属用户 ID。
@@ -91,9 +91,9 @@ export interface UserTokenIssueResult {
   user_token: string;
 
   /**
-   * token 所属 Studio ID。
+   * token 所属 Bay ID。
    */
-  studio_id: string;
+  bay_id: string;
 
   /**
    * token 所属用户 ID。

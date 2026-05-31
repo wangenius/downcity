@@ -11,8 +11,8 @@ import path from "node:path";
 import fs from "node:fs";
 import type { Command } from "commander";
 import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
-import { listManagedAgentEntries } from "@/process/registry/StudioRegistry.js";
-import { isStudioRunning } from "@/process/registry/StudioRuntime.js";
+import { listManagedAgentEntries } from "@/process/registry/BayRegistry.js";
+import { isBayRunning } from "@/process/registry/BayRuntime.js";
 import type { JsonValue } from "@downcity/agent";
 import { parsePort, resolveAgentId } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
@@ -49,7 +49,7 @@ export async function checkAgentPreflight(
   options?: AgentPreflightOptions,
 ): Promise<void> {
   if (options?.requireCityRunning !== false) {
-    if (!(await isStudioRunning())) {
+    if (!(await isBayRunning())) {
       throw new CliError({
         title: "bay runtime is not running",
         fix: "bay start",

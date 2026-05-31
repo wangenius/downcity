@@ -39,7 +39,7 @@ test("City instruction aggregates built-in and service documentation", async () 
 
     assert.match(text, /# Downcity City Instruction/)
     assert.match(text, /## Env \(env\)/)
-    assert.match(text, /## Studios \(studios\)/)
+    assert.match(text, /## Bays \(bays\)/)
     assert.match(text, /## Demo InstallableService \(demo\)/)
     assert.match(text, /这是一个测试服务说明。/)
     assert.match(text, /GET \/v1\/demo\/ping \| auth: admin/)
@@ -126,9 +126,9 @@ test("City bootstraps internal secrets into the env table", async () => {
   }
 })
 
-test("City rejects mismatched studio_id for authenticated user requests", async () => {
+test("City rejects mismatched bay_id for authenticated user requests", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-studio-"))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-bay-"))
 
   try {
     process.chdir(tempDir)
@@ -153,7 +153,7 @@ test("City rejects mismatched studio_id for authenticated user requests", async 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
-    const studio_response = await base.handleRequest(new Request("http://localhost/v1/studios/create", {
+    const bay_response = await base.handleRequest(new Request("http://localhost/v1/bays/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -163,11 +163,11 @@ test("City rejects mismatched studio_id for authenticated user requests", async 
         name: "Demo",
       }),
     }))
-    const studio = await studio_response.json()
+    const bay = await bay_response.json()
 
     const authenticator = await base.getAuthenticator()
     const issued = await authenticator.createToken({
-      studio_id: studio.studio_id,
+      bay_id: bay.bay_id,
       user_id: "user_1",
     })
 
@@ -178,7 +178,7 @@ test("City rejects mismatched studio_id for authenticated user requests", async 
         authorization: `Bearer ${issued.user_token}`,
       },
       body: JSON.stringify({
-        studio_id: "studio_other",
+        bay_id: "bay_other",
         prompt: "hi",
       }),
     }))
@@ -186,7 +186,7 @@ test("City rejects mismatched studio_id for authenticated user requests", async 
     assert.equal(response.status, 403)
     assert.deepEqual(await response.json(), {
       error: {
-        message: "studio_id does not match the authenticated token",
+        message: "bay_id does not match the authenticated token",
         type: "server_error",
       },
     })

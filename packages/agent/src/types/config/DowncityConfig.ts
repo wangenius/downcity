@@ -159,7 +159,7 @@ export interface DowncityConfig {
   id: string;
   version: string;
   /**
-   * Runtime startup configuration used by `studio agent start`.
+   * Runtime startup configuration used by `bay agent start`.
    * CLI flags (if provided) take precedence over this config.
    */
   start?: {

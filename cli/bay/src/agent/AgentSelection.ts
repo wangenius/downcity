@@ -11,7 +11,7 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import prompts from "prompts";
 import { getDowncityJsonPath, getProfileMdPath } from "@/config/Paths.js";
-import { listManagedAgentEntries } from "@/process/registry/StudioRegistry.js";
+import { listManagedAgentEntries } from "@/process/registry/BayRegistry.js";
 import type { ManagedAgentRegistryEntry } from "@downcity/agent";
 import type {
   CliAgentPromptChoice,
@@ -23,7 +23,7 @@ import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 import { CliError } from "../shared/CliError.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
-import { resolveRunningManagedAgents } from "../shared/StudioAgentRuntime.js";
+import { resolveRunningManagedAgents } from "../shared/BayAgentRuntime.js";
 
 /**
  * 判断一个目录是否已经满足最小 agent 初始化条件。

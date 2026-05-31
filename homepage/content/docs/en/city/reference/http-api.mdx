@@ -18,7 +18,7 @@ The bearer credential decides the request identity:
 
 Each action declares which identities it allows. The default is `["user"]`; `[]` means guest access is allowed.
 
-## Studio Routes (common user-side routes)
+## Bay Routes (common user-side routes)
 
 | Route | Method | Purpose | Pathway |
 | --- | --- | --- | --- |
@@ -37,18 +37,18 @@ Each action declares which identities it allows. The default is `["user"]`; `[]`
 | `/v1/services` | `GET` | Registered service list | — |
 | `/v1/{service}/{action}` | `POST` | Generic action call | — |
 
-`/v1/accounts/oauth/callback` is the fixed return URL for GitHub, Google, and other third-party OAuth providers. Studio clients usually do not call it directly.
+`/v1/accounts/oauth/callback` is the fixed return URL for GitHub, Google, and other third-party OAuth providers. Bay clients usually do not call it directly.
 
 ## Admin Routes (same route space, admin credential required)
 
 | Route | Method | Purpose |
 | --- | --- | --- |
-| `/v1/studios/list` | `GET` | List studios |
-| `/v1/studios/create` | `POST` | Create studio |
-| `/v1/studios/pause` | `POST` | Pause studio |
-| `/v1/studios/activate` | `POST` | Activate studio |
-| `/v1/studios/remove` | `POST` | Remove studio |
-| `/v1/studios/tokens/apply` | `POST` | Issue user_token |
+| `/v1/bays/list` | `GET` | List bays |
+| `/v1/bays/create` | `POST` | Create bay |
+| `/v1/bays/pause` | `POST` | Pause bay |
+| `/v1/bays/activate` | `POST` | Activate bay |
+| `/v1/bays/remove` | `POST` | Remove bay |
+| `/v1/bays/tokens/apply` | `POST` | Issue user_token |
 | `/v1/env/list` | `GET` | View runtime env |
 | `/v1/env/upsert` | `POST` | Write env variable |
 | `/v1/env/remove` | `POST` | Delete env variable |
@@ -92,7 +92,7 @@ The same route returns different visibility by identity:
 
 Request:
 ```json
-{ "studio_id": "studio_xxx", "model": "deepseek-v4-flash", "prompt": "Hello" }
+{ "bay_id": "bay_xxx", "model": "deepseek-v4-flash", "prompt": "Hello" }
 ```
 
 Response:
@@ -100,7 +100,7 @@ Response:
 { "id": "msg_xxx", "role": "assistant", "parts": [{ "type": "text", "text": "Hi!" }] }
 ```
 
-If the request body includes `studio_id`, it must match the studio bound to the `user_token`. Otherwise City returns `403`.
+If the request body includes `bay_id`, it must match the bay bound to the `user_token`. Otherwise City returns `403`.
 
 ## `GET /v1/services`
 

@@ -144,7 +144,7 @@ export function formatInstructionDocument(input: {
   lines.push("# Downcity City Instruction");
   lines.push("");
   lines.push("## City");
-  lines.push("City 是 Downcity 的基础设施运行容器，负责挂载 Service、初始化内置 env/studios 能力、统一处理 /v1/* HTTP 路由，以及校验 user_token 与 admin_secret_key。");
+  lines.push("City 是 Downcity 的基础设施运行容器，负责挂载 Service、初始化内置 env/bays 能力、统一处理 /v1/* HTTP 路由，以及校验 user_token 与 admin_secret_key。");
   lines.push("");
   lines.push("基础使用：");
   lines.push("1. 创建 City 实例。");

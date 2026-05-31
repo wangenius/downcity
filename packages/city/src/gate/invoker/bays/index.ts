@@ -1,25 +1,25 @@
 /**
- * Studios Service 调用器（对应 core service/studios/studios-service.ts StudiosService）。
+ * Bays Service 调用器（对应 core service/bays/bays-service.ts BaysService）。
  *
- * 管理端操作：Studio CRUD + Token 签发。
+ * 管理端操作：Bay CRUD + Token 签发。
  */
 
 import type { RequestInitLike } from "../../http.js";
-import type { Studio, StudioCreateInput, TokenApplyInput, TokenApplyResult } from "./types.js";
+import type { Bay, BayCreateInput, TokenApplyInput, TokenApplyResult } from "./types.js";
 
-const PREFIX = "/v1/studios";
+const PREFIX = "/v1/bays";
 
 /**
- * Studio 和 Token 管理调用器。
+ * Bay 和 Token 管理调用器。
  *
- * 通过 Admin Gate .studios 访问：
+ * 通过 Admin Gate .bays 访问：
  * ```ts
- * await admin.studios.list();
- * await admin.studios.create({ name: "My App" });
- * await admin.studios.tokens.apply({ studio_id, user_id });
+ * await admin.bays.list();
+ * await admin.bays.create({ name: "My App" });
+ * await admin.bays.tokens.apply({ bay_id, user_id });
  * ```
  */
-export class StudiosInvoker {
+export class BaysInvoker {
   /** Token 签发 */
   readonly tokens: TokenInvoker;
 
@@ -32,14 +32,14 @@ export class StudiosInvoker {
     this.tokens = new TokenInvoker(opts);
   }
 
-  /** 列出 Studio */
-  async list(): Promise<Studio[]> {
-    const body = await this.req<{ items: Studio[] }>(`${PREFIX}/list`, { method: "GET" });
+  /** 列出 Bay */
+  async list(): Promise<Bay[]> {
+    const body = await this.req<{ items: Bay[] }>(`${PREFIX}/list`, { method: "GET" });
     return body.items;
   }
 
   /** 创建 */
-  create(input: StudioCreateInput): Promise<Studio> {
+  create(input: BayCreateInput): Promise<Bay> {
     return this.req(`${PREFIX}/create`, {
       method: "POST",
       body: JSON.stringify(input),
@@ -47,26 +47,26 @@ export class StudiosInvoker {
   }
 
   /** 暂停 */
-  pause(studio_id: string): Promise<Studio> {
+  pause(bay_id: string): Promise<Bay> {
     return this.req(`${PREFIX}/pause`, {
       method: "POST",
-      body: JSON.stringify({ studio_id }),
+      body: JSON.stringify({ bay_id }),
     });
   }
 
   /** 激活 */
-  activate(studio_id: string): Promise<Studio> {
+  activate(bay_id: string): Promise<Bay> {
     return this.req(`${PREFIX}/activate`, {
       method: "POST",
-      body: JSON.stringify({ studio_id }),
+      body: JSON.stringify({ bay_id }),
     });
   }
 
   /** 删除 */
-  remove(studio_id: string): Promise<unknown> {
+  remove(bay_id: string): Promise<unknown> {
     return this.req(`${PREFIX}/remove`, {
       method: "POST",
-      body: JSON.stringify({ studio_id }),
+      body: JSON.stringify({ bay_id }),
     });
   }
 }

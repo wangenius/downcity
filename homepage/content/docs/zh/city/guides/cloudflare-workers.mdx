@@ -53,7 +53,7 @@ export default {
 仓库里的 [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1) 已经把真实接法写完整了，包含这些关键点：
 
 - 用 `drizzle-orm/d1` 把 `env.DB` 接成 City 可用数据库
-- City 启动时自动初始化内置 `env` / `studios` 表
+- City 启动时自动初始化内置 `env` / `bays` 表
 - 在每次请求前同步当前 origin，避免 OAuth callback 或外链使用错误域名
 - 继续像 Node 路线一样注册 `AIService`、accounts、usage、payment 服务
 

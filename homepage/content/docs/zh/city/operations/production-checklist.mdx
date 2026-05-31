@@ -17,14 +17,14 @@ description: 把 City 用到生产环境前需要确认的事项。
 - 每个要暴露的 service 都已经通过 `base.use(service)` 注册。
 - AI model 已通过 `Provider.model()` + `AIService.use()` 注册，并包含需要的 action。
 - 关键 provider env 已配置。
-- studio 表使用明确的数据库 URL。
+- bay 表使用明确的数据库 URL。
 - before hook 会阻止超额用户。
 - after hook 会记录 usage 和错误线索。
 
 ## 多产品
 
-- `studio_id` 能区分 studio。
-- usage 记录包含 studio_id、user_id、model。
+- `bay_id` 能区分 bay。
+- usage 记录包含 bay_id、user_id、model。
 - 不同产品的限额策略有默认值。
 
 ## 回滚

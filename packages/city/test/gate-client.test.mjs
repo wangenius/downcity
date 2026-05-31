@@ -9,7 +9,7 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   const client = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "studio_demo",
+    bay_id: "bay_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
@@ -17,7 +17,7 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
   assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", studio_id: "studio_demo" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", bay_id: "bay_demo" })
 })
 
 test("User Gate delegates AI calls", async () => {
@@ -26,21 +26,21 @@ test("User Gate delegates AI calls", async () => {
   const gate = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "studio_demo",
+    bay_id: "bay_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
   const result = await gate.ai.text({ prompt: "hi" })
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", studio_id: "studio_demo" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", bay_id: "bay_demo" })
 })
 
 test("AIInvoker.listModels() returns ModelCatalog", async () => {
   const client = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "studio_demo", user_token: "ub_test",
+    bay_id: "bay_demo", user_token: "ub_test",
     fetch: async () => json({ items: [
       { id: "gpt-5.4", name: "GPT-5.4", description: "P", modalities: ["text", "stream"], tags: [], meta: {}, env: {} },
       { id: "claude", name: "Claude", description: "A", modalities: ["text"], tags: [], meta: {}, env: {} },
@@ -58,7 +58,7 @@ test("AIInvoker.model(string) builds a correct ModelHandle", async () => {
   const client = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "studio_demo",
+    bay_id: "bay_demo",
     user_token: "ub_test",
     fetch: async () => json({ ok: true }),
   })
@@ -73,7 +73,7 @@ test("AIInvoker.stream() returns parsed chunks", async () => {
   const chunks = [{ type: "start", messageId: "msg_1" }, { type: "text-delta", id: "t1", delta: "hi" }, { type: "finish" }]
   const client = new Gate({
     role: "user",
-    city_url: "https://api.example.com/base/", studio_id: "studio_demo", user_token: "ub_test",
+    city_url: "https://api.example.com/base/", bay_id: "bay_demo", user_token: "ub_test",
     fetch: async () => streamResponse(chunks),
   })
   const stream = await client.ai.stream({ prompt: "hi" })
@@ -86,7 +86,7 @@ test("User Gate listServices()", async () => {
   const client = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "p",
+    bay_id: "p",
     user_token: "t",
     fetch: async () => json({
       items: [
@@ -105,11 +105,11 @@ test("User Gate service() → ServiceInvoker", async () => {
   const requests = []
   const client = new Gate({
     role: "user",
-    city_url: "https://api.example.com/base/", studio_id: "p", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
+    city_url: "https://api.example.com/base/", bay_id: "p", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
   const result = await client.service("notes").action("create").invoke({ title: "hello" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "https://api.example.com/base/v1/notes/create")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello", studio_id: "p" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello", bay_id: "p" })
 })
 
 test("ServiceClient.get() appends query params for GET actions", async () => {
@@ -117,7 +117,7 @@ test("ServiceClient.get() appends query params for GET actions", async () => {
   const client = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "p",
+    bay_id: "p",
     user_token: "t",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
   })
@@ -132,7 +132,7 @@ test("User Gate payment.methods() reads the unified payment directory", async ()
   const client = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "p",
+    bay_id: "p",
     fetch: async (url, init) => {
       requests.push({ url, init })
       return json({
@@ -173,7 +173,7 @@ test("User Gate payment.method(id).invoke() dispatches to the concrete payment s
   const client = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "p",
+    bay_id: "p",
     user_token: "t",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -208,7 +208,7 @@ test("User Gate payment.method(id).invoke() dispatches to the concrete payment s
   assert.equal(requests[1].url, "https://api.example.com/base/v1/payment.stripe/checkout/create")
   assert.deepEqual(JSON.parse(requests[1].init.body), {
     topup_id: "topup_demo",
-    studio_id: "p",
+    bay_id: "p",
   })
 })
 
@@ -216,7 +216,7 @@ test("User Gate payment.method(id).invoke() rejects disabled or user-required me
   const disabledClient = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "p",
+    bay_id: "p",
     fetch: async () => json({
       items: [
         {
@@ -242,7 +242,7 @@ test("User Gate payment.method(id).invoke() rejects disabled or user-required me
   const guestClient = new Gate({
     role: "user",
     city_url: "https://api.example.com/base/",
-    studio_id: "p",
+    bay_id: "p",
     fetch: async () => json({
       items: [
         {
@@ -312,24 +312,24 @@ test("Admin Gate env list / catalog / upsert / remove", async () => {
   assert.equal(requests[3].url, "http://localhost:3001/v1/env/remove")
 })
 
-test("Admin Gate studios CRUD + tokens.apply", async () => {
-  const requests = []; const p = { studio_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
+test("Admin Gate bays CRUD + tokens.apply", async () => {
+  const requests = []; const p = { bay_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
   const admin = new Gate({
     role: "admin",
     city_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
     requests.push({ url, init })
-    if (url.endsWith("/v1/studios/list")) return json({ items: [p] })
-    if (url.endsWith("/v1/studios/create")) return json(p)
-    if (url.endsWith("/v1/studios/tokens/apply")) return json({ user_token: "ub_test", studio_id: "p1", user_id: "u1", expires_at: "2026-01-01T00:00:00.000Z" })
+    if (url.endsWith("/v1/bays/list")) return json({ items: [p] })
+    if (url.endsWith("/v1/bays/create")) return json(p)
+    if (url.endsWith("/v1/bays/tokens/apply")) return json({ user_token: "ub_test", bay_id: "p1", user_id: "u1", expires_at: "2026-01-01T00:00:00.000Z" })
     return json({ success: true })
   }})
-  assert.deepEqual(await admin.studios.list(), [p])
-  assert.equal((await admin.studios.create({ name: "Demo" })).studio_id, "p1")
-  await admin.studios.pause("p1")
-  assert.equal(requests[2].url, "http://localhost:3001/v1/studios/pause")
-  assert.deepEqual(await admin.studios.tokens.apply({ studio_id: "p1", user_id: "u1" }), {
+  assert.deepEqual(await admin.bays.list(), [p])
+  assert.equal((await admin.bays.create({ name: "Demo" })).bay_id, "p1")
+  await admin.bays.pause("p1")
+  assert.equal(requests[2].url, "http://localhost:3001/v1/bays/pause")
+  assert.deepEqual(await admin.bays.tokens.apply({ bay_id: "p1", user_id: "u1" }), {
     user_token: "ub_test",
-    studio_id: "p1",
+    bay_id: "p1",
     user_id: "u1",
     expires_at: "2026-01-01T00:00:00.000Z",
   })

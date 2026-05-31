@@ -25,7 +25,7 @@ async function verifyBalanceServiceContract(): Promise<void> {
   await balance.sub("user_1", 5, {
     note: "chat",
     meta: {
-      studio_id: "studio_downcity",
+      bay_id: "bay_downcity",
     },
   });
   await balance.createTopup("user_1", 50, {

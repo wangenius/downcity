@@ -402,7 +402,7 @@ export interface ManagedAgentRegistryV1 {
 }
 
 /**
- * `studio agent list --running` 输出可复用的受管 agent 运行态视图。
+ * `bay agent list --running` 输出可复用的受管 agent 运行态视图。
  */
 export interface ManagedAgentProcessView {
   /**

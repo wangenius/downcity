@@ -23,13 +23,13 @@ import {
   getDowncityMemoryLongTermPath,
 } from "@/config/Paths.js";
 import { isAgentProjectInitialized } from "@downcity/agent";
-import { listManagedAgentEntries } from "@/process/registry/StudioRegistry.js";
+import { listManagedAgentEntries } from "@/process/registry/BayRegistry.js";
 import {
   getManagedAgentRegistryPath,
-  getStudioPidPath,
+  getBayPidPath,
   getControlPlanePidPath,
   getPlatformStoreDbPath,
-} from "@/process/registry/StudioPaths.js";
+} from "@/process/registry/BayPaths.js";
 import type {
   PlatformAgentOption,
   PlatformAgentsResponse,
@@ -551,7 +551,7 @@ export async function buildPlatformConfigStatusResponse(params: {
       key: "ui_pid",
       scope: "platform",
       label: "Bay PID",
-      filePath: getStudioPidPath(),
+      filePath: getBayPidPath(),
     }),
     readPlatformConfigFileStatus({
       key: "agents_registry",

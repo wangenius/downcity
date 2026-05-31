@@ -22,7 +22,7 @@ import {
 } from "./AgentSelection.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { injectAgentContext } from "../shared/IndexSupport.js";
-import { prepareForegroundAgent } from "../shared/StudioAgentRuntime.js";
+import { prepareForegroundAgent } from "../shared/BayAgentRuntime.js";
 import { CliError } from "../shared/CliError.js";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { PlatformStore } from "@/platform/store/index.js";

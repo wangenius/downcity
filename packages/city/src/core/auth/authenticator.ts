@@ -21,8 +21,8 @@ export interface AuthResult {
   level: RouteIdentity;
   /** 解析出的用户信息（user 级别时可用） */
   user?: RuntimeUser;
-  /** 解析出的 Studio 信息（user 级别时可用） */
-  studio?: { studio_id: string; status: string };
+  /** 解析出的 Bay 信息（user 级别时可用） */
+  bay?: { bay_id: string; status: string };
 }
 
 /** 统一鉴权器 */
@@ -32,7 +32,7 @@ export class Authenticator {
 
   constructor(
     private env: EnvProvider,
-    private store: () => Promise<{ studio: { get(id: string): Promise<{ studio_id: string; status: string } | undefined> } }>,
+    private store: () => Promise<{ bay: { get(id: string): Promise<{ bay_id: string; status: string } | undefined> } }>,
   ) {}
 
   /**
@@ -67,14 +67,14 @@ export class Authenticator {
     try {
       const payload = await this.getSigner().verify(token);
       const store = await this.store();
-      const studio = await store.studio.get(payload.studio_id);
-      if (!studio) return { level: "guest" };
-      if (studio.status !== "active") return { level: "guest" };
+      const bay = await store.bay.get(payload.bay_id);
+      if (!bay) return { level: "guest" };
+      if (bay.status !== "active") return { level: "guest" };
 
       return {
         level: "user",
         user: { user_id: payload.user_id, metadata: payload.metadata ?? {} },
-        studio,
+        bay,
       };
     } catch {
       return { level: "guest" };
@@ -108,21 +108,21 @@ export class Authenticator {
   }
 
   /**
-   * 签发 user_token（验证 studio 状态后签发）。
+   * 签发 user_token（验证 bay 状态后签发）。
    *
    * @param input - token 创建参数
    * @returns 签发结果（含 token 字符串）
    */
   async createToken(input: CreateUserTokenInput): Promise<UserTokenIssueResult> {
     const store = await this.store();
-    const studio = await store.studio.get(input.studio_id);
-    if (!studio) throw httpError(404, `Unknown studio: ${input.studio_id}`);
-    if (studio.status !== "active") throw httpError(403, `Studio is not active: ${input.studio_id}`);
+    const bay = await store.bay.get(input.bay_id);
+    if (!bay) throw httpError(404, `Unknown bay: ${input.bay_id}`);
+    if (bay.status !== "active") throw httpError(403, `Bay is not active: ${input.bay_id}`);
 
     const user_token = await this.getSigner().sign(input);
     return {
       user_token,
-      studio_id: input.studio_id,
+      bay_id: input.bay_id,
       user_id: input.user_id,
       ...(input.ttl
         ? { expires_at: new Date(Date.now() + TokenSigner.parseTTL(input.ttl) * 1000).toISOString() }

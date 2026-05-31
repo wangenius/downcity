@@ -135,8 +135,8 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   });
 
   // 关键点（中文）：检测控制面是否运行，决定能否即时重启。
-  const { isStudioRunning } = await import("@/process/registry/StudioRuntime.js");
-  const controlPlaneRunning = await isStudioRunning();
+  const { isBayRunning } = await import("@/process/registry/BayRuntime.js");
+  const controlPlaneRunning = await isBayRunning();
 
   if (!controlPlaneRunning) {
     emitCliBlock({

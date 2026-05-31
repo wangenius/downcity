@@ -53,7 +53,7 @@ The important part is not a helper name. It is that you hand the database to Cit
 The full implementation in [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1) already covers the real integration details:
 
 - wrap `env.DB` with `drizzle-orm/d1`
-- let City initialize the built-in `env` and `studios` tables
+- let City initialize the built-in `env` and `bays` tables
 - synchronize the current origin before each request so OAuth callbacks and links use the correct domain
 - keep registering `AIService`, accounts, usage, and payment services the same way as the Node path
 

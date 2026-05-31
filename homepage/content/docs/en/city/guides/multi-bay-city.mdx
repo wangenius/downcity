@@ -1,9 +1,9 @@
 ---
-title: Many Studios, One City
-description: How one City can serve multiple studios without mixing studio differences with shared infrastructure.
+title: Many Bays, One City
+description: How one City can serve multiple bays without mixing bay differences with shared infrastructure.
 ---
 
-When many studios share one City, the goal is not “save one server.” The goal is to separate **shared infrastructure** from **studio-specific differences**.
+When many bays share one City, the goal is not “save one server.” The goal is to separate **shared infrastructure** from **bay-specific differences**.
 
 What should be shared:
 
@@ -13,31 +13,31 @@ What should be shared:
 - hooks, usage, and logs
 - `user_token` verification
 
-What should stay in each studio:
+What should stay in each bay:
 
 - pages and interaction
 - the user system
 - plan, order, and balance rules
-- studio-specific brand, positioning, and pricing
+- bay-specific brand, positioning, and pricing
 
 ## One diagram for the reuse boundary
 
-<div className="dc-doc-flow" aria-label="Many studios share one City">
+<div className="dc-doc-flow" aria-label="Many bays share one City">
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Studio A</strong>
+      <strong>Bay A</strong>
       <span>For example, a web tool.</span>
-      <code>studio_id = studio_web</code>
+      <code>bay_id = bay_web</code>
     </div>
     <div className="dc-doc-node">
-      <strong>Studio B</strong>
+      <strong>Bay B</strong>
       <span>For example, a Chrome extension.</span>
-      <code>studio_id = studio_extension</code>
+      <code>bay_id = bay_extension</code>
     </div>
     <div className="dc-doc-node">
-      <strong>Studio C</strong>
+      <strong>Bay C</strong>
       <span>For example, a client demo or internal tool.</span>
-      <code>studio_id = studio_demo</code>
+      <code>bay_id = bay_demo</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -49,26 +49,26 @@ What should stay in each studio:
   </div>
 </div>
 
-## How to think about `studio_id`
+## How to think about `bay_id`
 
-`studio_id` is a studio boundary, not a model boundary.
+`bay_id` is a bay boundary, not a model boundary.
 
 It is useful for:
 
-- identifying which studio sent the call
-- deciding whether a studio is still `active`
+- identifying which bay sent the call
+- deciding whether a bay is still `active`
 - telling hooks where usage should be recorded
-- separating one user’s activity across different studios
+- separating one user’s activity across different bays
 
-A common pattern is one stable `studio_id` per studio:
+A common pattern is one stable `bay_id` per bay:
 
 ```ts
-const studio = await admin.studios.create({
+const bay = await admin.bays.create({
   name: "Chrome Extension",
 });
 
-const issued = await admin.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const issued = await admin.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   metadata: {
     plan: "starter",
@@ -79,7 +79,7 @@ const issued = await admin.studios.tokens.apply({
 
 ## What belongs in token metadata
 
-`studio_id` says *which studio this is*. Token metadata is better for *the user’s business state inside that studio*.
+`bay_id` says *which bay this is*. Token metadata is better for *the user’s business state inside that bay*.
 
 Common fields:
 
@@ -89,15 +89,15 @@ Common fields:
 - `feature_flag`
 - `team_id`
 
-That lets hooks differentiate behavior with `ctx.studio` and `ctx.user.metadata` instead of cloning City for each studio.
+That lets hooks differentiate behavior with `ctx.bay` and `ctx.user.metadata` instead of cloning City for each bay.
 
 ## Recommended layering
 
-### Studio side
+### Bay side
 
 - keeps routes, UI, and business experience
 - uses `User Gate`
-- only holds `studio_id + user_token`
+- only holds `bay_id + user_token`
 
 ### Business backend
 
@@ -112,19 +112,19 @@ That lets hooks differentiate behavior with `ctx.studio` and `ctx.user.metadata`
 - owns usage and hooks
 - owns the reusable AI service layer
 
-## When to create a new studio
+## When to create a new bay
 
-Usually worth creating a new studio when:
+Usually worth creating a new bay when:
 
-- it is a separate studio or market
+- it is a separate bay or market
 - it needs to be paused or activated independently
 - it needs independent usage reporting or business strategy
-- you need to separate web app, extension, client demo, and other studio surfaces
+- you need to separate web app, extension, client demo, and other bay surfaces
 
-Usually not worth creating a new studio when:
+Usually not worth creating a new bay when:
 
-- it is only another page in the same studio
-- it is only a feature flag inside the same studio
+- it is only another page in the same bay
+- it is only a feature flag inside the same bay
 - it is just another conversation/session for one user
 
 Those are better kept inside your own business system or token metadata.

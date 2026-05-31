@@ -5,7 +5,7 @@
 import { ServiceClient } from "../invoker/invoker.js";
 import { BalanceInvoker } from "../invoker/balance/index.js";
 import { EnvInvoker } from "../invoker/env/index.js";
-import { StudiosInvoker } from "../invoker/studios/index.js";
+import { BaysInvoker } from "../invoker/bays/index.js";
 import {
   defaultFetch,
   normalizeBaseURL,
@@ -24,7 +24,7 @@ import type {
 export class AdminGateAccess {
   readonly balance: BalanceInvoker;
   readonly env: EnvInvoker;
-  readonly studios: StudiosInvoker;
+  readonly bays: BaysInvoker;
 
   private readonly base_url: string;
   private readonly secret: string;
@@ -45,7 +45,7 @@ export class AdminGateAccess {
     const req = <T>(path: string, init: RequestInitLike) => this.json<T>(path, init);
     this.balance = new BalanceInvoker({ requestJSON: req });
     this.env = new EnvInvoker({ requestJSON: req });
-    this.studios = new StudiosInvoker({ requestJSON: req });
+    this.bays = new BaysInvoker({ requestJSON: req });
   }
 
   /** 获取 Service 调用器（与 User Gate 共用同一路由） */

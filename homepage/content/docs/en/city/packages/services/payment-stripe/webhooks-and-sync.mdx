@@ -51,7 +51,7 @@ If redirect URLs are not configured explicitly, the service uses `DOWNCITY_CITY_
 
 ## What gets synced in this version
 
-This layer does not grant studio access and does not mirror every Stripe object.
+This layer does not grant bay access and does not mirror every Stripe object.
 
 In this version it does four concrete things:
 
@@ -68,7 +68,7 @@ The one-time topup flow only needs a small Stripe event surface:
 - `checkout.session.expired`: marks the payment as expired
 - `payment_intent.payment_failed`: marks the payment as failed
 
-Other Stripe events can be ignored until the studio explicitly needs a new payment flow.
+Other Stripe events can be ignored until the bay explicitly needs a new payment flow.
 
 ## Idempotency rules
 

@@ -62,12 +62,12 @@ https://downcity.example.com/v1/accounts/oauth/callback
 
 Register that exact URL under the Google OAuth client's `Authorized redirect URIs`.
 
-If you are only using the Downcity accounts service server-side OAuth flow, this redirect URI is the critical part. You usually do not need to register your studio frontend as a JavaScript origin for this flow alone.
+If you are only using the Downcity accounts service server-side OAuth flow, this redirect URI is the critical part. You usually do not need to register your bay frontend as a JavaScript origin for this flow alone.
 
 ## The fields Google users most often get wrong
 
 - choosing the wrong `Application type` instead of `Web application`
-- putting the studio frontend URL into `Authorized redirect URIs` instead of the City callback URL
+- putting the bay frontend URL into `Authorized redirect URIs` instead of the City callback URL
 - using one public domain in production but registering another one in Google Cloud
 - changing redirect settings and testing immediately before Google finishes applying the change
 
@@ -92,7 +92,7 @@ To start login:
 ```ts
 const start = await guest.service("accounts").action("oauth/start").invoke({
   provider: "google",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 
@@ -114,13 +114,13 @@ Downcity only handles the standard OAuth start and callback flow. It does not by
 
 After Google login succeeds, the accounts service still returns a normal City `user_token`.
 
-So the studio does not need a different post-login client flow just because the user came from Google:
+So the bay does not need a different post-login client flow just because the user came from Google:
 
 ```ts
 const user = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: result.user_token,
 });
 ```

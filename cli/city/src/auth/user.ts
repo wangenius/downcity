@@ -325,7 +325,7 @@ function saveSession(baseUrl: string, email: string, result: { user_token: strin
     base_url: normalizeBaseUrl(baseUrl),
     email,
     user_id: result.user_id ?? "",
-    studio_id: "studio_downcity",
+    bay_id: "bay_downcity",
     user_token: result.user_token,
   };
   writeUserSession(session);

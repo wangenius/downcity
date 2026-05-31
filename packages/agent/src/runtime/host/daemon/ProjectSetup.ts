@@ -30,14 +30,14 @@ function ensureContextFiles(projectRoot: string): void {
   // Check if initialized（启动入口一次性确认工程根目录与关键文件）
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     console.error(
-      '❌ Project not initialized. Please run "studio agent create" first',
+      '❌ Project not initialized. Please run "bay agent create" first',
     );
     process.exit(1);
   }
 
   if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
     console.error(
-      '❌ downcity.json does not exist. Please run "studio agent create" first',
+      '❌ downcity.json does not exist. Please run "bay agent create" first',
     );
     process.exit(1);
   }

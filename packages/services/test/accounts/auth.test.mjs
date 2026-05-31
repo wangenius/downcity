@@ -15,8 +15,8 @@ test("accountsService registers users, logs in, and issues City tokens", async (
     process.chdir(tempDir)
     const { base, adminSecret } = await setupBase(tempDir)
 
-    const studio = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/studios/create",
+    const bay = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/bays/create",
       body: { name: "Demo" },
     }))).json()
 
@@ -32,7 +32,7 @@ test("accountsService registers users, logs in, and issues City tokens", async (
     if (registered.verification_token) {
       const verifyResponse = await base.handleRequest(jsonRequest("/v1/accounts/verify-email", {
         token: registered.verification_token,
-        studio_id: studio.studio_id,
+        bay_id: bay.bay_id,
       }))
       assert.equal(verifyResponse.status, 200)
       const verified = await verifyResponse.json()
@@ -42,7 +42,7 @@ test("accountsService registers users, logs in, and issues City tokens", async (
     const loginResponse = await base.handleRequest(jsonRequest("/v1/accounts/login", {
       email: "user@example.com",
       password: "password123",
-      studio_id: studio.studio_id,
+      bay_id: bay.bay_id,
     }))
     assert.equal(loginResponse.status, 200)
     const loggedIn = await loginResponse.json()
@@ -123,14 +123,14 @@ test("accountsService completes Google OAuth callback and resolves the state tok
       GOOGLE_CLIENT_SECRET: "google_client_secret",
     })
 
-    const studio = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/studios/create",
+    const bay = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/bays/create",
       body: { name: "Demo" },
     }))).json()
 
     const startResponse = await base.handleRequest(jsonRequest("/v1/accounts/oauth/start", {
       provider: "google",
-      studio_id: studio.studio_id,
+      bay_id: bay.bay_id,
     }))
     assert.equal(startResponse.status, 200)
     const start = await startResponse.json()
@@ -201,14 +201,14 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
       WECHAT_CLIENT_SECRET: "wechat_client_secret",
     })
 
-    const studio = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/studios/create",
+    const bay = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/bays/create",
       body: { name: "Demo" },
     }))).json()
 
     const startResponse = await base.handleRequest(jsonRequest("/v1/accounts/oauth/start", {
       provider: "wechat",
-      studio_id: studio.studio_id,
+      bay_id: bay.bay_id,
     }))
     assert.equal(startResponse.status, 200)
     const start = await startResponse.json()

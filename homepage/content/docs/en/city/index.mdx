@@ -1,13 +1,13 @@
 ---
 title: Downcity City Docs
-description: One City, so your next AI studio does not rebuild the backend again.
+description: One City, so your next AI bay does not rebuild the backend again.
 ---
 
-Downcity is a shared AI infrastructure runtime for AI studios. It gives you one long-running City that multiple web apps, extensions, apps, desktop tools, client demos, and internal tools can reuse.
+Downcity is a shared AI infrastructure runtime for AI bays. It gives you one long-running City that multiple web apps, extensions, apps, desktop tools, client demos, and internal tools can reuse.
 
-What City exposes to studios is not a raw provider API. It exposes a stable **studio-facing calling boundary**:
+What City exposes to bays is not a raw provider API. It exposes a stable **bay-facing calling boundary**:
 
-- the studio holds `studio_id + user_token`
+- the bay holds `bay_id + user_token`
 - it calls `text()`, `stream()`, `image()`, and other services through `User Gate`
 - City keeps the model directory, provider routing, hooks, usage, and env behind the boundary
 
@@ -17,17 +17,17 @@ What City exposes to studios is not a raw provider API. It exposes a stable **st
   <a className="dc-doc-card" href="/en/docs/city/quickstart">
     <em>Start Here</em>
     <strong>I want to run one full call chain</strong>
-    <p>Deploy an City, add one model, issue a token, and make a studio client call `text()` or `stream()` successfully.</p>
+    <p>Deploy an City, add one model, issue a token, and make a bay client call `text()` or `stream()` successfully.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/concepts">
     <em>Mental Model</em>
     <strong>I want to understand the boundaries first</strong>
-    <p>Separate City, studio clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
+    <p>Separate City, bay clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/guides">
     <em>Real Scenarios</em>
-    <strong>I am connecting a real studio now</strong>
-    <p>Read the practical guides for pure-client studios, multi-studio reuse, auth, provider env, hooks, and business logic.</p>
+    <strong>I am connecting a real bay now</strong>
+    <p>Read the practical guides for pure-client bays, multi-bay reuse, auth, provider env, hooks, and business logic.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/packages">
     <em>Packages</em>
@@ -46,9 +46,9 @@ What City exposes to studios is not a raw provider API. It exposes a stable **st
 <div className="dc-doc-flow" aria-label="Downcity request flow">
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Many studio clients</strong>
+      <strong>Many bay clients</strong>
       <span>Web apps, extensions, apps, desktop tools, client demos, and internal tools.</span>
-      <code>User Gate + studio_id + user_token</code>
+      <code>User Gate + bay_id + user_token</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -72,7 +72,7 @@ What City exposes to studios is not a raw provider API. It exposes a stable **st
 </div>
 
 <p className="dc-doc-caption">
-  Studio clients see stable services and model IDs. Which provider or gateway City uses internally remains a server-side detail.
+  Bay clients see stable services and model IDs. Which provider or gateway City uses internally remains a server-side detail.
 </p>
 
 ## What City owns
@@ -88,13 +88,13 @@ What City exposes to studios is not a raw provider API. It exposes a stable **st
 
 - your user system
 - orders, subscriptions, CRM, or content data
-- studio-specific pages, interaction, and business UX
+- bay-specific pages, interaction, and business UX
 - a public “unified provider API” for arbitrary third-party systems
 
 More precisely:
 
 > City owns the shared AI infrastructure layer.
-> Studios still own their users, business logic, interface, and pricing model.
+> Bays still own their users, business logic, interface, and pricing model.
 
 ## Recommended order
 

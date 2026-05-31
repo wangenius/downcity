@@ -33,7 +33,7 @@ function applyEnvMap(
 }
 
 /**
- * 对 `studio chat send` 命令做前置安全校验。
+ * 对 `bay chat send` 命令做前置安全校验。
  *
  * 关键点（中文）
  * - 历史上模型会把长文本直接拼进多行 shell 命令，导致后续行被 zsh 当作独立命令解析。
@@ -42,20 +42,20 @@ function applyEnvMap(
  */
 export function validateChatSendCommand(cmd: string): string | null {
   const source = String(cmd ?? "");
-  if (!/\bstudio\s+chat\s+send\b/.test(source)) return null;
+  if (!/\bbay\s+chat\s+send\b/.test(source)) return null;
   if (!/[\r\n]/.test(source)) return null;
-  if (/\bstudio\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) {
+  if (/\bbay\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) {
     return null;
   }
-  if (/\bstudio\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) {
+  if (/\bbay\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) {
     return null;
   }
-  if (/\bstudio\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source)) {
+  if (/\bbay\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source)) {
     return null;
   }
   return [
-    "Unsafe `studio chat send` command: real newlines are not allowed.",
-    "If your message is multi-line, use `studio chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
+    "Unsafe `bay chat send` command: real newlines are not allowed.",
+    "If your message is multi-line, use `bay chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
   ].join(" ");
 }
 

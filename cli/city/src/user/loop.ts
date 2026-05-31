@@ -19,7 +19,7 @@ export async function userLoop(ctx: UserContext): Promise<Result> {
   const client = new Gate({
     role: "user",
     city_url: ctx.session.base_url,
-    studio_id: ctx.session.studio_id,
+    bay_id: ctx.session.bay_id,
     user_token: ctx.session.user_token,
   });
 

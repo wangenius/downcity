@@ -72,7 +72,7 @@ const kimiCode = new Provider("kimi-code", {
 const client = new Gate({
   role: "user",
   city_url,
-  studio_id,
+  bay_id,
   user_token,
 });
 const result = await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });

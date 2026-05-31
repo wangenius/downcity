@@ -272,7 +272,7 @@ export function App() {
           setSelectedSessionId("");
           setStatus({
             type: "error",
-            text: "未发现可用 Agent，请先启动 `studio agent start`。",
+            text: "未发现可用 Agent，请先启动 `bay agent start`。",
           });
           return;
         }
@@ -753,7 +753,7 @@ export function App() {
               placeholder="粘贴 Bearer Token；支持直接粘贴 Bearer xxx 或纯 token"
             />
             <span className="rounded-[12px] bg-muted px-3 py-2 text-[11px] normal-case tracking-normal text-muted-foreground">
-              如何获取：在当前机器终端执行 `studio token create my-token`，或直接运行 `studio token`。
+              如何获取：在当前机器终端执行 `bay token create my-token`，或直接运行 `bay token`。
             </span>
           </label>
 

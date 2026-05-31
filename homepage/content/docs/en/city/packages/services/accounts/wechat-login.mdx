@@ -64,11 +64,11 @@ https://open.weixin.qq.com/connect/qrconnect
 
 with the current City `redirect_uri`.
 
-If the callback domain configured in WeChat does not match the real public City domain used by the studio, login usually fails immediately.
+If the callback domain configured in WeChat does not match the real public City domain used by the bay, login usually fails immediately.
 
 So two things must stay aligned:
 
-- the real public City domain used by the studio
+- the real public City domain used by the bay
 - the exact callback URL registered in WeChat
 
 ## How the frontend should use it
@@ -92,7 +92,7 @@ To start login:
 ```ts
 const start = await guest.service("accounts").action("oauth/start").invoke({
   provider: "wechat",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 
@@ -108,13 +108,13 @@ const result = await guest.service("accounts").get("oauth/result", {
 
 After WeChat login succeeds, the accounts service still returns a normal City `user_token`.
 
-So the studio does not need a special post-login client flow just because the user came from WeChat:
+So the bay does not need a special post-login client flow just because the user came from WeChat:
 
 ```ts
 const user = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: result.user_token,
 });
 ```
@@ -123,7 +123,7 @@ const user = new Gate({
 
 - mixing Website App login with Official Account login
 - mixing Website App login with Mini Program login
-- configuring one domain in WeChat while the studio actually uses another City domain
+- configuring one domain in WeChat while the bay actually uses another City domain
 - hardcoding the `wechat` button instead of checking `providers` first
 
 ## Related docs

@@ -23,7 +23,7 @@ DOWNCITY_CITY_TOKEN_SIGNING_KEY=sign_xxx
 DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
 ```
 
-`/data` 已经配置为持久化 volume。SQLite 数据库、studio、model、auth session、usage、payment 和 City env 都会保存在这里。
+`/data` 已经配置为持久化 volume。SQLite 数据库、bay、model、auth session、usage、payment 和 City env 都会保存在这里。
 
 容器启动命令已经写在 Compose 的内联构建配置里：
 

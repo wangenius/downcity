@@ -1,14 +1,14 @@
 ---
 title: User Gate
-description: How studio clients read the model directory and call AIService or custom services.
+description: How bay clients read the model directory and call AIService or custom services.
 ---
 
-`User Gate` is the runtime client for studio-facing calls.
+`User Gate` is the runtime client for bay-facing calls.
 
-It binds one user inside one studio:
+It binds one user inside one bay:
 
 - `city_url`
-- `studio_id`, automatically injected into AI service and user action calls
+- `bay_id`, automatically injected into AI service and user action calls
 - `user_token`, required for AI service calls and authenticated actions
 
 For guest-access actions such as login, registration, or webhooks, you can pass `city_url` only.
@@ -17,13 +17,13 @@ You can use it inside browsers, extensions, mobile apps, desktop apps, or your o
 
 ## Build the right mental model first
 
-The most important point is not the method list. `User Gate` unifies three kinds of studio-side calls:
+The most important point is not the method list. `User Gate` unifies three kinds of bay-side calls:
 
 - AI service: `client.ai.*`
 - custom service: services you registered in City yourself
 - service: services registered into City by services, such as `accounts`, `usage`, or `payment`
 
-So from the studio side, `User Gate` is not only "the thing that calls models." It is the unified user-context entry into City.
+So from the bay side, `User Gate` is not only "the thing that calls models." It is the unified user-context entry into City.
 
 ## Minimal example
 
@@ -34,7 +34,7 @@ import type { UIMessageChunk } from "ai";
 const client = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_xxx",
+  bay_id: "bay_xxx",
   user_token: "ub_xxx",
 });
 
@@ -61,11 +61,11 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_xxx",
+  bay_id: "bay_xxx",
 });
 ```
 
-After receiving `session.user_token`, create a User Gate with `studio_id + user_token` for AI service calls.
+After receiving `session.user_token`, create a User Gate with `bay_id + user_token` for AI service calls.
 
 ## Guest calls vs logged-in user calls
 
@@ -82,7 +82,7 @@ Pass `city_url` only. This is for guest-access Actions such as:
 
 ### Logged-in user phase
 
-Pass `city_url + studio_id + user_token`. This is for:
+Pass `city_url + bay_id + user_token`. This is for:
 
 - AI services
 - custom services that require user context
@@ -101,13 +101,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_xxx",
+  bay_id: "bay_xxx",
 });
 
 const user = new Gate({
   role: "user",
   city_url,
-  studio_id: "studio_xxx",
+  bay_id: "bay_xxx",
   user_token: session.user_token,
 });
 ```
@@ -132,7 +132,7 @@ const catalog = await client.ai.listModels();
 const model = catalog.get("deepseek-v4-flash") ?? catalog.default();
 ```
 
-This keeps raw model IDs from scattering across your studio code.
+This keeps raw model IDs from scattering across your bay code.
 
 ## `ai.text()`
 
@@ -200,7 +200,7 @@ The City-side Provider `image` / `video` actions should also return `UIMessage`.
 
 ## `ai.tts()` / `ai.asr()`
 
-`tts()` and `asr()` keep open return types because audio input and output transport shapes vary more across studios:
+`tts()` and `asr()` keep open return types because audio input and output transport shapes vary more across bays:
 
 ```ts
 await client.ai.tts({
@@ -226,7 +226,7 @@ services[0];
 // }
 ```
 
-This is useful for dynamic menus, debug tooling, or studio-side discovery of callable services.
+This is useful for dynamic menus, debug tooling, or bay-side discovery of callable services.
 
 ## Custom services and official services
 
@@ -256,7 +256,7 @@ const usage = await client.service("usage").get("me");
 
 ### Payment
 
-If you want the studio code to think in terms of "payment methods" instead of hand-writing `service + action`, use:
+If you want the bay code to think in terms of "payment methods" instead of hand-writing `service + action`, use:
 
 ```ts
 const methods = await client.payment.methods();
@@ -285,7 +285,7 @@ You do not need a second protocol for services. Just remember:
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_xxx",
+  bay_id: "bay_xxx",
 });
 ```
 
@@ -376,7 +376,7 @@ Usually one of these:
 - `user_token` is missing
 - the token expired
 - the token signature is invalid
-- the request `studio_id` does not match the studio bound to the token
+- the request `bay_id` does not match the bay bound to the token
 
 ### 422
 
@@ -390,10 +390,10 @@ Usually one of these:
 
 Do not use `User Gate` for:
 
-- creating studios
+- creating bays
 - issuing `user_token`
 - modifying runtime env
 - maintaining production provider keys
-- pausing or re-activating studios
+- pausing or re-activating bays
 
 Those are trusted-side actions and belong in [Admin Gate](/en/docs/city/reference/gate-admin) or your own backend.

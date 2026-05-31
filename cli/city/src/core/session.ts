@@ -35,8 +35,8 @@ export interface UserSession {
   email: string;
   /** 用户 ID */
   user_id: string;
-  /** 当前 studio ID */
-  studio_id: string;
+  /** 当前 bay ID */
+  bay_id: string;
   /** user token */
   user_token: string;
 }

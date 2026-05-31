@@ -16,11 +16,11 @@ If you are still unsure what Downcity is, why it is split this way, or where the
   </a>
   <a className="dc-doc-card" href="/en/docs/city/reference/gate-user">
     <strong>User Gate</strong>
-    <p>The studio-side entry. It reads `ai.listModels()`, calls `ai.text()`, `ai.stream()`, `ai.image()`, and invokes Service actions.</p>
+    <p>The bay-side entry. It reads `ai.listModels()`, calls `ai.text()`, `ai.stream()`, `ai.image()`, and invokes Service actions.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/reference/gate-admin">
     <strong>Admin Gate</strong>
-    <p>The trusted-side entry. It manages studios, `user_token`, and runtime env.</p>
+    <p>The trusted-side entry. It manages bays, `user_token`, and runtime env.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/reference/http-api">
     <strong>HTTP API</strong>
@@ -34,7 +34,7 @@ If you are still unsure what Downcity is, why it is split this way, or where the
 
 ## Suggested order
 
-1. Writing studio-side code: start with [User Gate](/en/docs/city/reference/gate-user)
+1. Writing bay-side code: start with [User Gate](/en/docs/city/reference/gate-user)
 2. Wiring server-side runtime: continue with [City](/en/docs/city/reference/city-runtime)
 3. Writing login and token issuance: read [Admin Gate](/en/docs/city/reference/gate-admin)
 4. Hand-writing requests: finish with [HTTP API](/en/docs/city/reference/http-api)

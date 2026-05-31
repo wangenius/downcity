@@ -1,5 +1,5 @@
 /**
- * StudioRegistry：bay 后台维护的 agent registry（`~/.downcity/main/agents.json`）。
+ * BayRegistry：bay 后台维护的 agent registry（`~/.downcity/main/agents.json`）。
  *
  * 关键点（中文）
  * - registry 只维护“Bay 认知到的 agent 项目列表”，用于统一观测与批量管理。
@@ -13,10 +13,10 @@ import type {
   ManagedAgentRegistryEntry,
   ManagedAgentRegistryV1,
 } from "@downcity/agent";
-import { getManagedAgentRegistryPath, getStudioRuntimeDirPath } from "./StudioPaths.js";
-import { isStudioRunning } from "./StudioRuntime.js";
+import { getManagedAgentRegistryPath, getBayRuntimeDirPath } from "./BayPaths.js";
+import { isBayRunning } from "./BayRuntime.js";
 
-const CONSOLE_DIR = getStudioRuntimeDirPath();
+const CONSOLE_DIR = getBayRuntimeDirPath();
 const MANAGED_AGENTS_FILE = getManagedAgentRegistryPath();
 
 function buildEmptyRegistry(): ManagedAgentRegistryV1 {
@@ -181,7 +181,7 @@ export async function upsertManagedAgentEntry(input: {
   stoppedAt?: string;
 }): Promise<void> {
   // 关键点（中文）：agent 必须登记到 bay 后台才“有效”，因此 Bay 未启动时拒绝写入 registry。
-  if (!(await isStudioRunning())) {
+  if (!(await isBayRunning())) {
     throw new Error("bay runtime is not running");
   }
 

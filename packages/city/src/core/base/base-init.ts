@@ -8,13 +8,13 @@
 import { executeDDL } from "../../store/db.js";
 import { TableApi, buildCreateUserTableSQL, type CityTableApi } from "../../store/table-api.js";
 import { EnvStore } from "../../service/env/env-store.js";
-import { StudioStore } from "../../service/studios/studio-store.js";
+import { BayStore } from "../../service/bays/bay-store.js";
 import { Authenticator } from "../auth/authenticator.js";
 import { randomSecret } from "../../utils/helpers.js";
 import type { Service } from "../../service/service.js";
 import type { CityUserSchemaInput } from "../../store/types.js";
 import type { Runtime } from "../runtime.js";
-import type { Studio } from "../../service/studios/types.js";
+import type { Bay } from "../../service/bays/types.js";
 import type { EnvEntry } from "../../service/env/types.js";
 import type { Database, DbClient } from "../../store/db.js";
 
@@ -28,8 +28,8 @@ export interface CityInitState {
   client: { $client: DbClient };
   /** 所有表 API 映射 */
   table_map: Map<string, CityTableApi>;
-  /** studio store */
-  studio_store: StudioStore;
+  /** bay store */
+  bay_store: BayStore;
   /** 鉴权器 */
   authenticator: Authenticator;
 }
@@ -43,14 +43,14 @@ export async function initialize_city(params: {
   /** 已注册服务 */
   services: Service[];
   /** City ready 回调 */
-  require_ready: () => Promise<{ studio: { get(id: string): Promise<{ studio_id: string; status: string } | undefined> } }>;
+  require_ready: () => Promise<{ bay: { get(id: string): Promise<{ bay_id: string; status: string } | undefined> } }>;
 }): Promise<CityInitState> {
   const { runtime, services, require_ready } = params;
   const { database, client, env, builtinTables } = runtime;
 
   const user_schema = collect_service_schemas(services);
   const table_map = new Map<string, CityTableApi>();
-  table_map.set("studios", new TableApi(database, builtinTables.studios));
+  table_map.set("bays", new TableApi(database, builtinTables.bays));
   table_map.set("env", new TableApi(database, builtinTables.env));
 
   for (const [name, table] of Object.entries(user_schema)) {
@@ -68,9 +68,9 @@ export async function initialize_city(params: {
   const env_store = new EnvStore(env_table as CityTableApi<EnvEntry>);
   await env.attachStore(env_store);
 
-  const studios_table = table_map.get("studios");
-  if (!studios_table) throw new Error("City studios table is not initialized");
-  const studio_store = new StudioStore(studios_table as CityTableApi<Studio>);
+  const bays_table = table_map.get("bays");
+  if (!bays_table) throw new Error("City bays table is not initialized");
+  const bay_store = new BayStore(bays_table as CityTableApi<Bay>);
 
   const configured_base_url = env.get("DOWNCITY_CITY_BASE_URL")
     ?? env.get("BETTER_AUTH_URL")
@@ -86,7 +86,7 @@ export async function initialize_city(params: {
     service._client = db_client;
     service._authenticator = authenticator;
     service._env = env;
-    service._studioStore = studio_store;
+    service._bayStore = bay_store;
     service._raw = runtime.raw;
     service._baseURL = configured_base_url ?? runtime.baseURL;
     await service._onInit();
@@ -96,7 +96,7 @@ export async function initialize_city(params: {
     database,
     client: db_client,
     table_map,
-    studio_store,
+    bay_store,
     authenticator,
   };
 }

@@ -5,7 +5,7 @@
 它负责这些共用能力：
 
 - 挂载 `Service` / `AIService`
-- 初始化内置 `studios` / `env` 表
+- 初始化内置 `bays` / `env` 表
 - 校验 `user_token` 和 `admin_secret_key`
 - 暴露统一的 `/v1/*` HTTP 路由
 - 提供 env、数据库、hook 和鉴权上下文
@@ -142,7 +142,7 @@ city.use(ai);
 
 ## 官方服务
 
-官方服务用于封装多 studio 复用能力：
+官方服务用于封装多 bay 复用能力：
 
 ```ts
 import { accountsService } from "@downcity/services";
@@ -163,7 +163,7 @@ city.use(usageService());
 - `auth: ["admin"]` 只允许 `admin_secret_key`
 - `auth: []` 表示免登录
 
-对于用户侧请求，`user_token` 绑定 studio 身份。如果请求体或 query 中传了 `studio_id`，它必须与 token 里的 studio 一致。
+对于用户侧请求，`user_token` 绑定 bay 身份。如果请求体或 query 中传了 `bay_id`，它必须与 token 里的 bay 一致。
 
 ## 主要导出
 
@@ -176,7 +176,7 @@ city.use(usageService());
 - `CityModelDescriptor`
 - `TokenSigner`
 - `EnvService`
-- `StudiosService`
+- `BaysService`
 
 ## Gate 模型目录
 

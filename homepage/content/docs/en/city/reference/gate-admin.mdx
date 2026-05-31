@@ -1,13 +1,13 @@
 ---
 title: Admin Gate
-description: How trusted environments manage studios, issue user tokens, and maintain runtime env.
+description: How trusted environments manage bays, issue user tokens, and maintain runtime env.
 ---
 
 `Admin Gate` should only run in trusted environments.
 
 Typical cases:
 
-- your own studio backend
+- your own bay backend
 - local admin scripts
 - internal tools
 - CI or operations scripts
@@ -20,12 +20,12 @@ The most accurate mental model is: `Admin Gate` is the trusted-side bridge into 
 
 It usually owns three things:
 
-- managing `studio`
+- managing `bay`
 - issuing `user_token`
 - maintaining runtime env
 - running trusted-side balance / redeem_code administration
 
-If `User Gate` owns "how a user-context studio call reaches City," then `Admin Gate` owns "how the trusted side prepares that call environment."
+If `User Gate` owns "how a user-context bay call reaches City," then `Admin Gate` owns "how the trusted side prepares that call environment."
 
 ## Minimal example
 
@@ -54,37 +54,37 @@ If `admin_secret_key` is omitted, the SDK tries to read `process.env.DOWNCITY_CI
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>Admin Gate</strong>
-      <span>Calls `/v1/studios/*`, `/v1/studios/tokens/apply`, `/v1/env/*`, `/v1/ai/models`, and `/v1/base/instruction`.</span>
+      <span>Calls `/v1/bays/*`, `/v1/bays/tokens/apply`, `/v1/env/*`, `/v1/ai/models`, and `/v1/base/instruction`.</span>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>Downcity</strong>
-      <span>Verifies `admin_secret_key`, then executes studio, token, and env management actions.</span>
+      <span>Verifies `admin_secret_key`, then executes bay, token, and env management actions.</span>
     </div>
   </div>
 </div>
 
-## `studios`
+## `bays`
 
 ### `list()`
 
 ```ts
-const items = await admin.studios.list();
+const items = await admin.bays.list();
 ```
 
 ### `create()`
 
 ```ts
-const studio = await admin.studios.create({
+const bay = await admin.bays.create({
   name: "Chrome Extension",
 });
 ```
 
 The response includes:
 
-- `studio_id`
+- `bay_id`
 - `name`
 - `status`
 - `created_at`
@@ -93,32 +93,32 @@ The response includes:
 ### `pause()` / `activate()`
 
 ```ts
-await admin.studios.pause(studio.studio_id);
+await admin.bays.pause(bay.bay_id);
 
-await admin.studios.activate(studio.studio_id);
+await admin.bays.activate(bay.bay_id);
 ```
 
 Useful when you need to:
 
-- stop all user calls for one studio
-- temporarily take a studio offline
-- reopen calls for a studio later
+- stop all user calls for one bay
+- temporarily take a bay offline
+- reopen calls for a bay later
 
 ### `remove()`
 
 ```ts
-await admin.studios.remove(studio.studio_id);
+await admin.bays.remove(bay.bay_id);
 ```
 
-The current behavior is direct studio deletion. Confirm that this matches your business expectation before using it.
+The current behavior is direct bay deletion. Confirm that this matches your business expectation before using it.
 
 ## `tokens.apply()`
 
-This is the most common trusted-side action: issue a `user_token` for one user under one studio.
+This is the most common trusted-side action: issue a `user_token` for one user under one bay.
 
 ```ts
-const issued = await admin.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const issued = await admin.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -131,7 +131,7 @@ const issued = await admin.studios.tokens.apply({
 The response includes:
 
 - `user_token`
-- `studio_id`
+- `bay_id`
 - `user_id`
 - `expires_at`
 
@@ -148,14 +148,14 @@ The response includes:
 router.post("/login", async (c) => {
   const user_id = await login(c);
 
-  const issued = await admin.studios.tokens.apply({
-    studio_id: "studio_xxx",
+  const issued = await admin.bays.tokens.apply({
+    bay_id: "bay_xxx",
     user_id,
     ttl: "7d",
   });
 
   return c.json({
-    studio_id: "studio_xxx",
+    bay_id: "bay_xxx",
     user_token: issued.user_token,
   });
 });
@@ -165,7 +165,7 @@ That means:
 
 1. your backend handles user login first
 2. the trusted backend asks City for `user_token`
-3. it returns `studio_id + user_token` to the client
+3. it returns `bay_id + user_token` to the client
 4. the client calls City through `User Gate`
 
 ## Relationship with the accounts service
@@ -178,7 +178,7 @@ The two common patterns are:
 
 - your backend validates user credentials or session
 - your backend uses `Admin Gate` to request `user_token`
-- the frontend receives `studio_id + user_token`
+- the frontend receives `bay_id + user_token`
 
 ### Pattern B: the accounts service owns login
 
@@ -236,7 +236,7 @@ These changes are written to the `env` table in the City database. Both business
 
 ## `listServices()` / `listModels()` / `instruction()`
 
-Besides `studios.*` and `env.*`, the admin side can also read the current capability catalog exposed by City.
+Besides `bays.*` and `env.*`, the admin side can also read the current capability catalog exposed by City.
 
 ### `listServices()`
 
@@ -273,7 +273,7 @@ It maps to `GET /v1/base/instruction` and returns the aggregated plain-text City
 
 ## Admin Gate can also call service-provided admin services
 
-Besides `studios.*` and `env.*`, `Admin Gate` can call admin-side services exposed by official packages.
+Besides `bays.*` and `env.*`, `Admin Gate` can call admin-side services exposed by official packages.
 
 For example:
 
@@ -297,7 +297,7 @@ await admin.balance.redeemCodes.disable({
 });
 ```
 
-In other words, `Admin Gate` is not only for built-in studios/env endpoints. It is also the trusted-side entry into the same unified service route space.
+In other words, `Admin Gate` is not only for built-in bays/env endpoints. It is also the trusted-side entry into the same unified service route space.
 
 ## Error handling
 
@@ -308,8 +308,8 @@ When `Admin Gate` receives a non-2xx HTTP response, it throws an `Error` with tw
 
 ```ts
 try {
-  await admin.studios.tokens.apply({
-    studio_id: "studio_xxx",
+  await admin.bays.tokens.apply({
+    bay_id: "bay_xxx",
     user_id: "user_123",
   });
 } catch (error) {
@@ -323,8 +323,8 @@ try {
 Common statuses:
 
 - `401`: `admin_secret_key` is missing or wrong.
-- `403`: the target studio is paused, so no token can be issued.
-- `404`: the target studio does not exist.
+- `403`: the target bay is paused, so no token can be issued.
+- `404`: the target bay does not exist.
 - `500`: City is missing required config, or the admin action failed internally.
 
 ## What `Admin Gate` does not manage right now

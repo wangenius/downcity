@@ -9,7 +9,7 @@ description: "@downcity/services records service-call facts, not prices or plans
 
 The usage service records:
 
-- which studio made the call
+- which bay made the call
 - which user made the call
 - which service or model was used
 - whether the call succeeded or failed
@@ -37,7 +37,7 @@ const events = await admin.service("usage").get("events");
 const summary = await admin.service("usage").get("summary");
 ```
 
-## How studio-side users read their own usage
+## How bay-side users read their own usage
 
 ```ts
 const me = await user.service("usage").get("me");
@@ -47,17 +47,17 @@ Useful for:
 
 - account usage pages
 - plan consumption displays
-- self-serve usage awareness inside the studio
+- self-serve usage awareness inside the bay
 
 ## Common scenarios
 
 ### Scenario 1: track first, price later
 
-First persist the facts, then later decide which models are billable, which calls count toward quotas, and which studios or flows are exempt.
+First persist the facts, then later decide which models are billable, which calls count toward quotas, and which bays or flows are exempt.
 
 ### Scenario 2: debugging and operations
 
-If you need to know whether calls really happened, whether one studio is consuming abnormally, or whether one model is being hit far more than expected, the usage fact layer is often the first place to look.
+If you need to know whether calls really happened, whether one bay is consuming abnormally, or whether one model is being hit far more than expected, the usage fact layer is often the first place to look.
 
 ## Common API surface
 

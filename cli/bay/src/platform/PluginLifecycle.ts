@@ -12,7 +12,7 @@ import { PlatformStore } from "@/platform/store/index.js";
 /**
  * 单个 plugin 的 Bay 级生命周期配置。
  */
-export interface StudioPluginLifecycleItem {
+export interface BayPluginLifecycleItem {
   /**
    * 当前 plugin 是否在 Bay 级被启用。
    */
@@ -26,16 +26,16 @@ export interface StudioPluginLifecycleItem {
 /**
  * Bay 级 plugin 生命周期配置映射。
  */
-export interface StudioPluginLifecycleConfig {
+export interface BayPluginLifecycleConfig {
   /**
    * 插件生命周期配置对象映射。
    */
-  [pluginName: string]: StudioPluginLifecycleItem | undefined;
+  [pluginName: string]: BayPluginLifecycleItem | undefined;
 }
 
 const PLUGIN_LIFECYCLE_SETTING_KEY = "plugins.lifecycle";
 
-function normalizeLifecycleItem(input: unknown): StudioPluginLifecycleItem | null {
+function normalizeLifecycleItem(input: unknown): BayPluginLifecycleItem | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const record = input as Record<string, unknown>;
   if (typeof record.enabled !== "boolean") return null;
@@ -45,9 +45,9 @@ function normalizeLifecycleItem(input: unknown): StudioPluginLifecycleItem | nul
   };
 }
 
-function normalizeLifecycleConfig(input: unknown): StudioPluginLifecycleConfig {
+function normalizeLifecycleConfig(input: unknown): BayPluginLifecycleConfig {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
-  const out: StudioPluginLifecycleConfig = {};
+  const out: BayPluginLifecycleConfig = {};
   for (const [pluginName, raw] of Object.entries(input as Record<string, unknown>)) {
     const key = String(pluginName || "").trim();
     if (!key) continue;
@@ -61,11 +61,11 @@ function normalizeLifecycleConfig(input: unknown): StudioPluginLifecycleConfig {
 /**
  * 读取 Bay 级 plugin 生命周期配置。
  */
-export function readStudioPluginLifecycleConfig(): StudioPluginLifecycleConfig {
+export function readBayPluginLifecycleConfig(): BayPluginLifecycleConfig {
   const store = new PlatformStore();
   try {
     return normalizeLifecycleConfig(
-      store.getSecureSettingJsonSync<StudioPluginLifecycleConfig>(
+      store.getSecureSettingJsonSync<BayPluginLifecycleConfig>(
         PLUGIN_LIFECYCLE_SETTING_KEY,
       ),
     );
@@ -77,9 +77,9 @@ export function readStudioPluginLifecycleConfig(): StudioPluginLifecycleConfig {
 /**
  * 写入完整 Bay 级 plugin 生命周期配置。
  */
-export function writeStudioPluginLifecycleConfig(
-  value: StudioPluginLifecycleConfig,
-): StudioPluginLifecycleConfig {
+export function writeBayPluginLifecycleConfig(
+  value: BayPluginLifecycleConfig,
+): BayPluginLifecycleConfig {
   const normalized = normalizeLifecycleConfig(value);
   const store = new PlatformStore();
   try {
@@ -93,19 +93,19 @@ export function writeStudioPluginLifecycleConfig(
 /**
  * 读取单个 plugin 的 Bay 级生命周期状态。
  */
-export function readStudioPluginLifecycleItem(
+export function readBayPluginLifecycleItem(
   pluginName: string,
-): StudioPluginLifecycleItem | null {
+): BayPluginLifecycleItem | null {
   const key = String(pluginName || "").trim();
   if (!key) return null;
-  return readStudioPluginLifecycleConfig()[key] || null;
+  return readBayPluginLifecycleConfig()[key] || null;
 }
 
 /**
  * 判断单个 plugin 是否启用。
  */
-export function isStudioPluginEnabled(pluginName: string): boolean {
-  const item = readStudioPluginLifecycleItem(pluginName);
+export function isBayPluginEnabled(pluginName: string): boolean {
+  const item = readBayPluginLifecycleItem(pluginName);
   if (!item) return true;
   return item.enabled === true;
 }
@@ -113,16 +113,16 @@ export function isStudioPluginEnabled(pluginName: string): boolean {
 /**
  * 设置单个 plugin 的启用态。
  */
-export function setStudioPluginEnabled(
+export function setBayPluginEnabled(
   pluginName: string,
   enabled: boolean,
-): StudioPluginLifecycleConfig {
+): BayPluginLifecycleConfig {
   const key = String(pluginName || "").trim();
   if (!key) {
     throw new Error("pluginName is required");
   }
-  const current = readStudioPluginLifecycleConfig();
-  return writeStudioPluginLifecycleConfig({
+  const current = readBayPluginLifecycleConfig();
+  return writeBayPluginLifecycleConfig({
     ...current,
     [key]: {
       enabled,

@@ -292,7 +292,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
   const enabled =
     pluginConfig && (pluginConfig as { enabled?: unknown }).enabled === true;
   if (!enabled) {
-    throw new Error("ASR plugin is disabled. Run `studio asr on` first.");
+    throw new Error("ASR plugin is disabled. Run `bay asr on` first.");
   }
 
   const provider = String(
@@ -307,7 +307,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
       (pluginConfig as { modelId?: unknown } | null)?.modelId || "SenseVoiceSmall",
     ).trim() || "SenseVoiceSmall";
   if (!modelId && provider === "local") {
-    throw new Error("ASR active model is not configured. Run `studio asr use <modelId>`.");
+    throw new Error("ASR active model is not configured. Run `bay asr use <modelId>`.");
   }
 
   const modelsRootDir = resolveVoiceModelsRootDir({

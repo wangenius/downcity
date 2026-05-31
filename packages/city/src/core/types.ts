@@ -26,7 +26,7 @@ export interface CityHealthStatus {
 /**
  * 创建 City 实例时传入的顶层配置。
  *
- * 默认只需要传入 Drizzle db。City 会自动初始化内置 env/studios 能力。
+ * 默认只需要传入 Drizzle db。City 会自动初始化内置 env/bays 能力。
  */
 export interface CityOptions {
   /**

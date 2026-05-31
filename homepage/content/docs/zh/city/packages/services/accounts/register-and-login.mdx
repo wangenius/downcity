@@ -11,7 +11,7 @@ description: "@downcity/services 下最常见的 register、login 和 user_token
 const session = await guest.service("accounts").action("register").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 
@@ -21,13 +21,13 @@ const session = await guest.service("accounts").action("register").invoke({
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 
-## 为什么这里要带 `studio_id`
+## 为什么这里要带 `bay_id`
 
-因为 service 在登录或注册成功后，通常会顺手向 City 申请该 studio 下的 `user_token`。
+因为 service 在登录或注册成功后，通常会顺手向 City 申请该 bay 下的 `user_token`。
 
 所以它需要知道：
 
@@ -42,7 +42,7 @@ const session = await guest.service("accounts").action("login").invoke({
 const user = new Gate({
   role: "user",
   city_url,
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: session.user_token,
 });
 ```

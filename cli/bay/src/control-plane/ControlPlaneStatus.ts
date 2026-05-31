@@ -13,9 +13,9 @@ import { readControlPlanePublicModeSetting } from "./ControlPlanePublicMode.js";
 import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
   getManagedAgentRegistryPath,
-  getStudioPidPath,
-} from "@/process/registry/StudioPaths.js";
-import { isStudioProcessAlive, readStudioPid } from "@/process/registry/StudioRuntime.js";
+  getBayPidPath,
+} from "@/process/registry/BayPaths.js";
+import { isBayProcessAlive, readBayPid } from "@/process/registry/BayRuntime.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { resolveRunningManagedAgents } from "./ControlPlaneProcess.js";
 
@@ -60,20 +60,20 @@ export function printRunningManagedAgents(views: ManagedAgentProcessView[]): voi
  * 打印 bay 后台、control plane 与受管 agent 的状态面板。
  */
 export async function controlPlaneStatusCommand(): Promise<void> {
-  const pidPath = getStudioPidPath();
+  const pidPath = getBayPidPath();
 
-  const studioPid = await readStudioPid();
-  const running = Boolean(studioPid && isStudioProcessAlive(studioPid));
+  const bayPid = await readBayPid();
+  const running = Boolean(bayPid && isBayProcessAlive(bayPid));
   emitCliBlock({
-    tone: running ? "success" : studioPid ? "warning" : "info",
+    tone: running ? "success" : bayPid ? "warning" : "info",
     title: "Bay runtime",
-    summary: running ? "running" : studioPid ? "stale" : "stopped",
+    summary: running ? "running" : bayPid ? "stale" : "stopped",
     facts: [
       {
         label: "registry",
         value: getManagedAgentRegistryPath(),
       },
-      ...(studioPid && !running
+      ...(bayPid && !running
         ? [
             {
               label: "warning",

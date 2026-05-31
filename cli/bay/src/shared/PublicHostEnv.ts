@@ -9,9 +9,9 @@
 
 import { PlatformStore } from "@/platform/store/index.js";
 import type {
-  StudioPublicHostEnvEntry,
-  StudioPublicHostEnvResult,
-  EnsureStudioPublicHostEnvInput,
+  BayPublicHostEnvEntry,
+  BayPublicHostEnvResult,
+  EnsureBayPublicHostEnvInput,
 } from "./PublicHostEnvTypes.js";
 
 const PUBLIC_HOST_DESCRIPTION = "Auto-detected public host for agent contact links.";
@@ -58,7 +58,7 @@ function readGlobalEnvFromStore(): Record<string, string> {
   }
 }
 
-async function upsertGlobalEnvToStore(entry: StudioPublicHostEnvEntry): Promise<void> {
+async function upsertGlobalEnvToStore(entry: BayPublicHostEnvEntry): Promise<void> {
   const store = new PlatformStore();
   try {
     await store.upsertEnvEntry({
@@ -75,9 +75,9 @@ async function upsertGlobalEnvToStore(entry: StudioPublicHostEnvEntry): Promise<
 /**
  * 确保 Bay 全局环境中存在自动探测的公网 host。
  */
-export async function ensureStudioPublicHostEnv(
-  input: EnsureStudioPublicHostEnvInput = {},
-): Promise<StudioPublicHostEnvResult> {
+export async function ensureBayPublicHostEnv(
+  input: EnsureBayPublicHostEnvInput = {},
+): Promise<BayPublicHostEnvResult> {
   const env = input.env || process.env;
   const globalEnv = input.readGlobalEnv ? input.readGlobalEnv() : readGlobalEnvFromStore();
   const hasRuntimePublicAddress = Boolean(
@@ -101,7 +101,7 @@ export async function ensureStudioPublicHostEnv(
     };
   }
 
-  const entry: StudioPublicHostEnvEntry = {
+  const entry: BayPublicHostEnvEntry = {
     key: "DOWNCITY_PUBLIC_HOST",
     value: resolved,
     description: PUBLIC_HOST_DESCRIPTION,

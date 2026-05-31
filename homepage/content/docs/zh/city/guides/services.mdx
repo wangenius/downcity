@@ -36,7 +36,7 @@ base.use(stripePaymentService({
 }));
 ```
 
-服务会把自己的 action 和数据表注册进 City。官方产品示例里还会显式注册 `EnvService`、`StudiosService` 和 `AIService`。
+服务会把自己的 action 和数据表注册进 City。官方产品示例里还会显式注册 `EnvService`、`BaysService` 和 `AIService`。
 
 ## 客户端调用服务
 
@@ -53,11 +53,11 @@ const accounts = guest.service("accounts");
 const session = await accounts.action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 
-User Gate 带上 `studio_id + user_token` 后，调需要用户鉴权的服务入口：
+User Gate 带上 `bay_id + user_token` 后，调需要用户鉴权的服务入口：
 
 ```ts
 const usage = user.service("usage");

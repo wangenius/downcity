@@ -224,7 +224,7 @@ function buildMessage(
     parts,
     metadata: {
       model: ctx.variant?.id,
-      studio_id: ctx.studio?.studio_id,
+      bay_id: ctx.bay?.bay_id,
       user_id: ctx.user?.user_id,
       finishReason: result.finishReason,
       usage: result.usage,

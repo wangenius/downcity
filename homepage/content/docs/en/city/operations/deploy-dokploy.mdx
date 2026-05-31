@@ -5,7 +5,7 @@ description: Deploy the Downcity Node block to Dokploy with a persistent City da
 
 The Node block is the standard Docker / Dokploy deployment shape for Downcity City Infra.
 
-It runs `cities/node`, exposes the City HTTP API, and stores SQLite data in a persistent `/data` volume. Use it when you want a long-running city service layer for studios, apps, agents, or internal tools.
+It runs `cities/node`, exposes the City HTTP API, and stores SQLite data in a persistent `/data` volume. Use it when you want a long-running city service layer for bays, apps, agents, or internal tools.
 
 ## Dokploy Settings
 
@@ -33,7 +33,7 @@ PORT=43127
 DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
 ```
 
-`/data` must stay persistent. Studios, models, users, sessions, usage, payments, and City env entries are stored in that SQLite database.
+`/data` must stay persistent. Bays, models, users, sessions, usage, payments, and City env entries are stored in that SQLite database.
 
 ## Domain Path
 
@@ -46,7 +46,7 @@ GET  /v1/services
 POST /v1/ai/text
 ```
 
-If your domain is `https://base.example.com`, studio-side SDKs and trusted backends should use:
+If your domain is `https://base.example.com`, bay-side SDKs and trusted backends should use:
 
 ```txt
 base_url=https://base.example.com
@@ -98,15 +98,15 @@ Expected shape:
 ```json
 {
   "ok": true,
-  "services": ["env", "studios", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+  "services": ["env", "bays", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
 }
 ```
 
 If the request times out, the Dokploy service is not exposed publicly, the VPS firewall does not allow `43127`, or a reachable domain has not been bound yet.
 
-## Call From Studios
+## Call From Bays
 
-Studio frontends and apps should call the Node block through `@downcity/city`:
+Bay frontends and apps should call the Node block through `@downcity/city`:
 
 ```ts
 import { Gate } from "@downcity/city";
@@ -114,7 +114,7 @@ import { Gate } from "@downcity/city";
 const client = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "my-studio",
+  bay_id: "my-bay",
   user_token: "user_token",
 });
 ```

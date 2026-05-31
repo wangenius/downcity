@@ -23,7 +23,7 @@ declare module "hono" {
   interface ContextVariableMap {
     identity?: { kind: "guest" | "user" | "admin" };
     user?: RuntimeUser;
-    studio?: { studio_id: string; status: string };
+    bay?: { bay_id: string; status: string };
   }
 }
 
@@ -60,7 +60,7 @@ export function build_city_router(params: {
     const result = await authenticator.resolve(c.req.raw);
     c.set("identity", { kind: result.level });
     if (result.user) c.set("user", result.user);
-    if (result.studio) c.set("studio", result.studio);
+    if (result.bay) c.set("bay", result.bay);
     await next();
   });
 
@@ -79,7 +79,7 @@ export function build_city_router(params: {
       authenticator.authorize({
         level: c.get("identity")?.kind ?? "guest",
         user: c.get("user"),
-        studio: c.get("studio"),
+        bay: c.get("bay"),
       }, ["admin"]);
 
       return c.json({ items: collect_city_env_catalog(services, runtime.env) });
@@ -93,7 +93,7 @@ export function build_city_router(params: {
       authenticator.authorize({
         level: c.get("identity")?.kind ?? "guest",
         user: c.get("user"),
-        studio: c.get("studio"),
+        bay: c.get("bay"),
       }, ["admin"]);
 
       return new Response(await build_city_instruction(services), {
@@ -134,7 +134,7 @@ export function build_city_router(params: {
           db,
           identity: c.get("identity") ?? { kind: "guest" },
           user: c.get("user"),
-          studio: c.get("studio"),
+          bay: c.get("bay"),
           env: (key) => runtime.env.get(key),
           service: { id: service.id, name: service.name },
           action: { id: action.id },
@@ -145,9 +145,9 @@ export function build_city_router(params: {
           authenticator.authorize({
             level: ctx.identity?.kind ?? "guest",
             user: ctx.user,
-            studio: ctx.studio,
+            bay: ctx.bay,
           }, def.auth);
-          ensure_studio_identity_match(ctx);
+          ensure_bay_identity_match(ctx);
 
           for (const hook of global_service_hooks(services)) {
             await hook.runBefore(ctx);
@@ -239,18 +239,18 @@ function search_params_to_object(search_params: URLSearchParams): Record<string,
 }
 
 /**
- * 校验 input.studio_id 与 token 绑定产品一致。
+ * 校验 input.bay_id 与 token 绑定产品一致。
  */
-function ensure_studio_identity_match(ctx: Context): void {
+function ensure_bay_identity_match(ctx: Context): void {
   if (ctx.identity?.kind !== "user") return;
-  const request_studio_id = typeof ctx.input.studio_id === "string"
-    ? ctx.input.studio_id.trim()
+  const request_bay_id = typeof ctx.input.bay_id === "string"
+    ? ctx.input.bay_id.trim()
     : "";
-  if (!request_studio_id) return;
+  if (!request_bay_id) return;
 
-  const token_studio_id = ctx.studio?.studio_id ?? "";
-  if (request_studio_id !== token_studio_id) {
-    throw httpError(403, "studio_id does not match the authenticated token");
+  const token_bay_id = ctx.bay?.bay_id ?? "";
+  if (request_bay_id !== token_bay_id) {
+    throw httpError(403, "bay_id does not match the authenticated token");
   }
 }
 

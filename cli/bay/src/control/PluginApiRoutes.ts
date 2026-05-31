@@ -26,8 +26,8 @@ import type {
 } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
 import {
-  isStudioPluginEnabled,
-  setStudioPluginEnabled,
+  isBayPluginEnabled,
+  setBayPluginEnabled,
 } from "@/platform/PluginLifecycle.js";
 
 type PluginActionConfigItem = {
@@ -143,7 +143,7 @@ function buildGlobalPluginPayload(): PluginUiResponse {
     plugins: listPluginViews(createPluginCatalog()).map((view) => ({
       ...view,
       availability: {
-        enabled: isStudioPluginEnabled(view.name),
+        enabled: isBayPluginEnabled(view.name),
         available: true,
         reasons: [],
       },
@@ -168,7 +168,7 @@ function buildAgentPluginPayload(params?: {
     plugins: listPluginViews(createPluginCatalog()).map((view) => ({
       ...view,
       availability: {
-        enabled: isStudioPluginEnabled(view.name),
+        enabled: isBayPluginEnabled(view.name),
         available: false,
         reasons: reason
           ? [`Agent server unavailable: ${reason}`]
@@ -308,7 +308,7 @@ async function runGlobalPluginAction(input: {
       };
     }
 
-    setStudioPluginEnabled(plugin.name, actionName === "on");
+    setBayPluginEnabled(plugin.name, actionName === "on");
     return {
       success: true,
       message: `Plugin "${plugin.name}" ${actionName === "on" ? "enabled" : "disabled"} in bay config`,

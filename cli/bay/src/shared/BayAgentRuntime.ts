@@ -18,8 +18,8 @@ import {
 import {
   listManagedAgentEntries,
   markManagedAgentStopped,
-} from "@/process/registry/StudioRegistry.js";
-import { isStudioRunning } from "@/process/registry/StudioRuntime.js";
+} from "@/process/registry/BayRegistry.js";
+import { isBayRunning } from "@/process/registry/BayRuntime.js";
 import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
 import { CliError } from "./CliError.js";
 import { injectAgentContext } from "./IndexSupport.js";
@@ -90,7 +90,7 @@ export async function prepareForegroundAgent(
   options: StartOptions & { foreground?: boolean };
   shouldForeground: boolean;
 }> {
-  if (!(await isStudioRunning())) {
+  if (!(await isBayRunning())) {
     throw new CliError({
       title: "bay runtime is not running",
       fix: "bay start",

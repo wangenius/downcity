@@ -3,7 +3,7 @@ title: 签发 user_token
 description: 给产品侧 client 一个可以调用 City 的用户凭证。
 ---
 
-`user_token` 需要由可信环境签发。开发者后端使用 `Admin Gate`，基于 `studio_id + user_id` 向 City 申请 token。
+`user_token` 需要由可信环境签发。开发者后端使用 `Admin Gate`，基于 `bay_id + user_id` 向 City 申请 token。
 
 ```ts
 import { Gate } from "@downcity/city";
@@ -14,12 +14,12 @@ const client = new Gate({
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const studio = await client.studios.create({
+const bay = await client.bays.create({
   name: "Web App",
 });
 
-const user = await client.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const user = await client.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -28,7 +28,7 @@ const user = await client.studios.tokens.apply({
 });
 ```
 
-把 `user.user_token` 和 `studio.studio_id` 返回给产品 client。
+把 `user.user_token` 和 `bay.bay_id` 返回给产品 client。
 
 ## metadata 的作用
 
@@ -41,7 +41,7 @@ const action = service.action("generate", async (ctx) => {
 
 action.before(async (ctx) => {
   await quotaService.check({
-    studio_id: ctx.studio?.studio_id,
+    bay_id: ctx.bay?.bay_id,
     user_id: ctx.user?.user_id,
     plan: ctx.user?.metadata?.plan,
   });

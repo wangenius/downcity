@@ -2,8 +2,8 @@
   "title": "场景指南",
   "pages": [
     "index",
-    "pure-client-studios",
-    "multi-studio-city",
+    "pure-client-bays",
+    "multi-bay-city",
     "cloudflare-workers",
     "services",
     "accounts-service",

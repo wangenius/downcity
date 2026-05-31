@@ -11,10 +11,10 @@ description: 用默认数据库、Admin Gate 和 User Gate 跑通一条完整调
 跑通后，你会得到这个调用链：
 
 ```plaintext
-Studio Client
-    ↓ Admin Gate 创建 studio / 签发 user_token
+Bay Client
+    ↓ Admin Gate 创建 bay / 签发 user_token
 Downcity City
-    ↓ User Gate 携带 user_token + studio_id 调用 service
+    ↓ User Gate 携带 user_token + bay_id 调用 service
 Provider → AIService → handler
 ```
 
@@ -61,7 +61,7 @@ await base.health();
 serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ```
 
-## 2. 创建 studio 并签发 token
+## 2. 创建 bay 并签发 token
 
 ```ts
 import { Gate } from "@downcity/city";
@@ -72,9 +72,9 @@ const admin = new Gate({
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const studio = await admin.studios.create({ name: "Demo Studio" });
-const token = await admin.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const bay = await admin.bays.create({ name: "Demo Bay" });
+const token = await admin.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   metadata: { plan: "pro" },
   ttl: "7d",
@@ -89,7 +89,7 @@ import { Gate } from "@downcity/city";
 const client = new Gate({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  studio_id: studio.studio_id,
+  bay_id: bay.bay_id,
   user_token: token.user_token,
 });
 

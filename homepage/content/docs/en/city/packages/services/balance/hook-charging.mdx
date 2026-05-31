@@ -18,7 +18,7 @@ Pricing usually belongs to business logic:
 
 - which actions should charge
 - whether one model costs more
-- whether one studio should be free
+- whether one bay should be free
 - whether one user segment gets discounts
 
 That logic fits your own hooks better than service config.
@@ -52,7 +52,7 @@ ai.hook.after(async (ctx) => {
   await balance.sub(ctx.user!.user_id, amount, {
     note: "agent chat",
     meta: {
-      studio_id: ctx.studio?.studio_id,
+      bay_id: ctx.bay?.bay_id,
       model_id: ctx.variant?.id,
     },
   });

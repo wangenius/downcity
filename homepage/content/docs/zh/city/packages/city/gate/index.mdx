@@ -8,7 +8,7 @@ Gate 是 `@downcity/city` 导出的访问层。产品侧通过它接入一座 Ci
 它不只是“调一下 AI”的小工具，而是把这几类调用统一收口到一个产品侧入口里：
 
 - `User Gate`：终端产品调用 AI service、custom service 和公开 service
-- `Admin Gate`：可信环境管理 studio、签发 `user_token`、维护 runtime env
+- `Admin Gate`：可信环境管理 bay、签发 `user_token`、维护 runtime env
 - `service(name)`：统一调用你自己注册的 service，或官方服务暴露出来的接口
 
 如果你要做的是“前端产品如何接 City”，这页应该是 package 层的第一入口。
@@ -17,12 +17,12 @@ Gate 是 `@downcity/city` 导出的访问层。产品侧通过它接入一座 Ci
 
 | 客户端 | 给谁用 | 负责什么 |
 | --- | --- | --- |
-| `User Gate` | 前端、App、扩展、桌面端 | 拿 `studio_id + user_token` 调 AI service、custom service、公开 service |
-| `Admin Gate` | 产品后端、管理脚本、内部工具 | 管 studio、签 token、写 runtime env、调管理侧 service |
+| `User Gate` | 前端、App、扩展、桌面端 | 拿 `bay_id + user_token` 调 AI service、custom service、公开 service |
+| `Admin Gate` | 产品后端、管理脚本、内部工具 | 管 bay、签 token、写 runtime env、调管理侧 service |
 
 ## 什么时候该用它
 
-- 你的产品已经拿到了 `studio_id + user_token`
+- 你的产品已经拿到了 `bay_id + user_token`
 - 你要让产品前端去调用 `text()`、`stream()`、`image()`、custom service 或 service
 - 你要在可信后端里签发 token 或写 City 的管理数据
 - 你想把注册、登录、OAuth、usage、payment 这些能力也放到同一套调用模型里
@@ -49,7 +49,7 @@ pnpm add @downcity/city
 - AI 调用
 - 你自己写的业务 service 调用
 - 官方服务 service 调用
-- studio / token / env 管理调用
+- bay / token / env 管理调用
 
 ## 四种最常见调用
 
@@ -83,7 +83,7 @@ const rewritten = await client
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 
 const usage = await user.service("usage").get("me");
@@ -94,14 +94,14 @@ const usage = await user.service("usage").get("me");
 ### 4. Trusted-side management
 
 ```ts
-const issued = await admin.studios.tokens.apply({
-  studio_id: "studio_demo",
+const issued = await admin.bays.tokens.apply({
+  bay_id: "bay_demo",
   user_id: "user_123",
   ttl: "7d",
 });
 ```
 
-适合 studio、token、runtime env 这些必须在可信环境完成的动作。
+适合 bay、token、runtime env 这些必须在可信环境完成的动作。
 
 ## 什么是 service
 
@@ -127,7 +127,7 @@ import { Gate } from "@downcity/city";
 const client = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: "ub_xxx",
 });
 
@@ -142,7 +142,7 @@ const result = await client.ai.text({
 这个阶段假设你已经有：
 
 - `city_url`
-- `studio_id`
+- `bay_id`
 - `user_token`
 
 如果你还没有 `user_token`，通常要先走下面的登录链路。
@@ -158,12 +158,12 @@ const admin = new Gate({
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const studio = await admin.studios.create({
-  name: "Demo Studio",
+const bay = await admin.bays.create({
+  name: "Demo Bay",
 });
 
-const token = await admin.studios.tokens.apply({
-  studio_id: studio.studio_id,
+const token = await admin.bays.tokens.apply({
+  bay_id: bay.bay_id,
   user_id: "user_123",
   ttl: "30m",
 });
@@ -179,7 +179,7 @@ const token = await admin.studios.tokens.apply({
 前端提交登录信息
   -> 你的业务后端完成账号校验
   -> 业务后端用 Admin Gate 向 City 申请 user_token
-  -> 后端返回 studio_id + user_token
+  -> 后端返回 bay_id + user_token
   -> 前端创建 User Gate
   -> 前端开始调用 client.ai.* 或 client.service(...)
 ```
@@ -192,7 +192,7 @@ const token = await admin.studios.tokens.apply({
 前端先创建 guest User Gate（只有 city_url）
   -> 调 guest.service("accounts").action("register" / "login")
   -> accounts service 返回 user_token
-  -> 前端再创建正常 User Gate（city_url + studio_id + user_token）
+  -> 前端再创建正常 User Gate（city_url + bay_id + user_token）
   -> 前端继续调用 AI service 或其他 service
 ```
 
@@ -213,13 +213,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 
 const user = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
   user_token: session.user_token,
 });
 
@@ -232,7 +232,7 @@ const reply = await user.ai.text({
 
 - `register`、`login`、`oauth/start`、`oauth/result` 这类入口通常是免登录 Action
 - 它们仍然通过 `User Gate` 调，但这时只需要 `city_url`
-- 真正进入用户态调用后，才需要 `studio_id + user_token`
+- 真正进入用户态调用后，才需要 `bay_id + user_token`
 
 ## 自定义 service 与服务路由
 
@@ -242,7 +242,7 @@ const reply = await user.ai.text({
 const session = await client.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  studio_id: "studio_demo",
+  bay_id: "bay_demo",
 });
 ```
 

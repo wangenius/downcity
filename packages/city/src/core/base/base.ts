@@ -14,7 +14,7 @@ import type { Hono } from "hono";
 import { Service } from "../../service/service.js";
 import { asInstallableService, type ServiceDefinition } from "../../service/installable-service.js";
 import { EnvService } from "../../service/env/env-service.js";
-import { StudiosService } from "../../service/studios/studios-service.js";
+import { BaysService } from "../../service/bays/bays-service.js";
 import { build_city_instruction } from "./base-instruction.js";
 import { initialize_city } from "./base-init.js";
 import { build_city_router } from "./base-router.js";
@@ -23,7 +23,7 @@ import type { CityOptions, CityHealthStatus } from "../types.js";
 import type { Authenticator } from "../auth/authenticator.js";
 import type { Runtime } from "../runtime.js";
 import type { CityTableApi } from "../../store/table-api.js";
-import type { StudioStore } from "../../service/studios/studio-store.js";
+import type { BayStore } from "../../service/bays/bay-store.js";
 import type { Database, DbClient } from "../../store/db.js";
 
 export class City {
@@ -36,12 +36,12 @@ export class City {
   private init_promise?: Promise<void>;
   private hono?: Hono;
   private authenticator?: Authenticator;
-  private studio_store?: StudioStore;
+  private bay_store?: BayStore;
 
   constructor(options: CityOptions) {
     this.runtime = options.runtime ?? create_runtime_from_db(options);
     this.use(new EnvService());
-    this.use(new StudiosService());
+    this.use(new BaysService());
   }
 
   /**
@@ -141,7 +141,7 @@ export class City {
     this.database = state.database;
     this.client = state.client;
     this.table_map = state.table_map;
-    this.studio_store = state.studio_store;
+    this.bay_store = state.bay_store;
     this.authenticator = state.authenticator;
     this.hono = build_city_router({
       runtime: this.runtime,
@@ -171,14 +171,14 @@ export class City {
   }
 
   /**
-   * 给 Authenticator 延迟访问 studio store。
+   * 给 Authenticator 延迟访问 bay store。
    */
   private async require_ready(): Promise<{
-    studio: { get(id: string): Promise<{ studio_id: string; status: string } | undefined> };
+    bay: { get(id: string): Promise<{ bay_id: string; status: string } | undefined> };
   }> {
     await this.ensure_ready();
     return {
-      studio: this.studio_store ?? { get: () => Promise.resolve(undefined) },
+      bay: this.bay_store ?? { get: () => Promise.resolve(undefined) },
     };
   }
 }

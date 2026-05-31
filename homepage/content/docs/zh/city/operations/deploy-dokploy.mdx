@@ -33,7 +33,7 @@ PORT=43127
 DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
 ```
 
-`/data` 必须是持久化 volume。studio、model、用户、session、usage、payment 和 City env 都会保存在这个 SQLite 数据库里。
+`/data` 必须是持久化 volume。bay、model、用户、session、usage、payment 和 City env 都会保存在这个 SQLite 数据库里。
 
 ## 域名路径
 
@@ -98,7 +98,7 @@ curl http://1.2.3.4:43127/health
 ```json
 {
   "ok": true,
-  "services": ["env", "studios", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+  "services": ["env", "bays", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
 }
 ```
 
@@ -114,7 +114,7 @@ import { Gate } from "@downcity/city";
 const client = new Gate({
   role: "user",
   city_url: "https://base.example.com",
-  studio_id: "my-studio",
+  bay_id: "my-bay",
   user_token: "user_token",
 });
 ```

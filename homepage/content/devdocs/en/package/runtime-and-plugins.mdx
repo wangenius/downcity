@@ -88,10 +88,10 @@ AgentCore then coordinates session execution and plugin runtime
 
 ```mermaid
 flowchart TD
-  A["studio console start"] --> B["start console control plane"]
+  A["bay console start"] --> B["start console control plane"]
   B --> C["maintain registry / model store / gateway"]
 
-  D["studio agent start"] --> E["validate console and project state"]
+  D["bay agent start"] --> E["validate console and project state"]
   E --> F["initialize AgentCore"]
   F --> G["read downcity.json / .env / shared env"]
   G --> H["prepare model binding"]
@@ -103,9 +103,9 @@ flowchart TD
   M --> N["start managed plugin runtimes if needed"]
 ```
 
-`studio console start` brings up the global control plane. It handles registry, shared configuration, model pool coordination, and UI-facing gateway behavior.
+`bay console start` brings up the global control plane. It handles registry, shared configuration, model pool coordination, and UI-facing gateway behavior.
 
-`studio agent start` then assembles one project into a running agent host. That process reads project config, prepares model binding, creates the session layer, registers plugins, and starts managed runtimes when needed.
+`bay agent start` then assembles one project into a running agent host. That process reads project config, prepares model binding, creates the session layer, registers plugins, and starts managed runtimes when needed.
 
 ## What owns what
 

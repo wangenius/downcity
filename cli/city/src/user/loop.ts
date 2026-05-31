@@ -6,7 +6,7 @@
  * - me / services / service 保持内联（逻辑简单）。
  */
 
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 import { type UserContext } from "../auth/user.js";
 import { clearUserSession } from "../core/session.js";
 import { askUserCommand, askText, show, showError, showSuccess } from "../core/ui.js";
@@ -16,10 +16,10 @@ import { doModels } from "./models.js";
 type Result = "logout" | "quit" | "switch_identity";
 
 export async function userLoop(ctx: UserContext): Promise<Result> {
-  const client = new Visa({
+  const client = new City({
     role: "user",
     city_url: ctx.session.base_url,
-    bay_id: ctx.session.bay_id,
+    town_id: ctx.session.town_id,
     user_token: ctx.session.user_token,
   });
 
@@ -39,7 +39,7 @@ export async function userLoop(ctx: UserContext): Promise<Result> {
 }
 
 async function execute(
-  c: Visa,
+  c: City,
   ctx: UserContext,
   cmd: string,
 ): Promise<"continue" | "logout" | "quit"> {

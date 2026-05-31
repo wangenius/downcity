@@ -1,6 +1,6 @@
 ---
 title: Logging and Usage
-description: How to record AI calls by user, bay, and model.
+description: How to record AI calls by user, town, and model.
 ---
 
 Downcity does not decide where your logs live, but hooks give you one consistent integration point.
@@ -8,7 +8,7 @@ Downcity does not decide where your logs live, but hooks give you one consistent
 ## Recommended fields
 
 - user_id
-- bay_id
+- town_id
 - model
 - started_at
 - ended_at
@@ -21,7 +21,7 @@ Downcity does not decide where your logs live, but hooks give you one consistent
 ai.hook.after(async (ctx) => {
   await logService.write({
     user_id: ctx.user?.user_id,
-    bay_id: ctx.bay?.bay_id,
+    town_id: ctx.town?.town_id,
     model: ctx.variant?.id,
     model_meta: ctx.variant?.meta,
     started_at: ctx.started_at,
@@ -30,4 +30,4 @@ ai.hook.after(async (ctx) => {
 });
 ```
 
-Once many bays share one City, usage data becomes centralized by default, which makes cost analysis and business decisions much easier later.
+Once many towns share one City, usage data becomes centralized by default, which makes cost analysis and business decisions much easier later.

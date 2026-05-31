@@ -1,6 +1,6 @@
 ---
 title: 现在怎么用
-description: 用默认数据库、Admin Visa 和 User Visa 跑通一条完整调用链。
+description: 用默认数据库、Admin City 和 User City 跑通一条完整调用链。
 ---
 
 如果你想先按仓库里的现成产品体验，入口是：
@@ -11,17 +11,17 @@ description: 用默认数据库、Admin Visa 和 User Visa 跑通一条完整调
 跑通后，你会得到这个调用链：
 
 ```plaintext
-Bay Client
-    ↓ Admin Visa 创建 bay / 签发 user_token
+Town Client
+    ↓ Admin City 创建 town / 签发 user_token
 Downcity City
-    ↓ User Visa 携带 user_token + bay_id 调用 service
+    ↓ User City 携带 user_token + town_id 调用 service
 Provider → AIService → handler
 ```
 
 ## 1. 启动 City
 
 ```ts
-import { City, AIService, Provider } from "@downcity/city";
+import { CityBase, AIService, Provider } from "@downcity/city";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -32,7 +32,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new City({ db, dialect: "sqlite", raw: sqlite });
+const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
 
 // 注册一个 echo 模型
 const echo = new Provider("echo", {
@@ -61,20 +61,20 @@ await base.health();
 serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ```
 
-## 2. 创建 bay 并签发 token
+## 2. 创建 town 并签发 token
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const admin = new Visa({
+const admin = new City({
   role: "admin",
   city_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const bay = await admin.bays.create({ name: "Demo Bay" });
-const token = await admin.bays.tokens.apply({
-  bay_id: bay.bay_id,
+const town = await admin.towns.create({ name: "Demo Town" });
+const token = await admin.towns.tokens.apply({
+  town_id: town.town_id,
   user_id: "user_123",
   metadata: { plan: "pro" },
   ttl: "7d",
@@ -84,12 +84,12 @@ const token = await admin.bays.tokens.apply({
 ## 3. 产品侧调用
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new Visa({
+const client = new City({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  bay_id: bay.bay_id,
+  town_id: town.town_id,
   user_token: token.user_token,
 });
 

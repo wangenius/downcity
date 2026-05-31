@@ -1,0 +1,130 @@
+---
+title: Many Towns, One City
+description: How one City can serve multiple towns without mixing town differences with shared infrastructure.
+---
+
+When many towns share one City, the goal is not “save one server.” The goal is to separate **shared infrastructure** from **town-specific differences**.
+
+What should be shared:
+
+- provider env
+- model directory
+- service routing
+- hooks, usage, and logs
+- `user_token` verification
+
+What should stay in each town:
+
+- pages and interaction
+- the user system
+- plan, order, and balance rules
+- town-specific brand, positioning, and pricing
+
+## One diagram for the reuse boundary
+
+<div className="dc-doc-flow" aria-label="Many towns share one City">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Town A</strong>
+      <span>For example, a web tool.</span>
+      <code>town_id = town_web</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Town B</strong>
+      <span>For example, a Chrome extension.</span>
+      <code>town_id = town_extension</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Town C</strong>
+      <span>For example, a client demo or internal tool.</span>
+      <code>town_id = town_demo</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>One Downcity</strong>
+      <span>Reuses the model directory, provider env, service logic, usage records, and hooks.</span>
+    </div>
+  </div>
+</div>
+
+## How to think about `town_id`
+
+`town_id` is a town boundary, not a model boundary.
+
+It is useful for:
+
+- identifying which town sent the call
+- deciding whether a town is still `active`
+- telling hooks where usage should be recorded
+- separating one user’s activity across different towns
+
+A common pattern is one stable `town_id` per town:
+
+```ts
+const town = await admin.towns.create({
+  name: "Chrome Extension",
+});
+
+const issued = await admin.towns.tokens.apply({
+  town_id: town.town_id,
+  user_id: "user_123",
+  metadata: {
+    plan: "starter",
+    channel: "extension",
+  },
+});
+```
+
+## What belongs in token metadata
+
+`town_id` says *which town this is*. Token metadata is better for *the user’s business state inside that town*.
+
+Common fields:
+
+- `plan`
+- `organization_id`
+- `channel`
+- `feature_flag`
+- `team_id`
+
+That lets hooks differentiate behavior with `ctx.town` and `ctx.user.metadata` instead of cloning City for each town.
+
+## Recommended layering
+
+### Town side
+
+- keeps routes, UI, and business experience
+- uses `User City`
+- only holds `town_id + user_token`
+
+### Business backend
+
+- owns login, orders, balance, subscriptions, and business data
+- uses `Admin City` in a trusted environment
+- issues `user_token` after a successful login
+
+### City
+
+- owns the model directory
+- owns provider calls
+- owns usage and hooks
+- owns the reusable AI service layer
+
+## When to create a new town
+
+Usually worth creating a new town when:
+
+- it is a separate town or market
+- it needs to be paused or activated independently
+- it needs independent usage reporting or business strategy
+- you need to separate web app, extension, client demo, and other town surfaces
+
+Usually not worth creating a new town when:
+
+- it is only another page in the same town
+- it is only a feature flag inside the same town
+- it is just another conversation/session for one user
+
+Those are better kept inside your own business system or token metadata.

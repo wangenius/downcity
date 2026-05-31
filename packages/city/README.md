@@ -5,7 +5,7 @@
 它负责这些共用能力：
 
 - 挂载 `Service` / `AIService`
-- 初始化内置 `bays` / `env` 表
+- 初始化内置 `towns` / `env` 表
 - 校验 `user_token` 和 `admin_secret_key`
 - 暴露统一的 `/v1/*` HTTP 路由
 - 提供 env、数据库、hook 和鉴权上下文
@@ -19,7 +19,7 @@ pnpm add @downcity/city
 ## 最小示例
 
 ```ts
-import { City, AIService } from "@downcity/city";
+import { CityBase, AIService } from "@downcity/city";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -30,7 +30,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const city = new City({ db, dialect: "sqlite", raw: sqlite });
+const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
 
 const ai = new AIService();
 ai.use({
@@ -52,7 +52,7 @@ ai.use({
   },
 });
 
-city.use(ai);
+base.use(ai);
 ```
 
 启动 HTTP 服务：
@@ -60,21 +60,21 @@ city.use(ai);
 ```ts
 import { serve } from "@hono/node-server";
 
-await city.health();
-serve({ fetch: city.router().fetch, port: 43127, hostname: "127.0.0.1" });
+await base.health();
+serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ```
 
 ## City 说明文档
 
-`city.instruction()` 会返回当前 City 实例的聚合说明文档字符串，内容包含：
+`base.instruction()` 会返回当前 CityBase 实例的聚合说明文档字符串，内容包含：
 
-- City 的基本使用方式
+- CityBase 的基本使用方式
 - 当前已挂载的 service
 - 每个模块需要的 env 配置
 - 每个模块补充的使用说明
 
 ```ts
-const text = await city.instruction();
+const text = await base.instruction();
 console.log(text);
 ```
 
@@ -106,7 +106,7 @@ notes.action("list", async () => {
   return { items: [] };
 }, { method: "GET", auth: ["admin"] });
 
-city.use(notes);
+base.use(notes);
 ```
 
 City 会自动映射为：
@@ -137,19 +137,19 @@ ai.use(
   }),
 );
 
-city.use(ai);
+base.use(ai);
 ```
 
 ## 官方服务
 
-官方服务用于封装多 bay 复用能力：
+官方服务用于封装多 town 复用能力：
 
 ```ts
 import { accountsService } from "@downcity/services";
 import { usageService } from "@downcity/services";
 
-city.use(accountsService());
-city.use(usageService());
+base.use(accountsService());
+base.use(usageService());
 ```
 
 服务路由当前只支持：
@@ -163,11 +163,12 @@ city.use(usageService());
 - `auth: ["admin"]` 只允许 `admin_secret_key`
 - `auth: []` 表示免登录
 
-对于用户侧请求，`user_token` 绑定 bay 身份。如果请求体或 query 中传了 `bay_id`，它必须与 token 里的 bay 一致。
+对于用户侧请求，`user_token` 绑定 town 身份。如果请求体或 query 中传了 `town_id`，它必须与 token 里的 town 一致。
 
 ## 主要导出
 
 - `City`
+- `CityBase`
 - `Service`
 - `ServiceDefinition`
 - `AIService`
@@ -176,11 +177,11 @@ city.use(usageService());
 - `CityModelDescriptor`
 - `TokenSigner`
 - `EnvService`
-- `BaysService`
+- `TownsService`
 
-## Visa 模型目录
+## City 模型目录
 
-`User Visa` 的 `client.ai.listModels()` 返回 `ModelCatalog`。目录中的模型是 `CityModel`，可以直接用于 Visa 的 AI 调用，也可以传给支持 CityModel 的 Agent SDK：
+`User City` 的 `client.ai.listModels()` 返回 `ModelCatalog`。目录中的模型是 `CityModel`，可以直接用于 City 的 AI 调用，也可以传给支持 CityModel 的 Agent SDK：
 
 ```ts
 const catalog = await client.ai.listModels();

@@ -1,20 +1,20 @@
 ---
-title: bay plugin schedule
+title: town plugin schedule
 description: Inspect and cancel one-shot scheduled plugin jobs
 ---
 
-# `bay plugin schedule`
+# `town plugin schedule`
 
-`bay plugin schedule` manages the local one-shot plugin schedule store.
+`town plugin schedule` manages the local one-shot plugin schedule store.
 
 Use it when a plugin action was accepted with `--delay` or `--time` and you want to inspect or cancel the resulting scheduled job.
 
 ## Usage
 
 ```bash
-bay plugin schedule list [options]
-bay plugin schedule info <jobId> [options]
-bay plugin schedule cancel <jobId> [options]
+town plugin schedule list [options]
+town plugin schedule info <jobId> [options]
+town plugin schedule cancel <jobId> [options]
 ```
 
 ## Supported subcommands
@@ -25,11 +25,11 @@ bay plugin schedule cancel <jobId> [options]
 
 ## What it applies to
 
-- `bay chat send --delay/--time`
-- `bay memory flush --delay/--time`
-- `bay plugin command <plugin> <command> --delay/--time`
+- `town chat send --delay/--time`
+- `town memory flush --delay/--time`
+- `town plugin command <plugin> <command> --delay/--time`
 
-This is one-shot scheduling only. For reusable workflows or cron-style automation, use `bay task`.
+This is one-shot scheduling only. For reusable workflows or cron-style automation, use `town task`.
 
 ## Storage
 
@@ -42,12 +42,12 @@ Scheduled jobs are stored in the current agent project's:
 ## Examples
 
 ```bash
-bay plugin schedule list --path /abs/path/to/agent
-bay plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
-bay plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+town plugin schedule list --path /abs/path/to/agent
+town plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+town plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
 ```
 
 ## Related
 
-- [`bay plugin`](/en/docs/commands/plugin/plugin)
-- [`bay task`](/en/docs/commands/plugin/task)
+- [`town plugin`](/en/docs/commands/plugin/plugin)
+- [`town task`](/en/docs/commands/plugin/task)

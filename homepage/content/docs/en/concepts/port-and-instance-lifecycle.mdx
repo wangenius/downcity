@@ -8,7 +8,7 @@ description: How console, agent, and plugin endpoints coordinate on port allocat
 ## Unified Rule
 
 - Agent ports are allocated by `console`.
-- `bay agent start/restart` does not require users to manage ports manually.
+- `town agent start/restart` does not require users to manage ports manually.
 - plugin commands resolve the target agent first, then the endpoint.
 
 ## Runtime Roles
@@ -27,7 +27,7 @@ description: How console, agent, and plugin endpoints coordinate on port allocat
 
 ### plugin endpoints
 
-- `bay plugin ...` calls plugin routes
+- `town plugin ...` calls plugin routes
 - both are dispatched in the target runtime
 
 ## Agent Port Allocation
@@ -50,6 +50,6 @@ For plugin API calls:
 
 ## Recommendations
 
-- In multi-agent scenarios, prefer `bay plugin ... --agent <id>`. Plugin actions run locally against the selected project path.
+- In multi-agent scenarios, prefer `town plugin ... --agent <id>`. Plugin actions run locally against the selected project path.
 - Do not keep stale `DC_CITY_PORT` in your shell profile.
-- If runtime status is abnormal, run `bay agent doctor --fix` and inspect daemon logs.
+- If runtime status is abnormal, run `town agent doctor --fix` and inspect daemon logs.

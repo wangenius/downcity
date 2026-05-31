@@ -5,7 +5,7 @@
  * 通过 model() 方法生成模型配置，可直接传给 AIService.use() 完成注册。
  *
  * 两条独立通路：
- * - SDK 通路：text / stream — 给 User Visa 用
+ * - SDK 通路：text / stream — 给 User City 用
  * - OpenAI 兼容通路：openai — 给 /chat/completions 端点用
  *   - 未提供 openai action → AIService 自动透传（需 baseURL + envKey）
  *   - 提供了 openai action → 按自定义逻辑处理

@@ -33,7 +33,7 @@ PORT=43127
 DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
 ```
 
-`/data` 必须是持久化 volume。bay、model、用户、session、usage、payment 和 City env 都会保存在这个 SQLite 数据库里。
+`/data` 必须是持久化 volume。town、model、用户、session、usage、payment 和 City env 都会保存在这个 SQLite 数据库里。
 
 ## 域名路径
 
@@ -98,7 +98,7 @@ curl http://1.2.3.4:43127/health
 ```json
 {
   "ok": true,
-  "services": ["env", "bays", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
 }
 ```
 
@@ -109,26 +109,26 @@ curl http://1.2.3.4:43127/health
 产品前端和应用应该通过 `@downcity/city` 调用 Node 街区：
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new Visa({
+const client = new City({
   role: "user",
   city_url: "https://base.example.com",
-  bay_id: "my-bay",
+  town_id: "my-town",
   user_token: "user_token",
 });
 ```
 
-可信后端应该用 `Admin Visa` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
+可信后端应该用 `Admin City` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const admin = new Visa({
+const admin = new City({
   role: "admin",
   city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
 
-完整 SDK 能力继续看 [User Visa](/docs/city/reference/visa-user) 和 [Admin Visa](/docs/city/reference/visa-admin)。
+完整 SDK 能力继续看 [User City](/docs/city/reference/city-user) 和 [Admin City](/docs/city/reference/city-admin)。

@@ -244,7 +244,7 @@ export abstract class BaseChatChannel {
       lines.push(
         "",
         "请把下面命令发给管理员：",
-        `bay chat auth set ${this.channel}:${userId}`,
+        `town chat auth set ${this.channel}:${userId}`,
       );
     }
 

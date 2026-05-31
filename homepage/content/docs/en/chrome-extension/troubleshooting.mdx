@@ -37,14 +37,14 @@ Fix it by:
 
 1. opening the extension settings page
 2. selecting the matching connection
-3. running `bay token create my-token` in the local terminal
+3. running `town token create my-token` in the local terminal
 4. pasting the token into settings and saving
 
 ## 3. The Remote Service Is Not Exposed Publicly
 
 If you are targeting a remote machine, also confirm that the Console is not only bound to loopback.
 
-From the `bay` CLI code:
+From the `town` CLI code:
 
 - without `--host` or `--public`, Console stays in local mode on `127.0.0.1`
 - with `--public`, it binds to `0.0.0.0`
@@ -52,26 +52,26 @@ From the `bay` CLI code:
 Typical commands:
 
 ```bash
-bay start --public
+town start --public
 ```
 
 or:
 
 ```bash
-bay console start --public
+town console start --public
 ```
 
 If you want that public binding to persist across later restarts, use:
 
 ```bash
-bay public on
+town public on
 ```
 
 ## 4. No Available Agent
 
 This usually means:
 
-- `bay agent start` is not running
+- `town agent start` is not running
 - the connection address is wrong
 - the Agent is offline
 

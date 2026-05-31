@@ -10,8 +10,8 @@ description: How to build, load, and connect the Chrome extension to one or more
 Before using the extension, you will usually want these running:
 
 ```bash
-bay start
-bay agent start
+town start
+town agent start
 ```
 
 If you load the extension from this repo, build it first:
@@ -60,13 +60,13 @@ After that, the popup can switch between those connections directly.
 If the target Server requires unified auth, create a token in the local terminal:
 
 ```bash
-bay token create my-token
+town token create my-token
 ```
 
 If you prefer the interactive flow, run:
 
 ```bash
-bay token
+town token
 ```
 
 Then paste the returned token into `Bearer Token`.
@@ -82,7 +82,7 @@ If no Session is available, it usually means:
 - the connection address is wrong
 - the remote Console is not listening publicly, or the server firewall blocks the port
 
-For a server deployment, you can either start Console once with `bay start --public`, or persist public mode with `bay public on`.
+For a server deployment, you can either start Console once with `town start --public`, or persist public mode with `town public on`.
 
 ## After Updating the Extension
 

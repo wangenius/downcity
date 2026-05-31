@@ -38,7 +38,7 @@ export async function build_city_instruction(services: Service[]): Promise<strin
 
   return formatInstructionDocument({
     base: {
-      builtin_services: ["env", "bays"],
+      builtin_services: ["env", "towns"],
       loaded_modules: sections.map((item) => item.id),
     },
     sections,

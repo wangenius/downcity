@@ -2,13 +2,13 @@
  * Admin 命令循环。返回 "logout" | "quit" | "switch_identity"。
  */
 
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { type AdminSession } from "../core/session.js";
 import { showError, showSuccess } from "../core/ui.js";
 import { adminErrorMessage, isAdminAuthError } from "./auth-error.js";
 import { manageEnv } from "./commands/service-env.js";
-import { manageBays } from "./commands/bays.js";
+import { manageTowns } from "./commands/towns.js";
 import { manageAccounts } from "./commands/accounts.js";
 import { manageBalance } from "./commands/balance.js";
 import { manageUsage } from "./commands/usage.js";
@@ -17,11 +17,11 @@ import { manageCustom } from "./commands/custom.js";
 import { manageModels } from "./commands/models.js";
 import { manageInstruction } from "./commands/instruction.js";
 
-const commands: Record<string, (a: Visa, baseUrl: string) => Promise<void>> = {
+const commands: Record<string, (a: City, baseUrl: string) => Promise<void>> = {
   env: manageEnv,
   instruction: manageInstruction,
   models: manageModels,
-  bays: manageBays,
+  towns: manageTowns,
   accounts: manageAccounts,
   balance: manageBalance,
   usage: manageUsage,
@@ -30,7 +30,7 @@ const commands: Record<string, (a: Visa, baseUrl: string) => Promise<void>> = {
 };
 
 export async function adminLoop(session: AdminSession): Promise<"logout" | "quit" | "switch_identity"> {
-  const admin = new Visa({
+  const admin = new City({
     role: "admin",
     city_url: session.base_url,
     admin_secret_key: session.admin_secret_key,
@@ -43,7 +43,7 @@ export async function adminLoop(session: AdminSession): Promise<"logout" | "quit
         { label: "Env", value: "env", hint: "View & configure environment variables" },
         { label: "City Instruction", value: "instruction", hint: "Read aggregated city/service guidance" },
         { label: "Models", value: "models", hint: "Read model readiness and missing env" },
-        { label: "Bays", value: "bays" },
+        { label: "Towns", value: "towns" },
         { label: "Accounts", value: "accounts" },
         { label: "Balance", value: "balance" },
         { label: "Usage", value: "usage" },

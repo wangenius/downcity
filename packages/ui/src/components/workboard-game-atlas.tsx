@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只负责全局 world atlas 的地图渲染与热点交互。
- * - 角色、gate、corridor 都从 gameMapConfig 读取，不再在主组件里散落计算。
+ * - 角色、city、corridor 都从 gameMapConfig 读取，不再在主组件里散落计算。
  * - 该组件对应 teamprofile 的全局地图层，点击 zone 后进入局部房间。
  */
 
@@ -47,7 +47,7 @@ function WorkboardAtlasPortalSign(props: {
     >
       <span className="absolute left-3 top-full h-5 w-2 bg-[#6e4d2f]" />
       <span className="absolute right-3 top-full h-5 w-2 bg-[#6e4d2f]" />
-      <span className="block text-[9px] uppercase tracking-[0.18em] text-[#6e4d2f]/70">zone gate</span>
+      <span className="block text-[9px] uppercase tracking-[0.18em] text-[#6e4d2f]/70">zone city</span>
       <span className="mt-1 block truncate text-sm font-semibold leading-5 tracking-[-0.04em] text-[#352516]">
         {zone.title}
       </span>
@@ -124,7 +124,7 @@ export function WorkboardGameAtlas(props: DowncityWorkboardGameAtlasProps) {
         {actors.map((actor) => {
           const faded = actor.zoneId !== props.activeZoneId;
           return (
-            <g key={`gate-${actor.id}`} opacity={faded ? 0.18 : 0.72}>
+            <g key={`city-${actor.id}`} opacity={faded ? 0.18 : 0.72}>
               <rect
                 x={actor.overviewGate.x - 5}
                 y={actor.overviewGate.y - 5}

@@ -1,15 +1,15 @@
 ---
-title: bay model
+title: town model
 description: Dedicated management for console-global language models (provider/model)
 ---
 
-# `bay model`
+# `town model`
 
 Dedicated model management command group for language models only.
 
 ## Design Rules
 
-- Bare `bay model` opens an interactive manager in a TTY.
+- Bare `town model` opens an interactive manager in a TTY.
 - `create` remains a direct shortcut into the create flow.
 - Script subcommands (`list/pause/update/test/...`) remain available for automation.
 - Provider `apiKey` is stored in `~/.downcity/downcity.db` and encrypted on write.
@@ -20,56 +20,56 @@ Dedicated model management command group for language models only.
 
 ```bash
 # Interactive manager
-bay model
+town model
 
 # Interactive create (choose provider or model)
-bay model create
+town model create
 
 # List
-bay model list
+town model list
 
 # Read details
-bay model get provider <providerId>
-bay model get model <modelId>
+town model get provider <providerId>
+town model get model <modelId>
 
 # Pause model (enabled defaults to true)
-bay model pause <modelId>
-bay model pause <modelId> --enabled false
+town model pause <modelId>
+town model pause <modelId> --enabled false
 
 # Discover provider models (optionally auto-add)
-bay model discover <providerId>
-bay model discover <providerId> --auto-add true --prefix openai_
+town model discover <providerId>
+town model discover <providerId> --auto-add true --prefix openai_
 
 # Update provider
-bay model update provider <providerId> --api-key "$OPENAI_API_KEY"
-bay model update provider kimi_cn --type moonshot-cn
-bay model update provider kimi_ai --type moonshot-ai
+town model update provider <providerId> --api-key "$OPENAI_API_KEY"
+town model update provider kimi_cn --type moonshot-cn
+town model update provider kimi_ai --type moonshot-ai
 
 # Update model
-bay model update model <modelId> --name gpt-4o-mini --provider openai_main
+town model update model <modelId> --name gpt-4o-mini --provider openai_main
 
 # Remove provider/model
-bay model remove provider <providerId>
-bay model remove model <modelId>
+town model remove provider <providerId>
+town model remove model <modelId>
 
 # Bind model to project (set downcity.json.execution.modelId)
-bay model use <modelId> --path /path/to/agent
+town model use <modelId> --path /path/to/agent
 
 # Test provider
-bay model test provider <providerId>
+town model test provider <providerId>
 
 # Test model (real call)
-bay model test model <modelId>
+town model test model <modelId>
 ```
 
 ## Interactive Manager
 
-- `bay model` is the human-first entrypoint for the global model pool.
+- `town model` is the human-first entrypoint for the global model pool.
 - It lets you browse providers and models, edit settings, remove entries, test connectivity, pause/resume models, bind a model to a project, and jump into the create flow.
 - Removal is guarded:
   - provider removal is blocked while any model still references it
   - model removal is blocked while any agent project still references it via `downcity.json.execution.modelId`
-- In non-interactive environments, `bay model` falls back to normal help output.
+- In non-interactive environments, `town model` falls back to normal help output.
 
 ## create Behavior
 
@@ -99,16 +99,16 @@ bay model test model <modelId>
 
 ## Related Commands
 
-- [`bay config`](/en/docs/commands/config)
-- [`bay agent create`](/en/docs/commands/agent/create)
-- [`bay agent start`](/en/docs/commands/agent/start)
+- [`town config`](/en/docs/commands/config)
+- [`town agent create`](/en/docs/commands/agent/create)
+- [`town agent start`](/en/docs/commands/agent/start)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ bay model list
+$ town model list
 {
   "success": true,
   "providers": [
@@ -133,7 +133,7 @@ $ bay model list
 ```
 
 ```text
-$ bay model pause <modelId>
+$ town model pause <modelId>
 {
   "success": true,
   "modelId": "<modelId>",

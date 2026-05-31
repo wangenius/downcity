@@ -1,9 +1,9 @@
 ---
-title: bay agent restart
+title: town agent restart
 description: 重启指定 agent 进程
 ---
 
-# `bay agent restart`
+# `town agent restart`
 
 重启指定 agent 的 runtime。
 
@@ -12,7 +12,7 @@ description: 重启指定 agent 进程
 ## 用法
 
 ```bash
-bay agent restart [path] [options]
+town agent restart [path] [options]
 ```
 
 ## 常用参数
@@ -27,24 +27,24 @@ bay agent restart [path] [options]
 
 ## 相关命令
 
-- [`bay agent start`](/zh/docs/commands/agent/start)
-- [`bay agent restart`](/zh/docs/commands/agent/restart)
-- [`bay agent status`](/zh/docs/commands/agent/status)
+- [`town agent start`](/zh/docs/commands/agent/start)
+- [`town agent restart`](/zh/docs/commands/agent/restart)
+- [`town agent status`](/zh/docs/commands/agent/status)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/town/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ bay agent restart .
-bay v1.0.0
+$ town agent restart .
+town v1.0.0
 ✅ Downcity daemon restarted
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ bay agent restart .
-bay v1.0.0
+$ town agent restart .
+town v1.0.0
 ❌ Failed to restart daemon: <error>
 ```

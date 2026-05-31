@@ -1,23 +1,23 @@
 ---
 title: CLI FAQ
-description: 关于 bay agent 命令的常见问题
+description: 关于 town agent 命令的常见问题
 ---
 
 # CLI FAQ
 
-## `bay agent start` 和 `bay agent start --foreground` 有什么区别？
+## `town agent start` 和 `town agent start --foreground` 有什么区别？
 
 - 默认是后台 daemon
 - `--foreground` 是当前终端前台运行
 
-## 为什么 `bay agent chat` 提示连不上？
+## 为什么 `town agent chat` 提示连不上？
 
 通常是因为目标 agent 没有在运行。
 
 先看：
 
 ```bash
-bay agent status
+town agent status
 ```
 
 如果状态不是 `running`，先恢复运行状态，再去排查聊天上下文和提示词。

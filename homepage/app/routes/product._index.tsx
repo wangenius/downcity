@@ -26,7 +26,7 @@ const PAGE = {
       {
         id: "sdk",
         title: "City SDK",
-        desc: "把 City runtime、Gate 与公共服务接入你自己的产品流程和业务系统。",
+        desc: "把 City runtime、City 与公共服务接入你自己的产品流程和业务系统。",
         source: "packages/city/",
       },
       {
@@ -40,7 +40,7 @@ const PAGE = {
     facts: [
       "Console UI 是独立前端包，目录为 products/console/。",
       "Chrome Extension 基于 Manifest V3，目录为 products/chrome-extension/。",
-      "City runtime 与 Gate 调用 SDK 都位于 packages/city/。",
+      "City runtime 与 City 调用 SDK 都位于 packages/city/。",
       "UI SDK 当前以 console-ui-kit 方向沉淀组件能力。",
     ],
   },
@@ -65,7 +65,7 @@ const PAGE = {
       {
         id: "sdk",
         title: "City SDK",
-        desc: "Embed City runtime, Gate access, and public services into your own product flow and business system.",
+        desc: "Embed City runtime, City access, and public services into your own product flow and business system.",
         source: "packages/city/",
       },
       {
@@ -79,7 +79,7 @@ const PAGE = {
     facts: [
       "Console UI is a dedicated frontend package in products/console/.",
       "Chrome Extension is a Manifest V3 extension in products/chrome-extension/.",
-      "City runtime and Gate access SDK both live in packages/city/.",
+      "City runtime and City access SDK both live in packages/city/.",
       "UI SDK direction is currently documented as console-ui-kit extraction.",
     ],
   },

@@ -1,12 +1,12 @@
 ---
 title: Try It Now
-description: Run a complete call chain with the default database, Admin Visa, and User Visa.
+description: Run a complete call chain with the default database, Admin City, and User City.
 ---
 
 ## 1. Start City
 
 ```ts
-import { City, AIService, Provider } from "@downcity/city";
+import { CityBase, AIService, Provider } from "@downcity/city";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -17,7 +17,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new City({ db, dialect: "sqlite", raw: sqlite });
+const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
 
 const echo = new Provider("echo", {
   text: async (ctx) => ({
@@ -36,17 +36,17 @@ await base.health();
 serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ```
 
-## 2. Create Bay & Token
+## 2. Create Town & Token
 
 ```ts
-const admin = new Visa({
+const admin = new City({
   role: "admin",
   city_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
-const bay = await admin.bays.create({ name: "Demo Bay" });
-const token = await admin.bays.tokens.apply({
-  bay_id: bay.bay_id,
+const town = await admin.towns.create({ name: "Demo Town" });
+const token = await admin.towns.tokens.apply({
+  town_id: town.town_id,
   user_id: "user_123",
   ttl: "7d",
 });
@@ -55,10 +55,10 @@ const token = await admin.bays.tokens.apply({
 ## 3. Client Call
 
 ```ts
-const client = new Visa({
+const client = new City({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  bay_id: bay.bay_id,
+  town_id: town.town_id,
   user_token: token.user_token,
 });
 

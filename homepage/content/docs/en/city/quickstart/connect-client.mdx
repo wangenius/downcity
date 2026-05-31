@@ -1,17 +1,17 @@
 ---
 title: Connect Client
-description: Call City from the bay with User Visa.
+description: Call City from the town with User City.
 ---
 
-Bay clients use `User Visa`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
+Town clients use `User City`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new Visa({
+const client = new City({
   role: "user",
   city_url: "https://base.example.com",
-  bay_id: "bay_xxx",
+  town_id: "town_xxx",
   user_token: "ub_xxx",
 });
 
@@ -19,7 +19,7 @@ const catalog = await client.ai.listModels();
 
 const result = await client.ai.text({
   model: catalog.default(),
-  prompt: "Write a welcome message for the bay",
+  prompt: "Write a welcome message for the town",
 });
 ```
 

@@ -18,10 +18,10 @@ Downcity is an agent platform for local projects and team workflows. It combines
 
 | Package | Purpose |
 | --- | --- |
-| `downcity` | Public CLI bundle that installs `bay` for local Agent hosting and `city` for deployed City administration. |
+| `downcity` | Public CLI bundle that installs `town` for local Agent hosting and `city` for deployed City administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
-| `@downcity/city` | City runtime plus Visa access SDK for service registration, actions, auth, env, bay-scoped access, and HTTP calling. |
-| `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by Visa. |
+| `@downcity/city` | City runtime plus City access SDK for service registration, actions, auth, env, town-scoped access, and HTTP calling. |
+| `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by City. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
 | `cities/*` | Deployable City compositions that assemble `@downcity/city` and services for Node or edge runtimes. |
@@ -31,10 +31,10 @@ Downcity is an agent platform for local projects and team workflows. It combines
 ## Core Capabilities
 
 - Repo is the Agent: initialize a project with `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/`.
-- Bay control plane: run `bay start` or `bay console` to host local agents and access the control surface.
+- Town control plane: run `town start` or `town console` to host local agents and access the control surface.
 - Agent daemon lifecycle: create, start, stop, restart, inspect, chat with, and diagnose project agents.
-- Global model pool: manage providers and models through `bay model`, then bind projects to model IDs.
-- City runtime: reuse one shared service city across bays with `@downcity/city`, `@downcity/services`, and deployable `cities/*`.
+- Global model pool: manage providers and models through `town model`, then bind projects to model IDs.
+- City runtime: reuse one shared service city across towns with `@downcity/city`, `@downcity/services`, and deployable `cities/*`.
 - Built-in services: `chat`, `task`, `memory`, `shell`, and `contact`.
 - Built-in plugins: `skill`, `auth`, `web`, `asr`, `tts`, and `workboard`.
 - SDK access: embed a local agent or call a remote agent over HTTP.
@@ -52,16 +52,16 @@ pnpm add -g downcity
 The package exposes both commands:
 
 ```bash
-bay --version
+town --version
 city --version
 ```
 
-`bay` is the local Agent host command. `city` is the deployed City administration command. Use `bay update` to upgrade the global CLI.
+`town` is the local Agent host command. `city` is the deployed City administration command. Use `town update` to upgrade the global CLI.
 
 ### 2. Initialize the platform
 
 ```bash
-bay init
+town init
 ```
 
 This sets up the global Downcity storage and configuration, by default under `~/.downcity/`.
@@ -69,20 +69,20 @@ This sets up the global Downcity storage and configuration, by default under `~/
 ### 3. Configure a model
 
 ```bash
-bay model create
-bay model list
-bay model use <modelId>
-bay model test model <modelId>
+town model create
+town model list
+town model use <modelId>
+town model test model <modelId>
 ```
 
-`bay` resolves `downcity.json.execution.modelId` into a runtime `LanguageModel` and injects it into agent sessions.
+`town` resolves `downcity.json.execution.modelId` into a runtime `LanguageModel` and injects it into agent sessions.
 
 ### 4. Create an agent project
 
 Run this inside the target repository:
 
 ```bash
-bay agent create .
+town agent create .
 ```
 
 This creates or updates:
@@ -110,31 +110,31 @@ your-project/
 ### 5. Start the agent and talk to it
 
 ```bash
-bay agent start .
-bay agent status .
-bay agent chat -m "Summarize this repository"
+town agent start .
+town agent status .
+town agent chat -m "Summarize this repository"
 ```
 
 To run in the foreground:
 
 ```bash
-bay agent start . --foreground
+town agent start . --foreground
 ```
 
 ### 6. Start Console
 
 ```bash
-bay start --console
+town start --console
 # or
-bay console
+town console
 ```
 
 Useful status commands:
 
 ```bash
-bay status
-bay agent list
-bay console status
+town status
+town agent list
+town console status
 ```
 
 ## SDK Example
@@ -200,7 +200,7 @@ downcity/
 │   └── ui/
 ├── cli/
 │   ├── city/
-│   ├── bay/
+│   ├── town/
 │   └── downcity/
 ├── cities/
 │   ├── edge/
@@ -221,7 +221,7 @@ downcity/
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Developer docs: [downcity.ai/devdocs](https://downcity.ai/devdocs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
-- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/bay/README.md](./cli/bay/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
+- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/town/README.md](./cli/town/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
 
 ## Local Development
 
@@ -263,6 +263,6 @@ pnpm dev:homepage
 
 - Downcity can execute shell commands, read and write project files, start local daemons, and receive external messages through chat channels.
 - Use a clean Git branch and audit changes with `git status` and `git diff`.
-- Keep secrets out of the repository; prefer local environment variables or `bay env`.
+- Keep secrets out of the repository; prefer local environment variables or `town env`.
 - Use tokens and auth boundaries for Console, HTTP access, and chat channel integrations.
 - Tighten command execution boundaries through sandbox configuration where appropriate.

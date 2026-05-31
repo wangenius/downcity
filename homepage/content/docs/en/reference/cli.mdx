@@ -15,55 +15,55 @@ CLI docs are organized by command pages and command groups.
 ## Primary command groups
 
 - Fixed root commands:
-  - [`bay init`](/en/docs/commands/init)
-  - [`bay start`](/en/docs/commands/start)
-  - [`bay stop`](/en/docs/commands/stop)
-  - [`bay restart`](/en/docs/commands/restart)
-  - [`bay update`](/en/docs/commands/update)
-  - [`bay status`](/en/docs/commands/status)
-  - [`bay public`](/en/docs/commands/public)
+  - [`town init`](/en/docs/commands/init)
+  - [`town start`](/en/docs/commands/start)
+  - [`town stop`](/en/docs/commands/stop)
+  - [`town restart`](/en/docs/commands/restart)
+  - [`town update`](/en/docs/commands/update)
+  - [`town status`](/en/docs/commands/status)
+  - [`town public`](/en/docs/commands/public)
 - Fixed module commands:
-  - [`bay console`](/en/docs/commands/console/console)
-  - [`bay agent`](/en/docs/commands/agent/agent)
-  - [`bay agent create`](/en/docs/commands/agent/create)
-  - [`bay agent list`](/en/docs/commands/agent/list)
-  - [`bay agent chat`](/en/docs/commands/agent/chat)
-  - [`bay config`](/en/docs/commands/config)
-  - [`bay model`](/en/docs/commands/model)
-  - [`bay env`](/en/docs/commands/env)
-  - [`bay plugin`](/en/docs/commands/plugin/plugin)
+  - [`town console`](/en/docs/commands/console/console)
+  - [`town agent`](/en/docs/commands/agent/agent)
+  - [`town agent create`](/en/docs/commands/agent/create)
+  - [`town agent list`](/en/docs/commands/agent/list)
+  - [`town agent chat`](/en/docs/commands/agent/chat)
+  - [`town config`](/en/docs/commands/config)
+  - [`town model`](/en/docs/commands/model)
+  - [`town env`](/en/docs/commands/env)
+  - [`town plugin`](/en/docs/commands/plugin/plugin)
 - Dynamic action commands:
-  - [`bay chat`](/en/docs/commands/plugin/chat)
-  - [`bay task`](/en/docs/commands/plugin/task)
-  - [`bay memory`](/en/docs/commands/plugin/memory)
-  - [`bay contact`](/en/docs/commands/plugin/contact)
-  - [`bay shell`](/en/docs/commands/plugin/shell)
-  - [`bay skill`](/en/docs/commands/plugin/skill)
-  - [`bay web`](/en/docs/commands/plugin/web)
-  - [`bay asr`](/en/docs/commands/plugin/asr)
-  - [`bay tts`](/en/docs/commands/plugin/tts)
+  - [`town chat`](/en/docs/commands/plugin/chat)
+  - [`town task`](/en/docs/commands/plugin/task)
+  - [`town memory`](/en/docs/commands/plugin/memory)
+  - [`town contact`](/en/docs/commands/plugin/contact)
+  - [`town shell`](/en/docs/commands/plugin/shell)
+  - [`town skill`](/en/docs/commands/plugin/skill)
+  - [`town web`](/en/docs/commands/plugin/web)
+  - [`town asr`](/en/docs/commands/plugin/asr)
+  - [`town tts`](/en/docs/commands/plugin/tts)
 
 ## Runtime model (short)
 
-- `bay start`: start Bay runtime only
-- `bay start --console` / `bay start -a`: start Bay runtime and Console together
-- `bay console start`: start Console only, after Bay runtime is already running
-- `bay stop`: stop Console, then stop Bay runtime and managed agents
-- `bay restart`: restart Bay runtime, restore managed agents, then restart Console
-- `bay update`: update the currently installed global `downcity` CLI bundle
-- `bay public`: manage persisted public exposure for Console, with interactive mode plus `on/off/status`
-- `bay agent`: open the interactive agent manager in a TTY
-- `bay agent create`: initialize project runtime files
-- `bay agent list`: inspect registered agents, or use `--running` for active ones only
-- `bay agent start`: start project agent daemon
-- `bay agent stop`: stop project agent daemon
-- `bay agent chat`: chat with an agent in interactive mode or send one-shot messages with `--message`
-- `bay console`: manage the Console module itself
-- `bay plugin ...`: inspect plugin catalog, manage plugin lifecycle, or use advanced plugin command forms
-- `bay chat/task/memory/contact/shell ...`: normal managed-plugin runtime commands
-- `bay web/skill/asr/tts ...`: normal local plugin commands
-- `bay model`: open the interactive global model manager in a TTY
-- `bay model ...`: manage model config for runtime and automation
+- `town start`: start Town runtime only
+- `town start --console` / `town start -a`: start Town runtime and Console together
+- `town console start`: start Console only, after Town runtime is already running
+- `town stop`: stop Console, then stop Town runtime and managed agents
+- `town restart`: restart Town runtime, restore managed agents, then restart Console
+- `town update`: update the currently installed global `downcity` CLI bundle
+- `town public`: manage persisted public exposure for Console, with interactive mode plus `on/off/status`
+- `town agent`: open the interactive agent manager in a TTY
+- `town agent create`: initialize project runtime files
+- `town agent list`: inspect registered agents, or use `--running` for active ones only
+- `town agent start`: start project agent daemon
+- `town agent stop`: stop project agent daemon
+- `town agent chat`: chat with an agent in interactive mode or send one-shot messages with `--message`
+- `town console`: manage the Console module itself
+- `town plugin ...`: inspect plugin catalog, manage plugin lifecycle, or use advanced plugin command forms
+- `town chat/task/memory/contact/shell ...`: normal managed-plugin runtime commands
+- `town web/skill/asr/tts ...`: normal local plugin commands
+- `town model`: open the interactive global model manager in a TTY
+- `town model ...`: manage model config for runtime and automation
 
 ## Always up to date
 
@@ -72,6 +72,6 @@ Use local help for latest flags:
 ```bash
 city --help
 city <command> --help
-bay --help
-bay <command> --help
+town --help
+town <command> --help
 ```

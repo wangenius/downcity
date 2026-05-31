@@ -1,27 +1,27 @@
 ---
 title: Global wallet model
-description: "Why @downcity/services stores balance by user instead of creating one wallet per bay."
+description: "Why @downcity/services stores balance by user instead of creating one wallet per town."
 ---
 
-`@downcity/services` keeps balance by user, not by bay.
+`@downcity/services` keeps balance by user, not by town.
 
 That means:
 
-- user A spends inside bay X
-- user A spends inside bay Y
+- user A spends inside town X
+- user A spends inside town Y
 - both consume the same shared balance
 
 ## Why this fits Downcity better
 
 The typical Downcity shape is:
 
-- one City serving multiple client bays
-- the same user moving across those bays
+- one City serving multiple client towns
+- the same user moving across those towns
 - one shared AI account layer behind them
 
-If balance is split per bay, both bay UX and operations become fragmented.
+If balance is split per town, both town UX and operations become fragmented.
 
-## Does bay still matter
+## Does town still matter
 
 Yes, but it belongs in ledger metadata rather than in the wallet primary key.
 
@@ -29,7 +29,7 @@ Yes, but it belongs in ledger metadata rather than in the wallet primary key.
 await balance.sub(ctx.user!.user_id, 10, {
   note: "agent chat",
   meta: {
-    bay_id: ctx.bay?.bay_id,
+    town_id: ctx.town?.town_id,
     model_id: ctx.variant?.id,
   },
 });

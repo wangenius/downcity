@@ -3,9 +3,9 @@ title: "City CLI"
 description: "Manage City models and tables from the terminal for setup, debugging, and routine operations."
 ---
 
-`downcity` is the global installation package for Downcity's CLI products. It installs two commands: `city` for City administration and `bay` for local Agent hosting.
+`downcity` is the global installation package for Downcity's CLI products. It installs two commands: `city` for City administration and `town` for local Agent hosting.
 
-If `Admin Visa` owns "trusted programmatic calls", `city` owns "a human operating City directly from the terminal".
+If `Admin City` owns "trusted programmatic calls", `city` owns "a human operating City directly from the terminal".
 
 ## How to read this section
 
@@ -36,25 +36,25 @@ city
 The default `city` entry opens an interactive panel. If no server exists yet, the CLI first requires you to add one. After that, you can:
 
 - manage multiple City servers from `Manage Servers`
-- enter the Admin flow for env / models / bays / payment
+- enter the Admin flow for env / models / towns / payment
 - enter the User flow for login, recharge, and service calls
 
 ## Common commands
 
 ```bash
-bay model list
-bay model create
-bay model manage
-bay agent start .
+town model list
+town model create
+town model manage
+town agent start .
 ```
 
 ## Boundaries with other packages
 
-- It does not replace `Admin Visa` from [@downcity/city](/en/docs/city/packages/city/visa).
+- It does not replace `Admin City` from [@downcity/city](/en/docs/city/packages/city/city).
 - It does not replace the runtime capabilities in [@downcity/city](/en/docs/city/packages/city).
-- It is better for human-operated inspection and maintenance than for code you embed into a bay.
+- It is better for human-operated inspection and maintenance than for code you embed into a town.
 
-- `Admin Visa` is for trusted programmatic calls
+- `Admin City` is for trusted programmatic calls
 - `city` is for human-operated terminal workflows
 
 ## Read next

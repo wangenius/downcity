@@ -493,13 +493,13 @@ function createTtsPluginDefinition(plugin: Plugin): Plugin {
       "# TTS Plugin",
       "The agent can call the tts plugin to synthesize speech audio from plain text.",
       "Typical usage flow:",
-      "1. Check availability with `bay tts status` when you need to confirm whether the plugin and model are ready.",
-      "2. Generate audio with `bay tts synthesize <text>`.",
+      "1. Check availability with `town tts status` when you need to confirm whether the plugin and model are ready.",
+      "2. Generate audio with `town tts synthesize <text>`.",
       "3. Optionally override synthesis parameters with `--voice`, `--language`, `--format`, `--speed`, and `--output`.",
       "Use the `tts.synthesize` action when the user asks to generate spoken audio or a reusable audio file tag.",
       "A successful synthesis returns a local output path and a reusable `<file type=\"audio\">...</file>` tag for downstream sending.",
       "If the Python runner prints non-fatal stderr, the command still succeeds and returns that stderr summary as extra context.",
-      "Example: `bay tts synthesize \"你好，欢迎来到 Downcity\" --format wav`",
+      "Example: `town tts synthesize \"你好，欢迎来到 Downcity\" --format wav`",
     ].join("\n");
   },
   };

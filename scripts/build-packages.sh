@@ -24,7 +24,7 @@ usage() {
   echo "  --city     构建 @downcity/city"
   echo "  --services 构建 @downcity/services"
   echo "  --plugins  构建 @downcity/plugins"
-  echo "  --cli      构建 Downcity CLI 产品包（内部 city/bay 构建单元 + downcity）"
+  echo "  --cli      构建 Downcity CLI 产品包（内部 city/town 构建单元 + downcity）"
   echo "  --ui       构建 @downcity/ui"
   echo "  --all      构建全部 packages（type + agent + city + services + plugins + ui + cli）"
   echo "  --no-bump  跳过 patch 版本号自增"
@@ -174,7 +174,7 @@ run_build() {
   if [[ "$pkg" == "cli" ]]; then
     echo "--- Downcity CLI products ---"
     run_project_build "$ROOT_DIR/cli/city"
-    run_project_build "$ROOT_DIR/cli/bay"
+    run_project_build "$ROOT_DIR/cli/town"
     run_project_build "$ROOT_DIR/products/console"
     run_project_build "$ROOT_DIR/cli/downcity"
     return 0
@@ -212,7 +212,7 @@ if $BUMP; then
   for pkg in "${PACKAGES[@]}"; do
     if [[ "$pkg" == "cli" ]]; then
       node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/city/package.json"
-      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/bay/package.json"
+      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/town/package.json"
       node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/downcity/package.json"
     else
       node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/packages/$pkg/package.json"

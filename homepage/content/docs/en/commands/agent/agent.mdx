@@ -1,31 +1,31 @@
 ---
-title: bay agent
+title: town agent
 description: Manage agents interactively, or use subcommands for scripts
 ---
 
-# `bay agent`
+# `town agent`
 
 Manage agent lifecycle and registry-aware operations.
 
 > Recommended reading: the new complete Agent documentation now lives in a dedicated docs domain. Start with [Agent Overview](/en/docs/agent/overview/what-is-agent) and [Agent CLI Overview](/en/docs/agent/cli/overview).
 
-Run `bay agent` without a subcommand in an interactive terminal to open the agent manager. Use subcommands when you want a scriptable command.
+Run `town agent` without a subcommand in an interactive terminal to open the agent manager. Use subcommands when you want a scriptable command.
 
 ## Command hierarchy
 
-Top-level command groups are: `bay console`, `bay agent`, `bay plugin`.
+Top-level command groups are: `town console`, `town agent`, `town plugin`.
 
 ## Usage
 
 ```bash
-bay agent
-bay agent <subcommand>
+town agent
+town agent <subcommand>
 ```
 
 ## Version inspection
 
-- `bay -v` shows the city CLI version only.
-- `bay agent -v` shows both the current bay CLI version and the `@downcity/agent` runtime version actually bundled with that bay installation.
+- `town -v` shows the city CLI version only.
+- `town agent -v` shows both the current town CLI version and the `@downcity/agent` runtime version actually bundled with that town installation.
 
 ## Interactive manager
 
@@ -39,7 +39,7 @@ The interactive manager lets you:
 
 It does not replace the subcommands below. It is a guided entry point for common local operations.
 
-Chat channel credentials stay in city-level channel accounts managed from `bay chat`. The agent manager only connects an agent to those existing accounts through `plugins.chat.channels.<channel>.channelAccountId`. If an agent points at a missing account, the manager removes that dangling binding automatically.
+Chat channel credentials stay in city-level channel accounts managed from `town chat`. The agent manager only connects an agent to those existing accounts through `plugins.chat.channels.<channel>.channelAccountId`. If an agent points at a missing account, the manager removes that dangling binding automatically.
 
 ## Subcommands
 
@@ -54,18 +54,18 @@ Chat channel credentials stay in city-level channel accounts managed from `bay c
 
 ## Subcommand docs
 
-- [`bay agent create`](/en/docs/commands/agent/create)
-- [`bay agent list`](/en/docs/commands/agent/list)
-- [`bay agent start`](/en/docs/commands/agent/start)
-- [`bay agent stop`](/en/docs/commands/agent/stop)
-- [`bay agent chat`](/en/docs/commands/agent/chat)
-- [`bay agent status`](/en/docs/commands/agent/status)
-- [`bay agent restart`](/en/docs/commands/agent/restart)
-- [`bay agent doctor`](/en/docs/commands/agent/doctor)
+- [`town agent create`](/en/docs/commands/agent/create)
+- [`town agent list`](/en/docs/commands/agent/list)
+- [`town agent start`](/en/docs/commands/agent/start)
+- [`town agent stop`](/en/docs/commands/agent/stop)
+- [`town agent chat`](/en/docs/commands/agent/chat)
+- [`town agent status`](/en/docs/commands/agent/status)
+- [`town agent restart`](/en/docs/commands/agent/restart)
+- [`town agent doctor`](/en/docs/commands/agent/doctor)
 
 ## Environment variable injection
 
-On every `bay` execution, CLI resolves current agent context and injects variables into the `bay` process and its child processes:
+On every `town` execution, CLI resolves current agent context and injects variables into the `town` process and its child processes:
 
 - `DC_AGENT_ID`: current agent runtime id
 - `DC_AGENT_PATH`: absolute path of current agent
@@ -74,15 +74,15 @@ On every `bay` execution, CLI resolves current agent context and injects variabl
 
 ## Related command
 
-- Start console first: [`bay start`](/en/docs/commands/start)
+- Start console first: [`town start`](/en/docs/commands/start)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ bay agent
-bay v1.0.0
+$ town agent
+town v1.0.0
 ? 管理 Agent
   查看 agents
   创建 agent

@@ -1,9 +1,9 @@
 ---
-title: bay agent doctor
+title: town agent doctor
 description: 诊断并可修复 agent 的僵尸状态文件
 ---
 
-# `bay agent doctor`
+# `town agent doctor`
 
 诊断指定 agent 的状态文件，并可清理僵尸 pid/meta。
 
@@ -12,7 +12,7 @@ description: 诊断并可修复 agent 的僵尸状态文件
 ## 用法
 
 ```bash
-bay agent doctor [path] [--fix]
+town agent doctor [path] [--fix]
 ```
 
 ## 常用参数
@@ -27,26 +27,26 @@ bay agent doctor [path] [--fix]
 
 ## 相关命令
 
-- [`bay agent status`](/zh/docs/commands/agent/status)
-- [`bay agent restart`](/zh/docs/commands/agent/restart)
+- [`town agent status`](/zh/docs/commands/agent/status)
+- [`town agent restart`](/zh/docs/commands/agent/restart)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/town/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ bay agent doctor .
-bay v1.0.0
+$ town agent doctor .
+town v1.0.0
 ⚠️  Stale daemon state detected
    project: <projectRoot>
    stalePid: <pid>
    reason: <reasons>
    log: <daemonLogPath>
-   Run `bay agent doctor <path> --fix` to clean stale pid/meta.
+   Run `town agent doctor <path> --fix` to clean stale pid/meta.
 ```
 
 ```text
-$ bay agent doctor . --fix
-bay v1.0.0
+$ town agent doctor . --fix
+town v1.0.0
 ✅ Cleaned stale daemon pid/meta files
 ```

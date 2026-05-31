@@ -6,7 +6,7 @@
  *
  * 使用示例：
  * ```ts
- * const city = new City({ db });
+ * const base = new CityBase({ db });
  * ```
  */
 
@@ -87,12 +87,12 @@ export interface EnvProvider {
 /**
  * City 内置表定义。
  *
- * 包含 bays 和 env 两个内置表。
+ * 包含 towns 和 env 两个内置表。
  * 适配器根据数据库类型（SQLite / Postgres）提供对应的表定义。
  */
 export interface BuiltinTables {
   /** 产品表 */
-  bays: TableDef;
+  towns: TableDef;
   /** 环境变量表 */
   env: TableDef;
 }
@@ -127,7 +127,7 @@ export interface Runtime {
   env: EnvProvider;
 
   /**
-   * City 内置表定义（bays + env）。
+   * City 内置表定义（towns + env）。
    *
    * 适配器根据数据库类型提供正确的 Drizzle 表定义。
    */

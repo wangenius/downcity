@@ -141,16 +141,16 @@ export function formatInstructionDocument(input: {
 }): string {
   const lines: string[] = [];
 
-  lines.push("# Downcity City Instruction");
+  lines.push("# Downcity CityBase Instruction");
   lines.push("");
-  lines.push("## City");
-  lines.push("City 是 Downcity 的基础设施运行容器，负责挂载 Service、初始化内置 env/bays 能力、统一处理 /v1/* HTTP 路由，以及校验 user_token 与 admin_secret_key。");
+  lines.push("## CityBase");
+  lines.push("CityBase 是 Downcity 的服务端基础设施运行容器，负责挂载 Service、初始化内置 env/towns 能力、统一处理 /v1/* HTTP 路由，以及校验 user_token 与 admin_secret_key。");
   lines.push("");
   lines.push("基础使用：");
-  lines.push("1. 创建 City 实例。");
-  lines.push("2. 通过 city.use(...) 注册业务 Service、AIService 或带 install(ctx) 生命周期的服务。");
-  lines.push("3. 先调用 await city.health() 完成初始化。");
-  lines.push("4. 通过 city.router().fetch 或 city.handleRequest(...) 对外提供请求处理。");
+  lines.push("1. 创建 CityBase 实例。");
+  lines.push("2. 通过 base.use(...) 注册业务 Service、AIService 或带 install(ctx) 生命周期的服务。");
+  lines.push("3. 先调用 await base.health() 完成初始化。");
+  lines.push("4. 通过 base.router().fetch 或 base.handleRequest(...) 对外提供请求处理。");
   lines.push("");
   lines.push(`内置服务：${input.base.builtin_services.join(", ")}`);
   lines.push(`当前已加载模块：${input.base.loaded_modules.join(", ")}`);

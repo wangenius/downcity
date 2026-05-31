@@ -44,11 +44,11 @@ Run tasks, write the final output body to `output.md`, and write a summary to `r
 ## Common commands
 
 ```bash
-bay task list
-bay task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 9 * * 1-5" --activate
-bay task run daily-check
-bay task update daily-check --when "@manual"
-bay task disable daily-check
+town task list
+town task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 9 * * 1-5" --activate
+town task run daily-check
+town task update daily-check --when "@manual"
+town task disable daily-check
 ```
 
 ## Status
@@ -65,4 +65,4 @@ bay task disable daily-check
 
 ## Runtime requirement
 
-Scheduling only works with a running runtime (typically `bay agent start`).
+Scheduling only works with a running runtime (typically `town agent start`).

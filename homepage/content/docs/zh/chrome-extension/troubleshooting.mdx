@@ -37,14 +37,14 @@ npm run build:extension
 
 1. 打开扩展设置页
 2. 选中对应连接
-3. 在本机终端执行 `bay token create my-token`
+3. 在本机终端执行 `town token create my-token`
 4. 把 token 粘贴到设置页并保存
 
 ## 3. 远程机器上服务没有对外暴露
 
 如果你访问的是远程机器，还需要确认 Console 本身不是只绑定在本机回环地址。
 
-从 `bay` 的代码看：
+从 `town` 的代码看：
 
 - 未传 `--host` / `--public` 时，Console 默认仍是本机模式 `127.0.0.1`
 - 传 `--public` 时，会绑定 `0.0.0.0`
@@ -52,26 +52,26 @@ npm run build:extension
 通常可以这样启动：
 
 ```bash
-bay start --public
+town start --public
 ```
 
 或者：
 
 ```bash
-bay console start --public
+town console start --public
 ```
 
 如果你希望之后每次启动都沿用公网绑定，可以执行：
 
 ```bash
-bay public on
+town public on
 ```
 
 ## 4. 没有可用 Agent
 
 通常表示：
 
-- `bay agent start` 还没启动
+- `town agent start` 还没启动
 - 当前连接地址不对
 - 当前 Agent 没有处于运行状态
 

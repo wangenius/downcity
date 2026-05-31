@@ -2,12 +2,12 @@
  * Admin Usage 管理命令。
  */
 
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { showError } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 
-export async function manageUsage(a: Visa): Promise<void> {
+export async function manageUsage(a: City): Promise<void> {
   const svc = a.service("usage");
   while (true) {
     const act = await select({
@@ -22,17 +22,17 @@ export async function manageUsage(a: Visa): Promise<void> {
 
     try {
       if (act === "events") {
-        const b = await svc.get<{ items: { bay_id: string; service: string; status: string; created_at: string }[] }>("events");
+        const b = await svc.get<{ items: { town_id: string; service: string; status: string; created_at: string }[] }>("events");
         console.log(`\n${b.items.length} events:\n`);
         for (const e of b.items.slice(-20)) {
-          console.log(`  ${e.created_at.slice(0, 19)}  ${e.bay_id.padEnd(22)} ${e.service.padEnd(15)} [${e.status}]`);
+          console.log(`  ${e.created_at.slice(0, 19)}  ${e.town_id.padEnd(22)} ${e.service.padEnd(15)} [${e.status}]`);
         }
         console.log("");
       } else {
-        const b = await svc.get<{ items: { bay_id: string; service: string; status: string; count: number }[] }>("summary");
+        const b = await svc.get<{ items: { town_id: string; service: string; status: string; count: number }[] }>("summary");
         console.log(`\nSummary:\n`);
         for (const s of b.items) {
-          console.log(`  ${s.bay_id.padEnd(22)} ${s.service.padEnd(15)} ${String(s.count).padStart(5)} [${s.status}]`);
+          console.log(`  ${s.town_id.padEnd(22)} ${s.service.padEnd(15)} ${String(s.count).padStart(5)} [${s.status}]`);
         }
         console.log("");
       }

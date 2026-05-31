@@ -5,7 +5,7 @@ description: Deploy the Downcity Node block to Dokploy with a persistent City da
 
 The Node block is the standard Docker / Dokploy deployment shape for Downcity City Infra.
 
-It runs `cities/node`, exposes the City HTTP API, and stores SQLite data in a persistent `/data` volume. Use it when you want a long-running city service layer for bays, apps, agents, or internal tools.
+It runs `cities/node`, exposes the City HTTP API, and stores SQLite data in a persistent `/data` volume. Use it when you want a long-running city service layer for towns, apps, agents, or internal tools.
 
 ## Dokploy Settings
 
@@ -33,7 +33,7 @@ PORT=43127
 DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
 ```
 
-`/data` must stay persistent. Bays, models, users, sessions, usage, payments, and City env entries are stored in that SQLite database.
+`/data` must stay persistent. Towns, models, users, sessions, usage, payments, and City env entries are stored in that SQLite database.
 
 ## Domain Path
 
@@ -46,7 +46,7 @@ GET  /v1/services
 POST /v1/ai/text
 ```
 
-If your domain is `https://base.example.com`, bay-side SDKs and trusted backends should use:
+If your domain is `https://base.example.com`, town-side SDKs and trusted backends should use:
 
 ```txt
 base_url=https://base.example.com
@@ -98,37 +98,37 @@ Expected shape:
 ```json
 {
   "ok": true,
-  "services": ["env", "bays", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
 }
 ```
 
 If the request times out, the Dokploy service is not exposed publicly, the VPS firewall does not allow `43127`, or a reachable domain has not been bound yet.
 
-## Call From Bays
+## Call From Towns
 
-Bay frontends and apps should call the Node block through `@downcity/city`:
+Town frontends and apps should call the Node block through `@downcity/city`:
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new Visa({
+const client = new City({
   role: "user",
   city_url: "https://base.example.com",
-  bay_id: "my-bay",
+  town_id: "my-town",
   user_token: "user_token",
 });
 ```
 
-Trusted backends should use `Admin Visa` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
+Trusted backends should use `Admin City` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const admin = new Visa({
+const admin = new City({
   role: "admin",
   city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
 
-See [User Visa](/en/docs/city/reference/visa-user) and [Admin Visa](/en/docs/city/reference/visa-admin) for the full SDK surface.
+See [User City](/en/docs/city/reference/city-user) and [Admin City](/en/docs/city/reference/city-admin) for the full SDK surface.

@@ -1,17 +1,17 @@
 ---
-title: bay restart
-description: Restart Bay runtime, restore managed agents, then restart Console
+title: town restart
+description: Restart Town runtime, restore managed agents, then restart Console
 ---
 
-# `bay restart`
+# `town restart`
 
-Restart the full Bay runtime stack.
+Restart the full Town runtime stack.
 
 Current behavior:
 
 1. stop Console
-2. stop Bay runtime
-3. restart Bay runtime
+2. stop Town runtime
+3. restart Town runtime
 4. restore managed agents that were running before restart
 5. restart Console
 
@@ -20,26 +20,26 @@ During the stop phase, Downcity stops the matching process group first. ACP exec
 ## Usage
 
 ```bash
-bay restart
+town restart
 ```
 
 ## Related commands
 
-- [`bay start`](/en/docs/commands/start)
-- [`bay stop`](/en/docs/commands/stop)
-- [`bay status`](/en/docs/commands/status)
-- [`bay console`](/en/docs/commands/console/console)
+- [`town start`](/en/docs/commands/start)
+- [`town stop`](/en/docs/commands/stop)
+- [`town status`](/en/docs/commands/status)
+- [`town console`](/en/docs/commands/console/console)
 
 ## Example output
 
 ```text
-$ bay restart
-bay v1.0.0
+$ town restart
+town v1.0.0
 ✅ Console stopped
    pid: <consolePid>
-✅ Bay runtime stopped
+✅ Town runtime stopped
    pid: <bayPid>
-✅ Bay runtime started
+✅ Town runtime started
    pid: <newBayPid>
 Restarting 2 managed agents...
 ✅ Console started

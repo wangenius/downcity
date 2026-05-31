@@ -1,7 +1,7 @@
 /**
- * City 主模块。
+ * CityBase 主模块。
  *
- * City 是城市基础设施运行容器，负责协调：
+ * CityBase 是城市基础设施运行容器，负责协调：
  * - service 注册
  * - runtime 初始化
  * - 鉴权器访问
@@ -14,19 +14,19 @@ import type { Hono } from "hono";
 import { Service } from "../../service/service.js";
 import { asInstallableService, type ServiceDefinition } from "../../service/installable-service.js";
 import { EnvService } from "../../service/env/env-service.js";
-import { BaysService } from "../../service/bays/bays-service.js";
+import { TownsService } from "../../service/towns/towns-service.js";
 import { build_city_instruction } from "./base-instruction.js";
 import { initialize_city } from "./base-init.js";
 import { build_city_router } from "./base-router.js";
 import { create_runtime_from_db } from "./base-runtime.js";
-import type { CityOptions, CityHealthStatus } from "../types.js";
+import type { CityBaseOptions, CityBaseHealthStatus } from "../types.js";
 import type { Authenticator } from "../auth/authenticator.js";
 import type { Runtime } from "../runtime.js";
 import type { CityTableApi } from "../../store/table-api.js";
-import type { BayStore } from "../../service/bays/bay-store.js";
+import type { TownStore } from "../../service/towns/town-store.js";
 import type { Database, DbClient } from "../../store/db.js";
 
-export class City {
+export class CityBase {
   private readonly runtime: Runtime;
   private readonly services = new Map<string, Service>();
 
@@ -36,12 +36,12 @@ export class City {
   private init_promise?: Promise<void>;
   private hono?: Hono;
   private authenticator?: Authenticator;
-  private bay_store?: BayStore;
+  private town_store?: TownStore;
 
-  constructor(options: CityOptions) {
+  constructor(options: CityBaseOptions) {
     this.runtime = options.runtime ?? create_runtime_from_db(options);
     this.use(new EnvService());
-    this.use(new BaysService());
+    this.use(new TownsService());
   }
 
   /**
@@ -108,7 +108,7 @@ export class City {
   /**
    * 健康检查。
    */
-  async health(): Promise<CityHealthStatus> {
+  async health(): Promise<CityBaseHealthStatus> {
     await this.ensure_ready();
     const services = this.getServices();
     return {
@@ -141,7 +141,7 @@ export class City {
     this.database = state.database;
     this.client = state.client;
     this.table_map = state.table_map;
-    this.bay_store = state.bay_store;
+    this.town_store = state.town_store;
     this.authenticator = state.authenticator;
     this.hono = build_city_router({
       runtime: this.runtime,
@@ -166,19 +166,19 @@ export class City {
    */
   private require_ready_sync(): void {
     if (!this.hono) {
-      throw new Error("City init has not completed yet");
+      throw new Error("CityBase init has not completed yet");
     }
   }
 
   /**
-   * 给 Authenticator 延迟访问 bay store。
+   * 给 Authenticator 延迟访问 town store。
    */
   private async require_ready(): Promise<{
-    bay: { get(id: string): Promise<{ bay_id: string; status: string } | undefined> };
+    town: { get(id: string): Promise<{ town_id: string; status: string } | undefined> };
   }> {
     await this.ensure_ready();
     return {
-      bay: this.bay_store ?? { get: () => Promise.resolve(undefined) },
+      town: this.town_store ?? { get: () => Promise.resolve(undefined) },
     };
   }
 }

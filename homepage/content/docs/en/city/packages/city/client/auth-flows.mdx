@@ -1,0 +1,72 @@
+---
+title: Login and Token Flow
+description: "How guest User City, the accounts service, your own backend, user_token, and normal User City connect together."
+---
+
+Every login flow around City converges to one goal:
+
+> get `town_id + user_token` into the town frontend, then enter normal `User City` calls.
+
+## Pattern one: your backend owns login
+
+```txt
+frontend submits login data
+  -> your backend validates the account
+  -> backend uses Admin City to request user_token
+  -> returns town_id + user_token
+  -> frontend creates a normal User City
+```
+
+Good fit when:
+
+- you already have an account system
+- you need more complex org, permission, or risk-control logic
+
+## Pattern two: the accounts service owns login
+
+```txt
+frontend creates a guest User City
+  -> calls accounts.register / login
+  -> service returns user_token
+  -> frontend creates a normal User City
+```
+
+Good fit when:
+
+- you want the fastest path to minimal registration and login
+- you do not want to maintain your own user and session tables first
+
+## What a guest User City is
+
+It is simply a `User City` with `city_url` only:
+
+```ts
+const guest = new City({
+  role: "user",
+  city_url: "https://base.example.com",
+});
+```
+
+At this stage it is usually used only for guest-access Actions such as:
+
+- `accounts.register`
+- `accounts.login`
+- `accounts.oauth/start`
+- `accounts.oauth/result`
+
+## Switching to a normal User City
+
+```ts
+const user = new City({
+  role: "user",
+  city_url: "https://base.example.com",
+  town_id: "town_xxx",
+  user_token: session.user_token,
+});
+```
+
+At that point the town enters real user context:
+
+- it can call AI services
+- it can call custom services that require user identity
+- it can call services such as `accounts.me` and `usage.me`

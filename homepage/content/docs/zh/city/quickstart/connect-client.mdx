@@ -1,20 +1,20 @@
 ---
 title: 连接 Client
-description: 用 User Visa 调用 City 的 Service 和 Action。
+description: 用 User City 调用 City 的 Service 和 Action。
 ---
 
-`User Visa` 有两条常用通路：
+`User City` 有两条常用通路：
 
 - `client.ai.*` 调内置 AIService
 - `client.service(id).action(name).invoke()` 调自定义 Service 或服务 Service
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new Visa({
+const client = new City({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  bay_id: "bay_downcity",
+  town_id: "town_downcity",
   user_token: "ub_xxx",
 });
 
@@ -34,4 +34,4 @@ const result = await client.service("translate").action("zh2en").invoke({ text: 
 const oauth = await client.service("accounts").get("oauth/result", { state: "state_xxx" });
 ```
 
-创建 bay、暂停 bay、签发 `user_token` 和维护 Runtime env 都属于可信环境动作，用 `Admin Visa` 完成，不放到产品前端。
+创建 town、暂停 town、签发 `user_token` 和维护 Runtime env 都属于可信环境动作，用 `Admin City` 完成，不放到产品前端。

@@ -2,7 +2,8 @@
   "title": "@downcity/city",
   "pages": [
     "index",
-    "visa",
+    "client",
+    "city",
     "city-runtime",
     "service-and-action",
     "hooks-and-service",

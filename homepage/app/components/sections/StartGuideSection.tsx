@@ -35,7 +35,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
     steps: [
       {
         title: "安装 CLI",
-        description: "先让本地有一个明确的运行入口。安装后会得到 `bay` 和 `city` 两个命令。",
+        description: "先让本地有一个明确的运行入口。安装后会得到 `town` 和 `city` 两个命令。",
         command: "npm install -g downcity\nbay --version\ncity --version",
       },
       {
@@ -70,7 +70,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
     steps: [
       {
         title: "Install the CLI",
-        description: "Establish one local runtime entry point first. Installing exposes `bay` and `city` as separate commands.",
+        description: "Establish one local runtime entry point first. Installing exposes `town` and `city` as separate commands.",
         command: "npm install -g downcity\nbay --version\ncity --version",
       },
       {

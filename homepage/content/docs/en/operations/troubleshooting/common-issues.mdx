@@ -5,43 +5,43 @@ description: Typical installation, startup, and config failures
 
 # Common Issues
 
-## Command not found (`bay: command not found` / `bay: command not found`)
+## Command not found (`town: command not found` / `town: command not found`)
 
 ```bash
 npm config get prefix
 echo $PATH
 export PATH=$(npm config get prefix)/bin:$PATH
 rehash
-bay --version
+town --version
 ```
 
 Or run directly with:
 
 ```bash
-bay --version
+town --version
 ```
 
 Notes:
 
-- `bay` and `city` come from the same `downcity` package but expose different command surfaces.
+- `town` and `city` come from the same `downcity` package but expose different command surfaces.
 - New installs should not require manual `chmod +x`.
-- If `sudo bay ...` fails but `bay ...` works, it is usually a `sudo` PATH issue rather than an install failure.
+- If `sudo town ...` fails but `town ...` works, it is usually a `sudo` PATH issue rather than an install failure.
 
 ## Port conflict (5314 already in use)
 
 ```bash
 lsof -nP -iTCP:5314 -sTCP:LISTEN
-bay agent doctor . --fix
-bay agent restart .
+town agent doctor . --fix
+town agent restart .
 ```
 
-## `bay task/chat/...` cannot connect
+## `town task/chat/...` cannot connect
 
 Make sure daemon is running:
 
 ```bash
-bay agent start
-bay plugin list
+town agent start
+town plugin list
 ```
 
 ## LLM configuration mismatch
@@ -49,8 +49,8 @@ bay plugin list
 Check:
 
 ```bash
-bay model list
-bay config get model.primary
+town model list
+town config get model.primary
 ```
 
 Ensure:

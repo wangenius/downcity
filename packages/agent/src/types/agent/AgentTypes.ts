@@ -63,7 +63,7 @@ export interface AgentOptions {
    *
    * 关键点（中文）
    * - SDK 仍不负责“选择哪个模型”，这里只接收宿主已经创建好的模型实例。
-   * - 支持 AI SDK `LanguageModel`，也支持 City Gate 返回的 `CityModel`。
+   * - 支持 AI SDK `LanguageModel`，也支持 City City 返回的 `CityModel`。
    * - 该模型会作为 session 首次执行前的默认注入值。
    */
   model?: AgentModel;

@@ -7,17 +7,17 @@
 
 import { pgEnv, sqliteEnv } from "../../service/env/schema.js";
 import { EnvStore } from "../../service/env/env-store.js";
-import { pgBays, sqliteBays } from "../../service/bays/schema.js";
+import { pgTowns, sqliteTowns } from "../../service/towns/schema.js";
 import { normalizeEnvKey, parseDotenvEntries } from "../../utils/helpers.js";
-import type { CityOptions } from "../types.js";
+import type { CityBaseOptions } from "../types.js";
 import type { DbClient } from "../../store/db.js";
 import type { BuiltinTables, EnvProvider, Runtime } from "../runtime.js";
 import type { EnvEntry, EnvUpsertInput } from "../../service/env/types.js";
 
 /**
- * 从 CityOptions 创建 runtime。
+ * 从 CityBaseOptions 创建 runtime。
  */
-export function create_runtime_from_db(options: CityOptions): Runtime {
+export function create_runtime_from_db(options: CityBaseOptions): Runtime {
   const dialect = options.dialect ?? infer_dialect(options.db);
   const builtin_tables = builtin_tables_for(dialect);
   const client = extract_db_client(options.db);
@@ -36,8 +36,8 @@ export function create_runtime_from_db(options: CityOptions): Runtime {
  */
 function builtin_tables_for(dialect: "pg" | "sqlite"): BuiltinTables {
   return dialect === "pg"
-    ? { bays: pgBays, env: pgEnv }
-    : { bays: sqliteBays, env: sqliteEnv };
+    ? { towns: pgTowns, env: pgEnv }
+    : { towns: sqliteTowns, env: sqliteEnv };
 }
 
 /**

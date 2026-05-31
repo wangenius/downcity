@@ -25,15 +25,15 @@ The currently exposed endpoints are:
 If you start Console through:
 
 ```bash
-bay start --console
+town start --console
 ```
 
 the first startup automatically creates a local token and prints the plain token once in the startup output. The startup output looks like this:
 
 ```text
-$ bay start --console
-bay v1.0.0
-✅ Bay runtime started
+$ town start --console
+town v1.0.0
+✅ Town runtime started
    pid: <runtimePid>
    log: <bayRuntimeLogPath>
 ✅ Console started
@@ -50,7 +50,7 @@ bay v1.0.0
 If you want to mint tokens manually, run:
 
 ```bash
-bay token create my-token
+town token create my-token
 ```
 
 The name is only for your own identification and management. It does not represent a different token type or channel scope.
@@ -58,7 +58,7 @@ The name is only for your own identification and management. It does not represe
 If you prefer an interactive flow, you can also run:
 
 ```bash
-bay token
+town token
 ```
 
 The interactive flow then helps you:
@@ -81,19 +81,19 @@ If the token is valid, the endpoint returns the current subject, roles, and perm
 List tokens on the current machine:
 
 ```bash
-bay token list
+town token list
 ```
 
 Create a new token:
 
 ```bash
-bay token create my-token
+town token create my-token
 ```
 
 Delete a token:
 
 ```bash
-bay token delete <tokenId>
+town token delete <tokenId>
 ```
 
 You can also manage tokens through HTTP with an existing Bearer token:

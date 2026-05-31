@@ -32,12 +32,12 @@ description: Explains console registry writes, how the execution context surface
 
 ```mermaid
 flowchart TD
-  A["bay agent start"] --> B["start daemon"]
+  A["town agent start"] --> B["start daemon"]
   B --> C["write debug metadata"]
   B --> D["upsert console registry"]
   D --> E["console registry"]
 
-  F["city managed plugin or bay plugin"] --> G["agent API"]
+  F["city managed plugin or town plugin"] --> G["agent API"]
   G --> H["execution context"]
   H --> I["managed plugin runtime"]
   I --> J["plugin point dispatch"]

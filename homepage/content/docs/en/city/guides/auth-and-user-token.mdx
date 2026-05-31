@@ -3,15 +3,15 @@ title: Auth and `user_token`
 description: Connect your login system to Downcity token issuance.
 ---
 
-Downcity does not host your user system. It only requires a verifiable `user_token` on bay-side requests.
+Downcity does not host your user system. It only requires a verifiable `user_token` on town-side requests.
 
 ## If you already have login
 
-After a user logs in, issue a Downcity token through `Admin Visa`:
+After a user logs in, issue a Downcity token through `Admin City`:
 
 ```ts
-const user = await admin.bays.tokens.apply({
-  bay_id: "bay_xxx",
+const user = await admin.towns.tokens.apply({
+  town_id: "town_xxx",
   user_id: session.user.id,
   metadata: {
     plan: session.user.plan,
@@ -20,14 +20,14 @@ const user = await admin.bays.tokens.apply({
 });
 ```
 
-Then give the bay side two values:
+Then give the town side two values:
 
-- `bay_id`
+- `town_id`
 - `user_token`
 
 ## If you do not have a heavy backend yet
 
-For new pure-client bays, keep token issuance near one shared City instead of building a separate service per bay.
+For new pure-client towns, keep token issuance near one shared City instead of building a separate service per town.
 
 ## What the token should not do
 

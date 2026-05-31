@@ -8,7 +8,7 @@ description: 说明 console、agent 与 plugin 端点的端口分配、路由与
 ## 统一规则
 
 - agent 端口由 `console` 分配。
-- `bay agent start/restart` 不要求用户手工管端口。
+- `town agent start/restart` 不要求用户手工管端口。
 - plugin 命令先找目标 agent，再找 endpoint。
 
 ## 运行时角色
@@ -27,7 +27,7 @@ description: 说明 console、agent 与 plugin 端点的端口分配、路由与
 
 ### plugin 端点
 
-- `bay plugin ...` 走 plugin 路由
+- `town plugin ...` 走 plugin 路由
 - 都在目标 runtime 内部分发
 
 ## endpoint 解析
@@ -41,6 +41,6 @@ description: 说明 console、agent 与 plugin 端点的端口分配、路由与
 
 ## 建议
 
-- 多 agent 场景优先使用 `bay plugin ... --agent <id>`。
+- 多 agent 场景优先使用 `town plugin ... --agent <id>`。
 - 不要在 shell profile 里残留错误的 `DC_CITY_PORT`。
-- runtime 状态异常时先执行 `bay agent doctor --fix` 并检查 daemon 日志。
+- runtime 状态异常时先执行 `town agent doctor --fix` 并检查 daemon 日志。

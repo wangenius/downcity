@@ -51,7 +51,7 @@ test("console ui should preflight auth status before dashboard bootstrap", () =>
   assert.match(source, /setAuthRequired\(true\)/)
 })
 
-test("console ui should render a standalone auth gate page when login is required", () => {
+test("console ui should render a standalone auth city page when login is required", () => {
   const appSource = fs.readFileSync(
     path.resolve(import.meta.dirname, "../src/App.tsx"),
     "utf-8",

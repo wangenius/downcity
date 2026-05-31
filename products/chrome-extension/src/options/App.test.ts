@@ -32,7 +32,7 @@ test("Options App exposes server connections before auth and default routing", (
   assert.match(source, /Port/u);
   assert.match(source, /Base Path/u);
   assert.match(source, /Bearer Token/u);
-  assert.match(source, /bay token create my-token/u);
+  assert.match(source, /town token create my-token/u);
   assert.match(source, /Default Session/u);
   assert.doesNotMatch(source, /Connect Console/u);
   assert.doesNotMatch(source, /Agent \/ Channel/u);

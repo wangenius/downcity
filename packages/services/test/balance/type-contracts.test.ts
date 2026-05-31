@@ -1,8 +1,8 @@
-import { City } from "@downcity/city";
+import { CityBase } from "@downcity/city";
 import { balanceService } from "../../src/index.js";
 
 async function verifyBalanceServiceContract(): Promise<void> {
-  const base = new City({
+  const base = new CityBase({
     db: {} as never,
   });
 
@@ -25,7 +25,7 @@ async function verifyBalanceServiceContract(): Promise<void> {
   await balance.sub("user_1", 5, {
     note: "chat",
     meta: {
-      bay_id: "bay_downcity",
+      town_id: "town_downcity",
     },
   });
   await balance.createTopup("user_1", 50, {

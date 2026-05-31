@@ -24,9 +24,9 @@ export interface RuntimeUser {
  */
 export interface CreateUserTokenInput {
   /**
-   * token 所属的 Bay ID。
+   * token 所属的 Town ID。
    */
-  bay_id: string;
+  town_id: string;
 
   /**
    * token 所属的终端用户 ID。
@@ -56,9 +56,9 @@ export interface UserTokenPayload {
   aud: "downcity:user";
 
   /**
-   * token 所属 Bay ID。
+   * token 所属 Town ID。
    */
-  bay_id: string;
+  town_id: string;
 
   /**
    * token 所属用户 ID。
@@ -86,14 +86,14 @@ export interface UserTokenPayload {
  */
 export interface UserTokenIssueResult {
   /**
-   * 可交给 User Visa 使用的 token。
+   * 可交给 User City 使用的 token。
    */
   user_token: string;
 
   /**
-   * token 所属 Bay ID。
+   * token 所属 Town ID。
    */
-  bay_id: string;
+  town_id: string;
 
   /**
    * token 所属用户 ID。

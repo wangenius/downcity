@@ -1,12 +1,12 @@
 /**
  * Downcity Cloudflare Worker。
- * 业务 env 统一由 City 自己管理。
+ * 业务 env 统一由 CityBase 自己管理。
  * Worker 只负责提供基础运行时能力（如 D1）。
  */
 
 import { drizzle } from "drizzle-orm/d1";
 import {
-  type City,
+  type CityBase,
   type Context,
 } from "@downcity/city";
 import { compose_city } from "./compose-city.js";
@@ -20,7 +20,7 @@ export interface Env {
   DB: D1Database;
 }
 
-let city_promise: Promise<City> | undefined;
+let city_promise: Promise<CityBase> | undefined;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,14 +29,14 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-function get_city(env: Env, request: Request): Promise<City> {
+function get_city(env: Env, request: Request): Promise<CityBase> {
   if (!city_promise) {
     city_promise = init_city(env);
   }
   return city_promise;
 }
 
-async function init_city(env: Env): Promise<City> {
+async function init_city(env: Env): Promise<CityBase> {
   const db = drizzle(env.DB);
   const deepseek_provider = createOpenAIProvider({
     id: "deepseek",
@@ -84,7 +84,7 @@ async function init_city(env: Env): Promise<City> {
     await balance.sub(ctx.user!.user_id, amount, {
       note: "agent chat",
       meta: {
-        bay_id: ctx.bay?.bay_id,
+        town_id: ctx.town?.town_id,
         action: ctx.action?.id,
         model_id: ctx.variant?.id,
       },

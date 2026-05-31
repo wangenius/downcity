@@ -10,7 +10,7 @@ import type { Database } from "../store/db.js";
 /**
  * City 健康检查结果。
  */
-export interface CityHealthStatus {
+export interface CityBaseHealthStatus {
   /** 当前 Runtime 是否已经完成初始化并可处理请求 */
   ok: boolean;
   /** 服务名称，用于外部探测确认命中的服务类型 */
@@ -26,9 +26,9 @@ export interface CityHealthStatus {
 /**
  * 创建 City 实例时传入的顶层配置。
  *
- * 默认只需要传入 Drizzle db。City 会自动初始化内置 env/bays 能力。
+ * 默认只需要传入 Drizzle db。City 会自动初始化内置 env/towns 能力。
  */
-export interface CityOptions {
+export interface CityBaseOptions {
   /**
    * Drizzle database 对象。
    *

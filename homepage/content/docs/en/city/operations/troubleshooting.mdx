@@ -11,15 +11,15 @@ Check:
 - whether the token has expired
 - whether City has `DOWNCITY_CITY_TOKEN_SIGNING_KEY` configured
 - whether the token was issued by the current City
-- whether `bay_id` matches the bay embedded in the token
+- whether `town_id` matches the town embedded in the token
 
 ## client returns 403
 
 Check:
 
-- whether the `bay_id` in the request matches the bay bound to the current `user_token`
-- whether the bay bound to the token has been paused
-- whether the target bay was `active` when the admin side issued the token
+- whether the `town_id` in the request matches the town bound to the current `user_token`
+- whether the town bound to the token has been paused
+- whether the target town was `active` when the admin side issued the token
 
 ## client returns 404
 
@@ -27,7 +27,7 @@ Check:
 
 - whether the HTTP route is correct
 - whether the target service has been registered in City
-- whether the target bay existed when the admin side issued the token
+- whether the target town existed when the admin side issued the token
 
 ## model not found or handler not hit
 

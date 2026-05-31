@@ -17,15 +17,15 @@ Before launch, confirm at least the following:
 - Every service that should be exposed has been registered through `base.use(service)`.
 - AI models have been registered through `Provider.model()` + `AIService.use()` and include the required actions.
 - Critical provider env values have been configured.
-- The bay table uses an explicit database URL.
+- The town table uses an explicit database URL.
 - before hooks block over-quota users.
 - after hooks record usage and error clues.
 
-## Multi-bay setup
+## Multi-town setup
 
-- `bay_id` clearly separates bays.
-- Usage records include `bay_id`, `user_id`, and `model`.
-- Different bays have default quota strategies.
+- `town_id` clearly separates towns.
+- Usage records include `town_id`, `user_id`, and `model`.
+- Different towns have default quota strategies.
 
 ## Rollback
 

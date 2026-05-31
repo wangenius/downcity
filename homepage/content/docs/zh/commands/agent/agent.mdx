@@ -1,31 +1,31 @@
 ---
-title: bay agent
+title: town agent
 description: 交互式管理 agent，或使用子命令做脚本化操作
 ---
 
-# `bay agent`
+# `town agent`
 
 管理 Agent 生命周期和 registry 相关操作。
 
 > 推荐阅读：新的 Agent 完整文档已经迁移到独立文档域，优先从 [Agent 总览](/zh/docs/agent/overview/what-is-agent) 和 [Agent CLI 总览](/zh/docs/agent/cli/overview) 开始。
 
-在交互式终端中直接运行 `bay agent` 会进入 agent manager。需要脚本化调用时，继续使用明确子命令。
+在交互式终端中直接运行 `town agent` 会进入 agent manager。需要脚本化调用时，继续使用明确子命令。
 
 ## 命令层级
 
-一级命令组为：`bay console`、`bay agent`、`bay plugin`。
+一级命令组为：`town console`、`town agent`、`town plugin`。
 
 ## 用法
 
 ```bash
-bay agent
-bay agent <subcommand>
+town agent
+town agent <subcommand>
 ```
 
 ## 版本查看
 
-- `bay -v` 只显示 bay CLI 自身版本。
-- `bay agent -v` 会同时显示当前 bay CLI 版本，以及这份 bay 实际绑定的 `@downcity/agent` runtime 版本。
+- `town -v` 只显示 town CLI 自身版本。
+- `town agent -v` 会同时显示当前 town CLI 版本，以及这份 town 实际绑定的 `@downcity/agent` runtime 版本。
 
 ## 交互式管理器
 
@@ -39,7 +39,7 @@ bay agent <subcommand>
 
 它不会替代下面的子命令，只是把常用本地操作收进一个引导入口。
 
-聊天渠道凭据属于 `bay chat` 中的 city 级 channel account。agent manager 只负责把当前 agent 连接到已有账号，即写入 `plugins.chat.channels.<channel>.channelAccountId`。如果发现 agent 绑定了不存在的 account，会自动清理这个悬空关联。
+聊天渠道凭据属于 `town chat` 中的 city 级 channel account。agent manager 只负责把当前 agent 连接到已有账号，即写入 `plugins.chat.channels.<channel>.channelAccountId`。如果发现 agent 绑定了不存在的 account，会自动清理这个悬空关联。
 
 ## 子命令
 
@@ -54,18 +54,18 @@ bay agent <subcommand>
 
 ## 子命令文档
 
-- [`bay agent create`](/zh/docs/commands/agent/create)
-- [`bay agent list`](/zh/docs/commands/agent/list)
-- [`bay agent start`](/zh/docs/commands/agent/start)
-- [`bay agent stop`](/zh/docs/commands/agent/stop)
-- [`bay agent chat`](/zh/docs/commands/agent/chat)
-- [`bay agent status`](/zh/docs/commands/agent/status)
-- [`bay agent restart`](/zh/docs/commands/agent/restart)
-- [`bay agent doctor`](/zh/docs/commands/agent/doctor)
+- [`town agent create`](/zh/docs/commands/agent/create)
+- [`town agent list`](/zh/docs/commands/agent/list)
+- [`town agent start`](/zh/docs/commands/agent/start)
+- [`town agent stop`](/zh/docs/commands/agent/stop)
+- [`town agent chat`](/zh/docs/commands/agent/chat)
+- [`town agent status`](/zh/docs/commands/agent/status)
+- [`town agent restart`](/zh/docs/commands/agent/restart)
+- [`town agent doctor`](/zh/docs/commands/agent/doctor)
 
 ## 环境变量注入
 
-每次执行 `bay` 时，CLI 会自动推导当前 agent 上下文，并在 `bay` 进程及其子进程中注入：
+每次执行 `town` 时，CLI 会自动推导当前 agent 上下文，并在 `town` 进程及其子进程中注入：
 
 - `DC_AGENT_ID`：当前 agent runtime id
 - `DC_AGENT_PATH`：当前 agent 绝对路径
@@ -74,15 +74,15 @@ bay agent <subcommand>
 
 ## 相关命令
 
-- 推荐先启动 console：[`bay start`](/zh/docs/commands/start)
+- 推荐先启动 console：[`town start`](/zh/docs/commands/start)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/town/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ bay agent
-bay v1.0.0
+$ town agent
+town v1.0.0
 ? 管理 Agent
   查看 agents
   创建 agent

@@ -15,7 +15,7 @@ Downcity 的核心配置由 3 部分组成：
 
 ### `start`（仅高级场景）
 
-`bay agent start` 的端口由 console 自动分配。
+`town agent start` 的端口由 console 自动分配。
 
 因此常规场景不需要在项目 `downcity.json` 配置 `start.port`。
 
@@ -31,7 +31,7 @@ Downcity 的核心配置由 3 部分组成：
 
 ### `execution`
 
-agent 绑定模型 ID（映射到 Bay 全局模型池）：
+agent 绑定模型 ID（映射到 Town 全局模型池）：
 
 ```json
 {
@@ -102,17 +102,17 @@ agent 绑定模型 ID（映射到 Bay 全局模型池）：
 例如 asr：
 
 ```bash
-bay asr on SenseVoiceSmall
-bay config get plugins.asr
+town asr on SenseVoiceSmall
+town config get plugins.asr
 ```
 
 ## 常用命令
 
 ```bash
-bay config get
-bay config get execution.modelId
-bay model list
-bay config unset plugins.chat.channels.telegram
+town config get
+town config get execution.modelId
+town model list
+town config unset plugins.chat.channels.telegram
 ```
 
 ## 下一步

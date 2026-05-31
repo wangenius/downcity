@@ -1,14 +1,14 @@
 ---
 title: Downcity City Docs
-description: One City, so your next AI bay does not rebuild the backend again.
+description: One City, so your next AI town does not rebuild the backend again.
 ---
 
-Downcity is a shared AI infrastructure runtime for AI bays. It gives you one long-running City that multiple web apps, extensions, apps, desktop tools, client demos, and internal tools can reuse.
+Downcity is a shared AI infrastructure runtime for AI towns. It gives you one long-running City that multiple web apps, extensions, apps, desktop tools, client demos, and internal tools can reuse.
 
-What City exposes to bays is not a raw provider API. It exposes a stable **bay-facing calling boundary**:
+What City exposes to towns is not a raw provider API. It exposes a stable **town-facing calling boundary**:
 
-- the bay holds `bay_id + user_token`
-- it calls `text()`, `stream()`, `image()`, and other services through `User Visa`
+- the town holds `town_id + user_token`
+- it calls `text()`, `stream()`, `image()`, and other services through `User City`
 - City keeps the model directory, provider routing, hooks, usage, and env behind the boundary
 
 ## Pick your reading path
@@ -17,17 +17,17 @@ What City exposes to bays is not a raw provider API. It exposes a stable **bay-f
   <a className="dc-doc-card" href="/en/docs/city/quickstart">
     <em>Start Here</em>
     <strong>I want to run one full call chain</strong>
-    <p>Deploy an City, add one model, issue a token, and make a bay client call `text()` or `stream()` successfully.</p>
+    <p>Deploy an City, add one model, issue a token, and make a town client call `text()` or `stream()` successfully.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/concepts">
     <em>Mental Model</em>
     <strong>I want to understand the boundaries first</strong>
-    <p>Separate City, bay clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
+    <p>Separate City, town clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/guides">
     <em>Real Scenarios</em>
-    <strong>I am connecting a real bay now</strong>
-    <p>Read the practical guides for pure-client bays, multi-bay reuse, auth, provider env, hooks, and business logic.</p>
+    <strong>I am connecting a real town now</strong>
+    <p>Read the practical guides for pure-client towns, multi-town reuse, auth, provider env, hooks, and business logic.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/packages">
     <em>Packages</em>
@@ -37,7 +37,7 @@ What City exposes to bays is not a raw provider API. It exposes a stable **bay-f
   <a className="dc-doc-card" href="/en/docs/city/reference">
     <em>API</em>
     <strong>I only need the interfaces</strong>
-    <p>Jump straight to City, User Visa, Admin Visa, HTTP API, and environment variables.</p>
+    <p>Jump straight to City, User City, Admin City, HTTP API, and environment variables.</p>
   </a>
 </div>
 
@@ -46,9 +46,9 @@ What City exposes to bays is not a raw provider API. It exposes a stable **bay-f
 <div className="dc-doc-flow" aria-label="Downcity request flow">
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Many bay clients</strong>
+      <strong>Many town clients</strong>
       <span>Web apps, extensions, apps, desktop tools, client demos, and internal tools.</span>
-      <code>User Visa + bay_id + user_token</code>
+      <code>User City + town_id + user_token</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -72,7 +72,7 @@ What City exposes to bays is not a raw provider API. It exposes a stable **bay-f
 </div>
 
 <p className="dc-doc-caption">
-  Bay clients see stable services and model IDs. Which provider or gateway City uses internally remains a server-side detail.
+  Town clients see stable services and model IDs. Which provider or gateway City uses internally remains a server-side detail.
 </p>
 
 ## What City owns
@@ -88,13 +88,13 @@ What City exposes to bays is not a raw provider API. It exposes a stable **bay-f
 
 - your user system
 - orders, subscriptions, CRM, or content data
-- bay-specific pages, interaction, and business UX
+- town-specific pages, interaction, and business UX
 - a public “unified provider API” for arbitrary third-party systems
 
 More precisely:
 
 > City owns the shared AI infrastructure layer.
-> Bays still own their users, business logic, interface, and pricing model.
+> Towns still own their users, business logic, interface, and pricing model.
 
 ## Recommended order
 

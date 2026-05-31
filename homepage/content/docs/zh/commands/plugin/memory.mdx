@@ -1,18 +1,18 @@
 ---
-title: bay memory
+title: town memory
 description: 托管 memory plugin 命令，用于检索、读取、写入与 flush
 ---
 
-# `bay memory`
+# `town memory`
 
-`bay memory` 是托管 memory plugin 的命令组。
+`town memory` 是托管 memory plugin 的命令组。
 
 当 agent 或操作者需要显式查看、写入、整理 memory，而不是只依赖 prompt 注入时，使用它。
 
 ## 用法
 
 ```bash
-bay memory <subcommand> [options]
+town memory <subcommand> [options]
 ```
 
 ## 主要子命令
@@ -32,11 +32,11 @@ bay memory <subcommand> [options]
 ## 示例
 
 ```bash
-bay memory status
-bay memory search "release decision"
-bay memory get .downcity/memory/MEMORY.md --from 10 --lines 20
-bay memory store --target longterm --content "User prefers concise release notes."
-bay memory flush --session-id telegram-chat-123 --max-messages 40
+town memory status
+town memory search "release decision"
+town memory get .downcity/memory/MEMORY.md --from 10 --lines 20
+town memory store --target longterm --content "User prefers concise release notes."
+town memory flush --session-id telegram-chat-123 --max-messages 40
 ```
 
 ## 相关页面

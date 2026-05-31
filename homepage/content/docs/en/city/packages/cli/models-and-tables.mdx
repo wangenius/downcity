@@ -20,7 +20,7 @@ Many "the AI path is wrong" issues are not provider failures. They are model-lay
 
 When you debug runtime behavior, you usually end up checking tables such as:
 
-- `bays`
+- `towns`
 - `env`
 - usage event tables
 - accounts-related tables
@@ -29,9 +29,9 @@ When you debug runtime behavior, you usually end up checking tables such as:
 ## Common model-focused entry points
 
 ```bash
-bay model list
-bay model create
-bay model manage
+town model list
+town model create
+town model manage
 ```
 
 ## Common table-debugging scenarios
@@ -54,8 +54,8 @@ Looking at the tables first is often the fastest way to distinguish:
 ```bash
 city
 # or start a local agent
-bay agent start .
-bay model list
+town agent start .
+town model list
 ```
 
 Then continue inside the interactive panel to inspect:
@@ -85,7 +85,7 @@ It is better understood as a City-oriented operations tool.
 
 ### Looking at models alone is not always enough
 
-Models, service tables, usage events, and env data can all affect one bay flow, so you often need to inspect them together.
+Models, service tables, usage events, and env data can all affect one town flow, so you often need to inspect them together.
 
 ## Read next
 

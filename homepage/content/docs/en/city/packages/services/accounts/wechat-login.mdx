@@ -64,11 +64,11 @@ https://open.weixin.qq.com/connect/qrconnect
 
 with the current City `redirect_uri`.
 
-If the callback domain configured in WeChat does not match the real public City domain used by the bay, login usually fails immediately.
+If the callback domain configured in WeChat does not match the real public City domain used by the town, login usually fails immediately.
 
 So two things must stay aligned:
 
-- the real public City domain used by the bay
+- the real public City domain used by the town
 - the exact callback URL registered in WeChat
 
 ## How the frontend should use it
@@ -92,7 +92,7 @@ To start login:
 ```ts
 const start = await guest.service("accounts").action("oauth/start").invoke({
   provider: "wechat",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
@@ -108,13 +108,13 @@ const result = await guest.service("accounts").get("oauth/result", {
 
 After WeChat login succeeds, the accounts service still returns a normal City `user_token`.
 
-So the bay does not need a special post-login client flow just because the user came from WeChat:
+So the town does not need a special post-login client flow just because the user came from WeChat:
 
 ```ts
-const user = new Visa({
+const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
   user_token: result.user_token,
 });
 ```
@@ -123,11 +123,11 @@ const user = new Visa({
 
 - mixing Website App login with Official Account login
 - mixing Website App login with Mini Program login
-- configuring one domain in WeChat while the bay actually uses another City domain
+- configuring one domain in WeChat while the town actually uses another City domain
 - hardcoding the `wechat` button instead of checking `providers` first
 
 ## Related docs
 
 - For the overall OAuth flow, continue with [OAuth and Session](/en/docs/city/packages/services/accounts/oauth-and-session)
 - For the full integration path, read [Accounts Service](/en/docs/city/guides/accounts-service)
-- After deployment, write `WECHAT_CLIENT_ID` and `WECHAT_CLIENT_SECRET` into City env through Bay CLI or the Admin API
+- After deployment, write `WECHAT_CLIENT_ID` and `WECHAT_CLIENT_SECRET` into City env through Town CLI or the Admin API

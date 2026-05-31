@@ -11,8 +11,8 @@ The repository is organized around the agent runtime, city control plane, shared
 
 - `packages/agent/`: local agent kernel, session execution, plugin runtime, HTTP/RPC host, SDK
 - `cli/city/`: City management command for deployed service resources
-- `cli/bay/`: local Agent host, Console gateway, model pool, project orchestration, and daemon control
-- `packages/city/`: City runtime plus Gate access SDK for services, actions, auth, env, bay-scoped access, routing, and HTTP calls
+- `cli/town/`: local Agent host, Console gateway, model pool, project orchestration, and daemon control
+- `packages/city/`: City runtime plus City access SDK for services, actions, auth, env, town-scoped access, routing, and HTTP calls
 - `packages/services/`: public services such as accounts, balance, usage, payment, and Stripe flows
 - `packages/ui/`: reusable UI primitives and app-facing components
 - `cities/`: deployable City compositions that assemble City runtime and services for Node or edge runtimes
@@ -28,7 +28,7 @@ The repository is organized around the agent runtime, city control plane, shared
 - `cli/city` owns control-plane and multi-project coordination
 - `packages/city` owns reusable service runtime infrastructure
 - `packages/services` owns public service capabilities
-- `packages/city` owns service access over HTTP through Gate exports
+- `packages/city` owns service access over HTTP through City exports
 - product surfaces should consume runtime APIs instead of duplicating runtime logic
 
 ## Current architecture philosophy
@@ -43,10 +43,10 @@ The repository is organized around the agent runtime, city control plane, shared
 
 ```text
 packages/agent build -> SDK and runtime package
-packages/city build -> runtime and Gate SDK package
+packages/city build -> runtime and City SDK package
 packages/services build -> public services package
 cli/city build -> City management command
-cli/bay build -> local Bay host command
+cli/town build -> local Town host command
 cities/node typecheck -> Node service block
 cities/edge typecheck -> edge service block
 products/console build -> browser control surface

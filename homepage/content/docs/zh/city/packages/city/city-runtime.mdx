@@ -1,6 +1,6 @@
 ---
 title: City 运行时
-description: "City 实例、runtime、router、serve 和统一入口在 @downcity/city 里的角色。"
+description: "CityBase 实例、runtime、router、serve 和统一入口在 @downcity/city 里的角色。"
 ---
 
 `City` 是 Downcity 的长期运行容器。它不是一个零散函数集合，而是把 Drizzle db、service、鉴权和统一 `/v1/*` 路由收在同一个服务端入口里。
@@ -15,7 +15,7 @@ description: "City 实例、runtime、router、serve 和统一入口在 @downcit
 - service 注册表
 - 服务挂载点
 - HTTP 路由入口
-- token、bay、env 等基础设施
+- token、town、env 等基础设施
 
 所以你通常不是“调用一下 City”，而是“启动一个 City，然后让多个 client 长期连接它”。
 
@@ -28,7 +28,7 @@ description: "City 实例、runtime、router、serve 和统一入口在 @downcit
 
 ## 什么时候这页不是重点
 
-- 你只想知道产品前端怎么调 City：优先读 [@downcity/city](/docs/city/packages/city/visa)
+- 你只想知道产品前端怎么调 City：优先读 [@downcity/city](/docs/city/packages/city/city)
 - 你只想知道账号登录怎么跑通：优先读 [@downcity/services](/docs/city/packages/services)
 - 你只想看某个 custom service 怎么写：优先读 [Service 与 Action](/docs/city/packages/city/service-and-action)
 
@@ -49,7 +49,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new City({ db, dialect: "sqlite", raw: sqlite });
+const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
 
 const ai = new AIService();
 
@@ -131,7 +131,7 @@ export default {
 - service 生命周期
 - action 路由
 - token 鉴权
-- bay / env / store 基础设施
+- town / env / store 基础设施
 
 而具体宿主环境只负责把数据库对象创建好：
 
@@ -145,7 +145,7 @@ export default {
 
 这一页最相关的 City API 是：
 
-- `new City({ db })`：创建 City 实例
+- `new CityBase({ db })`：创建 CityBase 实例
 - `base.use(...)`：挂 service、AIService 和官方服务
 - `base.router()`：拿到底层 HTTP router
 - `base.handleRequest(request)`：处理单次请求
@@ -156,16 +156,16 @@ export default {
 
 ## 常见误解
 
-### City 不是 Visa SDK
+### City 不是 City SDK
 
-City 是服务端长期运行容器。产品侧真正调用它用的是 [@downcity/city](/docs/city/packages/city/visa)。
+City 是服务端长期运行容器。产品侧真正调用它用的是 [@downcity/city](/docs/city/packages/city/city)。
 
 ### City 不是纯 HTTP 代理
 
 它背后还持有：
 
 - 内置表
-- token / bay / env 基础设施
+- token / town / env 基础设施
 - service 数据层
 - hook 生命周期
 

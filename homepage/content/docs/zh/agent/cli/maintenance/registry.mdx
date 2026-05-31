@@ -5,7 +5,7 @@ description: 理解 city registry 中的已登记 Agent 与当前运行状态的
 
 # Agent Registry
 
-`bay agent list` 显示的是 city registry 中已登记的 agent，而不是“当前目录下找出来的项目”。
+`town agent list` 显示的是 city registry 中已登记的 agent，而不是“当前目录下找出来的项目”。
 
 ## registry 记录了什么
 
@@ -21,9 +21,9 @@ description: 理解 city registry 中的已登记 Agent 与当前运行状态的
 
 很多 CLI 操作都依赖这层信息：
 
-- `bay agent list`
-- `bay agent start` 的交互选择
-- `bay agent chat --to <name>`
+- `town agent list`
+- `town agent start` 的交互选择
+- `town agent chat --to <name>`
 
 如果没有 registry，很多“按 agent id 操作”的体验都会退化成“你必须自己记绝对路径”。
 
@@ -47,5 +47,5 @@ registry 是“登记信息”。
 
 ## 相关文档
 
-- [bay agent list](/zh/docs/agent/cli/lifecycle/list)
-- [bay agent start](/zh/docs/agent/cli/lifecycle/start)
+- [town agent list](/zh/docs/agent/cli/lifecycle/list)
+- [town agent start](/zh/docs/agent/cli/lifecycle/start)

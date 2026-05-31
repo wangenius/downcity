@@ -101,7 +101,7 @@ export interface CityModelDescriptor {
    * 当前模型是否为目录中的全局默认模型。
    *
    * 关键点（中文）
-   * - 该字段通常由 Gate 侧 ModelCatalog 计算得到。
+   * - 该字段通常由 City 侧 ModelCatalog 计算得到。
    */
   is_default?: boolean;
 
@@ -109,7 +109,7 @@ export interface CityModelDescriptor {
    * 当前模型作为默认模型负责的 modality 列表。
    *
    * 关键点（中文）
-   * - 该字段通常由 Gate 侧 ModelCatalog 计算得到。
+   * - 该字段通常由 City 侧 ModelCatalog 计算得到。
    */
   default_modalities?: string[];
 }
@@ -164,7 +164,7 @@ export interface CityModelInvoker {
  *
  * 关键点（中文）
  * - 公开字段来自 City 模型目录。
- * - 隐藏调用器由 Gate 注入，Agent SDK 可据此把 CityModel 适配为 LanguageModel。
+ * - 隐藏调用器由 City 注入，Agent SDK 可据此把 CityModel 适配为 LanguageModel。
  */
 export interface CityModel extends CityModelDescriptor {
   /**

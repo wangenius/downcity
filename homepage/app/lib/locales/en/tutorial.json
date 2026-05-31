@@ -4,12 +4,12 @@
   "step1": {
     "title": "Initialize Config",
     "description": "Create an agent project in your repo. This generates `PROFILE.md` (Agent Instructions) and config files, giving your repository a unique personality and boundaries.",
-    "command": "bay agent create ."
+    "command": "town agent create ."
   },
   "step2": {
     "title": "Wake Up Runtime",
     "description": "Start the Agent Runtime locally. It takes over the repo's read/write capabilities and connects to your chat apps (e.g., Telegram), standing by as a team member.",
-    "command": "bay agent start"
+    "command": "town agent start"
   },
   "step3": {
     "title": "Collaborate Naturally",

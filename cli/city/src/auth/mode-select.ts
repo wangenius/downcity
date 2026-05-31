@@ -28,7 +28,7 @@ export async function selectIdentity(): Promise<Identity> {
       { label: hasAdmin ? "★ Admin" : "   Admin", value: "admin", hint: hasAdmin ? activeServer?.base_url ?? "" : "Admin management" },
       { label: hasUser ? "★ User" : "   User", value: "user", hint: hasUser ? "session active" : "Login or register" },
       { label: "Manage Servers", value: "servers", hint: `${config.servers.length} configured` },
-      { label: "Update CLI", value: "update", hint: "Refresh global city/bay commands" },
+      { label: "Update CLI", value: "update", hint: "Refresh global city/town commands" },
       { label: "Quit", value: "quit" },
     ],
   });

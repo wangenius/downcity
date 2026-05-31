@@ -7,7 +7,7 @@ The most stable way to understand Downcity is not to start from a single API, bu
 
 ```txt
 Interfaces
-  -> bays enter City through client or Bay terminal
+  -> towns enter City through client or Town terminal
 Composition
   -> server / worker assemble City, official services, and models
 Kernel
@@ -19,20 +19,20 @@ Capabilities
 Together they create the runtime flow:
 
 ```txt
-bay UI / app / internal tool
-  -> User Visa / Admin Visa / Bay terminal
+town UI / app / internal tool
+  -> User City / Admin City / Town terminal
   -> City
   -> Service / AIService
   -> Provider / Database
 ```
 
-Many clients can share one self-deployed City. Bay clients stay lightweight and focus on UX; City centralizes auth, model routing, runtime env, hooks, and reusable capabilities.
+Many clients can share one self-deployed City. Town clients stay lightweight and focus on UX; City centralizes auth, model routing, runtime env, hooks, and reusable capabilities.
 
 ## 1. Interfaces: who calls City
 
 Downcity has two main external entry points:
 
-- Bay-side entry: `User Visa` and `Admin Visa` from `@downcity/city`
+- Town-side entry: `User City` and `Admin City` from `@downcity/city`
 - Operator entry: `downcity`
 
 Neither one implements the City itself. They both send requests into the same City.
@@ -53,12 +53,12 @@ When an HTTP request reaches City, City does the following:
 
 1. Refresh the runtime env view
 2. Validate the `user_token` or admin key
-3. Resolve identity, `bay_id`, and `user_id`
+3. Resolve identity, `town_id`, and `user_id`
 4. Find the target Service and Action
 5. Build one shared `ctx`
 6. Run hooks and the Action
 
-If the token is invalid, expired, or the `bay_id` does not match, City returns 401 or 403 directly.
+If the token is invalid, expired, or the `town_id` does not match, City returns 401 or 403 directly.
 
 ## 4. Capabilities: Service and Action
 
@@ -86,10 +86,10 @@ City itself does not care what “translation” or “payment” means as busin
 
 ### SDK pathway
 
-Used by `User Visa`:
+Used by `User City`:
 
 ```txt
-User Visa.ai.text({ prompt: "hello", model: "kimi-k2.6" })
+User City.ai.text({ prompt: "hello", model: "kimi-k2.6" })
   -> POST /v1/ai/text
   -> Provider text action(ctx)
   -> generateText / streamText (ai-sdk)

@@ -15,55 +15,55 @@ CLI 文档按“单命令页面 + 命令组”组织。
 ## 主要命令组
 
 - 固定根命令：
-  - [`bay init`](/zh/docs/commands/init)
-  - [`bay start`](/zh/docs/commands/start)
-  - [`bay stop`](/zh/docs/commands/stop)
-  - [`bay restart`](/zh/docs/commands/restart)
-  - [`bay update`](/zh/docs/commands/update)
-  - [`bay status`](/zh/docs/commands/status)
-  - [`bay public`](/zh/docs/commands/public)
+  - [`town init`](/zh/docs/commands/init)
+  - [`town start`](/zh/docs/commands/start)
+  - [`town stop`](/zh/docs/commands/stop)
+  - [`town restart`](/zh/docs/commands/restart)
+  - [`town update`](/zh/docs/commands/update)
+  - [`town status`](/zh/docs/commands/status)
+  - [`town public`](/zh/docs/commands/public)
 - 固定模块命令：
-  - [`bay console`](/zh/docs/commands/console/console)
-  - [`bay agent`](/zh/docs/commands/agent/agent)
-  - [`bay agent create`](/zh/docs/commands/agent/create)
-  - [`bay agent list`](/zh/docs/commands/agent/list)
-  - [`bay agent chat`](/zh/docs/commands/agent/chat)
-  - [`bay config`](/zh/docs/commands/config)
-  - [`bay model`](/zh/docs/commands/model)
-  - [`bay env`](/zh/docs/commands/env)
-  - [`bay plugin`](/zh/docs/commands/plugin/plugin)
+  - [`town console`](/zh/docs/commands/console/console)
+  - [`town agent`](/zh/docs/commands/agent/agent)
+  - [`town agent create`](/zh/docs/commands/agent/create)
+  - [`town agent list`](/zh/docs/commands/agent/list)
+  - [`town agent chat`](/zh/docs/commands/agent/chat)
+  - [`town config`](/zh/docs/commands/config)
+  - [`town model`](/zh/docs/commands/model)
+  - [`town env`](/zh/docs/commands/env)
+  - [`town plugin`](/zh/docs/commands/plugin/plugin)
 - 动态 action 命令：
-  - [`bay chat`](/zh/docs/commands/plugin/chat)
-  - [`bay task`](/zh/docs/commands/plugin/task)
-  - [`bay memory`](/zh/docs/commands/plugin/memory)
-  - [`bay contact`](/zh/docs/commands/plugin/contact)
-  - [`bay shell`](/zh/docs/commands/plugin/shell)
-  - [`bay skill`](/zh/docs/commands/plugin/skill)
-  - [`bay web`](/zh/docs/commands/plugin/web)
-  - [`bay asr`](/zh/docs/commands/plugin/asr)
-  - [`bay tts`](/zh/docs/commands/plugin/tts)
+  - [`town chat`](/zh/docs/commands/plugin/chat)
+  - [`town task`](/zh/docs/commands/plugin/task)
+  - [`town memory`](/zh/docs/commands/plugin/memory)
+  - [`town contact`](/zh/docs/commands/plugin/contact)
+  - [`town shell`](/zh/docs/commands/plugin/shell)
+  - [`town skill`](/zh/docs/commands/plugin/skill)
+  - [`town web`](/zh/docs/commands/plugin/web)
+  - [`town asr`](/zh/docs/commands/plugin/asr)
+  - [`town tts`](/zh/docs/commands/plugin/tts)
 
 ## 运行模型（简版）
 
-- `bay start`：仅启动 Bay runtime
-- `bay start --console` / `bay start -a`：同时启动 Bay runtime 和 Console
-- `bay console start`：只启动 Console，前提是 Bay runtime 已经运行
-- `bay stop`：先停止 Console，再停止 Bay runtime 与托管 agent
-- `bay restart`：重启 Bay runtime，恢复之前运行中的 agent，再重启 Console
-- `bay update`：更新当前全局安装来源对应的 `downcity` CLI 聚合包
-- `bay public`：管理 Console 的持久化公网暴露，支持交互式 manager 和 `on/off/status`
-- `bay agent`：在交互式终端中打开 agent manager
-- `bay agent create`：初始化项目运行文件
-- `bay agent list`：查看已登记 agent，也可加 `--running` 只看正在运行的项目
-- `bay agent start`：启动项目 agent daemon
-- `bay agent stop`：停止项目 agent daemon
-- `bay agent chat`：在终端中与 agent 对话，也可通过 `--message` 发送一次性消息
-- `bay console`：管理 Console 模块本身
-- `bay plugin ...`：查看 plugin catalog、管理 plugin lifecycle，或使用高级 plugin command 形式
-- `bay chat/task/memory/contact/shell ...`：日常托管 plugin runtime 命令
-- `bay web/skill/asr/tts ...`：日常本地 plugin 命令
-- `bay model`：在 TTY 中打开交互式全局模型管理器
-- `bay model ...`：管理运行时模型配置与自动化脚本入口
+- `town start`：仅启动 Town runtime
+- `town start --console` / `town start -a`：同时启动 Town runtime 和 Console
+- `town console start`：只启动 Console，前提是 Town runtime 已经运行
+- `town stop`：先停止 Console，再停止 Town runtime 与托管 agent
+- `town restart`：重启 Town runtime，恢复之前运行中的 agent，再重启 Console
+- `town update`：更新当前全局安装来源对应的 `downcity` CLI 聚合包
+- `town public`：管理 Console 的持久化公网暴露，支持交互式 manager 和 `on/off/status`
+- `town agent`：在交互式终端中打开 agent manager
+- `town agent create`：初始化项目运行文件
+- `town agent list`：查看已登记 agent，也可加 `--running` 只看正在运行的项目
+- `town agent start`：启动项目 agent daemon
+- `town agent stop`：停止项目 agent daemon
+- `town agent chat`：在终端中与 agent 对话，也可通过 `--message` 发送一次性消息
+- `town console`：管理 Console 模块本身
+- `town plugin ...`：查看 plugin catalog、管理 plugin lifecycle，或使用高级 plugin command 形式
+- `town chat/task/memory/contact/shell ...`：日常托管 plugin runtime 命令
+- `town web/skill/asr/tts ...`：日常本地 plugin 命令
+- `town model`：在 TTY 中打开交互式全局模型管理器
+- `town model ...`：管理运行时模型配置与自动化脚本入口
 
 ## 保持最新
 
@@ -72,6 +72,6 @@ CLI 文档按“单命令页面 + 命令组”组织。
 ```bash
 city --help
 city <command> --help
-bay --help
-bay <command> --help
+town --help
+town <command> --help
 ```

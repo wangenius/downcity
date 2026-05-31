@@ -4,7 +4,7 @@ import { product } from "@/lib/product";
 /**
  * 首页营销落地页路由。
  * 说明：
- * 1. 首页文案直接对齐当前 City / Bay 命名与 quickstart 文档，避免能力描述失真。
+ * 1. 首页文案直接对齐当前 City / Town 命名与 quickstart 文档，避免能力描述失真。
  * 2. 采用“用户目标 -> runtime 逻辑”映射方式呈现，不堆砌开发细节。
  */
 export function meta() {

@@ -11,15 +11,15 @@ description: 调试 City、client、token 和 env 的常见路径。
 - token 是否过期。
 - City 是否配置了 `DOWNCITY_CITY_TOKEN_SIGNING_KEY`。
 - token 是否由当前 City 签发。
-- `bay_id` 是否和 token 里的 bay 一致。
+- `town_id` 是否和 token 里的 town 一致。
 
 ## client 返回 403
 
 检查：
 
-- 请求体里的 `bay_id` 是否和当前 `user_token` 所属 bay 一致。
-- token 所属 bay 是否已经被暂停。
-- 管理端签发 token 时，目标 bay 是否是 `active`。
+- 请求体里的 `town_id` 是否和当前 `user_token` 所属 town 一致。
+- token 所属 town 是否已经被暂停。
+- 管理端签发 token 时，目标 town 是否是 `active`。
 
 ## client 返回 404
 
@@ -27,7 +27,7 @@ description: 调试 City、client、token 和 env 的常见路径。
 
 - 调用的 HTTP 路由是否正确。
 - 目标 service 是否已经在 City 里注册。
-- 管理端签发 token 时，目标 bay 是否存在。
+- 管理端签发 token 时，目标 town 是否存在。
 
 ## 模型不存在或没有命中 handler
 

@@ -3,7 +3,7 @@
   "pages": [
     "index",
     "city",
-    "visa",
+    "city",
     "cli",
     "services"
   ]

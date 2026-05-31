@@ -5,7 +5,7 @@ description: "Use the official accounts service for registration, login, OAuth e
 
 `@downcity/services` is a good fit when you do not want to build a full account system first. It packages the common registration, login, session, and OAuth entry flows into one official service.
 
-The important point is not "another SDK." It adds a ready-made `accounts` service into City, so bay-side callers can use it through `User Visa` and `Admin Visa`.
+The important point is not "another SDK." It adds a ready-made `accounts` service into City, so town-side callers can use it through `User City` and `Admin City`.
 
 ## How to read this section
 
@@ -23,7 +23,7 @@ The recommended order is:
 - email verification
 - GitHub, Google, and WeChat OAuth entry points
 - better-auth auth tables
-- bay-facing profile table
+- town-facing profile table
 - City `user_token` issuance after login
 
 ## Relationship with `@downcity/city`
@@ -58,10 +58,10 @@ pnpm add @downcity/services
 ## Enable it
 
 ```ts
-import { City } from "@downcity/city";
+import { CityBase } from "@downcity/city";
 import { accountsService } from "@downcity/services";
 
-const base = new City();
+const base = new CityBase();
 
 base.use(accountsService({
   token_ttl: "7d",
@@ -85,7 +85,7 @@ GET  /v1/accounts/users
 GET  /v1/accounts/sessions
 ```
 
-The third-party OAuth return URL is fixed at `/v1/accounts/oauth/callback`. Bay clients do not need to pass `redirect_uri` into `oauth/start`; the service generates it automatically from the current public City origin.
+The third-party OAuth return URL is fixed at `/v1/accounts/oauth/callback`. Town clients do not need to pass `redirect_uri` into `oauth/start`; the service generates it automatically from the current public City origin.
 
 As a first mental model:
 
@@ -98,18 +98,18 @@ As a first mental model:
 The service now keeps two layers of data:
 
 - better-auth auth tables: `auth_users`, `auth_accounts`, `auth_sessions`, `auth_verifications`
-- bay-facing table: `auth_profiles`
+- town-facing table: `auth_profiles`
 - oauth polling table: `service_accounts_oauth_states`
 
-The first layer answers auth questions. The second layer answers bay-facing display questions.
+The first layer answers auth questions. The second layer answers town-facing display questions.
 
-If the bay frontend needs to decide which sign-in buttons to render, it should call this first:
+If the town frontend needs to decide which sign-in buttons to render, it should call this first:
 
 ```ts
 const providers = await guest.service("accounts").get("providers");
 ```
 
-Then render email, GitHub, Google, or WeChat only from the server response. Do not hardcode the provider list in the bay client.
+Then render email, GitHub, Google, or WeChat only from the server response. Do not hardcode the provider list in the town client.
 
 ## Common call pattern
 
@@ -117,18 +117,18 @@ Then render email, GitHub, Google, or WeChat only from the server response. Do n
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
-Successful registration or login returns `user_token`. After that, the bay client can switch to a normal `User Visa` for AI calls.
+Successful registration or login returns `user_token`. After that, the town client can switch to a normal `User City` for AI calls.
 
-`GET /v1/accounts/me` also returns the current `profile`, so bay-side callers can render account data directly from one endpoint.
+`GET /v1/accounts/me` also returns the current `profile`, so town-side callers can render account data directly from one endpoint.
 
-## The most common bay-side integration
+## The most common town-side integration
 
 ```ts
-const guest = new Visa({
+const guest = new City({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -138,13 +138,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 
-const user = new Visa({
+const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
   user_token: session.user_token,
 });
 
@@ -159,5 +159,5 @@ This is why `accountsService()` and `@downcity/city` are usually read together: 
 
 - For the step-by-step flows, continue with the three subpages in this section
 - For the full scenario guide, read [Accounts Service](/en/docs/city/guides/accounts-service)
-- For the bay SDK, read [@downcity/city](/en/docs/city/packages/city/visa)
-- For more detailed bay-side calling patterns, read [User Visa](/en/docs/city/reference/visa-user)
+- For the town SDK, read [@downcity/city](/en/docs/city/packages/city/city)
+- For more detailed town-side calling patterns, read [User City](/en/docs/city/reference/city-user)

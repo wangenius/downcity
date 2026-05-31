@@ -29,9 +29,9 @@ Typical examples:
 
 ## When to think service first
 
-- the capability should be reused across many bays
+- the capability should be reused across many towns
 - it is more than before or after logic and needs its own service or tables
-- you want bay-side callers to reach it through a stable service boundary
+- you want town-side callers to reach it through a stable service boundary
 
 Typical examples:
 
@@ -56,7 +56,7 @@ Their meanings are:
 ## Common service mounting example
 
 ```ts
-import { City } from "@downcity/city";
+import { CityBase } from "@downcity/city";
 import { accountsService } from "@downcity/services";
 import { balanceService } from "@downcity/services";
 import { paymentService } from "@downcity/services";
@@ -64,7 +64,7 @@ import { stripePaymentMethod } from "@downcity/services";
 import { usageService } from "@downcity/services";
 import { stripePaymentService } from "@downcity/services";
 
-const base = new City({ db });
+const base = new CityBase({ db });
 const balance = balanceService();
 
 base.use(accountsService({
@@ -91,15 +91,15 @@ base.use(stripePaymentService({
 }));
 ```
 
-## How bay-side callers reach services
+## How town-side callers reach services
 
-Once mounted, services still look like normal services from the bay side:
+Once mounted, services still look like normal services from the town side:
 
 ```ts
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 
 const usage = await admin.service("usage").get("summary");
@@ -142,13 +142,13 @@ It often represents a whole boundary of services, tables, admin surfaces, and op
 
 Hooks are best for cross-cutting governance logic, not for turning every feature into middleware.
 
-### Services do not replace Visa
+### Services do not replace City
 
-Services add capability into City. The bay-side calling surface is still [@downcity/city](/en/docs/city/packages/city/visa).
+Services add capability into City. The town-side calling surface is still [@downcity/city](/en/docs/city/packages/city/city).
 
 ## Read next
 
-- For unified bay-side service calls, read [@downcity/city](/en/docs/city/packages/city/visa)
+- For unified town-side service calls, read [@downcity/city](/en/docs/city/packages/city/city)
 - For auth capability, read [@downcity/services](/en/docs/city/packages/services)
 - For usage recording, read [@downcity/services](/en/docs/city/packages/services)
 - For one-time Stripe topups, read [@downcity/services](/en/docs/city/packages/services)

@@ -280,7 +280,7 @@ export function buildOverviewPatrolRoute(params: {
 }): DowncityWorkboardStagePoint[] {
   const anchor = toStagePoint(params.zoneId, params.placement);
   const hub = toZoneHubPoint(params.zoneId);
-  const gate = WORKBOARD_ZONE_GATE_POINTS[params.zoneId];
+  const city = WORKBOARD_ZONE_GATE_POINTS[params.zoneId];
   const laneIndex = Math.round((params.placement.left + params.placement.top) / 32) % 3;
   const laneOffset = (laneIndex - 1) * 10;
   const roadY = params.zoneId === "engaged" || params.zoneId === "steady" ? 460 : 500;
@@ -294,17 +294,17 @@ export function buildOverviewPatrolRoute(params: {
     anchor,
     { x: anchor.x, y: hub.y },
     hub,
-    { x: gate.x, y: hub.y },
-    gate,
-    { x: gate.x, y: roadY },
+    { x: city.x, y: hub.y },
+    city,
+    { x: city.x, y: roadY },
     { x: plazaLane.x, y: roadY },
     plazaLane,
     WORKBOARD_TOWN_PLAZA_POINT,
     plazaLane,
     { x: plazaLane.x, y: roadY },
-    { x: gate.x, y: roadY },
-    gate,
-    { x: gate.x, y: hub.y },
+    { x: city.x, y: roadY },
+    city,
+    { x: city.x, y: hub.y },
     hub,
     { x: anchor.x, y: hub.y },
     anchor,

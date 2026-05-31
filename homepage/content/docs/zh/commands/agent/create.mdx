@@ -1,9 +1,9 @@
 ---
-title: bay agent create
+title: town agent create
 description: 创建/初始化一个 Downcity Agent 项目
 ---
 
-# `bay agent create`
+# `town agent create`
 
 在目标路径创建/初始化一个 Downcity Agent 项目。
 
@@ -12,7 +12,7 @@ description: 创建/初始化一个 Downcity Agent 项目
 ## 用法
 
 ```bash
-bay agent create [path]
+town agent create [path]
 ```
 
 ## 参数
@@ -30,19 +30,19 @@ bay agent create [path]
 
 ```bash
 # 在当前目录初始化
-bay agent create .
+town agent create .
 
 # 在指定目录初始化
-bay agent create ./my-agent-project
+town agent create ./my-agent-project
 ```
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/town/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ bay agent create .
-bay v1.0.0
+$ town agent create .
+town v1.0.0
 🚀 Initializing Downcity project: <projectRoot>
 ✅ Created PROFILE.md
 ✅ Created SOUL.md
@@ -54,6 +54,6 @@ bay v1.0.0
 常用后续命令：
 
 ```bash
-bay model list
-bay model get provider openai_main
+town model list
+town model get provider openai_main
 ```

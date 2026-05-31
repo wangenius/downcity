@@ -1,6 +1,6 @@
 ---
 title: Reference
-description: Read City, User Visa, Admin Visa, HTTP API, and environment variables by role.
+description: Read City, User City, Admin City, HTTP API, and environment variables by role.
 ---
 
 This section answers one question only: **how do I use it concretely?**
@@ -14,13 +14,13 @@ If you are still unsure what Downcity is, why it is split this way, or where the
     <strong>City</strong>
     <p>The server runtime entry. It initializes state, registers services, runs hooks, and exposes `handleRequest()`, `serve()`, and `router()`.</p>
   </a>
-  <a className="dc-doc-card" href="/en/docs/city/reference/visa-user">
-    <strong>User Visa</strong>
-    <p>The bay-side entry. It reads `ai.listModels()`, calls `ai.text()`, `ai.stream()`, `ai.image()`, and invokes Service actions.</p>
+  <a className="dc-doc-card" href="/en/docs/city/reference/city-user">
+    <strong>User City</strong>
+    <p>The town-side entry. It reads `ai.listModels()`, calls `ai.text()`, `ai.stream()`, `ai.image()`, and invokes Service actions.</p>
   </a>
-  <a className="dc-doc-card" href="/en/docs/city/reference/visa-admin">
-    <strong>Admin Visa</strong>
-    <p>The trusted-side entry. It manages bays, `user_token`, and runtime env.</p>
+  <a className="dc-doc-card" href="/en/docs/city/reference/city-admin">
+    <strong>Admin City</strong>
+    <p>The trusted-side entry. It manages towns, `user_token`, and runtime env.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/reference/http-api">
     <strong>HTTP API</strong>
@@ -34,7 +34,7 @@ If you are still unsure what Downcity is, why it is split this way, or where the
 
 ## Suggested order
 
-1. Writing bay-side code: start with [User Visa](/en/docs/city/reference/visa-user)
+1. Writing town-side code: start with [User City](/en/docs/city/reference/city-user)
 2. Wiring server-side runtime: continue with [City](/en/docs/city/reference/city-runtime)
-3. Writing login and token issuance: read [Admin Visa](/en/docs/city/reference/visa-admin)
+3. Writing login and token issuance: read [Admin City](/en/docs/city/reference/city-admin)
 4. Hand-writing requests: finish with [HTTP API](/en/docs/city/reference/http-api)

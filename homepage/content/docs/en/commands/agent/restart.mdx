@@ -1,9 +1,9 @@
 ---
-title: bay agent restart
+title: town agent restart
 description: Restart target agent process
 ---
 
-# `bay agent restart`
+# `town agent restart`
 
 Restart the process for a target agent.
 
@@ -12,7 +12,7 @@ Restart the process for a target agent.
 ## Usage
 
 ```bash
-bay agent restart [path] [options]
+town agent restart [path] [options]
 ```
 
 ## Key options
@@ -27,24 +27,24 @@ bay agent restart [path] [options]
 
 ## Related commands
 
-- [`bay agent start`](/en/docs/commands/agent/start)
-- [`bay agent restart`](/en/docs/commands/agent/restart)
-- [`bay agent status`](/en/docs/commands/agent/status)
+- [`town agent start`](/en/docs/commands/agent/start)
+- [`town agent restart`](/en/docs/commands/agent/restart)
+- [`town agent status`](/en/docs/commands/agent/status)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ bay agent restart .
-bay v1.0.0
+$ town agent restart .
+town v1.0.0
 ✅ Downcity daemon restarted
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ bay agent restart .
-bay v1.0.0
+$ town agent restart .
+town v1.0.0
 ❌ Failed to restart daemon: <error>
 ```

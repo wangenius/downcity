@@ -92,7 +92,7 @@ const providers = await guest.service("accounts").get("providers");
 ```ts
 const start = await guest.service("accounts").action("oauth/start").invoke({
   provider: "google",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
@@ -117,10 +117,10 @@ Google 登录完成后，accounts service 仍然会按统一方式返回 City `u
 也就是说，产品侧不需要因为换成 Google 登录，就改掉后面的用户态调用方式：
 
 ```ts
-const user = new Visa({
+const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
   user_token: result.user_token,
 });
 ```
@@ -137,4 +137,4 @@ const user = new Visa({
 - 想看 OAuth 整体链路，继续读 [OAuth 与 Session](/docs/city/packages/services/accounts/oauth-and-session)
 - 如果你还要接微信网站登录，继续读 [微信登录配置](/docs/city/packages/services/accounts/wechat-login)
 - 想看完整接入流程，读 [Accounts 服务指南](/docs/city/guides/accounts-service)
-- 部署后记得通过 Bay CLI / Admin API 把 `GOOGLE_CLIENT_ID` 和 `GOOGLE_CLIENT_SECRET` 写进 City env
+- 部署后记得通过 Town CLI / Admin API 把 `GOOGLE_CLIENT_ID` 和 `GOOGLE_CLIENT_SECRET` 写进 City env

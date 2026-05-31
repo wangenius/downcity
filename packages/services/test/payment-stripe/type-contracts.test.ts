@@ -2,10 +2,10 @@
  * Stripe 支付服务类型契约测试。
  */
 
-import { City } from "@downcity/city";
+import { CityBase } from "@downcity/city";
 import { stripePaymentService } from "../../src/index.js";
 
-const base = new City({
+const base = new CityBase({
   db: {} as never,
 });
 

@@ -32,12 +32,12 @@ description: 说明 console registry 何时写入、execution context 能力面�
 
 ```mermaid
 flowchart TD
-  A["bay agent start"] --> B["start daemon"]
+  A["town agent start"] --> B["start daemon"]
   B --> C["write debug metadata"]
   B --> D["upsert console registry"]
   D --> E["console registry"]
 
-  F["city 托管 plugin 或 bay plugin"] --> G["agent API"]
+  F["city 托管 plugin 或 town plugin"] --> G["agent API"]
   G --> H["execution context"]
   H --> I["托管 plugin runtime"]
   I --> J["plugin 点分发"]

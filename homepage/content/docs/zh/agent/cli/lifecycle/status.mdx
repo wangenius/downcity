@@ -1,14 +1,14 @@
 ---
-title: bay agent status
+title: town agent status
 description: 查看目标 Agent 当前是否运行、停止或处于 stale 状态
 ---
 
-# `bay agent status`
+# `town agent status`
 
 ## 用法
 
 ```bash
-bay agent status [path]
+town agent status [path]
 ```
 
 ## 常见状态
@@ -25,7 +25,7 @@ bay agent status [path]
 这时你通常可以继续：
 
 ```bash
-bay agent chat
+town agent chat
 ```
 
 如果 `running`，但聊天仍然有问题，那下一步更应该查的是模型绑定、渠道绑定或具体消息链路，而不是“进程有没有起来”。
@@ -37,7 +37,7 @@ bay agent chat
 处理方式通常是：
 
 ```bash
-bay agent start
+town agent start
 ```
 
 这通常表示项目是健康的，只是当前没有后台进程。
@@ -49,7 +49,7 @@ bay agent start
 处理方式通常是：
 
 ```bash
-bay agent doctor --fix
+town agent doctor --fix
 ```
 
 `stale` 的重点不是“项目坏了”，而是“状态文件和真实进程状态不一致”。
@@ -61,12 +61,12 @@ bay agent doctor --fix
 处理方式通常是：
 
 ```bash
-bay agent create .
+town agent create .
 ```
 
 它说明当前目录还没有成为一个完整的 agent 项目，后续所有 runtime 相关命令都不应该继续盲跑。
 
 ## 相关文档
 
-- [bay agent doctor](/zh/docs/agent/cli/maintenance/doctor)
+- [town agent doctor](/zh/docs/agent/cli/maintenance/doctor)
 - [Agent 显示 stale](/zh/docs/agent/operations/troubleshooting/agent-shows-stale)

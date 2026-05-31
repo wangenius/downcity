@@ -1,9 +1,9 @@
 ---
-title: bay agent status
+title: town agent status
 description: Show target agent status
 ---
 
-# `bay agent status`
+# `town agent status`
 
 Show process status for a target agent.
 
@@ -12,7 +12,7 @@ Show process status for a target agent.
 ## Usage
 
 ```bash
-bay agent status [path]
+town agent status [path]
 ```
 
 ## Behavior
@@ -24,19 +24,19 @@ bay agent status [path]
 
 ## Related commands
 
-- [`bay agent start`](/en/docs/commands/agent/start)
-- [`bay agent restart`](/en/docs/commands/agent/restart)
-- [`bay agent list --running`](/en/docs/commands/agent/list)
+- [`town agent start`](/en/docs/commands/agent/start)
+- [`town agent restart`](/en/docs/commands/agent/restart)
+- [`town agent list --running`](/en/docs/commands/agent/list)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ bay agent status .
-bay v1.0.0
+$ town agent status .
+town v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK bay agent status                                    │
+│ OK town agent status                                    │
 │   project    : <projectRoot>                           │
 │   log        : <daemonLogPath>                         │
 │   state      : running                                 │
@@ -46,15 +46,15 @@ bay v1.0.0
 ```
 
 ```text
-$ bay agent status .
-bay v1.0.0
+$ town agent status .
+town v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ WARN bay agent status                                  │
+│ WARN town agent status                                  │
 │   project      : <projectRoot>                         │
 │   log          : <daemonLogPath>                       │
 │   state        : stale                                 │
 │   stale_pid    : <pid>                                 │
 │   stale_reason : <reason>                              │
-│   fix          : bay agent doctor <projectRoot> --fix  │
+│   fix          : town agent doctor <projectRoot> --fix  │
 └─────────────────────────────────────────────────────────┘
 ```

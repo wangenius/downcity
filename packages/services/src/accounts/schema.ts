@@ -70,9 +70,9 @@ export interface AccountsOAuthStateRow extends Record<string, unknown> {
   state: string;
 
   /**
-   * 登录成功后要签发到哪个 bay。
+   * 登录成功后要签发到哪个 town。
    */
-  bay_id: string;
+  town_id: string;
 
   /**
    * 第三方 provider 标识。
@@ -137,9 +137,9 @@ export const accountsOAuthStates = sqliteTable(ACCOUNTS_OAUTH_STATE_TABLE, {
   state: text("state").primaryKey(),
 
   /**
-   * 登录成功后要签发到哪个 bay。
+   * 登录成功后要签发到哪个 town。
    */
-  bay_id: text("bay_id").notNull(),
+  town_id: text("town_id").notNull(),
 
   /**
    * provider 标识。

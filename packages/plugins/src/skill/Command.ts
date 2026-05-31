@@ -1,5 +1,5 @@
 /**
- * `bay skill` 命令 helper。
+ * `town skill` 命令 helper。
  *
  * 设计目标（中文）
  * - 尽量不自建 registry：直接复用社区的 `npx skills` 生态（find/install）。
@@ -79,7 +79,7 @@ export async function skillListCommand(cwd: string = "."): Promise<void> {
   const shipJson = path.join(projectRoot, "downcity.json");
   if (!fs.existsSync(shipJson)) {
     throw new Error(
-      `downcity.json not found at ${shipJson}. Run "bay agent create" first or pass the correct path.`,
+      `downcity.json not found at ${shipJson}. Run "town agent create" first or pass the correct path.`,
     );
   }
 

@@ -9,7 +9,7 @@
  * 已有有效 session 直接返回，不重复鉴权。
  */
 
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { normalizeBaseUrl } from "../core/env.js";
 import { openBrowser } from "../core/browser.js";
@@ -111,7 +111,7 @@ async function selectAuthMethod(baseUrl: string): Promise<AuthMethod | undefined
 }
 
 async function loadAuthOptions(baseUrl: string): Promise<AuthOption[]> {
-  const client = new Visa({ role: "user", city_url: normalizeBaseUrl(baseUrl) });
+  const client = new City({ role: "user", city_url: normalizeBaseUrl(baseUrl) });
   const accounts = client.service("accounts");
 
   try {
@@ -185,7 +185,7 @@ async function emailLogin(baseUrl: string): Promise<UserContext | undefined> {
   const password = await askSecret("password");
   if (!password) return undefined;
 
-  const client = new Visa({ role: "user", city_url: normalizeBaseUrl(baseUrl) });
+  const client = new City({ role: "user", city_url: normalizeBaseUrl(baseUrl) });
   const accounts = client.service("accounts");
 
   try {
@@ -225,7 +225,7 @@ async function emailRegister(baseUrl: string): Promise<UserContext | undefined> 
   const password = await askSecret("password (min 8 characters)");
   if (!password || password.length < 8) { showError("password must be at least 8 characters"); return undefined; }
 
-  const client = new Visa({ role: "user", city_url: normalizeBaseUrl(baseUrl) });
+  const client = new City({ role: "user", city_url: normalizeBaseUrl(baseUrl) });
   const accounts = client.service("accounts");
 
   let reg: RegisterResult;
@@ -274,7 +274,7 @@ interface OAuthPollResult {
 }
 
 async function oauthAuth(baseUrl: string, provider: string): Promise<UserContext | undefined> {
-  const client = new Visa({ role: "user", city_url: normalizeBaseUrl(baseUrl) });
+  const client = new City({ role: "user", city_url: normalizeBaseUrl(baseUrl) });
   const accounts = client.service("accounts");
 
   let start: OAuthStartResult;
@@ -303,7 +303,7 @@ async function oauthAuth(baseUrl: string, provider: string): Promise<UserContext
 }
 
 /** 轮询 OAuth 结果（最多 3 分钟） */
-async function pollOAuth(client: Visa, state: string): Promise<OAuthPollResult | undefined> {
+async function pollOAuth(client: City, state: string): Promise<OAuthPollResult | undefined> {
   const accounts = client.service("accounts");
   for (let i = 0; i < 180; i++) {
     try {
@@ -325,7 +325,7 @@ function saveSession(baseUrl: string, email: string, result: { user_token: strin
     base_url: normalizeBaseUrl(baseUrl),
     email,
     user_id: result.user_id ?? "",
-    bay_id: "bay_downcity",
+    town_id: "town_downcity",
     user_token: result.user_token,
   };
   writeUserSession(session);

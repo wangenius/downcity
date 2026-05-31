@@ -1,9 +1,9 @@
 ---
 title: Operations and Debugging
-description: "The boundary between downcity, Admin Visa, and direct database inspection, and when the CLI is the better tool."
+description: "The boundary between downcity, Admin City, and direct database inspection, and when the CLI is the better tool."
 ---
 
-The CLI and `Admin Visa` can both help you manage City, but they are better at different kinds of operational work.
+The CLI and `Admin City` can both help you manage City, but they are better at different kinds of operational work.
 
 ## The simplest rule first
 
@@ -17,9 +17,9 @@ If your thought is:
 
 - "this action should live in the system long term"
 
-move toward `Admin Visa` or a trusted script.
+move toward `Admin City` or a trusted script.
 
-## CLI, Admin Visa, and direct DB inspection each fit different work
+## CLI, Admin City, and direct DB inspection each fit different work
 
 ### Better fits for the CLI
 
@@ -28,7 +28,7 @@ move toward `Admin Visa` or a trusted script.
 - inspecting models, schema, and rows
 - one-off debugging without writing code first
 
-### Better fits for `Admin Visa`
+### Better fits for `Admin City`
 
 - backend-owned actions
 - automated token issuance
@@ -44,7 +44,7 @@ move toward `Admin Visa` or a trusted script.
 
 ```bash
 city
-bay model list
+town model list
 ```
 
 ## A common debugging chain
@@ -75,13 +75,13 @@ Check these facts first:
 
 ### The CLI is not just a one-time development tool
 
-If you operate many bays, services, or model configurations, it remains a frequent operations entry.
+If you operate many towns, services, or model configurations, it remains a frequent operations entry.
 
-### `Admin Visa` is not just a more advanced CLI
+### `Admin City` is not just a more advanced CLI
 
 They are different modes:
 
-- `Admin Visa`: trusted programmatic management
+- `Admin City`: trusted programmatic management
 - CLI: human terminal inspection
 
 ### Direct SQL should not always be your first instinct

@@ -39,7 +39,7 @@ Console 会聚合所有 agent 的 workboard 快照，展示一个独立的全局
 - 进入状态簇后会切到对应建筑的独立室内地图，每个 room 都有不同墙体、门、走廊、station、hub 和主题家具
 - 地图使用固定 40 x 24 tile 大地图画布；普通视图保持完整比例，全屏视图按 cover 方式铺满整个屏幕，始终保持正方像素块比例
 - 底部 portal rail 可以直接切换状态簇，进入 room 时会有像素化传送门过渡
-- agent 会作为带方向和状态符号的 sprite 沿 corridor、gate、station 巡游与停靠
+- agent 会作为带方向和状态符号的 sprite 沿 corridor、city、station 巡游与停靠
 - room 内会高亮当前聚焦 sprite 的 quest path、station 和 hub 连接关系
 - atlas 支持键盘式地图控制：左右切换状态簇、Enter 进入、Esc 返回 world
 - room 内的公开任务条目会映射成墙面公告板，station 位置会映射成房间里的蓝图桌，而不是额外覆盖的 dashboard 卡片
@@ -58,7 +58,7 @@ Console 会聚合所有 agent 的 workboard 快照，展示一个独立的全局
 - agent actors
 - atlas 通道 corridors
 - 簇内巡游 patrols
-- atlas 入口 gate 与簇内 station
+- atlas 入口 city 与簇内 station
 - 舞台道具与标签
 
 这样你可以继续复用 Downcity 默认的像素 game world，也可以把同一份公开数据接到自己的 host 渲染器里。
@@ -72,5 +72,5 @@ Console 会聚合所有 agent 的 workboard 快照，展示一个独立的全局
 
 ## 相关页面
 
-- [`bay plugin`](/zh/docs/commands/plugin/plugin)
+- [`town plugin`](/zh/docs/commands/plugin/plugin)
 - [Plugin 文档总览](/zh/agent-sdk-docs/plugins/overview)

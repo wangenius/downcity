@@ -23,7 +23,7 @@ That is why this is better explained as a guide than as an empty npm package.
 City only needs a Drizzle db object:
 
 ```ts
-import { City } from "@downcity/city";
+import { CityBase } from "@downcity/city";
 import { drizzle } from "drizzle-orm/d1";
 
 export interface Env {
@@ -33,7 +33,7 @@ export interface Env {
 export default {
   async fetch(request: Request, env: Env) {
     const db = drizzle(env.DB);
-    const base = new City({ db, dialect: "sqlite", raw: env.DB });
+    const base = new CityBase({ db, dialect: "sqlite", raw: env.DB });
 
     await base.health();
     return base.handleRequest(request);
@@ -53,7 +53,7 @@ The important part is not a helper name. It is that you hand the database to Cit
 The full implementation in [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1) already covers the real integration details:
 
 - wrap `env.DB` with `drizzle-orm/d1`
-- let City initialize the built-in `env` and `bays` tables
+- let City initialize the built-in `env` and `towns` tables
 - synchronize the current origin before each request so OAuth callbacks and links use the correct domain
 - keep registering `AIService`, accounts, usage, and payment services the same way as the Node path
 
@@ -61,7 +61,7 @@ For a real project, start from that example instead of rebuilding the runtime co
 
 ## Boundary with the Node path
 
-Worker and Node now use the same mental model: create a Drizzle db, then pass it to `new City({ db })`.
+Worker and Node now use the same mental model: create a Drizzle db, then pass it to `new CityBase({ db })`.
 
 - Node.js local projects commonly use `drizzle-orm/better-sqlite3`
 - Node.js production deployments can use Drizzle pg

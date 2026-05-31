@@ -1,43 +1,43 @@
 ---
-title: bay stop
+title: town stop
 description: Stop console (and managed child agent processes)
 ---
 
-# `bay stop`
+# `town stop`
 
 Stop console (and managed child agent processes).
 
 The current implementation also tries to clean up detached orphan processes:
 
-- Bay runtime (`run`) processes that are still alive without a pid file
+- Town runtime (`run`) processes that are still alive without a pid file
 - Console (`console run`) processes that are still alive without a pid file
 - agent daemons (`agent start --foreground true`) that are still alive without a pid file
 
-On macOS and Linux, `bay stop` stops the matching process group first. ACP executors, shell sessions, and watch child processes started by an agent receive the same stop signal, which prevents orphaned children from continuing to consume memory after the parent process exits.
+On macOS and Linux, `town stop` stops the matching process group first. ACP executors, shell sessions, and watch child processes started by an agent receive the same stop signal, which prevents orphaned children from continuing to consume memory after the parent process exits.
 
 ## Usage
 
 ```bash
-bay stop
+town stop
 ```
 
 ## Related commands
 
-- [`bay start`](/en/docs/commands/start)
-- [`bay status`](/en/docs/commands/status)
+- [`town start`](/en/docs/commands/start)
+- [`town status`](/en/docs/commands/status)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ bay stop
-bay v1.0.0
+$ town stop
+town v1.0.0
 ✅ Console UI stopped
    pid: <uiPid>
    pidFile: <uiPidPath>
    log: <uiLogPath>
-✅ Bay runtime stopped
+✅ Town runtime stopped
    pid: <pid>
    pidFile: <consolePidPath>
    log: <consoleLogPath>
@@ -47,9 +47,9 @@ bay v1.0.0
 ```
 
 ```text
-$ bay stop
-bay v1.0.0
-ℹ️  Bay runtime is not running
+$ town stop
+town v1.0.0
+ℹ️  Town runtime is not running
    pidFile: <consolePidPath>
    log: <consoleLogPath>
 ```

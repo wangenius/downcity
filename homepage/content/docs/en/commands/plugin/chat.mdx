@@ -1,19 +1,19 @@
 ---
-title: bay chat
+title: town chat
 description: Managed chat plugin commands for channel runtime, messaging, conversation inspection, and authorization
 ---
 
-# `bay chat`
+# `town chat`
 
-`bay chat` is the managed chat plugin command group.
+`town chat` is the managed chat plugin command group.
 
 Use it when you want to manage channel runtime, inspect conversations, send messages, react to messages, or manage platform-user authorization.
 
 ## Usage
 
 ```bash
-bay chat
-bay chat <subcommand> [options]
+town chat
+town chat <subcommand> [options]
 ```
 
 ## Main subcommands
@@ -41,21 +41,21 @@ bay chat <subcommand> [options]
 - `--delay <ms>`
 - `--time <time>`
 
-Use this for “send one existing message later”. For reusable automations or cron-style work, use `bay task`.
+Use this for “send one existing message later”. For reusable automations or cron-style work, use `town task`.
 
 ## Examples
 
 ```bash
-bay chat list --limit 20
-bay chat info --chat-key ctx_xxxxxxxxxxxxxxxx
-bay chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
-bay chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
-bay chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
-bay chat auth set telegram:12345678 --role admin
+town chat list --limit 20
+town chat info --chat-key ctx_xxxxxxxxxxxxxxxx
+town chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
+town chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
+town chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
+town chat auth set telegram:12345678 --role admin
 ```
 
 ## Related
 
 - [`Plugin Scheduling`](/en/docs/commands/plugin/schedule)
-- [`bay task`](/en/docs/commands/plugin/task)
+- [`town task`](/en/docs/commands/plugin/task)
 - [`Plugins Docs / chat`](/en/plugins-docs/builtins/chat)

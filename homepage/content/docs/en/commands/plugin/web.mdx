@@ -1,11 +1,11 @@
 ---
-title: bay web
+title: town web
 description: Choose web-access or agent-browser for the agent and verify that the current web provider is ready
 ---
 
-# `bay web`
+# `town web`
 
-`bay web` is the short command group for the built-in web plugin.
+`town web` is the short command group for the built-in web plugin.
 
 > This page remains as a command entry point. For the fuller plugin structure, see [Plugin Overview](/en/agent-sdk-docs/plugins/overview), [Plugin Configuration](/en/agent-sdk-docs/plugins/configuration), and [Plugin System Text](/en/agent-sdk-docs/plugins/plugin-system).
 
@@ -20,30 +20,30 @@ description: Choose web-access or agent-browser for the agent and verify that th
 
 ```bash
 # list supported providers
-bay web providers
+town web providers
 
 # install web-access into the shared skill root (user scope by default)
-bay web install --provider web-access
+town web install --provider web-access
 
 # install into the project skill root
-bay web install --provider web-access --scope project
+town web install --provider web-access --scope project
 
 # switch to web-access
-bay web use web-access
+town web use web-access
 
 # switch to agent-browser
-bay web use agent-browser --browser-command agent-browser
+town web use agent-browser --browser-command agent-browser
 
 # inspect the current provider
-bay web doctor
+town web doctor
 
 # inspect status
-bay web status
+town web status
 ```
 
 ## Notes
 
-- `bay web install` puts the provider skill into the shared skill roots:
+- `town web install` puts the provider skill into the shared skill roots:
   - user scope: `~/.agents/skills`
   - project scope: `PROJECT/.agents/skills`
 - With `provider=web-access`, the plugin checks whether the `web-access` skill is installed locally and injects its guidance into the agent.
@@ -53,6 +53,6 @@ bay web status
 
 ## Related
 
-- [`bay plugin`](/en/docs/commands/plugin/plugin)
+- [`town plugin`](/en/docs/commands/plugin/plugin)
 - [Plugin Docs Overview](/en/agent-sdk-docs/plugins/overview)
 - [`CLI Commands`](/en/docs/reference/cli)

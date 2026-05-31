@@ -15,7 +15,7 @@ import type { Database, DbClient } from "../store/db.js";
 import type { RuntimeUser } from "../core/auth/types.js";
 import type { Authenticator } from "../core/auth/authenticator.js";
 import type { EnvProvider } from "../core/runtime.js";
-import type { BayStore } from "./bays/bay-store.js";
+import type { TownStore } from "./towns/town-store.js";
 import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.js";
 
 // ===========================================================================
@@ -46,8 +46,8 @@ export interface Context {
   user?: RuntimeUser;
   /** 当前请求身份 */
   identity?: { kind: RouteIdentity };
-  /** 所属 bay */
-  bay?: { bay_id: string; status: string };
+  /** 所属 town */
+  town?: { town_id: string; status: string };
   /** 当前解析的 variant（如 AI model、翻译语言对等）。由 Service 自行注入 */
   variant?: { id: string; name: string; meta?: Record<string, unknown> };
   /** Action 开始时间（框架自动填充） */
@@ -123,7 +123,7 @@ export class Service {
   _client?: { $client: DbClient };
   _authenticator?: Authenticator;
   _env?: EnvProvider;
-  _bayStore?: BayStore;
+  _townStore?: TownStore;
 
   /** 原始数据库实例（better-sqlite3 / D1 等） */
   _raw?: unknown;

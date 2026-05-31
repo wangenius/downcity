@@ -5,13 +5,13 @@ import { marketingTheme } from "@/lib/marketing-theme";
 const PAGE = {
   zh: {
     title: "Product · City SDK",
-    subtitle: "把 City runtime、Gate 调用方式与公共服务接入你的产品体系，让多个 Bay 复用同一座服务城市。",
+    subtitle: "把 City runtime、City 调用方式与公共服务接入你的产品体系，让多个 Town 复用同一座服务城市。",
     docsCtaLabel: "查看 City SDK 文档",
     docsCtaHint: "Quick Start、CLI、配置、Plugins、Operations 都在主 docs 中。",
     highlights: [
       {
         title: "统一 City runtime 与公共服务",
-        description: "围绕 service、action、auth、env 和 bay 访问边界组织同一套服务城市，而不是每个产品重建一套后端。",
+        description: "围绕 service、action、auth、env 和 town 访问边界组织同一套服务城市，而不是每个产品重建一套后端。",
       },
       {
         title: "以仓库为边界组织运行",
@@ -24,8 +24,8 @@ const PAGE = {
     ],
     scenesTitle: "典型场景",
     scenes: [
-      "共享服务城市：让多个 Bay 或产品共用一套账户、模型、用量和支付服务。",
-      "Gate 接入：前端、扩展或后端通过 Gate 访问 City，而不是直接耦合数据库。",
+      "共享服务城市：让多个 Town 或产品共用一套账户、模型、用量和支付服务。",
+      "City 接入：前端、扩展或后端通过 City 访问 City，而不是直接耦合数据库。",
       "部署组合：用 cities/node 或 cities/edge 组合适配不同运行环境。",
     ],
     factsTitle: "事实对齐",
@@ -38,13 +38,13 @@ const PAGE = {
   en: {
     title: "Product · City SDK",
     subtitle:
-      "Integrate the City runtime, Gate access, and public services into one shared service city for multiple bays.",
+      "Integrate the City runtime, City access, and public services into one shared service city for multiple towns.",
     docsCtaLabel: "Open City SDK Docs",
     docsCtaHint: "Quick start, CLI, configuration, plugins, and operations live in the main docs.",
     highlights: [
       {
         title: "Unify City runtime and public services",
-        description: "Keep services, actions, auth, env, and bay boundaries inside one shared service city instead of rebuilding a backend per product.",
+        description: "Keep services, actions, auth, env, and town boundaries inside one shared service city instead of rebuilding a backend per product.",
       },
       {
         title: "Organize operations around the repo",
@@ -57,8 +57,8 @@ const PAGE = {
     ],
     scenesTitle: "Typical Scenarios",
     scenes: [
-      "Shared service city: let multiple bays or products reuse accounts, models, usage, and payment services.",
-      "Gate access: call City from frontend, extension, or backend code without coupling to database internals.",
+      "Shared service city: let multiple towns or products reuse accounts, models, usage, and payment services.",
+      "City access: call City from frontend, extension, or backend code without coupling to database internals.",
       "Deployment composition: use cities/node or cities/edge for different runtime targets.",
     ],
     factsTitle: "Facts",
@@ -73,7 +73,7 @@ const PAGE = {
 /**
  * Product City SDK 页面。
  * 说明：
- * 1. 这里聚焦 City runtime、Gate 与 services 这一条产品线。
+ * 1. 这里聚焦 City runtime、City 与 services 这一条产品线。
  * 2. Agent SDK 独立到 `/product/agent-sdk`，避免两种 SDK 语义混在一起。
  */
 export default function ProductSdkPage() {

@@ -3,9 +3,9 @@ title: "City CLI"
 description: "用终端管理 City 的模型和数据表，适合初始化、排查和日常运维。"
 ---
 
-`downcity` 是 Downcity 的全局安装聚合包。它会安装两个命令：`city` 负责 City 管理，`bay` 负责本机 Agent 宿主。
+`downcity` 是 Downcity 的全局安装聚合包。它会安装两个命令：`city` 负责 City 管理，`town` 负责本机 Agent 宿主。
 
-如果说 `Admin Visa` 负责“程序里的可信调用”，那 `city` 负责“人坐在终端前的直接操作”。
+如果说 `Admin City` 负责“程序里的可信调用”，那 `city` 负责“人坐在终端前的直接操作”。
 
 ## 这组文档怎么读
 
@@ -36,27 +36,27 @@ city
 默认 `city` 会进入交互式面板。没有 server 时，CLI 会先要求你添加一个 server；之后你可以：
 
 - 通过 `Manage Servers` 管理多个 City server
-- 进入 Admin 流程管理 env / models / bays / payment
+- 进入 Admin 流程管理 env / models / towns / payment
 - 进入 User 流程登录、充值和调用服务
 
 ## 常用命令
 
 ```bash
-bay model list
-bay model create
-bay model manage
-bay agent start .
+town model list
+town model create
+town model manage
+town agent start .
 ```
 
 ## 它和其他 package 的边界
 
-- 不替代 [@downcity/city](/docs/city/packages/city/visa) 里的 `Admin Visa`
+- 不替代 [@downcity/city](/docs/city/packages/city/city) 里的 `Admin City`
 - 不替代 [@downcity/city](/docs/city/packages/city) 的运行时能力
 - 更适合“人工排查”和“初始化运维”，而不是嵌进产品代码里
 
 更准确地说：
 
-- `Admin Visa` 负责程序里的可信调用
+- `Admin City` 负责程序里的可信调用
 - `city` 负责终端里的人工运维和排查
 
 ## 下一步读什么

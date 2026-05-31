@@ -1,6 +1,6 @@
 ---
 title: OAuth and Session
-description: "Where OAuth entry points, sessions, me, and logout sit in the bay flow of @downcity/services."
+description: "Where OAuth entry points, sessions, me, and logout sit in the town flow of @downcity/services."
 ---
 
 Besides password-based registration and login, the accounts service also owns OAuth and session-related actions.
@@ -13,7 +13,7 @@ There are usually two phases:
 - `oauth/start`
 - `oauth/result`
 
-In a typical bay flow, `providers` tells the frontend which login methods are actually enabled on the current City, `oauth/start` begins the OAuth flow, and `oauth/result` confirms or polls for the result.
+In a typical town flow, `providers` tells the frontend which login methods are actually enabled on the current City, `oauth/start` begins the OAuth flow, and `oauth/result` confirms or polls for the result.
 
 The official accounts service can expose GitHub, Google, and WeChat Website App login depending on server-side configuration. The frontend should always trust `providers` instead of hardcoding third-party login buttons.
 
@@ -33,12 +33,12 @@ await user.service("accounts").action("logout").invoke();
 
 ## Why session still matters here
 
-Even if the bay mainly uses `user_token` to call City later, the account system still needs:
+Even if the town mainly uses `user_token` to call City later, the account system still needs:
 
 - better-auth auth tables
 - a session table
 - login-state facts
-- bay-facing profile data
+- town-facing profile data
 
 That is why the service is not just "a few routes," but a minimal account infrastructure layer.
 
@@ -46,6 +46,6 @@ That is why the service is not just "a few routes," but a minimal account infras
 
 `GET /v1/accounts/me` no longer returns only the runtime `user`. It also returns:
 
-- `profile`: bay-facing display data such as display name and avatar
+- `profile`: town-facing display data such as display name and avatar
 
-That keeps bay clients and admin tools from reconstructing user state directly from auth rows.
+That keeps town clients and admin tools from reconstructing user state directly from auth rows.

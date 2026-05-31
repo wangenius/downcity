@@ -1,16 +1,16 @@
 {
   "name": "downcity",
-  "version": "1.1.62",
+  "version": "1.1.63",
   "type": "module",
-  "description": "Downcity CLI bundle — installs city and bay commands",
+  "description": "Downcity CLI bundle — installs city and town commands",
   "bin": {
     "city": "./bin/city/index.js",
-    "bay": "./bin/bay/index.js"
+    "town": "./bin/town/index.js"
   },
   "files": [
     "bin/",
     "city/",
-    "bay/",
+    "town/",
     "public/",
     "README.md",
     "package.json"

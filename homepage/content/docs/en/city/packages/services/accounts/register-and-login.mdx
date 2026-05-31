@@ -3,7 +3,7 @@ title: Registration and Login
 description: "The most common register, login, and user_token-returning flow in @downcity/services."
 ---
 
-The most direct problem solved by `@downcity/services` is letting a bay ship registration and login before building a full account system.
+The most direct problem solved by `@downcity/services` is letting a town ship registration and login before building a full account system.
 
 ## register
 
@@ -11,7 +11,7 @@ The most direct problem solved by `@downcity/services` is letting a bay ship reg
 const session = await guest.service("accounts").action("register").invoke({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
@@ -21,28 +21,28 @@ const session = await guest.service("accounts").action("register").invoke({
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
-## Why `bay_id` is included here
+## Why `town_id` is included here
 
-Because after successful login or registration, the service will usually request a `user_token` for that bay context from City.
+Because after successful login or registration, the service will usually request a `user_token` for that town context from City.
 
 So it needs to know:
 
-- which bay is currently being entered
-- which bay context the token should be issued for
+- which town is currently being entered
+- which town context the token should be issued for
 
 ## What happens after login succeeds
 
 Do not keep using the guest client forever. Switch into a normal user-context client:
 
 ```ts
-const user = new Visa({
+const user = new City({
   role: "user",
   city_url,
-  bay_id: "bay_demo",
+  town_id: "town_demo",
   user_token: session.user_token,
 });
 ```

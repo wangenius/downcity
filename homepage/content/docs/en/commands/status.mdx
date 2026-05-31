@@ -1,33 +1,33 @@
 ---
-title: bay status
-description: Show Bay runtime, Console, and managed agent status
+title: town status
+description: Show Town runtime, Console, and managed agent status
 ---
 
-# `bay status`
+# `town status`
 
-Show Bay runtime, Console, and managed active agents.
+Show Town runtime, Console, and managed active agents.
 
 ## Usage
 
 ```bash
-bay status
+town status
 ```
 
 ## Related commands
 
-- [`bay agent list --running`](/en/docs/commands/agent/list)
-- [`bay console`](/en/docs/commands/console/console)
-- [`bay public`](/en/docs/commands/public)
+- [`town agent list --running`](/en/docs/commands/agent/list)
+- [`town console`](/en/docs/commands/console/console)
+- [`town public`](/en/docs/commands/public)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ bay status
-bay v1.0.0
+$ town status
+town v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK bay status                                   │
+│ OK town status                                   │
 │   state    : running                                    │
 │   pid      : <pid>                                      │
 │   pid_file : <bayPidPath>                              │

@@ -3,7 +3,7 @@ title: City CLI Quickstart
 description: "The most common first-time entry points, connection patterns, and use cases for the city command."
 ---
 
-The `downcity` package installs the `city` command for City operators. `city` is not a Bay runtime SDK.
+The `downcity` package installs the `city` command for City operators. `city` is not a Town runtime SDK.
 
 ## When you should open city first
 
@@ -24,12 +24,12 @@ If you are iterating on `city manage` inside this repository, run:
 pnpm build:cli
 ```
 
-That command builds the local `cli/city` package, then refreshes the global `city` and `bay` commands on your machine. After the build passes, the next `city` or `bay` run uses the version from this workspace.
+That command builds the local `cli/city` package, then refreshes the global `city` and `town` commands on your machine. After the build passes, the next `city` or `town` run uses the version from this workspace.
 
-If `city` / `bay` is already installed, you can also run:
+If `city` / `town` is already installed, you can also run:
 
 ```bash
-bay update
+town update
 ```
 
 When executed inside the repository, it prefers rebuilding from the current workspace and refreshing the global install. Outside the repository, it updates to the latest npm version.
@@ -112,16 +112,16 @@ The Stripe webhook endpoint itself is fixed:
 
 ## What it is not for
 
-- embedding into bay code
+- embedding into town code
 - replacing backend management workflows
 - long-lived automation
 
-Those are better owned by `Admin Visa` or trusted backend scripts.
+Those are better owned by `Admin City` or trusted backend scripts.
 
 ## Common entry points
 
-- `city` / `bay`
-- `bay update`
+- `city` / `town`
+- `town update`
 - `Manage Servers`
 - `Admin`
 - `User`
@@ -132,9 +132,9 @@ Those are better owned by `Admin Visa` or trusted backend scripts.
 
 It is for City operators, developers, and maintainers.
 
-### The CLI does not replace Admin Visa
+### The CLI does not replace Admin City
 
-The CLI is for a human at a terminal. `Admin Visa` is for trusted programmatic workflows.
+The CLI is for a human at a terminal. `Admin City` is for trusted programmatic workflows.
 
 ### The CLI is not only for table inspection
 
@@ -143,5 +143,5 @@ It is also a practical entry for initialization, model maintenance, and debuggin
 ## Read next
 
 - For models and tables specifically, read [Models and Tables](/en/docs/city/packages/cli/models-and-tables)
-- For CLI versus Admin Visa in operations, read [Operations and Debugging](/en/docs/city/packages/cli/operations-and-debug)
+- For CLI versus Admin City in operations, read [Operations and Debugging](/en/docs/city/packages/cli/operations-and-debug)
 - For the runtime and data layer behind those tables, read [@downcity/city](/en/docs/city/packages/city)

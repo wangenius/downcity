@@ -5,7 +5,7 @@ description: "用官方账号服务提供注册、登录、OAuth 入口、会话
 
 `@downcity/services` 适合还不想单独维护完整账号系统的产品。它把最常见的注册、登录、会话和 OAuth 入口打包成一个官方服务。
 
-它的重点不是“多一个 SDK”，而是给 City 增加一个现成的 `accounts` service，让产品可以直接通过 `User Visa` / `Admin Visa` 去调用。
+它的重点不是“多一个 SDK”，而是给 City 增加一个现成的 `accounts` service，让产品可以直接通过 `User City` / `Admin City` 去调用。
 
 ## 这组文档怎么读
 
@@ -58,10 +58,10 @@ pnpm add @downcity/services
 ## 启用方式
 
 ```ts
-import { City } from "@downcity/city";
+import { CityBase } from "@downcity/city";
 import { accountsService } from "@downcity/services";
 
-const base = new City();
+const base = new CityBase();
 
 base.use(accountsService({
   token_ttl: "7d",
@@ -117,11 +117,11 @@ const providers = await guest.service("accounts").get("providers");
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
-登录或注册成功后，返回结果里会包含 `user_token`。产品 client 拿到 token 之后，再用常规 `User Visa` 去调 AI service。
+登录或注册成功后，返回结果里会包含 `user_token`。产品 client 拿到 token 之后，再用常规 `User City` 去调 AI service。
 
 `GET /v1/accounts/me` 返回的不只是 `user_token` 解出来的运行时用户，还会附带：
 
@@ -130,7 +130,7 @@ const session = await guest.service("accounts").action("login").invoke({
 ## 最常见的产品接法
 
 ```ts
-const guest = new Visa({
+const guest = new City({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -140,13 +140,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 
-const user = new Visa({
+const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
   user_token: session.user_token,
 });
 
@@ -161,5 +161,5 @@ const reply = await user.ai.text({
 
 - 想按流程深入，继续读本节的三个子页面
 - 想看完整场景，用 [Accounts 服务指南](/docs/city/guides/accounts-service)
-- 想看产品调用 SDK，用 [@downcity/city](/docs/city/packages/city/visa)
-- 想看更细的产品侧调法，读 [User Visa](/docs/city/reference/visa-user)
+- 想看产品调用 SDK，用 [@downcity/city](/docs/city/packages/city/city)
+- 想看更细的产品侧调法，读 [User City](/docs/city/reference/city-user)

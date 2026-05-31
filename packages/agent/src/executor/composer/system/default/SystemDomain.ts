@@ -74,7 +74,7 @@ export function buildContextSystemPrompt(input: {
   const outputRules = [
     "Task-run output rules:",
     "- This is a task execution context, not an interactive chat turn.",
-    "- Do NOT send external channel messages via `bay chat send` unless explicitly required by the task itself.",
+    "- Do NOT send external channel messages via `town chat send` unless explicitly required by the task itself.",
     "- Reply with result-oriented content; do NOT paste raw tool outputs or JSON logs.",
     "- Keep output compact and avoid unnecessary conversational fillers.",
   ].join("\n");

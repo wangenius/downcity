@@ -1,20 +1,20 @@
 ---
 title: Understand Downcity City
-description: Build the one-City-many-clients mental model before connecting real bays.
+description: Build the one-City-many-clients mental model before connecting real towns.
 ---
 
-The concepts section is not extra theory. It exists to keep the Downcity boundary clear before you wire it into real bays.
+The concepts section is not extra theory. It exists to keep the Downcity boundary clear before you wire it into real towns.
 
-If you start by treating Downcity as “just another backend framework” or “a generic provider gateway,” the service boundary, bay split, and trust model will all drift in the wrong direction.
+If you start by treating Downcity as “just another backend framework” or “a generic provider gateway,” the service boundary, town split, and trust model will all drift in the wrong direction.
 
 ## Start with this picture
 
 <div className="dc-doc-flow" aria-label="Downcity conceptual overview">
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Many bay clients</strong>
-      <span>Web apps, extensions, apps, desktop tools, and client demos can all be separate bays.</span>
-      <code>bay_id + user_token + User Visa</code>
+      <strong>Many town clients</strong>
+      <span>Web apps, extensions, apps, desktop tools, and client demos can all be separate towns.</span>
+      <code>town_id + user_token + User City</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -25,7 +25,7 @@ If you start by treating Downcity as “just another backend framework” or “
     </div>
     <div className="dc-doc-node">
       <strong>Your business system</strong>
-      <span>Still owns users, subscriptions, orders, balances, and bay data. City does not absorb it.</span>
+      <span>Still owns users, subscriptions, orders, balances, and town data. City does not absorb it.</span>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -40,10 +40,10 @@ If you start by treating Downcity as “just another backend framework” or “
 ## Recommended reading order
 
 <div className="dc-doc-grid">
-  <a className="dc-doc-card" href="/en/docs/city/concepts/bay-model">
+  <a className="dc-doc-card" href="/en/docs/city/concepts/town-model">
     <em>Step 1</em>
-    <strong>Bay model</strong>
-    <p>Understand why the right shape is “one City, many bays,” and what belongs in City versus the bay layer.</p>
+    <strong>Town model</strong>
+    <p>Understand why the right shape is “one City, many towns,” and what belongs in City versus the town layer.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/concepts/architecture">
     <em>Step 2</em>
@@ -58,7 +58,7 @@ If you start by treating Downcity as “just another backend framework” or “
   <a className="dc-doc-card" href="/en/docs/city/concepts/trust-boundary">
     <em>Step 4</em>
     <strong>Trust boundary</strong>
-    <p>Know which capabilities should stay in trusted backend code and which ones can safely reach bay clients.</p>
+    <p>Know which capabilities should stay in trusted backend code and which ones can safely reach town clients.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/concepts/usage-and-billing">
     <em>Step 5</em>
@@ -69,8 +69,8 @@ If you start by treating Downcity as “just another backend framework” or “
 
 ## When this section is the right starting point
 
-- you want multiple AI bays to share the same AI infrastructure
-- you need to understand the role of `bay_id`, `user_token`, and the model directory
+- you want multiple AI towns to share the same AI infrastructure
+- you need to understand the role of `town_id`, `user_token`, and the model directory
 - you are still deciding where City, your business backend, and an AI Gateway should stop
 
 If you only want one working call chain first, go straight to [Quickstart](/en/docs/city/quickstart).

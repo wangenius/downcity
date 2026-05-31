@@ -3,7 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { City } from "@downcity/city"
+import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { balanceService } from "../../bin/index.js"
 
@@ -15,7 +15,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new City({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
 
     const balance = balanceService({
       init: 100,
@@ -26,13 +26,13 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
-    const bay = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/bays/create",
+    const town = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/towns/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/bays/tokens/apply",
-      body: { bay_id: bay.bay_id, user_id: "user_1" },
+      path: "/v1/towns/tokens/apply",
+      body: { town_id: town.town_id, user_id: "user_1" },
     }))).json()
 
     assert.equal((await balance.read("user_1")).balance, 100)

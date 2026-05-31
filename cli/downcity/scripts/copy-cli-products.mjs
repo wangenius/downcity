@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `downcity` 是唯一对外安装包，不能依赖内部 CLI workspace 包名。
- * - 构建时把 `cli/city/bin`、`cli/bay/bin` 与 Console 静态资源复制进本包。
+ * - 构建时把 `cli/city/bin`、`cli/town/bin` 与 Console 静态资源复制进本包。
  * - 复制后的目录布局要匹配编译产物里的相对路径读取逻辑。
  */
 
@@ -23,13 +23,13 @@ const copy_targets = [
     target_path: path.join(package_root, "city"),
   },
   {
-    label: "bay command runtime",
-    source_path: path.join(workspace_root, "cli/bay/bin"),
-    target_path: path.join(package_root, "bay"),
+    label: "town command runtime",
+    source_path: path.join(workspace_root, "cli/town/bin"),
+    target_path: path.join(package_root, "town"),
   },
   {
     label: "console assets",
-    source_path: path.join(workspace_root, "cli/bay/public"),
+    source_path: path.join(workspace_root, "cli/town/public"),
     target_path: path.join(package_root, "public"),
   },
 ];
@@ -48,7 +48,7 @@ async function assert_source_exists(source_path, label) {
     throw new Error(
       [
         `${label} not found: ${source_path}`,
-        "Run `pnpm -C cli/city build` and `pnpm -C cli/bay build` first.",
+        "Run `pnpm -C cli/city build` and `pnpm -C cli/town build` first.",
       ].join(" "),
     );
   }

@@ -2,7 +2,7 @@
  * Console UI（React）构建配置。
  *
  * 关键点（中文）
- * - 直接输出到 `cli/bay/public`，再由发布脚本复制进 `downcity` 聚合包，作为 `bay console` 的静态资源。
+ * - 直接输出到 `cli/town/public`，再由发布脚本复制进 `downcity` 聚合包，作为 `town console` 的静态资源。
  * - 开发模式下代理 API 到 console 网关。
  */
 
@@ -37,7 +37,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../../cli/bay/public",
+    outDir: "../../cli/town/public",
     emptyOutDir: true,
     sourcemap: false,
     rollupOptions: {

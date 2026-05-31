@@ -1,17 +1,17 @@
 ---
-title: bay restart
-description: 重启 Bay runtime，恢复托管 agent，并重新拉起 Console
+title: town restart
+description: 重启 Town runtime，恢复托管 agent，并重新拉起 Console
 ---
 
-# `bay restart`
+# `town restart`
 
 重启完整的 city 运行栈。
 
 当前行为顺序：
 
 1. 停止 Console
-2. 停止 Bay runtime
-3. 重启 Bay runtime
+2. 停止 Town runtime
+3. 重启 Town runtime
 4. 恢复重启前处于运行状态的托管 agent
 5. 重新拉起 Console
 
@@ -20,26 +20,26 @@ description: 重启 Bay runtime，恢复托管 agent，并重新拉起 Console
 ## 用法
 
 ```bash
-bay restart
+town restart
 ```
 
 ## 相关命令
 
-- [`bay start`](/zh/docs/commands/start)
-- [`bay stop`](/zh/docs/commands/stop)
-- [`bay status`](/zh/docs/commands/status)
-- [`bay console`](/zh/docs/commands/console/console)
+- [`town start`](/zh/docs/commands/start)
+- [`town stop`](/zh/docs/commands/stop)
+- [`town status`](/zh/docs/commands/status)
+- [`town console`](/zh/docs/commands/console/console)
 
 ## 示例输出
 
 ```text
-$ bay restart
-bay v1.0.0
+$ town restart
+town v1.0.0
 ✅ Console stopped
    pid: <consolePid>
-✅ Bay runtime stopped
+✅ Town runtime stopped
    pid: <bayPid>
-✅ Bay runtime started
+✅ Town runtime started
    pid: <newBayPid>
 Restarting 2 managed agents...
 ✅ Console started

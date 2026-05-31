@@ -29,7 +29,7 @@ const PAGE = {
     facts: [
       "源码目录：products/console/",
       "包名：@downcity/console-ui",
-      "启动入口：bay start",
+      "启动入口：town start",
     ],
   },
   en: {
@@ -60,7 +60,7 @@ const PAGE = {
     facts: [
       "Source directory: products/console/",
       "Package name: @downcity/console-ui",
-      "Start command: bay start",
+      "Start command: town start",
     ],
   },
 } as const;

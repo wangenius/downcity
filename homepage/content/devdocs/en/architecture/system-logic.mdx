@@ -15,7 +15,7 @@ Downcity is easiest to read as six layers:
 2. Control plane: console
 3. Execution plane: agent host
 4. Capability layer: session and plugins
-5. Infrastructure layer: City runtime, auth, env, bay-scoped routing
+5. Infrastructure layer: City runtime, auth, env, town-scoped routing
 6. Public services: accounts, balance, usage, payment, and service SDK access
 
 ```mermaid
@@ -41,9 +41,9 @@ flowchart LR
   end
 
   subgraph Infra["Infrastructure"]
-    INFRA["City<br/>service runtime / auth / env / bays"]
+    INFRA["City<br/>service runtime / auth / env / towns"]
     SERVICES["Services<br/>accounts / balance / usage / payment"]
-    CONDUIT["Gate<br/>user and admin SDK"]
+    CONDUIT["City<br/>user and admin SDK"]
   end
 
   CLI --> CONSOLE
@@ -84,7 +84,7 @@ The agent host is the single-project execution plane. It:
 City is the reusable infrastructure for service-style runtimes. It:
 
 - mounts services and actions behind HTTP routes
-- owns bay-scoped auth, runtime env, and built-in bay/env tables
+- owns town-scoped auth, runtime env, and built-in town/env tables
 - gives City compositions a shared foundation for Node and edge deployments
 
 Services are public city services. They provide accounts, balance, usage, payment, and Stripe payment flows without owning city-level model governance.
@@ -131,10 +131,10 @@ The stable hook semantics are:
 
 ```mermaid
 flowchart TD
-  A["bay console start"] --> B["start console control plane"]
+  A["town console start"] --> B["start console control plane"]
   B --> C["registry / model store / gateway"]
 
-  D["bay agent start"] --> E["validate console and project state"]
+  D["town agent start"] --> E["validate console and project state"]
   E --> F["create AgentCore"]
   F --> G["load downcity.json / env"]
   G --> H["prepare model binding"]

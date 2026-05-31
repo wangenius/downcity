@@ -2,7 +2,7 @@
   "title": "理解 Downcity City",
   "pages": [
     "index",
-    "bay-model",
+    "town-model",
     "architecture",
     "token-model",
     "trust-boundary",

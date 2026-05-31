@@ -1,11 +1,11 @@
 ---
-title: bay tts
+title: town tts
 description: 管理内置 tts plugin，并把文本生成语音文件
 ---
 
-# `bay tts`
+# `town tts`
 
-`bay tts` 用于管理内置 tts plugin。
+`town tts` 用于管理内置 tts plugin。
 
 > 这页保留为命令入口。更完整的 Plugin 结构说明见 [Plugin 总览](/zh/agent-sdk-docs/plugins/overview)、[Plugin 配置](/zh/agent-sdk-docs/plugins/configuration) 和 [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)。
 
@@ -19,16 +19,16 @@ description: 管理内置 tts plugin，并把文本生成语音文件
 
 ```bash
 # 查看当前 tts 配置
-bay tts status
+town tts status
 
 # 启用插件
-bay tts on
+town tts on
 
 # 生成一个本地语音文件
-bay tts synthesize "hello from city"
+town tts synthesize "hello from city"
 
 # 指定格式 / 语言 / 音色 / 输出路径
-bay tts synthesize "你好，欢迎来到 Downcity" --format wav --language zh --voice default --output .downcity/out/welcome.wav
+town tts synthesize "你好，欢迎来到 Downcity" --format wav --language zh --voice default --output .downcity/out/welcome.wav
 ```
 
 ## 怎么使用
@@ -36,20 +36,20 @@ bay tts synthesize "你好，欢迎来到 Downcity" --format wav --language zh -
 1. 先启用 plugin：
 
 ```bash
-bay tts on
+town tts on
 ```
 
 2. 再检查当前模型和依赖是否可用：
 
 ```bash
-bay tts status
-bay tts doctor
+town tts status
+town tts doctor
 ```
 
 3. 生成语音文件：
 
 ```bash
-bay tts synthesize "这是一段测试语音"
+town tts synthesize "这是一段测试语音"
 ```
 
 4. 如需覆盖本次参数，可追加这些选项：
@@ -69,13 +69,13 @@ bay tts synthesize "这是一段测试语音"
 ## 说明
 
 - TTS 默认不接入 chat hooks。
-- `bay tts ...` 默认直接在当前项目里本地执行，不需要先运行 `bay agent start`。
-- 当 plugin 已启用且依赖可用时，agent 会在 system prompt 中感知这项能力，因此可以直接调用 `bay tts synthesize ...` 来生成语音文件。
+- `town tts ...` 默认直接在当前项目里本地执行，不需要先运行 `town agent start`。
+- 当 plugin 已启用且依赖可用时，agent 会在 system prompt 中感知这项能力，因此可以直接调用 `town tts synthesize ...` 来生成语音文件。
 - 它会生成一个本地音频文件，并返回可复用的 `<file type="audio">...</file>` 标签，后续发送阶段可直接复用。
 - 只要音频文件实际生成成功，非致命的 Python runner `stderr` 不再导致合成失败。
 - agent 侧的 TTS 参数会持久化到项目 `downcity.json` 的 `plugins.tts`。
 
 ## 相关页面
 
-- [`bay plugin`](/zh/docs/commands/plugin/plugin)
+- [`town plugin`](/zh/docs/commands/plugin/plugin)
 - [Plugin 文档总览](/zh/agent-sdk-docs/plugins/overview)

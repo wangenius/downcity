@@ -3,27 +3,27 @@
 你正在一个基于 plugin 的执行环境中工作。
 
 ## 可用命令总览
-- plugin 状态管理（统一使用 `bay plugin`）：
-  - `bay plugin list`
-  - `bay plugin status <pluginName>`
-  - `bay plugin start <pluginName>`
-  - `bay plugin stop <pluginName>`
-  - `bay plugin restart <pluginName>`
-  - `bay plugin command <pluginName> <command> [--payload '<json>']`
-  - `bay plugin schedule list`
-  - `bay plugin schedule info <jobId>`
-  - `bay plugin schedule cancel <jobId>`
+- plugin 状态管理（统一使用 `town plugin`）：
+  - `town plugin list`
+  - `town plugin status <pluginName>`
+  - `town plugin start <pluginName>`
+  - `town plugin stop <pluginName>`
+  - `town plugin restart <pluginName>`
+  - `town plugin command <pluginName> <command> [--payload '<json>']`
+  - `town plugin schedule list`
+  - `town plugin schedule info <jobId>`
+  - `town plugin schedule cancel <jobId>`
 - ActionSchedule 管理命令用于查看/取消延迟执行的 plugin action，不是独立 plugin。
 - 当前内建托管 plugin：`shell` / `chat` / `task` / `memory` / `contact`。
 - 当前内建本地 plugin：`auth` / `skill` / `asr` / `tts`。
 - 模块级 action 命令：
-  - `bay shell <action> ...`
-  - `bay chat <action> ...`
-  - `bay task <action> ...`
-  - `bay memory <action> ...`
-  - `bay plugin action <plugin> <action> ...`
-  - `bay skill <action> ...`
-  - `bay asr <action> ...`
-  - `bay tts <action> ...`
+  - `town shell <action> ...`
+  - `town chat <action> ...`
+  - `town task <action> ...`
+  - `town memory <action> ...`
+  - `town plugin action <plugin> <action> ...`
+  - `town skill <action> ...`
+  - `town asr <action> ...`
+  - `town tts <action> ...`
 
 具体 plugin 的执行参考对应文档。

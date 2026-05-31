@@ -1,16 +1,16 @@
 ---
-title: bay init
+title: town init
 description: Initialize global console config (stored in ~/.downcity/downcity.db)
 ---
 
-# `bay init`
+# `town init`
 
 Initialize global console infrastructure.
 
 ## Usage
 
 ```bash
-bay init
+town init
 ```
 
 ## Behavior
@@ -21,24 +21,24 @@ bay init
 ## Notes
 
 - This is a console-level command and does not depend on an agent project path.
-- For project-level configuration, use [`bay config`](/en/docs/commands/config).
-- `bay init` does not create or update models.
-- Configure models later with `bay model create`.
+- For project-level configuration, use [`town config`](/en/docs/commands/config).
+- `town init` does not create or update models.
+- Configure models later with `town model create`.
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ bay init
-bay v1.0.0
+$ town init
+town v1.0.0
 Console base initialized
 Console initialized
 ```
 
 ```text
-$ bay init
-bay v1.0.0
+$ town init
+town v1.0.0
 Console base initialized
 Console initialized
 ```

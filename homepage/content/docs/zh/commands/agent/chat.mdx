@@ -1,9 +1,9 @@
 ---
-title: bay agent chat
+title: town agent chat
 description: 在终端中与选定 agent 对话，支持交互式和一次性模式
 ---
 
-# `bay agent chat`
+# `town agent chat`
 
 在终端中与指定 agent 对话。
 
@@ -14,8 +14,8 @@ description: 在终端中与选定 agent 对话，支持交互式和一次性模
 ## 用法
 
 ```bash
-bay agent chat [--to <id>]
-bay agent chat [--to <id>] --message <text> [--json]
+town agent chat [--to <id>]
+town agent chat [--to <id>] --message <text> [--json]
 ```
 
 ## 常用参数
@@ -37,14 +37,14 @@ bay agent chat [--to <id>] --message <text> [--json]
 
 ## 相关命令
 
-- [`bay agent list`](/zh/docs/commands/agent/list)
-- [`bay agent start`](/zh/docs/commands/agent/start)
+- [`town agent list`](/zh/docs/commands/agent/list)
+- [`town agent start`](/zh/docs/commands/agent/start)
 
 ## 示例
 
 ```text
-$ bay agent chat --to lucas_whitman
-bay v1.0.439
+$ town agent chat --to lucas_whitman
+town v1.0.439
 
 INFO Agent chat · lucas_whitman
 
@@ -55,5 +55,5 @@ lucas_whitman> 总结一下今天做了什么
 ```
 
 ```bash
-$ bay agent chat --to lucas_whitman --message "总结一下今天做了什么" --json
+$ town agent chat --to lucas_whitman --message "总结一下今天做了什么" --json
 ```

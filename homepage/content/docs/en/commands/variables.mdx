@@ -5,34 +5,34 @@ description: Explain required command environment, files, and env-variable prior
 
 # Command Environment Requirements
 
-This page answers one question: what environment each `bay` command group needs to run correctly.
+This page answers one question: what environment each `town` command group needs to run correctly.
 
 ## 0) Top-level command boundary
 
 Top-level command groups are:
 
-- `bay console`
-- `bay agent`
-- `bay plugin`
+- `town console`
+- `town agent`
+- `town plugin`
 
-Commands like `bay chat`, `bay task`, `bay memory`, `bay shell`, `bay skill`, `bay asr`, and `bay tts` are plugin commands, not top-level roots.
+Commands like `town chat`, `town task`, `town memory`, `town shell`, `town skill`, `town asr`, and `town tts` are plugin commands, not top-level roots.
 
 ## 1) Environment by command group
 
 | Command Group | Required Environment | Optional Environment | Notes |
 | --- | --- | --- | --- |
-| `bay init` | Writable `~/.downcity/` | None | Writes `~/.downcity/downcity.db` |
-| `bay start/stop/restart/status` | Writable `~/.downcity/console/` | None | Manages global console process and registry |
-| `bay console` | Console is running; browser can reach UI port | `--host`, `--port` | Single UI instance can switch across multiple running agents |
-| `bay agent create` | Writable target directory | None | Generates `downcity.json`, `PROFILE.md`, `.downcity/` |
-| `bay agent start` | Console is running; project has `downcity.json` + `PROFILE.md` | `--host` | Agent port is allocated by console and registered into console registry |
-| `bay agent restart/status/doctor` | Target agent is registered in console registry | None | Operates through registry resolution |
-| `bay config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call agent API |
-| `bay plugin list/status` | None | `--json` | Static plugin catalog; does not resolve any agent |
-| `bay plugin start/stop/restart/command` | Target agent is running | `--agent`, `--path`, `--host`, `--port` | Used for managed plugins |
-| `bay plugin action ...` | Project has `downcity.json` | `--path` | Advanced local execution form |
-| `bay <managed-plugin> <action>` | Target agent is running | `--path`, `--host`, `--port` | Examples: `bay chat`, `bay task`, `bay memory`, `bay shell` |
-| `bay <local-plugin> <action>` | Project has `downcity.json` | `--path` | Examples: `bay skill`, `bay web`, `bay asr`, `bay tts` |
+| `town init` | Writable `~/.downcity/` | None | Writes `~/.downcity/downcity.db` |
+| `town start/stop/restart/status` | Writable `~/.downcity/console/` | None | Manages global console process and registry |
+| `town console` | Console is running; browser can reach UI port | `--host`, `--port` | Single UI instance can switch across multiple running agents |
+| `town agent create` | Writable target directory | None | Generates `downcity.json`, `PROFILE.md`, `.downcity/` |
+| `town agent start` | Console is running; project has `downcity.json` + `PROFILE.md` | `--host` | Agent port is allocated by console and registered into console registry |
+| `town agent restart/status/doctor` | Target agent is registered in console registry | None | Operates through registry resolution |
+| `town config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call agent API |
+| `town plugin list/status` | None | `--json` | Static plugin catalog; does not resolve any agent |
+| `town plugin start/stop/restart/command` | Target agent is running | `--agent`, `--path`, `--host`, `--port` | Used for managed plugins |
+| `town plugin action ...` | Project has `downcity.json` | `--path` | Advanced local execution form |
+| `town <managed-plugin> <action>` | Target agent is running | `--path`, `--host`, `--port` | Examples: `town chat`, `town task`, `town memory`, `town shell` |
+| `town <local-plugin> <action>` | Project has `downcity.json` | `--path` | Examples: `town skill`, `town web`, `town asr`, `town tts` |
 
 ## 2) Runtime transport
 
@@ -56,12 +56,12 @@ Priority order:
 
 ## 4) Context env requirements for common commands
 
-### `bay chat ...`
+### `town chat ...`
 
 - If `--chat-key` is omitted, it tries `DC_CTX_CHAT_KEY`
 - If `--session-id` is omitted, it first tries `DC_SESSION_ID`
 
-### `bay task ...`
+### `town task ...`
 
 - Task creation and run need `sessionId`
 - Pass `--session-id` explicitly, or rely on `DC_SESSION_ID`
@@ -71,8 +71,8 @@ Priority order:
 Use plugin roots for day-to-day work:
 
 ```bash
-bay chat send --chat-key ctx_xxx --text "hi"
-bay task list
-bay memory search "release decision"
-bay plugin list
+town chat send --chat-key ctx_xxx --text "hi"
+town task list
+town memory search "release decision"
+town plugin list
 ```

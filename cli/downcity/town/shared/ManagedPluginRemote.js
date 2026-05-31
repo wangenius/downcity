@@ -1,0 +1,200 @@
+/**
+ * `town plugin` 运行态远程 Agent server 调用辅助。
+ *
+ * 关键点（中文）
+ * - 统一处理 list/control/command 三类需要访问 Agent server 的命令。
+ * - 这里不负责命令注册，只负责 transport 调用与结果输出。
+ */
+import { printResult } from "../utils/cli/CliOutput.js";
+import { parseCommandPayload, resolvePluginProjectRoot, validateAgentProjectRoot, } from "./PluginTargetSupport.js";
+import { callServer } from "../process/daemon/Client.js";
+const PLUGIN_COMMAND_TIMEOUT_MS = 120_000;
+/**
+ * 执行 `plugin list`。
+ */
+export async function runManagedPluginListCommand(options) {
+    const resolved = await resolvePluginProjectRoot(options);
+    if (!resolved.projectRoot) {
+        printResult({
+            asJson: options.json,
+            success: false,
+            title: "plugin list failed",
+            payload: {
+                error: resolved.error || "Failed to resolve agent project path",
+            },
+        });
+        return;
+    }
+    const projectRoot = resolved.projectRoot;
+    const pathError = validateAgentProjectRoot(projectRoot);
+    if (pathError) {
+        printResult({
+            asJson: options.json,
+            success: false,
+            title: "plugin list failed",
+            payload: {
+                error: pathError,
+            },
+        });
+        return;
+    }
+    const remote = await callServer({
+        projectRoot,
+        path: "/api/plugins/list",
+        method: "GET",
+        host: options.host,
+        port: options.port,
+        authToken: options.token,
+    });
+    if (remote.success && remote.data) {
+        printResult({
+            asJson: options.json,
+            success: Boolean(remote.data.success),
+            title: remote.data.success ? "plugin listed" : "plugin list failed",
+            payload: {
+                ...(Array.isArray(remote.data.plugins) ? { plugins: remote.data.plugins } : {}),
+                ...(remote.data.error ? { error: remote.data.error } : {}),
+            },
+        });
+        return;
+    }
+    printResult({
+        asJson: options.json,
+        success: false,
+        title: "plugin list failed",
+        payload: {
+            error: remote.error || "Unknown error",
+        },
+    });
+}
+/**
+ * 执行 `plugin status/start/stop/restart`。
+ */
+export async function runManagedPluginControlCommand(params) {
+    const resolved = await resolvePluginProjectRoot(params.options);
+    if (!resolved.projectRoot) {
+        printResult({
+            asJson: params.options.json,
+            success: false,
+            title: `plugin ${params.action} failed`,
+            payload: {
+                error: resolved.error || "Failed to resolve agent project path",
+            },
+        });
+        return;
+    }
+    const projectRoot = resolved.projectRoot;
+    const pathError = validateAgentProjectRoot(projectRoot);
+    if (pathError) {
+        printResult({
+            asJson: params.options.json,
+            success: false,
+            title: `plugin ${params.action} failed`,
+            payload: {
+                error: pathError,
+            },
+        });
+        return;
+    }
+    const remote = await callServer({
+        projectRoot,
+        path: "/api/plugins/control",
+        method: "POST",
+        host: params.options.host,
+        port: params.options.port,
+        authToken: params.options.token,
+        body: {
+            pluginName: params.pluginName,
+            action: params.action,
+        },
+    });
+    if (remote.success && remote.data) {
+        printResult({
+            asJson: params.options.json,
+            success: Boolean(remote.data.success),
+            title: remote.data.success ? `plugin ${params.action} ok` : `plugin ${params.action} failed`,
+            payload: {
+                ...(remote.data.plugin ? { plugin: remote.data.plugin } : {}),
+                ...(remote.data.error ? { error: remote.data.error } : {}),
+            },
+        });
+        return;
+    }
+    printResult({
+        asJson: params.options.json,
+        success: false,
+        title: `plugin ${params.action} failed`,
+        payload: {
+            error: remote.error || "Unknown error",
+        },
+    });
+}
+/**
+ * 执行 `plugin command` 桥接。
+ */
+export async function runManagedPluginCommandBridge(params) {
+    const resolved = await resolvePluginProjectRoot(params.options);
+    if (!resolved.projectRoot) {
+        printResult({
+            asJson: params.options.json,
+            success: false,
+            title: "plugin command failed",
+            payload: {
+                error: resolved.error || "Failed to resolve agent project path",
+            },
+        });
+        return;
+    }
+    const projectRoot = resolved.projectRoot;
+    const pathError = validateAgentProjectRoot(projectRoot);
+    if (pathError) {
+        printResult({
+            asJson: params.options.json,
+            success: false,
+            title: "plugin command failed",
+            payload: {
+                error: pathError,
+            },
+        });
+        return;
+    }
+    const remote = await callServer({
+        projectRoot,
+        path: "/api/plugins/command",
+        method: "POST",
+        timeoutMs: PLUGIN_COMMAND_TIMEOUT_MS,
+        host: params.options.host,
+        port: params.options.port,
+        authToken: params.options.token,
+        body: {
+            pluginName: params.pluginName,
+            command: params.command,
+            ...(params.payloadRaw !== undefined
+                ? { payload: parseCommandPayload(params.payloadRaw) }
+                : {}),
+        },
+    });
+    if (remote.success && remote.data) {
+        printResult({
+            asJson: params.options.json,
+            success: Boolean(remote.data.success),
+            title: remote.data.success ? "plugin command ok" : "plugin command failed",
+            payload: {
+                ...(remote.data.plugin ? { plugin: remote.data.plugin } : {}),
+                ...(remote.data.message ? { message: remote.data.message } : {}),
+                ...(remote.data.data !== undefined ? { data: remote.data.data } : {}),
+                ...(remote.data.error ? { error: remote.data.error } : {}),
+            },
+        });
+        return;
+    }
+    printResult({
+        asJson: params.options.json,
+        success: false,
+        title: "plugin command failed",
+        payload: {
+            error: remote.error || "Unknown error",
+        },
+    });
+}
+//# sourceMappingURL=ManagedPluginRemote.js.map

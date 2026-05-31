@@ -1,20 +1,20 @@
 ---
-title: bay skill
+title: town skill
 description: Skill plugin actions (find/install/list/lookup)
 ---
 
-# `bay skill`
+# `town skill`
 
 Manage skill discovery, installation, and lookup.
 
 > This page remains as a command entry point. For the fuller plugin structure, see [Plugin Overview](/en/agent-sdk-docs/plugins/overview), [Built-in Plugins Today](/en/agent-sdk-docs/plugins/built-in-plugins), and [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions).
 
-> Hierarchy note: `bay skill` now belongs to the plugin action system. It is provided by the `skill` plugin, not by a separate legacy runtime layer.
+> Hierarchy note: `town skill` now belongs to the plugin action system. It is provided by the `skill` plugin, not by a separate legacy runtime layer.
 
 ## Usage
 
 ```bash
-bay skill <subcommand> [options]
+town skill <subcommand> [options]
 ```
 
 ## Subcommands
@@ -33,13 +33,13 @@ bay skill <subcommand> [options]
 ## Examples
 
 ```bash
-bay skill list
-bay skill lookup playwright
+town skill list
+town skill lookup playwright
 
 # install only when missing from `list`
-bay skill find playwright
-bay skill install owner/repo@playwright
-bay skill lookup playwright
+town skill find playwright
+town skill install owner/repo@playwright
+town skill lookup playwright
 ```
 
 ## Recommended flow
@@ -54,6 +54,6 @@ bay skill lookup playwright
 
 ## Related
 
-- [`bay plugin`](/en/docs/commands/plugin/plugin)
+- [`town plugin`](/en/docs/commands/plugin/plugin)
 - [Plugin Docs Overview](/en/agent-sdk-docs/plugins/overview)
 - [`CLI Commands`](/en/docs/reference/cli)

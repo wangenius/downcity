@@ -23,7 +23,7 @@ const PAGE = {
       {
         id: "sdk",
         title: "City SDK",
-        desc: "把 Downcity 的 City runtime、Gate 与公共服务能力接入你的产品体系。",
+        desc: "把 Downcity 的 City runtime、City 与公共服务能力接入你的产品体系。",
         source: "packages/city/",
       },
       {
@@ -43,7 +43,7 @@ const PAGE = {
     facts: [
       "Console UI：独立前端包，目录为 products/console/。",
       "Chrome Extension：Manifest V3 插件，目录为 products/chrome-extension/。",
-      "City SDK：核心 runtime 与 Gate 访问方式都位于 packages/city/。",
+      "City SDK：核心 runtime 与 City 访问方式都位于 packages/city/。",
       "Agent SDK：本地 Agent / RemoteAgent SDK 位于 packages/agent/。",
       "Downcity UI SDK：React + Tailwind 组件包目录为 packages/ui/。",
     ],
@@ -69,7 +69,7 @@ const PAGE = {
       {
         id: "sdk",
         title: "City SDK",
-        desc: "Integrate Downcity City runtime, Gate access, and public services into your product flow.",
+        desc: "Integrate Downcity City runtime, City access, and public services into your product flow.",
         source: "packages/city/",
       },
       {
@@ -89,7 +89,7 @@ const PAGE = {
     facts: [
       "Console UI is a dedicated frontend package under products/console/.",
       "Chrome Extension is a Manifest V3 extension under products/chrome-extension/.",
-      "City SDK core runtime and Gate access helpers both live in packages/city/.",
+      "City SDK core runtime and City access helpers both live in packages/city/.",
       "Agent SDK local Agent and RemoteAgent runtime are in packages/agent/.",
       "Downcity UI SDK is the React + Tailwind component package under packages/ui/.",
     ],

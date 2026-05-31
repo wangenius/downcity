@@ -4,17 +4,17 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 
-import { City, AIService } from "../bin/index.js"
+import { CityBase, AIService } from "../bin/index.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
 
-test("City instruction aggregates built-in and service documentation", async () => {
+test("CityBase instruction aggregates built-in and service documentation", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-instruction-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new City({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
 
     base.use({
       id: "demo",
@@ -37,9 +37,9 @@ test("City instruction aggregates built-in and service documentation", async () 
 
     const text = await base.instruction()
 
-    assert.match(text, /# Downcity City Instruction/)
+    assert.match(text, /# Downcity CityBase Instruction/)
     assert.match(text, /## Env \(env\)/)
-    assert.match(text, /## Bays \(bays\)/)
+    assert.match(text, /## Towns \(towns\)/)
     assert.match(text, /## Demo InstallableService \(demo\)/)
     assert.match(text, /这是一个测试服务说明。/)
     assert.match(text, /GET \/v1\/demo\/ping \| auth: admin/)
@@ -49,14 +49,14 @@ test("City instruction aggregates built-in and service documentation", async () 
   }
 })
 
-test("City instruction endpoint requires admin auth and returns text", async () => {
+test("CityBase instruction endpoint requires admin auth and returns text", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-instruction-http-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new City({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
@@ -81,21 +81,21 @@ test("City instruction endpoint requires admin auth and returns text", async () 
 
     assert.equal(adminResponse.status, 200)
     assert.equal(adminResponse.headers.get("content-type"), "text/plain; charset=utf-8")
-    assert.match(await adminResponse.text(), /Downcity City Instruction/)
+    assert.match(await adminResponse.text(), /Downcity CityBase Instruction/)
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
   }
 })
 
-test("City bootstraps internal secrets into the env table", async () => {
+test("CityBase bootstraps internal secrets into the env table", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-env-bootstrap-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new City({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
 
     await base.health()
 
@@ -126,14 +126,14 @@ test("City bootstraps internal secrets into the env table", async () => {
   }
 })
 
-test("City rejects mismatched bay_id for authenticated user requests", async () => {
+test("CityBase rejects mismatched town_id for authenticated user requests", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-bay-"))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-town-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new City({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
 
     const ai = new AIService()
     ai.use({
@@ -153,7 +153,7 @@ test("City rejects mismatched bay_id for authenticated user requests", async () 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
 
-    const bay_response = await base.handleRequest(new Request("http://localhost/v1/bays/create", {
+    const bay_response = await base.handleRequest(new Request("http://localhost/v1/towns/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -163,11 +163,11 @@ test("City rejects mismatched bay_id for authenticated user requests", async () 
         name: "Demo",
       }),
     }))
-    const bay = await bay_response.json()
+    const town = await bay_response.json()
 
     const authenticator = await base.getAuthenticator()
     const issued = await authenticator.createToken({
-      bay_id: bay.bay_id,
+      town_id: town.town_id,
       user_id: "user_1",
     })
 
@@ -178,7 +178,7 @@ test("City rejects mismatched bay_id for authenticated user requests", async () 
         authorization: `Bearer ${issued.user_token}`,
       },
       body: JSON.stringify({
-        bay_id: "bay_other",
+        town_id: "town_other",
         prompt: "hi",
       }),
     }))
@@ -186,7 +186,7 @@ test("City rejects mismatched bay_id for authenticated user requests", async () 
     assert.equal(response.status, 403)
     assert.deepEqual(await response.json(), {
       error: {
-        message: "bay_id does not match the authenticated token",
+        message: "town_id does not match the authenticated token",
         type: "server_error",
       },
     })
@@ -196,14 +196,14 @@ test("City rejects mismatched bay_id for authenticated user requests", async () 
   }
 })
 
-test("City exposes service env requirements and env catalog", async () => {
+test("CityBase exposes service env requirements and env catalog", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-core-services-env-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new City({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
 
     base.use({
       id: "payment.stripe",
@@ -286,14 +286,14 @@ test("City exposes service env requirements and env catalog", async () => {
   }
 })
 
-test("City refreshes runtime env before each request so external env updates take effect immediately", async () => {
+test("CityBase refreshes runtime env before each request so external env updates take effect immediately", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-env-refresh-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new City({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
 
     base.use({
       id: "demo.env",

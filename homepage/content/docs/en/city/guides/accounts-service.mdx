@@ -3,9 +3,9 @@ title: Accounts Service
 description: Use @downcity/services for registration, login, OAuth entry points, profile data, and user_token issuance.
 ---
 
-The accounts service fits bays that do not yet have a complex user system. It provides better-auth auth tables, a bay-facing profile table, password registration/login, and City `user_token` issuing after registration or login.
+The accounts service fits towns that do not yet have a complex user system. It provides better-auth auth tables, a town-facing profile table, password registration/login, and City `user_token` issuing after registration or login.
 
-This page focuses on how the service fits into the real bay call chain, not only what tables it creates.
+This page focuses on how the service fits into the real town call chain, not only what tables it creates.
 
 ## Install And Enable
 
@@ -17,18 +17,18 @@ base.use(accountsService({
 }));
 ```
 
-## Where it sits in the bay flow
+## Where it sits in the town flow
 
 ```txt
-bay frontend
-  -> guest User Visa with city_url only
+town frontend
+  -> guest User City with city_url only
   -> call guest accounts actions
   -> accounts service returns user_token
-  -> frontend creates a normal User Visa with city_url + bay_id + user_token
+  -> frontend creates a normal User City with city_url + town_id + user_token
   -> frontend continues with AI services or custom services
 ```
 
-If you already have your own backend, you can skip the service for login itself and let your backend validate users first, then use `Admin Visa` to issue `user_token`. The accounts service is the official ready-made service path for a minimal auth system.
+If you already have your own backend, you can skip the service for login itself and let your backend validate users first, then use `Admin City` to issue `user_token`. The accounts service is the official ready-made service path for a minimal auth system.
 
 ## Choosing the pattern
 
@@ -48,14 +48,14 @@ Good fit when:
 - you need complex org, invitation, permission, or risk-control logic
 - you only want City to handle `user_token` issuance
 
-Both patterns converge to the same end state: the frontend gets `bay_id + user_token`, then uses a normal `User Visa` to call City.
+Both patterns converge to the same end state: the frontend gets `town_id + user_token`, then uses a normal `User City` to call City.
 
 ## Login
 
 ```ts
-import { Visa } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const guest = new Visa({
+const guest = new City({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -65,11 +65,11 @@ const accounts = guest.service("accounts");
 const session = await accounts.action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
-The response includes `user_token`, `user_id`, and `email`. The bay client can then create a normal `User Visa` and call AI services.
+The response includes `user_token`, `user_id`, and `email`. The town client can then create a normal `User City` and call AI services.
 
 ## Registration
 
@@ -77,7 +77,7 @@ The response includes `user_token`, `user_id`, and `email`. The bay client can t
 const session = await accounts.action("register").invoke({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
@@ -88,7 +88,7 @@ If your service configuration requires email verification, the next step is usua
 ```ts
 const start = await accounts.action("oauth/start").invoke({
   provider: "github",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 
 const result = await guest.service("accounts").get("oauth/result", {
@@ -96,7 +96,7 @@ const result = await guest.service("accounts").get("oauth/result", {
 });
 ```
 
-The bay client does not need to pass `redirect_uri`. The accounts service generates the third-party OAuth callback automatically from the current public City origin:
+The town client does not need to pass `redirect_uri`. The accounts service generates the third-party OAuth callback automatically from the current public City origin:
 
 ```txt
 https://your-base-domain/v1/accounts/oauth/callback
@@ -116,10 +116,10 @@ This set of endpoints usually comes in two phases:
 - `oauth/start`: get the redirect URL or state
 - `oauth/result`: poll or confirm the login result
 
-## Switching from guest User Visa to normal User Visa
+## Switching from guest User City to normal User City
 
 ```ts
-const guest = new Visa({
+const guest = new City({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -129,13 +129,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 
-const user = new Visa({
+const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
   user_token: session.user_token,
 });
 
@@ -175,9 +175,9 @@ As a first mental model:
 
 That means:
 
-- guest Actions still run through `User Visa`
-- but at that stage the `User Visa` only needs `city_url`
-- once you enter user context, you move to `bay_id + user_token`
+- guest Actions still run through `User City`
+- but at that stage the `User City` only needs `city_url`
+- once you enter user context, you move to `town_id + user_token`
 
 ## Current User And Logout
 
@@ -192,7 +192,7 @@ await user.service("accounts").action("logout").invoke();
 `me` now returns:
 
 - `user`: the current runtime user
-- `profile`: bay-facing profile data
+- `profile`: town-facing profile data
 
 ## Manage Users
 
@@ -216,6 +216,6 @@ The accounts service does not replace `@downcity/city`.
 More precisely:
 
 - `@downcity/services` registers the `accounts` service into City
-- `@downcity/city` is what bay-side and trusted-side callers use to call that service
+- `@downcity/city` is what town-side and trusted-side callers use to call that service
 
-So the service provides the auth capability, while the SDK still provides the calling surface through `User Visa` and `Admin Visa`.
+So the service provides the auth capability, while the SDK still provides the calling surface through `User City` and `Admin City`.

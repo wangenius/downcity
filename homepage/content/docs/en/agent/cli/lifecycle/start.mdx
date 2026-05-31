@@ -1,16 +1,16 @@
 ---
-title: bay agent start
+title: town agent start
 description: Start an Agent process in background or foreground mode
 ---
 
-# `bay agent start`
+# `town agent start`
 
 ## Usage
 
 ```bash
-bay agent start [path]
-bay agent start [path] --foreground
-bay agent start [path] --host 0.0.0.0
+town agent start [path]
+town agent start [path] --foreground
+town agent start [path] --host 0.0.0.0
 ```
 
 ## Default behavior
@@ -32,7 +32,7 @@ This makes scripted usage predictable while keeping human usage convenient.
 ## `--foreground`
 
 ```bash
-bay agent start --foreground
+town agent start --foreground
 ```
 
 Use this when you want to:
@@ -53,7 +53,7 @@ Before startup, the following must be valid:
 
 If these conditions are missing, repeated `start` attempts are less useful than checking:
 
-- `bay agent status`
+- `town agent status`
 - [Agent won't start](/en/docs/agent/operations/troubleshooting/agent-wont-start)
 
 Continue with:

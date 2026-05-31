@@ -1,18 +1,18 @@
 ---
-title: bay config
+title: town config
 description: Manage project downcity.json and alias (model pool is separate)
 ---
 
-# `bay config`
+# `town config`
 
 Manage project `downcity.json` and alias.
 
-> Naming note: configuration command is `bay config`, not `bay console config`.
+> Naming note: configuration command is `town config`, not `town console config`.
 
 ## Usage
 
 ```bash
-bay config <subcommand>
+town config <subcommand>
 ```
 
 ## Subcommands
@@ -22,39 +22,39 @@ bay config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> Model pool management has moved to [`bay model`](/en/docs/commands/model).
+> Model pool management has moved to [`town model`](/en/docs/commands/model).
 
 ## Plugin config
 
-`bay config` now reads and writes project `downcity.json` only.
+`town config` now reads and writes project `downcity.json` only.
 
 For plugin configuration, edit:
 
 - `plugins.*` for agent-local plugin parameters only
-- use `bay <plugin> on/off` for plugin lifecycle
+- use `town <plugin> on/off` for plugin lifecycle
 
 Examples:
 
 ```bash
-bay config get plugins.asr
-bay config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+town config get plugins.asr
+town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
 ## Examples
 
 ```bash
-bay config get model.primary
-bay config set model.primary fast
-bay config unset plugins.chat.channels.telegram
-bay config alias --dry-run
+town config get model.primary
+town config set model.primary fast
+town config unset plugins.chat.channels.telegram
+town config alias --dry-run
 ```
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ bay config get model.primary
+$ town config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
@@ -65,7 +65,7 @@ $ bay config get model.primary
 ```
 
 ```text
-$ bay config set model.primary gpt-5.4
+$ town config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",

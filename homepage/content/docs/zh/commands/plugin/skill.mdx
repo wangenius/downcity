@@ -1,20 +1,20 @@
 ---
-title: bay skill
+title: town skill
 description: skill plugin actions（find/install/list/lookup）
 ---
 
-# `bay skill`
+# `town skill`
 
 管理 skills 的发现、安装与读取。
 
 > 这页保留为命令入口。更完整的 Plugin 结构说明见 [Plugin 总览](/zh/agent-sdk-docs/plugins/overview)、[当前有哪些内建 Plugin](/zh/agent-sdk-docs/plugins/built-in-plugins) 和 [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)。
 
-> 层级说明：`bay skill` 现在属于 plugin action 命令，由 `skill plugin` 提供，不再属于旧的独立运行层概念。
+> 层级说明：`town skill` 现在属于 plugin action 命令，由 `skill plugin` 提供，不再属于旧的独立运行层概念。
 
 ## 用法
 
 ```bash
-bay skill <subcommand> [options]
+town skill <subcommand> [options]
 ```
 
 ## 子命令
@@ -33,13 +33,13 @@ bay skill <subcommand> [options]
 ## 示例
 
 ```bash
-bay skill list
-bay skill lookup playwright
+town skill list
+town skill lookup playwright
 
 # 仅当 list 中缺失时再安装
-bay skill find playwright
-bay skill install owner/repo@playwright
-bay skill lookup playwright
+town skill find playwright
+town skill install owner/repo@playwright
+town skill lookup playwright
 ```
 
 ## 推荐流程
@@ -54,6 +54,6 @@ bay skill lookup playwright
 
 ## 相关页面
 
-- [`bay plugin`](/zh/docs/commands/plugin/plugin)
+- [`town plugin`](/zh/docs/commands/plugin/plugin)
 - [Plugin 文档总览](/zh/agent-sdk-docs/plugins/overview)
 - [`CLI 命令`](/zh/docs/reference/cli)

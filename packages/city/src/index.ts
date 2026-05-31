@@ -1,17 +1,17 @@
 /**
  * @downcity/city 公共入口。
  *
- * City 包同时提供服务端运行时与 Visa 访问入口：
- * - `City` 用来创建和部署城市
- * - `Visa` 用来以 user 或 admin 角色访问城市
+ * City 包同时提供服务端 CityBase 与客户端 City：
+ * - `CityBase` 用来创建和部署城市服务端
+ * - `City` 用来以 user 或 admin 角色访问城市
  */
 
 // ===========================================================================
-// 场景 1：创建 City 实例
+// 场景 1：创建 CityBase 实例
 // ===========================================================================
 
-export { City } from "./core/base/base.js";
-export type { CityOptions, CityHealthStatus } from "./core/types.js";
+export { CityBase } from "./core/base/base.js";
+export type { CityBaseOptions, CityBaseHealthStatus } from "./core/types.js";
 export type { Runtime, EnvProvider, BuiltinTables, TableDef } from "./core/runtime.js";
 
 // ===========================================================================
@@ -77,7 +77,7 @@ export type {
 } from "./core/auth/types.js";
 
 // ===========================================================================
-// 场景 4：管理 Bay 与环境变量（内置 Service）
+// 场景 4：管理 Town 与环境变量（内置 Service）
 // ===========================================================================
 
 export { EnvService } from "./service/env/env-service.js";
@@ -89,8 +89,8 @@ export type {
 } from "./service/env/types.js";
 export { EnvStore } from "./service/env/env-store.js";
 
-export { BaysService } from "./service/bays/bays-service.js";
-export type { Bay, BayCreateInput, BayStatus } from "./service/bays/types.js";
+export { TownsService } from "./service/towns/towns-service.js";
+export type { Town, TownCreateInput, TownStatus } from "./service/towns/types.js";
 
 // ===========================================================================
 // 场景 5：数据库工具
@@ -102,7 +102,7 @@ export type { CityTableApi } from "./store/table-api.js";
 export type { CityUserSchemaInput } from "./store/types.js";
 
 // ===========================================================================
-// 场景 6：Visa 访问入口
+// 场景 6：City 客户端访问入口
 // ===========================================================================
 
 export type {
@@ -110,7 +110,7 @@ export type {
   FetchResponseLike,
   RawStreamBody,
   RequestInitLike,
-} from "./visa/http.js";
+} from "./city/http.js";
 
 export type {
   CityModel,
@@ -118,19 +118,19 @@ export type {
   CityModelEnvRequirement,
 } from "@downcity/type";
 
-export { Visa } from "./visa/visa.js";
+export { City } from "./city/city.js";
 export type {
-  AdminVisaOptions,
-  VisaBaseOptions,
-  VisaOptions,
-  VisaOptionsForRole,
-  VisaRole,
-  UserVisaOptions,
-} from "./visa/types/visa.js";
+  AdminCityOptions,
+  CityClientBaseOptions,
+  CityOptions,
+  CityOptionsForRole,
+  CityRole,
+  UserCityOptions,
+} from "./city/types/city.js";
 
-export { AIInvoker, ModelCatalog, ModelHandle } from "./visa/invoker/ai/index.js";
-export { PaymentInvoker, PaymentMethodHandle } from "./visa/invoker/payment/index.js";
-export { ServiceClient, ActionClient } from "./visa/invoker/invoker.js";
+export { AIInvoker, ModelCatalog, ModelHandle } from "./city/invoker/ai/index.js";
+export { PaymentInvoker, PaymentMethodHandle } from "./city/invoker/payment/index.js";
+export { ServiceClient, ActionClient } from "./city/invoker/invoker.js";
 
 export type {
   UserPaymentMethod,
@@ -143,28 +143,28 @@ export type {
   UserStreamResult,
   UserTextResult,
   UserVideoResult,
-} from "./visa/user/types.js";
+} from "./city/user/types.js";
 
 export type {
   UserPaymentMethod as PaymentMethod,
   UserPaymentMethodReason as PaymentMethodReason,
   UserPaymentMethodType as PaymentMethodType,
-} from "./visa/invoker/payment/types.js";
+} from "./city/invoker/payment/types.js";
 
 export type {
   UserModelRef,
   UserModelInput,
-} from "./visa/invoker/ai/types.js";
+} from "./city/invoker/ai/types.js";
 
-export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./visa/invoker/balance/index.js";
-export { EnvInvoker } from "./visa/invoker/env/index.js";
-export { BaysInvoker } from "./visa/invoker/bays/index.js";
+export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./city/invoker/balance/index.js";
+export { EnvInvoker } from "./city/invoker/env/index.js";
+export { TownsInvoker } from "./city/invoker/towns/index.js";
 
 export type {
   AdminInstructionResult,
   AdminModelRecord,
   AdminServiceSummary,
-} from "./visa/admin/types.js";
+} from "./city/admin/types.js";
 
 export type {
   BalanceAccountRecord,
@@ -179,18 +179,18 @@ export type {
   BalanceTopupListInput,
   BalanceTopupRecord,
   BalanceTopupUpdateInput,
-} from "./visa/invoker/balance/types.js";
+} from "./city/invoker/balance/types.js";
 
 export type {
   TokenApplyInput,
   TokenApplyResult,
-} from "./visa/invoker/bays/types.js";
+} from "./city/invoker/towns/types.js";
 
 // ===========================================================================
 // 场景 7：内置表 Schema
 // ===========================================================================
 
-export { sqliteBays, pgBays } from "./service/bays/schema.js";
+export { sqliteTowns, pgTowns } from "./service/towns/schema.js";
 export { sqliteEnv, pgEnv } from "./service/env/schema.js";
 
 // ===========================================================================

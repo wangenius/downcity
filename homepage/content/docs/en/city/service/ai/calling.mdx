@@ -1,15 +1,15 @@
 ---
 title: Calling AI Service
-description: SDK pathway (User Visa) and OpenAI-compatible pathway (curl / OpenAI SDK / downcity agent) calling examples.
+description: SDK pathway (User City) and OpenAI-compatible pathway (curl / OpenAI SDK / downcity agent) calling examples.
 ---
 
 ## SDK Pathway
 
 ```ts
-const client = new Visa({
+const client = new City({
   role: "user",
   city_url: "http://127.0.0.1:43127",
-  bay_id: "bay_downcity",
+  town_id: "town_downcity",
   user_token: "ub_xxx",
 });
 
@@ -79,7 +79,7 @@ await session.ask("Write an HTTP server");
 
 | Scenario | Pathway |
 |---|---|
-| Your own bay code, simple prompt → text | SDK |
+| Your own town code, simple prompt → text | SDK |
 | Streaming output to your own UI | SDK |
 | downcity agent agent conversations | OpenAI-Compatible |
 | OpenAI SDK or compatible clients | OpenAI-Compatible |

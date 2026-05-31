@@ -26,7 +26,7 @@ export async function updateCli(cwd = process.cwd()): Promise<{
 
   if (workspaceRoot) {
     await run(commandOf("pnpm"), ["-C", "cli/city", "build"], workspaceRoot);
-    await run(commandOf("pnpm"), ["-C", "cli/bay", "build"], workspaceRoot);
+    await run(commandOf("pnpm"), ["-C", "cli/town", "build"], workspaceRoot);
     await run(commandOf("pnpm"), ["-C", "cli/downcity", "build"], workspaceRoot);
     const deploy_dir = path.join(os.tmpdir(), `downcity-cli-deploy-${Date.now()}`);
     await run(commandOf("pnpm"), ["--filter", CLI_PACKAGE_NAME, "deploy", "--legacy", deploy_dir], workspaceRoot);
@@ -71,10 +71,10 @@ async function installCliDeployGlobally(deploy_dir: string, cwd: string): Promis
   await mkdir(global_paths.global_bin, { recursive: true });
   await rm(global_paths.package_dir, { recursive: true, force: true });
   await cp(deploy_dir, global_paths.package_dir, { recursive: true, force: true });
-  await chmod(global_paths.bay_entry, 0o755);
+  await chmod(global_paths.town_entry, 0o755);
   await chmod(global_paths.city_entry, 0o755);
 
-  await recreateSymlink(global_paths.bay_bin, "../lib/node_modules/downcity/bin/bay/index.js");
+  await recreateSymlink(global_paths.town_bin, "../lib/node_modules/downcity/bin/town/index.js");
   await recreateSymlink(global_paths.city_bin, "../lib/node_modules/downcity/bin/city/index.js");
 }
 
@@ -86,9 +86,9 @@ async function resolveGlobalCliPaths(cwd: string): Promise<{
   global_modules: string;
   global_bin: string;
   package_dir: string;
-  bay_entry: string;
+  town_entry: string;
   city_entry: string;
-  bay_bin: string;
+  town_bin: string;
   city_bin: string;
 }> {
   const npm_prefix = (await capture(commandOf("npm"), ["prefix", "-g"], cwd)).trim();
@@ -101,9 +101,9 @@ async function resolveGlobalCliPaths(cwd: string): Promise<{
     global_modules,
     global_bin,
     package_dir,
-    bay_entry: path.join(package_dir, "bin", "bay", "index.js"),
+    town_entry: path.join(package_dir, "bin", "town", "index.js"),
     city_entry: path.join(package_dir, "bin", "city", "index.js"),
-    bay_bin: path.join(global_bin, "bay"),
+    town_bin: path.join(global_bin, "town"),
     city_bin: path.join(global_bin, "city"),
   };
 }

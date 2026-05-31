@@ -3,7 +3,7 @@ title: official services
 description: Add accounts, usage, and payment capabilities to City through package services.
 ---
 
-Services package backend capabilities that many client bays reuse. City users do not define database tables for these official services.
+Services package backend capabilities that many client towns reuse. City users do not define database tables for these official services.
 
 ## Minimal Setup
 
@@ -35,14 +35,14 @@ base.use(stripePaymentService({
 }));
 ```
 
-Services register their own actions and tables into City. The bay example also registers `EnvService`, `BaysService`, and `AIService` explicitly.
+Services register their own actions and tables into City. The town example also registers `EnvService`, `TownsService`, and `AIService` explicitly.
 
 ## Calling Services From Clients
 
-User Visa calls guest-access service entry points with `city_url` only:
+User City calls guest-access service entry points with `city_url` only:
 
 ```ts
-const guest = new Visa({
+const guest = new City({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -52,11 +52,11 @@ const accounts = guest.service("accounts");
 const session = await accounts.action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  bay_id: "bay_demo",
+  town_id: "town_demo",
 });
 ```
 
-User Visa calls authenticated service entry points after it has `bay_id + user_token`:
+User City calls authenticated service entry points after it has `town_id + user_token`:
 
 ```ts
 const usage = user.service("usage");
@@ -64,7 +64,7 @@ const usage = user.service("usage");
 const myUsage = await usage.get("me");
 ```
 
-Admin Visa calls `/v1/{serviceId}`:
+Admin City calls `/v1/{serviceId}`:
 
 ```ts
 const usage = admin.service("usage");

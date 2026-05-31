@@ -10,7 +10,7 @@ description: 从初始化到启动、聊天、停机，理解一个 Agent 的完
 ## 1. 初始化项目
 
 ```bash
-bay agent create .
+town agent create .
 ```
 
 这一步会生成最小可运行骨架，包括：
@@ -35,14 +35,14 @@ bay agent create .
 }
 ```
 
-也就是说，项目要绑定到 Bay 全局模型池中的某个模型 ID。
+也就是说，项目要绑定到 Town 全局模型池中的某个模型 ID。
 
 在当前代码里，这个执行绑定不是可选装饰，而是启动链路的硬前提之一。
 
 ## 3. 启动运行时
 
 ```bash
-bay agent start
+town agent start
 ```
 
 启动时，agent 会：
@@ -60,7 +60,7 @@ bay agent start
 
 运行中的 agent 可以通过多种入口执行：
 
-- `bay agent chat`
+- `town agent chat`
 - 已接入的聊天渠道
 - 项目级 HTTP 控制接口
 - SDK `Agent` / `RemoteAgent`
@@ -74,10 +74,10 @@ bay agent start
 常用命令：
 
 ```bash
-bay agent status
-bay agent stop
-bay agent restart
-bay agent doctor --fix
+town agent status
+town agent stop
+town agent restart
+town agent doctor --fix
 ```
 
 如果进程异常退出但状态文件仍在，`doctor` 用来清理 stale 状态。
@@ -88,8 +88,8 @@ bay agent doctor --fix
 
 1. 改 `PROFILE.md`
 2. 改 `downcity.json`
-3. `bay agent restart`
-4. `bay agent chat`
+3. `town agent restart`
+4. `town agent chat`
 5. 看输出，再继续微调
 
 如果你在打磨一个长期运行的项目 agent，这个循环会非常常见。
@@ -98,10 +98,10 @@ bay agent doctor --fix
 
 对大多数用户，推荐按下面的顺序上手：
 
-1. `bay agent create .`
+1. `town agent create .`
 2. 配好 `downcity.json.execution.modelId`
-3. `bay agent start`
-4. `bay agent chat`
+3. `town agent start`
+4. `town agent chat`
 5. 需要时再接入渠道或 SDK
 
 ## 什么时候应该跳到后面的章节

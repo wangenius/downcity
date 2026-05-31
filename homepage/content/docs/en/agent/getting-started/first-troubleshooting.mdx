@@ -11,13 +11,13 @@ When an agent fails the first time, the cause usually belongs to one of four are
 
 Symptoms:
 
-- `bay agent status` shows `not initialized`
+- `town agent status` shows `not initialized`
 - `PROFILE.md` or `downcity.json` is missing
 
 Fix:
 
 ```bash
-bay agent create .
+town agent create .
 ```
 
 If the minimum project files do not exist, do not start by suspecting models, channels, or sessions.
@@ -40,20 +40,20 @@ This is one of the most common structural startup problems in the current implem
 
 Symptoms:
 
-- `bay agent chat` cannot connect
+- `town agent chat` cannot connect
 - CLI says the daemon is unreachable
 
 Fix:
 
 ```bash
-bay agent status
-bay agent start
+town agent status
+town agent start
 ```
 
 If background behavior is unclear, also try:
 
 ```bash
-bay agent start --foreground
+town agent start --foreground
 ```
 
 ## 4. State files are stale
@@ -65,15 +65,15 @@ Symptoms:
 Fix:
 
 ```bash
-bay agent doctor --fix
-bay agent start
+town agent doctor --fix
+town agent start
 ```
 
 In most cases you do not need to delete project directories or manually remove random state files. `doctor --fix` is the right first move.
 
 ## Recommended order
 
-1. `bay agent status`
+1. `town agent status`
 2. inspect `downcity.json`
 3. confirm model binding
 4. if stale, run `doctor --fix`

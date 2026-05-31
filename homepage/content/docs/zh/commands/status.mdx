@@ -1,33 +1,33 @@
 ---
-title: bay status
-description: 查看 Bay runtime、Console 与托管 agent 状态
+title: town status
+description: 查看 Town runtime、Console 与托管 agent 状态
 ---
 
-# `bay status`
+# `town status`
 
-查看 Bay runtime、Console 与当前托管 agent 概览。
+查看 Town runtime、Console 与当前托管 agent 概览。
 
 ## 用法
 
 ```bash
-bay status
+town status
 ```
 
 ## 相关命令
 
-- [`bay agent list --running`](/zh/docs/commands/agent/list)
-- [`bay console`](/zh/docs/commands/console/console)
-- [`bay public`](/zh/docs/commands/public)
+- [`town agent list --running`](/zh/docs/commands/agent/list)
+- [`town console`](/zh/docs/commands/console/console)
+- [`town public`](/zh/docs/commands/public)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/town/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ bay status
-bay v1.0.0
+$ town status
+town v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK bay status                                   │
+│ OK town status                                   │
 │   state    : running                                    │
 │   pid      : <pid>                                      │
 │   pid_file : <bayPidPath>                              │

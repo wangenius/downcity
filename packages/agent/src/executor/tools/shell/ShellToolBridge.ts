@@ -75,7 +75,7 @@ function tryParseJsonObject(raw: string): JsonObject | null {
 function shouldEnableCommandBridge(command: string): boolean {
   const raw = String(command || "").trim();
   if (!raw) return false;
-  return /(?:^|\s)(?:city|bay)(?:\s|$)/i.test(raw);
+  return /(?:^|\s)(?:city|town)(?:\s|$)/i.test(raw);
 }
 
 async function injectUserTextMessage(params: {

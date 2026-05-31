@@ -1,22 +1,22 @@
 ---
 title: Guides
-description: Read by real bay scenario, not by internal implementation detail.
+description: Read by real town scenario, not by internal implementation detail.
 ---
 
-These pages are not API reference. They answer the more practical question: how should you use Downcity in real bay situations?
+These pages are not API reference. They answer the more practical question: how should you use Downcity in real town situations?
 
-If you already understand the basics but are now dealing with real bays, users, and providers, this section is the most useful one.
+If you already understand the basics but are now dealing with real towns, users, and providers, this section is the most useful one.
 
 ## Choose by scenario
 
 <div className="dc-doc-grid">
-  <a className="dc-doc-card" href="/en/docs/city/guides/pure-client-bays">
-    <strong>Pure-client bays</strong>
-    <p>For bays that start with only a frontend, extension, or app. Understand why each new idea does not need its own AI backend.</p>
+  <a className="dc-doc-card" href="/en/docs/city/guides/pure-client-towns">
+    <strong>Pure-client towns</strong>
+    <p>For towns that start with only a frontend, extension, or app. Understand why each new idea does not need its own AI backend.</p>
   </a>
-  <a className="dc-doc-card" href="/en/docs/city/guides/multi-bay-city">
-    <strong>Many bays, one City</strong>
-    <p>How one City serves multiple bays, and how to organize `bay_id` plus token metadata.</p>
+  <a className="dc-doc-card" href="/en/docs/city/guides/multi-town-city">
+    <strong>Many towns, one City</strong>
+    <p>How one City serves multiple towns, and how to organize `town_id` plus token metadata.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/guides/cloudflare-workers">
     <strong>Cloudflare Workers</strong>
@@ -24,7 +24,7 @@ If you already understand the basics but are now dealing with real bays, users, 
   </a>
   <a className="dc-doc-card" href="/en/docs/city/guides/auth-and-user-token">
     <strong>Auth and `user_token`</strong>
-    <p>Connect login, token issuance, and bay-side calls without leaking management capabilities to the client.</p>
+    <p>Connect login, token issuance, and town-side calls without leaking management capabilities to the client.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/guides/provider-env">
     <strong>Provider environment</strong>
@@ -42,8 +42,8 @@ If you already understand the basics but are now dealing with real bays, users, 
 
 ## Suggested order
 
-1. Building a new bay first: read [Pure-client bays](/en/docs/city/guides/pure-client-bays)
-2. Already operating multiple bays: continue with [Many bays, one City](/en/docs/city/guides/multi-bay-city)
+1. Building a new town first: read [Pure-client towns](/en/docs/city/guides/pure-client-towns)
+2. Already operating multiple towns: continue with [Many towns, one City](/en/docs/city/guides/multi-town-city)
 3. Deploying on Cloudflare Workers: continue with [Cloudflare Workers](/en/docs/city/guides/cloudflare-workers)
 4. Ready for real users: read [Auth and `user_token`](/en/docs/city/guides/auth-and-user-token)
 5. Ready for real providers: continue with [Provider environment](/en/docs/city/guides/provider-env) and [Model routing](/en/docs/city/guides/model-adapters)

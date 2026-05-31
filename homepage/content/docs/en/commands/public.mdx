@@ -1,34 +1,34 @@
 ---
-title: bay public
+title: town public
 description: Manage persisted public exposure for Console
 ---
 
-# `bay public`
+# `town public`
 
-`bay public` manages the persisted public exposure mode for Console.
+`town public` manages the persisted public exposure mode for Console.
 
 This command only controls the Console / control plane bind behavior. It does not change how individual agents listen.
 
 ## Usage
 
 ```bash
-bay public
+town public
 ```
 
 ```bash
-bay public status
+town public status
 ```
 
 ```bash
-bay public on
+town public on
 ```
 
 ```bash
-bay public on --host 0.0.0.0
+town public on --host 0.0.0.0
 ```
 
 ```bash
-bay public off
+town public off
 ```
 
 ## Actions
@@ -44,32 +44,32 @@ bay public off
 
 ## Important behavior
 
-- `bay public on` saves a persisted Console public-mode setting for future `bay start` and `bay console start`.
-- If Console is already running, `bay public on` or `bay public off` automatically restarts Console so the new binding takes effect.
-- Explicit runtime flags still win. For example, `bay console start --host 127.0.0.1` overrides the persisted public setting for that launch.
-- `bay public` only manages Console exposure. It is not a global switch for every runtime endpoint.
+- `town public on` saves a persisted Console public-mode setting for future `town start` and `town console start`.
+- If Console is already running, `town public on` or `town public off` automatically restarts Console so the new binding takes effect.
+- Explicit runtime flags still win. For example, `town console start --host 127.0.0.1` overrides the persisted public setting for that launch.
+- `town public` only manages Console exposure. It is not a global switch for every runtime endpoint.
 
 ## Typical flow
 
 ```bash
 # 1) inspect current persisted mode
-bay public status
+town public status
 
 # 2) enable public exposure for future starts
-bay public on
+town public on
 
 # 3) or pin a custom host
-bay public on --host 10.0.0.5
+town public on --host 10.0.0.5
 
 # 4) start city as usual
-bay start
+town start
 
 # 5) disable public exposure again
-bay public off
+town public off
 ```
 
 ## Related commands
 
-- [`bay console`](/en/docs/commands/console/console)
-- [`bay start`](/en/docs/commands/start)
-- [`bay status`](/en/docs/commands/status)
+- [`town console`](/en/docs/commands/console/console)
+- [`town start`](/en/docs/commands/start)
+- [`town status`](/en/docs/commands/status)

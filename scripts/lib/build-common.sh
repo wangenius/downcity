@@ -38,11 +38,11 @@ install_downcity_cli_globally() {
   mkdir -p "$global_modules" "$global_bin"
   rm -rf "$package_dir"
   cp -R "$deploy_dir" "$package_dir"
-  chmod +x "$package_dir/bin/bay/index.js"
+  chmod +x "$package_dir/bin/town/index.js"
   chmod +x "$package_dir/bin/city/index.js"
 
   local legacy_command="stu""dio"
-  rm -f "$global_bin/bay" "$global_bin/$legacy_command" "$global_bin/city" 2>/dev/null || true
-  ln -s "../lib/node_modules/downcity/bin/bay/index.js" "$global_bin/bay"
+  rm -f "$global_bin/town" "$global_bin/$legacy_command" "$global_bin/city" 2>/dev/null || true
+  ln -s "../lib/node_modules/downcity/bin/town/index.js" "$global_bin/town"
   ln -s "../lib/node_modules/downcity/bin/city/index.js" "$global_bin/city"
 }

@@ -1,0 +1,447 @@
+/**
+ * `town agent chat` 命令实现。
+ *
+ * 关键点（中文）
+ * - 统一覆盖交互式持续对话与一次性消息模式，不再保留独立 `quest` 命令。
+ * - 目标 agent 始终按 managed agent registry 名称解析，不依赖当前工作目录。
+ * - 默认使用独立 local-cli 主会话：`local-cli-chat-main`。
+ * - 远程访问统一走 `RemoteAgent({ url })`，不再在 CLI 侧维护第二套 HTTP SDK transport。
+ */
+import { createInterface } from "node:readline/promises";
+import chalk from "chalk";
+import prompts from "prompts";
+import { RemoteAgent, } from "@downcity/agent";
+import { emitCliBlock } from "../shared/CliReporter.js";
+import { printResult } from "../utils/cli/CliOutput.js";
+import { resolveProjectRootByAgentId, validateAgentProjectRoot, } from "../shared/PluginTargetSupport.js";
+import { listRegisteredAgentsForCli } from "./AgentSelection.js";
+import { resolveDaemonRpcEndpoint } from "../process/daemon/Client.js";
+import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
+function normalizeChatMessage(input) {
+    return String(input || "").trim();
+}
+/**
+ * 判断 readline 在交互期间抛出的 Ctrl+C 中断是否属于正常退出。
+ */
+function isReadlineAbortError(error) {
+    if (!error || typeof error !== "object")
+        return false;
+    const code = "code" in error ? String(error.code || "") : "";
+    const name = "name" in error ? String(error.name || "") : "";
+    return code === "ABORT_ERR" || name === "AbortError";
+}
+function buildAgentChatFailureText(error) {
+    return (String(error || "").trim() ||
+        "Agent daemon returned empty error (check config with `town agent status`)");
+}
+async function resolveChatTargetAgentId(inputId) {
+    const explicit = String(inputId || "").trim();
+    if (explicit)
+        return explicit;
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+        emitCliBlock({
+            tone: "error",
+            title: "Agent id is required",
+            note: "Use `town agent chat --to <id>` or run this command in an interactive terminal.",
+        });
+        return null;
+    }
+    const runningAgents = (await listRegisteredAgentsForCli()).filter((item) => item.status === "running");
+    if (runningAgents.length === 0) {
+        emitCliBlock({
+            tone: "error",
+            title: "No running agents",
+            note: "Run `town agent start` first.",
+        });
+        return null;
+    }
+    const response = (await prompts({
+        type: "select",
+        name: "agentId",
+        message: "选择要聊天的 Agent",
+        choices: runningAgents.map((agent) => ({
+            title: agent.id,
+            description: agent.projectRoot,
+            value: agent.id,
+        })),
+        initial: 0,
+    }));
+    const agentId = String(response.agentId || "").trim();
+    if (!agentId) {
+        emitCliBlock({
+            tone: "info",
+            title: "Agent chat cancelled",
+        });
+        return null;
+    }
+    return agentId;
+}
+async function resolveAgentChatTarget(agentIdInput) {
+    const agentId = String(agentIdInput || "").trim();
+    const sessionId = AGENT_CHAT_DEFAULT_SESSION_ID;
+    if (!agentId) {
+        return {
+            success: false,
+            outcome: {
+                agentId: "",
+                sessionId,
+                success: false,
+                error: "Missing target agent id.",
+            },
+        };
+    }
+    const resolved = await resolveProjectRootByAgentId(agentId);
+    if (!resolved.projectRoot) {
+        return {
+            success: false,
+            outcome: {
+                agentId,
+                sessionId,
+                success: false,
+                error: resolved.error || "Failed to resolve agent project path",
+            },
+        };
+    }
+    const pathError = validateAgentProjectRoot(resolved.projectRoot);
+    if (pathError) {
+        return {
+            success: false,
+            outcome: {
+                agentId,
+                projectRoot: resolved.projectRoot,
+                sessionId,
+                success: false,
+                error: pathError,
+            },
+        };
+    }
+    return {
+        success: true,
+        target: {
+            agentId,
+            projectRoot: resolved.projectRoot,
+            sessionId,
+        },
+    };
+}
+function printAssistantReply(replyText) {
+    const text = String(replyText || "").trim();
+    if (!text) {
+        emitCliBlock({
+            tone: "info",
+            title: "No visible reply",
+            note: "The turn completed, but no user-visible text was returned.",
+        });
+        return;
+    }
+    console.log(`\n${text}\n`);
+}
+function printAgentChatFailure(params) {
+    emitCliBlock({
+        tone: "error",
+        title: "Agent chat failed",
+        facts: [
+            {
+                label: "agent",
+                value: params.agentId,
+            },
+            {
+                label: "error",
+                value: buildAgentChatFailureText(params.error),
+            },
+        ],
+    });
+}
+function createRemoteAgent(params) {
+    const endpoint = resolveDaemonRpcEndpoint({
+        projectRoot: params.projectRoot,
+        host: params.transport?.host,
+        port: params.transport?.port,
+    });
+    return new RemoteAgent({
+        url: `rpc://${endpoint.host}:${endpoint.port}`,
+    });
+}
+async function getOrCreateRemoteSession(params) {
+    try {
+        return await params.remote_agent.getSession(params.session_id);
+    }
+    catch {
+        return await params.remote_agent.createSession({
+            sessionId: params.session_id,
+        });
+    }
+}
+async function runSdkPromptTurn(params) {
+    const message = normalizeChatMessage(params.message);
+    if (!message) {
+        return {
+            success: false,
+            error: "Chat message is required.",
+            emittedVisibleText: false,
+            text: "",
+        };
+    }
+    const resolved = await resolveAgentChatTarget(params.agentId);
+    if (!resolved.success) {
+        return {
+            success: false,
+            error: resolved.outcome.error,
+            emittedVisibleText: false,
+            text: "",
+        };
+    }
+    const remote_agent = createRemoteAgent({
+        projectRoot: resolved.target.projectRoot,
+        transport: params.transport,
+    });
+    const session = await getOrCreateRemoteSession({
+        remote_agent,
+        session_id: resolved.target.sessionId,
+    });
+    let printed_leading_newline = false;
+    let emitted_visible_text = false;
+    let final_text = "";
+    let target_turn_id = "";
+    const renderEvent = (event) => {
+        if (event.type !== "text-delta" || event.turnId !== target_turn_id || !event.text) {
+            return;
+        }
+        if (params.renderText === false)
+            return;
+        if (!printed_leading_newline) {
+            process.stdout.write("\n");
+            printed_leading_newline = true;
+        }
+        process.stdout.write(event.text);
+        emitted_visible_text = true;
+    };
+    const unsubscribe = session.subscribe((event) => {
+        renderEvent(event);
+        if (event.type === "turn-finish" && event.turnId === target_turn_id) {
+            final_text = event.text;
+        }
+    });
+    try {
+        const turn = await session.prompt({ query: message });
+        target_turn_id = turn.id;
+        const result = await turn.finished;
+        final_text = result.text;
+        if (printed_leading_newline) {
+            process.stdout.write("\n\n");
+        }
+        return {
+            success: result.success,
+            ...(result.error ? { error: result.error } : {}),
+            emittedVisibleText: emitted_visible_text,
+            text: final_text,
+        };
+    }
+    catch (error) {
+        if (printed_leading_newline) {
+            process.stdout.write("\n\n");
+        }
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+            emittedVisibleText: emitted_visible_text,
+            text: final_text,
+        };
+    }
+    finally {
+        unsubscribe();
+    }
+}
+/**
+ * 向目标 agent 的 SDK actor session 发送一轮消息。
+ */
+export async function executeAgentChatTurn(params) {
+    const message = normalizeChatMessage(params.message);
+    const sessionId = AGENT_CHAT_DEFAULT_SESSION_ID;
+    if (!message) {
+        return {
+            agentId: String(params.agentId || "").trim(),
+            sessionId,
+            success: false,
+            error: "Chat message is required.",
+        };
+    }
+    const resolved = await resolveAgentChatTarget(params.agentId);
+    if (!resolved.success)
+        return resolved.outcome;
+    const outcome = await runSdkPromptTurn({
+        agentId: params.agentId,
+        message,
+        transport: params.transport,
+        renderText: false,
+    });
+    return {
+        agentId: params.agentId,
+        ...(resolved.target.projectRoot ? { projectRoot: resolved.target.projectRoot } : {}),
+        sessionId,
+        success: outcome.success,
+        payload: {
+            success: outcome.success,
+            sessionId,
+            result: {
+                success: outcome.success,
+                userVisible: outcome.text || "",
+                ...(outcome.error ? { error: outcome.error } : {}),
+            },
+            ...(outcome.error ? { error: outcome.error } : {}),
+        },
+        ...(outcome.error ? { error: outcome.error } : {}),
+    };
+}
+async function runOneShotChat(params) {
+    if (params.options.json === true) {
+        const outcome = await executeAgentChatTurn({
+            agentId: params.agentId,
+            message: params.message,
+            transport: {
+                host: params.options.host,
+                port: params.options.port,
+            },
+        });
+        printResult({
+            asJson: true,
+            success: outcome.success,
+            title: "agent chat",
+            payload: {
+                agent: params.agentId,
+                ...(outcome.projectRoot ? { projectRoot: outcome.projectRoot } : {}),
+                sessionId: outcome.sessionId,
+                ...(outcome.payload?.result ? { result: outcome.payload.result } : {}),
+                ...(outcome.error ? { error: outcome.error } : {}),
+            },
+        });
+        return;
+    }
+    const outcome = await runSdkPromptTurn({
+        agentId: params.agentId,
+        message: params.message,
+        transport: {
+            host: params.options.host,
+            port: params.options.port,
+        },
+    });
+    if (!outcome.success) {
+        printAgentChatFailure({
+            agentId: params.agentId,
+            error: outcome.error,
+        });
+        return;
+    }
+    if (!outcome.emittedVisibleText)
+        printAssistantReply("");
+}
+/**
+ * 启动交互式持续对话。
+ */
+async function runInteractiveChat(params) {
+    const prompt = `${chalk.cyan(params.agentId)} ${chalk.dim("›")} `;
+    const helpText = [
+        `${chalk.dim("/exit, /quit  — 退出对话")}`,
+        `${chalk.dim("/clear       — 清屏")}`,
+        `${chalk.dim("/help        — 显示此帮助")}`,
+        `${chalk.dim("Ctrl+C       — 退出对话")}`,
+    ];
+    emitCliBlock({
+        tone: "info",
+        title: `Agent chat · ${params.agentId}`,
+        note: `Session: local-cli-chat-main · ${helpText[0].replace(chalk.dim(""), "").trim()}`,
+    });
+    console.log(helpText.join("\n"));
+    const rl = createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        terminal: true,
+    });
+    try {
+        while (true) {
+            let line = "";
+            try {
+                line = await rl.question(prompt);
+            }
+            catch (error) {
+                if (isReadlineAbortError(error)) {
+                    console.log();
+                    break;
+                }
+                throw error;
+            }
+            const text = normalizeChatMessage(line);
+            if (!text)
+                continue;
+            if (text === "/exit" || text === "/quit")
+                break;
+            if (text === "/clear") {
+                console.clear();
+                continue;
+            }
+            if (text === "/help") {
+                console.log(helpText.join("\n"));
+                continue;
+            }
+            const outcome = await runSdkPromptTurn({
+                agentId: params.agentId,
+                message: text,
+                transport: {
+                    host: params.options.host,
+                    port: params.options.port,
+                },
+            });
+            if (!outcome.success) {
+                printAgentChatFailure({
+                    agentId: params.agentId,
+                    error: outcome.error,
+                });
+                continue;
+            }
+            if (!outcome.emittedVisibleText)
+                printAssistantReply("");
+        }
+    }
+    finally {
+        rl.close();
+    }
+    console.log(chalk.dim("Chat ended."));
+}
+/**
+ * `town agent chat` 统一入口。
+ */
+export async function chatCommand(options) {
+    const agentId = await resolveChatTargetAgentId(options.to);
+    if (!agentId)
+        return;
+    const oneShotMessage = normalizeChatMessage(String(options.message || ""));
+    if (oneShotMessage) {
+        await runOneShotChat({
+            agentId,
+            message: oneShotMessage,
+            options,
+        });
+        return;
+    }
+    if (options.json === true) {
+        emitCliBlock({
+            tone: "error",
+            title: "JSON mode requires --message",
+            note: "Use `town agent chat --message <text> --json` for one-shot structured output.",
+        });
+        return;
+    }
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+        emitCliBlock({
+            tone: "error",
+            title: "Interactive terminal required",
+            note: "Use this command in a local terminal with TTY support, or pass `--message` for one-shot mode.",
+        });
+        return;
+    }
+    await runInteractiveChat({
+        agentId,
+        options,
+    });
+}
+//# sourceMappingURL=AgentChat.js.map

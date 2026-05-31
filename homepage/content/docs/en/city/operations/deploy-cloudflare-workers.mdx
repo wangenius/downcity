@@ -66,7 +66,7 @@ https://downcity.<your-subdomain>.workers.dev
 
 ## 4. Initialize City
 
-Call `/health` once. This lets the Worker boot City and create the built-in `env` / `bays` tables.
+Call `/health` once. This lets the Worker boot City and create the built-in `env` / `towns` tables.
 
 ```bash
 curl https://downcity.<your-subdomain>.workers.dev/health
@@ -77,7 +77,7 @@ Expected shape:
 ```json
 {
   "ok": true,
-  "services": ["env", "bays", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
 }
 ```
 
@@ -91,7 +91,7 @@ npx wrangler d1 execute downcity-db --remote \
   --command "SELECT value FROM env WHERE key='DOWNCITY_CITY_ADMIN_SECRET_KEY'"
 ```
 
-Keep this key in a trusted place. It is the credential used by `Admin Visa`, Bay CLI, or direct admin HTTP calls.
+Keep this key in a trusted place. It is the credential used by `Admin City`, Town CLI, or direct admin HTTP calls.
 
 ## 6. Write provider and service env
 
@@ -155,4 +155,4 @@ cd cities/edge
 pnpm deploy
 ```
 
-Runtime env lives in D1, so redeploying the Worker does not erase provider keys, OAuth secrets, bays, balances, usage records, or Stripe payment records.
+Runtime env lives in D1, so redeploying the Worker does not erase provider keys, OAuth secrets, towns, balances, usage records, or Stripe payment records.

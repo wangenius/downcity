@@ -305,7 +305,7 @@ export async function restartAgentFromHistoryMutation(params: {
   } catch (error) {
     const message = getErrorMessage(error);
     if (/not found/i.test(message)) {
-      params.showToast("当前 Console 控制面版本过旧，请先执行 `bay console restart` 后再重启 agent", "error");
+      params.showToast("当前 Console 控制面版本过旧，请先执行 `town console restart` 后再重启 agent", "error");
       return;
     }
     params.showToast(`重启 agent 失败: ${message}`, "error");
@@ -352,7 +352,7 @@ export async function stopAgentFromHistoryMutation(params: {
   } catch (error) {
     const message = getErrorMessage(error);
     if (/not found/i.test(message)) {
-      params.showToast("当前 Console 控制面版本过旧，请先执行 `bay console restart` 后再停止 agent", "error");
+      params.showToast("当前 Console 控制面版本过旧，请先执行 `town console restart` 后再停止 agent", "error");
       return;
     }
     params.showToast(`停止 agent 失败: ${message}`, "error");

@@ -9,17 +9,17 @@ Install the packages:
 pnpm add @downcity/city drizzle-orm better-sqlite3
 ```
 
-The database is the only thing you need before boot. On first boot City fills `DOWNCITY_CITY_ADMIN_SECRET_KEY`, `DOWNCITY_CITY_TOKEN_SIGNING_KEY`, and `BETTER_AUTH_SECRET` automatically. Provider keys are written later through Bay CLI or the Admin API:
+The database is the only thing you need before boot. On first boot City fills `DOWNCITY_CITY_ADMIN_SECRET_KEY`, `DOWNCITY_CITY_TOKEN_SIGNING_KEY`, and `BETTER_AUTH_SECRET` automatically. Provider keys are written later through Town CLI or the Admin API:
 
 ```bash
 OPENAI_API_KEY="..."
 OPENAI_BASE_URL="https://api.openai.com/v1"
 ```
 
-Create City:
+Create CityBase:
 
 ```ts
-import { City } from "@downcity/city";
+import { CityBase } from "@downcity/city";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -30,7 +30,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new City({ db, dialect: "sqlite", raw: sqlite });
+const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
 ```
 
 The default database is stored at:
@@ -39,7 +39,7 @@ The default database is stored at:
 ./data.sqlite
 ```
 
-For local SQLite, `better-sqlite3` is the recommended path. For production Postgres, create a Drizzle pg db and pass that db to `City` the same way.
+For local SQLite, `better-sqlite3` is the recommended path. For production Postgres, create a Drizzle pg db and pass that db to `CityBase` the same way.
 
 For Cloudflare Workers / D1, pass the D1 Drizzle db:
 
@@ -47,7 +47,7 @@ For Cloudflare Workers / D1, pass the D1 Drizzle db:
 import { drizzle } from "drizzle-orm/d1";
 
 const db = drizzle(env.DB);
-const base = new City({ db, dialect: "sqlite", raw: env.DB });
+const base = new CityBase({ db, dialect: "sqlite", raw: env.DB });
 ```
 
 City initializes itself automatically on the first `health()`, `handleRequest()`, `table()`, or similar runtime call.
@@ -90,4 +90,4 @@ await base.health();
 serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
 ```
 
-This service is the shared City used by later bays. Management and business data are handled through your own database and bay backend for now.
+This service is the shared City used by later towns. Management and business data are handled through your own database and town backend for now.

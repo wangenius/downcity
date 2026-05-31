@@ -1,15 +1,15 @@
 ---
-title: bay agent doctor
+title: town agent doctor
 description: 诊断并修复 Agent daemon 的 stale 状态文件
 ---
 
-# `bay agent doctor`
+# `town agent doctor`
 
 ## 用法
 
 ```bash
-bay agent doctor [path]
-bay agent doctor [path] --fix
+town agent doctor [path]
+town agent doctor [path] --fix
 ```
 
 ## 它解决什么问题
@@ -25,7 +25,7 @@ bay agent doctor [path] --fix
 只诊断，不修改：
 
 ```bash
-bay agent doctor
+town agent doctor
 ```
 
 ## 带 `--fix`
@@ -33,13 +33,13 @@ bay agent doctor
 清理 stale 状态文件：
 
 ```bash
-bay agent doctor --fix
+town agent doctor --fix
 ```
 
 然后通常再执行：
 
 ```bash
-bay agent start
+town agent start
 ```
 
 `doctor --fix` 之后是否立刻 `start`，取决于你是要恢复运行，还是只是先把状态清理干净。

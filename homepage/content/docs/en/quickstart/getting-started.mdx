@@ -11,37 +11,37 @@ description: Correct startup sequence for Console + Agent in about 10 minutes
 npm install -g downcity
 # or
 pnpm add -g downcity
-bay --version
+town --version
 city --version
 ```
 
-> `downcity` exposes `bay` for local agents and `city` for City administration.
+> `downcity` exposes `town` for local agents and `city` for City administration.
 >
-> If `bay` is not found after install, see [FAQ](/en/docs/operations/faq).
+> If `town` is not found after install, see [FAQ](/en/docs/operations/faq).
 >
-> To upgrade later, run `bay update`. It upgrades the package you originally installed.
+> To upgrade later, run `town update`. It upgrades the package you originally installed.
 
-## 2. Initialize Bay (first time only)
+## 2. Initialize Town (first time only)
 
 ```bash
-bay init
+town init
 ```
 
 This creates console-global config under `~/.downcity/`.
 
-## 3. Start Bay
+## 3. Start Town
 
 ```bash
-bay start
+town start
 ```
 
-> `bay agent start` requires console to be running first.
+> `town agent start` requires console to be running first.
 
 ## 4. Initialize a repository
 
 ```bash
 cd /path/to/your-repo
-bay agent create .
+town agent create .
 ```
 
 Initialization generates:
@@ -70,7 +70,7 @@ The minimal `downcity.json` example should be:
 
 Notes:
 
-- `modelId` points to a model in the Bay global model pool
+- `modelId` points to a model in the Town global model pool
 - the project no longer stores the old `model.primary` structure
 - if you have not prepared a model pool yet, do that first at the global level
 
@@ -79,7 +79,7 @@ Notes:
 Start the agent (default: background daemon):
 
 ```bash
-bay agent start
+town agent start
 ```
 
 If you run this outside an initialized agent directory, Downcity can let you pick from registered agents interactively.
@@ -87,15 +87,15 @@ If you run this outside an initialized agent directory, Downcity can let you pic
 Use foreground mode when you want logs in the current terminal:
 
 ```bash
-bay agent start --foreground
+town agent start --foreground
 ```
 
 ## 7. Verify agent state
 
 ```bash
-bay agent list
-bay agent status
-bay agent list --running
+town agent list
+town agent status
+town agent list --running
 ```
 
 Notes:
@@ -106,7 +106,7 @@ Notes:
 ## 8. Optional: start Console UI
 
 ```bash
-bay start --console
+town start --console
 ```
 
 ## 9. Optional: Chrome extension quick-send from page selection
@@ -127,6 +127,6 @@ If you use the repo's `chrome-extension`:
 
 - [Configuration](/en/docs/quickstart/configuration)
 - [Agent Overview](/en/docs/agent/overview/what-is-agent)
-- [`bay skill`](/en/docs/commands/plugin/skill)
-- [`bay task`](/en/docs/commands/plugin/task)
+- [`town skill`](/en/docs/commands/plugin/skill)
+- [`town task`](/en/docs/commands/plugin/task)
 - [FAQ](/en/docs/operations/faq)

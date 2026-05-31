@@ -1,17 +1,17 @@
 ---
-title: bay agent chat
+title: town agent chat
 description: 在终端里与运行中的 Agent 对话，支持交互式和一次性模式
 ---
 
-# `bay agent chat`
+# `town agent chat`
 
 ## 用法
 
 ```bash
-bay agent chat
-bay agent chat --to my-agent
-bay agent chat --to my-agent --message "总结一下今天做了什么"
-bay agent chat --to my-agent --message "输出 JSON" --json
+town agent chat
+town agent chat --to my-agent
+town agent chat --to my-agent --message "总结一下今天做了什么"
+town agent chat --to my-agent --message "输出 JSON" --json
 ```
 
 ## 两种模式
@@ -21,7 +21,7 @@ bay agent chat --to my-agent --message "输出 JSON" --json
 不带 `--message` 时进入持续对话：
 
 ```bash
-bay agent chat --to my-agent
+town agent chat --to my-agent
 ```
 
 适合：
@@ -35,7 +35,7 @@ bay agent chat --to my-agent
 带 `--message` 时只发一轮：
 
 ```bash
-bay agent chat --to my-agent --message "总结一下当前仓库结构"
+town agent chat --to my-agent --message "总结一下当前仓库结构"
 ```
 
 适合：

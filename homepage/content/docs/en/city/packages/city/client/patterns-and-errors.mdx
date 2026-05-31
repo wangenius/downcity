@@ -1,0 +1,48 @@
+---
+title: Common Patterns and Errors
+description: "Common City combinations in real towns, and how to reason about token, model, and service-related errors."
+---
+
+## The three most common combinations
+
+### Pure AI town
+
+- `@downcity/city`
+- City exports from `@downcity/city`
+
+### AI town with minimal auth
+
+- `@downcity/city`
+- City exports from `@downcity/city`
+- `@downcity/services`
+
+### AI town with usage and payment
+
+- `@downcity/city`
+- City exports from `@downcity/city`
+- `@downcity/services`
+
+## Most common 401 / 403 causes
+
+- `user_token` was not sent
+- the token expired
+- the `town_id` does not match the token
+- the town has been paused
+
+## Most common 404 causes
+
+- the target service was never mounted into City
+- the Action path is wrong
+- you assumed a service was enabled, but forgot `base.use(service())`
+
+## Most common 422 causes
+
+- the AI call references a model that does not exist
+- the current model does not support the requested modality
+- the custom service input does not match what the Action expects
+
+## A simple debug order
+
+1. confirm whether the call is AI service, custom service, or service
+2. confirm whether the current phase is guest access or logged-in user access
+3. then compare `town_id`, `user_token`, service id, action id, and model id

@@ -1,11 +1,11 @@
 /**
- * Edge City 装配模块。
+ * Edge CityBase 装配模块。
  *
- * Edge 街区拥有自己的 City 组装逻辑，方便针对 Cloudflare Worker
+ * Edge 街区拥有自己的 CityBase 组装逻辑，方便针对 Cloudflare Worker
  * 继续演化 D1、缓存、计费 hook 等运行时能力。
  */
 
-import { City, AIService, type CityOptions, type ModelConfig } from "@downcity/city";
+import { CityBase, AIService, type CityBaseOptions, type ModelConfig } from "@downcity/city";
 import {
   accountsService,
   balanceService,
@@ -19,7 +19,7 @@ import {
 } from "@downcity/services";
 
 /**
- * Edge City 默认余额桥接配置。
+ * Edge CityBase 默认余额桥接配置。
  */
 export interface ComposeCityBalanceOptions {
   /** 初始化赠送余额。 */
@@ -29,9 +29,9 @@ export interface ComposeCityBalanceOptions {
 }
 
 /**
- * Edge City 装配参数。
+ * Edge CityBase 装配参数。
  */
-export interface ComposeCityOptions extends CityOptions {
+export interface ComposeCityBaseOptions extends CityBaseOptions {
   /** 要注册的模型列表。 */
   models: ModelConfig[];
   /** accounts token ttl。 */
@@ -47,17 +47,17 @@ export interface ComposeCityOptions extends CityOptions {
 }
 
 /**
- * 组装一个包含默认公共服务与 AIService 的 Edge City。
+ * 组装一个包含默认公共服务与 AIService 的 Edge CityBase。
  */
-export function compose_city(options: ComposeCityOptions): {
-  /** 已组装完成的 City。 */
-  city: City;
+export function compose_city(options: ComposeCityBaseOptions): {
+  /** 已组装完成的 CityBase。 */
+  city: CityBase;
   /** balance 服务实例，便于外部追加 hook 或直接调用。 */
   balance: BalanceService;
   /** AI service 实例，便于外部增加 hook。 */
   ai: AIService;
 } {
-  const city = new City(options);
+  const city = new CityBase(options);
 
   city.use(accountsService({
     token_ttl: options.token_ttl,

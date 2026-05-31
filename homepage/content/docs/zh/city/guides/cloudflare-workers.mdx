@@ -23,7 +23,7 @@ Cloudflare Workers 和 Node.js 最大的不同，不是 HTTP 入口，而是 run
 City 需要的只是一个 Drizzle db 对象：
 
 ```ts
-import { City } from "@downcity/city";
+import { CityBase } from "@downcity/city";
 import { drizzle } from "drizzle-orm/d1";
 
 export interface Env {
@@ -33,7 +33,7 @@ export interface Env {
 export default {
   async fetch(request: Request, env: Env) {
     const db = drizzle(env.DB);
-    const base = new City({ db, dialect: "sqlite", raw: env.DB });
+    const base = new CityBase({ db, dialect: "sqlite", raw: env.DB });
 
     await base.health();
     return base.handleRequest(request);
@@ -53,7 +53,7 @@ export default {
 仓库里的 [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1) 已经把真实接法写完整了，包含这些关键点：
 
 - 用 `drizzle-orm/d1` 把 `env.DB` 接成 City 可用数据库
-- City 启动时自动初始化内置 `env` / `bays` 表
+- City 启动时自动初始化内置 `env` / `towns` 表
 - 在每次请求前同步当前 origin，避免 OAuth callback 或外链使用错误域名
 - 继续像 Node 路线一样注册 `AIService`、accounts、usage、payment 服务
 
@@ -61,7 +61,7 @@ export default {
 
 ## 和 Node 路线的边界
 
-Worker 和 Node 现在是同一套心智模型：都创建 Drizzle db，然后传给 `new City({ db })`。
+Worker 和 Node 现在是同一套心智模型：都创建 Drizzle db，然后传给 `new CityBase({ db })`。
 
 - Node.js 本地常用 `drizzle-orm/better-sqlite3`
 - Node.js 生产可以用 Drizzle pg

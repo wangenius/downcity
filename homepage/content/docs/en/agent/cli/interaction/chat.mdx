@@ -1,17 +1,17 @@
 ---
-title: bay agent chat
+title: town agent chat
 description: Chat with a running Agent from the terminal in interactive or one-shot mode
 ---
 
-# `bay agent chat`
+# `town agent chat`
 
 ## Usage
 
 ```bash
-bay agent chat
-bay agent chat --to my-agent
-bay agent chat --to my-agent --message "Summarize this repo"
-bay agent chat --to my-agent --message "Return JSON" --json
+town agent chat
+town agent chat --to my-agent
+town agent chat --to my-agent --message "Summarize this repo"
+town agent chat --to my-agent --message "Return JSON" --json
 ```
 
 ## Two modes
@@ -21,7 +21,7 @@ bay agent chat --to my-agent --message "Return JSON" --json
 Without `--message`, you enter a persistent terminal conversation:
 
 ```bash
-bay agent chat --to my-agent
+town agent chat --to my-agent
 ```
 
 Best for:
@@ -35,7 +35,7 @@ Best for:
 With `--message`, the CLI sends one turn and exits:
 
 ```bash
-bay agent chat --to my-agent --message "Summarize the current repository structure"
+town agent chat --to my-agent --message "Summarize the current repository structure"
 ```
 
 Best for:

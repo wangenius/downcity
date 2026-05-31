@@ -20,6 +20,8 @@ import { Navbar } from "@/components/sections/navbar";
 import i18next from "@/lib/locales"; // naming conflict with fumadocs i18n
 import { i18n } from "@/lib/i18n";
 
+const favicon_version = "20260601";
+
 const { provider } = defineI18nUI(i18n, {
   translations: {
     en: {
@@ -43,12 +45,25 @@ const { provider } = defineI18nUI(i18n, {
 
 export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
-  // favicon 使用 ico + 多尺寸 png，避免部分浏览器对 svg favicon 兼容性不稳定。
-  { rel: "icon", href: "/favicon.ico?v=20260325", type: "image/x-icon" },
-  { rel: "shortcut icon", href: "/favicon.ico?v=20260325", type: "image/x-icon" },
-  { rel: "icon", href: "/favicon-32x32.png?v=20260325", type: "image/png", sizes: "32x32" },
-  { rel: "icon", href: "/favicon-16x16.png?v=20260325", type: "image/png", sizes: "16x16" },
-  { rel: "icon", href: "/icon-192.png", type: "image/png", sizes: "192x192" },
+  // favicon 使用自包含 SVG 区分明暗色，ico/png 作为旧浏览器兜底。
+  { rel: "icon", href: `/favicon.ico?v=${favicon_version}`, type: "image/x-icon" },
+  { rel: "shortcut icon", href: `/favicon.ico?v=${favicon_version}`, type: "image/x-icon" },
+  { rel: "icon", href: `/favicon-32x32.png?v=${favicon_version}`, type: "image/png", sizes: "32x32" },
+  { rel: "icon", href: `/favicon-16x16.png?v=${favicon_version}`, type: "image/png", sizes: "16x16" },
+  {
+    rel: "icon",
+    href: `/favicon.svg?v=${favicon_version}`,
+    type: "image/svg+xml",
+    sizes: "any",
+    media: "(prefers-color-scheme: light)",
+  },
+  {
+    rel: "icon",
+    href: `/favicon-dark.svg?v=${favicon_version}`,
+    type: "image/svg+xml",
+    sizes: "any",
+    media: "(prefers-color-scheme: dark)",
+  },
   { rel: "apple-touch-icon", href: "/icon-192.png", sizes: "180x180" },
   { rel: "manifest", href: "/site.webmanifest" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -79,8 +94,6 @@ export const meta: Route.MetaFunction = () => {
         "AI agent, GitHub, repository, automation, developer tools, AI assistant, code automation, repo as agent",
     },
     { name: "author", content: "Downcity" },
-    { name: "theme-color", content: "#f5f4ef" },
-
     // Open Graph / Facebook
     { property: "og:type", content: "website" },
     { property: "og:site_name", content: "Downcity" },
@@ -154,6 +167,44 @@ export function Layout({ children }: { children: React.ReactNode }) {
     path.startsWith("/zh/ui-sdk-docs");
   const showGlobalChrome = !isDocsPath;
 
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return undefined;
+    }
+
+    // favicon 跟随实际主题 class，而不是只跟随系统色彩偏好。
+    const update_favicon = () => {
+      const is_dark = document.documentElement.classList.contains("dark");
+      const favicon_href = is_dark
+        ? `/favicon-dark.svg?v=${favicon_version}`
+        : `/favicon.svg?v=${favicon_version}`;
+      let theme_favicon = document.querySelector<HTMLLinkElement>(
+        'link[data-theme-favicon="true"]',
+      );
+
+      if (!theme_favicon) {
+        theme_favicon = document.createElement("link");
+        theme_favicon.rel = "icon";
+        theme_favicon.type = "image/svg+xml";
+        theme_favicon.sizes = "any";
+        theme_favicon.dataset.themeFavicon = "true";
+        document.head.appendChild(theme_favicon);
+      }
+
+      theme_favicon.href = favicon_href;
+    };
+
+    update_favicon();
+
+    const observer = new MutationObserver(update_favicon);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Sync i18n language with localStorage (only on client side)
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -196,15 +247,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <>
                   <div
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(70%_52%_at_50%_20%,rgba(255,255,255,0.5),transparent_56%),linear-gradient(to_bottom,rgba(255,255,255,0.08),transparent_18%)]"
+                    className="marketing-backdrop-glow pointer-events-none absolute inset-0 -z-20"
                   />
                   <div
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,rgba(17,17,17,0.022)_1px,transparent_1px),linear-gradient(to_bottom,rgba(17,17,17,0.022)_1px,transparent_1px)] bg-[size:88px_88px] [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]"
+                    className="marketing-backdrop-grid pointer-events-none absolute inset-0 -z-10"
                   />
                 </>
               ) : null}
-              <Toaster theme="light" richColors position="top-center" />
+              <Toaster theme="system" richColors position="top-center" />
               {showGlobalChrome ? <Navbar /> : null}
               <div className="relative flex-1">{children}</div>
             </div>
@@ -246,11 +297,11 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     <div className="relative flex min-h-screen flex-col bg-background">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(70%_52%_at_50%_20%,rgba(255,255,255,0.5),transparent_56%),linear-gradient(to_bottom,rgba(255,255,255,0.08),transparent_18%)]"
+        className="marketing-backdrop-glow pointer-events-none absolute inset-0 -z-20"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,rgba(17,17,17,0.022)_1px,transparent_1px),linear-gradient(to_bottom,rgba(17,17,17,0.022)_1px,transparent_1px)] bg-[size:88px_88px] [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]"
+        className="marketing-backdrop-grid pointer-events-none absolute inset-0 -z-10"
       />
       <main className="flex flex-1 flex-col items-center justify-center p-4 text-center">
         <div className="mx-auto max-w-md space-y-6">
@@ -266,7 +317,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           <div className="pt-4">
             <Link
               to={homePath}
-              className="inline-flex min-h-11 items-center gap-2 rounded-[0.38rem] border border-black bg-black px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-88"
+              className="inline-flex min-h-11 items-center gap-2 rounded-[0.38rem] border border-primary bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-88"
             >
               {i18next.t("errors.backToHome")}
             </Link>
@@ -274,7 +325,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         </div>
 
         {stack && (
-          <div className="mx-auto mt-12 w-full max-w-4xl overflow-x-auto rounded-[0.48rem] border border-black/8 bg-[rgba(245,244,239,0.78)] p-4 text-left">
+          <div className="mx-auto mt-12 w-full max-w-4xl overflow-x-auto rounded-[0.48rem] border border-border/80 bg-surface/78 p-4 text-left">
             <pre className="text-xs font-mono text-muted-foreground">
               {stack}
             </pre>

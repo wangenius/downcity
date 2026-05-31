@@ -173,7 +173,7 @@ const MARKETPLACE_PAGE = {
 type MarketplaceLang = keyof typeof MARKETPLACE_PAGE;
 
 const FIELD_CLASS_NAME =
-  "mt-2 min-h-11 w-full rounded-[16px] border border-[#E7E7EB] bg-[#FAFAFA] px-4 py-3 text-sm text-[#111113] outline-none transition-colors placeholder:text-[#9CA3AF] focus:border-[#111113]";
+  "mt-2 min-h-11 w-full rounded-[16px] border border-line bg-surface px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-text-subtle focus:border-primary";
 
 function createEmptyFormValues(): AgentMarketplaceSubmissionFormValues {
   return {
@@ -356,12 +356,12 @@ export default function Marketplace({
       </header>
 
       {submitted ? (
-        <section className="mt-8 rounded-[24px] border border-emerald-200 bg-emerald-50/70 p-5 text-emerald-950">
+        <section className="mt-8 rounded-[24px] border border-success-border bg-success-soft p-5 text-success-foreground">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
             <div>
               <h2 className="text-base font-semibold">{content.successTitle}</h2>
-              <p className="mt-1 text-sm leading-7 text-emerald-900/80">
+              <p className="mt-1 text-sm leading-7 text-success-foreground/80">
                 {content.successDescription}
               </p>
             </div>
@@ -492,7 +492,7 @@ export default function Marketplace({
             </p>
 
             {formErrors?.form ? (
-              <div className="mt-5 rounded-[18px] border border-red-200 bg-red-50/80 p-4 text-red-950">
+              <div className="mt-5 rounded-[18px] border border-danger-border bg-danger-soft p-4 text-danger-foreground">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <p className="text-sm leading-6">{formErrors.form}</p>
@@ -517,7 +517,7 @@ export default function Marketplace({
                   {content.helper.repositoryUrl}
                 </p>
                 {formErrors?.repositoryUrl ? (
-                  <p className="mt-2 text-xs text-red-600">{formErrors.repositoryUrl}</p>
+                  <p className="mt-2 text-xs text-danger">{formErrors.repositoryUrl}</p>
                 ) : null}
               </label>
 
@@ -533,7 +533,7 @@ export default function Marketplace({
                   placeholder={content.placeholders.submitterEmail}
                 />
                 {formErrors?.submitterEmail ? (
-                  <p className="mt-2 text-xs text-red-600">{formErrors.submitterEmail}</p>
+                  <p className="mt-2 text-xs text-danger">{formErrors.submitterEmail}</p>
                 ) : null}
               </label>
 

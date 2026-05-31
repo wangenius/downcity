@@ -7,6 +7,18 @@ interface MermaidProps {
   chart: string;
 }
 
+/**
+ * 读取全局主题变量，避免 Mermaid 与导出画布绕过 Tailwind 语义色。
+ */
+function readThemeColor(variable_name: string, fallback: string) {
+  if (typeof document === "undefined") return fallback;
+  return (
+    getComputedStyle(document.documentElement)
+      .getPropertyValue(variable_name)
+      .trim() || fallback
+  );
+}
+
 export function Mermaid({ chart }: MermaidProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,12 +38,12 @@ export function Mermaid({ chart }: MermaidProps) {
       startOnLoad: false,
       theme: "base",
       themeVariables: {
-        primaryColor: "#f3f4f6",
-        primaryTextColor: "#1f2937",
-        primaryBorderColor: "#e5e7eb",
-        lineColor: "#6b7280",
-        secondaryColor: "#e5e7eb",
-        tertiaryColor: "#f9fafb",
+        primaryColor: readThemeColor("--muted", "Canvas"),
+        primaryTextColor: readThemeColor("--foreground", "CanvasText"),
+        primaryBorderColor: readThemeColor("--border", "CanvasText"),
+        lineColor: readThemeColor("--muted-foreground", "CanvasText"),
+        secondaryColor: readThemeColor("--line-soft", "Canvas"),
+        tertiaryColor: readThemeColor("--background", "Canvas"),
         fontFamily: "system-ui, -apple-system, sans-serif",
       },
     });
@@ -103,7 +115,7 @@ export function Mermaid({ chart }: MermaidProps) {
     const url = URL.createObjectURL(svgBlob);
 
     img.onload = () => {
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = readThemeColor("--background", "Canvas");
       ctx.fillRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
 
@@ -133,8 +145,8 @@ export function Mermaid({ chart }: MermaidProps) {
 
   if (error) {
     return (
-      <div className="my-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-sm text-red-600">
+      <div className="my-4 rounded-lg border border-danger-border bg-danger-soft p-4">
+        <p className="text-sm text-danger">
           Failed to render Mermaid diagram: {error}
         </p>
       </div>
@@ -144,41 +156,41 @@ export function Mermaid({ chart }: MermaidProps) {
   // 全屏模式
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 z-50 bg-white flex flex-col">
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
         {/* 工具栏 */}
-        <div className="flex gap-2 justify-end p-4 border-b bg-gray-50">
+        <div className="flex justify-end gap-2 border-b bg-muted p-4">
           <button
             onClick={zoomOut}
-            className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
             title="缩小"
           >
             ➖ 缩小
           </button>
           <button
             onClick={resetZoom}
-            className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
             title="重置缩放"
           >
             🔍 {Math.round(zoom * 100)}%
           </button>
           <button
             onClick={zoomIn}
-            className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
             title="放大"
           >
             ➕ 放大
           </button>
-          <div className="w-px bg-gray-300 mx-1" />
+          <div className="mx-1 w-px bg-border" />
           <button
             onClick={exportToPNG}
-            className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
             title="导出为 PNG"
           >
             📥 导出 PNG
           </button>
           <button
             onClick={toggleFullscreen}
-            className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
             title="退出全屏 (ESC)"
           >
             ✕ 退出全屏
@@ -186,7 +198,7 @@ export function Mermaid({ chart }: MermaidProps) {
         </div>
 
         {/* 图表区域 */}
-        <div className="flex-1 overflow-auto flex justify-center items-start p-8">
+        <div className="flex flex-1 items-start justify-center overflow-auto p-8">
           <div
             ref={ref}
             className="flex justify-center transition-transform duration-200"
@@ -198,8 +210,8 @@ export function Mermaid({ chart }: MermaidProps) {
         </div>
 
         {/* 底部提示 */}
-        <div className="text-center py-2 text-xs text-gray-500 border-t bg-gray-50">
-          提示：使用 <kbd className="px-1 py-0.5 bg-gray-200 rounded">ESC</kbd>{" "}
+        <div className="border-t bg-muted py-2 text-center text-xs text-muted-foreground">
+          提示：使用 <kbd className="rounded bg-accent px-1 py-0.5">ESC</kbd>{" "}
           退出全屏， 滚轮或按钮缩放
         </div>
       </div>
@@ -210,17 +222,17 @@ export function Mermaid({ chart }: MermaidProps) {
   return (
     <div className="my-4">
       {/* 工具栏 */}
-      <div className="flex gap-2 justify-end mb-2">
+      <div className="mb-2 flex justify-end gap-2">
         <button
           onClick={toggleFullscreen}
-          className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
           title="全屏查看"
         >
           ⛶ 全屏
         </button>
         <button
           onClick={exportToPNG}
-          className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
           title="导出为 PNG"
         >
           📥 导出 PNG

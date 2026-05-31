@@ -12,11 +12,11 @@ export function baseOptions(): BaseLayoutProps {
       title: (
         <div className="flex h-10 w-10 items-center justify-center">
           <img
-            src="/icon.png"
+            src="/icon.svg"
             width={32}
             height={32}
             alt="Downcity"
-            className="h-8 w-8 object-contain"
+            className="brand-logo h-8 w-8 object-contain"
           />
         </div>
       ),

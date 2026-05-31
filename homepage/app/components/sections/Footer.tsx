@@ -23,10 +23,10 @@ export const Footer: FC = () => {
 
   return (
     <footer className="px-3 pb-6 pt-8 md:px-5 md:pb-10 md:pt-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5 border-t border-[#ECECF1] pt-5 md:flex-row md:items-end md:justify-between">
+      <div className="mx-auto flex max-w-7xl flex-col gap-5 border-t border-line-soft pt-5 md:flex-row md:items-end md:justify-between">
         <div className="space-y-3">
           <Link to={homePath} className="inline-flex items-center gap-3">
-            <img src="/icon-192.png" alt="Downcity" className="block h-10 w-10 object-contain opacity-95" />
+            <img src="/icon.svg" alt="Downcity" className="brand-logo block h-10 w-10 object-contain opacity-95" />
             <span>
               <span className="block text-[0.92rem] font-medium tracking-[-0.05em] text-foreground">
                 {product.productName}

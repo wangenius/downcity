@@ -54,11 +54,11 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
         title: (
           <div className="flex h-10 items-center gap-3">
             <img
-              src="/icon-192.png"
+              src="/icon.svg"
               width={32}
               height={32}
               alt="Downcity"
-              className="h-8 w-8 object-contain"
+              className="brand-logo h-8 w-8 object-contain"
             />
             <span className="text-sm font-medium tracking-[-0.02em] text-foreground">
               Devdocs

@@ -36,6 +36,38 @@
   --pill-pink: #eef0f2;
   --highlight-yellow: #d4d4d8;
   --block-bg: #f3f4f6;
+  --surface: var(--background);
+  --surface-soft: var(--muted);
+  --surface-muted: #f4f5f7;
+  --surface-hover: #f1f1f3;
+  --surface-strong: #232326;
+  --surface-overlay: color-mix(in oklch, var(--surface) 98%, transparent);
+  --text-soft: #6b7280;
+  --text-subtle: #9ca3af;
+  --text-strong: var(--foreground);
+  --line: var(--border);
+  --line-soft: #ececf1;
+  --line-strong: #dadce3;
+  --corner-marker: #d1d5db;
+  --hero-foreground: #202024;
+  --hero-mark: #e5e7eb;
+  --success: #059669;
+  --success-foreground: #064e3b;
+  --success-soft: #ecfdf5;
+  --success-border: #a7f3d0;
+  --info: #1d4ed8;
+  --danger: #dc2626;
+  --danger-foreground: #7f1d1d;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
+  --backdrop-glow: color-mix(in oklch, var(--background) 50%, transparent);
+  --backdrop-wash: color-mix(in oklch, var(--background) 8%, transparent);
+  --grid-line: color-mix(in oklch, var(--foreground) 2.2%, transparent);
+  --brand-logo-filter: none;
+  --white-alpha-strong: color-mix(in oklch, white 80%, transparent);
+  --shadow-panel: 0 1px 0 color-mix(in oklch, var(--foreground) 2%, transparent);
+  --shadow-popover: 0 10px 26px color-mix(in oklch, var(--foreground) 4.5%, transparent);
+  --shadow-control-inset: inset 0 0 0 1px var(--white-alpha-strong);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -85,6 +117,38 @@
   --chart-3: oklch(0.66 0.035 275.2);
   --chart-4: oklch(0.76 0.032 173.5);
   --chart-5: oklch(0.62 0.02 250.9);
+  --surface: var(--background);
+  --surface-soft: var(--secondary);
+  --surface-muted: oklch(0.245 0.018 258.6);
+  --surface-hover: var(--accent);
+  --surface-strong: oklch(0.86 0.018 248.6);
+  --surface-overlay: color-mix(in oklch, var(--popover) 96%, transparent);
+  --text-soft: var(--muted-foreground);
+  --text-subtle: oklch(0.64 0.014 246.2);
+  --text-strong: var(--foreground);
+  --line: var(--border);
+  --line-soft: color-mix(in oklch, var(--border) 72%, var(--foreground) 28%);
+  --line-strong: color-mix(in oklch, var(--border) 64%, var(--foreground) 36%);
+  --corner-marker: oklch(0.45 0.022 257.7);
+  --hero-foreground: var(--foreground);
+  --hero-mark: oklch(0.38 0.018 258.7);
+  --success: oklch(0.76 0.12 157.6);
+  --success-foreground: oklch(0.91 0.05 157.6);
+  --success-soft: oklch(0.24 0.04 157.6);
+  --success-border: oklch(0.4 0.08 157.6);
+  --info: oklch(0.78 0.09 248.6);
+  --danger: oklch(0.72 0.17 24.4);
+  --danger-foreground: oklch(0.92 0.05 24.4);
+  --danger-soft: oklch(0.25 0.045 24.4);
+  --danger-border: oklch(0.42 0.09 24.4);
+  --backdrop-glow: color-mix(in oklch, var(--foreground) 8%, transparent);
+  --backdrop-wash: color-mix(in oklch, var(--foreground) 3%, transparent);
+  --grid-line: color-mix(in oklch, var(--foreground) 5%, transparent);
+  --brand-logo-filter: invert(1);
+  --white-alpha-strong: color-mix(in oklch, var(--foreground) 10%, transparent);
+  --shadow-panel: 0 1px 0 color-mix(in oklch, black 18%, transparent);
+  --shadow-popover: 0 10px 26px color-mix(in oklch, black 28%, transparent);
+  --shadow-control-inset: inset 0 0 0 1px var(--white-alpha-strong);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -110,6 +174,30 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-text-soft: var(--text-soft);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-strong: var(--text-strong);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+  --color-corner-marker: var(--corner-marker);
+  --color-hero-foreground: var(--hero-foreground);
+  --color-hero-mark: var(--hero-mark);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-border: var(--success-border);
+  --color-info: var(--info);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-border: var(--danger-border);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -153,6 +241,29 @@
   --shadow-2xs: var(--shadow-2xs);
   --spacing: var(--spacing);
   --color-destructive-foreground: var(--destructive-foreground);
+}
+
+@layer utilities {
+  /* 营销页背景只读取主题变量，确保暗色模式不会残留浅色光晕。 */
+  .marketing-backdrop-glow {
+    background:
+      radial-gradient(70% 52% at 50% 20%, var(--backdrop-glow), transparent 56%),
+      linear-gradient(to bottom, var(--backdrop-wash), transparent 18%);
+  }
+
+  /* 网格线使用语义变量，不在组件中写死 rgba。 */
+  .marketing-backdrop-grid {
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 88px 88px;
+    mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
+  }
+
+  /* Logo 反色由主题变量统一控制，避免图标文件依赖系统色彩偏好。 */
+  .brand-logo {
+    filter: var(--brand-logo-filter);
+  }
 }
 
 @layer base {

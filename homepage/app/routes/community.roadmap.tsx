@@ -54,8 +54,8 @@ const roadmap = [
 ] as const;
 
 const STATUS_CLASS: Record<string, string> = {
-  completed: "text-emerald-700",
-  "in-progress": "text-blue-700",
+  completed: "text-success",
+  "in-progress": "text-info",
   pending: "text-muted-foreground",
 };
 

@@ -91,7 +91,7 @@ export function TutorialSection() {
                   ) : (
                     <div>
                       <p className="text-muted-foreground">{step.previewTop}</p>
-                      <p className="mt-1 text-emerald-600 dark:text-emerald-300">
+                      <p className="mt-1 text-success">
                         {step.previewBottom}
                       </p>
                     </div>

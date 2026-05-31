@@ -90,7 +90,7 @@ export function HeroSection() {
                 <span>{INSTALL_COMMAND}</span>
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background">
                   {copied ? (
-                    <IconCheck className="size-4 text-emerald-600" />
+                    <IconCheck className="size-4 text-success" />
                   ) : (
                     <IconCopy className="size-4 text-muted-foreground" />
                   )}
@@ -146,7 +146,7 @@ export function HeroSection() {
                     <span className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground">
                       <span
                         className={`inline-flex h-1.5 w-1.5 rounded-full ${
-                          row.state === "ok" ? "bg-emerald-500" : "bg-muted-foreground/65"
+                          row.state === "ok" ? "bg-success" : "bg-muted-foreground/65"
                         }`}
                       />
                       {row.value}
@@ -158,13 +158,13 @@ export function HeroSection() {
               <div className="space-y-2">
                 <div className={commandClass}>
                   <p className="text-muted-foreground">$ bay agent create .</p>
-                  <p className="mt-1 text-emerald-600 dark:text-emerald-300">
+                  <p className="mt-1 text-success">
                     {t("tutorial:mock.terminal.step1.ready")}
                   </p>
                 </div>
                 <div className={commandClass}>
                   <p className="text-muted-foreground">$ bay agent start</p>
-                  <p className="mt-1 text-emerald-600 dark:text-emerald-300">
+                  <p className="mt-1 text-success">
                     {t("tutorial:mock.terminal.step2.online")}
                   </p>
                 </div>

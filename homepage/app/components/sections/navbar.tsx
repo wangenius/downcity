@@ -174,23 +174,23 @@ export function Navbar() {
   const directLinks = [featuresLink, quickStartLink] as const;
 
   const dropdownContentClass =
-    "min-w-[18rem] rounded-[20px] border border-[#E7E7EB] bg-[#FAFAFA]/98 p-1.5 shadow-[0_10px_26px_rgba(24,24,27,0.045)] backdrop-blur-xl";
+    "min-w-[18rem] rounded-[20px] border border-line bg-surface-overlay p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-xl";
   const dropdownItemClass =
-    "min-h-10 rounded-[12px] px-3 py-2 text-[0.92rem] font-medium text-[#18181B] transition-colors focus:bg-[#F1F1F3] focus:text-[#18181B]";
+    "min-h-10 rounded-[12px] px-3 py-2 text-[0.92rem] font-medium text-foreground transition-colors focus:bg-surface-hover focus:text-foreground";
   const desktopNavItemClass =
-    "inline-flex h-10 items-center gap-1.5 rounded-[12px] px-4 text-[0.78rem] font-medium tracking-[0.08em] text-[#5F6672] transition-colors";
-  const desktopNavItemInactiveClass = "hover:bg-[#F1F1F3] hover:text-[#18181B]";
-  const desktopNavItemActiveClass = "bg-[#F1F1F3] text-[#18181B]";
+    "inline-flex h-10 items-center gap-1.5 rounded-[12px] px-4 text-[0.78rem] font-medium tracking-[0.08em] text-text-soft transition-colors";
+  const desktopNavItemInactiveClass = "hover:bg-surface-hover hover:text-foreground";
+  const desktopNavItemActiveClass = "bg-surface-hover text-foreground";
   const popoverContentClass =
-    "w-[18.75rem] rounded-[20px] border border-[#E7E7EB] bg-[#FAFAFA]/98 p-2 shadow-[0_10px_26px_rgba(24,24,27,0.045)] backdrop-blur-xl";
+    "w-[18.75rem] rounded-[20px] border border-line bg-surface-overlay p-2 shadow-[var(--shadow-popover)] backdrop-blur-xl";
   const popoverItemClass =
-    "grid gap-1 rounded-[12px] px-3 py-3 transition-colors hover:bg-[#F1F1F3]";
+    "grid gap-1 rounded-[12px] px-3 py-3 transition-colors hover:bg-surface-hover";
   const utilityButtonClass =
-    "inline-flex size-9 items-center justify-center rounded-[11px] text-[#5F6672] transition-colors hover:bg-[#F1F1F3] hover:text-[#18181B]";
+    "inline-flex size-9 items-center justify-center rounded-[11px] text-text-soft transition-colors hover:bg-surface-hover hover:text-foreground";
   const languageButtonClass =
-    "inline-flex size-9 items-center justify-center rounded-[11px] text-[#5F6672] transition-colors hover:bg-[#F1F1F3] hover:text-[#18181B]";
+    "inline-flex size-9 items-center justify-center rounded-[11px] text-text-soft transition-colors hover:bg-surface-hover hover:text-foreground";
   const languageDropdownItemClass =
-    "flex min-h-10 items-center justify-between rounded-[12px] px-3 py-2 text-[0.92rem] font-medium text-[#18181B] transition-colors focus:bg-[#F1F1F3] focus:text-[#18181B]";
+    "flex min-h-10 items-center justify-between rounded-[12px] px-3 py-2 text-[0.92rem] font-medium text-foreground transition-colors focus:bg-surface-hover focus:text-foreground";
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`);
@@ -223,8 +223,8 @@ export function Navbar() {
             {group.items.map((item) =>
               "path" in item ? (
                 <Link key={item.path} to={item.path} className={popoverItemClass}>
-                  <span className="text-[0.94rem] font-medium text-[#18181B]">{item.label}</span>
-                  <span className="text-[0.78rem] leading-5 text-[#71717A]">{item.description}</span>
+                  <span className="text-[0.94rem] font-medium text-foreground">{item.label}</span>
+                  <span className="text-[0.78rem] leading-5 text-text-soft">{item.description}</span>
                 </Link>
               ) : (
                 <a
@@ -234,11 +234,11 @@ export function Navbar() {
                   rel="noreferrer"
                   className={popoverItemClass}
                 >
-                  <span className="flex items-center gap-1.5 text-[0.94rem] font-medium text-[#18181B]">
+                  <span className="flex items-center gap-1.5 text-[0.94rem] font-medium text-foreground">
                     <span>{item.label}</span>
-                    <IconArrowUpRight className="size-3.5 text-[#71717A]" />
+                    <IconArrowUpRight className="size-3.5 text-text-soft" />
                   </span>
-                  <span className="text-[0.78rem] leading-5 text-[#71717A]">{item.description}</span>
+                  <span className="text-[0.78rem] leading-5 text-text-soft">{item.description}</span>
                 </a>
               ),
             )}
@@ -265,7 +265,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 bg-transparent backdrop-blur-md">
       <div className="mx-auto flex min-h-[64px] max-w-7xl items-center justify-between gap-4 px-3 md:px-5">
         <Link to={homePath} className="flex h-10 w-10 items-center justify-center rounded-[12px]">
-          <img src="/icon-192.png" alt="Downcity" className="block h-7 w-7 shrink-0 object-contain opacity-95" />
+          <img src="/icon.svg" alt="Downcity" className="brand-logo block h-7 w-7 shrink-0 object-contain opacity-95" />
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
@@ -305,16 +305,16 @@ export function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={10} className={dropdownContentClass}>
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-[#71717A]">
+                <DropdownMenuLabel className="px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-text-soft">
                   {isZh ? "语言" : "Language"}
                 </DropdownMenuLabel>
                 <DropdownMenuItem className={languageDropdownItemClass} onClick={() => setLang("en")}>
                   <span>English</span>
-                  {!isZh ? <IconCheck className="size-4 text-[#71717A]" /> : <span className="size-4" />}
+                  {!isZh ? <IconCheck className="size-4 text-text-soft" /> : <span className="size-4" />}
                 </DropdownMenuItem>
                 <DropdownMenuItem className={languageDropdownItemClass} onClick={() => setLang("zh")}>
                   <span>中文</span>
-                  {isZh ? <IconCheck className="size-4 text-[#71717A]" /> : <span className="size-4" />}
+                  {isZh ? <IconCheck className="size-4 text-text-soft" /> : <span className="size-4" />}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -331,12 +331,12 @@ export function Navbar() {
               <IconMenu2 className="size-4.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={dropdownContentClass}>
-              <div className="px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-[#71717A]">
+              <div className="px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-text-soft">
                 Downcity
               </div>
               {groupedLinks.map((group) => (
                 <DropdownMenuGroup key={group.label}>
-                  <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.62rem] uppercase tracking-[0.14em] text-[#71717A]">
+                  <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.62rem] uppercase tracking-[0.14em] text-text-soft">
                     {group.label}
                   </DropdownMenuLabel>
                   {group.items.map((item) =>
@@ -354,7 +354,7 @@ export function Navbar() {
                           <a {...itemProps} href={item.href} target="_blank" rel="noreferrer">
                             <span className="flex items-center gap-1.5">
                               <span>{item.label}</span>
-                              <IconArrowUpRight className="size-3.5 text-[#71717A]" />
+                              <IconArrowUpRight className="size-3.5 text-text-soft" />
                             </span>
                           </a>
                         )}
@@ -365,7 +365,7 @@ export function Navbar() {
                 </DropdownMenuGroup>
               ))}
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.62rem] uppercase tracking-[0.14em] text-[#71717A]">
+                <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.62rem] uppercase tracking-[0.14em] text-text-soft">
                   {isZh ? "直达" : "Direct"}
                 </DropdownMenuLabel>
                 {directLinks.map((item) => (

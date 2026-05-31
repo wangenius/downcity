@@ -1,9 +1,9 @@
 ---
-title: studio agent create
+title: bay agent create
 description: Create/initialize a Downcity agent project
 ---
 
-# `studio agent create`
+# `bay agent create`
 
 Create/initialize a Downcity agent project in the target path.
 
@@ -12,7 +12,7 @@ Create/initialize a Downcity agent project in the target path.
 ## Usage
 
 ```bash
-studio agent create [path]
+bay agent create [path]
 ```
 
 ## Arguments
@@ -30,19 +30,19 @@ studio agent create [path]
 
 ```bash
 # Initialize in current directory
-studio agent create .
+bay agent create .
 
 # Initialize in another directory
-studio agent create ./my-agent-project
+bay agent create ./my-agent-project
 ```
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio agent create .
-studio v1.0.0
+$ bay agent create .
+bay v1.0.0
 🚀 Initializing Downcity project: <projectRoot>
 ✅ Created PROFILE.md
 ✅ Created SOUL.md
@@ -54,6 +54,6 @@ studio v1.0.0
 Common follow-up commands:
 
 ```bash
-studio model list
-studio model get provider openai_main
+bay model list
+bay model get provider openai_main
 ```

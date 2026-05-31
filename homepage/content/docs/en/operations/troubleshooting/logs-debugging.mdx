@@ -14,14 +14,14 @@ tail -f .downcity/logs/$(date +%F).jsonl
 ## 2) Inspect plugin state
 
 ```bash
-studio plugin list
+bay plugin list
 ```
 
 ## 3) Inspect conversation state
 
 ```bash
-studio chat context --chat-key ctx_xxxxxxxxxxxxxxxx
-studio chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
+bay chat context --chat-key ctx_xxxxxxxxxxxxxxxx
+bay chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
 ```
 
 ## 4) Inspect task artifacts

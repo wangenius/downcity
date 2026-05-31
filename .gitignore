@@ -15,11 +15,15 @@ tsconfig.tsbuildinfo
 bun.lock
 
 bin
+!cli/downcity/bin/
+!cli/downcity/bin/bay/
+!cli/downcity/bin/bay/index.js
 bun.*
 # Package build output
 package/bin
 cli/downcity/city-cli/
 cli/downcity/studio-cli/
+cli/downcity/bay/
 cli/downcity/city/
 cli/downcity/studio/
 cli/downcity/public/

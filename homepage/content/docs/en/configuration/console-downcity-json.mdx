@@ -49,7 +49,7 @@ Current versions use explicit layers:
 Key behavior:
 
 1. Agent runtime env map is `new Agent({ env }) + <agent>/.env` (`.env` wins).
-2. When the host is `studio`, Console-global env is read from `downcity.db` and passed explicitly to `Agent`.
+2. When the host is `bay`, Console-global env is read from `downcity.db` and passed explicitly to `Agent`.
 3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
 5. Chat user permissions are resolved from `chat_auth_*` tables, not from an agent project.
@@ -60,28 +60,28 @@ Key behavior:
 Initialize Console (writes into `downcity.db`):
 
 ```bash
-studio init
+bay init
 ```
 
 Read/update project plugin parameters:
 
 ```bash
-studio config get plugins.asr
-studio config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+bay config get plugins.asr
+bay config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
 Toggle city-level plugin lifecycle:
 
 ```bash
-studio asr on
-studio asr off
+bay asr on
+bay asr off
 ```
 
 Manage model pool:
 
 ```bash
-studio model list
-studio model create
+bay model list
+bay model create
 ```
 
 ## Related docs

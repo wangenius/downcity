@@ -1,20 +1,20 @@
 ---
-title: studio skill
+title: bay skill
 description: Skill plugin actions (find/install/list/lookup)
 ---
 
-# `studio skill`
+# `bay skill`
 
 Manage skill discovery, installation, and lookup.
 
 > This page remains as a command entry point. For the fuller plugin structure, see [Plugin Overview](/en/agent-sdk-docs/plugins/overview), [Built-in Plugins Today](/en/agent-sdk-docs/plugins/built-in-plugins), and [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions).
 
-> Hierarchy note: `studio skill` now belongs to the plugin action system. It is provided by the `skill` plugin, not by a separate legacy runtime layer.
+> Hierarchy note: `bay skill` now belongs to the plugin action system. It is provided by the `skill` plugin, not by a separate legacy runtime layer.
 
 ## Usage
 
 ```bash
-studio skill <subcommand> [options]
+bay skill <subcommand> [options]
 ```
 
 ## Subcommands
@@ -33,13 +33,13 @@ studio skill <subcommand> [options]
 ## Examples
 
 ```bash
-studio skill list
-studio skill lookup playwright
+bay skill list
+bay skill lookup playwright
 
 # install only when missing from `list`
-studio skill find playwright
-studio skill install owner/repo@playwright
-studio skill lookup playwright
+bay skill find playwright
+bay skill install owner/repo@playwright
+bay skill lookup playwright
 ```
 
 ## Recommended flow
@@ -54,6 +54,6 @@ studio skill lookup playwright
 
 ## Related
 
-- [`studio plugin`](/en/docs/commands/plugin/plugin)
+- [`bay plugin`](/en/docs/commands/plugin/plugin)
 - [Plugin Docs Overview](/en/agent-sdk-docs/plugins/overview)
 - [`CLI Commands`](/en/docs/reference/cli)

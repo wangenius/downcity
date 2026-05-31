@@ -5,16 +5,16 @@ description: 使用 Downcity 的高频问题
 
 # FAQ
 
-## `downcity` 和 `studio` 有区别吗？
+## `downcity` 和 `bay` 有区别吗？
 
-没有。`studio` 是同一个可执行文件的短命令。
+没有。`bay` 是同一个可执行文件的短命令。
 
-## 为什么我执行 `studio task ...` 返回连接失败？
+## 为什么我执行 `bay task ...` 返回连接失败？
 
 `task/chat/memory/contact/shell/skill/asr/tts/plugin` 这类命令通常依赖运行中的 daemon：
 
 ```bash
-studio agent start
+bay agent start
 ```
 
 ## `downcity.json` 里为什么不能写 `${VAR}`？
@@ -29,16 +29,16 @@ studio agent start
 ## 如何切换模型？
 
 ```bash
-studio model list
-studio config get model.primary
+bay model list
+bay config get model.primary
 ```
 
 ## 如何查看当前服务状态？
 
 ```bash
-studio agent list --running
-studio plugin list
-studio memory status
+bay agent list --running
+bay plugin list
+bay memory status
 ```
 
 ## 安装依赖时看到 `deprecated eslint@8` 和一堆子依赖告警怎么办？
@@ -48,7 +48,7 @@ studio memory status
 - `eslint@8` 告警：说明当前依赖树里还在解析 8.x。
 - `glob@7` / `rimraf@3` / `inflight` 等：多为上游工具的传递依赖。
 
-如果你只运行 `studio`，可暂时忽略；如果要清理告警，优先做两件事：
+如果你只运行 `bay`，可暂时忽略；如果要清理告警，优先做两件事：
 
 1. 把项目里直接声明的 `eslint` 升到 9.x。
 2. 升级触发告警的工具包到最新主版本（若其已支持）。

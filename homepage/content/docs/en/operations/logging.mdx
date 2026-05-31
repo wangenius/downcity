@@ -25,7 +25,7 @@ tail -f .downcity/logs/$(date +%F).jsonl
 grep -Ei "error|warn|timeout|failed" .downcity/logs/$(date +%F).jsonl
 
 # Inspect recent chat records
-studio chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
+bay chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
 ```
 
 ## LLM message logging toggle

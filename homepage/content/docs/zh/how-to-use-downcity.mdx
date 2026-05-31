@@ -1,22 +1,22 @@
 ---
 title: 怎么使用 Downcity
-description: 从安装到日常使用，快速跑通 Studio、Agent、Console、Plugin、SDK 与 City
+description: 从安装到日常使用，快速跑通 Bay、Agent、Console、Plugin、SDK 与 City
 ---
 
 # 怎么使用 Downcity
 
 Downcity 的核心用法可以理解成一句话：把一个项目目录变成可长期运行、可对话、可执行、可观察的 Agent。
 
-最常用的是本机 Studio 路线：安装 `downcity`，启动 `studio`，在你的代码仓库里创建 agent，然后通过 CLI 或 Console 与它对话。需要嵌入到应用时，再使用 `@downcity/agent` SDK。需要多人、产品或线上服务复用模型和服务能力时，再部署 City。
+最常用的是本机 Bay 路线：安装 `downcity`，启动 `bay`，在你的代码仓库里创建 agent，然后通过 CLI 或 Console 与它对话。需要嵌入到应用时，再使用 `@downcity/agent` SDK。需要多人、产品或线上服务复用模型和服务能力时，再部署 City。
 
 ## 你会用到什么
 
 | 入口 | 什么时候用 |
 | --- | --- |
-| `studio` | 本机启动和管理 Agent、Console、模型池、插件和任务。 |
+| `bay` | 本机启动和管理 Agent、Console、模型池、插件和任务。 |
 | `city` | 管理已部署的 City、模型、token 和服务资源。 |
 | `@downcity/agent` | 在 Node 应用里嵌入本地 Agent，或调用远程 Agent。 |
-| `@downcity/city` | 构建可部署的 City runtime，让多个产品或 Studio 复用后端能力。 |
+| `@downcity/city` | 构建可部署的 City runtime，让多个产品或 Bay 复用后端能力。 |
 | Console | 在浏览器里查看和操作本机 Agent。 |
 | Chrome Extension | 把网页内容、选区和浏览器上下文发送给 Agent。 |
 
@@ -31,16 +31,16 @@ pnpm add -g downcity
 安装后会得到两个命令：
 
 ```bash
-studio --version
+bay --version
 city --version
 ```
 
-日常本机使用主要靠 `studio`。`city` 主要用于部署或管理共享服务城市。
+日常本机使用主要靠 `bay`。`city` 主要用于部署或管理共享服务城市。
 
-## 2. 首次初始化 Studio
+## 2. 首次初始化 Bay
 
 ```bash
-studio init
+bay init
 ```
 
 这一步会初始化全局配置和本机存储，默认位于 `~/.downcity/`。模型池、Console token、运行状态和全局环境都会放在这里。
@@ -50,21 +50,21 @@ studio init
 Agent 启动前需要绑定一个全局模型。最简单的方式是进入交互式模型管理器：
 
 ```bash
-studio model
+bay model
 ```
 
 也可以直接走命令：
 
 ```bash
-studio model create
-studio model list
-studio model test model <modelId>
+bay model create
+bay model list
+bay model test model <modelId>
 ```
 
 如果已经在某个 agent 项目里，可以把模型绑定到当前项目：
 
 ```bash
-studio model use <modelId>
+bay model use <modelId>
 ```
 
 项目里的 `downcity.json` 会记录这份绑定：
@@ -86,7 +86,7 @@ studio model use <modelId>
 
 ```bash
 cd /path/to/your-repo
-studio agent create .
+bay agent create .
 ```
 
 创建后通常会生成：
@@ -103,39 +103,39 @@ studio agent create .
 2. `PROFILE.md` 是否写清楚这个 Agent 应该怎么帮助你
 3. 当前项目是否真的需要启用聊天渠道或其他插件
 
-## 5. 启动 Studio 和 Agent
+## 5. 启动 Bay 和 Agent
 
-先启动本机 Studio runtime：
+先启动本机 Bay runtime：
 
 ```bash
-studio start
+bay start
 ```
 
 如果想同时打开浏览器 Console：
 
 ```bash
-studio start --console
+bay start --console
 ```
 
 然后在 agent 项目里启动 Agent：
 
 ```bash
-studio agent start
-studio agent status
-studio agent list --running
+bay agent start
+bay agent status
+bay agent list --running
 ```
 
 默认是后台 daemon，适合长期运行。如果想在当前终端看日志：
 
 ```bash
-studio agent start --foreground
+bay agent start --foreground
 ```
 
 停止和重启：
 
 ```bash
-studio agent stop
-studio agent restart
+bay agent stop
+bay agent restart
 ```
 
 ## 6. 和 Agent 对话
@@ -143,19 +143,19 @@ studio agent restart
 一次性发送消息：
 
 ```bash
-studio agent chat --message "总结一下这个仓库的结构"
+bay agent chat --message "总结一下这个仓库的结构"
 ```
 
 指定目标 agent：
 
 ```bash
-studio agent chat --to <agentId> --message "检查最近一次任务状态"
+bay agent chat --to <agentId> --message "检查最近一次任务状态"
 ```
 
 进入持续对话模式：
 
 ```bash
-studio agent chat
+bay agent chat
 ```
 
 在持续对话里输入 `/exit` 或 `/quit` 退出。
@@ -171,25 +171,25 @@ http://127.0.0.1:5315
 Downcity 的日常能力大多通过 plugin 命令暴露。常见命令包括：
 
 ```bash
-studio skill
-studio task list
-studio memory
-studio shell
-studio web
-studio asr
-studio tts
+bay skill
+bay task list
+bay memory
+bay shell
+bay web
+bay asr
+bay tts
 ```
 
 典型场景：
 
-- 用 `studio skill` 管理 Agent 技能
-- 用 `studio task` 创建长期存在的自动化任务
-- 用 `studio memory` 管理可复用记忆
-- 用 `studio shell` 执行项目相关命令
-- 用 `studio web` 处理网页访问能力
-- 用 `studio asr` / `studio tts` 接入语音能力
+- 用 `bay skill` 管理 Agent 技能
+- 用 `bay task` 创建长期存在的自动化任务
+- 用 `bay memory` 管理可复用记忆
+- 用 `bay shell` 执行项目相关命令
+- 用 `bay web` 处理网页访问能力
+- 用 `bay asr` / `bay tts` 接入语音能力
 
-如果某个能力需要延迟执行或定时执行，优先查看 `studio task` 和 plugin schedule 文档。
+如果某个能力需要延迟执行或定时执行，优先查看 `bay task` 和 plugin schedule 文档。
 
 ## 8. 接入 Chrome Extension
 
@@ -232,7 +232,7 @@ const result = await turn.finished;
 console.log(result.text);
 ```
 
-SDK 模式下，模型由你的宿主应用创建并注入。`@downcity/agent` 负责 Agent runtime，不负责解析 Studio 全局模型池里的 `modelId`。
+SDK 模式下，模型由你的宿主应用创建并注入。`@downcity/agent` 负责 Agent runtime，不负责解析 Bay 全局模型池里的 `modelId`。
 
 如果 Agent 已经作为 HTTP 服务运行，也可以使用远程 Agent：
 
@@ -392,7 +392,7 @@ const agent = new Agent({
 
 当你需要下面这些能力时，再考虑 City：
 
-- 多个 Studio 或多个产品复用同一套模型目录
+- 多个 Bay 或多个产品复用同一套模型目录
 - 给终端用户签发 `user_token`
 - 统一处理模型调用、用量、余额、支付和账号
 - 把 Downcity 能力接入正式产品后端
@@ -401,7 +401,7 @@ const agent = new Agent({
 City SDK 分成两侧：
 
 - 服务端用 `City`、`AIService`、`Provider` 创建可部署 runtime
-- 可信后端用 `Admin Gate` 创建 studio、签发 `user_token`
+- 可信后端用 `Admin Gate` 创建 bay、签发 `user_token`
 - 产品侧用 `User Gate` 调用 AIService 或自定义 Service
 
 ### 10.1 安装
@@ -495,12 +495,12 @@ const admin = new Gate({
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const studio = await admin.studios.create({
-  name: "Demo Studio",
+const bay = await admin.studios.create({
+  name: "Demo Bay",
 });
 
 const user = await admin.studios.tokens.apply({
-  studio_id: studio.studio_id,
+  studio_id: bay.studio_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -509,7 +509,7 @@ const user = await admin.studios.tokens.apply({
 });
 
 console.log({
-  studio_id: studio.studio_id,
+  studio_id: bay.studio_id,
   user_token: user.user_token,
 });
 ```
@@ -644,33 +644,33 @@ city --help
 
 ```bash
 # 1. 启动本机 runtime 和 Console
-studio start --console
+bay start --console
 
 # 2. 进入项目并启动 agent
 cd /path/to/your-repo
-studio agent start
+bay agent start
 
 # 3. 检查状态
-studio status
-studio agent status
+bay status
+bay agent status
 
 # 4. 直接在终端对话
-studio agent chat --message "今天先帮我读一下项目结构"
+bay agent chat --message "今天先帮我读一下项目结构"
 
 # 5. 创建长期任务
-studio task create --title "Daily check" --description "Run tests" --when "@manual"
+bay task create --title "Daily check" --description "Run tests" --when "@manual"
 ```
 
 ## 排障优先看什么
 
 如果 Agent 没有正常工作，按这个顺序查：
 
-1. `studio status`：确认 Studio runtime 是否运行
-2. `studio agent status`：确认当前 Agent 是否运行
-3. `studio model list`：确认绑定模型是否存在并启用
-4. `studio model test model <modelId>`：确认模型真实可调用
+1. `bay status`：确认 Bay runtime 是否运行
+2. `bay agent status`：确认当前 Agent 是否运行
+3. `bay model list`：确认绑定模型是否存在并启用
+4. `bay model test model <modelId>`：确认模型真实可调用
 5. `.downcity/logs/`：查看当前项目运行日志
-6. `studio agent doctor`：诊断僵尸进程或损坏状态
+6. `bay agent doctor`：诊断僵尸进程或损坏状态
 
 ## 下一步
 

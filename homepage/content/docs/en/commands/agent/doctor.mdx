@@ -1,9 +1,9 @@
 ---
-title: studio agent doctor
+title: bay agent doctor
 description: Diagnose and optionally fix stale agent state files
 ---
 
-# `studio agent doctor`
+# `bay agent doctor`
 
 Diagnose agent state files for a target agent and optionally clean stale pid/meta files.
 
@@ -12,7 +12,7 @@ Diagnose agent state files for a target agent and optionally clean stale pid/met
 ## Usage
 
 ```bash
-studio agent doctor [path] [--fix]
+bay agent doctor [path] [--fix]
 ```
 
 ## Key option
@@ -27,26 +27,26 @@ studio agent doctor [path] [--fix]
 
 ## Related commands
 
-- [`studio agent status`](/en/docs/commands/agent/status)
-- [`studio agent restart`](/en/docs/commands/agent/restart)
+- [`bay agent status`](/en/docs/commands/agent/status)
+- [`bay agent restart`](/en/docs/commands/agent/restart)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio agent doctor .
-studio v1.0.0
+$ bay agent doctor .
+bay v1.0.0
 ⚠️  Stale daemon state detected
    project: <projectRoot>
    stalePid: <pid>
    reason: <reasons>
    log: <daemonLogPath>
-   Run `studio agent doctor <path> --fix` to clean stale pid/meta.
+   Run `bay agent doctor <path> --fix` to clean stale pid/meta.
 ```
 
 ```text
-$ studio agent doctor . --fix
-studio v1.0.0
+$ bay agent doctor . --fix
+bay v1.0.0
 ✅ Cleaned stale daemon pid/meta files
 ```

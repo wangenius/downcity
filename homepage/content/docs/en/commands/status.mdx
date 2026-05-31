@@ -1,33 +1,33 @@
 ---
-title: studio status
-description: Show Studio runtime, Console, and managed agent status
+title: bay status
+description: Show Bay runtime, Console, and managed agent status
 ---
 
-# `studio status`
+# `bay status`
 
-Show Studio runtime, Console, and managed active agents.
+Show Bay runtime, Console, and managed active agents.
 
 ## Usage
 
 ```bash
-studio status
+bay status
 ```
 
 ## Related commands
 
-- [`studio agent list --running`](/en/docs/commands/agent/list)
-- [`studio console`](/en/docs/commands/console/console)
-- [`studio public`](/en/docs/commands/public)
+- [`bay agent list --running`](/en/docs/commands/agent/list)
+- [`bay console`](/en/docs/commands/console/console)
+- [`bay public`](/en/docs/commands/public)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio status
-studio v1.0.0
+$ bay status
+bay v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK studio status                                   │
+│ OK bay status                                   │
 │   state    : running                                    │
 │   pid      : <pid>                                      │
 │   pid_file : <studioPidPath>                              │

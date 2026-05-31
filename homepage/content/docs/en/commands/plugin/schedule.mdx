@@ -1,20 +1,20 @@
 ---
-title: studio plugin schedule
+title: bay plugin schedule
 description: Inspect and cancel one-shot scheduled plugin jobs
 ---
 
-# `studio plugin schedule`
+# `bay plugin schedule`
 
-`studio plugin schedule` manages the local one-shot plugin schedule store.
+`bay plugin schedule` manages the local one-shot plugin schedule store.
 
 Use it when a plugin action was accepted with `--delay` or `--time` and you want to inspect or cancel the resulting scheduled job.
 
 ## Usage
 
 ```bash
-studio plugin schedule list [options]
-studio plugin schedule info <jobId> [options]
-studio plugin schedule cancel <jobId> [options]
+bay plugin schedule list [options]
+bay plugin schedule info <jobId> [options]
+bay plugin schedule cancel <jobId> [options]
 ```
 
 ## Supported subcommands
@@ -25,11 +25,11 @@ studio plugin schedule cancel <jobId> [options]
 
 ## What it applies to
 
-- `studio chat send --delay/--time`
-- `studio memory flush --delay/--time`
-- `studio plugin command <plugin> <command> --delay/--time`
+- `bay chat send --delay/--time`
+- `bay memory flush --delay/--time`
+- `bay plugin command <plugin> <command> --delay/--time`
 
-This is one-shot scheduling only. For reusable workflows or cron-style automation, use `studio task`.
+This is one-shot scheduling only. For reusable workflows or cron-style automation, use `bay task`.
 
 ## Storage
 
@@ -42,12 +42,12 @@ Scheduled jobs are stored in the current agent project's:
 ## Examples
 
 ```bash
-studio plugin schedule list --path /abs/path/to/agent
-studio plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
-studio plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+bay plugin schedule list --path /abs/path/to/agent
+bay plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+bay plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
 ```
 
 ## Related
 
-- [`studio plugin`](/en/docs/commands/plugin/plugin)
-- [`studio task`](/en/docs/commands/plugin/task)
+- [`bay plugin`](/en/docs/commands/plugin/plugin)
+- [`bay task`](/en/docs/commands/plugin/task)

@@ -52,7 +52,7 @@ const files = [
   'packages/services/package.json',
   'packages/plugins/package.json',
   'cli/city/package.json',
-  'cli/studio/package.json',
+  'cli/bay/package.json',
   'cli/downcity/package.json',
 ];
 
@@ -180,7 +180,7 @@ main() {
     packages/services/package.json \
     packages/plugins/package.json \
     cli/city/package.json \
-    cli/studio/package.json \
+    cli/bay/package.json \
     cli/downcity/package.json
   
   # 7. 输入提交信息

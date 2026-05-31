@@ -1,32 +1,32 @@
 ---
-title: studio start
-description: Start Studio runtime in background mode
+title: bay start
+description: Start Bay runtime in background mode
 ---
 
-# `studio start`
+# `bay start`
 
-Start Studio runtime in background mode.
+Start Bay runtime in background mode.
 
-Startup initializes the Studio runtime registry and process state.
+Startup initializes the Bay runtime registry and process state.
 If no local token exists yet, startup automatically creates a `console-bootstrap` token and prints the plain token once in startup output.
 Startup also tries to discover the machine's public IP and saves it to Console Env as `DOWNCITY_PUBLIC_HOST`. Later, agent `contact link` generation prefers this address so link codes do not fall back to `127.0.0.1`.
 
-If you also want to start Console in one step, use `studio start --console`, `studio start -a`, or `studio start -p`.
+If you also want to start Console in one step, use `bay start --console`, `bay start -a`, or `bay start -p`.
 If you pass `-p/--public` or `-h/--host`, the CLI also starts Console automatically.
-If you previously enabled persisted public mode with [`studio public`](/en/docs/commands/public), plain `studio start` also reuses that saved Console binding unless you override it explicitly.
+If you previously enabled persisted public mode with [`bay public`](/en/docs/commands/public), plain `bay start` also reuses that saved Console binding unless you override it explicitly.
 
 ## Usage
 
 ```bash
-studio start
+bay start
 ```
 
 ```bash
-studio start --console
+bay start --console
 ```
 
 ```bash
-studio start -p
+bay start -p
 ```
 
 ## Common options
@@ -38,35 +38,35 @@ studio start -p
 
 ## External access
 
-- Plain `studio start` only starts the runtime and does not expose the Web Console.
-- `studio start --console` still binds Console to `127.0.0.1:5315` by default.
-- `studio start -p` starts Console automatically and switches the bind address to `0.0.0.0:5315`, which is suitable for server access from outside.
-- `studio public on` makes that public Console behavior persist for future plain `studio start` runs.
+- Plain `bay start` only starts the runtime and does not expose the Web Console.
+- `bay start --console` still binds Console to `127.0.0.1:5315` by default.
+- `bay start -p` starts Console automatically and switches the bind address to `0.0.0.0:5315`, which is suitable for server access from outside.
+- `bay public on` makes that public Console behavior persist for future plain `bay start` runs.
 - When Console is bound to `0.0.0.0`, use the server IP or domain to connect, not `127.0.0.1`.
 - In public mode, startup output also prints `Public URL`.
 - If the machine cannot determine a real public IP by itself (for example behind NAT / reverse proxy / load balancer), start city behind a reachable server, domain, or tunnel.
-- `studio start` saves the auto-detected public IP as global `DOWNCITY_PUBLIC_HOST`; if the deployment environment already injects `DOWNCITY_PUBLIC_URL` or `DOWNCITY_PUBLIC_HOST`, it does not overwrite the existing value.
+- `bay start` saves the auto-detected public IP as global `DOWNCITY_PUBLIC_HOST`; if the deployment environment already injects `DOWNCITY_PUBLIC_URL` or `DOWNCITY_PUBLIC_HOST`, it does not overwrite the existing value.
 
 ## Port meanings
 
-- `5314`: Studio runtime API port for `health`, managed plugin, plugin, and related endpoints.
+- `5314`: Bay runtime API port for `health`, managed plugin, plugin, and related endpoints.
 - `5315`: Console Web UI port for browser access.
 
 ## Related commands
 
-- [`studio stop`](/en/docs/commands/stop)
-- [`studio status`](/en/docs/commands/status)
-- [`studio public`](/en/docs/commands/public)
-- [`studio agent list --running`](/en/docs/commands/agent/list)
+- [`bay stop`](/en/docs/commands/stop)
+- [`bay status`](/en/docs/commands/status)
+- [`bay public`](/en/docs/commands/public)
+- [`bay agent list --running`](/en/docs/commands/agent/list)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio start --console
-studio v1.0.0
-✅ Studio runtime started
+$ bay start --console
+bay v1.0.0
+✅ Bay runtime started
    pid: <runtimePid>
    log: <studioRuntimeLogPath>
    port: 5314
@@ -86,9 +86,9 @@ studio v1.0.0
 ```
 
 ```text
-$ studio start
-studio v1.0.0
-✅ Studio runtime started
+$ bay start
+bay v1.0.0
+✅ Bay runtime started
    pid: <runtimePid>
    log: <studioRuntimeLogPath>
    port: 5314

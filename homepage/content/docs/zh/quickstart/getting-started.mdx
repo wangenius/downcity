@@ -11,37 +11,37 @@ description: 用正确启动顺序在 10 分钟内跑通 Console + Agent
 npm install -g downcity
 # 或
 pnpm add -g downcity
-studio --version
+bay --version
 city --version
 ```
 
-> `downcity` 安装后会提供 `studio` 和 `city` 两个命令。
+> `downcity` 安装后会提供 `bay` 和 `city` 两个命令。
 >
-> 如果安装后仍然找不到 `studio`，请先看 [FAQ](/zh/docs/operations/faq)。
+> 如果安装后仍然找不到 `bay`，请先看 [FAQ](/zh/docs/operations/faq)。
 >
-> 后续升级可以直接执行 `studio update`，它会更新你最初安装的那个包。
+> 后续升级可以直接执行 `bay update`，它会更新你最初安装的那个包。
 
-## 2. 初始化 Studio（仅首次）
+## 2. 初始化 Bay（仅首次）
 
 ```bash
-studio init
+bay init
 ```
 
 该命令会生成 Console 全局配置（位于 `~/.downcity/`）。
 
-## 3. 启动 Studio
+## 3. 启动 Bay
 
 ```bash
-studio start
+bay start
 ```
 
-> `studio agent start` 依赖 console 先运行。
+> `bay agent start` 依赖 console 先运行。
 
 ## 4. 初始化项目
 
 ```bash
 cd /path/to/your-repo
-studio agent create .
+bay agent create .
 ```
 
 初始化后会生成：
@@ -70,7 +70,7 @@ studio agent create .
 
 说明：
 
-- `modelId` 指向 Studio 全局模型池中的某个模型
+- `modelId` 指向 Bay 全局模型池中的某个模型
 - 项目本身不再直接保存旧的 `model.primary` 结构
 - 如果你还没准备模型池，请先到全局模型管理中准备一个可用模型
 
@@ -79,7 +79,7 @@ studio agent create .
 启动（默认后台 daemon，适合长期运行）：
 
 ```bash
-studio agent start
+bay agent start
 ```
 
 如果你当前不在已初始化的 agent 目录里，Downcity 会从已登记 agent 中提供交互式选择。
@@ -87,15 +87,15 @@ studio agent start
 需要在当前终端前台观察日志时再用：
 
 ```bash
-studio agent start --foreground
+bay agent start --foreground
 ```
 
 ## 7. 验证 Agent 状态
 
 ```bash
-studio agent list
-studio agent status
-studio agent list --running
+bay agent list
+bay agent status
+bay agent list --running
 ```
 
 说明：
@@ -106,7 +106,7 @@ studio agent list --running
 ## 8. 可选：启动 Console UI
 
 ```bash
-studio start --console
+bay start --console
 ```
 
 ## 9. 可选：Chrome 扩展网页选区直发 Agent
@@ -127,6 +127,6 @@ studio start --console
 
 - [配置详解](/zh/docs/quickstart/configuration)
 - [Agent 文档总览](/zh/docs/agent/overview/what-is-agent)
-- [`studio skill`](/zh/docs/commands/plugin/skill)
-- [`studio task`](/zh/docs/commands/plugin/task)
+- [`bay skill`](/zh/docs/commands/plugin/skill)
+- [`bay task`](/zh/docs/commands/plugin/task)
 - [FAQ](/zh/docs/operations/faq)

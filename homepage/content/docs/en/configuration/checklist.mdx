@@ -8,7 +8,7 @@ description: Production/readiness checks before rollout
 Use this checklist before release:
 
 1. Model binding
-- Verify `downcity.json.model.primary` exists in `studio model list`.
+- Verify `downcity.json.model.primary` exists in `bay model list`.
 
 2. Routing and network
 - Verify `start.host/start.port` match runtime daemon.
@@ -24,7 +24,7 @@ Use this checklist before release:
 
 5. Observability
 - Confirm log paths are writable and traceable.
-- Check `studio status` and `studio agent status` are healthy.
+- Check `bay status` and `bay agent status` are healthy.
 
 ## Related docs
 

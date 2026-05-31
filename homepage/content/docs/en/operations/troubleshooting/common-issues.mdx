@@ -5,43 +5,43 @@ description: Typical installation, startup, and config failures
 
 # Common Issues
 
-## Command not found (`studio: command not found` / `studio: command not found`)
+## Command not found (`bay: command not found` / `bay: command not found`)
 
 ```bash
 npm config get prefix
 echo $PATH
 export PATH=$(npm config get prefix)/bin:$PATH
 rehash
-studio --version
+bay --version
 ```
 
 Or run directly with:
 
 ```bash
-studio --version
+bay --version
 ```
 
 Notes:
 
-- `studio` and `city` come from the same `downcity` package but expose different command surfaces.
+- `bay` and `city` come from the same `downcity` package but expose different command surfaces.
 - New installs should not require manual `chmod +x`.
-- If `sudo studio ...` fails but `studio ...` works, it is usually a `sudo` PATH issue rather than an install failure.
+- If `sudo bay ...` fails but `bay ...` works, it is usually a `sudo` PATH issue rather than an install failure.
 
 ## Port conflict (5314 already in use)
 
 ```bash
 lsof -nP -iTCP:5314 -sTCP:LISTEN
-studio agent doctor . --fix
-studio agent restart .
+bay agent doctor . --fix
+bay agent restart .
 ```
 
-## `studio task/chat/...` cannot connect
+## `bay task/chat/...` cannot connect
 
 Make sure daemon is running:
 
 ```bash
-studio agent start
-studio plugin list
+bay agent start
+bay plugin list
 ```
 
 ## LLM configuration mismatch
@@ -49,8 +49,8 @@ studio plugin list
 Check:
 
 ```bash
-studio model list
-studio config get model.primary
+bay model list
+bay config get model.primary
 ```
 
 Ensure:

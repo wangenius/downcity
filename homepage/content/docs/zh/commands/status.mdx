@@ -1,33 +1,33 @@
 ---
-title: studio status
-description: 查看 Studio runtime、Console 与托管 agent 状态
+title: bay status
+description: 查看 Bay runtime、Console 与托管 agent 状态
 ---
 
-# `studio status`
+# `bay status`
 
-查看 Studio runtime、Console 与当前托管 agent 概览。
+查看 Bay runtime、Console 与当前托管 agent 概览。
 
 ## 用法
 
 ```bash
-studio status
+bay status
 ```
 
 ## 相关命令
 
-- [`studio agent list --running`](/zh/docs/commands/agent/list)
-- [`studio console`](/zh/docs/commands/console/console)
-- [`studio public`](/zh/docs/commands/public)
+- [`bay agent list --running`](/zh/docs/commands/agent/list)
+- [`bay console`](/zh/docs/commands/console/console)
+- [`bay public`](/zh/docs/commands/public)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/studio/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ studio status
-studio v1.0.0
+$ bay status
+bay v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK studio status                                   │
+│ OK bay status                                   │
 │   state    : running                                    │
 │   pid      : <pid>                                      │
 │   pid_file : <studioPidPath>                              │

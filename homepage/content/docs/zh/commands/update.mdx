@@ -1,26 +1,26 @@
 ---
-title: studio update
+title: bay update
 description: 更新当前全局安装来源对应的 downcity CLI 聚合包到最新版本
 ---
 
-# `studio update`
+# `bay update`
 
 更新当前全局安装来源对应的 `downcity` CLI 聚合包到最新版本。
 
-默认情况下，Downcity 会同时判断当前 CLI 的安装包名和包管理器。如果你安装的是 `downcity`，`studio update` 会升级 `downcity`；
+默认情况下，Downcity 会同时判断当前 CLI 的安装包名和包管理器。如果你安装的是 `downcity`，`bay update` 会升级 `downcity`；
 
 ## 用法
 
 ```bash
-studio update
+bay update
 ```
 
 ```bash
-studio update --manager npm
+bay update --manager npm
 ```
 
 ```bash
-studio update --manager pnpm
+bay update --manager pnpm
 ```
 
 ## 常用参数
@@ -29,20 +29,20 @@ studio update --manager pnpm
 
 ## 关键行为
 
-- `studio update` 只更新当前全局安装来源对应的 CLI 包本身。
-- 不会自动重启已经运行中的 Studio runtime / Console 进程。
-- 更新完成后，如果你希望运行中的进程也加载新版本，请执行 [`studio restart`](/zh/docs/commands/restart)。
+- `bay update` 只更新当前全局安装来源对应的 CLI 包本身。
+- 不会自动重启已经运行中的 Bay runtime / Console 进程。
+- 更新完成后，如果你希望运行中的进程也加载新版本，请执行 [`bay restart`](/zh/docs/commands/restart)。
 
 ## 相关命令
 
-- [`studio restart`](/zh/docs/commands/restart)
-- [`studio status`](/zh/docs/commands/status)
+- [`bay restart`](/zh/docs/commands/restart)
+- [`bay status`](/zh/docs/commands/status)
 
 ## 示例输出
 
 ```text
-$ studio update
-studio v1.0.0
+$ bay update
+bay v1.0.0
 
 Updating downcity
   manager   npm
@@ -51,5 +51,5 @@ Updating downcity
 Downcity updated
   package   downcity@latest
   manager   npm
-  note      如果当前已有 Studio runtime / Console 在运行，建议执行 `studio restart` 载入最新版本。
+  note      如果当前已有 Bay runtime / Console 在运行，建议执行 `bay restart` 载入最新版本。
 ```

@@ -1,9 +1,9 @@
 ---
-title: studio agent status
+title: bay agent status
 description: 查看指定 agent 状态
 ---
 
-# `studio agent status`
+# `bay agent status`
 
 查看指定 agent 的进程状态。
 
@@ -12,7 +12,7 @@ description: 查看指定 agent 状态
 ## 用法
 
 ```bash
-studio agent status [path]
+bay agent status [path]
 ```
 
 ## 行为说明
@@ -24,19 +24,19 @@ studio agent status [path]
 
 ## 相关命令
 
-- [`studio agent start`](/zh/docs/commands/agent/start)
-- [`studio agent restart`](/zh/docs/commands/agent/restart)
-- [`studio agent list --running`](/zh/docs/commands/agent/list)
+- [`bay agent start`](/zh/docs/commands/agent/start)
+- [`bay agent restart`](/zh/docs/commands/agent/restart)
+- [`bay agent list --running`](/zh/docs/commands/agent/list)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/studio/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ studio agent status .
-studio v1.0.0
+$ bay agent status .
+bay v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK studio agent status                                    │
+│ OK bay agent status                                    │
 │   project    : <projectRoot>                           │
 │   log        : <daemonLogPath>                         │
 │   state      : running                                 │
@@ -46,15 +46,15 @@ studio v1.0.0
 ```
 
 ```text
-$ studio agent status .
-studio v1.0.0
+$ bay agent status .
+bay v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ WARN studio agent status                                  │
+│ WARN bay agent status                                  │
 │   project      : <projectRoot>                         │
 │   log          : <daemonLogPath>                       │
 │   state        : stale                                 │
 │   stale_pid    : <pid>                                 │
 │   stale_reason : <reason>                              │
-│   fix          : studio agent doctor <projectRoot> --fix  │
+│   fix          : bay agent doctor <projectRoot> --fix  │
 └─────────────────────────────────────────────────────────┘
 ```

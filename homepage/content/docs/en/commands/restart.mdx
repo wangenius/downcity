@@ -1,17 +1,17 @@
 ---
-title: studio restart
-description: Restart Studio runtime, restore managed agents, then restart Console
+title: bay restart
+description: Restart Bay runtime, restore managed agents, then restart Console
 ---
 
-# `studio restart`
+# `bay restart`
 
-Restart the full Studio runtime stack.
+Restart the full Bay runtime stack.
 
 Current behavior:
 
 1. stop Console
-2. stop Studio runtime
-3. restart Studio runtime
+2. stop Bay runtime
+3. restart Bay runtime
 4. restore managed agents that were running before restart
 5. restart Console
 
@@ -20,26 +20,26 @@ During the stop phase, Downcity stops the matching process group first. ACP exec
 ## Usage
 
 ```bash
-studio restart
+bay restart
 ```
 
 ## Related commands
 
-- [`studio start`](/en/docs/commands/start)
-- [`studio stop`](/en/docs/commands/stop)
-- [`studio status`](/en/docs/commands/status)
-- [`studio console`](/en/docs/commands/console/console)
+- [`bay start`](/en/docs/commands/start)
+- [`bay stop`](/en/docs/commands/stop)
+- [`bay status`](/en/docs/commands/status)
+- [`bay console`](/en/docs/commands/console/console)
 
 ## Example output
 
 ```text
-$ studio restart
-studio v1.0.0
+$ bay restart
+bay v1.0.0
 ✅ Console stopped
    pid: <consolePid>
-✅ Studio runtime stopped
+✅ Bay runtime stopped
    pid: <studioPid>
-✅ Studio runtime started
+✅ Bay runtime started
    pid: <newStudioPid>
 Restarting 2 managed agents...
 ✅ Console started

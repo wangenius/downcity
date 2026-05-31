@@ -23,7 +23,7 @@ export function isNoRunningAgentError(messageInput: string): boolean {
   const message = String(messageInput || "").toLowerCase();
   return (
     message.includes("no running agent found") ||
-    message.includes("start one via `studio agent start` first") ||
+    message.includes("start one via `bay agent start` first") ||
     message.includes("no running agent selected")
   );
 }

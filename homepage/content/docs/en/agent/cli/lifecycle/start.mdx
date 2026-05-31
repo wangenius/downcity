@@ -1,16 +1,16 @@
 ---
-title: studio agent start
+title: bay agent start
 description: Start an Agent process in background or foreground mode
 ---
 
-# `studio agent start`
+# `bay agent start`
 
 ## Usage
 
 ```bash
-studio agent start [path]
-studio agent start [path] --foreground
-studio agent start [path] --host 0.0.0.0
+bay agent start [path]
+bay agent start [path] --foreground
+bay agent start [path] --host 0.0.0.0
 ```
 
 ## Default behavior
@@ -32,7 +32,7 @@ This makes scripted usage predictable while keeping human usage convenient.
 ## `--foreground`
 
 ```bash
-studio agent start --foreground
+bay agent start --foreground
 ```
 
 Use this when you want to:
@@ -53,7 +53,7 @@ Before startup, the following must be valid:
 
 If these conditions are missing, repeated `start` attempts are less useful than checking:
 
-- `studio agent status`
+- `bay agent status`
 - [Agent won't start](/en/docs/agent/operations/troubleshooting/agent-wont-start)
 
 Continue with:

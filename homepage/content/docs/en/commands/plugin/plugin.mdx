@@ -1,11 +1,11 @@
 ---
-title: studio plugin
+title: bay plugin
 description: Inspect plugin catalog, manage managed-plugin lifecycle, and use advanced plugin command forms
 ---
 
-# `studio plugin`
+# `bay plugin`
 
-`studio plugin` is the generic entry for the current plugin system.
+`bay plugin` is the generic entry for the current plugin system.
 
 > Recommended reading: conceptual plugin docs live in [Agent SDK / Plugins](/en/agent-sdk-docs/plugins/overview), and concrete manuals live in [Plugins Docs](/en/plugins-docs).
 
@@ -21,34 +21,34 @@ Use it when you want to:
 ## Common examples
 
 ```bash
-studio plugin
-studio plugin list
-studio plugin status asr
-studio plugin start chat --agent my-agent
-studio plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
-studio plugin action asr status
-studio plugin schedule list --path /path/to/agent
+bay plugin
+bay plugin list
+bay plugin status asr
+bay plugin start chat --agent my-agent
+bay plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
+bay plugin action asr status
+bay plugin schedule list --path /path/to/agent
 ```
 
 ## Notes
 
-- Running bare `studio plugin` in an interactive terminal opens a plugin manager.
-- `studio plugin list` and `studio plugin status` are static console-level catalog views.
+- Running bare `bay plugin` in an interactive terminal opens a plugin manager.
+- `bay plugin list` and `bay plugin status` are static console-level catalog views.
 - Managed plugins such as `chat`, `task`, `memory`, `contact`, and `shell` support `start/stop/restart/command`.
-- `studio plugin action ...` is the local execution form and runs directly inside the current project by default.
-- For day-to-day usage, prefer concrete command roots such as `studio chat ...`, `studio task ...`, `studio memory ...`, `studio shell ...`, `studio web ...`, `studio skill ...`, `studio asr ...`, and `studio tts ...`.
+- `bay plugin action ...` is the local execution form and runs directly inside the current project by default.
+- For day-to-day usage, prefer concrete command roots such as `bay chat ...`, `bay task ...`, `bay memory ...`, `bay shell ...`, `bay web ...`, `bay skill ...`, `bay asr ...`, and `bay tts ...`.
 
 ## Related
 
-- [`studio chat`](/en/docs/commands/plugin/chat)
-- [`studio task`](/en/docs/commands/plugin/task)
-- [`studio memory`](/en/docs/commands/plugin/memory)
-- [`studio contact`](/en/docs/commands/plugin/contact)
-- [`studio shell`](/en/docs/commands/plugin/shell)
+- [`bay chat`](/en/docs/commands/plugin/chat)
+- [`bay task`](/en/docs/commands/plugin/task)
+- [`bay memory`](/en/docs/commands/plugin/memory)
+- [`bay contact`](/en/docs/commands/plugin/contact)
+- [`bay shell`](/en/docs/commands/plugin/shell)
 - [`Plugin Scheduling`](/en/docs/commands/plugin/schedule)
-- [`studio skill`](/en/docs/commands/plugin/skill)
-- [`studio web`](/en/docs/commands/plugin/web)
-- [`studio asr`](/en/docs/commands/plugin/asr)
-- [`studio tts`](/en/docs/commands/plugin/tts)
+- [`bay skill`](/en/docs/commands/plugin/skill)
+- [`bay web`](/en/docs/commands/plugin/web)
+- [`bay asr`](/en/docs/commands/plugin/asr)
+- [`bay tts`](/en/docs/commands/plugin/tts)
 - [Agent SDK Plugin Concepts](/en/agent-sdk-docs/plugins/overview)
 - [Plugins Docs](/en/plugins-docs)

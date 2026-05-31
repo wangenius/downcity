@@ -11,13 +11,13 @@ description: 第一次使用 Agent 时最常遇到的问题和排查顺序
 
 表现：
 
-- `studio agent status` 显示 `not initialized`
+- `bay agent status` 显示 `not initialized`
 - 缺少 `PROFILE.md` 或 `downcity.json`
 
 处理：
 
 ```bash
-studio agent create .
+bay agent create .
 ```
 
 如果连最小初始化文件都不完整，就先不要去怀疑模型、渠道或 session。
@@ -40,20 +40,20 @@ studio agent create .
 
 表现：
 
-- `studio agent chat` 连不上
+- `bay agent chat` 连不上
 - CLI 提示 daemon unreachable
 
 处理：
 
 ```bash
-studio agent status
-studio agent start
+bay agent status
+bay agent start
 ```
 
 如果后台启动信息不够清楚，可以进一步使用：
 
 ```bash
-studio agent start --foreground
+bay agent start --foreground
 ```
 
 ## 4. 状态文件 stale
@@ -65,15 +65,15 @@ studio agent start --foreground
 处理：
 
 ```bash
-studio agent doctor --fix
-studio agent start
+bay agent doctor --fix
+bay agent start
 ```
 
 这种情况通常不需要删除项目目录或手工乱删状态文件，先走 `doctor --fix` 就够了。
 
 ## 推荐排查顺序
 
-1. `studio agent status`
+1. `bay agent status`
 2. 看 `downcity.json`
 3. 确认模型绑定
 4. 如果 stale 就 `doctor --fix`

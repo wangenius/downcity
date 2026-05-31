@@ -24,12 +24,12 @@ npm i -g downcity
 pnpm build:cli
 ```
 
-这个命令会先构建本地 `cli/city`，然后自动刷新你机器上的全局 `city` / `studio` 命令。构建通过后，下一次执行 `city` / `studio` 时就是当前仓库这份代码。
+这个命令会先构建本地 `cli/city`，然后自动刷新你机器上的全局 `city` / `bay` 命令。构建通过后，下一次执行 `city` / `bay` 时就是当前仓库这份代码。
 
-如果你已经装过 `city` / `studio`，之后也可以直接运行：
+如果你已经装过 `city` / `bay`，之后也可以直接运行：
 
 ```bash
-studio update
+bay update
 ```
 
 在仓库里运行时，它会优先用当前 workspace 重新 build 并刷新全局安装；不在仓库里时，则会更新到 npm 上的最新版本。
@@ -135,8 +135,8 @@ Stripe webhook endpoint 本身则固定是：
 
 这一页最常见的 CLI 入口就是：
 
-- `city` / `studio`
-- `studio update`
+- `city` / `bay`
+- `bay update`
 - `Manage Servers`
 - `Admin`
 - `User`

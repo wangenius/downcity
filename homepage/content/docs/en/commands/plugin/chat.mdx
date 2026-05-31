@@ -1,19 +1,19 @@
 ---
-title: studio chat
+title: bay chat
 description: Managed chat plugin commands for channel runtime, messaging, conversation inspection, and authorization
 ---
 
-# `studio chat`
+# `bay chat`
 
-`studio chat` is the managed chat plugin command group.
+`bay chat` is the managed chat plugin command group.
 
 Use it when you want to manage channel runtime, inspect conversations, send messages, react to messages, or manage platform-user authorization.
 
 ## Usage
 
 ```bash
-studio chat
-studio chat <subcommand> [options]
+bay chat
+bay chat <subcommand> [options]
 ```
 
 ## Main subcommands
@@ -41,21 +41,21 @@ studio chat <subcommand> [options]
 - `--delay <ms>`
 - `--time <time>`
 
-Use this for “send one existing message later”. For reusable automations or cron-style work, use `studio task`.
+Use this for “send one existing message later”. For reusable automations or cron-style work, use `bay task`.
 
 ## Examples
 
 ```bash
-studio chat list --limit 20
-studio chat info --chat-key ctx_xxxxxxxxxxxxxxxx
-studio chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
-studio chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
-studio chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
-studio chat auth set telegram:12345678 --role admin
+bay chat list --limit 20
+bay chat info --chat-key ctx_xxxxxxxxxxxxxxxx
+bay chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
+bay chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
+bay chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
+bay chat auth set telegram:12345678 --role admin
 ```
 
 ## Related
 
 - [`Plugin Scheduling`](/en/docs/commands/plugin/schedule)
-- [`studio task`](/en/docs/commands/plugin/task)
+- [`bay task`](/en/docs/commands/plugin/task)
 - [`Plugins Docs / chat`](/en/plugins-docs/builtins/chat)

@@ -17,15 +17,15 @@ The most common ones are:
 
 ## `DC_CITY_HOST` / `DC_CITY_PORT`
 
-The current Studio runtime endpoint inherited by nested `studio` invocations.
+The current Bay runtime endpoint inherited by nested `bay` invocations.
 
-They are mainly used when an agent shell or tool launches another `studio` command and that child process needs to route back to the current runtime.
+They are mainly used when an agent shell or tool launches another `bay` command and that child process needs to route back to the current runtime.
 
 ## `DC_AGENT_ID`
 
 The current agent runtime id.
 
-Current Studio runtime uses the same resolved id value that is passed into `new Agent({ id })`.
+Current Bay runtime uses the same resolved id value that is passed into `new Agent({ id })`.
 
 ## `DC_AGENT_PATH`
 

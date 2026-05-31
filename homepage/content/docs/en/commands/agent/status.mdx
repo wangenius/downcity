@@ -1,9 +1,9 @@
 ---
-title: studio agent status
+title: bay agent status
 description: Show target agent status
 ---
 
-# `studio agent status`
+# `bay agent status`
 
 Show process status for a target agent.
 
@@ -12,7 +12,7 @@ Show process status for a target agent.
 ## Usage
 
 ```bash
-studio agent status [path]
+bay agent status [path]
 ```
 
 ## Behavior
@@ -24,19 +24,19 @@ studio agent status [path]
 
 ## Related commands
 
-- [`studio agent start`](/en/docs/commands/agent/start)
-- [`studio agent restart`](/en/docs/commands/agent/restart)
-- [`studio agent list --running`](/en/docs/commands/agent/list)
+- [`bay agent start`](/en/docs/commands/agent/start)
+- [`bay agent restart`](/en/docs/commands/agent/restart)
+- [`bay agent list --running`](/en/docs/commands/agent/list)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio agent status .
-studio v1.0.0
+$ bay agent status .
+bay v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK studio agent status                                    │
+│ OK bay agent status                                    │
 │   project    : <projectRoot>                           │
 │   log        : <daemonLogPath>                         │
 │   state      : running                                 │
@@ -46,15 +46,15 @@ studio v1.0.0
 ```
 
 ```text
-$ studio agent status .
-studio v1.0.0
+$ bay agent status .
+bay v1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ WARN studio agent status                                  │
+│ WARN bay agent status                                  │
 │   project      : <projectRoot>                         │
 │   log          : <daemonLogPath>                       │
 │   state        : stale                                 │
 │   stale_pid    : <pid>                                 │
 │   stale_reason : <reason>                              │
-│   fix          : studio agent doctor <projectRoot> --fix  │
+│   fix          : bay agent doctor <projectRoot> --fix  │
 └─────────────────────────────────────────────────────────┘
 ```

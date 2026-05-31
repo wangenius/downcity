@@ -1,9 +1,9 @@
 ---
-title: studio agent chat
+title: bay agent chat
 description: Chat with a selected agent in interactive or one-shot mode
 ---
 
-# `studio agent chat`
+# `bay agent chat`
 
 Chat with a target agent from the terminal.
 
@@ -14,8 +14,8 @@ This command uses a dedicated local CLI main session: `local-cli-chat-main`.
 ## Usage
 
 ```bash
-studio agent chat [--to <id>]
-studio agent chat [--to <id>] --message <text> [--json]
+bay agent chat [--to <id>]
+bay agent chat [--to <id>] --message <text> [--json]
 ```
 
 ## Key options
@@ -36,14 +36,14 @@ studio agent chat [--to <id>] --message <text> [--json]
 
 ## Related commands
 
-- [`studio agent list`](/en/docs/commands/agent/list)
-- [`studio agent start`](/en/docs/commands/agent/start)
+- [`bay agent list`](/en/docs/commands/agent/list)
+- [`bay agent start`](/en/docs/commands/agent/start)
 
 ## Examples
 
 ```text
-$ studio agent chat --to lucas_whitman
-studio v1.0.439
+$ bay agent chat --to lucas_whitman
+bay v1.0.439
 
 INFO Agent chat · lucas_whitman
 
@@ -53,5 +53,5 @@ Today you completed the plugin interactive CLI redesign and validated the update
 ```
 
 ```bash
-$ studio agent chat --to lucas_whitman --message "summarize today's work" --json
+$ bay agent chat --to lucas_whitman --message "summarize today's work" --json
 ```

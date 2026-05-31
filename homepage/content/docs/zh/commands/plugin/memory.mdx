@@ -1,18 +1,18 @@
 ---
-title: studio memory
+title: bay memory
 description: 托管 memory plugin 命令，用于检索、读取、写入与 flush
 ---
 
-# `studio memory`
+# `bay memory`
 
-`studio memory` 是托管 memory plugin 的命令组。
+`bay memory` 是托管 memory plugin 的命令组。
 
 当 agent 或操作者需要显式查看、写入、整理 memory，而不是只依赖 prompt 注入时，使用它。
 
 ## 用法
 
 ```bash
-studio memory <subcommand> [options]
+bay memory <subcommand> [options]
 ```
 
 ## 主要子命令
@@ -32,11 +32,11 @@ studio memory <subcommand> [options]
 ## 示例
 
 ```bash
-studio memory status
-studio memory search "release decision"
-studio memory get .downcity/memory/MEMORY.md --from 10 --lines 20
-studio memory store --target longterm --content "User prefers concise release notes."
-studio memory flush --session-id telegram-chat-123 --max-messages 40
+bay memory status
+bay memory search "release decision"
+bay memory get .downcity/memory/MEMORY.md --from 10 --lines 20
+bay memory store --target longterm --content "User prefers concise release notes."
+bay memory flush --session-id telegram-chat-123 --max-messages 40
 ```
 
 ## 相关页面

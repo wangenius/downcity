@@ -1,23 +1,23 @@
 ---
 title: CLI FAQ
-description: Common questions about studio agent commands
+description: Common questions about bay agent commands
 ---
 
 # CLI FAQ
 
-## What is the difference between `studio agent start` and `studio agent start --foreground`?
+## What is the difference between `bay agent start` and `bay agent start --foreground`?
 
 - the default mode is a background daemon
 - `--foreground` runs in the current terminal
 
-## Why does `studio agent chat` say it cannot connect?
+## Why does `bay agent chat` say it cannot connect?
 
 Usually because the target agent is not running.
 
 Check:
 
 ```bash
-studio agent status
+bay agent status
 ```
 
 If the state is not `running`, restore that first before troubleshooting chat context or prompts.

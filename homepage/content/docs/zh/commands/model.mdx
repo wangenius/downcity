@@ -1,15 +1,15 @@
 ---
-title: studio model
+title: bay model
 description: 独立管理 console 全局语言模型（provider/model）
 ---
 
-# `studio model`
+# `bay model`
 
 独立的模型管理命令域，只管理语言模型。
 
 ## 设计约束
 
-- 裸 `studio model` 在 TTY 中会进入交互式 manager。
+- 裸 `bay model` 在 TTY 中会进入交互式 manager。
 - `create` 仍然保留为直接进入创建流程的快捷入口。
 - 其他子命令（`list/pause/update/test/...`）继续保持脚本友好。
 - provider 的 `apiKey` 存储在 `~/.downcity/downcity.db`，写入时自动加密。
@@ -20,56 +20,56 @@ description: 独立管理 console 全局语言模型（provider/model）
 
 ```bash
 # 交互式 manager
-studio model
+bay model
 
 # 交互式创建（选择创建 provider 或 model）
-studio model create
+bay model create
 
 # 列表
-studio model list
+bay model list
 
 # 读取详情
-studio model get provider <providerId>
-studio model get model <modelId>
+bay model get provider <providerId>
+bay model get model <modelId>
 
 # 暂停模型（默认 enabled=true）
-studio model pause <modelId>
-studio model pause <modelId> --enabled false
+bay model pause <modelId>
+bay model pause <modelId> --enabled false
 
 # 发现 provider 模型（可选自动写入）
-studio model discover <providerId>
-studio model discover <providerId> --auto-add true --prefix openai_
+bay model discover <providerId>
+bay model discover <providerId> --auto-add true --prefix openai_
 
 # 更新 provider
-studio model update provider <providerId> --api-key "$OPENAI_API_KEY"
-studio model update provider kimi_cn --type moonshot-cn
-studio model update provider kimi_ai --type moonshot-ai
+bay model update provider <providerId> --api-key "$OPENAI_API_KEY"
+bay model update provider kimi_cn --type moonshot-cn
+bay model update provider kimi_ai --type moonshot-ai
 
 # 更新 model
-studio model update model <modelId> --name gpt-4o-mini --provider openai_main
+bay model update model <modelId> --name gpt-4o-mini --provider openai_main
 
 # 删除 provider/model
-studio model remove provider <providerId>
-studio model remove model <modelId>
+bay model remove provider <providerId>
+bay model remove model <modelId>
 
 # 绑定到项目（设置 downcity.json.execution.modelId）
-studio model use <modelId> --path /path/to/agent
+bay model use <modelId> --path /path/to/agent
 
 # 测试 provider
-studio model test provider <providerId>
+bay model test provider <providerId>
 
 # 测试 model（真实调用）
-studio model test model <modelId>
+bay model test model <modelId>
 ```
 
 ## 交互式 manager
 
-- `studio model` 是面向人的全局模型池入口。
+- `bay model` 是面向人的全局模型池入口。
 - 可以直接浏览 provider 与 model、编辑配置、删除条目、测试连通性、暂停/恢复模型、把模型绑定到项目，并可随时跳转到创建流程。
 - 删除前会做保护检查：
   - provider 仍被 model 引用时拒绝删除
   - model 仍被 agent 项目的 `downcity.json.execution.modelId` 引用时拒绝删除
-- 在非交互环境中，裸 `studio model` 会回退到普通 help 输出。
+- 在非交互环境中，裸 `bay model` 会回退到普通 help 输出。
 
 ## create 行为
 
@@ -99,16 +99,16 @@ studio model test model <modelId>
 
 ## 相关命令
 
-- [`studio config`](/zh/docs/commands/config)
-- [`studio agent create`](/zh/docs/commands/agent/create)
-- [`studio agent start`](/zh/docs/commands/agent/start)
+- [`bay config`](/zh/docs/commands/config)
+- [`bay agent create`](/zh/docs/commands/agent/create)
+- [`bay agent start`](/zh/docs/commands/agent/start)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/studio/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ studio model list
+$ bay model list
 {
   "success": true,
   "providers": [
@@ -133,7 +133,7 @@ $ studio model list
 ```
 
 ```text
-$ studio model pause <modelId>
+$ bay model pause <modelId>
 {
   "success": true,
   "modelId": "<modelId>",

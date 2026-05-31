@@ -1,34 +1,34 @@
 ---
-title: studio public
+title: bay public
 description: Manage persisted public exposure for Console
 ---
 
-# `studio public`
+# `bay public`
 
-`studio public` manages the persisted public exposure mode for Console.
+`bay public` manages the persisted public exposure mode for Console.
 
 This command only controls the Console / control plane bind behavior. It does not change how individual agents listen.
 
 ## Usage
 
 ```bash
-studio public
+bay public
 ```
 
 ```bash
-studio public status
+bay public status
 ```
 
 ```bash
-studio public on
+bay public on
 ```
 
 ```bash
-studio public on --host 0.0.0.0
+bay public on --host 0.0.0.0
 ```
 
 ```bash
-studio public off
+bay public off
 ```
 
 ## Actions
@@ -44,32 +44,32 @@ studio public off
 
 ## Important behavior
 
-- `studio public on` saves a persisted Console public-mode setting for future `studio start` and `studio console start`.
-- If Console is already running, `studio public on` or `studio public off` automatically restarts Console so the new binding takes effect.
-- Explicit runtime flags still win. For example, `studio console start --host 127.0.0.1` overrides the persisted public setting for that launch.
-- `studio public` only manages Console exposure. It is not a global switch for every runtime endpoint.
+- `bay public on` saves a persisted Console public-mode setting for future `bay start` and `bay console start`.
+- If Console is already running, `bay public on` or `bay public off` automatically restarts Console so the new binding takes effect.
+- Explicit runtime flags still win. For example, `bay console start --host 127.0.0.1` overrides the persisted public setting for that launch.
+- `bay public` only manages Console exposure. It is not a global switch for every runtime endpoint.
 
 ## Typical flow
 
 ```bash
 # 1) inspect current persisted mode
-studio public status
+bay public status
 
 # 2) enable public exposure for future starts
-studio public on
+bay public on
 
 # 3) or pin a custom host
-studio public on --host 10.0.0.5
+bay public on --host 10.0.0.5
 
 # 4) start city as usual
-studio start
+bay start
 
 # 5) disable public exposure again
-studio public off
+bay public off
 ```
 
 ## Related commands
 
-- [`studio console`](/en/docs/commands/console/console)
-- [`studio start`](/en/docs/commands/start)
-- [`studio status`](/en/docs/commands/status)
+- [`bay console`](/en/docs/commands/console/console)
+- [`bay start`](/en/docs/commands/start)
+- [`bay status`](/en/docs/commands/status)

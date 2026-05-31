@@ -46,7 +46,7 @@ An agent does not own global platform concerns:
 - it does not persist city-level channel accounts
 - it is not the Console UI or the global control plane
 
-Those concerns belong to `studio` and Console.
+Those concerns belong to `bay` and Console.
 
 This boundary matters, because once you mix global concerns and project concerns together, it becomes much harder to answer basic questions like:
 
@@ -59,7 +59,7 @@ This boundary matters, because once you mix global concerns and project concerns
 You use an agent when you want to turn a repository into a long-running execution unit:
 
 - make one project conversational
-- chat with a project through `studio agent chat`
+- chat with a project through `bay agent chat`
 - receive Telegram, Feishu, or QQ messages into the project runtime
 - embed an agent into your own Node.js app with `@downcity/agent`
 - call a running agent process through `RemoteAgent`
@@ -71,9 +71,9 @@ You use an agent when you want to turn a repository into a long-running executio
 You run commands inside a project:
 
 ```bash
-studio agent create .
-studio agent start
-studio agent chat
+bay agent create .
+bay agent start
+bay agent chat
 ```
 
 This path is best when your goal is "turn this repository into an agent runtime and use it directly."

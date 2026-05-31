@@ -109,13 +109,13 @@ const CITY_COMMAND_ROOTS = new Set([
 ])
 
 /**
- * 允许自动补 `studio` 前缀的一级命令。
+ * 允许自动补 `bay` 前缀的一级命令。
  *
  * 关键点（中文）
- * - `studio` 是本机 Agent 宿主环境入口；
- * - 本机 runtime、Console、模型、配置、agent 与插件相关命令都应通过 studio 执行。
+ * - `bay` 是本机 Agent 宿主环境入口；
+ * - 本机 runtime、Console、模型、配置、agent 与插件相关命令都应通过 bay 执行。
  */
-const STUDIO_COMMAND_ROOTS = new Set([
+const BAY_COMMAND_ROOTS = new Set([
   "init",
   "start",
   "stop",
@@ -143,14 +143,14 @@ const STUDIO_COMMAND_ROOTS = new Set([
 
 const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> = [
   {
-    label: "Studio Runtime",
+    label: "Bay Runtime",
     items: [
-      { label: "Version", command: "studio -v", description: "查看 Studio CLI 版本" },
-      { label: "Studio Status", command: "status", description: "查看 studio 后台、Console 与托管 agent 状态" },
-      { label: "Studio Start", command: "start", description: "启动本机 Studio runtime" },
-      { label: "Studio Start All", command: "start --all", description: "启动 Studio、Console 与公网模式" },
-      { label: "Studio Restart", command: "restart", description: "重启 Studio 后台并恢复已运行 agent" },
-      { label: "Studio Stop", command: "stop", description: "停止 Console、Studio 后台与受管 agent" },
+      { label: "Version", command: "bay -v", description: "查看 Bay CLI 版本" },
+      { label: "Bay Status", command: "status", description: "查看 bay 后台、Console 与托管 agent 状态" },
+      { label: "Bay Start", command: "start", description: "启动本机 Bay runtime" },
+      { label: "Bay Start All", command: "start --all", description: "启动 Bay、Console 与公网模式" },
+      { label: "Bay Restart", command: "restart", description: "重启 Bay 后台并恢复已运行 agent" },
+      { label: "Bay Stop", command: "stop", description: "停止 Console、Bay 后台与受管 agent" },
     ],
   },
   {
@@ -166,7 +166,7 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
     ],
   },
   {
-    label: "Studio Agent",
+    label: "Bay Agent",
     items: [
       { label: "Agent Create", command: "agent create .", description: "初始化当前目录为 agent 项目" },
       { label: "Agent List", command: "agent list", description: "列出本机 agent 项目" },
@@ -179,14 +179,14 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
     ],
   },
   {
-    label: "Studio Config",
+    label: "Bay Config",
     items: [
       { label: "Config", command: "config", description: "管理 downcity.json 配置与 alias" },
-      { label: "Model", command: "model", description: "打开 Studio 全局模型池管理器" },
+      { label: "Model", command: "model", description: "打开 Bay 全局模型池管理器" },
       { label: "Token", command: "token", description: "管理本机 Bearer Token" },
       { label: "Env", command: "env", description: "管理平台 Env key" },
-      { label: "Studio Init", command: "init", description: "初始化 Studio 全局配置" },
-      { label: "Studio Update", command: "update", description: "更新全局 downcity CLI 聚合包" },
+      { label: "Bay Init", command: "init", description: "初始化 Bay 全局配置" },
+      { label: "Bay Update", command: "update", description: "更新全局 downcity CLI 聚合包" },
     ],
   },
   {
@@ -204,7 +204,7 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
       { label: "Chat Reconnect", command: "chat reconnect", description: "重连 chat 渠道" },
       { label: "Chat Context", command: "chat context", description: "查看当前会话上下文快照" },
       { label: "Chat History", command: "chat history --limit 30", description: "读取最近聊天历史" },
-      { label: "Chat Send", command: "chat send --text \"hello from studio\"", description: "向当前 chatKey 发送消息" },
+      { label: "Chat Send", command: "chat send --text \"hello from bay\"", description: "向当前 chatKey 发送消息" },
     ],
   },
   {
@@ -234,7 +234,7 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
       { label: "ASR Off", command: "asr off", description: "关闭 asr plugin" },
       { label: "TTS Status", command: "tts status", description: "查看 tts plugin 配置" },
       { label: "TTS On", command: "tts on", description: "启用 tts plugin" },
-      { label: "TTS Synthesize", command: "tts synthesize \"hello from studio\"", description: "生成可发送的语音文件" },
+      { label: "TTS Synthesize", command: "tts synthesize \"hello from bay\"", description: "生成可发送的语音文件" },
     ],
   },
 ]
@@ -328,18 +328,18 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
 
   /**
    * 解析最终执行命令（中文）
-   * - 已显式输入 `city|studio ...`：保持原样。
-   * - 首 token 是 Studio 已知命令/全局参数（`-v`）：自动补 `studio`。
+   * - 已显式输入 `city|bay ...`：保持原样。
+   * - 首 token 是 Bay 已知命令/全局参数（`-v`）：自动补 `bay`。
    * - 首 token 是 City 已知命令：自动补 `city`。
    * - 其他命令（clear/cd/ls/...）：按原始 shell 命令执行。
    */
   const resolveExecutionCommand = React.useCallback((commandTextInput: string): string => {
     const raw = String(commandTextInput || "").trim()
     if (!raw) return ""
-    if (/^(?:city|studio)(?:\s|$)/i.test(raw)) return raw
+    if (/^(?:city|bay)(?:\s|$)/i.test(raw)) return raw
     const first_token = String(raw.split(/\s+/, 1)[0] || "").trim().toLowerCase()
     if (!first_token) return ""
-    if (first_token.startsWith("-") || STUDIO_COMMAND_ROOTS.has(first_token)) return `studio ${raw}`
+    if (first_token.startsWith("-") || BAY_COMMAND_ROOTS.has(first_token)) return `bay ${raw}`
     if (CITY_COMMAND_ROOTS.has(first_token)) return `city ${raw}`
     return raw
   }, [])
@@ -769,7 +769,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
                     navigateCommandHistory("down")
                   }
                 }}
-                placeholder="输入命令后按回车执行（city / studio 可自动补全）"
+                placeholder="输入命令后按回车执行（city / bay 可自动补全）"
                 className="relative z-10 h-8 w-full bg-transparent font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground/80"
               />
             </div>

@@ -1,18 +1,18 @@
 ---
-title: studio config
+title: bay config
 description: 管理项目 downcity.json 与 alias（不含模型池管理）
 ---
 
-# `studio config`
+# `bay config`
 
 管理项目 `downcity.json` 与 alias。
 
-> 命令名说明：配置命令是 `studio config`，不是 `studio console config`。
+> 命令名说明：配置命令是 `bay config`，不是 `bay console config`。
 
 ## 用法
 
 ```bash
-studio config <subcommand>
+bay config <subcommand>
 ```
 
 ## 子命令
@@ -22,31 +22,31 @@ studio config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> 模型池管理已迁移到独立命令：[`studio model`](/zh/docs/commands/model)。
+> 模型池管理已迁移到独立命令：[`bay model`](/zh/docs/commands/model)。
 
 ## Plugin 配置
 
-`studio config` 现在只读写项目 `downcity.json`。
+`bay config` 现在只读写项目 `downcity.json`。
 
 插件相关配置请改为：
 
 - `plugins.*` 只管理当前 agent 的插件参数
-- plugin 启停请使用 `studio <plugin> on/off`
+- plugin 启停请使用 `bay <plugin> on/off`
 
 示例：
 
 ```bash
-studio config get plugins.asr
-studio config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+bay config get plugins.asr
+bay config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
 ## 示例
 
 ```bash
-studio config get model.primary
-studio config set model.primary fast
-studio config unset plugins.chat.channels.telegram
-studio config alias --dry-run
+bay config get model.primary
+bay config set model.primary fast
+bay config unset plugins.chat.channels.telegram
+bay config alias --dry-run
 ```
 
 ## 延伸阅读
@@ -55,10 +55,10 @@ studio config alias --dry-run
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/studio/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ studio config get model.primary
+$ bay config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
@@ -69,7 +69,7 @@ $ studio config get model.primary
 ```
 
 ```text
-$ studio config set model.primary gpt-5.4
+$ bay config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",

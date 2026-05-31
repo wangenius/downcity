@@ -1,18 +1,18 @@
 ---
-title: studio task
+title: bay task
 description: Managed task plugin commands for task definition, execution, and automation
 ---
 
-# `studio task`
+# `bay task`
 
-`studio task` is the managed task plugin command group.
+`bay task` is the managed task plugin command group.
 
 Use it when you want a reusable automation definition instead of a one-shot delayed plugin action.
 
 ## Usage
 
 ```bash
-studio task <subcommand> [options]
+bay task <subcommand> [options]
 ```
 
 ## Main subcommands
@@ -28,18 +28,18 @@ studio task <subcommand> [options]
 
 ## Key boundaries
 
-- Use `studio task` for reusable or long-lived automation.
-- Use `studio chat --delay/--time` or `studio memory --delay/--time` for one existing action that should happen later once.
+- Use `bay task` for reusable or long-lived automation.
+- Use `bay chat --delay/--time` or `bay memory --delay/--time` for one existing action that should happen later once.
 - Task definitions live in project storage and can use `@manual`, cron, or `time:<ISO8601>`.
 
 ## Examples
 
 ```bash
-studio task list
-studio task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
-studio task run daily-check
-studio task update daily-check --when "@manual"
-studio task disable daily-check
+bay task list
+bay task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+bay task run daily-check
+bay task update daily-check --when "@manual"
+bay task disable daily-check
 ```
 
 ## Related

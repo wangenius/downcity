@@ -10,7 +10,7 @@ A project agent usually moves through five stages.
 ## 1. Initialize the project
 
 ```bash
-studio agent create .
+bay agent create .
 ```
 
 This generates the minimum runtime scaffold:
@@ -35,14 +35,14 @@ Current project agents use one execution binding:
 }
 ```
 
-This means the project must bind to a model ID from the Studio global model pool.
+This means the project must bind to a model ID from the Bay global model pool.
 
 In the current code, this binding is not optional decoration. It is one of the core prerequisites for startup.
 
 ## 3. Start the runtime
 
 ```bash
-studio agent start
+bay agent start
 ```
 
 During startup, the agent will:
@@ -60,7 +60,7 @@ In background mode, the CLI also maintains daemon state so commands like `status
 
 Once running, the agent can be entered through multiple surfaces:
 
-- `studio agent chat`
+- `bay agent chat`
 - connected chat channels
 - project-level HTTP control routes
 - SDK `Agent` and `RemoteAgent`
@@ -72,10 +72,10 @@ Even though these look different from the outside, they ultimately reuse the sam
 Common lifecycle commands:
 
 ```bash
-studio agent status
-studio agent stop
-studio agent restart
-studio agent doctor --fix
+bay agent status
+bay agent stop
+bay agent restart
+bay agent doctor --fix
 ```
 
 If the process exits unexpectedly but state files remain, `doctor` is the command that restores consistency.
@@ -86,8 +86,8 @@ In real usage, lifecycle is often cyclical rather than linear:
 
 1. edit `PROFILE.md`
 2. edit `downcity.json`
-3. `studio agent restart`
-4. `studio agent chat`
+3. `bay agent restart`
+4. `bay agent chat`
 5. observe output and iterate again
 
 That loop is normal when you are shaping a long-lived project agent.
@@ -96,10 +96,10 @@ That loop is normal when you are shaping a long-lived project agent.
 
 For most users, the easiest first path is:
 
-1. `studio agent create .`
+1. `bay agent create .`
 2. configure `downcity.json.execution.modelId`
-3. `studio agent start`
-4. `studio agent chat`
+3. `bay agent start`
+4. `bay agent chat`
 5. only then add channels or SDK integrations
 
 If you are here specifically for embedding, jump to:

@@ -1,32 +1,32 @@
 ---
-title: studio start
-description: 后台启动 Studio runtime
+title: bay start
+description: 后台启动 Bay runtime
 ---
 
-# `studio start`
+# `bay start`
 
-后台启动 Studio runtime。
+后台启动 Bay runtime。
 
-启动时会初始化 Studio runtime 的 registry 和进程状态。
+启动时会初始化 Bay runtime 的 registry 和进程状态。
 如果当前还没有任何本机 token，启动过程会自动初始化一个 `console-bootstrap` token，并在启动日志里显示一次明文 token。
 启动过程还会尝试自动发现当前机器的公网 IP，并写入 Console Env 的 `DOWNCITY_PUBLIC_HOST`。后续 agent 生成 `contact link` 时会优先使用这个地址，避免 link code 回退到 `127.0.0.1`。
 
-如果你希望一并启动 Console，请使用 `studio start --console`、`studio start -a` 或 `studio start -p`。
+如果你希望一并启动 Console，请使用 `bay start --console`、`bay start -a` 或 `bay start -p`。
 如果你传入 `-p/--public` 或 `-h/--host`，CLI 也会自动一并启动 Console。
-如果你之前通过 [`studio public`](/zh/docs/commands/public) 开启过持久化公网模式，那么普通 `studio start` 也会沿用这份已保存的 Console 绑定，除非本次显式覆盖。
+如果你之前通过 [`bay public`](/zh/docs/commands/public) 开启过持久化公网模式，那么普通 `bay start` 也会沿用这份已保存的 Console 绑定，除非本次显式覆盖。
 
 ## 用法
 
 ```bash
-studio start
+bay start
 ```
 
 ```bash
-studio start --console
+bay start --console
 ```
 
 ```bash
-studio start -p
+bay start -p
 ```
 
 ## 常用参数
@@ -38,35 +38,35 @@ studio start -p
 
 ## 对外访问
 
-- 默认 `studio start` 只启动 runtime，不暴露 Web Console。
-- `studio start --console` 默认仍绑定 `127.0.0.1:5315`。
-- `studio start -p` 会自动启动 Console，并把监听地址切到 `0.0.0.0:5315`，适合服务器对外访问。
-- `studio public on` 可以把这类公网 Console 行为持久化到后续普通 `studio start`。
+- 默认 `bay start` 只启动 runtime，不暴露 Web Console。
+- `bay start --console` 默认仍绑定 `127.0.0.1:5315`。
+- `bay start -p` 会自动启动 Console，并把监听地址切到 `0.0.0.0:5315`，适合服务器对外访问。
+- `bay public on` 可以把这类公网 Console 行为持久化到后续普通 `bay start`。
 - 如果绑定的是 `0.0.0.0`，外部访问时请使用服务器实际 IP 或域名，而不是 `127.0.0.1`。
 - 在公网模式下，启动结果会额外打印 `Public URL`。
 - 如果机器本身拿不到公网 IP（例如处在 NAT / SLB / 反向代理后面），请在可达服务器、域名或 tunnel 后启动 city。
-- `studio start` 会把自动发现的公网 IP 保存为全局 `DOWNCITY_PUBLIC_HOST`；如果部署环境已经注入 `DOWNCITY_PUBLIC_URL` 或 `DOWNCITY_PUBLIC_HOST`，不会覆盖已有值。
+- `bay start` 会把自动发现的公网 IP 保存为全局 `DOWNCITY_PUBLIC_HOST`；如果部署环境已经注入 `DOWNCITY_PUBLIC_URL` 或 `DOWNCITY_PUBLIC_HOST`，不会覆盖已有值。
 
 ## 端口说明
 
-- `5314`：Studio runtime API 端口，用于 `health`、托管 plugin、plugin 等接口。
+- `5314`：Bay runtime API 端口，用于 `health`、托管 plugin、plugin 等接口。
 - `5315`：Console Web UI 端口，用于浏览器访问控制台。
 
 ## 相关命令
 
-- [`studio stop`](/zh/docs/commands/stop)
-- [`studio status`](/zh/docs/commands/status)
-- [`studio public`](/zh/docs/commands/public)
-- [`studio agent list --running`](/zh/docs/commands/agent/list)
+- [`bay stop`](/zh/docs/commands/stop)
+- [`bay status`](/zh/docs/commands/status)
+- [`bay public`](/zh/docs/commands/public)
+- [`bay agent list --running`](/zh/docs/commands/agent/list)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/studio/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ studio start --console
-studio v1.0.0
-✅ Studio runtime started
+$ bay start --console
+bay v1.0.0
+✅ Bay runtime started
    pid: <runtimePid>
    log: <studioRuntimeLogPath>
    port: 5314
@@ -86,9 +86,9 @@ studio v1.0.0
 ```
 
 ```text
-$ studio start
-studio v1.0.0
-✅ Studio runtime started
+$ bay start
+bay v1.0.0
+✅ Bay runtime started
    pid: <runtimePid>
    log: <studioRuntimeLogPath>
    port: 5314

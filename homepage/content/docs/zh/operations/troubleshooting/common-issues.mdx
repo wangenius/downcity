@@ -5,43 +5,43 @@ description: 安装、启动与配置中的常见错误
 
 # 常见问题
 
-## 命令找不到（`studio: command not found` / `studio: command not found`）
+## 命令找不到（`bay: command not found` / `bay: command not found`）
 
 ```bash
 npm config get prefix
 echo $PATH
 export PATH=$(npm config get prefix)/bin:$PATH
 rehash
-studio --version
+bay --version
 ```
 
 或直接用：
 
 ```bash
-studio --version
+bay --version
 ```
 
 说明：
 
-- `studio` 和 `city` 来自同一个 `downcity` 包，但负责不同命令面。
+- `bay` 和 `city` 来自同一个 `downcity` 包，但负责不同命令面。
 - 新版本安装后不应该再需要手动 `chmod +x`。
-- 如果 `sudo studio ...` 失败，但普通 `studio ...` 正常，通常是 `sudo` 的 PATH 问题，不是安装失败。
+- 如果 `sudo bay ...` 失败，但普通 `bay ...` 正常，通常是 `sudo` 的 PATH 问题，不是安装失败。
 
 ## 端口冲突（5314 被占用）
 
 ```bash
 lsof -nP -iTCP:5314 -sTCP:LISTEN
-studio agent doctor . --fix
-studio agent restart .
+bay agent doctor . --fix
+bay agent restart .
 ```
 
-## 启动后无法调用 `studio task/chat/...`
+## 启动后无法调用 `bay task/chat/...`
 
 先确认 daemon 运行中：
 
 ```bash
-studio agent start
-studio plugin list
+bay agent start
+bay plugin list
 ```
 
 ## LLM 配置错误
@@ -49,8 +49,8 @@ studio plugin list
 检查：
 
 ```bash
-studio model list
-studio config get model.primary
+bay model list
+bay config get model.primary
 ```
 
 并确认：

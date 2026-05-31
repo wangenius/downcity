@@ -1,11 +1,11 @@
 ---
-title: studio console
+title: bay console
 description: Manage the Console module (single instance, multi-agent view)
 ---
 
-# `studio console`
+# `bay console`
 
-`studio console` manages the Console module itself.
+`bay console` manages the Console module itself.
 
 Console is the web control surface for Downcity:
 
@@ -17,7 +17,7 @@ Console is the web control surface for Downcity:
 ## Usage
 
 ```bash
-studio console [action] [options]
+bay console [action] [options]
 ```
 
 ## Actions
@@ -38,67 +38,67 @@ If you pass `-p` without `-h`, the CLI automatically switches the bind host to `
 
 ## Important behavior
 
-- Console depends on Studio runtime. Start runtime first with [`studio start`](/en/docs/commands/start).
-- Console is not the Studio runtime process. It is a separate module on top of the runtime.
+- Console depends on Bay runtime. Start runtime first with [`bay start`](/en/docs/commands/start).
+- Console is not the Bay runtime process. It is a separate module on top of the runtime.
 - One Console instance can switch across multiple running agents.
-- `start` does not change the bind address of an already running Console. To move an existing local Console into public mode, run `studio console restart -p`.
-- If you want public mode to persist across future launches, use [`studio public`](/en/docs/commands/public).
-- `studio status` shows both Studio runtime state and Console state.
+- `start` does not change the bind address of an already running Console. To move an existing local Console into public mode, run `bay console restart -p`.
+- If you want public mode to persist across future launches, use [`bay public`](/en/docs/commands/public).
+- `bay status` shows both Bay runtime state and Console state.
 
 ## Typical flow
 
 ```bash
 # 1) start runtime + Console together
-studio start --console
+bay start --console
 
 # 1.1) start and expose Console in one step
-studio start -p
+bay start -p
 
 # 1.2) start only Console and expose it externally
-studio console start -p
+bay console start -p
 
 # 1.3) persist public mode for future starts
-studio public on
+bay public on
 
 # 2) start agents
-studio agent start /path/to/agent-a
-studio agent start /path/to/agent-b
+bay agent start /path/to/agent-a
+bay agent start /path/to/agent-b
 
 # 3) inspect Console state
-studio console status
+bay console status
 
 # 4) restart Console only
-studio console restart
+bay console restart
 ```
 
 ## Related commands
 
-- [`studio start`](/en/docs/commands/start)
-- [`studio public`](/en/docs/commands/public)
-- [`studio status`](/en/docs/commands/status)
-- [`studio agent list`](/en/docs/commands/agent/list)
-- [`studio agent start`](/en/docs/commands/agent/start)
+- [`bay start`](/en/docs/commands/start)
+- [`bay public`](/en/docs/commands/public)
+- [`bay status`](/en/docs/commands/status)
+- [`bay agent list`](/en/docs/commands/agent/list)
+- [`bay agent start`](/en/docs/commands/agent/start)
 
 ## External access notes
 
-- By default, `studio console start` binds to `127.0.0.1:5315`, so only the local machine can access it.
-- `studio console start -p` binds to `0.0.0.0:5315`, which allows external access.
-- If Console is already running, `studio console start -p` does not rebind the existing process from `127.0.0.1` to `0.0.0.0`; use `studio console restart -p`.
-- `studio public on` persists the same public behavior for later `studio start` and `studio console start`, and restarts a running Console automatically.
+- By default, `bay console start` binds to `127.0.0.1:5315`, so only the local machine can access it.
+- `bay console start -p` binds to `0.0.0.0:5315`, which allows external access.
+- If Console is already running, `bay console start -p` does not rebind the existing process from `127.0.0.1` to `0.0.0.0`; use `bay console restart -p`.
+- `bay public on` persists the same public behavior for later `bay start` and `bay console start`, and restarts a running Console automatically.
 - When using a `0.0.0.0` bind, connect with the server IP or domain instead of `127.0.0.1`.
 - In public mode, startup output also prints `Public URL`.
 - If the runtime sits behind NAT / reverse proxy / load balancer, set `DOWNCITY_PUBLIC_HOST` or `DOWNCITY_PUBLIC_URL` for an exact external address.
 
 ## Port meanings
 
-- `5314`: Studio runtime API port used by managed-plugin and plugin endpoints.
+- `5314`: Bay runtime API port used by managed-plugin and plugin endpoints.
 - `5315`: Console Web UI port used for browser access.
 
 ## Example output
 
 ```text
-$ studio console status
-studio v1.0.0
+$ bay console status
+bay v1.0.0
 ┌────────────────────────────────────────────────────┐
 │ OK console status                                  │
 │   state    : running                               │

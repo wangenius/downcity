@@ -10,7 +10,7 @@ description: Use terminal chat commands to interact with a running Agent
 Make sure the agent is running, then run:
 
 ```bash
-studio agent chat
+bay agent chat
 ```
 
 If you do not explicitly specify a target and your terminal is interactive, the CLI will let you choose from running agents.
@@ -20,7 +20,7 @@ That default experience is optimized for humans, not scripts.
 ## Target a specific Agent
 
 ```bash
-studio agent chat --to my-agent
+bay agent chat --to my-agent
 ```
 
 If you manage multiple agents, using `--to` explicitly is the most stable and reproducible pattern.
@@ -28,7 +28,7 @@ If you manage multiple agents, using `--to` explicitly is the most stable and re
 ## Send one message and exit
 
 ```bash
-studio agent chat --to my-agent --message "Summarize this repository"
+bay agent chat --to my-agent --message "Summarize this repository"
 ```
 
 This is usually the best shape for scripting, one-off analysis, or command-line tooling.
@@ -36,7 +36,7 @@ This is usually the best shape for scripting, one-off analysis, or command-line 
 ## JSON output
 
 ```bash
-studio agent chat --to my-agent --message "List today's changes" --json
+bay agent chat --to my-agent --message "List today's changes" --json
 ```
 
 Use this if another script or pipeline will consume the result.
@@ -58,7 +58,7 @@ That last point matters a lot. Terminal chat is not "one universal global conver
 
 Check these first:
 
-1. `studio agent status`
+1. `bay agent status`
 2. model binding
 3. whether the target agent is actually `running`
 

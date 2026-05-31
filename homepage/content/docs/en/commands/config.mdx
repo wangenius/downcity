@@ -1,18 +1,18 @@
 ---
-title: studio config
+title: bay config
 description: Manage project downcity.json and alias (model pool is separate)
 ---
 
-# `studio config`
+# `bay config`
 
 Manage project `downcity.json` and alias.
 
-> Naming note: configuration command is `studio config`, not `studio console config`.
+> Naming note: configuration command is `bay config`, not `bay console config`.
 
 ## Usage
 
 ```bash
-studio config <subcommand>
+bay config <subcommand>
 ```
 
 ## Subcommands
@@ -22,39 +22,39 @@ studio config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> Model pool management has moved to [`studio model`](/en/docs/commands/model).
+> Model pool management has moved to [`bay model`](/en/docs/commands/model).
 
 ## Plugin config
 
-`studio config` now reads and writes project `downcity.json` only.
+`bay config` now reads and writes project `downcity.json` only.
 
 For plugin configuration, edit:
 
 - `plugins.*` for agent-local plugin parameters only
-- use `studio <plugin> on/off` for plugin lifecycle
+- use `bay <plugin> on/off` for plugin lifecycle
 
 Examples:
 
 ```bash
-studio config get plugins.asr
-studio config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+bay config get plugins.asr
+bay config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
 ## Examples
 
 ```bash
-studio config get model.primary
-studio config set model.primary fast
-studio config unset plugins.chat.channels.telegram
-studio config alias --dry-run
+bay config get model.primary
+bay config set model.primary fast
+bay config unset plugins.chat.channels.telegram
+bay config alias --dry-run
 ```
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio config get model.primary
+$ bay config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
@@ -65,7 +65,7 @@ $ studio config get model.primary
 ```
 
 ```text
-$ studio config set model.primary gpt-5.4
+$ bay config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",

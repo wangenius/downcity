@@ -1,11 +1,11 @@
 ---
-title: studio tts
+title: bay tts
 description: Manage the built-in TTS plugin and generate audio files from text
 ---
 
-# `studio tts`
+# `bay tts`
 
-`studio tts` manages the built-in TTS plugin.
+`bay tts` manages the built-in TTS plugin.
 
 > This page remains as a command entry point. For the fuller plugin structure, see [Plugin Overview](/en/agent-sdk-docs/plugins/overview), [Plugin Configuration](/en/agent-sdk-docs/plugins/configuration), and [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions).
 
@@ -19,16 +19,16 @@ description: Manage the built-in TTS plugin and generate audio files from text
 
 ```bash
 # inspect current tts config
-studio tts status
+bay tts status
 
 # enable the plugin
-studio tts on
+bay tts on
 
 # synthesize one local audio file
-studio tts synthesize "hello from city"
+bay tts synthesize "hello from city"
 
 # override format / language / voice / output path
-studio tts synthesize "Hello from Downcity" --format wav --language en --voice default --output .downcity/out/welcome.wav
+bay tts synthesize "Hello from Downcity" --format wav --language en --voice default --output .downcity/out/welcome.wav
 ```
 
 ## How To Use
@@ -36,20 +36,20 @@ studio tts synthesize "Hello from Downcity" --format wav --language en --voice d
 1. Enable the plugin:
 
 ```bash
-studio tts on
+bay tts on
 ```
 
 2. Check whether the current model and dependency are ready:
 
 ```bash
-studio tts status
-studio tts doctor
+bay tts status
+bay tts doctor
 ```
 
 3. Generate an audio file:
 
 ```bash
-studio tts synthesize "This is a TTS test"
+bay tts synthesize "This is a TTS test"
 ```
 
 4. Override parameters for one run when needed:
@@ -69,13 +69,13 @@ studio tts synthesize "This is a TTS test"
 ## Notes
 
 - TTS is not attached to chat hooks by default.
-- `studio tts ...` runs locally against the current project by default, so you do not need to start `studio agent` first.
-- When the plugin is enabled and its dependency is available, the agent sees this capability through the system prompt and can call `studio tts synthesize ...` directly.
+- `bay tts ...` runs locally against the current project by default, so you do not need to start `bay agent` first.
+- When the plugin is enabled and its dependency is available, the agent sees this capability through the system prompt and can call `bay tts synthesize ...` directly.
 - It generates a local audio file and returns a reusable `<file type="audio">...</file>` tag for downstream sending.
 - Non-fatal Python runner `stderr` does not fail synthesis as long as the audio file is generated successfully.
 - Agent-local TTS parameters are persisted to project `downcity.json` under `plugins.tts`.
 
 ## Related
 
-- [`studio plugin`](/en/docs/commands/plugin/plugin)
+- [`bay plugin`](/en/docs/commands/plugin/plugin)
 - [Plugin Docs Overview](/en/agent-sdk-docs/plugins/overview)

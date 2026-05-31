@@ -1,15 +1,15 @@
 ---
-title: studio model
+title: bay model
 description: Dedicated management for console-global language models (provider/model)
 ---
 
-# `studio model`
+# `bay model`
 
 Dedicated model management command group for language models only.
 
 ## Design Rules
 
-- Bare `studio model` opens an interactive manager in a TTY.
+- Bare `bay model` opens an interactive manager in a TTY.
 - `create` remains a direct shortcut into the create flow.
 - Script subcommands (`list/pause/update/test/...`) remain available for automation.
 - Provider `apiKey` is stored in `~/.downcity/downcity.db` and encrypted on write.
@@ -20,56 +20,56 @@ Dedicated model management command group for language models only.
 
 ```bash
 # Interactive manager
-studio model
+bay model
 
 # Interactive create (choose provider or model)
-studio model create
+bay model create
 
 # List
-studio model list
+bay model list
 
 # Read details
-studio model get provider <providerId>
-studio model get model <modelId>
+bay model get provider <providerId>
+bay model get model <modelId>
 
 # Pause model (enabled defaults to true)
-studio model pause <modelId>
-studio model pause <modelId> --enabled false
+bay model pause <modelId>
+bay model pause <modelId> --enabled false
 
 # Discover provider models (optionally auto-add)
-studio model discover <providerId>
-studio model discover <providerId> --auto-add true --prefix openai_
+bay model discover <providerId>
+bay model discover <providerId> --auto-add true --prefix openai_
 
 # Update provider
-studio model update provider <providerId> --api-key "$OPENAI_API_KEY"
-studio model update provider kimi_cn --type moonshot-cn
-studio model update provider kimi_ai --type moonshot-ai
+bay model update provider <providerId> --api-key "$OPENAI_API_KEY"
+bay model update provider kimi_cn --type moonshot-cn
+bay model update provider kimi_ai --type moonshot-ai
 
 # Update model
-studio model update model <modelId> --name gpt-4o-mini --provider openai_main
+bay model update model <modelId> --name gpt-4o-mini --provider openai_main
 
 # Remove provider/model
-studio model remove provider <providerId>
-studio model remove model <modelId>
+bay model remove provider <providerId>
+bay model remove model <modelId>
 
 # Bind model to project (set downcity.json.execution.modelId)
-studio model use <modelId> --path /path/to/agent
+bay model use <modelId> --path /path/to/agent
 
 # Test provider
-studio model test provider <providerId>
+bay model test provider <providerId>
 
 # Test model (real call)
-studio model test model <modelId>
+bay model test model <modelId>
 ```
 
 ## Interactive Manager
 
-- `studio model` is the human-first entrypoint for the global model pool.
+- `bay model` is the human-first entrypoint for the global model pool.
 - It lets you browse providers and models, edit settings, remove entries, test connectivity, pause/resume models, bind a model to a project, and jump into the create flow.
 - Removal is guarded:
   - provider removal is blocked while any model still references it
   - model removal is blocked while any agent project still references it via `downcity.json.execution.modelId`
-- In non-interactive environments, `studio model` falls back to normal help output.
+- In non-interactive environments, `bay model` falls back to normal help output.
 
 ## create Behavior
 
@@ -99,16 +99,16 @@ studio model test model <modelId>
 
 ## Related Commands
 
-- [`studio config`](/en/docs/commands/config)
-- [`studio agent create`](/en/docs/commands/agent/create)
-- [`studio agent start`](/en/docs/commands/agent/start)
+- [`bay config`](/en/docs/commands/config)
+- [`bay agent create`](/en/docs/commands/agent/create)
+- [`bay agent start`](/en/docs/commands/agent/start)
 
 ## Example Output (Based on Current Implementation)
 
-The examples below are aligned with current command implementations in `cli/studio/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+The examples below are aligned with current command implementations in `cli/bay/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ studio model list
+$ bay model list
 {
   "success": true,
   "providers": [
@@ -133,7 +133,7 @@ $ studio model list
 ```
 
 ```text
-$ studio model pause <modelId>
+$ bay model pause <modelId>
 {
   "success": true,
   "modelId": "<modelId>",

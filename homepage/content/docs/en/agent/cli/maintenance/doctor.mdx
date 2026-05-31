@@ -1,15 +1,15 @@
 ---
-title: studio agent doctor
+title: bay agent doctor
 description: Diagnose and repair stale Agent daemon state
 ---
 
-# `studio agent doctor`
+# `bay agent doctor`
 
 ## Usage
 
 ```bash
-studio agent doctor [path]
-studio agent doctor [path] --fix
+bay agent doctor [path]
+bay agent doctor [path] --fix
 ```
 
 ## What problem it solves
@@ -25,7 +25,7 @@ It is not a universal repair command for every runtime issue.
 Diagnostic only:
 
 ```bash
-studio agent doctor
+bay agent doctor
 ```
 
 ## With `--fix`
@@ -33,13 +33,13 @@ studio agent doctor
 Repair stale state:
 
 ```bash
-studio agent doctor --fix
+bay agent doctor --fix
 ```
 
 Then, if you want to restore execution:
 
 ```bash
-studio agent start
+bay agent start
 ```
 
 Use `doctor` first when:

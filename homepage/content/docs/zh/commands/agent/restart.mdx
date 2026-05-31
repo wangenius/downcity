@@ -1,9 +1,9 @@
 ---
-title: studio agent restart
+title: bay agent restart
 description: 重启指定 agent 进程
 ---
 
-# `studio agent restart`
+# `bay agent restart`
 
 重启指定 agent 的 runtime。
 
@@ -12,7 +12,7 @@ description: 重启指定 agent 进程
 ## 用法
 
 ```bash
-studio agent restart [path] [options]
+bay agent restart [path] [options]
 ```
 
 ## 常用参数
@@ -27,24 +27,24 @@ studio agent restart [path] [options]
 
 ## 相关命令
 
-- [`studio agent start`](/zh/docs/commands/agent/start)
-- [`studio agent restart`](/zh/docs/commands/agent/restart)
-- [`studio agent status`](/zh/docs/commands/agent/status)
+- [`bay agent start`](/zh/docs/commands/agent/start)
+- [`bay agent restart`](/zh/docs/commands/agent/restart)
+- [`bay agent status`](/zh/docs/commands/agent/status)
 
 ## 示例输出（基于当前实现）
 
-以下示例直接对齐 `cli/studio/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+以下示例直接对齐 `cli/bay/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ studio agent restart .
-studio v1.0.0
+$ bay agent restart .
+bay v1.0.0
 ✅ Downcity daemon restarted
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ studio agent restart .
-studio v1.0.0
+$ bay agent restart .
+bay v1.0.0
 ❌ Failed to restart daemon: <error>
 ```

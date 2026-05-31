@@ -1,18 +1,18 @@
 ---
-title: studio task
+title: bay task
 description: 托管 task plugin 命令，用于任务定义、执行与自动化
 ---
 
-# `studio task`
+# `bay task`
 
-`studio task` 是托管 task plugin 的命令组。
+`bay task` 是托管 task plugin 的命令组。
 
 当你要定义“可复用、可长期存在的自动化任务”时，优先使用它，而不是一次性的延迟 plugin action。
 
 ## 用法
 
 ```bash
-studio task <subcommand> [options]
+bay task <subcommand> [options]
 ```
 
 ## 主要子命令
@@ -28,18 +28,18 @@ studio task <subcommand> [options]
 
 ## 边界
 
-- `studio task` 适合可复用、长期存在的自动化。
-- `studio chat --delay/--time`、`studio memory --delay/--time` 适合“把现成 action 稍后执行一次”。
+- `bay task` 适合可复用、长期存在的自动化。
+- `bay chat --delay/--time`、`bay memory --delay/--time` 适合“把现成 action 稍后执行一次”。
 - 任务定义可以使用 `@manual`、cron，或 `time:<ISO8601>`。
 
 ## 示例
 
 ```bash
-studio task list
-studio task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
-studio task run daily-check
-studio task update daily-check --when "@manual"
-studio task disable daily-check
+bay task list
+bay task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+bay task run daily-check
+bay task update daily-check --when "@manual"
+bay task disable daily-check
 ```
 
 ## 相关页面

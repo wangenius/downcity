@@ -8,7 +8,7 @@ description: 任务定义、调度与 CLI 操作
 任务定义存放在 `.downcity/task/<taskId>/task.md`。
 
 > 想看完整执行链路（状态机、校验规则、run 目录语义、排障）：  
-> 参考 [`studio task`](/zh/docs/commands/plugin/task) 与 [Plugins Docs / task](/zh/plugins-docs/builtins/task)。
+> 参考 [`bay task`](/zh/docs/commands/plugin/task) 与 [Plugins Docs / task](/zh/plugins-docs/builtins/task)。
 
 ## 最小任务示例
 
@@ -47,11 +47,11 @@ kind: agent
 ## 常用命令
 
 ```bash
-studio task list
-studio task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 9 * * 1-5" --activate
-studio task run daily-check
-studio task update daily-check --when "@manual"
-studio task disable daily-check
+bay task list
+bay task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 9 * * 1-5" --activate
+bay task run daily-check
+bay task update daily-check --when "@manual"
+bay task disable daily-check
 ```
 
 ## 状态说明
@@ -68,4 +68,4 @@ studio task disable daily-check
 
 ## 调度生效条件
 
-任务调度依赖运行中的 runtime（建议 `studio agent start`）。
+任务调度依赖运行中的 runtime（建议 `bay agent start`）。

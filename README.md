@@ -18,7 +18,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 
 | Package | Purpose |
 | --- | --- |
-| `downcity` | Public CLI bundle that installs `studio` for local Agent hosting and `city` for deployed City administration. |
+| `downcity` | Public CLI bundle that installs `bay` for local Agent hosting and `city` for deployed City administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
 | `@downcity/city` | City runtime plus Gate access SDK for service registration, actions, auth, env, studio-scoped access, and HTTP calling. |
 | `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by Gate. |
@@ -31,9 +31,9 @@ Downcity is an agent platform for local projects and team workflows. It combines
 ## Core Capabilities
 
 - Repo is the Agent: initialize a project with `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/`.
-- Studio control plane: run `studio start` or `studio console` to host local agents and access the control surface.
+- Bay control plane: run `bay start` or `bay console` to host local agents and access the control surface.
 - Agent daemon lifecycle: create, start, stop, restart, inspect, chat with, and diagnose project agents.
-- Global model pool: manage providers and models through `studio model`, then bind projects to model IDs.
+- Global model pool: manage providers and models through `bay model`, then bind projects to model IDs.
 - City runtime: reuse one shared service city across studios with `@downcity/city`, `@downcity/services`, and deployable `cities/*`.
 - Built-in services: `chat`, `task`, `memory`, `shell`, and `contact`.
 - Built-in plugins: `skill`, `auth`, `web`, `asr`, `tts`, and `workboard`.
@@ -52,16 +52,16 @@ pnpm add -g downcity
 The package exposes both commands:
 
 ```bash
-studio --version
+bay --version
 city --version
 ```
 
-`studio` is the local Agent host command. `city` is the deployed City administration command. Use `studio update` to upgrade the global CLI.
+`bay` is the local Agent host command. `city` is the deployed City administration command. Use `bay update` to upgrade the global CLI.
 
 ### 2. Initialize the platform
 
 ```bash
-studio init
+bay init
 ```
 
 This sets up the global Downcity storage and configuration, by default under `~/.downcity/`.
@@ -69,20 +69,20 @@ This sets up the global Downcity storage and configuration, by default under `~/
 ### 3. Configure a model
 
 ```bash
-studio model create
-studio model list
-studio model use <modelId>
-studio model test model <modelId>
+bay model create
+bay model list
+bay model use <modelId>
+bay model test model <modelId>
 ```
 
-`studio` resolves `downcity.json.execution.modelId` into a runtime `LanguageModel` and injects it into agent sessions.
+`bay` resolves `downcity.json.execution.modelId` into a runtime `LanguageModel` and injects it into agent sessions.
 
 ### 4. Create an agent project
 
 Run this inside the target repository:
 
 ```bash
-studio agent create .
+bay agent create .
 ```
 
 This creates or updates:
@@ -110,31 +110,31 @@ your-project/
 ### 5. Start the agent and talk to it
 
 ```bash
-studio agent start .
-studio agent status .
-studio agent chat -m "Summarize this repository"
+bay agent start .
+bay agent status .
+bay agent chat -m "Summarize this repository"
 ```
 
 To run in the foreground:
 
 ```bash
-studio agent start . --foreground
+bay agent start . --foreground
 ```
 
 ### 6. Start Console
 
 ```bash
-studio start --console
+bay start --console
 # or
-studio console
+bay console
 ```
 
 Useful status commands:
 
 ```bash
-studio status
-studio agent list
-studio console status
+bay status
+bay agent list
+bay console status
 ```
 
 ## SDK Example
@@ -200,7 +200,7 @@ downcity/
 │   └── ui/
 ├── cli/
 │   ├── city/
-│   ├── studio/
+│   ├── bay/
 │   └── downcity/
 ├── cities/
 │   ├── edge/
@@ -221,7 +221,7 @@ downcity/
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Developer docs: [downcity.ai/devdocs](https://downcity.ai/devdocs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
-- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/studio/README.md](./cli/studio/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
+- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/bay/README.md](./cli/bay/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
 
 ## Local Development
 
@@ -263,6 +263,6 @@ pnpm dev:homepage
 
 - Downcity can execute shell commands, read and write project files, start local daemons, and receive external messages through chat channels.
 - Use a clean Git branch and audit changes with `git status` and `git diff`.
-- Keep secrets out of the repository; prefer local environment variables or `studio env`.
+- Keep secrets out of the repository; prefer local environment variables or `bay env`.
 - Use tokens and auth boundaries for Console, HTTP access, and chat channel integrations.
 - Tighten command execution boundaries through sandbox configuration where appropriate.

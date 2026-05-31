@@ -1,9 +1,9 @@
 ---
-title: studio agent start
+title: bay agent start
 description: Start agent process (background or foreground)
 ---
 
-# `studio agent start`
+# `bay agent start`
 
 Start the process for a target agent.
 
@@ -12,7 +12,7 @@ Start the process for a target agent.
 ## Usage
 
 ```bash
-studio agent start [path] [options]
+bay agent start [path] [options]
 ```
 
 ## Key options
@@ -33,24 +33,24 @@ studio agent start [path] [options]
 
 ## Related commands
 
-- [`studio agent restart`](/en/docs/commands/agent/restart)
-- [`studio agent list`](/en/docs/commands/agent/list)
-- [`studio agent status`](/en/docs/commands/agent/status)
-- [`studio start`](/en/docs/commands/start)
+- [`bay agent restart`](/en/docs/commands/agent/restart)
+- [`bay agent list`](/en/docs/commands/agent/list)
+- [`bay agent status`](/en/docs/commands/agent/status)
+- [`bay start`](/en/docs/commands/start)
 
 ## Example Output
 
 ```text
-$ studio agent start .
-studio v1.0.437
+$ bay agent start .
+bay v1.0.437
 
 Agent daemon started                            lucas_whitman
   project   /Users/you/Documents/bots/lucas_whitman
 ```
 
 ```text
-$ studio agent start .
-studio v1.0.437
+$ bay agent start .
+bay v1.0.437
 
-❌ console is not running. Please run `studio start` first.
+❌ console is not running. Please run `bay start` first.
 ```

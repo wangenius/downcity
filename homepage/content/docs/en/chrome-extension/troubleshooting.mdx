@@ -37,14 +37,14 @@ Fix it by:
 
 1. opening the extension settings page
 2. selecting the matching connection
-3. running `studio token create my-token` in the local terminal
+3. running `bay token create my-token` in the local terminal
 4. pasting the token into settings and saving
 
 ## 3. The Remote Service Is Not Exposed Publicly
 
 If you are targeting a remote machine, also confirm that the Console is not only bound to loopback.
 
-From the `studio` CLI code:
+From the `bay` CLI code:
 
 - without `--host` or `--public`, Console stays in local mode on `127.0.0.1`
 - with `--public`, it binds to `0.0.0.0`
@@ -52,26 +52,26 @@ From the `studio` CLI code:
 Typical commands:
 
 ```bash
-studio start --public
+bay start --public
 ```
 
 or:
 
 ```bash
-studio console start --public
+bay console start --public
 ```
 
 If you want that public binding to persist across later restarts, use:
 
 ```bash
-studio public on
+bay public on
 ```
 
 ## 4. No Available Agent
 
 This usually means:
 
-- `studio agent start` is not running
+- `bay agent start` is not running
 - the connection address is wrong
 - the Agent is offline
 

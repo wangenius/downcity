@@ -1,26 +1,26 @@
 ---
-title: studio update
+title: bay update
 description: Update the currently installed global downcity CLI bundle to the latest version
 ---
 
-# `studio update`
+# `bay update`
 
 Update the currently installed global `downcity` CLI bundle to the latest version.
 
-By default, Downcity detects both the package manager and the installed package name. If you installed the CLI from `downcity`, `studio update` upgrades `downcity`;
+By default, Downcity detects both the package manager and the installed package name. If you installed the CLI from `downcity`, `bay update` upgrades `downcity`;
 
 ## Usage
 
 ```bash
-studio update
+bay update
 ```
 
 ```bash
-studio update --manager npm
+bay update --manager npm
 ```
 
 ```bash
-studio update --manager pnpm
+bay update --manager pnpm
 ```
 
 ## Options
@@ -29,20 +29,20 @@ studio update --manager pnpm
 
 ## Important behavior
 
-- `studio update` updates only the currently installed global CLI package.
-- It does not automatically restart already running Studio runtime / Console processes.
-- After update completes, run [`studio restart`](/en/docs/commands/restart) if you want running processes to load the new version.
+- `bay update` updates only the currently installed global CLI package.
+- It does not automatically restart already running Bay runtime / Console processes.
+- After update completes, run [`bay restart`](/en/docs/commands/restart) if you want running processes to load the new version.
 
 ## Related commands
 
-- [`studio restart`](/en/docs/commands/restart)
-- [`studio status`](/en/docs/commands/status)
+- [`bay restart`](/en/docs/commands/restart)
+- [`bay status`](/en/docs/commands/status)
 
 ## Example output
 
 ```text
-$ studio update
-studio v1.0.0
+$ bay update
+bay v1.0.0
 
 Updating downcity
   manager   npm
@@ -51,5 +51,5 @@ Updating downcity
 Downcity updated
   package   downcity@latest
   manager   npm
-  note      If Studio runtime / Console is already running, use `studio restart` to load the new version.
+  note      If Bay runtime / Console is already running, use `bay restart` to load the new version.
 ```

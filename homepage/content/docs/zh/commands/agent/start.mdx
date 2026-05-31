@@ -1,9 +1,9 @@
 ---
-title: studio agent start
+title: bay agent start
 description: 启动 agent 进程（后台或前台）
 ---
 
-# `studio agent start`
+# `bay agent start`
 
 启动指定 agent 的 runtime。
 
@@ -12,7 +12,7 @@ description: 启动 agent 进程（后台或前台）
 ## 用法
 
 ```bash
-studio agent start [path] [options]
+bay agent start [path] [options]
 ```
 
 ## 常用参数
@@ -33,24 +33,24 @@ studio agent start [path] [options]
 
 ## 相关命令
 
-- [`studio agent restart`](/zh/docs/commands/agent/restart)
-- [`studio agent list`](/zh/docs/commands/agent/list)
-- [`studio agent status`](/zh/docs/commands/agent/status)
-- [`studio start`](/zh/docs/commands/start)
+- [`bay agent restart`](/zh/docs/commands/agent/restart)
+- [`bay agent list`](/zh/docs/commands/agent/list)
+- [`bay agent status`](/zh/docs/commands/agent/status)
+- [`bay start`](/zh/docs/commands/start)
 
 ## 示例输出
 
 ```text
-$ studio agent start .
-studio v1.0.437
+$ bay agent start .
+bay v1.0.437
 
 Agent daemon started                            lucas_whitman
   project   /Users/you/Documents/bots/lucas_whitman
 ```
 
 ```text
-$ studio agent start .
-studio v1.0.437
+$ bay agent start .
+bay v1.0.437
 
-❌ console is not running. Please run `studio start` first.
+❌ console is not running. Please run `bay start` first.
 ```

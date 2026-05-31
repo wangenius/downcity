@@ -9,7 +9,7 @@ description: 初始化 Downcity City，准备默认数据库和 HTTP 服务。
 pnpm add @downcity/city drizzle-orm better-sqlite3
 ```
 
-准备好数据库即可。City 首次启动时会自动补齐 `DOWNCITY_CITY_ADMIN_SECRET_KEY`、`DOWNCITY_CITY_TOKEN_SIGNING_KEY` 和 `BETTER_AUTH_SECRET`。provider key 则在启动后通过 Studio CLI / Admin API 写入：
+准备好数据库即可。City 首次启动时会自动补齐 `DOWNCITY_CITY_ADMIN_SECRET_KEY`、`DOWNCITY_CITY_TOKEN_SIGNING_KEY` 和 `BETTER_AUTH_SECRET`。provider key 则在启动后通过 Bay CLI / Admin API 写入：
 
 ```bash
 OPENAI_API_KEY="..."

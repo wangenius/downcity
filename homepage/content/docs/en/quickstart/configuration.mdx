@@ -15,7 +15,7 @@ Downcity is configured with three core files:
 
 ### `start` (advanced only)
 
-For `studio agent start`, ports are auto-allocated by console.
+For `bay agent start`, ports are auto-allocated by console.
 
 So in normal usage you do not need `start.port` in project `downcity.json`.
 
@@ -31,7 +31,7 @@ Only configure `start` when manually running foreground runtime or debugging spe
 
 ### `execution`
 
-Agent model binding (maps to the Studio global model pool):
+Agent model binding (maps to the Bay global model pool):
 
 ```json
 {
@@ -102,17 +102,17 @@ Plugin config is maintained in project `downcity.json`.
 Example for asr:
 
 ```bash
-studio asr on SenseVoiceSmall
-studio config get plugins.asr
+bay asr on SenseVoiceSmall
+bay config get plugins.asr
 ```
 
 ## Useful commands
 
 ```bash
-studio config get
-studio config get execution.modelId
-studio model list
-studio config unset plugins.chat.channels.telegram
+bay config get
+bay config get execution.modelId
+bay model list
+bay config unset plugins.chat.channels.telegram
 ```
 
 ## Next

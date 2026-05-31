@@ -1,0 +1,72 @@
+---
+title: Login and Token Flow
+description: "How guest User Visa, the accounts service, your own backend, user_token, and normal User Visa connect together."
+---
+
+Every login flow around Visa converges to one goal:
+
+> get `bay_id + user_token` into the bay frontend, then enter normal `User Visa` calls.
+
+## Pattern one: your backend owns login
+
+```txt
+frontend submits login data
+  -> your backend validates the account
+  -> backend uses Admin Visa to request user_token
+  -> returns bay_id + user_token
+  -> frontend creates a normal User Visa
+```
+
+Good fit when:
+
+- you already have an account system
+- you need more complex org, permission, or risk-control logic
+
+## Pattern two: the accounts service owns login
+
+```txt
+frontend creates a guest User Visa
+  -> calls accounts.register / login
+  -> service returns user_token
+  -> frontend creates a normal User Visa
+```
+
+Good fit when:
+
+- you want the fastest path to minimal registration and login
+- you do not want to maintain your own user and session tables first
+
+## What a guest User Visa is
+
+It is simply a `User Visa` with `city_url` only:
+
+```ts
+const guest = new Visa({
+  role: "user",
+  city_url: "https://base.example.com",
+});
+```
+
+At this stage it is usually used only for guest-access Actions such as:
+
+- `accounts.register`
+- `accounts.login`
+- `accounts.oauth/start`
+- `accounts.oauth/result`
+
+## Switching to a normal User Visa
+
+```ts
+const user = new Visa({
+  role: "user",
+  city_url: "https://base.example.com",
+  bay_id: "bay_xxx",
+  user_token: session.user_token,
+});
+```
+
+At that point the bay enters real user context:
+
+- it can call AI services
+- it can call custom services that require user identity
+- it can call services such as `accounts.me` and `usage.me`

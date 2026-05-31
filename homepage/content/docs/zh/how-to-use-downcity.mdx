@@ -257,22 +257,22 @@ console.log(result.text);
 `@downcity/agent` 不要求你一定使用 OpenAI SDK。`model` 支持两种输入：
 
 - AI SDK `LanguageModel`
-- City Gate 返回的 `CityModel`
+- City Visa 返回的 `CityModel`
 
-如果你使用 City，Gate catalog 返回的 model 可以直接传给 Agent：
+如果你使用 City，Visa catalog 返回的 model 可以直接传给 Agent：
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const gate = new Gate({
+const visa = new Visa({
   role: "user",
   city_url: "http://127.0.0.1:43127",
   bay_id: "bay_xxx",
   user_token: "ub_xxx",
 });
 
-const catalog = await gate.ai.listModels();
+const catalog = await visa.ai.listModels();
 const model = catalog.default();
 
 if (!model) {
@@ -401,8 +401,8 @@ const agent = new Agent({
 City SDK 分成两侧：
 
 - 服务端用 `City`、`AIService`、`Provider` 创建可部署 runtime
-- 可信后端用 `Admin Gate` 创建 bay、签发 `user_token`
-- 产品侧用 `User Gate` 调用 AIService 或自定义 Service
+- 可信后端用 `Admin Visa` 创建 bay、签发 `user_token`
+- 产品侧用 `User Visa` 调用 AIService 或自定义 Service
 
 ### 10.1 安装
 
@@ -487,9 +487,9 @@ POST /v1/ai/chat/completions
 `user_token` 只能在可信环境签发，不要把 `admin_secret_key` 放到浏览器前端。
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const admin = new Gate({
+const admin = new Visa({
   role: "admin",
   city_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
@@ -518,12 +518,12 @@ console.log({
 
 ### 10.4 产品侧调用 City
 
-产品侧使用 User Gate：
+产品侧使用 User Visa：
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const client = new Gate({
+const client = new Visa({
   role: "user",
   city_url: "http://127.0.0.1:43127",
   bay_id: "bay_xxx",
@@ -614,7 +614,7 @@ City SDK 的核心调用链是：
 
 ```text
 产品前端 / 产品后端
-  -> User Gate 携带 bay_id + user_token
+  -> User Visa 携带 bay_id + user_token
   -> City 校验 token
   -> AIService / 自定义 Service
   -> Provider 或业务 action
@@ -631,7 +631,7 @@ city --help
 1. 创建 City
 2. 添加模型
 3. 签发 user token
-4. 在 client 侧通过 User Gate 调用 City
+4. 在 client 侧通过 User Visa 调用 City
 
 对应文档：
 

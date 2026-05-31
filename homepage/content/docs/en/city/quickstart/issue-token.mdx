@@ -3,12 +3,12 @@ title: Issue `user_token`
 description: Give the bay client a user-scoped credential that can call City.
 ---
 
-`user_token` must be issued by a trusted environment. Your backend uses `Admin Gate` and asks City for a token based on `bay_id + user_id`.
+`user_token` must be issued by a trusted environment. Your backend uses `Admin Visa` and asks City for a token based on `bay_id + user_id`.
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const client = new Gate({
+const client = new Visa({
   role: "admin",
   city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,

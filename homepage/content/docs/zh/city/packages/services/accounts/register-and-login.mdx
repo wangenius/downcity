@@ -39,7 +39,7 @@ const session = await guest.service("accounts").action("login").invoke({
 不是继续一直用 guest client，而是切到正常用户态：
 
 ```ts
-const user = new Gate({
+const user = new Visa({
   role: "user",
   city_url,
   bay_id: "bay_demo",

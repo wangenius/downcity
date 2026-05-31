@@ -1,15 +1,15 @@
 ---
 title: SDK Overview
-description: "The Downcity SDK is split by role: User Gate owns bay-runtime calls, while Admin Gate owns trusted-side management calls."
+description: "The Downcity SDK is split by role: User Visa owns bay-runtime calls, while Admin Visa owns trusted-side management calls."
 ---
 
 This page does one job: it pulls the calling model of `@downcity/city` into one reference overview.
 
-If you want the integration story first, start with [@downcity/city](/en/docs/city/packages/city/gate). If you need concrete method details, continue to [User Gate](/en/docs/city/reference/gate-user) and [Admin Gate](/en/docs/city/reference/gate-admin).
+If you want the integration story first, start with [@downcity/city](/en/docs/city/packages/city/visa). If you need concrete method details, continue to [User Visa](/en/docs/city/reference/visa-user) and [Admin Visa](/en/docs/city/reference/visa-admin).
 
 ## Two roles
 
-| | User Gate | Admin Gate |
+| | User Visa | Admin Visa |
 |---|---|---|
 | Used by | frontend, app, extension, desktop client | bay backend, ops scripts, internal tools |
 | Owns | AI services, custom services, public services | bays, tokens, runtime env, admin-side services |
@@ -20,7 +20,7 @@ If you want the integration story first, start with [@downcity/city](/en/docs/ci
 
 ```ts
 // Bay side
-const client = new Gate({
+const client = new Visa({
   role: "user",
   city_url,
   bay_id,
@@ -45,7 +45,7 @@ const checkout = await client.payment.method("stripe").invoke({
 });
 
 // Admin side
-const admin = new Gate({
+const admin = new Visa({
   role: "admin",
   city_url,
   admin_secret_key,
@@ -70,21 +70,21 @@ From the caller's point of view, they all live in the same City service route sp
 
 The two most common paths are:
 
-1. your backend finishes login first, then uses `Admin Gate` to request `user_token`
-2. the frontend uses a guest `User Gate` to call `accounts.login/register`, and the accounts service returns `user_token`
+1. your backend finishes login first, then uses `Admin Visa` to request `user_token`
+2. the frontend uses a guest `User Visa` to call `accounts.login/register`, and the accounts service returns `user_token`
 
 Both paths end in the same user context:
 
 ```txt
 city_url + bay_id + user_token
-  -> new Gate({ role: "user", ... })
+  -> new Visa({ role: "user", ... })
   -> client.ai.* or client.service(...)
 ```
 
 ## Which page to read next
 
 1. To understand package composition, read [Packages](/en/docs/city/packages)
-2. To understand bay integration, read [@downcity/city](/en/docs/city/packages/city/gate)
-3. For detailed bay-side calls, read [User Gate](/en/docs/city/reference/gate-user)
-4. For trusted-side management, read [Admin Gate](/en/docs/city/reference/gate-admin)
+2. To understand bay integration, read [@downcity/city](/en/docs/city/packages/city/visa)
+3. For detailed bay-side calls, read [User Visa](/en/docs/city/reference/visa-user)
+4. For trusted-side management, read [Admin Visa](/en/docs/city/reference/visa-admin)
 5. For minimal auth, read [@downcity/services](/en/docs/city/packages/services) and [Accounts Service](/en/docs/city/guides/accounts-service)

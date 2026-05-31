@@ -2,7 +2,7 @@
  * Admin Payment 管理命令。
  */
 
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { buildStripeEndpoints } from "../../core/stripe.js";
 import { show, showError } from "../../core/ui.js";
@@ -38,7 +38,7 @@ interface StripeEventListItem {
   created_at: string;
 }
 
-export async function managePayment(a: Gate, baseUrl: string): Promise<void> {
+export async function managePayment(a: Visa, baseUrl: string): Promise<void> {
   const svc = a.service("payment.stripe");
   const endpoints = buildStripeEndpoints(baseUrl);
   while (true) {

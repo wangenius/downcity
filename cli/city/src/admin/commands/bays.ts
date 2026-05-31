@@ -2,12 +2,12 @@
  * Admin Bays 管理命令。
  */
 
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { askText, showError, showSuccess } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 
-export async function manageBays(gate: Gate): Promise<void> {
+export async function manageBays(visa: Visa): Promise<void> {
   while (true) {
     const act = await select({
       message: "Bays",
@@ -25,7 +25,7 @@ export async function manageBays(gate: Gate): Promise<void> {
 
     try {
       if (act === "list") {
-        const items = await gate.bays.list();
+        const items = await visa.bays.list();
         console.log(`\n${items.length} bays:\n`);
         for (const bay of items) {
           console.log(`  ${bay.bay_id.padEnd(24)} ${bay.name.padEnd(20)} [${bay.status}]`);
@@ -35,7 +35,7 @@ export async function manageBays(gate: Gate): Promise<void> {
         const name = await askText("bay name");
         if (!name) continue;
         const bay_id = await askText("bay_id (optional)");
-        const bay = await gate.bays.create(
+        const bay = await visa.bays.create(
           bay_id
             ? { name, bay_id }
             : { name },
@@ -44,24 +44,24 @@ export async function manageBays(gate: Gate): Promise<void> {
       } else if (act === "pause") {
         const id = await askText("bay_id");
         if (!id) continue;
-        await gate.bays.pause(id);
+        await visa.bays.pause(id);
         showSuccess(`paused: ${id}`);
       } else if (act === "activate") {
         const id = await askText("bay_id");
         if (!id) continue;
-        await gate.bays.activate(id);
+        await visa.bays.activate(id);
         showSuccess(`activated: ${id}`);
       } else if (act === "remove") {
         const id = await askText("bay_id");
         if (!id) continue;
-        await gate.bays.remove(id);
+        await visa.bays.remove(id);
         showSuccess(`removed: ${id}`);
       } else if (act === "token") {
         const bay_id = await askText("bay_id");
         if (!bay_id) continue;
         const user_id = await askText("user_id");
         if (!user_id) continue;
-        const token = await gate.bays.tokens.apply({ bay_id, user_id });
+        const token = await visa.bays.tokens.apply({ bay_id, user_id });
         showSuccess(`token: ${token.user_token.slice(0, 20)}...`);
       }
     } catch (e) {

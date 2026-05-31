@@ -117,7 +117,7 @@ After Google login succeeds, the accounts service still returns a normal City `u
 So the bay does not need a different post-login client flow just because the user came from Google:
 
 ```ts
-const user = new Gate({
+const user = new Visa({
   role: "user",
   city_url: "https://base.example.com",
   bay_id: "bay_demo",

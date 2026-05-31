@@ -39,10 +39,10 @@ Services register their own actions and tables into City. The bay example also r
 
 ## Calling Services From Clients
 
-User Gate calls guest-access service entry points with `city_url` only:
+User Visa calls guest-access service entry points with `city_url` only:
 
 ```ts
-const guest = new Gate({
+const guest = new Visa({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -56,7 +56,7 @@ const session = await accounts.action("login").invoke({
 });
 ```
 
-User Gate calls authenticated service entry points after it has `bay_id + user_token`:
+User Visa calls authenticated service entry points after it has `bay_id + user_token`:
 
 ```ts
 const usage = user.service("usage");
@@ -64,7 +64,7 @@ const usage = user.service("usage");
 const myUsage = await usage.get("me");
 ```
 
-Admin Gate calls `/v1/{serviceId}`:
+Admin Visa calls `/v1/{serviceId}`:
 
 ```ts
 const usage = admin.service("usage");

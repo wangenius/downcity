@@ -20,8 +20,8 @@ Downcity is an agent platform for local projects and team workflows. It combines
 | --- | --- |
 | `downcity` | Public CLI bundle that installs `bay` for local Agent hosting and `city` for deployed City administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
-| `@downcity/city` | City runtime plus Gate access SDK for service registration, actions, auth, env, bay-scoped access, and HTTP calling. |
-| `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by Gate. |
+| `@downcity/city` | City runtime plus Visa access SDK for service registration, actions, auth, env, bay-scoped access, and HTTP calling. |
+| `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by Visa. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
 | `cities/*` | Deployable City compositions that assemble `@downcity/city` and services for Node or edge runtimes. |

@@ -96,13 +96,13 @@ That lets hooks differentiate behavior with `ctx.bay` and `ctx.user.metadata` in
 ### Bay side
 
 - keeps routes, UI, and business experience
-- uses `User Gate`
+- uses `User Visa`
 - only holds `bay_id + user_token`
 
 ### Business backend
 
 - owns login, orders, balance, subscriptions, and business data
-- uses `Admin Gate` in a trusted environment
+- uses `Admin Visa` in a trusted environment
 - issues `user_token` after a successful login
 
 ### City

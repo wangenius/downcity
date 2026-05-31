@@ -1,9 +1,9 @@
 ---
 title: 运维与排查
-description: "downcity 和 Admin Gate、数据库直查之间的边界，以及什么时候更适合用 CLI。"
+description: "downcity 和 Admin Visa、数据库直查之间的边界，以及什么时候更适合用 CLI。"
 ---
 
-CLI 和 `Admin Gate` 都能帮你管理 City，但它们适合的排查方式并不一样。
+CLI 和 `Admin Visa` 都能帮你管理 City，但它们适合的排查方式并不一样。
 
 ## 先给一个最简单的判断标准
 
@@ -17,9 +17,9 @@ CLI 和 `Admin Gate` 都能帮你管理 City，但它们适合的排查方式并
 
 - “这个动作以后要长期存在于系统里”
 
-优先脚本化或 `Admin Gate`。
+优先脚本化或 `Admin Visa`。
 
-## CLI、Admin Gate、数据库直查各自适合什么
+## CLI、Admin Visa、数据库直查各自适合什么
 
 ### 更适合 CLI 的情况
 
@@ -28,7 +28,7 @@ CLI 和 `Admin Gate` 都能帮你管理 City，但它们适合的排查方式并
 - 想看模型记录、schema、rows
 - 不想为了一个一次性问题先写脚本
 
-### 更适合 `Admin Gate` 的情况
+### 更适合 `Admin Visa` 的情况
 
 - 要把动作放进业务后端
 - 要自动化签 token
@@ -88,11 +88,11 @@ CLI 正适合这一步。
 
 只要你管理多个产品、多个 service、多个模型，CLI 都会是高频运维入口。
 
-### `Admin Gate` 不是“更高级的 CLI”
+### `Admin Visa` 不是“更高级的 CLI”
 
 两者不是上下位关系，而是两种不同形态：
 
-- `Admin Gate`：可信程序调用
+- `Admin Visa`：可信程序调用
 - CLI：人工终端排查
 
 ### 直接查数据库不应成为第一反应

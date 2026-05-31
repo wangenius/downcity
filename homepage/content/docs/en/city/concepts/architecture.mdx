@@ -20,7 +20,7 @@ Together they create the runtime flow:
 
 ```txt
 bay UI / app / internal tool
-  -> User Gate / Admin Gate / Bay terminal
+  -> User Visa / Admin Visa / Bay terminal
   -> City
   -> Service / AIService
   -> Provider / Database
@@ -32,7 +32,7 @@ Many clients can share one self-deployed City. Bay clients stay lightweight and 
 
 Downcity has two main external entry points:
 
-- Bay-side entry: `User Gate` and `Admin Gate` from `@downcity/city`
+- Bay-side entry: `User Visa` and `Admin Visa` from `@downcity/city`
 - Operator entry: `downcity`
 
 Neither one implements the City itself. They both send requests into the same City.
@@ -86,10 +86,10 @@ City itself does not care what “translation” or “payment” means as busin
 
 ### SDK pathway
 
-Used by `User Gate`:
+Used by `User Visa`:
 
 ```txt
-User Gate.ai.text({ prompt: "hello", model: "kimi-k2.6" })
+User Visa.ai.text({ prompt: "hello", model: "kimi-k2.6" })
   -> POST /v1/ai/text
   -> Provider text action(ctx)
   -> generateText / streamText (ai-sdk)

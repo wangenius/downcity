@@ -3,8 +3,8 @@
   "pages": [
     "index",
     "city-runtime",
-    "gate-user",
-    "gate-admin",
+    "visa-user",
+    "visa-admin",
     "http-api",
     "env-vars"
   ]

@@ -5,13 +5,13 @@ description: "Understand Downcity City package by package: responsibilities, com
 
 If you already know which package you want to inspect, this section is the fastest route.
 
-Downcity keeps the package graph intentionally small: start with `@downcity/city` for the City itself and its Gate access layer, create a Drizzle db in your host runtime, and add official services only when the bay needs them.
+Downcity keeps the package graph intentionally small: start with `@downcity/city` for the City itself and its Visa access layer, create a Drizzle db in your host runtime, and add official services only when the bay needs them.
 
 That order maps to four clear roles:
 
 - `city` is the Kernel for the City itself
 - `services` are Capabilities that add official behavior
-- Gate and `cli` are Interfaces for bay and operator entry
+- Visa and `cli` are Interfaces for bay and operator entry
 - `cities/*` is the Composition layer that assembles runnable examples
 
 If you only care about npm packages, the two most important pieces to remember first are `city` and `services`.
@@ -19,7 +19,7 @@ If you only care about npm packages, the two most important pieces to remember f
 ## Recommended order
 
 1. Start with [@downcity/city](/en/docs/city/packages/city) to understand the City itself
-2. Then read [Gate](/en/docs/city/packages/city/gate) to see how bays call it
+2. Then read [Visa](/en/docs/city/packages/city/visa) to see how bays call it
 3. If you want terminal tooling, read [City CLI](/en/docs/city/packages/cli)
 4. Add `@downcity/services` when your bay needs auth, wallet, usage, or Stripe payment flows
 
@@ -32,11 +32,11 @@ Read the package layer as this chain:
   -> provides the City Kernel
 @downcity/services
   -> adds official capabilities into City
-Gate from @downcity/city
-  -> uses User Gate and Admin Gate to call those capabilities
+Visa from @downcity/city
+  -> uses User Visa and Admin Visa to call those capabilities
 ```
 
-So Gate is not only for AI calls.
+So Visa is not only for AI calls.
 
 It also unifies:
 
@@ -61,9 +61,9 @@ Composition   -> cities/node + cities/edge
     <strong>@downcity/city</strong>
     <p>The City core: services, AIService, routes, auth, and model catalogs.</p>
   </a>
-  <a className="dc-doc-card" href="/en/docs/city/packages/city/gate">
-    <strong>Gate</strong>
-    <p>The bay SDK that exposes `User Gate` and `Admin Gate`, and unifies AI, custom service, service, and trusted-side call boundaries.</p>
+  <a className="dc-doc-card" href="/en/docs/city/packages/city/visa">
+    <strong>Visa</strong>
+    <p>The bay SDK that exposes `User Visa` and `Admin Visa`, and unifies AI, custom service, service, and trusted-side call boundaries.</p>
   </a>
 </div>
 

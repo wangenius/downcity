@@ -1,14 +1,14 @@
 ---
 title: Connect Client
-description: Call City from the bay with User Gate.
+description: Call City from the bay with User Visa.
 ---
 
-Bay clients use `User Gate`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
+Bay clients use `User Visa`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const client = new Gate({
+const client = new Visa({
   role: "user",
   city_url: "https://base.example.com",
   bay_id: "bay_xxx",

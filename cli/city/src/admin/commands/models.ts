@@ -7,14 +7,14 @@
  * - 如果模型缺少 provider key，会在这里直接显示缺失项。
  */
 
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 import { show, showError } from "../../core/ui.js";
 import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
 
 /**
  * 展示全部代码注册模型及其运行状态。
  */
-export async function manageModels(a: Gate): Promise<void> {
+export async function manageModels(a: Visa): Promise<void> {
   try {
     const [modelResp, envCatalog] = await Promise.all([
       a.listModels(),

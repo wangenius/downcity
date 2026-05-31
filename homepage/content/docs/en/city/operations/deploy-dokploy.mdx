@@ -109,9 +109,9 @@ If the request times out, the Dokploy service is not exposed publicly, the VPS f
 Bay frontends and apps should call the Node block through `@downcity/city`:
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const client = new Gate({
+const client = new Visa({
   role: "user",
   city_url: "https://base.example.com",
   bay_id: "my-bay",
@@ -119,16 +119,16 @@ const client = new Gate({
 });
 ```
 
-Trusted backends should use `Admin Gate` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
+Trusted backends should use `Admin Visa` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const admin = new Gate({
+const admin = new Visa({
   role: "admin",
   city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
 
-See [User Gate](/en/docs/city/reference/gate-user) and [Admin Gate](/en/docs/city/reference/gate-admin) for the full SDK surface.
+See [User Visa](/en/docs/city/reference/visa-user) and [Admin Visa](/en/docs/city/reference/visa-admin) for the full SDK surface.

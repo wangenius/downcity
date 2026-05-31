@@ -1,9 +1,9 @@
 /**
  * @downcity/city 公共入口。
  *
- * City 包同时提供服务端运行时与 Gate 访问入口：
+ * City 包同时提供服务端运行时与 Visa 访问入口：
  * - `City` 用来创建和部署城市
- * - `Gate` 用来以 user 或 admin 角色访问城市
+ * - `Visa` 用来以 user 或 admin 角色访问城市
  */
 
 // ===========================================================================
@@ -102,7 +102,7 @@ export type { CityTableApi } from "./store/table-api.js";
 export type { CityUserSchemaInput } from "./store/types.js";
 
 // ===========================================================================
-// 场景 6：Gate 访问入口
+// 场景 6：Visa 访问入口
 // ===========================================================================
 
 export type {
@@ -110,7 +110,7 @@ export type {
   FetchResponseLike,
   RawStreamBody,
   RequestInitLike,
-} from "./gate/http.js";
+} from "./visa/http.js";
 
 export type {
   CityModel,
@@ -118,19 +118,19 @@ export type {
   CityModelEnvRequirement,
 } from "@downcity/type";
 
-export { Gate } from "./gate/gate.js";
+export { Visa } from "./visa/visa.js";
 export type {
-  AdminGateOptions,
-  GateBaseOptions,
-  GateOptions,
-  GateOptionsForRole,
-  GateRole,
-  UserGateOptions,
-} from "./gate/types/gate.js";
+  AdminVisaOptions,
+  VisaBaseOptions,
+  VisaOptions,
+  VisaOptionsForRole,
+  VisaRole,
+  UserVisaOptions,
+} from "./visa/types/visa.js";
 
-export { AIInvoker, ModelCatalog, ModelHandle } from "./gate/invoker/ai/index.js";
-export { PaymentInvoker, PaymentMethodHandle } from "./gate/invoker/payment/index.js";
-export { ServiceClient, ActionClient } from "./gate/invoker/invoker.js";
+export { AIInvoker, ModelCatalog, ModelHandle } from "./visa/invoker/ai/index.js";
+export { PaymentInvoker, PaymentMethodHandle } from "./visa/invoker/payment/index.js";
+export { ServiceClient, ActionClient } from "./visa/invoker/invoker.js";
 
 export type {
   UserPaymentMethod,
@@ -143,28 +143,28 @@ export type {
   UserStreamResult,
   UserTextResult,
   UserVideoResult,
-} from "./gate/user/types.js";
+} from "./visa/user/types.js";
 
 export type {
   UserPaymentMethod as PaymentMethod,
   UserPaymentMethodReason as PaymentMethodReason,
   UserPaymentMethodType as PaymentMethodType,
-} from "./gate/invoker/payment/types.js";
+} from "./visa/invoker/payment/types.js";
 
 export type {
   UserModelRef,
   UserModelInput,
-} from "./gate/invoker/ai/types.js";
+} from "./visa/invoker/ai/types.js";
 
-export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./gate/invoker/balance/index.js";
-export { EnvInvoker } from "./gate/invoker/env/index.js";
-export { BaysInvoker } from "./gate/invoker/bays/index.js";
+export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./visa/invoker/balance/index.js";
+export { EnvInvoker } from "./visa/invoker/env/index.js";
+export { BaysInvoker } from "./visa/invoker/bays/index.js";
 
 export type {
   AdminInstructionResult,
   AdminModelRecord,
   AdminServiceSummary,
-} from "./gate/admin/types.js";
+} from "./visa/admin/types.js";
 
 export type {
   BalanceAccountRecord,
@@ -179,12 +179,12 @@ export type {
   BalanceTopupListInput,
   BalanceTopupRecord,
   BalanceTopupUpdateInput,
-} from "./gate/invoker/balance/types.js";
+} from "./visa/invoker/balance/types.js";
 
 export type {
   TokenApplyInput,
   TokenApplyResult,
-} from "./gate/invoker/bays/types.js";
+} from "./visa/invoker/bays/types.js";
 
 // ===========================================================================
 // 场景 7：内置表 Schema

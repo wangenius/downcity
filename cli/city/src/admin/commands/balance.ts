@@ -2,12 +2,12 @@
  * Admin Balance 管理命令。
  */
 
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 import { isCancel, select } from "@clack/prompts";
 import { askText, showError, showSuccess } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 
-export async function manageBalance(a: Gate): Promise<void> {
+export async function manageBalance(a: Visa): Promise<void> {
   while (true) {
     const act = await select({
       message: "Balance",

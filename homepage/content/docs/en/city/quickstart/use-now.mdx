@@ -1,6 +1,6 @@
 ---
 title: Try It Now
-description: Run a complete call chain with the default database, Admin Gate, and User Gate.
+description: Run a complete call chain with the default database, Admin Visa, and User Visa.
 ---
 
 ## 1. Start City
@@ -39,7 +39,7 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ## 2. Create Bay & Token
 
 ```ts
-const admin = new Gate({
+const admin = new Visa({
   role: "admin",
   city_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
@@ -55,7 +55,7 @@ const token = await admin.bays.tokens.apply({
 ## 3. Client Call
 
 ```ts
-const client = new Gate({
+const client = new Visa({
   role: "user",
   city_url: "http://127.0.0.1:43127",
   bay_id: bay.bay_id,

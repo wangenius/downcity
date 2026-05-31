@@ -11,7 +11,7 @@ What you end up with is not just a demo page. It is the smallest bay-shaped syst
 - one model record
 - one `bay_id`
 - one `user_token` that an end user can actually use
-- one `User Gate` that successfully calls City
+- one `User Visa` that successfully calls City
 
 You do not need a separate AI backend for every new bay. A new project can start as a client first and connect to an already deployed City.
 
@@ -27,7 +27,7 @@ You do not need a separate AI backend for every new bay. A new project can start
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>User Gate</strong>
+      <strong>User Visa</strong>
       <span>Reads `ai.listModels()` and then calls `ai.text()`, `ai.stream()`, `ai.image()`, or another service.</span>
     </div>
   </div>
@@ -53,14 +53,14 @@ You do not need a separate AI backend for every new bay. A new project can start
 2. [Create City](/en/docs/city/quickstart/create-city): create City and let the first startup initialize the default database automatically
 3. [Add model](/en/docs/city/quickstart/add-model): register models with Provider and AIService
 4. [Issue `user_token`](/en/docs/city/quickstart/issue-token): give a bay user a valid call credential
-5. [Connect client](/en/docs/city/quickstart/connect-client): call City from the bay with `User Gate`
+5. [Connect client](/en/docs/city/quickstart/connect-client): call City from the bay with `User Visa`
 
 ## Which path should you choose
 
 <div className="dc-doc-grid">
   <a className="dc-doc-card" href="/en/docs/city/quickstart/use-now">
     <strong>I only want one working flow first</strong>
-    <p>Starting from the templates is the fastest option. Verify City, bay, token, and User Gate first, then come back for the details.</p>
+    <p>Starting from the templates is the fastest option. Verify City, bay, token, and User Visa first, then come back for the details.</p>
   </a>
   <a className="dc-doc-card" href="/en/docs/city/quickstart/create-city">
     <strong>I want to start in my own project</strong>

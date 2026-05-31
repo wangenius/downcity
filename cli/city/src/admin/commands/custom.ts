@@ -2,12 +2,12 @@
  * Admin Custom Service 命令。
  */
 
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { askText, showError } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 
-export async function manageCustom(a: Gate): Promise<void> {
+export async function manageCustom(a: Visa): Promise<void> {
   while (true) {
     const name = await askText("service name (empty to go back)");
     if (!name) return;

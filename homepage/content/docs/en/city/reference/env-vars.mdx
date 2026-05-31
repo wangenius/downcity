@@ -5,7 +5,7 @@ description: Common environment variables used by the City.
 
 | Variable | Purpose |
 | --- | --- |
-| `DOWNCITY_CITY_ADMIN_SECRET_KEY` | Lets `Admin Gate` manage City |
+| `DOWNCITY_CITY_ADMIN_SECRET_KEY` | Lets `Admin Visa` manage City |
 | `DOWNCITY_CITY_TOKEN_SIGNING_KEY` | Lets City issue and validate `user_token` internally |
 | `DOWNCITY_CITY_DATABASE_URL` | Optional. Specifies the database URL used by City |
 | `OPENAI_API_KEY` | Example provider key; recommended to write it into the City database through Admin env |
@@ -52,7 +52,7 @@ So the practical rules are simple:
 
 ## Write values into the database
 
-A trusted backend can write provider keys through `Admin Gate`:
+A trusted backend can write provider keys through `Admin Visa`:
 
 ```ts
 await admin.env.upsert({

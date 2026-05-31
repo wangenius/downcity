@@ -111,7 +111,7 @@ After WeChat login succeeds, the accounts service still returns a normal City `u
 So the bay does not need a special post-login client flow just because the user came from WeChat:
 
 ```ts
-const user = new Gate({
+const user = new Visa({
   role: "user",
   city_url: "https://base.example.com",
   bay_id: "bay_demo",

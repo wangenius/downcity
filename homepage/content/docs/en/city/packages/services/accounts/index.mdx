@@ -5,7 +5,7 @@ description: "Use the official accounts service for registration, login, OAuth e
 
 `@downcity/services` is a good fit when you do not want to build a full account system first. It packages the common registration, login, session, and OAuth entry flows into one official service.
 
-The important point is not "another SDK." It adds a ready-made `accounts` service into City, so bay-side callers can use it through `User Gate` and `Admin Gate`.
+The important point is not "another SDK." It adds a ready-made `accounts` service into City, so bay-side callers can use it through `User Visa` and `Admin Visa`.
 
 ## How to read this section
 
@@ -121,14 +121,14 @@ const session = await guest.service("accounts").action("login").invoke({
 });
 ```
 
-Successful registration or login returns `user_token`. After that, the bay client can switch to a normal `User Gate` for AI calls.
+Successful registration or login returns `user_token`. After that, the bay client can switch to a normal `User Visa` for AI calls.
 
 `GET /v1/accounts/me` also returns the current `profile`, so bay-side callers can render account data directly from one endpoint.
 
 ## The most common bay-side integration
 
 ```ts
-const guest = new Gate({
+const guest = new Visa({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -141,7 +141,7 @@ const session = await guest.service("accounts").action("login").invoke<{
   bay_id: "bay_demo",
 });
 
-const user = new Gate({
+const user = new Visa({
   role: "user",
   city_url: "https://base.example.com",
   bay_id: "bay_demo",
@@ -159,5 +159,5 @@ This is why `accountsService()` and `@downcity/city` are usually read together: 
 
 - For the step-by-step flows, continue with the three subpages in this section
 - For the full scenario guide, read [Accounts Service](/en/docs/city/guides/accounts-service)
-- For the bay SDK, read [@downcity/city](/en/docs/city/packages/city/gate)
-- For more detailed bay-side calling patterns, read [User Gate](/en/docs/city/reference/gate-user)
+- For the bay SDK, read [@downcity/city](/en/docs/city/packages/city/visa)
+- For more detailed bay-side calling patterns, read [User Visa](/en/docs/city/reference/visa-user)

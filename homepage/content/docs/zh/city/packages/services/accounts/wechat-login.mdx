@@ -111,7 +111,7 @@ const result = await guest.service("accounts").get("oauth/result", {
 也就是说，产品侧不需要因为换成微信登录，就改掉后面的用户态调用方式：
 
 ```ts
-const user = new Gate({
+const user = new Visa({
   role: "user",
   city_url: "https://base.example.com",
   bay_id: "bay_demo",

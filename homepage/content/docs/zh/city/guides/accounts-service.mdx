@@ -21,14 +21,14 @@ base.use(accountsService({
 
 ```txt
 产品前端
-  -> guest User Gate（只有 city_url）
+  -> guest User Visa（只有 city_url）
   -> 调 accounts 的 guest action
   -> accounts service 返回 user_token
-  -> 前端创建正常 User Gate（city_url + bay_id + user_token）
+  -> 前端创建正常 User Visa（city_url + bay_id + user_token）
   -> 前端继续调 AI service 或 custom service
 ```
 
-如果你已经有自己的业务后端，也可以不用服务直接做登录鉴权，然后让后端用 `Admin Gate` 去签 `user_token`。Accounts 服务只是“最小账号系统”的官方现成方案。
+如果你已经有自己的业务后端，也可以不用服务直接做登录鉴权，然后让后端用 `Admin Visa` 去签 `user_token`。Accounts 服务只是“最小账号系统”的官方现成方案。
 
 ## 模式选择
 
@@ -48,14 +48,14 @@ base.use(accountsService({
 - 你要接复杂组织、邀请、权限、风控逻辑
 - 你只想把 `user_token` 签发交给 City
 
-这两种模式最终都会收敛到同一件事：前端拿到 `bay_id + user_token`，然后用正常 `User Gate` 调 City。
+这两种模式最终都会收敛到同一件事：前端拿到 `bay_id + user_token`，然后用正常 `User Visa` 调 City。
 
 ## 登录
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const guest = new Gate({
+const guest = new Visa({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -69,7 +69,7 @@ const session = await accounts.action("login").invoke({
 });
 ```
 
-返回结果里包含 `user_token`、`user_id` 和 `email`。产品 client 拿到 token 后，再创建常规 `User Gate` 调 AI service。
+返回结果里包含 `user_token`、`user_id` 和 `email`。产品 client 拿到 token 后，再创建常规 `User Visa` 调 AI service。
 
 ## 注册
 
@@ -116,10 +116,10 @@ https://你的-base-域名/v1/accounts/oauth/callback
 - `oauth/start`：拿跳转地址或 state
 - `oauth/result`：轮询或确认登录结果
 
-## 从 guest User Gate 切换到正常 User Gate
+## 从 guest User Visa 切换到正常 User Visa
 
 ```ts
-const guest = new Gate({
+const guest = new Visa({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -132,7 +132,7 @@ const session = await guest.service("accounts").action("login").invoke<{
   bay_id: "bay_demo",
 });
 
-const user = new Gate({
+const user = new Visa({
   role: "user",
   city_url: "https://base.example.com",
   bay_id: "bay_demo",
@@ -175,8 +175,8 @@ GET  /v1/accounts/sessions
 
 也就是说：
 
-- 免登录 Action 仍然通过 `User Gate` 调
-- 只是这个阶段的 `User Gate` 可以只有 `city_url`
+- 免登录 Action 仍然通过 `User Visa` 调
+- 只是这个阶段的 `User Visa` 可以只有 `city_url`
 - 进入用户态后，再要求 `bay_id + user_token`
 
 ## 当前用户和退出登录
@@ -218,4 +218,4 @@ Accounts 服务不会替代 `@downcity/city`。
 - `@downcity/services` 负责把 `accounts` service 注册进 City
 - `@downcity/city` 负责在产品侧和可信环境里调用这个 service
 
-也就是说，注册登录能力是服务提供的；调用方式仍然统一通过 `User Gate` / `Admin Gate` 完成。
+也就是说，注册登录能力是服务提供的；调用方式仍然统一通过 `User Visa` / `Admin Visa` 完成。

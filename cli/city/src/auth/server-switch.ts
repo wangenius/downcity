@@ -7,7 +7,7 @@
  * - 没有 server 时，CLI 会先强制进入添加流程
  */
 
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 import { isCancel, password, select, text } from "@clack/prompts";
 import {
   addServer,
@@ -242,7 +242,7 @@ async function promptRemoveServer(): Promise<void> {
 
 async function verifyServerAdminAccess(server: ServerProfile): Promise<boolean> {
   try {
-    const admin = new Gate({
+    const admin = new Visa({
       role: "admin",
       city_url: server.base_url,
       admin_secret_key: server.admin_secret_key,

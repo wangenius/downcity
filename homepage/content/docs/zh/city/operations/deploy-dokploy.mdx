@@ -109,9 +109,9 @@ curl http://1.2.3.4:43127/health
 产品前端和应用应该通过 `@downcity/city` 调用 Node 街区：
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const client = new Gate({
+const client = new Visa({
   role: "user",
   city_url: "https://base.example.com",
   bay_id: "my-bay",
@@ -119,16 +119,16 @@ const client = new Gate({
 });
 ```
 
-可信后端应该用 `Admin Gate` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
+可信后端应该用 `Admin Visa` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const admin = new Gate({
+const admin = new Visa({
   role: "admin",
   city_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
 
-完整 SDK 能力继续看 [User Gate](/docs/city/reference/gate-user) 和 [Admin Gate](/docs/city/reference/gate-admin)。
+完整 SDK 能力继续看 [User Visa](/docs/city/reference/visa-user) 和 [Admin Visa](/docs/city/reference/visa-admin)。

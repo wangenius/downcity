@@ -1,6 +1,6 @@
 ---
 title: 现在怎么用
-description: 用默认数据库、Admin Gate 和 User Gate 跑通一条完整调用链。
+description: 用默认数据库、Admin Visa 和 User Visa 跑通一条完整调用链。
 ---
 
 如果你想先按仓库里的现成产品体验，入口是：
@@ -12,9 +12,9 @@ description: 用默认数据库、Admin Gate 和 User Gate 跑通一条完整调
 
 ```plaintext
 Bay Client
-    ↓ Admin Gate 创建 bay / 签发 user_token
+    ↓ Admin Visa 创建 bay / 签发 user_token
 Downcity City
-    ↓ User Gate 携带 user_token + bay_id 调用 service
+    ↓ User Visa 携带 user_token + bay_id 调用 service
 Provider → AIService → handler
 ```
 
@@ -64,9 +64,9 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ## 2. 创建 bay 并签发 token
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const admin = new Gate({
+const admin = new Visa({
   role: "admin",
   city_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
@@ -84,9 +84,9 @@ const token = await admin.bays.tokens.apply({
 ## 3. 产品侧调用
 
 ```ts
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 
-const client = new Gate({
+const client = new Visa({
   role: "user",
   city_url: "http://127.0.0.1:43127",
   bay_id: bay.bay_id,

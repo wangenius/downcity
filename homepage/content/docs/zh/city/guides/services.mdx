@@ -40,10 +40,10 @@ base.use(stripePaymentService({
 
 ## 客户端调用服务
 
-User Gate 调免登录服务入口时，只需要 `city_url`：
+User Visa 调免登录服务入口时，只需要 `city_url`：
 
 ```ts
-const guest = new Gate({
+const guest = new Visa({
   role: "user",
   city_url: "https://base.example.com",
 });
@@ -57,7 +57,7 @@ const session = await accounts.action("login").invoke({
 });
 ```
 
-User Gate 带上 `bay_id + user_token` 后，调需要用户鉴权的服务入口：
+User Visa 带上 `bay_id + user_token` 后，调需要用户鉴权的服务入口：
 
 ```ts
 const usage = user.service("usage");
@@ -65,7 +65,7 @@ const usage = user.service("usage");
 const myUsage = await usage.get("me");
 ```
 
-Admin Gate 调 `/v1/{serviceId}`：
+Admin Visa 调 `/v1/{serviceId}`：
 
 ```ts
 const usage = admin.service("usage");

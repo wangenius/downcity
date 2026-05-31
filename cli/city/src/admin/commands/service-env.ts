@@ -7,7 +7,7 @@
  * - 直接管理：list / upsert / remove 裸 key-value
  */
 
-import { Gate } from "@downcity/city";
+import { Visa } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { askText, show, showError, showSuccess } from "../../core/ui.js";
 import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
@@ -34,7 +34,7 @@ interface ServiceEnv {
   env: EnvRequirement[];
 }
 
-export async function manageEnv(a: Gate): Promise<void> {
+export async function manageEnv(a: Visa): Promise<void> {
   while (true) {
     const services = await fetchEnvScopes(a);
 
@@ -79,7 +79,7 @@ export async function manageEnv(a: Gate): Promise<void> {
 // Init 模式
 // ============================================================
 
-async function initAllEnv(a: Gate, services: ServiceEnv[]): Promise<void> {
+async function initAllEnv(a: Visa, services: ServiceEnv[]): Promise<void> {
   const configuredKeys = new Set(
     services.flatMap((svc) => svc.env.filter((item) => item.configured).map((item) => item.key)),
   );
@@ -117,7 +117,7 @@ async function initAllEnv(a: Gate, services: ServiceEnv[]): Promise<void> {
 // 直接管理模式
 // ============================================================
 
-async function listAllEnv(a: Gate): Promise<void> {
+async function listAllEnv(a: Visa): Promise<void> {
   try {
     const items = await a.env.list();
     if (items.length === 0) { show("No env variables configured."); return; }
@@ -132,7 +132,7 @@ async function listAllEnv(a: Gate): Promise<void> {
   }
 }
 
-async function upsertEnv(a: Gate): Promise<void> {
+async function upsertEnv(a: Visa): Promise<void> {
   const key = await askText("key");
   if (!key) return;
   const value = await askText("value");
@@ -146,7 +146,7 @@ async function upsertEnv(a: Gate): Promise<void> {
   }
 }
 
-async function updateEnv(a: Gate): Promise<void> {
+async function updateEnv(a: Visa): Promise<void> {
   const items = await fetchCurrentEnv(a);
   if (items.length === 0) { show("No env variables to update."); return; }
 
@@ -171,7 +171,7 @@ async function updateEnv(a: Gate): Promise<void> {
   }
 }
 
-async function removeEnv(a: Gate): Promise<void> {
+async function removeEnv(a: Visa): Promise<void> {
   const key = await askText("key");
   if (!key) return;
   try {
@@ -187,7 +187,7 @@ async function removeEnv(a: Gate): Promise<void> {
 // 按 Service 查看
 // ============================================================
 
-async function configureServiceEnv(a: Gate, svc: ServiceEnv): Promise<void> {
+async function configureServiceEnv(a: Visa, svc: ServiceEnv): Promise<void> {
   while (true) {
     const scopes = await fetchEnvScopes(a);
     const currentScope = scopes?.find((item) => item.id === svc.id) ?? svc;
@@ -223,7 +223,7 @@ async function configureServiceEnv(a: Gate, svc: ServiceEnv): Promise<void> {
 // 工具
 // ============================================================
 
-async function fetchEnvScopes(a: Gate): Promise<ServiceEnv[] | undefined> {
+async function fetchEnvScopes(a: Visa): Promise<ServiceEnv[] | undefined> {
   try {
     const scopes = await a.env.catalog();
     if (scopes.length === 0) {
@@ -242,7 +242,7 @@ async function fetchEnvScopes(a: Gate): Promise<ServiceEnv[] | undefined> {
   }
 }
 
-async function fetchCurrentEnv(a: Gate): Promise<{ key: string; value: string }[]> {
+async function fetchCurrentEnv(a: Visa): Promise<{ key: string; value: string }[]> {
   try {
     return await a.env.list();
   } catch (e) {

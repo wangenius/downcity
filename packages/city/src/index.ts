@@ -1,5 +1,9 @@
 /**
  * @downcity/city 公共入口。
+ *
+ * City 包同时提供服务端运行时与 Gate 访问入口：
+ * - `City` 用来创建和部署城市
+ * - `Gate` / `UserClient` / `AdminClient` 用来访问城市
  */
 
 // ===========================================================================
@@ -98,14 +102,96 @@ export type { CityTableApi } from "./store/table-api.js";
 export type { CityUserSchemaInput } from "./store/types.js";
 
 // ===========================================================================
-// 场景 6：内置表 Schema
+// 场景 6：Gate 访问入口
+// ===========================================================================
+
+export type {
+  FetchLike,
+  FetchResponseLike,
+  RawStreamBody,
+  RequestInitLike,
+} from "./gate/http.js";
+
+export { Gate } from "./gate/gate.js";
+export type {
+  AdminGateOptions,
+  GateBaseOptions,
+  GateOptions,
+  GateRole,
+  UserGateOptions,
+} from "./gate/types/gate.js";
+
+export { UserClient } from "./gate/user/index.js";
+export { AIInvoker, ModelCatalog, ModelHandle } from "./gate/invoker/ai/index.js";
+export { PaymentInvoker, PaymentMethodHandle } from "./gate/invoker/payment/index.js";
+export { ServiceClient, ActionClient } from "./gate/invoker/invoker.js";
+
+export type {
+  UserClientOptions,
+  UserPaymentMethod,
+  UserPaymentMethodReason,
+  UserPaymentMethodType,
+  UserImageResult,
+  UserServiceInput,
+  UserServiceSummary,
+  UserStreamChunk,
+  UserStreamResult,
+  UserTextResult,
+  UserVideoResult,
+} from "./gate/user/types.js";
+
+export type {
+  UserPaymentMethod as PaymentMethod,
+  UserPaymentMethodReason as PaymentMethodReason,
+  UserPaymentMethodType as PaymentMethodType,
+} from "./gate/invoker/payment/types.js";
+
+export type {
+  UserModelRef,
+  UserModelInput,
+} from "./gate/invoker/ai/types.js";
+
+export { AdminClient } from "./gate/admin/index.js";
+export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./gate/invoker/balance/index.js";
+export { EnvInvoker } from "./gate/invoker/env/index.js";
+export { StudiosInvoker } from "./gate/invoker/studios/index.js";
+
+export type {
+  AdminClientOptions,
+  AdminInstructionResult,
+  AdminModelRecord,
+  AdminServiceSummary,
+} from "./gate/admin/types.js";
+
+export type {
+  BalanceAccountRecord,
+  BalanceHistoryListInput,
+  BalanceLedgerRecord,
+  BalanceMutationInput,
+  BalanceRedeemCodeCreateInput,
+  BalanceRedeemCodeDisableInput,
+  BalanceRedeemCodeIssueResult,
+  BalanceRedeemCodeListInput,
+  BalanceRedeemCodeRecord,
+  BalanceTopupListInput,
+  BalanceTopupRecord,
+  BalanceTopupUpdateInput,
+} from "./gate/invoker/balance/types.js";
+
+export type {
+  TokenApplyInput,
+  TokenApplyResult,
+} from "./gate/invoker/studios/types.js";
+
+// ===========================================================================
+// 场景 7：内置表 Schema
 // ===========================================================================
 
 export { sqliteStudios, pgStudios } from "./service/studios/schema.js";
 export { sqliteEnv, pgEnv } from "./service/env/schema.js";
 
 // ===========================================================================
-// 场景 7：工具函数
+// 场景 8：工具函数
 // ===========================================================================
 
 export {

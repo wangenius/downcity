@@ -20,9 +20,8 @@ Downcity is an agent platform for local projects and team workflows. It combines
 | --- | --- |
 | `downcity` | Public CLI bundle that installs `studio` for local Agent hosting and `city` for deployed City administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
-| `@downcity/city` | City runtime for service registration, actions, auth, env, studio-scoped access, and HTTP routing. |
+| `@downcity/city` | City runtime plus Gate access SDK for service registration, actions, auth, env, studio-scoped access, and HTTP calling. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
-| `@downcity/gate` | User and admin SDK for calling Downcity services over HTTP. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
 | `cities/*` | Deployable City compositions that assemble `@downcity/city` and services for Node or edge runtimes. |
 | `products/chrome-extension` | Chrome extension for Console connectivity, page context, and inline composition workflows. |
@@ -34,7 +33,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 - Studio control plane: run `studio start` or `studio console` to host local agents and access the control surface.
 - Agent daemon lifecycle: create, start, stop, restart, inspect, chat with, and diagnose project agents.
 - Global model pool: manage providers and models through `studio model`, then bind projects to model IDs.
-- City runtime: reuse one shared service city across studios with `@downcity/city`, `@downcity/services`, `@downcity/gate`, and deployable `cities/*`.
+- City runtime: reuse one shared service city across studios with `@downcity/city`, `@downcity/services`, and deployable `cities/*`.
 - Built-in services: `chat`, `task`, `memory`, `shell`, and `contact`.
 - Built-in plugins: `skill`, `auth`, `web`, `asr`, `tts`, and `workboard`.
 - SDK access: embed a local agent or call a remote agent over HTTP.
@@ -195,7 +194,6 @@ downcity/
 ├── packages/
 │   ├── agent/
 │   ├── city/
-│   ├── gate/
 │   ├── services/
 │   └── ui/
 ├── cli/
@@ -204,8 +202,7 @@ downcity/
 │   └── downcity/
 ├── cities/
 │   ├── edge/
-│   ├── node/
-│   └── shared/
+│   └── node/
 ├── products/
 │   └── chrome-extension/
 ├── homepage/
@@ -222,7 +219,7 @@ downcity/
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Developer docs: [downcity.ai/devdocs](https://downcity.ai/devdocs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
-- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/services/README.md](./packages/services/README.md), [packages/gate/README.md](./packages/gate/README.md), [cli/city/README.md](./cli/city/README.md), [cli/studio/README.md](./cli/studio/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
+- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/studio/README.md](./cli/studio/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
 
 ## Local Development
 

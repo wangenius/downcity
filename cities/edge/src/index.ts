@@ -6,9 +6,10 @@
 
 import { drizzle } from "drizzle-orm/d1";
 import {
+  type City,
   type Context,
 } from "@downcity/city";
-import { compose_block } from "../../shared/src/compose-block.js";
+import { compose_city } from "./compose-city.js";
 import { createOpenAIProvider } from "./openai-provider.js";
 
 const INITIAL_BALANCE = 100;
@@ -19,7 +20,7 @@ export interface Env {
   DB: D1Database;
 }
 
-let basePromise: Promise<ReturnType<typeof compose_block>["base"]> | undefined;
+let city_promise: Promise<City> | undefined;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,33 +29,33 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-function getBase(env: Env, request: Request): Promise<ReturnType<typeof compose_block>["base"]> {
-  if (!basePromise) {
-    basePromise = initBase(env);
+function get_city(env: Env, request: Request): Promise<City> {
+  if (!city_promise) {
+    city_promise = init_city(env);
   }
-  return basePromise;
+  return city_promise;
 }
 
-async function initBase(env: Env): Promise<ReturnType<typeof compose_block>["base"]> {
+async function init_city(env: Env): Promise<City> {
   const db = drizzle(env.DB);
-  const deepseekProvider = createOpenAIProvider({
+  const deepseek_provider = createOpenAIProvider({
     id: "deepseek",
     envKey: "DEEPSEEK_API_KEY",
     baseURL: "https://api.deepseek.com/v1",
     defaultModelId: "deepseek-v4-flash",
   });
-  const { base, balance, ai } = compose_block({
+  const { city, balance, ai } = compose_city({
     db,
     dialect: "sqlite",
     raw: env.DB,
     models: [
-      deepseekProvider.model({
+      deepseek_provider.model({
         id: "deepseek-v4-flash",
         name: "DeepSeek V4 Flash",
         description: "DeepSeek OpenAI-compatible text model",
         tags: ["deepseek", "text"],
       }),
-      deepseekProvider.model({
+      deepseek_provider.model({
         id: "deepseek-v4-pro",
         name: "DeepSeek V4 Pro",
         description: "DeepSeek OpenAI-compatible text model",
@@ -90,15 +91,15 @@ async function initBase(env: Env): Promise<ReturnType<typeof compose_block>["bas
     });
   });
 
-  await base.health();
-  const accounts = base.getService("accounts")!;
+  await city.health();
+  const accounts = city.getService("accounts")!;
   // 关键说明（中文）
   // accounts 的专用回调入口也统一挂到 `/v1/accounts/*`，
   // 这样 client / admin / worker 对外只有一套路由空间。
-  base.router().all("/v1/accounts/auth/*", (c) => (accounts as any).getAuthHandler()(c.req.raw));
-  base.router().get("/v1/accounts/oauth/callback", async (c) => (accounts as any).handleOAuthCallback(c.req.raw));
+  city.router().all("/v1/accounts/auth/*", (c) => (accounts as any).getAuthHandler()(c.req.raw));
+  city.router().get("/v1/accounts/oauth/callback", async (c) => (accounts as any).handleOAuthCallback(c.req.raw));
 
-  return base;
+  return city;
 }
 
 export default {
@@ -115,15 +116,15 @@ export default {
       }));
     }
 
-    const base = await getBase(env, request);
+    const city = await get_city(env, request);
     if (request.method === "GET" && url.pathname === "/health") {
-      const health = await base.health();
+      const health = await city.health();
       return withCors(Response.json({
         ...health,
         version: WORKER_VERSION,
       }));
     }
-    const response = await base.handleRequest(request);
+    const response = await city.handleRequest(request);
     return withCors(response);
   },
 };

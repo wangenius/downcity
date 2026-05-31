@@ -5,21 +5,21 @@ description: "Understand Downcity City package by package: responsibilities, com
 
 If you already know which package you want to inspect, this section is the fastest route.
 
-Downcity keeps the package graph intentionally small: start with `@downcity/city` for the City itself, add `@downcity/gate` for studio calls, create a Drizzle db in your host runtime, and add official services only when the studio needs them.
+Downcity keeps the package graph intentionally small: start with `@downcity/city` for the City itself and its Gate access layer, create a Drizzle db in your host runtime, and add official services only when the studio needs them.
 
 That order maps to four clear roles:
 
 - `city` is the Kernel for the City itself
 - `services` are Capabilities that add official behavior
-- `gate` and `cli` are Interfaces for studio and operator entry
+- Gate and `cli` are Interfaces for studio and operator entry
 - `cities/*` is the Composition layer that assembles runnable examples
 
-If you only care about npm packages, the three most important pieces to remember first are `city`, `services`, and `gate`.
+If you only care about npm packages, the two most important pieces to remember first are `city` and `services`.
 
 ## Recommended order
 
 1. Start with [@downcity/city](/en/docs/city/packages/city) to understand the City itself
-2. Then read [@downcity/gate](/en/docs/city/packages/gate) to see how studios call it
+2. Then read [Gate](/en/docs/city/packages/city/gate) to see how studios call it
 3. If you want terminal tooling, read [City CLI](/en/docs/city/packages/cli)
 4. Add `@downcity/services` when your studio needs auth, wallet, usage, or Stripe payment flows
 
@@ -32,11 +32,11 @@ Read the package layer as this chain:
   -> provides the City Kernel
 @downcity/services
   -> adds official capabilities into City
-@downcity/gate
+Gate from @downcity/city
   -> uses UserClient and AdminClient to call those capabilities
 ```
 
-So `@downcity/gate` is not only for AI calls.
+So Gate is not only for AI calls.
 
 It also unifies:
 
@@ -50,7 +50,7 @@ It also unifies:
 ```txt
 Kernel        -> @downcity/city
 Capabilities  -> @downcity/services
-Interfaces    -> @downcity/gate + downcity
+Interfaces    -> @downcity/city + downcity
 Composition   -> cities/node + cities/edge
 ```
 
@@ -61,8 +61,8 @@ Composition   -> cities/node + cities/edge
     <strong>@downcity/city</strong>
     <p>The City core: services, AIService, routes, auth, and model catalogs.</p>
   </a>
-  <a className="dc-doc-card" href="/en/docs/city/packages/gate">
-    <strong>@downcity/gate</strong>
+  <a className="dc-doc-card" href="/en/docs/city/packages/city/gate">
+    <strong>Gate</strong>
     <p>The studio SDK that exposes `UserClient` and `AdminClient`, and unifies AI, custom service, service, and trusted-side call boundaries.</p>
   </a>
 </div>
@@ -99,28 +99,28 @@ If you want to deploy City in Cloudflare Workers, you do not need an extra edge 
 ### Minimal AI studio
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 
 ### Minimal registration and login
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ### Usage metering
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ### Global wallet and topup orders
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ### One-time Stripe topups
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`

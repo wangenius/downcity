@@ -1,6 +1,6 @@
 ---
 title: Common Patterns and Errors
-description: "Common @downcity/gate package combinations in real studios, and how to reason about token, model, and service-related errors."
+description: "Common Gate combinations in real studios, and how to reason about token, model, and service-related errors."
 ---
 
 ## The three most common combinations
@@ -8,19 +8,18 @@ description: "Common @downcity/gate package combinations in real studios, and ho
 ### Pure AI studio
 
 - `@downcity/city`
-- `@downcity/gate`
+- Gate exports from `@downcity/city`
 
 ### AI studio with minimal auth
 
 - `@downcity/city`
-- `@downcity/gate`
+- Gate exports from `@downcity/city`
 - `@downcity/services`
 
 ### AI studio with usage and payment
 
 - `@downcity/city`
-- `@downcity/gate`
-- `@downcity/services`
+- Gate exports from `@downcity/city`
 - `@downcity/services`
 
 ## Most common 401 / 403 causes

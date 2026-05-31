@@ -7,7 +7,7 @@
  * - 如果模型缺少 provider key，会在这里直接显示缺失项。
  */
 
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 import { show, showError } from "../../core/ui.js";
 import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
 

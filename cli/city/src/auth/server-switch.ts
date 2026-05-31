@@ -7,7 +7,7 @@
  * - 没有 server 时，CLI 会先强制进入添加流程
  */
 
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 import { isCancel, password, select, text } from "@clack/prompts";
 import {
   addServer,

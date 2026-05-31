@@ -26,13 +26,13 @@ description: "用官方账号服务提供注册、登录、OAuth 入口、会话
 - 产品侧 profile 资料表
 - 登录后返回 City `user_token`
 
-## 它和 `@downcity/gate` 的关系
+## 它和 `@downcity/city` 的关系
 
 把两者分开看最清楚：
 
 - `@downcity/services`
   把 `accounts` 这组 service action 注册到 City
-- `@downcity/gate`
+- `@downcity/city`
   让前端、App、服务或可信后端去调用这些 action
 
 也就是说，这个服务负责“把账号能力接进 City”；真正的调用方式仍然统一走：
@@ -153,11 +153,11 @@ const reply = await user.ai.text({
 });
 ```
 
-这也是为什么 `accountsService()` 和 `@downcity/gate` 通常是一起看的：一个提供账号能力，一个提供调用入口。
+这也是为什么 `accountsService()` 和 `@downcity/city` 通常是一起看的：一个提供账号能力，一个提供调用入口。
 
 ## 相关文档
 
 - 想按流程深入，继续读本节的三个子页面
 - 想看完整场景，用 [Accounts 服务指南](/docs/city/guides/accounts-service)
-- 想看产品调用 SDK，用 [@downcity/gate](/docs/city/packages/gate)
+- 想看产品调用 SDK，用 [@downcity/city](/docs/city/packages/city/gate)
 - 想看更细的产品侧调法，读 [UserClient](/docs/city/reference/user-client)

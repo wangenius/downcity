@@ -9,7 +9,7 @@
  * - 兑换 redeem_code
  */
 
-import type { UserClient } from "@downcity/gate";
+import type { UserClient } from "@downcity/city";
 import { openBrowser } from "../core/browser.js";
 import { buildStripeEndpoints } from "../core/stripe.js";
 import { askText, show, showError, showSuccess } from "../core/ui.js";

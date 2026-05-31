@@ -12,9 +12,8 @@ The repository is organized around the agent runtime, city control plane, shared
 - `packages/agent/`: local agent kernel, session execution, plugin runtime, HTTP/RPC host, SDK
 - `cli/city/`: City management command for deployed service resources
 - `cli/studio/`: local Agent host, Console gateway, model pool, project orchestration, and daemon control
-- `packages/city/`: City runtime for services, actions, auth, env, studio-scoped access, and routing
+- `packages/city/`: City runtime plus Gate access SDK for services, actions, auth, env, studio-scoped access, routing, and HTTP calls
 - `packages/services/`: public services such as accounts, balance, usage, payment, and Stripe flows
-- `packages/gate/`: user and admin SDK for service calls
 - `packages/ui/`: reusable UI primitives and app-facing components
 - `cities/`: deployable City compositions that assemble City runtime and services for Node or edge runtimes
 - `products/console/`: browser control surface
@@ -29,7 +28,7 @@ The repository is organized around the agent runtime, city control plane, shared
 - `cli/city` owns control-plane and multi-project coordination
 - `packages/city` owns reusable service runtime infrastructure
 - `packages/services` owns public service capabilities
-- `packages/gate` owns service access over HTTP
+- `packages/city` owns service access over HTTP through Gate exports
 - product surfaces should consume runtime APIs instead of duplicating runtime logic
 
 ## Current architecture philosophy
@@ -44,9 +43,8 @@ The repository is organized around the agent runtime, city control plane, shared
 
 ```text
 packages/agent build -> SDK and runtime package
-packages/city build -> infrastructure runtime package
+packages/city build -> runtime and Gate SDK package
 packages/services build -> public services package
-packages/gate build -> service SDK package
 cli/city build -> City management command
 cli/studio build -> local Studio host command
 cities/node typecheck -> Node service block

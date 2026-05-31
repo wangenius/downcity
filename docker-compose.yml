@@ -26,7 +26,6 @@ services:
         RUN pnpm install --frozen-lockfile
         RUN pnpm -C packages/city build
         RUN pnpm -C packages/services build
-        RUN pnpm -C cities/shared typecheck
         RUN pnpm -C cities/node typecheck
 
         EXPOSE 43127

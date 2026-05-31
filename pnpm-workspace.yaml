@@ -4,7 +4,6 @@ packages:
   - packages/agent
   - packages/city
   - packages/services
-  - packages/gate
   - packages/plugins
   - cli/*
   - packages/ui

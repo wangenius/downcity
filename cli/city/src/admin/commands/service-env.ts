@@ -7,7 +7,7 @@
  * - 直接管理：list / upsert / remove 裸 key-value
  */
 
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { askText, show, showError, showSuccess } from "../../core/ui.js";
 import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";

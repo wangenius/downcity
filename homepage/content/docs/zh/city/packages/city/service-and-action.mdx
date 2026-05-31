@@ -90,7 +90,7 @@ POST /v1/translate/zh2en
 GET  /v1/translate/list
 ```
 
-这也是为什么产品端最后统一都能通过 `@downcity/gate` 调：
+这也是为什么产品端最后统一都能通过 `@downcity/city` 调：
 
 ```ts
 const result = await client
@@ -220,5 +220,5 @@ client.service("service_id").action("action_id").invoke(...)
 ## 继续阅读
 
 - 想知道 hook 和 service 怎么围绕 Action 工作，读 [Hook 与服务挂载](/docs/city/packages/city/hooks-and-service)
-- 想知道产品端怎么调用这些能力，读 [@downcity/gate](/docs/city/packages/gate)
+- 想知道产品端怎么调用这些能力，读 [@downcity/city](/docs/city/packages/city/gate)
 - 想看更底层 API 选项，读 [City API](/docs/city/reference/city-runtime)

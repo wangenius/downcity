@@ -2,7 +2,7 @@
  * Admin Payment 管理命令。
  */
 
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { buildStripeEndpoints } from "../../core/stripe.js";
 import { show, showError } from "../../core/ui.js";

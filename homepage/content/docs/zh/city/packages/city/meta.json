@@ -2,6 +2,7 @@
   "title": "@downcity/city",
   "pages": [
     "index",
+    "gate",
     "city-runtime",
     "service-and-action",
     "hooks-and-service",

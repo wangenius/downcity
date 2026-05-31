@@ -2,7 +2,7 @@
  * Admin Usage 管理命令。
  */
 
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { showError } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";

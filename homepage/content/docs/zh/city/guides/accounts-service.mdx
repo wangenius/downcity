@@ -53,7 +53,7 @@ base.use(accountsService({
 ## 登录
 
 ```ts
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 
 const guest = new UserClient({
   base_url: "https://base.example.com",
@@ -206,13 +206,13 @@ const sessions = await admin.service("accounts").get("sessions");
 
 City 使用者不需要手写这些表。
 
-## 和 `@downcity/gate` 的关系
+## 和 `@downcity/city` 的关系
 
-Accounts 服务不会替代 `@downcity/gate`。
+Accounts 服务不会替代 `@downcity/city`。
 
 更准确地说：
 
 - `@downcity/services` 负责把 `accounts` service 注册进 City
-- `@downcity/gate` 负责在产品侧和可信环境里调用这个 service
+- `@downcity/city` 负责在产品侧和可信环境里调用这个 service
 
 也就是说，注册登录能力是服务提供的；调用方式仍然统一通过 `UserClient` / `AdminClient` 完成。

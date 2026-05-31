@@ -64,7 +64,7 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ## 2. 创建 studio 并签发 token
 
 ```ts
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 
 const admin = new AdminClient({
   base_url: "http://127.0.0.1:43127",
@@ -83,7 +83,7 @@ const token = await admin.studios.tokens.apply({
 ## 3. 产品侧调用
 
 ```ts
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 
 const client = new UserClient({
   base_url: "http://127.0.0.1:43127",

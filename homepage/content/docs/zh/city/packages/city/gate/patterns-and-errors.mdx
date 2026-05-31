@@ -1,6 +1,6 @@
 ---
 title: 组合方式与常见错误
-description: "@downcity/gate 在真实产品里的常见组合，以及 token、model、service 相关错误的排查思路。"
+description: "Gate 在真实产品里的常见组合，以及 token、model、service 相关错误的排查思路。"
 ---
 
 ## 最常见的三种组合
@@ -8,19 +8,18 @@ description: "@downcity/gate 在真实产品里的常见组合，以及 token、
 ### 纯 AI 产品
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city` 导出的 Gate 能力
 
 ### AI 产品 + 最小账号体系
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city` 导出的 Gate 能力
 - `@downcity/services`
 
 ### AI 产品 + usage / 支付
 
 - `@downcity/city`
-- `@downcity/gate`
-- `@downcity/services`
+- `@downcity/city` 导出的 Gate 能力
 - `@downcity/services`
 
 ## 401 / 403 最常见原因

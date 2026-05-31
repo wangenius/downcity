@@ -27,7 +27,7 @@ const HELP_ITEMS = [
     name: "build",
     summary: "完整构建整个仓库。",
     detail:
-      "等价于 `build:all`，会构建 city、services、gate、cli、homepage 与 console 等主要交付物。",
+      "等价于 `build:all`，会构建 city、services、cli、homepage 与 console 等主要交付物。",
   },
   {
     name: "build:all",
@@ -44,11 +44,6 @@ const HELP_ITEMS = [
     name: "build:city",
     summary: "只构建 @downcity/city runtime 包。",
     detail: "执行 `pnpm -C packages/city build`，不会修改 package version。",
-  },
-  {
-    name: "build:gate",
-    summary: "只构建 @downcity/gate SDK 包。",
-    detail: "执行 `pnpm -C packages/gate build`，不会修改 package version。",
   },
   {
     name: "build:cli",
@@ -74,7 +69,7 @@ const HELP_ITEMS = [
     name: "patch:build",
     summary: "按 package 执行 patch bump + build。",
     detail:
-      "支持 `npm run patch:build -- --agent --city --services --gate --plugins --cli`、`--ui`、`--all`、`--no-bump`，默认构建 agent + plugins + cli。",
+      "支持 `npm run patch:build -- --agent --city --services --plugins --cli`、`--ui`、`--all`、`--no-bump`，默认构建 agent + plugins + cli。",
   },
   {
     name: "agent:patch:build",
@@ -92,20 +87,15 @@ const HELP_ITEMS = [
     detail: "等价于 `npm run patch:build -- --city`。",
   },
   {
-    name: "gate:patch:build",
-    summary: "只对 @downcity/gate 执行 patch bump + build。",
-    detail: "等价于 `npm run patch:build -- --gate`，会先构建 city 作为依赖。",
-  },
-  {
     name: "cli:patch:build",
     summary: "只对 downcity 执行 patch bump + build。",
     detail:
-      "等价于 `npm run patch:build -- --cli`，会构建 city、services、gate、agent 与 plugins 作为依赖，再构建 cli/city、cli/studio、cli/downcity 并全局安装 city/studio 两个命令。",
+      "等价于 `npm run patch:build -- --cli`，会构建 city、services、agent 与 plugins 作为依赖，再构建 cli/city、cli/studio、cli/downcity 并全局安装 city/studio 两个命令。",
   },
   {
     name: "all:patch:build",
     summary: "对全部 packages 执行 patch bump + build。",
-    detail: "等价于 `npm run patch:build -- --all`，会处理 agent、city、services、gate、plugins、ui、cli。",
+    detail: "等价于 `npm run patch:build -- --all`，会处理 agent、city、services、plugins、ui、cli。",
   },
   {
     name: "install:ws",

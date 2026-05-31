@@ -6,7 +6,7 @@
  * - me / services / service 保持内联（逻辑简单）。
  */
 
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 import { type UserContext } from "../auth/user.js";
 import { clearUserSession } from "../core/session.js";
 import { askUserCommand, askText, show, showError, showSuccess } from "../core/ui.js";

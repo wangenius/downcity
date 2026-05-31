@@ -6,7 +6,7 @@ description: 给产品侧 client 一个可以调用 City 的用户凭证。
 `user_token` 需要由可信环境签发。开发者后端使用 `AdminClient`，基于 `studio_id + user_id` 向 City 申请 token。
 
 ```ts
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 
 const client = new AdminClient({
   base_url: "https://base.example.com",

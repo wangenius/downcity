@@ -1,9 +1,9 @@
 ---
-title: "@downcity/gate"
+title: "Gate"
 description: "提供 UserClient 和 AdminClient，并把 AI、custom service 的调用边界统一收口。"
 ---
 
-`@downcity/gate` 是产品接入 Downcity 的主 SDK。
+Gate 是 `@downcity/city` 导出的访问层。产品侧通过它接入一座 City。
 
 它不只是“调一下 AI”的小工具，而是把这几类调用统一收口到一个产品侧入口里：
 
@@ -30,7 +30,7 @@ description: "提供 UserClient 和 AdminClient，并把 AI、custom service 的
 ## 安装
 
 ```bash
-pnpm add @downcity/gate
+pnpm add @downcity/city
 ```
 
 ## 这个包到底管什么
@@ -44,7 +44,7 @@ pnpm add @downcity/gate
 3. `client.service(name).get(path)`
    这是 GET Action 调用入口，适合 OAuth 轮询、列表查询、当前用户信息等读取型接口。
 
-也就是说，`@downcity/gate` 实际上统一承载了：
+也就是说，Gate 实际上统一承载了：
 
 - AI 调用
 - 你自己写的业务 service 调用
@@ -107,7 +107,7 @@ const issued = await admin.studios.tokens.apply({
 
 service 不是一套单独的协议。
 
-对 `@downcity/gate` 来说，它和你自己注册的 service 本质上是同一件事：都是 City 里挂在统一 `/v1/*` 路由空间下的 service，只是来源不同。
+对 `@downcity/city` 来说，它和你自己注册的 service 本质上是同一件事：都是 City 里挂在统一 `/v1/*` 路由空间下的 service，只是来源不同。
 
 - 你自己写的 service：例如 `rewrite`、`translate`、`workspace`
 - 官方服务带来的 service：例如 `accounts`、`usage`、`payment`、`payment.stripe`
@@ -122,7 +122,7 @@ client.service("service_id").get("path", query)
 ## `UserClient` 最小示例
 
 ```ts
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 
 const client = new UserClient({
   base_url: "https://base.example.com",
@@ -149,7 +149,7 @@ const result = await client.ai.text({
 ## `AdminClient` 最小示例
 
 ```ts
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 
 const admin = new AdminClient({
   base_url: "https://base.example.com",
@@ -273,24 +273,24 @@ const checkout = await client.payment.method("stripe").invoke({
 ### 只做 AI 产品最小接入
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 
 ### 要登录注册，但不想先自己搭账号系统
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ### 要记录 usage、做套餐或计量
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ### 要接 Stripe 充值
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ## 推荐阅读路径

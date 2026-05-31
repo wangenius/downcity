@@ -92,7 +92,7 @@ const methods = await guest.service("payment").get("methods");
 ## Most common combinations
 
 - Pair it with [@downcity/services](/en/docs/city/packages/services) for the full "topup -> Stripe payment -> wallet credit" flow
-- Pair it with [@downcity/gate](/en/docs/city/packages/gate) so the frontend can trigger Checkout creation
+- Pair it with [@downcity/city](/en/docs/city/packages/city/gate) so the frontend can trigger Checkout creation
 - Pair it with [City CLI](/en/docs/city/packages/cli) so a CLI user can start Stripe Checkout and open the browser
 - Pair it with [@downcity/services](/en/docs/city/packages/services) to keep "how much was funded" separate from "how much was consumed"
 

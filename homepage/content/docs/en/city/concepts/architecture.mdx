@@ -32,7 +32,7 @@ Many clients can share one self-deployed City. Studio clients stay lightweight a
 
 Downcity has two main external entry points:
 
-- Studio-side entry: `UserClient` and `AdminClient` from `@downcity/gate`
+- Studio-side entry: `UserClient` and `AdminClient` from `@downcity/city`
 - Operator entry: `downcity`
 
 Neither one implements the City itself. They both send requests into the same City.
@@ -43,7 +43,7 @@ Running Downcity is not just `new City(...)`. There is also an assembly layer:
 
 - `cities/node` is the Node.js + SQLite server example
 - `cities/edge` is the Cloudflare Workers + D1 deployment example
-- `cities/shared` reuses the common City assembly logic between server and worker
+- each city block owns its own City assembly logic for its runtime
 
 This layer is responsible for assembling `City + AIService + official services + models` into a runnable instance.
 

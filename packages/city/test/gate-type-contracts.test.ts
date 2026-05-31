@@ -1,5 +1,5 @@
 /**
- * @downcity/gate 类型契约测试。
+ * @downcity/city Gate 类型契约测试。
  */
 
 import type { UIMessage, UIMessageChunk } from "ai";

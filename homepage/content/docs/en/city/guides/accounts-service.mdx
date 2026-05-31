@@ -53,7 +53,7 @@ Both patterns converge to the same end state: the frontend gets `studio_id + use
 ## Login
 
 ```ts
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 
 const guest = new UserClient({
   base_url: "https://base.example.com",
@@ -206,13 +206,13 @@ The service now maintains:
 
 City users do not write these tables by hand.
 
-## Relationship with `@downcity/gate`
+## Relationship with `@downcity/city`
 
-The accounts service does not replace `@downcity/gate`.
+The accounts service does not replace `@downcity/city`.
 
 More precisely:
 
 - `@downcity/services` registers the `accounts` service into City
-- `@downcity/gate` is what studio-side and trusted-side callers use to call that service
+- `@downcity/city` is what studio-side and trusted-side callers use to call that service
 
 So the service provides the auth capability, while the SDK still provides the calling surface through `UserClient` and `AdminClient`.

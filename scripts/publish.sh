@@ -50,7 +50,6 @@ const files = [
   'packages/agent/package.json',
   'packages/city/package.json',
   'packages/services/package.json',
-  'packages/gate/package.json',
   'packages/plugins/package.json',
   'cli/city/package.json',
   'cli/studio/package.json',
@@ -179,7 +178,6 @@ main() {
     packages/agent/package.json \
     packages/city/package.json \
     packages/services/package.json \
-    packages/gate/package.json \
     packages/plugins/package.json \
     cli/city/package.json \
     cli/studio/package.json \

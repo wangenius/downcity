@@ -4,7 +4,7 @@
  * 从 server 获取模型目录，显示并允许用户切换。
  */
 
-import type { UserClient, ModelCatalog } from "@downcity/gate";
+import type { UserClient, ModelCatalog } from "@downcity/city";
 import { type UserContext } from "../auth/user.js";
 import { askModel, type ModelOption, show, showError, showSuccess } from "../core/ui.js";
 import { readConfig, writeConfig } from "../core/session.js";

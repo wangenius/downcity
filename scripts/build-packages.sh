@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 关键点（中文）：
 # 1) 这个脚本负责“packages 级 patch bump + build”，不承担 homepage / console 的全仓交付链路。
-# 2) 统一入口支持按包选择：agent、city、services、gate、plugins、ui、cli；默认构建 agent + plugins + cli。
+# 2) 统一入口支持按包选择：agent、city、services、plugins、ui、cli；默认构建 agent + plugins + cli。
 # 3) bump 只作用于本次显式选中的 package，避免误改无关包版本号。
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,22 +11,21 @@ cd "$ROOT_DIR"
 source "$ROOT_DIR/scripts/lib/build-common.sh"
 
 PACKAGES=()
-ALL_PACKAGES=("agent" "city" "services" "gate" "plugins" "ui" "cli")
+ALL_PACKAGES=("agent" "city" "services" "plugins" "ui" "cli")
 BUILD_PACKAGES=()
 BUMP=true
 
 usage() {
-  echo "Usage: npm run patch:build -- [--agent] [--city] [--services] [--gate] [--plugins] [--cli] [--ui] [--all] [--no-bump]"
+  echo "Usage: npm run patch:build -- [--agent] [--city] [--services] [--plugins] [--cli] [--ui] [--all] [--no-bump]"
   echo ""
   echo "  默认构建 agent + plugins + cli，并自增对应 package 的 patch 版本号"
   echo "  --agent    构建 @downcity/agent"
   echo "  --city     构建 @downcity/city"
   echo "  --services 构建 @downcity/services"
-  echo "  --gate     构建 @downcity/gate"
   echo "  --plugins  构建 @downcity/plugins"
   echo "  --cli      构建 Downcity CLI 产品包（内部 city/studio 构建单元 + downcity）"
   echo "  --ui       构建 @downcity/ui"
-  echo "  --all      构建全部 packages（agent + city + services + gate + plugins + ui + cli）"
+  echo "  --all      构建全部 packages（agent + city + services + plugins + ui + cli）"
   echo "  --no-bump  跳过 patch 版本号自增"
   exit 1
 }
@@ -79,7 +78,7 @@ resolve_build_packages() {
       if [[ "$has_plugins" == false ]]; then
         resolved+=("plugins")
       fi
-      for dep in city services gate; do
+      for dep in city services; do
         local has_dep=false
         local dep_item
         for dep_item in "${resolved[@]}"; do
@@ -153,14 +152,14 @@ run_build() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --)         shift ; continue ;;
     --agent)    add_package "agent" ;;
     --city)     add_package "city" ;;
     --services) add_package "services" ;;
-    --gate)     add_package "gate" ;;
     --plugins)  add_package "plugins" ;;
     --cli)      add_package "cli" ;;
     --ui)       add_package "ui" ;;
-    --all)      PACKAGES=("agent" "city" "services" "gate" "plugins" "ui" "cli") ; shift ; continue ;;
+    --all)      PACKAGES=("agent" "city" "services" "plugins" "ui" "cli") ; shift ; continue ;;
     --no-bump)  BUMP=false ;;
     -h|--help)  usage ;;
     *)          usage ;;

@@ -106,10 +106,10 @@ If the request times out, the Dokploy service is not exposed publicly, the VPS f
 
 ## Call From Studios
 
-Studio frontends and apps should call the Node block through `@downcity/gate`:
+Studio frontends and apps should call the Node block through `@downcity/city`:
 
 ```ts
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 
 const client = new UserClient({
   base_url: "https://base.example.com",
@@ -121,7 +121,7 @@ const client = new UserClient({
 Trusted backends should use `AdminClient` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
 
 ```ts
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 
 const admin = new AdminClient({
   base_url: "https://base.example.com",

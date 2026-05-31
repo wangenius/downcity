@@ -106,10 +106,10 @@ curl http://1.2.3.4:43127/health
 
 ## 产品侧调用
 
-产品前端和应用应该通过 `@downcity/gate` 调用 Node 街区：
+产品前端和应用应该通过 `@downcity/city` 调用 Node 街区：
 
 ```ts
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 
 const client = new UserClient({
   base_url: "https://base.example.com",
@@ -121,7 +121,7 @@ const client = new UserClient({
 可信后端应该用 `AdminClient` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
 
 ```ts
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 
 const admin = new AdminClient({
   base_url: "https://base.example.com",

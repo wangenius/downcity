@@ -1,9 +1,9 @@
 ---
-title: "@downcity/gate"
+title: "Gate"
 description: "Provides UserClient and AdminClient, and unifies AI, custom service, and service calls behind one SDK boundary."
 ---
 
-`@downcity/gate` is the main SDK that studios use to connect to Downcity.
+Gate is the access layer exported by `@downcity/city`. It is how studios connect to a City.
 
 It is not only a thin wrapper for AI calls. It unifies these studio-facing call surfaces into one package:
 
@@ -30,7 +30,7 @@ If your question is "how does a studio actually connect to City?", this page sho
 ## Install
 
 ```bash
-pnpm add @downcity/gate
+pnpm add @downcity/city
 ```
 
 ## What this package actually owns
@@ -44,7 +44,7 @@ The clearest way to think about it is in three layers:
 3. `client.service(name).get(path)`
    The GET Action entry for OAuth polling, list queries, current-user reads, and other read-oriented endpoints.
 
-In practice, `@downcity/gate` unifies:
+In practice, Gate unifies:
 
 - AI calls
 - calls to services you wrote yourself
@@ -107,7 +107,7 @@ Use this for studio, token, and runtime env actions that must stay in trusted en
 
 A service is not a separate protocol.
 
-From the perspective of `@downcity/gate`, it is the same kind of thing as one of your own services: a service mounted inside City under the shared `/v1/*` route space. The only difference is where it came from.
+From the perspective of `@downcity/city`, it is the same kind of thing as one of your own services: a service mounted inside City under the shared `/v1/*` route space. The only difference is where it came from.
 
 - Your own service: `rewrite`, `translate`, `workspace`
 - A service: `accounts`, `usage`, `payment`, `payment.stripe`
@@ -122,7 +122,7 @@ client.service("service_id").get("path", query)
 ## Minimal `UserClient` example
 
 ```ts
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 
 const client = new UserClient({
   base_url: "https://base.example.com",
@@ -149,7 +149,7 @@ If you do not have `user_token` yet, you normally start with one of the auth flo
 ## Minimal `AdminClient` example
 
 ```ts
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 
 const admin = new AdminClient({
   base_url: "https://base.example.com",
@@ -273,24 +273,24 @@ const checkout = await client.payment.method("stripe").invoke({
 ### Minimal AI studio integration
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 
 ### Registration and login without building your own account system first
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ### Usage records, metering, or plan logic
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ### Stripe topup integration
 
 - `@downcity/city`
-- `@downcity/gate`
+- `@downcity/city`
 - `@downcity/services`
 
 ## Recommended reading order

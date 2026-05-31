@@ -1,8 +1,8 @@
 /**
- * 街区共享装配模块。
+ * Node City 装配模块。
  *
- * 负责复用 node / edge 之间共同的 City 组装逻辑，
- * 让不同运行时只保留数据库与网络入口差异。
+ * Node 街区拥有自己的 City 组装逻辑，避免再通过独立 shared 包间接复用。
+ * 这里集中安装官方公共服务、余额系统、支付目录、Stripe 支付闭环和 AIService。
  */
 
 import { City, AIService, type CityOptions, type ModelConfig } from "@downcity/city";
@@ -13,53 +13,53 @@ import {
   stripePaymentMethod,
   stripePaymentService,
   usageService,
-  type BalanceService,
   type BalanceExtra,
+  type BalanceService,
   type StripePaymentServiceBalanceBridge,
 } from "@downcity/services";
 
 /**
- * 默认余额桥接配置。
+ * Node City 默认余额桥接配置。
  */
-export interface ComposeBlockBalanceOptions {
-  /** 初始化赠送余额 */
+export interface ComposeCityBalanceOptions {
+  /** 初始化赠送余额。 */
   init?: number;
-  /** 余额单位 */
+  /** 余额单位。 */
   unit?: string;
 }
 
 /**
- * 共享街区装配参数。
+ * Node City 装配参数。
  */
-export interface ComposeBlockOptions extends CityOptions {
-  /** 要注册的模型列表 */
+export interface ComposeCityOptions extends CityOptions {
+  /** 要注册的模型列表。 */
   models: ModelConfig[];
-  /** accounts token ttl */
+  /** accounts token ttl。 */
   token_ttl?: string;
-  /** usage 是否记录错误 */
+  /** usage 是否记录错误。 */
   record_usage_errors?: boolean;
-  /** 余额配置 */
-  balance?: ComposeBlockBalanceOptions;
-  /** 是否安装统一 payment service */
+  /** 余额配置。 */
+  balance?: ComposeCityBalanceOptions;
+  /** 是否安装统一 payment service。 */
   enable_payment?: boolean;
-  /** 是否安装 stripe 支付闭环 */
+  /** 是否安装 stripe 支付闭环。 */
   enable_stripe_payment?: boolean;
 }
 
 /**
- * 组装一个包含默认公共服务与 AIService 的 City。
+ * 组装一个包含默认公共服务与 AIService 的 Node City。
  */
-export function compose_block(options: ComposeBlockOptions): {
-  /** 已组装完成的 City */
-  base: City;
-  /** balance 服务实例，便于外部追加 hook 或直接调用 */
+export function compose_city(options: ComposeCityOptions): {
+  /** 已组装完成的 City。 */
+  city: City;
+  /** balance 服务实例，便于外部追加 hook 或直接调用。 */
   balance: BalanceService;
-  /** AI service 实例，便于外部增加 hook */
+  /** AI service 实例，便于外部增加 hook。 */
   ai: AIService;
 } {
-  const base = new City(options);
+  const city = new City(options);
 
-  base.use(accountsService({
+  city.use(accountsService({
     token_ttl: options.token_ttl,
   }));
 
@@ -67,15 +67,15 @@ export function compose_block(options: ComposeBlockOptions): {
     init: options.balance?.init,
     unit: options.balance?.unit,
   });
-  base.use(balance);
+  city.use(balance);
 
   if (options.enable_payment !== false) {
-    base.use(paymentService({
+    city.use(paymentService({
       methods: [stripePaymentMethod()],
     }));
   }
 
-  base.use(usageService({
+  city.use(usageService({
     record_errors: options.record_usage_errors,
   }));
 
@@ -84,17 +84,17 @@ export function compose_block(options: ComposeBlockOptions): {
       readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
       finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
     };
-    base.use(stripePaymentService({
+    city.use(stripePaymentService({
       balance: stripe_balance_bridge,
     }));
   }
 
   const ai = new AIService();
   ai.use(options.models);
-  base.use(ai);
+  city.use(ai);
 
   return {
-    base,
+    city,
     balance,
     ai,
   };

@@ -2,7 +2,7 @@
  * Admin Custom Service 命令。
  */
 
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { askText, showError } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";

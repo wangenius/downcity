@@ -20,9 +20,6 @@ importers:
       '@downcity/city':
         specifier: workspace:*
         version: link:../../packages/city
-      '@downcity/city-shared':
-        specifier: workspace:*
-        version: link:../shared
       '@downcity/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -54,9 +51,6 @@ importers:
       '@downcity/city':
         specifier: workspace:*
         version: link:../../packages/city
-      '@downcity/city-shared':
-        specifier: workspace:*
-        version: link:../shared
       '@downcity/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -85,15 +79,6 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
-
-  cities/shared:
-    dependencies:
-      '@downcity/city':
-        specifier: workspace:*
-        version: link:../../packages/city
-      '@downcity/services':
-        specifier: workspace:*
-        version: link:../../packages/services
 
   cli/city:
     dependencies:
@@ -127,9 +112,9 @@ importers:
       '@downcity/agent':
         specifier: workspace:^
         version: link:../../packages/agent
-      '@downcity/gate':
+      '@downcity/city':
         specifier: workspace:^
-        version: link:../../packages/gate
+        version: link:../../packages/city
       '@downcity/plugins':
         specifier: workspace:^
         version: link:../../packages/plugins
@@ -254,9 +239,9 @@ importers:
       '@downcity/agent':
         specifier: workspace:^
         version: link:../../packages/agent
-      '@downcity/gate':
+      '@downcity/city':
         specifier: workspace:^
-        version: link:../../packages/gate
+        version: link:../../packages/city
       '@downcity/plugins':
         specifier: workspace:^
         version: link:../../packages/plugins
@@ -639,16 +624,6 @@ importers:
       better-sqlite3:
         specifier: ^12.10.0
         version: 12.10.0
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/gate:
-    dependencies:
-      ai:
-        specifier: ^6.0.193
-        version: 6.0.193(zod@4.4.3)
-    devDependencies:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

@@ -6,7 +6,7 @@ description: Give the studio client a user-scoped credential that can call City.
 `user_token` must be issued by a trusted environment. Your backend uses `AdminClient` and asks City for a token based on `studio_id + user_id`.
 
 ```ts
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 
 const client = new AdminClient({
   base_url: "https://base.example.com",

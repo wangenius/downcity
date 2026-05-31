@@ -26,13 +26,13 @@ The recommended order is:
 - studio-facing profile table
 - City `user_token` issuance after login
 
-## Relationship with `@downcity/gate`
+## Relationship with `@downcity/city`
 
 The cleanest way to separate the two is:
 
 - `@downcity/services`
   registers the `accounts` service and its actions into City
-- `@downcity/gate`
+- `@downcity/city`
   gives frontends, apps, services, and trusted backends a unified way to call those actions
 
 So this service owns "adding auth capability into City," while the SDK still owns the actual calling pattern:
@@ -151,11 +151,11 @@ const reply = await user.ai.text({
 });
 ```
 
-This is why `accountsService()` and `@downcity/gate` are usually read together: one provides the auth capability, the other provides the calling surface.
+This is why `accountsService()` and `@downcity/city` are usually read together: one provides the auth capability, the other provides the calling surface.
 
 ## Related docs
 
 - For the step-by-step flows, continue with the three subpages in this section
 - For the full scenario guide, read [Accounts Service](/en/docs/city/guides/accounts-service)
-- For the studio SDK, read [@downcity/gate](/en/docs/city/packages/gate)
+- For the studio SDK, read [@downcity/city](/en/docs/city/packages/city/gate)
 - For more detailed studio-side calling patterns, read [UserClient](/en/docs/city/reference/user-client)

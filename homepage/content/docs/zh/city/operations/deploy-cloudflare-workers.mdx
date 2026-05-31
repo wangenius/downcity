@@ -20,7 +20,7 @@ description: 用 Workers + D1 部署 edge 街区，并初始化 admin 与 provid
 它做了四件关键事：
 
 - 把 `env.DB` 接成 Drizzle D1 数据库
-- 通过 `cities/shared` 组装 City
+- 在 `cities/edge` 内组装 Edge City
 - 挂载 accounts、balance、usage、payment、Stripe payment 和 AI services
 - 暴露 `/health` 用于部署验证
 

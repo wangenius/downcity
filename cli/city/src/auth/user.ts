@@ -9,7 +9,7 @@
  * 已有有效 session 直接返回，不重复鉴权。
  */
 
-import { UserClient } from "@downcity/gate";
+import { UserClient } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { normalizeBaseUrl } from "../core/env.js";
 import { openBrowser } from "../core/browser.js";

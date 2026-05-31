@@ -2,7 +2,7 @@
  * Admin City 说明文档查看命令。
  */
 
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 
 /**
  * 展示当前 City 聚合后的说明文档。

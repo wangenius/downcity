@@ -11,7 +11,7 @@
 import { serve } from "@hono/node-server";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { compose_block } from "../../shared/src/compose-block.js";
+import { compose_city } from "./compose-city.js";
 import * as models from "./models/index.js";
 
 /**
@@ -53,7 +53,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const { base } = compose_block({
+const { city } = compose_city({
   db,
   dialect: "sqlite",
   raw: sqlite,
@@ -62,10 +62,10 @@ const { base } = compose_block({
   record_usage_errors: true,
 });
 
-await base.health();
-const env_table = await base.table<{ key: string; value: string }>("env");
+await city.health();
+const env_table = await city.table<{ key: string; value: string }>("env");
 const admin_key = (await env_table.select({ key: "DOWNCITY_CITY_ADMIN_SECRET_KEY" }))[0]?.value ?? "(not set)";
-serve({ fetch: base.router().fetch, port, hostname: host });
+serve({ fetch: city.router().fetch, port, hostname: host });
 console.log(`Downcity http://${host}:${port}`);
 console.log(`SQLite: ${sqlite_path}`);
 console.log(`Admin key: ${admin_key}`);

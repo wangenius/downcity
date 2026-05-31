@@ -1,0 +1,101 @@
+/**
+ * Edge City 装配模块。
+ *
+ * Edge 街区拥有自己的 City 组装逻辑，方便针对 Cloudflare Worker
+ * 继续演化 D1、缓存、计费 hook 等运行时能力。
+ */
+
+import { City, AIService, type CityOptions, type ModelConfig } from "@downcity/city";
+import {
+  accountsService,
+  balanceService,
+  paymentService,
+  stripePaymentMethod,
+  stripePaymentService,
+  usageService,
+  type BalanceExtra,
+  type BalanceService,
+  type StripePaymentServiceBalanceBridge,
+} from "@downcity/services";
+
+/**
+ * Edge City 默认余额桥接配置。
+ */
+export interface ComposeCityBalanceOptions {
+  /** 初始化赠送余额。 */
+  init?: number;
+  /** 余额单位。 */
+  unit?: string;
+}
+
+/**
+ * Edge City 装配参数。
+ */
+export interface ComposeCityOptions extends CityOptions {
+  /** 要注册的模型列表。 */
+  models: ModelConfig[];
+  /** accounts token ttl。 */
+  token_ttl?: string;
+  /** usage 是否记录错误。 */
+  record_usage_errors?: boolean;
+  /** 余额配置。 */
+  balance?: ComposeCityBalanceOptions;
+  /** 是否安装统一 payment service。 */
+  enable_payment?: boolean;
+  /** 是否安装 stripe 支付闭环。 */
+  enable_stripe_payment?: boolean;
+}
+
+/**
+ * 组装一个包含默认公共服务与 AIService 的 Edge City。
+ */
+export function compose_city(options: ComposeCityOptions): {
+  /** 已组装完成的 City。 */
+  city: City;
+  /** balance 服务实例，便于外部追加 hook 或直接调用。 */
+  balance: BalanceService;
+  /** AI service 实例，便于外部增加 hook。 */
+  ai: AIService;
+} {
+  const city = new City(options);
+
+  city.use(accountsService({
+    token_ttl: options.token_ttl,
+  }));
+
+  const balance = balanceService({
+    init: options.balance?.init,
+    unit: options.balance?.unit,
+  });
+  city.use(balance);
+
+  if (options.enable_payment !== false) {
+    city.use(paymentService({
+      methods: [stripePaymentMethod()],
+    }));
+  }
+
+  city.use(usageService({
+    record_errors: options.record_usage_errors,
+  }));
+
+  if (options.enable_stripe_payment !== false) {
+    const stripe_balance_bridge: StripePaymentServiceBalanceBridge = {
+      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
+      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
+    };
+    city.use(stripePaymentService({
+      balance: stripe_balance_bridge,
+    }));
+  }
+
+  const ai = new AIService();
+  ai.use(options.models);
+  city.use(ai);
+
+  return {
+    city,
+    balance,
+    ai,
+  };
+}

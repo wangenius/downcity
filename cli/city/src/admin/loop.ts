@@ -2,7 +2,7 @@
  * Admin 命令循环。返回 "logout" | "quit" | "switch_identity"。
  */
 
-import { AdminClient } from "@downcity/gate";
+import { AdminClient } from "@downcity/city";
 import { select, isCancel } from "@clack/prompts";
 import { type AdminSession } from "../core/session.js";
 import { showError, showSuccess } from "../core/ui.js";

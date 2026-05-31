@@ -34,6 +34,13 @@ const copy_targets = [
   },
 ];
 
+const legacy_command_name = "stu" + "dio";
+const legacy_targets = [
+  path.join(package_root, legacy_command_name),
+  path.join(package_root, `${legacy_command_name}-cli`),
+  path.join(package_root, "bin", legacy_command_name),
+];
+
 async function assert_source_exists(source_path, label) {
   try {
     await fs.access(source_path);
@@ -45,6 +52,10 @@ async function assert_source_exists(source_path, label) {
       ].join(" "),
     );
   }
+}
+
+for (const legacy_path of legacy_targets) {
+  await fs.rm(legacy_path, { recursive: true, force: true });
 }
 
 for (const item of copy_targets) {

@@ -3,7 +3,7 @@
  */
 
 import type { FetchLike } from "../http.js";
-import type { UserModelRef } from "../invoker/ai/types.js";
+import type { CityModelDescriptor } from "@downcity/type";
 import type { UserServiceSummary } from "../user/types.js";
 
 /** Admin Gate 内部访问层构造参数 */
@@ -32,7 +32,7 @@ export type AdminServiceSummary = UserServiceSummary;
  * - `env_requirements`
  * - `default_modes`
  */
-export type AdminModelRecord = UserModelRef;
+export type AdminModelRecord = CityModelDescriptor;
 
 /**
  * City 聚合说明文档结果。

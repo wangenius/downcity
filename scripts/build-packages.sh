@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 关键点（中文）：
 # 1) 这个脚本负责“packages 级 patch bump + build”，不承担 homepage / console 的全仓交付链路。
-# 2) 统一入口支持按包选择：agent、city、services、plugins、ui、cli；默认构建 agent + plugins + cli。
+# 2) 统一入口支持按包选择：type、agent、city、services、plugins、ui、cli；默认构建 agent + plugins + cli。
 # 3) bump 只作用于本次显式选中的 package，避免误改无关包版本号。
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,21 +11,22 @@ cd "$ROOT_DIR"
 source "$ROOT_DIR/scripts/lib/build-common.sh"
 
 PACKAGES=()
-ALL_PACKAGES=("agent" "city" "services" "plugins" "ui" "cli")
+ALL_PACKAGES=("type" "agent" "city" "services" "plugins" "ui" "cli")
 BUILD_PACKAGES=()
 BUMP=true
 
 usage() {
-  echo "Usage: npm run patch:build -- [--agent] [--city] [--services] [--plugins] [--cli] [--ui] [--all] [--no-bump]"
+  echo "Usage: npm run patch:build -- [--type] [--agent] [--city] [--services] [--plugins] [--cli] [--ui] [--all] [--no-bump]"
   echo ""
   echo "  默认构建 agent + plugins + cli，并自增对应 package 的 patch 版本号"
+  echo "  --type     构建 @downcity/type"
   echo "  --agent    构建 @downcity/agent"
   echo "  --city     构建 @downcity/city"
   echo "  --services 构建 @downcity/services"
   echo "  --plugins  构建 @downcity/plugins"
   echo "  --cli      构建 Downcity CLI 产品包（内部 city/studio 构建单元 + downcity）"
   echo "  --ui       构建 @downcity/ui"
-  echo "  --all      构建全部 packages（agent + city + services + plugins + ui + cli）"
+  echo "  --all      构建全部 packages（type + agent + city + services + plugins + ui + cli）"
   echo "  --no-bump  跳过 patch 版本号自增"
   exit 1
 }
@@ -61,10 +62,14 @@ resolve_build_packages() {
   local selected
   for selected in "${PACKAGES[@]}"; do
     if [[ "$selected" == "cli" ]]; then
+      local has_type=false
       local has_agent=false
       local has_plugins=false
       local item
       for item in "${resolved[@]}"; do
+        if [[ "$item" == "type" ]]; then
+          has_type=true
+        fi
         if [[ "$item" == "agent" ]]; then
           has_agent=true
         fi
@@ -72,6 +77,9 @@ resolve_build_packages() {
           has_plugins=true
         fi
       done
+      if [[ "$has_type" == false ]]; then
+        resolved+=("type")
+      fi
       if [[ "$has_agent" == false ]]; then
         resolved+=("agent")
       fi
@@ -93,28 +101,53 @@ resolve_build_packages() {
       done
       break
     fi
-    if [[ "$selected" == "services" ]]; then
-      local has_city=false
+    if [[ "$selected" == "agent" || "$selected" == "city" ]]; then
+      local has_type=false
       local item
       for item in "${resolved[@]}"; do
-        if [[ "$item" == "city" ]]; then
-          has_city=true
+        if [[ "$item" == "type" ]]; then
+          has_type=true
           break
         fi
       done
+      if [[ "$has_type" == false ]]; then
+        resolved+=("type")
+      fi
+    fi
+    if [[ "$selected" == "services" ]]; then
+      local has_type=false
+      local has_city=false
+      local item
+      for item in "${resolved[@]}"; do
+        if [[ "$item" == "type" ]]; then
+          has_type=true
+        fi
+        if [[ "$item" == "city" ]]; then
+          has_city=true
+        fi
+      done
+      if [[ "$has_type" == false ]]; then
+        resolved+=("type")
+      fi
       if [[ "$has_city" == false ]]; then
         resolved+=("city")
       fi
     fi
     if [[ "$selected" == "plugins" ]]; then
+      local has_type=false
       local has_agent=false
       local item
       for item in "${resolved[@]}"; do
+        if [[ "$item" == "type" ]]; then
+          has_type=true
+        fi
         if [[ "$item" == "agent" ]]; then
           has_agent=true
-          break
         fi
       done
+      if [[ "$has_type" == false ]]; then
+        resolved+=("type")
+      fi
       if [[ "$has_agent" == false ]]; then
         resolved+=("agent")
       fi
@@ -153,13 +186,14 @@ run_build() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --)         shift ; continue ;;
+    --type)     add_package "type" ;;
     --agent)    add_package "agent" ;;
     --city)     add_package "city" ;;
     --services) add_package "services" ;;
     --plugins)  add_package "plugins" ;;
     --cli)      add_package "cli" ;;
     --ui)       add_package "ui" ;;
-    --all)      PACKAGES=("agent" "city" "services" "plugins" "ui" "cli") ; shift ; continue ;;
+    --all)      PACKAGES=("type" "agent" "city" "services" "plugins" "ui" "cli") ; shift ; continue ;;
     --no-bump)  BUMP=false ;;
     -h|--help)  usage ;;
     *)          usage ;;

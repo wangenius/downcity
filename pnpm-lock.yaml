@@ -547,6 +547,9 @@ importers:
 
   packages/agent:
     dependencies:
+      '@downcity/type':
+        specifier: workspace:*
+        version: link:../type
       '@larksuiteoapi/node-sdk':
         specifier: ^1.66.0
         version: 1.66.0
@@ -608,6 +611,9 @@ importers:
 
   packages/city:
     dependencies:
+      '@downcity/type':
+        specifier: workspace:*
+        version: link:../type
       ai:
         specifier: ^6.0.193
         version: 6.0.193(zod@4.4.3)
@@ -710,6 +716,16 @@ importers:
       better-sqlite3:
         specifier: ^12.10.0
         version: 12.10.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/type:
+    dependencies:
+      ai:
+        specifier: ^6.0.193
+        version: 6.0.193(zod@4.4.3)
+    devDependencies:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

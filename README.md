@@ -21,6 +21,7 @@ Downcity is an agent platform for local projects and team workflows. It combines
 | `downcity` | Public CLI bundle that installs `studio` for local Agent hosting and `city` for deployed City administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
 | `@downcity/city` | City runtime plus Gate access SDK for service registration, actions, auth, env, studio-scoped access, and HTTP calling. |
+| `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by Gate. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
 | `cities/*` | Deployable City compositions that assemble `@downcity/city` and services for Node or edge runtimes. |
@@ -195,6 +196,7 @@ downcity/
 │   ├── agent/
 │   ├── city/
 │   ├── services/
+│   ├── type/
 │   └── ui/
 ├── cli/
 │   ├── city/
@@ -219,7 +221,7 @@ downcity/
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Developer docs: [downcity.ai/devdocs](https://downcity.ai/devdocs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
-- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/studio/README.md](./cli/studio/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
+- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/studio/README.md](./cli/studio/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
 
 ## Local Development
 

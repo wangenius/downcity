@@ -9,6 +9,7 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
+import type { AgentModel } from "@/model/CityModelAdapter.js";
 import type { RpcServerInstance } from "@/rpc/Server.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type {
@@ -17,6 +18,8 @@ import type {
 } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
+
+export type { AgentModel } from "@/model/CityModelAdapter.js";
 
 /**
  * 本地 Agent 构造参数。
@@ -59,10 +62,11 @@ export interface AgentOptions {
    * 当前 agent 为新建 session 提供的默认模型实例。
    *
    * 关键点（中文）
-   * - SDK 仍不负责“选择哪个模型”，这里只接收宿主已经创建好的 `LanguageModel`。
+   * - SDK 仍不负责“选择哪个模型”，这里只接收宿主已经创建好的模型实例。
+   * - 支持 AI SDK `LanguageModel`，也支持 City Gate 返回的 `CityModel`。
    * - 该模型会作为 session 首次执行前的默认注入值。
    */
-  model?: LanguageModel;
+  model?: AgentModel;
 
   /**
    * 当前 agent 显式持有的插件实例集合。
@@ -252,7 +256,7 @@ export interface AgentSessionSetInput {
    * - 这里接受运行中的模型实例，而不是模型 ID。
    * - 由于模型实例通常不可序列化，落盘只保留轻量可读标签用于展示。
    */
-  model?: LanguageModel;
+  model?: AgentModel;
 }
 
 /**

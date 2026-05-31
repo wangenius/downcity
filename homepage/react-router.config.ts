@@ -4,6 +4,14 @@ import { vercelPreset } from "@vercel/react-router/vite";
 export default {
   // 站点默认启用 SSR，保证营销页与文档页都可以走服务端渲染。
   ssr: true,
+  // 提前启用 React Router v8 行为，避免 typegen/build 重复输出 future flag 提示。
+  future: {
+    v8_middleware: true,
+    v8_splitRouteModules: true,
+    v8_viteEnvironmentApi: true,
+    v8_passThroughRequests: true,
+    v8_trailingSlashAwareDataRequests: true,
+  },
   // Homepage 部署在静态回退与 SSR 混合环境中，关闭 lazy route discovery，
   // 避免前端额外请求 `/__manifest` 时被平台回退成 HTML，进而触发 JSON 解析报错。
   routeDiscovery: {

@@ -112,6 +112,12 @@ export type {
   RequestInitLike,
 } from "./gate/http.js";
 
+export type {
+  CityModel,
+  CityModelDescriptor,
+  CityModelEnvRequirement,
+} from "@downcity/type";
+
 export { Gate } from "./gate/gate.js";
 export type {
   AdminGateOptions,

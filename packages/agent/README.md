@@ -101,7 +101,8 @@ src/
   - `host/` 放宿主注入能力与 daemon 协议
   - `sandbox/` 放命令执行隔离与沙箱协议
   - `server/` 放 HTTP 服务端实现
-  - 模型实例解析不在 `agent` 包内完成，而由宿主先创建 `LanguageModel`，再通过 `new Agent({ model })` 或 `session.set({ model })` 注入
+- 模型实例解析不在 `agent` 包内完成，而由宿主先创建 `LanguageModel`，再通过 `new Agent({ model })` 或 `session.set({ model })` 注入
+- `model` 也可以接收 City Gate 返回的 `CityModel`，Agent 会在内部适配成 AI SDK `LanguageModel`
 
 - `src/types/`
   - 跨模块、跨包共享协议类型

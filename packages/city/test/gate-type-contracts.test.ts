@@ -5,6 +5,7 @@
 import type { UIMessage, UIMessageChunk } from "ai";
 import type {
   AIInvoker,
+  CityModelDescriptor,
   Gate,
   ModelCatalog,
   ModelHandle,
@@ -37,7 +38,7 @@ const adminServices = admin.listServices();
 const adminServicesContract: Promise<UserServiceSummary[]> = adminServices;
 
 const adminModels = admin.listModels();
-const adminModelsContract: Promise<UserModelRef[]> = adminModels;
+const adminModelsContract: Promise<CityModelDescriptor[]> = adminModels;
 
 const adminInstruction = admin.instruction();
 const adminInstructionContract: Promise<string> = adminInstruction;

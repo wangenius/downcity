@@ -19,6 +19,7 @@ esac
 
 if [[ "$BUILD_SCOPE" == "all" ]]; then
   # 构建顺序：city/services 先于 cli，cli 依赖这些城市基础包。
+  run_project_build "$ROOT_DIR/packages/type"
   run_project_build "$ROOT_DIR/packages/agent"
   run_project_build "$ROOT_DIR/packages/city"
   run_project_build "$ROOT_DIR/packages/services"
@@ -34,6 +35,7 @@ if [[ "$BUILD_SCOPE" == "all" ]]; then
 fi
 
 # build:cli — 仅构建 CLI 交付链路
+run_project_build "$ROOT_DIR/packages/type"
 run_project_build "$ROOT_DIR/packages/agent"
 run_project_build "$ROOT_DIR/packages/city"
 run_project_build "$ROOT_DIR/packages/services"

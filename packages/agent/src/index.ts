@@ -12,6 +12,7 @@ export { Agent } from "./agent/Agent.js";
 export { RemoteAgent } from "./agent/RemoteAgent.js";
 export type {
   AgentSessionCollection,
+  AgentModel,
   AgentSessionActor,
   AgentSession,
   AgentCreateSessionInput,

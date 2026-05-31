@@ -5,6 +5,7 @@ packages:
   - packages/city
   - packages/services
   - packages/plugins
+  - packages/type
   - cli/*
   - packages/ui
   - products/chrome-extension

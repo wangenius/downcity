@@ -172,9 +172,25 @@ city.use(usageService());
 - `ServiceDefinition`
 - `AIService`
 - `Provider`
+- `CityModel`
+- `CityModelDescriptor`
 - `TokenSigner`
 - `EnvService`
 - `StudiosService`
+
+## Gate 模型目录
+
+`User Gate` 的 `client.ai.listModels()` 返回 `ModelCatalog`。目录中的模型是 `CityModel`，可以直接用于 Gate 的 AI 调用，也可以传给支持 CityModel 的 Agent SDK：
+
+```ts
+const catalog = await client.ai.listModels();
+const model = catalog.default();
+
+await client.ai.text({
+  model,
+  prompt: "hello",
+});
+```
 
 ## 文档
 

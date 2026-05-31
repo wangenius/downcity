@@ -13,7 +13,7 @@
 
 import fs from "fs-extra";
 import { nanoid } from "nanoid";
-import type { LanguageModel, Tool } from "ai";
+import type { Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type {
   AgentContext,
@@ -41,6 +41,7 @@ import type {
   AgentSessionSummaryPage,
   AgentSessionSystemBlock,
 } from "@/types/agent/AgentTypes.js";
+import type { AgentModel } from "@/model/CityModelAdapter.js";
 import { Logger } from "@/utils/logger/Logger.js";
 import { Session } from "@/session/Session.js";
 import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
@@ -124,7 +125,7 @@ export class Agent {
   private readonly pluginRegistry: PluginRegistry;
   private readonly config: DowncityConfig;
   private readonly env: Record<string, string>;
-  private readonly defaultModel?: LanguageModel;
+  private readonly defaultModel?: AgentModel;
   private readonly pluginInstances: Map<string, BasePlugin>;
   private readonly sessionCollection: AgentSessionCollection;
 

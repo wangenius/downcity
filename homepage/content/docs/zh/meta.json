@@ -2,6 +2,7 @@
   "title": "City SDK",
   "pages": [
     "index",
+    "how-to-use-downcity",
     "quickstart",
     "city",
     "agent",

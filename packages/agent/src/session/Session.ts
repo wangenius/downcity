@@ -30,7 +30,6 @@ import {
   SessionSystemBuilder,
 } from "@/session/SessionSystemBuilder.js";
 import {
-  inferModelLabel,
   buildSessionHistoryPage,
   buildSessionInfo,
   patchSessionModelLabel,
@@ -62,6 +61,10 @@ import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import { SessionPromptRuntime } from "@/session/runtime/SessionPromptRuntime.js";
+import {
+  inferAgentModelLabel,
+  normalizeAgentModel,
+} from "@/model/CityModelAdapter.js";
 
 type SessionOptions = {
   /**
@@ -280,8 +283,8 @@ export class Session implements AgentSession {
    */
   async set(input: AgentSessionSetInput): Promise<void> {
     if (input.model) {
-      this.sessionConfig.model = input.model;
-      this.sessionConfig.modelLabel = inferModelLabel(input.model);
+      this.sessionConfig.model = normalizeAgentModel(input.model);
+      this.sessionConfig.modelLabel = inferAgentModelLabel(input.model);
       this.executor.clearExecutor();
     }
     await patchSessionModelLabel({

@@ -1,7 +1,7 @@
 {
-  "name": "@downcity/services",
-  "version": "0.1.11",
-  "description": "Downcity public services package for accounts, balance, usage, and Stripe payment flows.",
+  "name": "@downcity/type",
+  "version": "0.1.1",
+  "description": "Downcity shared protocol types for cross-package SDK boundaries.",
   "type": "module",
   "main": "./bin/index.js",
   "module": "./bin/index.js",
@@ -21,7 +21,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wangenius/downcity.git",
-    "directory": "packages/services"
+    "directory": "packages/type"
   },
   "homepage": "https://downcity.ai",
   "bugs": {
@@ -29,33 +29,22 @@
   },
   "keywords": [
     "downcity",
-    "service",
-    "accounts",
-    "balance",
-    "usage",
-    "stripe"
+    "types",
+    "protocol",
+    "sdk"
   ],
-  "engines": {
-    "node": ">=22.13.0"
-  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
-    "test": "tsc && tsc -p tsconfig.test.json && node --test test/**/*.test.mjs",
+    "typecheck": "tsc --noEmit",
     "prepack": "npm run build",
     "version:patch": "node ../../scripts/bump-package-version.mjs ./package.json"
   },
   "license": "MIT",
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^25.9.1",
-    "better-sqlite3": "^12.10.0",
-    "typescript": "^6.0.3"
-  },
   "dependencies": {
-    "@downcity/city": "workspace:*",
-    "better-auth": "^1.6.12",
-    "drizzle-orm": "^0.45.2"
+    "ai": "^6.0.193"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }

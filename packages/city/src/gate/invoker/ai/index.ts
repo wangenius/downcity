@@ -5,6 +5,13 @@
  */
 
 import { parseAIStreamBody } from "./stream.js";
+import {
+  CITY_MODEL_INVOKER,
+  CITY_MODEL_KIND,
+  type CityModel,
+  type CityModelDescriptor,
+  type CityModelInvokeInput,
+} from "@downcity/type";
 import type { UserModelRef } from "./types.js";
 import type {
   UserImageResult,
@@ -86,8 +93,8 @@ export class AIInvoker {
 
   /** 获取模型目录 */
   async listModels(): Promise<ModelCatalog> {
-    const body = await this.req<{ items: UserModelRef[] }>(`${PREFIX}/models`, { method: "GET" });
-    return new ModelCatalog(body.items);
+    const body = await this.req<{ items: CityModelDescriptor[] }>(`${PREFIX}/models`, { method: "GET" });
+    return new ModelCatalog(body.items, this);
   }
 
   /**
@@ -120,6 +127,10 @@ export class AIInvoker {
   private serializeTools(input: UserServiceInput): Record<string, unknown> {
     const { tools, ...rest } = input;
     const body: Record<string, unknown> = { ...rest };
+    if (Array.isArray(tools)) {
+      body.tools = tools;
+      return body;
+    }
     if (tools && typeof tools === "object") {
       body.tools = Object.entries(tools as Record<string, unknown>).map(([name, def]) => ({
         type: "function",
@@ -149,7 +160,7 @@ export class ModelCatalog {
   private readonly byId: Map<string, UserModelRef>;
   private readonly def: UserModelRef | undefined;
 
-  constructor(items: UserModelRef[]) {
+  constructor(items: CityModelDescriptor[], ai: AIInvoker) {
     if (!items?.length) {
       this.byId = new Map();
       this.def = undefined;
@@ -164,7 +175,7 @@ export class ModelCatalog {
     }
 
     const enriched = items.map((item, i) =>
-      Object.freeze({
+      createGateCityModel(ai, {
         ...item,
         is_default: i === 0,
         default_modalities: item.modalities.filter((m) => first.get(m) === item.id) || undefined,
@@ -197,6 +208,30 @@ export class ModelCatalog {
 export function serializeModel(model: import("./types.js").UserModelInput | undefined): string | undefined {
   if (!model) return undefined;
   return typeof model === "string" ? model : model.id;
+}
+
+function createGateCityModel(
+  ai: AIInvoker,
+  item: CityModelDescriptor,
+): UserModelRef {
+  const model = {
+    ...item,
+    kind: CITY_MODEL_KIND,
+  } as UserModelRef;
+
+  Object.defineProperty(model, CITY_MODEL_INVOKER, {
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: {
+      text: async (input: CityModelInvokeInput) =>
+        await ai.text({ ...input, model: item.id }),
+      stream: async (input: CityModelInvokeInput) =>
+        await ai.stream({ ...input, model: item.id }),
+    },
+  });
+
+  return Object.freeze(model);
 }
 
 // ===================================================================

@@ -9,13 +9,20 @@
 
 import { InstallableService } from "@downcity/city";
 import type { ServiceInstallContext } from "@downcity/city";
-import { betterAuth } from "better-auth";
-import { getMigrations } from "better-auth/db/migration";
-import type { BetterAuthOptions } from "better-auth";
+import { betterAuth } from "better-auth/minimal";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { readPreparedAll, readPreparedFirst, runPrepared } from "./db.js";
 import {
   ACCOUNTS_OAUTH_STATE_TABLE,
+  AUTH_ACCOUNT_TABLE,
+  AUTH_SESSION_TABLE,
+  AUTH_USER_TABLE,
+  AUTH_VERIFICATION_TABLE,
   USER_PROFILE_TABLE,
+  authAccounts,
+  authSessions,
+  authUsers,
+  authVerifications,
   accountsOAuthStates,
   userProfiles,
   type UserProfileRow,
@@ -32,10 +39,6 @@ import {
   type OAuthProviderProfile,
 } from "./oauth.js";
 
-const AUTH_USER_TABLE = "auth_users";
-const AUTH_ACCOUNT_TABLE = "auth_accounts";
-const AUTH_SESSION_TABLE = "auth_sessions";
-const AUTH_VERIFICATION_TABLE = "auth_verifications";
 const OAUTH_STATE_TTL_MS = 5 * 60 * 1000;
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -146,6 +149,10 @@ export class AccountsService extends InstallableService {
   readonly schema = {
     profile: userProfiles,
     oauth_states: accountsOAuthStates,
+    auth_users: authUsers,
+    auth_sessions: authSessions,
+    auth_accounts: authAccounts,
+    auth_verifications: authVerifications,
   };
 
   private auth!: ReturnType<typeof betterAuth>;
@@ -173,7 +180,15 @@ export class AccountsService extends InstallableService {
 
     this.auth = betterAuth({
       secret: this._env?.get("BETTER_AUTH_SECRET"),
-      database: this._raw,
+      database: drizzleAdapter(this.readDrizzleDb(), {
+        provider: "sqlite",
+        schema: {
+          [AUTH_USER_TABLE]: authUsers,
+          [AUTH_SESSION_TABLE]: authSessions,
+          [AUTH_ACCOUNT_TABLE]: authAccounts,
+          [AUTH_VERIFICATION_TABLE]: authVerifications,
+        },
+      }),
       baseURL: this._baseURL,
       user: {
         modelName: AUTH_USER_TABLE,
@@ -203,7 +218,6 @@ export class AccountsService extends InstallableService {
       socialProviders: buildSocialProviders((key: string) => this._env?.get(key)),
     } as any);
 
-    await runBetterAuthMigrations(this.auth.options);
     await super._onInit();
   }
 
@@ -784,6 +798,16 @@ export class AccountsService extends InstallableService {
   private rawPrepare(sql: string): any {
     return (this._raw as any).prepare(sql);
   }
+
+  /**
+   * 读取 City 注入的 Drizzle database。
+   */
+  private readDrizzleDb(): NonNullable<typeof this._db> {
+    if (!this._db) {
+      throw new Error("Accounts service database is not ready");
+    }
+    return this._db;
+  }
 }
 
 /**
@@ -791,18 +815,6 @@ export class AccountsService extends InstallableService {
  */
 export function accountsService(options: AccountsServiceOptions = {}): InstallableService {
   return new AccountsService(options);
-}
-
-/**
- * 运行 better-auth migrations。
- */
-async function runBetterAuthMigrations(options: BetterAuthOptions): Promise<void> {
-  try {
-    const { runMigrations } = await getMigrations(options);
-    await runMigrations();
-  } catch {
-    // better-auth 内部仍然会做兜底，这里保持静默容错。
-  }
 }
 
 /**

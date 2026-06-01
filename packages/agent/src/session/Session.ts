@@ -65,6 +65,7 @@ import {
   inferAgentModelLabel,
   normalizeAgentModel,
 } from "@/model/CityModelAdapter.js";
+import { ensureSessionTitle } from "@/session/SessionTitle.js";
 
 type SessionOptions = {
   /**
@@ -260,8 +261,8 @@ export class Session implements AgentSession {
       this.createdAt = createdAt;
       this.timezone = timezone;
       this.sessionConfig = {
-        ...(metadata.sdkConfig?.modelLabel
-          ? { modelLabel: metadata.sdkConfig.modelLabel }
+        ...(metadata.modelLabel
+          ? { modelLabel: metadata.modelLabel }
           : {}),
       };
       return this;
@@ -336,6 +337,7 @@ export class Session implements AgentSession {
     await this.executor.appendUserMessage({
       text: String(input.text || "").trim(),
     });
+    await this.ensureTitleFromHistory({ generate: true });
     await this.touchMetadata();
   }
 
@@ -366,11 +368,19 @@ export class Session implements AgentSession {
       }),
       this.historyStore.list(),
     ]);
+    const metadataWithTitle = metadata.title
+      ? metadata
+      : await ensureSessionTitle({
+          projectRoot: this.projectRoot,
+          agentId: this.agentId,
+          sessionId: this.id,
+          messages,
+        });
     return buildSessionInfo({
       projectRoot: this.projectRoot,
       agentId: this.agentId,
       sessionId: this.id,
-      metadata,
+      metadata: metadataWithTitle,
       messages,
       executing: this.isExecuting(),
     });
@@ -480,6 +490,7 @@ export class Session implements AgentSession {
     for (const message of forkMessages) {
       await forked.historyStore.append(message);
     }
+    await forked.ensureTitleFromHistory({ generate: true });
     await forked.touchMetadata();
     return forked;
   }
@@ -506,6 +517,8 @@ export class Session implements AgentSession {
       },
       appendUserMessage: async (messageParams) => {
         await this.executor.appendUserMessage(messageParams);
+        await this.ensureTitleFromHistory({ generate: true });
+        await this.touchMetadata();
       },
       appendAssistantMessage: async (messageParams) => {
         await this.executor.appendAssistantMessage(messageParams);
@@ -561,6 +574,23 @@ export class Session implements AgentSession {
     });
   }
 
+  private async ensureTitleFromHistory(input?: {
+    /**
+     * 是否允许调用模型生成标题。
+     */
+    generate?: boolean;
+  }): Promise<void> {
+    const messages = await this.historyStore.list();
+    await ensureSessionTitle({
+      projectRoot: this.projectRoot,
+      agentId: this.agentId,
+      sessionId: this.id,
+      messages,
+      ...(input?.generate ? { model: this.sessionConfig.model } : {}),
+      generate: input?.generate === true,
+    });
+  }
+
   private async persistAssistantResult(
     assistantMessage: SessionMessageV1,
   ): Promise<void> {
@@ -586,6 +616,7 @@ export class Session implements AgentSession {
     await this.executor.appendUserMessage({
       message,
     });
+    await this.ensureTitleFromHistory({ generate: true });
     await this.touchMetadata();
     return message;
   }

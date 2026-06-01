@@ -2,7 +2,8 @@
  * SDK Session 浏览辅助。
  *
  * 关键点（中文）
- * - 统一负责 session 列表摘要、session 详情与 history 分页的只读投影逻辑。
+ * - 统一负责 session 列表摘要、session 详情与 history 分页的投影逻辑。
+ * - 老 session 缺失持久化 title 时，会在列表读取阶段补写 fallback title。
  * - 面向 SDK / RemoteAgent / HTTP route 复用，避免在多个入口重复拼列表与分页语义。
  * - 这里不持有运行态状态；执行状态等动态信息通过调用参数显式注入。
  */
@@ -33,6 +34,10 @@ import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleT
 import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
 import { getSdkAgentSessionsRootDirPath } from "@/session/storage/Paths.js";
 import { readSessionMetadata } from "@/session/storage/Metadata.js";
+import {
+  ensureSessionTitle,
+  resolveFallbackSessionTitle,
+} from "@/session/SessionTitle.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
 
@@ -184,14 +189,7 @@ export function resolveSessionMessagePreview(message: SessionMessageV1): string 
  * 推导当前 session 的可读标题。
  */
 export function resolveSessionTitle(messages: SessionMessageV1[]): string | undefined {
-  for (const message of messages) {
-    if (message.role !== "user") continue;
-    const preview = resolveSessionMessagePreview(message);
-    if (!preview) continue;
-    return truncateText(preview, 80);
-  }
-  const fallback = messages[0] ? resolveSessionMessagePreview(messages[0]) : "";
-  return fallback ? truncateText(fallback, 80) : undefined;
+  return resolveFallbackSessionTitle(messages);
 }
 
 function resolveToolName(part: ToolPartCompatShape, aiToolName?: string): string {
@@ -361,7 +359,10 @@ export function buildSessionInfo(
         180,
       )
     : undefined;
-  const title = resolveSessionTitle(input.messages);
+  const title =
+    typeof input.metadata.title === "string" && input.metadata.title.trim()
+      ? input.metadata.title.trim()
+      : undefined;
   return {
     agentId: input.agentId,
     sessionId: input.sessionId,
@@ -374,8 +375,8 @@ export function buildSessionInfo(
     ...(typeof input.metadata.updatedAt === "number"
       ? { updatedAt: input.metadata.updatedAt }
       : {}),
-    ...(input.metadata.sdkConfig?.modelLabel
-      ? { modelLabel: input.metadata.sdkConfig.modelLabel }
+    ...(input.metadata.modelLabel
+      ? { modelLabel: input.metadata.modelLabel }
       : {}),
     ...(typeof input.metadata.timezone === "string" && input.metadata.timezone.trim()
       ? { timezone: input.metadata.timezone.trim() }
@@ -470,11 +471,19 @@ export async function listAgentSessionSummaryPage(params: {
     const messages = await loadSessionMessagesFromPath(
       getSdkAgentSessionMessagesPath(params.projectRoot, params.agentId, sessionId),
     );
+    const metadataWithTitle = metadata.title
+      ? metadata
+      : await ensureSessionTitle({
+          projectRoot: params.projectRoot,
+          agentId: params.agentId,
+          sessionId,
+          messages,
+        });
     const info = buildSessionInfo({
       projectRoot: params.projectRoot,
       agentId: params.agentId,
       sessionId,
-      metadata,
+      metadata: metadataWithTitle,
       messages,
       executing: params.executingSessionIds?.has(sessionId),
     });

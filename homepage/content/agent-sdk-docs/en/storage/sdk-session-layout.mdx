@@ -20,8 +20,10 @@ Because several SDK Agents may coexist inside the same project directory.
 ## What you will see there
 
 - `messages.jsonl`
-- session metadata
+- `meta.json`
 - archive directories
+
+`meta.json` includes the persisted `title`. After the first user message, the SDK writes a title; if model title generation fails, it uses a truncated version of that first user message.
 
 When you debug multiple sessions or multiple agents, this directory layout becomes very important because it defines how data stays isolated between different execution units.
 

@@ -20,8 +20,10 @@ SDK 本地 Agent 的 session 默认落盘到：
 ## 你能在这里看到什么
 
 - `messages.jsonl`
-- session metadata
+- `meta.json`
 - archive 目录
+
+`meta.json` 中包含持久化 `title`。首条用户消息出现后，SDK 会写入标题；如果模型标题生成失败，就使用首条用户消息的截断文本。
 
 当你在做多 session 或多 agent 调试时，这套目录结构会非常关键，因为它决定了不同执行单元之间的数据隔离方式。
 

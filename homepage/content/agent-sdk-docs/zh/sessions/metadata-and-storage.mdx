@@ -11,6 +11,12 @@ SDK session 默认落盘到：
 <projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
 ```
 
+同一目录下还会有：
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/meta.json
+```
+
 ## 为什么要按 `agentId` 分区
 
 因为同一个项目目录下，可能有多个 SDK agent 共存。
@@ -26,6 +32,20 @@ SDK session 默认落盘到：
 - 归档目录
 
 如果你在排障、做历史回放或多 agent 实验，这些落盘信息都很有价值。
+
+## `meta.json`
+
+`meta.json` 保存 session 列表和详情所需的轻量字段：
+
+- `sessionId`
+- `agentId`
+- `title`
+- `modelLabel`
+- `createdAt`
+- `updatedAt`
+- `timezone`
+
+`title` 是持久化字段。首条用户消息出现后，SDK 会优先用模型生成标题；如果生成失败，就用首条用户消息截断后写入 `title`。
 
 ## 相关文档
 

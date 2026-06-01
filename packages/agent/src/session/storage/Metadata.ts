@@ -8,10 +8,7 @@
 
 import fs from "fs-extra";
 import type { LanguageModel } from "ai";
-import type {
-  SessionHistoryMetaV1,
-  SessionHistorySdkConfigV1,
-} from "@/executor/types/SessionHistoryMeta.js";
+import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { getSdkAgentSessionMetaPath } from "@/session/storage/Paths.js";
 
 type ReadSessionMetadataInput = {
@@ -34,6 +31,14 @@ type ReadSessionMetadataInput = {
 function normalizeModelLabel(input: unknown): string | undefined {
   const label = typeof input === "string" ? input.trim() : "";
   return label || undefined;
+}
+
+/**
+ * 归一化 session 标题。
+ */
+export function normalizeSessionTitle(input: unknown): string | undefined {
+  const title = typeof input === "string" ? input.trim() : "";
+  return title || undefined;
 }
 
 /**
@@ -103,27 +108,11 @@ export async function readSessionMetadata(
         typeof raw.updatedAt === "number" && Number.isFinite(raw.updatedAt)
           ? raw.updatedAt
           : 0,
-      pinnedSkillIds: Array.isArray(raw.pinnedSkillIds)
-        ? raw.pinnedSkillIds
-            .map((item) => (typeof item === "string" ? item.trim() : ""))
-            .filter(Boolean)
-        : [],
-      ...(typeof raw.lastArchiveId === "string" && raw.lastArchiveId.trim()
-        ? { lastArchiveId: raw.lastArchiveId.trim() }
+      ...(normalizeSessionTitle(raw.title)
+        ? { title: normalizeSessionTitle(raw.title) }
         : {}),
-      ...(typeof raw.keepLastMessages === "number" &&
-      Number.isFinite(raw.keepLastMessages)
-        ? { keepLastMessages: raw.keepLastMessages }
-        : {}),
-      ...(typeof raw.maxInputTokensApprox === "number" &&
-      Number.isFinite(raw.maxInputTokensApprox)
-        ? { maxInputTokensApprox: raw.maxInputTokensApprox }
-        : {}),
-      ...(typeof raw.compactRatio === "number" && Number.isFinite(raw.compactRatio)
-        ? { compactRatio: raw.compactRatio }
-        : {}),
-      ...(raw.sdkConfig && typeof raw.sdkConfig === "object"
-        ? { sdkConfig: raw.sdkConfig as SessionHistorySdkConfigV1 }
+      ...(normalizeModelLabel(raw.modelLabel)
+        ? { modelLabel: normalizeModelLabel(raw.modelLabel) }
         : {}),
     };
   } catch {
@@ -134,7 +123,6 @@ export async function readSessionMetadata(
       createdAt: Date.now(),
       timezone: resolveSystemTimezone(),
       updatedAt: 0,
-      pinnedSkillIds: [],
     };
   }
 }
@@ -181,10 +169,7 @@ export async function patchSessionModelLabel(
     updatedAt: Date.now(),
     ...(modelLabel
       ? {
-          sdkConfig: {
-            ...(current.sdkConfig || {}),
-            modelLabel,
-          },
+          modelLabel,
         }
       : {}),
   };

@@ -34,6 +34,8 @@ Typical fields include:
 - `executing`
 - `timezone`
 
+`title` comes from the top-level `meta.json` field. After the first user message, the SDK persists a title; if model generation fails, it uses a truncated version of that first user message.
+
 ## Good use cases
 
 - rendering the selected session header in UI

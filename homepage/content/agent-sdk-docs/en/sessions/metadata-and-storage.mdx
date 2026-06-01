@@ -11,6 +11,12 @@ SDK sessions are persisted by default under:
 <projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
 ```
 
+The same directory also contains:
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/meta.json
+```
+
 ## Why storage is partitioned by `agentId`
 
 Because multiple SDK agents can exist inside the same project directory.
@@ -26,6 +32,20 @@ This is also one of the reasons why `id` should not be treated as a casual displ
 - archive directories
 
 If you are troubleshooting, replaying history, or running multi-agent experiments, this persisted data is extremely useful.
+
+## `meta.json`
+
+`meta.json` stores the lightweight fields used by session lists and detail views:
+
+- `sessionId`
+- `agentId`
+- `title`
+- `modelLabel`
+- `createdAt`
+- `updatedAt`
+- `timezone`
+
+`title` is persisted. After the first user message, the SDK first tries to generate a title with the configured model. If generation fails, it writes a truncated version of the first user message as `title`.
 
 ## Related docs
 

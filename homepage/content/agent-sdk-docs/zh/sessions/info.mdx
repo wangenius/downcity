@@ -34,6 +34,8 @@ console.log(info.messageCount);
 - `executing`
 - `timezone`
 
+`title` 来自 session 的 `meta.json` 顶层字段。首条用户消息出现后，SDK 会持久化标题；模型生成失败时会使用首条用户消息截断文本。
+
 ## 适合什么场景
 
 - 在 UI 中渲染当前选中 session 的头部信息

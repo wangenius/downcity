@@ -21,11 +21,16 @@ export {
 } from "./storage/Paths.js";
 export {
   inferModelLabel,
+  normalizeSessionTitle,
   patchSessionModelLabel,
   readSessionMetadata,
   resolveSystemTimezone,
   writeSessionMetadata,
 } from "./storage/Metadata.js";
+export {
+  ensureSessionTitle,
+  resolveFallbackSessionTitle,
+} from "./SessionTitle.js";
 export {
   persistSdkAssistantResult,
   touchSessionMetadata,

@@ -83,10 +83,7 @@ export async function touchSessionMetadata(
     updatedAt: Date.now(),
     ...(params.sessionConfig.modelLabel
       ? {
-          sdkConfig: {
-            ...(current.sdkConfig || {}),
-            modelLabel: params.sessionConfig.modelLabel,
-          },
+          modelLabel: params.sessionConfig.modelLabel,
         }
       : {}),
   };

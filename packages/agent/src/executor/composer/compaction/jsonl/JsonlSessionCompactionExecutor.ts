@@ -191,10 +191,6 @@ export async function compactSessionMessagesIfNeeded(
     await deps.writeMetaUnsafe({
       ...prevMeta,
       updatedAt: Date.now(),
-      lastArchiveId: params.archiveOnCompact ? archiveId : undefined,
-      keepLastMessages: Math.max(1, currentKept.length),
-      maxInputTokensApprox: params.maxInputTokensApprox,
-      compactRatio,
     });
   });
 

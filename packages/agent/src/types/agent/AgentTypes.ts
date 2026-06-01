@@ -445,8 +445,9 @@ export interface AgentSessionSummary {
    * 当前 session 可读标题。
    *
    * 说明（中文）
-   * - 当前 SDK 不要求标题一定存在。
-   * - 若调用方需要展示列表标题，可优先使用这里；为空时再回退到 `sessionId`。
+   * - 标题持久化在 session `meta.json` 顶层。
+   * - 首条用户消息出现后，SDK 会优先生成标题，失败时回退到首条用户消息截断。
+   * - 空 session 可能暂时没有标题，调用方可回退到 `sessionId`。
    */
   title?: string;
 

@@ -194,29 +194,9 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     await fs.ensureFile(this.getMessagesFilePath());
   }
 
-  private normalizePinnedSkillIds(input: string[] | undefined): string[] {
-    if (!Array.isArray(input)) return [];
-    const out: string[] = [];
-    for (const raw of input) {
-      const id = typeof raw === "string" ? raw.trim() : "";
-      if (!id) continue;
-      out.push(id);
-    }
-    return Array.from(new Set(out)).slice(0, 2000);
-  }
-
-  private normalizeSdkConfig(
-    input: SessionHistoryMetaV1["sdkConfig"],
-  ): SessionHistoryMetaV1["sdkConfig"] {
-    if (!input || typeof input !== "object" || Array.isArray(input)) {
-      return undefined;
-    }
-    const modelLabel =
-      typeof input.modelLabel === "string" ? input.modelLabel.trim() : "";
-    if (!modelLabel) return undefined;
-    return {
-      modelLabel,
-    };
+  private normalizeText(input: unknown): string | undefined {
+    const value = typeof input === "string" ? input.trim() : "";
+    return value || undefined;
   }
 
   private async readMetaUnsafe(): Promise<SessionHistoryMetaV1> {
@@ -235,24 +215,15 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         ...(typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
           ? { createdAt: raw.createdAt }
           : {}),
+        ...(this.normalizeText(raw.timezone)
+          ? { timezone: this.normalizeText(raw.timezone) }
+          : {}),
         updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : 0,
-        pinnedSkillIds: this.normalizePinnedSkillIds(raw.pinnedSkillIds),
-        ...(typeof raw.lastArchiveId === "string" && raw.lastArchiveId.trim()
-          ? { lastArchiveId: raw.lastArchiveId.trim() }
+        ...(this.normalizeText(raw.title)
+          ? { title: this.normalizeText(raw.title) }
           : {}),
-        ...(typeof raw.keepLastMessages === "number" &&
-        Number.isFinite(raw.keepLastMessages)
-          ? { keepLastMessages: raw.keepLastMessages }
-          : {}),
-        ...(typeof raw.maxInputTokensApprox === "number" &&
-        Number.isFinite(raw.maxInputTokensApprox)
-          ? { maxInputTokensApprox: raw.maxInputTokensApprox }
-          : {}),
-        ...(typeof raw.compactRatio === "number" && Number.isFinite(raw.compactRatio)
-          ? { compactRatio: raw.compactRatio }
-          : {}),
-        ...(this.normalizeSdkConfig(raw.sdkConfig)
-          ? { sdkConfig: this.normalizeSdkConfig(raw.sdkConfig) }
+        ...(this.normalizeText(raw.modelLabel)
+          ? { modelLabel: this.normalizeText(raw.modelLabel) }
           : {}),
       };
     } catch {
@@ -261,7 +232,6 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         sessionId: this.sessionId,
         createdAt: Date.now(),
         updatedAt: 0,
-        pinnedSkillIds: [],
       };
     }
   }
@@ -276,26 +246,16 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       ...(typeof next.createdAt === "number" && Number.isFinite(next.createdAt)
         ? { createdAt: next.createdAt }
         : {}),
+      ...(this.normalizeText(next.timezone)
+        ? { timezone: this.normalizeText(next.timezone) }
+        : {}),
       updatedAt:
         typeof next.updatedAt === "number" ? next.updatedAt : Date.now(),
-      pinnedSkillIds: this.normalizePinnedSkillIds(next.pinnedSkillIds),
-      ...(typeof next.lastArchiveId === "string" && next.lastArchiveId.trim()
-        ? { lastArchiveId: next.lastArchiveId.trim() }
+      ...(this.normalizeText(next.title)
+        ? { title: this.normalizeText(next.title) }
         : {}),
-      ...(typeof next.keepLastMessages === "number" &&
-      Number.isFinite(next.keepLastMessages)
-        ? { keepLastMessages: next.keepLastMessages }
-        : {}),
-      ...(typeof next.maxInputTokensApprox === "number" &&
-      Number.isFinite(next.maxInputTokensApprox)
-        ? { maxInputTokensApprox: next.maxInputTokensApprox }
-        : {}),
-      ...(typeof next.compactRatio === "number" &&
-      Number.isFinite(next.compactRatio)
-        ? { compactRatio: next.compactRatio }
-        : {}),
-      ...(this.normalizeSdkConfig(next.sdkConfig)
-        ? { sdkConfig: this.normalizeSdkConfig(next.sdkConfig) }
+      ...(this.normalizeText(next.modelLabel)
+        ? { modelLabel: this.normalizeText(next.modelLabel) }
         : {}),
     };
     await fs.writeJson(this.getMetaFilePath(), normalized, { spaces: 2 });

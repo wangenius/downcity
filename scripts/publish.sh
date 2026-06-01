@@ -172,7 +172,7 @@ main() {
   esac
   set_new_version "$new_version"
 
-  # 6. 暂存发布版本文件。UI SDK 仍走独立 publish:ui 流程。
+  # 6. 暂存发布版本文件。UI SDK 走 packages 主发布流程。
   git add \
     package.json \
     packages/agent/package.json \

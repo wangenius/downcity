@@ -32,13 +32,6 @@ const github_output_path = process.env.GITHUB_OUTPUT;
 const packages_directory = join(process.cwd(), "packages");
 
 /**
- * 已有独立发布流程的包。
- */
-const excluded_packages = new Set([
-  "@downcity/ui",
-]);
-
-/**
  * 列出所有可检测的 package.json 路径。
  *
  * @returns {string[]}
@@ -111,7 +104,7 @@ const changed_packages = [];
 for (const manifest_path of list_package_manifest_paths()) {
   const current_manifest = read_current_manifest(manifest_path);
 
-  if (current_manifest.private === true || excluded_packages.has(current_manifest.name)) {
+  if (current_manifest.private === true) {
     continue;
   }
 

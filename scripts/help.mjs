@@ -129,11 +129,6 @@ const HELP_ITEMS = [
       "同步 root、@downcity/agent、@downcity/plugins、downcity 版本并推送，触发 scoped 包发布 workflow，并在成功后触发 downcity 镜像包 workflow。",
   },
   {
-    name: "publish:ui",
-    summary: "执行 UI 发布脚本。",
-    detail: "用于 UI 相关发布流程，与 downcity 主 CLI 发布分离。",
-  },
-  {
     name: "build:packages",
     summary: "packages 构建脚本底层入口。",
     detail: "当前与 `patch:build` 指向同一个脚本，保留给已有使用习惯与兼容调用。",

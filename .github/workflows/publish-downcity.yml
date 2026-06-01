@@ -12,10 +12,13 @@ on:
     paths:
       - ".github/workflows/publish-downcity.yml"
       - "cli/city/**"
-      - "cli/bay/**"
+      - "cli/town/**"
       - "cli/downcity/**"
+      - "products/console/**"
+      - "packages/type/package.json"
       - "packages/agent/package.json"
-      - "packages/gate/package.json"
+      - "packages/city/package.json"
+      - "packages/services/package.json"
       - "packages/plugins/package.json"
       - "pnpm-lock.yaml"
   workflow_dispatch:
@@ -58,11 +61,14 @@ jobs:
       - name: Build downcity CLI package
         run: |
           set -euo pipefail
+          pnpm -C packages/type build
           pnpm -C packages/agent build
-          pnpm -C packages/gate build
+          pnpm -C packages/city build
+          pnpm -C packages/services build
           pnpm -C packages/plugins build
           pnpm -C cli/city build
-          pnpm -C cli/bay build
+          pnpm -C cli/town build
+          pnpm -C products/console build
           pnpm -C cli/downcity build
 
       - name: Validate npm token and package ownership

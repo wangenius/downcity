@@ -1,0 +1,48 @@
+---
+title: town city
+description: Connect Town to the active City server without managing City resources
+---
+
+# `town city`
+
+`town city` manages the connection context that local Agents use to call City.
+
+Town does not configure City models, services, accounts, billing, or admin resources. Use the `city` CLI for those.
+
+## Usage
+
+```bash
+town city
+town city status
+town city list
+town city use
+town city connect <url> --town-id <townId> --user-token <token>
+town city disconnect
+```
+
+## What It Writes
+
+`town city connect` and `town city use` write Town platform env entries:
+
+- `DOWNCITY_CITY_URL`
+- `DOWNCITY_CITY_TOWN_ID`
+- `DOWNCITY_CITY_USER_TOKEN`
+
+Agent runtime reads these values when it needs to call City user-side services.
+
+## Recommended Flow
+
+```bash
+city
+town city use
+town city status
+town agent start
+```
+
+Use `city` to add servers, login, and manage shared resources. Use `town city use` to import the active City session into Town.
+
+## Related
+
+- [`town agent`](/en/products-docs/town-cli/agent/agent)
+- [`town plugin`](/en/products-docs/town-cli/plugin/plugin)
+- [`town env`](/en/products-docs/town-cli/env)

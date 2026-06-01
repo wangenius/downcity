@@ -25,7 +25,7 @@ If you prefer a control-plane vs execution-plane mental model:
 Console or city-level runtime is responsible for global concerns:
 
 - managing multiple agent projects
-- maintaining the global model pool
+- maintaining the shared model catalog
 - maintaining global channel accounts
 - exposing control-plane APIs
 - providing aggregated UI views
@@ -63,13 +63,13 @@ This split is also what keeps many CLI and HTTP behaviors understandable:
 For day-to-day use, keep two rules in mind:
 
 1. When you configure the project runtime, you edit project files like `downcity.json`.
-2. When you manage shared resources, you use city-level capabilities like the model pool, channel accounts, and Console.
+2. When you manage shared resources, you use shared runtime capabilities like model catalogs, channel accounts, and Console.
 
 ## Common examples
 
 ### Model binding
 
-- the model definition lives in the global model pool
+- the model definition lives in the shared model catalog
 - the project chooses its model through `downcity.json.execution.modelId`
 
 So model definition and model selection are separate concerns.

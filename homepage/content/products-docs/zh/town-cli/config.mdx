@@ -1,6 +1,6 @@
 ---
 title: town config
-description: 管理项目 downcity.json 与 alias（不含模型池管理）
+description: 管理项目 downcity.json 与 alias
 ---
 
 # `town config`
@@ -22,7 +22,7 @@ town config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> 模型池管理已迁移到独立命令：[`town model`](/zh/products-docs/town-cli/model)。
+> 模型资源由 `city` 管理。Town 托管 Agent 时只读取项目里的 execution 绑定。
 
 ## Plugin 配置
 
@@ -31,7 +31,7 @@ town config <subcommand>
 插件相关配置请改为：
 
 - `plugins.*` 只管理当前 agent 的插件参数
-- plugin 启停请使用 `town <plugin> on/off`
+- plugin 生命周期和运行态请使用 `town plugin`
 
 示例：
 
@@ -43,8 +43,8 @@ town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ## 示例
 
 ```bash
-town config get model.primary
-town config set model.primary fast
+town config get execution.modelId
+town config set execution.modelId fast
 town config unset plugins.chat.channels.telegram
 town config alias --dry-run
 ```
@@ -58,23 +58,23 @@ town config alias --dry-run
 以下示例直接对齐 `cli/town/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ town config get model.primary
+$ town config get execution.modelId
 {
   "success": true,
   "projectRoot": "<projectRoot>",
   "shipJsonPath": "<projectRoot>/downcity.json",
-  "keyPath": "model.primary",
+  "keyPath": "execution.modelId",
   "value": "<modelId>"
 }
 ```
 
 ```text
-$ town config set model.primary gpt-5.4
+$ town config set execution.modelId gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",
   "shipJsonPath": "<projectRoot>/downcity.json",
-  "keyPath": "model.primary",
+  "keyPath": "execution.modelId",
   "value": "gpt-5.4",
   "existed": true,
   "previous": "<oldModelId>"

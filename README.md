@@ -2,25 +2,25 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-> Turn a code repository into a conversational, executable, and observable agent runtime.
+> Agent infrastructure for AI builders shipping many agent-powered products and workflows.
 
-Downcity is an agent platform for local projects and team workflows. It combines your repository, models, sessions, tools, services, plugins, and control plane into one system so a project can run long-lived agents with traceable execution and extensible interfaces.
+Downcity gives creators, indie builders, and teams one reusable runtime layer for agents, models, tools, tasks, memory, plugins, shared services, permissions, usage, billing, and control surfaces. Instead of rebuilding the same agent backend for every new AI product, you can run many agents, products, and workflows on one infrastructure stack.
 
 ## Why Downcity
 
-- Repo-native agent runtime: the repository is the working context, memory boundary, and execution surface.
-- Platform plus runtime separation: `downcity` manages the platform; `@downcity/agent` focuses on single-agent execution.
-- Long-running operations: run agents as managed daemons, inspect status, review history, and interact through CLI or Console.
-- Observable by default: sessions, logs, runtime state, and operational surfaces are designed to be inspectable.
-- Extensible architecture: services, plugins, SDK APIs, and UI components are all designed as explicit integration surfaces.
+- Built for AI builders: create the next agent product without rebuilding model routing, tools, memory, tasks, auth, usage, billing, and operations again.
+- Reusable runtime layer: a repo or folder can become an agent boundary, while Downcity owns the broader infrastructure for long-running agents.
+- Shared services: centralize model catalogs, runtime env, service routing, accounts, balance, usage, payment, and HTTP access.
+- Operable agents: run agents as managed daemons, inspect status, review history, and interact through CLI, Console, browser extension, or SDK.
+- Extensible architecture: plugins, services, SDK APIs, and UI components are explicit integration surfaces for products and teams.
 
 ## Packages
 
 | Package | Purpose |
 | --- | --- |
-| `downcity` | Public CLI bundle that installs `town` for local Agent hosting and `city` for deployed City administration. |
+| `downcity` | Public CLI bundle that installs `town` for local Agent hosting and `city` for shared service administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
-| `@downcity/city` | City runtime plus City access SDK for service registration, actions, auth, env, town-scoped access, and HTTP calling. |
+| `@downcity/city` | Shared service runtime and access SDK for service registration, actions, auth, env, town-scoped access, and HTTP calling. |
 | `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by City. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
@@ -30,14 +30,13 @@ Downcity is an agent platform for local projects and team workflows. It combines
 
 ## Core Capabilities
 
-- Repo is the Agent: initialize a project with `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/`.
-- Town control plane: run `town start` or `town console` to host local agents and access the control surface.
-- Agent daemon lifecycle: create, start, stop, restart, inspect, chat with, and diagnose project agents.
-- Global model pool: manage providers and models through `town model`, then bind projects to model IDs.
-- City runtime: reuse one shared service city across towns with `@downcity/city`, `@downcity/services`, and deployable `cities/*`.
-- Built-in services: `chat`, `task`, `memory`, `shell`, and `contact`.
-- Built-in plugins: `skill`, `auth`, `web`, `asr`, `tts`, and `workboard`.
-- SDK access: embed a local agent or call a remote agent over HTTP.
+- Agent project runtime: initialize a repo or folder with `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/`.
+- Local hosting and operations: run `town start` or `town console` to host local agents and access the control surface.
+- Agent lifecycle: create, start, stop, restart, inspect, chat with, diagnose, and observe project agents.
+- City connection: use `town city` to connect local Agents to the active City server; manage shared models and services with `city`.
+- Shared backend services: reuse accounts, balance, usage, payment, env, auth, and service routing across agents and products.
+- Built-in agent capabilities: `chat`, `task`, `memory`, `shell`, `contact`, `skill`, `web`, `asr`, `tts`, and `workboard`.
+- Product surfaces: Console UI, Chrome Extension, Agent SDK, shared services SDK, and UI SDK.
 
 ## Quick Start
 
@@ -56,7 +55,7 @@ town --version
 city --version
 ```
 
-`town` is the local Agent host command. `city` is the deployed City administration command. Use `town update` to upgrade the global CLI.
+`town` is the local Agent host command. `city` is the shared service administration command. Use `town update` to upgrade the global CLI.
 
 ### 2. Initialize the platform
 
@@ -66,16 +65,15 @@ town init
 
 This sets up the global Downcity storage and configuration, by default under `~/.downcity/`.
 
-### 3. Configure a model
+### 3. Connect Town to City
 
 ```bash
-town model create
-town model list
-town model use <modelId>
-town model test model <modelId>
+city
+town city use
+town city status
 ```
 
-`town` resolves `downcity.json.execution.modelId` into a runtime `LanguageModel` and injects it into agent sessions.
+`city` manages shared services and models. `town city` imports the active City connection for local Agent runtime use.
 
 ### 4. Create an agent project
 
@@ -216,10 +214,9 @@ downcity/
 ## Documentation
 
 - Docs: [downcity.ai/docs](https://downcity.ai/docs)
-- City docs: [downcity.ai/docs/city](https://downcity.ai/docs/city)
+- Shared Services SDK docs: [downcity.ai/city-sdk-docs](https://downcity.ai/city-sdk-docs)
 - Agent SDK docs: [downcity.ai/agent-sdk-docs](https://downcity.ai/agent-sdk-docs)
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
-- Developer docs: [downcity.ai/devdocs](https://downcity.ai/devdocs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
 - Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/town/README.md](./cli/town/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
 

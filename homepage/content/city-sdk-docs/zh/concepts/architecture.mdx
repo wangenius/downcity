@@ -35,11 +35,11 @@ Downcity 对外有两类主要入口：
 - 产品侧入口：`@downcity/city` 的 `User City` 与 `Admin City`
 - 运维入口：`downcity`
 
-它们都不实现 City 本身，只负责把请求送进同一个 City。
+它们都不实现服务端 runtime 本身，只负责把请求送进同一套共享 runtime。
 
 ## 2. Composition：谁来把 City 组装起来
 
-Downcity 的运行时不是“new 一个 City 就结束”，中间还有一层装配：
+Downcity 的运行时不是“new 一个 City 就结束”，中间还有一层面向部署环境的装配：
 
 - `cities/node` 负责 Node.js + SQLite 的本地 server 示例
 - `cities/edge` 负责 Cloudflare Workers + D1 的部署示例

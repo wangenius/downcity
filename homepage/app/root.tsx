@@ -79,19 +79,22 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export const meta: Route.MetaFunction = () => {
+  const title = "Downcity - Agent Infrastructure for AI Builders";
+  const description =
+    "Downcity gives AI builders one reusable runtime for agents, models, tools, tasks, memory, services, permissions, usage, billing, and control surfaces.";
+
   return [
-    { title: "Downcity - The Repo IS The Agent" },
+    { title },
     { charSet: "utf-8" },
     { name: "viewport", content: "width=device-width, initial-scale=1" },
     {
       name: "description",
-      content:
-        "Downcity - Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
+      content: description,
     },
     {
       name: "keywords",
       content:
-        "AI agent, GitHub, repository, automation, developer tools, AI assistant, code automation, repo as agent",
+        "AI agent infrastructure, agent runtime, AI builders, agent products, agent operations, AI workflow automation, developer tools",
     },
     { name: "author", content: "Downcity" },
     // Open Graph / Facebook
@@ -99,12 +102,11 @@ export const meta: Route.MetaFunction = () => {
     { property: "og:site_name", content: "Downcity" },
     {
       property: "og:title",
-      content: "Downcity - The Repo IS The Agent",
+      content: title,
     },
     {
       property: "og:description",
-      content:
-        "Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
+      content: description,
     },
     { property: "og:image", content: "/icon-512.png" },
 
@@ -113,12 +115,11 @@ export const meta: Route.MetaFunction = () => {
     { name: "twitter:site", content: "@downcity_ai" },
     {
       name: "twitter:title",
-      content: "Downcity - The Repo IS The Agent",
+      content: title,
     },
     {
       name: "twitter:description",
-      content:
-        "Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
+      content: description,
     },
     { name: "twitter:image", content: "/icon-512.png" },
 
@@ -146,7 +147,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // 文档页使用 fumadocs 自身导航，不展示站点全局 Header。
   const isDocsPath =
     path === "/docs" ||
-    path === "/devdocs" ||
     path === "/products-docs" ||
     path === "/city-sdk-docs" ||
     path === "/agent-sdk-docs" ||
@@ -154,7 +154,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     path === "/plugins-docs" ||
     path === "/ui-sdk-docs" ||
     path.startsWith("/docs/") ||
-    path.startsWith("/devdocs/") ||
     path.startsWith("/products-docs/") ||
     path.startsWith("/city-sdk-docs/") ||
     path.startsWith("/agent-sdk-docs/") ||
@@ -163,8 +162,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     path.startsWith("/ui-sdk-docs/") ||
     path.startsWith("/en/docs") ||
     path.startsWith("/zh/docs") ||
-    path.startsWith("/en/devdocs") ||
-    path.startsWith("/zh/devdocs") ||
     path.startsWith("/en/products-docs") ||
     path.startsWith("/zh/products-docs") ||
     path.startsWith("/en/city-sdk-docs") ||

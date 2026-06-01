@@ -1,11 +1,17 @@
 ---
 title: Downcity Docs
-description: Downcity 概念、用户主线和各文档 Space 的总入口。
+description: 给 AI builders 的 Agent 基础设施文档入口。
 ---
 
 # Downcity Docs
 
-Downcity Docs 是地图。产品手册和 SDK 参考都拆到独立 space 里，这样每类读者都能停留在正确层级。
+Downcity 是给 AI builders 的 Agent 基础设施。这套文档帮助你运行本机 Agent、复用共享服务、连接模型和插件，并把 Agent 工作流做成真实产品表层。
+
+最短产品模型：
+
+- 产品负责用户体验
+- Agent 在明确运行边界里执行任务
+- Downcity 提供模型、工具、任务、记忆、服务、权限、usage、计费和控制台这些可复用运行层
 
 ## 从这里开始
 
@@ -13,7 +19,7 @@ Downcity Docs 是地图。产品手册和 SDK 参考都拆到独立 space 里，
 2. [快速开始](/zh/docs/quickstart/getting-started)
 3. [Downcity 的整体关系](/zh/docs/concepts/project-logic-overview)
 4. [Products Docs](/zh/products-docs)
-5. [City SDK](/zh/city-sdk-docs)
+5. [共享服务 SDK](/zh/city-sdk-docs)
 6. [Agent SDK](/zh/agent-sdk-docs)
 7. [Services SDK](/zh/services-sdk-docs)
 8. [Plugins Docs](/zh/plugins-docs)
@@ -22,13 +28,12 @@ Downcity Docs 是地图。产品手册和 SDK 参考都拆到独立 space 里，
 ## 文档 Space
 
 - [Products](/zh/products-docs)：Town CLI、Town Console、Chrome Extension。
-- [City SDK](/zh/city-sdk-docs)：`City`、`CityBase`、town 身份、token、service/action 基建和部署。
+- [共享服务 SDK](/zh/city-sdk-docs)：`City`、`CityBase`、town 身份、token、service/action 基建和部署。
 - [Agent SDK](/zh/agent-sdk-docs)：可编程 Agent、Session、Local/Remote Agent、模型绑定和 Plugin API。
 - [Services SDK](/zh/services-sdk-docs)：accounts、balance、usage、Stripe payment services。
 - [Plugins Docs](/zh/plugins-docs)：内建 plugin 手册和 plugin 示例。
 - [UI SDK](/zh/ui-sdk-docs)：可复用 UI 组件和 Workboard 界面。
-- [Dev Docs](/zh/devdocs)：内部架构、package 结构、构建流和实现说明。
 
 ## 这个 Space 保留什么
 
-这里保留产品级导览：快速开始、核心概念、配置、安全、运维和通用参考。
+这里保留产品级导览：快速开始、核心概念、配置、安全、运维和通用参考。实现细节放在对应 SDK Space。

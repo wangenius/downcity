@@ -3,7 +3,7 @@ title: Auth and `user_token`
 description: Connect your login system to Downcity token issuance.
 ---
 
-Downcity does not host your user system. It only requires a verifiable `user_token` on town-side requests.
+Downcity does not host your user system. It only requires a verifiable `user_token` on product-side requests.
 
 ## If you already have login
 
@@ -20,14 +20,14 @@ const user = await admin.towns.tokens.apply({
 });
 ```
 
-Then give the town side two values:
+Then give the product side two values:
 
 - `town_id`
 - `user_token`
 
 ## If you do not have a heavy backend yet
 
-For new pure-client towns, keep token issuance near one shared City instead of building a separate service per town.
+For new pure-client products, keep token issuance near one shared runtime instead of building a separate service per product.
 
 ## What the token should not do
 

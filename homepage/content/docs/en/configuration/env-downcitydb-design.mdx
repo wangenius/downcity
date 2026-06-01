@@ -1,6 +1,6 @@
 ---
 title: Env and downcity.db Design
-description: Explain how env, channel accounts, model pool, and project plugin config are separated
+description: Explain how env, channel accounts, model catalogs, and project plugin config are separated
 ---
 
 # Env and downcity.db Design
@@ -24,7 +24,7 @@ Use one rule:
 
 ## Project `downcity.json` owns
 
-- `model.primary`
+- `execution.modelId`
 - `plugins.*`
 
 ## Why
@@ -41,4 +41,4 @@ Use one rule:
 4. project `.env` overrides duplicate host keys
 5. Agent reads project `downcity.json`
 6. resolve `plugins.*`
-7. resolve channel credentials, chat authorization rules, and model pool from `downcity.db`
+7. resolve channel credentials, chat authorization rules, and shared model catalog from `downcity.db`

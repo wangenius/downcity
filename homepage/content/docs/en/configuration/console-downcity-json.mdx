@@ -18,7 +18,7 @@ Console-global config is unified in:
 
 `downcity.db` contains these major groups:
 
-1. Model pool (providers/models)
+1. Shared model catalog (providers/models)
 2. Console-managed env records (`env_entries`)
 4. Bot account vault (`channel_accounts`)
 5. Chat user authorization (`chat_auth_roles`, `chat_auth_role_permissions`, `chat_auth_channel_defaults`, `chat_auth_user_roles`)
@@ -77,11 +77,11 @@ town asr on
 town asr off
 ```
 
-Manage model pool:
+Manage shared models:
 
 ```bash
 town model list
-town model create
+town model use <modelId>
 ```
 
 ## Related docs

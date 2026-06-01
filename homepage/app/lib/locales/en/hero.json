@@ -1,12 +1,12 @@
 {
-  "topBadge": "✨ Repo-Native Agent Runtime",
-  "title": "The Repo",
-  "titleItalic": "IS The Agent",
+  "topBadge": "Agent Infrastructure for AI Builders",
+  "title": "Build Many",
+  "titleItalic": "Agent Products",
   "titleEnd": "",
-  "subtitle": "Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
-  "tag1": "Conversational",
-  "tag2": "Autonomous",
-  "tag3": "Auditable",
-  "verticalText": "REPO IS AGENT",
-  "start": "Start Shipping"
+  "subtitle": "Use one reusable runtime for agents, models, tools, tasks, memory, services, permissions, usage, billing, and control surfaces.",
+  "tag1": "Reusable",
+  "tag2": "Operable",
+  "tag3": "Extensible",
+  "verticalText": "AGENT INFRA",
+  "start": "Start Building"
 }

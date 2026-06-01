@@ -22,15 +22,15 @@ export const CTASection: FC = () => {
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
         <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
           <div className="space-y-3">
-            <p className={marketingTheme.eyebrow}>Launch Decision</p>
+            <p className={marketingTheme.eyebrow}>Builder Decision</p>
             <h2 className="font-serif text-[1.9rem] font-semibold tracking-[-0.04em] text-foreground md:text-[2.25rem]">
               {t("common:ctaSection.titlePrefix")}{" "}
               <span className="italic text-foreground/72">{t("common:ctaSection.titleItalic")}</span>
             </h2>
             <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
               {isZh
-                ? "先在一个真实仓库里跑通最小闭环，再按需加更多技能与平台。"
-                : "Close one real repo loop first, then add more skills and platforms only when needed."}
+                ? "先用一套可复用运行层跑通一个真实 Agent 产品，再把它扩展到更多工作流和产品入口。"
+                : "Close one real agent product loop on a reusable runtime, then expand it into more workflows and product surfaces."}
             </p>
           </div>
 

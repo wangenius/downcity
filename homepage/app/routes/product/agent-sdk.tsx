@@ -75,7 +75,7 @@ const PAGE = {
  * Product Agent SDK 页面。
  * 说明：
  * 1. 这里聚焦 `@downcity/agent` 的嵌入式执行壳能力。
- * 2. 与 City SDK 分开后，用户能明确区分“平台运行层”和“应用嵌入层”。
+ * 2. 与共享服务 SDK 分开后，用户能明确区分“平台运行层”和“应用嵌入层”。
  */
 export default function ProductAgentSdkPage() {
   const { i18n } = useTranslation();

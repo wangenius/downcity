@@ -3,7 +3,7 @@ title: "City"
 description: "Provides User City and Admin City, and unifies AI, custom service, and service calls behind one SDK boundary."
 ---
 
-City is the access layer exported by `@downcity/city`. It is how towns connect to a City.
+City is the access layer exported by `@downcity/city`. It is how products connect to the shared runtime.
 
 It is not only a thin wrapper for AI calls. It unifies these town-facing call surfaces into one package:
 
@@ -23,7 +23,7 @@ If your question is "how does a town actually connect to City?", this page shoul
 ## Use it when
 
 - your town already has `town_id + user_token`
-- you want town clients to call `text()`, `stream()`, `image()`, custom services, or services
+- you want product clients to call `text()`, `stream()`, `image()`, custom services, or services
 - you want a trusted backend to issue tokens or manage City data
 - you want registration, login, OAuth, usage, and payment-related capabilities to follow the same call model
 
@@ -112,7 +112,7 @@ From the perspective of `@downcity/city`, it is the same kind of thing as one of
 - Your own service: `rewrite`, `translate`, `workspace`
 - A service: `accounts`, `usage`, `payment`, `payment.stripe`
 
-So the town side does not need to learn two call patterns. Everything stays:
+So the product side does not need to learn two call patterns. Everything stays:
 
 ```ts
 client.service("service_id").action("action_id").invoke(...)
@@ -302,7 +302,7 @@ const checkout = await client.payment.method("stripe").invoke({
 If this is your first Downcity town integration, read in this order:
 
 1. Start here to build the mental model for `User City`, `Admin City`, and `service(...)`
-2. Then read [User City](/en/city-sdk-docs/reference/city-user) for detailed town-side calls
+2. Then read [User City](/en/city-sdk-docs/reference/city-user) for detailed product-side calls
 3. Then read [Admin City](/en/city-sdk-docs/reference/city-admin) for trusted-side token issuance
 4. If you want minimal registration/login, continue to [@downcity/services](/en/services-sdk-docs)
 5. If you want the full login scenario, read [Services SDK Accounts](/en/services-sdk-docs/accounts)

@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-description: Correct startup sequence for Console + Agent in about 10 minutes
+description: Run your first local agent on Downcity infrastructure in about 10 minutes
 ---
 
 # Getting Started
@@ -53,7 +53,7 @@ Initialization generates:
 
 ## 5. Bind a model
 
-The current project agent uses the global model-pool binding style.
+The current project agent binds to a model ID exposed by the shared AI service.
 
 The minimal `downcity.json` example should be:
 
@@ -70,9 +70,9 @@ The minimal `downcity.json` example should be:
 
 Notes:
 
-- `modelId` points to a model in the Town global model pool
-- the project no longer stores the old `model.primary` structure
-- if you have not prepared a model pool yet, do that first at the global level
+- `modelId` points to a model available through `town model list`
+- the project stores the selected model under `execution.modelId`
+- if you have not connected shared models yet, do that before starting the agent
 
 ## 6. Start Agent
 

@@ -11,7 +11,7 @@
   "simple": {
     "value": "1-Click",
     "label": "Simple",
-    "description": "Repo is the only artifact"
+    "description": "Runtime is reusable"
   },
   "anytime": {
     "value": "24/7",

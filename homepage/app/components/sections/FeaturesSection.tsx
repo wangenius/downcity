@@ -91,7 +91,7 @@ export const FeaturesSection: FC = () => {
             </p>
             <div className="mt-5 space-y-2 border-t border-border/70 pt-4">
               {[
-                isZh ? "Repo 是控制面，不是数据来源之一" : "Repo is the control plane, not just a data source",
+                isZh ? "Runtime 是复用层，repo 只是其中一种边界" : "Runtime is the reuse layer; a repo is one possible boundary",
                 isZh ? "审计日志即治理资产" : "Audit logs are governance assets",
                 isZh ? "路径贴合优先于平台迁移" : "Path-fit beats platform migration",
               ].map((line) => (

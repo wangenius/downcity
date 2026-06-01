@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 const PAGE = {
   zh: {
     badge: "Product",
-    title: "Downcity 产品不是一个点状工具，而是一套可组合的运行界面。",
+    title: "Downcity 是给 AI builders 的可复用 Agent 基础设施。",
     subtitle:
-      "同一套 runtime 逻辑，被分发到浏览器控制面、网页入口、SDK 与 UI 组件层。你面对的是不同使用场景，不是互相割裂的产品线。",
+      "同一套 runtime 逻辑，被分发到本地宿主、浏览器控制面、网页入口、SDK 与 UI 组件层。你面对的是不同使用场景，不是互相割裂的产品线。",
     cards: [
       {
         id: "console-ui",
@@ -25,8 +25,8 @@ const PAGE = {
       },
       {
         id: "sdk",
-        title: "City SDK",
-        desc: "把 City runtime、City 与公共服务接入你自己的产品流程和业务系统。",
+        title: "Shared Services SDK",
+        desc: "把模型、身份、usage、支付和服务路由接入你自己的产品流程和业务系统。",
         source: "packages/city/",
       },
       {
@@ -40,15 +40,15 @@ const PAGE = {
     facts: [
       "Console UI 是独立前端包，目录为 products/console/。",
       "Chrome Extension 基于 Manifest V3，目录为 products/chrome-extension/。",
-      "City runtime 与 City 调用 SDK 都位于 packages/city/。",
-      "UI SDK 当前以 console-ui-kit 方向沉淀组件能力。",
+      "Shared Services SDK 当前位于 packages/city/。",
+      "UI SDK 当前由 packages/ui 与 products/console 的真实交互模式共同沉淀。",
     ],
   },
   en: {
     badge: "Product",
-    title: "Downcity is not one isolated tool. It is a composed operating surface.",
+    title: "Downcity is reusable agent infrastructure for AI builders.",
     subtitle:
-      "The same runtime logic is distributed across browser control room, web entry, City SDK, and UI layer. You are choosing operating contexts, not disconnected products.",
+      "The same runtime logic is distributed across local hosting, browser control room, web entry, SDKs, and UI layer. You are choosing operating contexts, not disconnected products.",
     cards: [
       {
         id: "console-ui",
@@ -64,8 +64,8 @@ const PAGE = {
       },
       {
         id: "sdk",
-        title: "City SDK",
-        desc: "Embed City runtime, City access, and public services into your own product flow and business system.",
+        title: "Shared Services SDK",
+        desc: "Embed models, auth, usage, payment, and service routing into your own product flow and business system.",
         source: "packages/city/",
       },
       {
@@ -79,8 +79,8 @@ const PAGE = {
     facts: [
       "Console UI is a dedicated frontend package in products/console/.",
       "Chrome Extension is a Manifest V3 extension in products/chrome-extension/.",
-      "City runtime and City access SDK both live in packages/city/.",
-      "UI SDK direction is currently documented as console-ui-kit extraction.",
+      "Shared Services SDK currently lives in packages/city/.",
+      "UI SDK capabilities are shaped by packages/ui and real Console interaction patterns.",
     ],
   },
 } as const;

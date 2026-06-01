@@ -25,10 +25,6 @@ export const servicesSdkDocs = defineDocs({
   dir: "content/services-sdk-docs",
 });
 
-export const devdocs = defineDocs({
-  dir: "content/devdocs",
-});
-
 export const uiSdkDocs = defineDocs({
   dir: "content/ui-sdk-docs",
 });

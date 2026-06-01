@@ -25,7 +25,7 @@ Downcity 里有两个经常同时出现的概念：
 Console 或 city 级运行时主要负责：
 
 - 管理多个 agent 项目
-- 维护全局模型池
+- 维护共享模型目录
 - 维护全局 channel account
 - 提供控制面 API
 - 为 UI 提供聚合视图
@@ -60,13 +60,13 @@ Console 或 city 级运行时主要负责：
 你在日常使用时只需要记住两件事：
 
 1. 配置项目本身时，改的是项目里的文件，例如 `downcity.json`
-2. 管理全局资源时，使用的是 city 能力，例如模型池、channel account、Console
+2. 管理共享资源时，使用的是共享 runtime 能力，例如模型目录、channel account、Console
 
 ## 常见例子
 
 ### 绑定模型
 
-- 模型本身在 Town 全局模型池里
+- 模型本身在 Town 共享模型目录里
 - 当前项目使用哪个模型，由项目的 `downcity.json.execution.modelId` 决定
 
 所以“模型定义”和“模型选择”是两层东西：

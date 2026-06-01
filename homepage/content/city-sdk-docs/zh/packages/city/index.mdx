@@ -91,14 +91,14 @@ ai.use({
 base.use(ai);
 ```
 
-这个示例展示的是 `@downcity/city` 的运行时侧：它负责把数据库和服务挂到同一个 City 上。产品侧调用则使用同一个包导出的 City 能力。
+这个示例展示的是 `@downcity/city` 的运行时侧：它负责把数据库和服务挂到同一套共享 runtime 上。产品侧调用则使用同一个包导出的 City 能力。
 
 ## 典型理解路径
 
 ### 如果你要自己写业务 service
 
 - 先看 [Service 与 Action 设计](/zh/city-sdk-docs/packages/city/service-and-action)
-- 再看 [City](/zh/city-sdk-docs/packages/city/city)，理解产品怎么调用你写的 service
+- 再看 [City](/zh/city-sdk-docs/packages/city/city-runtime)，理解产品怎么调用你写的 service
 
 ### 如果你要接官方服务
 
@@ -116,6 +116,6 @@ base.use(ai);
 ## 下一步读什么
 
 - 想按主题深入，直接进入上面的四个子页面
-- 想看产品怎么调用它，继续读 [City](/zh/city-sdk-docs/packages/city/city)
+- 想看产品怎么调用它，继续读 [City](/zh/city-sdk-docs/packages/city/city-runtime)
 - 想看 Worker 怎么接进来，继续读 [Cloudflare Workers](/zh/city-sdk-docs/guides/cloudflare-workers)
 - 想直接查接口，再去 [City API](/zh/city-sdk-docs/reference/city-runtime)

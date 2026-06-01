@@ -11,7 +11,7 @@
   "simple": {
     "value": "极简",
     "label": "简单",
-    "description": "代码仓库即是 Agent"
+    "description": "Runtime 可复用"
   },
   "anytime": {
     "value": "24/7",

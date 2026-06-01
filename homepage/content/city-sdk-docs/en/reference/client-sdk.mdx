@@ -5,7 +5,7 @@ description: "The Downcity SDK is split by role: User City owns town-runtime cal
 
 This page does one job: it pulls the calling model of `@downcity/city` into one reference overview.
 
-If you want the integration story first, start with [@downcity/city](/en/city-sdk-docs/packages/city/city). If you need concrete method details, continue to [User City](/en/city-sdk-docs/reference/city-user) and [Admin City](/en/city-sdk-docs/reference/city-admin).
+If you want the integration story first, start with [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime). If you need concrete method details, continue to [User City](/en/city-sdk-docs/reference/city-user) and [Admin City](/en/city-sdk-docs/reference/city-admin).
 
 ## Two roles
 
@@ -64,7 +64,7 @@ Examples:
 - `rewrite`, `translate`: custom services you registered yourself
 - `accounts`, `usage`, `payment`, `payment.stripe`: services exposed by official packages
 
-From the caller's point of view, they all live in the same City service route space.
+From the caller's point of view, they all live in the same shared service route space.
 
 ## Where registration and login fit in the SDK model
 
@@ -84,7 +84,7 @@ city_url + town_id + user_token
 ## Which page to read next
 
 1. To understand package composition, read [Packages](/en/city-sdk-docs/packages)
-2. To understand town integration, read [@downcity/city](/en/city-sdk-docs/packages/city/city)
-3. For detailed town-side calls, read [User City](/en/city-sdk-docs/reference/city-user)
+2. To understand town integration, read [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime)
+3. For detailed product-side calls, read [User City](/en/city-sdk-docs/reference/city-user)
 4. For trusted-side management, read [Admin City](/en/city-sdk-docs/reference/city-admin)
 5. For minimal auth, read [Services SDK Accounts](/en/services-sdk-docs/accounts)

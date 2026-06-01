@@ -24,14 +24,14 @@ description: Most-used project-level fields and practical cautions
 ## Cautions
 
 1. A project now must declare `execution`, and the mode is fixed to `api`.
-2. `execution.modelId` must exist in the console model pool.
+2. `execution.modelId` must exist in the shared model catalog.
 3. `start.host/start.port` affects default CLI routing.
 4. Keep project-level config in `downcity.json`, including `plugins` and execution behavior.
 5. Local shell / CLI commands now always run inside a sandbox. Top-level `sandbox` only adjusts the boundary.
 
 ## Execution Modes
 
-If you want to use the console-global model pool:
+If you want to use the shared model catalog:
 
 ```json
 {

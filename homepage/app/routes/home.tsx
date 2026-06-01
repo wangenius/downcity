@@ -9,7 +9,7 @@ import { product } from "@/lib/product";
  */
 export function meta() {
   const baseUrl = product.homepage || "https://downcity.ai";
-  const title = `${product.productName} — The Operating City for AI Agents`;
+  const title = `${product.productName} — Agent Infrastructure for AI Builders`;
   const description = product.description;
 
   return [
@@ -48,7 +48,7 @@ export function meta() {
     },
     {
       property: "og:image:alt",
-      content: "Downcity - The Operating City for AI Agents",
+      content: "Downcity - Agent Infrastructure for AI Builders",
     },
     {
       name: "twitter:card",
@@ -72,7 +72,7 @@ export function meta() {
     },
     {
       name: "twitter:image:alt",
-      content: "Downcity - The Operating City for AI Agents",
+      content: "Downcity - Agent Infrastructure for AI Builders",
     },
     {
       tagName: "link",

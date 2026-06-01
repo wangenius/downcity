@@ -1,7 +1,7 @@
 /**
  * Agent SDK 文档布局路由模块。
  * 说明：
- * 1. `agent-sdk-docs` 与 `docs`、`devdocs`、`ui-sdk-docs` 平级存在，单独承载 Agent SDK 文档。
+ * 1. `agent-sdk-docs` 与 `docs`、`ui-sdk-docs` 平级存在，单独承载 Agent SDK 文档。
  * 2. 顶部品牌样式对齐 `docs`，保持纯 Logo 露出，不额外显示文档系统名称。
  */
 import { DocsLayout } from "fumadocs-ui/layouts/docs";

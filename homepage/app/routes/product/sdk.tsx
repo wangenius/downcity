@@ -4,28 +4,28 @@ import { marketingTheme } from "@/lib/marketing-theme";
 
 const PAGE = {
   zh: {
-    title: "Product · City SDK",
-    subtitle: "把 City runtime、City 调用方式与公共服务接入你的产品体系，让多个 Town 复用同一座服务城市。",
-    docsCtaLabel: "查看 City SDK 文档",
-    docsCtaHint: "Quick Start、CLI、配置、Plugins、Operations 都在主 docs 中。",
+    title: "Product · Shared Services SDK",
+    subtitle: "把模型目录、服务路由、身份、环境变量、用量、余额和支付这类 Agent 产品共享能力接入你的产品体系。",
+    docsCtaLabel: "查看共享服务文档",
+    docsCtaHint: "City 是当前 SDK 和包名，文档里保留这个实现名称。",
     highlights: [
       {
-        title: "统一 City runtime 与公共服务",
-        description: "围绕 service、action、auth、env 和 town 访问边界组织同一套服务城市，而不是每个产品重建一套后端。",
+        title: "复用 Agent 产品后端能力",
+        description: "围绕 service、action、auth、env 和访问边界组织共享能力，而不是每个 AI 产品重建一套后端。",
       },
       {
-        title: "以仓库为边界组织运行",
-        description: "让服务、模型、账户、用量与支付都围绕 City 的共享边界展开，降低多产品复用成本。",
+        title: "统一模型、账户、用量和支付",
+        description: "让多个 Agent、产品或工作流复用同一套模型目录、账户服务、usage 记录和支付闭环。",
       },
       {
-        title: "从本地到团队部署一致",
-        description: "用同一套 City 组合承接本地验证、Node 部署与 Edge 部署，不必维护多套服务底座。",
+        title: "从本地验证到线上部署一致",
+        description: "用同一套服务组合承接本地验证、Node 部署与 Edge 部署，不必维护多套基础设施。",
       },
     ],
     scenesTitle: "典型场景",
     scenes: [
-      "共享服务城市：让多个 Town 或产品共用一套账户、模型、用量和支付服务。",
-      "City 接入：前端、扩展或后端通过 City 访问 City，而不是直接耦合数据库。",
+      "多产品复用：让多个 Agent 产品共用一套账户、模型、用量和支付服务。",
+      "服务接入：前端、扩展或后端通过 SDK 调用服务，而不是直接耦合数据库。",
       "部署组合：用 cities/node 或 cities/edge 组合适配不同运行环境。",
     ],
     factsTitle: "事实对齐",
@@ -36,29 +36,29 @@ const PAGE = {
     ],
   },
   en: {
-    title: "Product · City SDK",
+    title: "Product · Shared Services SDK",
     subtitle:
-      "Integrate the City runtime, City access, and public services into one shared service city for multiple towns.",
-    docsCtaLabel: "Open City SDK Docs",
-    docsCtaHint: "Quick start, CLI, configuration, plugins, and operations live in the main docs.",
+      "Bring model catalogs, service routing, auth, runtime env, usage, balance, and payment capabilities into your agent product stack.",
+    docsCtaLabel: "Open Shared Services Docs",
+    docsCtaHint: "City remains the current SDK and package name, so implementation docs keep that name.",
     highlights: [
       {
-        title: "Unify City runtime and public services",
-        description: "Keep services, actions, auth, env, and town boundaries inside one shared service city instead of rebuilding a backend per product.",
+        title: "Reuse the agent product backend layer",
+        description: "Organize services, actions, auth, env, and access boundaries once instead of rebuilding the backend for every AI product.",
       },
       {
-        title: "Organize operations around the repo",
-        description: "Let service data, model records, accounts, usage, and payment state follow one reusable City boundary.",
+        title: "Unify models, accounts, usage, and payments",
+        description: "Let multiple agents, products, or workflows reuse one model catalog, account service, usage ledger, and payment flow.",
       },
       {
-        title: "Keep local and team deployment aligned",
-        description: "Use the same City composition across local validation, Node deployment, and edge deployment.",
+        title: "Keep local validation and deployment aligned",
+        description: "Use one service composition across local validation, Node deployment, and edge deployment.",
       },
     ],
     scenesTitle: "Typical Scenarios",
     scenes: [
-      "Shared service city: let multiple towns or products reuse accounts, models, usage, and payment services.",
-      "City access: call City from frontend, extension, or backend code without coupling to database internals.",
+      "Multi-product reuse: let multiple agent products share accounts, models, usage, and payment services.",
+      "Service access: call shared services from frontend, extension, or backend code without coupling to database internals.",
       "Deployment composition: use cities/node or cities/edge for different runtime targets.",
     ],
     factsTitle: "Facts",
@@ -71,9 +71,9 @@ const PAGE = {
 } as const;
 
 /**
- * Product City SDK 页面。
+ * Product Shared Services SDK 页面。
  * 说明：
- * 1. 这里聚焦 City runtime、City 与 services 这一条产品线。
+ * 1. 对外聚焦 Agent 产品共享基础设施，City 只作为实现包名保留。
  * 2. Agent SDK 独立到 `/product/agent-sdk`，避免两种 SDK 语义混在一起。
  */
 export default function ProductSdkPage() {

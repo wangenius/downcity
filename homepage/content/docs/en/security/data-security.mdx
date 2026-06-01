@@ -7,8 +7,8 @@ description: Model storage, encryption behavior, and key management guidance
 
 Model config uses a split design:
 
-1. Global model pool in `~/.downcity/downcity.db`
-2. Project-level binding in `<project>/downcity.json` as `model.primary`
+1. Shared model catalog and provider-side details outside the project
+2. Project-level binding in `<project>/downcity.json` as `execution.modelId`
 
 ## How apiKey is protected
 

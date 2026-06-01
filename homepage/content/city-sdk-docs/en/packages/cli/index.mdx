@@ -43,14 +43,14 @@ The default `city` entry opens an interactive panel. If no server exists yet, th
 
 ```bash
 town model list
-town model create
-town model manage
+town model use <modelId>
+town model test <modelId>
 town agent start .
 ```
 
 ## Boundaries with other packages
 
-- It does not replace `Admin City` from [@downcity/city](/en/city-sdk-docs/packages/city/city).
+- It does not replace `Admin City` from [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime).
 - It does not replace the runtime capabilities in [@downcity/city](/en/city-sdk-docs/packages/city).
 - It is better for human-operated inspection and maintenance than for code you embed into a town.
 

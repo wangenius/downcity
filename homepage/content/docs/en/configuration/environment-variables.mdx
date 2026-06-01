@@ -30,7 +30,7 @@ Key points:
 1. `@downcity/agent` does not auto-read host `process.env`.
 2. `new Agent({ env })` is the host injection entrypoint.
 3. When the host is `town`, Console-global env is read from `downcity.db` and passed explicitly into `Agent`.
-4. `downcity.json` stores bindings (`model.primary`, `channel.channelAccountId`), not plaintext credentials.
+4. `downcity.json` stores bindings (`execution.modelId`, `channel.channelAccountId`), not plaintext credentials.
 
 ## 2. Data Flow (diagram)
 
@@ -130,7 +130,8 @@ flowchart TD
 
 ```bash
 town init
-town model create
+town model list
+town model use <modelId>
 town plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 ```
 

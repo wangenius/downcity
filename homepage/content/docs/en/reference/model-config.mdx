@@ -1,82 +1,64 @@
 ---
 title: Model Config Reference
-description: "Real model implementation flow: SQLite storage, encryption, binding resolution, and apply behavior"
+description: How agent projects bind to shared AI service models in Downcity
 ---
 
 # Model Config Reference
 
-Model implementation has two layers:
+Downcity keeps model selection out of the agent project implementation. The project only stores a model ID; the shared AI service owns provider keys, provider routing, and the model catalog.
 
-1. Console-global model pool in `~/.downcity/downcity.db` (SQLite)
-2. Project-local `model.primary` in each agent `downcity.json`
+## Mental model
 
-## 1) Persistence layout
+```txt
+shared AI service model catalog
+  -> town model list
+  -> town model use <modelId>
+  -> downcity.json execution.modelId
+  -> agent session runtime
+```
 
-Console-global model pool:
+This keeps each agent project small and lets many products or agents reuse the same model infrastructure.
 
-- file: `~/.downcity/downcity.db`
-- tables: `model_providers`, `models`
-- write entrypoint: `town model ...`
+## Project binding
 
-Project-local binding:
-
-- file: `<project>/downcity.json`
-- field: `model.primary`
-
-## 2) Write flow
-
-1. `town model ...`
-writes provider/model records into `~/.downcity/downcity.db`
-
-2. Console UI model switch
-updates current agent `downcity.json -> model.primary`
-
-3. `town agent create`
-selects a model id from console pool and writes `model.primary`
-
-## 3) Read flow at runtime
+Agent projects bind through `execution.modelId`:
 
 ```json
 {
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
   }
 }
 ```
 
-`primary` must reference an existing model id in SQLite, otherwise startup fails.
+Notes:
 
-## 4) Encryption behavior
+- `execution.type` should be `api`
+- `execution.modelId` should match a model returned by `town model list`
+- provider secrets and provider connection details stay outside the project config
 
-Provider `apiKey` is not stored in plaintext:
+## Commands
 
-- algorithm: AES-256-GCM field-level encryption
-- key priority: `DC_MODEL_DB_KEY` env var > `~/.downcity/console/model-db.key`
-- DB field: `api_key_encrypted`
-
-## 5) Commands
-
-Manage model pool globally:
+List, bind, and test shared models:
 
 ```bash
 town model list
-town model get model fast
+town model use <modelId>
+town model test <modelId>
 ```
 
-Bind agent to a model ID:
-
-```bash
-town config set model.primary fast
-```
-
-## 6) Apply changes
-
-Restart agent after model changes:
+Restart the agent after changing the binding:
 
 ```bash
 town agent restart .
 ```
 
+## What the project does not store
+
+Project `downcity.json` should not store provider secrets or provider connection details. Those belong to the shared service runtime.
+
 ## Related docs
 
 - [downcity.json Reference](/en/docs/reference/downcity-json)
+- [Getting Started](/en/docs/quickstart/getting-started)

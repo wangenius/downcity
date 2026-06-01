@@ -1,6 +1,6 @@
 ---
 title: 快速开始
-description: 用正确启动顺序在 10 分钟内跑通 Console + Agent
+description: 用 10 分钟在 Downcity 基础设施上跑通第一个本机 Agent
 ---
 
 # 快速开始
@@ -53,7 +53,7 @@ town agent create .
 
 ## 5. 绑定模型
 
-当前项目 agent 使用的是全局模型池绑定方式。
+当前项目 agent 绑定的是共享 AI service 暴露出来的模型 ID。
 
 `downcity.json` 最小示例应为：
 
@@ -70,9 +70,9 @@ town agent create .
 
 说明：
 
-- `modelId` 指向 Town 全局模型池中的某个模型
-- 项目本身不再直接保存旧的 `model.primary` 结构
-- 如果你还没准备模型池，请先到全局模型管理中准备一个可用模型
+- `modelId` 指向 `town model list` 能看到的某个模型
+- 项目把选中的模型记录在 `execution.modelId`
+- 如果你还没有接好共享模型，请先完成模型连接再启动 Agent
 
 ## 6. 启动 Agent
 

@@ -7,8 +7,8 @@ description: 模型配置存储、加密机制与用户注意事项
 
 模型配置采用“全局存储 + 本地绑定”：
 
-1. 全局模型池：`~/.downcity/downcity.db`
-2. 项目绑定：`<project>/downcity.json` 的 `model.primary`
+1. 共享模型目录：`~/.downcity/downcity.db`
+2. 项目绑定：`<project>/downcity.json` 的 `execution.modelId`
 
 ## apiKey 如何保护
 

@@ -1,15 +1,15 @@
 ---
-title: City SDK
-description: One City, so your next AI town does not rebuild the backend again.
+title: Shared Services SDK
+description: Shared agent services for many AI products, all on one reusable runtime.
 ---
 
-Downcity is a shared AI infrastructure runtime for AI towns. It gives you one long-running City that multiple web apps, extensions, apps, desktop tools, client demos, and internal tools can reuse.
+Downcity's Shared Services SDK is the reusable service layer for AI builders who ship many agent-powered products. It gives you one long-running runtime that multiple web apps, extensions, desktop tools, client demos, and internal tools can share.
 
-What City exposes to towns is not a raw provider API. It exposes a stable **town-facing calling boundary**:
+The runtime is implemented by `@downcity/city`, but the product idea is broader than the City name: it exposes a stable **product-facing service boundary** instead of a raw provider API.
 
-- the town holds `town_id + user_token`
+- the product client holds `town_id + user_token`
 - it calls `text()`, `stream()`, `image()`, and other services through `User City`
-- City keeps the model directory, provider routing, hooks, usage, and env behind the boundary
+- the shared runtime keeps the model catalog, provider routing, hooks, usage, and env behind the boundary
 
 ## Pick your reading path
 
@@ -17,22 +17,22 @@ What City exposes to towns is not a raw provider API. It exposes a stable **town
   <a className="dc-doc-card" href="/en/city-sdk-docs/quickstart">
     <em>Start Here</em>
     <strong>I want to run one full call chain</strong>
-    <p>Deploy an City, add one model, issue a token, and make a town client call `text()` or `stream()` successfully.</p>
+    <p>Deploy a shared runtime, expose one model, issue a token, and make a product client call `text()` or `stream()` successfully.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/concepts">
     <em>Mental Model</em>
     <strong>I want to understand the boundaries first</strong>
-    <p>Separate City, town clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
+    <p>Separate the shared runtime, product clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/guides">
     <em>Real Scenarios</em>
     <strong>I am connecting a real town now</strong>
-    <p>Read the practical guides for pure-client towns, multi-town reuse, auth, provider env, hooks, and business logic.</p>
+    <p>Read the practical guides for pure-client products, multi-product reuse, auth, provider env, hooks, and business logic.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/packages">
     <em>Packages</em>
     <strong>I want to read by package</strong>
-    <p>Jump straight into `@downcity/city`, client, and CLI docs; official services live in Services SDK.</p>
+    <p>Jump straight into `@downcity/city`, client, and CLI docs; official service packages live in Services SDK.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/reference">
     <em>API</em>
@@ -46,7 +46,7 @@ What City exposes to towns is not a raw provider API. It exposes a stable **town
 <div className="dc-doc-flow" aria-label="Downcity request flow">
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Many town clients</strong>
+      <strong>Many product clients</strong>
       <span>Web apps, extensions, apps, desktop tools, client demos, and internal tools.</span>
       <code>User City + town_id + user_token</code>
     </div>
@@ -54,12 +54,12 @@ What City exposes to towns is not a raw provider API. It exposes a stable **town
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Downcity City</strong>
-      <span>Verifies the token, resolves the model directory, and dispatches the request to AIService, services, or custom Service actions.</span>
+      <strong>Shared runtime</strong>
+      <span>Verifies the token, resolves the model catalog, and dispatches the request to AIService, services, or custom Service actions.</span>
     </div>
     <div className="dc-doc-node">
       <strong>Hooks and usage</strong>
-      <span>Quota, balance, billing, logging, and risk control can plug into City while your own business rules stay in your system.</span>
+      <span>Quota, balance, billing, logging, and risk control can plug into the shared runtime while your own business rules stay in your system.</span>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -72,10 +72,10 @@ What City exposes to towns is not a raw provider API. It exposes a stable **town
 </div>
 
 <p className="dc-doc-caption">
-  Town clients see stable services and model IDs. Which provider or gateway City uses internally remains a server-side detail.
+  Product clients see stable services and model IDs. Which provider or gateway the shared runtime uses internally remains a server-side detail.
 </p>
 
-## What City owns
+## What the Shared Services SDK owns
 
 - runtime database and Service-owned tables
 - provider keys and runtime env
@@ -84,17 +84,17 @@ What City exposes to towns is not a raw provider API. It exposes a stable **town
 - public model catalogs through `client.ai.listModels()`
 - usage records and hook extension points
 
-## What City does not own
+## What it does not own
 
 - your user system
 - orders, subscriptions, CRM, or content data
-- town-specific pages, interaction, and business UX
+- product-specific pages, interaction, and business UX
 - a public “unified provider API” for arbitrary third-party systems
 
 More precisely:
 
-> City owns the shared AI infrastructure layer.
-> Towns still own their users, business logic, interface, and pricing model.
+> The Shared Services SDK owns the reusable AI infrastructure layer.
+> Your products still own their users, business logic, interface, and pricing model.
 
 ## Recommended order
 

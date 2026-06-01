@@ -1,12 +1,12 @@
 {
-  "topBadge": "✨ Repo-Native Agent 运行时",
-  "title": "代码仓库",
-  "titleItalic": "即 Agent",
+  "topBadge": "给 AI builders 的 Agent 基础设施",
+  "title": "构建多个",
+  "titleItalic": "Agent 产品",
   "titleEnd": "",
-  "subtitle": "无需额外编排，直接将代码仓库部署为可对话、可执行的 AI Agent。让你的代码拥有感知与行动力。",
-  "tag1": "可对话",
-  "tag2": "可自主",
-  "tag3": "可审计",
-  "verticalText": "REPO IS AGENT",
-  "start": "立即发布"
+  "subtitle": "用一套可复用运行层承载 Agent、模型、工具、任务、记忆、服务、权限、usage、计费和控制台。",
+  "tag1": "可复用",
+  "tag2": "可运营",
+  "tag3": "可扩展",
+  "verticalText": "AGENT INFRA",
+  "start": "开始构建"
 }

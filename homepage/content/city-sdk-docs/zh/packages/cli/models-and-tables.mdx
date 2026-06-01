@@ -36,15 +36,15 @@ CLI 最常被用来做两件事：
 
 ```bash
 town model list
-town model create
-town model manage
+town model use <modelId>
+town model test <modelId>
 ```
 
 适合：
 
-- 新增模型
-- 校正默认模型
-- 看模型目录是否已经进入 City 数据层
+- 查看 City AIService 暴露出的模型
+- 把当前项目绑定到指定的 `execution.modelId`
+- 测试某个模型是否能通过 City AIService 真实调用
 
 ## 最常见的表排查场景
 

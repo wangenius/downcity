@@ -1,24 +1,35 @@
 ---
 title: Project Logic Overview
-description: One-page overview of how city, agent, session, plugins, and console relate to each other in current Downcity
+description: One-page overview of Downcity as reusable agent infrastructure for AI builders
 ---
 
 # Project Logic Overview
 
-Current Downcity can be understood through these nouns:
+Downcity is easiest to understand from the product problem first: AI builders should not rebuild the same agent backend for every product, workflow, or customer demo.
+
+The core relationship is:
+
+- product surfaces own the user experience
+- agents execute work inside explicit runtime boundaries
+- shared runtime services own repeated infrastructure such as models, env, auth, service routing, usage, balance, and payment
+- Console, Chrome Extension, SDKs, and UI components expose that runtime to builders and teams
+
+## Runtime nouns
 
 - `town`: the overall runtime and CLI surface
 - `console`: global control plane
 - `agent`: one project runtime
 - `session`: one execution thread
 - `plugin`: one capability boundary
+- `city`: the current package/runtime name for shared service infrastructure
 
 ## The shortest model
 
-- console manages
-- agent hosts
-- session executes
-- plugins expose capability
+- products create the experience
+- agents run the work
+- sessions execute turns
+- plugins expose capabilities
+- shared services keep repeated backend concerns out of every product
 
 ## Plugin families
 
@@ -34,8 +45,9 @@ Current Downcity can be understood through these nouns:
 
 ## Why this matters
 
-When reading current code or docs, start with:
+When reading current code or docs, start with the product boundary:
 
-- if you need execution ownership, look at `session`
+- if you need product operation, look at `town`, `console`, and product docs
+- if you need execution ownership, look at `agent` and `session`
 - if you need capability ownership, look at `plugin`
-- if you need process and registry ownership, look at `console` and `agent`
+- if you need shared backend ownership, look at the shared services SDK and services docs

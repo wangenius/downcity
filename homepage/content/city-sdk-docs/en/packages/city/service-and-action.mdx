@@ -73,7 +73,7 @@ POST /v1/translate/zh2en
 GET  /v1/translate/list
 ```
 
-That is why the town side can stay unified:
+That is why the product side can stay unified:
 
 ```ts
 const result = await client
@@ -140,7 +140,7 @@ It eventually becomes a route, an auth boundary, a hook target, and a usage reco
 
 ### Official services and custom services do not need separate call patterns
 
-From the town side, both still go through `client.service("service_id").action("action_id").invoke(...)`.
+From the product side, both still go through `client.service("service_id").action("action_id").invoke(...)`.
 
 ### GET and POST are not cosmetic
 
@@ -149,5 +149,5 @@ Read-oriented operations fit GET better. Execution and mutation fit POST better.
 ## Read next
 
 - For hooks and extension around actions, read [Hooks and Service Mounting](/en/city-sdk-docs/packages/city/hooks-and-service)
-- For town-side calling, read [@downcity/city](/en/city-sdk-docs/packages/city/city)
+- For product-side calling, read [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime)
 - For lower-level method details, read [City API](/en/city-sdk-docs/reference/city-runtime)

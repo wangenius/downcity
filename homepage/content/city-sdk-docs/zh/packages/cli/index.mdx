@@ -43,14 +43,14 @@ city
 
 ```bash
 town model list
-town model create
-town model manage
+town model use <modelId>
+town model test <modelId>
 town agent start .
 ```
 
 ## 它和其他 package 的边界
 
-- 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city/city) 里的 `Admin City`
+- 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city/city-runtime) 里的 `Admin City`
 - 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city) 的运行时能力
 - 更适合“人工排查”和“初始化运维”，而不是嵌进产品代码里
 

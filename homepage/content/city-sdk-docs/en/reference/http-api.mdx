@@ -37,7 +37,7 @@ Each action declares which identities it allows. The default is `["user"]`; `[]`
 | `/v1/services` | `GET` | Registered service list | — |
 | `/v1/{service}/{action}` | `POST` | Generic action call | — |
 
-`/v1/accounts/oauth/callback` is the fixed return URL for GitHub, Google, and other third-party OAuth providers. Town clients usually do not call it directly.
+`/v1/accounts/oauth/callback` is the fixed return URL for GitHub, Google, and other third-party OAuth providers. Product clients usually do not call it directly.
 
 ## Admin Routes (same route space, admin credential required)
 

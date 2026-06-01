@@ -50,12 +50,12 @@ town plugin list
 
 ```bash
 town model list
-town config get model.primary
+town config get execution.modelId
 ```
 
 并确认：
 
-1. `model.primary` 指向 `~/.downcity/downcity.db` 中存在的 model id
+1. `execution.modelId` 指向 `~/.downcity/downcity.db` 中存在的 model id
 2. console 全局 SQLite 的 providers/models 记录完整可用
 3. 如果是 Kimi（Moonshot），`provider.type` 请使用 `moonshot-cn` 或 `moonshot-ai`
 4. `moonshot-cn` 默认走 `https://api.moonshot.cn/v1`

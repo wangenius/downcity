@@ -1,24 +1,35 @@
 ---
 title: Project Logic Overview
-description: 用一页文档解释当前 Downcity 里 city、agent、session、plugins 与 console 的关系
+description: 用一页文档解释 Downcity 作为 Agent 基础设施的产品关系
 ---
 
 # Project Logic Overview
 
-当前 Downcity 可以通过这些名词来理解：
+理解 Downcity 最好先从产品问题开始：AI builders 不应该为每个产品、工作流或客户 Demo 都重复搭一遍 Agent 后端。
+
+核心关系是：
+
+- 产品表层负责用户体验
+- Agent 在明确运行边界里执行任务
+- 共享 runtime services 负责模型、env、auth、service routing、usage、balance、payment 等重复基础设施
+- Console、Chrome Extension、SDK 和 UI 组件把这套 runtime 暴露给 builders 和团队
+
+## Runtime 名词
 
 - `town`：整体 runtime 与 CLI 表面
 - `console`：全局控制面
 - `agent`：一个项目 runtime
 - `session`：一条执行线程
 - `plugin`：一个能力边界
+- `city`：当前共享服务基础设施的 package / runtime 名称
 
 ## 最短模型
 
-- console 负责管理
-- agent 负责承载
-- session 负责执行
+- 产品负责体验
+- agent 负责运行工作
+- session 负责执行轮次
 - plugins 负责暴露能力
+- 共享服务负责把重复后端能力从每个产品里抽出来
 
 ## plugin 的两类
 
@@ -34,8 +45,9 @@ description: 用一页文档解释当前 Downcity 里 city、agent、session、p
 
 ## 为什么这很重要
 
-读当前代码或文档时，优先这样判断：
+读当前代码或文档时，优先看产品边界：
 
-- 需要找执行拥有者，看 `session`
+- 需要产品操作，看 `town`、`console` 和产品文档
+- 需要执行拥有者，看 `agent` 与 `session`
 - 需要找能力拥有者，看 `plugin`
-- 需要找进程与 registry 拥有者，看 `console` 与 `agent`
+- 需要共享后端拥有者，看共享服务 SDK 和 services 文档

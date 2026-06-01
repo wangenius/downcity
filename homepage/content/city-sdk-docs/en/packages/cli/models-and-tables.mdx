@@ -30,9 +30,15 @@ When you debug runtime behavior, you usually end up checking tables such as:
 
 ```bash
 town model list
-town model create
-town model manage
+town model use <modelId>
+town model test <modelId>
 ```
+
+Use these commands to:
+
+- inspect models exposed by City AIService
+- bind the current project to a specific `execution.modelId`
+- test whether a model can actually be called through City AIService
 
 ## Common table-debugging scenarios
 

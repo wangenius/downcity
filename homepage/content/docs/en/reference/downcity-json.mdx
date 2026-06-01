@@ -5,10 +5,7 @@ description: Current downcity.json layering, loading behavior, and key fields
 
 # `downcity.json` Reference
 
-Model config is now split into two layers:
-
-1. `~/.downcity/downcity.db` (console-global SQLite) manages the full model pool
-2. Project `downcity.json` (agent-local) declares `execution` and project plugins
+Project `downcity.json` is the local agent contract. It declares the agent identity, execution binding, plugin configuration, and sandbox boundary. Shared model and service details live outside the project file.
 
 ## Agent project minimal shape
 
@@ -25,23 +22,20 @@ Model config is now split into two layers:
 }
 ```
 
-`execution.type` is fixed to `api`, and `execution.modelId` must exist in `~/.downcity/downcity.db`.
+`execution.type` is fixed to `api`, and `execution.modelId` must reference a model available through `town model list`.
 
 Project `downcity.json` keeps plugin configuration under `plugins.*`.
 
-## Console-global model pool
+## Shared model binding
 
-Full model management stays in `~/.downcity/downcity.db`:
-
-- providers table
-- models table
-- provider apiKey is encrypted at rest (`api_key_encrypted`)
+The project only stores the selected model ID:
 
 Use CLI:
 
 ```bash
 town model list
-town model get provider openai_main
+town model use <modelId>
+town model test <modelId>
 ```
 
 ## Agent startup resolution
@@ -49,8 +43,8 @@ town model get provider openai_main
 When an agent starts:
 
 1. Check whether the project declares `execution`
-2. If `execution.type = "api"`, resolve the model in the SQLite models table by id
-3. Resolve provider in the SQLite providers table by providerId
+2. If `execution.type = "api"`, resolve the selected model ID through the configured shared AI service
+3. Inject the resolved model into the agent session runtime
 
 `execution` must be valid, otherwise startup fails fast.
 

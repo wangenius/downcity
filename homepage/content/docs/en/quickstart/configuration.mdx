@@ -1,11 +1,11 @@
 ---
 title: Configuration
-description: downcity.json, PROFILE.md, and runtime configuration essentials
+description: PROFILE.md, SOUL.md, downcity.json, and runtime configuration essentials
 ---
 
 # Configuration
 
-Downcity is configured with three core files:
+An agent project is configured with three core files:
 
 - `PROFILE.md`: agent role and boundaries (required)
 - `SOUL.md`: stable operating principles (optional)
@@ -31,7 +31,7 @@ Only configure `start` when manually running foreground runtime or debugging spe
 
 ### `execution`
 
-Agent model binding (maps to the Town global model pool):
+Agent model binding:
 
 ```json
 {
@@ -45,8 +45,9 @@ Agent model binding (maps to the Town global model pool):
 Notes:
 
 - project runtime now binds through `execution.modelId`
+- `modelId` should match a model available through `town model list`
 - for the current project runtime path, `execution.type` should be `api`
-- the old `model.primary` structure is no longer the recommended project-side format
+- provider secrets and provider connection details stay outside the project config
 
 ### `plugins.chat`
 

@@ -5,7 +5,7 @@ description: "Use the official accounts service for registration, login, OAuth e
 
 `@downcity/services` is a good fit when you do not want to build a full account system first. It packages the common registration, login, session, and OAuth entry flows into one official service.
 
-The important point is not "another SDK." It adds a ready-made `accounts` service into City, so town-side callers can use it through `User City` and `Admin City`.
+The important point is not "another SDK." It adds a ready-made `accounts` service into the shared runtime, so product-side callers can use it through `User City` and `Admin City`.
 
 ## How to read this section
 
@@ -23,7 +23,7 @@ The recommended order is:
 - email verification
 - GitHub, Google, and WeChat OAuth entry points
 - better-auth auth tables
-- town-facing profile table
+- product-facing profile table
 - City `user_token` issuance after login
 
 ## Relationship with `@downcity/city`
@@ -85,7 +85,7 @@ GET  /v1/accounts/users
 GET  /v1/accounts/sessions
 ```
 
-The third-party OAuth return URL is fixed at `/v1/accounts/oauth/callback`. Town clients do not need to pass `redirect_uri` into `oauth/start`; the service generates it automatically from the current public City origin.
+The third-party OAuth return URL is fixed at `/v1/accounts/oauth/callback`. Product clients do not need to pass `redirect_uri` into `oauth/start`; the service generates it automatically from the current public City origin.
 
 As a first mental model:
 
@@ -109,7 +109,7 @@ If the town frontend needs to decide which sign-in buttons to render, it should 
 const providers = await guest.service("accounts").get("providers");
 ```
 
-Then render email, GitHub, Google, or WeChat only from the server response. Do not hardcode the provider list in the town client.
+Then render email, GitHub, Google, or WeChat only from the server response. Do not hardcode the provider list in the product client.
 
 ## Common call pattern
 
@@ -121,11 +121,11 @@ const session = await guest.service("accounts").action("login").invoke({
 });
 ```
 
-Successful registration or login returns `user_token`. After that, the town client can switch to a normal `User City` for AI calls.
+Successful registration or login returns `user_token`. After that, the product client can switch to a normal `User City` for AI calls.
 
-`GET /v1/accounts/me` also returns the current `profile`, so town-side callers can render account data directly from one endpoint.
+`GET /v1/accounts/me` also returns the current `profile`, so product-side callers can render account data directly from one endpoint.
 
-## The most common town-side integration
+## The most common product-side integration
 
 ```ts
 const guest = new City({
@@ -159,5 +159,5 @@ This is why `accountsService()` and `@downcity/city` are usually read together: 
 
 - For the step-by-step flows, continue with the three subpages in this section
 - For the full account capability, continue in [Accounts Service](/en/services-sdk-docs/accounts)
-- For the town SDK, read [@downcity/city](/en/city-sdk-docs/packages/city/city)
-- For more detailed town-side calling patterns, read [User City](/en/city-sdk-docs/reference/city-user)
+- For the town SDK, read [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime)
+- For more detailed product-side calling patterns, read [User City](/en/city-sdk-docs/reference/city-user)

@@ -1,11 +1,11 @@
 ---
-title: Town Model
+title: Product Boundary Model
 description: Why Downcity is a reusable AI infrastructure runtime instead of a separate backend per project.
 ---
 
 The core mental model of Downcity is not "one town, one backend." It is:
 
-> one long-running City serving many AI towns.
+> one shared agent runtime serving many AI products and workflows.
 
 The reason is simple. What gets rebuilt again and again is usually not your business backend, but the AI call layer:
 
@@ -15,24 +15,24 @@ The reason is simple. What gets rebuilt again and again is usually not your busi
 - usage records
 - hooks, quotas, billing, and logs
 
-Once you ship a second or third AI town, these capabilities repeat everywhere.
+Once you ship a second or third AI product, these capabilities repeat everywhere.
 
-## One City, many towns
+## Many products, one shared runtime
 
-<div className="dc-doc-flow" aria-label="One City serves many towns">
+<div className="dc-doc-flow" aria-label="Many products share one runtime">
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Town A</strong>
-      <span>Web tools, content towns, workflow utilities.</span>
+      <strong>Product A</strong>
+      <span>Web tools, content products, workflow utilities.</span>
       <code>town_id = town_a</code>
     </div>
     <div className="dc-doc-node">
-      <strong>Town B</strong>
+      <strong>Product B</strong>
       <span>Chrome extensions, desktop tools, mobile entry points.</span>
       <code>town_id = town_b</code>
     </div>
     <div className="dc-doc-node">
-      <strong>Town C</strong>
+      <strong>Product C</strong>
       <span>Client demos, internal tools, vertical sites.</span>
       <code>town_id = town_c</code>
     </div>
@@ -40,63 +40,63 @@ Once you ship a second or third AI town, these capabilities repeat everywhere.
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Downcity</strong>
+      <strong>Shared runtime</strong>
       <span>Shared model catalog, provider env, service routes, token validation, usage, and hooks.</span>
     </div>
   </div>
 </div>
 
-## What should stay in City
+## What should stay in the shared runtime
 
 - Model catalog and provider configuration
 - `user_token` validation
 - AI service calls such as `client.ai.text()`, `client.ai.stream()`, and `client.ai.image()`
 - Usage records, logs, quotas, and business hooks
-- Shared call logic reused across multiple towns
+- Shared call logic reused across multiple products
 
-## What should stay in the town or business system
+## What should stay in the product or business system
 
 - User registration, login, and account systems
 - Orders, subscriptions, balances, and CRM
 - Pages, interactions, workflows, and content data
-- Each town's own brand, pricing, and go-to-market strategy
+- Each product's own brand, pricing, and go-to-market strategy
 
 In other words, Downcity centralizes the **AI infrastructure** layer, not your whole business system.
 
 ## Why this is more stable than "one backend per project"
 
-If every new town copies a separate AI backend, the same issues appear quickly:
+If every new product copies a separate AI backend, the same issues appear quickly:
 
 - provider keys scattered across many places
 - inconsistent token rules
 - inconsistent usage and logging conventions
 - every new provider, model, or quota strategy requires edits in many repos
 
-Once the AI call layer is centralized into one City, a new town usually only needs two steps:
+Once the AI call layer is centralized into the shared runtime, a new product usually only needs two steps:
 
 1. create a new `town_id`
-2. connect `User City` in the town
+2. connect `User City` in the product client
 
 ## What `town_id` means in this model
 
 `town_id` is not a model name, and it is not the full abstraction of your tenant system.
 
-It is closer to City's primary key for the "town boundary." It answers questions like:
+It is the runtime's stable primary key for the product boundary. It answers questions like:
 
-- which city started this call
-- whether this town is currently `active`
-- which town dimension hooks and usage should record against
-- whether a user's calls should be separated across different towns
+- which product started this call
+- whether this product is currently `active`
+- which product dimension hooks and usage should record against
+- whether a user's calls should be separated across different products
 
-If you are building a multi-town portfolio, `town_id` is the most stable boundary.
+If you are building a multi-product portfolio, `town_id` is the most stable boundary.
 
 ## The role of model at the town layer
 
 In the current implementation, a model is a runtime capability unit registered in Runtime, not something owned by a specific town.
 
-At the town layer, a model is more like a visible capability:
+At the product layer, a model is more like a visible capability:
 
 - you can pass it explicitly into `client.ai.text({ model })`
 - or omit it and let AIService use the default model for the current pathway
 
-This means the town sees stable model IDs, not upstream provider details.
+This means the product sees stable model IDs, not upstream provider details.

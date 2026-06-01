@@ -91,14 +91,14 @@ ai.use({
 base.use(ai);
 ```
 
-This example shows the runtime side of `@downcity/city`: it is where the database and services are mounted into one City. For town-side calls, use the City exports from the same package.
+This example shows the runtime side of `@downcity/city`: it is where the database and services are mounted into the shared runtime. For product-side calls, use the City exports from the same package.
 
 ## Typical reading paths
 
 ### If you want to write your own business service
 
 - Read [Service and Action design](/en/city-sdk-docs/packages/city/service-and-action)
-- Then read [City](/en/city-sdk-docs/packages/city/city) to understand how towns will call that service
+- Then read [City](/en/city-sdk-docs/packages/city/city-runtime) to understand how products will call that service
 
 ### If you want to add official services
 
@@ -116,6 +116,6 @@ This example shows the runtime side of `@downcity/city`: it is where the databas
 ## Read next
 
 - For the topic-specific deep dives, go straight into the four subpages above
-- For town-side calls, continue with [City](/en/city-sdk-docs/packages/city/city)
+- For product-side calls, continue with [City](/en/city-sdk-docs/packages/city/city-runtime)
 - For Worker deployment, continue with [Cloudflare Workers](/en/city-sdk-docs/guides/cloudflare-workers)
 - For concrete interfaces, jump to [City API](/en/city-sdk-docs/reference/city-runtime)

@@ -10,13 +10,12 @@
     "blog": "Blog",
     "whitepaper": "Whitepaper",
     "docs": "Docs",
-    "devdocs": "Devdocs",
     "features": "Features",
     "product": "Product",
     "productOverview": "Overview",
     "productConsoleUi": "Console UI",
     "productChromeExtension": "Chrome Extension",
-    "productSdk": "City SDK",
+    "productSdk": "Shared Services SDK",
     "productAgentSdk": "Agent SDK",
     "productUiSdk": "Downcity UI SDK",
     "resources": "Resources",
@@ -57,7 +56,6 @@
     "resources": "Resources",
     "features": "Features",
     "documentation": "Docs",
-    "developerDocumentation": "Developer Docs",
     "releases": "Releases",
     "github": "GitHub",
     "issues": "Issues",
@@ -74,7 +72,7 @@
     "backToHome": "Back to Home"
   },
   "ctaSection": {
-    "titlePrefix": "Ship Your",
-    "titleItalic": "Repo"
+    "titlePrefix": "Ship Agent",
+    "titleItalic": "Products"
   }
 }

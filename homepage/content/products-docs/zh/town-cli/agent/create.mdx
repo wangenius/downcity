@@ -19,8 +19,8 @@ town agent create [path]
 
 - `path`（可选）：项目路径，默认当前目录。
 - 交互默认的 `Agent id` 会基于目录名自动推导，并规整为 snake_case（仅作为默认值，可手动修改）。
-- 交互过程中会让你从 console 全局模型池里选择模型，并写入 `downcity.json.execution.modelId`。
-- 创建出的项目会直接写入统一的 `downcity.json.execution`，不再拆成 `model.primary + session.agent`。
+- 交互过程中会从已连接的 City 上下文读取可用执行目标，并把所选 ID 写入 `downcity.json.execution.modelId`。
+- 创建出的项目会直接写入统一的 `downcity.json.execution`，不再拆成旧的 model 和 session 字段。
 
 ## 选项
 
@@ -54,6 +54,7 @@ town v1.0.0
 常用后续命令：
 
 ```bash
-town model list
-town model get provider openai_main
+town city status
+town plugin
+town agent start
 ```

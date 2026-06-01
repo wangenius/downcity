@@ -17,7 +17,7 @@ description: "CityBase 实例、runtime、router、serve 和统一入口在 @dow
 - HTTP 路由入口
 - token、town、env 等基础设施
 
-所以你通常不是“调用一下 City”，而是“启动一个 City，然后让多个 client 长期连接它”。
+所以你通常不是“调用一下 City”，而是“启动一套共享 runtime，然后让多个产品 client 长期连接它”。
 
 ## 什么时候你需要关心这一页
 
@@ -28,7 +28,7 @@ description: "CityBase 实例、runtime、router、serve 和统一入口在 @dow
 
 ## 什么时候这页不是重点
 
-- 你只想知道产品前端怎么调 City：优先读 [@downcity/city](/zh/city-sdk-docs/packages/city/city)
+- 你只想知道产品前端怎么调 City：优先读 [@downcity/city](/zh/city-sdk-docs/packages/city/city-runtime)
 - 你只想知道账号登录怎么跑通：优先读 [@downcity/services](/zh/services-sdk-docs)
 - 你只想看某个 custom service 怎么写：优先读 [Service 与 Action](/zh/city-sdk-docs/packages/city/service-and-action)
 
@@ -139,7 +139,7 @@ export default {
 - Cloudflare Workers 可以用 `drizzle-orm/d1`
 - City 启动时会把需要的 env 写入内置 `env` 表
 
-这就是为什么同一个 City 模型可以复用到不同宿主环境，而不是每换一个平台就重写一套后端。
+这就是为什么同一套 runtime 模型可以复用到不同宿主环境，而不是每换一个平台就重写一套后端。
 
 ## 常用 API / 入口
 
@@ -156,9 +156,9 @@ export default {
 
 ## 常见误解
 
-### City 不是 City SDK
+### City 是 runtime，不是整个 SDK
 
-City 是服务端长期运行容器。产品侧真正调用它用的是 [@downcity/city](/zh/city-sdk-docs/packages/city/city)。
+City 是服务端长期运行容器。产品侧真正调用它用的是 [@downcity/city](/zh/city-sdk-docs/packages/city/city-runtime)。
 
 ### City 不是纯 HTTP 代理
 

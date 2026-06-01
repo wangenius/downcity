@@ -19,8 +19,8 @@ town agent create [path]
 
 - `path` (optional): project path. Defaults to current directory.
 - The interactive default `Agent id` is derived from the directory name and normalized to snake_case (default only; you can edit it).
-- The interactive flow now asks for a model from the console-global model pool and writes it into `downcity.json.execution.modelId`.
-- Created projects now keep execution binding in `downcity.json.execution` instead of splitting config across `model.primary` and `session.agent`.
+- The interactive flow reads available execution targets from the connected City context and writes the selected ID into `downcity.json.execution.modelId`.
+- Created projects keep execution binding in `downcity.json.execution` instead of splitting it across legacy model and session fields.
 
 ## Options
 
@@ -54,6 +54,7 @@ town v1.0.0
 Common follow-up commands:
 
 ```bash
-town model list
-town model get provider openai_main
+town city status
+town plugin
+town agent start
 ```

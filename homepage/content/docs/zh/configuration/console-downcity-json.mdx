@@ -18,7 +18,7 @@ Console 全局配置统一存储在：
 
 `downcity.db` 中主要包含以下数据域：
 
-1. 模型池（providers/models）
+1. 共享模型目录（providers/models）
 2. Console 侧管理的 env 记录（`env_entries`）
 4. Bot 账号凭据池（`channel_accounts`）
 5. Chat 用户授权（`chat_auth_roles`、`chat_auth_role_permissions`、`chat_auth_channel_defaults`、`chat_auth_user_roles`）
@@ -77,11 +77,11 @@ town asr on
 town asr off
 ```
 
-管理模型池：
+管理共享模型：
 
 ```bash
 town model list
-town model create
+town model use <modelId>
 ```
 
 ## 相关文档

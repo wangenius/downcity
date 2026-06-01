@@ -3,7 +3,7 @@ title: Environment and Key Rotation
 description: How to maintain provider keys and Downcity keys safely.
 ---
 
-The main benefit of managing keys in City is that many towns do not need separate config updates.
+The main benefit of managing keys in the shared runtime is that many products do not need separate config updates.
 
 ## provider keys
 
@@ -16,7 +16,7 @@ await admin.env.upsert({
 });
 ```
 
-After rotation, every service handler connected to this City reads the new value. Env values in the database take priority over `.env`.
+After rotation, every service handler connected to this runtime reads the new value. Env values in the database take priority over `.env`.
 
 ## Downcity's own keys
 

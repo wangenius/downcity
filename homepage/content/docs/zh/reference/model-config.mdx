@@ -1,87 +1,64 @@
 ---
 title: Model 配置参考
-description: "model 的真实实现逻辑：SQLite 存储、加密、绑定解析与生效机制"
+description: Agent 项目如何绑定 Downcity 共享 AI service 模型
 ---
 
 # Model 配置参考
 
-当前版本中，model 实现分成两层：
+Downcity 不把完整模型实现细节放进 Agent 项目。项目只保存模型 ID；provider key、provider routing 和模型目录由共享 AI service 负责。
 
-1. Console 全局：`~/.downcity/downcity.db`（SQLite）
-2. Agent 本地：`downcity.json -> model.primary`
+## 心智模型
 
-## 1) 数据落盘位置
+```txt
+共享 AI service 模型目录
+  -> town model list
+  -> town model use <modelId>
+  -> downcity.json execution.modelId
+  -> agent session runtime
+```
 
-模型池在 console 全局 SQLite：
+这样每个 Agent 项目都保持轻量，多个产品或 Agent 可以复用同一套模型基础设施。
 
-- 文件：`~/.downcity/downcity.db`
-- 表：`model_providers`、`models`
-- 管理入口：`town model ...`
+## 项目绑定
 
-agent 项目只保留绑定：
-
-- 文件：`<project>/downcity.json`
-- 字段：`model.primary`
-
-## 2) 写入链路（配置怎么被保存）
-
-1. `town model ...`
-写入 `~/.downcity/downcity.db`
-
-2. `town console` 中的 model 切换
-本质是更新当前 agent 的 `downcity.json -> model.primary`
-
-3. `town agent create`
-会从 console 模型池中选择一个 model id，写入新项目 `model.primary`
-
-## 3) 读取链路（运行时如何解析）
+Agent 项目通过 `execution.modelId` 绑定模型：
 
 ```json
 {
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
   }
 }
 ```
 
-1. 读取 agent `model.primary`
-2. 在 `~/.downcity/downcity.db` 找到对应 model
-3. 根据 model 的 `providerId` 找到 provider
-4. 组合出最终 provider + modelName + apiKey + baseUrl
+说明：
 
-`primary` 必须引用 SQLite 模型池中已有的 model id，否则启动失败。
+- `execution.type` 应写为 `api`
+- `execution.modelId` 应对应 `town model list` 返回的某个模型
+- provider secrets 和 provider 连接细节不写进项目配置
 
-## 4) 加密逻辑
+## 常用命令
 
-provider 的 `apiKey` 不明文入库：
-
-- 存储方式：AES-256-GCM 字段级加密
-- 密钥优先级：`DC_MODEL_DB_KEY` 环境变量 > `~/.downcity/console/model-db.key`
-- 结果：`downcity.db` 中 `api_key_encrypted` 为密文
-
-## 5) 常用命令
-
-模型池管理（全局）：
+列出、绑定和测试共享模型：
 
 ```bash
 town model list
-town model get model fast
+town model use <modelId>
+town model test <modelId>
 ```
 
-agent 绑定（项目）：
-
-```bash
-town config set model.primary fast
-```
-
-## 6) 生效机制
-
-模型相关配置变更后建议重启 agent：
+模型绑定变更后重启 agent：
 
 ```bash
 town agent restart .
 ```
 
+## 项目不应该保存什么
+
+项目 `downcity.json` 不应该保存 provider secrets 或 provider 连接细节。这些属于共享服务 runtime。
+
 ## 相关文档
 
 - [downcity.json 参考](/zh/docs/reference/downcity-json)
+- [快速开始](/zh/docs/quickstart/getting-started)

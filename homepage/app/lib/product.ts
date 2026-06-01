@@ -11,6 +11,6 @@ export const product: DowncityProduct = {
   productName: "Downcity",
   version: "1.0.0",
   description:
-    "Downcity is a management and collaboration platform for AI agents, built around chat, skill, task, and memory runtime capability.",
+    "Downcity is agent infrastructure for AI builders shipping many agent-powered products and workflows on one reusable runtime.",
   homepage: "https://downcity.ai",
 };

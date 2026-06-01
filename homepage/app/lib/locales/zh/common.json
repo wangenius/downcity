@@ -10,13 +10,12 @@
     "blog": "博客",
     "whitepaper": "白皮书",
     "docs": "文档",
-    "devdocs": "开发文档",
     "features": "功能特性",
     "product": "产品",
     "productOverview": "产品概览",
     "productConsoleUi": "Console UI",
     "productChromeExtension": "Chrome Extension",
-    "productSdk": "City SDK",
+    "productSdk": "共享服务 SDK",
     "productAgentSdk": "Agent SDK",
     "productUiSdk": "Downcity UI SDK",
     "resources": "资源",
@@ -57,7 +56,6 @@
     "resources": "资源",
     "features": "功能特性",
     "documentation": "文档",
-    "developerDocumentation": "开发文档",
     "releases": "版本发布",
     "github": "GitHub",
     "issues": "Issues",
@@ -74,7 +72,7 @@
     "backToHome": "返回首页"
   },
   "ctaSection": {
-    "titlePrefix": "发布你的",
-    "titleItalic": "仓库"
+    "titlePrefix": "发布 Agent",
+    "titleItalic": "产品"
   }
 }

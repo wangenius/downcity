@@ -1,18 +1,18 @@
 ---
 title: Configuration Overview
-description: Understand console-global vs agent-local configuration layers
+description: Understand shared-runtime vs agent-local configuration layers
 ---
 
 # Configuration Overview
 
 Recommended configuration layers:
 
-1. Console-global layer for shared resources (for example model pool).
+1. Shared runtime layer for shared resources such as model catalogs, env, and service credentials.
 2. Agent project layer for runtime binding and behavior.
 
 ## Core principles
 
-1. Define models at console level.
+1. Define models in the shared runtime layer.
 2. Agent only declares unified `execution`.
 3. Restart agent after config changes to verify apply behavior.
 

@@ -1,6 +1,6 @@
 ---
 title: Issue `user_token`
-description: Give the town client a user-scoped credential that can call City.
+description: Give the product client a user-scoped credential that can call the shared runtime.
 ---
 
 `user_token` must be issued by a trusted environment. Your backend uses `Admin City` and asks City for a token based on `town_id + user_id`.
@@ -28,7 +28,7 @@ const user = await client.towns.tokens.apply({
 });
 ```
 
-Return `user.user_token` and `town.town_id` to the town client.
+Return `user.user_token` and `town.town_id` to the product client.
 
 ## What `metadata` is for
 
@@ -48,4 +48,4 @@ action.before(async (ctx) => {
 });
 ```
 
-This is how multiple town clients share one auth and quota layer cleanly.
+This is how multiple product clients share one auth and quota layer cleanly.

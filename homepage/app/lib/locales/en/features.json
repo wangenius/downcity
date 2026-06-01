@@ -1,28 +1,28 @@
 {
   "sectionLabel": "Features",
-  "title": "More Than",
-  "titleItalic": "Copilot",
-  "description": "Downcity provides a safe and controllable Agent Runtime for your team.",
+  "title": "Infrastructure for",
+  "titleItalic": "Real Agents",
+  "description": "Downcity gives builders the reusable runtime layer that agent products keep rebuilding.",
   "features": {
     "repo": {
-      "title": "Repo Native",
-      "description": "Reject complex low-code drag-and-drop platforms. Your directory structure and TypeScript definitions ARE the agent's definition. Developing an Agent is as intuitive as writing standard business code."
+      "title": "Reusable Runtime",
+      "description": "A repo or folder can define an agent boundary, but the real value is reusing the runtime layer for models, tools, tasks, memory, services, and operations across many products."
     },
     "interactive": {
-      "title": "Proactive Employee",
-      "description": "True agency unlocked. It doesn't just wait for commands—it **proactively notifies you and executes tasks**. It learns by searching the web, installs skills on demand, and writes scripts to handle complex workflows autonomously."
+      "title": "Long-running Agents",
+      "description": "Agents can run as managed daemons, keep task context, execute tools, and stay reachable through CLI, Console, browser entry, or SDK surfaces."
     },
     "schedule": {
-      "title": "Human-in-the-Loop",
-      "description": "Empower your Agent without losing control. All sensitive actions (fixes, shell commands) push approval requests to you. Just click Agree or Reject on your phone."
+      "title": "Governed Execution",
+      "description": "Give agents useful tools without losing control. Runtime boundaries, permissions, logs, and operator surfaces keep execution inspectable and recoverable."
     },
     "audit": {
-      "title": "Auditable Memory",
-      "description": "Every thought, every action result, and every human approval is persistently logged in the file system. It's your most trustworthy and transparent digital employee."
+      "title": "Observable State",
+      "description": "Sessions, logs, runtime state, task artifacts, and workboard snapshots make agent behavior visible instead of hidden inside one-off chats."
     },
     "skills": {
-      "title": "Claude Code Skills",
-      "description": "Fully compatible with the Claude Code Skills ecosystem. Install high-quality community skills or extend your Agent's capabilities with simple Bash/Python scripts."
+      "title": "Extensible Capabilities",
+      "description": "Plugins, skills, shared services, and SDK APIs let each product add capabilities without forking the whole agent backend."
     }
   },
   "codePreview": {

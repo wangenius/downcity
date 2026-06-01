@@ -20,7 +20,7 @@ Current project agents use a single project execution binding: `api`.
 
 This means:
 
-- the project uses one model from the Town global model pool
+- the project uses one model from the shared model catalog
 - the project stores only the `modelId`
 - provider details, credentials, and model names live globally
 
@@ -30,7 +30,7 @@ At a high level, startup and execution look like this:
 
 1. read project config
 2. resolve `execution.modelId`
-3. resolve the final model from the global model pool
+3. resolve the final model from the shared model catalog
 4. create session executors
 5. combine static prompts, history, tools, and model into one execution context
 
@@ -81,5 +81,5 @@ This difference is one of the most common first-time SDK pitfalls.
 
 Continue with:
 
-- [Platform model pool](/en/docs/agent/configuration/models/platform-model-pool)
+- [Shared model catalog](/en/docs/agent/configuration/models/platform-model-pool)
 - [SDK overview](/en/agent-sdk-docs)

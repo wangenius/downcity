@@ -21,7 +21,7 @@ type PageTreeNode = {
 };
 
 /**
- * 递归按侧边栏顺序收集 City SDK Docs 文档 URL，用于目录页跳转。
+ * 递归按侧边栏顺序收集共享服务 SDK 文档 URL，用于目录页跳转。
  */
 function collectPageUrls(node: PageTreeNode | undefined, out: string[]) {
   if (!node) return;
@@ -71,7 +71,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   return {
     path: page.path,
-    title: page.data.title ?? "City SDK Docs",
+    title: page.data.title ?? "Shared Services SDK Docs",
     description: page.data.description ?? "",
   };
 }
@@ -80,8 +80,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
 
   const baseUrl = "https://downcity.ai";
-  const title = `${loaderData.title} — Downcity City SDK Docs`;
-  const description = loaderData.description || "Downcity City SDK documentation";
+  const title = `${loaderData.title} — Downcity Shared Services SDK Docs`;
+  const description = loaderData.description || "Downcity shared services SDK documentation";
   const url = `${baseUrl}${loaderData.path}`;
 
   return [
@@ -89,7 +89,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { name: "viewport", content: "width=device-width, initial-scale=1" },
     { title },
     { name: "description", content: description },
-    { name: "keywords", content: "Downcity, city sdk, citybase, downcity city, services" },
+    { name: "keywords", content: "Downcity, shared services sdk, citybase, agent infrastructure, services" },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },

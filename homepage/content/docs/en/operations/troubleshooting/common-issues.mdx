@@ -50,12 +50,12 @@ Check:
 
 ```bash
 town model list
-town config get model.primary
+town config get execution.modelId
 ```
 
 Ensure:
 
-1. `model.primary` points to an existing model id in `~/.downcity/downcity.db`
+1. `execution.modelId` points to an existing model id in `~/.downcity/downcity.db`
 2. console-global SQLite providers/models entries are valid
 3. For Kimi (Moonshot), use `provider.type` as `moonshot-cn` or `moonshot-ai`
 4. `moonshot-cn` defaults to `https://api.moonshot.cn/v1`

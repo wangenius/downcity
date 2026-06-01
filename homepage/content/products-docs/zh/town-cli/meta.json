@@ -1,4 +1,4 @@
 {
   "title": "Town CLI",
-  "pages": ["init", "start", "stop", "restart", "update", "status", "public", "config", "model", "env", "console", "agent", "plugin", "variables"]
+  "pages": ["init", "start", "stop", "restart", "update", "status", "public", "city", "config", "env", "console", "agent", "plugin", "variables"]
 }

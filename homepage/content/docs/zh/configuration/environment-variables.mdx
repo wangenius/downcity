@@ -86,7 +86,7 @@ sequenceDiagram
 
 ### 4.2 不会读取项目 `.env`
 
-1. 模型池（`model_providers`、`models`）只来自 `downcity.db`。
+1. 共享模型目录（`model_providers`、`models`）只来自 `downcity.db`。
 2. plugin 配置来自项目 `downcity.json`（`plugins.*`，包含插件自己的依赖配置）。
 3. bot 凭据源只来自 `channel_accounts`。
 4. `DC_CTX_*` 是请求时生成，不属于配置持久层。
@@ -130,7 +130,8 @@ flowchart TD
 
 ```bash
 town init
-town model create
+town model list
+town model use <modelId>
 town plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 ```
 

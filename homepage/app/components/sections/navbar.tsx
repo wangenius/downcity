@@ -9,9 +9,15 @@ import {
   IconBrandX,
   IconCheck,
   IconChevronDown,
+  IconDeviceDesktop,
   IconLanguage,
   IconMenu2,
+  IconMoon,
+  IconSun,
+  IconSunMoon,
 } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { useTheme } from "fumadocs-ui/provider/base";
 import { setLang } from "@/lib/locales";
 import {
   DropdownMenu,
@@ -46,7 +52,6 @@ export function Navbar() {
   const homePath = isZh ? "/zh" : "/";
   const startPath = isZh ? "/zh/start" : "/start";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
-  const devdocsPath = isZh ? "/zh/devdocs" : "/en/devdocs";
   const productsDocsPath = isZh ? "/zh/products-docs" : "/en/products-docs";
   const citySdkDocsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
   const agentSdkDocsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
@@ -63,8 +68,6 @@ export function Navbar() {
   const productSdkPath = isZh ? "/zh/product/sdk" : "/product/sdk";
   const productAgentSdkPath = isZh ? "/zh/product/agent-sdk" : "/product/agent-sdk";
   const productUiSdkPath = isZh ? "/zh/product/ui-sdk" : "/product/ui-sdk";
-  const docsQuickstartPath = isZh ? "/zh/docs/quickstart/getting-started" : "/en/docs/quickstart/getting-started";
-  const productsTownCliPath = isZh ? "/zh/products-docs/town-cli/init" : "/en/products-docs/town-cli/init";
   const resourcesSkillsPath = isZh ? "/zh/resources/skills" : "/resources/skills";
   const resourcesMarketplacePath = isZh ? "/zh/resources/marketplace" : "/resources/marketplace";
   const resourcesHostingPath = isZh ? "/zh/resources/hosting" : "/resources/hosting";
@@ -87,7 +90,7 @@ export function Navbar() {
       { label: t("nav.productOverview"), description: isZh ? "完整产品矩阵" : "Full product index", path: productBasePath },
       { label: t("nav.productConsoleUi"), description: isZh ? "浏览器里的 Agent 控制台" : "Agent control surface", path: productConsoleUiPath },
       { label: t("nav.productChromeExtension"), description: isZh ? "把网页上下文送入 Agent" : "Send live web context", path: productChromeExtensionPath },
-      { label: t("nav.productSdk"), description: isZh ? "把 City 服务接入产品流程" : "Embed City service flows", path: productSdkPath },
+      { label: t("nav.productSdk"), description: isZh ? "接入共享服务能力" : "Embed shared service flows", path: productSdkPath },
       { label: t("nav.productAgentSdk"), description: isZh ? "把本地 Agent、Session、Plugin 嵌入应用" : "Embed local agents, sessions, and plugins", path: productAgentSdkPath },
       { label: t("nav.productUiSdk"), description: isZh ? "复用 Downcity 界面语言" : "Reuse the Downcity UI layer", path: productUiSdkPath },
     ],
@@ -104,35 +107,31 @@ export function Navbar() {
       servicesSdkDocsPath,
       pluginsDocsPath,
       uiSdkDocsPath,
-      devdocsPath,
     ],
     items: [
-      { label: "Downcity Docs", description: isZh ? "文档地图与产品级导览" : "Documentation map and product-level orientation", path: docsPath },
-      { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "先把 Town 跑起来，再进入更深层结构" : "Start Town first, then go deeper into the structure", path: docsQuickstartPath },
-      { label: "Products", description: isZh ? "Town CLI、Town Console、Chrome Extension" : "Town CLI, Town Console, and Chrome Extension", path: productsDocsPath },
-      { label: "Town CLI", description: isZh ? "命令入口与参数" : "Command entry points and flags", path: productsTownCliPath },
-      { label: "City SDK", description: isZh ? "City、CityBase、town、token 与部署" : "City, CityBase, town, tokens, and deployment", path: citySdkDocsPath },
+      { label: "Downcity Docs", description: isZh ? "核心文档空间" : "Core documentation space", path: docsPath },
+      { label: "Products", description: isZh ? "产品文档空间" : "Product documentation space", path: productsDocsPath },
+      { label: isZh ? "共享服务 SDK" : "Shared Services SDK", description: isZh ? "共享服务文档空间" : "Shared service documentation space", path: citySdkDocsPath },
       {
         label: "Agent SDK",
-        description: isZh ? "独立的 Agent SDK 接入、Session、Plugin 与 API 文档" : "Standalone docs for Agent SDK integration, sessions, plugins, and APIs",
+        description: isZh ? "Agent SDK 文档空间" : "Agent SDK documentation space",
         path: agentSdkDocsPath,
       },
       {
         label: "Services SDK",
-        description: isZh ? "accounts、balance、usage 与 payment-stripe" : "accounts, balance, usage, and payment-stripe",
+        description: isZh ? "Services SDK 文档空间" : "Services SDK documentation space",
         path: servicesSdkDocsPath,
       },
       {
         label: "Plugins Docs",
-        description: isZh ? "具体 built-in plugin 手册与场景示例" : "Concrete built-in plugin manuals and scenario guides",
+        description: isZh ? "插件文档空间" : "Plugin documentation space",
         path: pluginsDocsPath,
       },
       {
         label: "UI SDK",
-        description: isZh ? "独立的 UI SDK 接入、模块与开发文档" : "Standalone docs for UI SDK integration, modules, and development",
+        description: isZh ? "UI SDK 文档空间" : "UI SDK documentation space",
         path: uiSdkDocsPath,
       },
-      { label: t("nav.devdocs"), description: isZh ? "架构、实现与设计规范" : "Architecture, implementation, and design docs", path: devdocsPath },
     ],
   } as const;
 
@@ -208,7 +207,7 @@ export function Navbar() {
     "inline-flex size-9 items-center justify-center rounded-[11px] text-text-soft transition-colors hover:bg-surface-hover hover:text-foreground";
   const languageButtonClass =
     "inline-flex size-9 items-center justify-center rounded-[11px] text-text-soft transition-colors hover:bg-surface-hover hover:text-foreground";
-  const languageDropdownItemClass =
+  const menuSelectItemClass =
     "flex min-h-10 items-center justify-between rounded-[12px] px-3 py-2 text-[0.92rem] font-medium text-foreground transition-colors focus:bg-surface-hover focus:text-foreground";
 
   const isActive = (path: string) =>
@@ -314,6 +313,12 @@ export function Navbar() {
           >
             <IconBrandGithub className="size-4" />
           </a>
+          <ThemeSwitcher
+            is_zh={isZh}
+            button_class={languageButtonClass}
+            dropdown_content_class={dropdownContentClass}
+            dropdown_item_class={menuSelectItemClass}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={isZh ? "切换语言" : "Switch language"}
@@ -327,11 +332,11 @@ export function Navbar() {
                 <DropdownMenuLabel className="px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-text-soft">
                   {isZh ? "语言" : "Language"}
                 </DropdownMenuLabel>
-                <DropdownMenuItem className={languageDropdownItemClass} onClick={() => setLang("en")}>
+                <DropdownMenuItem className={menuSelectItemClass} onClick={() => setLang("en")}>
                   <span>English</span>
                   {!isZh ? <IconCheck className="size-4 text-text-soft" /> : <span className="size-4" />}
                 </DropdownMenuItem>
-                <DropdownMenuItem className={languageDropdownItemClass} onClick={() => setLang("zh")}>
+                <DropdownMenuItem className={menuSelectItemClass} onClick={() => setLang("zh")}>
                   <span>中文</span>
                   {isZh ? <IconCheck className="size-4 text-text-soft" /> : <span className="size-4" />}
                 </DropdownMenuItem>
@@ -407,10 +412,152 @@ export function Navbar() {
               <DropdownMenuItem className={dropdownItemClass} onClick={() => setLang(isZh ? "en" : "zh")}>
                 {isZh ? "Switch to English" : "切换到中文"}
               </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.62rem] uppercase tracking-[0.14em] text-text-soft">
+                  {isZh ? "主题" : "Theme"}
+                </DropdownMenuLabel>
+                <ThemeMenuItems
+                  is_zh={isZh}
+                  item_class={menuSelectItemClass}
+                />
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
     </header>
   );
+}
+
+/**
+ * 主题选项配置。
+ * 说明：主题能力由 Fumadocs RootProvider 内置的 next-themes 提供，这里只负责站点 Header 的用户入口。
+ */
+const theme_options = [
+  {
+    value: "light",
+    icon: IconSun,
+    en_label: "Light",
+    zh_label: "Light",
+  },
+  {
+    value: "dark",
+    icon: IconMoon,
+    en_label: "Dark",
+    zh_label: "Dark",
+  },
+  {
+    value: "system",
+    icon: IconDeviceDesktop,
+    en_label: "System",
+    zh_label: "System",
+  },
+] as const;
+
+type ThemeMode = (typeof theme_options)[number]["value"];
+
+/**
+ * Header 主题切换器。
+ */
+function ThemeSwitcher({
+  is_zh,
+  button_class,
+  dropdown_content_class,
+  dropdown_item_class,
+}: {
+  /** 当前界面是否为中文。 */
+  is_zh: boolean;
+  /** 触发按钮样式。 */
+  button_class: string;
+  /** 下拉面板样式。 */
+  dropdown_content_class: string;
+  /** 下拉选项样式。 */
+  dropdown_item_class: string;
+}) {
+  const { theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={is_zh ? "切换主题" : "Switch theme"}
+        title={is_zh ? "切换主题" : "Switch theme"}
+        className={button_class}
+      >
+        {mounted && resolvedTheme === "dark" ? (
+          <IconMoon className="size-4" />
+        ) : mounted && resolvedTheme === "light" ? (
+          <IconSun className="size-4" />
+        ) : (
+          <IconSunMoon className="size-4" />
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={10} className={dropdown_content_class}>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-text-soft">
+            {is_zh ? "主题" : "Theme"}
+          </DropdownMenuLabel>
+          <ThemeMenuItems
+            is_zh={is_zh}
+            item_class={dropdown_item_class}
+          />
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * 主题菜单选项。
+ */
+function ThemeMenuItems({
+  is_zh,
+  item_class,
+}: {
+  /** 当前界面是否为中文。 */
+  is_zh: boolean;
+  /** 菜单选项样式。 */
+  item_class: string;
+}) {
+  const { setTheme, theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const current_theme = isThemeMode(theme) ? theme : "system";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <>
+      {theme_options.map((option) => {
+        const Icon = option.icon;
+        const selected = mounted && current_theme === option.value;
+
+        return (
+          <DropdownMenuItem
+            key={option.value}
+            className={item_class}
+            onClick={() => setTheme(option.value)}
+          >
+            <span className="flex items-center gap-2">
+              <Icon className="size-4 text-text-soft" />
+              <span>{is_zh ? option.zh_label : option.en_label}</span>
+            </span>
+            {selected ? <IconCheck className="size-4 text-text-soft" /> : <span className="size-4" />}
+          </DropdownMenuItem>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * 判断主题字符串是否为 Header 支持的三种模式。
+ */
+function isThemeMode(value: string | undefined): value is ThemeMode {
+  return value === "light" || value === "dark" || value === "system";
 }

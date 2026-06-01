@@ -9,7 +9,7 @@ description: "The role of the City instance, runtime, router, and serve inside @
 
 A simple way to think about City is:
 
-> one reusable AI infrastructure runtime process that many towns can keep calling over time.
+> one reusable AI infrastructure runtime process that many products can keep calling over time.
 
 That process owns:
 
@@ -130,9 +130,9 @@ The host runtime only needs to create the database object:
 
 ## Common misunderstandings
 
-### City is not a City SDK
+### City is the runtime, not the whole SDK
 
-City is the long-running server runtime. Town-side calling still belongs to [@downcity/city](/en/city-sdk-docs/packages/city/city).
+City is the long-running server runtime. Product-side calling still belongs to [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime).
 
 ### City is not only an HTTP proxy
 

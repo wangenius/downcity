@@ -1,19 +1,19 @@
 ---
-title: Model Configuration (Console + Agent)
-description: Responsibility boundary between model pool and project binding
+title: Model Configuration
+description: Responsibility boundary between shared model catalog and project binding
 ---
 
-# Model Configuration (Console + Agent)
+# Model Configuration
 
 Model setup is split into two responsibilities:
 
-1. Console manages the model pool (provider/model metadata, keys, endpoints).
-2. Agent project chooses `model.primary` in `downcity.json`.
+1. The shared AI service manages the model catalog and provider-side details.
+2. Agent project chooses `execution.modelId` in `downcity.json`.
 
 ## Workflow
 
-1. Configure provider/model in console.
-2. Set `model.primary` in project.
+1. Make sure a model is available through `town model list`.
+2. Set `execution.modelId` in project.
 3. Restart agent and validate one real invocation.
 
 ## Commands
@@ -21,13 +21,13 @@ Model setup is split into two responsibilities:
 ```bash
 town model list
 town model use default --path .
-town config set model.primary default
+town config set execution.modelId default
 town agent restart .
 ```
 
 ## Failure cases
 
-- missing `model.primary` target: agent startup fails.
+- missing `execution.modelId` target: agent startup fails.
 - invalid provider/key: model invocation fails with auth/network errors.
 
 ## Related docs

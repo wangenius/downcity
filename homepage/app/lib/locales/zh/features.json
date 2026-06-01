@@ -1,28 +1,28 @@
 {
   "sectionLabel": "核心特性",
-  "title": "不仅仅是",
-  "titleItalic": "Copilot",
-  "description": "Downcity 为企业提供安全、可控的 AI Agent 运行时环境。",
+  "title": "真实 Agent 的",
+  "titleItalic": "基础设施",
+  "description": "Downcity 给 builders 一套可复用运行层，承接每个 Agent 产品都会重复建设的后端能力。",
   "features": {
     "repo": {
-      "title": "Repo Native",
-      "description": "拒绝繁琐的低代码拖拽平台。你的代码仓库、目录结构与 TypeScript 类型定义，就是 Agent 的最强定义。开发 Agent 就像写普通业务代码一样简单直观。"
+      "title": "可复用 Runtime",
+      "description": "repo 或 folder 可以定义 Agent 的运行边界，但真正的价值是让模型、工具、任务、记忆、服务和运维层在多个产品之间复用。"
     },
     "interactive": {
-      "title": "Proactive Employee",
-      "description": "它具备真正的主动性：它不仅能响应指令，更能**主动发出提醒并执行任务**。遇到未知领域，它会自动联网学习、按需安装技能；面对复杂场景，它会编写脚本并自我规划，让一切自动发生。"
+      "title": "长期运行 Agent",
+      "description": "Agent 可以作为托管 daemon 运行，保留任务上下文，执行工具，并通过 CLI、Console、浏览器入口或 SDK 持续可达。"
     },
     "schedule": {
-      "title": "Human-in-the-Loop",
-      "description": "赋予 Agent 能力，但不失去控制。所有敏感操作（如代码修改、Shell 执行）都会推送审批请求。你只需要并在手机上点击 Agree 或 Reject，安全尽在掌握。"
+      "title": "有边界的执行",
+      "description": "给 Agent 真实工具能力，同时保留控制。运行边界、权限、日志和操作面让每次执行都可检查、可恢复。"
     },
     "audit": {
-      "title": "Auditable Memory",
-      "description": "Agent 的每一次思考、每一步行动结果、每一次人类的审批记录，都被完整记录在文件系统中。它是你最值得信赖、最透明的数字化员工。"
+      "title": "可观测状态",
+      "description": "会话、日志、运行状态、任务产物和 Workboard 快照让 Agent 行为保持可见，而不是藏在一次性聊天里。"
     },
     "skills": {
-      "title": "Claude Code Skills",
-      "description": "站在巨人的肩膀上。直接复用 Claude Code 庞大的技能生态。想让 Agent 操作 Kubernetes？管理 AWS？或者只是发送 Slack 通知？一句指令安装，即刻拥有。"
+      "title": "可扩展能力",
+      "description": "Plugins、skills、共享服务和 SDK API 让每个产品可以增添能力，而不必复制整套 Agent 后端。"
     }
   },
   "codePreview": {

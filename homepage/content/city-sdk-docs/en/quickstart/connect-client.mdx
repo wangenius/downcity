@@ -1,9 +1,9 @@
 ---
 title: Connect Client
-description: Call City from the town with User City.
+description: Call the shared runtime from a product client with User City.
 ---
 
-Town clients use `User City`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
+Product clients use `User City`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
 
 ```ts
 import { City } from "@downcity/city";
@@ -19,7 +19,7 @@ const catalog = await client.ai.listModels();
 
 const result = await client.ai.text({
   model: catalog.default(),
-  prompt: "Write a welcome message for the town",
+  prompt: "Write a welcome message for the product",
 });
 ```
 
@@ -34,7 +34,7 @@ const body = await client.ai.stream({
 
 `ai.text()` returns an AI SDK `UIMessage`. `ai.stream()` returns `ReadableStream<UIMessageChunk>` when the City-side stream handler returns an AI SDK UIMessage stream response.
 
-One City can serve many client surfaces:
+One shared runtime can serve many client surfaces:
 
 - `https://app.example.com`
 - a Chrome extension

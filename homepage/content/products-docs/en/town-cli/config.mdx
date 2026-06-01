@@ -1,6 +1,6 @@
 ---
 title: town config
-description: Manage project downcity.json and alias (model pool is separate)
+description: Manage project downcity.json and alias
 ---
 
 # `town config`
@@ -22,7 +22,7 @@ town config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> Model pool management has moved to [`town model`](/en/products-docs/town-cli/model).
+> Model resources are managed by `city`. Town only reads the project execution binding while hosting Agents.
 
 ## Plugin config
 
@@ -31,7 +31,7 @@ town config <subcommand>
 For plugin configuration, edit:
 
 - `plugins.*` for agent-local plugin parameters only
-- use `town <plugin> on/off` for plugin lifecycle
+- use `town plugin` for plugin lifecycle and runtime state
 
 Examples:
 
@@ -43,8 +43,8 @@ town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ## Examples
 
 ```bash
-town config get model.primary
-town config set model.primary fast
+town config get execution.modelId
+town config set execution.modelId fast
 town config unset plugins.chat.channels.telegram
 town config alias --dry-run
 ```
@@ -54,23 +54,23 @@ town config alias --dry-run
 The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ town config get model.primary
+$ town config get execution.modelId
 {
   "success": true,
   "projectRoot": "<projectRoot>",
   "shipJsonPath": "<projectRoot>/downcity.json",
-  "keyPath": "model.primary",
+  "keyPath": "execution.modelId",
   "value": "<modelId>"
 }
 ```
 
 ```text
-$ town config set model.primary gpt-5.4
+$ town config set execution.modelId gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",
   "shipJsonPath": "<projectRoot>/downcity.json",
-  "keyPath": "model.primary",
+  "keyPath": "execution.modelId",
   "value": "gpt-5.4",
   "existed": true,
   "previous": "<oldModelId>"

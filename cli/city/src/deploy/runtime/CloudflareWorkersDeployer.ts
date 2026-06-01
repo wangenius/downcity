@@ -4,17 +4,17 @@
  * 关键点（中文）
  * - `city deploy` 的用户心智是“部署一个 City 项目”，不是配置 Cloudflare 工程。
  * - 构建和类型检查从 package.json 自动推断，`city.json` 保持最小。
- * - D1 和 Worker URL 等部署绑定写入项目 `.env`。
+ * - D1 等部署绑定写入项目 `.env`，Worker URL 回写到 City 自己的 server 配置。
  */
 
 import { rmSync } from "node:fs";
 import { dirname } from "node:path";
+import { addServer, readActiveServer, readServer } from "../../core/session.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
 import type {
   CityDeployOptions,
   CityProjectConfigFile,
-  CityProjectDeployEnvFile,
 } from "../../types/CityProjectConfig.js";
 import {
   readCityProjectDeployEnv,
@@ -47,7 +47,7 @@ export async function deployCloudflareWorkers(
   });
 
   if (options.verify_only) {
-    await verifyWorker(env_file);
+    await verifyWorker(readVerifyBaseUrl());
     return;
   }
 
@@ -96,11 +96,6 @@ export async function deployCloudflareWorkers(
   }
 
   const worker_url = extractWorkerUrl(output);
-  if (worker_url && !options.dry_run) {
-    env_file = writeCityProjectDeployEnv(env_file, {
-      city_worker_url: worker_url,
-    });
-  }
 
   emitCliBlock({
     tone: "success",
@@ -111,8 +106,12 @@ export async function deployCloudflareWorkers(
     ],
   });
 
+  if (worker_url && !options.dry_run) {
+    registerDeployedServer(config_file.config.name, worker_url);
+  }
+
   if (options.verify && !options.dry_run) {
-    await verifyWorker(env_file);
+    await verifyWorker(worker_url ?? readVerifyBaseUrl());
   }
 }
 
@@ -141,15 +140,12 @@ async function runWranglerDeploy(
 /**
  * 验证 Worker 健康状态。
  */
-async function verifyWorker(env_file: CityProjectDeployEnvFile): Promise<void> {
-  const base_url = process.env.DOWNCITY_WORKER_URL
-    ?? process.env.CITY_WORKER_URL
-    ?? env_file.env.city_worker_url;
+async function verifyWorker(base_url: string | undefined): Promise<void> {
   if (!base_url?.trim()) {
     emitCliBlock({
       tone: "warning",
       title: "Verification skipped",
-      note: "Set CITY_WORKER_URL or DOWNCITY_WORKER_URL in the project .env to check /health.",
+      note: "No connected City server found. Run `city deploy` first, or choose a server in Manage Servers.",
     });
     return;
   }
@@ -181,6 +177,40 @@ async function verifyWorker(env_file: CityProjectDeployEnvFile): Promise<void> {
  */
 function extractWorkerUrl(output: string): string | undefined {
   return output.match(/https:\/\/[^\s]+\.workers\.dev/i)?.[0];
+}
+
+/**
+ * 把部署出的 Worker 自动注册为当前 City server。
+ */
+function registerDeployedServer(name: string, worker_url: string): void {
+  const existing_server = readServer(worker_url);
+  const active_server = readActiveServer();
+  const preserved_admin_secret_key = existing_server?.admin_secret_key
+    ?? (active_server?.base_url === worker_url ? active_server.admin_secret_key : "")
+    ?? "";
+
+  addServer({
+    name,
+    base_url: worker_url,
+    admin_secret_key: preserved_admin_secret_key,
+  });
+
+  emitCliBlock({
+    tone: "success",
+    title: "City server connected",
+    facts: [
+      { label: "name", value: name },
+      { label: "url", value: worker_url },
+    ],
+    note: "The deployed Worker is now the active City server.",
+  });
+}
+
+/**
+ * 读取当前用于校验的 City server URL。
+ */
+function readVerifyBaseUrl(): string | undefined {
+  return readActiveServer()?.base_url;
 }
 
 /**

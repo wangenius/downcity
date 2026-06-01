@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `city.json` 是开发者手写的最小项目声明。
- * - `.env` 保存本地部署绑定，例如 Cloudflare account、D1 name 和 Worker URL。
+ * - `.env` 保存本地部署绑定，例如 Cloudflare account、D1 name 与 binding。
  * - 配置里不放 Cloudflare token、provider key 或过细的 Worker 选项。
  */
 
@@ -41,8 +41,6 @@ export interface CityProjectConfig {
 export interface CityProjectDeployEnv {
   /** Cloudflare account id，用于后续部署复用，不属于密钥。 */
   cloudflare_account_id?: string;
-  /** Worker 公开访问地址，用于部署后验证与客户端连接。 */
-  city_worker_url?: string;
   /** Cloudflare D1 database name。 */
   city_d1_database_name?: string;
   /** Worker runtime 中的 D1 binding 名称。 */

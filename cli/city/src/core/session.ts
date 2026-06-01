@@ -132,7 +132,7 @@ export function setActiveServer(baseUrl: string): void {
  */
 export function addServer(input: {
   base_url: string;
-  admin_secret_key: string;
+  admin_secret_key?: string;
   name?: string;
 }): ServerProfile {
   const config = readConfig();
@@ -165,7 +165,7 @@ export function updateServer(
   currentBaseUrl: string,
   input: {
     base_url: string;
-    admin_secret_key: string;
+    admin_secret_key?: string;
     name?: string;
   },
 ): ServerProfile {
@@ -348,15 +348,11 @@ function normalizeServers(servers: ServerProfile[]): ServerProfile[] {
 
 function normalizeServer(input: {
   base_url: string;
-  admin_secret_key: string;
+  admin_secret_key?: string;
   name?: string;
 }): ServerProfile {
   const normalizedBaseUrl = normalizeBaseUrl(input.base_url);
   const normalizedAdminSecretKey = String(input.admin_secret_key ?? "").trim();
-  if (!normalizedAdminSecretKey) {
-    throw new Error("admin_secret_key cannot be empty");
-  }
-
   const normalizedName = String(input.name ?? "").trim() || deriveServerName(normalizedBaseUrl);
 
   return {

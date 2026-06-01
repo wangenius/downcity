@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `city deploy` 默认读取目标目录下的 `.env`，方便本地显式部署。
- * - `.env` 保存部署绑定信息，例如 Cloudflare account、D1 name 和 Worker URL。
+ * - `.env` 保存部署绑定信息，例如 Cloudflare account、D1 name 和 binding。
  * - Provider key、Stripe key 等业务密钥仍应写入 City env 表，而不是写入公开客户端。
  */
 
@@ -18,8 +18,6 @@ import type {
 const DEPLOY_ENV_KEYS = [
   "CITY_TARGET",
   "CLOUDFLARE_ACCOUNT_ID",
-  "CITY_WORKER_URL",
-  "DOWNCITY_WORKER_URL",
   "CITY_D1_DATABASE_NAME",
   "CITY_D1_BINDING",
 ] as const;
@@ -45,10 +43,6 @@ export function readCityProjectDeployEnv(project_dir: string): CityProjectDeploy
     env_path,
     env: normalizeDeployEnv({
       cloudflare_account_id: file_env.CLOUDFLARE_ACCOUNT_ID ?? process.env.CLOUDFLARE_ACCOUNT_ID,
-      city_worker_url: file_env.CITY_WORKER_URL
-        ?? file_env.DOWNCITY_WORKER_URL
-        ?? process.env.CITY_WORKER_URL
-        ?? process.env.DOWNCITY_WORKER_URL,
       city_d1_database_name: file_env.CITY_D1_DATABASE_NAME ?? process.env.CITY_D1_DATABASE_NAME,
       city_d1_binding: file_env.CITY_D1_BINDING ?? process.env.CITY_D1_BINDING,
     }),
@@ -87,7 +81,6 @@ export function writeCityProjectDeployEnv(
 function normalizeDeployEnv(input: Partial<CityProjectDeployEnv>): CityProjectDeployEnv {
   return {
     cloudflare_account_id: clean(input.cloudflare_account_id),
-    city_worker_url: clean(input.city_worker_url),
     city_d1_database_name: clean(input.city_d1_database_name),
     city_d1_binding: clean(input.city_d1_binding),
   };
@@ -101,10 +94,6 @@ function renderDeployEnv(env: CityProjectDeployEnv): Record<string, string> {
     CITY_TARGET: "cloudflare-workers",
   };
   if (env.cloudflare_account_id) values.CLOUDFLARE_ACCOUNT_ID = env.cloudflare_account_id;
-  if (env.city_worker_url) {
-    values.CITY_WORKER_URL = env.city_worker_url;
-    values.DOWNCITY_WORKER_URL = env.city_worker_url;
-  }
   if (env.city_d1_database_name) values.CITY_D1_DATABASE_NAME = env.city_d1_database_name;
   if (env.city_d1_binding) values.CITY_D1_BINDING = env.city_d1_binding;
   return values;
@@ -133,7 +122,11 @@ function upsertEnvValues(text: string, values: Record<string, string>): string {
     }
   }
 
-  const filtered_lines = next_lines.filter((line) => !line.match(/^\s*CITY_D1_DATABASE_ID\s*=/));
+  const filtered_lines = next_lines.filter((line) => (
+    !line.match(/^\s*CITY_D1_DATABASE_ID\s*=/)
+    && !line.match(/^\s*CITY_WORKER_URL\s*=/)
+    && !line.match(/^\s*DOWNCITY_WORKER_URL\s*=/)
+  ));
   return `${filtered_lines.join("\n").replace(/\n+$/, "")}\n`;
 }
 

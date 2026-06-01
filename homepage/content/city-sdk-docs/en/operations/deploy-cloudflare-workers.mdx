@@ -80,8 +80,6 @@ Common local values can live in the project `.env`:
 ```bash
 CITY_TARGET=cloudflare-workers
 CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>
-CITY_WORKER_URL=https://my-city.<your-subdomain>.workers.dev
-DOWNCITY_WORKER_URL=https://my-city.<your-subdomain>.workers.dev
 CITY_D1_DATABASE_NAME=my-city-db
 CITY_D1_BINDING=DB
 ```
@@ -118,7 +116,8 @@ city deploy ./my-city --dry-run
 - prepares D1 for the `cloudflare-workers` target by looking up `CITY_D1_DATABASE_NAME`, and creates it automatically when missing
 - generates Wrangler config temporarily instead of writing it into the project directory
 - runs `wrangler deploy --config <generated-wrangler.toml>`
-- writes the Worker URL, D1 database name, and related deploy bindings back to the project `.env`
+- writes the D1 database name and related deploy bindings back to the project `.env`
+- automatically registers the deployed Worker URL as the current City server
 - requests Worker `/health` when `--verify` is passed
 
 `.env` is the local deploy binding file and should not be committed to Git. `city.json` stays as the commit-safe project declaration.
@@ -198,7 +197,7 @@ The callback domain must match the public domain users actually visit. If you la
 
 ## 11. Verify
 
-If `.env` contains `CITY_WORKER_URL` or `DOWNCITY_WORKER_URL`, run only the health check:
+If a City server is already connected, run only the health check:
 
 ```bash
 city deploy --verify-only

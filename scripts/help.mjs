@@ -90,7 +90,7 @@ const HELP_ITEMS = [
     name: "cli:patch:build",
     summary: "只对 downcity 执行 patch bump + build。",
     detail:
-      "等价于 `npm run patch:build -- --cli`，会构建 city、services、agent 与 plugins 作为依赖，再构建 cli/city、cli/town、cli/downcity 并全局安装 city/town 两个命令。",
+      "等价于 `npm run patch:build -- --cli`，会构建 city、services、agent、plugins 与 ui 作为依赖，再构建 cli/city、cli/town、cli/downcity 并全局安装 city/town 两个命令。",
   },
   {
     name: "all:patch:build",

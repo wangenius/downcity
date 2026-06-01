@@ -65,6 +65,7 @@ resolve_build_packages() {
       local has_type=false
       local has_agent=false
       local has_plugins=false
+      local has_ui=false
       local item
       for item in "${resolved[@]}"; do
         if [[ "$item" == "type" ]]; then
@@ -76,6 +77,9 @@ resolve_build_packages() {
         if [[ "$item" == "plugins" ]]; then
           has_plugins=true
         fi
+        if [[ "$item" == "ui" ]]; then
+          has_ui=true
+        fi
       done
       if [[ "$has_type" == false ]]; then
         resolved+=("type")
@@ -85,6 +89,9 @@ resolve_build_packages() {
       fi
       if [[ "$has_plugins" == false ]]; then
         resolved+=("plugins")
+      fi
+      if [[ "$has_ui" == false ]]; then
+        resolved+=("ui")
       fi
       for dep in city services; do
         local has_dep=false

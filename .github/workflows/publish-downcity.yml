@@ -20,6 +20,7 @@ on:
       - "packages/city/package.json"
       - "packages/services/package.json"
       - "packages/plugins/package.json"
+      - "packages/ui/package.json"
       - "pnpm-lock.yaml"
   workflow_dispatch:
 
@@ -66,6 +67,7 @@ jobs:
           pnpm -C packages/city build
           pnpm -C packages/services build
           pnpm -C packages/plugins build
+          pnpm -C packages/ui build
           pnpm -C cli/city build
           pnpm -C cli/town build
           pnpm -C products/console build

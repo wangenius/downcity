@@ -1,75 +1,144 @@
 ---
 title: 部署到 Cloudflare Workers
-description: 用 Workers + D1 部署 edge 街区，并初始化 admin 与 provider env。
+description: 使用 city deploy 把 City 项目部署到 Workers + D1。
 ---
 
-这页是 `cities/edge` 的正式部署操作路径。
+这页是 City 项目部署到 Cloudflare Workers 的正式操作路径。
 
-如果你只是想理解 City 怎么接入 Workers 和 D1，先读 [Cloudflare Workers](/zh/city-sdk-docs/guides/cloudflare-workers)。这一页只讲上线步骤：D1 binding、部署、取回 admin key、写入 env、OAuth callback 和健康检查。
+如果你只是想理解 City 怎么接入 Workers 和 D1，先读 [Cloudflare Workers](/zh/city-sdk-docs/guides/cloudflare-workers)。这一页只讲上线步骤：`city.json`、本地部署、Git URL 部署、D1、admin key、env、OAuth callback 和健康检查。
 
 ## 前置条件
 
 - 一个 Cloudflare 账号
-- 已经在仓库根目录执行过 `pnpm install`
-- 已经通过 `pnpm exec wrangler login` 或 `npx wrangler login` 登录 Wrangler
+- 已经在项目里安装依赖
 
-## 1. 确认 edge 街区
+Downcity 不会在 `git push` 后自动部署 Worker。部署是显式动作：
+
+```bash
+city deploy
+```
+
+## 1. 创建 City 项目
+
+开发者通常从一个空目录开始：
+
+```bash
+mkdir my-city
+cd my-city
+city create .
+```
+
+`city create .` 会交互式询问 City 名称和部署目标，并生成项目骨架：
+
+- `city.json`
+- `src/index.ts`
+- `package.json`
+- `tsconfig.json`
+- `.env.example`
+
+生成后的 `city.json` 只保存项目基本信息：
+
+```json
+{
+  "type": "city",
+  "name": "my-city",
+  "target": "cloudflare-workers"
+}
+```
+
+`type` 表示这是一个 City 项目，`target` 表示部署目标。当前支持 `cloudflare-workers`，也就是部署到 Cloudflare Edge Worker。入口文件、D1、binding、wrangler 配置都由 `city create` 和 `city deploy` 按 target 约定生成，不写进 `city.json`。
+
+## 2. 部署当前目录
+
+在 City 项目目录里直接执行：
+
+```bash
+city deploy
+```
+
+如果 `city.json` 的 `target` 是 `cloudflare-workers`，`city deploy` 会自动检查 Cloudflare 登录态。没有登录时会唤起 Wrangler 登录；已经登录但 Cloudflare 无法自动返回 account 时，会提示你刷新登录，或输入一次 Cloudflare account id。输入的 account id 会保存到 `.city/deploy.json`，后续部署会自动复用。
+
+也可以显式传目录：
+
+```bash
+city deploy ./my-city
+```
+
+还可以直接部署 Git 仓库：
+
+```bash
+city deploy https://github.com/example/my-city.git
+```
+
+Git URL 会被 clone 到临时目录，然后按同一套 `city.json` 流程部署。
+
+## 3. 本地部署参数
+
+常用本地参数可以写在项目目录的 `.env`：
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>
+DOWNCITY_WORKER_URL=https://my-city.<your-subdomain>.workers.dev
+```
+
+也可以部署时临时传入 account id：
+
+```bash
+city deploy --account-id <your-cloudflare-account-id>
+```
+
+## 4. Dry-run
+
+正式发布前先检查 bundle 和 Wrangler 配置：
+
+```bash
+city deploy --dry-run
+```
+
+如果部署别的目录：
+
+```bash
+city deploy ./my-city --dry-run
+```
+
+## 5. 部署过程
+
+`city deploy` 会执行这些步骤：
+
+- 读取目标目录的 `city.json`
+- 加载目标目录的 `.env`
+- 根据 `city.json.target` 检查目标平台登录态；Cloudflare Workers 会自动唤起 Wrangler 登录或引导选择 account
+- 如果 package.json 有 `build`，执行 `pnpm build`
+- 如果 package.json 有 `typecheck`，执行 `pnpm typecheck`
+- 对 `cloudflare-workers` target 准备 D1，并在 `.city/deploy.json` 里没有 database id 时创建 D1
+- 根据 `city.json` 和 `.city/deploy.json` 同步 `wrangler.toml`
+- 执行 `wrangler deploy`
+- 在传入 `--verify` 时请求 Worker `/health`
+
+D1 database id 会写入：
+
+```text
+.city/deploy.json
+```
+
+它是 CLI 生成的部署状态，不是开发者手写配置。
+
+## 6. 官方 edge 参考项目
+
+Downcity 仓库里的参考项目是 `cities/edge`：
+
+```bash
+city deploy cities/edge --verify
+```
 
 参考实现位于 [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1)。
 
-它做了四件关键事：
+## 7. 初始化 City
 
-- 把 `env.DB` 接成 Drizzle D1 数据库
-- 在 `cities/edge` 内组装 Edge City
-- 挂载 accounts、balance、usage、payment、Stripe payment 和 AI services
-- 暴露 `/health` 用于部署验证
-
-## 2. 准备 D1
-
-`cities/edge/wrangler.toml` 里声明了 D1 binding：
-
-```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "downcity-db"
-database_id = "<your-d1-database-id>"
-```
-
-第一次部署时，先创建 D1 数据库，并把返回的 ID 写入 `wrangler.toml`：
+部署完成后，请求一次 `/health`。这会让 Worker 启动 City，并创建内置的 `env` / `towns` 表。
 
 ```bash
-cd cities/edge
-npx wrangler d1 create downcity-db
-```
-
-如果 `database_id` 为空，`cities/edge/deploy.sh` 也会尝试创建 D1，并把 ID 写回 `wrangler.toml`。
-
-## 3. 部署
-
-```bash
-cd cities/edge
-pnpm deploy
-```
-
-这个脚本会先确认 D1 数据库，再执行 `wrangler deploy`。你也可以直接运行：
-
-```bash
-cd cities/edge
-npx wrangler deploy
-```
-
-部署完成后，Worker URL 通常类似：
-
-```text
-https://downcity.<your-subdomain>.workers.dev
-```
-
-## 4. 初始化 City
-
-先请求一次 `/health`。这会让 Worker 启动 City，并创建内置的 `env` / `towns` 表。
-
-```bash
-curl https://downcity.<your-subdomain>.workers.dev/health
+curl https://my-city.<your-subdomain>.workers.dev/health
 ```
 
 返回大致如下：
@@ -81,26 +150,25 @@ curl https://downcity.<your-subdomain>.workers.dev/health
 }
 ```
 
-## 5. 取回 admin key
+## 8. 取回 admin key
 
-City 首次启动时会把 `DOWNCITY_CITY_ADMIN_SECRET_KEY` 写入自己的 `env` 表。Workers + D1 部署下，可以直接从远程 D1 查询：
+City 首次启动时会把 `DOWNCITY_CITY_ADMIN_SECRET_KEY` 写入自己的 `env` 表。Workers + D1 部署下，可以从远程 D1 查询：
 
 ```bash
-cd cities/edge
-npx wrangler d1 execute downcity-db --remote \
+npx wrangler d1 execute my-city-db --remote \
   --command "SELECT value FROM env WHERE key='DOWNCITY_CITY_ADMIN_SECRET_KEY'"
 ```
 
 请把这个 key 存在可信位置。它是 `Admin City`、Town CLI 或直接调用 admin HTTP 接口时使用的管理凭证。
 
-## 6. 写入 provider 和 service env
+## 9. 写入 provider 和 service env
 
 Provider API key 和服务密钥应该写入 City 自己的 env 表，不应该进入公开客户端。
 
 示例：
 
 ```bash
-curl -X POST https://downcity.<your-subdomain>.workers.dev/v1/env/upsert \
+curl -X POST https://my-city.<your-subdomain>.workers.dev/v1/env/upsert \
   -H "Authorization: Bearer <admin_secret_key>" \
   -H "Content-Type: application/json" \
   -d '{"key":"DEEPSEEK_API_KEY","value":"sk-..."}'
@@ -110,7 +178,7 @@ curl -X POST https://downcity.<your-subdomain>.workers.dev/v1/env/upsert \
 
 | Key | 用途 |
 | --- | --- |
-| `DEEPSEEK_API_KEY` | edge 参考街区默认使用的 provider key |
+| `DEEPSEEK_API_KEY` | edge 参考项目默认使用的 provider key |
 | `STRIPE_SECRET_KEY` | 创建 Stripe Checkout 的 API key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook 签名密钥 |
 | `STRIPE_SUCCESS_URL` | 可选，Checkout 成功后的默认跳转地址 |
@@ -118,32 +186,29 @@ curl -X POST https://downcity.<your-subdomain>.workers.dev/v1/env/upsert \
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | 可选，Google OAuth 登录 |
 | `WECHAT_CLIENT_ID` / `WECHAT_CLIENT_SECRET` | 可选，微信网站应用登录 |
 
-也可以继续读 [Provider 环境变量](/zh/city-sdk-docs/guides/provider-env) 和 [环境变量参考](/zh/city-sdk-docs/reference/env-vars)。
-
-## 7. 配置 OAuth callback
+## 10. 配置 OAuth callback
 
 如果你开启 OAuth 登录，需要把 provider 的 callback URL 配成 Worker 对外地址：
 
 ```text
-https://downcity.<your-subdomain>.workers.dev/v1/accounts/oauth/callback
+https://my-city.<your-subdomain>.workers.dev/v1/accounts/oauth/callback
 ```
 
 callback 域名必须和用户实际访问的公开域名一致。如果之后切到自定义域名，也要同步更新 OAuth provider 里的回调地址。
 
-## 8. 验证
+## 11. 验证
 
-部署完成后先检查：
+如果 `.env` 里配置了 `DOWNCITY_WORKER_URL`，可以只执行健康检查：
 
 ```bash
-curl https://downcity.<your-subdomain>.workers.dev/
-curl https://downcity.<your-subdomain>.workers.dev/health
+city deploy --verify-only
 ```
 
-再用 admin auth 确认模型目录：
+也可以手动检查：
 
 ```bash
-curl https://downcity.<your-subdomain>.workers.dev/v1/ai/models \
-  -H "Authorization: Bearer <admin_secret_key>"
+curl https://my-city.<your-subdomain>.workers.dev/
+curl https://my-city.<your-subdomain>.workers.dev/health
 ```
 
 ## 更新部署
@@ -151,8 +216,7 @@ curl https://downcity.<your-subdomain>.workers.dev/v1/ai/models \
 修改代码后：
 
 ```bash
-cd cities/edge
-pnpm deploy
+city deploy --verify
 ```
 
 运行时 env 保存在 D1 里，所以重新部署 Worker 不会丢失 provider key、OAuth secret、town、余额、usage 记录或 Stripe 支付记录。

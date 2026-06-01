@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy": "./deploy.sh",
+    "build": "pnpm -C ../../packages/city build && pnpm -C ../../packages/services build",
     "dev": "wrangler dev",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

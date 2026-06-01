@@ -1,0 +1,5 @@
+{
+  "type": "city",
+  "name": "downcity",
+  "target": "cloudflare-workers"
+}

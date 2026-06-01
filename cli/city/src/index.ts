@@ -16,6 +16,8 @@ import { Command } from "commander";
 import { runCityApp } from "./app.js";
 import { createVersionBanner } from "./shared/IndexSupport.js";
 import { setCliVerbosity } from "./shared/CliReporter.js";
+import { deployCityProject } from "./deploy/commands/deploy.js";
+import { createCityProject } from "./create/commands/create.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -41,6 +43,42 @@ program
   .helpOption("--help", "display help for command")
   .action(createVersionBanner(packageJson.version, async (action?: string) => {
     await runCityApp(action ? [action] : []);
+  }));
+
+program
+  .command("create [dir]")
+  .description("交互式创建 City 项目骨架")
+  .option("-f, --force", "允许覆盖已有项目文件")
+  .helpOption("--help", "display help for command")
+  .action(createVersionBanner(packageJson.version, async (
+    dir: string | undefined,
+    options: { force?: boolean },
+  ) => {
+    await createCityProject(dir ?? ".", options);
+  }));
+
+program
+  .command("deploy [source]")
+  .description("部署当前目录、本地目录或 Git URL 中的 City 项目")
+  .option("--dry-run", "只执行 Wrangler dry-run，不发布 Worker")
+  .option("--verify", "部署完成后请求 Worker /health")
+  .option("--verify-only", "只请求 Worker /health，不构建或部署")
+  .option("--skip-build", "跳过 package.json 中的 build")
+  .option("--skip-typecheck", "跳过 package.json 中的 typecheck")
+  .option("--account-id <account_id>", "本次部署使用的 Cloudflare account id")
+  .helpOption("--help", "display help for command")
+  .action(createVersionBanner(packageJson.version, async (
+    source: string | undefined,
+    options: {
+      dryRun?: boolean;
+      verify?: boolean;
+      verifyOnly?: boolean;
+      skipBuild?: boolean;
+      skipTypecheck?: boolean;
+      accountId?: string;
+    },
+  ) => {
+    await deployCityProject(source ?? ".", options);
   }));
 
 program.showHelpAfterError();

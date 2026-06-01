@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - `city.json` 是简单的 City 项目声明，Wrangler 配置是部署时临时生成物。
  * - Cloudflare 默认值由 CLI 管理，用户不需要在 `city.json` 里写 worker_name 等细节。
- * - D1 database id 从项目 `.env` 读取，不污染用户手写配置。
+ * - D1 database id 由 CLI 在部署时解析，不污染用户手写配置。
  */
 
 import { mkdtempSync, writeFileSync } from "node:fs";
@@ -27,11 +27,12 @@ export interface WranglerConfigWriteResult {
 export function writeWranglerConfig(
   config_file: CityProjectConfigFile,
   env_file: CityProjectDeployEnvFile,
+  database_id?: string,
 ): WranglerConfigWriteResult {
   const config = config_file.config;
   const config_dir = mkdtempSync(join(tmpdir(), "downcity-wrangler-"));
   const config_path = join(config_dir, "wrangler.toml");
-  const database_id = env_file.env.city_d1_database_id ?? "";
+  const resolved_database_id = database_id ?? "";
 
   const lines = [
     `name = ${tomlString(config.name)}`,
@@ -47,7 +48,7 @@ export function writeWranglerConfig(
       "[[d1_databases]]",
       `binding = ${tomlString(config.database.binding)}`,
       `database_name = ${tomlString(config.database.name)}`,
-      `database_id = ${tomlString(database_id)}`,
+      `database_id = ${tomlString(resolved_database_id)}`,
     );
   }
 

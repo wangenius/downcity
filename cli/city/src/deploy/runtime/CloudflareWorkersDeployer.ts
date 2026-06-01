@@ -65,16 +65,19 @@ export async function deployCloudflareWorkers(
     skip_typecheck: options.skip_typecheck,
   });
 
-  if (!options.dry_run) {
-    const d1_result = await resolveD1Database({
-      config_file,
-      env_file,
-      account_id,
-    });
-    env_file = d1_result.env_file;
-  }
+  const d1_result = await resolveD1Database({
+    config_file,
+    env_file,
+    account_id,
+    create_if_missing: options.dry_run !== true,
+  });
+  env_file = d1_result.env_file;
 
-  const wrangler_result = writeWranglerConfig(config_file, env_file);
+  const wrangler_result = writeWranglerConfig(
+    config_file,
+    env_file,
+    d1_result.resolved_database_id,
+  );
   emitCliBlock({
     tone: "success",
     title: "Wrangler config generated",

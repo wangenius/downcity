@@ -82,7 +82,6 @@ CITY_TARGET=cloudflare-workers
 CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>
 CITY_WORKER_URL=https://my-city.<your-subdomain>.workers.dev
 DOWNCITY_WORKER_URL=https://my-city.<your-subdomain>.workers.dev
-CITY_D1_DATABASE_ID=<created-by-city-deploy>
 CITY_D1_DATABASE_NAME=my-city-db
 CITY_D1_BINDING=DB
 ```
@@ -116,10 +115,10 @@ city deploy ./my-city --dry-run
 - checks the target platform identity from `city.json.target`; Cloudflare Workers opens Wrangler login or guides account selection when needed
 - runs `pnpm build` if package.json has a `build` script
 - runs `pnpm typecheck` if package.json has a `typecheck` script
-- prepares D1 for the `cloudflare-workers` target and creates it when `.env` has no `CITY_D1_DATABASE_ID` yet
+- prepares D1 for the `cloudflare-workers` target by looking up `CITY_D1_DATABASE_NAME`, and creates it automatically when missing
 - generates Wrangler config temporarily instead of writing it into the project directory
 - runs `wrangler deploy --config <generated-wrangler.toml>`
-- writes the Worker URL, D1 database id, and related deploy results back to the project `.env`
+- writes the Worker URL, D1 database name, and related deploy bindings back to the project `.env`
 - requests Worker `/health` when `--verify` is passed
 
 `.env` is the local deploy binding file and should not be committed to Git. `city.json` stays as the commit-safe project declaration.

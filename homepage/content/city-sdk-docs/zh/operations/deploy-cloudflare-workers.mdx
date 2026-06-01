@@ -82,7 +82,6 @@ CITY_TARGET=cloudflare-workers
 CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>
 CITY_WORKER_URL=https://my-city.<your-subdomain>.workers.dev
 DOWNCITY_WORKER_URL=https://my-city.<your-subdomain>.workers.dev
-CITY_D1_DATABASE_ID=<created-by-city-deploy>
 CITY_D1_DATABASE_NAME=my-city-db
 CITY_D1_BINDING=DB
 ```
@@ -116,10 +115,10 @@ city deploy ./my-city --dry-run
 - 根据 `city.json.target` 检查目标平台登录态；Cloudflare Workers 会自动唤起 Wrangler 登录或引导选择 account
 - 如果 package.json 有 `build`，执行 `pnpm build`
 - 如果 package.json 有 `typecheck`，执行 `pnpm typecheck`
-- 对 `cloudflare-workers` target 准备 D1，并在 `.env` 里没有 `CITY_D1_DATABASE_ID` 时创建 D1
+- 对 `cloudflare-workers` target 按 `CITY_D1_DATABASE_NAME` 查找 D1；不存在时自动创建
 - 临时生成 Wrangler 配置，不写入项目目录
 - 执行 `wrangler deploy --config <generated-wrangler.toml>`
-- 把 Worker URL、D1 database id 等部署结果写回项目 `.env`
+- 把 Worker URL、D1 database name 和 binding 等部署结果写回项目 `.env`
 - 在传入 `--verify` 时请求 Worker `/health`
 
 `.env` 是本地部署绑定文件，不应该提交到 Git。`city.json` 仍然只保留可提交的项目声明。

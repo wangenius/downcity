@@ -195,7 +195,6 @@ function createCloudflareWorkersFiles(
         "CLOUDFLARE_ACCOUNT_ID=",
         `CITY_WORKER_URL=https://${name}.<your-subdomain>.workers.dev`,
         `DOWNCITY_WORKER_URL=https://${name}.<your-subdomain>.workers.dev`,
-        `CITY_D1_DATABASE_ID=`,
         `CITY_D1_DATABASE_NAME=${name}-db`,
         "CITY_D1_BINDING=DB",
         "",

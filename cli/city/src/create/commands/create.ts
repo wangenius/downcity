@@ -3,15 +3,17 @@
  *
  * 关键点（中文）
  * - 从零搭建一个可部署的 City 项目，而不是让用户手写底层部署文件。
+ * - Git URL 只在 create 阶段 clone 到本地；deploy 阶段只处理本地项目。
  * - `city.json` 只写项目类型和部署目标，其他文件由 CLI 生成。
  * - 当前先生成 Cloudflare Workers 项目骨架，后续可扩展更多 target。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, basename } from "node:path";
 import { confirm, isCancel, select, text } from "@clack/prompts";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
+import { runCommand } from "../../deploy/runtime/CommandRunner.js";
 
 /** Commander 传入的 create 选项。 */
 export interface CityCreateCommandOptions {
@@ -26,7 +28,13 @@ export async function createCityProject(
   dir: string = ".",
   options: CityCreateCommandOptions = {},
 ): Promise<void> {
-  const project_dir = resolve(String(dir || "."));
+  const input = String(dir || ".").trim() || ".";
+  if (isGitUrl(input)) {
+    await cloneCityProject(input, options);
+    return;
+  }
+
+  const project_dir = resolve(input);
   mkdirSync(project_dir, { recursive: true });
 
   const default_name = inferProjectName(project_dir);
@@ -87,6 +95,46 @@ export async function createCityProject(
 }
 
 /**
+ * 从 Git URL 创建本地 City 项目。
+ */
+async function cloneCityProject(
+  git_url: string,
+  options: CityCreateCommandOptions,
+): Promise<void> {
+  const default_dir = inferGitProjectName(git_url);
+  const dir_input = await text({
+    message: "Local directory",
+    initialValue: default_dir,
+  });
+  if (isCancel(dir_input)) return;
+
+  const project_dir = resolve(String(dir_input || default_dir).trim() || default_dir);
+  if (existsSync(project_dir) && readdirSync(project_dir).length > 0) {
+    throw new CliError({
+      title: "Local directory is not empty",
+      note: project_dir,
+      fix: "Choose an empty directory for `city create <git-url>`, then run `city deploy` inside it.",
+    });
+  }
+
+  await runCommand({
+    label: "Clone City project",
+    command: `git clone --depth 1 ${shellQuote(git_url)} ${shellQuote(project_dir)}`,
+    cwd: process.cwd(),
+  });
+
+  emitCliBlock({
+    tone: "success",
+    title: "City project cloned",
+    facts: [
+      { label: "source", value: git_url },
+      { label: "dir", value: project_dir },
+    ],
+    note: "Run city deploy from the cloned project directory when ready.",
+  });
+}
+
+/**
  * 创建 Cloudflare Workers 项目文件。
  */
 function createCloudflareWorkersFiles(
@@ -143,8 +191,13 @@ function createCloudflareWorkersFiles(
       path: ".env.example",
       content: [
         "# Local deploy values.",
+        "CITY_TARGET=cloudflare-workers",
         "CLOUDFLARE_ACCOUNT_ID=",
+        `CITY_WORKER_URL=https://${name}.<your-subdomain>.workers.dev`,
         `DOWNCITY_WORKER_URL=https://${name}.<your-subdomain>.workers.dev`,
+        `CITY_D1_DATABASE_ID=`,
+        `CITY_D1_DATABASE_NAME=${name}-db`,
+        "CITY_D1_BINDING=DB",
         "",
       ].join("\n"),
     },
@@ -241,4 +294,28 @@ function normalizePackageName(name: string): string {
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-")
     || "city";
+}
+
+/**
+ * 判断输入是否像 Git URL。
+ */
+function isGitUrl(value: string): boolean {
+  return /^(https?:\/\/|git@|ssh:\/\/)/.test(value)
+    || /^[^@\s]+@[^:\s]+:[^\s]+$/.test(value);
+}
+
+/**
+ * 从 Git URL 推断本地目录名。
+ */
+function inferGitProjectName(git_url: string): string {
+  const without_query = git_url.split(/[?#]/)[0] ?? git_url;
+  const last_part = without_query.split(/[/\\:]/).filter(Boolean).pop() ?? "city";
+  return normalizePackageName(last_part.replace(/\.git$/i, "")) || "city";
+}
+
+/**
+ * shell 参数转义。
+ */
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
 }

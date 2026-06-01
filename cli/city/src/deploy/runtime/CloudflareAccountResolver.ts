@@ -10,19 +10,18 @@
 import { isCancel, select, text } from "@clack/prompts";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
-import type { CityProjectDeployStateFile } from "../../types/CityProjectConfig.js";
+import type { CityProjectDeployEnvFile } from "../../types/CityProjectConfig.js";
 import {
-  mergeCloudflareDeployState,
-  writeCityProjectDeployState,
-} from "../config/CityProjectDeployStateStore.js";
+  writeCityProjectDeployEnv,
+} from "../config/CityProjectEnvLoader.js";
 import { runCommand } from "./CommandRunner.js";
 
 /** Cloudflare account 解析参数。 */
 export interface ResolveCloudflareAccountParams {
   /** City 项目目录。 */
   project_dir: string;
-  /** 当前 City 部署状态。 */
-  state_file: CityProjectDeployStateFile;
+  /** 当前 City 本地部署环境。 */
+  env_file: CityProjectDeployEnvFile;
   /** 用户通过命令行或环境变量显式传入的 account id。 */
   account_id?: string;
 }
@@ -31,8 +30,8 @@ export interface ResolveCloudflareAccountParams {
 export interface ResolveCloudflareAccountResult {
   /** Cloudflare account id。 */
   account_id?: string;
-  /** 可能写入 account id 后的部署状态。 */
-  state_file: CityProjectDeployStateFile;
+  /** 可能写入 account id 后的本地部署环境。 */
+  env_file: CityProjectDeployEnvFile;
 }
 
 /**
@@ -41,13 +40,13 @@ export interface ResolveCloudflareAccountResult {
 export async function resolveCloudflareAccount(
   params: ResolveCloudflareAccountParams,
 ): Promise<ResolveCloudflareAccountResult> {
-  const saved_account_id = params.state_file.state.cloudflare?.account_id;
+  const saved_account_id = params.env_file.env.cloudflare_account_id;
   const initial_account_id = normalizeAccountId(params.account_id)
     ?? normalizeAccountId(process.env.CLOUDFLARE_ACCOUNT_ID)
     ?? normalizeAccountId(saved_account_id);
 
   if (initial_account_id) {
-    return persistCloudflareAccount(params.state_file, initial_account_id);
+    return persistCloudflareAccount(params.env_file, initial_account_id);
   }
 
   let output = await runWranglerWhoami(params.project_dir);
@@ -63,7 +62,7 @@ export async function resolveCloudflareAccount(
       title: "Cloudflare account detected",
       facts: [{ label: "account", value: detected_account_id }],
     });
-    return persistCloudflareAccount(params.state_file, detected_account_id);
+    return persistCloudflareAccount(params.env_file, detected_account_id);
   }
 
   if (isWranglerAccountLookupDenied(output)) {
@@ -75,7 +74,7 @@ export async function resolveCloudflareAccount(
     title: "Wrangler authenticated",
     note: output.split("\n").slice(0, 3).join(" "),
   });
-  return { state_file: params.state_file };
+  return { env_file: params.env_file };
 }
 
 /**
@@ -109,7 +108,7 @@ async function resolveAccountAfterLookupDenied(
       {
         label: "Enter account id",
         value: "enter-account-id",
-        hint: "Saved to .city/deploy.json",
+        hint: "Saved to project .env",
       },
       {
         label: "Cancel deploy",
@@ -129,19 +128,19 @@ async function resolveAccountAfterLookupDenied(
     const output = await runWranglerWhoami(params.project_dir);
     const account_id = extractAccountId(output);
     if (account_id) {
-      return persistCloudflareAccount(params.state_file, account_id);
+      return persistCloudflareAccount(params.env_file, account_id);
     }
-    return await promptForAccountId(params.state_file);
+    return await promptForAccountId(params.env_file);
   }
 
-  return await promptForAccountId(params.state_file);
+  return await promptForAccountId(params.env_file);
 }
 
 /**
  * 交互式输入 Cloudflare account id。
  */
 async function promptForAccountId(
-  state_file: CityProjectDeployStateFile,
+  env_file: CityProjectDeployEnvFile,
 ): Promise<ResolveCloudflareAccountResult> {
   const account_id = await text({
     message: "Cloudflare account id",
@@ -158,14 +157,14 @@ async function promptForAccountId(
       note: "Cloudflare account id was not provided.",
     });
   }
-  return persistCloudflareAccount(state_file, String(account_id));
+  return persistCloudflareAccount(env_file, String(account_id));
 }
 
 /**
- * 保存 Cloudflare account id 到部署状态。
+ * 保存 Cloudflare account id 到项目 `.env`。
  */
 function persistCloudflareAccount(
-  state_file: CityProjectDeployStateFile,
+  env_file: CityProjectDeployEnvFile,
   account_id: string,
 ): ResolveCloudflareAccountResult {
   const normalized_account_id = normalizeAccountId(account_id);
@@ -176,13 +175,12 @@ function persistCloudflareAccount(
     });
   }
 
-  const next_state_file = mergeCloudflareDeployState(state_file, {
-    account_id: normalized_account_id,
+  const next_env_file = writeCityProjectDeployEnv(env_file, {
+    cloudflare_account_id: normalized_account_id,
   });
-  writeCityProjectDeployState(next_state_file);
   return {
     account_id: normalized_account_id,
-    state_file: next_state_file,
+    env_file: next_env_file,
   };
 }
 

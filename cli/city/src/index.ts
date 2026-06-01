@@ -59,7 +59,7 @@ program
 
 program
   .command("deploy [source]")
-  .description("部署当前目录、本地目录或 Git URL 中的 City 项目")
+  .description("部署当前目录或本地目录中的 City 项目")
   .option("--dry-run", "只执行 Wrangler dry-run，不发布 Worker")
   .option("--verify", "部署完成后请求 Worker /health")
   .option("--verify-only", "只请求 Worker /health，不构建或部署")

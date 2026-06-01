@@ -4,6 +4,10 @@ dist
 *.log
 cache
 .env
+.city/
+**/.city/
+wrangler.toml
+**/wrangler.toml
 package-lock.json
 yarn.lock
 

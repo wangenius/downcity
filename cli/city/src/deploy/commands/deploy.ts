@@ -47,21 +47,17 @@ export async function deployCityProject(
     account_id: raw_options.accountId,
   };
   const target = await resolveCityDeployTarget(options.source);
-  try {
-    const config_file = readCityProjectConfig(target.project_dir);
-    loadCityProjectEnv(config_file.project_dir);
+  const config_file = readCityProjectConfig(target.project_dir);
+  loadCityProjectEnv(config_file.project_dir);
 
-    switch (config_file.config.target) {
-      case "cloudflare-workers":
-        await deployCloudflareWorkers(config_file, options);
-        return;
-      default:
-        throw new CliError({
-          title: "Unsupported City target",
-          note: `city deploy does not support ${config_file.config.target}.`,
-        });
-    }
-  } finally {
-    await target.cleanup?.();
+  switch (config_file.config.target) {
+    case "cloudflare-workers":
+      await deployCloudflareWorkers(config_file, options);
+      return;
+    default:
+      throw new CliError({
+        title: "Unsupported City target",
+        note: `city deploy does not support ${config_file.config.target}.`,
+      });
   }
 }

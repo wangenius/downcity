@@ -3,50 +3,49 @@
  *
  * 关键点（中文）
  * - D1 是 Workers 目标的运行时资源，由 `city deploy` 自动准备。
- * - database id 写入 `.city/deploy.json`，不写回用户手写的 `city.json`。
- * - dry-run 不创建远程资源，只使用已有状态生成 Wrangler dry-run。
+ * - database id 写入项目 `.env`，不写回用户手写的 `city.json`。
+ * - dry-run 不创建远程资源，只使用已有 `.env` 生成 Wrangler dry-run。
  */
 
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
 import type {
   CityProjectConfigFile,
-  CityProjectDeployStateFile,
+  CityProjectDeployEnvFile,
 } from "../../types/CityProjectConfig.js";
 import {
-  mergeCloudflareDeployState,
-  writeCityProjectDeployState,
-} from "../config/CityProjectDeployStateStore.js";
+  writeCityProjectDeployEnv,
+} from "../config/CityProjectEnvLoader.js";
 import { runCommand } from "./CommandRunner.js";
 
 /** D1 解析参数。 */
 export interface ResolveD1DatabaseParams {
   /** City 项目配置文件。 */
   config_file: CityProjectConfigFile;
-  /** City 项目部署状态文件。 */
-  state_file: CityProjectDeployStateFile;
+  /** City 项目本地部署环境文件。 */
+  env_file: CityProjectDeployEnvFile;
   /** Cloudflare account id。 */
   account_id?: string;
 }
 
 /** D1 解析结果。 */
 export interface ResolveD1DatabaseResult {
-  /** 更新后的部署状态文件。 */
-  state_file: CityProjectDeployStateFile;
+  /** 更新后的本地部署环境文件。 */
+  env_file: CityProjectDeployEnvFile;
   /** D1 database id。 */
   database_id?: string;
 }
 
 /**
- * 确认 D1 数据库存在，必要时创建并写入 `.city/deploy.json`。
+ * 确认 D1 数据库存在，必要时创建并写入项目 `.env`。
  */
 export async function resolveD1Database(
   params: ResolveD1DatabaseParams,
 ): Promise<ResolveD1DatabaseResult> {
   const database = params.config_file.config.database;
-  if (!database) return { state_file: params.state_file };
+  if (!database) return { env_file: params.env_file };
 
-  const existing_database_id = params.state_file.state.cloudflare?.database_id;
+  const existing_database_id = params.env_file.env.city_d1_database_id;
   if (existing_database_id) {
     emitCliBlock({
       tone: "success",
@@ -57,7 +56,7 @@ export async function resolveD1Database(
       ],
     });
     return {
-      state_file: params.state_file,
+      env_file: params.env_file,
       database_id: existing_database_id,
     };
   }
@@ -80,14 +79,15 @@ export async function resolveD1Database(
     throw new CliError({
       title: "Unable to read D1 database id",
       note: output,
-      fix: "Create D1 manually, then put cloudflare.database_id into .city/deploy.json.",
+      fix: "Create D1 manually, then put CITY_D1_DATABASE_ID into the project .env.",
     });
   }
 
-  const next_state_file = mergeCloudflareDeployState(params.state_file, {
-    database_id,
+  const next_env_file = writeCityProjectDeployEnv(params.env_file, {
+    city_d1_database_id: database_id,
+    city_d1_database_name: database.name,
+    city_d1_binding: database.binding,
   });
-  writeCityProjectDeployState(next_state_file);
 
   emitCliBlock({
     tone: "success",
@@ -95,12 +95,12 @@ export async function resolveD1Database(
     facts: [
       { label: "name", value: database.name },
       { label: "id", value: database_id },
-      { label: "state", value: next_state_file.state_path },
+      { label: "env", value: next_env_file.env_path },
     ],
   });
 
   return {
-    state_file: next_state_file,
+    env_file: next_env_file,
     database_id,
   };
 }

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `city.json` 是开发者手写的最小项目声明。
- * - `.city/deploy.json` 保存 CLI 生成的远端资源状态。
+ * - `.env` 保存本地部署绑定，例如 Cloudflare account、D1 id 和 Worker URL。
  * - 配置里不放 Cloudflare token、provider key 或过细的 Worker 选项。
  */
 
@@ -37,17 +37,18 @@ export interface CityProjectConfig {
   database?: CityProjectDatabaseConfig;
 }
 
-/** City 项目部署状态。 */
-export interface CityProjectDeployState {
-  /** Cloudflare 部署状态，只保存资源 ID 和公开 URL。 */
-  cloudflare?: {
-    /** Cloudflare account id，用于后续部署复用，不属于密钥。 */
-    account_id?: string;
-    /** Cloudflare D1 database id。 */
-    database_id?: string;
-    /** Worker 公开访问地址。 */
-    worker_url?: string;
-  };
+/** City 项目本地部署环境。 */
+export interface CityProjectDeployEnv {
+  /** Cloudflare account id，用于后续部署复用，不属于密钥。 */
+  cloudflare_account_id?: string;
+  /** Worker 公开访问地址，用于部署后验证与客户端连接。 */
+  city_worker_url?: string;
+  /** Cloudflare D1 database id。 */
+  city_d1_database_id?: string;
+  /** Cloudflare D1 database name。 */
+  city_d1_database_name?: string;
+  /** Worker runtime 中的 D1 binding 名称。 */
+  city_d1_binding?: string;
 }
 
 /** 已读取并解析完成的 City 项目配置文件。 */
@@ -60,12 +61,12 @@ export interface CityProjectConfigFile {
   config: CityProjectConfig;
 }
 
-/** 已读取并解析完成的 City 部署状态文件。 */
-export interface CityProjectDeployStateFile {
-  /** `.city/deploy.json` 的绝对路径。 */
-  state_path: string;
-  /** 当前部署状态。 */
-  state: CityProjectDeployState;
+/** 已读取并解析完成的 City 本地部署环境文件。 */
+export interface CityProjectDeployEnvFile {
+  /** `.env` 的绝对路径。 */
+  env_path: string;
+  /** 当前部署环境。 */
+  env: CityProjectDeployEnv;
 }
 
 /** 已解析的部署目标。 */
@@ -74,15 +75,13 @@ export interface CityDeployTarget {
   project_dir: string;
   /** 原始部署目标文本。 */
   source: string;
-  /** 部署目标是否来自远程 Git。 */
-  remote: boolean;
-  /** 清理远程临时目录的回调。 */
-  cleanup?: () => Promise<void>;
+  /** 部署目标是否为本地目录。 */
+  local: boolean;
 }
 
 /** `city deploy` 命令的执行选项。 */
 export interface CityDeployOptions {
-  /** 用户传入的部署目标，可以是空值、`.`、本地目录或 Git URL。 */
+  /** 用户传入的部署目标，可以是空值、`.` 或本地目录。 */
   source: string;
   /** 是否只执行 Wrangler dry-run。 */
   dry_run: boolean;

@@ -8,6 +8,7 @@
  * - 远程访问统一走 `RemoteAgent({ url })`，不再在 CLI 侧维护第二套 HTTP SDK transport。
  */
 import { createInterface } from "node:readline/promises";
+import fs from "fs-extra";
 import chalk from "chalk";
 import prompts from "prompts";
 import { RemoteAgent, } from "@downcity/agent";
@@ -15,7 +16,8 @@ import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { resolveProjectRootByAgentId, validateAgentProjectRoot, } from "../shared/PluginTargetSupport.js";
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
-import { resolveDaemonRpcEndpoint } from "../process/daemon/Client.js";
+import { resolveDaemonEndpoint, resolveDaemonRpcEndpoint, } from "../process/daemon/Client.js";
+import { getDaemonMetaPath } from "../process/daemon/Manager.js";
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
 function normalizeChatMessage(input) {
     return String(input || "").trim();
@@ -152,14 +154,59 @@ function printAgentChatFailure(params) {
         ],
     });
 }
-function createRemoteAgent(params) {
-    const endpoint = resolveDaemonRpcEndpoint({
+function pickArgValue(args, key) {
+    const idx = args.findIndex((item) => String(item).trim() === key);
+    if (idx < 0)
+        return undefined;
+    const next = String(args[idx + 1] || "").trim();
+    return next || undefined;
+}
+async function resolveAgentChatRemoteTarget(params) {
+    const explicit_host = String(params.transport?.host || "").trim();
+    const explicit_port = params.transport?.port;
+    // 关键点（中文）：显式 host/port 继续按 RPC 解释，保持已有 CLI 语义不变。
+    if (explicit_host || explicit_port !== undefined) {
+        const endpoint = resolveDaemonRpcEndpoint({
+            projectRoot: params.projectRoot,
+            host: params.transport?.host,
+            port: params.transport?.port,
+        });
+        return {
+            url: `rpc://${endpoint.host}:${endpoint.port}`,
+        };
+    }
+    try {
+        const metaPath = getDaemonMetaPath(params.projectRoot);
+        if (await fs.pathExists(metaPath)) {
+            const raw = (await fs.readJson(metaPath));
+            const args = Array.isArray(raw?.args)
+                ? raw.args.map((item) => String(item))
+                : [];
+            if (pickArgValue(args, "--rpc-port")) {
+                const endpoint = resolveDaemonRpcEndpoint({
+                    projectRoot: params.projectRoot,
+                });
+                return {
+                    url: `rpc://${endpoint.host}:${endpoint.port}`,
+                };
+            }
+        }
+    }
+    catch {
+        // ignore daemon meta parse errors and fallback to HTTP SDK endpoint
+    }
+    // 关键点（中文）：兼容旧 daemon，仅有 HTTP port 时回退到 SDK HTTP 路由。
+    const endpoint = resolveDaemonEndpoint({
         projectRoot: params.projectRoot,
-        host: params.transport?.host,
-        port: params.transport?.port,
     });
+    return {
+        url: `http://${endpoint.host}:${endpoint.port}`,
+    };
+}
+async function createRemoteAgent(params) {
+    const target = await resolveAgentChatRemoteTarget(params);
     return new RemoteAgent({
-        url: `rpc://${endpoint.host}:${endpoint.port}`,
+        url: target.url,
     });
 }
 async function getOrCreateRemoteSession(params) {
@@ -191,7 +238,7 @@ async function runSdkPromptTurn(params) {
             text: "",
         };
     }
-    const remote_agent = createRemoteAgent({
+    const remote_agent = await createRemoteAgent({
         projectRoot: resolved.target.projectRoot,
         transport: params.transport,
     });

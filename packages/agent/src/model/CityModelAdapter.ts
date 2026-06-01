@@ -34,6 +34,24 @@ type ProviderPromptMessage = {
 
 type ProviderStreamController = ReadableStreamDefaultController<Record<string, unknown>>;
 type ProviderContentPart = Record<string, unknown>;
+type ProviderPromptRole = "system" | "user" | "assistant" | "tool";
+
+type ProviderToolResultOutput = {
+  /**
+   * tool result 输出类型。
+   */
+  type?: unknown;
+
+  /**
+   * tool result 输出值。
+   */
+  value?: unknown;
+
+  /**
+   * tool 拒绝原因。
+   */
+  reason?: unknown;
+};
 
 function normalizeFinishReason(input: unknown): {
   unified: "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other";
@@ -72,12 +90,72 @@ function fileUrlFromProviderPart(part: Record<string, unknown>): string {
   return "";
 }
 
-function providerContentToUiParts(content: unknown): UIMessage["parts"] {
+function resolveProviderPromptRole(input: unknown): ProviderPromptRole {
+  return input === "system" || input === "user" || input === "assistant" || input === "tool"
+    ? input
+    : "user";
+}
+
+function normalizeProviderToolResultOutput(
+  output: ProviderToolResultOutput,
+): {
+  /**
+   * 归一后的 tool part 状态。
+   */
+  state: "output-available" | "output-error";
+
+  /**
+   * tool 成功输出。
+   */
+  output?: unknown;
+
+  /**
+   * tool 错误文本。
+   */
+  errorText?: string;
+} {
+  const outputType = typeof output.type === "string" ? output.type : "";
+  if (outputType === "json" || outputType === "text" || outputType === "content") {
+    return {
+      state: "output-available",
+      output: "value" in output ? output.value : null,
+    };
+  }
+  if (outputType === "error-json") {
+    return {
+      state: "output-error",
+      errorText: stringifyToolInput("value" in output ? output.value : null),
+    };
+  }
+  if (outputType === "error-text") {
+    return {
+      state: "output-error",
+      errorText: String(output.value ?? ""),
+    };
+  }
+  if (outputType === "execution-denied") {
+    return {
+      state: "output-error",
+      errorText: String(output.reason ?? "tool execution denied"),
+    };
+  }
+  return {
+    state: "output-available",
+    output,
+  };
+}
+
+function providerContentToUiParts(
+  content: unknown,
+  existingParts?: UIMessage["parts"],
+): UIMessage["parts"] {
   if (!Array.isArray(content)) {
     return [{ type: "text", text: textFromProviderContent(content) }];
   }
 
-  const parts: UIMessage["parts"] = [];
+  const parts: UIMessage["parts"] = Array.isArray(existingParts)
+    ? [...existingParts]
+    : [];
   for (const part of content) {
     if (!part || typeof part !== "object") continue;
     const record = part as Record<string, unknown>;
@@ -109,6 +187,55 @@ function providerContentToUiParts(content: unknown): UIMessage["parts"] {
         input: record.input,
         providerExecuted: Boolean(record.providerExecuted),
       });
+      continue;
+    }
+    if (record.type === "tool-result") {
+      const toolCallId = String(record.toolCallId ?? "");
+      const toolName = String(record.toolName ?? "");
+      const normalizedOutput = normalizeProviderToolResultOutput(
+        (record.output as ProviderToolResultOutput | undefined) ?? {},
+      );
+      const existingPart = parts.find((item) => {
+        if (!item || typeof item !== "object") return false;
+        const toolPart = item as { toolCallId?: unknown };
+        return String(toolPart.toolCallId ?? "") === toolCallId;
+      }) as
+        | ({
+            toolCallId?: unknown;
+            toolName?: unknown;
+            input?: unknown;
+            providerExecuted?: unknown;
+          } & Record<string, unknown>)
+        | undefined;
+      const baseInput = existingPart?.input ?? null;
+      const baseToolName = String(existingPart?.toolName ?? toolName);
+      const nextPart = normalizedOutput.state === "output-available"
+        ? {
+            type: "dynamic-tool" as const,
+            toolName: baseToolName,
+            toolCallId,
+            state: "output-available" as const,
+            input: baseInput,
+            output: normalizedOutput.output,
+            providerExecuted: false,
+          }
+        : {
+            type: "dynamic-tool" as const,
+            toolName: baseToolName,
+            toolCallId,
+            state: "output-error" as const,
+            input: baseInput,
+            errorText: normalizedOutput.errorText ?? "tool_error",
+            providerExecuted: false,
+          };
+      if (existingPart) {
+        const index = parts.indexOf(existingPart as never);
+        if (index >= 0) {
+          parts[index] = nextPart;
+          continue;
+        }
+      }
+      parts.push(nextPart);
     }
   }
   return parts;
@@ -116,19 +243,36 @@ function providerContentToUiParts(content: unknown): UIMessage["parts"] {
 
 function providerPromptToMessages(prompt: unknown): UIMessage[] {
   if (!Array.isArray(prompt)) return [];
-  return prompt
-    .map((message, index): UIMessage | null => {
-      if (!message || typeof message !== "object") return null;
-      const item = message as ProviderPromptMessage;
-      const role = item.role === "system" || item.role === "assistant" ? item.role : "user";
-      const parts = providerContentToUiParts(item.content);
-      return {
+  const messages: UIMessage[] = [];
+  for (const [index, message] of prompt.entries()) {
+    if (!message || typeof message !== "object") continue;
+    const item = message as ProviderPromptMessage;
+    const role = resolveProviderPromptRole(item.role);
+    if (role === "tool") {
+      const lastAssistantMessage = [...messages]
+        .reverse()
+        .find((candidate) => candidate.role === "assistant");
+      if (lastAssistantMessage) {
+        lastAssistantMessage.parts = providerContentToUiParts(
+          item.content,
+          lastAssistantMessage.parts,
+        );
+        continue;
+      }
+      messages.push({
         id: `city-model-message-${String(index)}`,
-        role,
-        parts,
-      };
-    })
-    .filter((message): message is UIMessage => Boolean(message));
+        role: "assistant",
+        parts: providerContentToUiParts(item.content),
+      });
+      continue;
+    }
+    messages.push({
+      id: `city-model-message-${String(index)}`,
+      role,
+      parts: providerContentToUiParts(item.content),
+    });
+  }
+  return messages;
 }
 
 function providerOptionsToInput(options: Record<string, unknown>): CityModelInvokeInput {
@@ -161,15 +305,40 @@ function uiMessageToProviderContent(message: UIMessage): ProviderContentPart[] {
         toolCallId?: unknown;
         toolName?: unknown;
         input?: unknown;
+        output?: unknown;
+        errorText?: unknown;
+        state?: unknown;
         providerExecuted?: unknown;
       };
-      return [{
+      const content: ProviderContentPart[] = [{
         type: "tool-call",
         toolCallId: String(toolPart.toolCallId ?? ""),
         toolName: String(toolPart.toolName ?? ""),
         input: stringifyToolInput(toolPart.input),
         providerExecuted: Boolean(toolPart.providerExecuted),
       }];
+      if (toolPart.state === "output-available") {
+        content.push({
+          type: "tool-result",
+          toolCallId: String(toolPart.toolCallId ?? ""),
+          toolName: String(toolPart.toolName ?? ""),
+          output: {
+            type: "json",
+            value: toolPart.output ?? null,
+          },
+        });
+      } else if (toolPart.state === "output-error") {
+        content.push({
+          type: "tool-result",
+          toolCallId: String(toolPart.toolCallId ?? ""),
+          toolName: String(toolPart.toolName ?? ""),
+          output: {
+            type: "error-text",
+            value: String(toolPart.errorText ?? "tool_error"),
+          },
+        });
+      }
+      return content;
     }
     return [];
   });

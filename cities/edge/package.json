@@ -6,7 +6,10 @@
   "scripts": {
     "build": "pnpm -C ../../packages/city build && pnpm -C ../../packages/services build",
     "dev": "wrangler dev",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "deploy": "city deploy",
+    "deploy:dry": "city deploy --dry-run",
+    "deploy:verify": "city deploy --verify"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.67",

@@ -8,12 +8,10 @@
  */
 
 import { isCancel, select, text } from "@clack/prompts";
+import { readCloudflareAccountId, writeCloudflareAccountId } from "../../core/session.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
 import type { CityProjectDeployEnvFile } from "../../types/CityProjectConfig.js";
-import {
-  writeCityProjectDeployEnv,
-} from "../config/CityProjectEnvLoader.js";
 import { runCommand } from "./CommandRunner.js";
 
 /** Cloudflare account 解析参数。 */
@@ -40,10 +38,9 @@ export interface ResolveCloudflareAccountResult {
 export async function resolveCloudflareAccount(
   params: ResolveCloudflareAccountParams,
 ): Promise<ResolveCloudflareAccountResult> {
-  const saved_account_id = params.env_file.env.cloudflare_account_id;
   const initial_account_id = normalizeAccountId(params.account_id)
     ?? normalizeAccountId(process.env.CLOUDFLARE_ACCOUNT_ID)
-    ?? normalizeAccountId(saved_account_id);
+    ?? normalizeAccountId(readCloudflareAccountId());
 
   if (initial_account_id) {
     return persistCloudflareAccount(params.env_file, initial_account_id);
@@ -87,7 +84,7 @@ async function resolveAccountAfterLookupDenied(
     throw new CliError({
       title: "Cloudflare account required",
       note: "Wrangler credential exists, but Cloudflare rejected user/account lookup, so city cannot choose an account automatically.",
-      fix: "Run city deploy --account-id <account_id> or set CLOUDFLARE_ACCOUNT_ID in .env.",
+      fix: "Run city deploy --account-id <account_id> or rerun in an interactive terminal.",
     });
   }
 
@@ -108,7 +105,7 @@ async function resolveAccountAfterLookupDenied(
       {
         label: "Enter account id",
         value: "enter-account-id",
-        hint: "Saved to project .env",
+        hint: "Saved to local City CLI state",
       },
       {
         label: "Cancel deploy",
@@ -161,7 +158,7 @@ async function promptForAccountId(
 }
 
 /**
- * 保存 Cloudflare account id 到项目 `.env`。
+ * 保存 Cloudflare account id 到本地 City CLI 状态。
  */
 function persistCloudflareAccount(
   env_file: CityProjectDeployEnvFile,
@@ -175,12 +172,10 @@ function persistCloudflareAccount(
     });
   }
 
-  const next_env_file = writeCityProjectDeployEnv(env_file, {
-    cloudflare_account_id: normalized_account_id,
-  });
+  writeCloudflareAccountId(normalized_account_id);
   return {
     account_id: normalized_account_id,
-    env_file: next_env_file,
+    env_file,
   };
 }
 

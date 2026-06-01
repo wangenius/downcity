@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `city deploy` 默认读取目标目录下的 `.env`，方便本地显式部署。
- * - `.env` 保存部署绑定信息，例如 Cloudflare account、D1 name 和 binding。
+ * - `.env` 只保存 City 项目自身真正需要的部署输入，例如 D1 name。
  * - Provider key、Stripe key 等业务密钥仍应写入 City env 表，而不是写入公开客户端。
  */
 
@@ -16,10 +16,7 @@ import type {
 } from "../../types/CityProjectConfig.js";
 
 const DEPLOY_ENV_KEYS = [
-  "CITY_TARGET",
-  "CLOUDFLARE_ACCOUNT_ID",
   "CITY_D1_DATABASE_NAME",
-  "CITY_D1_BINDING",
 ] as const;
 
 /**
@@ -42,9 +39,7 @@ export function readCityProjectDeployEnv(project_dir: string): CityProjectDeploy
   return {
     env_path,
     env: normalizeDeployEnv({
-      cloudflare_account_id: file_env.CLOUDFLARE_ACCOUNT_ID ?? process.env.CLOUDFLARE_ACCOUNT_ID,
       city_d1_database_name: file_env.CITY_D1_DATABASE_NAME ?? process.env.CITY_D1_DATABASE_NAME,
-      city_d1_binding: file_env.CITY_D1_BINDING ?? process.env.CITY_D1_BINDING,
     }),
   };
 }
@@ -80,9 +75,7 @@ export function writeCityProjectDeployEnv(
  */
 function normalizeDeployEnv(input: Partial<CityProjectDeployEnv>): CityProjectDeployEnv {
   return {
-    cloudflare_account_id: clean(input.cloudflare_account_id),
     city_d1_database_name: clean(input.city_d1_database_name),
-    city_d1_binding: clean(input.city_d1_binding),
   };
 }
 
@@ -90,12 +83,8 @@ function normalizeDeployEnv(input: Partial<CityProjectDeployEnv>): CityProjectDe
  * 渲染部署环境变量。
  */
 function renderDeployEnv(env: CityProjectDeployEnv): Record<string, string> {
-  const values: Record<string, string> = {
-    CITY_TARGET: "cloudflare-workers",
-  };
-  if (env.cloudflare_account_id) values.CLOUDFLARE_ACCOUNT_ID = env.cloudflare_account_id;
+  const values: Record<string, string> = {};
   if (env.city_d1_database_name) values.CITY_D1_DATABASE_NAME = env.city_d1_database_name;
-  if (env.city_d1_binding) values.CITY_D1_BINDING = env.city_d1_binding;
   return values;
 }
 
@@ -126,6 +115,9 @@ function upsertEnvValues(text: string, values: Record<string, string>): string {
     !line.match(/^\s*CITY_D1_DATABASE_ID\s*=/)
     && !line.match(/^\s*CITY_WORKER_URL\s*=/)
     && !line.match(/^\s*DOWNCITY_WORKER_URL\s*=/)
+    && !line.match(/^\s*CITY_TARGET\s*=/)
+    && !line.match(/^\s*CLOUDFLARE_ACCOUNT_ID\s*=/)
+    && !line.match(/^\s*CITY_D1_BINDING\s*=/)
   ));
   return `${filtered_lines.join("\n").replace(/\n+$/, "")}\n`;
 }

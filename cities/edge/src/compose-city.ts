@@ -1,8 +1,10 @@
 /**
  * Edge CityBase 装配模块。
  *
- * Edge 街区拥有自己的 CityBase 组装逻辑，方便针对 Cloudflare Worker
- * 继续演化 D1、缓存、计费 hook 等运行时能力。
+ * 关键点（中文）
+ * - 这里负责组装 edge 项目的默认 City 服务能力。
+ * - 示例项目把 accounts、balance、payment、usage、ai 这些常见服务集中接好。
+ * - 后续继续扩展 D1、缓存、计费 hook 或自定义 service 时，都从这里演化。
  */
 
 import { CityBase, AIService, type CityBaseOptions, type ModelConfig } from "@downcity/city";

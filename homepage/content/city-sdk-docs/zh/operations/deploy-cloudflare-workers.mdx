@@ -78,11 +78,10 @@ city deploy ./my-city
 常用本地参数可以写在项目目录的 `.env`：
 
 ```bash
-CITY_TARGET=cloudflare-workers
-CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>
 CITY_D1_DATABASE_NAME=my-city-db
-CITY_D1_BINDING=DB
 ```
+
+Cloudflare account 不属于 City 项目配置。`city deploy` 会优先复用 Wrangler 登录态；只有 Cloudflare 无法自动识别 account 时，才会引导你输入一次并保存到本地 City CLI 状态。
 
 也可以部署时临时传入 account id：
 
@@ -116,7 +115,7 @@ city deploy ./my-city --dry-run
 - 对 `cloudflare-workers` target 按 `CITY_D1_DATABASE_NAME` 查找 D1；不存在时自动创建
 - 临时生成 Wrangler 配置，不写入项目目录
 - 执行 `wrangler deploy --config <generated-wrangler.toml>`
-- 把 D1 database name 和 binding 等部署结果写回项目 `.env`
+- 把 D1 database name 等部署结果写回项目 `.env`
 - 自动把部署出来的 Worker URL 注册成当前 City server
 - 在传入 `--verify` 时请求 Worker `/health`
 

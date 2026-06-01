@@ -63,7 +63,6 @@ export async function resolveD1Database(
   if (listed_database_id) {
     const next_env_file = writeCityProjectDeployEnv(params.env_file, {
       city_d1_database_name: database.name,
-      city_d1_binding: database.binding,
     });
 
     emitCliBlock({
@@ -114,7 +113,6 @@ export async function resolveD1Database(
 
   const next_env_file = writeCityProjectDeployEnv(params.env_file, {
     city_d1_database_name: database.name,
-    city_d1_binding: database.binding,
   });
 
   emitCliBlock({

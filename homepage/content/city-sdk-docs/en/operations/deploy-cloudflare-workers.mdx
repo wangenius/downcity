@@ -78,11 +78,10 @@ city deploy ./my-city
 Common local values can live in the project `.env`:
 
 ```bash
-CITY_TARGET=cloudflare-workers
-CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>
 CITY_D1_DATABASE_NAME=my-city-db
-CITY_D1_BINDING=DB
 ```
+
+Cloudflare account is not part of the City project config. `city deploy` reuses Wrangler login first; only when Cloudflare cannot resolve the account automatically does City prompt once and save it into local City CLI state.
 
 You can also pass the account id for one deploy:
 
@@ -116,7 +115,7 @@ city deploy ./my-city --dry-run
 - prepares D1 for the `cloudflare-workers` target by looking up `CITY_D1_DATABASE_NAME`, and creates it automatically when missing
 - generates Wrangler config temporarily instead of writing it into the project directory
 - runs `wrangler deploy --config <generated-wrangler.toml>`
-- writes the D1 database name and related deploy bindings back to the project `.env`
+- writes the D1 database name back to the project `.env`
 - automatically registers the deployed Worker URL as the current City server
 - requests Worker `/health` when `--verify` is passed
 

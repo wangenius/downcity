@@ -1,7 +1,10 @@
 /**
- * Downcity Cloudflare Worker。
- * 业务 env 统一由 CityBase 自己管理。
- * Worker 只负责提供基础运行时能力（如 D1）。
+ * Downcity edge City 示例入口。
+ *
+ * 关键点（中文）
+ * - 这是一个标准的 City edge 项目示例，部署入口统一走 `city deploy`。
+ * - 业务 env、admin key、provider key 统一由 City 自己管理。
+ * - Worker 只负责承接 Edge runtime 能力，例如 D1 与 HTTP request。
  */
 
 import { drizzle } from "drizzle-orm/d1";

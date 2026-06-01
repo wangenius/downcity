@@ -55,6 +55,8 @@ export interface ClientConfig {
   active_server_url?: string;
   /** 已保存的 server 列表 */
   servers: ServerProfile[];
+  /** 当前 Cloudflare account id，属于 CLI 本地 provider 状态。 */
+  cloudflare_account_id?: string;
   /** 当前选择的模型 ID */
   model: string;
   /** 上次使用的身份 */
@@ -76,6 +78,9 @@ export function readConfig(): ClientConfig {
   return {
     active_server_url,
     servers,
+    cloudflare_account_id: typeof raw.cloudflare_account_id === "string"
+      ? raw.cloudflare_account_id.trim() || undefined
+      : undefined,
     model: typeof raw.model === "string" ? raw.model : "",
     last_identity: raw.last_identity === "admin" || raw.last_identity === "user"
       ? raw.last_identity
@@ -95,8 +100,29 @@ export function writeConfig(config: ClientConfig): void {
   writeJSON(CONFIG_FILE, {
     active_server_url: active,
     servers: normalizedServers,
+    cloudflare_account_id: typeof config.cloudflare_account_id === "string"
+      ? config.cloudflare_account_id.trim() || undefined
+      : undefined,
     model: config.model ?? "",
     last_identity: config.last_identity,
+  });
+}
+
+/**
+ * 读取当前保存的 Cloudflare account id。
+ */
+export function readCloudflareAccountId(): string | undefined {
+  return readConfig().cloudflare_account_id;
+}
+
+/**
+ * 写入当前 Cloudflare account id。
+ */
+export function writeCloudflareAccountId(account_id: string): void {
+  const config = readConfig();
+  writeConfig({
+    ...config,
+    cloudflare_account_id: String(account_id).trim() || undefined,
   });
 }
 

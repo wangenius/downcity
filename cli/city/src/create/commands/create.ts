@@ -191,10 +191,7 @@ function createCloudflareWorkersFiles(
       path: ".env.example",
       content: [
         "# Local deploy values.",
-        "CITY_TARGET=cloudflare-workers",
-        "CLOUDFLARE_ACCOUNT_ID=",
         `CITY_D1_DATABASE_NAME=${name}-db`,
-        "CITY_D1_BINDING=DB",
         "",
       ].join("\n"),
     },

@@ -1,0 +1,61 @@
+---
+title: town chat
+description: Managed chat plugin commands for channel runtime, messaging, conversation inspection, and authorization
+---
+
+# `town chat`
+
+`town chat` is the managed chat plugin command group.
+
+Use it when you want to manage channel runtime, inspect conversations, send messages, react to messages, or manage platform-user authorization.
+
+## Usage
+
+```bash
+town chat
+town chat <subcommand> [options]
+```
+
+## Main subcommands
+
+- `status`
+- `test`
+- `reconnect`
+- `open`
+- `close`
+- `configuration`
+- `configure`
+- `list`
+- `info`
+- `send`
+- `react`
+- `context`
+- `delete`
+- `history`
+- `auth set <platform:userId>`
+
+## Scheduling
+
+`send` supports one-shot delayed or scheduled execution through:
+
+- `--delay <ms>`
+- `--time <time>`
+
+Use this for “send one existing message later”. For reusable automations or cron-style work, use `town task`.
+
+## Examples
+
+```bash
+town chat list --limit 20
+town chat info --chat-key ctx_xxxxxxxxxxxxxxxx
+town chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
+town chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
+town chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
+town chat auth set telegram:12345678 --role admin
+```
+
+## Related
+
+- [`Plugin Scheduling`](/en/products-docs/town-cli/plugin/schedule)
+- [`town task`](/en/products-docs/town-cli/plugin/task)
+- [`Plugins Docs / chat`](/en/plugins-docs/builtins/chat)

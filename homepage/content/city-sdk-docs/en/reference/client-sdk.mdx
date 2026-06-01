@@ -1,0 +1,90 @@
+---
+title: SDK Overview
+description: "The Downcity SDK is split by role: User City owns town-runtime calls, while Admin City owns trusted-side management calls."
+---
+
+This page does one job: it pulls the calling model of `@downcity/city` into one reference overview.
+
+If you want the integration story first, start with [@downcity/city](/en/city-sdk-docs/packages/city/city). If you need concrete method details, continue to [User City](/en/city-sdk-docs/reference/city-user) and [Admin City](/en/city-sdk-docs/reference/city-admin).
+
+## Two roles
+
+| | User City | Admin City |
+|---|---|---|
+| Used by | frontend, app, extension, desktop client | town backend, ops scripts, internal tools |
+| Owns | AI services, custom services, public services | towns, tokens, runtime env, admin-side services |
+| Common auth | `user_token` | `admin_secret_key` |
+| Safe in browser | yes | no |
+
+## Four common call types
+
+```ts
+// Town side
+const client = new City({
+  role: "user",
+  city_url,
+  town_id,
+  user_token,
+});
+
+// AI Service
+await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
+await client.ai.stream({ prompt: "hello" });
+
+// Custom Service
+await client.service("translate").action("zh2en").invoke({ text: "hello" });
+await client.service("accounts").action("login").invoke({ email: "a@b.com", password: "..." });
+
+// GET action
+const items = await client.service("towns").get("list");
+
+// Payment methods
+const methods = await client.payment.methods();
+const checkout = await client.payment.method("stripe").invoke({
+  topup_id: "topup_demo",
+});
+
+// Admin side
+const admin = new City({
+  role: "admin",
+  city_url,
+  admin_secret_key,
+});
+await admin.service("towns").action("create").invoke({ name: "My App" });
+```
+
+## Relationship between service, service, and AI service
+
+- AI service: called through `client.ai.*`
+- custom service: called through `client.service(name)...`
+- service: still called through `client.service(name)...`, but the service comes from a service
+
+Examples:
+
+- `rewrite`, `translate`: custom services you registered yourself
+- `accounts`, `usage`, `payment`, `payment.stripe`: services exposed by official packages
+
+From the caller's point of view, they all live in the same City service route space.
+
+## Where registration and login fit in the SDK model
+
+The two most common paths are:
+
+1. your backend finishes login first, then uses `Admin City` to request `user_token`
+2. the frontend uses a guest `User City` to call `accounts.login/register`, and the accounts service returns `user_token`
+
+Both paths end in the same user context:
+
+```txt
+city_url + town_id + user_token
+  -> new City({ role: "user", ... })
+  -> client.ai.* or client.service(...)
+```
+
+## Which page to read next
+
+1. To understand package composition, read [Packages](/en/city-sdk-docs/packages)
+2. To understand town integration, read [@downcity/city](/en/city-sdk-docs/packages/city/city)
+3. For detailed town-side calls, read [User City](/en/city-sdk-docs/reference/city-user)
+4. For trusted-side management, read [Admin City](/en/city-sdk-docs/reference/city-admin)
+5. For minimal auth, read [Services SDK Accounts](/en/services-sdk-docs/accounts)

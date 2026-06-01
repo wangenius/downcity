@@ -1,0 +1,66 @@
+---
+title: 环境变量
+description: City 运行时常见环境变量。
+---
+
+| 变量 | 用途 |
+| --- | --- |
+| `DOWNCITY_CITY_ADMIN_SECRET_KEY` | `Admin City` 管理 City |
+| `DOWNCITY_CITY_TOKEN_SIGNING_KEY` | City 内部签发和校验 `user_token` |
+| `DOWNCITY_CITY_DATABASE_URL` | 可选。指定 City 使用的数据库 URL |
+| `OPENAI_API_KEY` | 示例 provider key，建议通过 Admin env 写入 City 数据库 |
+| `OPENAI_BASE_URL` | 示例 provider base URL，建议通过 Admin env 写入 City 数据库 |
+
+`DOWNCITY_CITY_ADMIN_SECRET_KEY`、`DOWNCITY_CITY_TOKEN_SIGNING_KEY` 和 `BETTER_AUTH_SECRET` 会在 City 首次启动时自动写入 City 数据库的 `env` 表。provider API key 也统一通过 Admin API / Town CLI 写入同一张表。
+
+`DOWNCITY_CITY_DATABASE_URL` 不填时，默认数据库路径是：
+
+```plaintext
+.base/downcity.sqlite
+```
+
+## provider env 的使用方式
+
+model handler 直接读取 `ctx.env`：
+
+```ts
+const deepseek = new Provider("deepseek", {
+  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+  envKey: "DEEPSEEK_API_KEY",
+  text: async (ctx) => {
+    const apiKey = ctx.env("DEEPSEEK_API_KEY");
+    const { createOpenAI } = await import("@ai-sdk/openai");
+    const client = createOpenAI({
+      apiKey,
+      baseURL: "https://api.deepseek.com",
+    });
+    const result = await generateText({
+      model: client.chat("deepseek-v4-flash"),
+      prompt: ctx.input.prompt,
+    });
+    return assistantMessage(result.text, ctx);
+  },
+  stream: async (ctx) => { /* ... */ },
+});
+```
+
+所以实际约束很简单：
+
+- env key 名称由你自己决定
+- 建议使用大写下划线命名
+- handler 里通过 `ctx.env(key)` 读取
+
+## 写入数据库
+
+可信后端可以用 `Admin City` 写入 provider key：
+
+```ts
+await admin.env.upsert({
+  key: "DEEPSEEK_API_KEY",
+  value: "sk-xxx",
+});
+```
+
+这些值会保存到 City 数据库的 `env` 表。业务 Runtime 只从 City 自己的 env 表读取，不再回退到 `.env` 或进程环境变量。
+
+详见 [Provider 环境变量](/zh/city-sdk-docs/guides/provider-env)。

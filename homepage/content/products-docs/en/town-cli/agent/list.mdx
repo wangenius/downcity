@@ -1,0 +1,43 @@
+---
+title: town agent list
+description: List agent projects registered in city
+---
+
+# `town agent list`
+
+List agent projects already registered in the city registry.
+
+> This page remains as a command entry point. For the fuller explanation, see [CLI / list](/en/docs/agent/cli/lifecycle/list) and [Agent Registry](/en/docs/agent/cli/maintenance/registry).
+
+## Usage
+
+```bash
+town agent list
+town agent list --running
+```
+
+## Behavior
+
+- Shows registered agent projects from the city registry.
+- `--running` filters the list to currently active agent daemons only.
+- Displays both running and stopped entries.
+- Helps you see which agents are available for interactive `town agent start`.
+
+## Related commands
+
+- [`town agent start`](/en/products-docs/town-cli/agent/start)
+- [`town agent status`](/en/products-docs/town-cli/agent/status)
+
+## Example Output
+
+```text
+town v1.0.437
+
+Agents                                           2 registered
+  lucas_whitman
+    project   /Users/you/Documents/bots/lucas_whitman
+    status    running
+  research_lab
+    project   /Users/you/Documents/bots/research_lab
+    status    stopped
+```

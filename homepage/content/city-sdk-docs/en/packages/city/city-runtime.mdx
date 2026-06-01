@@ -1,0 +1,150 @@
+---
+title: City
+description: "The role of the City instance, runtime, router, and serve inside @downcity/city."
+---
+
+`@downcity/city`'s City is the long-running server container of Downcity. It is where the Drizzle db, services, auth, and the shared `/v1/*` route space come together.
+
+## What this concept means
+
+A simple way to think about City is:
+
+> one reusable AI infrastructure runtime process that many towns can keep calling over time.
+
+That process owns:
+
+- the Drizzle database connection
+- the service registry
+- service mounting
+- the HTTP route surface
+- town, token, and env infrastructure
+
+## When this page matters
+
+- you are about to run a real City for the first time
+- you want to understand why `City` only needs a Drizzle db
+- you want clarity on `router()`, `handleRequest()`, and `serve()`
+- you want to mount City into Node, Workers, or another HTTP host
+
+## Minimal runnable example
+
+```ts
+import { AIService, City } from "@downcity/city";
+import { serve } from "@hono/node-server";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+
+const sqlite = new Database("./.base/downcity.sqlite");
+sqlite.pragma("journal_mode = WAL");
+
+const db = Object.assign(drizzle(sqlite), {
+  $client: { exec: (sql: string) => sqlite.exec(sql) },
+});
+
+const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
+
+const ai = new AIService();
+
+ai.use({
+  id: "local-echo",
+  name: "Local Echo",
+  default: ["text"],
+  actions: {
+    text: async (ctx) => ({
+      id: crypto.randomUUID(),
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          text: String(ctx.input.prompt ?? ""),
+          state: "done",
+        },
+      ],
+    }),
+  },
+});
+
+base.use(ai);
+
+await base.health();
+
+serve({
+  fetch: base.router().fetch,
+  port: 43127,
+  hostname: "127.0.0.1",
+});
+```
+
+The important ideas in that example are:
+
+1. `db` decides which Drizzle database City uses.
+2. `base.use(...)` decides which capabilities City exposes.
+3. `base.router()` and `base.handleRequest()` decide how City enters your HTTP layer.
+
+## Scenario 1: City is the main service
+
+If you want City itself to be the main HTTP entry, `serve()` is the clearest mental model:
+
+```ts
+import { serve } from "@hono/node-server";
+
+await base.health();
+serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
+```
+
+## Scenario 2: City is mounted into your existing server
+
+If you already have a server framework, handing requests into City is often the cleaner pattern:
+
+```ts
+export default {
+  async fetch(request: Request) {
+    return base.handleRequest(request);
+  },
+};
+```
+
+## Why City only takes db
+
+`@downcity/city` owns the logic that should stay stable across runtimes:
+
+- service lifecycle
+- action routes
+- token auth
+- town / env / store infrastructure
+
+The host runtime only needs to create the database object:
+
+- Node.js can use `drizzle-orm/better-sqlite3` or Drizzle pg
+- Cloudflare Workers can use `drizzle-orm/d1`
+- City writes required runtime env into the built-in `env` table on boot
+
+## Common API surface
+
+- `new CityBase({ db })`
+- `base.use(...)`
+- `base.router()`
+- `base.handleRequest(request)`
+- `base.health()`
+- `base.table(name)`
+
+## Common misunderstandings
+
+### City is not a City SDK
+
+City is the long-running server runtime. Town-side calling still belongs to [@downcity/city](/en/city-sdk-docs/packages/city/city).
+
+### City is not only an HTTP proxy
+
+It also owns built-in tables, token and env infrastructure, service data layers, and hook lifecycle.
+
+### City is not one provider
+
+Providers, models, services, and custom services are capabilities mounted into City, not the City itself.
+
+## Read next
+
+- For what actually gets mounted into City, read [Service and Action](/en/city-sdk-docs/packages/city/service-and-action)
+- For hooks and extension points, read [Hooks and Service Mounting](/en/city-sdk-docs/packages/city/hooks-and-service)
+- For persistence and tables, read [Store and Table](/en/city-sdk-docs/packages/city/store-and-table)
+- For lower-level method details, read [City API](/en/city-sdk-docs/reference/city-runtime)

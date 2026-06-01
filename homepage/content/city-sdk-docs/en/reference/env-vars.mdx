@@ -1,0 +1,66 @@
+---
+title: Environment Variables
+description: Common environment variables used by the City.
+---
+
+| Variable | Purpose |
+| --- | --- |
+| `DOWNCITY_CITY_ADMIN_SECRET_KEY` | Lets `Admin City` manage City |
+| `DOWNCITY_CITY_TOKEN_SIGNING_KEY` | Lets City issue and validate `user_token` internally |
+| `DOWNCITY_CITY_DATABASE_URL` | Optional. Specifies the database URL used by City |
+| `OPENAI_API_KEY` | Example provider key; recommended to write it into the City database through Admin env |
+| `OPENAI_BASE_URL` | Example provider base URL; recommended to write it into the City database through Admin env |
+
+`DOWNCITY_CITY_ADMIN_SECRET_KEY`, `DOWNCITY_CITY_TOKEN_SIGNING_KEY`, and `BETTER_AUTH_SECRET` are generated automatically on first boot and stored in City's `env` table. Provider API keys should be written into the same table through the Admin API or Town CLI.
+
+If `DOWNCITY_CITY_DATABASE_URL` is omitted, the default database path is:
+
+```plaintext
+.base/downcity.sqlite
+```
+
+## How provider env is used
+
+The model handler reads directly from `ctx.env`:
+
+```ts
+const deepseek = new Provider("deepseek", {
+  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+  envKey: "DEEPSEEK_API_KEY",
+  text: async (ctx) => {
+    const apiKey = ctx.env("DEEPSEEK_API_KEY");
+    const { createOpenAI } = await import("@ai-sdk/openai");
+    const client = createOpenAI({
+      apiKey,
+      baseURL: "https://api.deepseek.com",
+    });
+    const result = await generateText({
+      model: client.chat("deepseek-v4-flash"),
+      prompt: ctx.input.prompt,
+    });
+    return assistantMessage(result.text, ctx);
+  },
+  stream: async (ctx) => { /* ... */ },
+});
+```
+
+So the practical rules are simple:
+
+- you choose the env key names yourself
+- uppercase snake case is recommended
+- read values through `ctx.env(key)` inside the handler
+
+## Write values into the database
+
+A trusted backend can write provider keys through `Admin City`:
+
+```ts
+await admin.env.upsert({
+  key: "DEEPSEEK_API_KEY",
+  value: "sk-xxx",
+});
+```
+
+These values are stored in the `env` table inside the City database. Business runtime reads only from that City-managed env table and no longer falls back to `.env` or process environment variables.
+
+See also [Provider environment variables](/en/city-sdk-docs/guides/provider-env).

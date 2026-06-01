@@ -1,0 +1,67 @@
+---
+title: "@downcity/services"
+description: "统一安装 Downcity 官方 accounts、balance、usage 和 Stripe 支付服务。"
+---
+
+`@downcity/services` 把 Downcity 官方服务合并成一个包，但仍然保留清晰的能力边界。
+
+你安装一个包，就能按需启用：
+
+- `accountsService()`：注册、登录、OAuth、会话和 `user_token`
+- `balanceService()`：全局余额、流水、充值单和 redeem code
+- `paymentService()`：统一暴露当前 City 开放的支付方式
+- `usageService()`：记录真实用户侧 service 调用事实
+- `stripePaymentService()`：把 Stripe 一次性充值同步成余额到账
+
+## 安装
+
+```bash
+pnpm add @downcity/services
+```
+
+## 最小接入
+
+```ts
+import { CityBase } from "@downcity/city";
+import {
+  accountsService,
+  balanceService,
+  paymentService,
+  stripePaymentMethod,
+  stripePaymentService,
+  usageService,
+} from "@downcity/services";
+
+const base = new CityBase();
+const balance = balanceService();
+
+base.use(accountsService());
+base.use(balance);
+base.use(paymentService({
+  methods: [
+    stripePaymentMethod(),
+  ],
+}));
+base.use(usageService());
+base.use(stripePaymentService({
+  balance: {
+    readTopup: async (topup_id) => await balance.readTopup(topup_id),
+    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  },
+}));
+```
+
+产品侧通常先调用：
+
+```ts
+const methods = await guest.service("payment").get("methods");
+```
+
+然后再根据返回的 `methods.items` 选择具体支付方式，比如 `payment.stripe`。
+
+## 按能力阅读
+
+1. 账号能力读 [Accounts 服务](/zh/services-sdk-docs/accounts)
+2. 余额能力读 [Balance 服务](/zh/services-sdk-docs/balance)
+3. 使用记录读 [Usage 服务](/zh/services-sdk-docs/usage)
+4. Stripe 充值读 [Stripe Payment 服务](/zh/services-sdk-docs/payment-stripe)

@@ -1,0 +1,121 @@
+---
+title: "@downcity/city"
+description: "The City core: services, models, auth, and the unified route surface."
+---
+
+`@downcity/city` is the City itself. If you are deploying a real City that will serve one or more towns, this is the package everything rests on.
+
+This is not a small helper around an AI SDK. It is the core server-side City where your AI services, custom services, official services, and shared `/v1/*` route surface come together.
+
+## How to read this section
+
+The best reading order is:
+
+1. Start with [City and bootstrapping](/en/city-sdk-docs/packages/city/city-runtime) to understand what a `City` instance actually owns.
+2. Continue with [Service and Action design](/en/city-sdk-docs/packages/city/service-and-action) to see why AI services, custom services, and services all end up behind one route model.
+3. Read [Hooks and service integration](/en/city-sdk-docs/packages/city/hooks-and-service) when you need extension points.
+4. Read [Store and table data model](/en/city-sdk-docs/packages/city/store-and-table) when you need to understand persistence and table layout.
+
+If you only want the big picture first, finish this page and then follow the sequence above.
+
+## What this package actually owns
+
+- creating the `City` instance
+- registering `Service`, official services, and `AIService`
+- town, env, and token-related built-in capabilities
+- the unified `/v1/*` route boundary
+- City access through `User City`, `Admin City`, and `City`
+
+## What it does not own
+
+- It does not create the concrete database connection. Create a Drizzle ORM db and pass it to `new CityBase({ db })`.
+- It does not own ready-made auth, usage, or payment business logic. Those come from official services.
+
+## When this should be your first stop
+
+- you are building a real City deployment
+- you need your own AI services or custom services
+- you want shared auth, hooks, and model catalogs behind one backend
+
+## Most common package combinations
+
+| Goal | Package combination |
+| --- | --- |
+| Local or standard Node deployment | `@downcity/city` + Drizzle SQLite / Postgres |
+| Town frontend or app calls | `@downcity/city` City exports |
+| Accounts, usage, or payments | `@downcity/city` + the matching official service |
+
+## Install
+
+```bash
+pnpm add @downcity/city drizzle-orm better-sqlite3
+```
+
+## Minimal example
+
+```ts
+import { CityBase, AIService } from "@downcity/city";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+
+const sqlite = new Database("./data.sqlite");
+sqlite.pragma("journal_mode = WAL");
+
+const db = Object.assign(drizzle(sqlite), {
+  $client: { exec: (sql: string) => sqlite.exec(sql) },
+});
+
+const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
+
+const ai = new AIService();
+
+ai.use({
+  id: "local-echo",
+  name: "Local Echo",
+  default: ["text"],
+  actions: {
+    text: async (ctx) => ({
+      id: crypto.randomUUID(),
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          text: String(ctx.input.prompt ?? ""),
+          state: "done",
+        },
+      ],
+    }),
+  },
+});
+
+base.use(ai);
+```
+
+This example shows the runtime side of `@downcity/city`: it is where the database and services are mounted into one City. For town-side calls, use the City exports from the same package.
+
+## Typical reading paths
+
+### If you want to write your own business service
+
+- Read [Service and Action design](/en/city-sdk-docs/packages/city/service-and-action)
+- Then read [City](/en/city-sdk-docs/packages/city/city) to understand how towns will call that service
+
+### If you want to add official services
+
+- Read [Hooks and service integration](/en/city-sdk-docs/packages/city/hooks-and-service)
+- Then continue with the matching service pages:
+  - [@downcity/services](/en/services-sdk-docs)
+  - [@downcity/services](/en/services-sdk-docs)
+  - [@downcity/services](/en/services-sdk-docs)
+
+### If you want to deploy and operate it
+
+- Read [City and bootstrapping](/en/city-sdk-docs/packages/city/city-runtime)
+- Then read [City CLI](/en/city-sdk-docs/packages/cli) for setup and debugging workflows
+
+## Read next
+
+- For the topic-specific deep dives, go straight into the four subpages above
+- For town-side calls, continue with [City](/en/city-sdk-docs/packages/city/city)
+- For Worker deployment, continue with [Cloudflare Workers](/en/city-sdk-docs/guides/cloudflare-workers)
+- For concrete interfaces, jump to [City API](/en/city-sdk-docs/reference/city-runtime)

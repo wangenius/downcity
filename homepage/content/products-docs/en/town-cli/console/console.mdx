@@ -1,0 +1,110 @@
+---
+title: town console
+description: Manage the Console module (single instance, multi-agent view)
+---
+
+# `town console`
+
+`town console` manages the Console module itself.
+
+Console is the web control surface for Downcity:
+
+- one Console instance
+- multiple agent views
+- global model / env / auth / plugin management
+- agent switching and proxying
+
+## Usage
+
+```bash
+town console [action] [options]
+```
+
+## Actions
+
+- `start`: start Console in background
+- `stop`: stop Console
+- `restart`: restart Console
+- `status`: show Console status
+
+If `action` is omitted, `start` is used.
+
+## Options
+
+- `-p, --public [enabled]`: start Console in public mode and bind it to `0.0.0.0`
+- `-h, --host <host>`: Console host, default `127.0.0.1`
+
+If you pass `-p` without `-h`, the CLI automatically switches the bind host to `0.0.0.0` so the server can expose Console externally.
+
+## Important behavior
+
+- Console depends on Town runtime. Start runtime first with [`town start`](/en/products-docs/town-cli/start).
+- Console is not the Town runtime process. It is a separate module on top of the runtime.
+- One Console instance can switch across multiple running agents.
+- `start` does not change the bind address of an already running Console. To move an existing local Console into public mode, run `town console restart -p`.
+- If you want public mode to persist across future launches, use [`town public`](/en/products-docs/town-cli/public).
+- `town status` shows both Town runtime state and Console state.
+
+## Typical flow
+
+```bash
+# 1) start runtime + Console together
+town start --console
+
+# 1.1) start and expose Console in one step
+town start -p
+
+# 1.2) start only Console and expose it externally
+town console start -p
+
+# 1.3) persist public mode for future starts
+town public on
+
+# 2) start agents
+town agent start /path/to/agent-a
+town agent start /path/to/agent-b
+
+# 3) inspect Console state
+town console status
+
+# 4) restart Console only
+town console restart
+```
+
+## Related commands
+
+- [`town start`](/en/products-docs/town-cli/start)
+- [`town public`](/en/products-docs/town-cli/public)
+- [`town status`](/en/products-docs/town-cli/status)
+- [`town agent list`](/en/products-docs/town-cli/agent/list)
+- [`town agent start`](/en/products-docs/town-cli/agent/start)
+
+## External access notes
+
+- By default, `town console start` binds to `127.0.0.1:5315`, so only the local machine can access it.
+- `town console start -p` binds to `0.0.0.0:5315`, which allows external access.
+- If Console is already running, `town console start -p` does not rebind the existing process from `127.0.0.1` to `0.0.0.0`; use `town console restart -p`.
+- `town public on` persists the same public behavior for later `town start` and `town console start`, and restarts a running Console automatically.
+- When using a `0.0.0.0` bind, connect with the server IP or domain instead of `127.0.0.1`.
+- In public mode, startup output also prints `Public URL`.
+- If the runtime sits behind NAT / reverse proxy / load balancer, set `DOWNCITY_PUBLIC_HOST` or `DOWNCITY_PUBLIC_URL` for an exact external address.
+
+## Port meanings
+
+- `5314`: Town runtime API port used by managed-plugin and plugin endpoints.
+- `5315`: Console Web UI port used for browser access.
+
+## Example output
+
+```text
+$ town console status
+town v1.0.0
+┌────────────────────────────────────────────────────┐
+│ OK console status                                  │
+│   state    : running                               │
+│   pid      : <pid>                                 │
+│   url      : http://127.0.0.1:5315                 │
+│   pid_file : <consolePidPath>                      │
+│   log      : <consoleLogPath>                      │
+└────────────────────────────────────────────────────┘
+```

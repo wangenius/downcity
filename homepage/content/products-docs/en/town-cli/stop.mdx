@@ -1,0 +1,55 @@
+---
+title: town stop
+description: Stop console (and managed child agent processes)
+---
+
+# `town stop`
+
+Stop console (and managed child agent processes).
+
+The current implementation also tries to clean up detached orphan processes:
+
+- Town runtime (`run`) processes that are still alive without a pid file
+- Console (`console run`) processes that are still alive without a pid file
+- agent daemons (`agent start --foreground true`) that are still alive without a pid file
+
+On macOS and Linux, `town stop` stops the matching process group first. ACP executors, shell sessions, and watch child processes started by an agent receive the same stop signal, which prevents orphaned children from continuing to consume memory after the parent process exits.
+
+## Usage
+
+```bash
+town stop
+```
+
+## Related commands
+
+- [`town start`](/en/products-docs/town-cli/start)
+- [`town status`](/en/products-docs/town-cli/status)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ town stop
+town v1.0.0
+✅ Console UI stopped
+   pid: <uiPid>
+   pidFile: <uiPidPath>
+   log: <uiLogPath>
+✅ Town runtime stopped
+   pid: <pid>
+   pidFile: <consolePidPath>
+   log: <consoleLogPath>
+✅ orphan process stopped
+   pid: <orphanPid>
+   command: <orphanCommand>
+```
+
+```text
+$ town stop
+town v1.0.0
+ℹ️  Town runtime is not running
+   pidFile: <consolePidPath>
+   log: <consoleLogPath>
+```

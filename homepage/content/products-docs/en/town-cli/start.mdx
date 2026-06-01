@@ -1,0 +1,96 @@
+---
+title: town start
+description: Start Town runtime in background mode
+---
+
+# `town start`
+
+Start Town runtime in background mode.
+
+Startup initializes the Town runtime registry and process state.
+If no local token exists yet, startup automatically creates a `console-bootstrap` token and prints the plain token once in startup output.
+Startup also tries to discover the machine's public IP and saves it to Console Env as `DOWNCITY_PUBLIC_HOST`. Later, agent `contact link` generation prefers this address so link codes do not fall back to `127.0.0.1`.
+
+If you also want to start Console in one step, use `town start --console`, `town start -a`, or `town start -p`.
+If you pass `-p/--public` or `-h/--host`, the CLI also starts Console automatically.
+If you previously enabled persisted public mode with [`town public`](/en/products-docs/town-cli/public), plain `town start` also reuses that saved Console binding unless you override it explicitly.
+
+## Usage
+
+```bash
+town start
+```
+
+```bash
+town start --console
+```
+
+```bash
+town start -p
+```
+
+## Common options
+
+- `-a, --all`: start Console together
+- `--console`: start Console together
+- `-p, --public [enabled]`: start Console in public mode and bind it to `0.0.0.0`
+- `-h, --host <host>`: Console host; when provided, Console is started automatically
+
+## External access
+
+- Plain `town start` only starts the runtime and does not expose the Web Console.
+- `town start --console` still binds Console to `127.0.0.1:5315` by default.
+- `town start -p` starts Console automatically and switches the bind address to `0.0.0.0:5315`, which is suitable for server access from outside.
+- `town public on` makes that public Console behavior persist for future plain `town start` runs.
+- When Console is bound to `0.0.0.0`, use the server IP or domain to connect, not `127.0.0.1`.
+- In public mode, startup output also prints `Public URL`.
+- If the machine cannot determine a real public IP by itself (for example behind NAT / reverse proxy / load balancer), start city behind a reachable server, domain, or tunnel.
+- `town start` saves the auto-detected public IP as global `DOWNCITY_PUBLIC_HOST`; if the deployment environment already injects `DOWNCITY_PUBLIC_URL` or `DOWNCITY_PUBLIC_HOST`, it does not overwrite the existing value.
+
+## Port meanings
+
+- `5314`: Town runtime API port for `health`, managed plugin, plugin, and related endpoints.
+- `5315`: Console Web UI port for browser access.
+
+## Related commands
+
+- [`town stop`](/en/products-docs/town-cli/stop)
+- [`town status`](/en/products-docs/town-cli/status)
+- [`town public`](/en/products-docs/town-cli/public)
+- [`town agent list --running`](/en/products-docs/town-cli/agent/list)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ town start --console
+town v1.0.0
+✅ Town runtime started
+   pid: <runtimePid>
+   log: <bayRuntimeLogPath>
+   port: 5314
+   usage: Runtime API / managed-plugin endpoints (health, plugin, task, chat)
+✅ Console started
+   pid: <consolePid>
+   url: http://127.0.0.1:5315
+   public_url: http://203.0.113.10:5315
+   log: <consoleLogPath>
+   port: 5315
+   usage: Console Web UI / control plane
+✅ Console token initialized
+   subject: local-cli
+   name: console-bootstrap
+   token: dc_xxx
+   next: paste the Bearer Token above into Console UI / Extension
+```
+
+```text
+$ town start
+town v1.0.0
+✅ Town runtime started
+   pid: <runtimePid>
+   log: <bayRuntimeLogPath>
+   port: 5314
+   usage: Runtime API / managed-plugin endpoints (health, plugin, task, chat)
+```

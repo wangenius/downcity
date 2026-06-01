@@ -1,6 +1,6 @@
 {
   "download": "Download",
-  "documentation": "City SDK",
+  "documentation": "Docs",
   "version": "Version",
   "getStarted": "Get Started",
   "readDocs": "Read Docs",
@@ -56,7 +56,7 @@
     "product": "Product",
     "resources": "Resources",
     "features": "Features",
-    "documentation": "City SDK",
+    "documentation": "Docs",
     "developerDocumentation": "Developer Docs",
     "releases": "Releases",
     "github": "GitHub",

@@ -1,0 +1,57 @@
+---
+title: town agent chat
+description: Chat with a selected agent in interactive or one-shot mode
+---
+
+# `town agent chat`
+
+Chat with a target agent from the terminal.
+
+> This page remains as a command entry point. For the fuller explanation, see [Chat with an Agent](/en/docs/agent/getting-started/chat-with-an-agent) and [CLI / chat](/en/docs/agent/cli/interaction/chat).
+
+This command uses a dedicated local CLI main session: `local-cli-chat-main`.
+
+## Usage
+
+```bash
+town agent chat [--to <id>]
+town agent chat [--to <id>] --message <text> [--json]
+```
+
+## Key options
+
+- `-t, --to <id>`: target agent id; if omitted, the CLI opens an interactive picker from running agents
+- `-m, --message <text>`: send one message and exit instead of entering the REPL
+- `--json`: print structured output for one-shot mode
+- `--host <host>` / `--port <port>`: force remote HTTP transport
+- `--token <token>`: explicit Bearer token for remote HTTP mode
+
+## Behavior
+
+- Defaults to interactive terminal chat when `--message` is omitted.
+- One-shot mode works without entering the REPL.
+- Requires the target agent to be running.
+- Keeps sending every line into the same local CLI session instead of sharing Console UI context.
+- Type `/exit` or `/quit` to leave the chat loop.
+
+## Related commands
+
+- [`town agent list`](/en/products-docs/town-cli/agent/list)
+- [`town agent start`](/en/products-docs/town-cli/agent/start)
+
+## Examples
+
+```text
+$ town agent chat --to lucas_whitman
+town v1.0.439
+
+INFO Agent chat · lucas_whitman
+
+lucas_whitman> summarize today's work
+
+Today you completed the plugin interactive CLI redesign and validated the updated command tree.
+```
+
+```bash
+$ town agent chat --to lucas_whitman --message "summarize today's work" --json
+```

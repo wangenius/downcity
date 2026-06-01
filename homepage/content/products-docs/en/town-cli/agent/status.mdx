@@ -1,0 +1,60 @@
+---
+title: town agent status
+description: Show target agent status
+---
+
+# `town agent status`
+
+Show process status for a target agent.
+
+> This page remains as a command entry point. For the fuller explanation, see [CLI / status](/en/docs/agent/cli/lifecycle/status) and [Agent Shows stale](/en/docs/agent/operations/troubleshooting/agent-shows-stale).
+
+## Usage
+
+```bash
+town agent status [path]
+```
+
+## Behavior
+
+- `path` defaults to current directory `.`
+- Target agent must be registered in console registry
+- Output includes agent state, process info, and key paths
+- When state is `stale`, output includes `stale_reason` for direct diagnosis
+
+## Related commands
+
+- [`town agent start`](/en/products-docs/town-cli/agent/start)
+- [`town agent restart`](/en/products-docs/town-cli/agent/restart)
+- [`town agent list --running`](/en/products-docs/town-cli/agent/list)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ town agent status .
+town v1.0.0
+┌─────────────────────────────────────────────────────────┐
+│ OK town agent status                                    │
+│   project    : <projectRoot>                           │
+│   log        : <daemonLogPath>                         │
+│   state      : running                                 │
+│   pid        : <pid>                                   │
+│   started_at : <isoTimestamp>                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+```text
+$ town agent status .
+town v1.0.0
+┌─────────────────────────────────────────────────────────┐
+│ WARN town agent status                                  │
+│   project      : <projectRoot>                         │
+│   log          : <daemonLogPath>                       │
+│   state        : stale                                 │
+│   stale_pid    : <pid>                                 │
+│   stale_reason : <reason>                              │
+│   fix          : town agent doctor <projectRoot> --fix  │
+└─────────────────────────────────────────────────────────┘
+```

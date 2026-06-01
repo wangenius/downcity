@@ -1,37 +1,34 @@
 ---
 title: Downcity Docs
-description: 聚焦 Town runtime、City runtime、CLI 与运行逻辑的用户文档
+description: Downcity 概念、用户主线和各文档 Space 的总入口。
 ---
 
 # Downcity Docs
 
-Downcity 文档聚焦 Town 本机宿主、City 服务运行时、CLI、配置体系，以及它们如何组成完整的运行逻辑。
+Downcity Docs 是地图。产品手册和 SDK 参考都拆到独立 space 里，这样每类读者都能停留在正确层级。
 
-## 阅读路线
+## 从这里开始
 
 1. [怎么使用 Downcity](/zh/docs/how-to-use-downcity)
 2. [快速开始](/zh/docs/quickstart/getting-started)
-3. [核心原理](/zh/docs/concepts)
-4. [配置中心](/zh/docs/configuration/overview)
-5. [Chrome Extension](/zh/docs/chrome-extension/overview)
-6. [安全与权限](/zh/docs/security/overview)
-7. [Plugin 命令](/zh/docs/commands/plugin/plugin)
-8. [运维与排障](/zh/docs/operations)
-9. [CLI / API 参考](/zh/docs/reference)
+3. [Downcity 的整体关系](/zh/docs/concepts/project-logic-overview)
+4. [Products Docs](/zh/products-docs)
+5. [City SDK](/zh/city-sdk-docs)
+6. [Agent SDK](/zh/agent-sdk-docs)
+7. [Services SDK](/zh/services-sdk-docs)
+8. [Plugins Docs](/zh/plugins-docs)
+9. [UI SDK](/zh/ui-sdk-docs)
 
-## 文档结构
+## 文档 Space
 
-- `quickstart`：安装、初始化、downcity.json
-- `chrome-extension`：安装连接、Extension Popup 与页内输入框（Inline Composer）、快捷键、抓取行为、排障
-- `configuration`：配置分层、downcity.json、模型配置、上线检查清单
-- `security`：权限边界、运行隔离、密钥与数据安全
-- `commands`：console、plugin、chat、task、memory、shell、asr、tts
-- `concepts`：架构、Execution Context 与 Session、Plugin 协作模型、关系与进程模型、消息链路
-- `operations`：日志、故障排查、FAQ
-- `reference`：命令参考、HTTP API、`.downcity/` 目录
+- [Products](/zh/products-docs)：Town CLI、Town Console、Chrome Extension。
+- [City SDK](/zh/city-sdk-docs)：`City`、`CityBase`、town 身份、token、service/action 基建和部署。
+- [Agent SDK](/zh/agent-sdk-docs)：可编程 Agent、Session、Local/Remote Agent、模型绑定和 Plugin API。
+- [Services SDK](/zh/services-sdk-docs)：accounts、balance、usage、Stripe payment services。
+- [Plugins Docs](/zh/plugins-docs)：内建 plugin 手册和 plugin 示例。
+- [UI SDK](/zh/ui-sdk-docs)：可复用 UI 组件和 Workboard 界面。
+- [Dev Docs](/zh/devdocs)：内部架构、package 结构、构建流和实现说明。
 
-## 版本说明
+## 这个 Space 保留什么
 
-本文档以当前仓库 `cli/town/` 中的 Town CLI 行为，以及 `packages/city/` 中的 City 服务运行时为准。
-
-如果你要看嵌入式接入、Session、Plugin 或内建能力组合，请继续阅读 [Agent SDK 文档](/zh/agent-sdk-docs)。
+这里保留产品级导览：快速开始、核心概念、配置、安全、运维和通用参考。

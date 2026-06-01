@@ -3,10 +3,10 @@ import { docs } from "../../.source/server";
 import { i18n } from "./i18n";
 
 /**
- * City Docs source 装载模块。
+ * Downcity Docs source 装载模块。
  * 说明：
- * 1. 主 `docs` 现在定位为 City Docs，聚焦控制平面、CLI、配置与运行逻辑。
- * 2. SDK、Plugin 与内建能力细节单独收敛到 `agent-sdk-docs`。
+ * 1. 主 `docs` 现在定位为文档地图和产品级导览，不再承载全部 SDK 细节。
+ * 2. Products、City SDK、Agent SDK、Services SDK、Plugins 和 UI SDK 都拆成独立文档 space。
  */
 export const source = loader({
   baseUrl: "/docs",

@@ -1,0 +1,55 @@
+---
+title: town stop
+description: 停止 console（并停止其托管的子 agent 进程）
+---
+
+# `town stop`
+
+停止 console（并停止其托管的子 agent 进程）。
+
+当前实现还会额外尝试清理“失联的旧进程”：
+
+- 没有 pid 文件但仍在后台运行的 Town runtime（`run`）
+- 没有 pid 文件但仍在后台运行的 Console（`console run`）
+- 没有 pid 文件但仍在后台运行的 agent daemon（`agent start --foreground true`）
+
+在 macOS / Linux 上，`town stop` 会优先停止对应的进程组。这样 agent 内部拉起的 ACP 执行器、shell 会话、watch 子进程也会一起收到停止信号，避免父进程退出后留下孤儿进程继续占用内存。
+
+## 用法
+
+```bash
+town stop
+```
+
+## 相关命令
+
+- [`town start`](/zh/products-docs/town-cli/start)
+- [`town status`](/zh/products-docs/town-cli/status)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `cli/town/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ town stop
+town v1.0.0
+✅ Console UI stopped
+   pid: <uiPid>
+   pidFile: <uiPidPath>
+   log: <uiLogPath>
+✅ Town runtime stopped
+   pid: <pid>
+   pidFile: <consolePidPath>
+   log: <consoleLogPath>
+✅ orphan process stopped
+   pid: <orphanPid>
+   command: <orphanCommand>
+```
+
+```text
+$ town stop
+town v1.0.0
+ℹ️  Town runtime is not running
+   pidFile: <consolePidPath>
+   log: <consoleLogPath>
+```

@@ -1,36 +1,33 @@
 ---
 title: Downcity Docs
-description: User documentation focused on Town runtime, City runtime, CLI, and operating logic
+description: The entry point for Downcity concepts, user workflows, and documentation spaces.
 ---
 
 # Downcity Docs
 
-Downcity docs focus on how Town local hosting, City services, CLI, configuration, and the operating model fit together.
+Downcity docs are the map. Product manuals and SDK references live in their own spaces so each reader can stay on the right layer.
 
-## Recommended Path
+## Start Here
 
 1. [Getting Started](/en/docs/quickstart/getting-started)
-2. [Core Concepts](/en/docs/concepts)
-3. [Configuration Hub](/en/docs/configuration/overview)
-4. [Chrome Extension](/en/docs/chrome-extension/overview)
-5. [Security & Permissions](/en/docs/security/overview)
-6. [Plugin Commands](/en/docs/commands/plugin/plugin)
-7. [Operations](/en/docs/operations)
-8. [CLI / API Reference](/en/docs/reference)
+2. [How Downcity Fits Together](/en/docs/concepts/project-logic-overview)
+3. [Products Docs](/en/products-docs)
+4. [City SDK](/en/city-sdk-docs)
+5. [Agent SDK](/en/agent-sdk-docs)
+6. [Services SDK](/en/services-sdk-docs)
+7. [Plugins Docs](/en/plugins-docs)
+8. [UI SDK](/en/ui-sdk-docs)
 
-## Information Architecture
+## Documentation Spaces
 
-- `quickstart`: install, init, downcity.json
-- `chrome-extension`: install/connect, Extension Popup and Inline Composer, shortcuts, capture behavior, troubleshooting
-- `configuration`: layered config, downcity.json, model config, rollout checklist
-- `security`: permission boundaries, runtime isolation, key and data protection
-- `commands`: console, plugin, chat, task, memory, shell, asr, tts
-- `concepts`: architecture, execution context and session, plugin collaboration model, relationship/process, message flow
-- `operations`: logs, troubleshooting, FAQ
-- `reference`: command reference, HTTP API, `.downcity/` directory
+- [Products](/en/products-docs): Town CLI, Town Console, and Chrome Extension.
+- [City SDK](/en/city-sdk-docs): `City`, `CityBase`, town identity, tokens, service/action infrastructure, and deployment.
+- [Agent SDK](/en/agent-sdk-docs): programmable agents, sessions, local/remote agent, model binding, and plugin APIs.
+- [Services SDK](/en/services-sdk-docs): accounts, balance, usage, and Stripe payment services.
+- [Plugins Docs](/en/plugins-docs): built-in plugin manuals and plugin examples.
+- [UI SDK](/en/ui-sdk-docs): reusable UI components and Workboard surfaces.
+- [Dev Docs](/en/devdocs): internal architecture, package structure, build flow, and implementation notes.
 
-## Scope
+## What Stays Here
 
-These docs are user-facing and focus on the current Town CLI behavior in `cli/town/` plus the City service runtime in `packages/city/`.
-
-If you want embedding, sessions, plugins, or built-in capability composition, continue in [Agent SDK Docs](/en/agent-sdk-docs).
+This space keeps product-level orientation: quickstart, core concepts, configuration, security, operations, and broad reference material.

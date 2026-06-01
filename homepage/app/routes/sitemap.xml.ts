@@ -1,6 +1,9 @@
 import { source } from "@/lib/source";
 import { devSource } from "@/lib/dev-source";
+import { productsDocsSource } from "@/lib/products-docs-source";
+import { citySdkDocsSource } from "@/lib/city-sdk-docs-source";
 import { agentSdkDocsSource } from "@/lib/agent-sdk-docs-source";
+import { servicesSdkDocsSource } from "@/lib/services-sdk-docs-source";
 import { pluginsDocsSource } from "@/lib/plugins-docs-source";
 import { uiSdkDocsSource } from "@/lib/ui-sdk-docs-source";
 import { product } from "@/lib/product";
@@ -11,7 +14,10 @@ export const loader = async () => {
   // Get all documentation pages
   const pages = source.getPages();
   const devPages = devSource.getPages();
+  const productsDocsPages = productsDocsSource.getPages();
+  const citySdkPages = citySdkDocsSource.getPages();
   const agentSdkPages = agentSdkDocsSource.getPages();
+  const servicesSdkPages = servicesSdkDocsSource.getPages();
   const pluginsDocsPages = pluginsDocsSource.getPages();
   const uiSdkPages = uiSdkDocsSource.getPages();
 
@@ -83,7 +89,25 @@ export const loader = async () => {
       priority: 0.7,
     },
     {
+      url: `${baseUrl}/products-docs`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/city-sdk-docs`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/agent-sdk-docs`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/services-sdk-docs`,
       lastModified: new Date().toISOString(),
       changeFrequency: "weekly" as const,
       priority: 0.7,
@@ -117,7 +141,28 @@ export const loader = async () => {
     priority: 0.6,
   }));
 
+  const productsDocumentationPages = productsDocsPages.map((page) => ({
+    url: `${baseUrl}${page.path}`,
+    lastModified: new Date().toISOString(),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
+  const citySdkDocumentationPages = citySdkPages.map((page) => ({
+    url: `${baseUrl}${page.path}`,
+    lastModified: new Date().toISOString(),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
   const agentSdkDocumentationPages = agentSdkPages.map((page) => ({
+    url: `${baseUrl}${page.path}`,
+    lastModified: new Date().toISOString(),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
+  const servicesSdkDocumentationPages = servicesSdkPages.map((page) => ({
     url: `${baseUrl}${page.path}`,
     lastModified: new Date().toISOString(),
     changeFrequency: "weekly" as const,
@@ -142,7 +187,10 @@ export const loader = async () => {
     ...staticPages,
     ...docsPages,
     ...developerDocsPages,
+    ...productsDocumentationPages,
+    ...citySdkDocumentationPages,
     ...agentSdkDocumentationPages,
+    ...servicesSdkDocumentationPages,
     ...pluginsDocumentationPages,
     ...uiSdkDocumentationPages,
   ];

@@ -1,0 +1,43 @@
+---
+title: town agent stop
+description: Stop a target agent daemon
+---
+
+# `town agent stop`
+
+Stop the background daemon for a target agent.
+
+> This page remains as a command entry point. For the fuller explanation, see [CLI / stop](/en/docs/agent/cli/lifecycle/stop).
+
+## Usage
+
+```bash
+town agent stop [path]
+```
+
+## Behavior
+
+- `path` defaults to current directory `.`
+- Target agent must be registered in the city registry
+- Stops the matching daemon process group
+- Cleans daemon pid/meta files
+- Marks the agent as `stopped` in the city registry
+- If the daemon is not running, the command exits successfully with a not-running message
+
+## Related commands
+
+- [`town agent start`](/en/products-docs/town-cli/agent/start)
+- [`town agent restart`](/en/products-docs/town-cli/agent/restart)
+- [`town agent status`](/en/products-docs/town-cli/agent/status)
+- [`town agent list`](/en/products-docs/town-cli/agent/list)
+
+## Example Output
+
+```text
+$ town agent stop .
+town v1.0.437
+
+Agent daemon stopped                            lucas_whitman
+  project   /Users/you/Documents/bots/lucas_whitman
+  pid       12345
+```

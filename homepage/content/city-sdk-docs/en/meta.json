@@ -1,0 +1,13 @@
+{
+  "title": "City SDK",
+  "pages": [
+    "index",
+    "concepts",
+    "quickstart",
+    "guides",
+    "packages",
+    "service",
+    "operations",
+    "reference"
+  ]
+}

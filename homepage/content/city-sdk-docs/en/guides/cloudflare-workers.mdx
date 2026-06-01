@@ -1,0 +1,74 @@
+---
+title: Cloudflare Workers
+description: Run City directly on Cloudflare Workers and D1 with @downcity/city, without waiting for a separate edge package.
+---
+
+If you want to deploy Downcity on Cloudflare Workers, the recommended path is not a separate edge package. Wire `@downcity/city` directly into the Workers runtime.
+
+The official reference implementation is `cities/edge`.
+
+## What this path actually solves
+
+The main difference from Node.js is not the HTTP entry. It is the runtime resource model:
+
+- the database usually comes from a binding such as `env.DB`
+- environment values are not just a local `.env` file
+- the request origin may need to be synchronized into services on every request
+- Worker isolates are reused, so runtime cache behavior must be managed explicitly
+
+That is why this is better explained as a guide than as an empty npm package.
+
+## The minimum shape
+
+City only needs a Drizzle db object:
+
+```ts
+import { CityBase } from "@downcity/city";
+import { drizzle } from "drizzle-orm/d1";
+
+export interface Env {
+  DB: D1Database;
+}
+
+export default {
+  async fetch(request: Request, env: Env) {
+    const db = drizzle(env.DB);
+    const base = new CityBase({ db, dialect: "sqlite", raw: env.DB });
+
+    await base.health();
+    return base.handleRequest(request);
+  },
+};
+```
+
+The important part is not a helper name. It is that you hand the database to City:
+
+- D1 becomes a db through `drizzle-orm/d1`
+- D1 is a SQLite dialect, so pass `dialect: "sqlite"`
+- `raw: env.DB` is available to services that need the low-level D1 object
+- the current request origin can be synchronized before calls that need OAuth callback URLs
+
+## Use `cities/edge` as the real reference
+
+The full implementation in [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1) already covers the real integration details:
+
+- wrap `env.DB` with `drizzle-orm/d1`
+- let City initialize the built-in `env` and `towns` tables
+- synchronize the current origin before each request so OAuth callbacks and links use the correct domain
+- keep registering `AIService`, accounts, usage, and payment services the same way as the Node path
+
+For a real project, start from that example instead of rebuilding the runtime contract from scratch.
+
+## Boundary with the Node path
+
+Worker and Node now use the same mental model: create a Drizzle db, then pass it to `new CityBase({ db })`.
+
+- Node.js local projects commonly use `drizzle-orm/better-sqlite3`
+- Node.js production deployments can use Drizzle pg
+- Workers / D1 use `drizzle-orm/d1`
+
+## Next
+
+- If you still need the City mental model first, read [City](/en/city-sdk-docs/packages/city/city-runtime)
+- If you need to manage provider keys, continue with [Provider environment](/en/city-sdk-docs/guides/provider-env)
+- If you want the full reference implementation, open [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1)

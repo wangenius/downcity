@@ -1,0 +1,10 @@
+{
+  "title": "Services SDK",
+  "pages": [
+    "index",
+    "accounts",
+    "balance",
+    "usage",
+    "payment-stripe"
+  ]
+}

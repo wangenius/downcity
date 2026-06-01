@@ -1,0 +1,55 @@
+---
+title: town update
+description: 更新当前全局安装来源对应的 downcity CLI 聚合包到最新版本
+---
+
+# `town update`
+
+更新当前全局安装来源对应的 `downcity` CLI 聚合包到最新版本。
+
+默认情况下，Downcity 会同时判断当前 CLI 的安装包名和包管理器。如果你安装的是 `downcity`，`town update` 会升级 `downcity`；
+
+## 用法
+
+```bash
+town update
+```
+
+```bash
+town update --manager npm
+```
+
+```bash
+town update --manager pnpm
+```
+
+## 常用参数
+
+- `--manager <manager>`：指定 `auto`、`npm` 或 `pnpm`（默认 `auto`）
+
+## 关键行为
+
+- `town update` 只更新当前全局安装来源对应的 CLI 包本身。
+- 不会自动重启已经运行中的 Town runtime / Console 进程。
+- 更新完成后，如果你希望运行中的进程也加载新版本，请执行 [`town restart`](/zh/products-docs/town-cli/restart)。
+
+## 相关命令
+
+- [`town restart`](/zh/products-docs/town-cli/restart)
+- [`town status`](/zh/products-docs/town-cli/status)
+
+## 示例输出
+
+```text
+$ town update
+town v1.0.0
+
+Updating downcity
+  manager   npm
+  command   npm install -g downcity@latest
+
+Downcity updated
+  package   downcity@latest
+  manager   npm
+  note      如果当前已有 Town runtime / Console 在运行，建议执行 `town restart` 载入最新版本。
+```

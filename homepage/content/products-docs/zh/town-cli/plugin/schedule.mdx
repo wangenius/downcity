@@ -1,0 +1,53 @@
+---
+title: town plugin schedule
+description: 查看并取消一次性 plugin 调度任务
+---
+
+# `town plugin schedule`
+
+`town plugin schedule` 用来管理本地的一次性 plugin 调度存储。
+
+当某个 plugin action 因为 `--delay` 或 `--time` 被接受为延迟任务后，你可以用它来查看或取消任务。
+
+## 用法
+
+```bash
+town plugin schedule list [options]
+town plugin schedule info <jobId> [options]
+town plugin schedule cancel <jobId> [options]
+```
+
+## 支持的子命令
+
+- `list`
+- `info <jobId>`
+- `cancel <jobId>`
+
+## 适用范围
+
+- `town chat send --delay/--time`
+- `town memory flush --delay/--time`
+- `town plugin command <plugin> <command> --delay/--time`
+
+这里只负责一次性调度。若要可复用工作流或 cron 自动化，请使用 `town task`。
+
+## 存储位置
+
+调度任务写入当前 agent 项目的：
+
+```text
+.downcity/schedule.sqlite
+```
+
+## 示例
+
+```bash
+town plugin schedule list --path /abs/path/to/agent
+town plugin schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+town plugin schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+```
+
+## 相关页面
+
+- [`town plugin`](/zh/products-docs/town-cli/plugin/plugin)
+- [`town task`](/zh/products-docs/town-cli/plugin/task)

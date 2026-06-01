@@ -1,0 +1,66 @@
+---
+title: "City CLI"
+description: "用终端管理 City 的模型和数据表，适合初始化、排查和日常运维。"
+---
+
+`downcity` 是 Downcity 的全局安装聚合包。它会安装两个命令：`city` 负责 City 管理，`town` 负责本机 Agent 宿主。
+
+如果说 `Admin City` 负责“程序里的可信调用”，那 `city` 负责“人坐在终端前的直接操作”。
+
+## 这组文档怎么读
+
+建议按下面顺序读：
+
+1. 先读 [快速开始](/zh/city-sdk-docs/packages/cli/quickstart)，先知道怎么连到 City 数据库。
+2. 再读 [模型与数据表管理](/zh/city-sdk-docs/packages/cli/models-and-tables)，理解最常见的表查看和模型维护动作。
+3. 最后读 [运维与排查](/zh/city-sdk-docs/packages/cli/operations-and-debug)，把日常检查、故障定位和人工修复串起来。
+
+## 适合什么时候用
+
+- 你想直接查看 City 数据库里有哪些表
+- 你要增删改查 `downcity_models`
+- 你要在本地排查 runtime 数据是否写对了
+
+## 安装
+
+```bash
+npm i -g downcity
+```
+
+## 默认用法
+
+```bash
+city
+```
+
+默认 `city` 会进入交互式面板。没有 server 时，CLI 会先要求你添加一个 server；之后你可以：
+
+- 通过 `Manage Servers` 管理多个 City server
+- 进入 Admin 流程管理 env / models / towns / payment
+- 进入 User 流程登录、充值和调用服务
+
+## 常用命令
+
+```bash
+town model list
+town model create
+town model manage
+town agent start .
+```
+
+## 它和其他 package 的边界
+
+- 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city/city) 里的 `Admin City`
+- 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city) 的运行时能力
+- 更适合“人工排查”和“初始化运维”，而不是嵌进产品代码里
+
+更准确地说：
+
+- `Admin City` 负责程序里的可信调用
+- `city` 负责终端里的人工运维和排查
+
+## 下一步读什么
+
+- 想先接上数据库，读 [快速开始](/zh/city-sdk-docs/packages/cli/quickstart)
+- 想维护 `downcity_models` 和表数据，读 [模型与数据表管理](/zh/city-sdk-docs/packages/cli/models-and-tables)
+- 想看故障处理方式，读 [运维与排查](/zh/city-sdk-docs/packages/cli/operations-and-debug)

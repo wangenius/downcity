@@ -112,6 +112,32 @@ export default [
     route("zh/devdocs/*", "routes/devdocs/page.tsx", { id: "devdocs-zh" }),
   ]),
 
+  // Products docs routes with layout
+  layout("routes/products-docs/layout.tsx", [
+    route("en/products-docs/*", "routes/products-docs/page.tsx", {
+      id: "products-docs-en",
+    }),
+    route("products-docs/*", "routes/products-docs/redirect.tsx", {
+      id: "products-docs-redirect",
+    }),
+    route("zh/products-docs/*", "routes/products-docs/page.tsx", {
+      id: "products-docs-zh",
+    }),
+  ]),
+
+  // City SDK docs routes with layout
+  layout("routes/city-sdk-docs/layout.tsx", [
+    route("en/city-sdk-docs/*", "routes/city-sdk-docs/page.tsx", {
+      id: "city-sdk-docs-en",
+    }),
+    route("city-sdk-docs/*", "routes/city-sdk-docs/redirect.tsx", {
+      id: "city-sdk-docs-redirect",
+    }),
+    route("zh/city-sdk-docs/*", "routes/city-sdk-docs/page.tsx", {
+      id: "city-sdk-docs-zh",
+    }),
+  ]),
+
   // Agent SDK docs routes with layout
   layout("routes/agent-sdk-docs/layout.tsx", [
     route("en/agent-sdk-docs/*", "routes/agent-sdk-docs/page.tsx", {
@@ -122,6 +148,19 @@ export default [
     }),
     route("zh/agent-sdk-docs/*", "routes/agent-sdk-docs/page.tsx", {
       id: "agent-sdk-docs-zh",
+    }),
+  ]),
+
+  // Services SDK docs routes with layout
+  layout("routes/services-sdk-docs/layout.tsx", [
+    route("en/services-sdk-docs/*", "routes/services-sdk-docs/page.tsx", {
+      id: "services-sdk-docs-en",
+    }),
+    route("services-sdk-docs/*", "routes/services-sdk-docs/redirect.tsx", {
+      id: "services-sdk-docs-redirect",
+    }),
+    route("zh/services-sdk-docs/*", "routes/services-sdk-docs/page.tsx", {
+      id: "services-sdk-docs-zh",
     }),
   ]),
 
@@ -150,7 +189,10 @@ export default [
   // API routes
   route("api/search", "routes/docs/search.ts"),
   route("api/devdocs/search", "routes/devdocs/search.ts"),
+  route("api/products-docs/search", "routes/products-docs/search.ts"),
+  route("api/city-sdk-docs/search", "routes/city-sdk-docs/search.ts"),
   route("api/agent-sdk-docs/search", "routes/agent-sdk-docs/search.ts"),
+  route("api/services-sdk-docs/search", "routes/services-sdk-docs/search.ts"),
   route("api/plugins-docs/search", "routes/plugins-docs/search.ts"),
   route("api/ui-sdk-docs/search", "routes/ui-sdk-docs/search.ts"),
 ] satisfies RouteConfig;

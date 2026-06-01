@@ -1,0 +1,59 @@
+---
+title: town skill
+description: Skill plugin actions (find/install/list/lookup)
+---
+
+# `town skill`
+
+Manage skill discovery, installation, and lookup.
+
+> This page remains as a command entry point. For the fuller plugin structure, see [Plugin Overview](/en/agent-sdk-docs/plugins/overview), [Built-in Plugins Today](/en/agent-sdk-docs/plugins/built-in-plugins), and [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions).
+
+> Hierarchy note: `town skill` now belongs to the plugin action system. It is provided by the `skill` plugin, not by a separate legacy runtime layer.
+
+## Usage
+
+```bash
+town skill <subcommand> [options]
+```
+
+## Subcommands
+
+- `find <query>`
+- `install <spec>`
+- `list`
+- `lookup <name>`
+
+## `install` key options
+
+- `-g, --global`: global install (default true)
+- `-y, --yes`: skip confirmation (default true)
+- `--agent <agent>`: default `claude-code`
+
+## Examples
+
+```bash
+town skill list
+town skill lookup playwright
+
+# install only when missing from `list`
+town skill find playwright
+town skill install owner/repo@playwright
+town skill lookup playwright
+```
+
+## Recommended flow
+
+`list -> lookup` (if missing, then `find -> install -> lookup`)
+
+## Agent behavior
+
+- In the running agent, `lookup` tool output returns status only.
+- Skill content is injected through the next user message wrapped in `<skill>...</skill>`.
+- Injected skill content is also persisted into context messages so you can verify it in the timeline.
+
+## Related
+
+- [`town plugin`](/en/products-docs/town-cli/plugin/plugin)
+- [Plugin Docs Overview](/en/agent-sdk-docs/plugins/overview)
+- [`CLI Commands`](/en/docs/reference/cli)

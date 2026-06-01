@@ -1,0 +1,158 @@
+---
+title: Deploy to Cloudflare Workers
+description: Deploy the edge city block with Workers + D1, then initialize admin and provider env.
+---
+
+This page is the operational deployment path for `cities/edge`.
+
+If you only want to understand how City is wired to Workers and D1, read [Cloudflare Workers](/en/city-sdk-docs/guides/cloudflare-workers) first. This page focuses on the production steps: D1 binding, deploy, admin key retrieval, env setup, OAuth callbacks, and health checks.
+
+## Prerequisites
+
+- A Cloudflare account
+- `pnpm install` already completed in the repository
+- `wrangler` logged in with `pnpm exec wrangler login` or `npx wrangler login`
+
+## 1. Review the edge block
+
+The reference implementation lives in [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1).
+
+It does four important things:
+
+- binds `env.DB` to Drizzle D1
+- composes the Edge City inside `cities/edge`
+- mounts accounts, balance, usage, payment, Stripe payment, and AI services
+- exposes `/health` for deployment verification
+
+## 2. Prepare D1
+
+`cities/edge/wrangler.toml` contains the D1 binding:
+
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "downcity-db"
+database_id = "<your-d1-database-id>"
+```
+
+For a fresh deployment, create a D1 database and put the returned ID into `wrangler.toml`:
+
+```bash
+cd cities/edge
+npx wrangler d1 create downcity-db
+```
+
+If `database_id` is empty, `cities/edge/deploy.sh` can also create the D1 database and write the ID back into `wrangler.toml`.
+
+## 3. Deploy
+
+```bash
+cd cities/edge
+pnpm deploy
+```
+
+The script runs `wrangler deploy` after confirming the D1 database. You can also deploy directly:
+
+```bash
+cd cities/edge
+npx wrangler deploy
+```
+
+After deployment, your Worker URL usually looks like:
+
+```text
+https://downcity.<your-subdomain>.workers.dev
+```
+
+## 4. Initialize City
+
+Call `/health` once. This lets the Worker boot City and create the built-in `env` / `towns` tables.
+
+```bash
+curl https://downcity.<your-subdomain>.workers.dev/health
+```
+
+Expected shape:
+
+```json
+{
+  "ok": true,
+  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+}
+```
+
+## 5. Retrieve the admin key
+
+On first boot, City stores `DOWNCITY_CITY_ADMIN_SECRET_KEY` in its own `env` table. For Workers + D1, retrieve it from the remote D1 database:
+
+```bash
+cd cities/edge
+npx wrangler d1 execute downcity-db --remote \
+  --command "SELECT value FROM env WHERE key='DOWNCITY_CITY_ADMIN_SECRET_KEY'"
+```
+
+Keep this key in a trusted place. It is the credential used by `Admin City`, Town CLI, or direct admin HTTP calls.
+
+## 6. Write provider and service env
+
+Provider keys and service secrets should be written into City's env table instead of public clients.
+
+Example:
+
+```bash
+curl -X POST https://downcity.<your-subdomain>.workers.dev/v1/env/upsert \
+  -H "Authorization: Bearer <admin_secret_key>" \
+  -H "Content-Type: application/json" \
+  -d '{"key":"DEEPSEEK_API_KEY","value":"sk-..."}'
+```
+
+Common keys:
+
+| Key | Purpose |
+| --- | --- |
+| `DEEPSEEK_API_KEY` | Provider key used by the reference edge block |
+| `STRIPE_SECRET_KEY` | Stripe API key for Checkout creation |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+| `STRIPE_SUCCESS_URL` | Optional default Checkout success redirect |
+| `STRIPE_CANCEL_URL` | Optional default Checkout cancel redirect |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google OAuth login |
+| `WECHAT_CLIENT_ID` / `WECHAT_CLIENT_SECRET` | Optional WeChat website login |
+
+See also [Provider Environment Variables](/en/city-sdk-docs/guides/provider-env) and [Environment variables](/en/city-sdk-docs/reference/env-vars).
+
+## 7. Configure OAuth callbacks
+
+If you enable OAuth login, configure the provider callback URL to the deployed Worker:
+
+```text
+https://downcity.<your-subdomain>.workers.dev/v1/accounts/oauth/callback
+```
+
+The callback domain must match the public domain users actually visit. If you later move to a custom domain, update the OAuth provider configuration as well.
+
+## 8. Verify
+
+Use these checks after deployment:
+
+```bash
+curl https://downcity.<your-subdomain>.workers.dev/
+curl https://downcity.<your-subdomain>.workers.dev/health
+```
+
+Then confirm the model catalog with admin auth:
+
+```bash
+curl https://downcity.<your-subdomain>.workers.dev/v1/ai/models \
+  -H "Authorization: Bearer <admin_secret_key>"
+```
+
+## Updating the deployment
+
+After code changes:
+
+```bash
+cd cities/edge
+pnpm deploy
+```
+
+Runtime env lives in D1, so redeploying the Worker does not erase provider keys, OAuth secrets, towns, balances, usage records, or Stripe payment records.

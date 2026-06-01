@@ -1,17 +1,14 @@
 {
-  "title": "City SDK",
+  "title": "Downcity Docs",
   "pages": [
     "index",
     "how-to-use-downcity",
     "quickstart",
-    "city",
     "agent",
-    "chrome-extension",
     "concepts",
     "capabilities",
     "configuration",
     "security",
-    "commands",
     "operations",
     "reference",
     "community"

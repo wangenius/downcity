@@ -1,0 +1,48 @@
+---
+title: town asr
+description: 管理内置 asr plugin 与其转写配置
+---
+
+# `town asr`
+
+`town asr` 是内置 asr plugin 的短命令组。
+
+> 这页保留为命令入口。更完整的 Plugin 结构说明见 [Plugin 总览](/zh/agent-sdk-docs/plugins/overview)、[当前有哪些内建 Plugin](/zh/agent-sdk-docs/plugins/built-in-plugins) 和 [Plugin Hooks 和 Resolve](/zh/agent-sdk-docs/plugins/plugin-hooks)。
+
+## 它负责什么
+
+- 启用或关闭 city 级 asr plugin
+- 管理 asr 的转写配置
+- 切换当前转写模型
+- 转写本地音频文件
+
+## 常用示例
+
+```bash
+# 启用 asr，并安装模型
+town asr on SenseVoiceSmall
+
+# 查看 plugin + transcriber 状态
+town asr status
+
+# 切换当前模型
+town asr use whisper-large-v3-turbo
+
+# 转写一个本地音频文件
+town asr transcribe ./demo.ogg
+```
+
+## 说明
+
+- `town asr on` 会在一步里完成“切换 city 级 plugin 启用态 + 可选安装转写依赖”。
+- Console UI 的 `Plugins -> asr` 卡片里也提供了依赖修复台，可以直接读取状态、下载模型、切换当前模型，并填写 Python / models 目录等配置。
+- asr plugin 会接入 `chat` runtime 的语音扩展点，Telegram / QQ 的语音消息会通过这些点完成转写与正文增强。
+- agent 侧的 ASR 参数会持久化到项目 `downcity.json` 的 `plugins.asr`。
+
+## 相关页面
+
+- [`town plugin`](/zh/products-docs/town-cli/plugin/plugin)
+- [`town tts`](/zh/products-docs/town-cli/plugin/tts)
+- [Plugin 文档总览](/zh/agent-sdk-docs/plugins/overview)
+- [Plugins Docs / asr](/zh/plugins-docs/builtins/asr)
+- [Plugins Docs / chat](/zh/plugins-docs/builtins/chat)

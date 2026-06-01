@@ -47,7 +47,10 @@ export function Navbar() {
   const startPath = isZh ? "/zh/start" : "/start";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const devdocsPath = isZh ? "/zh/devdocs" : "/en/devdocs";
+  const productsDocsPath = isZh ? "/zh/products-docs" : "/en/products-docs";
+  const citySdkDocsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
   const agentSdkDocsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
+  const servicesSdkDocsPath = isZh ? "/zh/services-sdk-docs" : "/en/services-sdk-docs";
   const pluginsDocsPath = isZh ? "/zh/plugins-docs" : "/en/plugins-docs";
   const uiSdkDocsPath = isZh ? "/zh/ui-sdk-docs" : "/en/ui-sdk-docs";
   const productBasePath = isZh ? "/zh/product" : "/product";
@@ -61,7 +64,7 @@ export function Navbar() {
   const productAgentSdkPath = isZh ? "/zh/product/agent-sdk" : "/product/agent-sdk";
   const productUiSdkPath = isZh ? "/zh/product/ui-sdk" : "/product/ui-sdk";
   const docsQuickstartPath = isZh ? "/zh/docs/quickstart/getting-started" : "/en/docs/quickstart/getting-started";
-  const docsCliPath = isZh ? "/zh/docs/reference/cli" : "/en/docs/reference/cli";
+  const productsTownCliPath = isZh ? "/zh/products-docs/town-cli/init" : "/en/products-docs/town-cli/init";
   const resourcesSkillsPath = isZh ? "/zh/resources/skills" : "/resources/skills";
   const resourcesMarketplacePath = isZh ? "/zh/resources/marketplace" : "/resources/marketplace";
   const resourcesHostingPath = isZh ? "/zh/resources/hosting" : "/resources/hosting";
@@ -93,16 +96,31 @@ export function Navbar() {
   const docsGroup = {
     kind: "group",
     label: t("nav.docs"),
-    activePaths: [docsPath, devdocsPath, agentSdkDocsPath, pluginsDocsPath, uiSdkDocsPath],
+    activePaths: [
+      docsPath,
+      productsDocsPath,
+      citySdkDocsPath,
+      agentSdkDocsPath,
+      servicesSdkDocsPath,
+      pluginsDocsPath,
+      uiSdkDocsPath,
+      devdocsPath,
+    ],
     items: [
-      { label: "Downcity Docs", description: isZh ? "Town、City 与运行逻辑总入口" : "Main entry for Town, City, and operating logic", path: docsPath },
+      { label: "Downcity Docs", description: isZh ? "文档地图与产品级导览" : "Documentation map and product-level orientation", path: docsPath },
       { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "先把 Town 跑起来，再进入更深层结构" : "Start Town first, then go deeper into the structure", path: docsQuickstartPath },
-      { label: "CLI", description: isZh ? "命令入口与参数" : "Command entry points and flags", path: docsCliPath },
-      { label: t("nav.devdocs"), description: isZh ? "架构、实现与设计规范" : "Architecture, implementation, and design docs", path: devdocsPath },
+      { label: "Products", description: isZh ? "Town CLI、Town Console、Chrome Extension" : "Town CLI, Town Console, and Chrome Extension", path: productsDocsPath },
+      { label: "Town CLI", description: isZh ? "命令入口与参数" : "Command entry points and flags", path: productsTownCliPath },
+      { label: "City SDK", description: isZh ? "City、CityBase、town、token 与部署" : "City, CityBase, town, tokens, and deployment", path: citySdkDocsPath },
       {
         label: "Agent SDK",
         description: isZh ? "独立的 Agent SDK 接入、Session、Plugin 与 API 文档" : "Standalone docs for Agent SDK integration, sessions, plugins, and APIs",
         path: agentSdkDocsPath,
+      },
+      {
+        label: "Services SDK",
+        description: isZh ? "accounts、balance、usage 与 payment-stripe" : "accounts, balance, usage, and payment-stripe",
+        path: servicesSdkDocsPath,
       },
       {
         label: "Plugins Docs",
@@ -114,6 +132,7 @@ export function Navbar() {
         description: isZh ? "独立的 UI SDK 接入、模块与开发文档" : "Standalone docs for UI SDK integration, modules, and development",
         path: uiSdkDocsPath,
       },
+      { label: t("nav.devdocs"), description: isZh ? "架构、实现与设计规范" : "Architecture, implementation, and design docs", path: devdocsPath },
     ],
   } as const;
 

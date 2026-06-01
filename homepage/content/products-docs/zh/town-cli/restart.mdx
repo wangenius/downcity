@@ -1,0 +1,48 @@
+---
+title: town restart
+description: 重启 Town runtime，恢复托管 agent，并重新拉起 Console
+---
+
+# `town restart`
+
+重启完整的 city 运行栈。
+
+当前行为顺序：
+
+1. 停止 Console
+2. 停止 Town runtime
+3. 重启 Town runtime
+4. 恢复重启前处于运行状态的托管 agent
+5. 重新拉起 Console
+
+停止阶段会优先清理对应的进程组。agent 内部拉起的 ACP 执行器、shell 会话、watch 子进程会随父进程一起停止，避免重启后旧子进程继续留在后台占用内存。
+
+## 用法
+
+```bash
+town restart
+```
+
+## 相关命令
+
+- [`town start`](/zh/products-docs/town-cli/start)
+- [`town stop`](/zh/products-docs/town-cli/stop)
+- [`town status`](/zh/products-docs/town-cli/status)
+- [`town console`](/zh/products-docs/town-cli/console/console)
+
+## 示例输出
+
+```text
+$ town restart
+town v1.0.0
+✅ Console stopped
+   pid: <consolePid>
+✅ Town runtime stopped
+   pid: <bayPid>
+✅ Town runtime started
+   pid: <newTownPid>
+Restarting 2 managed agents...
+✅ Console started
+   pid: <newConsolePid>
+   url: http://127.0.0.1:5315
+```

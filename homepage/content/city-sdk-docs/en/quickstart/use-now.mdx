@@ -1,0 +1,76 @@
+---
+title: Try It Now
+description: Run a complete call chain with the default database, Admin City, and User City.
+---
+
+## 1. Start City
+
+```ts
+import { CityBase, AIService, Provider } from "@downcity/city";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+
+const sqlite = new Database("./data.sqlite");
+sqlite.pragma("journal_mode = WAL");
+
+const db = Object.assign(drizzle(sqlite), {
+  $client: { exec: (sql: string) => sqlite.exec(sql) },
+});
+
+const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
+
+const echo = new Provider("echo", {
+  text: async (ctx) => ({
+    id: crypto.randomUUID(),
+    role: "assistant",
+    parts: [{ type: "text", text: `Echo: ${ctx.input.prompt}` }],
+  }),
+  stream: async (ctx) => { /* ... */ },
+});
+
+const ai = new AIService();
+ai.use(echo.model({ id: "local-echo", name: "Local Echo", default: true }));
+base.use(ai);
+
+await base.health();
+serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
+```
+
+## 2. Create Town & Token
+
+```ts
+const admin = new City({
+  role: "admin",
+  city_url: "http://127.0.0.1:43127",
+  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+});
+const town = await admin.towns.create({ name: "Demo Town" });
+const token = await admin.towns.tokens.apply({
+  town_id: town.town_id,
+  user_id: "user_123",
+  ttl: "7d",
+});
+```
+
+## 3. Client Call
+
+```ts
+const client = new City({
+  role: "user",
+  city_url: "http://127.0.0.1:43127",
+  town_id: town.town_id,
+  user_token: token.user_token,
+});
+
+// SDK pathway
+const result = await client.ai.text({ prompt: "Hello" });
+
+// OpenAI-compatible pathway
+// POST /v1/ai/chat/completions
+```
+
+## Next Steps
+
+- [Provider & Model Registration](/en/city-sdk-docs/service/ai/provider)
+- [Calling AI Service](/en/city-sdk-docs/service/ai/calling)
+- [Create City](/en/city-sdk-docs/quickstart/create-city)

@@ -1,0 +1,52 @@
+---
+title: town agent doctor
+description: Diagnose and optionally fix stale agent state files
+---
+
+# `town agent doctor`
+
+Diagnose agent state files for a target agent and optionally clean stale pid/meta files.
+
+> This page remains as a command entry point. For the fuller explanation, see [CLI / doctor](/en/docs/agent/cli/maintenance/doctor) and [Agent Shows stale](/en/docs/agent/operations/troubleshooting/agent-shows-stale).
+
+## Usage
+
+```bash
+town agent doctor [path] [--fix]
+```
+
+## Key option
+
+- `--fix [enabled]`: clean stale state files automatically
+
+## Behavior
+
+- `path` defaults to current directory `.`
+- Target agent must be registered in console registry
+- Without `--fix`, it only reports issues and does not modify files
+
+## Related commands
+
+- [`town agent status`](/en/products-docs/town-cli/agent/status)
+- [`town agent restart`](/en/products-docs/town-cli/agent/restart)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ town agent doctor .
+town v1.0.0
+⚠️  Stale daemon state detected
+   project: <projectRoot>
+   stalePid: <pid>
+   reason: <reasons>
+   log: <daemonLogPath>
+   Run `town agent doctor <path> --fix` to clean stale pid/meta.
+```
+
+```text
+$ town agent doctor . --fix
+town v1.0.0
+✅ Cleaned stale daemon pid/meta files
+```

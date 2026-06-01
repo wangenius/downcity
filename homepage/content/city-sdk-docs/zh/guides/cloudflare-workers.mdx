@@ -1,0 +1,74 @@
+---
+title: Cloudflare Workers
+description: 直接用 @downcity/city 在 Cloudflare Workers + D1 中部署 City，不需要额外的 edge package。
+---
+
+如果你准备把 Downcity 部署到 Cloudflare Workers，推荐做法不是等一个单独的 edge package，而是直接把 `@downcity/city` 接到 Workers runtime。
+
+官方参考实现就在 `cities/edge`。
+
+## 这条路径解决什么
+
+Cloudflare Workers 和 Node.js 最大的不同，不是 HTTP 入口，而是 runtime 资源模型不同：
+
+- 数据库通常来自 `env.DB` 这类 binding
+- 环境变量读取不再是本地 `.env` 文件
+- request origin 可能需要在每次请求时同步到 service
+- Worker isolate 会复用，所以 runtime cache 需要自己管理
+
+这也是为什么这里更适合用 guide 解释接法，而不是再抽一个空的 npm 包。
+
+## 最小接法
+
+City 需要的只是一个 Drizzle db 对象：
+
+```ts
+import { CityBase } from "@downcity/city";
+import { drizzle } from "drizzle-orm/d1";
+
+export interface Env {
+  DB: D1Database;
+}
+
+export default {
+  async fetch(request: Request, env: Env) {
+    const db = drizzle(env.DB);
+    const base = new CityBase({ db, dialect: "sqlite", raw: env.DB });
+
+    await base.health();
+    return base.handleRequest(request);
+  },
+};
+```
+
+这里的重点不是某个 helper 名字，而是你把数据库交给 City：
+
+- D1 通过 `drizzle-orm/d1` 得到 db
+- D1 属于 SQLite 方言，所以显式传 `dialect: "sqlite"`
+- `raw: env.DB` 交给需要底层 D1 对象的服务使用
+- 当前请求 origin 可以在请求前同步给需要 OAuth callback 的 service
+
+## 推荐直接参考 `cities/edge`
+
+仓库里的 [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1) 已经把真实接法写完整了，包含这些关键点：
+
+- 用 `drizzle-orm/d1` 把 `env.DB` 接成 City 可用数据库
+- City 启动时自动初始化内置 `env` / `towns` 表
+- 在每次请求前同步当前 origin，避免 OAuth callback 或外链使用错误域名
+- 继续像 Node 路线一样注册 `AIService`、accounts、usage、payment 服务
+
+如果你要做正式项目，建议从这个示例拷贝，而不是从零拼 `runtime`。
+
+## 和 Node 路线的边界
+
+Worker 和 Node 现在是同一套心智模型：都创建 Drizzle db，然后传给 `new CityBase({ db })`。
+
+- Node.js 本地常用 `drizzle-orm/better-sqlite3`
+- Node.js 生产可以用 Drizzle pg
+- Workers / D1 用 `drizzle-orm/d1`
+
+## 下一步
+
+- 如果你还没搭 City 本体，先读 [City 运行时](/zh/city-sdk-docs/packages/city/city-runtime)
+- 如果你要管理 provider key，继续读 [provider 环境变量](/zh/city-sdk-docs/guides/provider-env)
+- 如果你需要完整示例，直接看 [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1)

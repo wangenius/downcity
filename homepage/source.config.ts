@@ -13,6 +13,18 @@ export const docs = defineDocs({
   dir: "content/docs",
 });
 
+export const productsDocs = defineDocs({
+  dir: "content/products-docs",
+});
+
+export const citySdkDocs = defineDocs({
+  dir: "content/city-sdk-docs",
+});
+
+export const servicesSdkDocs = defineDocs({
+  dir: "content/services-sdk-docs",
+});
+
 export const devdocs = defineDocs({
   dir: "content/devdocs",
 });

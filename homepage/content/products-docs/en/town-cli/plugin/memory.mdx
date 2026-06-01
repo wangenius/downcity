@@ -1,0 +1,45 @@
+---
+title: town memory
+description: Managed memory plugin commands for search, retrieval, storage, and flush
+---
+
+# `town memory`
+
+`town memory` is the managed memory plugin command group.
+
+Use it when the agent or operator needs to inspect or write memory explicitly instead of relying only on prompt-time memory injection.
+
+## Usage
+
+```bash
+town memory <subcommand> [options]
+```
+
+## Main subcommands
+
+- `status`
+- `search <query>`
+- `get <memoryPath> [--from <line>] [--lines <count>]`
+- `store --content <text> [--target <longterm|daily|working>] [--session-id <sessionId>]`
+- `flush --session-id <sessionId> [--max-messages <count>]`
+
+## Notes
+
+- Memory exists when the memory plugin is registered and started.
+- The system prompt only injects a bounded longterm pack; deeper retrieval still goes through `memory.search` and `memory.get`.
+- All memory actions support one-shot `--delay` / `--time`.
+
+## Examples
+
+```bash
+town memory status
+town memory search "release decision"
+town memory get .downcity/memory/MEMORY.md --from 10 --lines 20
+town memory store --target longterm --content "User prefers concise release notes."
+town memory flush --session-id telegram-chat-123 --max-messages 40
+```
+
+## Related
+
+- [`Plugin Scheduling`](/en/products-docs/town-cli/plugin/schedule)
+- [`Plugins Docs / memory`](/en/plugins-docs/builtins/memory)

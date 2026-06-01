@@ -1,16 +1,14 @@
 /**
- * 平台模型管理路由。
+ * City AIService 模型路由。
  *
  * 关键点（中文）
  * - 聚合 `/api/ui/model*` 路由，避免网关主文件过长。
- * - 统一承接模型池 CRUD、测试、发现与 agent 绑定切换。
+ * - Town 不再提供模型池 CRUD，只负责读取 City AIService 模型目录与更新 agent 绑定。
  */
 import fs from "fs-extra";
 import { getDowncityJsonPath } from "../config/Paths.js";
-import { PlatformStore } from "../platform/store/index.js";
-import { ModelPoolService } from "../model/service/ModelPoolService.js";
+import { assertCityAiModelReady, listCityAiServiceModelsForUser, } from "../model/runtime/CityAiServiceBinding.js";
 export function registerPlatformModelRoutes(params) {
-    const modelPoolService = params.modelPoolService || new ModelPoolService();
     const { app, readRequestedAgentId, resolveSelectedAgent, buildModelResponse } = params;
     app.get("/api/ui/model", async (c) => {
         try {
@@ -37,19 +35,7 @@ export function registerPlatformModelRoutes(params) {
             if (!nextPrimaryModelId) {
                 return c.json({ success: false, error: "Missing primaryModelId" }, 400);
             }
-            const store = new PlatformStore();
-            try {
-                const targetModel = store.getModel(nextPrimaryModelId);
-                if (!targetModel) {
-                    return c.json({ success: false, error: `Model not found: ${nextPrimaryModelId}` }, 400);
-                }
-                if (targetModel.isPaused === true) {
-                    return c.json({ success: false, error: `Model is paused: ${nextPrimaryModelId}` }, 400);
-                }
-            }
-            finally {
-                store.close();
-            }
+            await assertCityAiModelReady(nextPrimaryModelId);
             const shipJsonPath = getDowncityJsonPath(selectedAgent.projectRoot);
             if (!(await fs.pathExists(shipJsonPath))) {
                 return c.json({ success: false, error: `downcity.json not found: ${shipJsonPath}` }, 400);
@@ -73,161 +59,22 @@ export function registerPlatformModelRoutes(params) {
     });
     app.get("/api/ui/model/pool", async (c) => {
         try {
-            const payload = await modelPoolService.listPool();
+            const models = await listCityAiServiceModelsForUser();
             return c.json({
                 success: true,
-                ...payload,
+                providers: [],
+                models: models.map((model) => ({
+                    id: model.id,
+                    providerId: "city",
+                    name: model.name,
+                    isPaused: false,
+                    modalities: model.modalities,
+                    tags: model.tags,
+                    meta: model.meta,
+                })),
+                providerIds: [],
+                modelIds: models.map((model) => model.id),
             });
-        }
-        catch (error) {
-            return c.json({ success: false, error: String(error) }, 500);
-        }
-    });
-    app.post("/api/ui/model/provider/upsert", async (c) => {
-        try {
-            const body = (await c.req.json().catch(() => ({})));
-            const providerId = String(body.id || "").trim();
-            if (!providerId) {
-                return c.json({ success: false, error: "Missing provider id" }, 400);
-            }
-            const providerType = String(body.type || "").trim();
-            if (!providerType) {
-                return c.json({ success: false, error: "Missing provider type" }, 400);
-            }
-            const payload = await modelPoolService.upsertProvider({
-                id: providerId,
-                type: providerType,
-                baseUrl: body.baseUrl,
-                apiKey: body.apiKey,
-                clearBaseUrl: body.clearBaseUrl === true,
-                clearApiKey: body.clearApiKey === true,
-            });
-            return c.json({
-                success: true,
-                ...payload,
-            });
-        }
-        catch (error) {
-            return c.json({ success: false, error: String(error) }, 500);
-        }
-    });
-    app.post("/api/ui/model/provider/remove", async (c) => {
-        try {
-            const body = (await c.req.json().catch(() => ({})));
-            const providerId = String(body.providerId || "").trim();
-            if (!providerId) {
-                return c.json({ success: false, error: "Missing providerId" }, 400);
-            }
-            await modelPoolService.removeProvider(providerId);
-            return c.json({ success: true, providerId });
-        }
-        catch (error) {
-            return c.json({ success: false, error: String(error) }, 500);
-        }
-    });
-    app.post("/api/ui/model/provider/test", async (c) => {
-        try {
-            const body = (await c.req.json().catch(() => ({})));
-            const providerId = String(body.providerId || "").trim();
-            if (!providerId) {
-                return c.json({ success: false, error: "Missing providerId" }, 400);
-            }
-            const payload = await modelPoolService.testProvider(providerId);
-            return c.json({
-                success: true,
-                ...payload,
-            });
-        }
-        catch (error) {
-            return c.json({ success: false, error: String(error) }, 500);
-        }
-    });
-    app.post("/api/ui/model/provider/discover", async (c) => {
-        try {
-            const body = (await c.req.json().catch(() => ({})));
-            const providerId = String(body.providerId || "").trim();
-            if (!providerId) {
-                return c.json({ success: false, error: "Missing providerId" }, 400);
-            }
-            const payload = await modelPoolService.discoverProvider({
-                providerId,
-                autoAdd: body.autoAdd === true,
-                prefix: String(body.prefix || "").trim(),
-            });
-            return c.json({
-                success: true,
-                ...payload,
-            });
-        }
-        catch (error) {
-            return c.json({ success: false, error: String(error) }, 500);
-        }
-    });
-    app.post("/api/ui/model/model/upsert", async (c) => {
-        try {
-            const body = (await c.req.json().catch(() => ({})));
-            const modelId = String(body.id || "").trim();
-            if (!modelId) {
-                return c.json({ success: false, error: "Missing model id" }, 400);
-            }
-            const payload = await modelPoolService.upsertModel({
-                id: modelId,
-                providerId: String(body.providerId || "").trim(),
-                name: String(body.name || "").trim(),
-                temperature: body.temperature,
-                maxTokens: body.maxTokens,
-                topP: body.topP,
-                frequencyPenalty: body.frequencyPenalty,
-                presencePenalty: body.presencePenalty,
-                anthropicVersion: body.anthropicVersion,
-                isPaused: body.isPaused === true,
-            });
-            return c.json({
-                success: true,
-                ...payload,
-            });
-        }
-        catch (error) {
-            return c.json({ success: false, error: String(error) }, 500);
-        }
-    });
-    app.post("/api/ui/model/model/remove", async (c) => {
-        try {
-            const body = (await c.req.json().catch(() => ({})));
-            const modelId = String(body.modelId || "").trim();
-            if (!modelId) {
-                return c.json({ success: false, error: "Missing modelId" }, 400);
-            }
-            await modelPoolService.removeModel(modelId);
-            return c.json({ success: true, modelId });
-        }
-        catch (error) {
-            return c.json({ success: false, error: String(error) }, 500);
-        }
-    });
-    app.post("/api/ui/model/model/pause", async (c) => {
-        try {
-            const body = (await c.req.json().catch(() => ({})));
-            const modelId = String(body.modelId || "").trim();
-            if (!modelId) {
-                return c.json({ success: false, error: "Missing modelId" }, 400);
-            }
-            await modelPoolService.setModelPaused(modelId, body.isPaused === true);
-            return c.json({ success: true, modelId, isPaused: body.isPaused === true });
-        }
-        catch (error) {
-            return c.json({ success: false, error: String(error) }, 500);
-        }
-    });
-    app.post("/api/ui/model/model/test", async (c) => {
-        try {
-            const body = (await c.req.json().catch(() => ({})));
-            const modelId = String(body.modelId || "").trim();
-            if (!modelId) {
-                return c.json({ success: false, error: "Missing modelId" }, 400);
-            }
-            const payload = await modelPoolService.testModel(modelId, String(body.prompt || "").trim());
-            return c.json({ success: true, ...payload });
         }
         catch (error) {
             return c.json({ success: false, error: String(error) }, 500);

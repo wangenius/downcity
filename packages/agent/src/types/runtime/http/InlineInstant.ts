@@ -40,7 +40,7 @@ export interface PlatformInlineInstantRunInput {
   pageContext?: string;
 
   /**
-   * `model` executor 对应的模型池 modelId。
+   * `model` executor 对应的 City AIService modelId。
    */
   modelId?: string;
 

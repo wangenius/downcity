@@ -21,7 +21,7 @@ import {
 import { registerConfigCommand } from "../shared/Config.js";
 import { registerEnvCommand } from "../shared/Env.js";
 import { registerTokenCommand } from "../shared/Token.js";
-import { registerModelCommand } from "../model/Model.js";
+import { registerCityConnectionCommand } from "../shared/CityConnection.js";
 import { controlPlaneInitCommand } from "./ControlPlaneInit.js";
 import { parseBoolean, parsePort, createVersionBanner } from "../shared/IndexSupport.js";
 import { CliError } from "../shared/CliError.js";
@@ -65,7 +65,7 @@ export function registerControlPlaneCommands(
 ): void {
   program
     .command("init")
-    .description("初始化 Town 全局配置（模型/插件等，写入 ~/.downcity/downcity.db）")
+    .description("初始化 Town 全局配置（插件、env、账号等，写入 ~/.downcity/downcity.db）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
       await controlPlaneInitCommand();
@@ -238,7 +238,7 @@ export function registerControlPlaneCommands(
   registerConfigCommand(program);
   registerEnvCommand(program);
   registerTokenCommand(program);
-  registerModelCommand(program);
+  registerCityConnectionCommand(program);
 }
 
 export {

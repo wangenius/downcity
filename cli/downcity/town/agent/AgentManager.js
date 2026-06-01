@@ -13,7 +13,6 @@ import { startCommand } from "./Start.js";
 import { stopCommand } from "./Stop.js";
 import { restartCommand } from "./Restart.js";
 import { statusCommand } from "./Status.js";
-import { agentResetCommand } from "./AgentReset.js";
 import { chatCommand } from "./AgentChat.js";
 import { listRegisteredAgentsForCli, resolveCliAgentStartProjectRoot, } from "./AgentSelection.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
@@ -230,11 +229,6 @@ async function promptAgentAction(agent) {
                 title: "配置 ID",
                 description: `当前：${agent.id}`,
                 value: "configureId",
-            },
-            {
-                title: "配置模型",
-                description: `当前：${agent.modelId || "未配置"}`,
-                value: "configureModel",
             },
             {
                 title: "连接聊天渠道",
@@ -533,15 +527,6 @@ async function runSelectedAgentManager() {
             }
             if (action === "configureId") {
                 agent = await configureAgentId(agent);
-                continue;
-            }
-            if (action === "configureModel") {
-                await agentResetCommand(agent.projectRoot);
-                const nextConfig = readAgentConfig(agent.projectRoot);
-                agent = {
-                    ...agent,
-                    modelId: readAgentModelId(nextConfig),
-                };
                 continue;
             }
             if (action === "connectChannels") {

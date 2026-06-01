@@ -9,7 +9,7 @@ Start Town runtime in background mode.
 
 Startup initializes the Town runtime registry and process state.
 If no local token exists yet, startup automatically creates a `console-bootstrap` token and prints the plain token once in startup output.
-Startup also tries to discover the machine's public IP and saves it to Console Env as `DOWNCITY_PUBLIC_HOST`. Later, agent `contact link` generation prefers this address so link codes do not fall back to `127.0.0.1`.
+Startup also tries to discover the machine's public IP and saves it to City-side Env as `DOWNCITY_PUBLIC_HOST`. Later, agent `contact link` generation prefers this address so link codes do not fall back to `127.0.0.1`.
 
 If you also want to start Console in one step, use `town start --console`, `town start -a`, or `town start -p`.
 If you pass `-p/--public` or `-h/--host`, the CLI also starts Console automatically.

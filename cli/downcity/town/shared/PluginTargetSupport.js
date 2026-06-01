@@ -53,7 +53,7 @@ export async function checkAgentPreflight(projectRoot, options) {
         });
     }
     // 关键点（中文）：提前校验 execution binding，避免"启动成功后秒退"。
-    assertProjectExecutionModelReady(projectRoot);
+    await assertProjectExecutionModelReady(projectRoot);
 }
 /**
  * 解析正整数参数。

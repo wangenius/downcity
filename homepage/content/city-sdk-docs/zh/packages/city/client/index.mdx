@@ -3,7 +3,7 @@ title: "City"
 description: "提供 User City 和 Admin City，并把 AI、custom service 的调用边界统一收口。"
 ---
 
-City 是 `@downcity/city` 导出的访问层。产品侧通过它接入共享 runtime。
+City 是 `@downcity/city` 导出的访问层。产品侧通过它接入 City runtime。
 
 它不只是“调一下 AI”的小工具，而是把这几类调用统一收口到一个产品侧入口里：
 
@@ -305,11 +305,11 @@ const checkout = await client.payment.method("stripe").invoke({
 2. 再看 [User City](/zh/city-sdk-docs/reference/city-user)，理解产品侧具体调法
 3. 再看 [Admin City](/zh/city-sdk-docs/reference/city-admin)，理解可信后端怎么签 token
 4. 如果你要最小注册登录，继续看 [@downcity/services](/zh/services-sdk-docs)
-5. 如果你要完整登录场景，再看 [Services SDK Accounts](/zh/services-sdk-docs/accounts)
+5. 如果你要完整登录场景，再看 [City Services Docs / Accounts](/zh/services-sdk-docs/accounts)
 
 ## 下一步读什么
 
 - 想理解 City 端是什么，回到 [@downcity/city](/zh/city-sdk-docs/packages/city)
 - 想查完整 SDK 接口，看 [User City](/zh/city-sdk-docs/reference/city-user) 和 [Admin City](/zh/city-sdk-docs/reference/city-admin)
 - 想看账号服务怎么直接返回 `user_token`，看 [@downcity/services](/zh/services-sdk-docs)
-- 想看完整登录链路，读 [Services SDK Accounts](/zh/services-sdk-docs/accounts)
+- 想看完整登录链路，读 [City Services Docs / Accounts](/zh/services-sdk-docs/accounts)

@@ -1,1 +1,1 @@
-{"version":3,"file":"ModelReadCommand.d.ts","sourceRoot":"","sources":["../../src/model/ModelReadCommand.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAczC;;GAEG;AACH,wBAAgB,yBAAyB,CAAC,KAAK,EAAE,OAAO,GAAG,IAAI,CAK9D"}
+{"version":3,"file":"ModelReadCommand.d.ts","sourceRoot":"","sources":["../../src/model/ModelReadCommand.ts"],"names":[],"mappings":"AAAA;;;;;;;GAOG;AAEH,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAgBzC;;GAEG;AACH,wBAAgB,yBAAyB,CAAC,KAAK,EAAE,OAAO,GAAG,IAAI,CAI9D"}

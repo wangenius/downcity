@@ -32,7 +32,8 @@ town agent create .
 处理：
 
 - 检查 `downcity.json.execution.modelId`
-- 确认这个 `modelId` 在共享模型目录中存在
+- 执行 `town city status`
+- 确认这个 `modelId` 在 City AIService 中存在
 
 这是当前项目 agent 启动链路里最常见的结构性错误之一。
 
@@ -75,7 +76,7 @@ town agent start
 
 1. `town agent status`
 2. 看 `downcity.json`
-3. 确认模型绑定
+3. 确认 City 连接与模型绑定
 4. 如果 stale 就 `doctor --fix`
 5. 还不行再 `restart`
 

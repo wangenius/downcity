@@ -181,7 +181,7 @@ export interface DowncityConfig {
    *
    * 关键点（中文）
    * - 项目只有一种执行模式：`api`。
-   * - 绑定平台全局模型池中的模型 ID。
+   * - 绑定 City AIService 暴露的模型 ID。
    */
   execution?: ExecutionBindingConfig;
   /**

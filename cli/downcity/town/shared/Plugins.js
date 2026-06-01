@@ -18,6 +18,7 @@ import { resolveProjectRoot } from "./PluginTargetSupport.js";
 import { runManagedPluginCommandBridge, runManagedPluginControlCommand, } from "./ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
 import { setBayPluginEnabled } from "../platform/PluginLifecycle.js";
+import { listRegisteredAgentsForCli, } from "../agent/AgentSelection.js";
 function createPluginCatalog() {
     return createBuiltinPlugins();
 }
@@ -170,6 +171,64 @@ async function promptPluginName(message) {
     const pluginName = String(response.pluginName || "").trim();
     return pluginName || null;
 }
+async function promptPluginAgentTarget() {
+    const agents = await listRegisteredAgentsForCli();
+    if (agents.length === 0) {
+        emitCliBlock({
+            tone: "info",
+            title: "No registered agents",
+            note: "Run `town agent create` and `town agent start` before managing runtime plugins.",
+        });
+        return null;
+    }
+    const response = (await prompts({
+        type: "select",
+        name: "projectRoot",
+        message: "选择 Agent",
+        choices: agents.map((agent) => ({
+            title: agent.id,
+            description: `${agent.status} · ${agent.projectRoot}`,
+            value: agent.projectRoot,
+        })),
+        initial: Math.max(0, agents.findIndex((agent) => agent.status === "running")),
+    }));
+    const projectRoot = String(response.projectRoot || "").trim();
+    return projectRoot || null;
+}
+async function promptPluginRootAction() {
+    const plugins = listStaticCatalogEntries();
+    const agents = await listRegisteredAgentsForCli();
+    const runningCount = agents.filter((agent) => agent.status === "running").length;
+    const response = (await prompts({
+        type: "select",
+        name: "action",
+        message: "管理 Agent Plugins",
+        choices: [
+            {
+                title: "查看 plugin 目录",
+                description: `${plugins.length} 个内建 plugin`,
+                value: "catalog",
+            },
+            {
+                title: "管理某个 Agent 的 plugin",
+                description: `${agents.length} 个已登记，${runningCount} 个运行中`,
+                value: "agent",
+            },
+            {
+                title: "管理 Town 级 plugin 开关",
+                description: "静态 lifecycle 开关，不替代 Agent runtime 状态",
+                value: "global",
+            },
+            {
+                title: "退出",
+                description: "关闭 plugin manager",
+                value: "exit",
+            },
+        ],
+        initial: 1,
+    }));
+    return response.action || null;
+}
 async function promptPluginManagerAction(params) {
     const plugin = findStaticCatalogEntry(params.pluginName);
     const availability = plugin
@@ -207,6 +266,48 @@ async function promptPluginManagerAction(params) {
     }));
     const action = response.action;
     return action || null;
+}
+async function promptAgentPluginAction(params) {
+    const plugin = findStaticCatalogEntry(params.pluginName);
+    const response = (await prompts({
+        type: "select",
+        name: "action",
+        message: `管理 Agent plugin · ${params.pluginName}`,
+        choices: [
+            {
+                title: "查看目录信息",
+                description: plugin?.title || params.pluginName,
+                value: "info",
+            },
+            {
+                title: "查看运行状态",
+                description: "读取目标 Agent runtime 的 plugin 状态",
+                value: "status",
+            },
+            {
+                title: "启动",
+                description: "启动目标 Agent 上的托管 plugin",
+                value: "start",
+            },
+            {
+                title: "停止",
+                description: "停止目标 Agent 上的托管 plugin",
+                value: "stop",
+            },
+            {
+                title: "重启",
+                description: "重启目标 Agent 上的托管 plugin",
+                value: "restart",
+            },
+            {
+                title: "返回",
+                description: "重新选择 Agent 或 plugin",
+                value: "back",
+            },
+        ],
+        initial: 1,
+    }));
+    return response.action || null;
 }
 async function resolveInteractivePluginName(params) {
     const explicit = String(params.pluginName || "").trim();
@@ -377,7 +478,7 @@ async function runPluginLifecycleCommand(params) {
         enabled: params.enabled,
     });
 }
-async function runInteractivePluginManager() {
+async function runGlobalPluginLifecycleManager() {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
         return;
     }
@@ -426,6 +527,80 @@ async function runInteractivePluginManager() {
                     enabled: false,
                 });
             }
+        }
+    }
+}
+async function runAgentPluginManager() {
+    const projectRoot = await promptPluginAgentTarget();
+    if (!projectRoot)
+        return;
+    while (true) {
+        const pluginName = await promptPluginName("选择要管理的 Agent plugin");
+        if (!pluginName)
+            return;
+        while (true) {
+            const action = await promptAgentPluginAction({ pluginName });
+            if (!action) {
+                emitCliBlock({
+                    tone: "info",
+                    title: "Plugin manager closed",
+                });
+                return;
+            }
+            if (action === "back")
+                break;
+            if (action === "info") {
+                await runPluginInfoCommand({
+                    pluginName,
+                    options: { json: false },
+                });
+                continue;
+            }
+            await runManagedPluginControlCommand({
+                pluginName,
+                action,
+                options: {
+                    path: projectRoot,
+                    json: false,
+                },
+            });
+        }
+    }
+}
+export async function runInteractivePluginManager() {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+        return;
+    }
+    while (true) {
+        const action = await promptPluginRootAction();
+        if (!action || action === "exit") {
+            emitCliBlock({
+                tone: "info",
+                title: "Plugin manager closed",
+            });
+            return;
+        }
+        try {
+            if (action === "catalog") {
+                await runPluginListCommand({
+                    json: false,
+                });
+                continue;
+            }
+            if (action === "agent") {
+                await runAgentPluginManager();
+                continue;
+            }
+            if (action === "global") {
+                await runGlobalPluginLifecycleManager();
+            }
+        }
+        catch (error) {
+            emitCliBlock({
+                tone: "error",
+                title: "Plugin manager action failed",
+                note: error instanceof Error ? error.message : String(error),
+            });
         }
     }
 }

@@ -17,8 +17,9 @@ import { registerPluginsCommand } from "./shared/Plugins.js";
 import { registerManagedPluginCommandsForCli } from "./shared/ManagedPluginActionCommands.js";
 import { registerAgentCommands } from "./shared/IndexAgentCommand.js";
 import { registerChatCommand } from "./shared/Chat.js";
-import { setCliVerbosity } from "./shared/CliReporter.js";
+import { emitCliHeader, resetCliSectionFlow, setCliVerbosity, } from "./shared/CliReporter.js";
 import { registerControlPlaneCommands } from "./control-plane/ControlPlaneCommand.js";
+import { runInteractiveTownManager } from "./shared/TownManager.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const cli_path = join(__dirname, "index.js");
@@ -95,7 +96,12 @@ if (argv[0] === "agent" &&
     process.exit(0);
 }
 if (process.argv.length <= 2) {
-    program.outputHelp();
+    resetCliSectionFlow();
+    emitCliHeader(packageJson.version, { command_name: "town" });
+    await runInteractiveTownManager({
+        program,
+        cli_path,
+    });
     process.exit(0);
 }
 // 关键点（中文）：在 parse 前解析 --quiet / --verbose，设置全局 verbosity。

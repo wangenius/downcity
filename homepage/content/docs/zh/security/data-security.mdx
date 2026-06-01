@@ -5,9 +5,9 @@ description: 模型配置存储、加密机制与用户注意事项
 
 # 数据安全与密钥
 
-模型配置采用“全局存储 + 本地绑定”：
+模型配置采用“City 存储 + 项目绑定”：
 
-1. 共享模型目录：`~/.downcity/downcity.db`
+1. City AIService 模型目录：`~/.downcity/downcity.db`
 2. 项目绑定：`<project>/downcity.json` 的 `execution.modelId`
 
 ## apiKey 如何保护
@@ -23,7 +23,7 @@ provider 的 `apiKey` 不以明文写入数据库，而是写入加密字段 `ap
 
 1. 不要提交 `~/.downcity` 或任何私钥文件到版本库。
 2. 团队环境统一通过密钥管理系统注入 `DC_MODEL_DB_KEY`。
-3. 轮换 key 后，执行一次模型连通性验证（`town model list` + 实际调用测试）。
+3. 轮换 key 后，执行一次 City 连接与模型调用验证（`town city status` + 实际调用测试）。
 
 ## 相关文档
 

@@ -1,46 +1,26 @@
 /**
- * ExecutionModelBinding：Town 宿主侧执行模型绑定辅助。
+ * ExecutionModelBinding：Town 宿主侧 City AIService 模型绑定辅助。
  *
  * 职责说明（中文）
- * - 统一承接平台模型池读取、模型候选列表构建与项目 execution.modelId 校验。
- * - 保证 `Agent` 只接收最终 `LanguageModel`，不再承担模型池查询职责。
- * - 让 CLI、control gateway、前台启动等宿主入口复用同一套模型绑定规则。
+ * - 统一读取 City AIService 模型目录。
+ * - 校验项目 `execution.modelId` 是否能在 City AIService 中找到。
+ * - Town 只保存 model id，不保存 provider、key 或 endpoint。
  */
+import { type CityAiModelChoice } from "./CityAiServiceBinding.js";
 /**
- * 平台模型下拉候选项。
+ * City AIService 模型下拉候选项。
  */
-export interface PlatformModelChoice {
-    /**
-     * 下拉展示文案。
-     */
-    title: string;
-    /**
-     * 实际写入 `execution.modelId` 的模型 ID。
-     */
-    value: string;
-}
+export type PlatformModelChoice = CityAiModelChoice;
 /**
- * 读取平台模型候选列表。
- *
- * 关键点（中文）
- * - 输出结果面向 CLI/Console 的模型选择界面。
- * - provider 信息会拼到标题中，便于区分同名模型。
+ * 读取 City AIService 模型候选列表。
  */
 export declare function listPlatformModelChoices(): Promise<PlatformModelChoice[]>;
 /**
- * 断言指定平台模型可用于 agent execution。
- *
- * 关键点（中文）
- * - 当前只校验“存在且未暂停”。
- * - 供应商连通性与 API Key 可用性仍交给真正创建模型实例时再校验。
+ * 断言指定模型可用于 agent execution。
  */
-export declare function assertPlatformModelReady(modelId: string): void;
+export declare function assertPlatformModelReady(modelId: string): Promise<void>;
 /**
  * 断言项目 execution 绑定已声明且目标模型可用。
- *
- * 关键点（中文）
- * - 这里是 Town 启动/控制面入口的宿主前置校验。
- * - 失败时抛出稳定错误，交由 CLI 或 HTTP 层决定如何展示。
  */
-export declare function assertProjectExecutionModelReady(projectRoot: string): void;
+export declare function assertProjectExecutionModelReady(projectRoot: string): Promise<void>;
 //# sourceMappingURL=ExecutionModelBinding.d.ts.map

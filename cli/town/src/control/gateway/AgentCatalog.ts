@@ -44,7 +44,7 @@ import type {
   PlatformAgentShipJson,
 } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
-import { PlatformStore } from "@/platform/store/index.js";
+import { listCityAiServiceModelsForUser } from "@/model/runtime/CityAiServiceBinding.js";
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 const DEFAULT_RUNTIME_PORT = 5314;
 
@@ -352,11 +352,11 @@ export async function inspectPlatformAgentDirectory(
 }
 
 /**
- * 构建 Global Model 面板响应。
+ * 构建 City AIService Model 面板响应。
  *
  * 关键点（中文）
- * - 读取当前选中 agent 的 `execution.modelId`，再去平台模型池里补全 provider/model 信息。
- * - 这里只返回全局模型池视图，不解析项目内本地模型目录。
+ * - 读取当前选中 agent 的 `execution.modelId`，再去 City AIService 模型目录补全展示信息。
+ * - Town 这里只返回可绑定模型视图，不维护 provider/model 配置。
  */
 export async function buildPlatformModelResponse(params: {
   requestedAgentId: string;
@@ -396,40 +396,29 @@ export async function buildPlatformModelResponse(params: {
     }
   }
 
-  const store = new PlatformStore();
-  try {
-    const models = store.listModels();
-    const providers = await store.listProviders();
-    const providerMap = new Map(providers.map((x) => [x.id, x] as const));
-    const activeModel = agentPrimaryModelId
-      ? models.find((x) => x.id === agentPrimaryModelId) : null
-    const providerKey = String(activeModel?.providerId || "").trim();
-    const provider = providerKey ? providerMap.get(providerKey) : null;
+  const models = await listCityAiServiceModelsForUser();
+  const activeModel = agentPrimaryModelId
+    ? models.find((x) => x.id === agentPrimaryModelId)
+    : null;
 
-    return {
-      success: true,
-      model: {
-        primaryModelId: agentPrimaryModelId,
-        primaryModelName: String(activeModel?.name || "").trim(),
-        providerKey,
-        providerType: String(provider?.type || "").trim(),
-        baseUrl: String(provider?.baseUrl || "").trim(),
-        agentPrimaryModelId,
-        availableModels: models.map((model) => {
-          const providerConfig = providerMap.get(model.providerId);
-          return {
-            id: model.id,
-            name: model.name,
-            providerKey: model.providerId,
-            providerType: String(providerConfig?.type || "").trim(),
-            isPaused: model.isPaused === true,
-          };
-        }),
-      },
-    };
-  } finally {
-    store.close();
-  }
+  return {
+    success: true,
+    model: {
+      primaryModelId: agentPrimaryModelId,
+      primaryModelName: String(activeModel?.name || "").trim(),
+      providerKey: "city",
+      providerType: "ai-service",
+      baseUrl: "City AIService",
+      agentPrimaryModelId,
+      availableModels: models.map((model) => ({
+        id: model.id,
+        name: model.name,
+        providerKey: "city",
+        providerType: model.modalities.join("/") || "ai-service",
+        isPaused: false,
+      })),
+    },
+  };
 }
 
 /**

@@ -24,14 +24,14 @@ description: downcity.json 中用户最常用字段与注意事项
 ## 注意事项
 
 1. 项目现在必须声明 `execution`，执行模式固定为 `api`。
-2. `execution.modelId` 必须存在于 共享模型目录中。
+2. `execution.modelId` 必须存在于已连接的 City AIService 中。
 3. `start.host/start.port` 会影响 CLI 的默认路由目标。
 4. 项目层统一在 `downcity.json` 中维护 `plugins` 与执行相关配置。
 5. 本地 shell / CLI 命令默认强制运行在 sandbox 中，顶层 `sandbox` 只用于调整边界参数。
 
 ## 执行模式
 
-如果你希望项目走 console 共享模型目录：
+如果你希望项目使用 City AIService 模型：
 
 ```json
 {
@@ -80,4 +80,4 @@ town config set start.port 3100
 
 - [downcity.json 参考](/zh/docs/reference/downcity-json)
 - [快速开始配置](/zh/docs/quickstart/configuration)
-- [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)
+- [环境变量配置逻辑（City 侧 vs Agent 私有）](/zh/docs/configuration/environment-variables)

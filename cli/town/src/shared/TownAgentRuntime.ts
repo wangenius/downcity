@@ -99,7 +99,7 @@ export async function prepareForegroundAgent(
 
   injectAgentContext(cwd);
   const project_root = resolve(String(cwd || "."));
-  assertProjectExecutionModelReady(project_root);
+  await assertProjectExecutionModelReady(project_root);
 
   const should_foreground = options.foreground === true;
   if (!should_foreground) {

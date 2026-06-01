@@ -34,11 +34,11 @@ export declare function resolvePlatformAgentById(requestedAgentId: string): Prom
  */
 export declare function inspectPlatformAgentDirectory(projectRoot: string): Promise<PlatformAgentDirectoryInspection>;
 /**
- * 构建 Global Model 面板响应。
+ * 构建 City AIService Model 面板响应。
  *
  * 关键点（中文）
- * - 读取当前选中 agent 的 `execution.modelId`，再去平台模型池里补全 provider/model 信息。
- * - 这里只返回全局模型池视图，不解析项目内本地模型目录。
+ * - 读取当前选中 agent 的 `execution.modelId`，再去 City AIService 模型目录补全展示信息。
+ * - Town 这里只返回可绑定模型视图，不维护 provider/model 配置。
  */
 export declare function buildPlatformModelResponse(params: {
     requestedAgentId: string;

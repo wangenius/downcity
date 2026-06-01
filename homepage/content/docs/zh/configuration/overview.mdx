@@ -1,18 +1,18 @@
 ---
 title: 配置总览
-description: 按层理解 Console 全局配置与 Agent 项目配置
+description: 按层理解 City Service 配置与 Agent 项目配置
 ---
 
 # 配置总览
 
 当前推荐配置分层：
 
-1. 共享运行层：管理共享资源（例如模型目录、env 和服务凭据）。
+1. City runtime：管理模型目录、env 和服务凭据。
 2. Agent 项目层：声明当前项目绑定与运行参数。
 
 ## 关键原则
 
-1. 模型定义在 Console，全局复用。
+1. 模型定义在 City AIService，多个 Agent 可复用。
 2. Agent 只声明统一的 `execution`，不重复保存 provider 细节。
 3. 任何配置变更后，建议重启对应 agent 验证生效。
 
@@ -23,8 +23,8 @@ description: 按层理解 Console 全局配置与 Agent 项目配置
 
 ## 下一步
 
-1. [Console downcity.json](/zh/docs/configuration/console-downcity-json)
+1. [City 配置存储](/zh/docs/configuration/console-downcity-json)
 2. [项目配置（downcity.json）](/zh/docs/configuration/project)
-3. [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)
-4. [模型配置（Console + Agent）](/zh/docs/configuration/model)
+3. [环境变量配置逻辑（City 侧 vs Agent 私有）](/zh/docs/configuration/environment-variables)
+4. [模型配置（City + Agent）](/zh/docs/configuration/model)
 5. [配置检查清单](/zh/docs/configuration/checklist)

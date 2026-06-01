@@ -118,7 +118,7 @@ export default [
     }),
   ]),
 
-  // Shared Services SDK docs routes with layout
+  // City SDK docs routes with layout
   layout("routes/city-sdk-docs/layout.tsx", [
     route("en/city-sdk-docs/*", "routes/city-sdk-docs/page.tsx", {
       id: "city-sdk-docs-en",
@@ -144,7 +144,7 @@ export default [
     }),
   ]),
 
-  // Services SDK docs routes with layout
+  // City Services Docs routes with layout
   layout("routes/services-sdk-docs/layout.tsx", [
     route("en/services-sdk-docs/*", "routes/services-sdk-docs/page.tsx", {
       id: "services-sdk-docs-en",

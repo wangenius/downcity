@@ -1,19 +1,19 @@
 ---
-title: Shared Model Catalog
-description: Understand the relationship between the shared model catalog and Agent project binding
+title: City Model Catalog
+description: Understand the relationship between City AIService models and Agent project binding
 ---
 
-# Shared Model Catalog
+# City Model Catalog
 
 An Agent project does not store the full model definition by itself.
 
 ## Where the model catalog lives
 
-The model catalog belongs to the shared AI service layer.
+The model catalog belongs to City AIService.
 
 From a user perspective:
 
-- the global layer stores the provider, model name, API key, and other full model details
+- City stores the provider, model name, API key, and other full model details
 - the project only stores `execution.modelId`
 
 That is why you usually do not see the full provider configuration inside the project itself.
@@ -28,7 +28,7 @@ If you maintain multiple projects, this becomes very valuable quickly.
 
 ## Typical workflow
 
-1. Prepare a model in the shared AI service layer.
+1. Prepare a model in City AIService.
 2. Bind the project's `execution.modelId` to that model.
 
 After that, switching models is mostly just switching the `modelId`.

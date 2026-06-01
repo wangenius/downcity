@@ -1,6 +1,6 @@
 ---
 title: Bind a Model to an Agent
-description: Use execution.modelId to make a project run with a global model
+description: Use execution.modelId to make a project run with a City model
 ---
 
 # Bind a Model to an Agent
@@ -18,12 +18,18 @@ The binding point between a project and a model is:
 
 ## How to change it
 
-You can edit `downcity.json` directly, or use related model-management commands to help you manage it.
+You can edit `downcity.json` directly, or set it with `town config`.
 
 Either way, the final project-side result should be the same:
 
 - `execution.type = "api"`
 - `execution.modelId = "<some-id>"`
+
+Before starting the Agent, make sure Town is connected to City:
+
+```bash
+town city status
+```
 
 ## What to do after changing it
 

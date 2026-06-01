@@ -25,8 +25,8 @@ const PAGE = {
       },
       {
         id: "sdk",
-        title: "Shared Services SDK",
-        desc: "把模型、身份、usage、支付和服务路由接入你自己的产品流程和业务系统。",
+        title: "City SDK",
+        desc: "把模型、身份、usage、支付和 Service 路由接入你自己的产品流程和业务系统。",
         source: "packages/city/",
       },
       {
@@ -40,7 +40,7 @@ const PAGE = {
     facts: [
       "Console UI 是独立前端包，目录为 products/console/。",
       "Chrome Extension 基于 Manifest V3，目录为 products/chrome-extension/。",
-      "Shared Services SDK 当前位于 packages/city/。",
+      "City SDK 当前位于 packages/city/。",
       "UI SDK 当前由 packages/ui 与 products/console 的真实交互模式共同沉淀。",
     ],
   },
@@ -64,7 +64,7 @@ const PAGE = {
       },
       {
         id: "sdk",
-        title: "Shared Services SDK",
+        title: "City SDK",
         desc: "Embed models, auth, usage, payment, and service routing into your own product flow and business system.",
         source: "packages/city/",
       },
@@ -79,7 +79,7 @@ const PAGE = {
     facts: [
       "Console UI is a dedicated frontend package in products/console/.",
       "Chrome Extension is a Manifest V3 extension in products/chrome-extension/.",
-      "Shared Services SDK currently lives in packages/city/.",
+      "City SDK currently lives in packages/city/.",
       "UI SDK capabilities are shaped by packages/ui and real Console interaction patterns.",
     ],
   },

@@ -45,7 +45,7 @@ agent 绑定模型 ID：
 说明：
 
 - 当前项目 runtime 通过 `execution.modelId` 绑定模型
-- `modelId` 应该对应 `town model list` 能看到的模型
+- `modelId` 应该对应已连接 City AIService 暴露的模型
 - 对当前项目 runtime 路径，`execution.type` 应写为 `api`
 - provider secrets 和 provider 连接细节不写进项目配置
 
@@ -112,7 +112,7 @@ town config get plugins.asr
 ```bash
 town config get
 town config get execution.modelId
-town model list
+town city status
 town config unset plugins.chat.channels.telegram
 ```
 
@@ -122,4 +122,4 @@ town config unset plugins.chat.channels.telegram
 - [CLI 参考](/zh/docs/reference/cli)
 - [downcity.json 参考](/zh/docs/reference/downcity-json)
 - [`.downcity/` 目录说明](/zh/docs/reference/dot-downcity)
-- [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)
+- [环境变量配置逻辑（City 侧 vs Agent 私有）](/zh/docs/configuration/environment-variables)

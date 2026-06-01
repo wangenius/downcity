@@ -1,0 +1,1 @@
+{"version":3,"file":"TownManager.d.ts","sourceRoot":"","sources":["../../src/shared/TownManager.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAGH,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAwEzC;;GAEG;AACH,wBAAsB,yBAAyB,CAAC,MAAM,EAAE;IACtD;;OAEG;IACH,OAAO,EAAE,OAAO,CAAC;IAEjB;;OAEG;IACH,QAAQ,EAAE,MAAM,CAAC;CAClB,GAAG,OAAO,CAAC,IAAI,CAAC,CAsDhB"}

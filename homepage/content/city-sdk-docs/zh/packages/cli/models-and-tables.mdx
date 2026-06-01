@@ -35,16 +35,16 @@ CLI 最常被用来做两件事：
 ## 最常见的模型相关入口
 
 ```bash
-town model list
-town model use <modelId>
-town model test <modelId>
+city
+town city use
+town city status
 ```
 
 适合：
 
 - 查看 City AIService 暴露出的模型
-- 把当前项目绑定到指定的 `execution.modelId`
-- 测试某个模型是否能通过 City AIService 真实调用
+- 把当前 City 连接导入 Town
+- 在启动本机 Agent 前确认 City 连接设置可用
 
 ## 最常见的表排查场景
 
@@ -77,7 +77,7 @@ CLI 正适合先肉眼确认。
 city
 # or start a local agent
 town agent start .
-town model list
+town city status
 ```
 
 然后在交互式面板里继续看：

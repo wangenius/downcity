@@ -1,6 +1,6 @@
 ---
 title: Env and downcity.db Design
-description: Explain how env, channel accounts, model catalogs, and project plugin config are separated
+description: Explain how env, channel accounts, City model catalogs, and project plugin config are separated
 ---
 
 # Env and downcity.db Design
@@ -20,7 +20,7 @@ Use one rule:
 - `chat_auth_user_roles`
 - `model_providers`
 - `models`
-- other console-owned encrypted settings
+- other City-owned encrypted settings
 
 ## Project `downcity.json` owns
 
@@ -31,14 +31,14 @@ Use one rule:
 
 - secrets should not be duplicated into project config
 - plugin enablement and plugin-owned dependency config are project behavior
-- console storage should not hide project-specific plugin state
+- City storage should not hide project-specific plugin state
 
 ## Runtime load order
 
-1. the host may read Console-managed env from `downcity.db`
+1. the host may read City-managed env from `downcity.db`
 2. the host passes runtime-needed values explicitly through `new Agent({ env })`
 3. Agent reads project `.env`
 4. project `.env` overrides duplicate host keys
 5. Agent reads project `downcity.json`
 6. resolve `plugins.*`
-7. resolve channel credentials, chat authorization rules, and shared model catalog from `downcity.db`
+7. resolve channel credentials, chat authorization rules, and City AIService model catalog from `downcity.db`

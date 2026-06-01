@@ -1,18 +1,18 @@
 ---
 title: Configuration Overview
-description: Understand shared-runtime vs agent-local configuration layers
+description: Understand City-side services vs agent-local configuration layers
 ---
 
 # Configuration Overview
 
 Recommended configuration layers:
 
-1. Shared runtime layer for shared resources such as model catalogs, env, and service credentials.
+1. City layer for model catalogs, env, and Service credentials.
 2. Agent project layer for runtime binding and behavior.
 
 ## Core principles
 
-1. Define models in the shared runtime layer.
+1. Define models in City AIService.
 2. Agent only declares unified `execution`.
 3. Restart agent after config changes to verify apply behavior.
 
@@ -23,8 +23,8 @@ Recommended configuration layers:
 
 ## Next
 
-1. [Console downcity.json](/en/docs/configuration/console-downcity-json)
+1. [City Config Storage](/en/docs/configuration/console-downcity-json)
 2. [Project Configuration (downcity.json)](/en/docs/configuration/project)
-3. [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)
-4. [Model Configuration (Console + Agent)](/en/docs/configuration/model)
+3. [Environment Variable Strategy (City-side vs Agent Private)](/en/docs/configuration/environment-variables)
+4. [Model Configuration (City + Agent)](/en/docs/configuration/model)
 5. [Configuration Checklist](/en/docs/configuration/checklist)

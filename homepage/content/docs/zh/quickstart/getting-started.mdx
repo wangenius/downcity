@@ -27,7 +27,7 @@ city --version
 town init
 ```
 
-该命令会生成 Console 全局配置（位于 `~/.downcity/`）。
+该命令会生成本地 Town 状态，并准备 City 连接层（位于 `~/.downcity/`）。
 
 ## 3. 启动 Town
 
@@ -35,7 +35,7 @@ town init
 town start
 ```
 
-> `town agent start` 依赖 console 先运行。
+> `town agent start` 依赖本地 Town runtime 先运行。
 
 ## 4. 初始化项目
 
@@ -53,7 +53,7 @@ town agent create .
 
 ## 5. 绑定模型
 
-当前项目 agent 绑定的是共享 AI service 暴露出来的模型 ID。
+当前项目 agent 绑定的是 City AIService 暴露出来的模型 ID。模型目录由 `city` 管理，Town 通过 `town city` 连接到 City。
 
 `downcity.json` 最小示例应为：
 
@@ -70,9 +70,9 @@ town agent create .
 
 说明：
 
-- `modelId` 指向 `town model list` 能看到的某个模型
+- `modelId` 指向已连接 City AIService 暴露的某个模型
 - 项目把选中的模型记录在 `execution.modelId`
-- 如果你还没有接好共享模型，请先完成模型连接再启动 Agent
+- 如果你还没有连接 Town 与 City，请先执行 `town city use` 再启动 Agent
 
 ## 6. 启动 Agent
 

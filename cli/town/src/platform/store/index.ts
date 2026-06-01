@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 对外仍然只暴露一个 `PlatformStore` 类，保持调用入口稳定。
- * - 内部已经按职责拆成 schema、model/provider、secure settings、env、channel accounts 多个模块。
+ * - 内部已经按职责拆成 schema、secure settings、env、channel accounts 多个模块。
  * - 这样既能保持外部 API 简洁，也能把通用存储层控制在可维护的模块粒度内。
  */
 
@@ -17,32 +17,13 @@ import type {
   StoredChannelAccount,
   StoredEnvEntry,
   StoredGlobalEnvEntry,
-  StoredModel,
-  StoredModelProvider,
-  StoredProviderMeta,
   UpsertChannelAccountInput,
   UpsertEnvEntryInput,
   UpsertGlobalEnvEntryInput,
-  UpsertModelInput,
-  UpsertModelProviderInput,
 } from "@downcity/agent";
 import {
   getPlatformRootDirPath,
 } from "@/process/registry/TownPaths.js";
-import {
-  clearStoredModelsAndProviders,
-  getResolvedStoredModel,
-  getStoredModel,
-  getStoredProvider,
-  listStoredModels,
-  listStoredProviderMetas,
-  listStoredProviders,
-  removeStoredModel,
-  removeStoredProvider,
-  setStoredModelPaused,
-  upsertStoredModel,
-  upsertStoredProvider,
-} from "./StoreModelRepository.js";
 import {
   buildAgentSecureSettingKey,
   getSecureSettingJson,
@@ -107,90 +88,9 @@ export class PlatformStore {
   }
 
   /**
-   * 列出 providers。
-   */
-  async listProviders(): Promise<StoredModelProvider[]> {
-    return await listStoredProviders(this.context);
-  }
-
-  /**
-   * 获取单个 provider。
-   */
-  async getProvider(providerId: string): Promise<StoredModelProvider | null> {
-    return await getStoredProvider(this.context, providerId);
-  }
-
-  /**
-   * 新增或更新 provider。
-   */
-  async upsertProvider(input: UpsertModelProviderInput): Promise<void> {
-    await upsertStoredProvider(this.context, input);
-  }
-
-  /**
-   * 删除 provider。
-   */
-  removeProvider(providerId: string): void {
-    removeStoredProvider(this.context, providerId);
-  }
-
-  /**
-   * 列出 models。
-   */
-  listModels(): StoredModel[] {
-    return listStoredModels(this.context);
-  }
-
-  /**
-   * 同步列出 provider 元信息（不含 API Key）。
-   */
-  listProvidersSync(): StoredProviderMeta[] {
-    return listStoredProviderMetas(this.context);
-  }
-
-  /**
-   * 获取单个 model。
-   */
-  getModel(modelId: string): StoredModel | null {
-    return getStoredModel(this.context, modelId);
-  }
-
-  /**
-   * 新增或更新 model。
-   */
-  upsertModel(input: UpsertModelInput): void {
-    upsertStoredModel(this.context, input);
-  }
-
-  /**
-   * 切换模型暂停状态。
-   */
-  setModelPaused(modelId: string, paused: boolean): void {
-    setStoredModelPaused(this.context, modelId, paused);
-  }
-
-  /**
-   * 删除 model。
-   */
-  removeModel(modelId: string): void {
-    removeStoredModel(this.context, modelId);
-  }
-
-  /**
-   * 获取 model + provider 聚合信息。
-   */
-  async getResolvedModel(modelId: string): Promise<{
-    model: StoredModel;
-    provider: StoredModelProvider;
-  } | null> {
-    return await getResolvedStoredModel(this.context, modelId);
-  }
-
-  /**
    * 清空所有存储数据。
    */
   clearAll(): void {
-    clearStoredModelsAndProviders(this.context);
     this.sqlite.exec("DELETE FROM platform_secure_settings;");
     this.sqlite.exec("DELETE FROM env_entries;");
     this.sqlite.exec("DELETE FROM channel_accounts;");

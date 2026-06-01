@@ -21,7 +21,7 @@ Once an agent starts, it is responsible for the current project runtime:
 
 - reading `downcity.json`
 - loading `PROFILE.md` and `SOUL.md`
-- binding the project to its selected model
+- binding the project to its selected City AIService model
 - creating and maintaining sessions
 - exposing project-level HTTP and CLI entry points
 - starting enabled project plugins
@@ -42,11 +42,11 @@ into one executable runtime context.
 An agent does not own global platform concerns:
 
 - it does not manage multiple projects
-- it does not own the shared model catalog
-- it does not persist city-level channel accounts
+- it does not own the City AIService model catalog
+- it does not persist City-level channel accounts
 - it is not the Console UI or the global control plane
 
-Those concerns belong to `town` and Console.
+Those concerns are split between Town and City: Town manages local Agents and Agent plugins, while City manages models, channel accounts, and Service capabilities.
 
 This boundary matters, because once you mix global concerns and project concerns together, it becomes much harder to answer basic questions like:
 

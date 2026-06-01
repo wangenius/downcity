@@ -22,7 +22,7 @@
     },
     "skills": {
       "title": "可扩展能力",
-      "description": "Plugins、skills、共享服务和 SDK API 让每个产品可以增添能力，而不必复制整套 Agent 后端。"
+      "description": "Plugins、skills、City 和 SDK API 让每个产品可以增添能力，而不必复制整套 Agent 后端。"
     }
   },
   "codePreview": {

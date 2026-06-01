@@ -7,7 +7,7 @@ The most stable way to understand Downcity is not to start from a single API, bu
 
 ```txt
 Interfaces
-  -> products enter the shared runtime through client or operator tools
+  -> products enter the City runtime through client or operator tools
 Composition
   -> server / worker assemble @downcity/city, official services, and models
 Kernel
@@ -21,12 +21,12 @@ Together they create the runtime flow:
 ```txt
 product UI / app / internal tool
   -> User City / Admin City / Town terminal
-  -> shared runtime
+  -> City runtime
   -> Service / AIService
   -> Provider / Database
 ```
 
-Many clients can share one self-deployed runtime. Product clients stay lightweight and focus on UX; the shared runtime centralizes auth, model routing, runtime env, hooks, and reusable capabilities.
+Many clients can share one self-deployed runtime. Product clients stay lightweight and focus on UX; the City runtime centralizes auth, model routing, runtime env, hooks, and reusable capabilities.
 
 ## 1. Interfaces: who calls City
 
@@ -35,7 +35,7 @@ Downcity has two main external entry points:
 - Product-side entry: `User City` and `Admin City` from `@downcity/city`
 - Operator entry: `downcity`
 
-Neither one implements the server runtime itself. They both send requests into the same shared runtime.
+Neither one implements the server runtime itself. They both send requests into the same City runtime.
 
 ## 2. Composition: who assembles City
 

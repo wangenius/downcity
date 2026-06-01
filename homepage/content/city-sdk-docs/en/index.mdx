@@ -1,15 +1,15 @@
 ---
-title: Shared Services SDK
-description: Shared agent services for many AI products, all on one reusable runtime.
+title: City SDK
+description: City runtime and SDK capabilities for many AI products.
 ---
 
-Downcity's Shared Services SDK is the reusable service layer for AI builders who ship many agent-powered products. It gives you one long-running runtime that multiple web apps, extensions, desktop tools, client demos, and internal tools can share.
+Downcity's City SDK is the way AI builders create, deploy, and call City. A City runtime can serve multiple web apps, extensions, desktop tools, client demos, and internal tools without making each product rebuild the same AI backend.
 
-The runtime is implemented by `@downcity/city`, but the product idea is broader than the City name: it exposes a stable **product-facing service boundary** instead of a raw provider API.
+City exposes a stable **product-facing service boundary** instead of a raw provider API. Inside City, capabilities are organized as `Service`, `Action`, and `AIService`.
 
 - the product client holds `town_id + user_token`
 - it calls `text()`, `stream()`, `image()`, and other services through `User City`
-- the shared runtime keeps the model catalog, provider routing, hooks, usage, and env behind the boundary
+- City keeps the model catalog, provider routing, hooks, usage, and env behind the boundary
 
 ## Pick your reading path
 
@@ -17,12 +17,12 @@ The runtime is implemented by `@downcity/city`, but the product idea is broader 
   <a className="dc-doc-card" href="/en/city-sdk-docs/quickstart">
     <em>Start Here</em>
     <strong>I want to run one full call chain</strong>
-    <p>Deploy a shared runtime, expose one model, issue a token, and make a product client call `text()` or `stream()` successfully.</p>
+    <p>Deploy a City runtime, expose one model, issue a token, and make a product client call `text()` or `stream()` successfully.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/concepts">
     <em>Mental Model</em>
     <strong>I want to understand the boundaries first</strong>
-    <p>Separate the shared runtime, product clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
+    <p>Separate the City runtime, product clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/guides">
     <em>Real Scenarios</em>
@@ -32,7 +32,7 @@ The runtime is implemented by `@downcity/city`, but the product idea is broader 
   <a className="dc-doc-card" href="/en/city-sdk-docs/packages">
     <em>Packages</em>
     <strong>I want to read by package</strong>
-    <p>Jump straight into `@downcity/city`, client, and CLI docs; official service packages live in Services SDK.</p>
+    <p>Jump straight into `@downcity/city`, client, and CLI docs; official service packages live in City Services Docs.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/reference">
     <em>API</em>
@@ -54,12 +54,12 @@ The runtime is implemented by `@downcity/city`, but the product idea is broader 
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Shared runtime</strong>
+      <strong>City runtime</strong>
       <span>Verifies the token, resolves the model catalog, and dispatches the request to AIService, services, or custom Service actions.</span>
     </div>
     <div className="dc-doc-node">
       <strong>Hooks and usage</strong>
-      <span>Quota, balance, billing, logging, and risk control can plug into the shared runtime while your own business rules stay in your system.</span>
+      <span>Quota, balance, billing, logging, and risk control can plug into the City runtime while your own business rules stay in your system.</span>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -72,10 +72,10 @@ The runtime is implemented by `@downcity/city`, but the product idea is broader 
 </div>
 
 <p className="dc-doc-caption">
-  Product clients see stable services and model IDs. Which provider or gateway the shared runtime uses internally remains a server-side detail.
+  Product clients see stable Service actions and model IDs. Which provider or gateway City uses internally remains a server-side detail.
 </p>
 
-## What the Shared Services SDK owns
+## What the City SDK owns
 
 - runtime database and Service-owned tables
 - provider keys and runtime env
@@ -93,7 +93,7 @@ The runtime is implemented by `@downcity/city`, but the product idea is broader 
 
 More precisely:
 
-> The Shared Services SDK owns the reusable AI infrastructure layer.
+> The City SDK owns the City runtime and its Service-facing AI infrastructure.
 > Your products still own their users, business logic, interface, and pricing model.
 
 ## Recommended order

@@ -12,7 +12,7 @@ The easiest split is:
 - hooks: insert rules into an existing call lifecycle
 - services: add a full reusable capability set into City
 
-That is why auth, usage, and payment do not become separate systems. They become extension points inside the same shared runtime.
+That is why auth, usage, and payment do not become separate systems. They become extension points inside the same City runtime.
 
 ## When to think hook first
 
@@ -144,7 +144,7 @@ Hooks are best for cross-cutting governance logic, not for turning every feature
 
 ### Services do not replace City
 
-Services add capability into the shared runtime. The product-side calling surface is still [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime).
+Services add capability into the City runtime. The product-side calling surface is still [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime).
 
 ## Read next
 

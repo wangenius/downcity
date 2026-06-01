@@ -7,6 +7,7 @@
  * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 import type { Command } from "commander";
+export declare function runInteractivePluginManager(): Promise<void>;
 /**
  * 注册 `town plugin` 命令组。
  */

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - Downcity 的全局根目录固定在用户目录 `~/.downcity/`。
- * - `~/.downcity/downcity.db`：全局 SQLite 数据库，保存模型池与平台级配置。
+ * - `~/.downcity/downcity.db`：全局 SQLite 数据库，保存平台级配置。
  * - `~/.downcity/main/*`：town 后台与 control plane 共享的运行文件目录。
  * - 这里定义的是“全局路径约定”，不是单个 agent 项目的 `.downcity/` 路径。
  */
@@ -38,7 +38,7 @@ export function getTownRuntimeDirPath(): string {
 }
 
 /**
- * 全局模型存储密钥文件路径。
+ * 全局加密存储密钥文件路径。
  */
 export function getPlatformStoreKeyPath(): string {
   return path.join(getTownRuntimeDirPath(), "model-db.key");

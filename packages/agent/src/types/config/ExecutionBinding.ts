@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 项目运行入口只有一种执行模式：`api`。
- * - 绑定平台全局模型池中的模型 ID。
+ * - 绑定 City AIService 暴露的模型 ID。
  * - 该类型是项目 `downcity.json` 中唯一的执行配置。
  */
 
@@ -17,11 +17,11 @@ export interface ExecutionBindingConfig {
   type: "api";
 
   /**
-   * 平台全局模型池中的模型 ID。
+   * City AIService 中的模型 ID。
    *
    * 说明（中文）
-   * - 必须能在 `~/.downcity/downcity.db` 的模型池中解析到。
-   * - 例如：`default`、`fast`、`quality`。
+   * - 必须能通过 City 的 `/v1/ai/models` 目录查询到。
+   * - 例如：`deepseek-v4-flash`、`fast`、`quality`。
    */
   modelId: string;
 }

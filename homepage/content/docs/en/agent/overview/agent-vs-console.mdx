@@ -1,36 +1,48 @@
 ---
-title: Agent vs Console
-description: Understand the boundary between the single-project Agent runtime and the global city or Console control plane
+title: Agent, Town, and City
+description: Understand the boundary between the single-project Agent runtime, Town management, and City
 ---
 
-# Agent vs Console
+# Agent, Town, and City
 
-Two concepts appear constantly in Downcity:
+Three concepts appear constantly in Downcity:
 
 - `agent`: the runtime for one project
-- `town` / Console: the global control plane
+- `town`: the local manager for Agents and Agent plugins
+- `city`: the City layer for model, account, and platform resources
 
 ## The short version
 
 - `agent` owns how one project runs
-- `town` owns which projects exist, which global resources exist, and how they are managed
+- `town` owns which local Agents exist and how their plugins are managed
+- `city` owns resources such as AIService models and channel accounts
 
 If you prefer a control-plane vs execution-plane mental model:
 
-- `town` / Console is the control plane
+- `town` is the local Agent control plane
+- `city` is the City plane
 - `agent` is the execution plane
 
-## What Console owns
+## What Town owns
 
-Console or city-level runtime is responsible for global concerns:
+Town is responsible for local Agent management:
 
 - managing multiple agent projects
-- maintaining the shared model catalog
-- maintaining global channel accounts
-- exposing control-plane APIs
-- providing aggregated UI views
+- starting, stopping, and inspecting agent runtimes
+- managing Agent plugin lifecycle
+- connecting the local Agent runtime to City
 
-These are shared resources. They do not naturally belong to one project.
+Town does not own model providers, model credentials, or the City AIService model catalog.
+
+## What City owns
+
+City is responsible for model, account, and platform resources:
+
+- maintaining the City AIService model catalog
+- maintaining global channel accounts
+- providing shared platform credentials and service APIs
+
+These are shared resources. They do not naturally belong to one project or to the local Town process.
 
 ## What the Agent owns
 
@@ -63,20 +75,21 @@ This split is also what keeps many CLI and HTTP behaviors understandable:
 For day-to-day use, keep two rules in mind:
 
 1. When you configure the project runtime, you edit project files like `downcity.json`.
-2. When you manage shared resources, you use shared runtime capabilities like model catalogs, channel accounts, and Console.
+2. When you manage local Agents and plugins, you use `town`.
+3. When you manage model providers, credentials, and shared accounts, you use `city` and connect Town with `town city`.
 
 ## Common examples
 
 ### Model binding
 
-- the model definition lives in the shared model catalog
+- the model definition lives in City AIService
 - the project chooses its model through `downcity.json.execution.modelId`
 
 So model definition and model selection are separate concerns.
 
 ### Chat channels
 
-- bot credentials and channel accounts are city-level resources
+- bot credentials and channel accounts are City-level resources
 - the project only binds a `channelAccountId`
 
 That is why project config usually contains something like:

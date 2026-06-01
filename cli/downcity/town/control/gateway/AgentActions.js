@@ -44,7 +44,7 @@ export async function initializePlatformAgentProject(params) {
     const execution = resolveExecutionInput({
         modelId: params.modelId,
     });
-    assertPlatformModelReady(execution.modelId);
+    await assertPlatformModelReady(execution.modelId);
     return initializeAgentProject({
         projectRoot: params.projectRoot,
         id: String(params.id || "").trim() || undefined,
@@ -66,7 +66,7 @@ export async function updatePlatformAgentExecution(params) {
     if (!modelId) {
         throw new Error("modelId is required");
     }
-    assertPlatformModelReady(modelId);
+    await assertPlatformModelReady(modelId);
     ship.execution = {
         type: "api",
         modelId,
@@ -206,7 +206,7 @@ export async function startManagedAgentByProjectRoot(params) {
         const execution = resolveExecutionInput({
             modelId: params.initialization?.modelId,
         });
-        assertPlatformModelReady(execution.modelId);
+        await assertPlatformModelReady(execution.modelId);
         await initializeAgentProject({
             projectRoot: normalizedRoot,
             id: String(params.initialization?.id || "").trim() || undefined,
@@ -221,7 +221,7 @@ export async function startManagedAgentByProjectRoot(params) {
             throw new Error(`Project not ready: ${normalizedRoot}. Required files: PROFILE.md and downcity.json`);
         }
     }
-    assertProjectExecutionModelReady(normalizedRoot);
+    await assertProjectExecutionModelReady(normalizedRoot);
     const args = await buildRunArgsFromOptions(normalizedRoot, {});
     const started = await startDaemonProcess({
         projectRoot: normalizedRoot,

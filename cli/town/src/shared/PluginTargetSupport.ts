@@ -76,7 +76,7 @@ export async function checkAgentPreflight(
   }
 
   // 关键点（中文）：提前校验 execution binding，避免"启动成功后秒退"。
-  assertProjectExecutionModelReady(projectRoot);
+  await assertProjectExecutionModelReady(projectRoot);
 }
 
 /**

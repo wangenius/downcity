@@ -1,16 +1,16 @@
 /**
- * CreateRuntimeModel：Town 宿主侧 LanguageModel 工厂。
+ * CreateRuntimeModel：Town 宿主侧模型工厂。
  *
  * 关键点（中文）
- * - `@downcity/agent` 只消费 `LanguageModel`，不再负责模型池解析。
- * - Town 负责把 `execution.modelId` 解析成平台模型池中的 provider/model 配置。
- * - 这里统一承接 CLI、control plane、inline instant 等宿主场景的模型创建逻辑。
+ * - Town 不再实现 provider/model 模型池。
+ * - `execution.modelId` 只表示 City AIService 中暴露的 model id。
+ * - 真实 provider、密钥、endpoint 与模型实现都由 City 的 AIService 负责。
  */
+import type { DowncityConfig } from "@downcity/agent";
 import type { LanguageModel } from "ai";
-import { type DowncityConfig } from "@downcity/agent";
 type ModelLogContext = {
     /**
-     * 当前 session 标识，用于 LLM 请求日志追踪。
+     * 当前 session 标识，用于日志追踪。
      */
     sessionId?: string;
 };
@@ -19,33 +19,28 @@ type RuntimeModelFactoryInput = {
      * 当前项目配置。
      *
      * 关键点（中文）
-     * - 这里只依赖 `execution.modelId` 与 `llm.logMessages`。
-     * - provider/model 详情统一从平台模型池读取。
+     * - 这里只读取 `execution.modelId`。
+     * - 模型能力目录来自 City AIService。
      */
     config: DowncityConfig;
     /**
      * 可选 session run scope。
      *
      * 关键点（中文）
-     * - 仅用于把 sessionId 透传到 LLM 请求日志元数据。
+     * - 保留该字段是为了维持宿主调用契约；City AIService 请求日志由 City 侧负责。
      */
     getSessionRunScope?: () => ModelLogContext | undefined;
     /**
      * 宿主显式注入的运行时 env。
      *
      * 关键点（中文）
-     * - 这里只作为 provider apiKey 的回退来源。
-     * - 不再从 `downcity.json` 或 provider 配置里解析 `${ENV_KEY}` 占位符。
+     * - 用于读取 DOWNCITY_CITY_URL / DOWNCITY_CITY_USER_TOKEN / DOWNCITY_CITY_TOWN_ID。
+     * - 不再读取 provider API Key。
      */
     env?: Record<string, string> | NodeJS.ProcessEnv;
 };
 /**
- * 创建 LanguageModel 实例。
- *
- * 解析策略（中文）
- * 1) 读取 `execution.modelId`。
- * 2) 从 Town 平台模型池解析 provider/model。
- * 3) 按 provider type 分发到对应 AI SDK 工厂。
+ * 创建 Agent 可直接使用的模型实例。
  */
 export declare function createRuntimeModel(input: RuntimeModelFactoryInput): Promise<LanguageModel>;
 export {};

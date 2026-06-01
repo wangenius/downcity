@@ -1,19 +1,19 @@
 ---
-title: 共享模型目录
-description: 理解共享模型目录与 Agent 项目绑定之间的关系
+title: City 模型目录
+description: 理解 City AIService 模型目录与 Agent 项目绑定之间的关系
 ---
 
-# 共享模型目录
+# City 模型目录
 
 Agent 项目本身不保存完整模型定义。
 
 ## 模型目录在哪里
 
-模型目录属于共享 AI service 层。
+模型目录属于 City AIService。
 
 从用户视角理解：
 
-- 全局层保存 provider、模型名、API key 等完整信息
+- City 保存 provider、模型名、API key 等完整信息
 - 项目层只保存 `execution.modelId`
 
 这也是为什么项目里通常看不到完整 provider 配置。
@@ -28,7 +28,7 @@ Agent 项目本身不保存完整模型定义。
 
 ## 你通常怎么操作
 
-1. 先在共享 AI service 层准备好模型
+1. 先在 City AIService 准备好模型
 2. 再把项目的 `execution.modelId` 绑定到目标模型
 
 一旦绑定完成，后续切换模型本质上就是切换 `modelId`。

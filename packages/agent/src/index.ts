@@ -10,6 +10,10 @@
 // Agent 入口
 export { Agent } from "./agent/Agent.js";
 export { RemoteAgent } from "./agent/RemoteAgent.js";
+export {
+  inferAgentModelLabel,
+  normalizeAgentModel,
+} from "./model/CityModelAdapter.js";
 export type {
   AgentSessionCollection,
   AgentModel,
@@ -282,14 +286,9 @@ export type {
   StoredChannelAccountChannel,
   StoredEnvEntry,
   StoredGlobalEnvEntry,
-  StoredModel,
-  StoredModelProvider,
-  StoredProviderMeta,
   UpsertChannelAccountInput,
   UpsertEnvEntryInput,
   UpsertGlobalEnvEntryInput,
-  UpsertModelInput,
-  UpsertModelProviderInput,
 } from "./types/runtime/host/Store.js";
 
 // HTTP auth 协议类型

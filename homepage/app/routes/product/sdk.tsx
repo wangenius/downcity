@@ -4,14 +4,14 @@ import { marketingTheme } from "@/lib/marketing-theme";
 
 const PAGE = {
   zh: {
-    title: "Product · Shared Services SDK",
-    subtitle: "把模型目录、服务路由、身份、环境变量、用量、余额和支付这类 Agent 产品共享能力接入你的产品体系。",
-    docsCtaLabel: "查看共享服务文档",
-    docsCtaHint: "City 是当前 SDK 和包名，文档里保留这个实现名称。",
+    title: "Product · City SDK",
+    subtitle: "用 City SDK 把模型目录、Service 路由、身份、环境变量、用量、余额和支付接入你的产品体系。",
+    docsCtaLabel: "查看 City SDK 文档",
+    docsCtaHint: "City 是产品和 SDK 名称；Service 是 City 里的能力组织单位。",
     highlights: [
       {
         title: "复用 Agent 产品后端能力",
-        description: "围绕 service、action、auth、env 和访问边界组织共享能力，而不是每个 AI 产品重建一套后端。",
+        description: "围绕 Service、Action、auth、env 和访问边界组织能力，而不是每个 AI 产品重建一套后端。",
       },
       {
         title: "统一模型、账户、用量和支付",
@@ -24,8 +24,8 @@ const PAGE = {
     ],
     scenesTitle: "典型场景",
     scenes: [
-      "多产品复用：让多个 Agent 产品共用一套账户、模型、用量和支付服务。",
-      "服务接入：前端、扩展或后端通过 SDK 调用服务，而不是直接耦合数据库。",
+      "多产品复用：让多个 Agent 产品连接同一套 City，复用账户、模型、用量和支付能力。",
+      "Service 接入：前端、扩展或后端通过 SDK 调用 City 中的 Service，而不是直接耦合数据库。",
       "部署组合：用 cities/node 或 cities/edge 组合适配不同运行环境。",
     ],
     factsTitle: "事实对齐",
@@ -36,10 +36,10 @@ const PAGE = {
     ],
   },
   en: {
-    title: "Product · Shared Services SDK",
+    title: "Product · City SDK",
     subtitle:
       "Bring model catalogs, service routing, auth, runtime env, usage, balance, and payment capabilities into your agent product stack.",
-    docsCtaLabel: "Open Shared Services Docs",
+    docsCtaLabel: "Open City SDK Docs",
     docsCtaHint: "City remains the current SDK and package name, so implementation docs keep that name.",
     highlights: [
       {
@@ -58,7 +58,7 @@ const PAGE = {
     scenesTitle: "Typical Scenarios",
     scenes: [
       "Multi-product reuse: let multiple agent products share accounts, models, usage, and payment services.",
-      "Service access: call shared services from frontend, extension, or backend code without coupling to database internals.",
+      "Service access: call Service actions in City from frontend, extension, or backend code without coupling to database internals.",
       "Deployment composition: use cities/node or cities/edge for different runtime targets.",
     ],
     factsTitle: "Facts",
@@ -71,16 +71,16 @@ const PAGE = {
 } as const;
 
 /**
- * Product Shared Services SDK 页面。
+ * Product City SDK 页面。
  * 说明：
- * 1. 对外聚焦 Agent 产品共享基础设施，City 只作为实现包名保留。
+ * 1. 对外统一叫 City SDK，不再另造产品名。
  * 2. Agent SDK 独立到 `/product/agent-sdk`，避免两种 SDK 语义混在一起。
  */
 export default function ProductSdkPage() {
   const { i18n } = useTranslation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
   const content = isZh ? PAGE.zh : PAGE.en;
-  const docsPath = isZh ? "/zh/docs" : "/en/docs";
+  const docsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
 
   return (
     <div className={marketingTheme.pageNarrow}>

@@ -1,16 +1,16 @@
 ---
-title: Console Config Storage (downcity.db)
-description: Console-global config is now unified in ~/.downcity/downcity.db with encrypted sensitive fields
+title: City Config Storage (downcity.db)
+description: City-side service config is unified in ~/.downcity/downcity.db with encrypted sensitive fields
 ---
 
-# Console Config Storage (downcity.db)
+# City Config Storage (downcity.db)
 
-From current versions, Console no longer uses:
+From current versions, shared City-side config no longer uses:
 
 1. `~/.downcity/downcity.json`
 2. `~/.downcity/.env`
 
-Console-global config is unified in:
+City-side config is unified in:
 
 - `~/.downcity/downcity.db`
 
@@ -18,8 +18,8 @@ Console-global config is unified in:
 
 `downcity.db` contains these major groups:
 
-1. Shared model catalog (providers/models)
-2. Console-managed env records (`env_entries`)
+1. City AIService model catalog (providers/models)
+2. City-managed env records (`env_entries`)
 4. Bot account vault (`channel_accounts`)
 5. Chat user authorization (`chat_auth_roles`, `chat_auth_role_permissions`, `chat_auth_channel_defaults`, `chat_auth_user_roles`)
 
@@ -34,7 +34,7 @@ These files remain agent-project-level config (unchanged):
 
 So the split is:
 
-- Console: `~/.downcity/downcity.db`
+- City: `~/.downcity/downcity.db`
 - Agent: project-local `downcity.json/.env`
 
 ## Environment Variable Scope (Important)
@@ -49,15 +49,15 @@ Current versions use explicit layers:
 Key behavior:
 
 1. Agent runtime env map is `new Agent({ env }) + <agent>/.env` (`.env` wins).
-2. When the host is `town`, Console-global env is read from `downcity.db` and passed explicitly to `Agent`.
+2. When the host is `town`, City-side env is read from `downcity.db` and passed explicitly to `Agent`.
 3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
 5. Chat user permissions are resolved from `chat_auth_*` tables, not from an agent project.
-6. Plugin parameters are read from project `downcity.json`, while plugin enable/disable belongs to Console global state.
+6. Plugin parameters are read from project `downcity.json`, while Agent plugin lifecycle is managed by Town.
 
 ## Common operations
 
-Initialize Console (writes into `downcity.db`):
+Initialize local Town state and City connection metadata:
 
 ```bash
 town init
@@ -70,24 +70,24 @@ town config get plugins.asr
 town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
-Toggle city-level plugin lifecycle:
+Manage Agent plugin lifecycle:
 
 ```bash
 town asr on
 town asr off
 ```
 
-Manage shared models:
+Use City models from an Agent project:
 
 ```bash
-town model list
-town model use <modelId>
+town city status
+town config set execution.modelId <modelId>
 ```
 
 ## Related docs
 
 - [Env and downcity.db Database Design](/en/docs/configuration/env-downcitydb-design)
-- [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)
+- [Environment Variable Strategy (City-side vs Agent Private)](/en/docs/configuration/environment-variables)
 
 ## Process files
 

@@ -1,1 +1,0 @@
-{"version":3,"file":"ModelCreateCommand.d.ts","sourceRoot":"","sources":["../../src/model/ModelCreateCommand.ts"],"names":[],"mappings":"AAAA;;;;;;;GAOG;AAGH,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAezC;;;;;GAKG;AACH,wBAAsB,6BAA6B,CAAC,OAAO,EAAE;IAAE,IAAI,CAAC,EAAE,OAAO,CAAA;CAAE,GAAG,OAAO,CAAC,IAAI,CAAC,CA2C9F;AAiVD;;GAEG;AACH,wBAAgB,0BAA0B,CAAC,KAAK,EAAE,OAAO,GAAG,IAAI,CAS/D"}

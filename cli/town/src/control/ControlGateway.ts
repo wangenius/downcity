@@ -198,10 +198,10 @@ export class ControlGateway {
   }
 
   /**
-   * 构建 Global Model 面板响应。
+   * 构建 City AIService Model 面板响应。
    *
    * 关键点（中文）
-   * - 模型池来自控制面全局 SQLite，而不是某个 agent。
+   * - 模型目录来自 City AIService，而不是 Town 本地模型池。
    * - `agentPrimaryModelId` 仅用于展示当前选中 agent 的项目绑定。
    */
   private async buildModelResponse(requestedAgentId: string): Promise<{

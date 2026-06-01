@@ -21,7 +21,7 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 
 - 读取项目根目录下的 `downcity.json`
 - 加载 `PROFILE.md` 和 `SOUL.md`
-- 绑定项目选择的模型
+- 绑定项目选择的 City AIService 模型
 - 创建和维护会话
 - 暴露 HTTP / CLI 入口
 - 启动项目配置中启用的 plugin
@@ -38,11 +38,11 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 ## Agent 不负责什么
 
 - 不负责管理多个项目
-- 不负责共享模型目录管理
+- 不负责 City AIService 模型目录管理
 - 不负责 city 级 channel account 的保存
 - 不负责全局控制面和 Console UI
 
-这些属于 `town` 和 console 的职责。
+这些职责会拆分到 Town 和 City：Town 管本地 Agent 与 Agent plugin，City 管模型、渠道账号等能力。
 
 如果你把 `town` 和 `agent` 的职责混在一起理解，后面就会很容易遇到这些困惑：
 

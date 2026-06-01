@@ -2,7 +2,6 @@
  * `town init`：初始化平台级默认配置（`~/.downcity/`）。
  *
  * 生成内容
- * - `~/.downcity/downcity.db`：平台级全局配置存储（敏感字段加密）
  * - `~/.downcity/schema/downcity.schema.json`：给项目 downcity.json 的 schema（可选）
  *
  * 关键点（中文）

@@ -12,7 +12,6 @@ import { agentHistoryCleanCommand } from "../agent/AgentHistory.js";
 import { initCommand } from "../agent/Init.js";
 import { restartCommand } from "../agent/Restart.js";
 import { stopCommand } from "../agent/Stop.js";
-import { agentResetCommand } from "../agent/AgentReset.js";
 import { runCommand } from "../agent/Run.js";
 import { startCommand } from "../agent/Start.js";
 import { statusCommand } from "../agent/Status.js";
@@ -187,14 +186,6 @@ export function registerAgentCommands(program, context) {
                 },
             ],
         });
-    }));
-    agent
-        .command("reset [path]")
-        .description("重新配置 Agent 的执行模型绑定")
-        .helpOption("--help", "display help for command")
-        .action(createVersionBanner(context.version, async (cwd = ".") => {
-        // reset 不要求 agent 在 registry 中，只需要 downcity.json 存在
-        await agentResetCommand(cwd);
     }));
     agent
         .command("stop [path]")

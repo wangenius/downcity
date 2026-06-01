@@ -27,7 +27,7 @@ city --version
 town init
 ```
 
-This creates console-global config under `~/.downcity/`.
+This creates local Town state under `~/.downcity/` and prepares the City connection layer.
 
 ## 3. Start Town
 
@@ -35,7 +35,7 @@ This creates console-global config under `~/.downcity/`.
 town start
 ```
 
-> `town agent start` requires console to be running first.
+> `town agent start` requires the local Town runtime to be running first.
 
 ## 4. Initialize a repository
 
@@ -53,7 +53,7 @@ Initialization generates:
 
 ## 5. Bind a model
 
-The current project agent binds to a model ID exposed by the shared AI service.
+The current project agent binds to a model ID exposed by City AIService. Use `city` to manage the model catalog, then use `town city` to connect the local Agent runtime to City.
 
 The minimal `downcity.json` example should be:
 
@@ -70,9 +70,9 @@ The minimal `downcity.json` example should be:
 
 Notes:
 
-- `modelId` points to a model available through `town model list`
+- `modelId` points to a model available through the connected City AIService
 - the project stores the selected model under `execution.modelId`
-- if you have not connected shared models yet, do that before starting the agent
+- if you have not connected Town to City yet, run `town city use` before starting the agent
 
 ## 6. Start Agent
 

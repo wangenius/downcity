@@ -3,11 +3,11 @@
  *
  * 关键点（中文）
  * - 对外仍然只暴露一个 `PlatformStore` 类，保持调用入口稳定。
- * - 内部已经按职责拆成 schema、model/provider、secure settings、env、channel accounts 多个模块。
+ * - 内部已经按职责拆成 schema、secure settings、env、channel accounts 多个模块。
  * - 这样既能保持外部 API 简洁，也能把通用存储层控制在可维护的模块粒度内。
  */
 import type { PlatformStoreContext } from "./StoreShared.js";
-import type { StoredChannelAccount, StoredEnvEntry, StoredGlobalEnvEntry, StoredModel, StoredModelProvider, StoredProviderMeta, UpsertChannelAccountInput, UpsertEnvEntryInput, UpsertGlobalEnvEntryInput, UpsertModelInput, UpsertModelProviderInput } from "@downcity/agent";
+import type { StoredChannelAccount, StoredEnvEntry, StoredGlobalEnvEntry, UpsertChannelAccountInput, UpsertEnvEntryInput, UpsertGlobalEnvEntryInput } from "@downcity/agent";
 /**
  * 平台控制面全局存储门面。
  */
@@ -23,53 +23,6 @@ export declare class PlatformStore {
      * 关闭连接。
      */
     close(): void;
-    /**
-     * 列出 providers。
-     */
-    listProviders(): Promise<StoredModelProvider[]>;
-    /**
-     * 获取单个 provider。
-     */
-    getProvider(providerId: string): Promise<StoredModelProvider | null>;
-    /**
-     * 新增或更新 provider。
-     */
-    upsertProvider(input: UpsertModelProviderInput): Promise<void>;
-    /**
-     * 删除 provider。
-     */
-    removeProvider(providerId: string): void;
-    /**
-     * 列出 models。
-     */
-    listModels(): StoredModel[];
-    /**
-     * 同步列出 provider 元信息（不含 API Key）。
-     */
-    listProvidersSync(): StoredProviderMeta[];
-    /**
-     * 获取单个 model。
-     */
-    getModel(modelId: string): StoredModel | null;
-    /**
-     * 新增或更新 model。
-     */
-    upsertModel(input: UpsertModelInput): void;
-    /**
-     * 切换模型暂停状态。
-     */
-    setModelPaused(modelId: string, paused: boolean): void;
-    /**
-     * 删除 model。
-     */
-    removeModel(modelId: string): void;
-    /**
-     * 获取 model + provider 聚合信息。
-     */
-    getResolvedModel(modelId: string): Promise<{
-        model: StoredModel;
-        provider: StoredModelProvider;
-    } | null>;
     /**
      * 清空所有存储数据。
      */

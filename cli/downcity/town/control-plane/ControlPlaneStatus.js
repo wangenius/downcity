@@ -11,6 +11,7 @@ import { getManagedAgentRegistryPath, getTownPidPath, } from "../process/registr
 import { isTownProcessAlive, readTownPid } from "../process/registry/TownRuntime.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { resolveRunningManagedAgents } from "./ControlPlaneProcess.js";
+import { readTownCityConnectionState } from "../shared/CityConnection.js";
 /**
  * 打印当前受管 agent 面板。
  */
@@ -80,6 +81,37 @@ export async function controlPlaneStatusCommand() {
                 ]
                 : []),
         ],
+    });
+    const city = readTownCityConnectionState();
+    emitCliBlock({
+        tone: city.source === "missing"
+            ? "warning"
+            : city.has_user_token
+                ? "success"
+                : "warning",
+        title: "City connection",
+        summary: city.source === "missing" ? "missing" : city.source,
+        facts: city.source === "missing"
+            ? [
+                {
+                    label: "fix",
+                    value: "town city connect <url> --user-token <token>",
+                },
+            ]
+            : [
+                {
+                    label: "url",
+                    value: city.city_url,
+                },
+                {
+                    label: "town",
+                    value: city.town_id,
+                },
+                {
+                    label: "user token",
+                    value: city.has_user_token ? "configured" : "missing",
+                },
+            ],
     });
     const ui = await getControlPlaneRuntimeStatus();
     const publicMode = await readControlPlanePublicModeSetting();

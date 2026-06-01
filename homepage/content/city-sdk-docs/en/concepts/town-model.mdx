@@ -5,7 +5,7 @@ description: Why Downcity is a reusable AI infrastructure runtime instead of a s
 
 The core mental model of Downcity is not "one town, one backend." It is:
 
-> one shared agent runtime serving many AI products and workflows.
+> one City runtime serving many AI products and workflows.
 
 The reason is simple. What gets rebuilt again and again is usually not your business backend, but the AI call layer:
 
@@ -17,7 +17,7 @@ The reason is simple. What gets rebuilt again and again is usually not your busi
 
 Once you ship a second or third AI product, these capabilities repeat everywhere.
 
-## Many products, one shared runtime
+## Many products, one City runtime
 
 <div className="dc-doc-flow" aria-label="Many products share one runtime">
   <div className="dc-doc-lane">
@@ -40,19 +40,19 @@ Once you ship a second or third AI product, these capabilities repeat everywhere
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>Shared runtime</strong>
-      <span>Shared model catalog, provider env, service routes, token validation, usage, and hooks.</span>
+      <strong>City runtime</strong>
+      <span>City model catalog, provider env, Service routes, token validation, usage, and hooks.</span>
     </div>
   </div>
 </div>
 
-## What should stay in the shared runtime
+## What should stay in the City runtime
 
 - Model catalog and provider configuration
 - `user_token` validation
 - AI service calls such as `client.ai.text()`, `client.ai.stream()`, and `client.ai.image()`
 - Usage records, logs, quotas, and business hooks
-- Shared call logic reused across multiple products
+- Call logic reused across multiple products
 
 ## What should stay in the product or business system
 
@@ -72,7 +72,7 @@ If every new product copies a separate AI backend, the same issues appear quickl
 - inconsistent usage and logging conventions
 - every new provider, model, or quota strategy requires edits in many repos
 
-Once the AI call layer is centralized into the shared runtime, a new product usually only needs two steps:
+Once the AI call layer is centralized into the City runtime, a new product usually only needs two steps:
 
 1. create a new `town_id`
 2. connect `User City` in the product client

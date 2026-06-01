@@ -45,7 +45,7 @@ Agent model binding:
 Notes:
 
 - project runtime now binds through `execution.modelId`
-- `modelId` should match a model available through `town model list`
+- `modelId` should match a model exposed by the connected City AIService
 - for the current project runtime path, `execution.type` should be `api`
 - provider secrets and provider connection details stay outside the project config
 
@@ -112,7 +112,7 @@ town config get plugins.asr
 ```bash
 town config get
 town config get execution.modelId
-town model list
+town city status
 town config unset plugins.chat.channels.telegram
 ```
 
@@ -121,4 +121,4 @@ town config unset plugins.chat.channels.telegram
 - [Agent Configuration Overview](/en/docs/agent/configuration/overview)
 - [CLI Reference](/en/docs/reference/cli)
 - [`.downcity/` Directory](/en/docs/reference/dot-downcity)
-- [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)
+- [Environment Variable Strategy (City-side vs Agent Private)](/en/docs/configuration/environment-variables)

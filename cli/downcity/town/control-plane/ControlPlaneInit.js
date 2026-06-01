@@ -2,7 +2,6 @@
  * `town init`：初始化平台级默认配置（`~/.downcity/`）。
  *
  * 生成内容
- * - `~/.downcity/downcity.db`：平台级全局配置存储（敏感字段加密）
  * - `~/.downcity/schema/downcity.schema.json`：给项目 downcity.json 的 schema（可选）
  *
  * 关键点（中文）
@@ -15,7 +14,6 @@ import fs from "fs-extra";
 import { DOWNCITY_JSON_SCHEMA } from "../config/DowncitySchema.js";
 import { saveJson } from "../utils/storage.js";
 import { getPlatformRootDirPath, } from "../process/registry/TownPaths.js";
-import { PlatformStore } from "../platform/store/index.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 /**
  * 平台初始化入口。
@@ -28,40 +26,21 @@ export async function controlPlaneInitCommand() {
     // 写入 schema（给编辑器使用）
     await fs.ensureDir(schemaDir);
     await saveJson(schemaPath, DOWNCITY_JSON_SCHEMA);
-    const modelStore = new PlatformStore();
-    let existingModelsCount = 0;
-    try {
-        existingModelsCount = modelStore.listModels().length;
-        emitCliBlock({
-            tone: "success",
-            title: "Platform base initialized",
-            facts: [
-                {
-                    label: "Root",
-                    value: operationRoot,
-                },
-                {
-                    label: "Schema",
-                    value: schemaPath,
-                },
-                {
-                    label: "Existing models",
-                    value: String(existingModelsCount),
-                },
-            ],
-            note: existingModelsCount > 0
-                ? "检测到已有模型池。`town init` 不会修改模型配置。"
-                : "当前还没有模型池。你可以稍后执行 `town model create` 配置模型。",
-        });
-    }
-    finally {
-        modelStore.close();
-    }
     emitCliBlock({
         tone: "success",
         title: "Platform initialized",
         summary: "base-only",
-        note: "基础设施已初始化。下一步可执行 `town model create` 配置模型。",
+        note: "基础设施已初始化。模型由 City AIService 暴露，Town 只负责绑定 modelId。",
+        facts: [
+            {
+                label: "Root",
+                value: operationRoot,
+            },
+            {
+                label: "Schema",
+                value: schemaPath,
+            },
+        ],
     });
     emitCliList({
         tone: "accent",

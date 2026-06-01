@@ -36,7 +36,7 @@ export interface AgentProjectInitializationInput {
    * 项目执行绑定配置。
    *
    * 说明（中文）
-   * - 绑定平台全局模型池中的模型 ID。
+   * - 绑定 City AIService 暴露的模型 ID。
    */
   execution: ExecutionBindingConfig;
 

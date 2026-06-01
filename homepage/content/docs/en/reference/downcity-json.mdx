@@ -22,7 +22,7 @@ Project `downcity.json` is the local agent contract. It declares the agent ident
 }
 ```
 
-`execution.type` is fixed to `api`, and `execution.modelId` must reference a model available through `town model list`.
+`execution.type` is fixed to `api`, and `execution.modelId` must reference a model exposed by the connected City AIService.
 
 Project `downcity.json` keeps plugin configuration under `plugins.*`.
 
@@ -30,12 +30,12 @@ Project `downcity.json` keeps plugin configuration under `plugins.*`.
 
 The project only stores the selected model ID:
 
-Use CLI:
+Use City-side administration to choose the model ID, then keep the project binding in `downcity.json`:
 
 ```bash
-town model list
-town model use <modelId>
-town model test <modelId>
+town city status
+town config set execution.modelId <modelId>
+town agent restart .
 ```
 
 ## Agent startup resolution
@@ -43,7 +43,7 @@ town model test <modelId>
 When an agent starts:
 
 1. Check whether the project declares `execution`
-2. If `execution.type = "api"`, resolve the selected model ID through the configured shared AI service
+2. If `execution.type = "api"`, resolve the selected model ID through the configured City AIService
 3. Inject the resolved model into the agent session runtime
 
 `execution` must be valid, otherwise startup fails fast.

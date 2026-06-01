@@ -33,7 +33,7 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
         modelId: {
           type: "string",
           description:
-            "API 执行模式下绑定的平台全局模型 ID。",
+            "API 执行模式下绑定的 City AIService 模型 ID。",
         },
       },
       required: ["type", "modelId"],

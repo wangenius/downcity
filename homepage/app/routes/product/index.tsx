@@ -12,20 +12,20 @@ const page_content = {
   zh: {
     badge: "Product",
     title: "给 AI builders 的 Agent 基础设施产品矩阵",
-    subtitle: "Downcity 不是单点工具，而是一套可复用运行层：本地 Agent 宿主、控制台、浏览器入口、Agent SDK、共享服务 SDK 与 UI SDK 共同支撑多个 Agent 产品和工作流。",
+    subtitle: "Downcity 不是单点工具，而是一套可复用运行层：本地 Agent 宿主、控制台、浏览器入口、Agent SDK、City SDK 与 UI SDK 共同支撑多个 Agent 产品和工作流。",
     logicBadge: "Product Logic",
-    logicTitle: "Products、Agents 与 Shared Runtime",
+    logicTitle: "Products、Agents 与 City Runtime",
     logicSubtitle:
       "产品负责真实体验，Agent 负责执行任务，Downcity runtime 负责模型、工具、任务、记忆、权限、用量、计费、服务和可观测性这类重复基础设施。",
     flow: [
       { title: "Products", desc: "AI 产品与工作流入口", icon: IconAppWindow },
       { title: "Agents", desc: "长期运行和执行任务", icon: IconRobot },
-      { title: "Shared Runtime", desc: "模型 / 服务 / 权限 / 用量 / 计费", icon: IconBuildingSkyscraper },
+      { title: "City Runtime", desc: "模型 / 服务 / 权限 / 用量 / 计费", icon: IconBuildingSkyscraper },
     ],
     notes: [
       { title: "Products", desc: "可以是网页、扩展、桌面端、移动端、客户 Demo、内部工具或 API Host。" },
       { title: "Agents", desc: "在明确边界里运行，处理任务、上下文、工具调用和长期状态。" },
-      { title: "Shared Runtime", desc: "把多个产品都会重复建设的 Agent 后端能力收束成可复用基础设施。" },
+      { title: "City Runtime", desc: "把多个产品都会重复建设的 Agent 后端能力收束成可复用基础设施。" },
     ],
     cards: [
       {
@@ -49,8 +49,8 @@ const page_content = {
       },
       {
         id: "sdk",
-        title: "Shared Services SDK",
-        desc: "把模型目录、服务路由、身份、用量、余额和支付这类共享后端能力接入你的产品体系。",
+        title: "City SDK",
+        desc: "把模型目录、Service 路由、身份、用量、余额和支付接入你的产品体系。",
         source: "packages/city/",
       },
       {
@@ -72,7 +72,7 @@ const page_content = {
       "Official Town CLI：官方 terminal/local Town 实现，目录为 cli/town/。",
       "Console UI：独立前端包，目录为 products/console/。",
       "Chrome Extension：Manifest V3 插件，目录为 products/chrome-extension/。",
-      "Shared Services SDK：核心 runtime 与服务访问方式位于 packages/city/。",
+      "City SDK：核心 runtime 与服务访问方式位于 packages/city/。",
       "Agent SDK：本地 Agent / RemoteAgent SDK 位于 packages/agent/。",
       "Downcity UI SDK：React + Tailwind 组件包目录为 packages/ui/。",
     ],
@@ -81,20 +81,20 @@ const page_content = {
     badge: "Product",
     title: "Agent infrastructure products for AI builders",
     subtitle:
-      "Downcity is not one tool. It is one reusable runtime layer across local agent hosting, Console, browser entry, Agent SDK, shared services SDK, and UI SDK for many agent products and workflows.",
+      "Downcity is not one tool. It is one reusable runtime layer across local agent hosting, Console, browser entry, Agent SDK, City SDK, and UI SDK for many agent products and workflows.",
     logicBadge: "Product Logic",
-    logicTitle: "Products, Agents, and Shared Runtime",
+    logicTitle: "Products, Agents, and City Runtime",
     logicSubtitle:
       "Products own the real experience, agents execute the work, and Downcity runtime owns the repeated infrastructure: models, tools, tasks, memory, permissions, usage, billing, services, and observability.",
     flow: [
       { title: "Products", desc: "AI products and workflow entry points", icon: IconAppWindow },
       { title: "Agents", desc: "Run long-lived execution", icon: IconRobot },
-      { title: "Shared Runtime", desc: "Models / services / auth / usage / billing", icon: IconBuildingSkyscraper },
+      { title: "City Runtime", desc: "Models / services / auth / usage / billing", icon: IconBuildingSkyscraper },
     ],
     notes: [
       { title: "Products", desc: "Can be web apps, extensions, desktop apps, mobile apps, client demos, internal tools, or API hosts." },
       { title: "Agents", desc: "Run inside explicit boundaries and handle tasks, context, tool calls, and long-term state." },
-      { title: "Shared Runtime", desc: "Centralizes the agent backend capabilities that every new AI product would otherwise rebuild." },
+      { title: "City Runtime", desc: "Centralizes the agent backend capabilities that every new AI product would otherwise rebuild." },
     ],
     cards: [
       {
@@ -118,7 +118,7 @@ const page_content = {
       },
       {
         id: "sdk",
-        title: "Shared Services SDK",
+        title: "City SDK",
         desc: "Bring model catalogs, service routing, auth, usage, balance, and payment capabilities into your product flow.",
         source: "packages/city/",
       },
@@ -141,7 +141,7 @@ const page_content = {
       "Official Town CLI is the terminal/local Town implementation under cli/town/.",
       "Console UI is a dedicated frontend package under products/console/.",
       "Chrome Extension is a Manifest V3 extension under products/chrome-extension/.",
-      "Shared Services SDK runtime and service access helpers live in packages/city/.",
+      "City SDK runtime and service access helpers live in packages/city/.",
       "Agent SDK local Agent and RemoteAgent runtime are in packages/agent/.",
       "Downcity UI SDK is the React + Tailwind component package under packages/ui/.",
     ],
@@ -153,7 +153,7 @@ const page_content = {
  * 说明：
  * 1. Product 仅展示真实产品线，不再使用抽象分组。
  * 2. 文案基于仓库目录与文档事实，避免空泛描述。
- * 3. 产品逻辑图只表达 Products、Agents、Shared Runtime 三个核心概念。
+ * 3. 产品逻辑图只表达 Products、Agents、City Runtime 三个核心概念。
  */
 export default function ProductOverviewPage() {
   const { i18n } = useTranslation();
@@ -204,9 +204,9 @@ type ProductOverviewContent = (typeof page_content)[keyof typeof page_content];
 /**
  * 产品逻辑图示区域。
  * 说明：
- * 1. 只保留一条主线：Products -> Agents -> Shared Runtime。
- * 2. 避免把 City 作为对外总定位，只保留共享服务层的产品事实。
- * 3. 下方三条说明解释产品、Agent 与共享运行层的边界。
+ * 1. 只保留一条主线：Products -> Agents -> City Runtime。
+ * 2. 避免把 City 作为对外总定位，只保留City runtime的产品事实。
+ * 3. 下方三条说明解释产品、Agent 与City runtime的边界。
  */
 function ProductLogicSection({ content }: { content: ProductOverviewContent }) {
   return (

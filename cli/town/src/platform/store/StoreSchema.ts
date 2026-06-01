@@ -13,37 +13,6 @@ import type { PlatformStoreContext } from "./StoreShared.js";
  */
 export function ensurePlatformStoreSchema(context: PlatformStoreContext): void {
   context.sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS model_providers (
-      id TEXT PRIMARY KEY NOT NULL,
-      type TEXT NOT NULL,
-      base_url TEXT,
-      api_key_encrypted TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `);
-  context.sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS models (
-      id TEXT PRIMARY KEY NOT NULL,
-      provider_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      temperature REAL,
-      max_tokens INTEGER,
-      top_p REAL,
-      frequency_penalty REAL,
-      presence_penalty REAL,
-      anthropic_version TEXT,
-      is_paused INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `);
-  ensureModelsTableColumns(context);
-  context.sqlite.exec(`
-    CREATE INDEX IF NOT EXISTS models_provider_id_idx
-    ON models(provider_id);
-  `);
-  context.sqlite.exec(`
     CREATE TABLE IF NOT EXISTS platform_secure_settings (
       key TEXT PRIMARY KEY NOT NULL,
       value_encrypted TEXT NOT NULL,
@@ -245,23 +214,6 @@ function ensureAuthSchema(context: PlatformStoreContext): void {
     CREATE INDEX IF NOT EXISTS auth_audit_logs_resource_idx
     ON auth_audit_logs(resource_type, resource_id);
   `);
-}
-
-/**
- * 补齐 models 表的增量列。
- */
-function ensureModelsTableColumns(context: PlatformStoreContext): void {
-  const rows = context.sqlite
-    .prepare("PRAGMA table_info(models)")
-    .all() as Array<{ name?: unknown }>;
-  const columns = new Set(
-    rows.map((row) => String(row.name || "").trim()).filter(Boolean),
-  );
-  if (!columns.has("is_paused")) {
-    context.sqlite.exec(
-      "ALTER TABLE models ADD COLUMN is_paused INTEGER NOT NULL DEFAULT 0;",
-    );
-  }
 }
 
 /**

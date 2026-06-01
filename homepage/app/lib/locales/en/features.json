@@ -22,7 +22,7 @@
     },
     "skills": {
       "title": "Extensible Capabilities",
-      "description": "Plugins, skills, shared services, and SDK APIs let each product add capabilities without forking the whole agent backend."
+      "description": "Plugins, skills, City, and SDK APIs let each product add capabilities without forking the whole agent backend."
     }
   },
   "codePreview": {

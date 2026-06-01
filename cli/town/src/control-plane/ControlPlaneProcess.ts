@@ -363,7 +363,7 @@ export async function restartManagedAgents(cliPath: string): Promise<void> {
   });
   for (const item of runningAgents) {
     try {
-      assertProjectExecutionModelReady(item.projectRoot);
+      await assertProjectExecutionModelReady(item.projectRoot);
       const args = await buildRunArgsFromOptions(
         item.projectRoot,
         restartOptionsMap.get(item.projectRoot) || {},
@@ -477,7 +477,7 @@ export async function prepareForegroundAgent(
 
   injectAgentContext(cwd);
   const projectRoot = resolve(String(cwd || "."));
-    assertProjectExecutionModelReady(projectRoot);
+  await assertProjectExecutionModelReady(projectRoot);
 
   const shouldForeground = options.foreground === true;
   if (!shouldForeground) {

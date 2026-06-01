@@ -22,8 +22,13 @@ import { registerPluginsCommand } from "./shared/Plugins.js";
 import { registerManagedPluginCommandsForCli } from "./shared/ManagedPluginActionCommands.js";
 import { registerAgentCommands } from "./shared/IndexAgentCommand.js";
 import { registerChatCommand } from "./shared/Chat.js";
-import { setCliVerbosity } from "./shared/CliReporter.js";
+import {
+  emitCliHeader,
+  resetCliSectionFlow,
+  setCliVerbosity,
+} from "./shared/CliReporter.js";
 import { registerControlPlaneCommands } from "./control-plane/ControlPlaneCommand.js";
+import { runInteractiveTownManager } from "./shared/TownManager.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -121,7 +126,12 @@ if (
 }
 
 if (process.argv.length <= 2) {
-  program.outputHelp();
+  resetCliSectionFlow();
+  emitCliHeader(packageJson.version, { command_name: "town" });
+  await runInteractiveTownManager({
+    program,
+    cli_path,
+  });
   process.exit(0);
 }
 

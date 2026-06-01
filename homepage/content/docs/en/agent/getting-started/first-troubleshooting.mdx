@@ -32,7 +32,8 @@ Symptoms:
 Fix:
 
 - check `downcity.json.execution.modelId`
-- confirm that the model ID exists in the shared model catalog
+- run `town city status`
+- confirm that the model ID exists in City AIService
 
 This is one of the most common structural startup problems in the current implementation.
 
@@ -75,7 +76,7 @@ In most cases you do not need to delete project directories or manually remove r
 
 1. `town agent status`
 2. inspect `downcity.json`
-3. confirm model binding
+3. confirm City connection and model binding
 4. if stale, run `doctor --fix`
 5. if still needed, `restart`
 

@@ -1,7 +1,7 @@
 /**
- * 共享服务 SDK 文档布局路由模块。
+ * City SDK 文档布局路由模块。
  * 说明：
- * 1. `city-sdk-docs` 与 `docs`、`agent-sdk-docs`、`services-sdk-docs` 平级存在，单独承载共享服务 SDK 文档。
+ * 1. `city-sdk-docs` 与 `docs`、`agent-sdk-docs`、`services-sdk-docs` 平级存在，单独承载City SDK 文档。
  * 2. 这里仅负责语言切换与 Fumadocs 布局装配，不承载业务逻辑。
  */
 import { DocsLayout } from "fumadocs-ui/layouts/docs";

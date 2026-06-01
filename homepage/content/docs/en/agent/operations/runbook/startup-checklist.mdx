@@ -9,11 +9,12 @@ Before you run `town agent start`, confirm:
 
 1. the project has been initialized
 2. `downcity.json.execution.modelId` is configured
-3. the corresponding model exists in the shared model catalog
-4. if chat channels are enabled, the relevant `channelAccountId` really exists
-5. required environment variables are ready
+3. Town is connected to City
+4. the corresponding model exists in City AIService
+5. if chat channels are enabled, the relevant `channelAccountId` really exists
+6. required environment variables are ready
 
 The two easiest things to miss are usually:
 
-- `modelId` is written, but that model does not actually exist in the shared model catalog
+- `modelId` is written, but that model does not actually exist in City AIService
 - the variable exists in your interactive shell, but not in the runtime environment used by the agent process

@@ -1,18 +1,18 @@
 ---
 title: Model Config Reference
-description: How agent projects bind to shared AI service models in Downcity
+description: How agent projects bind to City AIService models in Downcity
 ---
 
 # Model Config Reference
 
-Downcity keeps model selection out of the agent project implementation. The project only stores a model ID; the shared AI service owns provider keys, provider routing, and the model catalog.
+Downcity keeps model selection out of the agent project implementation. The project only stores a model ID; the City AIService owns provider keys, provider routing, and the model catalog.
 
 ## Mental model
 
 ```txt
-shared AI service model catalog
-  -> town model list
-  -> town model use <modelId>
+City AIService model catalog
+  -> city
+  -> town city use
   -> downcity.json execution.modelId
   -> agent session runtime
 ```
@@ -35,17 +35,17 @@ Agent projects bind through `execution.modelId`:
 Notes:
 
 - `execution.type` should be `api`
-- `execution.modelId` should match a model returned by `town model list`
+- `execution.modelId` should match a model exposed by the connected City AIService
 - provider secrets and provider connection details stay outside the project config
 
 ## Commands
 
-List, bind, and test shared models:
+Connect Town to City, then write the project binding:
 
 ```bash
-town model list
-town model use <modelId>
-town model test <modelId>
+town city use
+town city status
+town config set execution.modelId <modelId>
 ```
 
 Restart the agent after changing the binding:
@@ -56,7 +56,7 @@ town agent restart .
 
 ## What the project does not store
 
-Project `downcity.json` should not store provider secrets or provider connection details. Those belong to the shared service runtime.
+Project `downcity.json` should not store provider secrets or provider connection details. Those belong to the City runtime.
 
 ## Related docs
 

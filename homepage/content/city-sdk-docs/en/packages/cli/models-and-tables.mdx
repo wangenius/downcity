@@ -29,16 +29,16 @@ When you debug runtime behavior, you usually end up checking tables such as:
 ## Common model-focused entry points
 
 ```bash
-town model list
-town model use <modelId>
-town model test <modelId>
+city
+town city use
+town city status
 ```
 
 Use these commands to:
 
 - inspect models exposed by City AIService
-- bind the current project to a specific `execution.modelId`
-- test whether a model can actually be called through City AIService
+- import the active City connection into Town
+- confirm local Agents can resolve City connection settings before startup
 
 ## Common table-debugging scenarios
 
@@ -61,7 +61,7 @@ Looking at the tables first is often the fastest way to distinguish:
 city
 # or start a local agent
 town agent start .
-town model list
+town city status
 ```
 
 Then continue inside the interactive panel to inspect:

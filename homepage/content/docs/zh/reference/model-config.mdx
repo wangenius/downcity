@@ -1,18 +1,18 @@
 ---
 title: Model 配置参考
-description: Agent 项目如何绑定 Downcity 共享 AI service 模型
+description: Agent 项目如何绑定 Downcity City AIService 模型
 ---
 
 # Model 配置参考
 
-Downcity 不把完整模型实现细节放进 Agent 项目。项目只保存模型 ID；provider key、provider routing 和模型目录由共享 AI service 负责。
+Downcity 不把完整模型实现细节放进 Agent 项目。项目只保存模型 ID；provider key、provider routing 和模型目录由City AIService 负责。
 
 ## 心智模型
 
 ```txt
-共享 AI service 模型目录
-  -> town model list
-  -> town model use <modelId>
+City AIService 模型目录
+  -> city
+  -> town city use
   -> downcity.json execution.modelId
   -> agent session runtime
 ```
@@ -35,17 +35,17 @@ Agent 项目通过 `execution.modelId` 绑定模型：
 说明：
 
 - `execution.type` 应写为 `api`
-- `execution.modelId` 应对应 `town model list` 返回的某个模型
+- `execution.modelId` 应对应已连接 City AIService 暴露的某个模型
 - provider secrets 和 provider 连接细节不写进项目配置
 
 ## 常用命令
 
-列出、绑定和测试共享模型：
+先连接 Town 与 City，再写入项目绑定：
 
 ```bash
-town model list
-town model use <modelId>
-town model test <modelId>
+town city use
+town city status
+town config set execution.modelId <modelId>
 ```
 
 模型绑定变更后重启 agent：
@@ -56,7 +56,7 @@ town agent restart .
 
 ## 项目不应该保存什么
 
-项目 `downcity.json` 不应该保存 provider secrets 或 provider 连接细节。这些属于共享服务 runtime。
+项目 `downcity.json` 不应该保存 provider secrets 或 provider 连接细节。这些属于City runtime。
 
 ## 相关文档
 

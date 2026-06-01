@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 当 agent 启动失败（如 model not found）时，不必删除重建，直接重选模型。
- * - 从平台全局模型池中选择可用模型，更新 downcity.json.execution.modelId。
+ * - 从 City AIService 中选择可用模型，更新 downcity.json.execution.modelId。
  * - 仅修改 execution.modelId，不触碰 PROFILE.md / SOUL.md / channels 等其他配置。
  */
 
@@ -11,10 +11,10 @@ import path from "node:path";
 import fs from "fs-extra";
 import prompts from "prompts";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { PlatformStore } from "@/platform/store/index.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
+import { listPlatformModelChoices } from "@/model/runtime/ExecutionModelBinding.js";
 
 /**
  * 读取当前 agent 的 execution.modelId。
@@ -29,32 +29,6 @@ function readCurrentModelId(projectRoot: string): { shipJsonPath: string; curren
     ? (raw.execution as Record<string, unknown>).modelId || ""
     : "").trim();
   return { shipJsonPath, current };
-}
-
-/**
- * 列出可用的平台模型选项。
- */
-function listModelChoices(): Array<{ title: string; value: string }> {
-  const store = new PlatformStore();
-  try {
-    const models = store.listModels();
-    const providers = store.listProvidersSync();
-    const providerMap = new Map(providers.map((p) => [p.id, p]));
-    return models
-      .filter((m) => !m.isPaused)
-      .map((m) => {
-        const provider = providerMap.get(m.providerId);
-        const label = provider
-          ? `${provider.type}${provider.baseUrl ? ` · ${provider.baseUrl}` : ""}`
-          : "-";
-        return {
-          title: `${m.id}  [${label}]`,
-          value: m.id,
-        };
-      });
-  } finally {
-    store.close();
-  }
 }
 
 /**
@@ -77,12 +51,12 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   const { current } = readCurrentModelId(projectRoot);
 
   // 3) 获取可用模型列表
-  const choices = listModelChoices();
+  const choices = await listPlatformModelChoices();
   if (choices.length === 0) {
     throw new CliError({
-      title: "No models available in platform pool",
-      note: "请先配置 provider 并创建 model",
-      fix: "town model create",
+      title: "No models available in City AIService",
+      note: "请先在 City AIService 注册模型，并确保当前 user_token 可调用",
+      fix: "city",
     });
   }
 

@@ -90,7 +90,7 @@ export function Navbar() {
       { label: t("nav.productOverview"), description: isZh ? "完整产品矩阵" : "Full product index", path: productBasePath },
       { label: t("nav.productConsoleUi"), description: isZh ? "浏览器里的 Agent 控制台" : "Agent control surface", path: productConsoleUiPath },
       { label: t("nav.productChromeExtension"), description: isZh ? "把网页上下文送入 Agent" : "Send live web context", path: productChromeExtensionPath },
-      { label: t("nav.productSdk"), description: isZh ? "接入共享服务能力" : "Embed shared service flows", path: productSdkPath },
+      { label: t("nav.productSdk"), description: isZh ? "接入 City SDK" : "Embed City SDK", path: productSdkPath },
       { label: t("nav.productAgentSdk"), description: isZh ? "把本地 Agent、Session、Plugin 嵌入应用" : "Embed local agents, sessions, and plugins", path: productAgentSdkPath },
       { label: t("nav.productUiSdk"), description: isZh ? "复用 Downcity 界面语言" : "Reuse the Downcity UI layer", path: productUiSdkPath },
     ],
@@ -111,20 +111,20 @@ export function Navbar() {
     items: [
       { label: "Downcity Docs", description: isZh ? "核心文档空间" : "Core documentation space", path: docsPath },
       { label: "Products", description: isZh ? "产品文档空间" : "Product documentation space", path: productsDocsPath },
-      { label: isZh ? "共享服务 SDK" : "Shared Services SDK", description: isZh ? "共享服务文档空间" : "Shared service documentation space", path: citySdkDocsPath },
+      { label: "City SDK", description: isZh ? "City SDK 文档空间" : "City SDK documentation space", path: citySdkDocsPath },
       {
         label: "Agent SDK",
         description: isZh ? "Agent SDK 文档空间" : "Agent SDK documentation space",
         path: agentSdkDocsPath,
       },
       {
-        label: "Services SDK",
-        description: isZh ? "Services SDK 文档空间" : "Services SDK documentation space",
+        label: "City Services Docs",
+        description: isZh ? "City Services Docs 文档空间" : "City Services Docs documentation space",
         path: servicesSdkDocsPath,
       },
       {
-        label: "Plugins Docs",
-        description: isZh ? "插件文档空间" : "Plugin documentation space",
+        label: "Agent Plugins Docs",
+        description: isZh ? "Agent Plugins Docs 文档空间" : "Agent Plugins Docs documentation space",
         path: pluginsDocsPath,
       },
       {

@@ -1,26 +1,27 @@
 ---
 title: Model Configuration
-description: Responsibility boundary between shared model catalog and project binding
+description: Responsibility boundary between City AIService model catalog and project binding
 ---
 
 # Model Configuration
 
 Model setup is split into two responsibilities:
 
-1. The shared AI service manages the model catalog and provider-side details.
+1. City manages the model catalog and provider-side details.
 2. Agent project chooses `execution.modelId` in `downcity.json`.
 
 ## Workflow
 
-1. Make sure a model is available through `town model list`.
-2. Set `execution.modelId` in project.
-3. Restart agent and validate one real invocation.
+1. Use `city` to prepare or inspect the model catalog.
+2. Connect Town to City with `town city use`.
+3. Set `execution.modelId` in project.
+4. Restart agent and validate one real invocation.
 
 ## Commands
 
 ```bash
-town model list
-town model use default --path .
+town city use
+town city status
 town config set execution.modelId default
 town agent restart .
 ```

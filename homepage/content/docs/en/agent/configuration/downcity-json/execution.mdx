@@ -1,6 +1,6 @@
 ---
 title: execution Configuration
-description: How an Agent project binds to a model in the shared model catalog
+description: How an Agent project binds to a model in City AIService
 ---
 
 # `execution` Configuration
@@ -19,7 +19,7 @@ For the current project runtime, the agent uses one execution binding:
 ## What it means
 
 - `type` is fixed to `api`
-- `modelId` points to a model ID in the shared model catalog
+- `modelId` points to a model ID in the connected City AIService
 
 In the current codebase, project execution binding is parsed around this rule.
 
@@ -32,25 +32,25 @@ This keeps:
 - the actual model name
 - other model details
 
-in the shared model catalog.
+in the City model catalog.
 
 The project only needs to say, "use this model."
 
-That makes the boundary between project config and global model definitions much clearer.
+That makes the boundary between project config and City model definitions much clearer.
 
 ## Common mistakes
 
-If `modelId` does not exist in the shared model catalog, agent startup will fail.
+If `modelId` does not exist in the City model catalog, agent startup will fail.
 
 Another common mistake is carrying over older configuration language and writing a different runtime binding here. For the current project runtime path, use `api`.
 
 ## Recommended workflow
 
-First make sure the shared model catalog has a working model. Then bind the project to it.
+First make sure City has a working model. Then bind the project to it.
 
-If you are troubleshooting for the first time, start with a model ID you already know works instead of validating both the global model definition and the project binding at the same time.
+If you are troubleshooting for the first time, start with a model ID you already know works instead of validating both the City model definition and the project binding at the same time.
 
 ## Continue reading
 
-- [Shared model catalog](/en/docs/agent/configuration/models/platform-model-pool)
+- [City model catalog](/en/docs/agent/configuration/models/platform-model-pool)
 - [Bind a model to an agent](/en/docs/agent/configuration/models/bind-model-to-agent)

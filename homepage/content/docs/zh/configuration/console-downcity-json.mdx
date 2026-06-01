@@ -1,16 +1,16 @@
 ---
-title: Console 配置存储（downcity.db）
-description: Console 全局配置已统一收敛到 ~/.downcity/downcity.db（含加密存储）
+title: City 配置存储（downcity.db）
+description: City 侧 Service 配置统一收敛到 ~/.downcity/downcity.db（含加密存储）
 ---
 
-# Console 配置存储（downcity.db）
+# City 配置存储（downcity.db）
 
-从当前版本开始，Console 不再使用：
+从当前版本开始，City 侧共享配置不再使用：
 
 1. `~/.downcity/downcity.json`
 2. `~/.downcity/.env`
 
-Console 全局配置统一存储在：
+City 侧配置统一存储在：
 
 - `~/.downcity/downcity.db`
 
@@ -18,8 +18,8 @@ Console 全局配置统一存储在：
 
 `downcity.db` 中主要包含以下数据域：
 
-1. 共享模型目录（providers/models）
-2. Console 侧管理的 env 记录（`env_entries`）
+1. City AIService 模型目录（providers/models）
+2. City 侧管理的 env 记录（`env_entries`）
 4. Bot 账号凭据池（`channel_accounts`）
 5. Chat 用户授权（`chat_auth_roles`、`chat_auth_role_permissions`、`chat_auth_channel_defaults`、`chat_auth_user_roles`）
 
@@ -34,7 +34,7 @@ Console 全局配置统一存储在：
 
 也就是：
 
-- Console：`~/.downcity/downcity.db`
+- City：`~/.downcity/downcity.db`
 - Agent：项目目录下的 `downcity.json/.env`
 
 ## 环境变量作用域（重要）
@@ -49,15 +49,15 @@ Console 全局配置统一存储在：
 关键行为：
 
 1. Agent 运行时 env 最终是 `new Agent({ env }) + <agent>/.env`（`.env` 优先）。
-2. 当宿主是 `town` 时，会先从 `downcity.db` 读取 Console 全局 env，再显式传给 `Agent`。
+2. 当宿主是 `town` 时，会先从 `downcity.db` 读取 City 侧 env，再显式传给 `Agent`。
 3. `downcity.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
 4. 渠道真实凭据来自 `channel_accounts`。
 5. 用户聊天权限来自 `chat_auth_*` 表，不保存在 agent 项目里。
-6. plugin 参数来自项目 `downcity.json`，plugin 启停属于 Console 全局配置。
+6. plugin 参数来自项目 `downcity.json`，Agent plugin 生命周期由 Town 管理。
 
 ## 常用操作
 
-初始化 Console（写入 `downcity.db`）：
+初始化本地 Town 状态和 City 连接元信息：
 
 ```bash
 town init
@@ -70,24 +70,24 @@ town config get plugins.asr
 town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
-切换 city 级 plugin 启停：
+管理 Agent plugin 生命周期：
 
 ```bash
 town asr on
 town asr off
 ```
 
-管理共享模型：
+让 Agent 项目使用 City 模型：
 
 ```bash
-town model list
-town model use <modelId>
+town city status
+town config set execution.modelId <modelId>
 ```
 
 ## 相关文档
 
 - [Env 与 downcity.db 数据库设计](/zh/docs/configuration/env-downcitydb-design)
-- [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)
+- [环境变量配置逻辑（City 侧 vs Agent 私有）](/zh/docs/configuration/environment-variables)
 
 ## 运行文件
 

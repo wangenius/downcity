@@ -44,9 +44,9 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
         command: "cd /path/to/your-repo\ntown agent create .",
       },
       {
-        title: "配置模型并启动 Runtime",
-        description: "写入 `.env` 后启动 runtime。默认后台运行，需要观察日志时再切前台模式。",
-        command: "LLM_API_KEY=your_key\n\ntown start\ntown agent start\n# 调试时\ntown agent start --foreground",
+        title: "连接 City 并启动 Runtime",
+        description: "先把当前 City 会话导入 Town，再启动 runtime。默认后台运行，需要观察日志时再切前台模式。",
+        command: "city\n\ntown city use\ntown start\ntown agent start\n# 调试时\ntown agent start --foreground",
       },
       {
         title: "做一次健康检查",
@@ -79,9 +79,9 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
         command: "cd /path/to/your-repo\ntown agent create .",
       },
       {
-        title: "Configure model and start runtime",
-        description: "Create `.env`, then start the runtime. Use foreground mode only when you need live logs in the current shell.",
-        command: "LLM_API_KEY=your_key\n\ntown start\ntown agent start\n# for debugging\ntown agent start --foreground",
+        title: "Connect City and start runtime",
+        description: "Import the active City session into Town, then start the runtime. Use foreground mode only when you need live logs in the current shell.",
+        command: "city\n\ntown city use\ntown start\ntown agent start\n# for debugging\ntown agent start --foreground",
       },
       {
         title: "Run a health check",

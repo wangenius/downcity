@@ -47,6 +47,13 @@ export async function initCommand(cwd = ".", options = {}) {
     const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
     const modelChoices = await listPlatformModelChoices();
     const modelChoiceIds = modelChoices.map((item) => item.value);
+    if (modelChoiceIds.length === 0) {
+        throw new CliError({
+            title: "City AIService has no available models",
+            note: "Please register at least one model in City AIService and ensure the City user token can access it.",
+            fix: "city",
+        });
+    }
     // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
     if (existingShipJson) {
         if (!allowOverwrite) {
@@ -78,7 +85,7 @@ export async function initCommand(cwd = ".", options = {}) {
         {
             type: "select",
             name: "primaryModelId",
-            message: "Select primary model (from platform model pool)",
+            message: "Select primary model (from City AIService)",
             choices: modelChoices,
             initial: 0,
         },
@@ -96,19 +103,12 @@ export async function initCommand(cwd = ".", options = {}) {
     ]));
     // 关键点（中文）：agent_id 同时用于 `downcity.json.id` 与 init 模板变量渲染，避免两处来源不一致。
     const agent_id = String(response.id || "").trim() || default_agent_id;
-    const primaryModelId = String(response.primaryModelId || "").trim() || "default";
-    if (modelChoiceIds.length === 0) {
-        throw new CliError({
-            title: "Platform model pool is empty",
-            note: "Please configure at least one model first.",
-            fix: "town model create",
-        });
-    }
+    const primaryModelId = String(response.primaryModelId || "").trim() || modelChoiceIds[0];
     const execution = {
         type: "api",
         modelId: primaryModelId,
     };
-    assertPlatformModelReady(primaryModelId);
+    await assertPlatformModelReady(primaryModelId);
     const selectedChannels = Array.isArray(response.channels)
         ? response.channels
         : [];
@@ -162,7 +162,7 @@ export async function initCommand(cwd = ".", options = {}) {
                 },
                 {
                     label: "Source",
-                    value: "~/.downcity/downcity.db",
+                    value: "City AIService",
                 },
             ],
         });
@@ -226,8 +226,8 @@ export async function initCommand(cwd = ".", options = {}) {
         "Edit downcity.json.execution to adjust execution target",
     ];
     if (primaryModelId) {
-        nextSteps.push("Edit downcity.json.execution.modelId (bind to console API model id)");
-        nextSteps.push('Use "town model ..." to manage global model pool');
+        nextSteps.push("Edit downcity.json.execution.modelId (bind to City AIService model id)");
+        nextSteps.push('Use "town city status" to confirm the Agent runtime can reach City');
     }
     if (selectedChannels.includes("telegram")) {
         nextSteps.push("Bind plugins.chat.channels.telegram.channelAccountId to an existing channel account");

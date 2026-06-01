@@ -63,6 +63,40 @@ export async function resolveD1Database(
 
   emitCliBlock({
     tone: "warning",
+    title: "Checking D1 database",
+    facts: [{ label: "name", value: database.name }],
+  });
+
+  const listed_database_id = await findExistingD1DatabaseId({
+    project_dir: params.config_file.project_dir,
+    account_id: params.account_id,
+    database_name: database.name,
+  });
+  if (listed_database_id) {
+    const next_env_file = writeCityProjectDeployEnv(params.env_file, {
+      city_d1_database_id: listed_database_id,
+      city_d1_database_name: database.name,
+      city_d1_binding: database.binding,
+    });
+
+    emitCliBlock({
+      tone: "success",
+      title: "D1 database reused",
+      facts: [
+        { label: "name", value: database.name },
+        { label: "id", value: listed_database_id },
+        { label: "env", value: next_env_file.env_path },
+      ],
+    });
+
+    return {
+      env_file: next_env_file,
+      database_id: listed_database_id,
+    };
+  }
+
+  emitCliBlock({
+    tone: "warning",
     title: "Creating D1 database",
     facts: [{ label: "name", value: database.name }],
   });
@@ -110,6 +144,34 @@ export async function resolveD1Database(
  */
 function extractD1DatabaseId(output: string): string | undefined {
   return output.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
+}
+
+/**
+ * 从 Cloudflare 已有 D1 列表中查找同名数据库。
+ */
+async function findExistingD1DatabaseId(
+  params: {
+    project_dir: string;
+    account_id?: string;
+    database_name: string;
+  },
+): Promise<string | undefined> {
+  const output = await runCommand({
+    label: "List D1 databases",
+    command: "pnpm exec wrangler d1 list --json",
+    cwd: params.project_dir,
+    env: { CLOUDFLARE_ACCOUNT_ID: params.account_id },
+    capture: true,
+  });
+
+  try {
+    const parsed = JSON.parse(output) as Array<{ name?: unknown; uuid?: unknown }>;
+    const matched = parsed.find((item) => String(item?.name ?? "").trim() === params.database_name);
+    const database_id = String(matched?.uuid ?? "").trim();
+    return database_id || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

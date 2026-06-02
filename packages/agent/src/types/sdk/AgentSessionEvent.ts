@@ -159,6 +159,30 @@ export interface AgentSessionAssistantStepEvent {
 }
 
 /**
+ * Session 标题更新事件。
+ */
+export interface AgentSessionTitleEvent {
+  /**
+   * 当前事件类型。
+   */
+  type: "session-title";
+
+  /**
+   * 当前 session 唯一标识。
+   */
+  sessionId: string;
+
+  /**
+   * 当前 session 最新标题。
+   *
+   * 说明（中文）
+   * - 标题已持久化到 session meta。
+   * - 新 session 通常在首条 user message 落盘后生成标题。
+   */
+  title: string;
+}
+
+/**
  * 单个 turn 完成事件。
  */
 export interface AgentSessionTurnFinishEvent {
@@ -213,6 +237,7 @@ export type AgentSessionEvent =
   | AgentSessionToolCallEvent
   | AgentSessionToolResultEvent
   | AgentSessionAssistantStepEvent
+  | AgentSessionTitleEvent
   | AgentSessionTurnFinishEvent
   | AgentSessionErrorEvent;
 

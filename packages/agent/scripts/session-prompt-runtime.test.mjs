@@ -9,7 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { SessionPromptRuntime } from "../bin/sdk/session/runtime/SessionPromptRuntime.js";
+import { SessionPromptRuntime } from "../bin/session/runtime/SessionPromptRuntime.js";
 
 function createDeferred() {
   let resolve;

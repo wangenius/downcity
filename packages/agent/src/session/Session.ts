@@ -581,13 +581,26 @@ export class Session implements AgentSession {
     generate?: boolean;
   }): Promise<void> {
     const messages = await this.historyStore.list();
-    await ensureSessionTitle({
+    const beforeMetadata = await readSessionMetadata({
+      projectRoot: this.projectRoot,
+      agentId: this.agentId,
+      sessionId: this.id,
+    });
+    const beforeTitle = String(beforeMetadata.title || "").trim();
+    const nextMetadata = await ensureSessionTitle({
       projectRoot: this.projectRoot,
       agentId: this.agentId,
       sessionId: this.id,
       messages,
       ...(input?.generate ? { model: this.sessionConfig.model } : {}),
       generate: input?.generate === true,
+    });
+    const nextTitle = String(nextMetadata.title || "").trim();
+    if (!nextTitle || nextTitle === beforeTitle) return;
+    this.eventHub.publish({
+      type: "session-title",
+      sessionId: this.id,
+      title: nextTitle,
     });
   }
 

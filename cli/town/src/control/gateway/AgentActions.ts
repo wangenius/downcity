@@ -25,6 +25,7 @@ import {
   getProfileMdPath,
   getDowncitySessionRootDirPath,
   getDowncityJsonPath,
+  getDowncityDirPath,
 } from "@/config/Paths.js";
 import { stripInvocationAuthEnv } from "@/http/auth/AuthEnv.js";
 import type { PlatformAgentOption } from "@downcity/agent";
@@ -32,6 +33,7 @@ import type { AgentProjectInitializationResult } from "@downcity/agent";
 import type {
   ExecutionBindingConfig,
 } from "@downcity/agent";
+import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import {
   assertPlatformModelReady,
   assertProjectExecutionModelReady,
@@ -61,6 +63,28 @@ function resolveManagedAgentIdFromProjectRoot(projectRoot: string): string {
   } catch {
     return fallback;
   }
+}
+
+function resolveTaskIdFromTaskMdPath(task_md_path: unknown): string {
+  const text = String(task_md_path || "").trim();
+  if (!text) return "";
+  return path.basename(path.dirname(text));
+}
+
+function getDowncityTasksDirPath(project_root: string): string {
+  return path.join(getDowncityDirPath(project_root), "task");
+}
+
+function readTaskListFromPluginActionResult(input: unknown): Array<{
+  title?: unknown;
+  taskMdPath?: unknown;
+  lastRunTimestamp?: unknown;
+}> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return [];
+  const data = (input as { data?: unknown }).data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return [];
+  const tasks = (data as { tasks?: unknown }).tasks;
+  return Array.isArray(tasks) ? tasks : [];
 }
 
 /**
@@ -319,6 +343,7 @@ export async function startManagedAgentByProjectRoot(params: {
 export async function inspectManagedAgentRestartSafety(params: {
   projectRoot: string;
   listKnownAgents: () => Promise<PlatformAgentOption[]>;
+  agentRpcPool?: AgentRpcPool;
 }): Promise<{
   activeContexts: string[];
   activeTasks: string[];
@@ -348,31 +373,33 @@ export async function inspectManagedAgentRestartSafety(params: {
     }
   }
 
-  if (targetAgent?.running === true && targetAgent.baseUrl) {
+  if (targetAgent?.running === true && params.agentRpcPool) {
     try {
-      const tasksUrl = new URL("/api/control/tasks", targetAgent.baseUrl).toString();
-      const tasksResponse = await fetch(tasksUrl);
-      if (tasksResponse.ok) {
-        const payload = (await tasksResponse.json().catch(() => ({}))) as {
-          tasks?: Array<{ title?: unknown }>;
-        };
-        const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
-        for (const task of tasks) {
-          const title = String(task?.title || "").trim();
-          if (!title) continue;
-          const runsUrl = new URL(
-            `/api/control/tasks/${encodeURIComponent(title)}/runs?limit=1`,
-            targetAgent.baseUrl,
-          ).toString();
-          const runsResponse = await fetch(runsUrl);
-          if (!runsResponse.ok) continue;
-          const runsPayload = (await runsResponse.json().catch(() => ({}))) as {
-            runs?: Array<{ inProgress?: unknown }>;
-          };
-          const firstRun = Array.isArray(runsPayload.runs) ? runsPayload.runs[0] : null;
-          if (firstRun?.inProgress === true) {
-            activeTasks.push(title);
-          }
+      const client = params.agentRpcPool.resolveClientForAgent(targetAgent);
+      const payload = client
+        ? await client.run_internal_plugin_action({
+            plugin_name: "task",
+            action_name: "list",
+            payload: {},
+          })
+        : null;
+      const tasks = readTaskListFromPluginActionResult(payload);
+      for (const task of tasks) {
+        const title = String(task?.title || "").trim();
+        const task_id = resolveTaskIdFromTaskMdPath(task?.taskMdPath);
+        const timestamp = String(task?.lastRunTimestamp || "").trim();
+        if (!title || !task_id || !timestamp) continue;
+        const progressPath = path.join(
+          getDowncityTasksDirPath(normalizedRoot),
+          task_id,
+          timestamp,
+          "run-progress.json",
+        );
+        const progress = (await fs.readJson(progressPath).catch(() => null)) as {
+          status?: unknown;
+        } | null;
+        if (String(progress?.status || "").trim().toLowerCase() === "running") {
+          activeTasks.push(title);
         }
       }
     } catch {

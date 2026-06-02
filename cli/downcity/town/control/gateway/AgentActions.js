@@ -11,7 +11,7 @@ import path from "node:path";
 import { startDaemonProcess, stopDaemonProcess, getDaemonLogPath, isProcessAlive, readDaemonPid, } from "../../process/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "../../process/daemon/CliArgs.js";
 import { initializeAgentProject, isAgentProjectInitialized, } from "@downcity/agent";
-import { getProfileMdPath, getDowncitySessionRootDirPath, getDowncityJsonPath, } from "../../config/Paths.js";
+import { getProfileMdPath, getDowncitySessionRootDirPath, getDowncityJsonPath, getDowncityDirPath, } from "../../config/Paths.js";
 import { stripInvocationAuthEnv } from "../../http/auth/AuthEnv.js";
 import { assertPlatformModelReady, assertProjectExecutionModelReady, } from "../../model/runtime/ExecutionModelBinding.js";
 function resolveExecutionInput(params) {
@@ -36,6 +36,24 @@ function resolveManagedAgentIdFromProjectRoot(projectRoot) {
     catch {
         return fallback;
     }
+}
+function resolveTaskIdFromTaskMdPath(task_md_path) {
+    const text = String(task_md_path || "").trim();
+    if (!text)
+        return "";
+    return path.basename(path.dirname(text));
+}
+function getDowncityTasksDirPath(project_root) {
+    return path.join(getDowncityDirPath(project_root), "task");
+}
+function readTaskListFromPluginActionResult(input) {
+    if (!input || typeof input !== "object" || Array.isArray(input))
+        return [];
+    const data = input.data;
+    if (!data || typeof data !== "object" || Array.isArray(data))
+        return [];
+    const tasks = data.tasks;
+    return Array.isArray(tasks) ? tasks : [];
 }
 /**
  * 初始化平台控制面选中的 agent 项目。
@@ -265,26 +283,27 @@ export async function inspectManagedAgentRestartSafety(params) {
             }
         }
     }
-    if (targetAgent?.running === true && targetAgent.baseUrl) {
+    if (targetAgent?.running === true && params.agentRpcPool) {
         try {
-            const tasksUrl = new URL("/api/control/tasks", targetAgent.baseUrl).toString();
-            const tasksResponse = await fetch(tasksUrl);
-            if (tasksResponse.ok) {
-                const payload = (await tasksResponse.json().catch(() => ({})));
-                const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
-                for (const task of tasks) {
-                    const title = String(task?.title || "").trim();
-                    if (!title)
-                        continue;
-                    const runsUrl = new URL(`/api/control/tasks/${encodeURIComponent(title)}/runs?limit=1`, targetAgent.baseUrl).toString();
-                    const runsResponse = await fetch(runsUrl);
-                    if (!runsResponse.ok)
-                        continue;
-                    const runsPayload = (await runsResponse.json().catch(() => ({})));
-                    const firstRun = Array.isArray(runsPayload.runs) ? runsPayload.runs[0] : null;
-                    if (firstRun?.inProgress === true) {
-                        activeTasks.push(title);
-                    }
+            const client = params.agentRpcPool.resolveClientForAgent(targetAgent);
+            const payload = client
+                ? await client.run_internal_plugin_action({
+                    plugin_name: "task",
+                    action_name: "list",
+                    payload: {},
+                })
+                : null;
+            const tasks = readTaskListFromPluginActionResult(payload);
+            for (const task of tasks) {
+                const title = String(task?.title || "").trim();
+                const task_id = resolveTaskIdFromTaskMdPath(task?.taskMdPath);
+                const timestamp = String(task?.lastRunTimestamp || "").trim();
+                if (!title || !task_id || !timestamp)
+                    continue;
+                const progressPath = path.join(getDowncityTasksDirPath(normalizedRoot), task_id, timestamp, "run-progress.json");
+                const progress = (await fs.readJson(progressPath).catch(() => null));
+                if (String(progress?.status || "").trim().toLowerCase() === "running") {
+                    activeTasks.push(title);
                 }
             }
         }

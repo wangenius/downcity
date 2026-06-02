@@ -393,6 +393,7 @@ export class ControlGateway {
     return inspectManagedAgentRestartSafety({
       projectRoot,
       listKnownAgents: () => this.listKnownAgents(),
+      agentRpcPool: this.agentRpcPool,
     });
   }
 

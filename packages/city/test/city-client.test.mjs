@@ -20,6 +20,49 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", town_id: "town_demo" })
 })
 
+test("AIInvoker.text() serializes AI SDK provider tools with inputSchema", async () => {
+  const requests = []
+  const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello" }] }
+  const inputSchema = {
+    type: "object",
+    properties: {
+      cmd: { type: "string", description: "Shell command" },
+    },
+    required: ["cmd"],
+    additionalProperties: false,
+  }
+  const client = new City({
+    role: "user",
+    city_url: "https://api.example.com/base/",
+    town_id: "town_demo",
+    user_token: "ub_test",
+    fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
+  })
+
+  await client.ai.text({
+    messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "run pwd" }] }],
+    tools: [
+      {
+        type: "function",
+        name: "exec_command",
+        description: "Run shell command",
+        inputSchema,
+      },
+    ],
+  })
+
+  assert.deepEqual(JSON.parse(requests[0].init.body).tools, [
+    {
+      type: "function",
+      function: {
+        name: "exec_command",
+        description: "Run shell command",
+        parameters: inputSchema,
+      },
+    },
+  ])
+})
+
 test("User City delegates AI calls", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }

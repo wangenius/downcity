@@ -13,6 +13,7 @@ import { registerPlatformAgentStatusRoutes } from "../control/AgentStatusApiRout
 import { registerPlatformPluginRoutes } from "../control/PluginApiRoutes.js";
 import { registerDashboardTaskApiRoutes } from "../control/DashboardTaskApiRoutes.js";
 import { registerDashboardSessionApiRoutes } from "../control/DashboardSessionApiRoutes.js";
+import { registerDashboardOverviewApiRoutes } from "../control/DashboardOverviewApiRoutes.js";
 import { buildPlatformWorkloadBlockPayload } from "../control/gateway/GatewaySupport.js";
 /**
  * 注册平台控制面 API 路由。
@@ -261,6 +262,12 @@ export function registerPlatformApiRoutes(params) {
         agentRpcPool: handlers.agentRpcPool,
     });
     registerDashboardSessionApiRoutes({
+        app,
+        readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
+        resolveSelectedAgent: (requestedAgentId) => handlers.resolveSelectedAgent(requestedAgentId),
+        agentRpcPool: handlers.agentRpcPool,
+    });
+    registerDashboardOverviewApiRoutes({
         app,
         readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
         resolveSelectedAgent: (requestedAgentId) => handlers.resolveSelectedAgent(requestedAgentId),

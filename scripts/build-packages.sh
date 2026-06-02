@@ -190,6 +190,18 @@ run_build() {
   run_project_build "$ROOT_DIR/packages/$pkg"
 }
 
+should_sync_global_cli() {
+  local pkg
+  for pkg in "${PACKAGES[@]}"; do
+    case "$pkg" in
+      agent|city|plugins|ui|cli)
+        return 0
+        ;;
+    esac
+  done
+  return 1
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --)         shift ; continue ;;
@@ -237,8 +249,14 @@ done
 echo ""
 echo "==> 完成"
 
-# 构建 cli 后重新全局安装
-if [[ " ${PACKAGES[*]} " =~ " cli " ]]; then
+# patch build 后，只要本次改动会影响全局 town/city 的交付，就先补齐 CLI 产物，再同步全局安装。
+if should_sync_global_cli; then
+  if [[ ! " ${BUILD_PACKAGES[*]} " =~ " cli " ]]; then
+    echo ""
+    echo "==> 刷新 Downcity CLI 交付产物 ..."
+    run_build "cli"
+  fi
+
   echo ""
   echo "==> 全局安装 Downcity CLI ..."
   install_downcity_cli_globally "$ROOT_DIR"

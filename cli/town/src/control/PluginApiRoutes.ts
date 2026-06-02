@@ -25,6 +25,7 @@ import type {
   PluginView,
 } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
+import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import {
   isTownPluginEnabled,
   setBayPluginEnabled,
@@ -50,24 +51,6 @@ type PluginUiResponse = {
   plugins: PluginUiItem[];
   runtimeConnected: boolean;
   runtimeError?: string;
-};
-
-type PluginListResponse = {
-  success?: boolean;
-  plugins?: PluginView[];
-  error?: string;
-  message?: string;
-};
-
-type PluginAvailabilityResponse = {
-  success?: boolean;
-  availability?: PluginAvailability;
-  error?: string;
-  message?: string;
-};
-
-type RuntimeForwardAuthHeaders = {
-  authorization?: string;
 };
 
 function getErrorMessage(error: unknown): string {
@@ -181,94 +164,22 @@ function buildAgentPluginPayload(params?: {
   };
 }
 
-async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init);
-  const payload = (await response.json().catch(() => ({}))) as {
-    success?: boolean;
-    error?: unknown;
-    message?: unknown;
-  };
-  if (!response.ok || payload?.success === false) {
-    const errorMessage =
-      typeof payload?.error === "string"
-        ? payload.error
-        : typeof payload?.message === "string"
-          ? payload.message
-          : `${response.status} ${response.statusText}`;
-    throw new Error(errorMessage);
-  }
-  return payload as T;
-}
-
-function readRuntimeForwardAuthHeaders(request: Request): RuntimeForwardAuthHeaders {
-  const authorization = String(request.headers.get("authorization") || "").trim();
-  return authorization ? { authorization } : {};
-}
-
-function buildRuntimeRequestHeaders(params?: {
-  authHeaders?: RuntimeForwardAuthHeaders;
-  headers?: Headers | Record<string, string>;
-}): Headers {
-  const headers = new Headers(params?.headers || {});
-  const authorization = String(params?.authHeaders?.authorization || "").trim();
-  if (authorization) {
-    headers.set("authorization", authorization);
-  }
-  return headers;
-}
-
-async function loadPluginViews(
-  baseUrl: string,
-  authHeaders?: RuntimeForwardAuthHeaders,
-): Promise<PluginView[]> {
-  const listUrl = new URL("/api/plugins/catalog", baseUrl).toString();
-  const payload = await fetchJson<PluginListResponse>(listUrl, {
-    headers: buildRuntimeRequestHeaders({ authHeaders }),
-  });
-  const plugins = Array.isArray(payload.plugins) ? payload.plugins : [];
-  return plugins.sort((a, b) => a.name.localeCompare(b.name));
-}
-
-async function loadAgentPluginAvailability(
-  baseUrl: string,
-  pluginName: string,
-  authHeaders?: RuntimeForwardAuthHeaders,
-): Promise<PluginAvailability> {
-  const availabilityUrl = new URL("/api/plugins/availability", baseUrl).toString();
-  const payload = await fetchJson<PluginAvailabilityResponse>(availabilityUrl, {
-    method: "POST",
-    headers: buildRuntimeRequestHeaders({
-      authHeaders,
-      headers: {
-        "content-type": "application/json",
-      },
-    }),
-    body: JSON.stringify({
-      pluginName,
-    }),
-  });
-  if (!payload.availability) {
-    throw new Error(`Plugin availability is empty: ${pluginName}`);
-  }
-  return payload.availability;
-}
-
 async function buildAgentPluginPayloadFromRuntime(
   selectedAgent: PlatformAgentOption,
-  authHeaders?: RuntimeForwardAuthHeaders,
+  agentRpcPool: AgentRpcPool,
 ): Promise<PluginUiResponse> {
-  const baseUrl = String(selectedAgent.baseUrl || "").trim();
+  const client = agentRpcPool.resolveClientForAgent(selectedAgent);
+  if (!client) {
+    throw new Error("Selected agent RPC endpoint is unavailable.");
+  }
   const configMap = buildPluginConfigMap();
-  const pluginViews = await loadPluginViews(baseUrl, authHeaders);
+  const pluginViews = (await client.list_internal_plugin_catalog())
+    .sort((a, b) => a.name.localeCompare(b.name));
   const plugins = await Promise.all(
     pluginViews.map(async (view) => {
       return {
         ...view,
-        availability: await loadAgentPluginAvailability(
-          baseUrl,
-          view.name,
-          authHeaders,
-        ),
+        availability: await client.get_internal_plugin_availability(view.name),
         config: configMap.get(view.name) || {
           actions: [],
         },
@@ -355,6 +266,10 @@ export function registerPlatformPluginRoutes(params: {
   resolveSelectedAgent: (
     requestedAgentId: string,
   ) => Promise<PlatformAgentOption | null>;
+  /**
+   * Town 维护的 Agent RPC 连接池。
+   */
+  agentRpcPool: AgentRpcPool;
 }): void {
   const app = params.app;
 
@@ -365,7 +280,7 @@ export function registerPlatformPluginRoutes(params: {
         return c.json(buildGlobalPluginPayload());
       }
       const selectedAgent = await params.resolveSelectedAgent(requestedAgentId);
-      if (!selectedAgent || !selectedAgent.baseUrl) {
+      if (!selectedAgent || !selectedAgent.running) {
         return c.json(
           buildAgentPluginPayload({
             projectRoot: selectedAgent?.projectRoot,
@@ -379,7 +294,7 @@ export function registerPlatformPluginRoutes(params: {
         return c.json(
           await buildAgentPluginPayloadFromRuntime(
             selectedAgent,
-            readRuntimeForwardAuthHeaders(c.req.raw),
+            params.agentRpcPool,
           ),
         );
       } catch (runtimeError) {
@@ -420,12 +335,21 @@ export function registerPlatformPluginRoutes(params: {
         ? await params.resolveSelectedAgent(requestedAgentId)
         : null;
 
-      const result = await runGlobalPluginAction({
-        pluginName,
-        actionName,
-        projectRoot: String(selectedAgent?.projectRoot || "").trim() || undefined,
-        payload: body?.payload,
-      });
+      const client = selectedAgent?.running === true
+        ? params.agentRpcPool.resolveClientForAgent(selectedAgent)
+        : null;
+      const result = client
+        ? await client.run_internal_plugin_action({
+            plugin_name: pluginName,
+            action_name: actionName,
+            payload: body?.payload,
+          })
+        : await runGlobalPluginAction({
+            pluginName,
+            actionName,
+            projectRoot: String(selectedAgent?.projectRoot || "").trim() || undefined,
+            payload: body?.payload,
+          });
       return c.json(
         {
           ...result,

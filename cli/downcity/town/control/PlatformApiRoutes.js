@@ -244,11 +244,13 @@ export function registerPlatformApiRoutes(params) {
         app,
         readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
         resolveSelectedAgent: (requestedAgentId) => handlers.resolveSelectedAgent(requestedAgentId),
+        agentRpcPool: handlers.agentRpcPool,
     });
     registerPlatformPluginRoutes({
         app,
         readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
         resolveSelectedAgent: (requestedAgentId) => handlers.resolveSelectedAgent(requestedAgentId),
+        agentRpcPool: handlers.agentRpcPool,
     });
     app.all("/api/*", async (c) => {
         try {

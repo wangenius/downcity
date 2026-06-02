@@ -6,25 +6,33 @@
  * - 不处理进程控制；启动 / 停止逻辑单独放到 AgentActions 中。
  */
 import type { PlatformAgentOption, PlatformAgentsResponse, PlatformConfigFileStatusItem, PlatformConfigStatusResponse, PlatformAgentDirectoryInspection } from "@downcity/agent";
+import type { AgentRpcPool } from "../../control/gateway/AgentRpcPool.js";
 /**
  * 从请求中读取当前指向的 agent id。
  */
 export declare function readRequestedPlatformAgentId(request: Request): string;
+type AgentCatalogOptions = {
+    /**
+     * Town 维护的 Agent RPC 连接池。
+     */
+    agentRpcPool?: AgentRpcPool;
+};
 /**
  * 枚举平台控制面注册表中的所有 agent。
  */
-export declare function listKnownPlatformAgents(): Promise<PlatformAgentOption[]>;
+export declare function listKnownPlatformAgents(options?: AgentCatalogOptions): Promise<PlatformAgentOption[]>;
 /**
  * 构建 agent 列表响应。
  */
 export declare function buildPlatformAgentsResponse(params: {
     requestedAgentId: string;
     cityVersion: string;
+    agentRpcPool?: AgentRpcPool;
 }): Promise<PlatformAgentsResponse>;
 /**
  * 解析当前选中的运行中 agent。
  */
-export declare function resolveSelectedPlatformAgent(requestedAgentId: string, cityVersion: string): Promise<PlatformAgentOption | null>;
+export declare function resolveSelectedPlatformAgent(requestedAgentId: string, cityVersion: string, options?: AgentCatalogOptions): Promise<PlatformAgentOption | null>;
 /**
  * 按 id 查找 agent，允许离线状态。
  */
@@ -77,4 +85,5 @@ export declare function buildPlatformConfigStatusResponse(params: {
     requestedAgentId: string;
     cityVersion: string;
 }): Promise<PlatformConfigStatusResponse>;
+export {};
 //# sourceMappingURL=AgentCatalog.d.ts.map

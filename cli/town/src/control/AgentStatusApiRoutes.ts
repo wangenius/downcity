@@ -9,6 +9,7 @@
 
 import type { Hono } from "hono";
 import type { PlatformAgentOption } from "@downcity/agent";
+import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 
 type AgentStatusPayload = {
   success: boolean;
@@ -17,22 +18,6 @@ type AgentStatusPayload = {
   pluginsReady: boolean;
   hasChatPlugin: boolean;
   reason?: string;
-};
-
-type PluginStateListResponse = {
-  success?: boolean;
-  plugins?: Array<{
-    name?: unknown;
-    state?: unknown;
-  }>;
-  error?: unknown;
-  message?: unknown;
-};
-
-type ChatStatusResponse = {
-  success?: boolean;
-  error?: unknown;
-  message?: unknown;
 };
 
 function getErrorMessage(error: unknown): string {
@@ -47,30 +32,11 @@ function isReadyState(input: unknown): boolean {
   return ["running", "ok", "active", "enabled", "success", "idle"].includes(state);
 }
 
-async function fetchStatusJson<T>(input: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init);
-  const payload = (await response.json().catch(() => ({}))) as {
-    success?: boolean;
-    error?: unknown;
-    message?: unknown;
-  };
-  if (!response.ok || payload.success === false) {
-    const message =
-      typeof payload.error === "string"
-        ? payload.error
-        : typeof payload.message === "string"
-          ? payload.message
-          : `${response.status} ${response.statusText}`;
-    throw new Error(message);
-  }
-  return payload as T;
-}
-
 async function probeSelectedAgentStatus(
   selectedAgent: PlatformAgentOption,
+  agentRpcPool: AgentRpcPool,
 ): Promise<AgentStatusPayload> {
-  const baseUrl = String(selectedAgent.baseUrl || "").trim();
-  if (!selectedAgent.running || !baseUrl) {
+  if (!selectedAgent.running) {
     return {
       success: true,
       running: false,
@@ -81,8 +47,20 @@ async function probeSelectedAgentStatus(
     };
   }
 
+  const client = agentRpcPool.resolveClientForAgent(selectedAgent);
+  if (!client) {
+    return {
+      success: true,
+      running: false,
+      serverReady: false,
+      pluginsReady: false,
+      hasChatPlugin: false,
+      reason: "Selected agent RPC endpoint is unavailable.",
+    };
+  }
+
   try {
-    await fetchStatusJson<{ status?: string }>(new URL("/api/status", baseUrl).toString());
+    await client.get_internal_status();
   } catch (error) {
     return {
       success: true,
@@ -94,11 +72,9 @@ async function probeSelectedAgentStatus(
     };
   }
 
-  let pluginsPayload: PluginStateListResponse;
+  let pluginList: Array<{ name?: unknown; state?: unknown }>;
   try {
-    pluginsPayload = await fetchStatusJson<PluginStateListResponse>(
-      new URL("/api/plugins/list", baseUrl).toString(),
-    );
+    pluginList = await client.list_internal_plugin_states();
   } catch (error) {
     return {
       success: true,
@@ -110,9 +86,6 @@ async function probeSelectedAgentStatus(
     };
   }
 
-  const pluginList = Array.isArray(pluginsPayload.plugins)
-    ? pluginsPayload.plugins
-    : [];
   if (pluginList.length === 0) {
     return {
       success: true,
@@ -151,20 +124,11 @@ async function probeSelectedAgentStatus(
   }
 
   try {
-    await fetchStatusJson<ChatStatusResponse>(
-      new URL("/api/plugins/command", baseUrl).toString(),
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          pluginName: "chat",
-          command: "status",
-          payload: {},
-        }),
-      },
-    );
+    await client.run_internal_plugin_command({
+      plugin_name: "chat",
+      command: "status",
+      payload: {},
+    });
     return {
       success: true,
       running: true,
@@ -200,6 +164,8 @@ export function registerPlatformAgentStatusRoutes(params: {
    * 解析当前应使用的 agent。
    */
   resolveSelectedAgent: (requestedAgentId: string) => Promise<PlatformAgentOption | null>;
+  /** Town 维护的 Agent RPC 连接池。 */
+  agentRpcPool: AgentRpcPool;
 }): void {
   const app = params.app;
 
@@ -217,7 +183,7 @@ export function registerPlatformAgentStatusRoutes(params: {
           reason: "No running agent selected.",
         } satisfies AgentStatusPayload);
       }
-      return c.json(await probeSelectedAgentStatus(selectedAgent));
+      return c.json(await probeSelectedAgentStatus(selectedAgent, params.agentRpcPool));
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
     }

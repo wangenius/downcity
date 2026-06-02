@@ -18,6 +18,7 @@ import { buildPlatformAgentsResponse, buildPlatformConfigStatusResponse, buildPl
 import { executeAgentProjectShellCommand, initializePlatformAgentProject, inspectManagedAgentRestartSafety, pickPlatformAgentDirectoryPath, restartManagedAgentByProjectRoot, startManagedAgentByProjectRoot, stopManagedAgentByProjectRoot, updatePlatformAgentExecution, } from "../control/gateway/AgentActions.js";
 import { serveControlPlaneFrontendPath } from "../control/gateway/FrontendAssets.js";
 import { buildPlatformUpstreamUrl, forwardPlatformRequest, } from "../control/gateway/Proxy.js";
+import { AgentRpcPool } from "../control/gateway/AgentRpcPool.js";
 import { listPluginAuthPolicies } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
 import { AuthService } from "../http/auth/AuthService.js";
@@ -58,11 +59,15 @@ export class ControlGateway {
     agentSdkPublishRuntime = null;
     publicDir;
     authService;
+    agentRpcPool;
     constructor() {
         // 关键点（中文）：Console UI 构建产物随 Town CLI 一起托管，聚合包会复制到对应 public 目录。
         this.publicDir = path.join(__dirname, "../../public");
         this.app = new Hono();
         this.authService = new AuthService();
+        this.agentRpcPool = new AgentRpcPool({
+            resolveAgentById: (requestedAgentId) => this.resolveAgentById(requestedAgentId),
+        });
         this.app.use("*", logger());
         this.app.use("*", cors({
             origin: "*",
@@ -86,7 +91,7 @@ export class ControlGateway {
         this.agentSdkPublishRuntime = registerAgentSdkPublishRoutes({
             app: this.app,
             handlers: {
-                resolveAgentById: (requestedAgentId) => this.resolveAgentById(requestedAgentId),
+                agentRpcPool: this.agentRpcPool,
             },
         });
         registerPlatformApiRoutes({
@@ -111,6 +116,7 @@ export class ControlGateway {
                 buildUpstreamUrl: (requestUrl, baseUrl) => this.buildUpstreamUrl(requestUrl, baseUrl),
                 forwardRequest: (request, upstreamUrl) => this.forwardRequest(request, upstreamUrl),
                 serveFrontendPath: (c, reqPath) => this.serveFrontendPath(c, reqPath),
+                agentRpcPool: this.agentRpcPool,
             },
         });
     }
@@ -127,6 +133,7 @@ export class ControlGateway {
         return buildPlatformAgentsResponse({
             requestedAgentId,
             cityVersion: DC_VERSION,
+            agentRpcPool: this.agentRpcPool,
         });
     }
     /**
@@ -166,7 +173,9 @@ export class ControlGateway {
         });
     }
     async resolveSelectedAgent(requestedAgentId) {
-        return resolveSelectedPlatformAgent(requestedAgentId, DC_VERSION);
+        return resolveSelectedPlatformAgent(requestedAgentId, DC_VERSION, {
+            agentRpcPool: this.agentRpcPool,
+        });
     }
     /**
      * 根据 id 查找 agent（允许离线 agent，用于 command 页面）。
@@ -306,6 +315,7 @@ export class ControlGateway {
         const server = this.server;
         this.server = null;
         await this.agentSdkPublishRuntime?.close();
+        await this.agentRpcPool.close();
         await new Promise((resolve) => {
             server.close(() => resolve());
         });

@@ -44,6 +44,7 @@ import type {
   PlatformAgentShipJson,
 } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
+import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import { listCityAiServiceModelsForUser } from "@/model/runtime/CityAiServiceBinding.js";
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 const DEFAULT_RUNTIME_PORT = 5314;
@@ -111,34 +112,39 @@ async function resolveRuntimeEndpoint(projectRoot: string): Promise<{
   };
 }
 
+type AgentCatalogOptions = {
+  /**
+   * Town 维护的 Agent RPC 连接池。
+   */
+  agentRpcPool?: AgentRpcPool;
+};
+
+function readChatStatusChannels(input: unknown): PlatformAgentChatChannelStatus[] {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return [];
+  const data = (input as { data?: unknown }).data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return [];
+  const channels = (data as { channels?: unknown }).channels;
+  return Array.isArray(channels) ? channels as PlatformAgentChatChannelStatus[] : [];
+}
+
 async function resolveAgentChatProfiles(params: {
-  baseUrl: string;
+  agent: PlatformAgentOption;
+  agentRpcPool?: AgentRpcPool;
 }): Promise<Array<{
   channel: string;
   linkState?: string;
   statusText?: string;
 }>> {
+  if (!params.agentRpcPool) return [];
   try {
-    const upstreamUrl = new URL("/api/plugins/command", params.baseUrl).toString();
-    const response = await fetch(upstreamUrl, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        pluginName: "chat",
-        command: "status",
-        payload: {},
-      }),
+    const client = params.agentRpcPool.resolveClientForAgent(params.agent);
+    if (!client) return [];
+    const payload = await client.run_internal_plugin_command({
+      plugin_name: "chat",
+      command: "status",
+      payload: {},
     });
-    if (!response.ok) return [];
-    const payload = (await response.json().catch(() => ({}))) as {
-      success?: unknown;
-      data?: {
-        channels?: PlatformAgentChatChannelStatus[];
-      };
-    };
-    const rows = Array.isArray(payload?.data?.channels) ? payload.data.channels : [];
+    const rows = readChatStatusChannels(payload);
     return rows
       .map((row) => {
         const channel = String(row?.channel || "").trim();
@@ -179,6 +185,7 @@ async function buildAgentOption(
   startedAt: string,
   updatedAt: string,
   stoppedAt?: string,
+  options?: AgentCatalogOptions,
 ): Promise<PlatformAgentOption | null> {
   const daemonPid = await readDaemonPid(projectRoot);
   const running = Boolean(daemonPid && isProcessAlive(daemonPid));
@@ -197,13 +204,7 @@ async function buildAgentOption(
     // ignore
   }
 
-  const chatProfiles = running
-    ? await resolveAgentChatProfiles({
-        baseUrl: `http://${endpoint.host}:${endpoint.port}`,
-      })
-    : [];
-
-  return {
+  const option: PlatformAgentOption = {
     id: projectRoot,
     agentId,
     projectRoot,
@@ -216,15 +217,26 @@ async function buildAgentOption(
     stoppedAt: String(stoppedAt || "").trim() || undefined,
     daemonPid: running ? daemonPid || undefined : undefined,
     logPath: running ? getDaemonLogPath(projectRoot) : undefined,
-    chatProfiles,
     modelId: ship?.execution?.modelId && typeof ship.execution.modelId === "string" ? ship.execution.modelId.trim() || undefined : undefined,
+  };
+  const chatProfiles = running
+    ? await resolveAgentChatProfiles({
+        agent: option,
+        agentRpcPool: options?.agentRpcPool,
+      })
+    : [];
+  return {
+    ...option,
+    chatProfiles,
   };
 }
 
 /**
  * 枚举平台控制面注册表中的所有 agent。
  */
-export async function listKnownPlatformAgents(): Promise<PlatformAgentOption[]> {
+export async function listKnownPlatformAgents(
+  options?: AgentCatalogOptions,
+): Promise<PlatformAgentOption[]> {
   const entries = await listManagedAgentEntries();
   const agents: PlatformAgentOption[] = [];
 
@@ -236,6 +248,7 @@ export async function listKnownPlatformAgents(): Promise<PlatformAgentOption[]> 
       String(entry.startedAt || ""),
       String(entry.updatedAt || ""),
       String(entry.stoppedAt || ""),
+      options,
     );
     if (!option) continue;
     agents.push(option);
@@ -270,8 +283,11 @@ function selectAgentId(
 export async function buildPlatformAgentsResponse(params: {
   requestedAgentId: string;
   cityVersion: string;
+  agentRpcPool?: AgentRpcPool;
 }): Promise<PlatformAgentsResponse> {
-  const agents = await listKnownPlatformAgents();
+  const agents = await listKnownPlatformAgents({
+    agentRpcPool: params.agentRpcPool,
+  });
   const selectedAgentId = selectAgentId(agents, params.requestedAgentId);
   return {
     success: true,
@@ -287,10 +303,12 @@ export async function buildPlatformAgentsResponse(params: {
 export async function resolveSelectedPlatformAgent(
   requestedAgentId: string,
   cityVersion: string,
+  options?: AgentCatalogOptions,
 ): Promise<PlatformAgentOption | null> {
   const payload = await buildPlatformAgentsResponse({
     requestedAgentId,
     cityVersion,
+    agentRpcPool: options?.agentRpcPool,
   });
   if (!payload.selectedAgentId) return null;
   const selected = payload.agents.find((agent) => agent.id === payload.selectedAgentId);

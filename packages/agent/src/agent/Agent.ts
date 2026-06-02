@@ -431,6 +431,7 @@ export class Agent {
       host,
       port,
       sessionCollection: this.sessionCollection,
+      getAgentContext: () => this.agentContext,
     });
     this.rpcBinding = {
       url: `rpc://${host}:${port}`,

@@ -16,22 +16,8 @@ function isReadyState(input) {
     const state = String(input || "").trim().toLowerCase();
     return ["running", "ok", "active", "enabled", "success", "idle"].includes(state);
 }
-async function fetchStatusJson(input, init) {
-    const response = await fetch(input, init);
-    const payload = (await response.json().catch(() => ({})));
-    if (!response.ok || payload.success === false) {
-        const message = typeof payload.error === "string"
-            ? payload.error
-            : typeof payload.message === "string"
-                ? payload.message
-                : `${response.status} ${response.statusText}`;
-        throw new Error(message);
-    }
-    return payload;
-}
-async function probeSelectedAgentStatus(selectedAgent) {
-    const baseUrl = String(selectedAgent.baseUrl || "").trim();
-    if (!selectedAgent.running || !baseUrl) {
+async function probeSelectedAgentStatus(selectedAgent, agentRpcPool) {
+    if (!selectedAgent.running) {
         return {
             success: true,
             running: false,
@@ -41,8 +27,19 @@ async function probeSelectedAgentStatus(selectedAgent) {
             reason: "Selected agent endpoint is unavailable.",
         };
     }
+    const client = agentRpcPool.resolveClientForAgent(selectedAgent);
+    if (!client) {
+        return {
+            success: true,
+            running: false,
+            serverReady: false,
+            pluginsReady: false,
+            hasChatPlugin: false,
+            reason: "Selected agent RPC endpoint is unavailable.",
+        };
+    }
     try {
-        await fetchStatusJson(new URL("/api/status", baseUrl).toString());
+        await client.get_internal_status();
     }
     catch (error) {
         return {
@@ -54,9 +51,9 @@ async function probeSelectedAgentStatus(selectedAgent) {
             reason: getErrorMessage(error),
         };
     }
-    let pluginsPayload;
+    let pluginList;
     try {
-        pluginsPayload = await fetchStatusJson(new URL("/api/plugins/list", baseUrl).toString());
+        pluginList = await client.list_internal_plugin_states();
     }
     catch (error) {
         return {
@@ -68,9 +65,6 @@ async function probeSelectedAgentStatus(selectedAgent) {
             reason: getErrorMessage(error),
         };
     }
-    const pluginList = Array.isArray(pluginsPayload.plugins)
-        ? pluginsPayload.plugins
-        : [];
     if (pluginList.length === 0) {
         return {
             success: true,
@@ -106,16 +100,10 @@ async function probeSelectedAgentStatus(selectedAgent) {
         };
     }
     try {
-        await fetchStatusJson(new URL("/api/plugins/command", baseUrl).toString(), {
-            method: "POST",
-            headers: {
-                "content-type": "application/json",
-            },
-            body: JSON.stringify({
-                pluginName: "chat",
-                command: "status",
-                payload: {},
-            }),
+        await client.run_internal_plugin_command({
+            plugin_name: "chat",
+            command: "status",
+            payload: {},
         });
         return {
             success: true,
@@ -155,7 +143,7 @@ export function registerPlatformAgentStatusRoutes(params) {
                     reason: "No running agent selected.",
                 });
             }
-            return c.json(await probeSelectedAgentStatus(selectedAgent));
+            return c.json(await probeSelectedAgentStatus(selectedAgent, params.agentRpcPool));
         }
         catch (error) {
             return c.json({ success: false, error: String(error) }, 500);

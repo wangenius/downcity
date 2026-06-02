@@ -6,6 +6,7 @@
  * - 这里不持有状态，只消费宿主提供的 handlers。
  */
 import type { Hono, Context } from "hono";
+import type { AgentRpcPool } from "../control/gateway/AgentRpcPool.js";
 import type { PlatformAgentDirectoryInspection, PlatformAgentOption, PlatformAgentsResponse, PlatformConfigStatusResponse, PlatformLocalModelsResponse } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
 /**
@@ -122,6 +123,8 @@ export interface PlatformApiRouteHandlers {
     forwardRequest(request: Request, upstreamUrl: string): Promise<Response>;
     /** 托管前端静态资源。 */
     serveFrontendPath(c: Context, reqPath: string): Promise<Response>;
+    /** Town 维护的 Agent RPC 连接池。 */
+    agentRpcPool: AgentRpcPool;
 }
 /**
  * 注册平台控制面 API 路由。

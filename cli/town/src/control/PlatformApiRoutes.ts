@@ -13,6 +13,7 @@ import { registerPlatformChannelAccountRoutes } from "@/control/ChannelAccountAp
 import { registerPlatformEnvRoutes } from "@/control/EnvApiRoutes.js";
 import { registerPlatformAgentStatusRoutes } from "@/control/AgentStatusApiRoutes.js";
 import { registerPlatformPluginRoutes } from "@/control/PluginApiRoutes.js";
+import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import type {
   PlatformAgentDirectoryInspection,
   PlatformAgentOption,
@@ -139,6 +140,8 @@ export interface PlatformApiRouteHandlers {
   forwardRequest(request: Request, upstreamUrl: string): Promise<Response>;
   /** 托管前端静态资源。 */
   serveFrontendPath(c: Context, reqPath: string): Promise<Response>;
+  /** Town 维护的 Agent RPC 连接池。 */
+  agentRpcPool: AgentRpcPool;
 }
 
 /**
@@ -434,12 +437,14 @@ export function registerPlatformApiRoutes(params: {
     readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
     resolveSelectedAgent: (requestedAgentId) =>
       handlers.resolveSelectedAgent(requestedAgentId),
+    agentRpcPool: handlers.agentRpcPool,
   });
   registerPlatformPluginRoutes({
     app,
     readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
     resolveSelectedAgent: (requestedAgentId) =>
       handlers.resolveSelectedAgent(requestedAgentId),
+    agentRpcPool: handlers.agentRpcPool,
   });
 
   app.all("/api/*", async (c) => {

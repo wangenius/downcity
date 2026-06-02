@@ -17,6 +17,16 @@ import type {
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
+import type { JsonValue } from "@/types/common/Json.js";
+import type {
+  PluginActionResult,
+  PluginAvailability,
+  PluginCommandResult,
+  PluginStateControlAction,
+  PluginStateControlResult,
+  PluginStateSnapshot,
+  PluginView,
+} from "@/plugin/types/Plugin.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 
@@ -81,6 +91,52 @@ type RpcClientRequest =
       method: "sdk.sessions.unsubscribe";
       params: {
         subscriptionId: string;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.status.get";
+    }
+  | {
+      id: string;
+      method: "internal.plugins.catalog";
+    }
+  | {
+      id: string;
+      method: "internal.plugins.list";
+    }
+  | {
+      id: string;
+      method: "internal.plugins.control";
+      params: {
+        pluginName: string;
+        action: PluginStateControlAction;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.plugins.command";
+      params: {
+        pluginName: string;
+        command: string;
+        payload?: JsonValue;
+        schedule?: JsonValue;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.plugins.availability";
+      params: {
+        pluginName: string;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.plugins.action";
+      params: {
+        pluginName: string;
+        actionName: string;
+        payload?: JsonValue;
       };
     };
 
@@ -286,6 +342,112 @@ export class RpcClient {
         });
       },
     };
+  }
+
+  /**
+   * 读取 Agent 内部状态。
+   */
+  async get_internal_status(): Promise<{ status: string }> {
+    return await this.request<{ status: string }>({
+      method: "internal.status.get",
+    });
+  }
+
+  /**
+   * 列出 Agent runtime 注册的 plugin catalog。
+   */
+  async list_internal_plugin_catalog(): Promise<PluginView[]> {
+    const data = await this.request<{ plugins: PluginView[] }>({
+      method: "internal.plugins.catalog",
+    });
+    return Array.isArray(data.plugins) ? data.plugins : [];
+  }
+
+  /**
+   * 列出 Agent runtime 内 plugin 状态。
+   */
+  async list_internal_plugin_states(): Promise<PluginStateSnapshot[]> {
+    const data = await this.request<{ plugins: PluginStateSnapshot[] }>({
+      method: "internal.plugins.list",
+    });
+    return Array.isArray(data.plugins) ? data.plugins : [];
+  }
+
+  /**
+   * 控制 Agent runtime 内 plugin 生命周期。
+   */
+  async control_internal_plugin(params: {
+    plugin_name: string;
+    action: PluginStateControlAction;
+  }): Promise<PluginStateControlResult> {
+    return await this.request<PluginStateControlResult>({
+      method: "internal.plugins.control",
+      params: {
+        pluginName: params.plugin_name,
+        action: params.action,
+      },
+    });
+  }
+
+  /**
+   * 执行 Agent runtime 内 plugin command。
+   */
+  async run_internal_plugin_command(params: {
+    plugin_name: string;
+    command: string;
+    payload?: JsonValue;
+    schedule?: JsonValue;
+  }): Promise<PluginCommandResult & { plugin?: PluginStateSnapshot }> {
+    return await this.request<PluginCommandResult & { plugin?: PluginStateSnapshot }>({
+      method: "internal.plugins.command",
+      params: {
+        pluginName: params.plugin_name,
+        command: params.command,
+        ...(params.payload !== undefined ? { payload: params.payload } : {}),
+        ...(params.schedule !== undefined ? { schedule: params.schedule } : {}),
+      },
+    });
+  }
+
+  /**
+   * 检查 Agent runtime 内 plugin 可用性。
+   */
+  async get_internal_plugin_availability(
+    plugin_name: string,
+  ): Promise<PluginAvailability> {
+    const data = await this.request<{
+      availability: PluginAvailability;
+    }>({
+      method: "internal.plugins.availability",
+      params: {
+        pluginName: plugin_name,
+      },
+    });
+    return data.availability;
+  }
+
+  /**
+   * 执行 Agent runtime 内 plugin action。
+   */
+  async run_internal_plugin_action(params: {
+    plugin_name: string;
+    action_name: string;
+    payload?: JsonValue;
+  }): Promise<PluginActionResult<JsonValue> & {
+    pluginName?: string;
+    actionName?: string;
+  }> {
+    return await this.request<PluginActionResult<JsonValue> & {
+      pluginName?: string;
+      actionName?: string;
+    }>({
+      method: "internal.plugins.action",
+      params: {
+        pluginName: params.plugin_name,
+        actionName: params.action_name,
+        ...(params.payload !== undefined ? { payload: params.payload } : {}),
+      },
+    });
   }
 
   /**

@@ -97,66 +97,18 @@ function buildAgentPluginPayload(params) {
         })),
     };
 }
-async function fetchJson(input, init) {
-    const response = await fetch(input, init);
-    const payload = (await response.json().catch(() => ({})));
-    if (!response.ok || payload?.success === false) {
-        const errorMessage = typeof payload?.error === "string"
-            ? payload.error
-            : typeof payload?.message === "string"
-                ? payload.message
-                : `${response.status} ${response.statusText}`;
-        throw new Error(errorMessage);
+async function buildAgentPluginPayloadFromRuntime(selectedAgent, agentRpcPool) {
+    const client = agentRpcPool.resolveClientForAgent(selectedAgent);
+    if (!client) {
+        throw new Error("Selected agent RPC endpoint is unavailable.");
     }
-    return payload;
-}
-function readRuntimeForwardAuthHeaders(request) {
-    const authorization = String(request.headers.get("authorization") || "").trim();
-    return authorization ? { authorization } : {};
-}
-function buildRuntimeRequestHeaders(params) {
-    const headers = new Headers(params?.headers || {});
-    const authorization = String(params?.authHeaders?.authorization || "").trim();
-    if (authorization) {
-        headers.set("authorization", authorization);
-    }
-    return headers;
-}
-async function loadPluginViews(baseUrl, authHeaders) {
-    const listUrl = new URL("/api/plugins/catalog", baseUrl).toString();
-    const payload = await fetchJson(listUrl, {
-        headers: buildRuntimeRequestHeaders({ authHeaders }),
-    });
-    const plugins = Array.isArray(payload.plugins) ? payload.plugins : [];
-    return plugins.sort((a, b) => a.name.localeCompare(b.name));
-}
-async function loadAgentPluginAvailability(baseUrl, pluginName, authHeaders) {
-    const availabilityUrl = new URL("/api/plugins/availability", baseUrl).toString();
-    const payload = await fetchJson(availabilityUrl, {
-        method: "POST",
-        headers: buildRuntimeRequestHeaders({
-            authHeaders,
-            headers: {
-                "content-type": "application/json",
-            },
-        }),
-        body: JSON.stringify({
-            pluginName,
-        }),
-    });
-    if (!payload.availability) {
-        throw new Error(`Plugin availability is empty: ${pluginName}`);
-    }
-    return payload.availability;
-}
-async function buildAgentPluginPayloadFromRuntime(selectedAgent, authHeaders) {
-    const baseUrl = String(selectedAgent.baseUrl || "").trim();
     const configMap = buildPluginConfigMap();
-    const pluginViews = await loadPluginViews(baseUrl, authHeaders);
+    const pluginViews = (await client.list_internal_plugin_catalog())
+        .sort((a, b) => a.name.localeCompare(b.name));
     const plugins = await Promise.all(pluginViews.map(async (view) => {
         return {
             ...view,
-            availability: await loadAgentPluginAvailability(baseUrl, view.name, authHeaders),
+            availability: await client.get_internal_plugin_availability(view.name),
             config: configMap.get(view.name) || {
                 actions: [],
             },
@@ -226,7 +178,7 @@ export function registerPlatformPluginRoutes(params) {
                 return c.json(buildGlobalPluginPayload());
             }
             const selectedAgent = await params.resolveSelectedAgent(requestedAgentId);
-            if (!selectedAgent || !selectedAgent.baseUrl) {
+            if (!selectedAgent || !selectedAgent.running) {
                 return c.json(buildAgentPluginPayload({
                     projectRoot: selectedAgent?.projectRoot,
                     runtimeConnected: false,
@@ -234,7 +186,7 @@ export function registerPlatformPluginRoutes(params) {
                 }));
             }
             try {
-                return c.json(await buildAgentPluginPayloadFromRuntime(selectedAgent, readRuntimeForwardAuthHeaders(c.req.raw)));
+                return c.json(await buildAgentPluginPayloadFromRuntime(selectedAgent, params.agentRpcPool));
             }
             catch (runtimeError) {
                 return c.json(buildAgentPluginPayload({
@@ -266,12 +218,21 @@ export function registerPlatformPluginRoutes(params) {
             const selectedAgent = requestedAgentId
                 ? await params.resolveSelectedAgent(requestedAgentId)
                 : null;
-            const result = await runGlobalPluginAction({
-                pluginName,
-                actionName,
-                projectRoot: String(selectedAgent?.projectRoot || "").trim() || undefined,
-                payload: body?.payload,
-            });
+            const client = selectedAgent?.running === true
+                ? params.agentRpcPool.resolveClientForAgent(selectedAgent)
+                : null;
+            const result = client
+                ? await client.run_internal_plugin_action({
+                    plugin_name: pluginName,
+                    action_name: actionName,
+                    payload: body?.payload,
+                })
+                : await runGlobalPluginAction({
+                    pluginName,
+                    actionName,
+                    projectRoot: String(selectedAgent?.projectRoot || "").trim() || undefined,
+                    payload: body?.payload,
+                });
             return c.json({
                 ...result,
                 pluginName,

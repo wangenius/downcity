@@ -27,6 +27,7 @@ export declare class ControlGateway {
     private agentSdkPublishRuntime;
     private readonly publicDir;
     private readonly authService;
+    private readonly agentRpcPool;
     constructor();
     /**
      * 注册网关路由。

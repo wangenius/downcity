@@ -8,10 +8,10 @@
  */
 
 import { Hono } from "hono";
-import { RemoteAgent, type PlatformAgentOption } from "@downcity/agent";
 import type { AgentListSessionsInput } from "@downcity/agent";
+import type { AgentSessionEvent } from "@downcity/agent";
 import type { AgentSessionPromptInput } from "@downcity/agent";
-import { resolveDaemonRpcEndpoint } from "@/process/daemon/Client.js";
+import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 
 const NDJSON_CONTENT_TYPE = "application/x-ndjson; charset=utf-8";
 const SDK_EVENTS_READY_FRAME = {
@@ -22,10 +22,8 @@ const SDK_EVENTS_READY_FRAME = {
  * Town Agent SDK 发布路由依赖。
  */
 export interface AgentSdkPublishRouteHandlers {
-  /**
-   * 按用户可见 agent id 或项目根目录解析 agent。
-   */
-  resolveAgentById(requestedAgentId: string): Promise<PlatformAgentOption | null>;
+  /** Town 维护的 Agent RPC 连接池。 */
+  agentRpcPool: AgentRpcPool;
 }
 
 /**
@@ -46,22 +44,19 @@ export function registerAgentSdkPublishRoutes(params: {
   handlers: AgentSdkPublishRouteHandlers;
 }): AgentSdkPublishRoutesRuntime {
   const { app, handlers } = params;
-  const remote_agents_by_url = new Map<string, RemoteAgent>();
 
   app.get("/agents/:agentId/api/sdk/sessions", async (c) => {
     try {
-      const remote_agent = await resolve_remote_agent({
-        requested_agent_id: c.req.param("agentId"),
-        handlers,
-        remote_agents_by_url,
-      });
-      if (!remote_agent) return agent_not_found_response();
+      const client = await handlers.agentRpcPool.resolveClientByAgentId(
+        c.req.param("agentId"),
+      );
+      if (!client) return agent_not_found_response();
       const input: AgentListSessionsInput = {
         ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
         ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
         ...(c.req.query("query") ? { query: c.req.query("query") } : {}),
       };
-      const page = await remote_agent.listSessions(input);
+      const page = await client.list_sessions(input);
       return c.json({
         success: true,
         page,
@@ -74,21 +69,19 @@ export function registerAgentSdkPublishRoutes(params: {
 
   app.post("/agents/:agentId/api/sdk/sessions", async (c) => {
     try {
-      const remote_agent = await resolve_remote_agent({
-        requested_agent_id: c.req.param("agentId"),
-        handlers,
-        remote_agents_by_url,
-      });
-      if (!remote_agent) return agent_not_found_response();
+      const client = await handlers.agentRpcPool.resolveClientByAgentId(
+        c.req.param("agentId"),
+      );
+      if (!client) return agent_not_found_response();
       const body = (await c.req.json().catch(() => ({}))) as {
         sessionId?: unknown;
       };
-      const session = await remote_agent.createSession({
+      const session = await client.create_session({
         ...(body.sessionId ? { sessionId: String(body.sessionId).trim() } : {}),
       });
       return c.json({
         success: true,
-        session: await session.getInfo(),
+        session,
       });
     } catch (error) {
       return error_response(c, error);
@@ -97,16 +90,16 @@ export function registerAgentSdkPublishRoutes(params: {
 
   app.get("/agents/:agentId/api/sdk/sessions/:sessionId", async (c) => {
     try {
-      const session = await resolve_remote_session({
+      const resolved = await resolve_client_and_session_id({
         agent_id: c.req.param("agentId"),
         session_id: c.req.param("sessionId"),
-        handlers,
-        remote_agents_by_url,
+        agent_rpc_pool: handlers.agentRpcPool,
       });
-      if (!session) return agent_not_found_response();
+      if (!resolved) return agent_not_found_response();
+      const session = await resolved.client.get_session(resolved.session_id);
       return c.json({
         success: true,
-        session: await session.getInfo(),
+        session,
       });
     } catch (error) {
       return error_response(c, error);
@@ -115,15 +108,17 @@ export function registerAgentSdkPublishRoutes(params: {
 
   app.post("/agents/:agentId/api/sdk/sessions/:sessionId/prompt", async (c) => {
     try {
-      const session = await resolve_remote_session({
+      const resolved = await resolve_client_and_session_id({
         agent_id: c.req.param("agentId"),
         session_id: c.req.param("sessionId"),
-        handlers,
-        remote_agents_by_url,
+        agent_rpc_pool: handlers.agentRpcPool,
       });
-      if (!session) return agent_not_found_response();
+      if (!resolved) return agent_not_found_response();
       const body = (await c.req.json()) as AgentSessionPromptInput;
-      const turn = await session.prompt(body);
+      const turn = await resolved.client.prompt_session({
+        session_id: resolved.session_id,
+        input: body,
+      });
       return c.json({
         success: true,
         turn: {
@@ -137,32 +132,35 @@ export function registerAgentSdkPublishRoutes(params: {
 
   app.get("/agents/:agentId/api/sdk/sessions/:sessionId/events", async (c) => {
     try {
-      const session = await resolve_remote_session({
+      const resolved = await resolve_client_and_session_id({
         agent_id: c.req.param("agentId"),
         session_id: c.req.param("sessionId"),
-        handlers,
-        remote_agents_by_url,
+        agent_rpc_pool: handlers.agentRpcPool,
       });
-      if (!session) return agent_not_found_response();
+      if (!resolved) return agent_not_found_response();
 
       const encoder = new TextEncoder();
       const request_signal = c.req.raw.signal;
-      let cleanup_events_connection = (): void => {};
+      let cleanup_events_connection = async (): Promise<void> => {};
       const stream = new ReadableStream<Uint8Array>({
         cancel() {
-          cleanup_events_connection();
+          void cleanup_events_connection();
         },
-        start(controller) {
+        async start(controller) {
           const write_line = (value: unknown): void => {
             controller.enqueue(encoder.encode(`${JSON.stringify(value)}\n`));
           };
 
-          const unsubscribe = session.subscribe((event) => {
-            write_line(event);
+          const subscription = await resolved.client.subscribe_session({
+            session_id: resolved.session_id,
+            on_ready: () => {},
+            on_event: (event: AgentSessionEvent) => {
+              write_line(event);
+            },
           });
 
-          const close_stream = (): void => {
-            cleanup_events_connection();
+          const close_stream = async (): Promise<void> => {
+            await cleanup_events_connection();
             try {
               controller.close();
             } catch {
@@ -170,13 +168,13 @@ export function registerAgentSdkPublishRoutes(params: {
             }
           };
 
-          cleanup_events_connection = (): void => {
-            unsubscribe();
+          cleanup_events_connection = async (): Promise<void> => {
+            await subscription.unsubscribe().catch(() => undefined);
             request_signal.removeEventListener("abort", close_stream);
           };
 
           if (request_signal.aborted) {
-            close_stream();
+            await close_stream();
             return;
           }
 
@@ -200,14 +198,15 @@ export function registerAgentSdkPublishRoutes(params: {
 
   app.get("/agents/:agentId/api/sdk/sessions/:sessionId/history", async (c) => {
     try {
-      const session = await resolve_remote_session({
+      const resolved = await resolve_client_and_session_id({
         agent_id: c.req.param("agentId"),
         session_id: c.req.param("sessionId"),
-        handlers,
-        remote_agents_by_url,
+        agent_rpc_pool: handlers.agentRpcPool,
       });
-      if (!session) return agent_not_found_response();
-      const history = await session.history({
+      if (!resolved) return agent_not_found_response();
+      const history = await resolved.client.get_session_history({
+        session_id: resolved.session_id,
+        input: {
         ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
         ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
         ...(c.req.query("order")
@@ -216,6 +215,7 @@ export function registerAgentSdkPublishRoutes(params: {
         ...(c.req.query("view")
           ? { view: c.req.query("view") as "message" | "timeline" }
           : {}),
+        },
       });
       return c.json({
         success: true,
@@ -228,15 +228,17 @@ export function registerAgentSdkPublishRoutes(params: {
 
   app.get("/agents/:agentId/api/sdk/sessions/:sessionId/messages", async (c) => {
     try {
-      const session = await resolve_remote_session({
+      const resolved = await resolve_client_and_session_id({
         agent_id: c.req.param("agentId"),
         session_id: c.req.param("sessionId"),
-        handlers,
-        remote_agents_by_url,
+        agent_rpc_pool: handlers.agentRpcPool,
       });
-      if (!session) return agent_not_found_response();
-      const history = await session.history({
-        view: "message",
+      if (!resolved) return agent_not_found_response();
+      const history = await resolved.client.get_session_history({
+        session_id: resolved.session_id,
+        input: {
+          view: "message",
+        },
       });
       return c.json({
         success: true,
@@ -250,16 +252,16 @@ export function registerAgentSdkPublishRoutes(params: {
 
   app.get("/agents/:agentId/api/sdk/sessions/:sessionId/system", async (c) => {
     try {
-      const session = await resolve_remote_session({
+      const resolved = await resolve_client_and_session_id({
         agent_id: c.req.param("agentId"),
         session_id: c.req.param("sessionId"),
-        handlers,
-        remote_agents_by_url,
+        agent_rpc_pool: handlers.agentRpcPool,
       });
-      if (!session) return agent_not_found_response();
+      if (!resolved) return agent_not_found_response();
+      const system = await resolved.client.get_session_system(resolved.session_id);
       return c.json({
         success: true,
-        system: await session.system(),
+        system,
       });
     } catch (error) {
       return error_response(c, error);
@@ -268,22 +270,22 @@ export function registerAgentSdkPublishRoutes(params: {
 
   app.post("/agents/:agentId/api/sdk/sessions/:sessionId/fork", async (c) => {
     try {
-      const session = await resolve_remote_session({
+      const resolved = await resolve_client_and_session_id({
         agent_id: c.req.param("agentId"),
         session_id: c.req.param("sessionId"),
-        handlers,
-        remote_agents_by_url,
+        agent_rpc_pool: handlers.agentRpcPool,
       });
-      if (!session) return agent_not_found_response();
+      if (!resolved) return agent_not_found_response();
       const body = (await c.req.json().catch(() => ({}))) as {
         messageId?: unknown;
       };
-      const forked = await session.fork(
-        String(body.messageId || "").trim() || undefined,
-      );
+      const forked = await resolved.client.fork_session({
+        session_id: resolved.session_id,
+        message_id: String(body.messageId || "").trim() || undefined,
+      });
       return c.json({
         success: true,
-        session: await forked.getInfo(),
+        session: forked,
       });
     } catch (error) {
       return error_response(c, error);
@@ -292,48 +294,31 @@ export function registerAgentSdkPublishRoutes(params: {
 
   return {
     async close(): Promise<void> {
-      const agents = [...remote_agents_by_url.values()];
-      remote_agents_by_url.clear();
-      await Promise.all(agents.map((agent) => agent.close()));
+      // 关键点（中文）：RPC 连接由 ControlGateway 的 AgentRpcPool 统一关闭。
     },
   };
 }
 
-async function resolve_remote_agent(params: {
-  requested_agent_id: string;
-  handlers: AgentSdkPublishRouteHandlers;
-  remote_agents_by_url: Map<string, RemoteAgent>;
-}): Promise<RemoteAgent | null> {
-  const agent = await params.handlers.resolveAgentById(params.requested_agent_id);
-  if (!agent || agent.running !== true) return null;
-  const endpoint = resolveDaemonRpcEndpoint({
-    projectRoot: agent.projectRoot,
-  });
-  const rpc_url = `rpc://${endpoint.host}:${endpoint.port}`;
-  const cached = params.remote_agents_by_url.get(rpc_url);
-  if (cached) return cached;
-  const created = new RemoteAgent({ url: rpc_url });
-  params.remote_agents_by_url.set(rpc_url, created);
-  return created;
-}
-
-async function resolve_remote_session(params: {
+async function resolve_client_and_session_id(params: {
   agent_id: string;
   session_id: string;
-  handlers: AgentSdkPublishRouteHandlers;
-  remote_agents_by_url: Map<string, RemoteAgent>;
-}) {
+  agent_rpc_pool: AgentRpcPool;
+}): Promise<{
+  client: Awaited<ReturnType<AgentRpcPool["resolveClientByAgentId"]>> extends infer T
+    ? Exclude<T, null>
+    : never;
+  session_id: string;
+} | null> {
   const session_id = String(params.session_id || "").trim();
   if (!session_id) {
     throw new Error("Missing sessionId");
   }
-  const remote_agent = await resolve_remote_agent({
-    requested_agent_id: params.agent_id,
-    handlers: params.handlers,
-    remote_agents_by_url: params.remote_agents_by_url,
-  });
-  if (!remote_agent) return null;
-  return await remote_agent.getSession(session_id);
+  const client = await params.agent_rpc_pool.resolveClientByAgentId(params.agent_id);
+  if (!client) return null;
+  return {
+    client,
+    session_id,
+  };
 }
 
 function agent_not_found_response(): Response {

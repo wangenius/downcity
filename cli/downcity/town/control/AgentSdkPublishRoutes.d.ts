@@ -7,15 +7,13 @@
  * - 本模块只做协议转换，不引入 Town SDK 包，也不实现第二套 session 编排器。
  */
 import { Hono } from "hono";
-import { type PlatformAgentOption } from "@downcity/agent";
+import type { AgentRpcPool } from "../control/gateway/AgentRpcPool.js";
 /**
  * Town Agent SDK 发布路由依赖。
  */
 export interface AgentSdkPublishRouteHandlers {
-    /**
-     * 按用户可见 agent id 或项目根目录解析 agent。
-     */
-    resolveAgentById(requestedAgentId: string): Promise<PlatformAgentOption | null>;
+    /** Town 维护的 Agent RPC 连接池。 */
+    agentRpcPool: AgentRpcPool;
 }
 /**
  * Town Agent SDK 发布路由运行时句柄。

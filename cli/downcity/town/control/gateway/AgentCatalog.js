@@ -74,24 +74,28 @@ async function resolveRuntimeEndpoint(projectRoot) {
         port: daemonArgPort || DEFAULT_RUNTIME_PORT,
     };
 }
+function readChatStatusChannels(input) {
+    if (!input || typeof input !== "object" || Array.isArray(input))
+        return [];
+    const data = input.data;
+    if (!data || typeof data !== "object" || Array.isArray(data))
+        return [];
+    const channels = data.channels;
+    return Array.isArray(channels) ? channels : [];
+}
 async function resolveAgentChatProfiles(params) {
+    if (!params.agentRpcPool)
+        return [];
     try {
-        const upstreamUrl = new URL("/api/plugins/command", params.baseUrl).toString();
-        const response = await fetch(upstreamUrl, {
-            method: "POST",
-            headers: {
-                "content-type": "application/json",
-            },
-            body: JSON.stringify({
-                pluginName: "chat",
-                command: "status",
-                payload: {},
-            }),
-        });
-        if (!response.ok)
+        const client = params.agentRpcPool.resolveClientForAgent(params.agent);
+        if (!client)
             return [];
-        const payload = (await response.json().catch(() => ({})));
-        const rows = Array.isArray(payload?.data?.channels) ? payload.data.channels : [];
+        const payload = await client.run_internal_plugin_command({
+            plugin_name: "chat",
+            command: "status",
+            payload: {},
+        });
+        const rows = readChatStatusChannels(payload);
         return rows
             .map((row) => {
             const channel = String(row?.channel || "").trim();
@@ -120,7 +124,7 @@ async function resolveAgentChatProfiles(params) {
         return [];
     }
 }
-async function buildAgentOption(projectRoot, startedAt, updatedAt, stoppedAt) {
+async function buildAgentOption(projectRoot, startedAt, updatedAt, stoppedAt, options) {
     const daemonPid = await readDaemonPid(projectRoot);
     const running = Boolean(daemonPid && isProcessAlive(daemonPid));
     const endpoint = await resolveRuntimeEndpoint(projectRoot);
@@ -138,12 +142,7 @@ async function buildAgentOption(projectRoot, startedAt, updatedAt, stoppedAt) {
     catch {
         // ignore
     }
-    const chatProfiles = running
-        ? await resolveAgentChatProfiles({
-            baseUrl: `http://${endpoint.host}:${endpoint.port}`,
-        })
-        : [];
-    return {
+    const option = {
         id: projectRoot,
         agentId,
         projectRoot,
@@ -156,21 +155,30 @@ async function buildAgentOption(projectRoot, startedAt, updatedAt, stoppedAt) {
         stoppedAt: String(stoppedAt || "").trim() || undefined,
         daemonPid: running ? daemonPid || undefined : undefined,
         logPath: running ? getDaemonLogPath(projectRoot) : undefined,
-        chatProfiles,
         modelId: ship?.execution?.modelId && typeof ship.execution.modelId === "string" ? ship.execution.modelId.trim() || undefined : undefined,
+    };
+    const chatProfiles = running
+        ? await resolveAgentChatProfiles({
+            agent: option,
+            agentRpcPool: options?.agentRpcPool,
+        })
+        : [];
+    return {
+        ...option,
+        chatProfiles,
     };
 }
 /**
  * 枚举平台控制面注册表中的所有 agent。
  */
-export async function listKnownPlatformAgents() {
+export async function listKnownPlatformAgents(options) {
     const entries = await listManagedAgentEntries();
     const agents = [];
     for (const entry of entries) {
         const projectRoot = path.resolve(String(entry.projectRoot || "").trim());
         if (!projectRoot)
             continue;
-        const option = await buildAgentOption(projectRoot, String(entry.startedAt || ""), String(entry.updatedAt || ""), String(entry.stoppedAt || ""));
+        const option = await buildAgentOption(projectRoot, String(entry.startedAt || ""), String(entry.updatedAt || ""), String(entry.stoppedAt || ""), options);
         if (!option)
             continue;
         agents.push(option);
@@ -200,7 +208,9 @@ function selectAgentId(agents, requestedAgentId) {
  * 构建 agent 列表响应。
  */
 export async function buildPlatformAgentsResponse(params) {
-    const agents = await listKnownPlatformAgents();
+    const agents = await listKnownPlatformAgents({
+        agentRpcPool: params.agentRpcPool,
+    });
     const selectedAgentId = selectAgentId(agents, params.requestedAgentId);
     return {
         success: true,
@@ -212,10 +222,11 @@ export async function buildPlatformAgentsResponse(params) {
 /**
  * 解析当前选中的运行中 agent。
  */
-export async function resolveSelectedPlatformAgent(requestedAgentId, cityVersion) {
+export async function resolveSelectedPlatformAgent(requestedAgentId, cityVersion, options) {
     const payload = await buildPlatformAgentsResponse({
         requestedAgentId,
         cityVersion,
+        agentRpcPool: options?.agentRpcPool,
     });
     if (!payload.selectedAgentId)
         return null;

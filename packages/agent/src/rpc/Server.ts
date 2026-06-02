@@ -14,6 +14,15 @@ import type {
 } from "@/types/agent/AgentTypes.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { JsonValue } from "@/types/common/Json.js";
+import type { PluginStateControlAction } from "@/plugin/types/Plugin.js";
+import {
+  controlPluginState,
+  listPluginStates,
+} from "@/plugin/core/PluginStateController.js";
+import { parsePluginCommandRequestBody } from "@/plugin/core/PluginCommandRequest.js";
+import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
 
 type RpcSessionRequest =
   | {
@@ -84,6 +93,52 @@ type RpcSessionRequest =
       params: {
         subscriptionId: string;
       };
+    }
+  | {
+      id: string;
+      method: "internal.status.get";
+    }
+  | {
+      id: string;
+      method: "internal.plugins.catalog";
+    }
+  | {
+      id: string;
+      method: "internal.plugins.list";
+    }
+  | {
+      id: string;
+      method: "internal.plugins.control";
+      params: {
+        pluginName: string;
+        action: PluginStateControlAction;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.plugins.command";
+      params: {
+        pluginName: string;
+        command: string;
+        payload?: JsonValue;
+        schedule?: JsonValue;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.plugins.availability";
+      params: {
+        pluginName: string;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.plugins.action";
+      params: {
+        pluginName: string;
+        actionName: string;
+        payload?: JsonValue;
+      };
     };
 
 type RpcSuccessFrame = {
@@ -119,6 +174,8 @@ export interface RpcServerStartOptions {
   host: string;
   /** Session 集合访问口。 */
   sessionCollection: AgentSessionCollection;
+  /** Agent 上下文访问口。 */
+  getAgentContext?: () => AgentContext;
 }
 
 /**
@@ -243,6 +300,72 @@ export async function startRpcServer(
             writeSuccess(request.id, { unsubscribed: true });
             return;
           }
+          case "internal.status.get": {
+            writeSuccess(request.id, { status: "ok" });
+            return;
+          }
+          case "internal.plugins.catalog": {
+            const context = requireAgentContext(options);
+            writeSuccess(request.id, {
+              plugins: context.plugins.list(),
+            });
+            return;
+          }
+          case "internal.plugins.list": {
+            const context = requireAgentContext(options);
+            writeSuccess(request.id, {
+              plugins: listPluginStates({ context }),
+            });
+            return;
+          }
+          case "internal.plugins.control": {
+            const context = requireAgentContext(options);
+            const result = await controlPluginState({
+              pluginName: request.params.pluginName,
+              action: request.params.action,
+              context,
+            });
+            writeSuccess(request.id, result);
+            return;
+          }
+          case "internal.plugins.command": {
+            const context = requireAgentContext(options);
+            const body = parsePluginCommandRequestBody(request.params);
+            const result = await runPluginCommand({
+              pluginName: body.pluginName,
+              command: body.command,
+              payload: body.payload,
+              schedule: body.schedule,
+              context,
+            });
+            writeSuccess(request.id, result);
+            return;
+          }
+          case "internal.plugins.availability": {
+            const context = requireAgentContext(options);
+            const availability = await context.plugins.availability(
+              request.params.pluginName,
+            );
+            writeSuccess(request.id, {
+              pluginName: request.params.pluginName,
+              availability,
+            });
+            return;
+          }
+          case "internal.plugins.action": {
+            const context = requireAgentContext(options);
+            const result = await context.plugins.runAction({
+              plugin: request.params.pluginName,
+              action: request.params.actionName,
+              payload: request.params.payload,
+            });
+            writeSuccess(request.id, {
+              ...result,
+              pluginName: request.params.pluginName,
+              actionName: request.params.actionName,
+            });
+            return;
+          }
         }
       } catch (error) {
         writeError(request.id, error);
@@ -307,4 +430,12 @@ export async function startRpcServer(
       });
     },
   };
+}
+
+function requireAgentContext(options: RpcServerStartOptions): AgentContext {
+  const context = options.getAgentContext?.();
+  if (!context) {
+    throw new Error("Agent RPC server was started without AgentContext");
+  }
+  return context;
 }

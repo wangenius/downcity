@@ -1,9 +1,10 @@
 /**
- * @file 验证 CityModel 适配层会把本地 tool result 带回下一轮请求。
+ * @file 验证 CityModel 会优先走 OpenAI-compatible LanguageModel 并完成 tool loop。
  *
  * 关键点（中文）
  * - 这里直接走编译后的 Agent / City 产物，避免测试只覆盖源码级辅助函数。
- * - 重点锁住 CityModelAdapter 的 tool-call -> 本地执行 -> tool-result 回传链路。
+ * - 重点锁住 CityModel -> LanguageModel -> tool-call -> 本地执行 -> tool-result 回传链路。
+ * - 新路径不应再调用 `/v1/ai/stream`，避免 UIMessage stream 反向适配丢失 finish 语义。
  */
 
 import test from "node:test";
@@ -17,15 +18,15 @@ import { City } from "../../city/bin/index.js";
 import { tool } from "ai";
 import { z } from "zod";
 
-function write_sse(res, chunks) {
+function write_openai_sse(res, chunks) {
   res.writeHead(200, {
     "content-type": "text/event-stream; charset=utf-8",
     "cache-control": "no-cache",
     connection: "keep-alive",
-    "x-vercel-ai-ui-message-stream": "v1",
   });
   for (const chunk of chunks) {
-    res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    const payload = typeof chunk === "string" ? chunk : JSON.stringify(chunk);
+    res.write(`data: ${payload}\n\n`);
   }
   res.end();
 }
@@ -42,8 +43,10 @@ async function read_json_body(req) {
   return JSON.parse(String(raw || "{}"));
 }
 
-test("CityModel sends tool result back on the next round", async () => {
+test("CityModel uses direct LanguageModel path and sends tool result back", async () => {
   const requests = [];
+  const agent_requests = [];
+  let stream_requests = 0;
   let tool_executed = false;
 
   const server = http.createServer(async (req, res) => {
@@ -68,30 +71,149 @@ test("CityModel sends tool result back on the next round", async () => {
     }
 
     if (req.method === "POST" && url.pathname === "/v1/ai/stream") {
+      stream_requests += 1;
+      res.writeHead(500, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "legacy stream endpoint should not be called" }));
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/v1/ai/chat/completions") {
       const body = await read_json_body(req);
       requests.push(body);
 
-      if (requests.length === 1) {
-        write_sse(res, [
-          { type: "start", messageId: "msg_1" },
-          { type: "tool-input-start", toolCallId: "call_1", toolName: "ping" },
+      if (!Array.isArray(body.tools)) {
+        write_openai_sse(res, [
           {
-            type: "tool-input-available",
-            toolCallId: "call_1",
-            toolName: "ping",
-            input: { value: "hello" },
+            id: "chatcmpl_title",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "mock-model",
+            choices: [
+              {
+                index: 0,
+                delta: { role: "assistant", content: "Tool loop" },
+                finish_reason: null,
+              },
+            ],
           },
-          { type: "finish", finishReason: "tool-calls" },
+          {
+            id: "chatcmpl_title",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "mock-model",
+            choices: [
+              {
+                index: 0,
+                delta: {},
+                finish_reason: "stop",
+              },
+            ],
+          },
+          "[DONE]",
         ]);
         return;
       }
 
-      write_sse(res, [
-        { type: "start", messageId: "msg_2" },
-        { type: "text-start", id: "text_2" },
-        { type: "text-delta", id: "text_2", delta: "done" },
-        { type: "text-end", id: "text_2" },
-        { type: "finish", finishReason: "stop" },
+      agent_requests.push(body);
+      if (agent_requests.length === 1) {
+        write_openai_sse(res, [
+          {
+            id: "chatcmpl_1",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "mock-model",
+            choices: [
+              {
+                index: 0,
+                delta: { role: "assistant" },
+                finish_reason: null,
+              },
+            ],
+          },
+          {
+            id: "chatcmpl_1",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "mock-model",
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: "call_1",
+                      type: "function",
+                      function: {
+                        name: "ping",
+                        arguments: "{\"value\":\"hello\"}",
+                      },
+                    },
+                  ],
+                },
+                finish_reason: null,
+              },
+            ],
+          },
+          {
+            id: "chatcmpl_1",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "mock-model",
+            choices: [
+              {
+                index: 0,
+                delta: {},
+                finish_reason: "tool_calls",
+              },
+            ],
+          },
+          "[DONE]",
+        ]);
+        return;
+      }
+
+      write_openai_sse(res, [
+        {
+          id: "chatcmpl_2",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "mock-model",
+          choices: [
+            {
+              index: 0,
+              delta: { role: "assistant" },
+              finish_reason: null,
+            },
+          ],
+        },
+        {
+          id: "chatcmpl_2",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "mock-model",
+          choices: [
+            {
+              index: 0,
+              delta: { content: "done" },
+              finish_reason: null,
+            },
+          ],
+        },
+        {
+          id: "chatcmpl_2",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "mock-model",
+          choices: [
+            {
+              index: 0,
+              delta: {},
+              finish_reason: "stop",
+            },
+          ],
+        },
+        "[DONE]",
       ]);
       return;
     }
@@ -142,31 +264,19 @@ test("CityModel sends tool result back on the next round", async () => {
 
     assert.equal(result.success, true);
     assert.equal(tool_executed, true);
-    assert.equal(requests.length, 2);
+    assert.equal(stream_requests, 0);
+    assert.equal(agent_requests.length, 2);
+    assert.equal(requests.every((request) => request?.town_id === "town_demo"), true);
+    assert.equal(agent_requests[0]?.model, "mock-model");
 
-    const second_request_messages = Array.isArray(requests[1]?.messages)
-      ? requests[1].messages
+    const second_request_messages = Array.isArray(agent_requests[1]?.messages)
+      ? agent_requests[1].messages
       : [];
-    const second_assistant_message = second_request_messages.find(
-      (message) => message && message.role === "assistant",
-    );
-    assert.ok(second_assistant_message);
-    const second_assistant_parts = Array.isArray(second_assistant_message.parts)
-      ? second_assistant_message.parts
-      : [];
-
-    const tool_call_part = second_assistant_parts.find(
-      (part) => part && part.type === "dynamic-tool" && part.state === "output-available",
-    );
-    assert.deepEqual(tool_call_part, {
-      type: "dynamic-tool",
-      toolName: "ping",
-      toolCallId: "call_1",
-      state: "output-available",
-      input: { value: "hello" },
-      output: { echoed: "hello" },
-      providerExecuted: false,
-    });
+    const serialized_second_messages = JSON.stringify(second_request_messages);
+    assert.match(serialized_second_messages, /"role":"tool"/);
+    assert.match(serialized_second_messages, /call_1/);
+    assert.match(serialized_second_messages, /echoed/);
+    assert.match(serialized_second_messages, /hello/);
   } finally {
     await new Promise((resolve, reject) => {
       server.close((error) => {

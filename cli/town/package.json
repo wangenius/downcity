@@ -1,6 +1,6 @@
 {
   "name": "downcity-town-command",
-  "version": "1.1.71",
+  "version": "1.1.73",
   "private": true,
   "type": "module",
   "description": "Downcity Town CLI — 本机 Agent 宿主与运行入口",

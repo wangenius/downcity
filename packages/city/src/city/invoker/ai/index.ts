@@ -9,8 +9,8 @@ import {
   CITY_MODEL_INVOKER,
   CITY_MODEL_KIND,
   type CityModel,
+  type CityModelConnection,
   type CityModelDescriptor,
-  type CityModelInvokeInput,
 } from "@downcity/type";
 import type { UserModelRef } from "./types.js";
 import type {
@@ -69,6 +69,26 @@ export class AIInvoker {
       body: JSON.stringify(this.input(this.serializeTools(input))),
     });
     return parseAIStreamBody(res.body);
+  }
+
+  /**
+   * 返回当前模型的 OpenAI-compatible 连接信息。
+   *
+   * 关键点（中文）
+   * - City SDK 只负责提供连接上下文，不负责创建 AI SDK LanguageModel。
+   * - Agent SDK 会读取该信息并在 agent 包内完成模型转换。
+   */
+  connection(modelId: string): CityModelConnection {
+    const resolved_model_id = String(modelId || "").trim();
+    if (!resolved_model_id) {
+      throw new TypeError("modelId is required");
+    }
+    return {
+      base_url: `${this.baseUrl}/v1/ai`,
+      api_key: this.token,
+      model_id: resolved_model_id,
+      request_body: this.input({ model: resolved_model_id } as UserServiceInput),
+    };
   }
 
   /** 图片生成 */
@@ -294,10 +314,7 @@ function create_city_model(
     configurable: false,
     writable: false,
     value: {
-      text: async (input: CityModelInvokeInput) =>
-        await ai.text({ ...input, model: item.id }),
-      stream: async (input: CityModelInvokeInput) =>
-        await ai.stream({ ...input, model: item.id }),
+      connection: () => ai.connection(item.id),
     },
   });
 

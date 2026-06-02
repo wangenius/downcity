@@ -532,6 +532,9 @@ importers:
 
   packages/agent:
     dependencies:
+      '@ai-sdk/openai-compatible':
+        specifier: ^2.0.48
+        version: 2.0.48(zod@4.4.3)
       '@downcity/type':
         specifier: workspace:*
         version: link:../type

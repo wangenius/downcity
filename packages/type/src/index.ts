@@ -7,8 +7,6 @@
  * - 运行时可执行能力通过隐藏 symbol 暴露，避免污染用户可见的模型目录字段。
  */
 
-import type { UIMessage, UIMessageChunk } from "ai";
-
 /**
  * City model 的公开协议标识。
  */
@@ -115,33 +113,32 @@ export interface CityModelDescriptor {
 }
 
 /**
- * City 模型执行输入。
+ * City 模型连接信息。
+ *
+ * 关键点（中文）
+ * - 该结构只给 SDK 内部消费，不作为模型目录的公开展示字段。
+ * - Agent SDK 会基于这些信息自行创建 AI SDK LanguageModel。
  */
-export interface CityModelInvokeInput {
+export interface CityModelConnection {
   /**
-   * 单轮 prompt 文本。
+   * OpenAI-compatible 服务端点根地址，例如 `https://example.com/v1/ai`。
    */
-  prompt?: string;
+  base_url: string;
 
   /**
-   * 多轮 UIMessage 消息列表。
+   * 当前 user token；Agent 会把它作为 provider apiKey 使用。
    */
-  messages?: UIMessage[];
+  api_key?: string;
 
   /**
-   * 模型可调用工具定义。
+   * 当前模型的调用 ID，默认写入 OpenAI-compatible 请求体的 `model` 字段。
    */
-  tools?: unknown;
+  model_id: string;
 
   /**
-   * provider 级扩展选项。
+   * 每次请求都需要额外合并到请求体的 City 上下文字段，例如 `town_id`。
    */
-  providerOptions?: unknown;
-
-  /**
-   * 其他透传给 City AIService action 的输入字段。
-   */
-  [key: string]: unknown;
+  request_body: Record<string, unknown>;
 }
 
 /**
@@ -149,14 +146,13 @@ export interface CityModelInvokeInput {
  */
 export interface CityModelInvoker {
   /**
-   * 使用当前 City 模型执行一次非流式文本调用。
+   * 返回当前 City 模型的运行时连接信息。
+   *
+   * 关键点（中文）
+   * - CityModel 公开字段仍然是模型目录信息。
+   * - Agent SDK 负责把连接信息转换为 AI SDK LanguageModel。
    */
-  text(input: CityModelInvokeInput): Promise<UIMessage>;
-
-  /**
-   * 使用当前 City 模型执行一次流式调用。
-   */
-  stream(input: CityModelInvokeInput): Promise<ReadableStream<UIMessageChunk>>;
+  connection(): CityModelConnection;
 }
 
 /**
@@ -184,11 +180,14 @@ export interface CityModel extends CityModelDescriptor {
 export function isCityModel(value: unknown): value is CityModel {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<PropertyKey, unknown>;
+  const invoker = record[CITY_MODEL_INVOKER] as
+    | { connection?: unknown }
+    | undefined;
   return (
     record.kind === CITY_MODEL_KIND &&
     typeof record.id === "string" &&
-    typeof record[CITY_MODEL_INVOKER] === "object" &&
-    record[CITY_MODEL_INVOKER] !== null
+    typeof invoker === "object" &&
+    invoker !== null &&
+    typeof invoker.connection === "function"
   );
 }
-

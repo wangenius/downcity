@@ -13,6 +13,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import { fileURLToPath } from "url";
 import { registerPlatformApiRoutes } from "../control/PlatformApiRoutes.js";
+import { registerAgentSdkPublishRoutes, } from "../control/AgentSdkPublishRoutes.js";
 import { buildPlatformAgentsResponse, buildPlatformConfigStatusResponse, buildPlatformModelResponse, inspectPlatformAgentDirectory, listKnownPlatformAgents, readPlatformConfigFileStatus, readRequestedPlatformAgentId, resolvePlatformAgentById, resolveSelectedPlatformAgent, } from "../control/gateway/AgentCatalog.js";
 import { executeAgentProjectShellCommand, initializePlatformAgentProject, inspectManagedAgentRestartSafety, pickPlatformAgentDirectoryPath, restartManagedAgentByProjectRoot, startManagedAgentByProjectRoot, stopManagedAgentByProjectRoot, updatePlatformAgentExecution, } from "../control/gateway/AgentActions.js";
 import { serveControlPlaneFrontendPath } from "../control/gateway/FrontendAssets.js";
@@ -54,6 +55,7 @@ const DC_VERSION = (() => {
 export class ControlGateway {
     app;
     server = null;
+    agentSdkPublishRuntime = null;
     publicDir;
     authService;
     constructor() {
@@ -80,6 +82,12 @@ export class ControlGateway {
         registerAuthRoutes({
             app: this.app,
             authService: this.authService,
+        });
+        this.agentSdkPublishRuntime = registerAgentSdkPublishRoutes({
+            app: this.app,
+            handlers: {
+                resolveAgentById: (requestedAgentId) => this.resolveAgentById(requestedAgentId),
+            },
         });
         registerPlatformApiRoutes({
             app: this.app,
@@ -254,18 +262,31 @@ export class ControlGateway {
                         req.on("end", () => onDone(Buffer.concat(chunks)));
                         req.on("error", onError);
                     });
+                    const abort_controller = new AbortController();
                     const request = new Request(url.toString(), {
                         method,
                         headers: new Headers(req.headers),
                         body: bodyBuffer.length > 0 ? bodyBuffer : undefined,
+                        signal: abort_controller.signal,
                     });
+                    res.on("close", () => abort_controller.abort());
                     const response = await this.app.fetch(request);
                     res.statusCode = response.status;
                     for (const [key, value] of response.headers.entries()) {
                         res.setHeader(key, value);
                     }
-                    const output = Buffer.from(await response.arrayBuffer());
-                    res.end(output);
+                    if (!response.body) {
+                        res.end();
+                        return;
+                    }
+                    const reader = response.body.getReader();
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done)
+                            break;
+                        res.write(Buffer.from(value));
+                    }
+                    res.end();
                 }
                 catch {
                     res.statusCode = 500;
@@ -284,6 +305,7 @@ export class ControlGateway {
             return;
         const server = this.server;
         this.server = null;
+        await this.agentSdkPublishRuntime?.close();
         await new Promise((resolve) => {
             server.close(() => resolve());
         });

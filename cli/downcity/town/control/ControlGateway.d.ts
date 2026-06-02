@@ -24,6 +24,7 @@ export interface ControlGatewayStartOptions {
 export declare class ControlGateway {
     private app;
     private server;
+    private agentSdkPublishRuntime;
     private readonly publicDir;
     private readonly authService;
     constructor();

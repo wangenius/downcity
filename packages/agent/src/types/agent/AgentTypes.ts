@@ -196,6 +196,15 @@ export interface RemoteAgentOptions {
    * 或 `rpc://127.0.0.1:5314`
    */
   url: string;
+
+  /**
+   * 访问远程 HTTP Agent 时使用的 Bearer token。
+   *
+   * 关键点（中文）
+   * - 仅 `http://` / `https://` transport 会携带该 token。
+   * - `rpc://` 是本机内部直连通道，不读取也不发送 token。
+   */
+  token?: string;
 }
 
 /**

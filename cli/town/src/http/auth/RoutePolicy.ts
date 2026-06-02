@@ -93,6 +93,12 @@ export const CONTROL_PLANE_AUTH_ROUTE_POLICIES: AuthRoutePolicy[] = [
   { path: "/api/auth/*", method: "*", requireAuth: false },
   { path: "/health", method: "GET", requireAuth: false },
   {
+    path: "/agents/*",
+    method: "*",
+    requireAuth: true,
+    anyPermissions: ["agent.execute"],
+  },
+  {
     path: "/api/ui/agents",
     method: "GET",
     requireAuth: true,

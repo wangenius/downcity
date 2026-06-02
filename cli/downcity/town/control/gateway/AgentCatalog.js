@@ -232,7 +232,11 @@ export async function resolvePlatformAgentById(requestedAgentId) {
     if (!targetId)
         return null;
     const agents = await listKnownPlatformAgents();
-    return agents.find((item) => item.id === targetId) || null;
+    const normalizedTargetRoot = path.resolve(targetId);
+    return (agents.find((item) => item.id === targetId ||
+        item.agentId === targetId ||
+        item.projectRoot === targetId ||
+        item.projectRoot === normalizedTargetRoot) || null);
 }
 /**
  * 探测目录是否已具备 agent 运行条件。

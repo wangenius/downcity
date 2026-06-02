@@ -115,6 +115,10 @@ type RemoteAgentTransport = RemoteSessionTransport & {
    * 列出 sessions。
    */
   list_sessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage>;
+  /**
+   * 关闭 transport 持有的长期连接。
+   */
+  close?(): Promise<void>;
 };
 
 type SdkEventsReadyFrame = {
@@ -336,7 +340,7 @@ export class RemoteAgent {
     if (!url) {
       throw new Error("RemoteAgent requires a non-empty url");
     }
-    this.transport = create_remote_agent_transport(url);
+    this.transport = create_remote_agent_transport(url, options.token);
   }
 
   /**
@@ -369,13 +373,34 @@ export class RemoteAgent {
   ): Promise<AgentSessionSummaryPage> {
     return await this.transport.list_sessions(input);
   }
+
+  /**
+   * 关闭远程 transport。
+   *
+   * 关键点（中文）
+   * - `rpc://` 会关闭底层长连接。
+   * - `http://` / `https://` 没有常驻连接，调用时是安全 no-op。
+   */
+  async close(): Promise<void> {
+    await this.transport.close?.();
+  }
 }
 
 class HttpRemoteAgentTransport implements RemoteAgentTransport {
   private readonly base_url: string;
+  private readonly token: string;
 
-  constructor(url: string) {
+  constructor(url: string, token?: string) {
     this.base_url = url.replace(/\/+$/, "");
+    this.token = String(token || "").trim();
+  }
+
+  private headers(input?: Record<string, string>): Headers {
+    const headers = new Headers(input);
+    if (this.token) {
+      headers.set("Authorization", `Bearer ${this.token}`);
+    }
+    return headers;
   }
 
   async create_session(input?: AgentCreateSessionInput): Promise<AgentSessionInfo> {
@@ -385,9 +410,9 @@ class HttpRemoteAgentTransport implements RemoteAgentTransport {
       session?: AgentSessionInfo;
     }>(`${this.base_url}/api/sdk/sessions`, {
       method: "POST",
-      headers: {
+      headers: this.headers({
         "Content-Type": "application/json",
-      },
+      }),
       body: JSON.stringify({
         ...(input?.sessionId ? { sessionId: input.sessionId } : {}),
       }),
@@ -403,7 +428,9 @@ class HttpRemoteAgentTransport implements RemoteAgentTransport {
       success?: boolean;
       error?: string;
       session?: AgentSessionInfo;
-    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}`);
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}`, {
+      headers: this.headers(),
+    });
     if (!payload.success || !payload.session?.sessionId) {
       throw new Error(String(payload.error || "Remote session info failed"));
     }
@@ -422,9 +449,9 @@ class HttpRemoteAgentTransport implements RemoteAgentTransport {
       };
     }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/prompt`, {
       method: "POST",
-      headers: {
+      headers: this.headers({
         "Content-Type": "application/json",
-      },
+      }),
       body: JSON.stringify({
         query: input.query,
       }),
@@ -451,6 +478,7 @@ class HttpRemoteAgentTransport implements RemoteAgentTransport {
     const response = await fetch(
       `${this.base_url}/api/sdk/sessions/${encodeURIComponent(params.session_id)}/events`,
       {
+        headers: this.headers(),
         signal: abort_controller.signal,
       },
     );
@@ -495,6 +523,9 @@ class HttpRemoteAgentTransport implements RemoteAgentTransport {
       `${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/history${
         query.size > 0 ? `?${query.toString()}` : ""
       }`,
+      {
+        headers: this.headers(),
+      },
     );
     if (!payload.success || !payload.history || !Array.isArray(payload.history.items)) {
       throw new Error(String(payload.error || "Remote session history failed"));
@@ -507,7 +538,9 @@ class HttpRemoteAgentTransport implements RemoteAgentTransport {
       success?: boolean;
       error?: string;
       system?: AgentSessionSystemSnapshot;
-    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/system`);
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/system`, {
+      headers: this.headers(),
+    });
     if (!payload.success || !payload.system || !Array.isArray(payload.system.blocks)) {
       throw new Error(String(payload.error || "Remote session system failed"));
     }
@@ -528,9 +561,9 @@ class HttpRemoteAgentTransport implements RemoteAgentTransport {
       session?: AgentSessionInfo;
     }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/fork`, {
       method: "POST",
-      headers: {
+      headers: this.headers({
         "Content-Type": "application/json",
-      },
+      }),
       body: JSON.stringify({
         ...(message_id ? { messageId: message_id } : {}),
       }),
@@ -552,6 +585,9 @@ class HttpRemoteAgentTransport implements RemoteAgentTransport {
       page?: AgentSessionSummaryPage;
     }>(
       `${this.base_url}/api/sdk/sessions${query.size > 0 ? `?${query.toString()}` : ""}`,
+      {
+        headers: this.headers(),
+      },
     );
     if (!payload.success || !payload.page) {
       throw new Error(String(payload.error || "Remote sessions list failed"));
@@ -633,11 +669,18 @@ class RpcRemoteAgentTransport implements RemoteAgentTransport {
   async list_sessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage> {
     return await this.client.list_sessions(input);
   }
+
+  async close(): Promise<void> {
+    await this.client.close();
+  }
 }
 
-function create_remote_agent_transport(url: string): RemoteAgentTransport {
+function create_remote_agent_transport(
+  url: string,
+  token?: string,
+): RemoteAgentTransport {
   if (/^https?:\/\//i.test(url)) {
-    return new HttpRemoteAgentTransport(url);
+    return new HttpRemoteAgentTransport(url, token);
   }
   if (/^rpc:\/\//i.test(url)) {
     return new RpcRemoteAgentTransport(url);

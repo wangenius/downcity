@@ -1,6 +1,6 @@
 {
   "name": "@downcity/agent",
-  "version": "1.1.67",
+  "version": "1.1.68",
   "type": "module",
   "description": "Downcity Agent 运行时 — 单 Agent 执行壳与 HTTP 服务能力",
   "main": "./bin/index.js",

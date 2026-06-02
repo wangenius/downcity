@@ -143,7 +143,9 @@ export interface RpcServerInstance {
 export async function startRpcServer(
   options: RpcServerStartOptions,
 ): Promise<RpcServerInstance> {
+  const sockets = new Set<net.Socket>();
   const server = net.createServer((socket) => {
+    sockets.add(socket);
     const subscriptions = new Map<string, SocketSubscription>();
     let buffered = "";
 
@@ -273,6 +275,7 @@ export async function startRpcServer(
       cleanupSubscriptions();
     });
     socket.on("close", () => {
+      sockets.delete(socket);
       cleanupSubscriptions();
     });
     socket.on("end", () => {
@@ -294,6 +297,11 @@ export async function startRpcServer(
     url: `rpc://${options.host}:${options.port}`,
     server,
     async stop(): Promise<void> {
+      // 关键点（中文）：RPC 是长连接；停止 server 时必须主动关闭现有 socket。
+      for (const socket of sockets) {
+        socket.destroy();
+      }
+      sockets.clear();
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
       });

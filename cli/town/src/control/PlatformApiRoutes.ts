@@ -14,6 +14,7 @@ import { registerPlatformEnvRoutes } from "@/control/EnvApiRoutes.js";
 import { registerPlatformAgentStatusRoutes } from "@/control/AgentStatusApiRoutes.js";
 import { registerPlatformPluginRoutes } from "@/control/PluginApiRoutes.js";
 import { registerDashboardTaskApiRoutes } from "@/control/DashboardTaskApiRoutes.js";
+import { registerDashboardSessionApiRoutes } from "@/control/DashboardSessionApiRoutes.js";
 import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import type {
   PlatformAgentDirectoryInspection,
@@ -448,6 +449,13 @@ export function registerPlatformApiRoutes(params: {
     agentRpcPool: handlers.agentRpcPool,
   });
   registerDashboardTaskApiRoutes({
+    app,
+    readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
+    resolveSelectedAgent: (requestedAgentId) =>
+      handlers.resolveSelectedAgent(requestedAgentId),
+    agentRpcPool: handlers.agentRpcPool,
+  });
+  registerDashboardSessionApiRoutes({
     app,
     readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
     resolveSelectedAgent: (requestedAgentId) =>

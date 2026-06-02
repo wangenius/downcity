@@ -246,5 +246,50 @@ export function registerPlatformPluginRoutes(params) {
             }, 500);
         }
     });
+    app.post("/api/plugins/action", async (c) => {
+        try {
+            const body = await c.req.json().catch(() => null);
+            const plugin_name = String(body?.pluginName || "").trim();
+            const action_name = String(body?.actionName || "").trim();
+            if (!plugin_name) {
+                return c.json({ success: false, error: "pluginName is required" }, 400);
+            }
+            if (!action_name) {
+                return c.json({ success: false, error: "actionName is required" }, 400);
+            }
+            const requested_agent_id = params.readRequestedAgentId(c.req.raw);
+            const selected_agent = await params.resolveSelectedAgent(requested_agent_id);
+            if (!selected_agent || selected_agent.running !== true) {
+                return c.json({
+                    success: false,
+                    error: "No running agent found. Start one via `town agent start` first.",
+                }, 503);
+            }
+            const client = params.agentRpcPool.resolveClientForAgent(selected_agent);
+            if (!client) {
+                return c.json({
+                    success: false,
+                    error: "Selected agent RPC endpoint is unavailable.",
+                }, 503);
+            }
+            // 关键点（中文）：这里承接旧 `/api/plugins/action`，但通过 Agent RPC 执行，不再代理到 Agent HTTP。
+            const result = await client.run_internal_plugin_action({
+                plugin_name,
+                action_name,
+                payload: body?.payload,
+            });
+            return c.json({
+                ...result,
+                pluginName: plugin_name,
+                actionName: action_name,
+            }, result.success ? 200 : 400);
+        }
+        catch (error) {
+            return c.json({
+                success: false,
+                error: getErrorMessage(error),
+            }, 500);
+        }
+    });
 }
 //# sourceMappingURL=PluginApiRoutes.js.map

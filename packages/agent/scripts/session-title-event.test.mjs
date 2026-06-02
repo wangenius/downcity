@@ -3,7 +3,8 @@
  *
  * 关键点（中文）
  * - 这里走编译后的公开 SDK，锁住调用方实际可见行为。
- * - 使用 appendUserMessage 触发 fallback 标题，避免测试依赖真实模型。
+ * - title 默认允许为空；没有可用模型时不会再回退成首条 user message。
+ * - 当后续补上模型且 title 仍为空时，应允许再次尝试生成。
  */
 
 import test from "node:test";
@@ -12,9 +13,39 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 
+import { MockLanguageModelV3 } from "ai/test";
 import { Agent } from "../bin/index.js";
 
-test("Session publishes title event and exposes title in history", async () => {
+function create_mock_title_model(title_text) {
+  return new MockLanguageModelV3({
+    modelId: "mock-session-title-model",
+    doGenerate: async () => ({
+      content: [
+        {
+          type: "text",
+          text: title_text,
+        },
+      ],
+      finishReason: "stop",
+      usage: {
+        inputTokens: {
+          total: 0,
+          noCache: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
+        outputTokens: {
+          total: 0,
+          text: 0,
+          reasoning: 0,
+        },
+      },
+      warnings: [],
+    }),
+  });
+}
+
+test("Session keeps title empty when no model is available", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-session-title-"),
   );
@@ -34,17 +65,53 @@ test("Session publishes title event and exposes title in history", async () => {
     });
 
     const title_event = events.find((event) => event.type === "session-title");
+    assert.equal(title_event, undefined);
+
+    const history = await session.history();
+    assert.equal(history.session.title, undefined);
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("Session retries title generation after model becomes available", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-session-title-retry-"),
+  );
+  const agent = new Agent({
+    id: "title_retry_agent",
+    path: agent_path,
+  });
+  const session = await agent.createSession();
+  const events = [];
+  const unsubscribe = session.subscribe((event) => {
+    events.push(event);
+  });
+
+  try {
+    await session.appendUserMessage({
+      text: "Investigate flaky session title generation in the SDK",
+    });
+
+    const history_before_model = await session.history();
+    assert.equal(history_before_model.session.title, undefined);
+
+    await session.set({
+      model: create_mock_title_model("排查 session 标题"),
+    });
+    await session.appendUserMessage({
+      text: "Need another prompt to trigger the retry path",
+    });
+
+    const title_event = events.find((event) => event.type === "session-title");
     assert.deepEqual(title_event, {
       type: "session-title",
       sessionId: session.id,
-      title: "Use shell tools to inspect the current workspace",
+      title: "排查 session 标题",
     });
 
     const history = await session.history();
-    assert.equal(
-      history.session.title,
-      "Use shell tools to inspect the current workspace",
-    );
+    assert.equal(history.session.title, "排查 session 标题");
   } finally {
     unsubscribe();
   }

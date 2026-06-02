@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一负责 session 列表摘要、session 详情与 history 分页的投影逻辑。
- * - 老 session 缺失持久化 title 时，会在列表读取阶段补写 fallback title。
+ * - session title 允许为空；浏览层不会再从首条 user message 推导 fallback title。
  * - 面向 SDK / RemoteAgent / HTTP route 复用，避免在多个入口重复拼列表与分页语义。
  * - 这里不持有运行态状态；执行状态等动态信息通过调用参数显式注入。
  */
@@ -36,7 +36,6 @@ import { getSdkAgentSessionsRootDirPath } from "@/session/storage/Paths.js";
 import { readSessionMetadata } from "@/session/storage/Metadata.js";
 import {
   ensureSessionTitle,
-  resolveFallbackSessionTitle,
 } from "@/session/SessionTitle.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
@@ -183,13 +182,6 @@ export function resolveSessionMessagePreview(message: SessionMessageV1): string 
   const userVisible = pickLastSuccessfulChatSendText(message).trim();
   if (userVisible) return userVisible;
   return extractAssistantToolSummary(message);
-}
-
-/**
- * 推导当前 session 的可读标题。
- */
-export function resolveSessionTitle(messages: SessionMessageV1[]): string | undefined {
-  return resolveFallbackSessionTitle(messages);
 }
 
 function resolveToolName(part: ToolPartCompatShape, aiToolName?: string): string {

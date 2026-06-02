@@ -29,7 +29,6 @@ export {
 } from "./storage/Metadata.js";
 export {
   ensureSessionTitle,
-  resolveFallbackSessionTitle,
 } from "./SessionTitle.js";
 export {
   persistSdkAssistantResult,
@@ -44,6 +43,5 @@ export {
   listAgentSessionSummaryPage,
   loadSessionMessagesFromPath,
   resolveSessionMessagePreview,
-  resolveSessionTitle,
   toSessionTimelineEvents,
 } from "./browse/Browse.js";

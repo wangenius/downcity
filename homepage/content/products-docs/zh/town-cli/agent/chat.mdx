@@ -29,8 +29,11 @@ town agent chat [--to <id>] --message <text> [--json]
 ## 行为说明
 
 - 默认在未传 `--message` 时进入交互式持续对话。
+- 交互式模式下，选择 agent 进入对话后，终端会显示当前执行中的 spinner 状态。
+- 当 agent 触发 tool 调用时，交互式模式会展示 tool 名称、关键输入摘要，以及完成状态。
 - 非 `--json` 模式下，Agent 回复会在终端中流式输出，而不是等整轮完成后一次性打印。
 - 一次性模式不会进入 REPL。
+- `--message` 的一次性模式保持简洁输出，不展示交互式 spinner / tool 过程区块。
 - 目标 agent 必须已经处于运行中。
 - 终端里输入的每一行都会进入同一个本地 CLI 会话，不与 Console UI 共用上下文。
 - 输入 `/exit` 或 `/quit` 退出持续对话。
@@ -49,6 +52,11 @@ town v1.0.439
 INFO Agent chat · lucas_whitman
 
 lucas_whitman> 总结一下今天做了什么
+⠙ Thinking...
+tool shell.exec running
+  cmd: git status --short
+tool shell.exec done
+  output: M cli/town/src/agent/AgentChat.ts
 
 今天你完成了 plugin 交互式 CLI 重构，
 并验证了更新后的命令树。

@@ -32,10 +32,10 @@ import { getDaemonMetaPath } from "@/process/daemon/Manager.js";
 import type {
   AgentChatCliOptions,
   AgentChatExecutionOutcome,
-  AgentChatExecuteResponse,
   AgentChatTransportOptions,
 } from "./AgentChatTypes.js";
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
+import { AgentChatInteractiveRenderer } from "./AgentChatInteractiveRenderer.js";
 
 type ResolvedAgentChatTarget = {
   /**
@@ -306,6 +306,7 @@ async function runSdkPromptTurn(params: {
   message: string;
   transport?: AgentChatTransportOptions;
   renderText?: boolean;
+  interactiveRenderer?: AgentChatInteractiveRenderer;
 }): Promise<{
   success: boolean;
   error?: string;
@@ -345,8 +346,13 @@ async function runSdkPromptTurn(params: {
   let emitted_visible_text = false;
   let final_text = "";
   let target_turn_id = "";
+  const pending_events: AgentSessionEvent[] = [];
 
   const renderEvent = (event: AgentSessionEvent): void => {
+    if (params.interactiveRenderer) {
+      params.interactiveRenderer.render_event(event);
+      return;
+    }
     if (event.type !== "text-delta" || event.turnId !== target_turn_id || !event.text) {
       return;
     }
@@ -360,19 +366,38 @@ async function runSdkPromptTurn(params: {
   };
 
   const unsubscribe = session.subscribe((event) => {
+    if (!target_turn_id) {
+      pending_events.push(event);
+      return;
+    }
+    if ("turnId" in event && event.turnId && event.turnId !== target_turn_id) return;
     renderEvent(event);
-    if (event.type === "turn-finish" && event.turnId === target_turn_id) {
+    if (event.type === "turn-finish") {
       final_text = event.text;
     }
   });
 
   try {
+    params.interactiveRenderer?.start_turn();
     const turn = await session.prompt({ query: message });
     target_turn_id = turn.id;
+    params.interactiveRenderer?.attach_turn_id(target_turn_id);
+
+    for (const event of pending_events) {
+      if ("turnId" in event && event.turnId && event.turnId !== target_turn_id) continue;
+      renderEvent(event);
+      if (event.type === "turn-finish") {
+        final_text = event.text;
+      }
+    }
+
     const result = await turn.finished;
     final_text = result.text;
 
-    if (printed_leading_newline) {
+    if (params.interactiveRenderer) {
+      emitted_visible_text =
+        params.interactiveRenderer.finish_turn().emitted_visible_text;
+    } else if (printed_leading_newline) {
       process.stdout.write("\n\n");
     }
 
@@ -383,7 +408,10 @@ async function runSdkPromptTurn(params: {
       text: final_text,
     };
   } catch (error) {
-    if (printed_leading_newline) {
+    if (params.interactiveRenderer) {
+      emitted_visible_text =
+        params.interactiveRenderer.finish_turn().emitted_visible_text;
+    } else if (printed_leading_newline) {
       process.stdout.write("\n\n");
     }
     return {
@@ -554,6 +582,7 @@ async function runInteractiveChat(params: {
           host: params.options.host,
           port: params.options.port,
         },
+        interactiveRenderer: new AgentChatInteractiveRenderer(),
       });
 
       if (!outcome.success) {

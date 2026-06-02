@@ -1,6 +1,6 @@
 {
   "name": "downcity-city-command",
-  "version": "1.1.73",
+  "version": "1.1.74",
   "private": true,
   "type": "module",
   "description": "Downcity City CLI — City 服务、账户、模型与资源管理入口",

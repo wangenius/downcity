@@ -3,8 +3,8 @@
  *
  * 关键点（中文）
  * - session title 是 `meta.json` 顶层字段，列表与详情都以它为准。
- * - 首次用户消息出现后优先使用模型生成标题，失败时回退到首条用户消息截断。
- * - 老 session 缺失 title 时可在读取列表/详情时补写 fallback title。
+ * - title 默认允许为空；只有模型成功生成标题时才会写入。
+ * - 当 title 仍为空时，后续执行链路可以再次尝试生成。
  */
 
 import { generateText, type LanguageModel } from "ai";
@@ -16,7 +16,6 @@ import {
   writeSessionMetadata,
 } from "@/session/storage/Metadata.js";
 
-const FALLBACK_SESSION_TITLE_MAX_CHARS = 60;
 const GENERATED_SESSION_TITLE_MAX_CHARS = 24;
 
 /**
@@ -100,20 +99,6 @@ function normalizeGeneratedTitle(input: string): string | undefined {
     : undefined;
 }
 
-/**
- * 从首条用户消息推导 fallback 标题。
- */
-export function resolveFallbackSessionTitle(
-  messages: SessionMessageV1[],
-): string | undefined {
-  const firstUserText = resolveFirstUserText(messages);
-  const title = truncateTitle(
-    firstUserText,
-    FALLBACK_SESSION_TITLE_MAX_CHARS,
-  );
-  return normalizeSessionTitle(title);
-}
-
 async function generateSessionTitle(input: {
   /**
    * 当前模型实例。
@@ -154,32 +139,18 @@ export async function ensureSessionTitle(
   if (current.title) return current;
 
   const firstUserText = resolveFirstUserText(input.messages);
-  const fallbackTitle = resolveFallbackSessionTitle(input.messages);
-  if (!fallbackTitle) return current;
-
-  const fallbackMeta: SessionHistoryMetaV1 = {
-    ...current,
-    title: fallbackTitle,
-  };
-  await writeSessionMetadata({
-    projectRoot: input.projectRoot,
-    agentId: input.agentId,
-    sessionId: input.sessionId,
-    meta: fallbackMeta,
-  });
-
   if (input.generate !== true || !input.model || !firstUserText) {
-    return fallbackMeta;
+    return current;
   }
 
   const generatedTitle = await generateSessionTitle({
     model: input.model,
     firstUserText,
   });
-  if (!generatedTitle) return fallbackMeta;
+  if (!generatedTitle) return current;
 
   const generatedMeta: SessionHistoryMetaV1 = {
-    ...fallbackMeta,
+    ...current,
     title: generatedTitle,
   };
   await writeSessionMetadata({

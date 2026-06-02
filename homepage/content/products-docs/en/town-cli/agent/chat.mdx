@@ -29,6 +29,9 @@ town agent chat [--to <id>] --message <text> [--json]
 ## Behavior
 
 - Defaults to interactive terminal chat when `--message` is omitted.
+- In interactive mode, once you pick an agent and enter the chat loop, the terminal shows spinner-based progress states.
+- When the agent runs tools, interactive mode shows the tool name, a compact input summary, and the completion state.
+- One-shot `--message` mode keeps the simpler output flow and does not render the interactive spinner / tool status blocks.
 - One-shot mode works without entering the REPL.
 - Requires the target agent to be running.
 - Keeps sending every line into the same local CLI session instead of sharing Console UI context.
@@ -48,6 +51,11 @@ town v1.0.439
 INFO Agent chat · lucas_whitman
 
 lucas_whitman> summarize today's work
+⠙ Thinking...
+tool shell.exec running
+  cmd: git status --short
+tool shell.exec done
+  output: M cli/town/src/agent/AgentChat.ts
 
 Today you completed the plugin interactive CLI redesign and validated the updated command tree.
 ```

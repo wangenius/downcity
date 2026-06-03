@@ -18,7 +18,6 @@ import {
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
 import {
-  hasPersistedAssistantSteps,
   pickLastSuccessfulChatSendText,
 } from "@downcity/agent/internal/executor/messages/UserVisibleText.js";
 import {
@@ -439,10 +438,7 @@ export class ChatQueueWorker {
       return;
     }
 
-    if (
-      observation.assistantStepDispatched ||
-      hasPersistedAssistantSteps(result.assistantMessage)
-    ) {
+    if (observation.assistantStepDispatched) {
       return;
     }
 

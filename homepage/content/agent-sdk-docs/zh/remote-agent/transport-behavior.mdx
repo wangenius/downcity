@@ -1,11 +1,14 @@
 ---
 title: 传输行为
-description: 理解 RemoteAgent 使用的 HTTP 传输方式、返回格式和事件投递行为
+description: 理解 RemoteAgent 使用的 HTTP 与 RPC 传输方式
 ---
 
 # 传输行为
 
-RemoteAgent 当前通过 HTTP 调用服务端的 SDK 路由。
+RemoteAgent 支持两种传输形态：
+
+- `http://...` / `https://...`：调用 Town Agent HTTP gateway 挂载出来的 SDK 路由
+- `rpc://...`：直连本机 Agent RPC server
 
 ## 普通请求
 
@@ -21,9 +24,11 @@ RemoteAgent 当前通过 HTTP 调用服务端的 SDK 路由。
 
 ## 事件流请求
 
-`events` 走的是 NDJSON 风格的长连接返回。
+走 HTTP 时，`events` 是 NDJSON 风格的长连接返回。
 
-也就是说，客户端会不断收到一行一行的 JSON 事件。
+走 RPC 时，同样的 session events 会通过 RPC 连接投递。
+
+对 HTTP 调用方来说，客户端会不断收到一行一行的 JSON 事件。
 
 每一行都可以看成一条独立的 session event。
 

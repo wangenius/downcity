@@ -333,7 +333,7 @@ export class Agent {
    * 返回当前 agent runtime。
    *
    * 关键点（中文）
-   * - 供宿主在 agent 外部装配 transport（例如 city HTTP gateway）时复用。
+   * - 供宿主在 agent 外部装配 transport（例如 Town HTTP gateway）时复用。
    * - 不暴露启动语义，只暴露运行时访问口。
    */
   getRuntime(): AgentRuntime {

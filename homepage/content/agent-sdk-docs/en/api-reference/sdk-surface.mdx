@@ -51,7 +51,7 @@ You can also provide a default model directly in `new Agent({ model })`.
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  url: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:5314/agents/repo-helper",
 });
 
 const session = await agent.getSession("repo-analysis");

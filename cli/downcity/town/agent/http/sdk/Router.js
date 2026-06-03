@@ -8,7 +8,7 @@
 import { Hono } from "hono";
 import { registerSdkSessionRoutes } from "../../../agent/http/sdk/SessionRoutes.js";
 /**
- * 创建 SDK HTTP router。
+ * 创建 Town gateway 使用的 SDK HTTP router。
  */
 export function createSdkRouter(sessionCollection) {
     const router = new Hono();

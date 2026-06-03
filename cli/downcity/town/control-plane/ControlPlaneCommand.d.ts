@@ -22,7 +22,7 @@ export interface ControlPlaneCommandRegistrationContext {
  *
  * 语义说明（中文）
  * - `town ...` / `town console ...` 管的是本机宿主与平台控制面进程。
- * - 单 agent 控制能力统一留在 `@downcity/agent` 暴露的 runtime / HTTP control API。
+ * - 单 agent 控制能力统一由 Town 基于 Agent runtime / RPC 装配外层协议面。
  */
 export declare function registerControlPlaneCommands(program: Command, context: ControlPlaneCommandRegistrationContext): void;
 export { ensureRegisteredAgentProjectRoot, prepareForegroundAgent, };

@@ -1,11 +1,14 @@
 ---
 title: Transport Behavior
-description: Understand the HTTP transport, response formats, and event delivery behavior used by RemoteAgent
+description: Understand the HTTP and RPC transport behavior used by RemoteAgent
 ---
 
 # Transport Behavior
 
-RemoteAgent currently calls the server through HTTP SDK routes.
+RemoteAgent supports two transport shapes:
+
+- `http://...` / `https://...`: calls the SDK routes mounted by the Town Agent HTTP gateway
+- `rpc://...`: connects directly to the local Agent RPC server
 
 ## Regular requests
 
@@ -21,9 +24,11 @@ Those use normal JSON request-response exchanges.
 
 ## Event subscription requests
 
-`events` uses an NDJSON-style long-lived response.
+Over HTTP, `events` uses an NDJSON-style long-lived response.
 
-That means the client receives JSON events one line at a time.
+Over RPC, the same session events are delivered through the RPC connection.
+
+For HTTP callers, the client receives JSON events one line at a time.
 
 Each line can be treated as an independent session event.
 

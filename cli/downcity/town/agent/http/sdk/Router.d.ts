@@ -8,7 +8,7 @@
 import { Hono } from "hono";
 import type { AgentSessionCollection } from "@downcity/agent/internal/types/agent/AgentTypes.js";
 /**
- * 创建 SDK HTTP router。
+ * 创建 Town gateway 使用的 SDK HTTP router。
  */
 export declare function createSdkRouter(sessionCollection: AgentSessionCollection): Hono;
 //# sourceMappingURL=Router.d.ts.map

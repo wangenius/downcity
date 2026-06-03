@@ -11,7 +11,7 @@ import type { AgentSessionCollection } from "@downcity/agent/internal/types/agen
 import { registerSdkSessionRoutes } from "@/agent/http/sdk/SessionRoutes.js";
 
 /**
- * 创建 SDK HTTP router。
+ * 创建 Town gateway 使用的 SDK HTTP router。
  */
 export function createSdkRouter(
   sessionCollection: AgentSessionCollection,

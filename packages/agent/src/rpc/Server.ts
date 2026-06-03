@@ -8,6 +8,9 @@
  */
 
 import net from "node:net";
+import fs from "fs-extra";
+import { dirname } from "node:path";
+import type { SystemModelMessage } from "ai";
 import type {
   AgentListSessionsInput,
   AgentSessionCollection,
@@ -15,14 +18,22 @@ import type {
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { PluginStateControlAction } from "@/plugin/types/Plugin.js";
+import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
+import {
+  getDowncityChatHistoryPath,
+  getDowncitySessionMessagesPath,
+} from "@/config/Paths.js";
+import { resolveSessionSystemMessages } from "@/executor/composer/system/default/SystemDomain.js";
 import {
   controlPluginState,
   listPluginStates,
 } from "@/plugin/core/PluginStateController.js";
 import { parsePluginCommandRequestBody } from "@/plugin/core/PluginCommandRequest.js";
 import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
+import { executeBySessionId } from "@/runtime/server/http/control/ExecuteBySession.js";
 
 type RpcSessionRequest =
   | {
@@ -97,6 +108,36 @@ type RpcSessionRequest =
   | {
       id: string;
       method: "internal.status.get";
+    }
+  | {
+      id: string;
+      method: "internal.sessions.execute";
+      params: {
+        sessionId: string;
+        instructions: string;
+        attachments?: ControlSessionExecuteAttachmentInput[];
+      };
+    }
+  | {
+      id: string;
+      method: "internal.sessions.clear_messages";
+      params: {
+        sessionId: string;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.sessions.clear_chat_history";
+      params: {
+        sessionId: string;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.sessions.resolve_system_prompt";
+      params: {
+        sessionId: string;
+      };
     }
   | {
       id: string;
@@ -176,6 +217,8 @@ export interface RpcServerStartOptions {
   sessionCollection: AgentSessionCollection;
   /** Agent 上下文访问口。 */
   getAgentContext?: () => AgentContext;
+  /** Agent 运行态访问口。 */
+  getAgentRuntime?: () => AgentRuntime;
 }
 
 /**
@@ -302,6 +345,67 @@ export async function startRpcServer(
           }
           case "internal.status.get": {
             writeSuccess(request.id, { status: "ok" });
+            return;
+          }
+          case "internal.sessions.execute": {
+            const runtime = requireAgentRuntime(options);
+            const context = requireAgentContext(options);
+            const result = await executeBySessionId({
+              agentState: runtime,
+              executionContext: context,
+              sessionId: request.params.sessionId,
+              instructions: request.params.instructions,
+              attachments: request.params.attachments,
+            });
+            writeSuccess(request.id, {
+              sessionId: request.params.sessionId,
+              result,
+            });
+            return;
+          }
+          case "internal.sessions.clear_messages": {
+            const runtime = requireAgentRuntime(options);
+            const sessionId = String(request.params.sessionId || "").trim();
+            if (!sessionId) throw new Error("Missing sessionId");
+            const messagesPath = getDowncitySessionMessagesPath(
+              runtime.rootPath,
+              runtime.paths.agentId,
+              sessionId,
+            );
+            await fs.remove(dirname(messagesPath));
+            runtime.getSession(sessionId).clearExecutor();
+            writeSuccess(request.id, {
+              sessionId,
+              cleared: true,
+            });
+            return;
+          }
+          case "internal.sessions.clear_chat_history": {
+            const runtime = requireAgentRuntime(options);
+            const sessionId = String(request.params.sessionId || "").trim();
+            if (!sessionId) throw new Error("Missing sessionId");
+            await fs.remove(getDowncityChatHistoryPath(runtime.rootPath, sessionId));
+            writeSuccess(request.id, {
+              sessionId,
+              cleared: true,
+            });
+            return;
+          }
+          case "internal.sessions.resolve_system_prompt": {
+            const runtime = requireAgentRuntime(options);
+            const context = requireAgentContext(options);
+            const sessionId = String(request.params.sessionId || "").trim() || "consoleui-chat-main";
+            const systemMessages = await resolveSessionSystemMessages({
+              projectRoot: runtime.rootPath,
+              sessionId,
+              profile: "chat",
+              staticSystemPrompts: runtime.systems,
+              context,
+            });
+            writeSuccess(request.id, {
+              sessionId,
+              ...toSystemPromptPayload(systemMessages),
+            });
             return;
           }
           case "internal.plugins.catalog": {
@@ -438,4 +542,66 @@ function requireAgentContext(options: RpcServerStartOptions): AgentContext {
     throw new Error("Agent RPC server was started without AgentContext");
   }
   return context;
+}
+
+function requireAgentRuntime(options: RpcServerStartOptions): AgentRuntime {
+  const runtime = options.getAgentRuntime?.();
+  if (!runtime) {
+    throw new Error("Agent RPC server was started without AgentRuntime");
+  }
+  return runtime;
+}
+
+function normalizeSystemText(input: string | null | undefined): string {
+  return String(input || "").trim();
+}
+
+function toSystemMessageText(message: SystemModelMessage): string {
+  const content = message.content as unknown;
+  if (typeof content === "string") return normalizeSystemText(content);
+  if (!Array.isArray(content)) return "";
+  const parts = content as Array<{ text?: unknown }>;
+  const texts: string[] = [];
+  for (const part of parts) {
+    if (!part || typeof part !== "object") continue;
+    const text = normalizeSystemText(String(part.text || ""));
+    if (!text) continue;
+    texts.push(text);
+  }
+  return texts.join("\n").trim();
+}
+
+/**
+ * 把 system messages 转成 Console/Town 可直接渲染的结构。
+ */
+function toSystemPromptPayload(messages: SystemModelMessage[]): {
+  sections: Array<{
+    key: string;
+    title: string;
+    items: Array<{ index: number; content: string }>;
+  }>;
+  totalMessages: number;
+  totalChars: number;
+} {
+  const items = messages
+    .map((message, index) => ({
+      index: index + 1,
+      content: toSystemMessageText(message),
+    }))
+    .filter((item) => item.content);
+  const totalChars = items.reduce(
+    (acc, item) => acc + String(item.content || "").length,
+    0,
+  );
+  return {
+    sections: [
+      {
+        key: "resolved",
+        title: "Resolved System Messages",
+        items,
+      },
+    ],
+    totalMessages: items.length,
+    totalChars,
+  };
 }

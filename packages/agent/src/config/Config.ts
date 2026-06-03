@@ -96,6 +96,17 @@ function assertNoProjectExtensionsLayer(
   );
 }
 
+function normalizeDefaultAgentId(projectRoot: string): string {
+  const basename = path.basename(projectRoot);
+  return basename
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_{2,}/g, "_")
+    .trim() || basename || "agent";
+}
+
 /**
  * 加载当前项目最终生效的 `downcity.json` 配置。
  *
@@ -124,10 +135,12 @@ export function loadDowncityConfig(projectRoot: string): DowncityConfig {
   }
 
   const candidate = merged as Partial<DowncityConfig>;
-  if (typeof candidate.id !== "string" || typeof candidate.version !== "string") {
-    throw new Error("Invalid downcity.json: missing required fields id/version");
-  }
-  const config = candidate as DowncityConfig;
+  // 关键点（中文）：运行态 agent id 与 CLI resolveAgentId 保持一致，未显式配置时用目录名兜底。
+  const config: DowncityConfig = {
+    ...candidate,
+    id: String(candidate.id || "").trim() || normalizeDefaultAgentId(projectRoot),
+    version: String(candidate.version || "").trim() || "1.0.0",
+  };
   assertProjectExecutionTarget(config);
   return config;
 }

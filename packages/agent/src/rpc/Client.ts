@@ -29,6 +29,7 @@ import type {
 } from "@/plugin/types/Plugin.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
 
 type RpcClientRequest =
   | {
@@ -96,6 +97,36 @@ type RpcClientRequest =
   | {
       id: string;
       method: "internal.status.get";
+    }
+  | {
+      id: string;
+      method: "internal.sessions.execute";
+      params: {
+        sessionId: string;
+        instructions: string;
+        attachments?: ControlSessionExecuteAttachmentInput[];
+      };
+    }
+  | {
+      id: string;
+      method: "internal.sessions.clear_messages";
+      params: {
+        sessionId: string;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.sessions.clear_chat_history";
+      params: {
+        sessionId: string;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.sessions.resolve_system_prompt";
+      params: {
+        sessionId: string;
+      };
     }
   | {
       id: string;
@@ -186,6 +217,60 @@ export interface RpcSessionSubscription {
   subscription_id: string;
   /** 取消订阅。 */
   unsubscribe(): Promise<void>;
+}
+
+/**
+ * RPC system prompt 分段条目。
+ */
+export interface RpcSystemPromptSectionItem {
+  /** 消息序号。 */
+  index: number;
+  /** system message 文本内容。 */
+  content: string;
+}
+
+/**
+ * RPC system prompt 分段。
+ */
+export interface RpcSystemPromptSection {
+  /** 分段稳定 key。 */
+  key: string;
+  /** 分段展示标题。 */
+  title: string;
+  /** 分段内消息条目。 */
+  items: RpcSystemPromptSectionItem[];
+}
+
+/**
+ * RPC system prompt 响应。
+ */
+export interface RpcSystemPromptPayload {
+  /** 请求是否成功。 */
+  success?: boolean;
+  /** 当前 session id。 */
+  sessionId: string;
+  /** system message 总数。 */
+  totalMessages: number;
+  /** system message 总字符数。 */
+  totalChars: number;
+  /** system message 分段。 */
+  sections: RpcSystemPromptSection[];
+}
+
+/**
+ * RPC session execute 响应。
+ */
+export interface RpcSessionExecuteResult {
+  /** 执行是否成功。 */
+  success: boolean;
+  /** 失败错误信息。 */
+  error?: string;
+  /** assistant 原始消息。 */
+  assistantMessage?: unknown;
+  /** 用户可见文本。 */
+  userVisible: string;
+  /** 是否进入队列。 */
+  queued: boolean;
 }
 
 /**
@@ -350,6 +435,69 @@ export class RpcClient {
   async get_internal_status(): Promise<{ status: string }> {
     return await this.request<{ status: string }>({
       method: "internal.status.get",
+    });
+  }
+
+  /**
+   * 在 Agent runtime 内执行一轮 session 指令。
+   */
+  async execute_internal_session(params: {
+    session_id: string;
+    instructions: string;
+    attachments?: ControlSessionExecuteAttachmentInput[];
+  }): Promise<{ sessionId: string; result: RpcSessionExecuteResult }> {
+    return await this.request<{
+      sessionId: string;
+      result: RpcSessionExecuteResult;
+    }>({
+      method: "internal.sessions.execute",
+      params: {
+        sessionId: params.session_id,
+        instructions: params.instructions,
+        ...(params.attachments !== undefined ? { attachments: params.attachments } : {}),
+      },
+    });
+  }
+
+  /**
+   * 清空 Agent runtime 内指定 session 的消息。
+   */
+  async clear_internal_session_messages(
+    session_id: string,
+  ): Promise<{ sessionId: string; cleared: boolean }> {
+    return await this.request<{ sessionId: string; cleared: boolean }>({
+      method: "internal.sessions.clear_messages",
+      params: {
+        sessionId: session_id,
+      },
+    });
+  }
+
+  /**
+   * 清空 Agent runtime 内指定 session 的 chat history。
+   */
+  async clear_internal_chat_history(
+    session_id: string,
+  ): Promise<{ sessionId: string; cleared: boolean }> {
+    return await this.request<{ sessionId: string; cleared: boolean }>({
+      method: "internal.sessions.clear_chat_history",
+      params: {
+        sessionId: session_id,
+      },
+    });
+  }
+
+  /**
+   * 解析 Agent runtime 内指定 session 的 system prompt。
+   */
+  async resolve_internal_system_prompt(
+    session_id: string,
+  ): Promise<RpcSystemPromptPayload> {
+    return await this.request<RpcSystemPromptPayload>({
+      method: "internal.sessions.resolve_system_prompt",
+      params: {
+        sessionId: session_id,
+      },
     });
   }
 

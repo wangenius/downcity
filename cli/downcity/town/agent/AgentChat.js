@@ -327,6 +327,7 @@ async function runSdkPromptTurn(params) {
     }
     finally {
         unsubscribe();
+        await remote_agent.close();
     }
 }
 /**

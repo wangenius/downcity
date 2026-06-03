@@ -15,6 +15,7 @@ import type {
   AgentSessionTimelineEvent,
   PlatformAgentOption,
 } from "@downcity/agent";
+import type { ControlSessionExecuteAttachmentInput } from "@downcity/agent/internal/runtime/server/http/control/types/ControlSessionExecute.js";
 import { toUiMessageTimeline } from "@downcity/agent/internal/runtime/server/http/control/MessageTimeline.js";
 import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import { getDowncitySessionMessagesDirPath } from "@/config/Paths.js";
@@ -120,6 +121,81 @@ export function registerDashboardSessionApiRoutes(
         total: messages.length,
         rawTotal: history.total,
         messages,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.delete("/api/dashboard/sessions/:sessionId/messages", async (c) => {
+    try {
+      const context = await resolveDashboardAgentContext(params, c.req.raw);
+      if (!context) return agentUnavailableResponse();
+      const session_id = decodeMaybe(c.req.param("sessionId"));
+      if (!session_id) return c.json({ success: false, error: "Missing sessionId" }, 400);
+      const result = await context.client.clear_internal_session_messages(session_id);
+      return c.json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.delete("/api/dashboard/sessions/:sessionId/chat-history", async (c) => {
+    try {
+      const context = await resolveDashboardAgentContext(params, c.req.raw);
+      if (!context) return agentUnavailableResponse();
+      const session_id = decodeMaybe(c.req.param("sessionId"));
+      if (!session_id) return c.json({ success: false, error: "Missing sessionId" }, 400);
+      const result = await context.client.clear_internal_chat_history(session_id);
+      return c.json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.post("/api/dashboard/sessions/:sessionId/execute", async (c) => {
+    try {
+      const context = await resolveDashboardAgentContext(params, c.req.raw);
+      if (!context) return agentUnavailableResponse();
+      const session_id = decodeMaybe(c.req.param("sessionId"));
+      const body = await c.req.json().catch(() => ({})) as {
+        instructions?: unknown;
+        attachments?: ControlSessionExecuteAttachmentInput[];
+      };
+      const instructions = String(body.instructions || "").trim();
+      if (!session_id) return c.json({ success: false, error: "Missing sessionId" }, 400);
+      if (!instructions) return c.json({ success: false, error: "Missing instructions" }, 400);
+      const payload = await context.client.execute_internal_session({
+        session_id,
+        instructions,
+        attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
+      });
+      return c.json({
+        success: true,
+        ...payload,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.get("/api/dashboard/system-prompt", async (c) => {
+    try {
+      const context = await resolveDashboardAgentContext(params, c.req.raw);
+      if (!context) return agentUnavailableResponse();
+      const session_id =
+        decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
+        CONSOLEUI_SESSION_ID;
+      const payload = await context.client.resolve_internal_system_prompt(session_id);
+      return c.json({
+        success: true,
+        ...payload,
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);

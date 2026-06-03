@@ -1,9 +1,10 @@
 /**
- * User 命令循环。返回 "logout" | "quit" | "switch_identity"。
+ * User 命令循环。
  *
  * 关键说明（中文）
  * - models 合并了列表展示与选择切换，委托到 models.ts。
  * - me / services / service 保持内联（逻辑简单）。
+ * - server management 与 switch city 由外层工作区负责调度。
  */
 
 import { City } from "@downcity/city";
@@ -13,7 +14,7 @@ import { askUserCommand, askText, show, showError, showSuccess } from "../core/u
 import { createTopup, rechargeWithStripe, redeemCode, showBalance, showBalanceHistory, showTopups } from "./balance.js";
 import { doModels } from "./models.js";
 
-type Result = "logout" | "quit" | "switch_identity";
+type Result = "signed_out" | "quit" | "switch_server" | "server_management";
 
 export async function userLoop(ctx: UserContext): Promise<Result> {
   const client = new City({
@@ -26,12 +27,13 @@ export async function userLoop(ctx: UserContext): Promise<Result> {
   while (true) {
     const cmd = await askUserCommand();
     if (!cmd) continue;
-    if (cmd === "switch") return "switch_identity";
 
     try {
       const r = await execute(client, ctx, cmd);
       if (r === "quit") return "quit";
-      if (r === "logout") return "logout";
+      if (r === "signed_out") return "signed_out";
+      if (r === "switch_server") return "switch_server";
+      if (r === "server_management") return "server_management";
     } catch (e) {
       showError(e instanceof Error ? e.message : String(e));
     }
@@ -42,7 +44,7 @@ async function execute(
   c: City,
   ctx: UserContext,
   cmd: string,
-): Promise<"continue" | "logout" | "quit"> {
+): Promise<"continue" | "signed_out" | "quit" | "switch_server" | "server_management"> {
   switch (cmd) {
     case "models":
       await doModels(c, ctx);
@@ -92,10 +94,16 @@ async function execute(
       return "continue";
     }
 
-    case "logout":
+    case "server_management":
+      return "server_management";
+
+    case "switch_server":
+      return "switch_server";
+
+    case "sign_out":
       clearUserSession(ctx.session.base_url);
-      showSuccess("logged out");
-      return "logout";
+      showSuccess("signed out");
+      return "signed_out";
 
     case "quit":
       return "quit";

@@ -10,7 +10,7 @@ import { showError } from "../core/ui.js";
 export async function adminAuth(server: ServerProfile): Promise<AdminSession | undefined> {
   const adminSecretKey = String(server.admin_secret_key ?? "").trim();
   if (!adminSecretKey) {
-    showError("Current server is missing admin_secret_key. Use Manage Servers -> Edit Server.");
+    showError("Current City is missing admin_secret_key. Open Server management -> Configure admin access.");
     return undefined;
   }
 

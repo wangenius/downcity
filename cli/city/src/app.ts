@@ -1,28 +1,26 @@
 #!/usr/bin/env node
 
 /**
- * Downcity City 管理入口与状态机调度。
+ * Downcity City 交互入口与工作区调度。
  *
  * 状态流转：
- *   selectIdentity → Admin → adminLoop → selectIdentity (switch identity)
- *   selectIdentity → User  → userLoop  → selectIdentity (switch identity)
- *   selectIdentity → Manage Servers → selectIdentity
+ *   welcome/home → connect/switch City → server workspace → server management/admin tools
  *
- * 不再持有 config 快照，每次需要时从磁盘 readConfig()。
+ * 关键说明（中文）
+ * - 顶层不再要求先选择 admin / user 身份
+ * - connect City 后默认进入 user sign in / user 工作区
+ * - admin 能力只作为低频的 server management 入口出现
  */
 
 import { readFileSync } from "node:fs";
 import { intro } from "./core/ui.js";
-import { readActiveServer, readConfig, writeConfig } from "./core/session.js";
+import { readActiveServer } from "./core/session.js";
 import { parseArgs } from "./core/env.js";
-import { selectIdentity } from "./auth/mode-select.js";
-import { adminAuth } from "./auth/admin.js";
-import { userAuth } from "./auth/user.js";
-import { ensureServerConfigured, manageServersMenu } from "./auth/server-switch.js";
-import { userLoop } from "./user/loop.js";
-import { adminLoop } from "./admin/loop.js";
+import { promptAddServer, promptSelectActiveServer } from "./auth/server-switch.js";
 import { show, showError, showSuccess } from "./core/ui.js";
 import { updateCli } from "./core/update.js";
+import { selectHomeAction, selectWelcomeAction } from "./home/HomeMenu.js";
+import { openServerWorkspace } from "./workspace/ServerWorkspace.js";
 
 export async function runCityApp(argv: string[] = []): Promise<void> {
   const cli = parseArgs(argv);
@@ -32,56 +30,67 @@ export async function runCityApp(argv: string[] = []): Promise<void> {
   }
 
   intro(`Downcity City v${readCliVersion()} (Esc to go back, Ctrl+C to exit)`);
-  if (!(await ensureServerConfigured())) {
-    return;
-  }
+  while (true) {
+    const activeServer = readActiveServer();
+    if (!activeServer) {
+      const welcomeAction = await selectWelcomeAction();
+      if (welcomeAction === "quit") {
+        return;
+      }
+      if (welcomeAction === "update") {
+        await runSelfUpdate();
+        return;
+      }
 
-  let identity = await selectIdentity();
+      const connectedServer = await promptAddServer();
+      if (!connectedServer) {
+        continue;
+      }
 
-  while (identity !== "quit") {
-    if (identity === "update") {
+      const result = await openServerWorkspace(connectedServer.base_url);
+      if (result === "quit") {
+        return;
+      }
+      continue;
+    }
+
+    const homeAction = await selectHomeAction();
+    if (homeAction === "quit") {
+      return;
+    }
+    if (homeAction === "update") {
       await runSelfUpdate();
       return;
     }
 
-    if (identity === "servers") {
-      await manageServersMenu();
-      if (!(await ensureServerConfigured())) {
+    if (homeAction === "connect_city") {
+      const connectedServer = await promptAddServer();
+      if (!connectedServer) {
+        continue;
+      }
+      const result = await openServerWorkspace(connectedServer.base_url);
+      if (result === "quit") {
         return;
       }
-      identity = await selectIdentity();
       continue;
     }
 
-    // 每次从磁盘读取最新 config，不持快照
-    const cfg = readConfig();
-    const activeServer = readActiveServer();
-    if (!activeServer) {
-      if (!(await ensureServerConfigured())) {
+    if (homeAction === "switch_city") {
+      const selectedServer = await promptSelectActiveServer();
+      if (!selectedServer) {
+        continue;
+      }
+      const result = await openServerWorkspace(selectedServer.base_url);
+      if (result === "quit") {
         return;
       }
-      identity = await selectIdentity();
-      continue;
-    }
-    writeConfig({ ...cfg, last_identity: identity });
-
-    if (identity === "admin") {
-      const session = await adminAuth(activeServer);
-      if (!session) { identity = await selectIdentity(); continue; }
-      const result = await adminLoop(session);
-      if (result === "quit") break;
-      if (result === "switch_identity") { identity = await selectIdentity(); continue; }
-      identity = await selectIdentity();
       continue;
     }
 
-    // identity === "user"
-    const ctx = await userAuth(activeServer.base_url);
-    if (!ctx) { identity = await selectIdentity(); continue; }
-    const result = await userLoop(ctx);
-    if (result === "quit") break;
-    if (result === "switch_identity") { identity = await selectIdentity(); continue; }
-    identity = await selectIdentity();
+    const result = await openServerWorkspace(activeServer.base_url);
+    if (result === "quit") {
+      return;
+    }
   }
 }
 

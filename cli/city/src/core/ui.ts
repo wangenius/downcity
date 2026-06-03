@@ -23,7 +23,7 @@ export function showSuccess(text: string): void { log.success(text); }
 
 /** 主命令菜单 */
 export async function askUserCommand(): Promise<string | undefined> {
-  const s = await select({ message: "Command", options: [
+  const s = await select({ message: "Workspace", options: [
     { label: "Models", value: "models", hint: "List and select model" },
     { label: "Balance", value: "balance", hint: "View current balance" },
     { label: "History", value: "history", hint: "View balance ledger" },
@@ -34,9 +34,10 @@ export async function askUserCommand(): Promise<string | undefined> {
     { label: "My profile", value: "me" },
     { label: "List services", value: "services" },
     { label: "Call service", value: "service" },
-    { label: "Switch to Admin", value: "switch" },
-    { label: "Logout", value: "logout" },
-    { label: "Quit", value: "quit" },
+    { label: "Server management", value: "server_management", hint: "Low-frequency admin access and local connection settings" },
+    { label: "Switch City", value: "switch_server" },
+    { label: "Sign out", value: "sign_out" },
+    { label: "Exit", value: "quit" },
   ]});
   if (!s || isCancel(s)) return undefined;
   return s as string;

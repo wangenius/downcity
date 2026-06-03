@@ -42,30 +42,62 @@ city
 
 默认会先显示当前 CLI 版本，再进入交互式面板。这通常是第一次排查时最直接的入口。
 
-如果你还没有配置任何 server，CLI 不会给你塞一个默认地址，而是会先要求你添加 server。
+如果你还没有配置任何 City，CLI 不会给你塞一个默认地址，而是会先进入欢迎页。
 
-## 第一次先添加 server
+## 第一次先连接一个 City
 
-现在 `city manage` 把 server 当成一等资源管理。第一次启动时，需要先填写：
+第一次启动时，默认主路径是：
+
+- `Connect an existing City`
+
+这一步只需要填写：
 
 - `base_url`
-- `admin_secret_key`
 
-保存后，这个 server 会自动成为当前 active server。之后你再从顶层菜单进入：
+CLI 会先做一次公开可达性检查，然后保存这个 City 连接。
 
-- `Admin`
-- `User`
-- `Manage Servers`
+这里不会强制要求 `admin_secret_key`。
+
+## connect 之后会发生什么
+
+保存成功后，这个 City 会自动成为当前工作区。接下来默认进入 user 路径：
+
+- 如果本地已经有这个 City 的 user session：直接进入 user workspace
+- 如果还没有 user session：直接进入 sign in
+
+也就是说，`city` 现在的默认心智是：
+
+1. 先连接一个 City
+2. 默认走 user sign in / user workspace
+3. 只有需要管理这个 City 时，才进入 `Server management`
 
 ## 之后怎么管理 server
 
-以后不再用“切换当前 server”这种临时入口，而是统一通过 `Manage Servers`：
+以后首页围绕当前 City 工作区展开：
 
-- `List Servers`
-- `Add Server`
-- `Select Active Server`
-- `Edit Server`
-- `Remove Server`
+- `Open current City`
+- `Switch City`
+- `Connect another City`
+- `Upgrade CLI`
+
+user workspace 里则保留高频 user 动作，例如：
+
+- `Models`
+- `Balance`
+- `Recharge`
+- `My profile`
+- `Services`
+
+低频管理能力被收进：
+
+- `Server management`
+
+在 `Server management` 里，你再按需进入：
+
+- `Configure admin access`
+- `Open admin tools`
+- `Edit City`
+- `Remove City`
 
 ## 一个最常见的上手流程
 
@@ -76,9 +108,9 @@ city
 
 这三步通常就足够你做第一轮确认：
 
-1. 先添加一个可用的 City server
-2. 当前 active server 配置已经保存
-3. 你可以继续进入 Admin / User 流程
+1. 先 connect 一个可用的 City
+2. 当前 City 连接会被保存成本地工作区
+3. 默认继续进入 user sign in / user workspace
 
 ## CLI 最适合解决什么问题
 
@@ -111,9 +143,10 @@ city
 如果你的 City 启用了 `payment.stripe`，CLI 现在也可以直接：
 
 - 读取 Stripe 服务暴露的 env requirements
-- 以 Admin 身份补齐 `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`
-- 在 `Admin -> Payment` 里直接看到当前 server 对应的 Stripe webhook endpoint
-- 以 User 身份创建 topup
+- 在 `Server management` 里配置 admin access
+- 进入 admin tools 补齐 `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`
+- 在 `Payment` 里直接看到当前 server 对应的 Stripe webhook endpoint
+- 以 user 身份创建 topup
 - 继续创建 Stripe Checkout，并自动打开浏览器支付
 
 如果你没有单独配置 `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL`，Stripe 服务会优先基于
@@ -137,9 +170,9 @@ Stripe webhook endpoint 本身则固定是：
 
 - `city` / `town`
 - `town update`
-- `Manage Servers`
-- `Admin`
-- `User`
+- `Connect an existing City`
+- `Server management`
+- `Sign in`
 
 ## 常见误解
 

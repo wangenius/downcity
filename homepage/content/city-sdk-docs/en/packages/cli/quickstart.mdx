@@ -42,30 +42,62 @@ city
 
 That first shows the current CLI version, then opens the interactive panel, which is often the fastest first inspection entry.
 
-If you do not have any configured server yet, the CLI does not inject a default address. It first asks you to add a server.
+If you do not have any connected City yet, the CLI does not inject a default address. It first opens a welcome flow.
 
-## First add a server
+## First connect a City
 
-`city manage` now treats servers as first-class managed resources. On first launch, you need to provide:
+On first launch, the default primary path is:
+
+- `Connect an existing City`
+
+That step only asks for:
 
 - `base_url`
-- `admin_secret_key`
 
-After saving, that server automatically becomes the current active server. From there, the top-level menu leads into:
+The CLI runs a public reachability check, then saves the City connection locally.
 
-- `Admin`
-- `User`
-- `Manage Servers`
+It does not require `admin_secret_key` during connect.
+
+## What happens after connect
+
+After saving, that City becomes the current workspace. From there, the default path is user-first:
+
+- if a local user session already exists for that City, `city` opens the user workspace directly
+- if no local user session exists yet, `city` opens sign in first
+
+So the default mental model is now:
+
+1. connect a City
+2. sign in as user
+3. open server management only when trusted-side admin work is needed
 
 ## How server management works afterward
 
-Instead of a temporary "switch current server" flow, everything is now unified under `Manage Servers`:
+The home screen now revolves around the current City workspace:
 
-- `List Servers`
-- `Add Server`
-- `Select Active Server`
-- `Edit Server`
-- `Remove Server`
+- `Open current City`
+- `Switch City`
+- `Connect another City`
+- `Upgrade CLI`
+
+The user workspace keeps high-frequency user actions such as:
+
+- `Models`
+- `Balance`
+- `Recharge`
+- `My profile`
+- `Services`
+
+Low-frequency trusted-side administration is grouped under:
+
+- `Server management`
+
+Inside `Server management`, you can then choose:
+
+- `Configure admin access`
+- `Open admin tools`
+- `Edit City`
+- `Remove City`
 
 ## A common first workflow
 
@@ -76,9 +108,9 @@ city
 
 That is often enough for the first round of confirmation:
 
-1. add a working City server
-2. save the current active server
-3. continue into the Admin or User flow
+1. connect a working City
+2. save it as the current local workspace
+3. continue into user sign in or the user workspace
 
 ## What the CLI is best at
 
@@ -99,8 +131,9 @@ Those tasks now start from the interactive menu instead of assuming a default se
 If your City enables `payment.stripe`, the CLI can now:
 
 - read Stripe env requirements exposed by the service
-- let an admin configure `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`
-- show the Stripe webhook endpoint for the current server in `Admin -> Payment`
+- configure admin access from `Server management`
+- let admin tools configure `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`
+- show the Stripe webhook endpoint for the current server in `Payment`
 - create a topup as a user
 - create a Stripe Checkout Session and open the browser for payment
 
@@ -122,9 +155,9 @@ Those are better owned by `Admin City` or trusted backend scripts.
 
 - `city` / `town`
 - `town update`
-- `Manage Servers`
-- `Admin`
-- `User`
+- `Connect an existing City`
+- `Server management`
+- `Sign in`
 
 ## Common misunderstandings
 

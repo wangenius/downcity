@@ -2,9 +2,9 @@
  * Server 管理模块。
  *
  * 关键说明（中文）
- * - 不再提供“切换当前 server”的临时入口
- * - 所有 server 操作都统一收口到 Manage Servers
- * - 没有 server 时，CLI 会先强制进入添加流程
+ * - connect City 不再强制要求 admin_secret_key
+ * - admin access 只在低频管理场景中单独配置
+ * - server 仍然作为本地连接记录持久化保存
  */
 
 import { City } from "@downcity/city";
@@ -19,76 +19,7 @@ import {
   type ServerProfile,
   updateServer,
 } from "../core/session.js";
-import { show, showError, showSuccess } from "../core/ui.js";
-
-/**
- * 确保至少存在一个 server。
- */
-export async function ensureServerConfigured(): Promise<boolean> {
-  if (readConfig().servers.length > 0) {
-    return true;
-  }
-
-  show("No servers configured. Add a server before continuing.");
-  const created = await promptAddServer();
-  if (!created) {
-    showError("No server configured. Exiting.");
-    return false;
-  }
-  return true;
-}
-
-/**
- * 顶层 server 管理菜单。
- */
-export async function manageServersMenu(): Promise<void> {
-  while (true) {
-    const config = readConfig();
-    const active = readActiveServer();
-
-    const selected = await select({
-      message: active
-        ? `Manage Servers [current: ${active.name}]`
-        : "Manage Servers [no active server]",
-      options: [
-        { label: "List Servers", value: "list", hint: `${config.servers.length} configured` },
-        { label: "Add Server", value: "add", hint: "Create a new Infra server profile" },
-        { label: "Select Active Server", value: "select", hint: active ? active.base_url : "Choose current server" },
-        { label: "Edit Server", value: "edit", hint: "Update name, server URL, or admin key" },
-        { label: "Remove Server", value: "remove", hint: "Delete a server profile" },
-        { label: "Back", value: "back", hint: "Return to main menu" },
-      ],
-    });
-
-    if (!selected || isCancel(selected) || selected === "back") {
-      return;
-    }
-
-    if (selected === "list") {
-      printServers(config.servers, active?.base_url);
-      continue;
-    }
-
-    if (selected === "add") {
-      await promptAddServer();
-      continue;
-    }
-
-    if (selected === "select") {
-      await promptSelectActiveServer();
-      continue;
-    }
-
-    if (selected === "edit") {
-      await promptEditServer();
-      continue;
-    }
-
-    if (selected === "remove") {
-      await promptRemoveServer();
-    }
-  }
-}
+import { showError, showSuccess } from "../core/ui.js";
 
 /**
  * 添加 server。
@@ -102,31 +33,25 @@ export async function promptAddServer(): Promise<ServerProfile | undefined> {
     return undefined;
   }
 
-  const adminSecretKey = await password({ message: "admin_secret_key" });
-  if (!adminSecretKey || isCancel(adminSecretKey) || !String(adminSecretKey).trim()) {
-    return undefined;
-  }
-
   const server = addServer({
     base_url: String(baseUrl).trim(),
-    admin_secret_key: String(adminSecretKey).trim(),
   });
 
-  const verified = await verifyServerAdminAccess(server);
+  const verified = await verifyServerPublicAccess(server);
   if (verified) {
-    showSuccess(`Server added and activated: ${server.name}`);
+    showSuccess(`City connected: ${server.name}`);
   } else {
-    showError(`Server saved, but admin verification failed: ${server.name}`);
+    showError(`City saved, but the public reachability check failed: ${server.name}`);
   }
 
   return server;
 }
 
-async function promptSelectActiveServer(): Promise<void> {
+export async function promptSelectActiveServer(): Promise<ServerProfile | undefined> {
   const config = readConfig();
   if (config.servers.length === 0) {
     showError("No servers configured.");
-    return;
+    return undefined;
   }
 
   const selected = await select({
@@ -139,21 +64,23 @@ async function promptSelectActiveServer(): Promise<void> {
   });
 
   if (!selected || isCancel(selected)) {
-    return;
+    return undefined;
   }
 
-  setActiveServer(String(selected));
-  showSuccess(`Active server: ${String(selected)}`);
+  const selected_base_url = String(selected);
+  setActiveServer(selected_base_url);
+  showSuccess(`Current City: ${selected_base_url}`);
+  return readServer(selected_base_url);
 }
 
-async function promptEditServer(): Promise<void> {
+export async function promptEditServer(baseUrl?: string): Promise<ServerProfile | undefined> {
   const config = readConfig();
   if (config.servers.length === 0) {
     showError("No servers configured.");
-    return;
+    return undefined;
   }
 
-  const targetBaseUrl = await select({
+  const targetBaseUrl = baseUrl ?? await select({
     message: "Edit server",
     options: config.servers.map((server) => ({
       label: server.base_url === config.active_server_url ? `★ ${server.name}` : `   ${server.name}`,
@@ -162,13 +89,13 @@ async function promptEditServer(): Promise<void> {
     })),
   });
   if (!targetBaseUrl || isCancel(targetBaseUrl)) {
-    return;
+    return undefined;
   }
 
   const current = readServer(String(targetBaseUrl));
   if (!current) {
     showError("Selected server no longer exists.");
-    return;
+    return undefined;
   }
 
   const field = await select({
@@ -181,42 +108,85 @@ async function promptEditServer(): Promise<void> {
     ],
   });
   if (!field || isCancel(field) || field === "cancel") {
-    return;
+    return undefined;
   }
 
   const next = { ...current };
 
   if (field === "name") {
     const name = await text({ message: "Display name", initialValue: current.name });
-    if (!name || isCancel(name)) return;
+    if (!name || isCancel(name)) return undefined;
     next.name = String(name).trim() || current.name;
   } else if (field === "base_url") {
     const baseUrl = await text({ message: "Server URL", initialValue: current.base_url });
-    if (!baseUrl || isCancel(baseUrl)) return;
+    if (!baseUrl || isCancel(baseUrl)) return undefined;
     next.base_url = String(baseUrl).trim() || current.base_url;
   } else if (field === "admin_secret_key") {
     const adminSecretKey = await password({ message: "admin_secret_key" });
-    if (!adminSecretKey || isCancel(adminSecretKey)) return;
+    if (!adminSecretKey || isCancel(adminSecretKey)) return undefined;
     next.admin_secret_key = String(adminSecretKey).trim();
   }
 
   const updated = updateServer(current.base_url, next);
-  const verified = await verifyServerAdminAccess(updated);
-  if (verified) {
-    showSuccess(`Server updated: ${updated.name}`);
-  } else {
-    showError(`Server updated, but admin verification failed: ${updated.name}`);
+  if (field === "admin_secret_key") {
+    const verified = await verifyServerAdminAccess(updated);
+    if (verified) {
+      showSuccess(`Admin access updated: ${updated.name}`);
+    } else {
+      showError(`City saved, but admin verification failed: ${updated.name}`);
+    }
+    return updated;
   }
+
+  const verified = await verifyServerPublicAccess(updated);
+  if (verified) {
+    showSuccess(`City updated: ${updated.name}`);
+  } else {
+    showError(`City saved, but the public reachability check failed: ${updated.name}`);
+  }
+  return updated;
 }
 
-async function promptRemoveServer(): Promise<void> {
+/**
+ * 为当前 server 单独配置 admin access。
+ */
+export async function promptConfigureAdminAccess(
+  baseUrl: string,
+): Promise<ServerProfile | undefined> {
+  const current = readServer(baseUrl);
+  if (!current) {
+    showError("Selected server no longer exists.");
+    return undefined;
+  }
+
+  const adminSecretKey = await password({ message: "admin_secret_key" });
+  if (!adminSecretKey || isCancel(adminSecretKey) || !String(adminSecretKey).trim()) {
+    return undefined;
+  }
+
+  const updated = updateServer(current.base_url, {
+    ...current,
+    admin_secret_key: String(adminSecretKey).trim(),
+  });
+
+  const verified = await verifyServerAdminAccess(updated);
+  if (verified) {
+    showSuccess(`Admin access configured: ${updated.name}`);
+  } else {
+    showError(`City saved, but admin verification failed: ${updated.name}`);
+  }
+
+  return updated;
+}
+
+export async function promptRemoveServer(baseUrl?: string): Promise<boolean> {
   const config = readConfig();
   if (config.servers.length === 0) {
     showError("No servers configured.");
-    return;
+    return false;
   }
 
-  const selected = await select({
+  const selected = baseUrl ?? await select({
     message: "Remove server",
     options: [
       ...config.servers.map((server) => ({
@@ -228,7 +198,7 @@ async function promptRemoveServer(): Promise<void> {
     ],
   });
   if (!selected || isCancel(selected) || selected === "cancel") {
-    return;
+    return false;
   }
 
   removeServer(String(selected));
@@ -238,6 +208,7 @@ async function promptRemoveServer(): Promise<void> {
       ? `Server removed. Current server: ${nextActive.name}`
       : "Server removed. No servers configured.",
   );
+  return true;
 }
 
 async function verifyServerAdminAccess(server: ServerProfile): Promise<boolean> {
@@ -254,18 +225,17 @@ async function verifyServerAdminAccess(server: ServerProfile): Promise<boolean> 
   }
 }
 
-function printServers(servers: ServerProfile[], activeBaseUrl: string | undefined): void {
-  if (servers.length === 0) {
-    show("No servers configured.");
-    return;
+async function verifyServerPublicAccess(server: ServerProfile): Promise<boolean> {
+  try {
+    const user = new City({
+      role: "user",
+      city_url: server.base_url,
+    });
+    await user.service("accounts").get("providers");
+    return true;
+  } catch {
+    return false;
   }
-
-  console.log(`\n${servers.length} servers:\n`);
-  for (const server of servers) {
-    const marker = server.base_url === activeBaseUrl ? "★" : " ";
-    console.log(` ${marker} ${server.name.padEnd(24)} ${server.base_url}  admin=${maskSecret(server.admin_secret_key)}`);
-  }
-  console.log("");
 }
 
 function maskSecret(value: string): string {

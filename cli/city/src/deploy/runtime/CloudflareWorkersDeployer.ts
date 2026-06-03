@@ -145,7 +145,7 @@ async function verifyWorker(base_url: string | undefined): Promise<void> {
     emitCliBlock({
       tone: "warning",
       title: "Verification skipped",
-      note: "No connected City server found. Run `city deploy` first, or choose a server in Manage Servers.",
+      note: "No connected City server found. Run `city deploy` first, or connect a City in the interactive CLI.",
     });
     return;
   }

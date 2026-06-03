@@ -11,7 +11,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
 import { startDaemonProcess, stopDaemonProcess } from "@/process/daemon/Manager.js";
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 import { checkAgentPreflight } from "../shared/PluginTargetSupport.js";
@@ -27,7 +27,7 @@ import { CliError } from "../shared/CliError.js";
  */
 export async function restartCommand(
   cwd: string = ".",
-  options: StartOptions,
+  options: AgentStartOptions,
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
 

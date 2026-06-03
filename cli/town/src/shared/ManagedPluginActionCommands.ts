@@ -207,7 +207,7 @@ function registerPluginActionCommand(params: {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-    .option("--token <token>", "覆盖 Bearer Token（按 HTTP daemon 调用时可选）")
+    .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 
   commandSpec.configure?.(actionCommand);
@@ -330,7 +330,7 @@ function attachPluginLifecycleOptions(command: Command): Command {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-    .option("--token <token>", "覆盖 Bearer Token（按 HTTP daemon 调用时可选）")
+    .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }
 

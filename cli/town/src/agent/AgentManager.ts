@@ -25,7 +25,7 @@ import { prepareForegroundAgent } from "../shared/TownAgentRuntime.js";
 import { CliError } from "../shared/CliError.js";
 import { getDowncityJsonPath } from "@/config/Paths.js";
 import { PlatformStore } from "@/platform/store/index.js";
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 import type { DowncityConfig } from "@downcity/agent";
 import type { StoredChannelAccount, StoredChannelAccountChannel } from "@downcity/agent";
 import type {
@@ -309,7 +309,7 @@ async function promptStartProjectPath(): Promise<string | null> {
 }
 
 async function startAgentProject(projectRoot: string): Promise<void> {
-  const options: StartOptions & { foreground?: boolean } = {};
+  const options: AgentStartOptions & { foreground?: boolean } = {};
   const prepared = await prepareForegroundAgent(projectRoot, options);
   if (prepared.shouldForeground) {
     await runCommand(prepared.projectRoot, prepared.options);

@@ -20,7 +20,7 @@ import { stopCommand } from "../agent/Stop.js";
 import { runCommand } from "../agent/Run.js";
 import { startCommand } from "../agent/Start.js";
 import { statusCommand } from "../agent/Status.js";
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "./IndexSupport.js";
 import { runWithSpinner } from "@/utils/cli/Spinner.js";
 import { emitCliBlock } from "./CliReporter.js";
@@ -103,7 +103,7 @@ export function registerAgentCommands(
     .action(
       createVersionBanner(
         context.version,
-        async (cwd: string | undefined, options: StartOptions & { foreground?: boolean }) => {
+        async (cwd: string | undefined, options: AgentStartOptions & { foreground?: boolean }) => {
           const projectRoot = await resolveCliAgentStartProjectRoot(cwd);
 
           const prepared = await prepareForegroundAgent(projectRoot, options);
@@ -286,7 +286,7 @@ export function registerAgentCommands(
     .description("重启后台 Agent 进程（daemon）")
     .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
     .helpOption("--help", "display help for command")
-    .action(createVersionBanner(context.version, async (cwd: string = ".", options: StartOptions) => {
+    .action(createVersionBanner(context.version, async (cwd: string = ".", options: AgentStartOptions) => {
       const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
       injectAgentContext(projectRoot);
       await restartCommand(projectRoot, options);

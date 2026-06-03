@@ -8,7 +8,8 @@
  */
 
 import { resolve } from "node:path";
-import type { ManagedAgentProcessView, StartOptions } from "@downcity/agent";
+import type { ManagedAgentProcessView } from "@downcity/agent";
+import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
 import {
   getDaemonLogPath,
@@ -84,10 +85,10 @@ export async function ensureRegisteredAgentProjectRoot(cwd: string): Promise<str
  */
 export async function prepareForegroundAgent(
   cwd: string,
-  options: StartOptions & { foreground?: boolean },
+  options: AgentStartOptions & { foreground?: boolean },
 ): Promise<{
   projectRoot: string;
-  options: StartOptions & { foreground?: boolean };
+  options: AgentStartOptions & { foreground?: boolean };
   shouldForeground: boolean;
 }> {
   if (!(await isTownRunning())) {

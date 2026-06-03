@@ -153,7 +153,6 @@ export type {
   AgentProjectInitializationResult,
 } from "./types/config/AgentProject.js";
 export type { ExecutionBindingConfig } from "./types/config/ExecutionBinding.js";
-export type { StartOptions } from "./types/config/Start.js";
 
 // 配置与模型类型
 export type { DowncityConfig } from "./types/config/DowncityConfig.js";
@@ -184,7 +183,6 @@ export type {
 
 export type {
   PlatformAgentChatChannelStatus,
-  PlatformAgentDaemonMeta,
   PlatformAgentShipChatChannelsConfig,
   PlatformAgentShipChatPluginConfig,
   PlatformAgentShipExecutionAgentConfig,

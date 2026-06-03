@@ -6,7 +6,8 @@
  * - 这里只保留 Town 启动/列表/前台运行需要的最小运行态逻辑。
  * - City 管理命令仍通过 `city` 入口负责。
  */
-import type { ManagedAgentProcessView, StartOptions } from "@downcity/agent";
+import type { ManagedAgentProcessView } from "@downcity/agent";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 /**
  * 解析当前仍在运行的 managed agent。
  */
@@ -23,11 +24,11 @@ export declare function ensureRegisteredAgentProjectRoot(cwd: string): Promise<s
 /**
  * 为前台 agent 运行补齐上下文与模型绑定。
  */
-export declare function prepareForegroundAgent(cwd: string, options: StartOptions & {
+export declare function prepareForegroundAgent(cwd: string, options: AgentStartOptions & {
     foreground?: boolean;
 }): Promise<{
     projectRoot: string;
-    options: StartOptions & {
+    options: AgentStartOptions & {
         foreground?: boolean;
     };
     shouldForeground: boolean;

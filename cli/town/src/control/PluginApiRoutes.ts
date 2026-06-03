@@ -185,7 +185,7 @@ function buildAgentPluginPayload(params?: {
         enabled: isTownPluginEnabled(view.name),
         available: false,
         reasons: reason
-          ? [`Agent server unavailable: ${reason}`]
+          ? [`Agent runtime unavailable: ${reason}`]
           : ["Static catalog view only. Agent-side availability is not loaded."],
       },
       config: configMap.get(view.name) || {

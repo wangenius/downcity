@@ -40,7 +40,7 @@ import {
   signalDetachedProcess,
   sweepDetachedBayProcesses,
 } from "@/process/registry/ProcessSweep.js";
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 import {
   injectAgentContext,
   resolveAgentId,
@@ -316,7 +316,7 @@ export async function stopTownRuntimeCommand(params?: { timeoutMs?: number }): P
   });
 }async function resolveRestartOptionsFromProjectRoot(
   projectRoot: string,
-): Promise<StartOptions> {
+): Promise<AgentStartOptions> {
   const meta = await readDaemonMeta(projectRoot);
   if (!meta || !Array.isArray(meta.args)) {
     return {};
@@ -341,7 +341,7 @@ export async function stopTownRuntimeCommand(params?: { timeoutMs?: number }): P
 export async function restartManagedAgents(cliPath: string): Promise<void> {
   const runningAgents = await resolveRunningManagedAgents();
   const townCliPath = resolveTownCliPath();
-  const restartOptionsMap = new Map<string, StartOptions>();
+  const restartOptionsMap = new Map<string, AgentStartOptions>();
   for (const item of runningAgents) {
     restartOptionsMap.set(
       item.projectRoot,
@@ -462,10 +462,10 @@ export async function ensureRegisteredAgentProjectRoot(
  */
 export async function prepareForegroundAgent(
   cwd: string,
-  options: StartOptions & { foreground?: boolean },
+  options: AgentStartOptions & { foreground?: boolean },
 ): Promise<{
   projectRoot: string;
-  options: StartOptions & { foreground?: boolean };
+  options: AgentStartOptions & { foreground?: boolean };
   shouldForeground: boolean;
 }> {
   if (!(await isTownRunning())) {

@@ -6,7 +6,7 @@
  * - 让 `ControlPlaneCommand` 只保留命令树装配，不再混杂大量进程细节。
  */
 import type { ManagedAgentProcessView } from "@downcity/agent";
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 /**
  * 启动 town runtime 后台进程。
  */
@@ -49,11 +49,11 @@ export declare function ensureRegisteredAgentProjectRoot(cwd: string): Promise<s
 /**
  * 为前台 agent 运行补齐上下文与模型绑定。
  */
-export declare function prepareForegroundAgent(cwd: string, options: StartOptions & {
+export declare function prepareForegroundAgent(cwd: string, options: AgentStartOptions & {
     foreground?: boolean;
 }): Promise<{
     projectRoot: string;
-    options: StartOptions & {
+    options: AgentStartOptions & {
         foreground?: boolean;
     };
     shouldForeground: boolean;

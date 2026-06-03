@@ -10,7 +10,7 @@
  * 注意
  * - 前台启动请显式使用 `town agent start --foreground`。
  */
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 /**
  * daemon 启动入口。
  *
@@ -19,5 +19,5 @@ import type { StartOptions } from "@downcity/agent";
  * 2) 组装 `agent start` 子进程参数
  * 3) 通过 daemon manager 后台拉起并打印 pid/log
  */
-export declare function startCommand(cwd: string | undefined, options: StartOptions): Promise<void>;
+export declare function startCommand(cwd: string | undefined, options: AgentStartOptions): Promise<void>;
 //# sourceMappingURL=Start.d.ts.map

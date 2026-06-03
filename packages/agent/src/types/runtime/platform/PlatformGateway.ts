@@ -7,20 +7,6 @@
  */
 
 /**
- * Daemon 元数据文件结构。
- */
-export interface PlatformAgentDaemonMeta {
-  /**
-   * 启动 daemon 时记录的原始参数列表。
-   *
-   * 说明（中文）
-   * - 来自 `.downcity/daemon/*.json`。
-   * - 保持 `unknown`，避免过早假设参数格式。
-   */
-  args?: unknown;
-}
-
-/**
  * downcity.json 中的 ACP agent 配置。
  */
 export interface PlatformAgentShipExecutionAgentConfig {
@@ -120,12 +106,12 @@ export interface PlatformAgentShipPluginsConfig {
  */
 export interface PlatformAgentShipStartConfig {
   /**
-   * agent server host。
+   * Town Agent HTTP gateway host。
    */
   host?: unknown;
 
   /**
-   * agent server port。
+   * Town Agent HTTP gateway port。
    */
   port?: unknown;
 }
@@ -175,7 +161,7 @@ export interface PlatformAgentChatChannelStatus {
   configured?: unknown;
 
   /**
-   * agent server 中该渠道是否处于运行态。
+   * Agent runtime 中该渠道是否处于运行态。
    */
   running?: unknown;
 

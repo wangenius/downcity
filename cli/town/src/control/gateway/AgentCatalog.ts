@@ -40,7 +40,6 @@ import type {
 } from "@downcity/agent";
 import type {
   PlatformAgentChatChannelStatus,
-  PlatformAgentDaemonMeta,
   PlatformAgentShipJson,
 } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
@@ -49,7 +48,13 @@ import { listCityAiServiceModelsForUser } from "@/model/runtime/CityAiServiceBin
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 const DEFAULT_RUNTIME_PORT = 5314;
 
-
+/**
+ * Town daemon meta 的宽松读取视图。
+ */
+interface TownAgentDaemonMetaView {
+  /** daemon 启动时记录的 argv。 */
+  args?: unknown;
+}
 
 /**
  * 从请求中读取当前指向的 agent id。
@@ -97,7 +102,7 @@ async function resolveRuntimeEndpoint(projectRoot: string): Promise<{
   try {
     const metaPath = getDaemonMetaPath(projectRoot);
     if (await fs.pathExists(metaPath)) {
-      const meta = (await fs.readJson(metaPath)) as PlatformAgentDaemonMeta;
+      const meta = (await fs.readJson(metaPath)) as TownAgentDaemonMetaView;
       const args = Array.isArray(meta.args) ? meta.args.map((x) => String(x)) : [];
       daemonArgHost = normalizeHost(pickArgValue(args, "--host"));
       daemonArgPort = normalizePort(pickArgValue(args, "--port"));

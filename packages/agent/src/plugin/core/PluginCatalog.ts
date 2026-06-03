@@ -129,7 +129,7 @@ export async function resolvePluginAvailability(params: {
       enabled: true,
       available: false,
       reasons: agentReason
-        ? [`Agent server unavailable: ${agentReason}`]
+        ? [`Agent runtime unavailable: ${agentReason}`]
         : ["Static catalog view only. Agent-side availability is not loaded."],
     };
   }
@@ -172,7 +172,7 @@ export function buildStaticPluginAvailability(params: {
     enabled: true,
     available: false,
     reasons: agentReason
-      ? [`Agent server unavailable: ${agentReason}`]
+      ? [`Agent runtime unavailable: ${agentReason}`]
       : ["Static catalog view only. Agent-side availability is not loaded."],
   };
 }

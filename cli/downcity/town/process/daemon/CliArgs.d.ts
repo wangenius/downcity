@@ -6,7 +6,7 @@
  *   进程（显式 `--foreground true`），这里负责拼装其 argv。
  * - Town 托管的 HTTP gateway 与 agent 本机 RPC 使用不同端口，避免职责混用。
  */
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "../../types/AgentStartOptions.js";
 /**
  * 将 daemon 选项转换为 `agent start` 子进程 argv。
  *
@@ -14,5 +14,5 @@ import type { StartOptions } from "@downcity/agent";
  * - daemon 始终启动 `agent start` 前台流程，因此参数统一映射到 `agent start` CLI 形态。
  * - 只透传用户显式传入的字段，避免污染默认值决策。
  */
-export declare const buildRunArgsFromOptions: (projectRoot: string, options: StartOptions) => Promise<string[]>;
+export declare const buildRunArgsFromOptions: (projectRoot: string, options: AgentStartOptions) => Promise<string[]>;
 //# sourceMappingURL=CliArgs.d.ts.map

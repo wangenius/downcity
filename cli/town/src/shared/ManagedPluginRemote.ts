@@ -1,8 +1,8 @@
 /**
- * `town plugin` 运行态远程 Agent server 调用辅助。
+ * `town plugin` 运行态远程 Agent runtime 调用辅助。
  *
  * 关键点（中文）
- * - 统一处理 list/control/command 三类需要访问 Agent server 的命令。
+ * - 统一处理 list/control/command 三类需要访问 Agent runtime 的命令。
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 

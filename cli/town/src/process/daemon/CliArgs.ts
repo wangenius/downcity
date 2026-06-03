@@ -7,7 +7,7 @@
  * - Town 托管的 HTTP gateway 与 agent 本机 RPC 使用不同端口，避免职责混用。
  */
 
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
 
 /**
@@ -19,7 +19,7 @@ import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
  */
 export const buildRunArgsFromOptions = async (
   projectRoot: string,
-  options: StartOptions,
+  options: AgentStartOptions,
 ): Promise<string[]> => {
   // 关键点（中文）：daemon 子进程必须强制前台模式，避免再次进入 startCommand 形成递归拉起。
   const args: string[] = ["agent", "start", projectRoot, "--foreground", "true"];

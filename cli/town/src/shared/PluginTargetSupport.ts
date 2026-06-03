@@ -260,7 +260,7 @@ export function addPluginTargetOptions(command: Command): Command {
     .option("--agent <id>", "agent id（从 managed agent registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-    .option("--token <token>", "覆盖 Bearer Token（按 HTTP daemon 调用时可选）")
+    .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
     .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }
 

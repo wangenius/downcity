@@ -9,7 +9,7 @@
  * - 后台常驻启动请使用 `town agent start`，并用
  *   `town agent restart` 管理。
  */
-import type { StartOptions } from "@downcity/agent";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *
@@ -20,5 +20,5 @@ import type { StartOptions } from "@downcity/agent";
  * - 启动 services（例如 task cron）
  * - 统一处理进程信号并优雅停机
  */
-export declare function runCommand(cwd: string | undefined, options: StartOptions): Promise<void>;
+export declare function runCommand(cwd: string | undefined, options: AgentStartOptions): Promise<void>;
 //# sourceMappingURL=Run.d.ts.map

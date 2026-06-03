@@ -8,4 +8,4 @@ export type {
   PluginStateControlResult,
   PluginStateRecord,
   PluginStateSnapshot,
-} from "@/plugin/types/Plugin.js";
+} from "@/types/plugin/PluginState.js";

@@ -3,8 +3,8 @@
  *
  * 关键点（中文）
  * - 承接旧 Console 使用的 session 列表与消息时间线读接口。
- * - 读运行态信息时直接复用 Agent RPC 的 SDK session 能力，不再经由 Agent HTTP control API。
- * - 这里只迁移低风险读接口；写操作暂时保留在旧 proxy 路径。
+ * - 读写运行态信息时直接复用 Agent RPC 的 SDK / internal session 能力。
+ * - 不再经由 Agent HTTP control API，避免 Agent 进程必须额外暴露 HTTP。
  */
 import type { Hono } from "hono";
 import type { PlatformAgentOption } from "@downcity/agent";

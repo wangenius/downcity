@@ -1,0 +1,65 @@
+/**
+ * Agent RPC server 内部类型。
+ *
+ * 关键点（中文）
+ * - 这里描述 handler 需要的依赖，不承载 socket 生命周期。
+ * - Server.ts 负责网络，handler 负责把协议方法转成 Agent 操作。
+ */
+
+import type { AgentSessionCollection } from "@/types/agent/AgentTypes.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
+import type { RpcEventFrame } from "@/types/rpc/RpcProtocol.js";
+
+/**
+ * RPC Server 启动参数。
+ */
+export interface RpcServerStartOptions {
+  /** RPC 服务监听端口。 */
+  port: number;
+  /** RPC 服务监听主机。 */
+  host: string;
+  /** Session 集合访问口。 */
+  sessionCollection: AgentSessionCollection;
+  /** Agent 上下文访问口。 */
+  getAgentContext?: () => AgentContext;
+  /** Agent 运行态访问口。 */
+  getAgentRuntime?: () => AgentRuntime;
+}
+
+/**
+ * RPC request handler 依赖。
+ */
+export interface RpcRequestHandlerOptions {
+  /** Session 集合访问口。 */
+  sessionCollection: AgentSessionCollection;
+  /** Agent 上下文访问口。 */
+  getAgentContext?: () => AgentContext;
+  /** Agent 运行态访问口。 */
+  getAgentRuntime?: () => AgentRuntime;
+}
+
+/**
+ * 单个 socket 上的 session 订阅。
+ */
+export interface RpcSocketSubscription {
+  /** 被订阅的 session id。 */
+  sessionId: string;
+  /** 取消订阅函数。 */
+  unsubscribe: () => void;
+}
+
+/**
+ * 写入 RPC 成功帧。
+ */
+export type RpcWriteSuccess = (id: string, data?: unknown) => void;
+
+/**
+ * 写入 RPC 失败帧。
+ */
+export type RpcWriteError = (id: string, error: unknown) => void;
+
+/**
+ * 写入 RPC 事件帧。
+ */
+export type RpcWriteEvent = (frame: RpcEventFrame) => void;

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - UI 由控制面进程独立托管，不依赖单个 agent 启动参数。
- * - 提供统一的多 agent 选择能力，并把 `/api/*` 代理到选中 agent。
+ * - 提供统一的多 agent 选择能力，并通过 RPC 访问选中 agent。
  */
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -17,7 +17,6 @@ import { registerAgentSdkPublishRoutes, } from "../control/AgentSdkPublishRoutes
 import { buildPlatformAgentsResponse, buildPlatformConfigStatusResponse, buildPlatformModelResponse, inspectPlatformAgentDirectory, listKnownPlatformAgents, readPlatformConfigFileStatus, readRequestedPlatformAgentId, resolvePlatformAgentById, resolveSelectedPlatformAgent, } from "../control/gateway/AgentCatalog.js";
 import { executeAgentProjectShellCommand, initializePlatformAgentProject, inspectManagedAgentRestartSafety, pickPlatformAgentDirectoryPath, restartManagedAgentByProjectRoot, startManagedAgentByProjectRoot, stopManagedAgentByProjectRoot, updatePlatformAgentExecution, } from "../control/gateway/AgentActions.js";
 import { serveControlPlaneFrontendPath } from "../control/gateway/FrontendAssets.js";
-import { buildPlatformUpstreamUrl, forwardPlatformRequest, } from "../control/gateway/Proxy.js";
 import { AgentRpcPool } from "../control/gateway/AgentRpcPool.js";
 import { listPluginAuthPolicies } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
@@ -113,8 +112,6 @@ export class ControlGateway {
                 executeShellCommand: (args) => this.executeShellCommand(args),
                 buildModelResponse: (requestedAgentId) => this.buildModelResponse(requestedAgentId),
                 resolveSelectedAgent: (requestedAgentId) => this.resolveSelectedAgent(requestedAgentId),
-                buildUpstreamUrl: (requestUrl, baseUrl) => this.buildUpstreamUrl(requestUrl, baseUrl),
-                forwardRequest: (request, upstreamUrl) => this.forwardRequest(request, upstreamUrl),
                 serveFrontendPath: (c, reqPath) => this.serveFrontendPath(c, reqPath),
                 agentRpcPool: this.agentRpcPool,
             },
@@ -242,12 +239,6 @@ export class ControlGateway {
     }
     async stopAgentByProjectRoot(projectRoot) {
         return stopManagedAgentByProjectRoot(projectRoot);
-    }
-    buildUpstreamUrl(requestUrl, baseUrl) {
-        return buildPlatformUpstreamUrl(requestUrl, baseUrl);
-    }
-    async forwardRequest(request, upstreamUrl) {
-        return forwardPlatformRequest(request, upstreamUrl);
     }
     async serveFrontendPath(c, reqPath) {
         return serveControlPlaneFrontendPath({

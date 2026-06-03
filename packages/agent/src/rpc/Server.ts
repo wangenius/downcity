@@ -20,8 +20,14 @@ import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { JsonValue } from "@/types/common/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { PluginStateControlAction } from "@/plugin/types/Plugin.js";
 import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
+import {
+  readAuthControlPayload,
+  setAuthControlUserRole,
+  writeAuthControlConfig,
+} from "@/runtime/server/http/control/AuthControlService.js";
 import {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesPath,
@@ -179,6 +185,27 @@ type RpcSessionRequest =
         pluginName: string;
         actionName: string;
         payload?: JsonValue;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.authorization.get";
+    }
+  | {
+      id: string;
+      method: "internal.authorization.config";
+      params: {
+        config: JsonObject;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.authorization.action";
+      params: {
+        action: string;
+        channel: string;
+        userId?: string;
+        roleId?: string;
       };
     };
 
@@ -468,6 +495,41 @@ export async function startRpcServer(
               pluginName: request.params.pluginName,
               actionName: request.params.actionName,
             });
+            return;
+          }
+          case "internal.authorization.get": {
+            const context = requireAgentContext(options);
+            writeSuccess(request.id, await readAuthControlPayload(context));
+            return;
+          }
+          case "internal.authorization.config": {
+            const context = requireAgentContext(options);
+            writeSuccess(
+              request.id,
+              await writeAuthControlConfig({
+                context,
+                config: request.params.config,
+              }),
+            );
+            return;
+          }
+          case "internal.authorization.action": {
+            const context = requireAgentContext(options);
+            const action = String(request.params.action || "").trim();
+            if (action !== "setUserRole") {
+              throw new Error(`Unsupported authorization action: ${action}`);
+            }
+            writeSuccess(
+              request.id,
+              await setAuthControlUserRole({
+                context,
+                input: {
+                  channel: request.params.channel,
+                  userId: String(request.params.userId || "").trim(),
+                  roleId: String(request.params.roleId || "").trim(),
+                },
+              }),
+            );
             return;
           }
         }

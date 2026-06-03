@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - UI 由控制面进程独立托管，不依赖单个 agent 启动参数。
- * - 提供统一的多 agent 选择能力，并把 `/api/*` 代理到选中 agent。
+ * - 提供统一的多 agent 选择能力，并通过 RPC 访问选中 agent。
  */
 /**
  * 控制面网关启动参数。
@@ -88,8 +88,6 @@ export declare class ControlGateway {
     private inspectAgentRestartSafety;
     private restartAgentByProjectRoot;
     private stopAgentByProjectRoot;
-    private buildUpstreamUrl;
-    private forwardRequest;
     private serveFrontendPath;
     /**
      * 启动 UI 网关。

@@ -14,9 +14,9 @@ import type { AuthControlPayload } from "@/runtime/server/http/control/types/Aut
 const AUTH_PLUGIN_NAME = "auth";
 const AUTH_ACTIONS = {
   snapshot: "snapshot",
-  readConfig: "readConfig",
-  writeConfig: "writeConfig",
-  setUserRole: "setUserRole",
+  readConfig: "read-config",
+  writeConfig: "write-config",
+  setUserRole: "set-user-role",
 } as const;
 const CHAT_AUTHORIZATION_CATALOG: JsonObject = {
   channels: ["telegram", "feishu", "qq"],

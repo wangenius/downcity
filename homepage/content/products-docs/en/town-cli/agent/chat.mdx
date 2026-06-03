@@ -23,8 +23,8 @@ town agent chat [--to <id>] --message <text> [--json]
 - `-t, --to <id>`: target agent id; if omitted, the CLI opens an interactive picker from running agents
 - `-m, --message <text>`: send one message and exit instead of entering the REPL
 - `--json`: print structured output for one-shot mode
-- `--host <host>` / `--port <port>`: force remote HTTP transport
-- `--token <token>`: explicit Bearer token for remote HTTP mode
+- `--host <host>` / `--port <port>`: override the auto-resolved RPC host / port
+- `--token <token>`: used only when connecting to an HTTP-compatible legacy daemon
 
 ## Behavior
 

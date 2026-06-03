@@ -117,10 +117,6 @@ export interface PlatformApiRouteHandlers {
     }>;
     /** 解析当前选中的 agent。 */
     resolveSelectedAgent(requestedAgentId: string): Promise<PlatformAgentOption | null>;
-    /** 构建 upstream URL。 */
-    buildUpstreamUrl(requestUrl: URL, baseUrl: string): string;
-    /** 代理请求。 */
-    forwardRequest(request: Request, upstreamUrl: string): Promise<Response>;
     /** 托管前端静态资源。 */
     serveFrontendPath(c: Context, reqPath: string): Promise<Response>;
     /** Town 维护的 Agent RPC 连接池。 */

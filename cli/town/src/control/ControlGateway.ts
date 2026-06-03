@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - UI 由控制面进程独立托管，不依赖单个 agent 启动参数。
- * - 提供统一的多 agent 选择能力，并把 `/api/*` 代理到选中 agent。
+ * - 提供统一的多 agent 选择能力，并通过 RPC 访问选中 agent。
  */
 
 import { Hono, type Context } from "hono";
@@ -40,10 +40,6 @@ import {
   updatePlatformAgentExecution,
 } from "@/control/gateway/AgentActions.js";
 import { serveControlPlaneFrontendPath } from "@/control/gateway/FrontendAssets.js";
-import {
-  buildPlatformUpstreamUrl,
-  forwardPlatformRequest,
-} from "@/control/gateway/Proxy.js";
 import { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import { listPluginAuthPolicies } from "@downcity/agent";
 import type {
@@ -185,8 +181,6 @@ export class ControlGateway {
         executeShellCommand: (args) => this.executeShellCommand(args),
         buildModelResponse: (requestedAgentId) => this.buildModelResponse(requestedAgentId),
         resolveSelectedAgent: (requestedAgentId) => this.resolveSelectedAgent(requestedAgentId),
-        buildUpstreamUrl: (requestUrl, baseUrl) => this.buildUpstreamUrl(requestUrl, baseUrl),
-        forwardRequest: (request, upstreamUrl) => this.forwardRequest(request, upstreamUrl),
         serveFrontendPath: (c, reqPath) => this.serveFrontendPath(c, reqPath),
         agentRpcPool: this.agentRpcPool,
       },
@@ -419,17 +413,6 @@ export class ControlGateway {
     message?: string;
   }> {
     return stopManagedAgentByProjectRoot(projectRoot);
-  }
-
-  private buildUpstreamUrl(requestUrl: URL, baseUrl: string): string {
-    return buildPlatformUpstreamUrl(requestUrl, baseUrl);
-  }
-
-  private async forwardRequest(
-    request: Request,
-    upstreamUrl: string,
-  ): Promise<Response> {
-    return forwardPlatformRequest(request, upstreamUrl);
   }
 
   private async serveFrontendPath(c: Context, reqPath: string): Promise<Response> {

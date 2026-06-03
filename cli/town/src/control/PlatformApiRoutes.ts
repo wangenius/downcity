@@ -16,6 +16,7 @@ import { registerPlatformPluginRoutes } from "@/control/PluginApiRoutes.js";
 import { registerDashboardTaskApiRoutes } from "@/control/DashboardTaskApiRoutes.js";
 import { registerDashboardSessionApiRoutes } from "@/control/DashboardSessionApiRoutes.js";
 import { registerDashboardOverviewApiRoutes } from "@/control/DashboardOverviewApiRoutes.js";
+import { registerDashboardRuntimeApiRoutes } from "@/control/DashboardRuntimeApiRoutes.js";
 import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import type {
   PlatformAgentDirectoryInspection,
@@ -137,10 +138,6 @@ export interface PlatformApiRouteHandlers {
   }>;
   /** 解析当前选中的 agent。 */
   resolveSelectedAgent(requestedAgentId: string): Promise<PlatformAgentOption | null>;
-  /** 构建 upstream URL。 */
-  buildUpstreamUrl(requestUrl: URL, baseUrl: string): string;
-  /** 代理请求。 */
-  forwardRequest(request: Request, upstreamUrl: string): Promise<Response>;
   /** 托管前端静态资源。 */
   serveFrontendPath(c: Context, reqPath: string): Promise<Response>;
   /** Town 维护的 Agent RPC 连接池。 */
@@ -470,48 +467,12 @@ export function registerPlatformApiRoutes(params: {
       handlers.resolveSelectedAgent(requestedAgentId),
     agentRpcPool: handlers.agentRpcPool,
   });
-
-  app.all("/api/*", async (c) => {
-    try {
-      const reqUrl = new URL(c.req.url);
-      if (reqUrl.pathname.startsWith("/api/ui/")) {
-        return c.json({ success: false, error: "Not Found" }, 404);
-      }
-
-      const requestedAgentId = handlers.readRequestedAgentId(c.req.raw);
-      const selection = await handlers.resolveSelectedAgent(requestedAgentId);
-      if (!selection) {
-        return c.json(
-          {
-            success: false,
-            error:
-              "No running agent found. Start one via `town agent start` first.",
-          },
-          503,
-        );
-      }
-
-      if (!selection.baseUrl) {
-        return c.json(
-          {
-            success: false,
-            error: "Selected agent endpoint is unavailable.",
-          },
-          503,
-        );
-      }
-      const upstreamUrl = handlers.buildUpstreamUrl(reqUrl, selection.baseUrl);
-      const response = await handlers.forwardRequest(c.req.raw, upstreamUrl);
-      return response;
-    } catch (error) {
-      return c.json(
-        {
-          success: false,
-          error: `Proxy request failed: ${String(error)}`,
-        },
-        500,
-      );
-    }
+  registerDashboardRuntimeApiRoutes({
+    app,
+    readRequestedAgentId: (request) => handlers.readRequestedAgentId(request),
+    resolveSelectedAgent: (requestedAgentId) =>
+      handlers.resolveSelectedAgent(requestedAgentId),
+    agentRpcPool: handlers.agentRpcPool,
   });
 
   app.get("/*", async (c) => {

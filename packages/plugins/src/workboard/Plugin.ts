@@ -3,12 +3,13 @@
  *
  * 关键点（中文）
  * - workboard 是一个 runtime 观测面板插件，负责提供结构化工作快照。
- * - 当前通过 plugin HTTP 注入暴露 `/api/workboard/snapshot`，供 console 代理与 UI 消费。
+ * - 当前同时通过 plugin action 与 HTTP 注入提供快照，供 Town/RPC 与旧 HTTP 宿主复用。
  */
 
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
+import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import { isPluginEnabled } from "@downcity/agent/internal/plugin/core/Activation.js";
 import { getWorkboardSnapshotStore } from "@/workboard/runtime/Store.js";
 import type { WorkboardSnapshotResponse } from "@/workboard/types/Workboard.js";
@@ -32,6 +33,29 @@ function createWorkboardPluginDefinition(plugin: Plugin): Plugin {
         available: true,
         reasons: [],
       };
+    },
+    actions: {
+      snapshot: {
+        execute: async ({ context }) => {
+          const availability = await plugin.availability?.(context);
+          if (availability && availability.available !== true) {
+            return {
+              success: false,
+              error: availability.reasons.join("; ") || "workboard unavailable",
+            };
+          }
+
+          const snapshot = await getWorkboardSnapshotStore({
+            contextResolver: () => context,
+          }).readSnapshot();
+          return {
+            success: true,
+            data: {
+              snapshot,
+            } as unknown as JsonValue,
+          };
+        },
+      },
     },
     http: {
       server: {

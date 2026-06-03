@@ -27,8 +27,9 @@ description: Present the public-facing state of multiple agents and their recent
 When the agent is running, `workboard` exposes:
 
 - `GET /api/workboard/snapshot`
+- `workboard.snapshot` plugin action, which Town Console calls through Agent RPC by default
 
-The endpoint returns structured JSON, but only as a public-safe high-level projection. It does not expose internal session, plugin runtime, task, path, or model details.
+These entry points return structured JSON, but only as a public-safe high-level projection. They do not expose internal session, plugin runtime, task, path, or model details.
 
 ## Console behavior
 

@@ -18,6 +18,7 @@ import type {
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
 import type { JsonValue } from "@/types/common/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type {
   PluginActionResult,
   PluginAvailability,
@@ -30,6 +31,7 @@ import type {
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
+import type { AuthControlPayload } from "@/runtime/server/http/control/types/AuthControl.js";
 
 type RpcClientRequest =
   | {
@@ -168,6 +170,27 @@ type RpcClientRequest =
         pluginName: string;
         actionName: string;
         payload?: JsonValue;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.authorization.get";
+    }
+  | {
+      id: string;
+      method: "internal.authorization.config";
+      params: {
+        config: JsonObject;
+      };
+    }
+  | {
+      id: string;
+      method: "internal.authorization.action";
+      params: {
+        action: string;
+        channel: string;
+        userId?: string;
+        roleId?: string;
       };
     };
 
@@ -594,6 +617,49 @@ export class RpcClient {
         pluginName: params.plugin_name,
         actionName: params.action_name,
         ...(params.payload !== undefined ? { payload: params.payload } : {}),
+      },
+    });
+  }
+
+  /**
+   * 读取 Agent runtime 内 authorization 控制面快照。
+   */
+  async get_internal_authorization(): Promise<AuthControlPayload> {
+    return await this.request<AuthControlPayload>({
+      method: "internal.authorization.get",
+    });
+  }
+
+  /**
+   * 写入 Agent runtime 内 authorization 配置。
+   */
+  async write_internal_authorization_config(
+    config: JsonObject,
+  ): Promise<AuthControlPayload> {
+    return await this.request<AuthControlPayload>({
+      method: "internal.authorization.config",
+      params: {
+        config,
+      },
+    });
+  }
+
+  /**
+   * 执行 Agent runtime 内 authorization 动作。
+   */
+  async run_internal_authorization_action(params: {
+    action: string;
+    channel: string;
+    user_id?: string;
+    role_id?: string;
+  }): Promise<AuthControlPayload> {
+    return await this.request<AuthControlPayload>({
+      method: "internal.authorization.action",
+      params: {
+        action: params.action,
+        channel: params.channel,
+        ...(params.user_id ? { userId: params.user_id } : {}),
+        ...(params.role_id ? { roleId: params.role_id } : {}),
       },
     });
   }

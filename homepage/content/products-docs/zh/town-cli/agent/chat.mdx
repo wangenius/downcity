@@ -23,8 +23,8 @@ town agent chat [--to <id>] --message <text> [--json]
 - `-t, --to <id>`：目标 agent id；省略时会从当前运行中的 agent 里交互选择
 - `-m, --message <text>`：发送一轮消息后直接退出，不进入 REPL
 - `--json`：一次性模式下输出结构化结果
-- `--host <host>` / `--port <port>`：强制走远程 HTTP transport
-- `--token <token>`：远程 HTTP 模式下显式传入 Bearer token
+- `--host <host>` / `--port <port>`：覆盖自动解析出的 RPC host / port
+- `--token <token>`：仅在连接 HTTP 兼容旧 daemon 时用于 Bearer token
 
 ## 行为说明
 

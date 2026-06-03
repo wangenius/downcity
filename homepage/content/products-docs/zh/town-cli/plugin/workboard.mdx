@@ -27,8 +27,9 @@ description: 用结构化快照展示各个 agent 对外呈现出的状态与近
 当 agent 运行时，`workboard` 会提供：
 
 - `GET /api/workboard/snapshot`
+- `workboard.snapshot` plugin action（Town Console 默认通过 Agent RPC 调用）
 
-该接口返回结构化 JSON，但只包含对外安全的概览状态，不会直接暴露内部 session、plugin runtime、task 或路径细节。
+这些入口返回结构化 JSON，但只包含对外安全的概览状态，不会直接暴露内部 session、plugin runtime、task 或路径细节。
 
 ## Console 中的表现
 

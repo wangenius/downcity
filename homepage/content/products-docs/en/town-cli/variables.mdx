@@ -38,16 +38,16 @@ Commands like `town chat`, `town task`, `town memory`, `town shell`, `town skill
 
 Default rule:
 
-1. no `--host` / `--port`: use the local agent daemon HTTP endpoint resolved from the target project
-2. `--host` or `--port` provided: override the endpoint and use HTTP with the given host/port
+1. no `--host` / `--port`: resolve the target agent's local RPC endpoint from the registry
+2. `--host` or `--port` provided: override the RPC endpoint and connect to that host/port
 
-Bearer-token resolution matters only when the target HTTP endpoint currently requires auth.
+Bearer-token resolution matters only when connecting to an HTTP-compatible legacy daemon whose HTTP endpoint requires auth.
 
 ## 3) `DC_AUTH_TOKEN`
 
 For most local usage, you do not need to care about auth env vars.
 
-Managed-runtime calls default to the local daemon HTTP endpoint. `DC_AUTH_TOKEN` matters only when that HTTP endpoint requires auth.
+Managed-runtime calls default to the local daemon RPC endpoint. `DC_AUTH_TOKEN` matters only for HTTP-compatible legacy daemons whose endpoint requires auth.
 
 Priority order:
 

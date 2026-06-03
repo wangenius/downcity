@@ -8,7 +8,9 @@
     "outDir": "./bin",
     "rootDir": "src",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@downcity/agent": ["../../packages/agent/bin/index.d.ts"],
+      "@downcity/agent/internal/*": ["../../packages/agent/bin/*"]
     },
     "strict": true,
     "noImplicitAny": false,

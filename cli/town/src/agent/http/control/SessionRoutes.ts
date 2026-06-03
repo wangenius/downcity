@@ -16,20 +16,20 @@ import {
   getDowncitySessionMessagesArchiveDirPath,
   getDowncitySessionMessagesArchivePath,
   getDowncitySessionMessagesPath,
-} from "@downcity/agent/internal/config/Paths.js";
-import type { ControlSessionExecuteRequestBody } from "@downcity/agent/internal/runtime/control/types/ControlSessionExecute.js";
+} from "@/config/Paths.js";
+import type { ControlSessionExecuteRequestBody } from "@/agent/control/types/ControlSessionExecute.js";
 import type { ControlRouteRegistrationParams } from "@/agent/http/control/types/ControlRoutes.js";
 import {
   buildControlRouteAliases,
   decodeMaybe,
   toLimit,
-} from "@downcity/agent/internal/runtime/control/CommonHelpers.js";
+} from "@/agent/control/CommonHelpers.js";
 import {
   listControlSessionSummaries,
   loadSessionMessagesFromFile,
   toUiMessageTimeline,
-} from "@downcity/agent/internal/runtime/control/Helpers.js";
-import { executeBySessionId } from "@downcity/agent/internal/runtime/control/ExecuteBySession.js";
+} from "@/agent/control/Helpers.js";
+import { executeBySessionId } from "@/agent/control/ExecuteBySession.js";
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 
 function normalizeSystemText(input: string | null | undefined): string {
@@ -105,7 +105,6 @@ export function registerControlSessionRoutes(
         const sessions = await listControlSessionSummaries({
           projectRoot: runtime.rootPath,
           agentId: runtime.paths.agentId,
-          executionContext: params.getAgentContext(),
           limit,
           executingSessionIds,
         });
@@ -408,7 +407,6 @@ export function registerControlSessionRoutes(
 
         const result = await executeBySessionId({
           agentState: runtime,
-          executionContext: params.getAgentContext(),
           sessionId,
           instructions,
           attachments: Array.isArray(body.attachments) ? body.attachments : undefined,

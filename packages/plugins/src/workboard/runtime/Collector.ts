@@ -8,9 +8,9 @@
 
 import { listTaskDefinitions } from "@/task/Action.js";
 import { listPluginStates } from "@downcity/agent/internal/plugin/core/Manager.js";
-import { listControlSessionSummaries } from "@downcity/agent/internal/runtime/control/SessionSummaryStore.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { WorkboardSnapshot } from "@/workboard/types/Workboard.js";
+import { listWorkboardSessionSummaries } from "@/workboard/runtime/SessionSummary.js";
 import {
   buildIdleActivity,
   toRecentActivity,
@@ -30,10 +30,8 @@ export async function collectWorkboardSnapshot(
 ): Promise<WorkboardSnapshot> {
   const collectedAt = new Date().toISOString();
   const executingSessionIds = new Set(context.session.listExecutingSessionIds());
-  const sessions = await listControlSessionSummaries({
-    projectRoot: context.rootPath,
-    agentId: context.paths.agentId,
-    executionContext: context,
+  const sessions = await listWorkboardSessionSummaries({
+    context,
     limit: WORKBOARD_RECENT_LIMIT + Math.max(executingSessionIds.size, 1),
     executingSessionIds,
   });

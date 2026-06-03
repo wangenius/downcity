@@ -40,6 +40,7 @@ import {
 import {
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
+  getSdkAgentSessionInflightPath,
 } from "@/session/index.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import {
@@ -183,6 +184,11 @@ export class Session implements AgentSession {
         messagesFilePath: `${messagesDirPath}/messages.jsonl`,
         metaFilePath: `${messagesDirPath}/meta.json`,
         archiveDirPath: getSdkAgentSessionArchiveDirPath(
+          this.projectRoot,
+          this.agentId,
+          this.id,
+        ),
+        inflightFilePath: getSdkAgentSessionInflightPath(
           this.projectRoot,
           this.agentId,
           this.id,

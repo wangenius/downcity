@@ -2,6 +2,10 @@ export declare function getProfileMdPath(cwd: string): string;
 export declare function getSoulMdPath(cwd: string): string;
 export declare function getDowncityJsonPath(cwd: string): string;
 export declare function getDowncityDirPath(cwd: string): string;
+/**
+ * 日志目录路径。
+ */
+export declare function getLogsDirPath(cwd: string): string;
 export declare function getDowncitySchemaPath(cwd: string): string;
 export declare function getCacheDirPath(cwd: string): string;
 /**
@@ -26,7 +30,24 @@ export declare function getDowncitySessionDirPath(cwd: string, agentId: string, 
  * - compact 会把被折叠的原始段写入 `messages/archive/*`（可审计）
  */
 export declare function getDowncitySessionMessagesDirPath(cwd: string, agentId: string, sessionId: string): string;
+/**
+ * Session 消息事实源文件路径。
+ */
+export declare function getDowncitySessionMessagesPath(cwd: string, agentId: string, sessionId: string): string;
+export declare function getDowncitySessionMessagesArchiveDirPath(cwd: string, agentId: string, sessionId: string): string;
+/**
+ * Session 消息归档文件路径。
+ */
+export declare function getDowncitySessionMessagesArchivePath(cwd: string, agentId: string, sessionId: string, archiveId: string): string;
+/**
+ * 任务运行目录路径。
+ */
+export declare function getDowncityTasksDirPath(cwd: string): string;
 export declare function getDowncityDebugDirPath(cwd: string): string;
+/**
+ * `.downcity/public` 公开资源目录路径。
+ */
+export declare function getDowncityPublicDirPath(cwd: string): string;
 /**
  * Channel 目录（channel -> sessionId 映射）。
  *

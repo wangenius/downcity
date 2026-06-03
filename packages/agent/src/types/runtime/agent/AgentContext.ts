@@ -16,7 +16,7 @@ import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
-} from "@/types/runtime/host/AgentHost.js";
+} from "@/types/agent/AgentRuntimeAssembly.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginPort } from "@/plugin/types/Plugin.js";

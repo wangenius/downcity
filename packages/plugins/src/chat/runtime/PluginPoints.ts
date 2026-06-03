@@ -56,7 +56,7 @@ export const CHAT_PLUGIN_POINTS = {
    *
    * 说明（中文）
    * - 仅做副作用记录，不返回值。
-   * - 典型实现方是 auth plugin。
+   * - 典型实现方是 chat-authorization plugin。
    */
   observePrincipal: "chat.observePrincipal",
   /**
@@ -64,7 +64,7 @@ export const CHAT_PLUGIN_POINTS = {
    *
    * 说明（中文）
    * - 由 chat plugin runtime 在 ingress 阶段显式调用。
-   * - 典型实现方是 auth plugin。
+   * - 典型实现方是 chat-authorization plugin。
    */
   authorizeIncoming: "chat.authorizeIncoming",
   /**
@@ -72,7 +72,7 @@ export const CHAT_PLUGIN_POINTS = {
    *
    * 说明（中文）
    * - 主要用于在 history / queue metadata 中补齐授权上下文。
-   * - 典型实现方是 auth plugin。
+   * - 典型实现方是 chat-authorization plugin。
    */
   resolveUserRole: "chat.resolveUserRole",
 } as const;

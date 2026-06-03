@@ -322,20 +322,39 @@ export function toSessionTimelineEvents(
 export async function loadSessionMessagesFromPath(
   filePath: string,
 ): Promise<SessionMessageV1[]> {
-  if (!(await fs.pathExists(filePath))) return [];
-  const raw = await fs.readFile(filePath, "utf-8");
-  const lines = raw.split("\n").filter(Boolean);
   const messages: SessionMessageV1[] = [];
-  for (const line of lines) {
-    try {
-      const parsed = JSON.parse(line) as SessionMessageV1;
-      if (!parsed || typeof parsed !== "object") continue;
-      if (parsed.role !== "user" && parsed.role !== "assistant") continue;
-      messages.push(parsed);
-    } catch {
-      // 关键点（中文）：单行损坏不影响整个 session 的可读性。
+  if (await fs.pathExists(filePath)) {
+    const raw = await fs.readFile(filePath, "utf-8");
+    const lines = raw.split("\n").filter(Boolean);
+    for (const line of lines) {
+      try {
+        const parsed = JSON.parse(line) as SessionMessageV1;
+        if (!parsed || typeof parsed !== "object") continue;
+        if (parsed.role !== "user" && parsed.role !== "assistant") continue;
+        messages.push(parsed);
+      } catch {
+        // 关键点（中文）：单行损坏不影响整个 session 的可读性。
+      }
     }
   }
+
+  const inflight_path = filePath.replace(/messages\.jsonl$/, "inflight.json");
+  if (await fs.pathExists(inflight_path)) {
+    try {
+      const parsed = (await fs.readJson(inflight_path)) as SessionMessageV1;
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        parsed.role === "assistant" &&
+        Array.isArray(parsed.parts)
+      ) {
+        messages.push(parsed);
+      }
+    } catch {
+      // ignore invalid inflight snapshot
+    }
+  }
+
   return messages;
 }
 

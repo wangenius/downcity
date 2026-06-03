@@ -17,6 +17,12 @@ The same directory also contains:
 <projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/meta.json
 ```
 
+and the in-progress assistant snapshot:
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/inflight.json
+```
+
 ## Why storage is partitioned by `agentId`
 
 Because multiple SDK agents can exist inside the same project directory.
@@ -28,8 +34,13 @@ This is also one of the reasons why `id` should not be treated as a casual displ
 ## What you can usually find here
 
 - message history
+- in-progress assistant snapshot
 - session metadata
 - archive directories
+
+`messages.jsonl` stores stable history.
+
+`inflight.json` stores the current unfinished assistant UIMessage. During multi-step tool execution, the SDK keeps rewriting this snapshot so already-produced text and tool parts survive interruptions. When execution finishes normally, the final assistant message is committed into `messages.jsonl` and `inflight.json` is removed.
 
 If you are troubleshooting, replaying history, or running multi-agent experiments, this persisted data is extremely useful.
 

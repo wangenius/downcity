@@ -4,14 +4,11 @@
  * 关键点（中文）
  * - 负责收敛“写完整 assistant message / 写 fallback 文本 / 完全跳过”三种分支。
  * - 避免 SDK、HTTP execute、control execute、chat queue 各自复制一套判断。
- * - 一旦 step 消息已经单独持久化，最终 merged assistant 必须跳过，不能再补一条 fallback。
+ * - 运行中 step/tool 的持久化由 inflight 快照承担；run 结束时只关心最终 assistant 如何收口。
  */
 
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
-import {
-  hasPersistedAssistantSteps,
-  resolveAssistantMessageForPersistence,
-} from "@/executor/messages/UserVisibleText.js";
+import { resolveAssistantMessageForPersistence } from "@/executor/messages/UserVisibleText.js";
 
 /**
  * assistant 写入端口。
@@ -48,8 +45,8 @@ export interface PersistAssistantResultParams {
    * 可选兜底文本。
    *
    * 关键点（中文）
-   * - 仅在没有完整 assistant message 且未发生 step 持久化时才允许写入。
-   * - 若 step 已单独落盘，这里必须被忽略，避免重复 assistant。
+   * - 仅在没有完整 assistant message 时才允许写入。
+   * - inflight 快照的正式收口由 history store 负责，这里不再处理旧的 step 独立落盘分支。
    */
   fallbackText?: string;
 }
@@ -81,11 +78,6 @@ export function buildAssistantResultPersistencePayload(
     return {
       message: persistedMessage,
     };
-  }
-
-  // 关键点（中文）：step 已经单独落盘时，最终 merged assistant 必须完全跳过。
-  if (hasPersistedAssistantSteps(params.assistantMessage)) {
-    return null;
   }
 
   const fallbackText = normalizeFallbackText(params.fallbackText);

@@ -8,8 +8,12 @@
 
 import path from "node:path";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { stripInvocationAuthEnv } from "@downcity/agent/internal/runtime/auth/AuthEnv.js";
 import { getSessionRunScope } from "@downcity/agent/internal/executor/SessionRunScope.js";
+
+function stripShellSecretEnv(env: NodeJS.ProcessEnv): void {
+  delete env.DC_AUTH_TOKEN;
+  delete env.DC_AGENT_TOKEN;
+}
 
 /**
  * 构造 shell 子进程环境变量。
@@ -42,7 +46,7 @@ export function buildShellEnv(context: AgentContext): NodeJS.ProcessEnv {
   if (sessionId) env.DC_SESSION_ID = sessionId;
   if (process.env.DC_CITY_HOST) env.DC_CITY_HOST = process.env.DC_CITY_HOST;
   if (process.env.DC_CITY_PORT) env.DC_CITY_PORT = process.env.DC_CITY_PORT;
-  stripInvocationAuthEnv(env);
+  stripShellSecretEnv(env);
 
   return env;
 }

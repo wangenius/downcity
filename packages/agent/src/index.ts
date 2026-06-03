@@ -134,7 +134,7 @@ export {
 export { loadDowncityConfig } from "./config/Config.js";
 export {
   ensureRuntimeProjectReady,
-} from "./runtime/host/ProjectSetup.js";
+} from "./agent/local/ProjectSetup.js";
 export { assertProjectExecutionTarget } from "./config/ExecutionBinding.js";
 
 // 日志
@@ -144,7 +144,7 @@ export { getLogger, logger, type Logger } from "./utils/logger/Logger.js";
 export type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
-} from "./types/runtime/host/AgentHost.js";
+} from "./types/agent/AgentRuntimeAssembly.js";
 
 // 项目协议类型
 export type {
@@ -273,7 +273,7 @@ export type {
   UpsertChannelAccountInput,
   UpsertEnvEntryInput,
   UpsertGlobalEnvEntryInput,
-} from "./types/runtime/host/Store.js";
+} from "./types/platform/Store.js";
 
 // HTTP auth 协议类型
 export {

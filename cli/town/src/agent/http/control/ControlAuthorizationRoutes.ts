@@ -3,23 +3,60 @@
  *
  * 关键点（中文）
  * - 单独承接 `/api/control/authorization*`。
- * - 授权页面的数据统一通过 auth plugin API 读取与写入。
+ * - Town 只做 HTTP 适配，具体授权数据读写统一交给 chat-authorization plugin action。
  */
 
 import type { Hono } from "hono";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
-import {
-  readAuthControlPayload,
-  setAuthControlUserRole,
-  writeAuthControlConfig,
-} from "@downcity/agent/internal/runtime/control/AuthControlService.js";
-import { buildControlRouteAliases } from "@downcity/agent/internal/runtime/control/CommonHelpers.js";
+import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import { buildControlRouteAliases } from "@/agent/control/CommonHelpers.js";
+
+const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";
+const CHAT_AUTHORIZATION_ACTIONS = {
+  snapshot: "snapshot",
+  writeConfig: "write-config",
+  setUserRole: "set-user-role",
+} as const;
 
 function normalizeChatChannel(value: unknown): string | null {
   const text = String(value || "").trim().toLowerCase();
   if (text === "telegram" || text === "feishu" || text === "qq") return text;
   return null;
+}
+
+function toJsonObject(value: unknown): JsonObject {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as JsonObject;
+}
+
+/**
+ * 执行 chat-authorization action。
+ */
+async function runChatAuthorizationAction(params: {
+  context: AgentContext;
+  action: string;
+  payload?: JsonValue;
+}): Promise<JsonObject> {
+  const result = await params.context.plugins.runAction({
+    plugin: CHAT_AUTHORIZATION_PLUGIN_NAME,
+    action: params.action,
+    ...(params.payload !== undefined ? { payload: params.payload } : {}),
+  });
+  if (!result.success) {
+    throw new Error(result.error || result.message || "chat authorization action failed");
+  }
+  return toJsonObject(result.data);
+}
+
+/**
+ * 读取聊天授权控制面快照。
+ */
+async function readChatAuthorizationSnapshot(context: AgentContext): Promise<JsonObject> {
+  return await runChatAuthorizationAction({
+    context,
+    action: CHAT_AUTHORIZATION_ACTIONS.snapshot,
+  });
 }
 
 /**
@@ -34,7 +71,7 @@ export function registerControlAuthorizationRoutes(params: {
   for (const routePath of buildControlRouteAliases("/authorization")) {
     app.get(routePath, async (c) => {
       try {
-        const payload = await readAuthControlPayload(getAgentContext());
+        const payload = await readChatAuthorizationSnapshot(getAgentContext());
         return c.json({
           success: true,
           ...payload,
@@ -51,10 +88,15 @@ export function registerControlAuthorizationRoutes(params: {
         const body = (await c.req.json().catch(() => ({}))) as {
           config?: JsonObject;
         };
-        const payload = await writeAuthControlConfig({
-          context: getAgentContext(),
-          config: body.config && typeof body.config === "object" ? body.config : {},
+        const context = getAgentContext();
+        await runChatAuthorizationAction({
+          context,
+          action: CHAT_AUTHORIZATION_ACTIONS.writeConfig,
+          payload: {
+            config: body.config && typeof body.config === "object" ? body.config : {},
+          },
         });
+        const payload = await readChatAuthorizationSnapshot(context);
         return c.json({
           success: true,
           ...payload,
@@ -83,14 +125,17 @@ export function registerControlAuthorizationRoutes(params: {
           return c.json({ success: false, error: `Unsupported action: ${action}` }, 400);
         }
 
-        const payload = await setAuthControlUserRole({
-          context: getAgentContext(),
-          input: {
+        const context = getAgentContext();
+        await runChatAuthorizationAction({
+          context,
+          action: CHAT_AUTHORIZATION_ACTIONS.setUserRole,
+          payload: {
             channel,
             userId: String(body.userId || "").trim(),
             roleId: String(body.roleId || "").trim(),
           },
         });
+        const payload = await readChatAuthorizationSnapshot(context);
         return c.json({
           success: true,
           ...payload,

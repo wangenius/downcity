@@ -326,8 +326,8 @@ async function promptPluginManagerAction(params: {
       {
         title: "全局关闭",
         description:
-          params.pluginName === "auth"
-            ? "auth plugin 不允许全局关闭"
+          params.pluginName === "chat-authorization"
+            ? "chat-authorization plugin 不允许全局关闭"
             : "写入 Town 级 lifecycle 配置",
         value: "disable",
       },

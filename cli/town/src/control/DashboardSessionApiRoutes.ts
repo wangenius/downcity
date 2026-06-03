@@ -11,12 +11,14 @@ import type { Hono } from "hono";
 import fs from "fs-extra";
 import path from "node:path";
 import type {
+  AgentSessionEvent,
   AgentSessionSummary,
   AgentSessionTimelineEvent,
   PlatformAgentOption,
 } from "@downcity/agent";
-import type { ControlSessionExecuteAttachmentInput } from "@downcity/agent/internal/runtime/control/types/ControlSessionExecute.js";
-import { toUiMessageTimeline } from "@downcity/agent/internal/runtime/control/MessageTimeline.js";
+import type { ControlSessionExecuteAttachmentInput } from "@/agent/control/types/ControlSessionExecute.js";
+import { buildExecuteInputText } from "@/agent/control/ExecuteInput.js";
+import { toUiMessageTimeline } from "@/agent/control/MessageTimeline.js";
 import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import { getDowncitySessionMessagesDirPath } from "@/config/Paths.js";
 
@@ -171,7 +173,9 @@ export function registerDashboardSessionApiRoutes(
       const instructions = String(body.instructions || "").trim();
       if (!session_id) return c.json({ success: false, error: "Missing sessionId" }, 400);
       if (!instructions) return c.json({ success: false, error: "Missing instructions" }, 400);
-      const payload = await context.client.execute_internal_session({
+      const payload = await executeDashboardSessionTurn({
+        project_root: context.agent.projectRoot,
+        client: context.client,
         session_id,
         instructions,
         attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
@@ -294,6 +298,94 @@ export function registerDashboardSessionApiRoutes(
     }
   });
 
+}
+
+/**
+ * 通过标准 session RPC 执行一轮 dashboard 输入。
+ */
+async function executeDashboardSessionTurn(params: {
+  project_root: string;
+  client: NonNullable<ReturnType<AgentRpcPool["resolveClientForAgent"]>>;
+  session_id: string;
+  instructions: string;
+  attachments?: ControlSessionExecuteAttachmentInput[];
+}): Promise<{
+  sessionId: string;
+  result: {
+    success: boolean;
+    error?: string;
+    userVisible: string;
+    queued: boolean;
+  };
+}> {
+  const execute_input = await buildExecuteInputText({
+    projectRoot: params.project_root,
+    sessionId: params.session_id,
+    instructions: params.instructions,
+    attachments: params.attachments,
+  });
+  const finished_events: AgentSessionEvent[] = [];
+  const subscription = await params.client.subscribe_session({
+    session_id: params.session_id,
+    on_ready: () => {},
+    on_event: (event) => {
+      if (event.type === "turn-finish" || event.type === "error") {
+        finished_events.push(event);
+      }
+    },
+  });
+
+  try {
+    const turn = await params.client.prompt_session({
+      session_id: params.session_id,
+      input: { query: execute_input },
+    });
+    const event = await waitForDashboardTurnFinish({
+      turn_id: turn.id,
+      events: finished_events,
+    });
+    if (event.type === "error") {
+      return {
+        sessionId: params.session_id,
+        result: {
+          success: false,
+          error: event.message,
+          userVisible: "",
+          queued: false,
+        },
+      };
+    }
+    return {
+      sessionId: params.session_id,
+      result: {
+        success: event.success,
+        ...(event.error ? { error: event.error } : {}),
+        userVisible: String(event.text || "").trim(),
+        queued: false,
+      },
+    };
+  } finally {
+    await subscription.unsubscribe().catch(() => undefined);
+  }
+}
+
+async function waitForDashboardTurnFinish(params: {
+  turn_id: string;
+  events: AgentSessionEvent[];
+}): Promise<Extract<AgentSessionEvent, { type: "turn-finish" | "error" }>> {
+  const started_at = Date.now();
+  while (Date.now() - started_at < 120_000) {
+    const event = params.events.find((item) => {
+      if (item.type === "error") return true;
+      if (item.type !== "turn-finish") return false;
+      return item.turnId === params.turn_id;
+    });
+    if (event && (event.type === "turn-finish" || event.type === "error")) {
+      return event;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("Dashboard session execute timed out");
 }
 
 async function resolveDashboardAgent(

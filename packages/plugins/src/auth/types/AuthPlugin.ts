@@ -1,8 +1,8 @@
 /**
- * Auth Plugin 类型与契约定义。
+ * ChatAuthorizationPlugin 类型与契约定义。
  *
  * 关键点（中文）
- * - 统一维护 auth plugin 的领域类型、扩展点/action 名称、payload 契约。
+ * - 统一维护聊天授权 plugin 的领域类型、扩展点/action 名称、payload 契约。
  * - 业务层不应散落硬编码字符串，如 `chat.authorizeIncoming`、`set-user-role`。
  * - chat / console / plugin 执行链路都从这里共享同一份边界定义。
  */
@@ -11,12 +11,12 @@ import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
 import { CHAT_PLUGIN_POINTS } from "@/chat/runtime/PluginPoints.js";
 
 /**
- * auth plugin 稳定名称。
+ * 聊天授权 plugin 稳定名称。
  */
-export const AUTH_PLUGIN_NAME = "auth";
+export const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";
 
 /**
- * auth 支持的渠道目录。
+ * 聊天授权支持的渠道目录。
  */
 export const CHAT_AUTHORIZATION_CHANNELS = ["telegram", "feishu", "qq"] as const;
 
@@ -26,18 +26,18 @@ export const CHAT_AUTHORIZATION_CHANNELS = ["telegram", "feishu", "qq"] as const
 export type ChatAuthorizationChannel = (typeof CHAT_AUTHORIZATION_CHANNELS)[number];
 
 /**
- * auth 扩展点名称集合。
+ * 聊天授权扩展点名称集合。
  */
-export const AUTH_PLUGIN_POINTS = {
+export const CHAT_AUTHORIZATION_PLUGIN_POINTS = {
   observePrincipal: CHAT_PLUGIN_POINTS.observePrincipal,
   authorizeIncoming: CHAT_PLUGIN_POINTS.authorizeIncoming,
   resolveUserRole: CHAT_PLUGIN_POINTS.resolveUserRole,
 } as const;
 
 /**
- * auth action 名称集合。
+ * 聊天授权 action 名称集合。
  */
-export const AUTH_ACTIONS = {
+export const CHAT_AUTHORIZATION_ACTIONS = {
   snapshot: "snapshot",
   readConfig: "read-config",
   writeConfig: "write-config",
@@ -50,8 +50,8 @@ export const AUTH_ACTIONS = {
 export const CHAT_AUTHORIZATION_PERMISSIONS = [
   "chat.dm.use",
   "chat.group.use",
-  "auth.manage.users",
-  "auth.manage.roles",
+  "chat.authorization.manage.users",
+  "chat.authorization.manage.roles",
   "agent.view.logs",
   "agent.manage",
 ] as const;
@@ -70,8 +70,8 @@ export const CHAT_AUTHORIZATION_PERMISSION_LABELS: Record<
 > = {
   "chat.dm.use": "DM",
   "chat.group.use": "Group",
-  "auth.manage.users": "Users",
-  "auth.manage.roles": "Roles",
+  "chat.authorization.manage.users": "Users",
+  "chat.authorization.manage.roles": "Roles",
   "agent.view.logs": "Logs",
   "agent.manage": "Agent",
 };
@@ -85,8 +85,8 @@ export const CHAT_AUTHORIZATION_PERMISSION_DESCRIPTIONS: Record<
 > = {
   "chat.dm.use": "允许用户在私聊场景中直接向 agent 发送请求并得到响应。",
   "chat.group.use": "允许用户在群聊或频道场景中触发 agent 执行对话与任务。",
-  "auth.manage.users": "允许修改用户与权限组之间的绑定关系。",
-  "auth.manage.roles": "允许编辑权限组定义，以及调整各渠道的新用户默认组。",
+  "chat.authorization.manage.users": "允许修改聊天用户与权限组之间的绑定关系。",
+  "chat.authorization.manage.roles": "允许编辑聊天权限组定义，以及调整各渠道的新用户默认组。",
   "agent.view.logs": "允许查看当前 agent 的运行日志与排障信息。",
   "agent.manage": "允许执行高权限管理动作，例如变更配置、操作服务与任务。",
 };
@@ -112,11 +112,11 @@ export interface ChatAuthorizationPermissionMeta {
 }
 
 /**
- * auth 目录快照。
+ * 聊天授权目录快照。
  */
 export interface ChatAuthorizationCatalog {
   /**
-   * auth 支持的渠道列表。
+   * 聊天授权支持的渠道列表。
    */
   channels: ChatAuthorizationChannel[];
 
@@ -137,7 +137,7 @@ export interface ChatAuthorizationCatalog {
 }
 
 /**
- * auth 统一目录常量。
+ * 聊天授权统一目录常量。
  */
 export const CHAT_AUTHORIZATION_CATALOG: ChatAuthorizationCatalog = {
   channels: [...CHAT_AUTHORIZATION_CHANNELS],
@@ -207,7 +207,7 @@ export function createDefaultChatAuthorizationRoles(): Record<string, ChatAuthor
 }
 
 /**
- * 判断给定值是否为 auth 支持的渠道。
+ * 判断给定值是否为聊天授权支持的渠道。
  */
 export function isChatAuthorizationChannel(
   value: unknown,
@@ -465,7 +465,7 @@ export interface ChatAuthorizationStateFile {
 /**
  * plugin effect 输入：记录观测主体。
  */
-export interface AuthObservePrincipalPayload {
+export interface ChatAuthorizationObservePrincipalPayload {
   /**
    * 当前渠道。
    */
@@ -495,7 +495,7 @@ export interface AuthObservePrincipalPayload {
 /**
  * plugin effect 输出：记录观测主体结果。
  */
-export interface AuthObservePrincipalResult {
+export interface ChatAuthorizationObservePrincipalResult {
   /**
    * 是否成功落盘。
    */
@@ -505,7 +505,7 @@ export interface AuthObservePrincipalResult {
 /**
  * plugin resolve 输入：查询用户角色。
  */
-export interface AuthResolveUserRolePayload {
+export interface ChatAuthorizationResolveUserRolePayload {
   /**
    * 当前渠道。
    */
@@ -519,7 +519,7 @@ export interface AuthResolveUserRolePayload {
 /**
  * action: 覆盖写入配置输入。
  */
-export interface AuthWriteConfigPayload {
+export interface ChatAuthorizationWriteConfigPayload {
   /**
    * 新配置。
    */
@@ -529,7 +529,7 @@ export interface AuthWriteConfigPayload {
 /**
  * action: 设置用户角色输入。
  */
-export interface AuthSetUserRolePayload {
+export interface ChatAuthorizationSetUserRolePayload {
   /**
    * 当前渠道。
    */

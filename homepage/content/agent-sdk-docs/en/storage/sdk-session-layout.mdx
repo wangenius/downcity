@@ -20,10 +20,13 @@ Because several SDK Agents may coexist inside the same project directory.
 ## What you will see there
 
 - `messages.jsonl`
+- `inflight.json`
 - `meta.json`
 - archive directories
 
 `meta.json` includes the persisted `title`. After the first user message, the SDK writes a title; if model title generation fails, it uses a truncated version of that first user message.
+
+`inflight.json` stores the current in-progress assistant UIMessage snapshot. During multi-step tool execution, the SDK rewrites this file so partially produced text and tool parts are not lost if the run is interrupted. When the run completes, the final assistant message is committed into `messages.jsonl` and `inflight.json` is removed.
 
 When you debug multiple sessions or multiple agents, this directory layout becomes very important because it defines how data stays isolated between different execution units.
 

@@ -42,6 +42,13 @@ export function getDowncityDirPath(cwd: string): string {
   return path.join(cwd, ".downcity");
 }
 
+/**
+ * 日志目录路径。
+ */
+export function getLogsDirPath(cwd: string): string {
+  return path.join(getDowncityDirPath(cwd), "logs");
+}
+
 export function getDowncitySchemaPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "schema", "downcity.schema.json");
 }
@@ -136,7 +143,21 @@ export function getDowncitySessionMessagesDirPath(
   return path.join(getDowncitySessionDirPath(cwd, agentId, sessionId), "messages");
 }
 
-function getDowncitySessionMessagesArchiveDirPath(
+/**
+ * Session 消息事实源文件路径。
+ */
+export function getDowncitySessionMessagesPath(
+  cwd: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getDowncitySessionMessagesDirPath(cwd, agentId, sessionId),
+    "messages.jsonl",
+  );
+}
+
+export function getDowncitySessionMessagesArchiveDirPath(
   cwd: string,
   agentId: string,
   sessionId: string,
@@ -147,8 +168,37 @@ function getDowncitySessionMessagesArchiveDirPath(
   );
 }
 
+/**
+ * Session 消息归档文件路径。
+ */
+export function getDowncitySessionMessagesArchivePath(
+  cwd: string,
+  agentId: string,
+  sessionId: string,
+  archiveId: string,
+): string {
+  return path.join(
+    getDowncitySessionMessagesArchiveDirPath(cwd, agentId, sessionId),
+    `${encodeURIComponent(String(archiveId || "").trim())}.json`,
+  );
+}
+
+/**
+ * 任务运行目录路径。
+ */
+export function getDowncityTasksDirPath(cwd: string): string {
+  return path.join(getDowncityDirPath(cwd), "task");
+}
+
 export function getDowncityDebugDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), ".debug");
+}
+
+/**
+ * `.downcity/public` 公开资源目录路径。
+ */
+export function getDowncityPublicDirPath(cwd: string): string {
+  return path.join(getDowncityDirPath(cwd), "public");
 }
 
 /**

@@ -12,6 +12,7 @@ export {
   getSdkAgentDirPath,
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
+  getSdkAgentSessionInflightPath,
   getSdkAgentSessionMessagesDirPath,
   getSdkAgentSessionMessagesPath,
   getSdkAgentSessionMetaPath,

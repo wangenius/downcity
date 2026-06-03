@@ -14,7 +14,7 @@ export {
 export type { BuiltinPluginClass } from "./BuiltinPlugins.js";
 export { ChatPlugin } from "./chat/ChatPlugin.js";
 export { ChatChannelAccountManager } from "./chat/accounts/ChannelAccountManager.js";
-export { AuthPlugin } from "./auth/Plugin.js";
+export { ChatAuthorizationPlugin } from "./auth/Plugin.js";
 export { SkillPlugin } from "./skill/Plugin.js";
 export { WebPlugin } from "./web/Plugin.js";
 export { AsrPlugin } from "./asr/Plugin.js";
@@ -28,6 +28,7 @@ export {
 export { resolveAuthorizedUserRole } from "./auth/runtime/AuthorizationPolicy.js";
 export {
   CHAT_AUTHORIZATION_CHANNELS,
+  CHAT_AUTHORIZATION_PLUGIN_NAME,
   createDefaultChatAuthorizationRoles,
   isChatAuthorizationChannel,
 } from "./auth/types/AuthPlugin.js";
@@ -42,23 +43,22 @@ export type {
   ChatPluginTelegramOptions,
 } from "./chat/ChatPluginTypes.js";
 export type {
-  AuthObservePrincipalPayload,
-  AuthObservePrincipalResult,
-  AuthResolveUserRolePayload,
-  AuthSetUserRolePayload,
-  AuthWriteConfigPayload,
   ChatAuthorizationCatalog,
   ChatAuthorizationChannel,
   ChatAuthorizationConfig,
   ChatAuthorizationDecision,
   ChatAuthorizationEvaluateInput,
   ChatAuthorizationEvaluateResult,
+  ChatAuthorizationObservePrincipalPayload,
   ChatAuthorizationObservedChat,
   ChatAuthorizationObservedUser,
   ChatAuthorizationPermission,
   ChatAuthorizationPermissionMeta,
+  ChatAuthorizationResolveUserRolePayload,
   ChatAuthorizationRole,
+  ChatAuthorizationSetUserRolePayload,
   ChatAuthorizationSnapshot,
   ChatAuthorizationStateFile,
+  ChatAuthorizationWriteConfigPayload,
   ChatChannelAuthorizationConfig,
 } from "./auth/types/AuthPlugin.js";

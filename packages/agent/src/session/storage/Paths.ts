@@ -114,3 +114,22 @@ export function getSdkAgentSessionArchiveDirPath(
     "archive",
   );
 }
+
+/**
+ * 单个 session 的 inflight assistant 路径。
+ *
+ * 关键点（中文）
+ * - 运行中的 assistant 只保留一份增量快照。
+ * - step / tool 过程会持续重写这个文件，避免中途中断后过程完全丢失。
+ * - 完成后再把最终 assistant 合并进 `messages.jsonl`，并清理该文件。
+ */
+export function getSdkAgentSessionInflightPath(
+  projectRoot: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getSdkAgentSessionMessagesDirPath(projectRoot, agentId, sessionId),
+    "inflight.json",
+  );
+}

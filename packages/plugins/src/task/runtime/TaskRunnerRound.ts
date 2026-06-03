@@ -8,9 +8,8 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import { stripInvocationAuthEnv } from "@downcity/agent/internal/runtime/auth/AuthEnv.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { runSandboxCommand } from "@downcity/agent/internal/runtime/sandbox/SandboxRunner.js";
+import { runSandboxCommand } from "@downcity/agent/internal/sandbox/SandboxRunner.js";
 import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
 import type {
@@ -22,6 +21,11 @@ import type {
 } from "@/task/runtime/TaskRunnerTypes.js";
 import { withSessionRunScope } from "@downcity/agent/internal/executor/SessionRunScope.js";
 import { appendTaskRoundUserMessage } from "./TaskRunnerSession.js";
+
+function stripTaskSecretEnv(env: NodeJS.ProcessEnv): void {
+  delete env.DC_AUTH_TOKEN;
+  delete env.DC_AGENT_TOKEN;
+}
 
 /**
  * 从文本中提取 JSON 对象（支持 ```json 代码块）。
@@ -288,7 +292,7 @@ export async function runScriptTask(params: {
         ...process.env,
         DC_SESSION_ID: params.sessionId,
       };
-      stripInvocationAuthEnv(childEnv);
+      stripTaskSecretEnv(childEnv);
       return runSandboxCommand({
         context: params.context,
         shellId: `task-script:${params.sessionId}`,

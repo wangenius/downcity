@@ -9,7 +9,7 @@
 
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import { AuthPlugin } from "@/auth/Plugin.js";
+import { ChatAuthorizationPlugin } from "@/auth/Plugin.js";
 import { SkillPlugin } from "@/skill/Plugin.js";
 import { WebPlugin } from "@/web/Plugin.js";
 import { AsrPlugin } from "@/asr/Plugin.js";
@@ -32,7 +32,7 @@ export type BuiltinPluginClass<T extends BasePlugin = BasePlugin> = new (
  * 全部内建 plugin classes。
  */
 export const BUILTIN_PLUGIN_CLASSES: BuiltinPluginClass[] = [
-  AuthPlugin,
+  ChatAuthorizationPlugin,
   SkillPlugin,
   WebPlugin,
   AsrPlugin,

@@ -107,21 +107,21 @@ In that case, downstream logic can use the resolve point instead of duplicating 
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { AuthPlugin } from "@downcity/plugins";
+import { ChatAuthorizationPlugin } from "@downcity/plugins";
 
 const agent = new Agent({
   id: "chat-agent",
   path: "/path/to/project",
   tools: {},
-  plugins: [new AuthPlugin()],
+  plugins: [new ChatAuthorizationPlugin()],
 });
 ```
 
-`auth` is more often consumed automatically by runtime integration points than manually called like a business plugin.
+`chat-authorization` is more often consumed automatically by runtime integration points than manually called like a business plugin.
 
 ## Main actions
 
-`auth` exposes four core actions.
+`chat-authorization` exposes four core actions.
 
 | Action | What it does | Best use case |
 | --- | --- | --- |

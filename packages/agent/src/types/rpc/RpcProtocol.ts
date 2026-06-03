@@ -17,14 +17,13 @@ import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginStateControlAction } from "@/plugin/types/Plugin.js";
-import type { ControlSessionExecuteAttachmentInput } from "@/runtime/control/types/ControlSessionExecute.js";
 
 /**
  * RPC 请求。
  *
  * 关键点（中文）
  * - `sdk.*` 面向 RemoteAgent 的稳定会话 SDK。
- * - `internal.*` 面向 Town runtime/control plane 的本机管理通道。
+ * - `internal.*` 面向 Town 本机管理通道。
  */
 export type RpcRequest =
   | {
@@ -135,21 +134,6 @@ export type RpcRequest =
   | {
       /** 请求 id，用于匹配响应。 */
       id: string;
-      /** 在 Agent runtime 内执行一轮 session 指令。 */
-      method: "internal.sessions.execute";
-      /** 执行参数。 */
-      params: {
-        /** 目标 session id。 */
-        sessionId: string;
-        /** 用户指令文本。 */
-        instructions: string;
-        /** 可选附件。 */
-        attachments?: ControlSessionExecuteAttachmentInput[];
-      };
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
       /** 清空 session messages。 */
       method: "internal.sessions.clear_messages";
       /** 目标 session 参数。 */
@@ -246,40 +230,6 @@ export type RpcRequest =
         actionName: string;
         /** action payload。 */
         payload?: JsonValue;
-      };
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 读取 authorization 控制配置。 */
-      method: "internal.authorization.get";
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 写入 authorization 控制配置。 */
-      method: "internal.authorization.config";
-      /** authorization 配置参数。 */
-      params: {
-        /** 配置对象。 */
-        config: JsonObject;
-      };
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 执行 authorization 控制动作。 */
-      method: "internal.authorization.action";
-      /** authorization 动作参数。 */
-      params: {
-        /** 动作名。 */
-        action: string;
-        /** 渠道名。 */
-        channel: string;
-        /** 可选用户 id。 */
-        userId?: string;
-        /** 可选角色 id。 */
-        roleId?: string;
       };
     };
 
@@ -400,22 +350,6 @@ export interface RpcSystemPromptPayload {
   totalChars: number;
   /** system message 分段。 */
   sections: RpcSystemPromptSection[];
-}
-
-/**
- * RPC session execute 响应。
- */
-export interface RpcSessionExecuteResult {
-  /** 执行是否成功。 */
-  success: boolean;
-  /** 失败错误信息。 */
-  error?: string;
-  /** assistant 原始消息。 */
-  assistantMessage?: unknown;
-  /** 用户可见文本。 */
-  userVisible: string;
-  /** 是否进入队列。 */
-  queued: boolean;
 }
 
 /**

@@ -64,6 +64,21 @@ export interface SessionHistoryStore {
   append(message: SessionMessageV1): Promise<void>;
 
   /**
+   * 读取当前运行中的 assistant 快照。
+   */
+  readInflight(): Promise<SessionMessageV1 | null>;
+
+  /**
+   * 写入当前运行中的 assistant 快照。
+   */
+  writeInflight(message: SessionMessageV1): Promise<void>;
+
+  /**
+   * 用最终 assistant 收口 inflight 快照。
+   */
+  finalizeInflight(message?: SessionMessageV1 | null): Promise<void>;
+
+  /**
    * 读取完整消息历史。
    */
   list(): Promise<SessionMessageV1[]>;

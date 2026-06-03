@@ -106,6 +106,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
   private readonly overrideMessagesFilePath?: string;
   private readonly overrideMetaFilePath?: string;
   private readonly overrideArchiveDirPath?: string;
+  private readonly overrideInflightFilePath?: string;
 
   constructor(options: JsonlSessionHistoryStoreOptions) {
     const rootPath = String(options.rootPath || "").trim();
@@ -134,6 +135,9 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     );
     this.overrideArchiveDirPath = this.readOptionalPath(
       options.paths?.archiveDirPath,
+    );
+    this.overrideInflightFilePath = this.readOptionalPath(
+      options.paths?.inflightFilePath,
     );
   }
 
@@ -183,6 +187,14 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     return path.join(this.getMessagesDirPath(), "archive");
   }
 
+  private getInflightFilePath(): string {
+    if (this.overrideInflightFilePath) return this.overrideInflightFilePath;
+    if (this.overrideMessagesDirPath) {
+      return path.join(this.overrideMessagesDirPath, "inflight.json");
+    }
+    return path.join(this.getMessagesDirPath(), "inflight.json");
+  }
+
   private getLockFilePath(): string {
     return path.join(this.getMessagesDirPath(), ".session.lock");
   }
@@ -197,6 +209,75 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
   private normalizeText(input: unknown): string | undefined {
     const value = typeof input === "string" ? input.trim() : "";
     return value || undefined;
+  }
+
+  private normalizePersistedMessage(
+    input: unknown,
+  ): SessionMessageV1 | null {
+    if (!input || typeof input !== "object") return null;
+    const candidate = input as Partial<SessionMessageV1>;
+    const role = String(candidate.role || "");
+    if (role !== "user" && role !== "assistant") return null;
+    if (!Array.isArray(candidate.parts)) return null;
+    return candidate as SessionMessageV1;
+  }
+
+  private hasStructuredAssistantParts(message: SessionMessageV1 | null): boolean {
+    if (!message || message.role !== "assistant" || !Array.isArray(message.parts)) {
+      return false;
+    }
+    return message.parts.some((part) => {
+      if (!part || typeof part !== "object") return false;
+      const type = typeof part.type === "string" ? part.type.trim() : "";
+      return Boolean(type) && type !== "text";
+    });
+  }
+
+  private mergeInflightWithFinal(
+    inflight: SessionMessageV1,
+    finalMessage: SessionMessageV1,
+  ): SessionMessageV1 {
+    const final_parts = Array.isArray(finalMessage.parts)
+      ? finalMessage.parts.filter((part) => part && typeof part === "object")
+      : [];
+    if (this.hasStructuredAssistantParts(finalMessage)) {
+      return finalMessage;
+    }
+    if (final_parts.length === 0) return inflight;
+
+    const inflight_parts = Array.isArray(inflight.parts)
+      ? inflight.parts
+      : [];
+    const last_inflight_part =
+      inflight_parts.length > 0 ? inflight_parts[inflight_parts.length - 1] : undefined;
+    const last_inflight_text =
+      last_inflight_part &&
+      typeof last_inflight_part === "object" &&
+      last_inflight_part.type === "text" &&
+      typeof last_inflight_part.text === "string"
+        ? last_inflight_part.text.trim()
+        : "";
+    const append_parts = final_parts.filter((part, index) => {
+      if (index > 0) return true;
+      if (!part || typeof part !== "object" || part.type !== "text") return true;
+      const next_text = typeof part.text === "string" ? part.text.trim() : "";
+      if (!next_text) return false;
+      return next_text !== last_inflight_text;
+    });
+
+    return {
+      ...inflight,
+      id: finalMessage.id,
+      metadata: {
+        ...(inflight.metadata || {
+          v: 1 as const,
+          ts: Date.now(),
+          sessionId: this.sessionId,
+        }),
+        ...(finalMessage.metadata || {}),
+      },
+      parts: [...inflight_parts, ...append_parts],
+    };
   }
 
   private async readMetaUnsafe(): Promise<SessionHistoryMetaV1> {
@@ -259,6 +340,40 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         : {}),
     };
     await fs.writeJson(this.getMetaFilePath(), normalized, { spaces: 2 });
+  }
+
+  private async readInflightUnsafe(): Promise<SessionMessageV1 | null> {
+    const file = this.getInflightFilePath();
+    try {
+      const raw = await fs.readJson(file);
+      return this.normalizePersistedMessage(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  private async writeInflightUnsafe(message: SessionMessageV1): Promise<void> {
+    const normalized = this.normalizePersistedMessage(message);
+    if (!normalized || normalized.role !== "assistant") {
+      throw new Error("inflight assistant must be an assistant UIMessage");
+    }
+    const file = this.getInflightFilePath();
+    const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
+    await fs.ensureDir(path.dirname(file));
+    await fs.writeJson(temp, normalized, { spaces: 2 });
+    await fs.move(temp, file, { overwrite: true });
+  }
+
+  private async removeInflightUnsafe(): Promise<void> {
+    await fs.remove(this.getInflightFilePath());
+  }
+
+  private async appendMessageUnsafe(message: SessionMessageV1): Promise<void> {
+    await fs.appendFile(
+      this.getMessagesFilePath(),
+      JSON.stringify(message) + "\n",
+      "utf8",
+    );
   }
 
   private async withWriteLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -361,11 +476,48 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
 
   async append(message: SessionMessageV1): Promise<void> {
     await this.withWriteLock(async () => {
-      await fs.appendFile(
-        this.getMessagesFilePath(),
-        JSON.stringify(message) + "\n",
-        "utf8",
-      );
+      const normalized = this.normalizePersistedMessage(message);
+      if (!normalized) return;
+
+      // 关键点（中文）：若上一次 assistant 在运行中中断，新的 user 到来前先把残留快照收口到正式历史，
+      // 避免 `list()` 时旧 inflight 跑到新 user 后面，打乱时序。
+      if (normalized.role === "user") {
+        const current_inflight = await this.readInflightUnsafe();
+        if (current_inflight) {
+          await this.appendMessageUnsafe(current_inflight);
+          await this.removeInflightUnsafe();
+        }
+      }
+
+      await this.appendMessageUnsafe(normalized);
+    });
+  }
+
+  async readInflight(): Promise<SessionMessageV1 | null> {
+    await this.ensureLayout();
+    return this.readInflightUnsafe();
+  }
+
+  async writeInflight(message: SessionMessageV1): Promise<void> {
+    await this.withWriteLock(async () => {
+      await this.writeInflightUnsafe(message);
+    });
+  }
+
+  async finalizeInflight(message?: SessionMessageV1 | null): Promise<void> {
+    await this.withWriteLock(async () => {
+      const current_inflight = await this.readInflightUnsafe();
+      const normalized_message = this.normalizePersistedMessage(message);
+      const final_message =
+        current_inflight && normalized_message
+          ? this.mergeInflightWithFinal(current_inflight, normalized_message)
+          : normalized_message || current_inflight;
+      if (final_message) {
+        await this.appendMessageUnsafe(final_message);
+      }
+      if (current_inflight) {
+        await this.removeInflightUnsafe();
+      }
     });
   }
 
@@ -377,15 +529,16 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     const out: SessionMessageV1[] = [];
     for (const line of lines) {
       try {
-        const obj = JSON.parse(line) as Partial<SessionMessageV1>;
-        if (!obj || typeof obj !== "object") continue;
-        const role = String(obj.role || "");
-        if (role !== "user" && role !== "assistant") continue;
-        if (!Array.isArray(obj.parts)) continue;
-        out.push(obj as SessionMessageV1);
+        const obj = this.normalizePersistedMessage(JSON.parse(line));
+        if (!obj) continue;
+        out.push(obj);
       } catch {
         // ignore invalid lines
       }
+    }
+    const current_inflight = await this.readInflightUnsafe();
+    if (current_inflight) {
+      out.push(current_inflight);
     }
     return out;
   }

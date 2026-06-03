@@ -15,7 +15,7 @@ import { findPluginByName } from "@/plugin/core/PluginCatalog.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
-} from "@/runtime/host/AgentHostRuntime.js";
+} from "@/agent/local/AgentRuntimeAssembly.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type {
   Plugin,

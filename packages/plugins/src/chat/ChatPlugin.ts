@@ -13,7 +13,7 @@ import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/runtime/host/Store.js";
+import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type {
   ChatPluginFeishuOptions,

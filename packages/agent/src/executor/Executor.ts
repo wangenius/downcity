@@ -13,7 +13,7 @@ import type { SessionHistoryComposer } from "@executor/composer/history/SessionH
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import { withSessionRunScope } from "@executor/SessionRunScope.js";
 import type { SessionRunScope } from "@executor/SessionRunScope.js";
-import { buildSessionStepEventMessages } from "@executor/messages/SessionStepEventMapper.js";
+import { buildSessionStepParts } from "@executor/messages/SessionStepEventMapper.js";
 import { JsonlSessionCompactionComposer } from "@executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionContextComposer } from "@executor/composer/context/LocalSessionContextComposer.js";
 import type { SessionCompactionComposer } from "@executor/composer/compaction/SessionCompactionComposer.js";
@@ -55,6 +55,7 @@ import type {
   SessionRunInput,
   SessionRunResult,
 } from "@/executor/types/SessionRun.js";
+import { generateId } from "@/utils/Id.js";
 
 /**
  * 可压缩错误的最大重试次数。
@@ -227,6 +228,56 @@ export class Executor implements SessionExecutor {
   }
 
   /**
+   * 把 step/tool 过程增量写入当前运行中的 assistant 快照。
+   */
+  private async appendAssistantStepPartsToInflight(
+    parts: SessionMessageV1["parts"],
+  ): Promise<void> {
+    const normalized_parts = Array.isArray(parts)
+      ? parts.filter((part) => part && typeof part === "object")
+      : [];
+    if (normalized_parts.length === 0) return;
+
+    const current_inflight = await this.historyStore.readInflight();
+    const next_message: SessionMessageV1 = current_inflight
+      ? {
+          ...current_inflight,
+          metadata: {
+            ...(current_inflight.metadata || {
+              v: 1 as const,
+              ts: Date.now(),
+              sessionId: this.sessionId,
+            }),
+            ts: Date.now(),
+            sessionId: this.sessionId,
+            source: "egress",
+            kind: "normal",
+          },
+          parts: [
+            ...(Array.isArray(current_inflight.parts)
+              ? current_inflight.parts
+              : []),
+            ...normalized_parts,
+          ],
+        }
+      : {
+          id: `a:${this.sessionId}:${generateId()}`,
+          role: "assistant",
+          metadata: {
+            v: 1,
+            ts: Date.now(),
+            sessionId: this.sessionId,
+            source: "egress",
+            kind: "normal",
+          },
+          parts: normalized_parts,
+        };
+
+    await this.historyStore.writeInflight(next_message);
+    await this.afterSessionUpdatedAsync();
+  }
+
+  /**
    * 运行当前 session 的一次请求。
    *
    * 关键点（中文）
@@ -256,7 +307,6 @@ export class Executor implements SessionExecutor {
         ? { onUiMessageChunkCallback: params.onUiMessageChunkCallback }
         : {}),
     };
-    let persistedAssistantStepCount = 0;
     const providedOnAssistantStepCallback =
       sessionRunScope.onAssistantStepCallback;
 
@@ -266,20 +316,14 @@ export class Executor implements SessionExecutor {
       visibility?: "visible" | "internal";
       stepResult?: unknown;
     }): Promise<void> => {
-      const stepMessages = buildSessionStepEventMessages({
-        sessionId: this.sessionId,
+      const step_parts = buildSessionStepParts({
         stepIndex: step.stepIndex,
         stepResult: step.stepResult,
         text: step.text,
         visibility: step.visibility,
       });
-      if (stepMessages.length > 0) {
-        for (const stepMessage of stepMessages) {
-          await this.appendAssistantMessage({
-            message: stepMessage,
-          });
-          persistedAssistantStepCount += 1;
-        }
+      if (step_parts.length > 0) {
+        await this.appendAssistantStepPartsToInflight(step_parts);
       }
 
       if (typeof providedOnAssistantStepCallback === "function") {
@@ -298,32 +342,7 @@ export class Executor implements SessionExecutor {
         },
         () => this.runWithRetry({ query }),
       );
-      if (persistedAssistantStepCount <= 0) return result;
-
-      return {
-        ...result,
-        assistantMessage: {
-          ...result.assistantMessage,
-          metadata: {
-            ...(result.assistantMessage.metadata || {
-              v: 1 as const,
-              ts: Date.now(),
-              sessionId: this.sessionId,
-            }),
-            extra: {
-              ...(
-                result.assistantMessage.metadata?.extra &&
-                  typeof result.assistantMessage.metadata.extra === "object" &&
-                  !Array.isArray(result.assistantMessage.metadata.extra)
-                  ? result.assistantMessage.metadata.extra
-                  : {}
-              ),
-              assistantStepMessagesPersisted: true,
-              assistantStepCount: persistedAssistantStepCount,
-            },
-          },
-        },
-      };
+      return result;
     } finally {
       this.resetRunState();
       this.executing = false;

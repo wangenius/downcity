@@ -11,7 +11,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/runtime/host/Store.js";
+import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
 import type {
   ChatChannelName,
   ChatChannelStateSnapshot,

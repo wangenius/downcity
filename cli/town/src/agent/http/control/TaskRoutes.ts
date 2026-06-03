@@ -8,21 +8,21 @@
 
 import fs from "fs-extra";
 import { basename, dirname, join } from "path";
-import { getDowncityTasksDirPath } from "@downcity/agent/internal/config/Paths.js";
 import { runPluginCommand } from "@downcity/agent/internal/plugin/core/Manager.js";
+import { getDowncityTasksDirPath } from "@/config/Paths.js";
 import type { ControlRouteRegistrationParams } from "@/agent/http/control/types/ControlRoutes.js";
 import {
   buildControlRouteAliases,
   decodeMaybe,
   toLimit,
   toOptionalString,
-} from "@downcity/agent/internal/runtime/control/CommonHelpers.js";
+} from "@/agent/control/CommonHelpers.js";
 import {
   TASK_RUN_DIR_REGEX,
   listTaskRuns,
   readRecentLogs,
   readTaskRunDetail,
-} from "@downcity/agent/internal/runtime/control/Helpers.js";
+} from "@/agent/control/Helpers.js";
 
 type TaskListItem = {
   title?: string;

@@ -3,34 +3,8 @@
  *
  * 关键点（中文）
  * - shell 会话生命周期已经统一收敛到 shell plugin runtime。
- * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验与 env 注入。
+ * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验。
  */
-
-import { stripInvocationAuthEnv } from "@/runtime/auth/AuthEnv.js";
-import { getSessionRunScope } from "@executor/SessionRunScope.js";
-
-function setEnvString(
-  env: NodeJS.ProcessEnv,
-  key: string,
-  value: string | undefined,
-): void {
-  if (typeof value !== "string") return;
-  const trimmed = value.trim();
-  if (!trimmed) return;
-  env[key] = trimmed;
-}
-
-function applyEnvMap(
-  env: NodeJS.ProcessEnv,
-  entries?: Record<string, string>,
-): void {
-  if (!entries) return;
-  for (const [rawKey, rawValue] of Object.entries(entries)) {
-    const key = String(rawKey || "").trim();
-    if (!key) continue;
-    setEnvString(env, key, rawValue);
-  }
-}
 
 /**
  * 对 `town chat send` 命令做前置安全校验。
@@ -57,27 +31,4 @@ export function validateChatSendCommand(cmd: string): string | null {
     "Unsafe `town chat send` command: real newlines are not allowed.",
     "If your message is multi-line, use `town chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
   ].join(" ");
-}
-
-/**
- * 构建 shell 子进程环境变量。
- *
- * 关键点（中文）
- * - 当前仍用于 shell tool / shell runtime 与相关测试。
- * - 优先级：显式注入 > 当前请求上下文变量 > 宿主进程环境。
- * - 默认剥离 Bearer Token，避免通用 shell 隐式走本地 HTTP。
- */
-export function buildShellContextEnv(
-  injected?: Record<string, string>,
-): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  const contextCtx = getSessionRunScope();
-
-  applyEnvMap(env, injected);
-  setEnvString(env, "DC_SESSION_ID", contextCtx?.sessionId);
-  setEnvString(env, "DC_CITY_HOST", process.env.DC_CITY_HOST);
-  setEnvString(env, "DC_CITY_PORT", process.env.DC_CITY_PORT);
-  stripInvocationAuthEnv(env);
-
-  return env;
 }

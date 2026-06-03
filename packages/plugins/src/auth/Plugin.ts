@@ -1,10 +1,10 @@
 /**
- * Auth Plugin。
+ * ChatAuthorizationPlugin。
  *
  * 关键点（中文）
- * - auth 是内建且必需的 plugin，不走可选启停语义。
+ * - chat-authorization 是内建且必需的 plugin，不走可选启停语义。
  * - 静态授权配置与动态观测态都收敛在项目 `.downcity/chat/authorization/`。
- * - auth plugin 只负责统一暴露扩展点 / action 边界，不再依赖宿主平台读写授权配置。
+ * - 它只负责聊天主体授权，不负责 Town HTTP Bearer token 或路由访问鉴权。
  */
 
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
@@ -13,10 +13,12 @@ import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import { CHAT_PLUGIN_POINTS } from "@/chat/runtime/PluginPoints.js";
 import {
-  AUTH_ACTIONS,
-  type AuthObservePrincipalPayload,
-  type AuthSetUserRolePayload,
-  type AuthWriteConfigPayload,
+  CHAT_AUTHORIZATION_ACTIONS,
+  CHAT_AUTHORIZATION_CATALOG,
+  CHAT_AUTHORIZATION_PLUGIN_NAME,
+  type ChatAuthorizationObservePrincipalPayload,
+  type ChatAuthorizationSetUserRolePayload,
+  type ChatAuthorizationWriteConfigPayload,
   type ChatAuthorizationConfig,
   type ChatAuthorizationEvaluateInput,
   type ChatAuthorizationSnapshot,
@@ -50,7 +52,7 @@ function toRecord(value: unknown): Record<string, unknown> {
 function toEvaluateInput(payload: Record<string, unknown>): ChatAuthorizationEvaluateInput {
   const channel = toChannel(payload.channel);
   if (!channel) {
-    throw new Error("auth.authorize_incoming requires a valid channel");
+    throw new Error("chat-authorization.authorize_incoming requires a valid channel");
   }
   return {
     channel,
@@ -64,158 +66,173 @@ function toEvaluateInput(payload: Record<string, unknown>): ChatAuthorizationEva
 
 function toSnapshotData(snapshot: ChatAuthorizationSnapshot): JsonValue {
   return {
+    catalog: CHAT_AUTHORIZATION_CATALOG as unknown as JsonValue,
     config: snapshot.config as unknown as JsonValue,
     users: snapshot.users as unknown as JsonValue,
     chats: snapshot.chats as unknown as JsonValue,
   };
 }
 
-function createAuthPluginDefinition(): Plugin {
+function createChatAuthorizationPluginDefinition(): Plugin {
   return {
-    name: "auth",
-  title: "User Authorization System",
-  description:
-    "Controls who can talk to the agent in chat channels, records observed users and chats, and resolves each user's effective role for downstream service decisions.",
-  availability() {
-    return {
-      enabled: true,
-      available: true,
-      reasons: [],
-    };
-  },
-  hooks: {
-    guard: {
-      [CHAT_PLUGIN_POINTS.authorizeIncoming]: [
-        async ({ context, value }) => {
-          const input =
-            value && typeof value === "object" && !Array.isArray(value)
-              ? (value as Record<string, unknown>)
-              : {};
-          const evaluateInput = toEvaluateInput(input);
-          const authorizationConfig = readChatAuthorizationConfig(context);
-          const result = evaluateIncomingChatAuthorization({
-            config: context.config,
-            channel: evaluateInput.channel,
-            input: evaluateInput,
-            authorizationConfig,
-          });
-          if (result.decision !== "allow") {
-            throw new Error(result.reason || "chat authorization blocked");
-          }
-        },
-      ],
+    name: CHAT_AUTHORIZATION_PLUGIN_NAME,
+    title: "Chat Authorization",
+    description:
+      "Controls who can talk to the agent in chat channels, records observed users and chats, and resolves each user's effective role for downstream service decisions.",
+    availability() {
+      return {
+        enabled: true,
+        available: true,
+        reasons: [],
+      };
     },
-    effect: {
-      [CHAT_PLUGIN_POINTS.observePrincipal]: [
-        async ({ context, value }) => {
-          const input = toRecord(value) as unknown as AuthObservePrincipalPayload;
-          const channel = toChannel(input.channel);
+    hooks: {
+      guard: {
+        [CHAT_PLUGIN_POINTS.authorizeIncoming]: [
+          async ({ context, value }) => {
+            const input =
+              value && typeof value === "object" && !Array.isArray(value)
+                ? (value as Record<string, unknown>)
+                : {};
+            const evaluateInput = toEvaluateInput(input);
+            const authorizationConfig = readChatAuthorizationConfig(context);
+            const result = evaluateIncomingChatAuthorization({
+              config: context.config,
+              channel: evaluateInput.channel,
+              input: evaluateInput,
+              authorizationConfig,
+            });
+            if (result.decision !== "allow") {
+              throw new Error(result.reason || "chat authorization blocked");
+            }
+          },
+        ],
+      },
+      effect: {
+        [CHAT_PLUGIN_POINTS.observePrincipal]: [
+          async ({ context, value }) => {
+            const input = toRecord(
+              value,
+            ) as unknown as ChatAuthorizationObservePrincipalPayload;
+            const channel = toChannel(input.channel);
+            if (!channel) {
+              throw new Error("chat.observePrincipal requires a valid channel");
+            }
+            await recordObservedAuthorizationPrincipal({
+              context,
+              channel,
+              chatId: String(input.chatId || "").trim(),
+              ...(typeof input.chatType === "string"
+                ? { chatType: input.chatType.trim() }
+                : {}),
+              ...(typeof input.chatTitle === "string"
+                ? { chatTitle: input.chatTitle.trim() }
+                : {}),
+              ...(typeof input.userId === "string"
+                ? { userId: input.userId.trim() }
+                : {}),
+              ...(typeof input.username === "string"
+                ? { username: input.username.trim() }
+                : {}),
+            });
+          },
+        ],
+      },
+    },
+    resolves: {
+      [CHAT_PLUGIN_POINTS.resolveUserRole]: async ({ context, value }) => {
+        const input =
+          value && typeof value === "object" && !Array.isArray(value)
+            ? (value as Record<string, unknown>)
+            : {};
+        const channel = toChannel(input.channel);
+        if (!channel) {
+          throw new Error("chat.resolveUserRole requires a valid channel");
+        }
+        const role = resolveAuthorizedUserRole({
+          channel,
+          userId: String(input.userId || "").trim(),
+          rootPath: context.rootPath,
+        });
+        return ((role || null) as unknown) as JsonValue;
+      },
+    },
+    actions: {
+      [CHAT_AUTHORIZATION_ACTIONS.snapshot]: {
+        execute: async ({ context }) => {
+          const snapshot = await readAuthorizationSnapshot({
+            context,
+          });
+          return {
+            success: true,
+            data: toSnapshotData(snapshot),
+          };
+        },
+      },
+      [CHAT_AUTHORIZATION_ACTIONS.readConfig]: {
+        execute: async ({ context }) => {
+          return {
+            success: true,
+            data: readChatAuthorizationConfig(context) as unknown as JsonValue,
+          };
+        },
+      },
+      [CHAT_AUTHORIZATION_ACTIONS.writeConfig]: {
+        execute: async ({ context, payload }) => {
+          const body = toRecord(
+            payload,
+          ) as unknown as ChatAuthorizationWriteConfigPayload;
+          const nextConfig =
+            body.config && typeof body.config === "object" && !Array.isArray(body.config)
+              ? (body.config as ChatAuthorizationConfig)
+              : {};
+          await writeChatAuthorizationConfig({
+            context,
+            nextConfig,
+          });
+          return {
+            success: true,
+            data: readChatAuthorizationConfig(context) as unknown as JsonValue,
+          };
+        },
+      },
+      [CHAT_AUTHORIZATION_ACTIONS.setUserRole]: {
+        execute: async ({ context, payload }) => {
+          const body = toRecord(
+            payload,
+          ) as unknown as ChatAuthorizationSetUserRolePayload;
+          const channel = toChannel(body.channel);
           if (!channel) {
-            throw new Error("chat.observePrincipal requires a valid channel");
+            return {
+              success: false,
+              error: "set-user-role requires a valid channel",
+              message: "set-user-role requires a valid channel",
+            };
           }
-          await recordObservedAuthorizationPrincipal({
+          await setChatAuthorizationUserRole({
             context,
             channel,
-            chatId: String(input.chatId || "").trim(),
-            ...(typeof input.chatType === "string" ? { chatType: input.chatType.trim() } : {}),
-            ...(typeof input.chatTitle === "string" ? { chatTitle: input.chatTitle.trim() } : {}),
-            ...(typeof input.userId === "string" ? { userId: input.userId.trim() } : {}),
-            ...(typeof input.username === "string" ? { username: input.username.trim() } : {}),
+            userId: String(body.userId || "").trim(),
+            roleId: String(body.roleId || "").trim(),
           });
-        },
-      ],
-    },
-  },
-  resolves: {
-    [CHAT_PLUGIN_POINTS.resolveUserRole]: async ({ context, value }) => {
-      const input =
-        value && typeof value === "object" && !Array.isArray(value)
-          ? (value as Record<string, unknown>)
-          : {};
-      const channel = toChannel(input.channel);
-      if (!channel) {
-        throw new Error("chat.resolveUserRole requires a valid channel");
-      }
-      const role = resolveAuthorizedUserRole({
-        channel,
-        userId: String(input.userId || "").trim(),
-        rootPath: context.rootPath,
-      });
-      return ((role || null) as unknown) as JsonValue;
-    },
-  },
-  actions: {
-    [AUTH_ACTIONS.snapshot]: {
-      execute: async ({ context }) => {
-        const snapshot = await readAuthorizationSnapshot({
-          context,
-        });
-        return {
-          success: true,
-          data: toSnapshotData(snapshot),
-        };
-      },
-    },
-    [AUTH_ACTIONS.readConfig]: {
-      execute: async ({ context }) => {
-        return {
-          success: true,
-          data: readChatAuthorizationConfig(context) as unknown as JsonValue,
-        };
-      },
-    },
-    [AUTH_ACTIONS.writeConfig]: {
-      execute: async ({ context, payload }) => {
-        const body = toRecord(payload) as unknown as AuthWriteConfigPayload;
-        const nextConfig =
-          body.config && typeof body.config === "object" && !Array.isArray(body.config)
-            ? (body.config as ChatAuthorizationConfig)
-            : {};
-        await writeChatAuthorizationConfig({
-          context,
-          nextConfig,
-        });
-        return {
-          success: true,
-          data: readChatAuthorizationConfig(context) as unknown as JsonValue,
-        };
-      },
-    },
-    [AUTH_ACTIONS.setUserRole]: {
-      execute: async ({ context, payload }) => {
-        const body = toRecord(payload) as unknown as AuthSetUserRolePayload;
-        const channel = toChannel(body.channel);
-        if (!channel) {
           return {
-            success: false,
-            error: "set-user-role requires a valid channel",
-            message: "set-user-role requires a valid channel",
+            success: true,
+            data: readChatAuthorizationConfig(context) as unknown as JsonValue,
           };
-        }
-        await setChatAuthorizationUserRole({
-          context,
-          channel,
-          userId: String(body.userId || "").trim(),
-          roleId: String(body.roleId || "").trim(),
-        });
-        return {
-          success: true,
-          data: readChatAuthorizationConfig(context) as unknown as JsonValue,
-        };
+        },
       },
     },
-  },
   };
 }
 
 /**
- * AuthPlugin：统一承载授权能力。
+ * ChatAuthorizationPlugin：统一承载聊天用户授权能力。
  */
-export class AuthPlugin extends BasePlugin {
-  readonly name = "auth";
+export class ChatAuthorizationPlugin extends BasePlugin {
+  readonly name = CHAT_AUTHORIZATION_PLUGIN_NAME;
 
   constructor(agent: AgentRuntime | null = null) {
     super(agent);
-    Object.assign(this, createAuthPluginDefinition());
+    Object.assign(this, createChatAuthorizationPluginDefinition());
   }
 }

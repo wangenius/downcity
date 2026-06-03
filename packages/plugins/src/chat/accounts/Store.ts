@@ -20,7 +20,7 @@ import type {
   StoredChannelAccount,
   StoredChannelAccountChannel,
   UpsertChannelAccountInput,
-} from "@downcity/agent/internal/types/runtime/host/Store.js";
+} from "@downcity/agent/internal/types/platform/Store.js";
 
 function nowIso(): string {
   return new Date().toISOString();

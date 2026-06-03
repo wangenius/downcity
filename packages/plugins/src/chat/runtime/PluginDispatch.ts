@@ -9,7 +9,7 @@
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
 import type {
-  AuthObservePrincipalPayload,
+  ChatAuthorizationObservePrincipalPayload,
   ChatAuthorizationEvaluateInput,
   ChatAuthorizationRole,
 } from "@/auth/types/AuthPlugin.js";
@@ -40,7 +40,7 @@ export async function observeIncomingChatPrincipal(params: {
     ...(params.chatTitle ? { chatTitle: params.chatTitle } : {}),
     ...(params.userId ? { userId: params.userId } : {}),
     ...(params.username ? { username: params.username } : {}),
-  } as AuthObservePrincipalPayload as unknown as JsonObject);
+  } as ChatAuthorizationObservePrincipalPayload as unknown as JsonObject);
 }
 
 /**

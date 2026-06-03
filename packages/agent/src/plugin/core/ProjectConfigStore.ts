@@ -10,7 +10,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { AgentPluginConfigRuntime } from "@/types/runtime/host/AgentHost.js";
+import type { AgentPluginConfigRuntime } from "@/types/agent/AgentRuntimeAssembly.js";
 
 type PersistableSections = {
   /**
@@ -71,7 +71,8 @@ export function readProjectPluginRecord(
  * 从项目配置读取单个 plugin 的启用态。
  *
  * 关键点（中文）
- * - 除 `auth` 外，未显式配置 `enabled: false` 时默认视为启用。
+ * - 未显式配置 `enabled: false` 时默认视为启用。
+ * - Agent 不按插件名维护“必需插件”例外，避免 Runtime 理解具体业务插件。
  * - 这样可以保持“零配置即可使用”的内建 plugin 体验。
  */
 export function readProjectPluginEnabled(params: {
@@ -86,7 +87,6 @@ export function readProjectPluginEnabled(params: {
 }): boolean {
   const normalizedPluginName = String(params.pluginName || "").trim();
   if (!normalizedPluginName) return false;
-  if (normalizedPluginName === "auth") return true;
   const current = readProjectPluginRecordFromConfig(params.config, normalizedPluginName);
   return current.enabled !== false;
 }
@@ -113,7 +113,7 @@ export async function writeProjectPluginEnabled(params: {
   context: ProjectPluginConfigCarrier;
 }): Promise<void> {
   const normalizedPluginName = String(params.pluginName || "").trim();
-  if (!normalizedPluginName || normalizedPluginName === "auth") return;
+  if (!normalizedPluginName) return;
   if (!params.context.config.plugins) {
     params.context.config.plugins = {};
   }

@@ -17,6 +17,12 @@ SDK session 默认落盘到：
 <projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/meta.json
 ```
 
+以及运行中的 assistant 快照：
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/inflight.json
+```
+
 ## 为什么要按 `agentId` 分区
 
 因为同一个项目目录下，可能有多个 SDK agent 共存。
@@ -28,8 +34,13 @@ SDK session 默认落盘到：
 ## 你通常能在这里得到什么
 
 - 消息历史
+- 运行中的 assistant 快照
 - session metadata
 - 归档目录
+
+`messages.jsonl` 保存稳定历史。
+
+`inflight.json` 保存当前尚未完成的 assistant UIMessage。多 step tool 调用过程中，SDK 会持续重写这份快照；如果执行顺利结束，最终 assistant 会写回 `messages.jsonl`，并删除 `inflight.json`。如果中途崩溃，仍然可以从 `inflight.json` 恢复已经生成的过程内容。
 
 如果你在排障、做历史回放或多 agent 实验，这些落盘信息都很有价值。
 

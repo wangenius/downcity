@@ -13,6 +13,12 @@ import type { PluginStateControlAction } from "@downcity/agent/internal/plugin/t
 import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 
 type RuntimeRpcClient = NonNullable<ReturnType<AgentRpcPool["resolveClientForAgent"]>>;
+const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";
+const CHAT_AUTHORIZATION_ACTIONS = {
+  snapshot: "snapshot",
+  writeConfig: "write-config",
+  setUserRole: "set-user-role",
+} as const;
 
 /**
  * Dashboard runtime 路由参数。
@@ -106,9 +112,13 @@ export function registerDashboardRuntimeApiRoutes(
     try {
       const resolved = await resolveRuntimeClient(params, c.req.raw);
       if ("response" in resolved) return resolved.response;
+      const result = await runChatAuthorizationAction({
+        client: resolved.client,
+        action: CHAT_AUTHORIZATION_ACTIONS.snapshot,
+      });
       return c.json({
         success: true,
-        ...(await resolved.client.get_internal_authorization()),
+        ...toJsonObject(result.data),
       });
     } catch (error) {
       return c.json({ success: false, error: getErrorMessage(error) }, 500);
@@ -120,11 +130,20 @@ export function registerDashboardRuntimeApiRoutes(
       const body = await c.req.json().catch(() => ({}));
       const resolved = await resolveRuntimeClient(params, c.req.raw);
       if ("response" in resolved) return resolved.response;
+      await runChatAuthorizationAction({
+        client: resolved.client,
+        action: CHAT_AUTHORIZATION_ACTIONS.writeConfig,
+        payload: {
+          config: toJsonObject(body?.config),
+        },
+      });
+      const result = await runChatAuthorizationAction({
+        client: resolved.client,
+        action: CHAT_AUTHORIZATION_ACTIONS.snapshot,
+      });
       return c.json({
         success: true,
-        ...(await resolved.client.write_internal_authorization_config(
-          toJsonObject(body?.config),
-        )),
+        ...toJsonObject(result.data),
       });
     } catch (error) {
       return c.json({ success: false, error: getErrorMessage(error) }, 500);
@@ -136,14 +155,22 @@ export function registerDashboardRuntimeApiRoutes(
       const body = await c.req.json().catch(() => ({}));
       const resolved = await resolveRuntimeClient(params, c.req.raw);
       if ("response" in resolved) return resolved.response;
+      await runChatAuthorizationAction({
+        client: resolved.client,
+        action: CHAT_AUTHORIZATION_ACTIONS.setUserRole,
+        payload: {
+          channel: String(body?.channel || "").trim(),
+          userId: String(body?.userId || "").trim(),
+          roleId: String(body?.roleId || "").trim(),
+        },
+      });
+      const result = await runChatAuthorizationAction({
+        client: resolved.client,
+        action: CHAT_AUTHORIZATION_ACTIONS.snapshot,
+      });
       return c.json({
         success: true,
-        ...(await resolved.client.run_internal_authorization_action({
-          action: String(body?.action || "").trim(),
-          channel: String(body?.channel || "").trim(),
-          user_id: String(body?.userId || "").trim(),
-          role_id: String(body?.roleId || "").trim(),
-        })),
+        ...toJsonObject(result.data),
       });
     } catch (error) {
       return c.json({ success: false, error: getErrorMessage(error) }, 500);
@@ -186,6 +213,25 @@ async function resolveRuntimeClient(
     };
   }
   return { client };
+}
+
+/**
+ * 通过通用 Agent RPC 执行 chat-authorization action。
+ */
+async function runChatAuthorizationAction(params: {
+  client: RuntimeRpcClient;
+  action: string;
+  payload?: JsonObject;
+}) {
+  const result = await params.client.run_internal_plugin_action({
+    plugin_name: CHAT_AUTHORIZATION_PLUGIN_NAME,
+    action_name: params.action,
+    ...(params.payload !== undefined ? { payload: params.payload } : {}),
+  });
+  if (!result.success) {
+    throw new Error(result.error || result.message || "chat authorization action failed");
+  }
+  return result;
 }
 
 function agentUnavailableResponse(): Response {

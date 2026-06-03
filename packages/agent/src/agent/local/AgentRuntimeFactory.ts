@@ -21,7 +21,7 @@ import type { Session } from "@/session/Session.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
-} from "@/runtime/host/AgentHostRuntime.js";
+} from "@/agent/local/AgentRuntimeAssembly.js";
 
 /**
  * 创建 AgentRuntime 的参数。

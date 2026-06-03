@@ -7,7 +7,7 @@
  */
 
 import type { VoicePluginConfig } from "@/voice/types/VoicePlugin.js";
-import type { AgentPluginConfigRuntime } from "@downcity/agent/internal/types/runtime/host/AgentHost.js";
+import type { AgentPluginConfigRuntime } from "@downcity/agent/internal/types/agent/AgentRuntimeAssembly.js";
 import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 
 /**

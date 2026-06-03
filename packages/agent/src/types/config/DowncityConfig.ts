@@ -8,7 +8,7 @@
 import type { LlmConfig } from "@/types/config/LlmConfig.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
 import type { JsonObject } from "@/types/common/Json.js";
-import type { SandboxProjectConfig } from "@/runtime/sandbox/types/Sandbox.js";
+import type { SandboxProjectConfig } from "@/sandbox/types/Sandbox.js";
 
 /**
  * 单个聊天渠道配置。

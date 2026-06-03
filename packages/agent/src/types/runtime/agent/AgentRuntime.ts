@@ -15,7 +15,7 @@ import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
-} from "@/types/runtime/host/AgentHost.js";
+} from "@/types/agent/AgentRuntimeAssembly.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 

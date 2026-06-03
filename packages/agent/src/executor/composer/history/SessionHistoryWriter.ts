@@ -104,7 +104,7 @@ export class SessionHistoryWriter {
     try {
       const historyStore = this.getHistoryStore();
       if (params.message && typeof params.message === "object") {
-        await historyStore.append(params.message);
+        await historyStore.finalizeInflight(params.message);
         void this.afterSessionUpdatedAsync();
         return;
       }
@@ -112,7 +112,7 @@ export class SessionHistoryWriter {
       const fallbackText = String(params.fallbackText || "").trim();
       if (!fallbackText) return;
 
-      await historyStore.append(
+      await historyStore.finalizeInflight(
         historyStore.assistantText({
           text: fallbackText,
           metadata: {

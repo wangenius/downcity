@@ -6,7 +6,7 @@
  * - 凭据明文只允许出现在写入输入中，读取结果必须是脱敏后的安全视图。
  */
 
-import type { StoredChannelAccountChannel } from "@downcity/agent/internal/types/runtime/host/Store.js";
+import type { StoredChannelAccountChannel } from "@downcity/agent/internal/types/platform/Store.js";
 
 /**
  * 支持的 chat channel account 类型。

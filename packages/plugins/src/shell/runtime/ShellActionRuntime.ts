@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { spawnShellProcess } from "@downcity/agent/internal/runtime/sandbox/SandboxRunner.js";
+import { spawnShellProcess } from "@downcity/agent/internal/sandbox/SandboxRunner.js";
 import type {
   ShellPluginState,
   ShellSessionRuntimeState,

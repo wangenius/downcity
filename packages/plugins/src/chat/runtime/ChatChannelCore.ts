@@ -8,7 +8,7 @@
  */
 
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/runtime/host/Store.js";
+import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";

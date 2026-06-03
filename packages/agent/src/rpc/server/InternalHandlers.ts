@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 只处理 `internal.*` 方法。
- * - 这些方法服务 Town runtime/control plane，不属于 RemoteAgent 的用户 SDK 面。
+ * - 这些方法服务 Town 本机管理通道，不属于 RemoteAgent 的用户 SDK 面。
  */
 
 import fs from "fs-extra";
@@ -20,11 +20,6 @@ import {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesPath,
 } from "@/config/Paths.js";
-import {
-  readAuthControlPayload,
-  setAuthControlUserRole,
-  writeAuthControlConfig,
-} from "@/runtime/control/AuthControlService.js";
 import { resolveSessionSystemMessages } from "@/executor/composer/system/default/SystemDomain.js";
 import {
   controlPluginState,
@@ -32,7 +27,6 @@ import {
 } from "@/plugin/core/PluginStateController.js";
 import { parsePluginCommandRequestBody } from "@/plugin/core/PluginCommandRequest.js";
 import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
-import { executeBySessionId } from "@/runtime/control/ExecuteBySession.js";
 
 /**
  * 处理 internal RPC 请求。
@@ -50,22 +44,6 @@ export async function handleInternalRpcRequest(params: {
   switch (request.method) {
     case "internal.status.get": {
       write_success(request.id, { status: "ok" });
-      return true;
-    }
-    case "internal.sessions.execute": {
-      const runtime = requireAgentRuntime(options);
-      const context = requireAgentContext(options);
-      const result = await executeBySessionId({
-        agentState: runtime,
-        executionContext: context,
-        sessionId: request.params.sessionId,
-        instructions: request.params.instructions,
-        attachments: request.params.attachments,
-      });
-      write_success(request.id, {
-        sessionId: request.params.sessionId,
-        result,
-      });
       return true;
     }
     case "internal.sessions.clear_messages": {
@@ -174,41 +152,6 @@ export async function handleInternalRpcRequest(params: {
         pluginName: request.params.pluginName,
         actionName: request.params.actionName,
       });
-      return true;
-    }
-    case "internal.authorization.get": {
-      const context = requireAgentContext(options);
-      write_success(request.id, await readAuthControlPayload(context));
-      return true;
-    }
-    case "internal.authorization.config": {
-      const context = requireAgentContext(options);
-      write_success(
-        request.id,
-        await writeAuthControlConfig({
-          context,
-          config: request.params.config,
-        }),
-      );
-      return true;
-    }
-    case "internal.authorization.action": {
-      const context = requireAgentContext(options);
-      const action = String(request.params.action || "").trim();
-      if (action !== "setUserRole") {
-        throw new Error(`Unsupported authorization action: ${action}`);
-      }
-      write_success(
-        request.id,
-        await setAuthControlUserRole({
-          context,
-          input: {
-            channel: request.params.channel,
-            userId: String(request.params.userId || "").trim(),
-            roleId: String(request.params.roleId || "").trim(),
-          },
-        }),
-      );
       return true;
     }
     default:

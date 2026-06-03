@@ -10,9 +10,9 @@ import type { Hono } from "hono";
 import type { PlatformAgentOption } from "@downcity/agent";
 import type { AgentRpcPool } from "../control/gateway/AgentRpcPool.js";
 /**
- * 注册 Plugin 管理 API 路由。
+ * Plugin 管理 API 路由参数。
  */
-export declare function registerPlatformPluginRoutes(params: {
+export interface PlatformPluginRouteParams {
     /**
      * Hono 应用实例。
      */
@@ -29,5 +29,9 @@ export declare function registerPlatformPluginRoutes(params: {
      * Town 维护的 Agent RPC 连接池。
      */
     agentRpcPool: AgentRpcPool;
-}): void;
+}
+/**
+ * 注册 Plugin 管理 API 路由。
+ */
+export declare function registerPlatformPluginRoutes(params: PlatformPluginRouteParams): void;
 //# sourceMappingURL=PluginApiRoutes.d.ts.map

@@ -167,6 +167,41 @@ async function runGlobalPluginAction(input) {
     });
 }
 /**
+ * 解析选中 agent 的 plugin RPC client。
+ */
+async function resolveRuntimePluginRpcClient(params, request) {
+    const requested_agent_id = params.readRequestedAgentId(request);
+    const selected_agent = await params.resolveSelectedAgent(requested_agent_id);
+    if (!selected_agent || selected_agent.running !== true) {
+        return {
+            response: new Response(JSON.stringify({
+                success: false,
+                error: "No running agent found. Start one via `town agent start` first.",
+            }), {
+                status: 503,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }),
+        };
+    }
+    const client = params.agentRpcPool.resolveClientForAgent(selected_agent);
+    if (!client) {
+        return {
+            response: new Response(JSON.stringify({
+                success: false,
+                error: "Selected agent RPC endpoint is unavailable.",
+            }), {
+                status: 503,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }),
+        };
+    }
+    return { client };
+}
+/**
  * 注册 Plugin 管理 API 路由。
  */
 export function registerPlatformPluginRoutes(params) {
@@ -246,6 +281,63 @@ export function registerPlatformPluginRoutes(params) {
             }, 500);
         }
     });
+    app.get("/api/plugins/catalog", async (c) => {
+        try {
+            const resolved = await resolveRuntimePluginRpcClient(params, c.req.raw);
+            if ("response" in resolved)
+                return resolved.response;
+            return c.json({
+                success: true,
+                plugins: await resolved.client.list_internal_plugin_catalog(),
+            });
+        }
+        catch (error) {
+            return c.json({
+                success: false,
+                error: getErrorMessage(error),
+            }, 500);
+        }
+    });
+    app.get("/api/plugins/list", async (c) => {
+        try {
+            const resolved = await resolveRuntimePluginRpcClient(params, c.req.raw);
+            if ("response" in resolved)
+                return resolved.response;
+            return c.json({
+                success: true,
+                plugins: await resolved.client.list_internal_plugin_states(),
+            });
+        }
+        catch (error) {
+            return c.json({
+                success: false,
+                error: getErrorMessage(error),
+            }, 500);
+        }
+    });
+    app.post("/api/plugins/availability", async (c) => {
+        try {
+            const body = await c.req.json().catch(() => null);
+            const plugin_name = String(body?.pluginName || "").trim();
+            if (!plugin_name) {
+                return c.json({ success: false, error: "pluginName is required" }, 400);
+            }
+            const resolved = await resolveRuntimePluginRpcClient(params, c.req.raw);
+            if ("response" in resolved)
+                return resolved.response;
+            return c.json({
+                success: true,
+                pluginName: plugin_name,
+                availability: await resolved.client.get_internal_plugin_availability(plugin_name),
+            });
+        }
+        catch (error) {
+            return c.json({
+                success: false,
+                error: getErrorMessage(error),
+            }, 500);
+        }
+    });
     app.post("/api/plugins/action", async (c) => {
         try {
             const body = await c.req.json().catch(() => null);
@@ -257,23 +349,11 @@ export function registerPlatformPluginRoutes(params) {
             if (!action_name) {
                 return c.json({ success: false, error: "actionName is required" }, 400);
             }
-            const requested_agent_id = params.readRequestedAgentId(c.req.raw);
-            const selected_agent = await params.resolveSelectedAgent(requested_agent_id);
-            if (!selected_agent || selected_agent.running !== true) {
-                return c.json({
-                    success: false,
-                    error: "No running agent found. Start one via `town agent start` first.",
-                }, 503);
-            }
-            const client = params.agentRpcPool.resolveClientForAgent(selected_agent);
-            if (!client) {
-                return c.json({
-                    success: false,
-                    error: "Selected agent RPC endpoint is unavailable.",
-                }, 503);
-            }
+            const resolved = await resolveRuntimePluginRpcClient(params, c.req.raw);
+            if ("response" in resolved)
+                return resolved.response;
             // 关键点（中文）：这里承接旧 `/api/plugins/action`，但通过 Agent RPC 执行，不再代理到 Agent HTTP。
-            const result = await client.run_internal_plugin_action({
+            const result = await resolved.client.run_internal_plugin_action({
                 plugin_name,
                 action_name,
                 payload: body?.payload,

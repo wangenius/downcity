@@ -6,7 +6,7 @@
  * - 当目标 agent 可访问时，再叠加 plugin list + availability，补齐启用态、依赖缺失等动态信息。
  * - 这样能同时满足“架构上 plugin 属于 main/package 注册信息”和“可用性属于 agent 状态”两层语义。
  */
-import { findPluginByName, listPluginViews, runLocalPluginAction, } from "@downcity/agent";
+import { findPluginByName, listPluginViews, parseActionScheduleRunAtMsOrThrow, runLocalPluginAction, } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
 import { isTownPluginEnabled, setBayPluginEnabled, } from "../platform/PluginLifecycle.js";
 function getErrorMessage(error) {
@@ -17,6 +17,29 @@ function getErrorMessage(error) {
 }
 function createPluginCatalog() {
     return createBuiltinPlugins();
+}
+function isJsonRecord(value) {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+function readCommandSchedule(body) {
+    const nested_schedule = isJsonRecord(body.schedule) ? body.schedule : undefined;
+    const top_level_delay = body.delayMs ?? body.delay;
+    const top_level_time = body.sendAtMs ?? body.sendAt ?? body.time;
+    if (body.schedule !== undefined && !nested_schedule) {
+        throw new Error("schedule must be an object");
+    }
+    if (nested_schedule?.runAtMs !== undefined &&
+        (top_level_delay !== undefined || top_level_time !== undefined)) {
+        throw new Error("`schedule.runAtMs` cannot be used together with `delay/time`.");
+    }
+    if (nested_schedule?.runAtMs !== undefined) {
+        return nested_schedule;
+    }
+    const run_at_ms = parseActionScheduleRunAtMsOrThrow({
+        delay: top_level_delay,
+        time: top_level_time,
+    });
+    return typeof run_at_ms === "number" ? { runAtMs: run_at_ms } : undefined;
 }
 function buildPluginActionConfig(plugin) {
     if (!plugin)
@@ -330,6 +353,70 @@ export function registerPlatformPluginRoutes(params) {
                 pluginName: plugin_name,
                 availability: await resolved.client.get_internal_plugin_availability(plugin_name),
             });
+        }
+        catch (error) {
+            return c.json({
+                success: false,
+                error: getErrorMessage(error),
+            }, 500);
+        }
+    });
+    app.post("/api/plugins/control", async (c) => {
+        try {
+            const body = await c.req.json().catch(() => null);
+            const plugin_name = String(body?.pluginName || "").trim();
+            const action = String(body?.action || "")
+                .trim()
+                .toLowerCase();
+            if (!plugin_name) {
+                return c.json({ success: false, error: "pluginName is required" }, 400);
+            }
+            if (!action) {
+                return c.json({ success: false, error: "action is required" }, 400);
+            }
+            if (!["start", "stop", "restart", "status"].includes(action)) {
+                return c.json({ success: false, error: "invalid action" }, 400);
+            }
+            const resolved = await resolveRuntimePluginRpcClient(params, c.req.raw);
+            if ("response" in resolved)
+                return resolved.response;
+            const result = await resolved.client.control_internal_plugin({
+                plugin_name,
+                action: action,
+            });
+            return c.json(result, result.success ? 200 : 400);
+        }
+        catch (error) {
+            return c.json({
+                success: false,
+                error: getErrorMessage(error),
+            }, 500);
+        }
+    });
+    app.post("/api/plugins/command", async (c) => {
+        try {
+            const body = await c.req.json().catch(() => null);
+            const command_body = isJsonRecord(body) ? body : {};
+            const plugin_name = String(command_body.pluginName || "").trim();
+            const command = String(command_body.command || "").trim();
+            if (!plugin_name) {
+                return c.json({ success: false, error: "pluginName is required" }, 400);
+            }
+            if (!command) {
+                return c.json({ success: false, error: "command is required" }, 400);
+            }
+            const resolved = await resolveRuntimePluginRpcClient(params, c.req.raw);
+            if ("response" in resolved)
+                return resolved.response;
+            // 关键点（中文）：兼容旧 HTTP command 的顶层 delay/time 字段，再交给 Agent RPC 执行。
+            const schedule = readCommandSchedule(command_body);
+            const result = await resolved.client.run_internal_plugin_command({
+                plugin_name,
+                command,
+                payload: command_body.payload,
+                schedule,
+            });
+            return c.json(result, result.success ? 200 : 400);
         }
         catch (error) {
             return c.json({

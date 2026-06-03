@@ -13,13 +13,14 @@ description: 本地 Agent SDK 的核心公开接口
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
+- `agent.setInstruction(input)`
 - `agent.getConfig()`
 - `agent.getLogger()`
 - `agent.plugins`
 
 `agent.createSession()` 和 `agent.getSession()` 返回 `AgentSession`。
 
-`agent.getConfig()` 和 `agent.getLogger()` 是更窄的高级集成辅助入口。本地 SDK 不再把 `agent.getRuntime()` 与 `agent.getContext()` 作为公开使用面。
+`agent.getConfig()` 和 `agent.getLogger()` 是更窄的高级集成辅助入口。宿主如果需要更底层的装配能力，还可以使用 `agent.getRuntime()`、`agent.getContext()` 与 `agent.getSessionCollection()`。
 
 ## 构造参数
 
@@ -27,10 +28,11 @@ description: 本地 Agent SDK 的核心公开接口
 - `path`
 - `model`
 - `env`
-- `mode`
 - `tools`
 - `instruction`
 - `plugins`
+
+当前没有 `mode` 这个构造参数。
 
 ## 核心语义
 
@@ -43,16 +45,16 @@ description: 本地 Agent SDK 的核心公开接口
 
 `agent.start()` 负责启动当前 agent 的长期运行能力。
 
-典型例子包括：
+当前真实语义包括：
 
-- 启动 HTTP 服务
 - 启动 plugin lifecycle
+- 可选启动本机 RPC 服务
 
 推荐写法：
 
 ```ts
 await agent.start({
-  http: {
+  rpc: {
     host: "127.0.0.1",
     port: 15314,
   },
@@ -62,31 +64,34 @@ await agent.start({
 如果你不调用 `agent.start()`：
 
 - 仍然可以直接 `await agent.createSession()` 然后 `session.prompt()`
-- 但不会启动 HTTP
-- 也不会启动后台 plugin lifecycle
+- 但不会启动后台 plugin lifecycle
+- 也不会启动 RPC
 
 `agent.stop()` 则负责关闭当前 agent 已启动的长期运行能力。
 
-## 生命周期入口
+## HTTP 和 `Agent` 的关系
 
-不过在大多数用户场景里，更推荐统一使用：
+如果你需要 HTTP 服务端点，不是通过：
 
 ```ts
-await agent.start({
-  http: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
+agent.start({ http: { ... } })
+```
+
+而是通过宿主 HTTP 装配入口：
+
+```ts
+startServer({
+  host,
+  port,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
 });
 ```
 
-本地 `Agent` 不再暴露细粒度的运行时内部入口。
+## `agent.plugins`
 
-如果你需要服务端点，就使用：
-
-- HTTP：`agent.start({ http: { host, port } })`
-
-`agent.plugins` 是当前本地 SDK 新增的重要公开面。
+`agent.plugins` 是本地 SDK 里很重要的公开面。
 
 你可以直接用它做：
 

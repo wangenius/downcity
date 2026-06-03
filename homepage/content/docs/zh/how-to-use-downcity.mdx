@@ -213,7 +213,7 @@ const agent = new Agent({
   tools: {},
 });
 
-const session = await agent.session();
+const session = await agent.createSession();
 await session.set({
   model: openai.responses("gpt-5"),
 });
@@ -234,10 +234,10 @@ SDK 模式下，模型由你的宿主应用创建并注入。`@downcity/agent` �
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  baseUrl: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:15314",
 });
 
-const session = await agent.session();
+const session = await agent.createSession();
 const turn = await session.prompt({
   query: "检查最近一次任务执行状态",
 });

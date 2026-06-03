@@ -31,6 +31,7 @@ cli/downcity/city/
 cli/downcity/public/
 !examples/demo-agent/bin
 # Runtime data
+.downcity/
 .downcity/logs/
 .downcity/approvals/
 .downcity/runs/

@@ -11,6 +11,7 @@ Start here:
 
 - [Agent SDK Overview](/en/agent-sdk-docs)
 - [Local Agent Quickstart](/en/agent-sdk-docs/local-agent/quickstart)
+- [Agent and City AIService](/en/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
 - [RemoteAgent Quickstart](/en/agent-sdk-docs/remote-agent/quickstart)
 - [Session Overview](/en/agent-sdk-docs/sessions/overview)
 
@@ -19,7 +20,7 @@ Start here:
 The `@downcity/agent` package now exposes two primary SDK entries:
 
 - `Agent`: local embeddable agent runtime
-- `RemoteAgent`: remote HTTP client for an already-running agent
+- `RemoteAgent`: remote agent client
 
 ## Install
 
@@ -32,6 +33,13 @@ If you want to use built-in plugin classes such as `ChatPlugin`, install the bui
 ```bash
 pnpm add @downcity/plugins
 ```
+
+## The most important distinction here
+
+- pure SDK embedding mode: the host owns the model directly
+- Downcity project mode: the model usually comes from `execution.modelId` + `City AIService`
+
+So not every scenario should default to `session.set({ model })`.
 
 ## Local Agent
 
@@ -49,12 +57,10 @@ const agent = new Agent({
   id: "vibecape-official",
   path: "/path/to/agent-project",
   tools: {},
+  model: openai.responses("gpt-5"),
 });
 
 const session = await agent.createSession();
-await session.set({
-  model: openai.responses("gpt-5"),
-});
 
 const turn = await session.prompt({
   query: "Rename the local file to match the new convention",
@@ -64,118 +70,41 @@ const result = await turn.finished;
 console.log(result.text);
 ```
 
-## Inject ChatPlugin
+If you did not provide a default model on `Agent`, you can still call `session.set({ model })` for one specific session.
 
-If your client needs to start chat channels directly inside `@downcity/agent`, pass an explicit `ChatPlugin` instance:
-
-```ts
-import { Agent } from "@downcity/agent";
-import { ChatPlugin } from "@downcity/plugins";
-
-const agent = new Agent({
-  id: "vibecape-official",
-  path: "/path/to/agent-project",
-  tools: {},
-  plugins: [
-    new ChatPlugin({
-      telegram: {
-        botToken: process.env.TELEGRAM_BOT_TOKEN!,
-      },
-    }),
-  ],
-});
-```
-
-`plugins` accepts already-instantiated plugin objects.  
-`agent.start({ http: { ... } })` automatically starts those plugins before exposing the endpoints.
-
-## Observe a session
-
-```ts
-const unsubscribe = session.subscribe((event) => {
-  if (event.type === "text-delta") {
-    process.stdout.write(event.text);
-  }
-});
-
-const turn = await session.prompt({
-  query: "Continue the previous task",
-});
-await turn.finished;
-unsubscribe();
-```
-
-Current session events include:
-
-- `text-delta`
-- `reasoning-delta`
-- `tool-call`
-- `tool-result`
-- `error`
-
-## Fork a session
-
-```ts
-const branched = await session.fork();
-const fromMessage = await session.fork("message-id");
-```
-
-If `messageId` is provided, the new session copies history up to and including that message.
-
-## Start HTTP
+## Start RPC
 
 ```ts
 const started = await agent.start({
-  http: {
+  rpc: {
     host: "127.0.0.1",
     port: 15314,
   },
 });
 
-console.log(started.http?.baseUrl);
+console.log(started.rpc?.url);
+```
+
+## Expose HTTP
+
+```ts
+const server = await startServer({
+  host: "127.0.0.1",
+  port: 15314,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
+});
 ```
 
 ## Remote Agent
 
-Use `RemoteAgent` when another process has already started `agent.start({ http: { ... } })`.
+Use `RemoteAgent` when another process has already exposed the Agent over HTTP or RPC.
 
 ```ts
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  baseUrl: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:15314",
 });
-
-const session = await agent.createSession();
-
-const turn = await session.prompt({
-  query: "Summarize the repository structure",
-});
-const result = await turn.finished;
-
-console.log(result.text);
 ```
-
-Remote observation uses the same API:
-
-```ts
-const unsubscribe = session.subscribe((event) => {
-  if (event.type === "text-delta") {
-    process.stdout.write(event.text);
-  }
-});
-
-const turn = await session.prompt({ query: "Continue" });
-await turn.finished;
-unsubscribe();
-```
-
-## Session storage
-
-SDK sessions are stored under:
-
-```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
-```
-
-This keeps sessions from different agents isolated even when they share the same project directory.

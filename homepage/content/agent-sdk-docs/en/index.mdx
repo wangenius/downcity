@@ -1,14 +1,52 @@
 ---
 title: Agent SDK
-description: Understand the local Agent, remote Agent, and Session usage model exposed by @downcity/agent
+description: Understand the local Agent, remote Agent, Session model, and how @downcity/agent relates to City AIService
 ---
 
 # Agent SDK
 
-`@downcity/agent` exposes two main SDK entry points:
+`@downcity/agent` currently exposes two main SDK entry points:
 
 - `Agent`: a local embeddable agent runtime
-- `RemoteAgent`: a remote HTTP client
+- `RemoteAgent`: a remote agent client
+
+The core of this SDK is the `session`. Whether you work locally or remotely, the real execution object is the session, not the `Agent` itself.
+
+## Two common usage paths
+
+### 1. Pure SDK embedding
+
+In this mode, the host owns the model instance directly:
+
+- `new Agent({ model })`
+- or `await session.set({ model })`
+
+Good fit for:
+
+- embedding directly inside a Node service
+- local scripts or internal tools
+- apps that already manage model instances themselves
+
+### 2. Downcity / Town / City integration
+
+In this mode, the Agent project does not directly own provider config, API keys, or model instances.
+
+The model catalog and provider details live in `City AIService`, and the Agent project only binds:
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  }
+}
+```
+
+Good fit for:
+
+- normal Downcity Agent projects
+- multiple Agents sharing one model pool
+- setups where provider keys, routing, and catalogs should stay centralized in City
 
 ## When to use `Agent`
 
@@ -23,21 +61,33 @@ You can explicitly pass:
 - `id`
 - `path`
 - `tools`
+- `instruction`
+- `model`
 - `plugins`
 
 It behaves like a local embedded execution shell.
 
 ## When to use `RemoteAgent`
 
-When another process has already exposed an agent over HTTP, use:
+When another process has already exposed an agent, use:
 
 ```ts
 import { RemoteAgent } from "@downcity/agent";
 ```
 
-Then call it through `baseUrl`.
+Then connect it through:
 
-It behaves like the paired remote client.
+```ts
+new RemoteAgent({ url: "http://127.0.0.1:15314" })
+```
+
+`RemoteAgent` currently supports:
+
+- `http://...`
+- `https://...`
+- `rpc://...`
+
+It behaves like the paired remote client, not the model host.
 
 ## Shared core object: Session
 
@@ -63,21 +113,34 @@ Most SDK questions eventually become "how should I create, configure, and consum
 
 ## One critical difference
 
-### Project runtime
+### Pure local SDK sessions
+
+The local SDK session model can come from:
+
+```ts
+new Agent({ model })
+```
+
+or:
+
+```ts
+await session.set({ model })
+```
+
+### Downcity Agent projects
 
 The project runtime model comes from:
 
 - `downcity.json.execution.modelId`
+- the connected `City AIService` catalog
 
-### Local SDK session
+So in Downcity integration mode:
 
-The local SDK session model comes from:
+- the Agent project stores only the `modelId`
+- Town resolves that `modelId` through City AIService
+- provider config, API keys, and base URLs do not belong in the Agent project
 
-```ts
-await session.set({ model });
-```
-
-### Remote SDK session
+### Remote SDK sessions
 
 Remote sessions do not currently support passing a local model instance from the client.
 
@@ -86,9 +149,15 @@ That is because the model instance should stay on the server side, not travel ov
 ## Recommended reading order
 
 1. [Local Agent](/en/agent-sdk-docs/local-agent/quickstart)
-2. [Plugin Concepts](/en/agent-sdk-docs/plugins/overview)
-3. [Agent Plugins Docs](/en/plugins-docs)
-4. [Remote Agent](/en/agent-sdk-docs/remote-agent/quickstart)
-5. [Sessions](/en/agent-sdk-docs/sessions/overview)
+2. [Agent and City AIService](/en/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
+3. [Sessions](/en/agent-sdk-docs/sessions/overview)
+4. [Plugin Concepts](/en/agent-sdk-docs/plugins/overview)
+5. [Remote Agent](/en/agent-sdk-docs/remote-agent/quickstart)
 6. [SDK Surface](/en/agent-sdk-docs/api-reference/sdk-surface)
 7. [API reference](/en/agent-sdk-docs/api-reference/agent-class)
+
+## Related docs
+
+- [City AIService](/en/city-sdk-docs/service/ai/index)
+- [Add model](/en/city-sdk-docs/quickstart/add-model)
+- [Model config (City + Agent)](/en/docs/configuration/model)

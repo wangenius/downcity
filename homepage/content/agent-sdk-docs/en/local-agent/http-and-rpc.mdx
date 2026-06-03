@@ -1,48 +1,85 @@
 ---
-title: Local Agent HTTP Server
-description: How to expose a local Agent as an HTTP service
+title: Local Agent HTTP / RPC
+description: Understand the real runtime split between RPC, HTTP, and long-lived local Agent capabilities
 ---
 
-# Local Agent HTTP Server
+# Local Agent HTTP / RPC
 
 A local Agent can be called directly in-process, but it can also expose service endpoints.
 
-## Recommended startup path
+In the current implementation, `RPC` and `HTTP` do not come from the same entry point.
 
-The recommended entry is the unified lifecycle API:
+## What `agent.start()` currently does
+
+`agent.start()` currently handles:
+
+- starting plugin lifecycles
+- optionally starting the local RPC server
+
+Example:
 
 ```ts
 const started = await agent.start({
-  http: {
+  rpc: {
     host: "127.0.0.1",
     port: 15314,
   },
 });
 
-console.log(started.http?.baseUrl);
+console.log(started.rpc?.url);
 ```
 
-This starts the following in one place:
+The return value includes:
 
-- the HTTP server
-- plugin lifecycles by default
+- `started.rpc?.url`
+- `started.pluginsStarted`
 
-## Start HTTP only
+## What `agent.start()` does not do
+
+`agent.start()` does not currently start the HTTP server.
+
+That means this is not the current real API:
 
 ```ts
-const started = await agent.start({
+await agent.start({
   http: {
     host: "127.0.0.1",
     port: 15314,
   },
 });
-
-console.log(started.http?.baseUrl);
 ```
 
-The current default port is `15314`.
+## How to expose HTTP
 
-If you do not specify a port manually, this is the default local SDK HTTP listener port.
+If you want to expose the local Agent over HTTP, use the host-side HTTP assembly entry:
+
+```ts
+import { Agent, startServer } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model,
+});
+
+await agent.start({
+  plugins: true,
+});
+
+const server = await startServer({
+  host: "127.0.0.1",
+  port: 15314,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
+});
+```
+
+The responsibility split is:
+
+- `Agent`: local execution shell
+- `agent.start()`: long-lived plugins / optional RPC
+- `startServer(...)`: mount runtime, context, and session collection as HTTP
 
 ## `start()` vs not calling `start()`
 
@@ -50,32 +87,35 @@ If you do not call `agent.start()`:
 
 - you can still call `await agent.createSession()` and then use `session.prompt()` / `session.subscribe()`
 - this is the right shape when you use the Agent as a local in-process library
-- no HTTP server starts
 - no background plugin lifecycle starts
+- no RPC server starts
 
 After you call `agent.start()`:
 
-- the Agent exposes HTTP endpoints
 - plugins start by default
-- chat, task, ActionSchedule, and other background loops can keep running
+- ActionSchedule and other background loops can keep running
+- if you pass `rpc`, the Agent also exposes a `rpc://...` endpoint
 
-A simple mental model is:
+## When to use RPC
 
-- no `start`: library mode
-- `start`: long-lived runtime mode
+- another local process should consume Agent session capability directly
+- you do not want to mount HTTP yourself
+- you want a lighter local transport
 
 ## When to use HTTP
 
-- another process should call the agent through `RemoteAgent`
-- you want to expose the local agent as a lightweight service
+- another process should call the agent through `RemoteAgent({ url: "http://..." })`
+- you want a standard HTTP entry for frontend/backend or third-party consumers
+- you want SDK routes and plugin HTTP routes on the same host
 
-This is especially useful when the caller and the executor live in different processes.
+## One plugin-related detail that matters
 
-## What happens before startup
+When you expose HTTP through `startServer(...)`, registered plugins with `plugin.http.server.register(...)` are also mounted onto the same HTTP app automatically.
 
-When you call `agent.start({ http: { ... } })`, the SDK starts plugins first by default.
+So:
 
-That reduces the risk of ending up in a state where the endpoint is up but a critical plugin is still not ready.
+- `agent.plugins` owns the plugin registry and plugin calls
+- `startServer(...)` is what actually exposes plugin HTTP routes
 
 ## Related docs
 

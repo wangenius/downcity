@@ -1,48 +1,85 @@
 ---
-title: 本地 Agent 的 HTTP 服务
-description: 如何把本地 Agent 暴露为 HTTP 服务
+title: 本地 Agent 的 HTTP / RPC
+description: 理解本地 Agent 的长期运行能力，以及 RPC 与 HTTP 在当前实现中的真实分工
 ---
 
-# 本地 Agent 的 HTTP 服务
+# 本地 Agent 的 HTTP / RPC
 
 本地 Agent 不只可以在当前进程里直接调用，也可以对外暴露服务端点。
 
-## 推荐启动方式
+但当前实现里，`RPC` 和 `HTTP` 不是同一个入口。
 
-现在更推荐直接使用统一生命周期入口：
+## `agent.start()` 当前负责什么
+
+当前 `agent.start()` 负责：
+
+- 启动 plugin lifecycle
+- 可选启动本机 RPC 服务
+
+例如：
 
 ```ts
 const started = await agent.start({
-  http: {
+  rpc: {
     host: "127.0.0.1",
     port: 15314,
   },
 });
 
-console.log(started.http?.baseUrl);
+console.log(started.rpc?.url);
 ```
 
-这样会在一个调用里统一启动：
+返回里会有：
 
-- HTTP 服务
-- plugin lifecycle（默认开启）
+- `started.rpc?.url`
+- `started.pluginsStarted`
 
-## 单独启动 HTTP
+## `agent.start()` 不负责什么
+
+当前 `agent.start()` 不负责启动 HTTP server。
+
+也就是说，这样的写法并不是当前真实 API：
 
 ```ts
-const started = await agent.start({
+await agent.start({
   http: {
     host: "127.0.0.1",
     port: 15314,
   },
 });
-
-console.log(started.http?.baseUrl);
 ```
 
-当前默认端口是 `15314`。
+## 如何启动 HTTP
 
-如果你没有手动指定端口，这就是本地 SDK HTTP 的默认监听端口。
+如果你要把本地 Agent 暴露成 HTTP 服务，应使用宿主 HTTP 装配入口：
+
+```ts
+import { Agent, startServer } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model,
+});
+
+await agent.start({
+  plugins: true,
+});
+
+const server = await startServer({
+  host: "127.0.0.1",
+  port: 15314,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
+});
+```
+
+这里的职责划分是：
+
+- `Agent`：本地执行壳
+- `agent.start()`：长期运行能力中的 plugins / rpc
+- `startServer(...)`：把 runtime、context、sessionCollection 挂成 HTTP 服务
 
 ## `start()` 和不 `start()` 的区别
 
@@ -50,34 +87,38 @@ console.log(started.http?.baseUrl);
 
 - 你仍然可以直接 `await agent.createSession()`，再用 `session.prompt()` / `session.subscribe()`
 - 适合把 Agent 当作当前进程里的本地库
-- 不会启动 HTTP
 - 不会启动 plugin 的后台生命周期
+- 不会启动 RPC
 
 调用 `agent.start()` 之后：
 
-- Agent 会开始对外暴露 HTTP 端点
-- 默认会启动 plugins
-- chat、task、ActionSchedule 和其他后台 loop 才会真正持续运行
+- plugins 默认会启动
+- ActionSchedule 和其他后台 loop 才会真正持续运行
+- 如果传了 `rpc`，还会暴露 `rpc://...` 地址
 
-可以把它理解成：
+## 什么时候用 RPC
 
-- 不 `start`：library mode
-- `start`：long-lived runtime mode
+- 另一个本地进程想直接消费 Agent session 能力
+- 你不想自己额外挂 HTTP
+- 你想走更轻量的本机 transport
 
 ## 什么时候用 HTTP
 
-- 你想让另一个进程通过 `RemoteAgent` 调它
-- 你想把本地 agent 暴露成一个轻量服务
+- 你想让另一个进程通过 `RemoteAgent({ url: "http://..." })` 调它
+- 你想给前后端或第三方程序一个标准 HTTP 入口
+- 你需要同时挂 SDK 路由和 plugin HTTP 路由
 
-它特别适合“执行方和调用方分进程”的结构。
+## 一个和 plugin 相关的重要点
 
-## 启动前会发生什么
+当前通过 `startServer(...)` 创建 HTTP 服务时，已注册 plugin 的 `plugin.http.server.register(...)` 也会自动挂到同一个 HTTP app 上。
 
-调用 `agent.start({ http: { ... } })` 时，SDK 默认会先确保当前 agent 的 plugins 已启动。
+所以：
 
-这样可以减少“端点已经起来了，但关键 plugin 还没 ready”的不一致状态。
+- `agent.plugins` 负责插件注册表与调用
+- `startServer(...)` 负责把插件的 HTTP 路由真正挂出去
 
 ## 相关文档
 
 - [RemoteAgent 快速开始](/zh/agent-sdk-docs/remote-agent/quickstart)
 - [SDK HTTP 端点](/zh/agent-sdk-docs/api-reference/sdk-http-endpoints)
+- [通过 HTTP 暴露 Agent](/zh/agent-sdk-docs/integration-patterns/expose-over-http)

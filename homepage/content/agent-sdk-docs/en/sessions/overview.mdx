@@ -24,6 +24,8 @@ const unsubscribe = session.subscribe((event) => {
 await turn.finished;
 ```
 
+If you already provided a default model through `new Agent({ model })`, you do not need a separate `session.set({ model })`.
+
 ### RemoteAgent
 
 ```ts
@@ -46,19 +48,16 @@ If you remember only one thing, remember this: the real working object in the SD
 
 ## One important difference
 
-- local sessions need `set({ model })` first
+- local sessions must have a model available
 - remote sessions cannot currently receive a model instance from the client
 
 So the biggest difference between local and remote usage is not the interaction shape. It is where the model is held and configured.
 
-## Usage guidance
+## One more boundary
 
-- Use `prompt()` to append new user input
-- Use `subscribe()` to observe future turn events
-- Use `turn.finished` when you need the final result of a specific turn
+If you are working inside a normal Downcity Agent project, the model usually comes from:
 
-## Continue reading
+- `downcity.json.execution.modelId`
+- the connected `City AIService`
 
-- [set model](/en/agent-sdk-docs/sessions/set-model)
-- [prompt](/en/agent-sdk-docs/sessions/prompt)
-- [subscribe](/en/agent-sdk-docs/sessions/subscribe)
+In that case, `session.set({ model })` should not be treated as the default path.

@@ -1,21 +1,39 @@
 ---
 title: RemoteAgent Class
-description: The core public interface of the remote Agent client
+description: The core public API of the remote Agent client
 ---
 
 # RemoteAgent Class
 
-`RemoteAgent` exposes these core public entry points:
+`RemoteAgent` exposes the following main public API:
 
-- `new RemoteAgent({ baseUrl })`
+- `new RemoteAgent({ url })`
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
 
 `agent.createSession()` and `agent.getSession()` return `RemoteAgentSession`.
 
+## `url`
+
+The current constructor shape is:
+
+```ts
+new RemoteAgent({
+  url: "http://127.0.0.1:15314",
+});
+```
+
+not `baseUrl`.
+
+`url` currently supports:
+
+- `http://...`
+- `https://...`
+- `rpc://...`
+
 ## Core semantics
 
-It does not execute work by itself. It only talks to a remote server over HTTP.
+It does not execute tasks by itself. It only connects to remote session capability.
 
-If you think of local `Agent` as the server-side executor, `RemoteAgent` is the paired client.
+If the local `Agent` is the execution shell on the server side, `RemoteAgent` is the paired client.

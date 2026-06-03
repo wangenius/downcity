@@ -5,20 +5,33 @@ description: 把本地 Agent 作为 HTTP 服务暴露给其它进程或客户端
 
 # 通过 HTTP 暴露 Agent
 
-如果你的调用方和执行方不在同一个进程里，可以把本地 Agent 暴露成 HTTP 服务：
+如果你的调用方和执行方不在同一个进程里，可以把本地 Agent 暴露成 HTTP 服务。
+
+当前推荐的宿主装配方式是：
 
 ```ts
-await agent.start({
-  http: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
+const server = await startServer({
+  host: "127.0.0.1",
+  port: 15314,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
 });
 ```
 
-然后别的进程用 `RemoteAgent` 连接它。
+然后别的进程用：
+
+```ts
+new RemoteAgent({
+  url: "http://127.0.0.1:15314",
+})
+```
+
+去连接它。
 
 这是一种很自然的本地 client-server 形态：
 
 - 本地 Agent 负责执行
 - RemoteAgent 负责消费
+
+如果你同时注册了 plugins，`startServer(...)` 也会把 plugin 的 HTTP 路由一起挂出去。

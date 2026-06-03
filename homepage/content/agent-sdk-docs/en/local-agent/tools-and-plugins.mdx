@@ -5,95 +5,11 @@ description: How to inject tools and explicit plugin instances into a local Agen
 
 # tools and plugins
 
-## tools
+## plugin HTTP
 
-A local Agent can receive a tool collection directly:
+If you expose HTTP through `startServer(...)`, registered plugins with `plugin.http.server.register(...)` are also mounted onto the same HTTP app automatically.
 
-```ts
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  tools: {
-    my_tool: myTool,
-  },
-});
-```
+So:
 
-Those tools become available during session execution.
-
-If your app needs a long-lived default tool set, agent-level injection is usually the cleanest choice.
-
-## plugin instances
-
-If you want the local Agent to own long-lived plugin behavior such as chat channels, pass explicit plugin instances:
-
-```ts
-import { Agent } from "@downcity/agent";
-import { ChatPlugin } from "@downcity/plugins";
-
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  tools: {},
-  plugins: [
-    new ChatPlugin({
-      telegram: {
-        botToken: process.env.TELEGRAM_BOT_TOKEN!,
-      },
-    }),
-  ],
-});
-```
-
-This is useful when:
-
-- you want the SDK process itself to start chat channels
-- you want plugin lifecycle to be controlled by your application code
-
-## plugins
-
-If you want the local Agent to own plugins, pass explicit plugin instances:
-
-```ts
-import { Agent } from "@downcity/agent";
-import { SkillPlugin, WebPlugin } from "@downcity/plugins";
-
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  tools: {},
-  plugins: [new SkillPlugin(), new WebPlugin()],
-});
-
-const plugins = agent.plugins.list();
-```
-
-Those plugins are registered into the current `Agent`'s own registry.
-
-That means:
-
-- plugin actions can be called through `agent.plugins.runAction(...)`
-- `context.plugins` inside plugin hooks points to the same registry
-- duplicate plugin names throw immediately
-- the SDK does not register every built-in plugin by default
-
-The local SDK currently wires the plugin registry, `AgentContext.plugins`, and the registered plugins' `system(context)` text into the session prompt.
-
-It does not automatically mount `plugin.http.server` onto the SDK HTTP server started by `agent.start({ http: { ... } })`.
-
-## Important boundary
-
-The SDK `plugins` field is the set of instances you hand to `Agent` yourself. It is not a mirror of the global plugin manager.
-
-So do not think of SDK mode as "import everything from the project automatically." It is intentionally explicit assembly.
-
-If you want the full built-in set, assemble it explicitly with `plugins: createBuiltinPlugins()` from `@downcity/plugins`.
-
-If you want the next layer of detail:
-
-- how plugins attach to a local Agent
-
-continue with:
-
-- [Plugin overview](/en/agent-sdk-docs/plugins/overview)
-- [Custom plugin](/en/agent-sdk-docs/plugins/custom-plugin)
+- plugin existence comes from the `plugins` array you pass into `Agent`
+- plugin HTTP exposure happens when the host calls `startServer(...)`

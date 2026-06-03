@@ -1,6 +1,6 @@
 ---
 title: 例子：最小 RemoteAgent
-description: 通过 HTTP 调用另一个进程中的 Agent
+description: 通过 HTTP 或 RPC 调用另一个进程中的 Agent
 ---
 
 # 例子：最小 RemoteAgent
@@ -9,7 +9,7 @@ description: 通过 HTTP 调用另一个进程中的 Agent
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  baseUrl: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:15314",
 });
 
 const session = await agent.createSession();
@@ -18,6 +18,14 @@ const turn = await session.prompt({
 });
 
 const result = await turn.finished;
+```
+
+如果你走本机 RPC，也可以写成：
+
+```ts
+const agent = new RemoteAgent({
+  url: "rpc://127.0.0.1:15314",
+});
 ```
 
 建议先用这个最小例子验证远程连通性，再逐步叠加更复杂的订阅式 UI 或多 session 行为。

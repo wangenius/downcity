@@ -1,17 +1,37 @@
 ---
 title: RemoteAgent 快速开始
-description: 连接一个已经通过 HTTP 暴露出来的 Agent
+description: 连接一个已经通过 HTTP 或 RPC 暴露出来的 Agent
 ---
 
 # RemoteAgent 快速开始
 
-## 服务端先启动 HTTP
+`RemoteAgent` 是远程 session 客户端。
 
-服务端代码：
+当前它支持连接：
+
+- `http://...`
+- `https://...`
+- `rpc://...`
+
+## 服务端先准备好可访问入口
+
+### 方式 1：服务端暴露 HTTP
+
+```ts
+const server = await startServer({
+  host: "127.0.0.1",
+  port: 15314,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
+});
+```
+
+### 方式 2：服务端启动 RPC
 
 ```ts
 const started = await agent.start({
-  http: {
+  rpc: {
     host: "127.0.0.1",
     port: 15314,
   },
@@ -20,11 +40,13 @@ const started = await agent.start({
 
 ## 客户端连接
 
+### 连接 HTTP
+
 ```ts
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  baseUrl: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:15314",
 });
 
 const session = await agent.createSession();
@@ -35,12 +57,37 @@ const turn = await session.prompt({
 const result = await turn.finished;
 ```
 
-客户端在这里不需要关心项目提示词、City AIService 模型细节或 runtime 装配细节，它只消费远程已经暴露好的 session 能力。
+### 连接 RPC
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  url: "rpc://127.0.0.1:15314",
+});
+```
+
+## 一个重要限制
+
+远程 session 当前不支持：
+
+```ts
+await session.set({ model });
+```
+
+模型应该留在服务端本地持有。
+
+如果你是纯 SDK 模式，应该在服务端本地 `Agent` 或本地 `session` 上设置模型。
+
+如果你是 Downcity 集成模式，模型通常来自：
+
+- `downcity.json.execution.modelId`
+- 已连接的 `City AIService`
 
 ## 适用场景
 
 - 另一个进程已经持有本地 Agent
-- 你只想通过 HTTP 方式消费 agent 能力
+- 你只想通过 HTTP 或 RPC 方式消费 agent 能力
 - 你想把调用方和执行方分开
 
 如果你有前后端、本地守护进程加调用端、或者多个消费者共享同一个 agent host，这种模式会很自然。

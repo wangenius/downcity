@@ -13,47 +13,6 @@ You want one plugin to provide a read-only snapshot endpoint:
 
 That is a clean fit for `plugin.http.server`.
 
-## Example
-
-```ts
-import type { Plugin } from "@downcity/agent";
-
-export const snapshotHttpPlugin: Plugin = {
-  name: "notes_http",
-  title: "Notes Snapshot",
-  description: "Expose one read-only notes snapshot endpoint.",
-  http: {
-    runtime: {
-      authPolicies: [
-        {
-          path: "/api/notes/*",
-          method: "GET",
-          requireAuth: true,
-          anyPermissions: ["agent.read"],
-        },
-      ],
-      register({ app, pluginName }) {
-        app.get("/api/notes/snapshot", async (c) => {
-          return c.json({
-            success: true,
-            plugin: pluginName,
-            snapshot: {
-              count: 3,
-            },
-          });
-        });
-      },
-    },
-  },
-};
-```
-
-## What this scenario is meant to show
-
-- the plugin declares the route
-- the server layer assembles it
-- auth policy declaration lives with the plugin capability
-
 ## Current boundary
 
 This capability belongs to the full runtime HTTP assembly path.
@@ -61,10 +20,5 @@ This capability belongs to the full runtime HTTP assembly path.
 That means:
 
 - `plugin.http.server` is not the same kind of explicit call as `agent.plugins.runAction(...)`
-- the current minimal SDK `agent.start({ http: { ... } })` only exposes session APIs and does not auto-mount plugin HTTP routes
+- you should expose HTTP through host-side `startServer(...)`, which automatically mounts plugin HTTP routes
 - if you need this, think of it as a fuller host/runtime integration capability
-
-## Related docs
-
-- [Plugin HTTP injection](/en/agent-sdk-docs/plugins/plugin-http)
-- [Custom plugin](/en/agent-sdk-docs/plugins/custom-plugin)

@@ -1,6 +1,7 @@
 {
   "title": "核心原理",
   "pages": [
+    "downcity-core-concepts",
     "architecture",
     "project-logic-overview",
     "logic-map",

@@ -1,23 +1,12 @@
 ---
-title: "Example: Client / Server Pattern"
-description: One process exposes an Agent host and another process calls it through RemoteAgent
+title: "Example: Client / Server Mode"
+description: One process exposes Agent capability, another consumes it through RemoteAgent
 ---
 
-# Example: Client / Server Pattern
+# Example: Client / Server Mode
 
-This pattern usually looks like:
+This mode usually looks like:
 
 - the server process owns the local `Agent`
-- the server calls `agent.start({ http: { ... } })`
+- the server exposes HTTP through `startServer(...)`, or RPC through `agent.start({ rpc: ... })`
 - the client process creates `RemoteAgent`
-
-The biggest advantage is a clean separation of responsibilities:
-
-- the server maintains execution context
-- the client only sends requests and consumes results
-
-This is a good fit for:
-
-- frontend and backend separation
-- a local daemon plus caller process
-- multiple callers sharing one agent host

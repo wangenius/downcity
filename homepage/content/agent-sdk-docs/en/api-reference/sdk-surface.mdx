@@ -8,7 +8,7 @@ description: The practical public API surface of Agent, RemoteAgent, and Session
 If you only want the practical developer-facing API shape, remember this:
 
 - `Agent` is the local runtime entry
-- `RemoteAgent` is the remote HTTP client
+- `RemoteAgent` is the remote session client
 - `AgentSession` is the local working object
 - `RemoteAgentSession` is the remote working object
 
@@ -43,13 +43,15 @@ const turn = await session.prompt({
 await turn.finished;
 ```
 
+You can also provide a default model directly in `new Agent({ model })`.
+
 ## Typical remote flow
 
 ```ts
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  baseUrl: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:15314",
 });
 
 const session = await agent.getSession("repo-analysis");
@@ -80,20 +82,28 @@ Core methods:
 Typical responsibilities:
 
 - create and resume local sessions
-- start HTTP runtime capabilities
+- start plugin lifecycles and optional RPC capability
 - expose plugin integration
 - provide narrow advanced helpers for config and logging
 
+If you need HTTP, the host should assemble it through `startServer(...)`.
+
 ## `RemoteAgent`
 
-Use `RemoteAgent` when another process already exposed an agent over HTTP.
+Use `RemoteAgent` when another process has already exposed an agent.
 
 Core methods:
 
-- `new RemoteAgent({ baseUrl })`
+- `new RemoteAgent({ url })`
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
+
+It currently supports:
+
+- `http://...`
+- `https://...`
+- `rpc://...`
 
 Typical responsibilities:
 
@@ -121,7 +131,7 @@ Core methods:
 Typical usage order:
 
 1. `await agent.createSession()`
-2. `await session.set({ model })`
+2. `await session.set({ model })` or provide a default model on `Agent`
 3. `const turn = await session.prompt({ query })`
 4. `await turn.finished`
 5. optional: `session.history()` / `session.getInfo()` / `session.fork()`
@@ -145,20 +155,11 @@ Important difference:
 - local `AgentSession` supports `set({ model })`
 - remote `RemoteAgentSession` does not accept a local model instance from the client
 
-## Which method to use for what
+## Agent projects and City AIService
 
-- Use `createSession()` when you want a brand new conversation
-- Use `getSession(sessionId)` when you want to continue a known session
-- Use `listSessions()` when you want a session picker, history sidebar, or third-party session browser
-- Use `getInfo()` when you want one session's current summary/detail snapshot
-- Use `history()` when you want paged conversation content
-- Use `subscribe()` when you want future turn events
-- Use `system()` when you want the current effective system prompt snapshot
-- Use `fork()` when you want to branch from the current conversation state
+If you are using this SDK inside a normal Downcity Agent project, there is one more distinction:
 
-## Reading next
+- pure SDK embedding: pass a local `model`
+- Downcity project: bind through `execution.modelId` to `City AIService`
 
-- [Agent Class](/en/agent-sdk-docs/api-reference/agent-class)
-- [RemoteAgent Class](/en/agent-sdk-docs/api-reference/remote-agent-class)
-- [Session Overview](/en/agent-sdk-docs/sessions/overview)
-- [Session Types and Results](/en/agent-sdk-docs/api-reference/session-types)
+So `session.set({ model })` is not the default path for every scenario.

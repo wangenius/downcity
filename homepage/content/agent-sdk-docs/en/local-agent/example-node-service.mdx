@@ -1,6 +1,6 @@
 ---
 title: "Example: Embed a Local Agent in a Node Service"
-description: A typical embedding pattern for using a local Agent inside a Node service
+description: A typical embedding pattern for using a local Agent inside a Node service, and when City AIService belongs in the picture
 ---
 
 # Example: Embed a Local Agent in a Node Service
@@ -11,15 +11,16 @@ One very common pattern looks like this:
 2. The service creates or loads a session at startup.
 3. An HTTP handler receives a request and turns it into `session.prompt()`.
 
-This is a good fit for:
+## Minimal embedding mode
 
-- internal tools
-- engineering assistants
-- packaging repository capabilities behind a service
+```ts
+import { Agent } from "@downcity/agent";
 
-If you later want other processes to reuse it, exposing the same local agent over HTTP is usually the most natural next step.
+const agent = new Agent({
+  id: "repo-helper",
+  path: process.cwd(),
+  model,
+});
 
-If you need cross-process access, add:
-
-- `agent.start({ http: { ... } })`
-- a second process using `RemoteAgent`
+const session = await agent.createSession();
+```

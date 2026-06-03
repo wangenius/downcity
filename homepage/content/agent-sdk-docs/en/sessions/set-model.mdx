@@ -5,15 +5,35 @@ description: How a local SDK session explicitly binds its default model instance
 
 # `session.set({ model })`
 
-Local SDK sessions do not have a model by default.
-
-You must explicitly call:
+`session.set({ model })` is one of the explicit ways to bind a model instance in local SDK usage.
 
 ```ts
 await session.set({
   model: openai.responses("gpt-5"),
 });
 ```
+
+## When you need it
+
+This is useful when:
+
+- you are using `@downcity/agent` in pure SDK embedding mode
+- you did not provide a default model through `new Agent({ model })`
+- you want to override the model for one specific session
+
+## When you may not need it
+
+If you already wrote:
+
+```ts
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model: openai.responses("gpt-5"),
+});
+```
+
+then new sessions automatically receive that default model, so you usually do not need another explicit `set`.
 
 ## Why it works this way
 
@@ -26,10 +46,25 @@ That makes the local SDK more flexible, but it also makes the caller responsible
 
 ## What happens if you skip it
 
-Execution fails because the session has no default model.
+If a local session has neither:
 
-This is one of the most common runtime mistakes in local SDK usage.
+- `new Agent({ model })`
+
+nor:
+
+- `session.set({ model })`
+
+then execution fails because the session has no default model.
 
 ## What about remote sessions
 
 Remote sessions do not currently support setting the model this way from the client side.
+
+## What about Downcity Agent projects
+
+If you are working inside a normal Downcity Agent project, the model should usually come from:
+
+- `downcity.json.execution.modelId`
+- the connected `City AIService`
+
+In that case, `session.set({ model })` should not be treated as the default path.

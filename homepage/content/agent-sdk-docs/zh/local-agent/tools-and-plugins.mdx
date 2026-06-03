@@ -79,7 +79,14 @@ const plugins = agent.plugins.list();
 
 当前本地 SDK 会接通 plugin registry、`AgentContext.plugins`，并在 session prompt 中注入已注册 plugin 的 `system(context)` 文本。
 
-它不会把 `plugin.http.server` 自动挂到 `agent.start({ http: { ... } })` 的 SDK HTTP server 上。
+## plugin HTTP
+
+如果你通过 `startServer(...)` 暴露 HTTP 服务，已注册 plugin 的 `plugin.http.server.register(...)` 也会自动挂到同一个 HTTP app 上。
+
+也就是说：
+
+- 插件是否存在，由 `Agent` 构造参数里的 `plugins` 决定
+- 插件 HTTP 是否真正暴露，由宿主是否调用 `startServer(...)` 决定
 
 ## 一个重要边界
 

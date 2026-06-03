@@ -1,17 +1,37 @@
 ---
 title: RemoteAgent Quickstart
-description: Connect to an Agent that has already been exposed over HTTP
+description: Connect to an Agent that has already been exposed over HTTP or RPC
 ---
 
 # RemoteAgent Quickstart
 
-## Start HTTP on the server side first
+`RemoteAgent` is the remote session client.
 
-Server-side code:
+It currently supports:
+
+- `http://...`
+- `https://...`
+- `rpc://...`
+
+## Expose a reachable server-side endpoint first
+
+### Option 1: expose HTTP from the server
+
+```ts
+const server = await startServer({
+  host: "127.0.0.1",
+  port: 15314,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
+});
+```
+
+### Option 2: start RPC on the server
 
 ```ts
 const started = await agent.start({
-  http: {
+  rpc: {
     host: "127.0.0.1",
     port: 15314,
   },
@@ -20,11 +40,13 @@ const started = await agent.start({
 
 ## Connect from the client
 
+### Connect over HTTP
+
 ```ts
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  baseUrl: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:15314",
 });
 
 const session = await agent.createSession();
@@ -35,12 +57,35 @@ const turn = await session.prompt({
 const result = await turn.finished;
 ```
 
-On the client side, you do not need to care about project prompts, City AIService model details, or runtime assembly. You only consume the remote session capability that has already been exposed.
+### Connect over RPC
+
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({
+  url: "rpc://127.0.0.1:15314",
+});
+```
+
+## One important limitation
+
+Remote sessions do not currently support:
+
+```ts
+await session.set({ model });
+```
+
+The model should stay on the server side.
+
+If you are in pure SDK mode, configure the model on the server-side local `Agent` or local session.
+
+If you are in Downcity integration mode, the model usually comes from:
+
+- `downcity.json.execution.modelId`
+- the connected `City AIService`
 
 ## Good fit for
 
 - another process already owns the local Agent
-- you only want to consume agent capability through HTTP
+- you only want to consume agent capability through HTTP or RPC
 - you want to separate the caller from the executor
-
-If you have a frontend and backend, a local daemon plus callers, or several consumers sharing one agent host, this mode feels very natural.

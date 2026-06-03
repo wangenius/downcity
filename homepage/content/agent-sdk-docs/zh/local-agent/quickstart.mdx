@@ -1,6 +1,6 @@
 ---
 title: 本地 Agent 快速开始
-description: 用 Agent SDK 在本地进程里创建一个可执行的 Agent
+description: 用 Agent SDK 在本地进程里创建一个可执行的 Agent，并理解本地模型与 City AIService 模型的差异
 ---
 
 # 本地 Agent 快速开始
@@ -52,7 +52,30 @@ console.log(result.text);
 
 如果两种都没做，本地 session 没有模型，无法执行。
 
-第一次上手时，建议先不要叠加复杂 tools、托管 plugin、额外 plugin 或 HTTP 暴露，先把最短执行链跑通。
+## 一个关键区分
+
+### 纯 SDK 嵌入模式
+
+如果你是直接把 `@downcity/agent` 嵌到自己的 Node 应用里，最常见就是：
+
+- `new Agent({ model })`
+- 或 `session.set({ model })`
+
+模型实例由你的宿主代码直接持有。
+
+### Downcity Agent 项目模式
+
+如果你是在正常的 Downcity / Town 项目里跑 Agent，通常不应该在项目里直接持有 provider 配置或模型实例。
+
+这时模型来自：
+
+- `downcity.json.execution.modelId`
+- 已连接的 `City AIService`
+
+也就是说：
+
+- Agent 项目只选择 `modelId`
+- `City AIService` 管理 provider、API key、模型目录
 
 ## 什么时候需要 `agent.start()`
 
@@ -68,18 +91,29 @@ await turn.finished;
 
 通常不需要调用 `agent.start()`。
 
-只有在你需要这些长期运行能力时，才需要调用 `agent.start(...)`：
+当前 `agent.start()` 的职责是：
 
-- 启动 HTTP 端口，让别的进程通过 `RemoteAgent` 调用它
-- 启动 plugin lifecycle 和 Agent 的 ActionSchedule loop，让长期后台能力真正开始运行
+- 启动 plugin lifecycle
+- 可选启动本机 RPC 服务
 
-可以把它简单理解成：
+例如：
 
-- 不 `start`：把 Agent 当本地库直接调用
-- `start`：把 Agent 变成一个会对外服务、会跑后台能力的长期运行实例
+```ts
+const started = await agent.start({
+  rpc: {
+    host: "127.0.0.1",
+    port: 15314,
+  },
+});
+
+console.log(started.rpc?.url);
+```
+
+如果你需要 HTTP 服务端点，则应使用宿主侧的 `startServer(...)` 来装配 HTTP server，而不是 `agent.start({ http: ... })`。
 
 ## 继续阅读
 
 - [构造参数](/zh/agent-sdk-docs/local-agent/constructor-options)
-- [本地 Agent 的 HTTP 服务](/zh/agent-sdk-docs/local-agent/http-and-rpc)
+- [本地 Agent 的 HTTP / RPC](/zh/agent-sdk-docs/local-agent/http-and-rpc)
+- [Agent 与 City AIService](/zh/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
 - [Session set / prompt / subscribe](/zh/agent-sdk-docs/sessions/overview)

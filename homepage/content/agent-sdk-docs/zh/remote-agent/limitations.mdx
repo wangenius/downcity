@@ -23,12 +23,21 @@ await session.set({ model });
 ## 推荐做法
 
 - 在服务端本地 Agent 上配置模型
+- 或在 Downcity 集成模式里，通过 `execution.modelId` 绑定 `City AIService` 模型
 - 客户端只做远程调用
 
 如果你把模型控制逻辑也放到客户端，就很容易和当前能力边界冲突。
 
 ## 另一个现实限制
 
-如果服务端没有启动 `agent.start({ http: { ... } })`，RemoteAgent 无法连接。
+如果服务端既没有：
+
+- 通过 `startServer(...)` 暴露 HTTP
+
+也没有：
+
+- 通过 `agent.start({ rpc: ... })` 启动 RPC
+
+那么 `RemoteAgent` 无法连接。
 
 从体验上看，RemoteAgent 更像一个瘦客户端，而不是会自动替你补全服务端能力的智能代理。

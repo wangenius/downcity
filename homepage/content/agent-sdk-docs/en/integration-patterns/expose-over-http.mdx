@@ -1,24 +1,20 @@
 ---
-title: Expose an Agent over HTTP
-description: Turn a local Agent into an HTTP service for other processes or clients
+title: Expose Agent over HTTP
+description: Expose a local Agent as an HTTP service for other processes or clients
 ---
 
-# Expose an Agent over HTTP
+# Expose Agent over HTTP
 
-If the caller and executor do not live in the same process, expose the local Agent as an HTTP service:
+If the caller and the executor do not live in the same process, you can expose the local Agent as an HTTP service.
+
+The current host-side assembly pattern is:
 
 ```ts
-await agent.start({
-  http: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
+const server = await startServer({
+  host: "127.0.0.1",
+  port: 15314,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
 });
 ```
-
-Then connect to it from another process using `RemoteAgent`.
-
-This creates a very natural local client-server shape:
-
-- the local Agent executes
-- `RemoteAgent` consumes

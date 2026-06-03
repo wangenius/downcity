@@ -1,11 +1,15 @@
 ---
 title: SDK HTTP Endpoints
-description: The minimal HTTP interface a local Agent exposes for RemoteAgent
+description: The minimal HTTP session routes a local Agent can expose to RemoteAgent
 ---
 
 # SDK HTTP Endpoints
 
-The SDK routes currently exposed by a local Agent through `agent.start({ http: { ... } })` include:
+These SDK routes are not currently exposed by `agent.start({ http: { ... } })`.
+
+They are mounted when the host calls `startServer(...)` and passes `sessionCollection`.
+
+The current core set includes:
 
 - `GET /api/sdk/sessions`
 - `POST /api/sdk/sessions`
@@ -16,11 +20,3 @@ The SDK routes currently exposed by a local Agent through `agent.start({ http: {
 - `GET /api/sdk/sessions/:sessionId/messages`
 - `GET /api/sdk/sessions/:sessionId/system`
 - `POST /api/sdk/sessions/:sessionId/fork`
-
-## Design goal
-
-This is not meant to be a huge general-purpose platform API.
-
-It is intentionally a small session-centered SDK surface.
-
-The priority is not "grow a complex API platform." The priority is keeping the local `Agent` and `RemoteAgent` capability surfaces aligned.

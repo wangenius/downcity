@@ -79,14 +79,25 @@ SDK 本地 `Agent` 允许你在应用代码里显式传入：
 
 - `tools`
 - `plugins`
+- `model`
 - session 级 `model`
 
 这和项目 runtime 有一点不同：
 
 - 项目 runtime 的模型来自 `downcity.json.execution.modelId`
-- SDK 本地 session 的模型由 `session.set({ model })` 显式传入
+- SDK 本地执行可以来自 `new Agent({ model })`，也可以对单个 session 调 `session.set({ model })`
 
-这也是本地 SDK 最常见的踩坑点之一：你以为 SDK 会自动从项目配置里帮你把运行中的模型实例准备好，但当前实现不是这样，SDK session 仍然需要显式 `set({ model })`。
+这也是本地 SDK 最常见的踩坑点之一：你以为 SDK 会自动从项目配置里帮你把运行中的模型实例准备好，但当前实现不是这样。
+
+也就是说，如果你既没有：
+
+- 在 `new Agent({ model })` 里提供默认模型
+
+也没有：
+
+- 对某个 session 显式 `set({ model })`
+
+那么本地 SDK 执行会因为缺少模型而失败。
 
 ## 继续阅读
 

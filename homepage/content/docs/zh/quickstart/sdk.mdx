@@ -11,6 +11,7 @@ description: 以本地嵌入式 Agent 或远程 Agent Client 的方式使用 Dow
 
 - [Agent SDK 总览](/zh/agent-sdk-docs)
 - [本地 Agent 快速开始](/zh/agent-sdk-docs/local-agent/quickstart)
+- [Agent 与 City AIService](/zh/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
 - [RemoteAgent 快速开始](/zh/agent-sdk-docs/remote-agent/quickstart)
 - [Session 总览](/zh/agent-sdk-docs/sessions/overview)
 
@@ -19,7 +20,7 @@ description: 以本地嵌入式 Agent 或远程 Agent Client 的方式使用 Dow
 `@downcity/agent` 当前对外提供两个主要 SDK 入口：
 
 - `Agent`：本地嵌入式 Agent
-- `RemoteAgent`：连接已启动 Agent HTTP 服务的远程客户端
+- `RemoteAgent`：远程 Agent 客户端
 
 ## 安装
 
@@ -32,6 +33,13 @@ pnpm add @downcity/agent
 ```bash
 pnpm add @downcity/plugins
 ```
+
+## 这里最重要的区分
+
+- 纯 SDK 嵌入模式：模型由宿主直接持有
+- Downcity 项目模式：模型通常来自 `execution.modelId` + `City AIService`
+
+也就是说，并不是所有场景都应该默认去写 `session.set({ model })`。
 
 ## 本地 Agent
 
@@ -49,12 +57,10 @@ const agent = new Agent({
   id: "vibecape-official",
   path: "/path/to/agent-project",
   tools: {},
+  model: openai.responses("gpt-5"),
 });
 
 const session = await agent.createSession();
-await session.set({
-  model: openai.responses("gpt-5"),
-});
 
 const turn = await session.prompt({
   query: "把本地文件重命名为新的规范",
@@ -63,6 +69,8 @@ const result = await turn.finished;
 
 console.log(result.text);
 ```
+
+如果没有在 `Agent` 构造时传默认模型，也可以对单个 session 调用 `session.set({ model })`。
 
 ## 注入 ChatPlugin
 
@@ -86,8 +94,7 @@ const agent = new Agent({
 });
 ```
 
-`plugins` 接收“已经实例化好的 plugin 对象”。  
-`agent.start({ http: { ... } })` 会在暴露服务端点前自动启动这些 plugin。
+`plugins` 接收“已经实例化好的 plugin 对象”。
 
 ## 观察执行过程
 
@@ -105,45 +112,40 @@ await turn.finished;
 unsubscribe();
 ```
 
-当前 session 事件类型包括：
-
-- `text-delta`
-- `reasoning-delta`
-- `tool-call`
-- `tool-result`
-- `error`
-
-## 分叉 Session
-
-```ts
-const branched = await session.fork();
-const fromMessage = await session.fork("message-id");
-```
-
-传入 `messageId` 时，新 session 会复制到该消息为止（包含该消息）的历史。
-
-## 启动 HTTP
+## 启动 RPC
 
 ```ts
 const started = await agent.start({
-  http: {
+  rpc: {
     host: "127.0.0.1",
     port: 15314,
   },
 });
 
-console.log(started.http?.baseUrl);
+console.log(started.rpc?.url);
+```
+
+## 暴露 HTTP
+
+```ts
+const server = await startServer({
+  host: "127.0.0.1",
+  port: 15314,
+  getAgentRuntime: () => agent.getRuntime(),
+  getAgentContext: () => agent.getContext(),
+  sessionCollection: agent.getSessionCollection(),
+});
 ```
 
 ## 远程 Agent
 
-当另一个进程已经调用过 `agent.start({ http: { ... } })` 时，使用 `RemoteAgent`。
+当另一个进程已经通过 HTTP 或 RPC 暴露了 Agent 时，使用 `RemoteAgent`。
 
 ```ts
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  baseUrl: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:15314",
 });
 
 const session = await agent.createSession();
@@ -156,19 +158,7 @@ const result = await turn.finished;
 console.log(result.text);
 ```
 
-远程观察方式相同：
-
-```ts
-const unsubscribe = session.subscribe((event) => {
-  if (event.type === "text-delta") {
-    process.stdout.write(event.text);
-  }
-});
-
-const turn = await session.prompt({ query: "继续" });
-await turn.finished;
-unsubscribe();
-```
+远程 session 当前不支持客户端直接传本地模型实例。
 
 ## Session 落盘位置
 
@@ -177,5 +167,3 @@ SDK session 默认落盘到：
 ```text
 <projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
 ```
-
-这样即使多个 agent 共用同一个项目目录，session 也会按 `agentId` 隔离。

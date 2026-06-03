@@ -1,6 +1,6 @@
 ---
 title: "Example: Minimal RemoteAgent"
-description: Call an Agent in another process over HTTP
+description: Call an Agent hosted in another process over HTTP or RPC
 ---
 
 # Example: Minimal RemoteAgent
@@ -9,7 +9,7 @@ description: Call an Agent in another process over HTTP
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  baseUrl: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:15314",
 });
 
 const session = await agent.createSession();
@@ -19,5 +19,3 @@ const turn = await session.prompt({
 
 const result = await turn.finished;
 ```
-
-It is best to use this minimal example to validate remote connectivity first, and only then add more complex subscription or multi-session behavior.

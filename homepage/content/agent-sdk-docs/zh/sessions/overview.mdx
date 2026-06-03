@@ -24,6 +24,8 @@ const unsubscribe = session.subscribe((event) => {
 await turn.finished;
 ```
 
+如果你已经在 `new Agent({ model })` 里提供了默认模型，也可以不再单独调用 `session.set({ model })`。
+
 ### RemoteAgent
 
 ```ts
@@ -46,10 +48,19 @@ await turn.finished;
 
 ## 一个重要区别
 
-- 本地 session 需要先 `set({ model })`
+- 本地 session 需要确保有模型
 - 远程 session 当前不支持远程传模型实例
 
 所以本地和远程的最大差异，不在交互形态，而在“模型是在哪里被持有和配置的”。
+
+## 再补一个边界
+
+如果你是在正常的 Downcity Agent 项目里工作，模型通常来自：
+
+- `downcity.json.execution.modelId`
+- 已连接的 `City AIService`
+
+这时 `session.set({ model })` 不应被当成默认路径。
 
 ## 使用建议
 

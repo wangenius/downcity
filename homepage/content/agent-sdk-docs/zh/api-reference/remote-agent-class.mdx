@@ -7,15 +7,47 @@ description: 远程 Agent 客户端的核心公开接口
 
 `RemoteAgent` 的核心公开使用面包括：
 
-- `new RemoteAgent({ baseUrl })`
+- `new RemoteAgent({ url })`
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
 
 `agent.createSession()` 和 `agent.getSession()` 返回 `RemoteAgentSession`。
 
+## `url`
+
+当前构造参数是：
+
+```ts
+new RemoteAgent({
+  url: "http://127.0.0.1:15314",
+});
+```
+
+而不是 `baseUrl`。
+
+`url` 当前支持：
+
+- `http://...`
+- `https://...`
+- `rpc://...`
+
 ## 核心语义
 
-它本身不执行任务，只负责通过 HTTP 调远程服务端。
+它本身不执行任务，只负责连接远程 session 能力。
 
-如果你把本地 `Agent` 看成服务端，那 `RemoteAgent` 就是与之配对的客户端。
+如果你把本地 `Agent` 看成服务端执行壳，那 `RemoteAgent` 就是与之配对的客户端。
+
+## 一个重要限制
+
+远程 session 当前不支持客户端直接传本地模型实例。
+
+也就是说：
+
+```ts
+await session.set({ model });
+```
+
+当前不支持。
+
+模型应该由服务端本地 `Agent` 或服务端本地 session 持有。

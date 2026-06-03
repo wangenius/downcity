@@ -1,11 +1,11 @@
 ---
 title: Agent Class
-description: The core public interface of the local Agent runtime
+description: The core public API of the local Agent SDK
 ---
 
 # Agent Class
 
-The local `Agent` exposes these core public entry points:
+The local `Agent` exposes the following main public API:
 
 - `new Agent(options)`
 - `agent.start(options?)`
@@ -13,13 +13,14 @@ The local `Agent` exposes these core public entry points:
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
+- `agent.setInstruction(input)`
 - `agent.getConfig()`
 - `agent.getLogger()`
 - `agent.plugins`
 
 `agent.createSession()` and `agent.getSession()` return `AgentSession`.
 
-`agent.getConfig()` and `agent.getLogger()` are the narrow advanced-integration helpers. The local SDK no longer exposes `agent.getRuntime()` or `agent.getContext()` as public entry points.
+If the host needs lower-level runtime assembly, it can also use `agent.getRuntime()`, `agent.getContext()`, and `agent.getSessionCollection()`.
 
 ## Constructor options
 
@@ -27,73 +28,30 @@ The local `Agent` exposes these core public entry points:
 - `path`
 - `model`
 - `env`
-- `mode`
 - `tools`
 - `instruction`
 - `plugins`
 
-## Core semantics
-
-- `Agent` itself is the local execution shell
-- the real execution object is the session it creates
-
-From an API-design perspective, it behaves more like a session factory plus a long-lived runtime entry point.
+There is currently no `mode` constructor option.
 
 ## `start()` and `stop()`
 
-`agent.start()` starts the long-lived runtime capabilities of the current agent.
+`agent.start()` starts long-lived capabilities for the current agent.
 
-Typical examples include:
+In the current implementation, that means:
 
-- starting the HTTP server
 - starting plugin lifecycles
+- optionally starting the local RPC server
 
-Recommended usage:
+Recommended shape:
 
 ```ts
 await agent.start({
-  http: {
+  rpc: {
     host: "127.0.0.1",
     port: 15314,
   },
 });
 ```
 
-If you do not call `agent.start()`:
-
-- you can still call `await agent.createSession()` and then `session.prompt()`
-- but no HTTP endpoint starts
-- and no background plugin lifecycle starts
-
-`agent.stop()` closes whichever long-lived capabilities are currently running.
-
-## Lifecycle entry
-
-But for most user scenarios, the recommended entry is:
-
-```ts
-await agent.start({
-  http: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
-});
-```
-
-The local `Agent` no longer exposes fine-grained runtime internals.
-
-If you need an endpoint, use:
-
-- HTTP: `agent.start({ http: { host, port } })`
-
-`agent.plugins` is now an important public surface of the local SDK.
-
-You can use it directly for:
-
-- `agent.plugins.list()`
-- `agent.plugins.availability(pluginName)`
-- `agent.plugins.runAction({ plugin, action, payload })`
-- `agent.plugins.pipeline(pointName, value)`
-- `agent.plugins.guard(pointName, value)`
-- `agent.plugins.effect(pointName, value)`
-- `agent.plugins.resolve(pointName, value)`
+If you need HTTP endpoints, use `startServer(...)` on the host side instead of `agent.start({ http: ... })`.

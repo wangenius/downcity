@@ -1,6 +1,6 @@
 ---
 title: 例子：在 Node 服务里嵌入本地 Agent
-description: 一个典型的本地 Agent 嵌入模式示例
+description: 一个典型的本地 Agent 嵌入模式示例，并说明什么时候要接 City AIService
 ---
 
 # 例子：在 Node 服务里嵌入本地 Agent
@@ -17,9 +17,38 @@ description: 一个典型的本地 Agent 嵌入模式示例
 - 研发助手
 - 把某个仓库能力封装成服务
 
-如果你后面要给别的进程复用，再叠加 HTTP 暴露通常是最自然的下一步。
+## 最小嵌入模式
 
-如果你需要跨进程访问，通常再叠加：
+```ts
+import { Agent } from "@downcity/agent";
 
-- `agent.start({ http: { ... } })`
-- 另一个进程用 `RemoteAgent`
+const agent = new Agent({
+  id: "repo-helper",
+  path: process.cwd(),
+  model,
+});
+
+const session = await agent.createSession();
+```
+
+这种模式下，模型实例由你的 Node 宿主直接持有。
+
+## 如果要跨进程复用
+
+如果后面要给别的进程复用，通常有两条路：
+
+- `agent.start({ rpc: { ... } })`
+- 或宿主使用 `startServer(...)` 暴露 HTTP
+
+然后另一个进程用 `RemoteAgent({ url })` 连接它。
+
+## 如果你是 Downcity 项目
+
+如果你不是在做纯 SDK 嵌入，而是在跑正常的 Downcity Agent 项目，通常不应该在这里直接持有 provider 配置或模型实例。
+
+这时更推荐：
+
+- 在 `City AIService` 注册模型
+- 在项目里通过 `execution.modelId` 绑定模型
+
+也就是说，Node 宿主嵌入 `Agent` 和通过 Town 连接 `City AIService`，是两种不同的使用路径。

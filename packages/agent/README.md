@@ -50,17 +50,18 @@ packages/agent
 ```text
 src/
 ├── index.ts               # 包公开入口，集中导出外部可依赖的 API 与协议类型
+├── agent/                 # Agent SDK 入口，按 local / remote 拆分本地与远程实现
+│   ├── local/             # 本地 Agent facade 与实例装配中心
+│   └── remote/            # RemoteAgent facade、RemoteSession 与 HTTP/RPC transport
 ├── config/                # 配置与项目初始化，负责 downcity.json、默认配置、execution binding 与脚手架
 │   └── project/           # Agent 项目初始化与项目初始化类型
-├── core/                  # 单 Agent 运行时装配中心，负责 AgentCore / AgentContext
 ├── executor/              # 内部执行内核，负责历史、system、tool loop、增量输出与消息持久化
 ├── plugin/                # 插件系统，负责插件注册、hook、action、内建插件与插件类型
 ├── rpc/                   # Agent 本机 RPC runtime，对外 HTTP gateway 由 Town 提供
 ├── runtime/               # 运行时实现细节层，统一收纳 host / sandbox / control 等内部能力
 │   ├── host/              # 宿主注入能力协议
 │   └── sandbox/           # 命令沙箱与沙箱协议
-├── sdk/                   # 本地 SDK facade，提供 Agent / RemoteAgent / Session 等高层 API
-│   └── session/           # SDK session 的 metadata、落盘路径、持久化与 runtime 端口适配
+├── session/               # SDK session actor、metadata、落盘路径、持久化与 runtime 端口适配
 ├── types/                 # 跨模块共享协议类型，集中放置 common / config / runtime 等稳定契约
 └── utils/                 # 低层工具，负责 CLI、日志、存储与模板辅助
 ```
@@ -72,16 +73,12 @@ src/
   - `project/` 收口 agent 项目脚手架与初始化结果类型
   - 负责 `downcity.json`、项目 env、`.downcity/*` 路径规则与 execution binding
 
-- `src/core/`
-  - 单 Agent 装配中心
-  - `AgentCore` 负责把 config、session SDK、executor、plugin、runtime 组装成一个实例级执行内核
-  - `AgentContext` 提供统一能力面，供 session / executor / plugin 复用
-
-- `src/sdk/`
-  - 本地 SDK facade
-  - 包括 `Agent`、`RemoteAgent`、`Session` 与 `sdk/session/*`
-  - `Agent.ts` 通过 `start()/stop()` 统一收口长期运行生命周期
-  - `sdk/session/*` 负责 SDK session metadata、落盘路径、持久化与 runtime 端口适配
+- `src/agent/`
+  - SDK facade 层
+  - `local/Agent.ts` 负责本地 Agent 实例装配、plugin/session/RPC 生命周期
+  - `remote/RemoteAgent.ts` 负责远程 Agent 客户端入口
+  - `remote/RemoteSession.ts` 负责远程 session actor 与 turn lifecycle
+  - `remote/transports/*` 负责 HTTP/RPC transport 适配
 
 - `src/executor/`
   - 内部执行内核
@@ -120,13 +117,13 @@ src/
 `@downcity/agent` 的核心是一条单 Agent 执行链：
 
 ```text
-入口协议 -> AgentCore -> AgentContext -> Session SDK / Executor / Plugin -> Runtime 子系统 -> History / Reply
+入口协议 -> Agent facade -> AgentContext -> Session / Executor / Plugin -> Runtime 子系统 -> History / Reply
 ```
 
 其中：
 
-- `sdk` 是用户 API 面
-- `core` 是实例级装配中心
-- `session SDK / executor / plugin` 是三大核心分层
+- `agent/local` 与 `agent/remote` 是用户 API 面
+- `Agent` facade 是实例级装配中心
+- `session / executor / plugin` 是三大核心分层
 - `runtime` 是 control / sandbox / host 这类实现细节的统一容器
 - `types / utils` 提供横向公共支撑

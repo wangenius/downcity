@@ -8,8 +8,8 @@
  */
 
 // Agent 入口
-export { Agent } from "./agent/Agent.js";
-export { RemoteAgent } from "./agent/RemoteAgent.js";
+export { Agent } from "./agent/local/Agent.js";
+export { RemoteAgent } from "./agent/remote/RemoteAgent.js";
 export {
   inferAgentModelLabel,
   normalizeAgentModel,

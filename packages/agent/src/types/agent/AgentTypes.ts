@@ -192,8 +192,8 @@ export interface RemoteAgentOptions {
   /**
    * 远程 agent 访问地址。
    *
-   * 例如：`https://city.example.com`、`http://127.0.0.1:15314`
-   * 或 `rpc://127.0.0.1:5314`
+   * 例如：`https://city.example.com/agents/lucas`、`http://127.0.0.1:5314/agents/lucas`
+   * 或 `rpc://127.0.0.1:15314`
    */
   url: string;
 

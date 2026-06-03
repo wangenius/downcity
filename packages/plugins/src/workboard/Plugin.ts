@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - workboard 是一个 runtime 观测面板插件，负责提供结构化工作快照。
- * - 当前同时通过 plugin action 与 HTTP 注入提供快照，供 Town/RPC 与旧 HTTP 宿主复用。
+ * - 当前同时通过 plugin action 与 HTTP 注入提供快照，供 Town RPC 与 Town HTTP gateway 复用。
  */
 
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";

@@ -222,7 +222,7 @@ async function resolveAgentChatRemoteTarget(params: {
   projectRoot: string;
   transport?: AgentChatTransportOptions;
 }): Promise<AgentChatRemoteTarget> {
-  // 关键点（中文）：chat 只走 Agent 本机 RPC，不再回退到旧 HTTP SDK 路由。
+  // 关键点（中文）：chat 固定走 Agent 本机 RPC，由 Town 负责对外暴露。
   const endpoint = resolveDaemonRpcEndpoint({
     projectRoot: params.projectRoot,
     host: params.transport?.host,

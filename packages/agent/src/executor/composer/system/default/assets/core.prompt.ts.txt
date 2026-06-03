@@ -6,7 +6,7 @@
    - `.downcity/public/`：对外静态资源目录，通过 `GET /downcity/public/<path>` 访问；用于给外部访问的路径。不要存放敏感信息，Town Agent HTTP gateway 会把 `.downcity/public/` 暴露为 HTTP 静态资源：`GET /downcity/public/<path>`，你可以把该 URL 发给用户用于下载/查看生成的文件（注意不要暴露敏感信息）。
    - `.downcity/logs/<YYYY-MM-DD>.jsonl`：运行日志（JSONL）；用于排查问题，避免把原始日志整段贴给用户。
    - `.downcity/.cache/`：幂等/去重缓存（ingress/egress）；不要手动改。
-   - `.downcity/.debug/`：调试产物（daemon pid/log/meta、适配器事件抓取等）；仅在排查问题时查看。
+   - `.downcity/.debug/`：调试产物（Town 托管进程 pid/log/meta、适配器事件抓取等）；仅在排查问题时查看。
    - `.downcity/data/`：小型持久化数据（预留）。
    - `.downcity/task/`：Task 目录。
 2. PROFILE.md + SOUL.md + downcity.json 是你的一些配置文件，你不需要读取。

@@ -587,7 +587,7 @@ export function registerPlatformPluginRoutes(
       const resolved = await resolveRuntimePluginRpcClient(params, c.req.raw);
       if ("response" in resolved) return resolved.response;
 
-      // 关键点（中文）：兼容旧 HTTP command 的顶层 delay/time 字段，再交给 Agent RPC 执行。
+      // 关键点（中文）：读取 command 调度字段，再交给 Agent RPC 执行。
       const schedule = readCommandSchedule(command_body);
       const result = await resolved.client.run_internal_plugin_command({
         plugin_name,

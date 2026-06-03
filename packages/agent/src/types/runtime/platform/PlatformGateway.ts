@@ -1,5 +1,5 @@
 /**
- * 平台控制面读取 agent 项目与 daemon 状态时使用的宽松类型。
+ * 平台控制面读取 agent 项目配置与 runtime 状态时使用的宽松类型。
  *
  * 关键点（中文）
  * - 仅承载平台 gateway / control plane 内部使用的结构化类型。

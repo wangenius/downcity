@@ -15,18 +15,10 @@ import fs from "fs-extra";
 import { nanoid } from "nanoid";
 import type { Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import type {
-  AgentContext,
-  SessionPort,
-} from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { JsonValue } from "@/types/common/Json.js";
-import type {
-  PluginAvailability,
-  PluginPort,
-  PluginView,
-} from "@/plugin/types/Plugin.js";
+import type { PluginPort } from "@/plugin/types/Plugin.js";
 import type {
   AgentSession,
   AgentCreateSessionInput,
@@ -44,17 +36,11 @@ import type {
 import type { AgentModel } from "@/model/CityModelAdapter.js";
 import { Logger } from "@/utils/logger/Logger.js";
 import { Session } from "@/session/Session.js";
-import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
 import {
   getSdkAgentSessionDirPath,
   listAgentSessionSummaryPage,
 } from "@/session/index.js";
-import {
-  createAgentPathRuntime,
-  createAgentPluginConfigRuntime,
-} from "@/runtime/host/AgentHostRuntime.js";
 import { loadDowncityConfig, resolveAgentEnv } from "@/config/Config.js";
-import { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.js";
@@ -62,52 +48,19 @@ import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
 import type { ActionScheduleRuntimeHandle } from "@/plugin/core/ActionScheduleRuntime.js";
 import { startActionScheduleRuntime } from "@/plugin/core/ActionScheduleRuntime.js";
 import { startRpcServer } from "@/rpc/Server.js";
-
-function createFallbackSdkConfig(agentId: string): DowncityConfig {
-  return {
-    id: agentId,
-    version: "0.0.0",
-  } as DowncityConfig;
-}
-
-function normalizeInstructionInput(input: string | string[] | undefined): string[] {
-  const items = Array.isArray(input)
-    ? input
-    : typeof input === "string"
-      ? [input]
-      : [];
-  return items
-    .map((item) => String(item || "").trim())
-    .filter((item) => item.length > 0);
-}
-
-function createCoreInstructionContent(projectRoot: string): string {
-  const currentYear = String(new Date().getFullYear());
-  return DEFAULT_SHIP_PROMPTS
-    .replaceAll("{{project_path}}", projectRoot)
-    .replaceAll("{{project_root}}", projectRoot)
-    .replaceAll("{{current_year}}", currentYear);
-}
-
-function createInstructionSystemBlocks(
-  instruction: string[],
-  projectRoot: string,
-): AgentSessionSystemBlock[] {
-  if (instruction.length === 0) {
-    return [
-      {
-        source: "core",
-        name: "default",
-        content: createCoreInstructionContent(projectRoot),
-      },
-    ];
-  }
-  return instruction.map((content, index) => ({
-    source: "instruction" as const,
-    name: instruction.length === 1 ? "agent" : `agent:${index + 1}`,
-    content,
-  }));
-}
+import {
+  createFallbackSdkConfig,
+  createInstructionSystemBlocks,
+  normalizeInstructionInput,
+} from "@/agent/local/AgentInstructions.js";
+import {
+  createAgentPluginPort,
+  createAgentPluginRegistry,
+} from "@/agent/local/AgentPluginFactory.js";
+import {
+  createAgentContext,
+  createAgentRuntime,
+} from "@/agent/local/AgentRuntimeFactory.js";
 
 /**
  * SDK 本地 Agent。
@@ -156,13 +109,40 @@ export class Agent {
     this.defaultModel = options.model;
     this.config = this.loadConfig();
     this.pluginInstances = new Map<string, BasePlugin>();
-    this.runtime = this.createRuntime();
+    this.runtime = createAgentRuntime({
+      agent_id: this.id,
+      project_root: this.path,
+      logger: this.logger,
+      config: this.config,
+      env: this.env,
+      systems: this.instruction,
+      plugin_instances: this.pluginInstances,
+      get_session_port: (session_id) =>
+        this.getOrCreateSession(session_id).getRuntimePort(),
+      list_cached_sessions: () => [...this.sessionsById.values()],
+    });
     this.registerPlugins(options.plugins || []);
-    this.pluginRegistry = this.createPluginRegistry([
-      ...this.pluginInstances.values(),
-    ]);
-    this.plugins = this.createPluginPort();
-    this.agentContext = this.createAgentContext();
+    this.pluginRegistry = createAgentPluginRegistry({
+      plugins: [...this.pluginInstances.values()],
+      get_context: () => this.agentContext,
+    });
+    this.plugins = createAgentPluginPort(this.pluginRegistry);
+    this.agentContext = createAgentContext({
+      runtime: this.runtime,
+      project_root: this.path,
+      logger: this.logger,
+      config: this.config,
+      env: this.env,
+      systems: this.instruction,
+      plugin_instances: this.pluginInstances,
+      plugins: this.plugins,
+      get_session_port: (session_id) =>
+        this.getOrCreateSession(session_id).getRuntimePort(),
+      resolve_session_model: async (session_id) => {
+        const session = await this.getSession(session_id);
+        return session.config.model;
+      },
+    });
     setShellToolRuntime(this.agentContext.invoke);
 
     this.sessionCollection = {
@@ -490,61 +470,6 @@ export class Agent {
   }
 
   /**
-   * 创建 plugin 注册表。
-   *
-   * 关键点（中文）
-   * - registry 本身不直接持有静态上下文，而是通过 resolver 延迟读取当前 `agentContext`。
-   * - 这样 hook 调度与 availability 判断都能复用同一份上下文视图。
-   */
-  private createPluginRegistry(input: BasePlugin[]): PluginRegistry {
-    let pluginRegistryRef: PluginRegistry | null = null;
-    const hookRegistry = new HookRegistry({
-      contextResolver: () => this.agentContext,
-      pluginEnabledChecker: (pluginName) => {
-        const plugin = pluginRegistryRef?.get(pluginName);
-        return plugin
-          ? isPluginEnabled({ plugin, context: this.agentContext })
-          : false;
-      },
-    });
-    const registry = new PluginRegistry({
-      contextResolver: () => this.agentContext,
-      hookRegistry,
-    });
-    pluginRegistryRef = registry;
-
-    for (const plugin of input) {
-      registry.register(plugin);
-    }
-    return registry;
-  }
-
-  /**
-   * 创建对外暴露的 plugin 调用门面。
-   */
-  private createPluginPort(): PluginPort {
-    return {
-      list: (): PluginView[] => this.pluginRegistry.list(),
-      availability: async (pluginName: string): Promise<PluginAvailability> =>
-        await this.pluginRegistry.availability(pluginName),
-      runAction: async (params) => await this.pluginRegistry.runAction(params),
-      pipeline: async <T>(pointName: string, value: T): Promise<T> =>
-        await this.pluginRegistry.pipeline(pointName, value),
-      guard: async <T>(pointName: string, value: T): Promise<void> => {
-        await this.pluginRegistry.guard(pointName, value);
-      },
-      effect: async <T>(pointName: string, value: T): Promise<void> => {
-        await this.pluginRegistry.effect(pointName, value);
-      },
-      resolve: async <TInput, TOutput>(
-        pointName: string,
-        value: TInput,
-      ): Promise<TOutput> =>
-        await this.pluginRegistry.resolve<TInput, TOutput>(pointName, value),
-    };
-  }
-
-  /**
    * 读取当前 agent 静态 instruction blocks。
    */
   private loadInstructionSystemBlocks(): AgentSessionSystemBlock[] {
@@ -580,109 +505,6 @@ export class Agent {
       }
     }
     return out;
-  }
-
-  /**
-   * 创建实例级 runtime 视图。
-   *
-   * 关键点（中文）
-   * - runtime 描述的是当前 agent 实例持有的长期状态。
-   * - 其他 server / plugin / transport 都通过这个视图读取统一状态。
-   */
-  private createRuntime(): AgentRuntime {
-    const runtime = {
-      cwd: this.path,
-      rootPath: this.path,
-      logger: this.logger,
-      config: this.config,
-      env: this.env,
-      systems: this.instruction,
-      paths: createAgentPathRuntime(this.path, this.id),
-      pluginConfig: createAgentPluginConfigRuntime(this.path),
-      getSession: (sessionId: string): SessionPort =>
-        this.getOrCreateSession(sessionId).getRuntimePort(),
-      listExecutingSessionIds: () =>
-        [...this.sessionsById.values()]
-          .filter((session) => session.isExecuting())
-          .map((session) => session.id),
-      getExecutingSessionCount: () =>
-        [...this.sessionsById.values()].filter((session) => session.isExecuting()).length,
-      pluginInstances: this.pluginInstances,
-    } satisfies AgentRuntime;
-    return runtime;
-  }
-
-  /**
-   * 创建统一执行上下文。
-   *
-   * 关键点（中文）
-   * - `AgentContext` 是执行期能力视图，不是状态实体本身。
-   * - plugin runtime、chat runtime、shell tool 都通过这里消费能力。
-   */
-  private createAgentContext(): AgentContext {
-    let context!: AgentContext;
-    context = {
-      agent: this.runtime,
-      cwd: this.path,
-      rootPath: this.path,
-      logger: this.logger,
-      config: this.config,
-      env: this.env,
-      systems: this.instruction,
-      paths: this.runtime.paths,
-      pluginConfig: this.runtime.pluginConfig,
-      session: {
-        get: (sessionId) => this.getOrCreateSession(sessionId).getRuntimePort(),
-        listExecutingSessionIds: () => this.runtime.listExecutingSessionIds(),
-        getExecutingSessionCount: () => this.runtime.getExecutingSessionCount(),
-        resolveModel: async (sessionId) => {
-          const session = await this.getSession(sessionId);
-          return session.config.model;
-        },
-      },
-      invoke: {
-        invoke: async (params: {
-          plugin: string;
-          action: string;
-          payload?: JsonValue;
-        }) => {
-          const pluginName = String(params.plugin || "").trim();
-          const actionName = String(params.action || "").trim();
-          const plugin = this.pluginInstances.get(pluginName);
-          if (!plugin) {
-            return {
-              success: false,
-              error: `Unknown plugin: ${pluginName}`,
-            };
-          }
-          const action = plugin.actions[actionName];
-          if (!action) {
-            return {
-              success: false,
-              error: `Unknown action: ${pluginName}.${actionName}`,
-            };
-          }
-          const result = await action.execute({
-            context,
-            payload: params.payload ?? null,
-            pluginName,
-            actionName,
-          });
-          if (!result.success) {
-            return {
-              success: false,
-              ...(result.error ? { error: result.error } : {}),
-            };
-          }
-          return {
-            success: true,
-            ...(result.data !== undefined ? { data: result.data } : {}),
-          };
-        },
-      },
-      plugins: this.plugins,
-    };
-    return context;
   }
 
   /**

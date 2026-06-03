@@ -1,0 +1,68 @@
+/**
+ * Agent instruction 组装工具。
+ *
+ * 关键点（中文）
+ * - 这里只处理静态 instruction 与默认 core prompt。
+ * - 不读取 session、plugin 或 runtime 状态，保持为纯函数。
+ */
+
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+import type { AgentSessionSystemBlock } from "@/types/agent/AgentTypes.js";
+import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
+
+/**
+ * 创建 SDK 场景的最小 fallback 配置。
+ */
+export function createFallbackSdkConfig(agent_id: string): DowncityConfig {
+  return {
+    id: agent_id,
+    version: "0.0.0",
+  } as DowncityConfig;
+}
+
+/**
+ * 归一化调用方传入的静态 instruction。
+ */
+export function normalizeInstructionInput(
+  input: string | string[] | undefined,
+): string[] {
+  const items = Array.isArray(input)
+    ? input
+    : typeof input === "string"
+      ? [input]
+      : [];
+  return items
+    .map((item) => String(item || "").trim())
+    .filter((item) => item.length > 0);
+}
+
+function createCoreInstructionContent(project_root: string): string {
+  const current_year = String(new Date().getFullYear());
+  return DEFAULT_SHIP_PROMPTS
+    .replaceAll("{{project_path}}", project_root)
+    .replaceAll("{{project_root}}", project_root)
+    .replaceAll("{{current_year}}", current_year);
+}
+
+/**
+ * 构造进入 session system prompt 的 instruction block。
+ */
+export function createInstructionSystemBlocks(
+  instruction: string[],
+  project_root: string,
+): AgentSessionSystemBlock[] {
+  if (instruction.length === 0) {
+    return [
+      {
+        source: "core",
+        name: "default",
+        content: createCoreInstructionContent(project_root),
+      },
+    ];
+  }
+  return instruction.map((content, index) => ({
+    source: "instruction" as const,
+    name: instruction.length === 1 ? "agent" : `agent:${index + 1}`,
+    content,
+  }));
+}

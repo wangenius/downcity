@@ -38,7 +38,7 @@ const session = await agent.createSession();
 如果后面要给别的进程复用，通常有两条路：
 
 - `agent.start({ rpc: { ... } })`
-- 或宿主使用 `startServer(...)` 暴露 HTTP
+- 或通过 `town agent start` 由 Town 暴露 HTTP
 
 然后另一个进程用 `RemoteAgent({ url })` 连接它。
 

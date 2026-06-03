@@ -15,8 +15,8 @@ import type {
   AgentSessionTimelineEvent,
   PlatformAgentOption,
 } from "@downcity/agent";
-import type { ControlSessionExecuteAttachmentInput } from "@downcity/agent/internal/runtime/server/http/control/types/ControlSessionExecute.js";
-import { toUiMessageTimeline } from "@downcity/agent/internal/runtime/server/http/control/MessageTimeline.js";
+import type { ControlSessionExecuteAttachmentInput } from "@downcity/agent/internal/runtime/control/types/ControlSessionExecute.js";
+import { toUiMessageTimeline } from "@downcity/agent/internal/runtime/control/MessageTimeline.js";
 import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import { getDowncitySessionMessagesDirPath } from "@/config/Paths.js";
 

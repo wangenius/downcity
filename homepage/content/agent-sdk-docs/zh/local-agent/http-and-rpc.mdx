@@ -1,17 +1,17 @@
 ---
-title: 本地 Agent 的 HTTP / RPC
-description: 理解本地 Agent 的长期运行能力，以及 RPC 与 HTTP 在当前实现中的真实分工
+title: 本地 Agent RPC 与 Town HTTP
+description: 理解 Agent RPC 与 Town 托管 HTTP 暴露之间的真实分工
 ---
 
-# 本地 Agent 的 HTTP / RPC
+# 本地 Agent RPC 与 Town HTTP
 
-本地 Agent 不只可以在当前进程里直接调用，也可以对外暴露服务端点。
+本地 Agent 可以在当前进程里直接调用，也可以暴露本机 RPC 给另一个本地进程调用。
 
-但当前实现里，`RPC` 和 `HTTP` 不是同一个入口。
+HTTP 不是 `Agent` SDK 自己的 server 能力。在 Downcity 里，HTTP 暴露由 Town 负责。
 
 ## `agent.start()` 当前负责什么
 
-当前 `agent.start()` 负责：
+`agent.start()` 负责：
 
 - 启动 plugin lifecycle
 - 可选启动本机 RPC 服务
@@ -36,7 +36,7 @@ console.log(started.rpc?.url);
 
 ## `agent.start()` 不负责什么
 
-当前 `agent.start()` 不负责启动 HTTP server。
+`agent.start()` 不负责启动 HTTP server。
 
 也就是说，这样的写法并不是当前真实 API：
 
@@ -49,37 +49,19 @@ await agent.start({
 });
 ```
 
-## 如何启动 HTTP
+## 如何通过 Town 暴露 HTTP
 
-如果你要把本地 Agent 暴露成 HTTP 服务，应使用宿主 HTTP 装配入口：
+如果你要 HTTP，对应做法是用 Town 启动 Agent，并让 Town 发布 Agent HTTP 网关：
 
-```ts
-import { Agent, startServer } from "@downcity/agent";
-
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  model,
-});
-
-await agent.start({
-  plugins: true,
-});
-
-const server = await startServer({
-  host: "127.0.0.1",
-  port: 15314,
-  getAgentRuntime: () => agent.getRuntime(),
-  getAgentContext: () => agent.getContext(),
-  sessionCollection: agent.getSessionCollection(),
-});
+```bash
+town agent start
 ```
 
 这里的职责划分是：
 
 - `Agent`：本地执行壳
-- `agent.start()`：长期运行能力中的 plugins / rpc
-- `startServer(...)`：把 runtime、context、sessionCollection 挂成 HTTP 服务
+- `agent.start()`：长期运行能力中的 plugins / 本机 RPC
+- `town agent start`：Agent 进程宿主与 HTTP 网关发布者
 
 ## `start()` 和不 `start()` 的区别
 
@@ -104,21 +86,20 @@ const server = await startServer({
 
 ## 什么时候用 HTTP
 
-- 你想让另一个进程通过 `RemoteAgent({ url: "http://..." })` 调它
+- 外部 client 需要通过 Town 的 HTTP 网关调用 Agent
 - 你想给前后端或第三方程序一个标准 HTTP 入口
-- 你需要同时挂 SDK 路由和 plugin HTTP 路由
+- 你需要 Town 在同一个网关上托管 SDK 路由和 plugin HTTP 路由
 
 ## 一个和 plugin 相关的重要点
 
-当前通过 `startServer(...)` 创建 HTTP 服务时，已注册 plugin 的 `plugin.http.server.register(...)` 也会自动挂到同一个 HTTP app 上。
+Town 暴露 Agent HTTP 网关时，已注册 plugin 的 `plugin.http.server.register(...)` 会自动挂到同一个 HTTP app 上。
 
 所以：
 
 - `agent.plugins` 负责插件注册表与调用
-- `startServer(...)` 负责把插件的 HTTP 路由真正挂出去
+- Town 负责把插件的 HTTP 路由真正挂出去
 
 ## 相关文档
 
 - [RemoteAgent 快速开始](/zh/agent-sdk-docs/remote-agent/quickstart)
 - [SDK HTTP 端点](/zh/agent-sdk-docs/api-reference/sdk-http-endpoints)
-- [通过 HTTP 暴露 Agent](/zh/agent-sdk-docs/integration-patterns/expose-over-http)

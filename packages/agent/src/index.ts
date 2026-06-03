@@ -110,9 +110,6 @@ export {
 // Agent RPC 集成
 export { startRpcServer } from "./rpc/Server.js";
 
-// 宿主 HTTP gateway 集成
-export { startServer } from "./runtime/server/http/Server.js";
-
 // Runtime plugin 运行集成
 export {
   startAllPlugins,
@@ -137,7 +134,7 @@ export {
 export { loadDowncityConfig } from "./config/Config.js";
 export {
   ensureRuntimeProjectReady,
-} from "./runtime/host/daemon/ProjectSetup.js";
+} from "./runtime/host/ProjectSetup.js";
 export { assertProjectExecutionTarget } from "./config/ExecutionBinding.js";
 
 // 日志
@@ -197,17 +194,6 @@ export type {
   PlatformAgentShipSingleChannelConfig,
   PlatformAgentShipStartConfig,
 } from "./types/runtime/platform/PlatformGateway.js";
-
-// Daemon 协议类型
-export {
-  DAEMON_LOG_FILENAME,
-  DAEMON_META_FILENAME,
-  DAEMON_PID_FILENAME,
-} from "./types/runtime/daemon/Daemon.js";
-export type {
-  DaemonMeta,
-  DaemonStaleReason,
-} from "./types/runtime/daemon/Daemon.js";
 
 // Inline instant 协议类型
 export type {

@@ -109,11 +109,11 @@ const started = await agent.start({
 console.log(started.rpc?.url);
 ```
 
-如果你需要 HTTP 服务端点，则应使用宿主侧的 `startServer(...)` 来装配 HTTP server，而不是 `agent.start({ http: ... })`。
+如果你需要 HTTP 服务端点，应通过 `town agent start` 由 Town 发布 HTTP 网关，而不是 `agent.start({ http: ... })`。
 
 ## 继续阅读
 
 - [构造参数](/zh/agent-sdk-docs/local-agent/constructor-options)
-- [本地 Agent 的 HTTP / RPC](/zh/agent-sdk-docs/local-agent/http-and-rpc)
+- [本地 Agent RPC 与 Town HTTP](/zh/agent-sdk-docs/local-agent/http-and-rpc)
 - [Agent 与 City AIService](/zh/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
 - [Session set / prompt / subscribe](/zh/agent-sdk-docs/sessions/overview)

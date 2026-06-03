@@ -1,17 +1,17 @@
 ---
-title: Local Agent HTTP / RPC
-description: Understand the real runtime split between RPC, HTTP, and long-lived local Agent capabilities
+title: Local Agent RPC and Town HTTP
+description: Understand the runtime split between Agent RPC and Town-managed HTTP exposure
 ---
 
-# Local Agent HTTP / RPC
+# Local Agent RPC and Town HTTP
 
-A local Agent can be called directly in-process, but it can also expose service endpoints.
+A local Agent can be called directly in-process, and it can expose a local RPC endpoint for another local process.
 
-In the current implementation, `RPC` and `HTTP` do not come from the same entry point.
+HTTP is not an `Agent` SDK server capability. In Downcity, HTTP exposure is owned by Town.
 
-## What `agent.start()` currently does
+## What `agent.start()` does
 
-`agent.start()` currently handles:
+`agent.start()` handles:
 
 - starting plugin lifecycles
 - optionally starting the local RPC server
@@ -36,7 +36,7 @@ The return value includes:
 
 ## What `agent.start()` does not do
 
-`agent.start()` does not currently start the HTTP server.
+`agent.start()` does not start an HTTP server.
 
 That means this is not the current real API:
 
@@ -49,37 +49,19 @@ await agent.start({
 });
 ```
 
-## How to expose HTTP
+## How to expose HTTP through Town
 
-If you want to expose the local Agent over HTTP, use the host-side HTTP assembly entry:
+If you want HTTP, start the Agent with Town and let Town publish the Agent HTTP gateway:
 
-```ts
-import { Agent, startServer } from "@downcity/agent";
-
-const agent = new Agent({
-  id: "repo-helper",
-  path: "/path/to/project",
-  model,
-});
-
-await agent.start({
-  plugins: true,
-});
-
-const server = await startServer({
-  host: "127.0.0.1",
-  port: 15314,
-  getAgentRuntime: () => agent.getRuntime(),
-  getAgentContext: () => agent.getContext(),
-  sessionCollection: agent.getSessionCollection(),
-});
+```bash
+town agent start
 ```
 
 The responsibility split is:
 
 - `Agent`: local execution shell
-- `agent.start()`: long-lived plugins / optional RPC
-- `startServer(...)`: mount runtime, context, and session collection as HTTP
+- `agent.start()`: long-lived plugins and optional local RPC
+- `town agent start`: Agent process host and HTTP gateway publisher
 
 ## `start()` vs not calling `start()`
 
@@ -104,18 +86,18 @@ After you call `agent.start()`:
 
 ## When to use HTTP
 
-- another process should call the agent through `RemoteAgent({ url: "http://..." })`
+- an external client should call the Agent through Town over HTTP
 - you want a standard HTTP entry for frontend/backend or third-party consumers
-- you want SDK routes and plugin HTTP routes on the same host
+- you want Town to host SDK routes and plugin HTTP routes on the same gateway
 
 ## One plugin-related detail that matters
 
-When you expose HTTP through `startServer(...)`, registered plugins with `plugin.http.server.register(...)` are also mounted onto the same HTTP app automatically.
+When Town exposes the Agent HTTP gateway, registered plugins with `plugin.http.server.register(...)` are mounted onto the same HTTP app automatically.
 
 So:
 
 - `agent.plugins` owns the plugin registry and plugin calls
-- `startServer(...)` is what actually exposes plugin HTTP routes
+- Town is what actually exposes plugin HTTP routes
 
 ## Related docs
 

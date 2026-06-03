@@ -8,7 +8,7 @@
  */
 import fs from "fs-extra";
 import path from "node:path";
-import { toUiMessageTimeline } from "@downcity/agent/internal/runtime/server/http/control/MessageTimeline.js";
+import { toUiMessageTimeline } from "@downcity/agent/internal/runtime/control/MessageTimeline.js";
 import { getDowncitySessionMessagesDirPath } from "../config/Paths.js";
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 /**

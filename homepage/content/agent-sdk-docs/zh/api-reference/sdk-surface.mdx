@@ -86,7 +86,7 @@ await turn.finished;
 - 暴露 plugin 集成入口
 - 提供配置与日志这两个较窄的高级辅助能力
 
-如果你需要 HTTP 服务，则应由宿主通过 `startServer(...)` 装配。
+如果你需要 HTTP 服务，应通过 Town 启动 Agent，由 Town 发布 HTTP 网关。
 
 ## `RemoteAgent`
 

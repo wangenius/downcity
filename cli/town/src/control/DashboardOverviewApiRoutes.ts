@@ -12,7 +12,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AgentSessionSummary, PlatformAgentOption } from "@downcity/agent";
-import { readRecentLogs } from "@downcity/agent/internal/runtime/server/http/control/TaskStore.js";
+import { readRecentLogs } from "@downcity/agent/internal/runtime/control/TaskStore.js";
 import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";

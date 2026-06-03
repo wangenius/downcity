@@ -8,7 +8,7 @@
  */
 import fs from "fs-extra";
 import path from "node:path";
-import { TASK_RUN_DIR_REGEX, listTaskRuns, readRecentLogs, readTaskRunDetail, } from "@downcity/agent/internal/runtime/server/http/control/TaskStore.js";
+import { TASK_RUN_DIR_REGEX, listTaskRuns, readRecentLogs, readTaskRunDetail, } from "@downcity/agent/internal/runtime/control/TaskStore.js";
 import { getDowncityDirPath } from "../config/Paths.js";
 const TASK_ID_REGEXP = /^[\p{L}\p{N}][\p{L}\p{N}_\-\s]{0,63}$/u;
 /**

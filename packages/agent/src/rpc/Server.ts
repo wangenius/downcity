@@ -22,12 +22,12 @@ import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { PluginStateControlAction } from "@/plugin/types/Plugin.js";
-import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
+import type { ControlSessionExecuteAttachmentInput } from "@/runtime/control/types/ControlSessionExecute.js";
 import {
   readAuthControlPayload,
   setAuthControlUserRole,
   writeAuthControlConfig,
-} from "@/runtime/server/http/control/AuthControlService.js";
+} from "@/runtime/control/AuthControlService.js";
 import {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesPath,
@@ -39,7 +39,7 @@ import {
 } from "@/plugin/core/PluginStateController.js";
 import { parsePluginCommandRequestBody } from "@/plugin/core/PluginCommandRequest.js";
 import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
-import { executeBySessionId } from "@/runtime/server/http/control/ExecuteBySession.js";
+import { executeBySessionId } from "@/runtime/control/ExecuteBySession.js";
 
 type RpcSessionRequest =
   | {

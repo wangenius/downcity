@@ -16,7 +16,7 @@ import {
   listTaskRuns,
   readRecentLogs,
   readTaskRunDetail,
-} from "@downcity/agent/internal/runtime/server/http/control/TaskStore.js";
+} from "@downcity/agent/internal/runtime/control/TaskStore.js";
 import type { AgentRpcPool } from "@/control/gateway/AgentRpcPool.js";
 import { getDowncityDirPath } from "@/config/Paths.js";
 

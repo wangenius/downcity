@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import { stripInvocationAuthEnv } from "@downcity/agent/internal/runtime/server/http/auth/AuthEnv.js";
+import { stripInvocationAuthEnv } from "@downcity/agent/internal/runtime/auth/AuthEnv.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import { runSandboxCommand } from "@downcity/agent/internal/runtime/sandbox/SandboxRunner.js";
 import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";

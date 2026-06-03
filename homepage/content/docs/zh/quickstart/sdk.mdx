@@ -125,16 +125,10 @@ const started = await agent.start({
 console.log(started.rpc?.url);
 ```
 
-## 暴露 HTTP
+## 通过 Town 暴露 HTTP
 
-```ts
-const server = await startServer({
-  host: "127.0.0.1",
-  port: 15314,
-  getAgentRuntime: () => agent.getRuntime(),
-  getAgentContext: () => agent.getContext(),
-  sessionCollection: agent.getSessionCollection(),
-});
+```bash
+town agent start
 ```
 
 ## 远程 Agent

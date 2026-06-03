@@ -7,14 +7,10 @@ description: Expose a local Agent as an HTTP service for other processes or clie
 
 If the caller and the executor do not live in the same process, you can expose the local Agent as an HTTP service.
 
-The current host-side assembly pattern is:
+In Downcity, HTTP exposure is published by Town:
 
-```ts
-const server = await startServer({
-  host: "127.0.0.1",
-  port: 15314,
-  getAgentRuntime: () => agent.getRuntime(),
-  getAgentContext: () => agent.getContext(),
-  sessionCollection: agent.getSessionCollection(),
-});
+```bash
+town agent start
 ```
+
+For local process-to-process access, prefer `rpc://`. Use HTTP when an external client needs to call the Agent through the Town gateway.

@@ -30,8 +30,8 @@ import type {
 } from "@/plugin/types/Plugin.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
-import type { ControlSessionExecuteAttachmentInput } from "@/runtime/server/http/control/types/ControlSessionExecute.js";
-import type { AuthControlPayload } from "@/runtime/server/http/control/types/AuthControl.js";
+import type { ControlSessionExecuteAttachmentInput } from "@/runtime/control/types/ControlSessionExecute.js";
+import type { AuthControlPayload } from "@/runtime/control/types/AuthControl.js";
 
 type RpcClientRequest =
   | {

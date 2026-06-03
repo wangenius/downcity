@@ -11,7 +11,7 @@
  *   - `downcity.daemon.log`：stdout/stderr 合并日志
  *   - `downcity.daemon.json`：元数据（启动时间、参数等）
  */
-import { type DaemonMeta, type DaemonStaleReason } from "@downcity/agent";
+import { type DaemonMeta, type DaemonStaleReason } from "../../process/daemon/Types.js";
 /**
  * 计算 daemon pid 文件路径。
  */

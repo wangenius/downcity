@@ -52,7 +52,7 @@ You can satisfy step 3 in either way:
 
 If you skip step 3 entirely, the local session has no model and cannot execute.
 
-When you are using the SDK for the first time, avoid stacking complex tools, managed plugins, extra plugins, or HTTP exposure immediately. Get the shortest execution path working first.
+When you are using the SDK for the first time, avoid stacking complex tools, managed plugins, extra plugins, or Town HTTP exposure immediately. Get the shortest execution path working first.
 
 ## When you need `agent.start()`
 
@@ -70,16 +70,16 @@ you usually do not need `agent.start()`.
 
 Call `agent.start(...)` only when you need long-lived runtime capabilities:
 
-- start an HTTP endpoint so another process can call the agent through `RemoteAgent`
+- start local RPC so another local process can call the agent through `RemoteAgent`
 - start plugin lifecycles and the Agent's action scheduling loop for long-lived background work
 
 A simple mental model is:
 
 - no `start`: use the Agent as a local library
-- `start`: turn the Agent into a long-lived runtime that exposes endpoints and runs background capabilities
+- `start`: turn the Agent into a long-lived runtime that can expose RPC and run background capabilities
 
 ## Continue reading
 
 - [Constructor options](/en/agent-sdk-docs/local-agent/constructor-options)
-- [Local Agent HTTP Server](/en/agent-sdk-docs/local-agent/http-and-rpc)
+- [Local Agent RPC and Town HTTP](/en/agent-sdk-docs/local-agent/http-and-rpc)
 - [Session set / prompt / subscribe](/en/agent-sdk-docs/sessions/overview)

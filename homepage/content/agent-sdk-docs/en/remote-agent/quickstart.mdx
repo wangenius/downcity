@@ -1,6 +1,6 @@
 ---
 title: RemoteAgent Quickstart
-description: Connect to an Agent that has already been exposed over HTTP or RPC
+description: Connect to an Agent that has already been exposed by Town over HTTP or by Agent RPC
 ---
 
 # RemoteAgent Quickstart
@@ -15,16 +15,10 @@ It currently supports:
 
 ## Expose a reachable server-side endpoint first
 
-### Option 1: expose HTTP from the server
+### Option 1: publish HTTP through Town
 
-```ts
-const server = await startServer({
-  host: "127.0.0.1",
-  port: 15314,
-  getAgentRuntime: () => agent.getRuntime(),
-  getAgentContext: () => agent.getContext(),
-  sessionCollection: agent.getSessionCollection(),
-});
+```bash
+town agent start
 ```
 
 ### Option 2: start RPC on the server
@@ -46,7 +40,7 @@ const started = await agent.start({
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  url: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:5314/agents/repo-helper",
 });
 
 const session = await agent.createSession();

@@ -8,7 +8,7 @@
 
 import { listTaskDefinitions } from "@/task/Action.js";
 import { listPluginStates } from "@downcity/agent/internal/plugin/core/Manager.js";
-import { listControlSessionSummaries } from "@downcity/agent/internal/runtime/server/http/control/SessionSummaryStore.js";
+import { listControlSessionSummaries } from "@downcity/agent/internal/runtime/control/SessionSummaryStore.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { WorkboardSnapshot } from "@/workboard/types/Workboard.js";
 import {

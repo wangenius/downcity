@@ -1,13 +1,13 @@
 ---
 title: SDK HTTP Endpoints
-description: The minimal HTTP session routes a local Agent can expose to RemoteAgent
+description: The minimal HTTP session routes Town can expose for RemoteAgent
 ---
 
 # SDK HTTP Endpoints
 
-These SDK routes are not currently exposed by `agent.start({ http: { ... } })`.
+These SDK routes are not exposed by `agent.start({ http: { ... } })`.
 
-They are mounted when the host calls `startServer(...)` and passes `sessionCollection`.
+They are mounted by the Town Agent HTTP gateway when Town publishes a running Agent.
 
 The current core set includes:
 

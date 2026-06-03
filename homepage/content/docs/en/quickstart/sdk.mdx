@@ -85,16 +85,10 @@ const started = await agent.start({
 console.log(started.rpc?.url);
 ```
 
-## Expose HTTP
+## Expose HTTP Through Town
 
-```ts
-const server = await startServer({
-  host: "127.0.0.1",
-  port: 15314,
-  getAgentRuntime: () => agent.getRuntime(),
-  getAgentContext: () => agent.getContext(),
-  sessionCollection: agent.getSessionCollection(),
-});
+```bash
+town agent start
 ```
 
 ## Remote Agent
@@ -105,6 +99,6 @@ Use `RemoteAgent` when another process has already exposed the Agent over HTTP o
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  url: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:5314/agents/repo-helper",
 });
 ```

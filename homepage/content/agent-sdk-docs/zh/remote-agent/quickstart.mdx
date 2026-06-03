@@ -1,6 +1,6 @@
 ---
 title: RemoteAgent 快速开始
-description: 连接一个已经通过 HTTP 或 RPC 暴露出来的 Agent
+description: 连接一个已经由 Town 通过 HTTP 暴露，或由 Agent RPC 暴露出来的 Agent
 ---
 
 # RemoteAgent 快速开始
@@ -15,16 +15,10 @@ description: 连接一个已经通过 HTTP 或 RPC 暴露出来的 Agent
 
 ## 服务端先准备好可访问入口
 
-### 方式 1：服务端暴露 HTTP
+### 方式 1：通过 Town 发布 HTTP
 
-```ts
-const server = await startServer({
-  host: "127.0.0.1",
-  port: 15314,
-  getAgentRuntime: () => agent.getRuntime(),
-  getAgentContext: () => agent.getContext(),
-  sessionCollection: agent.getSessionCollection(),
-});
+```bash
+town agent start
 ```
 
 ### 方式 2：服务端启动 RPC
@@ -46,7 +40,7 @@ const started = await agent.start({
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  url: "http://127.0.0.1:15314",
+  url: "http://127.0.0.1:5314/agents/repo-helper",
 });
 
 const session = await agent.createSession();

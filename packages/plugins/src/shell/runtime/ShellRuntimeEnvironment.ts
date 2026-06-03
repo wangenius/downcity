@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { stripInvocationAuthEnv } from "@downcity/agent/internal/runtime/server/http/auth/AuthEnv.js";
+import { stripInvocationAuthEnv } from "@downcity/agent/internal/runtime/auth/AuthEnv.js";
 import { getSessionRunScope } from "@downcity/agent/internal/executor/SessionRunScope.js";
 
 /**

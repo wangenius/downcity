@@ -77,16 +77,10 @@ await agent.start({
 agent.start({ http: { ... } })
 ```
 
-而是通过宿主 HTTP 装配入口：
+而是通过 Town 发布 Agent HTTP 网关：
 
-```ts
-startServer({
-  host,
-  port,
-  getAgentRuntime: () => agent.getRuntime(),
-  getAgentContext: () => agent.getContext(),
-  sessionCollection: agent.getSessionCollection(),
-});
+```bash
+town agent start
 ```
 
 ## `agent.plugins`

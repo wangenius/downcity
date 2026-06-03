@@ -10,12 +10,13 @@
  *   `town agent restart` 管理。
  */
 import path from "node:path";
-import { Agent, loadDowncityConfig, loadStaticSystemPrompts, shellTools, startServer, StaticPromptCatalog, } from "@downcity/agent";
+import { Agent, loadDowncityConfig, loadStaticSystemPrompts, shellTools, StaticPromptCatalog, } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "../model/runtime/CreateRuntimeModel.js";
 import { readPlatformGlobalEnv } from "../env/ProcessEnv.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
+import { startAgentHttpGateway } from "../agent/AgentHttpGateway.js";
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *
@@ -105,7 +106,7 @@ export async function runCommand(cwd = ".", options) {
     if (!startResult.rpc?.server) {
         throw new Error("Agent start did not return expected RPC binding");
     }
-    const server = await startServer({
+    const server = await startAgentHttpGateway({
         host,
         port,
         getAgentRuntime: () => agent.getRuntime(),

@@ -7,9 +7,9 @@ description: How to inject tools and explicit plugin instances into a local Agen
 
 ## plugin HTTP
 
-If you expose HTTP through `startServer(...)`, registered plugins with `plugin.http.server.register(...)` are also mounted onto the same HTTP app automatically.
+If Town exposes the Agent HTTP gateway, registered plugins with `plugin.http.server.register(...)` are also mounted onto the same HTTP app automatically.
 
 So:
 
 - plugin existence comes from the `plugins` array you pass into `Agent`
-- plugin HTTP exposure happens when the host calls `startServer(...)`
+- plugin HTTP exposure happens when Town publishes the Agent HTTP gateway

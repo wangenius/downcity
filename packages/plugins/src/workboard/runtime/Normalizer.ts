@@ -6,7 +6,7 @@
  * - 所有会泄漏上下文的字段都必须在这里截断或抽象。
  */
 
-import type { ControlSessionSummary } from "@downcity/agent/internal/runtime/server/http/control/types/ControlViewData.js";
+import type { ControlSessionSummary } from "@downcity/agent/internal/runtime/control/types/ControlViewData.js";
 import type { PluginStateSnapshot } from "@downcity/agent/internal/plugin/types/PluginState.js";
 import type { TaskListResponse } from "@/task/types/TaskCommand.js";
 import type {

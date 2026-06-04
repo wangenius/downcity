@@ -220,7 +220,6 @@ export class AgentSessionManager {
      * 可选指定 session id。
      */
     session_id?: string;
-
   }): AgentManagedSession {
     const resolved_session_id =
       String(input?.session_id || "").trim() ||

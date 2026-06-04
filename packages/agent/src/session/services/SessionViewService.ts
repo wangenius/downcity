@@ -22,6 +22,7 @@ import type {
   AgentSessionHistoryInput,
   AgentSessionHistoryPage,
   AgentSessionInfo,
+  AgentSession,
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
@@ -29,7 +30,7 @@ import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
-type SessionViewServiceOptions<TSession> = {
+type SessionViewServiceOptions<TSession extends Pick<AgentSession, "set">> = {
   /**
    * 当前 agent 稳定标识。
    */
@@ -97,7 +98,7 @@ type SessionViewServiceOptions<TSession> = {
 /**
  * 本地 Session 查询与派生视图服务。
  */
-export class SessionViewService<TSession> {
+export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
   private readonly agent_id: string;
   private readonly project_root: string;
   private readonly session_id: string;
@@ -137,20 +138,37 @@ export class SessionViewService<TSession> {
       }),
       this.history_store.list(),
     ]);
-    const metadata_with_title = metadata.title
-      ? metadata
+    return await this.build_info({
+      metadata,
+      messages,
+    });
+  }
+
+  private async build_info(input: {
+    /**
+     * 当前 session metadata。
+     */
+    metadata: Awaited<ReturnType<typeof readSessionMetadata>>;
+
+    /**
+     * 当前 session 消息列表。
+     */
+    messages: SessionMessageV1[];
+  }): Promise<AgentSessionInfo> {
+    const metadata_with_title = input.metadata.title
+      ? input.metadata
       : await ensureSessionTitle({
           projectRoot: this.project_root,
           agentId: this.agent_id,
           sessionId: this.session_id,
-          messages,
+          messages: input.messages,
         });
     return buildSessionInfo({
       projectRoot: this.project_root,
       agentId: this.agent_id,
       sessionId: this.session_id,
       metadata: metadata_with_title,
-      messages,
+      messages: input.messages,
       executing: this.is_executing(),
     });
   }
@@ -161,10 +179,18 @@ export class SessionViewService<TSession> {
   async history(
     input?: AgentSessionHistoryInput,
   ): Promise<AgentSessionHistoryPage> {
-    const [session, messages] = await Promise.all([
-      this.get_info(),
+    const [metadata, messages] = await Promise.all([
+      readSessionMetadata({
+        projectRoot: this.project_root,
+        agentId: this.agent_id,
+        sessionId: this.session_id,
+      }),
       this.history_store.list(),
     ]);
+    const session = await this.build_info({
+      metadata,
+      messages,
+    });
     return buildSessionHistoryPage({
       session,
       messages,
@@ -246,11 +272,7 @@ export class SessionViewService<TSession> {
     const forked = forked_bundle.session;
     const session_config = this.state_service.get_config();
     if (session_config.model) {
-      await (
-        forked as unknown as {
-          set(input: { model: unknown }): Promise<void>;
-        }
-      ).set({
+      await forked.set({
         model: session_config.model,
       });
     }

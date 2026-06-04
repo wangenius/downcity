@@ -75,7 +75,7 @@ export class Session implements AgentSession {
   private readonly localState: SessionLocalState;
   private readonly stateService: SessionStateService;
   private readonly turnService: SessionTurnService;
-  private readonly viewService: SessionViewService<Session>;
+  private readonly viewService: SessionViewService<this>;
   private runtimePort: SessionPort | null = null;
 
   constructor(options: SessionOptions) {
@@ -99,40 +99,8 @@ export class Session implements AgentSession {
       throw new Error("Session requires a non-empty projectRoot");
     }
 
-    const session_dir_path = getSdkAgentSessionDirPath(
-      this.projectRoot,
-      this.agentId,
-      this.id,
-    );
-    const messages_dir_path = `${session_dir_path}/messages`;
-    this.historyStore = new JsonlSessionHistoryStore({
-      rootPath: this.projectRoot,
-      agentId: this.agentId,
-      sessionId: this.id,
-      paths: {
-        sessionDirPath: session_dir_path,
-        messagesDirPath: messages_dir_path,
-        messagesFilePath: `${messages_dir_path}/messages.jsonl`,
-        metaFilePath: `${messages_dir_path}/meta.json`,
-        archiveDirPath: getSdkAgentSessionArchiveDirPath(
-          this.projectRoot,
-          this.agentId,
-          this.id,
-        ),
-        inflightFilePath: getSdkAgentSessionInflightPath(
-          this.projectRoot,
-          this.agentId,
-          this.id,
-        ),
-      },
-    });
-    this.localState = {
-      sessionConfig: {},
-      createdAt: Date.now(),
-      timezone: resolveSystemTimezone(),
-      initializePromise: null,
-      ensureConfiguredPromise: null,
-    };
+    this.historyStore = this.create_history_store();
+    this.localState = this.create_local_state();
     const composer_context = this.create_composer_context();
     this.historyComposer = this.resolve_composer(
       this.composers?.historyComposer,
@@ -197,7 +165,7 @@ export class Session implements AgentSession {
       state_service: this.stateService,
       event_hub: this.eventHub,
     });
-    this.viewService = new SessionViewService<Session>({
+    this.viewService = new SessionViewService<this>({
       agent_id: this.agentId,
       project_root: this.projectRoot,
       session_id: this.id,
@@ -211,7 +179,7 @@ export class Session implements AgentSession {
         ? { custom_system_composer: system_composer }
         : {}),
       create_fork_session: async (session_id) => {
-        const session = this.createChildSession(session_id);
+        const session = this.create_fork_session(session_id);
         await session.initialize();
         return {
           session,
@@ -318,7 +286,7 @@ export class Session implements AgentSession {
   /**
    * 从当前 session 创建一个分叉会话。
    */
-  async fork(input?: AgentSessionForkInput | string): Promise<Session> {
+  async fork(input?: AgentSessionForkInput | string): Promise<this> {
     return await this.viewService.fork(input);
   }
 
@@ -363,8 +331,8 @@ export class Session implements AgentSession {
     await this.stateService.ensure_ready_for_execution();
   }
 
-  private createChildSession(session_id: string): Session {
-    return new Session({
+  private create_fork_session(session_id: string): this {
+    return this.create_child_session({
       agentId: this.agentId,
       projectRoot: this.projectRoot,
       sessionId: session_id,
@@ -373,8 +341,63 @@ export class Session implements AgentSession {
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
       getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
       getPluginSystemBlocks: this.getPluginSystemBlocks,
+      ensureConfigured: this.ensureConfiguredHook,
       composers: this.composers,
     });
+  }
+
+  /**
+   * 创建当前 Session 的同类子会话。
+   *
+   * 关键点（中文）
+   * - 默认沿用当前实例的 class，避免自定义 Session 在 fork 后退回默认实现。
+   * - 子类仍可覆盖该方法，接管更特殊的子会话创建逻辑。
+   */
+  protected create_child_session(options: SessionOptions): this {
+    const SessionClass = this.constructor as new (
+      options: SessionOptions,
+    ) => Session;
+    return new SessionClass(options) as this;
+  }
+
+  private create_history_store(): JsonlSessionHistoryStore {
+    const session_dir_path = getSdkAgentSessionDirPath(
+      this.projectRoot,
+      this.agentId,
+      this.id,
+    );
+    const messages_dir_path = `${session_dir_path}/messages`;
+    return new JsonlSessionHistoryStore({
+      rootPath: this.projectRoot,
+      agentId: this.agentId,
+      sessionId: this.id,
+      paths: {
+        sessionDirPath: session_dir_path,
+        messagesDirPath: messages_dir_path,
+        messagesFilePath: `${messages_dir_path}/messages.jsonl`,
+        metaFilePath: `${messages_dir_path}/meta.json`,
+        archiveDirPath: getSdkAgentSessionArchiveDirPath(
+          this.projectRoot,
+          this.agentId,
+          this.id,
+        ),
+        inflightFilePath: getSdkAgentSessionInflightPath(
+          this.projectRoot,
+          this.agentId,
+          this.id,
+        ),
+      },
+    });
+  }
+
+  private create_local_state(): SessionLocalState {
+    return {
+      sessionConfig: {},
+      createdAt: Date.now(),
+      timezone: resolveSystemTimezone(),
+      initializePromise: null,
+      ensureConfiguredPromise: null,
+    };
   }
 
   private create_composer_context(): SessionComposerFactoryContext {

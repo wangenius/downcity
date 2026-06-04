@@ -23,6 +23,7 @@ export interface AgentCreateSessionInput {
    * - 省略时由 SDK 自动生成稳定且不可推导的 sessionId。
    */
   sessionId?: string;
+
 }
 
 /**

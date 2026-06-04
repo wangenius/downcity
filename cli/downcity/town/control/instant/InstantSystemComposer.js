@@ -26,11 +26,10 @@ export class InstantSystemComposer {
         if (this.prompts.length < 1)
             return [];
         const scope = getSessionRunScope();
+        const sessionId = String(scope?.runContext?.sessionId || "").trim();
         return await transformPromptsIntoSystemMessages(this.prompts, {
             ...(this.projectRoot ? { projectPath: this.projectRoot } : {}),
-            ...(String(scope?.sessionId || "").trim()
-                ? { sessionId: String(scope?.sessionId || "").trim() }
-                : {}),
+            ...(sessionId ? { sessionId } : {}),
         });
     }
 }

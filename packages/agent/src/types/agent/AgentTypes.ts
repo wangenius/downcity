@@ -9,9 +9,19 @@
 
 export type { AgentModel } from "@/model/CityModelAdapter.js";
 export type {
+  SessionComposerFactoryContext,
+  SessionComposerInput,
+  SessionComposerOptions,
+} from "@/types/session/SessionComposerOptions.js";
+export type {
+  AgentManagedSession,
+  SessionOptions,
+} from "@/types/session/SessionOptions.js";
+export type {
   AgentOptions,
   AgentRpcBinding,
   AgentRpcStartOptions,
+  AgentSessionConstructor,
   AgentStartOptions,
   AgentStartResult,
   AgentStopResult,

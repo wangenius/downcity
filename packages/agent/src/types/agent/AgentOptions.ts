@@ -10,6 +10,21 @@ import type { Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
 import type { RpcServerInstance } from "@/rpc/Server.js";
+import type {
+  AgentManagedSession,
+  SessionOptions,
+} from "@/types/session/SessionOptions.js";
+
+/**
+ * Agent 可使用的 Session 类。
+ *
+ * 关键点（中文）
+ * - 传 class，而不是传实例，保证 Agent 可以按 sessionId 创建多个 session。
+ * - 自定义类可继承默认 `Session`，并在构造函数里注入自己的 Composer。
+ */
+export type AgentSessionConstructor = new (
+  options: SessionOptions,
+) => AgentManagedSession;
 
 /**
  * 本地 Agent 构造参数。
@@ -66,6 +81,16 @@ export interface AgentOptions {
    * - SDK 不再自动注入任何 built-in plugin；需要的能力都应由宿主显式传入。
    */
   plugins?: BasePlugin[];
+
+  /**
+   * 当前 agent 使用的本地 Session 类。
+   *
+   * 关键点（中文）
+   * - Agent 只负责用这个类创建/恢复 session，不感知具体 Composer 策略。
+   * - 如果需要自定义 Composer，请在自定义 Session 类内部传给 `super({ composers })`。
+   * - 该能力仅适用于本地 `Agent`。
+   */
+  Session?: AgentSessionConstructor;
 
   /**
    * 当前 agent 的显式环境变量覆盖项。

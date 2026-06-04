@@ -1,0 +1,99 @@
+/**
+ * Session 构造参数类型。
+ *
+ * 关键点（中文）
+ * - 这里描述 Agent 创建本地 Session 时传入的稳定上下文。
+ * - 默认 Session 和自定义 Session 类都应使用这组参数。
+ * - Composer 仍然是 Session 级能力，不向 Agent 的执行策略层泄漏。
+ */
+
+import type { Tool } from "ai";
+import type { AgentSession } from "@/types/agent/SessionActor.js";
+import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
+import type { SessionComposerOptions } from "@/types/session/SessionComposerOptions.js";
+
+/**
+ * Agent 可管理的本地 Session 实例。
+ */
+export interface AgentManagedSession extends AgentSession {
+  /**
+   * 初始化当前 session。
+   */
+  initialize(): Promise<this>;
+
+  /**
+   * 返回供 plugin/runtime 使用的 session 端口。
+   */
+  getRuntimePort(): SessionPort;
+
+  /**
+   * 返回当前 session 是否正在执行。
+   */
+  isExecuting(): boolean;
+}
+
+/**
+ * 本地 Session 构造参数。
+ */
+export interface SessionOptions {
+  /**
+   * 当前 agent 稳定标识。
+   */
+  agentId: string;
+
+  /**
+   * 当前项目根目录。
+   */
+  projectRoot: string;
+
+  /**
+   * 当前 sessionId。
+   */
+  sessionId: string;
+
+  /**
+   * 当前 agent 默认工具集合。
+   */
+  tools: Record<string, Tool>;
+
+  /**
+   * 统一日志器。
+   */
+  logger: {
+    /**
+     * 记录普通信息。
+     */
+    info(message: string, details?: Record<string, unknown>): void;
+
+    /**
+     * 记录警告信息。
+     */
+    warn(message: string, details?: Record<string, unknown>): void;
+  };
+
+  /**
+   * 读取当前 SDK 调用方传入的 instruction system blocks。
+   */
+  getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
+
+  /**
+   * 读取当前 agent 显式注入的受托管 plugin system blocks。
+   */
+  getManagedPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+
+  /**
+   * 读取当前 agent 显式注册 plugin 的 system blocks。
+   */
+  getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
+
+  /**
+   * 在执行前确保当前 session 已完成宿主侧默认配置。
+   */
+  ensureConfigured?: (session: AgentManagedSession) => Promise<void>;
+
+  /**
+   * 当前 session 的 Composer 覆盖项。
+   */
+  composers?: SessionComposerOptions;
+}

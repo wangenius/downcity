@@ -16,6 +16,7 @@ new Agent({
   instruction,
   tools,
   plugins,
+  Session,
 })
 ```
 
@@ -151,3 +152,49 @@ SDK 会为当前 `Agent` 创建独立的 plugin registry。
 - 同名 plugin 被重复注册时会直接报错
 - `agent.plugins` 与 `AgentContext.plugins` 会使用这份 registry
 - 如果你想一次性注入整套内建 plugin，可以从 `@downcity/plugins` 传入 `plugins: createBuiltinPlugins()`
+
+## `Session`
+
+本地 session 的高级自定义类。
+
+当你希望替换本地 session 实现，或者在 Session 层注入自定义 Composer 时使用它。`Agent` 只负责用这个类创建和恢复 session，不理解 Composer 的具体策略。
+
+```ts
+import {
+  Agent,
+  Session,
+  type SessionOptions,
+  type SessionSystemComposer,
+} from "@downcity/agent";
+
+const systemComposer: SessionSystemComposer = {
+  name: "custom_system",
+  async resolve() {
+    return [{ role: "system", content: "始终简洁回答。" }];
+  },
+};
+
+class CustomSession extends Session {
+  constructor(options: SessionOptions) {
+    super({
+      ...options,
+      composers: {
+        systemComposer,
+      },
+    });
+  }
+}
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  Session: CustomSession,
+});
+```
+
+关键点：
+
+- 传入的是 class，不是已经创建好的 session 实例
+- 这样 `Agent` 可以按不同 `sessionId` 创建多个 session
+- Composer 自定义留在自定义 Session 类内部
+- `RemoteAgent` 不支持本地 Session 类，因为它只是远程 runtime 的访问器

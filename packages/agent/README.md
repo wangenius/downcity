@@ -83,7 +83,7 @@ src/
 - `src/executor/`
   - 内部执行内核
   - `Session` 是 SDK 用户面对的会话整体，`Executor` 是内部单轮执行引擎
-  - Store 负责 history 事实源落盘，Composer 是纯 interface 协议，负责组装 system / history / context / compaction
+  - Store 负责 history 事实源落盘，Composer 是可替换的 session 阶段策略协议，负责定义 system / history / context / compaction 等执行阶段逻辑
   - `Executor.prepareExecuteInput()` 串起四类 Composer，`Executor.runCoreEngine()` 负责进入模型 tool loop
   - 负责 history、system、context、CoreEngine、增量输出与消息持久化
 

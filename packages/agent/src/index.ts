@@ -10,6 +10,8 @@
 // Agent 入口
 export { Agent } from "./agent/local/Agent.js";
 export { RemoteAgent } from "./agent/remote/RemoteAgent.js";
+export { Session } from "./session/Session.js";
+export type { SessionOptions } from "./types/session/SessionOptions.js";
 export {
   inferAgentModelLabel,
   normalizeAgentModel,
@@ -17,8 +19,10 @@ export {
 export type {
   AgentSessionCollection,
   AgentModel,
+  AgentManagedSession,
   AgentSessionActor,
   AgentSession,
+  AgentSessionConstructor,
   AgentCreateSessionInput,
   AgentListSessionsInput,
   AgentOptions,
@@ -73,9 +77,27 @@ export {
   getSessionRunScope,
 } from "./executor/SessionRunScope.js";
 export { JsonlSessionHistoryComposer } from "./executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
+export { LocalSessionContextComposer } from "./executor/composer/context/LocalSessionContextComposer.js";
 export { JsonlSessionHistoryStore } from "./executor/store/history/jsonl/JsonlSessionHistoryStore.js";
 export { JsonlSessionCompactionComposer } from "./executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
+export type {
+  SessionCompactionComposer,
+  SessionCompactionInput,
+} from "./executor/composer/compaction/SessionCompactionComposer.js";
+export type {
+  SessionContextComposer,
+  SessionContextComposeResult,
+} from "./executor/composer/context/SessionContextComposer.js";
+export type {
+  SessionHistoryComposer,
+  SessionHistoryPrepareInput,
+} from "./executor/composer/history/SessionHistoryComposer.js";
 export type { SessionSystemComposer } from "./executor/composer/system/SessionSystemComposer.js";
+export type {
+  SessionComposerFactoryContext,
+  SessionComposerInput,
+  SessionComposerOptions,
+} from "./types/session/SessionComposerOptions.js";
 export { transformPromptsIntoSystemMessages } from "./executor/composer/system/default/PromptRenderer.js";
 export {
   loadStaticSystemPrompts,

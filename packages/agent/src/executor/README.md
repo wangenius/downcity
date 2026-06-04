@@ -6,7 +6,7 @@
 
 - `Session`：用户/SDK 面向的完整会话对象，负责模型配置、历史入口、prompt 入口和分叉能力。
 - `Executor`：单个 session 的内部单轮执行引擎，负责并发锁、执行 scope、Composer 编排、压缩重试、assistant step 持久化和 tool-loop 调用。
-- `Composer`：执行前的材料组装协议，只负责把原材料组装成某一阶段输入，不直接执行模型，也没有公共运行时基类。
+- `Composer`：Session 执行阶段的可替换策略协议。调用方可以通过 custom composer 定义 system、history、runtime context 与 compaction 等阶段逻辑。
 - `HistoryStore`：历史事实源，负责 JSONL 读写、meta、archive、lock、compact 与消息工厂。
 - `HistoryComposer`：历史组装策略，只负责把 `HistoryStore` 中的历史组装成本轮模型输入。
 - `CoreEngine`：Executor 内部的模型/tool-loop 核心机制，负责模型流、tool calls、续写和最终 assistant message 合并。
@@ -38,7 +38,7 @@ sdk/Session.prompt({ query })
 
 ## Composer 的代码实现方式
 
-Composer 在代码里是 TypeScript `interface`，不是抽象基类。每个 Composer 只声明当前阶段需要的最小协议，实现类用 `implements` 接上。
+Composer 在代码里是 TypeScript `interface`，不是抽象基类。每个 Composer 声明当前阶段的策略协议，实现类用 `implements` 接上；如果需要自定义 Composer，应在自定义 `Session` 类中传给 `super({ composers })`。
 
 ```ts
 export interface SessionSystemComposer {
@@ -76,9 +76,9 @@ Executor.prepareExecuteInput()
 边界规则：
 
 - Composer 不调用模型，模型调用只发生在 `Executor.runCoreEngine()`。
-- Composer 不持有历史事实，历史事实由 `HistoryStore` 负责。
+- Composer 可以绑定或读取当前 session 的上下文，但历史事实源仍由 `HistoryStore` 负责。
 - Composer 不管理 session 生命周期，生命周期由 `Session` / `Executor` 管理。
-- Composer 可以读取上下文并做策略判断，但输出应该是“本轮执行材料”。
+- Composer 可以读取上下文并做策略判断，输出或执行结果应该服务于当前阶段的本轮 session 执行。
 
 ## 当前目录结构
 

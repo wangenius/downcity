@@ -17,7 +17,7 @@ import type {
 } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { PluginPort } from "@/plugin/types/Plugin.js";
-import type { Session } from "@/session/Session.js";
+import type { AgentManagedSession } from "@/types/agent/AgentTypes.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
@@ -44,7 +44,7 @@ export interface CreateAgentRuntimeOptions {
   /** 获取或创建 session runtime port。 */
   get_session_port: (session_id: string) => SessionPort;
   /** 读取当前已缓存的 session 实例。 */
-  list_cached_sessions: () => Session[];
+  list_cached_sessions: () => AgentManagedSession[];
 }
 
 /**

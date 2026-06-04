@@ -50,6 +50,7 @@ export class Agent {
   private readonly config: DowncityConfig;
   private readonly env: Record<string, string>;
   private readonly defaultModel?: AgentModel;
+  private readonly SessionClass: AgentOptions["Session"];
   private readonly sessionManager: AgentSessionManager;
   private readonly lifecycleService: AgentLifecycleService;
 
@@ -57,6 +58,7 @@ export class Agent {
 
   constructor(options: AgentOptions) {
     this.defaultModel = options.model;
+    this.SessionClass = options.Session;
     let session_manager_ref: AgentSessionManager | null = null;
     const assembly_service = new AgentAssemblyService({
       options,
@@ -189,6 +191,7 @@ export class Agent {
       get_instruction: () => this.instruction,
       plugin_instances: assembly.plugin_instances,
       default_model: this.defaultModel,
+      SessionClass: this.SessionClass,
     });
   }
 }

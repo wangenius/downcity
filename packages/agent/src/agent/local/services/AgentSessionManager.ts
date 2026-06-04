@@ -14,9 +14,11 @@ import type { Logger } from "@/utils/logger/Logger.js";
 import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
+  AgentManagedSession,
   AgentModel,
   AgentSession,
   AgentSessionCollection,
+  AgentSessionConstructor,
   AgentSessionSummaryPage,
   AgentSessionSystemBlock,
 } from "@/types/agent/AgentTypes.js";
@@ -77,6 +79,11 @@ type AgentSessionManagerOptions = {
    * 当前默认模型实例。
    */
   default_model?: AgentModel;
+
+  /**
+   * 当前 agent 使用的本地 Session 类。
+   */
+  SessionClass?: AgentSessionConstructor;
 };
 
 /**
@@ -92,7 +99,8 @@ export class AgentSessionManager {
   private readonly get_instruction: AgentSessionManagerOptions["get_instruction"];
   private readonly plugin_instances: Map<string, BasePlugin>;
   private readonly default_model?: AgentModel;
-  private readonly sessions_by_id = new Map<string, Session>();
+  private readonly SessionClass: AgentSessionConstructor;
+  private readonly sessions_by_id = new Map<string, AgentManagedSession>();
   private readonly configured_session_ids = new Set<string>();
   private readonly session_collection: AgentSessionCollection;
 
@@ -106,6 +114,7 @@ export class AgentSessionManager {
     this.get_instruction = options.get_instruction;
     this.plugin_instances = options.plugin_instances;
     this.default_model = options.default_model;
+    this.SessionClass = options.SessionClass || Session;
     this.session_collection = {
       createSession: async (input) => await this.create_session(input),
       getSession: async (session_id) => await this.get_session(session_id),
@@ -116,7 +125,7 @@ export class AgentSessionManager {
   /**
    * 返回当前缓存的 session 实例。
    */
-  list_cached_sessions(): Session[] {
+  list_cached_sessions(): AgentManagedSession[] {
     return [...this.sessions_by_id.values()];
   }
 
@@ -131,7 +140,9 @@ export class AgentSessionManager {
    * 获取或创建一个 session runtime port。
    */
   get_session_port(session_id: string): SessionPort {
-    return this.get_or_create_session(session_id).getRuntimePort();
+    return this.get_or_create_session({
+      session_id,
+    }).getRuntimePort();
   }
 
   /**
@@ -155,7 +166,9 @@ export class AgentSessionManager {
     ) {
       throw new Error(`Session "${explicit_session_id}" already exists`);
     }
-    const session = this.get_or_create_session(explicit_session_id);
+    const session = this.get_or_create_session({
+      session_id: explicit_session_id,
+    });
     await session.initialize();
     await this.apply_session_defaults(session);
     return session;
@@ -180,7 +193,9 @@ export class AgentSessionManager {
     ) {
       throw new Error(`Session "${resolved_session_id}" not found`);
     }
-    const session = this.get_or_create_session(resolved_session_id);
+    const session = this.get_or_create_session({
+      session_id: resolved_session_id,
+    });
     await session.initialize();
     await this.apply_session_defaults(session);
     return session;
@@ -200,13 +215,20 @@ export class AgentSessionManager {
     });
   }
 
-  private get_or_create_session(session_id?: string): Session {
+  private get_or_create_session(input?: {
+    /**
+     * 可选指定 session id。
+     */
+    session_id?: string;
+
+  }): AgentManagedSession {
     const resolved_session_id =
-      String(session_id || "").trim() || `session-${Date.now()}-${nanoid(8)}`;
+      String(input?.session_id || "").trim() ||
+      `session-${Date.now()}-${nanoid(8)}`;
     const cached = this.sessions_by_id.get(resolved_session_id);
     if (cached) return cached;
 
-    const created = new Session({
+    const created = new this.SessionClass({
       agentId: this.agent_id,
       projectRoot: this.project_root,
       sessionId: resolved_session_id,
@@ -223,7 +245,9 @@ export class AgentSessionManager {
     return created;
   }
 
-  private async apply_session_defaults(session: Session): Promise<void> {
+  private async apply_session_defaults(
+    session: AgentManagedSession,
+  ): Promise<void> {
     if (this.configured_session_ids.has(session.id)) return;
     if (this.default_model) {
       await session.set({

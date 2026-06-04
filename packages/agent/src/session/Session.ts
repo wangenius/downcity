@@ -7,8 +7,8 @@
  * - 内部继续复用 `Executor` / `JsonlSessionHistoryStore` / Composer 体系。
  */
 
-import type { Tool } from "ai";
 import { Executor } from "@executor/Executor.js";
+import type { Tool } from "ai";
 import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
 import type {
@@ -42,56 +42,16 @@ import { SessionStateService } from "@/session/services/SessionStateService.js";
 import { SessionTurnService } from "@/session/services/SessionTurnService.js";
 import { SessionViewService } from "@/session/services/SessionViewService.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
-
-type SessionOptions = {
-  /**
-   * 当前 agent 稳定标识。
-   */
-  agentId: string;
-
-  /**
-   * 当前项目根目录。
-   */
-  projectRoot: string;
-
-  /**
-   * 当前 sessionId。
-   */
-  sessionId: string;
-
-  /**
-   * 当前 agent 默认工具集合。
-   */
-  tools: Record<string, Tool>;
-
-  /**
-   * 统一日志器。
-   */
-  logger: {
-    info(message: string, details?: Record<string, unknown>): void;
-    warn(message: string, details?: Record<string, unknown>): void;
-  };
-
-  /**
-   * 读取当前 SDK 调用方传入的 instruction system blocks。
-   */
-  getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
-
-  /**
-   * 读取当前 agent 显式注入的受托管 plugin system blocks。
-   */
-  getManagedPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
-
-  /**
-   * 读取当前 agent 显式注册 plugin 的 system blocks。
-   */
-  getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
-
-  /**
-   * 在执行前确保当前 session 已完成宿主侧默认配置。
-   */
-  ensureConfigured?: (session: Session) => Promise<void>;
-};
+import type {
+  SessionComposerFactoryContext,
+  SessionComposerInput,
+  SessionComposerOptions,
+} from "@/types/session/SessionComposerOptions.js";
+import type { SessionCompactionComposer } from "@/executor/composer/compaction/SessionCompactionComposer.js";
+import type { SessionContextComposer } from "@/executor/composer/context/SessionContextComposer.js";
+import type { SessionHistoryComposer } from "@/executor/composer/history/SessionHistoryComposer.js";
+import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";
+import type { SessionOptions } from "@/types/session/SessionOptions.js";
 
 /**
  * SDK 本地 Session。
@@ -107,8 +67,9 @@ export class Session implements AgentSession {
   private readonly getManagedPluginSystemBlocks: SessionOptions["getManagedPluginSystemBlocks"];
   private readonly getPluginSystemBlocks: SessionOptions["getPluginSystemBlocks"];
   private readonly ensureConfiguredHook?: SessionOptions["ensureConfigured"];
+  private readonly composers?: SessionComposerOptions;
   private readonly historyStore: JsonlSessionHistoryStore;
-  private readonly historyComposer: JsonlSessionHistoryComposer;
+  private readonly historyComposer: SessionHistoryComposer;
   private readonly executor: Executor;
   private readonly eventHub = new SessionEventHub();
   private readonly localState: SessionLocalState;
@@ -127,6 +88,7 @@ export class Session implements AgentSession {
     this.getManagedPluginSystemBlocks = options.getManagedPluginSystemBlocks;
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     this.ensureConfiguredHook = options.ensureConfigured;
+    this.composers = options.composers;
     if (!this.id) {
       throw new Error("Session requires a non-empty sessionId");
     }
@@ -164,9 +126,6 @@ export class Session implements AgentSession {
         ),
       },
     });
-    this.historyComposer = new JsonlSessionHistoryComposer({
-      store: this.historyStore,
-    });
     this.localState = {
       sessionConfig: {},
       createdAt: Date.now(),
@@ -174,22 +133,47 @@ export class Session implements AgentSession {
       initializePromise: null,
       ensureConfiguredPromise: null,
     };
+    const composer_context = this.create_composer_context();
+    this.historyComposer = this.resolve_composer(
+      this.composers?.historyComposer,
+      composer_context,
+      () =>
+        new JsonlSessionHistoryComposer({
+          store: this.historyStore,
+        }),
+    );
+    const system_composer = this.resolve_composer(
+      this.composers?.systemComposer,
+      composer_context,
+      () =>
+        new SessionSystemBuilder({
+          agentId: this.agentId,
+          projectRoot: this.projectRoot,
+          getSessionCreatedAt: () => this.localState.createdAt,
+          getSessionTimezone: () => this.localState.timezone,
+          getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+          getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
+          getPluginSystemBlocks: this.getPluginSystemBlocks,
+        }),
+    );
+    const context_composer = this.resolve_optional_composer<
+      SessionContextComposer
+    >(this.composers?.contextComposer, composer_context);
+    const compaction_composer = this.resolve_optional_composer<
+      SessionCompactionComposer
+    >(this.composers?.compactionComposer, composer_context);
     this.executor = new Executor({
       sessionId: this.id,
       historyStore: this.historyStore,
       historyComposer: this.historyComposer,
       getModel: () => this.localState.sessionConfig.model,
       logger: this.logger as never,
-      systemComposer: new SessionSystemBuilder({
-        agentId: this.agentId,
-        projectRoot: this.projectRoot,
-        getSessionCreatedAt: () => this.localState.createdAt,
-        getSessionTimezone: () => this.localState.timezone,
-        getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-        getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-        getPluginSystemBlocks: this.getPluginSystemBlocks,
-      }),
+      systemComposer: system_composer,
       getTools: () => this.tools,
+      ...(context_composer ? { contextComposer: context_composer } : {}),
+      ...(compaction_composer
+        ? { compactionComposer: compaction_composer }
+        : {}),
     });
     this.stateService = new SessionStateService({
       agent_id: this.agentId,
@@ -223,6 +207,9 @@ export class Session implements AgentSession {
       get_instruction_system_blocks: this.getInstructionSystemBlocks,
       get_managed_plugin_system_blocks: this.getManagedPluginSystemBlocks,
       get_plugin_system_blocks: this.getPluginSystemBlocks,
+      ...(this.composers?.systemComposer
+        ? { custom_system_composer: system_composer }
+        : {}),
       create_fork_session: async (session_id) => {
         const session = this.createChildSession(session_id);
         await session.initialize();
@@ -386,6 +373,45 @@ export class Session implements AgentSession {
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
       getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
       getPluginSystemBlocks: this.getPluginSystemBlocks,
+      composers: this.composers,
     });
+  }
+
+  private create_composer_context(): SessionComposerFactoryContext {
+    return {
+      agentId: this.agentId,
+      projectRoot: this.projectRoot,
+      sessionId: this.id,
+      historyStore: this.historyStore,
+      getTools: () => this.tools,
+      getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+      getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
+      getPluginSystemBlocks: this.getPluginSystemBlocks,
+      getSessionCreatedAt: () => this.localState.createdAt,
+      getSessionTimezone: () => this.localState.timezone,
+    };
+  }
+
+  private resolve_composer<TComposer>(
+    input: SessionComposerInput<TComposer> | undefined,
+    context: SessionComposerFactoryContext,
+    create_default: () => TComposer,
+  ): TComposer {
+    const composer = this.resolve_optional_composer(input, context);
+    return composer || create_default();
+  }
+
+  private resolve_optional_composer<TComposer>(
+    input: SessionComposerInput<TComposer> | undefined,
+    context: SessionComposerFactoryContext,
+  ): TComposer | undefined {
+    if (!input) return undefined;
+    if (typeof input === "function") {
+      const create_composer = input as (
+        context: SessionComposerFactoryContext,
+      ) => TComposer;
+      return create_composer(context);
+    }
+    return input;
   }
 }

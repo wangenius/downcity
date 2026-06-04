@@ -16,6 +16,7 @@ import {
 } from "@/session/index.js";
 import { buildSessionSystemBlocks } from "@/session/SessionSystemBuilder.js";
 import type { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
+import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";
 import type {
   AgentSessionForkInput,
   AgentSessionHistoryInput,
@@ -26,6 +27,7 @@ import type {
 } from "@/types/agent/AgentTypes.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 type SessionViewServiceOptions<TSession> = {
   /**
@@ -74,6 +76,15 @@ type SessionViewServiceOptions<TSession> = {
   get_plugin_system_blocks: () => Promise<AgentSessionSystemBlock[]>;
 
   /**
+   * 可选自定义 system composer。
+   *
+   * 关键点（中文）
+   * - 仅当调用方覆盖了 system composer 时传入。
+   * - 默认 SDK system snapshot 仍保留 block 级来源信息。
+   */
+  custom_system_composer?: SessionSystemComposer;
+
+  /**
    * 创建一个新的本地 Session 实例。
    */
   create_fork_session: (session_id: string) => Promise<{
@@ -96,6 +107,7 @@ export class SessionViewService<TSession> {
   private readonly get_instruction_system_blocks: SessionViewServiceOptions<TSession>["get_instruction_system_blocks"];
   private readonly get_managed_plugin_system_blocks: SessionViewServiceOptions<TSession>["get_managed_plugin_system_blocks"];
   private readonly get_plugin_system_blocks: SessionViewServiceOptions<TSession>["get_plugin_system_blocks"];
+  private readonly custom_system_composer?: SessionSystemComposer;
   private readonly create_fork_session: SessionViewServiceOptions<TSession>["create_fork_session"];
 
   constructor(options: SessionViewServiceOptions<TSession>) {
@@ -109,6 +121,7 @@ export class SessionViewService<TSession> {
     this.get_managed_plugin_system_blocks =
       options.get_managed_plugin_system_blocks;
     this.get_plugin_system_blocks = options.get_plugin_system_blocks;
+    this.custom_system_composer = options.custom_system_composer;
     this.create_fork_session = options.create_fork_session;
   }
 
@@ -163,16 +176,18 @@ export class SessionViewService<TSession> {
    * 读取当前 session 生效的 system 快照。
    */
   async system(): Promise<AgentSessionSystemSnapshot> {
-    const blocks = await buildSessionSystemBlocks({
-      agentId: this.agent_id,
-      projectRoot: this.project_root,
-      sessionId: this.session_id,
-      createdAt: this.state_service.get_created_at(),
-      timezone: this.state_service.get_timezone(),
-      getInstructionSystemBlocks: this.get_instruction_system_blocks,
-      getManagedPluginSystemBlocks: this.get_managed_plugin_system_blocks,
-      getPluginSystemBlocks: this.get_plugin_system_blocks,
-    });
+    const blocks = this.custom_system_composer
+      ? await this.resolve_custom_system_blocks(this.custom_system_composer)
+      : await buildSessionSystemBlocks({
+          agentId: this.agent_id,
+          projectRoot: this.project_root,
+          sessionId: this.session_id,
+          createdAt: this.state_service.get_created_at(),
+          timezone: this.state_service.get_timezone(),
+          getInstructionSystemBlocks: this.get_instruction_system_blocks,
+          getManagedPluginSystemBlocks: this.get_managed_plugin_system_blocks,
+          getPluginSystemBlocks: this.get_plugin_system_blocks,
+        });
     return {
       sessionId: this.session_id,
       session: {
@@ -184,6 +199,30 @@ export class SessionViewService<TSession> {
       },
       blocks,
     };
+  }
+
+  private async resolve_custom_system_blocks(
+    composer: SessionSystemComposer,
+  ): Promise<AgentSessionSystemBlock[]> {
+    const run_context: SessionRunContext = {
+      sessionId: this.session_id,
+      injectedUserMessages: [],
+      deferredPersistedUserMessages: [],
+    };
+    const messages = await composer.resolve(run_context);
+    const blocks: AgentSessionSystemBlock[] = [];
+    messages.forEach((message, index) => {
+      const content = this.stringify_system_content(
+        (message as { content?: unknown }).content,
+      );
+      if (!content) return;
+      blocks.push({
+        source: "session",
+        name: `${composer.name || "custom_system"}:${index + 1}`,
+        content,
+      });
+    });
+    return blocks;
   }
 
   /**
@@ -247,5 +286,15 @@ export class SessionViewService<TSession> {
       generate: true,
     });
     await forked_bundle.state_service.touch_metadata();
+  }
+
+  private stringify_system_content(content: unknown): string {
+    if (typeof content === "string") return content.trim();
+    if (content === null || content === undefined) return "";
+    try {
+      return JSON.stringify(content);
+    } catch {
+      return String(content || "").trim();
+    }
   }
 }

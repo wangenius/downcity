@@ -30,7 +30,7 @@ import {
   createAgentRuntime,
 } from "@/agent/local/AgentRuntimeFactory.js";
 import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.js";
-import type { Session } from "@/session/Session.js";
+import type { AgentManagedSession } from "@/types/agent/AgentTypes.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 
 type AgentAssemblyServiceOptions = {
@@ -42,7 +42,7 @@ type AgentAssemblyServiceOptions = {
   /**
    * 读取当前已缓存的 session 实例。
    */
-  list_cached_sessions: () => Session[];
+  list_cached_sessions: () => AgentManagedSession[];
 
   /**
    * 获取或创建 session runtime port。

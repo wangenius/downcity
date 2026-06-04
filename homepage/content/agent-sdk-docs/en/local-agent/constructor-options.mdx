@@ -16,6 +16,7 @@ new Agent({
   instruction,
   tools,
   plugins,
+  Session,
 })
 ```
 
@@ -151,3 +152,49 @@ Key points:
 - duplicate plugin names throw immediately
 - `agent.plugins` and `AgentContext.plugins` use this registry
 - if you want the full built-in set, pass `plugins: createBuiltinPlugins()` from `@downcity/plugins`
+
+## `Session`
+
+Advanced local-only custom Session class for sessions created by this agent.
+
+Use this when you want to replace the local session implementation or inject custom Session-level Composers. `Agent` only uses the class to create and restore sessions; it does not inspect Composer behavior.
+
+```ts
+import {
+  Agent,
+  Session,
+  type SessionOptions,
+  type SessionSystemComposer,
+} from "@downcity/agent";
+
+const systemComposer: SessionSystemComposer = {
+  name: "custom_system",
+  async resolve() {
+    return [{ role: "system", content: "Always answer tersely." }];
+  },
+};
+
+class CustomSession extends Session {
+  constructor(options: SessionOptions) {
+    super({
+      ...options,
+      composers: {
+        systemComposer,
+      },
+    });
+  }
+}
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  Session: CustomSession,
+});
+```
+
+Key points:
+
+- pass a class, not an already-created session instance
+- `Agent` can then create multiple sessions with different `sessionId` values
+- Composer customization stays inside the custom Session class
+- `RemoteAgent` does not support local Session classes because it only accesses a remote runtime

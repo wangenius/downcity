@@ -17,6 +17,7 @@ import type { ChatSessionContextComposer } from "@/chat/runtime/ChatSessionConte
 import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
 import type { SessionAssistantStepCallback } from "@downcity/agent/internal/executor/types/SessionRun.js";
 import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
+import type { SessionRunContext } from "@downcity/agent/internal/types/executor/SessionRunContext.js";
 import type { ChatSessionTurnState } from "@/chat/runtime/ChatSessionTypes.js";
 
 type ChatSessionOptions = {
@@ -144,10 +145,19 @@ export class ChatSession extends Executor {
         : {}),
     };
     try {
+      const run_context: SessionRunContext = {
+        sessionId: this.sessionId,
+        ...(typeof params.onStepCallback === "function"
+          ? { onStepCallback: params.onStepCallback }
+          : {}),
+        onAssistantStepCallback: this.forwardAssistantStep,
+        injectedUserMessages: [],
+        deferredPersistedUserMessages: [],
+        pendingAssistantFileParts: [],
+      };
       return await super.run({
         query: params.query,
-        onStepCallback: params.onStepCallback,
-        onAssistantStepCallback: this.forwardAssistantStep,
+        runContext: run_context,
       });
     } finally {
       this.activeTurnState = null;

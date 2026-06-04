@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { getSessionRunScope } from "@downcity/agent/internal/executor/SessionRunScope.js";
+import { getSessionRunContext } from "@downcity/agent/internal/executor/SessionRunScope.js";
 
 function stripShellSecretEnv(env: NodeJS.ProcessEnv): void {
   delete env.DC_AUTH_TOKEN;
@@ -31,8 +31,8 @@ export function buildShellEnv(context: AgentContext): NodeJS.ProcessEnv {
     env[normalizedKey] = normalizedValue;
   }
 
-  const request = getSessionRunScope();
-  const sessionId = String(request?.sessionId || "").trim();
+  const run_context = getSessionRunContext();
+  const sessionId = String(run_context?.sessionId || "").trim();
   const agentPath = String(context.rootPath || "").trim();
   const configuredAgentId = String(context.config?.id || "").trim();
   const agentId = configuredAgentId || (agentPath ? path.basename(agentPath) : "");
@@ -66,6 +66,6 @@ export function resolveShellCwd(context: AgentContext, cwd?: string): string {
 export function resolveOwnerContextId(explicit?: string): string | undefined {
   const fromInput = String(explicit || "").trim();
   if (fromInput) return fromInput;
-  const fromRequest = String(getSessionRunScope()?.sessionId || "").trim();
+  const fromRequest = String(getSessionRunContext()?.sessionId || "").trim();
   return fromRequest || undefined;
 }

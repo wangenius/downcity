@@ -11,6 +11,7 @@ import fs from "fs-extra";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import { runSandboxCommand } from "@downcity/agent/internal/sandbox/SandboxRunner.js";
 import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
+import type { SessionRunContext } from "@downcity/agent/internal/types/executor/SessionRunContext.js";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
 import type {
   ChatSendOutputPick,
@@ -245,7 +246,7 @@ export async function runAgentRound(params: {
 
   const result = await withSessionRunScope(
     {
-      sessionId: params.sessionId,
+      runContext: create_task_run_context(params.sessionId),
     },
     () =>
       params.taskSessionRuntime.getExecutor(params.sessionId).run({
@@ -286,7 +287,7 @@ export async function runScriptTask(params: {
   await fs.writeFile(scriptAbs, body.endsWith("\n") ? body : `${body}\n`, "utf-8");
 
   const execResult = await withSessionRunScope(
-    { sessionId: params.sessionId },
+    { runContext: create_task_run_context(params.sessionId) },
     () => {
       const childEnv: NodeJS.ProcessEnv = {
         ...process.env,
@@ -311,6 +312,18 @@ export async function runScriptTask(params: {
   const combined = [stdout, stderr].filter(Boolean).join("\n");
   return {
     outputText: combined,
+  };
+}
+
+/**
+ * 创建 task runner 的显式 session run context。
+ */
+function create_task_run_context(session_id: string): SessionRunContext {
+  return {
+    sessionId: session_id,
+    injectedUserMessages: [],
+    deferredPersistedUserMessages: [],
+    pendingAssistantFileParts: [],
   };
 }
 

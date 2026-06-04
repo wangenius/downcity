@@ -7,7 +7,7 @@
  * - 统一从 request context + ChatMetaStore 读取当前 chat 元信息。
  */
 
-import { getSessionRunScope } from "@downcity/agent/internal/executor/SessionRunScope.js";
+import { getSessionRunContext } from "@downcity/agent/internal/executor/SessionRunScope.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { ChatEnvironmentPromptInput } from "@/chat/types/ChatPromptContext.js";
 import { readChatMetaBySessionId } from "@/chat/runtime/ChatMetaStore.js";
@@ -26,7 +26,7 @@ function normalizePromptValue(value: unknown, fallback: string): string {
 export async function resolveCurrentChatEnvironmentPromptInput(
   context: AgentContext,
 ): Promise<ChatEnvironmentPromptInput | null> {
-  const sessionId = String(getSessionRunScope()?.sessionId || "").trim();
+  const sessionId = String(getSessionRunContext()?.sessionId || "").trim();
   if (!sessionId) return null;
 
   const meta = await readChatMetaBySessionId({

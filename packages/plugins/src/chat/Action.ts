@@ -7,7 +7,7 @@
  */
 
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { getSessionRunScope } from "@downcity/agent/internal/executor/SessionRunScope.js";
+import { getSessionRunContext } from "@downcity/agent/internal/executor/SessionRunScope.js";
 import {
   sendActionByChatKey,
   sendTextByChatKey,
@@ -59,13 +59,13 @@ export function resolveChatSessionSnapshot(input?: {
   chatKey?: string;
   context?: AgentContext;
 }): ChatSessionSnapshot {
-  const requestCtx = getSessionRunScope();
+  const run_context = getSessionRunContext();
 
   const explicitSessionId = String(input?.sessionId || "").trim();
   const explicitChatKey = String(input?.chatKey || "").trim();
   const requestSessionId =
-    typeof requestCtx?.sessionId === "string" && requestCtx.sessionId.trim()
-      ? requestCtx.sessionId.trim()
+    typeof run_context?.sessionId === "string" && run_context.sessionId.trim()
+      ? run_context.sessionId.trim()
       : undefined;
   const envSessionId = readEnvString("DC_SESSION_ID");
   const envChatKey = readEnvString("DC_CTX_CHAT_KEY");

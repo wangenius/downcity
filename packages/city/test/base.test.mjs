@@ -286,7 +286,7 @@ test("CityBase exposes service env requirements and env catalog", async () => {
   }
 })
 
-test("CityBase refreshes runtime env before each request so external env updates take effect immediately", async () => {
+test("CityBase refreshes runtime env only after explicit env refresh", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-env-refresh-"))
 
@@ -332,6 +332,24 @@ test("CityBase refreshes runtime env before each request so external env updates
       created_at: now,
       updated_at: now,
     })
+
+    const cachedResponse = await base.handleRequest(new Request("http://localhost/v1/demo.env/value", {
+      method: "GET",
+    }))
+    assert.equal(cachedResponse.status, 200)
+    assert.deepEqual(await cachedResponse.json(), { google_client_id: null })
+
+    const refreshResponse = await base.handleRequest(new Request("http://localhost/v1/env/refresh", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${adminSecret}`,
+      },
+    }))
+    assert.equal(refreshResponse.status, 200)
+    const refreshBody = await refreshResponse.json()
+    assert.equal(refreshBody.success, true)
+    assert.equal(typeof refreshBody.count, "number")
+    assert.ok(refreshBody.count >= 1)
 
     const afterResponse = await base.handleRequest(new Request("http://localhost/v1/demo.env/value", {
       method: "GET",

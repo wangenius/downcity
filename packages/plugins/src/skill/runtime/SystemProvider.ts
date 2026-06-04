@@ -7,7 +7,7 @@
  * - `lookup` 行为为无状态：由 action 读取 SKILL.md 后通过协议注入 user message
  */
 
-import { getSessionRunScope } from "@downcity/agent/internal/executor/SessionRunScope.js";
+import { getSessionRunContext } from "@downcity/agent/internal/executor/SessionRunScope.js";
 import type { DowncityConfig } from "@downcity/agent/internal/types/config/DowncityConfig.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
@@ -19,8 +19,8 @@ type SkillSystemRuntime = {
 };
 
 function getCurrentSessionId(): string {
-  const request = getSessionRunScope();
-  return String(request?.sessionId || "").trim();
+  const run_context = getSessionRunContext();
+  return String(run_context?.sessionId || "").trim();
 }
 
 /**

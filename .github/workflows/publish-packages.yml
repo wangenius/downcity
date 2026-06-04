@@ -105,9 +105,15 @@ jobs:
             echo "${PACKAGE_NAME} is not published yet. Skipping owner check for first publish."
           fi
 
-      - name: Build workspace packages
+      - name: Build package dependency closure
         if: steps.version.outputs.should_publish == 'true'
-        run: pnpm -r --filter './packages/*' build
+        env:
+          PACKAGE_NAME: ${{ matrix.name }}
+        run: |
+          set -euo pipefail
+
+          # 关键点：只构建当前待发布包及其依赖，避免其他包的临时构建错误阻断本包发布。
+          pnpm -r --filter "${PACKAGE_NAME}..." build
 
       - name: Run package tests
         if: steps.version.outputs.should_publish == 'true'

@@ -56,10 +56,29 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
+      - name: Check published version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(node -p "require('./cli/downcity/package.json').version")"
+
+          if npm view "downcity@${VERSION}" version >/dev/null 2>&1; then
+            echo "downcity@${VERSION} already exists, skipping publish"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "downcity@${VERSION} is not published yet"
+          echo "should_publish=true" >> "$GITHUB_OUTPUT"
+
       - name: Install workspace dependencies
+        if: steps.version.outputs.should_publish == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build downcity CLI package
+        if: steps.version.outputs.should_publish == 'true'
         run: |
           set -euo pipefail
           pnpm -C packages/type build
@@ -74,6 +93,7 @@ jobs:
           pnpm -C cli/downcity build
 
       - name: Validate npm token and package ownership
+        if: steps.version.outputs.should_publish == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_DOWNCITY }}
         run: |
@@ -91,6 +111,7 @@ jobs:
           fi
 
       - name: Pack and publish downcity
+        if: steps.version.outputs.should_publish == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_DOWNCITY }}
         run: |

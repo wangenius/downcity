@@ -400,8 +400,27 @@ async function readJsonResponse(response: Response): Promise<unknown> {
 
 function readErrorMessage(data: unknown): string {
   const record = toRecord(data);
+  const nested = toRecord(record?.data) ?? toRecord(record?.job) ?? toRecord(record?.result);
   const error = toRecord(record?.error);
-  return readString(error?.message) || readString(record?.message) || readString(record?.error);
+  const nested_error = toRecord(nested?.error);
+  const detail = toRecord(error?.detail);
+  const nested_detail = toRecord(nested_error?.detail);
+  const message =
+    readString(error?.message) ||
+    readString(detail?.message) ||
+    readString(nested_error?.message) ||
+    readString(nested_detail?.message) ||
+    readString(record?.message) ||
+    readString(nested?.message) ||
+    readString(record?.error) ||
+    readString(nested?.error);
+  const code =
+    readString(error?.code) ||
+    readString(detail?.code) ||
+    readString(nested_error?.code) ||
+    readString(nested_detail?.code);
+  if (!message) return "";
+  return code && !message.includes(code) ? `${message} (${code})` : message;
 }
 
 function extractImagesFromOpenAIResponse(data: unknown): ExtractedImage[] {

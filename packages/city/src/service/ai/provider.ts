@@ -19,8 +19,8 @@ export interface ProviderOptions {
   baseURL?: string;
   envKey?: string;
   passthroughModel?: string;
-  text: ActionFn;
-  stream: ActionFn;
+  text?: ActionFn;
+  stream?: ActionFn;
   image?: ActionFn;
   video?: ActionFn;
   openai?: ActionFn;

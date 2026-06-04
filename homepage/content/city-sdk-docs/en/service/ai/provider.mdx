@@ -16,11 +16,68 @@ new Provider(id: string, opts: ProviderOptions)
 | `env` | `Record<string, string>` | No | Env var key → description |
 | `baseURL` | `string` | No | Provider API URL, for auto-passthrough |
 | `envKey` | `string` | No | Env var name for API key, for auto-passthrough |
-| `text` | `ServiceHandler` | **Yes** | SDK text handler |
-| `stream` | `ServiceHandler` | **Yes** | SDK stream handler |
+| `text` | `ServiceHandler` | No | SDK text handler |
+| `stream` | `ServiceHandler` | No | SDK stream handler |
 | `image` | `ServiceHandler` | No | SDK image handler |
 | `video` | `ServiceHandler` | No | SDK video handler |
 | `openai` | `ServiceHandler` | No | OpenAI-compatible handler. Auto-passthrough if omitted |
+
+## Image Providers
+
+`@downcity/city` does not ship concrete image provider factories for Luchi, 302.ai, OpenAI, Gemini, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image()` call contract.
+
+Provider-specific adapters should live in the concrete City project, for example `cities/edge/src/image-provider.ts`. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
+
+```ts
+import { Provider } from "@downcity/city";
+
+const imageProvider = new Provider("my-image", {
+  env: { MY_IMAGE_API_KEY: "My Image API Key" },
+  image: async (ctx) => {
+    const response = await fetch("https://image.example.com/generate", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${ctx.env("MY_IMAGE_API_KEY")}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(ctx.input),
+    });
+    const data = await response.json();
+
+    return {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      parts: [
+        {
+          type: "file",
+          mediaType: "image/png",
+          url: data.image_url,
+        },
+      ],
+    };
+  },
+});
+
+ai.use(imageProvider.model({
+  id: "image-basic",
+  name: "Image Basic",
+  default: ["image"],
+}));
+```
+
+The client call stays provider-neutral:
+
+```ts
+const msg = await client.ai.image({
+  model: "image-basic",
+  prompt: "A clean product photo of a ceramic mug",
+  ratio: "1:1",
+  quality: "standard",
+  count: 1,
+});
+
+const file = msg.parts.find((part) => part.type === "file");
+```
 
 ## Two Patterns
 

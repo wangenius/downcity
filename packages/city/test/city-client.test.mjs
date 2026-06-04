@@ -20,6 +20,40 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", town_id: "town_demo" })
 })
 
+test("AIInvoker.image() posts to /v1/ai/image and returns file parts", async () => {
+  const requests = []
+  const msg = {
+    id: "msg_image_1",
+    role: "assistant",
+    parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
+  }
+  const client = new City({
+    role: "user",
+    city_url: "https://api.example.com/base/",
+    town_id: "town_demo",
+    user_token: "ub_test",
+    fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
+  })
+
+  const result = await client.ai.image({
+    prompt: "draw a mug",
+    model: "openai-gpt-image-1",
+    size: "1024x1024",
+    count: 1,
+  })
+
+  assert.deepEqual(result, msg)
+  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image")
+  assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
+  assert.deepEqual(JSON.parse(requests[0].init.body), {
+    prompt: "draw a mug",
+    model: "openai-gpt-image-1",
+    size: "1024x1024",
+    count: 1,
+    town_id: "town_demo",
+  })
+})
+
 test("AIInvoker.text() serializes AI SDK provider tools with inputSchema", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello" }] }

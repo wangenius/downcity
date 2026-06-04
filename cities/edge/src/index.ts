@@ -13,6 +13,11 @@ import {
   type Context,
 } from "@downcity/city";
 import { compose_city } from "./compose-city.js";
+import {
+  createGeminiImageProvider,
+  createLuchiImageProvider,
+  createOpenAIImageProvider,
+} from "./image-provider.js";
 import { createOpenAIProvider } from "./openai-provider.js";
 
 const INITIAL_BALANCE = 100;
@@ -47,6 +52,29 @@ async function init_city(env: Env): Promise<CityBase> {
     baseURL: "https://api.deepseek.com/v1",
     defaultModelId: "deepseek-v4-flash",
   });
+  const luchi_image_provider = createLuchiImageProvider({
+    id: "luchi-image",
+    envKey: "LUCHI_IMAGE_ACCESS_TOKEN",
+    defaultModelId: "gpt-image-2",
+  });
+  const image_302_provider = createOpenAIImageProvider({
+    id: "302-image",
+    envKey: "AI302_API_KEY",
+    baseURL: "https://api.302.ai/v1",
+    defaultModelId: "gpt-image-1",
+    providerOptionsKey: "302ai",
+  });
+  const openai_image_provider = createOpenAIImageProvider({
+    id: "openai-image",
+    envKey: "OPENAI_API_KEY",
+    baseURL: "https://api.openai.com/v1",
+    defaultModelId: "gpt-image-1",
+  });
+  const gemini_image_provider = createGeminiImageProvider({
+    id: "gemini-image",
+    envKey: "GEMINI_API_KEY",
+    defaultModelId: "gemini-2.5-flash-image",
+  });
   const { city, balance, ai } = compose_city({
     db,
     dialect: "sqlite",
@@ -63,6 +91,52 @@ async function init_city(env: Env): Promise<CityBase> {
         name: "DeepSeek V4 Pro",
         description: "DeepSeek OpenAI-compatible text model",
         tags: ["deepseek", "text"],
+      }),
+      luchi_image_provider.model({
+        id: "luchi-gpt-image-2",
+        name: "Luchi GPT Image 2",
+        description: "Luchi async image generation model",
+        tags: ["luchi", "image"],
+        default: ["image"],
+        meta: {
+          upstream_model: "gpt-image-2",
+        },
+      }),
+      luchi_image_provider.model({
+        id: "luchi-gpt-image-1",
+        name: "Luchi GPT Image 1",
+        description: "Luchi async image generation model",
+        tags: ["luchi", "image"],
+        meta: {
+          upstream_model: "gpt-image-1",
+        },
+      }),
+      image_302_provider.model({
+        id: "302-gpt-image-1",
+        name: "302.ai GPT Image 1",
+        description: "302.ai OpenAI-compatible image generation model",
+        tags: ["302.ai", "image"],
+        meta: {
+          upstream_model: "gpt-image-1",
+        },
+      }),
+      openai_image_provider.model({
+        id: "openai-gpt-image-1",
+        name: "OpenAI GPT Image 1",
+        description: "OpenAI image generation model",
+        tags: ["openai", "image"],
+        meta: {
+          upstream_model: "gpt-image-1",
+        },
+      }),
+      gemini_image_provider.model({
+        id: "gemini-2.5-flash-image",
+        name: "Gemini 2.5 Flash Image",
+        description: "Gemini generateContent image model",
+        tags: ["gemini", "image"],
+        meta: {
+          upstream_model: "gemini-2.5-flash-image",
+        },
       }),
     ],
     record_usage_errors: true,

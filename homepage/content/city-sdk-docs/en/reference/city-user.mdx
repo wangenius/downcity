@@ -193,8 +193,32 @@ If you want a single JSON result, use `text()` instead of `stream()`.
 const imageMessage = await client.ai.image({
   prompt: "A fox standing in the snow",
   model: catalog.get("image-basic"),
+  ratio: "1:1",
+  count: 1,
+});
+
+const image = imageMessage.parts.find((part) => part.type === "file");
+console.log(image?.mediaType, image?.url);
+```
+
+You can also use `messages` for conversational or reference-image workflows:
+
+```ts
+await client.ai.image({
+  model: "luchi-gpt-image-2",
+  messages: [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "Keep the subject, switch to a white studio background" },
+        { type: "image", data_url: "data:image/png;base64,..." },
+      ],
+    },
+  ],
 });
 ```
+
+The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider normalizes upstream formats such as Luchi async jobs, OpenAI/302.ai images APIs, and Gemini `generateContent` into AI SDK `UIMessage` file parts.
 
 The City-side Provider `image` / `video` actions should also return `UIMessage`.
 

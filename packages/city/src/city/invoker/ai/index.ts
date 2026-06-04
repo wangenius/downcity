@@ -14,6 +14,7 @@ import {
 } from "@downcity/type";
 import type { UserModelRef } from "./types.js";
 import type {
+  UserImageInput,
   UserImageResult,
   UserServiceInput,
   UserStreamResult,
@@ -92,7 +93,7 @@ export class AIInvoker {
   }
 
   /** 图片生成 */
-  image(input: UserServiceInput): Promise<UserImageResult> {
+  image(input: UserImageInput): Promise<UserImageResult> {
     return this.post<UserImageResult>("/image", input);
   }
 
@@ -372,7 +373,7 @@ export class ModelHandle {
   }
 
   /** 图片生成 */
-  image(input: Omit<UserServiceInput, "model">): Promise<UserImageResult> {
+  image(input: Omit<UserImageInput, "model">): Promise<UserImageResult> {
     return this.ai.image({ ...input, model: this.id });
   }
 

@@ -193,8 +193,32 @@ City 侧的 stream handler 应该返回 AI SDK 的 `createUIMessageStreamRespons
 const imageMessage = await client.ai.image({
   prompt: "一只站在雪地里的狐狸",
   model: catalog.get("image-basic"),
+  ratio: "1:1",
+  count: 1,
+});
+
+const image = imageMessage.parts.find((part) => part.type === "file");
+console.log(image?.mediaType, image?.url);
+```
+
+也可以在对话或参考图场景使用 `messages`：
+
+```ts
+await client.ai.image({
+  model: "luchi-gpt-image-2",
+  messages: [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "保持主体不变，换成白色影棚背景" },
+        { type: "image", data_url: "data:image/png;base64,..." },
+      ],
+    },
+  ],
 });
 ```
+
+`image()` 的底层约定很简单：client 只发送 `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options` 这些输入；City 侧 Provider 负责把 Luchi 异步 Job、OpenAI/302.ai images API、Gemini `generateContent` 等上游格式归一成 AI SDK `UIMessage` file parts。
 
 City 侧的 Provider `image` / `video` action 也应该返回 `UIMessage`。
 

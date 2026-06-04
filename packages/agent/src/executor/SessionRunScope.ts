@@ -1,54 +1,19 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
-import type {
-  SessionAssistantStepCallback,
-  SessionUiMessageChunkCallback,
-} from "@/executor/types/SessionRun.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 /**
  * SessionRunScope（单次请求作用域）。
  *
  * 关键点（中文）
  * - 这是 session run 层请求作用域上下文，不属于具体 plugin 业务模块。
- * - 统一承载请求链需要透传的字段（如 `sessionId`）。
+ * - 当前阶段仅作为深层工具回调读取 `runContext` 的薄包装。
  */
 export type SessionRunScope = {
-  sessionId?: string;
   /**
-   * step 边界合并回调（可选）。
-   *
-   * 关键点（中文）
-   * - 由调用侧（如 chat queue）注入。
-   * - Orchestrator 从 SessionRunScope 读取并编排到本轮运行上下文。
+   * 当前显式运行上下文。
    */
-  onStepCallback?: () => Promise<SessionUserMessageV1[]>;
-
-  /**
-   * assistant step 完成回调（可选）。
-   *
-   * 关键点（中文）
-   * - 在每个 LLM step 结束时触发。
-   * - 用于把中间文本增量派发到外部通道（如 direct 模式分步发送）。
-   */
-  onAssistantStepCallback?: SessionAssistantStepCallback;
-
-  /**
-   * UI stream chunk 回调（可选）。
-   *
-   * 关键点（中文）
-   * - 用于把底层模型 UI stream 事件向上层 SDK / transport 旁路输出。
-   * - 不影响最终 assistantMessage 的收敛与落盘。
-   */
-  onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
-
-  /**
-   * 运行时注入的 user 消息队列（可选）。
-   *
-   * 关键点（中文）
-   * - 用于在 tool 执行后向下一 step 注入结构化 user 消息。
-   * - 队列内容由上层 plugin runtime 通过统一协议下发，main 不感知业务语义。
-   */
-  injectedUserMessages?: SessionUserMessageV1[];
+  runContext: SessionRunContext;
 };
 
 /**
@@ -56,22 +21,9 @@ export type SessionRunScope = {
  *
  * 关键点（中文）
  * - 同一条异步调用链内可读取一致的 SessionRunScope。
- * - 用于把 `sessionId` 从入口透传到 plugin runtime 与工具层。
+ * - 当前主要用于 tool 深层桥接层读取活跃 runContext。
  */
 export const sessionRunScopeStorage = new AsyncLocalStorage<SessionRunScope>();
-
-/**
- * 待持久化的运行时注入 user 消息队列（按 sessionId）。
- *
- * 关键点（中文）
- * - sessionRunScopeStorage 中的 injectedUserMessages 只负责“下一 step 临时可见”。
- * - 为了让时间线顺序稳定，这里把“真正写入历史”的动作延后到
- *   assistant message 落盘之后再统一执行。
- */
-const deferredPersistedUserMessagesBySession = new Map<
-  string,
-  SessionUserMessageV1[]
->();
 
 /**
  * 在当前异步调用链内绑定 session run 作用域。
@@ -88,6 +40,13 @@ export function getSessionRunScope(): SessionRunScope | undefined {
 }
 
 /**
+ * 读取当前异步链路上的显式 runContext。
+ */
+export function getSessionRunContext(): SessionRunContext | undefined {
+  return sessionRunScopeStorage.getStore()?.runContext;
+}
+
+/**
  * 入队一条“待注入 user 消息”。
  *
  * 关键点（中文）
@@ -96,12 +55,9 @@ export function getSessionRunScope(): SessionRunScope | undefined {
 export function enqueueInjectedUserMessage(
   message: SessionUserMessageV1,
 ): void {
-  const store = sessionRunScopeStorage.getStore();
-  if (!store || !message) return;
-  if (!Array.isArray(store.injectedUserMessages)) {
-    store.injectedUserMessages = [];
-  }
-  store.injectedUserMessages.push(message);
+  const run_context = getSessionRunContext();
+  if (!run_context || !message) return;
+  run_context.injectedUserMessages.push(message);
 }
 
 /**
@@ -111,10 +67,10 @@ export function enqueueInjectedUserMessage(
  * - 采用 drain 语义，确保每条注入消息只在下一 step 使用一次。
  */
 export function drainInjectedUserMessages(): SessionUserMessageV1[] {
-  const store = sessionRunScopeStorage.getStore();
-  if (!store || !Array.isArray(store.injectedUserMessages)) return [];
-  const out = [...store.injectedUserMessages];
-  store.injectedUserMessages = [];
+  const run_context = getSessionRunContext();
+  if (!run_context) return [];
+  const out = [...run_context.injectedUserMessages];
+  run_context.injectedUserMessages = [];
   return out;
 }
 
@@ -125,11 +81,11 @@ export function enqueueDeferredPersistedUserMessage(
   sessionId: string,
   message: SessionUserMessageV1,
 ): void {
+  const run_context = getSessionRunContext();
   const key = String(sessionId || "").trim();
-  if (!key || !message) return;
-  const current = deferredPersistedUserMessagesBySession.get(key) || [];
-  current.push(message);
-  deferredPersistedUserMessagesBySession.set(key, current);
+  if (!run_context || !key || !message) return;
+  if (run_context.sessionId !== key) return;
+  run_context.deferredPersistedUserMessages.push(message);
 }
 
 /**
@@ -138,9 +94,10 @@ export function enqueueDeferredPersistedUserMessage(
 export function drainDeferredPersistedUserMessages(
   sessionId: string,
 ): SessionUserMessageV1[] {
+  const run_context = getSessionRunContext();
   const key = String(sessionId || "").trim();
-  if (!key) return [];
-  const current = deferredPersistedUserMessagesBySession.get(key) || [];
-  deferredPersistedUserMessagesBySession.delete(key);
-  return [...current];
+  if (!run_context || !key || run_context.sessionId !== key) return [];
+  const current = [...run_context.deferredPersistedUserMessages];
+  run_context.deferredPersistedUserMessages = [];
+  return current;
 }

@@ -11,7 +11,7 @@ import type { streamText } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
-import { getSessionRunScope } from "@executor/SessionRunScope.js";
+import type { SessionUiMessageChunkCallback } from "@/executor/types/SessionRun.js";
 import {
   summarizeUiMessageForDebug,
   toInlinePreview,
@@ -37,6 +37,10 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
    * 构造 fallback assistant 消息的工厂函数。
    */
   buildFallbackAssistantMessage: (text: string) => SessionMessageV1;
+  /**
+   * UI stream chunk 回调。
+   */
+  onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
 }): Promise<SessionMessageV1> {
   let streamedAssistantMessage: SessionMessageV1 | null = null;
   let uiFinishSummary: JsonObject | null = null;
@@ -57,12 +61,10 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
     },
   });
 
-  const onUiMessageChunkCallback =
-    getSessionRunScope()?.onUiMessageChunkCallback;
   for await (const chunk of uiStream) {
-    if (typeof onUiMessageChunkCallback !== "function") continue;
+    if (typeof params.onUiMessageChunkCallback !== "function") continue;
     try {
-      await onUiMessageChunkCallback(chunk);
+      await params.onUiMessageChunkCallback(chunk);
     } catch {
       // ignore UI stream callback failures
     }

@@ -16,7 +16,7 @@ import type { ShellActionResponse } from "@/executor/tools/shell/types/ShellPlug
 import {
   enqueueDeferredPersistedUserMessage,
   enqueueInjectedUserMessage,
-  getSessionRunScope,
+  getSessionRunContext,
 } from "@executor/SessionRunScope.js";
 
 /**
@@ -88,8 +88,8 @@ async function injectUserTextMessage(params: {
    */
   note?: string;
 }): Promise<boolean> {
-  const store = getSessionRunScope();
-  const sessionId = String(store?.sessionId || "").trim();
+  const run_context = getSessionRunContext();
+  const sessionId = String(run_context?.sessionId || "").trim();
   const text = String(params.text || "").trim();
   if (!sessionId || !text) return false;
   const note = String(params.note || "runtime_injected_user_message");

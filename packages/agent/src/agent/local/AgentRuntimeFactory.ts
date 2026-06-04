@@ -133,32 +133,11 @@ export function createAgentContext(
         action: string;
         payload?: JsonValue;
       }) => {
-        const plugin_name = String(params.plugin || "").trim();
-        const action_name = String(params.action || "").trim();
-        const plugin = options.plugin_instances.get(plugin_name);
-        if (!plugin) {
-          return {
-            success: false,
-            error: `Unknown plugin: ${plugin_name}`,
-          };
-        }
-        const action = plugin.actions[action_name];
-        if (!action) {
-          return {
-            success: false,
-            error: `Unknown action: ${plugin_name}.${action_name}`,
-          };
-        }
-        const result = await action.execute({
-          context,
-          payload: params.payload ?? null,
-          pluginName: plugin_name,
-          actionName: action_name,
-        });
+        const result = await options.plugins.runAction(params);
         if (!result.success) {
           return {
             success: false,
-            ...(result.error ? { error: result.error } : {}),
+            error: result.error || result.message || "plugin action failed",
           };
         }
         return {

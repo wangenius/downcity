@@ -1,0 +1,251 @@
+/**
+ * SessionViewService：本地 Session 查询与派生视图服务。
+ *
+ * 关键点（中文）
+ * - 统一管理 info/history/system/fork 这类读取型能力。
+ * - 该服务只负责拼装查询结果，不负责编排 prompt turn。
+ * - 需要写入持久化状态的地方仍委托给 SessionStateService。
+ */
+
+import { nanoid } from "nanoid";
+import {
+  buildSessionHistoryPage,
+  buildSessionInfo,
+  ensureSessionTitle,
+  readSessionMetadata,
+} from "@/session/index.js";
+import { buildSessionSystemBlocks } from "@/session/SessionSystemBuilder.js";
+import type { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
+import type {
+  AgentSessionForkInput,
+  AgentSessionHistoryInput,
+  AgentSessionHistoryPage,
+  AgentSessionInfo,
+  AgentSessionSystemBlock,
+  AgentSessionSystemSnapshot,
+} from "@/types/agent/AgentTypes.js";
+import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import { SessionStateService } from "@/session/services/SessionStateService.js";
+
+type SessionViewServiceOptions<TSession> = {
+  /**
+   * 当前 agent 稳定标识。
+   */
+  agent_id: string;
+
+  /**
+   * 当前项目根目录。
+   */
+  project_root: string;
+
+  /**
+   * 当前 session 标识。
+   */
+  session_id: string;
+
+  /**
+   * 当前 session 历史事实源。
+   */
+  history_store: JsonlSessionHistoryStore;
+
+  /**
+   * 当前 session 状态服务。
+   */
+  state_service: SessionStateService;
+
+  /**
+   * 判断当前 session 是否正在执行。
+   */
+  is_executing: () => boolean;
+
+  /**
+   * 读取 instruction system blocks。
+   */
+  get_instruction_system_blocks: () => AgentSessionSystemBlock[];
+
+  /**
+   * 读取受托管 plugin system blocks。
+   */
+  get_managed_plugin_system_blocks: () => Promise<AgentSessionSystemBlock[]>;
+
+  /**
+   * 读取显式注册 plugin system blocks。
+   */
+  get_plugin_system_blocks: () => Promise<AgentSessionSystemBlock[]>;
+
+  /**
+   * 创建一个新的本地 Session 实例。
+   */
+  create_fork_session: (session_id: string) => Promise<{
+    session: TSession;
+    history_store: JsonlSessionHistoryStore;
+    state_service: SessionStateService;
+  }>;
+};
+
+/**
+ * 本地 Session 查询与派生视图服务。
+ */
+export class SessionViewService<TSession> {
+  private readonly agent_id: string;
+  private readonly project_root: string;
+  private readonly session_id: string;
+  private readonly history_store: JsonlSessionHistoryStore;
+  private readonly state_service: SessionStateService;
+  private readonly is_executing: SessionViewServiceOptions<TSession>["is_executing"];
+  private readonly get_instruction_system_blocks: SessionViewServiceOptions<TSession>["get_instruction_system_blocks"];
+  private readonly get_managed_plugin_system_blocks: SessionViewServiceOptions<TSession>["get_managed_plugin_system_blocks"];
+  private readonly get_plugin_system_blocks: SessionViewServiceOptions<TSession>["get_plugin_system_blocks"];
+  private readonly create_fork_session: SessionViewServiceOptions<TSession>["create_fork_session"];
+
+  constructor(options: SessionViewServiceOptions<TSession>) {
+    this.agent_id = options.agent_id;
+    this.project_root = options.project_root;
+    this.session_id = options.session_id;
+    this.history_store = options.history_store;
+    this.state_service = options.state_service;
+    this.is_executing = options.is_executing;
+    this.get_instruction_system_blocks = options.get_instruction_system_blocks;
+    this.get_managed_plugin_system_blocks =
+      options.get_managed_plugin_system_blocks;
+    this.get_plugin_system_blocks = options.get_plugin_system_blocks;
+    this.create_fork_session = options.create_fork_session;
+  }
+
+  /**
+   * 读取当前 session 详情。
+   */
+  async get_info(): Promise<AgentSessionInfo> {
+    const [metadata, messages] = await Promise.all([
+      readSessionMetadata({
+        projectRoot: this.project_root,
+        agentId: this.agent_id,
+        sessionId: this.session_id,
+      }),
+      this.history_store.list(),
+    ]);
+    const metadata_with_title = metadata.title
+      ? metadata
+      : await ensureSessionTitle({
+          projectRoot: this.project_root,
+          agentId: this.agent_id,
+          sessionId: this.session_id,
+          messages,
+        });
+    return buildSessionInfo({
+      projectRoot: this.project_root,
+      agentId: this.agent_id,
+      sessionId: this.session_id,
+      metadata: metadata_with_title,
+      messages,
+      executing: this.is_executing(),
+    });
+  }
+
+  /**
+   * 读取当前 session 历史分页。
+   */
+  async history(
+    input?: AgentSessionHistoryInput,
+  ): Promise<AgentSessionHistoryPage> {
+    const [session, messages] = await Promise.all([
+      this.get_info(),
+      this.history_store.list(),
+    ]);
+    return buildSessionHistoryPage({
+      session,
+      messages,
+      input,
+    });
+  }
+
+  /**
+   * 读取当前 session 生效的 system 快照。
+   */
+  async system(): Promise<AgentSessionSystemSnapshot> {
+    const blocks = await buildSessionSystemBlocks({
+      agentId: this.agent_id,
+      projectRoot: this.project_root,
+      sessionId: this.session_id,
+      createdAt: this.state_service.get_created_at(),
+      timezone: this.state_service.get_timezone(),
+      getInstructionSystemBlocks: this.get_instruction_system_blocks,
+      getManagedPluginSystemBlocks: this.get_managed_plugin_system_blocks,
+      getPluginSystemBlocks: this.get_plugin_system_blocks,
+    });
+    return {
+      sessionId: this.session_id,
+      session: {
+        agentId: this.agent_id,
+        sessionId: this.session_id,
+        projectRoot: this.project_root,
+        createdAt: new Date(this.state_service.get_created_at()).toISOString(),
+        timezone: this.state_service.get_timezone(),
+      },
+      blocks,
+    };
+  }
+
+  /**
+   * 从当前 session 创建一个分叉会话。
+   */
+  async fork(input?: AgentSessionForkInput | string): Promise<TSession> {
+    const message_id =
+      typeof input === "string"
+        ? String(input || "").trim() || undefined
+        : String(input?.messageId || "").trim() || undefined;
+    const messages = await this.history_store.list();
+    const fork_messages =
+      !message_id
+        ? messages
+        : this.resolve_fork_messages(messages, message_id);
+
+    const forked_bundle = await this.create_fork_session(
+      `fork-${Date.now()}-${nanoid(8)}`,
+    );
+    const forked = forked_bundle.session;
+    const session_config = this.state_service.get_config();
+    if (session_config.model) {
+      await (
+        forked as unknown as {
+          set(input: { model: unknown }): Promise<void>;
+        }
+      ).set({
+        model: session_config.model,
+      });
+    }
+    await this.append_fork_messages(forked_bundle, fork_messages);
+    return forked;
+  }
+
+  private resolve_fork_messages(
+    messages: SessionMessageV1[],
+    message_id: string,
+  ): SessionMessageV1[] {
+    const target_index = messages.findIndex(
+      (message) => String(message.id || "").trim() === message_id,
+    );
+    if (target_index < 0) {
+      throw new Error(
+        `Cannot fork session "${this.session_id}": messageId "${message_id}" not found.`,
+      );
+    }
+    return messages.slice(0, target_index + 1);
+  }
+
+  private async append_fork_messages(
+    forked_bundle: {
+      history_store: JsonlSessionHistoryStore;
+      state_service: SessionStateService;
+    },
+    messages: SessionMessageV1[],
+  ): Promise<void> {
+    for (const message of messages) {
+      await forked_bundle.history_store.append(message);
+    }
+    await forked_bundle.state_service.ensure_title_from_history({
+      generate: true,
+    });
+    await forked_bundle.state_service.touch_metadata();
+  }
+}

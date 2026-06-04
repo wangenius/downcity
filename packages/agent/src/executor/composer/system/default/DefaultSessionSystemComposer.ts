@@ -9,8 +9,8 @@
 import type {
   SessionSystemComposer,
 } from "@executor/composer/system/SessionSystemComposer.js";
-import { getSessionRunScope } from "@executor/SessionRunScope.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import {
   resolveSessionSystemMessages,
   type SystemProfile,
@@ -60,9 +60,8 @@ export class DefaultSessionSystemComposer implements SessionSystemComposer {
     this.profile = options.profile === "task" ? "task" : "chat";
   }
 
-  async resolve() {
-    const ctx = getSessionRunScope();
-    const sessionId = String(ctx?.sessionId || "").trim();
+  async resolve(run_context: SessionRunContext) {
+    const sessionId = String(run_context.sessionId || "").trim();
     if (!sessionId) {
       throw new Error("DefaultSessionSystemComposer.resolve requires a non-empty sessionId");
     }

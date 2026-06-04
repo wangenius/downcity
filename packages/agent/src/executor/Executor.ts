@@ -12,55 +12,24 @@ import { SessionHistoryWriter } from "@executor/composer/history/SessionHistoryW
 import type { SessionHistoryComposer } from "@executor/composer/history/SessionHistoryComposer.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import { withSessionRunScope } from "@executor/SessionRunScope.js";
-import type { SessionRunScope } from "@executor/SessionRunScope.js";
 import { buildSessionStepParts } from "@executor/messages/SessionStepEventMapper.js";
 import { JsonlSessionCompactionComposer } from "@executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionContextComposer } from "@executor/composer/context/LocalSessionContextComposer.js";
+import { CoreEngineRunner } from "@executor/core-engine/CoreEngineRunner.js";
 import type { SessionCompactionComposer } from "@executor/composer/compaction/SessionCompactionComposer.js";
 import type { SessionContextComposer } from "@executor/composer/context/SessionContextComposer.js";
 import type { SessionSystemComposer } from "@executor/composer/system/SessionSystemComposer.js";
-import {
-  MAX_INCOMPLETE_RESPONSE_RECOVERIES,
-  MAX_TEXT_ONLY_CONTINUATIONS,
-  MAX_TOOL_LOOP_STEPS,
-  buildIncompleteResponseRecoveryNudge,
-  buildTextOnlyContinuationNudge,
-  detectIncompleteResponse,
-  detectTextOnlyContinuationReason,
-  mergeAssistantUiMessages,
-  summarizeStepForDebug,
-  summarizeUiMessageForDebug,
-  toInlinePreview,
-} from "@executor/core-engine/CoreEngineSignals.js";
-import {
-  evaluateCoreEngineLoopDecision,
-  shouldContinueForTailMergedUserMessages,
-} from "@executor/core-engine/CoreEngineLoopDecision.js";
-import {
-  resolveEffectiveCoreEngineError,
-  summarizeStreamError,
-} from "@executor/core-engine/CoreEngineError.js";
-import { collectFinalAssistantMessageFromUiStream } from "@executor/core-engine/CoreEngineUiStreamCollector.js";
-import { CoreEngineMessageState } from "@executor/core-engine/CoreEngineMessageState.js";
-import {
-  buildOpenAIResponsesProviderOptions,
-} from "@executor/messages/SessionMessageCodec.js";
-import { logAssistantMessageNow } from "@executor/messages/SessionMessageLog.js";
+import { ExecutorInflightService } from "@executor/services/ExecutorInflightService.js";
+import { ExecutorRecoveryPolicy } from "@executor/services/ExecutorRecoveryPolicy.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import type {
   SessionExecuteInput,
-  SessionRunInput,
   SessionRunResult,
 } from "@/executor/types/SessionRun.js";
-import { generateId } from "@/utils/Id.js";
-
-/**
- * 可压缩错误的最大重试次数。
- */
-const MAX_COMPACTION_RETRY_ATTEMPTS = 3;
 
 type ExecutorOptions = {
   /**
@@ -134,9 +103,11 @@ export class Executor implements SessionExecutor {
   private readonly systemComposer: SessionSystemComposer;
   protected readonly contextComposer: SessionContextComposer;
   private readonly historyWriter: SessionHistoryWriter;
+  private readonly inflight_service: ExecutorInflightService;
+  private readonly recovery_policy: ExecutorRecoveryPolicy;
+  private readonly core_engine_runner: CoreEngineRunner;
 
   private executing = false;
-  private retryCount = 0;
 
   constructor(options: ExecutorOptions) {
     const sessionId = String(options.sessionId || "").trim();
@@ -162,6 +133,24 @@ export class Executor implements SessionExecutor {
       sessionId,
       getHistoryStore: () => this.getHistoryStore(),
       runAfterSessionUpdated: options.runAfterSessionUpdated,
+    });
+    this.inflight_service = new ExecutorInflightService({
+      session_id: this.sessionId,
+      history_store: this.historyStore,
+      run_after_session_updated_async: async () =>
+        await this.afterSessionUpdatedAsync(),
+    });
+    this.recovery_policy = new ExecutorRecoveryPolicy({
+      compaction_composer: this.compactionComposer,
+      context_composer: this.contextComposer,
+      logger: this.logger,
+    });
+    this.core_engine_runner = new CoreEngineRunner({
+      history_store: this.historyStore,
+      context_composer: this.contextComposer,
+      logger: this.logger,
+      should_compact_on_error: (error) =>
+        this.compactionComposer.shouldCompactOnError(error),
     });
   }
 
@@ -228,56 +217,6 @@ export class Executor implements SessionExecutor {
   }
 
   /**
-   * 把 step/tool 过程增量写入当前运行中的 assistant 快照。
-   */
-  private async appendAssistantStepPartsToInflight(
-    parts: SessionMessageV1["parts"],
-  ): Promise<void> {
-    const normalized_parts = Array.isArray(parts)
-      ? parts.filter((part) => part && typeof part === "object")
-      : [];
-    if (normalized_parts.length === 0) return;
-
-    const current_inflight = await this.historyStore.readInflight();
-    const next_message: SessionMessageV1 = current_inflight
-      ? {
-          ...current_inflight,
-          metadata: {
-            ...(current_inflight.metadata || {
-              v: 1 as const,
-              ts: Date.now(),
-              sessionId: this.sessionId,
-            }),
-            ts: Date.now(),
-            sessionId: this.sessionId,
-            source: "egress",
-            kind: "normal",
-          },
-          parts: [
-            ...(Array.isArray(current_inflight.parts)
-              ? current_inflight.parts
-              : []),
-            ...normalized_parts,
-          ],
-        }
-      : {
-          id: `a:${this.sessionId}:${generateId()}`,
-          role: "assistant",
-          metadata: {
-            v: 1,
-            ts: Date.now(),
-            sessionId: this.sessionId,
-            source: "egress",
-            kind: "normal",
-          },
-          parts: normalized_parts,
-        };
-
-    await this.historyStore.writeInflight(next_message);
-    await this.afterSessionUpdatedAsync();
-  }
-
-  /**
    * 运行当前 session 的一次请求。
    *
    * 关键点（中文）
@@ -286,9 +225,7 @@ export class Executor implements SessionExecutor {
    */
   async run(params: {
     query: string;
-    onStepCallback?: SessionRunScope["onStepCallback"];
-    onAssistantStepCallback?: SessionRunScope["onAssistantStepCallback"];
-    onUiMessageChunkCallback?: SessionRunScope["onUiMessageChunkCallback"];
+    runContext?: SessionRunContext;
   }): Promise<SessionRunResult> {
     if (this.executing) {
       // 关键点（中文）：同一个 Session 实例只允许一个活跃 run，
@@ -296,19 +233,9 @@ export class Executor implements SessionExecutor {
       throw new Error("Executor.run does not support concurrent execution");
     }
     const query = String(params.query || "").trim();
-    const sessionRunScope: Omit<SessionRunScope, "sessionId"> = {
-      ...(typeof params.onStepCallback === "function"
-        ? { onStepCallback: params.onStepCallback }
-        : {}),
-      ...(typeof params.onAssistantStepCallback === "function"
-        ? { onAssistantStepCallback: params.onAssistantStepCallback }
-        : {}),
-      ...(typeof params.onUiMessageChunkCallback === "function"
-        ? { onUiMessageChunkCallback: params.onUiMessageChunkCallback }
-        : {}),
-    };
+    const run_context = this.createRunContext(params.runContext);
     const providedOnAssistantStepCallback =
-      sessionRunScope.onAssistantStepCallback;
+      run_context.onAssistantStepCallback;
 
     const wrappedOnAssistantStepCallback = async (step: {
       text: string;
@@ -323,73 +250,55 @@ export class Executor implements SessionExecutor {
         visibility: step.visibility,
       });
       if (step_parts.length > 0) {
-        await this.appendAssistantStepPartsToInflight(step_parts);
+        await this.inflight_service.append_assistant_step_parts(step_parts);
       }
 
       if (typeof providedOnAssistantStepCallback === "function") {
         await providedOnAssistantStepCallback(step);
       }
     };
+    run_context.onAssistantStepCallback = wrappedOnAssistantStepCallback;
 
     this.executing = true;
-    this.resetRunState();
+    this.recovery_policy.reset_run_state();
     try {
       const result = await withSessionRunScope(
         {
-          sessionId: this.sessionId,
-          ...sessionRunScope,
-          onAssistantStepCallback: wrappedOnAssistantStepCallback,
+          runContext: run_context,
         },
-        () => this.runWithRetry({ query }),
+        async () =>
+          await this.recovery_policy.run_with_retry({
+            query,
+            model: this.resolveModelOrThrow(),
+            run_context,
+            prepare_execute_input: async ({
+              query: next_query,
+              model,
+              run_context: next_run_context,
+              retry_count,
+            }) =>
+              await this.prepareExecuteInput(
+                next_query,
+                model,
+                next_run_context,
+                retry_count,
+              ),
+            execute_prepared_run: async ({
+              execute_input,
+              model,
+              run_context: next_run_context,
+            }) =>
+              await this.executePreparedRun(
+                execute_input,
+                model,
+                next_run_context,
+              ),
+          }),
       );
       return result;
     } finally {
-      this.resetRunState();
+      this.recovery_policy.reset_run_state();
       this.executing = false;
-    }
-  }
-
-  /**
-   * 执行一次 session run（带可压缩错误重试）。
-   */
-  private async runWithRetry(input: SessionRunInput): Promise<SessionRunResult> {
-    const model = this.resolveModelOrThrow();
-    try {
-      const query = String(input.query || "").trim();
-      const prepared = await this.prepareExecuteInput(query, model);
-      return await this.executePreparedRun(prepared, model);
-    } catch (error) {
-      if (this.compactionComposer.shouldCompactOnError(error)) {
-        await this.logger.log("info", "[agent] compacting", {
-          retryCount: this.retryCount,
-          error: String(error),
-        });
-
-        if (this.retryCount < MAX_COMPACTION_RETRY_ATTEMPTS) {
-          this.retryCount += 1;
-          return this.runWithRetry(input);
-        }
-
-        return {
-          success: false,
-          error: "Context length exceeded and retries failed. Please resend your question.",
-          assistantMessage: this.contextComposer.buildFallbackAssistantMessage(
-            "Context length exceeded and retries failed. Please resend your question.",
-          ),
-        };
-      }
-
-      const errorMsg = String(error);
-      await this.logger.log("error", "Executor execution failed", {
-        error: errorMsg,
-      });
-      return {
-        success: false,
-        error: errorMsg,
-        assistantMessage: this.contextComposer.buildFallbackAssistantMessage(
-          `Execution failed: ${errorMsg}`,
-        ),
-      };
     }
   }
 
@@ -399,19 +308,21 @@ export class Executor implements SessionExecutor {
   private async prepareExecuteInput(
     query: string,
     model: LanguageModel,
+    run_context: SessionRunContext,
+    retry_count: number,
   ): Promise<SessionExecuteInput> {
     if (!String(this.historyComposer.sessionId || "").trim()) {
       throw new Error("Executor.run requires historyComposer.sessionId");
     }
 
-    const runContext = await this.contextComposer.compose();
-    const tools = runContext.tools;
-    const system = await this.systemComposer.resolve();
+    const composed_context = await this.contextComposer.compose(run_context);
+    const tools = composed_context.tools;
+    const system = await this.systemComposer.resolve(run_context);
 
     try {
-      if (this.retryCount > 0) {
+      if (retry_count > 0) {
         await this.logger.log("info", "[agent] compacting", {
-          retryCount: this.retryCount,
+          retryCount: retry_count,
         });
       }
 
@@ -419,7 +330,7 @@ export class Executor implements SessionExecutor {
         historyStore: this.historyStore,
         model,
         system,
-        retryCount: this.retryCount,
+        retryCount: retry_count,
       });
     } catch {
       // 压缩失败不阻断主流程，继续使用当前历史消息执行。
@@ -430,7 +341,7 @@ export class Executor implements SessionExecutor {
       tools,
       system,
       model,
-      retryCount: this.retryCount,
+      retryCount: retry_count,
     });
 
     return {
@@ -447,286 +358,41 @@ export class Executor implements SessionExecutor {
   private async executePreparedRun(
     input: SessionExecuteInput,
     model: LanguageModel,
+    run_context: SessionRunContext,
   ): Promise<SessionRunResult> {
-    return await this.runCoreEngine(input, model);
+    return await this.core_engine_runner.run({
+      execute_input: input,
+      model,
+      run_context,
+    });
   }
 
   /**
-   * 运行模型/tool-loop 核心。
-   *
-   * 关键点（中文）
-   * - CoreEngine 是 Executor 内部机制，不是第二个 Executor 实例。
-   * - 这里只返回最终 assistant message；是否写入长期 history 由外层 Session/Service 决定。
-   * - 运行中生成的内部续写 user message 只进入本轮内存态，不直接落盘。
+   * 归一化本轮显式运行上下文。
    */
-  private async runCoreEngine(
-    input: SessionExecuteInput,
-    model: LanguageModel,
-  ): Promise<SessionRunResult> {
-    const startTime = Date.now();
-    const sessionId = String(this.historyStore.sessionId || "").trim();
-    const system = Array.isArray(input.system) ? input.system : [];
-    const tools = input.tools;
-    let lastObservedStreamError: unknown = undefined;
-
-    try {
-      const messageState = await CoreEngineMessageState.create({
-        messages: input.messages,
-        tools,
-      });
-
-      const appendMergedUserMessages = (messages: SessionMessageV1[]) =>
-        messageState.appendMergedUserMessages(messages);
-
-      const contextComposerOnStepFinish =
-        this.contextComposer.createOnStepFinishHandler();
-      let stepCount = 0;
-      let totalToolCallCount = 0;
-      let totalToolResultCount = 0;
-      const onStepFinish = async (stepResult: unknown): Promise<void> => {
-        stepCount += 1;
-        const summary = summarizeStepForDebug(stepResult);
-        totalToolCallCount +=
-          typeof summary.toolCallCount === "number" ? summary.toolCallCount : 0;
-        totalToolResultCount +=
-          typeof summary.toolResultCount === "number"
-            ? summary.toolResultCount
-            : 0;
-        await this.logger.log("info", "[agent] step.finish", {
-          sessionId,
-          stepIndex: stepCount,
-          ...summary,
-        });
-        await contextComposerOnStepFinish(stepResult);
-      };
-
-      const prepareStep = this.contextComposer.createPrepareStepHandler({
-        system,
-        appendMergedUserMessages,
-      });
-
-      let finalAssistantUiMessage: SessionMessageV1 | null = null;
-      let textOnlyContinuationCount = 0;
-      let incompleteResponseRecoveryCount = 0;
-
-      while (stepCount < MAX_TOOL_LOOP_STEPS) {
-        const result = streamText({
-          model,
-          system,
-          onStepFinish,
-          prepareStep,
-          messages: messageState.modelMessages,
-          tools,
-          providerOptions: buildOpenAIResponsesProviderOptions(),
-          onError: async ({ error }) => {
-            lastObservedStreamError = error;
-            await this.logger.log("error", "[agent] stream.error", {
-              sessionId,
-              ...summarizeStreamError(error),
-            });
-          },
-        });
-
-        const stepAssistantUiMessage = await collectFinalAssistantMessageFromUiStream({
-          result,
-          sessionId,
-          logger: this.logger,
-          buildFallbackAssistantMessage: (text) =>
-            this.contextComposer.buildFallbackAssistantMessage(text),
-        });
-
-        const executedSteps = await result.steps;
-        const lastStep = executedSteps[executedSteps.length - 1];
-        if (!lastStep) break;
-
-        const incompleteResponse = detectIncompleteResponse({
-          stepResult: lastStep,
-          assistantMessage: stepAssistantUiMessage,
-        });
-        const textOnlyContinuationReason =
-          detectTextOnlyContinuationReason(lastStep);
-        const loopDecision = evaluateCoreEngineLoopDecision({
-          hasIncompleteResponse: incompleteResponse !== null,
-          incompleteRecoveryCount: incompleteResponseRecoveryCount,
-          maxIncompleteRecoveries: MAX_INCOMPLETE_RESPONSE_RECOVERIES,
-          textOnlyContinuationReason,
-          textOnlyContinuationCount,
-          maxTextOnlyContinuations: MAX_TEXT_ONLY_CONTINUATIONS,
-          hasTools: Object.keys(tools).length > 0,
-          toolCallCount: lastStep.toolCalls.length,
-        });
-
-        await this.logger.log("info", "[agent] loop.decision", {
-          sessionId,
-          stepIndex: stepCount,
-          continueForToolCalls: loopDecision.continueForToolCalls,
-          continueForTextOnly: loopDecision.continueForTextOnly,
-          continueForIncompleteRecovery:
-            loopDecision.continueForIncompleteRecovery,
-          decisionKind: loopDecision.kind,
-          textOnlyContinuationReason,
-          textOnlyContinuationCount,
-          incompleteResponseReason: incompleteResponse?.reason ?? null,
-          incompleteResponseRecoveryCount,
-          toolCallCount: lastStep.toolCalls.length,
-          toolResultCount: lastStep.toolResults.length,
-          finishReason: lastStep.finishReason,
-          textPreview: toInlinePreview(lastStep.text),
-        });
-
-        if (loopDecision.continueForIncompleteRecovery && incompleteResponse) {
-          incompleteResponseRecoveryCount += 1;
-          await this.logger.log("warn", "[agent] incomplete_response.recover", {
-            sessionId,
-            stepIndex: stepCount,
-            recoveryCount: incompleteResponseRecoveryCount,
-            reason: incompleteResponse.reason,
-            ...incompleteResponse.details,
-          });
-          const recoveryMessage = this.historyStore.userText({
-            text: buildIncompleteResponseRecoveryNudge(
-              incompleteResponseRecoveryCount,
-            ),
-            metadata: {
-              sessionId,
-              extra: {
-                internal: "agent_incomplete_response_recover",
-                reason: incompleteResponse.reason,
-                stepIndex: stepCount,
-              },
-            },
-          });
-          await messageState.appendUserTextMessage(recoveryMessage);
-          continue;
-        }
-
-        if (incompleteResponse) {
-          await this.logger.log("error", "[agent] incomplete_response", {
-            sessionId,
-            stepIndex: stepCount,
-            reason: incompleteResponse.reason,
-            recoveryCount: incompleteResponseRecoveryCount,
-            ...incompleteResponse.details,
-          });
-          throw new Error(
-            `Agent received incomplete response (${incompleteResponse.reason})`,
-          );
-        }
-
-        const responseMessages = Array.isArray(lastStep.response?.messages)
-          ? lastStep.response.messages
-          : [];
-        messageState.appendModelMessages(responseMessages);
-
-        finalAssistantUiMessage = mergeAssistantUiMessages(
-          finalAssistantUiMessage,
-          stepAssistantUiMessage,
-        );
-
-        // 关键点（中文）：把本 step 的 assistant UI 消息并入运行时上下文，保证后续全量重算不丢历史。
-        messageState.appendRuntimeSessionMessage(stepAssistantUiMessage);
-
-        if (loopDecision.continueForToolCalls) {
-          textOnlyContinuationCount = 0;
-          incompleteResponseRecoveryCount = 0;
-          continue;
-        }
-
-        if (loopDecision.continueForTextOnly) {
-          textOnlyContinuationCount += 1;
-          incompleteResponseRecoveryCount = 0;
-          const continuationMessage = this.historyStore.userText({
-            text: buildTextOnlyContinuationNudge(textOnlyContinuationCount),
-            metadata: {
-              sessionId,
-              extra: {
-                internal: "agent_loop_auto_continue",
-                reason: textOnlyContinuationReason,
-                stepIndex: stepCount,
-              },
-            },
-          });
-          await messageState.appendUserTextMessage(continuationMessage);
-          continue;
-        }
-
-        // 关键点（中文）：stop 前做 tail merge，覆盖最后一个 step 后才入队的新 user 消息。
-        const tailPrepared = await prepareStep({ messages: [] });
-        const tailMergedMessageCount = Array.isArray(tailPrepared.messages)
-          ? tailPrepared.messages.length
-          : 0;
-        if (
-          shouldContinueForTailMergedUserMessages({
-            mergedUserMessageCount: tailMergedMessageCount,
-          })
-        ) {
-          textOnlyContinuationCount = 0;
-          incompleteResponseRecoveryCount = 0;
-          await this.logger.log("info", "[agent] loop.tail_merge_continue", {
-            sessionId,
-            stepIndex: stepCount,
-            mergedUserMessageCount: tailMergedMessageCount,
-          });
-          continue;
-        }
-
-        break;
-      }
-
-      if (stepCount >= MAX_TOOL_LOOP_STEPS) {
-        await this.logger.log("warn", "[agent] loop.max_steps_reached", {
-          sessionId,
-          stepCount,
-          totalToolCallCount,
-          totalToolResultCount,
-        });
-      }
-
-      const finalMessage =
-        finalAssistantUiMessage ||
-        this.contextComposer.buildFallbackAssistantMessage("Execution completed");
-
-      await this.logger.log("info", "[agent] final.message", {
-        sessionId,
-        ...summarizeUiMessageForDebug(finalMessage),
-      });
-      await logAssistantMessageNow(this.logger, finalMessage);
-
-      const duration = Date.now() - startTime;
-      await this.logger.log("info", "[agent] finish", {
-        sessionId,
-        duration,
-        stepCount,
-        totalToolCallCount,
-        totalToolResultCount,
-      });
-
-      return {
-        success: true,
-        assistantMessage: finalMessage,
-      };
-    } catch (error) {
-      if (this.compactionComposer.shouldCompactOnError(error)) {
-        throw error;
-      }
-
-      const errorMsg = resolveEffectiveCoreEngineError({
-        error,
-        streamError: lastObservedStreamError,
-      });
-
-      await this.logger.log("error", "CoreEngine execution failed", {
-        error: errorMsg,
-      });
-
-      return {
-        success: false,
-        error: errorMsg,
-        assistantMessage: this.contextComposer.buildFallbackAssistantMessage(
-          `Execution failed: ${errorMsg}`,
-        ),
-      };
-    }
+  private createRunContext(
+    input?: SessionRunContext,
+  ): SessionRunContext {
+    return {
+      sessionId: String(input?.sessionId || this.sessionId).trim(),
+      ...(typeof input?.onStepCallback === "function"
+        ? { onStepCallback: input.onStepCallback }
+        : {}),
+      ...(typeof input?.onAssistantStepCallback === "function"
+        ? { onAssistantStepCallback: input.onAssistantStepCallback }
+        : {}),
+      ...(typeof input?.onUiMessageChunkCallback === "function"
+        ? { onUiMessageChunkCallback: input.onUiMessageChunkCallback }
+        : {}),
+      injectedUserMessages: Array.isArray(input?.injectedUserMessages)
+        ? [...input.injectedUserMessages]
+        : [],
+      deferredPersistedUserMessages: Array.isArray(
+        input?.deferredPersistedUserMessages,
+      )
+        ? [...input.deferredPersistedUserMessages]
+        : [],
+    };
   }
 
   /**
@@ -740,12 +406,5 @@ export class Executor implements SessionExecutor {
       );
     }
     return model;
-  }
-
-  /**
-   * 重置当前 run 级状态。
-   */
-  private resetRunState(): void {
-    this.retryCount = 0;
   }
 }

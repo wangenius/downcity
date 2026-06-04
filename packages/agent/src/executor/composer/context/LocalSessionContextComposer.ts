@@ -8,10 +8,6 @@
 
 import type { ModelMessage } from "ai";
 import { generateId } from "@/utils/Id.js";
-import {
-  drainInjectedUserMessages,
-  getSessionRunScope,
-} from "@executor/SessionRunScope.js";
 import type {
   SessionContextComposer,
   SessionContextComposeResult,
@@ -19,6 +15,7 @@ import type {
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { Tool } from "ai";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 type LocalSessionContextComposerOptions = {
   /**
@@ -45,18 +42,17 @@ export class LocalSessionContextComposer implements SessionContextComposer {
     this.getTools = options.getTools;
   }
 
-  async compose(): Promise<SessionContextComposeResult> {
+  async compose(
+    run_context: SessionRunContext,
+  ): Promise<SessionContextComposeResult> {
     const tools = this.getTools();
-    const ctx = getSessionRunScope();
-    const sessionId = String(ctx?.sessionId || this.sessionId || "").trim();
+    const sessionId = String(
+      run_context.sessionId || this.sessionId || "",
+    ).trim();
     if (!sessionId) {
       throw new Error(
-        "LocalSessionContextComposer.compose requires a sessionId from sessionRunScope or options.sessionId",
+        "LocalSessionContextComposer.compose requires a non-empty sessionId",
       );
-    }
-    // 关键点（中文）：sessionId 统一回填到请求上下文，后续组件直接读取。
-    if (ctx && typeof ctx === "object") {
-      if (!ctx.sessionId) ctx.sessionId = sessionId;
     }
     return {
       tools,
@@ -69,6 +65,7 @@ export class LocalSessionContextComposer implements SessionContextComposer {
       appendMergedUserMessages: (
         messages: SessionMessageV1[],
       ) => Promise<ModelMessage[]>;
+      runContext: SessionRunContext;
     },
   ): (input: { messages?: ModelMessage[] }) => Promise<{
     system: SessionSystemMessage[];
@@ -82,8 +79,9 @@ export class LocalSessionContextComposer implements SessionContextComposer {
       system: SessionSystemMessage[];
       messages?: ModelMessage[];
     }> => {
-      const injectedMessages = drainInjectedUserMessages();
-      const onStepCallback = getSessionRunScope()?.onStepCallback;
+      const injectedMessages = [...input.runContext.injectedUserMessages];
+      input.runContext.injectedUserMessages = [];
+      const onStepCallback = input.runContext.onStepCallback;
       if (
         typeof onStepCallback !== "function" &&
         injectedMessages.length === 0
@@ -120,8 +118,10 @@ export class LocalSessionContextComposer implements SessionContextComposer {
     };
   }
 
-  createOnStepFinishHandler(): (stepResult: unknown) => Promise<void> {
-    const onAssistantStepCallback = getSessionRunScope()?.onAssistantStepCallback;
+  createOnStepFinishHandler(
+    run_context: SessionRunContext,
+  ): (stepResult: unknown) => Promise<void> {
+    const onAssistantStepCallback = run_context.onAssistantStepCallback;
     let assistantStepIndex = 0;
     return async (stepResult: unknown): Promise<void> => {
       const step = stepResult as { text?: unknown };
@@ -144,12 +144,16 @@ export class LocalSessionContextComposer implements SessionContextComposer {
   /**
    * 构造 fallback assistant 消息。
    */
-  buildFallbackAssistantMessage(text: string): SessionMessageV1 {
-    const ctx = getSessionRunScope();
-    const sessionId = String(ctx?.sessionId || this.sessionId || "").trim();
+  buildFallbackAssistantMessage(
+    text: string,
+    run_context: SessionRunContext,
+  ): SessionMessageV1 {
+    const sessionId = String(
+      run_context.sessionId || this.sessionId || "",
+    ).trim();
     if (!sessionId) {
       throw new Error(
-        "LocalSessionContextComposer.buildFallbackAssistantMessage requires a sessionId from sessionRunScope or options.sessionId",
+        "LocalSessionContextComposer.buildFallbackAssistantMessage requires a non-empty sessionId",
       );
     }
     return {

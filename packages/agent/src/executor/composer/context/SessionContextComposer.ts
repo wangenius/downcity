@@ -9,6 +9,7 @@
 import type { ModelMessage, Tool } from "ai";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 /**
  * 本轮运行上下文组装输出。
@@ -32,7 +33,7 @@ export interface SessionContextComposer {
   /**
    * 组装一次 run 所需上下文。
    */
-  compose(): Promise<SessionContextComposeResult>;
+  compose(run_context: SessionRunContext): Promise<SessionContextComposeResult>;
 
   /**
    * 构造 prepareStep 回调。
@@ -49,6 +50,10 @@ export interface SessionContextComposer {
       appendMergedUserMessages: (
         messages: SessionMessageV1[],
       ) => Promise<ModelMessage[]>;
+      /**
+       * 当前显式运行上下文。
+       */
+      runContext: SessionRunContext;
     },
   ): (input: { messages?: ModelMessage[] }) => Promise<{
     system: SessionSystemMessage[];
@@ -58,7 +63,9 @@ export interface SessionContextComposer {
   /**
    * 构造 onStepFinish 回调。
    */
-  createOnStepFinishHandler(): (stepResult: unknown) => Promise<void>;
+  createOnStepFinishHandler(
+    run_context: SessionRunContext,
+  ): (stepResult: unknown) => Promise<void>;
 
   /**
    * 构造 fallback assistant 消息。
@@ -66,5 +73,8 @@ export interface SessionContextComposer {
    * 关键点（中文）
    * - fallback 消息构造由 ContextComposer 内部实现，Executor 不直接依赖 history Composer。
    */
-  buildFallbackAssistantMessage(text: string): SessionMessageV1;
+  buildFallbackAssistantMessage(
+    text: string,
+    run_context: SessionRunContext,
+  ): SessionMessageV1;
 }

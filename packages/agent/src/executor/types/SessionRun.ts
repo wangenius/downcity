@@ -9,7 +9,9 @@
 
 import type { Tool, UIMessageChunk } from "ai";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 /**
  * Assistant step 可见性。
@@ -94,6 +96,15 @@ export interface SessionRunResult {
    * 最终 assistant 消息。
    */
   assistantMessage: SessionMessageV1;
+
+  /**
+   * 本轮执行结束后待写入长期历史的 user 消息。
+   *
+   * 关键点（中文）
+   * - 这些消息通常由 tool 运行时在执行过程中动态注入。
+   * - 为保证消息顺序稳定，统一在 assistant 结果落盘后再由外层 Session 持久化。
+   */
+  deferredPersistedUserMessages?: SessionUserMessageV1[];
 }
 
 /**
@@ -104,6 +115,15 @@ export interface SessionRunInput {
    * 本轮用户输入查询文本。
    */
   query: string;
+
+  /**
+   * 本轮显式运行上下文。
+   *
+   * 关键点（中文）
+   * - 这里承载 step 合并、UI chunk 回调等跨组件运行期数据。
+   * - 若未传入，则由执行器按最小默认值兜底创建。
+   */
+  runContext?: SessionRunContext;
 }
 
 /**

@@ -8,12 +8,12 @@
  */
 
 import type { SessionSystemComposer } from "@executor/composer/system/SessionSystemComposer.js";
-import { getSessionRunScope } from "@executor/SessionRunScope.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type {
   AgentSessionSystemBlock,
   AgentSessionSystemSessionInfo,
 } from "@/types/agent/AgentTypes.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 /**
  * 解析 SDK session system blocks 的输入。
@@ -240,8 +240,8 @@ export class SessionSystemBuilder implements SessionSystemComposer {
   /**
    * 解析本轮 SDK session system messages。
    */
-  async resolve() {
-    const sessionId = String(getSessionRunScope()?.sessionId || "").trim();
+  async resolve(run_context: SessionRunContext) {
+    const sessionId = String(run_context.sessionId || "").trim();
     if (!sessionId) {
       throw new Error("SessionSystemBuilder.resolve requires a non-empty sessionId");
     }

@@ -34,6 +34,14 @@ export interface ComposeCityBalanceOptions {
  * Edge CityBase 装配参数。
  */
 export interface ComposeCityBaseOptions extends CityBaseOptions {
+  /** Drizzle database 对象。 */
+  db: CityBaseOptions["db"];
+  /** 数据库方言。 */
+  dialect?: CityBaseOptions["dialect"];
+  /** 原始数据库实例。 */
+  raw?: CityBaseOptions["raw"];
+  /** 内部运行时能力。 */
+  runtime?: CityBaseOptions["runtime"];
   /** 要注册的模型列表。 */
   models: ModelConfig[];
   /** accounts token ttl。 */

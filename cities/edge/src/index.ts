@@ -54,7 +54,7 @@ async function init_city(env: Env): Promise<CityBase> {
   });
   const luchi_image_provider = createLuchiImageProvider({
     id: "luchi-image",
-    envKey: "LUCHI_IMAGE_ACCESS_TOKEN",
+    envKey: "LUCHI_IMAGE_API_KEY",
     defaultModelId: "gpt-image-2",
   });
   const image_302_provider = createOpenAIImageProvider({
@@ -146,12 +146,12 @@ async function init_city(env: Env): Promise<CityBase> {
     },
   });
 
-  ai.hook.before(async (ctx) => {
+  ai.hook.before(async (ctx: Context) => {
     if (!shouldChargeAgentChat(ctx)) return;
     await balance.require(ctx.user!.user_id, CHAT_COST);
     ctx.locals.balance_amount = CHAT_COST;
   });
-  ai.hook.after(async (ctx) => {
+  ai.hook.after(async (ctx: Context) => {
     if (!shouldChargeAgentChat(ctx)) return;
     if (!isSuccessfulOutput(ctx.output)) return;
 

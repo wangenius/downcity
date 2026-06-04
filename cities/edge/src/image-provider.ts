@@ -117,7 +117,7 @@ export interface GeminiImageProviderOptions {
 export interface LuchiImageProviderOptions {
   /** Provider 唯一 ID。 */
   id: string;
-  /** access token 环境变量。 */
+  /** Luchi 长期 API Key 环境变量。 */
   envKey: string;
   /** Luchi image API base URL。 */
   baseURL?: string;
@@ -147,7 +147,7 @@ export function createOpenAIImageProvider(options: OpenAIImageProviderOptions): 
   const provider_options_key = options.providerOptionsKey ?? "openai";
   return new Provider(options.id, {
     env: { [options.envKey]: `${options.id} API Key` },
-    image: async (ctx) => {
+    image: async (ctx: Context) => {
       const input = normalizeImageActionInput(ctx.input);
       const api_key = readRequiredEnv(ctx, options.envKey);
       const upstream_model = resolveUpstreamModel(ctx, options.defaultModelId);
@@ -187,7 +187,7 @@ export function createGeminiImageProvider(options: GeminiImageProviderOptions): 
   const base_url = options.baseURL ?? "https://generativelanguage.googleapis.com/v1beta";
   return new Provider(options.id, {
     env: { [options.envKey]: `${options.id} API Key` },
-    image: async (ctx) => {
+    image: async (ctx: Context) => {
       const input = normalizeImageActionInput(ctx.input);
       const api_key = readRequiredEnv(ctx, options.envKey);
       const upstream_model = resolveUpstreamModel(ctx, options.defaultModelId);
@@ -224,14 +224,14 @@ export function createGeminiImageProvider(options: GeminiImageProviderOptions): 
  */
 export function createLuchiImageProvider(options: LuchiImageProviderOptions): Provider {
   const base_url = options.baseURL ?? "https://image.luchikey.com";
-  const poll_interval_ms = options.pollIntervalMs ?? 1000;
+  const poll_interval_ms = options.pollIntervalMs ?? 3000;
   const max_polls = options.maxPolls ?? 60;
 
   return new Provider(options.id, {
-    env: { [options.envKey]: `${options.id} Access Token` },
-    image: async (ctx) => {
+    env: { [options.envKey]: `${options.id} API Key` },
+    image: async (ctx: Context) => {
       const input = normalizeImageActionInput(ctx.input);
-      const access_token = readRequiredEnv(ctx, options.envKey);
+      const api_key = readRequiredEnv(ctx, options.envKey);
       const upstream_model = resolveUpstreamModel(ctx, options.defaultModelId);
       const provider_options = readProviderOptions(input, "luchi");
       const reference_images = extractReferenceImages(input);
@@ -253,9 +253,9 @@ export function createLuchiImageProvider(options: LuchiImageProviderOptions): Pr
         ? createLuchiEditFormData(body, reference_images)
         : JSON.stringify(body);
       const create_headers: Record<string, string> = has_reference_images
-        ? { "Authorization": `Bearer ${access_token}` }
+        ? { "Authorization": `Bearer ${api_key}` }
         : {
-            "Authorization": `Bearer ${access_token}`,
+            "Authorization": `Bearer ${api_key}`,
             "Content-Type": "application/json",
           };
 
@@ -271,7 +271,7 @@ export function createLuchiImageProvider(options: LuchiImageProviderOptions): Pr
       }
       const finished = await pollLuchiJob({
         base_url,
-        access_token,
+        api_key,
         job_id,
         poll_interval_ms,
         max_polls,
@@ -542,7 +542,7 @@ function buildImageMessage(
 
 async function pollLuchiJob(params: {
   base_url: string;
-  access_token: string;
+  api_key: string;
   job_id: string;
   poll_interval_ms: number;
   max_polls: number;
@@ -552,7 +552,7 @@ async function pollLuchiJob(params: {
     const response = await fetch(`${trimTrailingSlash(params.base_url)}/api/relay/image-jobs/${encodeURIComponent(params.job_id)}`, {
       method: "GET",
       headers: {
-        "Authorization": `Bearer ${params.access_token}`,
+        "Authorization": `Bearer ${params.api_key}`,
       },
     });
     const data = await readJsonResponse(response);

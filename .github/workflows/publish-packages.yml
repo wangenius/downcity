@@ -7,7 +7,8 @@ on:
     paths:
       - ".github/scripts/resolve-publish-matrix.mjs"
       - ".github/workflows/publish-packages.yml"
-      - "packages/*/package.json"
+      - "packages/**"
+      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 concurrency:
@@ -16,7 +17,7 @@ concurrency:
 
 jobs:
   detect:
-    name: Detect version bumps
+    name: Resolve publish candidates
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.detect.outputs.matrix }}
@@ -27,19 +28,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch comparison baseline
-        env:
-          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [ -z "${GITHUB_EVENT_BEFORE:-}" ] || [ "$GITHUB_EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            exit 0
-          fi
-
-          git fetch --no-tags --depth=1 origin "$GITHUB_EVENT_BEFORE"
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -47,8 +35,6 @@ jobs:
 
       - name: Resolve publish matrix
         id: detect
-        env:
-          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: node .github/scripts/resolve-publish-matrix.mjs
 
   publish:
@@ -77,10 +63,30 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
+      - name: Check published version
+        id: version
+        env:
+          PACKAGE_NAME: ${{ matrix.name }}
+          PACKAGE_VERSION: ${{ matrix.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "${PACKAGE_NAME}@${PACKAGE_VERSION} already exists, skipping publish"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "${PACKAGE_NAME}@${PACKAGE_VERSION} is not published yet"
+          echo "should_publish=true" >> "$GITHUB_OUTPUT"
+
       - name: Install workspace dependencies
+        if: steps.version.outputs.should_publish == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Validate npm token and package ownership
+        if: steps.version.outputs.should_publish == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PACKAGE_NAME: ${{ matrix.name }}
@@ -100,9 +106,11 @@ jobs:
           fi
 
       - name: Build workspace packages
+        if: steps.version.outputs.should_publish == 'true'
         run: pnpm -r --filter './packages/*' build
 
       - name: Run package tests
+        if: steps.version.outputs.should_publish == 'true'
         env:
           PACKAGE_PATH: ${{ matrix.path }}
         shell: bash
@@ -118,6 +126,7 @@ jobs:
           fi
 
       - name: Check version and publish
+        if: steps.version.outputs.should_publish == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PACKAGE_NAME: ${{ matrix.name }}

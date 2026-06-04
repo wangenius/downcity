@@ -40,5 +40,11 @@ export class EnvService extends Service {
       const entries = await this._env!.import(ctx.input.raw);
       return { success: true, count: entries.length, keys: entries.map((e) => e.key) };
     }, { auth: ["admin"] });
+
+    this.action("refresh", async () => {
+      await this._env!.refresh();
+      const items = await this._env!.list();
+      return { success: true, count: items.length };
+    }, { auth: ["admin"] });
   }
 }

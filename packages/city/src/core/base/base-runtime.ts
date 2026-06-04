@@ -72,7 +72,7 @@ function extract_db_client(db: { $client?: unknown }): DbClient {
  *
  * 关键说明（中文）
  * - City 把所有系统与业务 env 统一托管到 env 表
- * - 运行时通过内存 cache 加速读取，每次请求前 refresh 保证最新视图
+ * - 运行时通过内存 cache 加速读取，管理端修改或显式 refresh 时更新视图
  */
 class DatabaseEnvProvider implements EnvProvider {
   private store?: EnvStore;

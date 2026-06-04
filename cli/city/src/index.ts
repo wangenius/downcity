@@ -18,6 +18,7 @@ import { createVersionBanner } from "./shared/IndexSupport.js";
 import { setCliVerbosity } from "./shared/CliReporter.js";
 import { deployCityProject } from "./deploy/commands/deploy.js";
 import { createCityProject } from "./create/commands/create.js";
+import { refreshEnvCache } from "./env/commands/refresh.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -79,6 +80,19 @@ program
     },
   ) => {
     await deployCityProject(source ?? ".", options);
+  }));
+
+const env_program = program
+  .command("env")
+  .description("管理当前 City 的环境变量运行态能力")
+  .helpOption("--help", "display help for command");
+
+env_program
+  .command("refresh")
+  .description("刷新当前 City runtime env cache")
+  .helpOption("--help", "display help for command")
+  .action(createVersionBanner(packageJson.version, async () => {
+    await refreshEnvCache();
   }));
 
 program.showHelpAfterError();

@@ -53,9 +53,9 @@ export function build_city_router(params: {
 
   app.use("/v1/*", async (c, next) => {
     // 关键说明（中文）
-    // City env 支持运行时动态更新，因此每次请求前先 refresh，
-    // 避免常驻进程读到旧的 provider key 或回调配置。
-    await runtime.env.refresh();
+    // City env 默认读取运行时内存 cache。
+    // 管理端通过 /v1/env/upsert、/remove、/import 修改 env 时会自动更新当前 cache；
+    // 如果直接改数据库，可通过 /v1/env/refresh 或 city CLI 手动刷新。
     sync_request_origin(services, new URL(c.req.raw.url).origin);
     const result = await authenticator.resolve(c.req.raw);
     c.set("identity", { kind: result.level });

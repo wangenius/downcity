@@ -5,7 +5,12 @@
  */
 
 import type { RequestInitLike } from "../../http.js";
-import type { EnvCatalogScope, EnvEntry, EnvUpsertInput } from "./types.js";
+import type {
+  EnvCatalogScope,
+  EnvEntry,
+  EnvRefreshResult,
+  EnvUpsertInput,
+} from "./types.js";
 
 const PREFIX = "/v1/env";
 
@@ -52,6 +57,14 @@ export class EnvInvoker {
     return this.req(`${PREFIX}/remove`, {
       method: "POST",
       body: JSON.stringify({ key }),
+    });
+  }
+
+  /** 主动刷新当前 City runtime 的 env cache */
+  refresh(): Promise<EnvRefreshResult> {
+    return this.req<EnvRefreshResult>(`${PREFIX}/refresh`, {
+      method: "POST",
+      body: JSON.stringify({}),
     });
   }
 

@@ -44,6 +44,7 @@ export async function manageEnv(a: City): Promise<void> {
       { label: "Upsert", value: "__upsert__", hint: "Add or update a key=value" },
       { label: "Update", value: "__update__", hint: "Update an existing key" },
       { label: "Remove", value: "__remove__", hint: "Delete a key" },
+      { label: "Refresh runtime cache", value: "__refresh__", hint: "Reload env cache after direct database edits" },
     ];
 
     if (services) {
@@ -67,6 +68,7 @@ export async function manageEnv(a: City): Promise<void> {
     if (svcId === "__upsert__") { await upsertEnv(a); continue; }
     if (svcId === "__update__") { await updateEnv(a); continue; }
     if (svcId === "__remove__") { await removeEnv(a); continue; }
+    if (svcId === "__refresh__") { await refreshEnv(a); continue; }
 
     if (services) {
       const svc = services.find((s) => s.id === svcId);
@@ -177,6 +179,16 @@ async function removeEnv(a: City): Promise<void> {
   try {
     await a.env.remove(key);
     showSuccess(`removed: ${key}`);
+  } catch (e) {
+    rethrowAdminAuthError(e);
+    showError(adminErrorMessage(e));
+  }
+}
+
+async function refreshEnv(a: City): Promise<void> {
+  try {
+    const result = await a.env.refresh();
+    showSuccess(`env runtime cache refreshed (${result.count} keys)`);
   } catch (e) {
     rethrowAdminAuthError(e);
     showError(adminErrorMessage(e));

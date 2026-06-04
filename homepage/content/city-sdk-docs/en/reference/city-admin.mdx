@@ -232,6 +232,16 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 `);
 ```
 
+### `refresh()`
+
+```ts
+await admin.env.refresh();
+```
+
+When env values are changed through `admin.env.upsert()`, `remove()`, `import()`, or the city CLI, the current Runtime cache is updated automatically.
+
+If you bypass the Admin API and edit the database `env` table directly, call `admin.env.refresh()`, run `city env refresh`, or run `Refresh runtime cache` from the city CLI Env menu.
+
 These changes are written to the `env` table in the City database. Both business env values and system-level secrets are managed from this City-owned table, so you no longer need to patch Worker or Node host env manually.
 
 ## `listServices()` / `listModels()` / `instruction()`

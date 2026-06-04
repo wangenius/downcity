@@ -41,6 +41,21 @@ export interface EnvUpsertInput {
 }
 
 /**
+ * env refresh 结果。
+ */
+export interface EnvRefreshResult {
+  /**
+   * 是否刷新成功。
+   */
+  success: boolean;
+
+  /**
+   * 当前 refresh 后可见的 env 数量。
+   */
+  count: number;
+}
+
+/**
  * 单个 env requirement 的当前状态。
  */
 export interface EnvRequirementStatus {

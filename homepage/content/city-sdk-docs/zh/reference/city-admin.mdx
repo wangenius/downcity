@@ -232,6 +232,16 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 `);
 ```
 
+### `refresh()`
+
+```ts
+await admin.env.refresh();
+```
+
+通过 `admin.env.upsert()`、`remove()`、`import()` 或 city CLI 修改 env 时，当前 Runtime cache 会自动更新。
+
+如果你绕过 Admin API 直接修改数据库里的 `env` 表，需要调用 `admin.env.refresh()`，执行 `city env refresh`，或在 city CLI 的 Env 菜单执行 `Refresh runtime cache`。
+
 这些修改会写入 City 数据库的 `env` 表。业务 env 和系统级 secret 都以 City 这张表为准，不需要再去手动改 Worker / Node 宿主 env。
 
 ## `listServices()` / `listModels()` / `instruction()`

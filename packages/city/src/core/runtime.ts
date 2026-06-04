@@ -40,8 +40,8 @@ export interface EnvProvider {
    * 主动刷新当前 provider 的读取视图。
    *
    * 关键说明（中文）
-   * - City 在每次 HTTP 请求进入时会先调用它
-   * - 这样 Worker 常驻实例也能及时看到别的请求刚写入的 City env
+   * - City 启动时会初始化一次 env cache。
+   * - 管理端直接修改数据库后，可通过 EnvService refresh action 显式刷新。
    */
   refresh(): Promise<void>;
 

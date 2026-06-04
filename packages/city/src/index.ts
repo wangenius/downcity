@@ -83,6 +83,7 @@ export type {
 export { EnvService } from "./service/env/env-service.js";
 export type {
   EnvEntry,
+  EnvRefreshResult,
   EnvUpsertInput,
   EnvRequirementStatus,
   EnvCatalogScope,

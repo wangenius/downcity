@@ -55,12 +55,12 @@ export abstract class BasePlugin implements Plugin {
   /**
    * 插件标题。
    */
-  readonly title = "";
+  readonly title: string = "";
 
   /**
    * 插件说明。
    */
-  readonly description = "";
+  readonly description: string = "";
 
   /**
    * 插件配置定义。

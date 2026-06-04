@@ -182,6 +182,7 @@ export class SessionTurnService {
       },
       injectedUserMessages: [],
       deferredPersistedUserMessages: [],
+      pendingAssistantFileParts: [],
     };
     const result = await this.executor.run({
       query: input.promptInput.query,

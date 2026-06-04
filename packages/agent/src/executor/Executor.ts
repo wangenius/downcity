@@ -392,6 +392,9 @@ export class Executor implements SessionExecutor {
       )
         ? [...input.deferredPersistedUserMessages]
         : [],
+      pendingAssistantFileParts: Array.isArray(input?.pendingAssistantFileParts)
+        ? [...input.pendingAssistantFileParts]
+        : [],
     };
   }
 

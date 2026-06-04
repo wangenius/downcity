@@ -208,6 +208,7 @@ export class SessionViewService<TSession> {
       sessionId: this.session_id,
       injectedUserMessages: [],
       deferredPersistedUserMessages: [],
+      pendingAssistantFileParts: [],
     };
     const messages = await composer.resolve(run_context);
     const blocks: AgentSessionSystemBlock[] = [];

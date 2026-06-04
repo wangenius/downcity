@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { FileUIPart } from "ai";
 import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
@@ -100,4 +101,22 @@ export function drainDeferredPersistedUserMessages(
   const current = [...run_context.deferredPersistedUserMessages];
   run_context.deferredPersistedUserMessages = [];
   return current;
+}
+
+/**
+ * 入队一组“待并入 assistant 消息的 file parts”。
+ */
+export function enqueueAssistantFileParts(parts: FileUIPart[]): void {
+  const run_context = getSessionRunContext();
+  if (!run_context || !Array.isArray(parts) || parts.length === 0) return;
+  run_context.pendingAssistantFileParts.push(...parts);
+}
+
+/**
+ * 读取当前 run 内待并入 assistant 消息的 file parts。
+ */
+export function readPendingAssistantFileParts(): FileUIPart[] {
+  const run_context = getSessionRunContext();
+  if (!run_context) return [];
+  return [...run_context.pendingAssistantFileParts];
 }

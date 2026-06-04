@@ -5,6 +5,85 @@ description: How to inject tools and explicit plugin instances into a local Agen
 
 # tools and plugins
 
+## tools
+
+Local Agents can receive an explicit tool set:
+
+```ts
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  tools: {
+    my_tool: myTool,
+  },
+});
+```
+
+These tools are available during session execution.
+
+## plugins
+
+Local Agents can also receive explicit plugin instances:
+
+```ts
+import { Agent } from "@downcity/agent";
+import { SkillPlugin, WebPlugin } from "@downcity/plugins";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  plugins: [new SkillPlugin(), new WebPlugin()],
+});
+```
+
+Registered plugin actions can be called through `agent.plugins.runAction(...)`, and plugin `system(context)` text is injected into session prompts.
+
+## ImagePlugin
+
+Use `ImagePlugin` when you want an Agent to generate images during a conversation:
+
+```ts
+import { Agent, ImagePlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "creative-agent",
+  path: "/path/to/project",
+  model,
+  plugins: [
+    new ImagePlugin({
+      image: (input) => city.ai.image(input),
+    }),
+  ],
+});
+```
+
+After registration, the Agent automatically gets the built-in `plugin_call` tool. When image generation is needed, the model can call:
+
+```ts
+plugin_call({
+  plugin: "image",
+  action: "generate",
+  payload: {
+    prompt: "A cinematic illustration of a rainy city corner at night",
+    aspect_ratio: "16:9",
+  },
+});
+```
+
+`ImagePlugin` is provider-agnostic. It does not know about City, OpenAI, Gemini, 302.ai, or Luchi directly. It only requires `image(input)` to return an AI SDK `UIMessage`.
+
+Generated images are not left only inside the tool result. The Agent runtime merges generated `file` parts into the final assistant message, so session history stores:
+
+```ts
+{
+  role: "assistant",
+  parts: [
+    { type: "text", text: "Image generated." },
+    { type: "file", mediaType: "image/png", url: "..." },
+  ],
+}
+```
+
 ## plugin HTTP
 
 If Town exposes the Agent HTTP gateway, registered plugins with `plugin.http.server.register(...)` are also mounted onto the same HTTP app automatically.

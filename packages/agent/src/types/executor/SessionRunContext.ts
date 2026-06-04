@@ -12,6 +12,7 @@ import type {
   SessionUiMessageChunkCallback,
 } from "@/executor/types/SessionRun.js";
 import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { FileUIPart } from "ai";
 
 /**
  * 单次 session run 的运行上下文。
@@ -63,4 +64,13 @@ export interface SessionRunContext {
    * - 为保证时间线顺序稳定，这些消息会在 assistant 结果落盘之后统一持久化。
    */
   deferredPersistedUserMessages: SessionUserMessageV1[];
+
+  /**
+   * 本轮运行结束前待并入最终 assistant 消息的 file parts。
+   *
+   * 关键点（中文）
+   * - 用于 tool/plugin 在执行期产生图片、文件等最终输出。
+   * - 这些 part 不依赖模型把 tool result 再复述一遍，直接落入 assistant UIMessage。
+   */
+  pendingAssistantFileParts: FileUIPart[];
 }

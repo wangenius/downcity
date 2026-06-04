@@ -7,7 +7,7 @@
  * - 保持失败返回结构稳定，避免对外 Session 行为变化。
  */
 
-import { streamText, type LanguageModel } from "ai";
+import { streamText, type FileUIPart, type LanguageModel } from "ai";
 import { buildOpenAIResponsesProviderOptions } from "@executor/messages/SessionMessageCodec.js";
 import { logAssistantMessageNow } from "@executor/messages/SessionMessageLog.js";
 import {
@@ -42,6 +42,46 @@ import type {
   SessionRunResult,
 } from "@/executor/types/SessionRun.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+
+/**
+ * 生成 file part 去重 key。
+ */
+function build_file_part_key(part: FileUIPart): string {
+  return [
+    String(part.type || ""),
+    String(part.mediaType || ""),
+    String(part.filename || ""),
+    String(part.url || ""),
+  ].join("\n");
+}
+
+/**
+ * 把 tool/plugin 运行期产生的 file parts 并入最终 assistant UIMessage。
+ */
+function mergePendingAssistantFileParts(
+  message: SessionMessageV1,
+  parts: FileUIPart[],
+): SessionMessageV1 {
+  if (!Array.isArray(parts) || parts.length === 0) return message;
+  const current_parts = Array.isArray(message.parts) ? message.parts : [];
+  const seen = new Set<string>();
+  for (const part of current_parts) {
+    const candidate = part as FileUIPart;
+    if (candidate?.type !== "file") continue;
+    seen.add(build_file_part_key(candidate));
+  }
+  const next_file_parts = parts.filter((part) => {
+    const key = build_file_part_key(part);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (next_file_parts.length === 0) return message;
+  return {
+    ...message,
+    parts: [...current_parts, ...next_file_parts],
+  };
+}
 
 interface CoreEngineRunnerOptions {
   /**
@@ -332,12 +372,14 @@ export class CoreEngineRunner {
         });
       }
 
-      const final_message =
+      const final_message = mergePendingAssistantFileParts(
         final_assistant_ui_message ||
-        this.context_composer.buildFallbackAssistantMessage(
-          "Execution completed",
-          input.run_context,
-        );
+          this.context_composer.buildFallbackAssistantMessage(
+            "Execution completed",
+            input.run_context,
+          ),
+        input.run_context.pendingAssistantFileParts,
+      );
 
       await this.logger.log("info", "[agent] final.message", {
         sessionId: session_id,

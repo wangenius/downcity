@@ -30,6 +30,10 @@ import {
   createAgentRuntime,
 } from "@/agent/local/AgentRuntimeFactory.js";
 import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.js";
+import {
+  plugin_tools,
+  setPluginToolRuntime,
+} from "@executor/tools/plugin/PluginToolDefinition.js";
 import type { AgentManagedSession } from "@/types/agent/AgentTypes.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 
@@ -182,6 +186,9 @@ export class AgentAssemblyService {
       get_context: () => agent_context,
     });
     const plugins = createAgentPluginPort(plugin_registry);
+    if (this.should_register_plugin_call_tool(plugin_instances)) {
+      tools.plugin_call = tools.plugin_call || plugin_tools.plugin_call;
+    }
     agent_context = createAgentContext({
       runtime,
       project_root: path,
@@ -196,6 +203,7 @@ export class AgentAssemblyService {
         await this.resolve_session_model(session_id),
     });
     setShellToolRuntime(agent_context.invoke);
+    setPluginToolRuntime(plugins);
 
     return {
       id,
@@ -237,5 +245,24 @@ export class AgentAssemblyService {
       plugin.bindAgent(runtime);
       plugin_instances.set(name, plugin);
     }
+  }
+
+  /**
+   * 判断是否需要自动注册 plugin_call tool。
+   */
+  private should_register_plugin_call_tool(
+    plugin_instances: Map<string, BasePlugin>,
+  ): boolean {
+    for (const plugin of plugin_instances.values()) {
+      if (
+        plugin.actions &&
+        Object.keys(plugin.actions).some((action_name) =>
+          Boolean(String(action_name || "").trim()),
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 }

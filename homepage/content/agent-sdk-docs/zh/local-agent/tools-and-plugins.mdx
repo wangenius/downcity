@@ -79,6 +79,52 @@ const plugins = agent.plugins.list();
 
 当前本地 SDK 会接通 plugin registry、`AgentContext.plugins`，并在 session prompt 中注入已注册 plugin 的 `system(context)` 文本。
 
+## ImagePlugin
+
+如果你希望 Agent 在对话过程中自己触发生图，可以把图片能力包装成 `ImagePlugin`：
+
+```ts
+import { Agent, ImagePlugin } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "creative-agent",
+  path: "/path/to/project",
+  model,
+  plugins: [
+    new ImagePlugin({
+      image: (input) => city.ai.image(input),
+    }),
+  ],
+});
+```
+
+注册后，Agent 会自动获得一个内置的 `plugin_call` tool。模型在需要生图时会调用：
+
+```ts
+plugin_call({
+  plugin: "image",
+  action: "generate",
+  payload: {
+    prompt: "一张雨夜城市街角的电影感插画",
+    aspect_ratio: "16:9",
+  },
+});
+```
+
+`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、Gemini、302.ai、Luchi 等 provider 的具体协议。它只要求 `image(input)` 返回 AI SDK `UIMessage`。
+
+最终图片不会只停留在 tool result 里。Agent 底层会把生成结果中的 `file` parts 合并进最终 assistant message，因此 session 历史里会保存类似：
+
+```ts
+{
+  role: "assistant",
+  parts: [
+    { type: "text", text: "已生成图片。" },
+    { type: "file", mediaType: "image/png", url: "..." },
+  ],
+}
+```
+
 ## plugin HTTP
 
 如果 Town 暴露 Agent HTTP 网关，已注册 plugin 的 `plugin.http.server.register(...)` 也会自动挂到同一个 HTTP app 上。

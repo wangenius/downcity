@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 单独承接 `/api/control/authorization*`。
- * - Town 只做 HTTP 适配，具体授权数据读写统一交给 chat-authorization plugin action。
+ * - Town 只做 HTTP 适配，具体授权数据读写统一交给 chat plugin access action。
  */
 import { buildControlRouteAliases } from "../../control/CommonHelpers.js";
 const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";

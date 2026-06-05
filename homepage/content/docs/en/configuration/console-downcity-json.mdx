@@ -53,7 +53,7 @@ Key behavior:
 3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
 5. Chat user permissions are resolved from `chat_auth_*` tables, not from an agent project.
-6. Plugin parameters are read from project `downcity.json`, while Agent plugin lifecycle is managed by Town.
+6. Plugin parameters are read from project `downcity.json`; plugin runtime state belongs to the Agent process.
 
 ## Common operations
 
@@ -70,7 +70,7 @@ town config get plugins.asr
 town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
-Manage Agent plugin lifecycle:
+Use explicit plugin commands when you need runtime operations:
 
 ```bash
 town asr on

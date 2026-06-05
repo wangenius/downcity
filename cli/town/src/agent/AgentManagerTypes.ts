@@ -16,7 +16,7 @@ export type AgentManagerAgentAction =
   | "restart"
   | "chat"
   | "configureId"
-  | "connectChannels"
+  | "connectChatAccounts"
   | "back";
 
 export interface AgentManagerAgentSummary {

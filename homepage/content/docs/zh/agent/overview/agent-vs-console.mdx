@@ -13,7 +13,7 @@ Downcity 里有两个经常同时出现的概念：
 ## 一句话区分
 
 - `agent` 管“这个项目怎么运行”
-- `town` 管“有哪些项目、有哪些模型、有哪些全局账号和入口”
+- `town` 管“有哪些项目、本地共享 chat accounts 和入口”
 
 如果你习惯把系统拆成“控制面”和“执行面”，也可以这样记：
 
@@ -26,7 +26,7 @@ Console 或 city 级运行时主要负责：
 
 - 管理多个 agent 项目
 - 查看 City 连接与 Agent 执行绑定
-- 维护全局 channel account
+- 维护本地共享 chat account
 - 提供控制面 API
 - 为 UI 提供聚合视图
 
@@ -60,7 +60,7 @@ Console 或 city 级运行时主要负责：
 你在日常使用时只需要记住两件事：
 
 1. 配置项目本身时，改的是项目里的文件，例如 `downcity.json`
-2. 管理共享资源时，使用的是City runtime 能力，例如模型目录、channel account、Console
+2. 管理本地共享资源时，使用的是 Town 能力，例如 chat account、Console
 
 ## 常见例子
 
@@ -76,7 +76,7 @@ Console 或 city 级运行时主要负责：
 
 ### 绑定聊天渠道
 
-- bot 凭据和 channel account 是 city 级的
+- bot 凭据和 chat account 是 Town 级共享资源
 - 当前 agent 只是在项目配置里绑定 `channelAccountId`
 
 因此，项目配置中出现的通常是：

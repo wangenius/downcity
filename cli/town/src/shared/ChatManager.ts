@@ -3,8 +3,8 @@
  *
  * 关键点（中文）
  * - 裸 `town chat` 进入 chat plugin 管理，而不是只输出静态 help。
- * - chat channel account 属于 Town 级配置，在这里通过“配置 channel”管理。
- * - agent 只绑定 channel account，不在 agent 流程中维护密钥。
+ * - chat account 属于 Town 级共享资源，供各 agent 的 chat plugin 选择绑定。
+ * - 访问控制属于 chat plugin 的 access 能力，不再作为独立 plugin 心智暴露。
  */
 
 import prompts from "prompts";
@@ -17,7 +17,7 @@ import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { runManagedPluginControlCommand } from "./ManagedPluginRemote.js";
 import type { StoredChannelAccountChannel } from "@downcity/agent";
 import type {
-  ChatChannelAccountAction,
+  ChatAccountAction,
   ChatManagerRootAction,
 } from "./ChatManagerTypes.js";
 import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";
@@ -76,9 +76,9 @@ async function promptRootAction(): Promise<ChatManagerRootAction | null> {
         value: "restart",
       },
       {
-        title: "配置 channel",
-        description: `${accounts.items.length} 个 Town 级 channel account`,
-        value: "configureChannels",
+        title: "管理 chat accounts",
+        description: `${accounts.items.length} 个 Town 级共享账号`,
+        value: "configureAccounts",
       },
       {
         title: "退出",
@@ -92,13 +92,13 @@ async function promptRootAction(): Promise<ChatManagerRootAction | null> {
   return response.action || null;
 }
 
-async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | null> {
+async function promptChatAccountAction(): Promise<ChatAccountAction | null> {
   const manager = createChannelAccountManager();
   const accounts = await manager.list();
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: "配置 chat channel accounts",
+    message: "管理 chat plugin 共享资源",
     choices: [
       {
         title: "查看 accounts",
@@ -107,7 +107,7 @@ async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | 
       },
       {
         title: "新增 account",
-        description: "配置 Telegram、Feishu 或 QQ 账号",
+        description: "新增 Telegram、Feishu 或 QQ 账号",
         value: "add",
       },
       {
@@ -121,9 +121,9 @@ async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | 
         value: "remove",
       },
       {
-        title: "配置 authorization",
-        description: "给平台用户分配 auth role",
-        value: "configureAuthorization",
+        title: "管理访问控制",
+        description: "给 chat 用户分配 access role",
+        value: "configureAccess",
       },
       {
         title: "返回",
@@ -132,27 +132,27 @@ async function promptChannelAccountAction(): Promise<ChatChannelAccountAction | 
       },
     ],
     initial: 0,
-  })) as { action?: ChatChannelAccountAction };
+  })) as { action?: ChatAccountAction };
 
   return response.action || null;
 }
 
-async function emitChannelAccountList(): Promise<void> {
+async function emitChatAccountList(): Promise<void> {
   const manager = createChannelAccountManager();
   const { items } = await manager.list();
   if (items.length === 0) {
     emitCliBlock({
       tone: "info",
-      title: "Chat channel accounts",
+      title: "Chat accounts",
       summary: "0 configured",
-      note: "在 `town chat` 中选择“配置 channel”后新增 Telegram、Feishu 或 QQ account。",
+      note: "在 `town chat` 中选择“管理 chat accounts”后新增 Telegram、Feishu 或 QQ account。",
     });
     return;
   }
 
   emitCliList({
     tone: "accent",
-    title: "Chat channel accounts",
+    title: "Chat accounts",
     summary: `${items.length} configured`,
     items: items.map((account) => ({
       title: formatAccountTitle(account),
@@ -186,7 +186,7 @@ async function chooseAccount(): Promise<ChatChannelAccountListItem | null> {
   if (items.length === 0) {
     emitCliBlock({
       tone: "info",
-      title: "No Town channel accounts found",
+      title: "No Town chat accounts found",
       note: "先新增一个 Telegram、Feishu 或 QQ account。",
     });
     return null;
@@ -309,7 +309,7 @@ async function addChannelAccount(): Promise<void> {
 
   emitCliBlock({
     tone: "success",
-    title: "Channel account saved",
+    title: "Chat account saved",
     summary: result.id,
     note: result.message || (result.probed ? "bot 信息已探测" : "已按输入信息保存"),
   });
@@ -337,7 +337,7 @@ async function editChannelAccount(): Promise<void> {
 
   emitCliBlock({
     tone: "success",
-    title: "Channel account updated",
+    title: "Chat account updated",
     summary: account.id,
   });
 }
@@ -359,19 +359,19 @@ async function removeChannelAccount(): Promise<void> {
   await manager.remove(account.id);
   emitCliBlock({
     tone: "success",
-    title: "Channel account removed",
+    title: "Chat account removed",
     summary: account.id,
   });
 }
 
-async function runChannelAccountManager(): Promise<void> {
+async function runChatAccountManager(): Promise<void> {
   while (true) {
-    const action = await promptChannelAccountAction();
+    const action = await promptChatAccountAction();
     if (!action || action === "back") return;
 
     try {
       if (action === "list") {
-        await emitChannelAccountList();
+        await emitChatAccountList();
         continue;
       }
       if (action === "add") {
@@ -386,13 +386,13 @@ async function runChannelAccountManager(): Promise<void> {
         await removeChannelAccount();
         continue;
       }
-      if (action === "configureAuthorization") {
+      if (action === "configureAccess") {
         await runInteractiveChatAuthSetFlow();
       }
     } catch (error) {
       emitCliBlock({
         tone: "error",
-        title: "Channel account action failed",
+        title: "Chat account action failed",
         note: error instanceof Error ? error.message : String(error),
       });
     }
@@ -429,8 +429,8 @@ export async function runInteractiveChatManager(): Promise<void> {
     }
 
     try {
-      if (action === "configureChannels") {
-        await runChannelAccountManager();
+      if (action === "configureAccounts") {
+        await runChatAccountManager();
         continue;
       }
       await runChatLifecycleAction(action);

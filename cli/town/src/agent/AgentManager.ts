@@ -186,7 +186,7 @@ async function promptRootAction(): Promise<AgentManagerRootAction | null> {
       },
       {
         title: "管理 agent",
-        description: "状态、名称、执行绑定、渠道、启动、停止、聊天",
+        description: "状态、名称、执行绑定、chat 账号、启动、停止、聊天",
         value: "manage",
       },
       {
@@ -268,9 +268,9 @@ async function promptAgentAction(
         value: "configureId",
       },
       {
-        title: "连接聊天渠道",
+        title: "连接 chat accounts",
         description: `当前：${agent.channels.length > 0 ? agent.channels.join(", ") : "未连接"}`,
-        value: "connectChannels",
+        value: "connectChatAccounts",
       },
       {
         title: "返回",
@@ -432,7 +432,7 @@ async function promptChannelAccountId(params: {
   const response = (await prompts({
     type: "select",
     name: "accountId",
-    message: `连接 ${params.channel} channel account`,
+    message: `连接 ${params.channel} chat account`,
     choices,
     initial,
   })) as { accountId?: string };
@@ -452,7 +452,7 @@ async function connectAgentChannels(
   if (dangling.length > 0) {
     emitCliList({
       tone: "warning",
-      title: "Dangling channel accounts",
+      title: "Dangling chat accounts",
       summary: `${dangling.length} found`,
       items: dangling.map((item) => ({
         title: item.channel,
@@ -480,7 +480,7 @@ async function connectAgentChannels(
     };
     emitCliBlock({
       tone: "success",
-      title: "Dangling channel account links removed automatically",
+      title: "Dangling chat account links removed automatically",
       summary: cleanedAgent.channels.length > 0 ? cleanedAgent.channels.join(", ") : "none",
     });
 
@@ -488,8 +488,8 @@ async function connectAgentChannels(
     if (allAccountsAfterCleanup.length === 0) {
       emitCliBlock({
         tone: "info",
-        title: "No Town channel accounts found",
-        note: "已清理悬空关联。请先运行 `town chat`，选择“配置 channel”来配置 Telegram、Feishu 或 QQ account；agent 这里只做 connect。",
+        title: "No Town chat accounts found",
+        note: "已清理悬空关联。请先运行 `town chat`，选择“管理 chat accounts”来配置 Telegram、Feishu 或 QQ account；agent 这里只做 connect。",
       });
       return cleanedAgent;
     }
@@ -501,8 +501,8 @@ async function connectAgentChannels(
   if (allAccounts.length === 0) {
     emitCliBlock({
       tone: "info",
-      title: "No Town channel accounts found",
-      note: "请先运行 `town chat`，选择“配置 channel”来配置 Telegram、Feishu 或 QQ account；agent 这里只做 connect。",
+      title: "No Town chat accounts found",
+      note: "请先运行 `town chat`，选择“管理 chat accounts”来配置 Telegram、Feishu 或 QQ account；agent 这里只做 connect。",
     });
     return agent;
   }
@@ -595,7 +595,7 @@ async function runSelectedAgentManager(): Promise<void> {
         agent = await configureAgentId(agent);
         continue;
       }
-      if (action === "connectChannels") {
+      if (action === "connectChatAccounts") {
         agent = await connectAgentChannels(agent);
       }
     } catch (error) {

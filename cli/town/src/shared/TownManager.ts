@@ -75,13 +75,13 @@ async function promptTownHomeAction(): Promise<TownHomeAction | null> {
         value: "agent",
       },
       {
-        title: "管理 Agent Plugins",
-        description: "查看目录，按 Agent 管理 plugin 状态",
+        title: "查看 Agent Plugins",
+        description: "查看 Agent 内部 plugin 目录与能力",
         value: "plugin",
       },
       {
         title: "Chat plugin 快捷入口",
-        description: "配置 channel account 与 chat plugin 生命周期",
+        description: "管理 chat accounts、访问控制与 chat plugin 状态",
         value: "chat",
       },
       {

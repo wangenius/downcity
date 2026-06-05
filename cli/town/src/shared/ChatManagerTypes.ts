@@ -7,13 +7,13 @@ export type ChatManagerRootAction =
   | "start"
   | "stop"
   | "restart"
-  | "configureChannels"
+  | "configureAccounts"
   | "exit";
 
-export type ChatChannelAccountAction =
+export type ChatAccountAction =
   | "list"
   | "add"
   | "edit"
   | "remove"
-  | "configureAuthorization"
+  | "configureAccess"
   | "back";

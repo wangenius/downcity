@@ -34,12 +34,12 @@ town agent <subcommand>
 - 查看已登记 agents
 - 创建 agent 项目
 - 启动 agent
-- 选择 agent 时直接看到当前状态、名称、执行绑定和聊天渠道关联
-- 配置 agent id，或连接 Town 级聊天渠道账号
+- 选择 agent 时直接看到当前状态、名称、执行绑定和 chat account 关联
+- 配置 agent id，或连接 Town 级 chat account
 
 它不会替代下面的子命令，只是把常用本地操作收进一个引导入口。
 
-聊天渠道凭据属于 `town chat` 中的 Town 级 channel account。agent manager 只负责把当前 agent 连接到已有账号，即写入 `plugins.chat.channels.<channel>.channelAccountId`。如果发现 agent 绑定了不存在的 account，会自动清理这个悬空关联。
+聊天凭据属于 `town chat` 中的 Town 级 chat account。agent manager 只负责把当前 agent 连接到已有账号，即写入 `plugins.chat.channels.<platform>.channelAccountId`。如果发现 agent 绑定了不存在的 account，会自动清理这个悬空关联。
 
 ## 子命令
 
@@ -87,6 +87,6 @@ town v1.0.0
   查看 agents
   创建 agent
   启动 agent
-  管理 agent - 选择前显示状态、执行绑定和渠道
+  管理 agent - 选择前显示状态、执行绑定和 chat account
   退出
 ```

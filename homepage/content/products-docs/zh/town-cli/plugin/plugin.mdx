@@ -1,20 +1,19 @@
 ---
 title: town plugin
-description: 在 Town 中管理 Agent Plugins
+description: 在 Town 中查看 Agent Plugin 目录
 ---
 
 # `town plugin`
 
-`town plugin` 是 Town 管理 Agent Plugin 的主入口。
+`town plugin` 是 Town 查看 Agent Plugin 能力目录的入口。
 
 > 推荐先看：plugin 概念层文档在 [Agent SDK / Plugins](/zh/agent-sdk-docs/plugins/overview)，具体手册在 [Agent Plugins Docs](/zh/plugins-docs)。
 
 适合这些场景：
 
 - 查看当前注册了哪些 plugin
-- 选择某个 Agent 并管理 plugin 运行态
-- 检查某个 plugin 的静态启用态与能力面
-- 面向指定 agent 启动、停止、重启托管 plugin
+- 检查某个 plugin 的能力面
+- 需要脚本化控制时，显式把 status/start/stop/restart 转发给指定 agent
 - 不走短别名，直接转发托管 plugin command
 - 在当前本地项目内直接执行本地 plugin action
 - 查看或取消一次性 plugin 调度任务
@@ -34,10 +33,10 @@ town plugin schedule list --path /path/to/agent
 
 ## 说明
 
-- 在交互式终端里直接运行 `town plugin`，会进入 Agent Plugin 管理器。
-- `town plugin list` 和 `town plugin info` 是静态 Town catalog 视图。
+- 在交互式终端里直接运行 `town plugin`，会进入 plugin 目录浏览器。
+- `town plugin list` 和 `town plugin info` 是静态 catalog 视图。Town 不拥有 plugin 运行态。
 - `town plugin status <plugin>` 读取目标 agent 的实时运行态。
-- `chat`、`task`、`memory`、`contact`、`shell` 这类托管 plugin 支持 `start/stop/restart/command`。
+- `chat`、`task`、`memory`、`contact`、`shell` 这类 runtime plugin 支持显式 `start/stop/restart/command` 转发到目标 agent。
 - `town plugin action ...` 是本地执行形式，默认直接在当前项目里运行。
 - `town chat ...`、`town task ...`、`town memory ...`、`town shell ...`、`town web ...`、`town skill ...`、`town asr ...`、`town tts ...` 仍保留为快捷入口。
 

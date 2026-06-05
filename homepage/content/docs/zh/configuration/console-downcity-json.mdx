@@ -53,7 +53,7 @@ City 侧配置统一存储在：
 3. `downcity.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
 4. 渠道真实凭据来自 `channel_accounts`。
 5. 用户聊天权限来自 `chat_auth_*` 表，不保存在 agent 项目里。
-6. plugin 参数来自项目 `downcity.json`，Agent plugin 生命周期由 Town 管理。
+6. plugin 参数来自项目 `downcity.json`，plugin 运行态归属于 Agent 进程。
 
 ## 常用操作
 
@@ -70,7 +70,7 @@ town config get plugins.asr
 town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 
-管理 Agent plugin 生命周期：
+需要运行态操作时，使用显式 plugin 命令：
 
 ```bash
 town asr on

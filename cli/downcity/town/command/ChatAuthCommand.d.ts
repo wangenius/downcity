@@ -2,7 +2,7 @@
  * `town chat auth` CLI 辅助模块。
  *
  * 关键点（中文）
- * - chat authorization 现在按 agent projectRoot 隔离存储。
+ * - chat access 现在按 agent projectRoot 隔离存储。
  * - 授权主体使用 `<platform>:<platformUserId>`，例如 `telegram:12345678`。
  * - 管理员执行 `town chat auth set telegram:12345678` 后交互式选择 role。
  */

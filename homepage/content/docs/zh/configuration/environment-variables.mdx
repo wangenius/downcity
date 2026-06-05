@@ -136,7 +136,7 @@ town plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 ```
 
 2. 在 City UI `Global / Env` 维护共享 env，或由宿主在 `new Agent({ env })` 时显式传入。
-3. 在 City UI `Global / Channel Accounts` 创建账号。
+3. 通过 `town chat` 创建 chat account。
 4. 在 agent `downcity.json` 里绑定 `channelAccountId`。
 5. 仅在需要时使用 `<agent>/.env` 做项目级运行时覆盖。
 

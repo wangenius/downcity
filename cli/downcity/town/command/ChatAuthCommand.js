@@ -2,7 +2,7 @@
  * `town chat auth` CLI 辅助模块。
  *
  * 关键点（中文）
- * - chat authorization 现在按 agent projectRoot 隔离存储。
+ * - chat access 现在按 agent projectRoot 隔离存储。
  * - 授权主体使用 `<platform>:<platformUserId>`，例如 `telegram:12345678`。
  * - 管理员执行 `town chat auth set telegram:12345678` 后交互式选择 role。
  */
@@ -38,7 +38,7 @@ async function chooseRole(params) {
     const response = (await prompts({
         type: "select",
         name: "roleId",
-        message: "选择新的 auth role",
+        message: "选择新的 access role",
         choices: params.roles.map((role) => ({
             title: role.roleId,
             description: `${role.name} · ${role.permissions.length} permissions`,
@@ -75,7 +75,7 @@ export async function runChatAuthSet(params) {
     else {
         emitCliBlock({
             tone: "info",
-            title: "Chat auth principal",
+            title: "Chat access principal",
             facts: [
                 { label: "Principal", value: `${principal.channel}:${principal.userId}` },
                 { label: "Current role", value: currentRole?.roleId || "default" },
@@ -100,7 +100,7 @@ export async function runChatAuthSet(params) {
     });
     emitCliBlock({
         tone: "success",
-        title: "Chat auth role updated",
+        title: "Chat access role updated",
         summary: `${principal.channel}:${principal.userId} -> ${nextRole.roleId}`,
         facts: [
             { label: "Role", value: nextRole.name },
@@ -116,7 +116,7 @@ export async function runInteractiveChatAuthSetFlow(options) {
     const response = (await prompts({
         type: "text",
         name: "principal",
-        message: "输入授权主体（例如 telegram:12345678）",
+        message: "输入 chat 用户（例如 telegram:12345678）",
     }));
     const principal = String(response.principal || "").trim();
     if (!principal)
@@ -132,7 +132,7 @@ export async function runInteractiveChatAuthSetFlow(options) {
 export function registerChatAuthCommands(chat) {
     const auth = chat
         .command("auth")
-        .description("管理当前 agent 项目的 chat authorization")
+        .description("管理当前 agent 项目的 chat access")
         .helpOption("--help", "display help for command");
     auth
         .command("set <principal>")

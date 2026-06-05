@@ -2,8 +2,9 @@
  * `town plugin` 命令组。
  *
  * 关键点（中文）
- * - `town plugin` 提供 Town 侧静态 plugin catalog 入口。
- * - `list/info` 不依赖 agent，只展示内建 plugin 定义与 Town 配置事实。
+ * - `town plugin` 提供 Agent 内部 plugin 目录入口。
+ * - `list/info` 不依赖 agent，只展示内建 plugin 定义事实。
+ * - Town 不承载 plugin 运行态；运行态归属于具体 agent。
  * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 import type { Command } from "commander";

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 单独承接 `/api/control/authorization*`。
- * - Town 只做 HTTP 适配，具体授权数据读写统一交给 chat-authorization plugin action。
+ * - Town 只做 HTTP 适配，具体授权数据读写统一交给 chat plugin access action。
  */
 import type { Hono } from "hono";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";

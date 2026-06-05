@@ -2,14 +2,15 @@
  * `town plugin` 命令组。
  *
  * 关键点（中文）
- * - `town plugin` 提供 Town 侧静态 plugin catalog 入口。
- * - `list/info` 不依赖 agent，只展示内建 plugin 定义与 Town 配置事实。
+ * - `town plugin` 提供 Agent 内部 plugin 目录入口。
+ * - `list/info` 不依赖 agent，只展示内建 plugin 定义事实。
+ * - Town 不承载 plugin 运行态；运行态归属于具体 agent。
  * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 import fs from "node:fs";
 import prompts from "prompts";
-import { buildStaticPluginAvailability, findPluginByName, listPluginViews, listPluginsWithLifecycle, listPluginsWithoutLifecycle, runLocalPluginAction, } from "@downcity/agent";
-import { createBuiltinPlugins } from "@downcity/plugins";
+import { listPluginViews, listPluginsWithLifecycle, listPluginsWithoutLifecycle, runLocalPluginAction, } from "@downcity/agent";
+import { CHAT_AUTHORIZATION_PLUGIN_NAME, createBuiltinPlugins, } from "@downcity/plugins";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { getDowncityJsonPath } from "../config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
@@ -17,10 +18,14 @@ import { parseBoolean, parsePort } from "../shared/IndexSupport.js";
 import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
 import { runManagedPluginCommandBridge, runManagedPluginControlCommand, } from "../shared/ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
-import { isTownPluginEnabled, setTownPluginEnabled, } from "../town/PluginLifecycle.js";
-import { listRegisteredAgentsForCli, } from "../agent/AgentSelection.js";
 function createPluginCatalog() {
     return createBuiltinPlugins();
+}
+function isVisibleCatalogPlugin(pluginName) {
+    return pluginName !== CHAT_AUTHORIZATION_PLUGIN_NAME;
+}
+function createVisiblePluginCatalog() {
+    return createPluginCatalog().filter((plugin) => isVisibleCatalogPlugin(plugin.name));
 }
 async function resolvePluginProjectRoot(options) {
     return { projectRoot: resolveProjectRoot(options.path) };
@@ -44,38 +49,6 @@ function parseCommandPayload(raw) {
         return text;
     }
 }
-function buildSafeStaticPluginAvailability(pluginName) {
-    try {
-        const availability = buildStaticPluginAvailability({
-            plugins: createPluginCatalog(),
-            pluginName,
-        });
-        const normalizedReasons = availability.reasons.map((reason) => {
-            const text = String(reason || "");
-            if (text.includes("readonly")
-                || text.includes("Static availability inspection failed")) {
-                return "Static catalog view only. Town plugin availability could not be resolved in the current environment.";
-            }
-            return text;
-        });
-        return {
-            ...availability,
-            reasons: normalizedReasons,
-        };
-    }
-    catch (error) {
-        const message = String(error || "");
-        return {
-            enabled: false,
-            available: false,
-            reasons: [
-                message.includes("readonly")
-                    ? "Static catalog view only. Town plugin config is not writable in the current environment."
-                    : "Static catalog view only. Town plugin availability could not be resolved.",
-            ],
-        };
-    }
-}
 function stripAnsi(input) {
     return String(input || "").replace(/\u001b\[[0-9;]*m/g, "");
 }
@@ -94,17 +67,16 @@ function renderPluginCatalogTable(rows) {
         });
         return;
     }
-    const headers = ["plugin", "kind", "enabled", "available", "actions", "title"];
+    const headers = ["plugin", "kind", "actions", "system", "title"];
     const dataRows = rows.map((row) => [
         row.name,
         row.kind,
-        row.enabled ? "on" : "off",
-        row.available ? "yes" : "no",
         String(row.actionCount),
+        row.hasSystem ? "yes" : "no",
         row.title,
     ]);
     const widths = headers.map((header, index) => Math.max(header.length, ...dataRows.map((row) => stripAnsi(String(row[index] || "")).length)));
-    widths[5] = Math.min(Math.max(widths[5], 16), 40);
+    widths[4] = Math.min(Math.max(widths[4], 16), 44);
     const renderRow = (values) => values
         .map((value, index) => truncateCell(value, widths[index]).padEnd(widths[index], " "))
         .join("  ");
@@ -115,37 +87,28 @@ function renderPluginCatalogTable(rows) {
     }
 }
 function listStaticCatalogEntries() {
-    const plugins = createPluginCatalog();
+    const plugins = createVisiblePluginCatalog();
     const managedEntries = listPluginsWithLifecycle(plugins).map((plugin) => {
-        const enabled = isTownPluginEnabled(plugin.name);
         return {
             name: plugin.name,
             title: String(plugin.title || plugin.name || "").trim() || plugin.name,
-            kind: "managed",
-            enabled,
-            available: enabled,
+            kind: "agent-runtime",
             actionCount: Object.keys(plugin.actions || {}).length,
             actions: Object.keys(plugin.actions || {}).sort((left, right) => left.localeCompare(right)),
             hasSystem: typeof plugin.system === "function",
-            note: enabled
-                ? "Managed plugin. Use `town plugin start/stop/restart/status` with an agent target for live state."
-                : "Disabled by Town lifecycle config. Re-enable it before managing agent runtime state.",
+            note: "Runs inside an agent. Town only shows the catalog here; runtime is owned by the agent process.",
         };
     });
     const localPlugins = listPluginsWithoutLifecycle(plugins);
-    const localEntries = listPluginViews(localPlugins)
-        .map((plugin) => {
-        const availability = buildSafeStaticPluginAvailability(plugin.name);
+    const localEntries = listPluginViews(localPlugins).map((plugin) => {
         return {
             name: plugin.name,
             title: plugin.title,
-            kind: "local",
-            enabled: availability.enabled,
-            available: availability.available,
+            kind: "action",
             actionCount: plugin.actions.length,
             actions: [...plugin.actions],
             hasSystem: plugin.hasSystem,
-            note: availability.reasons.join("; ") || undefined,
+            note: "Action/system plugin. It runs through agent/plugin action execution, not Town runtime.",
         };
     });
     const merged = [...managedEntries, ...localEntries];
@@ -176,53 +139,22 @@ async function promptPluginName(message) {
     const pluginName = String(response.pluginName || "").trim();
     return pluginName || null;
 }
-async function promptPluginAgentTarget() {
-    const agents = await listRegisteredAgentsForCli();
-    if (agents.length === 0) {
-        emitCliBlock({
-            tone: "info",
-            title: "No registered agents",
-            note: "Run `town agent create` and `town agent start` before managing runtime plugins.",
-        });
-        return null;
-    }
-    const response = (await prompts({
-        type: "select",
-        name: "projectRoot",
-        message: "选择 Agent",
-        choices: agents.map((agent) => ({
-            title: agent.id,
-            description: `${agent.status} · ${agent.projectRoot}`,
-            value: agent.projectRoot,
-        })),
-        initial: Math.max(0, agents.findIndex((agent) => agent.status === "running")),
-    }));
-    const projectRoot = String(response.projectRoot || "").trim();
-    return projectRoot || null;
-}
 async function promptPluginRootAction() {
     const plugins = listStaticCatalogEntries();
-    const agents = await listRegisteredAgentsForCli();
-    const runningCount = agents.filter((agent) => agent.status === "running").length;
     const response = (await prompts({
         type: "select",
         name: "action",
-        message: "管理 Agent Plugins",
+        message: "Plugin 目录",
         choices: [
             {
                 title: "查看 plugin 目录",
-                description: `${plugins.length} 个内建 plugin`,
+                description: `${plugins.length} 个 Agent 内部 plugin`,
                 value: "catalog",
             },
             {
-                title: "管理某个 Agent 的 plugin",
-                description: `${agents.length} 个已登记，${runningCount} 个运行中`,
-                value: "agent",
-            },
-            {
-                title: "管理 Town 级 plugin 生命周期",
-                description: "静态 lifecycle 开关，不替代 Agent runtime 状态",
-                value: "global",
+                title: "查看 plugin 详情",
+                description: "查看 actions、system 与运行边界",
+                value: "info",
             },
             {
                 title: "退出",
@@ -230,87 +162,7 @@ async function promptPluginRootAction() {
                 value: "exit",
             },
         ],
-        initial: 1,
-    }));
-    return response.action || null;
-}
-async function promptPluginManagerAction(params) {
-    const plugin = findStaticCatalogEntry(params.pluginName);
-    const availability = plugin
-        ? { enabled: plugin.enabled, available: plugin.available }
-        : { enabled: false, available: false };
-    const response = (await prompts({
-        type: "select",
-        name: "action",
-        message: `管理 plugin · ${params.pluginName}`,
-        choices: [
-            {
-                title: "查看信息",
-                description: plugin?.title || params.pluginName,
-                value: "status",
-            },
-            {
-                title: "全局启用",
-                description: availability.enabled ? "当前已启用" : "写入 Town 级 lifecycle 配置",
-                value: "enable",
-            },
-            {
-                title: "全局关闭",
-                description: params.pluginName === "chat-authorization"
-                    ? "chat-authorization plugin 不允许全局关闭"
-                    : "写入 Town 级 lifecycle 配置",
-                value: "disable",
-            },
-            {
-                title: "返回",
-                description: "重新选择 plugin",
-                value: "back",
-            },
-        ],
         initial: 0,
-    }));
-    const action = response.action;
-    return action || null;
-}
-async function promptAgentPluginAction(params) {
-    const plugin = findStaticCatalogEntry(params.pluginName);
-    const response = (await prompts({
-        type: "select",
-        name: "action",
-        message: `管理 Agent plugin · ${params.pluginName}`,
-        choices: [
-            {
-                title: "查看目录信息",
-                description: plugin?.title || params.pluginName,
-                value: "info",
-            },
-            {
-                title: "查看运行状态",
-                description: "读取目标 Agent runtime 的 plugin 状态",
-                value: "status",
-            },
-            {
-                title: "启动",
-                description: "启动目标 Agent 上的托管 plugin",
-                value: "start",
-            },
-            {
-                title: "停止",
-                description: "停止目标 Agent 上的托管 plugin",
-                value: "stop",
-            },
-            {
-                title: "重启",
-                description: "重启目标 Agent 上的托管 plugin",
-                value: "restart",
-            },
-            {
-                title: "返回",
-                description: "重新选择 Agent 或 plugin",
-                value: "back",
-            },
-        ],
-        initial: 1,
     }));
     return response.action || null;
 }
@@ -343,9 +195,8 @@ async function runPluginListCommand(options) {
             name: plugin.name,
             title: plugin.title,
             kind: plugin.kind,
-            enabled: plugin.enabled,
-            available: plugin.available,
             actionCount: plugin.actionCount,
+            hasSystem: plugin.hasSystem,
         })));
         return;
     }
@@ -380,9 +231,9 @@ async function runPluginInfoCommand(params) {
     }
     if (params.options.json !== true) {
         emitCliBlock({
-            tone: plugin.enabled ? (plugin.available ? "success" : "warning") : "info",
+            tone: "info",
             title: `Plugin ${pluginName}`,
-            summary: plugin.enabled ? (plugin.available ? "available" : "static only") : "disabled",
+            summary: plugin.kind,
             facts: [
                 {
                     label: "title",
@@ -422,156 +273,6 @@ async function runPluginInfoCommand(params) {
         },
     });
 }
-function printPluginLifecycleResult(params) {
-    emitCliBlock({
-        tone: "success",
-        title: `Plugin ${params.pluginName}`,
-        summary: params.enabled ? "enabled" : "disabled",
-        facts: [
-            {
-                label: "scope",
-                value: "town",
-            },
-            {
-                label: "mode",
-                value: "global lifecycle",
-            },
-        ],
-    });
-}
-async function runPluginLifecycleCommand(params) {
-    const plugin = findPluginByName(createPluginCatalog(), params.pluginName);
-    if (!plugin) {
-        printResult({
-            asJson: params.asJson === true,
-            success: false,
-            title: "plugin lifecycle failed",
-            payload: {
-                error: `Unknown plugin: ${params.pluginName}`,
-            },
-        });
-        return;
-    }
-    if (plugin.name === "chat-authorization" && params.enabled === false) {
-        printResult({
-            asJson: params.asJson === true,
-            success: false,
-            title: "plugin lifecycle failed",
-            payload: {
-                pluginName: plugin.name,
-                error: `Plugin "${plugin.name}" cannot be disabled globally`,
-            },
-        });
-        return;
-    }
-    setTownPluginEnabled(plugin.name, params.enabled);
-    if (params.asJson === true) {
-        printResult({
-            asJson: true,
-            success: true,
-            title: "plugin lifecycle updated",
-            payload: {
-                pluginName: plugin.name,
-                enabled: params.enabled,
-                scope: "town",
-            },
-        });
-        return;
-    }
-    printPluginLifecycleResult({
-        pluginName: plugin.name,
-        enabled: params.enabled,
-    });
-}
-async function runGlobalPluginLifecycleManager() {
-    if (!process.stdin.isTTY || !process.stdout.isTTY) {
-        return;
-    }
-    while (true) {
-        const pluginName = await promptPluginName("选择要管理的 plugin");
-        if (!pluginName) {
-            emitCliBlock({
-                tone: "info",
-                title: "Plugin manager closed",
-            });
-            return;
-        }
-        while (true) {
-            const action = await promptPluginManagerAction({
-                pluginName,
-            });
-            if (!action) {
-                emitCliBlock({
-                    tone: "info",
-                    title: "Plugin manager closed",
-                });
-                return;
-            }
-            if (action === "back") {
-                break;
-            }
-            if (action === "status") {
-                await runPluginInfoCommand({
-                    pluginName,
-                    options: {
-                        json: false,
-                    },
-                });
-                continue;
-            }
-            if (action === "enable") {
-                await runPluginLifecycleCommand({
-                    pluginName,
-                    enabled: true,
-                });
-                continue;
-            }
-            if (action === "disable") {
-                await runPluginLifecycleCommand({
-                    pluginName,
-                    enabled: false,
-                });
-            }
-        }
-    }
-}
-async function runAgentPluginManager() {
-    const projectRoot = await promptPluginAgentTarget();
-    if (!projectRoot)
-        return;
-    while (true) {
-        const pluginName = await promptPluginName("选择要管理的 Agent plugin");
-        if (!pluginName)
-            return;
-        while (true) {
-            const action = await promptAgentPluginAction({ pluginName });
-            if (!action) {
-                emitCliBlock({
-                    tone: "info",
-                    title: "Plugin manager closed",
-                });
-                return;
-            }
-            if (action === "back")
-                break;
-            if (action === "info") {
-                await runPluginInfoCommand({
-                    pluginName,
-                    options: { json: false },
-                });
-                continue;
-            }
-            await runManagedPluginControlCommand({
-                pluginName,
-                action,
-                options: {
-                    path: projectRoot,
-                    json: false,
-                },
-            });
-        }
-    }
-}
 export async function runInteractivePluginManager() {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
         return;
@@ -592,12 +293,12 @@ export async function runInteractivePluginManager() {
                 });
                 continue;
             }
-            if (action === "agent") {
-                await runAgentPluginManager();
-                continue;
-            }
-            if (action === "global") {
-                await runGlobalPluginLifecycleManager();
+            if (action === "info") {
+                await runPluginInfoCommand({
+                    options: {
+                        json: false,
+                    },
+                });
             }
         }
         catch (error) {

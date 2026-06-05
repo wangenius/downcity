@@ -1,20 +1,19 @@
 ---
 title: town plugin
-description: Manage Agent Plugins from Town
+description: Inspect Agent plugin catalog from Town
 ---
 
 # `town plugin`
 
-`town plugin` is the main Town entry for Agent Plugin management.
+`town plugin` is the Town entry for inspecting Agent plugin capabilities.
 
 > Recommended reading: conceptual Agent plugin guidance lives in [Agent SDK / Plugins](/en/agent-sdk-docs/plugins/overview), and concrete manuals live in [Agent Plugins Docs](/en/plugins-docs).
 
 Use it when you want to:
 
 - inspect which plugins are registered
-- choose an Agent and manage plugin runtime state
-- inspect a plugin's static enabled state and capability surface
-- start, stop, or restart one managed plugin against a target agent
+- inspect a plugin's capability surface
+- explicitly forward status/start/stop/restart to a target agent when you need scriptable runtime control
 - dispatch a managed plugin command without using a short alias
 - execute a local plugin action directly inside the current project
 - inspect or cancel one-shot scheduled plugin jobs
@@ -34,10 +33,10 @@ town plugin schedule list --path /path/to/agent
 
 ## Notes
 
-- Running bare `town plugin` in an interactive terminal opens the Agent Plugin manager.
-- `town plugin list` and `town plugin info` are static Town catalog views.
+- Running bare `town plugin` in an interactive terminal opens the plugin catalog browser.
+- `town plugin list` and `town plugin info` are static catalog views. Town does not own plugin runtime state.
 - `town plugin status <plugin>` reads live runtime state from a target agent.
-- Managed plugins such as `chat`, `task`, `memory`, `contact`, and `shell` support `start/stop/restart/command`.
+- Runtime plugins such as `chat`, `task`, `memory`, `contact`, and `shell` support explicit `start/stop/restart/command` forwarding to the target agent.
 - `town plugin action ...` is the local execution form and runs directly inside the current project by default.
 - Concrete command roots such as `town chat ...`, `town task ...`, `town memory ...`, `town shell ...`, `town web ...`, `town skill ...`, `town asr ...`, and `town tts ...` remain available as shortcuts.
 

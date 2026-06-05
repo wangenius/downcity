@@ -54,7 +54,7 @@ export function optionalTrimmedText(value: string | undefined): string | undefin
 }
 
 /**
- * 规范化 channel account 的 channel 字段。
+ * 规范化 chat account 的平台字段。
  */
 export function normalizeChannelAccountChannel(
   input: string,
@@ -63,5 +63,5 @@ export function normalizeChannelAccountChannel(
   if (channel === "telegram" || channel === "feishu" || channel === "qq") {
     return channel;
   }
-  throw new Error(`Unsupported channel account type: ${input}`);
+  throw new Error(`Unsupported chat account platform: ${input}`);
 }

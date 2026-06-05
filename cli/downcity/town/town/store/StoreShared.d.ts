@@ -38,7 +38,7 @@ export declare function normalizeNonEmptyText(value: string, fieldName: string):
  */
 export declare function optionalTrimmedText(value: string | undefined): string | undefined;
 /**
- * 规范化 channel account 的 channel 字段。
+ * 规范化 chat account 的平台字段。
  */
 export declare function normalizeChannelAccountChannel(input: string): StoredChannelAccountChannel;
 //# sourceMappingURL=StoreShared.d.ts.map

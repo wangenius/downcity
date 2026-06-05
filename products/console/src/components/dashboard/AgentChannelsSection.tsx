@@ -1,8 +1,8 @@
 /**
- * Agent Chat Channels 管理页。
+ * Agent Chat 管理页。
  *
  * 关键点（中文）
- * - 仅展示当前 agent 的 chat channel 状态，不混入 context 列表逻辑。
+ * - 仅展示当前 agent 的 chat plugin 平台连接状态，不混入 context 列表逻辑。
  * - 支持最常用运维动作：刷新状态、连通性测试、重连。
  */
 
@@ -13,7 +13,7 @@ import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import type { UiAgentOption, UiChatChannelStatus } from "@/types/Dashboard"
 
 /**
- * Agent Chat Channels 管理页属性。
+ * Agent Chat 管理页属性。
  */
 export interface AgentChannelsSectionProps {
   /**
@@ -21,7 +21,7 @@ export interface AgentChannelsSectionProps {
    */
   selectedAgent: UiAgentOption | null
   /**
-   * chat 渠道状态列表。
+   * chat 平台状态列表。
    */
   channels: UiChatChannelStatus[]
   /**
@@ -29,11 +29,11 @@ export interface AgentChannelsSectionProps {
    */
   loading: boolean
   /**
-   * 刷新渠道状态回调。
+   * 刷新 chat 平台状态回调。
    */
   onRefresh: () => void
   /**
-   * 渠道动作回调。
+   * chat 平台动作回调。
    */
   onChannelAction: (action: "test" | "reconnect" | "open" | "close", channel: string) => void
 }
@@ -58,7 +58,7 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
 
   if (!selectedAgent) {
     return (
-      <DashboardModule title="Agent Channels" description="当前 agent 的 channel 运行状态。">
+      <DashboardModule title="Agent Chat" description="当前 agent 的 chat plugin 运行状态。">
         <div className="rounded-[20px] bg-secondary/85 px-4 py-5 text-sm text-muted-foreground">
           未选择可用 agent
         </div>
@@ -68,7 +68,7 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
 
   return (
     <DashboardModule
-      title="Agent Channels"
+      title="Agent Chat"
       description={`当前 agent：${selectedAgent.agentId || "-"}`}
       actions={
         <Button
@@ -88,7 +88,7 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
         <div className="space-y-2">
           {channels.length === 0 ? (
             <div className="rounded-[20px] bg-secondary/85 px-4 py-5 text-sm text-muted-foreground">
-              当前没有可管理 channel 数据
+              当前没有可管理 chat platform 数据
             </div>
           ) : (
             channels.map((item) => {

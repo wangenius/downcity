@@ -340,7 +340,7 @@ export async function querySessions(
           messageCount: 0,
           updatedAt: Date.now(),
           lastRole: "system",
-          lastText: "consoleui channel",
+          lastText: "Console UI chat",
         },
         ...list,
       ];

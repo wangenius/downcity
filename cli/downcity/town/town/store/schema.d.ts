@@ -147,10 +147,10 @@ export declare const envEntriesTable: import("drizzle-orm/sqlite-core").SQLiteTa
     dialect: "sqlite";
 }>;
 /**
- * Channel Account 表。
+ * Chat Account 表。
  *
  * 关键点（中文）
- * - 各渠道敏感字段独立密文列存储。
+ * - 各 chat platform 敏感字段独立密文列存储。
  * - `downcity.json` 仅保存 channelAccountId 绑定，不直接保存密钥。
  */
 export declare const channelAccountsTable: import("drizzle-orm/sqlite-core").SQLiteTableWithColumns<{

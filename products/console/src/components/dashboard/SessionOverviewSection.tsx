@@ -2,9 +2,9 @@
  * Session 列表总览区。
  *
  * 关键点（中文）
- * - 渠道主视图的 configuration 采用右上角 dropdown menu 直接切换 channel account。
- * - 切换来源限定为当前全局 Channel Account 库，不再打开复杂配置弹窗。
- * - agent 渠道页只负责“绑定关系与运行状态”，不展示 bot 详情信息。
+ * - Chat Runtime 主视图采用右上角 dropdown menu 直接切换 chat account。
+ * - 切换来源限定为当前全局 Chat Account 库，不再打开复杂配置弹窗。
+ * - agent chat 页只负责“绑定关系与运行状态”，不展示 bot 详情信息。
  */
 
 import * as React from "react"
@@ -75,11 +75,11 @@ export interface SessionOverviewSectionProps {
    */
   sessions: UiSessionSummary[]
   /**
-   * chat 渠道状态列表。
+   * chat 平台状态列表。
    */
   chatChannels: UiChatChannelStatus[]
   /**
-   * 全局 channel account 列表。
+   * 全局 chat account 列表。
    */
   channelAccounts: UiChannelAccountItem[]
   /**
@@ -87,7 +87,7 @@ export interface SessionOverviewSectionProps {
    */
   selectedSessionId: string
   /**
-   * 当前聚焦的渠道。
+   * 当前聚焦的 chat platform。
    */
   focusedChannel?: string
   /**
@@ -107,11 +107,11 @@ export interface SessionOverviewSectionProps {
    */
   deletingSessionId?: string
   /**
-   * 渠道动作。
+   * chat 平台动作。
    */
   onChatAction: (action: "test" | "reconnect" | "open" | "close", channel: string) => void
   /**
-   * 保存渠道配置。
+   * 保存 chat 平台配置。
    */
   onChatConfigure: (channel: string, config: Record<string, unknown>) => void
 }
@@ -210,17 +210,17 @@ export function SessionOverviewSection(props: SessionOverviewSectionProps) {
     <div className="space-y-5">
       {!activeChannel ? (
         <DashboardModule
-          title="Channel Runtime"
-          description="当前 channel 暂无状态。"
+          title="Chat Runtime"
+          description="当前 chat platform 暂无状态。"
         >
           <section className="rounded-[18px] bg-secondary px-3.5 py-5 text-sm text-muted-foreground">
-            当前 channel 暂无状态
+            当前 chat platform 暂无状态
           </section>
         </DashboardModule>
       ) : (
         <DashboardModule
-          title="Channel Runtime"
-          description={`当前 channel：${activeChannelLabel || "unknown"} · account ${activeChannelAccountLabel}`}
+          title="Chat Runtime"
+          description={`当前平台：${activeChannelLabel || "unknown"} · account ${activeChannelAccountLabel}`}
         >
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-3 px-1 py-1">
@@ -228,7 +228,7 @@ export function SessionOverviewSection(props: SessionOverviewSectionProps) {
                 <div className="truncate text-xl font-semibold leading-none text-foreground">{activeChannelLabel || "unknown"}</div>
                 {activeChannelName === "qq" ? (
                   <div className="mt-2 rounded-[12px] border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-xs leading-5 text-amber-950">
-                    QQ channel 当前为 dev 版本，建议仅用于测试与验证。
+                    QQ chat platform 当前为 dev 版本，建议仅用于测试与验证。
                   </div>
                 ) : null}
                 <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">

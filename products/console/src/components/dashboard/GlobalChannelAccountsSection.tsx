@@ -1,10 +1,10 @@
 /**
- * Global Channel Accounts 管理页。
+ * Global Chat Accounts 管理页。
  *
  * 关键点（中文）
- * - 新建账号时不要求手填 `channel account id` 与 `display name`。
+ * - 新建账号时不要求手填内部账号 id 与 `display name`。
  * - 用户只需填写凭据并点击“测试”，系统自动探测并回填必要信息。
- * - channel 页面仅绑定 channelAccountId，不直接维护密钥。
+ * - Chat Runtime 页面仅绑定 chat account，不直接维护密钥。
  */
 
 import * as React from "react"
@@ -101,7 +101,7 @@ function validateForConfirm(params: {
   const { form, probeStatus } = params
   const errors: string[] = []
 
-  if (!trimText(form.channel)) errors.push("请选择 channel")
+  if (!trimText(form.channel)) errors.push("请选择 chat platform")
 
   if (probeStatus !== "passed") {
     errors.push(probeStatus === "failed" ? "测试未通过，请修复凭据后重试" : "请先测试凭据并通过")
@@ -196,7 +196,7 @@ function getChannelCredentialFields(channel: string): UiConfigEditorField[] {
         type: "boolean",
         trueLabel: "测试环境",
         falseLabel: "生产环境",
-        description: "QQ channel 当前为 dev 版本，建议优先在测试环境验证。",
+        description: "QQ chat platform 当前为 dev 版本，建议优先在测试环境验证。",
       },
     ]
   }
@@ -378,7 +378,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
   return (
     <section className="space-y-4">
       <DashboardModule
-        title="Channel Accounts"
+        title="Chat Accounts"
         description={`已配置 ${items.length} 个，凭据完整 ${readyCount} 个`}
         actions={
           <>
@@ -407,7 +407,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
 
         {filteredItems.length === 0 ? (
           <div className="rounded-[20px] bg-secondary/85 py-6 text-center text-sm text-muted-foreground">
-            暂无 channel account
+            暂无 chat account
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -458,7 +458,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       onClick={() => {
                         void (async () => {
                           const confirmed = await confirm({
-                            title: "删除 Channel Account",
+                            title: "删除 Chat Account",
                             description: `确认删除账号「${item.name || id}」吗？该操作不可恢复。`,
                             confirmText: "删除",
                             confirmVariant: "destructive",
@@ -490,13 +490,13 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
       <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
         <DialogContent className="w-[min(92vw,560px)]">
           <DialogHeader>
-            <DialogTitle>{isEditing ? "编辑 Channel Account" : "新建 Channel Account"}</DialogTitle>
+            <DialogTitle>{isEditing ? "编辑 Chat Account" : "新建 Chat Account"}</DialogTitle>
             <DialogDescription>填写必要凭据，先测试，通过后确认。</DialogDescription>
           </DialogHeader>
 
           <div className="max-h-[62vh] space-y-4 overflow-y-auto px-4 pb-2">
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Channel</Label>
+              <Label className="text-xs text-muted-foreground">Chat Platform</Label>
               {isEditing ? (
                 <div className="rounded-[16px] bg-secondary px-3 py-2.5 text-sm text-foreground">
                   {channelDisplayName(form.channel)}

@@ -119,7 +119,7 @@ export function registerControlSessionRoutes(
                 messageCount: 0,
                 updatedAt: Date.now(),
                 lastRole: "system" as const,
-                lastText: "consoleui channel",
+                lastText: "Console UI chat",
                 channel: "consoleui",
                 ...(executingSessionIds.has(CONSOLEUI_SESSION_ID) ? { executing: true } : {}),
               },

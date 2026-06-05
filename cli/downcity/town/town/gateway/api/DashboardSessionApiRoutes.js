@@ -35,7 +35,7 @@ export function registerDashboardSessionApiRoutes(params) {
                         messageCount: 0,
                         updatedAt: Date.now(),
                         lastRole: "system",
-                        lastText: "consoleui channel",
+                        lastText: "Console UI chat",
                         channel: "consoleui",
                     },
                     ...sessions,

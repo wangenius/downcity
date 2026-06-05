@@ -74,7 +74,7 @@ export async function initCommand(cwd = ".", options = {}) {
         }
     }
     // Collect configuration information
-    // 交互采集（中文）：agent id + model + channels。
+    // 交互采集（中文）：agent id + model + chat platforms。
     const response = (await prompts([
         {
             type: "text",
@@ -90,10 +90,10 @@ export async function initCommand(cwd = ".", options = {}) {
             initial: 0,
         },
         {
-            // 关键交互: Chat channels 允许多选，未选择的就不写入 downcity.json
+            // 关键交互（中文）：Chat platforms 允许多选，未选择的就不写入 downcity.json。
             type: "multiselect",
             name: "channels",
-            message: "Select chat channels (multi-select)",
+            message: "Select chat platforms (multi-select)",
             choices: [
                 { title: "Telegram", value: "telegram" },
                 { title: "Feishu", value: "feishu" },
@@ -178,7 +178,7 @@ export async function initCommand(cwd = ".", options = {}) {
                 },
                 {
                     label: "Manage",
-                    value: "Console > Global / Channel Accounts",
+                    value: "Console > Global / Chat Accounts",
                 },
             ],
         });
@@ -193,7 +193,7 @@ export async function initCommand(cwd = ".", options = {}) {
                 },
                 {
                     label: "Manage",
-                    value: "Console > Global / Channel Accounts",
+                    value: "Console > Global / Chat Accounts",
                 },
             ],
         });
@@ -208,7 +208,7 @@ export async function initCommand(cwd = ".", options = {}) {
                 },
                 {
                     label: "Manage",
-                    value: "Console > Global / Channel Accounts",
+                    value: "Console > Global / Chat Accounts",
                 },
             ],
         });
@@ -216,7 +216,7 @@ export async function initCommand(cwd = ".", options = {}) {
     if (channelItems.length > 0) {
         emitCliList({
             tone: "accent",
-            title: "Channels",
+            title: "Chat platforms",
             items: channelItems,
         });
     }
@@ -230,13 +230,13 @@ export async function initCommand(cwd = ".", options = {}) {
         nextSteps.push('Use "town city status" to confirm the Agent runtime can reach City');
     }
     if (selectedChannels.includes("telegram")) {
-        nextSteps.push("Bind plugins.chat.channels.telegram.channelAccountId to an existing channel account");
+        nextSteps.push("Bind plugins.chat.channels.telegram.channelAccountId to an existing chat account");
     }
     if (selectedChannels.includes("feishu")) {
-        nextSteps.push("Bind plugins.chat.channels.feishu.channelAccountId to an existing channel account");
+        nextSteps.push("Bind plugins.chat.channels.feishu.channelAccountId to an existing chat account");
     }
     if (selectedChannels.includes("qq")) {
-        nextSteps.push("Bind plugins.chat.channels.qq.channelAccountId to an existing channel account");
+        nextSteps.push("Bind plugins.chat.channels.qq.channelAccountId to an existing chat account");
     }
     nextSteps.push('Run "town agent start" to start the agent');
     emitCliList({

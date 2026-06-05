@@ -16,7 +16,7 @@ import { runManagedPluginControlCommand } from "../shared/ManagedPluginRemote.js
 const CHAT_PLUGIN_HELP_TEXT = [
     "",
     "Chat quick guide:",
-    "  直接输出 assistant 文本会发送到当前 chat channel。",
+    "  直接输出 assistant 文本会发送到当前 chat platform。",
     "  跨 chat 发送请使用 `town chat send --chat-key <chatKey>`。",
     "  如果要发正文/附件/定时消息，先看 `town chat send --help` 与 `town chat react --help`。",
     "",

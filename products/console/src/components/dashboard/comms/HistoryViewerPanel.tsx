@@ -92,7 +92,7 @@ export function HistoryViewerPanel(props: HistoryViewerPanelProps) {
         <div className="min-w-0 space-y-2">
           <div className="max-h-[56vh] min-w-0 space-y-2 overflow-auto rounded-[20px] bg-secondary/85 p-2">
             {channelHistory.length === 0 ? (
-              <div className="text-xs text-muted-foreground">暂无 channel history</div>
+              <div className="text-xs text-muted-foreground">暂无 chat history</div>
             ) : (
               channelHistory.map((event, index) => {
                 const direction = String(event.direction || "unknown")

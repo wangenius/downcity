@@ -28,13 +28,13 @@ export function optionalTrimmedText(value) {
     return normalized || undefined;
 }
 /**
- * 规范化 channel account 的 channel 字段。
+ * 规范化 chat account 的平台字段。
  */
 export function normalizeChannelAccountChannel(input) {
     const channel = String(input || "").trim().toLowerCase();
     if (channel === "telegram" || channel === "feishu" || channel === "qq") {
         return channel;
     }
-    throw new Error(`Unsupported channel account type: ${input}`);
+    throw new Error(`Unsupported chat account platform: ${input}`);
 }
 //# sourceMappingURL=StoreShared.js.map

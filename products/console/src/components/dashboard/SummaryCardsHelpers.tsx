@@ -47,11 +47,11 @@ export interface SummaryCardsProps {
    */
   sessions: UiSessionSummary[]
   /**
-   * channel account 列表（用于显示当前绑定账号名称）。
+   * chat account 列表（用于显示当前绑定账号名称）。
    */
   channelAccounts: UiChannelAccountItem[]
   /**
-   * consoleui channel 默认 session id。
+   * Console UI chat 默认 session id。
    */
   consoleUiSessionId: string
   /**
@@ -100,11 +100,11 @@ export interface SummaryCardsProps {
    */
   onControlService: (serviceName: string, action: string) => Promise<void> | void
   /**
-   * chat channel 状态快照。
+   * chat platform 状态快照。
    */
   chatChannels: UiChatChannelStatus[]
   /**
-   * 执行 chat channel 动作。
+   * 执行 chat platform 动作。
    */
   onChatAction: (
     action: "test" | "reconnect" | "open" | "close",

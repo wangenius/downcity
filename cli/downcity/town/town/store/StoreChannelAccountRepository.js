@@ -1,14 +1,14 @@
 /**
- * PlatformStore 渠道账号仓储。
+ * PlatformStore chat account 仓储。
  *
  * 关键点（中文）
  * - 统一管理 `channel_accounts` 表。
- * - 负责敏感字段解密/加密与 channel account 的语义化组装。
+ * - 负责敏感字段解密/加密与 chat account 的语义化组装。
  */
 import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
 import { normalizeChannelAccountChannel, normalizeNonEmptyText, nowIso, optionalTrimmedText, } from "./StoreShared.js";
 /**
- * 同步列出 channel accounts。
+ * 同步列出 chat accounts。
  */
 export function listChannelAccountsSync(context, channelInput) {
     const maybeChannel = optionalTrimmedText(channelInput);
@@ -39,15 +39,15 @@ export function listChannelAccountsSync(context, channelInput) {
     return out;
 }
 /**
- * 同步按 ID 获取 channel account。
+ * 同步按 ID 获取 chat account。
  */
 export function getChannelAccountSync(context, accountIdInput) {
-    const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+    const accountId = normalizeNonEmptyText(accountIdInput, "chat account id");
     const rows = listChannelAccountsSync(context);
     return rows.find((item) => item.id === accountId) || null;
 }
 /**
- * 异步列出 channel accounts。
+ * 异步列出 chat accounts。
  */
 export async function listChannelAccounts(context, channelInput) {
     const maybeChannel = optionalTrimmedText(channelInput);
@@ -78,20 +78,20 @@ export async function listChannelAccounts(context, channelInput) {
     return out;
 }
 /**
- * 异步按 ID 获取 channel account。
+ * 异步按 ID 获取 chat account。
  */
 export async function getChannelAccount(context, accountIdInput) {
-    const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+    const accountId = normalizeNonEmptyText(accountIdInput, "chat account id");
     const rows = await listChannelAccounts(context);
     return rows.find((item) => item.id === accountId) || null;
 }
 /**
- * 新增或更新 channel account。
+ * 新增或更新 chat account。
  */
 export async function upsertChannelAccount(context, input) {
-    const id = normalizeNonEmptyText(input.id, "channel account id");
+    const id = normalizeNonEmptyText(input.id, "chat account id");
     const channel = normalizeChannelAccountChannel(input.channel);
-    const name = normalizeNonEmptyText(input.name, "channel account name");
+    const name = normalizeNonEmptyText(input.name, "chat account name");
     const existing = await getChannelAccount(context, id);
     const createdAt = existing?.createdAt || nowIso();
     const updatedAt = nowIso();
@@ -129,14 +129,14 @@ export async function upsertChannelAccount(context, input) {
     `).run(id, channel, name, optionalTrimmedText(input.identity) || null, optionalTrimmedText(input.owner) || null, optionalTrimmedText(input.creator) || null, botTokenEncrypted, appIdEncrypted, appSecretEncrypted, optionalTrimmedText(input.domain) || null, input.sandbox === true ? 1 : 0, createdAt, updatedAt);
 }
 /**
- * 删除 channel account。
+ * 删除 chat account。
  */
 export function removeChannelAccount(context, accountIdInput) {
-    const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+    const accountId = normalizeNonEmptyText(accountIdInput, "chat account id");
     context.sqlite.prepare("DELETE FROM channel_accounts WHERE id = ?;").run(accountId);
 }
 /**
- * 同步构造 channel account。
+ * 同步构造 chat account。
  */
 function buildChannelAccountFromRowSync(row) {
     const id = String(row.id || "").trim();
@@ -166,7 +166,7 @@ function buildChannelAccountFromRowSync(row) {
     };
 }
 /**
- * 异步构造 channel account。
+ * 异步构造 chat account。
  */
 async function buildChannelAccountFromRow(row) {
     const id = String(row.id || "").trim();

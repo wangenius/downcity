@@ -47,7 +47,7 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
   globalChannelAccounts: {
     view: "globalChannelAccounts",
     scope: "global",
-    title: "Channel Accounts",
+    title: "Chat Accounts",
     path: "/global/channel-accounts",
   },
   globalCommand: {

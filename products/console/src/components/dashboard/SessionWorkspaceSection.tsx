@@ -99,7 +99,7 @@ export interface SessionWorkspaceSectionProps {
    */
   onChangeInput: (value: string) => void
   /**
-   * 发送 consoleui channel 消息。
+   * 发送 Console UI chat 消息。
    */
   onSendConsoleUiMessage: () => void
   /**
@@ -760,7 +760,7 @@ export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
               onSendConsoleUiMessage()
             }}
             rows={3}
-            placeholder={canSend ? "输入发给 consoleui channel 的消息..." : "当前 session 为只读，仅 consoleui channel 可发送"}
+            placeholder={canSend ? "输入发给 Console UI 的消息..." : "当前 session 为只读，仅 Console UI 可发送"}
             disabled={!canSend}
             className="min-h-[84px] resize-y rounded-[14px] bg-secondary/85 text-[11px] focus-visible:bg-secondary"
           />

@@ -517,7 +517,7 @@ async function connectAgentChannels(
     if (nextAccountId === undefined) {
       emitCliBlock({
         tone: "info",
-        title: "Channel connection cancelled",
+        title: "Chat platform connection cancelled",
       });
       return agent;
     }
@@ -541,7 +541,7 @@ async function connectAgentChannels(
   };
   emitCliBlock({
     tone: "success",
-    title: "Agent chat channels connected",
+    title: "Agent chat platforms connected",
     summary: nextAgent.channels.length > 0 ? nextAgent.channels.join(", ") : "none",
     facts: [
       {

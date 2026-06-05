@@ -1,9 +1,9 @@
 /**
- * PlatformStore 渠道账号仓储。
+ * PlatformStore chat account 仓储。
  *
  * 关键点（中文）
  * - 统一管理 `channel_accounts` 表。
- * - 负责敏感字段解密/加密与 channel account 的语义化组装。
+ * - 负责敏感字段解密/加密与 chat account 的语义化组装。
  */
 
 import type {
@@ -20,7 +20,7 @@ import {
 } from "./StoreShared.js";
 
 /**
- * 同步列出 channel accounts。
+ * 同步列出 chat accounts。
  */
 export function listChannelAccountsSync(
   context: PlatformStoreContext,
@@ -58,19 +58,19 @@ export function listChannelAccountsSync(
 }
 
 /**
- * 同步按 ID 获取 channel account。
+ * 同步按 ID 获取 chat account。
  */
 export function getChannelAccountSync(
   context: PlatformStoreContext,
   accountIdInput: string,
 ): StoredChannelAccount | null {
-  const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+  const accountId = normalizeNonEmptyText(accountIdInput, "chat account id");
   const rows = listChannelAccountsSync(context);
   return rows.find((item) => item.id === accountId) || null;
 }
 
 /**
- * 异步列出 channel accounts。
+ * 异步列出 chat accounts。
  */
 export async function listChannelAccounts(
   context: PlatformStoreContext,
@@ -108,27 +108,27 @@ export async function listChannelAccounts(
 }
 
 /**
- * 异步按 ID 获取 channel account。
+ * 异步按 ID 获取 chat account。
  */
 export async function getChannelAccount(
   context: PlatformStoreContext,
   accountIdInput: string,
 ): Promise<StoredChannelAccount | null> {
-  const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+  const accountId = normalizeNonEmptyText(accountIdInput, "chat account id");
   const rows = await listChannelAccounts(context);
   return rows.find((item) => item.id === accountId) || null;
 }
 
 /**
- * 新增或更新 channel account。
+ * 新增或更新 chat account。
  */
 export async function upsertChannelAccount(
   context: PlatformStoreContext,
   input: UpsertChannelAccountInput,
 ): Promise<void> {
-  const id = normalizeNonEmptyText(input.id, "channel account id");
+  const id = normalizeNonEmptyText(input.id, "chat account id");
   const channel = normalizeChannelAccountChannel(input.channel);
-  const name = normalizeNonEmptyText(input.name, "channel account name");
+  const name = normalizeNonEmptyText(input.name, "chat account name");
   const existing = await getChannelAccount(context, id);
   const createdAt = existing?.createdAt || nowIso();
   const updatedAt = nowIso();
@@ -188,18 +188,18 @@ export async function upsertChannelAccount(
 }
 
 /**
- * 删除 channel account。
+ * 删除 chat account。
  */
 export function removeChannelAccount(
   context: PlatformStoreContext,
   accountIdInput: string,
 ): void {
-  const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+  const accountId = normalizeNonEmptyText(accountIdInput, "chat account id");
   context.sqlite.prepare("DELETE FROM channel_accounts WHERE id = ?;").run(accountId);
 }
 
 /**
- * 同步构造 channel account。
+ * 同步构造 chat account。
  */
 function buildChannelAccountFromRowSync(
   row: Record<string, unknown>,
@@ -234,7 +234,7 @@ function buildChannelAccountFromRowSync(
 }
 
 /**
- * 异步构造 channel account。
+ * 异步构造 chat account。
  */
 async function buildChannelAccountFromRow(
   row: Record<string, unknown>,

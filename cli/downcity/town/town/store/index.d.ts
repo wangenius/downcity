@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 对外仍然只暴露一个 `PlatformStore` 类，保持调用入口稳定。
- * - 内部已经按职责拆成 schema、secure settings、env、channel accounts 多个模块。
+ * - 内部已经按职责拆成 schema、secure settings、env、chat accounts 多个模块。
  * - 这样既能保持外部 API 简洁，也能把通用存储层控制在可维护的模块粒度内。
  */
 import type { PlatformStoreContext } from "./StoreShared.js";
@@ -112,27 +112,27 @@ export declare class PlatformStore {
      */
     clearGlobalEnvEntries(): void;
     /**
-     * 列出 channel accounts（同步解密）。
+     * 列出 chat accounts（同步解密）。
      */
     listChannelAccountsSync(channelInput?: string): StoredChannelAccount[];
     /**
-     * 按 ID 获取 channel account（同步解密）。
+     * 按 ID 获取 chat account（同步解密）。
      */
     getChannelAccountSync(accountIdInput: string): StoredChannelAccount | null;
     /**
-     * 列出 channel accounts（解密后）。
+     * 列出 chat accounts（解密后）。
      */
     listChannelAccounts(channelInput?: string): Promise<StoredChannelAccount[]>;
     /**
-     * 按 ID 获取 channel account（解密后）。
+     * 按 ID 获取 chat account（解密后）。
      */
     getChannelAccount(accountIdInput: string): Promise<StoredChannelAccount | null>;
     /**
-     * 新增或更新 channel account。
+     * 新增或更新 chat account。
      */
     upsertChannelAccount(input: UpsertChannelAccountInput): Promise<void>;
     /**
-     * 删除 channel account。
+     * 删除 chat account。
      */
     removeChannelAccount(accountIdInput: string): void;
 }

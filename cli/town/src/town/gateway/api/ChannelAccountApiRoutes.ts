@@ -1,8 +1,8 @@
 /**
- * 平台 Channel Account 路由。
+ * 平台 Chat Account 路由。
  *
  * 关键点（中文）
- * - 提供全局 channel account 管理接口。
+ * - 提供全局 chat account 管理接口。
  * - 仅暴露脱敏字段，不返回明文密钥。
  */
 
@@ -10,7 +10,7 @@ import type { Hono } from "hono";
 import { ChatChannelAccountManager } from "@downcity/plugins";
 
 /**
- * 注册 Channel Account API 路由。
+ * 注册 Chat Account API 路由。
  */
 export function registerPlatformChannelAccountRoutes(params: { app: Hono }): void {
   const app = params.app;

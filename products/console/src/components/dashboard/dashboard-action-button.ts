@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一所有 section / item 内的小型 icon action button 外观。
- * - 基准样式对齐 Channel Accounts item action button。
+ * - 基准样式对齐 Chat Accounts item action button。
  * - 危险操作只改变语义颜色，不改变尺寸、圆角与交互节奏。
  */
 

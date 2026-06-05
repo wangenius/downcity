@@ -39,10 +39,10 @@ export const envEntriesTable = sqliteTable(
 );
 
 /**
- * Channel Account 表。
+ * Chat Account 表。
  *
  * 关键点（中文）
- * - 各渠道敏感字段独立密文列存储。
+ * - 各 chat platform 敏感字段独立密文列存储。
  * - `downcity.json` 仅保存 channelAccountId 绑定，不直接保存密钥。
  */
 export const channelAccountsTable = sqliteTable(

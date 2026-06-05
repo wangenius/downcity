@@ -200,16 +200,16 @@ async function promptPluginRootAction(): Promise<
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: "Plugin 目录",
+    message: "Plugin 配置",
     choices: [
       {
-        title: "查看 plugin 目录",
-        description: `${plugins.length} 个 Agent 内部 plugin`,
+        title: "配置 plugin 能力",
+        description: `${plugins.length} 个 Agent 可用 plugin`,
         value: "catalog",
       },
       {
-        title: "查看 plugin 详情",
-        description: "查看 actions、system 与运行边界",
+        title: "查看 plugin 配置详情",
+        description: "查看 actions、system 与运行边界配置",
         value: "info",
       },
       {

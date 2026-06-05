@@ -10,7 +10,6 @@ import { gatewayStatusCommand } from "../town/gateway/runtime/GatewayStatus.js";
 import { restartTownRuntimeCommand, startTownRuntimeCommand, stopTownRuntimeCommand, } from "../town/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
-import { runInteractiveChatManager } from "./ChatManager.js";
 import { runInteractiveCityManager } from "./CityConnection.js";
 import { emitCliBlock } from "./CliReporter.js";
 async function promptTownHomeAction() {
@@ -50,14 +49,9 @@ async function promptTownHomeAction() {
                 value: "agent",
             },
             {
-                title: "查看 Agent Plugins",
-                description: "查看 Agent 内部 plugin 目录与能力",
+                title: "配置 Plugins",
+                description: "配置 Agent 可用 plugin 能力与运行边界",
                 value: "plugin",
-            },
-            {
-                title: "Chat plugin 快捷入口",
-                description: "管理 chat accounts、访问控制与 chat plugin 状态",
-                value: "chat",
             },
             {
                 title: "查看帮助",
@@ -118,10 +112,6 @@ export async function runInteractiveTownManager(params) {
             }
             if (action === "plugin") {
                 await runInteractivePluginManager();
-                continue;
-            }
-            if (action === "chat") {
-                await runInteractiveChatManager();
                 continue;
             }
             if (action === "help") {

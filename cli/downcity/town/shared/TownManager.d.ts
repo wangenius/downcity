@@ -18,7 +18,7 @@ export declare function runInteractiveTownManager(params: {
      */
     program: TownHelpProgram;
     /**
-     * 当前 CLI 入口路径，用于启动 Console。
+     * 当前 CLI 入口路径，用于启动或重启 Town runtime。
      */
     cli_path: string;
 }): Promise<void>;

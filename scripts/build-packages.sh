@@ -182,7 +182,6 @@ run_build() {
     echo "--- Downcity CLI products ---"
     run_project_build "$ROOT_DIR/cli/city"
     run_project_build "$ROOT_DIR/cli/town"
-    run_project_build "$ROOT_DIR/products/console"
     run_project_build "$ROOT_DIR/cli/downcity"
     return 0
   fi

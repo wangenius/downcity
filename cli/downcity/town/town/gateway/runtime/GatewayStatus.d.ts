@@ -1,8 +1,9 @@
 /**
- * GatewayStatus：Town gateway 命令的状态展示辅助。
+ * GatewayStatus：Town runtime 命令的状态展示辅助。
  *
  * 关键点（中文）
- * - 聚合 town 后台、gateway/gateway 与受管 agent 的状态面板输出。
+ * - 聚合 town 后台、City 连接与受管 agent 的状态面板输出。
+ * - Console UI 已从 Town 启动链路断开，因此总览不再展示 Console 运行态。
  * - 与进程控制逻辑解耦，便于后续继续拆分命令入口文件。
  */
 import type { ManagedAgentProcessView } from "@downcity/agent";
@@ -11,17 +12,7 @@ import type { ManagedAgentProcessView } from "@downcity/agent";
  */
 export declare function printRunningManagedAgents(views: ManagedAgentProcessView[]): void;
 /**
- * 打印 town 后台、gateway 与受管 agent 的状态面板。
+ * 打印 town 后台、City 连接与受管 agent 的状态面板。
  */
 export declare function gatewayStatusCommand(): Promise<void>;
-/**
- * 打印 gateway 独立状态面板。
- */
-export declare function printGatewayStatusPanel(status: {
-    running: boolean;
-    pid?: number;
-    pidPath: string;
-    logPath: string;
-    url?: string;
-}): void;
 //# sourceMappingURL=GatewayStatus.d.ts.map

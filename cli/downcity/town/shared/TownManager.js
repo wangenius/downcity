@@ -7,7 +7,6 @@
  */
 import prompts from "prompts";
 import { gatewayStatusCommand } from "../town/gateway/runtime/GatewayStatus.js";
-import { startGatewayRuntimeCommand } from "../town/gateway/runtime/GatewayRuntime.js";
 import { restartTownRuntimeCommand, startTownRuntimeCommand, stopTownRuntimeCommand, } from "../town/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
@@ -22,17 +21,17 @@ async function promptTownHomeAction() {
         choices: [
             {
                 title: "查看总览",
-                description: "Town runtime、Console、受管 Agent 状态",
+                description: "Town runtime、受管 Agent 与 City 连接状态",
                 value: "status",
             },
             {
                 title: "启动 Town",
-                description: "启动 Town runtime，不自动打开 Console",
+                description: "启动 Town runtime",
                 value: "start",
             },
             {
                 title: "停止 Town",
-                description: "停止 Console、Town runtime 与受管 Agent",
+                description: "停止 Town runtime 与受管 Agent",
                 value: "stop",
             },
             {
@@ -59,11 +58,6 @@ async function promptTownHomeAction() {
                 title: "Chat plugin 快捷入口",
                 description: "管理 chat accounts、访问控制与 chat plugin 状态",
                 value: "chat",
-            },
-            {
-                title: "打开 Console",
-                description: "启动本机控制台",
-                value: "console",
             },
             {
                 title: "查看帮助",
@@ -128,12 +122,6 @@ export async function runInteractiveTownManager(params) {
             }
             if (action === "chat") {
                 await runInteractiveChatManager();
-                continue;
-            }
-            if (action === "console") {
-                await startGatewayRuntimeCommand({
-                    cliPath: params.cli_path,
-                });
                 continue;
             }
             if (action === "help") {

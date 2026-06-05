@@ -1,9 +1,9 @@
 /**
- * Town gateway 命令装配模块。
+ * Town runtime 命令装配模块。
  *
  * 关键点（中文）
- * - 这里的 `console` 是 Town gateway 的运维入口，而不是单 agent API。
- * - 统一管理 top-level town 生命周期命令与 gateway 模块命令。
+ * - Town CLI 不再启动 Console UI 项目；`town start` 只负责本机 runtime。
+ * - 旧 gateway 源码暂时保留给历史 API/清理逻辑，但不再挂到用户命令入口。
  * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
  */
 import { Command } from "commander";
@@ -18,11 +18,11 @@ export interface GatewayCommandRegistrationContext {
     cliPath: string;
 }
 /**
- * 注册 top-level town 生命周期命令与 `console` 模块命令。
+ * 注册 top-level town 生命周期命令。
  *
  * 语义说明（中文）
- * - `town ...` / `town console ...` 管的是本机宿主与 Town gateway 进程。
- * - 单 agent 控制能力统一由 Town 基于 Agent runtime / RPC 装配外层协议面。
+ * - `town ...` 管的是本机宿主 runtime 与受管 agent。
+ * - Console UI 已从 Town 启动链路断开，不再提供 `town console` / `town public` 入口。
  */
 export declare function registerGatewayCommands(program: Command, context: GatewayCommandRegistrationContext): void;
 export { ensureRegisteredAgentProjectRoot, prepareForegroundAgent, };

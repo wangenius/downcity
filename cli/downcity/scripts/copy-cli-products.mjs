@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `downcity` 是唯一对外安装包，不能依赖内部 CLI workspace 包名。
- * - 构建时把 `cli/city/bin`、`cli/town/bin` 与 Console 静态资源复制进本包。
+ * - 构建时只把 `cli/city/bin` 与 `cli/town/bin` 复制进本包。
  * - 复制后的目录布局要匹配编译产物里的相对路径读取逻辑。
  */
 
@@ -26,11 +26,6 @@ const copy_targets = [
     label: "town command runtime",
     source_path: path.join(workspace_root, "cli/town/bin"),
     target_path: path.join(package_root, "town"),
-  },
-  {
-    label: "console assets",
-    source_path: path.join(workspace_root, "cli/town/public"),
-    target_path: path.join(package_root, "public"),
   },
 ];
 

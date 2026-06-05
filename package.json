@@ -13,7 +13,7 @@
     "build:city": "pnpm -C packages/type build && pnpm -C packages/city build",
     "build:services": "pnpm -C packages/services build",
     "build:plugins": "pnpm -C packages/plugins build",
-    "build:cli": "pnpm -C cli/city build && pnpm -C cli/town build && pnpm -C products/console build && pnpm -C cli/downcity build",
+    "build:cli": "pnpm -C cli/city build && pnpm -C cli/town build && pnpm -C cli/downcity build",
     "build:city-command": "pnpm -C cli/city build",
     "build:town-command": "pnpm -C cli/town build",
     "build:homepage": "pnpm -C homepage build",

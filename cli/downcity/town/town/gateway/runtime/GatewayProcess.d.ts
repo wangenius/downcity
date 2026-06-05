@@ -1,8 +1,9 @@
 /**
- * GatewayProcess：Town gateway 命令的 runtime/进程控制辅助。
+ * GatewayProcess：Town runtime 命令的进程控制辅助。
  *
  * 关键点（中文）
- * - 聚合 gateway 与受管 agent 的后台进程控制逻辑。
+ * - 聚合 Town runtime 与受管 agent 的后台进程控制逻辑。
+ * - 停止流程仍会清理旧 Console UI 进程，避免历史版本留下孤儿进程。
  * - 让 `GatewayCommand` 只保留命令树装配，不再混杂大量进程细节。
  */
 import type { ManagedAgentProcessView } from "@downcity/agent";
@@ -25,7 +26,7 @@ export declare function resolveRunningManagedAgents(params?: {
     syncRegistry?: boolean;
 }): Promise<ManagedAgentProcessView[]>;
 /**
- * 停止 town runtime 后台进程（先停 Console，再停受管 agent，最后停 town runtime）。
+ * 停止 town runtime 后台进程（先清理旧 Console，再停受管 agent，最后停 town runtime）。
  */
 export declare function stopTownRuntimeCommand(params?: {
     timeoutMs?: number;

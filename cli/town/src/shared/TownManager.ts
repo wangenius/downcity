@@ -8,7 +8,6 @@
 
 import prompts from "prompts";
 import { gatewayStatusCommand } from "../town/gateway/runtime/GatewayStatus.js";
-import { startGatewayRuntimeCommand } from "../town/gateway/runtime/GatewayRuntime.js";
 import {
   restartTownRuntimeCommand,
   startTownRuntimeCommand,
@@ -29,7 +28,6 @@ type TownHomeAction =
   | "agent"
   | "plugin"
   | "chat"
-  | "console"
   | "help"
   | "exit";
 
@@ -46,17 +44,17 @@ async function promptTownHomeAction(): Promise<TownHomeAction | null> {
     choices: [
       {
         title: "查看总览",
-        description: "Town runtime、Console、受管 Agent 状态",
+        description: "Town runtime、受管 Agent 与 City 连接状态",
         value: "status",
       },
       {
         title: "启动 Town",
-        description: "启动 Town runtime，不自动打开 Console",
+        description: "启动 Town runtime",
         value: "start",
       },
       {
         title: "停止 Town",
-        description: "停止 Console、Town runtime 与受管 Agent",
+        description: "停止 Town runtime 与受管 Agent",
         value: "stop",
       },
       {
@@ -85,11 +83,6 @@ async function promptTownHomeAction(): Promise<TownHomeAction | null> {
         value: "chat",
       },
       {
-        title: "打开 Console",
-        description: "启动本机控制台",
-        value: "console",
-      },
-      {
         title: "查看帮助",
         description: "输出 town 命令帮助",
         value: "help",
@@ -116,7 +109,7 @@ export async function runInteractiveTownManager(params: {
   program: TownHelpProgram;
 
   /**
-   * 当前 CLI 入口路径，用于启动 Console。
+   * 当前 CLI 入口路径，用于启动或重启 Town runtime。
    */
   cli_path: string;
 }): Promise<void> {
@@ -166,12 +159,6 @@ export async function runInteractiveTownManager(params: {
       }
       if (action === "chat") {
         await runInteractiveChatManager();
-        continue;
-      }
-      if (action === "console") {
-        await startGatewayRuntimeCommand({
-          cliPath: params.cli_path,
-        });
         continue;
       }
       if (action === "help") {

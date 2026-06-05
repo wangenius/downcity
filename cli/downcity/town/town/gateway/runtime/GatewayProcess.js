@@ -1,8 +1,9 @@
 /**
- * GatewayProcess：Town gateway 命令的 runtime/进程控制辅助。
+ * GatewayProcess：Town runtime 命令的进程控制辅助。
  *
  * 关键点（中文）
- * - 聚合 gateway 与受管 agent 的后台进程控制逻辑。
+ * - 聚合 Town runtime 与受管 agent 的后台进程控制逻辑。
+ * - 停止流程仍会清理旧 Console UI 进程，避免历史版本留下孤儿进程。
  * - 让 `GatewayCommand` 只保留命令树装配，不再混杂大量进程细节。
  */
 import { resolve } from "path";
@@ -29,10 +30,10 @@ import { resolveTownCliPath } from "../../../shared/TownCliPath.js";
  * 启动 town runtime 后台进程。
  */
 export async function startTownRuntimeCommand(cliPath) {
-    const consoleDir = getTownRuntimeDirPath();
+    const runtimeDir = getTownRuntimeDirPath();
     const pidPath = getTownPidPath();
     const logPath = getTownLogPath();
-    await fs.ensureDir(consoleDir);
+    await fs.ensureDir(runtimeDir);
     await ensureManagedAgentRegistry();
     const existingPid = await readTownPid();
     if (existingPid && isTownProcessAlive(existingPid)) {
@@ -75,7 +76,7 @@ export async function startTownRuntimeCommand(cliPath) {
     });
     child.unref();
     if (!child.pid) {
-        throw new Error("Failed to start console process (missing pid)");
+        throw new Error("Failed to start town runtime process (missing pid)");
     }
     await fs.writeFile(pidPath, String(child.pid), "utf-8");
     emitCliBlock({
@@ -124,14 +125,14 @@ export async function resolveRunningManagedAgents(params) {
     return views.sort((a, b) => a.projectRoot.localeCompare(b.projectRoot));
 }
 /**
- * 停止 town runtime 后台进程（先停 Console，再停受管 agent，最后停 town runtime）。
+ * 停止 town runtime 后台进程（先清理旧 Console，再停受管 agent，最后停 town runtime）。
  */
 export async function stopTownRuntimeCommand(params) {
     const timeoutMs = params?.timeoutMs ?? 10_000;
-    const consoleDir = getTownRuntimeDirPath();
+    const runtimeDir = getTownRuntimeDirPath();
     const pidPath = getTownPidPath();
-    await fs.ensureDir(consoleDir);
-    // Phase 1: Stop Console
+    await fs.ensureDir(runtimeDir);
+    // 关键点（中文）：兼容清理旧版本可能留下的 Console UI 进程；当前 Town 不再启动它。
     emitCliBlock({
         tone: "info",
         title: "Town runtime",
@@ -325,9 +326,9 @@ export async function restartTownRuntimeCommand(cliPath) {
  * 执行 town runtime 常驻进程。
  */
 export async function runTownRuntimeCommand() {
-    const consoleDir = getTownRuntimeDirPath();
+    const runtimeDir = getTownRuntimeDirPath();
     const pidPath = getTownPidPath();
-    await fs.ensureDir(consoleDir);
+    await fs.ensureDir(runtimeDir);
     await ensureManagedAgentRegistry();
     await fs.writeFile(pidPath, String(process.pid), "utf-8");
     const shutdown = async () => {

@@ -1,31 +1,27 @@
 /**
- * Town gateway 命令装配模块。
+ * Town runtime 命令装配模块。
  *
  * 关键点（中文）
- * - 这里的 `console` 是 Town gateway 的运维入口，而不是单 agent API。
- * - 统一管理 top-level town 生命周期命令与 gateway 模块命令。
+ * - Town CLI 不再启动 Console UI 项目；`town start` 只负责本机 runtime。
+ * - 旧 gateway 源码暂时保留给历史 API/清理逻辑，但不再挂到用户命令入口。
  * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
  */
-import { Option } from "commander";
-import { getGatewayRuntimeStatus, restartGatewayRuntimeCommand, runGatewayRuntimeCommand, startGatewayRuntimeCommand, stopGatewayRuntimeCommand, } from "../town/gateway/runtime/GatewayRuntime.js";
-import { gatewayPublicCommand, } from "../town/gateway/runtime/GatewayPublicManager.js";
 import { registerConfigCommand } from "./ConfigCommand.js";
 import { registerEnvCommand } from "./EnvCommand.js";
 import { registerTokenCommand } from "./TokenCommand.js";
 import { registerCityConnectionCommand } from "./CityCommand.js";
 import { gatewayInitCommand } from "../town/gateway/runtime/GatewayInit.js";
-import { parseBoolean, parsePort, createVersionBanner } from "../shared/IndexSupport.js";
+import { createVersionBanner } from "../shared/IndexSupport.js";
 import { CliError } from "../shared/CliError.js";
 import { updateCommand } from "../shared/Update.js";
-import { gatewayStatusCommand, printGatewayStatusPanel, } from "../town/gateway/runtime/GatewayStatus.js";
+import { gatewayStatusCommand, } from "../town/gateway/runtime/GatewayStatus.js";
 import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot, restartTownRuntimeCommand, runTownRuntimeCommand, startTownRuntimeCommand, stopTownRuntimeCommand, } from "../town/gateway/runtime/GatewayProcess.js";
-import { shouldAutoStartGatewayFromPersistedMode, } from "../town/gateway/runtime/GatewayPublicMode.js";
 /**
- * 注册 top-level town 生命周期命令与 `console` 模块命令。
+ * 注册 top-level town 生命周期命令。
  *
  * 语义说明（中文）
- * - `town ...` / `town console ...` 管的是本机宿主与 Town gateway 进程。
- * - 单 agent 控制能力统一由 Town 基于 Agent runtime / RPC 装配外层协议面。
+ * - `town ...` 管的是本机宿主 runtime 与受管 agent。
+ * - Console UI 已从 Town 启动链路断开，不再提供 `town console` / `town public` 入口。
  */
 export function registerGatewayCommands(program, context) {
     program
@@ -37,68 +33,31 @@ export function registerGatewayCommands(program, context) {
     }));
     program
         .command("start")
-        .description("启动 town runtime；使用 -a/--all、--console 或 -p/--public 可同时启动 Console")
-        .option("-a, --all", "同时启动 Console")
-        .option("--console", "同时启动 Console")
-        .option("-p, --public [enabled]", "以公网模式启动 Console（绑定 0.0.0.0）", parseBoolean)
-        .option("-h, --host <host>", "Console 主机；传入后默认同时启动 Console")
+        .description("启动 town runtime（不启动 Console UI）")
         .helpOption("--help", "display help for command")
-        .action(createVersionBanner(context.version, async (_options, command) => {
-        const options = command.opts();
-        const hasExplicitHost = Boolean(String(options?.host || "").trim());
-        const hasExplicitPublic = typeof options?.public === "boolean";
-        const shouldStartConsole = options?.all === true ||
-            options?.console === true ||
-            options?.public === true ||
-            hasExplicitHost ||
-            (!hasExplicitPublic && (await shouldAutoStartGatewayFromPersistedMode()));
+        .action(createVersionBanner(context.version, async () => {
         await startTownRuntimeCommand(context.cliPath);
-        if (shouldStartConsole) {
-            await startGatewayRuntimeCommand({
-                options: {
-                    public: options?.public,
-                    host: options?.host,
-                },
-                cliPath: context.cliPath,
-            });
-        }
     }));
     program
         .command("stop")
-        .description("停止 Town（先停 Console，再停 town 后台与受管 agent）")
+        .description("停止 Town runtime 与受管 agent")
         .helpOption("--help", "display help for command")
         .action(createVersionBanner(context.version, async () => {
         await stopTownRuntimeCommand();
     }));
     program
         .command("restart")
-        .description("重启 Town（重启 town 后台并恢复已运行 agent，再拉起 Console）")
+        .description("重启 Town runtime 并恢复已运行 agent")
         .helpOption("--help", "display help for command")
         .action(createVersionBanner(context.version, async () => {
         await restartTownRuntimeCommand(context.cliPath);
-        await startGatewayRuntimeCommand({
-            cliPath: context.cliPath,
-        });
     }));
     program
         .command("status")
-        .description("查看 town 后台、Console 与已托管 agent 运行状态")
+        .description("查看 town runtime 与已托管 agent 运行状态")
         .helpOption("--help", "display help for command")
         .action(createVersionBanner(context.version, async () => {
         await gatewayStatusCommand();
-    }));
-    program
-        .command("public [action]")
-        .description("管理 Console 公网模式（支持交互式 manager 与 on/off/status）")
-        .option("-h, --host <host>", "公网模式绑定 host（默认 0.0.0.0）")
-        .helpOption("--help", "display help for command")
-        .action(createVersionBanner(context.version, async (action, _options, command) => {
-        const options = command.opts();
-        await gatewayPublicCommand({
-            action,
-            host: options.host,
-            cliPath: context.cliPath,
-        });
     }));
     program
         .command("update")
@@ -122,49 +81,6 @@ export function registerGatewayCommands(program, context) {
         .command("run", { hidden: true })
         .description("Town 内部运行时（不直接使用）")
         .action(runTownRuntimeCommand);
-    const consoleCommand = program
-        .command("console [action]")
-        .description("管理 Town gateway（命令名保留为 console；start/stop/restart/status，默认 start）")
-        .option("-p, --public [enabled]", "以公网模式启动 Town gateway（绑定 0.0.0.0）", parseBoolean)
-        .option("-h, --host <host>", "Town gateway 主机（默认 127.0.0.1）")
-        .addOption(new Option("--port <port>").argParser(parsePort).hideHelp())
-        .helpOption("--help", "display help for command");
-    consoleCommand
-        .action(createVersionBanner(context.version, async (action, _options, command) => {
-        const options = command.opts();
-        const resolvedAction = String(action || "start").trim().toLowerCase();
-        if (resolvedAction === "start") {
-            await startGatewayRuntimeCommand({
-                options,
-                cliPath: context.cliPath,
-            });
-            return;
-        }
-        if (resolvedAction === "run") {
-            await runGatewayRuntimeCommand(options);
-            return;
-        }
-        if (resolvedAction === "stop") {
-            await stopGatewayRuntimeCommand();
-            return;
-        }
-        if (resolvedAction === "restart") {
-            await restartGatewayRuntimeCommand({
-                options,
-                cliPath: context.cliPath,
-            });
-            return;
-        }
-        if (resolvedAction === "status") {
-            const status = await getGatewayRuntimeStatus();
-            printGatewayStatusPanel(status);
-            return;
-        }
-        throw new CliError({
-            title: `Unknown action: ${resolvedAction}`,
-            fix: "Use start|stop|restart|status.",
-        });
-    }));
     registerConfigCommand(program);
     registerEnvCommand(program);
     registerTokenCommand(program);

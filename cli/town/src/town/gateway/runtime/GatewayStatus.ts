@@ -1,15 +1,12 @@
 /**
- * GatewayStatus：Town gateway 命令的状态展示辅助。
+ * GatewayStatus：Town runtime 命令的状态展示辅助。
  *
  * 关键点（中文）
- * - 聚合 town 后台、gateway/gateway 与受管 agent 的状态面板输出。
+ * - 聚合 town 后台、City 连接与受管 agent 的状态面板输出。
+ * - Console UI 已从 Town 启动链路断开，因此总览不再展示 Console 运行态。
  * - 与进程控制逻辑解耦，便于后续继续拆分命令入口文件。
  */
 
-import {
-  getGatewayRuntimeStatus,
-} from "./GatewayRuntime.js";
-import { readGatewayPublicModeSetting } from "./GatewayPublicMode.js";
 import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
   getManagedAgentRegistryPath,
@@ -58,7 +55,7 @@ export function printRunningManagedAgents(views: ManagedAgentProcessView[]): voi
 }
 
 /**
- * 打印 town 后台、gateway 与受管 agent 的状态面板。
+ * 打印 town 后台、City 连接与受管 agent 的状态面板。
  */
 export async function gatewayStatusCommand(): Promise<void> {
   const pidPath = getTownPidPath();
@@ -125,34 +122,6 @@ export async function gatewayStatusCommand(): Promise<void> {
         ],
   });
 
-  const ui = await getGatewayRuntimeStatus();
-  const publicMode = await readGatewayPublicModeSetting();
-  emitCliBlock({
-    tone: ui.running ? "success" : "info",
-    title: "Console",
-    summary: ui.running ? "running" : "stopped",
-    facts: [
-      ...(ui.url
-        ? [
-            {
-              label: "url",
-              value: ui.url,
-            },
-          ]
-        : []),
-      {
-        label: "public mode",
-        value: publicMode.enabled ? "enabled" : "disabled",
-      },
-      {
-        label: "public host",
-        value: publicMode.enabled
-          ? String(publicMode.host || "0.0.0.0")
-          : "127.0.0.1",
-      },
-    ],
-  });
-
   try {
     const runningAgents = await resolveRunningManagedAgents({
       syncRegistry: false,
@@ -171,29 +140,4 @@ export async function gatewayStatusCommand(): Promise<void> {
       ],
     });
   }
-}
-
-/**
- * 打印 gateway 独立状态面板。
- */
-export function printGatewayStatusPanel(status: {
-  running: boolean;
-  pid?: number;
-  pidPath: string;
-  logPath: string;
-  url?: string;
-}): void {
-  emitCliBlock({
-    tone: status.running ? "success" : "info",
-    title: "Console",
-    summary: status.running ? "running" : "stopped",
-    facts: status.url
-      ? [
-          {
-            label: "url",
-            value: status.url,
-          },
-        ]
-      : [],
-  });
 }

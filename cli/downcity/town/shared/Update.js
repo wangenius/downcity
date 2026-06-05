@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 优先根据当前 CLI 所在的全局模块目录，自动判断是 npm 还是 pnpm 安装。
  * - 允许用户通过 `--manager` 显式覆盖包管理器选择。
- * - 实际更新只负责全局包升级，不自动重启已有 runtime/Console 进程。
+ * - 实际更新只负责全局包升级，不自动重启已有 runtime 进程。
  */
 import fs from "fs";
 import path from "path";
@@ -173,7 +173,7 @@ export async function updateCommand(options = {}) {
                 value: manager,
             },
         ],
-        note: "如果当前已有 town runtime / Console 在运行，建议执行 `town restart` 载入最新版本。",
+        note: "如果当前已有 town runtime 在运行，建议执行 `town restart` 载入最新版本。",
     });
 }
 //# sourceMappingURL=Update.js.map

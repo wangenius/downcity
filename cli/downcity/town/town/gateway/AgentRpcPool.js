@@ -7,7 +7,7 @@
  * - 该模块不暴露 HTTP 语义，只负责按 agent registry 解析并缓存 RpcClient。
  */
 import { RpcClient } from "@downcity/agent/internal/rpc/Client.js";
-import { resolveDaemonRpcEndpoint } from "@/process/daemon/Client.js";
+import { resolveDaemonRpcEndpoint } from "../../process/daemon/Client.js";
 /**
  * Town 内部 Agent RPC 连接池。
  */

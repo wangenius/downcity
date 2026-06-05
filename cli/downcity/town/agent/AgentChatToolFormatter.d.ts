@@ -7,7 +7,7 @@
  * - 为后续继续贴近 Codex CLI / Claude Code 风格保留独立演进边界。
  */
 import type { JsonValue } from "@downcity/agent";
-import type { AgentChatToolDisplayBlock } from "@/types/AgentChatInteractive.js";
+import type { AgentChatToolDisplayBlock } from "../types/AgentChatInteractive.js";
 /**
  * 格式化 tool 开始事件。
  */

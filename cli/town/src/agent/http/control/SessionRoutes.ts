@@ -16,20 +16,20 @@ import {
   getDowncitySessionMessagesArchiveDirPath,
   getDowncitySessionMessagesArchivePath,
   getDowncitySessionMessagesPath,
-} from "@/config/Paths.js";
-import type { ControlSessionExecuteRequestBody } from "@/agent/control/types/ControlSessionExecute.js";
-import type { ControlRouteRegistrationParams } from "@/agent/http/control/types/ControlRoutes.js";
+} from "../../../config/Paths.js";
+import type { ControlSessionExecuteRequestBody } from "../../control/types/ControlSessionExecute.js";
+import type { ControlRouteRegistrationParams } from "./types/ControlRoutes.js";
 import {
   buildControlRouteAliases,
   decodeMaybe,
   toLimit,
-} from "@/agent/control/CommonHelpers.js";
+} from "../../control/CommonHelpers.js";
 import {
   listControlSessionSummaries,
   loadSessionMessagesFromFile,
   toUiMessageTimeline,
-} from "@/agent/control/Helpers.js";
-import { executeBySessionId } from "@/agent/control/ExecuteBySession.js";
+} from "../../control/Helpers.js";
+import { executeBySessionId } from "../../control/ExecuteBySession.js";
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 
 function normalizeSystemText(input: string | null | undefined): string {

@@ -6,7 +6,7 @@
  * - 仅负责编排请求与响应；消息读取、时间线映射、执行拼装复用 helper。
  * - 会话控制接口统一暴露在 `/api/control/*` 下。
  */
-import type { ControlRouteRegistrationParams } from "@/agent/http/control/types/ControlRoutes.js";
+import type { ControlRouteRegistrationParams } from "./types/ControlRoutes.js";
 /**
  * 注册上下文相关路由。
  */

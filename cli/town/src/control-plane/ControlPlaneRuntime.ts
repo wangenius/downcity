@@ -14,17 +14,17 @@ import {
   getControlPlaneLogPath,
   getControlPlaneMetaPath,
   getControlPlanePidPath,
-} from "@/process/registry/TownPaths.js";
+} from "../process/registry/TownPaths.js";
 import {
   isTownProcessAlive,
   isTownRunning,
-} from "@/process/registry/TownRuntime.js";
+} from "../process/registry/TownRuntime.js";
 import {
   findDetachedBayProcesses,
   signalDetachedProcess,
   sweepDetachedBayProcesses,
-} from "@/process/registry/ProcessSweep.js";
-import { createControlGateway } from "@/town/gateway/ControlGateway.js";
+} from "../process/registry/ProcessSweep.js";
+import { createControlGateway } from "../town/gateway/ControlGateway.js";
 import type {
   ControlPlaneRuntimeMeta,
   ControlPlaneRuntimeStatus,

@@ -8,7 +8,7 @@
  */
 import type { Hono } from "hono";
 import type { PlatformAgentOption } from "@downcity/agent";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
 /**
  * 注册 Agent 状态探活 API 路由。
  */

@@ -9,9 +9,9 @@
 import fs from "fs-extra";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { getPlatformStoreDbPath } from "@/process/registry/TownPaths.js";
+import { getPlatformStoreDbPath } from "../../process/registry/TownPaths.js";
 import { ensurePlatformStoreSchema } from "./StoreSchema.js";
-import { getPlatformRootDirPath, } from "@/process/registry/TownPaths.js";
+import { getPlatformRootDirPath, } from "../../process/registry/TownPaths.js";
 import { buildAgentSecureSettingKey, getSecureSettingJson, getSecureSettingJsonSync, removeSecureSetting, setSecureSettingJson, setSecureSettingJsonSync, } from "./StoreSecureSettings.js";
 import { clearGlobalEnvEntries, getGlobalEnvMap, getGlobalEnvMapSync, listEnvEntries, listEnvEntriesSync, listGlobalEnvEntries, listGlobalEnvEntriesSync, removeEnvEntry, removeGlobalEnvEntry, upsertEnvEntry, upsertGlobalEnvEntry, } from "./StoreEnvRepository.js";
 import { getChannelAccount, getChannelAccountSync, listChannelAccounts, listChannelAccountsSync, removeChannelAccount, upsertChannelAccount, } from "./StoreChannelAccountRepository.js";

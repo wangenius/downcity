@@ -8,12 +8,12 @@
 
 import type { Hono } from "hono";
 import fs from "fs-extra";
-import { getDowncityJsonPath } from "@/config/Paths.js";
+import { getDowncityJsonPath } from "../../../config/Paths.js";
 import type { PlatformAgentOption } from "@downcity/agent";
 import {
   assertCityAiModelReady,
   listCityAiServiceModelsForUser,
-} from "@/town/city-model/CityAiServiceBinding.js";
+} from "../../city-model/CityAiServiceBinding.js";
 
 type ShipJsonLike = {
   execution?: {

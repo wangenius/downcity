@@ -3,25 +3,25 @@
  *
  * 关键点（中文）
  * - 聚合 control plane 与受管 agent 的后台进程控制逻辑。
- * - 让 `ControlPlaneCommand` 只保留命令树装配，不再混杂大量进程细节。
+ * - 让 `GatewayCommand` 只保留命令树装配，不再混杂大量进程细节。
  */
 import { resolve } from "path";
 import fs from "fs-extra";
 import { spawn } from "child_process";
-import { getDaemonLogPath, isProcessAlive as isDaemonProcessAlive, readDaemonMeta, readDaemonPid, startDaemonProcess, stopDaemonProcess, } from "@/process/daemon/Manager.js";
-import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
-import { assertProjectExecutionModelReady } from "@/town/city-model/ExecutionModelBinding.js";
-import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
-import { ensureManagedAgentRegistry, listManagedAgentEntries, markManagedAgentStopped, } from "@/process/registry/TownRegistry.js";
-import { getTownLogPath, getTownPidPath, getTownRuntimeDirPath, } from "@/process/registry/TownPaths.js";
-import { isTownProcessAlive, isTownRunning, readTownPid, } from "@/process/registry/TownRuntime.js";
-import { signalDetachedProcess, sweepDetachedBayProcesses, } from "@/process/registry/ProcessSweep.js";
+import { getDaemonLogPath, isProcessAlive as isDaemonProcessAlive, readDaemonMeta, readDaemonPid, startDaemonProcess, stopDaemonProcess, } from "../process/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "../process/daemon/CliArgs.js";
+import { assertProjectExecutionModelReady } from "../town/city-model/ExecutionModelBinding.js";
+import { allocateAvailablePort } from "../process/daemon/PortAllocator.js";
+import { ensureManagedAgentRegistry, listManagedAgentEntries, markManagedAgentStopped, } from "../process/registry/TownRegistry.js";
+import { getTownLogPath, getTownPidPath, getTownRuntimeDirPath, } from "../process/registry/TownPaths.js";
+import { isTownProcessAlive, isTownRunning, readTownPid, } from "../process/registry/TownRuntime.js";
+import { signalDetachedProcess, sweepDetachedBayProcesses, } from "../process/registry/ProcessSweep.js";
 import { injectAgentContext, resolveAgentId, sleep, } from "../shared/IndexSupport.js";
 import { buildRuntimePortFacts } from "../shared/PortHints.js";
 import { stopControlPlaneCommand } from "./ControlPlaneRuntime.js";
 import { ensureControlPlaneAuthBootstrap } from "./ControlPlaneAuthBootstrap.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
-import { runWithSpinner } from "@/utils/cli/Spinner.js";
+import { runWithSpinner } from "../utils/cli/Spinner.js";
 import { CliError } from "../shared/CliError.js";
 import { ensureBayPublicHostEnv } from "../shared/PublicHostEnv.js";
 import { resolveTownCliPath } from "../shared/TownCliPath.js";

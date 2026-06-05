@@ -19,8 +19,8 @@ import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { injectAgentContext } from "../shared/IndexSupport.js";
 import { prepareForegroundAgent } from "../shared/TownAgentRuntime.js";
 import { CliError } from "../shared/CliError.js";
-import { getDowncityJsonPath } from "@/config/Paths.js";
-import { PlatformStore } from "@/town/store/index.js";
+import { getDowncityJsonPath } from "../config/Paths.js";
+import { PlatformStore } from "../town/store/index.js";
 const CHAT_CHANNELS = ["telegram", "feishu", "qq"];
 function isInteractiveTerminal() {
     return process.stdin.isTTY === true && process.stdout.isTTY === true;

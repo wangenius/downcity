@@ -10,7 +10,7 @@ import prompts from "prompts";
 import { ChatChannelAccountManager, } from "@downcity/plugins";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { runManagedPluginControlCommand } from "./ManagedPluginRemote.js";
-import { runInteractiveChatAuthSetFlow } from "./ChatAuth.js";
+import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";
 const CHAT_CHANNELS = ["telegram", "feishu", "qq"];
 function createChannelAccountManager() {
     return new ChatChannelAccountManager();

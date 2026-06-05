@@ -11,7 +11,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import os from "node:os";
 import { mkdtemp } from "node:fs/promises";
-import { generateId } from "@/utils/Id.js";
+import { generateId } from "../../../utils/Id.js";
 import {
   drainDeferredPersistedUserMessages,
   Executor,
@@ -30,9 +30,9 @@ import type {
   PlatformInlineInstantRunResult,
   PlatformInlineInstantRunner,
 } from "@downcity/agent";
-import { InstantSystemComposer } from "@/town/gateway/instant/InstantSystemComposer.js";
-import { createRuntimeModel } from "@/town/city-model/CreateRuntimeModel.js";
-import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
+import { InstantSystemComposer } from "./InstantSystemComposer.js";
+import { createRuntimeModel } from "../../city-model/CreateRuntimeModel.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "../../../env/ProcessEnv.js";
 import type { Logger as AgentLogger } from "@downcity/agent";
 
 type InstantSessionRunnerOptions = {

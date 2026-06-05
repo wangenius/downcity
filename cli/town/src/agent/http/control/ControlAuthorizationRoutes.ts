@@ -10,7 +10,7 @@ import type { Hono } from "hono";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import { buildControlRouteAliases } from "@/agent/control/CommonHelpers.js";
+import { buildControlRouteAliases } from "../../control/CommonHelpers.js";
 
 const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";
 const CHAT_AUTHORIZATION_ACTIONS = {

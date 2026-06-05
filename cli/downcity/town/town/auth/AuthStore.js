@@ -10,10 +10,10 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { nanoid } from "nanoid";
-import { getPlatformStoreDbPath } from "@/process/registry/TownPaths.js";
+import { getPlatformStoreDbPath } from "../../process/registry/TownPaths.js";
 import { AUTH_DEFAULT_ROLES, AUTH_PERMISSION_DESCRIPTIONS, AUTH_PERMISSION_KEYS, } from "@downcity/agent";
-import { nowIso, normalizeNonEmptyText, optionalTrimmedText, } from "@/town/store/StoreShared.js";
-import { ensurePlatformStoreSchema } from "@/town/store/StoreSchema.js";
+import { nowIso, normalizeNonEmptyText, optionalTrimmedText, } from "../store/StoreShared.js";
+import { ensurePlatformStoreSchema } from "../store/StoreSchema.js";
 /**
  * AuthStore 门面。
  */

@@ -5,7 +5,7 @@
  * - 负责把 API 传入的附件规范化并落盘。
  * - 最终统一转成 `<file>` 标签注入到 user message。
  */
-import type { ControlSessionExecuteAttachmentInput } from "@/agent/control/types/ControlSessionExecute.js";
+import type { ControlSessionExecuteAttachmentInput } from "./types/ControlSessionExecute.js";
 /**
  * 构造 execute 入站文本。
  */

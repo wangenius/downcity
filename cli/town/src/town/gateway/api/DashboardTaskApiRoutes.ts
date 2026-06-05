@@ -16,9 +16,9 @@ import {
   listTaskRuns,
   readRecentLogs,
   readTaskRunDetail,
-} from "@/agent/control/TaskStore.js";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
-import { getDowncityDirPath } from "@/config/Paths.js";
+} from "../../../agent/control/TaskStore.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
+import { getDowncityDirPath } from "../../../config/Paths.js";
 
 const TASK_ID_REGEXP = /^[\p{L}\p{N}][\p{L}\p{N}_\-\s]{0,63}$/u;
 

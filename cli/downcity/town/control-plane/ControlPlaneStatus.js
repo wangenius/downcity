@@ -7,8 +7,8 @@
  */
 import { getControlPlaneRuntimeStatus, } from "./ControlPlaneRuntime.js";
 import { readControlPlanePublicModeSetting } from "./ControlPlanePublicMode.js";
-import { getManagedAgentRegistryPath, getTownPidPath, } from "@/process/registry/TownPaths.js";
-import { isTownProcessAlive, readTownPid } from "@/process/registry/TownRuntime.js";
+import { getManagedAgentRegistryPath, getTownPidPath, } from "../process/registry/TownPaths.js";
+import { isTownProcessAlive, readTownPid } from "../process/registry/TownRuntime.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { resolveRunningManagedAgents } from "./ControlPlaneProcess.js";
 import { readTownCityConnectionState } from "../shared/CityConnection.js";

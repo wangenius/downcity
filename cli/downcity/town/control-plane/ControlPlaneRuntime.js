@@ -8,10 +8,10 @@
  */
 import fs from "fs-extra";
 import { spawn } from "node:child_process";
-import { getTownRuntimeDirPath, getControlPlaneLogPath, getControlPlaneMetaPath, getControlPlanePidPath, } from "@/process/registry/TownPaths.js";
-import { isTownProcessAlive, isTownRunning, } from "@/process/registry/TownRuntime.js";
-import { findDetachedBayProcesses, signalDetachedProcess, sweepDetachedBayProcesses, } from "@/process/registry/ProcessSweep.js";
-import { createControlGateway } from "@/town/gateway/ControlGateway.js";
+import { getTownRuntimeDirPath, getControlPlaneLogPath, getControlPlaneMetaPath, getControlPlanePidPath, } from "../process/registry/TownPaths.js";
+import { isTownProcessAlive, isTownRunning, } from "../process/registry/TownRuntime.js";
+import { findDetachedBayProcesses, signalDetachedProcess, sweepDetachedBayProcesses, } from "../process/registry/ProcessSweep.js";
+import { createControlGateway } from "../town/gateway/ControlGateway.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
 import { buildControlPlanePortFacts } from "../shared/PortHints.js";

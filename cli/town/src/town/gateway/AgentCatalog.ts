@@ -14,22 +14,22 @@ import {
   getDaemonMetaPath,
   isProcessAlive,
   readDaemonPid,
-} from "@/process/daemon/Manager.js";
+} from "../../process/daemon/Manager.js";
 import {
   getProfileMdPath,
   getDowncityJsonPath,
   getDowncitySchemaPath,
   getSoulMdPath,
   getDowncityMemoryLongTermPath,
-} from "@/config/Paths.js";
+} from "../../config/Paths.js";
 import { isAgentProjectInitialized } from "@downcity/agent";
-import { listManagedAgentEntries } from "@/process/registry/TownRegistry.js";
+import { listManagedAgentEntries } from "../../process/registry/TownRegistry.js";
 import {
   getManagedAgentRegistryPath,
   getTownPidPath,
   getControlPlanePidPath,
   getPlatformStoreDbPath,
-} from "@/process/registry/TownPaths.js";
+} from "../../process/registry/TownPaths.js";
 import type {
   PlatformAgentOption,
   PlatformAgentsResponse,
@@ -43,8 +43,8 @@ import type {
   PlatformAgentShipJson,
 } from "@downcity/agent";
 import type { DowncityConfig } from "@downcity/agent";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
-import { listCityAiServiceModelsForUser } from "@/town/city-model/CityAiServiceBinding.js";
+import type { AgentRpcPool } from "./AgentRpcPool.js";
+import { listCityAiServiceModelsForUser } from "../city-model/CityAiServiceBinding.js";
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 const DEFAULT_RUNTIME_PORT = 5314;
 

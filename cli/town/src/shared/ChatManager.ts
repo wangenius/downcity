@@ -20,7 +20,7 @@ import type {
   ChatChannelAccountAction,
   ChatManagerRootAction,
 } from "./ChatManagerTypes.js";
-import { runInteractiveChatAuthSetFlow } from "./ChatAuth.js";
+import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";
 
 const CHAT_CHANNELS: StoredChannelAccountChannel[] = ["telegram", "feishu", "qq"];
 

@@ -6,7 +6,7 @@
  * - 同时提供消息文件读取能力。
  */
 import type { SessionMessageV1 } from "@downcity/agent/internal/executor/types/SessionMessages.js";
-import type { ControlTimelineEvent } from "@/agent/control/types/ControlViewData.js";
+import type { ControlTimelineEvent } from "./types/ControlViewData.js";
 /**
  * 转成 control 时间线。
  */

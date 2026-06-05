@@ -8,7 +8,7 @@
  */
 
 import path from "path";
-import { stopDaemonProcess } from "@/process/daemon/Manager.js";
+import { stopDaemonProcess } from "../process/daemon/Manager.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 

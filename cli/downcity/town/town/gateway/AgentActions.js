@@ -8,12 +8,12 @@
 import { execFile, spawn } from "node:child_process";
 import fs from "fs-extra";
 import path from "node:path";
-import { startDaemonProcess, stopDaemonProcess, getDaemonLogPath, isProcessAlive, readDaemonPid, } from "@/process/daemon/Manager.js";
-import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
+import { startDaemonProcess, stopDaemonProcess, getDaemonLogPath, isProcessAlive, readDaemonPid, } from "../../process/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "../../process/daemon/CliArgs.js";
 import { initializeAgentProject, isAgentProjectInitialized, } from "@downcity/agent";
-import { getProfileMdPath, getDowncitySessionRootDirPath, getDowncityJsonPath, getDowncityDirPath, } from "@/config/Paths.js";
-import { stripInvocationAuthEnv } from "@/town/auth/AuthEnv.js";
-import { assertPlatformModelReady, assertProjectExecutionModelReady, } from "@/town/city-model/ExecutionModelBinding.js";
+import { getProfileMdPath, getDowncitySessionRootDirPath, getDowncityJsonPath, getDowncityDirPath, } from "../../config/Paths.js";
+import { stripInvocationAuthEnv } from "../auth/AuthEnv.js";
+import { assertPlatformModelReady, assertProjectExecutionModelReady, } from "../city-model/ExecutionModelBinding.js";
 function resolveExecutionInput(params) {
     const modelId = String(params.modelId || "").trim();
     if (!modelId) {

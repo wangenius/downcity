@@ -7,7 +7,7 @@
  * - City 管理命令仍通过 `city` 入口负责。
  */
 import type { ManagedAgentProcessView } from "@downcity/agent";
-import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 /**
  * 解析当前仍在运行的 managed agent。
  */

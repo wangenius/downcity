@@ -8,9 +8,9 @@
  */
 import fs from "fs-extra";
 import path from "node:path";
-import { buildExecuteInputText } from "@/agent/control/ExecuteInput.js";
-import { toUiMessageTimeline } from "@/agent/control/MessageTimeline.js";
-import { getDowncitySessionMessagesDirPath } from "@/config/Paths.js";
+import { buildExecuteInputText } from "../../../agent/control/ExecuteInput.js";
+import { toUiMessageTimeline } from "../../../agent/control/MessageTimeline.js";
+import { getDowncitySessionMessagesDirPath } from "../../../config/Paths.js";
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 /**
  * 注册 dashboard session 读侧路由。

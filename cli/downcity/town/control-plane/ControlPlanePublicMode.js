@@ -6,7 +6,7 @@
  * - 配置统一落在平台级 `downcity.db`，避免再引入新的散落文件。
  * - CLI 显式传参优先级高于持久化配置，保证脚本化调用可预测。
  */
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "../town/store/index.js";
 const CONTROL_PLANE_PUBLIC_MODE_SETTING_KEY = "town.controlPlane.publicMode";
 const DEFAULT_PUBLIC_BIND_HOST = "0.0.0.0";
 function normalizePublicModeHost(input) {

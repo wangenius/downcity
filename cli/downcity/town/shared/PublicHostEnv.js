@@ -6,7 +6,7 @@
  * - 若部署环境已经注入 `DOWNCITY_PUBLIC_URL/HOST`，绝不覆盖。
  * - 写入平台 Env 后，后续 Town 宿主会在启动 Agent/模型运行时前显式读取并传入。
  */
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "../town/store/index.js";
 const PUBLIC_HOST_DESCRIPTION = "Auto-detected public host for agent contact links.";
 function isIpv4Address(value) {
     const parts = String(value || "").trim().split(".");

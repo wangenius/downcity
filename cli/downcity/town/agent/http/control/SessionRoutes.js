@@ -9,10 +9,10 @@
 import fs from "fs-extra";
 import { dirname } from "path";
 import { resolveSessionSystemMessages } from "@downcity/agent/internal/executor/composer/system/default/SystemDomain.js";
-import { getDowncityChatHistoryPath, getDowncitySessionMessagesArchiveDirPath, getDowncitySessionMessagesArchivePath, getDowncitySessionMessagesPath, } from "@/config/Paths.js";
-import { buildControlRouteAliases, decodeMaybe, toLimit, } from "@/agent/control/CommonHelpers.js";
-import { listControlSessionSummaries, loadSessionMessagesFromFile, toUiMessageTimeline, } from "@/agent/control/Helpers.js";
-import { executeBySessionId } from "@/agent/control/ExecuteBySession.js";
+import { getDowncityChatHistoryPath, getDowncitySessionMessagesArchiveDirPath, getDowncitySessionMessagesArchivePath, getDowncitySessionMessagesPath, } from "../../../config/Paths.js";
+import { buildControlRouteAliases, decodeMaybe, toLimit, } from "../../control/CommonHelpers.js";
+import { listControlSessionSummaries, loadSessionMessagesFromFile, toUiMessageTimeline, } from "../../control/Helpers.js";
+import { executeBySessionId } from "../../control/ExecuteBySession.js";
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 function normalizeSystemText(input) {
     return String(input || "").trim();

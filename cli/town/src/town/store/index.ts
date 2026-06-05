@@ -10,7 +10,7 @@
 import fs from "fs-extra";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { getPlatformStoreDbPath } from "@/process/registry/TownPaths.js";
+import { getPlatformStoreDbPath } from "../../process/registry/TownPaths.js";
 import { ensurePlatformStoreSchema } from "./StoreSchema.js";
 import type { PlatformStoreContext } from "./StoreShared.js";
 import type {
@@ -23,7 +23,7 @@ import type {
 } from "@downcity/agent";
 import {
   getPlatformRootDirPath,
-} from "@/process/registry/TownPaths.js";
+} from "../../process/registry/TownPaths.js";
 import {
   buildAgentSecureSettingKey,
   getSecureSettingJson,

@@ -6,7 +6,7 @@
  * - 这里不持有状态，只消费宿主提供的 handlers。
  */
 import type { Hono, Context } from "hono";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
 import type { PlatformAgentDirectoryInspection, PlatformAgentOption, PlatformAgentsResponse, PlatformConfigStatusResponse, PlatformLocalModelsResponse } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
 /**

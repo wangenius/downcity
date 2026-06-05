@@ -7,7 +7,7 @@
  * - 运行时模型通过 Town 自己保存的 User City session 构造。
  */
 import { City } from "@downcity/city";
-import { DEFAULT_CITY_URL, readTownCityAdminSecretForBase, readTownCityUserSessionForRuntime, } from "@/shared/CityConnection.js";
+import { DEFAULT_CITY_URL, readTownCityAdminSecretForBase, readTownCityUserSessionForRuntime, } from "../../shared/CityConnection.js";
 const DEFAULT_TOWN_ID = "town_downcity";
 function readString(value) {
     return typeof value === "string" ? value.trim() : "";

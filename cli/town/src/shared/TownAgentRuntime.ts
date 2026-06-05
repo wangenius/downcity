@@ -9,19 +9,19 @@
 
 import { resolve } from "node:path";
 import type { ManagedAgentProcessView } from "@downcity/agent";
-import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
-import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
+import { allocateAvailablePort } from "../process/daemon/PortAllocator.js";
 import {
   getDaemonLogPath,
   isProcessAlive as isDaemonProcessAlive,
   readDaemonPid,
-} from "@/process/daemon/Manager.js";
+} from "../process/daemon/Manager.js";
 import {
   listManagedAgentEntries,
   markManagedAgentStopped,
-} from "@/process/registry/TownRegistry.js";
-import { isTownRunning } from "@/process/registry/TownRuntime.js";
-import { assertProjectExecutionModelReady } from "@/town/city-model/ExecutionModelBinding.js";
+} from "../process/registry/TownRegistry.js";
+import { isTownRunning } from "../process/registry/TownRuntime.js";
+import { assertProjectExecutionModelReady } from "../town/city-model/ExecutionModelBinding.js";
 import { CliError } from "./CliError.js";
 import { injectAgentContext } from "./IndexSupport.js";
 

@@ -5,17 +5,17 @@
  * - 路由注册从 `ControlGateway` 宿主类中拆出，避免网关门面继续膨胀。
  * - 这里不持有状态，只消费宿主提供的 handlers。
  */
-import { registerPlatformModelRoutes } from "@/town/gateway/api/ModelApiRoutes.js";
-import { registerPlatformInstantRoutes } from "@/town/gateway/instant/InstantApiRoutes.js";
-import { registerPlatformChannelAccountRoutes } from "@/town/gateway/api/ChannelAccountApiRoutes.js";
-import { registerPlatformEnvRoutes } from "@/town/gateway/api/EnvApiRoutes.js";
-import { registerPlatformAgentStatusRoutes } from "@/town/gateway/api/AgentStatusApiRoutes.js";
-import { registerPlatformPluginRoutes } from "@/town/gateway/api/PluginApiRoutes.js";
-import { registerDashboardTaskApiRoutes } from "@/town/gateway/api/DashboardTaskApiRoutes.js";
-import { registerDashboardSessionApiRoutes } from "@/town/gateway/api/DashboardSessionApiRoutes.js";
-import { registerDashboardOverviewApiRoutes } from "@/town/gateway/api/DashboardOverviewApiRoutes.js";
-import { registerDashboardRuntimeApiRoutes } from "@/town/gateway/api/DashboardRuntimeApiRoutes.js";
-import { buildPlatformWorkloadBlockPayload } from "@/town/gateway/GatewaySupport.js";
+import { registerPlatformModelRoutes } from "./ModelApiRoutes.js";
+import { registerPlatformInstantRoutes } from "../instant/InstantApiRoutes.js";
+import { registerPlatformChannelAccountRoutes } from "./ChannelAccountApiRoutes.js";
+import { registerPlatformEnvRoutes } from "./EnvApiRoutes.js";
+import { registerPlatformAgentStatusRoutes } from "./AgentStatusApiRoutes.js";
+import { registerPlatformPluginRoutes } from "./PluginApiRoutes.js";
+import { registerDashboardTaskApiRoutes } from "./DashboardTaskApiRoutes.js";
+import { registerDashboardSessionApiRoutes } from "./DashboardSessionApiRoutes.js";
+import { registerDashboardOverviewApiRoutes } from "./DashboardOverviewApiRoutes.js";
+import { registerDashboardRuntimeApiRoutes } from "./DashboardRuntimeApiRoutes.js";
+import { buildPlatformWorkloadBlockPayload } from "../GatewaySupport.js";
 /**
  * 注册平台控制面 API 路由。
  */

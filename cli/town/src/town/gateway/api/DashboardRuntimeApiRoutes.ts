@@ -10,7 +10,7 @@
 import type { Hono } from "hono";
 import type { JsonObject, PlatformAgentOption } from "@downcity/agent";
 import type { PluginStateControlAction } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
 
 type RuntimeRpcClient = NonNullable<ReturnType<AgentRpcPool["resolveClientForAgent"]>>;
 const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";

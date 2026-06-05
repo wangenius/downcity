@@ -6,7 +6,6 @@
  * - 提供 `checkAgentPreflight` 供 start/restart/status 等命令统一使用。
  * - 保持 command 注册层只关注命令树，不再直接承载路径解析细节。
  */
-import type { Command } from "commander";
 import type { JsonValue } from "@downcity/agent";
 import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
@@ -71,12 +70,4 @@ export declare function validateAgentProjectRoot(projectRoot: string): string | 
  * 解析 plugin command payload。
  */
 export declare function parseCommandPayload(raw?: string): JsonValue | undefined;
-/**
- * 注入 plugin 目标解析通用选项。
- */
-export declare function addPluginTargetOptions(command: Command): Command;
-/**
- * 注入 ActionSchedule 管理命令通用选项。
- */
-export declare function addPluginScheduleOptions(command: Command): Command;
 //# sourceMappingURL=PluginTargetSupport.d.ts.map

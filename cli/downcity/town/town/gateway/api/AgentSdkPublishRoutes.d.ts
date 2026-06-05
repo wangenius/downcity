@@ -7,7 +7,7 @@
  * - 本模块只做协议转换，不引入 Town SDK 包，也不实现第二套 session 编排器。
  */
 import { Hono } from "hono";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
 /**
  * Town Agent SDK 发布路由依赖。
  */

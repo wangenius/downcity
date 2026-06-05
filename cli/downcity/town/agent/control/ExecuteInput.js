@@ -7,7 +7,7 @@
  */
 import fs from "fs-extra";
 import path from "node:path";
-import { getCacheDirPath } from "@/config/Paths.js";
+import { getCacheDirPath } from "../../config/Paths.js";
 import { renderChatMessageFileTag } from "@downcity/agent/internal/executor/messages/ChatMessageMarkup.js";
 const EXECUTE_ATTACHMENT_MAX_COUNT = 8;
 const EXECUTE_ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024;

@@ -8,12 +8,12 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { getLogsDirPath, getDowncityTasksDirPath } from "@/config/Paths.js";
+import { getLogsDirPath, getDowncityTasksDirPath } from "../../config/Paths.js";
 import type {
   ControlLogEntry,
   ControlTaskRunDetail,
   ControlTaskRunSummary,
-} from "@/agent/control/types/ControlViewData.js";
+} from "./types/ControlViewData.js";
 import { truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, toUiMessageTimeline } from "./MessageTimeline.js";
 

@@ -11,14 +11,14 @@ import {
   emitCliBlock,
   emitCliList,
   formatCliBlock,
-} from "@/shared/CliReporter.js";
+} from "../../shared/CliReporter.js";
 import type {
   CliReportBlock,
   CliReportFact,
   CliReportList,
   CliReportListItem,
   CliReportTone,
-} from "@/shared/CliReporterTypes.js";
+} from "../../shared/CliReporterTypes.js";
 
 /**
  * printResult 统一参数。

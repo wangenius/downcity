@@ -7,7 +7,7 @@
  * - 默认策略：未显式关闭时，一律视为启用。
  */
 
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "./store/index.js";
 
 /**
  * 单个 plugin 的 Town 级生命周期配置。

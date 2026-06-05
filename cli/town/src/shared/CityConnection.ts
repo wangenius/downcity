@@ -1,35 +1,34 @@
 /**
- * `town city` 命令与 City user 连接管理。
+ * Town City user 连接管理服务。
  *
  * 关键点（中文）
  * - `city` CLI 只作为 admin/base 管理入口。
  * - `town` CLI 自己维护 user 登录态，避免把 user token 复制到 city 状态。
  * - Town 可以只读发现 `city` CLI 已配置的 base 地址，但不依赖 city 内部模块。
+ * - CLI 命令装配统一放在 `src/command/CityCommand.ts`，本模块只保留状态与登录流程。
  */
 
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import prompts from "prompts";
-import type { Command } from "commander";
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "../town/store/index.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { printResult } from "@/utils/cli/CliOutput.js";
-import { parseBoolean } from "./IndexSupport.js";
+import { printResult } from "../utils/cli/CliOutput.js";
 import { performTownCityUserLogin } from "./CityUserLogin.js";
 import type {
   TownCityConnectionState,
   TownCityServerProfile,
-} from "@/types/TownCityConnection.js";
-import type { TownCityUserSession } from "@/types/TownCitySession.js";
+} from "../types/TownCityConnection.js";
+import type { TownCityUserSession } from "../types/TownCitySession.js";
 import type {
   CityAdminConfig,
   TownCityLocalProfile,
   TownCityLocalState,
-} from "@/types/TownCityState.js";
+} from "../types/TownCityState.js";
 
 export const DEFAULT_CITY_URL = "https://base.downcity.ai";
-const DEFAULT_TOWN_ID = "town_downcity";
+export const DEFAULT_TOWN_ID = "town_downcity";
 const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
 const TOWN_CITY_STATE_KEY = "town.city.state";
 
@@ -331,7 +330,7 @@ export function readTownCityConnectionState(): TownCityConnectionState {
   };
 }
 
-function emitCityConnectionStatus(options?: { as_json?: boolean }): void {
+export function emitCityConnectionStatus(options?: { as_json?: boolean }): void {
   const state = readTownCityConnectionState();
   if (options?.as_json === true) {
     printResult({
@@ -363,7 +362,7 @@ function emitCityConnectionStatus(options?: { as_json?: boolean }): void {
   });
 }
 
-function emitCityServerList(options?: { as_json?: boolean }): void {
+export function emitCityServerList(options?: { as_json?: boolean }): void {
   const servers = listTownCityServers();
   if (options?.as_json === true) {
     printResult({
@@ -396,7 +395,7 @@ function emitCityServerList(options?: { as_json?: boolean }): void {
   });
 }
 
-async function runCityConnectCommand(params: {
+export async function runCityConnectCommand(params: {
   url?: string;
   as_json?: boolean;
 }): Promise<void> {
@@ -428,7 +427,7 @@ async function runCityConnectCommand(params: {
   });
 }
 
-async function runCityUseCommand(params: {
+export async function runCityUseCommand(params: {
   server?: string;
   as_json?: boolean;
 }): Promise<void> {
@@ -480,7 +479,7 @@ function saveUserSession(session: TownCityUserSession): void {
   });
 }
 
-async function runCityLoginCommand(params: {
+export async function runCityLoginCommand(params: {
   url?: string;
   town_id?: string;
   as_json?: boolean;
@@ -522,7 +521,7 @@ async function runCityLoginCommand(params: {
   });
 }
 
-function runCityLogoutCommand(options?: { as_json?: boolean }): void {
+export function runCityLogoutCommand(options?: { as_json?: boolean }): void {
   const state = readTownCityState();
   const city_url = resolveSelectedBaseUrl(state);
   const sessions = { ...(state.sessions ?? {}) };
@@ -541,7 +540,7 @@ function runCityLogoutCommand(options?: { as_json?: boolean }): void {
   });
 }
 
-function runCityDisconnectCommand(options?: { as_json?: boolean }): void {
+export function runCityDisconnectCommand(options?: { as_json?: boolean }): void {
   const state = readTownCityState();
   const city_url = resolveSelectedBaseUrl(state);
   const profiles = (state.profiles ?? []).filter((profile) => profile.base_url !== city_url);
@@ -669,88 +668,4 @@ async function promptSelectCityBase(): Promise<TownCityServerProfile | null> {
   const base_url = readString(response.base_url);
   if (!base_url) return null;
   return servers.find((server) => server.base_url === base_url) ?? null;
-}
-
-export function registerCityConnectionCommand(program: Command): void {
-  const city = program
-    .command("city")
-    .description("管理 Town 的 City user 连接与登录态")
-    .helpOption("--help", "display help for command")
-    .action(async () => {
-      if (!process.stdin.isTTY || !process.stdout.isTTY) {
-        city.outputHelp();
-        return;
-      }
-      await runInteractiveCityManager();
-    });
-
-  city
-    .command("status")
-    .description("查看 Town 当前 City user 连接状态")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .action((options: { json?: boolean }) => {
-      emitCityConnectionStatus({ as_json: options.json === true });
-    });
-
-  city
-    .command("list")
-    .description("列出 Town 可选择的 City base")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .action((options: { json?: boolean }) => {
-      emitCityServerList({ as_json: options.json === true });
-    });
-
-  city
-    .command("connect [url]")
-    .description("手动添加并选择一个 City base（默认 base.downcity.ai）")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .action(async (url: string | undefined, options: { json?: boolean }) => {
-      await runCityConnectCommand({
-        url,
-        as_json: options.json === true,
-      });
-    });
-
-  city
-    .command("use [server]")
-    .description("选择一个 City base；可使用 Town 本地或 city admin 已保存 base")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .action(async (server: string | undefined, options: { json?: boolean }) => {
-      await runCityUseCommand({
-        server,
-        as_json: options.json === true,
-      });
-    });
-
-  city
-    .command("login [url]")
-    .description("以 user 身份登录当前或指定 City base")
-    .option("--town-id <townId>", "City town id", DEFAULT_TOWN_ID)
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .action(async (
-      url: string | undefined,
-      options: { townId?: string; json?: boolean },
-    ) => {
-      await runCityLoginCommand({
-        url,
-        town_id: options.townId,
-        as_json: options.json === true,
-      });
-    });
-
-  city
-    .command("logout")
-    .description("清除当前 City base 的 Town user session")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .action((options: { json?: boolean }) => {
-      runCityLogoutCommand({ as_json: options.json === true });
-    });
-
-  city
-    .command("disconnect")
-    .description("移除当前 Town City base 选择并回到默认 base")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .action((options: { json?: boolean }) => {
-      runCityDisconnectCommand({ as_json: options.json === true });
-    });
 }

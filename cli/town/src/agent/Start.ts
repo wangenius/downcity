@@ -13,9 +13,9 @@
 
 import path from "path";
 import { fileURLToPath } from "url";
-import { startDaemonProcess } from "@/process/daemon/Manager.js";
-import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
-import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
+import { startDaemonProcess } from "../process/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "../process/daemon/CliArgs.js";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 import { checkAgentPreflight } from "../shared/PluginTargetSupport.js";

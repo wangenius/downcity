@@ -15,7 +15,7 @@ import os from "os";
 import prompts from "prompts";
 import fs from "fs-extra";
 import fg from "fast-glob";
-import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/config/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "../config/Paths.js";
 import {
   initializeAgentProject,
   normalizeDefaultAgentId,
@@ -27,7 +27,7 @@ import { CliError } from "../shared/CliError.js";
 import {
   assertPlatformModelReady,
   listPlatformModelChoices,
-} from "@/town/city-model/ExecutionModelBinding.js";
+} from "../town/city-model/ExecutionModelBinding.js";
 
 type InitPromptResponse = {
   id?: string;

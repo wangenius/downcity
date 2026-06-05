@@ -8,7 +8,7 @@
 
 import { Hono } from "hono";
 import type { AgentSessionCollection } from "@downcity/agent/internal/types/agent/AgentTypes.js";
-import { registerSdkSessionRoutes } from "@/agent/http/sdk/SessionRoutes.js";
+import { registerSdkSessionRoutes } from "./SessionRoutes.js";
 
 /**
  * 创建 Town gateway 使用的 SDK HTTP router。

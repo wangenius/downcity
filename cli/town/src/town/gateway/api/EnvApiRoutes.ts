@@ -8,7 +8,7 @@
 
 import dotenv from "dotenv";
 import type { Hono } from "hono";
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "../../store/index.js";
 
 function normalizeNonEmptyText(value: unknown, fieldName: string): string {
   const text = String(value || "").trim();

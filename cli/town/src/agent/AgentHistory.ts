@@ -14,7 +14,7 @@ import {
   getDowncityChannelMetaPath,
   getDowncityChatSessionDirPath,
   getDowncitySessionDirPath,
-} from "@/config/Paths.js";
+} from "../config/Paths.js";
 import { CliError } from "../shared/CliError.js";
 import type {
   AgentHistoryChannelMetaFile,
@@ -22,7 +22,7 @@ import type {
   AgentHistoryCleanResult,
 } from "./AgentHistoryTypes.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
-import { printResult } from "@/utils/cli/CliOutput.js";
+import { printResult } from "../utils/cli/CliOutput.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 
 function normalizeText(input: unknown): string {

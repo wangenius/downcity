@@ -5,7 +5,7 @@
  * - 统一暴露 `/api/ui/inline/instant-run`，避免扩展直接区分 model/acp 两套后端路径。
  * - 接口层只做轻量参数校验，具体临时 session 执行逻辑下沉到 runner。
  */
-import { InstantSessionRunner } from "@/town/gateway/instant/InstantSessionRunner.js";
+import { InstantSessionRunner } from "./InstantSessionRunner.js";
 function normalizeExecutorType(input) {
     const value = String(input || "").trim();
     if (value === "model" || value === "acp")

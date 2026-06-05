@@ -12,8 +12,8 @@ import fs from "fs-extra";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AgentSessionSummary, PlatformAgentOption } from "@downcity/agent";
-import { readRecentLogs } from "@/agent/control/TaskStore.js";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import { readRecentLogs } from "../../../agent/control/TaskStore.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
 
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 const __filename = fileURLToPath(import.meta.url);

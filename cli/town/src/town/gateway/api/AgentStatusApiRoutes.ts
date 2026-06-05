@@ -9,7 +9,7 @@
 
 import type { Hono } from "hono";
 import type { PlatformAgentOption } from "@downcity/agent";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
 
 type AgentStatusPayload = {
   success: boolean;

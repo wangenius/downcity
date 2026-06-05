@@ -6,8 +6,8 @@
  * - Town 不再提供模型池 CRUD，只负责读取 City AIService 模型目录与更新 agent 绑定。
  */
 import fs from "fs-extra";
-import { getDowncityJsonPath } from "@/config/Paths.js";
-import { assertCityAiModelReady, listCityAiServiceModelsForUser, } from "@/town/city-model/CityAiServiceBinding.js";
+import { getDowncityJsonPath } from "../../../config/Paths.js";
+import { assertCityAiModelReady, listCityAiServiceModelsForUser, } from "../../city-model/CityAiServiceBinding.js";
 export function registerPlatformModelRoutes(params) {
     const { app, readRequestedAgentId, resolveSelectedAgent, buildModelResponse } = params;
     app.get("/api/ui/model", async (c) => {

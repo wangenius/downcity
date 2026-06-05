@@ -6,7 +6,7 @@
  * - plugin runtimes / session / plugins 只消费这些对象，不再直接 import `main/*`。
  * - 当前由 Town 在这里统一装配路径与 plugin 配置持久化两类宿主对象。
  */
-import { getCacheDirPath, getDowncityChannelDirPath, getDowncityChannelMetaPath, getDowncityChatHistoryPath, getDowncityDirPath, getDowncityMemoryDailyDirPath, getDowncityMemoryDailyPath, getDowncityMemoryLongTermPath, getDowncitySessionDirPath, getDowncitySessionRootDirPath, } from "@/config/Paths.js";
+import { getCacheDirPath, getDowncityChannelDirPath, getDowncityChannelMetaPath, getDowncityChatHistoryPath, getDowncityDirPath, getDowncityMemoryDailyDirPath, getDowncityMemoryDailyPath, getDowncityMemoryLongTermPath, getDowncitySessionDirPath, getDowncitySessionRootDirPath, } from "../../config/Paths.js";
 import { persistProjectPluginConfig } from "@downcity/agent";
 /**
  * 创建当前项目的路径能力集合。

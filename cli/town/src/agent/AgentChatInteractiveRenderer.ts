@@ -9,12 +9,12 @@
 
 import chalk from "chalk";
 import type { AgentSessionEvent } from "@downcity/agent";
-import type { AgentChatInteractiveRenderSnapshot } from "@/types/AgentChatInteractive.js";
+import type { AgentChatInteractiveRenderSnapshot } from "../types/AgentChatInteractive.js";
 import {
   createSpinner,
   shouldRenderSpinner,
   type Spinner,
-} from "@/utils/cli/Spinner.js";
+} from "../utils/cli/Spinner.js";
 import {
   format_tool_call_block,
   format_tool_result_block,

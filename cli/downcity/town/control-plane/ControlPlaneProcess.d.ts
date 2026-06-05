@@ -3,10 +3,10 @@
  *
  * 关键点（中文）
  * - 聚合 control plane 与受管 agent 的后台进程控制逻辑。
- * - 让 `ControlPlaneCommand` 只保留命令树装配，不再混杂大量进程细节。
+ * - 让 `GatewayCommand` 只保留命令树装配，不再混杂大量进程细节。
  */
 import type { ManagedAgentProcessView } from "@downcity/agent";
-import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 /**
  * 启动 town runtime 后台进程。
  */

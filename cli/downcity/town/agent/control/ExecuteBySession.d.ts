@@ -6,7 +6,7 @@
  * - chat / queue 等渠道语义由宿主显式注入的 plugin 自行实现。
  */
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
-import type { ControlSessionExecuteAttachmentInput } from "@/agent/control/types/ControlSessionExecute.js";
+import type { ControlSessionExecuteAttachmentInput } from "./types/ControlSessionExecute.js";
 /**
  * 在指定 session 中执行一轮请求。
  *

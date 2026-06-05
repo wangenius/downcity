@@ -14,8 +14,8 @@ import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
   getManagedAgentRegistryPath,
   getTownPidPath,
-} from "@/process/registry/TownPaths.js";
-import { isTownProcessAlive, readTownPid } from "@/process/registry/TownRuntime.js";
+} from "../process/registry/TownPaths.js";
+import { isTownProcessAlive, readTownPid } from "../process/registry/TownRuntime.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { resolveRunningManagedAgents } from "./ControlPlaneProcess.js";
 import { readTownCityConnectionState } from "../shared/CityConnection.js";

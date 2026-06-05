@@ -9,7 +9,7 @@
 
 import { RpcClient } from "@downcity/agent/internal/rpc/Client.js";
 import type { PlatformAgentOption } from "@downcity/agent";
-import { resolveDaemonRpcEndpoint } from "@/process/daemon/Client.js";
+import { resolveDaemonRpcEndpoint } from "../../process/daemon/Client.js";
 
 /**
  * Agent RPC pool 依赖。

@@ -7,11 +7,10 @@
  */
 
 import prompts from "prompts";
-import type { Command } from "commander";
-import { controlPlaneStatusCommand } from "@/control-plane/ControlPlaneStatus.js";
-import { startControlPlaneCommand } from "@/control-plane/ControlPlaneRuntime.js";
-import { runInteractiveAgentManager } from "@/agent/AgentManager.js";
-import { runInteractivePluginManager } from "./Plugins.js";
+import { controlPlaneStatusCommand } from "../control-plane/ControlPlaneStatus.js";
+import { startControlPlaneCommand } from "../control-plane/ControlPlaneRuntime.js";
+import { runInteractiveAgentManager } from "../agent/AgentManager.js";
+import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { runInteractiveChatManager } from "./ChatManager.js";
 import { runInteractiveCityManager } from "./CityConnection.js";
 import { emitCliBlock } from "./CliReporter.js";
@@ -25,6 +24,11 @@ type TownHomeAction =
   | "console"
   | "help"
   | "exit";
+
+interface TownHelpProgram {
+  /** 输出当前 Town 根命令帮助。 */
+  outputHelp: () => void;
+}
 
 async function promptTownHomeAction(): Promise<TownHomeAction | null> {
   const response = (await prompts({
@@ -84,9 +88,9 @@ async function promptTownHomeAction(): Promise<TownHomeAction | null> {
  */
 export async function runInteractiveTownManager(params: {
   /**
-   * commander 根命令，用于输出帮助。
+   * Town 根命令帮助输出器。
    */
-  program: Command;
+  program: TownHelpProgram;
 
   /**
    * 当前 CLI 入口路径，用于启动 Console。

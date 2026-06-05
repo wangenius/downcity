@@ -12,7 +12,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "url";
 import { emitCliBlock } from "./CliReporter.js";
 import { CliError } from "./CliError.js";
-import { runWithSpinner } from "@/utils/cli/Spinner.js";
+import { runWithSpinner } from "../utils/cli/Spinner.js";
 const FALLBACK_GLOBAL_PACKAGE_NAME = "downcity";
 /**
  * 解析当前 CLI 安装包根目录。

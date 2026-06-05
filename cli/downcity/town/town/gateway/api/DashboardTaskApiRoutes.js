@@ -8,8 +8,8 @@
  */
 import fs from "fs-extra";
 import path from "node:path";
-import { TASK_RUN_DIR_REGEX, listTaskRuns, readRecentLogs, readTaskRunDetail, } from "@/agent/control/TaskStore.js";
-import { getDowncityDirPath } from "@/config/Paths.js";
+import { TASK_RUN_DIR_REGEX, listTaskRuns, readRecentLogs, readTaskRunDetail, } from "../../../agent/control/TaskStore.js";
+import { getDowncityDirPath } from "../../../config/Paths.js";
 const TASK_ID_REGEXP = /^[\p{L}\p{N}][\p{L}\p{N}_\-\s]{0,63}$/u;
 /**
  * 注册旧 dashboard task/logs 路由。

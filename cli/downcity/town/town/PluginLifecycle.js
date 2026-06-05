@@ -6,7 +6,7 @@
  * - 这里把状态落到平台安全配置中，由 Town 统一读写。
  * - 默认策略：未显式关闭时，一律视为启用。
  */
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "./store/index.js";
 const PLUGIN_LIFECYCLE_SETTING_KEY = "plugins.lifecycle";
 function normalizeLifecycleItem(input) {
     if (!input || typeof input !== "object" || Array.isArray(input))

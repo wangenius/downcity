@@ -6,7 +6,7 @@
  * - 单 agent control API 子路由按 overview/session/task/auth 四类拆分，便于继续维护。
  * - 单 agent control API 统一暴露在 `/api/control/*` 下。
  */
-import type { ControlRouteRegistrationParams } from "@/agent/http/control/types/ControlRoutes.js";
+import type { ControlRouteRegistrationParams } from "./types/ControlRoutes.js";
 /**
  * 注册单 agent control API 路由。
  */

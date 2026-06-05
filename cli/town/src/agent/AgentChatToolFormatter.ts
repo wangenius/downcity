@@ -8,7 +8,7 @@
  */
 
 import type { JsonObject, JsonValue } from "@downcity/agent";
-import type { AgentChatToolDisplayBlock } from "@/types/AgentChatInteractive.js";
+import type { AgentChatToolDisplayBlock } from "../types/AgentChatInteractive.js";
 
 const MAX_INLINE_TEXT_LENGTH = 120;
 const MAX_JSON_PREVIEW_LENGTH = 160;

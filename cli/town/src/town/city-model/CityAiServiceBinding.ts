@@ -14,7 +14,7 @@ import {
   DEFAULT_CITY_URL,
   readTownCityAdminSecretForBase,
   readTownCityUserSessionForRuntime,
-} from "@/shared/CityConnection.js";
+} from "../../shared/CityConnection.js";
 
 const DEFAULT_TOWN_ID = "town_downcity";
 

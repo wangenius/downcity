@@ -7,7 +7,7 @@
  * - CLI 显式传参优先级高于持久化配置，保证脚本化调用可预测。
  */
 
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "../town/store/index.js";
 import type { ControlPlaneStartOptions } from "./ControlPlaneRuntime.js";
 
 const CONTROL_PLANE_PUBLIC_MODE_SETTING_KEY = "town.controlPlane.publicMode";

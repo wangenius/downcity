@@ -7,7 +7,7 @@
  */
 
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
-import type { ControlSessionExecuteAttachmentInput } from "@/agent/control/types/ControlSessionExecute.js";
+import type { ControlSessionExecuteAttachmentInput } from "./types/ControlSessionExecute.js";
 import { buildExecuteInputText } from "./ExecuteInput.js";
 
 /**

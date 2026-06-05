@@ -11,9 +11,9 @@ import path from "node:path";
 import os from "node:os";
 import { mkdtemp } from "node:fs/promises";
 import { drainDeferredPersistedUserMessages, Executor, getLogger, JsonlSessionCompactionComposer, JsonlSessionHistoryComposer, JsonlSessionHistoryStore, pickLastSuccessfulChatSendText, resolveAssistantMessageForPersistence, } from "@downcity/agent";
-import { InstantSystemComposer } from "@/town/gateway/instant/InstantSystemComposer.js";
-import { createRuntimeModel } from "@/town/city-model/CreateRuntimeModel.js";
-import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
+import { InstantSystemComposer } from "./InstantSystemComposer.js";
+import { createRuntimeModel } from "../../city-model/CreateRuntimeModel.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "../../../env/ProcessEnv.js";
 function buildInstantPrompt(input) {
     const prompt = String(input.prompt || "").trim();
     const pageContext = String(input.pageContext || "").trim();

@@ -13,7 +13,7 @@ import type {
   PlatformInlineInstantRunner,
   InlineInstantExecutorType,
 } from "@downcity/agent";
-import { InstantSessionRunner } from "@/town/gateway/instant/InstantSessionRunner.js";
+import { InstantSessionRunner } from "./InstantSessionRunner.js";
 
 function normalizeExecutorType(input: unknown): InlineInstantExecutorType | "" {
   const value = String(input || "").trim();

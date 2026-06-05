@@ -9,7 +9,7 @@
  * - 这里只处理 global env，不处理项目 `.env`。
  * - 不负责 session 级运行时元信息（例如 `DC_SESSION_ID`）。
  */
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "../town/store/index.js";
 /**
  * 读取平台 global env 映射。
  */

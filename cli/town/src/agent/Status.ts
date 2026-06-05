@@ -12,8 +12,8 @@ import {
   isProcessAlive,
   readDaemonMeta,
   readDaemonPid,
-} from "@/process/daemon/Manager.js";
-import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
+} from "../process/daemon/Manager.js";
+import { getProfileMdPath, getDowncityJsonPath } from "../config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 
 /**

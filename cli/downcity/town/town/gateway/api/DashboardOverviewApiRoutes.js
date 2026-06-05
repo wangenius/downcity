@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readRecentLogs } from "@/agent/control/TaskStore.js";
+import { readRecentLogs } from "../../../agent/control/TaskStore.js";
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

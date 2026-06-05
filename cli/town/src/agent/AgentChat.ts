@@ -17,13 +17,13 @@ import {
   type RemoteAgentSession,
 } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
-import { printResult } from "@/utils/cli/CliOutput.js";
+import { printResult } from "../utils/cli/CliOutput.js";
 import {
   resolveProjectRootByAgentId,
   validateAgentProjectRoot,
 } from "../shared/PluginTargetSupport.js";
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
-import { resolveDaemonRpcEndpoint } from "@/process/daemon/Client.js";
+import { resolveDaemonRpcEndpoint } from "../process/daemon/Client.js";
 import type {
   AgentChatCliOptions,
   AgentChatExecutionOutcome,

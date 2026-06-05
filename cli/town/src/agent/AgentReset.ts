@@ -10,11 +10,11 @@
 import path from "node:path";
 import fs from "fs-extra";
 import prompts from "prompts";
-import { getDowncityJsonPath } from "@/config/Paths.js";
+import { getDowncityJsonPath } from "../config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
-import { listPlatformModelChoices } from "@/town/city-model/ExecutionModelBinding.js";
+import { listPlatformModelChoices } from "../town/city-model/ExecutionModelBinding.js";
 
 /**
  * 读取当前 agent 的 execution.modelId。
@@ -109,7 +109,7 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   });
 
   // 关键点（中文）：检测控制面是否运行，决定能否即时重启。
-  const { isTownRunning } = await import("@/process/registry/TownRuntime.js");
+  const { isTownRunning } = await import("../process/registry/TownRuntime.js");
   const controlPlaneRunning = await isTownRunning();
 
   if (!controlPlaneRunning) {

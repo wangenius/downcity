@@ -16,11 +16,11 @@ import type {
   AgentSessionTimelineEvent,
   PlatformAgentOption,
 } from "@downcity/agent";
-import type { ControlSessionExecuteAttachmentInput } from "@/agent/control/types/ControlSessionExecute.js";
-import { buildExecuteInputText } from "@/agent/control/ExecuteInput.js";
-import { toUiMessageTimeline } from "@/agent/control/MessageTimeline.js";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
-import { getDowncitySessionMessagesDirPath } from "@/config/Paths.js";
+import type { ControlSessionExecuteAttachmentInput } from "../../../agent/control/types/ControlSessionExecute.js";
+import { buildExecuteInputText } from "../../../agent/control/ExecuteInput.js";
+import { toUiMessageTimeline } from "../../../agent/control/MessageTimeline.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
+import { getDowncitySessionMessagesDirPath } from "../../../config/Paths.js";
 
 const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 

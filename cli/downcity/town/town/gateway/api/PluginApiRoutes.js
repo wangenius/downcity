@@ -8,7 +8,7 @@
  */
 import { findPluginByName, listPluginViews, parseActionScheduleRunAtMsOrThrow, runLocalPluginAction, } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
-import { isTownPluginEnabled, setBayPluginEnabled, } from "@/town/PluginLifecycle.js";
+import { isTownPluginEnabled, setBayPluginEnabled, } from "../../PluginLifecycle.js";
 function getErrorMessage(error) {
     if (error instanceof Error) {
         return error.message || String(error);

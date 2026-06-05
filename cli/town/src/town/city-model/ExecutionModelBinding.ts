@@ -10,13 +10,13 @@
 import fs from "fs-extra";
 import type { DowncityConfig } from "@downcity/agent";
 import { assertProjectExecutionTarget } from "@downcity/agent";
-import { getDowncityJsonPath } from "@/config/Paths.js";
+import { getDowncityJsonPath } from "../../config/Paths.js";
 import {
   assertCityAiModelReady,
   listCityAiModelChoices,
   type CityAiModelChoice,
 } from "./CityAiServiceBinding.js";
-import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "../../env/ProcessEnv.js";
 
 /**
  * City AIService 模型下拉候选项。

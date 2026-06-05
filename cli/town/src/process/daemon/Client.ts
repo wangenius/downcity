@@ -15,8 +15,8 @@ import {
 import {
   formatCliBearerHeaderValue,
   resolveCliAuthToken,
-} from "@/shared/CliAuthToken.js";
-import { getDaemonMetaPath } from "@/process/daemon/Manager.js";
+} from "../../shared/CliAuthToken.js";
+import { getDaemonMetaPath } from "./Manager.js";
 import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**

@@ -13,10 +13,10 @@ import path from "node:path";
 import { Agent, loadDowncityConfig, loadStaticSystemPrompts, shellTools, StaticPromptCatalog, } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
 import { CliError } from "../shared/CliError.js";
-import { createRuntimeModel } from "@/town/city-model/CreateRuntimeModel.js";
-import { readPlatformGlobalEnv } from "@/env/ProcessEnv.js";
+import { createRuntimeModel } from "../town/city-model/CreateRuntimeModel.js";
+import { readPlatformGlobalEnv } from "../env/ProcessEnv.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
-import { startAgentHttpGateway } from "@/agent/AgentHttpGateway.js";
+import { startAgentHttpGateway } from "./AgentHttpGateway.js";
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *

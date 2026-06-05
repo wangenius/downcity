@@ -13,7 +13,7 @@ import { emitCliBlock } from "./CliReporter.js";
 import type {
   TownCityLoginInput,
   TownCityUserSession,
-} from "@/types/TownCitySession.js";
+} from "../types/TownCitySession.js";
 import type {
   AccountsProviderItem,
   AuthOption,
@@ -23,7 +23,7 @@ import type {
   RegisterResult,
   TownCityAuthMethod,
   VerifyResult,
-} from "@/types/TownCityAuth.js";
+} from "../types/TownCityAuth.js";
 
 function readString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";

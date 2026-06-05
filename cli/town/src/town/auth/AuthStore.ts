@@ -11,7 +11,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { nanoid } from "nanoid";
-import { getPlatformStoreDbPath } from "@/process/registry/TownPaths.js";
+import { getPlatformStoreDbPath } from "../../process/registry/TownPaths.js";
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import {
   AUTH_DEFAULT_ROLES,
@@ -32,8 +32,8 @@ import {
   normalizeNonEmptyText,
   optionalTrimmedText,
   type PlatformStoreContext,
-} from "@/town/store/StoreShared.js";
-import { ensurePlatformStoreSchema } from "@/town/store/StoreSchema.js";
+} from "../store/StoreShared.js";
+import { ensurePlatformStoreSchema } from "../store/StoreSchema.js";
 
 /**
  * AuthStore 构造参数。

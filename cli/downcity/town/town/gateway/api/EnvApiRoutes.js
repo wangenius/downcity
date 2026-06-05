@@ -6,7 +6,7 @@
  * - 所有 value 在 DB 中以密文存储，这里的接口只负责明文读写与删除。
  */
 import dotenv from "dotenv";
-import { PlatformStore } from "@/town/store/index.js";
+import { PlatformStore } from "../../store/index.js";
 function normalizeNonEmptyText(value, fieldName) {
     const text = String(value || "").trim();
     if (!text) {

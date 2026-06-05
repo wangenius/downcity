@@ -9,17 +9,15 @@
 
 import path from "node:path";
 import fs from "node:fs";
-import type { Command } from "commander";
-import { getProfileMdPath, getDowncityJsonPath } from "@/config/Paths.js";
-import { listManagedAgentEntries } from "@/process/registry/TownRegistry.js";
-import { isTownRunning } from "@/process/registry/TownRuntime.js";
+import { getProfileMdPath, getDowncityJsonPath } from "../config/Paths.js";
+import { listManagedAgentEntries } from "../process/registry/TownRegistry.js";
+import { isTownRunning } from "../process/registry/TownRuntime.js";
 import type { JsonValue } from "@downcity/agent";
-import { parsePort, resolveAgentId } from "./IndexSupport.js";
+import { resolveAgentId } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
 import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
-import { parseBoolean } from "./IndexSupport.js";
-import { assertProjectExecutionModelReady } from "@/town/city-model/ExecutionModelBinding.js";
+import { assertProjectExecutionModelReady } from "../town/city-model/ExecutionModelBinding.js";
 
 export function isRegistryEntryRunning(
   entry: { status?: "running" | "stopped" },
@@ -249,27 +247,4 @@ export function parseCommandPayload(raw?: string): JsonValue | undefined {
     // 关键点（中文）：payload 不是 JSON 时按字符串透传，避免强制格式。
     return text;
   }
-}
-
-/**
- * 注入 plugin 目标解析通用选项。
- */
-export function addPluginTargetOptions(command: Command): Command {
-  return command
-    .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--agent <id>", "agent id（从 managed agent registry 解析）")
-    .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-    .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
-}
-
-/**
- * 注入 ActionSchedule 管理命令通用选项。
- */
-export function addPluginScheduleOptions(command: Command): Command {
-  return command
-    .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--agent <id>", "agent id（从 managed agent registry 解析）")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
 }

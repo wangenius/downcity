@@ -7,7 +7,7 @@
  */
 import type { PlatformAgentOption } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "./AgentRpcPool.js";
 /**
  * 初始化平台控制面选中的 agent 项目。
  */

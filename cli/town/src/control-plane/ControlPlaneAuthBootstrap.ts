@@ -8,7 +8,7 @@
  * - 启动流程不再写入任何本机默认 token 状态，只显示一次明文 token。
  */
 
-import { AuthService } from "@/town/auth/AuthService.js";
+import { AuthService } from "../town/auth/AuthService.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 
 const DEFAULT_CONTROL_PLANE_BOOTSTRAP_TOKEN_NAME = "control-plane-bootstrap";

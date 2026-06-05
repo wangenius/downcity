@@ -15,20 +15,20 @@
 import fs from "fs-extra";
 import path from "path";
 import { spawn } from "child_process";
-import { getDowncityDebugDirPath } from "@/config/Paths.js";
+import { getDowncityDebugDirPath } from "../../config/Paths.js";
 import {
   DAEMON_LOG_FILENAME,
   DAEMON_META_FILENAME,
   DAEMON_PID_FILENAME,
   type DaemonMeta,
   type DaemonStaleReason,
-} from "@/process/daemon/Types.js";
+} from "./Types.js";
 import {
   markManagedAgentStopped,
   upsertManagedAgentEntry,
-} from "@/process/registry/TownRegistry.js";
-import { signalDetachedProcess } from "@/process/registry/ProcessSweep.js";
-import { mergeProcessEnvWithPlatformGlobalEnv } from "@/env/ProcessEnv.js";
+} from "../registry/TownRegistry.js";
+import { signalDetachedProcess } from "../registry/ProcessSweep.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "../../env/ProcessEnv.js";
 
 /**
  * 异步睡眠工具。

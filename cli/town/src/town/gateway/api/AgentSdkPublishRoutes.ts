@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import type { AgentListSessionsInput } from "@downcity/agent";
 import type { AgentSessionEvent } from "@downcity/agent";
 import type { AgentSessionPromptInput } from "@downcity/agent";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
 
 const NDJSON_CONTENT_TYPE = "application/x-ndjson; charset=utf-8";
 const SDK_EVENTS_READY_FRAME = {

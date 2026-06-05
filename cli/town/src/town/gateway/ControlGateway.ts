@@ -13,11 +13,11 @@ import http from "node:http";
 import fs from "fs-extra";
 import path from "node:path";
 import { fileURLToPath } from "url";
-import { registerPlatformApiRoutes } from "@/town/gateway/api/PlatformApiRoutes.js";
+import { registerPlatformApiRoutes } from "./api/PlatformApiRoutes.js";
 import {
   registerAgentSdkPublishRoutes,
   type AgentSdkPublishRoutesRuntime,
-} from "@/town/gateway/api/AgentSdkPublishRoutes.js";
+} from "./api/AgentSdkPublishRoutes.js";
 import {
   buildPlatformAgentsResponse,
   buildPlatformConfigStatusResponse,
@@ -28,7 +28,7 @@ import {
   readRequestedPlatformAgentId,
   resolvePlatformAgentById,
   resolveSelectedPlatformAgent,
-} from "@/town/gateway/AgentCatalog.js";
+} from "./AgentCatalog.js";
 import {
   executeAgentProjectShellCommand,
   initializePlatformAgentProject,
@@ -38,9 +38,9 @@ import {
   startManagedAgentByProjectRoot,
   stopManagedAgentByProjectRoot,
   updatePlatformAgentExecution,
-} from "@/town/gateway/AgentActions.js";
-import { serveControlPlaneFrontendPath } from "@/town/gateway/FrontendAssets.js";
-import { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+} from "./AgentActions.js";
+import { serveControlPlaneFrontendPath } from "./FrontendAssets.js";
+import { AgentRpcPool } from "./AgentRpcPool.js";
 import { listPluginAuthPolicies } from "@downcity/agent";
 import type {
   PlatformAgentOption,
@@ -52,13 +52,13 @@ import type {
 } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
-import { AuthService } from "@/town/auth/AuthService.js";
-import { registerAuthRoutes } from "@/town/auth/AuthRoutes.js";
+import { AuthService } from "../auth/AuthService.js";
+import { registerAuthRoutes } from "../auth/AuthRoutes.js";
 import {
   CONTROL_PLANE_AUTH_ROUTE_POLICIES,
   createRouteAuthGuardMiddleware,
-} from "@/town/auth/RoutePolicy.js";
-import { resolveTownCliPath } from "@/shared/TownCliPath.js";
+} from "../auth/RoutePolicy.js";
+import { resolveTownCliPath } from "../../shared/TownCliPath.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -10,8 +10,8 @@ import fs from "fs-extra";
 import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,
-} from "@/config/Paths.js";
-import type { ControlSessionSummary } from "@/agent/control/types/ControlViewData.js";
+} from "../../config/Paths.js";
+import type { ControlSessionSummary } from "./types/ControlViewData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
 

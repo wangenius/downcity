@@ -10,7 +10,7 @@
  * 注意
  * - 前台启动请显式使用 `town agent start --foreground`。
  */
-import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
+import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 /**
  * daemon 启动入口。
  *

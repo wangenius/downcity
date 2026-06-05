@@ -27,11 +27,11 @@ import type {
   PluginView,
 } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "../AgentRpcPool.js";
 import {
   isTownPluginEnabled,
   setBayPluginEnabled,
-} from "@/town/PluginLifecycle.js";
+} from "../../PluginLifecycle.js";
 
 type PluginActionConfigItem = {
   name: string;

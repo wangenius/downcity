@@ -8,7 +8,7 @@
 import { AuthError } from "./AuthError.js";
 import { AuthStore } from "./AuthStore.js";
 import { extractBearerToken, generateAccessToken, hashAccessToken } from "./TokenService.js";
-import { optionalTrimmedText } from "@/town/store/StoreShared.js";
+import { optionalTrimmedText } from "../store/StoreShared.js";
 const LOCAL_CLI_USERNAME = "local-cli";
 const LOCAL_CLI_DISPLAY_NAME = "Local CLI";
 const LOCAL_CLI_PASSWORD_HASH = "[token-only-local-cli]";

@@ -7,7 +7,7 @@
  */
 import fs from "fs-extra";
 import path from "node:path";
-import { getLogsDirPath, getDowncityTasksDirPath } from "@/config/Paths.js";
+import { getLogsDirPath, getDowncityTasksDirPath } from "../../config/Paths.js";
 import { truncateText } from "./CommonHelpers.js";
 import { loadSessionMessagesFromFile, toUiMessageTimeline } from "./MessageTimeline.js";
 export const TASK_RUN_DIR_REGEX = /^\d{8}-\d{6}-\d{3}$/;

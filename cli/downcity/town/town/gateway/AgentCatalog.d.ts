@@ -6,7 +6,7 @@
  * - 不处理进程控制；启动 / 停止逻辑单独放到 AgentActions 中。
  */
 import type { PlatformAgentOption, PlatformAgentsResponse, PlatformConfigFileStatusItem, PlatformConfigStatusResponse, PlatformAgentDirectoryInspection } from "@downcity/agent";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "./AgentRpcPool.js";
 /**
  * 从请求中读取当前指向的 agent id。
  */

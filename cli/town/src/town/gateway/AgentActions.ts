@@ -15,8 +15,8 @@ import {
   getDaemonLogPath,
   isProcessAlive,
   readDaemonPid,
-} from "@/process/daemon/Manager.js";
-import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
+} from "../../process/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "../../process/daemon/CliArgs.js";
 import {
   initializeAgentProject,
   isAgentProjectInitialized,
@@ -26,18 +26,18 @@ import {
   getDowncitySessionRootDirPath,
   getDowncityJsonPath,
   getDowncityDirPath,
-} from "@/config/Paths.js";
-import { stripInvocationAuthEnv } from "@/town/auth/AuthEnv.js";
+} from "../../config/Paths.js";
+import { stripInvocationAuthEnv } from "../auth/AuthEnv.js";
 import type { PlatformAgentOption } from "@downcity/agent";
 import type { AgentProjectInitializationResult } from "@downcity/agent";
 import type {
   ExecutionBindingConfig,
 } from "@downcity/agent";
-import type { AgentRpcPool } from "@/town/gateway/AgentRpcPool.js";
+import type { AgentRpcPool } from "./AgentRpcPool.js";
 import {
   assertPlatformModelReady,
   assertProjectExecutionModelReady,
-} from "@/town/city-model/ExecutionModelBinding.js";
+} from "../city-model/ExecutionModelBinding.js";
 
 function resolveExecutionInput(params: {
   modelId?: unknown;

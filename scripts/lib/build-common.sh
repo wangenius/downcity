@@ -39,7 +39,7 @@ install_downcity_cli_globally() {
   mkdir -p "$global_modules" "$global_bin" "$package_dir"
 
   # 关键点（中文）：日常 patch build 已经构建好了 cli/downcity，不需要再 `pnpm deploy`
-  # 联网解析依赖。只更新 CLI 代码与静态资源，并复用全局安装中已有的 node_modules。
+  # 联网解析依赖。只更新 CLI 代码，并复用全局安装中已有的 node_modules。
   if [[ -d "$package_dir/node_modules" ]]; then
     rm -rf \
       "$package_dir/bin" \
@@ -51,7 +51,6 @@ install_downcity_cli_globally() {
     cp -R "$source_dir/bin" "$package_dir/bin"
     cp -R "$source_dir/city" "$package_dir/city"
     cp -R "$source_dir/town" "$package_dir/town"
-    cp -R "$source_dir/public" "$package_dir/public"
     cp "$source_dir/README.md" "$package_dir/README.md"
     cp "$source_dir/package.json" "$package_dir/package.json"
   else

@@ -34,6 +34,7 @@ const legacy_targets = [
   path.join(package_root, legacy_command_name),
   path.join(package_root, `${legacy_command_name}-cli`),
   path.join(package_root, "bin", legacy_command_name),
+  path.join(package_root, "public"),
 ];
 
 async function assert_source_exists(source_path, label) {

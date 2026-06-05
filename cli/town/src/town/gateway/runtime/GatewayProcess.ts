@@ -28,6 +28,8 @@ import {
 } from "../../../process/registry/TownRegistry.js";
 import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
+  getGatewayMetaPath,
+  getGatewayPidPath,
   getTownLogPath,
   getTownPidPath,
   getTownRuntimeDirPath,
@@ -48,7 +50,6 @@ import {
   sleep,
 } from "../../../shared/IndexSupport.js";
 import { buildRuntimePortFacts } from "../../../shared/PortHints.js";
-import { stopGatewayRuntimeCommand } from "./GatewayRuntime.js";
 import { ensureGatewayAuthBootstrap } from "./GatewayAuthBootstrap.js";
 import { emitCliBlock, emitCliList } from "../../../shared/CliReporter.js";
 import { runWithSpinner } from "../../../utils/cli/Spinner.js";
@@ -176,6 +177,37 @@ export async function resolveRunningManagedAgents(params?: {
 }
 
 /**
+ * 清理旧版本可能留下的 Console UI 运行态。
+ *
+ * 关键点（中文）
+ * - 当前 Town 不再启动 Console UI，也不再依赖 Console runtime 模块。
+ * - 这里只按旧 `town console run` 的 detached 命令形态做兜底清扫。
+ * - 清扫完成后删除旧 gateway pid/meta 文件，避免后续状态读取误判。
+ */
+async function cleanupLegacyConsoleUiRuntime(timeoutMs: number): Promise<void> {
+  const sweep = await sweepDetachedBayProcesses({
+    includeUi: true,
+    timeoutMs,
+  });
+
+  for (const item of sweep.stopped) {
+    emitCliBlock({
+      tone: "success",
+      title: "Legacy Console UI process stopped",
+    });
+  }
+  for (const item of sweep.alive) {
+    emitCliBlock({
+      tone: "warning",
+      title: "Legacy Console UI process may still be running",
+    });
+  }
+
+  await fs.remove(getGatewayPidPath());
+  await fs.remove(getGatewayMetaPath());
+}
+
+/**
  * 停止 town runtime 后台进程（先清理旧 Console，再停受管 agent，最后停 town runtime）。
  */
 export async function stopTownRuntimeCommand(params?: { timeoutMs?: number }): Promise<void> {
@@ -190,9 +222,9 @@ export async function stopTownRuntimeCommand(params?: { timeoutMs?: number }): P
     title: "Town runtime",
     summary: "stopping",
   });
-  await stopGatewayRuntimeCommand();
+  await cleanupLegacyConsoleUiRuntime(timeoutMs);
 
-  // Phase 2: Stop managed agents
+  // 关键点（中文）：受管 agent 由 Town 统一停机，避免遗留 daemon 占用项目端口。
   const views = await resolveRunningManagedAgents();
   if (views.length > 0) {
     emitCliBlock({
@@ -228,7 +260,7 @@ export async function stopTownRuntimeCommand(params?: { timeoutMs?: number }): P
     }
   }
 
-  // Phase 3: Stop town runtime process
+  // 关键点（中文）：最后停止 Town runtime 自身，并顺手清扫失联进程。
   const sweepOrphans = async (): Promise<void> => {
     const orphanSweep = await sweepDetachedBayProcesses({
       includeConsole: true,
@@ -250,8 +282,8 @@ export async function stopTownRuntimeCommand(params?: { timeoutMs?: number }): P
     }
   };
 
-  const consolePid = await readTownPid();
-  if (!consolePid) {
+  const runtimePid = await readTownPid();
+  if (!runtimePid) {
     emitCliBlock({
       tone: "info",
       title: "Town runtime process",
@@ -266,7 +298,7 @@ export async function stopTownRuntimeCommand(params?: { timeoutMs?: number }): P
     return;
   }
 
-  if (!isTownProcessAlive(consolePid)) {
+  if (!isTownProcessAlive(runtimePid)) {
     await fs.remove(pidPath);
     emitCliBlock({
       tone: "warning",
@@ -282,26 +314,26 @@ export async function stopTownRuntimeCommand(params?: { timeoutMs?: number }): P
     return;
   }
 
-  signalDetachedProcess(consolePid, "SIGTERM");
+  signalDetachedProcess(runtimePid, "SIGTERM");
 
   const startAt = Date.now();
   while (Date.now() - startAt < timeoutMs) {
-    if (!isTownProcessAlive(consolePid)) break;
+    if (!isTownProcessAlive(runtimePid)) break;
     await sleep(200);
   }
 
-  if (isTownProcessAlive(consolePid)) {
-    signalDetachedProcess(consolePid, "SIGKILL");
+  if (isTownProcessAlive(runtimePid)) {
+    signalDetachedProcess(runtimePid, "SIGKILL");
     const forceStartAt = Date.now();
     while (Date.now() - forceStartAt < 2_000) {
-      if (!isTownProcessAlive(consolePid)) break;
+      if (!isTownProcessAlive(runtimePid)) break;
       await sleep(100);
     }
   }
 
   await fs.remove(pidPath);
 
-  const stillAlive = isTownProcessAlive(consolePid);
+  const stillAlive = isTownProcessAlive(runtimePid);
   emitCliBlock({
     tone: stillAlive ? "warning" : "success",
     title: "Town runtime process",

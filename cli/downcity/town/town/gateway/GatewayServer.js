@@ -50,7 +50,11 @@ const DC_VERSION = (() => {
     return "unknown";
 })();
 /**
- * 控制面网关。
+ * 旧 Console 控制面网关。
+ *
+ * 关键点（中文）
+ * - 当前 Town CLI 已断开 Console UI 启动入口，本类只作为历史 HTTP 门面暂留。
+ * - 后续若确认没有外部 API 依赖，可以继续删除整组 gateway/server 路由。
  */
 export class GatewayServer {
     app;
@@ -60,7 +64,7 @@ export class GatewayServer {
     authService;
     agentRpcPool;
     constructor() {
-        // 关键点（中文）：Console UI 构建产物随 Town CLI 一起托管，聚合包会复制到对应 public 目录。
+        // 关键点（中文）：旧 Console 静态资源已不再随 Town CLI 打包，此路径仅服务历史门面。
         this.publicDir = path.join(__dirname, "../../public");
         this.app = new Hono();
         this.authService = new AuthService();

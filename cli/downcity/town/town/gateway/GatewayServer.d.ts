@@ -19,7 +19,11 @@ export interface GatewayServerStartOptions {
     host: string;
 }
 /**
- * 控制面网关。
+ * 旧 Console 控制面网关。
+ *
+ * 关键点（中文）
+ * - 当前 Town CLI 已断开 Console UI 启动入口，本类只作为历史 HTTP 门面暂留。
+ * - 后续若确认没有外部 API 依赖，可以继续删除整组 gateway/server 路由。
  */
 export declare class GatewayServer {
     private app;

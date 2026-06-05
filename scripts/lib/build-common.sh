@@ -15,6 +15,39 @@ run_project_build() {
   fi
 }
 
+sync_downcity_workspace_package_globally() {
+  local workspace_root="$1"
+  local package_dir="$2"
+  local package_name="$3"
+  local source_dir
+  local target_link
+  local target_dir
+
+  source_dir="$workspace_root/packages/$package_name"
+  target_link="$package_dir/node_modules/@downcity/$package_name"
+  if [[ ! -d "$source_dir" || ! -e "$target_link" ]]; then
+    return 0
+  fi
+
+  target_dir="$(cd "$target_link" && pwd -P)"
+  if [[ -z "$target_dir" || ! -d "$target_dir" ]]; then
+    return 0
+  fi
+
+  # 关键点（中文）：保留全局依赖包自己的 node_modules，只刷新 workspace 包源码与构建产物。
+  rsync -a --delete --exclude node_modules "$source_dir/" "$target_dir/"
+}
+
+sync_downcity_workspace_packages_globally() {
+  local workspace_root="$1"
+  local package_dir="$2"
+  local package_name
+
+  for package_name in type agent city services plugins ui; do
+    sync_downcity_workspace_package_globally "$workspace_root" "$package_dir" "$package_name"
+  done
+}
+
 install_downcity_cli_globally() {
   local workspace_root="$1"
   local deploy_dir
@@ -53,6 +86,7 @@ install_downcity_cli_globally() {
     cp -R "$source_dir/town" "$package_dir/town"
     cp "$source_dir/README.md" "$package_dir/README.md"
     cp "$source_dir/package.json" "$package_dir/package.json"
+    sync_downcity_workspace_packages_globally "$workspace_root" "$package_dir"
   else
     # 关键点（中文）：首次全局安装没有依赖目录时，仍需要 deploy 生成完整依赖树。
     deploy_dir="$(mktemp -d "${TMPDIR:-/tmp}/downcity-cli-deploy.XXXXXX")"

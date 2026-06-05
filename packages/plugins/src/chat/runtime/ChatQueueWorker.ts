@@ -44,7 +44,6 @@ type TurnObservation = {
   turnId: string;
   sessionId: string;
   messageId?: string;
-  assistantStepDispatched: boolean;
   typing: { stop: () => void };
 };
 
@@ -342,13 +341,18 @@ export class ChatQueueWorker {
     if (event.visibility === "internal") return;
     const stepText = String(event.text || "").trim();
     if (!stepText) return;
-    const dispatched = await this.dispatchAssistantStepMessage({
-      sessionId: observation.sessionId,
-      text: stepText,
-      messageId: observation.messageId,
-    });
-    if (dispatched) {
-      observation.assistantStepDispatched = true;
+
+    try {
+      await this.dispatchAssistantStepMessage({
+        sessionId: observation.sessionId,
+        text: stepText,
+        messageId: observation.messageId,
+      });
+    } catch (error) {
+      this.logger.warn("ChatQueueWorker assistant step dispatch failed", {
+        sessionId: observation.sessionId,
+        error: String(error),
+      });
     }
   }
 
@@ -369,7 +373,6 @@ export class ChatQueueWorker {
         turnId: turn.id,
         sessionId: item.sessionId,
         messageId: item.messageId,
-        assistantStepDispatched: false,
         typing: this.startTypingHeartbeat(item),
       };
       params.lane.turnObservers.set(turn.id, observation);
@@ -437,36 +440,6 @@ export class ChatQueueWorker {
       });
       return;
     }
-
-    if (observation.assistantStepDispatched) {
-      return;
-    }
-
-    const finalAssistantText =
-      pickLastSuccessfulChatSendText(result.assistantMessage) || result.text;
-    if (!finalAssistantText) {
-      return;
-    }
-
-    const dispatchedDirectly = await dispatchAssistantTextDirect({
-      logger: this.logger,
-      context: this.context,
-      sessionId: observation.sessionId,
-      assistantText: finalAssistantText,
-      phase: "final",
-    });
-    if (dispatchedDirectly) {
-      return;
-    }
-
-    await dispatchTextToChannel({
-      logger: this.logger,
-      context: this.context,
-      sessionId: observation.sessionId,
-      text: finalAssistantText,
-      messageId: observation.messageId,
-      phase: "final",
-    });
   }
 
   /**

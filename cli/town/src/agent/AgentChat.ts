@@ -175,6 +175,24 @@ async function resolveAgentChatTarget(
     };
   }
 
+  const registeredAgents = await listRegisteredAgentsForCli();
+  const registeredAgent = registeredAgents.find(
+    (item) =>
+      item.projectRoot === resolved.projectRoot || item.id === agentId,
+  );
+  if (registeredAgent && registeredAgent.status !== "running") {
+    return {
+      success: false,
+      outcome: {
+        agentId,
+        projectRoot: resolved.projectRoot,
+        sessionId,
+        success: false,
+        error: "Agent is not running. Run `town agent start` first.",
+      },
+    };
+  }
+
   return {
     success: true,
     target: {
@@ -486,6 +504,15 @@ async function runInteractiveChat(params: {
   agentId: string;
   options: AgentChatCliOptions;
 }): Promise<void> {
+  const resolved = await resolveAgentChatTarget(params.agentId);
+  if (!resolved.success) {
+    printAgentChatFailure({
+      agentId: params.agentId,
+      error: resolved.outcome.error,
+    });
+    return;
+  }
+
   const prompt = `${chalk.cyan(params.agentId)} ${chalk.dim("›")} `;
   const helpText = [
     `${chalk.dim("/exit, /quit  — 退出对话")}`,

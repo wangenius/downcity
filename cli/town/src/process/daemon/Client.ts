@@ -77,6 +77,7 @@ function resolveDaemonEndpointFromSources(params: {
   arg_port_name: string;
   default_host: string;
   default_port: number;
+  read_daemon_arg_host?: boolean;
 }): DaemonEndpoint {
   const explicitHost = normalizeHost(params.explicit_host);
   const explicitPort = parsePortLike(params.explicit_port);
@@ -93,7 +94,10 @@ function resolveDaemonEndpointFromSources(params: {
       const args = Array.isArray(raw?.args)
         ? raw.args.map((item) => String(item))
         : [];
-      daemonArgHost = normalizeHost(pickArgValue(args, "--host"));
+      daemonArgHost =
+        params.read_daemon_arg_host === false
+          ? undefined
+          : normalizeHost(pickArgValue(args, "--host"));
       daemonArgPort = parsePortLike(pickArgValue(args, params.arg_port_name));
     }
   } catch {
@@ -133,6 +137,7 @@ export function resolveDaemonEndpoint(params: {
     arg_port_name: "--port",
     default_host: "127.0.0.1",
     default_port: 5314,
+    read_daemon_arg_host: true,
   });
 }
 
@@ -157,6 +162,8 @@ export function resolveDaemonRpcEndpoint(
     arg_port_name: "--rpc-port",
     default_host: "127.0.0.1",
     default_port: 15314,
+    // 关键点（中文）：RPC 运行时固定监听本机地址，不能复用 HTTP gateway 的 `--host`。
+    read_daemon_arg_host: false,
   });
 }
 

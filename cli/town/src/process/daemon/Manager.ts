@@ -15,6 +15,7 @@
 import fs from "fs-extra";
 import path from "path";
 import { spawn } from "child_process";
+import { createConnection } from "node:net";
 import { getDowncityDebugDirPath } from "../../config/Paths.js";
 import {
   DAEMON_LOG_FILENAME,
@@ -35,6 +36,10 @@ import { mergeProcessEnvWithPlatformGlobalEnv } from "../../env/ProcessEnv.js";
  */
 const sleep = async (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+const DAEMON_READY_TIMEOUT_MS = 15_000;
+const DAEMON_READY_CONNECT_TIMEOUT_MS = 300;
+const DAEMON_READY_POLL_INTERVAL_MS = 200;
 
 /**
  * 计算 daemon pid 文件路径。
@@ -213,6 +218,136 @@ export const writeDaemonFiles = async (
 };
 
 /**
+ * 读取 CLI 参数值。
+ *
+ * 关键点（中文）
+ * - 支持 `--key value` 与 `--key=value` 两种形态，便于后续 CLI 参数格式演进。
+ */
+function pickArgValue(args: string[], key: string): string | undefined {
+  const inlinePrefix = `${key}=`;
+  const inlineValue = args
+    .map((item) => String(item).trim())
+    .find((item) => item.startsWith(inlinePrefix));
+  if (inlineValue) {
+    const value = inlineValue.slice(inlinePrefix.length).trim();
+    return value || undefined;
+  }
+
+  const idx = args.findIndex((item) => String(item).trim() === key);
+  if (idx < 0) return undefined;
+  const next = String(args[idx + 1] || "").trim();
+  return next || undefined;
+}
+
+/**
+ * 解析端口值。
+ */
+function parsePortLike(input: string | number | undefined): number | undefined {
+  if (input === undefined || input === null || input === "") return undefined;
+  const raw =
+    typeof input === "number" ? input : Number.parseInt(String(input), 10);
+  if (!Number.isFinite(raw) || Number.isNaN(raw)) return undefined;
+  if (!Number.isInteger(raw) || raw <= 0 || raw > 65535) return undefined;
+  return raw;
+}
+
+/**
+ * 尝试建立 TCP 连接。
+ *
+ * 关键点（中文）
+ * - 这里只验证 RPC 端口已监听，不耦合 `@downcity/agent` 的具体协议实现。
+ */
+async function canConnectTcp(params: {
+  host: string;
+  port: number;
+  timeoutMs?: number;
+}): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (success: boolean): void => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(success);
+    };
+
+    const socket = createConnection({
+      host: params.host,
+      port: params.port,
+    });
+    socket.setTimeout(params.timeoutMs ?? DAEMON_READY_CONNECT_TIMEOUT_MS);
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
+    socket.once("timeout", () => finish(false));
+  });
+}
+
+/**
+ * 等待 daemon RPC 进入可连接状态。
+ */
+async function waitForDaemonReady(params: {
+  pid: number;
+  args: string[];
+  timeoutMs?: number;
+}): Promise<void> {
+  const rpc_port = parsePortLike(pickArgValue(params.args, "--rpc-port"));
+  if (!rpc_port) {
+    throw new Error("Daemon RPC port is missing from startup arguments");
+  }
+
+  // 关键点（中文）：Agent RPC 在前台运行入口固定监听本机地址，不能复用 HTTP gateway host。
+  const rpc_host = "127.0.0.1";
+  const timeout_ms = params.timeoutMs ?? DAEMON_READY_TIMEOUT_MS;
+  const started_at = Date.now();
+
+  while (Date.now() - started_at < timeout_ms) {
+    if (!isProcessAlive(params.pid)) {
+      throw new Error(
+        `Daemon process exited before RPC became ready (${rpc_host}:${rpc_port})`,
+      );
+    }
+
+    if (
+      await canConnectTcp({
+        host: rpc_host,
+        port: rpc_port,
+      })
+    ) {
+      return;
+    }
+
+    await sleep(DAEMON_READY_POLL_INTERVAL_MS);
+  }
+
+  throw new Error(
+    `Daemon RPC did not become ready at ${rpc_host}:${rpc_port} within ${timeout_ms}ms`,
+  );
+}
+
+/**
+ * 回滚启动失败状态。
+ */
+async function rollbackDaemonStartup(params: {
+  projectRoot: string;
+  pid: number;
+}): Promise<void> {
+  signalDetachedProcess(params.pid, "SIGTERM");
+  await sleep(300);
+  try {
+    if (isProcessAlive(params.pid)) signalDetachedProcess(params.pid, "SIGKILL");
+  } catch {
+    // ignore
+  }
+  await fs.remove(getDaemonPidPath(params.projectRoot));
+  await fs.remove(getDaemonMetaPath(params.projectRoot));
+  try {
+    await markManagedAgentStopped(params.projectRoot);
+  } catch {
+    // ignore registry sync errors
+  }
+}
+
+/**
  * 启动 daemon 子进程。
  *
  * 流程（中文）
@@ -255,6 +390,7 @@ export const startDaemonProcess = async (params: {
   child.unref();
 
   if (!child.pid) {
+    fs.closeSync(logFd);
     throw new Error("Failed to start daemon process (missing pid)");
   }
 
@@ -268,25 +404,27 @@ export const startDaemonProcess = async (params: {
     platform: process.platform,
   });
 
-  // 关键点（中文）：启动成功后必须登记到 managed agent registry，否则该 daemon 视为“无效启动”。
+  // 关键点（中文）：只有 RPC 端口可连接后，才把 daemon 视为真正启动成功。
   try {
+    await waitForDaemonReady({
+      pid: child.pid,
+      args,
+    });
+
+    // 关键点（中文）：启动成功后必须登记到 managed agent registry，否则该 daemon 视为“无效启动”。
     await upsertManagedAgentEntry({
       projectRoot,
       pid: child.pid,
       status: "running",
     });
   } catch (error) {
-    // 回滚：无法登记时立即停止 daemon 并清理状态文件。
-    signalDetachedProcess(child.pid, "SIGTERM");
-    await sleep(300);
-    try {
-      if (isProcessAlive(child.pid)) signalDetachedProcess(child.pid, "SIGKILL");
-    } catch {
-      // ignore
-    }
-    await fs.remove(getDaemonPidPath(projectRoot));
-    await fs.remove(getDaemonMetaPath(projectRoot));
-    throw error;
+    // 回滚：无法 ready 或无法登记时立即停止 daemon 并清理状态文件。
+    await rollbackDaemonStartup({
+      projectRoot,
+      pid: child.pid,
+    });
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message}. Check daemon log: ${logPath}`);
   }
 
   return { pid: child.pid, logPath };

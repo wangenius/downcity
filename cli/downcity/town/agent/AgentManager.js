@@ -38,6 +38,16 @@ async function loadAgentSummaries() {
         };
     });
 }
+/**
+ * 重新加载单个 agent 摘要。
+ *
+ * 关键点（中文）
+ * - 交互式 manager 不能长期持有旧快照，否则启动/停止后菜单状态会误导用户。
+ */
+async function reloadAgentSummary(projectRoot, fallback) {
+    const agents = await loadAgentSummaries();
+    return agents.find((agent) => agent.projectRoot === projectRoot) || fallback;
+}
 function readAgentConfig(projectRoot) {
     try {
         return fs.readJsonSync(getDowncityJsonPath(projectRoot));
@@ -492,6 +502,7 @@ async function runSelectedAgentManager() {
     if (!agent)
         return;
     while (true) {
+        agent = await reloadAgentSummary(agent.projectRoot, agent);
         const action = await promptAgentAction(agent);
         if (!action) {
             emitCliBlock({
@@ -506,23 +517,37 @@ async function runSelectedAgentManager() {
             if (action === "status") {
                 injectAgentContext(agent.projectRoot);
                 await statusCommand(agent.projectRoot);
+                agent = await reloadAgentSummary(agent.projectRoot, agent);
                 continue;
             }
             if (action === "start") {
                 await startAgentProject(agent.projectRoot);
+                agent = await reloadAgentSummary(agent.projectRoot, agent);
                 continue;
             }
             if (action === "stop") {
                 await stopCommand(agent.projectRoot);
+                agent = await reloadAgentSummary(agent.projectRoot, agent);
                 continue;
             }
             if (action === "restart") {
                 injectAgentContext(agent.projectRoot);
                 await restartCommand(agent.projectRoot, {});
+                agent = await reloadAgentSummary(agent.projectRoot, agent);
                 continue;
             }
             if (action === "chat") {
+                agent = await reloadAgentSummary(agent.projectRoot, agent);
+                if (agent.status !== "running") {
+                    emitCliBlock({
+                        tone: "error",
+                        title: "Agent is not running",
+                        note: "请先启动当前 agent，再进入聊天。",
+                    });
+                    continue;
+                }
                 await chatCommand({ to: agent.id });
+                agent = await reloadAgentSummary(agent.projectRoot, agent);
                 continue;
             }
             if (action === "configureId") {

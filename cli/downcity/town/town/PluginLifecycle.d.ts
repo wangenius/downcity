@@ -9,7 +9,7 @@
 /**
  * 单个 plugin 的 Town 级生命周期配置。
  */
-export interface BayPluginLifecycleItem {
+export interface TownPluginLifecycleItem {
     /**
      * 当前 plugin 是否在 Town 级被启用。
      */
@@ -26,7 +26,7 @@ export interface TownPluginLifecycleConfig {
     /**
      * 插件生命周期配置对象映射。
      */
-    [pluginName: string]: BayPluginLifecycleItem | undefined;
+    [pluginName: string]: TownPluginLifecycleItem | undefined;
 }
 /**
  * 读取 Town 级 plugin 生命周期配置。
@@ -39,7 +39,7 @@ export declare function writeTownPluginLifecycleConfig(value: TownPluginLifecycl
 /**
  * 读取单个 plugin 的 Town 级生命周期状态。
  */
-export declare function readTownPluginLifecycleItem(pluginName: string): BayPluginLifecycleItem | null;
+export declare function readTownPluginLifecycleItem(pluginName: string): TownPluginLifecycleItem | null;
 /**
  * 判断单个 plugin 是否启用。
  */
@@ -47,5 +47,5 @@ export declare function isTownPluginEnabled(pluginName: string): boolean;
 /**
  * 设置单个 plugin 的启用态。
  */
-export declare function setBayPluginEnabled(pluginName: string, enabled: boolean): TownPluginLifecycleConfig;
+export declare function setTownPluginEnabled(pluginName: string, enabled: boolean): TownPluginLifecycleConfig;
 //# sourceMappingURL=PluginLifecycle.d.ts.map

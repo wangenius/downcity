@@ -30,7 +30,7 @@ import type { JsonValue } from "@downcity/agent";
 import type { AgentRpcPool } from "../AgentRpcPool.js";
 import {
   isTownPluginEnabled,
-  setBayPluginEnabled,
+  setTownPluginEnabled,
 } from "../../PluginLifecycle.js";
 
 type PluginActionConfigItem = {
@@ -250,7 +250,7 @@ async function runGlobalPluginAction(input: {
       };
     }
 
-    setBayPluginEnabled(plugin.name, actionName === "on");
+    setTownPluginEnabled(plugin.name, actionName === "on");
     return {
       success: true,
       message: `Plugin "${plugin.name}" ${actionName === "on" ? "enabled" : "disabled"} in town config`,

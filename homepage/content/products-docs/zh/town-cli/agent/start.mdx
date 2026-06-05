@@ -22,11 +22,11 @@ town agent start [path] [options]
 
 ## 行为说明
 
-- 启动前会检查 console 是否已启动。
+- 启动前会检查 Town runtime 是否已启动。
 - 如果显式传了 `path`，就直接以该目录为目标。
 - 如果没传 `path` 且当前目录本身已经是已初始化 agent 项目，就直接启动当前目录。
 - 如果没传 `path` 且当前目录不是 agent 项目，CLI 会从已登记 agent 中弹出交互选择器。
-- agent 端口始终由 console 自动分配。
+- agent 端口始终由 Town runtime 自动分配。
 - 默认不依赖项目 `downcity.json.start.host/port`。
 - `--foreground` 时在当前终端运行；否则按后台方式运行。
 - `--foreground` 仅用于当前终端的临时运行会话，终端结束后进程随之结束。
@@ -52,5 +52,5 @@ Agent daemon started                            lucas_whitman
 $ town agent start .
 town v1.0.437
 
-❌ console is not running. Please run `town start` first.
+❌ town runtime is not running
 ```

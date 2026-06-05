@@ -18,10 +18,10 @@ town agent stop [path]
 ## Behavior
 
 - `path` defaults to current directory `.`
-- Target agent must be registered in the city registry
+- Target agent must be registered in the managed agent registry
 - Stops the matching daemon process group
 - Cleans daemon pid/meta files
-- Marks the agent as `stopped` in the city registry
+- Marks the agent as `stopped` in the managed agent registry
 - If the daemon is not running, the command exits successfully with a not-running message
 
 ## Related commands

@@ -12,7 +12,7 @@ import { PlatformStore } from "./store/index.js";
 /**
  * 单个 plugin 的 Town 级生命周期配置。
  */
-export interface BayPluginLifecycleItem {
+export interface TownPluginLifecycleItem {
   /**
    * 当前 plugin 是否在 Town 级被启用。
    */
@@ -30,12 +30,12 @@ export interface TownPluginLifecycleConfig {
   /**
    * 插件生命周期配置对象映射。
    */
-  [pluginName: string]: BayPluginLifecycleItem | undefined;
+  [pluginName: string]: TownPluginLifecycleItem | undefined;
 }
 
 const PLUGIN_LIFECYCLE_SETTING_KEY = "plugins.lifecycle";
 
-function normalizeLifecycleItem(input: unknown): BayPluginLifecycleItem | null {
+function normalizeLifecycleItem(input: unknown): TownPluginLifecycleItem | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const record = input as Record<string, unknown>;
   if (typeof record.enabled !== "boolean") return null;
@@ -95,7 +95,7 @@ export function writeTownPluginLifecycleConfig(
  */
 export function readTownPluginLifecycleItem(
   pluginName: string,
-): BayPluginLifecycleItem | null {
+): TownPluginLifecycleItem | null {
   const key = String(pluginName || "").trim();
   if (!key) return null;
   return readTownPluginLifecycleConfig()[key] || null;
@@ -113,7 +113,7 @@ export function isTownPluginEnabled(pluginName: string): boolean {
 /**
  * 设置单个 plugin 的启用态。
  */
-export function setBayPluginEnabled(
+export function setTownPluginEnabled(
   pluginName: string,
   enabled: boolean,
 ): TownPluginLifecycleConfig {

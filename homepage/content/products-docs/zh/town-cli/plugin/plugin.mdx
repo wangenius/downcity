@@ -24,8 +24,9 @@ description: 在 Town 中管理 Agent Plugins
 ```bash
 town plugin
 town plugin list
-town plugin status asr
+town plugin info asr
 town plugin start chat --agent my-agent
+town plugin status chat --agent my-agent
 town plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
 town plugin action asr status
 town plugin schedule list --path /path/to/agent
@@ -34,7 +35,8 @@ town plugin schedule list --path /path/to/agent
 ## 说明
 
 - 在交互式终端里直接运行 `town plugin`，会进入 Agent Plugin 管理器。
-- `town plugin list` 和 `town plugin status` 是静态 console-level catalog 视图。
+- `town plugin list` 和 `town plugin info` 是静态 Town catalog 视图。
+- `town plugin status <plugin>` 读取目标 agent 的实时运行态。
 - `chat`、`task`、`memory`、`contact`、`shell` 这类托管 plugin 支持 `start/stop/restart/command`。
 - `town plugin action ...` 是本地执行形式，默认直接在当前项目里运行。
 - `town chat ...`、`town task ...`、`town memory ...`、`town shell ...`、`town web ...`、`town skill ...`、`town asr ...`、`town tts ...` 仍保留为快捷入口。

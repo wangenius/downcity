@@ -18,10 +18,10 @@ town agent stop [path]
 ## 行为说明
 
 - `path` 默认是当前目录 `.`
-- 目标 agent 需要已登记在 city registry
+- 目标 agent 需要已登记在受管 agent registry
 - 停止匹配的 daemon 进程组
 - 清理 daemon pid/meta 文件
-- 在 city registry 中把 agent 标记为 `stopped`
+- 在受管 agent registry 中把 agent 标记为 `stopped`
 - 如果 daemon 没有运行，命令会成功退出并提示 not running
 
 ## 相关命令

@@ -23,6 +23,6 @@ export interface AgentManagerAgentSummary {
   id: string;
   projectRoot: string;
   status: "running" | "stopped";
-  modelId?: string;
+  execution_binding?: string;
   channels: string[];
 }

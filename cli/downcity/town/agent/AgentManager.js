@@ -33,7 +33,7 @@ async function loadAgentSummaries() {
             id: String(config?.id || "").trim() || agent.id,
             projectRoot: agent.projectRoot,
             status: agent.status,
-            modelId: readAgentModelId(config),
+            execution_binding: readAgentExecutionBinding(config),
             channels: readAgentChannelSummaries(config),
         };
     });
@@ -46,7 +46,7 @@ function readAgentConfig(projectRoot) {
         return null;
     }
 }
-function readAgentModelId(config) {
+function readAgentExecutionBinding(config) {
     return String(config?.execution?.type === "api" ? config.execution.modelId || "" : "").trim();
 }
 function readAgentChannelSummaries(config) {
@@ -96,9 +96,9 @@ function loadChannelAccountMap() {
     return new Map(loadChannelAccounts().map((account) => [account.id, account]));
 }
 function formatAgentListDescription(agent) {
-    const model = agent.modelId || "no model";
+    const execution_binding = agent.execution_binding || "not configured";
     const channels = agent.channels.length > 0 ? agent.channels.join(", ") : "no channels";
-    return `${agent.status} · model: ${model} · channels: ${channels}`;
+    return `${agent.status} · execution: ${execution_binding} · channels: ${channels}`;
 }
 async function emitAgentManagerList() {
     const agents = await loadAgentSummaries();
@@ -120,7 +120,7 @@ async function emitAgentManagerList() {
             title: agent.id,
             facts: [
                 { label: "Status", value: agent.status },
-                { label: "Model", value: agent.modelId || "not configured" },
+                { label: "Execution", value: agent.execution_binding || "not configured" },
                 {
                     label: "Channels",
                     value: agent.channels.length > 0 ? agent.channels.join(", ") : "not connected",
@@ -155,7 +155,7 @@ async function promptRootAction() {
             },
             {
                 title: "管理 agent",
-                description: "状态、名称、模型、渠道、启动、停止、聊天",
+                description: "状态、名称、执行绑定、渠道、启动、停止、聊天",
                 value: "manage",
             },
             {

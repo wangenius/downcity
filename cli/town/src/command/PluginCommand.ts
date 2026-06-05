@@ -2,8 +2,8 @@
  * `town plugin` 命令组。
  *
  * 关键点（中文）
- * - `town plugin` 提供 console 侧静态 plugin catalog 入口。
- * - `list/status` 不依赖 agent，只展示内建 plugin 定义与 Town 配置事实。
+ * - `town plugin` 提供 Town 侧静态 plugin catalog 入口。
+ * - `list/info` 不依赖 agent，只展示内建 plugin 定义与 Town 配置事实。
  * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 
@@ -32,7 +32,10 @@ import {
   runManagedPluginControlCommand,
 } from "../shared/ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
-import { setBayPluginEnabled } from "../town/PluginLifecycle.js";
+import {
+  isTownPluginEnabled,
+  setTownPluginEnabled,
+} from "../town/PluginLifecycle.js";
 import {
   listRegisteredAgentsForCli,
 } from "../agent/AgentSelection.js";
@@ -96,7 +99,7 @@ function buildSafeStaticPluginAvailability(pluginName: string): {
         text.includes("readonly")
         || text.includes("Static availability inspection failed")
       ) {
-        return "Static catalog view only. Console plugin availability could not be resolved in the current environment.";
+        return "Static catalog view only. Town plugin availability could not be resolved in the current environment.";
       }
       return text;
     });
@@ -111,8 +114,8 @@ function buildSafeStaticPluginAvailability(pluginName: string): {
       available: false,
       reasons: [
         message.includes("readonly")
-          ? "Static catalog view only. Console plugin config is not writable in the current environment."
-          : "Static catalog view only. Console plugin availability could not be resolved.",
+          ? "Static catalog view only. Town plugin config is not writable in the current environment."
+          : "Static catalog view only. Town plugin availability could not be resolved.",
       ],
     };
   }
@@ -176,17 +179,22 @@ function renderPluginCatalogTable(rows: Array<{
 
 function listStaticCatalogEntries(): StaticCatalogEntry[] {
   const plugins = createPluginCatalog();
-  const managedEntries = listPluginsWithLifecycle(plugins).map((plugin) => ({
-    name: plugin.name,
-    title: String(plugin.title || plugin.name || "").trim() || plugin.name,
-    kind: "managed" as const,
-    enabled: true,
-    available: true,
-    actionCount: Object.keys(plugin.actions || {}).length,
-    actions: Object.keys(plugin.actions || {}).sort((left, right) => left.localeCompare(right)),
-    hasSystem: typeof plugin.system === "function",
-    note: "Managed plugin. Use `town plugin start/stop/restart/status` with an agent target for live state.",
-  }));
+  const managedEntries = listPluginsWithLifecycle(plugins).map((plugin) => {
+    const enabled = isTownPluginEnabled(plugin.name);
+    return {
+      name: plugin.name,
+      title: String(plugin.title || plugin.name || "").trim() || plugin.name,
+      kind: "managed" as const,
+      enabled,
+      available: enabled,
+      actionCount: Object.keys(plugin.actions || {}).length,
+      actions: Object.keys(plugin.actions || {}).sort((left, right) => left.localeCompare(right)),
+      hasSystem: typeof plugin.system === "function",
+      note: enabled
+        ? "Managed plugin. Use `town plugin start/stop/restart/status` with an agent target for live state."
+        : "Disabled by Town lifecycle config. Re-enable it before managing agent runtime state.",
+    };
+  });
 
   const localPlugins = listPluginsWithoutLifecycle(plugins);
   const localEntries = listPluginViews(localPlugins)
@@ -285,7 +293,7 @@ async function promptPluginRootAction(): Promise<
         value: "agent",
       },
       {
-        title: "管理 Town 级 plugin 开关",
+        title: "管理 Town 级 plugin 生命周期",
         description: "静态 lifecycle 开关，不替代 Agent runtime 状态",
         value: "global",
       },
@@ -459,7 +467,7 @@ async function runPluginInfoCommand(params: {
     printResult({
       asJson: params.options.json === true,
       success: false,
-      title: "plugin status failed",
+      title: "plugin info failed",
       payload: {
         error: `Unknown plugin: ${pluginName}`,
       },
@@ -469,9 +477,9 @@ async function runPluginInfoCommand(params: {
 
   if (params.options.json !== true) {
     emitCliBlock({
-      tone: plugin.available ? "success" : plugin.enabled ? "warning" : "info",
+      tone: plugin.enabled ? (plugin.available ? "success" : "warning") : "info",
       title: `Plugin ${pluginName}`,
-      summary: plugin.available ? "available" : plugin.enabled ? "static only" : "disabled",
+      summary: plugin.enabled ? (plugin.available ? "available" : "static only") : "disabled",
       facts: [
         {
           label: "title",
@@ -552,7 +560,7 @@ async function runPluginLifecycleCommand(params: {
     return;
   }
 
-  if (plugin.name === "auth" && params.enabled === false) {
+  if (plugin.name === "chat-authorization" && params.enabled === false) {
     printResult({
       asJson: params.asJson === true,
       success: false,
@@ -565,7 +573,7 @@ async function runPluginLifecycleCommand(params: {
     return;
   }
 
-  setBayPluginEnabled(plugin.name, params.enabled);
+  setTownPluginEnabled(plugin.name, params.enabled);
   if (params.asJson === true) {
     printResult({
       asJson: true,

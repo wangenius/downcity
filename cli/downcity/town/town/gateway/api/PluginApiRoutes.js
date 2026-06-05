@@ -8,7 +8,7 @@
  */
 import { findPluginByName, listPluginViews, parseActionScheduleRunAtMsOrThrow, runLocalPluginAction, } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
-import { isTownPluginEnabled, setBayPluginEnabled, } from "../../PluginLifecycle.js";
+import { isTownPluginEnabled, setTownPluginEnabled, } from "../../PluginLifecycle.js";
 function getErrorMessage(error) {
     if (error instanceof Error) {
         return error.message || String(error);
@@ -163,7 +163,7 @@ async function runGlobalPluginAction(input) {
                 message: `Plugin "${plugin.name}" cannot be disabled globally`,
             };
         }
-        setBayPluginEnabled(plugin.name, actionName === "on");
+        setTownPluginEnabled(plugin.name, actionName === "on");
         return {
             success: true,
             message: `Plugin "${plugin.name}" ${actionName === "on" ? "enabled" : "disabled"} in town config`,

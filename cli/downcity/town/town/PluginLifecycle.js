@@ -81,7 +81,7 @@ export function isTownPluginEnabled(pluginName) {
 /**
  * 设置单个 plugin 的启用态。
  */
-export function setBayPluginEnabled(pluginName, enabled) {
+export function setTownPluginEnabled(pluginName, enabled) {
     const key = String(pluginName || "").trim();
     if (!key) {
         throw new Error("pluginName is required");

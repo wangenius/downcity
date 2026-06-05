@@ -12,6 +12,7 @@ import type { AgentSession } from "@/types/agent/SessionActor.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import type { SessionComposerOptions } from "@/types/session/SessionComposerOptions.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 
 /**
  * Agent 可管理的本地 Session 实例。
@@ -60,17 +61,7 @@ export interface SessionOptions {
   /**
    * 统一日志器。
    */
-  logger: {
-    /**
-     * 记录普通信息。
-     */
-    info(message: string, details?: Record<string, unknown>): void;
-
-    /**
-     * 记录警告信息。
-     */
-    warn(message: string, details?: Record<string, unknown>): void;
-  };
+  logger: Logger;
 
   /**
    * 读取当前 SDK 调用方传入的 instruction system blocks。

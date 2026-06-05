@@ -102,47 +102,16 @@ export class Session implements AgentSession {
     this.historyStore = this.create_history_store();
     this.localState = this.create_local_state();
     const composer_context = this.create_composer_context();
-    this.historyComposer = this.resolve_composer(
-      this.composers?.historyComposer,
-      composer_context,
-      () =>
-        new JsonlSessionHistoryComposer({
-          store: this.historyStore,
-        }),
+    this.historyComposer = this.create_history_composer(composer_context);
+    const system_composer = this.create_system_composer(composer_context);
+    const context_composer = this.create_context_composer(composer_context);
+    const compaction_composer =
+      this.create_compaction_composer(composer_context);
+    this.executor = this.create_executor(
+      system_composer,
+      context_composer,
+      compaction_composer,
     );
-    const system_composer = this.resolve_composer(
-      this.composers?.systemComposer,
-      composer_context,
-      () =>
-        new SessionSystemBuilder({
-          agentId: this.agentId,
-          projectRoot: this.projectRoot,
-          getSessionCreatedAt: () => this.localState.createdAt,
-          getSessionTimezone: () => this.localState.timezone,
-          getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-          getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-          getPluginSystemBlocks: this.getPluginSystemBlocks,
-        }),
-    );
-    const context_composer = this.resolve_optional_composer<
-      SessionContextComposer
-    >(this.composers?.contextComposer, composer_context);
-    const compaction_composer = this.resolve_optional_composer<
-      SessionCompactionComposer
-    >(this.composers?.compactionComposer, composer_context);
-    this.executor = new Executor({
-      sessionId: this.id,
-      historyStore: this.historyStore,
-      historyComposer: this.historyComposer,
-      getModel: () => this.localState.sessionConfig.model,
-      logger: this.logger as never,
-      systemComposer: system_composer,
-      getTools: () => this.tools,
-      ...(context_composer ? { contextComposer: context_composer } : {}),
-      ...(compaction_composer
-        ? { compactionComposer: compaction_composer }
-        : {}),
-    });
     this.stateService = new SessionStateService({
       agent_id: this.agentId,
       project_root: this.projectRoot,
@@ -413,6 +382,70 @@ export class Session implements AgentSession {
       getSessionCreatedAt: () => this.localState.createdAt,
       getSessionTimezone: () => this.localState.timezone,
     };
+  }
+
+  private create_history_composer(
+    context: SessionComposerFactoryContext,
+  ): SessionHistoryComposer {
+    return this.resolve_composer(this.composers?.historyComposer, context, () =>
+      new JsonlSessionHistoryComposer({
+        store: this.historyStore,
+      }),
+    );
+  }
+
+  private create_system_composer(
+    context: SessionComposerFactoryContext,
+  ): SessionSystemComposer {
+    return this.resolve_composer(this.composers?.systemComposer, context, () =>
+      new SessionSystemBuilder({
+        agentId: this.agentId,
+        projectRoot: this.projectRoot,
+        getSessionCreatedAt: () => this.localState.createdAt,
+        getSessionTimezone: () => this.localState.timezone,
+        getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+        getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
+        getPluginSystemBlocks: this.getPluginSystemBlocks,
+      }),
+    );
+  }
+
+  private create_context_composer(
+    context: SessionComposerFactoryContext,
+  ): SessionContextComposer | undefined {
+    return this.resolve_optional_composer<SessionContextComposer>(
+      this.composers?.contextComposer,
+      context,
+    );
+  }
+
+  private create_compaction_composer(
+    context: SessionComposerFactoryContext,
+  ): SessionCompactionComposer | undefined {
+    return this.resolve_optional_composer<SessionCompactionComposer>(
+      this.composers?.compactionComposer,
+      context,
+    );
+  }
+
+  private create_executor(
+    system_composer: SessionSystemComposer,
+    context_composer?: SessionContextComposer,
+    compaction_composer?: SessionCompactionComposer,
+  ): Executor {
+    return new Executor({
+      sessionId: this.id,
+      historyStore: this.historyStore,
+      historyComposer: this.historyComposer,
+      getModel: () => this.localState.sessionConfig.model,
+      logger: this.logger,
+      systemComposer: system_composer,
+      getTools: () => this.tools,
+      ...(context_composer ? { contextComposer: context_composer } : {}),
+      ...(compaction_composer
+        ? { compactionComposer: compaction_composer }
+        : {}),
+    });
   }
 
   private resolve_composer<TComposer>(

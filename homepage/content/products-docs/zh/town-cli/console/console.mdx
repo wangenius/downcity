@@ -1,17 +1,17 @@
 ---
 title: town console
-description: 管理 Console 模块（单实例、多 agent 视图）
+description: 管理 Town gateway Console（单实例、多 agent 视图）
 ---
 
 # `town console`
 
-`town console` 只负责管理 Console 模块本身。
+`town console` 负责管理 Town gateway Console。
 
-Console 是 Downcity 的 Web 控制台：
+Console 是 Town gateway 暴露的浏览器界面：
 
 - 单实例 Console
 - 多 agent 切换查看
-- 全局 model / env / auth / plugin 管理
+- 全局 env / auth / plugin 管理，以及 Town user 的 City 连接状态
 - 选中 agent 后代理到对应运行时
 
 ## 用法
@@ -39,7 +39,7 @@ town console [action] [options]
 ## 关键行为
 
 - Console 依赖 Town runtime，先执行 [`town start`](/zh/products-docs/town-cli/start)。
-- Console 不是 Town runtime 本身，而是运行在其上的独立模块。
+- Console 不是 Town runtime 本身，而是由运行在 runtime 之上的 Town gateway 提供。
 - 一个 Console 实例可以切换查看多个运行中的 agent。
 - `start` 不会改写已经运行中的监听地址；如果当前是本机模式，要切到公网模式请执行 `town console restart -p`。
 - 如果你希望公网模式在后续启动里持续生效，请使用 [`town public`](/zh/products-docs/town-cli/public)。

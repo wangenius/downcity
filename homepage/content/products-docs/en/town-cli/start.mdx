@@ -44,7 +44,7 @@ town start -p
 - `town public on` makes that public Console behavior persist for future plain `town start` runs.
 - When Console is bound to `0.0.0.0`, use the server IP or domain to connect, not `127.0.0.1`.
 - In public mode, startup output also prints `Public URL`.
-- If the machine cannot determine a real public IP by itself (for example behind NAT / reverse proxy / load balancer), start city behind a reachable server, domain, or tunnel.
+- If the machine cannot determine a real public IP by itself (for example behind NAT / reverse proxy / load balancer), start Town behind a reachable server, domain, or tunnel.
 - `town start` saves the auto-detected public IP as global `DOWNCITY_PUBLIC_HOST`; if the deployment environment already injects `DOWNCITY_PUBLIC_URL` or `DOWNCITY_PUBLIC_HOST`, it does not overwrite the existing value.
 
 ## Port meanings
@@ -77,7 +77,7 @@ town v1.0.0
    public_url: http://203.0.113.10:5315
    log: <consoleLogPath>
    port: 5315
-   usage: Console Web UI / control plane
+   usage: Console Web UI / Town gateway
 ✅ Console token initialized
    subject: local-cli
    name: console-bootstrap

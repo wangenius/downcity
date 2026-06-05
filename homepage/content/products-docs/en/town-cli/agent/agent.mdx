@@ -34,12 +34,12 @@ The interactive manager lets you:
 - list registered agents
 - create an agent project
 - start an agent
-- pick an agent and see current status, name, model, and chat channel connections before choosing an action
-- configure the agent id, model binding, or city-level chat channel account connections
+- pick an agent and see current status, name, City execution binding, and chat channel connections before choosing an action
+- configure the agent id, City execution binding, or Town-level chat channel account connections
 
 It does not replace the subcommands below. It is a guided entry point for common local operations.
 
-Chat channel credentials stay in city-level channel accounts managed from `town chat`. The agent manager only connects an agent to those existing accounts through `plugins.chat.channels.<channel>.channelAccountId`. If an agent points at a missing account, the manager removes that dangling binding automatically.
+Chat channel credentials stay in Town-level channel accounts managed from `town chat`. The agent manager only connects an agent to those existing accounts through `plugins.chat.channels.<channel>.channelAccountId`. If an agent points at a missing account, the manager removes that dangling binding automatically.
 
 ## Subcommands
 
@@ -87,6 +87,6 @@ town v1.0.0
   查看 agents
   创建 agent
   启动 agent
-  管理 agent - status, model, channels are shown before actions
+  管理 agent - status, execution binding, channels are shown before actions
   退出
 ```

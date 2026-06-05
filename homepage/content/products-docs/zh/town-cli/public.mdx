@@ -7,7 +7,7 @@ description: 管理 Console 的持久化公网暴露模式
 
 `town public` 用来管理 Console 的持久化公网暴露模式。
 
-这个命令只控制 Console / control plane 的监听绑定方式，不会改动单个 agent 的监听行为。
+这个命令只控制 Console / Town gateway 的监听绑定方式，不会改动单个 agent 的监听行为。
 
 ## 用法
 
@@ -61,7 +61,7 @@ town public on
 # 3) 或者固定成自定义 host
 town public on --host 10.0.0.5
 
-# 4) 然后按正常方式启动 city
+# 4) 然后按正常方式启动 Town
 town start
 
 # 5) 需要恢复本机模式时关闭

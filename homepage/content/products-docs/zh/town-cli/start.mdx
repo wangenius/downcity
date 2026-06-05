@@ -44,7 +44,7 @@ town start -p
 - `town public on` 可以把这类公网 Console 行为持久化到后续普通 `town start`。
 - 如果绑定的是 `0.0.0.0`，外部访问时请使用服务器实际 IP 或域名，而不是 `127.0.0.1`。
 - 在公网模式下，启动结果会额外打印 `Public URL`。
-- 如果机器本身拿不到公网 IP（例如处在 NAT / SLB / 反向代理后面），请在可达服务器、域名或 tunnel 后启动 city。
+- 如果机器本身拿不到公网 IP（例如处在 NAT / SLB / 反向代理后面），请在可达服务器、域名或 tunnel 后启动 Town。
 - `town start` 会把自动发现的公网 IP 保存为全局 `DOWNCITY_PUBLIC_HOST`；如果部署环境已经注入 `DOWNCITY_PUBLIC_URL` 或 `DOWNCITY_PUBLIC_HOST`，不会覆盖已有值。
 
 ## 端口说明
@@ -77,7 +77,7 @@ town v1.0.0
    public_url: http://203.0.113.10:5315
    log: <consoleLogPath>
    port: 5315
-   usage: Console Web UI / control plane
+   usage: Console Web UI / Town gateway
 ✅ Console token initialized
    subject: local-cli
    name: console-bootstrap

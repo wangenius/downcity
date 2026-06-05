@@ -1,5 +1,5 @@
 /**
- * Agent 授权管理主视图。
+ * Agent Chat Access 管理主视图。
  *
  * 关键点（中文）
  * - 页面只保留最小摘要与用户目录。
@@ -486,7 +486,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
   return (
     <section className="space-y-4">
       <DashboardModule
-        title="Authorization"
+        title="Chat Access"
         description={normalizeText(selectedAgent?.agentId || selectedAgent?.id || "未选择")}
         bodyClassName="space-y-2.5"
         actions={
@@ -533,7 +533,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
             }}
           >
             <Settings2Icon className="mr-1 size-4" />
-            Policy
+            Access Policy
           </Button>
         </div>
       </DashboardModule>
@@ -644,8 +644,8 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
         <DialogContent className="w-[min(96vw,920px)] p-0">
           <DialogHeader className="border-b border-border/70 bg-secondary/35 px-4 py-3">
-            <DialogTitle>Policy</DialogTitle>
-            <DialogDescription className="sr-only">Authorization policy editor</DialogDescription>
+            <DialogTitle>Access Policy</DialogTitle>
+            <DialogDescription className="sr-only">Chat access policy editor</DialogDescription>
           </DialogHeader>
 
           <Tabs

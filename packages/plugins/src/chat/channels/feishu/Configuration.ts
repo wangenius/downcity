@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - ship 层只保留绑定字段。
- * - appId/appSecret/domain 由 channel account 维护。
+ * - appId/appSecret/domain 由 chat account 维护。
  */
 
 import { ChatChannelConfiguration } from "@/chat/channels/Configuration.js";
@@ -18,9 +18,9 @@ export class FeishuChannelConfiguration extends ChatChannelConfiguration {
   describe(): ChatChannelConfigurationDescriptor {
     return {
       channel: this.channel,
-      title: "Feishu Channel Configuration",
+      title: "Feishu Chat Platform Configuration",
       description:
-        "Bind a Feishu/Lark channel account and control runtime enable/disable state.",
+        "Bind a Feishu/Lark chat account and control runtime enable/disable state.",
       version: "1.0.0",
       capabilities: {
         canToggleEnabled: true,
@@ -45,9 +45,9 @@ export class FeishuChannelConfiguration extends ChatChannelConfiguration {
           },
           {
             key: "channelAccountId",
-            label: "Channel Account ID",
+            label: "Chat Account ID",
             description:
-              "Bind channel to a channel account row in ~/.downcity/downcity.db channel_accounts.",
+              "Bind this chat platform to a chat account row in ~/.downcity/downcity.db channel_accounts.",
             type: "string",
             source: "ship_json",
             required: false,

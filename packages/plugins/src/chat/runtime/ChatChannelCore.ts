@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里只放最基础的渠道状态/名称/account 解析能力。
  * - 生命周期、配置写入、action 执行分别放到更细的模块中。
- * - 目标是让 chat channel 子模块共享同一套最小公共基元。
+ * - 目标是让 chat platform 子模块共享同一套最小公共基元。
  */
 
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";

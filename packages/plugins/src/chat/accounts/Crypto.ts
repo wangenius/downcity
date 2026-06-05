@@ -2,7 +2,7 @@
  * Channel account 默认存储加密工具。
  *
  * 职责说明（中文）
- * - 负责默认 channel account 存储中的敏感字段加解密。
+ * - 负责默认 chat account 存储中的敏感字段加解密。
  * - 默认复用平台级 `model-db.key`，保证和现有 `~/.downcity/downcity.db` 数据兼容。
  *
  * 边界说明（中文）

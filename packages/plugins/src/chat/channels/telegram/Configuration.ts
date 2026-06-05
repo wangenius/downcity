@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - ship 层只绑定 `enabled` 与 `channelAccountId`。
- * - 真实密钥由 channel account 统一托管。
+ * - 真实密钥由 chat account 统一托管。
  */
 
 import { ChatChannelConfiguration } from "@/chat/channels/Configuration.js";
@@ -18,9 +18,9 @@ export class TelegramChannelConfiguration extends ChatChannelConfiguration {
   describe(): ChatChannelConfigurationDescriptor {
     return {
       channel: this.channel,
-      title: "Telegram Channel Configuration",
+      title: "Telegram Chat Platform Configuration",
       description:
-        "Bind a Telegram channel account and control runtime enable/disable state.",
+        "Bind a Telegram chat account and control runtime enable/disable state.",
       version: "1.0.0",
       capabilities: {
         canToggleEnabled: true,
@@ -45,9 +45,9 @@ export class TelegramChannelConfiguration extends ChatChannelConfiguration {
           },
           {
             key: "channelAccountId",
-            label: "Channel Account ID",
+            label: "Chat Account ID",
             description:
-              "Bind channel to a channel account row in ~/.downcity/downcity.db channel_accounts.",
+              "Bind this chat platform to a chat account row in ~/.downcity/downcity.db channel_accounts.",
             type: "string",
             source: "ship_json",
             required: false,

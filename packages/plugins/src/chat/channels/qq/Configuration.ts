@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - ship 层只保留 `enabled` 与 `channelAccountId`。
- * - QQ 专属参数（sandbox 等）在 channel account 中维护。
+ * - QQ 专属参数（sandbox 等）在 chat account 中维护。
  */
 
 import { ChatChannelConfiguration } from "@/chat/channels/Configuration.js";
@@ -18,9 +18,9 @@ export class QqChannelConfiguration extends ChatChannelConfiguration {
   describe(): ChatChannelConfigurationDescriptor {
     return {
       channel: this.channel,
-      title: "QQ Channel Configuration",
+      title: "QQ Chat Platform Configuration",
       description:
-        "Bind a QQ channel account and control runtime enable/disable state.",
+        "Bind a QQ chat account and control runtime enable/disable state.",
       version: "1.0.0",
       capabilities: {
         canToggleEnabled: true,
@@ -44,9 +44,9 @@ export class QqChannelConfiguration extends ChatChannelConfiguration {
           },
           {
             key: "channelAccountId",
-            label: "Channel Account ID",
+            label: "Chat Account ID",
             description:
-              "Bind channel to a channel account row in ~/.downcity/downcity.db channel_accounts.",
+              "Bind this chat platform to a chat account row in ~/.downcity/downcity.db channel_accounts.",
             type: "string",
             source: "ship_json",
             required: false,

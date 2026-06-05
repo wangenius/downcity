@@ -76,9 +76,9 @@ function toSnapshotData(snapshot: ChatAuthorizationSnapshot): JsonValue {
 function createChatAuthorizationPluginDefinition(): Plugin {
   return {
     name: CHAT_AUTHORIZATION_PLUGIN_NAME,
-    title: "Chat Authorization",
+    title: "Chat Access",
     description:
-      "Controls who can talk to the agent in chat channels, records observed users and chats, and resolves each user's effective role for downstream service decisions.",
+      "Controls who can talk to the agent through chat platforms, records observed users and chats, and resolves each user's effective role for downstream service decisions.",
     availability() {
       return {
         enabled: true,

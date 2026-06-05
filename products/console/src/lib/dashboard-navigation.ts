@@ -77,7 +77,7 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
   agentAuthorization: {
     view: "agentAuthorization",
     scope: "agent",
-    title: "Authorization",
+    title: "Chat Access",
     path: "/agent/authorization",
   },
   agentPlugins: {

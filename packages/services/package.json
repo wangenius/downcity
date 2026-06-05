@@ -1,6 +1,6 @@
 {
   "name": "@downcity/services",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "description": "Downcity public services package for accounts, balance, usage, and Stripe payment flows.",
   "type": "module",
   "main": "./bin/index.js",

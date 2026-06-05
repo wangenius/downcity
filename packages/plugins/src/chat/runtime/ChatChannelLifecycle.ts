@@ -69,7 +69,7 @@ async function startQQChannel(
   context: AgentContext,
 ): Promise<void> {
   if (!isChatChannelEnabled(context, "qq")) return;
-  context.logger.info("QQ channel enabled");
+  context.logger.info("QQ chat platform enabled");
   const account = resolveChannelAccount(context, "qq");
   const appId = String(account?.appId || "").trim();
   const appSecret = String(account?.appSecret || "").trim();

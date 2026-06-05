@@ -126,7 +126,7 @@ export function useDashboardSessionActions(params: {
         params.refreshLogs(params.selectedAgentId),
         params.refreshOverview(params.selectedAgentId),
       ]);
-      params.showToast("已发送到 consoleui channel", "success");
+      params.showToast("已发送到 Console UI chat", "success");
     } catch (error) {
       params.showToast(`发送失败: ${getErrorMessage(error)}`, "error");
     } finally {

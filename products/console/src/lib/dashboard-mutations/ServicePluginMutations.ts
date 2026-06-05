@@ -1,5 +1,5 @@
 /**
- * Console Dashboard service、plugin、chat、authorization 与 skill 写操作。
+ * Console Dashboard service、plugin、chat access 与 skill 写操作。
  *
  * 关键点（中文）
  * - 从 dashboard-mutations.ts 拆出，降低单文件复杂度。
@@ -287,9 +287,9 @@ export async function saveAuthorizationConfigMutation(params: {
       params.selectedAgentId,
     );
     params.setAuthorization(data);
-    params.showToast("authorization 配置已保存", "success");
+    params.showToast("chat access 配置已保存", "success");
   } catch (error) {
-    params.showToast(`保存 authorization 失败: ${getErrorMessage(error)}`, "error");
+    params.showToast(`保存 chat access 失败: ${getErrorMessage(error)}`, "error");
   }
 }
 
@@ -319,9 +319,9 @@ export async function runAuthorizationActionMutation(params: {
       params.selectedAgentId,
     );
     params.setAuthorization(data);
-    params.showToast(`authorization ${params.input.action} 已执行`, "success");
+    params.showToast(`chat access ${params.input.action} 已执行`, "success");
   } catch (error) {
-    params.showToast(`authorization ${params.input.action} 失败: ${getErrorMessage(error)}`, "error");
+    params.showToast(`chat access ${params.input.action} 失败: ${getErrorMessage(error)}`, "error");
   }
 }
 

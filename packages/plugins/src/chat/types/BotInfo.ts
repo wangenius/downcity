@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 将“凭据 -> bot 基础信息”的探测输入输出结构标准化。
- * - Console、Channel Account 存储、后续自动化流程都复用该结构。
+ * - Console、Chat Account 存储、后续自动化流程都复用该结构。
  */
 
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
@@ -77,7 +77,7 @@ export interface ChatBotInfoResult {
    */
   botUserId?: string;
   /**
-   * 建议用于生成 channel account id 的稳定种子。
+   * 建议用于生成 chat account id 的稳定种子。
    */
   idSeed?: string;
   /**

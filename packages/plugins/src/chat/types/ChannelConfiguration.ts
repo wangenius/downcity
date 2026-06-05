@@ -70,7 +70,7 @@ export interface ChatChannelConfigurationField {
    */
   type: ChatChannelConfigurationFieldType;
   /**
-   * 字段值来源（downcity.json / channel account / env fallback）。
+   * 字段值来源（downcity.json / chat account / env fallback）。
    */
   source: ChatChannelConfigurationFieldSource;
   /**
@@ -132,7 +132,7 @@ export interface ChatChannelConfigurationDescriptor {
      */
     canToggleEnabled: boolean;
     /**
-     * 是否支持 channel account 绑定。
+     * 是否支持 chat account 绑定。
      */
     canBindChannelAccount: boolean;
     /**
@@ -158,4 +158,3 @@ export interface ChatChannelConfigurationDescriptor {
     envFallback: ChatChannelConfigurationField[];
   };
 }
-

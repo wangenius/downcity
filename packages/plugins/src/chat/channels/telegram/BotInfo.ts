@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 基于 `getMe` 接口验证 token 有效性。
- * - 返回统一结构，供 channel account 创建流程复用。
+ * - 返回统一结构，供 chat account 创建流程复用。
  */
 
 import type {

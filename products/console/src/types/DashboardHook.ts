@@ -249,7 +249,7 @@ export interface UseConsoleDashboardResult {
   modelPoolItems: UiModelPoolItem[];
 
   /**
-   * Channel Account 列表（全局）。
+   * Chat Account 列表（全局）。
    */
   channelAccounts: UiChannelAccountItem[];
 
@@ -269,7 +269,7 @@ export interface UseConsoleDashboardResult {
   prompt: UiPromptResponse | null;
 
   /**
-   * consoleui channel 消息列表。
+   * Console UI chat 消息列表。
    */
   localMessages: UiLocalMessage[];
 
@@ -289,7 +289,7 @@ export interface UseConsoleDashboardResult {
   loading: boolean;
 
   /**
-   * 是否正在发送 consoleui channel 消息。
+   * 是否正在发送 Console UI chat 消息。
    */
   sending: boolean;
 
@@ -309,7 +309,7 @@ export interface UseConsoleDashboardResult {
   deletingSessionId: string;
 
   /**
-   * consoleui channel 输入框内容。
+   * Console UI chat 输入框内容。
    */
   chatInput: string;
 
@@ -428,7 +428,7 @@ export interface UseConsoleDashboardResult {
   refreshConfigStatus: (agentId: string) => Promise<void>;
 
   /**
-   * 刷新 consoleui channel 消息。
+   * 刷新 Console UI chat 消息。
    */
   refreshLocalChat: (agentId: string) => Promise<void>;
 
@@ -553,7 +553,7 @@ export interface UseConsoleDashboardResult {
   loadTaskRunDetail: (title: string, timestamp: string) => Promise<UiTaskRunDetailResponse | null>;
 
   /**
-   * 发送 consoleui channel 指令。
+   * 发送 Console UI chat 指令。
    */
   sendConsoleUiMessage: () => Promise<void>;
 
@@ -692,7 +692,7 @@ export interface UseConsoleDashboardResult {
   testModelPoolItem: (modelId: string, prompt?: string) => Promise<void>;
 
   /**
-   * 新增/更新 channel account。
+   * 新增/更新 chat account。
    */
   upsertChannelAccount: (input: {
     id: string;
@@ -724,7 +724,7 @@ export interface UseConsoleDashboardResult {
   }) => Promise<UiChannelAccountProbeResult | null>;
 
   /**
-   * 删除 channel account。
+   * 删除 chat account。
    */
   removeChannelAccount: (id: string) => Promise<void>;
 

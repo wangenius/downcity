@@ -1,13 +1,13 @@
 /**
- * Channel account 默认存储实现。
+ * Chat account 默认存储实现。
  *
  * 职责说明（中文）
- * - 提供 `chat` plugin 默认使用的全局 channel account 读写能力。
+ * - 提供 `chat` plugin 默认使用的全局 chat account 读写能力。
  * - 默认直接操作 `~/.downcity/downcity.db` 里的 `channel_accounts` 表。
  * - 对 `city` 而言，这里也是统一的默认账号池实现来源。
  *
  * 边界说明（中文）
- * - 这里只负责 channel account 这一个表，不扩展成通用平台数据库门面。
+ * - 这里只负责 chat account 这一个表，不扩展成通用平台数据库门面。
  * - 模型池、env、其他平台级配置仍由各自模块独立管理。
  */
 
@@ -40,7 +40,7 @@ function optionalTrimmedText(value: string | undefined): string | undefined {
 }
 
 /**
- * 规范化 channel 类型。
+ * 规范化 chat platform 类型。
  */
 export function normalizeChannelAccountChannel(
   input: string,
@@ -49,7 +49,7 @@ export function normalizeChannelAccountChannel(
   if (channel === "telegram" || channel === "feishu" || channel === "qq") {
     return channel;
   }
-  throw new Error(`Unsupported channel account type: ${input}`);
+  throw new Error(`Unsupported chat account platform: ${input}`);
 }
 
 function ensureChannelAccountSchema(database: Database.Database): void {
@@ -138,7 +138,7 @@ function buildChannelAccountFromRow(
 }
 
 /**
- * 同步列出全部 channel account。
+ * 同步列出全部 chat account。
  */
 export function listStoredChannelAccountsSync(
   channelInput?: string,
@@ -178,12 +178,12 @@ export function listStoredChannelAccountsSync(
 }
 
 /**
- * 同步按 ID 读取单个 channel account。
+ * 同步按 ID 读取单个 chat account。
  */
 export function getStoredChannelAccountSync(
   accountIdInput: string,
 ): StoredChannelAccount | null {
-  const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+  const accountId = normalizeNonEmptyText(accountIdInput, "chat account id");
   return withChannelAccountDb((database) => {
     const row = database.prepare(
       `
@@ -201,7 +201,7 @@ export function getStoredChannelAccountSync(
 }
 
 /**
- * 新增或更新 channel account。
+ * 新增或更新 chat account。
  *
  * 关键点（中文）
  * - 这里保留和现有平台库一致的落盘结构，避免默认实现切换后出现数据断层。
@@ -210,9 +210,9 @@ export function getStoredChannelAccountSync(
 export async function upsertStoredChannelAccount(
   input: UpsertChannelAccountInput,
 ): Promise<void> {
-  const id = normalizeNonEmptyText(input.id, "channel account id");
+  const id = normalizeNonEmptyText(input.id, "chat account id");
   const channel = normalizeChannelAccountChannel(input.channel);
-  const name = normalizeNonEmptyText(input.name, "channel account name");
+  const name = normalizeNonEmptyText(input.name, "chat account name");
   const existing = getStoredChannelAccountSync(id);
   const createdAt = existing?.createdAt || nowIso();
   const updatedAt = nowIso();
@@ -275,12 +275,12 @@ export async function upsertStoredChannelAccount(
 }
 
 /**
- * 删除单个 channel account。
+ * 删除单个 chat account。
  */
 export async function removeStoredChannelAccount(
   accountIdInput: string,
 ): Promise<void> {
-  const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+  const accountId = normalizeNonEmptyText(accountIdInput, "chat account id");
   withChannelAccountDb((database) => {
     database.prepare("DELETE FROM channel_accounts WHERE id = ?;").run(accountId);
   });

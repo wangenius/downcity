@@ -605,7 +605,7 @@ export interface UiModelProviderDiscoverResult {
 }
 
 /**
- * Channel Account 管理项（来自 `/api/ui/channel-accounts`）。
+ * Chat Account 管理项（来自 `/api/ui/channel-accounts`）。
  */
 export interface UiChannelAccountItem {
   /**
@@ -693,7 +693,7 @@ export interface UiChannelAccountsResponse {
 }
 
 /**
- * Channel Account 探测结果（来自 `/api/ui/channel-accounts/probe`）。
+ * Chat Account 探测结果（来自 `/api/ui/channel-accounts/probe`）。
  */
 export interface UiChannelAccountProbeResult {
   /**

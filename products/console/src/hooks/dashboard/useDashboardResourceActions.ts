@@ -2,7 +2,7 @@
  * Console Dashboard 资源管理动作 Hook。
  *
  * 关键点（中文）
- * - 汇总 agent、model、provider、channel account、env 等配置写操作。
+ * - 汇总 agent、model、provider、chat account、env 等配置写操作。
  * - 让主 hook 专注于状态编排，资源管理动作按领域分组收敛。
  */
 
@@ -445,8 +445,8 @@ export function useDashboardResourceActions(params: {
         requestJson: params.requestJson,
         path: dashboardApiRoutes.uiChannelAccountUpsert(),
         body: input,
-        successMessage: `channel account ${input.id} 已确认`,
-        errorMessage: "channel account 确认失败",
+        successMessage: `chat account ${input.id} 已确认`,
+        errorMessage: "chat account 确认失败",
         after: async () => {
           await Promise.all([
             params.refreshChannelAccounts(),
@@ -483,8 +483,8 @@ export function useDashboardResourceActions(params: {
         requestJson: params.requestJson,
         path: dashboardApiRoutes.uiChannelAccountRemove(),
         body: { id },
-        successMessage: `channel account ${id} 已删除`,
-        errorMessage: "channel account 删除失败",
+        successMessage: `chat account ${id} 已删除`,
+        errorMessage: "chat account 删除失败",
         after: async () => {
           await Promise.all([
             params.refreshChannelAccounts(),

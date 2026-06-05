@@ -1,24 +1,24 @@
 /**
- * Chat channel account 管理类型。
+ * Chat account 管理类型。
  *
  * 关键点（中文）
- * - 这些类型描述 agent 运行时内部的 chat channel account 管理输入输出。
+ * - 这些类型描述 agent 运行时内部的 chat account 管理输入输出。
  * - 凭据明文只允许出现在写入输入中，读取结果必须是脱敏后的安全视图。
  */
 
 import type { StoredChannelAccountChannel } from "@downcity/agent/internal/types/platform/Store.js";
 
 /**
- * 支持的 chat channel account 类型。
+ * 支持的 chat account 平台类型。
  */
 export type ChatChannelAccountChannel = StoredChannelAccountChannel;
 
 /**
- * Channel account 探测结果。
+ * Chat account 探测结果。
  */
 export interface ChatChannelAccountProbeResult {
   /**
-   * 账号所属 chat channel。
+   * 账号所属 chat platform。
    */
   channel: ChatChannelAccountChannel;
   /**
@@ -52,7 +52,7 @@ export interface ChatChannelAccountProbeResult {
 }
 
 /**
- * Channel account 列表中的安全视图。
+ * Chat account 列表中的安全视图。
  */
 export interface ChatChannelAccountListItem {
   /**
@@ -60,7 +60,7 @@ export interface ChatChannelAccountListItem {
    */
   id: string;
   /**
-   * 账号所属 chat channel。
+   * 账号所属 chat platform。
    */
   channel: ChatChannelAccountChannel;
   /**
@@ -122,7 +122,7 @@ export interface ChatChannelAccountListItem {
 }
 
 /**
- * Channel account 列表结果。
+ * Chat account 列表结果。
  */
 export interface ChatChannelAccountListResult {
   /**
@@ -132,7 +132,7 @@ export interface ChatChannelAccountListResult {
 }
 
 /**
- * Channel account 写入输入。
+ * Chat account 写入输入。
  */
 export interface ChatChannelAccountUpsertInput {
   /**
@@ -140,7 +140,7 @@ export interface ChatChannelAccountUpsertInput {
    */
   id: string;
   /**
-   * 账号所属 chat channel。
+   * 账号所属 chat platform。
    */
   channel: string;
   /**
@@ -194,11 +194,11 @@ export interface ChatChannelAccountUpsertInput {
 }
 
 /**
- * Channel account 凭据创建输入。
+ * Chat account 凭据创建输入。
  */
 export interface ChatChannelAccountCreateInput {
   /**
-   * 账号所属 chat channel。
+   * 账号所属 chat platform。
    */
   channel: string;
   /**

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - chat plugin prompt 与 channel prompt 都属于静态资产。
- * - 当前请求只注入当前 channel 的 prompt，避免平台规则串味。
+ * - 当前请求只注入当前 chat platform 的 prompt，避免平台规则串味。
  * - 该模块只负责 prompt 解析与拼装，不承担运行态控制职责。
  */
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
@@ -38,7 +38,7 @@ function resolveCurrentChatPromptChannel(
  *
  * 关键点（中文）
  * - 仅注入当前 context 对应的 channel prompt，避免把其他平台规则混入本轮会话。
- * - 若当前 context 不是 chat channel（如 consoleui）或尚无路由元信息，则不注入 channel prompt。
+ * - 若当前 context 不是 chat platform（如 Console UI）或尚无路由元信息，则不注入 platform prompt。
  */
 export async function buildCurrentChannelPrompts(
   context: AgentContext,

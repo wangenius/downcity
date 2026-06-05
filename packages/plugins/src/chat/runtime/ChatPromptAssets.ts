@@ -22,7 +22,7 @@ export const CHAT_PLUGIN_PROMPT = chatPluginPromptText.trim();
 export const FEISHU_CHAT_CHANNEL_PROMPT = feishuChatPromptText.trim();
 
 /**
- * QQ channel prompt。
+ * QQ chat platform prompt。
  */
 export const QQ_CHAT_CHANNEL_PROMPT = qqChatPromptText.trim();
 

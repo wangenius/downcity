@@ -226,7 +226,7 @@ export interface UiChatChannelConfigurationDescriptor {
      */
     canToggleEnabled?: boolean;
     /**
-     * 是否支持 channel account 绑定。
+     * 是否支持 chat account 绑定。
      */
     canBindChannelAccount?: boolean;
     /**
@@ -243,7 +243,7 @@ export interface UiChatChannelConfigurationDescriptor {
      */
     ship: UiChatChannelConfigurationField[];
     /**
-     * channel account 字段。
+     * chat account 字段。
      */
     channelAccount: UiChatChannelConfigurationField[];
     /**

@@ -1,8 +1,8 @@
 /**
- * Chat channel account 管理器。
+ * Chat account 管理器。
  *
  * 关键点（中文）
- * - 统一封装 agent 运行时下 chat channel account 的 CRUD 与探测。
+ * - 统一封装 agent 运行时下 chat account 的 CRUD 与探测。
  * - 账号凭据只在写入路径接收明文；列表与读取路径返回脱敏结果。
  * - city / vibecape 等上层产品都应直接复用这个实现，而不是各自维护副本。
  */
@@ -80,7 +80,7 @@ export class ChatChannelAccountManager {
   constructor() {}
 
   /**
-   * 生成唯一 channel account id。
+   * 生成唯一 chat account id。
    *
    * 关键点（中文）
    * - 账号 id 统一由系统生成，避免用户手填导致冲突或命名不一致。
@@ -222,9 +222,9 @@ export class ChatChannelAccountManager {
    */
   async upsert(input: ChatChannelAccountUpsertInput): Promise<{ id: string }> {
     const id = String(input.id || "").trim();
-    if (!id) throw new Error("channel account id cannot be empty");
+    if (!id) throw new Error("chat account id cannot be empty");
     const name = String(input.name || "").trim();
-    if (!name) throw new Error("channel account name cannot be empty");
+    if (!name) throw new Error("chat account name cannot be empty");
 
     const channel = normalizeChannelAccountChannel(input.channel);
 
@@ -285,7 +285,7 @@ export class ChatChannelAccountManager {
    */
   async remove(idInput: string): Promise<void> {
     const id = String(idInput || "").trim();
-    if (!id) throw new Error("channel account id cannot be empty");
+    if (!id) throw new Error("chat account id cannot be empty");
     await removeStoredChannelAccount(id);
   }
 }

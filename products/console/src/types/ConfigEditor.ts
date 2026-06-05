@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 用于 Console UI 中各类“配置表单”统一描述字段结构。
- * - 让 channel account / plugin config / provider config 等都能复用同一套渲染逻辑。
+ * - 让 chat account / plugin config / provider config 等都能复用同一套渲染逻辑。
  * - 这里只描述 UI 编辑层字段，不承载后端协议语义。
  */
 

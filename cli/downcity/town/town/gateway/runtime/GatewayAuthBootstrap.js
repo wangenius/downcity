@@ -1,5 +1,5 @@
 /**
- * gateway 启动阶段的本机 token 初始化辅助。
+ * Town runtime 启动阶段的本机 token 初始化辅助。
  *
  * 关键点（中文）
  * - `town start` 首次启动时，如果还没有本机 CLI access token，这里负责初始化首个 token。
@@ -9,7 +9,7 @@
  */
 import { AuthService } from "../../auth/AuthService.js";
 import { emitCliBlock } from "../../../shared/CliReporter.js";
-const DEFAULT_GATEWAY_BOOTSTRAP_TOKEN_NAME = "gateway-bootstrap";
+const DEFAULT_GATEWAY_BOOTSTRAP_TOKEN_NAME = "town-bootstrap";
 /**
  * 确保平台级至少存在一个本机 access token。
  */
@@ -25,7 +25,7 @@ export async function ensureGatewayAuthBootstrap(options = {}) {
         });
         emitCliBlock({
             tone: "success",
-            title: "Gateway token initialized",
+            title: "Town token initialized",
             summary: payload.user.username,
             facts: [
                 {

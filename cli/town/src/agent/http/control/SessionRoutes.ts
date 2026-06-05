@@ -30,7 +30,8 @@ import {
   toUiMessageTimeline,
 } from "../../control/Helpers.js";
 import { executeBySessionId } from "../../control/ExecuteBySession.js";
-const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
+
+const TOWN_CHAT_SESSION_ID = "town-chat-main";
 
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
@@ -108,20 +109,20 @@ export function registerControlSessionRoutes(
           limit,
           executingSessionIds,
         });
-        const hasConsoleSession = sessions.some(
-          (item) => String(item.sessionId || "").trim() === CONSOLEUI_SESSION_ID,
+        const hasTownChatSession = sessions.some(
+          (item) => String(item.sessionId || "").trim() === TOWN_CHAT_SESSION_ID,
         );
-        const enrichedSessions = hasConsoleSession
+        const enrichedSessions = hasTownChatSession
           ? sessions
           : [
               {
-                sessionId: CONSOLEUI_SESSION_ID,
+                sessionId: TOWN_CHAT_SESSION_ID,
                 messageCount: 0,
                 updatedAt: Date.now(),
                 lastRole: "system" as const,
-                lastText: "Console UI chat",
-                channel: "consoleui",
-                ...(executingSessionIds.has(CONSOLEUI_SESSION_ID) ? { executing: true } : {}),
+                lastText: "Town chat",
+                channel: "town",
+                ...(executingSessionIds.has(TOWN_CHAT_SESSION_ID) ? { executing: true } : {}),
               },
               ...sessions,
             ];
@@ -372,7 +373,7 @@ export function registerControlSessionRoutes(
         const runtime = params.getAgentRuntime();
         const sessionId =
           decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
-          CONSOLEUI_SESSION_ID;
+          TOWN_CHAT_SESSION_ID;
         const systemMessages = await resolveSessionSystemMessages({
           projectRoot: runtime.rootPath,
           sessionId,

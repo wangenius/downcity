@@ -1,5 +1,5 @@
 /**
- * gateway 启动阶段的本机 token 初始化辅助。
+ * Town runtime 启动阶段的本机 token 初始化辅助。
  *
  * 关键点（中文）
  * - `town start` 首次启动时，如果还没有本机 CLI access token，这里负责初始化首个 token。
@@ -9,7 +9,7 @@
  */
 import { AuthService } from "../../auth/AuthService.js";
 /**
- * gateway 启动期统一账户初始化参数。
+ * Town runtime 启动期统一账户初始化参数。
  */
 export interface EnsureGatewayAuthBootstrapOptions {
     /**

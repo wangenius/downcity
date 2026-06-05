@@ -1,10 +1,10 @@
 /**
- * TownPaths：Town 全局运行态与 gateway 共享的路径规则。
+ * TownPaths：Town 全局运行态路径规则。
  *
  * 关键点（中文）
  * - Downcity 的全局根目录固定在用户目录 `~/.downcity/`。
  * - `~/.downcity/downcity.db`：全局 SQLite 数据库，保存平台级配置。
- * - `~/.downcity/main/*`：town 后台与 gateway 共享的运行文件目录。
+ * - `~/.downcity/main/*`：town runtime 运行文件目录。
  * - 这里定义的是“全局路径约定”，不是单个 agent 项目的 `.downcity/` 路径。
  */
 /**
@@ -35,15 +35,15 @@ export declare function getTownPidPath(): string;
  */
 export declare function getTownLogPath(): string;
 /**
- * gateway pid 文件路径。
+ * 旧 Console gateway pid 文件路径。
+ *
+ * 关键点（中文）：当前仅用于 `town stop` 清理历史状态文件。
  */
 export declare function getGatewayPidPath(): string;
 /**
- * gateway 日志路径（stdout/stderr 合并）。
- */
-export declare function getGatewayLogPath(): string;
-/**
- * gateway 元数据路径。
+ * 旧 Console gateway 元数据路径。
+ *
+ * 关键点（中文）：当前仅用于 `town stop` 清理历史状态文件。
  */
 export declare function getGatewayMetaPath(): string;
 /**

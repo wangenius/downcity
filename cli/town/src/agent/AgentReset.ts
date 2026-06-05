@@ -110,13 +110,13 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
 
   // 关键点（中文）：检测控制面是否运行，决定能否即时重启。
   const { isTownRunning } = await import("../process/registry/TownRuntime.js");
-  const gatewayRunning = await isTownRunning();
+  const townRuntimeRunning = await isTownRunning();
 
-  if (!gatewayRunning) {
+  if (!townRuntimeRunning) {
     emitCliBlock({
       tone: "warning",
-      title: "Gateway is not running",
-      note: "请先启动控制面再重启 agent",
+      title: "Town runtime is not running",
+      note: "请先启动 Town runtime 再重启 agent",
       facts: [
         { label: "step 1", value: "town start" },
         { label: "step 2", value: `town agent restart ${projectRoot}` },

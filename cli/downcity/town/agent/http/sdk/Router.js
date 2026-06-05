@@ -6,7 +6,7 @@
  * - 路由面围绕 Session actor 公开能力展开，不混入 control UI 语义。
  */
 import { Hono } from "hono";
-import { registerSdkSessionRoutes } from "../../../agent/http/sdk/SessionRoutes.js";
+import { registerSdkSessionRoutes } from "@/agent/http/sdk/SessionRoutes.js";
 /**
  * 创建 Town gateway 使用的 SDK HTTP router。
  */

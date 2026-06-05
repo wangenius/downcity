@@ -11,9 +11,9 @@
  */
 import path from "node:path";
 import fs from "fs-extra";
-import { DOWNCITY_JSON_SCHEMA } from "../config/DowncitySchema.js";
-import { saveJson } from "../utils/storage.js";
-import { getPlatformRootDirPath, } from "../process/registry/TownPaths.js";
+import { DOWNCITY_JSON_SCHEMA } from "@/config/DowncitySchema.js";
+import { saveJson } from "@/utils/storage.js";
+import { getPlatformRootDirPath, } from "@/process/registry/TownPaths.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 /**
  * 平台初始化入口。

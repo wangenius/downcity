@@ -14,7 +14,7 @@ import { getDowncityJsonPath } from "@/config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
-import { listPlatformModelChoices } from "@/model/runtime/ExecutionModelBinding.js";
+import { listPlatformModelChoices } from "@/town/city-model/ExecutionModelBinding.js";
 
 /**
  * 读取当前 agent 的 execution.modelId。

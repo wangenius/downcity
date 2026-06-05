@@ -8,9 +8,9 @@
  */
 import { spawnSync } from "node:child_process";
 import prompts from "prompts";
-import { AuthService } from "../http/auth/AuthService.js";
+import { AuthService } from "@/town/auth/AuthService.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 function isInteractiveTerminal() {
     return process.stdin.isTTY === true && process.stdout.isTTY === true;
 }

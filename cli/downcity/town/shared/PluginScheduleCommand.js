@@ -7,7 +7,7 @@
  * - 这里同时承载 schedule 子命令注册与 ActionSchedule 本地存储读写流程。
  */
 import { ActionScheduleStore } from "@downcity/agent";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { addPluginScheduleOptions, normalizeScheduledJobStatus, parsePositiveIntOption, resolvePluginScheduleProjectRoot, validateAgentProjectRoot, } from "./PluginTargetSupport.js";
 /**
  * 执行 `plugin schedule list`。

@@ -16,9 +16,9 @@ import { runCommand } from "../agent/Run.js";
 import { startCommand } from "../agent/Start.js";
 import { statusCommand } from "../agent/Status.js";
 import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "./IndexSupport.js";
-import { runWithSpinner } from "../utils/cli/Spinner.js";
+import { runWithSpinner } from "@/utils/cli/Spinner.js";
 import { emitCliBlock } from "./CliReporter.js";
-import { cleanupStaleDaemonFiles, diagnoseDaemonStaleReasons, isProcessAlive as isDaemonProcessAlive, readDaemonPid, } from "../process/daemon/Manager.js";
+import { cleanupStaleDaemonFiles, diagnoseDaemonStaleReasons, isProcessAlive as isDaemonProcessAlive, readDaemonPid, } from "@/process/daemon/Manager.js";
 import { ensureRegisteredAgentProjectRoot, prepareForegroundAgent, } from "./TownAgentRuntime.js";
 /**
  * 注册 `town agent` 命令组。

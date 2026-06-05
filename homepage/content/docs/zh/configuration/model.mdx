@@ -13,14 +13,14 @@ description: City AIService 模型目录与项目绑定的职责边界
 ## 工作流
 
 1. 用 `city` 准备或检查模型目录。
-2. 用 `town city use` 连接 Town 与 City。
+2. 用 `town city login` 以 Town user 身份登录 City。
 3. 在 agent 项目设置 `execution.modelId`。
 4. 重启 agent 并进行一次实际调用验证。
 
 ## 命令示例
 
 ```bash
-town city use
+town city login
 town city status
 town config set execution.modelId default
 town agent restart .

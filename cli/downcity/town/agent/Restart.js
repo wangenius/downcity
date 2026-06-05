@@ -8,8 +8,8 @@
  */
 import path from "path";
 import { fileURLToPath } from "url";
-import { buildRunArgsFromOptions } from "../process/daemon/CliArgs.js";
-import { startDaemonProcess, stopDaemonProcess } from "../process/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
+import { startDaemonProcess, stopDaemonProcess } from "@/process/daemon/Manager.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 import { checkAgentPreflight } from "../shared/PluginTargetSupport.js";

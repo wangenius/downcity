@@ -1,9 +1,9 @@
 /**
- * 当前 City server 的低频管理入口。
+ * 当前 City server 的 admin 管理入口。
  *
  * 关键说明（中文）
- * - admin 能力不再作为首页主入口
- * - 只有进入 server management 后，才暴露 admin access 与管理工具
+ * - `city` CLI 只暴露 admin/base 管理能力。
+ * - user 登录与 user runtime 由 `town` 管理。
  */
 
 import { isCancel, select } from "@clack/prompts";

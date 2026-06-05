@@ -19,7 +19,7 @@ import { CliError } from "./CliError.js";
 import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { parseBoolean } from "./IndexSupport.js";
-import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
+import { assertProjectExecutionModelReady } from "@/town/city-model/ExecutionModelBinding.js";
 
 export function isRegistryEntryRunning(
   entry: { status?: "running" | "stopped" },

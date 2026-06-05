@@ -9,8 +9,8 @@
 import path from "node:path";
 import { parseActionScheduleRunAtMsOrThrow, } from "@downcity/agent";
 import { listPluginsWithLifecycle } from "@downcity/agent";
-import { callServer } from "../process/daemon/Client.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { callServer } from "@/process/daemon/Client.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean, parsePort } from "./IndexSupport.js";
 import { runManagedPluginControlCommand } from "./ManagedPluginRemote.js";
 const CHAT_PLUGIN_HELP_TEXT = [

@@ -27,7 +27,7 @@ import { CliError } from "../shared/CliError.js";
 import {
   assertPlatformModelReady,
   listPlatformModelChoices,
-} from "@/model/runtime/ExecutionModelBinding.js";
+} from "@/town/city-model/ExecutionModelBinding.js";
 
 type InitPromptResponse = {
   id?: string;

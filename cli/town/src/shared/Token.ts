@@ -11,7 +11,7 @@ import type { Command } from "commander";
 import { spawnSync } from "node:child_process";
 import prompts from "prompts";
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
-import { AuthService } from "@/http/auth/AuthService.js";
+import { AuthService } from "@/town/auth/AuthService.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 

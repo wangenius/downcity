@@ -24,7 +24,7 @@ import { injectAgentContext } from "../shared/IndexSupport.js";
 import { prepareForegroundAgent } from "../shared/TownAgentRuntime.js";
 import { CliError } from "../shared/CliError.js";
 import { getDowncityJsonPath } from "@/config/Paths.js";
-import { PlatformStore } from "@/platform/store/index.js";
+import { PlatformStore } from "@/town/store/index.js";
 import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 import type { DowncityConfig } from "@downcity/agent";
 import type { StoredChannelAccount, StoredChannelAccountChannel } from "@downcity/agent";

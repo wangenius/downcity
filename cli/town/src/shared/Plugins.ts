@@ -32,7 +32,7 @@ import {
   runManagedPluginControlCommand,
 } from "./ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
-import { setBayPluginEnabled } from "@/platform/PluginLifecycle.js";
+import { setBayPluginEnabled } from "@/town/PluginLifecycle.js";
 import {
   listRegisteredAgentsForCli,
 } from "@/agent/AgentSelection.js";

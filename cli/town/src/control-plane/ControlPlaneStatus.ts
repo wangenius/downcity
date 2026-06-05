@@ -106,7 +106,7 @@ export async function controlPlaneStatusCommand(): Promise<void> {
       ? [
           {
             label: "fix",
-            value: "town city connect <url> --user-token <token>",
+            value: "town city login",
           },
         ]
       : [

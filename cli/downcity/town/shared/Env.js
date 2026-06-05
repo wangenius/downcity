@@ -6,9 +6,9 @@
  * - 默认不输出任何 secret value；只在显式 set 时写入值。
  * - 当前只保留平台全局 env，不再区分 agent 私有层。
  */
-import { PlatformStore } from "../platform/store/index.js";
+import { PlatformStore } from "@/town/store/index.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean } from "./IndexSupport.js";
 /**
  * 规范化 env key。

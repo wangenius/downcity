@@ -13,14 +13,14 @@ Model setup is split into two responsibilities:
 ## Workflow
 
 1. Use `city` to prepare or inspect the model catalog.
-2. Connect Town to City with `town city use`.
+2. Sign in Town to City with `town city login`.
 3. Set `execution.modelId` in project.
 4. Restart agent and validate one real invocation.
 
 ## Commands
 
 ```bash
-town city use
+town city login
 town city status
 town config set execution.modelId default
 town agent restart .

@@ -1,13 +1,13 @@
 ---
 title: town city
-description: Connect Town to the active City server without managing City resources
+description: Select a City base and sign in as a Town user
 ---
 
 # `town city`
 
-`town city` manages the connection context that local Agents use to call City.
+`town city` manages the City user connection used by local Agents.
 
-Town does not configure City models, services, accounts, billing, or admin resources. Use the `city` CLI for those.
+`city` is for admin-side City base management. `town` is for user login and local Agent runtime access. By default, Town uses `https://base.downcity.ai`.
 
 ## Usage
 
@@ -15,31 +15,31 @@ Town does not configure City models, services, accounts, billing, or admin resou
 town city
 town city status
 town city list
-town city use
-town city connect <url> --town-id <townId> --user-token <token>
+town city connect [url]
+town city use [base]
+town city login [url]
+town city logout
 town city disconnect
 ```
 
-## What It Writes
+## State Model
 
-`town city connect` and `town city use` write Town platform env entries:
+`town city connect` and `town city use` select a City base. They do not copy admin credentials or user tokens from `city`.
 
-- `DOWNCITY_CITY_URL`
-- `DOWNCITY_CITY_TOWN_ID`
-- `DOWNCITY_CITY_USER_TOKEN`
+`town city login` signs in as a user and stores Town's own user session. Agent runtime reads that Town user session when it calls City AIService.
 
-Agent runtime reads these values when it needs to call City user-side services.
+Environment variables such as `DOWNCITY_CITY_URL`, `DOWNCITY_CITY_TOWN_ID`, and `DOWNCITY_CITY_USER_TOKEN` are still supported as runtime overrides for CI or temporary launches.
 
 ## Recommended Flow
 
 ```bash
-city
-town city use
-town city status
+city                  # optional: manage admin-side City bases and resources
+town city status      # defaults to https://base.downcity.ai
+town city login
 town agent start
 ```
 
-Use `city` to add servers, login, and manage shared resources. Use `town city use` to import the active City session into Town.
+Use `town city list` to see Town bases plus base URLs discovered from `city` admin configuration.
 
 ## Related
 

@@ -6,9 +6,9 @@
  * - City 只作为连接上下文进入 Town；模型和服务资源仍回到 `city` CLI 管理。
  */
 import prompts from "prompts";
-import { controlPlaneStatusCommand } from "../control-plane/ControlPlaneStatus.js";
-import { startControlPlaneCommand } from "../control-plane/ControlPlaneRuntime.js";
-import { runInteractiveAgentManager } from "../agent/AgentManager.js";
+import { controlPlaneStatusCommand } from "@/control-plane/ControlPlaneStatus.js";
+import { startControlPlaneCommand } from "@/control-plane/ControlPlaneRuntime.js";
+import { runInteractiveAgentManager } from "@/agent/AgentManager.js";
 import { runInteractivePluginManager } from "./Plugins.js";
 import { runInteractiveChatManager } from "./ChatManager.js";
 import { runInteractiveCityManager } from "./CityConnection.js";

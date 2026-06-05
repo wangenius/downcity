@@ -5,7 +5,7 @@
  * - 聚合 overview 与 plugin 运行态两块轻量只读接口。
  * - 只负责路由层拼装，不承载复杂业务状态机。
  */
-import type { ControlRouteRegistrationParams } from "../../../agent/http/control/types/ControlRoutes.js";
+import type { ControlRouteRegistrationParams } from "@/agent/http/control/types/ControlRoutes.js";
 /**
  * 注册概览与运行态 plugin 路由。
  */

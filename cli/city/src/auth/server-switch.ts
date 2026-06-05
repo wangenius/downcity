@@ -21,13 +21,16 @@ import {
 } from "../core/session.js";
 import { showError, showSuccess } from "../core/ui.js";
 
+const DEFAULT_CITY_BASE_URL = "https://base.downcity.ai";
+
 /**
  * 添加 server。
  */
 export async function promptAddServer(): Promise<ServerProfile | undefined> {
   const baseUrl = await text({
     message: "Server URL",
-    placeholder: "https://downcity.wangenius.workers.dev",
+    placeholder: DEFAULT_CITY_BASE_URL,
+    initialValue: DEFAULT_CITY_BASE_URL,
   });
   if (!baseUrl || isCancel(baseUrl) || !String(baseUrl).trim()) {
     return undefined;

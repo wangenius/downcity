@@ -2,9 +2,8 @@
  * 交互式 City CLI 的流程类型定义。
  *
  * 关键说明（中文）
- * - 顶层不再以 admin / user 身份作为首页主分流
- * - 首页围绕 City server 与当前工作区展开
- * - admin 只作为低频的 server management 能力出现
+ * - `city` 只负责 City base 与 admin 管理。
+ * - user 登录与 runtime 入口由 `town` 负责。
  */
 
 /**
@@ -20,15 +19,6 @@ export type HomeAction =
   | "switch_city"
   | "connect_city"
   | "update"
-  | "quit";
-
-/**
- * 当前 City 还没有 user session 时，工作区允许的动作。
- */
-export type ServerEntryAction =
-  | "sign_in"
-  | "server_management"
-  | "back"
   | "quit";
 
 /**

@@ -12,10 +12,10 @@ import chalk from "chalk";
 import prompts from "prompts";
 import { RemoteAgent, } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { resolveProjectRootByAgentId, validateAgentProjectRoot, } from "../shared/PluginTargetSupport.js";
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
-import { resolveDaemonRpcEndpoint } from "../process/daemon/Client.js";
+import { resolveDaemonRpcEndpoint } from "@/process/daemon/Client.js";
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
 import { AgentChatInteractiveRenderer } from "./AgentChatInteractiveRenderer.js";
 function normalizeChatMessage(input) {

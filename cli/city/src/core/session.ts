@@ -2,16 +2,15 @@
  * Session 与 server 配置持久化模块。
  *
  * 关键说明（中文）
- * - server 是一等资源，必须显式配置后 CLI 才进入身份菜单
+ * - server 是一等资源，必须显式配置后 CLI 才进入 admin 工作区
  * - 不再注入默认 server；没有 server 时必须先添加
- * - user session 仍然按 base_url 隔离保存
+ * - user session 由 `town` 维护，`city` 不再保存 user token
  * - admin_secret_key 直接属于 server 配置，不再作为独立 session 维护
  */
 
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import crypto from "node:crypto";
 import { normalizeBaseUrl } from "./env.js";
 
 const DIR = path.join(os.homedir(), ".downcity");
@@ -26,19 +25,6 @@ export interface AdminSession {
   base_url: string;
   /** 当前 server 的 admin secret key */
   admin_secret_key: string;
-}
-
-export interface UserSession {
-  /** 当前登录目标的 server server URL */
-  base_url: string;
-  /** 用户邮箱 */
-  email: string;
-  /** 用户 ID */
-  user_id: string;
-  /** 当前 town ID */
-  town_id: string;
-  /** user token */
-  user_token: string;
 }
 
 export interface ServerProfile {
@@ -59,8 +45,6 @@ export interface ClientConfig {
   cloudflare_account_id?: string;
   /** 当前选择的模型 ID */
   model: string;
-  /** 上次使用的身份 */
-  last_identity?: "admin" | "user";
 }
 
 // ============================================================
@@ -82,9 +66,6 @@ export function readConfig(): ClientConfig {
       ? raw.cloudflare_account_id.trim() || undefined
       : undefined,
     model: typeof raw.model === "string" ? raw.model : "",
-    last_identity: raw.last_identity === "admin" || raw.last_identity === "user"
-      ? raw.last_identity
-      : undefined,
   };
 }
 
@@ -104,7 +85,6 @@ export function writeConfig(config: ClientConfig): void {
       ? config.cloudflare_account_id.trim() || undefined
       : undefined,
     model: config.model ?? "",
-    last_identity: config.last_identity,
   });
 }
 
@@ -184,7 +164,6 @@ export function addServer(input: {
  * 更新已存在的 server。
  *
  * 关键说明（中文）
- * - 如果 base_url 变化，会清除旧 URL 下的 user session
  * - active server 会自动切换到新 URL
  */
 export function updateServer(
@@ -219,15 +198,11 @@ export function updateServer(
     active_server_url: activeServerUrl,
   });
 
-  if (normalizedCurrent !== normalizedNext.base_url) {
-    clearServerSessions(normalizedCurrent);
-  }
-
   return normalizedNext;
 }
 
 /**
- * 删除 server，同时清除该 URL 下的所有 session。
+ * 删除 server。
  */
 export function removeServer(baseUrl: string): void {
   const config = readConfig();
@@ -242,7 +217,6 @@ export function removeServer(baseUrl: string): void {
     servers: nextServers,
     active_server_url: nextActive,
   });
-  clearServerSessions(normalizedBaseUrl);
 }
 
 /**
@@ -251,41 +225,6 @@ export function removeServer(baseUrl: string): void {
 export function readServer(baseUrl: string): ServerProfile | undefined {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
   return readConfig().servers.find((server) => server.base_url === normalizedBaseUrl);
-}
-
-// ============================================================
-// User Session（按 URL 隔离）
-// ============================================================
-
-function sessionDir(url: string): string {
-  return path.join(DIR, "servers", urlHash(url));
-}
-
-function userFile(url: string): string {
-  return path.join(sessionDir(url), "user.json");
-}
-
-export function readUserSession(url: string): UserSession | undefined {
-  return readJSON<UserSession>(userFile(url));
-}
-
-export function writeUserSession(session: UserSession): void {
-  writeJSON(userFile(session.base_url), session);
-}
-
-export function clearUserSession(url: string): void {
-  try {
-    fs.unlinkSync(userFile(url));
-  } catch {
-    // ignore
-  }
-}
-
-/**
- * 清除某个 server URL 下的所有 session。
- */
-export function clearServerSessions(url: string): void {
-  clearUserSession(url);
 }
 
 // ============================================================
@@ -395,10 +334,6 @@ function deriveServerName(baseUrl: string): string {
   } catch {
     return baseUrl;
   }
-}
-
-function urlHash(url: string): string {
-  return crypto.createHash("sha256").update(url).digest("hex").slice(0, 16);
 }
 
 function readJSON<T>(filepath: string): T | undefined {

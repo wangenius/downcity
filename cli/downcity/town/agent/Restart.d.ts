@@ -6,7 +6,7 @@
  * - 重启前必须重新校验项目初始化状态与 execution binding，避免先停后起失败。
  * - 成功后会重新生成 daemon 元信息与日志路径，确保运行态与当前配置一致。
  */
-import type { AgentStartOptions } from "../types/AgentStartOptions.js";
+import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 /**
  * restart 命令执行流程。
  *

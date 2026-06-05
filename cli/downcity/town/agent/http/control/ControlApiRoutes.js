@@ -6,10 +6,10 @@
  * - 单 agent control API 子路由按 overview/session/task/auth 四类拆分，便于继续维护。
  * - 单 agent control API 统一暴露在 `/api/control/*` 下。
  */
-import { registerControlAuthorizationRoutes } from "../../../agent/http/control/ControlAuthorizationRoutes.js";
-import { registerControlSessionRoutes } from "../../../agent/http/control/SessionRoutes.js";
-import { registerControlOverviewRoutes } from "../../../agent/http/control/OverviewRoutes.js";
-import { registerControlTaskRoutes } from "../../../agent/http/control/TaskRoutes.js";
+import { registerControlAuthorizationRoutes } from "@/agent/http/control/ControlAuthorizationRoutes.js";
+import { registerControlSessionRoutes } from "@/agent/http/control/SessionRoutes.js";
+import { registerControlOverviewRoutes } from "@/agent/http/control/OverviewRoutes.js";
+import { registerControlTaskRoutes } from "@/agent/http/control/TaskRoutes.js";
 /**
  * 注册单 agent control API 路由。
  */

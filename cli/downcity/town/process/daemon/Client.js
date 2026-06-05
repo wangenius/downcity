@@ -6,8 +6,8 @@
  * - HTTP gateway 与本机 RPC 的地址解析分开，避免端口语义混淆。
  */
 import fs from "fs-extra";
-import { formatCliBearerHeaderValue, resolveCliAuthToken, } from "../../shared/CliAuthToken.js";
-import { getDaemonMetaPath } from "../../process/daemon/Manager.js";
+import { formatCliBearerHeaderValue, resolveCliAuthToken, } from "@/shared/CliAuthToken.js";
+import { getDaemonMetaPath } from "@/process/daemon/Manager.js";
 /**
  * 解析端口值。
  *

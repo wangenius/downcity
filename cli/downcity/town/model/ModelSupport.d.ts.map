@@ -1,1 +1,0 @@
-{"version":3,"file":"ModelSupport.d.ts","sourceRoot":"","sources":["../../src/model/ModelSupport.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAOH;;GAEG;AACH,wBAAgB,kBAAkB,CAAC,SAAS,CAAC,EAAE,MAAM,GAAG,MAAM,CAE7D;AAED;;;;;;GAMG;AACH,wBAAgB,sBAAsB,CAAC,WAAW,EAAE,MAAM,EAAE,OAAO,EAAE,MAAM,GAAG;IAC5E,YAAY,EAAE,MAAM,CAAC;IACrB,eAAe,EAAE,MAAM,CAAC;IACxB,WAAW,EAAE,MAAM,CAAC;CACrB,CA0BA"}

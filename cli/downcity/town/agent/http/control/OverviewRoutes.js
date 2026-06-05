@@ -9,8 +9,8 @@ import fs from "fs-extra";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { listPluginStates } from "@downcity/agent/internal/plugin/core/Manager.js";
-import { buildControlRouteAliases, toLimit } from "../../../agent/control/CommonHelpers.js";
-import { listControlSessionSummaries, readRecentLogs } from "../../../agent/control/Helpers.js";
+import { buildControlRouteAliases, toLimit } from "@/agent/control/CommonHelpers.js";
+import { listControlSessionSummaries, readRecentLogs } from "@/agent/control/Helpers.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 /**

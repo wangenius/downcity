@@ -1,26 +1,27 @@
 /**
- * Town 与 City 连接状态类型。
+ * Town 与 City user 连接状态类型。
  *
  * 关键点（中文）
- * - Town 只保存“连接哪个 City、用哪个 town/user token 调用”的宿主上下文。
- * - City 内部资源（模型、服务、账号、计费）仍由 `city` CLI 管理。
+ * - `city` CLI 只作为 admin/base 管理入口。
+ * - `town` CLI 自己维护 user base 选择与 user session。
+ * - Town 可以只读发现 `city` CLI 保存的 base 地址，但不读取 admin 密钥或 user token。
  */
 
 /**
- * City CLI 中保存的 server 配置摘要。
+ * Town 可选择的 City base 配置摘要。
  */
 export interface TownCityServerProfile {
   /**
-   * server 展示名称。
+   * base 展示名称。
    *
    * 说明（中文）
-   * - 来自 `city` CLI 的 `~/.downcity/config.json`。
+   * - 可能来自 Town 本地配置、默认 base，或 `city` CLI 的 admin base 列表。
    * - 若未显式设置，通常回退为 URL hostname。
    */
   name: string;
 
   /**
-   * City 服务基础地址。
+   * City base 服务地址。
    *
    * 说明（中文）
    * - 已做基础规范化，末尾不带多余 `/`。
@@ -29,12 +30,17 @@ export interface TownCityServerProfile {
   base_url: string;
 
   /**
-   * 是否是 `city` CLI 当前激活的 server。
+   * 是否是当前 Town 选择的 base。
    */
-  active: boolean;
+  selected: boolean;
 
   /**
-   * 该 server 是否保存了 admin secret key。
+   * base 来源。
+   */
+  source: "town" | "city-admin" | "default";
+
+  /**
+   * 该 base 是否由 `city` CLI 保存了 admin secret key。
    *
    * 说明（中文）
    * - 这里只展示存在性，不暴露密钥明文。
@@ -43,15 +49,15 @@ export interface TownCityServerProfile {
   has_admin_secret_key: boolean;
 
   /**
-   * 该 server 是否已有 user session。
+   * 该 base 是否已有 Town user session。
    *
    * 说明（中文）
-   * - 若为 true，`town city use` 可导入 user token 给本机 Agent runtime 使用。
+   * - user session 由 Town 自己维护，不从 `city` CLI 导入。
    */
   has_user_session: boolean;
 
   /**
-   * user session 中绑定的 town id。
+   * Town user session 中绑定的 town id。
    *
    * 说明（中文）
    * - 为空表示未登录或 session 文件不可用。
@@ -59,7 +65,7 @@ export interface TownCityServerProfile {
   town_id?: string;
 
   /**
-   * user session 中的用户 id。
+   * Town user session 中的用户 id。
    *
    * 说明（中文）
    * - 只用于状态展示，不参与权限判断。
@@ -68,16 +74,16 @@ export interface TownCityServerProfile {
 }
 
 /**
- * Town 当前写入平台 env 的 City 连接状态。
+ * Town 当前 City user 连接状态。
  */
 export interface TownCityConnectionState {
   /**
-   * 当前 Town runtime 使用的 City 服务基础地址。
+   * 当前 Town 选择的 City base 地址。
    */
   city_url: string;
 
   /**
-   * 当前 Town runtime 使用的 City town id。
+   * 当前 Town user session 使用的 City town id。
    */
   town_id: string;
 
@@ -94,9 +100,21 @@ export interface TownCityConnectionState {
    * 连接来源。
    *
    * 说明（中文）
-   * - `town-env` 表示由 `town city connect/use` 写入平台 env。
-   * - `city-cli` 表示只发现了 city CLI server，但尚未导入到 Town 平台 env。
+   * - `town-session` 表示 Town 已在当前 base 登录 user。
+   * - `town-base` 表示 Town 已选择 base，但尚未登录 user。
+   * - `city-admin` 表示当前 base 来自 `city` CLI 的 admin base 候选。
+   * - `default` 表示使用默认 base。
    * - `missing` 表示没有可用连接。
    */
-  source: "town-env" | "city-cli" | "missing";
+  source: "town-session" | "town-base" | "city-admin" | "default" | "missing";
+
+  /**
+   * 当前登录用户 ID。
+   */
+  user_id?: string;
+
+  /**
+   * 当前登录用户展示名称。
+   */
+  user_label?: string;
 }

@@ -9,10 +9,10 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
 import prompts from "prompts";
-import { getDowncityJsonPath, getProfileMdPath } from "../config/Paths.js";
-import { listManagedAgentEntries } from "../process/registry/TownRegistry.js";
+import { getDowncityJsonPath, getProfileMdPath } from "@/config/Paths.js";
+import { listManagedAgentEntries } from "@/process/registry/TownRegistry.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { CliError } from "../shared/CliError.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 import { resolveRunningManagedAgents } from "../shared/TownAgentRuntime.js";

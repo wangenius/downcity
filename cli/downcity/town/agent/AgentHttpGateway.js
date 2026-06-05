@@ -13,12 +13,12 @@ import http from "node:http";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 import { logger as serverLogger } from "@downcity/agent/internal/utils/logger/Logger.js";
-import { createExecuteRouter } from "../agent/http/execute/execute.js";
-import { healthRouter } from "../agent/http/health/health.js";
-import { createPluginsRouter } from "../agent/http/plugins/plugins.js";
-import { createStaticRouter } from "../agent/http/static/static.js";
-import { createControlRouter } from "../agent/http/control/ControlRouter.js";
-import { createSdkRouter } from "../agent/http/sdk/Router.js";
+import { createExecuteRouter } from "@/agent/http/execute/execute.js";
+import { healthRouter } from "@/agent/http/health/health.js";
+import { createPluginsRouter } from "@/agent/http/plugins/plugins.js";
+import { createStaticRouter } from "@/agent/http/static/static.js";
+import { createControlRouter } from "@/agent/http/control/ControlRouter.js";
+import { createSdkRouter } from "@/agent/http/sdk/Router.js";
 /**
  * 创建 Agent HTTP 网关 Hono 应用。
  */

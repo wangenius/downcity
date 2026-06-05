@@ -21,7 +21,7 @@ import {
   markManagedAgentStopped,
 } from "@/process/registry/TownRegistry.js";
 import { isTownRunning } from "@/process/registry/TownRuntime.js";
-import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
+import { assertProjectExecutionModelReady } from "@/town/city-model/ExecutionModelBinding.js";
 import { CliError } from "./CliError.js";
 import { injectAgentContext } from "./IndexSupport.js";
 

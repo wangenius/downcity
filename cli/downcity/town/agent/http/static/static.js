@@ -9,7 +9,7 @@
 import { Hono } from "hono";
 import fs from "fs-extra";
 import path from "path";
-import { getDowncityPublicDirPath } from "../../../config/Paths.js";
+import { getDowncityPublicDirPath } from "@/config/Paths.js";
 /**
  * 创建静态资源路由。
  */

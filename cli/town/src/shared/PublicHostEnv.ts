@@ -7,7 +7,7 @@
  * - 写入平台 Env 后，后续 Town 宿主会在启动 Agent/模型运行时前显式读取并传入。
  */
 
-import { PlatformStore } from "@/platform/store/index.js";
+import { PlatformStore } from "@/town/store/index.js";
 import type {
   BayPublicHostEnvEntry,
   BayPublicHostEnvResult,

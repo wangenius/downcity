@@ -18,7 +18,7 @@ import {
   stopDaemonProcess,
 } from "@/process/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/process/daemon/CliArgs.js";
-import { assertProjectExecutionModelReady } from "@/model/runtime/ExecutionModelBinding.js";
+import { assertProjectExecutionModelReady } from "@/town/city-model/ExecutionModelBinding.js";
 import { allocateAvailablePort } from "@/process/daemon/PortAllocator.js";
 import {
   ensureManagedAgentRegistry,

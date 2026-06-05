@@ -21,7 +21,7 @@ import {
 import { createBuiltinPlugins } from "@downcity/plugins";
 import type { AgentStartOptions } from "@/types/AgentStartOptions.js";
 import { CliError } from "../shared/CliError.js";
-import { createRuntimeModel } from "@/model/runtime/CreateRuntimeModel.js";
+import { createRuntimeModel } from "@/town/city-model/CreateRuntimeModel.js";
 import { readPlatformGlobalEnv } from "@/env/ProcessEnv.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 import { startAgentHttpGateway } from "@/agent/AgentHttpGateway.js";

@@ -1,9 +1,10 @@
 /**
- * Town 与 City 连接状态类型。
+ * Town 与 City user 连接状态类型。
  *
  * 关键点（中文）
- * - Town 只保存“连接哪个 City、用哪个 town/user token 调用”的宿主上下文。
- * - City 内部资源（模型、服务、账号、计费）仍由 `city` CLI 管理。
+ * - `city` CLI 只作为 admin/base 管理入口。
+ * - `town` CLI 自己维护 user base 选择与 user session。
+ * - Town 可以只读发现 `city` CLI 保存的 base 地址，但不读取 admin 密钥或 user token。
  */
 export {};
 //# sourceMappingURL=TownCityConnection.js.map

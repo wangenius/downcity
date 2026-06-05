@@ -1,13 +1,13 @@
 ---
 title: town city
-description: 连接 Town 与当前 City server，但不管理 City 资源
+description: 选择 City base，并以 Town user 身份登录
 ---
 
 # `town city`
 
-`town city` 管理本机 Agent 调用 City 时使用的连接上下文。
+`town city` 管理本机 Agent 调用 City 时使用的用户态连接。
 
-Town 不配置 City 的模型、服务、账号、计费或管理端资源。这些仍然通过 `city` CLI 管理。
+`city` 负责 admin 侧的 City base 与资源管理。`town` 负责 user 登录和本机 Agent runtime 访问。默认 City base 是 `https://base.downcity.ai`。
 
 ## 用法
 
@@ -15,31 +15,31 @@ Town 不配置 City 的模型、服务、账号、计费或管理端资源。这
 town city
 town city status
 town city list
-town city use
-town city connect <url> --town-id <townId> --user-token <token>
+town city connect [url]
+town city use [base]
+town city login [url]
+town city logout
 town city disconnect
 ```
 
-## 写入内容
+## 状态模型
 
-`town city connect` 和 `town city use` 会写入 Town 平台 env：
+`town city connect` 和 `town city use` 只选择 City base，不从 `city` 复制 admin 凭证或 user token。
 
-- `DOWNCITY_CITY_URL`
-- `DOWNCITY_CITY_TOWN_ID`
-- `DOWNCITY_CITY_USER_TOKEN`
+`town city login` 以 user 身份登录，并保存 Town 自己的 user session。Agent runtime 调用 City AIService 时读取这份 Town user session。
 
-Agent runtime 需要调用 City 用户态服务时会读取这些值。
+`DOWNCITY_CITY_URL`、`DOWNCITY_CITY_TOWN_ID`、`DOWNCITY_CITY_USER_TOKEN` 仍然可以作为 CI 或临时启动时的运行时覆盖项。
 
 ## 推荐流程
 
 ```bash
-city
-town city use
-town city status
+city                  # 可选：管理 admin 侧 City base 与资源
+town city status      # 默认指向 https://base.downcity.ai
+town city login
 town agent start
 ```
 
-用 `city` 添加 server、登录并管理共享资源。用 `town city use` 把当前 City 会话导入到 Town。
+使用 `town city list` 可以查看 Town 自己保存的 base，以及从 `city` admin 配置中发现的 base 地址。
 
 ## 相关页面
 

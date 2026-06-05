@@ -6,7 +6,7 @@
  * - asJson=true → 结构化 JSON（脚本友好）；asJson=false → 委托 CliReporter 渲染人类可读文本。
  * - 支持三种输出类型：block（单段落）、list（列表分组）、payload（旧版键值对，兼容过渡）。
  */
-import { emitCliBlock, emitCliList, } from "../../shared/CliReporter.js";
+import { emitCliBlock, emitCliList, } from "@/shared/CliReporter.js";
 /**
  * 判断值是否为 plain object。
  */

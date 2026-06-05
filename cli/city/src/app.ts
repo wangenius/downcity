@@ -7,9 +7,8 @@
  *   welcome/home → connect/switch City → server workspace → server management/admin tools
  *
  * 关键说明（中文）
- * - 顶层不再要求先选择 admin / user 身份
- * - connect City 后默认进入 user sign in / user 工作区
- * - admin 能力只作为低频的 server management 入口出现
+ * - `city` 只负责 City base 与 admin 管理。
+ * - user 登录与本机 runtime 统一由 `town city login` 承担。
  */
 
 import { readFileSync } from "node:fs";

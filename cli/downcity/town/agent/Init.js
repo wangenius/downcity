@@ -12,11 +12,11 @@
 import path from "path";
 import prompts from "prompts";
 import fs from "fs-extra";
-import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "../config/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/config/Paths.js";
 import { initializeAgentProject, normalizeDefaultAgentId, } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";
-import { assertPlatformModelReady, listPlatformModelChoices, } from "../model/runtime/ExecutionModelBinding.js";
+import { assertPlatformModelReady, listPlatformModelChoices, } from "@/town/city-model/ExecutionModelBinding.js";
 /**
  * init 命令入口。
  *

@@ -10,15 +10,15 @@ import fs from "node:fs";
 import prompts from "prompts";
 import { buildStaticPluginAvailability, findPluginByName, listPluginViews, listPluginsWithLifecycle, listPluginsWithoutLifecycle, runLocalPluginAction, } from "@downcity/agent";
 import { createBuiltinPlugins } from "@downcity/plugins";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { getDowncityJsonPath } from "../config/Paths.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
+import { getDowncityJsonPath } from "@/config/Paths.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { parseBoolean, parsePort } from "./IndexSupport.js";
 import { resolveProjectRoot } from "./PluginTargetSupport.js";
 import { runManagedPluginCommandBridge, runManagedPluginControlCommand, } from "./ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
-import { setBayPluginEnabled } from "../platform/PluginLifecycle.js";
-import { listRegisteredAgentsForCli, } from "../agent/AgentSelection.js";
+import { setBayPluginEnabled } from "@/town/PluginLifecycle.js";
+import { listRegisteredAgentsForCli, } from "@/agent/AgentSelection.js";
 function createPluginCatalog() {
     return createBuiltinPlugins();
 }

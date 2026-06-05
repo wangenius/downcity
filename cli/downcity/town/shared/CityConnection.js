@@ -1,27 +1,24 @@
 /**
- * `town city` 命令与 City 连接管理。
+ * `town city` 命令与 City user 连接管理。
  *
  * 关键点（中文）
- * - Town 只负责连接 City：URL、town_id、user_token 进入平台 env，供 Agent runtime 使用。
- * - City 模型、服务、账号、计费等资源仍由 `city` CLI 管理。
- * - 优先复用 `city` CLI 的 server/session 配置，避免 Town 维护第二套 server 事实源。
+ * - `city` CLI 只作为 admin/base 管理入口。
+ * - `town` CLI 自己维护 user 登录态，避免把 user token 复制到 city 状态。
+ * - Town 可以只读发现 `city` CLI 已配置的 base 地址，但不依赖 city 内部模块。
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import crypto from "node:crypto";
 import prompts from "prompts";
-import { PlatformStore } from "../platform/store/index.js";
+import { PlatformStore } from "@/town/store/index.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/utils/cli/CliOutput.js";
 import { parseBoolean } from "./IndexSupport.js";
-const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
-const CITY_ENV_KEYS = [
-    "DOWNCITY_CITY_URL",
-    "DOWNCITY_CITY_TOWN_ID",
-    "DOWNCITY_CITY_USER_TOKEN",
-];
+import { performTownCityUserLogin } from "./CityUserLogin.js";
+export const DEFAULT_CITY_URL = "https://base.downcity.ai";
 const DEFAULT_TOWN_ID = "town_downcity";
+const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
+const TOWN_CITY_STATE_KEY = "town.city.state";
 function readString(value) {
     return typeof value === "string" ? value.trim() : "";
 }
@@ -35,7 +32,7 @@ function defaultProtocol(value) {
     }
     return "https";
 }
-function normalizeCityUrl(value) {
+export function normalizeCityUrl(value) {
     const raw = String(value || "").trim();
     if (!raw)
         return "";
@@ -56,9 +53,6 @@ function deriveServerName(city_url) {
         return city_url;
     }
 }
-function hashCityUrl(city_url) {
-    return crypto.createHash("sha256").update(city_url).digest("hex").slice(0, 16);
-}
 function readJsonFile(file_path) {
     try {
         return JSON.parse(fs.readFileSync(file_path, "utf8"));
@@ -67,123 +61,230 @@ function readJsonFile(file_path) {
         return null;
     }
 }
-function readCityUserSession(city_url) {
-    const file_path = path.join(os.homedir(), ".downcity", "servers", hashCityUrl(city_url), "user.json");
-    return readJsonFile(file_path);
-}
-function readCityCliServers() {
-    const raw = readJsonFile(CITY_CONFIG_PATH);
-    const servers = Array.isArray(raw?.servers) ? raw.servers : [];
-    const active_url = normalizeCityUrl(readString(raw?.active_server_url));
-    const out = [];
-    for (const item of servers) {
-        const city_url = normalizeCityUrl(readString(item.base_url) || readString(item.url));
-        if (!city_url || out.some((server) => server.base_url === city_url))
+function normalizeLocalState(value) {
+    const selected_base_url = normalizeCityUrl(readString(value?.selected_base_url));
+    const profiles = [];
+    for (const item of Array.isArray(value?.profiles) ? value.profiles : []) {
+        const base_url = normalizeCityUrl(readString(item.base_url));
+        if (!base_url || profiles.some((profile) => profile.base_url === base_url))
             continue;
-        const user_session = readCityUserSession(city_url);
-        const user_token = readString(user_session?.user_token);
-        out.push({
-            name: readString(item.name) || deriveServerName(city_url),
-            base_url: city_url,
-            active: city_url === active_url,
-            has_admin_secret_key: Boolean(readString(item.admin_secret_key)),
-            has_user_session: Boolean(user_token),
-            town_id: readString(user_session?.town_id) || undefined,
-            user_id: readString(user_session?.user_id) || undefined,
+        profiles.push({
+            name: readString(item.name) || deriveServerName(base_url),
+            base_url,
         });
     }
-    return out.sort((left, right) => Number(right.active) - Number(left.active)
-        || left.name.localeCompare(right.name)
-        || left.base_url.localeCompare(right.base_url));
-}
-function readTownCityEnv() {
-    const store = new PlatformStore();
-    try {
-        return store.getEnvMapSync();
-    }
-    finally {
-        store.close();
-    }
-}
-export function readTownCityConnectionState() {
-    const env = readTownCityEnv();
-    const city_url = normalizeCityUrl(readString(env.DOWNCITY_CITY_URL));
-    const town_id = readString(env.DOWNCITY_CITY_TOWN_ID) || DEFAULT_TOWN_ID;
-    const user_token = readString(env.DOWNCITY_CITY_USER_TOKEN);
-    if (city_url) {
-        return {
-            city_url,
-            town_id,
-            has_user_token: Boolean(user_token),
-            source: "town-env",
-        };
-    }
-    const active_server = readCityCliServers().find((server) => server.active)
-        ?? readCityCliServers()[0];
-    if (active_server) {
-        return {
-            city_url: active_server.base_url,
-            town_id: active_server.town_id || DEFAULT_TOWN_ID,
-            has_user_token: active_server.has_user_session,
-            source: "city-cli",
+    const sessions = {};
+    const input_sessions = value?.sessions && typeof value.sessions === "object"
+        ? value.sessions
+        : {};
+    for (const [key, session] of Object.entries(input_sessions)) {
+        const base_url = normalizeCityUrl(readString(session?.base_url) || key);
+        const user_token = readString(session?.user_token);
+        if (!base_url || !user_token)
+            continue;
+        sessions[base_url] = {
+            base_url,
+            town_id: readString(session?.town_id) || DEFAULT_TOWN_ID,
+            user_id: readString(session?.user_id) || undefined,
+            user_label: readString(session?.user_label) || undefined,
+            user_token,
+            updated_at: readString(session?.updated_at) || new Date().toISOString(),
         };
     }
     return {
-        city_url: "",
-        town_id,
-        has_user_token: false,
-        source: "missing",
+        selected_base_url: selected_base_url || undefined,
+        profiles,
+        sessions,
     };
 }
-async function writeTownCityConnection(params) {
+function readTownCityState() {
     const store = new PlatformStore();
     try {
-        await store.upsertGlobalEnvEntry({
-            key: "DOWNCITY_CITY_URL",
-            value: params.city_url,
-            description: "Town 当前连接的 City 服务地址。",
-        });
-        await store.upsertGlobalEnvEntry({
-            key: "DOWNCITY_CITY_TOWN_ID",
-            value: params.town_id,
-            description: "Town Agent runtime 调用 City 时使用的 town id。",
-        });
-        if (params.user_token !== undefined) {
-            await store.upsertGlobalEnvEntry({
-                key: "DOWNCITY_CITY_USER_TOKEN",
-                value: params.user_token,
-                description: "Town Agent runtime 调用 City 用户态服务时使用的 user token。",
-            });
-        }
+        return normalizeLocalState(store.getSecureSettingJsonSync(TOWN_CITY_STATE_KEY));
     }
     finally {
         store.close();
     }
 }
-function clearTownCityConnection() {
+function writeTownCityState(state) {
     const store = new PlatformStore();
     try {
-        for (const key of CITY_ENV_KEYS) {
-            store.removeGlobalEnvEntry(key);
-        }
+        store.setSecureSettingJsonSync(TOWN_CITY_STATE_KEY, normalizeLocalState(state));
     }
     finally {
         store.close();
     }
 }
-function findCityCliServer(input) {
+function readCityAdminConfig() {
+    return readJsonFile(CITY_CONFIG_PATH) ?? {};
+}
+function readCityAdminServers() {
+    const raw = readCityAdminConfig();
+    const servers = Array.isArray(raw.servers) ? raw.servers : [];
+    const active_url = normalizeCityUrl(readString(raw.active_server_url));
+    const out = [];
+    const state = readTownCityState();
+    const selected_base_url = resolveSelectedBaseUrl(state);
+    for (const item of servers) {
+        const base_url = normalizeCityUrl(readString(item.base_url) || readString(item.url));
+        if (!base_url || out.some((server) => server.base_url === base_url))
+            continue;
+        const session = state.sessions?.[base_url];
+        out.push({
+            name: readString(item.name) || deriveServerName(base_url),
+            base_url,
+            selected: base_url === selected_base_url,
+            source: "city-admin",
+            has_admin_secret_key: Boolean(readString(item.admin_secret_key)),
+            has_user_session: Boolean(session?.user_token),
+            town_id: session?.town_id,
+            user_id: session?.user_id,
+        });
+    }
+    return out.sort((left, right) => Number(right.base_url === active_url) - Number(left.base_url === active_url)
+        || left.name.localeCompare(right.name)
+        || left.base_url.localeCompare(right.base_url));
+}
+function readCityAdminSecretForUrl(city_url) {
+    const target_url = normalizeCityUrl(city_url);
+    const raw = readCityAdminConfig();
+    const servers = Array.isArray(raw.servers) ? raw.servers : [];
+    const matched = servers.find((item) => normalizeCityUrl(readString(item.base_url) || readString(item.url)) === target_url);
+    return readString(matched?.admin_secret_key) || undefined;
+}
+export function readTownCityAdminSecretForBase(city_url) {
+    return readCityAdminSecretForUrl(city_url);
+}
+function resolveSelectedBaseUrl(state = readTownCityState()) {
+    return normalizeCityUrl(readString(state.selected_base_url)) || DEFAULT_CITY_URL;
+}
+function upsertTownProfile(state, input) {
+    const base_url = normalizeCityUrl(input.base_url);
+    if (!base_url)
+        return state;
+    const profiles = [...(state.profiles ?? [])];
+    const index = profiles.findIndex((item) => item.base_url === base_url);
+    const profile = {
+        name: readString(input.name) || deriveServerName(base_url),
+        base_url,
+    };
+    if (index >= 0)
+        profiles[index] = profile;
+    else
+        profiles.push(profile);
+    return {
+        ...state,
+        selected_base_url: base_url,
+        profiles,
+    };
+}
+function listTownCityServers() {
+    const state = readTownCityState();
+    const selected_base_url = resolveSelectedBaseUrl(state);
+    const admin_servers = readCityAdminServers();
+    const by_url = new Map();
+    const append = (profile) => {
+        const existing = by_url.get(profile.base_url);
+        if (!existing) {
+            by_url.set(profile.base_url, profile);
+            return;
+        }
+        by_url.set(profile.base_url, {
+            ...existing,
+            selected: existing.selected || profile.selected,
+            source: existing.source === "town" ? "town" : profile.source,
+            has_admin_secret_key: existing.has_admin_secret_key || profile.has_admin_secret_key,
+            has_user_session: existing.has_user_session || profile.has_user_session,
+            town_id: existing.town_id || profile.town_id,
+            user_id: existing.user_id || profile.user_id,
+        });
+    };
+    for (const profile of state.profiles ?? []) {
+        const session = state.sessions?.[profile.base_url];
+        append({
+            name: profile.name,
+            base_url: profile.base_url,
+            selected: profile.base_url === selected_base_url,
+            source: "town",
+            has_admin_secret_key: Boolean(readCityAdminSecretForUrl(profile.base_url)),
+            has_user_session: Boolean(session?.user_token),
+            town_id: session?.town_id,
+            user_id: session?.user_id,
+        });
+    }
+    for (const server of admin_servers)
+        append(server);
+    const default_session = state.sessions?.[DEFAULT_CITY_URL];
+    append({
+        name: "Downcity Base",
+        base_url: DEFAULT_CITY_URL,
+        selected: DEFAULT_CITY_URL === selected_base_url,
+        source: "default",
+        has_admin_secret_key: Boolean(readCityAdminSecretForUrl(DEFAULT_CITY_URL)),
+        has_user_session: Boolean(default_session?.user_token),
+        town_id: default_session?.town_id,
+        user_id: default_session?.user_id,
+    });
+    return [...by_url.values()].sort((left, right) => Number(right.selected) - Number(left.selected)
+        || Number(right.source === "default") - Number(left.source === "default")
+        || left.name.localeCompare(right.name)
+        || left.base_url.localeCompare(right.base_url));
+}
+function findCityServer(input) {
     const query = String(input || "").trim();
-    const servers = readCityCliServers();
+    const servers = listTownCityServers();
     if (!query)
-        return servers.find((server) => server.active) ?? servers[0] ?? null;
+        return servers.find((server) => server.selected) ?? servers[0] ?? null;
     const normalized_query_url = normalizeCityUrl(query);
     return servers.find((server) => server.name === query ||
         server.base_url === normalized_query_url ||
         server.base_url === query) ?? null;
 }
+function readCurrentTownCitySession() {
+    const state = readTownCityState();
+    const base_url = resolveSelectedBaseUrl(state);
+    return state.sessions?.[base_url] ?? null;
+}
+export function readTownCityUserSessionForRuntime() {
+    const state = readTownCityState();
+    const city_url = resolveSelectedBaseUrl(state);
+    const session = state.sessions?.[city_url] ?? null;
+    if (!session?.user_token)
+        return null;
+    return {
+        city_url,
+        town_id: session.town_id || DEFAULT_TOWN_ID,
+        user_token: session.user_token,
+    };
+}
+export function readTownCityConnectionState() {
+    const state = readTownCityState();
+    const city_url = resolveSelectedBaseUrl(state);
+    const session = state.sessions?.[city_url] ?? null;
+    if (session?.user_token) {
+        return {
+            city_url,
+            town_id: session.town_id || DEFAULT_TOWN_ID,
+            has_user_token: true,
+            source: "town-session",
+            user_id: session.user_id,
+            user_label: session.user_label,
+        };
+    }
+    const server = listTownCityServers().find((item) => item.base_url === city_url);
+    return {
+        city_url,
+        town_id: DEFAULT_TOWN_ID,
+        has_user_token: false,
+        source: server?.source === "city-admin"
+            ? "city-admin"
+            : server?.source === "town"
+                ? "town-base"
+                : "default",
+    };
+}
 function emitCityConnectionStatus(options) {
     const state = readTownCityConnectionState();
-    const servers = readCityCliServers();
     if (options?.as_json === true) {
         printResult({
             asJson: true,
@@ -191,42 +292,34 @@ function emitCityConnectionStatus(options) {
             title: "city connection",
             payload: {
                 connection: state,
-                cityCliServers: servers,
+                servers: listTownCityServers(),
             },
-        });
-        return;
-    }
-    if (state.source === "missing") {
-        emitCliBlock({
-            tone: "warning",
-            title: "City connection",
-            summary: "missing",
-            note: "Run `town city connect <url> --user-token <token>` or configure/login with `city`, then run `town city use`.",
         });
         return;
     }
     emitCliBlock({
         tone: state.has_user_token ? "success" : "warning",
         title: "City connection",
-        summary: state.source === "town-env" ? "connected" : "available from city cli",
+        summary: state.has_user_token ? "signed in" : "base selected",
         facts: [
             { label: "url", value: state.city_url },
             { label: "town", value: state.town_id },
             { label: "user token", value: state.has_user_token ? "configured" : "missing" },
             { label: "source", value: state.source },
+            ...(state.user_id ? [{ label: "user", value: state.user_id }] : []),
         ],
-        note: state.source === "city-cli"
-            ? "Run `town city use` to import the active city CLI session into Town runtime env."
-            : undefined,
+        note: state.has_user_token
+            ? undefined
+            : "Run `town city login` to sign in as a City user.",
     });
 }
 function emitCityServerList(options) {
-    const servers = readCityCliServers();
+    const servers = listTownCityServers();
     if (options?.as_json === true) {
         printResult({
             asJson: true,
             success: true,
-            title: "city servers",
+            title: "city bases",
             payload: {
                 count: servers.length,
                 servers,
@@ -234,165 +327,216 @@ function emitCityServerList(options) {
         });
         return;
     }
-    if (servers.length === 0) {
-        emitCliBlock({
-            tone: "info",
-            title: "City servers",
-            summary: "0 configured",
-            note: "Run `city` to add and login to a City server, or use `town city connect <url>` for Town only.",
-        });
-        return;
-    }
     emitCliList({
         tone: "accent",
-        title: "City servers",
-        summary: `${servers.length} configured`,
+        title: "City bases",
+        summary: `${servers.length} available`,
         items: servers.map((server) => ({
-            tone: server.active ? "success" : "info",
+            tone: server.selected ? "success" : "info",
             title: server.name,
             facts: [
                 { label: "url", value: server.base_url },
-                { label: "active", value: server.active ? "yes" : "no" },
+                { label: "selected", value: server.selected ? "yes" : "no" },
+                { label: "source", value: server.source },
                 { label: "user session", value: server.has_user_session ? "yes" : "no" },
-                { label: "town", value: server.town_id || "-" },
+                { label: "admin profile", value: server.has_admin_secret_key ? "yes" : "no" },
             ],
         })),
     });
 }
 async function runCityConnectCommand(params) {
     let city_url = normalizeCityUrl(String(params.url || ""));
-    let town_id = String(params.town_id || "").trim() || DEFAULT_TOWN_ID;
-    let user_token = String(params.user_token || "").trim();
     if (!city_url && process.stdin.isTTY && process.stdout.isTTY) {
-        const response = (await prompts([
-            {
-                type: "text",
-                name: "city_url",
-                message: "City URL",
-            },
-            {
-                type: "text",
-                name: "town_id",
-                message: "Town ID",
-                initial: town_id,
-            },
-            {
-                type: "password",
-                name: "user_token",
-                message: "User token（可选，留空只保存 URL）",
-            },
-        ]));
+        const response = (await prompts({
+            type: "text",
+            name: "city_url",
+            message: "City base URL",
+            initial: DEFAULT_CITY_URL,
+        }));
         city_url = normalizeCityUrl(String(response.city_url || ""));
-        town_id = String(response.town_id || "").trim() || DEFAULT_TOWN_ID;
-        user_token = String(response.user_token || "").trim();
     }
-    if (!city_url) {
-        printResult({
-            asJson: params.as_json === true,
-            success: false,
-            title: "city connect failed",
-            payload: {
-                error: "City URL is required",
-                fix: "town city connect <url> --user-token <token>",
-            },
-        });
-        return;
-    }
-    await writeTownCityConnection({
-        city_url,
-        town_id,
-        ...(user_token ? { user_token } : {}),
-    });
+    if (!city_url)
+        city_url = DEFAULT_CITY_URL;
+    const state = upsertTownProfile(readTownCityState(), { base_url: city_url });
+    writeTownCityState(state);
     printResult({
         asJson: params.as_json === true,
         success: true,
-        title: "city connected",
+        title: "city base connected",
         payload: {
             city_url,
-            town_id,
-            has_user_token: Boolean(user_token),
+            fix: "Run `town city login` to sign in as a user.",
         },
     });
 }
 async function runCityUseCommand(params) {
-    const server = findCityCliServer(params.server);
+    const server = findCityServer(params.server);
     if (!server) {
         printResult({
             asJson: params.as_json === true,
             success: false,
             title: "city use failed",
             payload: {
-                error: "No city CLI server matched the input",
-                fix: "Run `city` to configure a server, or `town city list` to inspect known servers.",
+                error: "No City base matched the input",
+                fix: "Run `town city list` to inspect available bases.",
             },
         });
         return;
     }
-    const session = readCityUserSession(server.base_url);
-    const user_token = readString(session?.user_token);
-    await writeTownCityConnection({
-        city_url: server.base_url,
-        town_id: readString(session?.town_id) || server.town_id || DEFAULT_TOWN_ID,
-        ...(user_token ? { user_token } : {}),
+    const state = upsertTownProfile(readTownCityState(), {
+        base_url: server.base_url,
+        name: server.name,
     });
+    writeTownCityState(state);
     printResult({
         asJson: params.as_json === true,
-        success: Boolean(user_token),
-        title: user_token ? "city session imported" : "city server imported without user token",
+        success: true,
+        title: "city base selected",
         payload: {
             city_url: server.base_url,
-            town_id: readString(session?.town_id) || server.town_id || DEFAULT_TOWN_ID,
-            has_user_token: Boolean(user_token),
-            fix: user_token ? undefined : "Run `city` and login as user, then run `town city use` again.",
+            source: server.source,
+            has_user_session: server.has_user_session,
+            fix: server.has_user_session ? undefined : "Run `town city login` to sign in as a user.",
+        },
+    });
+}
+function saveUserSession(session) {
+    const state = upsertTownProfile(readTownCityState(), {
+        base_url: session.base_url,
+    });
+    const sessions = {
+        ...(state.sessions ?? {}),
+        [session.base_url]: session,
+    };
+    writeTownCityState({
+        ...state,
+        selected_base_url: session.base_url,
+        sessions,
+    });
+}
+async function runCityLoginCommand(params) {
+    if (params.url) {
+        const city_url = normalizeCityUrl(params.url);
+        if (city_url) {
+            writeTownCityState(upsertTownProfile(readTownCityState(), { base_url: city_url }));
+        }
+    }
+    const state = readTownCityState();
+    const city_url = resolveSelectedBaseUrl(state);
+    const town_id = readString(params.town_id) || readCurrentTownCitySession()?.town_id || DEFAULT_TOWN_ID;
+    const session = await performTownCityUserLogin({
+        city_url,
+        town_id,
+    });
+    if (!session) {
+        printResult({
+            asJson: params.as_json === true,
+            success: false,
+            title: "city login cancelled",
+            payload: { city_url },
+        });
+        return;
+    }
+    saveUserSession(session);
+    printResult({
+        asJson: params.as_json === true,
+        success: true,
+        title: "city user signed in",
+        payload: {
+            city_url: session.base_url,
+            town_id: session.town_id,
+            user_id: session.user_id,
+            user_label: session.user_label,
+        },
+    });
+}
+function runCityLogoutCommand(options) {
+    const state = readTownCityState();
+    const city_url = resolveSelectedBaseUrl(state);
+    const sessions = { ...(state.sessions ?? {}) };
+    delete sessions[city_url];
+    writeTownCityState({
+        ...state,
+        sessions,
+    });
+    printResult({
+        asJson: options?.as_json === true,
+        success: true,
+        title: "city user signed out",
+        payload: {
+            city_url,
+        },
+    });
+}
+function runCityDisconnectCommand(options) {
+    const state = readTownCityState();
+    const city_url = resolveSelectedBaseUrl(state);
+    const profiles = (state.profiles ?? []).filter((profile) => profile.base_url !== city_url);
+    const sessions = { ...(state.sessions ?? {}) };
+    delete sessions[city_url];
+    writeTownCityState({
+        ...state,
+        selected_base_url: DEFAULT_CITY_URL,
+        profiles,
+        sessions,
+    });
+    printResult({
+        asJson: options?.as_json === true,
+        success: true,
+        title: "city base disconnected",
+        payload: {
+            removed: city_url,
+            selected: DEFAULT_CITY_URL,
         },
     });
 }
 async function promptCityManagerAction() {
     const state = readTownCityConnectionState();
-    const servers = readCityCliServers();
     const response = (await prompts({
         type: "select",
         name: "action",
-        message: "管理 City 连接",
+        message: "管理 City user 连接",
         choices: [
             {
                 title: "查看连接状态",
-                description: state.source === "missing" ? "当前未连接" : state.city_url,
+                description: state.city_url,
                 value: "status",
             },
             {
-                title: "导入 city CLI 当前会话",
-                description: `${servers.length} 个 city server 可用`,
+                title: "选择 City base",
+                description: "从 Town / city admin / 默认 base 候选中选择",
                 value: "use",
             },
             {
-                title: "手动连接 City",
-                description: "写入 Town runtime 所需的 URL / town_id / user_token",
+                title: "添加 City base",
+                description: "手动写入一个 Town user base",
                 value: "connect",
             },
             {
-                title: "查看 city CLI servers",
-                description: "只读展示，不管理 City 资源",
+                title: "User 登录",
+                description: state.has_user_token ? "重新登录当前 base" : "登录当前 base",
+                value: "login",
+            },
+            {
+                title: "User 登出",
+                description: "清除当前 base 的 Town user session",
+                value: "logout",
+            },
+            {
+                title: "查看可用 base",
+                description: "包含默认 base 与 city admin 已保存 base",
                 value: "list",
             },
             {
-                title: "断开 Town City 连接",
-                description: "删除 Town 平台 env 中的 City 连接项",
-                value: "disconnect",
-            },
-            {
                 title: "退出",
-                description: "关闭 City 连接管理",
+                description: "关闭 City user 连接管理",
                 value: "exit",
             },
         ],
-        initial: state.source === "missing" ? 1 : 0,
+        initial: state.has_user_token ? 0 : 3,
     }));
     return String(response.action || "").trim() || null;
 }
-/**
- * 运行 `town city` 交互式管理器。
- */
 export async function runInteractiveCityManager() {
     if (!process.stdin.isTTY || !process.stdout.isTTY)
         return;
@@ -418,25 +562,42 @@ export async function runInteractiveCityManager() {
             continue;
         }
         if (action === "use") {
-            await runCityUseCommand({});
+            const server = await promptSelectCityBase();
+            if (server)
+                await runCityUseCommand({ server: server.base_url });
             continue;
         }
-        if (action === "disconnect") {
-            clearTownCityConnection();
-            emitCliBlock({
-                tone: "success",
-                title: "City disconnected",
-            });
+        if (action === "login") {
+            await runCityLoginCommand({});
+            continue;
+        }
+        if (action === "logout") {
+            runCityLogoutCommand();
         }
     }
 }
-/**
- * 注册 `town city` 命令组。
- */
+async function promptSelectCityBase() {
+    const servers = listTownCityServers();
+    const response = (await prompts({
+        type: "select",
+        name: "base_url",
+        message: "选择 City base",
+        choices: servers.map((server) => ({
+            title: server.selected ? `* ${server.name}` : server.name,
+            description: `${server.source} · ${server.base_url}`,
+            value: server.base_url,
+        })),
+        initial: Math.max(0, servers.findIndex((server) => server.selected)),
+    }));
+    const base_url = readString(response.base_url);
+    if (!base_url)
+        return null;
+    return servers.find((server) => server.base_url === base_url) ?? null;
+}
 export function registerCityConnectionCommand(program) {
     const city = program
         .command("city")
-        .description("连接 City：只管理 Town 到 City 的连接上下文，不配置 City 模型或服务资源")
+        .description("管理 Town 的 City user 连接与登录态")
         .helpOption("--help", "display help for command")
         .action(async () => {
         if (!process.stdin.isTTY || !process.stdout.isTTY) {
@@ -447,35 +608,31 @@ export function registerCityConnectionCommand(program) {
     });
     city
         .command("status")
-        .description("查看 Town 当前 City 连接状态")
+        .description("查看 Town 当前 City user 连接状态")
         .option("--json [enabled]", "以 JSON 输出", parseBoolean)
         .action((options) => {
         emitCityConnectionStatus({ as_json: options.json === true });
     });
     city
         .command("list")
-        .description("列出 city CLI 已保存的 server")
+        .description("列出 Town 可选择的 City base")
         .option("--json [enabled]", "以 JSON 输出", parseBoolean)
         .action((options) => {
         emitCityServerList({ as_json: options.json === true });
     });
     city
         .command("connect [url]")
-        .description("手动连接 City，并写入 Town runtime 使用的平台 env")
-        .option("--town-id <townId>", "City town id", DEFAULT_TOWN_ID)
-        .option("--user-token <token>", "City user token")
+        .description("手动添加并选择一个 City base（默认 base.downcity.ai）")
         .option("--json [enabled]", "以 JSON 输出", parseBoolean)
         .action(async (url, options) => {
         await runCityConnectCommand({
             url,
-            town_id: options.townId,
-            user_token: options.userToken,
             as_json: options.json === true,
         });
     });
     city
         .command("use [server]")
-        .description("从 city CLI 当前或指定 server 导入连接与 user session")
+        .description("选择一个 City base；可使用 Town 本地或 city admin 已保存 base")
         .option("--json [enabled]", "以 JSON 输出", parseBoolean)
         .action(async (server, options) => {
         await runCityUseCommand({
@@ -484,19 +641,30 @@ export function registerCityConnectionCommand(program) {
         });
     });
     city
-        .command("disconnect")
-        .description("删除 Town 平台 env 中的 City 连接项")
+        .command("login [url]")
+        .description("以 user 身份登录当前或指定 City base")
+        .option("--town-id <townId>", "City town id", DEFAULT_TOWN_ID)
+        .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+        .action(async (url, options) => {
+        await runCityLoginCommand({
+            url,
+            town_id: options.townId,
+            as_json: options.json === true,
+        });
+    });
+    city
+        .command("logout")
+        .description("清除当前 City base 的 Town user session")
         .option("--json [enabled]", "以 JSON 输出", parseBoolean)
         .action((options) => {
-        clearTownCityConnection();
-        printResult({
-            asJson: options.json === true,
-            success: true,
-            title: "city disconnected",
-            payload: {
-                removed: [...CITY_ENV_KEYS],
-            },
-        });
+        runCityLogoutCommand({ as_json: options.json === true });
+    });
+    city
+        .command("disconnect")
+        .description("移除当前 Town City base 选择并回到默认 base")
+        .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+        .action((options) => {
+        runCityDisconnectCommand({ as_json: options.json === true });
     });
 }
 //# sourceMappingURL=CityConnection.js.map

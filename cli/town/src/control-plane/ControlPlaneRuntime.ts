@@ -24,7 +24,7 @@ import {
   signalDetachedProcess,
   sweepDetachedBayProcesses,
 } from "@/process/registry/ProcessSweep.js";
-import { createControlGateway } from "@/control/ControlGateway.js";
+import { createControlGateway } from "@/town/gateway/ControlGateway.js";
 import type {
   ControlPlaneRuntimeMeta,
   ControlPlaneRuntimeStatus,

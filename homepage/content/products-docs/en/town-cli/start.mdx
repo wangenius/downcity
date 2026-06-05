@@ -11,6 +11,8 @@ Startup initializes the Town runtime registry and process state.
 If no local token exists yet, startup automatically creates a `console-bootstrap` token and prints the plain token once in startup output.
 Startup also tries to discover the machine's public IP and saves it to City-side Env as `DOWNCITY_PUBLIC_HOST`. Later, agent `contact link` generation prefers this address so link codes do not fall back to `127.0.0.1`.
 
+In an interactive terminal, running bare `town` also opens the Town manager, where you can start, stop, restart, and inspect Town without typing the subcommands manually.
+
 If you also want to start Console in one step, use `town start --console`, `town start -a`, or `town start -p`.
 If you pass `-p/--public` or `-h/--host`, the CLI also starts Console automatically.
 If you previously enabled persisted public mode with [`town public`](/en/products-docs/town-cli/public), plain `town start` also reuses that saved Console binding unless you override it explicitly.

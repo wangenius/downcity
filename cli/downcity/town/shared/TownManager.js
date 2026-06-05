@@ -8,6 +8,7 @@
 import prompts from "prompts";
 import { gatewayStatusCommand } from "../town/gateway/runtime/GatewayStatus.js";
 import { startGatewayRuntimeCommand } from "../town/gateway/runtime/GatewayRuntime.js";
+import { restartTownRuntimeCommand, startTownRuntimeCommand, stopTownRuntimeCommand, } from "../town/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { runInteractiveChatManager } from "./ChatManager.js";
@@ -23,6 +24,21 @@ async function promptTownHomeAction() {
                 title: "查看总览",
                 description: "Town runtime、Console、受管 Agent 状态",
                 value: "status",
+            },
+            {
+                title: "启动 Town",
+                description: "启动 Town runtime，不自动打开 Console",
+                value: "start",
+            },
+            {
+                title: "停止 Town",
+                description: "停止 Console、Town runtime 与受管 Agent",
+                value: "stop",
+            },
+            {
+                title: "重启 Town",
+                description: "重启 runtime，并恢复此前运行中的受管 Agent",
+                value: "restart",
             },
             {
                 title: "连接 City",
@@ -84,6 +100,18 @@ export async function runInteractiveTownManager(params) {
         try {
             if (action === "status") {
                 await gatewayStatusCommand();
+                continue;
+            }
+            if (action === "start") {
+                await startTownRuntimeCommand(params.cli_path);
+                continue;
+            }
+            if (action === "stop") {
+                await stopTownRuntimeCommand();
+                continue;
+            }
+            if (action === "restart") {
+                await restartTownRuntimeCommand(params.cli_path);
                 continue;
             }
             if (action === "city") {

@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 平台控制面的 plugin 面板首先展示“已注册的内建 plugin 清单”，不应因为 agent 短暂不可用而整块消失。
  * - 当目标 agent 可访问时，再叠加 plugin list + availability，补齐启用态、依赖缺失等动态信息。
- * - 这样能同时满足“架构上 plugin 属于 main/package 注册信息”和“可用性属于 agent 状态”两层语义。
+ * - Town 只展示 catalog 并转发显式 action；plugin 运行态归属于具体 agent。
  */
 import type { Hono } from "hono";
 import type { PlatformAgentOption } from "@downcity/agent";

@@ -4,11 +4,10 @@
  * 关键点（中文）
  * - 平台控制面的 plugin 面板首先展示“已注册的内建 plugin 清单”，不应因为 agent 短暂不可用而整块消失。
  * - 当目标 agent 可访问时，再叠加 plugin list + availability，补齐启用态、依赖缺失等动态信息。
- * - 这样能同时满足“架构上 plugin 属于 main/package 注册信息”和“可用性属于 agent 状态”两层语义。
+ * - Town 只展示 catalog 并转发显式 action；plugin 运行态归属于具体 agent。
  */
 import { findPluginByName, listPluginViews, parseActionScheduleRunAtMsOrThrow, runLocalPluginAction, } from "@downcity/agent";
-import { createBuiltinPlugins } from "@downcity/plugins";
-import { isTownPluginEnabled, setTownPluginEnabled, } from "../../PluginLifecycle.js";
+import { CHAT_AUTHORIZATION_PLUGIN_NAME, createBuiltinPlugins, } from "@downcity/plugins";
 function getErrorMessage(error) {
     if (error instanceof Error) {
         return error.message || String(error);
@@ -17,6 +16,12 @@ function getErrorMessage(error) {
 }
 function createPluginCatalog() {
     return createBuiltinPlugins();
+}
+function isVisibleCatalogPlugin(pluginName) {
+    return pluginName !== CHAT_AUTHORIZATION_PLUGIN_NAME;
+}
+function createVisiblePluginCatalog() {
+    return createPluginCatalog().filter((plugin) => isVisibleCatalogPlugin(plugin.name));
 }
 function isJsonRecord(value) {
     return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -54,7 +59,7 @@ function buildPluginActionConfig(plugin) {
         .sort((a, b) => a.name.localeCompare(b.name));
 }
 function buildPluginConfigMap() {
-    const plugins = createPluginCatalog();
+    const plugins = createVisiblePluginCatalog();
     return new Map(listPluginViews(plugins).map((view) => {
         const plugin = findPluginByName(plugins, view.name);
         return [
@@ -68,7 +73,7 @@ function buildPluginConfigMap() {
     }));
 }
 function buildGlobalPluginConfigMap() {
-    const plugins = createPluginCatalog();
+    const plugins = createVisiblePluginCatalog();
     return new Map(listPluginViews(plugins).map((view) => {
         const plugin = findPluginByName(plugins, view.name);
         return [
@@ -85,10 +90,11 @@ function buildGlobalPluginPayload() {
     return {
         success: true,
         runtimeConnected: false,
-        plugins: listPluginViews(createPluginCatalog()).map((view) => ({
+        plugins: listPluginViews(createVisiblePluginCatalog()).map((view) => ({
             ...view,
+            state: "available",
             availability: {
-                enabled: isTownPluginEnabled(view.name),
+                enabled: true,
                 available: true,
                 reasons: [],
             },
@@ -105,10 +111,11 @@ function buildAgentPluginPayload(params) {
         success: true,
         runtimeConnected: params?.runtimeConnected === true,
         ...(reason ? { runtimeError: reason } : {}),
-        plugins: listPluginViews(createPluginCatalog()).map((view) => ({
+        plugins: listPluginViews(createVisiblePluginCatalog()).map((view) => ({
             ...view,
+            state: "available",
             availability: {
-                enabled: isTownPluginEnabled(view.name),
+                enabled: true,
                 available: false,
                 reasons: reason
                     ? [`Agent runtime unavailable: ${reason}`]
@@ -127,6 +134,7 @@ async function buildAgentPluginPayloadFromRuntime(selectedAgent, agentRpcPool) {
     }
     const configMap = buildPluginConfigMap();
     const pluginViews = (await client.list_internal_plugin_catalog())
+        .filter((view) => isVisibleCatalogPlugin(view.name))
         .sort((a, b) => a.name.localeCompare(b.name));
     const plugins = await Promise.all(pluginViews.map(async (view) => {
         return {
@@ -156,21 +164,10 @@ async function runGlobalPluginAction(input) {
         };
     }
     if (actionName === "on" || actionName === "off") {
-        if (plugin.name === "auth") {
-            return {
-                success: false,
-                error: `Plugin "${plugin.name}" cannot be disabled globally`,
-                message: `Plugin "${plugin.name}" cannot be disabled globally`,
-            };
-        }
-        setTownPluginEnabled(plugin.name, actionName === "on");
         return {
-            success: true,
-            message: `Plugin "${plugin.name}" ${actionName === "on" ? "enabled" : "disabled"} in town config`,
-            data: {
-                pluginName: plugin.name,
-                enabled: actionName === "on",
-            },
+            success: false,
+            error: `Plugin "${plugin.name}" ${actionName} requires a selected agent`,
+            message: `Plugin "${plugin.name}" ${actionName} requires a selected agent`,
         };
     }
     const projectRoot = String(input.projectRoot || "").trim();

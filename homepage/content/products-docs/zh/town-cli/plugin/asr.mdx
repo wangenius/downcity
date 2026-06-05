@@ -11,7 +11,7 @@ description: 管理内置 asr plugin 与其转写配置
 
 ## 它负责什么
 
-- 启用或关闭 city 级 asr plugin
+- 启用或关闭当前 agent 项目的 asr plugin
 - 管理 asr 的转写配置
 - 切换当前转写模型
 - 转写本地音频文件
@@ -34,7 +34,7 @@ town asr transcribe ./demo.ogg
 
 ## 说明
 
-- `town asr on` 会在一步里完成“切换 city 级 plugin 启用态 + 可选安装转写依赖”。
+- `town asr on` 会在一步里更新当前 agent 项目的 ASR plugin 配置，并可选安装转写依赖。
 - Console UI 的 `Plugins -> asr` 卡片里也提供了依赖修复台，可以直接读取状态、下载模型、切换当前模型，并填写 Python / models 目录等配置。
 - asr plugin 会接入 `chat` runtime 的语音扩展点，Telegram / QQ 的语音消息会通过这些点完成转写与正文增强。
 - agent 侧的 ASR 参数会持久化到项目 `downcity.json` 的 `plugins.asr`。

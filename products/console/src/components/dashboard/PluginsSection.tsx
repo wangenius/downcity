@@ -11,7 +11,6 @@ import * as React from "react"
 import {
   ChevronDownIcon,
   Loader2Icon,
-  PowerIcon,
   RefreshCcwIcon,
   SearchIcon,
   Settings2Icon,
@@ -30,7 +29,6 @@ import {
 } from "@downcity/ui"
 import { DashboardModule } from "./DashboardModule"
 import { ConfigFieldEditor } from "./ConfigFieldEditor"
-import { useConfirmDialog } from "../ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import type { UiPluginRuntimeItem } from "../../types/Dashboard"
 import {
@@ -58,7 +56,6 @@ export function PluginsSection(props: PluginsSectionProps) {
   const { scope, plugins, onRunAction } = props
   const hasRunningAgent = scope === "agent" ? props.hasRunningAgent : false
   const selectedAgentProjectId = scope === "agent" ? props.selectedAgentProjectId : undefined
-  const confirm = useConfirmDialog()
   const [search, setSearch] = React.useState("")
   const [pendingActions, setPendingActions] = React.useState<Record<string, PendingActionKind | null>>({})
   const [enabledOverrides, setEnabledOverrides] = React.useState<Record<string, boolean | undefined>>({})
@@ -102,17 +99,28 @@ export function PluginsSection(props: PluginsSectionProps) {
   }, [plugins, search])
 
   const summary = React.useMemo(() => {
-    let enabled = 0
-    let disabled = 0
+    if (scope === "global") {
       let attention = 0
       for (const item of filtered) {
-        const mode = getSnapshotMode(item)
-        if (mode === "enabled") enabled += 1
-        else if (mode === "disabled") disabled += 1
-        else attention += 1
+        if (getSnapshotMode(item) === "attention") attention += 1
       }
-      return { enabled, disabled, attention }
-    }, [filtered])
+      return {
+        catalog: filtered.length,
+        attention,
+      }
+    }
+
+    let enabled = 0
+    let disabled = 0
+    let attention = 0
+    for (const item of filtered) {
+      const mode = getSnapshotMode(item)
+      if (mode === "enabled") enabled += 1
+      else if (mode === "disabled") disabled += 1
+      else attention += 1
+    }
+    return { enabled, disabled, attention }
+  }, [filtered, scope])
 
   const installerPlugin = React.useMemo(
     () => plugins.find((item) => String(item.name || "").trim() === installerPluginName) || null,
@@ -368,7 +376,11 @@ export function PluginsSection(props: PluginsSectionProps) {
     <>
       <DashboardModule
         title="Plugins"
-        description={`enabled ${summary.enabled} · disabled ${summary.disabled}${summary.attention > 0 ? ` · attention ${summary.attention}` : ""}`}
+        description={
+          scope === "global"
+            ? `catalog ${summary.catalog}${summary.attention > 0 ? ` · attention ${summary.attention}` : ""}`
+            : `enabled ${summary.enabled} · disabled ${summary.disabled}${summary.attention > 0 ? ` · attention ${summary.attention}` : ""}`
+        }
         bodyClassName="min-h-0 overflow-y-auto"
         actions={
           <div className="relative w-[220px]">
@@ -413,9 +425,6 @@ export function PluginsSection(props: PluginsSectionProps) {
               const usageOptionsLoading = pending === "usageOptions"
               const canRunStatus = hasAction(actionItems, "status")
               const canRunDoctor = hasAction(actionItems, "doctor")
-              const canRunOn = hasAction(actionItems, "on")
-              const canRunOff = hasAction(actionItems, "off")
-              const canToggle = canRunOn || canRunOff
               const tone = getCardTone(
                 effectiveEnabled
                   ? snapshotMode === "attention"
@@ -500,33 +509,6 @@ export function PluginsSection(props: PluginsSectionProps) {
                           disabled={toggleLoading || doctorLoading || setupLoading || setupOptionsLoading || usageLoading || usageOptionsLoading}
                           onClick={() => {
                             void executeAction(name, "status", "status")
-                          }}
-                        />
-                      ) : null}
-
-                      {scope === "global" && canToggle ? (
-                        <ToolAction
-                          icon={<PowerIcon className="size-3.5" />}
-                          label={effectiveEnabled ? "停用" : "启用"}
-                          loading={toggleLoading}
-                          disabled={statusLoading || doctorLoading || setupLoading || setupOptionsLoading || usageLoading || usageOptionsLoading}
-                          tone={effectiveEnabled ? "danger" : "default"}
-                          onClick={() => {
-                            const nextAction = effectiveEnabled ? "off" : "on"
-                            if (nextAction === "off") {
-                              void (async () => {
-                                const confirmed = await confirm({
-                                  title: "关闭 Plugin",
-                                  description: `确认关闭 "${name}"？`,
-                                  confirmText: "关闭",
-                                  confirmVariant: "destructive",
-                                })
-                                if (!confirmed) return
-                                await executeAction(name, "toggle", "off")
-                              })()
-                              return
-                            }
-                            void executeAction(name, "toggle", "on")
                           }}
                         />
                       ) : null}

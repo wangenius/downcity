@@ -82,7 +82,7 @@ export const SERVER_AUTH_ROUTE_POLICIES = [
 /**
  * 控制面网关侧路由权限矩阵。
  */
-export const CONTROL_PLANE_AUTH_ROUTE_POLICIES = [
+export const GATEWAY_AUTH_ROUTE_POLICIES = [
     { path: "/api/auth/*", method: "*", requireAuth: false },
     { path: "/health", method: "GET", requireAuth: false },
     {

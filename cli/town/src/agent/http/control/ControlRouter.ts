@@ -8,7 +8,7 @@
  *
  * 命名说明（中文）
  * - 这里的 control 指“单 agent 控制域”。
- * - 它不是 city 的 gateway / control plane。
+ * - 它不是 city 的 gateway。
  * - 当前公开路径统一使用 `/api/control/*`。
  */
 

@@ -7,7 +7,7 @@
  * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
  */
 import { Command } from "commander";
-import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot } from "../control-plane/ControlPlaneProcess.js";
+import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot } from "../town/gateway/runtime/GatewayProcess.js";
 /**
  * top-level town/gateway 命令注册参数。
  */
@@ -21,7 +21,7 @@ export interface GatewayCommandRegistrationContext {
  * 注册 top-level town 生命周期命令与 `console` 模块命令。
  *
  * 语义说明（中文）
- * - `town ...` / `town console ...` 管的是本机宿主与平台控制面进程。
+ * - `town ...` / `town console ...` 管的是本机宿主与 Town gateway 进程。
  * - 单 agent 控制能力统一由 Town 基于 Agent runtime / RPC 装配外层协议面。
  */
 export declare function registerGatewayCommands(program: Command, context: GatewayCommandRegistrationContext): void;

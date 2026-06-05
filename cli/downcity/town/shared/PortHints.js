@@ -6,7 +6,7 @@
  * - 这里只输出“用户该怎么理解端口”，不参与任何监听或分配逻辑。
  */
 export const DEFAULT_RUNTIME_API_PORT = 5314;
-export const DEFAULT_CONTROL_PLANE_UI_PORT = 5315;
+export const DEFAULT_GATEWAY_UI_PORT = 5315;
 /**
  * 生成 town runtime 启动提示。
  */
@@ -23,15 +23,15 @@ export function buildRuntimePortFacts() {
     ];
 }
 /**
- * 生成 control plane 启动提示。
+ * 生成 gateway 启动提示。
  */
-export function buildControlPlanePortFacts(url, options) {
-    return buildControlPlanePortFactsWithOptions(url, options);
+export function buildGatewayPortFacts(url, options) {
+    return buildGatewayPortFactsWithOptions(url, options);
 }
 /**
- * 生成 control plane 启动提示。
+ * 生成 gateway 启动提示。
  */
-export function buildControlPlanePortFactsWithOptions(url, options) {
+export function buildGatewayPortFactsWithOptions(url, options) {
     return [
         {
             label: "URL",
@@ -47,11 +47,11 @@ export function buildControlPlanePortFactsWithOptions(url, options) {
             : []),
         {
             label: "Port",
-            value: String(DEFAULT_CONTROL_PLANE_UI_PORT),
+            value: String(DEFAULT_GATEWAY_UI_PORT),
         },
         {
             label: "Usage",
-            value: "Console Web UI / control plane",
+            value: "Console Web UI / gateway",
         },
     ];
 }

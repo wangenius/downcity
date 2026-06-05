@@ -47,7 +47,7 @@ export type CliReportBlock = {
      * 当前区块的主标题。
      *
      * 说明（中文）
-     * - 应直接表达当前步骤结果，例如 `Control plane started`。
+     * - 应直接表达当前步骤结果，例如 `Gateway started`。
      * - 保持简短，避免与 facts 重复。
      */
     title: string;

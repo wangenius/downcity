@@ -9,27 +9,27 @@
 
 import { Command, Option } from "commander";
 import {
-  getControlPlaneRuntimeStatus,
-  restartControlPlaneCommand,
-  runControlPlaneRuntimeCommand,
-  startControlPlaneCommand,
-  stopControlPlaneCommand,
-} from "../control-plane/ControlPlaneRuntime.js";
+  getGatewayRuntimeStatus,
+  restartGatewayRuntimeCommand,
+  runGatewayRuntimeCommand,
+  startGatewayRuntimeCommand,
+  stopGatewayRuntimeCommand,
+} from "../town/gateway/runtime/GatewayRuntime.js";
 import {
-  controlPlanePublicCommand,
-} from "../control-plane/ControlPlanePublicManager.js";
+  gatewayPublicCommand,
+} from "../town/gateway/runtime/GatewayPublicManager.js";
 import { registerConfigCommand } from "./ConfigCommand.js";
 import { registerEnvCommand } from "./EnvCommand.js";
 import { registerTokenCommand } from "./TokenCommand.js";
 import { registerCityConnectionCommand } from "./CityCommand.js";
-import { controlPlaneInitCommand } from "../control-plane/ControlPlaneInit.js";
+import { gatewayInitCommand } from "../town/gateway/runtime/GatewayInit.js";
 import { parseBoolean, parsePort, createVersionBanner } from "../shared/IndexSupport.js";
 import { CliError } from "../shared/CliError.js";
 import { updateCommand } from "../shared/Update.js";
 import {
-  controlPlaneStatusCommand,
-  printControlPlaneStatusPanel,
-} from "../control-plane/ControlPlaneStatus.js";
+  gatewayStatusCommand,
+  printGatewayStatusPanel,
+} from "../town/gateway/runtime/GatewayStatus.js";
 import {
   prepareForegroundAgent,
   ensureRegisteredAgentProjectRoot,
@@ -37,10 +37,10 @@ import {
   runTownRuntimeCommand,
   startTownRuntimeCommand,
   stopTownRuntimeCommand,
-} from "../control-plane/ControlPlaneProcess.js";
+} from "../town/gateway/runtime/GatewayProcess.js";
 import {
-  shouldAutoStartControlPlaneFromPersistedMode,
-} from "../control-plane/ControlPlanePublicMode.js";
+  shouldAutoStartGatewayFromPersistedMode,
+} from "../town/gateway/runtime/GatewayPublicMode.js";
 
 /**
  * top-level town/gateway 命令注册参数。
@@ -56,7 +56,7 @@ export interface GatewayCommandRegistrationContext {
  * 注册 top-level town 生命周期命令与 `console` 模块命令。
  *
  * 语义说明（中文）
- * - `town ...` / `town console ...` 管的是本机宿主与平台控制面进程。
+ * - `town ...` / `town console ...` 管的是本机宿主与 Town gateway 进程。
  * - 单 agent 控制能力统一由 Town 基于 Agent runtime / RPC 装配外层协议面。
  */
 export function registerGatewayCommands(
@@ -68,7 +68,7 @@ export function registerGatewayCommands(
     .description("初始化 Town 全局配置（插件、env、账号等，写入 ~/.downcity/downcity.db）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
-      await controlPlaneInitCommand();
+      await gatewayInitCommand();
     }));
 
   program
@@ -96,10 +96,10 @@ export function registerGatewayCommands(
         options?.console === true ||
         options?.public === true ||
         hasExplicitHost ||
-        (!hasExplicitPublic && (await shouldAutoStartControlPlaneFromPersistedMode()));
+        (!hasExplicitPublic && (await shouldAutoStartGatewayFromPersistedMode()));
       await startTownRuntimeCommand(context.cliPath);
       if (shouldStartConsole) {
-        await startControlPlaneCommand({
+        await startGatewayRuntimeCommand({
           options: {
             public: options?.public,
             host: options?.host,
@@ -123,7 +123,7 @@ export function registerGatewayCommands(
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
       await restartTownRuntimeCommand(context.cliPath);
-      await startControlPlaneCommand({
+      await startGatewayRuntimeCommand({
         cliPath: context.cliPath,
       });
     }));
@@ -133,7 +133,7 @@ export function registerGatewayCommands(
     .description("查看 town 后台、Console 与已托管 agent 运行状态")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async () => {
-      await controlPlaneStatusCommand();
+      await gatewayStatusCommand();
     }));
 
   program
@@ -147,7 +147,7 @@ export function registerGatewayCommands(
       command: Command,
     ) => {
       const options = command.opts<{ host?: string }>();
-      await controlPlanePublicCommand({
+      await gatewayPublicCommand({
         action,
         host: options.host,
         cliPath: context.cliPath,
@@ -183,9 +183,9 @@ export function registerGatewayCommands(
 
   const consoleCommand = program
     .command("console [action]")
-    .description("管理控制面模块（命令名保留为 console；start/stop/restart/status，默认 start）")
-    .option("-p, --public [enabled]", "以公网模式启动控制面（绑定 0.0.0.0）", parseBoolean)
-    .option("-h, --host <host>", "控制面主机（默认 127.0.0.1）")
+    .description("管理 Town gateway（命令名保留为 console；start/stop/restart/status，默认 start）")
+    .option("-p, --public [enabled]", "以公网模式启动 Town gateway（绑定 0.0.0.0）", parseBoolean)
+    .option("-h, --host <host>", "Town gateway 主机（默认 127.0.0.1）")
     .addOption(new Option("--port <port>").argParser(parsePort).hideHelp())
     .helpOption("--help", "display help for command");
 
@@ -201,30 +201,30 @@ export function registerGatewayCommands(
           const options = command.opts<{ public?: boolean; host?: string; port?: number }>();
           const resolvedAction = String(action || "start").trim().toLowerCase();
           if (resolvedAction === "start") {
-            await startControlPlaneCommand({
+            await startGatewayRuntimeCommand({
               options,
               cliPath: context.cliPath,
             });
             return;
           }
           if (resolvedAction === "run") {
-            await runControlPlaneRuntimeCommand(options);
+            await runGatewayRuntimeCommand(options);
             return;
           }
           if (resolvedAction === "stop") {
-            await stopControlPlaneCommand();
+            await stopGatewayRuntimeCommand();
             return;
           }
           if (resolvedAction === "restart") {
-            await restartControlPlaneCommand({
+            await restartGatewayRuntimeCommand({
               options,
               cliPath: context.cliPath,
             });
             return;
           }
           if (resolvedAction === "status") {
-            const status = await getControlPlaneRuntimeStatus();
-            printControlPlaneStatusPanel(status);
+            const status = await getGatewayRuntimeStatus();
+            printGatewayStatusPanel(status);
             return;
           }
           throw new CliError({

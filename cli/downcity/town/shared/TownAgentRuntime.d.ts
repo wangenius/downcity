@@ -2,7 +2,7 @@
  * Town Agent runtime 辅助模块。
  *
  * 关键点（中文）
- * - Town 负责本机 Agent 宿主能力，不能再从 City control-plane 源码导入 helper。
+ * - Town 负责本机 Agent 宿主能力，不能再从 City gateway 源码导入 helper。
  * - 这里只保留 Town 启动/列表/前台运行需要的最小运行态逻辑。
  * - City 管理命令仍通过 `city` 入口负责。
  */

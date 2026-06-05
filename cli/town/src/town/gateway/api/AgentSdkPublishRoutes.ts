@@ -294,7 +294,7 @@ export function registerAgentSdkPublishRoutes(params: {
 
   return {
     async close(): Promise<void> {
-      // 关键点（中文）：RPC 连接由 ControlGateway 的 AgentRpcPool 统一关闭。
+      // 关键点（中文）：RPC 连接由 GatewayServer 的 AgentRpcPool 统一关闭。
     },
   };
 }

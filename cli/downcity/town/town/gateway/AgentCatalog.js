@@ -12,7 +12,7 @@ import { getDaemonLogPath, getDaemonMetaPath, isProcessAlive, readDaemonPid, } f
 import { getProfileMdPath, getDowncityJsonPath, getDowncitySchemaPath, getSoulMdPath, getDowncityMemoryLongTermPath, } from "../../config/Paths.js";
 import { isAgentProjectInitialized } from "@downcity/agent";
 import { listManagedAgentEntries } from "../../process/registry/TownRegistry.js";
-import { getManagedAgentRegistryPath, getTownPidPath, getControlPlanePidPath, getPlatformStoreDbPath, } from "../../process/registry/TownPaths.js";
+import { getManagedAgentRegistryPath, getTownPidPath, getGatewayPidPath, getPlatformStoreDbPath, } from "../../process/registry/TownPaths.js";
 import { listCityAiServiceModelsForUser } from "../city-model/CityAiServiceBinding.js";
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 const DEFAULT_RUNTIME_PORT = 5314;
@@ -424,7 +424,7 @@ export async function buildPlatformConfigStatusResponse(params) {
             key: "control_plane_pid",
             scope: "platform",
             label: "Control Plane PID",
-            filePath: getControlPlanePidPath(),
+            filePath: getGatewayPidPath(),
         }),
         readPlatformConfigFileStatus({
             key: "ui_pid",

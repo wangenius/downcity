@@ -27,7 +27,7 @@ import { listManagedAgentEntries } from "../../process/registry/TownRegistry.js"
 import {
   getManagedAgentRegistryPath,
   getTownPidPath,
-  getControlPlanePidPath,
+  getGatewayPidPath,
   getPlatformStoreDbPath,
 } from "../../process/registry/TownPaths.js";
 import type {
@@ -566,7 +566,7 @@ export async function buildPlatformConfigStatusResponse(params: {
       key: "control_plane_pid",
       scope: "platform",
       label: "Control Plane PID",
-      filePath: getControlPlanePidPath(),
+      filePath: getGatewayPidPath(),
     }),
     readPlatformConfigFileStatus({
       key: "ui_pid",

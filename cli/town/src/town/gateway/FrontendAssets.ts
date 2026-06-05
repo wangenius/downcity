@@ -1,5 +1,5 @@
 /**
- * control plane 前端静态资源服务辅助。
+ * gateway 前端静态资源服务辅助。
  *
  * 关键点（中文）
  * - 统一处理静态文件 Content-Type 与 SPA fallback。
@@ -13,7 +13,7 @@ import path from "node:path";
 /**
  * 根据路径推断静态资源 MIME。
  */
-export function resolveControlPlaneContentType(filePath: string): string {
+export function resolveGatewayContentType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === ".html") return "text/html; charset=utf-8";
   if (ext === ".css") return "text/css; charset=utf-8";
@@ -33,9 +33,9 @@ export function resolveControlPlaneContentType(filePath: string): string {
 }
 
 /**
- * 返回 control plane 前端文件或 SPA fallback。
+ * 返回 gateway 前端文件或 SPA fallback。
  */
-export async function serveControlPlaneFrontendPath(params: {
+export async function serveGatewayFrontendPath(params: {
   context: Context;
   publicDir: string;
   requestPath: string;
@@ -56,7 +56,7 @@ export async function serveControlPlaneFrontendPath(params: {
     if (stat.isFile()) {
       const content = await fs.readFile(candidatePath);
       return params.context.body(content, 200, {
-        "Content-Type": resolveControlPlaneContentType(candidatePath),
+        "Content-Type": resolveGatewayContentType(candidatePath),
         "Cache-Control": safePath.startsWith("assets/")
           ? "public, max-age=31536000, immutable"
           : "no-cache",
@@ -67,7 +67,7 @@ export async function serveControlPlaneFrontendPath(params: {
   const indexPath = path.join(params.publicDir, "index.html");
   if (!(await fs.pathExists(indexPath))) {
     return params.context.text(
-      "Control plane frontend not found. Build control plane first.",
+      "Gateway frontend not found. Build gateway first.",
       503,
     );
   }

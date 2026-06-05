@@ -2,7 +2,7 @@
  * PlatformApiRoutes：平台控制面 API 路由注册。
  *
  * 关键点（中文）
- * - 路由注册从 `ControlGateway` 宿主类中拆出，避免网关门面继续膨胀。
+ * - 路由注册从 `GatewayServer` 宿主类中拆出，避免网关门面继续膨胀。
  * - 这里不持有状态，只消费宿主提供的 handlers。
  */
 import type { Hono, Context } from "hono";

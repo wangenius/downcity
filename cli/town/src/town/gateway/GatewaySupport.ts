@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 提供与路由层正交的纯文本/纯 payload 组装能力。
- * - 让 `ControlGateway` 与 route 注册模块不再重复拼接阻塞文案。
+ * - 让 `GatewayServer` 与 route 注册模块不再重复拼接阻塞文案。
  */
 
 /**

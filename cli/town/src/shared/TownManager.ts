@@ -7,8 +7,8 @@
  */
 
 import prompts from "prompts";
-import { controlPlaneStatusCommand } from "../control-plane/ControlPlaneStatus.js";
-import { startControlPlaneCommand } from "../control-plane/ControlPlaneRuntime.js";
+import { gatewayStatusCommand } from "../town/gateway/runtime/GatewayStatus.js";
+import { startGatewayRuntimeCommand } from "../town/gateway/runtime/GatewayRuntime.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { runInteractiveChatManager } from "./ChatManager.js";
@@ -114,7 +114,7 @@ export async function runInteractiveTownManager(params: {
 
     try {
       if (action === "status") {
-        await controlPlaneStatusCommand();
+        await gatewayStatusCommand();
         continue;
       }
       if (action === "city") {
@@ -134,7 +134,7 @@ export async function runInteractiveTownManager(params: {
         continue;
       }
       if (action === "console") {
-        await startControlPlaneCommand({
+        await startGatewayRuntimeCommand({
           cliPath: params.cli_path,
         });
         continue;

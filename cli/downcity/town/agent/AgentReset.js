@@ -98,11 +98,11 @@ export async function agentResetCommand(cwd = ".") {
     });
     // 关键点（中文）：检测控制面是否运行，决定能否即时重启。
     const { isTownRunning } = await import("../process/registry/TownRuntime.js");
-    const controlPlaneRunning = await isTownRunning();
-    if (!controlPlaneRunning) {
+    const gatewayRunning = await isTownRunning();
+    if (!gatewayRunning) {
         emitCliBlock({
             tone: "warning",
-            title: "Control plane is not running",
+            title: "Gateway is not running",
             note: "请先启动控制面再重启 agent",
             facts: [
                 { label: "step 1", value: "town start" },

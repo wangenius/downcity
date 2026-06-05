@@ -16,7 +16,7 @@ export declare const SERVER_AUTH_ROUTE_POLICIES: AuthRoutePolicy[];
 /**
  * 控制面网关侧路由权限矩阵。
  */
-export declare const CONTROL_PLANE_AUTH_ROUTE_POLICIES: AuthRoutePolicy[];
+export declare const GATEWAY_AUTH_ROUTE_POLICIES: AuthRoutePolicy[];
 /**
  * 根据路径与方法解析匹配的策略。
  */

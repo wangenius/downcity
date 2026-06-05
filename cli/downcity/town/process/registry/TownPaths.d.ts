@@ -1,10 +1,10 @@
 /**
- * TownPaths：Town 全局运行态与 control plane 共享的路径规则。
+ * TownPaths：Town 全局运行态与 gateway 共享的路径规则。
  *
  * 关键点（中文）
  * - Downcity 的全局根目录固定在用户目录 `~/.downcity/`。
  * - `~/.downcity/downcity.db`：全局 SQLite 数据库，保存平台级配置。
- * - `~/.downcity/main/*`：town 后台与 control plane 共享的运行文件目录。
+ * - `~/.downcity/main/*`：town 后台与 gateway 共享的运行文件目录。
  * - 这里定义的是“全局路径约定”，不是单个 agent 项目的 `.downcity/` 路径。
  */
 /**
@@ -35,17 +35,17 @@ export declare function getTownPidPath(): string;
  */
 export declare function getTownLogPath(): string;
 /**
- * control plane pid 文件路径。
+ * gateway pid 文件路径。
  */
-export declare function getControlPlanePidPath(): string;
+export declare function getGatewayPidPath(): string;
 /**
- * control plane 日志路径（stdout/stderr 合并）。
+ * gateway 日志路径（stdout/stderr 合并）。
  */
-export declare function getControlPlaneLogPath(): string;
+export declare function getGatewayLogPath(): string;
 /**
- * control plane 元数据路径。
+ * gateway 元数据路径。
  */
-export declare function getControlPlaneMetaPath(): string;
+export declare function getGatewayMetaPath(): string;
 /**
  * 受管 agent registry 文件路径（Town 维护的 agent 清单）。
  */

@@ -3,11 +3,8 @@
  */
 
 export type ChatManagerRootAction =
-  | "status"
-  | "start"
-  | "stop"
-  | "restart"
   | "configureAccounts"
+  | "configureAccess"
   | "exit";
 
 export type ChatAccountAction =

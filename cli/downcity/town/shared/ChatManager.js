@@ -2,14 +2,14 @@
  * `town chat` 交互式管理器。
  *
  * 关键点（中文）
- * - 裸 `town chat` 进入 chat plugin 管理，而不是只输出静态 help。
+ * - 裸 `town chat` 进入 chat plugin 共享资源管理，而不是只输出静态 help。
  * - chat account 属于 Town 级共享资源，供各 agent 的 chat plugin 选择绑定。
  * - 访问控制属于 chat plugin 的 access 能力，不再作为独立 plugin 心智暴露。
+ * - Town 不管理 chat plugin 运行态；运行态由具体 agent 内部托管。
  */
 import prompts from "prompts";
 import { ChatChannelAccountManager, } from "@downcity/plugins";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
-import { runManagedPluginControlCommand } from "./ManagedPluginRemote.js";
 import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";
 const CHAT_CHANNELS = ["telegram", "feishu", "qq"];
 function createChannelAccountManager() {
@@ -42,32 +42,17 @@ async function promptRootAction() {
     const response = (await prompts({
         type: "select",
         name: "action",
-        message: "管理 chat plugin",
+        message: "管理 chat plugin 共享资源",
         choices: [
-            {
-                title: "查看状态",
-                description: "查看当前项目 chat plugin 运行状态",
-                value: "status",
-            },
-            {
-                title: "启动",
-                description: "启动当前项目 chat plugin",
-                value: "start",
-            },
-            {
-                title: "停止",
-                description: "停止当前项目 chat plugin",
-                value: "stop",
-            },
-            {
-                title: "重启",
-                description: "重启当前项目 chat plugin",
-                value: "restart",
-            },
             {
                 title: "管理 chat accounts",
                 description: `${accounts.items.length} 个 Town 级共享账号`,
                 value: "configureAccounts",
+            },
+            {
+                title: "管理访问控制",
+                description: "给 chat 用户分配 access role",
+                value: "configureAccess",
             },
             {
                 title: "退出",
@@ -114,7 +99,7 @@ async function promptChatAccountAction() {
             },
             {
                 title: "返回",
-                description: "回到 chat plugin 菜单",
+                description: "回到 chat plugin 共享资源菜单",
                 value: "back",
             },
         ],
@@ -342,16 +327,6 @@ async function runChatAccountManager() {
         }
     }
 }
-async function runChatLifecycleAction(action) {
-    await runManagedPluginControlCommand({
-        pluginName: "chat",
-        action,
-        options: {
-            path: ".",
-            json: false,
-        },
-    });
-}
 /**
  * 运行 `town chat` 交互式管理器。
  */
@@ -372,7 +347,9 @@ export async function runInteractiveChatManager() {
                 await runChatAccountManager();
                 continue;
             }
-            await runChatLifecycleAction(action);
+            if (action === "configureAccess") {
+                await runInteractiveChatAuthSetFlow();
+            }
         }
         catch (error) {
             emitCliBlock({

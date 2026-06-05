@@ -12,7 +12,6 @@ import { listPluginsWithLifecycle } from "@downcity/agent";
 import { callServer } from "../process/daemon/Client.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { parseBoolean, parsePort } from "../shared/IndexSupport.js";
-import { runManagedPluginControlCommand } from "../shared/ManagedPluginRemote.js";
 const CHAT_PLUGIN_HELP_TEXT = [
     "",
     "Chat quick guide:",
@@ -28,6 +27,15 @@ const CHAT_PLUGIN_HELP_TEXT = [
     "  town chat history --limit 30",
 ].join("\n");
 const CHAT_HELP_HOOK_ATTACHED = Symbol("chat-help-hook-attached");
+const CHAT_RUNTIME_ACTION_COMMANDS_HIDDEN_FROM_TOWN = new Set([
+    "status",
+    "test",
+    "reconnect",
+    "open",
+    "close",
+    "configuration",
+    "configure",
+]);
 function resolveProjectRoot(pathInput) {
     return path.resolve(String(pathInput || "."));
 }
@@ -135,6 +143,11 @@ function extractCommandScheduleInput(options) {
     return { runAtMs };
 }
 function registerPluginActionCommand(params) {
+    // 关键点（中文）：chat platform 运行态与配置由 agent 内部管理，Town 不注册这些快捷命令。
+    if (params.plugin.name === "chat" &&
+        CHAT_RUNTIME_ACTION_COMMANDS_HIDDEN_FROM_TOWN.has(params.actionName)) {
+        return;
+    }
     const commandSpec = params.action.command;
     if (!commandSpec)
         return;
@@ -262,64 +275,6 @@ function registerPluginActionCommand(params) {
         });
     });
 }
-function hasPluginSubcommand(command, name) {
-    return command.commands.some((item) => item.name() === name);
-}
-function attachPluginLifecycleOptions(command) {
-    return command
-        .option("--path <path>", "项目根目录（默认当前目录）", ".")
-        .option("--host <host>", "Server host（覆盖自动解析）")
-        .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-        .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
-}
-function registerPluginLifecycleCommands(params) {
-    if (!params.plugin.lifecycle?.start && !params.plugin.lifecycle?.stop) {
-        return;
-    }
-    const pluginCommand = params.program.commands.find((item) => item.name() === params.plugin.name) ||
-        params.program
-            .command(params.plugin.name)
-            .description(`${params.plugin.name} plugin actions`)
-            .helpOption("--help", "display help for command");
-    const lifecycleCommands = [
-        {
-            name: "start",
-            description: `启动 ${params.plugin.name} plugin`,
-            action: "start",
-        },
-        {
-            name: "stop",
-            description: `停止 ${params.plugin.name} plugin`,
-            action: "stop",
-        },
-        {
-            name: "restart",
-            description: `重启 ${params.plugin.name} plugin`,
-            action: "restart",
-        },
-        {
-            name: "status",
-            description: `查看 ${params.plugin.name} plugin 运行状态`,
-            action: "status",
-        },
-    ];
-    for (const item of lifecycleCommands) {
-        if (hasPluginSubcommand(pluginCommand, item.name)) {
-            continue;
-        }
-        attachPluginLifecycleOptions(pluginCommand
-            .command(item.name)
-            .description(item.description)
-            .helpOption("--help", "display help for command")).action(async (options) => {
-            await runManagedPluginControlCommand({
-                pluginName: params.plugin.name,
-                action: item.action,
-                options,
-            });
-        });
-    }
-}
 /**
  * 注册所有受 agent 托管的 plugin actions CLI 命令。
  */
@@ -334,12 +289,6 @@ export function registerManagedPluginCommandsForCli(program, pluginsInput) {
                 action: action,
             });
         }
-    }
-    for (const plugin of plugins) {
-        registerPluginLifecycleCommands({
-            program,
-            plugin,
-        });
     }
 }
 //# sourceMappingURL=ManagedPluginActionCommand.js.map

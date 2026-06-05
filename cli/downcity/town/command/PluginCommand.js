@@ -16,8 +16,17 @@ import { getDowncityJsonPath } from "../config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { parseBoolean, parsePort } from "../shared/IndexSupport.js";
 import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
-import { runManagedPluginCommandBridge, runManagedPluginControlCommand, } from "../shared/ManagedPluginRemote.js";
+import { runManagedPluginCommandBridge } from "../shared/ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
+const CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_TOWN = new Set([
+    "status",
+    "test",
+    "reconnect",
+    "open",
+    "close",
+    "configuration",
+    "configure",
+]);
 function createPluginCatalog() {
     return createBuiltinPlugins();
 }
@@ -26,6 +35,13 @@ function isVisibleCatalogPlugin(pluginName) {
 }
 function createVisiblePluginCatalog() {
     return createPluginCatalog().filter((plugin) => isVisibleCatalogPlugin(plugin.name));
+}
+function listVisiblePluginActions(pluginName, actions) {
+    if (pluginName !== "chat") {
+        return actions;
+    }
+    // 关键点（中文）：Town 只展示 chat plugin 的用户操作能力，不展示 platform 运行态控制。
+    return actions.filter((action) => !CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_TOWN.has(action));
 }
 async function resolvePluginProjectRoot(options) {
     return { projectRoot: resolveProjectRoot(options.path) };
@@ -89,12 +105,13 @@ function renderPluginCatalogTable(rows) {
 function listStaticCatalogEntries() {
     const plugins = createVisiblePluginCatalog();
     const managedEntries = listPluginsWithLifecycle(plugins).map((plugin) => {
+        const actions = listVisiblePluginActions(plugin.name, Object.keys(plugin.actions || {}).sort((left, right) => left.localeCompare(right)));
         return {
             name: plugin.name,
             title: String(plugin.title || plugin.name || "").trim() || plugin.name,
             kind: "agent-runtime",
-            actionCount: Object.keys(plugin.actions || {}).length,
-            actions: Object.keys(plugin.actions || {}).sort((left, right) => left.localeCompare(right)),
+            actionCount: actions.length,
+            actions,
             hasSystem: typeof plugin.system === "function",
             note: "Runs inside an agent. Town only shows the catalog here; runtime is owned by the agent process.",
         };
@@ -385,70 +402,6 @@ export function registerPluginsCommand(program) {
         .action(async (pluginName, opts) => {
         await runPluginInfoCommand({
             pluginName,
-            options: opts,
-        });
-    });
-    plugin
-        .command("status <pluginName>")
-        .description("按 agent 目标查看托管 plugin 运行状态")
-        .option("--path <path>", "项目根目录（默认当前目录）", ".")
-        .option("--agent <id>", "agent id（从 managed agent registry 解析）")
-        .option("--host <host>", "Server host（覆盖自动解析）")
-        .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-        .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
-        .action(async (pluginName, opts) => {
-        await runManagedPluginControlCommand({
-            pluginName,
-            action: "status",
-            options: opts,
-        });
-    });
-    plugin
-        .command("start <pluginName>")
-        .description("按 agent 目标启动托管 plugin")
-        .option("--path <path>", "项目根目录（默认当前目录）", ".")
-        .option("--agent <id>", "agent id（从 managed agent registry 解析）")
-        .option("--host <host>", "Server host（覆盖自动解析）")
-        .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-        .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
-        .action(async (pluginName, opts) => {
-        await runManagedPluginControlCommand({
-            pluginName,
-            action: "start",
-            options: opts,
-        });
-    });
-    plugin
-        .command("stop <pluginName>")
-        .description("按 agent 目标停止托管 plugin")
-        .option("--path <path>", "项目根目录（默认当前目录）", ".")
-        .option("--agent <id>", "agent id（从 managed agent registry 解析）")
-        .option("--host <host>", "Server host（覆盖自动解析）")
-        .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-        .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
-        .action(async (pluginName, opts) => {
-        await runManagedPluginControlCommand({
-            pluginName,
-            action: "stop",
-            options: opts,
-        });
-    });
-    plugin
-        .command("restart <pluginName>")
-        .description("按 agent 目标重启托管 plugin")
-        .option("--path <path>", "项目根目录（默认当前目录）", ".")
-        .option("--agent <id>", "agent id（从 managed agent registry 解析）")
-        .option("--host <host>", "Server host（覆盖自动解析）")
-        .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-        .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
-        .action(async (pluginName, opts) => {
-        await runManagedPluginControlCommand({
-            pluginName,
-            action: "restart",
             options: opts,
         });
     });

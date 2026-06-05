@@ -51,7 +51,7 @@ export function buildGatewayPortFactsWithOptions(url, options) {
         },
         {
             label: "Usage",
-            value: "Console Web UI / gateway",
+            value: "Town runtime API",
         },
     ];
 }

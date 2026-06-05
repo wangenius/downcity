@@ -5,7 +5,7 @@
  * - 处理“pid 文件不存在，但旧的 detached 进程还活着”的场景。
  * - 仅匹配 Downcity CLI 自己拉起的 `run` / `console run` / `agent start --foreground true`。
  * - 作为 stop/start 的兜底清理层，避免旧版本进程占住端口却无法被当前 pid 文件追踪。
- * - `run` 指 town 后台，`console run` 指 gateway 命令，二者需要明确区分。
+ * - `run` 指 town runtime，`console run` 只用于清理旧 Console UI 进程。
  */
 /**
  * 构建 detached 进程停机时的信号目标。
@@ -30,21 +30,21 @@ export declare function isDowncityCliCommand(command: string): boolean;
  *
  * 关键点（中文）
  * - `Index.js run` 是 town runtime。
- * - `Index.js console run` 是 gateway runtime。
+ * - `Index.js console run` 是旧 Console UI runtime。
  * - 两者都包含 `run`，因此必须按完整子命令匹配，不能只查 `run` 词元。
  */
 export declare function shouldSweepDetachedBayCommand(command: string, params: {
-    includeConsole?: boolean;
-    includeUi?: boolean;
-    includeAgent?: boolean;
+    include_town_runtime?: boolean;
+    include_legacy_console_ui?: boolean;
+    include_agent?: boolean;
 }): boolean;
 /**
  * 只探测失联的 Downcity detached 进程，不执行停止动作。
  */
 export declare function findDetachedBayProcesses(params?: {
-    includeConsole?: boolean;
-    includeUi?: boolean;
-    includeAgent?: boolean;
+    include_town_runtime?: boolean;
+    include_legacy_console_ui?: boolean;
+    include_agent?: boolean;
     excludePids?: number[];
 }): Promise<Array<{
     pid: number;
@@ -54,9 +54,9 @@ export declare function findDetachedBayProcesses(params?: {
  * 清扫失联的 Downcity detached 进程。
  */
 export declare function sweepDetachedBayProcesses(params?: {
-    includeConsole?: boolean;
-    includeUi?: boolean;
-    includeAgent?: boolean;
+    include_town_runtime?: boolean;
+    include_legacy_console_ui?: boolean;
+    include_agent?: boolean;
     timeoutMs?: number;
     excludePids?: number[];
 }): Promise<{

@@ -42,7 +42,7 @@ export async function ensureGatewayAuthBootstrap(options = {}) {
                 },
                 {
                     label: "Next",
-                    value: "把上面的 Bearer Token 粘贴到 Console UI / Extension",
+                    value: "把上面的 Bearer Token 粘贴到 Extension 或脚本环境",
                 },
             ],
             note: "明文 token 只会在本次初始化时显示一次。",

@@ -178,7 +178,7 @@ export async function initCommand(cwd = ".", options = {}) {
                 },
                 {
                     label: "Manage",
-                    value: "Console > Global / Chat Accounts",
+                    value: "town chat accounts",
                 },
             ],
         });
@@ -193,7 +193,7 @@ export async function initCommand(cwd = ".", options = {}) {
                 },
                 {
                     label: "Manage",
-                    value: "Console > Global / Chat Accounts",
+                    value: "town chat accounts",
                 },
             ],
         });
@@ -208,7 +208,7 @@ export async function initCommand(cwd = ".", options = {}) {
                 },
                 {
                     label: "Manage",
-                    value: "Console > Global / Chat Accounts",
+                    value: "town chat accounts",
                 },
             ],
         });

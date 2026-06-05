@@ -48,7 +48,7 @@ export async function startTownRuntimeCommand(cliPath) {
     }
     // 关键点（中文）：若 pid 文件已丢失，但旧 town runtime 进程仍在后台存活，这里先清理孤儿进程。
     const sweep = await sweepDetachedBayProcesses({
-        includeConsole: true,
+        include_town_runtime: true,
     });
     for (const item of sweep.stopped) {
         emitCliBlock({
@@ -133,7 +133,7 @@ export async function resolveRunningManagedAgents(params) {
  */
 async function cleanupLegacyConsoleUiRuntime(timeoutMs) {
     const sweep = await sweepDetachedBayProcesses({
-        includeUi: true,
+        include_legacy_console_ui: true,
         timeoutMs,
     });
     for (const item of sweep.stopped) {
@@ -201,9 +201,9 @@ export async function stopTownRuntimeCommand(params) {
     // 关键点（中文）：最后停止 Town runtime 自身，并顺手清扫失联进程。
     const sweepOrphans = async () => {
         const orphanSweep = await sweepDetachedBayProcesses({
-            includeConsole: true,
-            includeUi: true,
-            includeAgent: true,
+            include_town_runtime: true,
+            include_legacy_console_ui: true,
+            include_agent: true,
             timeoutMs,
         });
         for (const item of orphanSweep.stopped) {

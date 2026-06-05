@@ -237,7 +237,7 @@ function emitTokenSetupGuide(token) {
             },
             {
                 label: "Next",
-                value: "把刚创建的 Bearer Token 粘贴到需要访问的 Console / Extension / 脚本环境",
+                value: "把刚创建的 Bearer Token 粘贴到需要访问的 Extension 或脚本环境",
             },
         ],
     });
@@ -256,7 +256,7 @@ async function promptTokenCreateInput(params) {
             type: "text",
             name: "name",
             message: "Token 名称",
-            initial: String(params?.defaultName || "").trim() || "console-ui",
+            initial: String(params?.defaultName || "").trim() || "town-client",
             validate: (value) => {
                 return String(value || "").trim() ? true : "请输入 token 名称";
             },

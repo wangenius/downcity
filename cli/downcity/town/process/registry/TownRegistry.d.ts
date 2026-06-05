@@ -11,7 +11,7 @@ import type { ManagedAgentRegistryEntry, ManagedAgentRegistryV1 } from "@downcit
  * 确保 town agent registry 文件存在。
  *
  * 关键点（中文）
- * - 空 Town 运行态也应拥有显式的空 registry，避免 Console 将“尚未启动任何 agent”误判为异常。
+ * - 空 Town 运行态也应拥有显式的空 registry，避免管理侧将“尚未启动任何 agent”误判为异常。
  * - 若文件已存在则不覆盖，保持历史记录不丢失。
  */
 export declare function ensureManagedAgentRegistry(): Promise<void>;

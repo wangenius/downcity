@@ -5,7 +5,7 @@
  * - 处理“pid 文件不存在，但旧的 detached 进程还活着”的场景。
  * - 仅匹配 Downcity CLI 自己拉起的 `run` / `console run` / `agent start --foreground true`。
  * - 作为 stop/start 的兜底清理层，避免旧版本进程占住端口却无法被当前 pid 文件追踪。
- * - `run` 指 town 后台，`console run` 指 gateway 命令，二者需要明确区分。
+ * - `run` 指 town runtime，`console run` 只用于清理旧 Console UI 进程。
  */
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
@@ -77,22 +77,22 @@ export function isDowncityCliCommand(command) {
  *
  * 关键点（中文）
  * - `Index.js run` 是 town runtime。
- * - `Index.js console run` 是 gateway runtime。
+ * - `Index.js console run` 是旧 Console UI runtime。
  * - 两者都包含 `run`，因此必须按完整子命令匹配，不能只查 `run` 词元。
  */
 export function shouldSweepDetachedBayCommand(command, params) {
     const args = parseDowncityCliArgs(command);
     if (args === null)
         return false;
-    if (params.includeConsole &&
+    if (params.include_town_runtime &&
         /^run(?:\s|$)/.test(args)) {
         return true;
     }
-    if (params.includeUi &&
+    if (params.include_legacy_console_ui &&
         /^console\s+run(?:\s|$)/.test(args)) {
         return true;
     }
-    if (params.includeAgent &&
+    if (params.include_agent &&
         /^agent\s+start(?:\s|$)/.test(args) &&
         /--foreground\s+true\b/.test(args)) {
         return true;
@@ -132,9 +132,9 @@ export async function findDetachedBayProcesses(params) {
         ...(Array.isArray(params?.excludePids) ? params.excludePids : []),
     ]);
     return listDetachedBayProcesses({
-        includeConsole: params?.includeConsole,
-        includeUi: params?.includeUi,
-        includeAgent: params?.includeAgent,
+        include_town_runtime: params?.include_town_runtime,
+        include_legacy_console_ui: params?.include_legacy_console_ui,
+        include_agent: params?.include_agent,
         excludePids,
     });
 }
@@ -176,9 +176,9 @@ export async function sweepDetachedBayProcesses(params) {
         ...(Array.isArray(params?.excludePids) ? params.excludePids : []),
     ]);
     const matched = await listDetachedBayProcesses({
-        includeConsole: params?.includeConsole,
-        includeUi: params?.includeUi,
-        includeAgent: params?.includeAgent,
+        include_town_runtime: params?.include_town_runtime,
+        include_legacy_console_ui: params?.include_legacy_console_ui,
+        include_agent: params?.include_agent,
         excludePids,
     });
     const stopped = [];

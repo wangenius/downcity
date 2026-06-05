@@ -5,7 +5,7 @@
  * - 处理“pid 文件不存在，但旧的 detached 进程还活着”的场景。
  * - 仅匹配 Downcity CLI 自己拉起的 `run` / `console run` / `agent start --foreground true`。
  * - 作为 stop/start 的兜底清理层，避免旧版本进程占住端口却无法被当前 pid 文件追踪。
- * - `run` 指 town 后台，`console run` 指 gateway 命令，二者需要明确区分。
+ * - `run` 指 town runtime，`console run` 只用于清理旧 Console UI 进程。
  */
 
 import { execFile as execFileCb } from "node:child_process";
@@ -87,33 +87,33 @@ export function isDowncityCliCommand(command: string): boolean {
  *
  * 关键点（中文）
  * - `Index.js run` 是 town runtime。
- * - `Index.js console run` 是 gateway runtime。
+ * - `Index.js console run` 是旧 Console UI runtime。
  * - 两者都包含 `run`，因此必须按完整子命令匹配，不能只查 `run` 词元。
  */
 export function shouldSweepDetachedBayCommand(
   command: string,
   params: {
-    includeConsole?: boolean;
-    includeUi?: boolean;
-    includeAgent?: boolean;
+    include_town_runtime?: boolean;
+    include_legacy_console_ui?: boolean;
+    include_agent?: boolean;
   },
 ): boolean {
   const args = parseDowncityCliArgs(command);
   if (args === null) return false;
   if (
-    params.includeConsole &&
+    params.include_town_runtime &&
     /^run(?:\s|$)/.test(args)
   ) {
     return true;
   }
   if (
-    params.includeUi &&
+    params.include_legacy_console_ui &&
     /^console\s+run(?:\s|$)/.test(args)
   ) {
     return true;
   }
   if (
-    params.includeAgent &&
+    params.include_agent &&
     /^agent\s+start(?:\s|$)/.test(args) &&
     /--foreground\s+true\b/.test(args)
   ) {
@@ -123,9 +123,9 @@ export function shouldSweepDetachedBayCommand(
 }
 
 async function listDetachedBayProcesses(params: {
-  includeConsole?: boolean;
-  includeUi?: boolean;
-  includeAgent?: boolean;
+  include_town_runtime?: boolean;
+  include_legacy_console_ui?: boolean;
+  include_agent?: boolean;
   excludePids: Set<number>;
 }): Promise<Array<{ pid: number; command: string }>> {
   if (process.platform === "win32") {
@@ -161,9 +161,9 @@ async function listDetachedBayProcesses(params: {
  * 只探测失联的 Downcity detached 进程，不执行停止动作。
  */
 export async function findDetachedBayProcesses(params?: {
-  includeConsole?: boolean;
-  includeUi?: boolean;
-  includeAgent?: boolean;
+  include_town_runtime?: boolean;
+  include_legacy_console_ui?: boolean;
+  include_agent?: boolean;
   excludePids?: number[];
 }): Promise<Array<{ pid: number; command: string }>> {
   const excludePids = new Set<number>([
@@ -172,9 +172,9 @@ export async function findDetachedBayProcesses(params?: {
   ]);
 
   return listDetachedBayProcesses({
-    includeConsole: params?.includeConsole,
-    includeUi: params?.includeUi,
-    includeAgent: params?.includeAgent,
+    include_town_runtime: params?.include_town_runtime,
+    include_legacy_console_ui: params?.include_legacy_console_ui,
+    include_agent: params?.include_agent,
     excludePids,
   });
 }
@@ -213,9 +213,9 @@ async function stopPid(pid: number, timeoutMs: number): Promise<boolean> {
  * 清扫失联的 Downcity detached 进程。
  */
 export async function sweepDetachedBayProcesses(params?: {
-  includeConsole?: boolean;
-  includeUi?: boolean;
-  includeAgent?: boolean;
+  include_town_runtime?: boolean;
+  include_legacy_console_ui?: boolean;
+  include_agent?: boolean;
   timeoutMs?: number;
   excludePids?: number[];
 }): Promise<{
@@ -229,9 +229,9 @@ export async function sweepDetachedBayProcesses(params?: {
     ...(Array.isArray(params?.excludePids) ? params.excludePids : []),
   ]);
   const matched = await listDetachedBayProcesses({
-    includeConsole: params?.includeConsole,
-    includeUi: params?.includeUi,
-    includeAgent: params?.includeAgent,
+    include_town_runtime: params?.include_town_runtime,
+    include_legacy_console_ui: params?.include_legacy_console_ui,
+    include_agent: params?.include_agent,
     excludePids,
   });
 

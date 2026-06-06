@@ -1,55 +1,39 @@
 ---
 title: Skills
-description: Skill 目录、发现逻辑与 list/lookup 优先工作流
+description: Skill 目录、发现逻辑和运行时注入语义
 ---
 
 # Skills
 
-Downcity 兼容 SKILL.md 形态的 skills。
+Skill 是围绕 `SKILL.md` 组织的可复用指令。
 
-## 默认扫描目录
+它让 Agent 学会可重复的工作流，而不需要把这些工作流硬编码进核心 runtime。
 
-- 项目级：`.agents/skills`
-- 用户级：`~/.agents/skills`
-- 额外目录：`downcity.json.plugins.skill.paths`
+## 发现目录
 
-## 推荐工作流
+Downcity 可以从这些位置发现 skills：
 
-1. `town skill list`（先看本地已安装/已学会 skills）
-2. `town skill lookup <name>`（命中后直接读取并执行）
-3. 若 `list` 中没有目标 skill，再执行 `find -> install -> lookup`
+- 项目级 skill roots
+- 用户级 skill roots
+- skill plugin 配置里声明的额外 roots
 
-示例：
+项目级 roots 适合只属于某个仓库的工作流。用户级 roots 适合跟随操作者跨项目复用的工作流。
 
-```bash
-town skill list
-town skill lookup playwright
+## 运行时语义
 
-# 仅当缺失时再安装
-town skill find playwright
-town skill install owner/repo@playwright
-town skill lookup playwright
-```
+Skill 会在执行前被选择，然后注入 Agent context。
 
-## 关键原则
+这意味着基础 Agent 可以保持通用，但在具体任务需要时获得精确的流程知识。
 
-- 使用 skill 前先 `lookup`，不要只凭记忆执行。
-- `list` 中列出的 skills 都是已安装可用，不需要重复 `install`。
-- 任务匹配时，优先使用已安装 skills。
-- Agent 运行时中，`lookup` 回包仅返回状态；`SKILL.md` 正文会以 `<skill>...</skill>` user message 注入。
-- `SKILL.md` 中的 `allowed-tools` 约束应严格遵守。
-- 运行时会自动发现新增/变更的 skill 文件。
+## 重要边界
 
-## 相关配置
+已安装 skill 代表可用知识，不代表自动可信的 action。
 
-```json
-{
-  "plugins": {
-    "skill": {
-      "enabled": true,
-      "paths": [".agents/skills"],
-      "allowExternalPaths": false
-    }
-  }
-}
-```
+Agent 仍然需要遵守每个 skill 声明的工具边界，以及当前生效的权限模型。
+
+## 去哪里使用
+
+具体 skill 命令放在产品文档：
+
+- [`town skill`](/zh/products-docs/town-cli/plugin/skill)
+- [Skill plugin 文档](/zh/plugins-docs/builtins/skill)

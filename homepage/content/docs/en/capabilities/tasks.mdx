@@ -1,68 +1,40 @@
 ---
 title: Tasks
-description: Task definition, scheduling, and CLI operations
+description: Task definitions, scheduling semantics, and result ownership
 ---
 
 # Tasks
 
-Task definitions live in `.downcity/task/<taskId>/task.md`.
+Tasks are reusable pieces of scheduled agent work.
 
-## Minimal task example
+They are not just delayed chat messages. A task has its own definition, schedule, run artifacts, and result delivery semantics.
 
-```markdown
----
-title: Daily Repo Check
-when: "0 9 * * 1-5"
-description: Run tests and summarize issues
-sessionId: telegram-chat-123456
-status: enabled
-kind: agent
----
+## What A Task Owns
 
-Run tasks, write the final output body to `output.md`, and write a summary to `result.md`.
-```
+A task definition describes:
+
+- what should run
+- when it should run
+- which session should receive the result
+- whether the task is enabled, paused, or disabled
+
+The task runtime writes run artifacts under the project `.downcity/` state tree. That keeps scheduled work tied to the project agent that owns it.
 
 ## Result Delivery
 
-- Task runs write artifacts under `.downcity/task/<taskId>/<timestamp>/`.
-- By default, the final result body is sent back to the chat bound to `sessionId`.
-- `sessionId` decides where the task result returns; it is not an authentication identity.
+`sessionId` decides where the task result returns.
 
-## Directory layout
-
-```text
-.downcity/task/
-  <taskId>/
-    task.md
-    <timestamp>/
-      run.json
-      output.md
-      result.md
-      dialogue.md
-```
-
-## Common commands
-
-```bash
-town task list
-town task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 9 * * 1-5" --activate
-town task run daily-check
-town task update daily-check --when "@manual"
-town task disable daily-check
-```
-
-## Status
-
-- `enabled`: scheduled
-- `paused`: defined but not scheduled
-- `disabled`: disabled
+It is not an authentication identity. It is a delivery route back into an existing session or chat context.
 
 ## Time Semantics
 
-- Cron expressions are interpreted in the local timezone of the runtime process. For example, when the runtime timezone is `Asia/Shanghai`, `0 13 * * *` means 13:00 Beijing time every day.
-- `time:<ISO8601>` one-shot triggers must include an explicit timezone, such as `time:2026-03-08T10:30:00+08:00`.
-- Proxies may affect IP-based location detection, but they do not change the machine timezone. To change cron semantics, change the system timezone or `TZ` for the runtime process.
+Task schedules are evaluated by the runtime process. Cron expressions therefore follow the runtime environment's timezone.
 
-## Runtime requirement
+One-shot time triggers should include an explicit timezone so that the stored schedule is not ambiguous.
 
-Scheduling only works with a running runtime (typically `town agent start`).
+## Where To Use It
+
+Concrete task commands live in product docs:
+
+- [`town task`](/en/products-docs/town-cli/plugin/task)
+- [Task plugin docs](/en/plugins-docs/builtins/task)

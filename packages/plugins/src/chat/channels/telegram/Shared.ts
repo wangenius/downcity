@@ -17,6 +17,7 @@ export interface TelegramUpdate {
   message?: {
     message_id?: number;
     message_thread_id?: number;
+    date?: number;
     text?: string;
     caption?: string;
     quote?: {

@@ -8,11 +8,22 @@
  */
 
 import type { QueuedUserInfoInput } from "@/chat/types/ChatPromptContext.js";
+import {
+  formatDateTimeInTimezone,
+  resolveRuntimeTimezone,
+} from "@downcity/agent/internal/utils/Time.js";
 
 function normalizeInfoValue(value: unknown): string {
   const text = String(value ?? "").replace(/\r?\n/g, " ").trim();
   if (!text) return "";
   return text.replace(/</g, "&#60;").replace(/>/g, "&#62;");
+}
+
+function normalizeReceivedAtIso(input: unknown): string {
+  const raw = typeof input === "string" ? input.trim() : "";
+  const date = raw ? new Date(raw) : new Date();
+  if (!Number.isFinite(date.getTime())) return new Date().toISOString();
+  return date.toISOString();
 }
 
 /**
@@ -25,13 +36,18 @@ function normalizeInfoValue(value: unknown): string {
 export function buildQueuedUserMessageWithInfo(params: {
   text: string;
 } & QueuedUserInfoInput): string {
+  const runtimeTimezone = resolveRuntimeTimezone();
+  const receivedAtIso = normalizeReceivedAtIso(params.receivedAt);
+  const receivedAtDate = new Date(receivedAtIso);
   const infoLines = [
     `message_id: ${normalizeInfoValue(params.messageId || "unknown")}`,
     `user_id: ${normalizeInfoValue(params.userId || "unknown")}`,
     `username: ${normalizeInfoValue(params.username || "unknown")}`,
     `role_id: ${normalizeInfoValue(params.roleId || "unknown")}`,
     `permissions: ${normalizeInfoValue((params.permissions || []).join(",") || "none")}`,
-    `received_at: ${normalizeInfoValue(params.receivedAt || new Date().toISOString())}`,
+    `received_at: ${normalizeInfoValue(receivedAtIso)}`,
+    `received_at_local: ${normalizeInfoValue(formatDateTimeInTimezone(receivedAtDate, runtimeTimezone))}`,
+    `runtime_timezone: ${normalizeInfoValue(runtimeTimezone)}`,
   ];
   if (normalizeInfoValue(params.userTimezone)) {
     infoLines.push(`user_timezone: ${normalizeInfoValue(params.userTimezone)}`);

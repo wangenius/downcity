@@ -219,6 +219,7 @@ export class TelegramBot extends BaseChatChannel {
             params.messageId,
             params.chatType,
             params.messageThreadId,
+            params.receivedAt,
             params.extra,
           );
         },
@@ -289,6 +290,7 @@ export class TelegramBot extends BaseChatChannel {
     messageId?: string,
     chatType?: NonNullable<TelegramUpdate["message"]>["chat"]["type"],
     messageThreadId?: number,
+    receivedAt?: string,
     extra?: JsonObject,
   ): Promise<void> {
     try {
@@ -302,6 +304,7 @@ export class TelegramBot extends BaseChatChannel {
         messageThreadId,
         userId,
         username,
+        receivedAt,
         chatTitle,
         ...(extra ? { extra } : {}),
       });

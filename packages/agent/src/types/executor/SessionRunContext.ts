@@ -24,6 +24,15 @@ export interface SessionRunContext {
   sessionId: string;
 
   /**
+   * 当前执行所属的项目根目录。
+   *
+   * 关键点（中文）
+   * - 用于 tool/plugin 运行期把二进制资源写入项目级 `.downcity/resources`。
+   * - 未提供时，底层资源写入逻辑会回退到当前进程工作目录，兼容旧入口。
+   */
+  projectRoot?: string;
+
+  /**
    * step 边界合并回调。
    *
    * 关键点（中文）

@@ -1,4 +1,4 @@
 {
   "title": "Quickstart",
-  "pages": ["getting-started", "configuration", "create-your-first-agent", "first-agent-chat", "sdk"]
+  "pages": ["getting-started"]
 }

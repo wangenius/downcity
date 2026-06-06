@@ -15,6 +15,9 @@ import {
 import type { UserModelRef } from "./types.js";
 import type {
   UserImageInput,
+  UserImageJobCreateResult,
+  UserImageJobResult,
+  UserImageJobStatusResult,
   UserImageResult,
   UserServiceInput,
   UserStreamResult,
@@ -95,6 +98,21 @@ export class AIInvoker {
   /** 图片生成 */
   image(input: UserImageInput): Promise<UserImageResult> {
     return this.post<UserImageResult>("/image", input);
+  }
+
+  /** 创建图片生成任务。 */
+  imageJobCreate(input: UserImageInput): Promise<UserImageJobCreateResult> {
+    return this.post<UserImageJobCreateResult>("/image/jobs/create", input);
+  }
+
+  /** 查询图片生成任务状态。 */
+  imageJobStatus(input: { job_id: string }): Promise<UserImageJobStatusResult> {
+    return this.post<UserImageJobStatusResult>("/image/jobs/status", input as UserServiceInput);
+  }
+
+  /** 读取图片生成任务结果。 */
+  imageJobResult(input: { job_id: string }): Promise<UserImageJobResult> {
+    return this.post<UserImageJobResult>("/image/jobs/result", input as UserServiceInput);
   }
 
   /** 视频生成 */

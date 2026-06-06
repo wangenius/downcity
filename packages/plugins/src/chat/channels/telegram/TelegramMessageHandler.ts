@@ -89,6 +89,7 @@ export type TelegramMessageExecutor = (params: {
   messageId?: string;
   chatType?: NonNullable<TelegramUpdate["message"]>["chat"]["type"];
   messageThreadId?: number;
+  receivedAt?: string;
   extra?: JsonObject;
 }) => Promise<void>;
 
@@ -193,6 +194,10 @@ export async function handleTelegramMessage(
   const hasIncomingAttachment = hasTelegramIncomingAttachment(message);
   const messageId =
     typeof message.message_id === "number" ? String(message.message_id) : undefined;
+  const receivedAt =
+    typeof message.date === "number" && Number.isFinite(message.date)
+      ? new Date(message.date * 1_000).toISOString()
+      : new Date().toISOString();
   const messageThreadId =
     typeof message.message_thread_id === "number"
       ? message.message_thread_id
@@ -394,6 +399,7 @@ export async function handleTelegramMessage(
       messageId,
       chatType: message.chat.type,
       messageThreadId,
+      receivedAt,
       extra: buildReplyContextExtra(replyContext),
     });
   });

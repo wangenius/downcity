@@ -375,6 +375,9 @@ export class Executor implements SessionExecutor {
   ): SessionRunContext {
     return {
       sessionId: String(input?.sessionId || this.sessionId).trim(),
+      ...(typeof input?.projectRoot === "string" && input.projectRoot.trim()
+        ? { projectRoot: input.projectRoot.trim() }
+        : {}),
       ...(typeof input?.onStepCallback === "function"
         ? { onStepCallback: input.onStepCallback }
         : {}),

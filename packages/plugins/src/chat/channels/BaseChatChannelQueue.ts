@@ -220,6 +220,7 @@ export async function enqueueExecChannelMessage(
     username: msg.username,
     roleId: userRole?.roleId,
     permissions: userRole?.permissions,
+    receivedAt: msg.receivedAt,
     userTimezone: msg.userTimezone,
     text: msg.text,
   });

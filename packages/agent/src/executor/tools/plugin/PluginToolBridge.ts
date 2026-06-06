@@ -14,7 +14,11 @@ import type {
   PluginCallInput,
   PluginCallToolResult,
 } from "@/executor/tools/plugin/types/PluginTool.js";
-import { enqueueAssistantFileParts } from "@executor/SessionRunScope.js";
+import { materializeAssistantFileParts } from "@executor/messages/AssistantFileResource.js";
+import {
+  enqueueAssistantFileParts,
+  getSessionRunContext,
+} from "@executor/SessionRunScope.js";
 
 let plugin_tool_runtime: PluginPort | null = null;
 
@@ -131,9 +135,16 @@ export async function invokePluginCallTool(
       action,
       payload,
     });
-    const file_parts = result.success
+    const raw_file_parts = result.success
       ? extract_assistant_file_parts(result.data)
       : [];
+    const file_parts =
+      raw_file_parts.length > 0
+        ? await materializeAssistantFileParts({
+            projectRoot: getSessionRunContext()?.projectRoot,
+            parts: raw_file_parts,
+          })
+        : [];
     if (file_parts.length > 0) {
       enqueueAssistantFileParts(file_parts);
     }

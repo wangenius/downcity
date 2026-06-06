@@ -15,7 +15,10 @@ import {
   type ToolSet,
 } from "ai";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
-import { injectFilePartsFromAttachments } from "@executor/messages/SessionAttachmentMapper.js";
+import {
+  hydrateFileUrlPartsForModel,
+  injectFilePartsFromAttachments,
+} from "@executor/messages/SessionAttachmentMapper.js";
 
 /**
  * 过滤回调返回值中的 user 文本消息。
@@ -76,8 +79,11 @@ export async function toModelMessages(
   // 第一步（中文）：在 user 消息上注入 file parts（多模态附件）。
   const enrichedMessages = await injectFilePartsFromAttachments(messages);
 
-  // 第二步（中文）：转换前先剔除 UI 层 id 字段，仅保留模型需要的数据结构。
-  const input = enrichedMessages.map((message) => {
+  // 第二步（中文）：把历史里的 file:// 资源在内存中 hydrate 成模型可消费的 data URL。
+  const hydratedMessages = await hydrateFileUrlPartsForModel(enrichedMessages);
+
+  // 第三步（中文）：转换前先剔除 UI 层 id 字段，仅保留模型需要的数据结构。
+  const input = hydratedMessages.map((message) => {
     // 解构去掉 id。
     const { id: _id, ...rest } = message;
 

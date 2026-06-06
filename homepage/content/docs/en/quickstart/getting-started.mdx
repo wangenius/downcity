@@ -1,130 +1,39 @@
 ---
 title: Getting Started
-description: Run your first local agent on Downcity infrastructure in about 10 minutes
+description: Choose the right Downcity documentation space for the surface you want to use
 ---
 
 # Getting Started
 
-## 1. Install
+Downcity has several user surfaces. This page is a map, not a command tutorial.
 
-```bash
-npm install -g downcity
-# or
-pnpm add -g downcity
-town --version
-city --version
-```
+Use it to decide where to start:
 
-> `downcity` exposes `town` for local agents and `city` for City administration.
->
-> If `town` is not found after install, see [FAQ](/en/docs/operations/faq).
->
-> To upgrade later, run `town update`. It upgrades the package you originally installed.
+- Use [Town CLI](/en/products-docs/town-cli) when you want to run local agents, manage project agents, or use built-in plugin commands.
+- Use [City CLI](/en/city-sdk-docs/packages/cli) when you want to create, manage, or deploy a City project.
+- Use [Agent SDK](/en/agent-sdk-docs) when you want to embed agent behavior in your own Node.js application.
+- Use [City SDK](/en/city-sdk-docs) when you want to build services, model providers, billing, usage, or admin surfaces.
+- Use [Agent Plugins Docs](/en/plugins-docs) when you want to understand built-in plugin behavior or author plugin integrations.
+- Use [Products Docs](/en/products-docs) when you want product-facing usage for Town CLI, Town Console, or Chrome Extension.
 
-## 2. Initialize Town (first time only)
+## Recommended Order
 
-```bash
-town init
-```
+First understand the model:
 
-This creates local Town state under `~/.downcity/` and prepares the City connection layer.
+1. [How Downcity Fits Together](/en/docs/concepts/project-logic-overview)
+2. [Agent Overview](/en/docs/agent/overview/what-is-agent)
+3. [Configuration Model](/en/docs/configuration/overview)
 
-## 3. Start Town
+Then choose the practical surface:
 
-```bash
-town start
-```
+- Local CLI usage: [Town CLI](/en/products-docs/town-cli)
+- Project agent commands: [`town agent`](/en/products-docs/town-cli/agent/agent)
+- Plugin commands: [`town plugin`](/en/products-docs/town-cli/plugin/plugin)
+- City administration CLI: [City CLI](/en/city-sdk-docs/packages/cli)
+- SDK integration: [Agent SDK](/en/agent-sdk-docs)
 
-> `town agent start` requires the local Town runtime to be running first.
+## What This Space Explains
 
-## 4. Initialize a repository
+Downcity docs explain why the system is split into Town, City, Agent, plugins, services, permissions, and configuration layers.
 
-```bash
-cd /path/to/your-repo
-town agent create .
-```
-
-Initialization generates:
-
-- `PROFILE.md` (required)
-- `SOUL.md` (optional)
-- `downcity.json`
-- `.downcity/` runtime directory
-
-## 5. Bind a model
-
-The current project agent binds to a model ID exposed by City AIService. Use `city` to manage the model catalog, then use `town city` to connect the local Agent runtime to City.
-
-The minimal `downcity.json` example should be:
-
-```json
-{
-  "name": "my-agent",
-  "version": "1.0.0",
-  "execution": {
-    "type": "api",
-    "modelId": "quality"
-  }
-}
-```
-
-Notes:
-
-- `modelId` points to a model available through the connected City AIService
-- the project stores the selected model under `execution.modelId`
-- if you have not connected Town to City yet, run `town city login` before starting the agent
-
-## 6. Start Agent
-
-Start the agent (default: background daemon):
-
-```bash
-town agent start
-```
-
-If you run this outside an initialized agent directory, Downcity can let you pick from registered agents interactively.
-
-Use foreground mode when you want logs in the current terminal:
-
-```bash
-town agent start --foreground
-```
-
-## 7. Verify agent state
-
-```bash
-town agent list
-town agent status
-town agent list --running
-```
-
-Notes:
-
-- Agent ports are auto-allocated by Town runtime, so Quickstart should not assume a fixed port.
-- In multi-agent setups, each agent can have a different port.
-
-## 8. Optional: use Console UI
-
-Current `town` CLI no longer starts Console UI. If you want the browser control surface, start Console through its product deployment or development entry.
-
-## 9. Optional: Chrome extension quick-send from page selection
-
-If you use the repo's `chrome-extension`:
-
-1. Select text on the page, then click the message button near the selection to open the inline input near the selected area.
-2. Clicking the browser extension action icon opens the Extension Popup; press `Cmd/Ctrl + U` to open the Inline Composer on the page.
-3. The Extension Popup stays minimal: one input box, one send button, page-level send history, and a settings button.
-4. Agent switching in the Extension Popup is intentionally minimal; Channel Chat is auto-resolved from the current Agent's first available conversation.
-5. Click a history item to refill a previous ask from the current page.
-6. Press `Cmd/Ctrl + Enter` or click the send button to submit (`Enter` for newline).
-7. Press `Esc` to close the input box.
-8. If nothing is selected, sending automatically falls back to full-page mode.
-9. Full-page mode prefers the strongest `main/article` content region; if the page has multiple strong content roots, it merges them and includes page image references.
-
-## Next
-
-- [Configuration](/en/docs/quickstart/configuration)
-- [Agent Overview](/en/docs/agent/overview/what-is-agent)
-- [`town skill`](/en/products-docs/town-cli/plugin/skill)
-- [`town task`](/en/products-docs/town-cli/plugin/task)
-- [FAQ](/en/docs/operations/faq)
+Concrete command flags, examples, and step-by-step operation guides live in product or SDK documentation.

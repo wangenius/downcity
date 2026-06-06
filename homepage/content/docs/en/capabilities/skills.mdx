@@ -1,55 +1,39 @@
 ---
 title: Skills
-description: Skill roots, discovery behavior, and list/lookup-first workflow
+description: Skill roots, discovery behavior, and runtime injection semantics
 ---
 
 # Skills
 
-Downcity supports SKILL.md-based skills.
+Skills are reusable instructions packaged around `SKILL.md`.
 
-## Default roots
+They let an Agent learn a repeatable workflow without hard-coding that workflow into the core runtime.
 
-- Project-level: `.agents/skills`
-- User-level: `~/.agents/skills`
-- Extra roots: `downcity.json.plugins.skill.paths`
+## Discovery Roots
 
-## Recommended workflow
+Downcity can discover skills from:
 
-1. `town skill list` (check already learned/installed local skills first)
-2. `town skill lookup <name>` (if found, read and execute directly)
-3. If missing from `list`, then run `find -> install -> lookup`
+- project-level skill roots
+- user-level skill roots
+- extra roots declared by the skill plugin configuration
 
-Example:
+Project-level roots are useful when the workflow belongs to one repository. User-level roots are useful when the workflow should follow the operator across projects.
 
-```bash
-town skill list
-town skill lookup playwright
+## Runtime Semantics
 
-# only when missing
-town skill find playwright
-town skill install owner/repo@playwright
-town skill lookup playwright
-```
+Skills are selected before execution and then injected into the Agent context.
 
-## Key rules
+That means the runtime can keep the base Agent general, while still adding precise procedural knowledge when a task calls for it.
 
-- Always `lookup` before using a skill.
-- Skills returned by `list` are already installed and ready to use.
-- Prefer matching learned skills by default when the task fits.
-- In the running agent, `lookup` returns status-only tool output; `SKILL.md` content is injected as a `<skill>...</skill>` user message.
-- Follow `allowed-tools` in `SKILL.md` strictly.
-- The agent discovers changed skill files automatically.
+## Important Boundary
 
-## Related config
+Installed skills are available knowledge. They are not automatically trusted actions.
 
-```json
-{
-  "plugins": {
-    "skill": {
-      "enabled": true,
-      "paths": [".agents/skills"],
-      "allowExternalPaths": false
-    }
-  }
-}
-```
+The Agent still has to respect each skill's declared tool boundaries and the active permission model.
+
+## Where To Use It
+
+Concrete skill commands live in product docs:
+
+- [`town skill`](/en/products-docs/town-cli/plugin/skill)
+- [Skill plugin docs](/en/plugins-docs/builtins/skill)

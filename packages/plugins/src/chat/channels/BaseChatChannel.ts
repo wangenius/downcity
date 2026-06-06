@@ -74,6 +74,14 @@ export type IncomingChatMessage = {
   userId?: string;
   username?: string;
   /**
+   * 当前消息接收时间。
+   *
+   * 说明（中文）
+   * - 推荐传入 ISO8601 字符串。
+   * - 渠道能拿到平台消息时间时优先使用平台时间，否则使用收到/入队时刻。
+   */
+  receivedAt?: string;
+  /**
    * 用户时区。
    *
    * 说明（中文）

@@ -33,6 +33,11 @@ type SessionTurnServiceOptions = {
   session_id: string;
 
   /**
+   * 当前项目根目录。
+   */
+  project_root: string;
+
+  /**
    * 当前 session 执行器。
    */
   executor: Executor;
@@ -53,6 +58,7 @@ type SessionTurnServiceOptions = {
  */
 export class SessionTurnService {
   private readonly session_id: string;
+  private readonly project_root: string;
   private readonly executor: Executor;
   private readonly state_service: SessionStateService;
   private readonly event_hub: SessionEventHub;
@@ -60,6 +66,7 @@ export class SessionTurnService {
 
   constructor(options: SessionTurnServiceOptions) {
     this.session_id = options.session_id;
+    this.project_root = options.project_root;
     this.executor = options.executor;
     this.state_service = options.state_service;
     this.event_hub = options.event_hub;
@@ -134,6 +141,7 @@ export class SessionTurnService {
     const tool_name_by_call_id = new Map<string, string>();
     const run_context: SessionRunContext = {
       sessionId: this.session_id,
+      projectRoot: this.project_root,
       onStepCallback: input.onStepMerge,
       onAssistantStepCallback: async (step) => {
         this.publish_event({

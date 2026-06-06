@@ -1,71 +1,40 @@
 ---
 title: Tasks
-description: 任务定义、调度与 CLI 操作
+description: 任务定义、调度语义和结果归属
 ---
 
 # Tasks
 
-任务定义存放在 `.downcity/task/<taskId>/task.md`。
+Task 是可复用、可调度的 Agent 工作定义。
 
-> 想看完整执行链路（状态机、校验规则、run 目录语义、排障）：  
-> 参考 [`town task`](/zh/products-docs/town-cli/plugin/task) 与 [Agent Plugins Docs / task](/zh/plugins-docs/builtins/task)。
+它不只是“延迟发送一条聊天消息”。一个 task 有自己的定义、调度、运行产物和结果投递语义。
 
-## 最小任务示例
+## Task 负责什么
 
-```markdown
----
-title: 每日仓库巡检
-when: "0 9 * * 1-5"
-description: 运行测试并总结异常
-sessionId: telegram-chat-123456
-status: enabled
-kind: agent
----
+一个 task 定义描述：
 
-请执行任务并把最终输出正文写入 `output.md`，并在 `result.md` 写摘要。
-```
+- 要执行什么
+- 什么时候执行
+- 结果应该回到哪个 session
+- 当前是 enabled、paused，还是 disabled
 
-## 执行结果通知
+task runtime 会把运行产物写进项目 `.downcity/` 状态树。这样定时工作始终归属于拥有它的项目 Agent。
 
-- 任务完成后会写入 `.downcity/task/<taskId>/<timestamp>/` 产物。
-- 默认会把最终结果正文发送回 `sessionId` 绑定的 chat。
-- `sessionId` 仅决定任务结果回到哪个会话，不代表认证身份。
+## 结果投递
 
-## 目录结构
+`sessionId` 决定任务结果返回哪里。
 
-```text
-.downcity/task/
-  <taskId>/
-    task.md
-    <timestamp>/
-      run.json
-      output.md
-      result.md
-      dialogue.md
-```
+它不是认证身份，而是结果回到既有 session 或 chat context 的投递路线。
 
-## 常用命令
+## 时间语义
 
-```bash
-town task list
-town task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 9 * * 1-5" --activate
-town task run daily-check
-town task update daily-check --when "@manual"
-town task disable daily-check
-```
+task schedule 由 runtime 进程解释。cron 表达式因此使用 runtime 所在环境的时区。
 
-## 状态说明
+一次性 time trigger 应该显式带时区，避免存储后的调度语义变得模糊。
 
-- `enabled`：参与调度
-- `paused`：保留定义，不调度
-- `disabled`：禁用
+## 去哪里使用
 
-## 时间口径
+具体 task 命令放在产品文档：
 
-- cron 表达式按运行该 runtime 的本机时区解释。例如本机时区是 `Asia/Shanghai` 时，`0 13 * * *` 表示每天北京时间 13:00。
-- `time:<ISO8601>` 一次性触发必须显式带时区，例如 `time:2026-03-08T10:30:00+08:00`。
-- 代理只会影响基于 IP 的位置推断，不会改变本机时区；如果要改变 cron 口径，请调整运行环境的系统时区或 `TZ`。
-
-## 调度生效条件
-
-任务调度依赖运行中的 runtime（建议 `town agent start`）。
+- [`town task`](/zh/products-docs/town-cli/plugin/task)
+- [Task plugin 文档](/zh/plugins-docs/builtins/task)

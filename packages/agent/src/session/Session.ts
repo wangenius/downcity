@@ -130,6 +130,7 @@ export class Session implements AgentSession {
     });
     this.turnService = new SessionTurnService({
       session_id: this.id,
+      project_root: this.projectRoot,
       executor: this.executor,
       state_service: this.stateService,
       event_hub: this.eventHub,

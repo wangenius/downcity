@@ -9,6 +9,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   isFileUIPart,
   isTextUIPart,
@@ -59,6 +60,64 @@ function buildDataUrl(mediaType: string, buffer: Buffer): string {
   const base64 = buffer.toString("base64");
   const safeType = mediaType || "application/octet-stream";
   return `data:${safeType};base64,${base64}`;
+}
+
+async function hydrateFileUrlPart(part: FileUIPart): Promise<FileUIPart> {
+  const url = String(part.url || "").trim();
+  if (!url.startsWith("file://")) return part;
+  try {
+    const absPath = fileURLToPath(url);
+    const buffer = await fs.readFile(absPath);
+    const mediaType =
+      String(part.mediaType || "").trim() ||
+      guessAttachmentMediaTypeFromPath(absPath) ||
+      "application/octet-stream";
+    return {
+      ...part,
+      mediaType,
+      url: buildDataUrl(mediaType, buffer),
+    };
+  } catch {
+    return part;
+  }
+}
+
+/**
+ * 将历史中的 `file://` file part 临时转换为模型可消费的 data URL。
+ *
+ * 关键点（中文）
+ * - 该函数只修改本轮内存消息，不回写历史。
+ * - 持久化层继续保留轻量 `file://` 绝对 URL，避免 JSONL 存储 base64。
+ */
+export async function hydrateFileUrlPartsForModel(
+  messages: SessionMessageV1[],
+): Promise<SessionMessageV1[]> {
+  if (!Array.isArray(messages) || messages.length === 0) return messages;
+
+  const out: SessionMessageV1[] = [];
+  for (const message of messages) {
+    const parts = Array.isArray(message?.parts) ? message.parts : [];
+    if (!parts.some((part) => isFileUIPart(part as FileUIPart))) {
+      out.push(message);
+      continue;
+    }
+
+    const nextParts: SessionMessageV1["parts"] = [];
+    let changed = false;
+    for (const part of parts) {
+      if (!isFileUIPart(part as FileUIPart)) {
+        nextParts.push(part);
+        continue;
+      }
+      const nextPart = await hydrateFileUrlPart(part as FileUIPart);
+      if (nextPart !== part) changed = true;
+      nextParts.push(nextPart as SessionMessageV1["parts"][number]);
+    }
+
+    out.push(changed ? { ...message, parts: nextParts } : message);
+  }
+
+  return out;
 }
 
 /**

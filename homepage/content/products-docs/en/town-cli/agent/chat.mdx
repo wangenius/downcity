@@ -7,7 +7,7 @@ description: Chat with a selected agent in interactive or one-shot mode
 
 Chat with a target agent from the terminal.
 
-> This page remains as a command entry point. For the fuller explanation, see [Chat with an Agent](/en/docs/agent/getting-started/chat-with-an-agent) and [CLI / chat](/en/docs/agent/cli/interaction/chat).
+Use this command after the target agent is running.
 
 This command uses a dedicated local CLI main session: `local-cli-chat-main`.
 
@@ -35,6 +35,16 @@ town agent chat [--to <id>] --message <text> [--json]
 - Requires the target agent to be running.
 - Keeps sending every line into the same local CLI session instead of sharing Console UI context.
 - Type `/exit` or `/quit` to leave the chat loop.
+
+## If you get no reply
+
+Check the runtime before debugging prompts or sessions:
+
+1. [`town agent status`](/en/products-docs/town-cli/agent/status)
+2. model binding in `downcity.json.execution.modelId`
+3. whether the selected target is actually running
+
+If the problem is a polluted terminal session, use [`town agent history clean`](/en/products-docs/town-cli/agent/history-clean) only when you know the exact session to reset.
 
 ## Related commands
 

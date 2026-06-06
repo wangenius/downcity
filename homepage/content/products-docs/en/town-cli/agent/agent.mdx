@@ -7,7 +7,7 @@ description: Manage agents interactively, or use subcommands for scripts
 
 Manage agent lifecycle and registry-aware operations.
 
-> Recommended reading: the new complete Agent documentation now lives in a dedicated docs domain. Start with [Agent Overview](/en/docs/agent/overview/what-is-agent) and [Agent CLI Overview](/en/docs/agent/cli/overview).
+This is the Town CLI command group for project Agents. For the conceptual model, read [What Is an Agent](/en/docs/agent/overview/what-is-agent).
 
 Run `town agent` without a subcommand in an interactive terminal to open the agent manager. Use subcommands when you want a scriptable command.
 
@@ -48,6 +48,7 @@ Chat credentials stay in Town-level chat accounts managed from `town chat`. The 
 - `start`: start the agent
 - `stop`: stop the agent daemon
 - `chat`: chat with an agent in interactive or one-shot mode
+- `history clean`: hard-clean a targeted session history
 - `status`: show agent status
 - `doctor`: diagnose state files and optionally fix stale pid/meta
 - `restart`: restart the agent
@@ -59,6 +60,7 @@ Chat credentials stay in Town-level chat accounts managed from `town chat`. The 
 - [`town agent start`](/en/products-docs/town-cli/agent/start)
 - [`town agent stop`](/en/products-docs/town-cli/agent/stop)
 - [`town agent chat`](/en/products-docs/town-cli/agent/chat)
+- [`town agent history clean`](/en/products-docs/town-cli/agent/history-clean)
 - [`town agent status`](/en/products-docs/town-cli/agent/status)
 - [`town agent restart`](/en/products-docs/town-cli/agent/restart)
 - [`town agent doctor`](/en/products-docs/town-cli/agent/doctor)

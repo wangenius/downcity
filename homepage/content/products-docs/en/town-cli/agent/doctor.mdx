@@ -7,7 +7,7 @@ description: Diagnose and optionally fix stale agent state files
 
 Diagnose agent state files for a target agent and optionally clean stale pid/meta files.
 
-> This page remains as a command entry point. For the fuller explanation, see [CLI / doctor](/en/docs/agent/cli/maintenance/doctor) and [Agent Shows stale](/en/docs/agent/operations/troubleshooting/agent-shows-stale).
+Use this command when daemon state looks inconsistent.
 
 ## Usage
 
@@ -24,6 +24,12 @@ town agent doctor [path] [--fix]
 - `path` defaults to current directory `.`
 - Target agent must be registered in the managed agent registry
 - Without `--fix`, it only reports issues and does not modify files
+
+## What stale means
+
+`stale` usually means the pid/meta state files still exist, but the daemon process does not.
+
+Common causes include abnormal process exit, machine restart, or incomplete cleanup from a previous launch. In most cases, `doctor --fix` is the right first move before starting again.
 
 ## Related commands
 

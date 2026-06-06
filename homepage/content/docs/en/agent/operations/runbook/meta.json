@@ -1,8 +1,0 @@
-{
-  "title": "Runbook",
-  "pages": [
-    "startup-checklist",
-    "restart-safely",
-    "recover-chat-runtime"
-  ]
-}

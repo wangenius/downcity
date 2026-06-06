@@ -1,63 +1,20 @@
 ---
 title: CLI Commands
-description: Command-line reference entry for Downcity
+description: Where Downcity command-line references live
 ---
 
 # CLI Commands
 
-CLI docs are organized by command pages and command groups.
+Downcity docs explain the design model, runtime boundaries, and configuration semantics.
 
-## Command docs directory
+Concrete command usage lives in product docs:
 
-- Open the `Commands` section and pick a command or group directly.
-- Both fixed commands and dynamically registered commands are listed there.
+- [Town CLI](/en/products-docs/town-cli)
+- [`town agent`](/en/products-docs/town-cli/agent/agent)
+- [`town plugin`](/en/products-docs/town-cli/plugin/plugin)
+- [City CLI](/en/city-sdk-docs/packages/cli)
 
-## Primary command groups
-
-- Fixed root commands:
-  - [`town init`](/en/products-docs/town-cli/init)
-  - [`town start`](/en/products-docs/town-cli/start)
-  - [`town stop`](/en/products-docs/town-cli/stop)
-  - [`town restart`](/en/products-docs/town-cli/restart)
-  - [`town update`](/en/products-docs/town-cli/update)
-  - [`town status`](/en/products-docs/town-cli/status)
-- Fixed module commands:
-  - [`town agent`](/en/products-docs/town-cli/agent/agent)
-  - [`town agent create`](/en/products-docs/town-cli/agent/create)
-  - [`town agent list`](/en/products-docs/town-cli/agent/list)
-  - [`town agent chat`](/en/products-docs/town-cli/agent/chat)
-  - [`town config`](/en/products-docs/town-cli/config)
-  - [`town city`](/en/products-docs/town-cli/city)
-  - [`town env`](/en/products-docs/town-cli/env)
-  - [`town plugin`](/en/products-docs/town-cli/plugin/plugin)
-- Dynamic action commands:
-  - [`town chat`](/en/products-docs/town-cli/plugin/chat)
-  - [`town task`](/en/products-docs/town-cli/plugin/task)
-  - [`town memory`](/en/products-docs/town-cli/plugin/memory)
-  - [`town contact`](/en/products-docs/town-cli/plugin/contact)
-  - [`town skill`](/en/products-docs/town-cli/plugin/skill)
-  - [`town web`](/en/products-docs/town-cli/plugin/web)
-  - [`town asr`](/en/products-docs/town-cli/plugin/asr)
-  - [`town tts`](/en/products-docs/town-cli/plugin/tts)
-
-## Runtime model (short)
-
-- `town start`: start Town runtime only
-- `town stop`: stop Town runtime and managed agents
-- `town restart`: restart Town runtime and restore managed agents
-- `town update`: update the currently installed global `downcity` CLI bundle
-- `town agent`: open the interactive agent manager in a TTY
-- `town agent create`: initialize project runtime files
-- `town agent list`: inspect registered agents, or use `--running` for active ones only
-- `town agent start`: start project agent daemon
-- `town agent stop`: stop project agent daemon
-- `town agent chat`: chat with an agent in interactive mode or send one-shot messages with `--message`
-- `town city`: select a City base and manage Town user login
-- `town plugin ...`: inspect the agent plugin catalog, or use explicit advanced plugin command forms
-- `town chat/task/memory/contact ...`: normal managed-plugin runtime commands
-- `town web/skill/asr/tts ...`: normal local plugin commands
-
-## Always up to date
+## Local help
 
 Use local help for latest flags:
 

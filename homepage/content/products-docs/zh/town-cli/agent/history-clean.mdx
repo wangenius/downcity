@@ -1,0 +1,45 @@
+---
+title: town agent history clean
+description: 为排障或恢复硬清理一个指定 Agent session history
+---
+
+# `town agent history clean`
+
+硬清理一个指定的 Agent session history。
+
+这是恢复和排障命令，不是日常聊天命令，也不是“清掉最近几轮消息”的模糊快捷入口。
+
+## 用法
+
+```bash
+town agent history clean [path] --session-id <sessionId> --hard
+town agent history clean [path] --channel telegram --chat-id 123 --hard
+```
+
+## 常用参数
+
+- `--session-id`：直接指定精确 session
+- `--channel`：按聊天渠道定位
+- `--chat-id`：按渠道里的 chat id 定位
+- `--target-type`：进一步限定目标身份
+- `--thread-id`：指定 thread 维度的历史
+- `--hard`：执行破坏性清理时必须显式传入
+- `--json`：输出结构化结果
+
+## 什么时候使用
+
+只有当你明确知道要重置哪个 session 时，才使用这个命令。
+
+典型场景：
+
+- 某个 session 上下文已经严重污染
+- 某条聊天路线必须重置
+- 排障时需要从干净上下文重新开始
+
+如果已经知道精确 session 身份，`--session-id` 通常是最清晰的定位方式。
+
+## 相关命令
+
+- [`town agent chat`](/zh/products-docs/town-cli/agent/chat)
+- [`town agent status`](/zh/products-docs/town-cli/agent/status)
+- [SDK session layout](/zh/agent-sdk-docs/storage/sdk-session-layout)

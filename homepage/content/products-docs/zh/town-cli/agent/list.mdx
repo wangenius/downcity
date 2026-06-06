@@ -7,7 +7,7 @@ description: 列出已登记到 Town 的 agent 项目
 
 列出已经登记到受管 agent registry 的 agent 项目。
 
-> 这页保留为命令入口。更完整的说明见 [CLI / list](/zh/docs/agent/cli/lifecycle/list) 和 [Agent Registry](/zh/docs/agent/cli/maintenance/registry)。
+registry 是 Town 发现和选择项目 Agent 的本地记录层。
 
 ## 用法
 
@@ -22,6 +22,12 @@ town agent list --running
 - `--running` 只保留当前仍在运行的 agent daemon。
 - 同时展示运行中和已停止的记录。
 - 方便在交互式 `town agent start` 之前先确认有哪些 agent 可选。
+
+## Registry 和进程状态
+
+registry 记录 Town 已知的项目根目录，以及每个项目对应的 agent id。
+
+真实运行状态仍然要靠 daemon 检查确认。所以 `list` 和 [`status`](/zh/products-docs/town-cli/agent/status) 相关，但不能互相替代。
 
 ## 相关命令
 

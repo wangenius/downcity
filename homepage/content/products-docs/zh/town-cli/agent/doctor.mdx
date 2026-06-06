@@ -7,7 +7,7 @@ description: 诊断并可修复 agent 的僵尸状态文件
 
 诊断指定 agent 的状态文件，并可清理僵尸 pid/meta。
 
-> 这页保留为命令入口。更完整的说明见 [CLI / doctor](/zh/docs/agent/cli/maintenance/doctor) 和 [Agent 显示 stale](/zh/docs/agent/operations/troubleshooting/agent-shows-stale)。
+daemon 状态看起来不一致时，使用这个命令。
 
 ## 用法
 
@@ -24,6 +24,12 @@ town agent doctor [path] [--fix]
 - `path` 默认当前目录 `.`。
 - 目标 agent 需要已登记在受管 agent registry。
 - 不带 `--fix` 时只诊断，不修改文件。
+
+## stale 表示什么
+
+`stale` 通常表示 pid/meta 状态文件还在，但 daemon 进程已经不存在。
+
+常见原因包括异常退出、机器重启，或上一次启动后的清理没有完成。多数情况下，重新启动前先执行 `doctor --fix` 是最合适的第一步。
 
 ## 相关命令
 

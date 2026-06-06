@@ -1,12 +1,4 @@
 {
   "title": "Agent",
-  "pages": [
-    "overview",
-    "getting-started",
-    "cli",
-    "configuration",
-    "storage",
-    "operations",
-    "examples"
-  ]
+  "pages": ["overview", "configuration", "storage"]
 }

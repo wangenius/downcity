@@ -7,7 +7,7 @@ description: Show target agent status
 
 Show process status for a target agent.
 
-> This page remains as a command entry point. For the fuller explanation, see [CLI / status](/en/docs/agent/cli/lifecycle/status) and [Agent Shows stale](/en/docs/agent/operations/troubleshooting/agent-shows-stale).
+Use this command before guessing whether the project is running, stopped, stale, or not initialized.
 
 ## Usage
 
@@ -21,6 +21,15 @@ town agent status [path]
 - Target agent must be registered in the managed agent registry
 - Output includes agent state, process info, and key paths
 - When state is `stale`, output includes `stale_reason` for direct diagnosis
+
+## Common states
+
+- `running`: daemon process is reachable
+- `stopped`: registry exists, but no daemon is running
+- `stale`: state files remain, but the underlying daemon is gone
+- `not initialized`: the target directory is not yet an Agent project
+
+If you see `stale`, run [`town agent doctor --fix`](/en/products-docs/town-cli/agent/doctor) before starting again.
 
 ## Related commands
 

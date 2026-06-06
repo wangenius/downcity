@@ -7,7 +7,7 @@ description: 交互式管理 agent，或使用子命令做脚本化操作
 
 管理 Agent 生命周期和 registry 相关操作。
 
-> 推荐阅读：新的 Agent 完整文档已经迁移到独立文档域，优先从 [Agent 总览](/zh/docs/agent/overview/what-is-agent) 和 [Agent CLI 总览](/zh/docs/agent/cli/overview) 开始。
+这是 Town CLI 中管理项目 Agent 的命令组。Agent 的设计边界和概念模型见 [Agent 是什么](/zh/docs/agent/overview/what-is-agent)。
 
 在交互式终端中直接运行 `town agent` 会进入 agent manager。需要脚本化调用时，继续使用明确子命令。
 
@@ -48,6 +48,7 @@ town agent <subcommand>
 - `start`：启动 agent
 - `stop`：停止 agent daemon
 - `chat`：在终端中与 agent 对话，支持交互式和一次性模式
+- `history clean`：硬清理指定 session history
 - `status`：查看 agent 状态
 - `doctor`：诊断状态文件，并可修复僵尸 pid/meta
 - `restart`：重启 agent
@@ -59,6 +60,7 @@ town agent <subcommand>
 - [`town agent start`](/zh/products-docs/town-cli/agent/start)
 - [`town agent stop`](/zh/products-docs/town-cli/agent/stop)
 - [`town agent chat`](/zh/products-docs/town-cli/agent/chat)
+- [`town agent history clean`](/zh/products-docs/town-cli/agent/history-clean)
 - [`town agent status`](/zh/products-docs/town-cli/agent/status)
 - [`town agent restart`](/zh/products-docs/town-cli/agent/restart)
 - [`town agent doctor`](/zh/products-docs/town-cli/agent/doctor)

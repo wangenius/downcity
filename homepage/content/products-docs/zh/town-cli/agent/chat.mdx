@@ -7,7 +7,7 @@ description: 在终端中与选定 agent 对话，支持交互式和一次性模
 
 在终端中与指定 agent 对话。
 
-> 这页保留为命令入口。更完整的说明见 [和 Agent 对话](/zh/docs/agent/getting-started/chat-with-an-agent) 和 [CLI / chat](/zh/docs/agent/cli/interaction/chat)。
+目标 agent 已经运行后，使用这个命令在终端里对话。
 
 该命令默认使用独立的本地 CLI 主会话：`local-cli-chat-main`。
 
@@ -36,6 +36,16 @@ town agent chat [--to <id>] --message <text> [--json]
 - 目标 agent 必须已经处于运行中。
 - 终端里输入的每一行都会进入同一个本地 CLI 会话，不与 Console UI 共用上下文。
 - 输入 `/exit` 或 `/quit` 退出持续对话。
+
+## 没有回复时
+
+先排运行状态，再排提示词或 session：
+
+1. [`town agent status`](/zh/products-docs/town-cli/agent/status)
+2. `downcity.json.execution.modelId` 模型绑定
+3. 选中的目标 agent 是否真的处于运行中
+
+如果问题来自被污染的终端会话，只有在你明确知道要重置哪个 session 时，才使用 [`town agent history clean`](/zh/products-docs/town-cli/agent/history-clean)。
 
 ## 相关命令
 

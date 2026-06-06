@@ -7,7 +7,7 @@ description: List agent projects registered in Town
 
 List agent projects already registered in the managed agent registry.
 
-> This page remains as a command entry point. For the fuller explanation, see [CLI / list](/en/docs/agent/cli/lifecycle/list) and [Agent Registry](/en/docs/agent/cli/maintenance/registry).
+The registry is the discovery layer for project Agents known to Town.
 
 ## Usage
 
@@ -22,6 +22,12 @@ town agent list --running
 - `--running` filters the list to currently active agent daemons only.
 - Displays both running and stopped entries.
 - Helps you see which agents are available for interactive `town agent start`.
+
+## Registry vs process state
+
+The registry records which project roots Town knows about and which id belongs to each project.
+
+Actual runtime state still depends on daemon inspection. That is why `list` and [`status`](/en/products-docs/town-cli/agent/status) are related, but not interchangeable.
 
 ## Related commands
 

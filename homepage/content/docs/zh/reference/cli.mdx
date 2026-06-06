@@ -1,63 +1,20 @@
 ---
 title: CLI 命令
-description: Downcity 命令行参考入口
+description: Downcity 命令行参考文档的位置
 ---
 
 # CLI 命令
 
-CLI 文档按“单命令页面 + 命令组”组织。
+Downcity docs 解释设计模型、运行边界和配置语义。
 
-## 命令目录
+具体命令用法放在产品文档：
 
-- 直接在 `Commands` 分组中选择具体命令或命令组。
-- 固定命令和动态命令都在这里汇总展示。
+- [Town CLI](/zh/products-docs/town-cli)
+- [`town agent`](/zh/products-docs/town-cli/agent/agent)
+- [`town plugin`](/zh/products-docs/town-cli/plugin/plugin)
+- [City CLI](/zh/city-sdk-docs/packages/cli)
 
-## 主要命令组
-
-- 固定根命令：
-  - [`town init`](/zh/products-docs/town-cli/init)
-  - [`town start`](/zh/products-docs/town-cli/start)
-  - [`town stop`](/zh/products-docs/town-cli/stop)
-  - [`town restart`](/zh/products-docs/town-cli/restart)
-  - [`town update`](/zh/products-docs/town-cli/update)
-  - [`town status`](/zh/products-docs/town-cli/status)
-- 固定模块命令：
-  - [`town agent`](/zh/products-docs/town-cli/agent/agent)
-  - [`town agent create`](/zh/products-docs/town-cli/agent/create)
-  - [`town agent list`](/zh/products-docs/town-cli/agent/list)
-  - [`town agent chat`](/zh/products-docs/town-cli/agent/chat)
-  - [`town config`](/zh/products-docs/town-cli/config)
-  - [`town city`](/zh/products-docs/town-cli/city)
-  - [`town env`](/zh/products-docs/town-cli/env)
-  - [`town plugin`](/zh/products-docs/town-cli/plugin/plugin)
-- 动态 action 命令：
-  - [`town chat`](/zh/products-docs/town-cli/plugin/chat)
-  - [`town task`](/zh/products-docs/town-cli/plugin/task)
-  - [`town memory`](/zh/products-docs/town-cli/plugin/memory)
-  - [`town contact`](/zh/products-docs/town-cli/plugin/contact)
-  - [`town skill`](/zh/products-docs/town-cli/plugin/skill)
-  - [`town web`](/zh/products-docs/town-cli/plugin/web)
-  - [`town asr`](/zh/products-docs/town-cli/plugin/asr)
-  - [`town tts`](/zh/products-docs/town-cli/plugin/tts)
-
-## 运行模型（简版）
-
-- `town start`：仅启动 Town runtime
-- `town stop`：停止 Town runtime 与受管 agent
-- `town restart`：重启 Town runtime，并恢复之前运行中的 agent
-- `town update`：更新当前全局安装来源对应的 `downcity` CLI 聚合包
-- `town agent`：在交互式终端中打开 agent manager
-- `town agent create`：初始化项目运行文件
-- `town agent list`：查看已登记 agent，也可加 `--running` 只看正在运行的项目
-- `town agent start`：启动项目 agent daemon
-- `town agent stop`：停止项目 agent daemon
-- `town agent chat`：在终端中与 agent 对话，也可通过 `--message` 发送一次性消息
-- `town city`：选择 City base，并管理 Town user 登录态
-- `town plugin ...`：查看 agent plugin catalog，或使用显式高级 plugin command 形式
-- `town chat/task/memory/contact ...`：日常托管 plugin runtime 命令
-- `town web/skill/asr/tts ...`：日常本地 plugin 命令
-
-## 保持最新
+## 本地帮助
 
 本地帮助输出永远是最新的：
 

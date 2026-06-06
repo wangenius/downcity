@@ -7,7 +7,7 @@ description: 查看指定 agent 状态
 
 查看指定 agent 的进程状态。
 
-> 这页保留为命令入口。更完整的说明见 [CLI / status](/zh/docs/agent/cli/lifecycle/status) 和 [Agent 显示 stale](/zh/docs/agent/operations/troubleshooting/agent-shows-stale)。
+先用这个命令确认项目到底是 running、stopped、stale，还是尚未初始化。
 
 ## 用法
 
@@ -21,6 +21,15 @@ town agent status [path]
 - 目标 agent 需要已登记在受管 agent registry。
 - 输出包含运行状态、进程信息和关键路径。
 - 当状态为 `stale` 时，会额外输出 `stale_reason`，说明判定为僵尸状态的具体原因。
+
+## 常见状态
+
+- `running`：daemon 进程可访问
+- `stopped`：registry 仍存在，但 daemon 未运行
+- `stale`：状态文件还在，但底层 daemon 已经不在
+- `not initialized`：目标目录还不是 Agent 项目
+
+如果看到 `stale`，先执行 [`town agent doctor --fix`](/zh/products-docs/town-cli/agent/doctor)，再重新启动。
 
 ## 相关命令
 

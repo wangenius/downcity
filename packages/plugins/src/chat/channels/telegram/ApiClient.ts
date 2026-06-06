@@ -10,6 +10,12 @@ import {
   type TelegramAttachmentType,
 } from "./Shared.js";
 
+const TELEGRAM_SEND_MAX_ATTEMPTS = 3;
+const TELEGRAM_SEND_RETRY_DELAYS_MS = [1_000, 3_000];
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * Telegram API 客户端。
@@ -105,6 +111,61 @@ export class TelegramApiClient {
   }
 
   /**
+   * 发送类 JSON 请求的短重试。
+   *
+   * 关键点（中文）
+   * - 只重试网络抖动 / Telegram 5xx 这类瞬时失败。
+   * - 不重试 Telegram 4xx，避免 Markdown 参数错误、权限错误等被重复打扰。
+   */
+  private async requestSendJson<T>(
+    method: string,
+    data: Record<string, unknown>,
+  ): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < TELEGRAM_SEND_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.requestJson<T>(method, data);
+      } catch (error) {
+        lastError = error;
+        if (
+          attempt >= TELEGRAM_SEND_MAX_ATTEMPTS - 1 ||
+          !this.isRetryableSendError(error)
+        ) {
+          throw error;
+        }
+
+        const delayMs =
+          TELEGRAM_SEND_RETRY_DELAYS_MS[attempt] ||
+          TELEGRAM_SEND_RETRY_DELAYS_MS[
+            TELEGRAM_SEND_RETRY_DELAYS_MS.length - 1
+          ];
+        this.logger.warn("Telegram send failed, retrying", {
+          method,
+          attempt: attempt + 1,
+          retryInMs: delayMs,
+          error: String(error),
+        });
+        await sleep(delayMs);
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * 判断发送失败是否适合短重试。
+   */
+  private isRetryableSendError(error: unknown): boolean {
+    const text = String(error || "");
+    if (/Telegram API (HTTP|error)\s+4\d\d/i.test(text)) {
+      return false;
+    }
+    return /fetch failed|network|TLS|ECONN|ETIMEDOUT|EAI_AGAIN|UND_ERR|HTTP\s+5\d\d/i.test(
+      text,
+    );
+  }
+
+  /**
    * 下载 Telegram 文件并保存到 `.downcity/.cache/telegram`。
    *
    * 说明（中文）
@@ -174,7 +235,7 @@ export class TelegramApiClient {
         for (const chunk of chunks) {
           if (!chunk) continue;
           try {
-            await this.requestJson("sendMessage", {
+            await this.requestSendJson("sendMessage", {
               chat_id: chatId,
               text: chunk,
               parse_mode: "Markdown",
@@ -184,7 +245,7 @@ export class TelegramApiClient {
           } catch {
             // Fallback to plain text (Markdown is strict and often fails)
             try {
-              await this.requestJson("sendMessage", {
+              await this.requestSendJson("sendMessage", {
                 chat_id: chatId,
                 text: chunk,
                 ...(message_thread_id ? { message_thread_id } : {}),
@@ -192,6 +253,8 @@ export class TelegramApiClient {
               });
             } catch (error2) {
               this.logger.error(`Failed to send message: ${String(error2)}`);
+              // 关键点（中文）：平台发送失败必须向上冒泡，避免 history 误记为已发送。
+              throw error2;
             }
           }
         }
@@ -205,7 +268,7 @@ export class TelegramApiClient {
         });
       } catch (e) {
         try {
-          await this.requestJson("sendMessage", {
+          await this.requestSendJson("sendMessage", {
             chat_id: chatId,
             text: `❌ Failed to send ${segment.attachment.type}: ${String(e)}`,
             ...(message_thread_id ? { message_thread_id } : {}),
@@ -215,6 +278,8 @@ export class TelegramApiClient {
           this.logger.error(
             `Failed to send attachment error message: ${String(e2)}`,
           );
+          // 关键点（中文）：附件和错误提示都发送失败时，上层必须感知失败。
+          throw e2;
         }
       }
     }
@@ -231,7 +296,7 @@ export class TelegramApiClient {
         ? opts.messageThreadId
         : undefined;
     try {
-      await this.requestJson("sendMessage", {
+      await this.requestSendJson("sendMessage", {
         chat_id: chatId,
         text,
         ...(message_thread_id ? { message_thread_id } : {}),
@@ -243,6 +308,8 @@ export class TelegramApiClient {
       });
     } catch (error) {
       this.logger.error(`Failed to send message: ${String(error)}`);
+      // 关键点（中文）：inline keyboard 发送失败也要返回失败状态给调用方。
+      throw error;
     }
   }
 

@@ -1,13 +1,13 @@
 ---
-title: Console Registration, Execution Context, and Shell Flow
-description: Explains console registry writes, how the execution context surface connects runtime capability, and how shell injects environment
+title: Town Registration, Execution Context, and Shell Flow
+description: Explains managed agent registry writes, how the execution context surface connects runtime capability, and how shell injects environment
 ---
 
-# Console Registration, Execution Context, and Shell Flow
+# Town Registration, Execution Context, and Shell Flow
 
-## 1. Console Registration
+## 1. Managed Agent Registration
 
-- registry file: `~/.downcity/console/agents.json`
+- registry file: `~/.downcity/main/agents.json`
 - stores known agents and their latest daemon metadata
 - daemon startup must complete the registry write or roll back
 
@@ -34,8 +34,8 @@ description: Explains console registry writes, how the execution context surface
 flowchart TD
   A["town agent start"] --> B["start daemon"]
   B --> C["write debug metadata"]
-  B --> D["upsert console registry"]
-  D --> E["console registry"]
+  B --> D["upsert managed agent registry"]
+  D --> E["Town registry"]
 
   F["city managed plugin or town plugin"] --> G["agent API"]
   G --> H["execution context"]

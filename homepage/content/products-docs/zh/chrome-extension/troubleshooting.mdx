@@ -42,30 +42,7 @@ npm run build:extension
 
 ## 3. 远程机器上服务没有对外暴露
 
-如果你访问的是远程机器，还需要确认 Console 本身不是只绑定在本机回环地址。
-
-从 `town` 的代码看：
-
-- 未传 `--host` / `--public` 时，Console 默认仍是本机模式 `127.0.0.1`
-- 传 `--public` 时，会绑定 `0.0.0.0`
-
-通常可以这样启动：
-
-```bash
-town start --public
-```
-
-或者：
-
-```bash
-town console start --public
-```
-
-如果你希望之后每次启动都沿用公网绑定，可以执行：
-
-```bash
-town public on
-```
+如果你访问的是远程机器，还需要确认 Console 部署本身可以从外部访问。当前 `town` CLI 不再启动或重新绑定 Console UI，公网访问应该在 Console 产品部署、反向代理、隧道或托管层处理。
 
 ## 4. 没有可用 Agent
 

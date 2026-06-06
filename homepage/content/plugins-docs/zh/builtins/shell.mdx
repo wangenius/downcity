@@ -26,6 +26,36 @@ description: shell session 生命周期、单次 exec，以及 per-agent shell r
 - per-agent 的 shell 状态边界
 - 一套围绕 shell 执行的 runtime action 层
 
+## 用户怎么使用
+
+当前没有根命令 `town shell`。使用 plugin command 形式：
+
+```bash
+town plugin command shell exec --payload '{"cmd":"pwd"}'
+town plugin command shell start --payload '{"cmd":"pnpm test","inlineWaitMs":1000}'
+town plugin command shell status --payload '{"shellId":"<shellId>"}'
+town plugin command shell read --payload '{"shellId":"<shellId>","fromCursor":0}'
+town plugin command shell write --payload '{"shellId":"<shellId>","chars":"q\n"}'
+town plugin command shell wait --payload '{"shellId":"<shellId>","timeoutMs":5000}'
+town plugin command shell close --payload '{"shellId":"<shellId>","force":true}'
+```
+
+`town plugin command ...` 面向托管 agent runtime。要在当前项目内直接本地执行，可以使用高级形式：`town plugin action shell <action> --payload '<json>'`。
+
+## SDK action 用法
+
+```ts
+await agent.plugins.runAction({
+  plugin: "shell",
+  action: "exec",
+  payload: {
+    cmd: "pwd",
+  },
+});
+```
+
+action 名称是 `exec`、`start`、`status`、`read`、`write`、`wait`、`close`。
+
 ## 关键语义
 
 - shell sessions 归属于 plugin 实例，而不是模块级全局单例

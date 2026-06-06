@@ -114,13 +114,30 @@ const agent = new Agent({
 | `language` | default language hint | for example `auto`, `zh`, `en` |
 | `timeoutMs` | timeout limit | bounds transcription wait time |
 
+## How users use it
+
+Use the `town asr` shortcut for normal CLI work:
+
+```bash
+town asr status
+town asr models
+town asr install SenseVoiceSmall --active-model SenseVoiceSmall
+town asr on SenseVoiceSmall --active-model SenseVoiceSmall
+town asr use SenseVoiceSmall
+town asr transcribe ./voice.wav --language zh
+town asr doctor
+town asr off
+```
+
+`configure` exists as an SDK/plugin action, but it is not exposed as a `town asr configure` shortcut. Use `town asr on`, `town asr use`, and `town asr off` for the normal CLI path.
+
 ## Main actions
 
 | Action | What it does | When to use it |
 | --- | --- | --- |
 | `status` | inspect config and dependency status | understand the current environment |
 | `install` | install transcription dependencies | first-time speech setup |
-| `configure` | update ASR config | day-to-day model or strategy tuning |
+| `configure` | update ASR config | SDK or advanced plugin action calls |
 | `on` | enable the plugin, optionally install too | one-step speech enablement |
 | `off` | disable the plugin | pause speech capability |
 | `use` | switch the active model | after multiple models exist |

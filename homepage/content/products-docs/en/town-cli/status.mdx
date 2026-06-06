@@ -1,11 +1,11 @@
 ---
 title: town status
-description: Show Town runtime, Console, and managed agent status
+description: Show Town runtime, City connection, and managed agent status
 ---
 
 # `town status`
 
-Show Town runtime, Console, and managed active agents.
+Show Town runtime, Town user City connection, and managed active agents. Current Town CLI no longer reports Console UI runtime state.
 
 ## Usage
 
@@ -16,30 +16,10 @@ town status
 ## Related commands
 
 - [`town agent list --running`](/en/products-docs/town-cli/agent/list)
-- [`town console`](/en/products-docs/town-cli/console/console)
-- [`town public`](/en/products-docs/town-cli/public)
+- [`town city status`](/en/products-docs/town-cli/city)
 
-## Example Output (Based on Current Implementation)
+## Output Sections
 
-The examples below are aligned with current command implementations in `cli/town/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
-
-```text
-$ town status
-town v1.0.0
-┌─────────────────────────────────────────────────────────┐
-│ OK town status                                   │
-│   state    : running                                    │
-│   pid      : <pid>                                      │
-│   pid_file : <bayPidPath>                              │
-│   log      : <bayLogPath>                              │
-│   registry : <consoleRegistryPath>                      │
-└─────────────────────────────────────────────────────────┘
-┌────────────────────────────────────────────────────┐
-│ OK console status                                │
-│   state    : running                               │
-│   pid      : <consolePid>                          │
-│   url      : http://127.0.0.1:5315                 │
-│   pid_file : <consolePidPath>                      │
-│   log      : <consoleLogPath>                      │
-└────────────────────────────────────────────────────┘
-```
+- `Town runtime`: running, stale, or stopped.
+- `City connection`: current City base, town id, and user token state.
+- `Managed agents`: agent daemons that are still running in the managed registry.

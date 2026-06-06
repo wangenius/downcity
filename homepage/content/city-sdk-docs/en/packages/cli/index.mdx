@@ -33,20 +33,41 @@ npm i -g downcity
 city
 ```
 
-The default `city` entry opens an interactive panel. If no server exists yet, the CLI first requires you to add one. After that, you can:
+In an interactive terminal, the default `city` entry opens the City panel. In non-interactive environments it prints help instead.
+
+If no City is connected yet, the interactive flow first asks you to add one. After that, you can:
 
 - manage multiple City servers from `Manage Servers`
 - enter the Admin flow for env / models / towns / payment
 - enter the User flow for login, recharge, and service calls
 
-## Common commands
+## Scriptable city commands
 
 ```bash
-city
-town city use
-town city status
-town agent start .
+city manage
+city create .
+city deploy
+city deploy --dry-run
+city deploy --verify
+city env refresh
 ```
+
+These commands manage City projects, deployment, and City runtime env cache.
+
+## Boundary with `town city`
+
+`town city` is a Town command group. Use it when a local Town runtime or agent needs to select a City base and store a Town user login:
+
+```bash
+town city use
+town city login
+town city status
+```
+
+So the short version is:
+
+- `city`: operate City from the terminal
+- `town city`: connect Town and local agents to a City base
 
 ## Boundaries with other packages
 

@@ -7,7 +7,7 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 
 当前代码里的 built-in plugin 集合包括：
 
-- `auth`
+- `chat-authorization`
 - `skill`
 - `web`
 - `asr`
@@ -26,7 +26,7 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 
 这组通常最值得普通开发者先读：
 
-- `auth`
+- `chat-authorization`
 - `skill`
 - `web`
 - `asr`
@@ -57,7 +57,7 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 ## 推荐怎么读
 
 - 如果你关心用户能力型 plugin：先读 `skill`、`web`、`asr`、`tts`、`chat`
-- 如果你关心平台规则层：读 `auth`
+- 如果你关心平台规则层：读 `chat-authorization`
 - 如果你关心控制面和状态面：读 `workboard`
 - 如果你关心基础设施模式：读 `schedule`、`task`、`memory`、`shell`
 
@@ -65,7 +65,7 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 
 | Plugin | 主要职责 | 主要形状 |
 | --- | --- | --- |
-| `auth` | 授权与角色解析 | rule layer |
+| `chat-authorization` | chat 授权与角色解析 | rule layer |
 | `skill` | 技能发现与安装 | action + system |
 | `web` | 联网 provider 策略 | config + setup + usage + actions + system |
 | `asr` | 语音输入与增强 | action + pipeline + system |

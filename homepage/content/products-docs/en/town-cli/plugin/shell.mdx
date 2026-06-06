@@ -1,11 +1,11 @@
 ---
-title: town shell
-description: Managed shell plugin commands for runtime shell execution and session ownership
+title: shell plugin
+description: Runtime shell execution and session ownership
 ---
 
-# `town shell`
+# shell plugin
 
-`town shell` is the managed shell plugin command group.
+`shell` is a built-in runtime plugin for shell sessions that belong to a specific agent runtime.
 
 Use it when you want shell execution that belongs to the agent runtime instead of an ad-hoc local terminal step.
 
@@ -18,7 +18,8 @@ Use it when you want shell execution that belongs to the agent runtime instead o
 ## Recommended path
 
 - inspect lifecycle and boundaries in [Agent Plugins Docs / shell](/en/plugins-docs/builtins/shell)
-- use `town plugin status shell`, `town plugin start shell`, or `town plugin restart shell` when you need lifecycle-level control
+- There is currently no `town shell` shortcut root; for scripted calls use `town plugin command shell <action> --payload <json>`
+- Common actions include `exec`, `start`, `status`, `read`, `write`, `wait`, and `close`
 
 ## Related
 

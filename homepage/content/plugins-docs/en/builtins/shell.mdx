@@ -26,6 +26,36 @@ Use `shell` when you need:
 - per-agent shell state boundaries
 - a runtime action layer around shell execution
 
+## How users use it
+
+There is no root `town shell` shortcut. Use the plugin command forms:
+
+```bash
+town plugin command shell exec --payload '{"cmd":"pwd"}'
+town plugin command shell start --payload '{"cmd":"pnpm test","inlineWaitMs":1000}'
+town plugin command shell status --payload '{"shellId":"<shellId>"}'
+town plugin command shell read --payload '{"shellId":"<shellId>","fromCursor":0}'
+town plugin command shell write --payload '{"shellId":"<shellId>","chars":"q\n"}'
+town plugin command shell wait --payload '{"shellId":"<shellId>","timeoutMs":5000}'
+town plugin command shell close --payload '{"shellId":"<shellId>","force":true}'
+```
+
+`town plugin command ...` targets a managed agent runtime. For local direct execution inside the current project, the advanced form is `town plugin action shell <action> --payload '<json>'`.
+
+## SDK action use
+
+```ts
+await agent.plugins.runAction({
+  plugin: "shell",
+  action: "exec",
+  payload: {
+    cmd: "pwd",
+  },
+});
+```
+
+The action names are `exec`, `start`, `status`, `read`, `write`, `wait`, and `close`.
+
 ## Important semantics
 
 - shell sessions belong to the plugin instance, not to a module-global singleton

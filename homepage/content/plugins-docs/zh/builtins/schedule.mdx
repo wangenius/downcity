@@ -3,34 +3,54 @@ title: schedule Plugin
 description: plugin action 延迟/定时重派发的内部调度基础设施
 ---
 
-# `schedule` Plugin
+# Action schedule
 
-`schedule` 是基础设施型 plugin。
+`schedule` 是延迟 plugin action 的基础设施概念。
 
-它负责轮询调度任务，并把到点的 plugin action 重新派发执行。
+它负责轮询调度任务，并把到点的 plugin action 重新派发执行。当前用户侧 CLI 里，它不是一个可以 start、stop 或执行业务 action 的独立 plugin。
 
 ## 主要形状
 
-- `lifecycle`
+- 持久化 action job
+- runtime 轮询与恢复
 - 没有业务 action
 
 ## 它主要解决什么问题
 
-如果你想理解这些问题，应该看 `schedule`：
+如果你想理解这些问题，应该看 action scheduling：
 
 - 为什么调度能力归属于 plugin lifecycle，而不是 agent 顶层壳
 - 延迟/定时 plugin action 是怎么被重新调用的
-- 为什么一个 plugin 可以没有用户可见业务 action，却依然是核心基础设施
+- 为什么它通过 `town plugin schedule` 管理，而不是单独提供 `town schedule` 命令
+
+## 用户怎么使用
+
+给 plugin action 命令加 `--delay` 或 `--time`，就会创建 scheduled job：
+
+```bash
+town chat send --chat-key <chatKey> --text "Later" --delay 60000
+town memory store --content "Remember this later" --target daily --time "2026-06-06T09:00:00+08:00"
+```
+
+通过 `town plugin schedule` 查看或取消 scheduled job：
+
+```bash
+town plugin schedule list
+town plugin schedule info <jobId>
+town plugin schedule cancel <jobId>
+```
+
+如果要做可复用自动化，用 `task` plugin，而不是一次性的 scheduled action。
 
 ## 关键语义
 
 - 它主要轮询 `PluginScheduleStore`
 - 启动恢复时会把中断的 running jobs 重置回 pending
-- 它是核心基础设施模式，不是普通用户能力型 plugin
+- 它是核心基础设施模式，不是普通用户业务型 plugin
 
 ## 公开性说明
 
-`SchedulePlugin` 在代码里是 built-in，但主要是平台基础设施 plugin，不属于典型公开 SDK 能力插件。
+action scheduling 属于平台基础设施，不是典型公开 SDK 能力插件。
 
 ## 相关文档
 

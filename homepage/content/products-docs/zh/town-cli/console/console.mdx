@@ -1,110 +1,21 @@
 ---
-title: town console
-description: 管理 Town gateway Console（单实例、多 agent 视图）
+title: Console CLI 命令已移除
+description: 当前 Town CLI 不再提供 Console UI 启动命令
 ---
 
-# `town console`
+# Console CLI 命令已移除
 
-`town console` 负责管理 Town gateway Console。
+当前版本的 `town` 不再提供 Console UI 启动命令。`town start` 只启动本机 Town runtime，不会启动浏览器 Console，也不支持 Console 相关参数。
 
-Console 是 Town gateway 暴露的浏览器界面：
+## 当前应该怎么做
 
-- 单实例 Console
-- 多 agent 切换查看
-- 全局 env / auth / plugin 管理，以及 Town user 的 City 连接状态
-- 选中 agent 后代理到对应运行时
+- 启动本机 runtime：[`town start`](/zh/products-docs/town-cli/start)
+- 查看 runtime、City 连接和受管 agent：[`town status`](/zh/products-docs/town-cli/status)
+- 管理 agent：[`town agent`](/zh/products-docs/town-cli/agent/agent)
+- 使用浏览器 Console：按产品部署或开发入口单独启动 Console UI
 
-## 用法
+## 相关页面
 
-```bash
-town console [action] [options]
-```
-
-## action
-
-- `start`：后台启动 Console
-- `stop`：停止 Console
-- `restart`：重启 Console
-- `status`：查看 Console 状态
-
-如果省略 `action`，默认执行 `start`。
-
-## 常用参数
-
-- `-p, --public [enabled]`：以公网模式启动 Console（绑定 `0.0.0.0`）
-- `-h, --host <host>`：Console 主机，默认 `127.0.0.1`
-
-如果传 `-p` 而不传 `-h`，CLI 会自动把监听主机切到 `0.0.0.0`，方便服务器直接对外暴露。
-
-## 关键行为
-
-- Console 依赖 Town runtime，先执行 [`town start`](/zh/products-docs/town-cli/start)。
-- Console 不是 Town runtime 本身，而是由运行在 runtime 之上的 Town gateway 提供。
-- 一个 Console 实例可以切换查看多个运行中的 agent。
-- `start` 不会改写已经运行中的监听地址；如果当前是本机模式，要切到公网模式请执行 `town console restart -p`。
-- 如果你希望公网模式在后续启动里持续生效，请使用 [`town public`](/zh/products-docs/town-cli/public)。
-- `town status` 会同时显示 Town runtime 与 Console 状态。
-
-## 典型流程
-
-```bash
-# 1) 一起启动 runtime + Console
-town start --console
-
-# 1.1) 一步启动并对外暴露 Console
-town start -p
-
-# 1.2) 只启动 Console，并对外暴露
-town console start -p
-
-# 1.3) 为后续启动持久化公网模式
-town public on
-
-# 2) 启动多个 agent
-town agent start /path/to/agent-a
-town agent start /path/to/agent-b
-
-# 3) 查看 Console 状态
-town console status
-
-# 4) 只重启 Console
-town console restart
-```
-
-## 相关命令
-
+- [Town Console](/zh/products-docs/town-console)
 - [`town start`](/zh/products-docs/town-cli/start)
-- [`town public`](/zh/products-docs/town-cli/public)
 - [`town status`](/zh/products-docs/town-cli/status)
-- [`town agent list`](/zh/products-docs/town-cli/agent/list)
-- [`town agent start`](/zh/products-docs/town-cli/agent/start)
-
-## 对外访问说明
-
-- 默认 `town console start` 绑定 `127.0.0.1:5315`，只能本机访问。
-- `town console start -p` 会绑定 `0.0.0.0:5315`，可以从外部访问。
-- 如果 Console 已经在运行，`town console start -p` 不会把已有进程从 `127.0.0.1` 改成 `0.0.0.0`；请使用 `town console restart -p`。
-- `town public on` 会把相同的公网行为持久化到后续 `town start` 和 `town console start`，并在 Console 已运行时自动重启应用新绑定。
-- 如果使用了 `0.0.0.0` 绑定，浏览器访问时请改用服务器 IP 或域名。
-- 公网模式下，启动结果会额外打印 `Public URL`。
-- 如果运行环境处于 NAT / 反向代理后面，建议显式设置 `DOWNCITY_PUBLIC_HOST` 或 `DOWNCITY_PUBLIC_URL`。
-
-## 端口说明
-
-- `5314`：Town runtime API 端口，供托管 plugin / plugin 等接口使用。
-- `5315`：Console Web UI 端口，供浏览器访问 Console。
-
-## 示例输出
-
-```text
-$ town console status
-town v1.0.0
-┌────────────────────────────────────────────────────┐
-│ OK console status                                  │
-│   state    : running                               │
-│   pid      : <pid>                                 │
-│   url      : http://127.0.0.1:5315                 │
-│   pid_file : <consolePidPath>                      │
-│   log      : <consoleLogPath>                      │
-└────────────────────────────────────────────────────┘
-```

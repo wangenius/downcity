@@ -29,6 +29,42 @@ Use `chat` when you need:
 - one queue worker per agent/plugin instance
 - chat delivery and inbound message execution
 
+## How users use it
+
+Most users do not control the channel runtime directly. They use the `town chat` shortcuts that Town exposes for chat sessions:
+
+```bash
+town chat
+town chat list
+town chat info --chat-key <chatKey>
+town chat send --chat-key <chatKey> --text "Done"
+town chat react --chat-key <chatKey> --message-id <messageId> --emoji "👍"
+town chat context --chat-key <chatKey>
+town chat history --chat-key <chatKey> --limit 30
+town chat delete --chat-key <chatKey>
+```
+
+`town chat` with no subcommand opens the interactive chat account manager. Use it to add Telegram, Feishu, or QQ accounts before connecting an agent to those accounts.
+
+Town intentionally hides channel-runtime actions such as `status`, `test`, `open`, `close`, `reconnect`, `configuration`, and `configure` from the user-facing `town chat` shortcut. Those actions exist inside the plugin runtime, but they are not the normal CLI path for users.
+
+## SDK action use
+
+In an embedded SDK scenario, call the visible chat actions by plugin name:
+
+```ts
+await agent.plugins.runAction({
+  plugin: "chat",
+  action: "send",
+  payload: {
+    chatKey: "telegram:123456",
+    text: "Done",
+  },
+});
+```
+
+The main user-facing actions are `list`, `info`, `send`, `react`, `context`, `history`, and `delete`.
+
 ## Important runtime semantics
 
 - queue worker lifecycle belongs to the plugin instance

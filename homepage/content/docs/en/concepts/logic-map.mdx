@@ -1,20 +1,21 @@
 ---
 title: Logic Map
-description: Explain how console, agent, execution context, session, and plugins collaborate
+description: Explain how Town runtime, Console, agent, execution context, session, and plugins collaborate
 ---
 
 # Logic Map
 
 The current logic map is:
 
-- `console` manages runtime and registry
+- `town` manages local runtime and the managed agent registry
+- `console` provides the browser control surface
 - `agent` hosts one project runtime
 - `session` executes one turn
 - `plugins` expose and augment capability
 
 ## Capability map
 
-- local plugins: `skill`, `web`, `asr`, `tts`, `auth`
+- local plugins: `skill`, `web`, `asr`, `tts`, `chat-authorization`
 - managed plugins: `chat`, `task`, `memory`, `contact`, `shell`, `schedule`
 
 ## Request map
@@ -37,4 +38,5 @@ sequenceDiagram
 
 - plugin owns capability entry and augmentation
 - session owns execution
-- console and agent own runtime management
+- Town runtime and agent own runtime management
+- Console observes and controls through runtime APIs

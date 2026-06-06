@@ -105,11 +105,7 @@ town agent create .
 town start
 ```
 
-如果想同时打开浏览器 Console：
-
-```bash
-town start --console
-```
+当前 `town start` 只启动本机 runtime，不启动浏览器 Console。如果需要 Console UI，请通过 Console 的产品部署或开发入口单独启动。
 
 然后在 agent 项目里启动 Agent：
 
@@ -154,11 +150,7 @@ town agent chat
 
 在持续对话里输入 `/exit` 或 `/quit` 退出。
 
-如果你启动了 Console，可以在浏览器里打开本机控制台。默认 Console 端口是：
-
-```text
-http://127.0.0.1:5315
-```
+如果你启动了 Console UI，可以在浏览器里使用控制台查看 agent 和插件状态。
 
 ## 7. 使用内建能力
 
@@ -168,7 +160,6 @@ Downcity 的日常能力大多通过 plugin 命令暴露。常见命令包括：
 town skill
 town task list
 town memory
-town shell
 town web
 town asr
 town tts
@@ -179,7 +170,7 @@ town tts
 - 用 `town skill` 管理 Agent 技能
 - 用 `town task` 创建长期存在的自动化任务
 - 用 `town memory` 管理可复用记忆
-- 用 `town shell` 执行项目相关命令
+- 用 `town plugin command shell <action>` 调用归属于 agent runtime 的 shell 能力
 - 用 `town web` 处理网页访问能力
 - 用 `town asr` / `town tts` 接入语音能力
 
@@ -637,8 +628,8 @@ city --help
 ## 推荐日常工作流
 
 ```bash
-# 1. 启动本机 runtime 和 Console
-town start --console
+# 1. 启动本机 runtime
+town start
 
 # 2. 进入项目并启动 agent
 cd /path/to/your-repo

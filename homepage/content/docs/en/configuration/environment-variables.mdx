@@ -132,7 +132,7 @@ flowchart TD
 town init
 town city status
 town config set execution.modelId <modelId>
-town plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
+town asr use SenseVoiceSmall
 ```
 
 2. Manage shared env in City UI `Global / Env`, or pass them explicitly through `new Agent({ env })`.
@@ -146,7 +146,7 @@ town plugin action asr configure --payload '{"modelId": "SenseVoiceSmall"}'
 2. Keep `downcity.json` as binding/config file, not secret storage.
 3. Use `<agent>/.env` as project-local runtime overlay only.
 4. Use `new Agent({ env })` only for explicit host-side overrides.
-5. Validate channel status via `chat status` after changing bindings.
+5. Validate chat routing via `town chat list` or `town chat info --chat-key <chatKey>` after changing bindings.
 6. If values look inherited, check `channelAccountId`, host-injected `env`, and project `.env`.
 
 ## 9. Homepage Agent Marketplace
@@ -163,17 +163,16 @@ Behavior:
 2. Managers approve or reject records manually in Supabase.
 3. Only `approved` records are shown on the public marketplace page.
 
-## 10. Console public address
+## 10. Public address
 
-When you use `town start -p` or `town console start -p`, the CLI tries to print `Public URL` in startup output.
-If you use `town public on`, future plain `town start` and `town console start` runs also reuse the saved public bind mode.
+Current `town` CLI no longer starts or rebinds Console UI. Public Console access should be provided by the Console product deployment, reverse proxy, tunnel, or hosting layer.
 
-These values are normally injected by `town start` or the deployment environment. They are not endpoint parameters that users enter for `contact link`:
+These values are normally injected by `town start` for runtime host discovery or by the deployment environment. They are not endpoint parameters that users enter for `contact link`:
 
 1. `DOWNCITY_PUBLIC_URL`: full external URL, for example `https://console.example.com`
-2. `DOWNCITY_PUBLIC_HOST`: external host only; the CLI expands it to `http://<host>:5315`
+2. `DOWNCITY_PUBLIC_HOST`: external host only
 
-`town start` automatically detects the public IP and stores it in City-side Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
+`town start` automatically detects the public host when possible and stores it in City-side Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
 
 Priority:
 

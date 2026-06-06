@@ -1,11 +1,11 @@
 ---
-title: auth Plugin
-description: A detailed guide to the auth built-in plugin, including its authorization flow, role resolution model, available actions, and how it uses guard, effect, and resolve points
+title: chat-authorization Plugin
+description: A detailed guide to the chat-authorization built-in plugin, including its authorization flow, role resolution model, available actions, and how it uses guard, effect, and resolve points
 ---
 
-# auth Plugin
+# chat-authorization Plugin
 
-`auth` is the most platform-rule-oriented built-in plugin in Downcity today.
+`chat-authorization` is the most platform-rule-oriented built-in plugin in Downcity today.
 
 It is not mainly there to add a user-facing business feature. It answers three foundation questions:
 
@@ -15,7 +15,7 @@ It is not mainly there to add a user-facing business feature. It answers three f
 
 ## What it does
 
-`auth` is responsible for four main jobs:
+`chat-authorization` is responsible for four main jobs:
 
 1. check authorization on inbound chat traffic
 2. record observed users and chat principals
@@ -31,7 +31,7 @@ So it spans:
 
 ## Why it is a special plugin
 
-Unlike most other built-in plugins, `auth` is not treated like a normal optional plugin.
+Unlike most other built-in plugins, `chat-authorization` is not treated like a normal optional plugin.
 
 Its availability semantics are currently:
 
@@ -44,7 +44,7 @@ That design makes sense because once authorization becomes a fully optional capa
 
 ## Which plugin capabilities it uses
 
-`auth` uses:
+`chat-authorization` uses:
 
 - `availability`
 - `hooks.guard`
@@ -59,11 +59,11 @@ It does not use:
 - `system`
 - `http.runtime`
 
-That tells you `auth` is not a UI-installable dependency plugin, and it is not mainly driven by prompt injection.
+That tells you `chat-authorization` is not a UI-installable dependency plugin, and it is not mainly driven by prompt injection.
 
 ## Typical runtime flow
 
-When a normal chat message enters the system, `auth` usually participates in this order:
+When a normal chat message enters the system, `chat-authorization` usually participates in this order:
 
 1. the chat inbound flow reaches an authorization point
 2. the `guard` hook evaluates the incoming channel, chatId, userId, and related fields
@@ -82,7 +82,7 @@ In short:
 
 ### Scenario 1: only allow specific Telegram users to talk to the agent
 
-You can write authorization rules into `auth`, and every inbound Telegram message will pass through the `guard` check first.
+You can write authorization rules into `chat-authorization`, and every inbound Telegram message will pass through the `guard` check first.
 
 If a user is not allowed, the message never reaches the later agent execution stages.
 
@@ -119,6 +119,25 @@ const agent = new Agent({
 
 `chat-authorization` is more often consumed automatically by runtime integration points than manually called like a business plugin.
 
+## How users use it
+
+For the normal Town CLI path, use `town chat auth`:
+
+```bash
+town chat auth set telegram:12345678 --role admin
+town chat auth set telegram:12345678
+```
+
+The first form sets a role directly. The second form opens an interactive role picker when the terminal supports it.
+
+For advanced local plugin action calls, use the stable plugin name `chat-authorization`:
+
+```bash
+town plugin action chat-authorization snapshot --path .
+town plugin action chat-authorization read-config --path .
+town plugin action chat-authorization set-user-role --path . --payload '{"channel":"telegram","userId":"12345678","roleId":"admin"}'
+```
+
 ## Main actions
 
 `chat-authorization` exposes four core actions.
@@ -126,15 +145,15 @@ const agent = new Agent({
 | Action | What it does | Best use case |
 | --- | --- | --- |
 | `snapshot` | read the current authorization snapshot | inspect observed state and rules |
-| `readConfig` | read the authorization config | control-plane UI or debugging |
-| `writeConfig` | write authorization config | bulk update policy rules |
-| `setUserRole` | set one user's role | change role assignment for one user |
+| `read-config` | read the authorization config | control-plane UI or debugging |
+| `write-config` | write authorization config | bulk update policy rules |
+| `set-user-role` | set one user's role | change role assignment for one user |
 
 ### Read the current authorization snapshot
 
 ```ts
 const snapshot = await agent.plugins.runAction({
-  plugin: "auth",
+  plugin: "chat-authorization",
   action: "snapshot",
 });
 ```
@@ -149,8 +168,8 @@ This usually returns:
 
 ```ts
 const config = await agent.plugins.runAction({
-  plugin: "auth",
-  action: "readConfig",
+  plugin: "chat-authorization",
+  action: "read-config",
 });
 ```
 
@@ -158,8 +177,8 @@ const config = await agent.plugins.runAction({
 
 ```ts
 const result = await agent.plugins.runAction({
-  plugin: "auth",
-  action: "writeConfig",
+  plugin: "chat-authorization",
+  action: "write-config",
   payload: {
     config: {
       telegram: {
@@ -174,8 +193,8 @@ const result = await agent.plugins.runAction({
 
 ```ts
 const result = await agent.plugins.runAction({
-  plugin: "auth",
-  action: "setUserRole",
+  plugin: "chat-authorization",
+  action: "set-user-role",
   payload: {
     channel: "telegram",
     userId: "123456",
@@ -186,7 +205,7 @@ const result = await agent.plugins.runAction({
 
 ## How it relates to hooks and resolve
 
-`auth` is one of the clearest built-in examples for understanding these mechanisms:
+`chat-authorization` is one of the clearest built-in examples for understanding these mechanisms:
 
 - `guard`: stop messages that should not enter
 - `effect`: record observed principals
@@ -200,7 +219,7 @@ If those concepts still feel abstract after reading this page, continue with:
 
 ## Its boundary relative to runtime ownership
 
-`auth` is not a long-lived connection-holding or worker-like runtime owner.
+`chat-authorization` is not a long-lived connection-holding or worker-like runtime owner.
 
 It is closer to a rule orchestration layer:
 
@@ -214,7 +233,7 @@ If you think of it as a runtime owner first, it becomes easy to over-couple perm
 
 ### It focuses on chat authorization and role resolution
 
-`auth` is not a general-purpose ACL system or a universal resource authorization framework.
+`chat-authorization` is not a general-purpose ACL system or a universal resource authorization framework.
 
 Its current focus is the chat-channel domain.
 
@@ -236,7 +255,7 @@ Its value is rule evaluation, not dependency installation.
 
 ## When to study it first
 
-Use `auth` as a reference when you want to design:
+Use `chat-authorization` as a reference when you want to design:
 
 - inbound guards
 - principal observation

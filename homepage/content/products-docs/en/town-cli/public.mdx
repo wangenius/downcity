@@ -1,75 +1,16 @@
 ---
-title: town public
-description: Manage persisted public exposure for Console
+title: Public Console CLI Removed
+description: Current Town CLI no longer provides Console public-exposure commands
 ---
 
-# `town public`
+# Public Console CLI Removed
 
-`town public` manages the persisted public exposure mode for Console.
+Current `town` no longer provides Console public-exposure commands. `town start` only starts local runtime; it does not start or rebind Console UI.
 
-This command only controls the Console / Town gateway bind behavior. It does not change how individual agents listen.
+If you need external Console access, expose Console UI through its product deployment, reverse proxy, tunnel, or cloud hosting layer.
 
-## Usage
+## Related
 
-```bash
-town public
-```
-
-```bash
-town public status
-```
-
-```bash
-town public on
-```
-
-```bash
-town public on --host 0.0.0.0
-```
-
-```bash
-town public off
-```
-
-## Actions
-
-- no action: open the interactive public-mode manager in a TTY
-- `status`: show persisted public mode and current Console runtime state
-- `on`: enable persisted public mode
-- `off`: disable persisted public mode
-
-## Common options
-
-- `--host <host>`: bind host to use when public mode is enabled, default `0.0.0.0`
-
-## Important behavior
-
-- `town public on` saves a persisted Console public-mode setting for future `town start` and `town console start`.
-- If Console is already running, `town public on` or `town public off` automatically restarts Console so the new binding takes effect.
-- Explicit runtime flags still win. For example, `town console start --host 127.0.0.1` overrides the persisted public setting for that launch.
-- `town public` only manages Console exposure. It is not a global switch for every runtime endpoint.
-
-## Typical flow
-
-```bash
-# 1) inspect current persisted mode
-town public status
-
-# 2) enable public exposure for future starts
-town public on
-
-# 3) or pin a custom host
-town public on --host 10.0.0.5
-
-# 4) start Town as usual
-town start
-
-# 5) disable public exposure again
-town public off
-```
-
-## Related commands
-
-- [`town console`](/en/products-docs/town-cli/console/console)
+- [Town Console](/en/products-docs/town-console)
 - [`town start`](/en/products-docs/town-cli/start)
 - [`town status`](/en/products-docs/town-cli/status)

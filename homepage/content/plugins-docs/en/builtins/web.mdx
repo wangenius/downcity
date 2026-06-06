@@ -22,7 +22,7 @@ It currently supports two providers:
 2. checking whether that provider is installed and usable
 3. triggering installation when needed
 4. injecting provider-specific usage constraints into the system prompt
-5. enabling or disabling the plugin at the city lifecycle level
+5. enabling or disabling the plugin in the current project config
 
 So its role is much closer to a unified web capability entry point than to a web executor itself.
 
@@ -64,7 +64,7 @@ It does not use hooks, and it does not use runtime HTTP.
 That tells you its center of gravity is:
 
 - provider configuration
-- enablement management
+- project enablement management
 - runtime prompt adaptation
 
 ## Why it is such a good full-plugin reference
@@ -123,16 +123,32 @@ const agent = new Agent({
 | `browserCommand` | browser command name | only relevant for `agent-browser` |
 | `installScope` | installation location | `user` or `project` |
 
+## How users use it
+
+Use the `town web` shortcut for normal CLI work:
+
+```bash
+town web status
+town web providers
+town web install --provider web-access --scope user
+town web on --provider web-access
+town web use agent-browser --browser-command agent-browser
+town web doctor
+town web off
+```
+
+`configure` exists as an SDK/plugin action, but it is not exposed as a `town web configure` shortcut. Use `town web on`, `town web use`, and `town web off` for normal CLI changes.
+
 ## Main actions
 
 | Action | What it does | When to use it |
 | --- | --- | --- |
 | `status` | inspect config and current readiness | understand the environment first |
 | `providers` | list supported providers | build a picker or control surface |
-| `configure` | write config | update provider or prompt strategy |
+| `configure` | write config | SDK or advanced plugin action calls |
 | `install` | install the current provider dependency | first-time setup |
-| `on` | enable the plugin | turn it on at city lifecycle level |
-| `off` | disable the plugin | turn it off at city lifecycle level |
+| `on` | enable the plugin | set `plugins.web.enabled` for the current project |
+| `off` | disable the plugin | set `plugins.web.enabled` for the current project |
 | `use` | switch the active provider | change web mode during project work |
 | `doctor` | diagnose dependency readiness | when you suspect provider setup problems |
 
@@ -268,14 +284,14 @@ If you want to understand the split between “plugin connects capability” and
 
 The actual execution of web search or browser interaction lives outside this plugin.
 
-### `on/off` is city-level lifecycle, not just project config
+### `on/off` writes project enablement
 
 That means:
 
 - `configure` changes how the plugin should be used
-- `on/off` changes whether the platform lifecycle considers the plugin enabled at all
+- `on/off` changes whether the current project considers the plugin enabled
 
-Those are two different layers.
+Those are related project-level writes: `configure` updates provider options, while `on/off` updates the project enablement flag.
 
 ### Switching provider does not magically migrate all runtime behavior unless guidance changes too
 

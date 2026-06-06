@@ -1,23 +1,28 @@
 ---
 title: 端口与实例生命周期
-description: 说明 console、agent 与 plugin 端点的端口分配、路由与生命周期
+description: 说明 Town runtime、agent 与 plugin 端点的端口分配、路由与生命周期
 ---
 
 # 端口与实例生命周期
 
 ## 统一规则
 
-- agent 端口由 `console` 分配。
+- agent 端口由 Town runtime 分配。
 - `town agent start/restart` 不要求用户手工管端口。
 - plugin 命令先找目标 agent，再找 endpoint。
 
 ## 运行时角色
 
-### console
+### Town runtime
 
-- 维护 `~/.downcity/console/agents.json`
+- 维护 `~/.downcity/main/agents.json`
 - 启停 agent daemon
 - 分配端口
+
+### Console
+
+- 提供用于观察和控制 agent 的浏览器 UI
+- 不替代 `town start` 启动本机 runtime
 
 ### agent
 
@@ -29,6 +34,15 @@ description: 说明 console、agent 与 plugin 端点的端口分配、路由与
 
 - `town plugin ...` 走 plugin 路由
 - 都在目标 runtime 内部分发
+
+## Agent 端口分配
+
+1. 确认 Town runtime 正在运行
+2. 校验项目文件
+3. 分配可用端口
+4. 启动 daemon
+5. 写入 debug 信息
+6. 更新受管 agent registry
 
 ## endpoint 解析
 

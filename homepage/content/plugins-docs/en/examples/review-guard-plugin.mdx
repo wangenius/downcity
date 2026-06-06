@@ -17,13 +17,14 @@ That is the most natural kind of `guard` scenario.
 ## Example
 
 ```ts
-import { Agent, type Plugin } from "@downcity/agent";
+import { Agent, BasePlugin, type PluginHooks } from "@downcity/agent";
 
-export const reviewGuardPlugin: Plugin = {
-  name: "review_guard",
-  title: "Review Guard",
-  description: "Blocks requests that were not reviewed.",
-  hooks: {
+class ReviewGuardPlugin extends BasePlugin {
+  readonly name = "review_guard";
+  readonly title = "Review Guard";
+  readonly description = "Blocks requests that were not reviewed.";
+
+  readonly hooks: PluginHooks = {
     guard: {
       "review.require_checked": [
         async ({ value }) => {
@@ -34,14 +35,14 @@ export const reviewGuardPlugin: Plugin = {
         },
       ],
     },
-  },
-};
+  };
+}
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [reviewGuardPlugin],
+  plugins: [new ReviewGuardPlugin()],
 });
 
 await agent.plugins.guard("review.require_checked", {

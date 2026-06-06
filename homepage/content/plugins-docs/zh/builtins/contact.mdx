@@ -30,6 +30,39 @@ description: agent 间点对点连接、审批、聊天和分享流的说明
 
 就应该关注 `contact`。
 
+## 用户怎么使用
+
+在 agent 项目里使用 `town contact`：
+
+```bash
+town contact link --ttl-seconds 600
+town contact approve <code> --name teammate
+town contact list
+town contact check teammate
+town contact chat --to teammate "Can you review this?"
+town contact share --to teammate --text "Notes attached" ./notes.md
+town contact inbox
+town contact receive <shareId>
+```
+
+`link` 会生成一个短期有效的 code。另一个 agent 执行 `approve <code>` 后，就能建立可信 contact。
+
+## SDK action 用法
+
+```ts
+await agent.plugins.runAction({
+  plugin: "contact",
+  action: "share",
+  payload: {
+    to: "teammate",
+    text: "Notes attached",
+    paths: ["./notes.md"],
+  },
+});
+```
+
+用户侧 action 名称是 `link`、`approve`、`list`、`check`、`chat`、`share`、`inbox`、`receive`。
+
 ## 关键语义
 
 - 每个 contact 都会维护一条长期 contact history

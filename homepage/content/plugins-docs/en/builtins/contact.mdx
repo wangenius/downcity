@@ -28,6 +28,39 @@ Use `contact` when one agent needs to:
 - approve or confirm a trusted contact
 - send direct chat or share payloads into the other side's inbox
 
+## How users use it
+
+Use `town contact` from an agent project:
+
+```bash
+town contact link --ttl-seconds 600
+town contact approve <code> --name teammate
+town contact list
+town contact check teammate
+town contact chat --to teammate "Can you review this?"
+town contact share --to teammate --text "Notes attached" ./notes.md
+town contact inbox
+town contact receive <shareId>
+```
+
+`link` creates a short-lived code. The other agent runs `approve <code>` to establish the trusted contact.
+
+## SDK action use
+
+```ts
+await agent.plugins.runAction({
+  plugin: "contact",
+  action: "share",
+  payload: {
+    to: "teammate",
+    text: "Notes attached",
+    paths: ["./notes.md"],
+  },
+});
+```
+
+The user-facing action names are `link`, `approve`, `list`, `check`, `chat`, `share`, `inbox`, and `receive`.
+
 ## Important semantics
 
 - each contact keeps a long-lived contact history

@@ -24,7 +24,7 @@ npm i -g downcity
 pnpm build:cli
 ```
 
-这个命令会先构建本地 `cli/city`，然后自动刷新你机器上的全局 `city` / `town` 命令。构建通过后，下一次执行 `city` / `town` 时就是当前仓库这份代码。
+这个命令会构建 workspace 里的 `city`、`town` 和 `downcity` CLI。它不负责自动改写你机器上的全局命令；如果你要刷新已安装的全局 CLI，请继续使用 `town update` 或重新安装全局包。
 
 如果你已经装过 `city` / `town`，之后也可以直接运行：
 
@@ -32,7 +32,7 @@ pnpm build:cli
 town update
 ```
 
-在仓库里运行时，它会优先用当前 workspace 重新 build 并刷新全局安装；不在仓库里时，则会更新到 npm 上的最新版本。
+`town update` 会更新当前安装的全局 Downcity CLI。仓库开发时，如果你只想验证本地源码，优先使用 workspace 的构建与本地入口。
 
 ## 第一次运行
 
@@ -40,7 +40,9 @@ town update
 city
 ```
 
-默认会先显示当前 CLI 版本，再进入交互式面板。这通常是第一次排查时最直接的入口。
+在交互式终端里，它会先显示当前 CLI 版本，再进入交互式面板。这通常是第一次排查时最直接的入口。
+
+在非交互环境里，`city` 会输出命令帮助。脚本化使用时，请直接调用 `city manage`、`city create .`、`city deploy` 或 `city env refresh` 这类明确命令。
 
 如果你还没有配置任何 City，CLI 不会给你塞一个默认地址，而是会先进入欢迎页。
 

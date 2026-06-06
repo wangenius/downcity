@@ -28,24 +28,33 @@ not a long-lived background worker.
 ## Example
 
 ```ts
-import { Agent, type Plugin } from "@downcity/agent";
+import {
+  Agent,
+  BasePlugin,
+  type AgentContext,
+  type PluginActions,
+  type PluginConfigDefinition,
+} from "@downcity/agent";
 
-export const notesPlugin: Plugin = {
-  name: "notes",
-  title: "Project Notes",
-  description: "Save and describe a project notes folder.",
-  config: {
+class NotesPlugin extends BasePlugin {
+  readonly name = "notes";
+  readonly title = "Project Notes";
+  readonly description = "Save and describe a project notes folder.";
+
+  readonly config = {
     plugin: "notes",
     scope: "project",
     defaultValue: {
       injectPrompt: true,
       folder: ".notes",
     },
-  },
-  system(context) {
+  } satisfies PluginConfigDefinition;
+
+  system(context: AgentContext) {
     return `Project notes folder: ${context.rootPath}/.notes`;
-  },
-  actions: {
+  }
+
+  readonly actions: PluginActions = {
     status: {
       allowWhenDisabled: true,
       execute: async ({ context }) => {
@@ -57,14 +66,14 @@ export const notesPlugin: Plugin = {
         };
       },
     },
-  },
-};
+  };
+}
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [notesPlugin],
+  plugins: [new NotesPlugin()],
 });
 
 const status = await agent.plugins.runAction({

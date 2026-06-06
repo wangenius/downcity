@@ -22,7 +22,7 @@ description: 详细说明 web 内建 plugin 如何选择 provider、安装依赖
 2. 检查该 provider 是否已安装并可用
 3. 在需要时触发安装
 4. 把当前 provider 的使用约束注入 system prompt
-5. 在 city 级生命周期里启用或关闭这个 plugin
+5. 在当前项目配置里启用或关闭这个 plugin
 
 所以它的角色更像“联网能力总入口”，而不是“联网执行器本身”。
 
@@ -64,7 +64,7 @@ description: 详细说明 web 内建 plugin 如何选择 provider、安装依赖
 这说明它最核心的价值是：
 
 - 配置 provider
-- 管理启用态
+- 管理项目启用态
 - 对运行时 prompt 做约束增强
 
 ## 为什么它是理解完整 plugin 的好样本
@@ -123,16 +123,32 @@ const agent = new Agent({
 | `browserCommand` | 浏览器命令名 | 仅 `agent-browser` 模式相关 |
 | `installScope` | 安装位置 | `user` 或 `project` |
 
+## 用户怎么使用
+
+普通 CLI 使用直接走 `town web` 快捷命令：
+
+```bash
+town web status
+town web providers
+town web install --provider web-access --scope user
+town web on --provider web-access
+town web use agent-browser --browser-command agent-browser
+town web doctor
+town web off
+```
+
+`configure` 存在于 SDK/plugin action 层，但没有暴露成 `town web configure` 快捷命令。普通 CLI 调整使用 `town web on`、`town web use`、`town web off`。
+
 ## 主要动作
 
 | Action | 作用 | 什么时候用 |
 | --- | --- | --- |
 | `status` | 看当前配置与可用状态 | 想先了解当前环境 |
 | `providers` | 列出支持的 provider | 想做选择器或控制面 |
-| `configure` | 写入配置 | 想更新 provider 或提示词策略 |
+| `configure` | 写入配置 | SDK 或高级 plugin action 调用 |
 | `install` | 安装当前 provider 对应能力 | 首次接入时 |
-| `on` | 启用 plugin | 从 city 级生命周期打开 |
-| `off` | 关闭 plugin | 从 city 级生命周期关闭 |
+| `on` | 启用 plugin | 设置当前项目的 `plugins.web.enabled` |
+| `off` | 关闭 plugin | 设置当前项目的 `plugins.web.enabled` |
 | `use` | 切换当前 provider | 项目运行时切换联网方式 |
 | `doctor` | 做依赖诊断 | 怀疑 provider 没装好时 |
 
@@ -268,14 +284,14 @@ const diagnosis = await agent.plugins.runAction({
 
 真正搜索或浏览器操作的执行不在这个 plugin 内部。
 
-### `on/off` 是 city 级生命周期，不只是项目配置
+### `on/off` 写入项目启用态
 
 这意味着：
 
 - `configure` 改的是怎么用
-- `on/off` 改的是这个 plugin 在平台上是否启用
+- `on/off` 改的是当前项目是否启用这个 plugin
 
-这两层不要混淆。
+它们都是项目级写入：`configure` 更新 provider 选项，`on/off` 更新项目启用开关。
 
 ### 切 provider 不等于自动迁移所有心智
 

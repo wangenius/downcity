@@ -22,32 +22,7 @@ The currently exposed endpoints are:
 
 ## First-time setup
 
-If you start Console through:
-
-```bash
-town start --console
-```
-
-the first startup automatically creates a local token and prints the plain token once in the startup output. The startup output looks like this:
-
-```text
-$ town start --console
-town v1.0.0
-✅ Town runtime started
-   pid: <runtimePid>
-   log: <bayRuntimeLogPath>
-✅ Console started
-   pid: <consolePid>
-   url: http://127.0.0.1:5315
-   log: <consoleLogPath>
-✅ Console token initialized
-   subject: local-cli
-   name: console-bootstrap
-   token: dc_xxx
-   next: paste the Bearer Token above into Console UI / Extension
-```
-
-If you want to mint tokens manually, run:
+Current `town` CLI no longer starts Console UI. To create a token for Console UI, Chrome Extension, or an external script, run:
 
 ```bash
 town token create my-token

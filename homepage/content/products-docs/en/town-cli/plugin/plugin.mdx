@@ -13,8 +13,7 @@ Use it when you want to:
 
 - inspect which plugins are registered
 - inspect a plugin's capability surface
-- explicitly forward status/start/stop/restart to a target agent when you need scriptable runtime control
-- dispatch a managed plugin command without using a short alias
+- dispatch a managed plugin command to a target agent without using a short alias
 - execute a local plugin action directly inside the current project
 - inspect or cancel one-shot scheduled plugin jobs
 
@@ -24,8 +23,7 @@ Use it when you want to:
 town plugin
 town plugin list
 town plugin info asr
-town plugin start chat --agent my-agent
-town plugin status chat --agent my-agent
+town plugin command chat list --agent my-agent
 town plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
 town plugin action asr status
 town plugin schedule list --path /path/to/agent
@@ -35,10 +33,10 @@ town plugin schedule list --path /path/to/agent
 
 - Running bare `town plugin` in an interactive terminal opens the plugin catalog browser.
 - `town plugin list` and `town plugin info` are static catalog views. Town does not own plugin runtime state.
-- `town plugin status <plugin>` reads live runtime state from a target agent.
-- Runtime plugins such as `chat`, `task`, `memory`, `contact`, and `shell` support explicit `start/stop/restart/command` forwarding to the target agent.
+- `town plugin command <pluginName> <command>` forwards a command to the target agent's running plugin.
 - `town plugin action ...` is the local execution form and runs directly inside the current project by default.
-- Concrete command roots such as `town chat ...`, `town task ...`, `town memory ...`, `town shell ...`, `town web ...`, `town skill ...`, `town asr ...`, and `town tts ...` remain available as shortcuts.
+- Concrete command roots such as `town chat ...`, `town task ...`, `town memory ...`, `town contact ...`, `town web ...`, `town skill ...`, `town asr ...`, and `town tts ...` are available as shortcuts.
+- `shell` currently has no `town shell` shortcut root; use `town plugin command shell <action>` for scripted calls.
 
 ## Related
 
@@ -46,7 +44,7 @@ town plugin schedule list --path /path/to/agent
 - [`town task`](/en/products-docs/town-cli/plugin/task)
 - [`town memory`](/en/products-docs/town-cli/plugin/memory)
 - [`town contact`](/en/products-docs/town-cli/plugin/contact)
-- [`town shell`](/en/products-docs/town-cli/plugin/shell)
+- [shell plugin](/en/products-docs/town-cli/plugin/shell)
 - [`Plugin Scheduling`](/en/products-docs/town-cli/plugin/schedule)
 - [`town skill`](/en/products-docs/town-cli/plugin/skill)
 - [`town web`](/en/products-docs/town-cli/plugin/web)

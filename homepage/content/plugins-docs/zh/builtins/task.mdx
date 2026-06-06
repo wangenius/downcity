@@ -27,6 +27,37 @@ description: task 定义、task actions，以及归属于 plugin 实例的 cron 
 - cron 触发的 task 执行
 - task 变更后的 scheduler reload
 
+## 用户怎么使用
+
+当你需要一条可复用的任务定义时，使用 `town task`：
+
+```bash
+town task list
+town task create --title "daily-summary" --description "Send a daily summary" --when "0 9 * * *" --session-id <sessionId>
+town task run daily-summary --reason "manual check"
+town task update daily-summary --status paused
+town task enable daily-summary
+town task disable daily-summary
+town task delete daily-summary
+```
+
+如果只是一次性的延迟动作，用 `town chat send --delay/--time`，或者给其他 plugin action 加 `--delay/--time`。如果这件事应该长期存在、可编辑、可手动重跑，再使用 `town task`。
+
+## SDK action 用法
+
+```ts
+await agent.plugins.runAction({
+  plugin: "task",
+  action: "run",
+  payload: {
+    title: "daily-summary",
+    reason: "manual check",
+  },
+});
+```
+
+action 名称是 `list`、`create`、`run`、`delete`、`update`、`status`、`enable`、`disable`。
+
 ## 关键语义
 
 - 长期 cron runtime 归属于 plugin 实例

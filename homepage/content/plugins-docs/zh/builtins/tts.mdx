@@ -94,6 +94,23 @@ const agent = new Agent({
 | `language` | 默认语言提示 | 可按场景覆盖 |
 | `voice` | 默认音色 | 可按场景覆盖 |
 
+## 用户怎么使用
+
+普通 CLI 使用直接走 `town tts` 快捷命令：
+
+```bash
+town tts status
+town tts models
+town tts install qwen3-tts-0.6b --active-model qwen3-tts-0.6b --format wav
+town tts on qwen3-tts-0.6b --active-model qwen3-tts-0.6b
+town tts use qwen3-tts-0.6b
+town tts synthesize "Hello, welcome to Downcity" --language en --format wav
+town tts doctor
+town tts off
+```
+
+`configure` 存在于 SDK/plugin action 层，但没有暴露成 `town tts configure` 快捷命令。普通 CLI 调整使用 `town tts on`、`town tts use`，以及 `synthesize` 的单次参数。
+
 ## 主要动作
 
 | Action | 作用 | 什么时候用 |
@@ -102,7 +119,7 @@ const agent = new Agent({
 | `doctor` | 诊断依赖是否就绪 | 怀疑模型或依赖没准备好时 |
 | `models` | 列出可用模型 | 给 UI 或控制面做选择 |
 | `install` | 安装合成依赖 | 首次接入 TTS |
-| `configure` | 更新默认配置 | 调整模型、格式、语速 |
+| `configure` | 更新默认配置 | SDK 或高级 plugin action 调用 |
 | `on` | 启用 plugin，可选顺带安装 | 一步打开能力 |
 | `off` | 关闭 plugin | 暂停语音合成 |
 | `use` | 切换当前模型 | 多模型切换 |

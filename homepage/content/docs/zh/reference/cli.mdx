@@ -21,9 +21,7 @@ CLI 文档按“单命令页面 + 命令组”组织。
   - [`town restart`](/zh/products-docs/town-cli/restart)
   - [`town update`](/zh/products-docs/town-cli/update)
   - [`town status`](/zh/products-docs/town-cli/status)
-  - [`town public`](/zh/products-docs/town-cli/public)
 - 固定模块命令：
-  - [`town console`](/zh/products-docs/town-cli/console/console)
   - [`town agent`](/zh/products-docs/town-cli/agent/agent)
   - [`town agent create`](/zh/products-docs/town-cli/agent/create)
   - [`town agent list`](/zh/products-docs/town-cli/agent/list)
@@ -37,7 +35,6 @@ CLI 文档按“单命令页面 + 命令组”组织。
   - [`town task`](/zh/products-docs/town-cli/plugin/task)
   - [`town memory`](/zh/products-docs/town-cli/plugin/memory)
   - [`town contact`](/zh/products-docs/town-cli/plugin/contact)
-  - [`town shell`](/zh/products-docs/town-cli/plugin/shell)
   - [`town skill`](/zh/products-docs/town-cli/plugin/skill)
   - [`town web`](/zh/products-docs/town-cli/plugin/web)
   - [`town asr`](/zh/products-docs/town-cli/plugin/asr)
@@ -46,22 +43,18 @@ CLI 文档按“单命令页面 + 命令组”组织。
 ## 运行模型（简版）
 
 - `town start`：仅启动 Town runtime
-- `town start --console` / `town start -a`：同时启动 Town runtime 和 Console
-- `town console start`：只启动 Console，前提是 Town runtime 已经运行
-- `town stop`：先停止 Console，再停止 Town runtime 与托管 agent
-- `town restart`：重启 Town runtime，恢复之前运行中的 agent，再重启 Console
+- `town stop`：停止 Town runtime 与受管 agent
+- `town restart`：重启 Town runtime，并恢复之前运行中的 agent
 - `town update`：更新当前全局安装来源对应的 `downcity` CLI 聚合包
-- `town public`：管理 Console 的持久化公网暴露，支持交互式 manager 和 `on/off/status`
 - `town agent`：在交互式终端中打开 agent manager
 - `town agent create`：初始化项目运行文件
 - `town agent list`：查看已登记 agent，也可加 `--running` 只看正在运行的项目
 - `town agent start`：启动项目 agent daemon
 - `town agent stop`：停止项目 agent daemon
 - `town agent chat`：在终端中与 agent 对话，也可通过 `--message` 发送一次性消息
-- `town console`：管理 Console 模块本身
 - `town city`：选择 City base，并管理 Town user 登录态
 - `town plugin ...`：查看 agent plugin catalog，或使用显式高级 plugin command 形式
-- `town chat/task/memory/contact/shell ...`：日常托管 plugin runtime 命令
+- `town chat/task/memory/contact ...`：日常托管 plugin runtime 命令
 - `town web/skill/asr/tts ...`：日常本地 plugin 命令
 
 ## 保持最新

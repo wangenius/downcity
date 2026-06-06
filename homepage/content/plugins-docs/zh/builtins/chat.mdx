@@ -29,6 +29,42 @@ description: 渠道 runtime、queue worker、chat system text 和 chat 相关 ac
 - 每个 agent/plugin 实例一条独立 queue worker
 - 消息入站后的执行与消息出站发送
 
+## 用户怎么使用
+
+大多数用户不直接控制渠道 runtime，而是使用 Town 暴露出来的 `town chat` 会话命令：
+
+```bash
+town chat
+town chat list
+town chat info --chat-key <chatKey>
+town chat send --chat-key <chatKey> --text "Done"
+town chat react --chat-key <chatKey> --message-id <messageId> --emoji "👍"
+town chat context --chat-key <chatKey>
+town chat history --chat-key <chatKey> --limit 30
+town chat delete --chat-key <chatKey>
+```
+
+不带子命令的 `town chat` 会打开交互式 chat account 管理器。先在这里添加 Telegram、Feishu 或 QQ 账号，再把 agent 连接到这些账号。
+
+Town 会刻意隐藏 `status`、`test`、`open`、`close`、`reconnect`、`configuration`、`configure` 这些渠道 runtime action。它们存在于 plugin runtime 里，但不是普通用户的 CLI 使用路径。
+
+## SDK action 用法
+
+本地嵌入 SDK 场景里，可以按 plugin 名称调用会话 action：
+
+```ts
+await agent.plugins.runAction({
+  plugin: "chat",
+  action: "send",
+  payload: {
+    chatKey: "telegram:123456",
+    text: "Done",
+  },
+});
+```
+
+用户侧最常用的 action 是 `list`、`info`、`send`、`react`、`context`、`history`、`delete`。
+
 ## 关键运行语义
 
 - queue worker 的生命周期归属于 plugin 实例

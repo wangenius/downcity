@@ -114,13 +114,30 @@ const agent = new Agent({
 | `language` | 默认语言提示 | 例如 `auto`、`zh`、`en` |
 | `timeoutMs` | 超时时间 | 用于限制转写等待时间 |
 
+## 用户怎么使用
+
+普通 CLI 使用直接走 `town asr` 快捷命令：
+
+```bash
+town asr status
+town asr models
+town asr install SenseVoiceSmall --active-model SenseVoiceSmall
+town asr on SenseVoiceSmall --active-model SenseVoiceSmall
+town asr use SenseVoiceSmall
+town asr transcribe ./voice.wav --language zh
+town asr doctor
+town asr off
+```
+
+`configure` 存在于 SDK/plugin action 层，但没有暴露成 `town asr configure` 快捷命令。普通 CLI 路径使用 `town asr on`、`town asr use`、`town asr off`。
+
 ## 主要动作
 
 | Action | 作用 | 什么时候用 |
 | --- | --- | --- |
 | `status` | 查看配置与依赖状态 | 想先判断当前环境 |
 | `install` | 安装转写依赖 | 首次启用语音转写 |
-| `configure` | 更新 ASR 配置 | 日常调整模型和策略 |
+| `configure` | 更新 ASR 配置 | SDK 或高级 plugin action 调用 |
 | `on` | 启用 plugin，可选顺带安装 | 一步打开语音能力 |
 | `off` | 关闭 plugin | 暂停语音能力 |
 | `use` | 切换当前模型 | 安装多个模型后切换 |

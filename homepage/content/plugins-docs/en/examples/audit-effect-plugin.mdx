@@ -22,13 +22,14 @@ That is a clean `effect` use case.
 ## Example
 
 ```ts
-import { Agent, type Plugin } from "@downcity/agent";
+import { Agent, BasePlugin, type PluginHooks } from "@downcity/agent";
 
-export const auditEffectPlugin: Plugin = {
-  name: "audit_effect",
-  title: "Audit Effect",
-  description: "Writes one audit line for every observed event.",
-  hooks: {
+class AuditEffectPlugin extends BasePlugin {
+  readonly name = "audit_effect";
+  readonly title = "Audit Effect";
+  readonly description = "Writes one audit line for every observed event.";
+
+  readonly hooks: PluginHooks = {
     effect: {
       "audit.observe": [
         async ({ value, plugin }) => {
@@ -36,14 +37,14 @@ export const auditEffectPlugin: Plugin = {
         },
       ],
     },
-  },
-};
+  };
+}
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [auditEffectPlugin],
+  plugins: [new AuditEffectPlugin()],
 });
 
 await agent.plugins.effect("audit.observe", {

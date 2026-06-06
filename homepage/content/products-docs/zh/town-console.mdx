@@ -1,17 +1,16 @@
 ---
 title: Town Console
-description: 本机 Town gateway 的浏览器界面。
+description: Downcity 的浏览器控制台界面。
 ---
 
 # Town Console
 
-Town Console 是 Town gateway 暴露出来的浏览器界面。你可以不用一直停留在终端里，也能查看和操作 agents。
+Town Console 是 Downcity 的浏览器控制台界面。当前 `town` CLI 不再负责启动 Console UI；`town start` 只启动本机 runtime。
 
 ## 主要任务
 
-- 通过 [Town CLI](/zh/products-docs/town-cli/console/console) 启动 console
 - 查看 agent 状态
 - 管理 plugin 配置，以及 Town user 的 City 连接状态
 - 调试时检查 runtime 状态
 
-命令细节见 [`town console`](/zh/products-docs/town-cli/console/console)。
+如果你在仓库内开发 Console UI，可以使用 workspace 的 Console 开发入口；部署环境则按产品部署方式提供浏览器访问。

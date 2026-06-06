@@ -1,11 +1,11 @@
 ---
 title: town status
-description: 查看 Town runtime、Console 与托管 agent 状态
+description: 查看 Town runtime、City 连接与托管 agent 状态
 ---
 
 # `town status`
 
-查看 Town runtime、Console 与当前托管 agent 概览。
+查看 Town runtime、City user 连接与当前托管 agent 概览。当前 Town CLI 不再展示 Console UI 运行态。
 
 ## 用法
 
@@ -16,30 +16,10 @@ town status
 ## 相关命令
 
 - [`town agent list --running`](/zh/products-docs/town-cli/agent/list)
-- [`town console`](/zh/products-docs/town-cli/console/console)
-- [`town public`](/zh/products-docs/town-cli/public)
+- [`town city status`](/zh/products-docs/town-cli/city)
 
-## 示例输出（基于当前实现）
+## 输出内容
 
-以下示例直接对齐 `cli/town/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
-
-```text
-$ town status
-town v1.0.0
-┌─────────────────────────────────────────────────────────┐
-│ OK town status                                   │
-│   state    : running                                    │
-│   pid      : <pid>                                      │
-│   pid_file : <bayPidPath>                              │
-│   log      : <bayLogPath>                              │
-│   registry : <consoleRegistryPath>                      │
-└─────────────────────────────────────────────────────────┘
-┌────────────────────────────────────────────────────┐
-│ OK console status                                │
-│   state    : running                               │
-│   pid      : <consolePid>                          │
-│   url      : http://127.0.0.1:5315                 │
-│   pid_file : <consolePidPath>                      │
-│   log      : <consoleLogPath>                      │
-└────────────────────────────────────────────────────┘
-```
+- `Town runtime`：running、stale 或 stopped。
+- `City connection`：当前 City base、town id 和 user token 状态。
+- `Managed agents`：当前 registry 中仍在运行的 agent daemon。

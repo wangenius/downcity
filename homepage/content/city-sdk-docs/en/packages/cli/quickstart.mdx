@@ -24,7 +24,7 @@ If you are iterating on `city manage` inside this repository, run:
 pnpm build:cli
 ```
 
-That command builds the local `cli/city` package, then refreshes the global `city` and `town` commands on your machine. After the build passes, the next `city` or `town` run uses the version from this workspace.
+That command builds the workspace `city`, `town`, and `downcity` CLIs. It does not automatically rewrite your global commands. To refresh an installed global CLI, use `town update` or reinstall the global package.
 
 If `city` / `town` is already installed, you can also run:
 
@@ -32,7 +32,7 @@ If `city` / `town` is already installed, you can also run:
 town update
 ```
 
-When executed inside the repository, it prefers rebuilding from the current workspace and refreshing the global install. Outside the repository, it updates to the latest npm version.
+`town update` updates the currently installed global Downcity CLI. During repository development, use the workspace build and local entry points when you only need to verify local source changes.
 
 ## First run
 
@@ -40,7 +40,9 @@ When executed inside the repository, it prefers rebuilding from the current work
 city
 ```
 
-That first shows the current CLI version, then opens the interactive panel, which is often the fastest first inspection entry.
+In an interactive terminal, that first shows the current CLI version, then opens the interactive panel, which is often the fastest first inspection entry.
+
+In non-interactive environments, `city` prints command help. Use explicit commands such as `city manage`, `city create .`, `city deploy`, or `city env refresh` when scripting.
 
 If you do not have any connected City yet, the CLI does not inject a default address. It first opens a welcome flow.
 

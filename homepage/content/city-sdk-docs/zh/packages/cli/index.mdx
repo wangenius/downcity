@@ -33,20 +33,41 @@ npm i -g downcity
 city
 ```
 
-默认 `city` 会进入交互式面板。没有 server 时，CLI 会先要求你添加一个 server；之后你可以：
+在交互式终端里，默认 `city` 会进入 City 面板；在非交互环境里，它会输出帮助信息。
+
+如果还没有连接任何 City，交互流程会先要求你添加一个 City；之后你可以：
 
 - 通过 `Manage Servers` 管理多个 City server
 - 进入 Admin 流程管理 env / models / towns / payment
 - 进入 User 流程登录、充值和调用服务
 
-## 常用命令
+## 可脚本化的 city 命令
 
 ```bash
-city
-town city use
-town city status
-town agent start .
+city manage
+city create .
+city deploy
+city deploy --dry-run
+city deploy --verify
+city env refresh
 ```
+
+这些命令负责 City 项目、部署，以及 City runtime env cache。
+
+## 和 `town city` 的边界
+
+`town city` 是 Town 的命令组。当本机 Town runtime 或 agent 需要选择 City base、保存 Town user 登录态时，使用它：
+
+```bash
+town city use
+town city login
+town city status
+```
+
+一句话区分：
+
+- `city`：人在终端里直接操作 City
+- `town city`：让 Town 和本地 agent 连接到某个 City base
 
 ## 它和其他 package 的边界
 

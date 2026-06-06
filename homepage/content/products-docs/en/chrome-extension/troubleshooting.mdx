@@ -42,30 +42,7 @@ Fix it by:
 
 ## 3. The Remote Service Is Not Exposed Publicly
 
-If you are targeting a remote machine, also confirm that the Console is not only bound to loopback.
-
-From the `town` CLI code:
-
-- without `--host` or `--public`, Console stays in local mode on `127.0.0.1`
-- with `--public`, it binds to `0.0.0.0`
-
-Typical commands:
-
-```bash
-town start --public
-```
-
-or:
-
-```bash
-town console start --public
-```
-
-If you want that public binding to persist across later restarts, use:
-
-```bash
-town public on
-```
+If you are targeting a remote machine, also confirm that the Console deployment is externally reachable. Current `town` CLI no longer starts or rebinds Console UI, so public access should be handled by the Console product deployment, reverse proxy, tunnel, or hosting layer.
 
 ## 4. No Available Agent
 

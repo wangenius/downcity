@@ -1,19 +1,18 @@
 ---
 title: town restart
-description: Restart Town runtime, restore managed agents, then restart Console
+description: Restart Town runtime and restore managed agents
 ---
 
 # `town restart`
 
-Restart the full Town runtime stack.
+Restart Town runtime and restore managed agents that were running before the restart.
 
 Current behavior:
 
-1. stop Console
-2. stop Town runtime
+1. record the currently running managed agents
+2. stop Town runtime and managed agents
 3. restart Town runtime
 4. restore managed agents that were running before restart
-5. restart Console
 
 During the stop phase, Downcity stops the matching process group first. ACP executors, shell sessions, and watch child processes started by an agent stop with the parent, so old children do not keep consuming memory after the restart.
 
@@ -28,21 +27,3 @@ town restart
 - [`town start`](/en/products-docs/town-cli/start)
 - [`town stop`](/en/products-docs/town-cli/stop)
 - [`town status`](/en/products-docs/town-cli/status)
-- [`town console`](/en/products-docs/town-cli/console/console)
-
-## Example output
-
-```text
-$ town restart
-town v1.0.0
-✅ Console stopped
-   pid: <consolePid>
-✅ Town runtime stopped
-   pid: <bayPid>
-✅ Town runtime started
-   pid: <newTownPid>
-Restarting 2 managed agents...
-✅ Console started
-   pid: <newConsolePid>
-   url: http://127.0.0.1:5315
-```

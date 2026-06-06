@@ -3,34 +3,54 @@ title: schedule Plugin
 description: Internal scheduling infrastructure for plugin actions and delayed or timed redispatch
 ---
 
-# `schedule` Plugin
+# Action schedule
 
-`schedule` is an infrastructure plugin.
+`schedule` is an infrastructure concept for delayed plugin actions.
 
-It is responsible for polling scheduled jobs and redispatching due plugin actions.
+It is responsible for polling scheduled jobs and redispatching due plugin actions. In the current user-facing CLI, it is not a standalone plugin that you start, stop, or call with business actions.
 
 ## Main shape
 
-- `lifecycle`
+- persistent action jobs
+- runtime polling and recovery
 - no business actions
 
 ## What it is for
 
-Use `schedule` as a mental model when you want to understand:
+Use action scheduling as a mental model when you want to understand:
 
 - why scheduling belongs to plugin lifecycle instead of the top-level agent shell
 - how delayed plugin actions are re-invoked
-- how infrastructure plugins can exist without user-facing business actions
+- why it is managed through `town plugin schedule`, not through a separate `town schedule` command
+
+## How users use it
+
+Create scheduled jobs by adding `--delay` or `--time` to a plugin action command:
+
+```bash
+town chat send --chat-key <chatKey> --text "Later" --delay 60000
+town memory store --content "Remember this later" --target daily --time "2026-06-06T09:00:00+08:00"
+```
+
+Inspect or cancel scheduled jobs through `town plugin schedule`:
+
+```bash
+town plugin schedule list
+town plugin schedule info <jobId>
+town plugin schedule cancel <jobId>
+```
+
+For reusable automation, use the `task` plugin instead of one scheduled action.
 
 ## Important semantics
 
 - it mainly polls `PluginScheduleStore`
 - it restarts interrupted running jobs back to pending on startup recovery
-- it is a core infrastructure pattern, not a normal user-facing plugin
+- it is a core infrastructure pattern, not a normal user-facing business plugin
 
 ## Public status
 
-`SchedulePlugin` is built-in in code, but it is primarily a platform infrastructure plugin rather than a normal public SDK capability plugin.
+Action scheduling is platform infrastructure rather than a normal public SDK capability plugin.
 
 ## Related docs
 

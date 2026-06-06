@@ -1,13 +1,14 @@
 ---
 title: Runtime Relationship And Process
-description: Collaboration model and startup/process order across console, agent, execution context, session, and plugin runtime
+description: Collaboration model and startup/process order across Town runtime, Console, agent, execution context, session, and plugin runtime
 ---
 
 # Runtime Relationship And Process
 
 Current runtime relationship can be summarized as:
 
-- `console` governs
+- `town` governs local runtime and managed agent registration
+- `console` provides a browser control surface
 - `agent` hosts
 - `execution context` exposes shared capability
 - `session` executes
@@ -15,8 +16,8 @@ Current runtime relationship can be summarized as:
 
 ## Startup order
 
-1. console starts
-2. agent starts under console registry
+1. Town runtime starts
+2. agent starts under the managed agent registry
 3. agent initializes model access, session store, and plugin registry
 4. managed plugins become ready
 

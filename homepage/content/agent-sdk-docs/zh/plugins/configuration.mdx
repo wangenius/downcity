@@ -1,29 +1,29 @@
 ---
 title: Plugin 配置
-description: 说明 plugin 的 city 级启用态、project 级 plugins 配置块，以及 setup 和 usage 的定位
+description: 说明 plugin 的项目级启用态、plugins 配置块，以及 setup 和 usage 的定位
 ---
 
 # Plugin 配置
 
 plugin 配置要分成 3 层理解：
 
-- city 级启用态
-- project 级 `plugins.*`
+- 项目级启用态
+- 项目级 plugin 选项
 - Console 的 `setup / usage` 协议
 
-## 1. city 级启用态
+## 1. 项目级启用态
 
-plugin 是否启用，不属于项目 `downcity.json`。
+plugin 是否启用，写在项目 `downcity.json`。
 
-它属于 city 级事实。
+它属于项目级事实。
 
 这意味着：
 
-- 某个 plugin 是否开启，是平台级决定
-- 静态 catalog 视图优先读 city 配置
-- `auth` 是例外，它默认始终启用
+- `plugins.<name>.enabled` 控制当前项目是否启用这个 plugin
+- 未显式配置 `enabled` 时，内建 plugin 通常按启用处理
+- `enabled: false` 会明确关闭当前项目里的该 plugin
 
-## 2. project 级 `plugins.*`
+## 2. 项目级 plugin 选项
 
 plugin 的运行参数通常落到项目：
 
@@ -41,10 +41,7 @@ plugin 的运行参数通常落到项目：
 这类配置表达的是：
 
 - 当前 agent 怎么使用这个 plugin
-
-而不是：
-
-- 这个 plugin 在整个平台里是否已经打开
+- 当前项目是否明确关闭了它
 
 ## 3. `config.scope`
 
@@ -53,7 +50,7 @@ plugin 类型里支持：
 - `global`
 - `project`
 
-这表示的是 plugin 配置定义的作用域，而不是 plugin lifecycle 的启停语义。
+这表示的是 plugin 配置字段的作用域。当前内建项目插件通常用项目配置同时保存启用态和运行参数。
 
 当前常见内建 plugin，很多都把运行参数放在 `project`。
 
@@ -111,8 +108,8 @@ plugin 类型里支持：
 
 把 plugin 配置记成这三句：
 
-- 开关在 city 级
-- 参数在 project 级
+- 开关在项目 `plugins.<name>.enabled`
+- 参数通常也在项目 `plugins.<name>`
 - setup 和 usage 是 UI 协议层
 
 ## 相关文档

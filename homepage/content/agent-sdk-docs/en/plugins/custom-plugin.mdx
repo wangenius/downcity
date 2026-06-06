@@ -20,19 +20,22 @@ then a custom plugin is usually the right extension point.
 `@downcity/agent` exposes:
 
 - plugin types and contracts
-- built-in plugin exports
+- the `BasePlugin` base class
 - the local `Agent` `plugins: [...]` assembly entry point
+
+Built-in plugin classes are exported from `@downcity/plugins`.
 
 ## Minimal skeleton
 
 ```ts
-import type { Plugin } from "@downcity/agent";
+import { BasePlugin, type PluginActions } from "@downcity/agent";
 
-export const notesPlugin: Plugin = {
-  name: "notes",
-  title: "Notes Helper",
-  description: "Adds note-related actions and prompt guidance.",
-  actions: {
+export class NotesPlugin extends BasePlugin {
+  readonly name = "notes";
+  readonly title = "Notes Helper";
+  readonly description = "Adds note-related actions and prompt guidance.";
+
+  readonly actions: PluginActions = {
     status: {
       execute: async ({ context }) => {
         return {
@@ -43,20 +46,21 @@ export const notesPlugin: Plugin = {
         };
       },
     },
-  },
-};
+  };
+}
 ```
 
 ## Attach the custom plugin to a local Agent
 
 ```ts
-import { Agent, type Plugin } from "@downcity/agent";
+import { Agent, BasePlugin, type PluginActions } from "@downcity/agent";
 
-const notesPlugin: Plugin = {
-  name: "notes",
-  title: "Notes Helper",
-  description: "Adds note-related actions and runtime guidance.",
-  actions: {
+class NotesPlugin extends BasePlugin {
+  readonly name = "notes";
+  readonly title = "Notes Helper";
+  readonly description = "Adds note-related actions and runtime guidance.";
+
+  readonly actions: PluginActions = {
     status: {
       allowWhenDisabled: true,
       execute: async ({ context }) => ({
@@ -66,14 +70,14 @@ const notesPlugin: Plugin = {
         },
       }),
     },
-  },
-};
+  };
+}
 
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  plugins: [notesPlugin],
+  plugins: [new NotesPlugin()],
 });
 ```
 

@@ -1,29 +1,29 @@
 ---
 title: Plugin Configuration
-description: Understand city-level plugin enablement, project-level plugins config, and the role of setup and usage
+description: Understand project-level plugin enablement, plugins config, and the role of setup and usage
 ---
 
 # Plugin Configuration
 
 Plugin configuration is easiest to understand in three layers:
 
-- city-level enablement
-- project-level `plugins.*`
+- project-level enablement
+- project-level plugin options
 - Console-facing `setup` and `usage` protocols
 
-## 1. City-level enablement
+## 1. Project-level enablement
 
-Whether a plugin is enabled is not primarily stored in project `downcity.json`.
+Whether a plugin is enabled is stored in project `downcity.json`.
 
-It is a city-level fact.
+It is a project-level fact.
 
 That means:
 
-- whether a plugin is switched on is a platform-level lifecycle decision
-- static plugin catalog views read city-level state first
-- `auth` is a special exception because it is always on
+- `plugins.<name>.enabled` controls whether the current project enables that plugin
+- if `enabled` is omitted, built-in plugins are generally treated as enabled
+- `enabled: false` explicitly disables the plugin for this project
 
-## 2. Project-level `plugins.*`
+## 2. Project-level plugin options
 
 Runtime options for how an agent uses a plugin usually live in:
 
@@ -41,10 +41,7 @@ Runtime options for how an agent uses a plugin usually live in:
 This expresses:
 
 - how the current agent uses the plugin
-
-not:
-
-- whether the plugin exists or is globally enabled
+- whether the current project has explicitly disabled it
 
 ## 3. `config.scope`
 
@@ -53,7 +50,7 @@ Plugin config definitions support:
 - `global`
 - `project`
 
-This describes config scope. It does not describe plugin lifecycle enablement by itself.
+This describes config field scope. The current built-in project plugins use project config for both enablement and runtime options.
 
 Many current built-in plugins keep agent-side runtime options at project scope.
 
@@ -111,8 +108,8 @@ The persistence path writes the `plugins` section instead of dumping the entire 
 
 Remember these three lines:
 
-- enablement lives at city scope
-- runtime options often live at project scope
+- enablement lives in project `plugins.<name>.enabled`
+- runtime options usually live beside it in project `plugins.<name>`
 - `setup` and `usage` are UI protocol layers
 
 ## Related docs

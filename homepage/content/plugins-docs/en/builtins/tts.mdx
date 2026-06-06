@@ -94,6 +94,23 @@ const agent = new Agent({
 | `language` | default language hint | can be overridden per call |
 | `voice` | default voice id | can be overridden per call |
 
+## How users use it
+
+Use the `town tts` shortcut for normal CLI work:
+
+```bash
+town tts status
+town tts models
+town tts install qwen3-tts-0.6b --active-model qwen3-tts-0.6b --format wav
+town tts on qwen3-tts-0.6b --active-model qwen3-tts-0.6b
+town tts use qwen3-tts-0.6b
+town tts synthesize "Hello, welcome to Downcity" --language en --format wav
+town tts doctor
+town tts off
+```
+
+`configure` exists as an SDK/plugin action, but it is not exposed as a `town tts configure` shortcut. Use `town tts on`, `town tts use`, and per-call `synthesize` options for normal CLI changes.
+
 ## Main actions
 
 | Action | What it does | When to use it |
@@ -102,7 +119,7 @@ const agent = new Agent({
 | `doctor` | diagnose dependency readiness | when model or runtime setup looks broken |
 | `models` | list available models | build a picker or control surface |
 | `install` | install synthesis dependencies | first-time TTS setup |
-| `configure` | update default config | change model, format, speed |
+| `configure` | update default config | SDK or advanced plugin action calls |
 | `on` | enable the plugin, optionally install too | one-step capability enablement |
 | `off` | disable the plugin | pause speech synthesis |
 | `use` | switch the active model | multi-model workflows |

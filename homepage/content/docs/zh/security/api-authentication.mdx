@@ -22,32 +22,7 @@ Downcity 现在只保留一种对外认证模型：
 
 ## 第一次使用
 
-如果你执行：
-
-```bash
-town start --console
-```
-
-首次启动时，Downcity 会自动初始化一个本机 token，并在启动日志里显示一次明文 token。启动日志里会看到类似输出：
-
-```text
-$ town start --console
-town v1.0.0
-✅ Town runtime started
-   pid: <runtimePid>
-   log: <bayRuntimeLogPath>
-✅ Console started
-   pid: <consolePid>
-   url: http://127.0.0.1:5315
-   log: <consoleLogPath>
-✅ Console token initialized
-   subject: local-cli
-   name: console-bootstrap
-   token: dc_xxx
-   next: 把上面的 Bearer Token 粘贴到 Console UI / Extension
-```
-
-如果你想手动签发 token，可以直接在本机终端执行：
+当前 `town` CLI 不再启动 Console UI。如果你需要给 Console UI、Chrome Extension 或外部脚本创建 token，可以直接在本机终端执行：
 
 ```bash
 town token create my-token

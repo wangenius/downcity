@@ -30,6 +30,35 @@ Use `memory` when you need:
 - reading memory file fragments
 - flushing one session's recent messages into memory
 
+## How users use it
+
+Use the `town memory` shortcut for normal local operation:
+
+```bash
+town memory status
+town memory search "project decision" --max-results 5
+town memory store --content "Prefer concise release notes." --target longterm
+town memory get .downcity/memory/daily/2026-06-06.md --from 1 --lines 20
+town memory flush --session-id <sessionId> --max-messages 30
+```
+
+`store` supports `longterm`, `daily`, and `working`. When writing to `working`, also provide `--session-id` so the memory is tied to the correct session.
+
+## SDK action use
+
+```ts
+await agent.plugins.runAction({
+  plugin: "memory",
+  action: "store",
+  payload: {
+    content: "Prefer concise release notes.",
+    target: "longterm",
+  },
+});
+```
+
+The action names are `status`, `search`, `get`, `store`, and `flush`.
+
 ## Important semantics
 
 - runtime state belongs to the plugin instance

@@ -11,27 +11,26 @@ This page answers one question: what environment each `town` command group needs
 
 Top-level command groups are:
 
-- `town console`
+- `town start/stop/restart/status`
 - `town agent`
 - `town plugin`
 
-Commands like `town chat`, `town task`, `town memory`, `town shell`, `town skill`, `town asr`, and `town tts` are plugin commands, not top-level roots.
+Commands like `town chat`, `town task`, `town memory`, `town contact`, `town skill`, `town web`, `town asr`, and `town tts` are plugin shortcut commands.
 
 ## 1) Environment by command group
 
 | Command Group | Required Environment | Optional Environment | Notes |
 | --- | --- | --- | --- |
 | `town init` | Writable `~/.downcity/` | None | Writes `~/.downcity/downcity.db` |
-| `town start/stop/restart/status` | Writable `~/.downcity/console/` | None | Manages Town runtime, gateway, and managed agent registry |
-| `town console` | Town runtime is running; browser can reach UI port | `--host`, `--port` | Single UI instance can switch across multiple running agents |
+| `town start/stop/restart/status` | Writable `~/.downcity/main/` | None | Manages Town runtime and managed agent registry |
 | `town agent create` | Writable target directory | None | Generates `downcity.json`, `PROFILE.md`, `.downcity/` |
 | `town agent start` | Town runtime is running; project has `downcity.json` + `PROFILE.md` | `--host` | Agent port is allocated by Town runtime and registered into the managed agent registry |
 | `town agent restart/status/doctor` | Target agent is registered in the managed agent registry | None | Operates through registry resolution |
 | `town config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call agent API |
 | `town plugin list/info` | None | `--json` | Static plugin catalog; does not resolve any agent |
-| `town plugin start/stop/restart/command` | Target agent is running | `--agent`, `--path`, `--host`, `--port` | Used for managed plugins |
+| `town plugin command ...` | Target agent is running | `--agent`, `--path`, `--host`, `--port` | Used for managed plugins |
 | `town plugin action ...` | Project has `downcity.json` | `--path` | Advanced local execution form |
-| `town <managed-plugin> <action>` | Target agent is running | `--path`, `--host`, `--port` | Examples: `town chat`, `town task`, `town memory`, `town shell` |
+| `town <managed-plugin> <action>` | Target agent is running | `--path`, `--host`, `--port` | Examples: `town chat`, `town task`, `town memory`, `town contact` |
 | `town <local-plugin> <action>` | Project has `downcity.json` | `--path` | Examples: `town skill`, `town web`, `town asr`, `town tts` |
 
 ## 2) Runtime transport

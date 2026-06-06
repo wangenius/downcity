@@ -62,6 +62,19 @@ Because `install` only means the skill now exists locally. Before using it corre
 
 That is what `lookup` prepares: it reads the skill content and gets it ready for injection as a user message.
 
+## How users use it
+
+Use the `town skill` shortcut for the common workflow:
+
+```bash
+town skill list
+town skill find "web access"
+town skill install web-access
+town skill lookup web-access
+```
+
+`list` tells you what is already available locally. `find` is useful only when the skill is missing from `list`. After `install`, run `lookup` before expecting the agent to follow that skill's instructions.
+
 ## Typical scenarios
 
 ### Scenario 1: the user says “find me a skill for web access”

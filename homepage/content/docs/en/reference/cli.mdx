@@ -21,9 +21,7 @@ CLI docs are organized by command pages and command groups.
   - [`town restart`](/en/products-docs/town-cli/restart)
   - [`town update`](/en/products-docs/town-cli/update)
   - [`town status`](/en/products-docs/town-cli/status)
-  - [`town public`](/en/products-docs/town-cli/public)
 - Fixed module commands:
-  - [`town console`](/en/products-docs/town-cli/console/console)
   - [`town agent`](/en/products-docs/town-cli/agent/agent)
   - [`town agent create`](/en/products-docs/town-cli/agent/create)
   - [`town agent list`](/en/products-docs/town-cli/agent/list)
@@ -37,7 +35,6 @@ CLI docs are organized by command pages and command groups.
   - [`town task`](/en/products-docs/town-cli/plugin/task)
   - [`town memory`](/en/products-docs/town-cli/plugin/memory)
   - [`town contact`](/en/products-docs/town-cli/plugin/contact)
-  - [`town shell`](/en/products-docs/town-cli/plugin/shell)
   - [`town skill`](/en/products-docs/town-cli/plugin/skill)
   - [`town web`](/en/products-docs/town-cli/plugin/web)
   - [`town asr`](/en/products-docs/town-cli/plugin/asr)
@@ -46,22 +43,18 @@ CLI docs are organized by command pages and command groups.
 ## Runtime model (short)
 
 - `town start`: start Town runtime only
-- `town start --console` / `town start -a`: start Town runtime and Console together
-- `town console start`: start Console only, after Town runtime is already running
-- `town stop`: stop Console, then stop Town runtime and managed agents
-- `town restart`: restart Town runtime, restore managed agents, then restart Console
+- `town stop`: stop Town runtime and managed agents
+- `town restart`: restart Town runtime and restore managed agents
 - `town update`: update the currently installed global `downcity` CLI bundle
-- `town public`: manage persisted public exposure for Console, with interactive mode plus `on/off/status`
 - `town agent`: open the interactive agent manager in a TTY
 - `town agent create`: initialize project runtime files
 - `town agent list`: inspect registered agents, or use `--running` for active ones only
 - `town agent start`: start project agent daemon
 - `town agent stop`: stop project agent daemon
 - `town agent chat`: chat with an agent in interactive mode or send one-shot messages with `--message`
-- `town console`: manage the Console module itself
 - `town city`: select a City base and manage Town user login
 - `town plugin ...`: inspect the agent plugin catalog, or use explicit advanced plugin command forms
-- `town chat/task/memory/contact/shell ...`: normal managed-plugin runtime commands
+- `town chat/task/memory/contact ...`: normal managed-plugin runtime commands
 - `town web/skill/asr/tts ...`: normal local plugin commands
 
 ## Always up to date

@@ -83,8 +83,6 @@ export interface UserImageJobStatusResult {
   message?: string;
   /** 失败时的错误信息。 */
   error?: string;
-  /** 成功时的图片结果。 */
-  result?: UserImageResult;
   /** 建议客户端下次轮询前等待的毫秒数。 */
   poll_after_ms?: number;
   /** 任务创建时间，ISO 字符串。 */

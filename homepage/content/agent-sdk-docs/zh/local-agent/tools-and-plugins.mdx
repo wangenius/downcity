@@ -92,26 +92,42 @@ const agent = new Agent({
   model,
   plugins: [
     new ImagePlugin({
-      image: (input) => city.ai.image(input),
+      create: (input) => city.ai.imageJobCreate(input),
+      status: (input) => city.ai.imageJobStatus(input),
+      result: (input) => city.ai.imageJobResult(input),
     }),
   ],
 });
 ```
 
-注册后，Agent 会自动获得一个内置的 `plugin_call` tool。模型在需要生图时会调用：
+注册后，Agent 会自动获得一个内置的 `plugin_call` tool。生图能力会以可观察的任务流暴露：
 
 ```ts
 plugin_call({
   plugin: "image",
-  action: "generate",
+  action: "create",
   payload: {
     prompt: "一张雨夜城市街角的电影感插画",
     aspect_ratio: "16:9",
   },
 });
+
+plugin_call({
+  plugin: "image",
+  action: "status",
+  payload: { job_id: "img_..." },
+});
+
+plugin_call({
+  plugin: "image",
+  action: "result",
+  payload: { job_id: "img_..." },
+});
 ```
 
-`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、Gemini、302.ai、Luchi 等 provider 的具体协议。它只要求 `image(input)` 返回 AI SDK `UIMessage`。
+`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、Gemini、302.ai、Luchi 等 provider 的具体协议。如果你只传 `image(input)`，它会把这个函数包装成本地后台任务。如果你的后端已经暴露任务协议，传入 `create/status/result`，Agent 就可以轮询真实的上游状态，不再依赖同步生图调用。
+
+旧的 `generate` action 仍然保留为带超时的等待快捷方式，但 Agent 默认应优先使用 `create -> status -> result`，这样进度、失败和重试都是可见的。
 
 最终图片不会只停留在 tool result 里。Agent 底层会把生成结果中的 `file` parts 合并进最终 assistant message，因此 session 历史里会保存类似：
 

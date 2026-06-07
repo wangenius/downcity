@@ -317,7 +317,6 @@ export class AIService extends Service {
       status: record.status,
       ...(record.message ? { message: record.message } : {}),
       ...(record.error ? { error: record.error } : {}),
-      ...(record.result ? { result: record.result } : {}),
       ...(record.status === "running" || record.status === "queued"
         ? { poll_after_ms: IMAGE_JOB_POLL_AFTER_MS }
         : {}),

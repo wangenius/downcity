@@ -75,7 +75,7 @@ For day-to-day use, keep two rules in mind:
 
 1. When you configure the project runtime, you edit project files like `downcity.json`.
 2. When you manage local Agents and plugins, you use `town`.
-3. When you manage model providers and City base resources, you use `city` and connect Town with `town city`.
+3. When you manage model providers and City base resources, you use `city` and keep Town connected to City.
 
 ## Common examples
 
@@ -103,16 +103,16 @@ instead of raw credentials.
 
 ### Runtime status
 
-- use `town agent status` to inspect one project runtime
-- use `town agent list` to inspect the set of known agents globally
+- project runtime status answers whether one agent is running
+- the managed-agent registry answers which agents are known globally
 
 ## A common misunderstanding
 
-People often ask: "If I run `town agent ...`, is the agent really separate?"
+People often ask: "If Town is the entry point, is the agent really separate?"
 
 Yes.
 
-`town agent ...` is the user-facing entry point. The actual runtime being started, queried, or stopped is the single-project agent runtime.
+Town is the user-facing entry point. The actual runtime being started, queried, or stopped is the single-project agent runtime.
 
 Continue with:
 

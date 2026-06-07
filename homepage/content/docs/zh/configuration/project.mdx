@@ -59,7 +59,7 @@ description: downcity.json 中用户最常用字段与注意事项
 当前版本的行为：
 
 - 作用于 shell plugin 与 `kind=script` 的 task 执行链
-- 当前优先支持 macOS，本地 backend 使用系统自带 `sandbox-exec`
+- 当前支持 macOS 与 Linux：macOS 使用系统自带 `sandbox-exec`，Linux 使用 `bubblewrap`（命令名 `bwrap`）
 - 不支持关闭 sandbox，也不会回退到宿主机普通子进程执行
 - 未挂入 sandbox 的宿主路径默认不可见
 - `writablePaths` 只允许写项目根目录内的路径
@@ -68,13 +68,11 @@ description: downcity.json 中用户最常用字段与注意事项
 - `networkMode="restricted"` 当前先按放开网络处理
 - `networkMode="full"` 允许 shell 打开网络访问
 
-## 常用命令
+Linux 使用前需要先安装 `bubblewrap`，并确保当前系统允许 unprivileged user namespaces。缺少 `bwrap` 或系统禁用 user namespace 时，shell 命令会失败，不会回退到普通宿主子进程执行。
 
-```bash
-town config get
-town config get execution
-town config set start.port 3100
-```
+## 去哪里修改
+
+项目配置可以直接编辑 `downcity.json`，也可以在需要 CLI 界面时使用 [Town config 工作流](/zh/products-docs/town-cli/config)。
 
 ## 相关文档
 

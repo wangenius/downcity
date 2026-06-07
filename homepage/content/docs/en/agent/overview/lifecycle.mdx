@@ -9,11 +9,7 @@ A project agent usually moves through five stages.
 
 ## 1. Initialize the project
 
-```bash
-town agent create .
-```
-
-This generates the minimum runtime scaffold:
+Initialization generates the minimum runtime scaffold:
 
 - `PROFILE.md`
 - `SOUL.md`
@@ -41,10 +37,6 @@ In the current code, this binding is not optional decoration. It is one of the c
 
 ## 3. Start the runtime
 
-```bash
-town agent start
-```
-
 During startup, the agent will:
 
 - validate that the project is initialized
@@ -54,13 +46,13 @@ During startup, the agent will:
 - start HTTP
 - start configured project plugins
 
-In background mode, the CLI also maintains daemon state so commands like `status`, `stop`, `restart`, and `doctor` can manage the process later.
+In background mode, Town also maintains daemon state so lifecycle actions can inspect, stop, restart, or repair the process later.
 
 ## 4. Execute and interact
 
 Once running, the agent can be entered through multiple surfaces:
 
-- `town agent chat`
+- Town CLI
 - connected chat channels
 - project-level HTTP control routes
 - SDK `Agent` and `RemoteAgent`
@@ -69,16 +61,7 @@ Even though these look different from the outside, they ultimately reuse the sam
 
 ## 5. Stop, restart, and recover
 
-Common lifecycle commands:
-
-```bash
-town agent status
-town agent stop
-town agent restart
-town agent doctor --fix
-```
-
-If the process exits unexpectedly but state files remain, `doctor` is the command that restores consistency.
+Stop, restart, and recovery are lifecycle operations over the same project runtime. If the process exits unexpectedly but state files remain, recovery restores consistency between daemon state and the actual process.
 
 ## The normal day-to-day loop
 
@@ -86,23 +69,16 @@ In real usage, lifecycle is often cyclical rather than linear:
 
 1. edit `PROFILE.md`
 2. edit `downcity.json`
-3. `town agent restart`
-4. `town agent chat`
+3. restart the project runtime
+4. interact with the agent
 5. observe output and iterate again
 
 That loop is normal when you are shaping a long-lived project agent.
 
-## Recommended first-time order
+## Where concrete workflows live
 
-For most users, the easiest first path is:
+This page describes the lifecycle model. Concrete command workflows live in:
 
-1. `town agent create .`
-2. connect Town to City with `town city status`
-3. configure `downcity.json.execution.modelId`
-4. `town agent start`
-5. `town agent chat`
-6. only then add channels or SDK integrations
-
-If you are here specifically for embedding, jump to:
-
+- [Agent CLI product docs](/en/products-docs/town-cli/agent/agent)
+- [Town City product docs](/en/products-docs/town-cli/city)
 - [Agent SDK overview](/en/agent-sdk-docs)

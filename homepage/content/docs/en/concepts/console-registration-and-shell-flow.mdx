@@ -32,12 +32,12 @@ description: Explains managed agent registry writes, how the execution context s
 
 ```mermaid
 flowchart TD
-  A["town agent start"] --> B["start daemon"]
+  A["agent runtime startup"] --> B["start daemon"]
   B --> C["write debug metadata"]
   B --> D["upsert managed agent registry"]
   D --> E["Town registry"]
 
-  F["city managed plugin or town plugin"] --> G["agent API"]
+  F["managed plugin caller"] --> G["agent API"]
   G --> H["execution context"]
   H --> I["managed plugin runtime"]
   I --> J["plugin point dispatch"]

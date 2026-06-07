@@ -1,6 +1,6 @@
 ---
 title: API Authentication
-description: Mint Bearer tokens from the local CLI and use them against Downcity APIs
+description: Understand the Bearer-token authentication boundary used by Downcity APIs
 ---
 
 # API Authentication
@@ -20,81 +20,19 @@ The currently exposed endpoints are:
 - `POST /api/auth/token/create`
 - `POST /api/auth/token/delete`
 
-## First-time setup
+## Token ownership
 
-Current `town` CLI no longer starts Console UI. To create a token for Console UI, Chrome Extension, or an external script, run:
-
-```bash
-town token create my-token
-```
-
-The name is only for your own identification and management. It does not represent a different token type or channel scope.
-
-If you prefer an interactive flow, you can also run:
-
-```bash
-town token
-```
-
-The interactive flow then helps you:
-
-- copy the newly issued token immediately
+Tokens are created and stored on the same local machine that owns the runtime. A token name is only for human identification and management. It does not represent a different token type or channel scope.
 
 ## Use the token
 
 Send the token through the `Authorization` header:
 
-```bash
-curl http://127.0.0.1:3000/api/auth/me \
-  -H 'Authorization: Bearer dc_xxx'
-```
-
 If the token is valid, the endpoint returns the current subject, roles, and permissions.
 
-## Manage tokens with CLI
+## Manage tokens
 
-List tokens on the current machine:
-
-```bash
-town token list
-```
-
-Create a new token:
-
-```bash
-town token create my-token
-```
-
-Delete a token:
-
-```bash
-town token delete <tokenId>
-```
-
-You can also manage tokens through HTTP with an existing Bearer token:
-
-```bash
-curl http://127.0.0.1:3000/api/auth/token/list \
-  -H 'Authorization: Bearer dc_xxx'
-```
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/token/create \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "name": "chrome-extension"
-  }'
-```
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "tokenId": "token_record_id"
-  }'
-```
+Token creation, listing, and deletion are local-machine operations. HTTP token-management endpoints require an existing Bearer token, so external callers cannot silently mint authority without first holding authority.
 
 ## `DC_AUTH_TOKEN`
 
@@ -129,6 +67,8 @@ If you see `Missing bearer token`:
 - first confirm that the target HTTP endpoint is actually protected
 - then check whether the current process has any valid token source
 - if this happens inside an agent/Bash/ACP subprocess, first check whether the command should receive an explicit token
+
+Concrete token workflows live in [Town CLI product docs](/en/products-docs/town-cli).
 
 ## Current scope
 

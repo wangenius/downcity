@@ -32,12 +32,12 @@ description: 说明受管 agent registry 何时写入、execution context 能力
 
 ```mermaid
 flowchart TD
-  A["town agent start"] --> B["start daemon"]
+  A["agent runtime startup"] --> B["start daemon"]
   B --> C["write debug metadata"]
   B --> D["upsert managed agent registry"]
   D --> E["Town registry"]
 
-  F["city 托管 plugin 或 town plugin"] --> G["agent API"]
+  F["托管 plugin caller"] --> G["agent API"]
   G --> H["execution context"]
   H --> I["托管 plugin runtime"]
   I --> J["plugin 点分发"]

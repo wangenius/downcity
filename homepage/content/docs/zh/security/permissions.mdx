@@ -46,20 +46,14 @@ description: "了解 Ship 当前的聊天用户权限模型"
 
 ### 在哪里管理
 
-可以在 `town chat` 的交互式菜单中选择“管理 chat accounts → 管理访问控制”，也可以直接使用 CLI：
-
-```bash
-town chat auth set telegram:12345678
-```
-
-执行后 CLI 会交互式选择目标权限组。常用管理动作包括：
+在 Town chat 产品表层管理聊天授权。常用管理动作包括：
 
 - 查看当前权限组
 - 配置某个组拥有哪些权限
 - 设置默认权限组
 - 把具体用户分配到指定权限组
 
-聊天用户被拒绝时，返回消息会包含类似 `town chat auth set telegram:12345678` 的命令，用户可以直接转发给管理员。
+聊天用户被拒绝时，返回消息会包含目标用户身份，管理员可以据此把用户分配到合适的权限组。
 
 ### 一个常见的分组方式
 
@@ -84,5 +78,6 @@ town chat auth set telegram:12345678
 ## 相关文档
 
 - [Console](/zh/products-docs/town-cli/console/console)
+- [Town chat 文档](/zh/products-docs/town-cli/plugin/chat)
 - [Agent Plugins Docs / chat](/zh/plugins-docs/builtins/chat)
 - [配置总览](/zh/docs/configuration/overview)

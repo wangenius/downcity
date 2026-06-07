@@ -59,7 +59,7 @@ In the current version, `shell` / CLI commands always run inside a sandbox. Proj
 Current behavior:
 
 - Affects both the shell plugin path and `kind=script` task execution
-- Current first-class backend is macOS using built-in `sandbox-exec`
+- Current backends support macOS and Linux: macOS uses built-in `sandbox-exec`; Linux uses `bubblewrap` (`bwrap`)
 - Sandbox cannot be disabled and shell execution does not fall back to an unrestricted host process
 - Host paths not mounted into the sandbox are not visible
 - `writablePaths` must stay inside the project root
@@ -68,13 +68,11 @@ Current behavior:
 - `networkMode="restricted"` is currently handled the same as open network
 - `networkMode="full"` allows network access from shell commands
 
-## Common commands
+On Linux, install `bubblewrap` first and make sure the system allows unprivileged user namespaces. If `bwrap` is missing or user namespaces are disabled, shell commands fail instead of falling back to an unrestricted host process.
 
-```bash
-town config get
-town config get execution
-town config set start.port 3100
-```
+## Where to edit it
+
+Project config can be edited directly in `downcity.json`, or through the [Town config workflow](/en/products-docs/town-cli/config) when you want a CLI surface.
 
 ## Related docs
 

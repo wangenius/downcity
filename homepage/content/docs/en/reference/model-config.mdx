@@ -12,7 +12,7 @@ Downcity keeps model selection out of the agent project implementation. The proj
 ```txt
 City AIService model catalog
   -> city
-  -> town city use
+  -> Town selects a City model
   -> downcity.json execution.modelId
   -> agent session runtime
 ```
@@ -38,21 +38,11 @@ Notes:
 - `execution.modelId` should match a model exposed by the connected City AIService
 - provider secrets and provider connection details stay outside the project config
 
-## Commands
+## Where commands live
 
-Connect Town to City, then write the project binding:
+Connect Town to City, write the project binding, then restart the agent after changing it.
 
-```bash
-town city use
-town city status
-town config set execution.modelId <modelId>
-```
-
-Restart the agent after changing the binding:
-
-```bash
-town agent restart .
-```
+Concrete workflows live in [Town City docs](/en/products-docs/town-cli/city), [Town config docs](/en/products-docs/town-cli/config), and [Agent restart docs](/en/products-docs/town-cli/agent/restart).
 
 ## What the project does not store
 

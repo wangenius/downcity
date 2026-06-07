@@ -18,26 +18,20 @@ The binding point between a project and a model is:
 
 ## How to change it
 
-You can edit `downcity.json` directly, or set it with `town config`.
+You can edit `downcity.json` directly, or use the [Town config workflow](/en/products-docs/town-cli/config).
 
 Either way, the final project-side result should be the same:
 
 - `execution.type = "api"`
 - `execution.modelId = "<some-id>"`
 
-Before starting the Agent, make sure Town is connected to City:
-
-```bash
-town city status
-```
+Before starting the Agent, make sure Town is connected to City. See [Town City docs](/en/products-docs/town-cli/city) for the product workflow.
 
 ## What to do after changing it
 
 Usually the safest next step is:
 
-```bash
-town agent restart
-```
+[Agent restart docs](/en/products-docs/town-cli/agent/restart)
 
 ## Common mistake
 

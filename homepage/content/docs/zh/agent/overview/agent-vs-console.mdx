@@ -91,16 +91,16 @@ Console 或 city 级运行时主要负责：
 
 ### 查看状态
 
-- 看某个项目是否运行，用 `town agent status`
-- 看全局有哪些 agent，用 `town agent list`
+- 项目 runtime 状态回答“这个 agent 是否运行”
+- 受管 agent registry 回答“全局有哪些 agent”
 
 ## 一个高频误区
 
-很多人会问：“既然我用的也是 `town agent ...` 命令，那为什么还要强调 agent 是独立运行时？”
+很多人会问：“既然 Town 是用户入口，那为什么还要强调 agent 是独立运行时？”
 
 答案是：
 
-- `town agent ...` 只是用户入口
+- Town 只是用户入口
 - 真正被启动、被管理、被执行的是单项目 agent runtime
 
 也就是说，命令入口属于 city，执行实体属于 agent。

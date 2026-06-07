@@ -1,6 +1,6 @@
 ---
 title: API 认证
-description: 如何通过本机 CLI 签发 Bearer Token，并用它访问 Downcity API
+description: 理解 Downcity API 使用的 Bearer Token 认证边界
 ---
 
 # API 认证
@@ -20,81 +20,19 @@ Downcity 现在只保留一种对外认证模型：
 - `POST /api/auth/token/create`
 - `POST /api/auth/token/delete`
 
-## 第一次使用
+## Token 归属
 
-当前 `town` CLI 不再启动 Console UI。如果你需要给 Console UI、Chrome Extension 或外部脚本创建 token，可以直接在本机终端执行：
-
-```bash
-town token create my-token
-```
-
-这里的名称只是便于你自己识别和管理，不代表不同权限或不同渠道类型。
-
-如果你想直接走交互模式，也可以执行：
-
-```bash
-town token
-```
-
-交互式模式会继续引导你：
-
-- 创建完成后直接复制刚签发的 token
+Token 由拥有本地 runtime 的同一台机器创建和保存。Token 名称只用于人工识别和管理，不代表不同权限或不同渠道类型。
 
 ## 用 Token 调用接口
 
 拿到 token 后，统一放进 `Authorization` 头：
 
-```bash
-curl http://127.0.0.1:3000/api/auth/me \
-  -H 'Authorization: Bearer dc_xxx'
-```
-
 如果 token 有效，接口会返回当前主体、角色和权限。
 
-## 用 CLI 管理 Token
+## 管理 Token
 
-列出当前机器已签发的 token：
-
-```bash
-town token list
-```
-
-创建一个新的 token：
-
-```bash
-town token create my-token
-```
-
-删除 token：
-
-```bash
-town token delete <tokenId>
-```
-
-如果你更习惯直接调用 HTTP，也可以继续用 Bearer Token 管理 token：
-
-```bash
-curl http://127.0.0.1:3000/api/auth/token/list \
-  -H 'Authorization: Bearer dc_xxx'
-```
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/token/create \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "name": "chrome-extension"
-  }'
-```
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "tokenId": "token_record_id"
-  }'
-```
+Token 创建、列出和删除都是本机操作。HTTP token 管理接口需要先持有 Bearer Token，所以外部调用者不能在没有权限的情况下静默签发新权限。
 
 ## `DC_AUTH_TOKEN`
 
@@ -129,6 +67,8 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
 - 先确认目标 HTTP 端点当前是不是启用了鉴权
 - 再检查当前进程有没有可用 token 来源
 - 如果是在 agent/Bash/ACP 子进程里，先确认这条命令是否需要显式传入 token
+
+具体 token 工作流放在 [Town CLI 产品文档](/zh/products-docs/town-cli)。
 
 ## 当前边界
 

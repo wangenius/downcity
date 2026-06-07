@@ -30,13 +30,9 @@ Project `downcity.json` keeps plugin configuration under `plugins.*`.
 
 The project only stores the selected model ID:
 
-Use City-side administration to choose the model ID, then keep the project binding in `downcity.json`:
+Use City-side administration to choose the model ID, then keep the project binding in `downcity.json`.
 
-```bash
-town city status
-town config set execution.modelId <modelId>
-town agent restart .
-```
+Concrete workflows live in [Town City docs](/en/products-docs/town-cli/city), [Town config docs](/en/products-docs/town-cli/config), and [Agent restart docs](/en/products-docs/town-cli/agent/restart).
 
 ## Agent startup resolution
 
@@ -121,13 +117,14 @@ Field notes:
 
 Current boundary:
 
-- Current first-class support is macOS using `sandbox-exec`
+- Current backends support macOS and Linux: macOS uses `sandbox-exec`; Linux uses `bubblewrap` (`bwrap`)
 - Shell commands are required to go through sandbox and do not fall back to an unrestricted host process
 - `kind=script` task bodies also run through the same sandbox backend
 - Host paths not mounted into the sandbox are not visible
 - Isolated `HOME` / `TMPDIR` live under `.downcity/shell/<shellId>/sandbox/`
+- Linux requires `bubblewrap` to be installed and unprivileged user namespaces to be enabled
 
 ## Related docs
 
 - [Model Config Reference](/en/docs/reference/model-config)
-- [`town config`](/en/products-docs/town-cli/config)
+- [Town config docs](/en/products-docs/town-cli/config)

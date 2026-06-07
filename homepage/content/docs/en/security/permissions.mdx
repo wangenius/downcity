@@ -46,20 +46,14 @@ The backing storage is structured tables, not a key-value JSON blob:
 
 ### Where to manage it
 
-Use the interactive `town chat` menu and choose "manage chat accounts → manage access control", or use the CLI directly:
-
-```bash
-town chat auth set telegram:12345678
-```
-
-The CLI then lets you choose the target permission group interactively. Common management tasks include:
+Manage chat authorization from the Town chat product surface. Common management tasks include:
 
 - view permission groups
 - edit which permissions belong to each group
 - choose the default group
 - assign users to groups
 
-When a chat user is denied, the denial message includes a command like `town chat auth set telegram:12345678` that they can forward to an admin.
+When a chat user is denied, the denial message includes the target user identity so an admin can assign the user to the right permission group.
 
 ### A common group layout
 
@@ -84,5 +78,6 @@ So even when a message comes from a group chat, the final decision is still base
 ## Related docs
 
 - [Console](/en/products-docs/town-cli/console/console)
+- [Town chat docs](/en/products-docs/town-cli/plugin/chat)
 - [Agent Plugins Docs / chat](/en/plugins-docs/builtins/chat)
 - [Configuration Overview](/en/docs/configuration/overview)

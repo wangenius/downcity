@@ -10,21 +10,16 @@ Model setup is split into two responsibilities:
 1. City manages the model catalog and provider-side details.
 2. Agent project chooses `execution.modelId` in `downcity.json`.
 
-## Workflow
+## Responsibility Flow
 
 1. Use `city` to prepare or inspect the model catalog.
-2. Sign in Town to City with `town city login`.
+2. Connect Town to City as the local user.
 3. Set `execution.modelId` in project.
 4. Restart agent and validate one real invocation.
 
-## Commands
+## Where commands live
 
-```bash
-town city login
-town city status
-town config set execution.modelId default
-town agent restart .
-```
+Concrete workflows live in [Town City docs](/en/products-docs/town-cli/city), [Town config docs](/en/products-docs/town-cli/config), and [Agent restart docs](/en/products-docs/town-cli/agent/restart).
 
 ## Failure cases
 

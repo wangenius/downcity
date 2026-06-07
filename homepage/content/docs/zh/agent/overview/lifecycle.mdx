@@ -9,11 +9,7 @@ description: 从初始化到启动、聊天、停机，理解一个 Agent 的完
 
 ## 1. 初始化项目
 
-```bash
-town agent create .
-```
-
-这一步会生成最小可运行骨架，包括：
+初始化会生成最小可运行骨架，包括：
 
 - `PROFILE.md`
 - `SOUL.md`
@@ -41,10 +37,6 @@ town agent create .
 
 ## 3. 启动运行时
 
-```bash
-town agent start
-```
-
 启动时，agent 会：
 
 - 校验项目是否初始化完成
@@ -54,13 +46,13 @@ town agent start
 - 启动 HTTP 服务
 - 启动项目内配置的 plugin
 
-如果你使用的是后台模式，CLI 还会为它维护 daemon 状态，方便后续 `status / stop / restart / doctor` 命令接管。
+如果使用后台模式，Town 还会为它维护 daemon 状态，让生命周期操作可以继续检查、停止、重启或修复这个进程。
 
 ## 4. 执行和交互
 
 运行中的 agent 可以通过多种入口执行：
 
-- `town agent chat`
+- Town CLI
 - 已接入的聊天渠道
 - 项目级 HTTP 控制接口
 - SDK `Agent` / `RemoteAgent`
@@ -71,16 +63,7 @@ town agent start
 
 ## 5. 停止、重启和恢复
 
-常用命令：
-
-```bash
-town agent status
-town agent stop
-town agent restart
-town agent doctor --fix
-```
-
-如果进程异常退出但状态文件仍在，`doctor` 用来清理 stale 状态。
+停止、重启和恢复，本质上都是对同一个项目运行时做生命周期管理。如果进程异常退出但状态文件仍在，恢复操作会让 daemon 状态和真实进程重新一致。
 
 ## 日常迭代里最常见的生命周期循环
 
@@ -88,29 +71,16 @@ town agent doctor --fix
 
 1. 改 `PROFILE.md`
 2. 改 `downcity.json`
-3. `town agent restart`
-4. `town agent chat`
+3. 重启项目运行时
+4. 和 agent 交互
 5. 看输出，再继续微调
 
 如果你在打磨一个长期运行的项目 agent，这个循环会非常常见。
 
-## 推荐使用顺序
+## 具体工作流在哪里
 
-对大多数用户，推荐按下面的顺序上手：
+这一页讲的是生命周期模型。具体命令工作流放在：
 
-1. `town agent create .`
-2. 配好 `downcity.json.execution.modelId`
-3. `town agent start`
-4. `town agent chat`
-5. 需要时再接入渠道或 SDK
-
-## 什么时候应该跳到后面的章节
-
-如果你不是来“启动一个 CLI agent”，而是要“在应用里嵌入 agent”，那可以直接跳去看：
-
+- [Agent CLI 产品文档](/zh/products-docs/town-cli/agent/agent)
+- [Town City 产品文档](/zh/products-docs/town-cli/city)
 - [Agent SDK 总览](/zh/agent-sdk-docs)
-
-## 继续阅读
-
-- [`town agent create`](/zh/products-docs/town-cli/agent/create)
-- [`town agent start`](/zh/products-docs/town-cli/agent/start)

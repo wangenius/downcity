@@ -59,7 +59,7 @@ This boundary matters, because once you mix global concerns and project concerns
 You use an agent when you want to turn a repository into a long-running execution unit:
 
 - make one project conversational
-- chat with a project through `town agent chat`
+- chat with a project through Town
 - receive Telegram, Feishu, or QQ messages into the project runtime
 - embed an agent into your own Node.js app with `@downcity/agent`
 - call a running agent process through `RemoteAgent`
@@ -68,15 +68,7 @@ You use an agent when you want to turn a repository into a long-running executio
 
 ### 1. CLI / runtime mode
 
-You run commands inside a project:
-
-```bash
-town agent create .
-town agent start
-town agent chat
-```
-
-This path is best when your goal is "turn this repository into an agent runtime and use it directly."
+Town provides the user-facing local runtime path. This path is best when your goal is "turn this repository into an agent runtime and use it directly."
 
 ### 2. SDK integration mode
 
@@ -110,5 +102,5 @@ If this is your first time in the Agent docs, the cleanest path is:
 
 1. [Agent vs Console](/en/docs/agent/overview/agent-vs-console)
 2. [Agent lifecycle](/en/docs/agent/overview/lifecycle)
-3. [`town agent` product docs](/en/products-docs/town-cli/agent/agent)
+3. [Agent CLI product docs](/en/products-docs/town-cli/agent/agent)
 4. [Agent SDK overview](/en/agent-sdk-docs)

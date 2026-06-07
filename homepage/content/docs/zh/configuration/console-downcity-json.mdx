@@ -55,34 +55,11 @@ City 侧配置统一存储在：
 5. 用户聊天权限来自 `chat_auth_*` 表，不保存在 agent 项目里。
 6. plugin 参数来自项目 `downcity.json`，plugin 运行态归属于 Agent 进程。
 
-## 常用操作
+## 管理入口
 
-初始化本地 Town 状态和 City 连接元信息：
+本地 Town 状态、项目 plugin 参数、plugin 运行态操作，以及 City 模型绑定，都有对应的产品级命令表层。
 
-```bash
-town init
-```
-
-查看项目 plugin 参数：
-
-```bash
-town config get plugins.asr
-town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
-```
-
-需要运行态操作时，使用显式 plugin 命令：
-
-```bash
-town asr on
-town asr off
-```
-
-让 Agent 项目使用 City 模型：
-
-```bash
-town city status
-town config set execution.modelId <modelId>
-```
+具体工作流见 [Town CLI](/zh/products-docs/town-cli)、[Town config 文档](/zh/products-docs/town-cli/config)、[Plugin CLI 文档](/zh/products-docs/town-cli/plugin/plugin) 和 [Town City 文档](/zh/products-docs/town-cli/city)。
 
 ## 相关文档
 

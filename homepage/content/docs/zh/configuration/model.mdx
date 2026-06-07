@@ -10,21 +10,16 @@ description: City AIService 模型目录与项目绑定的职责边界
 1. City 维护模型目录和 provider 侧细节。
 2. Agent 在 `downcity.json` 只选择 `execution.modelId`。
 
-## 工作流
+## 职责流程
 
 1. 用 `city` 准备或检查模型目录。
-2. 用 `town city login` 以 Town user 身份登录 City。
+2. 让 Town 以本机用户身份连接 City。
 3. 在 agent 项目设置 `execution.modelId`。
 4. 重启 agent 并进行一次实际调用验证。
 
-## 命令示例
+## 命令在哪里
 
-```bash
-town city login
-town city status
-town config set execution.modelId default
-town agent restart .
-```
+具体工作流见 [Town City 文档](/zh/products-docs/town-cli/city)、[Town config 文档](/zh/products-docs/town-cli/config) 和 [Agent restart 文档](/zh/products-docs/town-cli/agent/restart)。
 
 ## 失败场景
 

@@ -55,34 +55,11 @@ Key behavior:
 5. Chat user permissions are resolved from `chat_auth_*` tables, not from an agent project.
 6. Plugin parameters are read from project `downcity.json`; plugin runtime state belongs to the Agent process.
 
-## Common operations
+## Management entry points
 
-Initialize local Town state and City connection metadata:
+Local Town state, project plugin parameters, plugin runtime operations, and City model binding all have product-level command surfaces.
 
-```bash
-town init
-```
-
-Read/update project plugin parameters:
-
-```bash
-town config get plugins.asr
-town config set plugins.asr.modelId '\"SenseVoiceSmall\"'
-```
-
-Use explicit plugin commands when you need runtime operations:
-
-```bash
-town asr on
-town asr off
-```
-
-Use City models from an Agent project:
-
-```bash
-town city status
-town config set execution.modelId <modelId>
-```
+Use [Town CLI](/en/products-docs/town-cli), [Town config docs](/en/products-docs/town-cli/config), [Plugin CLI docs](/en/products-docs/town-cli/plugin/plugin), and [Town City docs](/en/products-docs/town-cli/city) for concrete workflows.
 
 ## Related docs
 

@@ -12,6 +12,11 @@ import type { SandboxConfig } from "@/sandbox/types/Sandbox.js";
 import type { SandboxNetworkMode } from "@/sandbox/types/Sandbox.js";
 
 /**
+ * 当前内置支持的 sandbox backend。
+ */
+export type SandboxBackend = "macos-seatbelt" | "linux-bubblewrap";
+
+/**
  * sandbox 会话状态。
  *
  * 说明（中文）
@@ -298,7 +303,7 @@ export interface ResolvedSandboxConfig extends SandboxConfig {
   /**
    * 当前运行时选中的 backend。
    */
-  backend: "macos-seatbelt";
+  backend: SandboxBackend;
 }
 
 /**
@@ -368,7 +373,7 @@ export interface SandboxSpawnResult {
   /**
    * 当前使用的 backend 名称。
    */
-  backend: "macos-seatbelt";
+  backend: SandboxBackend;
 
   /**
    * 当前实际采用的网络模式。

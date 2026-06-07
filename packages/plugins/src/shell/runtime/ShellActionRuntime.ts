@@ -52,6 +52,12 @@ import { attachShellProcessEventHandlers } from "./ShellProcessEvents.js";
 
 export { createShellPluginState } from "./ShellActionRuntimeSupport.js";
 
+function resolveDefaultShellPath(): string {
+  const envShell = String(process.env.SHELL || "").trim();
+  if (envShell) return envShell;
+  return process.platform === "darwin" ? "/bin/zsh" : "/bin/sh";
+}
+
 /**
  * 绑定当前 shell plugin runtime 实例的 execution runtime。
  */
@@ -106,7 +112,7 @@ export async function startShellSession(
   const shellId = `sh_${generateId()}`;
   const cwd = resolveShellCwd(context, request.cwd);
   const shellPath =
-    String(request.shell || process.env.SHELL || "/bin/zsh").trim() || "/bin/zsh";
+    String(request.shell || resolveDefaultShellPath()).trim() || resolveDefaultShellPath();
   const login = request.login !== false;
   const ownerContextId = resolveOwnerContextId(request.ownerContextId);
   const canAutoNotifyByContext = ownerContextId

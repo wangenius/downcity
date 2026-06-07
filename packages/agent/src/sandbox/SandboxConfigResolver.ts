@@ -9,6 +9,7 @@
 
 import path from "node:path";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { SandboxBackend } from "@/sandbox/types/SandboxRuntime.js";
 import type { ResolvedSandboxConfig } from "@/sandbox/types/SandboxRuntime.js";
 
 const DEFAULT_ENV_ALLOWLIST = [
@@ -85,20 +86,25 @@ function normalizeWritablePaths(params: {
 }
 
 /**
+ * 根据宿主平台解析当前 sandbox backend。
+ */
+export function resolveSandboxBackend(): SandboxBackend {
+  if (process.platform === "darwin") return "macos-seatbelt";
+  if (process.platform === "linux") return "linux-bubblewrap";
+  throw new Error(
+    `sandbox backend is required for shell execution, but current platform is unsupported: ${process.platform}`,
+  );
+}
+
+/**
  * 解析当前请求最终使用的 sandbox 配置。
  */
 export function resolveSandboxConfig(context: AgentContext): ResolvedSandboxConfig {
   const rootPath = path.resolve(context.rootPath);
   const projectConfig = context.config?.sandbox;
 
-  if (process.platform !== "darwin") {
-    throw new Error(
-      `sandbox backend is required for shell execution, but current platform is unsupported: ${process.platform}`,
-    );
-  }
-
   return {
-    backend: "macos-seatbelt",
+    backend: resolveSandboxBackend(),
     rootPath,
     envAllowlist: normalizeEnvAllowlist(projectConfig?.envAllowlist),
     writablePaths: normalizeWritablePaths({

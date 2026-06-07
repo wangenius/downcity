@@ -2,14 +2,12 @@
   "title": "Downcity Docs",
   "pages": [
     "index",
-    "how-to-use-downcity",
     "quickstart",
     "agent",
     "concepts",
     "capabilities",
     "configuration",
     "security",
-    "operations",
     "reference",
     "community"
   ]

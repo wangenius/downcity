@@ -56,7 +56,6 @@ export function isTemporaryModelServiceUnavailable(error: unknown): boolean {
   return (
     /Service temporarily unavailable/i.test(msg) ||
     /AI_RetryError/i.test(msg) ||
-    /AI_APICallError/i.test(msg) ||
     /maxRetriesExceeded/i.test(msg) ||
     /\b503\b/.test(msg)
   );
@@ -66,11 +65,16 @@ export function isTemporaryModelServiceUnavailable(error: unknown): boolean {
  * 构造回发到 channel 的失败文本。
  */
 export function buildChannelErrorText(error: unknown): string {
+  const raw = String(error ?? "").trim();
+  if (/AI_APICallError/i.test(raw)) {
+    return raw || "AI_APICallError";
+  }
+
   if (isTemporaryModelServiceUnavailable(error)) {
     return "⚠️ 模型服务暂时不可用（503），系统已自动重试但仍失败，请稍后再试。";
   }
 
-  const normalized = String(error ?? "").replace(/\s+/g, " ").trim();
+  const normalized = raw.replace(/\s+/g, " ").trim();
   if (/AI_NoOutputGeneratedError|No output generated/i.test(normalized)) {
     return "❌ 模型本轮没有生成可发送内容。系统已记录底层 stream 错误，请稍后重试。";
   }

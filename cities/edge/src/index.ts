@@ -18,7 +18,7 @@ import {
   createLuchiImageProvider,
   createOpenAIImageProvider,
 } from "./image-provider.js";
-import { createOpenAIProvider } from "./openai-provider.js";
+import { createDeepSeekProvider } from "./deepseek-provider.js";
 
 const INITIAL_BALANCE = 100;
 const CHAT_COST = 10;
@@ -46,7 +46,7 @@ function get_city(env: Env, request: Request): Promise<CityBase> {
 
 async function init_city(env: Env): Promise<CityBase> {
   const db = drizzle(env.DB);
-  const deepseek_provider = createOpenAIProvider({
+  const deepseek_provider = createDeepSeekProvider({
     id: "deepseek",
     envKey: "DEEPSEEK_API_KEY",
     baseURL: "https://api.deepseek.com/v1",

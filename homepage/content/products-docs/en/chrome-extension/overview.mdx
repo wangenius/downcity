@@ -1,47 +1,54 @@
 ---
 title: Chrome Extension Overview
-description: What the Chrome extension does now and how it fits into the Downcity Agent workflow
+description: What the Chrome extension does now and how it fits into the Downcity Town workflow
 ---
 
 # Chrome Extension Overview
 
-The Chrome extension is Downcity's web dispatch entry point.
+The Chrome extension is the browser entry point for Downcity Town.
 
-Its job is simple: capture the current page as a Markdown attachment, then send it to a chosen Downcity Server, Agent, and Session.
+It has two main paths: the Side Panel opens a persistent browser chat with an Agent, while the popup captures the current page as Markdown and sends it to the selected Agent.
 
 ## Best Use Cases
 
-- You are reading an article and want an Agent to summarize, translate, or extract actions
-- You want to send a live page snapshot into an existing Session
-- You have multiple local or remote Servers and want to switch between them quickly
+- You are reading an article and want to discuss it with an Agent in the browser side panel
+- You want to send a live page snapshot to an Agent
+- You want one simple browser tool connected to local or remote Downcity Town
 
 ## What It Provides
 
-### 1. Extension Popup
+### 1. Side Panel
+
+The Side Panel lets you:
+
+- keep a persistent Chrome Agent Session open
+- connect to the Town runtime API through `/api/sdk/*`
+- send regular messages or include the current page as Markdown
+- subscribe to Agent events and see replies in place
+
+### 2. Extension Popup
 
 The popup lets you:
 
-- choose the active Server Connection
 - choose the target Agent
-- choose the target Session
 - write an Ask and send it
-- review recent page history for the current connection
+- review recent page history for the current Town
 
-### 2. Settings Page
+### 3. Settings Page
 
 The settings page lets you:
 
-- create multiple Server Connections
-- configure Host, Port, and Bearer Token for each connection
-- choose default Agent / Session per connection
+- set the `Town URL`
+- choose the default Agent
 - set a default Ask for the popup
+- add a Town Token only when the target Town requires it
 
 ## What It No Longer Does
 
 - no Inline Composer
 - no on-page input panel
 - no waiting for the final execution result inside the popup
-- no replacement for the original Session UI
+- no multi-field Server configuration in the settings page
 
 ## Recommended Reading
 

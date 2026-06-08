@@ -7,6 +7,9 @@
  */
 
 import type {
+  ConsoleUiAgentOption,
+} from "../types/api";
+import type {
   ExtensionServerConnection,
   ExtensionConnectionRoutePreference,
   ExtensionSettings,
@@ -37,6 +40,36 @@ export function buildServerConnectionBaseUrl(
     port: connection.port,
     basePath: connection.basePath,
   });
+}
+
+/**
+ * 解析 Agent runtime base URL。
+ *
+ * 说明（中文）：
+ * - Server Connection 指向 Town / Console 聚合入口。
+ * - `/api/sdk/*` 属于单个 Agent HTTP gateway，必须优先使用 `/api/ui/agents` 返回的 `agent.baseUrl`。
+ * - 只有后端未返回 runtime 地址时，才回退到当前 Server Connection，便于兼容单 Agent 直连场景。
+ */
+export function resolveAgentRuntimeBaseUrl(params: {
+  /**
+   * 当前选中的 Agent。
+   */
+  agent?: ConsoleUiAgentOption | null;
+  /**
+   * 回退地址。
+   */
+  fallbackBaseUrl: string;
+}): string {
+  const explicit = String(params.agent?.baseUrl || "").trim();
+  if (explicit) return explicit.replace(/\/+$/, "");
+
+  const host = String(params.agent?.host || "").trim();
+  const port = params.agent?.port;
+  if (host && typeof port === "number" && Number.isFinite(port)) {
+    return `http://${host}:${Math.trunc(port)}`;
+  }
+
+  return String(params.fallbackBaseUrl || "").trim().replace(/\/+$/, "");
 }
 
 /**
@@ -71,7 +104,12 @@ export function resolveRoutePreference(params: {
       connectionId
     ] || null;
   return {
+    targetMode:
+      String(preference?.targetMode || "").trim() === "im_forward"
+        ? "im_forward"
+        : "agent_session",
     agentId: String(preference?.agentId || "").trim(),
     sessionId: String(preference?.sessionId || "").trim(),
+    agentSessionId: String(preference?.agentSessionId || "").trim(),
   };
 }

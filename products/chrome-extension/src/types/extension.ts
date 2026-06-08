@@ -2,8 +2,8 @@
  * Chrome 扩展内部领域类型。
  *
  * 关键点（中文）：
- * - 扩展当前只保留 Popup + Options 两个入口。
- * - 用户配置围绕「Server Connection -> Agent -> Session」三层关系组织。
+ * - 扩展当前保留 Popup / Options / Side Panel 三个入口。
+ * - 用户配置围绕「Server Connection -> Agent -> 路由目标」三层关系组织。
  * - 所有用户可见配置都集中定义在这里，避免 UI / storage 各自维护字段。
  */
 
@@ -73,18 +73,45 @@ export interface ExtensionServerConnectionSecretMap {
 }
 
 /**
+ * 扩展消息投递目标模式。
+ */
+export type ExtensionRouteTargetMode = "agent_session" | "im_forward";
+
+/**
  * 单个连接的默认路由偏好。
  */
 export interface ExtensionConnectionRoutePreference {
+  /**
+   * 当前连接默认投递目标。
+   *
+   * 说明（中文）：
+   * - `agent_session`：直连 Agent SDK session，作为浏览器侧常驻对话。
+   * - `im_forward`：转发到 ChatPlugin 维护的 IM 平台 session。
+   */
+  targetMode: ExtensionRouteTargetMode;
+
   /**
    * 该连接默认使用的 Agent id。
    */
   agentId: string;
 
   /**
-   * 该连接默认使用的 Session id。
+   * 该连接默认使用的 IM Session id。
+   *
+   * 说明（中文）：
+   * - 仅在 `targetMode === "im_forward"` 时使用。
+   * - 由 Telegram / Feishu / QQ 等 ChatPlugin 渠道产生。
    */
   sessionId: string;
+
+  /**
+   * 该连接默认使用的 Agent SDK Session id。
+   *
+   * 说明（中文）：
+   * - 仅在 `targetMode === "agent_session"` 时使用。
+   * - 若为空，扩展会按连接与 Agent 自动生成稳定 id。
+   */
+  agentSessionId: string;
 }
 
 /**

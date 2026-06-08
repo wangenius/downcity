@@ -51,8 +51,7 @@ const agent = new Agent({
   model,
   plugins: [
     new ImagePlugin({
-      create: (input) => city.ai.image_create(input),
-      result: (input) => city.ai.image_result(input),
+      image: (input) => city.ai.image(input),
     }),
   ],
 });
@@ -71,7 +70,7 @@ plugin_call({
 });
 ```
 
-`ImagePlugin` is provider-agnostic. It does not know about City, OpenAI, Gemini, 302.ai, or Luchi directly. Pass `create/result`; the plugin creates the upstream image job, polls it internally, and returns an AI SDK `UIMessage` when the image is ready.
+`ImagePlugin` is provider-agnostic. It does not know about City, OpenAI, Gemini, 302.ai, or Luchi directly. Pass an `image` function that returns an AI SDK `UIMessage`, and the plugin will forward generated file parts back into the assistant message.
 
 Generated image file parts are materialized under `.downcity/resources/` and merged into the final assistant message automatically.
 

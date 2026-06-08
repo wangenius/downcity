@@ -92,8 +92,7 @@ const agent = new Agent({
   model,
   plugins: [
     new ImagePlugin({
-      create: (input) => city.ai.image_create(input),
-      result: (input) => city.ai.image_result(input),
+      image: (input) => city.ai.image(input),
     }),
   ],
 });
@@ -112,7 +111,7 @@ plugin_call({
 });
 ```
 
-`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、Gemini、302.ai、Luchi 等 provider 的具体协议。传入 `create/result` 后，插件会创建上游图片任务，在内部轮询，并在图片完成后返回 AI SDK `UIMessage`。
+`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、Gemini、302.ai、Luchi 等 provider 的具体协议。传入返回 AI SDK `UIMessage` 的 `image` 函数后，插件会把生成结果中的 file parts 写回 assistant 消息。
 
 生成图片的 file parts 会自动落盘到 `.downcity/resources/`，并合并进最终 assistant message。
 

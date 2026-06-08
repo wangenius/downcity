@@ -9,7 +9,7 @@
 /**
  * Console UI 默认地址。
  */
-export const DEFAULT_CONSOLE_BASE_URL = "http://127.0.0.1:5315";
+export const DEFAULT_CONSOLE_BASE_URL = "http://127.0.0.1:5314";
 
 /**
  * 归一化 Base Path。

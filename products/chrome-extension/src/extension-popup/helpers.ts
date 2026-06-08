@@ -7,6 +7,7 @@
  */
 
 import { decorateAuthErrorText } from "../services/auth";
+import { readConnectionErrorHint } from "../services/connectionHints";
 import {
   buildServerConnectionBaseUrl,
   resolveSelectedConnection,
@@ -32,11 +33,13 @@ export interface ExtensionPopupToastMessage {
  * 读取错误文本。
  */
 export function readErrorText(error: unknown): string {
+  const hint = readConnectionErrorHint(error);
+  if (hint) return hint;
   const rawMessage =
     error instanceof Error ? error.message : String(error || "未知错误");
   const decorated = decorateAuthErrorText(rawMessage);
   if (/failed to fetch/i.test(decorated)) {
-    return "无法连接到 Server，请确认 Server 正在运行，并检查扩展设置中的 Protocol / Host / Port / Base Path 是否可访问";
+    return "无法连接到 Downcity Town，请确认 Town URL 可访问，本机默认使用 http://127.0.0.1:5314。";
   }
   return decorated;
 }
@@ -57,7 +60,7 @@ export function resolveExtensionPopupServerBaseUrl(settings: ExtensionSettings):
   try {
     const connection = resolveSelectedConnection(settings);
     if (!connection) {
-      throw new Error("未找到可用的 Server Connection");
+      throw new Error("未找到可用的 Downcity Town");
     }
     return {
       baseUrl: buildServerConnectionBaseUrl(connection),

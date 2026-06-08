@@ -15,8 +15,7 @@ import {
 import type { UserModelRef } from "./types.js";
 import type {
   UserImageInput,
-  UserImageJobCreateResult,
-  UserImageJobResult,
+  UserImageResult,
   UserServiceInput,
   UserStreamResult,
   UserTextResult,
@@ -93,14 +92,9 @@ export class AIInvoker {
     };
   }
 
-  /** 创建图片生成任务。 */
-  image_create(input: UserImageInput): Promise<UserImageJobCreateResult> {
-    return this.post<UserImageJobCreateResult>("/image/create", input);
-  }
-
-  /** 读取图片生成任务结果。 */
-  image_result(input: { job_id: string }): Promise<UserImageJobResult> {
-    return this.post<UserImageJobResult>("/image/result", input as UserServiceInput);
+  /** 图片生成 */
+  image(input: UserImageInput): Promise<UserImageResult> {
+    return this.post<UserImageResult>("/image", input);
   }
 
   /** 视频生成 */
@@ -378,14 +372,9 @@ export class ModelHandle {
     return this.ai.text({ ...input, model: this.id });
   }
 
-  /** 创建图片生成任务 */
-  image_create(input: Omit<UserImageInput, "model">): Promise<UserImageJobCreateResult> {
-    return this.ai.image_create({ ...input, model: this.id });
-  }
-
-  /** 读取图片生成任务结果 */
-  image_result(input: { job_id: string }): Promise<UserImageJobResult> {
-    return this.ai.image_result(input);
+  /** 图片生成 */
+  image(input: Omit<UserImageInput, "model">): Promise<UserImageResult> {
+    return this.ai.image({ ...input, model: this.id });
   }
 
   /** 视频生成 */

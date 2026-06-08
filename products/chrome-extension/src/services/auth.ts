@@ -125,6 +125,13 @@ export async function fetchConsoleAuthStatus(params?: {
   );
   const payload = (await response.json().catch(() => ({}))) as Partial<ConsoleExtensionAuthStatusResponse> &
     Record<string, unknown>;
+  if (response.status === 404) {
+    return {
+      success: true,
+      initialized: false,
+      requireToken: false,
+    };
+  }
   if (!response.ok || payload.success === false) {
     throw new Error(String(payload.error || payload.message || "读取鉴权状态失败"));
   }
@@ -142,7 +149,7 @@ export function decorateAuthErrorText(input: unknown): string {
   const message = String(input || "").trim();
   if (!message) return "未知错误";
   if (isAuthErrorMessage(message)) {
-    return `${message}。请在扩展设置页填写 Bearer Token。`;
+    return `${message}。请在扩展设置页填写 Town Token。`;
   }
   return message;
 }

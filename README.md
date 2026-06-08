@@ -25,7 +25,7 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
 | `cities/*` | Deployable City compositions that assemble `@downcity/city` and services for Node or edge runtimes. |
-| `products/chrome-extension` | Chrome extension for Console connectivity, page context, and inline composition workflows. |
+| `products/chrome-extension` | Chrome extension for Agent Session side-panel chat, page context capture, and optional IM forwarding. |
 | `homepage` | Official website and end-user documentation site. |
 
 ## Core Capabilities
@@ -259,7 +259,8 @@ pnpm dev:homepage
 ## Security and Runtime Notes
 
 - Downcity can execute shell commands, read and write project files, start local daemons, and receive external messages through chat channels.
+- Local shell and script commands run through the agent sandbox by default. The project is writable, network is open, and sandbox HOME/cache lives at `.downcity/sandbox`.
 - Use a clean Git branch and audit changes with `git status` and `git diff`.
 - Keep secrets out of the repository; prefer local environment variables or `town env`.
 - Use tokens and auth boundaries for Console, HTTP access, and chat channel integrations.
-- Tighten command execution boundaries through sandbox configuration where appropriate.
+- Host-level installs such as `sudo`, `brew install`, Xcode tools, and writes to system directories are outside the sandbox boundary.

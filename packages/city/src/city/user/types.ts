@@ -46,47 +46,9 @@ export interface UserCityAccessOptions {
 export type UserTextResult = UIMessage;
 export type UserStreamChunk = UIMessageChunk;
 export type UserStreamResult = ReadableStream<UserStreamChunk>;
+export type UserImageResult = UIMessage;
 export type UserVideoResult = UIMessage;
 export type { UserPaymentMethod, UserPaymentMethodReason, UserPaymentMethodType };
-
-/** 图片任务状态。 */
-export type UserImageJobStatus = "queued" | "running" | "succeeded" | "failed";
-
-/** 图片任务创建结果。 */
-export interface UserImageJobCreateResult {
-  /** 图片任务唯一 ID。 */
-  job_id: string;
-  /** 当前任务状态。 */
-  status: UserImageJobStatus;
-  /** 读取任务结果的 API 路径。 */
-  result_path: string;
-  /** 人类可读状态说明。 */
-  message?: string;
-  /** 建议客户端下次轮询前等待的毫秒数。 */
-  poll_after_ms?: number;
-  /** 任务创建时间，ISO 字符串。 */
-  created_at: string;
-  /** 任务更新时间，ISO 字符串。 */
-  updated_at: string;
-}
-
-/** 图片任务结果查询结果。 */
-export interface UserImageJobResult {
-  /** 图片任务唯一 ID。 */
-  job_id: string;
-  /** 当前任务状态。 */
-  status: UserImageJobStatus;
-  /** 成功时的图片结果。 */
-  result?: UIMessage;
-  /** 失败时的错误信息。 */
-  error?: string;
-  /** 人类可读状态说明。 */
-  message?: string;
-  /** 任务创建时间，ISO 字符串。 */
-  created_at: string;
-  /** 任务更新时间，ISO 字符串。 */
-  updated_at: string;
-}
 
 /** 图片生成文本内容片段。 */
 export interface UserImageTextContent {
@@ -141,7 +103,7 @@ export interface UserImageInput extends UserServiceInput {
   quality?: string;
   /** 随机种子。 */
   seed?: number;
-  /** 业务侧任务 ID，用于异步图片任务幂等、追踪和恢复。 */
+  /** 业务侧任务 ID，用于 provider 侧幂等、追踪和恢复。 */
   client_job_id?: string;
   /** Provider 私有参数，例如 `{ openai: {...}, gemini: {...}, luchi: {...} }`。 */
   provider_options?: Record<string, unknown>;

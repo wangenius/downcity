@@ -28,12 +28,9 @@ const textContract: Promise<UIMessage> = textResult;
 const streamResult = ai.stream({ prompt: "hello" });
 const streamContract: Promise<ReadableStream<UIMessageChunk>> = streamResult;
 
-const imageCreateResult = ai.image_create({ prompt: "draw" });
-const imageCreateContract: Promise<import("../src/index.js").UserImageJobCreateResult> = imageCreateResult;
-
-const imageResult = ai.image_result({ job_id: "img_1" });
-const imageContract: Promise<import("../src/index.js").UserImageJobResult> = imageResult;
-void imageCreateContract;
+const imageResult = ai.image({ prompt: "draw" });
+const imageContract: Promise<UIMessage> = imageResult;
+void imageContract;
 
 const videoResult = ai.video({ prompt: "demo" });
 const videoContract: Promise<UIMessage> = videoResult;
@@ -88,11 +85,8 @@ ai.text<{ text: string }>({ prompt: "hello" });
 // @ts-expect-error stream 返回类型固定为 UIMessageChunk stream
 ai.stream<ReadableStream<string>>({ prompt: "hello" });
 
-// @ts-expect-error image 已移除，图片生成需走 image_create/image_result
-ai.image({ prompt: "draw" });
-
-// @ts-expect-error image_result 返回类型固定为 UserImageJobResult
-ai.image_result<{ url: string }>({ job_id: "img_1" });
+// @ts-expect-error image 返回类型固定为 UIMessage
+ai.image<{ url: string }>({ prompt: "draw" });
 
 // @ts-expect-error video 返回类型固定为 UIMessage
 ai.video<{ url: string }>({ prompt: "demo" });

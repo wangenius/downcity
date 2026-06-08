@@ -1,19 +1,18 @@
 ---
 title: Troubleshooting
-description: Common Chrome extension issues and how to debug them, including connection failures, missing Agents, and missing Sessions
+description: Common Chrome extension issues and how to debug them, including connection failures, Side Panel chat, and missing Agents
 ---
 
 # Troubleshooting
 
-## 1. Cannot Reach the Server
+## 1. Cannot Reach Downcity Town
 
 Check:
 
-- whether Protocol is correct
-- whether Host and Port are correct
-- whether Base Path is correct
-- whether the target Server is actually running
-- whether the browser can reach that address
+- whether `town agent start` is running
+- whether `Town URL` is reachable from Chrome
+- whether local setup uses `http://127.0.0.1:5314`
+- whether you accidentally used `15314`, which is the Agent RPC port
 
 If you just updated the extension code, rebuild first:
 
@@ -23,7 +22,7 @@ npm run build:extension
 
 Then refresh the unpacked extension.
 
-## 2. The Current Connection Requires a Token
+## 2. The Current Town Requires a Token
 
 If you see:
 
@@ -31,36 +30,30 @@ If you see:
 - `Invalid bearer token`
 - `Permission denied`
 
-the target Server usually requires unified auth, but the current connection does not have a valid token yet.
+the target Town usually requires auth, but the extension does not have a valid token yet.
 
 Fix it by:
 
 1. opening the extension settings page
-2. selecting the matching connection
-3. running `town token create my-token` in the local terminal
-4. pasting the token into settings and saving
+2. running `town token create my-token` in the local terminal
+3. pasting the token into `Town Token`
+4. clicking `保存并检查`
 
-## 3. The Remote Service Is Not Exposed Publicly
+## 3. The Remote Town Is Not Exposed Publicly
 
-If you are targeting a remote machine, also confirm that the Console deployment is externally reachable. Current `town` CLI no longer starts or rebinds Console UI, so public access should be handled by the Console product deployment, reverse proxy, tunnel, or hosting layer.
+If you are targeting a remote machine, confirm that the Town runtime HTTP API is externally reachable through its deployment, reverse proxy, tunnel, or hosting layer.
 
 ## 4. No Available Agent
 
 This usually means:
 
 - `town agent start` is not running
-- the connection address is wrong
+- the Town URL is wrong
 - the Agent is offline
 
-## 5. No Available Session
+## 5. Side Panel Has No Messages
 
-The extension does not create Sessions by itself.
-
-This usually means:
-
-- that chat platform has no prior session history
-- the current Agent has no connected chat platforms
-- the saved default Session is no longer valid and must be reselected
+The extension creates a browser session automatically. If the Side Panel looks empty, send the first message or attach the current page from the composer.
 
 ## 6. The Captured Body Looks Wrong
 

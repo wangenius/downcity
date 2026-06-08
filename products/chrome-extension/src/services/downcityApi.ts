@@ -26,17 +26,57 @@ type ApiRequestOptions = ExtensionAuthOptions & {
 };
 
 /**
+ * 判断错误是否表示聚合 Agent 列表接口不存在。
+ */
+function isRouteNotFoundError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /HTTP\s+404|404\s+Not Found|not found/i.test(message);
+}
+
+/**
+ * 构造单 Agent gateway 的本地 Agent 选项。
+ */
+function buildSingleGatewayAgent(baseUrl: string): ConsoleUiAgentsResponse {
+  const normalizedBaseUrl = resolveConsoleBaseUrl(baseUrl);
+  return {
+    success: true,
+    selectedAgentId: "single-agent-gateway",
+    agents: [
+      {
+        id: "single-agent-gateway",
+        name: "Local Agent",
+        projectRoot: "",
+        running: true,
+        baseUrl: normalizedBaseUrl,
+      },
+    ],
+  };
+}
+
+/**
  * 拉取 Server 可用 Agent 列表。
  */
 export async function fetchAgents(
   options?: ApiRequestOptions,
 ): Promise<ConsoleUiAgentsResponse> {
-  const url = `${resolveConsoleBaseUrl(options?.serverBaseUrl)}/api/ui/agents`;
-  const payload = await requestJson<ConsoleUiAgentsResponse>(url, {
-    method: "GET",
-  }, {
-    authToken: options?.authToken,
-  });
+  const baseUrl = resolveConsoleBaseUrl(options?.serverBaseUrl);
+  const url = `${baseUrl}/api/ui/agents`;
+  let payload: ConsoleUiAgentsResponse;
+  try {
+    payload = await requestJson<ConsoleUiAgentsResponse>(url, {
+      method: "GET",
+    }, {
+      authToken: options?.authToken,
+    });
+  } catch (error) {
+    if (!isRouteNotFoundError(error)) throw error;
+    await requestJson<GenericApiResponse>(
+      `${baseUrl}/api/sdk/sessions?limit=1`,
+      { method: "GET" },
+      { authToken: options?.authToken },
+    );
+    return buildSingleGatewayAgent(baseUrl);
+  }
   if (payload.success !== true) {
     throw new Error(payload.error || "加载 Agent 列表失败");
   }

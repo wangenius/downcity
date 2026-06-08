@@ -26,7 +26,7 @@ const LEGACY_SEND_HISTORY_STORAGE_KEY = "downcity.extension.send.history.v1";
 const SEND_HISTORY_MAX_COUNT = 120;
 const DEFAULT_SERVER_PROTOCOL: ExtensionServerProtocol = "http";
 const DEFAULT_SERVER_HOST = "127.0.0.1";
-const DEFAULT_SERVER_PORT = 5315;
+const DEFAULT_SERVER_PORT = 5314;
 const DEFAULT_SERVER_BASE_PATH = "";
 const DEFAULT_SERVER_CONNECTION_NAME = "Local Server";
 const DEFAULT_TASK_PROMPT = "请阅读这个页面并给我一个可执行摘要。";
@@ -35,8 +35,10 @@ const DEFAULT_TASK_PROMPT = "请阅读这个页面并给我一个可执行摘要
  * 默认连接路由偏好。
  */
 const DEFAULT_ROUTE_PREFERENCE: ExtensionConnectionRoutePreference = {
+  targetMode: "agent_session",
   agentId: "",
   sessionId: "",
+  agentSessionId: "",
 };
 
 function normalizeServerHost(input: unknown): string {
@@ -122,9 +124,15 @@ function normalizeConnection(
 function normalizeRoutePreference(
   input: Partial<ExtensionConnectionRoutePreference> | null | undefined,
 ): ExtensionConnectionRoutePreference {
+  const targetMode =
+    String(input?.targetMode || "").trim() === "im_forward"
+      ? "im_forward"
+      : "agent_session";
   return {
+    targetMode,
     agentId: String(input?.agentId || "").trim(),
     sessionId: String(input?.sessionId || "").trim(),
+    agentSessionId: String(input?.agentSessionId || "").trim(),
   };
 }
 
@@ -357,8 +365,10 @@ async function migrateLegacySettingsIfNeeded(): Promise<ExtensionSettings | null
     selectedConnectionId: connection.id,
     routePreferences: {
       [connection.id]: {
+        targetMode: "im_forward",
         agentId: String(legacy.agentId || "").trim(),
         sessionId: String(legacy.chatKey || "").trim(),
+        agentSessionId: "",
       },
     },
     taskPrompt:

@@ -2,7 +2,7 @@
  * Chrome Extension 构建配置。
  *
  * 关键点（中文）：
- * - 使用 Vite + React 构建扩展弹窗与 options 两个页面。
+ * - 使用 Vite + React 构建扩展弹窗、options、side panel 与 background。
  * - Manifest 与静态资源放在 public/，构建时自动复制到 dist/。
  */
 import path from "node:path";
@@ -19,9 +19,14 @@ export default defineConfig({
       input: {
         popup: path.resolve(__dirname, "index.html"),
         options: path.resolve(__dirname, "options.html"),
+        sidepanel: path.resolve(__dirname, "sidepanel.html"),
+        background: path.resolve(__dirname, "src/background.ts"),
       },
       output: {
-        entryFileNames: "assets/[name]-[hash].js",
+        entryFileNames: (chunkInfo) =>
+          chunkInfo.name === "background"
+            ? "assets/background.js"
+            : "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",
       },
     },

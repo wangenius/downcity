@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - Agent 只调用 `generate` action。
- * - 插件内部负责 image_create/image_result 轮询。
+ * - 插件内部直接调用注入的 image 函数。
  * - 成功后返回 UIMessage，后续由 plugin bridge 落盘 file parts。
  */
 
@@ -27,33 +27,13 @@ function create_image_message() {
   };
 }
 
-test("ImagePlugin generate polls create/result until the image succeeds", async () => {
+test("ImagePlugin generate calls image and returns the generated message", async () => {
   const calls = [];
   const plugin = new ImagePlugin({
-    create: (input) => {
-      calls.push(["create", input.prompt]);
-      return {
-        job_id: "img_custom",
-        status: "running",
-        poll_after_ms: 1,
-      };
+    image: (input) => {
+      calls.push(["image", input.prompt]);
+      return create_image_message();
     },
-    result: () => {
-      calls.push(["result"]);
-      return calls.filter(([name]) => name === "result").length === 1
-        ? {
-            job_id: "img_custom",
-            status: "running",
-            poll_after_ms: 1,
-          }
-        : {
-            job_id: "img_custom",
-            status: "succeeded",
-            result: create_image_message(),
-          };
-    },
-    poll_interval_ms: 1,
-    wait_timeout_ms: 100,
   });
 
   const result = await plugin.actions.generate.execute({
@@ -66,27 +46,14 @@ test("ImagePlugin generate polls create/result until the image succeeds", async 
   assert.equal(result.success, true);
   assert.equal(result.data.role, "assistant");
   assert.equal(result.data.parts[0].type, "file");
-  assert.deepEqual(calls, [
-    ["create", "draw"],
-    ["result"],
-    ["result"],
-  ]);
+  assert.deepEqual(calls, [["image", "draw"]]);
 });
 
-test("ImagePlugin generate reports job failure", async () => {
+test("ImagePlugin generate reports image failure", async () => {
   const plugin = new ImagePlugin({
-    create: () => ({
-      job_id: "img_failed",
-      status: "running",
-      poll_after_ms: 1,
-    }),
-    result: () => ({
-      job_id: "img_failed",
-      status: "failed",
-      error: "provider failed",
-    }),
-    poll_interval_ms: 1,
-    wait_timeout_ms: 100,
+    image: () => {
+      throw new Error("provider failed");
+    },
   });
 
   const result = await plugin.actions.generate.execute({

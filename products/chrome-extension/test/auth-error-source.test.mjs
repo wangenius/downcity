@@ -2,7 +2,7 @@
  * Chrome 扩展鉴权错误源码约束测试（node:test）。
  *
  * 关键点（中文）：
- * - Server 返回 `auth required` 时，扩展必须提示用户去设置页补 Bearer Token。
+ * - Town 返回 `auth required` 时，扩展必须提示用户去设置页补 Town Token。
  */
 
 import assert from "node:assert/strict";
@@ -15,5 +15,5 @@ test("extension treats auth required as token configuration failure", () => {
   const authSource = readFileSync(AUTH_HELPER_FILE, "utf8");
 
   assert.match(authSource, /auth required/u);
-  assert.match(authSource, /请在扩展设置页填写 Bearer Token/u);
+  assert.match(authSource, /请在扩展设置页填写 Town Token/u);
 });

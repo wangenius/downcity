@@ -1,18 +1,27 @@
 ---
 title: 使用说明
-description: 如何在 Popup 中切换连接、选择 Agent / Session，并把网页发送到 Downcity
+description: 如何使用 Side Panel 对话，并在 Popup 中把网页发送到 Downcity
 ---
 
 # 使用说明
 
+## Side Panel 怎么用
+
+1. 点击浏览器工具栏中的扩展图标
+2. 在 Popup 中点击 `侧栏`
+3. 选择目标 Agent
+4. 输入消息并发送
+
+Side Panel 会为当前 Town 和 Agent 自动维护一个稳定的浏览器会话，所以你可以边浏览边持续对话。
+
+如果勾选 `附带当前页面`，本次消息会同时带上当前网页的 Markdown 快照。
+
 ## Extension Popup 怎么用
 
 1. 点击浏览器工具栏中的扩展图标
-2. 选择当前要使用的 Server Connection
-3. 选择目标 Agent
-4. 选择目标 Session
-5. 输入任务说明
-6. 点击发送，或按 `Cmd/Ctrl + Enter`
+2. 选择目标 Agent
+3. 输入任务说明
+4. 点击发送，或按 `Cmd/Ctrl + Enter`
 
 Popup 适合做明确、完整的一次网页投递。
 
@@ -23,26 +32,16 @@ Popup 适合做明确、完整的一次网页投递。
 1. 读取当前网页标题和 URL
 2. 抓取页面正文并转换成 Markdown
 3. 生成一个附件文件
-4. 把 Ask 和 Markdown 附件一起发送到目标 Agent / Session
+4. 发送给选定 Agent
 
 ## 页面历史有什么用
 
-Popup 会记录当前页面在当前连接下最近的发送历史，方便你：
+Popup 会记录当前页面在当前 Town 下最近的发送历史，方便你：
 
 - 回看之前发过什么
 - 避免重复输入
-- 确认自己发到了哪个连接下
+- 确认自己从这个页面发过什么
 
 ## 常用快捷键
 
 - `Cmd/Ctrl + Enter`：发送当前 Ask
-
-## 多连接怎么切换
-
-如果你配置了多个 Server Connection，Popup 顶部会显示连接选择器。
-
-切换连接后：
-
-- Bearer Token 会切换成该连接自己的 token
-- 默认 Agent / Session 会切换成该连接自己的路由偏好
-- 页面历史也会按该连接重新过滤

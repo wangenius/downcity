@@ -7,6 +7,7 @@
  */
 
 import { decorateAuthErrorText } from "../services/auth";
+import { readConnectionErrorHint } from "../services/connectionHints";
 
 /**
  * Options 状态。
@@ -26,12 +27,14 @@ export interface OptionsStatus {
  * 读取错误文本。
  */
 export function readErrorText(error: unknown): string {
+  const hint = readConnectionErrorHint(error);
+  if (hint) return hint;
   const decorated =
     error instanceof Error
       ? decorateAuthErrorText(error.message)
       : decorateAuthErrorText(error || "未知错误");
   if (/failed to fetch/i.test(decorated)) {
-    return "无法连接到 Server，请确认服务可访问，并检查当前连接的 Protocol / Host / Port / Base Path 配置。";
+    return "无法连接到 Downcity Town。请确认 Town URL 可访问，本机默认使用 http://127.0.0.1:5314。";
   }
   return decorated;
 }

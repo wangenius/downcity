@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 对 Agent 只暴露同步体验的 `generate` action。
- * - City / provider 的异步任务细节由插件内部 create + result 轮询封装。
+ * - City / provider 的图片能力通过单个 image 函数注入。
  * - action 返回 AI SDK UIMessage，后续由 plugin tool bridge 抽取 file parts 写回 assistant 消息。
  */
 
@@ -20,8 +20,6 @@ const DEFAULT_IMAGE_PLUGIN_NAME = "image";
 const DEFAULT_IMAGE_PLUGIN_TITLE = "Image";
 const DEFAULT_IMAGE_PLUGIN_DESCRIPTION =
   "Generate images and return them as assistant file parts.";
-const DEFAULT_WAIT_TIMEOUT_MS = 60_000;
-const DEFAULT_POLL_INTERVAL_MS = 3_000;
 
 /**
  * 判断值是否为普通对象。
@@ -54,13 +52,6 @@ function normalize_image_result(result: ImagePluginResult): ImagePluginResult {
 }
 
 /**
- * 等待指定毫秒数。
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
  * Agent 图片生成插件。
  */
 export class ImagePlugin extends BasePlugin {
@@ -79,10 +70,7 @@ export class ImagePlugin extends BasePlugin {
    */
   readonly description: string;
 
-  private readonly create_job: NonNullable<ImagePluginOptions["create"]>;
-  private readonly read_job_result: NonNullable<ImagePluginOptions["result"]>;
-  private readonly wait_timeout_ms: number;
-  private readonly poll_interval_ms: number;
+  private readonly image: NonNullable<ImagePluginOptions["image"]>;
 
   constructor(options: ImagePluginOptions) {
     super();
@@ -90,24 +78,15 @@ export class ImagePlugin extends BasePlugin {
     if (!name) {
       throw new Error("ImagePlugin requires a non-empty name");
     }
-    if (typeof options.create !== "function" || typeof options.result !== "function") {
-      throw new Error("ImagePlugin requires create and result functions");
+    if (typeof options.image !== "function") {
+      throw new Error("ImagePlugin requires an image function");
     }
     this.name = name;
     this.title = String(options.title || DEFAULT_IMAGE_PLUGIN_TITLE).trim();
     this.description = String(
       options.description || DEFAULT_IMAGE_PLUGIN_DESCRIPTION,
     ).trim();
-    this.create_job = options.create;
-    this.read_job_result = options.result;
-    this.wait_timeout_ms =
-      typeof options.wait_timeout_ms === "number" && options.wait_timeout_ms > 0
-        ? options.wait_timeout_ms
-        : DEFAULT_WAIT_TIMEOUT_MS;
-    this.poll_interval_ms =
-      typeof options.poll_interval_ms === "number" && options.poll_interval_ms > 0
-        ? options.poll_interval_ms
-        : DEFAULT_POLL_INTERVAL_MS;
+    this.image = options.image;
   }
 
   /**
@@ -123,32 +102,7 @@ export class ImagePlugin extends BasePlugin {
   }
 
   private async generate_image(input: ImagePluginInput): Promise<ImagePluginResult> {
-    const job = await this.create_job(input);
-    const job_id = String(job.job_id || "").trim();
-    if (!job_id) {
-      throw new Error("ImagePlugin image_create result requires job_id");
-    }
-
-    const deadline = Date.now() + this.wait_timeout_ms;
-    let poll_after_ms =
-      typeof job.poll_after_ms === "number" && job.poll_after_ms > 0
-        ? job.poll_after_ms
-        : this.poll_interval_ms;
-    while (Date.now() <= deadline) {
-      const result = await this.read_job_result({ job_id });
-      if (result.status === "succeeded" && result.result) {
-        return normalize_image_result(result.result);
-      }
-      if (result.status === "failed") {
-        throw new Error(result.error || result.message || "image job failed");
-      }
-      poll_after_ms =
-        typeof result.poll_after_ms === "number" && result.poll_after_ms > 0
-          ? result.poll_after_ms
-          : this.poll_interval_ms;
-      await sleep(poll_after_ms);
-    }
-    throw new Error(`image job timed out: ${job_id}`);
+    return normalize_image_result(await this.image(input));
   }
 
   /**

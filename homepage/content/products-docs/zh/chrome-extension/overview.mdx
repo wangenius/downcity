@@ -1,47 +1,54 @@
 ---
 title: Chrome Extension 总览
-description: Chrome 扩展现在提供什么能力，以及它和 Downcity Agent 工作流的关系
+description: Chrome 扩展现在提供什么能力，以及它和 Downcity Town 工作流的关系
 ---
 
 # Chrome Extension 总览
 
-Chrome Extension 是 Downcity 的网页投递入口。
+Chrome Extension 是 Downcity Town 的浏览器入口。
 
-它的职责很简单：把你当前正在看的网页整理成 Markdown 附件，然后发送到指定的 Downcity Server、Agent 和 Session。
+它有两条主链路：右侧 Side Panel 和 Agent 持续对话，Popup 把当前网页整理成 Markdown 后发送给选定 Agent。
 
 ## 适合什么场景
 
-- 你正在读一篇文章，想立刻交给 Agent 总结、翻译或提炼重点
-- 你希望把某个网页快照发到既有 Session 中继续工作
-- 你有多个本地或远程 Server，需要在浏览器里快速切换
+- 你正在读一篇文章，想在浏览器右侧直接和 Agent 讨论
+- 你希望把某个网页快照发给 Agent 继续工作
+- 你需要一个连接本机或远程 Downcity Town 的浏览器工具
 
 ## 它现在提供什么
 
-### 1. Extension Popup
+### 1. Side Panel
+
+Side Panel 负责：
+
+- 打开一个常驻的 Chrome Agent Session
+- 通过 `/api/sdk/*` 连接 Town runtime API
+- 发送普通消息，或附带当前页面 Markdown
+- 订阅 Agent 事件并展示回复
+
+### 2. Extension Popup
 
 Popup 负责：
 
-- 选择当前使用的 Server Connection
 - 选择目标 Agent
-- 选择目标 Session
 - 输入 Ask 并发送
-- 查看当前页面在当前连接下的最近发送历史
+- 查看当前页面在当前 Town 下的最近发送历史
 
-### 2. Settings Page
+### 3. Settings Page
 
 设置页负责：
 
-- 创建多个 Server Connection
-- 配置每个连接的 Host、Port 和 Bearer Token
-- 为每个连接设置默认 Agent / Session
+- 设置 `Town URL`
+- 选择默认 Agent
 - 设置 Popup 默认 Ask
+- 只在目标 Town 需要鉴权时填写 Town Token
 
 ## 它不会做什么
 
 - 不再提供 Inline Composer
 - 不再在网页内注入输入框
-- 不在 Popup 中等待完整执行结果
-- 不替代原始 Session 的消息查看界面
+- Popup 不等待完整执行结果
+- 设置页不再暴露多字段 Server 配置
 
 ## 推荐阅读
 

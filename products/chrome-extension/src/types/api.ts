@@ -397,6 +397,246 @@ export interface TuiContextExecuteRequestBody {
 }
 
 /**
+ * Agent SDK Session 信息。
+ */
+export interface AgentSdkSessionInfo {
+  /**
+   * Session 唯一标识。
+   */
+  sessionId: string;
+
+  /**
+   * Session 创建时间（毫秒时间戳）。
+   */
+  createdAt?: number;
+
+  /**
+   * Session 最近更新时间（毫秒时间戳）。
+   */
+  updatedAt?: number;
+
+  /**
+   * Session 标题。
+   */
+  title?: string;
+
+  /**
+   * Session 当前消息数量。
+   */
+  messageCount?: number;
+
+  /**
+   * 运行时返回的其他元信息。
+   */
+  [key: string]: unknown;
+}
+
+/**
+ * `/api/sdk/sessions` 列表页。
+ */
+export interface AgentSdkSessionPage {
+  /**
+   * 当前页条目。
+   */
+  items: AgentSdkSessionInfo[];
+
+  /**
+   * 下一页游标。
+   */
+  nextCursor?: string;
+
+  /**
+   * 是否还有更多数据。
+   */
+  hasMore?: boolean;
+}
+
+/**
+ * `/api/sdk/sessions` 响应体。
+ */
+export interface AgentSdkSessionsResponse {
+  /**
+   * 请求是否成功。
+   */
+  success: boolean;
+
+  /**
+   * Session 分页结果。
+   */
+  page?: AgentSdkSessionPage;
+
+  /**
+   * 兼容扁平 session 列表。
+   */
+  sessions?: AgentSdkSessionInfo[];
+
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * `/api/sdk/sessions/:sessionId` 响应体。
+ */
+export interface AgentSdkSessionResponse {
+  /**
+   * 请求是否成功。
+   */
+  success: boolean;
+
+  /**
+   * Session 信息。
+   */
+  session?: AgentSdkSessionInfo;
+
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * Agent SDK prompt 请求体。
+ */
+export interface AgentSdkPromptRequestBody {
+  /**
+   * 用户输入。
+   */
+  query: string;
+}
+
+/**
+ * Agent SDK prompt 响应体。
+ */
+export interface AgentSdkPromptResponse {
+  /**
+   * 请求是否成功。
+   */
+  success: boolean;
+
+  /**
+   * 本轮 turn 信息。
+   */
+  turn?: {
+    /**
+     * Turn 唯一标识。
+     */
+    id: string;
+  };
+
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * Agent SDK history 消息条目。
+ */
+export interface AgentSdkHistoryItem {
+  /**
+   * 消息 id。
+   */
+  id?: string;
+
+  /**
+   * 消息角色。
+   */
+  role?: "user" | "assistant" | "system" | string;
+
+  /**
+   * 消息文本。
+   */
+  text?: string;
+
+  /**
+   * 消息内容。
+   */
+  content?: unknown;
+
+  /**
+   * 消息创建时间。
+   */
+  createdAt?: number;
+
+  /**
+   * 所属 turn id。
+   */
+  turnId?: string;
+
+  /**
+   * 运行时返回的其他字段。
+   */
+  [key: string]: unknown;
+}
+
+/**
+ * Agent SDK history 响应体。
+ */
+export interface AgentSdkHistoryResponse {
+  /**
+   * 请求是否成功。
+   */
+  success: boolean;
+
+  /**
+   * history 分页结构。
+   */
+  history?: {
+    /**
+     * 当前页消息。
+     */
+    items?: AgentSdkHistoryItem[];
+
+    /**
+     * 下一页游标。
+     */
+    nextCursor?: string;
+  };
+
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * Agent SDK session 事件。
+ */
+export interface AgentSdkSessionEvent {
+  /**
+   * 事件类型。
+   */
+  type: string;
+
+  /**
+   * 所属 turn id。
+   */
+  turnId?: string;
+
+  /**
+   * 事件文本。
+   */
+  text?: string;
+
+  /**
+   * 是否成功。
+   */
+  success?: boolean;
+
+  /**
+   * 错误信息。
+   */
+  error?: string;
+
+  /**
+   * 运行时返回的其他字段。
+   */
+  [key: string]: unknown;
+}
+
+/**
  * `/api/services/command` 请求体。
  */
 export interface ServiceCommandRequestBody {

@@ -1,18 +1,27 @@
 ---
 title: Usage
-description: How to switch connections, choose Agent / Session, and send the current page to Downcity
+description: How to chat in the Side Panel and send the current page to Downcity from the popup
 ---
 
 # Usage
 
+## Side Panel Flow
+
+1. Click the extension icon in the browser toolbar
+2. Click `侧栏` in the popup
+3. Choose the target Agent
+4. Write a message and send it
+
+The Side Panel keeps a stable browser session for the current Town and Agent, so you can keep the conversation open while you browse.
+
+If `附带当前页面` is checked, that message also includes the current page Markdown snapshot.
+
 ## Extension Popup Flow
 
 1. Click the extension icon in the browser toolbar
-2. Choose the active Server Connection
-3. Choose the target Agent
-4. Choose the target Session
-5. Write the task prompt
-6. Click send or press `Cmd/Ctrl + Enter`
+2. Choose the target Agent
+3. Write the task prompt
+4. Click send or press `Cmd/Ctrl + Enter`
 
 The popup is best for a deliberate, explicit dispatch.
 
@@ -23,26 +32,16 @@ The extension works in this order:
 1. Read the current page title and URL
 2. Capture the main page body as Markdown
 3. Build a Markdown attachment
-4. Send the Ask plus attachment to the target Agent / Session
+4. Send it to the selected Agent
 
 ## Why Page History Exists
 
-The popup keeps recent send history for the current page and current connection so you can:
+The popup keeps recent send history for the current page and current Town so you can:
 
 - revisit previous asks
 - avoid repetitive typing
-- confirm which connection was used
+- confirm what you sent from that page
 
 ## Keyboard Shortcut
 
 - `Cmd/Ctrl + Enter`: send the current Ask
-
-## How Connection Switching Works
-
-If you configured multiple Server Connections, the popup shows a connection selector at the top.
-
-When you switch connections:
-
-- the extension switches to that connection's Token
-- the default Agent / Session preference changes with it
-- page history is filtered for that connection

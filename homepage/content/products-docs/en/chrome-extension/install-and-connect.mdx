@@ -1,13 +1,13 @@
 ---
 title: Install and Connect
-description: How to build, load, and connect the Chrome extension to one or more Downcity Servers
+description: How to build, load, and connect the Chrome extension to Downcity Town
 ---
 
 # Install and Connect
 
 ## Prerequisites
 
-Before using the extension, you will usually want these running:
+Before using the extension, start Town and an Agent:
 
 ```bash
 town start
@@ -29,35 +29,26 @@ npm run build:extension
 
 ## First-Time Configuration
 
-The extension ships with one default connection:
+Open the extension settings page and keep the setup simple:
 
-- Protocol: `http`
-- Host: `127.0.0.1`
-- Port: `5315`
-- Base Path: empty
+1. Set `Town URL`
+2. Choose `Agent`
+3. Set `Default Ask`
+4. Click `保存并检查`
 
-If your Server lives elsewhere, open the extension settings page. The page is now organized into:
+For local development, the Town URL is:
 
-- `Server Connections`: manage multiple connections
-- `Authentication`: configure the Bearer Token for the current connection
-- `Default Routing`: choose the default Agent / Session for the current connection
-- `Default Ask`: set the popup's default Ask
+```txt
+http://127.0.0.1:5314
+```
 
-## How to Add Multiple Connections
+Do not use `15314`. That is the Agent RPC port, not the browser HTTP endpoint.
 
-In the settings page:
+## Town Token
 
-1. Click `新建连接`
-2. Fill in the connection name, Host, and Port
-3. If the remote service uses HTTPS or sits behind a sub-path, also set `Protocol` and `Base Path`
-4. Add a Bearer Token if that Server requires one
-5. Save
+If the target Town requires auth, the settings page shows `Town Token`.
 
-After that, the popup can switch between those connections directly.
-
-## How to Get a Token
-
-If the target Server requires unified auth, create a token in the local terminal:
+Create a token in the local terminal:
 
 ```bash
 town token create my-token
@@ -69,20 +60,13 @@ If you prefer the interactive flow, run:
 town token
 ```
 
-Then paste the returned token into `Bearer Token`.
+Then paste the returned token into `Town Token` and click `保存并检查`.
 
-## How Agent and Session Selection Works
+## Remote Town
 
-The extension first loads the Agent list for the current connection, then loads the available Sessions under that Agent.
+For a remote deployment, enter its public HTTPS URL as `Town URL`.
 
-If no Session is available, it usually means:
-
-- that chat platform has no session history yet
-- the Agent is not running
-- the connection address is wrong
-- the remote Console is not listening publicly, or the server firewall blocks the port
-
-For a server deployment, make sure Console UI is exposed through its product deployment, reverse proxy, tunnel, or hosting layer.
+Make sure the URL is reachable from Chrome and points to the Town runtime HTTP API.
 
 ## After Updating the Extension
 

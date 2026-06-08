@@ -20,46 +20,12 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", town_id: "town_demo" })
 })
 
-test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
-  const requests = []
-  const msg = { job_id: "img_1", status: "running", result_path: "/v1/ai/image/result?job_id=img_1" }
-  const client = new City({
-    role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "town_demo",
-    user_token: "ub_test",
-    fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
-  })
-
-  const result = await client.ai.image_create({
-    prompt: "draw a mug",
-    model: "openai-gpt-image-1",
-    size: "1024x1024",
-    count: 1,
-  })
-
-  assert.deepEqual(result, msg)
-  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image/create")
-  assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
-  assert.deepEqual(JSON.parse(requests[0].init.body), {
-    prompt: "draw a mug",
-    model: "openai-gpt-image-1",
-    size: "1024x1024",
-    count: 1,
-    town_id: "town_demo",
-  })
-})
-
-test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
+test("AIInvoker.image() posts to /v1/ai/image", async () => {
   const requests = []
   const msg = {
-    job_id: "img_1",
-    status: "succeeded",
-    result: {
-      id: "msg_image_1",
-      role: "assistant",
-      parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
-    },
+    id: "msg_image_1",
+    role: "assistant",
+    parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
   }
   const client = new City({
     role: "user",
@@ -69,12 +35,21 @@ test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
 
-  const result = await client.ai.image_result({ job_id: "img_1" })
+  const result = await client.ai.image({
+    prompt: "draw a mug",
+    model: "openai-gpt-image-1",
+    size: "1024x1024",
+    count: 1,
+  })
 
   assert.deepEqual(result, msg)
-  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image/result")
+  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image")
+  assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
   assert.deepEqual(JSON.parse(requests[0].init.body), {
-    job_id: "img_1",
+    prompt: "draw a mug",
+    model: "openai-gpt-image-1",
+    size: "1024x1024",
+    count: 1,
     town_id: "town_demo",
   })
 })

@@ -1,13 +1,13 @@
 ---
 title: 安装与连接
-description: 如何构建、加载并把 Chrome 扩展连接到一个或多个 Downcity Server
+description: 如何构建、加载并把 Chrome 扩展连接到 Downcity Town
 ---
 
 # 安装与连接
 
 ## 前置条件
 
-在使用扩展前，通常需要先启动 Downcity 服务：
+在使用扩展前，先启动 Town 和 Agent：
 
 ```bash
 town start
@@ -29,60 +29,44 @@ npm run build:extension
 
 ## 第一次需要配置什么
 
-扩展默认会带一个连接，默认地址是：
+打开扩展设置页，保持四步：
 
-- Protocol: `http`
-- Host: `127.0.0.1`
-- Port: `5315`
-- Base Path: 空
+1. 填写 `Town URL`
+2. 选择 `Agent`
+3. 填写 `Default Ask`
+4. 点击 `保存并检查`
 
-如果你的 Server 不在默认地址，打开扩展设置页进行修改。设置页现在主要分成四块：
+本机开发时，Town URL 是：
 
-- `Server Connections`：管理多个连接
-- `Authentication`：为当前连接配置 Bearer Token
-- `Default Routing`：为当前连接选择默认 Agent / Session
-- `Default Ask`：设置 Popup 默认 Ask
+```txt
+http://127.0.0.1:5314
+```
 
-## 如何新增多个连接
+不要使用 `15314`。那是 Agent RPC 端口，不是浏览器使用的 HTTP 地址。
 
-你可以在设置页中：
+## Town Token
 
-1. 点击 `新建连接`
-2. 填写连接名称、Host 和 Port
-3. 如果远程服务使用 HTTPS 或挂在子路径下，补充 `Protocol` 和 `Base Path`
-4. 如有需要，填写该连接专属的 Bearer Token
-5. 点击保存
+如果目标 Town 需要鉴权，设置页会显示 `Town Token`。
 
-保存后，Popup 中就可以直接切换这些连接。
-
-## 如何获取 Token
-
-如果目标 Server 开启了统一鉴权，可以先在本机终端执行：
+在本机终端创建 token：
 
 ```bash
 town token create my-token
 ```
 
-如果你更喜欢交互式流程，也可以直接执行：
+如果你更喜欢交互式流程，也可以执行：
 
 ```bash
 town token
 ```
 
-然后把得到的 token 粘贴到设置页的 `Bearer Token`。
+然后把得到的 token 粘贴到 `Town Token`，再点击 `保存并检查`。
 
-## Agent 和 Session 怎么选
+## 远程 Town
 
-扩展会先读取当前连接上的 Agent 列表，再读取该 Agent 下可用的 Session 列表。
+如果连接远程服务，把远程可访问的 HTTPS 地址填到 `Town URL`。
 
-如果没有可用 Session，通常说明：
-
-- 对应聊天渠道还没有产生过历史会话
-- Agent 还没有运行
-- 当前连接地址配置错误
-- 远程 Console 没有以公网模式监听，或服务器防火墙未放行端口
-
-如果是服务器部署，请确保 Console UI 已经通过产品部署、反向代理、隧道或托管层对外可访问。
+确认这个地址可以被 Chrome 访问，并且指向 Town runtime HTTP API。
 
 ## 更新扩展后该做什么
 

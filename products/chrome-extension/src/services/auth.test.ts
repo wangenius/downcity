@@ -71,6 +71,6 @@ test("isAuthErrorMessage detects auth failures", () => {
 test("decorateAuthErrorText points users to token input", () => {
   assert.equal(
     decorateAuthErrorText("Missing bearer token"),
-    "Missing bearer token。请在扩展设置页填写 Bearer Token。",
+    "Missing bearer token。请在扩展设置页填写 Town Token。",
   );
 });

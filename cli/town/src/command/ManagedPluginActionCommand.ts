@@ -20,21 +20,41 @@ import type { PluginCommandResponse } from "@downcity/agent";
 import { callServer } from "../process/daemon/Client.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { parseBoolean, parsePort } from "../shared/IndexSupport.js";
+import { getCliLocale, helpText, t } from "../shared/CliLocale.js";
 
-const CHAT_PLUGIN_HELP_TEXT = [
-  "",
-  "Chat quick guide:",
-  "  直接输出 assistant 文本会发送到当前 chat platform。",
-  "  跨 chat 发送请使用 `town chat send --chat-key <chatKey>`。",
-  "  如果要发正文/附件/定时消息，先看 `town chat send --help` 与 `town chat react --help`。",
-  "",
-  "Common examples:",
-  "  town chat send --text 'done'",
-  "  town chat send --chat-key <chatKey> --text 'done'",
-  "  town chat react --message-id <messageId> --emoji '✅'",
-  "  town chat context",
-  "  town chat history --limit 30",
-].join("\n");
+function buildChatPluginHelpText(): string {
+  if (getCliLocale() === "zh") {
+    return [
+      "",
+      "Chat quick guide:",
+      "  直接输出 assistant 文本会发送到当前 chat platform。",
+      "  跨 chat 发送请使用 `town chat send --chat-key <chatKey>`。",
+      "  如果要发正文/附件/定时消息，先看 `town chat send --help` 与 `town chat react --help`。",
+      "",
+      "Common examples:",
+      "  town chat send --text 'done'",
+      "  town chat send --chat-key <chatKey> --text 'done'",
+      "  town chat react --message-id <messageId> --emoji '✅'",
+      "  town chat context",
+      "  town chat history --limit 30",
+    ].join("\n");
+  }
+
+  return [
+    "",
+    "Chat quick guide:",
+    "  Plain assistant text is sent to the current chat platform automatically.",
+    "  To send across chats, use `town chat send --chat-key <chatKey>`.",
+    "  For rich text, attachments, or scheduled messages, check `town chat send --help` and `town chat react --help` first.",
+    "",
+    "Common examples:",
+    "  town chat send --text 'done'",
+    "  town chat send --chat-key <chatKey> --text 'done'",
+    "  town chat react --message-id <messageId> --emoji '✅'",
+    "  town chat context",
+    "  town chat history --limit 30",
+  ].join("\n");
+}
 
 const CHAT_HELP_HOOK_ATTACHED = Symbol("chat-help-hook-attached");
 
@@ -47,6 +67,31 @@ const CHAT_RUNTIME_ACTION_COMMANDS_HIDDEN_FROM_TOWN = new Set([
   "configuration",
   "configure",
 ]);
+
+function translateManagedPluginDescription(
+  pluginName: string,
+  actionName: string,
+  description: string,
+): string {
+  if (getCliLocale() === "zh") {
+    return description;
+  }
+
+  if (pluginName === "chat") {
+    const chatMap: Record<string, string> = {
+      list: "list recorded chat sessions for the current agent (chatTitle/chatKey)",
+      info: "show details for a selected chat session (route/local path/context snapshot)",
+      send: "send a message to a target chatKey",
+      react: "add a reaction to a target message (Telegram only for now)",
+      context: "show the current conversation context snapshot",
+      delete: "permanently delete a selected chat session (mapping + history + context)",
+      history: "read chat history messages (latest 30 by default)",
+    };
+    return chatMap[actionName] ?? description;
+  }
+
+  return description;
+}
 
 type PluginCliBridgeOptions = {
   path?: string;
@@ -198,8 +243,11 @@ function registerPluginActionCommand(params: {
     params.program.commands.find((item) => item.name() === params.plugin.name) ||
     params.program
       .command(params.plugin.name)
-      .description(`${params.plugin.name} plugin actions`)
-      .helpOption("--help", "display help for command");
+      .description(t({
+        zh: `${params.plugin.name} plugin actions`,
+        en: `${params.plugin.name} plugin actions`,
+      }))
+      .helpOption("--help", helpText());
 
   if (
     params.plugin.name === "chat" &&
@@ -211,29 +259,56 @@ function registerPluginActionCommand(params: {
       [CHAT_HELP_HOOK_ATTACHED]?: boolean;
     };
     chatCommand.on("--help", () => {
-      console.log(CHAT_PLUGIN_HELP_TEXT);
+      console.log(buildChatPluginHelpText());
     });
     chatCommand[CHAT_HELP_HOOK_ATTACHED] = true;
   }
 
   const actionCommand = pluginCommand
     .command(params.actionName)
-    .description(commandSpec.description)
-    .helpOption("--help", "display help for command")
-    .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-    .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
+    .description(
+      translateManagedPluginDescription(
+        params.plugin.name,
+        params.actionName,
+        commandSpec.description,
+      ),
+    )
+    .helpOption("--help", helpText())
+    .option("--path <path>", t({
+      zh: "项目根目录（默认当前目录）",
+      en: "project root path (default: current directory)",
+    }), ".")
+    .option("--host <host>", t({
+      zh: "Server host（覆盖自动解析）",
+      en: "Server host override",
+    }))
+    .option("--port <port>", t({
+      zh: "Server port（覆盖自动解析）",
+      en: "Server port override",
+    }), parsePort)
+    .option("--token <token>", t({
+      zh: "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）",
+      en: "override the Bearer Token for Town Agent HTTP gateway calls",
+    }))
+    .option("--json [enabled]", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }), parseBoolean, true);
 
   commandSpec.configure?.(actionCommand);
   if (!hasLongOption(actionCommand, "--delay")) {
-    actionCommand.option("--delay <ms>", "延迟执行毫秒数（所有 plugin action 通用）");
+    actionCommand.option("--delay <ms>", t({
+      zh: "延迟执行毫秒数（所有 plugin action 通用）",
+      en: "delay execution in milliseconds (shared by all plugin actions)",
+    }));
   }
   if (!hasLongOption(actionCommand, "--time")) {
     actionCommand.option(
       "--time <time>",
-      "定时执行时间（Unix 时间戳秒/毫秒或 ISO 时间，所有 plugin action 通用）",
+      t({
+        zh: "定时执行时间（Unix 时间戳秒/毫秒或 ISO 时间，所有 plugin action 通用）",
+        en: "schedule execution time as Unix seconds/milliseconds or ISO time (shared by all plugin actions)",
+      }),
     );
   }
 

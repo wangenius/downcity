@@ -16,6 +16,7 @@ import { CliError } from "../shared/CliError.js";
 import { updateCommand } from "../shared/Update.js";
 import { gatewayStatusCommand, } from "../town/gateway/runtime/GatewayStatus.js";
 import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot, restartTownRuntimeCommand, runTownRuntimeCommand, startTownRuntimeCommand, stopTownRuntimeCommand, } from "../town/gateway/runtime/GatewayProcess.js";
+import { helpText, t } from "../shared/CliLocale.js";
 /**
  * 注册 top-level town 生命周期命令。
  *
@@ -26,44 +27,65 @@ import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot, restartTownRu
 export function registerGatewayCommands(program, context) {
     program
         .command("init")
-        .description("初始化 Town 全局配置（插件、env、账号等，写入 ~/.downcity/downcity.db）")
-        .helpOption("--help", "display help for command")
+        .description(t({
+        zh: "初始化 Town 全局配置（插件、env、账号等，写入 ~/.downcity/downcity.db）",
+        en: "initialize Town global state (plugins, env, accounts, etc.) in ~/.downcity/downcity.db",
+    }))
+        .helpOption("--help", helpText())
         .action(createVersionBanner(context.version, async () => {
         await gatewayInitCommand();
     }));
     program
         .command("start")
-        .description("启动 town runtime（不启动 Console UI）")
-        .helpOption("--help", "display help for command")
+        .description(t({
+        zh: "启动 town runtime（不启动 Console UI）",
+        en: "start the Town runtime without starting the Console UI",
+    }))
+        .helpOption("--help", helpText())
         .action(createVersionBanner(context.version, async () => {
         await startTownRuntimeCommand(context.cliPath);
     }));
     program
         .command("stop")
-        .description("停止 Town runtime 与受管 agent")
-        .helpOption("--help", "display help for command")
+        .description(t({
+        zh: "停止 Town runtime 与受管 agent",
+        en: "stop the Town runtime and managed agents",
+    }))
+        .helpOption("--help", helpText())
         .action(createVersionBanner(context.version, async () => {
         await stopTownRuntimeCommand();
     }));
     program
         .command("restart")
-        .description("重启 Town runtime 并恢复已运行 agent")
-        .helpOption("--help", "display help for command")
+        .description(t({
+        zh: "重启 Town runtime 并恢复已运行 agent",
+        en: "restart the Town runtime and recover running agents",
+    }))
+        .helpOption("--help", helpText())
         .action(createVersionBanner(context.version, async () => {
         await restartTownRuntimeCommand(context.cliPath);
     }));
     program
         .command("status")
-        .description("查看 town runtime 与已托管 agent 运行状态")
-        .helpOption("--help", "display help for command")
+        .description(t({
+        zh: "查看 town runtime 与已托管 agent 运行状态",
+        en: "show Town runtime and managed agent status",
+    }))
+        .helpOption("--help", helpText())
         .action(createVersionBanner(context.version, async () => {
         await gatewayStatusCommand();
     }));
     program
         .command("update")
-        .description("更新全局 downcity CLI 到最新版本")
-        .option("--manager <manager>", "指定包管理器（npm|pnpm|auto）", "auto")
-        .helpOption("--help", "display help for command")
+        .description(t({
+        zh: "更新全局 downcity CLI 到最新版本",
+        en: "update the global downcity CLI to the latest version",
+    }))
+        .option("--manager <manager>", t({
+        zh: "指定包管理器（npm|pnpm|auto）",
+        en: "choose the package manager (npm|pnpm|auto)",
+    }), "auto")
+        .helpOption("--help", helpText())
         .action(createVersionBanner(context.version, async (_options, command) => {
         const options = command.opts();
         const manager = String(options.manager || "auto").trim().toLowerCase();
@@ -79,7 +101,10 @@ export function registerGatewayCommands(program, context) {
     }));
     program
         .command("run", { hidden: true })
-        .description("Town 内部运行时（不直接使用）")
+        .description(t({
+        zh: "Town 内部运行时（不直接使用）",
+        en: "Town internal runtime (not for direct use)",
+    }))
         .action(runTownRuntimeCommand);
     registerConfigCommand(program);
     registerEnvCommand(program);

@@ -6,6 +6,7 @@
  */
 
 import { password, select, text, isCancel, intro, log } from "@clack/prompts";
+import { t } from "../i18n.js";
 
 export { intro, log, isCancel };
 
@@ -23,21 +24,24 @@ export function showSuccess(text: string): void { log.success(text); }
 
 /** 主命令菜单 */
 export async function askUserCommand(): Promise<string | undefined> {
-  const s = await select({ message: "Workspace", options: [
-    { label: "Models", value: "models", hint: "List and select model" },
-    { label: "Balance", value: "balance", hint: "View current balance" },
-    { label: "History", value: "history", hint: "View balance ledger" },
-    { label: "Topups", value: "topups", hint: "View recharge orders" },
-    { label: "Recharge (Stripe)", value: "recharge", hint: "Create Checkout and pay in browser" },
-    { label: "Create topup", value: "topup_create", hint: "Create a pending topup order only" },
-    { label: "Redeem code", value: "redeem_code", hint: "Redeem a one-time credit code" },
-    { label: "My profile", value: "me" },
-    { label: "List services", value: "services" },
-    { label: "Call service", value: "service" },
-    { label: "Server management", value: "server_management", hint: "Low-frequency admin access and local connection settings" },
-    { label: "Switch City", value: "switch_server" },
-    { label: "Sign out", value: "sign_out" },
-    { label: "Exit", value: "quit" },
+  const s = await select({ message: t({
+    zh: "工作区",
+    en: "Workspace",
+  }), options: [
+    { label: "Models", value: "models", hint: t({ zh: "列出并选择模型", en: "List and select model" }) },
+    { label: "Balance", value: "balance", hint: t({ zh: "查看当前余额", en: "View current balance" }) },
+    { label: "History", value: "history", hint: t({ zh: "查看余额流水", en: "View balance ledger" }) },
+    { label: "Topups", value: "topups", hint: t({ zh: "查看充值订单", en: "View recharge orders" }) },
+    { label: "Recharge (Stripe)", value: "recharge", hint: t({ zh: "创建 Checkout 并在浏览器支付", en: "Create Checkout and pay in browser" }) },
+    { label: t({ zh: "创建 topup", en: "Create topup" }), value: "topup_create", hint: t({ zh: "仅创建待处理 topup 订单", en: "Create a pending topup order only" }) },
+    { label: t({ zh: "兑换码", en: "Redeem code" }), value: "redeem_code", hint: t({ zh: "兑换一次性余额兑换码", en: "Redeem a one-time credit code" }) },
+    { label: t({ zh: "我的资料", en: "My profile" }), value: "me" },
+    { label: t({ zh: "列出服务", en: "List services" }), value: "services" },
+    { label: t({ zh: "调用服务", en: "Call service" }), value: "service" },
+    { label: t({ zh: "Server 管理", en: "Server management" }), value: "server_management", hint: t({ zh: "低频 admin 访问和本地连接配置", en: "Low-frequency admin access and local connection settings" }) },
+    { label: t({ zh: "切换 City", en: "Switch City" }), value: "switch_server" },
+    { label: t({ zh: "退出登录", en: "Sign out" }), value: "sign_out" },
+    { label: t({ zh: "退出", en: "Exit" }), value: "quit" },
   ]});
   if (!s || isCancel(s)) return undefined;
   return s as string;
@@ -79,6 +83,9 @@ export async function askModel(
     value: m.id,
     hint: m.hint,
   }));
-  const s = await select({ message: "Select model (★ current)", options });
+  const s = await select({ message: t({
+    zh: "选择模型（★ 当前）",
+    en: "Select model (★ current)",
+  }), options });
   return (!s || isCancel(s)) ? undefined : String(s);
 }

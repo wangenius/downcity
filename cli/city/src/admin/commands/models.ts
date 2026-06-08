@@ -10,6 +10,7 @@
 import { City } from "@downcity/city";
 import { show, showError } from "../../core/ui.js";
 import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
+import { t } from "../../i18n.js";
 
 /**
  * 展示全部代码注册模型及其运行状态。
@@ -25,7 +26,10 @@ export async function manageModels(a: City): Promise<void> {
     const envMap = new Map(aiScope?.env.map((item) => [item.key, item.configured]) ?? []);
 
     if (items.length === 0) {
-      show("No models registered on server.");
+      show(t({
+        zh: "当前 server 没有已注册的 models。",
+        en: "No models registered on server.",
+      }));
       return;
     }
 
@@ -56,7 +60,10 @@ export async function manageModels(a: City): Promise<void> {
   } catch (e) {
     rethrowAdminAuthError(e);
     if (isAdminNotFoundError(e)) {
-      showError("Connected City is too old and does not expose /v1/env/catalog yet. Deploy the latest worker/server first.");
+      showError(t({
+        zh: "当前连接的 City 版本过旧，尚未暴露 /v1/env/catalog。请先部署最新的 worker/server。",
+        en: "Connected City is too old and does not expose /v1/env/catalog yet. Deploy the latest worker/server first.",
+      }));
       return;
     }
     showError(adminErrorMessage(e));

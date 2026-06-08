@@ -14,6 +14,7 @@ import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import { AuthService } from "../town/auth/AuthService.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
+import { helpText, t } from "../shared/CliLocale.js";
 
 
 
@@ -621,15 +622,26 @@ async function runInteractiveTokenCommand(): Promise<void> {
 export function registerTokenCommand(program: Command): void {
   const token = program
     .command("token")
-    .description("管理本机 Bearer Token（无参数时启动交互式管理器）")
+    .description(t({
+      zh: "管理本机 Bearer Token（无参数时启动交互式管理器）",
+      en: "manage local Bearer tokens (opens the interactive manager when used without arguments)",
+    }))
+    .helpOption("--help", helpText())
     .action(async () => {
       await runInteractiveTokenCommand();
     });
 
   token
     .command("list")
-    .description("列出本机 Bearer Token")
-    .option("--json", "以 JSON 输出")
+    .description(t({
+      zh: "列出本机 Bearer Token",
+      en: "list local Bearer tokens",
+    }))
+    .option("--json", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }))
+    .helpOption("--help", helpText())
     .action((options: { json?: boolean }) => {
       const authService = new AuthService();
       try {
@@ -642,10 +654,23 @@ export function registerTokenCommand(program: Command): void {
 
   token
     .command("create")
-    .description("签发新的本机 Bearer Token")
-    .argument("[name]", "token 名称")
-    .option("--expires-at <iso>", "可选过期时间（ISO 字符串）")
-    .option("--json", "以 JSON 输出")
+    .description(t({
+      zh: "签发新的本机 Bearer Token",
+      en: "issue a new local Bearer token",
+    }))
+    .argument("[name]", t({
+      zh: "token 名称",
+      en: "token name",
+    }))
+    .option("--expires-at <iso>", t({
+      zh: "可选过期时间（ISO 字符串）",
+      en: "optional expiration time in ISO format",
+    }))
+    .option("--json", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }))
+    .helpOption("--help", helpText())
     .action(async (name: string | undefined, options: {
       expiresAt?: string;
       json?: boolean;
@@ -676,9 +701,19 @@ export function registerTokenCommand(program: Command): void {
 
   token
     .command("delete")
-    .description("删除指定 token")
-    .argument("[tokenId]", "token 记录 ID")
-    .option("--json", "以 JSON 输出")
+    .description(t({
+      zh: "删除指定 token",
+      en: "delete a selected token",
+    }))
+    .argument("[tokenId]", t({
+      zh: "token 记录 ID",
+      en: "token record ID",
+    }))
+    .option("--json", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }))
+    .helpOption("--help", helpText())
     .action(async (tokenId: string | undefined, options: { json?: boolean }) => {
       const normalizedTokenId = String(tokenId || "").trim();
       if (!normalizedTokenId) {

@@ -20,6 +20,7 @@ import { managePayment } from "./commands/payment.js";
 import { manageCustom } from "./commands/custom.js";
 import { manageModels } from "./commands/models.js";
 import { manageInstruction } from "./commands/instruction.js";
+import { t } from "../i18n.js";
 
 const commands: Record<string, (a: City, baseUrl: string) => Promise<void>> = {
   env: manageEnv,
@@ -46,31 +47,99 @@ export async function adminLoop(
 
   while (true) {
     const svc = await select({
-      message: embedded ? "Server management" : "Manage Service",
+      message: embedded
+        ? t({
+          zh: "Server 管理",
+          en: "Server management",
+        })
+        : t({
+          zh: "管理服务",
+          en: "Manage Service",
+        }),
       options: [
-        { label: "Env", value: "env", hint: "View & configure environment variables" },
-        { label: "City Instruction", value: "instruction", hint: "Read aggregated city/service guidance" },
-        { label: "Models", value: "models", hint: "Read model readiness and missing env" },
+        {
+          label: "Env",
+          value: "env",
+          hint: t({
+            zh: "查看并配置环境变量",
+            en: "View and configure environment variables",
+          }),
+        },
+        {
+          label: t({
+            zh: "City 指令",
+            en: "City Instruction",
+          }),
+          value: "instruction",
+          hint: t({
+            zh: "读取聚合后的 city/service 指引",
+            en: "Read aggregated city/service guidance",
+          }),
+        },
+        {
+          label: "Models",
+          value: "models",
+          hint: t({
+            zh: "查看模型就绪状态与缺失 env",
+            en: "Read model readiness and missing env requirements",
+          }),
+        },
         { label: "Towns", value: "towns" },
         { label: "Accounts", value: "accounts" },
         { label: "Balance", value: "balance" },
         { label: "Usage", value: "usage" },
         { label: "Payment (Stripe)", value: "payment" },
-        { label: "Custom service...", value: "custom" },
+        {
+          label: t({
+            zh: "自定义服务...",
+            en: "Custom service...",
+          }),
+          value: "custom",
+        },
         ...(embedded
-          ? [{ label: "Back", value: "back" }]
+          ? [{
+            label: t({
+              zh: "返回",
+              en: "Back",
+            }),
+            value: "back",
+          }]
           : [
-            { label: "Switch to User", value: "switch" },
-            { label: "Logout", value: "logout" },
+            {
+              label: t({
+                zh: "切换到 User",
+                en: "Switch to User",
+              }),
+              value: "switch",
+            },
+            {
+              label: t({
+                zh: "退出登录",
+                en: "Logout",
+              }),
+              value: "logout",
+            },
           ]),
-        { label: "Quit", value: "quit" },
+        {
+          label: t({
+            zh: "退出",
+            en: "Quit",
+          }),
+          value: "quit",
+        },
       ],
     });
     if (!svc || isCancel(svc)) return embedded ? "back" : "quit";
 
     if (svc === "quit") return "quit";
     if (svc === "back") return "back";
-    if (svc === "logout") { showSuccess("left admin mode"); return "logout"; }
+    if (svc === "logout") {
+      showSuccess(t({
+        zh: "已退出 admin 模式",
+        en: "left admin mode",
+      }));
+      return "logout";
+    }
     if (svc === "switch") return "switch_identity";
 
     try {

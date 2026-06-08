@@ -13,6 +13,7 @@ import type { StoredEnvEntry } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { parseBoolean } from "../shared/IndexSupport.js";
+import { helpText, t } from "../shared/CliLocale.js";
 
 /**
  * 规范化 env key。
@@ -282,14 +283,23 @@ function deleteKeyEntry(params: {
 export function registerEnvCommand(program: Command): void {
   const env = program
     .command("env")
-    .description("管理平台 Env 中的 key")
-    .helpOption("--help", "display help for command");
+    .description(t({
+      zh: "管理平台 Env 中的 key",
+      en: "manage keys in the platform Env store",
+    }))
+    .helpOption("--help", helpText());
 
   env
     .command("list")
-    .description("列出平台 Env 中已配置的 key")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "列出平台 Env 中已配置的 key",
+      en: "list configured keys in the platform Env store",
+    }))
+    .option("--json [enabled]", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
     .action(async (options: { json?: boolean }) => {
       await emitKeysList({
         asJson: options.json === true,
@@ -298,10 +308,19 @@ export function registerEnvCommand(program: Command): void {
 
   env
     .command("set <key> <value>")
-    .description("新增或更新平台 Env 中的 key")
-    .option("-d, --description <description>", "设置 key 描述")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "新增或更新平台 Env 中的 key",
+      en: "create or update a key in the platform Env store",
+    }))
+    .option("-d, --description <description>", t({
+      zh: "设置 key 描述",
+      en: "set a description for the key",
+    }))
+    .option("--json [enabled]", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
     .action(async (
       keyInput: string,
       valueInput: string,
@@ -317,8 +336,11 @@ export function registerEnvCommand(program: Command): void {
 
   env
     .command("copy")
-    .description("按 .env 文件格式输出平台 Env 的明文值")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "按 .env 文件格式输出平台 Env 的明文值",
+      en: "print platform Env values in .env file format",
+    }))
+    .helpOption("--help", helpText())
     .action(async () => {
       assertEnvCopyAllowedFromLocalCli();
       await emitDotenvCopy();
@@ -326,9 +348,15 @@ export function registerEnvCommand(program: Command): void {
 
   env
     .command("delete <key>")
-    .description("删除平台 Env 中的 key")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "删除平台 Env 中的 key",
+      en: "delete a key from the platform Env store",
+    }))
+    .option("--json [enabled]", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
     .action(async (
       keyInput: string,
       options: { json?: boolean },

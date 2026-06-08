@@ -10,6 +10,7 @@
 import type { Command } from "commander";
 import { registerChatAuthCommands } from "./ChatAuthCommand.js";
 import { runInteractiveChatManager } from "../shared/ChatManager.js";
+import { helpText, t } from "../shared/CliLocale.js";
 
 /**
  * 注册 `town chat` 交互式入口。
@@ -17,8 +18,11 @@ import { runInteractiveChatManager } from "../shared/ChatManager.js";
 export function registerChatCommand(program: Command): void {
   const chat = program
     .command("chat")
-    .description("管理 chat plugin 共享资源与会话操作（无参数时启动交互式管理器）")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "管理 chat plugin 共享资源与会话操作（无参数时启动交互式管理器）",
+      en: "manage chat plugin shared resources and conversation operations (opens the interactive manager when used without arguments)",
+    }))
+    .helpOption("--help", helpText())
     .action(async () => {
       if (process.stdin.isTTY === true && process.stdout.isTTY === true) {
         await runInteractiveChatManager();

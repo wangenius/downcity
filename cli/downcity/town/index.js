@@ -7,5 +7,7 @@
  * - commander 命令树统一由 `src/command/RootCommand.ts` 装配。
  */
 import { runTownCli } from "./command/RootCommand.js";
+import { resolveCliLocale, setCliLocale } from "./shared/CliLocale.js";
+setCliLocale(resolveCliLocale());
 await runTownCli();
 //# sourceMappingURL=index.js.map

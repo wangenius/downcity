@@ -36,6 +36,7 @@ import {
   upsertTownProfile,
   writeTownCityState,
 } from "./CityStateStore.js";
+import { t } from "./CliLocale.js";
 const cityUserManager = new CityUserManager();
 
 function readString(value: unknown): string {
@@ -381,56 +382,113 @@ async function promptCityManagerAction(): Promise<string | null> {
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: "管理 City user 连接",
+    message: t({
+      zh: "管理 City user 连接",
+      en: "Manage City user connections",
+    }),
     choices: [
       {
-        title: "查看连接状态",
+        title: t({
+          zh: "查看连接状态",
+          en: "View connection status",
+        }),
         description: state.city_url,
         value: "status",
       },
       {
-        title: "选择 City base",
-        description: "从 Town / city admin / 默认 base 候选中选择",
+        title: t({
+          zh: "选择 City base",
+          en: "Select City base",
+        }),
+        description: t({
+          zh: "从 Town / city admin / 默认 base 候选中选择",
+          en: "Choose from Town, city admin, or default base candidates",
+        }),
         value: "use",
       },
       {
-        title: "添加 City base",
-        description: "手动写入一个 Town user base",
+        title: t({
+          zh: "添加 City base",
+          en: "Add City base",
+        }),
+        description: t({
+          zh: "手动写入一个 Town user base",
+          en: "Manually add a Town user base",
+        }),
         value: "connect",
       },
       {
-        title: "User 登录",
-        description: state.has_user_token ? "重新登录当前 base" : "登录当前 base",
+        title: t({
+          zh: "User 登录",
+          en: "User login",
+        }),
+        description: state.has_user_token
+          ? t({ zh: "重新登录当前 base", en: "Sign in again to the current base" })
+          : t({ zh: "登录当前 base", en: "Sign in to the current base" }),
         value: "login",
       },
       {
-        title: "查看当前 User",
-        description: "显示 Town 当前实际使用的 City user",
+        title: t({
+          zh: "查看当前 User",
+          en: "View current user",
+        }),
+        description: t({
+          zh: "显示 Town 当前实际使用的 City user",
+          en: "Show the current City user resolved by Town",
+        }),
         value: "whoami",
       },
       {
-        title: "查看 User 余额",
-        description: state.has_user_token ? "读取当前登录 user 的余额" : "需要先登录 user",
+        title: t({
+          zh: "查看 User 余额",
+          en: "View user balance",
+        }),
+        description: state.has_user_token
+          ? t({ zh: "读取当前登录 user 的余额", en: "Read the balance of the current signed-in user" })
+          : t({ zh: "需要先登录 user", en: "A user login is required first" }),
         value: "balance",
       },
       {
-        title: "User 充值",
-        description: state.has_user_token ? "给当前登录 user 发起 checkout 充值" : "需要先登录 user",
+        title: t({
+          zh: "User 充值",
+          en: "User recharge",
+        }),
+        description: state.has_user_token
+          ? t({ zh: "给当前登录 user 发起 checkout 充值", en: "Start a checkout recharge for the current signed-in user" })
+          : t({ zh: "需要先登录 user", en: "A user login is required first" }),
         value: "recharge",
       },
       {
-        title: "User 登出",
-        description: "清除当前 base 的 Town user session",
+        title: t({
+          zh: "User 登出",
+          en: "User logout",
+        }),
+        description: t({
+          zh: "清除当前 base 的 Town user session",
+          en: "Clear the Town user session for the current base",
+        }),
         value: "logout",
       },
       {
-        title: "查看可用 base",
-        description: "包含默认 base 与 city admin 已保存 base",
+        title: t({
+          zh: "查看可用 base",
+          en: "List available bases",
+        }),
+        description: t({
+          zh: "包含默认 base 与 city admin 已保存 base",
+          en: "Includes the default base and city-admin saved bases",
+        }),
         value: "list",
       },
       {
-        title: "退出",
-        description: "关闭 City user 连接管理",
+        title: t({
+          zh: "退出",
+          en: "Exit",
+        }),
+        description: t({
+          zh: "关闭 City user 连接管理",
+          en: "Close City user connection management",
+        }),
         value: "exit",
       },
     ],
@@ -448,7 +506,10 @@ export async function runInteractiveCityManager(): Promise<void> {
     if (!action || action === "exit") {
       emitCliBlock({
         tone: "info",
-        title: "City manager closed",
+        title: t({
+          zh: "City 管理器已关闭",
+          en: "City manager closed",
+        }),
       });
       return;
     }

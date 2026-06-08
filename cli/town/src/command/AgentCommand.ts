@@ -34,6 +34,7 @@ import {
   ensureRegisteredAgentProjectRoot,
   prepareForegroundAgent,
 } from "../shared/TownAgentRuntime.js";
+import { helpText, t } from "../shared/CliLocale.js";
 
 /**
  * agent 命令注册参数。
@@ -56,9 +57,12 @@ export function registerAgentCommands(
 ): void {
   const agent = program
     .command("agent")
-    .description("管理 Agent：创建/列出/启停/重启（无参数时启动交互式管理器）")
+    .description(t({
+      zh: "管理 Agent：创建/列出/启停/重启（无参数时启动交互式管理器）",
+      en: "manage agents: create, list, start, stop, and restart (opens the interactive manager when used without arguments)",
+    }))
     .version(`town ${context.version} (agent ${context.agentVersion})`, "-v, --version")
-    .helpOption("--help", "display help for command")
+    .helpOption("--help", helpText())
     .action(createVersionBanner(context.version, async () => {
       if (process.stdin.isTTY === true && process.stdout.isTTY === true) {
         await runInteractiveAgentManager();
@@ -69,19 +73,34 @@ export function registerAgentCommands(
 
   agent
     .command("create [path]")
-    .description("创建/初始化一个 Agent 项目")
-    .option("-f, --force [enabled]", "允许覆盖已有 downcity.json（危险操作）", parseBoolean)
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "创建/初始化一个 Agent 项目",
+      en: "create and initialize an Agent project",
+    }))
+    .option("-f, --force [enabled]", t({
+      zh: "允许覆盖已有 downcity.json（危险操作）",
+      en: "allow overwriting an existing downcity.json (dangerous)",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
     .action(createVersionBanner(context.version, async (cwd: string = ".", options: { force?: boolean }) => {
       await initCommand(cwd, options);
     }));
 
   agent
     .command("list")
-    .description("列出已登记到 Town 的 Agent 项目")
-    .option("--running [enabled]", "仅列出当前运行中的 Agent", parseBoolean)
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "列出已登记到 Town 的 Agent 项目",
+      en: "list Agent projects registered in Town",
+    }))
+    .option("--running [enabled]", t({
+      zh: "仅列出当前运行中的 Agent",
+      en: "list only currently running agents",
+    }), parseBoolean)
+    .option("--json [enabled]", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
     .action(createVersionBanner(
       context.version,
       async (options: { running?: boolean; json?: boolean }) => {
@@ -94,12 +113,21 @@ export function registerAgentCommands(
 
   agent
     .command("start [path]")
-    .description("启动 Agent 进程（后台/前台）")
+    .description(t({
+      zh: "启动 Agent 进程（后台/前台）",
+      en: "start an Agent process in the background or foreground",
+    }))
     .addOption(new context.hiddenPortOption("--port <port>").argParser(parsePort).hideHelp())
     .addOption(new context.hiddenPortOption("--rpc-port <port>").argParser(parsePort).hideHelp())
-    .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
-    .option("--foreground [enabled]", "前台启动（仅当前终端）", parseBoolean)
-    .helpOption("--help", "display help for command")
+    .option("-h, --host <host>", t({
+      zh: "服务主机（默认 0.0.0.0）",
+      en: "service host (default: 0.0.0.0)",
+    }))
+    .option("--foreground [enabled]", t({
+      zh: "前台启动（仅当前终端）",
+      en: "run in the foreground for the current terminal only",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
     .action(
       createVersionBanner(
         context.version,
@@ -118,13 +146,28 @@ export function registerAgentCommands(
 
   agent
     .command("chat")
-    .description("在终端中与指定 Agent 对话（交互式或一次性）")
-    .option("-t, --to <id>", "目标 agent id（省略时交互选择）")
-    .option("-m, --message <text>", "一次性发送一轮消息并退出")
-    .option("--json [enabled]", "一次性模式下以 JSON 输出", parseBoolean)
-    .option("--host <host>", "RPC host（覆盖自动解析）")
+    .description(t({
+      zh: "在终端中与指定 Agent 对话（交互式或一次性）",
+      en: "chat with a selected Agent in the terminal (interactive or one-shot)",
+    }))
+    .option("-t, --to <id>", t({
+      zh: "目标 agent id（省略时交互选择）",
+      en: "target agent id (interactive selection when omitted)",
+    }))
+    .option("-m, --message <text>", t({
+      zh: "一次性发送一轮消息并退出",
+      en: "send one message and exit",
+    }))
+    .option("--json [enabled]", t({
+      zh: "一次性模式下以 JSON 输出",
+      en: "output as JSON in one-shot mode",
+    }), parseBoolean)
+    .option("--host <host>", t({
+      zh: "RPC host（覆盖自动解析）",
+      en: "RPC host override",
+    }))
     .addOption(new context.hiddenPortOption("--port <port>").argParser(parsePort).hideHelp())
-    .helpOption("--help", "display help for command")
+    .helpOption("--help", helpText())
     .action(createVersionBanner(
       context.version,
       async (
@@ -142,19 +185,46 @@ export function registerAgentCommands(
 
   const history = agent
     .command("history")
-    .description("维护 Agent 会话历史");
+    .description(t({
+      zh: "维护 Agent 会话历史",
+      en: "manage Agent conversation history",
+    }));
 
   history
     .command("clean [path]")
-    .description("按 session 或 chat 目标硬清理一条会话历史")
-    .option("--session-id <sessionId>", "目标 session ID")
-    .option("--channel <channel>", "目标聊天渠道，例如 telegram")
-    .option("--chat-id <chatId>", "目标渠道 chat ID")
-    .option("--target-type <targetType>", "目标渠道会话类型")
-    .option("--thread-id <threadId>", "目标线程 ID")
-    .option("--hard [enabled]", "执行硬清理：删除 session/chat/route", parseBoolean)
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "按 session 或 chat 目标硬清理一条会话历史",
+      en: "hard-clean one conversation history entry by session or chat target",
+    }))
+    .option("--session-id <sessionId>", t({
+      zh: "目标 session ID",
+      en: "target session ID",
+    }))
+    .option("--channel <channel>", t({
+      zh: "目标聊天渠道，例如 telegram",
+      en: "target chat channel, for example telegram",
+    }))
+    .option("--chat-id <chatId>", t({
+      zh: "目标渠道 chat ID",
+      en: "target channel chat ID",
+    }))
+    .option("--target-type <targetType>", t({
+      zh: "目标渠道会话类型",
+      en: "target channel conversation type",
+    }))
+    .option("--thread-id <threadId>", t({
+      zh: "目标线程 ID",
+      en: "target thread ID",
+    }))
+    .option("--hard [enabled]", t({
+      zh: "执行硬清理：删除 session/chat/route",
+      en: "perform a hard cleanup by deleting session/chat/route",
+    }), parseBoolean)
+    .option("--json [enabled]", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
     .action(createVersionBanner(
       context.version,
       async (
@@ -176,8 +246,11 @@ export function registerAgentCommands(
 
   agent
     .command("status [path]")
-    .description("查看后台 Agent 进程（daemon）状态")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "查看后台 Agent 进程（daemon）状态",
+      en: "show background Agent daemon status",
+    }))
+    .helpOption("--help", helpText())
     .action(createVersionBanner(context.version, async (cwd: string = ".") => {
       const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
       injectAgentContext(projectRoot);
@@ -186,9 +259,15 @@ export function registerAgentCommands(
 
   agent
     .command("doctor [path]")
-    .description("诊断 daemon 状态文件；可选修复僵尸 pid/meta")
-    .option("--fix [enabled]", "清理僵尸 daemon 状态文件", parseBoolean)
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "诊断 daemon 状态文件；可选修复僵尸 pid/meta",
+      en: "diagnose daemon state files and optionally clean stale pid/meta data",
+    }))
+    .option("--fix [enabled]", t({
+      zh: "清理僵尸 daemon 状态文件",
+      en: "clean stale daemon state files",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
     .action(createVersionBanner(
       context.version,
       async (cwd: string = ".", options: { fix?: boolean }) => {
@@ -273,8 +352,11 @@ export function registerAgentCommands(
 
   agent
     .command("stop [path]")
-    .description("停止后台 Agent 进程（daemon）")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "停止后台 Agent 进程（daemon）",
+      en: "stop the background Agent daemon",
+    }))
+    .helpOption("--help", helpText())
     .action(createVersionBanner(context.version, async (cwd: string = ".") => {
       const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
       injectAgentContext(projectRoot);
@@ -283,9 +365,15 @@ export function registerAgentCommands(
 
   agent
     .command("restart [path]")
-    .description("重启后台 Agent 进程（daemon）")
-    .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "重启后台 Agent 进程（daemon）",
+      en: "restart the background Agent daemon",
+    }))
+    .option("-h, --host <host>", t({
+      zh: "服务主机（默认 0.0.0.0）",
+      en: "service host (default: 0.0.0.0)",
+    }))
+    .helpOption("--help", helpText())
     .action(createVersionBanner(context.version, async (cwd: string = ".", options: AgentStartOptions) => {
       const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
       injectAgentContext(projectRoot);

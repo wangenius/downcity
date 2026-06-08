@@ -9,17 +9,47 @@
 import { isCancel, select } from "@clack/prompts";
 import { readActiveServer } from "../core/session.js";
 import { type HomeAction, type WelcomeAction } from "../types/Interactive.js";
+import { t } from "../i18n.js";
 
 /**
  * 首次启动时选择动作。
  */
 export async function selectWelcomeAction(): Promise<WelcomeAction> {
   const selected = await select({
-    message: "Welcome to City",
+    message: t({
+      zh: "欢迎使用 City",
+      en: "Welcome to City",
+    }),
     options: [
-      { label: "Connect an existing City", value: "connect_city", hint: "Add a City base URL for admin management" },
-      { label: "Upgrade CLI", value: "update", hint: "Refresh the global city command" },
-      { label: "Exit", value: "quit" },
+      {
+        label: t({
+          zh: "连接现有 City",
+          en: "Connect an existing City",
+        }),
+        value: "connect_city",
+        hint: t({
+          zh: "添加一个 City base URL 以便进行管理",
+          en: "Add a City base URL for admin management",
+        }),
+      },
+      {
+        label: t({
+          zh: "升级 CLI",
+          en: "Upgrade CLI",
+        }),
+        value: "update",
+        hint: t({
+          zh: "刷新全局 city 命令",
+          en: "Refresh the global city command",
+        }),
+      },
+      {
+        label: t({
+          zh: "退出",
+          en: "Exit",
+        }),
+        value: "quit",
+      },
     ],
   });
 
@@ -40,29 +70,59 @@ export async function selectHomeAction(): Promise<HomeAction> {
   }
 
   const selected = await select({
-    message: `City [${active_server.name}]`,
+    message: t({
+      zh: `City [${active_server.name}]`,
+      en: `City [${active_server.name}]`,
+    }),
     options: [
       {
-        label: "Open current City",
+        label: t({
+          zh: "打开当前 City",
+          en: "Open current City",
+        }),
         value: "open_current",
         hint: formatServerSummary(active_server.base_url, Boolean(active_server.admin_secret_key)),
       },
       {
-        label: "Switch City",
+        label: t({
+          zh: "切换 City",
+          en: "Switch City",
+        }),
         value: "switch_city",
-        hint: "Choose another connected City",
+        hint: t({
+          zh: "选择另一个已连接的 City",
+          en: "Choose another connected City",
+        }),
       },
       {
-        label: "Connect another City",
+        label: t({
+          zh: "连接另一个 City",
+          en: "Connect another City",
+        }),
         value: "connect_city",
-        hint: "Add a new City server URL",
+        hint: t({
+          zh: "添加新的 City server URL",
+          en: "Add a new City server URL",
+        }),
       },
       {
-        label: "Upgrade CLI",
+        label: t({
+          zh: "升级 CLI",
+          en: "Upgrade CLI",
+        }),
         value: "update",
-        hint: "Refresh the global city command",
+        hint: t({
+          zh: "刷新全局 city 命令",
+          en: "Refresh the global city command",
+        }),
       },
-      { label: "Exit", value: "quit" },
+      {
+        label: t({
+          zh: "退出",
+          en: "Exit",
+        }),
+        value: "quit",
+      },
     ],
   });
 
@@ -75,6 +135,12 @@ export async function selectHomeAction(): Promise<HomeAction> {
 
 function formatServerSummary(base_url: string, has_admin_access: boolean): string {
   return has_admin_access
-    ? `${base_url} · admin access configured`
-    : `${base_url} · admin access required`;
+    ? t({
+      zh: `${base_url} · 已配置 admin 访问`,
+      en: `${base_url} · admin access configured`,
+    })
+    : t({
+      zh: `${base_url} · 需要配置 admin 访问`,
+      en: `${base_url} · admin access required`,
+    });
 }

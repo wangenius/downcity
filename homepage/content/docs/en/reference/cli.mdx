@@ -17,3 +17,18 @@ Concrete command usage lives in product docs:
 ## Local help
 
 For exact flags, use local command help from the installed CLI. Product docs describe the supported command groups and common workflows.
+
+## CLI language
+
+`city` and `town` support both Chinese and English.
+
+- Use `--lang zh` or `--lang en` to switch the current command explicitly.
+- If `--lang` is not passed, the CLI falls back to `DC_CLI_LANG`, `LC_ALL`, `LC_MESSAGES`, and `LANG`.
+
+Examples:
+
+```bash
+town --lang en --help
+city --lang zh
+DC_CLI_LANG=zh town agent --help
+```

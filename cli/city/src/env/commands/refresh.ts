@@ -11,6 +11,7 @@ import { adminAuth } from "../../auth/admin.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../../admin/auth-error.js";
 import { readActiveServer } from "../../core/session.js";
 import { showError, showSuccess } from "../../core/ui.js";
+import { t } from "../../i18n.js";
 
 /**
  * 刷新当前 active City 的 runtime env cache。
@@ -18,7 +19,10 @@ import { showError, showSuccess } from "../../core/ui.js";
 export async function refreshEnvCache(): Promise<void> {
   const active_server = readActiveServer();
   if (!active_server) {
-    showError("No active City server. Run `city` to connect one first.");
+    showError(t({
+      zh: "当前没有激活的 City server。请先运行 `city` 连接一个。",
+      en: "No active City server. Run `city` to connect one first.",
+    }));
     return;
   }
 
@@ -35,7 +39,10 @@ export async function refreshEnvCache(): Promise<void> {
 
   try {
     const result = await admin.env.refresh();
-    showSuccess(`env runtime cache refreshed (${result.count} keys)`);
+    showSuccess(t({
+      zh: `env runtime cache 已刷新（${result.count} 个 key）`,
+      en: `env runtime cache refreshed (${result.count} keys)`,
+    }));
   } catch (error) {
     rethrowAdminAuthError(error);
     showError(adminErrorMessage(error));

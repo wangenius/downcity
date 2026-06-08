@@ -15,6 +15,7 @@ import { printResult } from "../utils/cli/CliOutput.js";
 import { getDowncityJsonPath } from "../config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { parseBoolean, parsePort } from "../shared/IndexSupport.js";
+import { helpText, t } from "../shared/CliLocale.js";
 import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
 import { runManagedPluginCommandBridge } from "../shared/ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
@@ -379,8 +380,11 @@ async function runPluginActionCommand(params) {
 export function registerPluginsCommand(program) {
     const plugin = program
         .command("plugin")
-        .description("管理 plugin（无参数时启动交互式管理器）")
-        .helpOption("--help", "display help for command");
+        .description(t({
+        zh: "管理 plugin（无参数时启动交互式管理器）",
+        en: "manage plugins (opens the interactive manager when used without arguments)",
+    }))
+        .helpOption("--help", helpText());
     plugin.action(async () => {
         if (!process.stdin.isTTY || !process.stdout.isTTY) {
             plugin.outputHelp();
@@ -390,15 +394,29 @@ export function registerPluginsCommand(program) {
     });
     plugin
         .command("list")
-        .description("列出全部已注册 plugin 的静态信息")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+        .description(t({
+        zh: "列出全部已注册 plugin 的静态信息",
+        en: "list static metadata for all registered plugins",
+    }))
+        .option("--json [enabled]", t({
+        zh: "以 JSON 输出",
+        en: "output as JSON",
+    }), parseBoolean)
+        .helpOption("--help", helpText())
         .action(async (opts) => {
         await runPluginListCommand(opts);
     });
     plugin
         .command("info [pluginName]")
-        .description("查看单个 plugin 的静态信息")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+        .description(t({
+        zh: "查看单个 plugin 的静态信息",
+        en: "show static metadata for a single plugin",
+    }))
+        .option("--json [enabled]", t({
+        zh: "以 JSON 输出",
+        en: "output as JSON",
+    }), parseBoolean)
+        .helpOption("--help", helpText())
         .action(async (pluginName, opts) => {
         await runPluginInfoCommand({
             pluginName,
@@ -407,14 +425,39 @@ export function registerPluginsCommand(program) {
     });
     plugin
         .command("command <pluginName> <command>")
-        .description("按 agent 目标转发托管 plugin command")
-        .option("--payload <json>", "可选 payload（JSON 字符串或普通字符串）")
-        .option("--path <path>", "项目根目录（默认当前目录）", ".")
-        .option("--agent <id>", "agent id（从 managed agent registry 解析）")
-        .option("--host <host>", "Server host（覆盖自动解析）")
-        .option("--port <port>", "Server port（覆盖自动解析）", parsePort)
-        .option("--token <token>", "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
+        .description(t({
+        zh: "按 agent 目标转发托管 plugin command",
+        en: "forward a managed plugin command to an agent target",
+    }))
+        .option("--payload <json>", t({
+        zh: "可选 payload（JSON 字符串或普通字符串）",
+        en: "optional payload as JSON or plain string",
+    }))
+        .option("--path <path>", t({
+        zh: "项目根目录（默认当前目录）",
+        en: "project root path (default: current directory)",
+    }), ".")
+        .option("--agent <id>", t({
+        zh: "agent id（从 managed agent registry 解析）",
+        en: "agent id resolved from the managed agent registry",
+    }))
+        .option("--host <host>", t({
+        zh: "Server host（覆盖自动解析）",
+        en: "Server host override",
+    }))
+        .option("--port <port>", t({
+        zh: "Server port（覆盖自动解析）",
+        en: "Server port override",
+    }), parsePort)
+        .option("--token <token>", t({
+        zh: "覆盖 Bearer Token（按 Town Agent HTTP gateway 调用时可选）",
+        en: "override the Bearer Token for Town Agent HTTP gateway calls",
+    }))
+        .option("--json [enabled]", t({
+        zh: "以 JSON 输出",
+        en: "output as JSON",
+    }), parseBoolean, true)
+        .helpOption("--help", helpText())
         .action(async (pluginName, command, opts) => {
         await runManagedPluginCommandBridge({
             pluginName,
@@ -425,10 +468,23 @@ export function registerPluginsCommand(program) {
     });
     plugin
         .command("action <pluginName> <actionName>")
-        .description("运行 plugin action（在当前本地项目内直接执行）")
-        .option("--payload <json>", "Action payload（JSON 或普通字符串）")
-        .option("--path <path>", "agent 项目路径（默认当前目录）", ".")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean, true)
+        .description(t({
+        zh: "运行 plugin action（在当前本地项目内直接执行）",
+        en: "run a plugin action directly in the current local project",
+    }))
+        .option("--payload <json>", t({
+        zh: "Action payload（JSON 或普通字符串）",
+        en: "action payload as JSON or plain string",
+    }))
+        .option("--path <path>", t({
+        zh: "agent 项目路径（默认当前目录）",
+        en: "agent project path (default: current directory)",
+    }), ".")
+        .option("--json [enabled]", t({
+        zh: "以 JSON 输出",
+        en: "output as JSON",
+    }), parseBoolean, true)
+        .helpOption("--help", helpText())
         .action(async (pluginName, actionName, opts) => {
         await runPluginActionCommand({
             pluginName,

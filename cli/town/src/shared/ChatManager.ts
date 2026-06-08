@@ -21,6 +21,7 @@ import type {
   ChatManagerRootAction,
 } from "./ChatManagerTypes.js";
 import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";
+import { t } from "./CliLocale.js";
 
 const CHAT_CHANNELS: StoredChannelAccountChannel[] = ["telegram", "feishu", "qq"];
 
@@ -53,21 +54,42 @@ async function promptRootAction(): Promise<ChatManagerRootAction | null> {
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: "管理 chat plugin 共享资源",
+    message: t({
+      zh: "管理 chat plugin 共享资源",
+      en: "Manage chat plugin shared resources",
+    }),
     choices: [
       {
-        title: "管理 chat accounts",
-        description: `${accounts.items.length} 个 Town 级共享账号`,
+        title: t({
+          zh: "管理 chat accounts",
+          en: "Manage chat accounts",
+        }),
+        description: t({
+          zh: `${accounts.items.length} 个 Town 级共享账号`,
+          en: `${accounts.items.length} Town-level shared accounts`,
+        }),
         value: "configureAccounts",
       },
       {
-        title: "管理访问控制",
-        description: "给 chat 用户分配 access role",
+        title: t({
+          zh: "管理访问控制",
+          en: "Manage access control",
+        }),
+        description: t({
+          zh: "给 chat 用户分配 access role",
+          en: "Assign access roles to chat users",
+        }),
         value: "configureAccess",
       },
       {
-        title: "退出",
-        description: "关闭 chat manager",
+        title: t({
+          zh: "退出",
+          en: "Exit",
+        }),
+        description: t({
+          zh: "关闭 chat manager",
+          en: "Close the chat manager",
+        }),
         value: "exit",
       },
     ],
@@ -83,36 +105,75 @@ async function promptChatAccountAction(): Promise<ChatAccountAction | null> {
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: "管理 chat plugin 共享资源",
+    message: t({
+      zh: "管理 chat plugin 共享资源",
+      en: "Manage chat plugin shared resources",
+    }),
     choices: [
       {
-        title: "查看 accounts",
-        description: `${accounts.items.length} 个已配置账号`,
+        title: t({
+          zh: "查看 accounts",
+          en: "View accounts",
+        }),
+        description: t({
+          zh: `${accounts.items.length} 个已配置账号`,
+          en: `${accounts.items.length} configured accounts`,
+        }),
         value: "list",
       },
       {
-        title: "新增 account",
-        description: "新增 Telegram、Feishu 或 QQ 账号",
+        title: t({
+          zh: "新增 account",
+          en: "Add account",
+        }),
+        description: t({
+          zh: "新增 Telegram、Feishu 或 QQ 账号",
+          en: "Add a Telegram, Feishu, or QQ account",
+        }),
         value: "add",
       },
       {
-        title: "编辑 account",
-        description: "修改名称、域名或密钥",
+        title: t({
+          zh: "编辑 account",
+          en: "Edit account",
+        }),
+        description: t({
+          zh: "修改名称、域名或密钥",
+          en: "Edit name, domain, or credentials",
+        }),
         value: "edit",
       },
       {
-        title: "删除 account",
-        description: "从 Town 全局账号池删除",
+        title: t({
+          zh: "删除 account",
+          en: "Remove account",
+        }),
+        description: t({
+          zh: "从 Town 全局账号池删除",
+          en: "Remove an account from the Town global pool",
+        }),
         value: "remove",
       },
       {
-        title: "管理访问控制",
-        description: "给 chat 用户分配 access role",
+        title: t({
+          zh: "管理访问控制",
+          en: "Manage access control",
+        }),
+        description: t({
+          zh: "给 chat 用户分配 access role",
+          en: "Assign access roles to chat users",
+        }),
         value: "configureAccess",
       },
       {
-        title: "返回",
-        description: "回到 chat plugin 共享资源菜单",
+        title: t({
+          zh: "返回",
+          en: "Back",
+        }),
+        description: t({
+          zh: "回到 chat plugin 共享资源菜单",
+          en: "Return to the chat shared resources menu",
+        }),
         value: "back",
       },
     ],
@@ -128,9 +189,15 @@ async function emitChatAccountList(): Promise<void> {
   if (items.length === 0) {
     emitCliBlock({
       tone: "info",
-      title: "Chat accounts",
+      title: t({
+        zh: "Chat accounts",
+        en: "Chat accounts",
+      }),
       summary: "0 configured",
-      note: "在 `town chat` 中选择“管理 chat accounts”后新增 Telegram、Feishu 或 QQ account。",
+      note: t({
+        zh: "在 `town chat` 中选择“管理 chat accounts”后新增 Telegram、Feishu 或 QQ account。",
+        en: "Add a Telegram, Feishu, or QQ account from `town chat` -> `Manage chat accounts`.",
+      }),
     });
     return;
   }
@@ -154,7 +221,10 @@ async function chooseChannel(): Promise<StoredChannelAccountChannel | null> {
   const response = (await prompts({
     type: "select",
     name: "channel",
-    message: "选择 channel",
+    message: t({
+      zh: "选择 channel",
+      en: "Select channel",
+    }),
     choices: CHAT_CHANNELS.map((channel) => ({
       title: channel,
       value: channel,
@@ -171,8 +241,14 @@ async function chooseAccount(): Promise<ChatChannelAccountListItem | null> {
   if (items.length === 0) {
     emitCliBlock({
       tone: "info",
-      title: "No Town chat accounts found",
-      note: "先新增一个 Telegram、Feishu 或 QQ account。",
+      title: t({
+        zh: "未找到 Town chat account",
+        en: "No Town chat accounts found",
+      }),
+      note: t({
+        zh: "请先新增一个 Telegram、Feishu 或 QQ account。",
+        en: "Add a Telegram, Feishu, or QQ account first.",
+      }),
     });
     return null;
   }

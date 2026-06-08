@@ -17,3 +17,18 @@ Downcity docs 解释设计模型、运行边界和配置语义。
 ## 本地帮助
 
 精确参数以本机安装的 CLI help 为准。产品文档负责说明命令组和常见工作流。
+
+## CLI 语言切换
+
+`city` 和 `town` 现在都支持中文与英文。
+
+- 通过 `--lang zh` 或 `--lang en` 显式切换当前命令语言。
+- 如果没有传 `--lang`，CLI 会依次读取 `DC_CLI_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG`。
+
+示例：
+
+```bash
+town --lang en --help
+city --lang zh
+DC_CLI_LANG=zh town agent --help
+```

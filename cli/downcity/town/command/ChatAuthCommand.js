@@ -11,6 +11,7 @@ import prompts from "prompts";
 import { isChatAuthorizationChannel, listChatAuthorizationRoles, readChatAuthorizationConfigSync, resolveAuthorizedUserRole, setChatAuthorizationUserRole, } from "@downcity/plugins";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { parseBoolean } from "../shared/IndexSupport.js";
+import { helpText, t } from "../shared/CliLocale.js";
 function resolveChatAuthProjectRoot(pathInput) {
     return path.resolve(String(pathInput || "."));
 }
@@ -132,14 +133,30 @@ export async function runInteractiveChatAuthSetFlow(options) {
 export function registerChatAuthCommands(chat) {
     const auth = chat
         .command("auth")
-        .description("管理当前 agent 项目的 chat access")
-        .helpOption("--help", "display help for command");
+        .description(t({
+        zh: "管理当前 agent 项目的 chat access",
+        en: "manage chat access for the current agent project",
+    }))
+        .helpOption("--help", helpText());
     auth
         .command("set <principal>")
-        .description("给授权主体设置角色，例如：town chat auth set telegram:12345678 --path .")
-        .option("--path <path>", "agent 项目根目录（默认当前目录）", ".")
-        .option("--role <roleId>", "直接指定 roleId；不传则交互式选择")
-        .option("--json [enabled]", "以 JSON 输出", parseBoolean, false)
+        .description(t({
+        zh: "给授权主体设置角色，例如：town chat auth set telegram:12345678 --path .",
+        en: "assign a role to a principal, for example: town chat auth set telegram:12345678 --path .",
+    }))
+        .option("--path <path>", t({
+        zh: "agent 项目根目录（默认当前目录）",
+        en: "agent project root path (default: current directory)",
+    }), ".")
+        .option("--role <roleId>", t({
+        zh: "直接指定 roleId；不传则交互式选择",
+        en: "set roleId directly; interactive selection when omitted",
+    }))
+        .option("--json [enabled]", t({
+        zh: "以 JSON 输出",
+        en: "output as JSON",
+    }), parseBoolean, false)
+        .helpOption("--help", helpText())
         .action(async (principal, options) => {
         await runChatAuthSet({
             principal,

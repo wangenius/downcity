@@ -18,15 +18,25 @@ import {
   validateAgentProjectRoot,
 } from "../shared/PluginTargetSupport.js";
 import { parseBoolean } from "../shared/IndexSupport.js";
+import { helpText, t } from "../shared/CliLocale.js";
 
 /**
  * 注入 ActionSchedule 管理命令通用选项。
  */
 function addPluginScheduleOptions(command: Command): Command {
   return command
-    .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--agent <id>", "agent id（从 managed agent registry 解析）")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
+    .option("--path <path>", t({
+      zh: "项目根目录（默认当前目录）",
+      en: "project root path (default: current directory)",
+    }), ".")
+    .option("--agent <id>", t({
+      zh: "agent id（从 managed agent registry 解析）",
+      en: "agent id resolved from the managed agent registry",
+    }))
+    .option("--json [enabled]", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }), parseBoolean, true);
 }
 
 /**
@@ -275,15 +285,27 @@ export async function runPluginScheduleCancelCommand(params: {
 export function registerPluginScheduleCommands(plugin: Command): void {
   const schedule = plugin
     .command("schedule")
-    .description("查看和管理持久化延迟 action 任务")
-    .helpOption("--help", "display help for command");
+    .description(t({
+      zh: "查看和管理持久化延迟 action 任务",
+      en: "inspect and manage persisted delayed action jobs",
+    }))
+    .helpOption("--help", helpText());
 
   addPluginScheduleOptions(
     schedule
       .command("list")
-      .description("列出当前 agent 的延迟 action 任务")
-      .option("--status <status>", "状态过滤（pending|running|succeeded|failed|cancelled）")
-      .option("--limit <n>", "返回条数（默认 100）"),
+      .description(t({
+        zh: "列出当前 agent 的延迟 action 任务",
+        en: "list delayed action jobs for the current agent",
+      }))
+      .option("--status <status>", t({
+        zh: "状态过滤（pending|running|succeeded|failed|cancelled）",
+        en: "status filter (pending|running|succeeded|failed|cancelled)",
+      }))
+      .option("--limit <n>", t({
+        zh: "返回条数（默认 100）",
+        en: "maximum number of results (default: 100)",
+      })),
   ).action(async (opts: PluginCliBaseOptions & { status?: string; limit?: string }) => {
     await runPluginScheduleListCommand({
       options: opts,
@@ -295,7 +317,10 @@ export function registerPluginScheduleCommands(plugin: Command): void {
   addPluginScheduleOptions(
     schedule
       .command("info <jobId>")
-      .description("查看单个延迟 action 任务详情"),
+      .description(t({
+        zh: "查看单个延迟 action 任务详情",
+        en: "show details for a single delayed action job",
+      })),
   ).action(async (jobId: string, opts: PluginCliBaseOptions) => {
     await runPluginScheduleInfoCommand({
       jobId,
@@ -306,7 +331,10 @@ export function registerPluginScheduleCommands(plugin: Command): void {
   addPluginScheduleOptions(
     schedule
       .command("cancel <jobId>")
-      .description("取消一个尚未执行的延迟 action 任务"),
+      .description(t({
+        zh: "取消一个尚未执行的延迟 action 任务",
+        en: "cancel a delayed action job that has not started yet",
+      })),
   ).action(async (jobId: string, opts: PluginCliBaseOptions) => {
     await runPluginScheduleCancelCommand({
       jobId,

@@ -9,5 +9,8 @@
  */
 
 import { runCityCli } from "./command/RootCommand.js";
+import { resolveCliLocale, setCliLocale } from "./i18n.js";
+
+setCliLocale(resolveCliLocale());
 
 await runCityCli();

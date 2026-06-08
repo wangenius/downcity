@@ -18,6 +18,7 @@ import { setCliVerbosity } from "../shared/CliReporter.js";
 import { deployCityProject } from "../deploy/commands/deploy.js";
 import { createCityProject } from "../create/commands/create.js";
 import { refreshEnvCache } from "../env/commands/refresh.js";
+import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "../i18n.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,29 +32,50 @@ const packageJson = JSON.parse(
  */
 export async function runCityCli(): Promise<void> {
   const program = new Command();
+  const cli_locale = resolveCliLocale();
+  setCliLocale(cli_locale);
 
   program
     .name("city")
-    .description("管理 Downcity City 服务、账户、模型与资源")
+    .description(t({
+      zh: "管理 Downcity City 服务、账户、模型与资源",
+      en: "Manage Downcity City services, accounts, models, and resources",
+    }))
     .version(packageJson.version, "-v, --version");
 
-  program.helpOption("--help", "display help for command");
-  program.option("-q, --quiet", "仅输出错误信息");
-  program.option("--verbose", "输出详细进度");
+  program.helpOption("--help", helpText());
+  program.option("--lang <locale>", langOptionText());
+  program.option("-q, --quiet", t({
+    zh: "仅输出错误信息",
+    en: "only print error output",
+  }));
+  program.option("--verbose", t({
+    zh: "输出详细进度",
+    en: "print verbose progress output",
+  }));
 
   program
     .command("manage [action]")
-    .description("打开 City 交互式管理界面")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "打开 City 交互式管理界面",
+      en: "open the interactive City management interface",
+    }))
+    .helpOption("--help", helpText())
     .action(createVersionBanner(packageJson.version, async (action?: string) => {
       await runCityApp(action ? [action] : []);
     }));
 
   program
     .command("create [dir]")
-    .description("交互式创建 City 项目骨架")
-    .option("-f, --force", "允许覆盖已有项目文件")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "交互式创建 City 项目骨架",
+      en: "interactively scaffold a City project",
+    }))
+    .option("-f, --force", t({
+      zh: "允许覆盖已有项目文件",
+      en: "allow overwriting existing project files",
+    }))
+    .helpOption("--help", helpText())
     .action(createVersionBanner(packageJson.version, async (
       dir: string | undefined,
       options: { force?: boolean },
@@ -63,14 +85,35 @@ export async function runCityCli(): Promise<void> {
 
   program
     .command("deploy [source]")
-    .description("部署当前目录或本地目录中的 City 项目")
-    .option("--dry-run", "只执行 Wrangler dry-run，不发布 Worker")
-    .option("--verify", "部署完成后请求 Worker /health")
-    .option("--verify-only", "只请求 Worker /health，不构建或部署")
-    .option("--skip-build", "跳过 package.json 中的 build")
-    .option("--skip-typecheck", "跳过 package.json 中的 typecheck")
-    .option("--account-id <account_id>", "本次部署使用的 Cloudflare account id")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "部署当前目录或本地目录中的 City 项目",
+      en: "deploy a City project from the current directory or a local path",
+    }))
+    .option("--dry-run", t({
+      zh: "只执行 Wrangler dry-run，不发布 Worker",
+      en: "run Wrangler dry-run only without publishing the Worker",
+    }))
+    .option("--verify", t({
+      zh: "部署完成后请求 Worker /health",
+      en: "request Worker /health after deployment completes",
+    }))
+    .option("--verify-only", t({
+      zh: "只请求 Worker /health，不构建或部署",
+      en: "request Worker /health only without building or deploying",
+    }))
+    .option("--skip-build", t({
+      zh: "跳过 package.json 中的 build",
+      en: "skip the package.json build script",
+    }))
+    .option("--skip-typecheck", t({
+      zh: "跳过 package.json 中的 typecheck",
+      en: "skip the package.json typecheck script",
+    }))
+    .option("--account-id <account_id>", t({
+      zh: "本次部署使用的 Cloudflare account id",
+      en: "use this Cloudflare account id for the deployment",
+    }))
+    .helpOption("--help", helpText())
     .action(createVersionBanner(packageJson.version, async (
       source: string | undefined,
       options: {
@@ -87,13 +130,19 @@ export async function runCityCli(): Promise<void> {
 
   const env_program = program
     .command("env")
-    .description("管理当前 City 的环境变量运行态能力")
-    .helpOption("--help", "display help for command");
+    .description(t({
+      zh: "管理当前 City 的环境变量运行态能力",
+      en: "manage runtime environment capabilities for the current City",
+    }))
+    .helpOption("--help", helpText());
 
   env_program
     .command("refresh")
-    .description("刷新当前 City runtime env cache")
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "刷新当前 City runtime env cache",
+      en: "refresh the current City runtime env cache",
+    }))
+    .helpOption("--help", helpText())
     .action(createVersionBanner(packageJson.version, async () => {
       await refreshEnvCache();
     }));

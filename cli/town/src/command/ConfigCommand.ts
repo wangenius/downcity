@@ -15,6 +15,7 @@ import { printResult } from "../utils/cli/CliOutput.js";
 import { aliasCommand } from "../shared/Alias.js";
 import { parseBoolean } from "../shared/IndexSupport.js";
 import type { DowncityConfig } from "@downcity/agent";
+import { helpText, t } from "../shared/CliLocale.js";
 
 /**
  * 解析项目根目录。
@@ -194,8 +195,14 @@ function runConfigCommand(
 
 function applyCommonOptions(command: Command): Command {
   return command
-    .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean, true);
+    .option("--path <path>", t({
+      zh: "项目根目录（默认当前目录）",
+      en: "project root path (default: current directory)",
+    }), ".")
+    .option("--json [enabled]", t({
+      zh: "以 JSON 输出",
+      en: "output as JSON",
+    }), parseBoolean, true);
 }
 
 /**
@@ -204,14 +211,20 @@ function applyCommonOptions(command: Command): Command {
 export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
-    .description("管理 downcity.json 配置与 alias")
-    .helpOption("--help", "display help for command");
+    .description(t({
+      zh: "管理 downcity.json 配置与 alias",
+      en: "manage downcity.json configuration and shell aliases",
+    }))
+    .helpOption("--help", helpText());
 
   applyCommonOptions(
     config
       .command("get [keyPath]")
-      .description("读取 downcity.json（可选读取单个路径）")
-      .helpOption("--help", "display help for command"),
+      .description(t({
+        zh: "读取 downcity.json（可选读取单个路径）",
+        en: "read downcity.json, optionally from a single path",
+      }))
+      .helpOption("--help", helpText()),
   ).action((keyPath: string | undefined, options: { path?: string; json?: boolean }) => {
     runConfigCommand(options, ({ config: downcityConfig }) => {
       if (!keyPath) {
@@ -238,8 +251,11 @@ export function registerConfigCommand(program: Command): void {
   applyCommonOptions(
     config
       .command("set <keyPath> <value>")
-      .description("设置 downcity.json 指定路径的值（value 支持 JSON 字面量）")
-      .helpOption("--help", "display help for command"),
+      .description(t({
+        zh: "设置 downcity.json 指定路径的值（value 支持 JSON 字面量）",
+        en: "set a value at a downcity.json path (value supports JSON literals)",
+      }))
+      .helpOption("--help", helpText()),
   ).action(
     (
       keyPath: string,
@@ -271,8 +287,11 @@ export function registerConfigCommand(program: Command): void {
   applyCommonOptions(
     config
       .command("unset <keyPath>")
-      .description("删除 downcity.json 指定路径")
-      .helpOption("--help", "display help for command"),
+      .description(t({
+        zh: "删除 downcity.json 指定路径",
+        en: "remove a value at a downcity.json path",
+      }))
+      .helpOption("--help", helpText()),
   ).action((keyPath: string, options: { path?: string; json?: boolean }) => {
     const pathTokens = parseConfigPath(keyPath);
     runConfigCommand(options, ({ config: downcityConfig }) => {
@@ -296,11 +315,23 @@ export function registerConfigCommand(program: Command): void {
 
   config
     .command("alias")
-    .description("在 .zshrc / .bashrc 中写入 Downcity 推荐 alias")
-    .option("--shell <shell>", "指定写入的 shell: zsh | bash | both", "both")
-    .option("--dry-run", "只打印将要修改的文件，不实际写入", false)
-    .option("--print", "仅打印 alias 内容（用于 eval）", false)
-    .helpOption("--help", "display help for command")
+    .description(t({
+      zh: "在 .zshrc / .bashrc 中写入 Downcity 推荐 alias",
+      en: "write recommended Downcity aliases into .zshrc / .bashrc",
+    }))
+    .option("--shell <shell>", t({
+      zh: "指定写入的 shell: zsh | bash | both",
+      en: "target shell to update: zsh | bash | both",
+    }), "both")
+    .option("--dry-run", t({
+      zh: "只打印将要修改的文件，不实际写入",
+      en: "print the files that would be changed without writing them",
+    }), false)
+    .option("--print", t({
+      zh: "仅打印 alias 内容（用于 eval）",
+      en: "print alias content only (for eval)",
+    }), false)
+    .helpOption("--help", helpText())
     .action(async (options: { shell?: string; dryRun?: boolean; print?: boolean }) => {
       await aliasCommand({
         shell: options.shell,

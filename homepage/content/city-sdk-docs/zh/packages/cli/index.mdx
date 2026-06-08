@@ -35,6 +35,14 @@ city
 
 在交互式终端里，默认 `city` 会进入 City 面板；在非交互环境里，它会输出帮助信息。
 
+CLI 也支持语言切换：
+
+```bash
+city --lang en
+city --lang zh --help
+DC_CLI_LANG=zh city
+```
+
 如果还没有连接任何 City，交互流程会先要求你添加一个 City；之后你可以：
 
 - 通过 `Manage Servers` 管理多个 City server

@@ -9,5 +9,8 @@
  */
 
 import { runTownCli } from "./command/RootCommand.js";
+import { resolveCliLocale, setCliLocale } from "./shared/CliLocale.js";
+
+setCliLocale(resolveCliLocale());
 
 await runTownCli();

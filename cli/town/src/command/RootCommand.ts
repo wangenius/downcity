@@ -28,6 +28,7 @@ import {
 } from "../shared/CliReporter.js";
 import { registerGatewayCommands } from "./GatewayCommand.js";
 import { runInteractiveTownManager } from "../shared/TownManager.js";
+import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "../shared/CliLocale.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -76,16 +77,28 @@ export async function runTownCli(): Promise<void> {
   const program = new Command();
   const argv = process.argv.slice(2);
   const builtinPlugins = createBuiltinPlugins();
+  const cli_locale = resolveCliLocale({ argv });
+  setCliLocale(cli_locale);
 
   program
     .name("town")
-    .description("在本机启动和管理 Agent 宿主环境")
+    .description(t({
+      zh: "在本机启动和管理 Agent 宿主环境",
+      en: "start and manage the local Agent host runtime",
+    }))
     .version(packageJson.version, "-v, --version");
 
-  program.helpOption("--help", "display help for command");
+  program.helpOption("--help", helpText());
+  program.option("--lang <locale>", langOptionText());
 
-  program.option("-q, --quiet", "仅输出错误信息");
-  program.option("--verbose", "输出详细进度");
+  program.option("-q, --quiet", t({
+    zh: "仅输出错误信息",
+    en: "only print error output",
+  }));
+  program.option("--verbose", t({
+    zh: "输出详细进度",
+    en: "print verbose progress output",
+  }));
 
   registerGatewayCommands(program, {
     version: packageJson.version,

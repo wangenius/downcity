@@ -18,7 +18,13 @@ export declare function isRegistryEntryRunning(entry: {
 export interface AgentPreflightOptions {
     /** 是否要求 town runtime 已运行。 */
     requireCityRunning?: boolean;
+    /** 是否检查 shell sandbox 宿主依赖。 */
+    requireShellSandbox?: boolean;
 }
+/**
+ * 检查本机 shell sandbox 依赖。
+ */
+export declare function checkShellSandboxHostPreflight(): Promise<void>;
 /**
  * Agent 启动前统一预检。
  *

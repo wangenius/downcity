@@ -14,6 +14,7 @@ import { isTownRunning } from "../process/registry/TownRuntime.js";
 import { assertProjectExecutionModelReady } from "../town/city-model/ExecutionModelBinding.js";
 import { CliError } from "./CliError.js";
 import { injectAgentContext } from "./IndexSupport.js";
+import { checkShellSandboxHostPreflight } from "./PluginTargetSupport.js";
 /**
  * 解析当前仍在运行的 managed agent。
  */
@@ -69,6 +70,7 @@ export async function prepareForegroundAgent(cwd, options) {
     }
     injectAgentContext(cwd);
     const project_root = resolve(String(cwd || "."));
+    await checkShellSandboxHostPreflight();
     await assertProjectExecutionModelReady(project_root);
     const should_foreground = options.foreground === true;
     if (!should_foreground) {

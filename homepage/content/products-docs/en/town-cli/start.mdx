@@ -20,10 +20,17 @@ town start
 ## What startup does
 
 - Initializes the Town runtime directory and managed agent registry.
+- Checks local shell sandbox dependencies. On Linux, `bubblewrap` (`bwrap`) and unprivileged user namespaces must be available.
 - Cleans up orphan Town runtime processes left by older versions.
 - Starts Town runtime in the background.
 - If no local Bearer Token exists, creates one and prints it once in startup output.
 - Tries to discover the machine's public host and saves it to City-side Env as `DOWNCITY_PUBLIC_HOST`. Later, agent `contact link` generation prefers this address so link codes do not fall back to `127.0.0.1`.
+
+## Linux sandbox prerequisites
+
+Linux shell sandboxing uses native Linux namespaces through `bubblewrap`. If `bwrap` is missing or user namespaces are disabled, `town start` fails before starting the runtime.
+
+Install `bubblewrap` with your system package manager, for example `sudo apt install bubblewrap`, `sudo dnf install bubblewrap`, or `sudo pacman -S bubblewrap`.
 
 ## Port meanings
 

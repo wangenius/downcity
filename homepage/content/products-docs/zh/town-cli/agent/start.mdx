@@ -23,6 +23,7 @@ town agent start [path] [options]
 ## 行为说明
 
 - 启动前会检查 Town runtime 是否已启动。
+- 启动前会检查本机 shell sandbox 依赖。Linux 上如果缺少 `bubblewrap`（命令名 `bwrap`）或系统禁用了 user namespaces，会直接启动失败。
 - 如果显式传了 `path`，就直接以该目录为目标。
 - 如果没传 `path` 且当前目录本身已经是已初始化 agent 项目，就直接启动当前目录。
 - 如果没传 `path` 且当前目录不是 agent 项目，CLI 会从已登记 agent 中弹出交互选择器。

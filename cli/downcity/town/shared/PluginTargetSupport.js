@@ -13,9 +13,32 @@ import { listManagedAgentEntries } from "../process/registry/TownRegistry.js";
 import { isTownRunning } from "../process/registry/TownRuntime.js";
 import { resolveAgentId } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
+import { checkShellSandboxPreflight } from "@downcity/agent/internal/sandbox/SandboxPreflight.js";
 import { assertProjectExecutionModelReady } from "../town/city-model/ExecutionModelBinding.js";
 export function isRegistryEntryRunning(entry) {
     return entry.status !== "stopped";
+}
+function formatSandboxFixes(fixes) {
+    return fixes.map((item) => `- ${item}`).join("\n");
+}
+/**
+ * 检查本机 shell sandbox 依赖。
+ */
+export async function checkShellSandboxHostPreflight() {
+    const result = await checkShellSandboxPreflight();
+    if (result.ok)
+        return;
+    const note = result.issues.map((issue) => issue.message).join("\n");
+    const fixes = result.issues.flatMap((issue) => issue.fixes);
+    const fixLines = fixes.length > 0 ? [formatSandboxFixes(fixes)] : [];
+    throw new CliError({
+        title: "Shell sandbox is not ready",
+        note,
+        fix: [
+            ...fixLines,
+            "Downcity will not run shell commands without a sandbox backend.",
+        ].join("\n"),
+    });
 }
 /**
  * Agent 启动前统一预检。
@@ -34,6 +57,9 @@ export async function checkAgentPreflight(projectRoot, options) {
                 fix: "town start",
             });
         }
+    }
+    if (options?.requireShellSandbox !== false) {
+        await checkShellSandboxHostPreflight();
     }
     const profilePath = getProfileMdPath(projectRoot);
     if (!fs.existsSync(profilePath)) {

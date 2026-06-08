@@ -56,6 +56,7 @@ import { runWithSpinner } from "../../../utils/cli/Spinner.js";
 import { CliError } from "../../../shared/CliError.js";
 import { ensureBayPublicHostEnv } from "../../../shared/PublicHostEnv.js";
 import { resolveTownCliPath } from "../../../shared/TownCliPath.js";
+import { checkShellSandboxHostPreflight } from "../../../shared/PluginTargetSupport.js";
 
 /**
  * 启动 town runtime 后台进程。
@@ -64,6 +65,7 @@ export async function startTownRuntimeCommand(cliPath: string): Promise<void> {
   const runtimeDir = getTownRuntimeDirPath();
   const pidPath = getTownPidPath();
   const logPath = getTownLogPath();
+  await checkShellSandboxHostPreflight();
   await fs.ensureDir(runtimeDir);
   await ensureManagedAgentRegistry();
 

@@ -17,6 +17,7 @@ import { resolveAgentId } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
 import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
+import { checkShellSandboxPreflight } from "@downcity/agent/internal/sandbox/SandboxPreflight.js";
 import { assertProjectExecutionModelReady } from "../town/city-model/ExecutionModelBinding.js";
 
 export function isRegistryEntryRunning(
@@ -31,6 +32,32 @@ export function isRegistryEntryRunning(
 export interface AgentPreflightOptions {
   /** 是否要求 town runtime 已运行。 */
   requireCityRunning?: boolean;
+  /** 是否检查 shell sandbox 宿主依赖。 */
+  requireShellSandbox?: boolean;
+}
+
+function formatSandboxFixes(fixes: string[]): string {
+  return fixes.map((item) => `- ${item}`).join("\n");
+}
+
+/**
+ * 检查本机 shell sandbox 依赖。
+ */
+export async function checkShellSandboxHostPreflight(): Promise<void> {
+  const result = await checkShellSandboxPreflight();
+  if (result.ok) return;
+
+  const note = result.issues.map((issue) => issue.message).join("\n");
+  const fixes = result.issues.flatMap((issue) => issue.fixes);
+  const fixLines = fixes.length > 0 ? [formatSandboxFixes(fixes)] : [];
+  throw new CliError({
+    title: "Shell sandbox is not ready",
+    note,
+    fix: [
+      ...fixLines,
+      "Downcity will not run shell commands without a sandbox backend.",
+    ].join("\n"),
+  });
 }
 
 /**
@@ -53,6 +80,10 @@ export async function checkAgentPreflight(
         fix: "town start",
       });
     }
+  }
+
+  if (options?.requireShellSandbox !== false) {
+    await checkShellSandboxHostPreflight();
   }
 
   const profilePath = getProfileMdPath(projectRoot);

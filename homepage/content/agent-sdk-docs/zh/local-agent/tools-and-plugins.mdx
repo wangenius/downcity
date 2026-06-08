@@ -92,54 +92,29 @@ const agent = new Agent({
   model,
   plugins: [
     new ImagePlugin({
-      create: (input) => city.ai.imageJobCreate(input),
-      status: (input) => city.ai.imageJobStatus(input),
-      result: (input) => city.ai.imageJobResult(input),
+      create: (input) => city.ai.image_create(input),
+      result: (input) => city.ai.image_result(input),
     }),
   ],
 });
 ```
 
-注册后，Agent 会自动获得一个内置的 `plugin_call` tool。生图能力会以可观察的任务流暴露：
+注册后，Agent 会自动获得一个内置的 `plugin_call` tool。模型只需要调用一个生图 action：
 
 ```ts
 plugin_call({
   plugin: "image",
-  action: "create",
+  action: "generate",
   payload: {
     prompt: "一张雨夜城市街角的电影感插画",
     aspect_ratio: "16:9",
   },
 });
-
-plugin_call({
-  plugin: "image",
-  action: "status",
-  payload: { job_id: "img_..." },
-});
-
-plugin_call({
-  plugin: "image",
-  action: "result",
-  payload: { job_id: "img_..." },
-});
 ```
 
-`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、Gemini、302.ai、Luchi 等 provider 的具体协议。如果你只传 `image(input)`，它会把这个函数包装成本地后台任务。如果你的后端已经暴露任务协议，传入 `create/status/result`，Agent 就可以轮询真实的上游状态，不再依赖同步生图调用。
+`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、Gemini、302.ai、Luchi 等 provider 的具体协议。传入 `create/result` 后，插件会创建上游图片任务，在内部轮询，并在图片完成后返回 AI SDK `UIMessage`。
 
-旧的 `generate` action 仍然保留为带超时的等待快捷方式，但 Agent 默认应优先使用 `create -> status -> result`，这样进度、失败和重试都是可见的。
-
-最终图片不会只停留在 tool result 里。Agent 底层会把生成结果中的 `file` parts 合并进最终 assistant message，因此 session 历史里会保存类似：
-
-```ts
-{
-  role: "assistant",
-  parts: [
-    { type: "text", text: "已生成图片。" },
-    { type: "file", mediaType: "image/png", url: "..." },
-  ],
-}
-```
+生成图片的 file parts 会自动落盘到 `.downcity/resources/`，并合并进最终 assistant message。
 
 ## plugin HTTP
 

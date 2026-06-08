@@ -232,10 +232,8 @@ export type {
   ImagePluginJobCreateResult,
   ImagePluginJobResult,
   ImagePluginJobStatus,
-  ImagePluginJobStatusResult,
   ImagePluginMessage,
   ImagePluginOptions,
-  ImagePluginResult,
   ImagePluginTextContent,
 } from "./types/plugin/ImagePlugin.js";
 

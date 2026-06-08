@@ -17,8 +17,6 @@ import type {
   UserImageInput,
   UserImageJobCreateResult,
   UserImageJobResult,
-  UserImageJobStatusResult,
-  UserImageResult,
   UserServiceInput,
   UserStreamResult,
   UserTextResult,
@@ -95,24 +93,14 @@ export class AIInvoker {
     };
   }
 
-  /** 图片生成 */
-  image(input: UserImageInput): Promise<UserImageResult> {
-    return this.post<UserImageResult>("/image", input);
-  }
-
   /** 创建图片生成任务。 */
-  imageJobCreate(input: UserImageInput): Promise<UserImageJobCreateResult> {
-    return this.post<UserImageJobCreateResult>("/image/jobs/create", input);
-  }
-
-  /** 查询图片生成任务状态。 */
-  imageJobStatus(input: { job_id: string }): Promise<UserImageJobStatusResult> {
-    return this.post<UserImageJobStatusResult>("/image/jobs/status", input as UserServiceInput);
+  image_create(input: UserImageInput): Promise<UserImageJobCreateResult> {
+    return this.post<UserImageJobCreateResult>("/image/create", input);
   }
 
   /** 读取图片生成任务结果。 */
-  imageJobResult(input: { job_id: string }): Promise<UserImageJobResult> {
-    return this.post<UserImageJobResult>("/image/jobs/result", input as UserServiceInput);
+  image_result(input: { job_id: string }): Promise<UserImageJobResult> {
+    return this.post<UserImageJobResult>("/image/result", input as UserServiceInput);
   }
 
   /** 视频生成 */
@@ -390,9 +378,14 @@ export class ModelHandle {
     return this.ai.text({ ...input, model: this.id });
   }
 
-  /** 图片生成 */
-  image(input: Omit<UserImageInput, "model">): Promise<UserImageResult> {
-    return this.ai.image({ ...input, model: this.id });
+  /** 创建图片生成任务 */
+  image_create(input: Omit<UserImageInput, "model">): Promise<UserImageJobCreateResult> {
+    return this.ai.image_create({ ...input, model: this.id });
+  }
+
+  /** 读取图片生成任务结果 */
+  image_result(input: { job_id: string }): Promise<UserImageJobResult> {
+    return this.ai.image_result(input);
   }
 
   /** 视频生成 */

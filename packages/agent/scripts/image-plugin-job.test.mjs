@@ -1,9 +1,10 @@
 /**
- * @file 验证 ImagePlugin 的可观察图片任务协议。
+ * @file 验证 ImagePlugin 对 Agent 保持直接生图体验。
  *
  * 关键点（中文）
- * - `create` 应快速返回 job_id，而不是同步等待图片完成。
- * - `status/result` 可查询同一个任务，成功后 result 返回 UIMessage。
+ * - Agent 只调用 `generate` action。
+ * - 插件内部负责 image_create/image_result 轮询。
+ * - 成功后返回 UIMessage，后续由 plugin bridge 落盘 file parts。
  */
 
 import test from "node:test";
@@ -26,130 +27,75 @@ function create_image_message() {
   };
 }
 
-test("ImagePlugin create/status/result exposes async image jobs", async () => {
-  let finish_image;
-  const image_promise = new Promise((resolve) => {
-    finish_image = () => resolve(create_image_message());
-  });
+test("ImagePlugin generate polls create/result until the image succeeds", async () => {
+  const calls = [];
   const plugin = new ImagePlugin({
-    image: async () => image_promise,
+    create: (input) => {
+      calls.push(["create", input.prompt]);
+      return {
+        job_id: "img_custom",
+        status: "running",
+        poll_after_ms: 1,
+      };
+    },
+    result: () => {
+      calls.push(["result"]);
+      return calls.filter(([name]) => name === "result").length === 1
+        ? {
+            job_id: "img_custom",
+            status: "running",
+            poll_after_ms: 1,
+          }
+        : {
+            job_id: "img_custom",
+            status: "succeeded",
+            result: create_image_message(),
+          };
+    },
     poll_interval_ms: 1,
     wait_timeout_ms: 100,
   });
 
-  const created = await plugin.actions.create.execute({
+  const result = await plugin.actions.generate.execute({
     context: {},
     payload: { prompt: "draw" },
     pluginName: "image",
-    actionName: "create",
-  });
-
-  assert.equal(created.success, true);
-  assert.equal(created.data.status, "running");
-  assert.match(created.data.job_id, /^img_/);
-
-  const before = await plugin.actions.status.execute({
-    context: {},
-    payload: { job_id: created.data.job_id },
-    pluginName: "image",
-    actionName: "status",
-  });
-
-  assert.equal(before.success, true);
-  assert.equal(before.data.status, "running");
-
-  finish_image();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  const after = await plugin.actions.status.execute({
-    context: {},
-    payload: { job_id: created.data.job_id },
-    pluginName: "image",
-    actionName: "status",
-  });
-
-  assert.equal(after.success, true);
-  assert.equal(after.data.status, "succeeded");
-  assert.equal("result" in after.data, false);
-
-  const result = await plugin.actions.result.execute({
-    context: {},
-    payload: { job_id: created.data.job_id },
-    pluginName: "image",
-    actionName: "result",
+    actionName: "generate",
   });
 
   assert.equal(result.success, true);
   assert.equal(result.data.role, "assistant");
   assert.equal(result.data.parts[0].type, "file");
+  assert.deepEqual(calls, [
+    ["create", "draw"],
+    ["result"],
+    ["result"],
+  ]);
 });
 
-test("ImagePlugin accepts custom job API without synchronous image function", async () => {
-  const message = create_image_message();
+test("ImagePlugin generate reports job failure", async () => {
   const plugin = new ImagePlugin({
     create: () => ({
-      job_id: "img_custom",
+      job_id: "img_failed",
       status: "running",
       poll_after_ms: 1,
     }),
-    status: () => ({
-      job_id: "img_custom",
-      status: "succeeded",
-    }),
     result: () => ({
-      job_id: "img_custom",
-      status: "succeeded",
-      result: message,
+      job_id: "img_failed",
+      status: "failed",
+      error: "provider failed",
     }),
+    poll_interval_ms: 1,
+    wait_timeout_ms: 100,
   });
 
-  const created = await plugin.actions.create.execute({
+  const result = await plugin.actions.generate.execute({
     context: {},
     payload: { prompt: "draw" },
     pluginName: "image",
-    actionName: "create",
+    actionName: "generate",
   });
 
-  assert.equal(created.success, true);
-  assert.equal(created.data.job_id, "img_custom");
-
-  const result = await plugin.actions.result.execute({
-    context: {},
-    payload: { job_id: "img_custom" },
-    pluginName: "image",
-    actionName: "result",
-  });
-
-  assert.equal(result.success, true);
-  assert.equal(result.data.parts[0].type, "file");
-});
-
-test("ImagePlugin strips accidental result data from custom status responses", async () => {
-  const plugin = new ImagePlugin({
-    create: () => ({
-      job_id: "img_status_result",
-      status: "succeeded",
-    }),
-    status: () => ({
-      job_id: "img_status_result",
-      status: "succeeded",
-      result: create_image_message(),
-    }),
-    result: () => ({
-      job_id: "img_status_result",
-      status: "succeeded",
-      result: create_image_message(),
-    }),
-  });
-
-  const status = await plugin.actions.status.execute({
-    context: {},
-    payload: { job_id: "img_status_result" },
-    pluginName: "image",
-    actionName: "status",
-  });
-
-  assert.equal(status.success, true);
-  assert.equal(status.data.status, "succeeded");
-  assert.equal("result" in status.data, false);
+  assert.equal(result.success, false);
+  assert.match(result.error, /provider failed/);
 });

@@ -51,54 +51,29 @@ const agent = new Agent({
   model,
   plugins: [
     new ImagePlugin({
-      create: (input) => city.ai.imageJobCreate(input),
-      status: (input) => city.ai.imageJobStatus(input),
-      result: (input) => city.ai.imageJobResult(input),
+      create: (input) => city.ai.image_create(input),
+      result: (input) => city.ai.image_result(input),
     }),
   ],
 });
 ```
 
-After registration, the Agent automatically gets the built-in `plugin_call` tool. Image generation is exposed as an observable job workflow:
+After registration, the Agent automatically gets the built-in `plugin_call` tool. The model calls a single image generation action:
 
 ```ts
 plugin_call({
   plugin: "image",
-  action: "create",
+  action: "generate",
   payload: {
     prompt: "A cinematic illustration of a rainy city corner at night",
     aspect_ratio: "16:9",
   },
 });
-
-plugin_call({
-  plugin: "image",
-  action: "status",
-  payload: { job_id: "img_..." },
-});
-
-plugin_call({
-  plugin: "image",
-  action: "result",
-  payload: { job_id: "img_..." },
-});
 ```
 
-`ImagePlugin` is provider-agnostic. It does not know about City, OpenAI, Gemini, 302.ai, or Luchi directly. If you only pass `image(input)`, it wraps that function in a local background job. If your backend already exposes jobs, pass `create/status/result` so the Agent can poll the real upstream state without depending on a synchronous image call.
+`ImagePlugin` is provider-agnostic. It does not know about City, OpenAI, Gemini, 302.ai, or Luchi directly. Pass `create/result`; the plugin creates the upstream image job, polls it internally, and returns an AI SDK `UIMessage` when the image is ready.
 
-The legacy `generate` action still exists as a bounded wait shortcut, but agents should prefer `create -> status -> result` so progress, failures, and retries are visible.
-
-Generated images are not left only inside the tool result. The Agent runtime merges generated `file` parts into the final assistant message, so session history stores:
-
-```ts
-{
-  role: "assistant",
-  parts: [
-    { type: "text", text: "Image generated." },
-    { type: "file", mediaType: "image/png", url: "..." },
-  ],
-}
-```
+Generated image file parts are materialized under `.downcity/resources/` and merged into the final assistant message automatically.
 
 ## plugin HTTP
 

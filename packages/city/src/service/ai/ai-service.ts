@@ -9,7 +9,8 @@
  * 路由（City 自动生成）：
  * - POST /v1/ai/text             — 文本生成
  * - POST /v1/ai/stream           — 流式生成
- * - POST /v1/ai/image            — 图片生成
+ * - POST /v1/ai/image/create     — 创建图片生成任务
+ * - POST /v1/ai/image/result     — 读取图片生成任务结果
  * - POST /v1/ai/video            — 视频生成
  * - POST /v1/ai/chat/completions — OpenAI 兼容端点
  * - GET  /v1/ai/models           — 模型列表
@@ -28,12 +29,11 @@ import type {
   UserImageJobCreateResult,
   UserImageJobResult,
   UserImageJobStatus,
-  UserImageJobStatusResult,
-  UserImageResult,
 } from "../../city/user/types.js";
+import type { UIMessage } from "ai";
 
-/** AIService 支持的 SDK 通路模态列表 */
-const MODALITIES = ["text", "stream", "image", "video", "tts", "asr"] as const;
+/** AIService 直接暴露的 SDK 通路模态列表；图片走独立任务接口。 */
+const MODALITIES = ["text", "stream", "video", "tts", "asr"] as const;
 /** 用户侧默认以 text 模态排序模型 */
 const DEFAULT_MODEL_MODE = "text";
 
@@ -48,7 +48,7 @@ interface ImageJobRecord {
   /** 原始图片生成输入。 */
   input: Record<string, unknown>;
   /** 成功时的图片结果。 */
-  result?: UserImageResult;
+  result?: UIMessage;
   /** 失败时的错误信息。 */
   error?: string;
   /** 人类可读状态说明。 */
@@ -88,13 +88,10 @@ export class AIService extends Service {
       });
     }
 
-    this.action("image/jobs/create", async (ctx) => this.createImageJob(ctx), {
+    this.action("image/create", async (ctx) => this.createImageJob(ctx), {
       auth: ["user", "admin"],
     });
-    this.action("image/jobs/status", async (ctx) => this.readImageJobStatus(ctx), {
-      auth: ["user", "admin"],
-    });
-    this.action("image/jobs/result", async (ctx) => this.readImageJobResult(ctx), {
+    this.action("image/result", async (ctx) => this.readImageJobResult(ctx), {
       auth: ["user", "admin"],
     });
 
@@ -290,36 +287,17 @@ export class AIService extends Service {
     return `img_${crypto.randomUUID()}`;
   }
 
-  private image_job_status_path(job_id: string): string {
-    return `/v1/ai/image/jobs/status?job_id=${encodeURIComponent(job_id)}`;
-  }
-
   private image_job_result_path(job_id: string): string {
-    return `/v1/ai/image/jobs/result?job_id=${encodeURIComponent(job_id)}`;
+    return `/v1/ai/image/result?job_id=${encodeURIComponent(job_id)}`;
   }
 
   private serialize_image_job_create(record: ImageJobRecord): UserImageJobCreateResult {
     return {
       job_id: record.job_id,
       status: record.status,
-      status_path: this.image_job_status_path(record.job_id),
       result_path: this.image_job_result_path(record.job_id),
       ...(record.message ? { message: record.message } : {}),
       poll_after_ms: IMAGE_JOB_POLL_AFTER_MS,
-      created_at: record.created_at,
-      updated_at: record.updated_at,
-    };
-  }
-
-  private serialize_image_job_status(record: ImageJobRecord): UserImageJobStatusResult {
-    return {
-      job_id: record.job_id,
-      status: record.status,
-      ...(record.message ? { message: record.message } : {}),
-      ...(record.error ? { error: record.error } : {}),
-      ...(record.status === "running" || record.status === "queued"
-        ? { poll_after_ms: IMAGE_JOB_POLL_AFTER_MS }
-        : {}),
       created_at: record.created_at,
       updated_at: record.updated_at,
     };
@@ -332,6 +310,9 @@ export class AIService extends Service {
       ...(record.result ? { result: record.result } : {}),
       ...(record.error ? { error: record.error } : {}),
       ...(record.message ? { message: record.message } : {}),
+      ...(record.status === "running" || record.status === "queued"
+        ? { poll_after_ms: IMAGE_JOB_POLL_AFTER_MS }
+        : {}),
       created_at: record.created_at,
       updated_at: record.updated_at,
     };
@@ -384,7 +365,7 @@ export class AIService extends Service {
         throw new Error("Image job action returned an HTTP Response");
       }
       record.status = "succeeded";
-      record.result = output as UserImageResult;
+      record.result = output as UIMessage;
       record.message = "image job succeeded";
       record.updated_at = new Date().toISOString();
     } catch (error) {
@@ -393,10 +374,6 @@ export class AIService extends Service {
       record.message = "image job failed";
       record.updated_at = new Date().toISOString();
     }
-  }
-
-  private readImageJobStatus(ctx: Context): UserImageJobStatusResult {
-    return this.serialize_image_job_status(this.require_image_job(ctx.input));
   }
 
   private readImageJobResult(ctx: Context): UserImageJobResult {

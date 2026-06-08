@@ -46,7 +46,6 @@ export interface UserCityAccessOptions {
 export type UserTextResult = UIMessage;
 export type UserStreamChunk = UIMessageChunk;
 export type UserStreamResult = ReadableStream<UserStreamChunk>;
-export type UserImageResult = UIMessage;
 export type UserVideoResult = UIMessage;
 export type { UserPaymentMethod, UserPaymentMethodReason, UserPaymentMethodType };
 
@@ -59,30 +58,10 @@ export interface UserImageJobCreateResult {
   job_id: string;
   /** 当前任务状态。 */
   status: UserImageJobStatus;
-  /** 查询任务状态的 API 路径。 */
-  status_path: string;
   /** 读取任务结果的 API 路径。 */
   result_path: string;
   /** 人类可读状态说明。 */
   message?: string;
-  /** 建议客户端下次轮询前等待的毫秒数。 */
-  poll_after_ms?: number;
-  /** 任务创建时间，ISO 字符串。 */
-  created_at: string;
-  /** 任务更新时间，ISO 字符串。 */
-  updated_at: string;
-}
-
-/** 图片任务状态查询结果。 */
-export interface UserImageJobStatusResult {
-  /** 图片任务唯一 ID。 */
-  job_id: string;
-  /** 当前任务状态。 */
-  status: UserImageJobStatus;
-  /** 人类可读状态说明。 */
-  message?: string;
-  /** 失败时的错误信息。 */
-  error?: string;
   /** 建议客户端下次轮询前等待的毫秒数。 */
   poll_after_ms?: number;
   /** 任务创建时间，ISO 字符串。 */
@@ -98,7 +77,7 @@ export interface UserImageJobResult {
   /** 当前任务状态。 */
   status: UserImageJobStatus;
   /** 成功时的图片结果。 */
-  result?: UserImageResult;
+  result?: UIMessage;
   /** 失败时的错误信息。 */
   error?: string;
   /** 人类可读状态说明。 */

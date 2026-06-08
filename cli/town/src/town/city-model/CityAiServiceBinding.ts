@@ -10,38 +10,9 @@
 import { City } from "@downcity/city";
 import type { AgentModel } from "@downcity/agent";
 import type { CityModelDescriptor } from "@downcity/type";
-import {
-  DEFAULT_CITY_URL,
-  readTownCityAdminSecretForBase,
-  readTownCityUserSessionForRuntime,
-} from "../../shared/CityConnection.js";
+import { CityUserManager } from "../../shared/CityUserManager.js";
 
-const DEFAULT_TOWN_ID = "town_downcity";
-
-/**
- * Town 可用于连接 City AIService 的配置。
- */
-export interface TownCityAiServiceConfig {
-  /**
-   * City HTTP 服务地址。
-   */
-  city_url: string;
-
-  /**
-   * 当前 Agent 调用 AIService 时使用的 town_id。
-   */
-  town_id: string;
-
-  /**
-   * User City 调用凭证。
-   */
-  user_token: string;
-
-  /**
-   * 可选 admin key，仅用于列出 admin 视角的模型目录。
-   */
-  admin_secret_key?: string;
-}
+const cityUserManager = new CityUserManager();
 
 /**
  * City AIService 模型选项。
@@ -63,87 +34,27 @@ export interface CityAiModelChoice {
   model: CityModelDescriptor;
 }
 
-function readString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function normalizeBaseUrl(value: string): string {
-  return value.trim().replace(/\/+$/, "");
-}
-
-/**
- * 读取 Town 连接 City AIService 所需配置。
- *
- * 关键点（中文）
- * - 优先使用环境变量，便于 daemon / CI 显式覆盖。
- * - 其次读取 Town 自己保存的 user session。
- * - City base 默认指向 base.downcity.ai。
- */
-export function readTownCityAiServiceConfig(
-  env: NodeJS.ProcessEnv = process.env,
-  options?: {
-    /**
-     * 是否要求 user_token 存在。
-     */
-    requireUserToken?: boolean;
-  },
-): TownCityAiServiceConfig {
-  const session = readTownCityUserSessionForRuntime();
-  const city_url = normalizeBaseUrl(
-    readString(env.DOWNCITY_CITY_URL)
-    || readString(env.CITY_URL)
-    || session?.city_url
-    || DEFAULT_CITY_URL
-    || "",
-  );
-  const town_id = readString(env.DOWNCITY_CITY_TOWN_ID)
-    || readString(env.CITY_TOWN_ID)
-    || session?.town_id
-    || DEFAULT_TOWN_ID;
-  const user_token = readString(env.DOWNCITY_CITY_USER_TOKEN)
-    || readString(env.CITY_USER_TOKEN)
-    || session?.user_token
-    || "";
-  const admin_secret_key = readString(env.DOWNCITY_CITY_ADMIN_SECRET_KEY)
-    || readString(env.CITY_ADMIN_SECRET_KEY)
-    || readTownCityAdminSecretForBase(city_url)
-    || undefined;
-
-  if (!city_url) {
-    throw new Error(
-      "City URL is required. Set DOWNCITY_CITY_URL or configure an active server with `city` CLI.",
-    );
-  }
-  if (options?.requireUserToken !== false && !user_token) {
-    throw new Error(
-      "City user_token is required. Run `town city login` or set DOWNCITY_CITY_USER_TOKEN before starting Town agents.",
-    );
-  }
-
-  return {
-    city_url,
-    town_id,
-    user_token,
-    admin_secret_key,
-  };
-}
-
 /**
  * 读取管理端模型目录。
  */
 export async function listCityAiServiceModelsForAdmin(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<CityModelDescriptor[]> {
-  const config = readTownCityAiServiceConfig(env, { requireUserToken: false });
-  if (!config.admin_secret_key) {
+  const user = await cityUserManager.resolveCurrentUser({
+    env,
+    require_user_token: false,
+    verify_user: false,
+  });
+  const admin_secret_key = cityUserManager.readAdminSecret(user.city_url, env);
+  if (!admin_secret_key) {
     throw new Error(
       "City admin_secret_key is required to list models. Set DOWNCITY_CITY_ADMIN_SECRET_KEY or configure admin access with `city`.",
     );
   }
   const city = new City({
     role: "admin",
-    city_url: config.city_url,
-    admin_secret_key: config.admin_secret_key,
+    city_url: user.city_url,
+    admin_secret_key,
   });
   return await city.listModels();
 }
@@ -154,14 +65,10 @@ export async function listCityAiServiceModelsForAdmin(
 export async function listCityAiServiceModelsForUser(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<CityModelDescriptor[]> {
-  const config = readTownCityAiServiceConfig(env);
-  const city = new City({
-    role: "user",
-    city_url: config.city_url,
-    town_id: config.town_id,
-    user_token: config.user_token,
+  const { client } = await cityUserManager.createUserClient({
+    env,
   });
-  const catalog = await city.ai.listModels();
+  const catalog = await client.ai.listModels();
   return catalog.all();
 }
 
@@ -221,14 +128,10 @@ export async function createCityAiAgentModel(input: {
 }): Promise<AgentModel> {
   const modelId = String(input.modelId || "").trim();
   if (!modelId) throw new Error("modelId cannot be empty");
-  const config = readTownCityAiServiceConfig(input.env ?? process.env);
-  const city = new City({
-    role: "user",
-    city_url: config.city_url,
-    town_id: config.town_id,
-    user_token: config.user_token,
+  const { client } = await cityUserManager.createUserClient({
+    env: input.env ?? process.env,
   });
-  const catalog = await city.ai.listModels();
+  const catalog = await client.ai.listModels();
   const model = catalog.get(modelId);
   if (!model) {
     throw new Error(`Model not found in City AIService: ${modelId}`);

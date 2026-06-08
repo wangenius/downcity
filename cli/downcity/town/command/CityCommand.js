@@ -7,7 +7,8 @@
  * - `city` CLI 只负责 admin/base 管理，`town city` 只负责 user login。
  */
 import { parseBoolean } from "../shared/IndexSupport.js";
-import { DEFAULT_TOWN_ID, emitCityConnectionStatus, emitCityServerList, runCityConnectCommand, runCityDisconnectCommand, runCityLoginCommand, runCityLogoutCommand, runCityUseCommand, runInteractiveCityManager, } from "../shared/CityConnection.js";
+import { DEFAULT_TOWN_ID } from "../shared/CityStateStore.js";
+import { emitCityConnectionStatus, emitCityUserWhoami, emitCityServerList, runCityConnectCommand, runCityDisconnectCommand, runCityLoginCommand, runCityLogoutCommand, runCityUseCommand, runInteractiveCityManager, } from "../shared/CityConnection.js";
 /**
  * 注册 `town city` 命令组。
  */
@@ -36,6 +37,13 @@ export function registerCityConnectionCommand(program) {
         .option("--json [enabled]", "以 JSON 输出", parseBoolean)
         .action((options) => {
         emitCityServerList({ as_json: options.json === true });
+    });
+    city
+        .command("whoami")
+        .description("查看 Town 当前实际使用的 City user")
+        .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+        .action(async (options) => {
+        await emitCityUserWhoami({ as_json: options.json === true });
     });
     city
         .command("connect [url]")

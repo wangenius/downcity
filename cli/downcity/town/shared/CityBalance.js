@@ -7,31 +7,24 @@
  * - 交互菜单只调用这里的高层函数，避免 CityConnection 模块继续膨胀。
  */
 import { spawnSync } from "node:child_process";
-import { City } from "@downcity/city";
 import { emitCliBlock } from "./CliReporter.js";
+import { CityUserManager } from "./CityUserManager.js";
 const DEFAULT_PAYMENT_METHOD_ID = "stripe";
+const cityUserManager = new CityUserManager();
 /**
  * 读取当前 Town City user 的余额。
  */
-export async function readCurrentTownCityBalance(session) {
-    const client = createCurrentUserCityClient(session);
-    if (!client)
-        return null;
-    const current_user_id = await readCurrentTokenUserId(client);
-    assertSessionUserMatchesToken(session, current_user_id);
+export async function readCurrentTownCityBalance() {
+    const { user, client } = await cityUserManager.createUserClient();
     const account = await client.service("balance").get("me");
-    assertBalanceUserMatchesToken(account, current_user_id);
+    assertBalanceUserMatchesToken(account, user.user_id);
     return account;
 }
 /**
  * 给当前 Town City user 发起充值。
  */
-export async function rechargeCurrentTownCityUser(session, input) {
-    const client = createCurrentUserCityClient(session);
-    if (!client)
-        return null;
-    const current_user_id = await readCurrentTokenUserId(client);
-    assertSessionUserMatchesToken(session, current_user_id);
+export async function rechargeCurrentTownCityUser(input) {
+    const { client } = await cityUserManager.createUserClient();
     const amount = normalizePositiveInteger(input.amount, "amount");
     const method_id = normalizeText(input.method_id) || DEFAULT_PAYMENT_METHOD_ID;
     const topup = await client.service("balance").action("topups/create").invoke({
@@ -56,26 +49,10 @@ export async function rechargeCurrentTownCityUser(session, input) {
         opened,
     };
 }
-async function readCurrentTokenUserId(client) {
-    const result = await client.service("accounts").get("me");
-    const user_id = normalizeText(result.user?.user_id);
-    if (!user_id) {
-        throw new Error("City user token resolved without a user_id. Please run `town city login` again.");
-    }
-    return user_id;
-}
-function assertSessionUserMatchesToken(session, token_user_id) {
-    const session_user_id = normalizeText(session?.user_id);
-    if (session_user_id && session_user_id !== token_user_id) {
-        throw new Error([
-            "Town City session user does not match the authenticated token.",
-            `session=${session_user_id}`,
-            `token=${token_user_id}`,
-            "Run `town city logout` and then `town city login`.",
-        ].join(" "));
-    }
-}
 function assertBalanceUserMatchesToken(account, token_user_id) {
+    if (!token_user_id) {
+        throw new Error("City user token resolved without a user_id. Run `town city login` again.");
+    }
     if (account.user_id !== token_user_id) {
         throw new Error([
             "Balance account user does not match the authenticated token.",
@@ -88,10 +65,8 @@ function assertBalanceUserMatchesToken(account, token_user_id) {
 /**
  * 输出当前 user 余额。
  */
-export async function emitCurrentTownCityBalance(session) {
-    const account = await readCurrentTownCityBalance(session);
-    if (!account)
-        return;
+export async function emitCurrentTownCityBalance() {
+    const account = await readCurrentTownCityBalance();
     emitCliBlock({
         tone: "success",
         title: "User balance",
@@ -126,22 +101,6 @@ export function emitTownCityRechargeResult(result) {
         note: checkout_url
             ? "Complete the checkout page to finish the recharge."
             : "Checkout URL was not returned by the payment service.",
-    });
-}
-function createCurrentUserCityClient(session) {
-    if (!session) {
-        emitCliBlock({
-            tone: "warning",
-            title: "City user not signed in",
-            note: "Run `town city login` first, or choose User 登录 in this manager.",
-        });
-        return null;
-    }
-    return new City({
-        role: "user",
-        city_url: session.base_url,
-        town_id: session.town_id,
-        user_token: session.user_token,
     });
 }
 function normalizePositiveInteger(value, label) {

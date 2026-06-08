@@ -9,27 +9,6 @@
 import type { AgentModel } from "@downcity/agent";
 import type { CityModelDescriptor } from "@downcity/type";
 /**
- * Town 可用于连接 City AIService 的配置。
- */
-export interface TownCityAiServiceConfig {
-    /**
-     * City HTTP 服务地址。
-     */
-    city_url: string;
-    /**
-     * 当前 Agent 调用 AIService 时使用的 town_id。
-     */
-    town_id: string;
-    /**
-     * User City 调用凭证。
-     */
-    user_token: string;
-    /**
-     * 可选 admin key，仅用于列出 admin 视角的模型目录。
-     */
-    admin_secret_key?: string;
-}
-/**
  * City AIService 模型选项。
  */
 export interface CityAiModelChoice {
@@ -46,20 +25,6 @@ export interface CityAiModelChoice {
      */
     model: CityModelDescriptor;
 }
-/**
- * 读取 Town 连接 City AIService 所需配置。
- *
- * 关键点（中文）
- * - 优先使用环境变量，便于 daemon / CI 显式覆盖。
- * - 其次读取 Town 自己保存的 user session。
- * - City base 默认指向 base.downcity.ai。
- */
-export declare function readTownCityAiServiceConfig(env?: NodeJS.ProcessEnv, options?: {
-    /**
-     * 是否要求 user_token 存在。
-     */
-    requireUserToken?: boolean;
-}): TownCityAiServiceConfig;
 /**
  * 读取管理端模型目录。
  */

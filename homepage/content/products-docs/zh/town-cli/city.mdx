@@ -15,6 +15,7 @@ description: 选择 City base，并以 Town user 身份登录
 town city
 town city status
 town city list
+town city whoami
 town city connect [url]
 town city use [base]
 town city login [url]
@@ -30,9 +31,11 @@ town city disconnect
 
 `town city login` 以 user 身份登录，并保存 Town 自己的 user session。Agent runtime 调用 City AIService 时读取这份 Town user session。
 
+`town city whoami` 会显示 Town 当前实际使用的 City user，包括 base、town id、user id，以及是否被环境变量覆盖。
+
 `查看 User 余额` 会读取当前登录 user 的 `balance` 账户。`User 充值` 会为当前登录 user 创建充值单，并通过可用支付方式创建 checkout 页面；默认会打开浏览器完成支付。
 
-`DOWNCITY_CITY_URL`、`DOWNCITY_CITY_TOWN_ID`、`DOWNCITY_CITY_USER_TOKEN` 仍然可以作为 CI 或临时启动时的运行时覆盖项。
+余额、充值、Agent runtime 默认都使用 `town city login` 保存的当前 City user。`DOWNCITY_CITY_URL` 可以临时选择另一个 base，并读取该 base 对应的 Town user session；只有显式设置 `DOWNCITY_CITY_USER_TOKEN` 时，才会覆盖当前 user 身份。`DOWNCITY_CITY_TOWN_ID` 可以覆盖 town id。
 
 ## 推荐流程
 
@@ -40,6 +43,7 @@ town city disconnect
 city                  # 可选：管理 admin 侧 City base 与资源
 town city status      # 默认指向 https://base.downcity.ai
 town city login
+town city whoami
 town                  # 选择「连接 City」→「查看 User 余额」或「User 充值」
 town agent start
 ```

@@ -9,9 +9,10 @@
 
 import type { Command } from "commander";
 import { parseBoolean } from "../shared/IndexSupport.js";
+import { DEFAULT_TOWN_ID } from "../shared/CityStateStore.js";
 import {
-  DEFAULT_TOWN_ID,
   emitCityConnectionStatus,
+  emitCityUserWhoami,
   emitCityServerList,
   runCityConnectCommand,
   runCityDisconnectCommand,
@@ -51,6 +52,14 @@ export function registerCityConnectionCommand(program: Command): void {
     .option("--json [enabled]", "以 JSON 输出", parseBoolean)
     .action((options: { json?: boolean }) => {
       emitCityServerList({ as_json: options.json === true });
+    });
+
+  city
+    .command("whoami")
+    .description("查看 Town 当前实际使用的 City user")
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+    .action(async (options: { json?: boolean }) => {
+      await emitCityUserWhoami({ as_json: options.json === true });
     });
 
   city

@@ -7,229 +7,19 @@
  * - Town 可以只读发现 `city` CLI 已配置的 base 地址，但不依赖 city 内部模块。
  * - CLI 命令装配统一放在 `src/command/CityCommand.ts`，本模块只保留状态与登录流程。
  */
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import prompts from "prompts";
-import { PlatformStore } from "../town/store/index.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { performTownCityUserLogin } from "./CityUserLogin.js";
 import { emitCurrentTownCityBalance, emitTownCityRechargeResult, rechargeCurrentTownCityUser, } from "./CityBalance.js";
-export const DEFAULT_CITY_URL = "https://base.downcity.ai";
-export const DEFAULT_TOWN_ID = "town_downcity";
-const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
-const TOWN_CITY_STATE_KEY = "town.city.state";
+import { CityUserManager } from "./CityUserManager.js";
+import { DEFAULT_CITY_URL, DEFAULT_TOWN_ID, listTownCityServers, normalizeCityUrl, readCityAdminSecretForUrl, readCityString, readCurrentTownCitySession, readTownCityState, resolveSelectedBaseUrl, upsertTownProfile, writeTownCityState, } from "./CityStateStore.js";
+const cityUserManager = new CityUserManager();
 function readString(value) {
-    return typeof value === "string" ? value.trim() : "";
-}
-function defaultProtocol(value) {
-    const host = value.split("/")[0] ?? "";
-    const clean_host = host.split(":")[0] ?? "";
-    if (clean_host === "localhost" ||
-        clean_host.includes(":") ||
-        clean_host.split(".").length === 4) {
-        return "http";
-    }
-    return "https";
-}
-export function normalizeCityUrl(value) {
-    const raw = String(value || "").trim();
-    if (!raw)
-        return "";
-    const has_protocol = /^[a-z][a-z\d+.-]*:\/\//iu.test(raw);
-    const with_protocol = has_protocol ? raw : `${defaultProtocol(raw)}://${raw}`;
-    const url = new URL(with_protocol);
-    if (!url.port &&
-        (url.hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/u.test(url.hostname))) {
-        url.port = "43127";
-    }
-    return url.toString().replace(/\/+$/, "");
-}
-function deriveServerName(city_url) {
-    try {
-        return new URL(city_url).hostname || city_url;
-    }
-    catch {
-        return city_url;
-    }
-}
-function readJsonFile(file_path) {
-    try {
-        return JSON.parse(fs.readFileSync(file_path, "utf8"));
-    }
-    catch {
-        return null;
-    }
-}
-function normalizeLocalState(value) {
-    const selected_base_url = normalizeCityUrl(readString(value?.selected_base_url));
-    const profiles = [];
-    for (const item of Array.isArray(value?.profiles) ? value.profiles : []) {
-        const base_url = normalizeCityUrl(readString(item.base_url));
-        if (!base_url || profiles.some((profile) => profile.base_url === base_url))
-            continue;
-        profiles.push({
-            name: readString(item.name) || deriveServerName(base_url),
-            base_url,
-        });
-    }
-    const sessions = {};
-    const input_sessions = value?.sessions && typeof value.sessions === "object"
-        ? value.sessions
-        : {};
-    for (const [key, session] of Object.entries(input_sessions)) {
-        const base_url = normalizeCityUrl(readString(session?.base_url) || key);
-        const user_token = readString(session?.user_token);
-        if (!base_url || !user_token)
-            continue;
-        sessions[base_url] = {
-            base_url,
-            town_id: readString(session?.town_id) || DEFAULT_TOWN_ID,
-            user_id: readString(session?.user_id) || undefined,
-            user_label: readString(session?.user_label) || undefined,
-            user_token,
-            updated_at: readString(session?.updated_at) || new Date().toISOString(),
-        };
-    }
-    return {
-        selected_base_url: selected_base_url || undefined,
-        profiles,
-        sessions,
-    };
-}
-function readTownCityState() {
-    const store = new PlatformStore();
-    try {
-        return normalizeLocalState(store.getSecureSettingJsonSync(TOWN_CITY_STATE_KEY));
-    }
-    finally {
-        store.close();
-    }
-}
-function writeTownCityState(state) {
-    const store = new PlatformStore();
-    try {
-        store.setSecureSettingJsonSync(TOWN_CITY_STATE_KEY, normalizeLocalState(state));
-    }
-    finally {
-        store.close();
-    }
-}
-function readCityAdminConfig() {
-    return readJsonFile(CITY_CONFIG_PATH) ?? {};
-}
-function readCityAdminServers() {
-    const raw = readCityAdminConfig();
-    const servers = Array.isArray(raw.servers) ? raw.servers : [];
-    const active_url = normalizeCityUrl(readString(raw.active_server_url));
-    const out = [];
-    const state = readTownCityState();
-    const selected_base_url = resolveSelectedBaseUrl(state);
-    for (const item of servers) {
-        const base_url = normalizeCityUrl(readString(item.base_url) || readString(item.url));
-        if (!base_url || out.some((server) => server.base_url === base_url))
-            continue;
-        const session = state.sessions?.[base_url];
-        out.push({
-            name: readString(item.name) || deriveServerName(base_url),
-            base_url,
-            selected: base_url === selected_base_url,
-            source: "city-admin",
-            has_admin_secret_key: Boolean(readString(item.admin_secret_key)),
-            has_user_session: Boolean(session?.user_token),
-            town_id: session?.town_id,
-            user_id: session?.user_id,
-        });
-    }
-    return out.sort((left, right) => Number(right.base_url === active_url) - Number(left.base_url === active_url)
-        || left.name.localeCompare(right.name)
-        || left.base_url.localeCompare(right.base_url));
-}
-function readCityAdminSecretForUrl(city_url) {
-    const target_url = normalizeCityUrl(city_url);
-    const raw = readCityAdminConfig();
-    const servers = Array.isArray(raw.servers) ? raw.servers : [];
-    const matched = servers.find((item) => normalizeCityUrl(readString(item.base_url) || readString(item.url)) === target_url);
-    return readString(matched?.admin_secret_key) || undefined;
+    return readCityString(value);
 }
 export function readTownCityAdminSecretForBase(city_url) {
     return readCityAdminSecretForUrl(city_url);
-}
-function resolveSelectedBaseUrl(state = readTownCityState()) {
-    return normalizeCityUrl(readString(state.selected_base_url)) || DEFAULT_CITY_URL;
-}
-function upsertTownProfile(state, input) {
-    const base_url = normalizeCityUrl(input.base_url);
-    if (!base_url)
-        return state;
-    const profiles = [...(state.profiles ?? [])];
-    const index = profiles.findIndex((item) => item.base_url === base_url);
-    const profile = {
-        name: readString(input.name) || deriveServerName(base_url),
-        base_url,
-    };
-    if (index >= 0)
-        profiles[index] = profile;
-    else
-        profiles.push(profile);
-    return {
-        ...state,
-        selected_base_url: base_url,
-        profiles,
-    };
-}
-function listTownCityServers() {
-    const state = readTownCityState();
-    const selected_base_url = resolveSelectedBaseUrl(state);
-    const admin_servers = readCityAdminServers();
-    const by_url = new Map();
-    const append = (profile) => {
-        const existing = by_url.get(profile.base_url);
-        if (!existing) {
-            by_url.set(profile.base_url, profile);
-            return;
-        }
-        by_url.set(profile.base_url, {
-            ...existing,
-            selected: existing.selected || profile.selected,
-            source: existing.source === "town" ? "town" : profile.source,
-            has_admin_secret_key: existing.has_admin_secret_key || profile.has_admin_secret_key,
-            has_user_session: existing.has_user_session || profile.has_user_session,
-            town_id: existing.town_id || profile.town_id,
-            user_id: existing.user_id || profile.user_id,
-        });
-    };
-    for (const profile of state.profiles ?? []) {
-        const session = state.sessions?.[profile.base_url];
-        append({
-            name: profile.name,
-            base_url: profile.base_url,
-            selected: profile.base_url === selected_base_url,
-            source: "town",
-            has_admin_secret_key: Boolean(readCityAdminSecretForUrl(profile.base_url)),
-            has_user_session: Boolean(session?.user_token),
-            town_id: session?.town_id,
-            user_id: session?.user_id,
-        });
-    }
-    for (const server of admin_servers)
-        append(server);
-    const default_session = state.sessions?.[DEFAULT_CITY_URL];
-    append({
-        name: "Downcity Base",
-        base_url: DEFAULT_CITY_URL,
-        selected: DEFAULT_CITY_URL === selected_base_url,
-        source: "default",
-        has_admin_secret_key: Boolean(readCityAdminSecretForUrl(DEFAULT_CITY_URL)),
-        has_user_session: Boolean(default_session?.user_token),
-        town_id: default_session?.town_id,
-        user_id: default_session?.user_id,
-    });
-    return [...by_url.values()].sort((left, right) => Number(right.selected) - Number(left.selected)
-        || Number(right.source === "default") - Number(left.source === "default")
-        || left.name.localeCompare(right.name)
-        || left.base_url.localeCompare(right.base_url));
 }
 function findCityServer(input) {
     const query = String(input || "").trim();
@@ -240,23 +30,6 @@ function findCityServer(input) {
     return servers.find((server) => server.name === query ||
         server.base_url === normalized_query_url ||
         server.base_url === query) ?? null;
-}
-export function readCurrentTownCitySession() {
-    const state = readTownCityState();
-    const base_url = resolveSelectedBaseUrl(state);
-    return state.sessions?.[base_url] ?? null;
-}
-export function readTownCityUserSessionForRuntime() {
-    const state = readTownCityState();
-    const city_url = resolveSelectedBaseUrl(state);
-    const session = state.sessions?.[city_url] ?? null;
-    if (!session?.user_token)
-        return null;
-    return {
-        city_url,
-        town_id: session.town_id || DEFAULT_TOWN_ID,
-        user_token: session.user_token,
-    };
 }
 export function readTownCityConnectionState() {
     const state = readTownCityState();
@@ -313,6 +86,62 @@ export function emitCityConnectionStatus(options) {
             ? undefined
             : "Run `town city login` to sign in as a City user.",
     });
+}
+export async function emitCityUserWhoami(options) {
+    try {
+        const user = await cityUserManager.resolveCurrentUser();
+        if (options?.as_json === true) {
+            printResult({
+                asJson: true,
+                success: true,
+                title: "city user",
+                payload: {
+                    city_url: user.city_url,
+                    town_id: user.town_id,
+                    user_id: user.user_id,
+                    user_label: user.user_label,
+                    source: user.source,
+                    env_overrides: user.env_overrides,
+                    warnings: user.warnings,
+                },
+            });
+            return;
+        }
+        emitCliBlock({
+            tone: "success",
+            title: "City user",
+            summary: user.source,
+            facts: [
+                { label: "url", value: user.city_url },
+                { label: "town", value: user.town_id },
+                { label: "user", value: user.user_id || "unknown" },
+                ...(user.user_label ? [{ label: "label", value: user.user_label }] : []),
+                { label: "source", value: user.source },
+                { label: "env url", value: user.env_overrides.city_url ? "yes" : "no" },
+                { label: "env town", value: user.env_overrides.town_id ? "yes" : "no" },
+                { label: "env token", value: user.env_overrides.user_token ? "yes" : "no" },
+            ],
+            note: user.warnings.join(" ") || undefined,
+        });
+    }
+    catch (error) {
+        if (options?.as_json === true) {
+            printResult({
+                asJson: true,
+                success: false,
+                title: "city user",
+                payload: {
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+            return;
+        }
+        emitCliBlock({
+            tone: "error",
+            title: "City user unavailable",
+            note: error instanceof Error ? error.message : String(error),
+        });
+    }
 }
 export function emitCityServerList(options) {
     const servers = listTownCityServers();
@@ -519,6 +348,11 @@ async function promptCityManagerAction() {
                 value: "login",
             },
             {
+                title: "查看当前 User",
+                description: "显示 Town 当前实际使用的 City user",
+                value: "whoami",
+            },
+            {
                 title: "查看 User 余额",
                 description: state.has_user_token ? "读取当前登录 user 的余额" : "需要先登录 user",
                 value: "balance",
@@ -582,14 +416,18 @@ export async function runInteractiveCityManager() {
             await runCityLoginCommand({});
             continue;
         }
+        if (action === "whoami") {
+            await emitCityUserWhoami();
+            continue;
+        }
         if (action === "balance") {
-            await emitCurrentTownCityBalance(readCurrentTownCitySession());
+            await emitCurrentTownCityBalance();
             continue;
         }
         if (action === "recharge") {
             const input = await promptRechargeInput();
             if (input) {
-                const result = await rechargeCurrentTownCityUser(readCurrentTownCitySession(), input);
+                const result = await rechargeCurrentTownCityUser(input);
                 if (result)
                     emitTownCityRechargeResult(result);
             }

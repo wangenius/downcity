@@ -15,6 +15,7 @@ description: Select a City base and sign in as a Town user
 town city
 town city status
 town city list
+town city whoami
 town city connect [url]
 town city use [base]
 town city login [url]
@@ -30,9 +31,11 @@ Running bare `town` opens the interactive console. Choose `Connect City` to view
 
 `town city login` signs in as a user and stores Town's own user session. Agent runtime reads that Town user session when it calls City AIService.
 
+`town city whoami` shows the City user Town will actually use, including the base, town id, user id, and whether environment variables are overriding anything.
+
 `View User Balance` reads the current signed-in user's `balance` account. `User Recharge` creates a topup for that user and starts a checkout with an available payment method; by default, Town opens the checkout page in your browser.
 
-Environment variables such as `DOWNCITY_CITY_URL`, `DOWNCITY_CITY_TOWN_ID`, and `DOWNCITY_CITY_USER_TOKEN` are still supported as runtime overrides for CI or temporary launches.
+Balance, recharge, and Agent runtime all use the current user saved by `town city login` by default. `DOWNCITY_CITY_URL` can temporarily select another base and then uses that base's saved Town user session. Only `DOWNCITY_CITY_USER_TOKEN` explicitly overrides the user identity. `DOWNCITY_CITY_TOWN_ID` can override the town id.
 
 ## Recommended Flow
 
@@ -40,6 +43,7 @@ Environment variables such as `DOWNCITY_CITY_URL`, `DOWNCITY_CITY_TOWN_ID`, and 
 city                  # optional: manage admin-side City bases and resources
 town city status      # defaults to https://base.downcity.ai
 town city login
+town city whoami
 town                  # choose Connect City -> View User Balance or User Recharge
 town agent start
 ```

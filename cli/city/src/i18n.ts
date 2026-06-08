@@ -69,10 +69,12 @@ export function readLocaleFromEnv(env: NodeJS.ProcessEnv = process.env): CliLoca
 export function resolveCliLocale(params?: {
   argv?: string[];
   env?: NodeJS.ProcessEnv;
+  persisted_locale?: CliLocale;
   fallback?: CliLocale;
 }): CliLocale {
   return (
     readLocaleFromArgv(params?.argv ?? process.argv.slice(2))
+    ?? params?.persisted_locale
     ?? readLocaleFromEnv(params?.env ?? process.env)
     ?? params?.fallback
     ?? "en"

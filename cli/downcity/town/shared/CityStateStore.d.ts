@@ -8,6 +8,7 @@
  */
 import type { TownCityServerProfile } from "../types/TownCityConnection.js";
 import type { TownCityUserSession } from "../types/TownCitySession.js";
+import type { CliLocale } from "../types/CliLocale.js";
 import type { TownCityLocalState } from "../types/TownCityState.js";
 export declare const DEFAULT_CITY_URL = "https://base.downcity.ai";
 export declare const DEFAULT_TOWN_ID = "town_downcity";
@@ -27,6 +28,14 @@ export declare function readTownCityState(): TownCityLocalState;
  * 写入 Town City 本地状态。
  */
 export declare function writeTownCityState(state: TownCityLocalState): void;
+/**
+ * 读取 Town 持久化的 CLI 语言。
+ */
+export declare function readPersistedTownCliLocale(): CliLocale | undefined;
+/**
+ * 写入 Town 持久化的 CLI 语言。
+ */
+export declare function writePersistedTownCliLocale(cli_locale: CliLocale): void;
 /**
  * 读取当前选中的 City base URL。
  */

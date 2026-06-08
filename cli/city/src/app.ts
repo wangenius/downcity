@@ -12,13 +12,19 @@
  */
 
 import { readFileSync } from "node:fs";
+import { isCancel, select } from "@clack/prompts";
 import { intro } from "./core/ui.js";
-import { readActiveServer } from "./core/session.js";
+import {
+  readActiveServer,
+  writePersistedCliLocale,
+} from "./core/session.js";
 import { parseArgs } from "./core/env.js";
 import { promptAddServer, promptSelectActiveServer } from "./auth/server-switch.js";
 import { show, showError, showSuccess } from "./core/ui.js";
 import { updateCli } from "./core/update.js";
 import { selectHomeAction, selectWelcomeAction } from "./home/HomeMenu.js";
+import { getCliLocale, setCliLocale, t } from "./i18n.js";
+import { type CliLocale } from "./types/CliLocale.js";
 import { openServerWorkspace } from "./workspace/ServerWorkspace.js";
 
 export async function runCityApp(argv: string[] = []): Promise<void> {
@@ -40,6 +46,10 @@ export async function runCityApp(argv: string[] = []): Promise<void> {
         await runSelfUpdate();
         return;
       }
+      if (welcomeAction === "set_language") {
+        await promptAndPersistCityCliLocale();
+        continue;
+      }
 
       const connectedServer = await promptAddServer();
       if (!connectedServer) {
@@ -60,6 +70,10 @@ export async function runCityApp(argv: string[] = []): Promise<void> {
     if (homeAction === "update") {
       await runSelfUpdate();
       return;
+    }
+    if (homeAction === "set_language") {
+      await promptAndPersistCityCliLocale();
+      continue;
     }
 
     if (homeAction === "connect_city") {
@@ -94,6 +108,55 @@ export async function runCityApp(argv: string[] = []): Promise<void> {
 }
 
 /**
+ * 交互式切换并持久化 City CLI 语言。
+ */
+async function promptAndPersistCityCliLocale(): Promise<void> {
+  const current_locale = getCliLocale();
+  const selected_locale = await select({
+    message: t({
+      zh: "选择 City CLI 语言",
+      en: "Choose the City CLI language",
+    }),
+    options: [
+      {
+        label: "English",
+        value: "en",
+        hint: current_locale === "en"
+          ? t({
+            zh: "当前",
+            en: "Current",
+          })
+          : undefined,
+      },
+      {
+        label: "中文",
+        value: "zh",
+        hint: current_locale === "zh"
+          ? t({
+            zh: "当前",
+            en: "Current",
+          })
+          : undefined,
+      },
+    ],
+  });
+
+  if (!selected_locale || isCancel(selected_locale)) {
+    return;
+  }
+
+  const cli_locale = selected_locale as CliLocale;
+  setCliLocale(cli_locale);
+  writePersistedCliLocale(cli_locale);
+  showSuccess(t({
+    zh: cli_locale === "zh" ? "已切换为中文，并保存为默认语言" : "已切换为英文，并保存为默认语言",
+    en: cli_locale === "zh"
+      ? "Switched to Chinese and saved as the default language"
+      : "Switched to English and saved as the default language",
+  }));
+}
+
+/**
  * 读取当前 CLI 包版本。
  *
  * 关键说明（中文）
@@ -118,10 +181,19 @@ function readCliVersion(): string {
  */
 async function runSelfUpdate(): Promise<void> {
   try {
-    show("Updating downcity CLI...");
+    show(t({
+      zh: "正在更新 downcity CLI...",
+      en: "Updating downcity CLI...",
+    }));
     const result = await updateCli();
-    showSuccess(`CLI updated via ${result.mode} mode -> v${result.version}`);
-    show("Please run `city` again to use the updated CLI.");
+    showSuccess(t({
+      zh: `CLI 已通过 ${result.mode} 模式更新到 v${result.version}`,
+      en: `CLI updated via ${result.mode} mode -> v${result.version}`,
+    }));
+    show(t({
+      zh: "请重新运行 `city` 以使用更新后的 CLI。",
+      en: "Please run `city` again to use the updated CLI.",
+    }));
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
   }

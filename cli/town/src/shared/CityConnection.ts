@@ -31,12 +31,14 @@ import {
   readCityAdminSecretForUrl,
   readCityString,
   readCurrentTownCitySession,
+  readPersistedTownCliLocale,
   readTownCityState,
   resolveSelectedBaseUrl,
   upsertTownProfile,
   writeTownCityState,
 } from "./CityStateStore.js";
-import { t } from "./CliLocale.js";
+import { getCliLocale, t } from "./CliLocale.js";
+import { promptAndPersistTownCliLocale } from "./InteractiveLocale.js";
 const cityUserManager = new CityUserManager();
 
 function readString(value: unknown): string {
@@ -379,6 +381,8 @@ export function runCityDisconnectCommand(options?: { as_json?: boolean }): void 
 
 async function promptCityManagerAction(): Promise<string | null> {
   const state = readTownCityConnectionState();
+  const current_locale = getCliLocale();
+  const persisted_locale = readPersistedTownCliLocale();
   const response = (await prompts({
     type: "select",
     name: "action",
@@ -482,6 +486,14 @@ async function promptCityManagerAction(): Promise<string | null> {
       },
       {
         title: t({
+          zh: "切换语言",
+          en: "Language",
+        }),
+        description: formatTownCliLocaleDescription(persisted_locale ?? current_locale),
+        value: "language",
+      },
+      {
+        title: t({
           zh: "退出",
           en: "Exit",
         }),
@@ -551,10 +563,29 @@ export async function runInteractiveCityManager(): Promise<void> {
       }
       continue;
     }
+    if (action === "language") {
+      await promptAndPersistTownCliLocale();
+      continue;
+    }
     if (action === "logout") {
       runCityLogoutCommand();
+      continue;
     }
   }
+}
+
+function formatTownCliLocaleDescription(cli_locale: "zh" | "en"): string {
+  if (cli_locale === "zh") {
+    return t({
+      zh: "当前默认语言：中文",
+      en: "Current default language: Chinese",
+    });
+  }
+
+  return t({
+    zh: "当前默认语言：英文",
+    en: "Current default language: English",
+  });
 }
 
 async function promptSelectCityBase(): Promise<TownCityServerProfile | null> {

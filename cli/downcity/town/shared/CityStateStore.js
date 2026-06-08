@@ -61,6 +61,22 @@ export function writeTownCityState(state) {
     }
 }
 /**
+ * 读取 Town 持久化的 CLI 语言。
+ */
+export function readPersistedTownCliLocale() {
+    return readTownCityState().cli_locale;
+}
+/**
+ * 写入 Town 持久化的 CLI 语言。
+ */
+export function writePersistedTownCliLocale(cli_locale) {
+    const state = readTownCityState();
+    writeTownCityState({
+        ...state,
+        cli_locale,
+    });
+}
+/**
  * 读取当前选中的 City base URL。
  */
 export function resolveSelectedBaseUrl(state = readTownCityState()) {
@@ -260,8 +276,17 @@ function normalizeLocalState(value) {
     }
     return {
         selected_base_url: selected_base_url || undefined,
+        cli_locale: normalizeCliLocale(value?.cli_locale),
         profiles,
         sessions,
     };
+}
+function normalizeCliLocale(value) {
+    const raw = String(value ?? "").trim().toLowerCase();
+    if (raw === "zh")
+        return "zh";
+    if (raw === "en")
+        return "en";
+    return undefined;
 }
 //# sourceMappingURL=CityStateStore.js.map

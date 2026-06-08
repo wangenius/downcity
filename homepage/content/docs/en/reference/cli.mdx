@@ -23,7 +23,8 @@ For exact flags, use local command help from the installed CLI. Product docs des
 `city` and `town` support both Chinese and English.
 
 - Use `--lang zh` or `--lang en` to switch the current command explicitly.
-- If `--lang` is not passed, the CLI falls back to `DC_CLI_LANG`, `LC_ALL`, `LC_MESSAGES`, and `LANG`.
+- If `--lang` is not passed, the CLI first uses the last language selected in the interactive menu, then falls back to `DC_CLI_LANG`, `LC_ALL`, `LC_MESSAGES`, and `LANG`.
+- In interactive mode, both `city` and `town` can change the default language from their menus and persist that preference locally.
 
 Examples:
 

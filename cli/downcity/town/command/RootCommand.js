@@ -19,6 +19,7 @@ import { registerAgentCommands } from "./AgentCommand.js";
 import { registerChatCommand } from "./ChatCommand.js";
 import { emitCliHeader, resetCliSectionFlow, setCliVerbosity, } from "../shared/CliReporter.js";
 import { registerGatewayCommands } from "./GatewayCommand.js";
+import { readPersistedTownCliLocale } from "../shared/CityStateStore.js";
 import { runInteractiveTownManager } from "../shared/TownManager.js";
 import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "../shared/CliLocale.js";
 const __filename = fileURLToPath(import.meta.url);
@@ -60,7 +61,10 @@ export async function runTownCli() {
     const program = new Command();
     const argv = process.argv.slice(2);
     const builtinPlugins = createBuiltinPlugins();
-    const cli_locale = resolveCliLocale({ argv });
+    const cli_locale = resolveCliLocale({
+        argv,
+        persisted_locale: readPersistedTownCliLocale(),
+    });
     setCliLocale(cli_locale);
     program
         .name("town")

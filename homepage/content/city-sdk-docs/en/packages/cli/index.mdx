@@ -43,6 +43,8 @@ city --lang zh --help
 DC_CLI_LANG=zh city
 ```
 
+In interactive mode, `city` also lets you change the default language from the menu and persists that selection locally. Resolution priority is `--lang` first, then the persisted interactive preference, then `DC_CLI_LANG`, `LC_ALL`, `LC_MESSAGES`, and `LANG`.
+
 If no City is connected yet, the interactive flow first asks you to add one. After that, you can:
 
 - manage multiple City servers from `Manage Servers`

@@ -30,6 +30,7 @@ export declare function readLocaleFromEnv(env?: NodeJS.ProcessEnv): CliLocale | 
 export declare function resolveCliLocale(params?: {
     argv?: string[];
     env?: NodeJS.ProcessEnv;
+    persisted_locale?: CliLocale;
     fallback?: CliLocale;
 }): CliLocale;
 /**

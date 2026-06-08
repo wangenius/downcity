@@ -23,7 +23,8 @@ Downcity docs 解释设计模型、运行边界和配置语义。
 `city` 和 `town` 现在都支持中文与英文。
 
 - 通过 `--lang zh` 或 `--lang en` 显式切换当前命令语言。
-- 如果没有传 `--lang`，CLI 会依次读取 `DC_CLI_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG`。
+- 如果没有传 `--lang`，CLI 会优先读取最近一次在交互菜单中保存的默认语言，然后再依次读取 `DC_CLI_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG`。
+- 在交互模式下，`city` 和 `town` 都可以直接从菜单切换语言，并把该选择持久化到本地。
 
 示例：
 

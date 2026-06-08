@@ -13,6 +13,7 @@ import path from "node:path";
 import { PlatformStore } from "../town/store/index.js";
 import type { TownCityServerProfile } from "../types/TownCityConnection.js";
 import type { TownCityUserSession } from "../types/TownCitySession.js";
+import type { CliLocale } from "../types/CliLocale.js";
 import type {
   CityAdminConfig,
   TownCityLocalProfile,
@@ -74,6 +75,24 @@ export function writeTownCityState(state: TownCityLocalState): void {
   } finally {
     store.close();
   }
+}
+
+/**
+ * 读取 Town 持久化的 CLI 语言。
+ */
+export function readPersistedTownCliLocale(): CliLocale | undefined {
+  return readTownCityState().cli_locale;
+}
+
+/**
+ * 写入 Town 持久化的 CLI 语言。
+ */
+export function writePersistedTownCliLocale(cli_locale: CliLocale): void {
+  const state = readTownCityState();
+  writeTownCityState({
+    ...state,
+    cli_locale,
+  });
 }
 
 /**
@@ -302,7 +321,15 @@ function normalizeLocalState(value: TownCityLocalState | null | undefined): Town
   }
   return {
     selected_base_url: selected_base_url || undefined,
+    cli_locale: normalizeCliLocale(value?.cli_locale),
     profiles,
     sessions,
   };
+}
+
+function normalizeCliLocale(value: unknown): CliLocale | undefined {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "zh") return "zh";
+  if (raw === "en") return "en";
+  return undefined;
 }

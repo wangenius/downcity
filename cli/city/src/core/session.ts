@@ -12,6 +12,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { normalizeBaseUrl } from "./env.js";
+import type { CliLocale } from "../types/CliLocale.js";
 
 const DIR = path.join(os.homedir(), ".downcity");
 const CONFIG_FILE = path.join(DIR, "config.json");
@@ -45,6 +46,8 @@ export interface ClientConfig {
   cloudflare_account_id?: string;
   /** 当前选择的模型 ID */
   model: string;
+  /** 当前持久化的 CLI 语言。 */
+  cli_locale?: CliLocale;
 }
 
 // ============================================================
@@ -66,6 +69,7 @@ export function readConfig(): ClientConfig {
       ? raw.cloudflare_account_id.trim() || undefined
       : undefined,
     model: typeof raw.model === "string" ? raw.model : "",
+    cli_locale: normalizeCliLocale(raw.cli_locale),
   };
 }
 
@@ -85,6 +89,25 @@ export function writeConfig(config: ClientConfig): void {
       ? config.cloudflare_account_id.trim() || undefined
       : undefined,
     model: config.model ?? "",
+    cli_locale: normalizeCliLocale(config.cli_locale),
+  });
+}
+
+/**
+ * 读取持久化的 CLI 语言。
+ */
+export function readPersistedCliLocale(): CliLocale | undefined {
+  return readConfig().cli_locale;
+}
+
+/**
+ * 写入持久化的 CLI 语言。
+ */
+export function writePersistedCliLocale(cli_locale: CliLocale): void {
+  const config = readConfig();
+  writeConfig({
+    ...config,
+    cli_locale,
   });
 }
 
@@ -278,6 +301,13 @@ function readServersFromConfig(raw: Record<string, unknown>): ServerProfile[] {
   }
 
   return servers;
+}
+
+function normalizeCliLocale(value: unknown): CliLocale | undefined {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "zh") return "zh";
+  if (raw === "en") return "en";
+  return undefined;
 }
 
 function readActiveServerURL(raw: Record<string, unknown>, servers: ServerProfile[]): string | undefined {

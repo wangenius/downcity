@@ -7,6 +7,7 @@
  */
 
 import type { TownCityUserSession } from "./TownCitySession.js";
+import type { CliLocale } from "./CliLocale.js";
 
 /**
  * `city` CLI admin 配置文件结构。
@@ -66,6 +67,11 @@ export interface TownCityLocalState {
    * 当前选择的 City base URL。
    */
   selected_base_url?: string;
+
+  /**
+   * 当前持久化的 CLI 语言。
+   */
+  cli_locale?: CliLocale;
 
   /**
    * Town 本地保存的 City base 列表。

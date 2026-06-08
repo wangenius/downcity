@@ -9,12 +9,13 @@
 import { isCancel, select } from "@clack/prompts";
 import { readActiveServer } from "../core/session.js";
 import { type HomeAction, type WelcomeAction } from "../types/Interactive.js";
-import { t } from "../i18n.js";
+import { getCliLocale, t } from "../i18n.js";
 
 /**
  * 首次启动时选择动作。
  */
 export async function selectWelcomeAction(): Promise<WelcomeAction> {
+  const current_locale = getCliLocale();
   const selected = await select({
     message: t({
       zh: "欢迎使用 City",
@@ -31,6 +32,14 @@ export async function selectWelcomeAction(): Promise<WelcomeAction> {
           zh: "添加一个 City base URL 以便进行管理",
           en: "Add a City base URL for admin management",
         }),
+      },
+      {
+        label: t({
+          zh: "切换语言",
+          en: "Language",
+        }),
+        value: "set_language",
+        hint: formatLocaleHint(current_locale),
       },
       {
         label: t({
@@ -68,6 +77,7 @@ export async function selectHomeAction(): Promise<HomeAction> {
   if (!active_server) {
     return "connect_city";
   }
+  const current_locale = getCliLocale();
 
   const selected = await select({
     message: t({
@@ -107,6 +117,14 @@ export async function selectHomeAction(): Promise<HomeAction> {
       },
       {
         label: t({
+          zh: "切换语言",
+          en: "Language",
+        }),
+        value: "set_language",
+        hint: formatLocaleHint(current_locale),
+      },
+      {
+        label: t({
           zh: "升级 CLI",
           en: "Upgrade CLI",
         }),
@@ -143,4 +161,18 @@ function formatServerSummary(base_url: string, has_admin_access: boolean): strin
       zh: `${base_url} · 需要配置 admin 访问`,
       en: `${base_url} · admin access required`,
     });
+}
+
+function formatLocaleHint(locale: "zh" | "en"): string {
+  if (locale === "zh") {
+    return t({
+      zh: "当前：中文",
+      en: "Current: Chinese",
+    });
+  }
+
+  return t({
+    zh: "当前：英文",
+    en: "Current: English",
+  });
 }

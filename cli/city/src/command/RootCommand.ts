@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { runCityApp } from "../app.js";
+import { readPersistedCliLocale } from "../core/session.js";
 import { createVersionBanner } from "../shared/IndexSupport.js";
 import { setCliVerbosity } from "../shared/CliReporter.js";
 import { deployCityProject } from "../deploy/commands/deploy.js";
@@ -32,7 +33,11 @@ const packageJson = JSON.parse(
  */
 export async function runCityCli(): Promise<void> {
   const program = new Command();
-  const cli_locale = resolveCliLocale();
+  const argv = process.argv.slice(2);
+  const cli_locale = resolveCliLocale({
+    argv,
+    persisted_locale: readPersistedCliLocale(),
+  });
   setCliLocale(cli_locale);
 
   program

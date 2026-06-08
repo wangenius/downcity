@@ -17,7 +17,8 @@ import { runInteractiveAgentManager } from "../agent/AgentManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { runInteractiveCityManager } from "./CityConnection.js";
 import { emitCliBlock } from "./CliReporter.js";
-import { t } from "./CliLocale.js";
+import { getCliLocale, t } from "./CliLocale.js";
+import { promptAndPersistTownCliLocale } from "./InteractiveLocale.js";
 
 type TownHomeAction =
   | "status"
@@ -27,6 +28,7 @@ type TownHomeAction =
   | "city"
   | "agent"
   | "plugin"
+  | "language"
   | "help"
   | "exit";
 
@@ -36,6 +38,7 @@ interface TownHelpProgram {
 }
 
 async function promptTownHomeAction(): Promise<TownHomeAction | null> {
+  const current_locale = getCliLocale();
   const response = (await prompts({
     type: "select",
     name: "action",
@@ -120,6 +123,22 @@ async function promptTownHomeAction(): Promise<TownHomeAction | null> {
           en: "Configure plugin capabilities and runtime boundaries for agents",
         }),
         value: "plugin",
+      },
+      {
+        title: t({
+          zh: "切换语言",
+          en: "Language",
+        }),
+        description: current_locale === "zh"
+          ? t({
+            zh: "当前默认语言：中文",
+            en: "Current default language: Chinese",
+          })
+          : t({
+            zh: "当前默认语言：英文",
+            en: "Current default language: English",
+          }),
+        value: "language",
       },
       {
         title: t({
@@ -209,6 +228,10 @@ export async function runInteractiveTownManager(params: {
       }
       if (action === "plugin") {
         await runInteractivePluginManager();
+        continue;
+      }
+      if (action === "language") {
+        await promptAndPersistTownCliLocale();
         continue;
       }
       if (action === "help") {

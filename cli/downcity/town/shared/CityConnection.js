@@ -13,8 +13,9 @@ import { printResult } from "../utils/cli/CliOutput.js";
 import { performTownCityUserLogin } from "./CityUserLogin.js";
 import { emitCurrentTownCityBalance, emitTownCityRechargeResult, rechargeCurrentTownCityUser, } from "./CityBalance.js";
 import { CityUserManager } from "./CityUserManager.js";
-import { DEFAULT_CITY_URL, DEFAULT_TOWN_ID, listTownCityServers, normalizeCityUrl, readCityAdminSecretForUrl, readCityString, readCurrentTownCitySession, readTownCityState, resolveSelectedBaseUrl, upsertTownProfile, writeTownCityState, } from "./CityStateStore.js";
-import { t } from "./CliLocale.js";
+import { DEFAULT_CITY_URL, DEFAULT_TOWN_ID, listTownCityServers, normalizeCityUrl, readCityAdminSecretForUrl, readCityString, readCurrentTownCitySession, readPersistedTownCliLocale, readTownCityState, resolveSelectedBaseUrl, upsertTownProfile, writeTownCityState, } from "./CityStateStore.js";
+import { getCliLocale, t } from "./CliLocale.js";
+import { promptAndPersistTownCliLocale } from "./InteractiveLocale.js";
 const cityUserManager = new CityUserManager();
 function readString(value) {
     return readCityString(value);
@@ -323,6 +324,8 @@ export function runCityDisconnectCommand(options) {
 }
 async function promptCityManagerAction() {
     const state = readTownCityConnectionState();
+    const current_locale = getCliLocale();
+    const persisted_locale = readPersistedTownCliLocale();
     const response = (await prompts({
         type: "select",
         name: "action",
@@ -426,6 +429,14 @@ async function promptCityManagerAction() {
             },
             {
                 title: t({
+                    zh: "切换语言",
+                    en: "Language",
+                }),
+                description: formatTownCliLocaleDescription(persisted_locale ?? current_locale),
+                value: "language",
+            },
+            {
+                title: t({
                     zh: "退出",
                     en: "Exit",
                 }),
@@ -494,10 +505,27 @@ export async function runInteractiveCityManager() {
             }
             continue;
         }
+        if (action === "language") {
+            await promptAndPersistTownCliLocale();
+            continue;
+        }
         if (action === "logout") {
             runCityLogoutCommand();
+            continue;
         }
     }
+}
+function formatTownCliLocaleDescription(cli_locale) {
+    if (cli_locale === "zh") {
+        return t({
+            zh: "当前默认语言：中文",
+            en: "Current default language: Chinese",
+        });
+    }
+    return t({
+        zh: "当前默认语言：英文",
+        en: "Current default language: English",
+    });
 }
 async function promptSelectCityBase() {
     const servers = listTownCityServers();

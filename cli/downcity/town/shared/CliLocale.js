@@ -46,6 +46,7 @@ export function readLocaleFromEnv(env = process.env) {
  */
 export function resolveCliLocale(params) {
     return (readLocaleFromArgv(params?.argv ?? process.argv.slice(2))
+        ?? params?.persisted_locale
         ?? readLocaleFromEnv(params?.env ?? process.env)
         ?? params?.fallback
         ?? "en");

@@ -185,28 +185,29 @@ The City-side stream handler should return the result of AI SDK `createUIMessage
 
 If you want a single JSON result, use `text()` instead of `stream()`.
 
-## `ai.image()` / `ai.video()`
+## `ai.image_create()` / `ai.image_result()` / `ai.video()`
 
-`image()` and `video()` return AI SDK `UIMessage`. Use file parts inside `parts` to represent generated image or video files:
+Image generation is a job API: create a job with `image_create()`, then poll it with `image_result()`. When the job succeeds, `result` is an AI SDK `UIMessage`. Use file parts inside `parts` to represent generated image files:
 
 ```ts
-const imageMessage = await client.ai.image({
+const job = await client.ai.image_create({
   prompt: "A fox standing in the snow",
   model: catalog.get("image-basic"),
   ratio: "1:1",
   count: 1,
 });
 
-const image = imageMessage.parts.find((part) => part.type === "file");
-console.log(image?.mediaType, image?.url);
+const current = await client.ai.image_result({ job_id: job.job_id });
+if (current.status === "succeeded") {
+  const image = current.result?.parts.find((part) => part.type === "file");
+  console.log(image?.mediaType, image?.url);
+}
 ```
-
-`client.ai.image()` uses job polling internally: it creates an image job with `image_create()`, polls `image_result()`, and returns the same `UIMessage` once the job succeeds. This avoids holding a long HTTP connection while slow image providers finish generation.
 
 You can also use `messages` for conversational or reference-image workflows:
 
 ```ts
-await client.ai.image({
+const job = await client.ai.image_create({
   model: "luchi-gpt-image-2",
   messages: [
     {
@@ -220,16 +221,9 @@ await client.ai.image({
 });
 ```
 
-If you want to control polling yourself, call the lower-level job API directly:
-
-```ts
-const job = await client.ai.image_create({ prompt: "A fox standing in the snow" });
-const current = await client.ai.image_result({ job_id: job.job_id });
-```
-
 The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider normalizes upstream formats such as Luchi async jobs, OpenAI/302.ai images APIs, and Gemini `generateContent` into AI SDK `UIMessage` file parts.
 
-The City-side Provider `image` / `video` actions should also return `UIMessage`.
+`video()` still returns AI SDK `UIMessage`. The City-side Provider `video` action should also return `UIMessage`.
 
 ## `ai.tts()` / `ai.asr()`
 
@@ -344,7 +338,7 @@ If what you want is model capability itself, prefer:
 
 - `client.ai.text()`
 - `client.ai.stream()`
-- `client.ai.image()`
+- `client.ai.image_create()` / `client.ai.image_result()`
 
 If what you want is a business action, use:
 

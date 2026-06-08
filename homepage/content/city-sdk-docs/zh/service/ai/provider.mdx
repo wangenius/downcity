@@ -27,7 +27,7 @@ const deepseek = new Provider("deepseek", {
 
 ## 图片 Provider
 
-`@downcity/city` 不内置 Luchi、302.ai、OpenAI、Gemini 这类具体图片 Provider 构造器。City 包只提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image()` 的统一调用协议。
+`@downcity/city` 不内置 Luchi、302.ai、OpenAI、Gemini 这类具体图片 Provider 构造器。City 包只提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image_create()` / `client.ai.image_result()` 的统一任务协议。
 
 具体上游适配应放在具体 City 项目里实现，例如 `cities/edge/src/image-provider.ts`。这些 adapter 可以把不同上游的响应归一成 AI SDK `UIMessage` file parts，然后通过 `Provider.model()` 注册给 `AIService`：
 
@@ -71,7 +71,7 @@ ai.use(imageProvider.model({
 调用端仍然保持统一：
 
 ```ts
-const msg = await client.ai.image({
+const job = await client.ai.image_create({
   model: "image-basic",
   prompt: "A clean product photo of a ceramic mug",
   ratio: "1:1",
@@ -79,7 +79,8 @@ const msg = await client.ai.image({
   count: 1,
 });
 
-const file = msg.parts.find((part) => part.type === "file");
+const current = await client.ai.image_result({ job_id: job.job_id });
+const file = current.result?.parts.find((part) => part.type === "file");
 ```
 
 ## 自动透传

@@ -30,10 +30,6 @@ const textContract: Promise<UIMessage> = textResult;
 const streamResult = ai.stream({ prompt: "hello" });
 const streamContract: Promise<ReadableStream<UIMessageChunk>> = streamResult;
 
-const imageResult = ai.image({ prompt: "draw" });
-const imageContract: Promise<UIMessage> = imageResult;
-void imageContract;
-
 const imageJobCreateResult = ai.image_create({ prompt: "draw" });
 const imageJobCreateContract: Promise<UserImageJobCreateResult> = imageJobCreateResult;
 void imageJobCreateContract;
@@ -95,8 +91,8 @@ ai.text<{ text: string }>({ prompt: "hello" });
 // @ts-expect-error stream 返回类型固定为 UIMessageChunk stream
 ai.stream<ReadableStream<string>>({ prompt: "hello" });
 
-// @ts-expect-error image 返回类型固定为 UIMessage
-ai.image<{ url: string }>({ prompt: "draw" });
+// @ts-expect-error image 已移除，图片生成请使用 image_create / image_result
+ai.image({ prompt: "draw" });
 
 // @ts-expect-error video 返回类型固定为 UIMessage
 ai.video<{ url: string }>({ prompt: "demo" });

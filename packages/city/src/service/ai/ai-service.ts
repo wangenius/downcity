@@ -188,7 +188,7 @@ export class AIService extends Service {
       });
     }
 
-    // 图片生成的任务式端点。SDK 的 client.ai.image() 默认走这里，避免长连接。
+    // 图片生成的任务式端点。SDK 通过 image_create / image_result 显式访问。
     this.action("image/create", async (ctx) => this.createImageJob(ctx), {
       auth: ["user", "admin"],
     });

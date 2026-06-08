@@ -18,13 +18,14 @@ new Provider(id: string, opts: ProviderOptions)
 | `envKey` | `string` | No | Env var name for API key, for auto-passthrough |
 | `text` | `ServiceHandler` | No | SDK text handler |
 | `stream` | `ServiceHandler` | No | SDK stream handler |
-| `image` | `ServiceHandler` | No | SDK image handler |
+| `image` | `ServiceHandler` | No | SDK direct image handler |
+| `image_job` | `ServiceHandler` | No | SDK image job step handler |
 | `video` | `ServiceHandler` | No | SDK video handler |
 | `openai` | `ServiceHandler` | No | OpenAI-compatible handler. Auto-passthrough if omitted |
 
 ## Image Providers
 
-`@downcity/city` does not ship concrete image provider factories for Luchi, 302.ai, OpenAI, Gemini, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image()` call contract.
+`@downcity/city` does not ship concrete image provider factories for Luchi, 302.ai, OpenAI, Gemini, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
 
 Provider-specific adapters should live in the concrete City project, for example `cities/edge/src/image-provider.ts`. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
 
@@ -68,7 +69,7 @@ ai.use(imageProvider.model({
 The client call stays provider-neutral:
 
 ```ts
-const msg = await client.ai.image({
+const job = await client.ai.image_create({
   model: "image-basic",
   prompt: "A clean product photo of a ceramic mug",
   ratio: "1:1",
@@ -76,7 +77,8 @@ const msg = await client.ai.image({
   count: 1,
 });
 
-const file = msg.parts.find((part) => part.type === "file");
+const current = await client.ai.image_result({ job_id: job.job_id });
+const file = current.result?.parts.find((part) => part.type === "file");
 ```
 
 ## Two Patterns

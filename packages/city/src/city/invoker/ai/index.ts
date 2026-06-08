@@ -18,7 +18,6 @@ import type {
   UserImageJobCreateResult,
   UserImageJobResult,
   UserImageJobResultInput,
-  UserImageResult,
   UserServiceInput,
   UserStreamResult,
   UserTextResult,
@@ -27,9 +26,6 @@ import type {
 import type { RequestInitLike } from "../../http.js";
 
 const PREFIX = "/v1/ai";
-const IMAGE_POLL_TIMEOUT_MS = 300_000;
-const IMAGE_POLL_MIN_INTERVAL_MS = 100;
-const IMAGE_POLL_MAX_INTERVAL_MS = 10_000;
 
 /**
  * AI 服务调用器。
@@ -106,36 +102,6 @@ export class AIInvoker {
   /** 查询图片生成任务 */
   image_result(input: UserImageJobResultInput): Promise<UserImageJobResult> {
     return this.post<UserImageJobResult>("/image/result", input as unknown as UserServiceInput);
-  }
-
-  /**
-   * 图片生成。
-   *
-   * 关键点（中文）
-   * - 对外仍然返回 UIMessage
-   * - 内部走 image/create + image/result，避免客户端维持超长 HTTP 连接
-   */
-  async image(input: UserImageInput): Promise<UserImageResult> {
-    const created = await this.image_create(input);
-    const deadline = Date.now() + IMAGE_POLL_TIMEOUT_MS;
-    let poll_after_ms = created.poll_after_ms;
-
-    while (Date.now() < deadline) {
-      await sleep(clampPollInterval(poll_after_ms));
-      const current = await this.image_result({ job_id: created.job_id });
-      poll_after_ms = current.poll_after_ms;
-      if (current.status === "succeeded") {
-        if (!current.result) {
-          throw new Error(`Downcity image job ${created.job_id} succeeded without result`);
-        }
-        return current.result;
-      }
-      if (current.status === "failed") {
-        throw new Error(`Downcity image job failed: ${current.error ?? current.message ?? created.job_id}`);
-      }
-    }
-
-    throw new Error(`Downcity image job timed out: ${created.job_id}`);
   }
 
   /** 视频生成 */
@@ -342,23 +308,6 @@ export function serializeModel(model: import("./types.js").UserModelInput | unde
   return typeof model === "string" ? model : model.id;
 }
 
-/**
- * 等待指定毫秒数。
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * 限制轮询间隔，避免服务端异常值导致过快或过慢轮询。
- */
-function clampPollInterval(value: unknown): number {
-  const n = typeof value === "number" && Number.isFinite(value)
-    ? value
-    : IMAGE_POLL_MIN_INTERVAL_MS;
-  return Math.max(IMAGE_POLL_MIN_INTERVAL_MS, Math.min(IMAGE_POLL_MAX_INTERVAL_MS, n));
-}
-
 function create_city_model(
   ai: AIInvoker,
   item: CityModelDescriptor,
@@ -428,11 +377,6 @@ export class ModelHandle {
   /** 文本生成 */
   text(input: Omit<UserServiceInput, "model">): Promise<UserTextResult> {
     return this.ai.text({ ...input, model: this.id });
-  }
-
-  /** 图片生成 */
-  image(input: Omit<UserImageInput, "model">): Promise<UserImageResult> {
-    return this.ai.image({ ...input, model: this.id });
   }
 
   /** 视频生成 */

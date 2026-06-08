@@ -89,6 +89,45 @@ export interface ImagePluginInput {
 export type ImagePluginResult = UIMessage;
 
 /**
+ * 图片生成任务状态。
+ */
+export type ImagePluginJobStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed";
+
+/**
+ * 图片任务创建结果。
+ */
+export interface ImagePluginJobCreateResult {
+  /** 图片任务 ID。 */
+  job_id: string;
+  /** 创建后的任务状态。 */
+  status: ImagePluginJobStatus;
+  /** 建议下一次轮询的间隔毫秒数。 */
+  poll_after_ms?: number;
+}
+
+/**
+ * 图片任务查询结果。
+ */
+export interface ImagePluginJobResult {
+  /** 图片任务 ID。 */
+  job_id: string;
+  /** 当前任务状态。 */
+  status: ImagePluginJobStatus;
+  /** 成功时返回的 AI SDK UIMessage。 */
+  result?: ImagePluginResult;
+  /** 失败时返回的错误消息。 */
+  error?: string;
+  /** 当前任务状态说明。 */
+  message?: string;
+  /** 建议下一次轮询的间隔毫秒数。 */
+  poll_after_ms?: number;
+}
+
+/**
  * ImagePlugin 构造参数。
  */
 export interface ImagePluginOptions {
@@ -98,6 +137,14 @@ export interface ImagePluginOptions {
   title?: string;
   /** Plugin 用途说明。 */
   description?: string;
-  /** 图片生成函数，通常传入 `(input) => city.ai.image(input)`。 */
-  image?: (input: ImagePluginInput) => Promise<ImagePluginResult> | ImagePluginResult;
+  /** 创建图片生成任务，通常传入 `(input) => city.ai.image_create(input)`。 */
+  image_create?: (input: ImagePluginInput) => Promise<ImagePluginJobCreateResult> | ImagePluginJobCreateResult;
+  /** 查询图片生成任务，通常传入 `(input) => city.ai.image_result(input)`。 */
+  image_result?: (input: { job_id: string }) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
+  /** 图片任务最大等待时间，默认 300000ms。 */
+  timeout_ms?: number;
+  /** 轮询间隔下限，默认 100ms。 */
+  min_poll_interval_ms?: number;
+  /** 轮询间隔上限，默认 10000ms。 */
+  max_poll_interval_ms?: number;
 }

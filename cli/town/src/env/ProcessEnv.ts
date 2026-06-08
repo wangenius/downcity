@@ -35,9 +35,13 @@ export function readPlatformGlobalEnv(): Record<string, string> {
  */
 export function mergeProcessEnvWithPlatformGlobalEnv(
   baseEnv: NodeJS.ProcessEnv = process.env,
-): NodeJS.ProcessEnv {
+): Record<string, string> {
+  const merged: Record<string, string> = {};
+  for (const [key, value] of Object.entries(baseEnv)) {
+    if (typeof value === "string") merged[key] = value;
+  }
   return {
-    ...baseEnv,
+    ...merged,
     ...readPlatformGlobalEnv(),
   };
 }

@@ -25,6 +25,33 @@ import type {
   VerifyResult,
 } from "../types/TownCityAuth.js";
 
+interface AccountsMeResult {
+  /**
+   * 当前 token 解析出的 user。
+   */
+  user?: {
+    /**
+     * City 用户 ID。
+     */
+    user_id?: string;
+  };
+
+  /**
+   * 当前用户资料。
+   */
+  profile?: {
+    /**
+     * 用户 email。
+     */
+    email?: string;
+
+    /**
+     * 用户展示名称。
+     */
+    display_name?: string;
+  } | null;
+}
+
 function readString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -113,11 +140,12 @@ async function emailLogin(input: TownCityLoginInput): Promise<TownCityUserSessio
   const result = await client.service("accounts").action("login").invoke<LoginResult>({
     email,
     password,
+    town_id: input.town_id,
   });
   if (result.error || !result.user_token) {
     throw new Error(result.error || "login failed: no token");
   }
-  return buildUserSession({
+  return await buildVerifiedUserSession({
     ...input,
     user_token: result.user_token,
     user_id: result.user_id,
@@ -169,11 +197,12 @@ async function emailRegister(input: TownCityLoginInput): Promise<TownCityUserSes
 
   const verified = await accounts.action("verify-email").invoke<VerifyResult>({
     token: verification_token,
+    town_id: input.town_id,
   });
   if (verified.error || !verified.user_token) {
     throw new Error(verified.error || "verification failed: no token");
   }
-  return buildUserSession({
+  return await buildVerifiedUserSession({
     ...input,
     user_token: verified.user_token,
     user_id: verified.user_id || registered.user_id,
@@ -189,6 +218,7 @@ async function oauthAuth(
   const accounts = client.service("accounts");
   const started = await accounts.action("oauth/start").invoke<OAuthStartResult>({
     provider,
+    town_id: input.town_id,
   });
   if (started.error || !started.url || !started.state) {
     throw new Error(started.error || "failed to start OAuth");
@@ -205,7 +235,7 @@ async function oauthAuth(
   if (!result || result.error || !result.user_token) {
     throw new Error(result?.error || "OAuth failed");
   }
-  return buildUserSession({
+  return await buildVerifiedUserSession({
     ...input,
     user_token: result.user_token,
     user_id: result.user_id,
@@ -240,6 +270,41 @@ function buildUserSession(input: TownCityLoginInput & {
     user_id: readString(input.user_id) || undefined,
     user_label: readString(input.user_label) || undefined,
     updated_at: new Date().toISOString(),
+  };
+}
+
+async function buildVerifiedUserSession(input: TownCityLoginInput & {
+  user_token: string;
+  user_id?: string;
+  user_label?: string;
+}): Promise<TownCityUserSession> {
+  const verified = await readUserSessionFromToken(input);
+  return buildUserSession({
+    ...input,
+    user_id: verified.user_id || input.user_id,
+    user_label: verified.user_label || input.user_label,
+  });
+}
+
+async function readUserSessionFromToken(input: TownCityLoginInput & {
+  user_token: string;
+}): Promise<{
+  user_id?: string;
+  user_label?: string;
+}> {
+  const client = new City({
+    role: "user",
+    city_url: input.city_url,
+    town_id: input.town_id,
+    user_token: input.user_token,
+  });
+  const result = await client.service("accounts").get<AccountsMeResult>("me");
+  const user_id = readString(result.user?.user_id);
+  const email = readString(result.profile?.email);
+  const display_name = readString(result.profile?.display_name);
+  return {
+    user_id: user_id || undefined,
+    user_label: email || display_name || user_id || undefined,
   };
 }
 

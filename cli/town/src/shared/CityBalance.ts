@@ -21,6 +21,18 @@ import type { TownCityUserSession } from "../types/TownCitySession.js";
 
 const DEFAULT_PAYMENT_METHOD_ID = "stripe";
 
+interface TownCityAccountsMeResult {
+  /**
+   * 当前 token 解析出的 user。
+   */
+  user?: {
+    /**
+     * City 用户 ID。
+     */
+    user_id?: string;
+  };
+}
+
 /**
  * 读取当前 Town City user 的余额。
  */
@@ -29,7 +41,11 @@ export async function readCurrentTownCityBalance(
 ): Promise<TownCityBalanceAccount | null> {
   const client = createCurrentUserCityClient(session);
   if (!client) return null;
-  return await client.service("balance").get<TownCityBalanceAccount>("me");
+  const current_user_id = await readCurrentTokenUserId(client);
+  assertSessionUserMatchesToken(session, current_user_id);
+  const account = await client.service("balance").get<TownCityBalanceAccount>("me");
+  assertBalanceUserMatchesToken(account, current_user_id);
+  return account;
 }
 
 /**
@@ -42,6 +58,8 @@ export async function rechargeCurrentTownCityUser(
   const client = createCurrentUserCityClient(session);
   if (!client) return null;
 
+  const current_user_id = await readCurrentTokenUserId(client);
+  assertSessionUserMatchesToken(session, current_user_id);
   const amount = normalizePositiveInteger(input.amount, "amount");
   const method_id = normalizeText(input.method_id) || DEFAULT_PAYMENT_METHOD_ID;
   const topup = await client.service("balance").action("topups/create").invoke<TownCityBalanceTopup>({
@@ -66,6 +84,44 @@ export async function rechargeCurrentTownCityUser(
     method_id,
     opened,
   };
+}
+
+async function readCurrentTokenUserId(client: City<"user">): Promise<string> {
+  const result = await client.service("accounts").get<TownCityAccountsMeResult>("me");
+  const user_id = normalizeText(result.user?.user_id);
+  if (!user_id) {
+    throw new Error("City user token resolved without a user_id. Please run `town city login` again.");
+  }
+  return user_id;
+}
+
+function assertSessionUserMatchesToken(
+  session: TownCityUserSession | null,
+  token_user_id: string,
+): void {
+  const session_user_id = normalizeText(session?.user_id);
+  if (session_user_id && session_user_id !== token_user_id) {
+    throw new Error([
+      "Town City session user does not match the authenticated token.",
+      `session=${session_user_id}`,
+      `token=${token_user_id}`,
+      "Run `town city logout` and then `town city login`.",
+    ].join(" "));
+  }
+}
+
+function assertBalanceUserMatchesToken(
+  account: TownCityBalanceAccount,
+  token_user_id: string,
+): void {
+  if (account.user_id !== token_user_id) {
+    throw new Error([
+      "Balance account user does not match the authenticated token.",
+      `balance=${account.user_id}`,
+      `token=${token_user_id}`,
+      "Run `town city logout` and then `town city login`.",
+    ].join(" "));
+  }
 }
 
 /**

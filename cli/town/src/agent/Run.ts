@@ -22,7 +22,7 @@ import { createBuiltinPlugins } from "@downcity/plugins";
 import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "../town/city-model/CreateRuntimeModel.js";
-import { readPlatformGlobalEnv } from "../env/ProcessEnv.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "../env/ProcessEnv.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 import { startAgentHttpGateway } from "./AgentHttpGateway.js";
 
@@ -41,7 +41,7 @@ export async function runCommand(
   options: AgentStartOptions,
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
-  const hostEnv = readPlatformGlobalEnv();
+  const hostEnv = mergeProcessEnvWithPlatformGlobalEnv();
   // 端口解析（中文）：允许 number / string；空值返回 undefined 以便走配置回退链。
   const parsePort = (
     value: string | number | undefined,

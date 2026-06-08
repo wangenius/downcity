@@ -20,5 +20,5 @@ export declare function readPlatformGlobalEnv(): Record<string, string>;
  * - 平台 global env 视为宿主层统一真相，应覆盖基础进程环境中的同名键。
  * - 返回新对象，不直接修改传入参数。
  */
-export declare function mergeProcessEnvWithPlatformGlobalEnv(baseEnv?: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+export declare function mergeProcessEnvWithPlatformGlobalEnv(baseEnv?: NodeJS.ProcessEnv): Record<string, string>;
 //# sourceMappingURL=ProcessEnv.d.ts.map

@@ -94,11 +94,12 @@ async function emailLogin(input) {
     const result = await client.service("accounts").action("login").invoke({
         email,
         password,
+        town_id: input.town_id,
     });
     if (result.error || !result.user_token) {
         throw new Error(result.error || "login failed: no token");
     }
-    return buildUserSession({
+    return await buildVerifiedUserSession({
         ...input,
         user_token: result.user_token,
         user_id: result.user_id,
@@ -148,11 +149,12 @@ async function emailRegister(input) {
         return null;
     const verified = await accounts.action("verify-email").invoke({
         token: verification_token,
+        town_id: input.town_id,
     });
     if (verified.error || !verified.user_token) {
         throw new Error(verified.error || "verification failed: no token");
     }
-    return buildUserSession({
+    return await buildVerifiedUserSession({
         ...input,
         user_token: verified.user_token,
         user_id: verified.user_id || registered.user_id,
@@ -164,6 +166,7 @@ async function oauthAuth(input, provider) {
     const accounts = client.service("accounts");
     const started = await accounts.action("oauth/start").invoke({
         provider,
+        town_id: input.town_id,
     });
     if (started.error || !started.url || !started.state) {
         throw new Error(started.error || "failed to start OAuth");
@@ -178,7 +181,7 @@ async function oauthAuth(input, provider) {
     if (!result || result.error || !result.user_token) {
         throw new Error(result?.error || "OAuth failed");
     }
-    return buildUserSession({
+    return await buildVerifiedUserSession({
         ...input,
         user_token: result.user_token,
         user_id: result.user_id,
@@ -210,6 +213,30 @@ function buildUserSession(input) {
         user_id: readString(input.user_id) || undefined,
         user_label: readString(input.user_label) || undefined,
         updated_at: new Date().toISOString(),
+    };
+}
+async function buildVerifiedUserSession(input) {
+    const verified = await readUserSessionFromToken(input);
+    return buildUserSession({
+        ...input,
+        user_id: verified.user_id || input.user_id,
+        user_label: verified.user_label || input.user_label,
+    });
+}
+async function readUserSessionFromToken(input) {
+    const client = new City({
+        role: "user",
+        city_url: input.city_url,
+        town_id: input.town_id,
+        user_token: input.user_token,
+    });
+    const result = await client.service("accounts").get("me");
+    const user_id = readString(result.user?.user_id);
+    const email = readString(result.profile?.email);
+    const display_name = readString(result.profile?.display_name);
+    return {
+        user_id: user_id || undefined,
+        user_label: email || display_name || user_id || undefined,
     };
 }
 function openBrowser(url) {

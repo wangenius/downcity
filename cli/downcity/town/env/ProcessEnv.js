@@ -33,8 +33,13 @@ export function readPlatformGlobalEnv() {
  * - 返回新对象，不直接修改传入参数。
  */
 export function mergeProcessEnvWithPlatformGlobalEnv(baseEnv = process.env) {
+    const merged = {};
+    for (const [key, value] of Object.entries(baseEnv)) {
+        if (typeof value === "string")
+            merged[key] = value;
+    }
     return {
-        ...baseEnv,
+        ...merged,
         ...readPlatformGlobalEnv(),
     };
 }

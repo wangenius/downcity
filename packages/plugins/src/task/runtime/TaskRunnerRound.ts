@@ -296,8 +296,8 @@ export async function runScriptTask(params: {
       stripTaskSecretEnv(childEnv);
       return runSandboxCommand({
         context: params.context,
-        shellId: `task-script:${params.sessionId}`,
-        shellDir: params.runDirAbs,
+        executionId: `task-script:${params.sessionId}`,
+        executionDir: params.runDirAbs,
         cmd: `sh "${scriptAbs.replace(/(["\\$`])/g, "\\$1")}"`,
         cwd: params.runDirAbs,
         shellPath: "/bin/sh",

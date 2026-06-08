@@ -50,7 +50,6 @@ description: downcity.json 中用户最常用字段与注意事项
 {
   "sandbox": {
     "networkMode": "off",
-    "writablePaths": [".", ".downcity"],
     "envAllowlist": ["PATH", "LANG", "TERM", "SHELL"]
   }
 }
@@ -62,7 +61,11 @@ description: downcity.json 中用户最常用字段与注意事项
 - 当前支持 macOS 与 Linux：macOS 使用系统自带 `sandbox-exec`，Linux 使用 `bubblewrap`（命令名 `bwrap`）
 - 不支持关闭 sandbox，也不会回退到宿主机普通子进程执行
 - 未挂入 sandbox 的宿主路径默认不可见
-- `writablePaths` 只允许写项目根目录内的路径
+- 项目根目录和 `.downcity/sandbox` 默认可写
+- `writablePaths` 用于追加项目内可写路径，且只能位于项目根目录内
+- sandbox 子进程共享 `.downcity/sandbox` 作为持久 `HOME`，并使用 `.downcity/sandbox/tmp` 作为 `TMPDIR`、`.downcity/sandbox/.cache` 作为 `XDG_CACHE_HOME`
+- 支持项目内安装与缓存，例如 `.venv`、`node_modules`、下载到项目内的模型和缓存文件
+- `sudo`、`brew install`、Xcode 工具安装，或写 `/usr/local`、`/opt/homebrew`、`/System` 这类宿主系统目录，不属于 sandbox 可执行边界
 - 默认网络是放开的；未显式配置时等价于 `networkMode="full"`
 - `networkMode="off"` 时禁止联网
 - `networkMode="restricted"` 当前先按放开网络处理

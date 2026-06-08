@@ -95,7 +95,6 @@ Example:
 {
   "sandbox": {
     "networkMode": "off",
-    "writablePaths": [".", ".downcity"],
     "envAllowlist": ["PATH", "LANG", "TERM", "SHELL"]
   }
 }
@@ -109,9 +108,10 @@ Field notes:
   - `restricted`: currently handled the same as open network
   - `full`: allows network access
 - `sandbox.writablePaths`
-  - Writable path list
+  - Additional writable path list
   - Relative paths resolve from the project root
   - Current implementation only allows paths inside the project root
+  - The project root and `.downcity/sandbox` remain writable by default
 - `sandbox.envAllowlist`
   - Environment variable names that may be exported into the sandbox
 
@@ -121,7 +121,10 @@ Current boundary:
 - Shell commands are required to go through sandbox and do not fall back to an unrestricted host process
 - `kind=script` task bodies also run through the same sandbox backend
 - Host paths not mounted into the sandbox are not visible
-- Isolated `HOME` / `TMPDIR` live under `.downcity/shell/<shellId>/sandbox/`
+- The agent sandbox persists at `.downcity/sandbox/`
+- Sandbox child processes use `.downcity/sandbox/` as `HOME`, `.downcity/sandbox/tmp` as `TMPDIR`, and `.downcity/sandbox/.cache` as `XDG_CACHE_HOME`
+- Project files, project-local `.venv`, `node_modules`, and downloaded model/cache files under the project are writable by default
+- Real user home and system directories such as `/usr/local`, `/opt/homebrew`, and `/System` are not writable from sandbox commands
 - Linux requires `bubblewrap` to be installed and unprivileged user namespaces to be enabled
 
 ## Related docs

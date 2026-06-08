@@ -3,6 +3,7 @@
  *
  * 关键点（中文）
  * - 这里负责把 `downcity.json` 中面向用户的最小配置，收敛成运行时可直接执行的绝对路径配置。
+ * - sandbox 是 agent 项目级能力，持久目录固定为 `<project>/.downcity/sandbox`。
  * - 当前版本只服务 shell / CLI 这条命令执行链，不引入审批、profile 绑定或用户权限系统。
  * - 解析结果只回答一个问题：这次命令执行的 sandbox 边界是什么。
  */
@@ -23,6 +24,8 @@ const DEFAULT_ENV_ALLOWLIST = [
   "USER",
   "LOGNAME",
 ];
+
+const SANDBOX_RELATIVE_DIR = path.join(".downcity", "sandbox");
 
 function normalizeEnvAllowlist(values?: string[]): string[] {
   const seen = new Set<string>();
@@ -49,14 +52,15 @@ export function isPathInsideRoot(rootPath: string, targetPath: string): boolean 
 
 function normalizeWritablePaths(params: {
   rootPath: string;
+  sandboxDir: string;
   writablePaths?: string[];
   context: AgentContext;
 }): string[] {
-  const { rootPath, writablePaths, context } = params;
+  const { rootPath, sandboxDir, writablePaths, context } = params;
   const rawValues =
     Array.isArray(writablePaths) && writablePaths.length > 0
-      ? writablePaths
-      : [rootPath];
+      ? [rootPath, sandboxDir, ...writablePaths]
+      : [rootPath, sandboxDir];
   const seen = new Set<string>();
   const result: string[] = [];
 
@@ -102,13 +106,21 @@ export function resolveSandboxBackend(): SandboxBackend {
 export function resolveSandboxConfig(context: AgentContext): ResolvedSandboxConfig {
   const rootPath = path.resolve(context.rootPath);
   const projectConfig = context.config?.sandbox;
+  const sandboxDir = path.join(rootPath, SANDBOX_RELATIVE_DIR);
+  const tmpDir = path.join(sandboxDir, "tmp");
+  const cacheDir = path.join(sandboxDir, ".cache");
 
   return {
     backend: resolveSandboxBackend(),
     rootPath,
+    sandboxDir,
+    homeDir: sandboxDir,
+    tmpDir,
+    cacheDir,
     envAllowlist: normalizeEnvAllowlist(projectConfig?.envAllowlist),
     writablePaths: normalizeWritablePaths({
       rootPath,
+      sandboxDir,
       writablePaths: projectConfig?.writablePaths,
       context,
     }),

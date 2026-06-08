@@ -59,6 +59,10 @@ action 名称是 `exec`、`start`、`status`、`read`、`write`、`wait`、`clos
 ## 关键语义
 
 - shell sessions 归属于 plugin 实例，而不是模块级全局单例
+- `shell` 不拥有 sandbox。每条命令都会进入当前 agent sandbox 执行，持久目录是 `.downcity/sandbox`
+- `shellId` 只标识 `.downcity/shell/<shellId>` 下的会话日志与进程生命周期，不决定 sandbox HOME、cache 或权限
+- sandbox 命令默认可读写项目目录、可联网，并共享 `.downcity/sandbox` 作为 `HOME`
+- sandbox 命令不能写真实用户 HOME，也不能写 `/usr/local`、`/opt/homebrew`、`/System` 等宿主系统目录
 - `start` lifecycle 负责绑定 runtime
 - `stop` lifecycle 会关闭全部 shell sessions，并清空内存状态
 

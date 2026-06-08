@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 当前最小实现直接基于系统自带 `sandbox-exec`。
  * - 目标不是抽象完整 provider 体系，而是先把 shell 命令从“宿主机直跑”收敛成“带边界执行”。
- * - 边界只保留四类：路径、环境变量、网络、隔离后的 HOME/TMPDIR。
+ * - 边界只保留四类：路径、环境变量、网络、agent 级共享 HOME/TMPDIR/cache。
  */
 
 import { spawn } from "node:child_process";
@@ -37,8 +37,9 @@ function dedupePaths(values: string[]): string[] {
 function buildReadablePaths(params: {
   rootPath: string;
   shellPath: string;
-  shellHomeDir: string;
-  shellTmpDir: string;
+  sandboxDir: string;
+  tmpDir: string;
+  cacheDir: string;
 }): string[] {
   return dedupePaths([
     "/bin",
@@ -50,21 +51,20 @@ function buildReadablePaths(params: {
     "/opt/homebrew",
     "/usr/local",
     params.rootPath,
-    params.shellHomeDir,
-    params.shellTmpDir,
+    params.sandboxDir,
+    params.tmpDir,
+    params.cacheDir,
     path.dirname(params.shellPath),
   ]);
 }
 
-function buildWritablePaths(params: SandboxSpawnParams & {
-  shellHomeDir: string;
-  shellTmpDir: string;
-}): string[] {
+function buildWritablePaths(params: SandboxSpawnParams): string[] {
   return dedupePaths([
     ...params.config.writablePaths,
-    params.shellDir,
-    params.shellHomeDir,
-    params.shellTmpDir,
+    params.executionDir,
+    params.config.sandboxDir,
+    params.config.tmpDir,
+    params.config.cacheDir,
   ]);
 }
 
@@ -77,20 +77,15 @@ function buildNetworkRules(networkMode: SandboxSpawnParams["config"]["networkMod
 
 function buildSeatbeltProfile(params: SandboxSpawnParams & {
   actualCwd: string;
-  shellHomeDir: string;
-  shellTmpDir: string;
 }): string {
   const readablePaths = buildReadablePaths({
     rootPath: params.config.rootPath,
     shellPath: params.shellPath,
-    shellHomeDir: params.shellHomeDir,
-    shellTmpDir: params.shellTmpDir,
+    sandboxDir: params.config.sandboxDir,
+    tmpDir: params.config.tmpDir,
+    cacheDir: params.config.cacheDir,
   });
-  const writablePaths = buildWritablePaths({
-    ...params,
-    shellHomeDir: params.shellHomeDir,
-    shellTmpDir: params.shellTmpDir,
-  });
+  const writablePaths = buildWritablePaths(params);
   const lines = [
     "(version 1)",
     "(deny default)",
@@ -116,10 +111,7 @@ function buildSeatbeltProfile(params: SandboxSpawnParams & {
   return `${lines.join("\n")}\n`;
 }
 
-function buildSandboxEnv(params: SandboxSpawnParams & {
-  shellHomeDir: string;
-  shellTmpDir: string;
-}): NodeJS.ProcessEnv {
+function buildSandboxEnv(params: SandboxSpawnParams): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const key of params.config.envAllowlist) {
     const value = params.baseEnv[key];
@@ -134,9 +126,14 @@ function buildSandboxEnv(params: SandboxSpawnParams & {
   }
 
   env.PATH = String(env.PATH || params.baseEnv.PATH || DEFAULT_PATH_VALUE);
-  env.HOME = params.shellHomeDir;
-  env.ZDOTDIR = params.shellHomeDir;
-  env.TMPDIR = params.shellTmpDir;
+  env.HOME = params.config.homeDir;
+  env.ZDOTDIR = params.config.homeDir;
+  env.TMPDIR = params.config.tmpDir;
+  env.XDG_CACHE_HOME = params.config.cacheDir;
+  env.DC_SANDBOX = "1";
+  env.DC_SANDBOX_DIR = params.config.sandboxDir;
+  env.DC_SANDBOX_HOME = params.config.homeDir;
+  env.DC_SANDBOX_CACHE = params.config.cacheDir;
   env.SHELL = params.shellPath;
 
   return env;
@@ -148,18 +145,15 @@ function buildSandboxEnv(params: SandboxSpawnParams & {
 export async function spawnMacOsSeatbeltSandbox(
   params: SandboxSpawnParams & { actualCwd: string },
 ): Promise<SandboxSpawnResult> {
-  const sandboxRootDir = path.join(params.shellDir, "sandbox");
-  const shellHomeDir = path.join(sandboxRootDir, "home");
-  const shellTmpDir = path.join(sandboxRootDir, "tmp");
-  const profilePath = path.join(sandboxRootDir, "profile.sb");
+  const profilePath = path.join(params.executionDir, "sandbox-profile.sb");
 
-  await fs.ensureDir(shellHomeDir);
-  await fs.ensureDir(shellTmpDir);
+  await fs.ensureDir(params.config.sandboxDir);
+  await fs.ensureDir(params.config.tmpDir);
+  await fs.ensureDir(params.config.cacheDir);
+  await fs.ensureDir(params.executionDir);
 
   const profile = buildSeatbeltProfile({
     ...params,
-    shellHomeDir,
-    shellTmpDir,
   });
   await fs.writeFile(profilePath, profile, "utf-8");
 
@@ -175,11 +169,7 @@ export async function spawnMacOsSeatbeltSandbox(
     {
       cwd: params.actualCwd,
       stdio: "pipe",
-      env: buildSandboxEnv({
-        ...params,
-        shellHomeDir,
-        shellTmpDir,
-      }),
+      env: buildSandboxEnv(params),
     },
   );
 
@@ -192,5 +182,9 @@ export async function spawnMacOsSeatbeltSandbox(
     sandboxed: true,
     backend: "macos-seatbelt",
     networkMode: params.config.networkMode,
+    sandboxDir: params.config.sandboxDir,
+    homeDir: params.config.homeDir,
+    tmpDir: params.config.tmpDir,
+    cacheDir: params.config.cacheDir,
   };
 }

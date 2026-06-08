@@ -102,7 +102,6 @@ agent 启动时：
 {
   "sandbox": {
     "networkMode": "off",
-    "writablePaths": [".", ".downcity"],
     "envAllowlist": ["PATH", "LANG", "TERM", "SHELL"]
   }
 }
@@ -116,9 +115,10 @@ agent 启动时：
   - `restricted`：当前先按放开网络处理
   - `full`：允许网络访问
 - `sandbox.writablePaths`
-  - 允许写入的路径列表
+  - 额外允许写入的路径列表
   - 可以写相对路径，默认相对项目根目录解析
   - 当前只允许项目根目录内路径
+  - 项目根目录和 `.downcity/sandbox` 默认始终可写
 - `sandbox.envAllowlist`
   - 允许导出到 sandbox 的环境变量名列表
 
@@ -128,7 +128,10 @@ agent 启动时：
 - shell 命令强制经过 sandbox，不支持关闭，也不会回退到宿主机普通子进程执行
 - `kind=script` 的 task 正文也通过同一套 sandbox backend 执行
 - 未挂入 sandbox 的宿主路径默认不可见
-- shell 的隔离 `HOME` / `TMPDIR` 会落在 `.downcity/shell/<shellId>/sandbox/`
+- agent sandbox 持久目录是 `.downcity/sandbox/`
+- sandbox 子进程使用 `.downcity/sandbox/` 作为 `HOME`，`.downcity/sandbox/tmp` 作为 `TMPDIR`，`.downcity/sandbox/.cache` 作为 `XDG_CACHE_HOME`
+- 项目文件、项目内 `.venv`、`node_modules`、下载到项目内的模型和缓存默认可写
+- 真实用户 HOME 以及 `/usr/local`、`/opt/homebrew`、`/System` 等系统目录默认不可写
 - Linux 需要预先安装 `bubblewrap`，并确保系统允许 unprivileged user namespaces
 
 ## 相关文档

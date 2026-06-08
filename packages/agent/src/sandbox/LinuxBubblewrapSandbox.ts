@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 基于 `bwrap` 提供 Linux 本机 shell sandbox。
  * - 继续保持“shell 命令必须进入 sandbox”的安全语义，不提供宿主机裸跑回退。
- * - 边界与 macOS backend 对齐：路径、环境变量、网络、隔离 HOME/TMPDIR。
+ * - 边界与 macOS backend 对齐：路径、环境变量、网络、agent 级共享 HOME/TMPDIR/cache。
  */
 
 import { spawn } from "node:child_process";
@@ -34,8 +34,9 @@ function dedupeExistingPaths(values: string[]): string[] {
 function buildReadablePaths(params: {
   rootPath: string;
   shellPath: string;
-  shellHomeDir: string;
-  shellTmpDir: string;
+  sandboxDir: string;
+  tmpDir: string;
+  cacheDir: string;
 }): string[] {
   return dedupeExistingPaths([
     "/usr",
@@ -45,21 +46,20 @@ function buildReadablePaths(params: {
     "/lib64",
     "/etc",
     params.rootPath,
-    params.shellHomeDir,
-    params.shellTmpDir,
+    params.sandboxDir,
+    params.tmpDir,
+    params.cacheDir,
     path.dirname(params.shellPath),
   ]);
 }
 
-function buildWritablePaths(params: SandboxSpawnParams & {
-  shellHomeDir: string;
-  shellTmpDir: string;
-}): string[] {
+function buildWritablePaths(params: SandboxSpawnParams): string[] {
   return dedupeExistingPaths([
     ...params.config.writablePaths,
-    params.shellDir,
-    params.shellHomeDir,
-    params.shellTmpDir,
+    params.executionDir,
+    params.config.sandboxDir,
+    params.config.tmpDir,
+    params.config.cacheDir,
   ]);
 }
 
@@ -73,10 +73,7 @@ function isPathCoveredBy(paths: string[], targetPath: string): boolean {
   });
 }
 
-function buildSandboxEnv(params: SandboxSpawnParams & {
-  shellHomeDir: string;
-  shellTmpDir: string;
-}): NodeJS.ProcessEnv {
+function buildSandboxEnv(params: SandboxSpawnParams): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const key of params.config.envAllowlist) {
     const value = params.baseEnv[key];
@@ -91,8 +88,13 @@ function buildSandboxEnv(params: SandboxSpawnParams & {
   }
 
   env.PATH = String(env.PATH || params.baseEnv.PATH || DEFAULT_PATH_VALUE);
-  env.HOME = params.shellHomeDir;
-  env.TMPDIR = params.shellTmpDir;
+  env.HOME = params.config.homeDir;
+  env.TMPDIR = params.config.tmpDir;
+  env.XDG_CACHE_HOME = params.config.cacheDir;
+  env.DC_SANDBOX = "1";
+  env.DC_SANDBOX_DIR = params.config.sandboxDir;
+  env.DC_SANDBOX_HOME = params.config.homeDir;
+  env.DC_SANDBOX_CACHE = params.config.cacheDir;
   env.SHELL = params.shellPath;
 
   return env;
@@ -119,20 +121,15 @@ function addParentDirs(args: string[], targetPath: string, createdDirs: Set<stri
 
 export function buildLinuxBubblewrapArgs(params: SandboxSpawnParams & {
   actualCwd: string;
-  shellHomeDir: string;
-  shellTmpDir: string;
 }): string[] {
   const readablePaths = buildReadablePaths({
     rootPath: params.config.rootPath,
     shellPath: params.shellPath,
-    shellHomeDir: params.shellHomeDir,
-    shellTmpDir: params.shellTmpDir,
+    sandboxDir: params.config.sandboxDir,
+    tmpDir: params.config.tmpDir,
+    cacheDir: params.config.cacheDir,
   });
-  const writablePaths = buildWritablePaths({
-    ...params,
-    shellHomeDir: params.shellHomeDir,
-    shellTmpDir: params.shellTmpDir,
-  });
+  const writablePaths = buildWritablePaths(params);
   const writableSet = new Set(writablePaths);
   const createdDirs = new Set<string>();
   const mountedPaths: string[] = [];
@@ -159,9 +156,8 @@ export function buildLinuxBubblewrapArgs(params: SandboxSpawnParams & {
   }
 
   for (const writablePath of writablePaths) {
-    if (!isPathCoveredBy(mountedPaths, writablePath)) {
-      addParentDirs(args, writablePath, createdDirs);
-    }
+    if (isPathCoveredBy(mountedPaths, writablePath)) continue;
+    addParentDirs(args, writablePath, createdDirs);
     addWritableBind(args, writablePath);
     mountedPaths.push(writablePath);
   }
@@ -192,28 +188,20 @@ export function buildLinuxBubblewrapArgs(params: SandboxSpawnParams & {
 export async function spawnLinuxBubblewrapSandbox(
   params: SandboxSpawnParams & { actualCwd: string },
 ): Promise<SandboxSpawnResult> {
-  const sandboxRootDir = path.join(params.shellDir, "sandbox");
-  const shellHomeDir = path.join(sandboxRootDir, "home");
-  const shellTmpDir = path.join(sandboxRootDir, "tmp");
-
-  await fs.ensureDir(shellHomeDir);
-  await fs.ensureDir(shellTmpDir);
+  await fs.ensureDir(params.config.sandboxDir);
+  await fs.ensureDir(params.config.tmpDir);
+  await fs.ensureDir(params.config.cacheDir);
+  await fs.ensureDir(params.executionDir);
   for (const writablePath of params.config.writablePaths) {
     await fs.ensureDir(writablePath);
   }
 
   const child = spawn("bwrap", buildLinuxBubblewrapArgs({
     ...params,
-    shellHomeDir,
-    shellTmpDir,
   }), {
     cwd: params.actualCwd,
     stdio: "pipe",
-    env: buildSandboxEnv({
-      ...params,
-      shellHomeDir,
-      shellTmpDir,
-    }),
+    env: buildSandboxEnv(params),
   });
 
   child.stdout.setEncoding("utf8");
@@ -225,5 +213,9 @@ export async function spawnLinuxBubblewrapSandbox(
     sandboxed: true,
     backend: "linux-bubblewrap",
     networkMode: params.config.networkMode,
+    sandboxDir: params.config.sandboxDir,
+    homeDir: params.config.homeDir,
+    tmpDir: params.config.tmpDir,
+    cacheDir: params.config.cacheDir,
   };
 }

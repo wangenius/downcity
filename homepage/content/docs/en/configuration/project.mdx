@@ -50,7 +50,6 @@ In the current version, `shell` / CLI commands always run inside a sandbox. Proj
 {
   "sandbox": {
     "networkMode": "off",
-    "writablePaths": [".", ".downcity"],
     "envAllowlist": ["PATH", "LANG", "TERM", "SHELL"]
   }
 }
@@ -62,7 +61,11 @@ Current behavior:
 - Current backends support macOS and Linux: macOS uses built-in `sandbox-exec`; Linux uses `bubblewrap` (`bwrap`)
 - Sandbox cannot be disabled and shell execution does not fall back to an unrestricted host process
 - Host paths not mounted into the sandbox are not visible
-- `writablePaths` must stay inside the project root
+- The project root and `.downcity/sandbox` are writable by default
+- `writablePaths` adds project-local writable paths and must stay inside the project root
+- Sandbox child processes share `.downcity/sandbox` as their persistent `HOME`, with `.downcity/sandbox/tmp` for `TMPDIR` and `.downcity/sandbox/.cache` for `XDG_CACHE_HOME`
+- Project-local installs such as `.venv`, `node_modules`, and downloaded model/cache files under the project are supported
+- Host-level installs such as `sudo`, `brew install`, Xcode tools, or writes to `/usr/local`, `/opt/homebrew`, and `/System` are outside the sandbox boundary
 - Network is open by default; omitting the field behaves like `networkMode="full"`
 - `networkMode="off"` blocks network access
 - `networkMode="restricted"` is currently handled the same as open network

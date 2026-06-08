@@ -54,6 +54,14 @@ export type ShellSessionSnapshot = {
   sandboxBackend?: string;
   /** 当前 shell 采用的 sandbox 网络模式。 */
   sandboxNetworkMode?: "off" | "restricted" | "full";
+  /** 当前 agent 级 sandbox 的持久目录。 */
+  sandboxDir?: string;
+  /** 当前 shell 在 sandbox 中使用的 HOME。 */
+  sandboxHomeDir?: string;
+  /** 当前 shell 在 sandbox 中使用的临时目录。 */
+  sandboxTmpDir?: string;
+  /** 当前 shell 在 sandbox 中使用的 XDG cache 目录。 */
+  sandboxCacheDir?: string;
   /** 当前 shell 状态。 */
   status: ShellSessionStatus;
   /** 子进程 pid；若尚未创建成功则为空。 */

@@ -2,9 +2,9 @@
  * SandboxRunner 入口。
  *
  * 关键点（中文）
- * - 这里不实现完整的 session/read/write 协议，只负责 shell 子进程创建时统一进入 sandbox backend。
+ * - 这里不实现完整的 session/read/write 协议，只负责本地子进程创建时统一进入 agent sandbox backend。
  * - 当前版本接入 macOS seatbelt 与 Linux bubblewrap backend。
- * - shell 命令不再允许回退到宿主机普通子进程执行。
+ * - 本地命令不再允许回退到宿主机普通子进程执行。
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
@@ -26,6 +26,31 @@ export async function spawnShellProcess(params: {
   login: boolean;
   baseEnv: NodeJS.ProcessEnv;
 }): Promise<SandboxSpawnResult> {
+  return spawnInSandbox({
+    context: params.context,
+    executionId: params.shellId,
+    executionDir: params.shellDir,
+    cmd: params.cmd,
+    cwd: params.cwd,
+    shellPath: params.shellPath,
+    login: params.login,
+    baseEnv: params.baseEnv,
+  });
+}
+
+/**
+ * 在当前 agent sandbox 中启动本地子进程。
+ */
+export async function spawnInSandbox(params: {
+  context: AgentContext;
+  executionId: string;
+  executionDir: string;
+  cmd: string;
+  cwd: string;
+  shellPath: string;
+  login: boolean;
+  baseEnv: NodeJS.ProcessEnv;
+}): Promise<SandboxSpawnResult> {
   const config = resolveSandboxConfig(params.context);
   const actualCwd = resolveSandboxCwd({
     rootPath: config.rootPath,
@@ -33,8 +58,8 @@ export async function spawnShellProcess(params: {
     context: params.context,
   });
   const spawnParams = {
-    shellId: params.shellId,
-    shellDir: params.shellDir,
+    executionId: params.executionId,
+    executionDir: params.executionDir,
     cmd: params.cmd,
     cwd: params.cwd,
     shellPath: params.shellPath,
@@ -61,8 +86,8 @@ export async function spawnShellProcess(params: {
  */
 export async function runSandboxCommand(params: {
   context: AgentContext;
-  shellId: string;
-  shellDir: string;
+  executionId: string;
+  executionDir: string;
   cmd: string;
   cwd: string;
   shellPath: string;
@@ -74,7 +99,7 @@ export async function runSandboxCommand(params: {
   exitCode: number;
   spawn: SandboxSpawnResult;
 }> {
-  const spawn = await spawnShellProcess(params);
+  const spawn = await spawnInSandbox(params);
   const stdoutChunks: string[] = [];
   const stderrChunks: string[] = [];
 

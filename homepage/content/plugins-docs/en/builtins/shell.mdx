@@ -59,6 +59,10 @@ The action names are `exec`, `start`, `status`, `read`, `write`, `wait`, and `cl
 ## Important semantics
 
 - shell sessions belong to the plugin instance, not to a module-global singleton
+- `shell` does not own the sandbox. Each command is spawned inside the current agent sandbox, whose persistent directory is `.downcity/sandbox`
+- `shellId` only identifies the session log and process lifecycle under `.downcity/shell/<shellId>`; it does not decide sandbox HOME, cache, or permissions
+- Sandbox commands can read and write the project, use network by default, and share `.downcity/sandbox` as `HOME`
+- Sandbox commands cannot write the real user home or host system locations such as `/usr/local`, `/opt/homebrew`, and `/System`
 - `start` lifecycle binds runtime
 - `stop` lifecycle closes all shell sessions and clears in-memory state
 

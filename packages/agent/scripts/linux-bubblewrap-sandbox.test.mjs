@@ -19,26 +19,29 @@ async function createSandboxFixture() {
   const projectRoot = path.join(root, "project");
   const writablePath = path.join(projectRoot, ".downcity");
   const shellDir = path.join(writablePath, "shell", "sh_test");
-  const shellHomeDir = path.join(shellDir, "sandbox", "home");
-  const shellTmpDir = path.join(shellDir, "sandbox", "tmp");
+  const sandboxDir = path.join(projectRoot, ".downcity", "sandbox");
+  const tmpDir = path.join(sandboxDir, "tmp");
+  const cacheDir = path.join(sandboxDir, ".cache");
 
-  await fs.mkdir(shellHomeDir, { recursive: true });
-  await fs.mkdir(shellTmpDir, { recursive: true });
+  await fs.mkdir(shellDir, { recursive: true });
+  await fs.mkdir(tmpDir, { recursive: true });
+  await fs.mkdir(cacheDir, { recursive: true });
 
   return {
     root,
     projectRoot,
     writablePath,
     shellDir,
-    shellHomeDir,
-    shellTmpDir,
+    sandboxDir,
+    tmpDir,
+    cacheDir,
   };
 }
 
 function createParams(fixture, overrides = {}) {
   return {
-    shellId: "sh_test",
-    shellDir: fixture.shellDir,
+    executionId: "sh_test",
+    executionDir: fixture.shellDir,
     cmd: "printf hello",
     cwd: fixture.projectRoot,
     actualCwd: fixture.projectRoot,
@@ -52,12 +55,14 @@ function createParams(fixture, overrides = {}) {
     config: {
       backend: "linux-bubblewrap",
       rootPath: fixture.projectRoot,
+      sandboxDir: fixture.sandboxDir,
+      homeDir: fixture.sandboxDir,
+      tmpDir: fixture.tmpDir,
+      cacheDir: fixture.cacheDir,
       envAllowlist: ["PATH", "LANG"],
-      writablePaths: [fixture.writablePath],
+      writablePaths: [fixture.projectRoot, fixture.sandboxDir],
       networkMode: "off",
     },
-    shellHomeDir: fixture.shellHomeDir,
-    shellTmpDir: fixture.shellTmpDir,
     ...overrides,
   };
 }
@@ -96,9 +101,9 @@ test("Linux bubblewrap args isolate network and overlay writable project paths",
     assert.equal(hasArg(args, "--die-with-parent"), true);
     assert.equal(hasArg(args, "--unshare-pid"), true);
     assert.equal(hasArg(args, "--unshare-net"), true);
-    assert.equal(hasOptionPair(args, "--ro-bind", fixture.projectRoot), true);
-    assert.equal(hasOptionPair(args, "--bind", fixture.writablePath), true);
-    assert.equal(hasOptionPair(args, "--bind", fixture.projectRoot), false);
+    assert.equal(hasOptionPair(args, "--bind", fixture.projectRoot), true);
+    assert.equal(hasOptionPair(args, "--bind", fixture.sandboxDir), false);
+    assert.equal(hasOptionPair(args, "--ro-bind", fixture.projectRoot), false);
     assert.equal(hasOptionValue(args, "--dir", fixture.writablePath), false);
     assert.deepEqual(args.slice(-5), [
       "--chdir",
@@ -119,6 +124,10 @@ test("Linux bubblewrap args keep root writable when sandbox writablePaths includ
       config: {
         backend: "linux-bubblewrap",
         rootPath: fixture.projectRoot,
+        sandboxDir: fixture.sandboxDir,
+        homeDir: fixture.sandboxDir,
+        tmpDir: fixture.tmpDir,
+        cacheDir: fixture.cacheDir,
         envAllowlist: ["PATH"],
         writablePaths: [fixture.projectRoot],
         networkMode: "full",

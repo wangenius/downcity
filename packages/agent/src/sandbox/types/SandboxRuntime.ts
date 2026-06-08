@@ -3,8 +3,8 @@
  *
  * 关键点（中文）
  * - 这里放的是 agent 执行层内部使用的最小 sandbox 运行时类型。
- * - 当前只围绕 `SandboxRunner` 设计，不引入复杂 provider / policy / binding 对象。
- * - 目标是让 shell plugin runtime 可以直接把命令交给 `SandboxRunner` 执行。
+ * - 当前只围绕 agent 级 sandbox spawn 设计，不引入复杂 provider / policy / binding 对象。
+ * - 目标是让 shell、task script 等本地执行入口都能复用同一个 agent sandbox 边界。
  */
 
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
@@ -304,6 +304,30 @@ export interface ResolvedSandboxConfig extends SandboxConfig {
    * 当前运行时选中的 backend。
    */
   backend: SandboxBackend;
+
+  /**
+   * 当前 agent 级 sandbox 的持久目录。
+   *
+   * 说明（中文）
+   * - 该目录不属于某个 shellId，而属于当前 agent 项目。
+   * - shell、task script 等所有 sandbox 子进程共享它作为 HOME/cache 根。
+   */
+  sandboxDir: string;
+
+  /**
+   * sandbox 子进程使用的 HOME。
+   */
+  homeDir: string;
+
+  /**
+   * sandbox 子进程使用的临时目录。
+   */
+  tmpDir: string;
+
+  /**
+   * sandbox 子进程使用的 XDG cache 目录。
+   */
+  cacheDir: string;
 }
 
 /**
@@ -311,14 +335,18 @@ export interface ResolvedSandboxConfig extends SandboxConfig {
  */
 export interface SandboxSpawnParams {
   /**
-   * 当前 shell 会话标识。
+   * 当前执行记录标识。
+   *
+   * 说明（中文）
+   * - shell plugin 传入 shellId，task script 可以传入自己的 executionId。
+   * - 它只用于日志与诊断，不参与 sandbox HOME/cache/权限边界的计算。
    */
-  shellId: string;
+  executionId: string;
 
   /**
-   * shell 会话目录。
+   * 当前执行记录目录。
    */
-  shellDir: string;
+  executionDir: string;
 
   /**
    * 要执行的原始命令文本。
@@ -379,4 +407,24 @@ export interface SandboxSpawnResult {
    * 当前实际采用的网络模式。
    */
   networkMode: SandboxNetworkMode;
+
+  /**
+   * 当前 agent 级 sandbox 的持久目录。
+   */
+  sandboxDir: string;
+
+  /**
+   * 当前子进程使用的 HOME。
+   */
+  homeDir: string;
+
+  /**
+   * 当前子进程使用的临时目录。
+   */
+  tmpDir: string;
+
+  /**
+   * 当前子进程使用的 XDG cache 目录。
+   */
+  cacheDir: string;
 }

@@ -140,6 +140,11 @@ export function build_city_router(params: {
           action: { id: action.id },
           started_at: new Date(),
         };
+        try {
+          ctx.waitUntil = (promise) => c.executionCtx.waitUntil(promise);
+        } catch {
+          ctx.waitUntil = undefined;
+        }
 
         try {
           authenticator.authorize({

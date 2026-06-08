@@ -196,6 +196,164 @@ test("CityBase rejects mismatched town_id for authenticated user requests", asyn
   }
 })
 
+test("CityBase AI image jobs persist and finish through waitUntil", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const message = {
+      id: "msg_image_1",
+      role: "assistant",
+      parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
+    }
+
+    const ai = new AIService()
+    ai.use({
+      id: "echo-image",
+      name: "Echo Image",
+      default: ["image"],
+      actions: {
+        image: async () => message,
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const pending = []
+    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ prompt: "draw" }),
+    }), {
+      execution: {
+        waitUntil(promise) {
+          pending.push(promise)
+        },
+      },
+    })
+
+    assert.equal(createResponse.status, 200)
+    const created = await createResponse.json()
+    assert.equal(created.status, "queued")
+    assert.equal(typeof created.job_id, "string")
+
+    await Promise.all(pending)
+
+    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+
+    assert.equal(resultResponse.status, 200)
+    assert.deepEqual(await resultResponse.json(), {
+      job_id: created.job_id,
+      status: "succeeded",
+      result: message,
+      message: "succeeded",
+      poll_after_ms: 2000,
+    })
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("CityBase AI image jobs can advance through result polling", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-poll-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const message = {
+      id: "msg_image_1",
+      role: "assistant",
+      parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
+    }
+    let calls = 0
+
+    const ai = new AIService()
+    ai.use({
+      id: "step-image",
+      name: "Step Image",
+      default: ["image"],
+      actions: {
+        image: async () => message,
+        image_job: async (ctx) => {
+          calls += 1
+          const state = ctx.locals.image_job?.state
+          if (state?.upstream_job_id === "up_1") {
+            return { status: "succeeded", result: message, message: "succeeded" }
+          }
+          return {
+            status: "running",
+            state: { upstream_job_id: "up_1" },
+            message: "running",
+            poll_after_ms: 10,
+          }
+        },
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ prompt: "draw" }),
+    }))
+    const created = await createResponse.json()
+
+    const first = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+    assert.equal(first.status, 200)
+    assert.equal((await first.json()).status, "running")
+
+    const second = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+    assert.equal(second.status, 200)
+    assert.deepEqual(await second.json(), {
+      job_id: created.job_id,
+      status: "succeeded",
+      result: message,
+      message: "succeeded",
+      poll_after_ms: 2000,
+    })
+    assert.equal(calls, 2)
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("CityBase exposes service env requirements and env catalog", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-core-services-env-"))

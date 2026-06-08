@@ -20,19 +20,86 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", town_id: "town_demo" })
 })
 
-test("AIInvoker.image() posts to /v1/ai/image", async () => {
+test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
+  const requests = []
+  const client = new City({
+    role: "user",
+    city_url: "https://api.example.com/base/",
+    town_id: "town_demo",
+    user_token: "ub_test",
+    fetch: async (url, init) => {
+      requests.push({ url, init })
+      return json({ job_id: "img_1", status: "queued", poll_after_ms: 2000 })
+    },
+  })
+
+  const result = await client.ai.image_create({
+    prompt: "draw a mug",
+    model: "openai-gpt-image-1",
+    size: "1024x1024",
+    count: 1,
+  })
+
+  assert.deepEqual(result, { job_id: "img_1", status: "queued", poll_after_ms: 2000 })
+  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image/create")
+  assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
+  assert.deepEqual(JSON.parse(requests[0].init.body), {
+    prompt: "draw a mug",
+    model: "openai-gpt-image-1",
+    size: "1024x1024",
+    count: 1,
+    town_id: "town_demo",
+  })
+})
+
+test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
+  const requests = []
+  const client = new City({
+    role: "user",
+    city_url: "https://api.example.com/base/",
+    town_id: "town_demo",
+    user_token: "ub_test",
+    fetch: async (url, init) => {
+      requests.push({ url, init })
+      return json({ job_id: "img_1", status: "running", poll_after_ms: 2000 })
+    },
+  })
+
+  const result = await client.ai.image_result({ job_id: "img_1" })
+
+  assert.deepEqual(result, { job_id: "img_1", status: "running", poll_after_ms: 2000 })
+  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image/result")
+  assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
+  assert.deepEqual(JSON.parse(requests[0].init.body), {
+    job_id: "img_1",
+    town_id: "town_demo",
+  })
+})
+
+test("AIInvoker.image() creates and polls image jobs", async () => {
   const requests = []
   const msg = {
     id: "msg_image_1",
     role: "assistant",
     parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
   }
+  let result_calls = 0
   const client = new City({
     role: "user",
     city_url: "https://api.example.com/base/",
     town_id: "town_demo",
     user_token: "ub_test",
-    fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
+    fetch: async (url, init) => {
+      requests.push({ url, init })
+      if (url.endsWith("/v1/ai/image/create")) {
+        return json({ job_id: "img_1", status: "queued", poll_after_ms: 1 })
+      }
+      result_calls += 1
+      if (result_calls === 1) {
+        return json({ job_id: "img_1", status: "running", poll_after_ms: 1 })
+      }
+      return json({ job_id: "img_1", status: "succeeded", result: msg, poll_after_ms: 1 })
+    },
   })
 
   const result = await client.ai.image({
@@ -43,15 +110,29 @@ test("AIInvoker.image() posts to /v1/ai/image", async () => {
   })
 
   assert.deepEqual(result, msg)
-  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image")
-  assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
-  assert.deepEqual(JSON.parse(requests[0].init.body), {
-    prompt: "draw a mug",
-    model: "openai-gpt-image-1",
-    size: "1024x1024",
-    count: 1,
+  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image/create")
+  assert.equal(requests[1].url, "https://api.example.com/base/v1/ai/image/result")
+  assert.equal(requests[2].url, "https://api.example.com/base/v1/ai/image/result")
+})
+
+test("AIInvoker.image() throws failed image job errors", async () => {
+  const client = new City({
+    role: "user",
+    city_url: "https://api.example.com/base/",
     town_id: "town_demo",
+    user_token: "ub_test",
+    fetch: async (url) => {
+      if (url.endsWith("/v1/ai/image/create")) {
+        return json({ job_id: "img_1", status: "queued", poll_after_ms: 1 })
+      }
+      return json({ job_id: "img_1", status: "failed", error: "upstream failed", poll_after_ms: 1 })
+    },
   })
+
+  await assert.rejects(
+    () => client.ai.image({ prompt: "draw" }),
+    /Downcity image job failed: upstream failed/,
+  )
 })
 
 test("AIInvoker.text() serializes AI SDK provider tools with inputSchema", async () => {

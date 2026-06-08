@@ -16,6 +16,11 @@ import { PlatformStore } from "../town/store/index.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { performTownCityUserLogin } from "./CityUserLogin.js";
+import {
+  emitCurrentTownCityBalance,
+  emitTownCityRechargeResult,
+  rechargeCurrentTownCityUser,
+} from "./CityBalance.js";
 import type {
   TownCityConnectionState,
   TownCityServerProfile,
@@ -280,7 +285,7 @@ function findCityServer(input?: string): TownCityServerProfile | null {
   ) ?? null;
 }
 
-function readCurrentTownCitySession(): TownCityUserSession | null {
+export function readCurrentTownCitySession(): TownCityUserSession | null {
   const state = readTownCityState();
   const base_url = resolveSelectedBaseUrl(state);
   return state.sessions?.[base_url] ?? null;
@@ -591,6 +596,16 @@ async function promptCityManagerAction(): Promise<string | null> {
         value: "login",
       },
       {
+        title: "查看 User 余额",
+        description: state.has_user_token ? "读取当前登录 user 的余额" : "需要先登录 user",
+        value: "balance",
+      },
+      {
+        title: "User 充值",
+        description: state.has_user_token ? "给当前登录 user 发起 checkout 充值" : "需要先登录 user",
+        value: "recharge",
+      },
+      {
         title: "User 登出",
         description: "清除当前 base 的 Town user session",
         value: "logout",
@@ -646,6 +661,18 @@ export async function runInteractiveCityManager(): Promise<void> {
       await runCityLoginCommand({});
       continue;
     }
+    if (action === "balance") {
+      await emitCurrentTownCityBalance(readCurrentTownCitySession());
+      continue;
+    }
+    if (action === "recharge") {
+      const input = await promptRechargeInput();
+      if (input) {
+        const result = await rechargeCurrentTownCityUser(readCurrentTownCitySession(), input);
+        if (result) emitTownCityRechargeResult(result);
+      }
+      continue;
+    }
     if (action === "logout") {
       runCityLogoutCommand();
     }
@@ -668,4 +695,48 @@ async function promptSelectCityBase(): Promise<TownCityServerProfile | null> {
   const base_url = readString(response.base_url);
   if (!base_url) return null;
   return servers.find((server) => server.base_url === base_url) ?? null;
+}
+
+async function promptRechargeInput(): Promise<{
+  amount: number;
+  method_id?: string;
+  note?: string;
+  open_checkout?: boolean;
+} | null> {
+  const response = (await prompts([
+    {
+      type: "number",
+      name: "amount",
+      message: "充值金额",
+      min: 1,
+      validate: (value: number) =>
+        Number.isInteger(value) && value > 0 ? true : "请输入正整数",
+    },
+    {
+      type: "text",
+      name: "note",
+      message: "说明（可选）",
+      initial: "Town user recharge",
+    },
+    {
+      type: "confirm",
+      name: "open_checkout",
+      message: "创建后打开支付页面？",
+      initial: true,
+    },
+  ])) as {
+    amount?: number;
+    note?: string;
+    open_checkout?: boolean;
+  };
+
+  const amount = Number(response.amount);
+  if (!Number.isInteger(amount) || amount <= 0) return null;
+
+  return {
+    amount,
+    method_id: "stripe",
+    note: readString(response.note),
+    open_checkout: response.open_checkout !== false,
+  };
 }

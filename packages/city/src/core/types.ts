@@ -8,6 +8,26 @@ import type { Runtime } from "./runtime.js";
 import type { Database } from "../store/db.js";
 
 /**
+ * 单次请求的运行时执行上下文。
+ */
+export interface CityRequestExecutionContext {
+  /**
+   * 延长后台任务生命周期。
+   *
+   * Worker 运行时会映射到 ExecutionContext.waitUntil。
+   */
+  waitUntil(promise: Promise<unknown>): void;
+}
+
+/**
+ * CityBase.handleRequest 的可选参数。
+ */
+export interface CityHandleRequestOptions {
+  /** 单次请求的运行时执行上下文。 */
+  execution?: CityRequestExecutionContext;
+}
+
+/**
  * City 健康检查结果。
  */
 export interface CityBaseHealthStatus {

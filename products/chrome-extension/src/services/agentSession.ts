@@ -115,6 +115,39 @@ export async function ensureAgentSdkSession(params: {
 }
 
 /**
+ * 读取已存在的 Agent SDK session。
+ */
+export async function getAgentSdkSessionInfo(params: {
+  /**
+   * Agent gateway 基础地址。
+   */
+  serverBaseUrl?: string;
+  /**
+   * 目标 session id。
+   */
+  sessionId: string;
+  /**
+   * Bearer Token。
+   */
+  authToken?: string;
+}): Promise<AgentSdkSessionInfo> {
+  const sessionId = String(params.sessionId || "").trim();
+  if (!sessionId) throw new Error("缺少 Agent Session");
+
+  const url = `${resolveConsoleBaseUrl(params.serverBaseUrl)}/api/sdk/sessions/${encodeURIComponent(sessionId)}`;
+  const payload = await requestJson<AgentSdkSessionResponse>(
+    url,
+    { method: "GET" },
+    { authToken: params.authToken },
+  );
+
+  if (payload.success !== true || !payload.session) {
+    throw new Error(payload.error || "读取 Agent Session 失败");
+  }
+  return payload.session;
+}
+
+/**
  * 拉取 Agent SDK session 列表。
  */
 export async function fetchAgentSdkSessions(

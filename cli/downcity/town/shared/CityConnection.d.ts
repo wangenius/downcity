@@ -8,10 +8,12 @@
  * - CLI 命令装配统一放在 `src/command/CityCommand.ts`，本模块只保留状态与登录流程。
  */
 import type { TownCityConnectionState } from "../types/TownCityConnection.js";
+import type { TownCityUserSession } from "../types/TownCitySession.js";
 export declare const DEFAULT_CITY_URL = "https://base.downcity.ai";
 export declare const DEFAULT_TOWN_ID = "town_downcity";
 export declare function normalizeCityUrl(value: string): string;
 export declare function readTownCityAdminSecretForBase(city_url: string): string | undefined;
+export declare function readCurrentTownCitySession(): TownCityUserSession | null;
 export declare function readTownCityUserSessionForRuntime(): {
     city_url: string;
     town_id: string;

@@ -6,6 +6,12 @@ import type { UIMessage, UIMessageChunk } from "ai";
 import type { FetchLike } from "../http.js";
 import type { UserModelInput } from "../invoker/ai/types.js";
 import type {
+  AIImageJobStatus,
+  UserImageJobCreateResult,
+  UserImageJobResult,
+  UserImageJobResultInput,
+} from "../../service/ai/job-types.js";
+import type {
   UserPaymentMethod,
   UserPaymentMethodReason,
   UserPaymentMethodType,
@@ -48,6 +54,12 @@ export type UserStreamChunk = UIMessageChunk;
 export type UserStreamResult = ReadableStream<UserStreamChunk>;
 export type UserImageResult = UIMessage;
 export type UserVideoResult = UIMessage;
+export type {
+  AIImageJobStatus as UserImageJobStatus,
+  UserImageJobCreateResult,
+  UserImageJobResult,
+  UserImageJobResultInput,
+};
 export type { UserPaymentMethod, UserPaymentMethodReason, UserPaymentMethodType };
 
 /** 图片生成文本内容片段。 */

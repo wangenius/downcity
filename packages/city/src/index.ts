@@ -12,6 +12,7 @@
 
 export { CityBase } from "./core/base/base.js";
 export type { CityBaseOptions, CityBaseHealthStatus } from "./core/types.js";
+export type { CityHandleRequestOptions, CityRequestExecutionContext } from "./core/types.js";
 export type { Runtime, EnvProvider, BuiltinTables, TableDef } from "./core/runtime.js";
 
 // ===========================================================================
@@ -140,6 +141,10 @@ export type {
   UserImageContent,
   UserImageFileContent,
   UserImageInput,
+  UserImageJobCreateResult,
+  UserImageJobResult,
+  UserImageJobResultInput,
+  UserImageJobStatus,
   UserImageMessage,
   UserImageResult,
   UserImageTextContent,
@@ -150,6 +155,12 @@ export type {
   UserTextResult,
   UserVideoResult,
 } from "./city/user/types.js";
+
+export type {
+  AIImageJobStepContext,
+  AIImageJobStepResult,
+  AIImageJobStepState,
+} from "./service/ai/job-types.js";
 
 export type {
   UserPaymentMethod as PaymentMethod,

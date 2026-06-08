@@ -64,6 +64,14 @@ export interface Context {
   db: Record<string, CityTableApi>;
   /** 读环境变量（框架注入） */
   env(key: string): string | undefined;
+  /**
+   * 延长请求外后台任务生命周期（Worker 等运行时注入）。
+   *
+   * 关键说明（中文）
+   * - 长耗时任务不能阻塞前台 HTTP 请求
+   * - 支持 waitUntil 的运行时会继续执行这里传入的 Promise
+   */
+  waitUntil?(promise: Promise<unknown>): void;
 }
 
 // ===========================================================================

@@ -22,11 +22,15 @@ town city logout
 town city disconnect
 ```
 
+运行裸 `town` 会进入交互式操作台。选择 `连接 City` 后，可以在 user 菜单里查看余额或发起充值。
+
 ## 状态模型
 
 `town city connect` 和 `town city use` 只选择 City base，不从 `city` 复制 admin 凭证或 user token。
 
 `town city login` 以 user 身份登录，并保存 Town 自己的 user session。Agent runtime 调用 City AIService 时读取这份 Town user session。
+
+`查看 User 余额` 会读取当前登录 user 的 `balance` 账户。`User 充值` 会为当前登录 user 创建充值单，并通过可用支付方式创建 checkout 页面；默认会打开浏览器完成支付。
 
 `DOWNCITY_CITY_URL`、`DOWNCITY_CITY_TOWN_ID`、`DOWNCITY_CITY_USER_TOKEN` 仍然可以作为 CI 或临时启动时的运行时覆盖项。
 
@@ -36,6 +40,7 @@ town city disconnect
 city                  # 可选：管理 admin 侧 City base 与资源
 town city status      # 默认指向 https://base.downcity.ai
 town city login
+town                  # 选择「连接 City」→「查看 User 余额」或「User 充值」
 town agent start
 ```
 

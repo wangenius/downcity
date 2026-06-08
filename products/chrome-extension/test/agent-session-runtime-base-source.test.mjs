@@ -29,5 +29,5 @@ test("agent session sdk calls use selected agent runtime base url", () => {
   assert.match(popupSource, /serverBaseUrl:\s*agentRuntimeBaseUrl/u);
   assert.match(sidePanelSource, /const\s+agentRuntimeBaseUrl\s*=\s*useMemo/u);
   assert.match(sidePanelSource, /resolveAgentRuntimeBaseUrl\(\{\s*agent:\s*nextAgent/u);
-  assert.match(sidePanelSource, /serverBaseUrl:\s*agentRuntimeBaseUrl/u);
+  assert.match(sidePanelSource, /createRemoteAgentClient\(\{\s*baseUrl:\s*agentRuntimeBaseUrl/u);
 });

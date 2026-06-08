@@ -180,7 +180,7 @@ async function init_city(env: Env): Promise<CityBase> {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
@@ -201,7 +201,7 @@ export default {
         version: WORKER_VERSION,
       }));
     }
-    const response = await city.handleRequest(request);
+    const response = await city.handleRequest(request, { execution: ctx });
     return withCors(response);
   },
 };

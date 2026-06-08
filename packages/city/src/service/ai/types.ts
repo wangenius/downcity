@@ -27,6 +27,8 @@ export interface ModelActions {
   stream?: ActionFn;
   /** 图片生成 action */
   image?: ActionFn;
+  /** 图片任务推进 action，用于长耗时 provider 的可恢复轮询 */
+  image_job?: ActionFn;
   /** 视频生成 action */
   video?: ActionFn;
   /** 语音合成 action */

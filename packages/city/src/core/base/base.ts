@@ -10,7 +10,7 @@
  * 具体初始化、路由构建、instruction 聚合等实现已拆到独立模块。
  */
 
-import type { Hono } from "hono";
+import type { Hono, ExecutionContext as HonoExecutionContext } from "hono";
 import { Service } from "../../service/service.js";
 import { asInstallableService, type ServiceDefinition } from "../../service/installable-service.js";
 import { EnvService } from "../../service/env/env-service.js";
@@ -19,7 +19,7 @@ import { build_city_instruction } from "./base-instruction.js";
 import { initialize_city } from "./base-init.js";
 import { build_city_router } from "./base-router.js";
 import { create_runtime_from_db } from "./base-runtime.js";
-import type { CityBaseOptions, CityBaseHealthStatus } from "../types.js";
+import type { CityBaseOptions, CityBaseHealthStatus, CityHandleRequestOptions } from "../types.js";
 import type { Authenticator } from "../auth/authenticator.js";
 import type { Runtime } from "../runtime.js";
 import type { CityTableApi } from "../../store/table-api.js";
@@ -100,9 +100,9 @@ export class CityBase {
   /**
    * 处理 HTTP 请求。
    */
-  async handleRequest(request: Request): Promise<Response> {
+  async handleRequest(request: Request, options: CityHandleRequestOptions = {}): Promise<Response> {
     await this.ensure_ready();
-    return this.hono!.fetch(request);
+    return this.hono!.fetch(request, {}, options.execution as HonoExecutionContext | undefined);
   }
 
   /**

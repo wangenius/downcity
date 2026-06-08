@@ -22,6 +22,7 @@ export interface ProviderOptions {
   text?: ActionFn;
   stream?: ActionFn;
   image?: ActionFn;
+  image_job?: ActionFn;
   video?: ActionFn;
   openai?: ActionFn;
 }
@@ -44,6 +45,7 @@ export class Provider {
       text: opts.text,
       stream: opts.stream,
       image: opts.image,
+      image_job: opts.image_job,
       video: opts.video,
       openai: opts.openai,
     };

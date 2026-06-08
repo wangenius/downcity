@@ -10,6 +10,8 @@ import type {
   ModelCatalog,
   ModelHandle,
   PaymentMethodHandle,
+  UserImageJobCreateResult,
+  UserImageJobResult,
   UserModelRef,
   UserPaymentMethod,
   UserServiceSummary,
@@ -31,6 +33,14 @@ const streamContract: Promise<ReadableStream<UIMessageChunk>> = streamResult;
 const imageResult = ai.image({ prompt: "draw" });
 const imageContract: Promise<UIMessage> = imageResult;
 void imageContract;
+
+const imageJobCreateResult = ai.image_create({ prompt: "draw" });
+const imageJobCreateContract: Promise<UserImageJobCreateResult> = imageJobCreateResult;
+void imageJobCreateContract;
+
+const imageJobResult = ai.image_result({ job_id: "img_1" });
+const imageJobResultContract: Promise<UserImageJobResult> = imageJobResult;
+void imageJobResultContract;
 
 const videoResult = ai.video({ prompt: "demo" });
 const videoContract: Promise<UIMessage> = videoResult;

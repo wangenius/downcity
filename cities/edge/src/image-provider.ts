@@ -8,7 +8,7 @@
  */
 
 import type { FileUIPart, UIMessage } from "ai";
-import { Provider, type Context } from "@downcity/city";
+import { Provider, type Context, type AIImageJobStepContext } from "@downcity/city";
 
 /**
  * 图片生成消息内容中的文本片段。
@@ -233,42 +233,13 @@ export function createLuchiImageProvider(options: LuchiImageProviderOptions): Pr
       const input = normalizeImageActionInput(ctx.input);
       const api_key = readRequiredEnv(ctx, options.envKey);
       const upstream_model = resolveUpstreamModel(ctx, options.defaultModelId);
-      const provider_options = readProviderOptions(input, "luchi");
-      const reference_images = extractReferenceImages(input);
-      const body = stripUndefined({
-        model: upstream_model,
-        prompt: extractPrompt(input),
-        ratio: input.ratio ?? input.aspect_ratio,
-        quality: input.quality,
-        count: readImageCount(input),
-        seed: input.seed,
-        client_job_id: input.client_job_id,
-        ...provider_options,
+      const job_id = await createLuchiJob({
+        ctx,
+        input,
+        api_key,
+        base_url,
+        upstream_model,
       });
-      const has_reference_images = reference_images.length > 0;
-      const create_path = has_reference_images
-        ? "/api/relay/image-jobs/edits"
-        : "/api/relay/image-jobs/generations";
-      const create_body = has_reference_images
-        ? createLuchiEditFormData(body, reference_images)
-        : JSON.stringify(body);
-      const create_headers: Record<string, string> = has_reference_images
-        ? { "Authorization": `Bearer ${api_key}` }
-        : {
-            "Authorization": `Bearer ${api_key}`,
-            "Content-Type": "application/json",
-          };
-
-      const create_response = await fetch(`${trimTrailingSlash(base_url)}${create_path}`, {
-        method: "POST",
-        headers: create_headers,
-        body: create_body,
-      });
-      const created = await readJsonResponse(create_response);
-      const job_id = readJobId(created);
-      if (!job_id) {
-        throw new Error("Luchi image job id is missing");
-      }
       const finished = await pollLuchiJob({
         base_url,
         api_key,
@@ -283,6 +254,57 @@ export function createLuchiImageProvider(options: LuchiImageProviderOptions): Pr
         job_id,
         raw: pickMetadata(finished, ["status", "usage", "error"]),
       });
+    },
+    image_job: async (ctx: Context) => {
+      const input = normalizeImageActionInput(ctx.input);
+      const api_key = readRequiredEnv(ctx, options.envKey);
+      const upstream_model = resolveUpstreamModel(ctx, options.defaultModelId);
+      const image_job = readImageJobStepContext(ctx);
+      const upstream_job_id = typeof image_job?.state?.upstream_job_id === "string"
+        ? image_job.state.upstream_job_id
+        : "";
+      const job_id = upstream_job_id || await createLuchiJob({
+        ctx,
+        input,
+        api_key,
+        base_url,
+        upstream_model,
+      });
+      const data = await readLuchiJob({
+        base_url,
+        api_key,
+        job_id,
+      });
+      const status = readJobStatus(data);
+      if (["succeeded", "success", "completed", "done"].includes(status)) {
+        return {
+          status: "succeeded",
+          message: "succeeded",
+          result: buildImageMessage(ctx, extractImagesFromLuchiResponse(data, base_url), {
+            provider: options.id,
+            upstream_model,
+            job_id,
+            raw: pickMetadata(data, ["status", "usage", "error"]),
+          }),
+        };
+      }
+      if (["failed", "failure", "error", "cancelled", "canceled"].includes(status)) {
+        return {
+          status: "failed",
+          message: "failed",
+          error: readErrorMessage(data) || `Luchi image job failed: ${job_id}`,
+        };
+      }
+      return {
+        status: "running",
+        message: "running",
+        poll_after_ms: poll_interval_ms,
+        state: {
+          provider: options.id,
+          upstream_job_id: job_id,
+          upstream_status: status || "running",
+        },
+      };
     },
   });
 }
@@ -540,6 +562,73 @@ function buildImageMessage(
   };
 }
 
+function readImageJobStepContext(ctx: Context): AIImageJobStepContext | undefined {
+  const value = ctx.locals.image_job;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as AIImageJobStepContext
+    : undefined;
+}
+
+async function createLuchiJob(params: {
+  ctx: Context;
+  input: ImageActionInput;
+  api_key: string;
+  base_url: string;
+  upstream_model: string;
+}): Promise<string> {
+  const provider_options = readProviderOptions(params.input, "luchi");
+  const reference_images = extractReferenceImages(params.input);
+  const body = stripUndefined({
+    model: params.upstream_model,
+    prompt: extractPrompt(params.input),
+    ratio: params.input.ratio ?? params.input.aspect_ratio,
+    quality: params.input.quality,
+    count: readImageCount(params.input),
+    seed: params.input.seed,
+    client_job_id: params.input.client_job_id || readImageJobStepContext(params.ctx)?.job_id,
+    ...provider_options,
+  });
+  const has_reference_images = reference_images.length > 0;
+  const create_path = has_reference_images
+    ? "/api/relay/image-jobs/edits"
+    : "/api/relay/image-jobs/generations";
+  const create_body = has_reference_images
+    ? createLuchiEditFormData(body, reference_images)
+    : JSON.stringify(body);
+  const create_headers: Record<string, string> = has_reference_images
+    ? { "Authorization": `Bearer ${params.api_key}` }
+    : {
+        "Authorization": `Bearer ${params.api_key}`,
+        "Content-Type": "application/json",
+      };
+
+  const create_response = await fetch(`${trimTrailingSlash(params.base_url)}${create_path}`, {
+    method: "POST",
+    headers: create_headers,
+    body: create_body,
+  });
+  const created = await readJsonResponse(create_response);
+  const job_id = readJobId(created);
+  if (!job_id) {
+    throw new Error("Luchi image job id is missing");
+  }
+  return job_id;
+}
+
+async function readLuchiJob(params: {
+  base_url: string;
+  api_key: string;
+  job_id: string;
+}): Promise<unknown> {
+  const response = await fetch(`${trimTrailingSlash(params.base_url)}/api/relay/image-jobs/${encodeURIComponent(params.job_id)}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${params.api_key}`,
+    },
+  });
+  return await readJsonResponse(response);
+}
+
 async function pollLuchiJob(params: {
   base_url: string;
   api_key: string;
@@ -549,13 +638,7 @@ async function pollLuchiJob(params: {
 }): Promise<unknown> {
   for (let attempt = 0; attempt < params.max_polls; attempt += 1) {
     if (attempt > 0) await sleep(params.poll_interval_ms);
-    const response = await fetch(`${trimTrailingSlash(params.base_url)}/api/relay/image-jobs/${encodeURIComponent(params.job_id)}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${params.api_key}`,
-      },
-    });
-    const data = await readJsonResponse(response);
+    const data = await readLuchiJob(params);
     const status = readJobStatus(data);
     if (["succeeded", "success", "completed", "done"].includes(status)) return data;
     if (["failed", "error", "cancelled", "canceled"].includes(status)) {

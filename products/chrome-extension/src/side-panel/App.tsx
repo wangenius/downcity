@@ -2,9 +2,9 @@
  * Side Panel 对话界面。
  *
  * 关键点（中文）：
- * - 右侧栏是 Chrome Extension 的原生 Agent Session 对话入口。
- * - 对话直连 `/api/sdk/*`，不依赖 ChatPlugin，因此普通 Agent 也能立即联通。
- * - IM 转发仍保留在 Popup / Options 中，Side Panel 只负责浏览器常驻 session。
+ * - 右侧栏是 Chrome Extension 的 RemoteAgent 浏览器对话入口。
+ * - 对话通过轻量 RemoteAgent client 访问 Town runtime API，不依赖 ChatPlugin。
+ * - 当前页面上下文跟随 Chrome 活动标签页变化，并收进输入框区域。
  */
 
 import {
@@ -13,7 +13,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import type { ConsoleUiAgentOption, AgentSdkHistoryItem } from "../types/api";
 import type {
@@ -21,31 +20,28 @@ import type {
   ExtensionSettings,
   StatusMessage,
 } from "../types/extension";
+import type { ComposerSubmitPayload } from "../types/sidePanel";
 import { fetchConsoleAuthStatus, isAuthErrorMessage } from "../services/auth";
-import {
-  ensureAgentSdkSession,
-  fetchAgentSdkHistory,
-  promptAgentSdkSession,
-  resolveAgentSessionId,
-  subscribeAgentSdkSessionEvents,
-} from "../services/agentSession";
+import { resolveAgentSessionId } from "../services/agentSession";
 import { fetchAgents } from "../services/downcityApi";
 import { resolveAgentId } from "../services/chatRouting";
 import { buildPageMarkdownSnapshot } from "../services/pageMarkdown";
 import {
-  formatServerConnectionLabel,
   resolveAgentRuntimeBaseUrl,
   resolveRoutePreference,
   resolveSelectedConnection,
 } from "../services/serverConnection";
+import { createRemoteAgentClient } from "../services/remoteAgentClient";
 import {
   DEFAULT_SETTINGS,
   loadConnectionToken,
   loadSettings,
   saveSettings,
 } from "../services/storage";
-import { getActiveTabContext } from "../services/tab";
-import { readErrorText, shortenUrl } from "../extension-popup/helpers";
+import { getActiveTabContext, subscribeActiveTabContext } from "../services/tab";
+import { readErrorText } from "../extension-popup/helpers";
+import { Composer } from "./Composer";
+import { MarkdownMessage } from "./MarkdownMessage";
 
 type PanelMessage = {
   /**
@@ -99,7 +95,38 @@ function toPanelMessage(item: AgentSdkHistoryItem, index: number): PanelMessage 
   };
 }
 
-function mergeAssistantEvent(params: {
+function appendAssistantDelta(params: {
+  messages: PanelMessage[];
+  turnId: string;
+  text: string;
+}): PanelMessage[] {
+  const turnId = String(params.turnId || "").trim();
+  const text = String(params.text || "");
+  if (!turnId || !text) return params.messages;
+  const existingIndex = params.messages.findIndex((item) => item.id === turnId);
+  if (existingIndex >= 0) {
+    return params.messages.map((item, index) =>
+      index === existingIndex
+        ? {
+            ...item,
+            text: `${item.text}${text}`,
+            createdAt: Date.now(),
+          }
+        : item,
+    );
+  }
+  return [
+    ...params.messages,
+    {
+      id: turnId,
+      role: "assistant",
+      text,
+      createdAt: Date.now(),
+    },
+  ];
+}
+
+function finalizeAssistantMessage(params: {
   messages: PanelMessage[];
   turnId: string;
   text: string;
@@ -119,15 +146,7 @@ function mergeAssistantEvent(params: {
         : item,
     );
   }
-  return [
-    ...params.messages,
-    {
-      id: turnId,
-      role: "assistant",
-      text,
-      createdAt: Date.now(),
-    },
-  ];
+  return appendAssistantDelta({ messages: params.messages, turnId, text });
 }
 
 function formatMessageTime(timestamp: number): string {
@@ -138,6 +157,43 @@ function formatMessageTime(timestamp: number): string {
     minute: "2-digit",
     hour12: false,
   });
+}
+
+function formatUserMessagePreview(payload: ComposerSubmitPayload): string {
+  const text = String(payload.text || "").trim();
+  const references = payload.references
+    .map((item) => `@ ${item.label}`)
+    .filter(Boolean);
+  if (references.length < 1) return text;
+  return [text || "引用上下文", "", references.join("\n")].join("\n").trim();
+}
+
+function findLatestAssistantId(messages: PanelMessage[]): string {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === "assistant") return messages[index]?.id || "";
+  }
+  return "";
+}
+
+/**
+ * 设置图标。
+ */
+function SettingsIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2a2 2 0 1 1-4 0V21a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.1 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H2.8a2 2 0 1 1 0-4H3a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.1l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V2.8a2 2 0 1 1 4 0V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.9 7l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z" />
+    </svg>
+  );
 }
 
 export function SidePanelApp() {
@@ -158,12 +214,10 @@ export function SidePanelApp() {
   const [authRequired, setAuthRequired] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [includePage, setIncludePage] = useState(false);
-  const [input, setInput] = useState("");
   const [messages, setMessages] = useState<PanelMessage[]>([]);
   const [status, setStatus] = useState<StatusMessage>({
     type: "idle",
-    text: "准备就绪",
+    text: "",
   });
 
   const selectedConnection = useMemo(
@@ -241,28 +295,43 @@ export function SidePanelApp() {
       unsubscribeRef.current?.();
       unsubscribeRef.current = null;
 
-      setStatus({ type: "loading", text: "连接 Agent Session 中..." });
-      await ensureAgentSdkSession({
-        serverBaseUrl: params.baseUrl,
-        sessionId: params.nextSessionId,
-        authToken: params.token,
+      setStatus({ type: "loading", text: "连接 Agent 中..." });
+      const remoteAgent = createRemoteAgentClient({
+        baseUrl: params.baseUrl,
+        token: params.token,
       });
-      const history = await fetchAgentSdkHistory({
-        serverBaseUrl: params.baseUrl,
-        sessionId: params.nextSessionId,
-        authToken: params.token,
-        limit: 120,
-      });
+      const session = await remoteAgent.getSession(params.nextSessionId);
+      const history = await session.history({ limit: 120 });
       setMessages(history.map(toPanelMessage).filter(Boolean) as PanelMessage[]);
 
-      unsubscribeRef.current = await subscribeAgentSdkSessionEvents({
-        serverBaseUrl: params.baseUrl,
-        sessionId: params.nextSessionId,
-        authToken: params.token,
+      unsubscribeRef.current = await session.subscribe({
         onEvent: (event) => {
+          if (event.type === "text-delta" && event.turnId) {
+            setMessages((prev) =>
+              appendAssistantDelta({
+                messages: prev,
+                turnId: event.turnId || "",
+                text: String(event.text || ""),
+              }),
+            );
+            setStatus({ type: "loading", text: "Agent 正在回复..." });
+            return;
+          }
+          if (event.type === "reasoning-delta" && event.turnId) {
+            setStatus({ type: "loading", text: "Agent 正在思考..." });
+            return;
+          }
+          if (event.type === "tool-call") {
+            setStatus({ type: "loading", text: "Agent 正在使用工具..." });
+            return;
+          }
+          if (event.type === "tool-result") {
+            setStatus({ type: "loading", text: "Agent 已完成工具调用..." });
+            return;
+          }
           if (event.type === "turn-finish" && event.turnId) {
             setMessages((prev) =>
-              mergeAssistantEvent({
+              finalizeAssistantMessage({
                 messages: prev,
                 turnId: event.turnId || "",
                 text: String(event.text || ""),
@@ -279,7 +348,7 @@ export function SidePanelApp() {
         },
       });
 
-      setStatus({ type: "idle", text: "准备就绪" });
+      setStatus({ type: "idle", text: "" });
     },
     [],
   );
@@ -373,63 +442,47 @@ export function SidePanelApp() {
     };
   }, [initialize]);
 
-  const handleSelectAgent = useCallback(
-    async (nextAgentId: string) => {
-      if (!selectedConnection || !serverBaseUrl) return;
-      const nextAgent = agents.find((item) => item.id === nextAgentId) || null;
-      const nextAgentRuntimeBaseUrl = resolveAgentRuntimeBaseUrl({
-        agent: nextAgent,
-        fallbackBaseUrl: serverBaseUrl,
-      });
-      const nextSessionId = resolveAgentSessionId({
-        connectionId: selectedConnection.id,
-        agentId: nextAgentId,
-      });
-      setAgentId(nextAgentId);
-      setSessionId(nextSessionId);
-      await persistAgentSession({
-        nextSettings: settingsRef.current,
-        connectionId: selectedConnection.id,
-        nextAgentId,
-        nextSessionId,
-      });
-      await connectSession({
-        baseUrl: nextAgentRuntimeBaseUrl,
-        token: authToken,
-        nextSessionId,
-      });
-    },
-    [
-      agents,
-      authToken,
-      connectSession,
-      persistAgentSession,
-      selectedConnection,
-      serverBaseUrl,
-    ],
-  );
+  useEffect(() => {
+    const unsubscribe = subscribeActiveTabContext((nextTab) => {
+      setTab(nextTab);
+    });
+    return unsubscribe;
+  }, []);
 
-  const buildPrompt = useCallback(async (): Promise<string> => {
-    const query = String(input || "").trim();
-    if (!query) return "";
-    if (!includePage) return query;
-    const snapshot = await buildPageMarkdownSnapshot(tab);
-    return [
-      query,
-      "",
-      `当前页面：${tab.title}`,
-      `URL：${tab.url}`,
-      "",
-      `<file type="document" name="${snapshot.fileName}" caption="来源页面：${snapshot.url}">`,
-      snapshot.markdown,
-      "</file>",
-    ].join("\n");
-  }, [includePage, input, tab]);
+  const buildPrompt = useCallback(async (payload: ComposerSubmitPayload): Promise<string> => {
+    const query = String(payload.text || "").trim();
+    const pageRefs = payload.references.filter((item) => item.type === "page");
+    const selectionRefs = payload.references.filter((item) => item.type === "selection");
+    if (!query && pageRefs.length < 1 && selectionRefs.length < 1) return "";
+    const parts = [query || "请根据引用上下文继续处理。"];
 
-  const sendMessage = useCallback(async () => {
+    for (const reference of pageRefs) {
+      const snapshot = await buildPageMarkdownSnapshot(tab);
+      parts.push(
+        "",
+        `当前页面引用：${reference.label}`,
+        `URL：${snapshot.url}`,
+        "",
+        `<file type="document" name="${snapshot.fileName}" caption="来源页面：${snapshot.url}">`,
+        snapshot.markdown,
+        "</file>",
+      );
+    }
+
+    if (selectionRefs.length > 0) {
+      parts.push("", "选中文本引用：");
+      selectionRefs.forEach((reference, index) => {
+        parts.push("", `引用 ${index + 1}：`, String(reference.text || "").trim());
+      });
+    }
+
+    return parts.join("\n");
+  }, [tab]);
+
+  const sendMessage = useCallback(async (payload: ComposerSubmitPayload) => {
     if (isSending || authRequired) return;
-    const query = String(input || "").trim();
-    if (!query) return;
+    const query = String(payload.text || "").trim();
+    if (!query && payload.references.length < 1) return;
     if (!agentRuntimeBaseUrl || !sessionId) {
       setStatus({ type: "error", text: "当前连接或 Session 不可用。" });
       return;
@@ -440,25 +493,24 @@ export function SidePanelApp() {
     }
 
     setIsSending(true);
-    setInput("");
-    setStatus({ type: "loading", text: includePage ? "提取页面并发送中..." : "发送中..." });
+    setStatus({ type: "loading", text: "发送中..." });
 
     const localUserMessage: PanelMessage = {
       id: `local-user-${Date.now()}`,
       role: "user",
-      text: query,
+      text: formatUserMessagePreview(payload),
       createdAt: Date.now(),
     };
     setMessages((prev) => [...prev, localUserMessage]);
 
     try {
-      const prompt = await buildPrompt();
-      await promptAgentSdkSession({
-        serverBaseUrl: agentRuntimeBaseUrl,
-        sessionId,
-        authToken,
-        query: prompt,
+      const prompt = await buildPrompt(payload);
+      const remoteAgent = createRemoteAgentClient({
+        baseUrl: agentRuntimeBaseUrl,
+        token: authToken,
       });
+      const session = await remoteAgent.getSession(sessionId);
+      await session.prompt({ query: prompt });
       setStatus({ type: "loading", text: "Agent 正在回复..." });
     } catch (error) {
       setStatus({ type: "error", text: `发送失败：${readErrorText(error)}` });
@@ -470,105 +522,85 @@ export function SidePanelApp() {
     authRequired,
     authToken,
     buildPrompt,
-    includePage,
-    input,
     isSending,
     selectedAgent?.running,
     sessionId,
   ]);
 
-  const handleKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
-      if (event.nativeEvent.isComposing) return;
-      if (event.key !== "Enter") return;
-      if (!event.metaKey && !event.ctrlKey) return;
-      event.preventDefault();
-      void sendMessage();
-    },
-    [sendMessage],
-  );
-
   const openSettingsPage = useCallback(() => {
     chrome.runtime.openOptionsPage();
   }, []);
 
+  const agentName = selectedAgent?.name || "Downcity Agent";
+  const errorText =
+    authRequired
+      ? "当前 Town 需要 Token，请到设置页填写。"
+      : selectedAgent && !selectedAgent.running
+        ? "目标 Agent 未运行，请先启动。"
+        : status.type === "error"
+          ? status.text
+          : "";
+  const isWorking = status.type === "loading" || isSending || isInitializing;
+  const latestAssistantId = isWorking ? findLatestAssistantId(messages) : "";
+  const shouldShowLoadingDots =
+    isWorking && messages[messages.length - 1]?.role === "user";
+  const canSend =
+    !isInitializing &&
+    !authRequired &&
+    !isSending &&
+    Boolean(agentRuntimeBaseUrl) &&
+    Boolean(sessionId);
+
   return (
     <main className="flex h-screen min-h-[520px] flex-col bg-background text-foreground">
-      <header className="border-b border-border bg-surface px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Downcity
-            </div>
-            <h1 className="mt-1 text-[18px] font-medium text-foreground">
-              Agent Chat
-            </h1>
-          </div>
-          <button
-            type="button"
-            className="inline-flex h-9 items-center justify-center rounded-[10px] border border-border bg-muted px-3 text-[11px] font-medium text-foreground transition hover:bg-background"
-            onClick={openSettingsPage}
-          >
-            设置
-          </button>
+      <header className="flex min-h-[58px] items-center justify-between gap-3 bg-surface px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${
+              errorText
+                ? "bg-error"
+                : isWorking
+                  ? "animate-pulse bg-[#4f7cff]"
+                  : "bg-[#4f7cff]"
+            }`}
+          />
+          <h1 className="truncate text-[15px] font-medium text-foreground">
+            {agentName}
+          </h1>
         </div>
-
-        <div className="mt-3 grid gap-2">
-          <select
-            className="h-10 w-full rounded-[10px] border border-border bg-background px-3 text-[12px] text-foreground outline-none"
-            value={agentId}
-            onChange={(event) => {
-              void handleSelectAgent(event.target.value);
-            }}
-            disabled={isInitializing || agents.length < 1}
-          >
-            {agents.length > 0 ? (
-              agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name} {agent.running ? "" : "（未运行）"}
-                </option>
-              ))
-            ) : (
-              <option value="">暂无可用 Agent</option>
-            )}
-          </select>
-          <div className="rounded-[10px] border border-border bg-muted px-3 py-2 text-[11px] leading-5 text-muted-foreground">
-            {selectedConnection
-              ? formatServerConnectionLabel(selectedConnection)
-              : "当前没有可用连接"}
-            <br />
-            Session: {sessionId || "未连接"}
-          </div>
-        </div>
+        <button
+          type="button"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          onClick={openSettingsPage}
+          aria-label="设置"
+          title="设置"
+        >
+          <SettingsIcon />
+        </button>
       </header>
+      {errorText ? (
+        <div className="bg-surface px-4 pb-2 text-[12px] leading-5 text-error">
+          {errorText}
+        </div>
+      ) : null}
 
-      <section className="border-b border-border px-4 py-3">
-        <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Current Page
-        </div>
-        <div className="mt-1 truncate text-[12px] font-medium text-foreground">
-          {tab.title}
-        </div>
-        <div className="mt-1 truncate text-[11px] text-muted-foreground">
-          {shortenUrl(tab.url)}
-        </div>
-      </section>
-
-      <section className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+      <section className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <div className="grid gap-3">
           {messages.length > 0 ? (
             messages.map((message) => (
               <article
                 key={message.id}
-                className={`max-w-[92%] rounded-[12px] border px-3 py-2.5 ${
+                className={`max-w-[92%] rounded-[16px] px-3.5 py-2.5 ${
                   message.role === "user"
-                    ? "ml-auto border-primary bg-primary text-primary-foreground"
-                    : "mr-auto border-border bg-surface text-foreground"
+                    ? "ml-auto bg-primary text-primary-foreground"
+                    : "mr-auto bg-transparent text-foreground"
                 }`}
               >
-                <div className="whitespace-pre-wrap break-words text-[13px] leading-6">
-                  {message.text}
-                </div>
+                <MarkdownMessage
+                  role={message.role}
+                  text={message.text}
+                  streaming={message.id === latestAssistantId}
+                />
                 <div
                   className={`mt-1 text-[10px] ${
                     message.role === "user"
@@ -581,52 +613,30 @@ export function SidePanelApp() {
               </article>
             ))
           ) : (
-            <div className="rounded-[12px] border border-dashed border-border bg-surface px-3 py-6 text-center text-[12px] leading-6 text-muted-foreground">
-              这条 Chrome Agent Session 还没有消息。
+            <div className="flex min-h-[220px] items-center justify-center px-4 text-center text-[13px] leading-6 text-muted-foreground">
+              和 {agentName} 开始对话。
             </div>
           )}
+          {shouldShowLoadingDots ? (
+            <div className="mr-auto flex items-center gap-1 rounded-[16px] bg-transparent px-3.5 py-2.5 text-muted-foreground">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.2s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.1s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" />
+            </div>
+          ) : null}
           <div ref={endRef} />
         </div>
       </section>
 
-      <footer className="border-t border-border bg-surface px-4 py-3">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <label className="inline-flex items-center gap-2 text-[12px] text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={includePage}
-              onChange={(event) => setIncludePage(event.target.checked)}
-            />
-            附带当前页面
-          </label>
-          <div
-            className={`truncate text-[11px] ${
-              status.type === "error" ? "text-error" : "text-muted-foreground"
-            }`}
-          >
-            {authRequired ? "需要 Token" : status.text}
-          </div>
-        </div>
-        <div className="flex items-end gap-2">
-          <textarea
-            className="min-h-[78px] flex-1 resize-none rounded-[12px] border border-border bg-background px-3 py-2.5 text-[13px] leading-6 text-foreground outline-none transition focus:border-border-strong"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="和 Agent 对话..."
-            disabled={isInitializing || authRequired || isSending}
-          />
-          <button
-            type="button"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-[12px] border border-primary bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => {
-              void sendMessage();
-            }}
-            disabled={isInitializing || authRequired || isSending || !input.trim()}
-          >
-            {isSending ? "发送中" : "发送"}
-          </button>
-        </div>
+      <footer className="bg-surface px-3 pb-3 pt-2">
+        <Composer
+          tab={tab}
+          disabled={!canSend}
+          sending={isSending}
+          onSubmit={(payload) => {
+            void sendMessage(payload);
+          }}
+        />
       </footer>
     </main>
   );

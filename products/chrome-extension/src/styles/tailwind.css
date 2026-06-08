@@ -8,6 +8,9 @@
  */
 
 @import "tailwindcss";
+@import "streamdown/styles.css";
+
+@source "../../node_modules/streamdown/dist/index.js";
 
 :root {
   color-scheme: light;
@@ -15,10 +18,13 @@
   --foreground: #111113;
   --surface: #fcfcfd;
   --surface-foreground: #111113;
+  --card: #fcfcfd;
+  --card-foreground: #111113;
   --muted: #f3f4f6;
   --muted-foreground: #6b7280;
   --border: #e7e7eb;
   --border-strong: #d4d4d8;
+  --input: #e7e7eb;
   --primary: #111113;
   --primary-foreground: #fcfcfd;
   --success: #166534;
@@ -35,10 +41,13 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-foreground: var(--surface-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-success: var(--success);
@@ -86,4 +95,55 @@ textarea {
 ::selection {
   background: color-mix(in srgb, var(--ring) 28%, #ffffff 72%);
   color: var(--foreground);
+}
+
+.side-panel-markdown {
+  overflow-wrap: anywhere;
+}
+
+.side-panel-markdown :where(p, ul, ol, pre, blockquote) {
+  margin-block: 0.45rem;
+}
+
+.side-panel-markdown :where(p:first-child, ul:first-child, ol:first-child, pre:first-child, blockquote:first-child) {
+  margin-top: 0;
+}
+
+.side-panel-markdown :where(p:last-child, ul:last-child, ol:last-child, pre:last-child, blockquote:last-child) {
+  margin-bottom: 0;
+}
+
+.side-panel-markdown :where(ul, ol) {
+  padding-left: 1.2rem;
+}
+
+.side-panel-markdown :where(li) {
+  margin-block: 0.15rem;
+}
+
+.side-panel-markdown :where(code) {
+  border-radius: 0.35rem;
+  background: var(--muted);
+  padding: 0.08rem 0.28rem;
+  font-size: 0.92em;
+}
+
+.side-panel-markdown :where(pre) {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: #111113;
+  padding: 0.75rem;
+  color: #fcfcfd;
+}
+
+.side-panel-markdown :where(pre code) {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.side-panel-markdown :where(blockquote) {
+  border-left: 2px solid var(--border-strong);
+  padding-left: 0.75rem;
+  color: var(--muted-foreground);
 }

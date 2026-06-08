@@ -46,6 +46,7 @@ products/chrome-extension/
 │  │  ├─ chatRouting.ts
 │  │  ├─ downcityApi.ts
 │  │  ├─ pageMarkdown.ts
+│  │  ├─ remoteAgentClient.ts
 │  │  ├─ serverConnection.ts
 │  │  ├─ storage.ts
 │  │  └─ tab.ts

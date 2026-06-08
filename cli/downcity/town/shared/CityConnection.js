@@ -15,6 +15,7 @@ import { PlatformStore } from "../town/store/index.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { performTownCityUserLogin } from "./CityUserLogin.js";
+import { emitCurrentTownCityBalance, emitTownCityRechargeResult, rechargeCurrentTownCityUser, } from "./CityBalance.js";
 export const DEFAULT_CITY_URL = "https://base.downcity.ai";
 export const DEFAULT_TOWN_ID = "town_downcity";
 const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
@@ -240,7 +241,7 @@ function findCityServer(input) {
         server.base_url === normalized_query_url ||
         server.base_url === query) ?? null;
 }
-function readCurrentTownCitySession() {
+export function readCurrentTownCitySession() {
     const state = readTownCityState();
     const base_url = resolveSelectedBaseUrl(state);
     return state.sessions?.[base_url] ?? null;
@@ -518,6 +519,16 @@ async function promptCityManagerAction() {
                 value: "login",
             },
             {
+                title: "查看 User 余额",
+                description: state.has_user_token ? "读取当前登录 user 的余额" : "需要先登录 user",
+                value: "balance",
+            },
+            {
+                title: "User 充值",
+                description: state.has_user_token ? "给当前登录 user 发起 checkout 充值" : "需要先登录 user",
+                value: "recharge",
+            },
+            {
                 title: "User 登出",
                 description: "清除当前 base 的 Town user session",
                 value: "logout",
@@ -571,6 +582,19 @@ export async function runInteractiveCityManager() {
             await runCityLoginCommand({});
             continue;
         }
+        if (action === "balance") {
+            await emitCurrentTownCityBalance(readCurrentTownCitySession());
+            continue;
+        }
+        if (action === "recharge") {
+            const input = await promptRechargeInput();
+            if (input) {
+                const result = await rechargeCurrentTownCityUser(readCurrentTownCitySession(), input);
+                if (result)
+                    emitTownCityRechargeResult(result);
+            }
+            continue;
+        }
         if (action === "logout") {
             runCityLogoutCommand();
         }
@@ -593,5 +617,37 @@ async function promptSelectCityBase() {
     if (!base_url)
         return null;
     return servers.find((server) => server.base_url === base_url) ?? null;
+}
+async function promptRechargeInput() {
+    const response = (await prompts([
+        {
+            type: "number",
+            name: "amount",
+            message: "充值金额",
+            min: 1,
+            validate: (value) => Number.isInteger(value) && value > 0 ? true : "请输入正整数",
+        },
+        {
+            type: "text",
+            name: "note",
+            message: "说明（可选）",
+            initial: "Town user recharge",
+        },
+        {
+            type: "confirm",
+            name: "open_checkout",
+            message: "创建后打开支付页面？",
+            initial: true,
+        },
+    ]));
+    const amount = Number(response.amount);
+    if (!Number.isInteger(amount) || amount <= 0)
+        return null;
+    return {
+        amount,
+        method_id: "stripe",
+        note: readString(response.note),
+        open_checkout: response.open_checkout !== false,
+    };
 }
 //# sourceMappingURL=CityConnection.js.map

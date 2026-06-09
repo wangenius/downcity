@@ -48,6 +48,51 @@ sync_downcity_workspace_packages_globally() {
   done
 }
 
+deploy_downcity_cli_package() {
+  local package_dir="$1"
+  local deploy_dir="$2"
+
+  pnpm --filter downcity deploy --legacy "$deploy_dir"
+  rm -rf "$package_dir"
+  cp -R "$deploy_dir" "$package_dir"
+}
+
+downcity_global_runtime_has_required_dependencies() {
+  local package_dir="$1"
+  local manifest_path="$2"
+
+  node --input-type=module - "$package_dir" "$manifest_path" <<'EOF'
+import fs from "node:fs";
+import path from "node:path";
+
+const [, , package_dir, manifest_path] = process.argv;
+const manifest = JSON.parse(fs.readFileSync(manifest_path, "utf8"));
+const dependencies = Object.keys(manifest.dependencies || {});
+
+for (const dependency_name of dependencies) {
+  if (dependency_name.startsWith("@downcity/")) {
+    continue;
+  }
+
+  const dependency_path = path.join(
+    package_dir,
+    "node_modules",
+    ...dependency_name.split("/"),
+  );
+
+  if (!fs.existsSync(dependency_path)) {
+    console.error(`Missing global dependency: ${dependency_name}`);
+    process.exit(10);
+  }
+}
+EOF
+  local status=$?
+  if [[ "$status" -eq 10 ]]; then
+    return 1
+  fi
+  return "$status"
+}
+
 install_downcity_cli_globally() {
   local workspace_root="$1"
   local deploy_dir
@@ -87,14 +132,20 @@ install_downcity_cli_globally() {
     cp "$source_dir/README.md" "$package_dir/README.md"
     cp "$source_dir/package.json" "$package_dir/package.json"
     sync_downcity_workspace_packages_globally "$workspace_root" "$package_dir"
+
+    # 关键点（中文）：如果这次 CLI 引入了新的直连依赖，增量同步无法补齐 node_modules，
+    # 这里自动回退到一次完整 deploy，避免全局 `city` / `town` 因缺依赖直接崩溃。
+    if ! downcity_global_runtime_has_required_dependencies "$package_dir" "$source_dir/package.json"; then
+      deploy_dir="$(mktemp -d "${TMPDIR:-/tmp}/downcity-cli-deploy.XXXXXX")"
+      trap 'rm -rf "$deploy_dir"' RETURN
+      deploy_downcity_cli_package "$package_dir" "$deploy_dir"
+    fi
   else
     # 关键点（中文）：首次全局安装没有依赖目录时，仍需要 deploy 生成完整依赖树。
     deploy_dir="$(mktemp -d "${TMPDIR:-/tmp}/downcity-cli-deploy.XXXXXX")"
     trap 'rm -rf "$deploy_dir"' RETURN
 
-    pnpm --filter downcity deploy --legacy "$deploy_dir"
-    rm -rf "$package_dir"
-    cp -R "$deploy_dir" "$package_dir"
+    deploy_downcity_cli_package "$package_dir" "$deploy_dir"
   fi
 
   chmod +x "$package_dir/bin/town/index.js"

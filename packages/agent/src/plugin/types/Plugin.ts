@@ -37,7 +37,7 @@ export type {
   PluginGuardHook,
   PluginHooks,
   PluginPipelineHook,
-  PluginPort,
+  AgentPlugins,
   PluginResolveHook,
   PluginResolves,
   PluginView,

@@ -12,6 +12,7 @@ import type { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import type {
   Plugin,
   PluginActionResult,
+  AgentPlugins,
   PluginAvailability,
   PluginView,
 } from "@/plugin/types/Plugin.js";
@@ -23,7 +24,7 @@ type ContextResolver = () => AgentContext;
 /**
  * PluginRegistry：plugin 注册与调度实现。
  */
-export class PluginRegistry {
+export class PluginRegistry implements AgentPlugins {
   private readonly contextResolver: ContextResolver;
 
   private readonly hookRegistry: HookRegistry;

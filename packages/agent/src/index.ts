@@ -249,7 +249,7 @@ export type {
   PluginHooks,
   PluginHttpDefinition,
   PluginPipelineHook,
-  PluginPort,
+  AgentPlugins,
   PluginResolveHook,
   PluginHttpRegistration,
   PluginActionInvokeParams,

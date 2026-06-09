@@ -11,7 +11,7 @@ import type { Tool } from "ai";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { PluginPort } from "@/plugin/types/Plugin.js";
+import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
@@ -41,7 +41,7 @@ export class Agent {
   readonly id: string;
   readonly path: string;
   readonly tools: Record<string, Tool>;
-  readonly plugins: PluginPort;
+  readonly plugins: AgentPlugins;
 
   private readonly logger: Logger;
   private readonly runtime: AgentRuntime;

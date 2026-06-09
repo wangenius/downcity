@@ -75,7 +75,7 @@ function buildDefaultTaskBody(): string {
     "",
     "- 最终输出直接写结果本身，不要包多余寒暄，不要粘贴冗长日志。",
     "- 需要结构时，优先使用短标题、要点列表、表格或 JSON 等稳定格式。",
-    "- 默认不要在正文里重复调用 `town chat send`；系统会自动发送最终结果。",
+    "- 默认不要在正文里重复调用 chat plugin 的发送 action；系统会自动发送最终结果。",
     "",
     "# 触发与状态建议",
     "",
@@ -87,7 +87,7 @@ function buildDefaultTaskBody(): string {
     "",
     "- 当前是独立 task 上下文，不要假设仍处在原始聊天回合里。",
     "- 尽量使用可审计的方式：关键中间产物写入 `./.downcity/task/<title>/<timestamp>/` 下的 markdown 文件。",
-    "- 如果任务明确要求跨会话、跨平台或发送额外通知，再显式调用 `town chat send`。",
+    "- 如果任务明确要求跨会话、跨平台或发送额外通知，再显式调用 chat plugin 的发送 action。",
     "",
   ].join("\n");
 }

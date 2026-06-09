@@ -498,7 +498,7 @@ function createWebPluginDefinition(plugin: Plugin): Plugin {
     return [
       `Current web provider: ${config.provider}`,
       config.provider === "agent-browser"
-        ? `Use external CLI command: ${config.browserCommand}`
+        ? `Use the configured agent-browser provider: ${config.browserCommand}`
         : "Use the installed external web-access skill/project.",
       "",
       WEB_PLUGIN_PROMPT,

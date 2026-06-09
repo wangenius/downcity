@@ -69,7 +69,6 @@ export type {
 
 // Plugin 作者 API
 export { BasePlugin } from "./plugin/core/BasePlugin.js";
-export { ImagePlugin } from "./plugin/core/ImagePlugin.js";
 
 // Session 与即时执行集成
 export { Executor } from "./executor/Executor.js";
@@ -225,15 +224,6 @@ export type {
 } from "./types/runtime/http/InlineInstant.js";
 
 // Plugin 作者与控制面类型
-export type {
-  ImagePluginContent,
-  ImagePluginFileContent,
-  ImagePluginInput,
-  ImagePluginMessage,
-  ImagePluginOptions,
-  ImagePluginTextContent,
-} from "./types/plugin/ImagePlugin.js";
-
 export type {
   Plugin,
   PluginAction,

@@ -3,8 +3,7 @@
  *
  * 关键说明（中文）
  * - 这是 `city` / `city manage` 的默认交互入口。
- * - 进入具体动作前会销毁 TUI 屏幕，再复用现有 prompts/clack 流程。
- * - 动作结束后重新回到 TUI，保证迭代速度与既有功能兼容。
+ * - 左侧 sidebar 承载 City 列表与 breadcrumb，右侧 main_section 展示当前项详情。
  */
 import type { HomeAction, WelcomeAction } from "../types/Interactive.js";
 import type { tui_action_result } from "../types/Tui.js";

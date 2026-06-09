@@ -4,10 +4,12 @@
  * 关键点（中文）
  * - 用全屏 TUI 替换 `@clack/prompts` 常用能力。
  * - 先覆盖当前 City CLI 实际使用到的 `select / text / password / confirm`。
+ * - 选择类问题统一在左侧 sidebar，右侧 main_section 只展示详情或输入。
  * - 保持返回约定尽量接近 clack，便于渐进替换现有流程。
  */
 
 import blessed from "neo-blessed";
+import { create_city_tui_shell } from "./Shell.js";
 
 interface prompt_select_option {
   label: string;
@@ -67,49 +69,54 @@ export async function select(
   input: prompt_select_input,
 ): Promise<unknown> {
   return await new Promise<unknown>((resolve) => {
-    const screen = create_screen(input.message);
+    const shell = create_city_tui_shell({
+      screen_title: input.message,
+      breadcrumb: input.message,
+      main_label: "Main",
+      footer: "Enter choose · Esc cancel · ↑↓ / j k navigate",
+    });
+    const { screen } = shell;
     let finished = false;
+    let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
 
     const finish = (value: unknown): void => {
       if (finished) return;
       finished = true;
+      if (raw_input_listener) {
+        process.stdin.off("data", raw_input_listener);
+      }
       screen.destroy();
       resolve(value);
     };
 
     const list = blessed.list({
-      parent: screen,
-      top: 0,
+      parent: shell.sidebar_box,
+      top: 2,
       left: 0,
-      width: "42%",
-      height: "100%-3",
+      width: "100%",
+      height: "100%-2",
       keys: true,
       vi: true,
       mouse: true,
-      border: "line",
-      label: " Select ",
       style: build_list_style(),
-      items: input.options.map((item) => format_option_title(item)),
+      items: input.options.map((item) => item.label),
     }) as blessed_list_element;
 
     const detail = blessed.box({
-      parent: screen,
+      parent: shell.main_box,
       top: 0,
-      left: "42%",
-      width: "58%",
-      height: "100%-3",
-      border: "line",
-      label: " Detail ",
+      left: 0,
+      width: "100%",
+      height: "100%",
       padding: { left: 1, right: 1, top: 1, bottom: 1 },
       scrollable: true,
       alwaysScroll: true,
+      tags: true,
       content: format_option_detail(input.options[0]),
       style: {
-        border: { fg: "cyan" },
+        fg: "white",
       },
     });
-
-    create_footer(screen, "Enter choose · Esc cancel · ↑↓ / j k navigate");
 
     list.select(0);
     list.focus();
@@ -126,6 +133,18 @@ export async function select(
     });
 
     screen.key(["escape", "q", "C-c"], () => finish(cancel("cancel")));
+    raw_input_listener = (chunk: Buffer | string): void => {
+      const text = String(chunk);
+      if (text.includes("\u0003") || is_plain_escape_input(text)) {
+        finish(cancel("cancel"));
+        return;
+      }
+      if (text.includes("\r") || text.includes("\n")) {
+        const index = typeof list.selected === "number" ? list.selected : 0;
+        finish(input.options[index]?.value);
+      }
+    };
+    process.stdin.on("data", raw_input_listener);
     screen.render();
   });
 }
@@ -169,45 +188,57 @@ export async function confirm(
   ];
 
   return await new Promise<unknown>((resolve) => {
-    const screen = create_screen(input.message);
+    const shell = create_city_tui_shell({
+      screen_title: input.message,
+      breadcrumb: input.message,
+      main_label: "Main",
+      footer: "Enter choose · Esc cancel",
+    });
+    const { screen } = shell;
     let finished = false;
+    let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
 
     const finish = (value: unknown): void => {
       if (finished) return;
       finished = true;
+      if (raw_input_listener) {
+        process.stdin.off("data", raw_input_listener);
+      }
       screen.destroy();
       resolve(value);
     };
 
     const list = blessed.list({
-      parent: screen,
-      top: "center",
-      left: "center",
-      width: "60%",
-      height: 8,
+      parent: shell.sidebar_box,
+      top: 2,
+      left: 0,
+      width: "100%",
+      height: "100%-2",
       keys: true,
       vi: true,
       mouse: true,
-      border: "line",
-      label: " Confirm ",
       style: build_list_style(),
       items: options.map((item) => item.label),
     }) as blessed_list_element;
 
-    blessed.box({
-      parent: screen,
-      top: "center-6",
-      left: "center",
-      width: "60%",
-      height: 3,
-      align: "center",
-      content: input.message,
+    const detail = blessed.box({
+      parent: shell.main_box,
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      padding: { left: 1, right: 1, top: 1, bottom: 1 },
+      tags: true,
+      content: format_option_detail(options[initial_value ? 0 : 1]),
     });
-
-    create_footer(screen, "Enter choose · Esc cancel");
 
     list.select(initial_value ? 0 : 1);
     list.focus();
+    list.on("select item", (_item, index_value) => {
+      const index = typeof index_value === "number" ? index_value : 0;
+      detail.setContent(format_option_detail(options[index]));
+      screen.render();
+    });
 
     list.key(["enter"], () => {
       const index = typeof list.selected === "number" ? list.selected : (initial_value ? 0 : 1);
@@ -215,6 +246,18 @@ export async function confirm(
     });
 
     screen.key(["escape", "q", "C-c"], () => finish(cancel("cancel")));
+    raw_input_listener = (chunk: Buffer | string): void => {
+      const text = String(chunk);
+      if (text.includes("\u0003") || is_plain_escape_input(text)) {
+        finish(cancel("cancel"));
+        return;
+      }
+      if (text.includes("\r") || text.includes("\n")) {
+        const index = typeof list.selected === "number" ? list.selected : (initial_value ? 0 : 1);
+        finish(options[index]?.value);
+      }
+    };
+    process.stdin.on("data", raw_input_listener);
     screen.render();
   });
 }
@@ -289,7 +332,13 @@ async function open_text_prompt_once(
   },
 ): Promise<unknown> {
   return await new Promise<unknown>((resolve) => {
-    const screen = create_screen(input.message);
+    const shell = create_city_tui_shell({
+      screen_title: input.message,
+      breadcrumb: input.message,
+      main_label: "Main",
+      footer: "Type text · Enter submit · Esc cancel · Ctrl+U clear",
+    });
+    const { screen } = shell;
     let finished = false;
     let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
 
@@ -304,7 +353,7 @@ async function open_text_prompt_once(
     };
 
     blessed.box({
-      parent: screen,
+      parent: shell.main_box,
       top: 4,
       left: "center",
       width: "70%",
@@ -315,7 +364,7 @@ async function open_text_prompt_once(
     });
 
     const hint_box = blessed.box({
-      parent: screen,
+      parent: shell.main_box,
       top: 14,
       left: "center",
       width: "70%",
@@ -328,7 +377,7 @@ async function open_text_prompt_once(
     });
 
     const textbox = blessed.textbox({
-      parent: screen,
+      parent: shell.main_box,
       top: 8,
       left: "center",
       width: "70%",
@@ -355,8 +404,6 @@ async function open_text_prompt_once(
       hint_box.setContent(options.error_message || format_input_hint(input.placeholder));
       screen.render();
     };
-
-    create_footer(screen, "Type text · Enter submit · Esc cancel · Ctrl+U clear");
 
     screen.key(["escape", "C-c"], () => finish(cancel("cancel")));
     textbox.key(["enter", "return"], () => {
@@ -405,58 +452,6 @@ async function open_text_prompt_once(
   });
 }
 
-function create_screen(title: string): blessed.Widgets.Screen {
-  const screen = blessed.screen({
-    smartCSR: true,
-    fullUnicode: true,
-    title,
-    dockBorders: true,
-    autoPadding: true,
-  });
-
-  screen.style = {
-    bg: "black",
-    fg: "white",
-  };
-
-  blessed.box({
-    parent: screen,
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: 3,
-    tags: true,
-    border: "line",
-    padding: { left: 1, top: 1 },
-    content: `{bold}${title}{/bold}`,
-    style: {
-      border: { fg: "cyan" },
-    },
-  });
-
-  return screen;
-}
-
-function create_footer(
-  screen: blessed.Widgets.Screen,
-  content: string,
-): void {
-  blessed.box({
-    parent: screen,
-    left: 0,
-    bottom: 0,
-    width: "100%",
-    height: 3,
-    border: "line",
-    padding: { left: 1, top: 1 },
-    style: {
-      border: { fg: "cyan" },
-      fg: "gray",
-    },
-    content,
-  });
-}
-
 function build_list_style(): blessed.Widgets.ListOptions["style"] {
   return {
     border: { fg: "cyan" },
@@ -467,12 +462,6 @@ function build_list_style(): blessed.Widgets.ListOptions["style"] {
       bold: true,
     },
   };
-}
-
-function format_option_title(option?: prompt_select_option): string {
-  const label = String(option?.label ?? "").trim();
-  const hint = String(option?.hint ?? "").trim();
-  return hint ? `${label}\n${hint}` : label;
 }
 
 function format_option_detail(option?: prompt_select_option): string {

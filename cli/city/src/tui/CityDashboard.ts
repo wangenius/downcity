@@ -3,12 +3,12 @@
  *
  * 关键说明（中文）
  * - 这是 `city` / `city manage` 的默认交互入口。
- * - 进入具体动作前会销毁 TUI 屏幕，再复用现有 prompts/clack 流程。
- * - 动作结束后重新回到 TUI，保证迭代速度与既有功能兼容。
+ * - 左侧 sidebar 承载 City 列表与 breadcrumb，右侧 main_section 展示当前项详情。
  */
 
 import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
+import { create_city_tui_shell } from "./Shell.js";
 import { readActiveServer, readConfig } from "../core/session.js";
 import { getCliLocale, t } from "../i18n.js";
 import type { HomeAction, WelcomeAction } from "../types/Interactive.js";
@@ -193,66 +193,51 @@ async function run_city_dashboard_once(
   state: city_dashboard_state,
 ): Promise<string | null> {
   return await new Promise<string | null>((resolve) => {
-    const screen = blessed.screen({
-      smartCSR: true,
-      fullUnicode: true,
-      title: "Downcity City",
-      dockBorders: true,
-      autoPadding: true,
+    const shell = create_city_tui_shell({
+      screen_title: "Downcity City",
+      breadcrumb: state.title,
+      main_label: "Main",
+      footer: state.footer,
     });
+    const { screen } = shell;
 
     let finished = false;
+    let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
 
     const finish = (value: string | null): void => {
       if (finished) return;
       finished = true;
+      if (raw_input_listener) {
+        process.stdin.off("data", raw_input_listener);
+      }
       screen.destroy();
       resolve(value);
     };
 
-    const root = blessed.box({
-      parent: screen,
-      width: "100%",
-      height: "100%",
-      style: {
-        fg: "white",
-        bg: "black",
-      },
-    });
-
     blessed.box({
-      parent: root,
+      parent: shell.main_box,
       top: 0,
-      left: 0,
-      width: "100%",
-      height: 4,
+      left: 1,
+      width: "100%-2",
+      height: 3,
       tags: true,
-      padding: { left: 1, right: 1, top: 1 },
       content: `{bold}${state.title}{/bold}\n${state.subtitle}`,
-      border: "line",
-      style: {
-        border: { fg: "cyan" },
-      },
     });
 
     const list = blessed.list({
-      parent: root,
-      top: 4,
+      parent: shell.sidebar_box,
+      top: 2,
       left: 0,
-      width: "42%",
-      height: "shrink",
-      bottom: 3,
+      width: "100%",
+      height: "100%-2",
       keys: true,
       vi: true,
       mouse: true,
-      border: "line",
-      label: ` ${t({ zh: "动作", en: "Actions" })} `,
       style: {
-        border: { fg: "cyan" },
         item: { fg: "white" },
         selected: {
           fg: "black",
-          bg: "green",
+          bg: "cyan",
           bold: true,
         },
       },
@@ -260,39 +245,21 @@ async function run_city_dashboard_once(
     }) as blessed_list_element;
 
     const detail = blessed.box({
-      parent: root,
+      parent: shell.main_box,
       top: 4,
-      left: "42%",
-      width: "58%",
-      height: "shrink",
-      bottom: 3,
+      left: 0,
+      width: "100%",
+      height: "100%-4",
       padding: { left: 1, right: 1, top: 1, bottom: 1 },
       tags: true,
       scrollable: true,
       alwaysScroll: true,
       keys: true,
       mouse: true,
-      border: "line",
-      label: ` ${t({ zh: "详情", en: "Details" })} `,
       style: {
-        border: { fg: "cyan" },
+        fg: "white",
       },
       content: format_detail_content(state.items[0]),
-    });
-
-    blessed.box({
-      parent: root,
-      left: 0,
-      bottom: 0,
-      width: "100%",
-      height: 3,
-      padding: { left: 1, right: 1, top: 1 },
-      border: "line",
-      style: {
-        border: { fg: "cyan" },
-        fg: "gray",
-      },
-      content: state.footer,
     });
 
     list.on("select item", (_item, index_value) => {
@@ -319,6 +286,18 @@ async function run_city_dashboard_once(
     });
 
     screen.key(["escape", "q", "C-c"], () => finish(null));
+    raw_input_listener = (chunk: Buffer | string): void => {
+      const text = String(chunk);
+      if (text.includes("\u0003") || text === "\u001b") {
+        finish(null);
+        return;
+      }
+      if (text.includes("\r") || text.includes("\n")) {
+        const index = typeof list.selected === "number" ? list.selected : 0;
+        finish(state.items[index]?.id ?? null);
+      }
+    };
+    process.stdin.on("data", raw_input_listener);
 
     list.focus();
     screen.render();
@@ -326,7 +305,7 @@ async function run_city_dashboard_once(
 }
 
 function format_list_label(item: tui_list_item): string {
-  return `${item.title}\n${item.subtitle}`;
+  return item.title;
 }
 
 function format_detail_content(item: tui_list_item): string {

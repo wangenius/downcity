@@ -493,7 +493,7 @@ function build_city_detail(city_state: TownCityConnectionState): string {
 }
 
 function format_list_label(item: tui_list_item): string {
-  return `${item.title}\n${item.subtitle}`;
+  return item.title;
 }
 
 function format_detail_content(item: tui_list_item): string {

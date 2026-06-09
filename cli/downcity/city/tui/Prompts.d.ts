@@ -4,6 +4,7 @@
  * 关键点（中文）
  * - 用全屏 TUI 替换 `@clack/prompts` 常用能力。
  * - 先覆盖当前 City CLI 实际使用到的 `select / text / password / confirm`。
+ * - 选择类问题统一在左侧 sidebar，右侧 main_section 只展示详情或输入。
  * - 保持返回约定尽量接近 clack，便于渐进替换现有流程。
  */
 interface prompt_select_option {

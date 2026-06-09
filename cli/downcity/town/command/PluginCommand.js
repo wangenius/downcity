@@ -8,7 +8,7 @@
  * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 import fs from "node:fs";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import { listPluginViews, listPluginsWithLifecycle, listPluginsWithoutLifecycle, runLocalPluginAction, } from "@downcity/agent";
 import { CHAT_AUTHORIZATION_PLUGIN_NAME, createBuiltinPlugins, } from "@downcity/plugins";
 import { printResult } from "../utils/cli/CliOutput.js";

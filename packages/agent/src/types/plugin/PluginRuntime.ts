@@ -52,9 +52,9 @@ export interface PluginAvailability {
 }
 
 /**
- * Plugin 调用端口。
+ * 当前 Agent 可用的 plugin 调用面。
  */
-export interface PluginPort {
+export interface AgentPlugins {
   /** 列出全部已注册 plugin。 */
   list(): PluginView[];
   /** 检查指定 plugin 可用性。 */

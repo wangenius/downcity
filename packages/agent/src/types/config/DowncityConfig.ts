@@ -108,24 +108,6 @@ export interface DowncityChatPluginConfig {
 }
 
 /**
- * skill 插件配置。
- */
-export interface DowncitySkillPluginConfig {
-  /**
-   * 当前插件是否启用。
-   */
-  enabled?: boolean;
-  /**
-   * 技能目录列表。
-   */
-  paths?: string[];
-  /**
-   * 是否允许读取项目外部技能目录。
-   */
-  allowExternalPaths?: boolean;
-}
-
-/**
  * downcity.json 中的插件配置映射。
  */
 export interface DowncityPluginConfigMap {
@@ -134,16 +116,11 @@ export interface DowncityPluginConfigMap {
    */
   chat?: DowncityChatPluginConfig;
   /**
-   * skill 插件配置。
-   */
-  skill?: DowncitySkillPluginConfig;
-  /**
    * 其他插件配置。
    */
   [pluginName: string]:
     | JsonObject
     | DowncityChatPluginConfig
-    | DowncitySkillPluginConfig
     | undefined;
 }
 
@@ -171,7 +148,7 @@ export interface DowncityConfig {
    *
    * 关键点（中文）
    * - 所有可配置能力统一收敛到 `plugins`，不再保留独立 `services` 域。
-   * - plugin 私有配置（例如 `plugins.skill.paths`、`plugins.chat.channels`）也放在这里。
+   * - 需要持久化到项目文件的 plugin 配置（例如 `plugins.chat.channels`）放在这里。
    * - key 为 plugin 名称，value 为对应插件的结构化配置对象。
    * - 当前阶段允许各 plugin 自定义字段，但必须保持 JSON 可序列化。
    */

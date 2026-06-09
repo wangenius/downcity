@@ -6,7 +6,7 @@
  * - 保留原有脚本化子命令不变，只把高频的人类操作收敛成轻量 manager。
  */
 
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import fs from "fs-extra";
 import { initCommand } from "./Init.js";
 import { runCommand } from "./Run.js";

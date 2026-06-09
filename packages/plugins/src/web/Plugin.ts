@@ -5,7 +5,6 @@
  * - `web` plugin 不再自实现联网与浏览器能力，只负责 provider 选择、状态检查与提示词注入。
  * - 真正的联网逻辑直接交给外部实现：`web-access` 或 `agent-browser`。
  */
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
@@ -499,7 +498,7 @@ function createWebPluginDefinition(plugin: Plugin): Plugin {
     return [
       `Current web provider: ${config.provider}`,
       config.provider === "agent-browser"
-        ? `Use external CLI command: ${config.browserCommand}`
+        ? `Use the configured agent-browser provider: ${config.browserCommand}`
         : "Use the installed external web-access skill/project.",
       "",
       WEB_PLUGIN_PROMPT,
@@ -516,8 +515,8 @@ function createWebPluginDefinition(plugin: Plugin): Plugin {
 export class WebPlugin extends BasePlugin {
   readonly name = "web";
 
-  constructor(agent: AgentRuntime | null = null) {
-    super(agent);
+  constructor() {
+    super();
     Object.assign(this, createWebPluginDefinition(this));
   }
 }

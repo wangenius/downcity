@@ -8,7 +8,6 @@
  * - action 注册表已经拆到独立模块，当前文件只保留实例骨架。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
@@ -107,11 +106,9 @@ export class ChatPlugin extends BasePlugin {
     worker.stop();
   }
 
-  constructor(optionsOrAgent?: ChatPluginOptions | AgentRuntime | null) {
-    super(isAgentRuntimeInput(optionsOrAgent) ? optionsOrAgent : null);
-    this.options = isAgentRuntimeInput(optionsOrAgent)
-      ? {}
-      : (optionsOrAgent || {});
+  constructor(options?: ChatPluginOptions) {
+    super();
+    this.options = options || {};
     this.actions = createChatPluginActions({
       channelState: this.channelState,
     });
@@ -238,12 +235,4 @@ export class ChatPlugin extends BasePlugin {
       updatedAt: now,
     };
   }
-}
-
-function isAgentRuntimeInput(
-  input: ChatPluginOptions | AgentRuntime | null | undefined,
-): input is AgentRuntime | null {
-  if (input === null) return true;
-  if (!input || typeof input !== "object") return false;
-  return typeof (input as AgentRuntime).getSession === "function";
 }

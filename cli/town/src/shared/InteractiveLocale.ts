@@ -6,7 +6,7 @@
  * - 写入 Town 本地状态后立即更新进程内语言，保证后续菜单即时生效。
  */
 
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import type { CliLocale } from "../types/CliLocale.js";
 import { writePersistedTownCliLocale } from "./CityStateStore.js";
 import { emitCliBlock } from "./CliReporter.js";

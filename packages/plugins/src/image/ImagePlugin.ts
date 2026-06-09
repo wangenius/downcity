@@ -1,5 +1,5 @@
 /**
- * ImagePlugin：Agent 内置图片生成插件。
+ * ImagePlugin：图片生成插件。
  *
  * 关键点（中文）
  * - 对 Agent 只暴露同步体验的 `generate` action。
@@ -7,16 +7,19 @@
  * - action 返回 AI SDK UIMessage，后续由 plugin tool bridge 抽取 file parts 写回 assistant 消息。
  */
 
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type {
+  JsonObject,
+  JsonValue,
+} from "@downcity/agent/internal/types/common/Json.js";
 import type {
   ImagePluginInput,
   ImagePluginJobCreateResult,
   ImagePluginJobResult,
   ImagePluginOptions,
   ImagePluginResult,
-} from "@/types/plugin/ImagePlugin.js";
-import { BasePlugin } from "@/plugin/core/BasePlugin.js";
+} from "@/image/types/ImagePlugin.js";
 
 const DEFAULT_IMAGE_PLUGIN_NAME = "image";
 const DEFAULT_IMAGE_PLUGIN_TITLE = "Image";
@@ -37,7 +40,9 @@ function to_record(value: unknown): Record<string, unknown> | null {
 /**
  * 归一化模型传入的图片生成 payload。
  */
-function normalize_image_payload(payload: JsonValue | undefined): ImagePluginInput {
+function normalize_image_payload(
+  payload: JsonValue | undefined,
+): ImagePluginInput {
   const record = to_record(payload ?? {});
   if (!record) {
     throw new TypeError("ImagePlugin.generate payload must be an object");
@@ -66,7 +71,11 @@ function sleep(ms: number): Promise<void> {
 /**
  * 限制轮询间隔，避免服务端异常值导致过快或过慢轮询。
  */
-function clamp_poll_interval(value: unknown, min_ms: number, max_ms: number): number {
+function clamp_poll_interval(
+  value: unknown,
+  min_ms: number,
+  max_ms: number,
+): number {
   const n = typeof value === "number" && Number.isFinite(value) ? value : min_ms;
   return Math.max(min_ms, Math.min(max_ms, n));
 }
@@ -84,7 +93,12 @@ function normalize_positive_number(value: unknown, fallback: number): number {
  * 校验任务创建结果。
  */
 function validate_created_job(value: ImagePluginJobCreateResult): void {
-  if (!value || typeof value !== "object" || typeof value.job_id !== "string" || !value.job_id.trim()) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    typeof value.job_id !== "string" ||
+    !value.job_id.trim()
+  ) {
     throw new TypeError("ImagePlugin image_create must return a job_id");
   }
 }
@@ -94,7 +108,12 @@ function validate_created_job(value: ImagePluginJobCreateResult): void {
  */
 function validate_job_result(value: ImagePluginJobResult): void {
   const status = value?.status;
-  if (status !== "queued" && status !== "running" && status !== "succeeded" && status !== "failed") {
+  if (
+    status !== "queued" &&
+    status !== "running" &&
+    status !== "succeeded" &&
+    status !== "failed"
+  ) {
     throw new TypeError("ImagePlugin image_result must return a valid job status");
   }
 }
@@ -143,7 +162,10 @@ export class ImagePlugin extends BasePlugin {
     ).trim();
     this.image_create = options.image_create;
     this.image_result = options.image_result;
-    this.timeout_ms = normalize_positive_number(options.timeout_ms, DEFAULT_TIMEOUT_MS);
+    this.timeout_ms = normalize_positive_number(
+      options.timeout_ms,
+      DEFAULT_TIMEOUT_MS,
+    );
     this.min_poll_interval_ms = normalize_positive_number(
       options.min_poll_interval_ms,
       DEFAULT_MIN_POLL_INTERVAL_MS,
@@ -166,18 +188,22 @@ export class ImagePlugin extends BasePlugin {
     ].join("\n");
   }
 
-  private async generate_image(input: ImagePluginInput): Promise<ImagePluginResult> {
+  private async generate_image(
+    input: ImagePluginInput,
+  ): Promise<ImagePluginResult> {
     const created = await this.image_create(input);
     validate_created_job(created);
     const deadline = Date.now() + this.timeout_ms;
     let poll_after_ms = created.poll_after_ms;
 
     while (Date.now() < deadline) {
-      await sleep(clamp_poll_interval(
-        poll_after_ms,
-        this.min_poll_interval_ms,
-        this.max_poll_interval_ms,
-      ));
+      await sleep(
+        clamp_poll_interval(
+          poll_after_ms,
+          this.min_poll_interval_ms,
+          this.max_poll_interval_ms,
+        ),
+      );
       const current = await this.image_result({ job_id: created.job_id });
       validate_job_result(current);
       poll_after_ms = current.poll_after_ms;
@@ -188,7 +214,9 @@ export class ImagePlugin extends BasePlugin {
         return normalize_image_result(current.result);
       }
       if (current.status === "failed") {
-        throw new Error(`Image job failed: ${current.error ?? current.message ?? created.job_id}`);
+        throw new Error(
+          `Image job failed: ${current.error ?? current.message ?? created.job_id}`,
+        );
       }
     }
 

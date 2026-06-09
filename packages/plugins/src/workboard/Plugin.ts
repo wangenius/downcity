@@ -6,7 +6,6 @@
  * - 当前同时通过 plugin action 与 HTTP 注入提供快照，供 Town RPC 与 Town HTTP gateway 复用。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
@@ -111,8 +110,8 @@ function createWorkboardPluginDefinition(plugin: Plugin): Plugin {
 export class WorkboardPlugin extends BasePlugin {
   readonly name = "workboard";
 
-  constructor(agent: AgentRuntime | null = null) {
-    super(agent);
+  constructor() {
+    super();
     Object.assign(this, createWorkboardPluginDefinition(this));
   }
 }

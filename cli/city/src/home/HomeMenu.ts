@@ -6,7 +6,7 @@
  * - 日常使用时，首页围绕当前激活的 City admin 工作区展开。
  */
 
-import { isCancel, select } from "@clack/prompts";
+import { isCancel, select } from "../tui/Prompts.js";
 import { readActiveServer } from "../core/session.js";
 import { type HomeAction, type WelcomeAction } from "../types/Interactive.js";
 import { getCliLocale, t } from "../i18n.js";

@@ -19,7 +19,7 @@ import type {
 } from "@/types/agent/AgentRuntimeAssembly.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { PluginPort } from "@/plugin/types/Plugin.js";
+import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
   SessionMetadataV1,
   SessionMessageV1,
@@ -261,7 +261,7 @@ export interface AgentContext {
   /**
    * Plugin 调用入口。
    */
-  plugins: PluginPort;
+  plugins: AgentPlugins;
 }
 
 /**

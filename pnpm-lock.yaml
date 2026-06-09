@@ -109,9 +109,6 @@ importers:
       '@ai-sdk/xai':
         specifier: ^3.0.93
         version: 3.0.93(zod@4.4.3)
-      '@clack/prompts':
-        specifier: ^1.5.0
-        version: 1.5.0
       '@downcity/agent':
         specifier: workspace:^
         version: link:../../packages/agent
@@ -163,6 +160,9 @@ importers:
       nanoid:
         specifier: ^5.1.11
         version: 5.1.11
+      neo-blessed:
+        specifier: ^0.2.0
+        version: 0.2.0
       node-cron:
         specifier: ^4.2.1
         version: 4.2.1
@@ -236,9 +236,6 @@ importers:
       '@ai-sdk/xai':
         specifier: ^3.0.93
         version: 3.0.93(zod@4.4.3)
-      '@clack/prompts':
-        specifier: ^1.5.0
-        version: 1.5.0
       '@downcity/agent':
         specifier: workspace:^
         version: link:../../packages/agent
@@ -290,6 +287,9 @@ importers:
       nanoid:
         specifier: ^5.1.11
         version: 5.1.11
+      neo-blessed:
+        specifier: ^0.2.0
+        version: 0.2.0
       node-cron:
         specifier: ^4.2.1
         version: 4.2.1
@@ -353,6 +353,9 @@ importers:
       nanoid:
         specifier: ^5.1.11
         version: 5.1.11
+      neo-blessed:
+        specifier: ^0.2.0
+        version: 0.2.0
       prompts:
         specifier: ^2.4.2
         version: 2.4.2
@@ -1226,14 +1229,6 @@ packages:
 
   '@chevrotain/types@11.1.2':
     resolution: {integrity: sha512-U+HFai5+zmJCkK86QsaJtoITlboZHBqrVketcO2ROv865xfCMSFpELQoz1GkX5GzME8pTa+3kbKrZHQtI0gdbw==}
-
-  '@clack/core@1.4.0':
-    resolution: {integrity: sha512-7Wctjq6f7c1CPz8sPpkwUnz8yRgVANkpNupb81q432FjcJg4l+Sw7XANdNSdWfAKq0IHI0JTcUeK5dxs/HrGPw==}
-    engines: {node: '>= 20.12.0'}
-
-  '@clack/prompts@1.5.0':
-    resolution: {integrity: sha512-wKh+wTjmrUoUdkZg8KpJO5X+p9PWV+KE9mePseq9UYWkukgTKsGS47RRL2HstwVcvDQH+PenrPJWII8+MfiiyA==}
-    engines: {node: '>= 20.12.0'}
 
   '@cloudflare/kv-asset-handler@0.5.0':
     resolution: {integrity: sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg==}
@@ -5906,6 +5901,11 @@ packages:
     resolution: {integrity: sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg==}
     engines: {node: '>= 0.6'}
 
+  neo-blessed@0.2.0:
+    resolution: {integrity: sha512-C2kC4K+G2QnNQFXUIxTQvqmrdSIzGTX1ZRKeDW6ChmvPRw8rTkTEJzbEQHiHy06d36PCl/yMOCjquCRV8SpSQw==}
+    engines: {node: '>= 8.0.0'}
+    hasBin: true
+
   next-themes@0.4.6:
     resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
     peerDependencies:
@@ -7603,18 +7603,6 @@ snapshots:
   '@braintree/sanitize-url@7.1.2': {}
 
   '@chevrotain/types@11.1.2': {}
-
-  '@clack/core@1.4.0':
-    dependencies:
-      fast-wrap-ansi: 0.2.2
-      sisteransi: 1.0.5
-
-  '@clack/prompts@1.5.0':
-    dependencies:
-      '@clack/core': 1.4.0
-      fast-string-width: 3.0.2
-      fast-wrap-ansi: 0.2.2
-      sisteransi: 1.0.5
 
   '@cloudflare/kv-asset-handler@0.5.0': {}
 
@@ -12179,6 +12167,8 @@ snapshots:
   negotiator@0.6.4: {}
 
   negotiator@1.0.0: {}
+
+  neo-blessed@0.2.0: {}
 
   next-themes@0.4.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:

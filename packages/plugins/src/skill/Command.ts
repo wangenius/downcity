@@ -3,15 +3,13 @@
  *
  * 设计目标（中文）
  * - 尽量不自建 registry：直接复用社区的 `npx skills` 生态（find/install）。
- * - 同时提供本地视角的 `list`：列出 Downcity 当前能发现的 skills（含 project/home）。
+ * - 同时提供本地视角的 `list`：按 SkillPlugin 默认构造参数列出当前项目 skills。
  */
 
 import path from "node:path";
-import fs from "fs-extra";
 import { execa } from "execa";
 import { discoverClaudeSkillsSync } from "@/skill/runtime/Discovery.js";
 import { getClaudeSkillSearchRoots } from "@/skill/runtime/Paths.js";
-import { loadDowncityConfig } from "@downcity/agent/internal/config/Config.js";
 
 async function runNpxSkills(args: string[], opts?: { yes?: boolean }): Promise<number> {
   const yes = opts?.yes !== false;
@@ -76,16 +74,8 @@ export async function skillInstallCommand(
  */
 export async function skillListCommand(cwd: string = "."): Promise<void> {
   const projectRoot = path.resolve(String(cwd || "."));
-  const shipJson = path.join(projectRoot, "downcity.json");
-  if (!fs.existsSync(shipJson)) {
-    throw new Error(
-      `downcity.json not found at ${shipJson}. Run "town agent create" first or pass the correct path.`,
-    );
-  }
-
-  const config = loadDowncityConfig(projectRoot);
-  const roots = getClaudeSkillSearchRoots(projectRoot, config);
-  const skills = discoverClaudeSkillsSync(projectRoot, config);
+  const roots = getClaudeSkillSearchRoots(projectRoot);
+  const skills = discoverClaudeSkillsSync(projectRoot);
 
   console.log("Skill roots:");
   for (const root of roots) console.log(`- [${root.source}] ${root.display}`);

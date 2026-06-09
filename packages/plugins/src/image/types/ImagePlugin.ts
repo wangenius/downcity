@@ -2,13 +2,16 @@
  * ImagePlugin 类型定义。
  *
  * 关键点（中文）
- * - 这里仅定义 agent 对图片能力的最低层协议，不绑定 city 或任意上游 provider。
+ * - 这里仅定义图片 plugin 对图片能力的最低层协议，不绑定 city 或任意上游 provider。
  * - 图片生成结果使用 AI SDK UIMessage，保证 session 落盘格式与现有消息系统一致。
  * - 字段保持 JSON 可序列化，便于通过 plugin action 与 tool bridge 传递。
  */
 
 import type { UIMessage } from "ai";
-import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type {
+  JsonObject,
+  JsonValue,
+} from "@downcity/agent/internal/types/common/Json.js";
 
 /**
  * 图片生成文本内容片段。
@@ -138,9 +141,13 @@ export interface ImagePluginOptions {
   /** Plugin 用途说明。 */
   description?: string;
   /** 创建图片生成任务，通常传入 `(input) => city.ai.image_create(input)`。 */
-  image_create?: (input: ImagePluginInput) => Promise<ImagePluginJobCreateResult> | ImagePluginJobCreateResult;
+  image_create?: (
+    input: ImagePluginInput,
+  ) => Promise<ImagePluginJobCreateResult> | ImagePluginJobCreateResult;
   /** 查询图片生成任务，通常传入 `(input) => city.ai.image_result(input)`。 */
-  image_result?: (input: { job_id: string }) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
+  image_result?: (input: {
+    job_id: string;
+  }) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
   /** 图片任务最大等待时间，默认 300000ms。 */
   timeout_ms?: number;
   /** 轮询间隔下限，默认 100ms。 */

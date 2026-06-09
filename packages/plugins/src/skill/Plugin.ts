@@ -7,21 +7,17 @@
  * - skills overview 文本通过 `plugin.system` 注入，不再依赖 plugin.system。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import { isPluginEnabled } from "@downcity/agent/internal/plugin/core/Activation.js";
 import type {
   SkillPluginFindPayload,
   SkillPluginInstallPayload,
   SkillPluginLookupPayload,
+  SkillPluginOptions,
 } from "@/skill/types/SkillPlugin.js";
 import { SKILL_PLUGIN_ACTIONS } from "@/skill/types/SkillPlugin.js";
-import {
-  DEFAULT_SKILL_PLUGIN_CONFIG,
-  readSkillPluginConfig,
-} from "@/skill/Config.js";
+import { resolveSkillPluginOptions } from "@/skill/Config.js";
 import { skillFindCommand, skillInstallCommand } from "@/skill/Command.js";
 import {
   findLearnedSkillExact,
@@ -92,245 +88,239 @@ function inferSkillQueryFromSpec(spec: string): string {
   return "";
 }
 
-function createSkillPluginDefinition(plugin: Plugin): Plugin {
+function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
   return {
     name: "skill",
-  title: "Skill Catalog And Loader",
-  description:
-    "Finds, installs, lists, and reads local skills, and injects the current skill overview into system prompts so the agent knows what capabilities are available.",
-  config: {
-    plugin: "skill",
-    scope: "project",
-    defaultValue: {
-      ...DEFAULT_SKILL_PLUGIN_CONFIG,
+    title: "Skill Catalog And Loader",
+    description:
+      "Finds, installs, lists, and reads local skills, and injects the current skill overview into system prompts so the agent knows what capabilities are available.",
+    async system(context) {
+      const dynamicText = String(
+        await buildSkillsSystemText({
+          rootPath: context.rootPath,
+          options,
+        }),
+      ).trim();
+      return [SKILL_PLUGIN_PROMPT, dynamicText].filter(Boolean).join("\n\n");
     },
-  },
-  availability(context) {
-    if (!isPluginEnabled({ plugin, context })) {
-      return {
-        enabled: false,
-        available: false,
-        reasons: ["skill plugin disabled in project config"],
-      };
-    }
-    return {
-      enabled: true,
-      available: true,
-      reasons: [],
-    };
-  },
-  async system(context) {
-    const dynamicText = String(await buildSkillsSystemText(context)).trim();
-    return [SKILL_PLUGIN_PROMPT, dynamicText].filter(Boolean).join("\n\n");
-  },
-  actions: {
-    [SKILL_PLUGIN_ACTIONS.find]: {
-      command: {
-        description: "查找 `list` 中不存在的未学会 skills（缺失时再 install）",
-        configure(command) {
-          command.argument("<query>");
+    actions: {
+      [SKILL_PLUGIN_ACTIONS.find]: {
+        command: {
+          description: "查找 `list` 中不存在的未学会 skills（缺失时再 install）",
+          configure(command) {
+            command.argument("<query>");
+          },
+          mapInput({ args }): SkillPluginFindPayload {
+            const query = String(args[0] || "").trim();
+            if (!query) throw new Error("Missing query");
+            return { query };
+          },
         },
-        mapInput({ args }): SkillPluginFindPayload {
-          const query = String(args[0] || "").trim();
-          if (!query) throw new Error("Missing query");
-          return { query };
-        },
-      },
-      async execute(params) {
-        const payload = params.payload as SkillPluginFindPayload;
-        const rootPath = params.context.rootPath;
-        const exactLearned = findLearnedSkillExact(rootPath, payload.query);
-        if (exactLearned) {
+        async execute(params) {
+          const payload = params.payload as SkillPluginFindPayload;
+          const rootPath = params.context.rootPath;
+          const exactLearned = findLearnedSkillExact(
+            rootPath,
+            payload.query,
+            options,
+          );
+          if (exactLearned) {
+            return {
+              success: true,
+              data: {
+                query: payload.query,
+                message: "该技能已在 list 中，无需 install。使用前请先执行 lookup。",
+                workflow: ["list", "lookup"],
+                nextAction: "lookup",
+                learnedSkill: exactLearned,
+                learnedHints: [],
+              },
+            };
+          }
+
+          const learnedHints = searchLearnedSkills(
+            rootPath,
+            payload.query,
+            5,
+            options,
+          );
+          await skillFindCommand(payload.query);
           return {
             success: true,
             data: {
               query: payload.query,
-              message: "该技能已在 list 中，无需 install。使用前请先执行 lookup。",
-              workflow: ["list", "lookup"],
-              nextAction: "lookup",
-              learnedSkill: exactLearned,
-              learnedHints: [],
+              message: "已执行缺失技能检索；若目标不在 list 中，可 install 后再 lookup。",
+              workflow: ["find", "install", "lookup"],
+              nextAction: "install",
+              learnedSkill: null,
+              learnedHints,
             },
           };
-        }
-
-        const learnedHints = searchLearnedSkills(rootPath, payload.query, 5);
-        await skillFindCommand(payload.query);
-        return {
-          success: true,
-          data: {
-            query: payload.query,
-            message: "已执行缺失技能检索；若目标不在 list 中，可 install 后再 lookup。",
-            workflow: ["find", "install", "lookup"],
-            nextAction: "install",
-            learnedSkill: null,
-            learnedHints,
+        },
+      },
+      [SKILL_PLUGIN_ACTIONS.install]: {
+        command: {
+          description: "安装 `list` 中不存在的 skill（完成后请先 lookup）",
+          configure(command) {
+            command
+              .argument("<spec>")
+              .option("-g, --global", "全局安装（默认 true）", true)
+              .option("-y, --yes", "跳过确认（默认 true）", true)
+              .option("--agent <agent>", "指定 agent", "claude-code");
           },
-        };
-      },
-    },
-    [SKILL_PLUGIN_ACTIONS.install]: {
-      command: {
-        description: "安装 `list` 中不存在的 skill（完成后请先 lookup）",
-        configure(command) {
-          command
-            .argument("<spec>")
-            .option("-g, --global", "全局安装（默认 true）", true)
-            .option("-y, --yes", "跳过确认（默认 true）", true)
-            .option("--agent <agent>", "指定 agent", "claude-code");
+          mapInput({ args, opts }): SkillPluginInstallPayload {
+            const spec = String(args[0] || "").trim();
+            if (!spec) throw new Error("Missing spec");
+            return {
+              spec,
+              global: getBooleanOpt(opts, "global"),
+              yes: getBooleanOpt(opts, "yes"),
+              agent: getStringOpt(opts, "agent"),
+            };
+          },
         },
-        mapInput({ args, opts }): SkillPluginInstallPayload {
-          const spec = String(args[0] || "").trim();
-          if (!spec) throw new Error("Missing spec");
-          return {
-            spec,
-            global: getBooleanOpt(opts, "global"),
-            yes: getBooleanOpt(opts, "yes"),
-            agent: getStringOpt(opts, "agent"),
-          };
-        },
-      },
-      async execute(params) {
-        const payload = params.payload as SkillPluginInstallPayload;
-        const rootPath = params.context.rootPath;
-        const queryFromSpec = inferSkillQueryFromSpec(payload.spec);
-        const beforeList = listSkills(rootPath).skills;
-        const beforeIds = new Set(beforeList.map((item) => item.id));
+        async execute(params) {
+          const payload = params.payload as SkillPluginInstallPayload;
+          const rootPath = params.context.rootPath;
+          const queryFromSpec = inferSkillQueryFromSpec(payload.spec);
+          const beforeList = listSkills(rootPath, options).skills;
+          const beforeIds = new Set(beforeList.map((item) => item.id));
 
-        const learnedBefore =
-          findLearnedSkillExact(rootPath, queryFromSpec) ||
-          findLearnedSkillExact(rootPath, payload.spec);
-        if (learnedBefore) {
+          const learnedBefore =
+            findLearnedSkillExact(rootPath, queryFromSpec, options) ||
+            findLearnedSkillExact(rootPath, payload.spec, options);
+          if (learnedBefore) {
+            return {
+              success: true,
+              data: {
+                spec: payload.spec,
+                skipped: true,
+                message: "技能已在 list 中，无需 install。使用前请先执行 lookup。",
+                workflow: ["list", "lookup"],
+                nextAction: "lookup",
+                queryFromSpec,
+                addedSkills: [],
+                learnedSkill: learnedBefore,
+              },
+            };
+          }
+
+          await skillInstallCommand(payload.spec, {
+            global: payload.global,
+            yes: payload.yes,
+            agent: payload.agent,
+          });
+          const afterList = listSkills(rootPath, options).skills;
+          const addedSkills = afterList.filter((item) => !beforeIds.has(item.id));
+          const learnedAfter =
+            findLearnedSkillExact(rootPath, queryFromSpec, options) ||
+            findLearnedSkillExact(rootPath, payload.spec, options) ||
+            (addedSkills.length === 1 ? addedSkills[0] : undefined);
+
           return {
             success: true,
             data: {
               spec: payload.spec,
-              skipped: true,
-              message: "技能已在 list 中，无需 install。使用前请先执行 lookup。",
-              workflow: ["list", "lookup"],
+              message: "技能学习完成。使用技能前请先执行 lookup 读取该技能的 SKILL.md 内容。",
+              workflow: ["find", "install", "lookup"],
               nextAction: "lookup",
+              skipped: false,
               queryFromSpec,
-              addedSkills: [],
-              learnedSkill: learnedBefore,
+              addedSkills,
+              learnedSkill: learnedAfter || null,
             },
           };
-        }
-
-        await skillInstallCommand(payload.spec, {
-          global: payload.global,
-          yes: payload.yes,
-          agent: payload.agent,
-        });
-        const afterList = listSkills(rootPath).skills;
-        const addedSkills = afterList.filter((item) => !beforeIds.has(item.id));
-        const learnedAfter =
-          findLearnedSkillExact(rootPath, queryFromSpec) ||
-          findLearnedSkillExact(rootPath, payload.spec) ||
-          (addedSkills.length === 1 ? addedSkills[0] : undefined);
-
-        return {
-          success: true,
-          data: {
-            spec: payload.spec,
-            message: "技能学习完成。使用技能前请先执行 lookup 读取该技能的 SKILL.md 内容。",
-            workflow: ["find", "install", "lookup"],
-            nextAction: "lookup",
-            skipped: false,
-            queryFromSpec,
-            addedSkills,
-            learnedSkill: learnedAfter || null,
+        },
+      },
+      [SKILL_PLUGIN_ACTIONS.list]: {
+        command: {
+          description: "列出当前已学会（本地可发现）的 skills",
+          mapInput() {
+            return {};
           },
-        };
-      },
-    },
-    [SKILL_PLUGIN_ACTIONS.list]: {
-      command: {
-        description: "列出当前已学会（本地可发现）的 skills",
-        mapInput() {
-          return {};
         },
-      },
-      api: {
-        method: "GET",
-      },
-      execute(params) {
-        return {
-          success: true,
-          data: listSkills(params.context.rootPath),
-        };
-      },
-    },
-    [SKILL_PLUGIN_ACTIONS.lookup]: {
-      command: {
-        description: "读取已学会 skill 内容（SKILL.md）",
-        configure(command) {
-          command.argument("<name>");
+        api: {
+          method: "GET",
         },
-        mapInput({ args }): SkillPluginLookupPayload {
-          const name = String(args[0] || "").trim();
-          if (!name) throw new Error("Missing name");
-          return { name };
-        },
-      },
-      api: {
-        method: "POST",
-        async mapInput(c): Promise<SkillPluginLookupPayload> {
-          const body = readJsonObject(await c.req.json());
-          const name = String(body.name || "").trim();
-          if (!name) throw new Error("Missing name");
-          return { name };
-        },
-      },
-      async execute(params) {
-        const payload = params.payload as SkillPluginLookupPayload;
-        const result = await lookupSkill({
-          projectRoot: params.context.rootPath,
-          request: {
-            name: payload.name,
-          },
-        });
-        if (!result.success) {
+        execute(params) {
           return {
-            success: false,
-            error: result.error || "skill lookup failed",
-          };
-        }
-
-        const skillName = String(result.skill?.name || result.skill?.id || "").trim();
-        const openingTag = skillName
-          ? `<skill name="${sanitizeXmlAttr(skillName)}">`
-          : "<skill>";
-        const skillUserMessage = [
-          openingTag,
-          String(result.content || "").trim(),
-          "</skill>",
-        ]
-          .filter(Boolean)
-          .join("\n")
-          .trim();
-
-        return {
-          success: true,
-          data: {
             success: true,
-            ...(result.skill ? { skill: result.skill } : {}),
-            message: "技能内容已准备，下一步将以 `<skill>...</skill>` user message 注入。",
-            __ship: {
-              injectUserMessages: [
-                {
-                  text: skillUserMessage,
-                  note: "skill_lookup",
-                },
-              ],
-              suppressToolOutput: true,
-              toolOutputMessage:
-                "skill lookup success; content injected as <skill> user message.",
-            },
+            data: listSkills(params.context.rootPath, options),
+          };
+        },
+      },
+      [SKILL_PLUGIN_ACTIONS.lookup]: {
+        command: {
+          description: "读取已学会 skill 内容（SKILL.md）",
+          configure(command) {
+            command.argument("<name>");
           },
-        };
+          mapInput({ args }): SkillPluginLookupPayload {
+            const name = String(args[0] || "").trim();
+            if (!name) throw new Error("Missing name");
+            return { name };
+          },
+        },
+        api: {
+          method: "POST",
+          async mapInput(c): Promise<SkillPluginLookupPayload> {
+            const body = readJsonObject(await c.req.json());
+            const name = String(body.name || "").trim();
+            if (!name) throw new Error("Missing name");
+            return { name };
+          },
+        },
+        async execute(params) {
+          const payload = params.payload as SkillPluginLookupPayload;
+          const result = await lookupSkill({
+            projectRoot: params.context.rootPath,
+            request: {
+              name: payload.name,
+            },
+            options,
+          });
+          if (!result.success) {
+            return {
+              success: false,
+              error: result.error || "skill lookup failed",
+            };
+          }
+
+          const skillName = String(result.skill?.name || result.skill?.id || "").trim();
+          const openingTag = skillName
+            ? `<skill name="${sanitizeXmlAttr(skillName)}">`
+            : "<skill>";
+          const skillUserMessage = [
+            openingTag,
+            String(result.content || "").trim(),
+            "</skill>",
+          ]
+            .filter(Boolean)
+            .join("\n")
+            .trim();
+
+          return {
+            success: true,
+            data: {
+              success: true,
+              ...(result.skill ? { skill: result.skill } : {}),
+              message: "技能内容已准备，下一步将以 `<skill>...</skill>` user message 注入。",
+              __ship: {
+                injectUserMessages: [
+                  {
+                    text: skillUserMessage,
+                    note: "skill_lookup",
+                  },
+                ],
+                suppressToolOutput: true,
+                toolOutputMessage:
+                  "skill lookup success; content injected as <skill> user message.",
+              },
+            },
+          };
+        },
       },
     },
-  },
   };
 }
 
@@ -340,8 +330,9 @@ function createSkillPluginDefinition(plugin: Plugin): Plugin {
 export class SkillPlugin extends BasePlugin {
   readonly name = "skill";
 
-  constructor(agent: AgentRuntime | null = null) {
-    super(agent);
-    Object.assign(this, createSkillPluginDefinition(this));
+  constructor(options: SkillPluginOptions = {}) {
+    super();
+    const resolvedOptions = resolveSkillPluginOptions(options);
+    Object.assign(this, createSkillPluginDefinition(resolvedOptions));
   }
 }

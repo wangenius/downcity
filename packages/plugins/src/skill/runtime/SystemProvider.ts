@@ -8,14 +8,14 @@
  */
 
 import { getSessionRunContext } from "@downcity/agent/internal/executor/SessionRunScope.js";
-import type { DowncityConfig } from "@downcity/agent/internal/types/config/DowncityConfig.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
 import { setSessionAvailableSkills } from "./Store.js";
+import type { SkillPluginOptions } from "@/skill/types/SkillPlugin.js";
 
 type SkillSystemRuntime = {
   rootPath: string;
-  config: DowncityConfig;
+  options?: SkillPluginOptions | null;
 };
 
 function getCurrentSessionId(): string {
@@ -37,7 +37,7 @@ export async function buildSkillsSystemText(
   const sessionId = getCurrentSessionId();
   const discoveredSkills = discoverClaudeSkillsSync(
     runtime.rootPath,
-    runtime.config,
+    runtime.options,
   );
 
   if (sessionId) {
@@ -46,7 +46,7 @@ export async function buildSkillsSystemText(
 
   return renderClaudeSkillsPromptSection(
     runtime.rootPath,
-    runtime.config,
+    runtime.options,
     discoveredSkills,
   ).trim();
 }

@@ -8,8 +8,7 @@
  * - Town 不管理 chat plugin 运行态；运行态由具体 agent 内部托管。
  */
 
-import prompts from "prompts";
-import type { PromptObject } from "prompts";
+import prompts, { type PromptObject } from "../tui/Prompts.js";
 import {
   ChatChannelAccountManager,
   type ChatChannelAccountListItem,

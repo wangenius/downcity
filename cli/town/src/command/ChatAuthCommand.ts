@@ -8,7 +8,7 @@
  */
 
 import path from "node:path";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import type { Command } from "commander";
 import {
   isChatAuthorizationChannel,

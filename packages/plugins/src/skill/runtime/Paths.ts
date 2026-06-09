@@ -2,16 +2,16 @@
  * Skills roots resolution.
  *
  * 关键点（中文）
- * - roots 分三类：项目内（project）、用户目录（home），以及配置外部路径（config）
- * - allowExternalPaths 只控制“配置外部路径（config）”是否可扫描；home 默认始终可扫描
+ * - roots 分三类：项目内（project）、用户目录（home），以及构造参数路径（custom）
+ * - SkillPlugin constructor 是唯一配置入口，不再读取 downcity.json 的 skill 私有配置
  * - 兼容 `<any>/skills` 这种布局：如果 root basename 不是 `skills` 且其子目录 `skills/` 存在，则优先扫描 `<root>/skills`
  */
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { DowncityConfig } from "@downcity/agent/internal/config/Config.js";
-import { readSkillPluginConfig } from "../Config.js";
+import { resolveSkillPluginOptions } from "../Config.js";
 import type { SkillRoot } from "@/skill/types/SkillRoot.js";
+import type { SkillPluginOptions } from "@/skill/types/SkillPlugin.js";
 import { expandHome, uniqStrings } from "./Utils.js";
 
 function normalizeSkillRootCandidate(candidate: string): string {
@@ -38,13 +38,17 @@ function resolveSkillRootPath(projectRoot: string, raw: string): string {
 
 export function getClaudeSkillSearchRoots(
   projectRoot: string,
-  config: DowncityConfig,
+  options?: SkillPluginOptions | null,
 ): SkillRoot[] {
-  const skillPluginConfig = readSkillPluginConfig(config);
-  const configured = skillPluginConfig.paths.map((x) => String(x));
+  const skillPluginOptions = resolveSkillPluginOptions(options);
+  const configured = skillPluginOptions.paths.map((x) => String(x));
 
-  const defaultsProject: string[] = [];
-  const defaultsHome = ["~/.agents/skills"];
+  const defaultsProject = skillPluginOptions.use.includes("project")
+    ? [".agents/skills"]
+    : [];
+  const defaultsHome = skillPluginOptions.use.includes("home")
+    ? ["~/.agents/skills"]
+    : [];
 
   const rawConfigured = uniqStrings(configured);
   const rawProject = uniqStrings(defaultsProject);
@@ -65,32 +69,17 @@ export function getClaudeSkillSearchRoots(
     });
   }
 
-  // 2) configured roots：如果在项目内，按 project 处理；否则按 config（受 allowExternalPaths 影响）
+  // 2) constructor paths：用户显式传入的路径，统一视为 custom 来源
   for (const raw of rawConfigured) {
     const resolved = normalizeSkillRootCandidate(resolveSkillRootPath(projectRoot, raw));
-    const rel = path.relative(projectRoot, resolved);
-    const inside =
-      rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-
-    if (inside) {
-      roots.push({
-        source: "project",
-        raw,
-        resolved,
-        display: raw,
-        priority: 12,
-        trustedWhenExternalDisabled: true,
-      });
-    } else {
-      roots.push({
-        source: "config",
-        raw,
-        resolved,
-        display: raw,
-        priority: 40,
-        trustedWhenExternalDisabled: false,
-      });
-    }
+    roots.push({
+      source: "custom",
+      raw,
+      resolved,
+      display: raw,
+      priority: 12,
+      trustedWhenExternalDisabled: true,
+    });
   }
 
   // 3) home root（用户目录）
@@ -120,9 +109,9 @@ export function getClaudeSkillSearchRoots(
 // Back-compat（内部仅用于 prompt 展示）：保留旧 API 形状，避免外部 import 立刻断裂。
 export function getClaudeSkillSearchPaths(
   projectRoot: string,
-  config: DowncityConfig,
+  options?: SkillPluginOptions | null,
 ): { raw: string[]; resolved: string[] } {
-  const roots = getClaudeSkillSearchRoots(projectRoot, config);
+  const roots = getClaudeSkillSearchRoots(projectRoot, options);
   return {
     raw: roots.map((r) => r.display),
     resolved: roots.map((r) => r.resolved),

@@ -7,10 +7,9 @@
  * - 仅做字符串渲染，不做文件 IO。
  */
 
-import type { DowncityConfig } from "@downcity/agent/internal/config/Config.js";
-import { readSkillPluginConfig } from "../Config.js";
 import { getClaudeSkillSearchRoots } from "./Paths.js";
 import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
+import type { SkillPluginOptions } from "@/skill/types/SkillPlugin.js";
 
 /**
  * 渲染 skills 系统提示片段。
@@ -21,11 +20,10 @@ import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
  */
 export function renderClaudeSkillsPromptSection(
   projectRoot: string,
-  config: DowncityConfig,
+  options: SkillPluginOptions | null | undefined,
   skills: ClaudeSkill[],
 ): string {
-  const roots = getClaudeSkillSearchRoots(projectRoot, config);
-  const allowExternal = readSkillPluginConfig(config).allowExternalPaths;
+  const roots = getClaudeSkillSearchRoots(projectRoot, options);
 
   const skillsSection =
     skills.length > 0
@@ -41,11 +39,7 @@ export function renderClaudeSkillsPromptSection(
     roots.length > 0
       ? roots
           .map((root) => {
-            const externalNote =
-              root.source === "config" && !allowExternal
-                ? " (disabled: allowExternalPaths=false)"
-                : "";
-            return `- [${root.source}] ${root.display}${externalNote}`;
+            return `- [${root.source}] ${root.display}`;
           })
           .join("\n")
       : "- (none)";

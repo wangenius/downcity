@@ -13,6 +13,7 @@ export {
 } from "./BuiltinPlugins.js";
 export type { BuiltinPluginClass } from "./BuiltinPlugins.js";
 export { ChatPlugin } from "./chat/ChatPlugin.js";
+export { ImagePlugin } from "./image/ImagePlugin.js";
 export { ChatChannelAccountManager } from "./chat/accounts/ChannelAccountManager.js";
 export { ChatAuthorizationPlugin } from "./auth/Plugin.js";
 export { SkillPlugin } from "./skill/Plugin.js";
@@ -42,6 +43,18 @@ export type {
   ChatPluginQqOptions,
   ChatPluginTelegramOptions,
 } from "./chat/ChatPluginTypes.js";
+export type {
+  ImagePluginContent,
+  ImagePluginFileContent,
+  ImagePluginInput,
+  ImagePluginJobCreateResult,
+  ImagePluginJobResult,
+  ImagePluginJobStatus,
+  ImagePluginMessage,
+  ImagePluginOptions,
+  ImagePluginResult,
+  ImagePluginTextContent,
+} from "./image/types/ImagePlugin.js";
 export type {
   ChatAuthorizationCatalog,
   ChatAuthorizationChannel,

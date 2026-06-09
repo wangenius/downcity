@@ -6,7 +6,6 @@
  * - Console 只通过 setup / action 与插件交互，保持极简统一。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type {
@@ -493,13 +492,13 @@ function createTtsPluginDefinition(plugin: Plugin): Plugin {
       "# TTS Plugin",
       "The agent can call the tts plugin to synthesize speech audio from plain text.",
       "Typical usage flow:",
-      "1. Check availability with `town tts status` when you need to confirm whether the plugin and model are ready.",
-      "2. Generate audio with `town tts synthesize <text>`.",
-      "3. Optionally override synthesis parameters with `--voice`, `--language`, `--format`, `--speed`, and `--output`.",
+      "1. Check availability with the `status` action when you need to confirm whether the plugin and model are ready.",
+      "2. Generate audio with the `synthesize` action.",
+      "3. Optionally override synthesis parameters in the action payload: `voice`, `language`, `format`, `speed`, and `output`.",
       "Use the `tts.synthesize` action when the user asks to generate spoken audio or a reusable audio file tag.",
       "A successful synthesis returns a local output path and a reusable `<file type=\"audio\">...</file>` tag for downstream sending.",
       "If the Python runner prints non-fatal stderr, the command still succeeds and returns that stderr summary as extra context.",
-      "Example: `town tts synthesize \"你好，欢迎来到 Downcity\" --format wav`",
+      "Example: `plugin_call({ plugin: \"tts\", action: \"synthesize\", payload: { text: \"你好，欢迎来到 Downcity\", format: \"wav\" } })`",
     ].join("\n");
   },
   };
@@ -511,8 +510,8 @@ function createTtsPluginDefinition(plugin: Plugin): Plugin {
 export class TtsPlugin extends BasePlugin {
   readonly name = "tts";
 
-  constructor(agent: AgentRuntime | null = null) {
-    super(agent);
+  constructor() {
+    super();
     Object.assign(this, createTtsPluginDefinition(this));
   }
 }

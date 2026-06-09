@@ -5,7 +5,7 @@
  * 模型选择接受通用的 { id, name, hint } 数组，不依赖 server model 类型。
  */
 
-import { password, select, text, isCancel, intro, log } from "@clack/prompts";
+import { password, select, text, isCancel, intro, log } from "../tui/Prompts.js";
 import { t } from "../i18n.js";
 
 export { intro, log, isCancel };

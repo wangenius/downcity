@@ -12,7 +12,7 @@
 
 import path from "path";
 import os from "os";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import fs from "fs-extra";
 import fg from "fast-glob";
 import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "../config/Paths.js";

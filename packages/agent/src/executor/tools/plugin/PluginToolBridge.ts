@@ -2,14 +2,14 @@
  * Plugin tool 运行时桥接。
  *
  * 关键点（中文）
- * - tool 层不直接持有 agent 或 plugin registry，只通过装配期注入的 PluginPort 调用 action。
+ * - tool 层不直接持有 agent 或 plugin registry，只通过装配期注入的 AgentPlugins 调用 action。
  * - 如果 action 返回 AI SDK UIMessage，则抽取 file parts 并入最终 assistant 消息。
  * - 返回给模型的 tool result 只保留短摘要，避免 data URL 等大内容污染上下文。
  */
 
 import type { FileUIPart } from "ai";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { PluginPort } from "@/plugin/types/Plugin.js";
+import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
   PluginCallInput,
   PluginCallToolResult,
@@ -20,19 +20,19 @@ import {
   getSessionRunContext,
 } from "@executor/SessionRunScope.js";
 
-let plugin_tool_runtime: PluginPort | null = null;
+let plugin_tool_runtime: AgentPlugins | null = null;
 
 /**
  * 注入 plugin tool 运行时。
  */
-export function setPluginToolRuntime(next: PluginPort): void {
+export function setPluginToolRuntime(next: AgentPlugins): void {
   plugin_tool_runtime = next;
 }
 
 /**
  * 读取已注入的 plugin tool 运行时。
  */
-function require_plugin_tool_runtime(): PluginPort {
+function require_plugin_tool_runtime(): AgentPlugins {
   if (plugin_tool_runtime) return plugin_tool_runtime;
   throw new Error(
     "Plugin tool runtime is not initialized. Ensure agent assembly completed before using plugin_call.",

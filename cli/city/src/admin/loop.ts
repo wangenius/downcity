@@ -2,15 +2,15 @@
  * Admin 命令循环。
  *
  * 关键说明（中文）
- * - embedded 模式用于 user 工作区下的 server management
- * - 此时 admin 只作为低频管理工具，不再承担顶层导航职责
+ * - `city` 点开某个 City 后直接进入这个菜单。
+ * - City 连接配置、admin key 更新等低频操作通过 `更多` 回调交给 workspace 层处理。
  */
 
 import { City } from "@downcity/city";
-import { select, isCancel } from "@clack/prompts";
 import { type AdminSession } from "../core/session.js";
-import { showError, showSuccess } from "../core/ui.js";
 import { adminErrorMessage, isAdminAuthError } from "./auth-error.js";
+import { create_admin_tui_runtime } from "../tui/AdminTuiRuntime.js";
+import type { admin_tui_runtime } from "../types/AdminTui.js";
 import { manageEnv } from "./commands/service-env.js";
 import { manageTowns } from "./commands/towns.js";
 import { manageAccounts } from "./commands/accounts.js";
@@ -22,7 +22,7 @@ import { manageModels } from "./commands/models.js";
 import { manageInstruction } from "./commands/instruction.js";
 import { t } from "../i18n.js";
 
-const commands: Record<string, (a: City, baseUrl: string) => Promise<void>> = {
+const commands: Record<string, (a: City, baseUrl: string, runtime: admin_tui_runtime) => Promise<void>> = {
   env: manageEnv,
   instruction: manageInstruction,
   models: manageModels,
@@ -36,27 +36,34 @@ const commands: Record<string, (a: City, baseUrl: string) => Promise<void>> = {
 
 export async function adminLoop(
   session: AdminSession,
-  options?: { embedded?: boolean },
+  options?: {
+    embedded?: boolean;
+    title?: string;
+    on_more?: (runtime: admin_tui_runtime) => Promise<"continue" | "back" | "quit" | "removed">;
+    runtime?: admin_tui_runtime;
+  },
 ): Promise<"logout" | "quit" | "switch_identity" | "back"> {
   const admin = new City({
     role: "admin",
     city_url: session.base_url,
     admin_secret_key: session.admin_secret_key,
   });
-  const embedded = options?.embedded === true;
+  const embedded = options?.embedded !== false;
+  const runtime = options?.runtime ?? create_admin_tui_runtime(options?.title ?? "Admin");
 
   while (true) {
-    const svc = await select({
-      message: embedded
-        ? t({
-          zh: "Server 管理",
-          en: "Server management",
-        })
-        : t({
-          zh: "管理服务",
-          en: "Manage Service",
-        }),
-      options: [
+    const svc = await runtime.select_nav(
+      options?.title
+        ?? (embedded
+          ? t({
+            zh: "Admin 管理",
+            en: "Admin management",
+          })
+          : t({
+            zh: "管理服务",
+            en: "Manage Service",
+          })),
+      [
         {
           label: "Env",
           value: "env",
@@ -96,6 +103,19 @@ export async function adminLoop(
           }),
           value: "custom",
         },
+        ...(options?.on_more
+          ? [{
+            label: t({
+              zh: "更多",
+              en: "More",
+            }),
+            value: "more",
+            hint: t({
+              zh: "更新 admin、编辑 City、移除 City",
+              en: "Update admin, edit City, remove City",
+            }),
+          }]
+          : []),
         ...(embedded
           ? [{
             label: t({
@@ -128,28 +148,55 @@ export async function adminLoop(
           value: "quit",
         },
       ],
-    });
-    if (!svc || isCancel(svc)) return embedded ? "back" : "quit";
+    );
+    if (!svc) {
+      runtime.close();
+      return embedded ? "back" : "quit";
+    }
 
-    if (svc === "quit") return "quit";
-    if (svc === "back") return "back";
+    if (svc === "quit") {
+      runtime.close();
+      return "quit";
+    }
+    if (svc === "back") {
+      runtime.close();
+      return "back";
+    }
+    if (svc === "more" && options?.on_more) {
+      const result = await options.on_more(runtime);
+      if (result === "quit") {
+        runtime.close();
+        return "quit";
+      }
+      if (result === "back" || result === "removed") {
+        runtime.close();
+        return "back";
+      }
+      continue;
+    }
     if (svc === "logout") {
-      showSuccess(t({
+      await runtime.show_message("success", t({
         zh: "已退出 admin 模式",
         en: "left admin mode",
       }));
+      runtime.close();
       return "logout";
     }
-    if (svc === "switch") return "switch_identity";
+    if (svc === "switch") {
+      runtime.close();
+      return "switch_identity";
+    }
 
     try {
-      await commands[svc]?.(admin, session.base_url);
+      const command_key = String(svc);
+      await commands[command_key]?.(admin, session.base_url, runtime);
     } catch (e) {
       if (isAdminAuthError(e)) {
-        showError(adminErrorMessage(e));
+        await runtime.show_message("error", adminErrorMessage(e));
+        runtime.close();
         return "logout";
       }
-      showError(adminErrorMessage(e));
+      await runtime.show_message("error", adminErrorMessage(e));
     }
   }
 }

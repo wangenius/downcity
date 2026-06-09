@@ -7,7 +7,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import { City } from "@downcity/city";
 import { emitCliBlock } from "./CliReporter.js";
 import type {

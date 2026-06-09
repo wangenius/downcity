@@ -9,7 +9,6 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { discoverClaudeSkillsSync } from "@/skill/runtime/Discovery.js";
-import { loadDowncityConfig } from "@downcity/agent/internal/config/Config.js";
 import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import type {
@@ -18,6 +17,7 @@ import type {
   SkillLookupResponse,
   SkillSummary,
 } from "@/skill/types/SkillCommand.js";
+import type { SkillPluginOptions } from "@/skill/types/SkillPlugin.js";
 
 function normalizeAllowedTools(input: JsonValue | undefined): string[] {
   if (!Array.isArray(input)) return [];
@@ -64,10 +64,12 @@ function findSkill(skills: ClaudeSkill[], name: string): ClaudeSkill | null {
   );
 }
 
-function getSkills(projectRoot: string): ClaudeSkill[] {
+function getSkills(
+  projectRoot: string,
+  options?: SkillPluginOptions | null,
+): ClaudeSkill[] {
   const root = path.resolve(projectRoot);
-  const config = loadDowncityConfig(root);
-  return discoverClaudeSkillsSync(root, config);
+  return discoverClaudeSkillsSync(root, options);
 }
 
 /**
@@ -76,8 +78,9 @@ function getSkills(projectRoot: string): ClaudeSkill[] {
 export function findLearnedSkillExact(
   projectRoot: string,
   query: string,
+  options?: SkillPluginOptions | null,
 ): SkillSummary | null {
-  const skills = getSkills(projectRoot);
+  const skills = getSkills(projectRoot, options);
   const target = findSkillExact(skills, query);
   return target ? toSkillSummary(target) : null;
 }
@@ -89,11 +92,12 @@ export function searchLearnedSkills(
   projectRoot: string,
   query: string,
   limit: number = 10,
+  options?: SkillPluginOptions | null,
 ): SkillSummary[] {
   const q = String(query || "").trim().toLowerCase();
   if (!q) return [];
 
-  const skills = getSkills(projectRoot);
+  const skills = getSkills(projectRoot, options);
   const matched = skills.filter((item) => {
     const id = item.id.toLowerCase();
     const name = item.name.toLowerCase();
@@ -107,8 +111,11 @@ export function searchLearnedSkills(
 /**
  * 列出当前项目下可发现的全部 skill。
  */
-export function listSkills(projectRoot: string): SkillListResponse {
-  const skills = getSkills(projectRoot).map(toSkillSummary);
+export function listSkills(
+  projectRoot: string,
+  options?: SkillPluginOptions | null,
+): SkillListResponse {
+  const skills = getSkills(projectRoot, options).map(toSkillSummary);
   return {
     success: true,
     skills,
@@ -127,9 +134,13 @@ export async function lookupSkill(params: {
    * skill lookup 请求。
    */
   request: SkillLookupRequest;
+  /**
+   * SkillPlugin 构造参数。
+   */
+  options?: SkillPluginOptions | null;
 }): Promise<SkillLookupResponse> {
   const root = path.resolve(params.projectRoot);
-  const skills = getSkills(root);
+  const skills = getSkills(root, params.options);
   const target = findSkill(skills, params.request.name);
   if (!target) {
     return {

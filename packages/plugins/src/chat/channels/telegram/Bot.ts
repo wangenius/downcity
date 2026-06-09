@@ -47,6 +47,8 @@ export class TelegramBot extends BaseChatChannel {
 
   private readonly botToken: string;
   private readonly platform: TelegramPlatformClient;
+  private startTask: Promise<void> | null = null;
+  private startupGeneration = 0;
 
   constructor(context: AgentContext, botToken: string) {
     super({ channel: "telegram", context });
@@ -143,17 +145,36 @@ export class TelegramBot extends BaseChatChannel {
       this.logger.warn("Telegram Bot Token not configured, skipping startup");
       return;
     }
+    if (this.startTask) return;
 
     this.logger.info("🤖 Starting Telegram Bot...");
+    this.platform.markStartupStarted();
+    const startupGeneration = ++this.startupGeneration;
+    // 关键点（中文）：Telegram 网络初始化不能阻塞 Agent RPC/gateway ready。
+    this.startTask = this.startInBackground(startupGeneration);
+  }
+
+  /**
+   * 后台启动 Telegram polling。
+   */
+  private async startInBackground(startupGeneration: number): Promise<void> {
     try {
       await this.platform.preparePolling();
       await this.drainPendingUpdatesToHistory({ reason: "startup" });
+      if (startupGeneration !== this.startupGeneration) {
+        return;
+      }
       this.platform.startPollingLoop();
+      this.platform.markStartupSucceeded();
     } catch (error) {
+      if (startupGeneration !== this.startupGeneration) return;
+      this.platform.markStartupFailed(error);
       this.logger.error("Failed to start Telegram Bot", {
         error: String(error),
       });
       await this.platform.stop();
+    } finally {
+      this.startTask = null;
     }
   }
 
@@ -342,6 +363,7 @@ export class TelegramBot extends BaseChatChannel {
    * 停止 Telegram bot。
    */
   async stop(): Promise<void> {
+    this.startupGeneration += 1;
     await this.platform.stop();
   }
 }

@@ -9,7 +9,7 @@
 
 import type { Command } from "commander";
 import { spawnSync } from "node:child_process";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import { AuthService } from "../town/auth/AuthService.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";

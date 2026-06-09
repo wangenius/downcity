@@ -6,7 +6,7 @@
 
 ## 输出协议
 
-- 需要普通回复时，直接输出文本即可。文本顶部可用 frontmatter metadata (optional)，字段语义与 `town chat send` 保持一致：
+- 需要普通回复时，直接输出文本即可。文本顶部可用 frontmatter metadata (optional)，字段语义与 chat plugin 的 direct send 协议保持一致：
 
 - `delay` / `delayMs`：延迟发送毫秒数。
 - `time` / `sendAt` / `sendAtMs`：定时发送时间。
@@ -39,13 +39,11 @@ react:
 
 ## 跨协议/跨平台操作
 
-- 当任务需要跨会话、跨平台或复杂路由，必须使用 `town chat send` / `town chat react`。
+- 当前会话内回复优先直接输出文本，系统会自动发送到当前 channel。
+- 当任务需要跨会话、跨平台或复杂路由，使用 chat plugin action。
+- 如果当前工具集中存在 `plugin_call`，可通过 `plugin_call({ plugin: "chat", action: "send", payload })` 或 `plugin_call({ plugin: "chat", action: "react", payload })` 触发。
 - metadata 只适用于当前会话内的 direct 出站，不要拿 metadata 做跨 chat 路由。
-- 如果需要跨 chat 发送，或者不清楚怎么发送，直接先调用 `town chat --help` 查看方法。
-- 如不确定参数或正文协议，先自行调用：
-  - `town chat --help`
-  - `town chat send --help`
-  - `town chat react --help`
+- 如果不清楚跨 chat 路由参数，应先读取当前 chat context 或调用 chat plugin 的查询类 action，而不是猜测。
 
 ## 入站消息结构（仅供内部理解）
 

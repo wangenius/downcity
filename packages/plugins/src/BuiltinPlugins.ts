@@ -7,7 +7,6 @@
  * - 调用方需要完整内建集合时，显式调用 `createBuiltinPlugins()` 并传给 Agent 或通用 helper。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import { ChatAuthorizationPlugin } from "@/auth/Plugin.js";
 import { SkillPlugin } from "@/skill/Plugin.js";
@@ -24,9 +23,7 @@ import { ShellPlugin } from "@/shell/ShellPlugin.js";
 /**
  * 内建 plugin class 构造器。
  */
-export type BuiltinPluginClass<T extends BasePlugin = BasePlugin> = new (
-  agent: AgentRuntime | null,
-) => T;
+export type BuiltinPluginClass<T extends BasePlugin = BasePlugin> = new () => T;
 
 /**
  * 全部内建 plugin classes。
@@ -48,6 +45,6 @@ export const BUILTIN_PLUGIN_CLASSES: BuiltinPluginClass[] = [
 /**
  * 创建完整内建 plugin 实例集合。
  */
-export function createBuiltinPlugins(agent: AgentRuntime | null = null): BasePlugin[] {
-  return BUILTIN_PLUGIN_CLASSES.map((PluginClass) => new PluginClass(agent));
+export function createBuiltinPlugins(): BasePlugin[] {
+  return BUILTIN_PLUGIN_CLASSES.map((PluginClass) => new PluginClass());
 }

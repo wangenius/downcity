@@ -5,7 +5,6 @@
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
-  Plugin,
   PluginLifecycle,
   PluginState,
   PluginStateControlAction,
@@ -130,20 +129,6 @@ export function markPluginCommand(
   record.lastCommand = command;
   record.lastCommandAt = nowMs();
   record.updatedAt = nowMs();
-}
-
-/**
- * 返回静态主动型 plugin 定义清单。
- */
-export function getStaticPlugins(): Plugin[] {
-  return [];
-}
-
-/**
- * 返回主动型 plugin 根命令名清单。
- */
-export function getPluginRootCommandNames(): string[] {
-  return [];
 }
 
 /**

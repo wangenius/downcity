@@ -9,7 +9,7 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import { getDowncityJsonPath } from "../config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { CliError } from "../shared/CliError.js";

@@ -2,7 +2,7 @@
  * AgentAssemblyService：本地 Agent 装配服务。
  *
  * 关键点（中文）
- * - 统一装配 logger、config、env、runtime、context、plugin registry 与 plugin port。
+ * - 统一装配 logger、config、env、runtime、context 与 plugin registry。
  * - 该服务只负责一次性长期对象装配，不负责 session 缓存和生命周期启动。
  * - session/lifecycle service 通过它暴露的长期对象协作，避免在 facade 中重复拼装。
  */
@@ -12,7 +12,7 @@ import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { PluginPort } from "@/plugin/types/Plugin.js";
+import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type { AgentOptions } from "@/types/agent/AgentTypes.js";
 import { Logger } from "@/utils/logger/Logger.js";
 import { loadDowncityConfig, resolveAgentEnv } from "@/config/Config.js";
@@ -22,7 +22,6 @@ import {
   normalizeInstructionInput,
 } from "@/agent/local/AgentInstructions.js";
 import {
-  createAgentPluginPort,
   createAgentPluginRegistry,
 } from "@/agent/local/AgentPluginFactory.js";
 import {
@@ -111,9 +110,9 @@ export interface AgentAssemblyResult {
   plugin_registry: PluginRegistry;
 
   /**
-   * 当前对外 plugin 调用端口。
+   * 当前 agent plugin 调用面。
    */
-  plugins: PluginPort;
+  plugins: AgentPlugins;
 
   /**
    * 当前 agent runtime。
@@ -178,14 +177,14 @@ export class AgentAssemblyService {
       list_cached_sessions: this.list_cached_sessions,
     });
 
-    this.register_plugins(plugin_instances, runtime, this.options.plugins || []);
+    this.register_plugins(plugin_instances, this.options.plugins || []);
 
     let agent_context!: AgentContext;
     const plugin_registry = createAgentPluginRegistry({
       plugins: [...plugin_instances.values()],
       get_context: () => agent_context,
     });
-    const plugins = createAgentPluginPort(plugin_registry);
+    const plugins = plugin_registry;
     if (this.should_register_plugin_call_tool(plugin_instances)) {
       tools.plugin_call = tools.plugin_call || plugin_tools.plugin_call;
     }
@@ -231,7 +230,6 @@ export class AgentAssemblyService {
 
   private register_plugins(
     plugin_instances: Map<string, BasePlugin>,
-    runtime: AgentRuntime,
     plugins: BasePlugin[],
   ): void {
     for (const plugin of plugins) {
@@ -242,7 +240,6 @@ export class AgentAssemblyService {
       if (plugin_instances.has(name)) {
         throw new Error(`Duplicate plugin registration: ${name}`);
       }
-      plugin.bindAgent(runtime);
       plugin_instances.set(name, plugin);
     }
   }

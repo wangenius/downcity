@@ -66,6 +66,8 @@ export class TelegramPlatformClient {
   private botUsername?: string;
   private botId?: number;
   private clearedWebhookOnce = false;
+  private isStarting = false;
+  private lastStartupError: string | null = null;
 
   constructor(options: TelegramPlatformClientOptions) {
     this.logger = options.context.logger;
@@ -97,24 +99,56 @@ export class TelegramPlatformClient {
         : running
           ? "unknown"
           : "disconnected";
-    return {
-      running,
-      linkState,
-      statusText:
-        linkState === "connected"
+    const statusText = this.lastStartupError
+      ? "start_failed"
+      : this.isStarting
+        ? "starting"
+        : linkState === "connected"
           ? "polling"
           : linkState === "unknown"
             ? "starting"
-            : "stopped",
+            : "stopped";
+    return {
+      running,
+      linkState,
+      statusText,
       detail: {
+        isStarting: this.isStarting,
         pollInFlight: this.pollInFlight,
         lastUpdateId: this.lastUpdateId,
         consecutivePollErrors: this.consecutivePollErrors,
         nextPollAllowedAt: this.nextPollAllowedAt || null,
         botUsername: this.botUsername || null,
         botId: typeof this.botId === "number" ? this.botId : null,
+        lastStartupError: this.lastStartupError,
       },
     };
+  }
+
+  /**
+   * 标记 Telegram 后台启动开始。
+   */
+  markStartupStarted(): void {
+    this.isStarting = true;
+    this.isRunning = true;
+    this.lastStartupError = null;
+  }
+
+  /**
+   * 标记 Telegram 后台启动完成。
+   */
+  markStartupSucceeded(): void {
+    this.isStarting = false;
+    this.lastStartupError = null;
+  }
+
+  /**
+   * 标记 Telegram 后台启动失败。
+   */
+  markStartupFailed(error: unknown): void {
+    this.isStarting = false;
+    this.isRunning = false;
+    this.lastStartupError = String(error);
   }
 
   /**
@@ -340,9 +374,11 @@ export class TelegramPlatformClient {
    * 停止平台运行时。
    */
   async stop(): Promise<void> {
+    this.isStarting = false;
     this.isRunning = false;
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
     }
     this.consecutivePollErrors = 0;
     this.nextPollAllowedAt = 0;

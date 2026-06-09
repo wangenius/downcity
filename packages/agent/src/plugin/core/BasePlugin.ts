@@ -8,7 +8,6 @@
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
   Plugin,
   PluginActions,
@@ -37,15 +36,6 @@ export abstract class BasePlugin implements Plugin {
     updatedAt: Date.now(),
     chain: Promise.resolve(),
   };
-
-  /**
-   * 当前 plugin 所属的 agent 宿主。
-   */
-  protected agent: AgentRuntime | null;
-
-  constructor(agent: AgentRuntime | null = null) {
-    this.agent = agent;
-  }
 
   /**
    * 当前 plugin 名称。
@@ -114,21 +104,4 @@ export abstract class BasePlugin implements Plugin {
    */
   system?(context: AgentContext): Promise<string> | string;
 
-  /**
-   * 绑定当前 plugin 所属的 agent 宿主。
-   */
-  bindAgent(agent: AgentRuntime | null): this {
-    this.agent = agent;
-    return this;
-  }
-
-  /**
-   * 读取绑定的 agent 宿主。
-   */
-  protected requireAgent(): AgentRuntime {
-    if (this.agent) return this.agent;
-    throw new Error(
-      `Plugin "${this.name}" is not bound to an agent instance.`,
-    );
-  }
 }

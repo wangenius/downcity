@@ -84,7 +84,8 @@ const plugins = agent.plugins.list();
 如果你希望 Agent 在对话过程中自己触发生图，可以把图片能力包装成 `ImagePlugin`：
 
 ```ts
-import { Agent, ImagePlugin } from "@downcity/agent";
+import { Agent } from "@downcity/agent";
+import { ImagePlugin } from "@downcity/plugins";
 
 const agent = new Agent({
   id: "creative-agent",

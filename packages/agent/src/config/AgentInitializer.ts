@@ -183,22 +183,16 @@ export async function initializeAgentProject(
     version: "1.0.0",
     execution,
     plugins: {
-      skill: {
-        enabled: true,
-        paths: [".agents/skills"],
-        allowExternalPaths: false,
-      },
       ...(input.plugins || {}),
-    },
-    ...(Object.keys(channelsConfig).length > 0
-      ? {
-          plugins: {
+      ...(Object.keys(channelsConfig).length > 0
+        ? {
             chat: {
+              ...input.plugins?.chat,
               channels: channelsConfig,
             },
-          },
-        }
-      : {}),
+          }
+        : {}),
+    },
   };
   await saveJson(shipJsonPath, shipConfig);
   createdFiles.push("downcity.json");

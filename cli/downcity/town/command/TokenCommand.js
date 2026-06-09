@@ -7,7 +7,7 @@
  * - 子命令依旧保留脚本友好的非交互模式，便于自动化调用。
  */
 import { spawnSync } from "node:child_process";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import { AuthService } from "../town/auth/AuthService.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";

@@ -8,33 +8,35 @@
  */
 
 import { City } from "@downcity/city";
-import { show, showError } from "../../core/ui.js";
 import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
 import { t } from "../../i18n.js";
+import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
 /**
  * 展示全部代码注册模型及其运行状态。
  */
-export async function manageModels(a: City): Promise<void> {
+export async function manageModels(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   try {
-    const [modelResp, envCatalog] = await Promise.all([
+    const [modelResp, envCatalog] = await runtime.with_loading("Models", async () => await Promise.all([
       a.listModels(),
       a.env.catalog(),
-    ]);
+    ]));
     const items = modelResp ?? [];
     const aiScope = envCatalog.find((item) => item.id === "ai-models");
     const envMap = new Map(aiScope?.env.map((item) => [item.key, item.configured]) ?? []);
 
     if (items.length === 0) {
-      show(t({
+      await runtime.show_message("info", t({
         zh: "当前 server 没有已注册的 models。",
         en: "No models registered on server.",
       }));
       return;
     }
 
-    console.log(`\n${items.length} models:\n`);
-    for (const model of items) {
+    await runtime.show_table({
+      title: `${items.length} Models`,
+      columns: ["Name", "Status", "Modalities", "Defaults", "Env", "Description"],
+      rows: items.map((model) => {
       const requirements = model.env_requirements ?? [];
       const missingEnv = requirements
         .filter((item) => item.required && !envMap.get(item.key))
@@ -48,24 +50,27 @@ export async function manageModels(a: City): Promise<void> {
           .map((item) => `${item.key}${envMap.get(item.key) ? "✓" : "✗"}`)
           .join(", ")
         : "none";
-
-      console.log(`  ${model.name} (${model.id})`);
-      console.log(`    status: ${status}`);
-      console.log(`    modalities: ${model.modalities.join(", ") || "none"}`);
-      console.log(`    ${defaults}`);
-      console.log(`    env: ${envText}`);
-      if (model.description) console.log(`    desc: ${model.description}`);
-      console.log("");
-    }
+      return {
+        cells: [
+          `${model.name} (${model.id})`,
+          status,
+          model.modalities.join(", ") || "none",
+          defaults,
+          envText,
+          model.description ?? "",
+        ],
+      };
+    }),
+    });
   } catch (e) {
     rethrowAdminAuthError(e);
     if (isAdminNotFoundError(e)) {
-      showError(t({
+      await runtime.show_message("error", t({
         zh: "当前连接的 City 版本过旧，尚未暴露 /v1/env/catalog。请先部署最新的 worker/server。",
         en: "Connected City is too old and does not expose /v1/env/catalog yet. Deploy the latest worker/server first.",
       }));
       return;
     }
-    showError(adminErrorMessage(e));
+    await runtime.show_message("error", adminErrorMessage(e));
   }
 }

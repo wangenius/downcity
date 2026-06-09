@@ -9,8 +9,6 @@ export type {
 } from "@/plugin/types/Plugin.js";
 export {
   controlPluginState,
-  getPluginRootCommandNames,
-  getStaticPlugins,
   isPluginRunning,
   listPluginStates,
   startAllPlugins,

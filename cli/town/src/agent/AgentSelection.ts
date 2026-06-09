@@ -9,7 +9,7 @@
 
 import { existsSync } from "fs";
 import { resolve } from "path";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import { getDowncityJsonPath, getProfileMdPath } from "../config/Paths.js";
 import { listManagedAgentEntries } from "../process/registry/TownRegistry.js";
 import type { ManagedAgentRegistryEntry } from "@downcity/agent";

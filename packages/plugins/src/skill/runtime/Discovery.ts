@@ -2,7 +2,7 @@
  * Skills discovery：扫描可用 skills 并生成索引。
  *
  * 关键点（中文）
- * - 扫描范围由 `paths.ts` 决定（项目、用户目录、可选外部目录）。
+ * - 扫描范围由 `paths.ts` 决定（项目、用户目录、构造参数路径）。
  * - 同名 skill 按根目录优先级“先到先得”。
  */
 
@@ -10,13 +10,45 @@ import fs from "fs-extra";
 import yaml from "js-yaml";
 import path from "path";
 import type { Dirent, Stats } from "node:fs";
-import type { DowncityConfig } from "@downcity/agent/internal/config/Config.js";
-import { readSkillPluginConfig } from "../Config.js";
+import { resolveSkillPluginOptions } from "../Config.js";
 import { parseFrontMatter } from "./Frontmatter.js";
 import { getClaudeSkillSearchRoots } from "./Paths.js";
-import { isSubpath } from "./Utils.js";
 import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
+import type {
+  SkillPluginIgnoreRule,
+  SkillPluginOptions,
+} from "@/skill/types/SkillPlugin.js";
 import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+
+function matchesIgnoreRule(skill: ClaudeSkill, rule: SkillPluginIgnoreRule): boolean {
+  if (typeof rule === "string") {
+    const value = rule.trim().toLowerCase();
+    if (!value) return false;
+    return skill.id.toLowerCase() === value || skill.name.toLowerCase() === value;
+  }
+  if (rule instanceof RegExp) {
+    rule.lastIndex = 0;
+    const matchesId = rule.test(skill.id);
+    rule.lastIndex = 0;
+    const matchesName = rule.test(skill.name);
+    rule.lastIndex = 0;
+    return matchesId || matchesName;
+  }
+  if (typeof rule === "function") {
+    return rule(skill);
+  }
+  return false;
+}
+
+function shouldIgnoreSkill(
+  skill: ClaudeSkill,
+  rules: SkillPluginIgnoreRule[],
+): boolean {
+  for (const rule of rules) {
+    if (matchesIgnoreRule(skill, rule)) return true;
+  }
+  return false;
+}
 
 /**
  * 扫描并发现 Claude Code-compatible skills。
@@ -34,26 +66,18 @@ import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/commo
  */
 export function discoverClaudeSkillsSync(
   projectRoot: string,
-  config: DowncityConfig,
+  options?: SkillPluginOptions | null,
 ): ClaudeSkill[] {
   const root = String(projectRoot || "").trim();
   if (!root) return [];
-  const allowExternal = readSkillPluginConfig(config).allowExternalPaths;
-  const roots = getClaudeSkillSearchRoots(root, config);
+  const resolvedOptions = resolveSkillPluginOptions(options);
+  const roots = getClaudeSkillSearchRoots(root, resolvedOptions);
 
   const outById = new Map<string, ClaudeSkill>();
 
   for (const r of roots) {
     const sourceRoot = r.resolved;
 
-    // allowExternalPaths 只影响 config 外部路径；home 默认可扫描
-    if (
-      r.source === "config" &&
-      !allowExternal &&
-      !isSubpath(root, sourceRoot)
-    ) {
-      continue;
-    }
     if (!fs.existsSync(sourceRoot)) continue;
     let stat: Stats;
     try {
@@ -122,7 +146,7 @@ export function discoverClaudeSkillsSync(
       const allowedTools =
         meta?.["allowed-tools"] ?? meta?.allowedTools ?? meta?.allowed_tools;
 
-      outById.set(id, {
+      const skill: ClaudeSkill = {
         id,
         name,
         description,
@@ -131,7 +155,9 @@ export function discoverClaudeSkillsSync(
         directoryPath,
         skillMdPath,
         allowedTools,
-      });
+      };
+      if (shouldIgnoreSkill(skill, resolvedOptions.ignore)) continue;
+      outById.set(id, skill);
     }
   }
 

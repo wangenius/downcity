@@ -12,6 +12,6 @@
   2. `snapshot -i`
   3. 使用元素引用交互
   4. 页面变化后重新 snapshot
-- 如果 `agent-browser` 命令不可用，应先报告依赖缺失
+- 如果 `agent-browser` provider 不可用，应先报告依赖缺失
 
 你在处理需要浏览器操作的任务时，应以外部 `agent-browser` 项目为准。

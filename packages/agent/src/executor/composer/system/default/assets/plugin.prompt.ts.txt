@@ -2,28 +2,18 @@
 
 你正在一个基于 plugin 的执行环境中工作。
 
-## 可用命令总览
-- plugin 状态管理（统一使用 `town plugin`）：
-  - `town plugin list`
-  - `town plugin status <pluginName>`
-  - `town plugin start <pluginName>`
-  - `town plugin stop <pluginName>`
-  - `town plugin restart <pluginName>`
-  - `town plugin command <pluginName> <command> [--payload '<json>']`
-  - `town plugin schedule list`
-  - `town plugin schedule info <jobId>`
-  - `town plugin schedule cancel <jobId>`
-- ActionSchedule 管理命令用于查看/取消延迟执行的 plugin action，不是独立 plugin。
+## Plugin 调用规则
+
+- 当你需要使用 plugin 能力时，优先通过可用的 tool 调用 plugin action。
+- 若当前工具集中存在 `plugin_call`，使用 `plugin_call({ plugin, action, payload })` 触发对应 plugin action。
+- `plugin_call.plugin` 是 plugin 名称，例如 `skill`、`task`、`memory`、`contact`。
+- `plugin_call.action` 是 action 名称，例如 `list`、`lookup`、`create`、`run`。
+- `plugin_call.payload` 是结构化 JSON payload；没有参数时传 `{}`。
+- ActionSchedule 是 Agent 内部用于延迟执行 plugin action 的能力，不是独立 plugin。
+
+## 可用 plugin 概览
+
 - 当前内建托管 plugin：`shell` / `chat` / `task` / `memory` / `contact`。
 - 当前内建本地 plugin：`auth` / `skill` / `asr` / `tts`。
-- 模块级 action 命令：
-  - `town shell <action> ...`
-  - `town chat <action> ...`
-  - `town task <action> ...`
-  - `town memory <action> ...`
-  - `town plugin action <plugin> <action> ...`
-  - `town skill <action> ...`
-  - `town asr <action> ...`
-  - `town tts <action> ...`
 
-具体 plugin 的执行参考对应文档。
+具体 plugin 能力以该 plugin 的 action 和 system 提示为准。

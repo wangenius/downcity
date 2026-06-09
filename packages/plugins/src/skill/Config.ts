@@ -1,51 +1,58 @@
 /**
- * skill plugin 配置读取工具。
+ * SkillPlugin 构造参数归一化工具。
  *
  * 关键点（中文）
- * - skill 已迁到 plugin 体系，因此发现路径等配置统一从 `plugins.skill` 读取。
- * - 这里负责把原始 JSON 配置归一化成 runtime 可直接消费的稳定结构。
+ * - SkillPlugin 不再读取 `downcity.json.plugins.skill` 私有配置。
+ * - constructor options 是唯一行为配置入口，便于 SDK 用户直接理解。
+ * - 这里只做默认值与去重，不做文件系统扫描。
  */
 
-import type { DowncityConfig } from "@downcity/agent/internal/types/config/DowncityConfig.js";
 import type {
-  ResolvedSkillPluginConfig,
-  SkillPluginConfig,
+  ResolvedSkillPluginOptions,
+  SkillPluginOptions,
 } from "@/skill/types/SkillPlugin.js";
 
 /**
- * skill plugin 默认配置。
+ * skill plugin 默认构造参数。
  */
-export const DEFAULT_SKILL_PLUGIN_CONFIG: ResolvedSkillPluginConfig = {
-  paths: [".agents/skills"],
-  allowExternalPaths: false,
+export const DEFAULT_SKILL_PLUGIN_OPTIONS: ResolvedSkillPluginOptions = {
+  use: ["project"],
+  paths: [],
+  ignore: [],
 };
 
+function normalizeUse(
+  input: SkillPluginOptions["use"],
+): ResolvedSkillPluginOptions["use"] {
+  if (!Array.isArray(input)) return [...DEFAULT_SKILL_PLUGIN_OPTIONS.use];
+  const values: ResolvedSkillPluginOptions["use"] = [];
+  for (const item of input) {
+    if ((item === "project" || item === "home") && !values.includes(item)) {
+      values.push(item);
+    }
+  }
+  return values;
+}
+
+function normalizePaths(input: SkillPluginOptions["paths"]): string[] {
+  if (!Array.isArray(input)) return [...DEFAULT_SKILL_PLUGIN_OPTIONS.paths];
+  const values: string[] = [];
+  for (const item of input) {
+    const value = String(item || "").trim();
+    if (value && !values.includes(value)) values.push(value);
+  }
+  return values;
+}
+
 /**
- * 读取并归一化 skill plugin 配置。
+ * 读取并归一化 SkillPlugin 构造参数。
  */
-export function readSkillPluginConfig(
-  config?: DowncityConfig | null,
-): ResolvedSkillPluginConfig {
-  const raw = config?.plugins?.skill;
-  const skillConfig =
-    raw && typeof raw === "object" && !Array.isArray(raw)
-      ? (raw as SkillPluginConfig)
-      : null;
-
-  const normalizedPaths = Array.isArray(skillConfig?.paths)
-    ? skillConfig.paths
-        .map((item) => String(item || "").trim())
-        .filter(Boolean)
-    : [];
-
+export function resolveSkillPluginOptions(
+  options?: SkillPluginOptions | null,
+): ResolvedSkillPluginOptions {
   return {
-    paths:
-      normalizedPaths.length > 0
-        ? normalizedPaths
-        : [...DEFAULT_SKILL_PLUGIN_CONFIG.paths],
-    allowExternalPaths:
-      typeof skillConfig?.allowExternalPaths === "boolean"
-        ? skillConfig.allowExternalPaths
-        : DEFAULT_SKILL_PLUGIN_CONFIG.allowExternalPaths,
+    use: normalizeUse(options?.use),
+    paths: normalizePaths(options?.paths),
+    ignore: Array.isArray(options?.ignore) ? [...options.ignore] : [],
   };
 }

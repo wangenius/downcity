@@ -9,7 +9,7 @@
 /**
  * skill 根目录来源类型。
  */
-export type SkillRootSource = "project" | "home" | "config";
+export type SkillRootSource = "project" | "home" | "custom";
 
 /**
  * skill 扫描根目录。

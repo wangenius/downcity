@@ -27,14 +27,11 @@ Its main value is not to replace skills, but to create one consistent entry poin
 
 `skill` uses:
 
-- `config`
-- `availability`
 - `actions`
 - `system`
 
 That means it combines:
 
-- configuration
 - explicit action invocation
 - runtime prompt augmentation
 
@@ -110,16 +107,30 @@ const agent = new Agent({
 });
 ```
 
-## What the config layer does
+By default, `SkillPlugin` only scans the current project's `.agents/skills`.
 
-`skill` currently uses project-scoped config.
+To opt into more sources, pass constructor options:
 
-That means:
+```ts
+const agent = new Agent({
+  id: "skill-helper",
+  path: "/path/to/project",
+  tools: {},
+  plugins: [
+    new SkillPlugin({
+      use: ["project", "home"],
+      paths: [".agents/shared-skills"],
+      ignore: ["legacy-skill"],
+    }),
+  ],
+});
+```
 
-- the current project can carry its own skill-plugin settings
-- those settings belong to the plugin, not to one specific skill's content
+Options:
 
-For most users, the real center of gravity is the action workflow, not advanced configuration.
+- `use` controls built-in scan sources: `project` and `home`
+- `paths` adds extra scan directories, with relative paths resolved from the project root
+- `ignore` hides selected skills by name, regex, or predicate function
 
 ## Main actions
 

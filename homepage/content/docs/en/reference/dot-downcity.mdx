@@ -56,7 +56,7 @@ Task definitions and per-run artifacts (`run.json`, `result.md`, etc.).
 
 ### Skills location
 
-Skills are discovered from `.agents/skills` (project) and `~/.agents/skills` (user).
+`SkillPlugin` scans `.agents/skills` (project) by default. If `use: ["home"]` is enabled in the constructor, it also scans `~/.agents/skills` (user).
 
 ## Security guidance
 

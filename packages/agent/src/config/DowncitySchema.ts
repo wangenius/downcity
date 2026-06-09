@@ -86,14 +86,6 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
       type: "object",
       additionalProperties: true,
       properties: {
-        skill: {
-          type: "object",
-          additionalProperties: true,
-          properties: {
-            paths: { type: "array", items: { type: "string" } },
-            allowExternalPaths: { type: "boolean" },
-          },
-        },
         chat: {
           type: "object",
           additionalProperties: true,

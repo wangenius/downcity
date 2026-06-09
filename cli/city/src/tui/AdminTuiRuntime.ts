@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - Admin 启动后只创建一个 blessed screen，除退出外不再跳出全屏应用模式。
- * - 左侧为稳定导航区，右侧 section 承载 loading、列表、文本、JSON、消息与输入。
+ * - 左侧 sidebar 承载所有菜单层级，右侧 section 只承载 loading、文本、JSON、消息与输入。
  */
 
 import blessed from "neo-blessed";
@@ -60,6 +60,7 @@ interface blessed_textbox_element extends blessed.Widgets.TextboxElement {
 interface shell_layout {
   screen: blessed.Widgets.Screen;
   nav_box: blessed.Widgets.BoxElement;
+  breadcrumb_box: blessed.Widgets.BoxElement;
   nav_list: blessed_list_element;
   content_box: blessed.Widgets.BoxElement;
   footer_box: blessed.Widgets.BoxElement;
@@ -71,6 +72,7 @@ interface shell_layout {
 export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
   const shell = create_shell(title);
   let active_main_cleanup: (() => void) | undefined;
+  let breadcrumb_parts: string[] = [title];
 
   const cleanup_main = (): void => {
     if (active_main_cleanup) {
@@ -92,9 +94,9 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
 
     async select_nav(nav_title: string, options: admin_tui_select_option[]): Promise<string | undefined> {
       cleanup_main();
-      render_nav(shell, nav_title, options);
+      breadcrumb_parts = [nav_title];
+      render_nav(shell, nav_title, options, 0);
       render_idle(shell, "选择左侧管理项");
-      render_footer("Enter choose · Esc / q back · ↑↓ navigate");
       return await run_sidebar_select({
         shell,
         title: nav_title,
@@ -103,15 +105,15 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
     },
 
     async select(section_title: string, options: admin_tui_select_option[]): Promise<string | undefined> {
-      cleanup_main();
-      render_footer("Enter choose · Esc / q back · ↑↓ navigate");
-      return await run_main_select({
+      breadcrumb_parts = next_breadcrumb_parts(breadcrumb_parts, section_title);
+      render_nav(shell, breadcrumb_parts.join(" / "), options, 0);
+      if (shell.content_box.children.length === 0) {
+        render_idle(shell, "选择左侧管理项");
+      }
+      return await run_sidebar_select({
         shell,
         title: section_title,
         options,
-        on_cleanup: (cleanup) => {
-          active_main_cleanup = cleanup;
-        },
       });
     },
 
@@ -225,18 +227,32 @@ function create_shell(title: string): shell_layout {
     width: "34%",
     height: "100%-3",
     border: "line",
-    label: " Admin ",
+    label: " Sidebar ",
     style: {
       border: { fg: "cyan" },
     },
   });
 
+  const breadcrumb_box = blessed.box({
+    parent: nav_box,
+    top: 0,
+    left: 1,
+    width: "100%-2",
+    height: 2,
+    tags: false,
+    content: format_breadcrumb(title),
+    style: {
+      fg: "cyan",
+      bold: true,
+    },
+  });
+
   const nav_list = blessed.list({
     parent: nav_box,
-    top: 1,
+    top: 2,
     left: 0,
     width: "100%",
-    height: "100%-1",
+    height: "100%-2",
     keys: true,
     vi: true,
     mouse: true,
@@ -273,17 +289,20 @@ function create_shell(title: string): shell_layout {
   });
 
   screen.render();
-  return { screen, nav_box, nav_list, content_box, footer_box };
+  return { screen, nav_box, breadcrumb_box, nav_list, content_box, footer_box };
 }
 
 function render_nav(
   shell: shell_layout,
   title: string,
   options: admin_tui_select_option[],
+  selected_index: number,
 ): void {
-  shell.nav_box.setLabel(` ${title} `);
+  shell.breadcrumb_box.setContent(format_breadcrumb(title));
   shell.nav_list.setItems(options.map((item) => item.label));
-  shell.nav_list.select(0);
+  shell.nav_list.select(selected_index);
+  render_sidebar_hint(shell, options, selected_index);
+  shell.screen.render();
 }
 
 function render_idle(shell: shell_layout, message: string): void {
@@ -322,6 +341,9 @@ async function run_sidebar_select(input: {
       if (key_name === "escape" || key_name === "q" || key_name === "C-c") {
         finish(undefined);
       }
+      setImmediate(() => {
+        render_sidebar_hint(input.shell, input.options, list.selected);
+      });
     };
 
     const finish = (value: string | undefined): void => {
@@ -341,93 +363,8 @@ async function run_sidebar_select(input: {
 
     list.select(0);
     list.focus();
+    render_sidebar_hint(input.shell, input.options, list.selected);
     list.on("keypress", keypress_listener);
-    raw_input_listener = (chunk: Buffer | string): void => {
-      const text = String(chunk);
-      if (text.includes("\u0003") || is_plain_escape_input(text)) {
-        finish(undefined);
-        return;
-      }
-      if (text.includes("\r") || text.includes("\n")) {
-        const index = typeof list.selected === "number" ? list.selected : 0;
-        finish(input.options[index]?.value);
-      }
-    };
-    process.stdin.on("data", raw_input_listener);
-    input.shell.screen.render();
-  });
-}
-
-async function run_main_select(input: {
-  shell: shell_layout;
-  title: string;
-  options: admin_tui_select_option[];
-  on_cleanup: (cleanup: () => void) => void;
-}): Promise<string | undefined> {
-  return await new Promise<string | undefined>((resolve) => {
-    input.shell.content_box.setLabel(` ${input.title} `);
-    let finished = false;
-    let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
-
-    blessed.box({
-      parent: input.shell.content_box,
-      top: 1,
-      left: 1,
-      width: "100%-2",
-      height: 2,
-      tags: true,
-      content: `{bold}${input.title}{/bold}`,
-    });
-
-    const list = blessed.list({
-      parent: input.shell.content_box,
-      top: 3,
-      left: 1,
-      width: "100%-2",
-      height: "100%-4",
-      keys: true,
-      vi: true,
-      mouse: true,
-      items: input.options.map(format_main_option),
-      style: build_list_style(),
-    }) as blessed_list_element;
-    const keypress_listener = (_ch: unknown, key: unknown): void => {
-      const key_name = get_key_name(key);
-      if (key_name === "enter") {
-        const index = typeof list.selected === "number" ? list.selected : 0;
-        finish(input.options[index]?.value);
-      }
-      if (key_name === "escape" || key_name === "q" || key_name === "C-c") {
-        finish(undefined);
-      }
-      setImmediate(() => render_main_hint(input.shell, input.options, list.selected));
-    };
-
-    const finish = (value: string | undefined): void => {
-      if (finished) return;
-      finished = true;
-      cleanup_input();
-      resolve(value);
-    };
-
-    const cleanup_input = (): void => {
-      if (raw_input_listener) {
-        process.stdin.off("data", raw_input_listener);
-        raw_input_listener = undefined;
-      }
-      list.removeListener("keypress", keypress_listener);
-    };
-
-    const cleanup = (): void => {
-      cleanup_input();
-      list.destroy();
-    };
-    input.on_cleanup(cleanup);
-
-    list.select(0);
-    list.focus();
-    list.on("keypress", keypress_listener);
-    render_main_hint(input.shell, input.options, list.selected);
     raw_input_listener = (chunk: Buffer | string): void => {
       const text = String(chunk);
       if (text.includes("\u0003") || is_plain_escape_input(text)) {
@@ -657,11 +594,7 @@ function build_list_style(): blessed.Widgets.ListOptions["style"] {
   };
 }
 
-function format_main_option(option: admin_tui_select_option): string {
-  return option.label;
-}
-
-function render_main_hint(
+function render_sidebar_hint(
   shell: shell_layout,
   options: admin_tui_select_option[],
   selected: number | undefined,
@@ -670,6 +603,20 @@ function render_main_hint(
   const hint = option?.hint ? ` · ${option.hint}` : "";
   shell.footer_box.setContent(`Enter choose · Esc / q back · ↑↓ navigate${hint}`);
   shell.screen.render();
+}
+
+function next_breadcrumb_parts(current_parts: string[], section_title: string): string[] {
+  const normalized_title = section_title.trim();
+  if (!normalized_title) return current_parts;
+  const existing_index = current_parts.indexOf(normalized_title);
+  if (existing_index >= 0) {
+    return current_parts.slice(0, existing_index + 1);
+  }
+  return [...current_parts, normalized_title];
+}
+
+function format_breadcrumb(title: string): string {
+  return title.padEnd(80, " ");
 }
 
 function get_key_name(key: unknown): string | undefined {

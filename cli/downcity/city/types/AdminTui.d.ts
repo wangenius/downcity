@@ -46,9 +46,9 @@ export type admin_tui_message_kind = "info" | "success" | "error";
 export interface admin_tui_runtime {
     /** 关闭当前 admin shell，退出全屏 TUI。 */
     close(): void;
-    /** 在左侧主导航中选择一个动作。 */
+    /** 在左侧主导航中选择一个顶层动作，并重置 sidebar breadcrumb。 */
     select_nav(title: string, options: admin_tui_select_option[]): Promise<string | undefined>;
-    /** 在右侧 section 中选择一个动作。 */
+    /** 在左侧 sidebar 中选择一个次级动作，并将 title 追加到 breadcrumb。 */
     select(title: string, options: admin_tui_select_option[]): Promise<string | undefined>;
     /** 在右侧 section 中输入文本。 */
     text(title: string, placeholder?: string): Promise<string | undefined>;

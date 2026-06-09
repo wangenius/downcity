@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - Admin 启动后只创建一个 blessed screen，除退出外不再跳出全屏应用模式。
- * - 左侧为稳定导航区，右侧 section 承载 loading、列表、文本、JSON、消息与输入。
+ * - 左侧 sidebar 承载所有菜单层级，右侧 section 只承载 loading、文本、JSON、消息与输入。
  */
 import type { admin_tui_runtime } from "../types/AdminTui.js";
 /**

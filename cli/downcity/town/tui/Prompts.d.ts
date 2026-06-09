@@ -4,6 +4,7 @@
  * 关键点（中文）
  * - 用全屏 TUI 替换 `prompts` 的交互行为，但尽量保持返回结构兼容。
  * - 先覆盖当前仓库里实际使用到的 `select / multiselect / text / password / confirm / number`。
+ * - 选择类问题统一在左侧 sidebar 交互，右侧 main_section 只展示详情或输入。
  * - 脚本模式仍由调用方自己兜底；这里默认只服务交互式 TTY 场景。
  */
 /**

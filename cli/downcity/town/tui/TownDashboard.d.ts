@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这是裸 `town` 的默认入口。
- * - 进入具体动作前销毁 TUI，再复用现有命令/交互流程。
+ * - 左侧 sidebar 承载动作菜单与 breadcrumb，右侧 main_section 展示当前动作说明。
  * - 动作结束后返回仪表盘，形成统一终端操作台体验。
  */
 import type { tui_action_result } from "../types/Tui.js";

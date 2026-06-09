@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这是裸 `town` 的默认入口。
- * - 进入具体动作前销毁 TUI，再复用现有命令/交互流程。
+ * - 左侧 sidebar 承载动作菜单与 breadcrumb，右侧 main_section 展示当前动作说明。
  * - 动作结束后返回仪表盘，形成统一终端操作台体验。
  */
 
@@ -45,6 +45,23 @@ interface blessed_list_element extends blessed.Widgets.ListElement {
   focus: () => void;
   setItems: (items: blessed.Widgets.ListElementItem[]) => void;
   selected?: number;
+}
+
+interface town_dashboard_shell {
+  /** blessed 全屏根节点。 */
+  screen: blessed.Widgets.Screen;
+
+  /** 左侧 sidebar 容器。 */
+  sidebar_box: blessed.Widgets.BoxElement;
+
+  /** sidebar 顶部 breadcrumb。 */
+  breadcrumb_box: blessed.Widgets.BoxElement;
+
+  /** 右侧主内容区。 */
+  main_box: blessed.Widgets.BoxElement;
+
+  /** 底部操作提示。 */
+  footer_box: blessed.Widgets.BoxElement;
 }
 
 interface town_dashboard_state {
@@ -207,13 +224,8 @@ async function run_town_dashboard_once(
   state: town_dashboard_state,
 ): Promise<string | null> {
   return await new Promise<string | null>((resolve) => {
-    const screen = blessed.screen({
-      smartCSR: true,
-      fullUnicode: true,
-      title: "Downcity Town",
-      dockBorders: true,
-      autoPadding: true,
-    });
+    const shell = create_town_dashboard_shell(state);
+    const { screen } = shell;
 
     let finished = false;
 
@@ -224,45 +236,16 @@ async function run_town_dashboard_once(
       resolve(value);
     };
 
-    const root = blessed.box({
-      parent: screen,
-      width: "100%",
-      height: "100%",
-      style: {
-        fg: "white",
-        bg: "black",
-      },
-    });
-
-    blessed.box({
-      parent: root,
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: 4,
-      tags: true,
-      padding: { left: 1, right: 1, top: 1 },
-      content: `{bold}${state.title}{/bold}\n${state.subtitle}`,
-      border: "line",
-      style: {
-        border: { fg: "green" },
-      },
-    });
-
     const list = blessed.list({
-      parent: root,
-      top: 4,
+      parent: shell.sidebar_box,
+      top: 2,
       left: 0,
-      width: "42%",
-      height: "shrink",
-      bottom: 3,
+      width: "100%",
+      height: "100%-2",
       keys: true,
       vi: true,
       mouse: true,
-      border: "line",
-      label: ` ${t({ zh: "动作", en: "Actions" })} `,
       style: {
-        border: { fg: "green" },
         item: { fg: "white" },
         selected: {
           fg: "black",
@@ -274,39 +257,21 @@ async function run_town_dashboard_once(
     }) as blessed_list_element;
 
     const detail = blessed.box({
-      parent: root,
+      parent: shell.main_box,
       top: 4,
-      left: "42%",
-      width: "58%",
-      height: "shrink",
-      bottom: 3,
+      left: 0,
+      width: "100%",
+      height: "100%-4",
       padding: { left: 1, right: 1, top: 1, bottom: 1 },
       tags: true,
       scrollable: true,
       alwaysScroll: true,
       keys: true,
       mouse: true,
-      border: "line",
-      label: ` ${t({ zh: "详情", en: "Details" })} `,
       style: {
-        border: { fg: "green" },
+        fg: "white",
       },
       content: format_detail_content(state.items[0]),
-    });
-
-    blessed.box({
-      parent: root,
-      left: 0,
-      bottom: 0,
-      width: "100%",
-      height: 3,
-      padding: { left: 1, right: 1, top: 1 },
-      border: "line",
-      style: {
-        border: { fg: "green" },
-        fg: "gray",
-      },
-      content: state.footer,
     });
 
     list.on("select item", (_item, index_value) => {
@@ -337,6 +302,93 @@ async function run_town_dashboard_once(
     list.focus();
     screen.render();
   });
+}
+
+function create_town_dashboard_shell(state: town_dashboard_state): town_dashboard_shell {
+  const screen = blessed.screen({
+    smartCSR: true,
+    fullUnicode: true,
+    title: "Downcity Town",
+    dockBorders: true,
+    autoPadding: true,
+  });
+
+  screen.style = {
+    bg: "black",
+    fg: "white",
+  };
+
+  const sidebar_box = blessed.box({
+    parent: screen,
+    top: 0,
+    left: 0,
+    width: "34%",
+    height: "100%-3",
+    border: "line",
+    label: " Sidebar ",
+    style: {
+      border: { fg: "green" },
+    },
+  });
+
+  const breadcrumb_box = blessed.box({
+    parent: sidebar_box,
+    top: 0,
+    left: 1,
+    width: "100%-2",
+    height: 2,
+    content: format_breadcrumb(state.title),
+    style: {
+      fg: "green",
+      bold: true,
+    },
+  });
+
+  const main_box = blessed.box({
+    parent: screen,
+    top: 0,
+    left: "34%",
+    width: "66%",
+    height: "100%-3",
+    border: "line",
+    label: " Main ",
+    style: {
+      border: { fg: "green" },
+    },
+  });
+
+  blessed.box({
+    parent: main_box,
+    top: 0,
+    left: 1,
+    width: "100%-2",
+    height: 3,
+    tags: true,
+    content: `{bold}${state.title}{/bold}\n${state.subtitle}`,
+  });
+
+  const footer_box = blessed.box({
+    parent: screen,
+    left: 0,
+    bottom: 0,
+    width: "100%",
+    height: 3,
+    padding: { left: 1, right: 1, top: 1 },
+    border: "line",
+    style: {
+      border: { fg: "green" },
+      fg: "gray",
+    },
+    content: state.footer,
+  });
+
+  return {
+    screen,
+    sidebar_box,
+    breadcrumb_box,
+    main_box,
+    footer_box,
+  };
 }
 
 async function safe_count_running_agents(): Promise<number> {
@@ -446,6 +498,10 @@ function format_list_label(item: tui_list_item): string {
 
 function format_detail_content(item: tui_list_item): string {
   return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;
+}
+
+function format_breadcrumb(value: string): string {
+  return value.padEnd(80, " ");
 }
 
 function read_town_cli_version(): string {

@@ -3,7 +3,7 @@
  */
 
 import { City } from "@downcity/city";
-import { isCancel, select } from "@clack/prompts";
+import { isCancel, select } from "../../tui/Prompts.js";
 import { askText, showError, showSuccess } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 

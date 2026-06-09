@@ -8,7 +8,7 @@
  * - CLI 命令装配统一放在 `src/command/CityCommand.ts`，本模块只保留状态与登录流程。
  */
 
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { performTownCityUserLogin } from "./CityUserLogin.js";

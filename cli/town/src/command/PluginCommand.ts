@@ -10,7 +10,7 @@
 
 import fs from "node:fs";
 import type { Command } from "commander";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import {
   listPluginViews,
   listPluginsWithLifecycle,

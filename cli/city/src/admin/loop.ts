@@ -7,7 +7,7 @@
  */
 
 import { City } from "@downcity/city";
-import { select, isCancel } from "@clack/prompts";
+import { select, isCancel } from "../tui/Prompts.js";
 import { type AdminSession } from "../core/session.js";
 import { showError, showSuccess } from "../core/ui.js";
 import { adminErrorMessage, isAdminAuthError } from "./auth-error.js";
@@ -143,7 +143,8 @@ export async function adminLoop(
     if (svc === "switch") return "switch_identity";
 
     try {
-      await commands[svc]?.(admin, session.base_url);
+      const command_key = String(svc);
+      await commands[command_key]?.(admin, session.base_url);
     } catch (e) {
       if (isAdminAuthError(e)) {
         showError(adminErrorMessage(e));

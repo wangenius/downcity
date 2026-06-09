@@ -10,7 +10,7 @@
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, basename } from "node:path";
-import { confirm, isCancel, select, text } from "@clack/prompts";
+import { confirm, isCancel, select, text } from "../../tui/Prompts.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
 import { runCommand } from "../../deploy/runtime/CommandRunner.js";

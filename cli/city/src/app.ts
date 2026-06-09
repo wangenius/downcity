@@ -12,8 +12,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { isCancel, select } from "@clack/prompts";
-import { intro } from "./core/ui.js";
+import { isCancel, select } from "./tui/Prompts.js";
 import {
   readActiveServer,
   writePersistedCliLocale,
@@ -22,10 +21,12 @@ import { parseArgs } from "./core/env.js";
 import { promptAddServer, promptSelectActiveServer } from "./auth/server-switch.js";
 import { show, showError, showSuccess } from "./core/ui.js";
 import { updateCli } from "./core/update.js";
-import { selectHomeAction, selectWelcomeAction } from "./home/HomeMenu.js";
 import { getCliLocale, setCliLocale, t } from "./i18n.js";
 import { type CliLocale } from "./types/CliLocale.js";
 import { openServerWorkspace } from "./workspace/ServerWorkspace.js";
+import { open_city_dashboard } from "./tui/CityDashboard.js";
+import type { HomeAction, WelcomeAction } from "./types/Interactive.js";
+import type { tui_action_result } from "./types/Tui.js";
 
 export async function runCityApp(argv: string[] = []): Promise<void> {
   const cli = parseArgs(argv);
@@ -34,77 +35,10 @@ export async function runCityApp(argv: string[] = []): Promise<void> {
     return;
   }
 
-  intro(`Downcity City v${readCliVersion()} (Esc to go back, Ctrl+C to exit)`);
-  while (true) {
-    const activeServer = readActiveServer();
-    if (!activeServer) {
-      const welcomeAction = await selectWelcomeAction();
-      if (welcomeAction === "quit") {
-        return;
-      }
-      if (welcomeAction === "update") {
-        await runSelfUpdate();
-        return;
-      }
-      if (welcomeAction === "set_language") {
-        await promptAndPersistCityCliLocale();
-        continue;
-      }
-
-      const connectedServer = await promptAddServer();
-      if (!connectedServer) {
-        continue;
-      }
-
-      const result = await openServerWorkspace(connectedServer.base_url);
-      if (result === "quit") {
-        return;
-      }
-      continue;
-    }
-
-    const homeAction = await selectHomeAction();
-    if (homeAction === "quit") {
-      return;
-    }
-    if (homeAction === "update") {
-      await runSelfUpdate();
-      return;
-    }
-    if (homeAction === "set_language") {
-      await promptAndPersistCityCliLocale();
-      continue;
-    }
-
-    if (homeAction === "connect_city") {
-      const connectedServer = await promptAddServer();
-      if (!connectedServer) {
-        continue;
-      }
-      const result = await openServerWorkspace(connectedServer.base_url);
-      if (result === "quit") {
-        return;
-      }
-      continue;
-    }
-
-    if (homeAction === "switch_city") {
-      const selectedServer = await promptSelectActiveServer();
-      if (!selectedServer) {
-        continue;
-      }
-      const result = await openServerWorkspace(selectedServer.base_url);
-      if (result === "quit") {
-        return;
-      }
-      continue;
-    }
-
-    const result = await openServerWorkspace(activeServer.base_url);
-    if (result === "quit") {
-      return;
-    }
-  }
+  await open_city_dashboard({
+    run_welcome_action: run_welcome_dashboard_action,
+    run_home_action: run_home_dashboard_action,
+  });
 }
 
 /**
@@ -197,4 +131,74 @@ async function runSelfUpdate(): Promise<void> {
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
   }
+}
+
+/**
+ * 执行欢迎页动作。
+ */
+async function run_welcome_dashboard_action(
+  action: WelcomeAction,
+): Promise<tui_action_result> {
+  if (action === "quit") {
+    return "quit";
+  }
+  if (action === "update") {
+    await runSelfUpdate();
+    return "refresh";
+  }
+  if (action === "set_language") {
+    await promptAndPersistCityCliLocale();
+    return "refresh";
+  }
+
+  const connected_server = await promptAddServer();
+  if (!connected_server) {
+    return "refresh";
+  }
+
+  const result = await openServerWorkspace(connected_server.base_url);
+  return result === "quit" ? "quit" : "refresh";
+}
+
+/**
+ * 执行首页动作。
+ */
+async function run_home_dashboard_action(
+  action: HomeAction,
+): Promise<tui_action_result> {
+  if (action === "quit") {
+    return "quit";
+  }
+  if (action === "update") {
+    await runSelfUpdate();
+    return "refresh";
+  }
+  if (action === "set_language") {
+    await promptAndPersistCityCliLocale();
+    return "refresh";
+  }
+  if (action === "connect_city") {
+    const connected_server = await promptAddServer();
+    if (!connected_server) {
+      return "refresh";
+    }
+    const result = await openServerWorkspace(connected_server.base_url);
+    return result === "quit" ? "quit" : "refresh";
+  }
+  if (action === "switch_city") {
+    const selected_server = await promptSelectActiveServer();
+    if (!selected_server) {
+      return "refresh";
+    }
+    const result = await openServerWorkspace(selected_server.base_url);
+    return result === "quit" ? "quit" : "refresh";
+  }
+
+  const active_server = readActiveServer();
+  if (!active_server) {
+    return "refresh";
+  }
+
+  const result = await openServerWorkspace(active_server.base_url);
+  return result === "quit" ? "quit" : "refresh";
 }

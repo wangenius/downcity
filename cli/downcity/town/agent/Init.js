@@ -10,7 +10,7 @@
  * - 避免写入无意义的默认值：能省则省，保持配置简洁
  */
 import path from "path";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import fs from "fs-extra";
 import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "../config/Paths.js";
 import { initializeAgentProject, normalizeDefaultAgentId, } from "@downcity/agent";

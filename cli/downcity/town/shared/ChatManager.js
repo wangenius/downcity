@@ -7,7 +7,7 @@
  * - 访问控制属于 chat plugin 的 access 能力，不再作为独立 plugin 心智暴露。
  * - Town 不管理 chat plugin 运行态；运行态由具体 agent 内部托管。
  */
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import { ChatChannelAccountManager, } from "@downcity/plugins";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";

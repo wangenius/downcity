@@ -7,7 +7,7 @@
  * - Wrangler 已登录但无法枚举 account 时，进入最小交互：重新登录或手动输入 account id。
  */
 
-import { isCancel, select, text } from "@clack/prompts";
+import { isCancel, select, text } from "../../tui/Prompts.js";
 import { readCloudflareAccountId, writeCloudflareAccountId } from "../../core/session.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";

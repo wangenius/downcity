@@ -17,7 +17,7 @@ import { registerPluginsCommand } from "./PluginCommand.js";
 import { registerManagedPluginCommandsForCli } from "./ManagedPluginActionCommand.js";
 import { registerAgentCommands } from "./AgentCommand.js";
 import { registerChatCommand } from "./ChatCommand.js";
-import { emitCliHeader, resetCliSectionFlow, setCliVerbosity, } from "../shared/CliReporter.js";
+import { setCliVerbosity, } from "../shared/CliReporter.js";
 import { registerGatewayCommands } from "./GatewayCommand.js";
 import { readPersistedTownCliLocale } from "../shared/CityStateStore.js";
 import { runInteractiveTownManager } from "../shared/TownManager.js";
@@ -117,8 +117,6 @@ export async function runTownCli() {
         process.exit(0);
     }
     if (process.argv.length <= 2) {
-        resetCliSectionFlow();
-        emitCliHeader(packageJson.version, { command_name: "town" });
         await runInteractiveTownManager({
             program,
             cli_path,

@@ -7,9 +7,7 @@
  * - 默认使用独立 local-cli 主会话：`local-cli-chat-main`。
  * - 远程访问统一走 `RemoteAgent({ url })`，不再在 CLI 侧维护第二套 HTTP SDK transport。
  */
-import { createInterface } from "node:readline/promises";
-import chalk from "chalk";
-import prompts from "prompts";
+import prompts from "../tui/Prompts.js";
 import { RemoteAgent, } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
@@ -17,7 +15,7 @@ import { resolveProjectRootByAgentId, validateAgentProjectRoot, } from "../share
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
 import { resolveDaemonRpcEndpoint } from "../process/daemon/Client.js";
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
-import { AgentChatInteractiveRenderer } from "./AgentChatInteractiveRenderer.js";
+import { run_agent_chat_tui } from "./AgentChatTui.js";
 function normalizeChatMessage(input) {
     return String(input || "").trim();
 }
@@ -388,87 +386,6 @@ async function runOneShotChat(params) {
         printAssistantReply("");
 }
 /**
- * 启动交互式持续对话。
- */
-async function runInteractiveChat(params) {
-    const resolved = await resolveAgentChatTarget(params.agentId);
-    if (!resolved.success) {
-        printAgentChatFailure({
-            agentId: params.agentId,
-            error: resolved.outcome.error,
-        });
-        return;
-    }
-    const prompt = `${chalk.cyan(params.agentId)} ${chalk.dim("›")} `;
-    const helpText = [
-        `${chalk.dim("/exit, /quit  — 退出对话")}`,
-        `${chalk.dim("/clear       — 清屏")}`,
-        `${chalk.dim("/help        — 显示此帮助")}`,
-        `${chalk.dim("Ctrl+C       — 退出对话")}`,
-    ];
-    emitCliBlock({
-        tone: "info",
-        title: `Agent chat · ${params.agentId}`,
-        note: `Session: local-cli-chat-main · ${helpText[0].replace(chalk.dim(""), "").trim()}`,
-    });
-    console.log(helpText.join("\n"));
-    const rl = createInterface({
-        input: process.stdin,
-        output: process.stdout,
-        terminal: true,
-    });
-    try {
-        while (true) {
-            let line = "";
-            try {
-                line = await rl.question(prompt);
-            }
-            catch (error) {
-                if (isReadlineAbortError(error)) {
-                    console.log();
-                    break;
-                }
-                throw error;
-            }
-            const text = normalizeChatMessage(line);
-            if (!text)
-                continue;
-            if (text === "/exit" || text === "/quit")
-                break;
-            if (text === "/clear") {
-                console.clear();
-                continue;
-            }
-            if (text === "/help") {
-                console.log(helpText.join("\n"));
-                continue;
-            }
-            const outcome = await runSdkPromptTurn({
-                agentId: params.agentId,
-                message: text,
-                transport: {
-                    host: params.options.host,
-                    port: params.options.port,
-                },
-                interactiveRenderer: new AgentChatInteractiveRenderer(),
-            });
-            if (!outcome.success) {
-                printAgentChatFailure({
-                    agentId: params.agentId,
-                    error: outcome.error,
-                });
-                continue;
-            }
-            if (!outcome.emittedVisibleText)
-                printAssistantReply("");
-        }
-    }
-    finally {
-        rl.close();
-    }
-    console.log(chalk.dim("Chat ended."));
-}
-/**
  * `town agent chat` 统一入口。
  */
 export async function chatCommand(options) {
@@ -500,9 +417,25 @@ export async function chatCommand(options) {
         });
         return;
     }
-    await runInteractiveChat({
-        agentId,
-        options,
+    await run_agent_chat_tui({
+        agent_id: agentId,
+        run_turn: async ({ message, interactive_renderer }) => {
+            const outcome = await runSdkPromptTurn({
+                agentId,
+                message,
+                transport: {
+                    host: options.host,
+                    port: options.port,
+                },
+                interactiveRenderer: interactive_renderer,
+            });
+            return {
+                success: outcome.success,
+                error: outcome.error,
+                emitted_visible_text: outcome.emittedVisibleText,
+                text: outcome.text,
+            };
+        },
     });
 }
 //# sourceMappingURL=AgentChat.js.map

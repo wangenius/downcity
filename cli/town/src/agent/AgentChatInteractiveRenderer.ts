@@ -9,7 +9,10 @@
 
 import chalk from "chalk";
 import type { AgentSessionEvent } from "@downcity/agent";
-import type { AgentChatInteractiveRenderSnapshot } from "../types/AgentChatInteractive.js";
+import type {
+  AgentChatInteractiveRenderSnapshot,
+  AgentChatInteractiveRendererPort,
+} from "../types/AgentChatInteractive.js";
 import {
   createSpinner,
   shouldRenderSpinner,
@@ -30,7 +33,7 @@ function extract_event_turn_id(event: AgentSessionEvent): string {
 /**
  * 交互式单轮渲染器。
  */
-export class AgentChatInteractiveRenderer {
+export class AgentChatInteractiveRenderer implements AgentChatInteractiveRendererPort {
   private spinner: Spinner | null = null;
   private spinner_text = "";
   private emitted_visible_text = false;

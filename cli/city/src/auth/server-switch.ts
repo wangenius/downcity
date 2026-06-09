@@ -8,7 +8,7 @@
  */
 
 import { City } from "@downcity/city";
-import { isCancel, password, select, text } from "@clack/prompts";
+import { isCancel, password, select, text } from "../tui/Prompts.js";
 import {
   addServer,
   readActiveServer,

@@ -33,7 +33,7 @@ npm i -g downcity
 city
 ```
 
-In an interactive terminal, the default `city` entry opens the City panel. In non-interactive environments it prints help instead.
+In an interactive terminal, the default `city` entry opens the full-screen City TUI dashboard. In non-interactive environments it prints help instead.
 
 The CLI also supports language switching:
 
@@ -45,7 +45,7 @@ DC_CLI_LANG=zh city
 
 In interactive mode, `city` also lets you change the default language from the menu and persists that selection locally. Resolution priority is `--lang` first, then the persisted interactive preference, then `DC_CLI_LANG`, `LC_ALL`, `LC_MESSAGES`, and `LANG`.
 
-If no City is connected yet, the interactive flow first asks you to add one. After that, you can:
+If no City is connected yet, the dashboard first guides you to add one. After that, you can:
 
 - manage multiple City servers from `Manage Servers`
 - enter the Admin flow for env / models / towns / payment

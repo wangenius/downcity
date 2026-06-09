@@ -33,7 +33,7 @@ npm i -g downcity
 city
 ```
 
-在交互式终端里，默认 `city` 会进入 City 面板；在非交互环境里，它会输出帮助信息。
+在交互式终端里，默认 `city` 会进入全屏 City TUI dashboard；在非交互环境里，它会输出帮助信息。
 
 CLI 也支持语言切换：
 
@@ -45,7 +45,7 @@ DC_CLI_LANG=zh city
 
 在交互模式下，`city` 也可以直接从菜单修改默认语言，并把选择持久化到本地。语言解析优先级是：先读 `--lang`，再读交互菜单里保存的默认语言，最后再读 `DC_CLI_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG`。
 
-如果还没有连接任何 City，交互流程会先要求你添加一个 City；之后你可以：
+如果还没有连接任何 City，dashboard 会先引导你添加一个 City；之后你可以：
 
 - 通过 `Manage Servers` 管理多个 City server
 - 进入 Admin 流程管理 env / models / towns / payment

@@ -6,7 +6,7 @@
  * - user 登录与 user runtime 由 `town` 管理。
  */
 
-import { isCancel, select } from "@clack/prompts";
+import { isCancel, select } from "../tui/Prompts.js";
 import { adminAuth } from "../auth/admin.js";
 import {
   promptConfigureAdminAccess,

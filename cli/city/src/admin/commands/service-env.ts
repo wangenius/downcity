@@ -8,7 +8,7 @@
  */
 
 import { City } from "@downcity/city";
-import { select, isCancel } from "@clack/prompts";
+import { select, isCancel } from "../../tui/Prompts.js";
 import { askText, show, showError, showSuccess } from "../../core/ui.js";
 import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
 

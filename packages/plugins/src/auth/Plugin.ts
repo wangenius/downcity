@@ -7,7 +7,6 @@
  * - 它只负责聊天主体授权，不负责 Town HTTP Bearer token 或路由访问鉴权。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
@@ -231,8 +230,8 @@ function createChatAuthorizationPluginDefinition(): Plugin {
 export class ChatAuthorizationPlugin extends BasePlugin {
   readonly name = CHAT_AUTHORIZATION_PLUGIN_NAME;
 
-  constructor(agent: AgentRuntime | null = null) {
-    super(agent);
+  constructor() {
+    super();
     Object.assign(this, createChatAuthorizationPluginDefinition());
   }
 }

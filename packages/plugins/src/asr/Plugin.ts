@@ -7,7 +7,6 @@
  * - 当前作为 chat 入站消息增强中间件接入语音转写。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { VoicePluginConfig } from "@/voice/types/VoicePlugin.js";
@@ -503,8 +502,8 @@ function createAsrPluginDefinition(plugin: Plugin): Plugin {
 export class AsrPlugin extends BasePlugin {
   readonly name = "asr";
 
-  constructor(agent: AgentRuntime | null = null) {
-    super(agent);
+  constructor() {
+    super();
     Object.assign(this, createAsrPluginDefinition(this));
   }
 }

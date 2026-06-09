@@ -7,7 +7,6 @@
  * - `share` 分享文本、链接、文件和目录，并进入对方 inbox。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
@@ -146,8 +145,8 @@ export class ContactPlugin extends BasePlugin {
    */
   readonly actions: PluginActions;
 
-  constructor(agent: AgentRuntime | null) {
-    super(agent);
+  constructor() {
+    super();
     this.actions = createContactActions({
       link: async (context, payload) =>
         (await this.link(context, payload)) as unknown as JsonValue,

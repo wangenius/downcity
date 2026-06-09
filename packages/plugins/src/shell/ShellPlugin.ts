@@ -7,7 +7,6 @@
  * - ShellActionRuntime 只保留纯运行时流程，不再承载模块级单例状态。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
@@ -61,8 +60,8 @@ export class ShellPlugin extends BasePlugin {
    */
   public readonly sessions: Map<string, ShellSessionRuntimeState>;
 
-  constructor(agent: AgentRuntime | null) {
-    super(agent);
+  constructor() {
+    super();
     this.state = createShellPluginState();
     this.sessions = this.state.sessions;
     this.actions = {

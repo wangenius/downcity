@@ -7,7 +7,6 @@
  * - 当前文件只保留实例骨架与 lifecycle，不再依赖旧的模块级单例。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
@@ -59,8 +58,8 @@ export class TaskPlugin extends BasePlugin {
    */
   public cronEngine: TaskCronTriggerEngine | null = null;
 
-  constructor(agent: AgentRuntime | null) {
-    super(agent);
+  constructor() {
+    super();
 
     this.actions = createTaskPluginActions({
       reloadSchedulerAfterMutation: async (params) =>

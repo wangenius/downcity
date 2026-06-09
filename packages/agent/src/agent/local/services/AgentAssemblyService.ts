@@ -178,7 +178,7 @@ export class AgentAssemblyService {
       list_cached_sessions: this.list_cached_sessions,
     });
 
-    this.register_plugins(plugin_instances, runtime, this.options.plugins || []);
+    this.register_plugins(plugin_instances, this.options.plugins || []);
 
     let agent_context!: AgentContext;
     const plugin_registry = createAgentPluginRegistry({
@@ -231,7 +231,6 @@ export class AgentAssemblyService {
 
   private register_plugins(
     plugin_instances: Map<string, BasePlugin>,
-    runtime: AgentRuntime,
     plugins: BasePlugin[],
   ): void {
     for (const plugin of plugins) {
@@ -242,7 +241,6 @@ export class AgentAssemblyService {
       if (plugin_instances.has(name)) {
         throw new Error(`Duplicate plugin registration: ${name}`);
       }
-      plugin.bindAgent(runtime);
       plugin_instances.set(name, plugin);
     }
   }

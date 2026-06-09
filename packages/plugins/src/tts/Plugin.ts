@@ -6,7 +6,6 @@
  * - Console 只通过 setup / action 与插件交互，保持极简统一。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type {
@@ -511,8 +510,8 @@ function createTtsPluginDefinition(plugin: Plugin): Plugin {
 export class TtsPlugin extends BasePlugin {
   readonly name = "tts";
 
-  constructor(agent: AgentRuntime | null = null) {
-    super(agent);
+  constructor() {
+    super();
     Object.assign(this, createTtsPluginDefinition(this));
   }
 }

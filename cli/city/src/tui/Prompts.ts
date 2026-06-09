@@ -46,6 +46,20 @@ interface blessed_list_element extends blessed.Widgets.ListElement {
   selected?: number;
 }
 
+interface blessed_textbox_element extends blessed.Widgets.TextboxElement {
+  key: (
+    keys: string | string[],
+    listener: (...args: unknown[]) => void,
+  ) => blessed_textbox_element;
+  focus: () => void;
+  readInput: (callback: (error: Error | null, value?: string) => void) => void;
+  submit: () => void;
+  _done?: (error: Error | string | null, value?: string | null) => void;
+  clearValue: () => void;
+  setValue: (value: string) => void;
+  getValue: () => string;
+}
+
 /**
  * clack 兼容：select。
  */
@@ -245,85 +259,9 @@ async function run_text_prompt(
   let error_message = "";
 
   while (true) {
-    const submitted_value = await new Promise<unknown>((resolve) => {
-      const screen = create_screen(input.message);
-      let finished = false;
-
-      const finish = (value: unknown): void => {
-        if (finished) return;
-        finished = true;
-        screen.destroy();
-        resolve(value);
-      };
-
-      blessed.box({
-        parent: screen,
-        top: "center-6",
-        left: "center",
-        width: "70%",
-        height: 3,
-        align: "center",
-        content: input.message,
-      });
-
-      blessed.box({
-        parent: screen,
-        top: "center-3",
-        left: "center",
-        width: "70%",
-        height: 5,
-        border: "line",
-        label: secret ? " Secret " : " Input ",
-        style: {
-          border: { fg: error_message ? "red" : "cyan" },
-        },
-      });
-
-      if (error_message) {
-        blessed.box({
-          parent: screen,
-          top: "center+2",
-          left: "center",
-          width: "70%",
-          height: 2,
-          align: "center",
-          style: {
-            fg: "red",
-          },
-          content: error_message,
-        });
-      }
-
-      const textbox = blessed.textbox({
-        parent: screen,
-        top: "center-2",
-        left: "center-34%",
-        width: "66%",
-        height: 1,
-        inputOnFocus: true,
-        keys: true,
-        mouse: true,
-        censor: secret,
-        value: String(input.initialValue ?? input.placeholder ?? ""),
-        style: {
-          fg: "white",
-          bg: "black",
-        },
-      });
-
-      create_footer(screen, "Enter submit · Esc cancel");
-
-      textbox.focus();
-      textbox.readInput((error, value) => {
-        if (error) {
-          finish(cancel("cancel"));
-          return;
-        }
-        finish(String(value ?? ""));
-      });
-
-      screen.key(["escape", "C-c"], () => finish(cancel("cancel")));
-      screen.render();
+    const submitted_value = await open_text_prompt_once(input, {
+      secret,
+      error_message,
     });
 
     if (isCancel(submitted_value)) {
@@ -341,6 +279,130 @@ async function run_text_prompt(
     }
     error_message = String(validate_result || "Invalid input");
   }
+}
+
+async function open_text_prompt_once(
+  input: prompt_text_input,
+  options: {
+    secret: boolean;
+    error_message: string;
+  },
+): Promise<unknown> {
+  return await new Promise<unknown>((resolve) => {
+    const screen = create_screen(input.message);
+    let finished = false;
+    let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
+
+    const finish = (value: unknown): void => {
+      if (finished) return;
+      finished = true;
+      if (raw_input_listener) {
+        process.stdin.off("data", raw_input_listener);
+      }
+      screen.destroy();
+      resolve(value);
+    };
+
+    blessed.box({
+      parent: screen,
+      top: 4,
+      left: "center",
+      width: "70%",
+      height: 3,
+      align: "center",
+      tags: true,
+      content: input.message,
+    });
+
+    const hint_box = blessed.box({
+      parent: screen,
+      top: 14,
+      left: "center",
+      width: "70%",
+      height: 2,
+      align: "center",
+      tags: true,
+      style: {
+        fg: options.error_message ? "red" : "gray",
+      },
+    });
+
+    const textbox = blessed.textbox({
+      parent: screen,
+      top: 8,
+      left: "center",
+      width: "70%",
+      height: 5,
+      border: "line",
+      label: options.secret ? " Secret " : " Input ",
+      padding: { left: 1, right: 1, top: 1 },
+      inputOnFocus: true,
+      keys: true,
+      mouse: true,
+      censor: options.secret,
+      value: String(input.initialValue ?? ""),
+      style: {
+        border: { fg: options.error_message ? "red" : "cyan" },
+        fg: "white",
+        bg: "black",
+        focus: {
+          border: { fg: options.error_message ? "red" : "cyan" },
+        },
+      },
+    }) as blessed_textbox_element;
+
+    const render_hint = (): void => {
+      hint_box.setContent(options.error_message || format_input_hint(input.placeholder));
+      screen.render();
+    };
+
+    create_footer(screen, "Type text · Enter submit · Esc cancel · Ctrl+U clear");
+
+    screen.key(["escape", "C-c"], () => finish(cancel("cancel")));
+    textbox.key(["enter", "return"], () => {
+      // 关键点（中文）：不同终端会把回车解析为 enter 或 return，统一转成 textbox submit。
+      textbox.submit();
+    });
+    textbox.key(["escape", "C-c"], () => finish(cancel("cancel")));
+    screen.key(["C-u"], () => {
+      textbox.clearValue();
+      screen.render();
+    });
+    textbox.key(["C-u"], () => {
+      textbox.clearValue();
+      screen.render();
+    });
+
+    textbox.focus();
+    render_hint();
+    textbox.readInput((error, value) => {
+      if (error) {
+        finish(cancel("cancel"));
+        return;
+      }
+      finish(normalize_textbox_value(value));
+    });
+
+    raw_input_listener = (chunk: Buffer | string): void => {
+      const text = String(chunk);
+      if (text.includes("\u0003") || is_plain_escape_input(text)) {
+        finish(cancel("cancel"));
+        return;
+      }
+      if (text.includes("\u0015")) {
+        textbox.clearValue();
+        screen.render();
+        return;
+      }
+      if (text.includes("\r") || text.includes("\n")) {
+        // 关键点（中文）：部分终端的回车不会触发 blessed 的 enter/return，延后一拍读取最新值。
+        setImmediate(() => submit_textbox_value(textbox, () => {
+          finish(normalize_textbox_value(textbox.getValue()));
+        }));
+      }
+    };
+    process.stdin.on("data", raw_input_listener);
+  });
 }
 
 function create_screen(title: string): blessed.Widgets.Screen {
@@ -423,6 +485,30 @@ function format_option_detail(option?: prompt_select_option): string {
     option.hint ? option.hint : "",
     option.value !== undefined ? `\nvalue: ${String(option.value)}` : "",
   ].filter(Boolean).join("\n");
+}
+
+function format_input_hint(placeholder?: string): string {
+  const text = String(placeholder ?? "").trim();
+  return text ? `placeholder: ${text}` : "";
+}
+
+function normalize_textbox_value(value: unknown): string {
+  return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, "");
+}
+
+function submit_textbox_value(
+  textbox: blessed_textbox_element,
+  finish: () => void,
+): void {
+  if (textbox._done) {
+    // 关键点（中文）：stop 只释放 blessed 内部 readInput 状态，不触发 submit/cancel 回调。
+    textbox._done("stop");
+  }
+  finish();
+}
+
+function is_plain_escape_input(text: string): boolean {
+  return text === "\u001b";
 }
 
 function cancel(reason: string): { __clack_cancel: true; reason: string } {

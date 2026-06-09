@@ -7,8 +7,9 @@
  * - 如果模型缺少 provider key，会在这里直接显示缺失项。
  */
 import { City } from "@downcity/city";
+import type { admin_tui_runtime } from "../../types/AdminTui.js";
 /**
  * 展示全部代码注册模型及其运行状态。
  */
-export declare function manageModels(a: City): Promise<void>;
+export declare function manageModels(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void>;
 //# sourceMappingURL=models.d.ts.map

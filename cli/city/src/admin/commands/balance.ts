@@ -3,15 +3,12 @@
  */
 
 import { City } from "@downcity/city";
-import { isCancel, select } from "../../tui/Prompts.js";
-import { askText, showError, showSuccess } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
+import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
-export async function manageBalance(a: City): Promise<void> {
+export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {
-    const act = await select({
-      message: "Balance",
-      options: [
+    const act = await runtime.select("Balance", [
         { label: "List users", value: "users" },
         { label: "History", value: "history" },
         { label: "Topups", value: "topups" },
@@ -23,129 +20,147 @@ export async function manageBalance(a: City): Promise<void> {
         { label: "Create redeem code", value: "create_redeem_code" },
         { label: "Disable redeem code", value: "disable_redeem_code" },
         { label: "Back", value: "back" },
-      ],
-    });
-    if (!act || isCancel(act) || act === "back") return;
+      ]);
+    if (!act || act === "back") return;
 
     try {
       if (act === "users") {
-        const items = await a.balance.listUsers(30);
-        console.log(`\n${items.length} balance accounts:\n`);
-        for (const item of items) {
-          console.log(`  ${item.user_id.padEnd(28)} ${String(item.balance).padStart(8)} ${item.unit.padEnd(10)} ${item.updated_at.slice(0, 19)}`);
-        }
-        console.log("");
+        const items = await runtime.with_loading("Balance Accounts", async () => await a.balance.listUsers(30));
+        await runtime.show_table({
+          title: `${items.length} Balance Accounts`,
+          columns: ["User", "Balance", "Unit", "Updated"],
+          rows: items.map((item) => ({
+            cells: [item.user_id, String(item.balance), item.unit, item.updated_at.slice(0, 19)],
+          })),
+          empty_message: "No balance accounts.",
+        });
         continue;
       }
 
       if (act === "history") {
-        const userId = await askText("user_id (optional)");
-        const items = await a.balance.listHistory({
+        const userId = await runtime.text("user_id (optional)");
+        const items = await runtime.with_loading("Balance History", async () => await a.balance.listHistory({
           limit: 30,
           user_id: userId ?? "",
+        }));
+        await runtime.show_table({
+          title: `${items.length} Balance History`,
+          columns: ["Created", "User", "Kind", "Amount", "Balance After", "Note"],
+          rows: items.map((item) => ({
+            cells: [item.created_at.slice(0, 19), item.user_id, item.kind, String(item.amount), String(item.balance_after), item.note],
+          })),
+          empty_message: "No balance history.",
         });
-        console.log(`\n${items.length} balance history entries:\n`);
-        for (const item of items) {
-          console.log(`  ${item.created_at.slice(0, 19)}  ${item.user_id.padEnd(20)} ${item.kind.padEnd(8)} ${String(item.amount).padStart(6)} -> ${String(item.balance_after).padStart(6)}  ${item.note}`);
-        }
-        console.log("");
         continue;
       }
 
       if (act === "topups") {
-        const userId = await askText("user_id (optional)");
-        const items = await a.balance.listTopups({
+        const userId = await runtime.text("user_id (optional)");
+        const items = await runtime.with_loading("Topups", async () => await a.balance.listTopups({
           limit: 30,
           user_id: userId ?? "",
+        }));
+        await runtime.show_table({
+          title: `${items.length} Topups`,
+          columns: ["Topup ID", "User", "Amount", "Unit", "Status", "Note"],
+          rows: items.map((item) => ({
+            cells: [item.topup_id, item.user_id, String(item.amount), item.unit, item.status, item.note],
+          })),
+          empty_message: "No topups.",
         });
-        console.log(`\n${items.length} topup orders:\n`);
-        for (const item of items) {
-          console.log(`  ${item.topup_id.padEnd(24)} ${item.user_id.padEnd(20)} ${String(item.amount).padStart(6)} ${item.unit.padEnd(10)} [${item.status}] ${item.note}`);
-        }
-        console.log("");
         continue;
       }
 
       if (act === "redeem_codes") {
-        const status = await askText("status (optional: active/redeemed/disabled)");
-        const userId = await askText("redeemed_by_user_id (optional)");
-        const items = await a.balance.redeemCodes.list({
+        const status = await runtime.text("status (optional: active/redeemed/disabled)");
+        const userId = await runtime.text("redeemed_by_user_id (optional)");
+        const items = await runtime.with_loading("Redeem Codes", async () => await a.balance.redeemCodes.list({
           limit: 30,
           status: normalizeRedeemCodeStatus(status),
           user_id: userId ?? "",
+        }));
+        await runtime.show_table({
+          title: `${items.length} Redeem Codes`,
+          columns: ["Redeem Code ID", "Code", "Amount", "Unit", "Status", "Owner", "Note"],
+          rows: items.map((item) => ({
+            cells: [
+              item.redeem_code_id,
+              item.code_mask,
+              String(item.amount),
+              item.unit,
+              item.status,
+              item.redeemed_by_user_id || "-",
+              item.note,
+            ],
+          })),
+          empty_message: "No redeem codes.",
         });
-        console.log(`\n${items.length} redeem codes:\n`);
-        for (const item of items) {
-          const owner = item.redeemed_by_user_id || "-";
-          console.log(`  ${item.redeem_code_id.padEnd(24)} ${item.code_mask.padEnd(22)} ${String(item.amount).padStart(6)} ${item.unit.padEnd(10)} [${item.status.padEnd(8)}] ${owner.padEnd(20)} ${item.note}`);
-        }
-        console.log("");
         continue;
       }
 
       if (act === "add" || act === "sub") {
-        const userId = await askText("user_id");
+        const userId = await runtime.text("user_id");
         if (!userId) continue;
-        const rawAmount = await askText("amount");
+        const rawAmount = await runtime.text("amount");
         if (!rawAmount) continue;
 
         const amount = Number(rawAmount);
         if (!Number.isInteger(amount) || amount <= 0) {
-          showError("amount must be a positive integer");
+          await runtime.show_message("error", "amount must be a positive integer");
           continue;
         }
 
-        const note = await askText("note (optional)");
-        const account = act === "add"
+        const note = await runtime.text("note (optional)");
+        const account = await runtime.with_loading("Update Balance", async () => act === "add"
           ? await a.balance.add({ user_id: userId, amount, note: note ?? "" })
-          : await a.balance.sub({ user_id: userId, amount, note: note ?? "" });
-        showSuccess(`balance updated: ${account.user_id} -> ${account.balance} ${account.unit}`);
+          : await a.balance.sub({ user_id: userId, amount, note: note ?? "" }));
+        await runtime.show_message("success", `balance updated: ${account.user_id} -> ${account.balance} ${account.unit}`);
         continue;
       }
 
       if (act === "create_redeem_code") {
-        const rawAmount = await askText("amount");
+        const rawAmount = await runtime.text("amount");
         if (!rawAmount) continue;
 
         const amount = Number(rawAmount);
         if (!Number.isInteger(amount) || amount <= 0) {
-          showError("amount must be a positive integer");
+          await runtime.show_message("error", "amount must be a positive integer");
           continue;
         }
 
-        const code = await askText("custom redeem_code (optional)");
-        const note = await askText("note (optional)");
-        const issued = await a.balance.redeemCodes.create({
+        const code = await runtime.text("custom redeem_code (optional)");
+        const note = await runtime.text("note (optional)");
+        const issued = await runtime.with_loading("Create Redeem Code", async () => await a.balance.redeemCodes.create({
           amount,
           code: code ?? "",
           note: note ?? "",
-        });
-        showSuccess(`redeem_code created: ${issued.redeem_code_id} -> ${issued.code} (+${issued.amount} ${issued.unit})`);
+        }));
+        await runtime.show_text("Redeem Code Created", `redeem_code created: ${issued.redeem_code_id}\ncode: ${issued.code}\namount: +${issued.amount} ${issued.unit}`);
         continue;
       }
 
       if (act === "disable_redeem_code") {
-        const redeemCodeId = await askText("redeem_code_id");
+        const redeemCodeId = await runtime.text("redeem_code_id");
         if (!redeemCodeId) continue;
-        const note = await askText("note (optional)");
-        const item = await a.balance.redeemCodes.disable({
+        const note = await runtime.text("note (optional)");
+        const item = await runtime.with_loading("Disable Redeem Code", async () => await a.balance.redeemCodes.disable({
           redeem_code_id: redeemCodeId,
           note: note ?? "",
-        });
-        showSuccess(`redeem_code updated: ${item.redeem_code_id} -> ${item.status}`);
+        }));
+        await runtime.show_message("success", `redeem_code updated: ${item.redeem_code_id} -> ${item.status}`);
         continue;
       }
 
-      const topupId = await askText("topup_id");
+      const topupId = await runtime.text("topup_id");
       if (!topupId) continue;
-      const note = await askText("note (optional)");
-      const topup = act === "finish"
+      const note = await runtime.text("note (optional)");
+      const topup = await runtime.with_loading("Update Topup", async () => act === "finish"
         ? await a.balance.finishTopup({ topup_id: topupId, note: note ?? "" })
-        : await a.balance.cancelTopup({ topup_id: topupId, note: note ?? "" });
-      showSuccess(`topup updated: ${topup.topup_id} -> ${topup.status}`);
+        : await a.balance.cancelTopup({ topup_id: topupId, note: note ?? "" }));
+      await runtime.show_message("success", `topup updated: ${topup.topup_id} -> ${topup.status}`);
     } catch (e) {
       rethrowAdminAuthError(e);
-      showError(adminErrorMessage(e));
+      await runtime.show_message("error", adminErrorMessage(e));
     }
   }
 }

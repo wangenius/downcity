@@ -11,9 +11,9 @@
  */
 import { readFileSync } from "node:fs";
 import { isCancel, select } from "./tui/Prompts.js";
-import { readActiveServer, writePersistedCliLocale, } from "./core/session.js";
+import { readActiveServer, setActiveServer, writePersistedCliLocale, } from "./core/session.js";
 import { parseArgs } from "./core/env.js";
-import { promptAddServer, promptSelectActiveServer } from "./auth/server-switch.js";
+import { promptAddServer } from "./auth/server-switch.js";
 import { show, showError, showSuccess } from "./core/ui.js";
 import { updateCli } from "./core/update.js";
 import { getCliLocale, setCliLocale, t } from "./i18n.js";
@@ -124,12 +124,8 @@ async function run_welcome_dashboard_action(action) {
     if (action === "quit") {
         return "quit";
     }
-    if (action === "update") {
-        await runSelfUpdate();
-        return "refresh";
-    }
-    if (action === "set_language") {
-        await promptAndPersistCityCliLocale();
+    if (action === "more") {
+        await run_city_more_actions();
         return "refresh";
     }
     const connected_server = await promptAddServer();
@@ -146,12 +142,8 @@ async function run_home_dashboard_action(action) {
     if (action === "quit") {
         return "quit";
     }
-    if (action === "update") {
-        await runSelfUpdate();
-        return "refresh";
-    }
-    if (action === "set_language") {
-        await promptAndPersistCityCliLocale();
+    if (action === "more") {
+        await run_city_more_actions();
         return "refresh";
     }
     if (action === "connect_city") {
@@ -162,12 +154,13 @@ async function run_home_dashboard_action(action) {
         const result = await openServerWorkspace(connected_server.base_url);
         return result === "quit" ? "quit" : "refresh";
     }
-    if (action === "switch_city") {
-        const selected_server = await promptSelectActiveServer();
-        if (!selected_server) {
+    if (action.startsWith("open_server:")) {
+        const base_url = action.slice("open_server:".length).trim();
+        if (!base_url) {
             return "refresh";
         }
-        const result = await openServerWorkspace(selected_server.base_url);
+        setActiveServer(base_url);
+        const result = await openServerWorkspace(base_url);
         return result === "quit" ? "quit" : "refresh";
     }
     const active_server = readActiveServer();
@@ -176,5 +169,45 @@ async function run_home_dashboard_action(action) {
     }
     const result = await openServerWorkspace(active_server.base_url);
     return result === "quit" ? "quit" : "refresh";
+}
+async function run_city_more_actions() {
+    const current_locale = getCliLocale();
+    const selected_action = await select({
+        message: t({
+            zh: "更多",
+            en: "More",
+        }),
+        options: [
+            {
+                label: t({
+                    zh: "切换语言",
+                    en: "Language",
+                }),
+                value: "set_language",
+                hint: current_locale === "zh"
+                    ? t({ zh: "当前默认语言：中文", en: "Current default language: Chinese" })
+                    : t({ zh: "当前默认语言：英文", en: "Current default language: English" }),
+            },
+            {
+                label: t({
+                    zh: "升级 CLI",
+                    en: "Upgrade CLI",
+                }),
+                value: "update",
+                hint: t({
+                    zh: "刷新全局 city 命令",
+                    en: "Refresh the global city command",
+                }),
+            },
+        ],
+    });
+    if (!selected_action || isCancel(selected_action)) {
+        return;
+    }
+    if (selected_action === "set_language") {
+        await promptAndPersistCityCliLocale();
+        return;
+    }
+    await runSelfUpdate();
 }
 //# sourceMappingURL=app.js.map

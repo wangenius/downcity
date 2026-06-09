@@ -3,42 +3,45 @@
  */
 
 import { City } from "@downcity/city";
-import { select, isCancel } from "../../tui/Prompts.js";
-import { showError } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
+import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
-export async function manageUsage(a: City): Promise<void> {
+export async function manageUsage(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   const svc = a.service("usage");
   while (true) {
-    const act = await select({
-      message: "Usage",
-      options: [
+    const act = await runtime.select("Usage", [
         { label: "List events", value: "events" },
         { label: "Summary", value: "summary" },
         { label: "Back", value: "back" },
-      ],
-    });
-    if (!act || isCancel(act) || act === "back") return;
+      ]);
+    if (!act || act === "back") return;
 
     try {
       if (act === "events") {
-        const b = await svc.get<{ items: { town_id: string; service: string; status: string; created_at: string }[] }>("events");
-        console.log(`\n${b.items.length} events:\n`);
-        for (const e of b.items.slice(-20)) {
-          console.log(`  ${e.created_at.slice(0, 19)}  ${e.town_id.padEnd(22)} ${e.service.padEnd(15)} [${e.status}]`);
-        }
-        console.log("");
+        const b = await runtime.with_loading("Usage Events", async () => await svc.get<{ items: { town_id: string; service: string; status: string; created_at: string }[] }>("events"));
+        const items = b.items.slice(-20);
+        await runtime.show_table({
+          title: `${items.length} Usage Events`,
+          columns: ["Created", "Town", "Service", "Status"],
+          rows: items.map((e) => ({
+            cells: [e.created_at.slice(0, 19), e.town_id, e.service, e.status],
+          })),
+          empty_message: "No usage events.",
+        });
       } else {
-        const b = await svc.get<{ items: { town_id: string; service: string; status: string; count: number }[] }>("summary");
-        console.log(`\nSummary:\n`);
-        for (const s of b.items) {
-          console.log(`  ${s.town_id.padEnd(22)} ${s.service.padEnd(15)} ${String(s.count).padStart(5)} [${s.status}]`);
-        }
-        console.log("");
+        const b = await runtime.with_loading("Usage Summary", async () => await svc.get<{ items: { town_id: string; service: string; status: string; count: number }[] }>("summary"));
+        await runtime.show_table({
+          title: "Usage Summary",
+          columns: ["Town", "Service", "Count", "Status"],
+          rows: b.items.map((s) => ({
+            cells: [s.town_id, s.service, String(s.count), s.status],
+          })),
+          empty_message: "No usage summary.",
+        });
       }
     } catch (e) {
       rethrowAdminAuthError(e);
-      showError(adminErrorMessage(e));
+      await runtime.show_message("error", adminErrorMessage(e));
     }
   }
 }

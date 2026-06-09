@@ -1,43 +1,44 @@
 /**
  * Admin Accounts 管理命令。
  */
-import { select, isCancel } from "../../tui/Prompts.js";
-import { showError } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
-export async function manageAccounts(a) {
+export async function manageAccounts(a, _baseUrl, runtime) {
     const svc = a.service("accounts");
     while (true) {
-        const act = await select({
-            message: "Accounts",
-            options: [
-                { label: "List users", value: "users" },
-                { label: "List sessions", value: "sessions" },
-                { label: "Back", value: "back" },
-            ],
-        });
-        if (!act || isCancel(act) || act === "back")
+        const act = await runtime.select("Accounts", [
+            { label: "List users", value: "users" },
+            { label: "List sessions", value: "sessions" },
+            { label: "Back", value: "back" },
+        ]);
+        if (!act || act === "back")
             return;
         try {
             if (act === "users") {
-                const b = await svc.get("users");
-                console.log(`\n${b.items.length} users:\n`);
-                for (const u of b.items) {
-                    console.log(`  ${u.user_id.padEnd(30)} ${u.email.padEnd(30)} ${u.created_at.slice(0, 10)}`);
-                }
-                console.log("");
+                const b = await runtime.with_loading("Users", async () => await svc.get("users"));
+                await runtime.show_table({
+                    title: `${b.items.length} Users`,
+                    columns: ["User ID", "Email", "Created"],
+                    rows: b.items.map((u) => ({
+                        cells: [u.user_id, u.email, u.created_at.slice(0, 10)],
+                    })),
+                    empty_message: "No users.",
+                });
             }
             else {
-                const b = await svc.get("sessions");
-                console.log(`\n${b.items.length} sessions:\n`);
-                for (const s of b.items) {
-                    console.log(`  ${s.session_id.padEnd(36)} ${s.user_id.padEnd(30)} [${s.status}]`);
-                }
-                console.log("");
+                const b = await runtime.with_loading("Sessions", async () => await svc.get("sessions"));
+                await runtime.show_table({
+                    title: `${b.items.length} Sessions`,
+                    columns: ["Session ID", "User ID", "Status"],
+                    rows: b.items.map((s) => ({
+                        cells: [s.session_id, s.user_id, s.status],
+                    })),
+                    empty_message: "No sessions.",
+                });
             }
         }
         catch (e) {
             rethrowAdminAuthError(e);
-            showError(adminErrorMessage(e));
+            await runtime.show_message("error", adminErrorMessage(e));
         }
     }
 }

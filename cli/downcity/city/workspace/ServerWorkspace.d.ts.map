@@ -1,1 +1,1 @@
-{"version":3,"file":"ServerWorkspace.d.ts","sourceRoot":"","sources":["../../src/workspace/ServerWorkspace.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAKH;;GAEG;AACH,wBAAsB,mBAAmB,CAAC,QAAQ,EAAE,MAAM,GAAG,OAAO,CAAC,MAAM,GAAG,MAAM,CAAC,CAQpF"}
+{"version":3,"file":"ServerWorkspace.d.ts","sourceRoot":"","sources":["../../src/workspace/ServerWorkspace.ts"],"names":[],"mappings":"AAAA;;;;;;;GAOG;AAgBH;;GAEG;AACH,wBAAsB,mBAAmB,CAAC,QAAQ,EAAE,MAAM,GAAG,OAAO,CAAC,MAAM,GAAG,MAAM,CAAC,CAqEpF"}

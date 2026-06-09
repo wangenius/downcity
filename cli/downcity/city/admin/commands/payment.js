@@ -1,28 +1,23 @@
 /**
  * Admin Payment 管理命令。
  */
-import { select, isCancel } from "../../tui/Prompts.js";
 import { buildStripeEndpoints } from "../../core/stripe.js";
-import { show, showError } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
-export async function managePayment(a, baseUrl) {
+export async function managePayment(a, baseUrl, runtime) {
     const svc = a.service("payment.stripe");
     const endpoints = buildStripeEndpoints(baseUrl);
     while (true) {
-        const act = await select({
-            message: "Payment",
-            options: [
-                { label: "Show webhook setup", value: "webhook", hint: endpoints.webhook_url },
-                { label: "List payments", value: "payments" },
-                { label: "List webhook events", value: "events" },
-                { label: "Back", value: "back" },
-            ],
-        });
-        if (!act || isCancel(act) || act === "back")
+        const act = await runtime.select("Payment", [
+            { label: "Show webhook setup", value: "webhook", hint: endpoints.webhook_url },
+            { label: "List payments", value: "payments" },
+            { label: "List webhook events", value: "events" },
+            { label: "Back", value: "back" },
+        ]);
+        if (!act || act === "back")
             return;
         try {
             if (act === "webhook") {
-                show([
+                await runtime.show_text("Stripe Webhook Setup", [
                     `Server URL: ${endpoints.base_url}`,
                     `Stripe webhook endpoint: ${endpoints.webhook_url}`,
                     "Recommended Stripe events:",
@@ -34,25 +29,30 @@ export async function managePayment(a, baseUrl) {
                 continue;
             }
             if (act === "payments") {
-                const result = await svc.get("payments");
-                console.log(`\n${result.items.length} payments:\n`);
-                for (const item of result.items) {
-                    console.log(`  ${item.updated_at.slice(0, 19)}  ${item.user_id.padEnd(20)} ${String(item.amount).padStart(6)} ${item.currency.padEnd(6)} [${item.status}] ${item.payment_id}`);
-                }
-                console.log("");
+                const result = await runtime.with_loading("Payments", async () => await svc.get("payments"));
+                await runtime.show_table({
+                    title: `${result.items.length} Payments`,
+                    columns: ["Updated", "User", "Amount", "Currency", "Status", "Payment ID"],
+                    rows: result.items.map((item) => ({
+                        cells: [item.updated_at.slice(0, 19), item.user_id, String(item.amount), item.currency, item.status, item.payment_id],
+                    })),
+                    empty_message: "No payments.",
+                });
                 continue;
             }
-            const result = await svc.get("events");
-            console.log(`\n${result.items.length} webhook events:\n`);
-            for (const item of result.items) {
-                const error = item.sync_error ? ` ${item.sync_error}` : "";
-                console.log(`  ${item.created_at.slice(0, 19)}  ${item.type.padEnd(32)} [${item.sync_status}] ${item.event_id}${error}`);
-            }
-            console.log("");
+            const result = await runtime.with_loading("Webhook Events", async () => await svc.get("events"));
+            await runtime.show_table({
+                title: `${result.items.length} Webhook Events`,
+                columns: ["Created", "Type", "Status", "Event ID", "Error"],
+                rows: result.items.map((item) => ({
+                    cells: [item.created_at.slice(0, 19), item.type, item.sync_status, item.event_id, item.sync_error || ""],
+                })),
+                empty_message: "No webhook events.",
+            });
         }
         catch (e) {
             rethrowAdminAuthError(e);
-            showError(adminErrorMessage(e));
+            await runtime.show_message("error", adminErrorMessage(e));
         }
     }
 }

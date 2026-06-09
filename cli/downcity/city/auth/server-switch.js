@@ -11,7 +11,7 @@ import { isCancel, password, select, text } from "../tui/Prompts.js";
 import { addServer, readActiveServer, readConfig, readServer, removeServer, setActiveServer, updateServer, } from "../core/session.js";
 import { showError, showSuccess } from "../core/ui.js";
 import { t } from "../i18n.js";
-const DEFAULT_CITY_BASE_URL = "https://base.downcity.ai";
+const CITY_BASE_URL_EXAMPLE = "https://your-city.example.com";
 /**
  * 添加 server。
  */
@@ -21,8 +21,7 @@ export async function promptAddServer() {
             zh: "Server URL",
             en: "Server URL",
         }),
-        placeholder: DEFAULT_CITY_BASE_URL,
-        initialValue: DEFAULT_CITY_BASE_URL,
+        placeholder: CITY_BASE_URL_EXAMPLE,
     });
     if (!baseUrl || isCancel(baseUrl) || !String(baseUrl).trim()) {
         return undefined;
@@ -131,14 +130,6 @@ export async function promptEditServer(baseUrl) {
             },
             {
                 label: t({
-                    zh: "Admin secret key",
-                    en: "Admin secret key",
-                }),
-                value: "admin_secret_key",
-                hint: maskSecret(current.admin_secret_key),
-            },
-            {
-                label: t({
                     zh: "取消",
                     en: "Cancel",
                 }),
@@ -178,34 +169,7 @@ export async function promptEditServer(baseUrl) {
             return undefined;
         next.base_url = String(baseUrl).trim() || current.base_url;
     }
-    else if (field === "admin_secret_key") {
-        const adminSecretKey = await password({
-            message: t({
-                zh: "admin_secret_key",
-                en: "admin_secret_key",
-            }),
-        });
-        if (!adminSecretKey || isCancel(adminSecretKey))
-            return undefined;
-        next.admin_secret_key = String(adminSecretKey).trim();
-    }
     const updated = updateServer(current.base_url, next);
-    if (field === "admin_secret_key") {
-        const verified = await verifyServerAdminAccess(updated);
-        if (verified) {
-            showSuccess(t({
-                zh: `Admin 访问已更新：${updated.name}`,
-                en: `Admin access updated: ${updated.name}`,
-            }));
-        }
-        else {
-            showError(t({
-                zh: `City 已保存，但 admin 校验失败：${updated.name}`,
-                en: `City saved, but admin verification failed: ${updated.name}`,
-            }));
-        }
-        return updated;
-    }
     const verified = await verifyServerPublicAccess(updated);
     if (verified) {
         showSuccess(t({

@@ -34,35 +34,26 @@ function build_city_dashboard_state() {
     const active_server = readActiveServer();
     const config = readConfig();
     const connected_count = config.servers.length;
-    if (!active_server) {
+    if (connected_count === 0) {
         const items = [
             {
                 id: "connect_city",
-                title: t({ zh: "连接现有 City", en: "Connect an existing City" }),
+                title: t({ zh: "添加 City", en: "Add City" }),
                 subtitle: t({ zh: "添加一个 City base URL", en: "Add a City base URL" }),
                 detail: t({
-                    zh: "连接并保存一个 City base。连接成功后会自动进入当前 City 的管理工作区。",
-                    en: "Connect and save a City base. After success, City opens the current management workspace.",
+                    zh: "添加并保存一个 City base。连接成功后会自动进入这个 City 的管理工作区。",
+                    en: "Add and save a City base. After success, City opens this management workspace.",
                 }),
             },
             {
-                id: "set_language",
-                title: t({ zh: "切换语言", en: "Language" }),
+                id: "more",
+                title: t({ zh: "更多", en: "More" }),
                 subtitle: locale === "zh"
-                    ? t({ zh: "当前默认语言：中文", en: "Current default language: Chinese" })
-                    : t({ zh: "当前默认语言：英文", en: "Current default language: English" }),
+                    ? t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" })
+                    : t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" }),
                 detail: t({
-                    zh: "切换 City CLI 的默认语言，并保存到本地配置。",
-                    en: "Switch the default City CLI language and persist it locally.",
-                }),
-            },
-            {
-                id: "update",
-                title: t({ zh: "升级 CLI", en: "Upgrade CLI" }),
-                subtitle: t({ zh: "刷新全局 city 命令", en: "Refresh the global city command" }),
-                detail: t({
-                    zh: "拉起当前安装的 CLI 自更新流程。完成后请重新运行 `city`。",
-                    en: "Run the self-update flow for the installed CLI. Restart `city` after completion.",
+                    zh: "进入更多操作，查看语言切换和 CLI 升级等设置。",
+                    en: "Open more actions for language switching and CLI upgrade settings.",
                 }),
             },
             {
@@ -79,90 +70,71 @@ function build_city_dashboard_state() {
             mode: "welcome",
             title: `City v${version}`,
             subtitle: t({
-                zh: "欢迎使用 City。当前尚未连接任何 City server。",
-                en: "Welcome to City. No City server is connected yet.",
+                zh: "当前还没有 City。先添加一个再进入管理。",
+                en: "No City has been added yet. Add one to start managing it.",
             }),
             footer: t({
-                zh: "Enter 进入 · Esc / q 退出 · ↑↓ 切换 · 当前入口：全屏 TUI",
-                en: "Enter open · Esc / q quit · ↑↓ navigate · current entry: full-screen TUI",
+                zh: "Enter 进入 · Esc / q 退出 · ↑↓ 切换",
+                en: "Enter open · Esc / q quit · ↑↓ navigate",
             }),
             items,
         };
     }
-    const admin_state = String(active_server.admin_secret_key || "").trim()
-        ? t({ zh: "已配置 admin", en: "admin configured" })
-        : t({ zh: "未配置 admin", en: "admin missing" });
-    const items = [
-        {
-            id: "open_current",
-            title: t({ zh: "打开当前 City", en: "Open current City" }),
-            subtitle: `${active_server.name} · ${admin_state}`,
+    const items = config.servers.map((server) => {
+        const is_active = active_server?.base_url === server.base_url;
+        const admin_state = String(server.admin_secret_key || "").trim()
+            ? t({ zh: "已配置 admin", en: "admin configured" })
+            : t({ zh: "未配置 admin", en: "admin missing" });
+        return {
+            id: `open_server:${server.base_url}`,
+            title: is_active ? `★ ${server.name}` : server.name,
+            subtitle: `${server.base_url} · ${admin_state}`,
             detail: t({
-                zh: `当前 City：${active_server.base_url}\n\n进入当前 City 的管理工作区，继续 server management / admin tools 等流程。`,
-                en: `Current City: ${active_server.base_url}\n\nOpen the current City management workspace and continue into server management or admin tools.`,
+                zh: `City：${server.name}\nURL：${server.base_url}\n状态：${admin_state}${is_active ? "\n\n当前已激活。" : ""}\n\n回车直接进入这个 City 的管理工作区。`,
+                en: `City: ${server.name}\nURL: ${server.base_url}\nStatus: ${admin_state}${is_active ? "\n\nCurrently active." : ""}\n\nPress Enter to open this City management workspace.`,
             }),
-        },
-        {
-            id: "switch_city",
-            title: t({ zh: "切换 City", en: "Switch City" }),
-            subtitle: t({
-                zh: `已连接 ${connected_count} 个 City`,
-                en: `${connected_count} connected City servers`,
-            }),
-            detail: t({
-                zh: "从已连接的 City 列表中切换当前工作区。",
-                en: "Switch the current workspace from the saved City list.",
-            }),
-        },
-        {
-            id: "connect_city",
-            title: t({ zh: "连接另一个 City", en: "Connect another City" }),
-            subtitle: t({ zh: "添加新的 City server", en: "Add another City server" }),
-            detail: t({
-                zh: "新增一个 City base URL，并保存到本地配置中。",
-                en: "Add another City base URL and save it into the local configuration.",
-            }),
-        },
-        {
-            id: "set_language",
-            title: t({ zh: "切换语言", en: "Language" }),
-            subtitle: locale === "zh"
-                ? t({ zh: "当前默认语言：中文", en: "Current default language: Chinese" })
-                : t({ zh: "当前默认语言：英文", en: "Current default language: English" }),
-            detail: t({
-                zh: "切换 City CLI 的默认语言，并保存到本地配置。",
-                en: "Switch the default City CLI language and persist it locally.",
-            }),
-        },
-        {
-            id: "update",
-            title: t({ zh: "升级 CLI", en: "Upgrade CLI" }),
-            subtitle: t({ zh: "刷新全局 city 命令", en: "Refresh the global city command" }),
-            detail: t({
-                zh: "拉起当前安装的 CLI 自更新流程。完成后请重新运行 `city`。",
-                en: "Run the self-update flow for the installed CLI. Restart `city` after completion.",
-            }),
-        },
-        {
-            id: "quit",
-            title: t({ zh: "退出", en: "Exit" }),
-            subtitle: t({ zh: "关闭 City", en: "Close City" }),
-            detail: t({
-                zh: "退出当前 City CLI。",
-                en: "Exit the current City CLI.",
-            }),
-        },
-    ];
+        };
+    });
+    items.push({
+        id: "connect_city",
+        title: t({ zh: "添加 City", en: "Add City" }),
+        subtitle: t({
+            zh: `当前已连接 ${connected_count} 个 City`,
+            en: `${connected_count} connected City servers`,
+        }),
+        detail: t({
+            zh: "添加新的 City base URL，并保存到本地配置中。",
+            en: "Add a new City base URL and save it into the local configuration.",
+        }),
+    }, {
+        id: "more",
+        title: t({ zh: "更多", en: "More" }),
+        subtitle: locale === "zh"
+            ? t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" })
+            : t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" }),
+        detail: t({
+            zh: "进入更多操作，查看语言切换和 CLI 升级等设置。",
+            en: "Open more actions for language switching and CLI upgrade settings.",
+        }),
+    }, {
+        id: "quit",
+        title: t({ zh: "退出", en: "Exit" }),
+        subtitle: t({ zh: "关闭 City", en: "Close City" }),
+        detail: t({
+            zh: "退出当前 City CLI。",
+            en: "Exit the current City CLI.",
+        }),
+    });
     return {
-        mode: "home",
+        mode: "servers",
         title: `City v${version}`,
         subtitle: t({
-            zh: `当前 City：${active_server.name} · ${active_server.base_url}`,
-            en: `Current City: ${active_server.name} · ${active_server.base_url}`,
+            zh: `共 ${connected_count} 个 City${active_server ? ` · 当前：${active_server.name}` : ""}`,
+            en: `${connected_count} City servers${active_server ? ` · current: ${active_server.name}` : ""}`,
         }),
         footer: t({
-            zh: "Enter 进入动作 · Esc / q 退出 · ↑↓ 切换 · 当前入口：全屏 TUI",
-            en: "Enter run action · Esc / q quit · ↑↓ navigate · current entry: full-screen TUI",
+            zh: "Enter 进入 City · Esc / q 退出 · ↑↓ 切换",
+            en: "Enter open City · Esc / q quit · ↑↓ navigate",
         }),
         items,
     };

@@ -36,10 +36,11 @@ export function parseArgs(argv) {
 // ============================================================
 // URL 规范化
 // ============================================================
-export function normalizeBaseUrl(baseUrl = DEFAULT_BASE_URL) {
+export function normalizeBaseUrl(baseUrl) {
     const raw = String(baseUrl).trim();
-    if (!raw)
-        return DEFAULT_BASE_URL;
+    if (!raw) {
+        throw new Error("City server URL is required.");
+    }
     const hasProtocol = /^[a-z][a-z\d+.-]*:\/\//iu.test(raw);
     const withProtocol = hasProtocol ? raw : `${defaultProtocol(raw)}://${raw}`;
     const url = new URL(withProtocol);

@@ -7,5 +7,6 @@
  * - 直接管理：list / upsert / remove 裸 key-value
  */
 import { City } from "@downcity/city";
-export declare function manageEnv(a: City): Promise<void>;
+import type { admin_tui_runtime } from "../../types/AdminTui.js";
+export declare function manageEnv(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void>;
 //# sourceMappingURL=service-env.d.ts.map

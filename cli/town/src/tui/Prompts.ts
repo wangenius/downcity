@@ -56,6 +56,20 @@ interface blessed_list_element extends blessed.Widgets.ListElement {
   selected?: number;
 }
 
+interface blessed_textbox_element extends blessed.Widgets.TextboxElement {
+  key: (
+    keys: string | string[],
+    listener: (...args: unknown[]) => void,
+  ) => blessed_textbox_element;
+  focus: () => void;
+  readInput: (callback: (error: Error | null, value?: string) => void) => void;
+  submit: () => void;
+  _done?: (error: Error | string | null, value?: string | null) => void;
+  clearValue: () => void;
+  setValue: (value: string) => void;
+  getValue: () => string;
+}
+
 interface prompt_result_map {
   [key: string]: unknown;
 }
@@ -400,17 +414,21 @@ async function open_text_prompt_once(
   return await new Promise<string | undefined>((resolve) => {
     const screen = create_screen(question.message);
     let finished = false;
+    let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
 
     const finish = (value: string | undefined): void => {
       if (finished) return;
       finished = true;
+      if (raw_input_listener) {
+        process.stdin.off("data", raw_input_listener);
+      }
       screen.destroy();
       resolve(value);
     };
 
     blessed.box({
       parent: screen,
-      top: "center-6",
+      top: 4,
       left: "center",
       width: "70%",
       height: 3,
@@ -419,66 +437,97 @@ async function open_text_prompt_once(
       content: question.message,
     });
 
-    blessed.box({
+    const hint_box = blessed.box({
       parent: screen,
-      top: "center-3",
+      top: 14,
+      left: "center",
+      width: "70%",
+      height: 2,
+      align: "center",
+      tags: true,
+      style: {
+        fg: options.error_message ? "red" : "gray",
+      },
+    });
+
+    const textbox = blessed.textbox({
+      parent: screen,
+      top: 8,
       left: "center",
       width: "70%",
       height: 5,
       border: "line",
       label: options.secret ? " Secret " : " Input ",
-      style: {
-        border: {
-          fg: options.error_message ? "red" : "green",
-        },
-      },
-    });
-
-    if (options.error_message) {
-      blessed.box({
-        parent: screen,
-        top: "center+2",
-        left: "center",
-        width: "70%",
-        height: 2,
-        align: "center",
-        style: {
-          fg: "red",
-        },
-        content: options.error_message,
-      });
-    }
-
-    const input = blessed.textbox({
-      parent: screen,
-      top: "center-2",
-      left: "center-34%",
-      width: "66%",
-      height: 1,
+      padding: { left: 1, right: 1, top: 1 },
       inputOnFocus: true,
       keys: true,
       mouse: true,
       censor: options.secret,
+      value: initial_value,
       style: {
+        border: {
+          fg: options.error_message ? "red" : "green",
+        },
         fg: "white",
         bg: "black",
+        focus: {
+          border: {
+            fg: options.error_message ? "red" : "green",
+          },
+        },
       },
-      value: initial_value,
+    }) as blessed_textbox_element;
+
+    const render_hint = (): void => {
+      hint_box.setContent(options.error_message);
+      screen.render();
+    };
+
+    create_footer(screen, "Type text · Enter submit · Esc cancel · Ctrl+U clear");
+
+    screen.key(["escape", "C-c"], () => finish(undefined));
+    textbox.key(["enter", "return"], () => {
+      // 关键点（中文）：不同终端会把回车解析为 enter 或 return，统一转成 textbox submit。
+      textbox.submit();
     });
-
-    create_footer(screen, "Enter submit · Esc cancel");
-
-    input.focus();
-    input.readInput((error, value) => {
+    textbox.key(["escape", "C-c"], () => finish(undefined));
+    screen.key(["C-u"], () => {
+      textbox.clearValue();
+      screen.render();
+    });
+    textbox.key(["C-u"], () => {
+      textbox.clearValue();
+      screen.render();
+    });
+    textbox.focus();
+    render_hint();
+    textbox.readInput((error, value) => {
       if (error) {
         finish(undefined);
         return;
       }
-      finish(String(value ?? ""));
+      finish(normalize_textbox_value(value));
     });
 
-    screen.key(["escape", "C-c"], () => finish(undefined));
-    screen.render();
+    raw_input_listener = (chunk: Buffer | string): void => {
+      const text = String(chunk);
+      if (text.includes("\u0003") || is_plain_escape_input(text)) {
+        finish(undefined);
+        return;
+      }
+      if (text.includes("\u0015")) {
+        textbox.clearValue();
+        screen.render();
+        return;
+      }
+      if (text.includes("\r") || text.includes("\n")) {
+        // 关键点（中文）：部分终端的回车不会触发 blessed 的 enter/return，延后一拍读取最新值。
+        setImmediate(() => submit_textbox_value(textbox, () => {
+          finish(normalize_textbox_value(textbox.getValue()));
+        }));
+      }
+    };
+    process.stdin.on("data", raw_input_listener);
   });
 }
 
@@ -619,4 +668,23 @@ function normalize_initial_index(
     return 0;
   }
   return Math.min(length - 1, numeric_value);
+}
+
+function normalize_textbox_value(value: unknown): string {
+  return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, "");
+}
+
+function submit_textbox_value(
+  textbox: blessed_textbox_element,
+  finish: () => void,
+): void {
+  if (textbox._done) {
+    // 关键点（中文）：stop 只释放 blessed 内部 readInput 状态，不触发 submit/cancel 回调。
+    textbox._done("stop");
+  }
+  finish();
+}
+
+function is_plain_escape_input(text: string): boolean {
+  return text === "\u001b";
 }

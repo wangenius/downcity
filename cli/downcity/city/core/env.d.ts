@@ -11,5 +11,5 @@ export declare function parseArgs(argv: string[]): {
     command: string;
     options: Record<string, string | boolean>;
 };
-export declare function normalizeBaseUrl(baseUrl?: string): string;
+export declare function normalizeBaseUrl(baseUrl: string): string;
 //# sourceMappingURL=env.d.ts.map

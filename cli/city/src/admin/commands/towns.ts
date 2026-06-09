@@ -3,15 +3,12 @@
  */
 
 import { City } from "@downcity/city";
-import { select, isCancel } from "../../tui/Prompts.js";
-import { askText, showError, showSuccess } from "../../core/ui.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
+import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
-export async function manageTowns(city: City): Promise<void> {
+export async function manageTowns(city: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {
-    const act = await select({
-      message: "Towns",
-      options: [
+    const act = await runtime.select("Towns", [
         { label: "List all", value: "list" },
         { label: "Create", value: "create" },
         { label: "Pause", value: "pause" },
@@ -19,54 +16,56 @@ export async function manageTowns(city: City): Promise<void> {
         { label: "Remove", value: "remove" },
         { label: "Issue token", value: "token" },
         { label: "Back", value: "back" },
-      ],
-    });
-    if (!act || isCancel(act) || act === "back") return;
+      ]);
+    if (!act || act === "back") return;
 
     try {
       if (act === "list") {
-        const items = await city.towns.list();
-        console.log(`\n${items.length} towns:\n`);
-        for (const town of items) {
-          console.log(`  ${town.town_id.padEnd(24)} ${town.name.padEnd(20)} [${town.status}]`);
-        }
-        console.log("");
+        const items = await runtime.with_loading("Towns", async () => await city.towns.list());
+        await runtime.show_table({
+          title: `${items.length} Towns`,
+          columns: ["Town ID", "Name", "Status"],
+          rows: items.map((town) => ({
+            cells: [town.town_id, town.name, town.status],
+          })),
+          empty_message: "No towns.",
+        });
       } else if (act === "create") {
-        const name = await askText("town name");
+        const name = await runtime.text("town name");
         if (!name) continue;
-        const town_id = await askText("town_id (optional)");
-        const town = await city.towns.create(
+        const town_id = await runtime.text("town_id (optional)");
+        const town = await runtime.with_loading("Create Town", async () => await city.towns.create(
           town_id
             ? { name, town_id }
             : { name },
-        );
-        showSuccess(`created: ${town.town_id}`);
+        ));
+        await runtime.show_message("success", `created: ${town.town_id}`);
       } else if (act === "pause") {
-        const id = await askText("town_id");
+        const id = await runtime.text("town_id");
         if (!id) continue;
-        await city.towns.pause(id);
-        showSuccess(`paused: ${id}`);
+        await runtime.with_loading("Pause Town", async () => await city.towns.pause(id));
+        await runtime.show_message("success", `paused: ${id}`);
       } else if (act === "activate") {
-        const id = await askText("town_id");
+        const id = await runtime.text("town_id");
         if (!id) continue;
-        await city.towns.activate(id);
-        showSuccess(`activated: ${id}`);
+        await runtime.with_loading("Activate Town", async () => await city.towns.activate(id));
+        await runtime.show_message("success", `activated: ${id}`);
       } else if (act === "remove") {
-        const id = await askText("town_id");
+        const id = await runtime.text("town_id");
         if (!id) continue;
-        await city.towns.remove(id);
-        showSuccess(`removed: ${id}`);
+        await runtime.with_loading("Remove Town", async () => await city.towns.remove(id));
+        await runtime.show_message("success", `removed: ${id}`);
       } else if (act === "token") {
-        const town_id = await askText("town_id");
+        const town_id = await runtime.text("town_id");
         if (!town_id) continue;
-        const user_id = await askText("user_id");
+        const user_id = await runtime.text("user_id");
         if (!user_id) continue;
-        const token = await city.towns.tokens.apply({ town_id, user_id });
-        showSuccess(`token: ${token.user_token.slice(0, 20)}...`);
+        const token = await runtime.with_loading("Issue Token", async () => await city.towns.tokens.apply({ town_id, user_id }));
+        await runtime.show_text("Town Token", token.user_token);
       }
     } catch (e) {
       rethrowAdminAuthError(e);
-      showError(adminErrorMessage(e));
+      await runtime.show_message("error", adminErrorMessage(e));
     }
   }
 }

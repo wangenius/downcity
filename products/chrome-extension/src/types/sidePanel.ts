@@ -55,3 +55,33 @@ export interface ComposerSubmitPayload {
    */
   references: ComposerReference[];
 }
+
+/**
+ * 页面选中文本引用消息。
+ */
+export interface SelectionReferenceMessage {
+  /**
+   * 消息类型。
+   */
+  type: "downcity.side-panel.insert-selection-reference";
+
+  /**
+   * 引用消息 id，用于 Side Panel 去重。
+   */
+  id: string;
+
+  /**
+   * 选中文本内容。
+   */
+  text: string;
+
+  /**
+   * 选中文本所在页面标题。
+   */
+  pageTitle: string;
+
+  /**
+   * 选中文本所在页面 URL。
+   */
+  pageUrl: string;
+}

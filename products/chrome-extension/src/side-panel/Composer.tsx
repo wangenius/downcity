@@ -4,16 +4,25 @@
  * 关键点（中文）：
  * - 使用 contenteditable 承载普通文本与 inline reference node。
  * - 当前 tab 引用会自动同步到输入框，用户可删除。
- * - 页面选中文本通过 hover pop item 插入为引用。
+ * - 页面选中文本由 content script 浮层传入，并插入为 editor node。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import type { ActiveTabContext } from "../types/extension";
-import type { ComposerReference, ComposerSubmitPayload } from "../types/sidePanel";
 import {
-  getActiveTabSelectionContext,
-  type ActiveTabSelectionContext,
-} from "../services/tab";
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
+import type { ActiveTabContext } from "../types/extension";
+import type {
+  ComposerReference,
+  ComposerSubmitPayload,
+  SelectionReferenceMessage,
+} from "../types/sidePanel";
 
 /**
  * Composer 属性。
@@ -64,10 +73,165 @@ function pageReferenceFromTab(tab: ActiveTabContext): ComposerReference {
 }
 
 function readPlainText(element: HTMLElement | null): string {
-  return String(element?.innerText || "")
+  if (!element) return "";
+  const parts: string[] = [];
+
+  const visit = (node: ChildNode) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      parts.push(node.textContent || "");
+      return;
+    }
+    if (!(node instanceof HTMLElement)) return;
+    if (node.dataset.composerReference === "true") return;
+    if (node.tagName === "BR") {
+      parts.push("\n");
+      return;
+    }
+    node.childNodes.forEach(visit);
+    if (node.tagName === "DIV" || node.tagName === "P") {
+      parts.push("\n");
+    }
+  };
+
+  element.childNodes.forEach(visit);
+  return parts
+    .join("")
     .replace(/\u00a0/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function readReferenceNode(node: HTMLElement): ComposerReference | null {
+  const type = node.dataset.referenceType;
+  if (type !== "page" && type !== "selection") return null;
+  const id = node.dataset.referenceId || "";
+  const label = node.dataset.referenceLabel || "";
+  if (!id || !label) return null;
+  return {
+    id,
+    type,
+    label,
+    url: node.dataset.referenceUrl || undefined,
+    text: node.dataset.referenceText || undefined,
+  };
+}
+
+function readReferences(element: HTMLElement | null): ComposerReference[] {
+  if (!element) return [];
+  const references: ComposerReference[] = [];
+  const nodes = Array.from(
+    element.querySelectorAll<HTMLElement>('[data-composer-reference="true"]'),
+  );
+  nodes.forEach((node) => {
+    const reference = readReferenceNode(node);
+    if (reference) references.push(reference);
+  });
+  return references;
+}
+
+function createReferenceNode(reference: ComposerReference): HTMLSpanElement {
+  const node = document.createElement("span");
+  node.contentEditable = "false";
+  node.dataset.composerReference = "true";
+  node.dataset.referenceId = reference.id;
+  node.dataset.referenceType = reference.type;
+  node.dataset.referenceLabel = reference.label;
+  if (reference.url) node.dataset.referenceUrl = reference.url;
+  if (reference.text) node.dataset.referenceText = reference.text;
+  node.title = reference.url || reference.text || reference.label;
+  node.className =
+    "group/reference relative mx-0.5 inline-flex h-7 max-w-[min(14rem,calc(100%-0.5rem))] min-w-0 items-center gap-1.5 overflow-hidden rounded-lg bg-foreground/[0.09] px-1.5 align-baseline text-[11px] leading-none text-foreground/90 shadow-none transition-colors hover:bg-foreground/[0.12]";
+
+  const icon = document.createElement("span");
+  icon.className =
+    "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-md text-muted-foreground/75 transition-opacity group-hover/reference:opacity-0";
+  icon.textContent = reference.type === "page" ? "⌘" : "“";
+  node.appendChild(icon);
+
+  const label = document.createElement("span");
+  label.className = "min-w-0 truncate font-medium";
+  label.textContent = reference.label;
+  node.appendChild(label);
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.referenceRemove = "true";
+  button.className =
+    "absolute left-1 top-1/2 inline-flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground/70 opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground focus-visible:opacity-100 group-hover/reference:opacity-100";
+  button.setAttribute("aria-label", "删除引用");
+  button.title = "删除引用";
+  button.textContent = "×";
+  node.appendChild(button);
+
+  return node;
+}
+
+function updateEditorState(
+  element: HTMLElement | null,
+  setHasText: (value: boolean) => void,
+  setHasReferences: (value: boolean) => void,
+) {
+  setHasText(Boolean(readPlainText(element)));
+  setHasReferences(readReferences(element).length > 0);
+}
+
+function removeReferenceNodes(
+  element: HTMLElement,
+  matcher: (reference: ComposerReference) => boolean,
+) {
+  const nodes = Array.from(
+    element.querySelectorAll<HTMLElement>('[data-composer-reference="true"]'),
+  );
+  nodes.forEach((node) => {
+    const reference = readReferenceNode(node);
+    if (reference && matcher(reference)) {
+      node.remove();
+    }
+  });
+}
+
+function insertReferenceAtStart(element: HTMLElement, reference: ComposerReference) {
+  const node = createReferenceNode(reference);
+  const space = document.createTextNode(" ");
+  const firstChild = element.firstChild;
+  element.insertBefore(space, firstChild);
+  element.insertBefore(node, space);
+}
+
+function isSelectionInside(element: HTMLElement): boolean {
+  const selection = window.getSelection();
+  const node = selection?.anchorNode;
+  return Boolean(node && element.contains(node));
+}
+
+function insertReferenceAtCursor(element: HTMLElement, reference: ComposerReference) {
+  const node = createReferenceNode(reference);
+  const space = document.createTextNode(" ");
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount < 1 || !isSelectionInside(element)) {
+    element.appendChild(node);
+    element.appendChild(space);
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+  range.insertNode(node);
+  range.setStartAfter(node);
+  range.collapse(true);
+  range.insertNode(space);
+  range.setStartAfter(space);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function clearEditorKeepingPageReferences(element: HTMLElement) {
+  const pageReferences = readReferences(element).filter((item) => item.type === "page");
+  element.innerHTML = "";
+  pageReferences.forEach((reference) => {
+    insertReferenceAtStart(element, reference);
+  });
 }
 
 /**
@@ -75,78 +239,80 @@ function readPlainText(element: HTMLElement | null): string {
  */
 export function Composer(props: ComposerProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const insertedSelectionIdsRef = useRef<Set<string>>(new Set());
   const { disabled, onSubmit, sending, tab } = props;
-  const [references, setReferences] = useState<ComposerReference[]>([]);
-  const [selection, setSelection] = useState<ActiveTabSelectionContext>({
-    tabId: null,
-    text: "",
-  });
   const [hasText, setHasText] = useState(false);
+  const [hasReferences, setHasReferences] = useState(false);
 
   const pageReference = useMemo(() => pageReferenceFromTab(tab), [tab]);
-  const canSubmit = !disabled && !sending && (hasText || references.length > 0);
+  const canSubmit = !disabled && !sending && (hasText || hasReferences);
 
   useEffect(() => {
-    setReferences((prev) => {
-      const withoutPage = prev.filter((item) => item.type !== "page");
-      return [pageReference, ...withoutPage];
-    });
+    const editor = editorRef.current;
+    if (!editor) return;
+    removeReferenceNodes(editor, (reference) => reference.type === "page");
+    insertReferenceAtStart(editor, pageReference);
+    updateEditorState(editor, setHasText, setHasReferences);
   }, [pageReference]);
 
   const syncTextState = useCallback(() => {
-    setHasText(Boolean(readPlainText(editorRef.current)));
+    updateEditorState(editorRef.current, setHasText, setHasReferences);
   }, []);
 
-  const refreshSelection = useCallback(async () => {
-    try {
-      const nextSelection = await getActiveTabSelectionContext();
-      setSelection(nextSelection);
-    } catch {
-      setSelection({ tabId: null, text: "" });
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      void refreshSelection();
-    }, 900);
-    void refreshSelection();
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [refreshSelection]);
-
-  const removeReference = useCallback((id: string) => {
-    setReferences((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  const insertSelectionReference = useCallback(() => {
-    const text = String(selection.text || "").trim();
+  const insertSelectionReference = useCallback((message: SelectionReferenceMessage) => {
+    const text = String(message.text || "").trim();
     if (!text) return;
-    const id = `selection-${Date.now()}`;
-    setReferences((prev) => [
-      ...prev,
-      {
+    const id = String(message.id || `selection-${Date.now()}`).trim();
+    if (insertedSelectionIdsRef.current.has(id)) return;
+    insertedSelectionIdsRef.current.add(id);
+    const editor = editorRef.current;
+    if (editor) {
+      insertReferenceAtCursor(editor, {
         id,
         type: "selection",
         label: `选中文本：${shortenReferenceLabel(text)}`,
+        url: message.pageUrl,
         text,
-      },
-    ]);
-    setSelection({ tabId: null, text: "" });
+      });
+      updateEditorState(editor, setHasText, setHasReferences);
+    }
     editorRef.current?.focus();
-  }, [selection.text]);
+  }, []);
+
+  useEffect(() => {
+    const onMessage = (message: unknown) => {
+      const record = message as Partial<SelectionReferenceMessage> | null;
+      if (record?.type !== "downcity.side-panel.insert-selection-reference") {
+        return;
+      }
+      insertSelectionReference(record as SelectionReferenceMessage);
+    };
+
+    chrome.runtime.onMessage.addListener(onMessage);
+    chrome.runtime.sendMessage({ type: "downcity.side-panel.ready" }, (response) => {
+      const reference = response?.reference as SelectionReferenceMessage | undefined;
+      if (reference?.type === "downcity.side-panel.insert-selection-reference") {
+        insertSelectionReference(reference);
+      }
+      void chrome.runtime.lastError;
+    });
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(onMessage);
+    };
+  }, [insertSelectionReference]);
 
   const submit = useCallback(() => {
     if (!canSubmit) return;
-    const text = readPlainText(editorRef.current);
+    const editor = editorRef.current;
+    const text = readPlainText(editor);
+    const references = readReferences(editor);
     onSubmit({ text, references });
-    if (editorRef.current) {
-      editorRef.current.innerText = "";
+    if (editor) {
+      clearEditorKeepingPageReferences(editor);
     }
-    setReferences((prev) => prev.filter((item) => item.type === "page"));
-    setHasText(false);
-  }, [canSubmit, onSubmit, references]);
+    updateEditorState(editor, setHasText, setHasReferences);
+  }, [canSubmit, onSubmit]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -159,67 +325,49 @@ export function Composer(props: ComposerProps) {
     [submit],
   );
 
-  return (
-    <div className="relative">
-      {selection.text ? (
-        <button
-          type="button"
-          className="absolute -top-10 left-3 z-10 max-w-[calc(100%-24px)] truncate rounded-full border border-border bg-surface px-3 py-1.5 text-[11px] text-foreground shadow-[0_6px_20px_rgba(17,17,19,0.12)]"
-          onClick={insertSelectionReference}
-          title={selection.text}
-        >
-          引用选中
-        </button>
-      ) : null}
+  const handleEditorClick = useCallback((event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const removeButton = target.closest<HTMLElement>('[data-reference-remove="true"]');
+    if (removeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      removeButton.closest<HTMLElement>('[data-composer-reference="true"]')?.remove();
+      syncTextState();
+      editorRef.current?.focus();
+      return;
+    }
+  }, [syncTextState]);
 
-      <div className="rounded-[22px] bg-muted px-3 py-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.03)] transition focus-within:shadow-[inset_0_0_0_1px_var(--color-ring)]">
+  const handlePaste = useCallback((event: ClipboardEvent<HTMLDivElement>) => {
+    const text = event.clipboardData.getData("text/plain");
+    if (!text) return;
+    event.preventDefault();
+    document.execCommand("insertText", false, text);
+    syncTextState();
+  }, [syncTextState]);
+
+  return (
+    <div className="relative min-w-0 max-w-full overflow-hidden">
+      <div className="min-w-0 max-w-full overflow-hidden rounded-[18px] bg-foreground/[0.035] px-2.5 py-2 shadow-none transition-colors focus-within:bg-foreground/[0.055]">
         <div
-          className="flex min-h-[92px] w-full flex-wrap content-start items-start gap-1.5 rounded-[16px] text-[14px] leading-6 text-foreground"
-          onClick={() => editorRef.current?.focus()}
-        >
-          {references.map((item) => (
-            <span
-              key={item.id}
-              contentEditable={false}
-              className="inline-flex h-7 max-w-full shrink-0 items-center gap-1.5 rounded-full bg-background px-2 text-[11px] leading-none text-foreground shadow-[0_0_0_1px_var(--color-border)]"
-              title={item.url || item.text || item.label}
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#4f7cff]" />
-              <span className="max-w-[190px] truncate">{item.label}</span>
-              <button
-                type="button"
-                className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  removeReference(item.id);
-                }}
-                aria-label="删除引用"
-                title="删除引用"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-          <div
-            ref={editorRef}
-            className="min-w-[120px] flex-1 whitespace-pre-wrap break-words bg-transparent outline-none empty:before:text-muted-foreground/70 empty:before:content-[attr(data-placeholder)]"
-            contentEditable={!disabled}
-            data-placeholder="Ask anything..."
-            onInput={syncTextState}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              void refreshSelection();
-            }}
-            role="textbox"
-            aria-multiline="true"
-            suppressContentEditableWarning
-          />
-        </div>
+          ref={editorRef}
+          className="max-h-[200px] min-h-[54px] min-w-0 max-w-full overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words rounded-[14px] px-1 py-1 text-[13px] leading-[1.34] text-foreground outline-none [overflow-wrap:anywhere] empty:before:text-muted-foreground/50 empty:before:content-[attr(data-placeholder)]"
+          contentEditable={!disabled}
+          data-placeholder="Ask anything..."
+          onClick={handleEditorClick}
+          onInput={syncTextState}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          role="textbox"
+          aria-multiline="true"
+          suppressContentEditableWarning
+        />
 
         <div className="mt-2 flex justify-end">
           <button
             type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[17px] font-medium leading-none text-primary-foreground transition hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-45"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[17px] font-medium leading-none text-primary-foreground shadow-none transition hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-35"
             onClick={submit}
             disabled={!canSubmit}
             aria-label="发送"

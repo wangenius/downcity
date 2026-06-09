@@ -13,7 +13,8 @@ Chrome 扩展现在提供三类能力：
 - 如果 Town 需要鉴权，设置页会显示 `Town Token`
 - Popup 可以把当前网页发送给默认 Agent
 - 支持 Chrome Side Panel 常驻对话
-- 已移除 `Inline Composer` 和 content script；background service worker 只负责打开 Side Panel
+- 页面选中文本旁会显示轻量 `引用` 浮层，点击后把选区插入 Side Panel 输入框
+- 已移除 `Inline Composer`；content script 只负责页面选区引用浮层
 
 ## 技术栈
 
@@ -36,6 +37,8 @@ products/chrome-extension/
   │  │  └─ main.tsx
   │  ├─ side-panel/
   │  │  ├─ App.tsx
+  │  │  ├─ Composer.tsx
+  │  │  ├─ MarkdownMessage.tsx
   │  │  └─ main.tsx
 │  ├─ options/
 │  │  ├─ App.tsx
@@ -50,11 +53,13 @@ products/chrome-extension/
 │  │  ├─ serverConnection.ts
 │  │  ├─ storage.ts
 │  │  └─ tab.ts
+│  ├─ page-selection.ts
 │  ├─ styles/
 │  │  └─ tailwind.css
 │  └─ types/
 │     ├─ api.ts
 │     ├─ extension.ts
+│     ├─ sidePanel.ts
 │     └─ ExtensionSelect.ts
   ├─ index.html
   ├─ options.html
@@ -99,6 +104,7 @@ npm run build:release
 4. 点击 `保存并检查`。
 5. 点击浏览器扩展图标，在 Popup 中确认 Agent、输入 Ask 并发送。
 6. 在 Popup 中点击 `侧栏`，打开 Chrome Side Panel 进行常驻对话。
+7. 在网页正文中选中文本，点击选区旁的 `引用`，选中文本会作为输入框内的引用胶囊插入 Side Panel。
 
 如果目标是远程服务器，还要确认 Console 已对外监听：
 

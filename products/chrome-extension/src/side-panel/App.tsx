@@ -60,6 +60,10 @@ type PanelMessage = {
    * 消息时间。
    */
   createdAt: number;
+  /**
+   * 关联的 Agent turn id。
+   */
+  turnId?: string;
 };
 
 function normalizeMessageText(item: AgentSdkHistoryItem): string {
@@ -76,7 +80,110 @@ function normalizeMessageText(item: AgentSdkHistoryItem): string {
       .join("\n")
       .trim();
   }
+  if (Array.isArray(item.parts)) {
+    return item.parts
+      .map((part) => {
+        if (!part || typeof part !== "object") return "";
+        const record = part as Record<string, unknown>;
+        if (record.type === "text" && typeof record.text === "string") {
+          return record.text.trim();
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+  }
   return "";
+}
+
+function escapeContextAttribute(input: string): string {
+  return String(input || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function unescapeContextAttribute(input: string): string {
+  return String(input || "")
+    .replace(/&quot;/g, "\"")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+function stripCurrentContextBlock(input: string): string {
+  return String(input || "")
+    .replace(/<current_context>[\s\S]*?<\/current_context>/giu, "")
+    .trim();
+}
+
+function stripLegacyFileBlocks(input: string): string {
+  return String(input || "")
+    .replace(/<file\b[\s\S]*?<\/file>/giu, "")
+    .trim();
+}
+
+function readXmlAttribute(attributes: string, name: string): string {
+  const pattern = new RegExp(`\\b${name}="([^"]*)"`, "iu");
+  const match = attributes.match(pattern);
+  return unescapeContextAttribute(match?.[1] || "").trim();
+}
+
+function extractCurrentContextLabels(input: string): string[] {
+  const text = String(input || "");
+  const labels: string[] = [];
+  const siteMatches = text.matchAll(/<site\b[^>]*\btitle="([^"]*)"[^>]*>/giu);
+  for (const match of siteMatches) {
+    const title = unescapeContextAttribute(match[1] || "").trim();
+    if (title) labels.push(`@ ${title}`);
+  }
+  const selectionMatches = text.matchAll(/<selection\b[^>]*\blabel="([^"]*)"[^>]*>/giu);
+  for (const match of selectionMatches) {
+    const label = unescapeContextAttribute(match[1] || "").trim();
+    if (label) labels.push(`@ ${label}`);
+  }
+  return labels;
+}
+
+function extractLegacyFileLabels(input: string): string[] {
+  const labels: string[] = [];
+  const fileMatches = String(input || "").matchAll(/<file\b([^>]*)>/giu);
+  for (const match of fileMatches) {
+    const attributes = match[1] || "";
+    const caption = readXmlAttribute(attributes, "caption");
+    const name = readXmlAttribute(attributes, "name");
+    const label = caption || name;
+    if (label) labels.push(`@ ${label}`);
+  }
+  return labels;
+}
+
+function formatHistoryUserMessageText(input: string): string {
+  const text = String(input || "").trim();
+  if (!text) return "";
+  const query = stripLegacyFileBlocks(stripCurrentContextBlock(text));
+  const labels = [
+    ...extractCurrentContextLabels(text),
+    ...extractLegacyFileLabels(text),
+  ];
+  if (labels.length < 1) return query;
+  return [query || "引用上下文", "", labels.join("\n")].join("\n").trim();
+}
+
+function normalizeMessageCreatedAt(item: AgentSdkHistoryItem): number {
+  if (typeof item.createdAt === "number" && Number.isFinite(item.createdAt)) {
+    return item.createdAt;
+  }
+  const metadata = item.metadata;
+  if (metadata && typeof metadata === "object") {
+    const timestamp = (metadata as Record<string, unknown>).ts;
+    if (typeof timestamp === "number" && Number.isFinite(timestamp)) {
+      return timestamp;
+    }
+  }
+  return Date.now();
 }
 
 function toPanelMessage(item: AgentSdkHistoryItem, index: number): PanelMessage | null {
@@ -84,15 +191,88 @@ function toPanelMessage(item: AgentSdkHistoryItem, index: number): PanelMessage 
   if (role !== "user" && role !== "assistant" && role !== "system") return null;
   const text = normalizeMessageText(item);
   if (!text) return null;
+  const displayText = role === "user" ? formatHistoryUserMessageText(text) : text;
+  if (!displayText) return null;
   return {
-    id: String(item.id || item.turnId || `history-${index}`),
+    id: String(item.id || (item.turnId ? `${role}-${item.turnId}` : `history-${index}`)),
     role,
-    text,
-    createdAt:
-      typeof item.createdAt === "number" && Number.isFinite(item.createdAt)
-        ? item.createdAt
-        : Date.now(),
+    text: displayText,
+    createdAt: normalizeMessageCreatedAt(item),
+    turnId: typeof item.turnId === "string" ? item.turnId : undefined,
   };
+}
+
+function findLastTurnUserIndex(messages: PanelMessage[], turnId: string): number {
+  let foundIndex = -1;
+  messages.forEach((message, index) => {
+    if (message.role === "user" && message.turnId === turnId) {
+      foundIndex = index;
+    }
+  });
+  return foundIndex;
+}
+
+function placeAssistantAfterTurnUser(
+  messages: PanelMessage[],
+  turnId: string,
+): PanelMessage[] {
+  const normalizedTurnId = String(turnId || "").trim();
+  if (!normalizedTurnId) return messages;
+  const assistantIndex = messages.findIndex(
+    (message) =>
+      message.role === "assistant" &&
+      (message.id === normalizedTurnId || message.turnId === normalizedTurnId),
+  );
+  if (assistantIndex < 0) return messages;
+
+  const withoutAssistant = messages.filter((_, index) => index !== assistantIndex);
+  const userIndex = findLastTurnUserIndex(withoutAssistant, normalizedTurnId);
+  if (userIndex < 0) return messages;
+
+  const assistantMessage: PanelMessage = {
+    ...messages[assistantIndex],
+    id: normalizedTurnId,
+    turnId: normalizedTurnId,
+  };
+  return [
+    ...withoutAssistant.slice(0, userIndex + 1),
+    assistantMessage,
+    ...withoutAssistant.slice(userIndex + 1),
+  ];
+}
+
+function bindUserMessageTurn(params: {
+  messages: PanelMessage[];
+  userMessageId: string;
+  turnId: string;
+}): PanelMessage[] {
+  const turnId = String(params.turnId || "").trim();
+  if (!turnId) return params.messages;
+  const boundMessages = params.messages.map((message) =>
+    message.id === params.userMessageId
+      ? {
+          ...message,
+          turnId,
+        }
+      : message,
+  );
+  return placeAssistantAfterTurnUser(boundMessages, turnId);
+}
+
+function insertAssistantMessage(params: {
+  messages: PanelMessage[];
+  message: PanelMessage;
+}): PanelMessage[] {
+  const turnId = String(params.message.turnId || params.message.id || "").trim();
+  const userIndex = findLastTurnUserIndex(params.messages, turnId);
+  if (userIndex < 0) {
+    return [...params.messages, params.message];
+  }
+  return [
+    ...params.messages.slice(0, userIndex + 1),
+    params.message,
+    ...params.messages.slice(userIndex + 1),
+  ];
 }
 
 function appendAssistantDelta(params: {
@@ -103,27 +283,34 @@ function appendAssistantDelta(params: {
   const turnId = String(params.turnId || "").trim();
   const text = String(params.text || "");
   if (!turnId || !text) return params.messages;
-  const existingIndex = params.messages.findIndex((item) => item.id === turnId);
+  const existingIndex = params.messages.findIndex(
+    (item) =>
+      item.role === "assistant" && (item.id === turnId || item.turnId === turnId),
+  );
   if (existingIndex >= 0) {
-    return params.messages.map((item, index) =>
+    const nextMessages = params.messages.map((item, index) =>
       index === existingIndex
         ? {
             ...item,
+            id: turnId,
+            turnId,
             text: `${item.text}${text}`,
             createdAt: Date.now(),
           }
         : item,
     );
+    return placeAssistantAfterTurnUser(nextMessages, turnId);
   }
-  return [
-    ...params.messages,
-    {
+  return insertAssistantMessage({
+    messages: params.messages,
+    message: {
       id: turnId,
+      turnId,
       role: "assistant",
       text,
       createdAt: Date.now(),
     },
-  ];
+  });
 }
 
 function finalizeAssistantMessage(params: {
@@ -134,17 +321,23 @@ function finalizeAssistantMessage(params: {
   const turnId = String(params.turnId || "").trim();
   const text = String(params.text || "").trim();
   if (!turnId || !text) return params.messages;
-  const existingIndex = params.messages.findIndex((item) => item.id === turnId);
+  const existingIndex = params.messages.findIndex(
+    (item) =>
+      item.role === "assistant" && (item.id === turnId || item.turnId === turnId),
+  );
   if (existingIndex >= 0) {
-    return params.messages.map((item, index) =>
+    const nextMessages = params.messages.map((item, index) =>
       index === existingIndex
         ? {
             ...item,
+            id: turnId,
+            turnId,
             text,
             createdAt: Date.now(),
           }
         : item,
     );
+    return placeAssistantAfterTurnUser(nextMessages, turnId);
   }
   return appendAssistantDelta({ messages: params.messages, turnId, text });
 }
@@ -166,6 +359,25 @@ function formatUserMessagePreview(payload: ComposerSubmitPayload): string {
     .filter(Boolean);
   if (references.length < 1) return text;
   return [text || "引用上下文", "", references.join("\n")].join("\n").trim();
+}
+
+function buildSelectionContextLabel(input: string): string {
+  const text = String(input || "").replace(/\s+/g, " ").trim();
+  if (!text) return "选中文本";
+  if (text.length <= 42) return `选中文本：${text}`;
+  return `选中文本：${text.slice(0, 39).trimEnd()}...`;
+}
+
+function orderHistoryMessages(messages: PanelMessage[]): PanelMessage[] {
+  return messages
+    .map((message, index) => ({ message, index }))
+    .sort((left, right) => {
+      if (left.message.createdAt !== right.message.createdAt) {
+        return left.message.createdAt - right.message.createdAt;
+      }
+      return left.index - right.index;
+    })
+    .map((item) => item.message);
 }
 
 function findLatestAssistantId(messages: PanelMessage[]): string {
@@ -302,7 +514,9 @@ export function SidePanelApp() {
       });
       const session = await remoteAgent.getSession(params.nextSessionId);
       const history = await session.history({ limit: 120 });
-      setMessages(history.map(toPanelMessage).filter(Boolean) as PanelMessage[]);
+      setMessages(
+        orderHistoryMessages(history.map(toPanelMessage).filter(Boolean) as PanelMessage[]),
+      );
 
       unsubscribeRef.current = await session.subscribe({
         onEvent: (event) => {
@@ -454,26 +668,31 @@ export function SidePanelApp() {
     const pageRefs = payload.references.filter((item) => item.type === "page");
     const selectionRefs = payload.references.filter((item) => item.type === "selection");
     if (!query && pageRefs.length < 1 && selectionRefs.length < 1) return "";
-    const parts = [query || "请根据引用上下文继续处理。"];
+    const contextParts: string[] = [];
 
     for (const reference of pageRefs) {
       const snapshot = await buildPageMarkdownSnapshot(tab);
-      parts.push(
-        "",
-        `当前页面引用：${reference.label}`,
-        `URL：${snapshot.url}`,
-        "",
-        `<file type="document" name="${snapshot.fileName}" caption="来源页面：${snapshot.url}">`,
+      contextParts.push(
+        `<site title="${escapeContextAttribute(reference.label)}" url="${escapeContextAttribute(snapshot.url)}" file="${escapeContextAttribute(snapshot.fileName)}">`,
         snapshot.markdown,
-        "</file>",
+        "</site>",
       );
     }
 
-    if (selectionRefs.length > 0) {
-      parts.push("", "选中文本引用：");
-      selectionRefs.forEach((reference, index) => {
-        parts.push("", `引用 ${index + 1}：`, String(reference.text || "").trim());
-      });
+    selectionRefs.forEach((reference) => {
+      const text = String(reference.text || "").trim();
+      if (!text) return;
+      const label = buildSelectionContextLabel(text);
+      contextParts.push(
+        `<selection label="${escapeContextAttribute(label)}"${reference.url ? ` url="${escapeContextAttribute(reference.url)}"` : ""}>`,
+        text,
+        "</selection>",
+      );
+    });
+
+    const parts = [query || "请根据当前上下文继续处理。"];
+    if (contextParts.length > 0) {
+      parts.push("", "<current_context>", ...contextParts, "</current_context>");
     }
 
     return parts.join("\n");
@@ -495,8 +714,9 @@ export function SidePanelApp() {
     setIsSending(true);
     setStatus({ type: "loading", text: "发送中..." });
 
+    const userMessageId = `local-user-${Date.now()}`;
     const localUserMessage: PanelMessage = {
-      id: `local-user-${Date.now()}`,
+      id: userMessageId,
       role: "user",
       text: formatUserMessagePreview(payload),
       createdAt: Date.now(),
@@ -510,7 +730,14 @@ export function SidePanelApp() {
         token: authToken,
       });
       const session = await remoteAgent.getSession(sessionId);
-      await session.prompt({ query: prompt });
+      const turnId = await session.prompt({ query: prompt });
+      setMessages((prev) =>
+        bindUserMessageTurn({
+          messages: prev,
+          userMessageId,
+          turnId,
+        }),
+      );
       setStatus({ type: "loading", text: "Agent 正在回复..." });
     } catch (error) {
       setStatus({ type: "error", text: `发送失败：${readErrorText(error)}` });
@@ -552,8 +779,8 @@ export function SidePanelApp() {
     Boolean(sessionId);
 
   return (
-    <main className="flex h-screen min-h-[520px] flex-col bg-background text-foreground">
-      <header className="flex min-h-[58px] items-center justify-between gap-3 bg-surface px-4">
+    <main className="flex h-screen min-h-[520px] min-w-0 max-w-full flex-col overflow-x-hidden bg-background text-foreground">
+      <header className="flex min-h-[58px] min-w-0 max-w-full items-center justify-between gap-3 overflow-hidden bg-surface px-4">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={`h-2 w-2 shrink-0 rounded-full ${
@@ -579,18 +806,18 @@ export function SidePanelApp() {
         </button>
       </header>
       {errorText ? (
-        <div className="bg-surface px-4 pb-2 text-[12px] leading-5 text-error">
+        <div className="min-w-0 max-w-full overflow-hidden bg-surface px-4 pb-2 text-[12px] leading-5 text-error [overflow-wrap:anywhere]">
           {errorText}
         </div>
       ) : null}
 
-      <section className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        <div className="grid gap-3">
+      <section className="min-h-0 min-w-0 max-w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
+        <div className="grid min-w-0 max-w-full gap-3 overflow-hidden">
           {messages.length > 0 ? (
             messages.map((message) => (
               <article
                 key={message.id}
-                className={`max-w-[92%] rounded-[16px] px-3.5 py-2.5 ${
+                className={`min-w-0 max-w-[92%] overflow-hidden rounded-[16px] px-3.5 py-2.5 ${
                   message.role === "user"
                     ? "ml-auto bg-primary text-primary-foreground"
                     : "mr-auto bg-transparent text-foreground"
@@ -628,7 +855,7 @@ export function SidePanelApp() {
         </div>
       </section>
 
-      <footer className="bg-surface px-3 pb-3 pt-2">
+      <footer className="min-w-0 max-w-full overflow-hidden bg-background px-3 pb-3 pt-2">
         <Composer
           tab={tab}
           disabled={!canSend}

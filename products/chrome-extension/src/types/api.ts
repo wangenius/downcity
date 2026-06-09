@@ -556,9 +556,26 @@ export interface AgentSdkHistoryItem {
   content?: unknown;
 
   /**
+   * SDK 标准 UIMessage parts。
+   *
+   * 说明（中文）：
+   * - `/api/sdk/sessions/:sessionId/history?view=message` 返回的正文通常在 `parts[].text`。
+   * - Chrome 扩展只解析 `type === "text"` 的文本 part。
+   */
+  parts?: unknown[];
+
+  /**
    * 消息创建时间。
    */
   createdAt?: number;
+
+  /**
+   * SDK 消息元信息。
+   *
+   * 说明（中文）：
+   * - 标准 session 消息会在 `metadata.ts` 保存毫秒时间戳。
+   */
+  metadata?: unknown;
 
   /**
    * 所属 turn id。

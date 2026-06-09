@@ -21,11 +21,14 @@ export default defineConfig({
         options: path.resolve(__dirname, "options.html"),
         sidepanel: path.resolve(__dirname, "sidepanel.html"),
         background: path.resolve(__dirname, "src/background.ts"),
+        "page-selection": path.resolve(__dirname, "src/page-selection.ts"),
       },
       output: {
         entryFileNames: (chunkInfo) =>
           chunkInfo.name === "background"
             ? "assets/background.js"
+            : chunkInfo.name === "page-selection"
+              ? "assets/page-selection.js"
             : "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",
       },

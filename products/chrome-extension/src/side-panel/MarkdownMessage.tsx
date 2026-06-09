@@ -31,7 +31,11 @@ export interface MarkdownMessageProps {
  */
 export function MarkdownMessage(props: MarkdownMessageProps) {
   if (props.role !== "assistant") {
-    return <div className="whitespace-pre-wrap break-words">{props.text}</div>;
+    return (
+      <div className="min-w-0 max-w-full overflow-hidden whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+        {props.text}
+      </div>
+    );
   }
 
   return (

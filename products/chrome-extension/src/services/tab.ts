@@ -10,20 +10,6 @@
 import type { ActiveTabContext } from "../types/extension";
 
 /**
- * 当前标签页选中文本。
- */
-export interface ActiveTabSelectionContext {
-  /**
-   * 当前标签页 id。
-   */
-  tabId: number | null;
-  /**
-   * 选中文本。
-   */
-  text: string;
-}
-
-/**
  * 读取当前活动标签页信息。
  */
 export async function getActiveTabContext(): Promise<ActiveTabContext> {
@@ -90,40 +76,5 @@ export function subscribeActiveTabContext(
     chrome.tabs.onActivated.removeListener(onActivated);
     chrome.tabs.onUpdated.removeListener(onUpdated);
     chrome.windows.onFocusChanged.removeListener(onFocusChanged);
-  };
-}
-
-/**
- * 读取当前活动标签页选中文本。
- */
-export async function getActiveTabSelectionContext(): Promise<ActiveTabSelectionContext> {
-  const tab = await getActiveTabContext();
-  if (typeof tab.tabId !== "number") {
-    return { tabId: null, text: "" };
-  }
-
-  const results = await new Promise<chrome.scripting.InjectionResult<string>[]>(
-    (resolve, reject) => {
-      chrome.scripting.executeScript(
-        {
-          target: { tabId: tab.tabId as number },
-          func: () => String(window.getSelection()?.toString() || "").trim(),
-        },
-        (items) => {
-          const error = chrome.runtime.lastError;
-          if (error) {
-            reject(new Error(error.message));
-            return;
-          }
-          resolve(items || []);
-        },
-      );
-    },
-  );
-
-  const text = String(results[0]?.result || "").replace(/\s+/g, " ").trim();
-  return {
-    tabId: tab.tabId,
-    text: text.length > 500 ? `${text.slice(0, 497)}...` : text,
   };
 }

@@ -6,10 +6,29 @@ import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 export async function manageAccounts(a, _baseUrl, runtime) {
     const svc = a.service("accounts");
     while (true) {
-        const act = await runtime.select("Accounts", [
-            { label: t({ zh: "查看用户", en: "List users" }), value: "users" },
-            { label: t({ zh: "查看会话", en: "List sessions" }), value: "sessions" },
-            { label: t({ zh: "返回", en: "Back" }), value: "back" },
+        const act = await runtime.select(t({ zh: "用户管理", en: "Users" }), [
+            {
+                label: t({ zh: "查看用户", en: "List users" }),
+                value: "users",
+                hint: t({
+                    zh: "查看 City 已注册用户，包括 user_id、邮箱和创建时间。",
+                    en: "List registered City users, including user_id, email, and creation time.",
+                }),
+            },
+            {
+                label: t({ zh: "查看登录会话", en: "List sessions" }),
+                value: "sessions",
+                hint: t({
+                    zh: "查看用户登录会话及其状态，用于排查登录、授权和会话有效性。",
+                    en: "Inspect user login sessions and status for authentication and authorization checks.",
+                }),
+            },
+            { label: t({ zh: "导航", en: "Navigation" }), value: "__section_navigation__", disabled: true },
+            {
+                label: t({ zh: "返回", en: "Back" }),
+                value: "back",
+                hint: t({ zh: "返回 Admin 管理菜单", en: "Return to Admin management" }),
+            },
         ]);
         if (!act || act === "back")
             return;

@@ -20,27 +20,27 @@ export async function manageEnv(a, _baseUrl, runtime) {
             {
                 label: t({ zh: "查看全部", en: "List all" }),
                 value: "__list__",
-                hint: t({ zh: "显示全部已配置环境变量", en: "Show all configured env variables" }),
+                hint: t({ zh: "显示当前 City 已保存的全部环境变量，并以掩码形式预览值。", en: "Show all saved environment variables for this City with masked value previews." }),
             },
             {
                 label: t({ zh: "新增或更新", en: "Upsert" }),
                 value: "__upsert__",
-                hint: t({ zh: "新增或更新 key=value", en: "Add or update a key=value" }),
+                hint: t({ zh: "手动输入 key/value，新增一个 env 或覆盖已有 env。", en: "Manually enter key/value to add a new env or overwrite an existing one." }),
             },
             {
                 label: t({ zh: "更新", en: "Update" }),
                 value: "__update__",
-                hint: t({ zh: "更新已有 key", en: "Update an existing key" }),
+                hint: t({ zh: "从已配置 env 中选择一个 key 并更新它的值。", en: "Select an existing env key and update its value." }),
             },
             {
                 label: t({ zh: "移除", en: "Remove" }),
                 value: "__remove__",
-                hint: t({ zh: "删除一个 key", en: "Delete a key" }),
+                hint: t({ zh: "删除一个 env key；删除后依赖该 key 的服务可能变为未就绪。", en: "Delete an env key; dependent services may become not ready." }),
             },
             {
                 label: t({ zh: "刷新 runtime cache", en: "Refresh runtime cache" }),
                 value: "__refresh__",
-                hint: t({ zh: "直接修改数据库后重载 env cache", en: "Reload env cache after direct database edits" }),
+                hint: t({ zh: "让当前 City runtime 重新加载 env cache，适合直接改库或批量更新后使用。", en: "Reload the City runtime env cache after direct database edits or batch updates." }),
             },
         ];
         if (services) {
@@ -53,10 +53,10 @@ export async function manageEnv(a, _baseUrl, runtime) {
                 });
             }
         }
-        choices.push({
+        choices.push({ label: t({ zh: "导航", en: "Navigation" }), value: "__section_navigation__", disabled: true }, {
             label: t({ zh: "返回", en: "Back" }),
             value: "back",
-            hint: t({ zh: "返回 admin 菜单", en: "Return to admin menu" }),
+            hint: t({ zh: "返回 Admin 管理菜单", en: "Return to Admin management" }),
         });
         const svcId = await runtime.select("Env", choices);
         if (!svcId || svcId === "back")

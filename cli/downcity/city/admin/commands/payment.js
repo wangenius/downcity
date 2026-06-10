@@ -8,17 +8,43 @@ export async function managePayment(a, baseUrl, runtime) {
     const svc = a.service("payment.stripe");
     const endpoints = buildStripeEndpoints(baseUrl);
     while (true) {
-        const act = await runtime.select("Payment", [
-            { label: t({ zh: "查看 webhook 配置", en: "Show webhook setup" }), value: "webhook", hint: endpoints.webhook_url },
-            { label: t({ zh: "查看支付记录", en: "List payments" }), value: "payments" },
-            { label: t({ zh: "查看 webhook 事件", en: "List webhook events" }), value: "events" },
-            { label: t({ zh: "返回", en: "Back" }), value: "back" },
+        const act = await runtime.select(t({ zh: "支付方式", en: "Payment methods" }), [
+            {
+                label: t({ zh: "Stripe webhook 配置", en: "Stripe webhook setup" }),
+                value: "webhook",
+                hint: t({
+                    zh: `查看 Stripe endpoint、推荐事件和 signing secret 配置位置：${endpoints.webhook_url}`,
+                    en: `Inspect Stripe endpoint, recommended events, and signing secret setup: ${endpoints.webhook_url}`,
+                }),
+            },
+            {
+                label: t({ zh: "Stripe 支付记录", en: "Stripe payments" }),
+                value: "payments",
+                hint: t({
+                    zh: "查看当前 City 通过 Stripe 创建或同步的支付记录，包括用户、金额、币种和状态。",
+                    en: "List Stripe payment records synced by this City, including user, amount, currency, and status.",
+                }),
+            },
+            {
+                label: t({ zh: "Stripe webhook 事件", en: "Stripe webhook events" }),
+                value: "events",
+                hint: t({
+                    zh: "查看 Stripe webhook 事件同步状态和错误，用于排查支付回调是否生效。",
+                    en: "Inspect Stripe webhook sync status and errors to debug payment callbacks.",
+                }),
+            },
+            { label: t({ zh: "导航", en: "Navigation" }), value: "__section_navigation__", disabled: true },
+            {
+                label: t({ zh: "返回", en: "Back" }),
+                value: "back",
+                hint: t({ zh: "返回 Admin 管理菜单", en: "Return to Admin management" }),
+            },
         ]);
         if (!act || act === "back")
             return;
         try {
             if (act === "webhook") {
-                await runtime.show_text(t({ zh: "Stripe Webhook 配置", en: "Stripe Webhook Setup" }), [
+                await runtime.show_text(t({ zh: "Stripe webhook 配置", en: "Stripe webhook setup" }), [
                     `${t({ zh: "Server URL", en: "Server URL" })}: ${endpoints.base_url}`,
                     `${t({ zh: "Stripe webhook endpoint", en: "Stripe webhook endpoint" })}: ${endpoints.webhook_url}`,
                     t({ zh: "推荐 Stripe events：", en: "Recommended Stripe events:" }),

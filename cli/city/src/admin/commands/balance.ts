@@ -10,17 +10,92 @@ import type { admin_tui_runtime } from "../../types/AdminTui.js";
 export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {
     const act = await runtime.select("Balance", [
-        { label: t({ zh: "查看用户", en: "List users" }), value: "users" },
-        { label: t({ zh: "余额历史", en: "History" }), value: "history" },
-        { label: t({ zh: "充值单", en: "Topups" }), value: "topups" },
-        { label: t({ zh: "兑换码", en: "Redeem codes" }), value: "redeem_codes" },
-        { label: t({ zh: "增加余额", en: "Add balance" }), value: "add" },
-        { label: t({ zh: "扣减余额", en: "Subtract balance" }), value: "sub" },
-        { label: t({ zh: "完成充值单", en: "Finish topup" }), value: "finish" },
-        { label: t({ zh: "取消充值单", en: "Cancel topup" }), value: "cancel" },
-        { label: t({ zh: "创建兑换码", en: "Create redeem code" }), value: "create_redeem_code" },
-        { label: t({ zh: "停用兑换码", en: "Disable redeem code" }), value: "disable_redeem_code" },
-        { label: t({ zh: "返回", en: "Back" }), value: "back" },
+        {
+          label: t({ zh: "查看余额账户", en: "List balance accounts" }),
+          value: "users",
+          hint: t({
+            zh: "查看用户当前余额、单位和更新时间。",
+            en: "List user balances, units, and update times.",
+          }),
+        },
+        {
+          label: t({ zh: "余额流水", en: "Ledger history" }),
+          value: "history",
+          hint: t({
+            zh: "查看余额变更记录，包括充值、扣减、兑换码和备注。",
+            en: "Inspect balance changes including topups, deductions, redeem codes, and notes.",
+          }),
+        },
+        {
+          label: t({ zh: "充值单", en: "Topups" }),
+          value: "topups",
+          hint: t({
+            zh: "查看用户充值单及其金额、状态和备注。",
+            en: "List user topups with amount, status, and notes.",
+          }),
+        },
+        {
+          label: t({ zh: "兑换码", en: "Redeem codes" }),
+          value: "redeem_codes",
+          hint: t({
+            zh: "查看可用、已兑换或已停用的余额兑换码。",
+            en: "List active, redeemed, or disabled balance redeem codes.",
+          }),
+        },
+        {
+          label: t({ zh: "人工增加余额", en: "Add balance" }),
+          value: "add",
+          hint: t({
+            zh: "为指定 user_id 手动增加余额，并写入余额流水。",
+            en: "Manually add balance to a user_id and write a ledger entry.",
+          }),
+        },
+        {
+          label: t({ zh: "人工扣减余额", en: "Subtract balance" }),
+          value: "sub",
+          hint: t({
+            zh: "为指定 user_id 手动扣减余额，并写入余额流水。",
+            en: "Manually subtract balance from a user_id and write a ledger entry.",
+          }),
+        },
+        {
+          label: t({ zh: "完成充值单", en: "Finish topup" }),
+          value: "finish",
+          hint: t({
+            zh: "将待处理充值单标记为完成，并同步更新余额。",
+            en: "Mark a pending topup as finished and apply the balance update.",
+          }),
+        },
+        {
+          label: t({ zh: "取消充值单", en: "Cancel topup" }),
+          value: "cancel",
+          hint: t({
+            zh: "取消待处理充值单，不增加用户余额。",
+            en: "Cancel a pending topup without increasing user balance.",
+          }),
+        },
+        {
+          label: t({ zh: "创建兑换码", en: "Create redeem code" }),
+          value: "create_redeem_code",
+          hint: t({
+            zh: "创建一次性余额兑换码，可交给用户自行兑换。",
+            en: "Create a one-time balance redeem code for users to redeem.",
+          }),
+        },
+        {
+          label: t({ zh: "停用兑换码", en: "Disable redeem code" }),
+          value: "disable_redeem_code",
+          hint: t({
+            zh: "停用尚未兑换的兑换码，防止继续使用。",
+            en: "Disable an unredeemed code so it can no longer be used.",
+          }),
+        },
+        { label: t({ zh: "导航", en: "Navigation" }), value: "__section_navigation__", disabled: true },
+        {
+          label: t({ zh: "返回", en: "Back" }),
+          value: "back",
+          hint: t({ zh: "返回 Admin 管理菜单", en: "Return to Admin management" }),
+        },
       ]);
     if (!act || act === "back") return;
 

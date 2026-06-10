@@ -15,8 +15,8 @@ export async function manageInstruction(
   runtime: admin_tui_runtime,
 ): Promise<void> {
   const title = t({
-    zh: "City 指令",
-    en: "City Instruction",
+    zh: "City 说明",
+    en: "City guide",
   });
   const content = await runtime.with_loading(title, async () => await a.instruction());
   await runtime.show_text(title, content);

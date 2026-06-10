@@ -34,7 +34,7 @@ export function create_admin_tui_runtime(title = "Admin") {
             cleanup_main();
             breadcrumb_parts = [nav_title];
             const breadcrumb_key = nav_title;
-            const selected_index = clamp_selected_index(selected_index_by_breadcrumb.get(breadcrumb_key), options.length, 0);
+            const selected_index = resolve_selectable_index(options, selected_index_by_breadcrumb.get(breadcrumb_key), 0);
             render_nav(shell, nav_title, options, selected_index);
             render_option_detail(shell, nav_title, options[selected_index]);
             return await run_sidebar_select({
@@ -49,7 +49,7 @@ export function create_admin_tui_runtime(title = "Admin") {
         async select(section_title, options) {
             breadcrumb_parts = next_breadcrumb_parts(breadcrumb_parts, section_title);
             const breadcrumb_key = breadcrumb_parts.join(" / ");
-            const selected_index = clamp_selected_index(selected_index_by_breadcrumb.get(breadcrumb_key), options.length, 0);
+            const selected_index = resolve_selectable_index(options, selected_index_by_breadcrumb.get(breadcrumb_key), 0);
             render_nav(shell, breadcrumb_key, options, selected_index);
             cleanup_main();
             render_option_detail(shell, section_title, options[selected_index]);
@@ -255,9 +255,12 @@ async function run_sidebar_select(input) {
         let finished = false;
         let raw_input_listener;
         const list = input.shell.nav_list;
-        let selected_index = clamp_selected_index(input.initial_index, input.options.length, 0);
+        let selected_index = resolve_selectable_index(input.options, input.initial_index, 0);
         const sync_selection = (index_value = list.selected) => {
-            selected_index = clamp_selected_index(index_value, input.options.length, selected_index);
+            selected_index = resolve_selectable_index(input.options, index_value, selected_index);
+            if (list.selected !== selected_index) {
+                list.select(selected_index);
+            }
             input.on_select_index(selected_index);
             input.on_focus_option?.(input.options[selected_index]);
             render_sidebar_hint(input.shell, input.options, selected_index);
@@ -266,6 +269,9 @@ async function run_sidebar_select(input) {
             const key_name = get_key_name(key);
             if (key_name === "enter") {
                 sync_selection();
+                if (is_disabled_option(input.options[selected_index])) {
+                    return;
+                }
                 finish(input.options[selected_index]?.value);
                 return;
             }
@@ -310,6 +316,9 @@ async function run_sidebar_select(input) {
             }
             if (text.includes("\r") || text.includes("\n")) {
                 sync_selection();
+                if (is_disabled_option(input.options[selected_index])) {
+                    return;
+                }
                 finish(input.options[selected_index]?.value);
             }
         };
@@ -514,7 +523,7 @@ function build_list_style() {
 }
 function render_sidebar_hint(shell, options, selected) {
     const option = options[typeof selected === "number" ? selected : 0];
-    const hint = option ? ` · ${option_description(option)}` : "";
+    const hint = option && !is_disabled_option(option) ? ` · ${option_description(option)}` : "";
     shell.footer_box.setContent(`${t({
         zh: "Enter 选择 · Esc / q 返回 · ↑↓ 切换",
         en: "Enter choose · Esc / q back · ↑↓ navigate",
@@ -522,6 +531,9 @@ function render_sidebar_hint(shell, options, selected) {
     shell.screen.render();
 }
 function format_sidebar_option(option) {
+    if (is_disabled_option(option)) {
+        return `── ${option.label} ──`;
+    }
     return option.label;
 }
 function format_option_detail(title, option) {
@@ -530,6 +542,17 @@ function format_option_detail(title, option) {
             zh: "未选择项目",
             en: "No item selected",
         });
+    }
+    if (is_disabled_option(option)) {
+        return [
+            `{bold}${option.label}{/bold}`,
+            t({
+                zh: "这是侧边栏分区标题，用于区分管理项和导航项。",
+                en: "This is a sidebar section heading that separates management and navigation items.",
+            }),
+            "",
+            `${t({ zh: "当前位置", en: "current section" })}: ${title}`,
+        ].join("\n");
     }
     return [
         `{bold}${option.label}{/bold}`,
@@ -547,6 +570,34 @@ function option_description(option) {
         zh: `选择 ${option.label}`,
         en: `Select ${option.label}`,
     });
+}
+function is_disabled_option(option) {
+    return option?.disabled === true;
+}
+function resolve_selectable_index(options, value, fallback) {
+    const candidate = clamp_selected_index(value, options.length, fallback);
+    if (!is_disabled_option(options[candidate])) {
+        return candidate;
+    }
+    const fallback_index = clamp_selected_index(fallback, options.length, 0);
+    const direction = candidate >= fallback_index ? 1 : -1;
+    const first_try = find_selectable_index(options, candidate, direction);
+    if (first_try >= 0)
+        return first_try;
+    const second_try = find_selectable_index(options, candidate, direction * -1);
+    if (second_try >= 0)
+        return second_try;
+    return candidate;
+}
+function find_selectable_index(options, start_index, direction) {
+    let index = start_index + direction;
+    while (index >= 0 && index < options.length) {
+        if (!is_disabled_option(options[index])) {
+            return index;
+        }
+        index += direction;
+    }
+    return -1;
 }
 function next_breadcrumb_parts(current_parts, section_title) {
     const normalized_title = section_title.trim();

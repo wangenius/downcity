@@ -43,6 +43,15 @@ export interface admin_tui_select_option {
 
   /** 右侧详情或列表提示。 */
   hint?: string;
+
+  /**
+   * 是否仅作为分区标题展示。
+   *
+   * 关键点（中文）
+   * - true 时该项只负责分隔 sidebar 内容，不会作为业务动作返回。
+   * - TUI 会在键盘移动时自动跳过该项，避免 Enter 触发无意义动作。
+   */
+  disabled?: boolean;
 }
 
 /**

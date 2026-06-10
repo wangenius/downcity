@@ -66,6 +66,14 @@ export async function adminLoop(
       [
         {
           label: t({
+            zh: "管理",
+            en: "Management",
+          }),
+          value: "__section_management__",
+          disabled: true,
+        },
+        {
+          label: t({
             zh: "环境变量",
             en: "Env",
           }),
@@ -73,17 +81,6 @@ export async function adminLoop(
           hint: t({
             zh: "查看并配置环境变量",
             en: "View and configure environment variables",
-          }),
-        },
-        {
-          label: t({
-            zh: "City 指令",
-            en: "City Instruction",
-          }),
-          value: "instruction",
-          hint: t({
-            zh: "读取聚合后的 city/service 指引",
-            en: "Read aggregated city/service guidance",
           }),
         },
         {
@@ -99,17 +96,25 @@ export async function adminLoop(
         },
         {
           label: t({
-            zh: "Towns",
-            en: "Towns",
+            zh: "产品管理",
+            en: "Products",
           }),
           value: "towns",
+          hint: t({
+            zh: "管理产品/App 入口；Town 是 agent 活动空间，用于划分 user token、服务调用边界和运行状态。",
+            en: "Manage product/App entries. A Town is where agents operate and scopes user tokens, service calls, and runtime status.",
+          }),
         },
         {
           label: t({
-            zh: "账户",
-            en: "Accounts",
+            zh: "用户管理",
+            en: "Users",
           }),
           value: "accounts",
+          hint: t({
+            zh: "查看 City 用户与登录会话，确认用户身份、邮箱和会话状态。",
+            en: "Inspect City users and login sessions, including identity, email, and session status.",
+          }),
         },
         {
           label: t({
@@ -117,41 +122,86 @@ export async function adminLoop(
             en: "Balance",
           }),
           value: "balance",
+          hint: t({
+            zh: "管理用户余额账户、余额流水、充值单、兑换码，以及人工增加或扣减余额。",
+            en: "Manage user balance accounts, ledger history, topups, redeem codes, and manual balance adjustments.",
+          }),
         },
         {
           label: t({
-            zh: "用量",
-            en: "Usage",
+            zh: "用量统计",
+            en: "Usage analytics",
           }),
           value: "usage",
+          hint: t({
+            zh: "查看 Town/产品维度的 service 调用事件与聚合统计，用于排查消耗、成功失败状态和使用趋势。",
+            en: "View service-call events and summaries by Town/product to audit consumption, status, and usage trends.",
+          }),
         },
         {
           label: t({
-            zh: "支付（Stripe）",
-            en: "Payment (Stripe)",
+            zh: "支付方式",
+            en: "Payment methods",
           }),
           value: "payment",
+          hint: t({
+            zh: "查看当前 City 已注册或启用的支付方式；当前包含 Stripe webhook 配置、支付记录与 webhook 事件。",
+            en: "Inspect registered or enabled payment methods. Currently includes Stripe webhook setup, payment records, and webhook events.",
+          }),
         },
         {
           label: t({
-            zh: "自定义服务...",
-            en: "Custom service...",
+            zh: "服务调试",
+            en: "Service debugger",
           }),
           value: "custom",
+          hint: t({
+            zh: "输入任意 service id 与 path，用 GET/POST 调试 City 暴露的服务动作。",
+            en: "Enter any service id and path to debug City service actions with GET or POST.",
+          }),
+        },
+        {
+          label: t({
+            zh: "City 说明",
+            en: "City guide",
+          }),
+          value: "instruction",
+          hint: t({
+            zh: "查看当前 City 聚合后的 agent/service instruction，适合了解这个 City 对外暴露的能力说明。",
+            en: "Read the aggregated agent/service instruction for this City and its exposed capabilities.",
+          }),
         },
         ...(options?.on_more
-          ? [{
-            label: t({
-              zh: "更多",
-              en: "More",
-            }),
-            value: "more",
-            hint: t({
-              zh: "更新 admin、编辑 City、移除 City",
-              en: "Update admin, edit City, remove City",
-            }),
-          }]
+          ? [
+            {
+              label: t({
+                zh: "低频设置",
+                en: "Settings",
+              }),
+              value: "__section_settings__",
+              disabled: true,
+            },
+            {
+              label: t({
+                zh: "更多",
+                en: "More",
+              }),
+              value: "more",
+              hint: t({
+                zh: "更新 admin 访问、编辑当前 City 本地连接记录，或移除当前 City。",
+                en: "Update admin access, edit the current local City connection, or remove this City.",
+              }),
+            },
+          ]
           : []),
+        {
+          label: t({
+            zh: "导航",
+            en: "Navigation",
+          }),
+          value: "__section_navigation__",
+          disabled: true,
+        },
         ...(embedded
           ? [{
             label: t({

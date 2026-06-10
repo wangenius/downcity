@@ -10,10 +10,29 @@ import type { admin_tui_runtime } from "../../types/AdminTui.js";
 export async function manageUsage(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   const svc = a.service("usage");
   while (true) {
-    const act = await runtime.select("Usage", [
-        { label: t({ zh: "查看事件", en: "List events" }), value: "events" },
-        { label: t({ zh: "汇总", en: "Summary" }), value: "summary" },
-        { label: t({ zh: "返回", en: "Back" }), value: "back" },
+    const act = await runtime.select(t({ zh: "用量统计", en: "Usage analytics" }), [
+        {
+          label: t({ zh: "查看调用事件", en: "List events" }),
+          value: "events",
+          hint: t({
+            zh: "查看最近 service 调用明细，包含 Town/产品、service、状态和创建时间。",
+            en: "View recent service-call events with Town/product, service, status, and creation time.",
+          }),
+        },
+        {
+          label: t({ zh: "查看汇总统计", en: "Summary" }),
+          value: "summary",
+          hint: t({
+            zh: "按 Town/产品、service 和状态聚合调用次数，用于观察消耗趋势和失败分布。",
+            en: "Aggregate call counts by Town/product, service, and status to inspect usage trends and failures.",
+          }),
+        },
+        { label: t({ zh: "导航", en: "Navigation" }), value: "__section_navigation__", disabled: true },
+        {
+          label: t({ zh: "返回", en: "Back" }),
+          value: "back",
+          hint: t({ zh: "返回 Admin 管理菜单", en: "Return to Admin management" }),
+        },
       ]);
     if (!act || act === "back") return;
 

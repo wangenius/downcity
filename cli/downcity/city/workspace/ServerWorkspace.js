@@ -142,7 +142,10 @@ async function open_city_admin_more_actions(base_url, runtime) {
                 en: "Edit City",
             }),
             value: "edit_city",
-            hint: server.base_url,
+            hint: t({
+                zh: `修改当前 City 的本地名称或 Server URL：${server.base_url}`,
+                en: `Edit the local name or Server URL for this City: ${server.base_url}`,
+            }),
         },
         {
             label: t({
@@ -157,10 +160,22 @@ async function open_city_admin_more_actions(base_url, runtime) {
         },
         {
             label: t({
+                zh: "导航",
+                en: "Navigation",
+            }),
+            value: "__section_navigation__",
+            disabled: true,
+        },
+        {
+            label: t({
                 zh: "返回",
                 en: "Back",
             }),
             value: "back",
+            hint: t({
+                zh: "返回 Admin 管理菜单",
+                en: "Return to Admin management",
+            }),
         },
         {
             label: t({
@@ -168,6 +183,10 @@ async function open_city_admin_more_actions(base_url, runtime) {
                 en: "Exit",
             }),
             value: "quit",
+            hint: t({
+                zh: "退出 City CLI",
+                en: "Exit the City CLI",
+            }),
         },
     ]);
     if (!selected || selected === "back") {

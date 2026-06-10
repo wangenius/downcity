@@ -6,15 +6,34 @@ import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 export async function manageCustom(a, _baseUrl, runtime) {
     while (true) {
         const name = await runtime.text(t({
-            zh: "服务名称（留空返回）",
-            en: "service name (empty to go back)",
+            zh: "service id（例如 accounts、usage、payment.stripe，留空返回）",
+            en: "service id (for example accounts, usage, payment.stripe; empty to go back)",
         }));
         if (!name)
             return;
-        const act = await runtime.select(name, [
-            { label: "GET", value: "get" },
-            { label: "POST", value: "post" },
-            { label: t({ zh: "返回", en: "Back" }), value: "back" },
+        const act = await runtime.select(t({ zh: `服务调试：${name}`, en: `Service debugger: ${name}` }), [
+            {
+                label: "GET",
+                value: "get",
+                hint: t({
+                    zh: "输入 path 后以 GET 调用该 service，用于读取列表、详情或只读状态。",
+                    en: "Enter a path and call this service with GET to read lists, details, or status.",
+                }),
+            },
+            {
+                label: "POST",
+                value: "post",
+                hint: t({
+                    zh: "输入 JSON body 后以 POST 调用该 service action，用于调试写入或动作接口。",
+                    en: "Enter a JSON body and call this service action with POST to debug writes or actions.",
+                }),
+            },
+            { label: t({ zh: "导航", en: "Navigation" }), value: "__section_navigation__", disabled: true },
+            {
+                label: t({ zh: "返回", en: "Back" }),
+                value: "back",
+                hint: t({ zh: "返回 Admin 管理菜单", en: "Return to Admin management" }),
+            },
         ]);
         if (!act || act === "back")
             return;

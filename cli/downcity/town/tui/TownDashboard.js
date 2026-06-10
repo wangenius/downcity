@@ -36,30 +36,6 @@ async function build_town_dashboard_state() {
     const city_state = readTownCityConnectionState();
     const managed_agents = await safe_count_running_agents();
     const items = [
-        section_item("runtime", t({ zh: "运行时", en: "Runtime" })),
-        {
-            id: "stop",
-            title: t({ zh: "停止 Town", en: "Stop Town" }),
-            subtitle: running
-                ? t({ zh: "停止 runtime 与托管 agent", en: "stop runtime and managed agents" })
-                : t({ zh: "当前 runtime 已停止", en: "runtime already stopped" }),
-            detail: t({
-                zh: "停止 Town runtime，并清理当前受管 agent daemon。",
-                en: "Stop the Town runtime and clean up currently managed agent daemons.",
-            }),
-        },
-        {
-            id: "restart",
-            title: t({ zh: "重启 Town", en: "Restart Town" }),
-            subtitle: t({
-                zh: "重启 runtime 并恢复受管状态",
-                en: "restart runtime and recover managed state",
-            }),
-            detail: t({
-                zh: "重启 Town runtime，并尝试恢复此前托管的 agent 运行态。",
-                en: "Restart the Town runtime and try to recover previously managed agent runtime state.",
-            }),
-        },
         section_item("management", t({ zh: "管理", en: "Management" })),
         {
             id: "agent",
@@ -112,7 +88,30 @@ async function build_town_dashboard_state() {
                 en: "Print the current Town root help, useful when looking up scriptable subcommands.",
             }),
         },
-        section_item("navigation", t({ zh: "导航", en: "Navigation" })),
+        section_item("actions", t({ zh: "操作", en: "Actions" })),
+        {
+            id: "stop",
+            title: t({ zh: "停止 Town", en: "Stop Town" }),
+            subtitle: running
+                ? t({ zh: "停止 Town 与托管 agent", en: "stop Town and managed agents" })
+                : t({ zh: "当前 Town 已停止", en: "Town already stopped" }),
+            detail: t({
+                zh: "停止 Town，并清理当前受管 agent daemon。",
+                en: "Stop Town and clean up currently managed agent daemons.",
+            }),
+        },
+        {
+            id: "restart",
+            title: t({ zh: "重启 Town", en: "Restart Town" }),
+            subtitle: t({
+                zh: "重启 Town 并恢复受管状态",
+                en: "restart Town and recover managed state",
+            }),
+            detail: t({
+                zh: "重启 Town，并尝试恢复此前托管的 agent 运行态。",
+                en: "Restart Town and try to recover previously managed agent state.",
+            }),
+        },
         {
             id: "exit",
             title: t({ zh: "退出", en: "Exit" }),
@@ -126,8 +125,8 @@ async function build_town_dashboard_state() {
     return {
         title: `Town v${version}`,
         subtitle: t({
-            zh: `runtime：${runtime_state_text(running)} · City：${build_city_subtitle(city_state)} · agent：${managed_agents}`,
-            en: `runtime: ${runtime_state_text(running)} · City: ${build_city_subtitle(city_state)} · agents: ${managed_agents}`,
+            zh: `Town：${runtime_state_text(running)} · City：${build_city_subtitle(city_state)} · agent：${managed_agents}`,
+            en: `Town: ${runtime_state_text(running)} · City: ${build_city_subtitle(city_state)} · agents: ${managed_agents}`,
         }),
         footer: t({
             zh: "Enter 进入动作 · Esc / q 退出 · ↑↓ 切换 · 当前入口：全屏 TUI",

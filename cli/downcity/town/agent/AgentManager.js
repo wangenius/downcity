@@ -215,7 +215,7 @@ async function promptAgentAction(agent) {
                 title: t({ zh: "Agent", en: "Agent" }),
                 disabled: true,
             },
-            ...runtimeActionChoices(agent),
+            ...startActionChoices(agent),
             {
                 title: t({ zh: "聊天", en: "Chat" }),
                 description: t({
@@ -229,6 +229,7 @@ async function promptAgentAction(agent) {
                 description: formatAgentConfigPanelDescription(agent),
                 value: "configure",
             },
+            ...stopAndRestartActionChoices(agent),
             {
                 title: t({ zh: "导航", en: "Navigation" }),
                 disabled: true,
@@ -262,26 +263,9 @@ function formatAgentConfigPanelDescription(agent) {
         ].join("\n"),
     });
 }
-function runtimeActionChoices(agent) {
+function startActionChoices(agent) {
     if (agent.status === "running") {
-        return [
-            {
-                title: t({ zh: "停止", en: "Stop" }),
-                description: t({
-                    zh: "停止当前 Agent daemon，但保留项目配置。",
-                    en: "Stop the current agent daemon while keeping project configuration.",
-                }),
-                value: "stop",
-            },
-            {
-                title: t({ zh: "重启", en: "Restart" }),
-                description: t({
-                    zh: "重启当前 Agent daemon，适合配置更新后重新加载。",
-                    en: "Restart the current agent daemon, useful after configuration changes.",
-                }),
-                value: "restart",
-            },
-        ];
+        return [];
     }
     return [
         {
@@ -291,6 +275,33 @@ function runtimeActionChoices(agent) {
                 en: "Start the current agent daemon and refresh runtime status.",
             }),
             value: "start",
+        },
+    ];
+}
+function stopAndRestartActionChoices(agent) {
+    if (agent.status !== "running") {
+        return [];
+    }
+    return [
+        {
+            title: t({ zh: "运行操作", en: "Runtime actions" }),
+            disabled: true,
+        },
+        {
+            title: t({ zh: "停止", en: "Stop" }),
+            description: t({
+                zh: "停止当前 Agent daemon，但保留项目配置。",
+                en: "Stop the current agent daemon while keeping project configuration.",
+            }),
+            value: "stop",
+        },
+        {
+            title: t({ zh: "重启", en: "Restart" }),
+            description: t({
+                zh: "重启当前 Agent daemon，适合配置更新后重新加载。",
+                en: "Restart the current agent daemon, useful after configuration changes.",
+            }),
+            value: "restart",
         },
     ];
 }

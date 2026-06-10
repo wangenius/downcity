@@ -305,7 +305,7 @@ async function run_city_dashboard_once(
 }
 
 function format_list_label(item: tui_list_item): string {
-  return `${item.title}  ·  ${item.subtitle}`;
+  return item.title;
 }
 
 function format_detail_content(item: tui_list_item): string {

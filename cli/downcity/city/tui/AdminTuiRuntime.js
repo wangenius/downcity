@@ -519,7 +519,7 @@ function render_sidebar_hint(shell, options, selected) {
     shell.screen.render();
 }
 function format_sidebar_option(option) {
-    return `${option.label}  ·  ${option_description(option)}`;
+    return option.label;
 }
 function option_description(option) {
     const explicit_hint = String(option.hint ?? "").trim();

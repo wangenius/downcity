@@ -751,7 +751,7 @@ function format_choice_sidebar_label(choice?: {
   description?: string;
   hint?: string;
 }): string {
-  return `${format_choice_label(choice)}  ·  ${choice_description(choice)}`;
+  return format_choice_label(choice);
 }
 
 function format_choice_detail(choice?: {
@@ -865,7 +865,7 @@ function build_multiselect_items(
 ): string[] {
   return choices.map((choice, index) => {
     const checked = selected_indexes.has(index) ? "[x]" : "[ ]";
-    return `${checked} ${format_choice_sidebar_label(choice)}`;
+    return `${checked} ${format_choice_label(choice)}`;
   });
 }
 

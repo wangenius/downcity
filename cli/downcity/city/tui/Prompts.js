@@ -388,7 +388,7 @@ function format_option_detail(option) {
     ].filter(Boolean).join("\n");
 }
 function format_option_sidebar_label(option) {
-    return `${option.label}  ·  ${option_description(option)}`;
+    return option.label;
 }
 function option_description(option) {
     const hint = String(option.hint ?? "").trim();

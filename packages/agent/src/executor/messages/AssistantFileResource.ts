@@ -3,13 +3,14 @@
  *
  * 关键点（中文）
  * - 只处理运行期产生的 assistant file part，不参与 user 附件注入。
- * - 将 `data:*;base64,...` 写入 `.downcity/resources`，历史中只保留 `file://` 绝对 URL。
+ * - 将 data URL、远程 URL 与本地文件统一写入 `.downcity/resources`。
+ * - 历史中只保留 `resources://<project-relative-path>`，避免暴露本机绝对路径。
  * - 资源文件按内容 hash 命名，天然去重并避免重复写入大文件。
  */
 
 import crypto from "node:crypto";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import fs from "fs-extra";
 import type { FileUIPart } from "ai";
 import { getDowncityResourcesDirPath } from "@/config/Paths.js";
@@ -92,6 +93,23 @@ function extension_from_filename(filename: string | undefined): string {
   return /^[.][a-z0-9]+$/u.test(ext) ? ext : "";
 }
 
+function filename_from_url(raw_url: string): string | undefined {
+  try {
+    const parsed = new URL(raw_url);
+    return path.basename(decodeURIComponent(parsed.pathname)) || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function to_resources_url(projectRoot: string, filePath: string): string {
+  const relative = path
+    .relative(projectRoot, filePath)
+    .split(path.sep)
+    .join("/");
+  return `resources://${relative}`;
+}
+
 async function write_resource_file(params: {
   projectRoot: string;
   mediaType: string;
@@ -117,8 +135,97 @@ async function write_resource_file(params: {
   return file_path;
 }
 
+async function read_remote_resource(raw_url: string): Promise<{
+  mediaType?: string;
+  filename?: string;
+  bytes: Buffer;
+}> {
+  const response = await fetch(raw_url);
+  if (!response.ok) {
+    throw new Error(`Failed to download assistant file resource: ${response.status}`);
+  }
+  const array_buffer = await response.arrayBuffer();
+  const bytes = Buffer.from(array_buffer);
+  if (bytes.length === 0) {
+    throw new Error("Downloaded assistant file resource is empty");
+  }
+  return {
+    mediaType: response.headers.get("content-type")?.split(";")[0]?.trim(),
+    filename: filename_from_url(raw_url),
+    bytes,
+  };
+}
+
+async function read_local_resource(
+  projectRoot: string,
+  raw_url: string,
+): Promise<{
+  mediaType?: string;
+  filename?: string;
+  bytes: Buffer;
+}> {
+  const raw = String(raw_url || "").trim();
+  const file_path = raw.startsWith("file://")
+    ? fileURLToPath(raw)
+    : path.isAbsolute(raw)
+      ? raw
+      : path.resolve(projectRoot, raw);
+  const bytes = await fs.readFile(file_path);
+  if (bytes.length === 0) {
+    throw new Error(`Assistant file resource is empty: ${file_path}`);
+  }
+  return {
+    filename: path.basename(file_path),
+    bytes,
+  };
+}
+
+async function materialize_file_part(params: {
+  projectRoot: string;
+  part: FileUIPart;
+}): Promise<FileUIPart> {
+  const raw_url = String(params.part.url || "").trim();
+  if (!raw_url) {
+    throw new Error("Assistant file part url is required");
+  }
+  if (raw_url.startsWith("resources://")) return params.part;
+
+  const parsed_data_url = parse_data_url(raw_url);
+  const source = parsed_data_url
+    ? {
+        mediaType: parsed_data_url.media_type,
+        filename:
+          typeof params.part.filename === "string"
+            ? params.part.filename
+            : undefined,
+        bytes: parsed_data_url.bytes,
+      }
+    : raw_url.startsWith("http://") || raw_url.startsWith("https://")
+      ? await read_remote_resource(raw_url)
+      : await read_local_resource(params.projectRoot, raw_url);
+
+  const media_type =
+    String(params.part.mediaType || source.mediaType || "").trim() ||
+    "application/octet-stream";
+  const file_path = await write_resource_file({
+    projectRoot: params.projectRoot,
+    mediaType: media_type,
+    filename:
+      typeof params.part.filename === "string"
+        ? params.part.filename
+        : source.filename,
+    bytes: source.bytes,
+  });
+
+  return {
+    ...params.part,
+    mediaType: media_type,
+    url: to_resources_url(params.projectRoot, file_path),
+  };
+}
+
 /**
- * 将 assistant file part 中的 data URL 资源落盘为 `file://` 绝对 URL。
+ * 将 assistant file part 中的资源统一落盘为 `resources://` 相对 URL。
  */
 export async function materializeAssistantFileParts(
   params: MaterializeAssistantFilePartsParams,
@@ -130,25 +237,7 @@ export async function materializeAssistantFileParts(
   const out: FileUIPart[] = [];
 
   for (const part of parts) {
-    const parsed = parse_data_url(String(part.url || ""));
-    if (!parsed) {
-      out.push(part);
-      continue;
-    }
-
-    const media_type = String(part.mediaType || parsed.media_type || "").trim();
-    const file_path = await write_resource_file({
-      projectRoot: project_root,
-      mediaType: media_type || parsed.media_type,
-      filename: typeof part.filename === "string" ? part.filename : undefined,
-      bytes: parsed.bytes,
-    });
-
-    out.push({
-      ...part,
-      mediaType: media_type || parsed.media_type,
-      url: pathToFileURL(file_path).href,
-    });
+    out.push(await materialize_file_part({ projectRoot: project_root, part }));
   }
 
   return out;

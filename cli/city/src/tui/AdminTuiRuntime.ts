@@ -657,7 +657,7 @@ function render_sidebar_hint(
 }
 
 function format_sidebar_option(option: admin_tui_select_option): string {
-  return `${option.label}  ·  ${option_description(option)}`;
+  return option.label;
 }
 
 function option_description(option: admin_tui_select_option): string {

@@ -422,7 +422,7 @@ function unknown_text() {
     return t({ zh: "未知", en: "unknown" });
 }
 function format_list_label(item) {
-    return `${item.title}  ·  ${item.subtitle}`;
+    return item.title;
 }
 function format_detail_content(item) {
     return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;

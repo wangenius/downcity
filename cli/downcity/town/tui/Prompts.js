@@ -572,7 +572,7 @@ function format_choice_label(choice) {
     return String(choice?.title ?? choice?.label ?? "").trim();
 }
 function format_choice_sidebar_label(choice) {
-    return `${format_choice_label(choice)}  ·  ${choice_description(choice)}`;
+    return format_choice_label(choice);
 }
 function format_choice_detail(choice) {
     if (!choice) {
@@ -659,7 +659,7 @@ function text_footer_text(secret) {
 function build_multiselect_items(choices, selected_indexes) {
     return choices.map((choice, index) => {
         const checked = selected_indexes.has(index) ? "[x]" : "[ ]";
-        return `${checked} ${format_choice_sidebar_label(choice)}`;
+        return `${checked} ${format_choice_label(choice)}`;
     });
 }
 function build_multiselect_values(choices, selected_indexes) {

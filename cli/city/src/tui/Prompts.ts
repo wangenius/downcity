@@ -495,7 +495,7 @@ function format_option_detail(option?: prompt_select_option): string {
 }
 
 function format_option_sidebar_label(option: prompt_select_option): string {
-  return `${option.label}  ·  ${option_description(option)}`;
+  return option.label;
 }
 
 function option_description(option: prompt_select_option): string {

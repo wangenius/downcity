@@ -243,7 +243,7 @@ async function run_city_dashboard_once(state) {
     });
 }
 function format_list_label(item) {
-    return `${item.title}  ·  ${item.subtitle}`;
+    return item.title;
 }
 function format_detail_content(item) {
     return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;

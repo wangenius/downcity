@@ -39,7 +39,6 @@ plugin 是 Downcity 里“一个能力边界”的统一承载单元。
 - `web`
 - `asr`
 - `tts`
-- `chat-authorization`
 
 ### 托管 plugin
 
@@ -53,7 +52,7 @@ plugin 是 Downcity 里“一个能力边界”的统一承载单元。
 - `contact`
 - `shell`
 
-ActionSchedule 由 Agent 自身管理，因此不会作为 plugin 出现在列表里。
+`chat` 同时承载渠道 runtime、queue worker 和入站授权能力。ActionSchedule 由 Agent 自身管理，因此不会作为 plugin 出现在列表里。
 
 正因为存在这类托管 plugin，旧的“分层对立”语言已经不再适合当前模型。
 

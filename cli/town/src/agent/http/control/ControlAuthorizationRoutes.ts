@@ -10,14 +10,10 @@ import type { Hono } from "hono";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import { CHAT_AUTHORIZATION_ACTIONS } from "@downcity/plugins";
 import { buildControlRouteAliases } from "../../control/CommonHelpers.js";
 
-const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";
-const CHAT_AUTHORIZATION_ACTIONS = {
-  snapshot: "snapshot",
-  writeConfig: "write-config",
-  setUserRole: "set-user-role",
-} as const;
+const CHAT_PLUGIN_NAME = "chat";
 
 function normalizeChatChannel(value: unknown): string | null {
   const text = String(value || "").trim().toLowerCase();
@@ -31,7 +27,7 @@ function toJsonObject(value: unknown): JsonObject {
 }
 
 /**
- * 执行 chat-authorization action。
+ * 执行 ChatPlugin 内置授权 action。
  */
 async function runChatAuthorizationAction(params: {
   context: AgentContext;
@@ -39,7 +35,7 @@ async function runChatAuthorizationAction(params: {
   payload?: JsonValue;
 }): Promise<JsonObject> {
   const result = await params.context.plugins.runAction({
-    plugin: CHAT_AUTHORIZATION_PLUGIN_NAME,
+    plugin: CHAT_PLUGIN_NAME,
     action: params.action,
     ...(params.payload !== undefined ? { payload: params.payload } : {}),
   });

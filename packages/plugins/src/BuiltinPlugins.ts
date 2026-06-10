@@ -8,7 +8,6 @@
  */
 
 import type { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import { ChatAuthorizationPlugin } from "@/auth/Plugin.js";
 import { SkillPlugin } from "@/skill/Plugin.js";
 import { WebPlugin } from "@/web/Plugin.js";
 import { WorkboardPlugin } from "@/workboard/Plugin.js";
@@ -27,7 +26,6 @@ export type BuiltinPluginClass<T extends BasePlugin = BasePlugin> = new () => T;
  * 全部内建 plugin classes。
  */
 export const BUILTIN_PLUGIN_CLASSES: BuiltinPluginClass[] = [
-  ChatAuthorizationPlugin,
   SkillPlugin,
   WebPlugin,
   WorkboardPlugin,

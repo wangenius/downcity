@@ -5,13 +5,9 @@
  * - 单独承接 `/api/control/authorization*`。
  * - Town 只做 HTTP 适配，具体授权数据读写统一交给 chat plugin access action。
  */
+import { CHAT_AUTHORIZATION_ACTIONS } from "@downcity/plugins";
 import { buildControlRouteAliases } from "../../control/CommonHelpers.js";
-const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";
-const CHAT_AUTHORIZATION_ACTIONS = {
-    snapshot: "snapshot",
-    writeConfig: "write-config",
-    setUserRole: "set-user-role",
-};
+const CHAT_PLUGIN_NAME = "chat";
 function normalizeChatChannel(value) {
     const text = String(value || "").trim().toLowerCase();
     if (text === "telegram" || text === "feishu" || text === "qq")
@@ -24,11 +20,11 @@ function toJsonObject(value) {
     return value;
 }
 /**
- * 执行 chat-authorization action。
+ * 执行 ChatPlugin 内置授权 action。
  */
 async function runChatAuthorizationAction(params) {
     const result = await params.context.plugins.runAction({
-        plugin: CHAT_AUTHORIZATION_PLUGIN_NAME,
+        plugin: CHAT_PLUGIN_NAME,
         action: params.action,
         ...(params.payload !== undefined ? { payload: params.payload } : {}),
     });

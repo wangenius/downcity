@@ -69,14 +69,11 @@ plugin 当前有两个非常容易混淆的状态：
 - 依赖检查
 - plugin 自己的 availability 逻辑
 
-## 一个特殊例子：`chat-authorization`
+## Chat 授权现在怎么理解
 
-`chat-authorization` 当前是特殊 plugin：
+Chat 授权现在是 `ChatPlugin` 的内置 runtime 能力，不再是单独注册的 plugin。
 
-- `enabled` 恒为 true
-- `available` 也默认可用
-
-它不走普通可选启停语义。
+所以它不再单独出现在 plugin catalog 里。是否具备 chat 授权能力，取决于当前 agent 是否注册了 `ChatPlugin`。
 
 ## 对文档使用者最稳的理解
 

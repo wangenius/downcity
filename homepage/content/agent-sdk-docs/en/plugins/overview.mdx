@@ -39,7 +39,6 @@ Typical examples:
 - `web`
 - `asr`
 - `tts`
-- `chat-authorization`
 
 ### Managed plugins
 
@@ -53,7 +52,7 @@ Typical examples:
 - `contact`
 - `shell`
 
-ActionSchedule is managed by Agent itself, so it is not listed as a plugin.
+`chat` owns the channel runtime, queue worker, and inbound authorization capability. ActionSchedule is managed by Agent itself, so it is not listed as a plugin.
 
 Managed plugins are the reason the old split runtime language is no longer the right model.
 

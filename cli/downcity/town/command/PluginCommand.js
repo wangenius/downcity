@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import prompts from "../tui/Prompts.js";
 import { listPluginViews, listPluginsWithLifecycle, listPluginsWithoutLifecycle, runLocalPluginAction, } from "@downcity/agent";
-import { CHAT_AUTHORIZATION_PLUGIN_NAME, createBuiltinPlugins, } from "@downcity/plugins";
+import { createBuiltinPlugins } from "@downcity/plugins";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { getDowncityJsonPath } from "../config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
@@ -32,11 +32,8 @@ const CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_TOWN = new Set([
 function createPluginCatalog() {
     return createBuiltinPlugins();
 }
-function isVisibleCatalogPlugin(pluginName) {
-    return pluginName !== CHAT_AUTHORIZATION_PLUGIN_NAME;
-}
 function createVisiblePluginCatalog() {
-    return createPluginCatalog().filter((plugin) => isVisibleCatalogPlugin(plugin.name));
+    return createPluginCatalog();
 }
 function listVisiblePluginActions(pluginName, actions) {
     if (pluginName !== "chat") {

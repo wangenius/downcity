@@ -1,19 +1,14 @@
 /**
- * ChatAuthorizationPlugin 类型与契约定义。
+ * ChatAuthorization 类型与契约定义。
  *
  * 关键点（中文）
- * - 统一维护聊天授权 plugin 的领域类型、扩展点/action 名称、payload 契约。
- * - 业务层不应散落硬编码字符串，如 `chat.authorizeIncoming`、`set-user-role`。
- * - chat / console / plugin 执行链路都从这里共享同一份边界定义。
+ * - 统一维护 ChatPlugin 内置授权能力的领域类型、扩展点/action 名称、payload 契约。
+ * - 业务层不应散落硬编码字符串，如 `chat.authorizeIncoming`、`authorization-set-user-role`。
+ * - chat / console / plugin action 执行链路都从这里共享同一份边界定义。
  */
 
 import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
 import { CHAT_PLUGIN_POINTS } from "@/chat/runtime/PluginPoints.js";
-
-/**
- * 聊天授权 plugin 稳定名称。
- */
-export const CHAT_AUTHORIZATION_PLUGIN_NAME = "chat-authorization";
 
 /**
  * 聊天授权支持的渠道目录。
@@ -28,7 +23,7 @@ export type ChatAuthorizationChannel = (typeof CHAT_AUTHORIZATION_CHANNELS)[numb
 /**
  * 聊天授权扩展点名称集合。
  */
-export const CHAT_AUTHORIZATION_PLUGIN_POINTS = {
+export const CHAT_AUTHORIZATION_POINTS = {
   observePrincipal: CHAT_PLUGIN_POINTS.observePrincipal,
   authorizeIncoming: CHAT_PLUGIN_POINTS.authorizeIncoming,
   resolveUserRole: CHAT_PLUGIN_POINTS.resolveUserRole,
@@ -38,10 +33,10 @@ export const CHAT_AUTHORIZATION_PLUGIN_POINTS = {
  * 聊天授权 action 名称集合。
  */
 export const CHAT_AUTHORIZATION_ACTIONS = {
-  snapshot: "snapshot",
-  readConfig: "read-config",
-  writeConfig: "write-config",
-  setUserRole: "set-user-role",
+  snapshot: "authorization-snapshot",
+  readConfig: "authorization-read-config",
+  writeConfig: "authorization-write-config",
+  setUserRole: "authorization-set-user-role",
 } as const;
 
 /**
@@ -463,7 +458,7 @@ export interface ChatAuthorizationStateFile {
 }
 
 /**
- * plugin effect 输入：记录观测主体。
+ * ChatPlugin effect 输入：记录观测主体。
  */
 export interface ChatAuthorizationObservePrincipalPayload {
   /**
@@ -493,7 +488,7 @@ export interface ChatAuthorizationObservePrincipalPayload {
 }
 
 /**
- * plugin effect 输出：记录观测主体结果。
+ * ChatPlugin effect 输出：记录观测主体结果。
  */
 export interface ChatAuthorizationObservePrincipalResult {
   /**
@@ -503,7 +498,7 @@ export interface ChatAuthorizationObservePrincipalResult {
 }
 
 /**
- * plugin resolve 输入：查询用户角色。
+ * ChatPlugin resolve 输入：查询用户角色。
  */
 export interface ChatAuthorizationResolveUserRolePayload {
   /**

@@ -7,7 +7,6 @@ description: The full built-in plugin map in Downcity, including public SDK plug
 
 The current built-in plugin capabilities in code include:
 
-- `chat-authorization`
 - `skill`
 - `web`
 - `asr`
@@ -26,7 +25,6 @@ The current built-in plugin capabilities in code include:
 
 These are the ones most developers are likely to read first:
 
-- `chat-authorization`
 - `skill`
 - `web`
 - `asr`
@@ -59,7 +57,7 @@ These plugins are usually read to understand how the platform is assembled, not 
 ## How to read this section
 
 - If you want user-facing capability plugins, start with `skill`, `web`, `asr`, `tts`, and `chat`
-- If you want platform rule layers, read `chat-authorization`
+- If you want platform rule layers, read the built-in authorization capability in `chat`
 - If you want control-plane or status surfaces, read `workboard`
 - If you want infrastructure patterns, read `schedule`, `task`, `memory`, and `shell`
 
@@ -67,13 +65,12 @@ These plugins are usually read to understand how the platform is assembled, not 
 
 | Plugin | Main role | Shape |
 | --- | --- | --- |
-| `chat-authorization` | chat authorization and role resolution | rule layer |
 | `skill` | skill discovery and installation | action + system |
 | `web` | web methodology injection and dependency preparation | action + setup + system |
 | `asr` | speech input and augmentation with constructor-injected transcription | action + pipeline + system |
 | `tts` | text-to-speech generation with constructor-injected synthesis | action + system |
 | `workboard` | work snapshots and status surfaces | availability + runtime HTTP |
-| `chat` | channel runtime and queue worker | lifecycle + actions + system |
+| `chat` | channel runtime, queue worker, chat authorization, and role resolution | lifecycle + actions + hooks + resolves + system |
 | `contact` | peer-to-peer agent linking and sharing | action + system + lifecycle shell |
 | `schedule` | plugin action scheduling infrastructure | lifecycle-only infrastructure |
 | `task` | task scheduler and cron execution | lifecycle + actions + system |

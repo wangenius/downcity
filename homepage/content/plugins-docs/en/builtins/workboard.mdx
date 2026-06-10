@@ -42,18 +42,17 @@ Some plugins are not mainly consumed by the agent itself. Their main consumers a
 
 `workboard` currently uses:
 
-- `availability`
-- `http.runtime`
+- `actions`
+- `http.server`
 
 It does not use:
 
-- `actions`
 - `setup`
 - `usage`
 - `system`
 - `hooks`
 
-That tells you its job is extremely focused: provide one controlled, authenticated, observable HTTP surface.
+That tells you its job is extremely focused: provide one controlled, authenticated, observable snapshot surface.
 
 ## Typical runtime flow
 
@@ -61,16 +60,14 @@ A normal workboard request usually flows like this:
 
 1. an external surface issues `GET /api/workboard/snapshot`
 2. runtime checks the plugin-declared auth policy first
-3. `workboard` checks its own availability
-4. if unavailable, it returns `503`
-5. if available, it reads the current snapshot from the snapshot store
-6. it returns structured JSON
+3. `workboard` reads the current snapshot from the snapshot store
+4. it returns structured JSON
 
 The important part is not only the route itself. It is that:
 
 - the route belongs to a plugin
 - auth policy is declared by the plugin
-- availability is aligned with plugin lifecycle
+- plugin presence comes from registration
 
 ## Auth requirement
 
@@ -123,10 +120,6 @@ GET /api/workboard/snapshot
 
 On success, it returns a structured snapshot response.
 
-If the plugin is currently unavailable, it usually returns:
-
-- `503`
-
 If an internal snapshot read fails, it usually returns:
 
 - `500`
@@ -178,9 +171,9 @@ Do not treat it like an action center.
 
 If the caller does not have `agent.read`, the endpoint should not be exposed to that caller.
 
-### Availability still affects endpoint behavior
+### Registration decides whether it exists
 
-Even if the route exists, a disabled or unavailable plugin does not guarantee a successful response.
+`workboard` no longer reads project config for a second enable/disable switch. If the plugin is registered, this observability surface exists; if it is not registered, the action and HTTP route are not mounted.
 
 ## When to use it as a reference
 

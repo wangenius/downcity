@@ -7,7 +7,6 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 
 当前代码里的内建 plugin 能力包括：
 
-- `chat-authorization`
 - `skill`
 - `web`
 - `asr`
@@ -26,7 +25,6 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 
 这组通常最值得普通开发者先读：
 
-- `chat-authorization`
 - `skill`
 - `web`
 - `asr`
@@ -59,7 +57,7 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 ## 推荐怎么读
 
 - 如果你关心用户能力型 plugin：先读 `skill`、`web`、`asr`、`tts`、`chat`
-- 如果你关心平台规则层：读 `chat-authorization`
+- 如果你关心平台规则层：读 `chat` 的内置授权能力
 - 如果你关心控制面和状态面：读 `workboard`
 - 如果你关心基础设施模式：读 `schedule`、`task`、`memory`、`shell`
 
@@ -67,13 +65,12 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 
 | Plugin | 主要职责 | 主要形状 |
 | --- | --- | --- |
-| `chat-authorization` | chat 授权与角色解析 | rule layer |
 | `skill` | 技能发现与安装 | action + system |
 | `web` | 联网方法论注入与依赖准备 | action + setup + system |
 | `asr` | 语音输入与增强，真实转写函数由 constructor 注入 | action + pipeline + system |
 | `tts` | 文本转语音，真实合成函数由 constructor 注入 | action + system |
 | `workboard` | 工作快照与状态面 | availability + runtime HTTP |
-| `chat` | 渠道 runtime 与队列 worker | lifecycle + actions + system |
+| `chat` | 渠道 runtime、队列 worker、chat 授权与角色解析 | lifecycle + actions + hooks + resolves + system |
 | `contact` | agent 间点对点连接与分享 | action + system + lifecycle shell |
 | `schedule` | plugin action 调度基础设施 | lifecycle-only infrastructure |
 | `task` | task 调度与 cron 执行 | lifecycle + actions + system |

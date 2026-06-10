@@ -1,6 +1,6 @@
 ---
 title: chat Plugin
-description: Channel runtime, queue worker, chat system text, and chat-facing plugin actions
+description: Channel runtime, queue worker, chat authorization, chat system text, and chat-facing plugin actions
 ---
 
 # `chat` Plugin
@@ -12,6 +12,7 @@ It owns:
 - channel state
 - the chat queue worker
 - the chat queue store
+- chat authorization hooks and resolves
 - chat-facing actions
 - chat system text
 
@@ -19,6 +20,8 @@ It owns:
 
 - `lifecycle`
 - `actions`
+- `hooks`
+- `resolves`
 - `system`
 
 ## What it is for
@@ -28,6 +31,7 @@ Use `chat` when you need:
 - Telegram, Feishu, or QQ chat channel runtime
 - one queue worker per agent/plugin instance
 - chat delivery and inbound message execution
+- inbound user authorization, principal observation, and role resolution
 
 ## How users use it
 
@@ -104,10 +108,44 @@ await agent.plugins.runAction({
 
 The main user-facing actions are `list`, `info`, `send`, `react`, `context`, `history`, and `delete`.
 
+## Built-in Authorization
+
+Chat authorization now belongs to `ChatPlugin` itself. You no longer attach a separate authorization plugin.
+
+It participates in inbound chat execution through three chat plugin points:
+
+- `chat.observePrincipal`: records observed users and chats
+- `chat.authorizeIncoming`: decides whether the current message may enter the agent based on roles and permissions
+- `chat.resolveUserRole`: enriches history / queue metadata with the current user role
+
+Authorization actions also live under `chat`:
+
+| Action | Purpose |
+| --- | --- |
+| `authorization-snapshot` | read the authorization catalog, config, observed users, and observed chats |
+| `authorization-read-config` | read the current authorization config |
+| `authorization-write-config` | replace the authorization config |
+| `authorization-set-user-role` | set a user's role for a channel |
+
+SDK example:
+
+```ts
+await agent.plugins.runAction({
+  plugin: "chat",
+  action: "authorization-set-user-role",
+  payload: {
+    channel: "telegram",
+    userId: "12345678",
+    roleId: "admin",
+  },
+});
+```
+
 ## Important runtime semantics
 
 - queue worker lifecycle belongs to the plugin instance
 - channel bot state also belongs to the plugin instance
+- inbound authorization belongs to `ChatPlugin`, while still being dispatched through generic plugin hooks / resolves
 - `Agent` only assembles it; it does not own chat domain state itself
 
 ## Public status

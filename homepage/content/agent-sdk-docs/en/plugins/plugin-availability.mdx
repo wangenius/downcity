@@ -69,14 +69,11 @@ It can combine:
 - dependency inspection
 - plugin-specific availability logic
 
-## Special case: `chat-authorization`
+## How to think about chat authorization now
 
-`chat-authorization` is a special plugin:
+Chat authorization is now a built-in runtime capability of `ChatPlugin`; it is no longer registered as a separate plugin.
 
-- `enabled` is effectively always true
-- `available` is also treated as available by default
-
-It does not use the normal optional lifecycle semantics.
+That means it no longer appears as its own catalog entry. Whether chat authorization exists depends on whether the current agent has `ChatPlugin` registered.
 
 ## Safest mental model
 

@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.1.162",
+  "version": "1.1.163",
   "type": "module",
   "description": "Downcity CLI bundle — installs city and town commands",
   "bin": {

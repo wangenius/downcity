@@ -9,7 +9,11 @@
  */
 
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
+import type {
+  PluginActions,
+  PluginHooks,
+  PluginResolves,
+} from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
@@ -29,6 +33,11 @@ import {
   stopChatChannels,
 } from "./runtime/ChatChannelFacade.js";
 import { createChatPluginActions } from "./runtime/ChatPluginActions.js";
+import {
+  createChatAuthorizationActions,
+  createChatAuthorizationHooks,
+  createChatAuthorizationResolves,
+} from "./runtime/ChatAuthorizationRuntime.js";
 import { ChatQueueWorker } from "./runtime/ChatQueueWorker.js";
 import { buildChatPluginSystem } from "./runtime/ChatPluginSystem.js";
 import { ChatQueueStore } from "./runtime/ChatQueueStore.js";
@@ -96,6 +105,16 @@ export class ChatPlugin extends BasePlugin {
   readonly actions: PluginActions;
 
   /**
+   * 当前 plugin 的 hook 定义表。
+   */
+  readonly hooks: PluginHooks;
+
+  /**
+   * 当前 plugin 的 resolve 定义表。
+   */
+  readonly resolves: PluginResolves;
+
+  /**
    * 启动当前实例的 queue worker。
    */
   private startQueueWorker(context: AgentContext): void {
@@ -126,9 +145,14 @@ export class ChatPlugin extends BasePlugin {
     this.channels = Array.isArray(this.options.channels)
       ? [...this.options.channels]
       : createDefaultChannels();
-    this.actions = createChatPluginActions({
-      channelState: this.channelState,
-    });
+    this.actions = {
+      ...createChatPluginActions({
+        channelState: this.channelState,
+      }),
+      ...createChatAuthorizationActions(),
+    };
+    this.hooks = createChatAuthorizationHooks();
+    this.resolves = createChatAuthorizationResolves();
     this.lifecycle = {
       start: async (context) => {
         this.startQueueWorker(context);

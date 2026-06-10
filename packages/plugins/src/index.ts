@@ -20,7 +20,6 @@ export {
 } from "./chat/channels/RuntimeChannel.js";
 export { ImagePlugin } from "./image/ImagePlugin.js";
 export { ChatChannelAccountManager } from "./chat/accounts/ChannelAccountManager.js";
-export { ChatAuthorizationPlugin } from "./auth/Plugin.js";
 export { SkillPlugin } from "./skill/Plugin.js";
 export { WebPlugin } from "./web/Plugin.js";
 export { AsrPlugin } from "./asr/Plugin.js";
@@ -33,8 +32,9 @@ export {
 } from "./auth/runtime/AuthorizationConfig.js";
 export { resolveAuthorizedUserRole } from "./auth/runtime/AuthorizationPolicy.js";
 export {
+  CHAT_AUTHORIZATION_ACTIONS,
   CHAT_AUTHORIZATION_CHANNELS,
-  CHAT_AUTHORIZATION_PLUGIN_NAME,
+  CHAT_AUTHORIZATION_POINTS,
   createDefaultChatAuthorizationRoles,
   isChatAuthorizationChannel,
 } from "./auth/types/AuthPlugin.js";

@@ -17,10 +17,7 @@ import {
   listPluginsWithoutLifecycle,
   runLocalPluginAction,
 } from "@downcity/agent";
-import {
-  CHAT_AUTHORIZATION_PLUGIN_NAME,
-  createBuiltinPlugins,
-} from "@downcity/plugins";
+import { createBuiltinPlugins } from "@downcity/plugins";
 import { printResult } from "../utils/cli/CliOutput.js";
 import type { JsonValue } from "@downcity/agent";
 import { getDowncityJsonPath } from "../config/Paths.js";
@@ -57,12 +54,8 @@ function createPluginCatalog() {
   return createBuiltinPlugins();
 }
 
-function isVisibleCatalogPlugin(pluginName: string): boolean {
-  return pluginName !== CHAT_AUTHORIZATION_PLUGIN_NAME;
-}
-
 function createVisiblePluginCatalog() {
-  return createPluginCatalog().filter((plugin) => isVisibleCatalogPlugin(plugin.name));
+  return createPluginCatalog();
 }
 
 function listVisiblePluginActions(pluginName: string, actions: string[]): string[] {

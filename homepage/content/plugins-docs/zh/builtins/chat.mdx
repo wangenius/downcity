@@ -1,6 +1,6 @@
 ---
 title: chat Plugin
-description: 渠道 runtime、queue worker、chat system text 和 chat 相关 action 的说明
+description: 渠道 runtime、queue worker、chat 授权、chat system text 和 chat 相关 action 的说明
 ---
 
 # `chat` Plugin
@@ -12,6 +12,7 @@ description: 渠道 runtime、queue worker、chat system text 和 chat 相关 ac
 - channel state
 - chat queue worker
 - chat queue store
+- chat authorization hooks / resolves
 - chat 相关 actions
 - chat system text
 
@@ -19,6 +20,8 @@ description: 渠道 runtime、queue worker、chat system text 和 chat 相关 ac
 
 - `lifecycle`
 - `actions`
+- `hooks`
+- `resolves`
 - `system`
 
 ## 它主要解决什么问题
@@ -28,6 +31,7 @@ description: 渠道 runtime、queue worker、chat system text 和 chat 相关 ac
 - Telegram、Feishu、QQ 这类 chat 渠道 runtime
 - 每个 agent/plugin 实例一条独立 queue worker
 - 消息入站后的执行与消息出站发送
+- 入站用户授权、主体观测和角色解析
 
 ## 用户怎么使用
 
@@ -104,10 +108,44 @@ await agent.plugins.runAction({
 
 用户侧最常用的 action 是 `list`、`info`、`send`、`react`、`context`、`history`、`delete`。
 
+## 内置授权能力
+
+Chat 授权现在属于 `ChatPlugin` 自己，不需要额外挂一个独立授权 plugin。
+
+它通过三个 chat plugin 点参与入站链路：
+
+- `chat.observePrincipal`：记录已观测到的用户和会话
+- `chat.authorizeIncoming`：根据角色与权限决定当前消息是否允许进入 agent
+- `chat.resolveUserRole`：为 history / queue metadata 补齐当前用户角色
+
+授权 action 也挂在 `chat` 下：
+
+| Action | 作用 |
+| --- | --- |
+| `authorization-snapshot` | 读取授权目录、配置、已观测用户和会话 |
+| `authorization-read-config` | 读取当前授权配置 |
+| `authorization-write-config` | 覆盖写入授权配置 |
+| `authorization-set-user-role` | 设置某个渠道用户的角色 |
+
+SDK 调用示例：
+
+```ts
+await agent.plugins.runAction({
+  plugin: "chat",
+  action: "authorization-set-user-role",
+  payload: {
+    channel: "telegram",
+    userId: "12345678",
+    roleId: "admin",
+  },
+});
+```
+
 ## 关键运行语义
 
 - queue worker 的生命周期归属于 plugin 实例
 - 渠道 bot 状态也归属于 plugin 实例
+- 入站授权能力归属于 `ChatPlugin`，但仍通过通用 plugin hooks / resolves 调度
 - `Agent` 只负责装配，不直接持有 chat 领域长期状态
 
 ## 公开性说明

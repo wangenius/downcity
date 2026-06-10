@@ -8,6 +8,7 @@
  * - 保持返回约定尽量接近 clack，便于渐进替换现有流程。
  */
 import blessed from "neo-blessed";
+import { t } from "../i18n.js";
 import { create_city_tui_shell } from "./Shell.js";
 /**
  * clack 兼容：select。
@@ -17,8 +18,7 @@ export async function select(input) {
         const shell = create_city_tui_shell({
             screen_title: input.message,
             breadcrumb: input.message,
-            main_label: "Main",
-            footer: "Enter choose · Esc cancel · ↑↓ / j k navigate",
+            footer: select_footer_text(),
         });
         const { screen } = shell;
         let finished = false;
@@ -108,20 +108,32 @@ export async function confirm(input) {
         {
             label: "Yes",
             value: true,
-            hint: "Confirm this action",
+            hint: t({
+                zh: "确认执行该动作",
+                en: "Confirm this action",
+            }),
         },
         {
-            label: "No",
+            label: t({
+                zh: "否",
+                en: "No",
+            }),
             value: false,
-            hint: "Cancel and go back",
+            hint: t({
+                zh: "取消并返回",
+                en: "Cancel and go back",
+            }),
         },
     ];
+    options[0].label = t({
+        zh: "是",
+        en: "Yes",
+    });
     return await new Promise((resolve) => {
         const shell = create_city_tui_shell({
             screen_title: input.message,
             breadcrumb: input.message,
-            main_label: "Main",
-            footer: "Enter choose · Esc cancel",
+            footer: confirm_footer_text(),
         });
         const { screen } = shell;
         let finished = false;
@@ -239,8 +251,7 @@ async function open_text_prompt_once(input, options) {
         const shell = create_city_tui_shell({
             screen_title: input.message,
             breadcrumb: input.message,
-            main_label: "Main",
-            footer: "Type text · Enter submit · Esc cancel · Ctrl+U clear",
+            footer: text_footer_text(options.secret),
         });
         const { screen } = shell;
         let finished = false;
@@ -284,7 +295,9 @@ async function open_text_prompt_once(input, options) {
             width: "70%",
             height: 5,
             border: "line",
-            label: options.secret ? " Secret " : " Input ",
+            label: ` ${options.secret
+                ? t({ zh: "密文", en: "Secret" })
+                : t({ zh: "输入", en: "Input" })} `,
             padding: { left: 1, right: 1, top: 1 },
             inputOnFocus: true,
             keys: true,
@@ -361,17 +374,54 @@ function build_list_style() {
 }
 function format_option_detail(option) {
     if (!option) {
-        return "No item selected";
+        return t({
+            zh: "未选择项目",
+            en: "No item selected",
+        });
     }
     return [
         `{bold}${option.label}{/bold}`,
         option.hint ? option.hint : "",
-        option.value !== undefined ? `\nvalue: ${String(option.value)}` : "",
+        option.value !== undefined ? `\n${t({ zh: "值", en: "value" })}: ${String(option.value)}` : "",
     ].filter(Boolean).join("\n");
 }
 function format_input_hint(placeholder) {
     const text = String(placeholder ?? "").trim();
-    return text ? `placeholder: ${text}` : "";
+    return text
+        ? `${t({ zh: "占位提示", en: "placeholder" })}: ${text}`
+        : "";
+}
+/**
+ * 列表选择 footer 文案。
+ */
+function select_footer_text() {
+    return t({
+        zh: "Enter 选择 · Esc 取消 · ↑↓ / j k 切换",
+        en: "Enter choose · Esc cancel · ↑↓ / j k navigate",
+    });
+}
+/**
+ * 确认选择 footer 文案。
+ */
+function confirm_footer_text() {
+    return t({
+        zh: "Enter 选择 · Esc 取消",
+        en: "Enter choose · Esc cancel",
+    });
+}
+/**
+ * 文本输入 footer 文案。
+ */
+function text_footer_text(secret) {
+    return secret
+        ? t({
+            zh: "输入密文 · Enter 提交 · Esc 取消 · Ctrl+U 清空",
+            en: "Type secret · Enter submit · Esc cancel · Ctrl+U clear",
+        })
+        : t({
+            zh: "输入文本 · Enter 提交 · Esc 取消 · Ctrl+U 清空",
+            en: "Type text · Enter submit · Esc cancel · Ctrl+U clear",
+        });
 }
 function normalize_textbox_value(value) {
     return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, "");

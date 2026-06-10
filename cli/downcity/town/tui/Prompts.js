@@ -8,6 +8,7 @@
  * - 脚本模式仍由调用方自己兜底；这里默认只服务交互式 TTY 场景。
  */
 import blessed from "neo-blessed";
+import { t } from "../shared/CliLocale.js";
 /**
  * Town 使用的 prompts 默认导出。
  */
@@ -90,7 +91,7 @@ async function run_select_prompt(question) {
                 fg: "white",
             },
         });
-        shell.footer_box.setContent("Enter choose · Esc cancel · ↑↓ / j k navigate");
+        shell.footer_box.setContent(select_footer_text());
         list.select(initial_index);
         list.focus();
         list.on("select item", (_item, index_value) => {
@@ -168,7 +169,7 @@ async function run_multiselect_prompt(question) {
                 fg: "white",
             },
         });
-        shell.footer_box.setContent("Space toggle · Enter confirm · Esc cancel · ↑↓ / j k navigate");
+        shell.footer_box.setContent(multiselect_footer_text());
         const sync_list = () => {
             list.setItems(build_multiselect_items(choices, selected_indexes));
             list.select(current_index);
@@ -222,13 +223,19 @@ async function run_confirm_prompt(question) {
     const initial_value = question.initial === true;
     const choices = [
         {
-            title: "Yes",
-            description: "Confirm this action",
+            title: t({ zh: "是", en: "Yes" }),
+            description: t({
+                zh: "确认执行该动作",
+                en: "Confirm this action",
+            }),
             value: true,
         },
         {
-            title: "No",
-            description: "Cancel and go back",
+            title: t({ zh: "否", en: "No" }),
+            description: t({
+                zh: "取消并返回",
+                en: "Cancel and go back",
+            }),
             value: false,
         },
     ];
@@ -273,7 +280,7 @@ async function run_confirm_prompt(question) {
             padding: { left: 1, right: 1, top: 1, bottom: 1 },
             content: format_choice_detail(choices[initial_value ? 0 : 1]),
         });
-        shell.footer_box.setContent("Enter choose · Esc cancel");
+        shell.footer_box.setContent(confirm_footer_text());
         list.select(initial_value ? 0 : 1);
         list.focus();
         list.key(["enter"], () => {
@@ -330,11 +337,17 @@ async function run_number_prompt(question) {
         }
         const parsed_value = Number(submitted_value);
         if (!Number.isFinite(parsed_value)) {
-            error_message = "Please enter a valid number";
+            error_message = t({
+                zh: "请输入有效数字",
+                en: "Please enter a valid number",
+            });
             continue;
         }
         if (typeof question.min === "number" && parsed_value < question.min) {
-            error_message = `Minimum value is ${question.min}`;
+            error_message = t({
+                zh: `最小值为 ${question.min}`,
+                en: `Minimum value is ${question.min}`,
+            });
             continue;
         }
         const validated = await validate_prompt_value(question, parsed_value);
@@ -390,7 +403,9 @@ async function open_text_prompt_once(question, options) {
             width: "70%",
             height: 5,
             border: "line",
-            label: options.secret ? " Secret " : " Input ",
+            label: ` ${options.secret
+                ? t({ zh: "密文", en: "Secret" })
+                : t({ zh: "输入", en: "Input" })} `,
             padding: { left: 1, right: 1, top: 1 },
             inputOnFocus: true,
             keys: true,
@@ -414,7 +429,7 @@ async function open_text_prompt_once(question, options) {
             hint_box.setContent(options.error_message);
             screen.render();
         };
-        shell.footer_box.setContent("Type text · Enter submit · Esc cancel · Ctrl+U clear");
+        shell.footer_box.setContent(text_footer_text(options.secret));
         screen.key(["escape", "C-c"], () => finish(undefined));
         textbox.key(["enter", "return"], () => {
             // 关键点（中文）：不同终端会把回车解析为 enter 或 return，统一转成 textbox submit。
@@ -464,7 +479,9 @@ async function validate_prompt_value(question, value) {
         return true;
     }
     const result = await question.validate(value);
-    return result === true ? true : String(result || "Invalid input");
+    return result === true
+        ? true
+        : String(result || t({ zh: "输入无效", en: "Invalid input" }));
 }
 function create_prompt_shell(title) {
     const screen = blessed.screen({
@@ -485,7 +502,7 @@ function create_prompt_shell(title) {
         width: "34%",
         height: "100%-3",
         border: "line",
-        label: " Sidebar ",
+        label: ` ${t({ zh: "侧边栏", en: "Sidebar" })} `,
         style: {
             border: { fg: "green" },
         },
@@ -509,7 +526,7 @@ function create_prompt_shell(title) {
         width: "66%",
         height: "100%-3",
         border: "line",
-        label: " Main ",
+        label: ` ${t({ zh: "主区域", en: "Main" })} `,
         style: {
             border: { fg: "green" },
         },
@@ -551,7 +568,10 @@ function format_choice_label(choice) {
 }
 function format_choice_detail(choice) {
     if (!choice) {
-        return "No item selected";
+        return t({
+            zh: "未选择项目",
+            en: "No item selected",
+        });
     }
     const title = String(choice.title ?? choice.label ?? "").trim();
     const hint = String(choice.description ?? choice.hint ?? "").trim();
@@ -559,8 +579,49 @@ function format_choice_detail(choice) {
     return [
         `{bold}${title}{/bold}`,
         hint,
-        value ? `\nvalue: ${value}` : "",
+        value ? `\n${t({ zh: "值", en: "value" })}: ${value}` : "",
     ].filter(Boolean).join("\n");
+}
+/**
+ * 单选 footer 文案。
+ */
+function select_footer_text() {
+    return t({
+        zh: "Enter 选择 · Esc 取消 · ↑↓ / j k 切换",
+        en: "Enter choose · Esc cancel · ↑↓ / j k navigate",
+    });
+}
+/**
+ * 多选 footer 文案。
+ */
+function multiselect_footer_text() {
+    return t({
+        zh: "Space 切换 · Enter 确认 · Esc 取消 · ↑↓ / j k 切换",
+        en: "Space toggle · Enter confirm · Esc cancel · ↑↓ / j k navigate",
+    });
+}
+/**
+ * 确认 footer 文案。
+ */
+function confirm_footer_text() {
+    return t({
+        zh: "Enter 选择 · Esc 取消",
+        en: "Enter choose · Esc cancel",
+    });
+}
+/**
+ * 输入 footer 文案。
+ */
+function text_footer_text(secret) {
+    return secret
+        ? t({
+            zh: "输入密文 · Enter 提交 · Esc 取消 · Ctrl+U 清空",
+            en: "Type secret · Enter submit · Esc cancel · Ctrl+U clear",
+        })
+        : t({
+            zh: "输入文本 · Enter 提交 · Esc 取消 · Ctrl+U 清空",
+            en: "Type text · Enter submit · Esc cancel · Ctrl+U clear",
+        });
 }
 function build_multiselect_items(choices, selected_indexes) {
     return choices.map((choice, index) => {

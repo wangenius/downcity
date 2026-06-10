@@ -7,6 +7,7 @@
  * - 所有调用方共享同一套颜色、footer、breadcrumb 清屏规则，避免 blessed 细节散落。
  */
 import blessed from "neo-blessed";
+import { t } from "../i18n.js";
 /**
  * 创建 City CLI 通用 TUI Shell。
  */
@@ -29,7 +30,7 @@ export function create_city_tui_shell(input) {
         width: "34%",
         height: "100%-3",
         border: "line",
-        label: " Sidebar ",
+        label: ` ${t({ zh: "侧边栏", en: "Sidebar" })} `,
         style: {
             border: { fg: "cyan" },
         },
@@ -53,7 +54,7 @@ export function create_city_tui_shell(input) {
         width: "66%",
         height: "100%-3",
         border: "line",
-        label: ` ${input.main_label ?? "Main"} `,
+        label: ` ${input.main_label ?? t({ zh: "主区域", en: "Main" })} `,
         style: {
             border: { fg: "cyan" },
         },

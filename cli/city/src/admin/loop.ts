@@ -65,7 +65,10 @@ export async function adminLoop(
           })),
       [
         {
-          label: "Env",
+          label: t({
+            zh: "环境变量",
+            en: "Env",
+          }),
           value: "env",
           hint: t({
             zh: "查看并配置环境变量",
@@ -84,18 +87,51 @@ export async function adminLoop(
           }),
         },
         {
-          label: "Models",
+          label: t({
+            zh: "模型",
+            en: "Models",
+          }),
           value: "models",
           hint: t({
             zh: "查看模型就绪状态与缺失 env",
             en: "Read model readiness and missing env requirements",
           }),
         },
-        { label: "Towns", value: "towns" },
-        { label: "Accounts", value: "accounts" },
-        { label: "Balance", value: "balance" },
-        { label: "Usage", value: "usage" },
-        { label: "Payment (Stripe)", value: "payment" },
+        {
+          label: t({
+            zh: "Towns",
+            en: "Towns",
+          }),
+          value: "towns",
+        },
+        {
+          label: t({
+            zh: "账户",
+            en: "Accounts",
+          }),
+          value: "accounts",
+        },
+        {
+          label: t({
+            zh: "余额",
+            en: "Balance",
+          }),
+          value: "balance",
+        },
+        {
+          label: t({
+            zh: "用量",
+            en: "Usage",
+          }),
+          value: "usage",
+        },
+        {
+          label: t({
+            zh: "支付（Stripe）",
+            en: "Payment (Stripe)",
+          }),
+          value: "payment",
+        },
         {
           label: t({
             zh: "自定义服务...",

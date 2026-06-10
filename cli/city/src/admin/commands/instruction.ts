@@ -3,6 +3,7 @@
  */
 
 import { City } from "@downcity/city";
+import { t } from "../../i18n.js";
 import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
 /**
@@ -13,6 +14,10 @@ export async function manageInstruction(
   _baseUrl: string,
   runtime: admin_tui_runtime,
 ): Promise<void> {
-  const content = await runtime.with_loading("City Instruction", async () => await a.instruction());
-  await runtime.show_text("City Instruction", content);
+  const title = t({
+    zh: "City 指令",
+    en: "City Instruction",
+  });
+  const content = await runtime.with_loading(title, async () => await a.instruction());
+  await runtime.show_text(title, content);
 }

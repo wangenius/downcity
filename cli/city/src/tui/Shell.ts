@@ -8,6 +8,7 @@
  */
 
 import blessed from "neo-blessed";
+import { t } from "../i18n.js";
 
 /**
  * City TUI Shell 配置。
@@ -76,7 +77,7 @@ export function create_city_tui_shell(input: city_tui_shell_input): city_tui_she
     width: "34%",
     height: "100%-3",
     border: "line",
-    label: " Sidebar ",
+    label: ` ${t({ zh: "侧边栏", en: "Sidebar" })} `,
     style: {
       border: { fg: "cyan" },
     },
@@ -102,7 +103,7 @@ export function create_city_tui_shell(input: city_tui_shell_input): city_tui_she
     width: "66%",
     height: "100%-3",
     border: "line",
-    label: ` ${input.main_label ?? "Main"} `,
+    label: ` ${input.main_label ?? t({ zh: "主区域", en: "Main" })} `,
     style: {
       border: { fg: "cyan" },
     },

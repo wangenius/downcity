@@ -7,6 +7,7 @@
  */
 
 import blessed from "neo-blessed";
+import { t } from "../i18n.js";
 import type {
   admin_tui_message_kind,
   admin_tui_runtime,
@@ -96,7 +97,10 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
       cleanup_main();
       breadcrumb_parts = [nav_title];
       render_nav(shell, nav_title, options, 0);
-      render_idle(shell, "选择左侧管理项");
+      render_idle(shell, t({
+        zh: "选择左侧管理项",
+        en: "Select an item from the sidebar",
+      }));
       return await run_sidebar_select({
         shell,
         title: nav_title,
@@ -108,7 +112,10 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
       breadcrumb_parts = next_breadcrumb_parts(breadcrumb_parts, section_title);
       render_nav(shell, breadcrumb_parts.join(" / "), options, 0);
       if (shell.content_box.children.length === 0) {
-        render_idle(shell, "选择左侧管理项");
+        render_idle(shell, t({
+          zh: "选择左侧管理项",
+          en: "Select an item from the sidebar",
+        }));
       }
       return await run_sidebar_select({
         shell,
@@ -119,7 +126,7 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
 
     async text(section_title: string, placeholder?: string): Promise<string | undefined> {
       cleanup_main();
-      render_footer("Type text · Enter submit · Esc cancel · Ctrl+U clear");
+      render_footer(text_footer_text(false));
       return await run_text_in_content(shell, {
         title: section_title,
         placeholder,
@@ -132,7 +139,7 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
 
     async password(section_title: string, placeholder?: string): Promise<string | undefined> {
       cleanup_main();
-      render_footer("Type secret · Enter submit · Esc cancel · Ctrl+U clear");
+      render_footer(text_footer_text(true));
       return await run_text_in_content(shell, {
         title: section_title,
         placeholder,
@@ -146,7 +153,10 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
     async with_loading<T>(section_title: string, task: () => Promise<T>): Promise<T> {
       cleanup_main();
       render_loading(shell, section_title);
-      render_footer("Loading...");
+      render_footer(t({
+        zh: "加载中...",
+        en: "Loading...",
+      }));
       shell.screen.render();
       try {
         return await task();
@@ -169,7 +179,7 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
     async show_table(input: admin_tui_table_input): Promise<void> {
       const rows = input.rows.length > 0
         ? [input.columns, ...input.rows.map((row) => row.cells)]
-        : [[input.empty_message ?? "No data"]];
+        : [[input.empty_message ?? t({ zh: "暂无数据", en: "No data" })]];
       await show_content(shell, {
         title: input.title,
         content: format_table(rows),
@@ -227,7 +237,7 @@ function create_shell(title: string): shell_layout {
     width: "34%",
     height: "100%-3",
     border: "line",
-    label: " Sidebar ",
+    label: ` ${t({ zh: "侧边栏", en: "Sidebar" })} `,
     style: {
       border: { fg: "cyan" },
     },
@@ -267,7 +277,7 @@ function create_shell(title: string): shell_layout {
     width: "66%",
     height: "100%-3",
     border: "line",
-    label: " Section ",
+    label: ` ${t({ zh: "内容", en: "Section" })} `,
     style: {
       border: { fg: "cyan" },
     },
@@ -306,7 +316,7 @@ function render_nav(
 }
 
 function render_idle(shell: shell_layout, message: string): void {
-  shell.content_box.setLabel(" Section ");
+  shell.content_box.setLabel(` ${t({ zh: "内容", en: "Section" })} `);
   blessed.box({
     parent: shell.content_box,
     top: "center",
@@ -414,7 +424,9 @@ async function run_text_in_content(
       width: "88%",
       height: 5,
       border: "line",
-      label: input.secret ? " Secret " : " Input ",
+      label: ` ${input.secret
+        ? t({ zh: "密文", en: "Secret" })
+        : t({ zh: "输入", en: "Input" })} `,
       padding: { left: 1, right: 1, top: 1 },
       inputOnFocus: true,
       keys: true,
@@ -434,7 +446,9 @@ async function run_text_in_content(
       width: "88%",
       height: 2,
       align: "center",
-      content: input.placeholder ? `placeholder: ${input.placeholder}` : "",
+      content: input.placeholder
+        ? `${t({ zh: "占位提示", en: "placeholder" })}: ${input.placeholder}`
+        : "",
       style: {
         fg: "gray",
       },
@@ -505,7 +519,10 @@ function render_loading(shell: shell_layout, title: string): void {
     align: "center",
     valign: "middle",
     border: "line",
-    content: `Loading ${title}...`,
+    content: t({
+      zh: `正在加载 ${title}...`,
+      en: `Loading ${title}...`,
+    }),
     style: {
       border: { fg: "cyan" },
       fg: "white",
@@ -541,7 +558,7 @@ async function show_content(
       keys: true,
       vi: true,
       mouse: true,
-      content: input.content || "(empty)",
+      content: input.content || t({ zh: "（空）", en: "(empty)" }),
       style: {
         fg: "white",
         border: { fg: input.accent },
@@ -570,7 +587,10 @@ async function show_content(
     if (typeof content_box.setScrollPerc === "function") {
       content_box.setScrollPerc(0);
     }
-    shell.footer_box.setContent("Enter / Esc back · ↑↓ scroll · q back");
+    shell.footer_box.setContent(t({
+      zh: "Enter / Esc 返回 · ↑↓ 滚动 · q 返回",
+      en: "Enter / Esc back · ↑↓ scroll · q back",
+    }));
     content_box.key(["enter", "escape", "q", "C-c"], finish);
     raw_input_listener = (chunk: Buffer | string): void => {
       const text = String(chunk);
@@ -601,7 +621,10 @@ function render_sidebar_hint(
 ): void {
   const option = options[typeof selected === "number" ? selected : 0];
   const hint = option?.hint ? ` · ${option.hint}` : "";
-  shell.footer_box.setContent(`Enter choose · Esc / q back · ↑↓ navigate${hint}`);
+  shell.footer_box.setContent(`${t({
+    zh: "Enter 选择 · Esc / q 返回 · ↑↓ 切换",
+    en: "Enter choose · Esc / q back · ↑↓ navigate",
+  })}${hint}`);
   shell.screen.render();
 }
 
@@ -666,9 +689,24 @@ function visible_width(value: string): number {
 }
 
 function message_title(kind: admin_tui_message_kind): string {
-  if (kind === "success") return "Success";
-  if (kind === "error") return "Error";
-  return "Info";
+  if (kind === "success") return t({ zh: "成功", en: "Success" });
+  if (kind === "error") return t({ zh: "错误", en: "Error" });
+  return t({ zh: "信息", en: "Info" });
+}
+
+/**
+ * 输入态 footer 文案。
+ */
+function text_footer_text(secret: boolean): string {
+  return secret
+    ? t({
+      zh: "输入密文 · Enter 提交 · Esc 取消 · Ctrl+U 清空",
+      en: "Type secret · Enter submit · Esc cancel · Ctrl+U clear",
+    })
+    : t({
+      zh: "输入文本 · Enter 提交 · Esc 取消 · Ctrl+U 清空",
+      en: "Type text · Enter submit · Esc cancel · Ctrl+U clear",
+    });
 }
 
 function message_accent(kind: admin_tui_message_kind): "cyan" | "green" | "red" {

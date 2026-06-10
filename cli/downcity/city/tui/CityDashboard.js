@@ -144,7 +144,6 @@ async function run_city_dashboard_once(state) {
         const shell = create_city_tui_shell({
             screen_title: "Downcity City",
             breadcrumb: state.title,
-            main_label: "Main",
             footer: state.footer,
         });
         const { screen } = shell;

@@ -3,18 +3,22 @@
  */
 
 import { City } from "@downcity/city";
+import { t } from "../../i18n.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
 export async function manageCustom(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {
-    const name = await runtime.text("service name (empty to go back)");
+    const name = await runtime.text(t({
+      zh: "服务名称（留空返回）",
+      en: "service name (empty to go back)",
+    }));
     if (!name) return;
 
     const act = await runtime.select(name, [
         { label: "GET", value: "get" },
         { label: "POST", value: "post" },
-        { label: "Back", value: "back" },
+        { label: t({ zh: "返回", en: "Back" }), value: "back" },
       ]);
     if (!act || act === "back") return;
 
@@ -30,7 +34,10 @@ export async function manageCustom(a: City, _baseUrl: string, runtime: admin_tui
         try {
           body = JSON.parse(raw);
         } catch {
-          await runtime.show_message("error", "Invalid JSON body");
+          await runtime.show_message("error", t({
+            zh: "JSON body 无效",
+            en: "Invalid JSON body",
+          }));
           continue;
         }
         const result = await runtime.with_loading(`${name} POST`, async () => await svc.action("").invoke(body));

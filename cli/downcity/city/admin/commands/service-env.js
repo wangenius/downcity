@@ -6,29 +6,58 @@
  * - 按 Service 查看：选择一个 service，查看/配置其 env
  * - 直接管理：list / upsert / remove 裸 key-value
  */
+import { t } from "../../i18n.js";
 import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
 export async function manageEnv(a, _baseUrl, runtime) {
     while (true) {
         const services = await fetchEnvScopes(a, runtime);
         const choices = [
-            { label: "Init (walk through all)", value: "__init__", hint: "Configure all missing env keys in sequence" },
-            { label: "List all", value: "__list__", hint: "Show all configured env variables" },
-            { label: "Upsert", value: "__upsert__", hint: "Add or update a key=value" },
-            { label: "Update", value: "__update__", hint: "Update an existing key" },
-            { label: "Remove", value: "__remove__", hint: "Delete a key" },
-            { label: "Refresh runtime cache", value: "__refresh__", hint: "Reload env cache after direct database edits" },
+            {
+                label: t({ zh: "初始化（逐项配置）", en: "Init (walk through all)" }),
+                value: "__init__",
+                hint: t({ zh: "按顺序配置全部缺失 env key", en: "Configure all missing env keys in sequence" }),
+            },
+            {
+                label: t({ zh: "查看全部", en: "List all" }),
+                value: "__list__",
+                hint: t({ zh: "显示全部已配置环境变量", en: "Show all configured env variables" }),
+            },
+            {
+                label: t({ zh: "新增或更新", en: "Upsert" }),
+                value: "__upsert__",
+                hint: t({ zh: "新增或更新 key=value", en: "Add or update a key=value" }),
+            },
+            {
+                label: t({ zh: "更新", en: "Update" }),
+                value: "__update__",
+                hint: t({ zh: "更新已有 key", en: "Update an existing key" }),
+            },
+            {
+                label: t({ zh: "移除", en: "Remove" }),
+                value: "__remove__",
+                hint: t({ zh: "删除一个 key", en: "Delete a key" }),
+            },
+            {
+                label: t({ zh: "刷新 runtime cache", en: "Refresh runtime cache" }),
+                value: "__refresh__",
+                hint: t({ zh: "直接修改数据库后重载 env cache", en: "Reload env cache after direct database edits" }),
+            },
         ];
         if (services) {
             for (const s of services) {
                 const configured = s.env.filter((item) => item.configured).length;
                 choices.push({
-                    label: `  ${s.name} (${configured}/${s.env.length} configured)`,
+                    label: `  ${s.name} (${configured}/${s.env.length} ${t({ zh: "已配置", en: "configured" })})`,
                     value: s.id,
                     hint: s.env.map((e) => `${e.key}${e.configured ? "✓" : ""}`).join(", "),
                 });
             }
         }
-        choices.push({ label: "Back", value: "back", hint: "Return to admin menu" });
+        choices.push({
+            label: t({ zh: "返回", en: "Back" }),
+            value: "back",
+            hint: t({ zh: "返回 admin 菜单", en: "Return to admin menu" }),
+        });
         const svcId = await runtime.select("Env", choices);
         if (!svcId || svcId === "back")
             return;
@@ -74,23 +103,23 @@ async function initAllEnv(a, services, runtime) {
         lines.push(`── ${svc.name} ──────────────────────────────`);
         for (const req of svc.env) {
             if (configuredKeys.has(req.key)) {
-                lines.push(`  ${req.key} ✓ already set`);
+                lines.push(`  ${req.key} ✓ ${t({ zh: "已设置", en: "already set" })}`);
                 continue;
             }
             const label = req.required
                 ? `${req.key} (${req.description})`
-                : `${req.key} (${req.description}, optional — enter to skip)`;
+                : `${req.key} (${req.description}, ${t({ zh: "可选，按 Enter 跳过", en: "optional, press Enter to skip" })})`;
             const value = await runtime.text(label);
             if (!value) {
                 if (req.required) {
-                    lines.push(`  ${req.key} ✗ skipped (required)`);
+                    lines.push(`  ${req.key} ✗ ${t({ zh: "已跳过（必填）", en: "skipped (required)" })}`);
                 }
                 continue;
             }
             try {
-                await runtime.with_loading(`Set ${req.key}`, async () => await a.env.upsert({ key: req.key, value }));
+                await runtime.with_loading(t({ zh: `设置 ${req.key}`, en: `Set ${req.key}` }), async () => await a.env.upsert({ key: req.key, value }));
                 configuredKeys.add(req.key);
-                lines.push(`  ${req.key} ✓ set`);
+                lines.push(`  ${req.key} ✓ ${t({ zh: "已设置", en: "set" })}`);
                 changed = true;
             }
             catch (e) {
@@ -100,8 +129,10 @@ async function initAllEnv(a, services, runtime) {
         }
     }
     lines.push("");
-    lines.push(changed ? "Env init complete." : "All env keys are already configured.");
-    await runtime.show_text("Env Init", lines.join("\n"));
+    lines.push(changed
+        ? t({ zh: "Env 初始化完成。", en: "Env init complete." })
+        : t({ zh: "全部 env key 均已配置。", en: "All env keys are already configured." }));
+    await runtime.show_text(t({ zh: "Env 初始化", en: "Env Init" }), lines.join("\n"));
 }
 // ============================================================
 // 直接管理模式
@@ -111,11 +142,11 @@ async function listAllEnv(a, runtime) {
         const items = await runtime.with_loading("Env", async () => await a.env.list());
         await runtime.show_table({
             title: `${items.length} Env`,
-            columns: ["Key", "Value"],
+            columns: [t({ zh: "Key", en: "Key" }), t({ zh: "值", en: "Value" })],
             rows: items.map((item) => ({
                 cells: [item.key, maskValue(item.value, 40)],
             })),
-            empty_message: "No env variables configured.",
+            empty_message: t({ zh: "尚未配置环境变量。", en: "No env variables configured." }),
         });
     }
     catch (e) {
@@ -124,15 +155,15 @@ async function listAllEnv(a, runtime) {
     }
 }
 async function upsertEnv(a, runtime) {
-    const key = await runtime.text("key");
+    const key = await runtime.text(t({ zh: "key", en: "key" }));
     if (!key)
         return;
-    const value = await runtime.text("value");
+    const value = await runtime.text(t({ zh: "值", en: "value" }));
     if (!value)
         return;
     try {
-        await runtime.with_loading(`Upsert ${key}`, async () => await a.env.upsert({ key, value }));
-        await runtime.show_message("success", `upserted: ${key}`);
+        await runtime.with_loading(t({ zh: `新增或更新 ${key}`, en: `Upsert ${key}` }), async () => await a.env.upsert({ key, value }));
+        await runtime.show_message("success", t({ zh: `已新增或更新：${key}`, en: `upserted: ${key}` }));
     }
     catch (e) {
         rethrowAdminAuthError(e);
@@ -142,23 +173,32 @@ async function upsertEnv(a, runtime) {
 async function updateEnv(a, runtime) {
     const items = await fetchCurrentEnv(a);
     if (items.length === 0) {
-        await runtime.show_message("info", "No env variables to update.");
+        await runtime.show_message("info", t({ zh: "没有可更新的环境变量。", en: "No env variables to update." }));
         return;
     }
     const choices = items.map((e) => ({
-        label: e.key, value: e.key, hint: `current: ${maskValue(e.value, 20)}`,
+        label: e.key,
+        value: e.key,
+        hint: t({ zh: `当前：${maskValue(e.value, 20)}`, en: `current: ${maskValue(e.value, 20)}` }),
     }));
-    choices.push({ label: "Cancel", value: "__cancel__", hint: "Return without changes" });
-    const key = await runtime.select("Select key to update", choices);
+    choices.push({
+        label: t({ zh: "取消", en: "Cancel" }),
+        value: "__cancel__",
+        hint: t({ zh: "不修改并返回", en: "Return without changes" }),
+    });
+    const key = await runtime.select(t({ zh: "选择要更新的 key", en: "Select key to update" }), choices);
     if (!key || key === "__cancel__")
         return;
     const current = items.find((e) => e.key === key);
-    const value = await runtime.text(`New value (current: ${maskValue(current.value, 16)})`);
+    const value = await runtime.text(t({
+        zh: `新值（当前：${maskValue(current.value, 16)}）`,
+        en: `New value (current: ${maskValue(current.value, 16)})`,
+    }));
     if (!value)
         return;
     try {
-        await runtime.with_loading(`Update ${String(key)}`, async () => await a.env.upsert({ key: key, value }));
-        await runtime.show_message("success", `updated: ${key}`);
+        await runtime.with_loading(t({ zh: `更新 ${String(key)}`, en: `Update ${String(key)}` }), async () => await a.env.upsert({ key: key, value }));
+        await runtime.show_message("success", t({ zh: `已更新：${key}`, en: `updated: ${key}` }));
     }
     catch (e) {
         rethrowAdminAuthError(e);
@@ -166,12 +206,12 @@ async function updateEnv(a, runtime) {
     }
 }
 async function removeEnv(a, runtime) {
-    const key = await runtime.text("key");
+    const key = await runtime.text(t({ zh: "key", en: "key" }));
     if (!key)
         return;
     try {
-        await runtime.with_loading(`Remove ${key}`, async () => await a.env.remove(key));
-        await runtime.show_message("success", `removed: ${key}`);
+        await runtime.with_loading(t({ zh: `移除 ${key}`, en: `Remove ${key}` }), async () => await a.env.remove(key));
+        await runtime.show_message("success", t({ zh: `已移除：${key}`, en: `removed: ${key}` }));
     }
     catch (e) {
         rethrowAdminAuthError(e);
@@ -180,8 +220,11 @@ async function removeEnv(a, runtime) {
 }
 async function refreshEnv(a, runtime) {
     try {
-        const result = await runtime.with_loading("Refresh Env", async () => await a.env.refresh());
-        await runtime.show_message("success", `env runtime cache refreshed (${result.count} keys)`);
+        const result = await runtime.with_loading(t({ zh: "刷新 Env", en: "Refresh Env" }), async () => await a.env.refresh());
+        await runtime.show_message("success", t({
+            zh: `env runtime cache 已刷新（${result.count} 个 key）`,
+            en: `env runtime cache refreshed (${result.count} keys)`,
+        }));
     }
     catch (e) {
         rethrowAdminAuthError(e);
@@ -197,25 +240,32 @@ async function configureServiceEnv(a, svc, runtime) {
         const currentScope = scopes?.find((item) => item.id === svc.id) ?? svc;
         const choices = currentScope.env.map((req) => {
             const status = req.configured
-                ? `✓ configured${req.value_preview ? ` (${req.value_preview})` : ""}`
-                : (req.required ? "✗ MISSING" : "○ unset");
+                ? `✓ ${t({ zh: "已配置", en: "configured" })}${req.value_preview ? ` (${req.value_preview})` : ""}`
+                : (req.required ? `✗ ${t({ zh: "缺失", en: "MISSING" })}` : `○ ${t({ zh: "未设置", en: "unset" })}`);
             return { label: req.key, value: req.key, hint: `${req.description} [${status}]` };
         });
-        choices.push({ label: "Back", value: "back", hint: "Return to env menu" });
-        const key = await runtime.select(`${svc.name} — configure`, choices);
+        choices.push({
+            label: t({ zh: "返回", en: "Back" }),
+            value: "back",
+            hint: t({ zh: "返回 env 菜单", en: "Return to env menu" }),
+        });
+        const key = await runtime.select(t({ zh: `${svc.name} - 配置`, en: `${svc.name} - configure` }), choices);
         if (!key || key === "back")
             return;
         const req = currentScope.env.find((e) => e.key === key);
         const hint = req.configured
-            ? `(current: ${req.value_preview ?? "configured"}, enter a new value to replace it)`
+            ? t({
+                zh: `（当前：${req.value_preview ?? "已配置"}，输入新值以替换）`,
+                en: `(current: ${req.value_preview ?? "configured"}, enter a new value to replace it)`,
+            })
             : "";
         const value = await runtime.text(`${req.description} ${hint}`);
         if (!value)
             continue;
         try {
             if (value) {
-                await runtime.with_loading(`Set ${req.key}`, async () => await a.env.upsert({ key: req.key, value }));
-                await runtime.show_message("success", `set ${req.key}`);
+                await runtime.with_loading(t({ zh: `设置 ${req.key}`, en: `Set ${req.key}` }), async () => await a.env.upsert({ key: req.key, value }));
+                await runtime.show_message("success", t({ zh: `已设置 ${req.key}`, en: `set ${req.key}` }));
             }
         }
         catch (e) {
@@ -229,9 +279,12 @@ async function configureServiceEnv(a, svc, runtime) {
 // ============================================================
 async function fetchEnvScopes(a, runtime) {
     try {
-        const scopes = await runtime.with_loading("Env Catalog", async () => await a.env.catalog());
+        const scopes = await runtime.with_loading(t({ zh: "Env 目录", en: "Env Catalog" }), async () => await a.env.catalog());
         if (scopes.length === 0) {
-            await runtime.show_message("info", "No services or AI models with env requirements found.");
+            await runtime.show_message("info", t({
+                zh: "没有找到需要 env 的服务或 AI 模型。",
+                en: "No services or AI models with env requirements found.",
+            }));
             return undefined;
         }
         return scopes;
@@ -239,10 +292,16 @@ async function fetchEnvScopes(a, runtime) {
     catch (e) {
         rethrowAdminAuthError(e);
         if (isAdminNotFoundError(e)) {
-            await runtime.show_message("error", "Connected City is too old and does not expose /v1/env/catalog yet. Deploy the latest worker/server first.");
+            await runtime.show_message("error", t({
+                zh: "当前连接的 City 版本过旧，尚未暴露 /v1/env/catalog。请先部署最新的 worker/server。",
+                en: "Connected City is too old and does not expose /v1/env/catalog yet. Deploy the latest worker/server first.",
+            }));
             return undefined;
         }
-        await runtime.show_message("error", `Failed to fetch env catalog: ${adminErrorMessage(e)}`);
+        await runtime.show_message("error", t({
+            zh: `获取 env 目录失败：${adminErrorMessage(e)}`,
+            en: `Failed to fetch env catalog: ${adminErrorMessage(e)}`,
+        }));
         return undefined;
     }
 }

@@ -144,8 +144,8 @@ async function build_town_dashboard_state() {
     return {
         title: `Town v${version}`,
         subtitle: t({
-            zh: `runtime：${running ? "running" : "stopped"} · City：${build_city_subtitle(city_state)} · agent：${managed_agents}`,
-            en: `runtime: ${running ? "running" : "stopped"} · City: ${build_city_subtitle(city_state)} · agents: ${managed_agents}`,
+            zh: `runtime：${runtime_state_text(running)} · City：${build_city_subtitle(city_state)} · agent：${managed_agents}`,
+            en: `runtime: ${runtime_state_text(running)} · City: ${build_city_subtitle(city_state)} · agents: ${managed_agents}`,
         }),
         footer: t({
             zh: "Enter 进入动作 · Esc / q 退出 · ↑↓ 切换 · 当前入口：全屏 TUI",
@@ -246,7 +246,7 @@ function create_town_dashboard_shell(state) {
         width: "34%",
         height: "100%-3",
         border: "line",
-        label: " Sidebar ",
+        label: ` ${t({ zh: "侧边栏", en: "Sidebar" })} `,
         style: {
             border: { fg: "green" },
         },
@@ -270,7 +270,7 @@ function create_town_dashboard_shell(state) {
         width: "66%",
         height: "100%-3",
         border: "line",
-        label: " Main ",
+        label: ` ${t({ zh: "主区域", en: "Main" })} `,
         style: {
             border: { fg: "green" },
         },
@@ -329,13 +329,13 @@ function build_status_detail(params) {
     return t({
         zh: [
             `{bold}Town runtime{/bold}`,
-            `状态：${params.running ? "running" : "stopped"}`,
-            `PID：${params.pid ?? "unknown"}`,
+            `状态：${runtime_state_text(params.running)}`,
+            `PID：${params.pid ?? unknown_text()}`,
             "",
             `{bold}City 连接{/bold}`,
             `base：${params.city_state.city_url}`,
             `source：${params.city_state.source}`,
-            `user token：${params.city_state.has_user_token ? "configured" : "missing"}`,
+            `user token：${configured_state_text(params.city_state.has_user_token)}`,
             `town id：${params.city_state.town_id}`,
             "",
             `{bold}托管 Agent{/bold}`,
@@ -345,13 +345,13 @@ function build_status_detail(params) {
         ].join("\n"),
         en: [
             `{bold}Town runtime{/bold}`,
-            `state: ${params.running ? "running" : "stopped"}`,
-            `PID: ${params.pid ?? "unknown"}`,
+            `state: ${runtime_state_text(params.running)}`,
+            `PID: ${params.pid ?? unknown_text()}`,
             "",
             `{bold}City connection{/bold}`,
             `base: ${params.city_state.city_url}`,
             `source: ${params.city_state.source}`,
-            `user token: ${params.city_state.has_user_token ? "configured" : "missing"}`,
+            `user token: ${configured_state_text(params.city_state.has_user_token)}`,
             `town id: ${params.city_state.town_id}`,
             "",
             `{bold}Managed agents{/bold}`,
@@ -380,7 +380,7 @@ function build_city_detail(city_state) {
             `base：${city_state.city_url}`,
             `source：${city_state.source}`,
             `town id：${city_state.town_id}`,
-            `user token：${city_state.has_user_token ? "configured" : "missing"}`,
+            `user token：${configured_state_text(city_state.has_user_token)}`,
             city_state.user_id ? `user id：${city_state.user_id}` : "",
             "",
             "选择后进入现有 `town city` 交互管理器，继续 connect / use / login / recharge 等流程。",
@@ -390,12 +390,34 @@ function build_city_detail(city_state) {
             `base: ${city_state.city_url}`,
             `source: ${city_state.source}`,
             `town id: ${city_state.town_id}`,
-            `user token: ${city_state.has_user_token ? "configured" : "missing"}`,
+            `user token: ${configured_state_text(city_state.has_user_token)}`,
             city_state.user_id ? `user id: ${city_state.user_id}` : "",
             "",
             "Selecting this opens the existing `town city` interactive manager for connect, use, login, recharge, and related flows.",
         ].filter(Boolean).join("\n"),
     });
+}
+/**
+ * runtime 状态显示文案。
+ */
+function runtime_state_text(running) {
+    return running
+        ? t({ zh: "运行中", en: "running" })
+        : t({ zh: "已停止", en: "stopped" });
+}
+/**
+ * 配置状态显示文案。
+ */
+function configured_state_text(configured) {
+    return configured
+        ? t({ zh: "已配置", en: "configured" })
+        : t({ zh: "缺失", en: "missing" });
+}
+/**
+ * 未知值显示文案。
+ */
+function unknown_text() {
+    return t({ zh: "未知", en: "unknown" });
 }
 function format_list_label(item) {
     return item.title;

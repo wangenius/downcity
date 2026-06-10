@@ -13,7 +13,8 @@ import { t } from "../../i18n.js";
  */
 export async function manageModels(a, _baseUrl, runtime) {
     try {
-        const [modelResp, envCatalog] = await runtime.with_loading("Models", async () => await Promise.all([
+        const model_title = t({ zh: "模型", en: "Models" });
+        const [modelResp, envCatalog] = await runtime.with_loading(model_title, async () => await Promise.all([
             a.listModels(),
             a.env.catalog(),
         ]));
@@ -28,27 +29,39 @@ export async function manageModels(a, _baseUrl, runtime) {
             return;
         }
         await runtime.show_table({
-            title: `${items.length} Models`,
-            columns: ["Name", "Status", "Modalities", "Defaults", "Env", "Description"],
+            title: t({ zh: `${items.length} 个模型`, en: `${items.length} Models` }),
+            columns: [
+                t({ zh: "名称", en: "Name" }),
+                t({ zh: "状态", en: "Status" }),
+                t({ zh: "模态", en: "Modalities" }),
+                t({ zh: "默认值", en: "Defaults" }),
+                "Env",
+                t({ zh: "说明", en: "Description" }),
+            ],
             rows: items.map((model) => {
                 const requirements = model.env_requirements ?? [];
                 const missingEnv = requirements
                     .filter((item) => item.required && !envMap.get(item.key))
                     .map((item) => item.key);
-                const status = missingEnv.length === 0 ? "READY" : `MISSING ${missingEnv.join(", ")}`;
+                const status = missingEnv.length === 0
+                    ? t({ zh: "就绪", en: "READY" })
+                    : t({ zh: `缺失 ${missingEnv.join(", ")}`, en: `MISSING ${missingEnv.join(", ")}` });
                 const defaults = (model.default_modes ?? []).length > 0
-                    ? `default: ${(model.default_modes ?? []).join(", ")}`
-                    : "default: none";
+                    ? t({
+                        zh: `默认：${(model.default_modes ?? []).join(", ")}`,
+                        en: `default: ${(model.default_modes ?? []).join(", ")}`,
+                    })
+                    : t({ zh: "默认：无", en: "default: none" });
                 const envText = requirements.length > 0
                     ? requirements
                         .map((item) => `${item.key}${envMap.get(item.key) ? "✓" : "✗"}`)
                         .join(", ")
-                    : "none";
+                    : t({ zh: "无", en: "none" });
                 return {
                     cells: [
                         `${model.name} (${model.id})`,
                         status,
-                        model.modalities.join(", ") || "none",
+                        model.modalities.join(", ") || t({ zh: "无", en: "none" }),
                         defaults,
                         envText,
                         model.description ?? "",

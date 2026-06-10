@@ -4,6 +4,7 @@
 
 import { City } from "@downcity/city";
 import { buildStripeEndpoints } from "../../core/stripe.js";
+import { t } from "../../i18n.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
@@ -42,48 +43,51 @@ export async function managePayment(a: City, baseUrl: string, runtime: admin_tui
   const endpoints = buildStripeEndpoints(baseUrl);
   while (true) {
     const act = await runtime.select("Payment", [
-        { label: "Show webhook setup", value: "webhook", hint: endpoints.webhook_url },
-        { label: "List payments", value: "payments" },
-        { label: "List webhook events", value: "events" },
-        { label: "Back", value: "back" },
+        { label: t({ zh: "查看 webhook 配置", en: "Show webhook setup" }), value: "webhook", hint: endpoints.webhook_url },
+        { label: t({ zh: "查看支付记录", en: "List payments" }), value: "payments" },
+        { label: t({ zh: "查看 webhook 事件", en: "List webhook events" }), value: "events" },
+        { label: t({ zh: "返回", en: "Back" }), value: "back" },
       ]);
     if (!act || act === "back") return;
 
     try {
       if (act === "webhook") {
-        await runtime.show_text("Stripe Webhook Setup", [
-          `Server URL: ${endpoints.base_url}`,
-          `Stripe webhook endpoint: ${endpoints.webhook_url}`,
-          "Recommended Stripe events:",
+        await runtime.show_text(t({ zh: "Stripe Webhook 配置", en: "Stripe Webhook Setup" }), [
+          `${t({ zh: "Server URL", en: "Server URL" })}: ${endpoints.base_url}`,
+          `${t({ zh: "Stripe webhook endpoint", en: "Stripe webhook endpoint" })}: ${endpoints.webhook_url}`,
+          t({ zh: "推荐 Stripe events：", en: "Recommended Stripe events:" }),
           "- checkout.session.completed",
           "- checkout.session.expired",
           "- payment_intent.payment_failed",
-          "After creating the endpoint in Stripe Dashboard, copy its Signing secret into STRIPE_WEBHOOK_SECRET.",
+          t({
+            zh: "在 Stripe Dashboard 创建 endpoint 后，将 Signing secret 复制到 STRIPE_WEBHOOK_SECRET。",
+            en: "After creating the endpoint in Stripe Dashboard, copy its Signing secret into STRIPE_WEBHOOK_SECRET.",
+          }),
         ].join("\n"));
         continue;
       }
 
       if (act === "payments") {
-        const result = await runtime.with_loading("Payments", async () => await svc.get<{ items: StripePaymentListItem[] }>("payments"));
+        const result = await runtime.with_loading(t({ zh: "支付记录", en: "Payments" }), async () => await svc.get<{ items: StripePaymentListItem[] }>("payments"));
         await runtime.show_table({
-          title: `${result.items.length} Payments`,
-          columns: ["Updated", "User", "Amount", "Currency", "Status", "Payment ID"],
+          title: t({ zh: `${result.items.length} 条支付记录`, en: `${result.items.length} Payments` }),
+          columns: [t({ zh: "更新时间", en: "Updated" }), t({ zh: "用户", en: "User" }), t({ zh: "金额", en: "Amount" }), t({ zh: "币种", en: "Currency" }), t({ zh: "状态", en: "Status" }), "Payment ID"],
           rows: result.items.map((item) => ({
             cells: [item.updated_at.slice(0, 19), item.user_id, String(item.amount), item.currency, item.status, item.payment_id],
           })),
-          empty_message: "No payments.",
+          empty_message: t({ zh: "暂无支付记录。", en: "No payments." }),
         });
         continue;
       }
 
-      const result = await runtime.with_loading("Webhook Events", async () => await svc.get<{ items: StripeEventListItem[] }>("events"));
+      const result = await runtime.with_loading(t({ zh: "Webhook 事件", en: "Webhook Events" }), async () => await svc.get<{ items: StripeEventListItem[] }>("events"));
       await runtime.show_table({
-        title: `${result.items.length} Webhook Events`,
-        columns: ["Created", "Type", "Status", "Event ID", "Error"],
+        title: t({ zh: `${result.items.length} 条 Webhook 事件`, en: `${result.items.length} Webhook Events` }),
+        columns: [t({ zh: "创建时间", en: "Created" }), t({ zh: "类型", en: "Type" }), t({ zh: "状态", en: "Status" }), "Event ID", t({ zh: "错误", en: "Error" })],
         rows: result.items.map((item) => ({
           cells: [item.created_at.slice(0, 19), item.type, item.sync_status, item.event_id, item.sync_error || ""],
         })),
-        empty_message: "No webhook events.",
+        empty_message: t({ zh: "暂无 webhook 事件。", en: "No webhook events." }),
       });
     } catch (e) {
       rethrowAdminAuthError(e);

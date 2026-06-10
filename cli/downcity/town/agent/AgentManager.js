@@ -14,11 +14,10 @@ import { stopCommand } from "./Stop.js";
 import { restartCommand } from "./Restart.js";
 import { statusCommand } from "./Status.js";
 import { chatCommand } from "./AgentChat.js";
-import { listRegisteredAgentsForCli, resolveCliAgentStartProjectRoot, } from "./AgentSelection.js";
+import { listRegisteredAgentsForCli } from "./AgentSelection.js";
 import { emitCliBlock, emitCliList } from "../shared/CliReporter.js";
 import { injectAgentContext } from "../shared/IndexSupport.js";
 import { prepareForegroundAgent } from "../shared/TownAgentRuntime.js";
-import { CliError } from "../shared/CliError.js";
 import { getDowncityJsonPath } from "../config/Paths.js";
 import { PlatformStore } from "../town/store/index.js";
 import { t } from "../shared/CliLocale.js";
@@ -119,79 +118,71 @@ function formatAgentListDescription(agent) {
         en: `${agent.status} · execution: ${execution_binding} · chat accounts: ${channels}`,
     });
 }
-async function emitAgentManagerList() {
-    const agents = await loadAgentSummaries();
-    if (agents.length === 0) {
-        emitCliBlock({
-            tone: "info",
-            title: "Agents",
-            summary: "0 registered",
-            note: "Run `town agent start <path>` once to register an agent with Town.",
-        });
-        return;
-    }
-    emitCliList({
-        tone: "accent",
-        title: "Agents",
-        summary: `${agents.length} registered`,
-        items: agents.map((agent) => ({
-            tone: agent.status === "running" ? "success" : "info",
-            title: agent.id,
-            facts: [
-                { label: "Status", value: agent.status },
-                { label: "Execution", value: agent.execution_binding || "not configured" },
-                {
-                    label: "Channels",
-                    value: agent.channels.length > 0 ? agent.channels.join(", ") : "not connected",
-                },
-                { label: "Project", value: agent.projectRoot },
-            ],
-        })),
+function formatAgentDetail(agent) {
+    const execution_binding = agent.execution_binding || t({
+        zh: "未配置",
+        en: "not configured",
+    });
+    const channels = agent.channels.length > 0
+        ? agent.channels.join(", ")
+        : t({ zh: "未连接", en: "not connected" });
+    return t({
+        zh: [
+            `状态：${agent.status === "running" ? "运行中" : "已停止"}`,
+            `执行绑定：${execution_binding}`,
+            `Chat 账号：${channels}`,
+            `项目路径：${agent.projectRoot}`,
+            "",
+            "Enter 进入该 Agent 的管理面板，在里面启动、停止、重启、聊天或修改配置。",
+        ].join("\n"),
+        en: [
+            `Status: ${agent.status}`,
+            `Execution: ${execution_binding}`,
+            `Chat accounts: ${channels}`,
+            `Project: ${agent.projectRoot}`,
+            "",
+            "Press Enter to open this agent's management panel, then start, stop, restart, chat, or edit settings there.",
+        ].join("\n"),
     });
 }
-async function promptRootAction() {
+async function promptAgentListSelection() {
     const agents = await loadAgentSummaries();
-    const runningCount = agents.filter((agent) => agent.status === "running").length;
     const response = (await prompts({
         type: "select",
-        name: "action",
+        name: "selection",
         message: t({ zh: "Agent 管理", en: "Agent management" }),
         choices: [
             {
-                title: t({ zh: "管理", en: "Management" }),
+                title: t({ zh: "Agent 列表", en: "Agents" }),
                 disabled: true,
             },
+            ...agents.map((agent) => ({
+                title: agent.status === "running"
+                    ? t({ zh: `${agent.id} · 运行中`, en: `${agent.id} · running` })
+                    : t({ zh: `${agent.id} · 已停止`, en: `${agent.id} · stopped` }),
+                description: formatAgentDetail(agent),
+                value: {
+                    type: "agent",
+                    project_root: agent.projectRoot,
+                },
+            })),
             {
-                title: t({ zh: "查看 Agent 列表", en: "View agent list" }),
-                description: t({
-                    zh: `${agents.length} 个已登记，${runningCount} 个运行中。用于确认当前 Town 托管了哪些 Agent 项目。`,
-                    en: `${agents.length} registered, ${runningCount} running. Use this to see which agent projects Town manages.`,
-                }),
-                value: "list",
+                title: t({ zh: "操作", en: "Actions" }),
+                disabled: true,
             },
             {
                 title: t({ zh: "创建 Agent", en: "Create agent" }),
                 description: t({
-                    zh: "初始化一个新的 Agent 项目，并生成运行所需的基础配置。",
-                    en: "Initialize a new agent project with the required runtime configuration.",
+                    zh: agents.length === 0
+                        ? "当前还没有登记 Agent。创建一个新的 Agent 项目，并生成运行所需的基础配置。"
+                        : "创建一个新的 Agent 项目，并生成运行所需的基础配置。",
+                    en: agents.length === 0
+                        ? "No agents are registered yet. Create a new agent project with the required runtime configuration."
+                        : "Create a new agent project with the required runtime configuration.",
                 }),
-                value: "create",
-            },
-            {
-                title: t({ zh: "启动 Agent", en: "Start agent" }),
-                description: t({
-                    zh: "启动当前目录 Agent，或从已登记 Agent 中选择一个启动。",
-                    en: "Start the agent in the current directory, or choose one from registered agents.",
-                }),
-                value: "start",
-            },
-            {
-                title: t({ zh: "管理已有 Agent", en: "Manage existing agent" }),
-                description: t({
-                    zh: "进入单个 Agent 的运行时与配置面板，可查看状态、启动停止、聊天、修改 ID 和连接 Chat 账号。",
-                    en: "Open one agent's runtime and settings panel to inspect status, start/stop, chat, edit ID, and connect chat accounts.",
-                }),
-                value: "manage",
+                value: {
+                    type: "create",
+                },
             },
             {
                 title: t({ zh: "导航", en: "Navigation" }),
@@ -203,38 +194,14 @@ async function promptRootAction() {
                     zh: "关闭 Agent 管理器，返回终端。",
                     en: "Close the Agent manager and return to the terminal.",
                 }),
-                value: "exit",
+                value: {
+                    type: "exit",
+                },
             },
         ],
-        initial: 0,
+        initial: agents.length > 0 ? 1 : 2,
     }));
-    return response.action || null;
-}
-async function promptAgentProjectRoot() {
-    const agents = await loadAgentSummaries();
-    if (agents.length === 0) {
-        emitCliBlock({
-            tone: "info",
-            title: "No agents found",
-            note: "运行 `town agent create` 创建项目，或运行 `town agent start <path>` 登记已有项目。",
-        });
-        return null;
-    }
-    const response = (await prompts({
-        type: "select",
-        name: "projectRoot",
-        message: t({ zh: "选择要管理的 Agent", en: "Select an agent to manage" }),
-        choices: agents.map((agent) => ({
-            title: agent.id,
-            description: `${formatAgentListDescription(agent)} · ${agent.projectRoot}`,
-            value: agent.projectRoot,
-        })),
-        initial: 0,
-    }));
-    const projectRoot = String(response.projectRoot || "").trim();
-    if (!projectRoot)
-        return null;
-    return agents.find((agent) => agent.projectRoot === projectRoot) || null;
+    return response.selection || null;
 }
 async function promptAgentAction(agent) {
     const response = (await prompts({
@@ -334,20 +301,6 @@ async function promptCreateProjectPath() {
         return null;
     return String(response.projectPath || ".").trim() || ".";
 }
-async function promptStartProjectPath() {
-    const response = (await prompts({
-        type: "text",
-        name: "projectPath",
-        message: t({
-            zh: "要启动的 Agent 项目路径",
-            en: "Agent project path to start",
-        }),
-        initial: ".",
-    }));
-    if (response.projectPath === undefined)
-        return null;
-    return String(response.projectPath || ".").trim() || ".";
-}
 async function startAgentProject(projectRoot) {
     const options = {};
     const prepared = await prepareForegroundAgent(projectRoot, options);
@@ -367,32 +320,6 @@ async function runCreateFlow() {
         return;
     }
     await initCommand(projectPath, {});
-}
-async function runStartFlow() {
-    let projectRoot;
-    try {
-        projectRoot = await resolveCliAgentStartProjectRoot();
-    }
-    catch (error) {
-        if (error instanceof CliError && error.exitCode === 0)
-            return;
-        if (error instanceof CliError &&
-            (error.message === "No registered agents" || error.message === "Agent path is required")) {
-            const projectPath = await promptStartProjectPath();
-            if (!projectPath) {
-                emitCliBlock({
-                    tone: "info",
-                    title: "Agent start cancelled",
-                });
-                return;
-            }
-            projectRoot = projectPath;
-        }
-        else {
-            throw error;
-        }
-    }
-    await startAgentProject(projectRoot);
 }
 async function configureAgentId(agent) {
     const response = (await prompts({
@@ -576,10 +503,8 @@ async function connectAgentChannels(agent) {
     });
     return nextAgent;
 }
-async function runSelectedAgentManager() {
-    let agent = await promptAgentProjectRoot();
-    if (!agent)
-        return;
+async function runSelectedAgentManager(agent_input) {
+    let agent = agent_input;
     while (true) {
         agent = await reloadAgentSummary(agent.projectRoot, agent);
         const action = await promptAgentAction(agent);
@@ -653,8 +578,8 @@ export async function runInteractiveAgentManager() {
     if (!isInteractiveTerminal())
         return;
     while (true) {
-        const action = await promptRootAction();
-        if (!action || action === "exit") {
+        const selection = await promptAgentListSelection();
+        if (!selection || selection.type === "exit") {
             emitCliBlock({
                 tone: "info",
                 title: "Agent manager closed",
@@ -662,20 +587,22 @@ export async function runInteractiveAgentManager() {
             return;
         }
         try {
-            if (action === "list") {
-                await emitAgentManagerList();
-                continue;
-            }
-            if (action === "create") {
+            if (selection.type === "create") {
                 await runCreateFlow();
                 continue;
             }
-            if (action === "start") {
-                await runStartFlow();
-                continue;
-            }
-            if (action === "manage") {
-                await runSelectedAgentManager();
+            if (selection.type === "agent") {
+                const agents = await loadAgentSummaries();
+                const agent = agents.find((item) => item.projectRoot === selection.project_root);
+                if (!agent) {
+                    emitCliBlock({
+                        tone: "info",
+                        title: "Agent not found",
+                        note: selection.project_root,
+                    });
+                    continue;
+                }
+                await runSelectedAgentManager(agent);
             }
         }
         catch (error) {

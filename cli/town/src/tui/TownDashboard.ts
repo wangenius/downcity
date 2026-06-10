@@ -23,6 +23,7 @@ type town_home_action =
   | "restart"
   | "city"
   | "agent"
+  | "chat"
   | "plugin"
   | "language"
   | "help"
@@ -104,7 +105,7 @@ async function build_town_dashboard_state(): Promise<town_dashboard_state> {
     section_item("runtime", t({ zh: "运行时", en: "Runtime" })),
     {
       id: "status",
-      title: t({ zh: "查看总览", en: "View overview" }),
+      title: t({ zh: "Town 总览", en: "Town overview" }),
       subtitle: build_status_subtitle(running, managed_agents),
       detail: build_status_detail({
         running,
@@ -162,8 +163,20 @@ async function build_town_dashboard_state(): Promise<town_dashboard_state> {
         en: `${managed_agents} running agents`,
       }),
       detail: t({
-        zh: "进入 Agent 管理器，继续创建、查看、启动、停止、聊天与绑定配置。",
-        en: "Open the Agent manager to create, inspect, start, stop, chat, and configure bindings.",
+        zh: "进入 Agent 列表。右侧会展示当前聚焦 Agent 的状态；点进某个 Agent 后再启动、停止、重启、聊天或修改配置。列表底部可创建新的 Agent。",
+        en: "Open the Agent list. The main section shows the focused agent status; open an agent to start, stop, restart, chat, or edit settings. Create a new agent from the bottom of the list.",
+      }),
+    },
+    {
+      id: "chat",
+      title: t({ zh: "Chat 共享资源", en: "Chat shared resources" }),
+      subtitle: t({
+        zh: "管理 Town 级 Chat 账号与访问控制",
+        en: "manage Town-level chat accounts and access control",
+      }),
+      detail: t({
+        zh: "进入 Chat 账号列表。右侧会展示当前聚焦账号的渠道、身份、凭据摘要与更新时间；点进账号后再编辑或删除。列表底部可新增账号或进入访问控制。",
+        en: "Open the Chat account list. The main section shows the focused account's channel, identity, credential summary, and update time; open an account to edit or remove it. Add accounts or access control from the bottom of the list.",
       }),
     },
     {

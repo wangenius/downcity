@@ -29,13 +29,12 @@ town agent <subcommand>
 
 ## Interactive manager
 
-The interactive manager lets you:
+The interactive manager is list-first:
 
-- list registered agents
-- create an agent project
-- start an agent
-- pick an agent and see current status, name, City execution binding, and chat account connections before choosing an action
-- configure the agent id or connect Town-level chat accounts
+- Opening `town agent` shows the Agent list immediately.
+- Focusing an Agent shows its status, execution binding, chat account connections, and project path in the main panel.
+- Press Enter on an Agent to open its management panel, then start, stop, restart, chat, configure the Agent ID, or connect Town-level chat accounts.
+- Use the bottom list actions to create a new Agent or exit.
 
 It does not replace the subcommands below. It is a guided entry point for common local operations.
 
@@ -86,9 +85,9 @@ The examples below are aligned with current command implementations in `cli/town
 $ town agent
 town v1.0.0
 ? 管理 Agent
-  查看 agents
-  创建 agent
-  启动 agent
-  管理 agent - status, execution binding, chat accounts are shown before actions
+  Agent 列表
+  my-agent · running - status, execution binding, chat accounts, and project path are shown on focus
+  操作
+  创建 Agent
   退出
 ```

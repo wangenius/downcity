@@ -7,7 +7,7 @@
  * - 动作结束后返回仪表盘，形成统一终端操作台体验。
  */
 import type { tui_action_result } from "../types/Tui.js";
-type town_home_action = "status" | "start" | "stop" | "restart" | "city" | "agent" | "plugin" | "language" | "help" | "exit";
+type town_home_action = "status" | "start" | "stop" | "restart" | "city" | "agent" | "chat" | "plugin" | "language" | "help" | "exit";
 interface town_dashboard_options {
     /** 执行顶层动作。 */
     run_action: (action: town_home_action) => Promise<tui_action_result>;

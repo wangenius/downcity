@@ -2,12 +2,25 @@
  * `town agent` 交互式 manager 类型。
  */
 
-export type AgentManagerRootAction =
-  | "list"
-  | "create"
-  | "start"
-  | "manage"
-  | "exit";
+/**
+ * Agent 列表入口的选择结果。
+ */
+export type AgentManagerListSelection =
+  | {
+      /** 选择类型：进入某个已登记 Agent。 */
+      type: "agent";
+
+      /** 目标 Agent 项目根目录。 */
+      project_root: string;
+    }
+  | {
+      /** 选择类型：创建新的 Agent 项目。 */
+      type: "create";
+    }
+  | {
+      /** 选择类型：退出 Agent 管理器。 */
+      type: "exit";
+    };
 
 export type AgentManagerAgentAction =
   | "status"

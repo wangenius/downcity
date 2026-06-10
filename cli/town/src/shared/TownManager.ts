@@ -13,6 +13,7 @@ import {
   stopTownRuntimeCommand,
 } from "../town/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
+import { runInteractiveChatManager } from "./ChatManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { runInteractiveCityManager } from "./CityConnection.js";
 import { emitCliBlock } from "./CliReporter.js";
@@ -28,6 +29,7 @@ type TownHomeAction =
   | "restart"
   | "city"
   | "agent"
+  | "chat"
   | "plugin"
   | "language"
   | "help"
@@ -107,6 +109,10 @@ async function run_town_dashboard_action(
     }
     if (action === "agent") {
       await runInteractiveAgentManager();
+      return "refresh";
+    }
+    if (action === "chat") {
+      await runInteractiveChatManager();
       return "refresh";
     }
     if (action === "plugin") {

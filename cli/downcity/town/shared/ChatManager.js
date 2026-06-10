@@ -9,7 +9,7 @@
  */
 import prompts from "../tui/Prompts.js";
 import { ChatChannelAccountManager, } from "@downcity/plugins";
-import { emitCliBlock, emitCliList } from "./CliReporter.js";
+import { emitCliBlock } from "./CliReporter.js";
 import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";
 import { t } from "./CliLocale.js";
 const CHAT_CHANNELS = ["telegram", "feishu", "qq"];
@@ -37,52 +37,92 @@ function formatCredentialSummary(account) {
         parts.push("sandbox");
     return parts.join(" · ") || "no credentials";
 }
-async function promptRootAction() {
+function formatAccountDetail(account) {
+    return t({
+        zh: [
+            `账号 ID：${account.id}`,
+            `渠道：${account.channel}`,
+            `名称：${account.name}`,
+            account.identity ? `身份：${account.identity}` : "",
+            `凭据：${formatCredentialSummary(account)}`,
+            `更新时间：${account.updatedAt}`,
+            "",
+            "Enter 进入该 Chat 账号的管理面板，在里面编辑或删除账号。",
+        ].filter(Boolean).join("\n"),
+        en: [
+            `Account ID: ${account.id}`,
+            `Channel: ${account.channel}`,
+            `Name: ${account.name}`,
+            account.identity ? `Identity: ${account.identity}` : "",
+            `Credentials: ${formatCredentialSummary(account)}`,
+            `Updated: ${account.updatedAt}`,
+            "",
+            "Press Enter to open this chat account's management panel, then edit or remove it there.",
+        ].filter(Boolean).join("\n"),
+    });
+}
+async function promptChatListSelection() {
     const manager = createChannelAccountManager();
     const accounts = await manager.list();
     const response = (await prompts({
         type: "select",
-        name: "action",
+        name: "selection",
         message: t({
-            zh: "管理 chat plugin 共享资源",
+            zh: "Chat 共享资源",
             en: "Manage chat plugin shared resources",
         }),
         choices: [
             {
                 title: t({
-                    zh: "管理",
-                    en: "Management",
+                    zh: "Chat 账号",
+                    en: "Chat accounts",
+                }),
+                disabled: true,
+            },
+            ...accounts.items.map((account) => ({
+                title: formatAccountTitle(account),
+                description: formatAccountDetail(account),
+                value: {
+                    type: "account",
+                    account_id: account.id,
+                },
+            })),
+            {
+                title: t({
+                    zh: "操作",
+                    en: "Actions",
                 }),
                 disabled: true,
             },
             {
                 title: t({
-                    zh: "Chat 账号管理",
-                    en: "Chat account management",
+                    zh: "新增 Chat 账号",
+                    en: "Add chat account",
                 }),
                 description: t({
-                    zh: `${accounts.items.length} 个 Town 级共享账号。Agent 只绑定这些账号，不在 Agent 内重复保存密钥。`,
-                    en: `${accounts.items.length} Town-level shared accounts. Agents bind to these accounts instead of duplicating credentials.`,
+                    zh: accounts.items.length === 0
+                        ? "当前还没有 Chat 账号。新增 Telegram、Feishu 或 QQ 账号，保存为 Town 级共享资源。"
+                        : "新增 Telegram、Feishu 或 QQ 账号，保存为 Town 级共享资源。",
+                    en: accounts.items.length === 0
+                        ? "No chat accounts are configured yet. Add a Telegram, Feishu, or QQ account as a Town-level shared resource."
+                        : "Add a Telegram, Feishu, or QQ account as a Town-level shared resource.",
                 }),
-                value: "configureAccounts",
+                value: {
+                    type: "add",
+                },
             },
             {
                 title: t({
                     zh: "访问控制",
-                    en: "Manage access control",
+                    en: "Access control",
                 }),
                 description: t({
-                    zh: "给 Chat 用户分配 access role，控制哪些外部用户可以访问 Agent。",
-                    en: "Assign access roles to chat users and control which external users can access agents.",
+                    zh: "给 Chat 用户分配 access role，控制外部用户访问 Agent 的权限。",
+                    en: "Assign access roles to chat users and control external access to agents.",
                 }),
-                value: "configureAccess",
-            },
-            {
-                title: t({
-                    zh: "导航",
-                    en: "Navigation",
-                }),
-                disabled: true,
+                value: {
+                    type: "access",
+                },
             },
             {
                 title: t({
@@ -93,52 +133,30 @@ async function promptRootAction() {
                     zh: "关闭 chat manager",
                     en: "Close the chat manager",
                 }),
-                value: "exit",
+                value: {
+                    type: "exit",
+                },
             },
         ],
-        initial: 0,
+        initial: accounts.items.length > 0 ? 1 : 2,
     }));
-    return response.action || null;
+    return response.selection || null;
 }
-async function promptChatAccountAction() {
-    const manager = createChannelAccountManager();
-    const accounts = await manager.list();
+async function promptChatAccountAction(account) {
     const response = (await prompts({
         type: "select",
         name: "action",
         message: t({
-            zh: "管理 chat plugin 共享资源",
-            en: "Manage chat plugin shared resources",
+            zh: `管理 Chat 账号 · ${account.name}`,
+            en: `Manage chat account · ${account.name}`,
         }),
         choices: [
             {
                 title: t({
                     zh: "账号",
-                    en: "Accounts",
+                    en: "Account",
                 }),
                 disabled: true,
-            },
-            {
-                title: t({
-                    zh: "查看 Chat 账号",
-                    en: "View accounts",
-                }),
-                description: t({
-                    zh: `${accounts.items.length} 个已配置账号。用于确认 Town 全局账号池里的渠道、身份和密钥状态。`,
-                    en: `${accounts.items.length} configured accounts. Use this to inspect channels, identities, and credential status in the Town global account pool.`,
-                }),
-                value: "list",
-            },
-            {
-                title: t({
-                    zh: "新增 Chat 账号",
-                    en: "Add account",
-                }),
-                description: t({
-                    zh: "新增 Telegram、Feishu 或 QQ 账号，保存为 Town 级共享资源。",
-                    en: "Add a Telegram, Feishu, or QQ account",
-                }),
-                value: "add",
             },
             {
                 title: t({
@@ -146,8 +164,8 @@ async function promptChatAccountAction() {
                     en: "Edit account",
                 }),
                 description: t({
-                    zh: "修改账号名称、域名或密钥；留空的密钥字段会保持不变。",
-                    en: "Edit name, domain, or credentials",
+                    zh: `${formatCredentialSummary(account)}。修改账号名称、域名或密钥；留空的密钥字段会保持不变。`,
+                    en: `${formatCredentialSummary(account)}. Edit name, domain, or credentials; empty credential fields keep the current value.`,
                 }),
                 value: "edit",
             },
@@ -164,24 +182,6 @@ async function promptChatAccountAction() {
             },
             {
                 title: t({
-                    zh: "权限",
-                    en: "Access",
-                }),
-                disabled: true,
-            },
-            {
-                title: t({
-                    zh: "访问控制",
-                    en: "Manage access control",
-                }),
-                description: t({
-                    zh: "给 Chat 用户分配 access role，控制外部用户访问 Agent 的权限。",
-                    en: "Assign access roles to chat users and control external access to agents.",
-                }),
-                value: "configureAccess",
-            },
-            {
-                title: t({
                     zh: "导航",
                     en: "Navigation",
                 }),
@@ -193,8 +193,8 @@ async function promptChatAccountAction() {
                     en: "Back",
                 }),
                 description: t({
-                    zh: "回到 chat plugin 共享资源菜单",
-                    en: "Return to the chat shared resources menu",
+                    zh: "回到 Chat 账号列表。",
+                    en: "Return to the chat account list.",
                 }),
                 value: "back",
             },
@@ -203,37 +203,10 @@ async function promptChatAccountAction() {
     }));
     return response.action || null;
 }
-async function emitChatAccountList() {
+async function reloadChatAccount(account_id) {
     const manager = createChannelAccountManager();
     const { items } = await manager.list();
-    if (items.length === 0) {
-        emitCliBlock({
-            tone: "info",
-            title: t({
-                zh: "Chat accounts",
-                en: "Chat accounts",
-            }),
-            summary: "0 configured",
-            note: t({
-                zh: "在 `town chat` 中选择“管理 chat accounts”后新增 Telegram、Feishu 或 QQ account。",
-                en: "Add a Telegram, Feishu, or QQ account from `town chat` -> `Manage chat accounts`.",
-            }),
-        });
-        return;
-    }
-    emitCliList({
-        tone: "accent",
-        title: "Chat accounts",
-        summary: `${items.length} configured`,
-        items: items.map((account) => ({
-            title: formatAccountTitle(account),
-            facts: [
-                { label: "ID", value: account.id },
-                { label: "Credentials", value: formatCredentialSummary(account) },
-                { label: "Updated", value: account.updatedAt },
-            ],
-        })),
-    });
+    return items.find((account) => account.id === account_id) || null;
 }
 async function chooseChannel() {
     const response = (await prompts({
@@ -254,40 +227,6 @@ async function chooseChannel() {
         initial: 0,
     }));
     return response.channel || null;
-}
-async function chooseAccount() {
-    const manager = createChannelAccountManager();
-    const { items } = await manager.list();
-    if (items.length === 0) {
-        emitCliBlock({
-            tone: "info",
-            title: t({
-                zh: "未找到 Town chat account",
-                en: "No Town chat accounts found",
-            }),
-            note: t({
-                zh: "请先新增一个 Telegram、Feishu 或 QQ account。",
-                en: "Add a Telegram, Feishu, or QQ account first.",
-            }),
-        });
-        return null;
-    }
-    const response = (await prompts({
-        type: "select",
-        name: "id",
-        message: t({
-            zh: "选择 Chat 账号",
-            en: "Select chat account",
-        }),
-        choices: items.map((account) => ({
-            title: formatAccountTitle(account),
-            description: `${account.id} · ${formatCredentialSummary(account)}`,
-            value: account.id,
-        })),
-        initial: 0,
-    }));
-    const id = String(response.id || "").trim();
-    return items.find((item) => item.id === id) || null;
 }
 async function promptCredentialFields(params) {
     const questions = [
@@ -392,10 +331,7 @@ async function addChannelAccount() {
         note: result.message || (result.probed ? "bot 信息已探测" : "已按输入信息保存"),
     });
 }
-async function editChannelAccount() {
-    const account = await chooseAccount();
-    if (!account)
-        return;
+async function editChannelAccount(account) {
     const input = await promptCredentialFields({
         channel: account.channel,
         current: account,
@@ -416,11 +352,9 @@ async function editChannelAccount() {
         title: "Chat account updated",
         summary: account.id,
     });
+    return await reloadChatAccount(account.id) || account;
 }
-async function removeChannelAccount() {
-    const account = await chooseAccount();
-    if (!account)
-        return;
+async function removeChannelAccount(account) {
     const response = (await prompts({
         type: "confirm",
         name: "remove",
@@ -431,7 +365,7 @@ async function removeChannelAccount() {
         initial: false,
     }));
     if (response.remove !== true)
-        return;
+        return false;
     const manager = createChannelAccountManager();
     await manager.remove(account.id);
     emitCliBlock({
@@ -439,31 +373,33 @@ async function removeChannelAccount() {
         title: "Chat account removed",
         summary: account.id,
     });
+    return true;
 }
-async function runChatAccountManager() {
+async function runChatAccountManager(account_input) {
+    let account = account_input;
     while (true) {
-        const action = await promptChatAccountAction();
+        const latest_account = await reloadChatAccount(account.id);
+        if (!latest_account) {
+            emitCliBlock({
+                tone: "info",
+                title: "Chat account no longer exists",
+                summary: account.id,
+            });
+            return;
+        }
+        account = latest_account;
+        const action = await promptChatAccountAction(account);
         if (!action || action === "back")
             return;
         try {
-            if (action === "list") {
-                await emitChatAccountList();
-                continue;
-            }
-            if (action === "add") {
-                await addChannelAccount();
-                continue;
-            }
             if (action === "edit") {
-                await editChannelAccount();
+                account = await editChannelAccount(account);
                 continue;
             }
             if (action === "remove") {
-                await removeChannelAccount();
-                continue;
-            }
-            if (action === "configureAccess") {
-                await runInteractiveChatAuthSetFlow();
+                const removed = await removeChannelAccount(account);
+                if (removed)
+                    return;
             }
         }
         catch (error) {
@@ -482,8 +418,8 @@ export async function runInteractiveChatManager() {
     if (!isInteractiveTerminal())
         return;
     while (true) {
-        const action = await promptRootAction();
-        if (!action || action === "exit") {
+        const selection = await promptChatListSelection();
+        if (!selection || selection.type === "exit") {
             emitCliBlock({
                 tone: "info",
                 title: "Chat manager closed",
@@ -491,12 +427,25 @@ export async function runInteractiveChatManager() {
             return;
         }
         try {
-            if (action === "configureAccounts") {
-                await runChatAccountManager();
+            if (selection.type === "add") {
+                await addChannelAccount();
                 continue;
             }
-            if (action === "configureAccess") {
+            if (selection.type === "access") {
                 await runInteractiveChatAuthSetFlow();
+                continue;
+            }
+            if (selection.type === "account") {
+                const account = await reloadChatAccount(selection.account_id);
+                if (!account) {
+                    emitCliBlock({
+                        tone: "info",
+                        title: "Chat account not found",
+                        summary: selection.account_id,
+                    });
+                    continue;
+                }
+                await runChatAccountManager(account);
             }
         }
         catch (error) {

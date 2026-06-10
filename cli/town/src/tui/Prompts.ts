@@ -869,7 +869,7 @@ function format_choice_detail(choice?: prompt_choice): string {
   }
 
   const hint = choice_description(choice);
-  const value = choice.value === undefined ? "" : String(choice.value);
+  const value = format_display_value(choice.value);
 
   return [
     `{bold}${title}{/bold}`,
@@ -895,6 +895,16 @@ function choice_description(choice?: {
     zh: `选择 ${title}`,
     en: `Select ${title}`,
   });
+}
+
+function format_display_value(value: unknown): string {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
 }
 
 /**

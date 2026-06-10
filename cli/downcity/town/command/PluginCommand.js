@@ -141,6 +141,69 @@ function listStaticCatalogEntries() {
 function findStaticCatalogEntry(pluginName) {
     return listStaticCatalogEntries().find((item) => item.name === pluginName) || null;
 }
+function formatPluginDescription(plugin) {
+    return t({
+        zh: [
+            `标题：${plugin.title || plugin.name}`,
+            `类型：${plugin.kind}`,
+            `Actions：${plugin.actions.join(", ") || "none"}`,
+            `System：${plugin.hasSystem ? "yes" : "no"}`,
+            plugin.note ? `说明：${plugin.note}` : "",
+            "",
+            "Enter 查看该 Plugin 的完整能力详情。Town 只展示能力目录，具体运行态归属于 Agent。",
+        ].filter(Boolean).join("\n"),
+        en: [
+            `Title: ${plugin.title || plugin.name}`,
+            `Kind: ${plugin.kind}`,
+            `Actions: ${plugin.actions.join(", ") || "none"}`,
+            `System: ${plugin.hasSystem ? "yes" : "no"}`,
+            plugin.note ? `Note: ${plugin.note}` : "",
+            "",
+            "Press Enter to inspect this plugin's full capability details. Town shows the catalog; runtime belongs to agents.",
+        ].filter(Boolean).join("\n"),
+    });
+}
+async function promptPluginSelection() {
+    const plugins = listStaticCatalogEntries();
+    const response = (await prompts({
+        type: "select",
+        name: "selection",
+        message: t({
+            zh: "Plugin 能力",
+            en: "Plugin capabilities",
+        }),
+        choices: [
+            {
+                title: t({ zh: "Plugin 列表", en: "Plugins" }),
+                disabled: true,
+            },
+            ...plugins.map((plugin) => ({
+                title: plugin.name,
+                description: formatPluginDescription(plugin),
+                value: {
+                    type: "plugin",
+                    plugin_name: plugin.name,
+                },
+            })),
+            {
+                title: t({ zh: "导航", en: "Navigation" }),
+                disabled: true,
+            },
+            {
+                title: t({ zh: "退出", en: "Exit" }),
+                description: t({
+                    zh: "关闭 Plugin 能力管理器，返回终端。",
+                    en: "Close the Plugin capability manager and return to the terminal.",
+                }),
+                value: {
+                    type: "exit",
+                },
+            },
+        ],
+        initial: plugins.length > 0 ? 1 : 2,
+    }));
+    return response.selection || null;
+}
 async function promptPluginName(message) {
     const plugins = listStaticCatalogEntries();
     const response = (await prompts({
@@ -159,53 +222,6 @@ async function promptPluginName(message) {
     }));
     const pluginName = String(response.pluginName || "").trim();
     return pluginName || null;
-}
-async function promptPluginRootAction() {
-    const plugins = listStaticCatalogEntries();
-    const response = (await prompts({
-        type: "select",
-        name: "action",
-        message: t({
-            zh: "Plugin 能力",
-            en: "Plugin capabilities",
-        }),
-        choices: [
-            {
-                title: t({ zh: "管理", en: "Management" }),
-                disabled: true,
-            },
-            {
-                title: t({ zh: "查看 Plugin 目录", en: "View plugin catalog" }),
-                description: t({
-                    zh: `${plugins.length} 个 Agent 可用 Plugin。用于确认当前已注册启用的能力、类型和 action 数量。`,
-                    en: `${plugins.length} plugins available to agents. Use this to inspect registered capabilities, kinds, and action counts.`,
-                }),
-                value: "catalog",
-            },
-            {
-                title: t({ zh: "查看 Plugin 详情", en: "View plugin details" }),
-                description: t({
-                    zh: "选择一个 Plugin，查看 actions、system 能力与运行边界；Town 只展示目录，具体运行态归属于 Agent。",
-                    en: "Choose a plugin to inspect actions, system capability, and runtime boundaries; Town shows the catalog while runtime belongs to agents.",
-                }),
-                value: "info",
-            },
-            {
-                title: t({ zh: "导航", en: "Navigation" }),
-                disabled: true,
-            },
-            {
-                title: t({ zh: "退出", en: "Exit" }),
-                description: t({
-                    zh: "关闭 Plugin 能力管理器，返回终端。",
-                    en: "Close the Plugin capability manager and return to the terminal.",
-                }),
-                value: "exit",
-            },
-        ],
-        initial: 0,
-    }));
-    return response.action || null;
 }
 async function resolveInteractivePluginName(params) {
     const explicit = String(params.pluginName || "").trim();
@@ -322,8 +338,8 @@ export async function runInteractivePluginManager() {
         return;
     }
     while (true) {
-        const action = await promptPluginRootAction();
-        if (!action || action === "exit") {
+        const selection = await promptPluginSelection();
+        if (!selection || selection.type === "exit") {
             emitCliBlock({
                 tone: "info",
                 title: "Plugin manager closed",
@@ -331,14 +347,9 @@ export async function runInteractivePluginManager() {
             return;
         }
         try {
-            if (action === "catalog") {
-                await runPluginListCommand({
-                    json: false,
-                });
-                continue;
-            }
-            if (action === "info") {
+            if (selection.type === "plugin") {
                 await runPluginInfoCommand({
+                    pluginName: selection.plugin_name,
                     options: {
                         json: false,
                     },

@@ -8,6 +8,7 @@
 import { gatewayStatusCommand } from "../town/gateway/runtime/GatewayStatus.js";
 import { restartTownRuntimeCommand, startTownRuntimeCommand, stopTownRuntimeCommand, } from "../town/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
+import { runInteractiveChatManager } from "./ChatManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { runInteractiveCityManager } from "./CityConnection.js";
 import { emitCliBlock } from "./CliReporter.js";
@@ -63,6 +64,10 @@ async function run_town_dashboard_action(action, params) {
         }
         if (action === "agent") {
             await runInteractiveAgentManager();
+            return "refresh";
+        }
+        if (action === "chat") {
+            await runInteractiveChatManager();
             return "refresh";
         }
         if (action === "plugin") {

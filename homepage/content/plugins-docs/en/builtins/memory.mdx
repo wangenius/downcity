@@ -1,75 +1,105 @@
 ---
 title: memory Plugin
-description: Memory storage, retrieval, runtime state, and session-aware memory flushing
+description: Agent long-term memory plugin backed by an LLM Wiki structure
 ---
 
 # `memory` Plugin
 
-`memory` is the agent memory plugin.
+`memory` is the agent long-term memory plugin. It exposes memory capabilities to the agent while organizing durable knowledge as an LLM Wiki internally.
 
 It provides:
 
-- memory storage
-- memory search
-- memory file reads
-- session-to-memory flushing
+- memory wiki search
+- memory wiki reads
+- explicit facts, preferences, and decisions
+- session-to-wiki digest
+- wiki page revision with new evidence
 - memory system text
 
-## Main shape
+## Main Shape
 
 - `lifecycle`
 - `actions`
 - `system`
 
-## What it is for
+## Storage Shape
 
-Use `memory` when you need:
+```text
+.downcity/memory/
+  wiki/       # curated knowledge layer primarily read by agents
+  sources/    # raw evidence from sessions and manual inputs
+```
 
-- searchable long-term or daily memory
-- explicit memory writes
-- reading memory file fragments
-- flushing one session's recent messages into memory
+`wiki/` is the main long-term memory surface. `sources/` is evidence and rebuild material. Search defaults to the wiki layer; include sources only when evidence is needed.
 
-## How users use it
+## Constructor Injection
+
+LLM digest/revise capabilities are passed through the constructor:
+
+```ts
+import { MemoryPlugin } from "@downcity/plugins";
+
+const memory = new MemoryPlugin({
+  digest: async (input) => {
+    return {
+      pages: [
+        {
+          path: "project-decisions.md",
+          title: "Project Decisions",
+          content: "Compiled wiki markdown",
+        },
+      ],
+      summary: "Updated project decisions.",
+    };
+  },
+  revise: async (input) => {
+    return {
+      path: input.path,
+      content: "Full revised wiki markdown",
+    };
+  },
+});
+```
+
+If `digest` or `revise` is not provided, the plugin falls back to deterministic behavior: archive the source and append to wiki pages without calling a model.
+
+## How Users Use It
 
 Use the `town memory` shortcut for normal local operation:
 
 ```bash
 town memory status
 town memory search "project decision" --max-results 5
-town memory store --content "Prefer concise release notes." --target longterm
-town memory get .downcity/memory/daily/2026-06-06.md --from 1 --lines 20
-town memory flush --session-id <sessionId> --max-messages 30
+town memory read .downcity/memory/wiki/project-decisions.md --from 1 --lines 20
+town memory remember --content "Prefer constructor-based plugin config." --topic "plugin system"
+town memory digest --session-id <sessionId> --max-messages 30
+town memory revise .downcity/memory/wiki/plugin-system.md --instruction "Merge the latest constructor config decision"
 ```
 
-`store` supports `longterm`, `daily`, and `working`. When writing to `working`, also provide `--session-id` so the memory is tied to the correct session.
-
-## SDK action use
+## SDK Action Use
 
 ```ts
 await agent.plugins.runAction({
   plugin: "memory",
-  action: "store",
+  action: "remember",
   payload: {
-    content: "Prefer concise release notes.",
-    target: "longterm",
+    content: "User preference: plugin config is passed through constructors.",
+    topic: "plugin system",
   },
 });
 ```
 
-The action names are `status`, `search`, `get`, `store`, and `flush`.
+The action names are `status`, `search`, `read`, `remember`, `digest`, and `revise`.
 
-## Important semantics
+## Important Semantics
 
-- runtime state belongs to the plugin instance
-- memory enablement is separate from whether the plugin exists in code
-- some actions are session-aware, especially `flush`
+- MemoryPlugin is LLM Wiki style memory, not a vector database.
+- `wiki/` is the primary durable knowledge layer for agents.
+- `sources/` is evidence and is excluded from search unless `includeSources` is set.
+- LLM capabilities are injected through the constructor, not read from project config files.
+- Memory enablement is separate from whether the plugin exists in code.
 
-## Public status
-
-`MemoryPlugin` is built-in in code, but it is primarily a platform runtime plugin rather than a main package-root SDK plugin export.
-
-## Related docs
+## Related Docs
 
 - [Plugin System](/en/agent-sdk-docs/plugins/plugin-system)
 - [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions)

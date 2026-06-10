@@ -44,6 +44,19 @@ town plugin command shell close --payload '{"shellId":"<shellId>","force":true}'
 
 ## SDK action use
 
+You can instantiate it directly and optionally override runtime parameters. If omitted, the built-in defaults are used:
+
+```ts
+import { ShellPlugin } from "@downcity/plugins";
+
+const shell = new ShellPlugin({
+  maxActiveShells: 64,
+  defaultExecTimeoutMs: 60_000,
+  defaultWaitTimeoutMs: 10_000,
+  cleanupDelayMs: 10 * 60 * 1000,
+});
+```
+
 ```ts
 await agent.plugins.runAction({
   plugin: "shell",
@@ -59,6 +72,7 @@ The action names are `exec`, `start`, `status`, `read`, `write`, `wait`, and `cl
 ## Important semantics
 
 - shell sessions belong to the plugin instance, not to a module-global singleton
+- constructor parameters are optional runtime tuning values; defaults preserve the built-in behavior
 - `shell` does not own the sandbox. Each command is spawned inside the current agent sandbox, whose persistent directory is `.downcity/sandbox`
 - `shellId` only identifies the session log and process lifecycle under `.downcity/shell/<shellId>`; it does not decide sandbox HOME, cache, or permissions
 - Sandbox commands can read and write the project, use network by default, and share `.downcity/sandbox` as `HOME`
@@ -68,7 +82,7 @@ The action names are `exec`, `start`, `status`, `read`, `write`, `wait`, and `cl
 
 ## Public status
 
-`ShellPlugin` exists as a built-in runtime plugin in code, but it is not one of the main package-root public plugin exports today.
+`ShellPlugin` is a built-in runtime plugin and can be imported directly from the `@downcity/plugins` package root.
 
 ## Related docs
 

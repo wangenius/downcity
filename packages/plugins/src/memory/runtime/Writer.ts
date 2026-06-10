@@ -1,28 +1,28 @@
 /**
- * Memory Writer（读写与路径安全）。
+ * Memory Writer（LLM Wiki 文件读写与路径安全）。
  *
  * 关键点（中文）
- * - 统一处理 get/store 的路径白名单。
- * - 只允许访问 memory 目录与 working 记忆文件。
+ * - `sources/` 保存原始证据，`wiki/` 保存整理后的长期记忆。
+ * - 所有外部传入路径都必须限制在 `.downcity/memory` 或 session working memory 内。
+ * - 无 LLM 注入时使用 append fallback，保证 MemoryPlugin 仍然可用。
  */
 
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type {
-  MemoryGetPayload,
-  MemoryGetResponse,
-  MemorySourceType,
-  MemoryStorePayload,
-  MemoryStoreResponse,
+  MemoryReadPayload,
+  MemoryReadResponse,
+  MemoryRevisePayload,
+  MemoryReviseResponse,
+  MemoryWikiPageDraft,
 } from "@/memory/types/Memory.js";
-import type { MemoryRuntimeState } from "./Store.js";
 
 function nowIso(): string {
   return new Date().toISOString();
 }
 
-function resolveDateStamp(now: Date = new Date()): string {
+function dateStamp(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 
@@ -37,77 +37,42 @@ function isWithin(parentPath: string, childPath: string): boolean {
   return child.startsWith(`${parent}${path.sep}`);
 }
 
-function resolveStoreTargetPath(
-  context: AgentContext,
-  target: MemorySourceType,
-  sessionId?: string,
-): { absPath: string; relPath: string } {
-  if (target === "longterm") {
-    const absPath = path.join(context.rootPath, ".downcity", "memory", "MEMORY.md");
-    return { absPath, relPath: toRelPath(context.rootPath, absPath) };
-  }
-  if (target === "daily") {
-    const date = resolveDateStamp();
-    const absPath = path.join(context.rootPath, ".downcity", "memory", "daily", `${date}.md`);
-    return { absPath, relPath: toRelPath(context.rootPath, absPath) };
-  }
-  const key = String(sessionId || "").trim();
-  if (!key) {
-    throw new Error("sessionId is required for working memory");
-  }
-  const absPath = path.join(
-    context.paths.getDowncitySessionDirPath(key),
-    "memory",
-    "working.md",
-  );
-  return { absPath, relPath: toRelPath(context.rootPath, absPath) };
+function slugify(value: string): string {
+  const text = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return text || "inbox";
 }
 
-function ensureHeading(target: MemorySourceType): string {
-  if (target === "longterm") {
-    return "# MEMORY\n";
-  }
-  if (target === "daily") {
-    return "# Daily Memory\n";
-  }
-  return "# Working Memory\n";
-}
-
-function formatEntry(content: string): string {
-  const clean = String(content || "").trim();
+function normalizeMarkdownPath(value: string): string {
+  const clean = String(value || "")
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "")
+    .trim();
   if (!clean) return "";
-  return `### ${nowIso()}\n\n${clean}\n`;
+  return clean.toLowerCase().endsWith(".md") ? clean : `${clean}.md`;
 }
 
-/**
- * 显式写入 memory。
- */
-export async function storeMemory(
-  context: AgentContext,
-  state: MemoryRuntimeState,
-  payload: MemoryStorePayload,
-): Promise<MemoryStoreResponse> {
-  void state;
-  const target: MemorySourceType = payload.target ?? "daily";
-  const content = String(payload.content || "").trim();
-  if (!content) {
-    throw new Error("content is required");
+function resolveWikiPath(context: AgentContext, requestedPath?: string, title?: string): {
+  absPath: string;
+  relPath: string;
+} {
+  const memoryRoot = path.join(context.rootPath, ".downcity", "memory");
+  const wikiRoot = path.join(memoryRoot, "wiki");
+  const normalized = normalizeMarkdownPath(requestedPath || slugify(title || "inbox"));
+  const withoutPrefix = normalized
+    .replace(/^\.downcity\/memory\/wiki\//, "")
+    .replace(/^wiki\//, "");
+  const absPath = path.resolve(wikiRoot, withoutPrefix);
+  if (!isWithin(wikiRoot, absPath)) {
+    throw new Error("wiki path is not allowed");
   }
-  const resolved = resolveStoreTargetPath(context, target, payload.sessionId);
-  await fs.mkdir(path.dirname(resolved.absPath), { recursive: true });
-  const exists = await fs
-    .access(resolved.absPath)
-    .then(() => true)
-    .catch(() => false);
-  if (!exists) {
-    await fs.writeFile(resolved.absPath, ensureHeading(target), "utf-8");
-  }
-  const entry = formatEntry(content);
-  await fs.appendFile(resolved.absPath, `\n${entry}`, "utf-8");
   return {
-    path: resolved.relPath,
-    target,
-    writtenChars: entry.length,
+    absPath,
+    relPath: toRelPath(context.rootPath, absPath),
   };
 }
 
@@ -131,13 +96,96 @@ function resolveAllowedReadPath(context: AgentContext, relPath: string): string 
   return absPath;
 }
 
+function buildSourceEntry(content: string, source?: string): string {
+  const clean = String(content || "").trim();
+  const sourceText = source ? `Source: ${source}\n\n` : "";
+  return `## ${nowIso()}\n\n${sourceText}${clean}\n`;
+}
+
+function buildFallbackWikiEntry(payload: {
+  content: string;
+  sourcePath?: string;
+  instruction?: string;
+}): string {
+  const lines = [
+    `## ${nowIso()}`,
+    "",
+    ...(payload.instruction ? [`Instruction: ${payload.instruction}`, ""] : []),
+    payload.content.trim(),
+    "",
+    ...(payload.sourcePath ? [`Source: ${payload.sourcePath}`, ""] : []),
+  ];
+  return lines.join("\n");
+}
+
+function ensureFrontmatter(draft: MemoryWikiPageDraft): string {
+  const content = String(draft.content || "").trim();
+  if (content.startsWith("---")) {
+    return `${content}\n`;
+  }
+  const title = String(draft.title || "Memory Page").trim();
+  const tags = draft.tags && draft.tags.length > 0
+    ? draft.tags.map((tag) => String(tag).trim()).filter(Boolean)
+    : ["memory"];
+  return [
+    "---",
+    `title: ${JSON.stringify(title)}`,
+    `date: ${dateStamp()}`,
+    `tags: [${tags.map((tag) => JSON.stringify(tag)).join(", ")}]`,
+    "---",
+    "",
+    content,
+    "",
+  ].join("\n");
+}
+
+async function readTextIfExists(absPath: string): Promise<string> {
+  try {
+    return String(await fs.readFile(absPath, "utf-8"));
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * 初始化 memory wiki 目录结构（幂等）。
+ */
+export async function ensureMemoryDirectories(rootPath: string): Promise<void> {
+  const memoryRoot = path.join(rootPath, ".downcity", "memory");
+  await fs.mkdir(path.join(memoryRoot, "wiki"), { recursive: true });
+  await fs.mkdir(path.join(memoryRoot, "sources", "manual"), { recursive: true });
+  await fs.mkdir(path.join(memoryRoot, "sources", "sessions"), { recursive: true });
+
+  const indexPath = path.join(memoryRoot, "wiki", "index.md");
+  const exists = await fs
+    .access(indexPath)
+    .then(() => true)
+    .catch(() => false);
+  if (!exists) {
+    await fs.writeFile(
+      indexPath,
+      [
+        "---",
+        'title: "Memory Index"',
+        `date: ${dateStamp()}`,
+        'tags: ["memory", "index"]',
+        "---",
+        "",
+        "This is the root index for the agent-maintained LLM Wiki memory.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+  }
+}
+
 /**
  * 读取指定记忆文件（支持行区间）。
  */
-export async function getMemory(
+export async function readMemory(
   context: AgentContext,
-  payload: MemoryGetPayload,
-): Promise<MemoryGetResponse> {
+  payload: MemoryReadPayload,
+): Promise<MemoryReadResponse> {
   const requestedPath = String(payload.path || "").trim();
   if (!requestedPath) {
     throw new Error("path is required");
@@ -165,9 +213,142 @@ export async function getMemory(
 }
 
 /**
- * 初始化 memory 目录结构（幂等）。
+ * 读取 wiki index 内容。
  */
-export async function ensureMemoryDirectories(rootPath: string): Promise<void> {
-  const memoryDailyDir = path.join(rootPath, ".downcity", "memory", "daily");
-  await fs.mkdir(memoryDailyDir, { recursive: true });
+export async function readWikiIndex(context: AgentContext): Promise<string> {
+  const indexPath = path.join(context.rootPath, ".downcity", "memory", "wiki", "index.md");
+  return await readTextIfExists(indexPath);
+}
+
+/**
+ * 归档手动 source。
+ */
+export async function appendManualSource(
+  context: AgentContext,
+  content: string,
+  source?: string,
+): Promise<{ path: string; writtenChars: number }> {
+  const absPath = path.join(
+    context.rootPath,
+    ".downcity",
+    "memory",
+    "sources",
+    "manual",
+    `${dateStamp()}.md`,
+  );
+  await fs.mkdir(path.dirname(absPath), { recursive: true });
+  const entry = buildSourceEntry(content, source);
+  await fs.appendFile(absPath, `\n${entry}`, "utf-8");
+  return {
+    path: toRelPath(context.rootPath, absPath),
+    writtenChars: entry.length,
+  };
+}
+
+/**
+ * 写入 session source。
+ */
+export async function writeSessionSource(
+  context: AgentContext,
+  sessionId: string,
+  content: string,
+): Promise<{ path: string; writtenChars: number }> {
+  const safeSessionId = slugify(sessionId);
+  const absPath = path.join(
+    context.rootPath,
+    ".downcity",
+    "memory",
+    "sources",
+    "sessions",
+    `${safeSessionId}.md`,
+  );
+  const text = [
+    "---",
+    `title: ${JSON.stringify(`Session ${sessionId}`)}`,
+    `date: ${dateStamp()}`,
+    'tags: ["memory-source", "session"]',
+    "---",
+    "",
+    `# Session ${sessionId}`,
+    "",
+    content.trim(),
+    "",
+  ].join("\n");
+  await fs.mkdir(path.dirname(absPath), { recursive: true });
+  await fs.writeFile(absPath, text, "utf-8");
+  return {
+    path: toRelPath(context.rootPath, absPath),
+    writtenChars: text.length,
+  };
+}
+
+/**
+ * 写入完整 wiki page。
+ */
+export async function writeWikiPage(
+  context: AgentContext,
+  draft: MemoryWikiPageDraft,
+): Promise<{ path: string; writtenChars: number }> {
+  const resolved = resolveWikiPath(context, draft.path, draft.title);
+  const content = ensureFrontmatter(draft);
+  await fs.mkdir(path.dirname(resolved.absPath), { recursive: true });
+  await fs.writeFile(resolved.absPath, content, "utf-8");
+  return {
+    path: resolved.relPath,
+    writtenChars: content.length,
+  };
+}
+
+/**
+ * 追加写入 wiki page。
+ */
+export async function appendWikiPage(
+  context: AgentContext,
+  payload: {
+    path?: string;
+    title?: string;
+    content: string;
+    sourcePath?: string;
+    instruction?: string;
+  },
+): Promise<{ path: string; writtenChars: number }> {
+  const resolved = resolveWikiPath(context, payload.path, payload.title);
+  await fs.mkdir(path.dirname(resolved.absPath), { recursive: true });
+  const exists = await fs
+    .access(resolved.absPath)
+    .then(() => true)
+    .catch(() => false);
+  if (!exists) {
+    await writeWikiPage(context, {
+      path: resolved.relPath,
+      title: payload.title || "Memory Inbox",
+      content: "This page is maintained by MemoryPlugin fallback writes.",
+      tags: ["memory"],
+    });
+  }
+  const entry = buildFallbackWikiEntry(payload);
+  await fs.appendFile(resolved.absPath, `\n${entry}`, "utf-8");
+  return {
+    path: resolved.relPath,
+    writtenChars: entry.length,
+  };
+}
+
+/**
+ * 使用 fallback 方式修订 wiki page。
+ */
+export async function appendMemoryRevision(
+  context: AgentContext,
+  payload: MemoryRevisePayload,
+): Promise<MemoryReviseResponse> {
+  const written = await appendWikiPage(context, {
+    path: payload.path,
+    content: String(payload.evidence || "").trim() || "(no evidence)",
+    instruction: payload.instruction,
+  });
+  return {
+    path: written.path,
+    mode: "appended",
+    writtenChars: written.writtenChars,
+  };
 }

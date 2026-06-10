@@ -14,6 +14,7 @@ Use it when you want shell execution that belongs to the agent runtime instead o
 - shell session ownership belongs to the managed shell plugin runtime
 - start/stop cleanup belongs to plugin lifecycle
 - command execution and session state stay tied to the target agent
+- shell runtime parameters come from the SDK constructor and are optional; the CLI only calls the shell plugin already registered on the target agent
 
 ## Recommended path
 

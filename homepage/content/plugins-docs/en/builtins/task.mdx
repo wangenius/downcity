@@ -43,6 +43,20 @@ town task delete daily-summary
 
 Use `town chat send --delay/--time` or another plugin action with `--delay/--time` for a one-shot delayed action. Use `town task` when the automation should remain as a named, editable task.
 
+## SDK Assembly
+
+`TaskPlugin` can be used with no options. By default, it uses the current machine timezone. If cron tasks should use a fixed timezone, pass `timezone` at the constructor root:
+
+```ts
+import { TaskPlugin } from "@downcity/plugins";
+
+const plugin = new TaskPlugin({
+  timezone: "Asia/Shanghai",
+});
+```
+
+`timezone` mainly affects cron expressions. One-shot `time:<ISO8601-with-timezone>` tasks use the timezone offset embedded in the ISO string itself.
+
 ## SDK action use
 
 ```ts
@@ -61,12 +75,14 @@ The action names are `list`, `create`, `run`, `delete`, `update`, `status`, `ena
 ## Important semantics
 
 - long-lived cron runtime belongs to the plugin instance
+- cron timezone comes from constructor `timezone`, defaulting to the local machine timezone
 - task scheduler reload is triggered after create, update, delete, or status mutation
+- the running-task lock belongs to the plugin instance, so reloads still keep each task serial
 - the plugin can also accept lifecycle commands such as reload or reschedule
 
 ## Public status
 
-`TaskPlugin` is built-in in code, but it is primarily a platform runtime plugin rather than one of the main package-root public SDK plugin exports.
+`TaskPlugin` is exported from `@downcity/plugins`. It can be attached directly in SDK usage, although the most common path is still through the agent runtime and `town task`.
 
 ## Related docs
 

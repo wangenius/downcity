@@ -14,6 +14,7 @@ import type {
   ShellPluginState,
   ShellSessionRuntimeState,
 } from "@/shell/ShellRuntimeTypes.js";
+import type { ShellPluginOptions } from "@/shell/types/ShellPluginOptions.js";
 import type {
   ShellCloseRequest,
   ShellExecRequest,
@@ -60,9 +61,9 @@ export class ShellPlugin extends BasePlugin {
    */
   public readonly sessions: Map<string, ShellSessionRuntimeState>;
 
-  constructor() {
+  constructor(options: ShellPluginOptions = {}) {
     super();
-    this.state = createShellPluginState();
+    this.state = createShellPluginState(options);
     this.sessions = this.state.sessions;
     this.actions = {
       exec: {
@@ -121,7 +122,7 @@ export class ShellPlugin extends BasePlugin {
           }
         }
         this.state.sessions.clear();
-        this.state.boundRuntime = null;
+        this.state.context = null;
       },
     };
   }

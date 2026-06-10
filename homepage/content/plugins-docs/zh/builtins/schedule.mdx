@@ -29,7 +29,7 @@ description: plugin action 延迟/定时重派发的内部调度基础设施
 
 ```bash
 town chat send --chat-key <chatKey> --text "Later" --delay 60000
-town memory store --content "Remember this later" --target daily --time "2026-06-06T09:00:00+08:00"
+town memory remember --content "Remember this later" --time "2026-06-06T09:00:00+08:00"
 ```
 
 通过 `town plugin schedule` 查看或取消 scheduled job：

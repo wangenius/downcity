@@ -29,6 +29,9 @@ export { WebPlugin } from "./web/Plugin.js";
 export { AsrPlugin } from "./asr/Plugin.js";
 export { TtsPlugin } from "./tts/Plugin.js";
 export { WorkboardPlugin } from "./workboard/Plugin.js";
+export { TaskPlugin } from "./task/TaskPlugin.js";
+export { MemoryPlugin } from "./memory/MemoryPlugin.js";
+export { ShellPlugin } from "./shell/ShellPlugin.js";
 export {
   listChatAuthorizationRoles,
   readChatAuthorizationConfigSync,
@@ -59,6 +62,38 @@ export type {
   ChatPluginOptions,
 } from "./chat/types/ChatPluginOptions.js";
 export type { ContactPluginOptions } from "./contact/types/ContactPluginOptions.js";
+export type { TaskPluginOptions } from "./task/types/TaskPluginOptions.js";
+export type {
+  ResolvedShellPluginOptions,
+  ShellPluginOptions,
+} from "./shell/types/ShellPluginOptions.js";
+export type {
+  MemoryActionPayload,
+  MemoryDefaults,
+  MemoryDigestHandler,
+  MemoryDigestHandlerInput,
+  MemoryDigestHandlerOutput,
+  MemoryDigestPayload,
+  MemoryDigestResponse,
+  MemoryPluginOptions,
+  MemoryReadPayload,
+  MemoryReadResponse,
+  MemoryRememberPayload,
+  MemoryRememberResponse,
+  MemoryReviseHandler,
+  MemoryReviseHandlerInput,
+  MemoryReviseHandlerOutput,
+  MemoryRevisePayload,
+  MemoryReviseResponse,
+  MemorySearchMode,
+  MemorySearchPayload,
+  MemorySearchResponse,
+  MemorySearchResultItem,
+  MemorySourceStat,
+  MemorySourceType,
+  MemoryStatusResponse,
+  MemoryWikiPageDraft,
+} from "./memory/types/Memory.js";
 export type {
   AsrPluginInput,
   AsrPluginOptions,

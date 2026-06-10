@@ -1,11 +1,10 @@
 /**
- * Memory Store（文件与运行态管理）。
+ * Memory Store（文件枚举与轻量运行态）。
  *
  * 关键点（中文）
- * - 管理 Memory service 的最小运行时状态。
- * - 统一管理 memory 源文件枚举。
- * - 不承载检索算法，检索在 Search 模块。
- * - 新版本不再使用 module-global state，状态归属 MemoryService 实例。
+ * - MemoryPlugin 使用 LLM Wiki 结构：`wiki/` 是知识层，`sources/` 是证据层。
+ * - 当前实现不维护后台索引，扫描 Markdown 即可工作。
+ * - 运行态只保存 rootPath，避免伪装成有后台 worker 的复杂 runtime。
  */
 
 import type { Dirent } from "node:fs";
@@ -28,10 +27,12 @@ export type MemorySourceFile = {
    * 来源分类。
    */
   source: MemorySourceType;
+
   /**
    * 绝对路径。
    */
   absPath: string;
+
   /**
    * 相对项目根目录路径。
    */
@@ -87,29 +88,59 @@ async function listMarkdownFilesRecursively(dirPath: string): Promise<string[]> 
   return out;
 }
 
+async function pushMarkdownTree(
+  out: MemorySourceFile[],
+  rootPath: string,
+  dirPath: string,
+  source: MemorySourceType,
+): Promise<void> {
+  for (const absPath of await listMarkdownFilesRecursively(dirPath)) {
+    out.push({
+      source,
+      absPath,
+      relPath: normalizeRelPath(rootPath, absPath),
+    });
+  }
+}
+
 /**
- * 枚举 memory 源文件。
+ * 枚举 memory Markdown 文件。
  */
 export async function listMemorySourceFiles(
   rootPath: string,
+  options: { includeSources?: boolean } = {},
 ): Promise<MemorySourceFile[]> {
   const out: MemorySourceFile[] = [];
-  const longterm = path.join(rootPath, ".downcity", "memory", "MEMORY.md");
-  if (await pathExists(longterm)) {
-    out.push({
-      source: "longterm",
-      absPath: longterm,
-      relPath: normalizeRelPath(rootPath, longterm),
-    });
-  }
+  await pushMarkdownTree(
+    out,
+    rootPath,
+    path.join(rootPath, ".downcity", "memory", "wiki"),
+    "wiki",
+  );
 
-  const dailyDir = path.join(rootPath, ".downcity", "memory", "daily");
-  for (const abs of await listMarkdownFilesRecursively(dailyDir)) {
-    out.push({
-      source: "daily",
-      absPath: abs,
-      relPath: normalizeRelPath(rootPath, abs),
-    });
+  if (options.includeSources) {
+    await pushMarkdownTree(
+      out,
+      rootPath,
+      path.join(rootPath, ".downcity", "memory", "sources"),
+      "source",
+    );
+
+    // 旧版 daily / MEMORY.md 被当作 source 层读取，避免已有文件突然不可检索。
+    const longterm = path.join(rootPath, ".downcity", "memory", "MEMORY.md");
+    if (await pathExists(longterm)) {
+      out.push({
+        source: "source",
+        absPath: longterm,
+        relPath: normalizeRelPath(rootPath, longterm),
+      });
+    }
+    await pushMarkdownTree(
+      out,
+      rootPath,
+      path.join(rootPath, ".downcity", "memory", "daily"),
+      "source",
+    );
   }
 
   const sessionRootDir = path.join(rootPath, ".downcity", "session");
@@ -144,10 +175,6 @@ export async function listMemorySourceFiles(
 
 /**
  * 创建一个新的 memory plugin state。
- *
- * 关键点（中文）
- * - 每个 `MemoryPlugin` 实例都持有自己的 state。
- * - 不再按 rootPath 落到模块级 Map，避免 plugin runtime 实例之间共享状态。
  */
 export function createMemoryRuntimeState(
   context: AgentContext,
@@ -155,28 +182,4 @@ export function createMemoryRuntimeState(
   return {
     rootPath: context.rootPath,
   };
-}
-
-/**
- * 启动 memory 运行时。
- *
- * 关键点（中文）
- * - Markdown-only 方案下不再维护后台索引同步。
- * - 注册了 memory plugin 就视为启用，不再额外读取项目配置开关。
- */
-export async function startMemoryRuntime(
-  _context: AgentContext,
-  state: MemoryRuntimeState,
-): Promise<void> {
-  void _context;
-  void state;
-}
-
-/**
- * 停止 memory 运行时。
- */
-export async function stopMemoryRuntime(
-  _state: MemoryRuntimeState,
-): Promise<void> {
-  void _state;
 }

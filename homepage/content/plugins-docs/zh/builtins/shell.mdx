@@ -44,6 +44,19 @@ town plugin command shell close --payload '{"shellId":"<shellId>","force":true}'
 
 ## SDK action 用法
 
+可以直接实例化，并按需覆盖 runtime 参数；不传时使用默认值：
+
+```ts
+import { ShellPlugin } from "@downcity/plugins";
+
+const shell = new ShellPlugin({
+  maxActiveShells: 64,
+  defaultExecTimeoutMs: 60_000,
+  defaultWaitTimeoutMs: 10_000,
+  cleanupDelayMs: 10 * 60 * 1000,
+});
+```
+
 ```ts
 await agent.plugins.runAction({
   plugin: "shell",
@@ -59,6 +72,7 @@ action 名称是 `exec`、`start`、`status`、`read`、`write`、`wait`、`clos
 ## 关键语义
 
 - shell sessions 归属于 plugin 实例，而不是模块级全局单例
+- constructor 参数都是可选 runtime 调参；默认值保持内建行为不变
 - `shell` 不拥有 sandbox。每条命令都会进入当前 agent sandbox 执行，持久目录是 `.downcity/sandbox`
 - `shellId` 只标识 `.downcity/shell/<shellId>` 下的会话日志与进程生命周期，不决定 sandbox HOME、cache 或权限
 - sandbox 命令默认可读写项目目录、可联网，并共享 `.downcity/sandbox` 作为 `HOME`
@@ -68,7 +82,7 @@ action 名称是 `exec`、`start`、`status`、`read`、`write`、`wait`、`clos
 
 ## 公开性说明
 
-`ShellPlugin` 在代码里是 built-in runtime plugin，但当前并不是包根主公开的 plugin export 之一。
+`ShellPlugin` 是 built-in runtime plugin，也可以从 `@downcity/plugins` 包根直接导入。
 
 ## 相关文档
 

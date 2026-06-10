@@ -31,12 +31,9 @@ import { getShellDir, getShellOutputPath, getShellSnapshotPath } from "./Paths.j
 import {
   buildActionResponse,
   buildShellEnv,
-  clampWaitMs,
+  clampWaitMsWithOptions,
   createOutputChunk,
   createShellPluginState,
-  DEFAULT_EXEC_TIMEOUT_MS,
-  DEFAULT_INLINE_WAIT_MS,
-  DEFAULT_WAIT_TIMEOUT_MS,
   ensureCapacity,
   isInMemorySession,
   isTerminalStatus,
@@ -65,7 +62,7 @@ export function bindShellRuntime(
   state: ShellPluginState,
   context: AgentContext,
 ): void {
-  state.boundRuntime = context;
+  state.context = context;
 }
 
 /**
@@ -189,7 +186,11 @@ export async function startShellSession(
   attachShellProcessEventHandlers({ state, session });
   await persistSnapshot(session);
 
-  const inlineWaitMs = clampWaitMs(request.inlineWaitMs, DEFAULT_INLINE_WAIT_MS);
+  const inlineWaitMs = clampWaitMsWithOptions(
+    state.options,
+    request.inlineWaitMs,
+    state.options.defaultInlineWaitMs,
+  );
   await waitShellSession(state, context, {
     shellId,
     afterVersion: 1,
@@ -351,7 +352,11 @@ export async function waitShellSession(
       };
       const timer = setTimeout(() => {
         finish();
-      }, clampWaitMs(request.timeoutMs, DEFAULT_WAIT_TIMEOUT_MS));
+      }, clampWaitMsWithOptions(
+        state.options,
+        request.timeoutMs,
+        state.options.defaultWaitTimeoutMs,
+      ));
       waiter = {
         resolve: finish,
         timer,
@@ -445,13 +450,17 @@ export async function execShellCommand(
   context: AgentContext,
   request: ShellExecRequest,
 ): Promise<ShellActionResponse> {
-  const timeoutMs = clampWaitMs(request.timeoutMs, DEFAULT_EXEC_TIMEOUT_MS);
+  const timeoutMs = clampWaitMsWithOptions(
+    state.options,
+    request.timeoutMs,
+    state.options.defaultExecTimeoutMs,
+  );
   const started = await startShellSession(state, context, {
     cmd: request.cmd,
     ...(request.cwd ? { cwd: request.cwd } : {}),
     ...(request.shell ? { shell: request.shell } : {}),
     login: request.login,
-    inlineWaitMs: Math.min(DEFAULT_INLINE_WAIT_MS, timeoutMs),
+    inlineWaitMs: Math.min(state.options.defaultInlineWaitMs, timeoutMs),
     maxOutputTokens: request.maxOutputTokens,
     autoNotifyOnExit: false,
   });

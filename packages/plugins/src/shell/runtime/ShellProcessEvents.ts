@@ -44,13 +44,13 @@ export function attachShellProcessEventHandlers(params: {
   const { state, session } = params;
   const { child } = session;
   child.stdout.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(session, String(chunk ?? "")).catch(() => undefined);
+    void appendSessionOutput(state, session, String(chunk ?? "")).catch(() => undefined);
   });
   child.stderr.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(session, String(chunk ?? "")).catch(() => undefined);
+    void appendSessionOutput(state, session, String(chunk ?? "")).catch(() => undefined);
   });
   child.on("error", (error: Error) => {
-    void appendSessionOutput(session, `\n[process error] ${String(error)}\n`).catch(
+    void appendSessionOutput(state, session, `\n[process error] ${String(error)}\n`).catch(
       () => undefined,
     );
     void finalizeExitAfterOutputDrain(state, session, -1).catch(() => undefined);

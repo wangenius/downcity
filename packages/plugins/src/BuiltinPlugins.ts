@@ -22,6 +22,9 @@ import { TtsPlugin } from "@/tts/Plugin.js";
 import type { ImagePluginOptions } from "@/image/types/ImagePlugin.js";
 import type { AsrPluginOptions } from "@/asr/types/AsrPlugin.js";
 import type { TtsPluginOptions } from "@/tts/types/TtsPlugin.js";
+import type { TaskPluginOptions } from "@/task/types/TaskPluginOptions.js";
+import type { MemoryPluginOptions } from "@/memory/types/Memory.js";
+import type { ShellPluginOptions } from "@/shell/types/ShellPluginOptions.js";
 
 /**
  * 内建 plugin class 构造器。
@@ -62,13 +65,36 @@ export interface BuiltinPluginOptions {
    * 文本转语音 plugin 的 City AI 能力注入。
    */
   tts?: TtsPluginOptions;
+
+  /**
+   * task plugin 的定时任务运行参数。
+   */
+  task?: TaskPluginOptions;
+
+  /**
+   * memory plugin 的 LLM Wiki 能力注入。
+   */
+  memory?: MemoryPluginOptions;
+
+  /**
+   * shell plugin 的可选 runtime 参数。
+   */
+  shell?: ShellPluginOptions;
 }
 
 /**
  * 创建完整内建 plugin 实例集合。
  */
 export function createBuiltinPlugins(options: BuiltinPluginOptions = {}): BasePlugin[] {
-  const plugins = BUILTIN_PLUGIN_CLASSES.map((PluginClass) => new PluginClass());
+  const plugins = BUILTIN_PLUGIN_CLASSES.map((PluginClass) =>
+    PluginClass === TaskPlugin
+      ? new TaskPlugin(options.task)
+      : PluginClass === MemoryPlugin
+        ? new MemoryPlugin(options.memory)
+        : PluginClass === ShellPlugin
+          ? new ShellPlugin(options.shell)
+      : new PluginClass(),
+  );
   if (options.image?.image_create && options.image?.image_result) {
     plugins.push(new ImagePlugin(options.image));
   }

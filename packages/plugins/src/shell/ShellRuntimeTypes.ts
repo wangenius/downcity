@@ -10,6 +10,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { ShellSessionSnapshot } from "@downcity/agent/internal/executor/tools/shell/types/ShellPlugin.js";
+import type { ResolvedShellPluginOptions } from "@/shell/types/ShellPluginOptions.js";
 
 /**
  * 单个 shell wait 调用挂起时注册的 waiter。
@@ -80,15 +81,19 @@ export type ShellSessionRuntimeState = {
  */
 export type ShellPluginState = {
   /**
+   * 当前 shell plugin 归一化后的运行参数。
+   */
+  options: ResolvedShellPluginOptions;
+  /**
    * 当前实例持有的全部 in-memory shell session。
    */
   sessions: Map<string, ShellSessionRuntimeState>;
   /**
-   * 当前实例最近一次绑定的 execution runtime。
+   * 当前实例最近一次启动时绑定的 agent context。
    *
    * 关键点（中文）
    * - 仅用于 shell 自动通知 chat 的回调路径。
    * - 这是实例字段，不再是模块级全局变量。
    */
-  boundRuntime: AgentContext | null;
+  context: AgentContext | null;
 };

@@ -1,21 +1,28 @@
 /**
- * Memory Service Action 逻辑。
+ * Memory Plugin action 逻辑。
  *
  * 关键点（中文）
- * - 只处理业务动作，不包含 CLI/API 参数映射细节。
- * - 所有动作统一返回结构化结果，失败不抛给上层。
+ * - action 面向 agent 的记忆语义：search/read/remember/digest/revise。
+ * - 原始证据先进入 sources，长期知识进入 wiki。
+ * - LLM digest/revise 能力由 MemoryPlugin constructor 注入。
  */
 
+import type { UIDataTypes, UIMessagePart, UITools } from "ai";
+import { isTextUIPart } from "ai";
 import type { PluginActionResult } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import type {
-  MemoryFlushPayload,
-  MemoryGetPayload,
+  MemoryDigestPayload,
+  MemoryDigestResponse,
+  MemoryPluginOptions,
+  MemoryReadPayload,
+  MemoryRememberPayload,
+  MemoryRememberResponse,
+  MemoryRevisePayload,
+  MemoryReviseResponse,
   MemorySearchPayload,
-  MemoryStorePayload,
 } from "@/memory/types/Memory.js";
-import { flushMemory } from "./runtime/Flush.js";
 import {
   collectMemoryStatus,
   searchMemory,
@@ -24,7 +31,93 @@ import {
   MEMORY_DEFAULTS,
   type MemoryRuntimeState,
 } from "./runtime/Store.js";
-import { getMemory, storeMemory } from "./runtime/Writer.js";
+import {
+  appendManualSource,
+  appendMemoryRevision,
+  appendWikiPage,
+  readMemory,
+  readWikiIndex,
+  writeSessionSource,
+  writeWikiPage,
+} from "./runtime/Writer.js";
+
+type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
+
+function toUiParts(message: { parts?: AnyUiMessagePart[] } | null | undefined): AnyUiMessagePart[] {
+  return Array.isArray(message?.parts) ? message.parts : [];
+}
+
+function extractReadableLine(message: {
+  role?: string;
+  parts?: AnyUiMessagePart[];
+}): string {
+  const role = String(message.role || "").toLowerCase() === "user" ? "User" : "Assistant";
+  const text = toUiParts(message)
+    .filter(isTextUIPart)
+    .map((part) => String(part.text || "").trim())
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+  if (!text) {
+    return "";
+  }
+  return `${role}: ${text}`;
+}
+
+function readDigestPages(result: Awaited<ReturnType<NonNullable<MemoryPluginOptions["digest"]>>>): {
+  pages: Array<{ path?: string; title?: string; content: string; tags?: string[] }>;
+  summary?: string;
+} {
+  if (typeof result === "string") {
+    return {
+      pages: [{ title: "Memory Digest", content: result, tags: ["memory", "digest"] }],
+    };
+  }
+  return {
+    pages: result.pages,
+    summary: result.summary,
+  };
+}
+
+function readReviseResult(
+  result: Awaited<ReturnType<NonNullable<MemoryPluginOptions["revise"]>>>,
+  fallbackPath: string,
+): { path: string; content: string; summary?: string } {
+  if (typeof result === "string") {
+    return {
+      path: fallbackPath,
+      content: result,
+    };
+  }
+  return {
+    path: result.path || fallbackPath,
+    content: result.content,
+    summary: result.summary,
+  };
+}
+
+function slugify(value: string): string {
+  const text = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return text || "inbox";
+}
+
+function toWikiMemoryPath(value: string): string {
+  const clean = String(value || "").replace(/\\/g, "/").replace(/^\/+/, "").trim();
+  if (!clean) return ".downcity/memory/wiki/inbox.md";
+  if (clean.startsWith(".downcity/memory/wiki/")) {
+    return clean.toLowerCase().endsWith(".md") ? clean : `${clean}.md`;
+  }
+  const withoutPrefix = clean.replace(/^wiki\//, "");
+  const withExt = withoutPrefix.toLowerCase().endsWith(".md")
+    ? withoutPrefix
+    : `${withoutPrefix}.md`;
+  return `.downcity/memory/wiki/${withExt}`;
+}
 
 /**
  * status action。
@@ -70,14 +163,14 @@ export async function searchMemoryAction(
 }
 
 /**
- * get action。
+ * read action。
  */
-export async function getMemoryAction(
+export async function readMemoryAction(
   context: AgentContext,
-  payload: MemoryGetPayload,
+  payload: MemoryReadPayload,
 ): Promise<PluginActionResult<JsonValue>> {
   try {
-    const data = await getMemory(context, payload);
+    const data = await readMemory(context, payload);
     return { success: true, data: data as unknown as JsonValue };
   } catch (error) {
     return {
@@ -88,16 +181,65 @@ export async function getMemoryAction(
 }
 
 /**
- * store action。
+ * remember action。
  */
-export async function storeMemoryAction(
+export async function rememberMemoryAction(
   context: AgentContext,
-  state: MemoryRuntimeState,
-  payload: MemoryStorePayload,
+  options: MemoryPluginOptions,
+  payload: MemoryRememberPayload,
 ): Promise<PluginActionResult<JsonValue>> {
   try {
-    const data = await storeMemory(context, state, payload);
-    return { success: true, data: data as unknown as JsonValue };
+    const content = String(payload.content || "").trim();
+    if (!content) {
+      throw new Error("content is required");
+    }
+    const source = await appendManualSource(context, content, payload.source);
+    const targetPath = toWikiMemoryPath(payload.path || slugify(payload.topic || "inbox"));
+
+    if (options.revise) {
+      const current = await readMemory(context, { path: targetPath }).catch(() => ({
+        path: targetPath,
+        text: "",
+      }));
+      const revised = readReviseResult(
+        await options.revise({
+          rootPath: context.rootPath,
+          path: targetPath,
+          currentContent: current.text,
+          instruction: "Integrate this new memory into the wiki page. Deduplicate and keep it concise.",
+          evidence: `${content}\n\nSource: ${source.path}`,
+        }),
+        targetPath,
+      );
+      const written = await writeWikiPage(context, {
+        path: revised.path,
+        title: payload.topic,
+        content: revised.content,
+        tags: ["memory"],
+      });
+      const response: MemoryRememberResponse = {
+        sourcePath: source.path,
+        wikiPath: written.path,
+        mode: "revised",
+        writtenChars: written.writtenChars,
+        summary: revised.summary,
+      };
+      return { success: true, data: response as unknown as JsonValue };
+    }
+
+    const written = await appendWikiPage(context, {
+      path: targetPath,
+      title: payload.topic || "Memory Inbox",
+      content,
+      sourcePath: source.path,
+    });
+    const response: MemoryRememberResponse = {
+      sourcePath: source.path,
+      wikiPath: written.path,
+      mode: "appended",
+      writtenChars: written.writtenChars,
+    };
+    return { success: true, data: response as unknown as JsonValue };
   } catch (error) {
     return {
       success: false,
@@ -107,16 +249,135 @@ export async function storeMemoryAction(
 }
 
 /**
- * flush action。
+ * digest action。
  */
-export async function flushMemoryAction(
+export async function digestMemoryAction(
   context: AgentContext,
-  state: MemoryRuntimeState,
-  payload: MemoryFlushPayload,
-): Promise<PluginActionResult> {
+  options: MemoryPluginOptions,
+  payload: MemoryDigestPayload,
+): Promise<PluginActionResult<JsonValue>> {
   try {
-    const data = await flushMemory(context, state, payload);
-    return { success: true, data: data as unknown as JsonValue };
+    const sessionId = String(payload.sessionId || "").trim();
+    if (!sessionId) {
+      throw new Error("sessionId is required");
+    }
+    const maxMessages = Number.isFinite(payload.maxMessages)
+      ? Math.max(1, Math.floor(payload.maxMessages as number))
+      : 30;
+    const historyStore = context.session.get(sessionId).getHistoryStore();
+    const total = await historyStore.size();
+    const start = Math.max(0, total - maxMessages);
+    const messages = await historyStore.slice(start, total);
+    const lines = messages
+      .map((msg) => extractReadableLine(msg))
+      .filter((line) => line.length > 0);
+    const transcript =
+      lines.length > 0
+        ? lines.join("\n\n")
+        : "本次 digest 未找到可写入的用户/助手文本内容。";
+    const sourceText = [
+      `Window: ${start}-${Math.max(start, total - 1)}`,
+      "",
+      transcript,
+    ].join("\n");
+    const source = await writeSessionSource(context, sessionId, sourceText);
+
+    if (options.digest) {
+      const wikiIndex = await readWikiIndex(context);
+      const digested = readDigestPages(
+        await options.digest({
+          rootPath: context.rootPath,
+          sourceText,
+          sourcePath: source.path,
+          sessionId,
+          wikiIndex,
+        }),
+      );
+      const wikiPaths: string[] = [];
+      for (const page of digested.pages) {
+        const written = await writeWikiPage(context, page);
+        wikiPaths.push(written.path);
+      }
+      const response: MemoryDigestResponse = {
+        sourcePath: source.path,
+        wikiPaths,
+        messageCount: lines.length,
+        mode: "digested",
+        summary: digested.summary,
+      };
+      return { success: true, data: response as unknown as JsonValue };
+    }
+
+    const written = await appendWikiPage(context, {
+      path: "session-digests",
+      title: "Session Digests",
+      content: sourceText,
+      sourcePath: source.path,
+    });
+    const response: MemoryDigestResponse = {
+      sourcePath: source.path,
+      wikiPaths: [written.path],
+      messageCount: lines.length,
+      mode: "archived",
+    };
+    return { success: true, data: response as unknown as JsonValue };
+  } catch (error) {
+    return {
+      success: false,
+      error: String(error),
+    };
+  }
+}
+
+/**
+ * revise action。
+ */
+export async function reviseMemoryAction(
+  context: AgentContext,
+  options: MemoryPluginOptions,
+  payload: MemoryRevisePayload,
+): Promise<PluginActionResult<JsonValue>> {
+  try {
+    const targetPath = toWikiMemoryPath(String(payload.path || "").trim());
+    if (!targetPath) {
+      throw new Error("path is required");
+    }
+    const instruction = String(payload.instruction || "").trim();
+    if (!instruction) {
+      throw new Error("instruction is required");
+    }
+
+    if (options.revise) {
+      const current = await readMemory(context, { path: targetPath }).catch(() => ({
+        path: targetPath,
+        text: "",
+      }));
+      const revised = readReviseResult(
+        await options.revise({
+          rootPath: context.rootPath,
+          path: targetPath,
+          currentContent: current.text,
+          instruction,
+          evidence: String(payload.evidence || ""),
+        }),
+        targetPath,
+      );
+      const written = await writeWikiPage(context, {
+        path: revised.path,
+        content: revised.content,
+        tags: ["memory"],
+      });
+      const response: MemoryReviseResponse = {
+        path: written.path,
+        mode: "revised",
+        writtenChars: written.writtenChars,
+        summary: revised.summary,
+      };
+      return { success: true, data: response as unknown as JsonValue };
+    }
+
+    const response = await appendMemoryRevision(context, payload);
+    return { success: true, data: response as unknown as JsonValue };
   } catch (error) {
     return {
       success: false,
@@ -143,5 +404,11 @@ export function toSearchPayload(input: Record<string, unknown>): MemorySearchPay
         : typeof input.minScore === "string"
           ? Number(input.minScore)
           : MEMORY_DEFAULTS.minScore,
+    includeSources:
+      typeof input.includeSources === "boolean"
+        ? input.includeSources
+        : typeof input.includeSources === "string"
+          ? input.includeSources === "true"
+          : undefined,
   };
 }

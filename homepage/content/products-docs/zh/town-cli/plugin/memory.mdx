@@ -1,6 +1,6 @@
 ---
 title: town memory
-description: 托管 memory plugin 命令，用于检索、读取、写入与 flush
+description: 托管 memory plugin 命令，用于 LLM Wiki 记忆检索、读取、记住、提炼与修订
 ---
 
 # `town memory`
@@ -18,15 +18,17 @@ town memory <subcommand> [options]
 ## 主要子命令
 
 - `status`
-- `search <query>`
-- `get <memoryPath> [--from <line>] [--lines <count>]`
-- `store --content <text> [--target <longterm|daily|working>] [--session-id <sessionId>]`
-- `flush --session-id <sessionId> [--max-messages <count>]`
+- `search <query> [--include-sources]`
+- `read <memoryPath> [--from <line>] [--lines <count>]`
+- `remember --content <text> [--topic <topic>] [--wiki-path <path>] [--source <source>]`
+- `digest --session-id <sessionId> [--max-messages <count>]`
+- `revise <memoryPath> --instruction <text> [--evidence <text>]`
 
 ## 说明
 
-- 只要注册并启动了 memory plugin，这套能力就存在。
-- system prompt 只会注入受控的长期记忆包；更深的检索仍然走 `memory.search` 与 `memory.get`。
+- MemoryPlugin 使用 LLM Wiki 结构：`.downcity/memory/wiki/` 是知识层，`.downcity/memory/sources/` 是证据层。
+- system prompt 只会注入少量稳定 wiki 摘要；更深检索走 `memory.search` 与 `memory.read`。
+- `memory.search` 默认只查 wiki 和 working memory；需要证据层时加 `--include-sources`。
 - 所有 memory action 都支持一次性 `--delay` / `--time`。
 
 ## 示例
@@ -34,9 +36,10 @@ town memory <subcommand> [options]
 ```bash
 town memory status
 town memory search "release decision"
-town memory get .downcity/memory/MEMORY.md --from 10 --lines 20
-town memory store --target longterm --content "User prefers concise release notes."
-town memory flush --session-id telegram-chat-123 --max-messages 40
+town memory read .downcity/memory/wiki/project-decisions.md --from 10 --lines 20
+town memory remember --topic "plugin system" --content "Plugin config should be passed through constructors."
+town memory digest --session-id telegram-chat-123 --max-messages 40
+town memory revise .downcity/memory/wiki/plugin-system.md --instruction "Merge latest constructor config decision"
 ```
 
 ## 相关页面

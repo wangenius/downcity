@@ -2,7 +2,7 @@
  * Memory Search 运行时。
  *
  * 关键点（中文）
- * - 直接扫描 Markdown 文件，不依赖额外索引库。
+ * - 直接扫描 LLM Wiki Markdown 文件，不依赖额外索引库。
  * - 统一收敛检索、分块、打分与状态统计逻辑。
  */
 
@@ -147,17 +147,20 @@ function chunkMarkdown(content: string): Array<{
   return out;
 }
 
-async function readMemoryChunks(context: AgentContext): Promise<Array<{
+async function readMemoryChunks(
+  context: AgentContext,
+  options: { includeSources?: boolean },
+): Promise<Array<{
   path: string;
-  source: "longterm" | "daily" | "working";
+  source: "wiki" | "source" | "working";
   startLine: number;
   endLine: number;
   text: string;
 }>> {
-  const files = await listMemorySourceFiles(context.rootPath);
+  const files = await listMemorySourceFiles(context.rootPath, options);
   const out: Array<{
     path: string;
-    source: "longterm" | "daily" | "working";
+    source: "wiki" | "source" | "working";
     startLine: number;
     endLine: number;
     text: string;
@@ -185,10 +188,12 @@ export async function collectMemoryStatus(
   state: MemoryRuntimeState,
 ): Promise<MemoryStatusResponse> {
   void state;
-  const files = await listMemorySourceFiles(context.rootPath);
+  const files = await listMemorySourceFiles(context.rootPath, {
+    includeSources: true,
+  });
   const sourceCounts: MemorySourceStat[] = [
-    { source: "longterm", files: 0, chunks: 0 },
-    { source: "daily", files: 0, chunks: 0 },
+    { source: "wiki", files: 0, chunks: 0 },
+    { source: "source", files: 0, chunks: 0 },
     { source: "working", files: 0, chunks: 0 },
   ];
 
@@ -257,7 +262,9 @@ export async function searchMemory(
   );
 
   try {
-    const results = (await readMemoryChunks(context))
+    const results = (await readMemoryChunks(context, {
+      includeSources: payload.includeSources,
+    }))
       .map((chunk) => {
         const score = buildSnippetScore(chunk.text, tokens);
         const citation =

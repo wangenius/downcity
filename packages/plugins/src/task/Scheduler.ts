@@ -15,7 +15,6 @@ import {
 import { listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 import { TaskCronEngine } from "./types/Cron.js";
-import { resolveRuntimeTimezone } from "@downcity/agent/internal/utils/Time.js";
 
 const TASK_LOG_PREFIX = "[TASK]";
 
@@ -26,13 +25,20 @@ function formatTaskLogMessage(message: string): string {
 export async function registerTaskCronJobs(params: {
   context: AgentContext;
   engine: TaskCronEngine;
+  /**
+   * cron 表达式使用的 IANA 时区。
+   */
+  timezone: string;
+  /**
+   * 当前 TaskPlugin 实例持有的运行中 task 锁。
+   */
+  runningTaskIds: Set<string>;
 }): Promise<{ tasksFound: number; jobsScheduled: number }> {
   const context = params.context;
   const logger = context.logger;
   const tasks = await listTasks(context.rootPath);
-  const runtimeTimezone = resolveRuntimeTimezone();
+  const runtimeTimezone = params.timezone;
 
-  const runningByTaskId = new Set<string>();
   let jobsScheduled = 0;
 
   for (const item of tasks) {
@@ -59,7 +65,7 @@ export async function registerTaskCronJobs(params: {
             if (!taskId) return;
 
             // 关键点（中文）：同一 taskId 串行；重叠触发时跳过，避免并发执行污染 run 目录。
-            if (runningByTaskId.has(taskId)) {
+            if (params.runningTaskIds.has(taskId)) {
               void logger.log("warn", formatTaskLogMessage("Task skipped (already running)"), {
                 taskId,
                 via: "cron",
@@ -67,7 +73,7 @@ export async function registerTaskCronJobs(params: {
               return;
             }
 
-            runningByTaskId.add(taskId);
+            params.runningTaskIds.add(taskId);
             try {
               // 关键点（中文）：触发瞬间复查最新 task.md，避免 status/when 变更后仍沿用旧注册状态。
               const latest = await readTask({
@@ -110,7 +116,7 @@ export async function registerTaskCronJobs(params: {
                 error: String(error),
               });
             } finally {
-              runningByTaskId.delete(taskId);
+              params.runningTaskIds.delete(taskId);
             }
           },
         });
@@ -147,7 +153,7 @@ export async function registerTaskCronJobs(params: {
           if (Date.now() < plannedTimeMs) return;
 
           // 关键点（中文）：同一 taskId 串行；重叠触发时跳过，避免并发执行污染 run 目录。
-          if (runningByTaskId.has(taskId)) {
+          if (params.runningTaskIds.has(taskId)) {
             void logger.log("warn", formatTaskLogMessage("Task skipped (already running)"), {
               taskId,
               via: "time",
@@ -156,7 +162,7 @@ export async function registerTaskCronJobs(params: {
           }
 
           let shouldDeactivateOneShot = false;
-          runningByTaskId.add(taskId);
+          params.runningTaskIds.add(taskId);
           try {
             const latest = await readTask({
               taskId,
@@ -224,7 +230,7 @@ export async function registerTaskCronJobs(params: {
                 });
               }
             }
-            runningByTaskId.delete(taskId);
+            params.runningTaskIds.delete(taskId);
           }
         },
       });

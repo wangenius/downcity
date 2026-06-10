@@ -1,10 +1,10 @@
 /**
- * MemoryPlugin：memory plugin 的类实现。
+ * MemoryPlugin：agent 的长期记忆 plugin。
  *
  * 关键点（中文）
- * - memory plugin state 现在归属于 plugin 实例。
- * - agent 持有 MemoryPlugin 实例，从而天然形成 per-agent 状态边界。
- * - 运行态只在实例内部缓存，不再放到模块级 Map。
+ * - 对外仍然是 MemoryPlugin，内部使用 LLM Wiki 方式组织知识。
+ * - constructor 注入 digest/revise 能力，plugin 不绑定具体 LLM 服务。
+ * - action 面向 agent 语义，而不是暴露底层文件写入细节。
  */
 
 import type { Command } from "commander";
@@ -13,20 +13,20 @@ import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import {
-  flushMemoryAction,
-  getMemoryAction,
+  digestMemoryAction,
+  readMemoryAction,
+  rememberMemoryAction,
+  reviseMemoryAction,
   searchMemoryAction,
   statusMemoryAction,
-  storeMemoryAction,
 } from "./Action.js";
 import {
   createMemoryRuntimeState,
-  startMemoryRuntime,
-  stopMemoryRuntime,
   type MemoryRuntimeState,
 } from "./runtime/Store.js";
 import { buildMemoryPluginSystemText } from "./runtime/SystemProvider.js";
 import { ensureMemoryDirectories } from "./runtime/Writer.js";
+import type { MemoryPluginOptions } from "./types/Memory.js";
 
 function parsePositiveInteger(value: string): number {
   const text = String(value || "").trim();
@@ -74,6 +74,11 @@ function readOptionalNumber(body: JsonObject, key: string): number | undefined {
   return typeof value === "number" ? value : undefined;
 }
 
+function readOptionalBoolean(body: JsonObject, key: string): boolean | undefined {
+  const value = body[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
 /**
  * Memory plugin 类实现。
  */
@@ -89,6 +94,13 @@ export class MemoryPlugin extends BasePlugin {
   public runtimeState: MemoryRuntimeState | null = null;
 
   /**
+   * 创建 MemoryPlugin。
+   */
+  constructor(private readonly options: MemoryPluginOptions = {}) {
+    super();
+  }
+
+  /**
    * 当前 plugin 的 system 文本提供器。
    */
   async system(context: AgentContext): Promise<string> {
@@ -101,12 +113,9 @@ export class MemoryPlugin extends BasePlugin {
   readonly lifecycle = {
     start: async (context: AgentContext): Promise<void> => {
       await ensureMemoryDirectories(context.rootPath);
-      const state = this.getOrCreateRuntimeState(context);
-      await startMemoryRuntime(context, state);
+      this.getOrCreateRuntimeState(context);
     },
     stop: async (): Promise<void> => {
-      if (!this.runtimeState) return;
-      await stopMemoryRuntime(this.runtimeState);
       this.runtimeState = null;
     },
   };
@@ -117,7 +126,7 @@ export class MemoryPlugin extends BasePlugin {
   readonly actions: PluginActions = {
     status: {
       command: {
-        description: "查看 memory 状态（backend/files/chunks）",
+        description: "查看 memory wiki 状态（wiki/source/working）",
         mapInput() {
           return {};
         },
@@ -129,12 +138,13 @@ export class MemoryPlugin extends BasePlugin {
     },
     search: {
       command: {
-        description: "检索记忆片段",
+        description: "检索 memory wiki",
         configure(command: Command) {
           command
             .argument("<query>")
             .option("--max-results <number>", "返回条数上限", parsePositiveInteger)
-            .option("--min-score <number>", "最小相关分数", parseNumber);
+            .option("--min-score <number>", "最小相关分数", parseNumber)
+            .option("--include-sources", "同时检索原始 source 层");
         },
         mapInput({ args, opts }) {
           const payload: JsonObject = {
@@ -146,6 +156,9 @@ export class MemoryPlugin extends BasePlugin {
           if (typeof opts.minScore === "number") {
             payload.minScore = opts.minScore;
           }
+          if (opts.includeSources === true) {
+            payload.includeSources = true;
+          }
           return payload;
         },
       },
@@ -156,12 +169,13 @@ export class MemoryPlugin extends BasePlugin {
           query: readString(body, "query"),
           maxResults: readOptionalNumber(body, "maxResults"),
           minScore: readOptionalNumber(body, "minScore"),
+          includeSources: readOptionalBoolean(body, "includeSources"),
         });
       },
     },
-    get: {
+    read: {
       command: {
-        description: "读取记忆文件片段",
+        description: "读取 memory wiki/source 文件片段",
         configure(command: Command) {
           command
             .argument("<memoryPath>", "记忆文件路径（相对项目根目录）")
@@ -183,52 +197,52 @@ export class MemoryPlugin extends BasePlugin {
       },
       execute: async (params) => {
         const body = readBodyObject(params.payload);
-        return await getMemoryAction(params.context, {
+        return await readMemoryAction(params.context, {
           path: readString(body, "path"),
           from: readOptionalNumber(body, "from"),
           lines: readOptionalNumber(body, "lines"),
         });
       },
     },
-    store: {
+    remember: {
       command: {
-        description: "显式写入 memory（longterm/daily/working）",
+        description: "把事实/偏好/决策记入 memory wiki",
         configure(command: Command) {
           command
-            .requiredOption("--content <text>", "写入内容")
-            .option("--target <target>", "写入层（longterm|daily|working）")
-            .option("--session-id <sessionId>", "working 目标必填");
+            .requiredOption("--content <text>", "需要记住的内容")
+            .option("--topic <topic>", "记忆主题")
+            .option("--wiki-path <path>", "目标 wiki page 路径")
+            .option("--source <source>", "来源说明");
         },
         mapInput({ opts }) {
           const payload: JsonObject = {
             content: String(opts.content || ""),
           };
-          if (typeof opts.target === "string") {
-            payload.target = String(opts.target).trim();
+          if (typeof opts.topic === "string") {
+            payload.topic = String(opts.topic).trim();
           }
-          if (typeof opts.sessionId === "string") {
-            payload.sessionId = String(opts.sessionId).trim();
+          if (typeof opts.wikiPath === "string") {
+            payload.path = String(opts.wikiPath).trim();
+          }
+          if (typeof opts.source === "string") {
+            payload.source = String(opts.source).trim();
           }
           return payload;
         },
       },
       execute: async (params) => {
         const body = readBodyObject(params.payload);
-        const target = readOptionalString(body, "target");
-        const state = this.getOrCreateRuntimeState(params.context);
-        return await storeMemoryAction(params.context, state, {
+        return await rememberMemoryAction(params.context, this.options, {
           content: readString(body, "content"),
-          target:
-            target === "longterm" || target === "daily" || target === "working"
-              ? target
-              : undefined,
-          sessionId: readOptionalString(body, "sessionId"),
+          topic: readOptionalString(body, "topic"),
+          path: readOptionalString(body, "path"),
+          source: readOptionalString(body, "source"),
         });
       },
     },
-    flush: {
+    digest: {
       command: {
-        description: "将当前会话最近消息刷写到 daily memory",
+        description: "把 session 提炼进 memory wiki",
         configure(command: Command) {
           command
             .requiredOption("--session-id <sessionId>", "会话 ID")
@@ -246,10 +260,38 @@ export class MemoryPlugin extends BasePlugin {
       },
       execute: async (params) => {
         const body = readBodyObject(params.payload);
-        const state = this.getOrCreateRuntimeState(params.context);
-        return await flushMemoryAction(params.context, state, {
+        return await digestMemoryAction(params.context, this.options, {
           sessionId: readString(body, "sessionId"),
           maxMessages: readOptionalNumber(body, "maxMessages"),
+        });
+      },
+    },
+    revise: {
+      command: {
+        description: "基于新证据修订 memory wiki page",
+        configure(command: Command) {
+          command
+            .argument("<memoryPath>", "目标 wiki page 路径")
+            .requiredOption("--instruction <text>", "修订指令")
+            .option("--evidence <text>", "新证据");
+        },
+        mapInput({ args, opts }) {
+          const payload: JsonObject = {
+            path: String(args[0] || ""),
+            instruction: String(opts.instruction || ""),
+          };
+          if (typeof opts.evidence === "string") {
+            payload.evidence = String(opts.evidence).trim();
+          }
+          return payload;
+        },
+      },
+      execute: async (params) => {
+        const body = readBodyObject(params.payload);
+        return await reviseMemoryAction(params.context, this.options, {
+          path: readString(body, "path"),
+          instruction: readString(body, "instruction"),
+          evidence: readOptionalString(body, "evidence"),
         });
       },
     },

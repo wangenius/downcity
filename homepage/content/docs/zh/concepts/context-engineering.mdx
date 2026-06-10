@@ -19,7 +19,7 @@ Downcity 把“上下文”拆成可组合、可落盘的几层数据：
 - 历史记录可审计，不依赖隐式内存。
 - 超长对话可 compact，保留最近消息与摘要。
 - 各 `sessionId` 相互隔离，减少串话。
-- 记忆召回通过 `memory.search -> memory.get` 按预算检索，不再整文件注入。
+- 记忆召回通过 `memory.search -> memory.read` 按预算检索，不再整文件注入。
 
 ## 实践建议
 

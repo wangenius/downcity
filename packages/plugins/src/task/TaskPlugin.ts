@@ -14,6 +14,7 @@ import type {
   TaskCronRegisterResult,
   TaskSchedulerReloadResult,
 } from "@/task/types/TaskPluginTypes.js";
+import type { TaskPluginOptions } from "@/task/types/TaskPluginOptions.js";
 import { TaskCronTriggerEngine } from "@/task/runtime/CronTrigger.js";
 import { registerTaskCronJobs } from "@/task/Scheduler.js";
 import {
@@ -23,6 +24,7 @@ import {
   reloadTaskSchedulerAfterMutation,
 } from "@/task/runtime/TaskActionExecution.js";
 import { TASK_PLUGIN_PROMPT } from "@/task/runtime/TaskPluginSystem.js";
+import { resolveRuntimeTimezone } from "@downcity/agent/internal/utils/Time.js";
 
 const TASK_LOG_PREFIX = "[TASK]";
 
@@ -50,6 +52,11 @@ export class TaskPlugin extends BasePlugin {
   readonly actions: PluginActions;
 
   /**
+   * 当前实例持有的显式配置。
+   */
+  public readonly options: TaskPluginOptions;
+
+  /**
    * 当前实例持有的 cron engine。
    *
    * 关键点（中文）
@@ -58,8 +65,18 @@ export class TaskPlugin extends BasePlugin {
    */
   public cronEngine: TaskCronTriggerEngine | null = null;
 
-  constructor() {
+  /**
+   * 当前实例持有的运行中 task 锁。
+   *
+   * 关键点（中文）
+   * - scheduler reload 会替换 cron engine。
+   * - 锁必须挂在 plugin 实例上，避免 reload 后同一 task 被新旧调度器并发触发。
+   */
+  private readonly runningTaskIds = new Set<string>();
+
+  constructor(options?: TaskPluginOptions) {
     super();
+    this.options = options || {};
 
     this.actions = createTaskPluginActions({
       reloadSchedulerAfterMutation: async (params) =>
@@ -115,6 +132,8 @@ export class TaskPlugin extends BasePlugin {
     const registerResult = await registerTaskCronJobs({
       context,
       engine,
+      timezone: this.resolveTimezone(),
+      runningTaskIds: this.runningTaskIds,
     });
     await engine.start();
     this.cronEngine = engine;
@@ -162,5 +181,12 @@ export class TaskPlugin extends BasePlugin {
       title: params.title,
       reloadScheduler: async (context) => this.restartCronRuntime(context),
     });
+  }
+
+  /**
+   * 解析当前 task cron 使用的时区。
+   */
+  private resolveTimezone(): string {
+    return String(this.options.timezone || "").trim() || resolveRuntimeTimezone();
   }
 }

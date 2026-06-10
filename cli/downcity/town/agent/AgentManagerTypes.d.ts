@@ -16,8 +16,7 @@ export type AgentManagerListSelection = {
     /** 选择类型：退出 Agent 管理器。 */
     type: "exit";
 };
-export type AgentManagerAgentAction = "status" | "chat" | "configure" | "back";
-export type AgentManagerRuntimeAction = "start" | "stop" | "restart" | "back";
+export type AgentManagerAgentAction = "start" | "stop" | "restart" | "chat" | "configure" | "back";
 export type AgentManagerConfigAction = "configureId" | "connectChatAccounts" | "back";
 export interface AgentManagerAgentSummary {
     id: string;

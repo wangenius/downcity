@@ -23,15 +23,11 @@ export type AgentManagerListSelection =
     };
 
 export type AgentManagerAgentAction =
-  | "status"
-  | "chat"
-  | "configure"
-  | "back";
-
-export type AgentManagerRuntimeAction =
   | "start"
   | "stop"
   | "restart"
+  | "chat"
+  | "configure"
   | "back";
 
 export type AgentManagerConfigAction =

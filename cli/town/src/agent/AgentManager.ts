@@ -29,7 +29,6 @@ import type {
   AgentManagerConfigAction,
   AgentManagerListSelection,
   AgentManagerAgentSummary,
-  AgentManagerRuntimeAction,
 } from "./AgentManagerTypes.js";
 
 const CHAT_CHANNELS: StoredChannelAccountChannel[] = ["telegram", "feishu", "qq"];
@@ -253,11 +252,7 @@ async function promptAgentAction(
         title: t({ zh: "Agent", en: "Agent" }),
         disabled: true,
       },
-      {
-        title: t({ zh: "状态", en: "Status" }),
-        description: formatAgentStatusPanelDescription(agent),
-        value: "status",
-      },
+      ...runtimeActionChoices(agent),
       {
         title: t({ zh: "聊天", en: "Chat" }),
         description: t({
@@ -290,26 +285,6 @@ async function promptAgentAction(
   return response.action || null;
 }
 
-function formatAgentStatusPanelDescription(agent: AgentManagerAgentSummary): string {
-  const next_actions = agent.status === "running"
-    ? t({ zh: "可停止或重启", en: "can stop or restart" })
-    : t({ zh: "可启动", en: "can start" });
-  return t({
-    zh: [
-      formatAgentListDescription(agent),
-      `动态动作：${next_actions}`,
-      "",
-      "Enter 后在状态面板里执行当前可用的运行时动作。",
-    ].join("\n"),
-    en: [
-      formatAgentListDescription(agent),
-      `Dynamic actions: ${next_actions}`,
-      "",
-      "Press Enter to run the currently available runtime actions from the status panel.",
-    ].join("\n"),
-  });
-}
-
 function formatAgentConfigPanelDescription(agent: AgentManagerAgentSummary): string {
   return t({
     zh: [
@@ -327,67 +302,44 @@ function formatAgentConfigPanelDescription(agent: AgentManagerAgentSummary): str
   });
 }
 
-async function promptAgentRuntimeAction(
+function runtimeActionChoices(
   agent: AgentManagerAgentSummary,
-): Promise<AgentManagerRuntimeAction | null> {
-  const choices = [
+): Array<{
+  title: string;
+  description: string;
+  value: AgentManagerAgentAction;
+}> {
+  if (agent.status === "running") {
+    return [
+      {
+        title: t({ zh: "停止", en: "Stop" }),
+        description: t({
+          zh: "停止当前 Agent daemon，但保留项目配置。",
+          en: "Stop the current agent daemon while keeping project configuration.",
+        }),
+        value: "stop",
+      },
+      {
+        title: t({ zh: "重启", en: "Restart" }),
+        description: t({
+          zh: "重启当前 Agent daemon，适合配置更新后重新加载。",
+          en: "Restart the current agent daemon, useful after configuration changes.",
+        }),
+        value: "restart",
+      },
+    ];
+  }
+
+  return [
     {
-      title: t({ zh: "状态", en: "Status" }),
-      disabled: true,
-    },
-    ...(agent.status === "running"
-      ? [
-          {
-            title: t({ zh: "停止", en: "Stop" }),
-            description: t({
-              zh: "停止当前 Agent daemon，但保留项目配置。",
-              en: "Stop the current agent daemon while keeping project configuration.",
-            }),
-            value: "stop" as const,
-          },
-          {
-            title: t({ zh: "重启", en: "Restart" }),
-            description: t({
-              zh: "重启当前 Agent daemon，适合配置更新后重新加载。",
-              en: "Restart the current agent daemon, useful after configuration changes.",
-            }),
-            value: "restart" as const,
-          },
-        ]
-      : [
-          {
-            title: t({ zh: "启动", en: "Start" }),
-            description: t({
-              zh: "启动当前 Agent daemon，并刷新运行状态。",
-              en: "Start the current agent daemon and refresh runtime status.",
-            }),
-            value: "start" as const,
-          },
-        ]),
-    {
-      title: t({ zh: "导航", en: "Navigation" }),
-      disabled: true,
-    },
-    {
-      title: t({ zh: "返回", en: "Back" }),
+      title: t({ zh: "启动", en: "Start" }),
       description: t({
-        zh: "回到当前 Agent 的侧边栏。",
-        en: "Return to this agent's sidebar.",
+        zh: "启动当前 Agent daemon，并刷新运行状态。",
+        en: "Start the current agent daemon and refresh runtime status.",
       }),
-      value: "back" as const,
+      value: "start",
     },
   ];
-  const response = (await prompts({
-    type: "select",
-    name: "action",
-    message: t({
-      zh: `状态 · ${agent.id}`,
-      en: `Status · ${agent.id}`,
-    }),
-    choices,
-    initial: 1,
-  })) as { action?: AgentManagerRuntimeAction };
-  return response.action || null;
 }
 
 async function promptAgentConfigAction(
@@ -694,27 +646,19 @@ async function runSelectedAgentManager(agent_input: AgentManagerAgentSummary): P
     if (action === "back") return;
 
     try {
-      if (action === "status") {
-        const runtime_action = await promptAgentRuntimeAction(agent);
-        if (!runtime_action || runtime_action === "back") {
-          continue;
-        }
-        if (runtime_action === "start") {
-          await startAgentProject(agent.projectRoot);
-          agent = await reloadAgentSummary(agent.projectRoot, agent);
-          continue;
-        }
-        if (runtime_action === "stop") {
-          await stopCommand(agent.projectRoot);
-          agent = await reloadAgentSummary(agent.projectRoot, agent);
-          continue;
-        }
-        if (runtime_action === "restart") {
-          injectAgentContext(agent.projectRoot);
-          await restartCommand(agent.projectRoot, {});
-          agent = await reloadAgentSummary(agent.projectRoot, agent);
-          continue;
-        }
+      if (action === "start") {
+        await startAgentProject(agent.projectRoot);
+        agent = await reloadAgentSummary(agent.projectRoot, agent);
+        continue;
+      }
+      if (action === "stop") {
+        await stopCommand(agent.projectRoot);
+        agent = await reloadAgentSummary(agent.projectRoot, agent);
+        continue;
+      }
+      if (action === "restart") {
+        injectAgentContext(agent.projectRoot);
+        await restartCommand(agent.projectRoot, {});
         agent = await reloadAgentSummary(agent.projectRoot, agent);
         continue;
       }

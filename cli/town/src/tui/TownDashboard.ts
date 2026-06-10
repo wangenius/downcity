@@ -228,6 +228,7 @@ async function run_town_dashboard_once(
     const { screen } = shell;
 
     let finished = false;
+    let selected_index = 0;
 
     const finish = (value: string | null): void => {
       if (finished) return;
@@ -275,16 +276,15 @@ async function run_town_dashboard_once(
     });
 
     list.on("select item", (_item, index_value) => {
-      const index: number = typeof index_value === "number" ? index_value : 0;
-      const next_item = state.items[index];
+      selected_index = clamp_selected_index(index_value, state.items.length, selected_index);
+      const next_item = state.items[selected_index];
       if (!next_item) return;
       detail.setContent(format_detail_content(next_item));
       screen.render();
     });
 
     list.key(["enter"], () => {
-      const index = typeof list.selected === "number" ? list.selected : 0;
-      finish(state.items[index]?.id ?? null);
+      finish(state.items[selected_index]?.id ?? null);
     });
 
     detail.key(["pageup"], () => {
@@ -527,6 +527,16 @@ function format_detail_content(item: tui_list_item): string {
 
 function format_breadcrumb(value: string): string {
   return value.padEnd(80, " ");
+}
+
+function clamp_selected_index(
+  value: unknown,
+  length: number,
+  fallback: number,
+): number {
+  if (length <= 0) return 0;
+  const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
+  return Math.max(0, Math.min(length - 1, index));
 }
 
 function read_town_cli_version(): string {

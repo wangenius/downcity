@@ -149,6 +149,7 @@ async function run_city_dashboard_once(state) {
         const { screen } = shell;
         let finished = false;
         let raw_input_listener;
+        let selected_index = 0;
         const finish = (value) => {
             if (finished)
                 return;
@@ -205,16 +206,15 @@ async function run_city_dashboard_once(state) {
             content: format_detail_content(state.items[0]),
         });
         list.on("select item", (_item, index_value) => {
-            const index = typeof index_value === "number" ? index_value : 0;
-            const next_item = state.items[index];
+            selected_index = clamp_selected_index(index_value, state.items.length, selected_index);
+            const next_item = state.items[selected_index];
             if (!next_item)
                 return;
             detail.setContent(format_detail_content(next_item));
             screen.render();
         });
         list.key(["enter"], () => {
-            const index = typeof list.selected === "number" ? list.selected : 0;
-            finish(state.items[index]?.id ?? null);
+            finish(state.items[selected_index]?.id ?? null);
         });
         detail.key(["pageup"], () => {
             detail.scroll(-Math.max(1, Math.floor(detail.height / 2)));
@@ -232,8 +232,7 @@ async function run_city_dashboard_once(state) {
                 return;
             }
             if (text.includes("\r") || text.includes("\n")) {
-                const index = typeof list.selected === "number" ? list.selected : 0;
-                finish(state.items[index]?.id ?? null);
+                finish(state.items[selected_index]?.id ?? null);
             }
         };
         process.stdin.on("data", raw_input_listener);
@@ -246,6 +245,12 @@ function format_list_label(item) {
 }
 function format_detail_content(item) {
     return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;
+}
+function clamp_selected_index(value, length, fallback) {
+    if (length <= 0)
+        return 0;
+    const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
+    return Math.max(0, Math.min(length - 1, index));
 }
 function read_city_cli_version() {
     try {

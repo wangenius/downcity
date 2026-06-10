@@ -146,6 +146,7 @@ async function run_select_prompt(
     const { screen } = shell;
     let finished = false;
     let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
+    let selected_index = initial_index;
 
     const finish = (value: unknown): void => {
       if (finished) return;
@@ -197,14 +198,13 @@ async function run_select_prompt(
     list.focus();
 
     list.on("select item", (_item, index_value) => {
-      const index: number = typeof index_value === "number" ? index_value : 0;
-      detail.setContent(format_choice_detail(choices[index]));
+      selected_index = clamp_selected_index(index_value, choices.length, selected_index);
+      detail.setContent(format_choice_detail(choices[selected_index]));
       screen.render();
     });
 
     list.key(["enter"], () => {
-      const index = typeof list.selected === "number" ? list.selected : initial_index;
-      finish(choices[index]?.value);
+      finish(choices[selected_index]?.value);
     });
 
     screen.key(["escape", "q", "C-c"], () => finish(undefined));
@@ -215,8 +215,7 @@ async function run_select_prompt(
         return;
       }
       if (text.includes("\r") || text.includes("\n")) {
-        const index = typeof list.selected === "number" ? list.selected : initial_index;
-        finish(choices[index]?.value);
+        finish(choices[selected_index]?.value);
       }
     };
     process.stdin.on("data", raw_input_listener);
@@ -364,6 +363,7 @@ async function run_confirm_prompt(
     const { screen } = shell;
     let finished = false;
     let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
+    let selected_index = initial_value ? 0 : 1;
 
     const finish = (value: boolean | undefined): void => {
       if (finished) return;
@@ -410,13 +410,12 @@ async function run_confirm_prompt(
     list.focus();
 
     list.key(["enter"], () => {
-      const index = typeof list.selected === "number" ? list.selected : (initial_value ? 0 : 1);
-      finish(Boolean(choices[index]?.value));
+      finish(Boolean(choices[selected_index]?.value));
     });
 
     list.on("select item", (_item, index_value) => {
-      const index: number = typeof index_value === "number" ? index_value : 0;
-      note.setContent(format_choice_detail(choices[index]));
+      selected_index = clamp_selected_index(index_value, choices.length, selected_index);
+      note.setContent(format_choice_detail(choices[selected_index]));
       screen.render();
     });
 
@@ -428,8 +427,7 @@ async function run_confirm_prompt(
         return;
       }
       if (text.includes("\r") || text.includes("\n")) {
-        const index = typeof list.selected === "number" ? list.selected : (initial_value ? 0 : 1);
-        finish(Boolean(choices[index]?.value));
+        finish(Boolean(choices[selected_index]?.value));
       }
     };
     process.stdin.on("data", raw_input_listener);
@@ -846,6 +844,16 @@ function normalize_initial_index(
     return 0;
   }
   return Math.min(length - 1, numeric_value);
+}
+
+function clamp_selected_index(
+  value: unknown,
+  length: number,
+  fallback: number,
+): number {
+  if (length <= 0) return 0;
+  const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
+  return Math.max(0, Math.min(length - 1, index));
 }
 
 function normalize_textbox_value(value: unknown): string {

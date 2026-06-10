@@ -23,6 +23,7 @@ export async function select(input) {
         const { screen } = shell;
         let finished = false;
         let raw_input_listener;
+        let selected_index = 0;
         const finish = (value) => {
             if (finished)
                 return;
@@ -63,13 +64,12 @@ export async function select(input) {
         list.select(0);
         list.focus();
         list.on("select item", (_item, index_value) => {
-            const index = typeof index_value === "number" ? index_value : 0;
-            detail.setContent(format_option_detail(input.options[index]));
+            selected_index = clamp_selected_index(index_value, input.options.length, selected_index);
+            detail.setContent(format_option_detail(input.options[selected_index]));
             screen.render();
         });
         list.key(["enter"], () => {
-            const index = typeof list.selected === "number" ? list.selected : 0;
-            finish(input.options[index]?.value);
+            finish(input.options[selected_index]?.value);
         });
         screen.key(["escape", "q", "C-c"], () => finish(cancel("cancel")));
         raw_input_listener = (chunk) => {
@@ -79,8 +79,7 @@ export async function select(input) {
                 return;
             }
             if (text.includes("\r") || text.includes("\n")) {
-                const index = typeof list.selected === "number" ? list.selected : 0;
-                finish(input.options[index]?.value);
+                finish(input.options[selected_index]?.value);
             }
         };
         process.stdin.on("data", raw_input_listener);
@@ -138,6 +137,7 @@ export async function confirm(input) {
         const { screen } = shell;
         let finished = false;
         let raw_input_listener;
+        let selected_index = initial_value ? 0 : 1;
         const finish = (value) => {
             if (finished)
                 return;
@@ -173,13 +173,12 @@ export async function confirm(input) {
         list.select(initial_value ? 0 : 1);
         list.focus();
         list.on("select item", (_item, index_value) => {
-            const index = typeof index_value === "number" ? index_value : 0;
-            detail.setContent(format_option_detail(options[index]));
+            selected_index = clamp_selected_index(index_value, options.length, selected_index);
+            detail.setContent(format_option_detail(options[selected_index]));
             screen.render();
         });
         list.key(["enter"], () => {
-            const index = typeof list.selected === "number" ? list.selected : (initial_value ? 0 : 1);
-            finish(options[index]?.value);
+            finish(options[selected_index]?.value);
         });
         screen.key(["escape", "q", "C-c"], () => finish(cancel("cancel")));
         raw_input_listener = (chunk) => {
@@ -189,8 +188,7 @@ export async function confirm(input) {
                 return;
             }
             if (text.includes("\r") || text.includes("\n")) {
-                const index = typeof list.selected === "number" ? list.selected : (initial_value ? 0 : 1);
-                finish(options[index]?.value);
+                finish(options[selected_index]?.value);
             }
         };
         process.stdin.on("data", raw_input_listener);
@@ -390,6 +388,12 @@ function format_input_hint(placeholder) {
     return text
         ? `${t({ zh: "占位提示", en: "placeholder" })}: ${text}`
         : "";
+}
+function clamp_selected_index(value, length, fallback) {
+    if (length <= 0)
+        return 0;
+    const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
+    return Math.max(0, Math.min(length - 1, index));
 }
 /**
  * 列表选择 footer 文案。

@@ -14,6 +14,7 @@ export function create_admin_tui_runtime(title = "Admin") {
     const shell = create_shell(title);
     let active_main_cleanup;
     let breadcrumb_parts = [title];
+    const selected_index_by_breadcrumb = new Map();
     const cleanup_main = () => {
         if (active_main_cleanup) {
             active_main_cleanup();
@@ -32,7 +33,9 @@ export function create_admin_tui_runtime(title = "Admin") {
         async select_nav(nav_title, options) {
             cleanup_main();
             breadcrumb_parts = [nav_title];
-            render_nav(shell, nav_title, options, 0);
+            const breadcrumb_key = nav_title;
+            const selected_index = clamp_selected_index(selected_index_by_breadcrumb.get(breadcrumb_key), options.length, 0);
+            render_nav(shell, nav_title, options, selected_index);
             render_idle(shell, t({
                 zh: "选择左侧管理项",
                 en: "Select an item from the sidebar",
@@ -41,11 +44,15 @@ export function create_admin_tui_runtime(title = "Admin") {
                 shell,
                 title: nav_title,
                 options,
+                initial_index: selected_index,
+                on_select_index: (index) => selected_index_by_breadcrumb.set(breadcrumb_key, index),
             });
         },
         async select(section_title, options) {
             breadcrumb_parts = next_breadcrumb_parts(breadcrumb_parts, section_title);
-            render_nav(shell, breadcrumb_parts.join(" / "), options, 0);
+            const breadcrumb_key = breadcrumb_parts.join(" / ");
+            const selected_index = clamp_selected_index(selected_index_by_breadcrumb.get(breadcrumb_key), options.length, 0);
+            render_nav(shell, breadcrumb_key, options, selected_index);
             if (shell.content_box.children.length === 0) {
                 render_idle(shell, t({
                     zh: "选择左侧管理项",
@@ -56,6 +63,8 @@ export function create_admin_tui_runtime(title = "Admin") {
                 shell,
                 title: section_title,
                 options,
+                initial_index: selected_index,
+                on_select_index: (index) => selected_index_by_breadcrumb.set(breadcrumb_key, index),
             });
         },
         async text(section_title, placeholder) {
@@ -250,18 +259,25 @@ async function run_sidebar_select(input) {
         let finished = false;
         let raw_input_listener;
         const list = input.shell.nav_list;
+        let selected_index = clamp_selected_index(input.initial_index, input.options.length, 0);
         const keypress_listener = (_ch, key) => {
             const key_name = get_key_name(key);
             if (key_name === "enter") {
-                const index = typeof list.selected === "number" ? list.selected : 0;
-                finish(input.options[index]?.value);
+                finish(input.options[selected_index]?.value);
             }
             if (key_name === "escape" || key_name === "q" || key_name === "C-c") {
                 finish(undefined);
             }
             setImmediate(() => {
-                render_sidebar_hint(input.shell, input.options, list.selected);
+                selected_index = clamp_selected_index(list.selected, input.options.length, selected_index);
+                input.on_select_index(selected_index);
+                render_sidebar_hint(input.shell, input.options, selected_index);
             });
+        };
+        const select_item_listener = (_item, index_value) => {
+            selected_index = clamp_selected_index(index_value, input.options.length, selected_index);
+            input.on_select_index(selected_index);
+            render_sidebar_hint(input.shell, input.options, selected_index);
         };
         const finish = (value) => {
             if (finished)
@@ -276,11 +292,14 @@ async function run_sidebar_select(input) {
                 raw_input_listener = undefined;
             }
             list.removeListener("keypress", keypress_listener);
+            list.removeListener("select item", select_item_listener);
         };
-        list.select(0);
+        list.select(selected_index);
         list.focus();
-        render_sidebar_hint(input.shell, input.options, list.selected);
+        input.on_select_index(selected_index);
+        render_sidebar_hint(input.shell, input.options, selected_index);
         list.on("keypress", keypress_listener);
+        list.on("select item", select_item_listener);
         raw_input_listener = (chunk) => {
             const text = String(chunk);
             if (text.includes("\u0003") || is_plain_escape_input(text)) {
@@ -288,8 +307,7 @@ async function run_sidebar_select(input) {
                 return;
             }
             if (text.includes("\r") || text.includes("\n")) {
-                const index = typeof list.selected === "number" ? list.selected : 0;
-                finish(input.options[index]?.value);
+                finish(input.options[selected_index]?.value);
             }
         };
         process.stdin.on("data", raw_input_listener);
@@ -512,6 +530,12 @@ function next_breadcrumb_parts(current_parts, section_title) {
 }
 function format_breadcrumb(title) {
     return title.padEnd(80, " ");
+}
+function clamp_selected_index(value, length, fallback) {
+    if (length <= 0)
+        return 0;
+    const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
+    return Math.max(0, Math.min(length - 1, index));
 }
 function get_key_name(key) {
     if (!key || typeof key !== "object")

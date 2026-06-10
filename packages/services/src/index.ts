@@ -31,14 +31,14 @@ export type {
   BalanceTopupStatus,
 } from "./balance/types.js";
 
-export { paymentService, stripePaymentMethod } from "./payment/index.js";
+export { creemPaymentMethod, paymentService, stripePaymentMethod } from "./payment/index.js";
 export type {
   PaymentMethodDefinition,
   PaymentMethodItem,
   PaymentMethodType,
   PaymentServiceOptions,
 } from "./payment/types.js";
-export type { StripePaymentMethodOptions } from "./payment/types.js";
+export type { CreemPaymentMethodOptions, StripePaymentMethodOptions } from "./payment/types.js";
 
 export { stripeEvents, stripePayments, stripePaymentService } from "./payment-stripe/index.js";
 export type {
@@ -53,6 +53,20 @@ export type {
   StripePaymentTopupRecord,
   StripeWebhookEvent,
 } from "./payment-stripe/types.js";
+
+export { creemEvents, creemPayments, creemPaymentService } from "./payment-creem/index.js";
+export type {
+  CreemCheckoutCreateResult,
+  CreemCreateCheckoutInput,
+  CreemEventRecord,
+  CreemEventSyncStatus,
+  CreemPaymentRecord,
+  CreemPaymentServiceBalanceBridge,
+  CreemPaymentServiceOptions,
+  CreemPaymentStatus,
+  CreemPaymentTopupRecord,
+  CreemWebhookEvent,
+} from "./payment-creem/types.js";
 
 export { usageEvents, usageService } from "./usage/index.js";
 export type { UsageServiceOptions } from "./usage/index.js";

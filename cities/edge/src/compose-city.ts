@@ -11,12 +11,15 @@ import { CityBase, AIService, type CityBaseOptions, type ModelConfig } from "@do
 import {
   accountsService,
   balanceService,
+  creemPaymentMethod,
+  creemPaymentService,
   paymentService,
   stripePaymentMethod,
   stripePaymentService,
   usageService,
   type BalanceExtra,
   type BalanceService,
+  type CreemPaymentServiceBalanceBridge,
   type StripePaymentServiceBalanceBridge,
 } from "@downcity/services";
 
@@ -54,6 +57,8 @@ export interface ComposeCityBaseOptions extends CityBaseOptions {
   enable_payment?: boolean;
   /** 是否安装 stripe 支付闭环。 */
   enable_stripe_payment?: boolean;
+  /** 是否安装 creem 支付闭环。 */
+  enable_creem_payment?: boolean;
 }
 
 /**
@@ -81,7 +86,10 @@ export function compose_city(options: ComposeCityBaseOptions): {
 
   if (options.enable_payment !== false) {
     city.use(paymentService({
-      methods: [stripePaymentMethod()],
+      methods: [
+        stripePaymentMethod(),
+        creemPaymentMethod(),
+      ],
     }));
   }
 
@@ -96,6 +104,16 @@ export function compose_city(options: ComposeCityBaseOptions): {
     };
     city.use(stripePaymentService({
       balance: stripe_balance_bridge,
+    }));
+  }
+
+  if (options.enable_creem_payment !== false) {
+    const creem_balance_bridge: CreemPaymentServiceBalanceBridge = {
+      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
+      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
+    };
+    city.use(creemPaymentService({
+      balance: creem_balance_bridge,
     }));
   }
 

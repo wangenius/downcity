@@ -117,3 +117,34 @@ export interface StripePaymentMethodOptions {
    */
   label?: string;
 }
+
+/**
+ * Creem 支付方式配置。
+ */
+export interface CreemPaymentMethodOptions {
+  /**
+   * 显式注入的 Creem API Key。
+   *
+   * 未传入时会回退读取 runtime env 中的 `CREEM_API_KEY`。
+   */
+  api_key?: string;
+
+  /**
+   * 显式注入的 Creem product_id。
+   *
+   * 未传入时会回退读取 runtime env 中的 `CREEM_PRODUCT_ID`。
+   */
+  product_id?: string;
+
+  /**
+   * 默认结算币种。
+   *
+   * 未传入时会回退读取 runtime env 中的 `CREEM_CURRENCY`，最终默认 `usd`。
+   */
+  currency?: string;
+
+  /**
+   * 可选展示名称。
+   */
+  label?: string;
+}

@@ -144,7 +144,7 @@ Expected shape:
 ```json
 {
   "ok": true,
-  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "payment.stripe", "payment.creem", "ai"]
 }
 ```
 
@@ -181,6 +181,9 @@ Common keys:
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `STRIPE_SUCCESS_URL` | Optional default Checkout success redirect |
 | `STRIPE_CANCEL_URL` | Optional Checkout cancel redirect |
+| `CREEM_API_KEY` | Creem API key for Checkout creation |
+| `CREEM_PRODUCT_ID` | Creem product used for hosted Checkout |
+| `CREEM_WEBHOOK_SECRET` | Optional Creem webhook signing secret |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google OAuth login |
 | `WECHAT_CLIENT_ID` / `WECHAT_CLIENT_SECRET` | Optional WeChat website login |
 

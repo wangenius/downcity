@@ -12,6 +12,7 @@ import type {
   PaymentMethodDefinition,
   PaymentMethodItem,
   PaymentServiceOptions,
+  CreemPaymentMethodOptions,
   StripePaymentMethodOptions,
 } from "./types.js";
 
@@ -59,6 +60,30 @@ export function stripePaymentMethod(options: StripePaymentMethodOptions = {}): P
         action: "checkout/create",
         requires_user: true,
         currency: normalizeCurrency(ctx.env("STRIPE_CURRENCY")) || normalizeCurrency(options.currency) || "usd",
+        reason: enabled ? undefined : "not_configured",
+      };
+    },
+  };
+}
+
+/**
+ * 生成 Creem 支付方式定义。
+ */
+export function creemPaymentMethod(options: CreemPaymentMethodOptions = {}): PaymentMethodDefinition {
+  return {
+    resolve(ctx): PaymentMethodItem {
+      const hasApiKey = Boolean(options.api_key || ctx.env("CREEM_API_KEY"));
+      const hasProductId = Boolean(options.product_id || ctx.env("CREEM_PRODUCT_ID"));
+      const enabled = hasApiKey && hasProductId;
+      return {
+        id: "creem",
+        type: "checkout",
+        enabled,
+        label: options.label?.trim() || "Creem",
+        service: "payment.creem",
+        action: "checkout/create",
+        requires_user: true,
+        currency: normalizeCurrency(ctx.env("CREEM_CURRENCY")) || normalizeCurrency(options.currency) || "usd",
         reason: enabled ? undefined : "not_configured",
       };
     },

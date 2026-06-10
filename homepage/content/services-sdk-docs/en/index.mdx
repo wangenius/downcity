@@ -1,6 +1,6 @@
 ---
 title: "@downcity/services"
-description: "Install one Downcity package for accounts, balance, usage, and Stripe payment services."
+description: "Install one Downcity package for accounts, balance, usage, Stripe payment, and Creem payment services."
 ---
 
 `@downcity/services` combines the official Downcity services into one package while keeping the capability boundaries clear.
@@ -12,6 +12,7 @@ With one installation, you can opt into:
 - `paymentService()` for exposing which payment methods the current City supports
 - `usageService()` for real user-side service-call facts
 - `stripePaymentService()` for translating Stripe one-time payments into wallet credit
+- `creemPaymentService()` for translating Creem one-time payments into wallet credit
 
 ## Install
 
@@ -26,6 +27,8 @@ import { CityBase } from "@downcity/city";
 import {
   accountsService,
   balanceService,
+  creemPaymentMethod,
+  creemPaymentService,
   paymentService,
   stripePaymentMethod,
   stripePaymentService,
@@ -40,10 +43,17 @@ base.use(balance);
 base.use(paymentService({
   methods: [
     stripePaymentMethod(),
+    creemPaymentMethod(),
   ],
 }));
 base.use(usageService());
 base.use(stripePaymentService({
+  balance: {
+    readTopup: async (topup_id) => await balance.readTopup(topup_id),
+    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  },
+}));
+base.use(creemPaymentService({
   balance: {
     readTopup: async (topup_id) => await balance.readTopup(topup_id),
     finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
@@ -57,7 +67,7 @@ On the product side, the usual first call is:
 const methods = await guest.service("payment").get("methods");
 ```
 
-Then the frontend can choose the concrete method from `methods.items`, such as `payment.stripe`.
+Then the frontend can choose the concrete method from `methods.items`, such as `payment.stripe` or `payment.creem`.
 
 ## Read by capability
 
@@ -65,3 +75,4 @@ Then the frontend can choose the concrete method from `methods.items`, such as `
 2. For wallet flows, read [Balance Service](/en/services-sdk-docs/balance)
 3. For usage events, read [Usage Service](/en/services-sdk-docs/usage)
 4. For Stripe topups, read [Stripe Payment Service](/en/services-sdk-docs/payment-stripe)
+5. For Creem topups, read [Creem Payment Service](/en/services-sdk-docs/payment-creem)

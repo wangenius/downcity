@@ -144,7 +144,7 @@ curl https://my-city.<your-subdomain>.workers.dev/health
 ```json
 {
   "ok": true,
-  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "payment.stripe", "ai"]
+  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "payment.stripe", "payment.creem", "ai"]
 }
 ```
 
@@ -181,6 +181,9 @@ curl -X POST https://my-city.<your-subdomain>.workers.dev/v1/env/upsert \
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook 签名密钥 |
 | `STRIPE_SUCCESS_URL` | 可选，Checkout 成功后的默认跳转地址 |
 | `STRIPE_CANCEL_URL` | 可选，Checkout 取消后的默认跳转地址 |
+| `CREEM_API_KEY` | 创建 Creem Checkout 的 API key |
+| `CREEM_PRODUCT_ID` | Creem 托管 Checkout 使用的 product |
+| `CREEM_WEBHOOK_SECRET` | 可选，Creem webhook 签名密钥 |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | 可选，Google OAuth 登录 |
 | `WECHAT_CLIENT_ID` / `WECHAT_CLIENT_SECRET` | 可选，微信网站应用登录 |
 

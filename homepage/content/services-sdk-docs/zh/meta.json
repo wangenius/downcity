@@ -5,6 +5,7 @@
     "accounts",
     "balance",
     "usage",
-    "payment-stripe"
+    "payment-stripe",
+    "payment-creem"
   ]
 }

@@ -75,7 +75,7 @@ async function run_select_prompt(question) {
             vi: true,
             mouse: true,
             style: build_list_style(),
-            items: choices.map((item) => format_choice_label(item)),
+            items: choices.map(format_choice_sidebar_label),
         });
         const detail = blessed.box({
             parent: shell.main_box,
@@ -98,6 +98,7 @@ async function run_select_prompt(question) {
         list.on("select item", (_item, index_value) => {
             selected_index = clamp_selected_index(index_value, choices.length, selected_index);
             detail.setContent(format_choice_detail(choices[selected_index]));
+            shell.footer_box.setContent(format_select_footer(choices[selected_index]));
             screen.render();
         });
         list.key(["enter"], () => {
@@ -115,6 +116,7 @@ async function run_select_prompt(question) {
             }
         };
         process.stdin.on("data", raw_input_listener);
+        shell.footer_box.setContent(format_select_footer(choices[selected_index]));
         screen.render();
     });
 }
@@ -173,13 +175,15 @@ async function run_multiselect_prompt(question) {
             list.setItems(build_multiselect_items(choices, selected_indexes));
             list.select(current_index);
             detail.setContent(format_choice_detail(choices[current_index]));
+            shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
             screen.render();
         };
         list.select(current_index);
         list.focus();
         list.on("select item", (_item, index_value) => {
-            current_index = typeof index_value === "number" ? index_value : current_index;
+            current_index = clamp_selected_index(index_value, choices.length, current_index);
             detail.setContent(format_choice_detail(choices[current_index]));
+            shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
             screen.render();
         });
         list.key(["space"], () => {
@@ -215,6 +219,7 @@ async function run_multiselect_prompt(question) {
             }
         };
         process.stdin.on("data", raw_input_listener);
+        shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
         screen.render();
     });
 }
@@ -268,7 +273,7 @@ async function run_confirm_prompt(question) {
             vi: true,
             mouse: true,
             style: build_list_style(),
-            items: choices.map((item) => item.title),
+            items: choices.map(format_choice_sidebar_label),
         });
         const note = blessed.box({
             parent: shell.main_box,
@@ -289,6 +294,7 @@ async function run_confirm_prompt(question) {
         list.on("select item", (_item, index_value) => {
             selected_index = clamp_selected_index(index_value, choices.length, selected_index);
             note.setContent(format_choice_detail(choices[selected_index]));
+            shell.footer_box.setContent(format_confirm_footer(choices[selected_index]));
             screen.render();
         });
         screen.key(["escape", "q", "C-c"], () => finish(undefined));
@@ -303,6 +309,7 @@ async function run_confirm_prompt(question) {
             }
         };
         process.stdin.on("data", raw_input_listener);
+        shell.footer_box.setContent(format_confirm_footer(choices[selected_index]));
         screen.render();
     });
 }
@@ -564,6 +571,9 @@ function build_list_style() {
 function format_choice_label(choice) {
     return String(choice?.title ?? choice?.label ?? "").trim();
 }
+function format_choice_sidebar_label(choice) {
+    return `${format_choice_label(choice)}  ·  ${choice_description(choice)}`;
+}
 function format_choice_detail(choice) {
     if (!choice) {
         return t({
@@ -572,13 +582,23 @@ function format_choice_detail(choice) {
         });
     }
     const title = String(choice.title ?? choice.label ?? "").trim();
-    const hint = String(choice.description ?? choice.hint ?? "").trim();
+    const hint = choice_description(choice);
     const value = choice.value === undefined ? "" : String(choice.value);
     return [
         `{bold}${title}{/bold}`,
         hint,
         value ? `\n${t({ zh: "值", en: "value" })}: ${value}` : "",
     ].filter(Boolean).join("\n");
+}
+function choice_description(choice) {
+    const hint = String(choice?.description ?? choice?.hint ?? "").trim();
+    if (hint)
+        return hint;
+    const title = format_choice_label(choice);
+    return t({
+        zh: `选择 ${title}`,
+        en: `Select ${title}`,
+    });
 }
 /**
  * 单选 footer 文案。
@@ -589,6 +609,11 @@ function select_footer_text() {
         en: "Enter choose · Esc cancel · ↑↓ / j k navigate",
     });
 }
+function format_select_footer(choice) {
+    if (!choice)
+        return select_footer_text();
+    return `${select_footer_text()} · ${choice_description(choice)}`;
+}
 /**
  * 多选 footer 文案。
  */
@@ -598,6 +623,11 @@ function multiselect_footer_text() {
         en: "Space toggle · Enter confirm · Esc cancel · ↑↓ / j k navigate",
     });
 }
+function format_multiselect_footer(choice) {
+    if (!choice)
+        return multiselect_footer_text();
+    return `${multiselect_footer_text()} · ${choice_description(choice)}`;
+}
 /**
  * 确认 footer 文案。
  */
@@ -606,6 +636,11 @@ function confirm_footer_text() {
         zh: "Enter 选择 · Esc 取消",
         en: "Enter choose · Esc cancel",
     });
+}
+function format_confirm_footer(choice) {
+    if (!choice)
+        return confirm_footer_text();
+    return `${confirm_footer_text()} · ${choice_description(choice)}`;
 }
 /**
  * 输入 footer 文案。
@@ -624,8 +659,7 @@ function text_footer_text(secret) {
 function build_multiselect_items(choices, selected_indexes) {
     return choices.map((choice, index) => {
         const checked = selected_indexes.has(index) ? "[x]" : "[ ]";
-        const title = String(choice.title ?? choice.label ?? "").trim();
-        return `${checked} ${title}`;
+        return `${checked} ${format_choice_sidebar_label(choice)}`;
     });
 }
 function build_multiselect_values(choices, selected_indexes) {

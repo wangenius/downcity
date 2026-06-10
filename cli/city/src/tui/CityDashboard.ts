@@ -267,6 +267,7 @@ async function run_city_dashboard_once(
       const next_item = state.items[selected_index];
       if (!next_item) return;
       detail.setContent(format_detail_content(next_item));
+      shell.set_footer(format_footer(state.footer, next_item));
       screen.render();
     });
 
@@ -298,16 +299,22 @@ async function run_city_dashboard_once(
     process.stdin.on("data", raw_input_listener);
 
     list.focus();
+    shell.set_footer(format_footer(state.footer, state.items[selected_index]));
     screen.render();
   });
 }
 
 function format_list_label(item: tui_list_item): string {
-  return item.title;
+  return `${item.title}  ·  ${item.subtitle}`;
 }
 
 function format_detail_content(item: tui_list_item): string {
   return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;
+}
+
+function format_footer(base_footer: string, item: tui_list_item | undefined): string {
+  if (!item) return base_footer;
+  return `${base_footer} · ${item.subtitle}`;
 }
 
 function clamp_selected_index(

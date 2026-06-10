@@ -232,7 +232,7 @@ function create_shell(title) {
 }
 function render_nav(shell, title, options, selected_index) {
     shell.breadcrumb_box.setContent(format_breadcrumb(title));
-    shell.nav_list.setItems(options.map((item) => item.label));
+    shell.nav_list.setItems(options.map(format_sidebar_option));
     shell.nav_list.select(selected_index);
     render_sidebar_hint(shell, options, selected_index);
     shell.screen.render();
@@ -511,12 +511,24 @@ function build_list_style() {
 }
 function render_sidebar_hint(shell, options, selected) {
     const option = options[typeof selected === "number" ? selected : 0];
-    const hint = option?.hint ? ` · ${option.hint}` : "";
+    const hint = option ? ` · ${option_description(option)}` : "";
     shell.footer_box.setContent(`${t({
         zh: "Enter 选择 · Esc / q 返回 · ↑↓ 切换",
         en: "Enter choose · Esc / q back · ↑↓ navigate",
     })}${hint}`);
     shell.screen.render();
+}
+function format_sidebar_option(option) {
+    return `${option.label}  ·  ${option_description(option)}`;
+}
+function option_description(option) {
+    const explicit_hint = String(option.hint ?? "").trim();
+    if (explicit_hint)
+        return explicit_hint;
+    return t({
+        zh: `选择 ${option.label}`,
+        en: `Select ${option.label}`,
+    });
 }
 function next_breadcrumb_parts(current_parts, section_title) {
     const normalized_title = section_title.trim();

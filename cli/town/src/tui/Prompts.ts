@@ -94,6 +94,8 @@ interface prompt_result_map {
   [key: string]: unknown;
 }
 
+type prompt_choice = NonNullable<PromptObject["choices"]>[number];
+
 /**
  * Town 使用的 prompts 默认导出。
  */
@@ -173,7 +175,7 @@ async function run_select_prompt(
       vi: true,
       mouse: true,
       style: build_list_style(),
-      items: choices.map((item) => format_choice_label(item)),
+      items: choices.map(format_choice_sidebar_label),
     }) as blessed_list_element;
 
     const detail = blessed.box({
@@ -200,6 +202,7 @@ async function run_select_prompt(
     list.on("select item", (_item, index_value) => {
       selected_index = clamp_selected_index(index_value, choices.length, selected_index);
       detail.setContent(format_choice_detail(choices[selected_index]));
+      shell.footer_box.setContent(format_select_footer(choices[selected_index]));
       screen.render();
     });
 
@@ -219,6 +222,7 @@ async function run_select_prompt(
       }
     };
     process.stdin.on("data", raw_input_listener);
+    shell.footer_box.setContent(format_select_footer(choices[selected_index]));
     screen.render();
   });
 }
@@ -286,6 +290,7 @@ async function run_multiselect_prompt(
       list.setItems(build_multiselect_items(choices, selected_indexes));
       list.select(current_index);
       detail.setContent(format_choice_detail(choices[current_index]));
+      shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
       screen.render();
     };
 
@@ -293,8 +298,9 @@ async function run_multiselect_prompt(
     list.focus();
 
     list.on("select item", (_item, index_value) => {
-      current_index = typeof index_value === "number" ? index_value : current_index;
+      current_index = clamp_selected_index(index_value, choices.length, current_index);
       detail.setContent(format_choice_detail(choices[current_index]));
+      shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
       screen.render();
     });
 
@@ -331,6 +337,7 @@ async function run_multiselect_prompt(
       }
     };
     process.stdin.on("data", raw_input_listener);
+    shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
     screen.render();
   });
 }
@@ -390,7 +397,7 @@ async function run_confirm_prompt(
       vi: true,
       mouse: true,
       style: build_list_style(),
-      items: choices.map((item) => item.title),
+      items: choices.map(format_choice_sidebar_label),
     }) as blessed_list_element;
 
     const note = blessed.box({
@@ -416,6 +423,7 @@ async function run_confirm_prompt(
     list.on("select item", (_item, index_value) => {
       selected_index = clamp_selected_index(index_value, choices.length, selected_index);
       note.setContent(format_choice_detail(choices[selected_index]));
+      shell.footer_box.setContent(format_confirm_footer(choices[selected_index]));
       screen.render();
     });
 
@@ -431,6 +439,7 @@ async function run_confirm_prompt(
       }
     };
     process.stdin.on("data", raw_input_listener);
+    shell.footer_box.setContent(format_confirm_footer(choices[selected_index]));
     screen.render();
   });
 }
@@ -736,6 +745,15 @@ function format_choice_label(choice?: {
   return String(choice?.title ?? choice?.label ?? "").trim();
 }
 
+function format_choice_sidebar_label(choice?: {
+  title?: string;
+  label?: string;
+  description?: string;
+  hint?: string;
+}): string {
+  return `${format_choice_label(choice)}  ·  ${choice_description(choice)}`;
+}
+
 function format_choice_detail(choice?: {
   title?: string;
   label?: string;
@@ -751,7 +769,7 @@ function format_choice_detail(choice?: {
   }
 
   const title = String(choice.title ?? choice.label ?? "").trim();
-  const hint = String(choice.description ?? choice.hint ?? "").trim();
+  const hint = choice_description(choice);
   const value = choice.value === undefined ? "" : String(choice.value);
 
   return [
@@ -759,6 +777,21 @@ function format_choice_detail(choice?: {
     hint,
     value ? `\n${t({ zh: "值", en: "value" })}: ${value}` : "",
   ].filter(Boolean).join("\n");
+}
+
+function choice_description(choice?: {
+  title?: string;
+  label?: string;
+  description?: string;
+  hint?: string;
+}): string {
+  const hint = String(choice?.description ?? choice?.hint ?? "").trim();
+  if (hint) return hint;
+  const title = format_choice_label(choice);
+  return t({
+    zh: `选择 ${title}`,
+    en: `Select ${title}`,
+  });
 }
 
 /**
@@ -771,6 +804,11 @@ function select_footer_text(): string {
   });
 }
 
+function format_select_footer(choice: prompt_choice | undefined): string {
+  if (!choice) return select_footer_text();
+  return `${select_footer_text()} · ${choice_description(choice)}`;
+}
+
 /**
  * 多选 footer 文案。
  */
@@ -781,6 +819,11 @@ function multiselect_footer_text(): string {
   });
 }
 
+function format_multiselect_footer(choice: prompt_choice | undefined): string {
+  if (!choice) return multiselect_footer_text();
+  return `${multiselect_footer_text()} · ${choice_description(choice)}`;
+}
+
 /**
  * 确认 footer 文案。
  */
@@ -789,6 +832,11 @@ function confirm_footer_text(): string {
     zh: "Enter 选择 · Esc 取消",
     en: "Enter choose · Esc cancel",
   });
+}
+
+function format_confirm_footer(choice: prompt_choice | undefined): string {
+  if (!choice) return confirm_footer_text();
+  return `${confirm_footer_text()} · ${choice_description(choice)}`;
 }
 
 /**
@@ -817,8 +865,7 @@ function build_multiselect_items(
 ): string[] {
   return choices.map((choice, index) => {
     const checked = selected_indexes.has(index) ? "[x]" : "[ ]";
-    const title = String(choice.title ?? choice.label ?? "").trim();
-    return `${checked} ${title}`;
+    return `${checked} ${format_choice_sidebar_label(choice)}`;
   });
 }
 

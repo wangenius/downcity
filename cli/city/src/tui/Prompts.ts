@@ -100,7 +100,7 @@ export async function select(
       vi: true,
       mouse: true,
       style: build_list_style(),
-      items: input.options.map((item) => item.label),
+      items: input.options.map(format_option_sidebar_label),
     }) as blessed_list_element;
 
     const detail = blessed.box({
@@ -125,6 +125,7 @@ export async function select(
     list.on("select item", (_item, index_value) => {
       selected_index = clamp_selected_index(index_value, input.options.length, selected_index);
       detail.setContent(format_option_detail(input.options[selected_index]));
+      shell.set_footer(format_select_footer(input.options[selected_index], false));
       screen.render();
     });
 
@@ -144,6 +145,7 @@ export async function select(
       }
     };
     process.stdin.on("data", raw_input_listener);
+    shell.set_footer(format_select_footer(input.options[selected_index], false));
     screen.render();
   });
 }
@@ -230,7 +232,7 @@ export async function confirm(
       vi: true,
       mouse: true,
       style: build_list_style(),
-      items: options.map((item) => item.label),
+      items: options.map(format_option_sidebar_label),
     }) as blessed_list_element;
 
     const detail = blessed.box({
@@ -249,6 +251,7 @@ export async function confirm(
     list.on("select item", (_item, index_value) => {
       selected_index = clamp_selected_index(index_value, options.length, selected_index);
       detail.setContent(format_option_detail(options[selected_index]));
+      shell.set_footer(format_select_footer(options[selected_index], true));
       screen.render();
     });
 
@@ -268,6 +271,7 @@ export async function confirm(
       }
     };
     process.stdin.on("data", raw_input_listener);
+    shell.set_footer(format_select_footer(options[selected_index], true));
     screen.render();
   });
 }
@@ -485,9 +489,22 @@ function format_option_detail(option?: prompt_select_option): string {
 
   return [
     `{bold}${option.label}{/bold}`,
-    option.hint ? option.hint : "",
+    option_description(option),
     option.value !== undefined ? `\n${t({ zh: "值", en: "value" })}: ${String(option.value)}` : "",
   ].filter(Boolean).join("\n");
+}
+
+function format_option_sidebar_label(option: prompt_select_option): string {
+  return `${option.label}  ·  ${option_description(option)}`;
+}
+
+function option_description(option: prompt_select_option): string {
+  const hint = String(option.hint ?? "").trim();
+  if (hint) return hint;
+  return t({
+    zh: `选择 ${option.label}`,
+    en: `Select ${option.label}`,
+  });
 }
 
 function format_input_hint(placeholder?: string): string {
@@ -515,6 +532,12 @@ function select_footer_text(): string {
     zh: "Enter 选择 · Esc 取消 · ↑↓ / j k 切换",
     en: "Enter choose · Esc cancel · ↑↓ / j k navigate",
   });
+}
+
+function format_select_footer(option: prompt_select_option | undefined, confirm_mode: boolean): string {
+  const base_footer = confirm_mode ? confirm_footer_text() : select_footer_text();
+  if (!option) return base_footer;
+  return `${base_footer} · ${option_description(option)}`;
 }
 
 /**

@@ -211,6 +211,7 @@ async function run_city_dashboard_once(state) {
             if (!next_item)
                 return;
             detail.setContent(format_detail_content(next_item));
+            shell.set_footer(format_footer(state.footer, next_item));
             screen.render();
         });
         list.key(["enter"], () => {
@@ -237,14 +238,20 @@ async function run_city_dashboard_once(state) {
         };
         process.stdin.on("data", raw_input_listener);
         list.focus();
+        shell.set_footer(format_footer(state.footer, state.items[selected_index]));
         screen.render();
     });
 }
 function format_list_label(item) {
-    return item.title;
+    return `${item.title}  ·  ${item.subtitle}`;
 }
 function format_detail_content(item) {
     return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;
+}
+function format_footer(base_footer, item) {
+    if (!item)
+        return base_footer;
+    return `${base_footer} · ${item.subtitle}`;
 }
 function clamp_selected_index(value, length, fallback) {
     if (length <= 0)

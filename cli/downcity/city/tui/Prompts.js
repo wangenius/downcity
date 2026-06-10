@@ -44,7 +44,7 @@ export async function select(input) {
             vi: true,
             mouse: true,
             style: build_list_style(),
-            items: input.options.map((item) => item.label),
+            items: input.options.map(format_option_sidebar_label),
         });
         const detail = blessed.box({
             parent: shell.main_box,
@@ -66,6 +66,7 @@ export async function select(input) {
         list.on("select item", (_item, index_value) => {
             selected_index = clamp_selected_index(index_value, input.options.length, selected_index);
             detail.setContent(format_option_detail(input.options[selected_index]));
+            shell.set_footer(format_select_footer(input.options[selected_index], false));
             screen.render();
         });
         list.key(["enter"], () => {
@@ -83,6 +84,7 @@ export async function select(input) {
             }
         };
         process.stdin.on("data", raw_input_listener);
+        shell.set_footer(format_select_footer(input.options[selected_index], false));
         screen.render();
     });
 }
@@ -158,7 +160,7 @@ export async function confirm(input) {
             vi: true,
             mouse: true,
             style: build_list_style(),
-            items: options.map((item) => item.label),
+            items: options.map(format_option_sidebar_label),
         });
         const detail = blessed.box({
             parent: shell.main_box,
@@ -175,6 +177,7 @@ export async function confirm(input) {
         list.on("select item", (_item, index_value) => {
             selected_index = clamp_selected_index(index_value, options.length, selected_index);
             detail.setContent(format_option_detail(options[selected_index]));
+            shell.set_footer(format_select_footer(options[selected_index], true));
             screen.render();
         });
         list.key(["enter"], () => {
@@ -192,6 +195,7 @@ export async function confirm(input) {
             }
         };
         process.stdin.on("data", raw_input_listener);
+        shell.set_footer(format_select_footer(options[selected_index], true));
         screen.render();
     });
 }
@@ -379,9 +383,21 @@ function format_option_detail(option) {
     }
     return [
         `{bold}${option.label}{/bold}`,
-        option.hint ? option.hint : "",
+        option_description(option),
         option.value !== undefined ? `\n${t({ zh: "值", en: "value" })}: ${String(option.value)}` : "",
     ].filter(Boolean).join("\n");
+}
+function format_option_sidebar_label(option) {
+    return `${option.label}  ·  ${option_description(option)}`;
+}
+function option_description(option) {
+    const hint = String(option.hint ?? "").trim();
+    if (hint)
+        return hint;
+    return t({
+        zh: `选择 ${option.label}`,
+        en: `Select ${option.label}`,
+    });
 }
 function format_input_hint(placeholder) {
     const text = String(placeholder ?? "").trim();
@@ -403,6 +419,12 @@ function select_footer_text() {
         zh: "Enter 选择 · Esc 取消 · ↑↓ / j k 切换",
         en: "Enter choose · Esc cancel · ↑↓ / j k navigate",
     });
+}
+function format_select_footer(option, confirm_mode) {
+    const base_footer = confirm_mode ? confirm_footer_text() : select_footer_text();
+    if (!option)
+        return base_footer;
+    return `${base_footer} · ${option_description(option)}`;
 }
 /**
  * 确认选择 footer 文案。

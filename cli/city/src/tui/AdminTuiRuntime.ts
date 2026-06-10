@@ -326,7 +326,7 @@ function render_nav(
   selected_index: number,
 ): void {
   shell.breadcrumb_box.setContent(format_breadcrumb(title));
-  shell.nav_list.setItems(options.map((item) => item.label));
+  shell.nav_list.setItems(options.map(format_sidebar_option));
   shell.nav_list.select(selected_index);
   render_sidebar_hint(shell, options, selected_index);
   shell.screen.render();
@@ -648,12 +648,25 @@ function render_sidebar_hint(
   selected: number | undefined,
 ): void {
   const option = options[typeof selected === "number" ? selected : 0];
-  const hint = option?.hint ? ` · ${option.hint}` : "";
+  const hint = option ? ` · ${option_description(option)}` : "";
   shell.footer_box.setContent(`${t({
     zh: "Enter 选择 · Esc / q 返回 · ↑↓ 切换",
     en: "Enter choose · Esc / q back · ↑↓ navigate",
   })}${hint}`);
   shell.screen.render();
+}
+
+function format_sidebar_option(option: admin_tui_select_option): string {
+  return `${option.label}  ·  ${option_description(option)}`;
+}
+
+function option_description(option: admin_tui_select_option): string {
+  const explicit_hint = String(option.hint ?? "").trim();
+  if (explicit_hint) return explicit_hint;
+  return t({
+    zh: `选择 ${option.label}`,
+    en: `Select ${option.label}`,
+  });
 }
 
 function next_breadcrumb_parts(current_parts: string[], section_title: string): string[] {

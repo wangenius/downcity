@@ -12,6 +12,7 @@ import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { SessionUiMessageChunkCallback } from "@/executor/types/SessionRun.js";
+import { generateId } from "@/utils/Id.js";
 import {
   summarizeUiMessageForDebug,
   toInlinePreview,
@@ -47,6 +48,18 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
 
   const uiStream = params.result.toUIMessageStream<SessionMessageV1>({
     // 关键点（中文）：SDK stream 需要 reasoning 旁路事件时可直接消费；最终落盘仍由 responseMessage 收敛。
+    originalMessages: [],
+    generateMessageId: () => `a:${params.sessionId}:${generateId()}`,
+    messageMetadata: ({ part }) => {
+      if (part.type !== "start" && part.type !== "finish") return undefined;
+      return {
+        v: 1,
+        ts: Date.now(),
+        sessionId: params.sessionId,
+        source: "egress",
+        kind: "normal",
+      };
+    },
     sendReasoning: true,
     sendSources: false,
     onFinish: (event) => {

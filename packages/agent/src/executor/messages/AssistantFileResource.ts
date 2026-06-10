@@ -160,7 +160,6 @@ async function read_local_resource(
   projectRoot: string,
   raw_url: string,
 ): Promise<{
-  mediaType?: string;
   filename?: string;
   bytes: Buffer;
 }> {

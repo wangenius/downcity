@@ -44,24 +44,24 @@ agent 启动时：
 
 ## 4) Plugin 配置
 
-插件行为配置写在项目 `downcity.json` 的 `plugins.*`。
+插件行为配置可以写在项目 `downcity.json` 的 `plugins.*`。并不是所有 plugin 都从这里读取运行参数；例如 `asr` 这类能力型 plugin 的真实转写函数从 SDK constructor 传入。
 
-插件如果需要额外模型、命令模板或本地路径，也直接写在对应的 `plugins.<name>.*` 下。
-
-例如 asr：
+例如 chat 渠道绑定：
 
 ```json
 {
   "plugins": {
-    "asr": {
-      "enabled": true,
-      "provider": "local",
-      "modelId": "SenseVoiceSmall"
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
     }
   }
 }
 ```
-
 
 ## 5) Chat 渠道绑定
 

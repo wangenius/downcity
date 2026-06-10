@@ -115,7 +115,7 @@ plugin_call({
 
 `ImagePlugin` 不直接绑定 City，也不关心 OpenAI、Gemini、302.ai、Luchi 等 provider 的具体协议。传入 `image_create` 和 `image_result` 任务函数后，插件会自己轮询，直到任务返回 AI SDK `UIMessage`。
 
-生成图片的 file parts 会自动落盘到 `.downcity/resources/`，并合并进最终 assistant message。
+生成图片的 file parts 会统一落盘到 `.downcity/resources/`，以 `resources://.downcity/resources/...` 引用，并自动合并进最终 assistant message。
 
 ## plugin HTTP
 

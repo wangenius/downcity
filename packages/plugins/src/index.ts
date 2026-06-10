@@ -44,6 +44,18 @@ export type {
   ChatPluginTelegramOptions,
 } from "./chat/ChatPluginTypes.js";
 export type {
+  AsrPluginInput,
+  AsrPluginOptions,
+  AsrPluginResult,
+} from "./asr/types/AsrPlugin.js";
+export type {
+  TtsPluginInput,
+  TtsPluginOptions,
+  TtsPluginResult,
+  TtsPluginSimpleAudioResult,
+  TtsPluginUiMessageResult,
+} from "./tts/types/TtsPlugin.js";
+export type {
   ImagePluginContent,
   ImagePluginFileContent,
   ImagePluginInput,

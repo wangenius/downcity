@@ -1,102 +1,93 @@
 ---
 title: web Plugin
-description: 详细说明 web 内建 plugin 如何选择 provider、安装依赖、切换联网方式、注入 system prompt，以及什么时候该用 web-access 或 agent-browser
+description: 详细说明 web 内建 plugin 如何注入联网方法论，并通过 install action 准备联网相关 skill / CLI 依赖
 ---
 
 # web Plugin
 
-`web` 是当前最完整的“外部能力适配型 plugin”。
+`web` 是一个很薄的 system text plugin。
 
-它本身不直接实现联网搜索或浏览器自动化，而是负责把这些外部能力稳妥地接到 agent 体系里。
+它主要做两件事：
 
-当前它支持两个 provider：
+- 向 agent 注入联网研究、网页阅读、浏览器操作的通用方法论
+- 通过 `install` action 准备 `web-access`、`agent-browser` 等联网相关 skill / CLI 依赖
 
-- `web-access`
-- `agent-browser`
+它不负责：
+
+- 选择 provider
+- 决定运行时默认使用哪个联网实现
+- 执行真实网页搜索或浏览器操作
+- 保存项目级 web 配置
 
 ## 它到底做什么
 
-`web` 主要负责：
+`web` 会在 agent 组装 system prompt 时追加一段方法论文本。
 
-1. 选择当前项目默认使用哪个联网 provider
-2. 检查该 provider 是否已安装并可用
-3. 在需要时触发安装
-4. 把当前 provider 的使用约束注入 system prompt
-5. 在当前项目配置里启用或关闭这个 plugin
+这段文本告诉 agent：
 
-所以它的角色更像“联网能力总入口”，而不是“联网执行器本身”。
+- 不要假设某个联网工具一定存在
+- 先查看当前可用 tools、skills 和上下文
+- 搜索、抓取、浏览器、登录态任务应该分别怎么选路径
+- 调研结论优先回到一手来源核实
+- 缺少必要联网能力时要直接说明，不要假装已经联网
 
-## `web-access` 和 `agent-browser` 有什么区别
+所以它的角色不是“联网执行器”，而是“联网任务心智层”。
 
-### `web-access`
+## install action 做什么
 
-更适合：
+`install` 是 setup action，只负责准备能力，不代表 agent 运行时必须使用某个 provider。
 
-- 网页搜索
-- 信息查证
-- 策略型联网任务
+```ts
+await agent.plugins.runAction({
+  plugin: "web",
+  action: "install",
+  payload: {
+    target: "agent-browser",
+    scope: "user",
+  },
+});
+```
 
-如果你的需求更像“查资料、搜网页、收集公开信息”，它通常是默认优先选项。
+可选 `target`：
 
-### `agent-browser`
+- `web-access`：安装 web-access skill，默认值
+- `agent-browser`：安装 agent-browser skill，并准备 `agent-browser` CLI 包
+- `all`：同时准备以上能力
 
-更适合：
+可选 `scope`：
 
-- 动态页面
-- 登录态页面
-- 真实浏览器交互
+- `user`：安装到用户级 skill / 全局 CLI，默认值
+- `project`：安装到当前项目级 skill / devDependency
 
-如果你的需求更像“打开页面、点击、输入、处理复杂前端界面”，那通常更应该选它。
+## 和具体联网能力的关系
+
+具体联网能力来自当前 agent 环境里的 tools、skills 或其他 plugin。
+
+例如：
+
+- 有搜索或 fetch 工具时，agent 可以用它们做公开网页检索与读取。
+- 有 browser、Chrome、agent-browser 或 computer-use 能力时，agent 可以处理动态页面、登录态页面和真实浏览器交互。
+- 有 `web-access` 类 skill 时，agent 可以按该 skill 的说明执行联网搜索、网页抓取和资料核实。
+
+`web` 本身不决定使用哪一个。选择发生在 agent 执行任务时，由当前可用能力和用户目标共同决定。
 
 ## 它使用了哪些 plugin 能力
 
 `web` 用到了：
 
-- `config`
-- `setup`
-- `usage`
-- `availability`
 - `actions`
+- `setup`
 - `system`
 
-它没有使用 hooks，也没有使用 runtime HTTP。
+它没有使用：
 
-这说明它最核心的价值是：
+- `config`
+- `usage`
+- `availability`
+- hooks
+- runtime HTTP
 
-- 配置 provider
-- 管理项目启用态
-- 对运行时 prompt 做约束增强
-
-## 为什么它是理解完整 plugin 的好样本
-
-因为 `web` 基本覆盖了一个“完整产品化插件”会需要的几乎所有面：
-
-- UI 可以先看 `setup`
-- 用户日常变更配置看 `usage`
-- 控制面可以看 `status` 和 `doctor`
-- CLI / SDK 可以直接调 action
-- agent system prompt 会自动得到 provider 提示
-
-## 典型场景
-
-### 场景一：项目主要做资料研究
-
-推荐把 provider 设成 `web-access`。
-
-这样 agent 的 system prompt 会自动知道自己应该走搜索 / 联网 skill 的路径，而不是假设有浏览器自动化。
-
-### 场景二：项目要操作登录后的动态后台
-
-推荐切到 `agent-browser`。
-
-这类任务往往不是“能搜到页面内容”就够了，而是需要真实浏览器上下文。
-
-### 场景三：项目里既有研究任务，又有浏览器自动化任务
-
-这时最常见做法是：
-
-- 默认 provider 用 `web-access`
-- 真正需要浏览器时，再显式 `use` 切到 `agent-browser`
+这也是它现在最干净的地方：prompt 负责方法论，`install` 只负责准备依赖，不把 provider 选择、项目配置和真实联网执行混在一起。
 
 ## 在 SDK 里怎么挂载
 
@@ -112,205 +103,53 @@ const agent = new Agent({
 });
 ```
 
-## 关键配置项
+挂载后，`WebPlugin.system()` 返回的方法论会自动进入 agent 的 plugin system prompt。
 
-| 配置项 | 作用 | 说明 |
-| --- | --- | --- |
-| `provider` | 当前 provider | `web-access` 或 `agent-browser` |
-| `injectPrompt` | 是否注入 provider 提示词 | 建议大多数场景保持开启 |
-| `repositoryUrl` | 记录来源仓库 | 更偏安装元信息 |
-| `sourceVersion` | 记录来源版本 | 更偏安装元信息 |
-| `browserCommand` | 浏览器命令名 | 仅 `agent-browser` 模式相关 |
-| `installScope` | 安装位置 | `user` 或 `project` |
+## 如何调用
 
-## 用户怎么使用
-
-普通 CLI 使用直接走 `town web` 快捷命令：
-
-```bash
-town web status
-town web providers
-town web install --provider web-access --scope user
-town web on --provider web-access
-town web use agent-browser --browser-command agent-browser
-town web doctor
-town web off
-```
-
-`configure` 存在于 SDK/plugin action 层，但没有暴露成 `town web configure` 快捷命令。普通 CLI 调整使用 `town web on`、`town web use`、`town web off`。
-
-## 主要动作
-
-| Action | 作用 | 什么时候用 |
-| --- | --- | --- |
-| `status` | 看当前配置与可用状态 | 想先了解当前环境 |
-| `providers` | 列出支持的 provider | 想做选择器或控制面 |
-| `configure` | 写入配置 | SDK 或高级 plugin action 调用 |
-| `install` | 安装当前 provider 对应能力 | 首次接入时 |
-| `on` | 启用 plugin | 设置当前项目的 `plugins.web.enabled` |
-| `off` | 关闭 plugin | 设置当前项目的 `plugins.web.enabled` |
-| `use` | 切换当前 provider | 项目运行时切换联网方式 |
-| `doctor` | 做依赖诊断 | 怀疑 provider 没装好时 |
-
-## 场景化用法示例
-
-### 查看当前状态
+`web` 只有一个 action：`install`。
 
 ```ts
-const status = await agent.plugins.runAction({
-  plugin: "web",
-  action: "status",
-});
-```
-
-这个结果通常会告诉你：
-
-- 当前 plugin 配置
-- 当前 availability
-- 当前 provider 的就绪信息
-
-### 列出所有 provider
-
-```ts
-const providers = await agent.plugins.runAction({
-  plugin: "web",
-  action: "providers",
-});
-```
-
-### 安装 provider
-
-```ts
-const result = await agent.plugins.runAction({
+await agent.plugins.runAction({
   plugin: "web",
   action: "install",
   payload: {
-    provider: "web-access",
-    installScope: "user",
-    injectPrompt: true,
+    target: "web-access",
+    scope: "user",
   },
 });
 ```
 
-### 切换当前 provider
+正确理解是：
 
-```ts
-const result = await agent.plugins.runAction({
-  plugin: "web",
-  action: "use",
-  payload: {
-    provider: "agent-browser",
-    browserCommand: "agent-browser",
-    injectPrompt: true,
-  },
-});
-```
+- `new WebPlugin()` 负责把联网方法论放进 agent system prompt
+- `web.install` 负责准备联网相关 skill / CLI 依赖
+- agent 执行时根据当前 tools / skills 决定具体联网路径
+- 真实搜索、抓取、点击和浏览器操作仍由具体 tool / skill 执行
 
-### 更新常规配置
+## 自然边界
 
-```ts
-const result = await agent.plugins.runAction({
-  plugin: "web",
-  action: "configure",
-  payload: {
-    provider: "web-access",
-    injectPrompt: true,
-  },
-});
-```
+`web` 不关心项目配置，也不写 `downcity.json.plugins.web`。
 
-### 做依赖诊断
+如果你需要让 agent 拥有某个具体联网能力，应在 agent 环境中显式提供对应 tool、skill 或 plugin，而不是把它塞进 `web`。
 
-```ts
-const diagnosis = await agent.plugins.runAction({
-  plugin: "web",
-  action: "doctor",
-});
-```
+## 什么时候使用它
 
-## `setup` 和 `usage` 在这里分别做什么
+适合：
 
-`web` 是理解这两个概念最清楚的内建样本之一。
+- agent 经常需要联网研究、网页阅读或浏览器操作
+- 你希望 agent 在使用联网能力前先做路径判断
+- 你已经通过 tools、skills 或其他 plugin 提供了真实联网能力
 
-### `setup`
+不适合：
 
-更偏首次接入：
-
-- 选 provider
-- 选安装位置
-- 决定是否注入提示词
-
-### `usage`
-
-更偏已经接入后的日常配置：
-
-- 当前 provider 是谁
-- 是否继续注入提示词
-- 浏览器命令是什么
-
-所以你可以把它理解为：
-
-- `setup` 解决“先接上”
-- `usage` 解决“接上之后怎么用”
-
-## `system` 在这里为什么很重要
-
-`web` 会根据当前配置，把 provider 对应的指导文本注入 system prompt。
-
-这一步很关键，因为“agent 具备联网能力”和“agent 知道自己应该怎么用这项联网能力”不是一回事。
-
-比如：
-
-- `web-access` 更偏搜索、查证、资料获取
-- `agent-browser` 更偏真实浏览器操作
-
-如果不把这种差异注入 prompt，agent 很容易选错路径。
-
-## 它的自然边界
-
-`web` 自己并不承担真实搜索引擎或浏览器执行器的长期实例管理。
-
-它更像一个：
-
-- provider 选择器
-- 安装入口
-- prompt 适配层
-
-如果你要理解“plugin 负责接能力、外部能力负责执行能力”，`web` 是很好的例子。
-
-## 需要注意的边界
-
-### 它不直接做网页搜索
-
-真正搜索或浏览器操作的执行不在这个 plugin 内部。
-
-### `on/off` 写入项目启用态
-
-这意味着：
-
-- `configure` 改的是怎么用
-- `on/off` 改的是当前项目是否启用这个 plugin
-
-它们都是项目级写入：`configure` 更新 provider 选项，`on/off` 更新项目启用开关。
-
-### 切 provider 不等于自动迁移所有心智
-
-从 `web-access` 切到 `agent-browser` 后，最重要的是 system prompt 也要随之变化。
-
-这也是 `injectPrompt` 默认值得保留为 `true` 的原因。
-
-## 什么时候优先参考它
-
-当你要设计这些能力时，优先参考 `web`：
-
-- provider 适配层
-- setup / usage 双界面插件
-- availability 与 doctor 诊断
-- system prompt 随配置切换
+- 你想让它切换运行时默认 provider
+- 你想让它直接执行网页搜索或浏览器点击
+- 你想把联网配置持久化到项目配置里
 
 ## 相关文档
 
 - [内建 Plugin 总览](/zh/plugins-docs/builtins/overview)
-- [Plugin 配置](/zh/agent-sdk-docs/plugins/configuration)
 - [Plugin System](/zh/agent-sdk-docs/plugins/plugin-system)
 - [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
+- [Skill Plugin](/zh/plugins-docs/builtins/skill)

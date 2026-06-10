@@ -177,14 +177,32 @@ export class ImagePlugin extends BasePlugin {
   }
 
   /**
-   * 图片插件给模型的最小使用说明。
+   * 图片插件给模型的使用说明。
    */
   system(_context: AgentContext): string {
     return [
-      "Image generation is available through the plugin_call tool.",
-      `Call plugin "${this.name}" action "generate" when the user asks to create, render, draw, or edit an image.`,
-      "Pass a JSON payload with prompt, optional size/aspect_ratio/quality/n, and optional provider_options.",
-      "The generated image files will be attached to the final assistant message automatically.",
+      "# Image Plugin",
+      "",
+      "Use this plugin only when the user asks to generate, create, draw, render, edit, transform, or stylize an image.",
+      "Do not call it for ordinary image analysis or questions about an existing image unless the user asks for a new/edited image output.",
+      "",
+      "Call through `plugin_call`:",
+      "",
+      "```ts",
+      "plugin_call({",
+      `  plugin: "${this.name}",`,
+      '  action: "generate",',
+      "  payload: {",
+      '    prompt: "...",',
+      "  },",
+      "});",
+      "```",
+      "",
+      "Payload rules:",
+      "- `prompt` is required unless `messages` provides the full multimodal image context.",
+      "- Optional common fields: `messages`, `size`, `aspect_ratio`, `ratio`, `quality`, `n`, `count`, `seed`, `provider_options`.",
+      "- Preserve the user's creative intent; do not over-rewrite the prompt unless clarification is necessary.",
+      "- Generated image file parts are saved under project `.downcity/resources` and attached to the final assistant message automatically.",
     ].join("\n");
   }
 

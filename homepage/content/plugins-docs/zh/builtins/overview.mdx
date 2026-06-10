@@ -5,7 +5,7 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 
 # Built-ins Overview
 
-当前代码里的 built-in plugin 集合包括：
+当前代码里的内建 plugin 能力包括：
 
 - `chat-authorization`
 - `skill`
@@ -33,6 +33,8 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 - `tts`
 - `workboard`
 - `chat`
+
+其中 `asr` 和 `tts` 需要通过 constructor 注入真实 AI 能力，因此它们是内建可用 class，但不在默认无参创建集合里。
 
 它们最适合理解这些 plugin 形状：
 
@@ -67,9 +69,9 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 | --- | --- | --- |
 | `chat-authorization` | chat 授权与角色解析 | rule layer |
 | `skill` | 技能发现与安装 | action + system |
-| `web` | 联网 provider 策略 | config + setup + usage + actions + system |
-| `asr` | 语音输入与增强 | action + pipeline + system |
-| `tts` | 文本转语音 | action + setup + usage + system |
+| `web` | 联网方法论注入与依赖准备 | action + setup + system |
+| `asr` | 语音输入与增强，真实转写函数由 constructor 注入 | action + pipeline + system |
+| `tts` | 文本转语音，真实合成函数由 constructor 注入 | action + system |
 | `workboard` | 工作快照与状态面 | availability + runtime HTTP |
 | `chat` | 渠道 runtime 与队列 worker | lifecycle + actions + system |
 | `contact` | agent 间点对点连接与分享 | action + system + lifecycle shell |

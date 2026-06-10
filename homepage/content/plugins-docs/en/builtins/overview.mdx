@@ -5,7 +5,7 @@ description: The full built-in plugin map in Downcity, including public SDK plug
 
 # Built-ins Overview
 
-The current built-in plugin set in code includes:
+The current built-in plugin capabilities in code include:
 
 - `chat-authorization`
 - `skill`
@@ -33,6 +33,8 @@ These are the ones most developers are likely to read first:
 - `tts`
 - `workboard`
 - `chat`
+
+`asr` and `tts` require real AI capabilities through their constructors, so they are built-in classes but are not part of the default no-argument creation set.
 
 These are the clearest examples for:
 
@@ -67,9 +69,9 @@ These plugins are usually read to understand how the platform is assembled, not 
 | --- | --- | --- |
 | `chat-authorization` | chat authorization and role resolution | rule layer |
 | `skill` | skill discovery and installation | action + system |
-| `web` | web provider strategy | config + setup + usage + actions + system |
-| `asr` | speech input and augmentation | action + pipeline + system |
-| `tts` | text-to-speech generation | action + setup + usage + system |
+| `web` | web methodology injection and dependency preparation | action + setup + system |
+| `asr` | speech input and augmentation with constructor-injected transcription | action + pipeline + system |
+| `tts` | text-to-speech generation with constructor-injected synthesis | action + system |
 | `workboard` | work snapshots and status surfaces | availability + runtime HTTP |
 | `chat` | channel runtime and queue worker | lifecycle + actions + system |
 | `contact` | peer-to-peer agent linking and sharing | action + system + lifecycle shell |

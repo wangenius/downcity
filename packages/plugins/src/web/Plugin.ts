@@ -1,47 +1,27 @@
 /**
- * Web Plugin。
+ * WebPlugin：联网方法论注入插件。
  *
  * 关键点（中文）
- * - `web` plugin 不再自实现联网与浏览器能力，只负责 provider 选择、状态检查与提示词注入。
- * - 真正的联网逻辑直接交给外部实现：`web-access` 或 `agent-browser`。
+ * - web plugin 不选择 provider，也不持久化 provider 运行态。
+ * - install action 只负责准备联网相关 skill / CLI 依赖。
+ * - 它只通过 `system()` 注入联网研究与浏览器使用方法论。
+ * - 具体执行能力由当前 agent 已注册的 tools、skills 或外部 plugin 决定。
  */
+
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { WebPluginConfig, WebPluginInstallInput } from "@/web/types/WebPlugin.js";
-import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/web/types/WebPlugin.js";
-import { isPluginEnabled } from "@downcity/agent/internal/plugin/core/Activation.js";
-import { writeProjectPluginEnabled } from "@downcity/agent/internal/plugin/core/ProjectConfigStore.js";
-import {
-  doctorWebPluginDependency,
-  inspectWebPluginDependency,
-  installWebPluginDependency,
-  readWebPluginConfig,
-  writeWebPluginConfig,
-} from "@/web/Dependency.js";
-import {
-  AGENT_BROWSER_PROMPT,
-  WEB_ACCESS_PROMPT,
-  WEB_PLUGIN_PROMPT,
-} from "@/web/WebPromptAssets.js";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type {
+  JsonObject,
+  JsonValue,
+} from "@downcity/agent/internal/types/common/Json.js";
+import { WEB_PLUGIN_PROMPT } from "@/web/WebPromptAssets.js";
+import { installWebPluginTargets } from "@/web/runtime/Install.js";
+import type { WebPluginInstallPayload } from "@/web/types/WebPlugin.js";
 
-function toJsonObject(input: Record<string, unknown> | null | undefined): JsonObject {
-  const out: JsonObject = {};
-  if (!input) return out;
-  for (const [key, value] of Object.entries(input)) {
-    if (
-      value === null ||
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
-      out[key] = value;
-    }
-  }
-  return out;
-}
-
-function getStringOpt(
+/**
+ * 读取字符串选项。
+ */
+function get_string_opt(
   opts: Record<string, JsonValue>,
   key: string,
 ): string | undefined {
@@ -51,472 +31,158 @@ function getStringOpt(
   return trimmed || undefined;
 }
 
-function getBooleanOpt(
+/**
+ * 读取布尔选项。
+ */
+function get_boolean_opt(
   opts: Record<string, JsonValue>,
   key: string,
-  defaultValue: boolean,
-): boolean {
+): boolean | undefined {
   const value = opts[key];
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
-    if (["0", "false", "no", "n", "off"].includes(normalized)) return false;
-  }
-  return defaultValue;
+  return typeof value === "boolean" ? value : undefined;
 }
 
-function getWebProviderOpt(
+/**
+ * 读取安装目标。
+ */
+function get_install_target_opt(
   opts: Record<string, JsonValue>,
-  key: string,
-): "web-access" | "agent-browser" | undefined {
-  const value = getStringOpt(opts, key);
-  if (value === "web-access" || value === "agent-browser") return value;
+): "web-access" | "agent-browser" | "all" | undefined {
+  const value = get_string_opt(opts, "target");
+  if (value === "web-access" || value === "agent-browser" || value === "all") {
+    return value;
+  }
   return undefined;
 }
 
-function getInstallScopeOpt(
+/**
+ * 读取安装作用域。
+ */
+function get_install_scope_opt(
   opts: Record<string, JsonValue>,
-  key: string,
 ): "user" | "project" | undefined {
-  const value = getStringOpt(opts, key);
+  const value = get_string_opt(opts, "scope");
   if (value === "user" || value === "project") return value;
   return undefined;
 }
 
-function createWebPluginDefinition(plugin: Plugin): Plugin {
-  return {
-    name: "web",
-  title: "Web Access",
-  description:
-    "Connects the agent to either web-access or agent-browser, checks provider readiness, and injects the matching guidance into the runtime prompt.",
-  config: {
-    plugin: "web",
-    scope: "project",
-    defaultValue: {
-      provider: "web-access",
-      injectPrompt: true,
-      repositoryUrl: WEB_PLUGIN_DEFAULT_REPOSITORY_URL,
-      sourceVersion: "2.4.1",
-      browserCommand: "agent-browser",
-      installScope: "user",
-    },
-  },
-  setup: {
-    mode: "install-configure",
-    title: "安装联网 Provider",
-    description: "把 provider 安装到统一 skill 目录，并同步当前配置。",
+/**
+ * WebPlugin：为 agent 注入联网任务的方法论。
+ */
+export class WebPlugin extends BasePlugin {
+  /**
+   * 当前 plugin 稳定名称。
+   */
+  readonly name = "web";
+
+  /**
+   * 插件标题。
+   */
+  readonly title = "Web Methodology";
+
+  /**
+   * 插件说明。
+   */
+  readonly description =
+    "Injects web research and browser-use methodology for agents.";
+
+  /**
+   * setup 面板：只准备联网相关依赖，不做 provider 配置。
+   */
+  readonly setup = {
+    mode: "install" as const,
+    title: "安装联网能力",
+    description:
+      "安装 web-access、agent-browser 等联网相关 skill / CLI 依赖；不改变 agent 的运行时默认选择。",
     fields: [
       {
-        key: "provider",
-        label: "联网方法",
-        type: "select",
-        required: true,
-        sourceAction: "providers",
-      },
-      {
-        key: "installScope",
-        label: "安装位置",
-        type: "select",
+        key: "target",
+        label: "联网能力",
+        type: "select" as const,
         required: true,
         options: [
-          { label: "用户目录", value: "user", hint: "~/.agents/skills" },
-          { label: "项目目录", value: "project", hint: "PROJECT/.agents/skills" },
+          {
+            label: "web-access",
+            value: "web-access",
+            hint: "通用搜索、抓取与资料核实 skill",
+          },
+          {
+            label: "agent-browser",
+            value: "agent-browser",
+            hint: "浏览器自动化 skill，并准备 agent-browser CLI",
+          },
+          {
+            label: "全部",
+            value: "all",
+            hint: "同时准备 web-access 和 agent-browser",
+          },
         ],
       },
       {
-        key: "injectPrompt",
-        label: "注入 provider 提示词",
-        type: "checkbox",
+        key: "scope",
+        label: "安装位置",
+        type: "select" as const,
+        required: true,
+        options: [
+          { label: "用户目录", value: "user", hint: "用户级 skill / 全局 CLI" },
+          { label: "项目目录", value: "project", hint: "项目级 skill / devDependency" },
+        ],
       },
     ],
     primaryAction: "install",
-    statusAction: "status",
-  },
-  usage: {
-    title: "配置联网方式",
-    description: "选择当前 agent 默认使用的联网 provider 与提示词注入策略。",
-    fields: [
-      {
-        key: "provider",
-        label: "当前 Provider",
-        type: "select",
-        required: true,
-        sourceAction: "providers",
-      },
-      {
-        key: "injectPrompt",
-        label: "注入 Provider 提示词",
-        type: "boolean",
-        trueLabel: "开启",
-        falseLabel: "关闭",
-        description: "开启后，agent system prompt 会自动注入当前 provider 的使用约束。",
-      },
-      {
-        key: "browserCommand",
-        label: "Browser 命令",
-        type: "string",
-        placeholder: "agent-browser",
-        description: "仅在 provider 为 agent-browser 时生效。",
-      },
-    ],
-    saveAction: "configure",
-    statusAction: "status",
-  },
-  async availability(context) {
-    if (!isPluginEnabled({ plugin, context })) {
-      return {
-        enabled: false,
-        available: false,
-        reasons: ["web plugin disabled in project config"],
-      };
-    }
-    const dependency = await inspectWebPluginDependency(context);
-    return {
-      enabled: true,
-      available: dependency.available,
-      reasons: dependency.reasons,
-    };
-  },
-  actions: {
-    status: {
-      allowWhenDisabled: true,
-      command: {
-        description: "查看 web plugin 当前状态",
-        mapInput() {
-          return {};
-        },
-      },
-      execute: async ({ context }) => {
-        const config = readWebPluginConfig(context);
-        const availability = await plugin.availability!(context);
-        const source = await inspectWebPluginDependency(context);
-        return {
-          success: true,
-          data: {
-            plugin: toJsonObject(config as unknown as Record<string, unknown>),
-            availability: {
-              enabled: availability.enabled,
-              available: availability.available,
-              reasons: availability.reasons,
-            },
-            provider: source.details || null,
-          },
-        };
-      },
-    },
-    providers: {
-      allowWhenDisabled: true,
-      command: {
-        description: "列出 web plugin 支持的 provider",
-        mapInput() {
-          return {};
-        },
-      },
-      execute: async () => {
-        return {
-          success: true,
-          data: {
-            options: [
-              {
-                value: "web-access",
-                title: "web-access",
-                description: "适合网页搜索、信息查证与策略型联网任务",
-              },
-              {
-                value: "agent-browser",
-                title: "agent-browser",
-                description: "适合动态页面、登录态页面与真实浏览器操作",
-              },
-            ],
-            providers: [
-              {
-                value: "web-access",
-                title: "web-access",
-                description: "适合网页搜索、信息查证与策略型联网任务",
-              },
-              {
-                value: "agent-browser",
-                title: "agent-browser",
-                description: "适合动态页面、登录态页面与真实浏览器操作",
-              },
-            ],
-          },
-        };
-      },
-    },
-    configure: {
-      allowWhenDisabled: true,
-      execute: async ({ context, payload }) => {
-        const payloadObject =
-          payload && typeof payload === "object" && !Array.isArray(payload)
-            ? (payload as Record<string, unknown>)
-            : {};
-        const { enabled: _ignoredEnabled, enable: _ignoredEnable, ...patch } =
-          payloadObject;
-        const nextConfig = await writeWebPluginConfig({
-          context,
-          value: patch as Partial<WebPluginConfig>,
-        });
-        return {
-          success: true,
-          data: {
-            plugin: toJsonObject(nextConfig as unknown as Record<string, unknown>),
-          },
-        };
-      },
-    },
+  };
+
+  /**
+   * WebPlugin 对外 action。
+   */
+  readonly actions = {
     install: {
       allowWhenDisabled: true,
       command: {
-        description: "安装当前 provider 对应的 skill，并写入配置",
+        description: "安装联网相关 skill / CLI 依赖",
         configure(command) {
           command
-            .option("--provider <provider>", "web-access 或 agent-browser")
-            .option("--repo <url>", "记录来源仓库地址")
-            .option("--version <version>", "记录来源版本")
-            .option("--browser-command <command>", "agent-browser 命令名")
+            .option("--target <target>", "web-access、agent-browser 或 all")
             .option("--scope <scope>", "安装位置：user 或 project")
-            .option("--no-inject-prompt", "关闭 provider 提示词注入");
+            .option("-y, --yes", "跳过确认（默认 true）", true)
+            .option("--agent <agent>", "skill installer 目标 agent", "claude-code");
         },
-        mapInput({ opts }): JsonValue {
+        mapInput({ opts }): JsonObject {
           return {
-            ...(getWebProviderOpt(opts, "provider")
-              ? { provider: getWebProviderOpt(opts, "provider") }
+            ...(get_install_target_opt(opts)
+              ? { target: get_install_target_opt(opts) }
               : {}),
-            ...(getStringOpt(opts, "repo")
-              ? { repositoryUrl: getStringOpt(opts, "repo") }
+            ...(get_install_scope_opt(opts)
+              ? { scope: get_install_scope_opt(opts) }
               : {}),
-            ...(getStringOpt(opts, "version")
-              ? { sourceVersion: getStringOpt(opts, "version") }
+            ...(typeof get_boolean_opt(opts, "yes") === "boolean"
+              ? { yes: get_boolean_opt(opts, "yes") }
               : {}),
-            ...(getStringOpt(opts, "browserCommand")
-              ? { browserCommand: getStringOpt(opts, "browserCommand") }
-              : {}),
-            ...(getInstallScopeOpt(opts, "scope")
-              ? { installScope: getInstallScopeOpt(opts, "scope") }
-              : {}),
-            injectPrompt: getBooleanOpt(opts, "injectPrompt", true),
-          } as JsonObject;
+            ...(get_string_opt(opts, "agent") ? { agent: get_string_opt(opts, "agent") } : {}),
+          } satisfies JsonObject;
         },
       },
       execute: async ({ context, payload }) => {
-        const result = await installWebPluginDependency({
+        const data = await installWebPluginTargets({
           context,
-          input:
+          payload:
             payload && typeof payload === "object" && !Array.isArray(payload)
-              ? (payload as WebPluginInstallInput)
+              ? (payload as WebPluginInstallPayload)
               : undefined,
         });
         return {
-          success: result.success,
-          ...(result.details ? { data: result.details } : {}),
-          ...(result.message ? { message: result.message } : {}),
-        };
-      },
-    },
-    on: {
-      allowWhenDisabled: true,
-      command: {
-        description: "启用 web plugin，并可选设置 provider",
-        configure(command) {
-          command
-            .option("--provider <provider>", "web-access 或 agent-browser")
-            .option("--repo <url>", "记录来源仓库地址")
-            .option("--version <version>", "记录来源版本")
-            .option("--browser-command <command>", "agent-browser 命令名")
-            .option("--no-inject-prompt", "关闭 provider 提示词注入");
-        },
-        mapInput({ opts }): JsonValue {
-          return {
-            ...(getWebProviderOpt(opts, "provider")
-              ? { provider: getWebProviderOpt(opts, "provider") }
-              : {}),
-            ...(getStringOpt(opts, "repo")
-              ? { repositoryUrl: getStringOpt(opts, "repo") }
-              : {}),
-            ...(getStringOpt(opts, "version")
-              ? { sourceVersion: getStringOpt(opts, "version") }
-              : {}),
-            ...(getStringOpt(opts, "browserCommand")
-              ? { browserCommand: getStringOpt(opts, "browserCommand") }
-              : {}),
-            injectPrompt: getBooleanOpt(opts, "injectPrompt", true),
-          } as JsonObject;
-        },
-      },
-      execute: async ({ context, payload }) => {
-        await writeProjectPluginEnabled({
-          pluginName: "web",
-          enabled: true,
-          context,
-        });
-        const providerRaw = String((payload as { provider?: unknown }).provider || "").trim();
-        const provider =
-          providerRaw === "web-access" || providerRaw === "agent-browser"
-            ? providerRaw
-            : undefined;
-        const nextConfig = await writeWebPluginConfig({
-          context,
-          value: {
-            ...readWebPluginConfig(context),
-            ...(provider ? { provider } : {}),
-            injectPrompt:
-              typeof (payload as { injectPrompt?: unknown }).injectPrompt === "boolean"
-                ? Boolean((payload as { injectPrompt?: unknown }).injectPrompt)
-                : true,
-            ...(typeof (payload as { repositoryUrl?: unknown }).repositoryUrl === "string"
-              ? { repositoryUrl: String((payload as { repositoryUrl?: unknown }).repositoryUrl) }
-              : {}),
-            ...(typeof (payload as { sourceVersion?: unknown }).sourceVersion === "string"
-              ? { sourceVersion: String((payload as { sourceVersion?: unknown }).sourceVersion) }
-              : {}),
-            ...(typeof (payload as { browserCommand?: unknown }).browserCommand === "string"
-              ? { browserCommand: String((payload as { browserCommand?: unknown }).browserCommand) }
-              : {}),
-          },
-        });
-        return {
           success: true,
-          data: {
-            plugin: toJsonObject(nextConfig as unknown as Record<string, unknown>),
-          },
+          data,
+          message: "web dependencies installed",
         };
       },
     },
-    off: {
-      command: {
-        description: "关闭 web plugin",
-        mapInput() {
-          return {};
-        },
-      },
-      execute: async ({ context }) => {
-        await writeProjectPluginEnabled({
-          pluginName: "web",
-          enabled: false,
-          context,
-        });
-        return {
-          success: true,
-          data: {
-            plugin: toJsonObject(
-              readWebPluginConfig(context) as unknown as Record<string, unknown>,
-            ),
-          },
-        };
-      },
-    },
-    use: {
-      allowWhenDisabled: true,
-      command: {
-        description: "切换 web plugin 当前 provider",
-        configure(command) {
-          command
-            .argument("<provider>")
-            .option("--browser-command <command>", "agent-browser 命令名")
-            .option("--no-inject-prompt", "关闭 provider 提示词注入");
-        },
-        mapInput({ args, opts }): JsonValue {
-          const provider = String(args[0] || "").trim();
-          if (!provider) throw new Error("provider is required");
-          return {
-            provider,
-            ...(getStringOpt(opts, "browserCommand")
-              ? { browserCommand: getStringOpt(opts, "browserCommand") }
-              : {}),
-            injectPrompt: getBooleanOpt(opts, "injectPrompt", true),
-          } as JsonObject;
-        },
-      },
-      execute: async ({ context, payload }) => {
-        const provider = String((payload as { provider?: unknown }).provider || "").trim();
-        if (provider !== "web-access" && provider !== "agent-browser") {
-          return {
-            success: false,
-            error: `Unsupported web provider: ${provider}`,
-            message: `Unsupported web provider: ${provider}`,
-          };
-        }
-        const nextConfig = await writeWebPluginConfig({
-          context,
-          value: {
-            ...readWebPluginConfig(context),
-            provider,
-            injectPrompt:
-              typeof (payload as { injectPrompt?: unknown }).injectPrompt === "boolean"
-                ? Boolean((payload as { injectPrompt?: unknown }).injectPrompt)
-                : true,
-            ...(typeof (payload as { browserCommand?: unknown }).browserCommand === "string"
-              ? { browserCommand: String((payload as { browserCommand?: unknown }).browserCommand) }
-              : {}),
-          },
-        });
-        return {
-          success: true,
-          data: {
-            plugin: toJsonObject(nextConfig as unknown as Record<string, unknown>),
-          },
-        };
-      },
-    },
-    doctor: {
-      allowWhenDisabled: true,
-      command: {
-        description: "检查当前 provider 是否已就绪",
-        mapInput() {
-          return {};
-        },
-      },
-      execute: async ({ context }) => {
-        const availability = await plugin.availability!(context);
-        const dependency = await doctorWebPluginDependency(context);
-        return {
-          success: true,
-          data: {
-            availability: {
-              enabled: availability.enabled,
-              available: availability.available,
-              reasons: availability.reasons,
-            },
-            provider: dependency.details || null,
-          },
-          message: dependency.available
-            ? "web provider is available"
-            : dependency.reasons.join("; ") || "web provider is not available",
-        };
-      },
-    },
-  },
-  system(context) {
-    const config = readWebPluginConfig(context);
-    if (!isPluginEnabled({ plugin, context }) || !config.injectPrompt) {
-      return "";
-    }
-    const providerPrompt =
-      config.provider === "agent-browser" ? AGENT_BROWSER_PROMPT : WEB_ACCESS_PROMPT;
-    return [
-      `Current web provider: ${config.provider}`,
-      config.provider === "agent-browser"
-        ? `Use the configured agent-browser provider: ${config.browserCommand}`
-        : "Use the installed external web-access skill/project.",
-      "",
-      WEB_PLUGIN_PROMPT,
-      "",
-      providerPrompt,
-    ].join("\n");
-  },
   };
-}
 
-/**
- * WebPlugin：provider 选择器与提示词适配层。
- */
-export class WebPlugin extends BasePlugin {
-  readonly name = "web";
-
-  constructor() {
-    super();
-    Object.assign(this, createWebPluginDefinition(this));
+  /**
+   * 注入联网方法论提示词。
+   */
+  system(_context: AgentContext): string {
+    return WEB_PLUGIN_PROMPT;
   }
 }

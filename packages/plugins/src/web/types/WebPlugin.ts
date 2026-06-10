@@ -1,141 +1,65 @@
 /**
- * Web Plugin 协议类型。
+ * WebPlugin 协议类型。
  *
  * 关键点（中文）
- * - `web` plugin 只负责选择 provider、管理少量配置，并注入对应项目的提示词。
- * - 联网能力本身由外部实现承担：`web-access` 或 `agent-browser`。
+ * - web plugin 只注入联网方法论，不维护 provider 运行态。
+ * - install action 仅用于准备联网相关 skill 与工具依赖。
+ * - target 表示要准备的联网能力，不表示 agent 运行时默认选择。
  */
 
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 
 /**
- * Web plugin 默认依赖仓库地址。
+ * WebPlugin 可安装目标。
  */
-export const WEB_PLUGIN_DEFAULT_REPOSITORY_URL =
-  "https://github.com/eze-is/web-access";
+export type WebPluginInstallTarget = "web-access" | "agent-browser" | "all";
 
 /**
- * Web plugin provider。
- */
-export type WebPluginProvider = "web-access" | "agent-browser";
-
-/**
- * Web plugin 安装作用域。
+ * WebPlugin 安装作用域。
  */
 export type WebPluginInstallScope = "user" | "project";
 
 /**
- * Web plugin 配置。
+ * WebPlugin install action 输入。
  */
-export interface WebPluginConfig {
+export interface WebPluginInstallPayload {
   /**
-   * 兼容统一结构化配置约束的索引签名。
+   * 要准备的联网能力。
+   *
+   * 说明（中文）
+   * - `web-access`：安装 web-access skill。
+   * - `agent-browser`：安装 agent-browser skill，并准备 agent-browser CLI 包。
+   * - `all`：同时准备以上能力。
+   * - 默认值为 `web-access`，避免默认安装额外 CLI。
+   */
+  target?: WebPluginInstallTarget;
+  /**
+   * 安装作用域。
+   *
+   * 说明（中文）
+   * - `user`：安装到用户级 skill / npm 全局环境。
+   * - `project`：安装到当前项目级 skill / devDependency。
+   * - 默认值为 `user`，避免默认修改项目依赖。
+   */
+  scope?: WebPluginInstallScope;
+  /**
+   * 是否跳过安装确认。
+   *
+   * 说明（中文）
+   * - 会透传给底层 skill installer。
+   * - 默认值为 `true`，适合 agent 自动执行。
+   */
+  yes?: boolean;
+  /**
+   * skill installer 的目标 agent 名称。
+   *
+   * 说明（中文）
+   * - 默认使用 `claude-code`，与现有 SkillPlugin 安装行为保持一致。
+   */
+  agent?: string;
+  /**
+   * 允许保留额外 JSON 字段，便于未来扩展安装器参数。
    */
   [key: string]: JsonValue | undefined;
-  /**
-   * 当前使用的 provider。
-   */
-  provider?: WebPluginProvider;
-  /**
-   * 是否向 agent 注入 provider 提示词。
-   */
-  injectPrompt?: boolean;
-  /**
-   * provider 来源仓库地址。
-   */
-  repositoryUrl?: string;
-  /**
-   * provider 版本标签或备注。
-   */
-  sourceVersion?: string;
-  /**
-   * agent-browser 命令名（可选）。
-   */
-  browserCommand?: string;
-  /**
-   * skill 安装作用域。
-   */
-  installScope?: WebPluginInstallScope;
 }
 
-/**
- * 归一化后的 web plugin 配置。
- */
-export interface ResolvedWebPluginConfig {
-  /**
-   * 当前 provider。
-   */
-  provider: WebPluginProvider;
-  /**
-   * 是否注入 prompt。
-   */
-  injectPrompt: boolean;
-  /**
-   * 仓库地址。
-   */
-  repositoryUrl: string;
-  /**
-   * provider 版本标签（可选）。
-   */
-  sourceVersion?: string;
-  /**
-   * 浏览器命令。
-   */
-  browserCommand: string;
-  /**
-   * skill 安装作用域。
-   */
-  installScope: WebPluginInstallScope;
-}
-
-/**
- * web plugin setup/install 输入。
- */
-export interface WebPluginInstallInput {
-  /**
-   * provider。
-   */
-  provider?: WebPluginProvider;
-  /**
-   * 是否注入 prompt。
-   */
-  injectPrompt?: boolean;
-  /**
-   * 来源仓库地址。
-   */
-  repositoryUrl?: string;
-  /**
-   * 版本标签。
-   */
-  sourceVersion?: string;
-  /**
-   * 浏览器命令（可选）。
-   */
-  browserCommand?: string;
-  /**
-   * 安装作用域（可选）。
-   */
-  installScope?: WebPluginInstallScope;
-}
-
-/**
- * web plugin 依赖检查结果。
- */
-export interface WebPluginDependencyCheckResult {
-  /**
-   * 当前 provider 是否可用。
-   */
-  available: boolean;
-  /**
-   * 当前 provider 是否已就绪。
-   */
-  installed: boolean;
-  /**
-   * 不可用原因列表。
-   */
-  reasons: string[];
-  /**
-   * 结构化详情（可选）。
-   */
-  details?: JsonValue;
-}

@@ -1,164 +1,129 @@
 /**
- * TTS Plugin 类型定义。
+ * TtsPlugin 类型定义。
  *
  * 关键点（中文）
- * - TTS 的行为配置与本地模型依赖统一收敛到 `plugins.tts`。
- * - Console 只需要理解 plugin setup，不需要理解底层 asset 细节。
+ * - TTS plugin 只定义 agent 侧协议，不绑定本地模型、Python 或 City 具体实现。
+ * - 真实语音合成能力通过 constructor 的 `tts` 函数注入，推荐传入 `city.ai.tts`。
+ * - action 最终统一返回 AI SDK UIMessage，便于 agent 统一处理音频 file part。
  */
 
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { TtsAudioFormat, TtsProvider } from "@/tts/types/Tts.js";
+import type { UIMessage } from "ai";
+import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 
 /**
- * TTS Plugin 配置。
+ * TTS 输入。
  */
-export interface TtsPluginConfig {
+export interface TtsPluginInput {
   /**
-   * 兼容统一结构化配置约束的索引签名。
+   * 需要合成为语音的文本。
    */
-  [key: string]: JsonValue | undefined;
+  text: string;
   /**
-   * 语音合成 provider 类型。
-   *
-   * 说明（中文）
-   * - 当前固定为 `local`。
-   */
-  provider?: TtsProvider;
-  /**
-   * 当前激活的本地模型 ID。
-   */
-  modelId?: string;
-  /**
-   * 本地模型根目录（可选）。
-   */
-  modelsDir?: string;
-  /**
-   * Python 可执行文件（可选）。
-   */
-  pythonBin?: string;
-  /**
-   * 默认语言提示（可选）。
-   *
-   * 说明（中文）
-   * - `auto` / `zh` / `en` 等简短值即可。
+   * 语言提示，例如 `auto`、`zh`、`en`。
    */
   language?: string;
   /**
-   * 默认音色 ID（可选）。
-   *
-   * 说明（中文）
-   * - 主要给运行时做覆盖；Console 默认不要求手动填写。
+   * 音色提示或上游 provider 的 voice id。
    */
   voice?: string;
   /**
-   * 默认输出格式。
+   * 输出格式提示，例如 `wav`、`mp3`、`ogg`。
    */
-  format?: TtsAudioFormat;
+  format?: string;
   /**
-   * 默认语速倍率。
+   * 语速倍率。
    */
   speed?: number;
   /**
-   * 输出目录。
-   *
-   * 说明（中文）
-   * - 可为相对项目根目录或绝对路径。
-   * - 为空时默认写到 `.downcity/.cache/tts/`。
+   * Provider 私有参数。
    */
-  outputDir?: string;
+  provider_options?: JsonObject;
   /**
-   * 单次合成超时时间（毫秒，可选）。
+   * 允许外部 tts 函数接收其他 JSON 可序列化参数。
    */
-  timeoutMs?: number;
-  /**
-   * 已安装模型列表（可选）。
-   *
-   * 说明（中文）
-   * - 仅作为状态快照使用，不应作为真实安装判断唯一依据。
-   */
-  installedModels?: string[];
+  [key: string]: JsonValue | undefined;
 }
 
 /**
- * TTS 安装输入。
+ * TTS 返回的标准 UIMessage。
  */
-export interface TtsInstallInput {
-  /**
-   * 兼容统一结构化配置约束的索引签名。
-   */
-  [key: string]: JsonValue | undefined;
-  /**
-   * 需要安装的模型 ID 列表（可选）。
-   */
-  modelIds?: string[];
-  /**
-   * 安装完成后激活的模型 ID（可选）。
-   */
-  activeModel?: string;
-  /**
-   * 是否强制覆盖已存在资源。
-   */
-  force?: boolean;
-  /**
-   * 模型目录（可选）。
-   */
-  modelsDir?: string;
-  /**
-   * Python 可执行文件（可选）。
-   */
-  pythonBin?: string;
-  /**
-   * 是否同时安装 Python 依赖。
-   */
-  installDeps?: boolean;
-  /**
-   * HuggingFace Token（可选）。
-   */
-  hfToken?: string;
-  /**
-   * 安装完成后默认输出格式（可选）。
-   */
-  format?: TtsAudioFormat;
-}
+export type TtsPluginUiMessageResult = UIMessage;
 
 /**
- * TTS 合成输入。
+ * TTS 返回的简单音频结果。
  */
-export interface TtsSynthesizeInput {
+export interface TtsPluginSimpleAudioResult {
   /**
-   * 兼容统一结构化配置约束的索引签名。
+   * 音频 URL，可为远程 URL、本地路径或 data URL。
    */
-  [key: string]: JsonValue | undefined;
+  url?: string;
   /**
-   * 需要合成的文本内容。
+   * data URL 音频内容。
+   */
+  data_url?: string;
+  /**
+   * 本地音频文件路径。
+   */
+  audio_path?: string;
+  /**
+   * 音频 MIME 类型，例如 `audio/wav`。
+   */
+  media_type?: string;
+  /**
+   * 建议文件名。
+   */
+  filename?: string;
+  /**
+   * 可选说明文本。
    */
   text?: string;
   /**
-   * 覆盖当前使用的模型 ID。
+   * 允许外部 tts 函数返回其他 JSON 可序列化字段。
    */
-  modelId?: string;
+  [key: string]: JsonValue | undefined;
+}
+
+/**
+ * TTS 输出。
+ */
+export type TtsPluginResult =
+  | TtsPluginUiMessageResult
+  | TtsPluginSimpleAudioResult;
+
+/**
+ * TtsPlugin 构造参数。
+ */
+export interface TtsPluginOptions {
   /**
-   * 覆盖当前语言提示（可选）。
+   * Plugin 稳定名称，默认 `tts`。
+   */
+  name?: string;
+  /**
+   * Plugin 展示标题，默认 `TTS`。
+   */
+  title?: string;
+  /**
+   * Plugin 用途说明。
+   */
+  description?: string;
+  /**
+   * 真实 TTS 能力函数。
+   *
+   * 说明（中文）
+   * - 推荐传入 `(input) => city.ai.tts(input)`。
+   * - plugin 只负责调用该函数，不关心模型、provider、鉴权或运行依赖。
+   */
+  tts: (input: TtsPluginInput) => Promise<TtsPluginResult> | TtsPluginResult;
+  /**
+   * 默认语言提示。
    */
   language?: string;
   /**
-   * 覆盖当前音色（可选）。
+   * 默认音色提示。
    */
   voice?: string;
   /**
-   * 覆盖当前输出格式。
+   * 默认输出格式提示。
    */
-  format?: TtsAudioFormat;
-  /**
-   * 覆盖当前语速倍率。
-   */
-  speed?: number;
-  /**
-   * 覆盖当前输出路径或目录。
-   *
-   * 说明（中文）
-   * - 若传入带扩展名的路径，则直接写该文件。
-   * - 若传入目录，则按默认命名生成文件。
-   */
-  output?: string;
+  format?: string;
 }

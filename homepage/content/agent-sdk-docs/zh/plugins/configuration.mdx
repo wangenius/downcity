@@ -30,9 +30,14 @@ plugin 的运行参数通常落到项目：
 ```json
 {
   "plugins": {
-    "web": {
-      "provider": "web-access",
-      "injectPrompt": true
+    "chat": {
+      "enabled": true,
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
     }
   }
 }
@@ -66,7 +71,7 @@ plugin 类型里支持：
 
 典型内容：
 
-- 安装 provider
+- 安装依赖
 - 下载模型
 - 安装 Python 依赖
 
@@ -79,7 +84,6 @@ plugin 类型里支持：
 
 典型内容：
 
-- 默认 provider
 - 是否 inject prompt
 - 默认模型
 - 默认格式 / 语言 / 语速

@@ -33,6 +33,11 @@ export class CoreEngineMessageState {
    */
   private readonly tools: Record<string, Tool>;
 
+  /**
+   * 当前项目根目录，用于解析历史中的 `resources://` file part。
+   */
+  private readonly projectRoot?: string;
+
   private constructor(params: {
     /**
      * 当前运行时 session 语义消息。
@@ -46,10 +51,15 @@ export class CoreEngineMessageState {
      * 当前轮可用工具集合。
      */
     tools: Record<string, Tool>;
+    /**
+     * 当前项目根目录。
+     */
+    projectRoot?: string;
   }) {
     this.sessionMessages = params.sessionMessages;
     this.currentModelMessages = params.modelMessages;
     this.tools = params.tools;
+    this.projectRoot = params.projectRoot;
   }
 
   /**
@@ -64,14 +74,23 @@ export class CoreEngineMessageState {
      * 当前轮可用工具集合。
      */
     tools: Record<string, Tool>;
+    /**
+     * 当前项目根目录。
+     */
+    projectRoot?: string;
   }): Promise<CoreEngineMessageState> {
     const sessionMessages = Array.isArray(params.messages)
       ? [...params.messages]
       : [];
     return new CoreEngineMessageState({
       sessionMessages,
-      modelMessages: await toModelMessages(sessionMessages, params.tools),
+      modelMessages: await toModelMessages(
+        sessionMessages,
+        params.tools,
+        params.projectRoot,
+      ),
       tools: params.tools,
+      projectRoot: params.projectRoot,
     });
   }
 
@@ -119,7 +138,11 @@ export class CoreEngineMessageState {
     messages: SessionMessageV1[],
   ): Promise<ModelMessage[]> {
     this.sessionMessages = [...this.sessionMessages, ...messages];
-    const modelMessages = await toModelMessages(messages, this.tools);
+    const modelMessages = await toModelMessages(
+      messages,
+      this.tools,
+      this.projectRoot,
+    );
     if (modelMessages.length > 0) {
       this.currentModelMessages = [...this.currentModelMessages, ...modelMessages];
       return modelMessages;
@@ -127,6 +150,7 @@ export class CoreEngineMessageState {
     this.currentModelMessages = await toModelMessages(
       this.sessionMessages,
       this.tools,
+      this.projectRoot,
     );
     return [];
   }

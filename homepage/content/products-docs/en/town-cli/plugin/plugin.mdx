@@ -22,10 +22,8 @@ Use it when you want to:
 ```bash
 town plugin
 town plugin list
-town plugin info asr
 town plugin command chat list --agent my-agent
 town plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
-town plugin action asr status
 town plugin schedule list --path /path/to/agent
 ```
 
@@ -35,7 +33,7 @@ town plugin schedule list --path /path/to/agent
 - `town plugin list` and `town plugin info` are static catalog views. Town does not own plugin runtime state.
 - `town plugin command <pluginName> <command>` forwards a command to the target agent's running plugin.
 - `town plugin action ...` is the local execution form and runs directly inside the current project by default.
-- Concrete command roots such as `town chat ...`, `town task ...`, `town memory ...`, `town contact ...`, `town web ...`, `town skill ...`, `town asr ...`, and `town tts ...` are available as shortcuts.
+- Concrete command roots such as `town chat ...`, `town task ...`, `town memory ...`, `town contact ...`, and `town skill ...` are available as shortcuts.
 - `shell` currently has no `town shell` shortcut root; use `town plugin command shell <action>` for scripted calls.
 
 ## Related
@@ -47,8 +45,5 @@ town plugin schedule list --path /path/to/agent
 - [shell plugin](/en/products-docs/town-cli/plugin/shell)
 - [`Plugin Scheduling`](/en/products-docs/town-cli/plugin/schedule)
 - [`town skill`](/en/products-docs/town-cli/plugin/skill)
-- [`town web`](/en/products-docs/town-cli/plugin/web)
-- [`town asr`](/en/products-docs/town-cli/plugin/asr)
-- [`town tts`](/en/products-docs/town-cli/plugin/tts)
 - [Agent SDK Plugin Concepts](/en/agent-sdk-docs/plugins/overview)
 - [Agent Plugins Docs](/en/plugins-docs)

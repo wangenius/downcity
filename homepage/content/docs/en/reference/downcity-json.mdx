@@ -46,23 +46,24 @@ When an agent starts:
 
 ## Plugin scope
 
-Plugin behavior is configured in project `downcity.json` under `plugins.*`.
-If a plugin needs extra models, command templates, or local paths, keep them under that plugin's own config block.
+Plugin behavior can be configured in project `downcity.json` under `plugins.*`. Not every plugin reads runtime options from this file. For example, capability plugins such as `asr` receive their real transcription function through the SDK constructor.
 
-Example for asr:
+Example chat channel binding:
 
 ```json
 {
   "plugins": {
-    "asr": {
-      "enabled": true,
-      "provider": "local",
-      "modelId": "SenseVoiceSmall"
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
     }
   }
 }
 ```
-
 
 ## Chat channel binding
 

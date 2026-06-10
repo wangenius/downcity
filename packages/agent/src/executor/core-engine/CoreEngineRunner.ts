@@ -154,6 +154,7 @@ export class CoreEngineRunner {
       const message_state = await CoreEngineMessageState.create({
         messages: input.execute_input.messages,
         tools,
+        projectRoot: input.run_context.projectRoot,
       });
 
       const append_merged_user_messages = (messages: SessionMessageV1[]) =>

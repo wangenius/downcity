@@ -30,9 +30,14 @@ Runtime options for how an agent uses a plugin usually live in:
 ```json
 {
   "plugins": {
-    "web": {
-      "provider": "web-access",
-      "injectPrompt": true
+    "chat": {
+      "enabled": true,
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
     }
   }
 }
@@ -66,7 +71,7 @@ Many current built-in plugins keep agent-side runtime options at project scope.
 
 Typical examples:
 
-- install a provider
+- install dependencies
 - download a model
 - install Python dependencies
 
@@ -79,7 +84,6 @@ Typical examples:
 
 Typical examples:
 
-- default provider
 - whether to inject prompts
 - default model
 - default format, language, or speed

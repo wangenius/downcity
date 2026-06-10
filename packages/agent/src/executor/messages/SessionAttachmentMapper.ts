@@ -5,6 +5,7 @@
  * - 兼容 Telegram / Feishu / TUI 等统一的 `<file>` 协议入口。
  * - 仅在本轮执行的内存消息上追加 file parts，不修改持久化历史。
  * - 当前只为图片与 PDF 注入 file part，保持多模态模型可直接消费。
+ * - 历史中的 `resources://` 与旧版 `file://` 会在喂给模型前临时 hydrate。
  */
 
 import fs from "fs-extra";
@@ -62,11 +63,32 @@ function buildDataUrl(mediaType: string, buffer: Buffer): string {
   return `data:${safeType};base64,${base64}`;
 }
 
-async function hydrateFileUrlPart(part: FileUIPart): Promise<FileUIPart> {
+function resolveResourcesUrlPath(
+  projectRoot: string | undefined,
+  rawUrl: string,
+): string | null {
+  const prefix = "resources://";
+  const raw = String(rawUrl || "").trim();
+  if (!raw.startsWith(prefix)) return null;
+  const relative = raw.slice(prefix.length).replace(/^\/+/, "");
+  if (!relative) return null;
+
+  const root = path.resolve(String(projectRoot || "").trim() || process.cwd());
+  const absPath = path.resolve(root, relative);
+  const rel = path.relative(root, absPath);
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return null;
+  return absPath;
+}
+
+async function hydrateFileUrlPart(
+  part: FileUIPart,
+  projectRoot?: string,
+): Promise<FileUIPart> {
   const url = String(part.url || "").trim();
-  if (!url.startsWith("file://")) return part;
+  const resourcesPath = resolveResourcesUrlPath(projectRoot, url);
+  if (!url.startsWith("file://") && !resourcesPath) return part;
   try {
-    const absPath = fileURLToPath(url);
+    const absPath = resourcesPath || fileURLToPath(url);
     const buffer = await fs.readFile(absPath);
     const mediaType =
       String(part.mediaType || "").trim() ||
@@ -83,14 +105,15 @@ async function hydrateFileUrlPart(part: FileUIPart): Promise<FileUIPart> {
 }
 
 /**
- * 将历史中的 `file://` file part 临时转换为模型可消费的 data URL。
+ * 将历史中的资源 file part 临时转换为模型可消费的 data URL。
  *
  * 关键点（中文）
  * - 该函数只修改本轮内存消息，不回写历史。
- * - 持久化层继续保留轻量 `file://` 绝对 URL，避免 JSONL 存储 base64。
+ * - 新历史保留 `resources://` 相对 URL，旧历史的 `file://` 仍继续兼容。
  */
 export async function hydrateFileUrlPartsForModel(
   messages: SessionMessageV1[],
+  projectRoot?: string,
 ): Promise<SessionMessageV1[]> {
   if (!Array.isArray(messages) || messages.length === 0) return messages;
 
@@ -109,7 +132,7 @@ export async function hydrateFileUrlPartsForModel(
         nextParts.push(part);
         continue;
       }
-      const nextPart = await hydrateFileUrlPart(part as FileUIPart);
+      const nextPart = await hydrateFileUrlPart(part as FileUIPart, projectRoot);
       if (nextPart !== part) changed = true;
       nextParts.push(nextPart as SessionMessageV1["parts"][number]);
     }

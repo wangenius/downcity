@@ -22,10 +22,8 @@ description: 在 Town 中查看 Agent Plugin 目录
 ```bash
 town plugin
 town plugin list
-town plugin info asr
 town plugin command chat list --agent my-agent
 town plugin command task run --payload '{"title":"daily-check"}' --agent my-agent
-town plugin action asr status
 town plugin schedule list --path /path/to/agent
 ```
 
@@ -35,7 +33,7 @@ town plugin schedule list --path /path/to/agent
 - `town plugin list` 和 `town plugin info` 是静态 catalog 视图。Town 不拥有 plugin 运行态。
 - `town plugin command <pluginName> <command>` 会把 command 转发给目标 agent 的运行中 plugin。
 - `town plugin action ...` 是本地执行形式，默认直接在当前项目里运行。
-- `town chat ...`、`town task ...`、`town memory ...`、`town contact ...`、`town web ...`、`town skill ...`、`town asr ...`、`town tts ...` 是当前可用的快捷入口。
+- `town chat ...`、`town task ...`、`town memory ...`、`town contact ...`、`town skill ...` 是当前可用的快捷入口。
 - `shell` 当前没有 `town shell` 快捷根命令；需要脚本化调用时使用 `town plugin command shell <action>`。
 
 ## 相关页面
@@ -47,8 +45,5 @@ town plugin schedule list --path /path/to/agent
 - [shell plugin](/zh/products-docs/town-cli/plugin/shell)
 - [`Plugin 调度`](/zh/products-docs/town-cli/plugin/schedule)
 - [`town skill`](/zh/products-docs/town-cli/plugin/skill)
-- [`town web`](/zh/products-docs/town-cli/plugin/web)
-- [`town asr`](/zh/products-docs/town-cli/plugin/asr)
-- [`town tts`](/zh/products-docs/town-cli/plugin/tts)
 - [Agent SDK Plugin 概念文档](/zh/agent-sdk-docs/plugins/overview)
 - [Agent Plugins Docs](/zh/plugins-docs)

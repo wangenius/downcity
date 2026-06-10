@@ -11,8 +11,6 @@ import type { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin
 import { ChatAuthorizationPlugin } from "@/auth/Plugin.js";
 import { SkillPlugin } from "@/skill/Plugin.js";
 import { WebPlugin } from "@/web/Plugin.js";
-import { AsrPlugin } from "@/asr/Plugin.js";
-import { TtsPlugin } from "@/tts/Plugin.js";
 import { WorkboardPlugin } from "@/workboard/Plugin.js";
 import { ChatPlugin } from "@/chat/ChatPlugin.js";
 import { ContactPlugin } from "@/contact/ContactPlugin.js";
@@ -32,8 +30,6 @@ export const BUILTIN_PLUGIN_CLASSES: BuiltinPluginClass[] = [
   ChatAuthorizationPlugin,
   SkillPlugin,
   WebPlugin,
-  AsrPlugin,
-  TtsPlugin,
   WorkboardPlugin,
   ChatPlugin,
   ContactPlugin,

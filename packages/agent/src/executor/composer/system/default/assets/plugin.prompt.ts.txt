@@ -14,6 +14,6 @@
 ## 可用 plugin 概览
 
 - 当前内建托管 plugin：`shell` / `chat` / `task` / `memory` / `contact`。
-- 当前内建本地 plugin：`auth` / `skill` / `asr` / `tts`。
+- 当前内建本地 plugin：`auth` / `skill`。
 
 具体 plugin 能力以该 plugin 的 action 和 system 提示为准。

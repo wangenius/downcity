@@ -61,15 +61,27 @@ export async function select(input) {
                 fg: "white",
             },
         });
-        list.select(0);
-        list.focus();
-        list.on("select item", (_item, index_value) => {
+        const sync_selection = (index_value = list.selected) => {
             selected_index = clamp_selected_index(index_value, input.options.length, selected_index);
             detail.setContent(format_option_detail(input.options[selected_index]));
             shell.set_footer(format_select_footer(input.options[selected_index], false));
             screen.render();
+        };
+        list.select(0);
+        list.focus();
+        list.on("select item", (_item, index_value) => {
+            sync_selection(index_value);
+        });
+        list.on("keypress", () => {
+            // 关键点（中文）：焦点移动时同步详情区和 footer，避免描述只在确认后才出现。
+            setImmediate(() => {
+                if (finished)
+                    return;
+                sync_selection();
+            });
         });
         list.key(["enter"], () => {
+            sync_selection();
             finish(input.options[selected_index]?.value);
         });
         screen.key(["escape", "q", "C-c"], () => finish(cancel("cancel")));
@@ -84,7 +96,7 @@ export async function select(input) {
             }
         };
         process.stdin.on("data", raw_input_listener);
-        shell.set_footer(format_select_footer(input.options[selected_index], false));
+        sync_selection(selected_index);
         screen.render();
     });
 }
@@ -172,15 +184,27 @@ export async function confirm(input) {
             tags: true,
             content: format_option_detail(options[initial_value ? 0 : 1]),
         });
-        list.select(initial_value ? 0 : 1);
-        list.focus();
-        list.on("select item", (_item, index_value) => {
+        const sync_selection = (index_value = list.selected) => {
             selected_index = clamp_selected_index(index_value, options.length, selected_index);
             detail.setContent(format_option_detail(options[selected_index]));
             shell.set_footer(format_select_footer(options[selected_index], true));
             screen.render();
+        };
+        list.select(initial_value ? 0 : 1);
+        list.focus();
+        list.on("select item", (_item, index_value) => {
+            sync_selection(index_value);
+        });
+        list.on("keypress", () => {
+            // 关键点（中文）：焦点移动时同步详情区和 footer，避免描述只在确认后才出现。
+            setImmediate(() => {
+                if (finished)
+                    return;
+                sync_selection();
+            });
         });
         list.key(["enter"], () => {
+            sync_selection();
             finish(options[selected_index]?.value);
         });
         screen.key(["escape", "q", "C-c"], () => finish(cancel("cancel")));
@@ -195,7 +219,7 @@ export async function confirm(input) {
             }
         };
         process.stdin.on("data", raw_input_listener);
-        shell.set_footer(format_select_footer(options[selected_index], true));
+        sync_selection(selected_index);
         screen.render();
     });
 }

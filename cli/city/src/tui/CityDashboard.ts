@@ -262,16 +262,29 @@ async function run_city_dashboard_once(
       content: format_detail_content(state.items[0]),
     });
 
-    list.on("select item", (_item, index_value) => {
+    const sync_selection = (index_value: unknown = list.selected): void => {
       selected_index = clamp_selected_index(index_value, state.items.length, selected_index);
       const next_item = state.items[selected_index];
       if (!next_item) return;
       detail.setContent(format_detail_content(next_item));
       shell.set_footer(format_footer(state.footer, next_item));
       screen.render();
+    };
+
+    list.on("select item", (_item, index_value) => {
+      sync_selection(index_value);
+    });
+
+    list.on("keypress", () => {
+      // 关键点（中文）：上下移动焦点时立即刷新右侧说明，不能只在 Enter 选择时刷新。
+      setImmediate(() => {
+        if (finished) return;
+        sync_selection();
+      });
     });
 
     list.key(["enter"], () => {
+      sync_selection();
       finish(state.items[selected_index]?.id ?? null);
     });
 
@@ -299,7 +312,7 @@ async function run_city_dashboard_once(
     process.stdin.on("data", raw_input_listener);
 
     list.focus();
-    shell.set_footer(format_footer(state.footer, state.items[selected_index]));
+    sync_selection(selected_index);
     screen.render();
   });
 }

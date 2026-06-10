@@ -194,19 +194,32 @@ async function run_select_prompt(
       },
     });
 
+    const sync_selection = (index_value: unknown = list.selected): void => {
+      selected_index = clamp_selected_index(index_value, choices.length, selected_index);
+      detail.setContent(format_choice_detail(choices[selected_index]));
+      shell.footer_box.setContent(format_select_footer(choices[selected_index]));
+      screen.render();
+    };
+
     shell.footer_box.setContent(select_footer_text());
 
     list.select(initial_index);
     list.focus();
 
     list.on("select item", (_item, index_value) => {
-      selected_index = clamp_selected_index(index_value, choices.length, selected_index);
-      detail.setContent(format_choice_detail(choices[selected_index]));
-      shell.footer_box.setContent(format_select_footer(choices[selected_index]));
-      screen.render();
+      sync_selection(index_value);
+    });
+
+    list.on("keypress", () => {
+      // 关键点（中文）：焦点移动时同步详情区和 footer，避免描述只在确认后才出现。
+      setImmediate(() => {
+        if (finished) return;
+        sync_selection();
+      });
     });
 
     list.key(["enter"], () => {
+      sync_selection();
       finish(choices[selected_index]?.value);
     });
 
@@ -222,7 +235,7 @@ async function run_select_prompt(
       }
     };
     process.stdin.on("data", raw_input_listener);
-    shell.footer_box.setContent(format_select_footer(choices[selected_index]));
+    sync_selection(selected_index);
     screen.render();
   });
 }
@@ -294,17 +307,30 @@ async function run_multiselect_prompt(
       screen.render();
     };
 
-    list.select(current_index);
-    list.focus();
-
-    list.on("select item", (_item, index_value) => {
+    const sync_selection = (index_value: unknown = list.selected): void => {
       current_index = clamp_selected_index(index_value, choices.length, current_index);
       detail.setContent(format_choice_detail(choices[current_index]));
       shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
       screen.render();
+    };
+
+    list.select(current_index);
+    list.focus();
+
+    list.on("select item", (_item, index_value) => {
+      sync_selection(index_value);
+    });
+
+    list.on("keypress", () => {
+      // 关键点（中文）：多选移动焦点时也要同步右侧说明。
+      setImmediate(() => {
+        if (finished) return;
+        sync_selection();
+      });
     });
 
     list.key(["space"], () => {
+      sync_selection();
       if (selected_indexes.has(current_index)) {
         selected_indexes.delete(current_index);
       } else {
@@ -314,6 +340,7 @@ async function run_multiselect_prompt(
     });
 
     list.key(["enter"], () => {
+      sync_selection();
       finish(build_multiselect_values(choices, selected_indexes));
     });
 
@@ -337,7 +364,7 @@ async function run_multiselect_prompt(
       }
     };
     process.stdin.on("data", raw_input_listener);
-    shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
+    sync_selection(current_index);
     screen.render();
   });
 }
@@ -411,20 +438,33 @@ async function run_confirm_prompt(
       content: format_choice_detail(choices[initial_value ? 0 : 1]),
     });
 
+    const sync_selection = (index_value: unknown = list.selected): void => {
+      selected_index = clamp_selected_index(index_value, choices.length, selected_index);
+      note.setContent(format_choice_detail(choices[selected_index]));
+      shell.footer_box.setContent(format_confirm_footer(choices[selected_index]));
+      screen.render();
+    };
+
     shell.footer_box.setContent(confirm_footer_text());
 
     list.select(initial_value ? 0 : 1);
     list.focus();
 
     list.key(["enter"], () => {
+      sync_selection();
       finish(Boolean(choices[selected_index]?.value));
     });
 
     list.on("select item", (_item, index_value) => {
-      selected_index = clamp_selected_index(index_value, choices.length, selected_index);
-      note.setContent(format_choice_detail(choices[selected_index]));
-      shell.footer_box.setContent(format_confirm_footer(choices[selected_index]));
-      screen.render();
+      sync_selection(index_value);
+    });
+
+    list.on("keypress", () => {
+      // 关键点（中文）：焦点移动时同步详情区和 footer，避免描述只在确认后才出现。
+      setImmediate(() => {
+        if (finished) return;
+        sync_selection();
+      });
     });
 
     screen.key(["escape", "q", "C-c"], () => finish(undefined));
@@ -439,7 +479,7 @@ async function run_confirm_prompt(
       }
     };
     process.stdin.on("data", raw_input_listener);
-    shell.footer_box.setContent(format_confirm_footer(choices[selected_index]));
+    sync_selection(selected_index);
     screen.render();
   });
 }

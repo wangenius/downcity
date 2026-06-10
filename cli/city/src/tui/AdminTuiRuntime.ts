@@ -104,16 +104,14 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
         0,
       );
       render_nav(shell, nav_title, options, selected_index);
-      render_idle(shell, t({
-        zh: "选择左侧管理项",
-        en: "Select an item from the sidebar",
-      }));
+      render_option_detail(shell, nav_title, options[selected_index]);
       return await run_sidebar_select({
         shell,
         title: nav_title,
         options,
         initial_index: selected_index,
         on_select_index: (index) => selected_index_by_breadcrumb.set(breadcrumb_key, index),
+        on_focus_option: (option) => render_option_detail(shell, nav_title, option),
       });
     },
 
@@ -126,18 +124,15 @@ export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
         0,
       );
       render_nav(shell, breadcrumb_key, options, selected_index);
-      if (shell.content_box.children.length === 0) {
-        render_idle(shell, t({
-          zh: "选择左侧管理项",
-          en: "Select an item from the sidebar",
-        }));
-      }
+      cleanup_main();
+      render_option_detail(shell, section_title, options[selected_index]);
       return await run_sidebar_select({
         shell,
         title: section_title,
         options,
         initial_index: selected_index,
         on_select_index: (index) => selected_index_by_breadcrumb.set(breadcrumb_key, index),
+        on_focus_option: (option) => render_option_detail(shell, section_title, option),
       });
     },
 
@@ -332,19 +327,24 @@ function render_nav(
   shell.screen.render();
 }
 
-function render_idle(shell: shell_layout, message: string): void {
+function render_option_detail(
+  shell: shell_layout,
+  title: string,
+  option: admin_tui_select_option | undefined,
+): void {
   shell.content_box.setLabel(` ${t({ zh: "内容", en: "Section" })} `);
+  shell.content_box.children.slice().forEach((child) => child.destroy());
   blessed.box({
     parent: shell.content_box,
-    top: "center",
-    left: "center",
-    width: "80%",
-    height: 5,
-    align: "center",
-    valign: "middle",
-    content: message,
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    padding: { left: 1, right: 1, top: 1, bottom: 1 },
+    tags: true,
+    content: format_option_detail(title, option),
     style: {
-      fg: "gray",
+      fg: "white",
     },
   });
   shell.screen.render();
@@ -356,30 +356,37 @@ async function run_sidebar_select(input: {
   options: admin_tui_select_option[];
   initial_index: number;
   on_select_index: (index: number) => void;
+  on_focus_option?: (option: admin_tui_select_option | undefined) => void;
 }): Promise<string | undefined> {
   return await new Promise<string | undefined>((resolve) => {
     let finished = false;
     let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
     const list = input.shell.nav_list;
     let selected_index = clamp_selected_index(input.initial_index, input.options.length, 0);
+    const sync_selection = (index_value: unknown = list.selected): void => {
+      selected_index = clamp_selected_index(index_value, input.options.length, selected_index);
+      input.on_select_index(selected_index);
+      input.on_focus_option?.(input.options[selected_index]);
+      render_sidebar_hint(input.shell, input.options, selected_index);
+    };
     const keypress_listener = (_ch: unknown, key: unknown): void => {
       const key_name = get_key_name(key);
       if (key_name === "enter") {
+        sync_selection();
         finish(input.options[selected_index]?.value);
+        return;
       }
       if (key_name === "escape" || key_name === "q" || key_name === "C-c") {
         finish(undefined);
+        return;
       }
       setImmediate(() => {
-        selected_index = clamp_selected_index(list.selected, input.options.length, selected_index);
-        input.on_select_index(selected_index);
-        render_sidebar_hint(input.shell, input.options, selected_index);
+        if (finished) return;
+        sync_selection();
       });
     };
     const select_item_listener = (_item: unknown, index_value: unknown): void => {
-      selected_index = clamp_selected_index(index_value, input.options.length, selected_index);
-      input.on_select_index(selected_index);
-      render_sidebar_hint(input.shell, input.options, selected_index);
+      sync_selection(index_value);
     };
 
     const finish = (value: string | undefined): void => {
@@ -400,8 +407,7 @@ async function run_sidebar_select(input: {
 
     list.select(selected_index);
     list.focus();
-    input.on_select_index(selected_index);
-    render_sidebar_hint(input.shell, input.options, selected_index);
+    sync_selection(selected_index);
     list.on("keypress", keypress_listener);
     list.on("select item", select_item_listener);
     raw_input_listener = (chunk: Buffer | string): void => {
@@ -411,6 +417,7 @@ async function run_sidebar_select(input: {
         return;
       }
       if (text.includes("\r") || text.includes("\n")) {
+        sync_selection();
         finish(input.options[selected_index]?.value);
       }
     };
@@ -658,6 +665,26 @@ function render_sidebar_hint(
 
 function format_sidebar_option(option: admin_tui_select_option): string {
   return option.label;
+}
+
+function format_option_detail(
+  title: string,
+  option: admin_tui_select_option | undefined,
+): string {
+  if (!option) {
+    return t({
+      zh: "未选择项目",
+      en: "No item selected",
+    });
+  }
+
+  return [
+    `{bold}${option.label}{/bold}`,
+    option_description(option),
+    "",
+    `${t({ zh: "当前位置", en: "current section" })}: ${title}`,
+    `${t({ zh: "值", en: "value" })}: ${option.value}`,
+  ].join("\n");
 }
 
 function option_description(option: admin_tui_select_option): string {

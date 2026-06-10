@@ -148,7 +148,9 @@ export async function run_agent_chat_tui(params) {
             bottom: 0,
             width: "100%",
             height: 4,
-            inputOnFocus: true,
+            // 关键点（中文）：这里必须手动调用 readInput(callback)。
+            // inputOnFocus 会在 focus 时先触发无 callback 的 readInput，导致后续 Enter 无法交给聊天循环。
+            inputOnFocus: false,
             keys: true,
             mouse: true,
             border: "line",
@@ -188,18 +190,60 @@ export async function run_agent_chat_tui(params) {
             input_box.clearValue();
             screen.render();
             return await new Promise((resolve_input) => {
-                active_input_resolver = resolve_input;
+                let finished_input = false;
+                let raw_input_listener;
+                const cleanup_input = () => {
+                    if (raw_input_listener) {
+                        process.stdin.off("data", raw_input_listener);
+                        raw_input_listener = undefined;
+                    }
+                };
+                const finish_input = (value) => {
+                    if (finished_input)
+                        return;
+                    finished_input = true;
+                    cleanup_input();
+                    if (active_input_resolver === finish_input) {
+                        active_input_resolver = null;
+                    }
+                    resolve_input(value);
+                };
+                active_input_resolver = finish_input;
                 input_box.readInput((error, value) => {
-                    if (active_input_resolver !== resolve_input) {
-                        return;
-                    }
-                    active_input_resolver = null;
                     if (error) {
-                        resolve_input(undefined);
+                        finish_input(undefined);
                         return;
                     }
-                    resolve_input(String(value ?? ""));
+                    finish_input(normalize_textbox_value(value));
                 });
+                input_box.key(["enter", "return"], () => {
+                    // 关键点（中文）：不同终端会把回车解析为 enter 或 return，统一转成 textbox submit。
+                    input_box.submit();
+                });
+                input_box.key(["escape", "C-c"], () => finish_input(undefined));
+                input_box.key(["C-u"], () => {
+                    input_box.clearValue();
+                    screen.render();
+                });
+                raw_input_listener = (chunk) => {
+                    const text = String(chunk);
+                    if (text.includes("\u0003") || is_plain_escape_input(text)) {
+                        finish_input(undefined);
+                        return;
+                    }
+                    if (text.includes("\u0015")) {
+                        input_box.clearValue();
+                        screen.render();
+                        return;
+                    }
+                    if (text.includes("\r") || text.includes("\n")) {
+                        // 关键点（中文）：部分终端的回车不会触发 blessed 的 enter/return，延后一拍读取最新值。
+                        setImmediate(() => submit_textbox_value(input_box, () => {
+                            finish_input(normalize_textbox_value(input_box.getValue()));
+                        }));
+                    }
+                };
+                process.stdin.on("data", raw_input_listener);
             });
         };
         screen.key(["C-c"], () => finish());
@@ -249,5 +293,18 @@ export async function run_agent_chat_tui(params) {
             finish();
         })();
     });
+}
+function normalize_textbox_value(value) {
+    return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, "");
+}
+function submit_textbox_value(textbox, finish) {
+    if (textbox._done) {
+        // 关键点（中文）：stop 只释放 blessed 内部 readInput 状态，不触发 submit/cancel 回调。
+        textbox._done("stop");
+    }
+    finish();
+}
+function is_plain_escape_input(text) {
+    return text === "\u001b";
 }
 //# sourceMappingURL=AgentChatTui.js.map

@@ -50,25 +50,39 @@ async function promptRootAction() {
         choices: [
             {
                 title: t({
-                    zh: "管理 chat accounts",
-                    en: "Manage chat accounts",
+                    zh: "管理",
+                    en: "Management",
+                }),
+                disabled: true,
+            },
+            {
+                title: t({
+                    zh: "Chat 账号管理",
+                    en: "Chat account management",
                 }),
                 description: t({
-                    zh: `${accounts.items.length} 个 Town 级共享账号`,
-                    en: `${accounts.items.length} Town-level shared accounts`,
+                    zh: `${accounts.items.length} 个 Town 级共享账号。Agent 只绑定这些账号，不在 Agent 内重复保存密钥。`,
+                    en: `${accounts.items.length} Town-level shared accounts. Agents bind to these accounts instead of duplicating credentials.`,
                 }),
                 value: "configureAccounts",
             },
             {
                 title: t({
-                    zh: "管理访问控制",
+                    zh: "访问控制",
                     en: "Manage access control",
                 }),
                 description: t({
-                    zh: "给 chat 用户分配 access role",
-                    en: "Assign access roles to chat users",
+                    zh: "给 Chat 用户分配 access role，控制哪些外部用户可以访问 Agent。",
+                    en: "Assign access roles to chat users and control which external users can access agents.",
                 }),
                 value: "configureAccess",
+            },
+            {
+                title: t({
+                    zh: "导航",
+                    en: "Navigation",
+                }),
+                disabled: true,
             },
             {
                 title: t({
@@ -99,58 +113,79 @@ async function promptChatAccountAction() {
         choices: [
             {
                 title: t({
-                    zh: "查看 accounts",
+                    zh: "账号",
+                    en: "Accounts",
+                }),
+                disabled: true,
+            },
+            {
+                title: t({
+                    zh: "查看 Chat 账号",
                     en: "View accounts",
                 }),
                 description: t({
-                    zh: `${accounts.items.length} 个已配置账号`,
-                    en: `${accounts.items.length} configured accounts`,
+                    zh: `${accounts.items.length} 个已配置账号。用于确认 Town 全局账号池里的渠道、身份和密钥状态。`,
+                    en: `${accounts.items.length} configured accounts. Use this to inspect channels, identities, and credential status in the Town global account pool.`,
                 }),
                 value: "list",
             },
             {
                 title: t({
-                    zh: "新增 account",
+                    zh: "新增 Chat 账号",
                     en: "Add account",
                 }),
                 description: t({
-                    zh: "新增 Telegram、Feishu 或 QQ 账号",
+                    zh: "新增 Telegram、Feishu 或 QQ 账号，保存为 Town 级共享资源。",
                     en: "Add a Telegram, Feishu, or QQ account",
                 }),
                 value: "add",
             },
             {
                 title: t({
-                    zh: "编辑 account",
+                    zh: "编辑 Chat 账号",
                     en: "Edit account",
                 }),
                 description: t({
-                    zh: "修改名称、域名或密钥",
+                    zh: "修改账号名称、域名或密钥；留空的密钥字段会保持不变。",
                     en: "Edit name, domain, or credentials",
                 }),
                 value: "edit",
             },
             {
                 title: t({
-                    zh: "删除 account",
+                    zh: "删除 Chat 账号",
                     en: "Remove account",
                 }),
                 description: t({
-                    zh: "从 Town 全局账号池删除",
+                    zh: "从 Town 全局账号池删除该账号；已绑定的 Agent 后续会提示清理悬空引用。",
                     en: "Remove an account from the Town global pool",
                 }),
                 value: "remove",
             },
             {
                 title: t({
-                    zh: "管理访问控制",
+                    zh: "权限",
+                    en: "Access",
+                }),
+                disabled: true,
+            },
+            {
+                title: t({
+                    zh: "访问控制",
                     en: "Manage access control",
                 }),
                 description: t({
-                    zh: "给 chat 用户分配 access role",
-                    en: "Assign access roles to chat users",
+                    zh: "给 Chat 用户分配 access role，控制外部用户访问 Agent 的权限。",
+                    en: "Assign access roles to chat users and control external access to agents.",
                 }),
                 value: "configureAccess",
+            },
+            {
+                title: t({
+                    zh: "导航",
+                    en: "Navigation",
+                }),
+                disabled: true,
             },
             {
                 title: t({
@@ -205,11 +240,15 @@ async function chooseChannel() {
         type: "select",
         name: "channel",
         message: t({
-            zh: "选择 channel",
-            en: "Select channel",
+            zh: "选择 Chat 渠道",
+            en: "Select chat channel",
         }),
         choices: CHAT_CHANNELS.map((channel) => ({
             title: channel,
+            description: t({
+                zh: `为新的 Town 级 Chat 账号选择 ${channel} 渠道。`,
+                en: `Choose ${channel} as the channel for the new Town-level chat account.`,
+            }),
             value: channel,
         })),
         initial: 0,
@@ -236,7 +275,10 @@ async function chooseAccount() {
     const response = (await prompts({
         type: "select",
         name: "id",
-        message: "选择 account",
+        message: t({
+            zh: "选择 Chat 账号",
+            en: "Select chat account",
+        }),
         choices: items.map((account) => ({
             title: formatAccountTitle(account),
             description: `${account.id} · ${formatCredentialSummary(account)}`,
@@ -252,7 +294,10 @@ async function promptCredentialFields(params) {
         {
             type: "text",
             name: "name",
-            message: "账号名称",
+            message: t({
+                zh: "账号名称",
+                en: "Account name",
+            }),
             initial: params.current?.name || "",
         },
     ];
@@ -260,25 +305,43 @@ async function promptCredentialFields(params) {
         questions.push({
             type: "password",
             name: "botToken",
-            message: params.current ? "Bot Token（留空保持不变）" : "Bot Token",
+            message: params.current
+                ? t({
+                    zh: "Bot Token（留空保持不变）",
+                    en: "Bot token (leave empty to keep unchanged)",
+                })
+                : t({ zh: "Bot Token", en: "Bot token" }),
         });
     }
     if (params.channel === "feishu" || params.channel === "qq") {
         questions.push({
             type: "text",
             name: "appId",
-            message: params.current ? "App ID（留空保持不变）" : "App ID",
+            message: params.current
+                ? t({
+                    zh: "App ID（留空保持不变）",
+                    en: "App ID (leave empty to keep unchanged)",
+                })
+                : t({ zh: "App ID", en: "App ID" }),
         }, {
             type: "password",
             name: "appSecret",
-            message: params.current ? "App Secret（留空保持不变）" : "App Secret",
+            message: params.current
+                ? t({
+                    zh: "App Secret（留空保持不变）",
+                    en: "App secret (leave empty to keep unchanged)",
+                })
+                : t({ zh: "App Secret", en: "App secret" }),
         });
     }
     if (params.channel === "feishu") {
         questions.push({
             type: "text",
             name: "domain",
-            message: "Domain（可选，例如 open.feishu.cn）",
+            message: t({
+                zh: "Domain（可选，例如 open.feishu.cn）",
+                en: "Domain (optional, for example open.feishu.cn)",
+            }),
             initial: params.current?.domain || "",
         });
     }
@@ -286,7 +349,10 @@ async function promptCredentialFields(params) {
         questions.push({
             type: "confirm",
             name: "sandbox",
-            message: "启用 QQ sandbox？",
+            message: t({
+                zh: "启用 QQ sandbox？",
+                en: "Enable QQ sandbox?",
+            }),
             initial: params.current?.sandbox === true,
         });
     }
@@ -302,7 +368,10 @@ async function addChannelAccount() {
     const probeResponse = (await prompts({
         type: "confirm",
         name: "probe",
-        message: "保存前探测 bot 信息？",
+        message: t({
+            zh: "保存前探测 bot 信息？",
+            en: "Probe bot info before saving?",
+        }),
         initial: true,
     }));
     const manager = createChannelAccountManager();
@@ -355,7 +424,10 @@ async function removeChannelAccount() {
     const response = (await prompts({
         type: "confirm",
         name: "remove",
-        message: `删除 ${account.channel} · ${account.name}？`,
+        message: t({
+            zh: `删除 ${account.channel} · ${account.name}？`,
+            en: `Remove ${account.channel} · ${account.name}?`,
+        }),
         initial: false,
     }));
     if (response.remove !== true)

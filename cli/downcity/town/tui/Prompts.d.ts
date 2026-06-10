@@ -18,19 +18,36 @@ export interface PromptObject {
     /** 问题标题。 */
     message: string;
     /** 选项列表。 */
-    choices?: Array<{
-        title?: string;
-        label?: string;
-        description?: string;
-        hint?: string;
-        value: unknown;
-    }>;
+    choices?: prompt_choice_option[];
     /** 初始值。 */
     initial?: unknown;
     /** 输入校验。 */
     validate?: (value: any) => true | string;
     /** 最小值。 */
     min?: number;
+}
+/**
+ * 选择类 Prompt 的单个选项。
+ */
+export interface prompt_choice_option {
+    /** 左侧 sidebar 展示标题。 */
+    title?: string;
+    /** 兼容旧调用方的展示标签。 */
+    label?: string;
+    /** 当前选项聚焦时展示在 main/footer 的说明。 */
+    description?: string;
+    /** 兼容旧调用方的说明文本。 */
+    hint?: string;
+    /** 选中后返回给调用方的业务值。 */
+    value?: unknown;
+    /**
+     * 是否仅作为分区标题展示。
+     *
+     * 关键点（中文）
+     * - true 时该项只负责分隔 sidebar，不参与选择与多选勾选。
+     * - TUI 会自动跳过该项，避免 Enter 返回无意义值。
+     */
+    disabled?: boolean;
 }
 interface prompt_result_map {
     [key: string]: unknown;

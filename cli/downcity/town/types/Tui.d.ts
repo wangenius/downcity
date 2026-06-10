@@ -17,6 +17,14 @@ export interface tui_list_item {
     subtitle: string;
     /** 右侧详情内容。 */
     detail: string;
+    /**
+     * 是否仅作为分区标题展示。
+     *
+     * 关键点（中文）
+     * - true 时该项不会作为业务动作返回，只用于把 sidebar 分成清晰区域。
+     * - 键盘移动与回车选择会自动跳过该项，避免误触发。
+     */
+    disabled?: boolean;
 }
 /**
  * 顶层 TUI 动作返回值。

@@ -43,6 +43,7 @@ interface blessed_list_element extends blessed.Widgets.ListElement {
     listener: (...args: unknown[]) => void,
   ) => blessed_list_element;
   focus: () => void;
+  select: (index: number) => void;
   setItems: (items: blessed.Widgets.ListElementItem[]) => void;
   selected?: number;
 }
@@ -100,6 +101,7 @@ async function build_town_dashboard_state(): Promise<town_dashboard_state> {
   const managed_agents = await safe_count_running_agents();
 
   const items: tui_list_item[] = [
+    section_item("runtime", t({ zh: "运行时", en: "Runtime" })),
     {
       id: "status",
       title: t({ zh: "查看总览", en: "View overview" }),
@@ -145,15 +147,16 @@ async function build_town_dashboard_state(): Promise<town_dashboard_state> {
         en: "Restart the Town runtime and try to recover previously managed agent runtime state.",
       }),
     },
+    section_item("management", t({ zh: "管理", en: "Management" })),
     {
       id: "city",
-      title: t({ zh: "连接 City", en: "Connect City" }),
+      title: t({ zh: "City 连接", en: "City connection" }),
       subtitle: build_city_subtitle(city_state),
       detail: build_city_detail(city_state),
     },
     {
       id: "agent",
-      title: t({ zh: "管理 Agent", en: "Manage agents" }),
+      title: t({ zh: "Agent 管理", en: "Agent management" }),
       subtitle: t({
         zh: `${managed_agents} 个运行中 agent`,
         en: `${managed_agents} running agents`,
@@ -165,16 +168,17 @@ async function build_town_dashboard_state(): Promise<town_dashboard_state> {
     },
     {
       id: "plugin",
-      title: t({ zh: "配置 Plugins", en: "Configure plugins" }),
+      title: t({ zh: "Plugin 能力", en: "Plugin capabilities" }),
       subtitle: t({
-        zh: "管理可用 plugin 能力",
-        en: "manage available plugin capabilities",
+        zh: "查看 Agent 可用的 plugin 目录与能力边界",
+        en: "inspect the plugin catalog and capability boundaries available to agents",
       }),
       detail: t({
-        zh: "进入 Plugin 管理器，继续查看、启用和配置 Agent 可用 plugin 能力。",
-        en: "Open the Plugin manager to inspect, enable, and configure Agent plugin capabilities.",
+        zh: "进入 Plugin 能力管理器。这里展示当前已注册的 plugin、actions、system 能力和运行边界；具体运行态仍归属于 Agent。",
+        en: "Open the Plugin capability manager. It shows registered plugins, actions, system capabilities, and runtime boundaries; actual runtime still belongs to agents.",
       }),
     },
+    section_item("settings", t({ zh: "设置", en: "Settings" })),
     {
       id: "language",
       title: t({ zh: "切换语言", en: "Language" }),
@@ -195,6 +199,7 @@ async function build_town_dashboard_state(): Promise<town_dashboard_state> {
         en: "Print the current Town root help, useful when looking up scriptable subcommands.",
       }),
     },
+    section_item("navigation", t({ zh: "导航", en: "Navigation" })),
     {
       id: "exit",
       title: t({ zh: "退出", en: "Exit" }),
@@ -228,7 +233,7 @@ async function run_town_dashboard_once(
     const { screen } = shell;
 
     let finished = false;
-    let selected_index = 0;
+    let selected_index = resolve_selectable_index(state.items, 0, 0);
 
     const finish = (value: string | null): void => {
       if (finished) return;
@@ -276,7 +281,10 @@ async function run_town_dashboard_once(
     });
 
     const sync_selection = (index_value: unknown = list.selected): void => {
-      selected_index = clamp_selected_index(index_value, state.items.length, selected_index);
+      selected_index = resolve_selectable_index(state.items, index_value, selected_index);
+      if (list.selected !== selected_index) {
+        list.select(selected_index);
+      }
       const next_item = state.items[selected_index];
       if (!next_item) return;
       detail.setContent(format_detail_content(next_item));
@@ -298,6 +306,9 @@ async function run_town_dashboard_once(
 
     list.key(["enter"], () => {
       sync_selection();
+      if (is_disabled_item(state.items[selected_index])) {
+        return;
+      }
       finish(state.items[selected_index]?.id ?? null);
     });
 
@@ -532,16 +543,39 @@ function unknown_text(): string {
   return t({ zh: "未知", en: "unknown" });
 }
 
+function section_item(id: string, title: string): tui_list_item {
+  return {
+    id: `section:${id}`,
+    title,
+    subtitle: "",
+    detail: "",
+    disabled: true,
+  };
+}
+
 function format_list_label(item: tui_list_item): string {
+  if (is_disabled_item(item)) {
+    return `── ${item.title} ──`;
+  }
   return item.title;
 }
 
 function format_detail_content(item: tui_list_item): string {
+  if (is_disabled_item(item)) {
+    return [
+      `{bold}${item.title}{/bold}`,
+      t({
+        zh: "这是侧边栏分区标题，用于区分当前 Town 管理区域。",
+        en: "This is a sidebar section heading used to group Town management areas.",
+      }),
+    ].join("\n");
+  }
   return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;
 }
 
 function format_footer(base_footer: string, item: tui_list_item | undefined): string {
   if (!item) return base_footer;
+  if (is_disabled_item(item)) return base_footer;
   return `${base_footer} · ${item.subtitle}`;
 }
 
@@ -557,6 +591,46 @@ function clamp_selected_index(
   if (length <= 0) return 0;
   const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
   return Math.max(0, Math.min(length - 1, index));
+}
+
+function is_disabled_item(item: tui_list_item | undefined): boolean {
+  return item?.disabled === true;
+}
+
+function resolve_selectable_index(
+  items: tui_list_item[],
+  value: unknown,
+  fallback: number,
+): number {
+  if (items.length <= 0) return 0;
+  const candidate = clamp_selected_index(value, items.length, fallback);
+  if (!is_disabled_item(items[candidate])) {
+    return candidate;
+  }
+
+  const direction = candidate >= fallback ? 1 : -1;
+  const first_try = find_selectable_index(items, candidate, direction);
+  if (first_try !== -1) return first_try;
+
+  const second_try = find_selectable_index(items, candidate, direction * -1);
+  if (second_try !== -1) return second_try;
+
+  return candidate;
+}
+
+function find_selectable_index(
+  items: tui_list_item[],
+  start_index: number,
+  direction: number,
+): number {
+  let index = start_index;
+  while (index >= 0 && index < items.length) {
+    if (!is_disabled_item(items[index])) {
+      return index;
+    }
+    index += direction;
+  }
+  return -1;
 }
 
 function read_town_cli_version(): string {

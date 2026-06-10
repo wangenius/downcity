@@ -25,6 +25,7 @@ import { prepareForegroundAgent } from "../shared/TownAgentRuntime.js";
 import { CliError } from "../shared/CliError.js";
 import { getDowncityJsonPath } from "../config/Paths.js";
 import { PlatformStore } from "../town/store/index.js";
+import { t } from "../shared/CliLocale.js";
 import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 import type { DowncityConfig } from "@downcity/agent";
 import type { StoredChannelAccount, StoredChannelAccountChannel } from "@downcity/agent";
@@ -138,9 +139,17 @@ function loadChannelAccountMap(): Map<string, StoredChannelAccount> {
 }
 
 function formatAgentListDescription(agent: AgentManagerAgentSummary): string {
-  const execution_binding = agent.execution_binding || "not configured";
-  const channels = agent.channels.length > 0 ? agent.channels.join(", ") : "no channels";
-  return `${agent.status} · execution: ${execution_binding} · channels: ${channels}`;
+  const execution_binding = agent.execution_binding || t({
+    zh: "未配置",
+    en: "not configured",
+  });
+  const channels = agent.channels.length > 0
+    ? agent.channels.join(", ")
+    : t({ zh: "未连接", en: "not connected" });
+  return t({
+    zh: `${agent.status} · 执行绑定：${execution_binding} · Chat 账号：${channels}`,
+    en: `${agent.status} · execution: ${execution_binding} · chat accounts: ${channels}`,
+  });
 }
 
 async function emitAgentManagerList(): Promise<void> {
@@ -181,31 +190,54 @@ async function promptRootAction(): Promise<AgentManagerRootAction | null> {
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: "管理 Agent",
+    message: t({ zh: "Agent 管理", en: "Agent management" }),
     choices: [
       {
-        title: "查看 agents",
-        description: `${agents.length} 个已登记，${runningCount} 个运行中`,
+        title: t({ zh: "管理", en: "Management" }),
+        disabled: true,
+      },
+      {
+        title: t({ zh: "查看 Agent 列表", en: "View agent list" }),
+        description: t({
+          zh: `${agents.length} 个已登记，${runningCount} 个运行中。用于确认当前 Town 托管了哪些 Agent 项目。`,
+          en: `${agents.length} registered, ${runningCount} running. Use this to see which agent projects Town manages.`,
+        }),
         value: "list",
       },
       {
-        title: "创建 agent",
-        description: "初始化一个 agent 项目",
+        title: t({ zh: "创建 Agent", en: "Create agent" }),
+        description: t({
+          zh: "初始化一个新的 Agent 项目，并生成运行所需的基础配置。",
+          en: "Initialize a new agent project with the required runtime configuration.",
+        }),
         value: "create",
       },
       {
-        title: "启动 agent",
-        description: "启动当前目录或选择已登记 agent",
+        title: t({ zh: "启动 Agent", en: "Start agent" }),
+        description: t({
+          zh: "启动当前目录 Agent，或从已登记 Agent 中选择一个启动。",
+          en: "Start the agent in the current directory, or choose one from registered agents.",
+        }),
         value: "start",
       },
       {
-        title: "管理 agent",
-        description: "状态、名称、执行绑定、chat 账号、启动、停止、聊天",
+        title: t({ zh: "管理已有 Agent", en: "Manage existing agent" }),
+        description: t({
+          zh: "进入单个 Agent 的运行时与配置面板，可查看状态、启动停止、聊天、修改 ID 和连接 Chat 账号。",
+          en: "Open one agent's runtime and settings panel to inspect status, start/stop, chat, edit ID, and connect chat accounts.",
+        }),
         value: "manage",
       },
       {
-        title: "退出",
-        description: "关闭 agent manager",
+        title: t({ zh: "导航", en: "Navigation" }),
+        disabled: true,
+      },
+      {
+        title: t({ zh: "退出", en: "Exit" }),
+        description: t({
+          zh: "关闭 Agent 管理器，返回终端。",
+          en: "Close the Agent manager and return to the terminal.",
+        }),
         value: "exit",
       },
     ],
@@ -229,7 +261,7 @@ async function promptAgentProjectRoot(): Promise<AgentManagerAgentSummary | null
   const response = (await prompts({
     type: "select",
     name: "projectRoot",
-    message: "选择要管理的 Agent",
+    message: t({ zh: "选择要管理的 Agent", en: "Select an agent to manage" }),
     choices: agents.map((agent) => ({
       title: agent.id,
       description: `${formatAgentListDescription(agent)} · ${agent.projectRoot}`,
@@ -249,46 +281,82 @@ async function promptAgentAction(
   const response = (await prompts({
     type: "select",
     name: "action",
-    message: `管理 agent · ${agent.id}`,
+    message: t({
+      zh: `管理 Agent · ${agent.id}`,
+      en: `Manage agent · ${agent.id}`,
+    }),
     choices: [
       {
-        title: "查看状态",
+        title: t({ zh: "运行时", en: "Runtime" }),
+        disabled: true,
+      },
+      {
+        title: t({ zh: "查看状态", en: "View status" }),
         description: formatAgentListDescription(agent),
         value: "status",
       },
       {
-        title: "启动",
-        description: "启动当前 agent daemon",
+        title: t({ zh: "启动", en: "Start" }),
+        description: t({
+          zh: "启动当前 Agent daemon，并刷新运行状态。",
+          en: "Start the current agent daemon and refresh runtime status.",
+        }),
         value: "start",
       },
       {
-        title: "停止",
-        description: "停止当前 agent daemon",
+        title: t({ zh: "停止", en: "Stop" }),
+        description: t({
+          zh: "停止当前 Agent daemon，但保留项目配置。",
+          en: "Stop the current agent daemon while keeping project configuration.",
+        }),
         value: "stop",
       },
       {
-        title: "重启",
-        description: "重启当前 agent daemon",
+        title: t({ zh: "重启", en: "Restart" }),
+        description: t({
+          zh: "重启当前 Agent daemon，适合配置更新后重新加载。",
+          en: "Restart the current agent daemon, useful after configuration changes.",
+        }),
         value: "restart",
       },
       {
-        title: "聊天",
-        description: "进入终端交互式对话",
+        title: t({ zh: "聊天", en: "Chat" }),
+        description: t({
+          zh: "进入与当前运行中 Agent 的终端对话。",
+          en: "Open a terminal conversation with the currently running agent.",
+        }),
         value: "chat",
       },
       {
-        title: "配置 ID",
-        description: `当前：${agent.id}`,
+        title: t({ zh: "配置", en: "Settings" }),
+        disabled: true,
+      },
+      {
+        title: t({ zh: "配置 ID", en: "Configure ID" }),
+        description: t({
+          zh: `当前：${agent.id}。修改后会写入该 Agent 项目的 downcity.json。`,
+          en: `Current: ${agent.id}. Changes are written to this agent project's downcity.json.`,
+        }),
         value: "configureId",
       },
       {
-        title: "连接 chat accounts",
-        description: `当前：${agent.channels.length > 0 ? agent.channels.join(", ") : "未连接"}`,
+        title: t({ zh: "连接 Chat 账号", en: "Connect chat accounts" }),
+        description: t({
+          zh: `当前：${agent.channels.length > 0 ? agent.channels.join(", ") : "未连接"}。把 Town 全局 Chat 账号绑定到当前 Agent。`,
+          en: `Current: ${agent.channels.length > 0 ? agent.channels.join(", ") : "not connected"}. Bind Town-level chat accounts to this agent.`,
+        }),
         value: "connectChatAccounts",
       },
       {
-        title: "返回",
-        description: "回到上一级菜单",
+        title: t({ zh: "导航", en: "Navigation" }),
+        disabled: true,
+      },
+      {
+        title: t({ zh: "返回", en: "Back" }),
+        description: t({
+          zh: "回到 Agent 列表与顶层管理菜单。",
+          en: "Return to the agent list and top-level management menu.",
+        }),
         value: "back",
       },
     ],
@@ -302,7 +370,7 @@ async function promptCreateProjectPath(): Promise<string | null> {
   const response = (await prompts({
     type: "text",
     name: "projectPath",
-    message: "Agent 项目路径",
+    message: t({ zh: "Agent 项目路径", en: "Agent project path" }),
     initial: ".",
   })) as { projectPath?: string };
 
@@ -314,7 +382,10 @@ async function promptStartProjectPath(): Promise<string | null> {
   const response = (await prompts({
     type: "text",
     name: "projectPath",
-    message: "要启动的 Agent 项目路径",
+    message: t({
+      zh: "要启动的 Agent 项目路径",
+      en: "Agent project path to start",
+    }),
     initial: ".",
   })) as { projectPath?: string };
 
@@ -374,10 +445,12 @@ async function configureAgentId(agent: AgentManagerAgentSummary): Promise<AgentM
   const response = (await prompts({
     type: "text",
     name: "id",
-    message: "Agent ID",
+    message: t({ zh: "Agent ID", en: "Agent ID" }),
     initial: agent.id,
     validate: (value) =>
-      String(value || "").trim().length > 0 ? true : "Agent ID 不能为空",
+      String(value || "").trim().length > 0
+        ? true
+        : t({ zh: "Agent ID 不能为空", en: "Agent ID cannot be empty" }),
   })) as { id?: string };
 
   if (response.id === undefined) {
@@ -429,8 +502,11 @@ async function promptChannelAccountId(params: {
   const accounts = loadChannelAccounts(params.channel);
   const choices = [
     {
-      title: "不连接",
-      description: `关闭 ${params.channel} 与当前 agent 的关联`,
+      title: t({ zh: "不连接", en: "Do not connect" }),
+      description: t({
+        zh: `关闭 ${params.channel} 与当前 Agent 的关联。`,
+        en: `Disable the ${params.channel} connection for the current agent.`,
+      }),
       value: "",
     },
     ...accounts.map((account) => ({
@@ -446,7 +522,10 @@ async function promptChannelAccountId(params: {
   const response = (await prompts({
     type: "select",
     name: "accountId",
-    message: `连接 ${params.channel} chat account`,
+    message: t({
+      zh: `连接 ${params.channel} Chat 账号`,
+      en: `Connect ${params.channel} chat account`,
+    }),
     choices,
     initial,
   })) as { accountId?: string };

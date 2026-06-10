@@ -149,7 +149,10 @@ async function promptPluginName(message) {
         message,
         choices: plugins.map((plugin) => ({
             title: plugin.name,
-            description: plugin.title || plugin.note || "",
+            description: t({
+                zh: `${plugin.title || plugin.name} · ${plugin.kind} · ${plugin.actionCount} 个 action。${plugin.note || ""}`,
+                en: `${plugin.title || plugin.name} · ${plugin.kind} · ${plugin.actionCount} actions. ${plugin.note || ""}`,
+            }),
             value: plugin.name,
         })),
         initial: 0,
@@ -162,21 +165,41 @@ async function promptPluginRootAction() {
     const response = (await prompts({
         type: "select",
         name: "action",
-        message: "Plugin 配置",
+        message: t({
+            zh: "Plugin 能力",
+            en: "Plugin capabilities",
+        }),
         choices: [
             {
-                title: "配置 plugin 能力",
-                description: `${plugins.length} 个 Agent 可用 plugin`,
+                title: t({ zh: "管理", en: "Management" }),
+                disabled: true,
+            },
+            {
+                title: t({ zh: "查看 Plugin 目录", en: "View plugin catalog" }),
+                description: t({
+                    zh: `${plugins.length} 个 Agent 可用 Plugin。用于确认当前已注册启用的能力、类型和 action 数量。`,
+                    en: `${plugins.length} plugins available to agents. Use this to inspect registered capabilities, kinds, and action counts.`,
+                }),
                 value: "catalog",
             },
             {
-                title: "查看 plugin 配置详情",
-                description: "查看 actions、system 与运行边界配置",
+                title: t({ zh: "查看 Plugin 详情", en: "View plugin details" }),
+                description: t({
+                    zh: "选择一个 Plugin，查看 actions、system 能力与运行边界；Town 只展示目录，具体运行态归属于 Agent。",
+                    en: "Choose a plugin to inspect actions, system capability, and runtime boundaries; Town shows the catalog while runtime belongs to agents.",
+                }),
                 value: "info",
             },
             {
-                title: "退出",
-                description: "关闭 plugin manager",
+                title: t({ zh: "导航", en: "Navigation" }),
+                disabled: true,
+            },
+            {
+                title: t({ zh: "退出", en: "Exit" }),
+                description: t({
+                    zh: "关闭 Plugin 能力管理器，返回终端。",
+                    en: "Close the Plugin capability manager and return to the terminal.",
+                }),
                 value: "exit",
             },
         ],
@@ -230,7 +253,10 @@ async function runPluginListCommand(options) {
 async function runPluginInfoCommand(params) {
     const pluginName = await resolveInteractivePluginName({
         pluginName: params.pluginName,
-        message: "选择要查看的 plugin",
+        message: t({
+            zh: "选择要查看的 Plugin",
+            en: "Select a plugin to inspect",
+        }),
     });
     if (!pluginName) {
         return;

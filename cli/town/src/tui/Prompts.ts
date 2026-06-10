@@ -25,13 +25,7 @@ export interface PromptObject {
   message: string;
 
   /** 选项列表。 */
-  choices?: Array<{
-    title?: string;
-    label?: string;
-    description?: string;
-    hint?: string;
-    value: unknown;
-  }>;
+  choices?: prompt_choice_option[];
 
   /** 初始值。 */
   initial?: unknown;
@@ -41,6 +35,35 @@ export interface PromptObject {
 
   /** 最小值。 */
   min?: number;
+}
+
+/**
+ * 选择类 Prompt 的单个选项。
+ */
+export interface prompt_choice_option {
+  /** 左侧 sidebar 展示标题。 */
+  title?: string;
+
+  /** 兼容旧调用方的展示标签。 */
+  label?: string;
+
+  /** 当前选项聚焦时展示在 main/footer 的说明。 */
+  description?: string;
+
+  /** 兼容旧调用方的说明文本。 */
+  hint?: string;
+
+  /** 选中后返回给调用方的业务值。 */
+  value?: unknown;
+
+  /**
+   * 是否仅作为分区标题展示。
+   *
+   * 关键点（中文）
+   * - true 时该项只负责分隔 sidebar，不参与选择与多选勾选。
+   * - TUI 会自动跳过该项，避免 Enter 返回无意义值。
+   */
+  disabled?: boolean;
 }
 
 interface blessed_list_element extends blessed.Widgets.ListElement {
@@ -141,7 +164,11 @@ async function run_select_prompt(
   question: PromptObject,
 ): Promise<unknown> {
   const choices = question.choices ?? [];
-  const initial_index = normalize_initial_index(question.initial, choices.length);
+  const initial_index = resolve_selectable_index(
+    choices,
+    normalize_initial_index(question.initial, choices.length),
+    0,
+  );
 
   return await new Promise<unknown>((resolve) => {
     const shell = create_prompt_shell(question.message);
@@ -195,7 +222,10 @@ async function run_select_prompt(
     });
 
     const sync_selection = (index_value: unknown = list.selected): void => {
-      selected_index = clamp_selected_index(index_value, choices.length, selected_index);
+      selected_index = resolve_selectable_index(choices, index_value, selected_index);
+      if (list.selected !== selected_index) {
+        list.select(selected_index);
+      }
       detail.setContent(format_choice_detail(choices[selected_index]));
       shell.footer_box.setContent(format_select_footer(choices[selected_index]));
       screen.render();
@@ -220,6 +250,9 @@ async function run_select_prompt(
 
     list.key(["enter"], () => {
       sync_selection();
+      if (is_disabled_choice(choices[selected_index])) {
+        return;
+      }
       finish(choices[selected_index]?.value);
     });
 
@@ -231,6 +264,10 @@ async function run_select_prompt(
         return;
       }
       if (text.includes("\r") || text.includes("\n")) {
+        sync_selection();
+        if (is_disabled_choice(choices[selected_index])) {
+          return;
+        }
         finish(choices[selected_index]?.value);
       }
     };
@@ -245,7 +282,11 @@ async function run_multiselect_prompt(
 ): Promise<unknown[] | undefined> {
   const choices = question.choices ?? [];
   const selected_indexes = new Set<number>();
-  let current_index = normalize_initial_index(question.initial, choices.length);
+  let current_index = resolve_selectable_index(
+    choices,
+    normalize_initial_index(question.initial, choices.length),
+    0,
+  );
 
   return await new Promise<unknown[] | undefined>((resolve) => {
     const shell = create_prompt_shell(question.message);
@@ -308,7 +349,10 @@ async function run_multiselect_prompt(
     };
 
     const sync_selection = (index_value: unknown = list.selected): void => {
-      current_index = clamp_selected_index(index_value, choices.length, current_index);
+      current_index = resolve_selectable_index(choices, index_value, current_index);
+      if (list.selected !== current_index) {
+        list.select(current_index);
+      }
       detail.setContent(format_choice_detail(choices[current_index]));
       shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
       screen.render();
@@ -331,6 +375,9 @@ async function run_multiselect_prompt(
 
     list.key(["space"], () => {
       sync_selection();
+      if (is_disabled_choice(choices[current_index])) {
+        return;
+      }
       if (selected_indexes.has(current_index)) {
         selected_indexes.delete(current_index);
       } else {
@@ -352,6 +399,10 @@ async function run_multiselect_prompt(
         return;
       }
       if (text.includes(" ")) {
+        sync_selection();
+        if (is_disabled_choice(choices[current_index])) {
+          return;
+        }
         if (selected_indexes.has(current_index)) {
           selected_indexes.delete(current_index);
         } else {
@@ -790,17 +841,15 @@ function format_choice_sidebar_label(choice?: {
   label?: string;
   description?: string;
   hint?: string;
+  disabled?: boolean;
 }): string {
+  if (is_disabled_choice(choice)) {
+    return `── ${format_choice_label(choice)} ──`;
+  }
   return format_choice_label(choice);
 }
 
-function format_choice_detail(choice?: {
-  title?: string;
-  label?: string;
-  description?: string;
-  hint?: string;
-  value?: unknown;
-}): string {
+function format_choice_detail(choice?: prompt_choice): string {
   if (!choice) {
     return t({
       zh: "未选择项目",
@@ -809,6 +858,16 @@ function format_choice_detail(choice?: {
   }
 
   const title = String(choice.title ?? choice.label ?? "").trim();
+  if (is_disabled_choice(choice)) {
+    return [
+      `{bold}${title}{/bold}`,
+      t({
+        zh: "这是侧边栏分区标题，用于区分当前菜单里的操作区域。",
+        en: "This is a sidebar section heading used to group actions in the current menu.",
+      }),
+    ].join("\n");
+  }
+
   const hint = choice_description(choice);
   const value = choice.value === undefined ? "" : String(choice.value);
 
@@ -824,7 +883,11 @@ function choice_description(choice?: {
   label?: string;
   description?: string;
   hint?: string;
+  disabled?: boolean;
 }): string {
+  if (is_disabled_choice(choice)) {
+    return "";
+  }
   const hint = String(choice?.description ?? choice?.hint ?? "").trim();
   if (hint) return hint;
   const title = format_choice_label(choice);
@@ -846,6 +909,7 @@ function select_footer_text(): string {
 
 function format_select_footer(choice: prompt_choice | undefined): string {
   if (!choice) return select_footer_text();
+  if (is_disabled_choice(choice)) return select_footer_text();
   return `${select_footer_text()} · ${choice_description(choice)}`;
 }
 
@@ -861,6 +925,7 @@ function multiselect_footer_text(): string {
 
 function format_multiselect_footer(choice: prompt_choice | undefined): string {
   if (!choice) return multiselect_footer_text();
+  if (is_disabled_choice(choice)) return multiselect_footer_text();
   return `${multiselect_footer_text()} · ${choice_description(choice)}`;
 }
 
@@ -876,6 +941,7 @@ function confirm_footer_text(): string {
 
 function format_confirm_footer(choice: prompt_choice | undefined): string {
   if (!choice) return confirm_footer_text();
+  if (is_disabled_choice(choice)) return confirm_footer_text();
   return `${confirm_footer_text()} · ${choice_description(choice)}`;
 }
 
@@ -895,26 +961,25 @@ function text_footer_text(secret: boolean): string {
 }
 
 function build_multiselect_items(
-  choices: Array<{
-    title?: string;
-    label?: string;
-    description?: string;
-    hint?: string;
-  }>,
+  choices: prompt_choice[],
   selected_indexes: Set<number>,
 ): string[] {
   return choices.map((choice, index) => {
+    if (is_disabled_choice(choice)) {
+      return format_choice_sidebar_label(choice);
+    }
     const checked = selected_indexes.has(index) ? "[x]" : "[ ]";
     return `${checked} ${format_choice_label(choice)}`;
   });
 }
 
 function build_multiselect_values(
-  choices: Array<{ value: unknown }>,
+  choices: prompt_choice[],
   selected_indexes: Set<number>,
 ): unknown[] {
   return [...selected_indexes]
     .sort((left, right) => left - right)
+    .filter((index) => !is_disabled_choice(choices[index]))
     .map((index) => choices[index]?.value)
     .filter((value) => value !== undefined);
 }
@@ -941,6 +1006,48 @@ function clamp_selected_index(
   if (length <= 0) return 0;
   const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
   return Math.max(0, Math.min(length - 1, index));
+}
+
+function is_disabled_choice(choice: {
+  disabled?: boolean;
+} | undefined): boolean {
+  return choice?.disabled === true;
+}
+
+function resolve_selectable_index(
+  choices: prompt_choice[],
+  value: unknown,
+  fallback: number,
+): number {
+  if (choices.length <= 0) return 0;
+  const candidate = clamp_selected_index(value, choices.length, fallback);
+  if (!is_disabled_choice(choices[candidate])) {
+    return candidate;
+  }
+
+  const direction = candidate >= fallback ? 1 : -1;
+  const first_try = find_selectable_index(choices, candidate, direction);
+  if (first_try !== -1) return first_try;
+
+  const second_try = find_selectable_index(choices, candidate, direction * -1);
+  if (second_try !== -1) return second_try;
+
+  return candidate;
+}
+
+function find_selectable_index(
+  choices: prompt_choice[],
+  start_index: number,
+  direction: number,
+): number {
+  let index = start_index;
+  while (index >= 0 && index < choices.length) {
+    if (!is_disabled_choice(choices[index])) {
+      return index;
+    }
+    index += direction;
+  }
+  return -1;
 }
 
 function normalize_textbox_value(value: unknown): string {

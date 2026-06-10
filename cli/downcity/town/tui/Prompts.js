@@ -44,7 +44,7 @@ async function run_prompt_question(question) {
 }
 async function run_select_prompt(question) {
     const choices = question.choices ?? [];
-    const initial_index = normalize_initial_index(question.initial, choices.length);
+    const initial_index = resolve_selectable_index(choices, normalize_initial_index(question.initial, choices.length), 0);
     return await new Promise((resolve) => {
         const shell = create_prompt_shell(question.message);
         const { screen } = shell;
@@ -93,7 +93,10 @@ async function run_select_prompt(question) {
             },
         });
         const sync_selection = (index_value = list.selected) => {
-            selected_index = clamp_selected_index(index_value, choices.length, selected_index);
+            selected_index = resolve_selectable_index(choices, index_value, selected_index);
+            if (list.selected !== selected_index) {
+                list.select(selected_index);
+            }
             detail.setContent(format_choice_detail(choices[selected_index]));
             shell.footer_box.setContent(format_select_footer(choices[selected_index]));
             screen.render();
@@ -114,6 +117,9 @@ async function run_select_prompt(question) {
         });
         list.key(["enter"], () => {
             sync_selection();
+            if (is_disabled_choice(choices[selected_index])) {
+                return;
+            }
             finish(choices[selected_index]?.value);
         });
         screen.key(["escape", "q", "C-c"], () => finish(undefined));
@@ -124,6 +130,10 @@ async function run_select_prompt(question) {
                 return;
             }
             if (text.includes("\r") || text.includes("\n")) {
+                sync_selection();
+                if (is_disabled_choice(choices[selected_index])) {
+                    return;
+                }
                 finish(choices[selected_index]?.value);
             }
         };
@@ -135,7 +145,7 @@ async function run_select_prompt(question) {
 async function run_multiselect_prompt(question) {
     const choices = question.choices ?? [];
     const selected_indexes = new Set();
-    let current_index = normalize_initial_index(question.initial, choices.length);
+    let current_index = resolve_selectable_index(choices, normalize_initial_index(question.initial, choices.length), 0);
     return await new Promise((resolve) => {
         const shell = create_prompt_shell(question.message);
         const { screen } = shell;
@@ -191,7 +201,10 @@ async function run_multiselect_prompt(question) {
             screen.render();
         };
         const sync_selection = (index_value = list.selected) => {
-            current_index = clamp_selected_index(index_value, choices.length, current_index);
+            current_index = resolve_selectable_index(choices, index_value, current_index);
+            if (list.selected !== current_index) {
+                list.select(current_index);
+            }
             detail.setContent(format_choice_detail(choices[current_index]));
             shell.footer_box.setContent(format_multiselect_footer(choices[current_index]));
             screen.render();
@@ -211,6 +224,9 @@ async function run_multiselect_prompt(question) {
         });
         list.key(["space"], () => {
             sync_selection();
+            if (is_disabled_choice(choices[current_index])) {
+                return;
+            }
             if (selected_indexes.has(current_index)) {
                 selected_indexes.delete(current_index);
             }
@@ -231,6 +247,10 @@ async function run_multiselect_prompt(question) {
                 return;
             }
             if (text.includes(" ")) {
+                sync_selection();
+                if (is_disabled_choice(choices[current_index])) {
+                    return;
+                }
                 if (selected_indexes.has(current_index)) {
                     selected_indexes.delete(current_index);
                 }
@@ -609,6 +629,9 @@ function format_choice_label(choice) {
     return String(choice?.title ?? choice?.label ?? "").trim();
 }
 function format_choice_sidebar_label(choice) {
+    if (is_disabled_choice(choice)) {
+        return `── ${format_choice_label(choice)} ──`;
+    }
     return format_choice_label(choice);
 }
 function format_choice_detail(choice) {
@@ -619,6 +642,15 @@ function format_choice_detail(choice) {
         });
     }
     const title = String(choice.title ?? choice.label ?? "").trim();
+    if (is_disabled_choice(choice)) {
+        return [
+            `{bold}${title}{/bold}`,
+            t({
+                zh: "这是侧边栏分区标题，用于区分当前菜单里的操作区域。",
+                en: "This is a sidebar section heading used to group actions in the current menu.",
+            }),
+        ].join("\n");
+    }
     const hint = choice_description(choice);
     const value = choice.value === undefined ? "" : String(choice.value);
     return [
@@ -628,6 +660,9 @@ function format_choice_detail(choice) {
     ].filter(Boolean).join("\n");
 }
 function choice_description(choice) {
+    if (is_disabled_choice(choice)) {
+        return "";
+    }
     const hint = String(choice?.description ?? choice?.hint ?? "").trim();
     if (hint)
         return hint;
@@ -649,6 +684,8 @@ function select_footer_text() {
 function format_select_footer(choice) {
     if (!choice)
         return select_footer_text();
+    if (is_disabled_choice(choice))
+        return select_footer_text();
     return `${select_footer_text()} · ${choice_description(choice)}`;
 }
 /**
@@ -663,6 +700,8 @@ function multiselect_footer_text() {
 function format_multiselect_footer(choice) {
     if (!choice)
         return multiselect_footer_text();
+    if (is_disabled_choice(choice))
+        return multiselect_footer_text();
     return `${multiselect_footer_text()} · ${choice_description(choice)}`;
 }
 /**
@@ -676,6 +715,8 @@ function confirm_footer_text() {
 }
 function format_confirm_footer(choice) {
     if (!choice)
+        return confirm_footer_text();
+    if (is_disabled_choice(choice))
         return confirm_footer_text();
     return `${confirm_footer_text()} · ${choice_description(choice)}`;
 }
@@ -695,6 +736,9 @@ function text_footer_text(secret) {
 }
 function build_multiselect_items(choices, selected_indexes) {
     return choices.map((choice, index) => {
+        if (is_disabled_choice(choice)) {
+            return format_choice_sidebar_label(choice);
+        }
         const checked = selected_indexes.has(index) ? "[x]" : "[ ]";
         return `${checked} ${format_choice_label(choice)}`;
     });
@@ -702,6 +746,7 @@ function build_multiselect_items(choices, selected_indexes) {
 function build_multiselect_values(choices, selected_indexes) {
     return [...selected_indexes]
         .sort((left, right) => left - right)
+        .filter((index) => !is_disabled_choice(choices[index]))
         .map((index) => choices[index]?.value)
         .filter((value) => value !== undefined);
 }
@@ -720,6 +765,35 @@ function clamp_selected_index(value, length, fallback) {
         return 0;
     const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
     return Math.max(0, Math.min(length - 1, index));
+}
+function is_disabled_choice(choice) {
+    return choice?.disabled === true;
+}
+function resolve_selectable_index(choices, value, fallback) {
+    if (choices.length <= 0)
+        return 0;
+    const candidate = clamp_selected_index(value, choices.length, fallback);
+    if (!is_disabled_choice(choices[candidate])) {
+        return candidate;
+    }
+    const direction = candidate >= fallback ? 1 : -1;
+    const first_try = find_selectable_index(choices, candidate, direction);
+    if (first_try !== -1)
+        return first_try;
+    const second_try = find_selectable_index(choices, candidate, direction * -1);
+    if (second_try !== -1)
+        return second_try;
+    return candidate;
+}
+function find_selectable_index(choices, start_index, direction) {
+    let index = start_index;
+    while (index >= 0 && index < choices.length) {
+        if (!is_disabled_choice(choices[index])) {
+            return index;
+        }
+        index += direction;
+    }
+    return -1;
 }
 function normalize_textbox_value(value) {
     return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, "");

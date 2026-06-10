@@ -36,7 +36,7 @@ function resolveSkillRootPath(projectRoot: string, raw: string): string {
     : path.resolve(projectRoot, expanded);
 }
 
-export function getClaudeSkillSearchRoots(
+export function getSkillSearchRoots(
   projectRoot: string,
   options?: SkillPluginOptions | null,
 ): SkillRoot[] {
@@ -104,16 +104,4 @@ export function getClaudeSkillSearchRoots(
   }
 
   return Array.from(byResolved.values()).sort((a, b) => a.priority - b.priority);
-}
-
-// Back-compat（内部仅用于 prompt 展示）：保留旧 API 形状，避免外部 import 立刻断裂。
-export function getClaudeSkillSearchPaths(
-  projectRoot: string,
-  options?: SkillPluginOptions | null,
-): { raw: string[]; resolved: string[] } {
-  const roots = getClaudeSkillSearchRoots(projectRoot, options);
-  return {
-    raw: roots.map((r) => r.display),
-    resolved: roots.map((r) => r.resolved),
-  };
 }

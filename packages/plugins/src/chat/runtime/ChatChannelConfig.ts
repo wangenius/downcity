@@ -2,13 +2,11 @@
  * ChatChannelConfig：chat 渠道配置与状态快照模块。
  *
  * 关键点（中文）
- * - 渠道配置摘要、状态快照、patch 归一化、downcity.json 落盘都收敛在这里。
- * - 所有配置写入都遵循“先改内存，再落盘”的一致性顺序。
+ * - 渠道配置摘要、状态快照、patch 归一化都收敛在这里。
+ * - chat.configure 的运行态写入由 ChatPlugin 实例承载，不再落盘到 downcity.json。
  * - 该模块不直接负责 action 流程控制，只提供可复用的底层能力。
  */
 
-import fs from "node:fs/promises";
-import path from "node:path";
 import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
@@ -107,47 +105,6 @@ export function getChatChannelStatus(
       configuration: toJsonObject(getChatChannelConfiguration(channel).describe()),
     },
   };
-}
-
-/**
- * 更新内存配置与 downcity.json 中的 channel enabled 状态。
- */
-export async function setChatChannelEnabled(params: {
-  context: AgentContext;
-  channel: ChatChannelName;
-  enabled: boolean;
-}): Promise<void> {
-  const { context, channel, enabled } = params;
-
-  const configPlugins = ((context.config.plugins ??= {}) as {
-    chat?: {
-      channels?: Record<string, Record<string, unknown>>;
-    };
-  });
-  const chatConfig = (configPlugins.chat ??= {});
-  const channelConfigs = (chatConfig.channels ??= {});
-  const channelConfig = (channelConfigs[channel] ??= {});
-  channelConfig.enabled = enabled;
-
-  const shipPath = path.join(context.rootPath, "downcity.json");
-  let shipJson: Record<string, unknown> = {};
-  try {
-    const raw = await fs.readFile(shipPath, "utf-8");
-    const parsed = JSON.parse(raw) as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      shipJson = parsed as Record<string, unknown>;
-    }
-  } catch {
-    shipJson = {};
-  }
-
-  const shipPlugins = ((shipJson.plugins ??= {}) as Record<string, unknown>);
-  const shipChat = ((shipPlugins.chat ??= {}) as Record<string, unknown>);
-  const shipChannels = ((shipChat.channels ??= {}) as Record<string, unknown>);
-  const shipChannel = ((shipChannels[channel] ??= {}) as Record<string, unknown>);
-  shipChannel.enabled = enabled;
-
-  await fs.writeFile(shipPath, `${JSON.stringify(shipJson, null, 2)}\n`, "utf-8");
 }
 
 function isJsonObject(value: JsonValue): value is JsonObject {
@@ -251,61 +208,6 @@ export function normalizeChatChannelConfigPatch(params: {
     patch[field.key] = normalizedValue;
   }
   return patch;
-}
-
-function applyChannelPatch(
-  target: Record<string, unknown>,
-  patch: Record<string, string | number | boolean | null>,
-): void {
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === null) {
-      delete target[key];
-      continue;
-    }
-    target[key] = value;
-  }
-}
-
-/**
- * 更新单个 channel 配置（内存 + downcity.json）。
- */
-export async function setChatChannelConfig(params: {
-  context: AgentContext;
-  channel: ChatChannelName;
-  patch: Record<string, string | number | boolean | null>;
-}): Promise<void> {
-  const { context, channel, patch } = params;
-  if (Object.keys(patch).length === 0) return;
-
-  const configPlugins = ((context.config.plugins ??= {}) as {
-    chat?: {
-      channels?: Record<string, Record<string, unknown>>;
-    };
-  });
-  const chatConfig = (configPlugins.chat ??= {});
-  const channelConfigs = (chatConfig.channels ??= {});
-  const channelConfig = (channelConfigs[channel] ??= {});
-  applyChannelPatch(channelConfig, patch);
-
-  const shipPath = path.join(context.rootPath, "downcity.json");
-  let shipJson: Record<string, unknown> = {};
-  try {
-    const raw = await fs.readFile(shipPath, "utf-8");
-    const parsed = JSON.parse(raw) as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      shipJson = parsed as Record<string, unknown>;
-    }
-  } catch {
-    shipJson = {};
-  }
-
-  const shipPlugins = ((shipJson.plugins ??= {}) as Record<string, unknown>);
-  const shipChat = ((shipPlugins.chat ??= {}) as Record<string, unknown>);
-  const shipChannels = ((shipChat.channels ??= {}) as Record<string, unknown>);
-  const shipChannel = ((shipChannels[channel] ??= {}) as Record<string, unknown>);
-  applyChannelPatch(shipChannel, patch);
-
-  await fs.writeFile(shipPath, `${JSON.stringify(shipJson, null, 2)}\n`, "utf-8");
 }
 
 /**

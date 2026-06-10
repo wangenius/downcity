@@ -12,25 +12,34 @@ import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type {
-  ChatPluginFeishuOptions,
+  ChatChannel,
   ChatPluginOptions,
-  ChatPluginQqOptions,
-  ChatPluginTelegramOptions,
-} from "@/chat/ChatPluginTypes.js";
+} from "@/chat/types/ChatPluginOptions.js";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
+import {
+  FeishuChannel,
+  QqChannel,
+  TelegramChannel,
+} from "@/chat/channels/RuntimeChannel.js";
 import {
   createChatChannelState,
   startChatChannels,
   stopChatChannels,
 } from "./runtime/ChatChannelFacade.js";
-import { getStoredChannelAccountSync } from "./accounts/Store.js";
 import { createChatPluginActions } from "./runtime/ChatPluginActions.js";
 import { ChatQueueWorker } from "./runtime/ChatQueueWorker.js";
 import { buildChatPluginSystem } from "./runtime/ChatPluginSystem.js";
 import { ChatQueueStore } from "./runtime/ChatQueueStore.js";
+
+function createDefaultChannels(): ChatChannel[] {
+  return [
+    new TelegramChannel({ enabled: false }),
+    new FeishuChannel({ enabled: false }),
+    new QqChannel({ enabled: false }),
+  ];
+}
 
 /**
  * Chat plugin 类实现。
@@ -68,6 +77,11 @@ export class ChatPlugin extends BasePlugin {
    * 当前实例持有的显式 plugin 配置。
    */
   public readonly options: ChatPluginOptions;
+
+  /**
+   * 当前实例持有的 chat channels。
+   */
+  public readonly channels: ChatChannel[];
 
   /**
    * 当前 plugin 的 system 文本构建器。
@@ -109,6 +123,9 @@ export class ChatPlugin extends BasePlugin {
   constructor(options?: ChatPluginOptions) {
     super();
     this.options = options || {};
+    this.channels = Array.isArray(this.options.channels)
+      ? [...this.options.channels]
+      : createDefaultChannels();
     this.actions = createChatPluginActions({
       channelState: this.channelState,
     });
@@ -130,18 +147,15 @@ export class ChatPlugin extends BasePlugin {
   getQueueWorkerConfig(
     context: AgentContext,
   ): Partial<ChatQueueWorkerConfig> | undefined {
-    return this.options.queue || context.config.plugins?.chat?.queue;
+    void context;
+    return this.options.queue;
   }
 
   /**
    * 判断指定渠道是否启用。
    */
   isChannelEnabled(context: AgentContext, channel: ChatChannelName): boolean {
-    const explicit = this.getExplicitChannelOptions(channel);
-    if (explicit) {
-      return explicit.enabled !== false;
-    }
-    return context.config.plugins?.chat?.channels?.[channel]?.enabled === true;
+    return this.getChannel(channel)?.isEnabled(context) === true;
   }
 
   /**
@@ -151,13 +165,40 @@ export class ChatPlugin extends BasePlugin {
     context: AgentContext,
     channel: ChatChannelName,
   ): string {
-    const explicit = this.getExplicitChannelOptions(channel);
-    const explicitAccountId = String(explicit?.channelAccountId || "").trim();
-    if (explicitAccountId) return explicitAccountId;
-    const config = context.config.plugins?.chat?.channels?.[channel] as
-      | { channelAccountId?: unknown }
-      | undefined;
-    return String(config?.channelAccountId || "").trim();
+    return String(this.getChannel(channel)?.getChannelAccountId(context) || "").trim();
+  }
+
+  /**
+   * 更新当前实例的渠道运行态配置。
+   *
+   * 关键点（中文）
+   * - chat.open/close/configure 只修改当前 plugin 实例，不写 downcity.json。
+   * - 当前运行态只允许更新 `enabled` 与 `channelAccountId`，密钥仍来自 constructor 或账号池。
+   */
+  applyChannelRuntimePatch(params: {
+    /**
+     * 目标渠道。
+     */
+    channel: ChatChannelName;
+    /**
+     * 是否启用该渠道。
+     */
+    enabled?: boolean;
+    /**
+     * 绑定的账号池记录 ID；传入 null 表示清空绑定。
+     */
+    channelAccountId?: string | null;
+  }): void {
+    const channel = this.getChannel(params.channel);
+    if (!channel) {
+      throw new Error(`Chat channel is not registered: ${params.channel}`);
+    }
+    channel.applyRuntimePatch({
+      ...(typeof params.enabled === "boolean" ? { enabled: params.enabled } : {}),
+      ...(Object.prototype.hasOwnProperty.call(params, "channelAccountId")
+        ? { channelAccountId: params.channelAccountId ?? null }
+        : {}),
+    });
   }
 
   /**
@@ -166,73 +207,11 @@ export class ChatPlugin extends BasePlugin {
   resolveChannelAccount(
     context: AgentContext,
     channel: ChatChannelName,
-  ): StoredChannelAccount | null {
-    const explicit = this.buildExplicitChannelAccount(channel);
-    if (explicit) return explicit;
-    const channelAccountId = this.getChannelAccountId(context, channel);
-    if (!channelAccountId) return null;
-    return getStoredChannelAccountSync(channelAccountId);
+  ) {
+    return this.getChannel(channel)?.getAccount(context) || null;
   }
 
-  private getExplicitChannelOptions(
-    channel: ChatChannelName,
-  ): ChatPluginTelegramOptions | ChatPluginFeishuOptions | ChatPluginQqOptions | undefined {
-    if (channel === "telegram") return this.options.telegram;
-    if (channel === "feishu") return this.options.feishu;
-    return this.options.qq;
-  }
-
-  private buildExplicitChannelAccount(
-    channel: ChatChannelName,
-  ): StoredChannelAccount | null {
-    const now = new Date().toISOString();
-
-    if (channel === "telegram") {
-      const config = this.options.telegram;
-      const botToken = String(config?.botToken || "").trim();
-      if (!botToken) return null;
-      return {
-        id: String(config?.channelAccountId || `chat-sdk-${channel}`).trim(),
-        channel,
-        name: String(config?.name || "telegram").trim() || "telegram",
-        botToken,
-        createdAt: now,
-        updatedAt: now,
-      };
-    }
-
-    if (channel === "feishu") {
-      const config = this.options.feishu;
-      const appId = String(config?.appId || "").trim();
-      const appSecret = String(config?.appSecret || "").trim();
-      if (!appId || !appSecret) return null;
-      return {
-        id: String(config?.channelAccountId || `chat-sdk-${channel}`).trim(),
-        channel,
-        name: String(config?.name || "feishu").trim() || "feishu",
-        appId,
-        appSecret,
-        ...(String(config?.domain || "").trim()
-          ? { domain: String(config?.domain || "").trim() }
-          : {}),
-        createdAt: now,
-        updatedAt: now,
-      };
-    }
-
-    const config = this.options.qq;
-    const appId = String(config?.appId || "").trim();
-    const appSecret = String(config?.appSecret || "").trim();
-    if (!appId || !appSecret) return null;
-    return {
-      id: String(config?.channelAccountId || `chat-sdk-${channel}`).trim(),
-      channel,
-      name: String(config?.name || "qq").trim() || "qq",
-      appId,
-      appSecret,
-      ...(config?.sandbox === true ? { sandbox: true } : {}),
-      createdAt: now,
-      updatedAt: now,
-    };
+  private getChannel(channel: ChatChannelName): ChatChannel | null {
+    return this.channels.find((item) => item.name === channel) || null;
   }
 }

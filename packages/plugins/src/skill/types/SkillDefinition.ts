@@ -1,5 +1,5 @@
 /**
- * Claude Code-compatible skill 模型。
+ * Skill 定义模型。
  *
  * 关键点（中文）
  * - skill 最小单元目录为 `<root>/<skill-id>/SKILL.md`。
@@ -11,9 +11,9 @@ import type { SkillRootSource } from "@/skill/types/SkillRoot.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 
 /**
- * Claude Code-compatible skill。
+ * 可被 agent 发现与读取的 skill 定义。
  */
-export interface ClaudeSkill {
+export interface SkillDefinition {
   /**
    * skill 稳定标识。
    *

@@ -8,8 +8,8 @@
 
 import path from "node:path";
 import { execa } from "execa";
-import { discoverClaudeSkillsSync } from "@/skill/runtime/Discovery.js";
-import { getClaudeSkillSearchRoots } from "@/skill/runtime/Paths.js";
+import { discoverSkillsSync } from "@/skill/runtime/Discovery.js";
+import { getSkillSearchRoots } from "@/skill/runtime/Paths.js";
 
 async function runNpxSkills(args: string[], opts?: { yes?: boolean }): Promise<number> {
   const yes = opts?.yes !== false;
@@ -57,7 +57,7 @@ export async function skillInstallCommand(
   if (!s) throw new Error("Missing spec");
 
   const args: string[] = ["add", s];
-  const agent = String(options.agent || "claude-code").trim();
+  const agent = String(options.agent || "").trim();
   if (agent) args.push("--agent", agent);
 
   const yes = options.yes !== false;
@@ -74,8 +74,8 @@ export async function skillInstallCommand(
  */
 export async function skillListCommand(cwd: string = "."): Promise<void> {
   const projectRoot = path.resolve(String(cwd || "."));
-  const roots = getClaudeSkillSearchRoots(projectRoot);
-  const skills = discoverClaudeSkillsSync(projectRoot);
+  const roots = getSkillSearchRoots(projectRoot);
+  const skills = discoverSkillsSync(projectRoot);
 
   console.log("Skill roots:");
   for (const root of roots) console.log(`- [${root.source}] ${root.display}`);

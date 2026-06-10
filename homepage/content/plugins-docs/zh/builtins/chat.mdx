@@ -48,6 +48,45 @@ town chat delete --chat-key <chatKey>
 
 Town 会刻意隐藏 `status`、`test`、`open`、`close`、`reconnect`、`configuration`、`configure` 这些渠道 runtime action。它们存在于 plugin runtime 里，但不是普通用户的 CLI 使用路径。
 
+## SDK 装配
+
+本地嵌入 SDK 场景里，`ChatPlugin` 接收 channel 对象。每个 channel 自己携带 env 或账号池绑定信息：
+
+```ts
+import {
+  ChatPlugin,
+  FeishuChannel,
+  QqChannel,
+  TelegramChannel,
+} from "@downcity/plugins";
+
+const plugin = new ChatPlugin({
+  channels: [
+    new TelegramChannel({
+      env: {
+        TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+      },
+    }),
+    new FeishuChannel({
+      env: {
+        FEISHU_APP_ID: process.env.FEISHU_APP_ID,
+        FEISHU_APP_SECRET: process.env.FEISHU_APP_SECRET,
+        FEISHU_DOMAIN: process.env.FEISHU_DOMAIN,
+      },
+    }),
+    new QqChannel({
+      env: {
+        QQ_APP_ID: process.env.QQ_APP_ID,
+        QQ_APP_SECRET: process.env.QQ_APP_SECRET,
+        QQ_SANDBOX: process.env.QQ_SANDBOX,
+      },
+    }),
+  ],
+});
+```
+
+`channelAccountId` 仍可作为账号池绑定能力使用，但 SDK 主路径推荐直接把 channel 需要的 env 传给对应 channel 对象。
+
 ## SDK action 用法
 
 本地嵌入 SDK 场景里，可以按 plugin 名称调用会话 action：

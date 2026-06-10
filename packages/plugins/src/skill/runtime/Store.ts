@@ -6,7 +6,7 @@
  * - core 不负责也不感知 skill/memory 业务状态
  */
 
-import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
+import type { SkillDefinition } from "@/skill/types/SkillDefinition.js";
 import type {
   SessionSkillStateInternal,
   SessionSkillStateSnapshot,
@@ -50,9 +50,12 @@ function getOrCreateState(sessionId: string): SessionSkillStateInternal {
  * 算法（中文）
  * - 以 id 归一化后整体替换，避免残留脏状态。
  */
-export function setSessionAvailableSkills(sessionId: string, skills: ClaudeSkill[]): void {
+export function setSessionAvailableSkills(
+  sessionId: string,
+  skills: SkillDefinition[],
+): void {
   const state = getOrCreateState(sessionId);
-  const next = new Map<string, ClaudeSkill>();
+  const next = new Map<string, SkillDefinition>();
 
   for (const skill of Array.isArray(skills) ? skills : []) {
     const id = String(skill?.id || "").trim();

@@ -7,7 +7,7 @@
  * - 该文件只描述插件协议，不承载发现、安装或 system 组装逻辑。
  */
 
-import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
+import type { SkillDefinition } from "@/skill/types/SkillDefinition.js";
 import type { SkillRootSource } from "@/skill/types/SkillRoot.js";
 
 /**
@@ -80,7 +80,7 @@ export type SkillPluginLookupPayload = {
 export type SkillPluginIgnoreRule =
   | string
   | RegExp
-  | ((skill: ClaudeSkill) => boolean);
+  | ((skill: SkillDefinition) => boolean);
 
 /**
  * SkillPlugin 构造参数。

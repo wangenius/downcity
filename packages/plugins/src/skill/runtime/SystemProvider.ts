@@ -8,8 +8,8 @@
  */
 
 import { getSessionRunContext } from "@downcity/agent/internal/executor/SessionRunScope.js";
-import { discoverClaudeSkillsSync } from "./Discovery.js";
-import { renderClaudeSkillsPromptSection } from "./Prompt.js";
+import { discoverSkillsSync } from "./Discovery.js";
+import { renderSkillsPromptSection } from "./Prompt.js";
 import { setSessionAvailableSkills } from "./Store.js";
 import type { SkillPluginOptions } from "@/skill/types/SkillPlugin.js";
 
@@ -35,7 +35,7 @@ export async function buildSkillsSystemText(
   runtime: SkillSystemRuntime,
 ): Promise<string> {
   const sessionId = getCurrentSessionId();
-  const discoveredSkills = discoverClaudeSkillsSync(
+  const discoveredSkills = discoverSkillsSync(
     runtime.rootPath,
     runtime.options,
   );
@@ -44,7 +44,7 @@ export async function buildSkillsSystemText(
     setSessionAvailableSkills(sessionId, discoveredSkills);
   }
 
-  return renderClaudeSkillsPromptSection(
+  return renderSkillsPromptSection(
     runtime.rootPath,
     runtime.options,
     discoveredSkills,

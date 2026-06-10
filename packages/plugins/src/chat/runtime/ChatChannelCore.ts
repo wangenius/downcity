@@ -15,16 +15,30 @@ import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
-type ChatRuntimeBindings = {
+export type ChatRuntimeBindings = {
   getChannelAccountId?(context: AgentContext, channel: ChatChannelName): string;
   resolveChannelAccount?(
     context: AgentContext,
     channel: ChatChannelName,
   ): StoredChannelAccount | null;
   isChannelEnabled?(context: AgentContext, channel: ChatChannelName): boolean;
+  applyChannelRuntimePatch?(params: {
+    /**
+     * 目标渠道。
+     */
+    channel: ChatChannelName;
+    /**
+     * 是否启用该渠道。
+     */
+    enabled?: boolean;
+    /**
+     * 绑定的账号池记录 ID；传入 null 表示清空绑定。
+     */
+    channelAccountId?: string | null;
+  }): void;
 };
 
-function resolveChatPluginBindings(
+export function resolveChatPluginBindings(
   context: AgentContext,
 ): ChatRuntimeBindings | null {
   const candidate = context.agent?.pluginInstances?.get?.("chat") as
@@ -78,10 +92,7 @@ export function resolveChannelAccountId(
   const plugin = resolveChatPluginBindings(context);
   const explicit = String(plugin?.getChannelAccountId?.(context, channel) || "").trim();
   if (explicit) return explicit;
-  const config = context.config.plugins?.chat?.channels?.[channel] as
-    | { channelAccountId?: unknown }
-    | undefined;
-  return String(config?.channelAccountId || "").trim();
+  return "";
 }
 
 /**
@@ -89,7 +100,8 @@ export function resolveChannelAccountId(
  *
  * 关键点（中文）
  * - 优先使用 ChatPlugin 实例上的显式解析逻辑。
- * - 若未命中，再回退到默认全局账号池 `~/.downcity/downcity.db`。
+ * - 若实例只提供 channelAccountId，再从默认全局账号池读取对应账号。
+ * - 不再从 downcity.json 隐式推断运行时账号。
  */
 export function resolveChannelAccount(
   context: AgentContext,
@@ -132,7 +144,7 @@ export function isChatChannelEnabled(
   if (typeof plugin?.isChannelEnabled === "function") {
     return plugin.isChannelEnabled(context, channel);
   }
-  return context.config.plugins?.chat?.channels?.[channel]?.enabled === true;
+  return false;
 }
 
 /**

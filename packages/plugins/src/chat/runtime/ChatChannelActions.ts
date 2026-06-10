@@ -25,17 +25,29 @@ import {
   getChatChannelStatus,
   listChatChannelConfigurationDescriptions,
   normalizeChatChannelConfigPatch,
-  setChatChannelConfig,
-  setChatChannelEnabled,
 } from "./ChatChannelConfig.js";
 import {
+  type ChatRuntimeBindings,
   getChatChannelBot,
+  resolveChatPluginBindings,
   resolveTargetChannels,
 } from "./ChatChannelCore.js";
 import {
   startSingleChatChannel,
   stopSingleChatChannel,
 } from "./ChatChannelLifecycle.js";
+
+type ChatRuntimeControlBindings = ChatRuntimeBindings & {
+  applyChannelRuntimePatch: NonNullable<ChatRuntimeBindings["applyChannelRuntimePatch"]>;
+};
+
+function getChatRuntimeBindings(context: AgentContext): ChatRuntimeControlBindings {
+  const plugin = resolveChatPluginBindings(context);
+  if (!plugin?.applyChannelRuntimePatch) {
+    throw new Error("ChatPlugin runtime instance is not available");
+  }
+  return plugin as ChatRuntimeControlBindings;
+}
 
 /**
  * 执行 `chat.status` action。
@@ -163,9 +175,9 @@ export async function executeChatOpenAction(params: {
   payload: ChatOpenActionPayload;
 }) {
   const targets = resolveTargetChannels(params.payload.channel);
+  const plugin = getChatRuntimeBindings(params.context);
   for (const channel of targets) {
-    await setChatChannelEnabled({
-      context: params.context,
+    plugin.applyChannelRuntimePatch({
       channel,
       enabled: true,
     });
@@ -198,10 +210,10 @@ export async function executeChatCloseAction(params: {
   payload: ChatCloseActionPayload;
 }) {
   const targets = resolveTargetChannels(params.payload.channel);
+  const plugin = getChatRuntimeBindings(params.context);
   for (const channel of targets) {
     await stopSingleChatChannel(params.state, channel);
-    await setChatChannelEnabled({
-      context: params.context,
+    plugin.applyChannelRuntimePatch({
       channel,
       enabled: false,
     });
@@ -280,10 +292,13 @@ export async function executeChatConfigureAction(params: {
     }
   }
 
-  await setChatChannelConfig({
-    context: params.context,
+  const plugin = getChatRuntimeBindings(params.context);
+  plugin.applyChannelRuntimePatch({
     channel,
-    patch,
+    ...(typeof patch.enabled === "boolean" ? { enabled: patch.enabled } : {}),
+    ...(Object.prototype.hasOwnProperty.call(patch, "channelAccountId")
+      ? { channelAccountId: String(patch.channelAccountId || "").trim() || null }
+      : {}),
   });
 
   // 关键点（中文）：默认重载一次目标渠道，让新配置立刻生效。

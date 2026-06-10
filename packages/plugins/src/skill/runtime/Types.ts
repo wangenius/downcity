@@ -1,4 +1,4 @@
-import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
+import type { SkillDefinition } from "@/skill/types/SkillDefinition.js";
 
 /**
  * Session skills state 对外快照。
@@ -9,7 +9,7 @@ import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
  */
 export type SessionSkillStateSnapshot = {
   sessionId: string;
-  allSkills: ClaudeSkill[];
+  allSkills: SkillDefinition[];
   updatedAt: number;
 };
 
@@ -17,6 +17,6 @@ export type SessionSkillStateSnapshot = {
  * Session skills state 内部结构。
  */
 export type SessionSkillStateInternal = {
-  allSkillsById: Map<string, ClaudeSkill>;
+  allSkillsById: Map<string, SkillDefinition>;
   updatedAt: number;
 };

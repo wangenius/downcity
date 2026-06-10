@@ -54,7 +54,8 @@ export interface WebPluginInstallPayload {
    * skill installer 的目标 agent 名称。
    *
    * 说明（中文）
-   * - 默认使用 `claude-code`，与现有 SkillPlugin 安装行为保持一致。
+   * - 留空时不向底层 skill installer 传递 `--agent`。
+   * - 只有需要显式指定 installer 目标时才传入。
    */
   agent?: string;
   /**
@@ -62,4 +63,3 @@ export interface WebPluginInstallPayload {
    */
   [key: string]: JsonValue | undefined;
 }
-

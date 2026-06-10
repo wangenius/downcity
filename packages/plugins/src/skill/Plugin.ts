@@ -166,7 +166,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
               .argument("<spec>")
               .option("-g, --global", "全局安装（默认 true）", true)
               .option("-y, --yes", "跳过确认（默认 true）", true)
-              .option("--agent <agent>", "指定 agent", "claude-code");
+              .option("--agent <agent>", "指定 agent");
           },
           mapInput({ args, opts }): SkillPluginInstallPayload {
             const spec = String(args[0] || "").trim();

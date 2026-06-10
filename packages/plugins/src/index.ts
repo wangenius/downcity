@@ -13,6 +13,11 @@ export {
 } from "./BuiltinPlugins.js";
 export type { BuiltinPluginClass } from "./BuiltinPlugins.js";
 export { ChatPlugin } from "./chat/ChatPlugin.js";
+export {
+  FeishuChannel,
+  QqChannel,
+  TelegramChannel,
+} from "./chat/channels/RuntimeChannel.js";
 export { ImagePlugin } from "./image/ImagePlugin.js";
 export { ChatChannelAccountManager } from "./chat/accounts/ChannelAccountManager.js";
 export { ChatAuthorizationPlugin } from "./auth/Plugin.js";
@@ -38,11 +43,17 @@ export type {
   ChatChannelAccountListItem,
 } from "./chat/types/ChannelAccount.js";
 export type {
-  ChatPluginFeishuOptions,
+  BaseChatChannelOptions,
+  ChatChannelEnv,
+  FeishuChannelOptions,
+  QqChannelOptions,
+  TelegramChannelOptions,
+} from "./chat/channels/RuntimeChannel.js";
+export type {
+  ChatChannel,
+  ChatChannelRuntimePatch,
   ChatPluginOptions,
-  ChatPluginQqOptions,
-  ChatPluginTelegramOptions,
-} from "./chat/ChatPluginTypes.js";
+} from "./chat/types/ChatPluginOptions.js";
 export type {
   AsrPluginInput,
   AsrPluginOptions,

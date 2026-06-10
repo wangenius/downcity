@@ -7,8 +7,8 @@
  * - 仅做字符串渲染，不做文件 IO。
  */
 
-import { getClaudeSkillSearchRoots } from "./Paths.js";
-import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
+import { getSkillSearchRoots } from "./Paths.js";
+import type { SkillDefinition } from "@/skill/types/SkillDefinition.js";
 import type { SkillPluginOptions } from "@/skill/types/SkillPlugin.js";
 
 /**
@@ -18,12 +18,12 @@ import type { SkillPluginOptions } from "@/skill/types/SkillPlugin.js";
  * - 为控制 token 成本，最多展示前 40 个 skill。
  * - roots 会按扫描顺序输出，便于排查冲突覆盖。
  */
-export function renderClaudeSkillsPromptSection(
+export function renderSkillsPromptSection(
   projectRoot: string,
   options: SkillPluginOptions | null | undefined,
-  skills: ClaudeSkill[],
+  skills: SkillDefinition[],
 ): string {
-  const roots = getClaudeSkillSearchRoots(projectRoot, options);
+  const roots = getSkillSearchRoots(projectRoot, options);
 
   const skillsSection =
     skills.length > 0

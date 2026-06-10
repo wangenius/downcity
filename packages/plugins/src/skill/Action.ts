@@ -8,8 +8,8 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { discoverClaudeSkillsSync } from "@/skill/runtime/Discovery.js";
-import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
+import { discoverSkillsSync } from "@/skill/runtime/Discovery.js";
+import type { SkillDefinition } from "@/skill/types/SkillDefinition.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import type {
   SkillListResponse,
@@ -30,7 +30,7 @@ function normalizeAllowedTools(input: JsonValue | undefined): string[] {
   return Array.from(new Set(values));
 }
 
-function toSkillSummary(skill: ClaudeSkill): SkillSummary {
+function toSkillSummary(skill: SkillDefinition): SkillSummary {
   return {
     id: skill.id,
     name: skill.name,
@@ -41,7 +41,10 @@ function toSkillSummary(skill: ClaudeSkill): SkillSummary {
   };
 }
 
-function findSkillExact(skills: ClaudeSkill[], name: string): ClaudeSkill | null {
+function findSkillExact(
+  skills: SkillDefinition[],
+  name: string,
+): SkillDefinition | null {
   const q = String(name || "").trim().toLowerCase();
   if (!q) return null;
 
@@ -52,7 +55,7 @@ function findSkillExact(skills: ClaudeSkill[], name: string): ClaudeSkill | null
   );
 }
 
-function findSkill(skills: ClaudeSkill[], name: string): ClaudeSkill | null {
+function findSkill(skills: SkillDefinition[], name: string): SkillDefinition | null {
   const q = String(name || "").trim().toLowerCase();
   if (!q) return null;
 
@@ -67,9 +70,9 @@ function findSkill(skills: ClaudeSkill[], name: string): ClaudeSkill | null {
 function getSkills(
   projectRoot: string,
   options?: SkillPluginOptions | null,
-): ClaudeSkill[] {
+): SkillDefinition[] {
   const root = path.resolve(projectRoot);
-  return discoverClaudeSkillsSync(root, options);
+  return discoverSkillsSync(root, options);
 }
 
 /**

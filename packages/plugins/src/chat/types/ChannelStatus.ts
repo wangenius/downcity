@@ -42,7 +42,7 @@ export type ChatChannelStateSnapshot = {
    */
   channel: ChatChannelName;
   /**
-   * 是否在配置中启用（`downcity.json` 的 `plugins.chat.channels.<channel>.enabled`）。
+   * 当前运行态是否启用该渠道。
    */
   enabled: boolean;
   /**

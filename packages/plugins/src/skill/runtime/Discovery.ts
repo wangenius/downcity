@@ -12,15 +12,18 @@ import path from "path";
 import type { Dirent, Stats } from "node:fs";
 import { resolveSkillPluginOptions } from "../Config.js";
 import { parseFrontMatter } from "./Frontmatter.js";
-import { getClaudeSkillSearchRoots } from "./Paths.js";
-import type { ClaudeSkill } from "@/skill/types/ClaudeSkill.js";
+import { getSkillSearchRoots } from "./Paths.js";
+import type { SkillDefinition } from "@/skill/types/SkillDefinition.js";
 import type {
   SkillPluginIgnoreRule,
   SkillPluginOptions,
 } from "@/skill/types/SkillPlugin.js";
 import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 
-function matchesIgnoreRule(skill: ClaudeSkill, rule: SkillPluginIgnoreRule): boolean {
+function matchesIgnoreRule(
+  skill: SkillDefinition,
+  rule: SkillPluginIgnoreRule,
+): boolean {
   if (typeof rule === "string") {
     const value = rule.trim().toLowerCase();
     if (!value) return false;
@@ -41,7 +44,7 @@ function matchesIgnoreRule(skill: ClaudeSkill, rule: SkillPluginIgnoreRule): boo
 }
 
 function shouldIgnoreSkill(
-  skill: ClaudeSkill,
+  skill: SkillDefinition,
   rules: SkillPluginIgnoreRule[],
 ): boolean {
   for (const rule of rules) {
@@ -51,7 +54,7 @@ function shouldIgnoreSkill(
 }
 
 /**
- * 扫描并发现 Claude Code-compatible skills。
+ * 扫描并发现本地 skills。
  *
  * 关键点（中文）
  * - skills 的扫描根目录与 projectRoot 强相关（默认 `.agents/skills`）
@@ -61,19 +64,19 @@ function shouldIgnoreSkill(
  * 发现技能算法（中文）
  * 1) 计算扫描根目录列表
  * 2) 逐目录读取 `SKILL.md` 与 frontmatter
- * 3) 按 id 去重并构造 ClaudeSkill
+ * 3) 按 id 去重并构造 SkillDefinition
  * 4) 最终按 name 排序，保证输出稳定
  */
-export function discoverClaudeSkillsSync(
+export function discoverSkillsSync(
   projectRoot: string,
   options?: SkillPluginOptions | null,
-): ClaudeSkill[] {
+): SkillDefinition[] {
   const root = String(projectRoot || "").trim();
   if (!root) return [];
   const resolvedOptions = resolveSkillPluginOptions(options);
-  const roots = getClaudeSkillSearchRoots(root, resolvedOptions);
+  const roots = getSkillSearchRoots(root, resolvedOptions);
 
-  const outById = new Map<string, ClaudeSkill>();
+  const outById = new Map<string, SkillDefinition>();
 
   for (const r of roots) {
     const sourceRoot = r.resolved;
@@ -146,7 +149,7 @@ export function discoverClaudeSkillsSync(
       const allowedTools =
         meta?.["allowed-tools"] ?? meta?.allowedTools ?? meta?.allowed_tools;
 
-      const skill: ClaudeSkill = {
+      const skill: SkillDefinition = {
         id,
         name,
         description,

@@ -145,7 +145,7 @@ export class WebPlugin extends BasePlugin {
             .option("--target <target>", "web-access、agent-browser 或 all")
             .option("--scope <scope>", "安装位置：user 或 project")
             .option("-y, --yes", "跳过确认（默认 true）", true)
-            .option("--agent <agent>", "skill installer 目标 agent", "claude-code");
+            .option("--agent <agent>", "skill installer 目标 agent");
         },
         mapInput({ opts }): JsonObject {
           return {

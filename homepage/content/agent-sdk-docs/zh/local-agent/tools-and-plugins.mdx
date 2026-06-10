@@ -29,7 +29,7 @@ const agent = new Agent({
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { ChatPlugin } from "@downcity/plugins";
+import { ChatPlugin, TelegramChannel } from "@downcity/plugins";
 
 const agent = new Agent({
   id: "repo-helper",
@@ -37,9 +37,13 @@ const agent = new Agent({
   tools: {},
   plugins: [
     new ChatPlugin({
-      telegram: {
-        botToken: process.env.TELEGRAM_BOT_TOKEN!,
-      },
+      channels: [
+        new TelegramChannel({
+          env: {
+            TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+          },
+        }),
+      ],
     }),
   ],
 });

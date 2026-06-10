@@ -145,7 +145,7 @@ async function install_skill(params: {
   spec: string;
   scope: WebPluginInstallScope;
   yes: boolean;
-  agent: string;
+  agent?: string;
   steps: WebPluginInstallStep[];
 }): Promise<void> {
   await skillInstallCommand(params.spec, {
@@ -207,7 +207,7 @@ export async function installWebPluginTargets(params: {
   const target = resolve_install_target(payload.target);
   const scope = resolve_install_scope(payload.scope);
   const yes = read_boolean(payload.yes) ?? true;
-  const agent = read_string(payload.agent) || "claude-code";
+  const agent = read_string(payload.agent);
   const targets =
     target === "all" ? (["web-access", "agent-browser"] as const) : ([target] as const);
   const steps: WebPluginInstallStep[] = [];
@@ -233,7 +233,7 @@ export async function installWebPluginTargets(params: {
   return {
     target,
     scope,
-    agent,
+    ...(agent ? { agent } : {}),
     steps: serialize_steps(steps),
     nextAction:
       "Use SkillPlugin lookup/list to inspect installed skills, then let the agent choose the concrete web path during task execution.",

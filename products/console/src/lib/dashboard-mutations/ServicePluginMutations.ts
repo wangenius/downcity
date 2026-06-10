@@ -379,8 +379,9 @@ export async function runSkillInstallMutation(params: {
     spec,
     global: params.input.global !== false,
     yes: params.input.yes !== false,
-    agent: String(params.input.agent || "claude-code").trim() || "claude-code",
   };
+  const agent = String(params.input.agent || "").trim();
+  if (agent) payload.agent = agent;
   try {
     const data = await runSkillDashboardCommand<UiSkillInstallResult>({
       requestJson: params.requestJson,

@@ -115,7 +115,7 @@ export function SkillsSection(props: SkillsSectionProps) {
   const [installConfigOpen, setInstallConfigOpen] = React.useState(false)
   const [installGlobal, setInstallGlobal] = React.useState(true)
   const [installYes, setInstallYes] = React.useState(true)
-  const [installAgent, setInstallAgent] = React.useState("claude-code")
+  const [installAgent, setInstallAgent] = React.useState("")
   const [actionLoadingKey, setActionLoadingKey] = React.useState("")
   const [actionReport, setActionReport] = React.useState<SkillActionReport | null>(null)
 
@@ -187,7 +187,7 @@ export function SkillsSection(props: SkillsSectionProps) {
         spec,
         global: installGlobal,
         yes: installYes,
-        agent: String(installAgent || "").trim() || "claude-code",
+        agent: String(installAgent || "").trim() || undefined,
       })
       setActionReport({
         title: "Install",
@@ -288,7 +288,7 @@ export function SkillsSection(props: SkillsSectionProps) {
           <>
             <SurfaceTag>{`global ${String(installGlobal)}`}</SurfaceTag>
             <SurfaceTag>{`yes ${String(installYes)}`}</SurfaceTag>
-            <SurfaceTag>{`agent ${String(installAgent || "claude-code")}`}</SurfaceTag>
+            <SurfaceTag>{`agent ${String(installAgent || "auto")}`}</SurfaceTag>
             <Button size="sm" variant="outline" onClick={() => setInstallConfigOpen(true)}>
               <Settings2Icon className="size-3.5" />
             </Button>
@@ -393,7 +393,7 @@ export function SkillsSection(props: SkillsSectionProps) {
               <Input
                 value={installAgent}
                 onChange={(event) => setInstallAgent(event.target.value)}
-                placeholder="claude-code"
+                placeholder="可选，留空则不传 --agent"
               />
             </div>
             <div className="flex flex-wrap gap-2">

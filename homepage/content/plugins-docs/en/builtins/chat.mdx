@@ -48,6 +48,45 @@ town chat delete --chat-key <chatKey>
 
 Town intentionally hides channel-runtime actions such as `status`, `test`, `open`, `close`, `reconnect`, `configuration`, and `configure` from the user-facing `town chat` shortcut. Those actions exist inside the plugin runtime, but they are not the normal CLI path for users.
 
+## SDK Assembly
+
+In embedded SDK scenarios, `ChatPlugin` receives channel objects. Each channel owns its env or account binding details:
+
+```ts
+import {
+  ChatPlugin,
+  FeishuChannel,
+  QqChannel,
+  TelegramChannel,
+} from "@downcity/plugins";
+
+const plugin = new ChatPlugin({
+  channels: [
+    new TelegramChannel({
+      env: {
+        TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+      },
+    }),
+    new FeishuChannel({
+      env: {
+        FEISHU_APP_ID: process.env.FEISHU_APP_ID,
+        FEISHU_APP_SECRET: process.env.FEISHU_APP_SECRET,
+        FEISHU_DOMAIN: process.env.FEISHU_DOMAIN,
+      },
+    }),
+    new QqChannel({
+      env: {
+        QQ_APP_ID: process.env.QQ_APP_ID,
+        QQ_APP_SECRET: process.env.QQ_APP_SECRET,
+        QQ_SANDBOX: process.env.QQ_SANDBOX,
+      },
+    }),
+  ],
+});
+```
+
+`channelAccountId` is still available as an account-pool binding, but the SDK-first path is to pass channel-specific env to the channel object.
+
 ## SDK action use
 
 In an embedded SDK scenario, call the visible chat actions by plugin name:

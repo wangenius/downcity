@@ -198,7 +198,7 @@ export function createChatPluginActions(params: {
     },
     configure: {
       command: {
-        description: "更新 chat 渠道参数（写入 downcity.json，可选立即重载）",
+        description: "更新 chat 渠道运行态参数（可选立即重载）",
         configure(command: Command) {
           command
             .requiredOption("--channel <name>", "指定渠道（telegram|feishu|qq）")

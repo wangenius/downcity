@@ -38,6 +38,33 @@ const agent = new Agent({
 
 Registered plugin actions can be called through `agent.plugins.runAction(...)`, and plugin `system(context)` text is injected into session prompts.
 
+## ChatPlugin
+
+Use `ChatPlugin` when you want the SDK runtime to own long-lived chat channels:
+
+```ts
+import { Agent } from "@downcity/agent";
+import { ChatPlugin, TelegramChannel } from "@downcity/plugins";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  plugins: [
+    new ChatPlugin({
+      channels: [
+        new TelegramChannel({
+          env: {
+            TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+          },
+        }),
+      ],
+    }),
+  ],
+});
+```
+
+Each channel object owns its own env and credential parsing, so `ChatPlugin` only manages lifecycle, queue, and actions.
+
 ## ImagePlugin
 
 Use `ImagePlugin` when you want an Agent to generate images during a conversation:

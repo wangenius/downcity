@@ -69,7 +69,7 @@ Provider API key 不建议写在 Dokploy env 里。部署完成后，通过 Admi
 curl -X POST https://base.example.com/v1/env/upsert \
   -H 'content-type: application/json' \
   -H 'authorization: Bearer admin_xxx' \
-  -d '{"key":"MOONSHOT_API_KEY","value":"your_api_key"}'
+  -d '{"key":"OPENAI_API_KEY","value":"your_api_key"}'
 
 curl -X POST https://base.example.com/v1/env/upsert \
   -H 'content-type: application/json' \
@@ -77,7 +77,7 @@ curl -X POST https://base.example.com/v1/env/upsert \
   -d '{"key":"DEEPSEEK_API_KEY","value":"your_api_key"}'
 ```
 
-运行时 `ctx.env.MOONSHOT_API_KEY` 和 `ctx.env.DEEPSEEK_API_KEY` 会优先从 City 数据库读取。
+运行时 `ctx.env.OPENAI_API_KEY` 和 `ctx.env.DEEPSEEK_API_KEY` 会优先从 City 数据库读取。
 
 ## 验证
 

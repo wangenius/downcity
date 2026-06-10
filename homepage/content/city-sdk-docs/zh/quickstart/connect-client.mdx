@@ -25,7 +25,7 @@ const stream = await client.ai.stream({ prompt: "hello" });
 // AI Service — OpenAI 通路（用 OpenAI SDK 直接调）
 import OpenAI from "openai";
 const openai = new OpenAI({ baseURL: "http://127.0.0.1:43127/v1/ai", apiKey: "ub_xxx" });
-await openai.chat.completions.create({ model: "kimi-k2.6", messages: [...] });
+await openai.chat.completions.create({ model: "deepseek-v4-flash", messages: [...] });
 
 // 自定义 Service
 const result = await client.service("translate").action("zh2en").invoke({ text: "你好" });

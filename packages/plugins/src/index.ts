@@ -11,8 +11,12 @@ export {
   BUILTIN_PLUGIN_CLASSES,
   createBuiltinPlugins,
 } from "./BuiltinPlugins.js";
-export type { BuiltinPluginClass } from "./BuiltinPlugins.js";
+export type {
+  BuiltinPluginClass,
+  BuiltinPluginOptions,
+} from "./BuiltinPlugins.js";
 export { ChatPlugin } from "./chat/ChatPlugin.js";
+export { ContactPlugin } from "./contact/ContactPlugin.js";
 export {
   FeishuChannel,
   QqChannel,
@@ -54,6 +58,7 @@ export type {
   ChatChannelRuntimePatch,
   ChatPluginOptions,
 } from "./chat/types/ChatPluginOptions.js";
+export type { ContactPluginOptions } from "./contact/types/ContactPluginOptions.js";
 export type {
   AsrPluginInput,
   AsrPluginOptions,

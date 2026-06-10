@@ -25,7 +25,7 @@ new Provider(id: string, opts: ProviderOptions)
 
 ## Image Providers
 
-`@downcity/city` does not ship concrete image provider factories for Luchi, 302.ai, OpenAI, Gemini, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
+`@downcity/city` does not ship concrete image provider factories for OpenAI, DeepSeek, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
 
 Provider-specific adapters should live in the concrete City project, for example `cities/edge/src/image-provider.ts`. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
 
@@ -97,19 +97,19 @@ const deepseek = new Provider("deepseek", {
 });
 ```
 
-### Pattern 2: Non-OpenAI Format (Write openai Handler)
+### Pattern 2: Custom OpenAI-Compatible Handler
 
-Must provide `openai` handler for format conversion:
+Provide an `openai` handler when the upstream needs request or response customization:
 
 ```ts
-const kimiCode = new Provider("kimi-code", {
-  env: { KIMI_CODE_API_KEY: "Kimi Code API Key" },
+const openaiCustom = new Provider("openai-custom", {
+  env: { OPENAI_API_KEY: "OpenAI API Key" },
   text: myTextHandler,
   stream: myStreamHandler,
   openai: async (ctx) => {
     // ctx.input is standard OpenAI body
-    // Downstream: OpenAI → Provider format
-    // Upstream: Provider response → OpenAI format
+    // Downstream: customize request
+    // Upstream: normalize response
   },
 });
 ```

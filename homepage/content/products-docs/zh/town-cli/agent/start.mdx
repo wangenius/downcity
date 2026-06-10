@@ -28,6 +28,7 @@ town agent start [path] [options]
 - 如果没传 `path` 且当前目录本身已经是已初始化 agent 项目，就直接启动当前目录。
 - 如果没传 `path` 且当前目录不是 agent 项目，CLI 会从已登记 agent 中弹出交互选择器。
 - agent 端口始终由 Town runtime 自动分配。
+- 启动时会为 agent 装配内建 plugin 集合。Town 已有 City user session 时，会把 City AI 能力注入到 `image`、`asr` 和 `tts`。
 - 默认不依赖项目 `downcity.json.start.host/port`。
 - `--foreground` 时在当前终端运行；否则按后台方式运行。
 - `--foreground` 仅用于当前终端的临时运行会话，终端结束后进程随之结束。

@@ -44,11 +44,11 @@ No ai-sdk. No type conversion. Fully transparent.
 
 ## Format Conversion
 
-For non-OpenAI providers (e.g., Anthropic), the `openai` handler does bidirectional conversion.
+For OpenAI-compatible providers with custom upstream requirements, the `openai` handler can do bidirectional conversion.
 
-### SSE Event Mapping (Anthropic → OpenAI)
+### SSE Event Mapping (Custom Upstream → OpenAI)
 
-| Anthropic SSE Event | OpenAI SSE Chunk |
+| Upstream SSE Event | OpenAI SSE Chunk |
 |---|---|
 | `message_start` | `delta: { role: "assistant" }` |
 | `content_block_delta` (text_delta) | `delta: { content: "..." }` |
@@ -58,7 +58,7 @@ For non-OpenAI providers (e.g., Anthropic), the `openai` handler does bidirectio
 
 ### stop_reason Mapping
 
-| Anthropic | OpenAI |
+| Upstream | OpenAI |
 |---|---|
 | `end_turn` | `stop` |
 | `max_tokens` | `length` |
@@ -80,7 +80,7 @@ const openai = new OpenAI({
   apiKey: "ub_xxx",
 });
 await openai.chat.completions.create({
-  model: "kimi-k2.6",
+  model: "deepseek-v4-flash",
   messages: [{ role: "user", content: "hello" }],
   stream: true,
 });

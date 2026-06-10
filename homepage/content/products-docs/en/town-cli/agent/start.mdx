@@ -28,6 +28,7 @@ town agent start [path] [options]
 - If `path` is omitted and current directory is already an initialized agent project, current directory is used.
 - If `path` is omitted and current directory is not an agent project, the CLI opens an interactive selector from registered agents.
 - Agent port is auto-assigned by Town runtime.
+- Runtime starts the built-in plugin set for the agent. When Town has a City user session, City AI capabilities are injected into `image`, `asr`, and `tts`.
 - Project `downcity.json.start.host/port` is not required for daemon startup.
 - With `--foreground`, runs in current terminal; otherwise runs in background mode.
 - `--foreground` is a temporary terminal session; once terminal exits, the process exits too.

@@ -32,7 +32,7 @@
       },
       "llm-models": {
         "question": "支持哪些大模型（LLM）？",
-        "answer": "Downcity 支持所有与 ai-sdk v6 兼容的模型，包括 Claude（Anthropic）、GPT-4（OpenAI）等。你可以轻松切换模型，或为不同任务使用不同模型。",
+        "answer": "Downcity 支持所有与 ai-sdk v6 兼容的模型，文档统一以 OpenAI 和 DeepSeek 作为标准示例。你可以轻松切换模型，或为不同任务使用不同模型。",
         "category": "technical"
       },
       "remote-deployment": {
@@ -62,7 +62,7 @@
       },
       "pricing": {
         "question": "收费模式是什么？",
-        "answer": "Downcity 是开源（MIT License）且免费使用。你只需承担你选择的大模型 API 成本（Claude、GPT-4 等）。未来将提供带更多功能与支持的企业版本。",
+        "answer": "Downcity 是开源（MIT License）且免费使用。你只需承担你选择的大模型 API 成本，例如 OpenAI 或 DeepSeek。未来将提供带更多功能与支持的企业版本。",
         "category": "general"
       }
     },

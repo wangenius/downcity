@@ -42,11 +42,11 @@ const deepseek = new Provider("deepseek", {
 });
 
 // Non-OpenAI format: must provide openai handler
-const kimiCode = new Provider("kimi-code", {
-  env: { KIMI_CODE_API_KEY: "Kimi Code API Key" },
-  text: kimiTextHandler,
-  stream: kimiStreamHandler,
-  openai: kimiOpenAIHandler,  // Anthropic ↔ OpenAI conversion
+const openaiCustom = new Provider("openai-custom", {
+  env: { OPENAI_API_KEY: "OpenAI API Key" },
+  text: openaiTextHandler,
+  stream: openaiStreamHandler,
+  openai: openaiCompatibleHandler,
 });
 ```
 
@@ -62,9 +62,9 @@ Zero adapter code. Fully OpenAI-compatible.
 
 ## Format Conversion
 
-For non-OpenAI providers (e.g., Anthropic), the `openai` handler does bidirectional conversion:
+For OpenAI-compatible providers with custom upstream requirements, the `openai` handler can do bidirectional conversion:
 
-- Downstream: OpenAI body → Provider format (e.g., Anthropic messages)
+- Downstream: OpenAI body → provider-specific request body
 - Upstream (non-streaming): Provider JSON → OpenAI JSON
 - Upstream (streaming): Provider SSE events → OpenAI SSE chunks (event by event)
 

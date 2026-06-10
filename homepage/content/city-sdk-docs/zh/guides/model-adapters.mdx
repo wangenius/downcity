@@ -52,15 +52,15 @@ POST /v1/ai/chat/completions
 
 ## 格式转换
 
-非 OpenAI 格式 Provider 需要 `openai` action 做双向转换：
+当 OpenAI 兼容上游需要自定义请求或响应处理时，可以写 `openai` action：
 
 ```ts
-const kimiCode = new Provider("kimi-code", {
-  text: anthropicTextAction,
-  stream: anthropicStreamAction,
+const openaiCustom = new Provider("openai-custom", {
+  text: openaiTextAction,
+  stream: openaiStreamAction,
   openai: async (ctx) => {
-    const body = openaiToAnthropic(ctx.input);
-    const res = await fetch("https://api.kimi.com/coding/v1/messages", { body: JSON.stringify(body) });
+    const body = customizeOpenAIBody(ctx.input);
+    const res = await fetch("https://api.openai.com/v1/chat/completions", { body: JSON.stringify(body) });
     return ctx.input.stream ? convertStream(res) : convertJSON(await res.json());
   },
 });

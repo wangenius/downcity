@@ -30,6 +30,7 @@ import type { ContactPingResponse } from "@/contact/types/ContactCheck.js";
 import type { ContactChatResponse } from "@/contact/types/ContactChat.js";
 import type { AgentContact } from "@/contact/types/Contact.js";
 import type { SaveContactInboxShareInput } from "@/contact/types/ContactShare.js";
+import type { ContactPluginOptions } from "@/contact/types/ContactPluginOptions.js";
 import {
   appendContactMessage,
   createStableContactId,
@@ -145,8 +146,14 @@ export class ContactPlugin extends BasePlugin {
    */
   readonly actions: PluginActions;
 
-  constructor() {
+  /**
+   * 当前实例持有的显式配置。
+   */
+  public readonly options: ContactPluginOptions;
+
+  constructor(options?: ContactPluginOptions) {
     super();
+    this.options = options || {};
     this.actions = createContactActions({
       link: async (context, payload) =>
         (await this.link(context, payload)) as unknown as JsonValue,
@@ -164,11 +171,6 @@ export class ContactPlugin extends BasePlugin {
       remoteShare: async (context, payload) =>
         (await this.remoteShare(context, payload)) as unknown as JsonValue,
     });
-
-    this.lifecycle = {
-      start: () => undefined,
-      stop: () => undefined,
-    };
   }
 
   /**
@@ -180,10 +182,16 @@ export class ContactPlugin extends BasePlugin {
 
   private async link(context: AgentContext, payload: ContactLinkCommandPayload) {
     const now = Date.now();
-    const ttlSeconds = Math.max(60, Number(payload.ttlSeconds || 600));
+    const ttlSeconds = Math.max(
+      60,
+      Number(payload.ttlSeconds || this.options.ttlSeconds || 600),
+    );
     const linkId = createContactId("link");
     const secret = createContactToken();
-    const endpoint = await resolveSelfEndpoint(context, payload.endpoint);
+    const endpoint = await resolveSelfEndpoint(
+      context,
+      payload.endpoint || this.options.endpoint,
+    );
     const agentName = getAgentName(context);
 
     await saveContactLinkRecord(context.rootPath, {
@@ -228,7 +236,7 @@ export class ContactPlugin extends BasePlugin {
       targetReachability === "loopback" ||
       targetReachability === "private";
     const requesterEndpointCandidate = shouldResolveRequesterEndpoint
-      ? await resolveSelfEndpoint(context, payload.endpoint)
+      ? await resolveSelfEndpoint(context, payload.endpoint || this.options.endpoint)
       : undefined;
     const callbackDecision = buildContactApproveCallbackDecision({
       targetEndpoint: parsed.endpoint,

@@ -208,7 +208,7 @@ You can also use `messages` for conversational or reference-image workflows:
 
 ```ts
 const job = await client.ai.image_create({
-  model: "luchi-gpt-image-2",
+  model: "openai-image-basic",
   messages: [
     {
       role: "user",
@@ -221,7 +221,7 @@ const job = await client.ai.image_create({
 });
 ```
 
-The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider normalizes upstream formats such as Luchi async jobs, OpenAI/302.ai images APIs, and Gemini `generateContent` into AI SDK `UIMessage` file parts.
+The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider normalizes upstream image responses, such as OpenAI image APIs, into AI SDK `UIMessage` file parts.
 
 `video()` still returns AI SDK `UIMessage`. The City-side Provider `video` action should also return `UIMessage`.
 

@@ -29,6 +29,13 @@ const CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_TOWN = new Set([
     "configuration",
     "configure",
 ]);
+const CONTACT_REMOTE_ACTIONS_HIDDEN_FROM_TOWN = new Set([
+    "remoteping",
+    "remoteapprove",
+    "remoteconfirm",
+    "remotechat",
+    "remoteshare",
+]);
 function createPluginCatalog() {
     return createBuiltinPlugins();
 }
@@ -36,11 +43,15 @@ function createVisiblePluginCatalog() {
     return createPluginCatalog();
 }
 function listVisiblePluginActions(pluginName, actions) {
-    if (pluginName !== "chat") {
-        return actions;
+    if (pluginName === "chat") {
+        // 关键点（中文）：Town 只展示 chat plugin 的用户操作能力，不展示 platform 运行态控制。
+        return actions.filter((action) => !CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_TOWN.has(action));
     }
-    // 关键点（中文）：Town 只展示 chat plugin 的用户操作能力，不展示 platform 运行态控制。
-    return actions.filter((action) => !CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_TOWN.has(action));
+    if (pluginName === "contact") {
+        // 关键点（中文）：remote* action 是 agent-to-agent 内部协议入口，不作为普通用户 action 展示。
+        return actions.filter((action) => !CONTACT_REMOTE_ACTIONS_HIDDEN_FROM_TOWN.has(action));
+    }
+    return actions;
 }
 async function resolvePluginProjectRoot(options) {
     return { projectRoot: resolveProjectRoot(options.path) };

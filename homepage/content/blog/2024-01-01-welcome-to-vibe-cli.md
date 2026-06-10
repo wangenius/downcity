@@ -86,7 +86,7 @@ vibe revise --add=typescript
 
 我们提供了多种精心设计的项目模板：
 
-- **🤖 AI SaaS 模板** - 集成 OpenAI、Anthropic 等 AI 服务
+- **🤖 AI SaaS 模板** - 集成 OpenAI、DeepSeek 等 AI 服务
 - **🏢 基础 SaaS 模板** - 通用的 SaaS 应用基础架构
 - **🛒 电商模板** - 完整的电商解决方案
 - **📱 移动应用模板** - React Native 移动应用（即将推出）

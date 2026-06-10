@@ -32,7 +32,7 @@
       },
       "llm-models": {
         "question": "Which LLM models are supported?",
-        "answer": "Downcity supports all models compatible with ai-sdk v6, including Claude (Anthropic), GPT-4 (OpenAI), and many others. You can easily switch between models or use different models for different tasks.",
+        "answer": "Downcity supports all models compatible with ai-sdk v6, with OpenAI and DeepSeek as the standard examples in the docs. You can easily switch between models or use different models for different tasks.",
         "category": "technical"
       },
       "remote-deployment": {
@@ -62,7 +62,7 @@
       },
       "pricing": {
         "question": "What's the pricing model?",
-        "answer": "Downcity is open source (MIT license) and free to use. You only pay for the LLM API costs (Claude, GPT-4, etc.) that you choose to use. Enterprise editions with additional features and support will be available in the future.",
+        "answer": "Downcity is open source (MIT license) and free to use. You only pay for the LLM API costs, such as OpenAI or DeepSeek, that you choose to use. Enterprise editions with additional features and support will be available in the future.",
         "category": "general"
       }
     },

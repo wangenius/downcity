@@ -208,7 +208,7 @@ if (current.status === "succeeded") {
 
 ```ts
 const job = await client.ai.image_create({
-  model: "luchi-gpt-image-2",
+  model: "openai-image-basic",
   messages: [
     {
       role: "user",
@@ -221,7 +221,7 @@ const job = await client.ai.image_create({
 });
 ```
 
-`image_create()` 的底层约定很简单：client 只发送 `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options` 这些输入；City 侧 Provider 负责把 Luchi 异步 Job、OpenAI/302.ai images API、Gemini `generateContent` 等上游格式归一成 AI SDK `UIMessage` file parts。
+`image_create()` 的底层约定很简单：client 只发送 `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options` 这些输入；City 侧 Provider 负责把 OpenAI 图片 API 等上游响应归一成 AI SDK `UIMessage` file parts。
 
 `video()` 仍然固定返回 AI SDK `UIMessage`。City 侧的 Provider `video` action 也应该返回 `UIMessage`。
 

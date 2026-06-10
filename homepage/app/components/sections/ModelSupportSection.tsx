@@ -10,10 +10,10 @@ const RUNTIMES = [
 ] as const;
 
 const MODELS = [
-  { name: "Claude 3.5 Sonnet", type: "Cloud", tags: ["Reasoning", "Coding"] },
-  { name: "GPT-4o", type: "Cloud", tags: ["General"] },
-  { name: "DeepSeek V3", type: "Hybrid", tags: ["Performant"] },
-  { name: "Llama 3", type: "Local", tags: ["Private", "Ollama"] },
+  { name: "GPT-5.2", type: "OpenAI", tags: ["Reasoning", "Coding"] },
+  { name: "GPT-5 mini", type: "OpenAI", tags: ["General"] },
+  { name: "DeepSeek V3.2", type: "DeepSeek", tags: ["Performant"] },
+  { name: "DeepSeek R1", type: "DeepSeek", tags: ["Reasoning"] },
 ] as const;
 
 /**

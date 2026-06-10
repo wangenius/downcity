@@ -27,7 +27,7 @@ const deepseek = new Provider("deepseek", {
 
 ## 图片 Provider
 
-`@downcity/city` 不内置 Luchi、302.ai、OpenAI、Gemini 这类具体图片 Provider 构造器。City 包只提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image_create()` / `client.ai.image_result()` 的统一任务协议。
+`@downcity/city` 不内置 OpenAI、DeepSeek 或其他具体图片 Provider 构造器。City 包只提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image_create()` / `client.ai.image_result()` 的统一任务协议。
 
 具体上游适配应放在具体 City 项目里实现，例如 `cities/edge/src/image-provider.ts`。这些 adapter 可以把不同上游的响应归一成 AI SDK `UIMessage` file parts，然后通过 `Provider.model()` 注册给 `AIService`：
 
@@ -96,27 +96,27 @@ const file = current.result?.parts.find((part) => part.type === "file");
 // openai: async (ctx) => fetch(`${baseURL}/chat/completions`, ...)
 ```
 
-## Anthropic 格式 Provider
+## 自定义 OpenAI 兼容 Handler
 
-非 OpenAI 格式的 Provider 需要写 `openai` action 做格式转换：
+当 OpenAI 兼容上游需要自定义请求或响应处理时，可以写 `openai` action：
 
 ```ts
-const kimiCode = new Provider("kimi-code", {
-  env: { KIMI_CODE_API_KEY: "Kimi Code API Key" },
-  text: myAnthropicTextAction,
-  stream: myAnthropicStreamAction,
+const openaiCustom = new Provider("openai-custom", {
+  env: { OPENAI_API_KEY: "OpenAI API Key" },
+  text: myOpenAITextAction,
+  stream: myOpenAIStreamAction,
 
-  // 必须写：Anthropic ↔ OpenAI 格式双向转换
+  // 按上游要求定制 OpenAI body，并把响应归一回来
   openai: async (ctx) => {
-    const anthropicBody = openaiToAnthropic(ctx.input);
-    const response = await fetch("https://api.kimi.com/coding/v1/messages", {
-      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify(anthropicBody),
+    const body = customizeOpenAIBody(ctx.input);
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      headers: { authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(body),
     });
     if (ctx.input.stream) {
-      return anthropicStreamToOpenAIStream(response);
+      return normalizeOpenAIStream(response);
     }
-    return anthropicToOpenAIResponse(await response.json());
+    return normalizeOpenAIResponse(await response.json());
   },
 });
 ```

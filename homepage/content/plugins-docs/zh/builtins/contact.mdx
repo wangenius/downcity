@@ -18,7 +18,6 @@ description: agent 间点对点连接、审批、聊天和分享流的说明
 
 - `actions`
 - `system`
-- 极轻量的 `lifecycle`
 
 ## 它主要解决什么问题
 
@@ -47,6 +46,21 @@ town contact receive <shareId>
 
 `link` 会生成一个短期有效的 code。另一个 agent 执行 `approve <code>` 后，就能建立可信 contact。
 
+## SDK 装配
+
+`ContactPlugin` 可以无参使用。需要固定对外地址或默认 link 过期时间时，可以从 constructor 传入：
+
+```ts
+import { ContactPlugin } from "@downcity/plugins";
+
+const plugin = new ContactPlugin({
+  endpoint: "https://agent.example.com",
+  ttlSeconds: 600,
+});
+```
+
+`endpoint` 会优先写入 `contact link` 生成的一次性联系码；不传时，运行时会从 `DOWNCITY_PUBLIC_URL`、`DOWNCITY_PUBLIC_HOST`、监听地址和网卡信息里推导。
+
 ## SDK action 用法
 
 ```ts
@@ -63,15 +77,17 @@ await agent.plugins.runAction({
 
 用户侧 action 名称是 `link`、`approve`、`list`、`check`、`chat`、`share`、`inbox`、`receive`。
 
+`remoteping`、`remoteapprove`、`remoteconfirm`、`remotechat`、`remoteshare` 是 agent-to-agent 内部协议入口。它们仍然是 plugin action，但不作为普通用户能力展示。
+
 ## 关键语义
 
 - 每个 contact 都会维护一条长期 contact history
 - 这个 plugin 虽然是 built-in，但比起通用 SDK 插件，更偏平台集成能力
-- 它的 lifecycle 更像轻量外壳，主要行为还是 action 驱动
+- 它不需要长期 lifecycle，主要行为由 action 和远端协议入口驱动
 
 ## 公开性说明
 
-`ContactPlugin` 在代码里是 built-in，但当前并不是包根主公开的 SDK-facing plugin 之一。
+`ContactPlugin` 从 `@downcity/plugins` 包根导出。它可以在 SDK 中直接装配，但更常见的使用路径仍然是 agent runtime 与 `town contact`。
 
 ## 相关文档
 

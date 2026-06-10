@@ -11,12 +11,12 @@
  */
 import path from "node:path";
 import { Agent, loadDowncityConfig, loadStaticSystemPrompts, shellTools, StaticPromptCatalog, } from "@downcity/agent";
-import { createBuiltinPlugins } from "@downcity/plugins";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "../town/city-model/CreateRuntimeModel.js";
 import { mergeProcessEnvWithPlatformGlobalEnv } from "../env/ProcessEnv.js";
 import { resolveAgentId } from "../shared/IndexSupport.js";
 import { startAgentHttpGateway } from "./AgentHttpGateway.js";
+import { createTownBuiltinPlugins } from "../town/plugins/TownBuiltinPlugins.js";
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *
@@ -71,12 +71,15 @@ export async function runCommand(cwd = ".", options) {
         config,
         env: hostEnv,
     });
+    const plugins = await createTownBuiltinPlugins({
+        env: hostEnv,
+    });
     const agent = new Agent({
         id: agentId,
         path: projectRoot,
         instruction: currentSystems,
         tools: shellTools,
-        plugins: createBuiltinPlugins(),
+        plugins,
         model,
         env: hostEnv,
     });

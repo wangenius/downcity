@@ -89,7 +89,7 @@ City 本身不关心“翻译”或“支付”是什么业务，它只负责把
 给 `User City` 调用：
 
 ```txt
-User City.ai.text({ prompt: "hello", model: "kimi-k2.6" })
+User City.ai.text({ prompt: "hello", model: "deepseek-v4-flash" })
   -> POST /v1/ai/text
   -> Provider text action(ctx)
   -> generateText / streamText (ai-sdk)

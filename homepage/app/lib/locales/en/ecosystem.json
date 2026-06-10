@@ -4,7 +4,7 @@
   "categories": {
     "models": {
       "title": "Universal Models",
-      "items": ["Claude 4.5", "GPT-5.2", "DeepSeek V3.2", "Gemini 3 Pro"]
+      "items": ["GPT-5.2", "GPT-5 mini", "DeepSeek V3.2", "DeepSeek R1"]
     },
     "protocols": {
       "title": "Standard Protocols",
@@ -12,7 +12,7 @@
     },
     "tools": {
       "title": "Agent Clients",
-      "items": ["Claude Code", "OpenCode", "Gemini CLI", "Codex"]
+      "items": ["Codex", "OpenCode", "Downcity CLI", "Town CLI"]
     }
   }
 }

@@ -38,28 +38,6 @@ async function build_town_dashboard_state() {
     const items = [
         section_item("runtime", t({ zh: "运行时", en: "Runtime" })),
         {
-            id: "status",
-            title: t({ zh: "Town 总览", en: "Town overview" }),
-            subtitle: build_status_subtitle(running, managed_agents),
-            detail: build_status_detail({
-                running,
-                pid,
-                city_state,
-                managed_agents,
-            }),
-        },
-        {
-            id: "start",
-            title: t({ zh: "启动 Town", en: "Start Town" }),
-            subtitle: running
-                ? t({ zh: "当前 runtime 已运行", en: "runtime already running" })
-                : t({ zh: "启动本机 Town runtime", en: "start the local Town runtime" }),
-            detail: t({
-                zh: "启动 Town runtime。若已运行，会直接返回当前状态。",
-                en: "Start the Town runtime. If it is already running, Town returns the current state.",
-            }),
-        },
-        {
             id: "stop",
             title: t({ zh: "停止 Town", en: "Stop Town" }),
             subtitle: running
@@ -84,12 +62,6 @@ async function build_town_dashboard_state() {
         },
         section_item("management", t({ zh: "管理", en: "Management" })),
         {
-            id: "city",
-            title: t({ zh: "City 连接", en: "City connection" }),
-            subtitle: build_city_subtitle(city_state),
-            detail: build_city_detail(city_state),
-        },
-        {
             id: "agent",
             title: t({ zh: "Agent 管理", en: "Agent management" }),
             subtitle: t({
@@ -102,27 +74,21 @@ async function build_town_dashboard_state() {
             }),
         },
         {
-            id: "chat",
-            title: t({ zh: "Chat 共享资源", en: "Chat shared resources" }),
-            subtitle: t({
-                zh: "管理 Town 级 Chat 账号与访问控制",
-                en: "manage Town-level chat accounts and access control",
-            }),
-            detail: t({
-                zh: "进入 Chat 账号列表。右侧会展示当前聚焦账号的渠道、身份、凭据摘要与更新时间；点进账号后再编辑或删除。列表底部可新增账号或进入访问控制。",
-                en: "Open the Chat account list. The main section shows the focused account's channel, identity, credential summary, and update time; open an account to edit or remove it. Add accounts or access control from the bottom of the list.",
-            }),
+            id: "city",
+            title: t({ zh: "City 连接", en: "City connection" }),
+            subtitle: build_city_subtitle(city_state),
+            detail: build_city_detail(city_state),
         },
         {
             id: "plugin",
             title: t({ zh: "Plugin 能力", en: "Plugin capabilities" }),
             subtitle: t({
-                zh: "查看 Agent 可用的 plugin 目录与能力边界",
-                en: "inspect the plugin catalog and capability boundaries available to agents",
+                zh: "查看 plugin 目录、Chat 共享资源与能力边界",
+                en: "inspect plugins, Chat shared resources, and capability boundaries",
             }),
             detail: t({
-                zh: "进入 Plugin 能力管理器。这里展示当前已注册的 plugin、actions、system 能力和运行边界；具体运行态仍归属于 Agent。",
-                en: "Open the Plugin capability manager. It shows registered plugins, actions, system capabilities, and runtime boundaries; actual runtime still belongs to agents.",
+                zh: "进入 Plugin 能力管理器。Chat 共享资源已归入这里；这里也展示当前已注册的 plugin、actions、system 能力和运行边界。",
+                en: "Open the Plugin capability manager. Chat shared resources now live here, alongside registered plugins, actions, system capabilities, and runtime boundaries.",
             }),
         },
         section_item("settings", t({ zh: "设置", en: "Settings" })),

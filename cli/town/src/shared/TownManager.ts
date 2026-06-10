@@ -6,14 +6,11 @@
  * - City 只作为连接上下文进入 Town；模型和服务资源仍回到 `city` CLI 管理。
  */
 
-import { gatewayStatusCommand } from "../town/gateway/runtime/GatewayStatus.js";
 import {
   restartTownRuntimeCommand,
-  startTownRuntimeCommand,
   stopTownRuntimeCommand,
 } from "../town/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
-import { runInteractiveChatManager } from "./ChatManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { runInteractiveCityManager } from "./CityConnection.js";
 import { emitCliBlock } from "./CliReporter.js";
@@ -23,13 +20,10 @@ import { open_town_dashboard } from "../tui/TownDashboard.js";
 import type { tui_action_result } from "../types/Tui.js";
 
 type TownHomeAction =
-  | "status"
-  | "start"
   | "stop"
   | "restart"
   | "city"
   | "agent"
-  | "chat"
   | "plugin"
   | "language"
   | "help"
@@ -87,14 +81,6 @@ async function run_town_dashboard_action(
   }
 
   try {
-    if (action === "status") {
-      await gatewayStatusCommand();
-      return "refresh";
-    }
-    if (action === "start") {
-      await startTownRuntimeCommand(params.cli_path);
-      return "refresh";
-    }
     if (action === "stop") {
       await stopTownRuntimeCommand();
       return "refresh";
@@ -109,10 +95,6 @@ async function run_town_dashboard_action(
     }
     if (action === "agent") {
       await runInteractiveAgentManager();
-      return "refresh";
-    }
-    if (action === "chat") {
-      await runInteractiveChatManager();
       return "refresh";
     }
     if (action === "plugin") {

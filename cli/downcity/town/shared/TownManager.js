@@ -5,10 +5,8 @@
  * - 裸 `town` 是本机 Agent 与 Plugin 操作台，不是 City 资源管理器。
  * - City 只作为连接上下文进入 Town；模型和服务资源仍回到 `city` CLI 管理。
  */
-import { gatewayStatusCommand } from "../town/gateway/runtime/GatewayStatus.js";
-import { restartTownRuntimeCommand, startTownRuntimeCommand, stopTownRuntimeCommand, } from "../town/gateway/runtime/GatewayProcess.js";
+import { restartTownRuntimeCommand, stopTownRuntimeCommand, } from "../town/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
-import { runInteractiveChatManager } from "./ChatManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { runInteractiveCityManager } from "./CityConnection.js";
 import { emitCliBlock } from "./CliReporter.js";
@@ -42,14 +40,6 @@ async function run_town_dashboard_action(action, params) {
         return "quit";
     }
     try {
-        if (action === "status") {
-            await gatewayStatusCommand();
-            return "refresh";
-        }
-        if (action === "start") {
-            await startTownRuntimeCommand(params.cli_path);
-            return "refresh";
-        }
         if (action === "stop") {
             await stopTownRuntimeCommand();
             return "refresh";
@@ -64,10 +54,6 @@ async function run_town_dashboard_action(action, params) {
         }
         if (action === "agent") {
             await runInteractiveAgentManager();
-            return "refresh";
-        }
-        if (action === "chat") {
-            await runInteractiveChatManager();
             return "refresh";
         }
         if (action === "plugin") {

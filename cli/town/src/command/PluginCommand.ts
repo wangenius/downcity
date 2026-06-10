@@ -31,6 +31,7 @@ import { helpText, t } from "../shared/CliLocale.js";
 import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
 import { runManagedPluginCommandBridge } from "../shared/ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
+import { runInteractiveChatManager } from "../shared/ChatManager.js";
 
 type StaticCatalogEntry = {
   name: string;
@@ -198,6 +199,10 @@ function findStaticCatalogEntry(pluginName: string): StaticCatalogEntry | null {
 
 type plugin_manager_selection =
   | {
+      /** 选择类型：进入 Chat 共享资源管理器。 */
+      type: "chat";
+    }
+  | {
       /** 选择类型：查看某个 Plugin。 */
       type: "plugin";
 
@@ -243,6 +248,20 @@ async function promptPluginSelection(): Promise<plugin_manager_selection | null>
     }),
     choices: [
       {
+        title: t({ zh: "共享资源", en: "Shared resources" }),
+        disabled: true,
+      },
+      {
+        title: t({ zh: "Chat", en: "Chat" }),
+        description: t({
+          zh: "管理 chat plugin 的 Town 级账号、访问控制与共享会话资源。",
+          en: "Manage Town-level accounts, access control, and shared conversation resources for the chat plugin.",
+        }),
+        value: {
+          type: "chat" as const,
+        },
+      },
+      {
         title: t({ zh: "Plugin 列表", en: "Plugins" }),
         disabled: true,
       },
@@ -269,7 +288,7 @@ async function promptPluginSelection(): Promise<plugin_manager_selection | null>
         },
       },
     ],
-    initial: plugins.length > 0 ? 1 : 2,
+    initial: 1,
   })) as { selection?: plugin_manager_selection };
 
   return response.selection || null;
@@ -436,6 +455,10 @@ export async function runInteractivePluginManager(): Promise<void> {
     }
 
     try {
+      if (selection.type === "chat") {
+        await runInteractiveChatManager();
+        continue;
+      }
       if (selection.type === "plugin") {
         await runPluginInfoCommand({
           pluginName: selection.plugin_name,

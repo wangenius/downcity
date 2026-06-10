@@ -19,6 +19,7 @@ import { helpText, t } from "../shared/CliLocale.js";
 import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
 import { runManagedPluginCommandBridge } from "../shared/ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
+import { runInteractiveChatManager } from "../shared/ChatManager.js";
 const CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_TOWN = new Set([
     "status",
     "test",
@@ -174,6 +175,20 @@ async function promptPluginSelection() {
         }),
         choices: [
             {
+                title: t({ zh: "共享资源", en: "Shared resources" }),
+                disabled: true,
+            },
+            {
+                title: t({ zh: "Chat", en: "Chat" }),
+                description: t({
+                    zh: "管理 chat plugin 的 Town 级账号、访问控制与共享会话资源。",
+                    en: "Manage Town-level accounts, access control, and shared conversation resources for the chat plugin.",
+                }),
+                value: {
+                    type: "chat",
+                },
+            },
+            {
                 title: t({ zh: "Plugin 列表", en: "Plugins" }),
                 disabled: true,
             },
@@ -200,7 +215,7 @@ async function promptPluginSelection() {
                 },
             },
         ],
-        initial: plugins.length > 0 ? 1 : 2,
+        initial: 1,
     }));
     return response.selection || null;
 }
@@ -347,6 +362,10 @@ export async function runInteractivePluginManager() {
             return;
         }
         try {
+            if (selection.type === "chat") {
+                await runInteractiveChatManager();
+                continue;
+            }
             if (selection.type === "plugin") {
                 await runPluginInfoCommand({
                     pluginName: selection.plugin_name,

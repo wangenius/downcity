@@ -24,10 +24,17 @@ export type AgentManagerListSelection =
 
 export type AgentManagerAgentAction =
   | "status"
+  | "chat"
+  | "configure"
+  | "back";
+
+export type AgentManagerRuntimeAction =
   | "start"
   | "stop"
   | "restart"
-  | "chat"
+  | "back";
+
+export type AgentManagerConfigAction =
   | "configureId"
   | "connectChatAccounts"
   | "back";

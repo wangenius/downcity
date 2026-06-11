@@ -291,7 +291,7 @@ console.log(text);
 const users = await admin.service("accounts").get("users");
 const sessions = await admin.service("accounts").get("sessions");
 
-const payments = await admin.service("payment.stripe").get("payments");
+const payments = await admin.service("payment").get("payments");
 ```
 
 现在 `balance` 还提供了一层 typed invoker，适合管理余额和 `redeem_code`：

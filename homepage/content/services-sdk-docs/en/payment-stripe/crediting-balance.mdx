@@ -22,7 +22,7 @@ The more stable rule is:
 A useful split is:
 
 - `balance`: wallet, topups, ledger
-- `payment.stripe`: Checkout, webhook, payment-result syncing
+- `payment` with the Stripe provider: Checkout, webhook, payment-result syncing
 
 So the two services are not competitors. They are adjacent layers in one recharge flow.
 
@@ -35,7 +35,8 @@ const topup = await user.service("balance").action("topups/create").invoke({
   amount: 500,
 });
 
-const checkout = await user.service("payment.stripe").action("checkout/create").invoke({
+const checkout = await user.service("payment").action("checkout/create").invoke({
+  method_id: "stripe",
   topup_id: topup.topup_id,
 });
 ```

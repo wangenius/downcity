@@ -1,15 +1,19 @@
 /**
- * Stripe 支付服务类型契约测试。
+ * Stripe payment provider 类型契约测试。
  */
 
 import { CityBase } from "@downcity/city";
-import { stripePaymentService } from "../../src/index.js";
+import {
+  paymentService,
+  stripePaymentProvider,
+  type PaymentServiceBalanceBridge,
+} from "../../src/index.js";
 
 const base = new CityBase({
   db: {} as never,
 });
 
-const balance = {
+const balance: PaymentServiceBalanceBridge = {
   async readTopup() {
     return {
       topup_id: "topup_demo",
@@ -32,6 +36,11 @@ const balance = {
   },
 };
 
-base.use(stripePaymentService({
+base.use(paymentService({
   balance,
+  providers: [
+    stripePaymentProvider({
+      currency: "usd",
+    }),
+  ],
 }));

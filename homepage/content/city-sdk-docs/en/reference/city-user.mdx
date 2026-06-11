@@ -296,7 +296,7 @@ const checkout = await client.payment.method("stripe").invoke({
 Here:
 
 - `client.payment.methods()` maps to `GET /v1/payment/methods`
-- `client.payment.method("stripe").invoke(...)` first reads the payment-method definition, then dispatches to the concrete service, such as `payment.stripe/checkout/create`
+- `client.payment.method("stripe").invoke(...)` first reads the payment-method definition, then dispatches to `payment/checkout/create` with `method_id: "stripe"`
 
 You do not need a second protocol for services. Just remember:
 

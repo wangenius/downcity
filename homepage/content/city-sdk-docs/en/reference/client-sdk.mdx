@@ -62,7 +62,7 @@ await admin.service("towns").action("create").invoke({ name: "My App" });
 Examples:
 
 - `rewrite`, `translate`: custom services you registered yourself
-- `accounts`, `usage`, `payment`, `payment.stripe`, `payment.creem`: services exposed by official packages
+- `accounts`, `usage`, `payment`: services exposed by official packages; payment providers such as Stripe and Creem are selected inside `payment`
 
 From the caller's point of view, they all live in the same City route space.
 

@@ -62,7 +62,7 @@ await admin.service("towns").action("create").invoke({ name: "My App" });
 例如：
 
 - `rewrite`、`translate` 是你自己注册的 custom service
-- `accounts`、`usage`、`payment`、`payment.stripe`、`payment.creem` 是 service
+- `accounts`、`usage`、`payment` 是官方 service；Stripe、Creem 这类支付能力作为 `payment` 里的 provider 选择
 
 对调用方来说，统一都是 City 的 service 路由空间。
 

@@ -3,34 +3,29 @@
  *
  * 关键说明（中文）
  * - `client.payment.methods()` 统一读取支付方式目录
- * - `client.payment.method("stripe").invoke(...)` 会自动解析目标 service / action
- * - 前端不再手写 `payment.stripe` 或 `checkout/create`
+ * - `client.payment.method("stripe").invoke(...)` 会自动注入 method_id
+ * - 前端不再手写 provider service/action
  */
 
 import type { RequestInitLike } from "../../http.js";
-import { ServiceClient } from "../invoker.js";
 import type { UserPaymentMethod } from "./types.js";
 
 const PREFIX = "/v1/payment";
 
 type Requester = <T>(path: string, init: RequestInitLike) => Promise<T>;
-type ServiceFactory = (name: string) => ServiceClient;
 
 /**
  * Payment 调用器。
  */
 export class PaymentInvoker {
   private readonly req: Requester;
-  private readonly service: ServiceFactory;
   private readonly hasUserToken: () => boolean;
 
   constructor(opts: {
     requestJSON: Requester;
-    service: ServiceFactory;
     hasUserToken: () => boolean;
   }) {
     this.req = opts.requestJSON;
-    this.service = opts.service;
     this.hasUserToken = opts.hasUserToken;
   }
 
@@ -98,7 +93,13 @@ export class PaymentInvoker {
       throw new TypeError(`user_token is required for payment method "${method.id}"`);
     }
 
-    return this.service(method.service).action(method.action).invoke<T>(input);
+    return this.req<T>(`${PREFIX}/${method.action}`, {
+      method: "POST",
+      body: JSON.stringify({
+        ...input,
+        method_id: method.id,
+      }),
+    });
   }
 }
 

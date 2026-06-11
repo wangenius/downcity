@@ -241,7 +241,7 @@ test("User City payment.methods() reads the unified payment directory", async ()
             type: "checkout",
             enabled: true,
             label: "Stripe",
-            service: "payment.stripe",
+            service: "payment",
             action: "checkout/create",
             requires_user: true,
             currency: "usd",
@@ -257,7 +257,7 @@ test("User City payment.methods() reads the unified payment directory", async ()
       type: "checkout",
       enabled: true,
       label: "Stripe",
-      service: "payment.stripe",
+      service: "payment",
       action: "checkout/create",
       requires_user: true,
       currency: "usd",
@@ -267,7 +267,7 @@ test("User City payment.methods() reads the unified payment directory", async ()
   assert.equal(requests[0].init.method, "GET")
 })
 
-test("User City payment.method(id).invoke() dispatches to the concrete payment service", async () => {
+test("User City payment.method(id).invoke() dispatches to the unified payment checkout endpoint", async () => {
   const requests = []
   const client = new City({
     role: "user",
@@ -284,7 +284,7 @@ test("User City payment.method(id).invoke() dispatches to the concrete payment s
               type: "checkout",
               enabled: true,
               label: "Stripe",
-              service: "payment.stripe",
+              service: "payment",
               action: "checkout/create",
               requires_user: true,
               currency: "usd",
@@ -298,16 +298,16 @@ test("User City payment.method(id).invoke() dispatches to the concrete payment s
 
   const method = client.payment.method("stripe")
   assert.equal(method.id, "stripe")
-  assert.equal((await method.describe()).service, "payment.stripe")
+  assert.equal((await method.describe()).service, "payment")
   assert.deepEqual(
     await method.invoke({ topup_id: "topup_demo" }),
     { checkout_url: "https://checkout.stripe.test/session_123" },
   )
 
-  assert.equal(requests[1].url, "https://api.example.com/base/v1/payment.stripe/checkout/create")
+  assert.equal(requests[1].url, "https://api.example.com/base/v1/payment/checkout/create")
   assert.deepEqual(JSON.parse(requests[1].init.body), {
     topup_id: "topup_demo",
-    town_id: "p",
+    method_id: "stripe",
   })
 })
 
@@ -323,7 +323,7 @@ test("User City payment.method(id).invoke() rejects disabled or user-required me
           type: "checkout",
           enabled: false,
           label: "Stripe",
-          service: "payment.stripe",
+          service: "payment",
           action: "checkout/create",
           requires_user: true,
           currency: "usd",
@@ -349,7 +349,7 @@ test("User City payment.method(id).invoke() rejects disabled or user-required me
           type: "checkout",
           enabled: true,
           label: "Stripe",
-          service: "payment.stripe",
+          service: "payment",
           action: "checkout/create",
           requires_user: true,
           currency: "usd",

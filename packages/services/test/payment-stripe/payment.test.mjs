@@ -7,7 +7,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
-import { paymentService, stripePaymentMethod, stripePaymentService } from "../../bin/index.js"
+import { paymentService, stripePaymentProvider } from "../../bin/index.js"
 
 test("paymentService lists enabled payment methods for guests", async () => {
   const cwd = process.cwd()
@@ -19,8 +19,8 @@ test("paymentService lists enabled payment methods for guests", async () => {
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     base.use(paymentService({
-      methods: [
-        stripePaymentMethod({
+      providers: [
+        stripePaymentProvider({
           secret_key: "sk_test",
           currency: "usd",
         }),
@@ -37,7 +37,7 @@ test("paymentService lists enabled payment methods for guests", async () => {
         type: "checkout",
         enabled: true,
         label: "Stripe",
-        service: "payment.stripe",
+        service: "payment",
         action: "checkout/create",
         requires_user: true,
         currency: "usd",
@@ -59,8 +59,8 @@ test("paymentService marks payment methods as disabled when Stripe is not config
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     base.use(paymentService({
-      methods: [
-        stripePaymentMethod({
+      providers: [
+        stripePaymentProvider({
           currency: "usd",
         }),
       ],
@@ -76,7 +76,7 @@ test("paymentService marks payment methods as disabled when Stripe is not config
         type: "checkout",
         enabled: false,
         label: "Stripe",
-        service: "payment.stripe",
+        service: "payment",
         action: "checkout/create",
         requires_user: true,
         currency: "usd",
@@ -89,7 +89,7 @@ test("paymentService marks payment methods as disabled when Stripe is not config
   }
 })
 
-test("stripePaymentService creates checkout sessions and finishes topups through webhook", async () => {
+test("paymentService creates checkout sessions and finishes topups through webhook", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-"))
   const stripeStub = await createStripeStub()
@@ -100,13 +100,17 @@ test("stripePaymentService creates checkout sessions and finishes topups through
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(stripePaymentService({
+    base.use(paymentService({
       balance,
-      secret_key: "sk_test",
-      webhook_secret: "whsec_test",
-      api_base_url: stripeStub.baseURL,
-      item_name: "Downcity Recharge",
-      currency: "usd",
+      providers: [
+        stripePaymentProvider({
+          secret_key: "sk_test",
+          webhook_secret: "whsec_test",
+          api_base_url: stripeStub.baseURL,
+          item_name: "Downcity Recharge",
+          currency: "usd",
+        }),
+      ],
     }))
 
     await base.health()
@@ -127,8 +131,9 @@ test("stripePaymentService creates checkout sessions and finishes topups through
 
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.stripe/checkout/create",
+      path: "/v1/payment/checkout/create",
       body: {
+        method_id: "stripe",
         topup_id: topup.topup_id,
       },
     }))
@@ -136,15 +141,17 @@ test("stripePaymentService creates checkout sessions and finishes topups through
     const checkout = await checkoutResponse.json()
     assert.equal(checkout.status, "pending")
     assert.equal(checkout.topup_id, topup.topup_id)
-    assert.equal(checkout.stripe_checkout_session_id, "cs_test_checkout")
+    assert.equal(checkout.provider, "stripe")
+    assert.equal(checkout.provider_session_id, "cs_test_checkout")
     assert.equal(checkout.checkout_url, "https://checkout.stripe.test/cs_test_checkout")
-    assert.equal(stripeStub.lastParams()?.get("success_url"), "https://base.example.com/v1/payment.stripe/redirect/success")
-    assert.equal(stripeStub.lastParams()?.get("cancel_url"), "https://base.example.com/v1/payment.stripe/redirect/cancel")
+    assert.equal(stripeStub.lastParams()?.get("success_url"), "https://base.example.com/v1/payment/redirect/success")
+    assert.equal(stripeStub.lastParams()?.get("cancel_url"), "https://base.example.com/v1/payment/redirect/cancel")
 
     const duplicateCheckoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.stripe/checkout/create",
+      path: "/v1/payment/checkout/create",
       body: {
+        method_id: "stripe",
         topup_id: topup.topup_id,
       },
     }))
@@ -152,7 +159,7 @@ test("stripePaymentService creates checkout sessions and finishes topups through
     const duplicateCheckout = await duplicateCheckoutResponse.json()
     assert.equal(duplicateCheckout.payment_id, checkout.payment_id)
 
-    const invalidWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment.stripe/webhook", {
+    const invalidWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -181,7 +188,7 @@ test("stripePaymentService creates checkout sessions and finishes topups through
         },
       },
     })
-    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment.stripe/webhook", {
+    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -192,14 +199,15 @@ test("stripePaymentService creates checkout sessions and finishes topups through
     assert.equal(webhookResponse.status, 200)
     assert.deepEqual(await webhookResponse.json(), {
       received: true,
-      event_id: "evt_checkout_completed",
+      event_id: "stripe:evt_checkout_completed",
+      provider: "stripe",
       sync_status: "applied",
     })
 
     const afterTopup = await balance.read("user_1")
     assert.equal(afterTopup.balance, 50)
 
-    const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment.stripe/webhook", {
+    const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -210,24 +218,26 @@ test("stripePaymentService creates checkout sessions and finishes topups through
     assert.equal(repeatedWebhookResponse.status, 200)
     assert.deepEqual(await repeatedWebhookResponse.json(), {
       received: true,
-      event_id: "evt_checkout_completed",
+      event_id: "stripe:evt_checkout_completed",
+      provider: "stripe",
       sync_status: "applied",
     })
     assert.equal((await balance.read("user_1")).balance, 50)
 
     const myPaymentsResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.stripe/payments/me",
+      path: "/v1/payment/payments/me",
       method: "GET",
     }))
     assert.equal(myPaymentsResponse.status, 200)
     const myPayments = await myPaymentsResponse.json()
     assert.equal(myPayments.items.length, 1)
     assert.equal(myPayments.items[0].status, "paid")
-    assert.equal(myPayments.items[0].stripe_payment_intent_id, "pi_test_payment")
+    assert.equal(myPayments.items[0].provider, "stripe")
+    assert.equal(myPayments.items[0].provider_payment_id, "pi_test_payment")
 
     const allPaymentsResponse = await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/payment.stripe/payments",
+      path: "/v1/payment/payments",
       method: "GET",
     }))
     assert.equal(allPaymentsResponse.status, 200)
@@ -240,7 +250,7 @@ test("stripePaymentService creates checkout sessions and finishes topups through
   }
 })
 
-test("stripePaymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and exposes HTML pages", async () => {
+test("paymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and exposes HTML pages", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-redirect-"))
   const stripeStub = await createStripeStub()
@@ -251,11 +261,15 @@ test("stripePaymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URL
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(stripePaymentService({
+    base.use(paymentService({
       balance,
-      secret_key: "sk_test",
-      webhook_secret: "whsec_test",
-      api_base_url: stripeStub.baseURL,
+      providers: [
+        stripePaymentProvider({
+          secret_key: "sk_test",
+          webhook_secret: "whsec_test",
+          api_base_url: stripeStub.baseURL,
+        }),
+      ],
     }))
 
     await base.health()
@@ -274,25 +288,25 @@ test("stripePaymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URL
     const topup = await balance.createTopup("user_3", 80, { note: "redirect fallback" })
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.stripe/checkout/create",
-      body: { topup_id: topup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "stripe", topup_id: topup.topup_id },
     }))
     assert.equal(checkoutResponse.status, 200)
     assert.equal(
       stripeStub.lastParams()?.get("success_url"),
-      "https://base.example.com/v1/payment.stripe/redirect/success",
+      "https://base.example.com/v1/payment/redirect/success",
     )
     assert.equal(
       stripeStub.lastParams()?.get("cancel_url"),
-      "https://base.example.com/v1/payment.stripe/redirect/cancel",
+      "https://base.example.com/v1/payment/redirect/cancel",
     )
 
-    const successPage = await base.handleRequest(new Request("https://base.example.com/v1/payment.stripe/redirect/success"))
+    const successPage = await base.handleRequest(new Request("https://base.example.com/v1/payment/redirect/success"))
     assert.equal(successPage.status, 200)
     assert.match(successPage.headers.get("content-type") || "", /^text\/html\b/)
     assert.match(await successPage.text(), /Payment completed/)
 
-    const cancelPage = await base.handleRequest(new Request("https://base.example.com/v1/payment.stripe/redirect/cancel"))
+    const cancelPage = await base.handleRequest(new Request("https://base.example.com/v1/payment/redirect/cancel"))
     assert.equal(cancelPage.status, 200)
     assert.match(cancelPage.headers.get("content-type") || "", /^text\/html\b/)
     assert.match(await cancelPage.text(), /Payment canceled/)
@@ -303,7 +317,7 @@ test("stripePaymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URL
   }
 })
 
-test("stripePaymentService derives redirect URLs from request origin without base-url env", async () => {
+test("paymentService derives redirect URLs from request origin without base-url env", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-request-origin-"))
   const stripeStub = await createStripeStub()
@@ -314,11 +328,15 @@ test("stripePaymentService derives redirect URLs from request origin without bas
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(stripePaymentService({
+    base.use(paymentService({
       balance,
-      secret_key: "sk_test",
-      webhook_secret: "whsec_test",
-      api_base_url: stripeStub.baseURL,
+      providers: [
+        stripePaymentProvider({
+          secret_key: "sk_test",
+          webhook_secret: "whsec_test",
+          api_base_url: stripeStub.baseURL,
+        }),
+      ],
     }))
 
     await base.health()
@@ -336,18 +354,18 @@ test("stripePaymentService derives redirect URLs from request origin without bas
     const topup = await balance.createTopup("user_4", 120, { note: "request origin fallback" })
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.stripe/checkout/create",
-      body: { topup_id: topup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "stripe", topup_id: topup.topup_id },
       origin: "https://runtime.example.com",
     }))
     assert.equal(checkoutResponse.status, 200)
     assert.equal(
       stripeStub.lastParams()?.get("success_url"),
-      "https://runtime.example.com/v1/payment.stripe/redirect/success",
+      "https://runtime.example.com/v1/payment/redirect/success",
     )
     assert.equal(
       stripeStub.lastParams()?.get("cancel_url"),
-      "https://runtime.example.com/v1/payment.stripe/redirect/cancel",
+      "https://runtime.example.com/v1/payment/redirect/cancel",
     )
   } finally {
     await stripeStub.close()
@@ -356,7 +374,7 @@ test("stripePaymentService derives redirect URLs from request origin without bas
   }
 })
 
-test("stripePaymentService marks failed and expired payments without crediting balance", async () => {
+test("paymentService marks failed and expired payments without crediting balance", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-status-"))
   const stripeStub = await createStripeStub()
@@ -367,11 +385,15 @@ test("stripePaymentService marks failed and expired payments without crediting b
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(stripePaymentService({
+    base.use(paymentService({
       balance,
-      secret_key: "sk_test",
-      webhook_secret: "whsec_test",
-      api_base_url: stripeStub.baseURL,
+      providers: [
+        stripePaymentProvider({
+          secret_key: "sk_test",
+          webhook_secret: "whsec_test",
+          api_base_url: stripeStub.baseURL,
+        }),
+      ],
     }))
 
     await base.health()
@@ -390,8 +412,8 @@ test("stripePaymentService marks failed and expired payments without crediting b
     const expiredTopup = await balance.createTopup("user_2", 30, { note: "expired" })
     const expiredCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.stripe/checkout/create",
-      body: { topup_id: expiredTopup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "stripe", topup_id: expiredTopup.topup_id },
     }))).json()
 
     const expiredPayload = JSON.stringify({
@@ -409,7 +431,7 @@ test("stripePaymentService marks failed and expired payments without crediting b
         },
       },
     })
-    const expiredResponse = await base.handleRequest(new Request("http://localhost/v1/payment.stripe/webhook", {
+    const expiredResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -427,8 +449,8 @@ test("stripePaymentService marks failed and expired payments without crediting b
     })
     const failedCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.stripe/checkout/create",
-      body: { topup_id: failedTopup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "stripe", topup_id: failedTopup.topup_id },
     }))).json()
 
     const failedPayload = JSON.stringify({
@@ -445,7 +467,7 @@ test("stripePaymentService marks failed and expired payments without crediting b
         },
       },
     })
-    const failedResponse = await base.handleRequest(new Request("http://localhost/v1/payment.stripe/webhook", {
+    const failedResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -456,7 +478,7 @@ test("stripePaymentService marks failed and expired payments without crediting b
     assert.equal(failedResponse.status, 200)
 
     const paymentsResponse = await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/payment.stripe/payments",
+      path: "/v1/payment/payments",
       method: "GET",
     }))
     const payments = await paymentsResponse.json()

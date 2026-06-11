@@ -60,9 +60,8 @@ import { CityBase } from "@downcity/city";
 import { accountsService } from "@downcity/services";
 import { balanceService } from "@downcity/services";
 import { paymentService } from "@downcity/services";
-import { stripePaymentMethod } from "@downcity/services";
+import { stripePaymentProvider } from "@downcity/services";
 import { usageService } from "@downcity/services";
-import { stripePaymentService } from "@downcity/services";
 
 const base = new CityBase({ db });
 const balance = balanceService();
@@ -73,21 +72,19 @@ base.use(accountsService({
 
 base.use(balance);
 base.use(paymentService({
-  methods: [
-    stripePaymentMethod(),
-  ],
-}));
-base.use(usageService({
-  record_errors: true,
-}));
-
-base.use(stripePaymentService({
   balance: {
     readTopup: async (topup_id) => await balance.readTopup(topup_id),
     finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   },
-  secret_key: process.env.STRIPE_SECRET_KEY,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+  providers: [
+    stripePaymentProvider({
+      secret_key: process.env.STRIPE_SECRET_KEY,
+      webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+    }),
+  ],
+}));
+base.use(usageService({
+  record_errors: true,
 }));
 ```
 
@@ -106,12 +103,13 @@ const usage = await admin.service("usage").get("summary");
 
 const methods = await guest.service("payment").get("methods");
 
-const checkout = await user.service("payment.stripe").action("checkout/create").invoke({
+const checkout = await user.service("payment").action("checkout/create").invoke({
+  method_id: "stripe",
   topup_id: "topup_demo",
 });
 ```
 
-That means `payment` can be the discovery entry while `payment.stripe` remains the execution entry.
+That means `payment` is both the discovery entry and the execution entry; Stripe is selected as a provider.
 
 ## Relationship between hooks, services, and services
 
@@ -130,7 +128,7 @@ service / action
 - `guest.service("accounts")...`
 - `guest.service("payment").get("methods")`
 - `user.service("usage")...`
-- `admin.service("payment.stripe")...`
+- `admin.service("payment").get("payments")`
 
 ## Common misunderstandings
 

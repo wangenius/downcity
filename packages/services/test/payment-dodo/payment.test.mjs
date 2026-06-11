@@ -6,7 +6,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "../payment-stripe/sqlite-db.mjs"
-import { dodoPaymentMethod, dodoPaymentService, paymentService } from "../../bin/index.js"
+import { dodoPaymentProvider, paymentService } from "../../bin/index.js"
 
 test("paymentService lists enabled Dodo payment method for guests", async () => {
   const cwd = process.cwd()
@@ -17,8 +17,8 @@ test("paymentService lists enabled Dodo payment method for guests", async () => 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     base.use(paymentService({
-      methods: [
-        dodoPaymentMethod({
+      providers: [
+        dodoPaymentProvider({
           api_key: "dodo_test",
           product_id: "pdt_test",
           currency: "usd",
@@ -36,7 +36,7 @@ test("paymentService lists enabled Dodo payment method for guests", async () => 
         type: "checkout",
         enabled: true,
         label: "Dodo Payments",
-        service: "payment.dodo",
+        service: "payment",
         action: "checkout/create",
         requires_user: true,
         currency: "usd",
@@ -48,7 +48,7 @@ test("paymentService lists enabled Dodo payment method for guests", async () => 
   }
 })
 
-test("dodoPaymentService creates checkout sessions and finishes topups through webhook", async () => {
+test("paymentService creates Dodo checkout sessions and finishes topups through webhook", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-dodo-service-"))
   const dodoStub = await createDodoStub()
@@ -58,13 +58,17 @@ test("dodoPaymentService creates checkout sessions and finishes topups through w
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(dodoPaymentService({
+    base.use(paymentService({
       balance,
-      api_key: "dodo_test",
-      product_id: "pdt_test",
-      environment: "test_mode",
-      api_base_url: dodoStub.baseURL,
-      currency: "usd",
+      providers: [
+        dodoPaymentProvider({
+          api_key: "dodo_test",
+          product_id: "pdt_test",
+          environment: "test_mode",
+          api_base_url: dodoStub.baseURL,
+          currency: "usd",
+        }),
+      ],
     }))
 
     await base.health()
@@ -82,24 +86,25 @@ test("dodoPaymentService creates checkout sessions and finishes topups through w
     const topup = await balance.createTopup("user_1", 50, { note: "recharge" })
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.dodo/checkout/create",
-      body: { topup_id: topup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "dodo", topup_id: topup.topup_id },
     }))
     assert.equal(checkoutResponse.status, 200)
     const checkout = await checkoutResponse.json()
     assert.equal(checkout.status, "pending")
-    assert.equal(checkout.dodo_checkout_session_id, "cs_dodo_test")
-    assert.equal(checkout.dodo_payment_id, "pay_dodo_test")
+    assert.equal(checkout.provider, "dodo")
+    assert.equal(checkout.provider_session_id, "cs_dodo_test")
+    assert.equal(checkout.provider_payment_id, "pay_dodo_test")
     assert.equal(checkout.checkout_url, "https://checkout.dodo.test/cs_dodo_test")
     assert.equal(dodoStub.lastBody().product_cart[0].product_id, "pdt_test")
-    assert.equal(dodoStub.lastBody().return_url, "https://base.example.com/v1/payment.dodo/redirect/success")
-    assert.equal(dodoStub.lastBody().cancel_url, "https://base.example.com/v1/payment.dodo/redirect/cancel")
+    assert.equal(dodoStub.lastBody().return_url, "https://base.example.com/v1/payment/redirect/success")
+    assert.equal(dodoStub.lastBody().cancel_url, "https://base.example.com/v1/payment/redirect/cancel")
     assert.equal(dodoStub.lastBody().metadata.payment_id, checkout.payment_id)
 
     const duplicateCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.dodo/checkout/create",
-      body: { topup_id: topup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "dodo", topup_id: topup.topup_id },
     }))).json()
     assert.equal(duplicateCheckout.payment_id, checkout.payment_id)
 
@@ -116,7 +121,7 @@ test("dodoPaymentService creates checkout sessions and finishes topups through w
         },
       },
     })
-    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment.dodo/webhook", {
+    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=dodo", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: completedPayload,
@@ -124,19 +129,22 @@ test("dodoPaymentService creates checkout sessions and finishes topups through w
     assert.equal(webhookResponse.status, 200)
     assert.deepEqual(await webhookResponse.json(), {
       received: true,
-      event_id: "evt_dodo_completed",
+      event_id: "dodo:evt_dodo_completed",
+      provider: "dodo",
       sync_status: "applied",
     })
     assert.equal((await balance.read("user_1")).balance, 50)
 
     const myPaymentsResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.dodo/payments/me",
+      path: "/v1/payment/payments/me",
       method: "GET",
     }))
     assert.equal(myPaymentsResponse.status, 200)
     const myPayments = await myPaymentsResponse.json()
     assert.equal(myPayments.items[0].status, "paid")
+    assert.equal(myPayments.items[0].provider, "dodo")
+    assert.equal(myPayments.items[0].provider_payment_id, "pay_dodo_test")
   } finally {
     await dodoStub.close()
     process.chdir(cwd)

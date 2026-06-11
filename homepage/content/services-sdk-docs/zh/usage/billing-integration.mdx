@@ -18,7 +18,7 @@ usage service
   -> 记录调用事实
 hook
   -> 判断额度、套餐、余额
-payment.stripe
+payment provider
   -> 同步支付结果并完成充值
 ```
 
@@ -30,8 +30,7 @@ payment.stripe
 import { usageService } from "@downcity/services";
 import { balanceService } from "@downcity/services";
 import { paymentService } from "@downcity/services";
-import { stripePaymentMethod } from "@downcity/services";
-import { stripePaymentService } from "@downcity/services";
+import { stripePaymentProvider } from "@downcity/services";
 
 const balance = balanceService();
 
@@ -41,25 +40,24 @@ base.use(usageService({
 
 base.use(balance);
 base.use(paymentService({
-  methods: [
-    stripePaymentMethod(),
-  ],
-}));
-base.use(stripePaymentService({
   balance: {
     readTopup: async (topup_id) => await balance.readTopup(topup_id),
     finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   },
-  secret_key: process.env.STRIPE_SECRET_KEY,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+  providers: [
+    stripePaymentProvider({
+      secret_key: process.env.STRIPE_SECRET_KEY,
+      webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+    }),
+  ],
 }));
 ```
 
 这个配置表达的是：
 
 - usage 负责记录“用了多少”
-- payment 负责告诉前端“当前有哪些支付方式”
-- Stripe 服务负责把支付结果同步进 topup / balance
+- payment 负责告诉前端“当前有哪些支付 provider”
+- provider 负责把支付结果同步进 topup / balance
 - 你自己的 hook / 后端逻辑负责判断“该怎么收费”
 
 ## 常见场景
@@ -114,7 +112,7 @@ Downcity 更适合把：
 - `usageService({ record_errors })`
 - `admin.service("usage").get("summary")`
 - `guest.service("payment").get("methods")`
-- `stripePaymentService({ balance, secret_key, webhook_secret })`
+- `paymentService({ balance, providers: [stripePaymentProvider()] })`
 
 ## 常见误解
 

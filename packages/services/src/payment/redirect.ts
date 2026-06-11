@@ -10,7 +10,9 @@
 /**
  * Payment 内置结果页路径。
  */
-export type PaymentRedirectPath = `/v1/payment.${string}/redirect/${"success" | "cancel"}`;
+export type PaymentRedirectPath =
+  | `/v1/payment/redirect/${"success" | "cancel"}`
+  | `/v1/payment.${string}/redirect/${"success" | "cancel"}`;
 
 /**
  * Payment 跳转地址解析参数。

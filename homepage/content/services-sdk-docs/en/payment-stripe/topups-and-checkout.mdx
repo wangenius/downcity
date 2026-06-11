@@ -31,7 +31,8 @@ const topup = await user.service("balance").action("topups/create").invoke({
   note: "recharge",
 });
 
-const checkout = await user.service("payment.stripe").action("checkout/create").invoke({
+const checkout = await user.service("payment").action("checkout/create").invoke({
+  method_id: "stripe",
   topup_id: topup.topup_id,
 });
 ```
@@ -51,4 +52,4 @@ The key is not only "how to take payment." The key is "City creates the trusted 
 ## Common API surface
 
 - `POST /v1/balance/topups/create`
-- `POST /v1/payment.stripe/checkout/create`
+- `POST /v1/payment/checkout/create`

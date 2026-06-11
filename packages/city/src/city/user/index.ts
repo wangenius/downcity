@@ -45,7 +45,6 @@ export class UserCityAccess {
     });
     this.payment = new PaymentInvoker({
       requestJSON: (path, init) => this.json(path, init),
-      service: (name) => this.service(name),
       hasUserToken: () => Boolean(this.token),
     });
   }

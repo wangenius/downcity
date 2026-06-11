@@ -2,7 +2,7 @@
  * Node CityBase 装配模块。
  *
  * Node 街区拥有自己的 CityBase 组装逻辑，避免再通过独立 shared 包间接复用。
- * 这里集中安装官方公共服务、余额系统、支付目录、Stripe 支付闭环和 AIService。
+ * 这里集中安装官方公共服务、余额系统、统一 Payment 服务和 AIService。
  */
 
 import { CityBase, AIService, type CityBaseOptions, type ModelConfig } from "@downcity/city";
@@ -10,12 +10,10 @@ import {
   accountsService,
   balanceService,
   paymentService,
-  stripePaymentMethod,
-  stripePaymentService,
+  stripePaymentProvider,
   usageService,
-  type BalanceExtra,
   type BalanceService,
-  type StripePaymentServiceBalanceBridge,
+  type PaymentServiceBalanceBridge,
 } from "@downcity/services";
 
 /**
@@ -42,7 +40,7 @@ export interface ComposeCityBaseOptions extends CityBaseOptions {
   balance?: ComposeCityBalanceOptions;
   /** 是否安装统一 payment service。 */
   enable_payment?: boolean;
-  /** 是否安装 stripe 支付闭环。 */
+  /** 是否启用 Stripe payment provider。 */
   enable_stripe_payment?: boolean;
 }
 
@@ -70,24 +68,21 @@ export function compose_city(options: ComposeCityBaseOptions): {
   city.use(balance);
 
   if (options.enable_payment !== false) {
+    const payment_balance_bridge: PaymentServiceBalanceBridge = {
+      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
+      finishTopup: async (topup_id: string, extra) => await balance.finishTopup(topup_id, extra),
+    };
     city.use(paymentService({
-      methods: [stripePaymentMethod()],
+      balance: payment_balance_bridge,
+      providers: [
+        ...(options.enable_stripe_payment === false ? [] : [stripePaymentProvider()]),
+      ],
     }));
   }
 
   city.use(usageService({
     record_errors: options.record_usage_errors,
   }));
-
-  if (options.enable_stripe_payment !== false) {
-    const stripe_balance_bridge: StripePaymentServiceBalanceBridge = {
-      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
-      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
-    };
-    city.use(stripePaymentService({
-      balance: stripe_balance_bridge,
-    }));
-  }
 
   const ai = new AIService();
   ai.use(options.models);

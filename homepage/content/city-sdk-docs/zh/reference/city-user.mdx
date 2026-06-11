@@ -296,7 +296,7 @@ const checkout = await client.payment.method("stripe").invoke({
 其中：
 
 - `client.payment.methods()` 对应 `GET /v1/payment/methods`
-- `client.payment.method("stripe").invoke(...)` 会先读取 method 定义，再自动转发到具体 service，例如 `payment.stripe/checkout/create`
+- `client.payment.method("stripe").invoke(...)` 会先读取 method 定义，再自动转发到 `payment/checkout/create`，并带上 `method_id: "stripe"`
 
 你不需要为 service 学一套新协议。只需要记住：
 

@@ -28,26 +28,30 @@ So the webhook record layer is not extra ceremony. It is the fact base for payme
 ## Enable it
 
 ```ts
-base.use(stripePaymentService({
+base.use(paymentService({
   balance: {
     readTopup: async (topup_id) => await balance.readTopup(topup_id),
     finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   },
-  secret_key: process.env.STRIPE_SECRET_KEY,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+  providers: [
+    stripePaymentProvider({
+      secret_key: process.env.STRIPE_SECRET_KEY,
+      webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+    }),
+  ],
 }));
 ```
 
 After that, Stripe should send events to:
 
 ```txt
-POST /v1/payment.stripe/webhook
+POST /v1/payment/webhook?provider=stripe
 ```
 
 Stripe redirect URLs are generated automatically from `DOWNCITY_CITY_BASE_URL`. If it is not configured, the service falls back to the current request origin and exposes two built-in result pages:
 
-- `GET /v1/payment.stripe/redirect/success`
-- `GET /v1/payment.stripe/redirect/cancel`
+- `GET /v1/payment/redirect/success`
+- `GET /v1/payment/redirect/cancel`
 
 ## What gets synced in this version
 
@@ -96,6 +100,6 @@ If Stripe and City look inconsistent, the webhook and payment-record layers are 
 
 ## Common API surface
 
-- `POST /v1/payment.stripe/checkout/create`
-- `POST /v1/payment.stripe/webhook`
-- `GET /v1/payment.stripe/payments`
+- `POST /v1/payment/checkout/create`
+- `POST /v1/payment/webhook?provider=stripe`
+- `GET /v1/payment/payments`

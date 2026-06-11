@@ -11,22 +11,14 @@ import { CityBase, AIService, type CityBaseOptions, type ModelConfig } from "@do
 import {
   accountsService,
   balanceService,
-  creemPaymentMethod,
-  creemPaymentService,
-  dodoPaymentMethod,
-  dodoPaymentService,
+  creemPaymentProvider,
+  dodoPaymentProvider,
   paymentService,
-  stripePaymentMethod,
-  stripePaymentService,
+  stripePaymentProvider,
   usageService,
-  waffoPaymentMethod,
-  waffoPaymentService,
-  type BalanceExtra,
+  waffoPaymentProvider,
   type BalanceService,
-  type CreemPaymentServiceBalanceBridge,
-  type DodoPaymentServiceBalanceBridge,
-  type StripePaymentServiceBalanceBridge,
-  type WaffoPaymentServiceBalanceBridge,
+  type PaymentServiceBalanceBridge,
 } from "@downcity/services";
 
 /**
@@ -95,12 +87,17 @@ export function compose_city(options: ComposeCityBaseOptions): {
   city.use(balance);
 
   if (options.enable_payment !== false) {
+    const payment_balance_bridge: PaymentServiceBalanceBridge = {
+      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
+      finishTopup: async (topup_id: string, extra) => await balance.finishTopup(topup_id, extra),
+    };
     city.use(paymentService({
-      methods: [
-        stripePaymentMethod(),
-        creemPaymentMethod(),
-        dodoPaymentMethod(),
-        waffoPaymentMethod(),
+      balance: payment_balance_bridge,
+      providers: [
+        ...(options.enable_stripe_payment === false ? [] : [stripePaymentProvider()]),
+        ...(options.enable_creem_payment === false ? [] : [creemPaymentProvider()]),
+        ...(options.enable_dodo_payment === false ? [] : [dodoPaymentProvider()]),
+        ...(options.enable_waffo_payment === false ? [] : [waffoPaymentProvider()]),
       ],
     }));
   }
@@ -108,46 +105,6 @@ export function compose_city(options: ComposeCityBaseOptions): {
   city.use(usageService({
     record_errors: options.record_usage_errors,
   }));
-
-  if (options.enable_stripe_payment !== false) {
-    const stripe_balance_bridge: StripePaymentServiceBalanceBridge = {
-      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
-      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
-    };
-    city.use(stripePaymentService({
-      balance: stripe_balance_bridge,
-    }));
-  }
-
-  if (options.enable_creem_payment !== false) {
-    const creem_balance_bridge: CreemPaymentServiceBalanceBridge = {
-      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
-      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
-    };
-    city.use(creemPaymentService({
-      balance: creem_balance_bridge,
-    }));
-  }
-
-  if (options.enable_dodo_payment !== false) {
-    const dodo_balance_bridge: DodoPaymentServiceBalanceBridge = {
-      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
-      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
-    };
-    city.use(dodoPaymentService({
-      balance: dodo_balance_bridge,
-    }));
-  }
-
-  if (options.enable_waffo_payment !== false) {
-    const waffo_balance_bridge: WaffoPaymentServiceBalanceBridge = {
-      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
-      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
-    };
-    city.use(waffoPaymentService({
-      balance: waffo_balance_bridge,
-    }));
-  }
 
   const ai = new AIService();
   ai.use(options.models);

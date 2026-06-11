@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - `payment` 是统一支付入口，负责告诉前端“当前有哪些支付方式”
- * - 具体执行动作仍然落到具体 service / action，例如 `payment.stripe`
+ * - 具体执行动作统一落到 `payment` service 的 `checkout/create`
  * - client 侧通过 typed invoker 屏蔽 service / action 的拼接细节
  */
 
@@ -48,14 +48,14 @@ export interface UserPaymentMethod {
   /**
    * 发起支付时应调用的 service id。
    *
-   * 例如：`payment.stripe`
+   * 当前统一为 `payment`。
    */
   service: string;
 
   /**
    * 发起支付时应调用的 action id。
    *
-   * 例如：`checkout/create`
+   * 当前统一为 `checkout/create`。
    */
   action: string;
 

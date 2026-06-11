@@ -62,9 +62,8 @@ import { CityBase } from "@downcity/city";
 import { accountsService } from "@downcity/services";
 import { balanceService } from "@downcity/services";
 import { paymentService } from "@downcity/services";
-import { stripePaymentMethod } from "@downcity/services";
+import { stripePaymentProvider } from "@downcity/services";
 import { usageService } from "@downcity/services";
-import { stripePaymentService } from "@downcity/services";
 
 const base = new CityBase({ db });
 const balance = balanceService();
@@ -75,21 +74,19 @@ base.use(accountsService({
 
 base.use(balance);
 base.use(paymentService({
-  methods: [
-    stripePaymentMethod(),
-  ],
-}));
-base.use(usageService({
-  record_errors: true,
-}));
-
-base.use(stripePaymentService({
   balance: {
     readTopup: async (topup_id) => await balance.readTopup(topup_id),
     finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   },
-  secret_key: process.env.STRIPE_SECRET_KEY,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+  providers: [
+    stripePaymentProvider({
+      secret_key: process.env.STRIPE_SECRET_KEY,
+      webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+    }),
+  ],
+}));
+base.use(usageService({
+  record_errors: true,
 }));
 ```
 
@@ -98,7 +95,7 @@ base.use(stripePaymentService({
 - `accountsService()` 给 City 增加 `accounts` service
 - `paymentService()` 给 City 增加统一支付入口，用来暴露当前可用的支付方式
 - `usageService()` 给 City 增加 usage 记录能力和相关查询入口
-- `stripePaymentService()` 给 City 增加 Stripe Checkout、webhook 和支付结果同步
+- `stripePaymentProvider()` 给统一 Payment 服务增加 Stripe Checkout、webhook 和支付结果同步
 
 ## service 挂进来后产品端怎么调
 
@@ -115,7 +112,8 @@ const usage = await admin.service("usage").get("summary");
 
 const methods = await guest.service("payment").get("methods");
 
-const checkout = await user.service("payment.stripe").action("checkout/create").invoke({
+const checkout = await user.service("payment").action("checkout/create").invoke({
+  method_id: "stripe",
   topup_id: "topup_demo",
 });
 ```
@@ -147,7 +145,7 @@ service / action
 - `guest.service("accounts")...`
 - `guest.service("payment").get("methods")`
 - `user.service("usage")...`
-- `admin.service("payment.stripe")...`
+- `admin.service("payment").get("payments")`
 
 如果你是从扩展角度思考，最重要的不是记很多 API，而是先判断“这是 hook 问题还是 service 问题”。
 

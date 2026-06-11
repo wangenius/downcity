@@ -291,7 +291,7 @@ For example:
 const users = await admin.service("accounts").get("users");
 const sessions = await admin.service("accounts").get("sessions");
 
-const payments = await admin.service("payment.stripe").get("payments");
+const payments = await admin.service("payment").get("payments");
 ```
 
 `balance` now also exposes a typed invoker for wallet and `redeem_code` administration:

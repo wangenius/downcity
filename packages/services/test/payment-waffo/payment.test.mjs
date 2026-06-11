@@ -7,7 +7,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "../payment-stripe/sqlite-db.mjs"
-import { paymentService, waffoPaymentMethod, waffoPaymentService } from "../../bin/index.js"
+import { paymentService, waffoPaymentProvider } from "../../bin/index.js"
 
 test("paymentService lists enabled Waffo payment method for guests", async () => {
   const cwd = process.cwd()
@@ -18,8 +18,8 @@ test("paymentService lists enabled Waffo payment method for guests", async () =>
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     base.use(paymentService({
-      methods: [
-        waffoPaymentMethod({
+      providers: [
+        waffoPaymentProvider({
           merchant_id: "MER_6gyg0Q5asJBoY5GSNmZt7P",
           private_key: "private",
           product_id: "PROD_1234567890123456789012",
@@ -38,7 +38,7 @@ test("paymentService lists enabled Waffo payment method for guests", async () =>
         type: "checkout",
         enabled: true,
         label: "Waffo Pancake",
-        service: "payment.waffo",
+        service: "payment",
         action: "checkout/create",
         requires_user: true,
         currency: "usd",
@@ -50,7 +50,7 @@ test("paymentService lists enabled Waffo payment method for guests", async () =>
   }
 })
 
-test("waffoPaymentService creates checkout sessions and finishes topups through webhook", async () => {
+test("paymentService creates Waffo checkout sessions and finishes topups through webhook", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-waffo-service-"))
   const keys = generateKeyPairSync("rsa", { modulusLength: 2048 })
@@ -63,15 +63,19 @@ test("waffoPaymentService creates checkout sessions and finishes topups through 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(waffoPaymentService({
+    base.use(paymentService({
       balance,
-      merchant_id: "MER_6gyg0Q5asJBoY5GSNmZt7P",
-      private_key: privateKey,
-      product_id: "PROD_1234567890123456789012",
-      webhook_public_key: publicKey,
-      environment: "test",
-      api_base_url: waffoStub.baseURL,
-      currency: "usd",
+      providers: [
+        waffoPaymentProvider({
+          merchant_id: "MER_6gyg0Q5asJBoY5GSNmZt7P",
+          private_key: privateKey,
+          product_id: "PROD_1234567890123456789012",
+          webhook_public_key: publicKey,
+          environment: "test",
+          api_base_url: waffoStub.baseURL,
+          currency: "usd",
+        }),
+      ],
     }))
 
     await base.health()
@@ -89,23 +93,24 @@ test("waffoPaymentService creates checkout sessions and finishes topups through 
     const topup = await balance.createTopup("user_1", 50, { note: "recharge" })
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.waffo/checkout/create",
-      body: { topup_id: topup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "waffo", topup_id: topup.topup_id },
     }))
     assert.equal(checkoutResponse.status, 200)
     const checkout = await checkoutResponse.json()
     assert.equal(checkout.status, "pending")
-    assert.equal(checkout.waffo_session_id, "ses_waffo_test")
+    assert.equal(checkout.provider, "waffo")
+    assert.equal(checkout.provider_session_id, "ses_waffo_test")
     assert.equal(checkout.checkout_url, "https://checkout.waffo.test/ses_waffo_test")
     assert.equal(waffoStub.lastBody().productId, "PROD_1234567890123456789012")
-    assert.equal(waffoStub.lastBody().successUrl, "https://base.example.com/v1/payment.waffo/redirect/success")
+    assert.equal(waffoStub.lastBody().successUrl, "https://base.example.com/v1/payment/redirect/success")
     assert.equal(waffoStub.lastBody().orderMerchantExternalId, checkout.payment_id)
     assert.equal(waffoStub.lastBody().metadata.topup_id, topup.topup_id)
 
     const duplicateCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.waffo/checkout/create",
-      body: { topup_id: topup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "waffo", topup_id: topup.topup_id },
     }))).json()
     assert.equal(duplicateCheckout.payment_id, checkout.payment_id)
 
@@ -132,7 +137,7 @@ test("waffoPaymentService creates checkout sessions and finishes topups through 
         },
       },
     })
-    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment.waffo/webhook", {
+    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=waffo", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -143,21 +148,23 @@ test("waffoPaymentService creates checkout sessions and finishes topups through 
     assert.equal(webhookResponse.status, 200)
     assert.deepEqual(await webhookResponse.json(), {
       received: true,
-      event_id: "evt_waffo_completed",
+      event_id: "waffo:evt_waffo_completed",
+      provider: "waffo",
       sync_status: "applied",
     })
     assert.equal((await balance.read("user_1")).balance, 50)
 
     const myPaymentsResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.waffo/payments/me",
+      path: "/v1/payment/payments/me",
       method: "GET",
     }))
     assert.equal(myPaymentsResponse.status, 200)
     const myPayments = await myPaymentsResponse.json()
     assert.equal(myPayments.items[0].status, "paid")
-    assert.equal(myPayments.items[0].waffo_order_id, "ORD_1234567890123456789012")
-    assert.equal(myPayments.items[0].waffo_payment_id, "PAY_1234567890123456789012")
+    assert.equal(myPayments.items[0].provider, "waffo")
+    assert.equal(myPayments.items[0].provider_order_id, "ORD_1234567890123456789012")
+    assert.equal(myPayments.items[0].provider_payment_id, "PAY_1234567890123456789012")
   } finally {
     await waffoStub.close()
     process.chdir(cwd)

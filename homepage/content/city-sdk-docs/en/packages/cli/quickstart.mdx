@@ -130,7 +130,7 @@ Those tasks now start from the interactive menu instead of assuming a default se
 
 ### Scenario 3: manual Stripe recharge
 
-If your City enables `payment.stripe`, the CLI can now:
+If your City enables the Stripe payment provider, the CLI can now:
 
 - read Stripe env requirements exposed by the service
 - configure admin access from `Server management`
@@ -143,7 +143,7 @@ Stripe success and cancel pages are generated automatically from `DOWNCITY_CITY_
 
 The Stripe webhook endpoint itself is fixed:
 
-- `{base_url}/v1/payment.stripe/webhook`
+- `{base_url}/v1/payment/webhook?provider=stripe`
 
 ## What it is not for
 

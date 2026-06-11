@@ -1,21 +1,20 @@
 /**
- * Creem payment 服务类型契约测试。
+ * Creem payment provider 类型契约测试。
  *
  * 关键说明（中文）
  * - 这个文件只做编译期契约验证
- * - 覆盖公开 service、method 和主要返回类型
+ * - 覆盖统一 PaymentService、provider 和主要返回类型
  */
 
 import { CityBase } from "@downcity/city";
 import {
-  creemPaymentMethod,
-  creemPaymentService,
+  creemPaymentProvider,
   paymentService,
-  type CreemCheckoutCreateResult,
-  type CreemPaymentServiceBalanceBridge,
+  type PaymentCheckoutCreateResult,
+  type PaymentServiceBalanceBridge,
 } from "../../src/index.js";
 
-const balance: CreemPaymentServiceBalanceBridge = {
+const balance: PaymentServiceBalanceBridge = {
   async readTopup(topup_id) {
     return {
       topup_id,
@@ -41,8 +40,9 @@ const balance: CreemPaymentServiceBalanceBridge = {
 const base = new CityBase({ db: {} as any, dialect: "sqlite" });
 
 base.use(paymentService({
-  methods: [
-    creemPaymentMethod({
+  balance,
+  providers: [
+    creemPaymentProvider({
       api_key: "creem_test",
       product_id: "prod_test",
       currency: "usd",
@@ -50,17 +50,13 @@ base.use(paymentService({
   ],
 }));
 
-base.use(creemPaymentService({
-  balance,
-  api_key: "creem_test",
-  product_id: "prod_test",
-  webhook_secret: "whsec_test",
-}));
-
-const checkout: CreemCheckoutCreateResult = {
+const checkout: PaymentCheckoutCreateResult = {
   payment_id: "pay_demo",
+  provider: "creem",
   topup_id: "topup_demo",
-  creem_checkout_id: "ch_demo",
+  provider_session_id: "ch_demo",
+  provider_payment_id: "",
+  provider_order_id: "",
   checkout_url: "https://checkout.creem.test/ch_demo",
   status: "pending",
 };

@@ -18,7 +18,7 @@ usage service
   -> records call facts
 hook
   -> decides quotas, plans, balances
-payment.stripe
+payment provider
   -> syncs payment results and completes topups
 ```
 
@@ -28,8 +28,7 @@ payment.stripe
 import { usageService } from "@downcity/services";
 import { balanceService } from "@downcity/services";
 import { paymentService } from "@downcity/services";
-import { stripePaymentMethod } from "@downcity/services";
-import { stripePaymentService } from "@downcity/services";
+import { stripePaymentProvider } from "@downcity/services";
 
 const balance = balanceService();
 
@@ -39,25 +38,24 @@ base.use(usageService({
 
 base.use(balance);
 base.use(paymentService({
-  methods: [
-    stripePaymentMethod(),
-  ],
-}));
-base.use(stripePaymentService({
   balance: {
     readTopup: async (topup_id) => await balance.readTopup(topup_id),
     finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   },
-  secret_key: process.env.STRIPE_SECRET_KEY,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+  providers: [
+    stripePaymentProvider({
+      secret_key: process.env.STRIPE_SECRET_KEY,
+      webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+    }),
+  ],
 }));
 ```
 
 That means:
 
 - usage records how much was used
-- payment tells the frontend which payment methods are currently exposed
-- Stripe service syncs successful payments into topups and balance
+- payment tells the frontend which payment providers are currently exposed
+- the provider syncs successful payments into topups and balance
 - your own hooks or systems still decide how charging should work
 
 ## Common scenarios
@@ -87,7 +85,7 @@ Towns vary too much: per-call pricing, per-model pricing, quota-based pricing, a
 - `usageService({ record_errors })`
 - `admin.service("usage").get("summary")`
 - `guest.service("payment").get("methods")`
-- `stripePaymentService({ balance, secret_key, webhook_secret })`
+- `paymentService({ balance, providers: [stripePaymentProvider()] })`
 
 ## Common misunderstandings
 

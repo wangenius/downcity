@@ -3,7 +3,8 @@
  *
  * 关键说明（中文）
  * - 对外统一暴露 Downcity 官方服务
- * - 保留 accounts / balance / payment / payment-stripe / usage 五个清晰子模块
+ * - 保留 accounts / balance / payment / usage 四个清晰服务边界
+ * - Stripe / Creem / Dodo / Waffo 统一作为 payment provider 暴露
  * - 业务侧只需要从一个包完成导入
  */
 
@@ -31,78 +32,39 @@ export type {
   BalanceTopupStatus,
 } from "./balance/types.js";
 
-export { creemPaymentMethod, dodoPaymentMethod, paymentService, stripePaymentMethod, waffoPaymentMethod } from "./payment/index.js";
+export {
+  creemPaymentProvider,
+  dodoPaymentProvider,
+  paymentService,
+  stripePaymentProvider,
+  waffoPaymentProvider,
+} from "./payment/index.js";
 export type {
-  PaymentMethodDefinition,
+  PaymentCheckoutCreateResult,
+  PaymentCreateCheckoutInput,
+  PaymentEventRecord,
+  PaymentEventSyncStatus,
   PaymentMethodItem,
+  PaymentMethodReason,
   PaymentMethodType,
+  PaymentProvider,
+  PaymentProviderCheckoutInput,
+  PaymentProviderCheckoutResult,
+  PaymentProviderContext,
+  PaymentProviderWebhookEvent,
+  PaymentProviderWebhookInput,
+  PaymentRecord,
+  PaymentServiceBalanceBridge,
   PaymentServiceOptions,
+  PaymentStatus,
+  PaymentTopupRecord,
 } from "./payment/types.js";
 export type {
-  CreemPaymentMethodOptions,
-  DodoPaymentMethodOptions,
-  StripePaymentMethodOptions,
-  WaffoPaymentMethodOptions,
+  CreemPaymentProviderOptions,
+  DodoPaymentProviderOptions,
+  StripePaymentProviderOptions,
+  WaffoPaymentProviderOptions,
 } from "./payment/types.js";
-
-export { stripeEvents, stripePayments, stripePaymentService } from "./payment-stripe/index.js";
-export type {
-  StripeCheckoutCreateResult,
-  StripeCreateCheckoutInput,
-  StripeEventRecord,
-  StripeEventSyncStatus,
-  StripePaymentRecord,
-  StripePaymentServiceBalanceBridge,
-  StripePaymentServiceOptions,
-  StripePaymentStatus,
-  StripePaymentTopupRecord,
-  StripeWebhookEvent,
-} from "./payment-stripe/types.js";
-
-export { creemEvents, creemPayments, creemPaymentService } from "./payment-creem/index.js";
-export type {
-  CreemCheckoutCreateResult,
-  CreemCreateCheckoutInput,
-  CreemEventRecord,
-  CreemEventSyncStatus,
-  CreemPaymentRecord,
-  CreemPaymentServiceBalanceBridge,
-  CreemPaymentServiceOptions,
-  CreemPaymentStatus,
-  CreemPaymentTopupRecord,
-  CreemWebhookEvent,
-} from "./payment-creem/types.js";
-
-export { dodoEvents, dodoPayments, dodoPaymentService } from "./payment-dodo/index.js";
-export type {
-  DodoCheckoutCreateResult,
-  DodoCreateCheckoutInput,
-  DodoEventRecord,
-  DodoEventSyncStatus,
-  DodoPaymentEnvironment,
-  DodoPaymentRecord,
-  DodoPaymentServiceBalanceBridge,
-  DodoPaymentServiceOptions,
-  DodoPaymentStatus,
-  DodoPaymentTopupRecord,
-  DodoWebhookEvent,
-} from "./payment-dodo/types.js";
-
-export { waffoEvents, waffoPayments, waffoPaymentService } from "./payment-waffo/index.js";
-export type {
-  WaffoCheckoutCreateResult,
-  WaffoCreateCheckoutInput,
-  WaffoEventRecord,
-  WaffoEventSyncStatus,
-  WaffoPaymentEnvironment,
-  WaffoPaymentRecord,
-  WaffoPaymentServiceBalanceBridge,
-  WaffoPaymentServiceOptions,
-  WaffoPaymentStatus,
-  WaffoPaymentTopupRecord,
-  WaffoWebhookEvent,
-  WaffoWebhookEventData,
-} from "./payment-waffo/types.js";
 
 export { usageEvents, usageService } from "./usage/index.js";
 export type { UsageServiceOptions } from "./usage/index.js";

@@ -7,7 +7,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "../payment-stripe/sqlite-db.mjs"
-import { creemPaymentMethod, creemPaymentService, paymentService } from "../../bin/index.js"
+import { creemPaymentProvider, paymentService } from "../../bin/index.js"
 
 test("paymentService lists enabled Creem payment method for guests", async () => {
   const cwd = process.cwd()
@@ -19,8 +19,8 @@ test("paymentService lists enabled Creem payment method for guests", async () =>
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     base.use(paymentService({
-      methods: [
-        creemPaymentMethod({
+      providers: [
+        creemPaymentProvider({
           api_key: "creem_test",
           product_id: "prod_test",
           currency: "usd",
@@ -38,7 +38,7 @@ test("paymentService lists enabled Creem payment method for guests", async () =>
         type: "checkout",
         enabled: true,
         label: "Creem",
-        service: "payment.creem",
+        service: "payment",
         action: "checkout/create",
         requires_user: true,
         currency: "usd",
@@ -60,8 +60,8 @@ test("paymentService marks Creem disabled when required config is missing", asyn
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     base.use(paymentService({
-      methods: [
-        creemPaymentMethod({
+      providers: [
+        creemPaymentProvider({
           currency: "usd",
         }),
       ],
@@ -77,7 +77,7 @@ test("paymentService marks Creem disabled when required config is missing", asyn
         type: "checkout",
         enabled: false,
         label: "Creem",
-        service: "payment.creem",
+        service: "payment",
         action: "checkout/create",
         requires_user: true,
         currency: "usd",
@@ -90,7 +90,7 @@ test("paymentService marks Creem disabled when required config is missing", asyn
   }
 })
 
-test("creemPaymentService creates checkout sessions and finishes topups through webhook", async () => {
+test("paymentService creates checkout sessions and finishes topups through webhook", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-creem-service-"))
   const creemStub = await createCreemStub()
@@ -101,13 +101,17 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(creemPaymentService({
+    base.use(paymentService({
       balance,
-      api_key: "creem_test",
-      product_id: "prod_test",
-      webhook_secret: "whsec_creem",
-      api_base_url: creemStub.baseURL,
-      currency: "usd",
+      providers: [
+        creemPaymentProvider({
+          api_key: "creem_test",
+          product_id: "prod_test",
+          webhook_secret: "whsec_creem",
+          api_base_url: creemStub.baseURL,
+          currency: "usd",
+        }),
+      ],
     }))
 
     await base.health()
@@ -126,8 +130,9 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
     const topup = await balance.createTopup("user_1", 50, { note: "recharge" })
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.creem/checkout/create",
+      path: "/v1/payment/checkout/create",
       body: {
+        method_id: "creem",
         topup_id: topup.topup_id,
       },
     }))
@@ -135,17 +140,19 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
     const checkout = await checkoutResponse.json()
     assert.equal(checkout.status, "pending")
     assert.equal(checkout.topup_id, topup.topup_id)
-    assert.equal(checkout.creem_checkout_id, "ch_test_checkout")
+    assert.equal(checkout.provider, "creem")
+    assert.equal(checkout.provider_session_id, "ch_test_checkout")
     assert.equal(checkout.checkout_url, "https://checkout.creem.test/ch_test_checkout")
     assert.equal(creemStub.lastBody().product_id, "prod_test")
-    assert.equal(creemStub.lastBody().success_url, "https://base.example.com/v1/payment.creem/redirect/success")
+    assert.equal(creemStub.lastBody().success_url, "https://base.example.com/v1/payment/redirect/success")
     assert.equal(creemStub.lastBody().request_id, checkout.payment_id)
     assert.equal(creemStub.lastBody().metadata.topup_id, topup.topup_id)
 
     const duplicateCheckoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.creem/checkout/create",
+      path: "/v1/payment/checkout/create",
       body: {
+        method_id: "creem",
         topup_id: topup.topup_id,
       },
     }))
@@ -153,7 +160,7 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
     const duplicateCheckout = await duplicateCheckoutResponse.json()
     assert.equal(duplicateCheckout.payment_id, checkout.payment_id)
 
-    const invalidWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment.creem/webhook", {
+    const invalidWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -179,7 +186,7 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
         },
       },
     })
-    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment.creem/webhook", {
+    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -190,14 +197,15 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
     assert.equal(webhookResponse.status, 200)
     assert.deepEqual(await webhookResponse.json(), {
       received: true,
-      event_id: "evt_checkout_completed",
+      event_id: "creem:evt_checkout_completed",
+      provider: "creem",
       sync_status: "applied",
     })
 
     const afterTopup = await balance.read("user_1")
     assert.equal(afterTopup.balance, 50)
 
-    const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment.creem/webhook", {
+    const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -208,24 +216,26 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
     assert.equal(repeatedWebhookResponse.status, 200)
     assert.deepEqual(await repeatedWebhookResponse.json(), {
       received: true,
-      event_id: "evt_checkout_completed",
+      event_id: "creem:evt_checkout_completed",
+      provider: "creem",
       sync_status: "applied",
     })
     assert.equal((await balance.read("user_1")).balance, 50)
 
     const myPaymentsResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.creem/payments/me",
+      path: "/v1/payment/payments/me",
       method: "GET",
     }))
     assert.equal(myPaymentsResponse.status, 200)
     const myPayments = await myPaymentsResponse.json()
     assert.equal(myPayments.items.length, 1)
     assert.equal(myPayments.items[0].status, "paid")
-    assert.equal(myPayments.items[0].creem_order_id, "ord_test_order")
+    assert.equal(myPayments.items[0].provider, "creem")
+    assert.equal(myPayments.items[0].provider_order_id, "ord_test_order")
 
     const allPaymentsResponse = await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/payment.creem/payments",
+      path: "/v1/payment/payments",
       method: "GET",
     }))
     assert.equal(allPaymentsResponse.status, 200)
@@ -238,7 +248,7 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
   }
 })
 
-test("creemPaymentService falls back to request origin for redirect URLs and exposes HTML pages", async () => {
+test("paymentService falls back to request origin for redirect URLs and exposes HTML pages", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-creem-redirect-"))
   const creemStub = await createCreemStub()
@@ -249,12 +259,16 @@ test("creemPaymentService falls back to request origin for redirect URLs and exp
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(creemPaymentService({
+    base.use(paymentService({
       balance,
-      api_key: "creem_test",
-      product_id: "prod_test",
-      webhook_secret: "whsec_creem",
-      api_base_url: creemStub.baseURL,
+      providers: [
+        creemPaymentProvider({
+          api_key: "creem_test",
+          product_id: "prod_test",
+          webhook_secret: "whsec_creem",
+          api_base_url: creemStub.baseURL,
+        }),
+      ],
     }))
 
     await base.health()
@@ -272,21 +286,21 @@ test("creemPaymentService falls back to request origin for redirect URLs and exp
     const topup = await balance.createTopup("user_2", 80, { note: "redirect fallback" })
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.creem/checkout/create",
-      body: { topup_id: topup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "creem", topup_id: topup.topup_id },
       origin: "https://runtime.example.com",
     }))
     assert.equal(checkoutResponse.status, 200)
     assert.equal(
       creemStub.lastBody().success_url,
-      "https://runtime.example.com/v1/payment.creem/redirect/success",
+      "https://runtime.example.com/v1/payment/redirect/success",
     )
-    const successPage = await base.handleRequest(new Request("https://runtime.example.com/v1/payment.creem/redirect/success"))
+    const successPage = await base.handleRequest(new Request("https://runtime.example.com/v1/payment/redirect/success"))
     assert.equal(successPage.status, 200)
     assert.match(successPage.headers.get("content-type") || "", /^text\/html\b/)
     assert.match(await successPage.text(), /Payment completed/)
 
-    const cancelPage = await base.handleRequest(new Request("https://runtime.example.com/v1/payment.creem/redirect/cancel"))
+    const cancelPage = await base.handleRequest(new Request("https://runtime.example.com/v1/payment/redirect/cancel"))
     assert.equal(cancelPage.status, 200)
     assert.match(cancelPage.headers.get("content-type") || "", /^text\/html\b/)
     assert.match(await cancelPage.text(), /Payment canceled/)
@@ -297,7 +311,7 @@ test("creemPaymentService falls back to request origin for redirect URLs and exp
   }
 })
 
-test("creemPaymentService marks failed and expired payments without crediting balance", async () => {
+test("paymentService marks failed and expired payments without crediting balance", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-creem-status-"))
   const creemStub = await createCreemStub()
@@ -308,12 +322,16 @@ test("creemPaymentService marks failed and expired payments without crediting ba
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
     const balance = createBalanceBridge()
-    base.use(creemPaymentService({
+    base.use(paymentService({
       balance,
-      api_key: "creem_test",
-      product_id: "prod_test",
-      webhook_secret: "whsec_creem",
-      api_base_url: creemStub.baseURL,
+      providers: [
+        creemPaymentProvider({
+          api_key: "creem_test",
+          product_id: "prod_test",
+          webhook_secret: "whsec_creem",
+          api_base_url: creemStub.baseURL,
+        }),
+      ],
     }))
 
     await base.health()
@@ -332,8 +350,8 @@ test("creemPaymentService marks failed and expired payments without crediting ba
     const expiredTopup = await balance.createTopup("user_3", 30, { note: "expired" })
     const expiredCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.creem/checkout/create",
-      body: { topup_id: expiredTopup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "creem", topup_id: expiredTopup.topup_id },
     }))).json()
 
     const expiredPayload = JSON.stringify({
@@ -348,7 +366,7 @@ test("creemPaymentService marks failed and expired payments without crediting ba
         },
       },
     })
-    const expiredResponse = await base.handleRequest(new Request("http://localhost/v1/payment.creem/webhook", {
+    const expiredResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -365,8 +383,8 @@ test("creemPaymentService marks failed and expired payments without crediting ba
     })
     const failedCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
-      path: "/v1/payment.creem/checkout/create",
-      body: { topup_id: failedTopup.topup_id },
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "creem", topup_id: failedTopup.topup_id },
     }))).json()
 
     const failedPayload = JSON.stringify({
@@ -382,7 +400,7 @@ test("creemPaymentService marks failed and expired payments without crediting ba
         },
       },
     })
-    const failedResponse = await base.handleRequest(new Request("http://localhost/v1/payment.creem/webhook", {
+    const failedResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -393,7 +411,7 @@ test("creemPaymentService marks failed and expired payments without crediting ba
     assert.equal(failedResponse.status, 200)
 
     const paymentsResponse = await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/payment.creem/payments",
+      path: "/v1/payment/payments",
       method: "GET",
     }))
     const payments = await paymentsResponse.json()

@@ -28,26 +28,30 @@ Stripe 事件
 ## 启用示例
 
 ```ts
-base.use(stripePaymentService({
+base.use(paymentService({
   balance: {
     readTopup: async (topup_id) => await balance.readTopup(topup_id),
     finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   },
-  secret_key: process.env.STRIPE_SECRET_KEY,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+  providers: [
+    stripePaymentProvider({
+      secret_key: process.env.STRIPE_SECRET_KEY,
+      webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+    }),
+  ],
 }));
 ```
 
 配置好以后，Stripe 应该把事件发到：
 
 ```txt
-POST /v1/payment.stripe/webhook
+POST /v1/payment/webhook?provider=stripe
 ```
 
 Stripe 跳转地址会自动基于 `DOWNCITY_CITY_BASE_URL` 生成；未配置时会回退到当前请求 origin，并自动提供两张可直接访问的默认结果页：
 
-- `GET /v1/payment.stripe/redirect/success`
-- `GET /v1/payment.stripe/redirect/cancel`
+- `GET /v1/payment/redirect/success`
+- `GET /v1/payment/redirect/cancel`
 
 ## 当前阶段真正同步什么
 
@@ -96,6 +100,6 @@ webhook 处理必须在两层保证幂等：
 
 ## 常用 API / 入口
 
-- `POST /v1/payment.stripe/checkout/create`
-- `POST /v1/payment.stripe/webhook`
-- `GET /v1/payment.stripe/payments`
+- `POST /v1/payment/checkout/create`
+- `POST /v1/payment/webhook?provider=stripe`
+- `GET /v1/payment/payments`

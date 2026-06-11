@@ -9,7 +9,32 @@
 import chalk from "chalk";
 import { createSpinner, shouldRenderSpinner, } from "../utils/cli/Spinner.js";
 import { format_tool_call_block, format_tool_result_block, } from "./AgentChatToolFormatter.js";
+function format_approval_request_block(event) {
+    return {
+        title: `[approval] ${event.toolName} requests unrestricted sandbox`,
+        detail_lines: [
+            `approval_id: ${event.approvalId}`,
+            `cmd: ${event.cmd}`,
+            `cwd: ${event.cwd}`,
+            `reason: ${event.reason}`,
+            "approve: run shell plugin action approve with this approval_id",
+            "deny: run shell plugin action deny with this approval_id",
+        ],
+    };
+}
+function format_approval_result_block(event) {
+    return {
+        title: `[approval] ${event.decision}`,
+        detail_lines: [
+            `approval_id: ${event.approvalId}`,
+            `tool: ${event.toolName}`,
+        ],
+    };
+}
 function extract_event_turn_id(event) {
+    if (event.type === "tool-approval-request" || event.type === "tool-approval-result") {
+        return "";
+    }
     if ("turnId" in event && typeof event.turnId === "string") {
         return event.turnId;
     }
@@ -70,6 +95,14 @@ export class AgentChatInteractiveRenderer {
                     tool_name: event.toolName,
                     result: event.result,
                 }));
+                this.set_spinner_text("Thinking...");
+                return;
+            case "tool-approval-request":
+                this.print_tool_block(format_approval_request_block(event));
+                this.set_spinner_text("Waiting for approval...");
+                return;
+            case "tool-approval-result":
+                this.print_tool_block(format_approval_result_block(event));
                 this.set_spinner_text("Thinking...");
                 return;
             case "error":

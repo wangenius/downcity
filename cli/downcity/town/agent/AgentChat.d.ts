@@ -7,13 +7,14 @@
  * - 默认使用独立 local-cli 主会话：`local-cli-chat-main`。
  * - 远程访问统一走 `RemoteAgent({ url })`，不再在 CLI 侧维护第二套 HTTP SDK transport。
  */
-import type { AgentChatCliOptions, AgentChatExecutionOutcome, AgentChatTransportOptions } from "./AgentChatTypes.js";
+import type { AgentChatCliOptions, AgentChatExecutionOutcome, AgentChatSessionOptions, AgentChatTransportOptions } from "./AgentChatTypes.js";
 /**
  * 向目标 agent 的 SDK actor session 发送一轮消息。
  */
 export declare function executeAgentChatTurn(params: {
     agentId: string;
     message: string;
+    sessionOptions?: AgentChatSessionOptions;
     transport?: AgentChatTransportOptions;
 }): Promise<AgentChatExecutionOutcome>;
 /**

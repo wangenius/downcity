@@ -1,6 +1,6 @@
 ---
 title: Usage
-description: How to chat in the Side Panel and send the current page to Downcity from the popup
+description: How to chat in the Side Panel and hand page context to a Downcity Agent
 ---
 
 # Usage
@@ -8,8 +8,7 @@ description: How to chat in the Side Panel and send the current page to Downcity
 ## Side Panel Flow
 
 1. Click the extension icon in the browser toolbar
-2. Click `侧栏` in the popup
-3. Write a message and send it
+2. Write a message and send it
 
 The Side Panel uses the default Agent saved in settings and keeps a stable browser session for the current Town and Agent, so you can keep the conversation open while you browse.
 
@@ -17,32 +16,17 @@ The composer automatically includes the current tab as an input reference. It up
 
 When you select text on the page, a small `引用` popover appears next to the selection. Click it to insert the selected text as an inline reference inside the Side Panel composer.
 
-## Extension Popup Flow
-
-1. Click the extension icon in the browser toolbar
-2. Choose the target Agent
-3. Write the task prompt
-4. Click send or press `Cmd/Ctrl + Enter`
-
-The popup is best for a deliberate, explicit dispatch.
-
 ## What Happens During Send
 
-The extension works in this order:
+When you send a message, the extension works in this order:
 
 1. Read the current page title and URL
 2. Capture the main page body as Markdown
 3. Build a Markdown attachment
 4. Send it to the selected Agent
 
-## Why Page History Exists
-
-The popup keeps recent send history for the current page and current Town so you can:
-
-- revisit previous asks
-- avoid repetitive typing
-- confirm what you sent from that page
-
 ## Keyboard Shortcut
 
 - `Cmd/Ctrl + Enter`: send the current Ask
+- `Cmd + I`: open the Downcity Side Panel; if the current page has selected text, it is inserted as a reference
+- `Esc`: close the Downcity Side Panel when the composer is focused

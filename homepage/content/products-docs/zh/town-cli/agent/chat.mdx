@@ -10,31 +10,40 @@ description: 在终端中与选定 agent 对话，支持交互式和一次性模
 目标 agent 已经运行后，使用这个命令在终端里对话。
 
 该命令默认使用独立的本地 CLI 主会话：`local-cli-chat-main`。
+交互式模式会先让你选择已有 session，或创建一个新的 session 后再进入 TUI。
+如果想跳过选择器并直接使用新上下文，可以使用 `--new-session`。
 
 ## 用法
 
 ```bash
-town agent chat [--to <id>]
-town agent chat [--to <id>] --message <text> [--json]
+town agent chat [--to <id>] [--session-id <sessionId>]
+town agent chat [--to <id>] --new-session
+town agent chat [--to <id>] --message <text> [--json] [--session-id <sessionId> | --new-session]
 ```
 
 ## 常用参数
 
 - `-t, --to <id>`：目标 agent id；省略时会从当前运行中的 agent 里交互选择
 - `-m, --message <text>`：发送一轮消息后直接退出，不进入 REPL
+- `--session-id <sessionId>`：进入或复用指定 CLI chat session
+- `--new-session`：新建一个独立 CLI chat session 后再开始对话
 - `--json`：一次性模式下输出结构化结果
 - `--host <host>`：覆盖自动解析出的 RPC host
 
 ## 行为说明
 
 - 默认在未传 `--message` 时进入交互式持续对话。
-- 交互式模式下，选择 agent 进入对话后，终端会显示当前执行中的 spinner 状态。
+- 交互式模式下，选择 agent 后会先选择已有 session，或创建一个新的 session。
+- 传入 `--session-id` 或 `--new-session` 时会跳过交互式 session 选择器。
+- TUI 内输入 `/session` 可以切换 session，输入 `/new` 可以创建并切换到新 session。
+- 进入对话后，终端会显示当前执行中的 spinner 状态。
 - 当 agent 触发 tool 调用时，交互式模式会展示 tool 名称、关键输入摘要，以及完成状态。
 - 非 `--json` 模式下，Agent 回复会在终端中流式输出，而不是等整轮完成后一次性打印。
 - 一次性模式不会进入 REPL。
 - `--message` 的一次性模式保持简洁输出，不展示交互式 spinner / tool 过程区块。
 - 目标 agent 必须已经处于运行中。
-- 终端里输入的每一行都会进入同一个本地 CLI 会话，不与 Console UI 共用上下文。
+- 终端里输入的每一行都会进入当前选定的本地 CLI 会话，不与 Console UI 共用上下文。
+- `--new-session` 会生成 `local-cli-chat-*` session ID，TUI 标题会展示当前生效的 session。
 - 输入 `/exit` 或 `/quit` 退出持续对话。
 
 ## 没有回复时
@@ -73,4 +82,9 @@ tool shell.exec done
 
 ```bash
 $ town agent chat --to lucas_whitman --message "总结一下今天做了什么" --json
+```
+
+```bash
+$ town agent chat --to lucas_whitman --new-session
+$ town agent chat --to lucas_whitman --session-id local-cli-chat-main
 ```

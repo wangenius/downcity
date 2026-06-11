@@ -85,3 +85,68 @@ export interface SelectionReferenceMessage {
    */
   pageUrl: string;
 }
+
+/**
+ * 页面选中文本读取响应。
+ */
+export interface PageSelectionReadResponse {
+  /**
+   * 当前选中文本。
+   */
+  text: string;
+
+  /**
+   * 选中文本所在页面标题。
+   */
+  pageTitle: string;
+
+  /**
+   * 选中文本所在页面 URL。
+   */
+  pageUrl: string;
+}
+
+/**
+ * Side Panel 输入框聚焦消息。
+ */
+export interface FocusComposerMessage {
+  /**
+   * 消息类型。
+   */
+  type: "downcity.side-panel.focus-composer";
+}
+
+/**
+ * Side Panel 关闭请求消息。
+ */
+export interface CloseSidePanelMessage {
+  /**
+   * 消息类型。
+   */
+  type: "downcity.side-panel.close";
+}
+
+/**
+ * Side Panel 自关闭消息。
+ */
+export interface CloseSidePanelSelfMessage {
+  /**
+   * 消息类型。
+   */
+  type: "downcity.side-panel.close-self";
+}
+
+/**
+ * Side Panel ready 响应。
+ */
+export interface SidePanelReadyResponse {
+  /**
+   * 待插入的选中文本引用。
+   */
+  reference?: SelectionReferenceMessage | null;
+
+  /**
+   * 是否需要在初始化后聚焦输入框。
+   */
+  focusComposer?: boolean;
+}

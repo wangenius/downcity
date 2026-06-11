@@ -158,6 +158,14 @@ export function registerAgentCommands(
       zh: "一次性发送一轮消息并退出",
       en: "send one message and exit",
     }))
+    .option("--session-id <sessionId>", t({
+      zh: "进入或复用指定 session",
+      en: "enter or reuse a specific session",
+    }))
+    .option("--new-session [enabled]", t({
+      zh: "新建一个独立 session 后进入 chat",
+      en: "create a new isolated session before chatting",
+    }), parseBoolean)
     .option("--json [enabled]", t({
       zh: "一次性模式下以 JSON 输出",
       en: "output as JSON in one-shot mode",
@@ -174,6 +182,8 @@ export function registerAgentCommands(
         options: {
           to?: string;
           message?: string;
+          sessionId?: string;
+          newSession?: boolean;
           json?: boolean;
           host?: string;
           port?: number;

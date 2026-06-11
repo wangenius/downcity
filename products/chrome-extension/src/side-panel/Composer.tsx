@@ -19,9 +19,12 @@ import {
 } from "react";
 import type { ActiveTabContext } from "../types/extension";
 import type {
+  CloseSidePanelMessage,
   ComposerReference,
   ComposerSubmitPayload,
+  FocusComposerMessage,
   SelectionReferenceMessage,
+  SidePanelReadyResponse,
 } from "../types/sidePanel";
 
 /**
@@ -240,6 +243,7 @@ function clearEditorKeepingPageReferences(element: HTMLElement) {
 export function Composer(props: ComposerProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const insertedSelectionIdsRef = useRef<Set<string>>(new Set());
+  const pendingFocusRef = useRef(false);
   const { disabled, onSubmit, sending, tab } = props;
   const [hasText, setHasText] = useState(false);
   const [hasReferences, setHasReferences] = useState(false);
@@ -259,6 +263,40 @@ export function Composer(props: ComposerProps) {
     updateEditorState(editorRef.current, setHasText, setHasReferences);
   }, []);
 
+  const closeSidePanel = useCallback(() => {
+    const message: CloseSidePanelMessage = {
+      type: "downcity.side-panel.close",
+    };
+    chrome.runtime.sendMessage(message, () => {
+      void chrome.runtime.lastError;
+    });
+    window.close();
+  }, []);
+
+  const focusEditor = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor || disabled) {
+      pendingFocusRef.current = true;
+      return;
+    }
+
+    pendingFocusRef.current = false;
+    editor.focus();
+
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }, [disabled]);
+
+  useEffect(() => {
+    if (!disabled && pendingFocusRef.current) {
+      focusEditor();
+    }
+  }, [disabled, focusEditor]);
+
   const insertSelectionReference = useCallback((message: SelectionReferenceMessage) => {
     const text = String(message.text || "").trim();
     if (!text) return;
@@ -276,12 +314,16 @@ export function Composer(props: ComposerProps) {
       });
       updateEditorState(editor, setHasText, setHasReferences);
     }
-    editorRef.current?.focus();
-  }, []);
+    focusEditor();
+  }, [focusEditor]);
 
   useEffect(() => {
     const onMessage = (message: unknown) => {
-      const record = message as Partial<SelectionReferenceMessage> | null;
+      const record = message as Partial<SelectionReferenceMessage | FocusComposerMessage> | null;
+      if (record?.type === "downcity.side-panel.focus-composer") {
+        focusEditor();
+        return;
+      }
       if (record?.type !== "downcity.side-panel.insert-selection-reference") {
         return;
       }
@@ -290,9 +332,13 @@ export function Composer(props: ComposerProps) {
 
     chrome.runtime.onMessage.addListener(onMessage);
     chrome.runtime.sendMessage({ type: "downcity.side-panel.ready" }, (response) => {
-      const reference = response?.reference as SelectionReferenceMessage | undefined;
+      const readyResponse = response as SidePanelReadyResponse | undefined;
+      const reference = readyResponse?.reference || undefined;
       if (reference?.type === "downcity.side-panel.insert-selection-reference") {
         insertSelectionReference(reference);
+      }
+      if (readyResponse?.focusComposer) {
+        focusEditor();
       }
       void chrome.runtime.lastError;
     });
@@ -300,7 +346,7 @@ export function Composer(props: ComposerProps) {
     return () => {
       chrome.runtime.onMessage.removeListener(onMessage);
     };
-  }, [insertSelectionReference]);
+  }, [focusEditor, insertSelectionReference]);
 
   const submit = useCallback(() => {
     if (!canSubmit) return;
@@ -317,12 +363,24 @@ export function Composer(props: ComposerProps) {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (event.nativeEvent.isComposing) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSidePanel();
+        return;
+      }
+      if (event.key.toLowerCase() === "i" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        event.stopPropagation();
+        focusEditor();
+        return;
+      }
       if (event.key !== "Enter") return;
       if (!event.metaKey && !event.ctrlKey) return;
       event.preventDefault();
       submit();
     },
-    [submit],
+    [closeSidePanel, focusEditor, submit],
   );
 
   const handleEditorClick = useCallback((event: MouseEvent<HTMLDivElement>) => {

@@ -17,8 +17,17 @@ import {
   format_tool_call_block,
   format_tool_result_block,
 } from "./AgentChatToolFormatter.js";
+import type {
+  AgentChatSessionChoice,
+  AgentChatSessionSummaryView,
+} from "./AgentChatTypes.js";
+import {
+  resolve_loop_selectable_index,
+  resolve_next_loop_selectable_index,
+} from "../tui/SelectableList.js";
 
 interface blessed_log_element extends blessed.Widgets.BoxElement {
+  setLabel: (label: string) => void;
   setContent: (content: string) => void;
   setScrollPerc?: (value: number) => void;
 }
@@ -43,12 +52,23 @@ interface blessed_textbox_element extends blessed.Widgets.TextboxElement {
   clearValue: () => void;
 }
 
-interface chat_message_sink {
-  /** 追加普通消息。 */
-  append_message: (role: "system" | "user" | "assistant", text: string) => void;
-
-  /** 追加状态消息。 */
-  append_status: (text: string) => void;
+interface blessed_list_element extends blessed.Widgets.ListElement {
+  /** 绑定键盘事件。 */
+  key: (
+    keys: string | string[],
+    listener: (...args: unknown[]) => void,
+  ) => blessed_list_element;
+  /** 绑定元素事件。 */
+  on: (
+    event: string,
+    listener: (...args: unknown[]) => void,
+  ) => blessed_list_element;
+  /** 聚焦列表。 */
+  focus: () => void;
+  /** 选中指定索引。 */
+  select: (index: number) => void;
+  /** 当前选中索引。 */
+  selected?: number;
 }
 
 function extract_event_turn_id(event: AgentSessionEvent): string {
@@ -216,7 +236,11 @@ class AgentChatTuiRenderer implements AgentChatInteractiveRendererPort {
  */
 export async function run_agent_chat_tui(params: {
   agent_id: string;
+  session_id: string;
+  list_sessions: () => Promise<AgentChatSessionSummaryView[]>;
+  create_session: () => Promise<{ session_id: string }>;
   run_turn: (input: {
+    session_id: string;
     message: string;
     interactive_renderer: AgentChatInteractiveRendererPort;
   }) => Promise<{
@@ -226,16 +250,19 @@ export async function run_agent_chat_tui(params: {
     text?: string;
   }>;
 }): Promise<void> {
+  let current_session_id = params.session_id;
+  const build_title = (): string =>
+    `Agent chat · ${params.agent_id} · ${current_session_id}`;
   const history_lines: string[] = [
-    `system> Agent chat · ${params.agent_id}`,
-    "system> Type /help for shortcuts, /quit to exit.",
+    `system> ${build_title()}`,
+    "system> Type /help for shortcuts, /session to switch, /new to create, /quit to exit.",
   ];
 
   await new Promise<void>((resolve) => {
     const screen = blessed.screen({
       smartCSR: true,
       fullUnicode: true,
-      title: `Agent Chat · ${params.agent_id}`,
+      title: build_title(),
       dockBorders: true,
       autoPadding: true,
     });
@@ -253,7 +280,7 @@ export async function run_agent_chat_tui(params: {
       scrollable: true,
       alwaysScroll: true,
       border: "line",
-      label: ` Agent Chat · ${params.agent_id} `,
+      label: ` ${build_title()} `,
       padding: { left: 1, right: 1, top: 1, bottom: 1 },
       style: {
         border: { fg: "green" },
@@ -282,6 +309,9 @@ export async function run_agent_chat_tui(params: {
     }) as blessed_textbox_element;
 
     const refresh_view = (stream_preview: string = ""): void => {
+      const title = build_title();
+      screen.title = title;
+      log_box.setLabel(` ${title} `);
       const content = [...history_lines];
       const normalized_stream = String(stream_preview || "").trim();
       if (normalized_stream) {
@@ -292,6 +322,17 @@ export async function run_agent_chat_tui(params: {
         log_box.setScrollPerc(100);
       }
       screen.render();
+    };
+
+    const reset_session_view = (session_id: string): void => {
+      current_session_id = session_id;
+      history_lines.splice(
+        0,
+        history_lines.length,
+        `system> ${build_title()}`,
+        "system> Type /help for shortcuts, /session to switch, /new to create, /quit to exit.",
+      );
+      refresh_view();
     };
 
     const finish = (): void => {
@@ -387,13 +428,51 @@ export async function run_agent_chat_tui(params: {
           break;
         }
         if (text === "/clear") {
-          history_lines.splice(0, history_lines.length, `system> Agent chat · ${params.agent_id}`);
+          history_lines.splice(0, history_lines.length, `system> ${build_title()}`);
           refresh_view();
           continue;
         }
         if (text === "/help") {
-          history_lines.push("system> /help · /clear · /quit");
+          history_lines.push("system> /help · /session · /new · /clear · /quit");
           refresh_view();
+          continue;
+        }
+        if (text === "/new") {
+          history_lines.push("status> Creating session...");
+          refresh_view();
+          try {
+            const created = await params.create_session();
+            reset_session_view(created.session_id);
+          } catch (error) {
+            history_lines.push(`error> ${format_error_message(error)}`);
+            refresh_view();
+          }
+          continue;
+        }
+        if (text === "/session") {
+          const choice = await open_session_picker({
+            screen,
+            list_sessions: params.list_sessions,
+          });
+          if (!choice) {
+            refresh_view();
+            continue;
+          }
+          if (choice.kind === "create") {
+            history_lines.push("status> Creating session...");
+            refresh_view();
+            try {
+              const created = await params.create_session();
+              reset_session_view(created.session_id);
+            } catch (error) {
+              history_lines.push(`error> ${format_error_message(error)}`);
+              refresh_view();
+            }
+            continue;
+          }
+          if (choice.sessionId) {
+            reset_session_view(choice.sessionId);
+          }
           continue;
         }
 
@@ -405,6 +484,7 @@ export async function run_agent_chat_tui(params: {
         refresh_view();
 
         const outcome = await params.run_turn({
+          session_id: current_session_id,
           message: text,
           interactive_renderer: renderer,
         });
@@ -420,6 +500,125 @@ export async function run_agent_chat_tui(params: {
       finish();
     })();
   });
+}
+
+async function open_session_picker(params: {
+  screen: blessed.Widgets.Screen;
+  list_sessions: () => Promise<AgentChatSessionSummaryView[]>;
+}): Promise<AgentChatSessionChoice | null> {
+  const sessions = await params.list_sessions();
+  const choices: AgentChatSessionChoice[] = [
+    { kind: "create" },
+    ...sessions.map((session) => ({
+      kind: "session" as const,
+      sessionId: session.sessionId,
+    })),
+  ];
+  const labels = [
+    "+ Create new session",
+    ...sessions.map(format_session_choice_label),
+  ];
+
+  return await new Promise<AgentChatSessionChoice | null>((resolve) => {
+    const overlay = blessed.box({
+      parent: params.screen,
+      top: "center",
+      left: "center",
+      width: "80%",
+      height: "70%",
+      border: "line",
+      label: " Sessions ",
+      padding: { left: 1, right: 1, top: 1, bottom: 1 },
+      style: {
+        border: { fg: "green" },
+        fg: "white",
+        bg: "black",
+      },
+    });
+    const list = blessed.list({
+      parent: overlay,
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      keys: false,
+      vi: false,
+      mouse: true,
+      items: labels,
+      style: {
+        selected: {
+          fg: "black",
+          bg: "green",
+        },
+        item: {
+          fg: "white",
+        },
+      },
+    }) as blessed_list_element;
+
+    let finished = false;
+    let selected_index = resolve_loop_selectable_index(choices, 0, 0);
+    const finish = (choice: AgentChatSessionChoice | null): void => {
+      if (finished) return;
+      finished = true;
+      overlay.destroy();
+      params.screen.render();
+      resolve(choice);
+    };
+
+    list.key(["escape", "C-c", "q"], () => finish(null));
+    list.key(["up", "k"], () => {
+      selected_index = resolve_next_loop_selectable_index(
+        choices,
+        selected_index,
+        -1,
+      );
+      list.select(selected_index);
+      params.screen.render();
+    });
+    list.key(["down", "j"], () => {
+      selected_index = resolve_next_loop_selectable_index(
+        choices,
+        selected_index,
+        1,
+      );
+      list.select(selected_index);
+      params.screen.render();
+    });
+    list.key(["enter", "return"], () => {
+      selected_index = resolve_loop_selectable_index(
+        choices,
+        list.selected,
+        selected_index,
+      );
+      finish(choices[selected_index] || null);
+    });
+    list.on("select", (_item, index) => {
+      selected_index = resolve_loop_selectable_index(
+        choices,
+        index,
+        selected_index,
+      );
+      finish(choices[selected_index] || null);
+    });
+    list.select(selected_index);
+    list.focus();
+    params.screen.render();
+  });
+}
+
+function format_session_choice_label(session: AgentChatSessionSummaryView): string {
+  const title = String(session.title || session.sessionId).trim();
+  const count = `${session.messageCount} msg`;
+  const executing = session.executing ? " · running" : "";
+  const preview = String(session.previewText || "").trim();
+  return preview
+    ? `${title} · ${count}${executing} · ${preview}`
+    : `${title} · ${count}${executing}`;
+}
+
+function format_error_message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function normalize_textbox_value(value: unknown): string {

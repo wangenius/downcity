@@ -12,6 +12,11 @@
 export const AGENT_CHAT_DEFAULT_SESSION_ID = "local-cli-chat-main";
 
 /**
+ * `town agent chat --new-session` 生成的 session ID 前缀。
+ */
+export const AGENT_CHAT_NEW_SESSION_ID_PREFIX = "local-cli-chat";
+
+/**
  * `town agent chat` 命令选项。
  */
 export interface AgentChatCliOptions {
@@ -19,6 +24,14 @@ export interface AgentChatCliOptions {
   to?: string;
   /** 一次性发送的消息文本。 */
   message?: string;
+  /**
+   * 显式指定要进入或复用的 sessionId。
+   *
+   * 关键点（中文）：该字段来自 commander 的 `--session-id` camelCase 映射。
+   */
+  sessionId?: string;
+  /** 是否新建一个独立 session 后进入 chat。 */
+  newSession?: boolean;
   /** 是否输出 JSON。 */
   json?: boolean;
   /** 覆盖目标 RPC host。 */
@@ -61,6 +74,44 @@ export interface AgentChatTransportOptions {
   host?: string;
   /** 覆盖目标 RPC port。 */
   port?: number;
+}
+
+/**
+ * chat session 解析选项。
+ */
+export interface AgentChatSessionOptions {
+  /** 显式指定要进入或复用的 sessionId。 */
+  sessionId?: string;
+  /** 是否新建一个独立 session。 */
+  newSession?: boolean;
+}
+
+/**
+ * 交互式 chat session 选项。
+ */
+export interface AgentChatSessionChoice {
+  /** 当前选项类型。 */
+  kind: "create" | "session";
+  /** 选中后要使用的 sessionId。 */
+  sessionId?: string;
+}
+
+/**
+ * TUI 内展示的 session 摘要。
+ */
+export interface AgentChatSessionSummaryView {
+  /** 当前 sessionId。 */
+  sessionId: string;
+  /** 可读标题。 */
+  title?: string;
+  /** 最近预览文本。 */
+  previewText?: string;
+  /** 已落盘消息数。 */
+  messageCount: number;
+  /** 最近更新时间（ms）。 */
+  updatedAt?: number;
+  /** 是否正在执行。 */
+  executing?: boolean;
 }
 
 /**

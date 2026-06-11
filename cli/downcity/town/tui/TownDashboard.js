@@ -12,6 +12,7 @@ import { readTownCityConnectionState } from "../shared/CityConnection.js";
 import { getCliLocale, t } from "../shared/CliLocale.js";
 import { readTownPid, isTownProcessAlive } from "../process/registry/TownRuntime.js";
 import { resolveRunningManagedAgents } from "../town/gateway/runtime/GatewayProcess.js";
+import { is_disabled_selectable_item, resolve_loop_selectable_index, resolve_next_loop_selectable_index, } from "./SelectableList.js";
 /**
  * 打开 Town 顶层仪表盘。
  */
@@ -140,7 +141,7 @@ async function run_town_dashboard_once(state) {
         const shell = create_town_dashboard_shell(state);
         const { screen } = shell;
         let finished = false;
-        let selected_index = resolve_selectable_index(state.items, 0, 0);
+        let selected_index = resolve_loop_selectable_index(state.items, 0, 0);
         const finish = (value) => {
             if (finished)
                 return;
@@ -154,8 +155,8 @@ async function run_town_dashboard_once(state) {
             left: 0,
             width: "100%",
             height: "100%-2",
-            keys: true,
-            vi: true,
+            keys: false,
+            vi: false,
             mouse: true,
             style: {
                 item: { fg: "white" },
@@ -185,7 +186,7 @@ async function run_town_dashboard_once(state) {
             content: format_detail_content(state.items[0]),
         });
         const sync_selection = (index_value = list.selected) => {
-            selected_index = resolve_selectable_index(state.items, index_value, selected_index);
+            selected_index = resolve_loop_selectable_index(state.items, index_value, selected_index);
             if (list.selected !== selected_index) {
                 list.select(selected_index);
             }
@@ -199,13 +200,15 @@ async function run_town_dashboard_once(state) {
         list.on("select item", (_item, index_value) => {
             sync_selection(index_value);
         });
-        list.on("keypress", () => {
-            // 关键点（中文）：上下移动焦点时立即刷新右侧说明，不能只在 Enter 选择时刷新。
-            setImmediate(() => {
-                if (finished)
-                    return;
-                sync_selection();
-            });
+        list.key(["up", "k"], () => {
+            selected_index = resolve_next_loop_selectable_index(state.items, selected_index, -1);
+            list.select(selected_index);
+            sync_selection(selected_index);
+        });
+        list.key(["down", "j"], () => {
+            selected_index = resolve_next_loop_selectable_index(state.items, selected_index, 1);
+            list.select(selected_index);
+            sync_selection(selected_index);
         });
         list.key(["enter"], () => {
             sync_selection();
@@ -457,40 +460,8 @@ function format_footer(base_footer, item) {
 function format_breadcrumb(value) {
     return value.padEnd(80, " ");
 }
-function clamp_selected_index(value, length, fallback) {
-    if (length <= 0)
-        return 0;
-    const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
-    return Math.max(0, Math.min(length - 1, index));
-}
 function is_disabled_item(item) {
-    return item?.disabled === true;
-}
-function resolve_selectable_index(items, value, fallback) {
-    if (items.length <= 0)
-        return 0;
-    const candidate = clamp_selected_index(value, items.length, fallback);
-    if (!is_disabled_item(items[candidate])) {
-        return candidate;
-    }
-    const direction = candidate >= fallback ? 1 : -1;
-    const first_try = find_selectable_index(items, candidate, direction);
-    if (first_try !== -1)
-        return first_try;
-    const second_try = find_selectable_index(items, candidate, direction * -1);
-    if (second_try !== -1)
-        return second_try;
-    return candidate;
-}
-function find_selectable_index(items, start_index, direction) {
-    let index = start_index;
-    while (index >= 0 && index < items.length) {
-        if (!is_disabled_item(items[index])) {
-            return index;
-        }
-        index += direction;
-    }
-    return -1;
+    return is_disabled_selectable_item(item);
 }
 function read_town_cli_version() {
     try {

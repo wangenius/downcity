@@ -111,7 +111,10 @@ your-project/
 town agent start .
 town agent status .
 town agent chat -m "总结一下这个项目"
+town agent chat --new-session
 ```
+
+交互式 chat 会先选择已有 session，也可以直接创建新 session 后进入 TUI。
 
 如果希望在当前终端前台运行：
 

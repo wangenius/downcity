@@ -15,6 +15,11 @@ import { readTownPid, isTownProcessAlive } from "../process/registry/TownRuntime
 import { resolveRunningManagedAgents } from "../town/gateway/runtime/GatewayProcess.js";
 import type { TownCityConnectionState } from "../types/TownCityConnection.js";
 import type { tui_action_result, tui_list_item } from "../types/Tui.js";
+import {
+  is_disabled_selectable_item,
+  resolve_loop_selectable_index,
+  resolve_next_loop_selectable_index,
+} from "./SelectableList.js";
 
 type town_home_action =
   | "stop"
@@ -208,7 +213,7 @@ async function run_town_dashboard_once(
     const { screen } = shell;
 
     let finished = false;
-    let selected_index = resolve_selectable_index(state.items, 0, 0);
+    let selected_index = resolve_loop_selectable_index(state.items, 0, 0);
 
     const finish = (value: string | null): void => {
       if (finished) return;
@@ -223,8 +228,8 @@ async function run_town_dashboard_once(
       left: 0,
       width: "100%",
       height: "100%-2",
-      keys: true,
-      vi: true,
+      keys: false,
+      vi: false,
       mouse: true,
       style: {
         item: { fg: "white" },
@@ -256,7 +261,11 @@ async function run_town_dashboard_once(
     });
 
     const sync_selection = (index_value: unknown = list.selected): void => {
-      selected_index = resolve_selectable_index(state.items, index_value, selected_index);
+      selected_index = resolve_loop_selectable_index(
+        state.items,
+        index_value,
+        selected_index,
+      );
       if (list.selected !== selected_index) {
         list.select(selected_index);
       }
@@ -271,12 +280,24 @@ async function run_town_dashboard_once(
       sync_selection(index_value);
     });
 
-    list.on("keypress", () => {
-      // 关键点（中文）：上下移动焦点时立即刷新右侧说明，不能只在 Enter 选择时刷新。
-      setImmediate(() => {
-        if (finished) return;
-        sync_selection();
-      });
+    list.key(["up", "k"], () => {
+      selected_index = resolve_next_loop_selectable_index(
+        state.items,
+        selected_index,
+        -1,
+      );
+      list.select(selected_index);
+      sync_selection(selected_index);
+    });
+
+    list.key(["down", "j"], () => {
+      selected_index = resolve_next_loop_selectable_index(
+        state.items,
+        selected_index,
+        1,
+      );
+      list.select(selected_index);
+      sync_selection(selected_index);
     });
 
     list.key(["enter"], () => {
@@ -558,54 +579,8 @@ function format_breadcrumb(value: string): string {
   return value.padEnd(80, " ");
 }
 
-function clamp_selected_index(
-  value: unknown,
-  length: number,
-  fallback: number,
-): number {
-  if (length <= 0) return 0;
-  const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
-  return Math.max(0, Math.min(length - 1, index));
-}
-
 function is_disabled_item(item: tui_list_item | undefined): boolean {
-  return item?.disabled === true;
-}
-
-function resolve_selectable_index(
-  items: tui_list_item[],
-  value: unknown,
-  fallback: number,
-): number {
-  if (items.length <= 0) return 0;
-  const candidate = clamp_selected_index(value, items.length, fallback);
-  if (!is_disabled_item(items[candidate])) {
-    return candidate;
-  }
-
-  const direction = candidate >= fallback ? 1 : -1;
-  const first_try = find_selectable_index(items, candidate, direction);
-  if (first_try !== -1) return first_try;
-
-  const second_try = find_selectable_index(items, candidate, direction * -1);
-  if (second_try !== -1) return second_try;
-
-  return candidate;
-}
-
-function find_selectable_index(
-  items: tui_list_item[],
-  start_index: number,
-  direction: number,
-): number {
-  let index = start_index;
-  while (index >= 0 && index < items.length) {
-    if (!is_disabled_item(items[index])) {
-      return index;
-    }
-    index += direction;
-  }
-  return -1;
+  return is_disabled_selectable_item(item);
 }
 
 function read_town_cli_version(): string {

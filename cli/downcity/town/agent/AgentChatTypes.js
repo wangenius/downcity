@@ -9,4 +9,8 @@
  * `town agent chat` 默认使用的 local-cli 会话 ID。
  */
 export const AGENT_CHAT_DEFAULT_SESSION_ID = "local-cli-chat-main";
+/**
+ * `town agent chat --new-session` 生成的 session ID 前缀。
+ */
+export const AGENT_CHAT_NEW_SESSION_ID_PREFIX = "local-cli-chat";
 //# sourceMappingURL=AgentChatTypes.js.map

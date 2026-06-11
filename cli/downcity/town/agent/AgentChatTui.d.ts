@@ -7,12 +7,19 @@
  * - 只负责交互式持续对话；一次性 `--message` 仍走原有脚本化路径。
  */
 import type { AgentChatInteractiveRendererPort } from "../types/AgentChatInteractive.js";
+import type { AgentChatSessionSummaryView } from "./AgentChatTypes.js";
 /**
  * 打开 TUI 聊天面板。
  */
 export declare function run_agent_chat_tui(params: {
     agent_id: string;
+    session_id: string;
+    list_sessions: () => Promise<AgentChatSessionSummaryView[]>;
+    create_session: () => Promise<{
+        session_id: string;
+    }>;
     run_turn: (input: {
+        session_id: string;
         message: string;
         interactive_renderer: AgentChatInteractiveRendererPort;
     }) => Promise<{

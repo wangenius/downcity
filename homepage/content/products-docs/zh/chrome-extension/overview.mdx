@@ -7,7 +7,7 @@ description: Chrome 扩展现在提供什么能力，以及它和 Downcity Town 
 
 Chrome Extension 是 Downcity Town 的浏览器入口。
 
-它有两条主链路：右侧 Side Panel 和 Agent 持续对话，Popup 把当前网页整理成 Markdown 后发送给选定 Agent。
+它的主链路是右侧 Side Panel：你可以和 Agent 持续对话，并把当前页面或选中文本作为上下文引用。
 
 ## 适合什么场景
 
@@ -27,21 +27,12 @@ Side Panel 负责：
 - 在网页里选中文本后，通过选区旁的 `引用` 浮层插入选中文本
 - 订阅 Agent 事件并展示回复
 
-### 2. Extension Popup
-
-Popup 负责：
-
-- 选择目标 Agent
-- 输入 Ask 并发送
-- 查看当前页面在当前 Town 下的最近发送历史
-
-### 3. Settings Page
+### 2. Settings Page
 
 设置页负责：
 
 - 设置 `Town URL`
 - 选择默认 Agent
-- 设置 Popup 默认 Ask
 - 只在目标 Town 需要鉴权时填写 Town Token
 
 ## 它不会做什么
@@ -49,7 +40,6 @@ Popup 负责：
 - 不再提供 Inline Composer
 - 不再在网页内注入输入框
 - 只保留用于选中文本引用的轻量页面浮层
-- Popup 不等待完整执行结果
 - 设置页不再暴露多字段 Server 配置
 
 ## 推荐阅读

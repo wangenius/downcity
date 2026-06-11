@@ -663,6 +663,20 @@ export function SidePanelApp() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    const onMessage = (message: unknown) => {
+      const record = message as Record<string, unknown> | null;
+      if (record?.type === "downcity.side-panel.close-self") {
+        window.close();
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(onMessage);
+    return () => {
+      chrome.runtime.onMessage.removeListener(onMessage);
+    };
+  }, []);
+
   const buildPrompt = useCallback(async (payload: ComposerSubmitPayload): Promise<string> => {
     const query = String(payload.text || "").trim();
     const pageRefs = payload.references.filter((item) => item.type === "page");

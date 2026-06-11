@@ -8,11 +8,12 @@
  * - 远程访问统一走 `RemoteAgent({ url })`，不再在 CLI 侧维护第二套 HTTP SDK transport。
  */
 
-import chalk from "chalk";
 import prompts from "../tui/Prompts.js";
+import { generateId } from "../utils/Id.js";
 import {
   RemoteAgent,
   type AgentSessionEvent,
+  type AgentSessionSummary,
   type RemoteAgentSession,
 } from "@downcity/agent";
 import { emitCliBlock } from "../shared/CliReporter.js";
@@ -26,10 +27,15 @@ import { resolveDaemonRpcEndpoint } from "../process/daemon/Client.js";
 import type {
   AgentChatCliOptions,
   AgentChatExecutionOutcome,
+  AgentChatSessionChoice,
+  AgentChatSessionOptions,
+  AgentChatSessionSummaryView,
   AgentChatTransportOptions,
 } from "./AgentChatTypes.js";
-import { AGENT_CHAT_DEFAULT_SESSION_ID } from "./AgentChatTypes.js";
-import { AgentChatInteractiveRenderer } from "./AgentChatInteractiveRenderer.js";
+import {
+  AGENT_CHAT_DEFAULT_SESSION_ID,
+  AGENT_CHAT_NEW_SESSION_ID_PREFIX,
+} from "./AgentChatTypes.js";
 import { run_agent_chat_tui } from "./AgentChatTui.js";
 import type { AgentChatInteractiveRendererPort } from "../types/AgentChatInteractive.js";
 
@@ -46,6 +52,10 @@ type ResolvedAgentChatTarget = {
    * 当前 chat 绑定的 sessionId。
    */
   sessionId: string;
+  /**
+   * 当前 chat 是否要求创建全新的 session。
+   */
+  createNewSession: boolean;
 };
 
 type AgentChatRemoteTarget = {
@@ -60,13 +70,85 @@ function normalizeChatMessage(input: string): string {
 }
 
 /**
- * 判断 readline 在交互期间抛出的 Ctrl+C 中断是否属于正常退出。
+ * 生成 CLI chat 专用的新 sessionId。
  */
-function isReadlineAbortError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const code = "code" in error ? String(error.code || "") : "";
-  const name = "name" in error ? String(error.name || "") : "";
-  return code === "ABORT_ERR" || name === "AbortError";
+function createAgentChatSessionId(): string {
+  return [
+    AGENT_CHAT_NEW_SESSION_ID_PREFIX,
+    Date.now(),
+    generateId().slice(0, 8),
+  ].join("-");
+}
+
+/**
+ * 解析 `town agent chat` 的 session 选择语义。
+ *
+ * 关键点（中文）
+ * - 默认继续使用 `local-cli-chat-main`，保持老命令行为稳定。
+ * - `--new-session` 生成不可预测的新 ID，避免用户手动清理旧上下文。
+ * - `--session-id` 与 `--new-session` 互斥，避免“复用”和“新建”语义冲突。
+ */
+function resolveAgentChatSessionOptions(
+  input?: AgentChatSessionOptions,
+):
+  | {
+      success: true;
+      session_id: string;
+      create_new_session: boolean;
+    }
+  | {
+      success: false;
+      error: string;
+    } {
+  const explicit_session_id = String(input?.sessionId || "").trim();
+  const should_create_new_session = input?.newSession === true;
+
+  if (explicit_session_id && should_create_new_session) {
+    return {
+      success: false,
+      error: "`--session-id` and `--new-session` cannot be used together.",
+    };
+  }
+
+  if (should_create_new_session) {
+    return {
+      success: true,
+      session_id: createAgentChatSessionId(),
+      create_new_session: true,
+    };
+  }
+
+  return {
+    success: true,
+    session_id: explicit_session_id || AGENT_CHAT_DEFAULT_SESSION_ID,
+    create_new_session: false,
+  };
+}
+
+function hasExplicitSessionSelection(input: AgentChatSessionOptions): boolean {
+  return Boolean(String(input.sessionId || "").trim() || input.newSession === true);
+}
+
+function toSessionSummaryView(
+  summary: AgentSessionSummary,
+): AgentChatSessionSummaryView {
+  return {
+    sessionId: summary.sessionId,
+    ...(summary.title ? { title: summary.title } : {}),
+    ...(summary.previewText ? { previewText: summary.previewText } : {}),
+    messageCount: summary.messageCount,
+    ...(typeof summary.updatedAt === "number" ? { updatedAt: summary.updatedAt } : {}),
+    ...(summary.executing ? { executing: true } : {}),
+  };
+}
+
+function buildSessionChoiceDescription(summary: AgentChatSessionSummaryView): string {
+  const parts = [
+    `${summary.messageCount} messages`,
+    summary.previewText || "",
+    summary.executing ? "running" : "",
+  ].filter(Boolean);
+  return parts.join(" · ");
 }
 
 function buildAgentChatFailureText(error?: string): string {
@@ -125,6 +207,7 @@ async function resolveChatTargetAgentId(inputId?: string): Promise<string | null
 
 async function resolveAgentChatTarget(
   agentIdInput: string,
+  sessionOptions?: AgentChatSessionOptions,
 ): Promise<
   | {
       success: true;
@@ -136,7 +219,22 @@ async function resolveAgentChatTarget(
     }
 > {
   const agentId = String(agentIdInput || "").trim();
-  const sessionId = AGENT_CHAT_DEFAULT_SESSION_ID;
+  const resolved_session = resolveAgentChatSessionOptions(sessionOptions);
+  const sessionId = resolved_session.success
+    ? resolved_session.session_id
+    : AGENT_CHAT_DEFAULT_SESSION_ID;
+  if (!resolved_session.success) {
+    return {
+      success: false,
+      outcome: {
+        agentId,
+        sessionId,
+        success: false,
+        error: resolved_session.error,
+      },
+    };
+  }
+
   if (!agentId) {
     return {
       success: false,
@@ -200,6 +298,7 @@ async function resolveAgentChatTarget(
       agentId,
       projectRoot: resolved.projectRoot,
       sessionId,
+      createNewSession: resolved_session.create_new_session,
     },
   };
 }
@@ -262,10 +361,164 @@ async function createRemoteAgent(params: {
   });
 }
 
+async function listRemoteChatSessions(params: {
+  remote_agent: RemoteAgent;
+}): Promise<AgentChatSessionSummaryView[]> {
+  const page = await params.remote_agent.listSessions({ limit: 30 });
+  const sessions = page.items.map(toSessionSummaryView);
+  if (!sessions.some((item) => item.sessionId === AGENT_CHAT_DEFAULT_SESSION_ID)) {
+    sessions.unshift({
+      sessionId: AGENT_CHAT_DEFAULT_SESSION_ID,
+      messageCount: 0,
+    });
+  }
+  return sessions;
+}
+
+async function createRemoteChatSession(params: {
+  remote_agent: RemoteAgent;
+  session_id?: string;
+}): Promise<{ session_id: string }> {
+  const session_id = String(params.session_id || "").trim() || createAgentChatSessionId();
+  const session = await params.remote_agent.createSession({
+    sessionId: session_id,
+  });
+  return {
+    session_id: session.id,
+  };
+}
+
+async function createAgentChatSessionPicker(params: {
+  remote_agent: RemoteAgent;
+}): Promise<AgentChatSessionChoice | null> {
+  const sessions = await listRemoteChatSessions({
+    remote_agent: params.remote_agent,
+  });
+  const choices = [
+    {
+      title: "+ Create new session",
+      description: "Start with an empty CLI chat context",
+      value: { kind: "create" },
+    },
+    {
+      title: AGENT_CHAT_DEFAULT_SESSION_ID,
+      description: "Default local CLI chat session",
+      value: {
+        kind: "session",
+        sessionId: AGENT_CHAT_DEFAULT_SESSION_ID,
+      },
+    },
+    ...sessions
+      .filter((item) => item.sessionId !== AGENT_CHAT_DEFAULT_SESSION_ID)
+      .map((item) => ({
+        title: item.title || item.sessionId,
+        description: buildSessionChoiceDescription(item),
+        value: {
+          kind: "session" as const,
+          sessionId: item.sessionId,
+        },
+      })),
+  ];
+  const response = (await prompts({
+    type: "select",
+    name: "choice",
+    message: "选择或创建 Agent session",
+    choices,
+    initial: 0,
+  })) as { choice?: AgentChatSessionChoice };
+  return response.choice || null;
+}
+
+async function resolveInteractiveChatSession(params: {
+  agentId: string;
+  options: AgentChatCliOptions;
+  transport?: AgentChatTransportOptions;
+}): Promise<
+  | {
+      success: true;
+      target: ResolvedAgentChatTarget;
+      remote_agent: RemoteAgent;
+    }
+  | {
+      success: false;
+      error?: string;
+    }
+> {
+  const preselected_session = resolveAgentChatSessionOptions(params.options);
+  if (!preselected_session.success) {
+    return {
+      success: false,
+      error: preselected_session.error,
+    };
+  }
+
+  const resolved = await resolveAgentChatTarget(params.agentId, {
+    sessionId: preselected_session.session_id,
+    newSession: false,
+  });
+  if (!resolved.success) {
+    return {
+      success: false,
+      error: resolved.outcome.error,
+    };
+  }
+  resolved.target.createNewSession = preselected_session.create_new_session;
+
+  const remote_agent = await createRemoteAgent({
+    projectRoot: resolved.target.projectRoot,
+    transport: params.transport,
+  });
+
+  if (hasExplicitSessionSelection(params.options)) {
+    if (resolved.target.createNewSession) {
+      const created = await createRemoteChatSession({
+        remote_agent,
+        session_id: preselected_session.session_id,
+      });
+      resolved.target.sessionId = created.session_id;
+      resolved.target.createNewSession = false;
+    }
+    return {
+      success: true,
+      target: resolved.target,
+      remote_agent,
+    };
+  }
+
+  const choice = await createAgentChatSessionPicker({ remote_agent });
+  if (!choice) {
+    await remote_agent.close();
+    return {
+      success: false,
+    };
+  }
+
+  if (choice.kind === "create") {
+    const created = await createRemoteChatSession({ remote_agent });
+    resolved.target.sessionId = created.session_id;
+    resolved.target.createNewSession = false;
+  } else if (choice.sessionId) {
+    resolved.target.sessionId = choice.sessionId;
+    resolved.target.createNewSession = false;
+  }
+
+  return {
+    success: true,
+    target: resolved.target,
+    remote_agent,
+  };
+}
+
 async function getOrCreateRemoteSession(params: {
   remote_agent: RemoteAgent;
   session_id: string;
+  create_new_session?: boolean;
 }): Promise<RemoteAgentSession> {
+  if (params.create_new_session === true) {
+    return await params.remote_agent.createSession({
+      sessionId: params.session_id,
+    });
+  }
   try {
     return await params.remote_agent.getSession(params.session_id);
   } catch {
@@ -278,6 +531,7 @@ async function getOrCreateRemoteSession(params: {
 async function runSdkPromptTurn(params: {
   agentId: string;
   message: string;
+  sessionOptions?: AgentChatSessionOptions;
   transport?: AgentChatTransportOptions;
   renderText?: boolean;
   interactiveRenderer?: AgentChatInteractiveRendererPort;
@@ -285,24 +539,32 @@ async function runSdkPromptTurn(params: {
   success: boolean;
   error?: string;
   emittedVisibleText: boolean;
+  sessionId: string;
+  projectRoot?: string;
   text?: string;
 }> {
   const message = normalizeChatMessage(params.message);
+  const resolved_session = resolveAgentChatSessionOptions(params.sessionOptions);
   if (!message) {
     return {
       success: false,
       error: "Chat message is required.",
       emittedVisibleText: false,
+      sessionId: resolved_session.success
+        ? resolved_session.session_id
+        : AGENT_CHAT_DEFAULT_SESSION_ID,
       text: "",
     };
   }
 
-  const resolved = await resolveAgentChatTarget(params.agentId);
+  const resolved = await resolveAgentChatTarget(params.agentId, params.sessionOptions);
   if (!resolved.success) {
     return {
       success: false,
       error: resolved.outcome.error,
       emittedVisibleText: false,
+      sessionId: resolved.outcome.sessionId,
+      ...(resolved.outcome.projectRoot ? { projectRoot: resolved.outcome.projectRoot } : {}),
       text: "",
     };
   }
@@ -314,6 +576,7 @@ async function runSdkPromptTurn(params: {
   const session = await getOrCreateRemoteSession({
     remote_agent,
     session_id: resolved.target.sessionId,
+    create_new_session: resolved.target.createNewSession,
   });
 
   let printed_leading_newline = false;
@@ -409,6 +672,8 @@ async function runSdkPromptTurn(params: {
       success: result.success,
       ...(result.error ? { error: result.error } : {}),
       emittedVisibleText: emitted_visible_text,
+      sessionId: resolved.target.sessionId,
+      projectRoot: resolved.target.projectRoot,
       text: final_text,
     };
   } catch (error) {
@@ -422,6 +687,8 @@ async function runSdkPromptTurn(params: {
       success: false,
       error: error instanceof Error ? error.message : String(error),
       emittedVisibleText: emitted_visible_text,
+      sessionId: resolved.target.sessionId,
+      projectRoot: resolved.target.projectRoot,
       text: final_text,
     };
   } finally {
@@ -436,10 +703,14 @@ async function runSdkPromptTurn(params: {
 export async function executeAgentChatTurn(params: {
   agentId: string;
   message: string;
+  sessionOptions?: AgentChatSessionOptions;
   transport?: AgentChatTransportOptions;
 }): Promise<AgentChatExecutionOutcome> {
   const message = normalizeChatMessage(params.message);
-  const sessionId = AGENT_CHAT_DEFAULT_SESSION_ID;
+  const resolved_session = resolveAgentChatSessionOptions(params.sessionOptions);
+  const sessionId = resolved_session.success
+    ? resolved_session.session_id
+    : AGENT_CHAT_DEFAULT_SESSION_ID;
 
   if (!message) {
     return {
@@ -450,24 +721,22 @@ export async function executeAgentChatTurn(params: {
     };
   }
 
-  const resolved = await resolveAgentChatTarget(params.agentId);
-  if (!resolved.success) return resolved.outcome;
-
   const outcome = await runSdkPromptTurn({
     agentId: params.agentId,
     message,
+    sessionOptions: params.sessionOptions,
     transport: params.transport,
     renderText: false,
   });
 
   return {
     agentId: params.agentId,
-    ...(resolved.target.projectRoot ? { projectRoot: resolved.target.projectRoot } : {}),
-    sessionId,
+    ...(outcome.projectRoot ? { projectRoot: outcome.projectRoot } : {}),
+    sessionId: outcome.sessionId,
     success: outcome.success,
     payload: {
       success: outcome.success,
-      sessionId,
+      sessionId: outcome.sessionId,
       result: {
         success: outcome.success,
         userVisible: outcome.text || "",
@@ -488,6 +757,10 @@ async function runOneShotChat(params: {
     const outcome = await executeAgentChatTurn({
       agentId: params.agentId,
       message: params.message,
+      sessionOptions: {
+        sessionId: params.options.sessionId,
+        newSession: params.options.newSession,
+      },
       transport: {
         host: params.options.host,
         port: params.options.port,
@@ -511,6 +784,10 @@ async function runOneShotChat(params: {
   const outcome = await runSdkPromptTurn({
     agentId: params.agentId,
     message: params.message,
+    sessionOptions: {
+      sessionId: params.options.sessionId,
+      newSession: params.options.newSession,
+    },
     transport: {
       host: params.options.host,
       port: params.options.port,
@@ -532,6 +809,16 @@ async function runOneShotChat(params: {
  * `town agent chat` 统一入口。
  */
 export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
+  const resolved_session = resolveAgentChatSessionOptions(options);
+  if (!resolved_session.success) {
+    emitCliBlock({
+      tone: "error",
+      title: "Invalid chat session options",
+      note: resolved_session.error,
+    });
+    return;
+  }
+
   const agentId = await resolveChatTargetAgentId(options.to);
   if (!agentId) return;
 
@@ -563,25 +850,61 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
     return;
   }
 
-  await run_agent_chat_tui({
-    agent_id: agentId,
-    run_turn: async ({ message, interactive_renderer }) => {
-      const outcome = await runSdkPromptTurn({
-        agentId,
-        message,
-        transport: {
-          host: options.host,
-          port: options.port,
-        },
-        interactiveRenderer: interactive_renderer,
-      });
-
-      return {
-        success: outcome.success,
-        error: outcome.error,
-        emitted_visible_text: outcome.emittedVisibleText,
-        text: outcome.text,
-      };
+  const interactive = await resolveInteractiveChatSession({
+    agentId,
+    options,
+    transport: {
+      host: options.host,
+      port: options.port,
     },
   });
+  if (!interactive.success) {
+    if (interactive.error) {
+      emitCliBlock({
+        tone: "error",
+        title: "Agent chat failed",
+        note: interactive.error,
+      });
+    }
+    return;
+  }
+
+  try {
+    await run_agent_chat_tui({
+      agent_id: agentId,
+      session_id: interactive.target.sessionId,
+      list_sessions: async () =>
+        await listRemoteChatSessions({
+          remote_agent: interactive.remote_agent,
+        }),
+      create_session: async () =>
+        await createRemoteChatSession({
+          remote_agent: interactive.remote_agent,
+        }),
+      run_turn: async ({ session_id, message, interactive_renderer }) => {
+        const outcome = await runSdkPromptTurn({
+          agentId,
+          message,
+          sessionOptions: {
+            sessionId: session_id,
+            newSession: false,
+          },
+          transport: {
+            host: options.host,
+            port: options.port,
+          },
+          interactiveRenderer: interactive_renderer,
+        });
+
+        return {
+          success: outcome.success,
+          error: outcome.error,
+          emitted_visible_text: outcome.emittedVisibleText,
+          text: outcome.text,
+        };
+      },
+    });
+  } finally {
+    await interactive.remote_agent.close();
+  }
 }

@@ -13,6 +13,10 @@ const MAX_SELECTION_LENGTH = 5000;
 let overlayElement: HTMLButtonElement | null = null;
 let latestText = "";
 
+function hasRuntimeConnection(): boolean {
+  return typeof chrome !== "undefined" && Boolean(chrome.runtime?.id && chrome.runtime.sendMessage);
+}
+
 function normalizeSelectionText(text: string): string {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (normalized.length <= MAX_SELECTION_LENGTH) return normalized;
@@ -33,6 +37,36 @@ function getSelectionPayload(): {
     return { text: "", rect: null };
   }
   return { text, rect };
+}
+
+function getSelectionReferencePayload() {
+  return {
+    text: latestText || getSelectionPayload().text,
+    pageTitle: document.title || "",
+    pageUrl: window.location.href,
+  };
+}
+
+function sendSelectionReference(text: string) {
+  if (!hasRuntimeConnection()) return;
+
+  try {
+    chrome.runtime.sendMessage(
+      {
+        type: "downcity.page-selection.reference",
+        id: `selection-${Date.now()}`,
+        text,
+        pageTitle: document.title || "",
+        pageUrl: window.location.href,
+      },
+      () => {
+        // 关键点（中文）：页面里旧 content script 或扩展重载时，消息通道可能失效。
+        void chrome.runtime.lastError;
+      },
+    );
+  } catch {
+    hideOverlay();
+  }
 }
 
 function ensureOverlay(): HTMLButtonElement {
@@ -64,13 +98,7 @@ function ensureOverlay(): HTMLButtonElement {
   button.addEventListener("click", () => {
     const text = latestText || getSelectionPayload().text;
     if (!text) return;
-    chrome.runtime.sendMessage({
-      type: "downcity.page-selection.reference",
-      id: `selection-${Date.now()}`,
-      text,
-      pageTitle: document.title || "",
-      pageUrl: window.location.href,
-    });
+    sendSelectionReference(text);
     hideOverlay();
   });
 
@@ -120,3 +148,11 @@ document.addEventListener("mouseup", scheduleOverlayUpdate);
 document.addEventListener("keyup", scheduleOverlayUpdate);
 document.addEventListener("scroll", hideOverlay, true);
 window.addEventListener("resize", hideOverlay);
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!message || typeof message !== "object") return false;
+  const type = String((message as Record<string, unknown>).type || "").trim();
+  if (type !== "downcity.page-selection.read") return false;
+  sendResponse(getSelectionReferencePayload());
+  return false;
+});

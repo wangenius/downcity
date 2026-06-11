@@ -111,7 +111,10 @@ your-project/
 town agent start .
 town agent status .
 town agent chat -m "Summarize this repository"
+town agent chat --new-session
 ```
+
+Interactive chat can also pick an existing session or create a new one before the TUI opens.
 
 To run in the foreground:
 

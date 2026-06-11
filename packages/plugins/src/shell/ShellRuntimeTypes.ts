@@ -9,8 +9,57 @@
 
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { ShellSessionSnapshot } from "@downcity/agent/internal/executor/tools/shell/types/ShellPlugin.js";
+import type {
+  ShellApprovalStatus,
+  ShellSessionSnapshot,
+} from "@downcity/agent/internal/executor/tools/shell/types/ShellPlugin.js";
 import type { ResolvedShellPluginOptions } from "@/shell/types/ShellPluginOptions.js";
+
+/**
+ * unrestricted sandbox 审批运行态。
+ */
+export type ShellApprovalRuntimeState = {
+  /**
+   * 当前审批请求 ID。
+   */
+  approvalId: string;
+  /**
+   * 关联的 shell_id。
+   */
+  shellId: string;
+  /**
+   * 所属 session/聊天上下文。
+   */
+  ownerContextId?: string;
+  /**
+   * 关联工具名。
+   */
+  toolName: "shell_exec" | "shell_start";
+  /**
+   * 申请执行的命令。
+   */
+  cmd: string;
+  /**
+   * 命令执行目录。
+   */
+  cwd: string;
+  /**
+   * 申请原因。
+   */
+  reason: string;
+  /**
+   * 当前审批创建时间。
+   */
+  createdAt: number;
+  /**
+   * 审批超时定时器。
+   */
+  timer: NodeJS.Timeout;
+  /**
+   * 兑现审批结果。
+   */
+  resolve: (status: ShellApprovalStatus) => void;
+};
 
 /**
  * 单个 shell wait 调用挂起时注册的 waiter。
@@ -88,6 +137,10 @@ export type ShellPluginState = {
    * 当前实例持有的全部 in-memory shell session。
    */
   sessions: Map<string, ShellSessionRuntimeState>;
+  /**
+   * 当前实例持有的全部 pending unrestricted sandbox 审批。
+   */
+  approvals: Map<string, ShellApprovalRuntimeState>;
   /**
    * 当前实例最近一次启动时绑定的 agent context。
    *

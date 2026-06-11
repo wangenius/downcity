@@ -14,7 +14,7 @@ import type { SandboxNetworkMode } from "@/sandbox/types/Sandbox.js";
 /**
  * 当前内置支持的 sandbox backend。
  */
-export type SandboxBackend = "macos-seatbelt" | "linux-bubblewrap";
+export type SandboxBackend = "macos-seatbelt" | "linux-bubblewrap" | "unrestricted-host";
 
 /**
  * sandbox 会话状态。
@@ -306,6 +306,11 @@ export interface ResolvedSandboxConfig extends SandboxConfig {
   backend: SandboxBackend;
 
   /**
+   * 当前 Downcity sandbox 模式。
+   */
+  sandboxMode?: "safe" | "unrestricted";
+
+  /**
    * 当前 agent 级 sandbox 的持久目录。
    *
    * 说明（中文）
@@ -397,6 +402,11 @@ export interface SandboxSpawnResult {
    * 当前进程是否实际运行在 sandbox 中。
    */
   sandboxed: boolean;
+
+  /**
+   * 当前 Downcity sandbox 模式。
+   */
+  sandboxMode?: "safe" | "unrestricted";
 
   /**
    * 当前使用的 backend 名称。

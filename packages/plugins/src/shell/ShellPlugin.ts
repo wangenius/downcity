@@ -29,8 +29,11 @@ import {
   closeAllShellSessions,
   closeShellSession,
   createShellPluginState,
+  approveShellApproval,
+  denyShellApproval,
   execShellCommand,
   getShellSessionStatus,
+  listShellApprovals,
   readShellSession,
   startShellSession,
   waitShellSession,
@@ -108,6 +111,42 @@ export class ShellPlugin extends BasePlugin {
           data: await this.close(params.context, params.payload as ShellCloseRequest),
         }),
       },
+      approvals: {
+        execute: async () => ({
+          success: true,
+          data: { approvals: listShellApprovals(this.state) },
+        }),
+      },
+      approve: {
+        execute: async (params) => {
+          const payload = params.payload as { approvalId?: unknown; approval_id?: unknown };
+          const approvalId = String(payload?.approvalId || payload?.approval_id || "").trim();
+          if (!approvalId) {
+            return { success: false, error: "approvalId is required" };
+          }
+          const ok = await approveShellApproval(this.state, params.context, approvalId);
+          return {
+            success: ok,
+            data: { approvalId, approved: ok },
+            ...(ok ? {} : { error: "approval request not found" }),
+          };
+        },
+      },
+      deny: {
+        execute: async (params) => {
+          const payload = params.payload as { approvalId?: unknown; approval_id?: unknown };
+          const approvalId = String(payload?.approvalId || payload?.approval_id || "").trim();
+          if (!approvalId) {
+            return { success: false, error: "approvalId is required" };
+          }
+          const ok = await denyShellApproval(this.state, params.context, approvalId);
+          return {
+            success: ok,
+            data: { approvalId, denied: ok },
+            ...(ok ? {} : { error: "approval request not found" }),
+          };
+        },
+      },
     };
 
     this.lifecycle = {
@@ -122,6 +161,7 @@ export class ShellPlugin extends BasePlugin {
           }
         }
         this.state.sessions.clear();
+        this.state.approvals.clear();
         this.state.context = null;
       },
     };

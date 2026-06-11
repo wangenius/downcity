@@ -140,6 +140,7 @@ export class SessionTurnService {
   }> {
     const tool_name_by_call_id = new Map<string, string>();
     const run_context: SessionRunContext = {
+      turnId: input.turnId,
       sessionId: this.session_id,
       projectRoot: this.project_root,
       onStepCallback: input.onStepMerge,

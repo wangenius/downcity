@@ -205,13 +205,23 @@ export function flattenShellActionResponse(params: {
 }): JsonObject {
   const shell = params.response.shell;
   const chunk = params.response.chunk;
+  const exitCode = typeof shell.exitCode === "number" ? shell.exitCode : null;
+  const success =
+    shell.approvalStatus !== "denied" &&
+    shell.approvalStatus !== "expired" &&
+    (exitCode === null || exitCode === 0);
   return {
-    success: true,
+    success,
     shell_id: shell.shellId,
     status: shell.status,
     cmd: shell.cmd,
     cwd: shell.cwd,
     sandboxed: shell.sandboxed === true,
+    sandbox: shell.sandboxMode || (shell.sandboxed === false ? "unrestricted" : "safe"),
+    approval_status: shell.approvalStatus || null,
+    approval_id: shell.approvalId || null,
+    approval_reason: shell.approvalReason || null,
+    stdin_writable: shell.stdinWritable !== false,
     sandbox_backend: shell.sandboxBackend || null,
     sandbox_network_mode: shell.sandboxNetworkMode || null,
     sandbox_dir: shell.sandboxDir || null,
@@ -223,7 +233,7 @@ export function flattenShellActionResponse(params: {
     started_at: shell.startedAt,
     updated_at: shell.updatedAt,
     ended_at: typeof shell.endedAt === "number" ? shell.endedAt : null,
-    exit_code: typeof shell.exitCode === "number" ? shell.exitCode : null,
+    exit_code: exitCode,
     output: chunk?.output || "",
     start_cursor: typeof chunk?.startCursor === "number" ? chunk.startCursor : null,
     end_cursor: typeof chunk?.endCursor === "number" ? chunk.endCursor : null,
@@ -257,19 +267,29 @@ export function flattenShellExecResponse(params: {
 }): JsonObject {
   const shell = params.response.shell;
   const chunk = params.response.chunk;
+  const exitCode = typeof shell.exitCode === "number" ? shell.exitCode : null;
+  const success =
+    shell.approvalStatus !== "denied" &&
+    shell.approvalStatus !== "expired" &&
+    (exitCode === null || exitCode === 0);
   return {
-    success: true,
+    success,
     status: shell.status,
     cmd: shell.cmd,
     cwd: shell.cwd,
     sandboxed: shell.sandboxed === true,
+    sandbox: shell.sandboxMode || (shell.sandboxed === false ? "unrestricted" : "safe"),
+    approval_status: shell.approvalStatus || null,
+    approval_id: shell.approvalId || null,
+    approval_reason: shell.approvalReason || null,
+    stdin_writable: shell.stdinWritable !== false,
     sandbox_backend: shell.sandboxBackend || null,
     sandbox_network_mode: shell.sandboxNetworkMode || null,
     sandbox_dir: shell.sandboxDir || null,
     sandbox_home_dir: shell.sandboxHomeDir || null,
     sandbox_tmp_dir: shell.sandboxTmpDir || null,
     sandbox_cache_dir: shell.sandboxCacheDir || null,
-    exit_code: typeof shell.exitCode === "number" ? shell.exitCode : null,
+    exit_code: exitCode,
     output: chunk?.output || "",
     original_chars: chunk?.originalChars ?? 0,
     original_lines: chunk?.originalLines ?? 0,

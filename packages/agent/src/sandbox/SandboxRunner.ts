@@ -12,6 +12,7 @@ import type { SandboxSpawnResult } from "@/sandbox/types/SandboxRuntime.js";
 import { resolveSandboxConfig, resolveSandboxCwd } from "@/sandbox/SandboxConfigResolver.js";
 import { spawnMacOsSeatbeltSandbox } from "@/sandbox/MacOsSeatbeltSandbox.js";
 import { spawnLinuxBubblewrapSandbox } from "@/sandbox/LinuxBubblewrapSandbox.js";
+import { spawnUnrestrictedSandbox } from "@/sandbox/UnrestrictedSandbox.js";
 
 /**
  * 启动 shell 子进程。
@@ -25,6 +26,7 @@ export async function spawnShellProcess(params: {
   shellPath: string;
   login: boolean;
   baseEnv: NodeJS.ProcessEnv;
+  sandboxMode?: "safe" | "unrestricted";
 }): Promise<SandboxSpawnResult> {
   return spawnInSandbox({
     context: params.context,
@@ -35,6 +37,7 @@ export async function spawnShellProcess(params: {
     shellPath: params.shellPath,
     login: params.login,
     baseEnv: params.baseEnv,
+    sandboxMode: params.sandboxMode,
   });
 }
 
@@ -50,7 +53,21 @@ export async function spawnInSandbox(params: {
   shellPath: string;
   login: boolean;
   baseEnv: NodeJS.ProcessEnv;
+  sandboxMode?: "safe" | "unrestricted";
 }): Promise<SandboxSpawnResult> {
+  if (params.sandboxMode === "unrestricted") {
+    return spawnUnrestrictedSandbox({
+      executionId: params.executionId,
+      executionDir: params.executionDir,
+      cmd: params.cmd,
+      cwd: params.cwd,
+      shellPath: params.shellPath,
+      login: params.login,
+      baseEnv: params.baseEnv,
+      actualCwd: params.cwd,
+    });
+  }
+
   const config = resolveSandboxConfig(params.context);
   const actualCwd = resolveSandboxCwd({
     rootPath: config.rootPath,

@@ -8,6 +8,17 @@
 
 import { z } from "zod";
 
+const shellSandboxModeSchema = z
+  .enum(["safe", "unrestricted"])
+  .optional()
+  .default("safe")
+  .describe("Sandbox mode. safe is the default; unrestricted requires user approval.");
+
+const shellUnrestrictedReasonSchema = z
+  .string()
+  .optional()
+  .describe("Required when sandbox is unrestricted. Explain why host-level execution is needed.");
+
 export const shellStartInputSchema = z.object({
   cmd: z.string().describe("Shell command to execute."),
   workdir: z
@@ -36,6 +47,8 @@ export const shellStartInputSchema = z.object({
     .boolean()
     .optional()
     .describe("Whether the shell plugin runtime should auto-return to the owning chat agent when the command exits."),
+  sandbox: shellSandboxModeSchema,
+  reason: shellUnrestrictedReasonSchema,
 });
 
 export const shellExecInputSchema = z.object({
@@ -62,6 +75,8 @@ export const shellExecInputSchema = z.object({
     .number()
     .optional()
     .describe("Maximum output tokens returned in the final result."),
+  sandbox: shellSandboxModeSchema,
+  reason: shellUnrestrictedReasonSchema,
 });
 
 export const shellStatusInputSchema = z.object({

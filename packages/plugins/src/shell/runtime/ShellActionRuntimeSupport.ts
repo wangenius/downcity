@@ -46,6 +46,7 @@ const DEFAULT_SHELL_PLUGIN_OPTIONS: ResolvedShellPluginOptions = {
   defaultInlineWaitMs: 1_200,
   defaultWaitTimeoutMs: 10_000,
   defaultExecTimeoutMs: 60_000,
+  defaultApprovalTimeoutMs: 120_000,
 };
 
 /**
@@ -121,6 +122,10 @@ export function resolveShellPluginOptions(
       options.defaultExecTimeoutMs,
       DEFAULT_SHELL_PLUGIN_OPTIONS.defaultExecTimeoutMs,
     ),
+    defaultApprovalTimeoutMs: readPositiveInteger(
+      options.defaultApprovalTimeoutMs,
+      DEFAULT_SHELL_PLUGIN_OPTIONS.defaultApprovalTimeoutMs,
+    ),
   };
 }
 
@@ -133,6 +138,7 @@ export function createShellPluginState(
   return {
     options: resolveShellPluginOptions(options),
     sessions: new Map<string, ShellSessionRuntimeState>(),
+    approvals: new Map(),
     context: null,
   };
 }

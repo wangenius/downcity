@@ -23,9 +23,11 @@
 - 需要向进程 stdin 输入内容时，使用 `shell_write`。
 - 命令会话完成后若不再需要，使用 `shell_close` 主动释放资源。
 - 不要把原始超长 shell 输出直接转发给用户，应先总结。
-- shell 命令默认在当前 agent 的 sandbox 中执行：项目目录可读写，网络可用，HOME 指向 `.downcity/sandbox/`，真实用户 HOME 与系统目录不可写。
+- shell 命令默认在 Safe Sandbox 中执行：项目目录可读写，网络可用，HOME 指向 `.downcity/sandbox/`，真实用户 HOME 与系统目录不可写。
 - 安装 Python 依赖时优先使用项目内 `.venv`，不要使用 `pip install --user`。
-- 不要尝试 `sudo`、`brew install`、Xcode Command Line Tools 安装或写 `/usr/local`、`/opt/homebrew`、`/System` 等宿主系统目录；如果确实缺少系统级依赖，直接告诉用户需要在宿主机安装。
+- 需要全局安装、写宿主目录、访问宿主级能力时，可以请求 `sandbox: "unrestricted"`；必须提供清楚的 `reason`，等待用户确认后才能执行。
+- 不要尝试 `sudo`、Xcode Command Line Tools 安装、修改 SSH/keychain/shell profile，或执行明显破坏性命令；这些请求即使使用 unrestricted sandbox 也会被拒绝。
+- 用户拒绝 unrestricted sandbox 请求后，不要反复请求同一命令，应解释影响并给出项目内替代方案。
 - 下载模型、工具缓存、临时状态应自然落在 `.downcity/sandbox/` 或项目目录中，不要假设可复用真实用户缓存。
 
 # 默认决策与澄清

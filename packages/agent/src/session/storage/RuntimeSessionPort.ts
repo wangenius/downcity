@@ -10,6 +10,7 @@ import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
+  AgentSessionEvent,
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
@@ -37,6 +38,10 @@ export interface CreateRuntimeSessionPortParams {
   subscribe: (
     subscriber: AgentSessionSubscriber,
   ) => AgentSessionUnsubscribe;
+  /**
+   * 发布一条 session runtime 事件。
+   */
+  publishEvent: (event: AgentSessionEvent) => void;
   /**
    * 清理当前 session executor 状态。
    */
@@ -87,6 +92,9 @@ export function createRuntimeSessionPort(
     },
     subscribe: (subscriber) => {
       return params.subscribe(subscriber);
+    },
+    publishEvent: (event) => {
+      params.publishEvent(event);
     },
     clearExecutor: () => {
       params.clearExecutor();

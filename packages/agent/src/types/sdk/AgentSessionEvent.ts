@@ -129,6 +129,96 @@ export interface AgentSessionToolResultEvent {
 }
 
 /**
+ * 工具审批请求事件。
+ */
+export interface AgentSessionToolApprovalRequestEvent {
+  /**
+   * 当前事件类型。
+   */
+  type: "tool-approval-request";
+
+  /**
+   * 当前审批所属 turn。
+   */
+  turnId: string;
+
+  /**
+   * 当前工具调用唯一标识。
+   */
+  toolCallId: string;
+
+  /**
+   * 当前工具名称。
+   */
+  toolName: string;
+
+  /**
+   * 当前审批请求唯一标识。
+   */
+  approvalId: string;
+
+  /**
+   * 请求执行的 sandbox 模式。
+   */
+  sandbox: "unrestricted";
+
+  /**
+   * 请求执行的命令文本。
+   */
+  cmd: string;
+
+  /**
+   * 命令执行目录。
+   */
+  cwd: string;
+
+  /**
+   * Agent 给用户展示的申请原因。
+   */
+  reason: string;
+
+  /**
+   * 当前审批状态。
+   */
+  status: "pending";
+}
+
+/**
+ * 工具审批结果事件。
+ */
+export interface AgentSessionToolApprovalResultEvent {
+  /**
+   * 当前事件类型。
+   */
+  type: "tool-approval-result";
+
+  /**
+   * 当前审批所属 turn。
+   */
+  turnId: string;
+
+  /**
+   * 当前工具调用唯一标识。
+   */
+  toolCallId: string;
+
+  /**
+   * 当前工具名称。
+   */
+  toolName: string;
+
+  /**
+   * 当前审批请求唯一标识。
+   */
+  approvalId: string;
+
+  /**
+   * 用户最终决策。
+   */
+  decision: "approved" | "denied" | "expired";
+}
+
+/**
  * assistant step 完成事件。
  */
 export interface AgentSessionAssistantStepEvent {
@@ -236,6 +326,8 @@ export type AgentSessionEvent =
   | AgentSessionReasoningDeltaEvent
   | AgentSessionToolCallEvent
   | AgentSessionToolResultEvent
+  | AgentSessionToolApprovalRequestEvent
+  | AgentSessionToolApprovalResultEvent
   | AgentSessionAssistantStepEvent
   | AgentSessionTitleEvent
   | AgentSessionTurnFinishEvent

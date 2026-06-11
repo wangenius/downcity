@@ -31,6 +31,7 @@ import type {
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
+  AgentSessionEvent,
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
@@ -132,6 +133,14 @@ export interface SessionPort {
    * - 历史消息仍通过 `getHistoryStore()` / SDK `history()` 读取。
    */
   subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe;
+  /**
+   * 发布一条 session runtime 事件。
+   *
+   * 关键点（中文）
+   * - plugin runtime 用它把审批、外部进度等非模型 chunk 事件推送给订阅方。
+   * - 历史消息持久化仍由 appendUserMessage / appendAssistantMessage 负责。
+   */
+  publishEvent(event: AgentSessionEvent): void;
   /**
    * 清理当前 session 的 executor 缓存。
    */

@@ -180,6 +180,7 @@ export async function spawnMacOsSeatbeltSandbox(
     child,
     cwd: params.actualCwd,
     sandboxed: true,
+    sandboxMode: "safe",
     backend: "macos-seatbelt",
     networkMode: params.config.networkMode,
     sandboxDir: params.config.sandboxDir,

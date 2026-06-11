@@ -19,6 +19,7 @@ import { generateId } from "@downcity/agent/internal/utils/Id.js";
 import { readChatMetaBySessionId } from "@/chat/runtime/ChatMetaStore.js";
 import type {
   ShellActionResponse,
+  ShellApprovalStatus,
   ShellCloseRequest,
   ShellExecRequest,
   ShellQueryRequest,
@@ -46,6 +47,12 @@ import {
   updateSessionSnapshot,
 } from "./ShellActionRuntimeSupport.js";
 import { attachShellProcessEventHandlers } from "./ShellProcessEvents.js";
+import {
+  listPendingApprovals,
+  requestUnrestrictedApproval,
+  resolveApproval,
+  validateUnrestrictedRequest,
+} from "./ShellApprovalRuntime.js";
 
 export { createShellPluginState } from "./ShellActionRuntimeSupport.js";
 
@@ -72,6 +79,20 @@ export async function closeAllShellSessions(
   state: ShellPluginState,
   force = false,
 ): Promise<void> {
+  for (const approval of Array.from(state.approvals.values())) {
+    if (state.context) {
+      await resolveApproval({
+        state,
+        context: state.context,
+        approvalId: approval.approvalId,
+        decision: "expired",
+      }).catch(() => undefined);
+      continue;
+    }
+    clearTimeout(approval.timer);
+    state.approvals.delete(approval.approvalId);
+    approval.resolve("expired");
+  }
   const closing = Array.from(state.sessions.values()).map(async (session) => {
     if (
       session.snapshot.status !== "running" &&
@@ -93,6 +114,65 @@ export async function closeAllShellSessions(
   await Promise.all(closing);
 }
 
+function resolveSandboxMode(value: unknown): "safe" | "unrestricted" {
+  return value === "unrestricted" ? "unrestricted" : "safe";
+}
+
+function buildDeniedApprovalResponse(params: {
+  shellId: string;
+  ownerContextId?: string;
+  cmd: string;
+  cwd: string;
+  shellPath: string;
+  approvalId: string;
+  reason: string;
+  approvalStatus: ShellApprovalStatus;
+}): ShellActionResponse {
+  const now = nowMs();
+  const message = params.approvalStatus === "expired"
+    ? "Unrestricted sandbox approval expired."
+    : "User denied unrestricted sandbox execution.";
+  return buildActionResponse({
+    shell: {
+      shellId: params.shellId,
+      ...(params.ownerContextId ? { ownerContextId: params.ownerContextId } : {}),
+      cmd: params.cmd,
+      cwd: params.cwd,
+      shellPath: params.shellPath,
+      sandboxed: false,
+      sandboxMode: "unrestricted",
+      sandboxBackend: "unrestricted-host",
+      sandboxNetworkMode: "full",
+      approvalStatus: params.approvalStatus,
+      approvalId: params.approvalId,
+      approvalReason: params.reason,
+      stdinWritable: false,
+      status: params.approvalStatus === "expired" ? "expired" : "failed",
+      startedAt: now,
+      updatedAt: now,
+      endedAt: now,
+      exitCode: -1,
+      lastOutputPreview: message,
+      outputChars: message.length,
+      droppedChars: 0,
+      version: 1,
+      autoNotifyOnExit: false,
+      notificationSent: false,
+      externalRefs: [],
+    },
+    chunk: {
+      shellId: params.shellId,
+      output: message,
+      startCursor: 0,
+      endCursor: message.length,
+      originalChars: message.length,
+      originalLines: 1,
+      hasMoreOutput: false,
+    },
+    note: message,
+  });
+}
+
 /**
  * 启动一个 shell session。
  */
@@ -111,6 +191,8 @@ export async function startShellSession(
   const shellPath =
     String(request.shell || resolveDefaultShellPath()).trim() || resolveDefaultShellPath();
   const login = request.login !== false;
+  const sandboxMode = resolveSandboxMode(request.sandbox);
+  const reason = String(request.reason || "").trim();
   const ownerContextId = resolveOwnerContextId(request.ownerContextId);
   const canAutoNotifyByContext = ownerContextId
     ? Boolean(
@@ -124,6 +206,37 @@ export async function startShellSession(
   await fs.ensureDir(shellDir);
   await fs.writeFile(outputFilePath, "", "utf-8");
 
+  let approvalId: string | undefined;
+  let approvalStatus: ShellApprovalStatus | undefined;
+  if (sandboxMode === "unrestricted") {
+    const validationError = validateUnrestrictedRequest({ cmd, reason });
+    if (validationError) throw new Error(validationError);
+    const approval = await requestUnrestrictedApproval({
+      state,
+      context,
+      shellId,
+      toolName: request.approvalToolName || "shell_start",
+      cmd,
+      cwd,
+      reason,
+      ...(ownerContextId ? { ownerContextId } : {}),
+    });
+    approvalId = approval.approvalId;
+    approvalStatus = approval.status;
+    if (approval.status !== "approved") {
+      return buildDeniedApprovalResponse({
+        shellId,
+        ...(ownerContextId ? { ownerContextId } : {}),
+        cmd,
+        cwd,
+        shellPath,
+        approvalId: approval.approvalId,
+        reason,
+        approvalStatus: approval.status,
+      });
+    }
+  }
+
   const spawnResult = await spawnShellProcess({
     context,
     shellId,
@@ -133,6 +246,7 @@ export async function startShellSession(
     shellPath,
     login,
     baseEnv: buildShellEnv(context),
+    sandboxMode,
   });
   const child = spawnResult.child;
   const actualCwd = spawnResult.cwd;
@@ -150,12 +264,17 @@ export async function startShellSession(
       cwd: actualCwd,
       shellPath,
       sandboxed: spawnResult.sandboxed,
+      sandboxMode: spawnResult.sandboxMode || sandboxMode,
       sandboxBackend: spawnResult.backend,
       sandboxNetworkMode: spawnResult.networkMode,
       sandboxDir: spawnResult.sandboxDir,
       sandboxHomeDir: spawnResult.homeDir,
       sandboxTmpDir: spawnResult.tmpDir,
       sandboxCacheDir: spawnResult.cacheDir,
+      ...(approvalStatus ? { approvalStatus } : {}),
+      ...(approvalId ? { approvalId } : {}),
+      ...(reason ? { approvalReason: reason } : {}),
+      stdinWritable: sandboxMode === "safe",
       status: "running",
       ...(typeof child.pid === "number" ? { pid: child.pid } : {}),
       startedAt,
@@ -301,6 +420,9 @@ export async function writeShellSession(
   }
   if (!session.child.stdin.writable) {
     throw new Error(`shell session ${shellId} stdin is closed`);
+  }
+  if (session.snapshot.stdinWritable === false) {
+    throw new Error(`shell session ${shellId} does not allow stdin writes`);
   }
   await new Promise<void>((resolve, reject) => {
     session.child.stdin.write(chars, (error) => {
@@ -460,6 +582,9 @@ export async function execShellCommand(
     ...(request.cwd ? { cwd: request.cwd } : {}),
     ...(request.shell ? { shell: request.shell } : {}),
     login: request.login,
+    sandbox: request.sandbox,
+    reason: request.reason,
+    approvalToolName: "shell_exec",
     inlineWaitMs: Math.min(state.options.defaultInlineWaitMs, timeoutMs),
     maxOutputTokens: request.maxOutputTokens,
     autoNotifyOnExit: false,
@@ -560,5 +685,44 @@ export async function execShellCommand(
       hasMoreOutput: false,
     },
     note: "shell exec completed in one-shot mode",
+  });
+}
+
+/**
+ * 列出 pending unrestricted sandbox 审批。
+ */
+export function listShellApprovals(state: ShellPluginState) {
+  return listPendingApprovals(state);
+}
+
+/**
+ * 批准 pending unrestricted sandbox 审批。
+ */
+export async function approveShellApproval(
+  state: ShellPluginState,
+  context: AgentContext,
+  approvalId: string,
+): Promise<boolean> {
+  return await resolveApproval({
+    state,
+    context,
+    approvalId,
+    decision: "approved",
+  });
+}
+
+/**
+ * 拒绝 pending unrestricted sandbox 审批。
+ */
+export async function denyShellApproval(
+  state: ShellPluginState,
+  context: AgentContext,
+  approvalId: string,
+): Promise<boolean> {
+  return await resolveApproval({
+    state,
+    context,
+    approvalId,
+    decision: "denied",
   });
 }

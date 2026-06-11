@@ -15,6 +15,16 @@ export type ShellSessionStatus =
   | "expired";
 
 /**
+ * shell 执行 sandbox 模式。
+ */
+export type ShellSandboxMode = "safe" | "unrestricted";
+
+/**
+ * unrestricted sandbox 审批状态。
+ */
+export type ShellApprovalStatus = "approved" | "denied" | "expired";
+
+/**
  * shell 会话关联的外部引用。
  *
  * 说明（中文）
@@ -50,6 +60,16 @@ export type ShellSessionSnapshot = {
   shellPath: string;
   /** 当前 shell 是否运行在 sandbox 中。 */
   sandboxed?: boolean;
+  /** 当前 shell 的 Downcity sandbox 模式。 */
+  sandboxMode?: ShellSandboxMode;
+  /** unrestricted sandbox 审批状态。 */
+  approvalStatus?: ShellApprovalStatus;
+  /** unrestricted sandbox 审批请求 ID。 */
+  approvalId?: string;
+  /** unrestricted sandbox 申请原因。 */
+  approvalReason?: string;
+  /** 当前 shell 是否允许继续写入 stdin。 */
+  stdinWritable?: boolean;
   /** 当前 shell 使用的 sandbox backend。 */
   sandboxBackend?: string;
   /** 当前 shell 采用的 sandbox 网络模式。 */
@@ -112,6 +132,12 @@ export type ShellStartRequest = {
   ownerContextId?: string;
   /** 是否在 shell 结束后自动回投主 chat agent。 */
   autoNotifyOnExit?: boolean;
+  /** 命令执行 sandbox 模式；默认 safe。 */
+  sandbox?: ShellSandboxMode;
+  /** 请求 unrestricted sandbox 时展示给用户的原因。 */
+  reason?: string;
+  /** 内部审批来源工具名；普通调用方不需要传。 */
+  approvalToolName?: "shell_exec" | "shell_start";
 };
 
 /**
@@ -134,6 +160,10 @@ export type ShellExecRequest = {
   timeoutMs?: number;
   /** 单次读取输出返回给模型的 token 上限。 */
   maxOutputTokens?: number;
+  /** 命令执行 sandbox 模式；默认 safe。 */
+  sandbox?: ShellSandboxMode;
+  /** 请求 unrestricted sandbox 时展示给用户的原因。 */
+  reason?: string;
 };
 
 /**

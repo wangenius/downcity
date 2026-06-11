@@ -85,6 +85,8 @@ export const shell_start = tool({
     inline_wait_ms = 1200,
     max_output_tokens,
     auto_notify_on_exit,
+    sandbox = "safe",
+    reason,
   }: ShellStartInput) => {
     const startedAt = Date.now();
 
@@ -99,6 +101,8 @@ export const shell_start = tool({
           inline_wait_ms,
           max_output_tokens: max_output_tokens ?? null,
           auto_notify_on_exit: auto_notify_on_exit ?? null,
+          sandbox,
+          reason: reason || "",
         }),
       );
 
@@ -128,6 +132,8 @@ export const shell_start = tool({
           ...(typeof auto_notify_on_exit === "boolean"
             ? { autoNotifyOnExit: auto_notify_on_exit }
             : {}),
+          sandbox,
+          ...(reason ? { reason } : {}),
         },
       });
 
@@ -173,6 +179,8 @@ export const shell_exec = tool({
     login = true,
     timeout_ms = 60000,
     max_output_tokens,
+    sandbox = "safe",
+    reason,
   }: ShellExecInput) => {
     const startedAt = Date.now();
 
@@ -186,6 +194,8 @@ export const shell_exec = tool({
           login,
           timeout_ms,
           max_output_tokens: max_output_tokens ?? null,
+          sandbox,
+          reason: reason || "",
         }),
       );
 
@@ -212,6 +222,8 @@ export const shell_exec = tool({
           ...(typeof max_output_tokens === "number"
             ? { maxOutputTokens: max_output_tokens }
             : {}),
+          sandbox,
+          ...(reason ? { reason } : {}),
         },
       });
 

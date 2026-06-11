@@ -52,10 +52,41 @@ interface chat_message_sink {
 }
 
 function extract_event_turn_id(event: AgentSessionEvent): string {
+  if (event.type === "tool-approval-request" || event.type === "tool-approval-result") {
+    return "";
+  }
   if ("turnId" in event && typeof event.turnId === "string") {
     return event.turnId;
   }
   return "";
+}
+
+function format_approval_request_block(event: Extract<AgentSessionEvent, { type: "tool-approval-request" }>): {
+  title: string;
+  detail_lines: string[];
+} {
+  return {
+    title: `[approval] ${event.toolName} requests unrestricted sandbox`,
+    detail_lines: [
+      `approval_id: ${event.approvalId}`,
+      `cmd: ${event.cmd}`,
+      `cwd: ${event.cwd}`,
+      `reason: ${event.reason}`,
+    ],
+  };
+}
+
+function format_approval_result_block(event: Extract<AgentSessionEvent, { type: "tool-approval-result" }>): {
+  title: string;
+  detail_lines: string[];
+} {
+  return {
+    title: `[approval] ${event.decision}`,
+    detail_lines: [
+      `approval_id: ${event.approvalId}`,
+      `tool: ${event.toolName}`,
+    ],
+  };
 }
 
 /**
@@ -115,6 +146,14 @@ class AgentChatTuiRenderer implements AgentChatInteractiveRendererPort {
             result: typed_event.result,
           }),
         );
+        return;
+      case "tool-approval-request":
+        this.flush_stream();
+        this.push_tool_block(format_approval_request_block(typed_event));
+        return;
+      case "tool-approval-result":
+        this.flush_stream();
+        this.push_tool_block(format_approval_result_block(typed_event));
         return;
       case "reasoning-delta":
         return;

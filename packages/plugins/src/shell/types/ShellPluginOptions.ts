@@ -59,6 +59,11 @@ export interface ShellPluginOptions {
    * `shell.exec` 默认总超时，单位毫秒。
    */
   defaultExecTimeoutMs?: number;
+
+  /**
+   * unrestricted sandbox 审批默认超时时间，单位毫秒。
+   */
+  defaultApprovalTimeoutMs?: number;
 }
 
 /**
@@ -109,4 +114,9 @@ export interface ResolvedShellPluginOptions {
    * `shell.exec` 默认总超时，单位毫秒。
    */
   defaultExecTimeoutMs: number;
+
+  /**
+   * unrestricted sandbox 审批默认超时时间，单位毫秒。
+   */
+  defaultApprovalTimeoutMs: number;
 }

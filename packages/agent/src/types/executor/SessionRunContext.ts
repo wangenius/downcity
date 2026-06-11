@@ -19,6 +19,15 @@ import type { FileUIPart } from "ai";
  */
 export interface SessionRunContext {
   /**
+   * 当前执行所属的 turn 标识。
+   *
+   * 关键点（中文）
+   * - session 是长期对话容器，turn 是单次用户输入触发的执行轮次。
+   * - 工具运行时发布 session event 时应优先使用该字段，避免把 sessionId 误当 turnId。
+   */
+  turnId?: string;
+
+  /**
    * 当前执行所属的 session 标识。
    */
   sessionId: string;

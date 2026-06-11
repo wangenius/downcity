@@ -211,6 +211,7 @@ export async function spawnLinuxBubblewrapSandbox(
     child,
     cwd: params.actualCwd,
     sandboxed: true,
+    sandboxMode: "safe",
     backend: "linux-bubblewrap",
     networkMode: params.config.networkMode,
     sandboxDir: params.config.sandboxDir,

@@ -7,6 +7,11 @@
  */
 
 /**
+ * shell 执行 sandbox 模式。
+ */
+export type ShellSandboxMode = "safe" | "unrestricted";
+
+/**
  * 启动一个交互式 shell session 的输入。
  */
 export type ShellStartInput = {
@@ -24,6 +29,10 @@ export type ShellStartInput = {
   max_output_tokens?: number;
   /** 进程退出时是否自动通知调用方。 */
   auto_notify_on_exit?: boolean;
+  /** 命令执行 sandbox 模式；默认 safe。 */
+  sandbox?: ShellSandboxMode;
+  /** 请求 unrestricted sandbox 时展示给用户的原因。 */
+  reason?: string;
 };
 
 /**
@@ -42,6 +51,10 @@ export type ShellExecInput = {
   timeout_ms?: number;
   /** 最多返回多少输出 token。 */
   max_output_tokens?: number;
+  /** 命令执行 sandbox 模式；默认 safe。 */
+  sandbox?: ShellSandboxMode;
+  /** 请求 unrestricted sandbox 时展示给用户的原因。 */
+  reason?: string;
 };
 
 /**

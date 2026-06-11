@@ -270,6 +270,9 @@ export class Session implements AgentSession {
       getExecutor: () => this.executor.getExecutor(),
       prompt: async (input) => await this.prompt(input),
       subscribe: (subscriber) => this.subscribe(subscriber),
+      publishEvent: (event) => {
+        this.eventHub.publish(event);
+      },
       clearExecutor: () => {
         this.executor.clearExecutor();
       },

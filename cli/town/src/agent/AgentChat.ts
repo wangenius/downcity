@@ -327,6 +327,32 @@ async function runSdkPromptTurn(params: {
       params.interactiveRenderer.render_event(event);
       return;
     }
+    if (event.type === "tool-approval-request") {
+      emitCliBlock({
+        tone: "info",
+        title: "Unrestricted sandbox approval requested",
+        facts: [
+          { label: "approval_id", value: event.approvalId },
+          { label: "tool", value: event.toolName },
+          { label: "cmd", value: event.cmd },
+          { label: "cwd", value: event.cwd },
+          { label: "reason", value: event.reason },
+        ],
+        note: "Use shell plugin action approve/deny with this approval_id from another control surface.",
+      });
+      return;
+    }
+    if (event.type === "tool-approval-result") {
+      emitCliBlock({
+        tone: event.decision === "approved" ? "success" : "error",
+        title: "Unrestricted sandbox approval resolved",
+        facts: [
+          { label: "approval_id", value: event.approvalId },
+          { label: "decision", value: event.decision },
+        ],
+      });
+      return;
+    }
     if (event.type !== "text-delta" || event.turnId !== target_turn_id || !event.text) {
       return;
     }
@@ -344,7 +370,9 @@ async function runSdkPromptTurn(params: {
       pending_events.push(event);
       return;
     }
-    if ("turnId" in event && event.turnId && event.turnId !== target_turn_id) return;
+    const is_approval_event =
+      event.type === "tool-approval-request" || event.type === "tool-approval-result";
+    if (!is_approval_event && "turnId" in event && event.turnId && event.turnId !== target_turn_id) return;
     renderEvent(event);
     if (event.type === "turn-finish") {
       final_text = event.text;
@@ -358,7 +386,9 @@ async function runSdkPromptTurn(params: {
     params.interactiveRenderer?.attach_turn_id(target_turn_id);
 
     for (const event of pending_events) {
-      if ("turnId" in event && event.turnId && event.turnId !== target_turn_id) continue;
+      const is_approval_event =
+        event.type === "tool-approval-request" || event.type === "tool-approval-result";
+      if (!is_approval_event && "turnId" in event && event.turnId && event.turnId !== target_turn_id) continue;
       renderEvent(event);
       if (event.type === "turn-finish") {
         final_text = event.text;

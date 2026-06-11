@@ -44,7 +44,7 @@ If you want to use a City AIService model:
 
 ## Shell Sandbox
 
-In the current version, `shell` / CLI commands always run inside a sandbox. Project-level `sandbox` only adjusts the boundary:
+In the current version, `shell` / CLI commands run in the **Safe Sandbox** by default. Project-level `sandbox` only adjusts the Safe Sandbox boundary:
 
 ```json
 {
@@ -59,13 +59,15 @@ Current behavior:
 
 - Affects both the shell plugin path and `kind=script` task execution
 - Current backends support macOS and Linux: macOS uses built-in `sandbox-exec`; Linux uses `bubblewrap` (`bwrap`)
-- Sandbox cannot be disabled and shell execution does not fall back to an unrestricted host process
+- Safe Sandbox cannot be disabled and shell execution does not silently fall back to an unrestricted host process
 - Host paths not mounted into the sandbox are not visible
 - The project root and `.downcity/sandbox` are writable by default
 - `writablePaths` adds project-local writable paths and must stay inside the project root
 - Sandbox child processes share `.downcity/sandbox` as their persistent `HOME`, with `.downcity/sandbox/tmp` for `TMPDIR` and `.downcity/sandbox/.cache` for `XDG_CACHE_HOME`
 - Project-local installs such as `.venv`, `node_modules`, and downloaded model/cache files under the project are supported
-- Host-level installs such as `sudo`, `brew install`, Xcode tools, or writes to `/usr/local`, `/opt/homebrew`, and `/System` are outside the sandbox boundary
+- For host-level actions such as `brew install`, `npm install -g`, `pip install --user`, `gh auth login`, or host service setup, the agent may explicitly request `sandbox="unrestricted"` with a `reason`
+- Unrestricted Sandbox is managed by Downcity Runtime; every execution requires user approval, and denied or expired requests do not run
+- `sudo`, Xcode tool installation, SSH/keychain/shell profile changes, and clearly destructive commands are rejected by default
 - Network is open by default; omitting the field behaves like `networkMode="full"`
 - `networkMode="off"` blocks network access
 - `networkMode="restricted"` is currently handled the same as open network

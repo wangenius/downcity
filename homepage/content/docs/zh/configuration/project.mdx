@@ -44,7 +44,7 @@ description: downcity.json 中用户最常用字段与注意事项
 
 ## Shell Sandbox
 
-当前版本里，`shell` / CLI 命令默认强制运行在 sandbox 中。项目层 `sandbox` 只用于调整边界参数：
+当前版本里，`shell` / CLI 命令默认运行在 **Safe Sandbox** 中。项目层 `sandbox` 只用于调整 Safe Sandbox 边界参数：
 
 ```json
 {
@@ -59,13 +59,15 @@ description: downcity.json 中用户最常用字段与注意事项
 
 - 作用于 shell plugin 与 `kind=script` 的 task 执行链
 - 当前支持 macOS 与 Linux：macOS 使用系统自带 `sandbox-exec`，Linux 使用 `bubblewrap`（命令名 `bwrap`）
-- 不支持关闭 sandbox，也不会回退到宿主机普通子进程执行
+- 不支持关闭 Safe Sandbox，也不会静默回退到宿主机普通子进程执行
 - 未挂入 sandbox 的宿主路径默认不可见
 - 项目根目录和 `.downcity/sandbox` 默认可写
 - `writablePaths` 用于追加项目内可写路径，且只能位于项目根目录内
 - sandbox 子进程共享 `.downcity/sandbox` 作为持久 `HOME`，并使用 `.downcity/sandbox/tmp` 作为 `TMPDIR`、`.downcity/sandbox/.cache` 作为 `XDG_CACHE_HOME`
 - 支持项目内安装与缓存，例如 `.venv`、`node_modules`、下载到项目内的模型和缓存文件
-- `sudo`、`brew install`、Xcode 工具安装，或写 `/usr/local`、`/opt/homebrew`、`/System` 这类宿主系统目录，不属于 sandbox 可执行边界
+- `brew install`、`npm install -g`、`pip install --user`、`gh auth login` 或访问宿主服务初始化能力时，agent 可以显式请求 `sandbox="unrestricted"` 并提供 `reason`
+- Unrestricted Sandbox 由 Downcity Runtime 管理；每次执行前都会向用户确认，用户拒绝或超时则不会执行命令
+- `sudo`、Xcode 工具安装、修改 SSH/keychain/shell profile 或明显破坏性命令会被默认拒绝
 - 默认网络是放开的；未显式配置时等价于 `networkMode="full"`
 - `networkMode="off"` 时禁止联网
 - `networkMode="restricted"` 当前先按放开网络处理

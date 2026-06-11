@@ -139,7 +139,7 @@ If your City enables `payment.stripe`, the CLI can now:
 - create a topup as a user
 - create a Stripe Checkout Session and open the browser for payment
 
-If `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL` are not configured explicitly, the Stripe service derives default success / cancel pages from `DOWNCITY_CITY_BASE_URL` first and then falls back to the current request origin.
+Stripe success and cancel pages are generated automatically from `DOWNCITY_CITY_BASE_URL`. If it is not configured, the service falls back to the current request origin for local development.
 
 The Stripe webhook endpoint itself is fixed:
 

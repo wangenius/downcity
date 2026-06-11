@@ -1,143 +1,144 @@
 /**
- * Downcity Creem 一次性充值服务。
+ * Downcity Dodo Payments 一次性充值服务。
  *
  * 关键说明（中文）
- * - 当前版本只处理 Creem Checkout 一次性充值
+ * - 当前版本只处理 Dodo Checkout 一次性充值
  * - 不处理 entitlement，也不处理 subscription
  * - 支付成功后统一调用 balance.finishTopup() 完成到账
  */
 
 import type { EnvRequirement, ServiceDefinition } from "@downcity/city";
 import { resolvePaymentRedirectURL } from "../payment/redirect.js";
-import { creemEvents, creemPayments } from "./schema.js";
+import { dodoEvents, dodoPayments } from "./schema.js";
 import {
-  createCreemCheckoutSession,
-  normalizeCreemApiBaseURL,
+  createDodoCheckoutSession,
+  createDodoClient,
+  normalizeDodoEnvironment,
   normalizeOptionalText,
   normalizeRequired,
-  parseCreemWebhookEvent,
+  parseDodoWebhookEvent,
   readMetadata,
-  verifyCreemSignature,
-} from "./creem.js";
+} from "./dodo.js";
 import type {
-  CreemCheckoutCreateResult,
-  CreemCreateCheckoutInput,
-  CreemEventRecord,
-  CreemEventSyncStatus,
-  CreemPaymentRecord,
-  CreemPaymentServiceOptions,
-  CreemPaymentStatus,
-  CreemWebhookEvent,
+  DodoCheckoutCreateResult,
+  DodoCreateCheckoutInput,
+  DodoEventRecord,
+  DodoEventSyncStatus,
+  DodoPaymentRecord,
+  DodoPaymentServiceOptions,
+  DodoPaymentStatus,
+  DodoWebhookEvent,
 } from "./types.js";
 
 type PaymentTable = {
-  select(where?: Partial<CreemPaymentRecord>): Promise<CreemPaymentRecord[]>;
-  insert(row: CreemPaymentRecord): Promise<unknown>;
+  select(where?: Partial<DodoPaymentRecord>): Promise<DodoPaymentRecord[]>;
+  insert(row: DodoPaymentRecord): Promise<unknown>;
   update(input: {
-    where: Partial<CreemPaymentRecord>;
-    values: Partial<CreemPaymentRecord>;
+    where: Partial<DodoPaymentRecord>;
+    values: Partial<DodoPaymentRecord>;
   }): Promise<unknown>;
 };
 
 type EventTable = {
-  select(where?: Partial<CreemEventRecord>): Promise<CreemEventRecord[]>;
-  insert(row: CreemEventRecord): Promise<unknown>;
+  select(where?: Partial<DodoEventRecord>): Promise<DodoEventRecord[]>;
+  insert(row: DodoEventRecord): Promise<unknown>;
   update(input: {
-    where: Partial<CreemEventRecord>;
-    values: Partial<CreemEventRecord>;
+    where: Partial<DodoEventRecord>;
+    values: Partial<DodoEventRecord>;
   }): Promise<unknown>;
 };
 
-interface NormalizedCreemPaymentServiceOptions {
-  balance: CreemPaymentServiceOptions["balance"];
+interface NormalizedDodoPaymentServiceOptions {
+  balance: DodoPaymentServiceOptions["balance"];
   api_key?: string;
   product_id?: string;
-  webhook_secret?: string;
+  webhook_key?: string;
+  environment: "test_mode" | "live_mode";
   currency: string;
-  api_base_url: string;
+  api_base_url?: string;
 }
 
 /**
- * Creem 服务对外暴露的运行时环境变量。
- *
- * 关键说明（中文）
- * - api key / product id 是创建 Checkout 的最小必要配置
- * - webhook secret 用于校验 creem-signature
- * - 默认跳转页统一基于 DOWNCITY_CITY_BASE_URL 生成
+ * Dodo 服务对外暴露的运行时环境变量。
  */
-const creemPaymentEnv: EnvRequirement[] = [
+const dodoPaymentEnv: EnvRequirement[] = [
   {
-    key: "CREEM_API_KEY",
-    description: "Creem API key，用于创建 Checkout Session",
+    key: "DODO_PAYMENTS_API_KEY",
+    description: "Dodo Payments API key，用于创建 Checkout Session",
     required: true,
   },
   {
-    key: "CREEM_PRODUCT_ID",
-    description: "Creem product_id，用于创建 Checkout Session",
+    key: "DODO_PRODUCT_ID",
+    description: "Dodo product_id，用于创建 Checkout Session",
     required: true,
   },
   {
-    key: "CREEM_WEBHOOK_SECRET",
-    description: "Creem webhook signing secret，用于校验 creem-signature",
+    key: "DODO_WEBHOOK_KEY",
+    description: "Dodo webhook signing key，用于校验 webhook",
+    required: false,
+  },
+  {
+    key: "DODO_ENVIRONMENT",
+    description: "Dodo SDK 环境：test_mode 或 live_mode；默认 test_mode",
     required: false,
   },
   {
     key: "DOWNCITY_CITY_BASE_URL",
-    description: "City 对外访问地址；用于自动生成 Creem 默认跳转页地址",
+    description: "City 对外访问地址；用于自动生成 Dodo 默认跳转页地址",
     required: false,
   },
   {
-    key: "CREEM_CURRENCY",
-    description: "默认结算币种，例如 usd；仅用于支付目录展示和本地记录",
+    key: "DODO_CURRENCY",
+    description: "默认结算币种，例如 usd",
     required: false,
   },
   {
-    key: "CREEM_API_BASE_URL",
-    description: "可选的 Creem API 基础地址覆写，通常只用于测试环境",
+    key: "DODO_API_BASE_URL",
+    description: "可选的 Dodo API 基础地址覆写，通常只用于测试环境",
     required: false,
   },
 ];
 
-export { creemEvents, creemPayments } from "./schema.js";
+export { dodoEvents, dodoPayments } from "./schema.js";
 export type {
-  CreemCheckoutCreateResult,
-  CreemCreateCheckoutInput,
-  CreemEventRecord,
-  CreemEventSyncStatus,
-  CreemPaymentRecord,
-  CreemPaymentServiceBalanceBridge,
-  CreemPaymentServiceOptions,
-  CreemPaymentStatus,
-  CreemPaymentTopupRecord,
-  CreemWebhookEvent,
+  DodoCheckoutCreateResult,
+  DodoCreateCheckoutInput,
+  DodoEventRecord,
+  DodoEventSyncStatus,
+  DodoPaymentEnvironment,
+  DodoPaymentRecord,
+  DodoPaymentServiceBalanceBridge,
+  DodoPaymentServiceOptions,
+  DodoPaymentStatus,
+  DodoPaymentTopupRecord,
+  DodoWebhookEvent,
 } from "./types.js";
 
 /**
- * 创建 Creem 一次性充值服务。
+ * 创建 Dodo Payments 一次性充值服务。
  */
-export function creemPaymentService(options: CreemPaymentServiceOptions): ServiceDefinition {
+export function dodoPaymentService(options: DodoPaymentServiceOptions): ServiceDefinition {
   const normalized = normalizeOptions(options);
 
   return {
-    id: "payment.creem",
-    name: "Creem Payment",
+    id: "payment.dodo",
+    name: "Dodo Payment",
     version: "0.1.0",
-    env: creemPaymentEnv,
+    env: dodoPaymentEnv,
     schema: {
-      payments: creemPayments,
-      events: creemEvents,
+      payments: dodoPayments,
+      events: dodoEvents,
     },
     instruction: [
-      "使用 Creem 创建一次性充值 Checkout，并在 webhook 成功后完成 balance topup。",
+      "使用 Dodo Payments 创建一次性充值 Checkout，并在 webhook 成功后完成 balance topup。",
       "这个服务不处理 entitlement，也不处理 subscription。",
-      "当 options 未显式传入时，会回退读取 CREEM_API_KEY / CREEM_PRODUCT_ID / CREEM_WEBHOOK_SECRET。",
-      "默认 success URL 统一基于 DOWNCITY_CITY_BASE_URL 自动生成。",
-      `currency=${normalized.currency}。`,
+      "当 options 未显式传入时，会回退读取 DODO_PAYMENTS_API_KEY / DODO_PRODUCT_ID / DODO_WEBHOOK_KEY。",
+      `currency=${normalized.currency}，environment=${normalized.environment}。`,
       "支付成功后统一通过 balance.finishTopup() 完成到账。",
     ].join("\n"),
     install(ctx) {
-      const payments = ctx.table<CreemPaymentRecord>("payments") as PaymentTable;
-      const events = ctx.table<CreemEventRecord>("events") as EventTable;
+      const payments = ctx.table<DodoPaymentRecord>("payments") as PaymentTable;
+      const events = ctx.table<DodoEventRecord>("events") as EventTable;
       const balance = normalized.balance;
 
       ctx.route({
@@ -145,7 +146,7 @@ export function creemPaymentService(options: CreemPaymentServiceOptions): Servic
         path: "/checkout/create",
         auth: ["user"],
         async handler(requestCtx) {
-          const body = await requestCtx.json<CreemCreateCheckoutInput>();
+          const body = await requestCtx.json<DodoCreateCheckoutInput>();
           const userId = normalizeRequired(requestCtx.user?.user_id, "user_id");
           const topup = await balance.readTopup(normalizeRequired(body.topup_id, "topup_id"));
           if (topup.user_id !== userId) {
@@ -160,39 +161,43 @@ export function creemPaymentService(options: CreemPaymentServiceOptions): Servic
             return requestCtx.jsonResponse(toCheckoutResult(existing));
           }
 
-          const apiKey = normalized.api_key ?? ctx.env("CREEM_API_KEY");
-          if (!apiKey) {
-            return requestCtx.jsonResponse({ error: "Creem API key is not configured" }, 500);
-          }
+          const apiKey = normalized.api_key ?? ctx.env("DODO_PAYMENTS_API_KEY");
+          if (!apiKey) return requestCtx.jsonResponse({ error: "Dodo API key is not configured" }, 500);
 
-          const productId = normalized.product_id ?? ctx.env("CREEM_PRODUCT_ID");
-          if (!productId) {
-            return requestCtx.jsonResponse({ error: "Creem product id is not configured" }, 500);
-          }
+          const productId = normalized.product_id ?? ctx.env("DODO_PRODUCT_ID");
+          if (!productId) return requestCtx.jsonResponse({ error: "Dodo product id is not configured" }, 500);
 
           const paymentId = `pay_${randomId()}`;
           const currency = resolveCurrency(normalized, ctx);
-          const created = await createCreemCheckoutSession(
-            apiKey,
-            resolveApiBaseURL(normalized, ctx),
-            {
-              payment_id: paymentId,
-              topup,
-              product_id: productId,
-              success_url: resolvePaymentRedirectURL({
-                path: "/v1/payment.creem/redirect/success",
-                ctx,
-                request: requestCtx.request,
-              }),
-            },
-          );
+          const client = createDodoClient({
+            api_key: apiKey,
+            webhook_key: normalized.webhook_key ?? ctx.env("DODO_WEBHOOK_KEY"),
+            environment: resolveEnvironment(normalized, ctx),
+            api_base_url: normalized.api_base_url ?? ctx.env("DODO_API_BASE_URL"),
+          });
+          const created = await createDodoCheckoutSession(client, {
+            payment_id: paymentId,
+            topup,
+            product_id: productId,
+            currency,
+            return_url: resolvePaymentRedirectURL({
+              path: "/v1/payment.dodo/redirect/success",
+              ctx,
+              request: requestCtx.request,
+            }),
+            cancel_url: resolvePaymentRedirectURL({
+              path: "/v1/payment.dodo/redirect/cancel",
+              ctx,
+              request: requestCtx.request,
+            }),
+          });
           const now = new Date().toISOString();
-          const row: CreemPaymentRecord = {
+          const row: DodoPaymentRecord = {
             payment_id: paymentId,
             topup_id: topup.topup_id,
             user_id: topup.user_id,
-            creem_checkout_id: created.checkout_id,
-            creem_order_id: "",
+            dodo_checkout_session_id: created.checkout_session_id,
+            dodo_payment_id: created.dodo_payment_id,
             amount: topup.amount,
             currency,
             status: "pending",
@@ -216,8 +221,7 @@ export function creemPaymentService(options: CreemPaymentServiceOptions): Servic
         auth: ["user"],
         async handler(requestCtx) {
           const userId = normalizeRequired(requestCtx.user?.user_id, "user_id");
-          const rows = sortPayments(await payments.select({ user_id: userId }));
-          return requestCtx.jsonResponse({ items: rows });
+          return requestCtx.jsonResponse({ items: sortPayments(await payments.select({ user_id: userId })) });
         },
       });
 
@@ -245,15 +249,26 @@ export function creemPaymentService(options: CreemPaymentServiceOptions): Servic
         auth: [],
         async handler(requestCtx) {
           const raw = await requestCtx.text();
-          const webhookSecret = normalized.webhook_secret ?? ctx.env("CREEM_WEBHOOK_SECRET");
-          if (webhookSecret) {
-            const signature = requestCtx.request.headers.get("creem-signature");
-            const valid = await verifyCreemSignature(raw, signature, webhookSecret);
-            if (!valid) return requestCtx.jsonResponse({ error: "Invalid Creem signature" }, 400);
+          const webhookKey = normalized.webhook_key ?? ctx.env("DODO_WEBHOOK_KEY");
+          let event: DodoWebhookEvent;
+          try {
+            const client = createDodoClient({
+              api_key: normalized.api_key ?? ctx.env("DODO_PAYMENTS_API_KEY") ?? "webhook_only",
+              webhook_key: webhookKey,
+              environment: resolveEnvironment(normalized, ctx),
+              api_base_url: normalized.api_base_url ?? ctx.env("DODO_API_BASE_URL"),
+            });
+            event = parseDodoWebhookEvent({
+              client,
+              raw,
+              headers: requestCtx.request.headers,
+              verify: Boolean(webhookKey),
+            });
+          } catch {
+            return requestCtx.jsonResponse({ error: "Invalid Dodo signature" }, 400);
           }
 
-          const event = parseCreemWebhookEvent(raw);
-          const eventId = normalizeRequired(event.id, "creem event id");
+          const eventId = readEventId(event);
           const eventType = readEventType(event);
           const existing = (await events.select({ event_id: eventId }))[0];
           if (existing) {
@@ -264,7 +279,7 @@ export function creemPaymentService(options: CreemPaymentServiceOptions): Servic
             });
           }
 
-          const eventRow: CreemEventRecord = {
+          const eventRow: DodoEventRecord = {
             event_id: eventId,
             type: eventType,
             payload_json: JSON.stringify(event),
@@ -275,11 +290,7 @@ export function creemPaymentService(options: CreemPaymentServiceOptions): Servic
           await events.insert(eventRow);
 
           try {
-            const syncStatus = await syncCreemEvent({
-              event,
-              payments,
-              balance,
-            });
+            const syncStatus = await syncDodoEvent({ event, payments, balance });
             await updateEvent(events, eventId, syncStatus, "");
             return requestCtx.jsonResponse({
               received: true,
@@ -307,7 +318,7 @@ export function creemPaymentService(options: CreemPaymentServiceOptions): Servic
           return htmlResponse(renderRedirectPage({
             title: "Payment successful",
             heading: "Payment completed",
-            description: "Your Creem payment has been accepted. If the balance view has not refreshed yet, close this page and return to your app.",
+            description: "Your Dodo payment has been accepted. If the balance view has not refreshed yet, close this page and return to your app.",
             request: requestCtx.request,
           }));
         },
@@ -331,91 +342,94 @@ export function creemPaymentService(options: CreemPaymentServiceOptions): Servic
 }
 
 /**
- * 统一同步 Creem webhook 事件。
+ * 统一同步 Dodo webhook 事件。
  */
-async function syncCreemEvent(input: {
-  event: CreemWebhookEvent;
+async function syncDodoEvent(input: {
+  event: DodoWebhookEvent;
   payments: PaymentTable;
-  balance: CreemPaymentServiceOptions["balance"];
-}): Promise<CreemEventSyncStatus> {
+  balance: DodoPaymentServiceOptions["balance"];
+}): Promise<DodoEventSyncStatus> {
   const { event, payments, balance } = input;
   switch (readEventType(event)) {
-    case "checkout.completed":
-      return await syncCheckoutCompleted(event, payments, balance);
-    case "checkout.expired":
-      return await syncCheckoutExpired(event, payments);
-    case "checkout.failed":
+    case "payment.succeeded":
+      return await syncPaymentSucceeded(event, payments, balance);
     case "payment.failed":
-      return await syncCheckoutFailed(event, payments);
+      return await syncPaymentFailed(event, payments);
+    case "payment.cancelled":
+    case "payment.canceled":
+      return await syncPaymentCanceled(event, payments);
     default:
       return "ignored";
   }
 }
 
 /**
- * 同步 `checkout.completed`。
+ * 同步 `payment.succeeded`。
  */
-async function syncCheckoutCompleted(
-  event: CreemWebhookEvent,
+async function syncPaymentSucceeded(
+  event: DodoWebhookEvent,
   payments: PaymentTable,
-  balance: CreemPaymentServiceOptions["balance"],
-): Promise<CreemEventSyncStatus> {
+  balance: DodoPaymentServiceOptions["balance"],
+): Promise<DodoEventSyncStatus> {
   const object = readEventObject(event);
   const payment = await findPaymentByEventObject(payments, object);
   if (!payment) return "ignored";
   if (payment.status === "paid") return "applied";
 
-  const orderId = readObjectId(readMetadata(object.order)) || normalizeOptionalText(object.order_id);
+  const dodoPaymentId = readObjectId(object) || normalizeOptionalText(object.payment_id);
   const topup = await balance.readTopup(payment.topup_id);
   if (topup.status === "pending") {
     await balance.finishTopup(payment.topup_id, {
-      note: "creem topup",
-      ref: orderId || readObjectId(object) || payment.creem_checkout_id,
+      note: "dodo topup",
+      ref: dodoPaymentId || payment.dodo_payment_id || payment.dodo_checkout_session_id,
       meta: {
-        creem_event_id: normalizeOptionalText(event.id),
-        creem_checkout_id: readObjectId(object) || payment.creem_checkout_id,
-        creem_order_id: orderId,
-        creem_payment_id: payment.payment_id,
+        dodo_event_id: readEventId(event),
+        dodo_checkout_session_id: normalizeOptionalText(object.checkout_session_id) || payment.dodo_checkout_session_id,
+        dodo_payment_id: dodoPaymentId,
+        dodo_service_payment_id: payment.payment_id,
       },
     });
   }
 
   await updatePayment(payments, payment.payment_id, {
     status: "paid",
-    creem_order_id: orderId || payment.creem_order_id,
+    dodo_payment_id: dodoPaymentId || payment.dodo_payment_id,
   });
-  return "applied";
-}
-
-/**
- * 同步 `checkout.expired`。
- */
-async function syncCheckoutExpired(
-  event: CreemWebhookEvent,
-  payments: PaymentTable,
-): Promise<CreemEventSyncStatus> {
-  const object = readEventObject(event);
-  const payment = await findPaymentByEventObject(payments, object);
-  if (!payment) return "ignored";
-  if (payment.status !== "pending") return "ignored";
-  await updatePayment(payments, payment.payment_id, { status: "expired" });
   return "applied";
 }
 
 /**
  * 同步支付失败事件。
  */
-async function syncCheckoutFailed(
-  event: CreemWebhookEvent,
+async function syncPaymentFailed(
+  event: DodoWebhookEvent,
   payments: PaymentTable,
-): Promise<CreemEventSyncStatus> {
+): Promise<DodoEventSyncStatus> {
   const object = readEventObject(event);
   const payment = await findPaymentByEventObject(payments, object);
   if (!payment) return "ignored";
   if (payment.status !== "pending") return "ignored";
   await updatePayment(payments, payment.payment_id, {
     status: "failed",
-    creem_order_id: readObjectId(readMetadata(object.order)) || normalizeOptionalText(object.order_id),
+    dodo_payment_id: readObjectId(object) || normalizeOptionalText(object.payment_id) || payment.dodo_payment_id,
+  });
+  return "applied";
+}
+
+/**
+ * 同步支付取消事件。
+ */
+async function syncPaymentCanceled(
+  event: DodoWebhookEvent,
+  payments: PaymentTable,
+): Promise<DodoEventSyncStatus> {
+  const object = readEventObject(event);
+  const payment = await findPaymentByEventObject(payments, object);
+  if (!payment) return "ignored";
+  if (payment.status !== "pending") return "ignored";
+  await updatePayment(payments, payment.payment_id, {
+    status: "canceled",
+    dodo_payment_id: readObjectId(object) || normalizeOptionalText(object.payment_id) || payment.dodo_payment_id,
   });
   return "applied";
 }
@@ -426,17 +440,23 @@ async function syncCheckoutFailed(
 async function findPaymentByEventObject(
   payments: PaymentTable,
   object: Record<string, unknown>,
-): Promise<CreemPaymentRecord | undefined> {
+): Promise<DodoPaymentRecord | undefined> {
   const metadata = readMetadata(object.metadata);
-  const paymentId = normalizeOptionalText(metadata.payment_id) || normalizeOptionalText(object.request_id);
+  const paymentId = normalizeOptionalText(metadata.payment_id);
   if (paymentId) {
     const record = (await payments.select({ payment_id: paymentId }))[0];
     if (record) return record;
   }
 
-  const checkoutId = readObjectId(object) || normalizeOptionalText(object.checkout_id);
-  if (checkoutId) {
-    const record = (await payments.select({ creem_checkout_id: checkoutId }))[0];
+  const dodoPaymentId = readObjectId(object) || normalizeOptionalText(object.payment_id);
+  if (dodoPaymentId) {
+    const record = (await payments.select({ dodo_payment_id: dodoPaymentId }))[0];
+    if (record) return record;
+  }
+
+  const checkoutSessionId = normalizeOptionalText(object.checkout_session_id);
+  if (checkoutSessionId) {
+    const record = (await payments.select({ dodo_checkout_session_id: checkoutSessionId }))[0];
     if (record) return record;
   }
 
@@ -454,7 +474,7 @@ async function findPaymentByEventObject(
 async function findActivePaymentByTopup(
   payments: PaymentTable,
   topupId: string,
-): Promise<CreemPaymentRecord | undefined> {
+): Promise<DodoPaymentRecord | undefined> {
   const rows = sortPayments(await payments.select({ topup_id: topupId }));
   return rows.find((row) => row.status === "pending");
 }
@@ -466,15 +486,15 @@ async function updatePayment(
   payments: PaymentTable,
   paymentId: string,
   input: {
-    status: CreemPaymentStatus;
-    creem_order_id?: string;
+    status: DodoPaymentStatus;
+    dodo_payment_id?: string;
   },
 ): Promise<void> {
   await payments.update({
     where: { payment_id: paymentId },
     values: {
       status: input.status,
-      creem_order_id: normalizeOptionalText(input.creem_order_id),
+      dodo_payment_id: normalizeOptionalText(input.dodo_payment_id),
       updated_at: new Date().toISOString(),
     },
   });
@@ -486,7 +506,7 @@ async function updatePayment(
 async function updateEvent(
   events: EventTable,
   eventId: string,
-  syncStatus: CreemEventSyncStatus,
+  syncStatus: DodoEventSyncStatus,
   syncError: string,
 ): Promise<void> {
   await events.update({
@@ -501,11 +521,12 @@ async function updateEvent(
 /**
  * 将支付记录裁剪为创建 Checkout 的返回结构。
  */
-function toCheckoutResult(row: CreemPaymentRecord): CreemCheckoutCreateResult {
+function toCheckoutResult(row: DodoPaymentRecord): DodoCheckoutCreateResult {
   return {
     payment_id: row.payment_id,
     topup_id: row.topup_id,
-    creem_checkout_id: row.creem_checkout_id,
+    dodo_checkout_session_id: row.dodo_checkout_session_id,
+    dodo_payment_id: row.dodo_payment_id,
     checkout_url: row.checkout_url,
     status: row.status,
   };
@@ -514,7 +535,7 @@ function toCheckoutResult(row: CreemPaymentRecord): CreemCheckoutCreateResult {
 /**
  * 统一排序支付记录。
  */
-function sortPayments(rows: CreemPaymentRecord[]): CreemPaymentRecord[] {
+function sortPayments(rows: DodoPaymentRecord[]): DodoPaymentRecord[] {
   return [...rows].sort((left, right) => {
     if (left.updated_at === right.updated_at) return right.created_at.localeCompare(left.created_at);
     return right.updated_at.localeCompare(left.updated_at);
@@ -524,43 +545,48 @@ function sortPayments(rows: CreemPaymentRecord[]): CreemPaymentRecord[] {
 /**
  * 统一排序 webhook 事件记录。
  */
-function sortEvents(rows: CreemEventRecord[]): CreemEventRecord[] {
+function sortEvents(rows: DodoEventRecord[]): DodoEventRecord[] {
   return [...rows].sort((left, right) => right.created_at.localeCompare(left.created_at));
+}
+
+/**
+ * 读取 webhook 事件 ID。
+ */
+function readEventId(event: DodoWebhookEvent): string {
+  return normalizeRequired(event.id || event.event_id || readObjectId(readEventObject(event)) || `evt_${randomId()}`, "dodo event id");
 }
 
 /**
  * 读取 webhook 事件类型。
  */
-function readEventType(event: CreemWebhookEvent): string {
-  return normalizeOptionalText(event.eventType) || normalizeOptionalText(event.type) || "unknown";
+function readEventType(event: DodoWebhookEvent): string {
+  return normalizeOptionalText(event.type) || normalizeOptionalText(event.eventType) || "unknown";
 }
 
 /**
  * 读取 webhook 事件主体。
  */
-function readEventObject(event: CreemWebhookEvent): Record<string, unknown> {
-  const directObject = readMetadata(event.object);
-  if (Object.keys(directObject).length > 0) return directObject;
-  return readMetadata(event.data?.object);
+function readEventObject(event: DodoWebhookEvent): Record<string, unknown> {
+  return readMetadata(event.data || event.object);
 }
 
 /**
  * 读取对象 ID。
  */
 function readObjectId(object: Record<string, unknown>): string {
-  return normalizeOptionalText(object.id);
+  return normalizeOptionalText(object.payment_id) || normalizeOptionalText(object.id);
 }
 
 /**
  * 规范化服务配置。
  */
-function normalizeOptions(options: CreemPaymentServiceOptions): NormalizedCreemPaymentServiceOptions {
-  if (!options?.balance) throw new TypeError("Creem payment service requires a balance service instance");
+function normalizeOptions(options: DodoPaymentServiceOptions): NormalizedDodoPaymentServiceOptions {
+  if (!options?.balance) throw new TypeError("Dodo payment service requires a balance service instance");
   return {
     ...options,
     balance: options.balance,
+    environment: normalizeDodoEnvironment(options.environment),
     currency: normalizeCurrency(options.currency) || "usd",
-    api_base_url: normalizeCreemApiBaseURL(options.api_base_url),
   };
 }
 
@@ -575,24 +601,24 @@ function normalizeCurrency(value: unknown): string {
  * 解析当前请求最终使用的币种。
  */
 function resolveCurrency(
-  options: NormalizedCreemPaymentServiceOptions,
+  options: NormalizedDodoPaymentServiceOptions,
   ctx: { env(key: string): string | undefined },
 ): string {
-  return normalizeCurrency(ctx.env("CREEM_CURRENCY")) || options.currency || "usd";
+  return normalizeCurrency(ctx.env("DODO_CURRENCY")) || options.currency || "usd";
 }
 
 /**
- * 解析当前请求最终使用的 Creem API 基础地址。
+ * 解析当前请求最终使用的 Dodo 环境。
  */
-function resolveApiBaseURL(
-  options: NormalizedCreemPaymentServiceOptions,
+function resolveEnvironment(
+  options: NormalizedDodoPaymentServiceOptions,
   ctx: { env(key: string): string | undefined },
-): string {
-  return normalizeCreemApiBaseURL(ctx.env("CREEM_API_BASE_URL") || options.api_base_url);
+): "test_mode" | "live_mode" {
+  return normalizeDodoEnvironment(ctx.env("DODO_ENVIRONMENT") || options.environment);
 }
 
 /**
- * 返回最小 HTML 页面，避免 Creem 跳回后出现 404。
+ * 返回最小 HTML 页面，避免 Dodo 跳回后出现 404。
  */
 function htmlResponse(html: string): Response {
   return new Response(html, {
@@ -622,55 +648,11 @@ function renderRedirectPage(input: {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title}</title>
     <style>
-      :root {
-        color-scheme: light;
-        --bg: #f5f7fb;
-        --card: #ffffff;
-        --text: #142033;
-        --muted: #5a6a85;
-        --border: #d9e2f1;
-        --accent: #1f6feb;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        padding: 24px;
-        background:
-          radial-gradient(circle at top, #e9f1ff 0, rgba(233, 241, 255, 0) 42%),
-          linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
-        color: var(--text);
-        font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-      main {
-        width: min(100%, 560px);
-        padding: 32px;
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        background: var(--card);
-        box-shadow: 0 18px 60px rgba(16, 24, 40, 0.08);
-      }
-      h1 {
-        margin: 0 0 12px;
-        font-size: 28px;
-        line-height: 1.2;
-      }
-      p {
-        margin: 0;
-        color: var(--muted);
-      }
-      a {
-        display: inline-block;
-        margin-top: 24px;
-        color: #fff;
-        background: var(--accent);
-        text-decoration: none;
-        padding: 12px 16px;
-        border-radius: 999px;
-        font-weight: 600;
-      }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f5f7fb; color: #142033; font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(100%, 560px); padding: 32px; border: 1px solid #d9e2f1; border-radius: 20px; background: #fff; box-shadow: 0 18px 60px rgba(16, 24, 40, 0.08); }
+      h1 { margin: 0 0 12px; font-size: 28px; line-height: 1.2; }
+      p { margin: 0; color: #5a6a85; }
+      a { display: inline-block; margin-top: 24px; color: #fff; background: #1f6feb; text-decoration: none; padding: 12px 16px; border-radius: 999px; font-weight: 600; }
     </style>
   </head>
   <body>
@@ -696,13 +678,8 @@ function escapeHTML(value: string): string {
 }
 
 /**
- * 生成随机 ID。
+ * 生成短随机 ID。
  */
 function randomId(): string {
-  const buffer = new Uint8Array(12);
-  crypto.getRandomValues(buffer);
-  return btoa(String.fromCharCode(...buffer))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  return crypto.randomUUID?.().replaceAll("-", "").slice(0, 16) || Math.random().toString(36).slice(2, 18);
 }

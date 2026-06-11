@@ -109,15 +109,6 @@ export interface CreemPaymentServiceOptions {
   webhook_secret?: string;
 
   /**
-   * 默认支付成功跳转地址。
-   *
-   * 当 `checkout/create` 未显式传入 `success_url` 时使用。
-   * 如果这里也未配置，服务会继续尝试基于 `DOWNCITY_CITY_BASE_URL`
-   * 自动生成默认结果页地址。
-   */
-  success_url?: string;
-
-  /**
    * 默认结算币种。
    *
    * 仅用于支付方式目录展示和本地记录；最终收款币种由 Creem product 决定。
@@ -141,19 +132,6 @@ export interface CreemCreateCheckoutInput extends Record<string, unknown> {
    * 对应的 balance topup ID。
    */
   topup_id: string;
-
-  /**
-   * 可选支付成功跳转地址。
-   */
-  success_url?: string;
-
-  /**
-   * 可选支付取消跳转地址。
-   *
-   * 当前 Creem Checkout API 不消费该字段；这里保留是为了前端在多支付方式
-   * checkout 入参里可以复用同一结构。
-   */
-  cancel_url?: string;
 }
 
 /**

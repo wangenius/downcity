@@ -40,11 +40,11 @@ base.use(creemPaymentService({
 - `CREEM_API_KEY`: API key used to create Checkout sessions
 - `CREEM_PRODUCT_ID`: Creem product used for the hosted Checkout page
 - `CREEM_WEBHOOK_SECRET`: optional webhook signing secret for `creem-signature`
-- `CREEM_SUCCESS_URL`: optional default success redirect
+- `DOWNCITY_CITY_BASE_URL`: optional public City base URL used to derive built-in result pages
 - `CREEM_CURRENCY`: optional display currency for payment method discovery
 - `CREEM_API_BASE_URL`: optional API base URL override for tests
 
-If the success redirect URL is not configured directly, the service derives a default redirect page from `DOWNCITY_CITY_BASE_URL` first and then falls back to the current request origin.
+The Creem success redirect URL is generated automatically from `DOWNCITY_CITY_BASE_URL`. If it is not configured, the service falls back to the current request origin for local development.
 
 ## Frontend flow
 

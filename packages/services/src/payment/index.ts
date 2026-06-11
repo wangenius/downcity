@@ -13,7 +13,9 @@ import type {
   PaymentMethodItem,
   PaymentServiceOptions,
   CreemPaymentMethodOptions,
+  DodoPaymentMethodOptions,
   StripePaymentMethodOptions,
+  WaffoPaymentMethodOptions,
 } from "./types.js";
 
 /**
@@ -84,6 +86,55 @@ export function creemPaymentMethod(options: CreemPaymentMethodOptions = {}): Pay
         action: "checkout/create",
         requires_user: true,
         currency: normalizeCurrency(ctx.env("CREEM_CURRENCY")) || normalizeCurrency(options.currency) || "usd",
+        reason: enabled ? undefined : "not_configured",
+      };
+    },
+  };
+}
+
+/**
+ * 生成 Dodo Payments 支付方式定义。
+ */
+export function dodoPaymentMethod(options: DodoPaymentMethodOptions = {}): PaymentMethodDefinition {
+  return {
+    resolve(ctx): PaymentMethodItem {
+      const hasApiKey = Boolean(options.api_key || ctx.env("DODO_PAYMENTS_API_KEY"));
+      const hasProductId = Boolean(options.product_id || ctx.env("DODO_PRODUCT_ID"));
+      const enabled = hasApiKey && hasProductId;
+      return {
+        id: "dodo",
+        type: "checkout",
+        enabled,
+        label: options.label?.trim() || "Dodo Payments",
+        service: "payment.dodo",
+        action: "checkout/create",
+        requires_user: true,
+        currency: normalizeCurrency(ctx.env("DODO_CURRENCY")) || normalizeCurrency(options.currency) || "usd",
+        reason: enabled ? undefined : "not_configured",
+      };
+    },
+  };
+}
+
+/**
+ * 生成 Waffo Pancake 支付方式定义。
+ */
+export function waffoPaymentMethod(options: WaffoPaymentMethodOptions = {}): PaymentMethodDefinition {
+  return {
+    resolve(ctx): PaymentMethodItem {
+      const hasMerchantId = Boolean(options.merchant_id || ctx.env("WAFFO_MERCHANT_ID"));
+      const hasPrivateKey = Boolean(options.private_key || ctx.env("WAFFO_PRIVATE_KEY"));
+      const hasProductId = Boolean(options.product_id || ctx.env("WAFFO_PRODUCT_ID"));
+      const enabled = hasMerchantId && hasPrivateKey && hasProductId;
+      return {
+        id: "waffo",
+        type: "checkout",
+        enabled,
+        label: options.label?.trim() || "Waffo Pancake",
+        service: "payment.waffo",
+        action: "checkout/create",
+        requires_user: true,
+        currency: normalizeCurrency(ctx.env("WAFFO_CURRENCY")) || normalizeCurrency(options.currency) || "usd",
         reason: enabled ? undefined : "not_configured",
       };
     },

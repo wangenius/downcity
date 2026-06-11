@@ -6,6 +6,8 @@
     "balance",
     "usage",
     "payment-stripe",
-    "payment-creem"
+    "payment-creem",
+    "payment-dodo",
+    "payment-waffo"
   ]
 }

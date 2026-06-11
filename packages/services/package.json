@@ -1,7 +1,7 @@
 {
   "name": "@downcity/services",
-  "version": "0.1.50",
-  "description": "Downcity public services package for accounts, balance, usage, Stripe payment, and Creem payment flows.",
+  "version": "0.1.52",
+  "description": "Downcity public services package for accounts, balance, usage, Stripe, Creem, Dodo, and Waffo payment flows.",
   "type": "module",
   "main": "./bin/index.js",
   "module": "./bin/index.js",
@@ -34,7 +34,9 @@
     "balance",
     "usage",
     "stripe",
-    "creem"
+    "creem",
+    "dodo",
+    "waffo"
   ],
   "engines": {
     "node": ">=22.13.0"
@@ -55,8 +57,10 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@waffo/pancake-ts": "^0.11.0",
     "@downcity/city": "workspace:*",
     "better-auth": "^1.6.12",
+    "dodopayments": "^2.36.0",
     "drizzle-orm": "^0.45.2"
   }
 }

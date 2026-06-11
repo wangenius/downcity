@@ -77,7 +77,7 @@ base.use(stripePaymentService({
 }));
 ```
 
-如果你没有手动填写 `success_url` / `cancel_url`，服务会优先基于 `DOWNCITY_CITY_BASE_URL`，再回退到当前请求 origin 自动生成默认跳转页地址。
+Stripe 的 success / cancel URL 会自动基于 `DOWNCITY_CITY_BASE_URL` 生成；未配置时会回退到当前请求 origin，方便本地开发。
 
 ## 前端先读什么
 

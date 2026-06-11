@@ -77,7 +77,7 @@ base.use(stripePaymentService({
 }));
 ```
 
-If `success_url` / `cancel_url` are not filled manually, the service derives default redirect-page URLs from `DOWNCITY_CITY_BASE_URL` first and then falls back to the current request origin.
+Stripe success and cancel URLs are generated automatically from `DOWNCITY_CITY_BASE_URL`. If it is not configured, the service falls back to the current request origin for local development.
 
 ## What the frontend should read first
 

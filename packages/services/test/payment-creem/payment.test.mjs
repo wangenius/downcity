@@ -106,13 +106,13 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
       api_key: "creem_test",
       product_id: "prod_test",
       webhook_secret: "whsec_creem",
-      success_url: "https://example.com/success",
       api_base_url: creemStub.baseURL,
       currency: "usd",
     }))
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const town = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/towns/create",
@@ -138,7 +138,7 @@ test("creemPaymentService creates checkout sessions and finishes topups through 
     assert.equal(checkout.creem_checkout_id, "ch_test_checkout")
     assert.equal(checkout.checkout_url, "https://checkout.creem.test/ch_test_checkout")
     assert.equal(creemStub.lastBody().product_id, "prod_test")
-    assert.equal(creemStub.lastBody().success_url, "https://example.com/success")
+    assert.equal(creemStub.lastBody().success_url, "https://base.example.com/v1/payment.creem/redirect/success")
     assert.equal(creemStub.lastBody().request_id, checkout.payment_id)
     assert.equal(creemStub.lastBody().metadata.topup_id, topup.topup_id)
 
@@ -313,12 +313,12 @@ test("creemPaymentService marks failed and expired payments without crediting ba
       api_key: "creem_test",
       product_id: "prod_test",
       webhook_secret: "whsec_creem",
-      success_url: "https://example.com/success",
       api_base_url: creemStub.baseURL,
     }))
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const town = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/towns/create",

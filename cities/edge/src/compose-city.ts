@@ -13,14 +13,20 @@ import {
   balanceService,
   creemPaymentMethod,
   creemPaymentService,
+  dodoPaymentMethod,
+  dodoPaymentService,
   paymentService,
   stripePaymentMethod,
   stripePaymentService,
   usageService,
+  waffoPaymentMethod,
+  waffoPaymentService,
   type BalanceExtra,
   type BalanceService,
   type CreemPaymentServiceBalanceBridge,
+  type DodoPaymentServiceBalanceBridge,
   type StripePaymentServiceBalanceBridge,
+  type WaffoPaymentServiceBalanceBridge,
 } from "@downcity/services";
 
 /**
@@ -59,6 +65,10 @@ export interface ComposeCityBaseOptions extends CityBaseOptions {
   enable_stripe_payment?: boolean;
   /** 是否安装 creem 支付闭环。 */
   enable_creem_payment?: boolean;
+  /** 是否安装 dodo 支付闭环。 */
+  enable_dodo_payment?: boolean;
+  /** 是否安装 waffo 支付闭环。 */
+  enable_waffo_payment?: boolean;
 }
 
 /**
@@ -89,6 +99,8 @@ export function compose_city(options: ComposeCityBaseOptions): {
       methods: [
         stripePaymentMethod(),
         creemPaymentMethod(),
+        dodoPaymentMethod(),
+        waffoPaymentMethod(),
       ],
     }));
   }
@@ -114,6 +126,26 @@ export function compose_city(options: ComposeCityBaseOptions): {
     };
     city.use(creemPaymentService({
       balance: creem_balance_bridge,
+    }));
+  }
+
+  if (options.enable_dodo_payment !== false) {
+    const dodo_balance_bridge: DodoPaymentServiceBalanceBridge = {
+      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
+      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
+    };
+    city.use(dodoPaymentService({
+      balance: dodo_balance_bridge,
+    }));
+  }
+
+  if (options.enable_waffo_payment !== false) {
+    const waffo_balance_bridge: WaffoPaymentServiceBalanceBridge = {
+      readTopup: async (topup_id: string) => await balance.readTopup(topup_id),
+      finishTopup: async (topup_id: string, extra: BalanceExtra) => await balance.finishTopup(topup_id, extra),
+    };
+    city.use(waffoPaymentService({
+      balance: waffo_balance_bridge,
     }));
   }
 

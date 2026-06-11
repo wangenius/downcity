@@ -151,8 +151,7 @@ city
 - 以 user 身份创建 topup
 - 继续创建 Stripe Checkout，并自动打开浏览器支付
 
-如果你没有单独配置 `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL`，Stripe 服务会优先基于
-`DOWNCITY_CITY_BASE_URL`，再回退到当前请求 origin 自动生成默认 success / cancel 页面。
+Stripe 的 success / cancel 页面会自动基于 `DOWNCITY_CITY_BASE_URL` 生成；未配置时会回退到当前请求 origin，方便本地开发。
 
 Stripe webhook endpoint 本身则固定是：
 

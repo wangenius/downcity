@@ -104,8 +104,6 @@ test("stripePaymentService creates checkout sessions and finishes topups through
       balance,
       secret_key: "sk_test",
       webhook_secret: "whsec_test",
-      success_url: "https://example.com/success",
-      cancel_url: "https://example.com/cancel",
       api_base_url: stripeStub.baseURL,
       item_name: "Downcity Recharge",
       currency: "usd",
@@ -113,6 +111,7 @@ test("stripePaymentService creates checkout sessions and finishes topups through
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const town = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/towns/create",
@@ -139,8 +138,8 @@ test("stripePaymentService creates checkout sessions and finishes topups through
     assert.equal(checkout.topup_id, topup.topup_id)
     assert.equal(checkout.stripe_checkout_session_id, "cs_test_checkout")
     assert.equal(checkout.checkout_url, "https://checkout.stripe.test/cs_test_checkout")
-    assert.equal(stripeStub.lastParams()?.get("success_url"), "https://example.com/success")
-    assert.equal(stripeStub.lastParams()?.get("cancel_url"), "https://example.com/cancel")
+    assert.equal(stripeStub.lastParams()?.get("success_url"), "https://base.example.com/v1/payment.stripe/redirect/success")
+    assert.equal(stripeStub.lastParams()?.get("cancel_url"), "https://base.example.com/v1/payment.stripe/redirect/cancel")
 
     const duplicateCheckoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
@@ -372,13 +371,12 @@ test("stripePaymentService marks failed and expired payments without crediting b
       balance,
       secret_key: "sk_test",
       webhook_secret: "whsec_test",
-      success_url: "https://example.com/success",
-      cancel_url: "https://example.com/cancel",
       api_base_url: stripeStub.baseURL,
     }))
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const town = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/towns/create",

@@ -102,24 +102,6 @@ export interface StripePaymentServiceOptions {
   webhook_secret?: string;
 
   /**
-   * 默认支付成功跳转地址。
-   *
-   * 当 `checkout/create` 未显式传入 `success_url` 时使用。
-   * 如果这里也未配置，服务会继续尝试基于 `DOWNCITY_CITY_BASE_URL`
-   * 自动生成默认结果页地址。
-   */
-  success_url?: string;
-
-  /**
-   * 默认支付取消跳转地址。
-   *
-   * 当 `checkout/create` 未显式传入 `cancel_url` 时使用。
-   * 如果这里也未配置，服务会继续尝试基于 `DOWNCITY_CITY_BASE_URL`
-   * 自动生成默认结果页地址。
-   */
-  cancel_url?: string;
-
-  /**
    * 默认结算币种。
    *
    * 传给 Stripe 时会被规范化为小写；默认值为 `usd`。
@@ -266,16 +248,6 @@ export interface StripeCreateCheckoutInput extends Record<string, unknown> {
    * 已存在的 balance topup ID。
    */
   topup_id?: string;
-
-  /**
-   * 可选覆盖默认成功跳转地址。
-   */
-  success_url?: string;
-
-  /**
-   * 可选覆盖默认取消跳转地址。
-   */
-  cancel_url?: string;
 }
 
 /**

@@ -40,11 +40,11 @@ base.use(creemPaymentService({
 - `CREEM_API_KEY`：用于创建 Checkout 的 API key
 - `CREEM_PRODUCT_ID`：Creem 托管 Checkout 使用的 product
 - `CREEM_WEBHOOK_SECRET`：可选，用于校验 `creem-signature`
-- `CREEM_SUCCESS_URL`：可选，默认成功跳转地址
+- `DOWNCITY_CITY_BASE_URL`：可选，City 对外访问地址，用于生成内置结果页
 - `CREEM_CURRENCY`：可选，支付方式目录展示用币种
 - `CREEM_API_BASE_URL`：可选，测试环境 API 地址覆写
 
-如果你没有直接配置成功跳转地址，服务会优先基于 `DOWNCITY_CITY_BASE_URL`，再回退到当前请求 origin 自动生成默认结果页地址。
+Creem 的 success URL 会自动基于 `DOWNCITY_CITY_BASE_URL` 生成；未配置时会回退到当前请求 origin，方便本地开发。
 
 ## 前端流程
 

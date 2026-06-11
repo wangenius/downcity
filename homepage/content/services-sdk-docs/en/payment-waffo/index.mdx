@@ -1,0 +1,90 @@
+---
+title: "Waffo Pancake Payment Service"
+description: "Turn one-time Waffo Pancake Checkout sessions into global balance topups."
+---
+
+`waffoPaymentService()` creates Waffo Pancake Checkout sessions through the `@waffo/pancake-ts` SDK and completes an existing `balance` topup after Waffo sends an `order.completed` webhook.
+
+The service stores the Downcity `payment_id` in Waffo `orderMerchantExternalId`, so webhook sync can find the local payment record without relying on buyer-controlled fields.
+
+## Enable it
+
+```ts
+import { balanceService } from "@downcity/services";
+import {
+  paymentService,
+  waffoPaymentMethod,
+  waffoPaymentService,
+  type WaffoPaymentServiceBalanceBridge,
+} from "@downcity/services";
+
+const balance = balanceService();
+const waffoBalanceBridge: WaffoPaymentServiceBalanceBridge = {
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+};
+
+base.use(balance);
+base.use(paymentService({
+  methods: [
+    waffoPaymentMethod(),
+  ],
+}));
+base.use(waffoPaymentService({
+  balance: waffoBalanceBridge,
+}));
+```
+
+## Required env
+
+- `WAFFO_MERCHANT_ID`: Waffo Merchant ID, for example `MER_6gyg0Q5asJBoY5GSNmZt7P`
+- `WAFFO_PRIVATE_KEY`: Waffo API private key used by `@waffo/pancake-ts`
+- `WAFFO_PRODUCT_ID`: Waffo product used for Checkout
+- `WAFFO_WEBHOOK_PUBLIC_KEY`: optional webhook public key; the SDK can also use its built-in Waffo keys
+- `WAFFO_ENVIRONMENT`: optional `test` or `prod`; defaults to `test`
+- `DOWNCITY_CITY_BASE_URL`: optional public City base URL used to derive built-in result pages
+- `WAFFO_CURRENCY`: optional display currency for payment method discovery
+- `WAFFO_API_BASE_URL`: optional API base URL override for tests
+
+The Waffo success redirect URL is generated automatically from `DOWNCITY_CITY_BASE_URL`. If it is not configured, the service falls back to the current request origin for local development.
+
+## Frontend flow
+
+Create a trusted topup first through `balance`, then create a Waffo checkout for it:
+
+```ts
+const checkout = await user.service("payment.waffo").action("checkout/create").invoke({
+  topup_id: "topup_demo",
+});
+
+location.href = checkout.checkout_url;
+```
+
+`paymentService()` exposes Waffo through:
+
+```ts
+const methods = await guest.service("payment").get("methods");
+```
+
+The Waffo method is enabled only when `WAFFO_MERCHANT_ID`, `WAFFO_PRIVATE_KEY`, and `WAFFO_PRODUCT_ID` are configured.
+
+## Webhook sync
+
+Configure Waffo to send webhook events to:
+
+```txt
+POST /v1/payment.waffo/webhook
+```
+
+The service verifies `x-waffo-signature` with the Waffo SDK and applies `order.completed` once per delivery id.
+
+## Routes
+
+- `GET /v1/payment/methods`
+- `POST /v1/payment.waffo/checkout/create`
+- `GET /v1/payment.waffo/payments/me`
+- `GET /v1/payment.waffo/payments`
+- `GET /v1/payment.waffo/events`
+- `POST /v1/payment.waffo/webhook`
+- `GET /v1/payment.waffo/redirect/success`
+- `GET /v1/payment.waffo/redirect/cancel`

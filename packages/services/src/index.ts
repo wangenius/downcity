@@ -31,14 +31,19 @@ export type {
   BalanceTopupStatus,
 } from "./balance/types.js";
 
-export { creemPaymentMethod, paymentService, stripePaymentMethod } from "./payment/index.js";
+export { creemPaymentMethod, dodoPaymentMethod, paymentService, stripePaymentMethod, waffoPaymentMethod } from "./payment/index.js";
 export type {
   PaymentMethodDefinition,
   PaymentMethodItem,
   PaymentMethodType,
   PaymentServiceOptions,
 } from "./payment/types.js";
-export type { CreemPaymentMethodOptions, StripePaymentMethodOptions } from "./payment/types.js";
+export type {
+  CreemPaymentMethodOptions,
+  DodoPaymentMethodOptions,
+  StripePaymentMethodOptions,
+  WaffoPaymentMethodOptions,
+} from "./payment/types.js";
 
 export { stripeEvents, stripePayments, stripePaymentService } from "./payment-stripe/index.js";
 export type {
@@ -67,6 +72,37 @@ export type {
   CreemPaymentTopupRecord,
   CreemWebhookEvent,
 } from "./payment-creem/types.js";
+
+export { dodoEvents, dodoPayments, dodoPaymentService } from "./payment-dodo/index.js";
+export type {
+  DodoCheckoutCreateResult,
+  DodoCreateCheckoutInput,
+  DodoEventRecord,
+  DodoEventSyncStatus,
+  DodoPaymentEnvironment,
+  DodoPaymentRecord,
+  DodoPaymentServiceBalanceBridge,
+  DodoPaymentServiceOptions,
+  DodoPaymentStatus,
+  DodoPaymentTopupRecord,
+  DodoWebhookEvent,
+} from "./payment-dodo/types.js";
+
+export { waffoEvents, waffoPayments, waffoPaymentService } from "./payment-waffo/index.js";
+export type {
+  WaffoCheckoutCreateResult,
+  WaffoCreateCheckoutInput,
+  WaffoEventRecord,
+  WaffoEventSyncStatus,
+  WaffoPaymentEnvironment,
+  WaffoPaymentRecord,
+  WaffoPaymentServiceBalanceBridge,
+  WaffoPaymentServiceOptions,
+  WaffoPaymentStatus,
+  WaffoPaymentTopupRecord,
+  WaffoWebhookEvent,
+  WaffoWebhookEventData,
+} from "./payment-waffo/types.js";
 
 export { usageEvents, usageService } from "./usage/index.js";
 export type { UsageServiceOptions } from "./usage/index.js";

@@ -8,6 +8,7 @@
  */
 
 import type { ServiceDefinition, EnvRequirement } from "@downcity/city";
+import { resolvePaymentRedirectURL } from "../payment/redirect.js";
 import { stripeEvents, stripePayments } from "./schema.js";
 import {
   createStripeCheckoutSession,
@@ -51,8 +52,6 @@ interface NormalizedStripePaymentServiceOptions {
   balance: StripePaymentServiceOptions["balance"];
   secret_key?: string;
   webhook_secret?: string;
-  success_url?: string;
-  cancel_url?: string;
   currency: string;
   item_name: string;
   api_base_url: string;
@@ -63,7 +62,7 @@ interface NormalizedStripePaymentServiceOptions {
  *
  * 关键说明（中文）
  * - secret / webhook 是最常见的宿主注入配置
- * - success / cancel URL 用于 CLI 或纯后端场景下的默认跳转地址
+ * - 默认跳转页统一基于 DOWNCITY_CITY_BASE_URL 生成
  * - currency / item name / api server URL 提供可选默认值覆写
  */
 const stripePaymentEnv: EnvRequirement[] = [
@@ -78,18 +77,8 @@ const stripePaymentEnv: EnvRequirement[] = [
     required: false,
   },
   {
-    key: "STRIPE_SUCCESS_URL",
-    description: "默认支付成功跳转地址；未在请求里传 success_url 时使用",
-    required: false,
-  },
-  {
-    key: "STRIPE_CANCEL_URL",
-    description: "默认支付取消跳转地址；未在请求里传 cancel_url 时使用",
-    required: false,
-  },
-  {
     key: "DOWNCITY_CITY_BASE_URL",
-    description: "City 对外访问地址；未显式配置 success/cancel URL 时，会自动生成 Stripe 默认跳转页地址",
+    description: "City 对外访问地址；用于自动生成 Stripe 默认跳转页地址",
     required: false,
   },
   {
@@ -139,9 +128,9 @@ export function stripePaymentService(options: StripePaymentServiceOptions): Serv
     instruction: [
       "使用 Stripe 创建一次性充值 Checkout，并在 webhook 成功后完成 balance topup。",
       "这个服务不处理 entitlement，也不处理 subscription。",
-      "当 options 未显式传入时，会回退读取 STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET / STRIPE_SUCCESS_URL / STRIPE_CANCEL_URL。",
-      "如果 success/cancel URL 仍未配置，会继续尝试基于 DOWNCITY_CITY_BASE_URL 自动生成默认跳转页地址。",
-      `currency=${normalized.currency}，success_url=${normalized.success_url || "read from STRIPE_SUCCESS_URL or route input"}。`,
+      "当 options 未显式传入时，会回退读取 STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET。",
+      "默认 success/cancel URL 统一基于 DOWNCITY_CITY_BASE_URL 自动生成。",
+      `currency=${normalized.currency}。`,
       "支付成功后统一通过 balance.finishTopup() 完成到账。",
     ].join("\n"),
     install(ctx) {
@@ -183,19 +172,13 @@ export function stripePaymentService(options: StripePaymentServiceOptions): Serv
               payment_id: paymentId,
               topup,
               currency,
-              success_url: resolveCheckoutRedirectURL({
-                value: body.success_url,
-                fallback: normalized.success_url ?? ctx.env("STRIPE_SUCCESS_URL"),
-                label: "success_url",
-                redirectPath: "/v1/payment.stripe/redirect/success",
+              success_url: resolvePaymentRedirectURL({
+                path: "/v1/payment.stripe/redirect/success",
                 ctx,
                 request: requestCtx.request,
               }),
-              cancel_url: resolveCheckoutRedirectURL({
-                value: body.cancel_url,
-                fallback: normalized.cancel_url ?? ctx.env("STRIPE_CANCEL_URL"),
-                label: "cancel_url",
-                redirectPath: "/v1/payment.stripe/redirect/cancel",
+              cancel_url: resolvePaymentRedirectURL({
+                path: "/v1/payment.stripe/redirect/cancel",
                 ctx,
                 request: requestCtx.request,
               }),
@@ -544,38 +527,6 @@ function sortEvents(rows: StripeEventRecord[]): StripeEventRecord[] {
 }
 
 /**
- * 选择跳转地址。
- */
-function pickRedirectURL(value: unknown, fallback: string | undefined, label: string): string {
-  const candidate = normalizeOptionalText(value);
-  if (candidate) return candidate;
-  return normalizeRequired(fallback, label);
-}
-
-/**
- * 解析 Checkout 跳转地址。
- *
- * 关键说明（中文）
- * - 优先使用请求级显式传入值
- * - 再回退到服务配置或 runtime env
- * - 再回退到 DOWNCITY_CITY_BASE_URL
- * - 最后使用当前请求 origin 自动生成服务内置结果页
- */
-function resolveCheckoutRedirectURL(input: {
-  value: unknown;
-  fallback: string | undefined;
-  label: string;
-  redirectPath: "/v1/payment.stripe/redirect/success" | "/v1/payment.stripe/redirect/cancel";
-  ctx: { env(key: string): string | undefined };
-  request: Request;
-}): string {
-  const configured = normalizeOptionalText(input.fallback);
-  const fromBaseURL = buildBaseURLRedirect(input.ctx.env("DOWNCITY_CITY_BASE_URL"), input.redirectPath);
-  const fromRequestOrigin = buildRequestOriginRedirect(input.request, input.redirectPath);
-  return pickRedirectURL(input.value, configured || fromBaseURL || fromRequestOrigin, input.label);
-}
-
-/**
  * 规范化服务配置。
  */
 function normalizeOptions(options: StripePaymentServiceOptions): NormalizedStripePaymentServiceOptions {
@@ -624,30 +575,6 @@ function resolveApiBaseURL(
   ctx: { env(key: string): string | undefined },
 ): string {
   return normalizeStripeApiBaseURL(ctx.env("STRIPE_API_BASE_URL") || options.api_base_url);
-}
-
-/**
- * 基于 City 对外地址生成默认跳转页 URL。
- */
-function buildBaseURLRedirect(baseURL: string | undefined, path: string): string {
-  const normalizedBaseURL = normalizeOptionalText(baseURL).replace(/\/+$/, "");
-  if (!normalizedBaseURL) return "";
-  return `${normalizedBaseURL}${path}`;
-}
-
-/**
- * 基于当前请求 origin 生成默认跳转页 URL。
- *
- * 关键说明（中文）
- * - 多域名或 workers.dev / 自定义域混用时，当前请求 origin 往往最准确
- * - 这里保留为最后兜底，避免开发者必须手动配置 BASE URL
- */
-function buildRequestOriginRedirect(request: Request, path: string): string {
-  try {
-    return new URL(path, request.url).toString();
-  } catch {
-    return "";
-  }
 }
 
 /**

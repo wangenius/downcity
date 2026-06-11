@@ -179,8 +179,7 @@ curl -X POST https://my-city.<your-subdomain>.workers.dev/v1/env/upsert \
 | `DEEPSEEK_API_KEY` | edge 参考项目默认使用的 provider key |
 | `STRIPE_SECRET_KEY` | 创建 Stripe Checkout 的 API key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook 签名密钥 |
-| `STRIPE_SUCCESS_URL` | 可选，Checkout 成功后的默认跳转地址 |
-| `STRIPE_CANCEL_URL` | 可选，Checkout 取消后的默认跳转地址 |
+| `DOWNCITY_CITY_BASE_URL` | City 对外访问地址，用于生成支付结果页 |
 | `CREEM_API_KEY` | 创建 Creem Checkout 的 API key |
 | `CREEM_PRODUCT_ID` | Creem 托管 Checkout 使用的 product |
 | `CREEM_WEBHOOK_SECRET` | 可选，Creem webhook 签名密钥 |

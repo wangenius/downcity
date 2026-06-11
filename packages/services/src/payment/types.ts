@@ -148,3 +148,72 @@ export interface CreemPaymentMethodOptions {
    */
   label?: string;
 }
+
+/**
+ * Dodo Payments 支付方式配置。
+ */
+export interface DodoPaymentMethodOptions {
+  /**
+   * 显式注入的 Dodo Payments API Key。
+   *
+   * 未传入时会回退读取 runtime env 中的 `DODO_PAYMENTS_API_KEY`。
+   */
+  api_key?: string;
+
+  /**
+   * 显式注入的 Dodo product_id。
+   *
+   * 未传入时会回退读取 runtime env 中的 `DODO_PRODUCT_ID`。
+   */
+  product_id?: string;
+
+  /**
+   * 默认结算币种。
+   *
+   * 未传入时会回退读取 runtime env 中的 `DODO_CURRENCY`，最终默认 `usd`。
+   */
+  currency?: string;
+
+  /**
+   * 可选展示名称。
+   */
+  label?: string;
+}
+
+/**
+ * Waffo Pancake 支付方式配置。
+ */
+export interface WaffoPaymentMethodOptions {
+  /**
+   * 显式注入的 Waffo Merchant ID。
+   *
+   * 未传入时会回退读取 runtime env 中的 `WAFFO_MERCHANT_ID`。
+   */
+  merchant_id?: string;
+
+  /**
+   * 显式注入的 Waffo private key。
+   *
+   * 未传入时会回退读取 runtime env 中的 `WAFFO_PRIVATE_KEY`。
+   */
+  private_key?: string;
+
+  /**
+   * 显式注入的 Waffo product_id。
+   *
+   * 未传入时会回退读取 runtime env 中的 `WAFFO_PRODUCT_ID`。
+   */
+  product_id?: string;
+
+  /**
+   * 默认结算币种。
+   *
+   * 未传入时会回退读取 runtime env 中的 `WAFFO_CURRENCY`，最终默认 `usd`。
+   */
+  currency?: string;
+
+  /**
+   * 可选展示名称。
+   */
+  label?: string;
+}

@@ -44,7 +44,7 @@ base.use(stripePaymentService({
 POST /v1/payment.stripe/webhook
 ```
 
-如果你没有显式配置跳转地址，服务会优先基于 `DOWNCITY_CITY_BASE_URL`，再回退到当前请求 origin，并自动提供两张可直接访问的默认结果页：
+Stripe 跳转地址会自动基于 `DOWNCITY_CITY_BASE_URL` 生成；未配置时会回退到当前请求 origin，并自动提供两张可直接访问的默认结果页：
 
 - `GET /v1/payment.stripe/redirect/success`
 - `GET /v1/payment.stripe/redirect/cancel`

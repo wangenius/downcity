@@ -44,7 +44,7 @@ After that, Stripe should send events to:
 POST /v1/payment.stripe/webhook
 ```
 
-If redirect URLs are not configured explicitly, the service uses `DOWNCITY_CITY_BASE_URL` first, then falls back to the current request origin, and exposes two built-in result pages:
+Stripe redirect URLs are generated automatically from `DOWNCITY_CITY_BASE_URL`. If it is not configured, the service falls back to the current request origin and exposes two built-in result pages:
 
 - `GET /v1/payment.stripe/redirect/success`
 - `GET /v1/payment.stripe/redirect/cancel`

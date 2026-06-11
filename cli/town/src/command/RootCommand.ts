@@ -16,7 +16,6 @@ import {
   listPluginsWithoutLifecycle,
   registerPluginActionCommandsForCli,
 } from "@downcity/agent";
-import { createBuiltinPlugins } from "@downcity/plugins";
 import { registerPluginsCommand } from "./PluginCommand.js";
 import { registerManagedPluginCommandsForCli } from "./ManagedPluginActionCommand.js";
 import { registerAgentCommands } from "./AgentCommand.js";
@@ -28,6 +27,7 @@ import { registerGatewayCommands } from "./GatewayCommand.js";
 import { readPersistedTownCliLocale } from "../shared/CityStateStore.js";
 import { runInteractiveTownManager } from "../shared/TownManager.js";
 import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "../shared/CliLocale.js";
+import { createTownStaticBuiltinPlugins } from "../town/plugins/TownBuiltinPlugins.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -75,7 +75,7 @@ export async function runTownCli(): Promise<void> {
   const installedAgentVersion = resolveInstalledAgentVersion();
   const program = new Command();
   const argv = process.argv.slice(2);
-  const builtinPlugins = createBuiltinPlugins();
+  const builtinPlugins = createTownStaticBuiltinPlugins();
   const cli_locale = resolveCliLocale({
     argv,
     persisted_locale: readPersistedTownCliLocale(),

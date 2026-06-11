@@ -10,7 +10,6 @@
 import fs from "node:fs";
 import prompts from "../tui/Prompts.js";
 import { listPluginViews, listPluginsWithLifecycle, listPluginsWithoutLifecycle, runLocalPluginAction, } from "@downcity/agent";
-import { createBuiltinPlugins } from "@downcity/plugins";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { getDowncityJsonPath } from "../config/Paths.js";
 import { emitCliBlock } from "../shared/CliReporter.js";
@@ -20,6 +19,7 @@ import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
 import { runManagedPluginCommandBridge } from "../shared/ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
 import { runInteractiveChatManager } from "../shared/ChatManager.js";
+import { createTownStaticBuiltinPlugins } from "../town/plugins/TownBuiltinPlugins.js";
 const CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_TOWN = new Set([
     "status",
     "test",
@@ -37,7 +37,7 @@ const CONTACT_REMOTE_ACTIONS_HIDDEN_FROM_TOWN = new Set([
     "remoteshare",
 ]);
 function createPluginCatalog() {
-    return createBuiltinPlugins();
+    return createTownStaticBuiltinPlugins();
 }
 function createVisiblePluginCatalog() {
     return createPluginCatalog();

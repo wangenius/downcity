@@ -18,9 +18,13 @@ import type {
   UserImageJobCreateResult,
   UserImageJobResult,
   UserImageJobResultInput,
+  UserAsrInput,
+  UserAsrResult,
   UserServiceInput,
   UserStreamResult,
   UserTextResult,
+  UserTtsInput,
+  UserTtsResult,
   UserVideoResult,
 } from "../../user/types.js";
 import type { RequestInitLike } from "../../http.js";
@@ -110,13 +114,13 @@ export class AIInvoker {
   }
 
   /** 语音合成 */
-  tts<T = unknown>(input: UserServiceInput): Promise<T> {
-    return this.post<T>("/tts", input);
+  tts(input: UserTtsInput): Promise<UserTtsResult> {
+    return this.post<UserTtsResult>("/tts", input);
   }
 
   /** 语音识别 */
-  asr<T = unknown>(input: UserServiceInput): Promise<T> {
-    return this.post<T>("/asr", input);
+  asr(input: UserAsrInput): Promise<UserAsrResult> {
+    return this.post<UserAsrResult>("/asr", input);
   }
 
   /** 获取模型目录 */

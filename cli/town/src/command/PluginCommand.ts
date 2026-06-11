@@ -17,7 +17,6 @@ import {
   listPluginsWithoutLifecycle,
   runLocalPluginAction,
 } from "@downcity/agent";
-import { createBuiltinPlugins } from "@downcity/plugins";
 import { printResult } from "../utils/cli/CliOutput.js";
 import type { JsonValue } from "@downcity/agent";
 import { getDowncityJsonPath } from "../config/Paths.js";
@@ -29,6 +28,7 @@ import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
 import { runManagedPluginCommandBridge } from "../shared/ManagedPluginRemote.js";
 import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
 import { runInteractiveChatManager } from "../shared/ChatManager.js";
+import { createTownStaticBuiltinPlugins } from "../town/plugins/TownBuiltinPlugins.js";
 
 type StaticCatalogEntry = {
   name: string;
@@ -59,7 +59,7 @@ const CONTACT_REMOTE_ACTIONS_HIDDEN_FROM_TOWN = new Set([
 ]);
 
 function createPluginCatalog() {
-  return createBuiltinPlugins();
+  return createTownStaticBuiltinPlugins();
 }
 
 function createVisiblePluginCatalog() {

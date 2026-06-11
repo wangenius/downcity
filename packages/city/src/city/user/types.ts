@@ -17,6 +17,18 @@ import type {
   UserPaymentMethodType,
 } from "../invoker/payment/types.js";
 
+/** JSON 基础值。 */
+export type UserJsonPrimitive = string | number | boolean | null;
+
+/** JSON 对象。 */
+export interface UserJsonObject {
+  /** JSON 字段值。 */
+  [key: string]: UserJsonValue;
+}
+
+/** JSON 可序列化值。 */
+export type UserJsonValue = UserJsonPrimitive | UserJsonObject | UserJsonValue[];
+
 /**
  * Service 摘要信息。
  */
@@ -54,6 +66,18 @@ export type UserStreamChunk = UIMessageChunk;
 export type UserStreamResult = ReadableStream<UserStreamChunk>;
 export type UserImageResult = UIMessage;
 export type UserVideoResult = UIMessage;
+export type UserTtsResult = UIMessage;
+/** 语音识别返回结果。 */
+export interface UserAsrResult {
+  /** 转写后的文本。 */
+  text: string;
+  /** Provider 可选返回语言标识，例如 `zh` 或 `en`。 */
+  language?: string;
+  /** Provider 可选返回音频时长，单位秒。 */
+  duration?: number;
+  /** Provider 额外返回的 JSON 可序列化字段。 */
+  [key: string]: UserJsonValue | undefined;
+}
 export type {
   AIImageJobStatus as UserImageJobStatus,
   UserImageJobCreateResult,
@@ -118,7 +142,37 @@ export interface UserImageInput extends UserServiceInput {
   /** 业务侧任务 ID，用于 provider 侧幂等、追踪和恢复。 */
   client_job_id?: string;
   /** Provider 私有参数，例如 `{ openai: {...}, gemini: {...}, luchi: {...} }`。 */
-  provider_options?: Record<string, unknown>;
+  provider_options?: UserJsonObject;
+}
+
+/** 语音合成输入。 */
+export interface UserTtsInput extends UserServiceInput {
+  /** 要合成为语音的文本。 */
+  text: string;
+  /** 可选语音名称或上游 voice id。 */
+  voice?: string;
+  /** 输出音频格式，例如 `mp3`、`wav` 或 `opus`。 */
+  format?: string;
+  /** 语速倍率。 */
+  speed?: number;
+  /** Provider 私有参数，例如 `{ openai: {...}, elevenlabs: {...} }`。 */
+  provider_options?: UserJsonObject;
+}
+
+/** 语音识别输入。 */
+export interface UserAsrInput extends UserServiceInput {
+  /** 远程音频 URL。 */
+  url?: string;
+  /** data URL 音频内容。 */
+  data_url?: string;
+  /** 本地或资源系统里的音频路径。 */
+  audio_path?: string;
+  /** 音频 MIME 类型，例如 `audio/ogg`。 */
+  media_type?: string;
+  /** 原始文件名，便于 provider 推断格式。 */
+  filename?: string;
+  /** Provider 私有参数，例如 `{ openai: {...}, groq: {...} }`。 */
+  provider_options?: UserJsonObject;
 }
 
 /** 发给任意 service 的输入 */

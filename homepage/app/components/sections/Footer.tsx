@@ -17,6 +17,8 @@ export const Footer: FC = () => {
   const isZh = i18n.language.toLowerCase().startsWith("zh");
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const homePath = isZh ? "/zh" : "/";
+  const termsPath = "/terms";
+  const privacyPath = "/privacy";
   const twitterUrl = "https://x.com/downcity_ai";
   const githubUrl = "https://github.com/wangenius/downcity";
 
@@ -42,6 +44,12 @@ export const Footer: FC = () => {
           <div className="flex items-center gap-3">
             <Link to={docsPath} className={marketingTheme.navItem}>
               {t("footer.documentation")}
+            </Link>
+            <Link to={termsPath} className={marketingTheme.navItem}>
+              {t("footer.terms")}
+            </Link>
+            <Link to={privacyPath} className={marketingTheme.navItem}>
+              {t("footer.privacy")}
             </Link>
             <a
               href={twitterUrl}

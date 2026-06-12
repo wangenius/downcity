@@ -13,6 +13,8 @@ export default [
   route("zh/whitepaper", "routes/whitepaper.tsx", { id: "whitepaper-zh" }),
   route("start", "routes/start.tsx"),
   route("zh/start", "routes/start.tsx", { id: "start-zh" }),
+  route("terms", "routes/terms.tsx"),
+  route("privacy", "routes/privacy.tsx"),
 
   // Features page
   route("features", "routes/features.tsx"),

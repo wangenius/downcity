@@ -75,6 +75,18 @@ export const loader = async () => {
       priority: 0.8,
     },
     {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: "yearly" as const,
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: "yearly" as const,
+      priority: 0.4,
+    },
+    {
       url: `${baseUrl}/docs`,
       lastModified: new Date().toISOString(),
       changeFrequency: "daily" as const,

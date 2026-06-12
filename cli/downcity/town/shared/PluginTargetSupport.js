@@ -13,7 +13,7 @@ import { listManagedAgentEntries } from "../process/registry/TownRegistry.js";
 import { isTownRunning } from "../process/registry/TownRuntime.js";
 import { resolveAgentId } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
-import { checkShellSandboxPreflight } from "@downcity/agent/internal/sandbox/SandboxPreflight.js";
+import { checkShellSandboxPreflight } from "@downcity/shell/sandbox/SandboxPreflight.js";
 import { assertProjectExecutionModelReady } from "../town/city-model/ExecutionModelBinding.js";
 export function isRegistryEntryRunning(entry) {
     return entry.status !== "stopped";

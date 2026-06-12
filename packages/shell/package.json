@@ -1,0 +1,57 @@
+{
+  "name": "@downcity/shell",
+  "version": "0.1.1",
+  "type": "module",
+  "description": "Downcity Shell — local command execution, sandboxing, shell sessions, and approvals",
+  "main": "./bin/index.js",
+  "types": "./bin/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./bin/index.js",
+      "types": "./bin/index.d.ts"
+    },
+    "./approval/*.js": {
+      "import": "./bin/approval/*.js",
+      "types": "./bin/approval/*.d.ts"
+    },
+    "./sandbox/*.js": {
+      "import": "./bin/sandbox/*.js",
+      "types": "./bin/sandbox/*.d.ts"
+    },
+    "./sandbox/types/*.js": {
+      "import": "./bin/sandbox/types/*.js",
+      "types": "./bin/sandbox/types/*.d.ts"
+    },
+    "./session/*.js": {
+      "import": "./bin/session/*.js",
+      "types": "./bin/session/*.d.ts"
+    },
+    "./tool/*.js": {
+      "import": "./bin/tool/*.js",
+      "types": "./bin/tool/*.d.ts"
+    },
+    "./types/*.js": {
+      "import": "./bin/types/*.js",
+      "types": "./bin/types/*.d.ts"
+    },
+    "./*": {
+      "import": "./bin/*",
+      "types": "./bin/*"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf bin tsconfig.tsbuildinfo && tsc && tsc-alias -f",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fs-extra": "^11.3.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^25.9.1",
+    "tsc-alias": "^1.8.17",
+    "typescript": "^6.0.3"
+  }
+}

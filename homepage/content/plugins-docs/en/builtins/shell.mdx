@@ -5,7 +5,7 @@ description: Shell session lifecycle, one-shot exec, and per-agent shell runtime
 
 # `shell` Plugin
 
-`shell` is the shell runtime plugin.
+`shell` is the built-in plugin adapter for the `@downcity/shell` package.
 
 It provides:
 
@@ -22,7 +22,7 @@ It provides:
 
 Use `shell` when you need:
 
-- a shell session map owned by one plugin instance
+- shell sessions backed by `@downcity/shell`
 - per-agent shell state boundaries
 - a runtime action layer around shell execution
 
@@ -71,9 +71,9 @@ The action names are `exec`, `start`, `status`, `read`, `write`, `wait`, and `cl
 
 ## Important semantics
 
-- shell sessions belong to the plugin instance, not to a module-global singleton
+- shell sessions are implemented by `@downcity/shell`; `ShellPlugin` binds that package to one agent instance
 - constructor parameters are optional runtime tuning values; defaults preserve the built-in behavior
-- `shell` does not own the sandbox. Each command is spawned inside the current agent sandbox, whose persistent directory is `.downcity/sandbox`
+- sandbox backends also live in `@downcity/shell`. Each command is spawned inside the current agent sandbox, whose persistent directory is `.downcity/sandbox`
 - `shellId` only identifies the session log and process lifecycle under `.downcity/shell/<shellId>`; it does not decide sandbox HOME, cache, or permissions
 - Sandbox commands can read and write the project, use network by default, and share `.downcity/sandbox` as `HOME`
 - Sandbox commands cannot write the real user home or host system locations such as `/usr/local`, `/opt/homebrew`, and `/System`
@@ -82,7 +82,7 @@ The action names are `exec`, `start`, `status`, `read`, `write`, `wait`, and `cl
 
 ## Public status
 
-`ShellPlugin` is a built-in runtime plugin and can be imported directly from the `@downcity/plugins` package root.
+`ShellPlugin` remains importable from `@downcity/plugins`. The command execution, sandbox backend, session lifecycle, and approval primitives live in `@downcity/shell`.
 
 ## Related docs
 

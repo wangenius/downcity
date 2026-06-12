@@ -10,11 +10,15 @@
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import { getSessionRunContext } from "@downcity/agent/internal/executor/SessionRunScope.js";
+import { readChatMetaBySessionId } from "@/chat/runtime/ChatMetaStore.js";
+import { resolveChatQueueStore } from "@/chat/runtime/ChatQueueStore.js";
+import type { ShellHostContext } from "@downcity/shell/types/ShellHostContext.js";
 import type {
   ShellPluginState,
   ShellSessionRuntimeState,
-} from "@/shell/ShellRuntimeTypes.js";
-import type { ShellPluginOptions } from "@/shell/types/ShellPluginOptions.js";
+} from "@downcity/shell/session/ShellRuntimeTypes.js";
+import type { ShellPluginOptions } from "@downcity/shell/types/ShellPluginOptions.js";
 import type {
   ShellCloseRequest,
   ShellExecRequest,
@@ -23,7 +27,7 @@ import type {
   ShellStartRequest,
   ShellWaitRequest,
   ShellWriteRequest,
-} from "@downcity/agent/internal/executor/tools/shell/types/ShellPlugin.js";
+} from "@downcity/shell/types/ShellPlugin.js";
 import {
   bindShellRuntime,
   closeAllShellSessions,
@@ -38,7 +42,23 @@ import {
   startShellSession,
   waitShellSession,
   writeShellSession,
-} from "./runtime/ShellActionRuntime.js";
+} from "@downcity/shell/session/ShellActionRuntime.js";
+
+function withShellIntegration(context: AgentContext): ShellHostContext {
+  const shell_context = context as unknown as ShellHostContext;
+  shell_context.shellIntegration = {
+    getRunContext: () => getSessionRunContext(),
+    readChatMeta: async ({ context: ctx, sessionId }) =>
+      await readChatMetaBySessionId({
+        context: ctx as unknown as AgentContext,
+        sessionId,
+      }),
+    enqueueChat: (ctx, input) => {
+      resolveChatQueueStore(ctx as unknown as AgentContext).enqueue(input as never);
+    },
+  };
+  return shell_context;
+}
 
 /**
  * Shell plugin 类实现。
@@ -124,7 +144,7 @@ export class ShellPlugin extends BasePlugin {
           if (!approvalId) {
             return { success: false, error: "approvalId is required" };
           }
-          const ok = await approveShellApproval(this.state, params.context, approvalId);
+          const ok = await approveShellApproval(this.state, withShellIntegration(params.context), approvalId);
           return {
             success: ok,
             data: { approvalId, approved: ok },
@@ -139,7 +159,7 @@ export class ShellPlugin extends BasePlugin {
           if (!approvalId) {
             return { success: false, error: "approvalId is required" };
           }
-          const ok = await denyShellApproval(this.state, params.context, approvalId);
+          const ok = await denyShellApproval(this.state, withShellIntegration(params.context), approvalId);
           return {
             success: ok,
             data: { approvalId, denied: ok },
@@ -151,7 +171,7 @@ export class ShellPlugin extends BasePlugin {
 
     this.lifecycle = {
       start: async (context) => {
-        bindShellRuntime(this.state, context);
+        bindShellRuntime(this.state, withShellIntegration(context));
       },
       stop: async () => {
         await closeAllShellSessions(this.state, true);
@@ -174,7 +194,7 @@ export class ShellPlugin extends BasePlugin {
     context: AgentContext,
     request: ShellStartRequest,
   ) {
-    return await startShellSession(this.state, context, request);
+    return await startShellSession(this.state, withShellIntegration(context), request);
   }
 
   /**
@@ -184,7 +204,7 @@ export class ShellPlugin extends BasePlugin {
     context: AgentContext,
     request: ShellQueryRequest,
   ) {
-    return await getShellSessionStatus(this.state, context, request);
+    return await getShellSessionStatus(this.state, withShellIntegration(context), request);
   }
 
   /**
@@ -194,7 +214,7 @@ export class ShellPlugin extends BasePlugin {
     context: AgentContext,
     request: ShellReadRequest,
   ) {
-    return await readShellSession(this.state, context, request);
+    return await readShellSession(this.state, withShellIntegration(context), request);
   }
 
   /**
@@ -204,7 +224,7 @@ export class ShellPlugin extends BasePlugin {
     context: AgentContext,
     request: ShellWriteRequest,
   ) {
-    return await writeShellSession(this.state, context, request);
+    return await writeShellSession(this.state, withShellIntegration(context), request);
   }
 
   /**
@@ -214,7 +234,7 @@ export class ShellPlugin extends BasePlugin {
     context: AgentContext,
     request: ShellWaitRequest,
   ) {
-    return await waitShellSession(this.state, context, request);
+    return await waitShellSession(this.state, withShellIntegration(context), request);
   }
 
   /**
@@ -224,7 +244,7 @@ export class ShellPlugin extends BasePlugin {
     context: AgentContext,
     request: ShellCloseRequest,
   ) {
-    return await closeShellSession(this.state, context, request);
+    return await closeShellSession(this.state, withShellIntegration(context), request);
   }
 
   /**
@@ -234,6 +254,6 @@ export class ShellPlugin extends BasePlugin {
     context: AgentContext,
     request: ShellExecRequest,
   ) {
-    return await execShellCommand(this.state, context, request);
+    return await execShellCommand(this.state, withShellIntegration(context), request);
   }
 }

@@ -9,7 +9,8 @@
 import path from "node:path";
 import fs from "fs-extra";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { runSandboxCommand } from "@downcity/agent/internal/sandbox/SandboxRunner.js";
+import { runSandboxCommand } from "@downcity/shell/sandbox/SandboxRunner.js";
+import type { ShellHostContext } from "@downcity/shell/types/ShellHostContext.js";
 import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
 import type { SessionRunContext } from "@downcity/agent/internal/types/executor/SessionRunContext.js";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
@@ -295,7 +296,7 @@ export async function runScriptTask(params: {
       };
       stripTaskSecretEnv(childEnv);
       return runSandboxCommand({
-        context: params.context,
+        context: params.context as unknown as ShellHostContext,
         executionId: `task-script:${params.sessionId}`,
         executionDir: params.runDirAbs,
         cmd: `sh "${scriptAbs.replace(/(["\\$`])/g, "\\$1")}"`,

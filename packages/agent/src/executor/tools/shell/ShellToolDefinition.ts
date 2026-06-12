@@ -37,7 +37,7 @@ import {
   shellStatusInputSchema,
   shellWaitInputSchema,
   shellWriteInputSchema,
-} from "./ShellToolSchemas.js";
+} from "@downcity/shell/tool/ShellToolSchemas.js";
 
 export { setShellToolRuntime } from "./ShellToolBridge.js";
 

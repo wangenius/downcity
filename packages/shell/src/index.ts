@@ -1,0 +1,38 @@
+/**
+ * @downcity/shell 公开入口。
+ *
+ * 关键点（中文）
+ * - 本包拥有 shell / sandbox 的领域能力，不依赖 agent session 或 plugin 系统。
+ * - Agent 与 plugins 通过这里复用本地命令执行、shell session、approval 与 sandbox backend。
+ */
+
+export * from "./types/Shell.js";
+export type {
+  ShellActionResponse,
+  ShellApprovalStatus,
+  ShellApprovalToolName,
+  ShellCloseRequest,
+  ShellExecRequest,
+  ShellExternalRef,
+  ShellOutputChunk,
+  ShellQueryRequest,
+  ShellReadRequest,
+  ShellSessionSnapshot,
+  ShellSessionStatus,
+  ShellStartRequest,
+  ShellWaitRequest,
+  ShellWriteRequest,
+} from "./types/ShellPlugin.js";
+export * from "./types/ShellPluginOptions.js";
+export * from "./types/ShellHostContext.js";
+export * from "./sandbox/types/Sandbox.js";
+export * from "./sandbox/types/SandboxRuntime.js";
+export * from "./sandbox/SandboxRunner.js";
+export * from "./sandbox/SandboxConfigResolver.js";
+export * from "./sandbox/SandboxPreflight.js";
+export * from "./session/ShellActionRuntime.js";
+export * from "./session/ShellActionResponse.js";
+export * from "./session/ShellRuntimeEnvironment.js";
+export * from "./session/ShellRuntimeTypes.js";
+export * from "./approval/ShellApprovalRuntime.js";
+export * from "./tool/ShellToolSchemas.js";

@@ -320,6 +320,9 @@ importers:
       '@downcity/plugins':
         specifier: workspace:^
         version: link:../../packages/plugins
+      '@downcity/shell':
+        specifier: workspace:^
+        version: link:../../packages/shell
       '@downcity/type':
         specifier: workspace:*
         version: link:../../packages/type
@@ -541,6 +544,9 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: ^2.0.48
         version: 2.0.48(zod@4.4.3)
+      '@downcity/shell':
+        specifier: workspace:^
+        version: link:../shell
       '@downcity/type':
         specifier: workspace:*
         version: link:../type
@@ -633,6 +639,9 @@ importers:
       '@downcity/agent':
         specifier: workspace:^
         version: link:../agent
+      '@downcity/shell':
+        specifier: workspace:^
+        version: link:../shell
       '@larksuiteoapi/node-sdk':
         specifier: ^1.66.0
         version: 1.66.0
@@ -716,6 +725,28 @@ importers:
       better-sqlite3:
         specifier: ^12.10.0
         version: 12.10.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shell:
+    dependencies:
+      fs-extra:
+        specifier: ^11.3.5
+        version: 11.3.5
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/fs-extra':
+        specifier: ^11.0.4
+        version: 11.0.4
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      tsc-alias:
+        specifier: ^1.8.17
+        version: 1.8.17
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

@@ -17,7 +17,7 @@ import { resolveAgentId } from "./IndexSupport.js";
 import { CliError } from "./CliError.js";
 import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
-import { checkShellSandboxPreflight } from "@downcity/agent/internal/sandbox/SandboxPreflight.js";
+import { checkShellSandboxPreflight } from "@downcity/shell/sandbox/SandboxPreflight.js";
 import { assertProjectExecutionModelReady } from "../town/city-model/ExecutionModelBinding.js";
 
 export function isRegistryEntryRunning(

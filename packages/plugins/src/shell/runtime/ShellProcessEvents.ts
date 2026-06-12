@@ -1,65 +1,7 @@
 /**
- * Shell 子进程事件绑定辅助。
+ * Shell process events 兼容出口。
  *
- * 关键点（中文）
- * - 集中处理 stdout/stderr 追加、process error 与 close 事件。
- * - close 到达时先等待输出写入链 drain，再统一进入终态收口，避免尾部输出丢读。
+ * 关键点（中文）：shell process events 已迁移到 `@downcity/shell`。
  */
 
-import type { ShellPluginState, ShellSessionRuntimeState } from "@/shell/ShellRuntimeTypes.js";
-import {
-  appendSessionOutput,
-  finalizeExit,
-} from "./ShellActionRuntimeSupport.js";
-
-async function finalizeExitAfterOutputDrain(
-  state: ShellPluginState,
-  session: ShellSessionRuntimeState,
-  exitCode: number,
-): Promise<void> {
-  // 关键点（中文）
-  // - `close` 事件到达时，stdout / stderr 的异步 append 链可能刚刚开始收尾。
-  // - 这里先让出一个事件循环 tick，再等待当前 writeChain，可显著降低“终态已到但尾部输出尚未可读”的竞态。
-  await new Promise<void>((resolve) => {
-    const timer = setImmediate(resolve);
-    if (typeof timer.unref === "function") timer.unref();
-  });
-  await session.writeChain.catch(() => undefined);
-  await finalizeExit(state, session, exitCode);
-}
-
-/**
- * 绑定 shell 子进程事件。
- */
-export function attachShellProcessEventHandlers(params: {
-  /**
-   * 当前 shell plugin runtime 状态。
-   */
-  state: ShellPluginState;
-  /**
-   * 当前 shell runtime session。
-   */
-  session: ShellSessionRuntimeState;
-}): void {
-  const { state, session } = params;
-  const { child } = session;
-  child.stdout.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(state, session, String(chunk ?? "")).catch(() => undefined);
-  });
-  child.stderr.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(state, session, String(chunk ?? "")).catch(() => undefined);
-  });
-  child.on("error", (error: Error) => {
-    void appendSessionOutput(state, session, `\n[process error] ${String(error)}\n`).catch(
-      () => undefined,
-    );
-    void finalizeExitAfterOutputDrain(state, session, -1).catch(() => undefined);
-  });
-  child.on("close", (code: number | null) => {
-    void finalizeExitAfterOutputDrain(
-      state,
-      session,
-      typeof code === "number" ? code : -1,
-    ).catch(() => undefined);
-  });
-}
+export * from "@downcity/shell/session/ShellProcessEvents.js";

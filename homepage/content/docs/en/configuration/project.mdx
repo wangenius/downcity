@@ -57,7 +57,7 @@ In the current version, `shell` / CLI commands run in the **Safe Sandbox** by de
 
 Current behavior:
 
-- Affects both the shell plugin path and `kind=script` task execution
+- Affects both `@downcity/shell` command execution and `kind=script` task execution
 - Current backends support macOS and Linux: macOS uses built-in `sandbox-exec`; Linux uses `bubblewrap` (`bwrap`)
 - Safe Sandbox cannot be disabled and shell execution does not silently fall back to an unrestricted host process
 - Host paths not mounted into the sandbox are not visible

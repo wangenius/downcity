@@ -5,7 +5,7 @@ description: shell session 生命周期、单次 exec，以及 per-agent shell r
 
 # `shell` Plugin
 
-`shell` 是 shell 运行时 plugin。
+`shell` 是 `@downcity/shell` 包对应的内建 plugin adapter。
 
 它提供：
 
@@ -22,7 +22,7 @@ description: shell session 生命周期、单次 exec，以及 per-agent shell r
 
 如果你需要这些能力，就应该关注 `shell`：
 
-- 归属于 plugin 实例的 shell session map
+- 由 `@downcity/shell` 实现的 shell session
 - per-agent 的 shell 状态边界
 - 一套围绕 shell 执行的 runtime action 层
 
@@ -71,9 +71,9 @@ action 名称是 `exec`、`start`、`status`、`read`、`write`、`wait`、`clos
 
 ## 关键语义
 
-- shell sessions 归属于 plugin 实例，而不是模块级全局单例
+- shell sessions 由 `@downcity/shell` 实现；`ShellPlugin` 负责把它绑定到某个 agent 实例
 - constructor 参数都是可选 runtime 调参；默认值保持内建行为不变
-- `shell` 不拥有 sandbox。每条命令都会进入当前 agent sandbox 执行，持久目录是 `.downcity/sandbox`
+- sandbox backend 也在 `@downcity/shell` 中。每条命令都会进入当前 agent sandbox 执行，持久目录是 `.downcity/sandbox`
 - `shellId` 只标识 `.downcity/shell/<shellId>` 下的会话日志与进程生命周期，不决定 sandbox HOME、cache 或权限
 - sandbox 命令默认可读写项目目录、可联网，并共享 `.downcity/sandbox` 作为 `HOME`
 - sandbox 命令不能写真实用户 HOME，也不能写 `/usr/local`、`/opt/homebrew`、`/System` 等宿主系统目录
@@ -82,7 +82,7 @@ action 名称是 `exec`、`start`、`status`、`read`、`write`、`wait`、`clos
 
 ## 公开性说明
 
-`ShellPlugin` 是 built-in runtime plugin，也可以从 `@downcity/plugins` 包根直接导入。
+`ShellPlugin` 仍然可以从 `@downcity/plugins` 包根直接导入。命令执行、sandbox backend、session lifecycle 与 approval primitives 位于 `@downcity/shell`。
 
 ## 相关文档
 

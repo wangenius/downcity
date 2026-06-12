@@ -5,6 +5,7 @@ packages:
   - packages/city
   - packages/services
   - packages/plugins
+  - packages/shell
   - packages/type
   - cli/*
   - packages/ui

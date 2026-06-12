@@ -5,13 +5,13 @@ description: runtime shell 执行与会话归属
 
 # shell plugin
 
-`shell` 是内建 runtime plugin，用于让 shell session 归属于具体 agent runtime。
+`shell` 是内建 plugin adapter，用于让 shell session 归属于具体 agent runtime。底层命令执行与 sandbox 实现在 `@downcity/shell` 中。
 
 当你需要“属于 agent runtime 的 shell 执行”而不是临时本地终端步骤时，使用它。
 
 ## 这类 plugin 的含义
 
-- shell session 的归属在托管 shell plugin runtime 上
+- shell session 的归属在托管 agent 上，具体实现位于 `@downcity/shell`
 - start/stop 时的清理归属于 plugin lifecycle
 - 命令执行与会话状态都绑定到目标 agent
 - shell runtime 参数来自 SDK constructor，可选；CLI 只是调用目标 agent 已注册的 shell plugin

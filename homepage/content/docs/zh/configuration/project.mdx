@@ -57,7 +57,7 @@ description: downcity.json 中用户最常用字段与注意事项
 
 当前版本的行为：
 
-- 作用于 shell plugin 与 `kind=script` 的 task 执行链
+- 作用于 `@downcity/shell` 命令执行与 `kind=script` 的 task 执行链
 - 当前支持 macOS 与 Linux：macOS 使用系统自带 `sandbox-exec`，Linux 使用 `bubblewrap`（命令名 `bwrap`）
 - 不支持关闭 Safe Sandbox，也不会静默回退到宿主机普通子进程执行
 - 未挂入 sandbox 的宿主路径默认不可见

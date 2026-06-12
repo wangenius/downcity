@@ -47,6 +47,7 @@ if (!newVersion) {
 
 const files = [
   'package.json',
+  'packages/shell/package.json',
   'packages/agent/package.json',
   'packages/city/package.json',
   'packages/services/package.json',
@@ -175,6 +176,7 @@ main() {
   # 6. 暂存发布版本文件。UI SDK 走 packages 主发布流程。
   git add \
     package.json \
+    packages/shell/package.json \
     packages/agent/package.json \
     packages/city/package.json \
     packages/services/package.json \

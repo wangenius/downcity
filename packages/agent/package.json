@@ -1,6 +1,6 @@
 {
   "name": "@downcity/agent",
-  "version": "1.1.113",
+  "version": "1.1.114",
   "type": "module",
   "description": "Downcity Agent 运行时 — 单 Agent 执行壳与本机 RPC 能力",
   "main": "./bin/index.js",
@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
+    "@downcity/shell": "workspace:^",
     "@downcity/type": "workspace:*",
     "@larksuiteoapi/node-sdk": "^1.66.0",
     "ai": "^6.0.193",

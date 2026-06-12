@@ -24,7 +24,7 @@ import type { AsrPluginOptions } from "@/asr/types/AsrPlugin.js";
 import type { TtsPluginOptions } from "@/tts/types/TtsPlugin.js";
 import type { TaskPluginOptions } from "@/task/types/TaskPluginOptions.js";
 import type { MemoryPluginOptions } from "@/memory/types/Memory.js";
-import type { ShellPluginOptions } from "@/shell/types/ShellPluginOptions.js";
+import type { ShellPluginOptions } from "@downcity/shell/types/ShellPluginOptions.js";
 
 /**
  * 内建 plugin class 构造器。

@@ -5,13 +5,13 @@ description: Runtime shell execution and session ownership
 
 # shell plugin
 
-`shell` is a built-in runtime plugin for shell sessions that belong to a specific agent runtime.
+`shell` is a built-in plugin adapter for shell sessions that belong to a specific agent runtime. The underlying command execution and sandbox implementation live in `@downcity/shell`.
 
 Use it when you want shell execution that belongs to the agent runtime instead of an ad-hoc local terminal step.
 
 ## What this plugin shape means
 
-- shell session ownership belongs to the managed shell plugin runtime
+- shell session ownership belongs to the managed agent, while implementation lives in `@downcity/shell`
 - start/stop cleanup belongs to plugin lifecycle
 - command execution and session state stay tied to the target agent
 - shell runtime parameters come from the SDK constructor and are optional; the CLI only calls the shell plugin already registered on the target agent

@@ -26,12 +26,24 @@ const agent = new RemoteAgent({ url: "http://127.0.0.1:5314" });
 const approvals = await agent.approvals();
 ```
 
+需要在当前对话 session 内自动允许 shell approval 时，可以切到 `always-allow`：
+
+```ts
+await agent.set_approval_mode({
+  session_id: "consoleui",
+  mode: "always-allow",
+});
+```
+
+该设置只影响当前 session 的新 shell approval 请求。
+
 ## 说明
 
 - `@downcity/plugins` 不再提供 `ShellPlugin`。
 - Shell tools 通过 `new Agent({ shell: new Shell() })` 挂载。
 - Unrestricted sandbox 请求会以 `tool-approval-request` session event 出现。
 - 每次审批只覆盖一个命令或一次 `shell_write`。
+- approval mode 可选值为 `ask` 与 `always-allow`。
 
 ## 相关页面
 

@@ -19,6 +19,8 @@ import {
   resolveSession,
 } from "../ShellActionRuntimeSupport.js";
 import {
+  getShellApprovalMode,
+  recordAutoApprovedApproval,
   requestUnrestrictedApproval,
   validateUnrestrictedRequest,
 } from "../../approval/ShellApprovalRuntime.js";
@@ -58,27 +60,46 @@ export async function writeShellSession(
   if (session.snapshot.sandboxMode === "unrestricted") {
     const validationError = validateUnrestrictedRequest({ cmd: chars, reason });
     if (validationError) throw new Error(validationError);
-    const approval = await requestUnrestrictedApproval({
+    const approvalMode = getShellApprovalMode({
       state,
-      context,
-      shellId,
-      toolName: "shell_write",
-      cmd: chars,
-      cwd: session.snapshot.cwd,
-      reason,
-      ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
-      inputPreview: chars,
-      inputChars: chars.length,
+      ownerContextId: session.snapshot.ownerContextId,
     });
-    approvalId = approval.approvalId;
-    approvalStatus = approval.status;
-    if (approval.status !== "approved") {
-      return buildDeniedWriteApprovalResponse({
-        session,
-        approvalId: approval.approvalId,
+    if (approvalMode === "always-allow") {
+      approvalStatus = "approved";
+      await recordAutoApprovedApproval({
+        context,
+        shellId,
+        toolName: "shell_write",
+        cmd: chars,
+        cwd: session.snapshot.cwd,
         reason,
-        approvalStatus: approval.status,
+        ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
+        inputPreview: chars,
+        inputChars: chars.length,
+      }).catch(() => undefined);
+    } else {
+      const approval = await requestUnrestrictedApproval({
+        state,
+        context,
+        shellId,
+        toolName: "shell_write",
+        cmd: chars,
+        cwd: session.snapshot.cwd,
+        reason,
+        ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
+        inputPreview: chars,
+        inputChars: chars.length,
       });
+      approvalId = approval.approvalId;
+      approvalStatus = approval.status;
+      if (approval.status !== "approved") {
+        return buildDeniedWriteApprovalResponse({
+          session,
+          approvalId: approval.approvalId,
+          reason,
+          approvalStatus: approval.status,
+        });
+      }
     }
   }
   await new Promise<void>((resolve, reject) => {

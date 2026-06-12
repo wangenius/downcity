@@ -9,6 +9,33 @@
 import type { UiChatHistoryEvent } from "./SessionAndModelTypes";
 
 /**
+ * Shell approval 模式。
+ *
+ * 说明（中文）
+ * - `ask` 表示当前 session 的 shell unrestricted 请求需要人工审批。
+ * - `always-allow` 表示当前 session 内自动允许 shell approval。
+ */
+export type UiShellApprovalMode = "ask" | "always-allow";
+
+/**
+ * Shell approval 模式选项。
+ */
+export interface UiShellApprovalModeOption {
+  /**
+   * 模式值。
+   */
+  mode: UiShellApprovalMode;
+  /**
+   * 展示标签。
+   */
+  label: string;
+  /**
+   * 展示说明。
+   */
+  description: string;
+}
+
+/**
  * Chat 渠道配置字段类型。
  */
 export type UiChatChannelConfigurationFieldType =

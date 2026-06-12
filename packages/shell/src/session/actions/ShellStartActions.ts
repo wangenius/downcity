@@ -35,6 +35,8 @@ import {
 } from "../ShellActionRuntimeSupport.js";
 import { attachShellProcessEventHandlers } from "../ShellProcessEvents.js";
 import {
+  getShellApprovalMode,
+  recordAutoApprovedApproval,
   requestUnrestrictedApproval,
   validateUnrestrictedRequest,
 } from "../../approval/ShellApprovalRuntime.js";
@@ -79,29 +81,43 @@ export async function startShellSession(
   if (sandboxMode === "unrestricted") {
     const validationError = validateUnrestrictedRequest({ cmd, reason });
     if (validationError) throw new Error(validationError);
-    const approval = await requestUnrestrictedApproval({
-      state,
-      context,
-      shellId,
-      toolName: request.approvalToolName || "shell_start",
-      cmd,
-      cwd,
-      reason,
-      ...(ownerContextId ? { ownerContextId } : {}),
-    });
-    approvalId = approval.approvalId;
-    approvalStatus = approval.status;
-    if (approval.status !== "approved") {
-      return buildDeniedApprovalResponse({
+    const approvalMode = getShellApprovalMode({ state, ownerContextId });
+    if (approvalMode === "always-allow") {
+      approvalStatus = "approved";
+      await recordAutoApprovedApproval({
+        context,
         shellId,
-        ...(ownerContextId ? { ownerContextId } : {}),
+        toolName: request.approvalToolName || "shell_start",
         cmd,
         cwd,
-        shellPath,
-        approvalId: approval.approvalId,
         reason,
-        approvalStatus: approval.status,
+        ...(ownerContextId ? { ownerContextId } : {}),
+      }).catch(() => undefined);
+    } else {
+      const approval = await requestUnrestrictedApproval({
+        state,
+        context,
+        shellId,
+        toolName: request.approvalToolName || "shell_start",
+        cmd,
+        cwd,
+        reason,
+        ...(ownerContextId ? { ownerContextId } : {}),
       });
+      approvalId = approval.approvalId;
+      approvalStatus = approval.status;
+      if (approval.status !== "approved") {
+        return buildDeniedApprovalResponse({
+          shellId,
+          ...(ownerContextId ? { ownerContextId } : {}),
+          cmd,
+          cwd,
+          shellPath,
+          approvalId: approval.approvalId,
+          reason,
+          approvalStatus: approval.status,
+        });
+      }
     }
   }
 

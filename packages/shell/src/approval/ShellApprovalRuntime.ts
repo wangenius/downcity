@@ -12,6 +12,7 @@ import path from "node:path";
 import { generateId } from "@/utils/Id.js";
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
 import type {
+  ShellApprovalMode,
   ShellApprovalStatus,
   ShellApprovalToolName,
 } from "@/types/ShellAction.js";
@@ -56,6 +57,66 @@ async function appendAudit(params: {
   await fs.appendFile(filePath, `${JSON.stringify(params.record)}\n`, "utf-8");
 }
 
+/**
+ * 归一化 shell approval 模式。
+ */
+export function normalizeShellApprovalMode(value: unknown): ShellApprovalMode {
+  return value === "always-allow" ? "always-allow" : "ask";
+}
+
+/**
+ * 读取指定 session 的 shell approval 模式。
+ */
+export function getShellApprovalMode(params: {
+  state: ShellRuntimeState;
+  ownerContextId?: string;
+}): ShellApprovalMode {
+  const ownerContextId = String(params.ownerContextId || "").trim();
+  if (!ownerContextId) return "ask";
+  return normalizeShellApprovalMode(params.state.approval_modes.get(ownerContextId));
+}
+
+/**
+ * 列出 shell 支持的 approval 模式。
+ */
+export function listShellApprovalModes(): Array<{
+  mode: ShellApprovalMode;
+  label: string;
+  description: string;
+}> {
+  return [
+    {
+      mode: "ask",
+      label: "Ask",
+      description: "Ask for approval before each unrestricted shell request.",
+    },
+    {
+      mode: "always-allow",
+      label: "Always allow",
+      description: "Automatically approve unrestricted shell requests in this session.",
+    },
+  ];
+}
+
+/**
+ * 设置指定 session 的 shell approval 模式。
+ */
+export function setShellApprovalMode(params: {
+  state: ShellRuntimeState;
+  ownerContextId: string;
+  mode: ShellApprovalMode;
+}): ShellApprovalMode {
+  const ownerContextId = String(params.ownerContextId || "").trim();
+  if (!ownerContextId) throw new Error("session_id is required");
+  const mode = normalizeShellApprovalMode(params.mode);
+  if (mode === "ask") {
+    params.state.approval_modes.delete(ownerContextId);
+    return "ask";
+  }
+  params.state.approval_modes.set(ownerContextId, mode);
+  return mode;
+}
+
 function publishApprovalResult(params: {
   context: ShellHostContext;
   ownerContextId?: string;
@@ -96,6 +157,44 @@ export function validateUnrestrictedRequest(params: {
     return "unrestricted sandbox rejected a dangerous command";
   }
   return null;
+}
+
+/**
+ * 记录 always-allow 模式下的自动批准。
+ */
+export async function recordAutoApprovedApproval(params: {
+  context: ShellHostContext;
+  shellId: string;
+  toolName: ShellApprovalToolName;
+  cmd: string;
+  cwd: string;
+  reason: string;
+  ownerContextId?: string;
+  inputPreview?: string;
+  inputChars?: number;
+}): Promise<void> {
+  const operation = resolveApprovalOperation(params.toolName);
+  const inputPreview = params.inputPreview !== undefined
+    ? buildInputPreview(params.inputPreview)
+    : undefined;
+  await appendAudit({
+    context: params.context,
+    record: {
+      event: "approval_auto_approved",
+      mode: "always-allow",
+      session_id: String(params.ownerContextId || "").trim() || null,
+      tool_call_id: params.shellId,
+      agent_id: params.context.config?.id || null,
+      tool_name: params.toolName,
+      cmd: params.cmd,
+      operation,
+      ...(inputPreview !== undefined ? { input_preview: inputPreview } : {}),
+      ...(typeof params.inputChars === "number" ? { input_chars: params.inputChars } : {}),
+      cwd: params.cwd,
+      reason: params.reason,
+      created_at: new Date(nowMs()).toISOString(),
+    },
+  });
 }
 
 /**

@@ -36,6 +36,7 @@ import { useDashboardAuth } from "./dashboard/useDashboardAuth";
 import { useDashboardToast } from "./dashboard/useDashboardToast";
 import { useDashboardAutoRefresh } from "./dashboard/useDashboardAutoRefresh";
 import { useDashboardSelectionRefs } from "./dashboard/useDashboardSelectionRefs";
+import { useDashboardShellApproval } from "./dashboard/useDashboardShellApproval";
 import type {
   UiAgentOption,
   UiChatChannelStatus,
@@ -173,6 +174,18 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     showToast,
   })
 
+  const {
+    shell_approval_mode: shellApprovalMode,
+    shell_approval_mode_options: shellApprovalModeOptions,
+    shell_approval_mode_loading: shellApprovalModeLoading,
+    set_session_shell_approval_mode: setSessionShellApprovalMode,
+  } = useDashboardShellApproval({
+    selected_agent_id: selectedAgentId,
+    selected_session_id: selectedSessionId,
+    request_json: async (path, options) => await requestJson(path, options),
+    show_toast: showToast,
+  });
+
   const clearPanelDataForNoAgent = useCallback(() => {
     setOverview(null);
     setAuthorization(null);
@@ -291,7 +304,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     },
     [requestJson],
   );
-
   const loadSessionArchiveMessages = useCallback(
     async (agentId: string, sessionId: string, archiveId: string) => {
       if (!agentId || !sessionId || !archiveId) {
@@ -873,6 +885,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     chatChannels,
     sessions,
     selectedSessionId,
+    shellApprovalMode,
+    shellApprovalModeOptions,
+    shellApprovalModeLoading,
     channelHistory,
     sessionMessages,
     sessionArchives,
@@ -901,6 +916,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setChatInput,
     handleAgentChange,
     handleSessionChange,
+    setSessionShellApprovalMode,
     refreshDashboard,
     refreshAuthorization,
     refreshAccess,

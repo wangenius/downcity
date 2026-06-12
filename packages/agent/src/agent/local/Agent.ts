@@ -25,7 +25,11 @@ import type {
   AgentStopResult,
 } from "@/types/agent/AgentTypes.js";
 import type {
+  ShellApprovalMode,
   ShellApprovalDecisionResult,
+  ShellApprovalModeUpdateResult,
+  ShellApprovalModeOption,
+  ShellSessionApprovalModeView,
   ShellApprovalView,
   Shell,
 } from "@downcity/shell";
@@ -149,6 +153,32 @@ export class Agent {
    */
   approvals(): ShellApprovalView[] {
     return this.shell?.approvals() || [];
+  }
+
+  /**
+   * 列出当前 shell 显式设置过的 approval 模式。
+   */
+  approval_modes(): ShellApprovalModeOption[] {
+    return this.shell?.approval_modes() || [];
+  }
+
+  /**
+   * 读取当前 shell 指定 session 的 approval 模式。
+   */
+  approval_mode(input: { session_id: string }): ShellSessionApprovalModeView {
+    if (!this.shell) throw new Error("Agent shell is not configured");
+    return this.shell.approval_mode(input);
+  }
+
+  /**
+   * 设置当前 shell 指定 session 的 approval 模式。
+   */
+  set_approval_mode(input: {
+    session_id: string;
+    mode: ShellApprovalMode;
+  }): ShellApprovalModeUpdateResult {
+    if (!this.shell) throw new Error("Agent shell is not configured");
+    return this.shell.set_approval_mode(input);
   }
 
   /**

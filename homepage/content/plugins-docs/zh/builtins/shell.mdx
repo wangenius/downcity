@@ -59,12 +59,33 @@ await agent.deny({ approval_id: pending[0].approval_id });
 
 `RemoteAgent` 通过 Town Agent HTTP gateway 暴露同样的 API。
 
+## Session Approval Mode
+
+Shell approval mode 只作用于当前 session：
+
+- `ask`：默认模式，每次 unrestricted 请求都进入审批队列。
+- `always-allow`：当前 session 内自动通过 shell approval，不再弹出新的 pending approval。
+
+```ts
+const modes = agent.approval_modes();
+
+agent.set_approval_mode({
+  session_id: "consoleui",
+  mode: "always-allow",
+});
+
+const current = agent.approval_mode({ session_id: "consoleui" });
+```
+
+`always-allow` 不改变 sandbox 模式，只是把原本需要手动批准的 unrestricted 请求自动记录为 approved。已有 pending approval 不会被自动批准。
+
 ## 关键语义
 
 - Shell 归属于 `@downcity/shell`，不属于 `@downcity/plugins`。
 - Agent 只挂载 Shell tools，并转发 session event。
 - Safe Sandbox 命令可读写项目，并使用配置的 sandbox 目录。
 - Unrestricted 命令只有在逐次审批通过后才会离开 Safe Sandbox 执行。
+- `always-allow` 只影响当前 session 的新 approval 请求，不影响其它 session。
 - 对 unrestricted `shell_start` 会话执行的每一次 `shell_write` 也需要审批。
 - `agent.stop()` 会释放 Shell sessions。
 

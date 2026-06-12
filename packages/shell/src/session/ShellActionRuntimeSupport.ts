@@ -137,6 +137,7 @@ export function createShellRuntimeState(
     options: resolveShellRuntimeOptions(options),
     sessions: new Map<string, ShellSessionRuntimeState>(),
     approvals: new Map(),
+    approval_modes: new Map(),
     context: null,
   };
 }

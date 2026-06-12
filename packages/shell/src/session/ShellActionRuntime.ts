@@ -29,5 +29,8 @@ export {
 export {
   approveShellApproval,
   denyShellApproval,
+  getShellApprovalModeView,
+  listShellApprovalModeViews,
   listShellApprovals,
+  setShellApprovalModeView,
 } from "./actions/ShellApprovalActions.js";

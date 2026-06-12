@@ -9,15 +9,56 @@
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
 import type { ShellRuntimeState } from "@/session/ShellRuntimeTypes.js";
 import {
+  getShellApprovalMode,
+  listShellApprovalModes,
   listPendingApprovals,
+  normalizeShellApprovalMode,
   resolveApproval,
+  setShellApprovalMode,
 } from "../../approval/ShellApprovalRuntime.js";
+import type { ShellApprovalMode } from "@/types/ShellAction.js";
 
 /**
  * 列出 pending unrestricted sandbox 审批。
  */
 export function listShellApprovals(state: ShellRuntimeState) {
   return listPendingApprovals(state);
+}
+
+/**
+ * 列出所有显式设置过的 shell approval 模式。
+ */
+export function listShellApprovalModeViews(state: ShellRuntimeState) {
+  void state;
+  return listShellApprovalModes();
+}
+
+/**
+ * 读取指定 session 的 shell approval 模式。
+ */
+export function getShellApprovalModeView(
+  state: ShellRuntimeState,
+  sessionId: string,
+): ShellApprovalMode {
+  return getShellApprovalMode({
+    state,
+    ownerContextId: sessionId,
+  });
+}
+
+/**
+ * 设置指定 session 的 shell approval 模式。
+ */
+export function setShellApprovalModeView(
+  state: ShellRuntimeState,
+  sessionId: string,
+  mode: ShellApprovalMode,
+): ShellApprovalMode {
+  return setShellApprovalMode({
+    state,
+    ownerContextId: sessionId,
+    mode: normalizeShellApprovalMode(mode),
+  });
 }
 
 /**

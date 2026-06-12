@@ -19,6 +19,7 @@ import {
   denyShellApproval,
   execShellCommand,
   readShellSession,
+  setShellApprovalModeView,
   startShellSession,
   writeShellSession,
 } from "@downcity/shell/session/ShellActionRuntime.js";
@@ -26,6 +27,7 @@ import {
 async function create_fixture() {
   const root_path = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-unrestricted-"));
   const events = [];
+  const run_context = {};
   const context = {
     rootPath: root_path,
     env: {},
@@ -40,10 +42,14 @@ async function create_fixture() {
         },
       }),
     },
+    shellIntegration: {
+      getRunContext: () => run_context,
+    },
   };
   return {
     root_path,
     events,
+    run_context,
     context,
   };
 }
@@ -328,6 +334,101 @@ test("shell_write safe writes without approval", async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
     assert.match(output, /safe-write/);
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});
+
+test("shell_exec unrestricted always-allow mode skips pending approval", async () => {
+  const fixture = await create_fixture();
+  const state = createShellRuntimeState({
+    defaultApprovalTimeoutMs: 2000,
+    defaultInlineWaitMs: 20,
+    defaultExecTimeoutMs: 2000,
+  });
+  try {
+    assert.equal(
+      setShellApprovalModeView(state, "session_auto", "always-allow"),
+      "always-allow",
+    );
+    fixture.run_context.sessionId = "session_auto";
+
+    const result = await execShellCommand(state, fixture.context, {
+      cmd: "printf auto-approved",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      sandbox: "unrestricted",
+      reason: "测试当前 session 自动允许 unrestricted shell_exec。",
+      timeoutMs: 2000,
+    });
+
+    assert.equal(state.approvals.size, 0);
+    assert.equal(fixture.events.length, 0);
+    assert.equal(result.shell.sandboxMode, "unrestricted");
+    assert.equal(result.shell.approvalStatus, "approved");
+    assert.equal(result.chunk.output, "auto-approved");
+
+    const audit_path = path.join(
+      fixture.root_path,
+      ".downcity",
+      "logs",
+      "unrestricted-sandbox-audit.jsonl",
+    );
+    const audit = await fs.readFile(audit_path, "utf-8");
+    assert.match(audit, /approval_auto_approved/);
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});
+
+test("shell_write unrestricted always-allow mode is scoped by session", async () => {
+  const fixture = await create_fixture();
+  const state = createShellRuntimeState({
+    defaultApprovalTimeoutMs: 2000,
+    defaultInlineWaitMs: 20,
+  });
+  try {
+    setShellApprovalModeView(state, "session_auto", "always-allow");
+
+    const auto_started = await startShellSession(state, fixture.context, {
+      cmd: "cat",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      sandbox: "unrestricted",
+      reason: "测试当前 session 自动允许 unrestricted shell_start。",
+      ownerContextId: "session_auto",
+      inlineWaitMs: 20,
+    });
+    assert.equal(auto_started.shell.approvalStatus, "approved");
+    assert.equal(state.approvals.size, 0);
+
+    const written = await writeShellSession(state, fixture.context, {
+      shellId: auto_started.shell.shellId,
+      chars: "auto-write\n",
+      reason: "测试当前 session 自动允许 unrestricted shell_write。",
+    });
+    assert.equal(written.shell.approvalStatus, "approved");
+    assert.equal(state.approvals.size, 0);
+
+    const ask_pending = startShellSession(state, fixture.context, {
+      cmd: "printf ask-session",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      sandbox: "unrestricted",
+      reason: "测试其它 session 仍然需要审批。",
+      ownerContextId: "session_ask",
+      inlineWaitMs: 20,
+    });
+    const approval = await wait_for_approval(state);
+    assert.equal(approval.ownerContextId, "session_ask");
+    await approveShellApproval(state, fixture.context, approval.approvalId);
+    const ask_result = await ask_pending;
+    assert.equal(ask_result.shell.approvalStatus, "approved");
   } finally {
     await closeAllShellSessions(state, true);
     await fs.rm(fixture.root_path, { recursive: true, force: true });

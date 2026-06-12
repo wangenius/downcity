@@ -51,7 +51,8 @@ export function App() {
     authInitializing, authBootstrapRequired, isAuthenticated, authRequired,
     authSubmitting, authErrorMessage, submitAuthToken, logout,
     overview, authorization, services, skills, plugins, agentPlugins,
-    chatChannels, sessions, selectedSessionId, channelHistory,
+    chatChannels, sessions, selectedSessionId, shellApprovalMode, shellApprovalModeOptions,
+    shellApprovalModeLoading, channelHistory,
     sessionMessages, sessionArchives, selectedArchiveId, sessionArchiveMessages,
     tasks, logs, model, configStatus, modelProviders, modelPoolItems,
     channelAccounts, globalEnvItems, agentEnvItems, prompt,
@@ -73,7 +74,7 @@ export function App() {
     removeModelPoolItem, setModelPoolItemPaused, testModelPoolItem,
     upsertChannelAccount, probeChannelAccount, removeChannelAccount,
     upsertGlobalEnv, removeGlobalEnv, importGlobalEnv, upsertAgentEnv,
-    removeAgentEnv, importAgentEnv, executeAgentCommand, constants, uiHelpers,
+    removeAgentEnv, importAgentEnv, executeAgentCommand, setSessionShellApprovalMode, constants, uiHelpers,
   } = useConsoleDashboard()
   const workboard = useWorkboard({
     agents,
@@ -747,6 +748,9 @@ export function App() {
           <section className="h-full min-h-0">
             <SessionWorkspaceSection
               selectedSessionId={selectedSessionId}
+              shellApprovalMode={shellApprovalMode}
+              shellApprovalModeOptions={shellApprovalModeOptions}
+              shellApprovalModeLoading={shellApprovalModeLoading}
               sessions={sessions}
               channelHistory={channelHistory}
               chatChannels={chatChannels}
@@ -764,6 +768,9 @@ export function App() {
               formatTime={uiHelpers.formatTime}
               onChangeInput={setChatInput}
               onSendConsoleUiMessage={() => void sendConsoleUiMessage()}
+              onSetShellApprovalMode={(mode) => {
+                void setSessionShellApprovalMode(mode)
+              }}
               onClearSessionMessages={() => {
                 if (!selectedSessionId) return
                 void clearSessionMessages(selectedSessionId)

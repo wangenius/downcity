@@ -10,6 +10,7 @@ export * from "./types/Shell.js";
 export * from "./types/ShellRuntime.js";
 export type {
   ShellActionResponse,
+  ShellApprovalMode,
   ShellApprovalStatus,
   ShellApprovalToolName,
   ShellCloseRequest,

@@ -9,12 +9,18 @@
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
 import type {
   ShellApprovalDecisionResult,
+  ShellApprovalModeUpdateResult,
+  ShellApprovalModeOption,
+  ShellSessionApprovalModeView,
   ShellApprovalView,
   ShellConfigureOptions,
   ShellOptions,
   ShellToolSet,
 } from "@/types/ShellRuntime.js";
-import type { ShellActionResponse } from "@/types/ShellAction.js";
+import type {
+  ShellActionResponse,
+  ShellApprovalMode,
+} from "@/types/ShellAction.js";
 import type { ShellRuntimeState } from "@/session/ShellRuntimeTypes.js";
 import {
   approveShellApproval,
@@ -23,9 +29,12 @@ import {
   createShellRuntimeState,
   denyShellApproval,
   execShellCommand,
+  getShellApprovalModeView,
   getShellSessionStatus,
+  listShellApprovalModeViews,
   listShellApprovals,
   readShellSession,
+  setShellApprovalModeView,
   startShellSession,
   waitShellSession,
   writeShellSession,
@@ -102,6 +111,42 @@ export class Shell {
   }
 
   /**
+   * 列出当前实例内所有显式设置过的 session approval 模式。
+   */
+  approval_modes(): ShellApprovalModeOption[] {
+    return listShellApprovalModeViews(this.state);
+  }
+
+  /**
+   * 读取指定 session 的 approval 模式。
+   */
+  approval_mode(input: { session_id: string }): ShellSessionApprovalModeView {
+    const session_id = String(input.session_id || "").trim();
+    if (!session_id) throw new Error("session_id is required");
+    return {
+      session_id,
+      mode: getShellApprovalModeView(this.state, session_id),
+    };
+  }
+
+  /**
+   * 设置指定 session 的 approval 模式。
+   */
+  set_approval_mode(input: {
+    session_id: string;
+    mode: ShellApprovalMode;
+  }): ShellApprovalModeUpdateResult {
+    const session_id = String(input.session_id || "").trim();
+    if (!session_id) throw new Error("session_id is required");
+    const mode = setShellApprovalModeView(this.state, session_id, input.mode);
+    return {
+      success: true,
+      session_id,
+      mode,
+    };
+  }
+
+  /**
    * 批准 pending approval。
    */
   async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
@@ -141,6 +186,7 @@ export class Shell {
     }
     this.state.sessions.clear();
     this.state.approvals.clear();
+    this.state.approval_modes.clear();
     this.state.context = null;
   }
 

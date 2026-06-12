@@ -7,7 +7,7 @@
  */
 
 import * as React from "react"
-import { ArchiveIcon, MoreHorizontalIcon, RefreshCcwIcon } from "lucide-react"
+import { ArchiveIcon, MoreHorizontalIcon, RefreshCcwIcon, ShieldCheckIcon } from "lucide-react"
 import { Button } from "@downcity/ui"
 import {
   DropdownMenu,
@@ -27,6 +27,8 @@ import type {
   UiSessionSummary,
   UiSessionTimelineMessage,
   UiPromptResponse,
+  UiShellApprovalMode,
+  UiShellApprovalModeOption,
 } from "@/types/Dashboard"
 
 export interface SessionWorkspaceSectionProps {
@@ -34,6 +36,18 @@ export interface SessionWorkspaceSectionProps {
    * 当前选中的 session id。
    */
   selectedSessionId: string
+  /**
+   * 当前 session 的 shell approval 模式。
+   */
+  shellApprovalMode: UiShellApprovalMode
+  /**
+   * Shell approval 可选模式列表。
+   */
+  shellApprovalModeOptions: UiShellApprovalModeOption[]
+  /**
+   * 是否正在读取或更新 shell approval 模式。
+   */
+  shellApprovalModeLoading: boolean
   /**
    * session 列表。
    */
@@ -102,6 +116,10 @@ export interface SessionWorkspaceSectionProps {
    * 发送 Console UI chat 消息。
    */
   onSendConsoleUiMessage: () => void
+  /**
+   * 设置当前 session 的 shell approval 模式。
+   */
+  onSetShellApprovalMode: (mode: UiShellApprovalMode) => void
   /**
    * 清理当前 session messages。
    */
@@ -578,6 +596,9 @@ function StatusBadge(props: { state: string }) {
 export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
   const {
     selectedSessionId,
+    shellApprovalMode,
+    shellApprovalModeOptions,
+    shellApprovalModeLoading,
     sessions,
     channelHistory,
     chatChannels,
@@ -595,6 +616,7 @@ export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
     formatTime,
     onChangeInput,
     onSendConsoleUiMessage,
+    onSetShellApprovalMode,
     onClearSessionMessages,
     onClearChatHistory,
     onDeleteSession,
@@ -617,6 +639,24 @@ export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
 
   const canSend = currentChannel === "consoleui"
   const contextExecuting = selectedSession?.executing === true
+  const approvalModeOptions = React.useMemo<UiShellApprovalModeOption[]>(
+    () =>
+      shellApprovalModeOptions.length > 0
+        ? shellApprovalModeOptions
+        : [
+            {
+              mode: "ask",
+              label: "Ask",
+              description: "Ask before each unrestricted shell request.",
+            },
+            {
+              mode: "always-allow",
+              label: "Always allow",
+              description: "Automatically approve shell requests in this session.",
+            },
+          ],
+    [shellApprovalModeOptions],
+  )
 
   const currentChannelStatus = React.useMemo(() => {
     if (currentChannel === "consoleui") return "connected"
@@ -686,6 +726,28 @@ export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
           </div>
 
           <div className="flex items-center gap-1.5">
+            <div className="inline-flex items-center gap-1 rounded-[12px] bg-secondary p-0.5">
+              <span className="flex size-7 items-center justify-center rounded-[10px] text-muted-foreground">
+                <ShieldCheckIcon className="size-3.5" />
+              </span>
+              {approvalModeOptions.map((item) => (
+                <button
+                  key={item.mode}
+                  type="button"
+                  className={cn(
+                    "h-7 rounded-[10px] px-2 text-[11px] transition-colors",
+                    shellApprovalMode === item.mode
+                      ? "bg-background text-foreground shadow-[0_1px_0_rgba(17,17,19,0.04)]"
+                      : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+                  )}
+                  disabled={shellApprovalModeLoading}
+                  title={item.description}
+                  onClick={() => onSetShellApprovalMode(item.mode)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
             <div className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-[11px] text-muted-foreground">
               <span className="font-mono">{currentChannel}</span>
               <span>{`${channelHistory.length} msgs`}</span>

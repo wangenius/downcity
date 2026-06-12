@@ -238,6 +238,9 @@ export const dashboardApiRoutes = {
     `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages`,
   sessionClearChatHistory: (sessionId: string) =>
     `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/chat-history`,
+  shellApprovalModes: () => "/api/shell/approval-modes",
+  shellApprovalMode: (sessionId: string) =>
+    `/api/shell/approval-mode?session_id=${encodeURIComponent(sessionId)}`,
   systemPrompt: (sessionId: string) =>
     `/api/dashboard/system-prompt?sessionId=${encodeURIComponent(sessionId)}`,
   tasks: () => "/api/dashboard/tasks",

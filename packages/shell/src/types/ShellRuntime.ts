@@ -8,7 +8,10 @@
 
 import type { Tool } from "ai";
 import type { SandboxProjectConfig } from "@/sandbox/types/Sandbox.js";
-import type { ShellApprovalStatus } from "@/types/ShellAction.js";
+import type {
+  ShellApprovalMode,
+  ShellApprovalStatus,
+} from "@/types/ShellAction.js";
 
 /**
  * Shell 运行时日志器。
@@ -127,6 +130,48 @@ export interface ShellApprovalDecisionResult {
    * 决策。
    */
   decision: Extract<ShellApprovalStatus, "approved" | "denied">;
+}
+
+/**
+ * Shell approval 模式选项。
+ */
+export interface ShellApprovalModeOption {
+  /**
+   * shell approval 模式。
+   */
+  mode: ShellApprovalMode;
+  /**
+   * 展示标签。
+   */
+  label: string;
+  /**
+   * 展示说明。
+   */
+  description: string;
+}
+
+/**
+ * Shell session approval 模式视图。
+ */
+export interface ShellSessionApprovalModeView {
+  /**
+   * 归属的 agent session id。
+   */
+  session_id: string;
+  /**
+   * 当前 session 的 shell approval 模式。
+   */
+  mode: ShellApprovalMode;
+}
+
+/**
+ * Shell approval 模式更新结果。
+ */
+export interface ShellApprovalModeUpdateResult extends ShellSessionApprovalModeView {
+  /**
+   * 操作是否成功。
+   */
+  success: true;
 }
 
 /**

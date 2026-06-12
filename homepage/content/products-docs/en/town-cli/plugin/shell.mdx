@@ -26,12 +26,24 @@ const agent = new RemoteAgent({ url: "http://127.0.0.1:5314" });
 const approvals = await agent.approvals();
 ```
 
+To automatically allow shell approvals in the current conversation session, switch that session to `always-allow`:
+
+```ts
+await agent.set_approval_mode({
+  session_id: "consoleui",
+  mode: "always-allow",
+});
+```
+
+This only affects new shell approval requests in that session.
+
 ## Notes
 
 - There is no `ShellPlugin` in `@downcity/plugins`.
 - Shell tools are mounted by `new Agent({ shell: new Shell() })`.
 - Unrestricted sandbox requests appear as `tool-approval-request` session events.
 - Approval decisions are scoped to one command or one `shell_write`.
+- Approval mode values are `ask` and `always-allow`.
 
 ## Related
 

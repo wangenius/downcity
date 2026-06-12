@@ -25,6 +25,37 @@ export function createShellRouter(options) {
             approvals: shell.approvals(),
         });
     });
+    router.get("/api/shell/approval-modes", (c) => {
+        const shell = requireShell(options);
+        return c.json({
+            success: true,
+            modes: shell.approval_modes(),
+        });
+    });
+    router.get("/api/shell/approval-mode", (c) => {
+        const session_id = String(c.req.query("session_id") || c.req.query("sessionId") || "").trim();
+        if (!session_id) {
+            return c.json({ success: false, error: "session_id is required" }, 400);
+        }
+        const shell = requireShell(options);
+        return c.json({
+            success: true,
+            ...shell.approval_mode({ session_id }),
+        });
+    });
+    router.post("/api/shell/approval-mode", async (c) => {
+        const body = await c.req.json().catch(() => null);
+        const session_id = String(body?.session_id || body?.sessionId || "").trim();
+        const mode = String(body?.mode || "").trim();
+        if (!session_id) {
+            return c.json({ success: false, error: "session_id is required" }, 400);
+        }
+        if (mode !== "ask" && mode !== "always-allow") {
+            return c.json({ success: false, error: "mode must be ask or always-allow" }, 400);
+        }
+        const shell = requireShell(options);
+        return c.json(shell.set_approval_mode({ session_id, mode }));
+    });
     router.post("/api/shell/approve", async (c) => {
         const body = await c.req.json().catch(() => null);
         const approval_id = String(body?.approval_id || body?.approvalId || "").trim();

@@ -30,6 +30,8 @@ import type {
   UiPromptResponse,
   UiServiceItem,
   UiSessionArchiveSummary,
+  UiShellApprovalMode,
+  UiShellApprovalModeOption,
   UiSessionSummary,
   UiSessionTimelineMessage,
   UiSkillFindResult,
@@ -194,6 +196,21 @@ export interface UseConsoleDashboardResult {
   selectedSessionId: string;
 
   /**
+   * 当前 session 的 shell approval 模式。
+   */
+  shellApprovalMode: UiShellApprovalMode;
+
+  /**
+   * Shell approval 可选模式列表。
+   */
+  shellApprovalModeOptions: UiShellApprovalModeOption[];
+
+  /**
+   * 当前是否正在读取或更新 shell approval 模式。
+   */
+  shellApprovalModeLoading: boolean;
+
+  /**
    * chat history 事件列表。
    */
   channelHistory: UiChatHistoryEvent[];
@@ -332,6 +349,11 @@ export interface UseConsoleDashboardResult {
    * 切换当前 session。
    */
   handleSessionChange: (sessionId: string) => Promise<void>;
+
+  /**
+   * 设置当前 session 的 shell approval 模式。
+   */
+  setSessionShellApprovalMode: (mode: UiShellApprovalMode) => Promise<void>;
 
   /**
    * 手动刷新 dashboard。

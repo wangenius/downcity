@@ -25,7 +25,11 @@ import type {
   TransportSubscription,
 } from "@/agent/remote/RemoteTransport.js";
 import type {
+  ShellApprovalMode,
   ShellApprovalDecisionResult,
+  ShellApprovalModeUpdateResult,
+  ShellApprovalModeOption,
+  ShellSessionApprovalModeView,
   ShellApprovalView,
 } from "@downcity/shell";
 
@@ -281,6 +285,58 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
       throw new Error(String(payload.error || "Remote shell approvals failed"));
     }
     return payload.approvals;
+  }
+
+  async approval_modes(): Promise<ShellApprovalModeOption[]> {
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      modes?: ShellApprovalModeOption[];
+    }>(`${this.base_url}/api/shell/approval-modes`, {
+      headers: this.headers(),
+    });
+    if (!payload.success || !Array.isArray(payload.modes)) {
+      throw new Error(String(payload.error || "Remote shell approval modes failed"));
+    }
+    return payload.modes;
+  }
+
+  async approval_mode(input: { session_id: string }): Promise<ShellSessionApprovalModeView> {
+    const session_id = String(input.session_id || "").trim();
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      session_id?: string;
+      mode?: ShellApprovalMode;
+    }>(`${this.base_url}/api/shell/approval-mode?session_id=${encodeURIComponent(session_id)}`, {
+      headers: this.headers(),
+    });
+    if (!payload.success || !payload.session_id || !payload.mode) {
+      throw new Error(String(payload.error || "Remote shell approval mode failed"));
+    }
+    return {
+      session_id: payload.session_id,
+      mode: payload.mode,
+    };
+  }
+
+  async set_approval_mode(input: {
+    session_id: string;
+    mode: ShellApprovalMode;
+  }): Promise<ShellApprovalModeUpdateResult> {
+    const payload = await read_http_json<ShellApprovalModeUpdateResult & {
+      error?: string;
+    }>(`${this.base_url}/api/shell/approval-mode`, {
+      method: "POST",
+      headers: this.headers({
+        "Content-Type": "application/json",
+      }),
+      body: JSON.stringify(input),
+    });
+    if (payload.success !== true) {
+      throw new Error(String(payload.error || "Remote shell approval mode update failed"));
+    }
+    return payload;
   }
 
   async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {

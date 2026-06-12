@@ -38,7 +38,11 @@ import type {
   RpcSystemPromptPayload,
 } from "@/types/rpc/RpcProtocol.js";
 import type {
+  ShellApprovalMode,
   ShellApprovalDecisionResult,
+  ShellApprovalModeUpdateResult,
+  ShellApprovalModeOption,
+  ShellSessionApprovalModeView,
   ShellApprovalView,
 } from "@downcity/shell";
 
@@ -370,6 +374,44 @@ export class RpcClient {
       method: "internal.shell.approvals",
     });
     return Array.isArray(data.approvals) ? data.approvals : [];
+  }
+
+  /**
+   * 列出 shell approval 模式。
+   */
+  async list_shell_approval_modes(): Promise<ShellApprovalModeOption[]> {
+    const data = await this.request<{ modes: ShellApprovalModeOption[] }>({
+      method: "internal.shell.approvalModes",
+    });
+    return Array.isArray(data.modes) ? data.modes : [];
+  }
+
+  /**
+   * 读取 shell approval 模式。
+   */
+  async get_shell_approval_mode(session_id: string): Promise<ShellSessionApprovalModeView> {
+    return await this.request<ShellSessionApprovalModeView>({
+      method: "internal.shell.approvalMode",
+      params: {
+        sessionId: session_id,
+      },
+    });
+  }
+
+  /**
+   * 设置 shell approval 模式。
+   */
+  async set_shell_approval_mode(input: {
+    session_id: string;
+    mode: ShellApprovalMode;
+  }): Promise<ShellApprovalModeUpdateResult> {
+    return await this.request<ShellApprovalModeUpdateResult>({
+      method: "internal.shell.setApprovalMode",
+      params: {
+        sessionId: input.session_id,
+        mode: input.mode,
+      },
+    });
   }
 
   /**

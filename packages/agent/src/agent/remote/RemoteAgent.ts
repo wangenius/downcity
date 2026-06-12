@@ -17,7 +17,11 @@ import type {
   RemoteAgentSession,
 } from "@/types/agent/AgentTypes.js";
 import type {
+  ShellApprovalMode,
   ShellApprovalDecisionResult,
+  ShellApprovalModeUpdateResult,
+  ShellApprovalModeOption,
+  ShellSessionApprovalModeView,
   ShellApprovalView,
 } from "@downcity/shell";
 import type { RemoteAgentTransport } from "@/agent/remote/RemoteTransport.js";
@@ -99,6 +103,30 @@ export class RemoteAgent {
    */
   async approvals(): Promise<ShellApprovalView[]> {
     return await this.transport.approvals();
+  }
+
+  /**
+   * 列出远程 Agent 显式设置过的 shell approval 模式。
+   */
+  async approval_modes(): Promise<ShellApprovalModeOption[]> {
+    return await this.transport.approval_modes();
+  }
+
+  /**
+   * 读取远程 Agent 指定 session 的 shell approval 模式。
+   */
+  async approval_mode(input: { session_id: string }): Promise<ShellSessionApprovalModeView> {
+    return await this.transport.approval_mode(input);
+  }
+
+  /**
+   * 设置远程 Agent 指定 session 的 shell approval 模式。
+   */
+  async set_approval_mode(input: {
+    session_id: string;
+    mode: ShellApprovalMode;
+  }): Promise<ShellApprovalModeUpdateResult> {
+    return await this.transport.set_approval_mode(input);
   }
 
   /**

@@ -21,7 +21,11 @@ import type {
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
+  ShellApprovalMode,
   ShellApprovalDecisionResult,
+  ShellApprovalModeUpdateResult,
+  ShellApprovalModeOption,
+  ShellSessionApprovalModeView,
   ShellApprovalView,
 } from "@downcity/shell";
 
@@ -78,6 +82,15 @@ export type RemoteAgentTransport = RemoteSessionTransport & {
   ): Promise<RemoteAgentPluginActionResult>;
   /** 列出 shell approvals。 */
   approvals(): Promise<ShellApprovalView[]>;
+  /** 列出 shell approval modes。 */
+  approval_modes(): Promise<ShellApprovalModeOption[]>;
+  /** 读取 shell approval mode。 */
+  approval_mode(input: { session_id: string }): Promise<ShellSessionApprovalModeView>;
+  /** 设置 shell approval mode。 */
+  set_approval_mode(input: {
+    session_id: string;
+    mode: ShellApprovalMode;
+  }): Promise<ShellApprovalModeUpdateResult>;
   /** 批准 shell approval。 */
   approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult>;
   /** 拒绝 shell approval。 */

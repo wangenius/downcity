@@ -26,7 +26,11 @@ import type {
   TransportSubscription,
 } from "@/agent/remote/RemoteTransport.js";
 import type {
+  ShellApprovalMode,
   ShellApprovalDecisionResult,
+  ShellApprovalModeUpdateResult,
+  ShellApprovalModeOption,
+  ShellSessionApprovalModeView,
   ShellApprovalView,
 } from "@downcity/shell";
 
@@ -119,6 +123,21 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
 
   async approvals(): Promise<ShellApprovalView[]> {
     return await this.client.list_shell_approvals();
+  }
+
+  async approval_modes(): Promise<ShellApprovalModeOption[]> {
+    return await this.client.list_shell_approval_modes();
+  }
+
+  async approval_mode(input: { session_id: string }): Promise<ShellSessionApprovalModeView> {
+    return await this.client.get_shell_approval_mode(input.session_id);
+  }
+
+  async set_approval_mode(input: {
+    session_id: string;
+    mode: ShellApprovalMode;
+  }): Promise<ShellApprovalModeUpdateResult> {
+    return await this.client.set_shell_approval_mode(input);
   }
 
   async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {

@@ -25,6 +25,16 @@ export type ShellSandboxMode = "safe" | "unrestricted";
 export type ShellApprovalStatus = "approved" | "denied" | "expired";
 
 /**
+ * shell approval 模式。
+ *
+ * 说明（中文）
+ * - `ask` 是默认模式，unrestricted shell 每次执行前都需要用户审批。
+ * - `always-allow` 只作用于当前 session，会自动通过本应进入审批队列的 shell 请求。
+ * - 该模式不改变 sandbox 权限模型，只影响 approval 是否需要等待人工确认。
+ */
+export type ShellApprovalMode = "ask" | "always-allow";
+
+/**
  * shell unrestricted sandbox 审批来源工具。
  */
 export type ShellApprovalToolName = "shell_exec" | "shell_start" | "shell_write";

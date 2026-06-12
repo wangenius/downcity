@@ -10,6 +10,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
 import type {
+  ShellApprovalMode,
   ShellApprovalStatus,
   ShellApprovalToolName,
   ShellSessionSnapshot,
@@ -157,6 +158,14 @@ export type ShellRuntimeState = {
    * 当前实例持有的全部 pending unrestricted sandbox 审批。
    */
   approvals: Map<string, ShellApprovalRuntimeState>;
+  /**
+   * 当前实例内按 owner session 保存的 approval 模式。
+   *
+   * 说明（中文）
+   * - key 是 chat/session id，value 是当前 session 的 shell approval 策略。
+   * - 不存在时等价于默认 `ask`。
+   */
+  approval_modes: Map<string, ShellApprovalMode>;
   /**
    * 当前实例最近一次启动时绑定的 agent context。
    *

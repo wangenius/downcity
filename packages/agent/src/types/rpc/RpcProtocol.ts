@@ -17,6 +17,7 @@ import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginStateControlAction } from "@/plugin/types/Plugin.js";
+import type { ShellApprovalMode } from "@downcity/shell";
 
 /**
  * RPC 请求。
@@ -237,6 +238,36 @@ export type RpcRequest =
       id: string;
       /** 列出 shell approvals。 */
       method: "internal.shell.approvals";
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 列出 shell approval 模式。 */
+      method: "internal.shell.approvalModes";
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 读取 shell approval 模式。 */
+      method: "internal.shell.approvalMode";
+      /** session 参数。 */
+      params: {
+        /** session id。 */
+        sessionId: string;
+      };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 设置 shell approval 模式。 */
+      method: "internal.shell.setApprovalMode";
+      /** session 模式参数。 */
+      params: {
+        /** session id。 */
+        sessionId: string;
+        /** approval 模式。 */
+        mode: ShellApprovalMode;
+      };
     }
   | {
       /** 请求 id，用于匹配响应。 */

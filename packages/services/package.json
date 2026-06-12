@@ -1,6 +1,6 @@
 {
   "name": "@downcity/services",
-  "version": "0.1.56",
+  "version": "0.1.57",
   "description": "Downcity public services package for accounts, balance, usage, Stripe, Creem, Dodo, and Waffo payment flows.",
   "type": "module",
   "main": "./bin/index.js",
@@ -46,7 +46,8 @@
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "tsc && tsc -p tsconfig.test.json && node --test test/**/*.test.mjs",
-    "prepack": "npm run build",
+    "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
+    "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json",
     "version:patch": "node ../../scripts/bump-package-version.mjs ./package.json"
   },
   "license": "MIT",

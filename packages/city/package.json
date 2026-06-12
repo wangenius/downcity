@@ -1,6 +1,6 @@
 {
   "name": "@downcity/city",
-  "version": "0.2.65",
+  "version": "0.2.66",
   "description": "Downcity City runtime and City access SDK for services, actions, auth, env, and towns.",
   "type": "module",
   "main": "./bin/index.js",
@@ -39,7 +39,8 @@
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "tsc && tsc -p tsconfig.test.json && node --test test/*.test.mjs",
-    "prepack": "npm run build",
+    "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
+    "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json",
     "version:patch": "node ../../scripts/bump-package-version.mjs ./package.json"
   },
   "license": "MIT",

@@ -43,7 +43,7 @@ sync_downcity_workspace_packages_globally() {
   local package_dir="$2"
   local package_name
 
-  for package_name in type agent city services plugins ui; do
+  for package_name in type shell agent city services plugins ui; do
     sync_downcity_workspace_package_globally "$workspace_root" "$package_dir" "$package_name"
   done
 }
@@ -70,10 +70,6 @@ const manifest = JSON.parse(fs.readFileSync(manifest_path, "utf8"));
 const dependencies = Object.keys(manifest.dependencies || {});
 
 for (const dependency_name of dependencies) {
-  if (dependency_name.startsWith("@downcity/")) {
-    continue;
-  }
-
   const dependency_path = path.join(
     package_dir,
     "node_modules",

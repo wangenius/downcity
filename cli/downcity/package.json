@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.1.173",
+  "version": "1.1.174",
   "type": "module",
   "description": "Downcity CLI bundle — installs city and town commands",
   "bin": {
@@ -18,7 +18,9 @@
     "build": "node scripts/copy-cli-products.mjs && node scripts/ensure-cli-executable.mjs",
     "dev": "node bin/city/index.js",
     "start": "node bin/city/index.js",
-    "typecheck": "node scripts/verify-entry.mjs"
+    "typecheck": "node scripts/verify-entry.mjs",
+    "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
+    "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",
@@ -32,6 +34,7 @@
     "@downcity/agent": "workspace:^",
     "@downcity/city": "workspace:^",
     "@downcity/plugins": "workspace:^",
+    "@downcity/shell": "workspace:^",
     "@larksuiteoapi/node-sdk": "^1.66.0",
     "@openrouter/ai-sdk-provider": "^2.9.0",
     "ai": "^6.0.193",

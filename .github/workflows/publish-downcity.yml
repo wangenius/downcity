@@ -16,6 +16,7 @@ on:
       - "cli/downcity/**"
       - "products/console/**"
       - "packages/type/package.json"
+      - "packages/shell/package.json"
       - "packages/agent/package.json"
       - "packages/city/package.json"
       - "packages/services/package.json"
@@ -82,6 +83,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm -C packages/type build
+          pnpm -C packages/shell build
           pnpm -C packages/agent build
           pnpm -C packages/city build
           pnpm -C packages/services build

@@ -245,6 +245,9 @@ importers:
       '@downcity/plugins':
         specifier: workspace:^
         version: link:../../packages/plugins
+      '@downcity/shell':
+        specifier: workspace:^
+        version: link:../../packages/shell
       '@larksuiteoapi/node-sdk':
         specifier: ^1.66.0
         version: 1.66.0
@@ -731,6 +734,9 @@ importers:
 
   packages/shell:
     dependencies:
+      ai:
+        specifier: ^6.0.193
+        version: 6.0.193(zod@4.4.3)
       fs-extra:
         specifier: ^11.3.5
         version: 11.3.5

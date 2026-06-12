@@ -1,10 +1,31 @@
 {
   "name": "@downcity/shell",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "Downcity Shell — local command execution, sandboxing, shell sessions, and approvals",
   "main": "./bin/index.js",
   "types": "./bin/index.d.ts",
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangenius/downcity.git",
+    "directory": "packages/shell"
+  },
+  "homepage": "https://downcity.ai",
+  "bugs": {
+    "url": "https://github.com/wangenius/downcity/issues"
+  },
+  "keywords": [
+    "downcity",
+    "shell",
+    "sandbox",
+    "agent"
+  ],
   "exports": {
     ".": {
       "types": "./bin/index.d.ts",
@@ -42,8 +63,11 @@
   "scripts": {
     "build": "rm -rf bin tsconfig.tsbuildinfo && tsc && tsc-alias -f",
     "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build",
+    "version:patch": "node ../../scripts/bump-package-version.mjs ./package.json"
   },
+  "license": "MIT",
   "dependencies": {
     "ai": "^6.0.193",
     "fs-extra": "^11.3.5",

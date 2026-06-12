@@ -9,8 +9,10 @@
 
 import type {
   PageSelectionReadResponse,
+  PendingSelectionReferenceState,
   SelectionReferenceMessage,
 } from "./types/sidePanel";
+import { PENDING_SELECTION_REFERENCE_STORAGE_KEY } from "./types/sidePanel";
 
 const OPEN_SIDE_PANEL_COMMAND = "open-side-panel";
 
@@ -88,9 +90,25 @@ function pushSelectionReferenceToSidePanel(reference: SelectionReferenceMessage)
   });
 }
 
+function saveSelectionReferenceToSession(reference: SelectionReferenceMessage) {
+  const state: PendingSelectionReferenceState = {
+    reference,
+    expiresAt: Date.now() + 5000,
+  };
+  chrome.storage.session.set(
+    {
+      [PENDING_SELECTION_REFERENCE_STORAGE_KEY]: state,
+    },
+    () => {
+      void chrome.runtime.lastError;
+    },
+  );
+}
+
 function queueSelectionReference(reference: SelectionReferenceMessage) {
   pendingSelectionReference = reference;
   pendingSelectionReferenceExpiresAt = Date.now() + 3000;
+  saveSelectionReferenceToSession(reference);
   pushSelectionReferenceToSidePanel(reference);
 }
 

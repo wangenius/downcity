@@ -360,9 +360,10 @@ export const shell_read = tool({
  * `shell_write`：向 shell stdin 写入内容。
  */
 export const shell_write = tool({
-  description: "Write text to the stdin of an existing shell session.",
+  description:
+    "Write text to the stdin of an existing shell session. When the target session runs in unrestricted sandbox mode, provide reason; every write requires user approval.",
   inputSchema: shellWriteInputSchema,
-  execute: async ({ shell_id, chars }: ShellWriteInput) => {
+  execute: async ({ shell_id, chars, reason }: ShellWriteInput) => {
     const startedAt = Date.now();
     try {
       console.log(
@@ -370,6 +371,7 @@ export const shell_write = tool({
         JSON.stringify({
           shell_id,
           input_chars: String(chars || "").length,
+          reason: reason || "",
         }),
       );
       const response = await invokeShellAction({
@@ -377,6 +379,7 @@ export const shell_write = tool({
         payload: {
           shellId: shell_id,
           chars,
+          ...(reason ? { reason } : {}),
         },
       });
       const flatResponse = flattenShellActionResponse({ response, startedAt });

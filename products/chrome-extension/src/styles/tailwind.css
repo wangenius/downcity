@@ -27,13 +27,51 @@
   --input: #e7e7eb;
   --primary: #111113;
   --primary-foreground: #fcfcfd;
+  --primary-hover: #232326;
+  --accent: #4f7cff;
   --success: #166534;
   --error: #b91c1c;
+  --error-surface: #faf5f5;
+  --error-border: #d9b2ae;
+  --error-foreground: #7f1d1d;
   --warning: #9a6700;
+  --code-background: #111113;
+  --code-foreground: #fcfcfd;
   --ring: rgba(17, 17, 19, 0.16);
   --radius: 0.6rem;
   --shadow-soft: 0 1px 0 rgba(17, 17, 19, 0.02);
   --font-sans: "Geist Variable", "Space Grotesk", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #0f1014;
+    --foreground: #f5f5f7;
+    --surface: #17181d;
+    --surface-foreground: #f5f5f7;
+    --card: #1b1c22;
+    --card-foreground: #f5f5f7;
+    --muted: #23242b;
+    --muted-foreground: #a3a6b3;
+    --border: #2d2f38;
+    --border-strong: #3a3d49;
+    --input: #333642;
+    --primary: #f5f5f7;
+    --primary-foreground: #111113;
+    --primary-hover: #dfe1e7;
+    --accent: #7aa2ff;
+    --success: #7ddf9a;
+    --error: #fca5a5;
+    --error-surface: #321d22;
+    --error-border: #6f343a;
+    --error-foreground: #fecaca;
+    --warning: #f2c777;
+    --code-background: #0b0c10;
+    --code-foreground: #f5f5f7;
+    --ring: rgba(245, 245, 247, 0.2);
+    --shadow-soft: 0 1px 0 rgba(0, 0, 0, 0.32);
+  }
 }
 
 @theme inline {
@@ -50,9 +88,16 @@
   --color-input: var(--input);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
   --color-success: var(--success);
   --color-error: var(--error);
+  --color-error-surface: var(--error-surface);
+  --color-error-border: var(--error-border);
+  --color-error-foreground: var(--error-foreground);
   --color-warning: var(--warning);
+  --color-code-background: var(--code-background);
+  --color-code-foreground: var(--code-foreground);
   --color-ring: var(--ring);
   --radius-sm: calc(var(--radius) - 0.125rem);
   --radius-md: var(--radius);
@@ -98,7 +143,7 @@ textarea {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--ring) 28%, #ffffff 72%);
+  background: color-mix(in srgb, var(--ring) 56%, var(--background) 44%);
   color: var(--foreground);
 }
 
@@ -151,9 +196,9 @@ textarea {
   max-width: 100%;
   overflow-x: hidden;
   border-radius: 0.5rem;
-  background: #111113;
+  background: var(--code-background);
   padding: 0.75rem;
-  color: #fcfcfd;
+  color: var(--code-foreground);
 }
 
 .side-panel-markdown :where(pre code) {

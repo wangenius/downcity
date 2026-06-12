@@ -74,6 +74,7 @@ Core methods:
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
+- `agent.runPluginAction(input)`
 - `agent.setInstruction(input)`
 - `agent.getConfig()`
 - `agent.getLogger()`
@@ -110,6 +111,7 @@ Typical responsibilities:
 - connect to an existing remote Agent runtime
 - switch to a known remote session
 - browse available remote sessions
+- respond to runtime plugin actions, such as shell approval requests
 
 ## `AgentSession`
 

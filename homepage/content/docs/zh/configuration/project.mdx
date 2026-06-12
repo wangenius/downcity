@@ -67,6 +67,7 @@ description: downcity.json 中用户最常用字段与注意事项
 - 支持项目内安装与缓存，例如 `.venv`、`node_modules`、下载到项目内的模型和缓存文件
 - `brew install`、`npm install -g`、`pip install --user`、`gh auth login` 或访问宿主服务初始化能力时，agent 可以显式请求 `sandbox="unrestricted"` 并提供 `reason`
 - Unrestricted Sandbox 由 Downcity Runtime 管理；每次执行前都会向用户确认，用户拒绝或超时则不会执行命令
+- unrestricted `shell_start` 的审批只授权启动该进程；后续每一次向同一个 unrestricted session 调用 `shell_write`，也都必须提供独立 `reason` 并再次等待用户确认
 - `sudo`、Xcode 工具安装、修改 SSH/keychain/shell profile 或明显破坏性命令会被默认拒绝
 - 默认网络是放开的；未显式配置时等价于 `networkMode="full"`
 - `networkMode="off"` 时禁止联网

@@ -28,6 +28,10 @@ export type {
 } from "@/types/agent/AgentOptions.js";
 export type { RemoteAgentOptions } from "@/types/agent/RemoteAgentOptions.js";
 export type {
+  RemoteAgentPluginActionInput,
+  RemoteAgentPluginActionResult,
+} from "@/types/agent/RemoteAgentPluginAction.js";
+export type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
   AgentSessionConfigSnapshot,

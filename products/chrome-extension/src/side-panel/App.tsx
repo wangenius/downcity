@@ -801,8 +801,8 @@ export function SidePanelApp() {
               errorText
                 ? "bg-error"
                 : isWorking
-                  ? "animate-pulse bg-[#4f7cff]"
-                  : "bg-[#4f7cff]"
+                  ? "animate-pulse bg-accent"
+                  : "bg-accent"
             }`}
           />
           <h1 className="truncate text-[15px] font-medium text-foreground">

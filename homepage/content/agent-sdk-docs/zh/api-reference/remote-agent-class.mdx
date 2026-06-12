@@ -11,8 +11,44 @@ description: 远程 Agent 客户端的核心公开接口
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
+- `agent.runPluginAction(input)`
 
 `agent.createSession()` 和 `agent.getSession()` 返回 `RemoteAgentSession`。
+
+## `runPluginAction`
+
+当你的客户端 UI 需要调用远程 runtime 上的 plugin action 时，使用 `runPluginAction()`。
+
+```ts
+await agent.runPluginAction({
+  plugin: "shell",
+  action: "approve",
+  payload: {
+    approvalId: "ap_xxx",
+  },
+});
+```
+
+对于 unrestricted shell 审批流程，前端订阅 session event，遇到 `tool-approval-request` 后调用 approve 或 deny：
+
+```ts
+session.subscribe(async (event) => {
+  if (event.type !== "tool-approval-request") return;
+
+  const displayText = event.operation === "write"
+    ? event.inputPreview || event.cmd
+    : event.cmd;
+  const approved = window.confirm(`${displayText}\n\n${event.reason}`);
+
+  await agent.runPluginAction({
+    plugin: "shell",
+    action: approved ? "approve" : "deny",
+    payload: {
+      approvalId: event.approvalId,
+    },
+  });
+});
+```
 
 ## `url`
 

@@ -15,6 +15,8 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  RemoteAgentPluginActionInput,
+  RemoteAgentPluginActionResult,
 } from "@/types/agent/AgentTypes.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
@@ -239,12 +241,48 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     }
     return payload.page;
   }
+
+  async run_plugin_action(
+    input: RemoteAgentPluginActionInput,
+  ): Promise<RemoteAgentPluginActionResult> {
+    const payload = await read_http_action_json<RemoteAgentPluginActionResult>(
+      `${this.base_url}/api/plugins/action`,
+      {
+        method: "POST",
+        headers: this.headers({
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({
+          pluginName: input.plugin,
+          actionName: input.action,
+          ...(input.payload !== undefined ? { payload: input.payload } : {}),
+        }),
+      },
+    );
+    if (typeof payload.success !== "boolean") {
+      throw new Error("Remote plugin action returned an invalid response");
+    }
+    return payload;
+  }
 }
 
 async function read_http_json<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, init);
   const payload = (await response.json().catch(() => ({}))) as T;
   if (!response.ok) {
+    const message = extract_error_message(payload);
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+  return payload;
+}
+
+async function read_http_action_json<T extends { success?: boolean }>(
+  input: string,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(input, init);
+  const payload = (await response.json().catch(() => ({}))) as T;
+  if (!response.ok && typeof payload.success !== "boolean") {
     const message = extract_error_message(payload);
     throw new Error(message || `HTTP ${response.status}`);
   }

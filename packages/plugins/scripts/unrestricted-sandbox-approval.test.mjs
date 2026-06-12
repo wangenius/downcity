@@ -18,7 +18,9 @@ import {
   createShellPluginState,
   denyShellApproval,
   execShellCommand,
+  readShellSession,
   startShellSession,
+  writeShellSession,
 } from "../bin/shell/runtime/ShellActionRuntime.js";
 
 async function create_fixture() {
@@ -149,6 +151,183 @@ test("shell_exec unrestricted approved executes in unrestricted sandbox", async 
     assert.equal(result.shell.approvalStatus, "approved");
     assert.equal(result.shell.exitCode, 0);
     assert.equal(result.chunk.output, "unrestricted-ok");
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});
+
+test("shell_write unrestricted requires reason", async () => {
+  const fixture = await create_fixture();
+  const state = createShellPluginState({
+    defaultApprovalTimeoutMs: 2000,
+    defaultInlineWaitMs: 20,
+  });
+  try {
+    const pending_result = startShellSession(state, fixture.context, {
+      cmd: "cat",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      sandbox: "unrestricted",
+      reason: "测试启动 unrestricted 交互进程。",
+      ownerContextId: "session_test",
+      inlineWaitMs: 20,
+    });
+    const start_approval = await wait_for_approval(state);
+    await approveShellApproval(state, fixture.context, start_approval.approvalId);
+    const started = await pending_result;
+
+    await assert.rejects(
+      writeShellSession(state, fixture.context, {
+        shellId: started.shell.shellId,
+        chars: "should-not-write\n",
+      }),
+      /requires a non-empty reason/,
+    );
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});
+
+test("shell_write unrestricted denied does not write stdin", async () => {
+  const fixture = await create_fixture();
+  const state = createShellPluginState({
+    defaultApprovalTimeoutMs: 2000,
+    defaultInlineWaitMs: 20,
+  });
+  try {
+    const pending_result = startShellSession(state, fixture.context, {
+      cmd: "cat",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      sandbox: "unrestricted",
+      reason: "测试启动 unrestricted 交互进程。",
+      ownerContextId: "session_test",
+      inlineWaitMs: 20,
+    });
+    const start_approval = await wait_for_approval(state);
+    await approveShellApproval(state, fixture.context, start_approval.approvalId);
+    const started = await pending_result;
+
+    const pending_write = writeShellSession(state, fixture.context, {
+      shellId: started.shell.shellId,
+      chars: "denied-write\n",
+      reason: "测试拒绝 unrestricted shell_write 不会写入 stdin。",
+    });
+    const write_approval = await wait_for_approval(state);
+    assert.equal(write_approval.toolName, "shell_write");
+    assert.equal(write_approval.operation, "write");
+    assert.equal(write_approval.inputPreview, "denied-write\n");
+    assert.equal(write_approval.inputChars, "denied-write\n".length);
+    assert.equal(fixture.events.at(-1)?.type, "tool-approval-request");
+    assert.equal(fixture.events.at(-1)?.toolName, "shell_write");
+    assert.equal(fixture.events.at(-1)?.operation, "write");
+
+    await denyShellApproval(state, fixture.context, write_approval.approvalId);
+    const denied = await pending_write;
+    assert.equal(denied.shell.approvalStatus, "denied");
+    assert.match(denied.chunk.output, /User denied unrestricted sandbox execution/);
+
+    const read = await readShellSession(state, fixture.context, {
+      shellId: started.shell.shellId,
+      fromCursor: 0,
+      maxOutputTokens: 1000,
+    });
+    assert.equal(read.chunk.output, "");
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});
+
+test("shell_write unrestricted approved writes stdin", async () => {
+  const fixture = await create_fixture();
+  const state = createShellPluginState({
+    defaultApprovalTimeoutMs: 2000,
+    defaultInlineWaitMs: 20,
+  });
+  try {
+    const pending_result = startShellSession(state, fixture.context, {
+      cmd: "cat",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      sandbox: "unrestricted",
+      reason: "测试启动 unrestricted 交互进程。",
+      ownerContextId: "session_test",
+      inlineWaitMs: 20,
+    });
+    const start_approval = await wait_for_approval(state);
+    await approveShellApproval(state, fixture.context, start_approval.approvalId);
+    const started = await pending_result;
+
+    const pending_write = writeShellSession(state, fixture.context, {
+      shellId: started.shell.shellId,
+      chars: "approved-write\n",
+      reason: "测试批准 unrestricted shell_write 后写入 stdin。",
+    });
+    const write_approval = await wait_for_approval(state);
+    assert.equal(write_approval.toolName, "shell_write");
+    await approveShellApproval(state, fixture.context, write_approval.approvalId);
+    const written = await pending_write;
+    assert.equal(written.shell.approvalStatus, "approved");
+
+    const started_at = Date.now();
+    let output = "";
+    while (Date.now() - started_at < 1000) {
+      const read = await readShellSession(state, fixture.context, {
+        shellId: started.shell.shellId,
+        fromCursor: 0,
+        maxOutputTokens: 1000,
+      });
+      output = read.chunk.output;
+      if (output.includes("approved-write")) break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.match(output, /approved-write/);
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});
+
+test("shell_write safe writes without approval", async () => {
+  const fixture = await create_fixture();
+  const state = createShellPluginState({
+    defaultApprovalTimeoutMs: 2000,
+    defaultInlineWaitMs: 20,
+  });
+  try {
+    const started = await startShellSession(state, fixture.context, {
+      cmd: "cat",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      sandbox: "safe",
+      inlineWaitMs: 20,
+    });
+    await writeShellSession(state, fixture.context, {
+      shellId: started.shell.shellId,
+      chars: "safe-write\n",
+    });
+    assert.equal(state.approvals.size, 0);
+
+    const started_at = Date.now();
+    let output = "";
+    while (Date.now() - started_at < 1000) {
+      const read = await readShellSession(state, fixture.context, {
+        shellId: started.shell.shellId,
+        fromCursor: 0,
+        maxOutputTokens: 1000,
+      });
+      output = read.chunk.output;
+      if (output.includes("safe-write")) break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.match(output, /safe-write/);
   } finally {
     await closeAllShellSessions(state, true);
     await fs.rm(fixture.root_path, { recursive: true, force: true });

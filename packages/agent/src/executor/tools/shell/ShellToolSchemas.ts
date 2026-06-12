@@ -102,6 +102,10 @@ export const shellReadInputSchema = z.object({
 export const shellWriteInputSchema = z.object({
   shell_id: z.string().describe("Existing shell identifier."),
   chars: z.string().describe("Bytes to write to stdin."),
+  reason: z
+    .string()
+    .optional()
+    .describe("Required when writing to an unrestricted shell session. Explain why this stdin input is needed."),
 });
 
 export const shellWaitInputSchema = z.object({

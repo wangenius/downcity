@@ -591,13 +591,21 @@ async function runSdkPromptTurn(params: {
       return;
     }
     if (event.type === "tool-approval-request") {
+      const operation = event.operation || (event.toolName === "shell_write" ? "write" : "exec");
+      const command_label = operation === "write" ? "input_preview" : "cmd";
+      const command_value = operation === "write" ? event.inputPreview || event.cmd : event.cmd;
       emitCliBlock({
         tone: "info",
         title: "Unrestricted sandbox approval requested",
         facts: [
           { label: "approval_id", value: event.approvalId },
           { label: "tool", value: event.toolName },
-          { label: "cmd", value: event.cmd },
+          { label: "operation", value: operation },
+          ...(event.shellId ? [{ label: "shell_id", value: event.shellId }] : []),
+          { label: command_label, value: command_value },
+          ...(typeof event.inputChars === "number"
+            ? [{ label: "input_chars", value: String(event.inputChars) }]
+            : []),
           { label: "cwd", value: event.cwd },
           { label: "reason", value: event.reason },
         ],

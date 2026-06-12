@@ -46,6 +46,8 @@ export type {
   AgentSessionSystemSessionInfo,
   AgentSessionSystemSnapshot,
   AgentSessionTimelineEvent,
+  RemoteAgentPluginActionInput,
+  RemoteAgentPluginActionResult,
   RemoteAgentSession,
 } from "./types/agent/AgentTypes.js";
 export type {

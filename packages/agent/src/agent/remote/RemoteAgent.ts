@@ -11,6 +11,8 @@ import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
   AgentSessionSummaryPage,
+  RemoteAgentPluginActionInput,
+  RemoteAgentPluginActionResult,
   RemoteAgentOptions,
   RemoteAgentSession,
 } from "@/types/agent/AgentTypes.js";
@@ -61,6 +63,31 @@ export class RemoteAgent {
     input?: AgentListSessionsInput,
   ): Promise<AgentSessionSummaryPage> {
     return await this.transport.list_sessions(input);
+  }
+
+  /**
+   * 执行远程 Agent runtime 内的 plugin action。
+   *
+   * 关键点（中文）
+   * - 这是 RemoteAgent 顶层能力，不绑定某个 session。
+   * - 前端收到 `tool-approval-request` 后，可以用它调用 `shell.approve` / `shell.deny`。
+   */
+  async runPluginAction(
+    input: RemoteAgentPluginActionInput,
+  ): Promise<RemoteAgentPluginActionResult> {
+    const plugin = String(input.plugin || "").trim();
+    const action = String(input.action || "").trim();
+    if (!plugin) {
+      throw new Error("runPluginAction requires a non-empty plugin");
+    }
+    if (!action) {
+      throw new Error("runPluginAction requires a non-empty action");
+    }
+    return await this.transport.run_plugin_action({
+      plugin,
+      action,
+      ...(input.payload !== undefined ? { payload: input.payload } : {}),
+    });
   }
 
   /**

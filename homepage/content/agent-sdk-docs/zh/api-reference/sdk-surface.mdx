@@ -74,6 +74,7 @@ await turn.finished;
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
+- `agent.runPluginAction(input)`
 - `agent.setInstruction(input)`
 - `agent.getConfig()`
 - `agent.getLogger()`
@@ -110,6 +111,7 @@ await turn.finished;
 - 连接一个已有的远程 agent 服务
 - 切换到已知的远程 session
 - 浏览可用的远程 session 列表
+- 响应 runtime plugin action，例如 shell 审批请求
 
 ## `AgentSession`
 

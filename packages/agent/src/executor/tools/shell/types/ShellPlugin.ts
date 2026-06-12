@@ -25,6 +25,11 @@ export type ShellSandboxMode = "safe" | "unrestricted";
 export type ShellApprovalStatus = "approved" | "denied" | "expired";
 
 /**
+ * shell unrestricted sandbox 审批来源工具。
+ */
+export type ShellApprovalToolName = "shell_exec" | "shell_start" | "shell_write";
+
+/**
  * shell 会话关联的外部引用。
  *
  * 说明（中文）
@@ -137,7 +142,7 @@ export type ShellStartRequest = {
   /** 请求 unrestricted sandbox 时展示给用户的原因。 */
   reason?: string;
   /** 内部审批来源工具名；普通调用方不需要传。 */
-  approvalToolName?: "shell_exec" | "shell_start";
+  approvalToolName?: ShellApprovalToolName;
 };
 
 /**
@@ -202,6 +207,8 @@ export type ShellWriteRequest = {
   shellId: string;
   /** 要写入 stdin 的原始文本。 */
   chars: string;
+  /** 向 unrestricted shell session 写入 stdin 时展示给用户的原因。 */
+  reason?: string;
 };
 
 /**

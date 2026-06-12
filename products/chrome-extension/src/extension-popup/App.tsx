@@ -970,7 +970,7 @@ export function ExtensionPopupApp() {
                     : status.text}
               </div>
               <button
-                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-[12px] border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-[12px] border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
                 type="submit"
                 disabled={composerDisabled || isSubmitting}
               >

@@ -107,6 +107,27 @@ export interface PageSelectionReadResponse {
 }
 
 /**
+ * Side Panel 待插入选区引用的临时存储 key。
+ */
+export const PENDING_SELECTION_REFERENCE_STORAGE_KEY =
+  "downcity.pending-selection-reference";
+
+/**
+ * Side Panel 待插入选区引用的临时存储状态。
+ */
+export interface PendingSelectionReferenceState {
+  /**
+   * 待插入的选中文本引用。
+   */
+  reference: SelectionReferenceMessage;
+
+  /**
+   * 过期时间戳，单位为毫秒。
+   */
+  expiresAt: number;
+}
+
+/**
  * Side Panel 输入框聚焦消息。
  */
 export interface FocusComposerMessage {

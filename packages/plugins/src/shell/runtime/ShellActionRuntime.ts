@@ -146,7 +146,7 @@ function buildDeniedApprovalResponse(params: {
       approvalStatus: params.approvalStatus,
       approvalId: params.approvalId,
       approvalReason: params.reason,
-      stdinWritable: false,
+      stdinWritable: true,
       status: params.approvalStatus === "expired" ? "expired" : "failed",
       startedAt: now,
       updatedAt: now,
@@ -162,6 +162,36 @@ function buildDeniedApprovalResponse(params: {
     },
     chunk: {
       shellId: params.shellId,
+      output: message,
+      startCursor: 0,
+      endCursor: message.length,
+      originalChars: message.length,
+      originalLines: 1,
+      hasMoreOutput: false,
+    },
+    note: message,
+  });
+}
+
+function buildDeniedWriteApprovalResponse(params: {
+  session: ShellSessionRuntimeState;
+  approvalId: string;
+  reason: string;
+  approvalStatus: ShellApprovalStatus;
+}): ShellActionResponse {
+  const message = params.approvalStatus === "expired"
+    ? "Unrestricted sandbox approval expired."
+    : "User denied unrestricted sandbox execution.";
+  return buildActionResponse({
+    shell: {
+      ...params.session.snapshot,
+      approvalStatus: params.approvalStatus,
+      approvalId: params.approvalId,
+      approvalReason: params.reason,
+      stdinWritable: true,
+    },
+    chunk: {
+      shellId: params.session.snapshot.shellId,
       output: message,
       startCursor: 0,
       endCursor: message.length,
@@ -274,7 +304,7 @@ export async function startShellSession(
       ...(approvalStatus ? { approvalStatus } : {}),
       ...(approvalId ? { approvalId } : {}),
       ...(reason ? { approvalReason: reason } : {}),
-      stdinWritable: sandboxMode === "safe",
+      stdinWritable: true,
       status: "running",
       ...(typeof child.pid === "number" ? { pid: child.pid } : {}),
       startedAt,
@@ -422,7 +452,37 @@ export async function writeShellSession(
     throw new Error(`shell session ${shellId} stdin is closed`);
   }
   if (session.snapshot.stdinWritable === false) {
-    throw new Error(`shell session ${shellId} does not allow stdin writes`);
+    throw new Error(`shell session ${shellId} stdin is closed`);
+  }
+
+  let approvalId: string | undefined;
+  let approvalStatus: ShellApprovalStatus | undefined;
+  const reason = String(request.reason || "").trim();
+  if (session.snapshot.sandboxMode === "unrestricted") {
+    const validationError = validateUnrestrictedRequest({ cmd: chars, reason });
+    if (validationError) throw new Error(validationError);
+    const approval = await requestUnrestrictedApproval({
+      state,
+      context,
+      shellId,
+      toolName: "shell_write",
+      cmd: chars,
+      cwd: session.snapshot.cwd,
+      reason,
+      ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
+      inputPreview: chars,
+      inputChars: chars.length,
+    });
+    approvalId = approval.approvalId;
+    approvalStatus = approval.status;
+    if (approval.status !== "approved") {
+      return buildDeniedWriteApprovalResponse({
+        session,
+        approvalId: approval.approvalId,
+        reason,
+        approvalStatus: approval.status,
+      });
+    }
   }
   await new Promise<void>((resolve, reject) => {
     session.child.stdin.write(chars, (error) => {
@@ -434,7 +494,13 @@ export async function writeShellSession(
     });
   });
   return buildActionResponse({
-    shell: session.snapshot,
+    shell: {
+      ...session.snapshot,
+      ...(approvalStatus ? { approvalStatus } : {}),
+      ...(approvalId ? { approvalId } : {}),
+      ...(reason ? { approvalReason: reason } : {}),
+      stdinWritable: true,
+    },
     note: chars ? "stdin written" : "no chars written",
   });
 }

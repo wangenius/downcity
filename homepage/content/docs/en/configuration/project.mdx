@@ -67,6 +67,7 @@ Current behavior:
 - Project-local installs such as `.venv`, `node_modules`, and downloaded model/cache files under the project are supported
 - For host-level actions such as `brew install`, `npm install -g`, `pip install --user`, `gh auth login`, or host service setup, the agent may explicitly request `sandbox="unrestricted"` with a `reason`
 - Unrestricted Sandbox is managed by Downcity Runtime; every execution requires user approval, and denied or expired requests do not run
+- For unrestricted `shell_start`, approval only authorizes starting that process. Each later `shell_write` to the same unrestricted session also requires its own `reason` and user approval.
 - `sudo`, Xcode tool installation, SSH/keychain/shell profile changes, and clearly destructive commands are rejected by default
 - Network is open by default; omitting the field behaves like `networkMode="full"`
 - `networkMode="off"` blocks network access

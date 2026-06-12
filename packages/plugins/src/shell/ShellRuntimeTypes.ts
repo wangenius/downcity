@@ -11,6 +11,7 @@ import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type {
   ShellApprovalStatus,
+  ShellApprovalToolName,
   ShellSessionSnapshot,
 } from "@downcity/agent/internal/executor/tools/shell/types/ShellPlugin.js";
 import type { ResolvedShellPluginOptions } from "@/shell/types/ShellPluginOptions.js";
@@ -34,11 +35,26 @@ export type ShellApprovalRuntimeState = {
   /**
    * 关联工具名。
    */
-  toolName: "shell_exec" | "shell_start";
+  toolName: ShellApprovalToolName;
   /**
    * 申请执行的命令。
+   *
+   * 说明（中文）
+   * - `shell_write` 使用该字段保存 stdin 写入预览，保持审批队列结构统一。
    */
   cmd: string;
+  /**
+   * 审批动作类型。
+   */
+  operation: "exec" | "start" | "write";
+  /**
+   * stdin 写入内容预览；仅 `shell_write` 审批存在。
+   */
+  inputPreview?: string;
+  /**
+   * stdin 写入字符数；仅 `shell_write` 审批存在。
+   */
+  inputChars?: number;
   /**
    * 命令执行目录。
    */

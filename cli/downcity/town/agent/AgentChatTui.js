@@ -19,11 +19,17 @@ function extract_event_turn_id(event) {
     return "";
 }
 function format_approval_request_block(event) {
+    const operation = event.operation || (event.toolName === "shell_write" ? "write" : "exec");
+    const command_label = operation === "write" ? "input_preview" : "cmd";
+    const command_value = operation === "write" ? event.inputPreview || event.cmd : event.cmd;
     return {
         title: `[approval] ${event.toolName} requests unrestricted sandbox`,
         detail_lines: [
             `approval_id: ${event.approvalId}`,
-            `cmd: ${event.cmd}`,
+            `operation: ${operation}`,
+            ...(event.shellId ? [`shell_id: ${event.shellId}`] : []),
+            `${command_label}: ${command_value}`,
+            ...(typeof event.inputChars === "number" ? [`input_chars: ${event.inputChars}`] : []),
             `cwd: ${event.cwd}`,
             `reason: ${event.reason}`,
         ],

@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - agent 只能通过 shell tool 请求 unrestricted sandbox；真正执行前必须等待用户确认。
  * - 审批结果最终回到原 tool result；session event 只用于 UI/CLI/Console 展示和操作。
- * - V1 授权粒度固定为单次命令或单次 shell_start 创建的命令会话。
+ * - V1 授权粒度固定为单次命令、单次 shell_start 启动，或单次 shell_write 输入。
  */
 
 import fs from "fs-extra";
@@ -12,7 +12,10 @@ import path from "node:path";
 import { generateId } from "@downcity/agent/internal/utils/Id.js";
 import { getSessionRunContext } from "@downcity/agent/internal/executor/SessionRunScope.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { ShellApprovalStatus } from "@downcity/agent/internal/executor/tools/shell/types/ShellPlugin.js";
+import type {
+  ShellApprovalStatus,
+  ShellApprovalToolName,
+} from "@downcity/agent/internal/executor/tools/shell/types/ShellPlugin.js";
 import type { ShellPluginState } from "@/shell/ShellRuntimeTypes.js";
 import { nowMs } from "./ShellActionRuntimeSupport.js";
 
@@ -27,6 +30,18 @@ const DANGEROUS_COMMAND_PATTERNS = [
 
 function isDangerousCommand(cmd: string): boolean {
   return DANGEROUS_COMMAND_PATTERNS.some((pattern) => pattern.test(cmd));
+}
+
+function resolveApprovalOperation(toolName: ShellApprovalToolName): "exec" | "start" | "write" {
+  if (toolName === "shell_write") return "write";
+  if (toolName === "shell_exec") return "exec";
+  return "start";
+}
+
+function buildInputPreview(value: string): string {
+  const normalized = String(value || "");
+  if (normalized.length <= 240) return normalized;
+  return `${normalized.slice(0, 240)}...`;
 }
 
 function resolveAuditPath(context: AgentContext): string {
@@ -47,7 +62,7 @@ function publishApprovalResult(params: {
   ownerContextId?: string;
   approvalId: string;
   shellId: string;
-  toolName: "shell_exec" | "shell_start";
+  toolName: ShellApprovalToolName;
   decision: ShellApprovalStatus;
 }): void {
   const sessionId = String(params.ownerContextId || "").trim();
@@ -91,11 +106,13 @@ export async function requestUnrestrictedApproval(params: {
   state: ShellPluginState;
   context: AgentContext;
   shellId: string;
-  toolName: "shell_exec" | "shell_start";
+  toolName: ShellApprovalToolName;
   cmd: string;
   cwd: string;
   reason: string;
   ownerContextId?: string;
+  inputPreview?: string;
+  inputChars?: number;
 }): Promise<{
   approvalId: string;
   status: ShellApprovalStatus;
@@ -103,6 +120,10 @@ export async function requestUnrestrictedApproval(params: {
   const approvalId = `ap_${generateId()}`;
   const createdAt = nowMs();
   const ownerContextId = String(params.ownerContextId || "").trim() || undefined;
+  const operation = resolveApprovalOperation(params.toolName);
+  const inputPreview = params.inputPreview !== undefined
+    ? buildInputPreview(params.inputPreview)
+    : undefined;
 
   const status = await new Promise<ShellApprovalStatus>((resolve) => {
     const timer = setTimeout(() => {
@@ -121,6 +142,9 @@ export async function requestUnrestrictedApproval(params: {
       ...(ownerContextId ? { ownerContextId } : {}),
       toolName: params.toolName,
       cmd: params.cmd,
+      operation,
+      ...(inputPreview !== undefined ? { inputPreview } : {}),
+      ...(typeof params.inputChars === "number" ? { inputChars: params.inputChars } : {}),
       cwd: params.cwd,
       reason: params.reason,
       createdAt,
@@ -142,6 +166,10 @@ export async function requestUnrestrictedApproval(params: {
           cwd: params.cwd,
           reason: params.reason,
           status: "pending",
+          operation,
+          shellId: params.shellId,
+          ...(inputPreview !== undefined ? { inputPreview } : {}),
+          ...(typeof params.inputChars === "number" ? { inputChars: params.inputChars } : {}),
         });
       } catch {
         // ignore event delivery failures
@@ -157,6 +185,9 @@ export async function requestUnrestrictedApproval(params: {
         tool_call_id: params.shellId,
         agent_id: params.context.config?.id || null,
         cmd: params.cmd,
+        operation,
+        ...(inputPreview !== undefined ? { input_preview: inputPreview } : {}),
+        ...(typeof params.inputChars === "number" ? { input_chars: params.inputChars } : {}),
         cwd: params.cwd,
         reason: params.reason,
         created_at: new Date(createdAt).toISOString(),
@@ -200,6 +231,9 @@ export async function resolveApproval(params: {
       tool_call_id: approval.shellId,
       agent_id: params.context.config?.id || null,
       cmd: approval.cmd,
+      operation: approval.operation,
+      ...(approval.inputPreview !== undefined ? { input_preview: approval.inputPreview } : {}),
+      ...(typeof approval.inputChars === "number" ? { input_chars: approval.inputChars } : {}),
       cwd: approval.cwd,
       reason: approval.reason,
       decision: params.decision,
@@ -217,8 +251,11 @@ export function listPendingApprovals(state: ShellPluginState): Array<{
   approvalId: string;
   shellId: string;
   ownerContextId?: string;
-  toolName: "shell_exec" | "shell_start";
+  toolName: ShellApprovalToolName;
   cmd: string;
+  operation: "exec" | "start" | "write";
+  inputPreview?: string;
+  inputChars?: number;
   cwd: string;
   reason: string;
   createdAt: number;
@@ -229,6 +266,9 @@ export function listPendingApprovals(state: ShellPluginState): Array<{
     ...(approval.ownerContextId ? { ownerContextId: approval.ownerContextId } : {}),
     toolName: approval.toolName,
     cmd: approval.cmd,
+    operation: approval.operation,
+    ...(approval.inputPreview !== undefined ? { inputPreview: approval.inputPreview } : {}),
+    ...(typeof approval.inputChars === "number" ? { inputChars: approval.inputChars } : {}),
     cwd: approval.cwd,
     reason: approval.reason,
     createdAt: approval.createdAt,

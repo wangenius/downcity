@@ -12,6 +12,11 @@
 export type ShellSandboxMode = "safe" | "unrestricted";
 
 /**
+ * shell unrestricted sandbox 申请原因。
+ */
+export type ShellUnrestrictedReason = string;
+
+/**
  * 启动一个交互式 shell session 的输入。
  */
 export type ShellStartInput = {
@@ -87,6 +92,8 @@ export type ShellWriteInput = {
   shell_id: string;
   /** 要发送到 stdin 的字符内容。 */
   chars: string;
+  /** 向 unrestricted shell session 写入 stdin 时展示给用户的原因。 */
+  reason?: ShellUnrestrictedReason;
 };
 
 /**

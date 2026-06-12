@@ -430,7 +430,7 @@ export function App() {
       <footer className="flex items-center justify-between gap-3 border-t border-border px-1 py-4">
         <div className={`text-sm ${getStatusClass(status.type)}`}>{status.text}</div>
         <button
-          className="inline-flex min-h-11 items-center justify-center rounded-[12px] border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center rounded-[12px] border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
           onClick={() => {
             void handleSave();

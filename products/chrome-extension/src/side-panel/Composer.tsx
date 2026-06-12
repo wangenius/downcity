@@ -23,9 +23,11 @@ import type {
   ComposerReference,
   ComposerSubmitPayload,
   FocusComposerMessage,
+  PendingSelectionReferenceState,
   SelectionReferenceMessage,
   SidePanelReadyResponse,
 } from "../types/sidePanel";
+import { PENDING_SELECTION_REFERENCE_STORAGE_KEY } from "../types/sidePanel";
 
 /**
  * Composer 属性。
@@ -317,6 +319,15 @@ export function Composer(props: ComposerProps) {
     focusEditor();
   }, [focusEditor]);
 
+  const insertStoredSelectionReference = useCallback((state: unknown) => {
+    const record = state as Partial<PendingSelectionReferenceState> | null;
+    const reference = record?.reference;
+    const expiresAt = Number(record?.expiresAt || 0);
+    if (!reference || Date.now() > expiresAt) return;
+    if (reference.type !== "downcity.side-panel.insert-selection-reference") return;
+    insertSelectionReference(reference);
+  }, [insertSelectionReference]);
+
   useEffect(() => {
     const onMessage = (message: unknown) => {
       const record = message as Partial<SelectionReferenceMessage | FocusComposerMessage> | null;
@@ -343,10 +354,26 @@ export function Composer(props: ComposerProps) {
       void chrome.runtime.lastError;
     });
 
+    chrome.storage.session.get([PENDING_SELECTION_REFERENCE_STORAGE_KEY], (result) => {
+      insertStoredSelectionReference(result[PENDING_SELECTION_REFERENCE_STORAGE_KEY]);
+      void chrome.runtime.lastError;
+    });
+
+    const onStorageChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName !== "session") return;
+      insertStoredSelectionReference(changes[PENDING_SELECTION_REFERENCE_STORAGE_KEY]?.newValue);
+    };
+
+    chrome.storage.onChanged.addListener(onStorageChanged);
+
     return () => {
       chrome.runtime.onMessage.removeListener(onMessage);
+      chrome.storage.onChanged.removeListener(onStorageChanged);
     };
-  }, [focusEditor, insertSelectionReference]);
+  }, [focusEditor, insertSelectionReference, insertStoredSelectionReference]);
 
   const submit = useCallback(() => {
     if (!canSubmit) return;
@@ -425,7 +452,7 @@ export function Composer(props: ComposerProps) {
         <div className="mt-2 flex justify-end">
           <button
             type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[17px] font-medium leading-none text-primary-foreground shadow-none transition hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-35"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[17px] font-medium leading-none text-primary-foreground shadow-none transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-35"
             onClick={submit}
             disabled={!canSubmit}
             aria-label="发送"

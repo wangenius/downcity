@@ -15,6 +15,8 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  RemoteAgentPluginActionInput,
+  RemoteAgentPluginActionResult,
 } from "@/types/agent/AgentTypes.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
@@ -99,6 +101,16 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
 
   async list_sessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage> {
     return await this.client.list_sessions(input);
+  }
+
+  async run_plugin_action(
+    input: RemoteAgentPluginActionInput,
+  ): Promise<RemoteAgentPluginActionResult> {
+    return await this.client.run_internal_plugin_action({
+      plugin_name: input.plugin,
+      action_name: input.action,
+      ...(input.payload !== undefined ? { payload: input.payload } : {}),
+    });
   }
 
   async close(): Promise<void> {

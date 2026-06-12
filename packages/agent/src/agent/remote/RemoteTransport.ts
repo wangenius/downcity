@@ -15,6 +15,8 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  RemoteAgentPluginActionInput,
+  RemoteAgentPluginActionResult,
 } from "@/types/agent/AgentTypes.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
@@ -66,6 +68,10 @@ export type RemoteAgentTransport = RemoteSessionTransport & {
   create_session(input?: AgentCreateSessionInput): Promise<AgentSessionInfo>;
   /** 列出 sessions。 */
   list_sessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage>;
+  /** 执行远程 Agent runtime 内的 plugin action。 */
+  run_plugin_action(
+    input: RemoteAgentPluginActionInput,
+  ): Promise<RemoteAgentPluginActionResult>;
   /** 关闭 transport 持有的长期连接。 */
   close?(): Promise<void>;
 };

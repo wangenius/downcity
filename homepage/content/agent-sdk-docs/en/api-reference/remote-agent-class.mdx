@@ -11,8 +11,44 @@ description: The core public API of the remote Agent client
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
+- `agent.runPluginAction(input)`
 
 `agent.createSession()` and `agent.getSession()` return `RemoteAgentSession`.
+
+## `runPluginAction`
+
+Use `runPluginAction()` when your client UI needs to call an action on the remote runtime.
+
+```ts
+await agent.runPluginAction({
+  plugin: "shell",
+  action: "approve",
+  payload: {
+    approvalId: "ap_xxx",
+  },
+});
+```
+
+For unrestricted shell approval flows, subscribe to session events and respond to `tool-approval-request`:
+
+```ts
+session.subscribe(async (event) => {
+  if (event.type !== "tool-approval-request") return;
+
+  const displayText = event.operation === "write"
+    ? event.inputPreview || event.cmd
+    : event.cmd;
+  const approved = window.confirm(`${displayText}\n\n${event.reason}`);
+
+  await agent.runPluginAction({
+    plugin: "shell",
+    action: approved ? "approve" : "deny",
+    payload: {
+      approvalId: event.approvalId,
+    },
+  });
+});
+```
 
 ## `url`
 

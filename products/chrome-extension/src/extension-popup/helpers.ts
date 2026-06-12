@@ -124,7 +124,7 @@ export function normalizeInitialTaskPrompt(value: string): string {
  */
 export function getToastToneClass(type: ExtensionPopupToastMessage["type"]): string {
   return type === "error"
-    ? "border-[#d9b2ae] bg-[#faf5f5] text-[#7f1d1d]"
+    ? "border-error-border bg-error-surface text-error-foreground"
     : "border-border bg-surface text-foreground";
 }
 

@@ -15,9 +15,9 @@ import {
   Agent,
   loadDowncityConfig,
   loadStaticSystemPrompts,
-  shellTools,
   StaticPromptCatalog,
 } from "@downcity/agent";
+import { Shell } from "@downcity/shell";
 import type { AgentStartOptions } from "../types/AgentStartOptions.js";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "../town/city-model/CreateRuntimeModel.js";
@@ -94,7 +94,7 @@ export async function runCommand(
     id: agentId,
     path: projectRoot,
     instruction: currentSystems,
-    tools: shellTools,
+    shell: new Shell(),
     plugins,
     model,
     env: hostEnv,
@@ -135,6 +135,7 @@ export async function runCommand(
     getAgentRuntime: () => agent.getRuntime(),
     getAgentContext: () => agent.getContext(),
     sessionCollection: agent.getSessionCollection(),
+    getShell: () => agent.getShell(),
   });
 
   const agentLogger = agent.getLogger();

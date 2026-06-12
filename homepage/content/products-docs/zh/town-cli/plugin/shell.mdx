@@ -1,28 +1,39 @@
 ---
-title: shell plugin
-description: runtime shell 执行与会话归属
+title: shell built-in
+description: Agent shell tools 与 unrestricted sandbox 审批
 ---
 
-# shell plugin
+# shell built-in
 
-`shell` 是内建 plugin adapter，用于让 shell session 归属于具体 agent runtime。底层命令执行与 sandbox 实现在 `@downcity/shell` 中。
+Shell 执行现在是 Agent 内建能力，不再是 plugin command surface。运行中的 Town agent 会通过 Agent HTTP gateway 给 SDK 客户端暴露 shell 审批 API。
 
-当你需要“属于 agent runtime 的 shell 执行”而不是临时本地终端步骤时，使用它。
+## 推荐路径
 
-## 这类 plugin 的含义
+使用 Agent SDK：
 
-- shell session 的归属在托管 agent 上，具体实现位于 `@downcity/shell`
-- start/stop 时的清理归属于 plugin lifecycle
-- 命令执行与会话状态都绑定到目标 agent
-- shell runtime 参数来自 SDK constructor，可选；CLI 只是调用目标 agent 已注册的 shell plugin
+```ts
+const approvals = await agent.approvals();
+await agent.approve({ approval_id: approvals[0].approval_id });
+await agent.deny({ approval_id: approvals[0].approval_id });
+```
 
-## 推荐阅读路径
+远程客户端：
 
-- 先看 [Agent Plugins Docs / shell](/zh/plugins-docs/builtins/shell) 理解 lifecycle 与边界
-- 当前没有 `town shell` 快捷根命令；脚本化调用时使用 `town plugin command shell <action> --payload <json>`
-- 常见 action 包括 `exec`、`start`、`status`、`read`、`write`、`wait`、`close`
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({ url: "http://127.0.0.1:5314" });
+const approvals = await agent.approvals();
+```
+
+## 说明
+
+- `@downcity/plugins` 不再提供 `ShellPlugin`。
+- Shell tools 通过 `new Agent({ shell: new Shell() })` 挂载。
+- Unrestricted sandbox 请求会以 `tool-approval-request` session event 出现。
+- 每次审批只覆盖一个命令或一次 `shell_write`。
 
 ## 相关页面
 
 - [`town plugin`](/zh/products-docs/town-cli/plugin/plugin)
-- [`Agent Plugins Docs / shell`](/zh/plugins-docs/builtins/shell)
+- [Shell Built-In](/zh/plugins-docs/builtins/shell)

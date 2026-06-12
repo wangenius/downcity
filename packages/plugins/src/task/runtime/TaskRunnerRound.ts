@@ -11,6 +11,7 @@ import fs from "fs-extra";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import { runSandboxCommand } from "@downcity/shell/sandbox/SandboxRunner.js";
 import type { ShellHostContext } from "@downcity/shell/types/ShellHostContext.js";
+import { withShellRunScope } from "@downcity/shell";
 import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
 import type { SessionRunContext } from "@downcity/agent/internal/types/executor/SessionRunContext.js";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
@@ -250,9 +251,17 @@ export async function runAgentRound(params: {
       runContext: create_task_run_context(params.sessionId),
     },
     () =>
-      params.taskSessionRuntime.getExecutor(params.sessionId).run({
-        query: params.query,
-      }),
+      withShellRunScope(
+        {
+          run_context: {
+            session_id: params.sessionId,
+          },
+        },
+        () =>
+          params.taskSessionRuntime.getExecutor(params.sessionId).run({
+            query: params.query,
+          }),
+      ),
   );
   const outputPick = pickAgentOutput(result.assistantMessage);
 

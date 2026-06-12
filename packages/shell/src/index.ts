@@ -7,6 +7,7 @@
  */
 
 export * from "./types/Shell.js";
+export * from "./types/ShellRuntime.js";
 export type {
   ShellActionResponse,
   ShellApprovalStatus,
@@ -22,9 +23,10 @@ export type {
   ShellStartRequest,
   ShellWaitRequest,
   ShellWriteRequest,
-} from "./types/ShellPlugin.js";
-export * from "./types/ShellPluginOptions.js";
+} from "./types/ShellAction.js";
+export * from "./types/ShellRuntimeOptions.js";
 export * from "./types/ShellHostContext.js";
+export * from "./Shell.js";
 export * from "./sandbox/types/Sandbox.js";
 export * from "./sandbox/types/SandboxRuntime.js";
 export * from "./sandbox/SandboxRunner.js";
@@ -34,5 +36,7 @@ export * from "./session/ShellActionRuntime.js";
 export * from "./session/ShellActionResponse.js";
 export * from "./session/ShellRuntimeEnvironment.js";
 export * from "./session/ShellRuntimeTypes.js";
+export * from "./session/ShellRunScope.js";
 export * from "./approval/ShellApprovalRuntime.js";
+export * from "./tool/ShellTools.js";
 export * from "./tool/ShellToolSchemas.js";

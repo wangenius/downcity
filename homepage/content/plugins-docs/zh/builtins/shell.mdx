@@ -1,91 +1,74 @@
 ---
-title: shell Plugin
-description: shell session 生命周期、单次 exec，以及 per-agent shell runtime 状态
+title: Shell Built-In
+description: 内建 shell tools、sandbox 模式与审批流程
 ---
 
-# `shell` Plugin
+# Shell Built-In
 
-`shell` 是 `@downcity/shell` 包对应的内建 plugin adapter。
-
-它提供：
-
-- one-shot shell 执行
-- 持久 shell session
-- status、read、write、wait、close 这些 action
-
-## 主要形状
-
-- `lifecycle`
-- `actions`
-
-## 它主要解决什么问题
-
-如果你需要这些能力，就应该关注 `shell`：
-
-- 由 `@downcity/shell` 实现的 shell session
-- per-agent 的 shell 状态边界
-- 一套围绕 shell 执行的 runtime action 层
-
-## 用户怎么使用
-
-当前没有根命令 `town shell`。使用 plugin command 形式：
-
-```bash
-town plugin command shell exec --payload '{"cmd":"pwd"}'
-town plugin command shell start --payload '{"cmd":"pnpm test","inlineWaitMs":1000}'
-town plugin command shell status --payload '{"shellId":"<shellId>"}'
-town plugin command shell read --payload '{"shellId":"<shellId>","fromCursor":0}'
-town plugin command shell write --payload '{"shellId":"<shellId>","chars":"q\n"}'
-town plugin command shell wait --payload '{"shellId":"<shellId>","timeoutMs":5000}'
-town plugin command shell close --payload '{"shellId":"<shellId>","force":true}'
-```
-
-`town plugin command ...` 面向托管 agent runtime。要在当前项目内直接本地执行，可以使用高级形式：`town plugin action shell <action> --payload '<json>'`。
-
-## SDK action 用法
-
-可以直接实例化，并按需覆盖 runtime 参数；不传时使用默认值：
+Shell 不再是 plugin。它是 `@downcity/shell` 提供的内建能力，通过 `new Shell()` 挂到 Agent 上。
 
 ```ts
-import { ShellPlugin } from "@downcity/plugins";
+import { Agent } from "@downcity/agent";
+import { Shell } from "@downcity/shell";
 
-const shell = new ShellPlugin({
-  maxActiveShells: 64,
-  defaultExecTimeoutMs: 60_000,
-  defaultWaitTimeoutMs: 10_000,
-  cleanupDelayMs: 10 * 60 * 1000,
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  shell: new Shell(),
 });
 ```
 
+## Tools
+
+传入 `shell: new Shell()` 后，模型会获得这些工具：
+
+- `shell_exec`
+- `shell_start`
+- `shell_status`
+- `shell_read`
+- `shell_write`
+- `shell_wait`
+- `shell_close`
+
+## Sandbox 模式
+
+Shell tools 默认进入 Safe Sandbox。
+
+只有需要宿主级能力时才使用 `sandbox: "unrestricted"`，例如 `brew install`、`npm install -g`、`pip install --user`、`gh auth login`，或初始化项目 sandbox 外的宿主服务。
+
 ```ts
-await agent.plugins.runAction({
-  plugin: "shell",
-  action: "exec",
-  payload: {
-    cmd: "pwd",
-  },
+shell_exec({
+  cmd: "brew install ffmpeg",
+  sandbox: "unrestricted",
+  reason: "Homebrew 需要写入宿主级 package 目录。",
 });
 ```
 
-action 名称是 `exec`、`start`、`status`、`read`、`write`、`wait`、`close`。
+Unrestricted 执行每次都需要用户审批。缺少 `reason` 会在执行前被拒绝。
+
+## 审批 API
+
+前端或 SDK 客户端通过 Agent API 审批：
+
+```ts
+const pending = await agent.approvals();
+
+await agent.approve({ approval_id: pending[0].approval_id });
+await agent.deny({ approval_id: pending[0].approval_id });
+```
+
+`RemoteAgent` 通过 Town Agent HTTP gateway 暴露同样的 API。
 
 ## 关键语义
 
-- shell sessions 由 `@downcity/shell` 实现；`ShellPlugin` 负责把它绑定到某个 agent 实例
-- constructor 参数都是可选 runtime 调参；默认值保持内建行为不变
-- sandbox backend 也在 `@downcity/shell` 中。每条命令都会进入当前 agent sandbox 执行，持久目录是 `.downcity/sandbox`
-- `shellId` 只标识 `.downcity/shell/<shellId>` 下的会话日志与进程生命周期，不决定 sandbox HOME、cache 或权限
-- sandbox 命令默认可读写项目目录、可联网，并共享 `.downcity/sandbox` 作为 `HOME`
-- sandbox 命令不能写真实用户 HOME，也不能写 `/usr/local`、`/opt/homebrew`、`/System` 等宿主系统目录
-- `start` lifecycle 负责绑定 runtime
-- `stop` lifecycle 会关闭全部 shell sessions，并清空内存状态
-
-## 公开性说明
-
-`ShellPlugin` 仍然可以从 `@downcity/plugins` 包根直接导入。命令执行、sandbox backend、session lifecycle 与 approval primitives 位于 `@downcity/shell`。
+- Shell 归属于 `@downcity/shell`，不属于 `@downcity/plugins`。
+- Agent 只挂载 Shell tools，并转发 session event。
+- Safe Sandbox 命令可读写项目，并使用配置的 sandbox 目录。
+- Unrestricted 命令只有在逐次审批通过后才会离开 Safe Sandbox 执行。
+- 对 unrestricted `shell_start` 会话执行的每一次 `shell_write` 也需要审批。
+- `agent.stop()` 会释放 Shell sessions。
 
 ## 相关文档
 
-- [Plugin Lifecycle](/zh/agent-sdk-docs/plugins/lifecycle)
-- [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
-- [Built-ins Overview](/zh/plugins-docs/builtins/overview)
+- [Agent 构造参数](/zh/agent-sdk-docs/local-agent/constructor-options)
+- [Tools 和 Plugins](/zh/agent-sdk-docs/local-agent/tools-and-plugins)

@@ -15,7 +15,6 @@ import { ChatPlugin } from "@/chat/ChatPlugin.js";
 import { ContactPlugin } from "@/contact/ContactPlugin.js";
 import { TaskPlugin } from "@/task/TaskPlugin.js";
 import { MemoryPlugin } from "@/memory/MemoryPlugin.js";
-import { ShellPlugin } from "@/shell/ShellPlugin.js";
 import { ImagePlugin } from "@/image/ImagePlugin.js";
 import { AsrPlugin } from "@/asr/Plugin.js";
 import { TtsPlugin } from "@/tts/Plugin.js";
@@ -24,7 +23,6 @@ import type { AsrPluginOptions } from "@/asr/types/AsrPlugin.js";
 import type { TtsPluginOptions } from "@/tts/types/TtsPlugin.js";
 import type { TaskPluginOptions } from "@/task/types/TaskPluginOptions.js";
 import type { MemoryPluginOptions } from "@/memory/types/Memory.js";
-import type { ShellPluginOptions } from "@downcity/shell/types/ShellPluginOptions.js";
 
 /**
  * 内建 plugin class 构造器。
@@ -44,7 +42,6 @@ export const BUILTIN_PLUGIN_CLASSES: BuiltinPluginClass[] = [
   ContactPlugin,
   TaskPlugin,
   MemoryPlugin,
-  ShellPlugin,
 ];
 
 /**
@@ -76,10 +73,6 @@ export interface BuiltinPluginOptions {
    */
   memory?: MemoryPluginOptions;
 
-  /**
-   * shell plugin 的可选 runtime 参数。
-   */
-  shell?: ShellPluginOptions;
 }
 
 /**
@@ -91,8 +84,6 @@ export function createBuiltinPlugins(options: BuiltinPluginOptions = {}): BasePl
       ? new TaskPlugin(options.task)
       : PluginClass === MemoryPlugin
         ? new MemoryPlugin(options.memory)
-        : PluginClass === ShellPlugin
-          ? new ShellPlugin(options.shell)
       : new PluginClass(),
   );
   if (options.image?.image_create && options.image?.image_result) {

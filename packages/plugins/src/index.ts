@@ -31,7 +31,6 @@ export { TtsPlugin } from "./tts/Plugin.js";
 export { WorkboardPlugin } from "./workboard/Plugin.js";
 export { TaskPlugin } from "./task/TaskPlugin.js";
 export { MemoryPlugin } from "./memory/MemoryPlugin.js";
-export { ShellPlugin } from "./shell/ShellPlugin.js";
 export {
   listChatAuthorizationRoles,
   readChatAuthorizationConfigSync,
@@ -63,10 +62,6 @@ export type {
 } from "./chat/types/ChatPluginOptions.js";
 export type { ContactPluginOptions } from "./contact/types/ContactPluginOptions.js";
 export type { TaskPluginOptions } from "./task/types/TaskPluginOptions.js";
-export type {
-  ResolvedShellPluginOptions,
-  ShellPluginOptions,
-} from "./shell/types/ShellPluginOptions.js";
 export type {
   MemoryActionPayload,
   MemoryDefaults,

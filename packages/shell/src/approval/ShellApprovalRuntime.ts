@@ -14,8 +14,8 @@ import type { ShellHostContext } from "@/types/ShellHostContext.js";
 import type {
   ShellApprovalStatus,
   ShellApprovalToolName,
-} from "@/types/ShellPlugin.js";
-import type { ShellPluginState } from "@/session/ShellRuntimeTypes.js";
+} from "@/types/ShellAction.js";
+import type { ShellRuntimeState } from "@/session/ShellRuntimeTypes.js";
 import { nowMs } from "../session/ShellActionRuntimeSupport.js";
 
 const DANGEROUS_COMMAND_PATTERNS = [
@@ -102,7 +102,7 @@ export function validateUnrestrictedRequest(params: {
  * 请求用户批准 unrestricted sandbox 执行。
  */
 export async function requestUnrestrictedApproval(params: {
-  state: ShellPluginState;
+  state: ShellRuntimeState;
   context: ShellHostContext;
   shellId: string;
   toolName: ShellApprovalToolName;
@@ -201,7 +201,7 @@ export async function requestUnrestrictedApproval(params: {
  * 兑现 unrestricted sandbox 审批。
  */
 export async function resolveApproval(params: {
-  state: ShellPluginState;
+  state: ShellRuntimeState;
   context: ShellHostContext;
   approvalId: string;
   decision: ShellApprovalStatus;
@@ -246,7 +246,7 @@ export async function resolveApproval(params: {
 /**
  * 列出 pending unrestricted sandbox 审批。
  */
-export function listPendingApprovals(state: ShellPluginState): Array<{
+export function listPendingApprovals(state: ShellRuntimeState): Array<{
   approvalId: string;
   shellId: string;
   ownerContextId?: string;

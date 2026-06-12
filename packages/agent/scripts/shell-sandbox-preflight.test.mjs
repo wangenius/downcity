@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 
 import {
   checkShellSandboxPreflightWithProbe,
-} from "../bin/sandbox/SandboxPreflight.js";
+} from "@downcity/shell/sandbox/SandboxPreflight.js";
 
 async function withPlatform(platform, callback) {
   const previous = Object.getOwnPropertyDescriptor(process, "platform");

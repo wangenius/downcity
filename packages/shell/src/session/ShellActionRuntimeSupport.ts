@@ -10,18 +10,18 @@ import path from "node:path";
 import fs from "fs-extra";
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
 import type {
-  ShellPluginState,
+  ShellRuntimeState,
   ShellSessionRuntimeState,
 } from "@/session/ShellRuntimeTypes.js";
 import type {
-  ResolvedShellPluginOptions,
-  ShellPluginOptions,
-} from "@/types/ShellPluginOptions.js";
+  ResolvedShellRuntimeOptions,
+  ShellRuntimeOptions,
+} from "@/types/ShellRuntimeOptions.js";
 import type {
   ShellQueryRequest,
   ShellSessionSnapshot,
   ShellSessionStatus,
-} from "@/types/ShellPlugin.js";
+} from "@/types/ShellAction.js";
 import { getShellOutputPath, getShellSnapshotPath } from "./Paths.js";
 import { resolveOwnerContextId } from "./ShellRuntimeEnvironment.js";
 export {
@@ -34,7 +34,7 @@ export {
   createOutputChunk,
 } from "./ShellActionResponse.js";
 
-const DEFAULT_SHELL_PLUGIN_OPTIONS: ResolvedShellPluginOptions = {
+const DEFAULT_SHELL_RUNTIME_OPTIONS: ResolvedShellRuntimeOptions = {
   maxActiveShells: 64,
   cleanupDelayMs: 10 * 60 * 1000,
   maxInMemoryOutputChars: 1_000_000,
@@ -50,17 +50,17 @@ const DEFAULT_SHELL_PLUGIN_OPTIONS: ResolvedShellPluginOptions = {
 /**
  * shell.start 默认内联等待时间。
  */
-export const DEFAULT_INLINE_WAIT_MS = DEFAULT_SHELL_PLUGIN_OPTIONS.defaultInlineWaitMs;
+export const DEFAULT_INLINE_WAIT_MS = DEFAULT_SHELL_RUNTIME_OPTIONS.defaultInlineWaitMs;
 
 /**
  * shell.wait 默认等待超时。
  */
-export const DEFAULT_WAIT_TIMEOUT_MS = DEFAULT_SHELL_PLUGIN_OPTIONS.defaultWaitTimeoutMs;
+export const DEFAULT_WAIT_TIMEOUT_MS = DEFAULT_SHELL_RUNTIME_OPTIONS.defaultWaitTimeoutMs;
 
 /**
  * shell.exec 默认总超时。
  */
-export const DEFAULT_EXEC_TIMEOUT_MS = DEFAULT_SHELL_PLUGIN_OPTIONS.defaultExecTimeoutMs;
+export const DEFAULT_EXEC_TIMEOUT_MS = DEFAULT_SHELL_RUNTIME_OPTIONS.defaultExecTimeoutMs;
 
 function readPositiveInteger(
   value: number | undefined,
@@ -73,68 +73,68 @@ function readPositiveInteger(
 }
 
 /**
- * 归一化 ShellPlugin 可选运行参数。
+ * 归一化 Shell 可选运行参数。
  */
-export function resolveShellPluginOptions(
-  options: ShellPluginOptions = {},
-): ResolvedShellPluginOptions {
+export function resolveShellRuntimeOptions(
+  options: ShellRuntimeOptions = {},
+): ResolvedShellRuntimeOptions {
   const minWaitMs = readPositiveInteger(
     options.minWaitMs,
-    DEFAULT_SHELL_PLUGIN_OPTIONS.minWaitMs,
+    DEFAULT_SHELL_RUNTIME_OPTIONS.minWaitMs,
   );
   const maxWaitMs = Math.max(
     minWaitMs,
     readPositiveInteger(
       options.maxWaitMs,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.maxWaitMs,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.maxWaitMs,
     ),
   );
   return {
     maxActiveShells: readPositiveInteger(
       options.maxActiveShells,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.maxActiveShells,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.maxActiveShells,
     ),
     cleanupDelayMs: readPositiveInteger(
       options.cleanupDelayMs,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.cleanupDelayMs,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.cleanupDelayMs,
     ),
     maxInMemoryOutputChars: readPositiveInteger(
       options.maxInMemoryOutputChars,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.maxInMemoryOutputChars,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.maxInMemoryOutputChars,
     ),
     outputPreviewChars: readPositiveInteger(
       options.outputPreviewChars,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.outputPreviewChars,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.outputPreviewChars,
     ),
     minWaitMs,
     maxWaitMs,
     defaultInlineWaitMs: readPositiveInteger(
       options.defaultInlineWaitMs,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.defaultInlineWaitMs,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.defaultInlineWaitMs,
     ),
     defaultWaitTimeoutMs: readPositiveInteger(
       options.defaultWaitTimeoutMs,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.defaultWaitTimeoutMs,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.defaultWaitTimeoutMs,
     ),
     defaultExecTimeoutMs: readPositiveInteger(
       options.defaultExecTimeoutMs,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.defaultExecTimeoutMs,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.defaultExecTimeoutMs,
     ),
     defaultApprovalTimeoutMs: readPositiveInteger(
       options.defaultApprovalTimeoutMs,
-      DEFAULT_SHELL_PLUGIN_OPTIONS.defaultApprovalTimeoutMs,
+      DEFAULT_SHELL_RUNTIME_OPTIONS.defaultApprovalTimeoutMs,
     ),
   };
 }
 
 /**
- * 创建 shell plugin runtime 初始状态。
+ * 创建 shell runtime 初始状态。
  */
-export function createShellPluginState(
-  options: ShellPluginOptions = {},
-): ShellPluginState {
+export function createShellRuntimeState(
+  options: ShellRuntimeOptions = {},
+): ShellRuntimeState {
   return {
-    options: resolveShellPluginOptions(options),
+    options: resolveShellRuntimeOptions(options),
     sessions: new Map<string, ShellSessionRuntimeState>(),
     approvals: new Map(),
     context: null,
@@ -152,14 +152,14 @@ export function nowMs(): number {
  * 归一化 wait/timeout 参数。
  */
 export function clampWaitMs(value: number | undefined, fallback: number): number {
-  return clampWaitMsWithOptions(DEFAULT_SHELL_PLUGIN_OPTIONS, value, fallback);
+  return clampWaitMsWithOptions(DEFAULT_SHELL_RUNTIME_OPTIONS, value, fallback);
 }
 
 /**
- * 结合 ShellPlugin options 归一化 wait/timeout 参数。
+ * 结合 Shell options 归一化 wait/timeout 参数。
  */
 export function clampWaitMsWithOptions(
-  options: ResolvedShellPluginOptions,
+  options: ResolvedShellRuntimeOptions,
   value: number | undefined,
   fallback: number,
 ): number {
@@ -241,58 +241,6 @@ function notifyWaiters(session: ShellSessionRuntimeState): void {
   }
 }
 
-async function emitChatCompletionEvent(
-  context: ShellHostContext,
-  snapshot: ShellSessionSnapshot,
-): Promise<void> {
-  const ownerContextId = String(snapshot.ownerContextId || "").trim();
-  if (!ownerContextId || snapshot.notificationSent !== false) return;
-
-  const meta = await context.shellIntegration?.readChatMeta?.({
-    context,
-    sessionId: ownerContextId,
-  });
-  if (!meta) return;
-
-  const lines = [
-    "[内部 shell 状态通知]",
-    `shell_id: ${snapshot.shellId}`,
-    `status: ${snapshot.status}`,
-    `exit_code: ${typeof snapshot.exitCode === "number" ? snapshot.exitCode : "null"}`,
-    `cmd: ${snapshot.cmd}`,
-  ];
-  if (snapshot.lastOutputPreview) {
-    lines.push(`last_output_preview: ${snapshot.lastOutputPreview}`);
-  }
-  if (snapshot.externalRefs.length > 0) {
-    const refs = snapshot.externalRefs.map((item) => `${item.kind}=${item.value}`);
-    lines.push(`external_refs: ${refs.join(", ")}`);
-  }
-  lines.push("请根据当前 shell 的状态，主动向用户简洁汇报结果或最新进展。");
-  const text = lines.join("\n");
-
-  context.shellIntegration?.enqueueChat?.(context, {
-    kind: "exec",
-    channel: meta.channel,
-    targetId: meta.chatId,
-    sessionId: ownerContextId,
-    text,
-    ...(meta.targetType ? { targetType: meta.targetType } : {}),
-    ...(typeof meta.threadId === "number" ? { threadId: meta.threadId } : {}),
-    ...(meta.messageId ? { messageId: meta.messageId } : {}),
-    ...(meta.actorId ? { actorId: meta.actorId } : {}),
-    ...(meta.actorName ? { actorName: meta.actorName } : {}),
-    extra: {
-      note: "shell_session_auto_notify",
-      internal: true,
-      shellId: snapshot.shellId,
-      shellStatus: snapshot.status,
-      exitCode:
-        typeof snapshot.exitCode === "number" ? snapshot.exitCode : null,
-    },
-  });
-}
-
 /**
  * 更新 session snapshot 并唤醒等待者。
  */
@@ -314,7 +262,7 @@ export async function updateSessionSnapshot(
  * 追加 shell 输出并同步更新快照。
  */
 export async function appendSessionOutput(
-  state: ShellPluginState,
+  state: ShellRuntimeState,
   session: ShellSessionRuntimeState,
   raw: string,
 ): Promise<void> {
@@ -344,7 +292,7 @@ export async function appendSessionOutput(
 /**
  * 为终态 shell 安排延迟清理。
  */
-export function scheduleCleanup(state: ShellPluginState, shellId: string): void {
+export function scheduleCleanup(state: ShellRuntimeState, shellId: string): void {
   const session = state.sessions.get(shellId);
   if (!session) return;
   if (session.cleanupTimer) clearTimeout(session.cleanupTimer);
@@ -361,7 +309,7 @@ export function scheduleCleanup(state: ShellPluginState, shellId: string): void 
 /**
  * 控制 in-memory shell session 容量。
  */
-export function ensureCapacity(state: ShellPluginState): void {
+export function ensureCapacity(state: ShellRuntimeState): void {
   if (state.sessions.size < state.options.maxActiveShells) return;
   const removable = Array.from(state.sessions.values())
     .filter((item) => item.snapshot.status !== "running" && item.snapshot.status !== "starting")
@@ -402,7 +350,7 @@ async function readPersistedOutput(
  * 按 shellId 或 ownerContext 解析目标 session。
  */
 export async function resolveSession(
-  state: ShellPluginState,
+  state: ShellRuntimeState,
   context: ShellHostContext,
   query: ShellQueryRequest,
 ): Promise<ShellSessionRuntimeState | { snapshot: ShellSessionSnapshot; outputText: string } | null> {
@@ -453,7 +401,7 @@ export function isInMemorySession(
  * 处理 shell 退出后的状态收口。
  */
 export async function finalizeExit(
-  state: ShellPluginState,
+  state: ShellRuntimeState,
   session: ShellSessionRuntimeState,
   exitCode: number,
 ): Promise<void> {
@@ -466,12 +414,7 @@ export async function finalizeExit(
   session.resolveCompletion();
   scheduleCleanup(state, session.snapshot.shellId);
 
-  if (
-    session.snapshot.autoNotifyOnExit &&
-    session.snapshot.notificationSent === false &&
-    state.context
-  ) {
-    await emitChatCompletionEvent(state.context, session.snapshot);
+  if (session.snapshot.autoNotifyOnExit && session.snapshot.notificationSent === false) {
     session.snapshot.notificationSent = true;
     await persistSnapshot(session);
   }

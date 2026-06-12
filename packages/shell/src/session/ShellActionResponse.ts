@@ -11,7 +11,7 @@ import type {
   ShellActionResponse,
   ShellOutputChunk,
   ShellSessionSnapshot,
-} from "@/types/ShellPlugin.js";
+} from "@/types/ShellAction.js";
 
 const DEFAULT_MAX_OUTPUT_CHARS = 12_000;
 const DEFAULT_MAX_OUTPUT_LINES = 200;

@@ -28,13 +28,13 @@ import {
   createAgentContext,
   createAgentRuntime,
 } from "@/agent/local/AgentRuntimeFactory.js";
-import { setShellToolRuntime } from "@executor/tools/shell/ShellToolDefinition.js";
 import {
   plugin_tools,
   setPluginToolRuntime,
 } from "@executor/tools/plugin/PluginToolDefinition.js";
 import type { AgentManagedSession } from "@/types/agent/AgentTypes.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 
 type AgentAssemblyServiceOptions = {
   /**
@@ -123,6 +123,11 @@ export interface AgentAssemblyResult {
    * 当前 agent context。
    */
   agent_context: AgentContext;
+
+  /**
+   * 当前 agent 挂载的内建 shell。
+   */
+  shell?: AgentOptions["shell"];
 }
 
 /**
@@ -201,7 +206,22 @@ export class AgentAssemblyService {
       resolve_session_model: async (session_id) =>
         await this.resolve_session_model(session_id),
     });
-    setShellToolRuntime(agent_context.invoke);
+    const shell = this.options.shell;
+    if (shell) {
+      shell.configure({
+        root_path: path,
+        env,
+        agent_id: id,
+        sandbox: config.sandbox,
+        logger,
+        emit_event: (event) => {
+          const session_id = String(event.session_id || "").trim();
+          if (!session_id) return;
+          agent_context.session.get(session_id).publishEvent(event as unknown as AgentSessionEvent);
+        },
+      });
+      Object.assign(tools, shell.tools);
+    }
     setPluginToolRuntime(plugins);
 
     return {
@@ -217,6 +237,7 @@ export class AgentAssemblyService {
       plugins,
       runtime,
       agent_context,
+      ...(shell ? { shell } : {}),
     };
   }
 

@@ -40,97 +40,11 @@ export type ShellRunContext = {
   turnId?: string;
 };
 
-export type ShellChatMeta = {
-  /**
-   * 聊天渠道名称。
-   */
-  channel: string;
-  /**
-   * 目标聊天 id。
-   */
-  chatId: string;
-  /**
-   * 目标类型。
-   */
-  targetType?: string;
-  /**
-   * 平台线程 id。
-   */
-  threadId?: number;
-  /**
-   * 平台消息 id。
-   */
-  messageId?: string;
-  /**
-   * 触发人 id。
-   */
-  actorId?: string;
-  /**
-   * 触发人名称。
-   */
-  actorName?: string;
-};
-
-export type ShellChatQueueInput = {
-  /**
-   * 队列动作类别。
-   */
-  kind: "exec";
-  /**
-   * 聊天渠道名称。
-   */
-  channel: string;
-  /**
-   * 目标聊天 id。
-   */
-  targetId: string;
-  /**
-   * session id。
-   */
-  sessionId: string;
-  /**
-   * 要投递的文本。
-   */
-  text: string;
-  /**
-   * 目标类型。
-   */
-  targetType?: string;
-  /**
-   * 平台线程 id。
-   */
-  threadId?: number;
-  /**
-   * 平台消息 id。
-   */
-  messageId?: string;
-  /**
-   * 触发人 id。
-   */
-  actorId?: string;
-  /**
-   * 触发人名称。
-   */
-  actorName?: string;
-  /**
-   * 额外元数据。
-   */
-  extra?: Record<string, unknown>;
-};
-
 export type ShellHostIntegration = {
   /**
    * 获取当前 agent/session run 上下文。
    */
   getRunContext?(): ShellRunContext | null | undefined;
-  /**
-   * 查询 chat session 元数据，用于 shell 自动回投。
-   */
-  readChatMeta?(input: { context: ShellHostContext; sessionId: string }): Promise<ShellChatMeta | null>;
-  /**
-   * 将内部 shell 完成通知放入 chat 队列。
-   */
-  enqueueChat?(context: ShellHostContext, input: ShellChatQueueInput): void;
 };
 
 export type ShellHostContext = {

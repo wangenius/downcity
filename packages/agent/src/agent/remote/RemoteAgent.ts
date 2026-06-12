@@ -16,6 +16,10 @@ import type {
   RemoteAgentOptions,
   RemoteAgentSession,
 } from "@/types/agent/AgentTypes.js";
+import type {
+  ShellApprovalDecisionResult,
+  ShellApprovalView,
+} from "@downcity/shell";
 import type { RemoteAgentTransport } from "@/agent/remote/RemoteTransport.js";
 import { RemoteSession } from "@/agent/remote/RemoteSession.js";
 import { create_remote_agent_transport } from "@/agent/remote/TransportFactory.js";
@@ -70,7 +74,7 @@ export class RemoteAgent {
    *
    * 关键点（中文）
    * - 这是 RemoteAgent 顶层能力，不绑定某个 session。
-   * - 前端收到 `tool-approval-request` 后，可以用它调用 `shell.approve` / `shell.deny`。
+   * - Shell approval 请使用 `approvals()` / `approve()` / `deny()`。
    */
   async runPluginAction(
     input: RemoteAgentPluginActionInput,
@@ -88,6 +92,27 @@ export class RemoteAgent {
       action,
       ...(input.payload !== undefined ? { payload: input.payload } : {}),
     });
+  }
+
+  /**
+   * 列出远程 Agent 的 shell pending approvals。
+   */
+  async approvals(): Promise<ShellApprovalView[]> {
+    return await this.transport.approvals();
+  }
+
+  /**
+   * 批准远程 Agent 的 shell approval。
+   */
+  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
+    return await this.transport.approve(input);
+  }
+
+  /**
+   * 拒绝远程 Agent 的 shell approval。
+   */
+  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
+    return await this.transport.deny(input);
   }
 
   /**

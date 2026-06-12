@@ -37,6 +37,10 @@ import type {
   RpcSessionSubscription,
   RpcSystemPromptPayload,
 } from "@/types/rpc/RpcProtocol.js";
+import type {
+  ShellApprovalDecisionResult,
+  ShellApprovalView,
+} from "@downcity/shell";
 
 export type {
   RpcClientEndpoint,
@@ -354,6 +358,40 @@ export class RpcClient {
         pluginName: params.plugin_name,
         actionName: params.action_name,
         ...(params.payload !== undefined ? { payload: params.payload } : {}),
+      },
+    });
+  }
+
+  /**
+   * 列出 shell approvals。
+   */
+  async list_shell_approvals(): Promise<ShellApprovalView[]> {
+    const data = await this.request<{ approvals: ShellApprovalView[] }>({
+      method: "internal.shell.approvals",
+    });
+    return Array.isArray(data.approvals) ? data.approvals : [];
+  }
+
+  /**
+   * 批准 shell approval。
+   */
+  async approve_shell_approval(approval_id: string): Promise<ShellApprovalDecisionResult> {
+    return await this.request<ShellApprovalDecisionResult>({
+      method: "internal.shell.approve",
+      params: {
+        approvalId: approval_id,
+      },
+    });
+  }
+
+  /**
+   * 拒绝 shell approval。
+   */
+  async deny_shell_approval(approval_id: string): Promise<ShellApprovalDecisionResult> {
+    return await this.request<ShellApprovalDecisionResult>({
+      method: "internal.shell.deny",
+      params: {
+        approvalId: approval_id,
       },
     });
   }

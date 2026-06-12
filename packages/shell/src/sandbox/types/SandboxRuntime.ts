@@ -343,7 +343,7 @@ export interface SandboxSpawnParams {
    * 当前执行记录标识。
    *
    * 说明（中文）
-   * - shell plugin 传入 shellId，task script 可以传入自己的 executionId。
+   * - shell runtime 传入 shellId，task script 可以传入自己的 executionId。
    * - 它只用于日志与诊断，不参与 sandbox HOME/cache/权限边界的计算。
    */
   executionId: string;

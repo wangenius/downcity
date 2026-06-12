@@ -9,7 +9,7 @@
  */
 
 import path from "node:path";
-import type { LanguageModel } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import { Executor } from "@downcity/agent/internal/executor/Executor.js";
 import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
@@ -20,7 +20,7 @@ import { JsonlSessionHistoryStore } from "@downcity/agent/internal/executor/stor
 import { JsonlSessionCompactionComposer } from "@downcity/agent/internal/executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionContextComposer } from "@downcity/agent/internal/executor/composer/context/LocalSessionContextComposer.js";
 import { DefaultSessionSystemComposer } from "@downcity/agent/internal/executor/composer/system/default/DefaultSessionSystemComposer.js";
-import { shellTools } from "@downcity/agent/internal/executor/tools/shell/ShellToolDefinition.js";
+import { Shell } from "@downcity/shell";
 import type { SessionExecutor } from "@downcity/agent/internal/executor/types/SessionExecutor.js";
 
 /**
@@ -83,6 +83,13 @@ export function createTaskSessionRuntimePort(params: {
   const historyStoresBySessionId = new Map<string, JsonlSessionHistoryStore>();
   const historyComposersBySessionId = new Map<string, JsonlSessionHistoryComposer>();
   const runtimesBySessionId = new Map<string, SessionExecutor>();
+  const shell = new Shell({
+    root_path: context.rootPath,
+    env: context.env,
+    sandbox: context.config.sandbox,
+    logger: context.logger,
+  });
+  const shell_tools = shell.tools as unknown as Record<string, Tool>;
 
   const resolveTaskHistoryStore = (sessionId: string): JsonlSessionHistoryStore => {
     const existing = historyStoresBySessionId.get(sessionId);
@@ -145,7 +152,7 @@ export function createTaskSessionRuntimePort(params: {
       const historyComposer = resolveTaskHistoryComposer(key);
       const contextComposer = new LocalSessionContextComposer({
         sessionId: key,
-        getTools: () => shellTools,
+        getTools: () => shell_tools,
       });
       const created = new Executor({
         sessionId: key,
@@ -156,7 +163,7 @@ export function createTaskSessionRuntimePort(params: {
         compactionComposer,
         contextComposer,
         systemComposer,
-        getTools: () => shellTools,
+        getTools: () => shell_tools,
       });
       runtimesBySessionId.set(key, created);
       return created;

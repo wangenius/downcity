@@ -34,7 +34,7 @@ town plugin schedule list --path /path/to/agent
 - `town plugin command <pluginName> <command>` 会把 command 转发给目标 agent 的运行中 plugin。
 - `town plugin action ...` 是本地执行形式，默认直接在当前项目里运行。
 - `town chat ...`、`town task ...`、`town memory ...`、`town contact ...`、`town skill ...` 是当前可用的快捷入口。
-- `shell` 当前没有 `town shell` 快捷根命令；需要脚本化调用时使用 `town plugin command shell <action>`。
+- Shell 执行现在是 Agent 内建能力；unrestricted sandbox 决策通过 Agent SDK 审批 API 完成。
 
 ## 相关页面
 
@@ -42,7 +42,7 @@ town plugin schedule list --path /path/to/agent
 - [`town task`](/zh/products-docs/town-cli/plugin/task)
 - [`town memory`](/zh/products-docs/town-cli/plugin/memory)
 - [`town contact`](/zh/products-docs/town-cli/plugin/contact)
-- [shell plugin](/zh/products-docs/town-cli/plugin/shell)
+- [shell built-in](/zh/products-docs/town-cli/plugin/shell)
 - [`Plugin 调度`](/zh/products-docs/town-cli/plugin/schedule)
 - [`town skill`](/zh/products-docs/town-cli/plugin/skill)
 - [Agent SDK Plugin 概念文档](/zh/agent-sdk-docs/plugins/overview)

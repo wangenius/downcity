@@ -12,7 +12,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { buildLinuxBubblewrapArgs } from "../bin/sandbox/LinuxBubblewrapSandbox.js";
+import { buildLinuxBubblewrapArgs } from "@downcity/shell/sandbox/LinuxBubblewrapSandbox.js";
 
 async function createSandboxFixture() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-bwrap-"));

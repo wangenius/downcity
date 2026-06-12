@@ -22,6 +22,7 @@ import { startActionScheduleRuntime } from "@/plugin/core/ActionScheduleRuntime.
 import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
 import { startRpcServer } from "@/rpc/Server.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
+import type { Shell } from "@downcity/shell";
 
 type AgentLifecycleServiceOptions = {
   /**
@@ -43,6 +44,11 @@ type AgentLifecycleServiceOptions = {
    * 读取当前 agent runtime。
    */
   get_runtime: () => AgentRuntime;
+
+  /**
+   * 读取当前 agent 挂载的 Shell。
+   */
+  get_shell?: () => Shell | undefined;
 };
 
 /**
@@ -53,6 +59,7 @@ export class AgentLifecycleService {
   private readonly agent_context: AgentContext;
   private readonly session_collection: AgentSessionCollection;
   private readonly get_runtime: AgentLifecycleServiceOptions["get_runtime"];
+  private readonly get_shell: AgentLifecycleServiceOptions["get_shell"];
 
   private plugins_started = false;
   private action_schedule_runtime: ActionScheduleRuntimeHandle | null = null;
@@ -64,6 +71,7 @@ export class AgentLifecycleService {
     this.agent_context = options.agent_context;
     this.session_collection = options.session_collection;
     this.get_runtime = options.get_runtime;
+    this.get_shell = options.get_shell;
   }
 
   /**
@@ -111,6 +119,8 @@ export class AgentLifecycleService {
     if (rpc_started) {
       await this.stop_rpc();
     }
+
+    await this.get_shell?.()?.dispose();
 
     this.start_promise = null;
 
@@ -168,6 +178,7 @@ export class AgentLifecycleService {
       sessionCollection: this.session_collection,
       getAgentContext: () => this.agent_context,
       getAgentRuntime: () => this.get_runtime(),
+      getShell: () => this.get_shell?.(),
     });
     this.rpc_binding = {
       url: `rpc://${host}:${port}`,

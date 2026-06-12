@@ -1,16 +1,16 @@
 /**
- * ShellPlugin constructor 参数类型。
+ * Shell constructor 参数类型。
  *
  * 关键点（中文）
  * - 所有字段都是可选 runtime 调参。
- * - 不传参数时保持 ShellPlugin 既有硬编码默认行为。
- * - 这些参数只影响 shell plugin runtime，不改变 sandbox 权限模型。
+ * - 不传参数时保持 Shell 既有硬编码默认行为。
+ * - 这些参数只影响 shell runtime，不改变 sandbox 权限模型。
  */
 
 /**
- * ShellPlugin 可选运行参数。
+ * Shell 可选运行参数。
  */
-export interface ShellPluginOptions {
+export interface ShellRuntimeOptions {
   /**
    * 最大 in-memory shell session 数量。
    *
@@ -67,9 +67,9 @@ export interface ShellPluginOptions {
 }
 
 /**
- * ShellPlugin 归一化后的运行参数。
+ * Shell 归一化后的运行参数。
  */
-export interface ResolvedShellPluginOptions {
+export interface ResolvedShellRuntimeOptions {
   /**
    * 最大 in-memory shell session 数量。
    */

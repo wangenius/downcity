@@ -20,6 +20,10 @@ import type {
 } from "@/types/agent/AgentTypes.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type {
+  ShellApprovalDecisionResult,
+  ShellApprovalView,
+} from "@downcity/shell";
 
 /**
  * Transport 持有的事件订阅句柄。
@@ -72,6 +76,12 @@ export type RemoteAgentTransport = RemoteSessionTransport & {
   run_plugin_action(
     input: RemoteAgentPluginActionInput,
   ): Promise<RemoteAgentPluginActionResult>;
+  /** 列出 shell approvals。 */
+  approvals(): Promise<ShellApprovalView[]>;
+  /** 批准 shell approval。 */
+  approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult>;
+  /** 拒绝 shell approval。 */
+  deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult>;
   /** 关闭 transport 持有的长期连接。 */
   close?(): Promise<void>;
 };

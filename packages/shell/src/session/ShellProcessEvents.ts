@@ -6,14 +6,14 @@
  * - close 到达时先等待输出写入链 drain，再统一进入终态收口，避免尾部输出丢读。
  */
 
-import type { ShellPluginState, ShellSessionRuntimeState } from "@/session/ShellRuntimeTypes.js";
+import type { ShellRuntimeState, ShellSessionRuntimeState } from "@/session/ShellRuntimeTypes.js";
 import {
   appendSessionOutput,
   finalizeExit,
 } from "./ShellActionRuntimeSupport.js";
 
 async function finalizeExitAfterOutputDrain(
-  state: ShellPluginState,
+  state: ShellRuntimeState,
   session: ShellSessionRuntimeState,
   exitCode: number,
 ): Promise<void> {
@@ -33,9 +33,9 @@ async function finalizeExitAfterOutputDrain(
  */
 export function attachShellProcessEventHandlers(params: {
   /**
-   * 当前 shell plugin runtime 状态。
+   * 当前 shell runtime 状态。
    */
-  state: ShellPluginState;
+  state: ShellRuntimeState;
   /**
    * 当前 shell runtime session。
    */

@@ -15,13 +15,13 @@ import path from "node:path";
 import {
   approveShellApproval,
   closeAllShellSessions,
-  createShellPluginState,
+  createShellRuntimeState,
   denyShellApproval,
   execShellCommand,
   readShellSession,
   startShellSession,
   writeShellSession,
-} from "../bin/shell/runtime/ShellActionRuntime.js";
+} from "@downcity/shell/session/ShellActionRuntime.js";
 
 async function create_fixture() {
   const root_path = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-unrestricted-"));
@@ -60,7 +60,7 @@ async function wait_for_approval(state) {
 
 test("shell_start unrestricted requires reason", async () => {
   const fixture = await create_fixture();
-  const state = createShellPluginState({ defaultApprovalTimeoutMs: 500 });
+  const state = createShellRuntimeState({ defaultApprovalTimeoutMs: 500 });
   try {
     await assert.rejects(
       startShellSession(state, fixture.context, {
@@ -80,7 +80,7 @@ test("shell_start unrestricted requires reason", async () => {
 
 test("shell_start unrestricted denied returns denied tool result without execution", async () => {
   const fixture = await create_fixture();
-  const state = createShellPluginState({
+  const state = createShellRuntimeState({
     defaultApprovalTimeoutMs: 2000,
     defaultInlineWaitMs: 20,
   });
@@ -122,7 +122,7 @@ test("shell_start unrestricted denied returns denied tool result without executi
 
 test("shell_exec unrestricted approved executes in unrestricted sandbox", async () => {
   const fixture = await create_fixture();
-  const state = createShellPluginState({
+  const state = createShellRuntimeState({
     defaultApprovalTimeoutMs: 2000,
     defaultInlineWaitMs: 20,
     defaultExecTimeoutMs: 2000,
@@ -159,7 +159,7 @@ test("shell_exec unrestricted approved executes in unrestricted sandbox", async 
 
 test("shell_write unrestricted requires reason", async () => {
   const fixture = await create_fixture();
-  const state = createShellPluginState({
+  const state = createShellRuntimeState({
     defaultApprovalTimeoutMs: 2000,
     defaultInlineWaitMs: 20,
   });
@@ -193,7 +193,7 @@ test("shell_write unrestricted requires reason", async () => {
 
 test("shell_write unrestricted denied does not write stdin", async () => {
   const fixture = await create_fixture();
-  const state = createShellPluginState({
+  const state = createShellRuntimeState({
     defaultApprovalTimeoutMs: 2000,
     defaultInlineWaitMs: 20,
   });
@@ -245,7 +245,7 @@ test("shell_write unrestricted denied does not write stdin", async () => {
 
 test("shell_write unrestricted approved writes stdin", async () => {
   const fixture = await create_fixture();
-  const state = createShellPluginState({
+  const state = createShellRuntimeState({
     defaultApprovalTimeoutMs: 2000,
     defaultInlineWaitMs: 20,
   });
@@ -296,7 +296,7 @@ test("shell_write unrestricted approved writes stdin", async () => {
 
 test("shell_write safe writes without approval", async () => {
   const fixture = await create_fixture();
-  const state = createShellPluginState({
+  const state = createShellRuntimeState({
     defaultApprovalTimeoutMs: 2000,
     defaultInlineWaitMs: 20,
   });

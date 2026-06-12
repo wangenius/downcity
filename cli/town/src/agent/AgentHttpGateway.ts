@@ -20,9 +20,11 @@ import { createPluginsRouter } from "./http/plugins/plugins.js";
 import { createStaticRouter } from "./http/static/static.js";
 import { createControlRouter } from "./http/control/ControlRouter.js";
 import { createSdkRouter } from "./http/sdk/Router.js";
+import { createShellRouter } from "./http/shell/shell.js";
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { AgentSessionCollection } from "@downcity/agent";
+import type { Shell } from "@downcity/shell";
 
 /**
  * Agent HTTP 网关启动参数。
@@ -38,6 +40,8 @@ export interface AgentHttpGatewayStartOptions {
   getAgentContext: () => AgentContext;
   /** 可选 SDK Session 集合绑定。 */
   sessionCollection?: AgentSessionCollection;
+  /** 可选 Shell 绑定。 */
+  getShell?: () => Shell | undefined;
 }
 
 /**
@@ -58,7 +62,7 @@ export interface AgentHttpGatewayInstance {
 export function createAgentHttpGatewayApp(
   options: Pick<
     AgentHttpGatewayStartOptions,
-    "getAgentRuntime" | "getAgentContext" | "sessionCollection"
+    "getAgentRuntime" | "getAgentContext" | "sessionCollection" | "getShell"
   >,
 ): Hono {
   const app = new Hono();
@@ -80,6 +84,9 @@ export function createAgentHttpGatewayApp(
   app.route("/", healthRouter);
   app.route("/", createPluginsRouter({
     getAgentContext: options.getAgentContext,
+  }));
+  app.route("/", createShellRouter({
+    getShell: () => options.getShell?.(),
   }));
   app.route("/", createExecuteRouter({
     getAgentRuntime: options.getAgentRuntime,

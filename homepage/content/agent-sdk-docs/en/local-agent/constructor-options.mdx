@@ -15,6 +15,7 @@ new Agent({
   env,
   instruction,
   tools,
+  shell,
   plugins,
   Session,
 })
@@ -123,6 +124,28 @@ Key points:
 - sessions created by this agent reuse the same tool collection
 
 This is a good fit when multiple sessions should share a stable default tool set.
+
+## `shell`
+
+Optional built-in shell capability.
+
+```ts
+import { Agent } from "@downcity/agent";
+import { Shell } from "@downcity/shell";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  shell: new Shell(),
+});
+```
+
+Key points:
+
+- Shell is not a plugin
+- the Agent mounts shell tools from the Shell instance
+- session and turn context are wired internally
+- approval APIs are `agent.approvals()`, `agent.approve(...)`, and `agent.deny(...)`
 
 ## `plugins`
 

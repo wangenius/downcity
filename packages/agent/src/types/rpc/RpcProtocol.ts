@@ -231,6 +231,34 @@ export type RpcRequest =
         /** action payload。 */
         payload?: JsonValue;
       };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 列出 shell approvals。 */
+      method: "internal.shell.approvals";
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 批准 shell approval。 */
+      method: "internal.shell.approve";
+      /** approval 参数。 */
+      params: {
+        /** approval id。 */
+        approvalId: string;
+      };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 拒绝 shell approval。 */
+      method: "internal.shell.deny";
+      /** approval 参数。 */
+      params: {
+        /** approval id。 */
+        approvalId: string;
+      };
     };
 
 /**

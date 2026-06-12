@@ -8,6 +8,7 @@
  */
 
 import { streamText, type LanguageModel, type Tool } from "ai";
+import { withShellRunScope } from "@downcity/shell";
 import { SessionHistoryWriter } from "@executor/composer/history/SessionHistoryWriter.js";
 import type { SessionHistoryComposer } from "@executor/composer/history/SessionHistoryComposer.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
@@ -267,7 +268,15 @@ export class Executor implements SessionExecutor {
           runContext: run_context,
         },
         async () =>
-          await this.recovery_policy.run_with_retry({
+          await withShellRunScope(
+            {
+              run_context: {
+                session_id: run_context.sessionId,
+                ...(run_context.turnId ? { turn_id: run_context.turnId } : {}),
+              },
+            },
+            async () =>
+              await this.recovery_policy.run_with_retry({
             query,
             model: this.resolveModelOrThrow(),
             run_context,
@@ -293,7 +302,8 @@ export class Executor implements SessionExecutor {
                 model,
                 next_run_context,
               ),
-          }),
+              }),
+          ),
       );
       return result;
     } finally {

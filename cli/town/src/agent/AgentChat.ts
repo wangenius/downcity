@@ -609,7 +609,7 @@ async function runSdkPromptTurn(params: {
           { label: "cwd", value: event.cwd },
           { label: "reason", value: event.reason },
         ],
-        note: "Use shell plugin action approve/deny with this approval_id from another control surface.",
+        note: "Approve or deny this request from a client that calls agent.approve({ approval_id }) or agent.deny({ approval_id }).",
       });
       return;
     }

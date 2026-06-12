@@ -23,8 +23,8 @@ function format_approval_request_block(event) {
             ...(typeof event.inputChars === "number" ? [`input_chars: ${event.inputChars}`] : []),
             `cwd: ${event.cwd}`,
             `reason: ${event.reason}`,
-            "approve: run shell plugin action approve with this approval_id",
-            "deny: run shell plugin action deny with this approval_id",
+            "approve: call agent.approve({ approval_id })",
+            "deny: call agent.deny({ approval_id })",
         ],
     };
 }

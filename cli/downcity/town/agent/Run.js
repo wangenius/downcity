@@ -10,7 +10,8 @@
  *   `town agent restart` 管理。
  */
 import path from "node:path";
-import { Agent, loadDowncityConfig, loadStaticSystemPrompts, shellTools, StaticPromptCatalog, } from "@downcity/agent";
+import { Agent, loadDowncityConfig, loadStaticSystemPrompts, StaticPromptCatalog, } from "@downcity/agent";
+import { Shell } from "@downcity/shell";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "../town/city-model/CreateRuntimeModel.js";
 import { mergeProcessEnvWithPlatformGlobalEnv } from "../env/ProcessEnv.js";
@@ -78,7 +79,7 @@ export async function runCommand(cwd = ".", options) {
         id: agentId,
         path: projectRoot,
         instruction: currentSystems,
-        tools: shellTools,
+        shell: new Shell(),
         plugins,
         model,
         env: hostEnv,
@@ -115,6 +116,7 @@ export async function runCommand(cwd = ".", options) {
         getAgentRuntime: () => agent.getRuntime(),
         getAgentContext: () => agent.getContext(),
         sessionCollection: agent.getSessionCollection(),
+        getShell: () => agent.getShell(),
     });
     const agentLogger = agent.getLogger();
     // 处理进程信号

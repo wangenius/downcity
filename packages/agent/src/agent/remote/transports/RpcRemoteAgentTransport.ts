@@ -25,6 +25,10 @@ import type {
   RemoteAgentTransport,
   TransportSubscription,
 } from "@/agent/remote/RemoteTransport.js";
+import type {
+  ShellApprovalDecisionResult,
+  ShellApprovalView,
+} from "@downcity/shell";
 
 /**
  * 本机 RPC transport。
@@ -111,6 +115,18 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
       action_name: input.action,
       ...(input.payload !== undefined ? { payload: input.payload } : {}),
     });
+  }
+
+  async approvals(): Promise<ShellApprovalView[]> {
+    return await this.client.list_shell_approvals();
+  }
+
+  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
+    return await this.client.approve_shell_approval(input.approval_id);
+  }
+
+  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
+    return await this.client.deny_shell_approval(input.approval_id);
   }
 
   async close(): Promise<void> {

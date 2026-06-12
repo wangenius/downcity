@@ -2,8 +2,8 @@
  * ShellRuntime 类型定义。
  *
  * 关键点（中文）
- * - 这些类型描述 shell plugin runtime 的实例级运行态。
- * - 状态所有权归属于 `ShellPlugin` 实例，而不是模块级单例。
+ * - 这些类型描述 shell runtime 的实例级运行态。
+ * - 状态所有权归属于 `Shell` 实例，而不是模块级单例。
  * - 统一归档到 `src/shell/` 相邻层级，避免继续分散在跨域目录里。
  */
 
@@ -13,8 +13,8 @@ import type {
   ShellApprovalStatus,
   ShellApprovalToolName,
   ShellSessionSnapshot,
-} from "@/types/ShellPlugin.js";
-import type { ResolvedShellPluginOptions } from "@/types/ShellPluginOptions.js";
+} from "@/types/ShellAction.js";
+import type { ResolvedShellRuntimeOptions } from "@/types/ShellRuntimeOptions.js";
 
 /**
  * unrestricted sandbox 审批运行态。
@@ -142,13 +142,13 @@ export type ShellSessionRuntimeState = {
 };
 
 /**
- * `ShellPlugin` 实例级状态。
+ * `Shell` 实例级状态。
  */
-export type ShellPluginState = {
+export type ShellRuntimeState = {
   /**
-   * 当前 shell plugin 归一化后的运行参数。
+   * 当前 shell 归一化后的运行参数。
    */
-  options: ResolvedShellPluginOptions;
+  options: ResolvedShellRuntimeOptions;
   /**
    * 当前实例持有的全部 in-memory shell session。
    */

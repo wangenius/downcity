@@ -19,6 +19,7 @@ import { createPluginsRouter } from "./http/plugins/plugins.js";
 import { createStaticRouter } from "./http/static/static.js";
 import { createControlRouter } from "./http/control/ControlRouter.js";
 import { createSdkRouter } from "./http/sdk/Router.js";
+import { createShellRouter } from "./http/shell/shell.js";
 /**
  * 创建 Agent HTTP 网关 Hono 应用。
  */
@@ -37,6 +38,9 @@ export function createAgentHttpGatewayApp(options) {
     app.route("/", healthRouter);
     app.route("/", createPluginsRouter({
         getAgentContext: options.getAgentContext,
+    }));
+    app.route("/", createShellRouter({
+        getShell: () => options.getShell?.(),
     }));
     app.route("/", createExecuteRouter({
         getAgentRuntime: options.getAgentRuntime,

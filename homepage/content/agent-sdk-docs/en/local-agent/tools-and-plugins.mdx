@@ -21,6 +21,31 @@ const agent = new Agent({
 
 These tools are available during session execution.
 
+## shell
+
+Use `@downcity/shell` when the Agent should own shell execution tools:
+
+```ts
+import { Agent } from "@downcity/agent";
+import { Shell } from "@downcity/shell";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  shell: new Shell(),
+});
+```
+
+This mounts `shell_exec`, `shell_start`, `shell_status`, `shell_read`, `shell_write`, `shell_wait`, and `shell_close`.
+
+Unrestricted sandbox requests are approved through the Agent:
+
+```ts
+const approvals = await agent.approvals();
+await agent.approve({ approval_id: approvals[0].approval_id });
+await agent.deny({ approval_id: approvals[0].approval_id });
+```
+
 ## plugins
 
 Local Agents can also receive explicit plugin instances:

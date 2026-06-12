@@ -7,6 +7,7 @@
  */
 
 import type { Tool } from "ai";
+import type { Shell } from "@downcity/shell";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
 import type { RpcServerInstance } from "@/rpc/Server.js";
@@ -50,6 +51,15 @@ export interface AgentOptions {
    * - session 运行时会直接复用这份工具集合。
    */
   tools?: Record<string, Tool>;
+
+  /**
+   * 当前 agent 内建 shell 能力。
+   *
+   * 关键点（中文）
+   * - Shell 不是 plugin，而是 agent 直接挂载的内建工具对象。
+   * - 未传入时，Agent 不会自动注入 shell tools。
+   */
+  shell?: Shell;
 
   /**
    * 调用方显式传入的静态基础指令。

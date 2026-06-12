@@ -105,7 +105,6 @@ export {
   loadStaticSystemPrompts,
   StaticPromptCatalog,
 } from "./executor/composer/system/default/StaticPromptCatalog.js";
-export { shellTools } from "./executor/tools/shell/ShellToolDefinition.js";
 
 // 通用 plugin 宿主工具
 export {

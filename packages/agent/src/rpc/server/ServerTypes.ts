@@ -10,6 +10,7 @@ import type { AgentSessionCollection } from "@/types/agent/AgentTypes.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { RpcEventFrame } from "@/types/rpc/RpcProtocol.js";
+import type { Shell } from "@downcity/shell";
 
 /**
  * RPC Server 启动参数。
@@ -25,6 +26,8 @@ export interface RpcServerStartOptions {
   getAgentContext?: () => AgentContext;
   /** Agent 运行态访问口。 */
   getAgentRuntime?: () => AgentRuntime;
+  /** Shell 访问口。 */
+  getShell?: () => Shell | undefined;
 }
 
 /**
@@ -37,6 +40,8 @@ export interface RpcRequestHandlerOptions {
   getAgentContext?: () => AgentContext;
   /** Agent 运行态访问口。 */
   getAgentRuntime?: () => AgentRuntime;
+  /** Shell 访问口。 */
+  getShell?: () => Shell | undefined;
 }
 
 /**

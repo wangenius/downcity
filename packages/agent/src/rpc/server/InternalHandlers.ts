@@ -154,9 +154,40 @@ export async function handleInternalRpcRequest(params: {
       });
       return true;
     }
+    case "internal.shell.approvals": {
+      const shell = requireShell(options);
+      write_success(request.id, {
+        approvals: shell.approvals(),
+      });
+      return true;
+    }
+    case "internal.shell.approve": {
+      const shell = requireShell(options);
+      const result = await shell.approve({
+        approval_id: String(request.params.approvalId || "").trim(),
+      });
+      write_success(request.id, result);
+      return true;
+    }
+    case "internal.shell.deny": {
+      const shell = requireShell(options);
+      const result = await shell.deny({
+        approval_id: String(request.params.approvalId || "").trim(),
+      });
+      write_success(request.id, result);
+      return true;
+    }
     default:
       return false;
   }
+}
+
+function requireShell(options: RpcRequestHandlerOptions) {
+  const shell = options.getShell?.();
+  if (!shell) {
+    throw new Error("Agent RPC server was started without Shell");
+  }
+  return shell;
 }
 
 function requireAgentContext(options: RpcRequestHandlerOptions): AgentContext {

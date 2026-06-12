@@ -24,6 +24,11 @@ import type {
   AgentStartResult,
   AgentStopResult,
 } from "@/types/agent/AgentTypes.js";
+import type {
+  ShellApprovalDecisionResult,
+  ShellApprovalView,
+  Shell,
+} from "@downcity/shell";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { Logger } from "@/utils/logger/Logger.js";
 import { normalizeInstructionInput } from "@/agent/local/AgentInstructions.js";
@@ -53,6 +58,7 @@ export class Agent {
   private readonly SessionClass: AgentOptions["Session"];
   private readonly sessionManager: AgentSessionManager;
   private readonly lifecycleService: AgentLifecycleService;
+  private readonly shell?: AgentOptions["shell"];
 
   private instruction: string[];
 
@@ -88,6 +94,7 @@ export class Agent {
     this.config = assembly.config;
     this.env = assembly.env;
     this.instruction = assembly.instruction;
+    this.shell = assembly.shell;
 
     this.sessionManager = this.create_session_manager(assembly);
     session_manager_ref = this.sessionManager;
@@ -96,6 +103,7 @@ export class Agent {
       agent_context: this.agentContext,
       session_collection: this.sessionManager.get_session_collection(),
       get_runtime: () => this.runtime,
+      get_shell: () => this.shell,
     });
   }
 
@@ -134,6 +142,29 @@ export class Agent {
    */
   async stop(): Promise<AgentStopResult> {
     return await this.lifecycleService.stop();
+  }
+
+  /**
+   * 列出当前 shell pending approvals。
+   */
+  approvals(): ShellApprovalView[] {
+    return this.shell?.approvals() || [];
+  }
+
+  /**
+   * 批准当前 shell pending approval。
+   */
+  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
+    if (!this.shell) throw new Error("Agent shell is not configured");
+    return await this.shell.approve(input);
+  }
+
+  /**
+   * 拒绝当前 shell pending approval。
+   */
+  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
+    if (!this.shell) throw new Error("Agent shell is not configured");
+    return await this.shell.deny(input);
   }
 
   /**
@@ -176,6 +207,13 @@ export class Agent {
    */
   getSessionCollection(): AgentSessionCollection {
     return this.sessionManager.get_session_collection();
+  }
+
+  /**
+   * 返回当前 agent 挂载的 Shell。
+   */
+  getShell(): Shell | undefined {
+    return this.shell;
   }
 
   private create_session_manager(

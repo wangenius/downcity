@@ -17,7 +17,6 @@ import {
   ImagePlugin,
   MemoryPlugin,
   QqChannel,
-  ShellPlugin,
   SkillPlugin,
   TaskPlugin,
   TelegramChannel,
@@ -130,7 +129,6 @@ export function createTownStaticBuiltinPlugins(input: {
     new ContactPlugin(),
     new TaskPlugin(),
     new MemoryPlugin(),
-    new ShellPlugin(),
   ];
 }
 

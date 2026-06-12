@@ -1,5 +1,5 @@
 /**
- * Shell plugin runtime 类型定义。
+ * Shell action 类型定义。
  *
  * 关键点（中文）
  * - `shell_id` 是 shell 会话的唯一标识，与 chat `sessionId` 严格区分。
@@ -49,7 +49,7 @@ export type ShellExternalRef = {
  * shell 会话快照。
  *
  * 说明（中文）
- * - 该对象是 shell plugin runtime 对外暴露的统一状态视图。
+ * - 该对象是 shell runtime 对外暴露的统一状态视图。
  * - 内部运行态（child process / waiter 集合）不会暴露给上层。
  */
 export type ShellSessionSnapshot = {
@@ -266,7 +266,7 @@ export type ShellOutputChunk = {
 };
 
 /**
- * shell plugin runtime 对 agent tool 返回的统一数据结构。
+ * shell runtime 对 agent tool 返回的统一数据结构。
  */
 export type ShellActionResponse = {
   /** shell 当前快照。 */

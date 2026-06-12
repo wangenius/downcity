@@ -6,7 +6,7 @@
  * - `@downcity/plugins` 只提供 plugin class，不参与 Town 全局账号、City 登录态或运行配置解析。
  * - 静态 CLI catalog 使用同一套 Town 装配入口，但不注入需要 City 登录态的 image/asr/tts。
  */
-import { AsrPlugin, ChatPlugin, ContactPlugin, FeishuChannel, ImagePlugin, MemoryPlugin, QqChannel, ShellPlugin, SkillPlugin, TaskPlugin, TelegramChannel, TtsPlugin, WebPlugin, WorkboardPlugin, } from "@downcity/plugins";
+import { AsrPlugin, ChatPlugin, ContactPlugin, FeishuChannel, ImagePlugin, MemoryPlugin, QqChannel, SkillPlugin, TaskPlugin, TelegramChannel, TtsPlugin, WebPlugin, WorkboardPlugin, } from "@downcity/plugins";
 import { CityUserManager } from "../../shared/CityUserManager.js";
 import { PlatformStore } from "../store/index.js";
 const city_user_manager = new CityUserManager();
@@ -88,7 +88,6 @@ export function createTownStaticBuiltinPlugins(input = {}) {
         new ContactPlugin(),
         new TaskPlugin(),
         new MemoryPlugin(),
-        new ShellPlugin(),
     ];
 }
 /**

@@ -1,28 +1,39 @@
 ---
-title: shell plugin
-description: Runtime shell execution and session ownership
+title: shell built-in
+description: Agent shell tools and unrestricted sandbox approvals
 ---
 
-# shell plugin
+# shell built-in
 
-`shell` is a built-in plugin adapter for shell sessions that belong to a specific agent runtime. The underlying command execution and sandbox implementation live in `@downcity/shell`.
+Shell execution is now an Agent built-in, not a plugin command surface. A running Town agent exposes shell approvals to SDK clients through the Agent HTTP gateway.
 
-Use it when you want shell execution that belongs to the agent runtime instead of an ad-hoc local terminal step.
+## Recommended Path
 
-## What this plugin shape means
+Use the Agent SDK:
 
-- shell session ownership belongs to the managed agent, while implementation lives in `@downcity/shell`
-- start/stop cleanup belongs to plugin lifecycle
-- command execution and session state stay tied to the target agent
-- shell runtime parameters come from the SDK constructor and are optional; the CLI only calls the shell plugin already registered on the target agent
+```ts
+const approvals = await agent.approvals();
+await agent.approve({ approval_id: approvals[0].approval_id });
+await agent.deny({ approval_id: approvals[0].approval_id });
+```
 
-## Recommended path
+For remote clients:
 
-- inspect lifecycle and boundaries in [Agent Plugins Docs / shell](/en/plugins-docs/builtins/shell)
-- There is currently no `town shell` shortcut root; for scripted calls use `town plugin command shell <action> --payload <json>`
-- Common actions include `exec`, `start`, `status`, `read`, `write`, `wait`, and `close`
+```ts
+import { RemoteAgent } from "@downcity/agent";
+
+const agent = new RemoteAgent({ url: "http://127.0.0.1:5314" });
+const approvals = await agent.approvals();
+```
+
+## Notes
+
+- There is no `ShellPlugin` in `@downcity/plugins`.
+- Shell tools are mounted by `new Agent({ shell: new Shell() })`.
+- Unrestricted sandbox requests appear as `tool-approval-request` session events.
+- Approval decisions are scoped to one command or one `shell_write`.
 
 ## Related
 
 - [`town plugin`](/en/products-docs/town-cli/plugin/plugin)
-- [`Agent Plugins Docs / shell`](/en/plugins-docs/builtins/shell)
+- [Shell Built-In](/en/plugins-docs/builtins/shell)

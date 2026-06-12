@@ -24,6 +24,10 @@ import type {
   RemoteAgentTransport,
   TransportSubscription,
 } from "@/agent/remote/RemoteTransport.js";
+import type {
+  ShellApprovalDecisionResult,
+  ShellApprovalView,
+} from "@downcity/shell";
 
 type SdkEventsReadyFrame = {
   /** SDK HTTP events 连接内部 ready 标记。 */
@@ -261,6 +265,47 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     );
     if (typeof payload.success !== "boolean") {
       throw new Error("Remote plugin action returned an invalid response");
+    }
+    return payload;
+  }
+
+  async approvals(): Promise<ShellApprovalView[]> {
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      approvals?: ShellApprovalView[];
+    }>(`${this.base_url}/api/shell/approvals`, {
+      headers: this.headers(),
+    });
+    if (!payload.success || !Array.isArray(payload.approvals)) {
+      throw new Error(String(payload.error || "Remote shell approvals failed"));
+    }
+    return payload.approvals;
+  }
+
+  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
+    return await this.run_shell_decision("approve", input.approval_id);
+  }
+
+  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
+    return await this.run_shell_decision("deny", input.approval_id);
+  }
+
+  private async run_shell_decision(
+    action: "approve" | "deny",
+    approval_id: string,
+  ): Promise<ShellApprovalDecisionResult> {
+    const payload = await read_http_json<ShellApprovalDecisionResult & {
+      error?: string;
+    }>(`${this.base_url}/api/shell/${action}`, {
+      method: "POST",
+      headers: this.headers({
+        "Content-Type": "application/json",
+      }),
+      body: JSON.stringify({ approval_id }),
+    });
+    if (typeof payload.success !== "boolean") {
+      throw new Error(String(payload.error || `Remote shell ${action} failed`));
     }
     return payload;
   }

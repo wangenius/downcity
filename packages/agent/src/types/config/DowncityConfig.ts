@@ -8,7 +8,7 @@
 import type { LlmConfig } from "@/types/config/LlmConfig.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
 import type { JsonObject } from "@/types/common/Json.js";
-import type { SandboxProjectConfig } from "@/sandbox/types/Sandbox.js";
+import type { SandboxProjectConfig } from "@downcity/shell/sandbox/types/Sandbox.js";
 
 /**
  * 单个聊天渠道配置。
@@ -165,7 +165,7 @@ export interface DowncityConfig {
    * shell / CLI 执行 sandbox 配置。
    *
    * 关键点（中文）
-   * - 当前只作用于 shell plugin 这条命令执行链。
+   * - 当前只作用于内建 shell 这条命令执行链。
    * - 这里不表达审批、用户授权与复杂策略系统，只表达最小边界。
    */
   sandbox?: SandboxProjectConfig;

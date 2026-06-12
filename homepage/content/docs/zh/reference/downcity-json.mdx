@@ -129,7 +129,7 @@ agent 启动时：
 - `kind=script` 的 task 正文也通过同一套 sandbox backend 执行
 - 未挂入 sandbox 的宿主路径默认不可见
 - agent sandbox 持久目录是 `.downcity/sandbox/`
-- sandbox 子进程使用 `.downcity/sandbox/` 作为 `HOME`，`.downcity/sandbox/tmp` 作为 `TMPDIR`，`.downcity/sandbox/.cache` 作为 `XDG_CACHE_HOME`
+- sandbox 子进程使用 `.downcity/sandbox/` 作为 `HOME`，`.downcity/sandbox/tmp` 作为常见临时目录变量与 zsh `TMPPREFIX` 目标，`.downcity/sandbox/.cache` 作为 `XDG_CACHE_HOME`
 - 项目文件、项目内 `.venv`、`node_modules`、下载到项目内的模型和缓存默认可写
 - 真实用户 HOME 以及 `/usr/local`、`/opt/homebrew`、`/System` 等系统目录默认不可写
 - Linux 需要预先安装 `bubblewrap`，并确保系统允许 unprivileged user namespaces

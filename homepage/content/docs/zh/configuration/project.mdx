@@ -63,7 +63,7 @@ description: downcity.json 中用户最常用字段与注意事项
 - 未挂入 sandbox 的宿主路径默认不可见
 - 项目根目录和 `.downcity/sandbox` 默认可写
 - `writablePaths` 用于追加项目内可写路径，且只能位于项目根目录内
-- sandbox 子进程共享 `.downcity/sandbox` 作为持久 `HOME`，并使用 `.downcity/sandbox/tmp` 作为 `TMPDIR`、`.downcity/sandbox/.cache` 作为 `XDG_CACHE_HOME`
+- sandbox 子进程共享 `.downcity/sandbox` 作为持久 `HOME`，并使用 `.downcity/sandbox/tmp` 作为常见临时目录变量与 zsh `TMPPREFIX` 目标、`.downcity/sandbox/.cache` 作为 `XDG_CACHE_HOME`
 - 支持项目内安装与缓存，例如 `.venv`、`node_modules`、下载到项目内的模型和缓存文件
 - `brew install`、`npm install -g`、`pip install --user`、`gh auth login` 或访问宿主服务初始化能力时，agent 可以显式请求 `sandbox="unrestricted"` 并提供 `reason`
 - Unrestricted Sandbox 由 Downcity Runtime 管理；每次执行前都会向用户确认，用户拒绝或超时则不会执行命令

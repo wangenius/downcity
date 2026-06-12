@@ -123,7 +123,7 @@ Current boundary:
 - `kind=script` task bodies also run through the same sandbox backend
 - Host paths not mounted into the sandbox are not visible
 - The agent sandbox persists at `.downcity/sandbox/`
-- Sandbox child processes use `.downcity/sandbox/` as `HOME`, `.downcity/sandbox/tmp` as `TMPDIR`, and `.downcity/sandbox/.cache` as `XDG_CACHE_HOME`
+- Sandbox child processes use `.downcity/sandbox/` as `HOME`, `.downcity/sandbox/tmp` as common temporary-directory variables and the zsh `TMPPREFIX` target, and `.downcity/sandbox/.cache` as `XDG_CACHE_HOME`
 - Project files, project-local `.venv`, `node_modules`, and downloaded model/cache files under the project are writable by default
 - Real user home and system directories such as `/usr/local`, `/opt/homebrew`, and `/System` are not writable from sandbox commands
 - Linux requires `bubblewrap` to be installed and unprivileged user namespaces to be enabled

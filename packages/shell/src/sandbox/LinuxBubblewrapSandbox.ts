@@ -73,7 +73,7 @@ function isPathCoveredBy(paths: string[], targetPath: string): boolean {
   });
 }
 
-function buildSandboxEnv(params: SandboxSpawnParams): NodeJS.ProcessEnv {
+export function buildLinuxBubblewrapSandboxEnv(params: SandboxSpawnParams): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const key of params.config.envAllowlist) {
     const value = params.baseEnv[key];
@@ -90,10 +90,15 @@ function buildSandboxEnv(params: SandboxSpawnParams): NodeJS.ProcessEnv {
   env.PATH = String(env.PATH || params.baseEnv.PATH || DEFAULT_PATH_VALUE);
   env.HOME = params.config.homeDir;
   env.TMPDIR = params.config.tmpDir;
+  env.TMP = params.config.tmpDir;
+  env.TEMP = params.config.tmpDir;
+  env.TEMPDIR = params.config.tmpDir;
+  env.TMPPREFIX = path.join(params.config.tmpDir, "zsh");
   env.XDG_CACHE_HOME = params.config.cacheDir;
   env.DC_SANDBOX = "1";
   env.DC_SANDBOX_DIR = params.config.sandboxDir;
   env.DC_SANDBOX_HOME = params.config.homeDir;
+  env.DC_SANDBOX_TMP = params.config.tmpDir;
   env.DC_SANDBOX_CACHE = params.config.cacheDir;
   env.SHELL = params.shellPath;
 
@@ -201,7 +206,7 @@ export async function spawnLinuxBubblewrapSandbox(
   }), {
     cwd: params.actualCwd,
     stdio: "pipe",
-    env: buildSandboxEnv(params),
+    env: buildLinuxBubblewrapSandboxEnv(params),
   });
 
   child.stdout.setEncoding("utf8");

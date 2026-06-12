@@ -63,7 +63,7 @@ Current behavior:
 - Host paths not mounted into the sandbox are not visible
 - The project root and `.downcity/sandbox` are writable by default
 - `writablePaths` adds project-local writable paths and must stay inside the project root
-- Sandbox child processes share `.downcity/sandbox` as their persistent `HOME`, with `.downcity/sandbox/tmp` for `TMPDIR` and `.downcity/sandbox/.cache` for `XDG_CACHE_HOME`
+- Sandbox child processes share `.downcity/sandbox` as their persistent `HOME`, with `.downcity/sandbox/tmp` for common temporary-directory variables and the zsh `TMPPREFIX` target, and `.downcity/sandbox/.cache` for `XDG_CACHE_HOME`
 - Project-local installs such as `.venv`, `node_modules`, and downloaded model/cache files under the project are supported
 - For host-level actions such as `brew install`, `npm install -g`, `pip install --user`, `gh auth login`, or host service setup, the agent may explicitly request `sandbox="unrestricted"` with a `reason`
 - Unrestricted Sandbox is managed by Downcity Runtime; every execution requires user approval, and denied or expired requests do not run

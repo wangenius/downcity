@@ -51,21 +51,23 @@ async function loadAuthOptions(city_url) {
     const result = await accounts.get("providers");
     return mapProvidersToOptions(result.items ?? []);
 }
-async function promptAuthMethod(city_url) {
-    const options = await loadAuthOptions(city_url);
-    if (options.length === 0) {
-        emitCliBlock({
-            tone: "warning",
-            title: "No sign-in methods",
-            note: "This City base has no enabled user auth providers.",
-        });
+async function promptAuthMethod(city_url, options) {
+    const auth_options = await loadAuthOptions(city_url);
+    if (auth_options.length === 0) {
+        if (options?.silent !== true) {
+            emitCliBlock({
+                tone: "warning",
+                title: "No sign-in methods",
+                note: "This City base has no enabled user auth providers.",
+            });
+        }
         return null;
     }
     const response = (await prompts({
         type: "select",
         name: "method",
         message: "Sign in",
-        choices: options.map((item) => ({
+        choices: auth_options.map((item) => ({
             title: item.title,
             description: item.description,
             value: item.value,
@@ -106,7 +108,7 @@ async function emailLogin(input) {
         user_label: result.email || email,
     });
 }
-async function emailRegister(input) {
+async function emailRegister(input, options) {
     const response = (await prompts([
         {
             type: "text",
@@ -134,11 +136,13 @@ async function emailRegister(input) {
     if (registered.error || !registered.success) {
         throw new Error(registered.error || "registration failed");
     }
-    emitCliBlock({
-        tone: "success",
-        title: "Verification code sent",
-        note: "If email delivery is unavailable, check server logs for the verification code.",
-    });
+    if (options?.silent !== true) {
+        emitCliBlock({
+            tone: "success",
+            title: "Verification code sent",
+            note: "If email delivery is unavailable, check server logs for the verification code.",
+        });
+    }
     const verify_response = (await prompts({
         type: "text",
         name: "verification_token",
@@ -161,7 +165,7 @@ async function emailRegister(input) {
         user_label: email,
     });
 }
-async function oauthAuth(input, provider) {
+async function oauthAuth(input, provider, options) {
     const client = new City({ role: "user", city_url: input.city_url });
     const accounts = client.service("accounts");
     const started = await accounts.action("oauth/start").invoke({
@@ -172,11 +176,13 @@ async function oauthAuth(input, provider) {
         throw new Error(started.error || "failed to start OAuth");
     }
     const opened = openBrowser(started.url);
-    emitCliBlock({
-        tone: opened ? "info" : "warning",
-        title: `OAuth: ${formatOAuthProviderLabel(provider)}`,
-        note: opened ? "Waiting for browser authorization..." : started.url,
-    });
+    if (options?.silent !== true) {
+        emitCliBlock({
+            tone: opened ? "info" : "warning",
+            title: `OAuth: ${formatOAuthProviderLabel(provider)}`,
+            note: opened ? "Waiting for browser authorization..." : started.url,
+        });
+    }
     const result = await pollOAuth(client, started.state);
     if (!result || result.error || !result.user_token) {
         throw new Error(result?.error || "OAuth failed");
@@ -280,15 +286,15 @@ function formatOAuthProviderLabel(provider) {
 /**
  * 执行 Town City user 登录。
  */
-export async function performTownCityUserLogin(input) {
-    const method = await promptAuthMethod(input.city_url);
+export async function performTownCityUserLogin(input, options) {
+    const method = await promptAuthMethod(input.city_url, options);
     if (!method)
         return null;
     if (method.startsWith("oauth:")) {
-        return await oauthAuth(input, method.slice("oauth:".length));
+        return await oauthAuth(input, method.slice("oauth:".length), options);
     }
     if (method === "register") {
-        return await emailRegister(input);
+        return await emailRegister(input, options);
     }
     return await emailLogin(input);
 }

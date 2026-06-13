@@ -6,8 +6,13 @@
  * - 不读写 Town 本地状态，调用方负责持久化 session。
  */
 import type { TownCityLoginInput, TownCityUserSession } from "../types/TownCitySession.js";
+interface town_city_user_login_options {
+    /** 是否禁止向命令行直接输出提示块。 */
+    silent?: boolean;
+}
 /**
  * 执行 Town City user 登录。
  */
-export declare function performTownCityUserLogin(input: TownCityLoginInput): Promise<TownCityUserSession | null>;
+export declare function performTownCityUserLogin(input: TownCityLoginInput, options?: town_city_user_login_options): Promise<TownCityUserSession | null>;
+export {};
 //# sourceMappingURL=CityUserLogin.d.ts.map

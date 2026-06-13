@@ -7,15 +7,13 @@
  * - Town 可以只读发现 `city` CLI 已配置的 base 地址，但不依赖 city 内部模块。
  * - CLI 命令装配统一放在 `src/command/CityCommand.ts`，本模块只保留状态与登录流程。
  */
-import prompts from "../tui/Prompts.js";
 import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { printResult } from "../utils/cli/CliOutput.js";
 import { performTownCityUserLogin } from "./CityUserLogin.js";
-import { emitCurrentTownCityBalance, emitTownCityRechargeResult, rechargeCurrentTownCityUser, } from "./CityBalance.js";
+import { open_city_manager_tui } from "../tui/CityManagerTui.js";
+import prompts from "../tui/Prompts.js";
 import { CityUserManager } from "./CityUserManager.js";
-import { DEFAULT_CITY_URL, DEFAULT_TOWN_ID, listTownCityServers, normalizeCityUrl, readCityAdminSecretForUrl, readCityString, readCurrentTownCitySession, readPersistedTownCliLocale, readTownCityState, resolveSelectedBaseUrl, upsertTownProfile, writeTownCityState, } from "./CityStateStore.js";
-import { getCliLocale, t } from "./CliLocale.js";
-import { promptAndPersistTownCliLocale } from "./InteractiveLocale.js";
+import { DEFAULT_CITY_URL, DEFAULT_TOWN_ID, listTownCityServers, normalizeCityUrl, readCityAdminSecretForUrl, readCityString, readCurrentTownCitySession, readTownCityState, resolveSelectedBaseUrl, upsertTownProfile, writeTownCityState, } from "./CityStateStore.js";
 const cityUserManager = new CityUserManager();
 function readString(value) {
     return readCityString(value);
@@ -23,7 +21,7 @@ function readString(value) {
 export function readTownCityAdminSecretForBase(city_url) {
     return readCityAdminSecretForUrl(city_url);
 }
-function findCityServer(input) {
+function findTownCityServer(input) {
     const query = String(input || "").trim();
     const servers = listTownCityServers();
     if (!query)
@@ -76,7 +74,7 @@ export function emitCityConnectionStatus(options) {
     emitCliBlock({
         tone: state.has_user_token ? "success" : "warning",
         title: "City connection",
-        summary: state.has_user_token ? "signed in" : "base selected",
+        summary: state.has_user_token ? "signed in" : "city selected",
         facts: [
             { label: "url", value: state.city_url },
             { label: "town", value: state.town_id },
@@ -86,7 +84,7 @@ export function emitCityConnectionStatus(options) {
         ],
         note: state.has_user_token
             ? undefined
-            : "Run `town city login` to sign in as a City user.",
+            : "Run `town city login` to sign in.",
     });
 }
 export async function emitCityUserWhoami(options) {
@@ -111,7 +109,7 @@ export async function emitCityUserWhoami(options) {
         }
         emitCliBlock({
             tone: "success",
-            title: "City user",
+            title: "City account",
             summary: user.source,
             facts: [
                 { label: "url", value: user.city_url },
@@ -140,7 +138,7 @@ export async function emitCityUserWhoami(options) {
         }
         emitCliBlock({
             tone: "error",
-            title: "City user unavailable",
+            title: "City account unavailable",
             note: error instanceof Error ? error.message : String(error),
         });
     }
@@ -151,7 +149,7 @@ export function emitCityServerList(options) {
         printResult({
             asJson: true,
             success: true,
-            title: "city bases",
+            title: "cities",
             payload: {
                 count: servers.length,
                 servers,
@@ -161,7 +159,7 @@ export function emitCityServerList(options) {
     }
     emitCliList({
         tone: "accent",
-        title: "City bases",
+        title: "Cities",
         summary: `${servers.length} available`,
         items: servers.map((server) => ({
             tone: server.selected ? "success" : "info",
@@ -182,7 +180,7 @@ export async function runCityConnectCommand(params) {
         const response = (await prompts({
             type: "text",
             name: "city_url",
-            message: "City base URL",
+            message: "City URL",
             initial: DEFAULT_CITY_URL,
         }));
         city_url = normalizeCityUrl(String(response.city_url || ""));
@@ -194,7 +192,7 @@ export async function runCityConnectCommand(params) {
     printResult({
         asJson: params.as_json === true,
         success: true,
-        title: "city base connected",
+        title: "city connected",
         payload: {
             city_url,
             fix: "Run `town city login` to sign in as a user.",
@@ -202,15 +200,15 @@ export async function runCityConnectCommand(params) {
     });
 }
 export async function runCityUseCommand(params) {
-    const server = findCityServer(params.server);
+    const server = findTownCityServer(params.server);
     if (!server) {
         printResult({
             asJson: params.as_json === true,
             success: false,
             title: "city use failed",
             payload: {
-                error: "No City base matched the input",
-                fix: "Run `town city list` to inspect available bases.",
+                error: "No City matched the input",
+                fix: "Run `town city list` to inspect available Cities.",
             },
         });
         return;
@@ -223,7 +221,7 @@ export async function runCityUseCommand(params) {
     printResult({
         asJson: params.as_json === true,
         success: true,
-        title: "city base selected",
+        title: "city selected",
         payload: {
             city_url: server.base_url,
             source: server.source,
@@ -232,7 +230,7 @@ export async function runCityUseCommand(params) {
         },
     });
 }
-function saveUserSession(session) {
+function saveTownCityUserSession(session) {
     const state = upsertTownProfile(readTownCityState(), {
         base_url: session.base_url,
     });
@@ -269,7 +267,7 @@ export async function runCityLoginCommand(params) {
         });
         return;
     }
-    saveUserSession(session);
+    saveTownCityUserSession(session);
     printResult({
         asJson: params.as_json === true,
         success: true,
@@ -322,259 +320,9 @@ export function runCityDisconnectCommand(options) {
         },
     });
 }
-async function promptCityManagerAction() {
-    const state = readTownCityConnectionState();
-    const current_locale = getCliLocale();
-    const persisted_locale = readPersistedTownCliLocale();
-    const response = (await prompts({
-        type: "select",
-        name: "action",
-        message: t({
-            zh: "管理 City user 连接",
-            en: "Manage City user connections",
-        }),
-        choices: [
-            {
-                title: t({
-                    zh: "查看连接状态",
-                    en: "View connection status",
-                }),
-                description: state.city_url,
-                value: "status",
-            },
-            {
-                title: t({
-                    zh: "选择 City base",
-                    en: "Select City base",
-                }),
-                description: t({
-                    zh: "从 Town / city admin / 默认 base 候选中选择",
-                    en: "Choose from Town, city admin, or default base candidates",
-                }),
-                value: "use",
-            },
-            {
-                title: t({
-                    zh: "添加 City base",
-                    en: "Add City base",
-                }),
-                description: t({
-                    zh: "手动写入一个 Town user base",
-                    en: "Manually add a Town user base",
-                }),
-                value: "connect",
-            },
-            {
-                title: t({
-                    zh: "User 登录",
-                    en: "User login",
-                }),
-                description: state.has_user_token
-                    ? t({ zh: "重新登录当前 base", en: "Sign in again to the current base" })
-                    : t({ zh: "登录当前 base", en: "Sign in to the current base" }),
-                value: "login",
-            },
-            {
-                title: t({
-                    zh: "查看当前 User",
-                    en: "View current user",
-                }),
-                description: t({
-                    zh: "显示 Town 当前实际使用的 City user",
-                    en: "Show the current City user resolved by Town",
-                }),
-                value: "whoami",
-            },
-            {
-                title: t({
-                    zh: "查看 User 余额",
-                    en: "View user balance",
-                }),
-                description: state.has_user_token
-                    ? t({ zh: "读取当前登录 user 的余额", en: "Read the balance of the current signed-in user" })
-                    : t({ zh: "需要先登录 user", en: "A user login is required first" }),
-                value: "balance",
-            },
-            {
-                title: t({
-                    zh: "User 充值",
-                    en: "User recharge",
-                }),
-                description: state.has_user_token
-                    ? t({ zh: "给当前登录 user 发起 checkout 充值", en: "Start a checkout recharge for the current signed-in user" })
-                    : t({ zh: "需要先登录 user", en: "A user login is required first" }),
-                value: "recharge",
-            },
-            {
-                title: t({
-                    zh: "User 登出",
-                    en: "User logout",
-                }),
-                description: t({
-                    zh: "清除当前 base 的 Town user session",
-                    en: "Clear the Town user session for the current base",
-                }),
-                value: "logout",
-            },
-            {
-                title: t({
-                    zh: "查看可用 base",
-                    en: "List available bases",
-                }),
-                description: t({
-                    zh: "包含默认 base 与 city admin 已保存 base",
-                    en: "Includes the default base and city-admin saved bases",
-                }),
-                value: "list",
-            },
-            {
-                title: t({
-                    zh: "切换语言",
-                    en: "Language",
-                }),
-                description: formatTownCliLocaleDescription(persisted_locale ?? current_locale),
-                value: "language",
-            },
-            {
-                title: t({
-                    zh: "退出",
-                    en: "Exit",
-                }),
-                description: t({
-                    zh: "关闭 City user 连接管理",
-                    en: "Close City user connection management",
-                }),
-                value: "exit",
-            },
-        ],
-        initial: state.has_user_token ? 0 : 3,
-    }));
-    return String(response.action || "").trim() || null;
-}
 export async function runInteractiveCityManager() {
     if (!process.stdin.isTTY || !process.stdout.isTTY)
         return;
-    while (true) {
-        const action = await promptCityManagerAction();
-        if (!action || action === "exit") {
-            emitCliBlock({
-                tone: "info",
-                title: t({
-                    zh: "City 管理器已关闭",
-                    en: "City manager closed",
-                }),
-            });
-            return;
-        }
-        if (action === "status") {
-            emitCityConnectionStatus();
-            continue;
-        }
-        if (action === "list") {
-            emitCityServerList();
-            continue;
-        }
-        if (action === "connect") {
-            await runCityConnectCommand({});
-            continue;
-        }
-        if (action === "use") {
-            const server = await promptSelectCityBase();
-            if (server)
-                await runCityUseCommand({ server: server.base_url });
-            continue;
-        }
-        if (action === "login") {
-            await runCityLoginCommand({});
-            continue;
-        }
-        if (action === "whoami") {
-            await emitCityUserWhoami();
-            continue;
-        }
-        if (action === "balance") {
-            await emitCurrentTownCityBalance();
-            continue;
-        }
-        if (action === "recharge") {
-            const input = await promptRechargeInput();
-            if (input) {
-                const result = await rechargeCurrentTownCityUser(input);
-                if (result)
-                    emitTownCityRechargeResult(result);
-            }
-            continue;
-        }
-        if (action === "language") {
-            await promptAndPersistTownCliLocale();
-            continue;
-        }
-        if (action === "logout") {
-            runCityLogoutCommand();
-            continue;
-        }
-    }
-}
-function formatTownCliLocaleDescription(cli_locale) {
-    if (cli_locale === "zh") {
-        return t({
-            zh: "当前默认语言：中文",
-            en: "Current default language: Chinese",
-        });
-    }
-    return t({
-        zh: "当前默认语言：英文",
-        en: "Current default language: English",
-    });
-}
-async function promptSelectCityBase() {
-    const servers = listTownCityServers();
-    const response = (await prompts({
-        type: "select",
-        name: "base_url",
-        message: "选择 City base",
-        choices: servers.map((server) => ({
-            title: server.selected ? `* ${server.name}` : server.name,
-            description: `${server.source} · ${server.base_url}`,
-            value: server.base_url,
-        })),
-        initial: Math.max(0, servers.findIndex((server) => server.selected)),
-    }));
-    const base_url = readString(response.base_url);
-    if (!base_url)
-        return null;
-    return servers.find((server) => server.base_url === base_url) ?? null;
-}
-async function promptRechargeInput() {
-    const response = (await prompts([
-        {
-            type: "number",
-            name: "amount",
-            message: "充值金额",
-            min: 1,
-            validate: (value) => Number.isInteger(value) && value > 0 ? true : "请输入正整数",
-        },
-        {
-            type: "text",
-            name: "note",
-            message: "说明（可选）",
-            initial: "Town user recharge",
-        },
-        {
-            type: "confirm",
-            name: "open_checkout",
-            message: "创建后打开支付页面？",
-            initial: true,
-        },
-    ]));
-    const amount = Number(response.amount);
-    if (!Number.isInteger(amount) || amount <= 0)
-        return null;
-    return {
-        amount,
-        method_id: "stripe",
-        note: readString(response.note),
-        open_checkout: response.open_checkout !== false,
-    };
+    await open_city_manager_tui();
 }
 //# sourceMappingURL=CityConnection.js.map

@@ -12,10 +12,17 @@ import { writePersistedTownCliLocale } from "./CityStateStore.js";
 import { emitCliBlock } from "./CliReporter.js";
 import { getCliLocale, setCliLocale, t } from "./CliLocale.js";
 
+interface prompt_town_cli_locale_options {
+  /** 是否禁止向命令行直接输出结果块。 */
+  silent?: boolean;
+}
+
 /**
  * 交互式切换并持久化 Town CLI 语言。
  */
-export async function promptAndPersistTownCliLocale(): Promise<void> {
+export async function promptAndPersistTownCliLocale(
+  options?: prompt_town_cli_locale_options,
+): Promise<CliLocale | null> {
   const current_locale = getCliLocale();
   const response = (await prompts({
     type: "select",
@@ -57,22 +64,25 @@ export async function promptAndPersistTownCliLocale(): Promise<void> {
 
   const cli_locale = response.cli_locale;
   if (!cli_locale) {
-    return;
+    return null;
   }
 
   setCliLocale(cli_locale);
   writePersistedTownCliLocale(cli_locale);
-  emitCliBlock({
-    tone: "success",
-    title: t({
-      zh: "CLI 语言已更新",
-      en: "CLI language updated",
-    }),
-    note: t({
-      zh: cli_locale === "zh" ? "当前默认语言已保存为中文。" : "当前默认语言已保存为英文。",
-      en: cli_locale === "zh"
-        ? "Chinese has been saved as the default language."
-        : "English has been saved as the default language.",
-    }),
-  });
+  if (options?.silent !== true) {
+    emitCliBlock({
+      tone: "success",
+      title: t({
+        zh: "CLI 语言已更新",
+        en: "CLI language updated",
+      }),
+      note: t({
+        zh: cli_locale === "zh" ? "当前默认语言已保存为中文。" : "当前默认语言已保存为英文。",
+        en: cli_locale === "zh"
+          ? "Chinese has been saved as the default language."
+          : "English has been saved as the default language.",
+      }),
+    });
+  }
+  return cli_locale;
 }

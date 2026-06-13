@@ -30,8 +30,8 @@ export function registerCityConnectionCommand(program: Command): void {
   const city = program
     .command("city")
     .description(t({
-      zh: "管理 Town 的 City user 连接与登录态",
-      en: "manage Town City user connections and login state",
+      zh: "管理 Town 的 City 连接与账号登录态",
+      en: "manage Town City connections and account login state",
     }))
     .helpOption("--help", helpText())
     .action(async () => {
@@ -45,8 +45,8 @@ export function registerCityConnectionCommand(program: Command): void {
   city
     .command("status")
     .description(t({
-      zh: "查看 Town 当前 City user 连接状态",
-      en: "show the current Town City user connection status",
+      zh: "查看 Town 当前 City 连接状态",
+      en: "show the current Town City connection status",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
@@ -59,8 +59,8 @@ export function registerCityConnectionCommand(program: Command): void {
   city
     .command("list")
     .description(t({
-      zh: "列出 Town 可选择的 City base",
-      en: "list City bases available to Town",
+      zh: "列出 Town 可选择的 City",
+      en: "list Cities available to Town",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
@@ -73,8 +73,8 @@ export function registerCityConnectionCommand(program: Command): void {
   city
     .command("whoami")
     .description(t({
-      zh: "查看 Town 当前实际使用的 City user",
-      en: "show the current City user resolved by Town",
+      zh: "查看 Town 当前实际使用的 City 账号",
+      en: "show the current City account resolved by Town",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
@@ -87,8 +87,8 @@ export function registerCityConnectionCommand(program: Command): void {
   city
     .command("connect [url]")
     .description(t({
-      zh: "手动添加并选择一个 City base（默认 base.downcity.ai）",
-      en: "manually add and select a City base (default: base.downcity.ai)",
+      zh: "手动添加并选择一个 City（默认 base.downcity.ai）",
+      en: "manually add and select a City (default: base.downcity.ai)",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
@@ -102,10 +102,10 @@ export function registerCityConnectionCommand(program: Command): void {
     });
 
   city
-    .command("use [server]")
+    .command("use [city]")
     .description(t({
-      zh: "选择一个 City base；可使用 Town 本地或 city admin 已保存 base",
-      en: "select a City base from Town-local or city-admin saved bases",
+      zh: "选择一个 City；可使用 Town 本地或 city admin 已保存 City",
+      en: "select a City from Town-local or city-admin saved Cities",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
@@ -121,8 +121,8 @@ export function registerCityConnectionCommand(program: Command): void {
   city
     .command("login [url]")
     .description(t({
-      zh: "以 user 身份登录当前或指定 City base",
-      en: "sign in to the current or specified City base as a user",
+      zh: "登录当前或指定 City",
+      en: "sign in to the current or specified City",
     }))
     .option("--town-id <townId>", t({
       zh: "City town id",
@@ -146,8 +146,8 @@ export function registerCityConnectionCommand(program: Command): void {
   city
     .command("logout")
     .description(t({
-      zh: "清除当前 City base 的 Town user session",
-      en: "clear the Town user session for the current City base",
+      zh: "清除当前 City 的 Town 登录态",
+      en: "clear the Town session for the current City",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
@@ -160,8 +160,8 @@ export function registerCityConnectionCommand(program: Command): void {
   city
     .command("disconnect")
     .description(t({
-      zh: "移除当前 Town City base 选择并回到默认 base",
-      en: "remove the current Town City base selection and fall back to the default base",
+      zh: "重置 Town 的 City 选择并回到默认 City",
+      en: "reset the Town City selection and fall back to the default City",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",

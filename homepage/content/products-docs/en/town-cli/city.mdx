@@ -1,13 +1,13 @@
 ---
 title: town city
-description: Select a City base and sign in as a Town user
+description: Select a City and sign in as a Town account
 ---
 
 # `town city`
 
 `town city` manages the City user connection used by local Agents.
 
-`city` is for admin-side City base management. `town` is for user login and local Agent runtime access. By default, Town uses `https://base.downcity.ai`.
+`city` is for admin-side City and resource management. `town` is for account login and local Agent runtime access. By default, Town uses `https://base.downcity.ai`.
 
 ## Usage
 
@@ -17,38 +17,38 @@ town city status
 town city list
 town city whoami
 town city connect [url]
-town city use [base]
+town city use [city]
 town city login [url]
 town city logout
 town city disconnect
 ```
 
-Running bare `town` opens the interactive console. Choose `Connect City` to view the signed-in user's balance or start a recharge from the user menu.
+Running bare `town` opens the interactive console. Choose `Connect City` to see one menu grouped by status, City, account, and settings; after sign-in, the account section shows balance directly and offers `Recharge`.
 
 ## State Model
 
-`town city connect` and `town city use` select a City base. They do not copy admin credentials or user tokens from `city`.
+`town city connect` and `town city use` select a City. They do not copy admin credentials or user tokens from `city`.
 
 `town city login` signs in as a user and stores Town's own user session. Agent runtime reads that Town user session when it calls City AIService.
 
-`town city whoami` shows the City user Town will actually use, including the base, town id, user id, and whether environment variables are overriding anything.
+`town city whoami` shows the City account Town will actually use, including the City URL, town id, user id, and whether environment variables are overriding anything.
 
-`View User Balance` reads the current signed-in user's `balance` account. `User Recharge` creates a topup for that user and starts a checkout with an available payment method; by default, Town opens the checkout page in your browser.
+After sign-in, the interactive menu reads the current account's `balance` account and displays the balance directly. `Recharge` creates a topup for the current account and starts a checkout with an available payment method; by default, Town opens the checkout page in your browser.
 
-Balance, recharge, and Agent runtime all use the current user saved by `town city login` by default. `DOWNCITY_CITY_URL` can temporarily select another base and then uses that base's saved Town user session. Only `DOWNCITY_CITY_USER_TOKEN` explicitly overrides the user identity. `DOWNCITY_CITY_TOWN_ID` can override the town id.
+Balance, recharge, and Agent runtime all use the current City account saved by `town city login` by default. `DOWNCITY_CITY_URL` can temporarily select another City and then uses that City's saved Town session. Only `DOWNCITY_CITY_USER_TOKEN` explicitly overrides the account identity. `DOWNCITY_CITY_TOWN_ID` can override the town id.
 
 ## Recommended Flow
 
 ```bash
-city                  # optional: manage admin-side City bases and resources
+city                  # optional: manage admin-side City resources
 town city status      # defaults to https://base.downcity.ai
 town city login
 town city whoami
-town                  # choose Connect City -> View User Balance or User Recharge
+town                  # choose Connect City -> view balance or choose Recharge
 town agent start
 ```
 
-Use `town city list` to see Town bases plus base URLs discovered from `city` admin configuration.
+Use `town city list` to see Cities saved by Town plus City URLs discovered from `city` admin configuration.
 
 ## Related
 

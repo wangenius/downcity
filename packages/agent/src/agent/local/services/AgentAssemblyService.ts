@@ -212,7 +212,6 @@ export class AgentAssemblyService {
         root_path: path,
         env,
         agent_id: id,
-        sandbox: config.sandbox,
         logger,
         emit_event: (event) => {
           const session_id = String(event.session_id || "").trim();

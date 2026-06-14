@@ -85,42 +85,6 @@ export interface SandboxConfig {
 }
 
 /**
- * 项目级 sandbox 配置。
- *
- * 说明（中文）
- * - 这是 `downcity.json` 中面向用户暴露的最小配置。
- * - 当前版本只服务 CLI / shell 执行边界，不扩展到审批或用户权限系统。
- */
-export interface SandboxProjectConfig {
-  /**
-   * 允许导出的环境变量名集合。
-   *
-   * 说明（中文）
-   * - 这里只声明允许导出的 key，不直接保存变量值。
-   * - 运行时仍会注入少量必需变量，例如隔离后的 `HOME`、`TMPDIR`。
-   */
-  envAllowlist?: string[];
-
-  /**
-   * 允许写入的路径集合。
-   *
-   * 说明（中文）
-   * - 路径可以是绝对路径，也可以是相对 `rootPath` 的相对路径。
-   * - 当前版本会把越出 `rootPath` 的路径裁掉，避免把宿主文件系统重新暴露回去。
-   */
-  writablePaths?: string[];
-
-  /**
-   * 当前 sandbox 的网络模式。
-   *
-   * 说明（中文）
-   * - 默认建议使用 `off`。
-   * - `restricted` 先保留为受限网络语义占位，当前实现会按保守策略处理。
-   */
-  networkMode?: SandboxNetworkMode;
-}
-
-/**
  * console 模块中保存的 agent sandbox 配置记录。
  */
 export interface AgentSandboxConfigRecord {

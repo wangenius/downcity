@@ -86,7 +86,6 @@ export function createTaskSessionRuntimePort(params: {
   const shell = new Shell({
     root_path: context.rootPath,
     env: context.env,
-    sandbox: context.config.sandbox,
     logger: context.logger,
   });
   const shell_tools = shell.tools as unknown as Record<string, Tool>;

@@ -8,7 +8,6 @@
 import type { LlmConfig } from "@/types/config/LlmConfig.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
 import type { JsonObject } from "@/types/common/Json.js";
-import type { SandboxProjectConfig } from "@downcity/shell/sandbox/types/Sandbox.js";
 
 /**
  * 单个聊天渠道配置。
@@ -161,14 +160,6 @@ export interface DowncityConfig {
    * - 绑定 City AIService 暴露的模型 ID。
    */
   execution?: ExecutionBindingConfig;
-  /**
-   * shell / CLI 执行 sandbox 配置。
-   *
-   * 关键点（中文）
-   * - 当前只作用于内建 shell 这条命令执行链。
-   * - 这里不表达审批、用户授权与复杂策略系统，只表达最小边界。
-   */
-  sandbox?: SandboxProjectConfig;
   /**
    * LLM 全量配置（通常来自平台全局层合并结果）。
    *

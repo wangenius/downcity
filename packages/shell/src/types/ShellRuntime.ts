@@ -7,7 +7,6 @@
  */
 
 import type { Tool } from "ai";
-import type { SandboxProjectConfig } from "@/sandbox/types/Sandbox.js";
 import type {
   ShellApprovalMode,
   ShellApprovalStatus,
@@ -41,9 +40,9 @@ export interface ShellOptions {
    */
   env?: Record<string, string | undefined>;
   /**
-   * Safe sandbox 配置。
+   * @deprecated Safe Sandbox 边界由 Shell 内部固定，不再支持外部配置。
    */
-  sandbox?: SandboxProjectConfig;
+  sandbox?: never;
   /**
    * 可选日志器。
    */

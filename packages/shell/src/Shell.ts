@@ -85,7 +85,6 @@ export class Shell {
         ...(this.host_options.env || {}),
         ...(options.env || {}),
       },
-      sandbox: options.sandbox || this.host_options.sandbox,
       logger: options.logger || this.host_options.logger,
       emit_event: options.emit_event || this.host_options.emit_event,
     };
@@ -229,7 +228,6 @@ export class Shell {
       env: this.host_options.env,
       config: {
         ...(this.host_options.agent_id ? { id: this.host_options.agent_id } : {}),
-        ...(this.host_options.sandbox ? { sandbox: this.host_options.sandbox } : {}),
       },
       logger: this.host_options.logger,
       session: emit_event

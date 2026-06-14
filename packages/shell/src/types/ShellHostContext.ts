@@ -6,8 +6,6 @@
  * - 不引用 agent 的 ShellHostContext，避免 shell 包反向绑定 agent session/runtime。
  */
 
-import type { SandboxProjectConfig } from "@/sandbox/types/Sandbox.js";
-
 export type ShellLogger = {
   /**
    * 输出 warning 日志。
@@ -64,10 +62,6 @@ export type ShellHostContext = {
      * Agent id。
      */
     id?: string;
-    /**
-     * Sandbox 配置。
-     */
-    sandbox?: SandboxProjectConfig;
   };
   /**
    * 可选日志器。

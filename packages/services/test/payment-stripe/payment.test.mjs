@@ -589,10 +589,11 @@ function createBalanceBridge() {
 
   return {
     async createTopup(userId, amount, extra = {}) {
+      const normalizedAmount = amount * 1_000_000
       const topup = {
         topup_id: `topup_${Math.random().toString(36).slice(2, 10)}`,
         user_id: userId,
-        amount,
+        amount: normalizedAmount,
         status: "pending",
         note: extra.note || "",
       }
@@ -613,11 +614,10 @@ function createBalanceBridge() {
       return { ...topup }
     },
     async read(userId) {
-      const balance = (balances.get(userId) || 0) * 1_000_000
+      const balance = balances.get(userId) || 0
       return {
         user_id: userId,
         balance,
-        balance_microcredits: balance,
       }
     },
   }

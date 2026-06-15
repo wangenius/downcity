@@ -3,8 +3,7 @@
  *
  * 关键说明（中文）
  * - 这里描述的是 Admin City 看到的 balance service 结构
- * - `balance` / `balance_after` 是 microcredits 整数
- * - `balance_microcredits` / `balance_after_microcredits` 是同值的显式说明字段
+ * - `balance` / `amount` / `balance_after` 的数值单位是 microcredits
  * - redeem_code 明文只在创建结果中返回一次
  */
 
@@ -19,16 +18,8 @@ export interface BalanceAccountRecord {
 
   /**
    * 当前余额，单位为 microcredits。
-   *
-   * 说明：`balance` 本身就是 microcredits；
-   * `balance_microcredits` 保留为同值的显式别名。
    */
   balance: number;
-
-  /**
-   * 当前余额，单位为 microcredits。
-   */
-  balance_microcredits: number;
 
   /**
    * 创建时间。
@@ -61,27 +52,14 @@ export interface BalanceLedgerRecord {
   kind: "init" | "add" | "sub" | "topup" | "redeem";
 
   /**
-   * 本次变动金额。
+   * 本次变动金额，单位为 microcredits。
    */
   amount: number;
 
   /**
-   * 本次变动金额，单位为 microcredits。
-   */
-  amount_microcredits: number;
-
-  /**
    * 变动后的余额快照，单位为 microcredits。
-   *
-   * 说明：`balance_after` 本身就是 microcredits；
-   * `balance_after_microcredits` 保留为同值的显式别名。
    */
   balance_after: number;
-
-  /**
-   * 变动后的余额快照，单位为 microcredits。
-   */
-  balance_after_microcredits: number;
 
   /**
    * 说明文本。
@@ -119,14 +97,9 @@ export interface BalanceTopupRecord {
   user_id: string;
 
   /**
-   * 充值金额。
-   */
-  amount: number;
-
-  /**
    * 充值金额，单位为 microcredits。
    */
-  amount_microcredits: number;
+  amount: number;
 
   /**
    * 充值单状态。
@@ -169,14 +142,9 @@ export interface BalanceRedeemCodeRecord {
   redeem_code_id: string;
 
   /**
-   * 充值金额。
-   */
-  amount: number;
-
-  /**
    * 充值金额，单位为 microcredits。
    */
-  amount_microcredits: number;
+  amount: number;
 
   /**
    * redeem_code 状态。
@@ -232,11 +200,6 @@ export interface BalanceRedeemCodeCreateInput {
    * redeem_code 额度。
    */
   amount: number;
-
-  /**
-   * redeem_code 额度，单位为 microcredits。
-   */
-  amount_microcredits?: number;
 
   /**
    * 可选自定义 redeem_code 明文。
@@ -336,11 +299,6 @@ export interface BalanceMutationInput {
    * 变动额度。
    */
   amount: number;
-
-  /**
-   * 变动额度，单位为 microcredits。
-   */
-  amount_microcredits?: number;
 
   /**
    * 说明文本。

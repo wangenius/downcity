@@ -76,7 +76,6 @@ test("billingService settles AI metering into balance charges", async () => {
     assert.equal(invokeResponse.status, 200)
 
     const account = await balance.read("user_1")
-    assert.equal(account.balance_microcredits, 989_600)
     assert.equal(account.balance, 989_600)
 
     const chargesResponse = await base.handleRequest(adminRequest(adminSecret, {
@@ -181,7 +180,7 @@ test("billingService supports per-million token pricing rules", async () => {
     assert.equal(charges.items[0].amount, 0.000016)
 
     const account = await balance.read("user_1")
-    assert.equal(account.balance_microcredits, 999_984)
+    assert.equal(account.balance, 999_984)
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })

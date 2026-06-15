@@ -98,8 +98,8 @@ export class BalanceService extends InstallableService {
     }, "init");
     this.instruction = [
       "提供用户级全局余额、余额流水、充值单与 redeem_code 能力。",
-      "`balance` API 字段即 microcredits 整数；`balance_microcredits` 是同值的显式别名。",
-      `当前余额以 microcredits 整数存储，首次自动开户发放 ${this.initMicrocredits} microcredits。`,
+      "`balance` / `amount` / `balance_after` 字段均使用 microcredits 整数。",
+      `首次自动开户发放 ${this.initMicrocredits} microcredits。`,
       "推荐在业务 hook 中调用 require/add/sub，把具体计费策略放在业务侧，而不是写死在服务内部。",
       "管理端可查询所有账户、流水、充值单与 redeem_code；用户侧可查询自己的余额、历史记录、充值单，并直接兑换 redeem_code。",
     ].join("\n");
@@ -137,8 +137,8 @@ export class BalanceService extends InstallableService {
     const normalizedAmount = readAmountMicrocredits({ amount_microcredits });
     const account = await this.read(normalizedUserId);
 
-    if (account.balance_microcredits < normalizedAmount) {
-      throw httpError(402, `insufficient balance: need ${normalizedAmount} microcredits, current ${account.balance_microcredits} microcredits`);
+    if (account.balance < normalizedAmount) {
+      throw httpError(402, `insufficient balance: need ${normalizedAmount} microcredits, current ${account.balance} microcredits`);
     }
 
     return account;
@@ -205,8 +205,7 @@ export class BalanceService extends InstallableService {
     const topup: BalanceTopup = {
       topup_id: `topup_${randomId()}`,
       user_id: normalizedUserId,
-      amount: microcreditsToCredits(normalizedAmount),
-      amount_microcredits: normalizedAmount,
+      amount: normalizedAmount,
       amount_usd_cents: microcreditsToUsdCents(normalizedAmount),
       status: "pending",
       note: normalizeText(extra.note),
@@ -218,12 +217,12 @@ export class BalanceService extends InstallableService {
 
     await this.ensureAccount(normalizedUserId);
     await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${TOPUP_TABLE} (topup_id, user_id, amount_microcredits, status, note, ref, metadata_json, created_at, updated_at)`,
+      `INSERT INTO ${TOPUP_TABLE} (topup_id, user_id, amount, status, note, ref, metadata_json, created_at, updated_at)`,
       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ].join(" "), [
       topup.topup_id,
       topup.user_id,
-      topup.amount_microcredits,
+      topup.amount,
       topup.status,
       topup.note,
       topup.ref,
@@ -263,7 +262,7 @@ export class BalanceService extends InstallableService {
       throw httpError(409, "topup is no longer pending");
     }
 
-    await this.applyDelta(current.user_id, current.amount_microcredits, "topup", {
+    await this.applyDelta(current.user_id, current.amount, "topup", {
       note: normalizeText(extra.note) || current.note || "topup",
       ref: normalizeText(extra.ref) || topup_id,
       meta: {
@@ -321,8 +320,7 @@ export class BalanceService extends InstallableService {
 
     const redeemCode: BalanceRedeemCode = {
       redeem_code_id: `rc_${randomId()}`,
-      amount: microcreditsToCredits(amount),
-      amount_microcredits: amount,
+      amount,
       status: "active",
       code_mask: maskRedeemCode(code),
       note: normalizeText(input.note),
@@ -335,13 +333,13 @@ export class BalanceService extends InstallableService {
     };
 
     await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${REDEEM_CODE_TABLE} (redeem_code_id, code_hash, code_mask, amount_microcredits, status, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at)`,
+      `INSERT INTO ${REDEEM_CODE_TABLE} (redeem_code_id, code_hash, code_mask, amount, status, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at)`,
       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ].join(" "), [
       redeemCode.redeem_code_id,
       codeHash,
       redeemCode.code_mask,
-      redeemCode.amount_microcredits,
+      redeemCode.amount,
       redeemCode.status,
       redeemCode.note,
       redeemCode.ref,
@@ -397,7 +395,7 @@ export class BalanceService extends InstallableService {
       throw httpError(409, `redeem_code is already ${latest.status}`);
     }
 
-    const account = await this.applyDelta(normalizedUserId, current.amount_microcredits, "redeem", {
+    const account = await this.applyDelta(normalizedUserId, current.amount, "redeem", {
       note: normalizeText(extra.note) || current.note || "redeem_code",
       ref: normalizeText(extra.ref) || current.redeem_code_id,
       meta: {
@@ -449,7 +447,7 @@ export class BalanceService extends InstallableService {
    */
   async listUsers(limit?: number | string): Promise<BalanceAccount[]> {
     const rows = await rawAll<BalanceAccount>(this.resolveRaw(), [
-      `SELECT user_id, balance_microcredits, created_at, updated_at FROM ${ACCOUNT_TABLE}`,
+      `SELECT user_id, balance, created_at, updated_at FROM ${ACCOUNT_TABLE}`,
       "ORDER BY updated_at DESC",
       "LIMIT ?",
     ].join(" "), [normalizeLimit(limit)]);
@@ -469,7 +467,7 @@ export class BalanceService extends InstallableService {
       : "";
 
     const rows = await rawAll<BalanceLedgerEntry>(this.resolveRaw(), [
-      `SELECT entry_id, user_id, kind, amount_microcredits, balance_after_microcredits, note, ref, metadata_json, created_at FROM ${LEDGER_TABLE}`,
+      `SELECT entry_id, user_id, kind, amount, balance_after, note, ref, metadata_json, created_at FROM ${LEDGER_TABLE}`,
       where,
       "ORDER BY created_at DESC, rowid DESC",
       "LIMIT ?",
@@ -490,7 +488,7 @@ export class BalanceService extends InstallableService {
       : "";
 
     const rows = await rawAll<BalanceTopup>(this.resolveRaw(), [
-      `SELECT topup_id, user_id, amount_microcredits, status, note, ref, metadata_json, created_at, updated_at FROM ${TOPUP_TABLE}`,
+      `SELECT topup_id, user_id, amount, status, note, ref, metadata_json, created_at, updated_at FROM ${TOPUP_TABLE}`,
       where,
       "ORDER BY created_at DESC",
       "LIMIT ?",
@@ -518,7 +516,7 @@ export class BalanceService extends InstallableService {
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
     const rows = await rawAll<BalanceRedeemCode>(this.resolveRaw(), [
-      `SELECT redeem_code_id, amount_microcredits, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
+      `SELECT redeem_code_id, amount, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
       where,
       "ORDER BY created_at DESC",
       "LIMIT ?",
@@ -548,20 +546,20 @@ export class BalanceService extends InstallableService {
     if (delta > 0) {
       await rawRun(this.resolveRaw(), [
         `UPDATE ${ACCOUNT_TABLE}`,
-        "SET balance_microcredits = balance_microcredits + ?, updated_at = ?",
+        "SET balance = balance + ?, updated_at = ?",
         "WHERE user_id = ?",
       ].join(" "), [delta, now, user_id]);
     } else {
       const spend = Math.abs(delta);
       const changed = await rawRun(this.resolveRaw(), [
         `UPDATE ${ACCOUNT_TABLE}`,
-        "SET balance_microcredits = balance_microcredits - ?, updated_at = ?",
-        "WHERE user_id = ? AND balance_microcredits >= ?",
+        "SET balance = balance - ?, updated_at = ?",
+        "WHERE user_id = ? AND balance >= ?",
       ].join(" "), [spend, now, user_id, spend]);
 
       if (changed === 0) {
         const current = await this.readAccountRequired(user_id);
-        throw httpError(402, `insufficient balance: need ${spend} microcredits, current ${current.balance_microcredits} microcredits`);
+        throw httpError(402, `insufficient balance: need ${spend} microcredits, current ${current.balance} microcredits`);
       }
     }
 
@@ -570,10 +568,8 @@ export class BalanceService extends InstallableService {
       entry_id: `bal_${randomId()}`,
       user_id,
       kind,
-      amount: microcreditsToCredits(delta),
-      amount_microcredits: delta,
+      amount: delta,
       balance_after: account.balance,
-      balance_after_microcredits: account.balance_microcredits,
       note: normalizeText(extra.note),
       ref: normalizeText(extra.ref),
       metadata_json: stringifyMeta(extra.meta),
@@ -588,7 +584,7 @@ export class BalanceService extends InstallableService {
   private async ensureAccount(user_id: string): Promise<void> {
     const now = new Date().toISOString();
     const inserted = await rawRun(this.resolveRaw(), [
-      `INSERT OR IGNORE INTO ${ACCOUNT_TABLE} (user_id, balance_microcredits, created_at, updated_at)`,
+      `INSERT OR IGNORE INTO ${ACCOUNT_TABLE} (user_id, balance, created_at, updated_at)`,
       "VALUES (?, ?, ?, ?)",
     ].join(" "), [user_id, this.initMicrocredits, now, now]);
 
@@ -597,10 +593,8 @@ export class BalanceService extends InstallableService {
         entry_id: `bal_${randomId()}`,
         user_id,
         kind: "init",
-        amount: microcreditsToCredits(this.initMicrocredits),
-        amount_microcredits: this.initMicrocredits,
+        amount: this.initMicrocredits,
         balance_after: this.initMicrocredits,
-        balance_after_microcredits: this.initMicrocredits,
         note: "initial balance",
         ref: "",
         metadata_json: "{}",
@@ -614,7 +608,7 @@ export class BalanceService extends InstallableService {
    */
   private async readAccountRequired(user_id: string): Promise<BalanceAccount> {
     const row = await rawFirst<BalanceAccount>(this.resolveRaw(), [
-      `SELECT user_id, balance_microcredits, created_at, updated_at FROM ${ACCOUNT_TABLE}`,
+      `SELECT user_id, balance, created_at, updated_at FROM ${ACCOUNT_TABLE}`,
       "WHERE user_id = ?",
     ].join(" "), [user_id]);
 
@@ -630,7 +624,7 @@ export class BalanceService extends InstallableService {
    */
   private async readTopupRequired(topup_id: string): Promise<BalanceTopup> {
     const row = await rawFirst<BalanceTopup>(this.resolveRaw(), [
-      `SELECT topup_id, user_id, amount_microcredits, status, note, ref, metadata_json, created_at, updated_at FROM ${TOPUP_TABLE}`,
+      `SELECT topup_id, user_id, amount, status, note, ref, metadata_json, created_at, updated_at FROM ${TOPUP_TABLE}`,
       "WHERE topup_id = ?",
     ].join(" "), [readRequired(topup_id, "topup_id")]);
 
@@ -646,7 +640,7 @@ export class BalanceService extends InstallableService {
    */
   private async readRedeemCodeRequired(redeem_code_id: string): Promise<BalanceRedeemCode> {
     const row = await rawFirst<BalanceRedeemCode>(this.resolveRaw(), [
-      `SELECT redeem_code_id, amount_microcredits, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
+      `SELECT redeem_code_id, amount, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
       "WHERE redeem_code_id = ?",
     ].join(" "), [readRequired(redeem_code_id, "redeem_code_id")]);
 
@@ -662,7 +656,7 @@ export class BalanceService extends InstallableService {
    */
   private async readRedeemCodeByHash(codeHash: string): Promise<StoredRedeemCodeRow | undefined> {
     const row = await rawFirst<StoredRedeemCodeRow>(this.resolveRaw(), [
-      `SELECT redeem_code_id, code_hash, amount_microcredits, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
+      `SELECT redeem_code_id, code_hash, amount, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
       "WHERE code_hash = ?",
     ].join(" "), [readRequired(codeHash, "code_hash")]);
 
@@ -679,14 +673,14 @@ export class BalanceService extends InstallableService {
    */
   private async insertLedger(entry: BalanceLedgerEntry): Promise<void> {
     await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${LEDGER_TABLE} (entry_id, user_id, kind, amount_microcredits, balance_after_microcredits, note, ref, metadata_json, created_at)`,
+      `INSERT INTO ${LEDGER_TABLE} (entry_id, user_id, kind, amount, balance_after, note, ref, metadata_json, created_at)`,
       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ].join(" "), [
       entry.entry_id,
       entry.user_id,
       entry.kind,
-      entry.amount_microcredits,
-      entry.balance_after_microcredits,
+      entry.amount,
+      entry.balance_after,
       entry.note,
       entry.ref,
       entry.metadata_json,

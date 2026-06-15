@@ -25,7 +25,7 @@ export const balanceAccounts = sqliteTable(ACCOUNT_TABLE, {
   /**
    * 当前余额，单位为 microcredits。
    */
-  balance_microcredits: integer("balance_microcredits").notNull(),
+  balance: integer("balance").notNull(),
 
   /**
    * 创建时间。
@@ -60,12 +60,12 @@ export const balanceLedger = sqliteTable(LEDGER_TABLE, {
   /**
    * 本次金额变动，单位为 microcredits。
    */
-  amount_microcredits: integer("amount_microcredits").notNull(),
+  amount: integer("amount").notNull(),
 
   /**
    * 变动后的余额，单位为 microcredits。
    */
-  balance_after_microcredits: integer("balance_after_microcredits").notNull(),
+  balance_after: integer("balance_after").notNull(),
 
   /**
    * 可读说明。
@@ -105,7 +105,7 @@ export const balanceTopups = sqliteTable(TOPUP_TABLE, {
   /**
    * 充值金额，单位为 microcredits。
    */
-  amount_microcredits: integer("amount_microcredits").notNull(),
+  amount: integer("amount").notNull(),
 
   /**
    * 充值单状态。
@@ -160,7 +160,7 @@ export const balanceRedeemCodes = sqliteTable(REDEEM_CODE_TABLE, {
   /**
    * 充值金额，单位为 microcredits。
    */
-  amount_microcredits: integer("amount_microcredits").notNull(),
+  amount: integer("amount").notNull(),
 
   /**
    * redeem_code 状态。

@@ -22,10 +22,6 @@ interface BalanceMutationBody extends Record<string, unknown>, BalanceExtra {
    */
   amount?: number;
 
-  /**
-   * 变动金额，单位为 microcredits。
-   */
-  amount_microcredits?: number;
 }
 
 interface BalanceFinishTopupBody extends Record<string, unknown>, BalanceExtra {
@@ -57,11 +53,6 @@ interface BalanceRedeemCodeCreateBody extends Record<string, unknown>, BalanceEx
    * redeem_code 金额。
    */
   amount?: number;
-
-  /**
-   * redeem_code 金额，单位为 microcredits。
-   */
-  amount_microcredits?: number;
 
   /**
    * 可选自定义 redeem_code。
@@ -230,7 +221,6 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
       const body = await c.json<BalanceRedeemCodeCreateBody>();
       return c.jsonResponse(await service.createRedeemCode({
         amount: Number(body.amount),
-        amount_microcredits: body.amount_microcredits,
         code: body.code,
         note: body.note,
         ref: body.ref,

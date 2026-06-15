@@ -35,12 +35,10 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     }))).json()
 
     assert.equal((await balance.read("user_1")).balance, 100_000_000)
-    assert.equal((await balance.read("user_1")).balance_microcredits, 100_000_000)
     assert.equal((await balance.require("user_1", 30)).user_id, "user_1")
 
     const debit = await balance.sub("user_1", 20, { note: "chat" })
     assert.equal(debit.balance, 80_000_000)
-    assert.equal(debit.balance_microcredits, 80_000_000)
 
     const meResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
@@ -50,7 +48,6 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     assert.equal(meResponse.status, 200)
     const me = await meResponse.json()
     assert.equal(me.balance, 80_000_000)
-    assert.equal(me.balance_microcredits, 80_000_000)
 
     const topupResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
@@ -60,8 +57,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     assert.equal(topupResponse.status, 200)
     const topup = await topupResponse.json()
     assert.equal(topup.status, "pending")
-    assert.equal(topup.amount, 50)
-    assert.equal(topup.amount_microcredits, 50_000_000)
+    assert.equal(topup.amount, 50_000_000)
     assert.equal(topup.amount_usd_cents, 5000)
 
     const finishResponse = await base.handleRequest(adminRequest(adminSecret, {
@@ -88,7 +84,6 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     assert.equal(redeemResponse.status, 200)
     const redeemed = await redeemResponse.json()
     assert.equal(redeemed.account.balance, 170_000_000)
-    assert.equal(redeemed.account.balance_microcredits, 170_000_000)
     assert.equal(redeemed.redeem_code.status, "redeemed")
     assert.equal(redeemed.redeem_code.redeemed_by_user_id, "user_1")
 
@@ -129,7 +124,6 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     assert.equal(usersResponse.status, 200)
     const users = await usersResponse.json()
     assert.equal(users.items[0].balance, 170_000_000)
-    assert.equal(users.items[0].balance_microcredits, 170_000_000)
 
     const redeemCodesResponse = await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/balance/redeem-codes?limit=10",

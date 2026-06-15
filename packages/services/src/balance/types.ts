@@ -3,9 +3,8 @@
  *
  * 关键说明（中文）
  * - 存储与计算使用 microcredits，1 credit = 1_000_000 microcredits
- * - API 中 `balance` / `balance_after` 表示 microcredits 整数
- * - `balance_microcredits` / `balance_after_microcredits` 是同值的显式说明字段
- * - `amount` 仍表示用户可理解的 credits 金额，`amount_microcredits` 表示精确整数金额
+ * - API 与表字段使用普通业务名：`balance` / `amount` / `balance_after`
+ * - 这些余额字段的数值单位是 microcredits；说明只放在文档里，不放字段名里
  * - `redeem_code` 是一次性兑换码，用于直接给用户充值
  * - 充值单 `topup` 与 `redeem_code` 是两条不同语义的充值链路
  */
@@ -80,16 +79,8 @@ export interface BalanceAccount extends Record<string, unknown> {
 
   /**
    * 当前可用余额，单位为 microcredits。
-   *
-   * 说明：为了让 API 的余额语义明确，`balance` 本身就是 microcredits；
-   * `balance_microcredits` 保留为同值的显式别名。
    */
   balance: number;
-
-  /**
-   * 当前可用余额，单位为 microcredits。
-   */
-  balance_microcredits: number;
 
   /**
    * 账户创建时间。
@@ -122,7 +113,7 @@ export interface BalanceLedgerEntry extends Record<string, unknown> {
   kind: BalanceLedgerKind;
 
   /**
-   * 本次变动金额，单位为 credits。
+   * 本次变动金额，单位为 microcredits。
    *
    * 约定：
    * - 加款为正数
@@ -131,22 +122,9 @@ export interface BalanceLedgerEntry extends Record<string, unknown> {
   amount: number;
 
   /**
-   * 本次变动金额，单位为 microcredits。
-   */
-  amount_microcredits: number;
-
-  /**
    * 本次变动后的余额快照，单位为 microcredits。
-   *
-   * 说明：`balance_after` 本身就是 microcredits；
-   * `balance_after_microcredits` 保留为同值的显式别名。
    */
   balance_after: number;
-
-  /**
-   * 本次变动后的余额快照，单位为 microcredits。
-   */
-  balance_after_microcredits: number;
 
   /**
    * 流水说明。
@@ -184,14 +162,9 @@ export interface BalanceTopup extends Record<string, unknown> {
   user_id: string;
 
   /**
-   * 充值金额，单位为 credits。
-   */
-  amount: number;
-
-  /**
    * 充值金额，单位为 microcredits。
    */
-  amount_microcredits: number;
+  amount: number;
 
   /**
    * 充值金额，单位为 USD cents。
@@ -239,14 +212,9 @@ export interface BalanceRedeemCode extends Record<string, unknown> {
   redeem_code_id: string;
 
   /**
-   * 充值金额，单位为 credits。
-   */
-  amount: number;
-
-  /**
    * 充值金额，单位为 microcredits。
    */
-  amount_microcredits: number;
+  amount: number;
 
   /**
    * 当前状态。
@@ -304,13 +272,10 @@ export interface BalanceRedeemCode extends Record<string, unknown> {
 export interface BalanceCreateRedeemCodeInput extends BalanceExtra {
   /**
    * 兑换成功后要充值到用户账户的额度，单位为 credits。
+   *
+   * 服务内部会转换成 microcredits 存储。
    */
   amount: number;
-
-  /**
-   * 兑换成功后要充值到用户账户的额度，单位为 microcredits。
-   */
-  amount_microcredits?: number;
 
   /**
    * 可选自定义兑换码明文。

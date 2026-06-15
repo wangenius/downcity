@@ -80,7 +80,7 @@ export async function createStripeCheckoutSession(
 function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
   const direct = Number(topup.amount_usd_cents);
   if (Number.isSafeInteger(direct) && direct > 0) return direct;
-  const fallback = Math.round(Number(topup.amount) * 100);
+  const fallback = Math.round(Number(topup.amount) / 10_000);
   if (!Number.isSafeInteger(fallback) || fallback <= 0) {
     throw new TypeError("topup amount_usd_cents must be a positive integer");
   }

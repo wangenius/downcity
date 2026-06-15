@@ -457,8 +457,8 @@ function build_city_items(params: {
         id: "balance",
         title: params.balance
           ? t({
-            zh: `余额：${params.balance.balance} microcredits`,
-            en: `Balance: ${params.balance.balance} microcredits`,
+            zh: `余额：${params.balance.balance}`,
+            en: `Balance: ${params.balance.balance}`,
           })
           : t({ zh: "余额：暂不可用", en: "Balance: unavailable" }),
         subtitle: params.balance
@@ -932,8 +932,8 @@ function build_city_subtitle(
     : t({ zh: "未登录", en: "not signed in" });
   const balance_text = balance
     ? t({
-      zh: ` · 余额 ${balance.balance} microcredits`,
-      en: ` · balance ${balance.balance} microcredits`,
+      zh: ` · 余额 ${balance.balance}`,
+      en: ` · balance ${balance.balance}`,
     })
     : "";
   return `${connection.city_url} · ${login_state}${balance_text}`;
@@ -996,7 +996,7 @@ function format_login_detail(connection: TownCityConnectionState): string {
 function format_balance_detail(account: TownCityBalanceAccount): string {
   return [
     `{bold}${t({ zh: "余额", en: "Balance" })}{/bold}`,
-    `${account.balance} microcredits`,
+    String(account.balance),
     "",
     `user: ${account.user_id}`,
     `created: ${account.created_at}`,
@@ -1042,7 +1042,7 @@ function format_recharge_result(result: TownCityRechargeResult): string {
     : "";
   return [
     `{bold}${t({ zh: "充值已创建", en: "Recharge created" })}{/bold}`,
-    `amount: ${result.topup.amount} credits (${result.topup.amount_microcredits} microcredits)`,
+    `amount: ${result.topup.amount}`,
     `status: ${result.topup.status}`,
     `topup: ${result.topup.topup_id}`,
     `method: ${result.method_id}`,

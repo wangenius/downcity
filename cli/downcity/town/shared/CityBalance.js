@@ -70,11 +70,10 @@ export async function emitCurrentTownCityBalance() {
     emitCliBlock({
         tone: "success",
         title: "User balance",
-        summary: `${account.balance} ${account.unit}`,
+        summary: `${account.balance} microcredits`,
         facts: [
             { label: "user", value: account.user_id },
-            { label: "balance", value: String(account.balance) },
-            { label: "unit", value: account.unit },
+            { label: "balance", value: `${account.balance} microcredits` },
             { label: "updated", value: account.updated_at },
         ],
     });
@@ -89,7 +88,7 @@ export function emitTownCityRechargeResult(result) {
         title: "User recharge",
         summary: result.topup.status,
         facts: [
-            { label: "amount", value: `${result.topup.amount} ${result.topup.unit}` },
+            { label: "amount", value: `${result.topup.amount} credits (${result.topup.amount_microcredits} microcredits)` },
             { label: "topup", value: result.topup.topup_id },
             { label: "method", value: result.method_id },
             ...(result.checkout.payment_id

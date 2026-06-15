@@ -3,6 +3,7 @@
  *
  * 关键点（中文）
  * - 这些类型只描述 Town CLI 用户侧展示与调用结果。
+ * - `balance` 是 microcredits 整数；`balance_microcredits` 是同值的显式说明字段。
  * - 真实余额账户、充值单与支付记录仍由 City 的 balance/payment 服务定义。
  */
 /**
@@ -14,13 +15,13 @@ export interface TownCityBalanceAccount extends Record<string, unknown> {
      */
     user_id: string;
     /**
-     * 当前可用余额。
+     * 当前可用余额，单位为 microcredits。
      */
     balance: number;
     /**
-     * 余额单位。
+     * 当前可用余额，单位为 microcredits。
      */
-    unit: string;
+    balance_microcredits: number;
     /**
      * 账户创建时间。
      */
@@ -47,9 +48,9 @@ export interface TownCityBalanceTopup extends Record<string, unknown> {
      */
     amount: number;
     /**
-     * 余额单位。
+     * 充值金额，单位为 microcredits。
      */
-    unit: string;
+    amount_microcredits: number;
     /**
      * 充值单状态。
      */

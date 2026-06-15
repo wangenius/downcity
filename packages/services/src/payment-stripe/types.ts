@@ -27,11 +27,6 @@ export interface StripePaymentTopupRecord extends Record<string, unknown> {
   amount: number;
 
   /**
-   * 余额单位。
-   */
-  unit: string;
-
-  /**
    * 充值单状态。
    */
   status: string;

@@ -20,7 +20,6 @@ const balance: PaymentServiceBalanceBridge = {
       topup_id,
       user_id: "user_1",
       amount: 100,
-      unit: "credits",
       status: "pending",
       note: "demo",
     };
@@ -30,7 +29,6 @@ const balance: PaymentServiceBalanceBridge = {
       topup_id,
       user_id: "user_1",
       amount: 100,
-      unit: "credits",
       status: "paid",
       note: "demo",
     };

@@ -142,7 +142,6 @@ async function init_city(env: Env): Promise<CityBase> {
     record_usage_errors: true,
     balance: {
       init: INITIAL_BALANCE,
-      unit: "credits",
     },
     pricing_rules: [
       {

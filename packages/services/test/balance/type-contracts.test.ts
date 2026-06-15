@@ -8,7 +8,6 @@ async function verifyBalanceServiceContract(): Promise<void> {
 
   const balance = balanceService({
     init: 100,
-    unit: "credits",
   });
 
   base.use(balance);

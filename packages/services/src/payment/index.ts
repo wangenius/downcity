@@ -161,7 +161,6 @@ export function paymentService(options: PaymentServiceOptions): ServiceDefinitio
             status: "pending",
             checkout_url: created.checkout_url,
             metadata_json: JSON.stringify({
-              unit: topup.unit,
               note: topup.note,
               provider: provider.id,
               ...(created.metadata ?? {}),

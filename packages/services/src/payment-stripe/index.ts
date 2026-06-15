@@ -197,7 +197,6 @@ export function stripePaymentService(options: StripePaymentServiceOptions): Serv
             status: "pending",
             checkout_url: created.checkout_url,
             metadata_json: JSON.stringify({
-              unit: topup.unit,
               note: topup.note,
             }),
             created_at: now,

@@ -120,7 +120,6 @@ export async function createDodoCheckoutSession(
       amount: String(input.topup.amount),
       amount_microcredits: String(input.topup.amount_microcredits ?? ""),
       amount_usd_cents: String(readTopupAmountUsdCents(input.topup)),
-      unit: input.topup.unit,
     },
   });
 

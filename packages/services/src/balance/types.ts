@@ -2,8 +2,10 @@
  * Balance 服务对外类型定义。
  *
  * 关键说明（中文）
- * - 余额单位默认值是 `credits`，并与 USD 1:1 挂钩
  * - 存储与计算使用 microcredits，1 credit = 1_000_000 microcredits
+ * - API 中 `balance` / `balance_after` 表示 microcredits 整数
+ * - `balance_microcredits` / `balance_after_microcredits` 是同值的显式说明字段
+ * - `amount` 仍表示用户可理解的 credits 金额，`amount_microcredits` 表示精确整数金额
  * - `redeem_code` 是一次性兑换码，用于直接给用户充值
  * - 充值单 `topup` 与 `redeem_code` 是两条不同语义的充值链路
  */
@@ -26,13 +28,6 @@ export interface BalanceServiceOptions {
    */
   init_microcredits?: number;
 
-  /**
-   * 余额单位名称。
-   *
-   * 例如：`credits`、`points`、`tokens`。
-   * 默认值为 `credits`。
-   */
-  unit?: string;
 }
 
 /**
@@ -84,7 +79,10 @@ export interface BalanceAccount extends Record<string, unknown> {
   user_id: string;
 
   /**
-   * 当前可用余额，单位为 credits。
+   * 当前可用余额，单位为 microcredits。
+   *
+   * 说明：为了让 API 的余额语义明确，`balance` 本身就是 microcredits；
+   * `balance_microcredits` 保留为同值的显式别名。
    */
   balance: number;
 
@@ -92,11 +90,6 @@ export interface BalanceAccount extends Record<string, unknown> {
    * 当前可用余额，单位为 microcredits。
    */
   balance_microcredits: number;
-
-  /**
-   * 余额单位。
-   */
-  unit: string;
 
   /**
    * 账户创建时间。
@@ -143,7 +136,10 @@ export interface BalanceLedgerEntry extends Record<string, unknown> {
   amount_microcredits: number;
 
   /**
-   * 本次变动后的余额快照，单位为 credits。
+   * 本次变动后的余额快照，单位为 microcredits。
+   *
+   * 说明：`balance_after` 本身就是 microcredits；
+   * `balance_after_microcredits` 保留为同值的显式别名。
    */
   balance_after: number;
 
@@ -151,11 +147,6 @@ export interface BalanceLedgerEntry extends Record<string, unknown> {
    * 本次变动后的余额快照，单位为 microcredits。
    */
   balance_after_microcredits: number;
-
-  /**
-   * 余额单位。
-   */
-  unit: string;
 
   /**
    * 流水说明。
@@ -208,11 +199,6 @@ export interface BalanceTopup extends Record<string, unknown> {
   amount_usd_cents: number;
 
   /**
-   * 余额单位。
-   */
-  unit: string;
-
-  /**
    * 当前状态。
    */
   status: BalanceTopupStatus;
@@ -261,11 +247,6 @@ export interface BalanceRedeemCode extends Record<string, unknown> {
    * 充值金额，单位为 microcredits。
    */
   amount_microcredits: number;
-
-  /**
-   * 余额单位。
-   */
-  unit: string;
 
   /**
    * 当前状态。

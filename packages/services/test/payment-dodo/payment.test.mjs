@@ -133,7 +133,7 @@ test("paymentService creates Dodo checkout sessions and finishes topups through 
       provider: "dodo",
       sync_status: "applied",
     })
-    assert.equal((await balance.read("user_1")).balance, 50)
+    assert.equal((await balance.read("user_1")).balance, 50_000_000)
 
     const myPaymentsResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
@@ -227,7 +227,6 @@ function createBalanceBridge() {
         topup_id: `topup_${Math.random().toString(36).slice(2, 10)}`,
         user_id: userId,
         amount,
-        unit: "credits",
         status: "pending",
         note: extra.note || "",
       }
@@ -248,10 +247,11 @@ function createBalanceBridge() {
       return { ...topup }
     },
     async read(userId) {
+      const balance = (balances.get(userId) || 0) * 1_000_000
       return {
         user_id: userId,
-        balance: balances.get(userId) || 0,
-        unit: "credits",
+        balance,
+        balance_microcredits: balance,
       }
     },
   }

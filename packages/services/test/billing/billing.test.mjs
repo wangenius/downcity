@@ -18,7 +18,6 @@ test("billingService settles AI metering into balance charges", async () => {
 
     const balance = balanceService({
       init: 1,
-      unit: "credits",
     })
     base.use(balance)
     base.use(usageService())
@@ -78,7 +77,7 @@ test("billingService settles AI metering into balance charges", async () => {
 
     const account = await balance.read("user_1")
     assert.equal(account.balance_microcredits, 989_600)
-    assert.equal(account.balance, 0.9896)
+    assert.equal(account.balance, 989_600)
 
     const chargesResponse = await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/billing/charges",
@@ -114,7 +113,6 @@ test("billingService supports per-million token pricing rules", async () => {
 
     const balance = balanceService({
       init: 1,
-      unit: "credits",
     })
     base.use(balance)
     base.use(billingService({

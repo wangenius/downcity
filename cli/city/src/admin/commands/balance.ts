@@ -14,8 +14,8 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
           label: t({ zh: "查看余额账户", en: "List balance accounts" }),
           value: "users",
           hint: t({
-            zh: "查看用户当前余额、单位和更新时间。",
-            en: "List user balances, units, and update times.",
+            zh: "查看用户当前余额和更新时间。",
+            en: "List user balances and update times.",
           }),
         },
         {
@@ -104,9 +104,9 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
         const items = await runtime.with_loading(t({ zh: "余额账户", en: "Balance Accounts" }), async () => await a.balance.listUsers(30));
         await runtime.show_table({
           title: t({ zh: `${items.length} 个余额账户`, en: `${items.length} Balance Accounts` }),
-          columns: [t({ zh: "用户", en: "User" }), t({ zh: "余额", en: "Balance" }), t({ zh: "单位", en: "Unit" }), t({ zh: "更新时间", en: "Updated" })],
+          columns: [t({ zh: "用户", en: "User" }), t({ zh: "余额 (microcredits)", en: "Balance (microcredits)" }), t({ zh: "更新时间", en: "Updated" })],
           rows: items.map((item) => ({
-            cells: [item.user_id, String(item.balance), item.unit, item.updated_at.slice(0, 19)],
+            cells: [item.user_id, String(item.balance), item.updated_at.slice(0, 19)],
           })),
           empty_message: t({ zh: "暂无余额账户。", en: "No balance accounts." }),
         });
@@ -121,7 +121,7 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
         }));
         await runtime.show_table({
           title: t({ zh: `${items.length} 条余额历史`, en: `${items.length} Balance History` }),
-          columns: [t({ zh: "创建时间", en: "Created" }), t({ zh: "用户", en: "User" }), t({ zh: "类型", en: "Kind" }), t({ zh: "金额", en: "Amount" }), t({ zh: "变更后余额", en: "Balance After" }), t({ zh: "备注", en: "Note" })],
+          columns: [t({ zh: "创建时间", en: "Created" }), t({ zh: "用户", en: "User" }), t({ zh: "类型", en: "Kind" }), t({ zh: "金额 (credits)", en: "Amount (credits)" }), t({ zh: "变更后余额 (microcredits)", en: "Balance After (microcredits)" }), t({ zh: "备注", en: "Note" })],
           rows: items.map((item) => ({
             cells: [item.created_at.slice(0, 19), item.user_id, item.kind, String(item.amount), String(item.balance_after), item.note],
           })),
@@ -138,9 +138,9 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
         }));
         await runtime.show_table({
           title: t({ zh: `${items.length} 个充值单`, en: `${items.length} Topups` }),
-          columns: ["Topup ID", t({ zh: "用户", en: "User" }), t({ zh: "金额", en: "Amount" }), t({ zh: "单位", en: "Unit" }), t({ zh: "状态", en: "Status" }), t({ zh: "备注", en: "Note" })],
+          columns: ["Topup ID", t({ zh: "用户", en: "User" }), t({ zh: "金额", en: "Amount" }), "Microcredits", t({ zh: "状态", en: "Status" }), t({ zh: "备注", en: "Note" })],
           rows: items.map((item) => ({
-            cells: [item.topup_id, item.user_id, String(item.amount), item.unit, item.status, item.note],
+            cells: [item.topup_id, item.user_id, String(item.amount), String(item.amount_microcredits), item.status, item.note],
           })),
           empty_message: t({ zh: "暂无充值单。", en: "No topups." }),
         });
@@ -157,13 +157,13 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
         }));
         await runtime.show_table({
           title: t({ zh: `${items.length} 个兑换码`, en: `${items.length} Redeem Codes` }),
-          columns: ["Redeem Code ID", t({ zh: "Code", en: "Code" }), t({ zh: "金额", en: "Amount" }), t({ zh: "单位", en: "Unit" }), t({ zh: "状态", en: "Status" }), t({ zh: "归属用户", en: "Owner" }), t({ zh: "备注", en: "Note" })],
+          columns: ["Redeem Code ID", t({ zh: "Code", en: "Code" }), t({ zh: "金额", en: "Amount" }), "Microcredits", t({ zh: "状态", en: "Status" }), t({ zh: "归属用户", en: "Owner" }), t({ zh: "备注", en: "Note" })],
           rows: items.map((item) => ({
             cells: [
               item.redeem_code_id,
               item.code_mask,
               String(item.amount),
-              item.unit,
+              String(item.amount_microcredits),
               item.status,
               item.redeemed_by_user_id || "-",
               item.note,
@@ -191,8 +191,8 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
           ? await a.balance.add({ user_id: userId, amount, note: note ?? "" })
           : await a.balance.sub({ user_id: userId, amount, note: note ?? "" }));
         await runtime.show_message("success", t({
-          zh: `余额已更新：${account.user_id} -> ${account.balance} ${account.unit}`,
-          en: `balance updated: ${account.user_id} -> ${account.balance} ${account.unit}`,
+          zh: `余额已更新：${account.user_id} -> ${account.balance} microcredits`,
+          en: `balance updated: ${account.user_id} -> ${account.balance} microcredits`,
         }));
         continue;
       }
@@ -215,8 +215,8 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
           note: note ?? "",
         }));
         await runtime.show_text(t({ zh: "兑换码已创建", en: "Redeem Code Created" }), t({
-          zh: `redeem_code 已创建：${issued.redeem_code_id}\ncode: ${issued.code}\namount: +${issued.amount} ${issued.unit}`,
-          en: `redeem_code created: ${issued.redeem_code_id}\ncode: ${issued.code}\namount: +${issued.amount} ${issued.unit}`,
+          zh: `redeem_code 已创建：${issued.redeem_code_id}\ncode: ${issued.code}\namount: +${issued.amount} credits (${issued.amount_microcredits} microcredits)`,
+          en: `redeem_code created: ${issued.redeem_code_id}\ncode: ${issued.code}\namount: +${issued.amount} credits (${issued.amount_microcredits} microcredits)`,
         }));
         continue;
       }

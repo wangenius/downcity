@@ -43,8 +43,6 @@ export interface PaymentTopupRecord extends Record<string, unknown> {
   amount_microcredits?: number;
   /** 充值金额，单位为 USD cents，用于支付 provider。 */
   amount_usd_cents?: number;
-  /** 余额单位。 */
-  unit: string;
   /** 充值单状态。 */
   status: string;
   /** 充值说明。 */

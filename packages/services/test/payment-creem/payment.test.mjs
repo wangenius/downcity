@@ -203,7 +203,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     })
 
     const afterTopup = await balance.read("user_1")
-    assert.equal(afterTopup.balance, 50)
+    assert.equal(afterTopup.balance, 50_000_000)
 
     const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
@@ -220,7 +220,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
       provider: "creem",
       sync_status: "applied",
     })
-    assert.equal((await balance.read("user_1")).balance, 50)
+    assert.equal((await balance.read("user_1")).balance, 50_000_000)
 
     const myPaymentsResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
@@ -521,7 +521,6 @@ function createBalanceBridge() {
         topup_id: `topup_${Math.random().toString(36).slice(2, 10)}`,
         user_id: userId,
         amount,
-        unit: "credits",
         status: "pending",
         note: extra.note || "",
       }
@@ -542,10 +541,11 @@ function createBalanceBridge() {
       return { ...topup }
     },
     async read(userId) {
+      const balance = (balances.get(userId) || 0) * 1_000_000
       return {
         user_id: userId,
-        balance: balances.get(userId) || 0,
-        unit: "credits",
+        balance,
+        balance_microcredits: balance,
       }
     },
   }

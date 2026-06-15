@@ -203,7 +203,6 @@ export function dodoPaymentService(options: DodoPaymentServiceOptions): ServiceD
             status: "pending",
             checkout_url: created.checkout_url,
             metadata_json: JSON.stringify({
-              unit: topup.unit,
               note: topup.note,
               product_id: productId,
             }),

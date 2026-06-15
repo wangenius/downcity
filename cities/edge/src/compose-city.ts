@@ -30,8 +30,6 @@ import {
 export interface ComposeCityBalanceOptions {
   /** 初始化赠送余额。 */
   init?: number;
-  /** 余额单位。 */
-  unit?: string;
 }
 
 /**
@@ -91,7 +89,6 @@ export function compose_city(options: ComposeCityBaseOptions): {
 
   const balance = balanceService({
     init: options.balance?.init,
-    unit: options.balance?.unit,
   });
   city.use(balance);
 

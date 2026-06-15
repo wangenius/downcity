@@ -198,9 +198,8 @@ export function parseAccountRow(row: BalanceAccount): BalanceAccount {
   const balance_microcredits = Number(row.balance_microcredits ?? row.balance);
   return {
     user_id: String(row.user_id),
-    balance: microcreditsToCredits(balance_microcredits),
+    balance: balance_microcredits,
     balance_microcredits,
-    unit: String(row.unit),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
@@ -218,9 +217,8 @@ export function parseLedgerRow(row: BalanceLedgerEntry): BalanceLedgerEntry {
     kind: String(row.kind) as BalanceLedgerKind,
     amount: microcreditsToCredits(amount_microcredits),
     amount_microcredits,
-    balance_after: microcreditsToCredits(balance_after_microcredits),
+    balance_after: balance_after_microcredits,
     balance_after_microcredits,
-    unit: String(row.unit),
     note: String(row.note ?? ""),
     ref: String(row.ref ?? ""),
     metadata_json: String(row.metadata_json ?? "{}"),
@@ -239,7 +237,6 @@ export function parseTopupRow(row: BalanceTopup): BalanceTopup {
     amount: microcreditsToCredits(amount_microcredits),
     amount_microcredits,
     amount_usd_cents: microcreditsToUsdCents(amount_microcredits),
-    unit: String(row.unit),
     status: String(row.status) as BalanceTopupStatus,
     note: String(row.note ?? ""),
     ref: String(row.ref ?? ""),
@@ -258,7 +255,6 @@ export function parseRedeemCodeRow(row: BalanceRedeemCode & { code_hash?: string
     redeem_code_id: String(row.redeem_code_id),
     amount: microcreditsToCredits(amount_microcredits),
     amount_microcredits,
-    unit: String(row.unit),
     status: String(row.status) as BalanceRedeemCodeStatus,
     code_mask: String(row.code_mask ?? ""),
     note: String(row.note ?? ""),

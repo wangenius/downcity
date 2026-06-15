@@ -125,6 +125,7 @@ function createCloudflareWorkersFiles(name, target) {
             path: "package.json",
             content: `${JSON.stringify({
                 name: package_name,
+                version: "0.0.1",
                 private: true,
                 type: "module",
                 scripts: {

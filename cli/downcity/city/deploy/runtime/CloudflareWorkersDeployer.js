@@ -16,6 +16,7 @@ import { resolveCloudflareAccount } from "./CloudflareAccountResolver.js";
 import { resolveD1Database } from "./D1DatabaseResolver.js";
 import { writeWranglerConfig } from "./WranglerConfigWriter.js";
 import { runCommand } from "./CommandRunner.js";
+import { bumpProjectPatchVersion } from "./ProjectVersionManager.js";
 import { runPackageDeployScripts } from "./PackageScriptRunner.js";
 /**
  * 部署 Cloudflare Workers City 项目。
@@ -43,6 +44,17 @@ export async function deployCloudflareWorkers(config_file, options) {
     });
     const account_id = account_result.account_id;
     env_file = account_result.env_file;
+    const version_bump = options.dry_run === true ? undefined : bumpProjectPatchVersion(config_file.project_dir);
+    if (version_bump) {
+        emitCliBlock({
+            tone: "success",
+            title: "Project version bumped",
+            facts: [
+                { label: "from", value: version_bump.previous_version },
+                { label: "to", value: version_bump.next_version },
+            ],
+        });
+    }
     await runPackageDeployScripts({
         project_dir: config_file.project_dir,
         skip_build: options.skip_build,

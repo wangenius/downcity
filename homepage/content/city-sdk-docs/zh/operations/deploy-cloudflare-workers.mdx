@@ -110,6 +110,7 @@ city deploy ./my-city --dry-run
 - 读取目标目录的 `city.json`
 - 加载目标目录的 `.env`
 - 根据 `city.json.target` 检查目标平台登录态；Cloudflare Workers 会自动唤起 Wrangler 登录或引导选择 account
+- 如果不是 `--dry-run`，先把项目 `package.json.version` 自动做一次 patch 自增
 - 如果 package.json 有 `build`，执行 `pnpm build`
 - 如果 package.json 有 `typecheck`，执行 `pnpm typecheck`
 - 对 `cloudflare-workers` target 按 `CITY_D1_DATABASE_NAME` 查找 D1；不存在时自动创建
@@ -120,6 +121,8 @@ city deploy ./my-city --dry-run
 - 在传入 `--verify` 时请求 Worker `/health`
 
 `.env` 是本地部署绑定文件，不应该提交到 Git。`city.json` 仍然只保留可提交的项目声明。
+
+`city deploy --dry-run` 和 `city deploy --verify-only` 不会修改项目版本号。
 
 ## 6. 开发者 edge 快捷示例
 

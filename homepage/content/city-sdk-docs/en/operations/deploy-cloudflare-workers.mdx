@@ -110,6 +110,7 @@ city deploy ./my-city --dry-run
 - reads `city.json` from the target directory
 - loads `.env` from the target directory
 - checks the target platform identity from `city.json.target`; Cloudflare Workers opens Wrangler login or guides account selection when needed
+- if this is not `--dry-run`, automatically bumps `package.json.version` by one patch version before deployment
 - runs `pnpm build` if package.json has a `build` script
 - runs `pnpm typecheck` if package.json has a `typecheck` script
 - prepares D1 for the `cloudflare-workers` target by looking up `CITY_D1_DATABASE_NAME`, and creates it automatically when missing
@@ -120,6 +121,8 @@ city deploy ./my-city --dry-run
 - requests Worker `/health` when `--verify` is passed
 
 `.env` is the local deploy binding file and should not be committed to Git. `city.json` stays as the commit-safe project declaration.
+
+`city deploy --dry-run` and `city deploy --verify-only` do not change the project version.
 
 ## 6. Developer edge starter
 

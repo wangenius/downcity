@@ -3,8 +3,9 @@
  *
  * 关键说明（中文）
  * - 金额输入与 `amount` 展示字段使用 credits
- * - 余额 API 字段 `balance` / `balance_after` 使用 microcredits
- * - 存储与扣款使用 microcredits
+ * - 内部账务与管理端余额字段 `balance` / `balance_after` 使用 microcredits
+ * - 用户侧 `/v1/balance/me` 使用 credits 作为主字段，并补充 microcredits
+ * - 存储与扣款统一使用 microcredits
  * - 所有转换集中在这里，避免各模块重复处理精度
  */
 

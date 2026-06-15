@@ -9,7 +9,7 @@
 import type { ServiceInstallContext, ServiceRouteContext } from "@downcity/city";
 import type { BalanceService } from "./service.js";
 import type { BalanceExtra } from "./types.js";
-import { normalizeUserId, readRequired } from "./utils.js";
+import { normalizeUserId, readRequired, toBalanceUserView } from "./utils.js";
 
 interface BalanceMutationBody extends Record<string, unknown>, BalanceExtra {
   /**
@@ -82,7 +82,7 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
     method: "GET",
     path: "/me",
     auth: ["user"],
-    handler: async (c) => c.jsonResponse(await service.read(readUserId(c))),
+    handler: async (c) => c.jsonResponse(toBalanceUserView(await service.read(readUserId(c)))),
   });
 
   ctx.route({

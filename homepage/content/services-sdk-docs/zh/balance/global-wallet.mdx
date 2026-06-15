@@ -9,7 +9,8 @@ description: "为什么 @downcity/services 按 user 维护余额，而不是按 
 
 - `1 credit = 1 USD`
 - `1 credit = 1,000,000 microcredits`
-- API 会同时返回面向用户的 `balance` 和精确对账用的 `balance_microcredits`
+- 用户侧 `GET /v1/balance/me` 会返回以 credits 为单位的 `balance`，并补充 `microcredits`、`display`、`conversion`
+- 管理端与内部账务字段仍然统一使用 microcredits
 
 也就是说：
 

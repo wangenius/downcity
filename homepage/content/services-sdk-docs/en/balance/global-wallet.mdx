@@ -9,7 +9,8 @@ By default, credits are USD-linked:
 
 - `1 credit = 1 USD`
 - `1 credit = 1,000,000 microcredits`
-- API responses expose both user-facing `balance` and exact `balance_microcredits`
+- user-facing `GET /v1/balance/me` returns `balance` in credits, plus `microcredits`, `display`, and `conversion`
+- admin and internal accounting fields still use microcredits
 
 That means:
 

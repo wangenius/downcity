@@ -47,7 +47,14 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     }))
     assert.equal(meResponse.status, 200)
     const me = await meResponse.json()
-    assert.equal(me.balance, 80_000_000)
+    assert.equal(me.balance, 80)
+    assert.equal(me.unit, "credits")
+    assert.equal(me.microcredits, 80_000_000)
+    assert.deepEqual(me.conversion, {
+      microcredits_per_credit: 1_000_000,
+      credit_decimals: 6,
+    })
+    assert.equal(me.display, "80")
 
     const topupResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,

@@ -12,6 +12,7 @@ export {
 
 export type {
   BalanceAccount,
+  BalanceCreditsConversion,
   BalanceCreateRedeemCodeInput,
   BalanceExtra,
   BalanceHistoryQuery,
@@ -26,6 +27,7 @@ export type {
   BalanceTopup,
   BalanceTopupQuery,
   BalanceTopupStatus,
+  BalanceUserBalance,
 } from "./types.js";
 
 export {

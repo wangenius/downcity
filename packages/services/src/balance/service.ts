@@ -98,7 +98,7 @@ export class BalanceService extends InstallableService {
     }, "init");
     this.instruction = [
       "提供用户级全局余额、余额流水、充值单与 redeem_code 能力。",
-      "`balance` / `amount` / `balance_after` 字段均使用 microcredits 整数。",
+      "内部账务与管理端的 `balance` / `amount` / `balance_after` 字段均使用 microcredits 整数；用户侧 `/me` 返回 credits 主字段并附带 microcredits。",
       `首次自动开户发放 ${this.initMicrocredits} microcredits。`,
       "推荐在业务 hook 中调用 require/add/sub，把具体计费策略放在业务侧，而不是写死在服务内部。",
       "管理端可查询所有账户、流水、充值单与 redeem_code；用户侧可查询自己的余额、历史记录、充值单，并直接兑换 redeem_code。",

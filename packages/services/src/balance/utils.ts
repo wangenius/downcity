@@ -8,6 +8,7 @@
 
 import type {
   BalanceAccount,
+  BalanceUserBalance,
   BalanceLedgerEntry,
   BalanceLedgerKind,
   BalanceTopup,
@@ -15,7 +16,15 @@ import type {
   BalanceRedeemCode,
   BalanceRedeemCodeStatus,
 } from "./types.js";
-import { microcreditsToUsdCents } from "./amount.js";
+import {
+  formatCredits,
+  microcreditsToCredits,
+  microcreditsToUsdCents,
+} from "./amount.js";
+import {
+  CREDIT_DECIMAL_PLACES,
+  MICROCREDITS_PER_CREDIT,
+} from "../types/Amount.js";
 
 const REDEEM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -201,6 +210,26 @@ export function parseAccountRow(row: BalanceAccount): BalanceAccount {
     balance,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
+  };
+}
+
+/**
+ * 将内部余额账户转换成用户侧展示对象。
+ */
+export function toBalanceUserView(account: BalanceAccount): BalanceUserBalance {
+  const microcredits = Number(account.balance ?? 0);
+  return {
+    user_id: String(account.user_id),
+    balance: microcreditsToCredits(microcredits),
+    unit: "credits",
+    microcredits,
+    conversion: {
+      microcredits_per_credit: MICROCREDITS_PER_CREDIT,
+      credit_decimals: CREDIT_DECIMAL_PLACES,
+    },
+    display: formatCredits(microcredits),
+    created_at: String(account.created_at),
+    updated_at: String(account.updated_at),
   };
 }
 

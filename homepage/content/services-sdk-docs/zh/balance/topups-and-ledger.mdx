@@ -64,6 +64,7 @@ await admin.service("balance").action("topups/finish").invoke({
 ## 用户侧常用入口
 
 - `GET /v1/balance/me`
+  返回面向用户的 credits `balance`，并附带精确对账用的 `microcredits`
 - `GET /v1/balance/history/me`
 - `GET /v1/balance/topups/me`
 - `POST /v1/balance/topups/create`

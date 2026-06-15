@@ -3,8 +3,9 @@
  *
  * 关键说明（中文）
  * - 存储与计算使用 microcredits，1 credit = 1_000_000 microcredits
- * - API 与表字段使用普通业务名：`balance` / `amount` / `balance_after`
- * - 这些余额字段的数值单位是 microcredits；说明只放在文档里，不放字段名里
+ * - 管理端与内部账务字段使用普通业务名：`balance` / `amount` / `balance_after`
+ * - 这些账务字段的数值单位是 microcredits；说明只放在文档里，不放字段名里
+ * - 用户侧 `/v1/balance/me` 以 credits 作为主展示单位，并附带 microcredits 与换算信息
  * - `redeem_code` 是一次性兑换码，用于直接给用户充值
  * - 充值单 `topup` 与 `redeem_code` 是两条不同语义的充值链路
  */
@@ -81,6 +82,66 @@ export interface BalanceAccount extends Record<string, unknown> {
    * 当前可用余额，单位为 microcredits。
    */
   balance: number;
+
+  /**
+   * 账户创建时间。
+   */
+  created_at: string;
+
+  /**
+   * 账户最近更新时间。
+   */
+  updated_at: string;
+}
+
+/**
+ * credits 换算说明。
+ */
+export interface BalanceCreditsConversion extends Record<string, unknown> {
+  /**
+   * 一个 credit 对应多少 microcredits。
+   */
+  microcredits_per_credit: number;
+
+  /**
+   * credits 最多保留的小数位数。
+   */
+  credit_decimals: number;
+}
+
+/**
+ * 用户侧余额展示对象。
+ */
+export interface BalanceUserBalance extends Record<string, unknown> {
+  /**
+   * 用户 ID。
+   */
+  user_id: string;
+
+  /**
+   * 当前余额，单位为 credits。
+   */
+  balance: number;
+
+  /**
+   * 主余额字段的单位。
+   */
+  unit: "credits";
+
+  /**
+   * 对应的原始 microcredits 整数。
+   */
+  microcredits: number;
+
+  /**
+   * credits 与 microcredits 的换算说明。
+   */
+  conversion: BalanceCreditsConversion;
+
+  /**
+   * 适合直接展示给用户的 credits 文本。
+   */
+  display: string;
 
   /**
    * 账户创建时间。

@@ -16,6 +16,7 @@ export { balanceAccounts, balanceLedger, balanceRedeemCodes, balanceTopups } fro
 export { BalanceService, balanceService } from "./balance/service.js";
 export type {
   BalanceAccount,
+  BalanceCreditsConversion,
   BalanceCreateRedeemCodeInput,
   BalanceExtra,
   BalanceHistoryQuery,
@@ -30,6 +31,7 @@ export type {
   BalanceTopup,
   BalanceTopupQuery,
   BalanceTopupStatus,
+  BalanceUserBalance,
 } from "./balance/types.js";
 export {
   CREDIT_DECIMAL_PLACES,

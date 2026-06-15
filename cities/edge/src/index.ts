@@ -10,7 +10,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import {
   type CityBase,
-  type Context,
 } from "@downcity/city";
 import { compose_city } from "./compose-city.js";
 import {
@@ -21,7 +20,8 @@ import {
 import { createDeepSeekProvider } from "./deepseek-provider.js";
 
 const INITIAL_BALANCE = 100;
-const CHAT_COST = 10;
+const CHAT_REQUEST_COST_MICROCREDITS = 10_000;
+const IMAGE_COST_MICROCREDITS = 50_000;
 const WORKER_VERSION = "0.0.1";
 
 export interface Env {
@@ -75,7 +75,7 @@ async function init_city(env: Env): Promise<CityBase> {
     envKey: "GEMINI_API_KEY",
     defaultModelId: "gemini-2.5-flash-image",
   });
-  const { city, balance, ai } = compose_city({
+  const { city } = compose_city({
     db,
     dialect: "sqlite",
     raw: env.DB,
@@ -144,28 +144,29 @@ async function init_city(env: Env): Promise<CityBase> {
       init: INITIAL_BALANCE,
       unit: "credits",
     },
-  });
-
-  ai.hook.before(async (ctx: Context) => {
-    if (!shouldChargeAgentChat(ctx)) return;
-    await balance.require(ctx.user!.user_id, CHAT_COST);
-    ctx.locals.balance_amount = CHAT_COST;
-  });
-  ai.hook.after(async (ctx: Context) => {
-    if (!shouldChargeAgentChat(ctx)) return;
-    if (!isSuccessfulOutput(ctx.output)) return;
-
-    const amount = Number(ctx.locals.balance_amount ?? 0);
-    if (!Number.isInteger(amount) || amount <= 0) return;
-
-    await balance.sub(ctx.user!.user_id, amount, {
-      note: "agent chat",
-      meta: {
-        town_id: ctx.town?.town_id,
-        action: ctx.action?.id,
-        model_id: ctx.variant?.id,
+    pricing_rules: [
+      {
+        rule_id: "ai_chat_completions_default",
+        service_id: "ai",
+        action_id: "chat/completions",
+        request_microcredits: CHAT_REQUEST_COST_MICROCREDITS,
+        note: "Default AI chat request price",
       },
-    });
+      {
+        rule_id: "ai_image_default",
+        service_id: "ai",
+        action_id: "image",
+        image_microcredits: IMAGE_COST_MICROCREDITS,
+        note: "Default AI image price",
+      },
+      {
+        rule_id: "ai_image_create_default",
+        service_id: "ai",
+        action_id: "image/create",
+        request_microcredits: IMAGE_COST_MICROCREDITS,
+        note: "Default async AI image create price",
+      },
+    ],
   });
 
   await city.health();
@@ -215,16 +216,4 @@ function withCors(response: Response): Response {
     statusText: response.statusText,
     headers,
   });
-}
-
-function shouldChargeAgentChat(ctx: Context): boolean {
-  return Boolean(
-    ctx.identity?.kind === "user" &&
-    ctx.user?.user_id &&
-    ctx.action?.id === "chat/completions",
-  );
-}
-
-function isSuccessfulOutput(output: unknown): boolean {
-  return !(output instanceof Response) || output.status < 400;
 }

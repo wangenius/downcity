@@ -65,6 +65,7 @@ export class Provider {
   }): ModelConfig {
     return {
       id: spec.id,
+      provider_id: this.id,
       name: spec.name,
       description: spec.description,
       tags: spec.tags,

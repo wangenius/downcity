@@ -319,8 +319,10 @@ test("CityBase AI image jobs can advance through result polling", async () => {
       body: JSON.stringify({ prompt: "draw" }),
     }))
     const created = await createResponse.json()
+    assert.equal(created.status, "running")
+    assert.equal(calls, 1)
 
-    const first = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const result = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -328,19 +330,8 @@ test("CityBase AI image jobs can advance through result polling", async () => {
       },
       body: JSON.stringify({ job_id: created.job_id }),
     }))
-    assert.equal(first.status, 200)
-    assert.equal((await first.json()).status, "running")
-
-    const second = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${adminSecret}`,
-      },
-      body: JSON.stringify({ job_id: created.job_id }),
-    }))
-    assert.equal(second.status, 200)
-    assert.deepEqual(await second.json(), {
+    assert.equal(result.status, 200)
+    assert.deepEqual(await result.json(), {
       job_id: created.job_id,
       status: "succeeded",
       result: message,

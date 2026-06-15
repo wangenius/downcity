@@ -27,3 +27,12 @@ export type {
   BalanceTopupQuery,
   BalanceTopupStatus,
 } from "./types.js";
+
+export {
+  CREDIT_DECIMAL_PLACES,
+  MICROCREDITS_PER_CREDIT,
+} from "../types/Amount.js";
+export type {
+  Credits,
+  Microcredits,
+} from "../types/Amount.js";

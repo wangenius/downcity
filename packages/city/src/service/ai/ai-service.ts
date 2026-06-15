@@ -44,12 +44,20 @@ const IMAGE_JOB_POLL_AFTER_MS = 2_000;
 
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
+type UsageRecord = Record<string, unknown>;
 
 /**
  * 判断一个值是否为 HTTP Response。
  */
 function isResponse(value: unknown): value is Response {
   return typeof value === "object" && value !== null && "status" in value && "headers" in value;
+}
+
+/**
+ * 判断一个值是否为普通对象。
+ */
+function isRecord(value: unknown): value is UsageRecord {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 /**
@@ -118,6 +126,109 @@ function parseImageJobInput(raw: string): Record<string, unknown> {
   } catch {
     return {};
   }
+}
+
+/**
+ * 从输出对象中读取 provider usage。
+ */
+function extractUsage(output: unknown): unknown {
+  if (!isRecord(output)) return undefined;
+  const metadata = isRecord(output.metadata) ? output.metadata : undefined;
+  if (metadata && "usage" in metadata) return metadata.usage;
+  if (metadata && "usageMetadata" in metadata) return metadata.usageMetadata;
+  if ("usage" in output) return output.usage;
+  return undefined;
+}
+
+/**
+ * 兼容常见 provider usage 字段。
+ */
+function normalizeUsage(usage: unknown): {
+  input_tokens?: number;
+  output_tokens?: number;
+  cached_tokens?: number;
+} {
+  if (!isRecord(usage)) return {};
+  const cached_tokens = readNumberFieldValue(usage, [
+    "cachedInputTokens",
+    "cached_input_tokens",
+    "cachedTokens",
+    "cached_tokens",
+    "prompt_cache_hit_tokens",
+  ]) ?? readNestedNumberFieldValue(usage, "prompt_tokens_details", [
+    "cached_tokens",
+    "cachedTokens",
+  ]);
+  const direct_input_tokens = readNumberFieldValue(usage, [
+    "inputTokens",
+    "input_tokens",
+  ]);
+  const prompt_tokens = readNumberFieldValue(usage, [
+    "promptTokens",
+    "prompt_tokens",
+    "promptTokenCount",
+    "prompt_token_count",
+  ]);
+  const input_tokens = readNumberFieldValue(usage, ["prompt_cache_miss_tokens"])
+    ?? direct_input_tokens
+    ?? (prompt_tokens !== undefined && cached_tokens !== undefined
+      ? Math.max(prompt_tokens - cached_tokens, 0)
+      : prompt_tokens);
+
+  return {
+    ...(input_tokens !== undefined ? { input_tokens } : {}),
+    ...readNumberField(usage, [
+      "outputTokens",
+      "output_tokens",
+      "completionTokens",
+      "completion_tokens",
+      "candidatesTokenCount",
+      "candidates_token_count",
+    ], "output_tokens"),
+    ...(cached_tokens !== undefined ? { cached_tokens } : {}),
+  };
+}
+
+/**
+ * 读取多个候选数字字段。
+ */
+function readNumberField(
+  record: UsageRecord,
+  keys: string[],
+  output_key: "input_tokens" | "output_tokens" | "cached_tokens",
+): Partial<Record<"input_tokens" | "output_tokens" | "cached_tokens", number>> {
+  const value = readNumberFieldValue(record, keys);
+  return value !== undefined ? { [output_key]: value } : {};
+}
+
+function readNumberFieldValue(record: UsageRecord, keys: string[]): number | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    const normalized = Number(value);
+    if (Number.isFinite(normalized) && normalized >= 0) {
+      return normalized;
+    }
+  }
+  return undefined;
+}
+
+function readNestedNumberFieldValue(record: UsageRecord, parent: string, keys: string[]): number | undefined {
+  const nested = record[parent];
+  return isRecord(nested) ? readNumberFieldValue(nested, keys) : undefined;
+}
+
+/**
+ * 统计 UIMessage file parts 里的图片数量。
+ */
+function countImageOutputs(output: unknown): number | undefined {
+  if (!isRecord(output) || !Array.isArray(output.parts)) return undefined;
+  const count = output.parts.filter((part) => {
+    if (!isRecord(part)) return false;
+    const type = String(part.type ?? "");
+    const media_type = String(part.mediaType ?? part.media_type ?? "");
+    return type === "file" && media_type.startsWith("image/");
+  }).length;
+  return count > 0 ? count : undefined;
 }
 
 /**
@@ -371,10 +482,12 @@ export class AIService extends Service {
 
   private async handleModality(modality: Modality, ctx: Context): Promise<unknown | Response> {
     const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: modality }, ctx.env);
-    const aiCtx: Context = { ...ctx, variant: resolved.model ? { id: resolved.model.id, name: resolved.model.name, meta: resolved.model.meta } : undefined };
+    this.attachResolvedModel(ctx, resolved.model, modality);
+    const started_at = Date.now();
 
     try {
-      const output = await resolved.action(aiCtx);
+      const output = await resolved.action(ctx);
+      this.attachOutputMetering(ctx, output, modality, started_at);
       if (isResponse(output)) return output;
       return output;
     } catch (error) {
@@ -406,15 +519,33 @@ export class AIService extends Service {
 
     await this.imageJobTable(ctx).insert(recordToRow(record));
 
+    this.attachResolvedModel(ctx, resolved.model, "image");
     const job_ctx: Context = {
       ...ctx,
       input: { ...ctx.input },
       locals: {},
       output: undefined,
       error: undefined,
-      variant: resolved.model ? { id: resolved.model.id, name: resolved.model.name, meta: resolved.model.meta } : undefined,
     };
-    if (!resolved.model?.actions.image_job) {
+    if (resolved.model?.actions.image_job) {
+      let advanced: AIImageJobRecord;
+      try {
+        advanced = await this.advanceImageJob(job_ctx, record);
+      } catch (error) {
+        await this.updateImageJob(ctx, job_id, {
+          status: "failed",
+          error: error instanceof Error ? error.message : String(error),
+          message: "failed",
+          updated_at: new Date().toISOString(),
+        });
+        throw httpError(502, error instanceof Error ? error.message : "image_job action failed");
+      }
+      return {
+        job_id,
+        status: advanced.status,
+        poll_after_ms: IMAGE_JOB_POLL_AFTER_MS,
+      };
+    } else {
       const promise = this.runImageJob(job_id, job_ctx);
       if (ctx.waitUntil) ctx.waitUntil(promise);
       else void promise;
@@ -445,6 +576,7 @@ export class AIService extends Service {
     const step_action = resolved.model?.actions.image_job;
     if (!step_action) return record;
 
+    this.attachResolvedModel(ctx, resolved.model, "image");
     const step_ctx: Context = {
       ...ctx,
       input,
@@ -456,7 +588,6 @@ export class AIService extends Service {
           state: parseImageJobStepState(record.result_json),
         } satisfies AIImageJobStepContext,
       },
-      variant: resolved.model ? { id: resolved.model.id, name: resolved.model.name, meta: resolved.model.meta } : undefined,
     };
     const output = await step_action(step_ctx);
     if (!isImageJobStepResult(output)) {
@@ -504,11 +635,8 @@ export class AIService extends Service {
       });
 
       const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image" }, ctx.env);
-      const aiCtx: Context = {
-        ...ctx,
-        variant: resolved.model ? { id: resolved.model.id, name: resolved.model.name, meta: resolved.model.meta } : undefined,
-      };
-      const output = await resolved.action(aiCtx);
+      this.attachResolvedModel(ctx, resolved.model, "image");
+      const output = await resolved.action(ctx);
       const result = await normalizeImageJobOutput(output);
 
       await this.updateImageJob(ctx, job_id, {
@@ -577,10 +705,13 @@ export class AIService extends Service {
     const body = ctx.input as Record<string, unknown>;
     const modelId = body.model as string | undefined;
     const resolved = this.resolve({ model: modelId, mode: "openai" }, ctx.env);
-    const aiCtx: Context = { ...ctx, input: body, variant: resolved.model ? { id: resolved.model.id, name: resolved.model.name, meta: resolved.model.meta } : undefined };
+    this.attachResolvedModel(ctx, resolved.model, "openai");
+    ctx.input = body;
+    const started_at = Date.now();
 
     try {
-      const output = await resolved.action(aiCtx);
+      const output = await resolved.action(ctx);
+      this.attachOutputMetering(ctx, output, "openai", started_at);
       if (isResponse(output)) return output;
       return new Response(JSON.stringify(output), { status: 200, headers: { "content-type": "application/json" } });
     } catch (error) {
@@ -588,6 +719,46 @@ export class AIService extends Service {
       const status = (error as { statusCode?: number }).statusCode ?? 500;
       return new Response(JSON.stringify({ error: { message, type: "server_error" } }), { status, headers: { "content-type": "application/json" } });
     }
+  }
+
+  /**
+   * 将解析出的模型写回原始 Context，供 hook / usage / billing 读取。
+   */
+  private attachResolvedModel(ctx: Context, model: ModelConfig | undefined, mode: string): void {
+    if (!model) return;
+    ctx.variant = { id: model.id, name: model.name, meta: model.meta };
+    ctx.metering = {
+      ...ctx.metering,
+      provider_id: model.provider_id,
+      model_id: model.id,
+      upstream_model: typeof model.meta?.upstream_model === "string"
+        ? model.meta.upstream_model
+        : model.passthroughModel,
+      request_count: ctx.metering?.request_count ?? 1,
+      metadata: {
+        ...(ctx.metering?.metadata ?? {}),
+        mode,
+      },
+    };
+  }
+
+  /**
+   * 从 action 输出里提取标准计量信息。
+   */
+  private attachOutputMetering(ctx: Context, output: unknown, mode: string, started_at: number): void {
+    const usage = extractUsage(output);
+    const normalized_usage = normalizeUsage(usage);
+    const image_count = mode === "image"
+      ? countImageOutputs(output) || ctx.metering?.image_count
+      : ctx.metering?.image_count;
+
+    ctx.metering = {
+      ...ctx.metering,
+      ...normalized_usage,
+      ...(image_count ? { image_count } : {}),
+      duration_ms: Date.now() - started_at,
+      raw_usage: usage ?? ctx.metering?.raw_usage,
+    };
   }
 
   // ========== 模型列表 ==========

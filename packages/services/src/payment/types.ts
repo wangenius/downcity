@@ -37,8 +37,12 @@ export interface PaymentTopupRecord extends Record<string, unknown> {
   topup_id: string;
   /** 充值目标用户 ID。 */
   user_id: string;
-  /** 充值金额，使用业务侧约定的最小整数单位。 */
+  /** 充值金额，单位为 credits。 */
   amount: number;
+  /** 充值金额，单位为 microcredits。 */
+  amount_microcredits?: number;
+  /** 充值金额，单位为 USD cents，用于支付 provider。 */
+  amount_usd_cents?: number;
   /** 余额单位。 */
   unit: string;
   /** 充值单状态。 */

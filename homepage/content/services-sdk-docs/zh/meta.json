@@ -4,6 +4,7 @@
     "index",
     "accounts",
     "balance",
+    "billing",
     "usage",
     "payment-stripe",
     "payment-creem",

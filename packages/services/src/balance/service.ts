@@ -45,8 +45,6 @@ import {
   maskRedeemCode,
   mergeMetaJSON,
   normalizeLimit,
-  normalizeNonNegativeInteger,
-  normalizePositiveInteger,
   normalizeRedeemCode,
   normalizeRedeemCodeStatus,
   normalizeText,
@@ -60,6 +58,12 @@ import {
   readRequired,
   stringifyMeta,
 } from "./utils.js";
+import {
+  microcreditsToCredits,
+  microcreditsToUsdCents,
+  readAmountMicrocredits,
+  readNonNegativeAmountMicrocredits,
+} from "./amount.js";
 
 type StoredRedeemCodeRow = BalanceRedeemCode & {
   /**
@@ -84,16 +88,19 @@ export class BalanceService extends InstallableService {
     redeem_codes: balanceRedeemCodes,
   };
 
-  private readonly initAmount: number;
+  private readonly initMicrocredits: number;
   private readonly unitName: string;
 
   constructor(options: BalanceServiceOptions = {}) {
     super();
-    this.initAmount = normalizeNonNegativeInteger(options.init ?? 0, "init");
+    this.initMicrocredits = readNonNegativeAmountMicrocredits({
+      amount: options.init ?? 0,
+      amount_microcredits: options.init_microcredits,
+    }, "init");
     this.unitName = String(options.unit ?? "credits").trim() || "credits";
     this.instruction = [
       "提供用户级全局余额、余额流水、充值单与 redeem_code 能力。",
-      `当前余额单位为 ${this.unitName}，首次自动开户发放 ${this.initAmount} ${this.unitName}。`,
+      `当前余额单位为 ${this.unitName}，首次自动开户发放 ${microcreditsToCredits(this.initMicrocredits)} ${this.unitName}。`,
       "推荐在业务 hook 中调用 require/add/sub，把具体计费策略放在业务侧，而不是写死在服务内部。",
       "管理端可查询所有账户、流水、充值单与 redeem_code；用户侧可查询自己的余额、历史记录、充值单，并直接兑换 redeem_code。",
     ].join("\n");
@@ -120,12 +127,19 @@ export class BalanceService extends InstallableService {
    * 余额不足时会抛出 `402 insufficient balance`。
    */
   async require(user_id: string, amount: number): Promise<BalanceAccount> {
+    return await this.requireMicrocredits(user_id, readAmountMicrocredits({ amount }));
+  }
+
+  /**
+   * 检查用户余额是否足够，入参单位为 microcredits。
+   */
+  async requireMicrocredits(user_id: string, amount_microcredits: number): Promise<BalanceAccount> {
     const normalizedUserId = normalizeUserId(user_id);
-    const normalizedAmount = normalizePositiveInteger(amount, "amount");
+    const normalizedAmount = readAmountMicrocredits({ amount_microcredits });
     const account = await this.read(normalizedUserId);
 
-    if (account.balance < normalizedAmount) {
-      throw httpError(402, `insufficient balance: need ${normalizedAmount}, current ${account.balance}`);
+    if (account.balance_microcredits < normalizedAmount) {
+      throw httpError(402, `insufficient balance: need ${microcreditsToCredits(normalizedAmount)}, current ${account.balance}`);
     }
 
     return account;
@@ -135,14 +149,28 @@ export class BalanceService extends InstallableService {
    * 给用户加余额，并写入 `add` 流水。
    */
   async add(user_id: string, amount: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
-    return await this.applyDelta(normalizeUserId(user_id), normalizePositiveInteger(amount, "amount"), "add", extra);
+    return await this.addMicrocredits(user_id, readAmountMicrocredits({ amount }), extra);
+  }
+
+  /**
+   * 给用户加余额，入参单位为 microcredits。
+   */
+  async addMicrocredits(user_id: string, amount_microcredits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
+    return await this.applyDelta(normalizeUserId(user_id), readAmountMicrocredits({ amount_microcredits }), "add", extra);
   }
 
   /**
    * 给用户扣余额，并写入 `sub` 流水。
    */
   async sub(user_id: string, amount: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
-    return await this.applyDelta(normalizeUserId(user_id), -normalizePositiveInteger(amount, "amount"), "sub", extra);
+    return await this.subMicrocredits(user_id, readAmountMicrocredits({ amount }), extra);
+  }
+
+  /**
+   * 给用户扣余额，入参单位为 microcredits。
+   */
+  async subMicrocredits(user_id: string, amount_microcredits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
+    return await this.applyDelta(normalizeUserId(user_id), -readAmountMicrocredits({ amount_microcredits }), "sub", extra);
   }
 
   /**
@@ -173,12 +201,14 @@ export class BalanceService extends InstallableService {
    */
   async createTopup(user_id: string, amount: number | undefined, extra: BalanceExtra = {}): Promise<BalanceTopup> {
     const normalizedUserId = normalizeUserId(user_id);
-    const normalizedAmount = normalizePositiveInteger(amount, "amount");
+    const normalizedAmount = readAmountMicrocredits({ amount });
     const now = new Date().toISOString();
     const topup: BalanceTopup = {
       topup_id: `topup_${randomId()}`,
       user_id: normalizedUserId,
-      amount: normalizedAmount,
+      amount: microcreditsToCredits(normalizedAmount),
+      amount_microcredits: normalizedAmount,
+      amount_usd_cents: microcreditsToUsdCents(normalizedAmount),
       unit: this.unitName,
       status: "pending",
       note: normalizeText(extra.note),
@@ -195,7 +225,7 @@ export class BalanceService extends InstallableService {
     ].join(" "), [
       topup.topup_id,
       topup.user_id,
-      topup.amount,
+      topup.amount_microcredits,
       topup.unit,
       topup.status,
       topup.note,
@@ -236,7 +266,7 @@ export class BalanceService extends InstallableService {
       throw httpError(409, "topup is no longer pending");
     }
 
-    await this.applyDelta(current.user_id, current.amount, "topup", {
+    await this.applyDelta(current.user_id, current.amount_microcredits, "topup", {
       note: normalizeText(extra.note) || current.note || "topup",
       ref: normalizeText(extra.ref) || topup_id,
       meta: {
@@ -283,7 +313,7 @@ export class BalanceService extends InstallableService {
    * 创建一个新的 redeem_code。
    */
   async createRedeemCode(input: BalanceCreateRedeemCodeInput): Promise<BalanceRedeemCodeIssueResult> {
-    const amount = normalizePositiveInteger(input.amount, "amount");
+    const amount = readAmountMicrocredits(input, "amount");
     const now = new Date().toISOString();
     const code = input.code ? normalizeRedeemCode(input.code) : generateRedeemCode();
     const codeHash = await hashRedeemCode(code);
@@ -294,7 +324,8 @@ export class BalanceService extends InstallableService {
 
     const redeemCode: BalanceRedeemCode = {
       redeem_code_id: `rc_${randomId()}`,
-      amount,
+      amount: microcreditsToCredits(amount),
+      amount_microcredits: amount,
       unit: this.unitName,
       status: "active",
       code_mask: maskRedeemCode(code),
@@ -314,7 +345,7 @@ export class BalanceService extends InstallableService {
       redeemCode.redeem_code_id,
       codeHash,
       redeemCode.code_mask,
-      redeemCode.amount,
+      redeemCode.amount_microcredits,
       redeemCode.unit,
       redeemCode.status,
       redeemCode.note,
@@ -371,7 +402,7 @@ export class BalanceService extends InstallableService {
       throw httpError(409, `redeem_code is already ${latest.status}`);
     }
 
-    const account = await this.applyDelta(normalizedUserId, current.amount, "redeem", {
+    const account = await this.applyDelta(normalizedUserId, current.amount_microcredits, "redeem", {
       note: normalizeText(extra.note) || current.note || "redeem_code",
       ref: normalizeText(extra.ref) || current.redeem_code_id,
       meta: {
@@ -535,7 +566,7 @@ export class BalanceService extends InstallableService {
 
       if (changed === 0) {
         const current = await this.readAccountRequired(user_id);
-        throw httpError(402, `insufficient balance: need ${spend}, current ${current.balance}`);
+        throw httpError(402, `insufficient balance: need ${microcreditsToCredits(spend)}, current ${current.balance}`);
       }
     }
 
@@ -544,8 +575,10 @@ export class BalanceService extends InstallableService {
       entry_id: `bal_${randomId()}`,
       user_id,
       kind,
-      amount: delta,
+      amount: microcreditsToCredits(delta),
+      amount_microcredits: delta,
       balance_after: account.balance,
+      balance_after_microcredits: account.balance_microcredits,
       unit: account.unit,
       note: normalizeText(extra.note),
       ref: normalizeText(extra.ref),
@@ -563,15 +596,17 @@ export class BalanceService extends InstallableService {
     const inserted = await rawRun(this.resolveRaw(), [
       `INSERT OR IGNORE INTO ${ACCOUNT_TABLE} (user_id, balance, unit, created_at, updated_at)`,
       "VALUES (?, ?, ?, ?, ?)",
-    ].join(" "), [user_id, this.initAmount, this.unitName, now, now]);
+    ].join(" "), [user_id, this.initMicrocredits, this.unitName, now, now]);
 
-    if (inserted > 0 && this.initAmount > 0) {
+    if (inserted > 0 && this.initMicrocredits > 0) {
       await this.insertLedger({
         entry_id: `bal_${randomId()}`,
         user_id,
         kind: "init",
-        amount: this.initAmount,
-        balance_after: this.initAmount,
+        amount: microcreditsToCredits(this.initMicrocredits),
+        amount_microcredits: this.initMicrocredits,
+        balance_after: microcreditsToCredits(this.initMicrocredits),
+        balance_after_microcredits: this.initMicrocredits,
         unit: this.unitName,
         note: "initial balance",
         ref: "",
@@ -657,8 +692,8 @@ export class BalanceService extends InstallableService {
       entry.entry_id,
       entry.user_id,
       entry.kind,
-      entry.amount,
-      entry.balance_after,
+      entry.amount_microcredits,
+      entry.balance_after_microcredits,
       entry.unit,
       entry.note,
       entry.ref,

@@ -5,6 +5,12 @@ description: "Why @downcity/services stores balance by user instead of creating 
 
 `@downcity/services` keeps balance by user, not by town.
 
+By default, credits are USD-linked:
+
+- `1 credit = 1 USD`
+- `1 credit = 1,000,000 microcredits`
+- API responses expose both user-facing `balance` and exact `balance_microcredits`
+
 That means:
 
 - user A spends inside town X

@@ -41,8 +41,8 @@ Downcity 对外有两类主要入口：
 
 Downcity 的运行时不是“new 一个 City 就结束”，中间还有一层面向部署环境的装配：
 
-- `cities/node` 负责 Node.js + SQLite 的本地 server 示例
-- `cities/edge` 负责 Cloudflare Workers + D1 的部署示例
+- `cities/node` 是 Node.js + SQLite 的开发者快捷示例
+- `cities/edge` 是 Cloudflare Workers + D1 的开发者快捷示例
 - 每个 city block 都拥有适配自身运行时的 City 组装逻辑
 
 这一层的职责，是把 `City + AIService + 官方服务 + 模型` 组装成真正可跑的实例。

@@ -108,7 +108,7 @@ export async function createDodoCheckoutSession(
     product_cart: [{
       product_id: input.product_id,
       quantity: 1,
-      amount: input.topup.amount,
+      amount: readTopupAmountUsdCents(input.topup),
     }],
     billing_currency: input.currency.toUpperCase() as any,
     return_url: input.return_url,
@@ -118,6 +118,8 @@ export async function createDodoCheckoutSession(
       topup_id: input.topup.topup_id,
       user_id: input.topup.user_id,
       amount: String(input.topup.amount),
+      amount_microcredits: String(input.topup.amount_microcredits ?? ""),
+      amount_usd_cents: String(readTopupAmountUsdCents(input.topup)),
       unit: input.topup.unit,
     },
   });
@@ -127,6 +129,19 @@ export async function createDodoCheckoutSession(
     dodo_payment_id: normalizeOptionalText(response.payment_id),
     checkout_url: normalizeRequired(response.checkout_url, "Dodo checkout url"),
   };
+}
+
+/**
+ * 读取支付 provider 需要的 USD cents 金额。
+ */
+function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
+  const direct = Number(topup.amount_usd_cents);
+  if (Number.isSafeInteger(direct) && direct > 0) return direct;
+  const fallback = Math.round(Number(topup.amount) * 100);
+  if (!Number.isSafeInteger(fallback) || fallback <= 0) {
+    throw new TypeError("topup amount_usd_cents must be a positive integer");
+  }
+  return fallback;
 }
 
 /**

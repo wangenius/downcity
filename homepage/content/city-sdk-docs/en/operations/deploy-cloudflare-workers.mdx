@@ -121,15 +121,15 @@ city deploy ./my-city --dry-run
 
 `.env` is the local deploy binding file and should not be committed to Git. `city.json` stays as the commit-safe project declaration.
 
-## 6. Official edge reference project
+## 6. Developer edge starter
 
-The reference project in the Downcity repository is `cities/edge`:
+The Downcity repository keeps `cities/edge` as a developer-friendly starter project:
 
 ```bash
 city deploy cities/edge --verify
 ```
 
-The reference implementation lives in [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1).
+This starter is useful for local experiments and custom deployments. Downcity's private official production Worker implementation lives outside the public repository.
 
 ## 7. Initialize City
 
@@ -176,7 +176,7 @@ Common keys:
 
 | Key | Purpose |
 | --- | --- |
-| `DEEPSEEK_API_KEY` | Provider key used by the edge reference project |
+| `DEEPSEEK_API_KEY` | Provider key used by the edge starter project |
 | `STRIPE_SECRET_KEY` | Stripe API key for Checkout creation |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `DOWNCITY_CITY_BASE_URL` | Public City base URL used to derive payment result pages |

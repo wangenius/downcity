@@ -1,0 +1,57 @@
+name: Feature request
+description: Suggest a capability, API, integration, or workflow improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe the user problem first, then the proposed change.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user need, workflow gap, or limitation should this solve?
+      placeholder: Describe the problem from the user's point of view.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should Downcity add or change?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Which part of Downcity would this touch?
+      options:
+        - Agent runtime / SDK
+        - City runtime / SDK
+        - Services
+        - CLI
+        - UI SDK
+        - Chrome extension
+        - Homepage / docs
+        - Other / unsure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds or alternative designs have you considered?
+  - type: textarea
+    id: api
+    attributes:
+      label: API or CLI sketch
+      description: If this affects an SDK, service, or command, include a small example of the desired shape.
+      render: ts
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, screenshots, related projects, or examples that clarify the request.

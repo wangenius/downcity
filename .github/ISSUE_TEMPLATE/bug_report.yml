@@ -1,0 +1,82 @@
+name: Bug report
+description: Report a reproducible Downcity bug.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please include enough detail for someone else to reproduce it.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+      placeholder: Describe the bug clearly and briefly.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the exact commands, code, or UI actions that trigger the bug.
+      placeholder: |
+        1. Run ...
+        2. Configure ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Include logs, stack traces, screenshots, or command output when useful.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Which part of Downcity seems affected?
+      options:
+        - Agent runtime / SDK
+        - City runtime / SDK
+        - Services
+        - CLI
+        - UI SDK
+        - Chrome extension
+        - Homepage / docs
+        - Other / unsure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Package, CLI, or commit version if known.
+      placeholder: downcity 1.1.5, @downcity/agent 1.1.5, commit SHA, etc.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node.js version, pnpm/npm version, runtime target, and relevant provider/service details.
+      placeholder: |
+        macOS 15.x
+        Node.js 22.x
+        pnpm 10.x
+        Runtime: local / node city / edge city
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that may help diagnose the issue.

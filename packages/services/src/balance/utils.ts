@@ -15,6 +15,7 @@ import type {
   BalanceRedeemCode,
   BalanceRedeemCodeStatus,
 } from "./types.js";
+import { microcreditsToCredits, microcreditsToUsdCents } from "./amount.js";
 
 const REDEEM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -194,9 +195,11 @@ export function normalizeRedeemCodeStatus(value: unknown): BalanceRedeemCodeStat
  * 解析账户行。
  */
 export function parseAccountRow(row: BalanceAccount): BalanceAccount {
+  const balance_microcredits = Number(row.balance_microcredits ?? row.balance);
   return {
     user_id: String(row.user_id),
-    balance: Number(row.balance),
+    balance: microcreditsToCredits(balance_microcredits),
+    balance_microcredits,
     unit: String(row.unit),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
@@ -207,12 +210,16 @@ export function parseAccountRow(row: BalanceAccount): BalanceAccount {
  * 解析流水行。
  */
 export function parseLedgerRow(row: BalanceLedgerEntry): BalanceLedgerEntry {
+  const amount_microcredits = Number(row.amount_microcredits ?? row.amount);
+  const balance_after_microcredits = Number(row.balance_after_microcredits ?? row.balance_after);
   return {
     entry_id: String(row.entry_id),
     user_id: String(row.user_id),
     kind: String(row.kind) as BalanceLedgerKind,
-    amount: Number(row.amount),
-    balance_after: Number(row.balance_after),
+    amount: microcreditsToCredits(amount_microcredits),
+    amount_microcredits,
+    balance_after: microcreditsToCredits(balance_after_microcredits),
+    balance_after_microcredits,
     unit: String(row.unit),
     note: String(row.note ?? ""),
     ref: String(row.ref ?? ""),
@@ -225,10 +232,13 @@ export function parseLedgerRow(row: BalanceLedgerEntry): BalanceLedgerEntry {
  * 解析充值单行。
  */
 export function parseTopupRow(row: BalanceTopup): BalanceTopup {
+  const amount_microcredits = Number(row.amount_microcredits ?? row.amount);
   return {
     topup_id: String(row.topup_id),
     user_id: String(row.user_id),
-    amount: Number(row.amount),
+    amount: microcreditsToCredits(amount_microcredits),
+    amount_microcredits,
+    amount_usd_cents: microcreditsToUsdCents(amount_microcredits),
     unit: String(row.unit),
     status: String(row.status) as BalanceTopupStatus,
     note: String(row.note ?? ""),
@@ -243,9 +253,11 @@ export function parseTopupRow(row: BalanceTopup): BalanceTopup {
  * 解析 redeem_code 行。
  */
 export function parseRedeemCodeRow(row: BalanceRedeemCode & { code_hash?: string }): BalanceRedeemCode {
+  const amount_microcredits = Number(row.amount_microcredits ?? row.amount);
   return {
     redeem_code_id: String(row.redeem_code_id),
-    amount: Number(row.amount),
+    amount: microcreditsToCredits(amount_microcredits),
+    amount_microcredits,
     unit: String(row.unit),
     status: String(row.status) as BalanceRedeemCodeStatus,
     code_mask: String(row.code_mask ?? ""),

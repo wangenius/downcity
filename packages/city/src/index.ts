@@ -30,6 +30,10 @@ export type {
 } from "./service/service.js";
 
 export type {
+  RuntimeMetering,
+} from "./types/Metering.js";
+
+export type {
   ActionFn,
   HookFn,
 } from "./service/action.js";

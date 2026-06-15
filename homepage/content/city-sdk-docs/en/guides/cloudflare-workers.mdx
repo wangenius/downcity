@@ -5,7 +5,7 @@ description: Run City directly on Cloudflare Workers and D1 with @downcity/city,
 
 If you want to deploy Downcity on Cloudflare Workers, the recommended path is not a separate edge package. Wire `@downcity/city` directly into the Workers runtime.
 
-The official reference implementation is `cities/edge`.
+The public repository includes `cities/edge` as a developer starter. Downcity's private official Worker implementation lives outside the public repository.
 
 ## What this path actually solves
 
@@ -48,16 +48,16 @@ The important part is not a helper name. It is that you hand the database to Cit
 - `raw: env.DB` is available to services that need the low-level D1 object
 - the current request origin can be synchronized before calls that need OAuth callback URLs
 
-## Use `cities/edge` as the real reference
+## Use `cities/edge` as a starter
 
-The full implementation in [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1) already covers the real integration details:
+The starter implementation in [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1) covers the integration details most projects need:
 
 - wrap `env.DB` with `drizzle-orm/d1`
 - let City initialize the built-in `env` and `towns` tables
 - synchronize the current origin before each request so OAuth callbacks and links use the correct domain
 - keep registering `AIService`, accounts, usage, and payment services the same way as the Node path
 
-For a real project, start from that example instead of rebuilding the runtime contract from scratch.
+For a real project, start from that example and adapt the model catalog, services, and provider keys to your product.
 
 ## Boundary with the Node path
 
@@ -71,4 +71,4 @@ Worker and Node now use the same mental model: create a Drizzle db, then pass it
 
 - If you still need the City mental model first, read [City](/en/city-sdk-docs/packages/city/city-runtime)
 - If you need to manage provider keys, continue with [Provider environment](/en/city-sdk-docs/guides/provider-env)
-- If you want the full reference implementation, open [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1)
+- If you want a complete starter implementation, open [cities/edge/src/index.ts](/Users/wangenius/Documents/github/downcity/cities/edge/src/index.ts:1)

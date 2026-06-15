@@ -1,5 +1,10 @@
 # Downcity
 
+[![Publish packages](https://github.com/wangenius/downcity/actions/workflows/publish-packages.yml/badge.svg)](https://github.com/wangenius/downcity/actions/workflows/publish-packages.yml)
+[![Publish CLI](https://github.com/wangenius/downcity/actions/workflows/publish-downcity.yml/badge.svg)](https://github.com/wangenius/downcity/actions/workflows/publish-downcity.yml)
+[![npm version](https://img.shields.io/npm/v/downcity.svg)](https://www.npmjs.com/package/downcity)
+[![License](https://img.shields.io/github/license/wangenius/downcity.svg)](./LICENSE)
+
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
 > Agent infrastructure for AI builders shipping many agent-powered products and workflows.
@@ -24,7 +29,7 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 | `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by City. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
-| `cities/*` | Deployable City compositions that assemble `@downcity/city` and services for Node or edge runtimes. |
+| `cities/*` | Developer-friendly City starter compositions for Node or edge runtimes; official private deployments live outside this repository. |
 | `products/chrome-extension` | Chrome extension for Agent Session side-panel chat, page context capture, and optional IM forwarding. |
 | `homepage` | Official website and end-user documentation site. |
 
@@ -213,6 +218,8 @@ downcity/
 ├── package.json
 └── pnpm-workspace.yaml
 ```
+
+The `cities/*` projects are kept as convenient developer starters. They are not the private official production deployments.
 
 ## Documentation
 

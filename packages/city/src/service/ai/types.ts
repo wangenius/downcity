@@ -47,6 +47,8 @@ export interface ModelActions {
 export interface ModelConfig {
   /** 模型唯一 ID */
   id: string;
+  /** Provider 唯一 ID */
+  provider_id?: string;
   /** 模型展示名称 */
   name: string;
   /** 模型描述 */

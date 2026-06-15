@@ -17,6 +17,7 @@ import type { Authenticator } from "../core/auth/authenticator.js";
 import type { EnvProvider } from "../core/runtime.js";
 import type { TownStore } from "./towns/town-store.js";
 import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.js";
+import type { RuntimeMetering } from "../types/Metering.js";
 
 // ===========================================================================
 // 鉴权级别
@@ -50,6 +51,8 @@ export interface Context {
   town?: { town_id: string; status: string };
   /** 当前解析的 variant（如 AI model、翻译语言对等）。由 Service 自行注入 */
   variant?: { id: string; name: string; meta?: Record<string, unknown> };
+  /** 当前调用的标准化计量信息。由 Service 或 Provider 自行注入 */
+  metering?: RuntimeMetering;
   /** Action 开始时间（框架自动填充） */
   started_at?: Date;
   /** Action 结束时间（框架自动填充） */

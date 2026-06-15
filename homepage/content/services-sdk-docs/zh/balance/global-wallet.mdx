@@ -5,6 +5,12 @@ description: "为什么 @downcity/services 按 user 维护余额，而不是按 
 
 `@downcity/services` 的核心是：余额按用户维护，不按 town 维护。
 
+默认情况下，credits 和 USD 1:1 挂钩：
+
+- `1 credit = 1 USD`
+- `1 credit = 1,000,000 microcredits`
+- API 会同时返回面向用户的 `balance` 和精确对账用的 `balance_microcredits`
+
 也就是说：
 
 - user A 在 town X 消费

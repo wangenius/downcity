@@ -8,12 +8,15 @@
 import { CityBase, AIService, type CityBaseOptions, type ModelConfig } from "@downcity/city";
 import {
   accountsService,
+  billingService,
   balanceService,
   paymentService,
   stripePaymentProvider,
   usageService,
   type BalanceService,
+  type BillingService,
   type PaymentServiceBalanceBridge,
+  type BillingPricingRuleInput,
 } from "@downcity/services";
 
 /**
@@ -38,6 +41,10 @@ export interface ComposeCityBaseOptions extends CityBaseOptions {
   record_usage_errors?: boolean;
   /** 余额配置。 */
   balance?: ComposeCityBalanceOptions;
+  /** billing pricing rules。 */
+  pricing_rules?: BillingPricingRuleInput[];
+  /** 是否安装 billing service。 */
+  enable_billing?: boolean;
   /** 是否安装统一 payment service。 */
   enable_payment?: boolean;
   /** 是否启用 Stripe payment provider。 */
@@ -52,6 +59,8 @@ export function compose_city(options: ComposeCityBaseOptions): {
   city: CityBase;
   /** balance 服务实例，便于外部追加 hook 或直接调用。 */
   balance: BalanceService;
+  /** billing 服务实例，便于外部查询或追加规则。 */
+  billing?: BillingService;
   /** AI service 实例，便于外部增加 hook。 */
   ai: AIService;
 } {
@@ -84,6 +93,14 @@ export function compose_city(options: ComposeCityBaseOptions): {
     record_errors: options.record_usage_errors,
   }));
 
+  const billing = options.enable_billing === false
+    ? undefined
+    : billingService({
+        balance,
+        pricing_rules: options.pricing_rules,
+      });
+  if (billing) city.use(billing);
+
   const ai = new AIService();
   ai.use(options.models);
   city.use(ai);
@@ -91,6 +108,7 @@ export function compose_city(options: ComposeCityBaseOptions): {
   return {
     city,
     balance,
+    billing,
     ai,
   };
 }

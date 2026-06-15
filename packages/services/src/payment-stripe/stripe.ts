@@ -40,7 +40,7 @@ export async function createStripeCheckoutSession(
   body.set("metadata[user_id]", input.topup.user_id);
   body.set("line_items[0][price_data][currency]", input.currency);
   body.set("line_items[0][price_data][product_data][name]", input.item_name);
-  body.set("line_items[0][price_data][unit_amount]", String(input.topup.amount));
+  body.set("line_items[0][price_data][unit_amount]", String(readTopupAmountUsdCents(input.topup)));
   body.set("line_items[0][quantity]", "1");
   body.set("payment_intent_data[metadata][payment_id]", input.payment_id);
   body.set("payment_intent_data[metadata][topup_id]", input.topup.topup_id);
@@ -72,6 +72,19 @@ export async function createStripeCheckoutSession(
     checkout_url: checkoutURL,
     payment_intent_id: normalizeOptionalText(payload.payment_intent),
   };
+}
+
+/**
+ * 读取支付 provider 需要的 USD cents 金额。
+ */
+function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
+  const direct = Number(topup.amount_usd_cents);
+  if (Number.isSafeInteger(direct) && direct > 0) return direct;
+  const fallback = Math.round(Number(topup.amount) * 100);
+  if (!Number.isSafeInteger(fallback) || fallback <= 0) {
+    throw new TypeError("topup amount_usd_cents must be a positive integer");
+  }
+  return fallback;
 }
 
 /**

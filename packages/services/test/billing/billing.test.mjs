@@ -140,9 +140,9 @@ test("billingService supports per-million token pricing rules", async () => {
           parts: [{ type: "text", text: "ok" }],
           metadata: {
             usage: {
-              input_tokens: 70,
-              cached_tokens: 30,
-              output_tokens: 20,
+              inputTokens: 1_000_000,
+              cachedInputTokens: 300_000,
+              outputTokens: 200_000,
             },
           },
         }),
@@ -176,11 +176,11 @@ test("billingService supports per-million token pricing rules", async () => {
     assert.equal(chargesResponse.status, 200)
     const charges = await chargesResponse.json()
     assert.equal(charges.items.length, 1)
-    assert.equal(charges.items[0].amount_microcredits, 16)
-    assert.equal(charges.items[0].amount, 0.000016)
+    assert.equal(charges.items[0].amount_microcredits, 154_840)
+    assert.equal(charges.items[0].amount, 0.15484)
 
     const account = await balance.read("user_1")
-    assert.equal(account.balance, 999_984)
+    assert.equal(account.balance, 845_160)
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })

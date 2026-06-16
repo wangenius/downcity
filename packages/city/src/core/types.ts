@@ -4,8 +4,8 @@
  * 包含创建 City 实例和健康检查所需的所有类型定义。
  */
 
-import type { Runtime } from "./runtime.js";
-import type { Database } from "../store/db.js";
+import type { Runtime } from "./runtime.ts";
+import type { Database } from "../store/db.ts";
 
 /**
  * 单次请求的运行时执行上下文。

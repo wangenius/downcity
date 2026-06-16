@@ -5,8 +5,8 @@
  * 零 Node.js 依赖，兼容所有现代运行时（Node、Workers、Deno、Bun、浏览器）。
  */
 
-import { httpError, base64UrlEncode, base64UrlDecode, base64UrlEncodeBytes, base64UrlDecodeBytes, timingSafeEqualBytes } from "../../utils/helpers.js";
-import type { CreateUserTokenInput, UserTokenPayload } from "./types.js";
+import { httpError, base64UrlEncode, base64UrlDecode, base64UrlEncodeBytes, base64UrlDecodeBytes, timingSafeEqualBytes } from "../../utils/helpers.ts";
+import type { CreateUserTokenInput, UserTokenPayload } from "./types.ts";
 
 export class TokenSigner {
   readonly signingKey: string;

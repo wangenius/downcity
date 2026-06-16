@@ -5,12 +5,12 @@
  * 统一桥接到 `Service.action()` 体系。
  */
 
-import { Service, type Context, type EnvRequirement } from "./service.js";
-import { Hook } from "./hook.js";
-import { TableApi } from "../store/table-api.js";
-import type { CityTableApi } from "../store/table-api.js";
-import type { CreateUserTokenInput, UserTokenIssueResult, RuntimeUser } from "../core/auth/types.js";
-import type { InstructionDefinition } from "./instruction.js";
+import { Service, type Context, type EnvRequirement } from "./service.ts";
+import { Hook } from "./hook.ts";
+import { TableApi } from "../store/table-api.ts";
+import type { CityTableApi } from "../store/table-api.ts";
+import type { CreateUserTokenInput, UserTokenIssueResult, RuntimeUser } from "../core/auth/types.ts";
+import type { InstructionDefinition } from "./instruction.ts";
 
 // ===========================================================================
 // ServiceInstallContext

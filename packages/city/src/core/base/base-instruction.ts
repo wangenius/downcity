@@ -8,8 +8,8 @@ import {
   formatInstructionDocument,
   resolveInstruction,
   type InstructionSection,
-} from "../../service/instruction.js";
-import type { Service } from "../../service/service.js";
+} from "../../service/instruction.ts";
+import type { Service } from "../../service/service.ts";
 
 /**
  * 聚合 City 的 instruction 文档。

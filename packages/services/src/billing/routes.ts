@@ -7,8 +7,8 @@
  */
 
 import type { ServiceInstallContext, ServiceRouteContext } from "@downcity/city";
-import type { BillingService } from "./service.js";
-import type { BillingChargeQuery, BillingPricingRuleInput } from "./types.js";
+import type { BillingService } from "./service.ts";
+import type { BillingChargeQuery, BillingPricingRuleInput } from "./types.ts";
 
 /**
  * 注册 Billing 服务 HTTP 路由。

@@ -5,7 +5,7 @@
  * SDK 会在内部选择 admin 或 user 能力面。
  */
 
-import type { FetchLike } from "../http.js";
+import type { FetchLike } from "../http.ts";
 
 /**
  * City 访问角色。

@@ -5,14 +5,14 @@
  * 并提供默认的数据库 env provider。
  */
 
-import { pgEnv, sqliteEnv } from "../../service/env/schema.js";
-import { EnvStore } from "../../service/env/env-store.js";
-import { pgTowns, sqliteTowns } from "../../service/towns/schema.js";
-import { normalizeEnvKey, parseDotenvEntries } from "../../utils/helpers.js";
-import type { CityBaseOptions } from "../types.js";
-import type { DbClient } from "../../store/db.js";
-import type { BuiltinTables, EnvProvider, Runtime } from "../runtime.js";
-import type { EnvEntry, EnvUpsertInput } from "../../service/env/types.js";
+import { pgEnv, sqliteEnv } from "../../service/env/schema.ts";
+import { EnvStore } from "../../service/env/env-store.ts";
+import { pgTowns, sqliteTowns } from "../../service/towns/schema.ts";
+import { normalizeEnvKey, parseDotenvEntries } from "../../utils/helpers.ts";
+import type { CityBaseOptions } from "../types.ts";
+import type { DbClient } from "../../store/db.ts";
+import type { BuiltinTables, EnvProvider, Runtime } from "../runtime.ts";
+import type { EnvEntry, EnvUpsertInput } from "../../service/env/types.ts";
 
 /**
  * 从 CityBaseOptions 创建 runtime。

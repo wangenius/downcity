@@ -4,8 +4,8 @@
 
 import { DefaultChatTransport } from "ai";
 import type { UIMessage } from "ai";
-import type { RawStreamBody } from "../../http.js";
-import type { UserStreamResult } from "../../user/types.js";
+import type { RawStreamBody } from "../../http.ts";
+import type { UserStreamResult } from "../../user/types.ts";
 
 /** 解析 AI SDK UIMessage SSE body */
 export function parseAIStreamBody(body: RawStreamBody): UserStreamResult {

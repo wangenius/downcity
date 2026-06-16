@@ -9,15 +9,15 @@
  */
 
 import { Hono } from "hono";
-import type { CityTableApi } from "../../store/table-api.js";
-import type { Service, Context } from "../../service/service.js";
-import { InstallableService } from "../../service/installable-service.js";
-import { httpError } from "../../utils/helpers.js";
-import type { Authenticator } from "../auth/authenticator.js";
-import type { Runtime } from "../runtime.js";
-import type { RuntimeUser } from "../auth/types.js";
-import { build_city_instruction } from "./base-instruction.js";
-import { collect_city_env_catalog } from "./base-env-catalog.js";
+import type { CityTableApi } from "../../store/table-api.ts";
+import type { Service, Context } from "../../service/service.ts";
+import { InstallableService } from "../../service/installable-service.ts";
+import { httpError } from "../../utils/helpers.ts";
+import type { Authenticator } from "../auth/authenticator.ts";
+import type { Runtime } from "../runtime.ts";
+import type { RuntimeUser } from "../auth/types.ts";
+import { build_city_instruction } from "./base-instruction.ts";
+import { collect_city_env_catalog } from "./base-env-catalog.ts";
 
 declare module "hono" {
   interface ContextVariableMap {

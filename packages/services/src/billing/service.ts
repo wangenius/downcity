@@ -12,10 +12,10 @@ import {
   type Context,
   type ServiceInstallContext,
 } from "@downcity/city";
-import { rawAll, rawFirst, rawRun } from "../balance/raw.js";
-import { microcreditsToCredits } from "../balance/amount.js";
-import { billingCharges, billingPricingRules, CHARGE_TABLE, PRICING_RULE_TABLE } from "./schema.js";
-import { registerBillingRoutes } from "./routes.js";
+import { rawAll, rawFirst, rawRun } from "../balance/raw.ts";
+import { microcreditsToCredits } from "../balance/amount.ts";
+import { billingCharges, billingPricingRules, CHARGE_TABLE, PRICING_RULE_TABLE } from "./schema.ts";
+import { registerBillingRoutes } from "./routes.ts";
 import type {
   BillingBalanceBridge,
   BillingCharge,
@@ -25,7 +25,7 @@ import type {
   BillingPricingRuleInput,
   BillingPricingRuleQuery,
   BillingServiceOptions,
-} from "./types.js";
+} from "./types.ts";
 
 const TOKENS_PER_MTOKEN = 1_000_000;
 const PRICING_RULE_COLUMNS = [

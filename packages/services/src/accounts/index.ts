@@ -11,7 +11,7 @@ import { InstallableService } from "@downcity/city";
 import type { ServiceInstallContext } from "@downcity/city";
 import { betterAuth } from "better-auth/minimal";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { readPreparedAll, readPreparedFirst, runPrepared } from "./db.js";
+import { readPreparedAll, readPreparedFirst, runPrepared } from "./db.ts";
 import {
   ACCOUNTS_OAUTH_STATE_TABLE,
   AUTH_ACCOUNT_TABLE,
@@ -26,7 +26,7 @@ import {
   accountsOAuthStates,
   userProfiles,
   type UserProfileRow,
-} from "./schema.js";
+} from "./schema.ts";
 import {
   OAUTH_PROVIDER_IDS,
   buildOAuthAuthorizeURL,
@@ -37,7 +37,7 @@ import {
   type AccountsProviderItem,
   type OAuthProviderId,
   type OAuthProviderProfile,
-} from "./oauth.js";
+} from "./oauth.ts";
 
 const OAUTH_STATE_TTL_MS = 5 * 60 * 1000;
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;

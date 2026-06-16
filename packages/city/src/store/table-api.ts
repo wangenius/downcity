@@ -14,8 +14,8 @@ import {
   and,
   type SQL,
 } from "drizzle-orm";
-import type { Database } from "./db.js";
-import { quoteIdent } from "../utils/helpers.js";
+import type { Database } from "./db.ts";
+import { quoteIdent } from "../utils/helpers.ts";
 
 // ===========================================================================
 // CityTableApi 类型

@@ -8,7 +8,7 @@
  */
 
 import { WaffoPancake } from "@waffo/pancake-ts";
-import type { WaffoPaymentEnvironment, WaffoPaymentTopupRecord, WaffoWebhookEvent } from "./types.js";
+import type { WaffoPaymentEnvironment, WaffoPaymentTopupRecord, WaffoWebhookEvent } from "./types.ts";
 
 /**
  * Waffo Checkout API 创建参数。

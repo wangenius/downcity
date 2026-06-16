@@ -6,9 +6,9 @@
  * - TownStore 由 City 初始化并注入，确保鉴权和管理 API 使用同一份 town 状态。
  */
 
-import { Service } from "../service.js";
-import type { Authenticator } from "../../core/auth/authenticator.js";
-import { TownStore } from "./town-store.js";
+import { Service } from "../service.ts";
+import type { Authenticator } from "../../core/auth/authenticator.ts";
+import { TownStore } from "./town-store.ts";
 
 export class TownsService extends Service {
   private store!: TownStore;

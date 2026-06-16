@@ -4,7 +4,7 @@
  * 路由：/v1/balance/*
  */
 
-import type { RequestInitLike } from "../../http.js";
+import type { RequestInitLike } from "../../http.ts";
 import type {
   BalanceAccountRecord,
   BalanceHistoryListInput,
@@ -18,7 +18,7 @@ import type {
   BalanceTopupListInput,
   BalanceTopupRecord,
   BalanceTopupUpdateInput,
-} from "./types.js";
+} from "./types.ts";
 
 const PREFIX = "/v1/balance";
 

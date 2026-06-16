@@ -5,12 +5,12 @@
  * admin / user 访问层，避免用户在第一层概念上关心 client 拆分。
  */
 
-import { AdminCityAccess } from "./admin/index.js";
-import { UserCityAccess } from "./user/index.js";
-import type { ServiceClient } from "./invoker/invoker.js";
-import type { CityOptionsForRole, CityRole } from "./types/city.js";
-import type { AdminModelRecord, AdminServiceSummary } from "./admin/types.js";
-import type { UserServiceSummary } from "./user/types.js";
+import { AdminCityAccess } from "./admin/index.ts";
+import { UserCityAccess } from "./user/index.ts";
+import type { ServiceClient } from "./invoker/invoker.ts";
+import type { CityOptionsForRole, CityRole } from "./types/city.ts";
+import type { AdminModelRecord, AdminServiceSummary } from "./admin/types.ts";
+import type { UserServiceSummary } from "./user/types.ts";
 
 /**
  * Downcity City。

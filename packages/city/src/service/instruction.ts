@@ -5,7 +5,7 @@
  * 以及 City 聚合输出时使用的格式化工具。
  */
 
-import type { Context, EnvRequirement, RouteAuth } from "./service.js";
+import type { Context, EnvRequirement, RouteAuth } from "./service.ts";
 
 /**
  * 模块说明生成时可访问的只读上下文。

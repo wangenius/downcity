@@ -11,8 +11,8 @@
  *   - 提供了 openai action → 按自定义逻辑处理
  */
 
-import type { ActionFn } from "../action.js";
-import type { ModelConfig, ModelActions } from "./types.js";
+import type { ActionFn } from "../action.ts";
+import type { ModelConfig, ModelActions } from "./types.ts";
 
 export interface ProviderOptions {
   env?: Record<string, string>;

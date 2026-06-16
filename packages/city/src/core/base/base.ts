@@ -11,20 +11,20 @@
  */
 
 import type { Hono, ExecutionContext as HonoExecutionContext } from "hono";
-import { Service } from "../../service/service.js";
-import { asInstallableService, type ServiceDefinition } from "../../service/installable-service.js";
-import { EnvService } from "../../service/env/env-service.js";
-import { TownsService } from "../../service/towns/towns-service.js";
-import { build_city_instruction } from "./base-instruction.js";
-import { initialize_city } from "./base-init.js";
-import { build_city_router } from "./base-router.js";
-import { create_runtime_from_db } from "./base-runtime.js";
-import type { CityBaseOptions, CityBaseHealthStatus, CityHandleRequestOptions } from "../types.js";
-import type { Authenticator } from "../auth/authenticator.js";
-import type { Runtime } from "../runtime.js";
-import type { CityTableApi } from "../../store/table-api.js";
-import type { TownStore } from "../../service/towns/town-store.js";
-import type { Database, DbClient } from "../../store/db.js";
+import { Service } from "../../service/service.ts";
+import { asInstallableService, type ServiceDefinition } from "../../service/installable-service.ts";
+import { EnvService } from "../../service/env/env-service.ts";
+import { TownsService } from "../../service/towns/towns-service.ts";
+import { build_city_instruction } from "./base-instruction.ts";
+import { initialize_city } from "./base-init.ts";
+import { build_city_router } from "./base-router.ts";
+import { create_runtime_from_db } from "./base-runtime.ts";
+import type { CityBaseOptions, CityBaseHealthStatus, CityHandleRequestOptions } from "../types.ts";
+import type { Authenticator } from "../auth/authenticator.ts";
+import type { Runtime } from "../runtime.ts";
+import type { CityTableApi } from "../../store/table-api.ts";
+import type { TownStore } from "../../service/towns/town-store.ts";
+import type { Database, DbClient } from "../../store/db.ts";
 
 export class CityBase {
   private readonly runtime: Runtime;

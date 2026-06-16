@@ -2,8 +2,8 @@
  * billing 服务子模块公共入口。
  */
 
-export { BillingService, billingService } from "./service.js";
-export { billingCharges, billingPricingRules } from "./schema.js";
+export { BillingService, billingService } from "./service.ts";
+export { billingCharges, billingPricingRules } from "./schema.ts";
 export type {
   BillingBalanceBridge,
   BillingChargeInput,
@@ -15,4 +15,4 @@ export type {
   BillingPricingRuleQuery,
   BillingPricingRuleStatus,
   BillingServiceOptions,
-} from "./types.js";
+} from "./types.ts";

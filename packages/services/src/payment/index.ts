@@ -8,12 +8,12 @@
  */
 
 import type { EnvRequirement, ServiceDefinition } from "@downcity/city";
-import { createCreemCheckoutSession, normalizeCreemApiBaseURL, parseCreemWebhookEvent, readMetadata as readCreemMetadata, verifyCreemSignature } from "../payment-creem/creem.js";
-import { createDodoCheckoutSession, createDodoClient, normalizeDodoEnvironment, parseDodoWebhookEvent, readMetadata as readDodoMetadata } from "../payment-dodo/dodo.js";
-import { createStripeCheckoutSession, normalizeStripeApiBaseURL, parseStripeWebhookEvent, readMetadata as readStripeMetadata, verifyStripeSignature } from "../payment-stripe/stripe.js";
-import { createWaffoCheckoutSession, createWaffoClient, normalizeWaffoEnvironment, parseWaffoWebhookEvent, readMetadata as readWaffoMetadata } from "../payment-waffo/waffo.js";
-import { paymentEvents, paymentPayments } from "./schema.js";
-import { resolvePaymentRedirectURL } from "./redirect.js";
+import { createCreemCheckoutSession, normalizeCreemApiBaseURL, parseCreemWebhookEvent, readMetadata as readCreemMetadata, verifyCreemSignature } from "../payment-creem/creem.ts";
+import { createDodoCheckoutSession, createDodoClient, normalizeDodoEnvironment, parseDodoWebhookEvent, readMetadata as readDodoMetadata } from "../payment-dodo/dodo.ts";
+import { createStripeCheckoutSession, normalizeStripeApiBaseURL, parseStripeWebhookEvent, readMetadata as readStripeMetadata, verifyStripeSignature } from "../payment-stripe/stripe.ts";
+import { createWaffoCheckoutSession, createWaffoClient, normalizeWaffoEnvironment, parseWaffoWebhookEvent, readMetadata as readWaffoMetadata } from "../payment-waffo/waffo.ts";
+import { paymentEvents, paymentPayments } from "./schema.ts";
+import { resolvePaymentRedirectURL } from "./redirect.ts";
 import type {
   CreemPaymentProviderOptions,
   DodoPaymentProviderOptions,
@@ -32,7 +32,7 @@ import type {
   PaymentStatus,
   StripePaymentProviderOptions,
   WaffoPaymentProviderOptions,
-} from "./types.js";
+} from "./types.ts";
 
 type PaymentTable = {
   select(where?: Partial<PaymentRecord>): Promise<PaymentRecord[]>;

@@ -2,10 +2,10 @@
  * 终端用户 SDK。
  */
 
-import { AIInvoker, serializeModel } from "../invoker/ai/index.js";
-import { PaymentInvoker } from "../invoker/payment/index.js";
-import { ServiceClient } from "../invoker/invoker.js";
-import type { UserCityAccessOptions, UserServiceInput, UserServiceSummary } from "./types.js";
+import { AIInvoker, serializeModel } from "../invoker/ai/index.ts";
+import { PaymentInvoker } from "../invoker/payment/index.ts";
+import { ServiceClient } from "../invoker/invoker.ts";
+import type { UserCityAccessOptions, UserServiceInput, UserServiceSummary } from "./types.ts";
 import {
   defaultFetch,
   normalizeBaseURL,
@@ -14,7 +14,7 @@ import {
   requiredString,
   type FetchLike,
   type RequestInitLike,
-} from "../http.js";
+} from "../http.ts";
 
 export class UserCityAccess {
   readonly ai: AIInvoker;

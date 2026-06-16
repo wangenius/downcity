@@ -5,18 +5,18 @@
  * 并把 runtime 依赖注入到各个 service。
  */
 
-import { executeDDL } from "../../store/db.js";
-import { TableApi, buildCreateUserTableSQL, type CityTableApi } from "../../store/table-api.js";
-import { EnvStore } from "../../service/env/env-store.js";
-import { TownStore } from "../../service/towns/town-store.js";
-import { Authenticator } from "../auth/authenticator.js";
-import { randomSecret } from "../../utils/helpers.js";
-import type { Service } from "../../service/service.js";
-import type { CityUserSchemaInput } from "../../store/types.js";
-import type { Runtime } from "../runtime.js";
-import type { Town } from "../../service/towns/types.js";
-import type { EnvEntry } from "../../service/env/types.js";
-import type { Database, DbClient } from "../../store/db.js";
+import { executeDDL } from "../../store/db.ts";
+import { TableApi, buildCreateUserTableSQL, type CityTableApi } from "../../store/table-api.ts";
+import { EnvStore } from "../../service/env/env-store.ts";
+import { TownStore } from "../../service/towns/town-store.ts";
+import { Authenticator } from "../auth/authenticator.ts";
+import { randomSecret } from "../../utils/helpers.ts";
+import type { Service } from "../../service/service.ts";
+import type { CityUserSchemaInput } from "../../store/types.ts";
+import type { Runtime } from "../runtime.ts";
+import type { Town } from "../../service/towns/types.ts";
+import type { EnvEntry } from "../../service/env/types.ts";
+import type { Database, DbClient } from "../../store/db.ts";
 
 /**
  * City 初始化后的内部状态。

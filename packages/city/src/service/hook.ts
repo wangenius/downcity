@@ -5,7 +5,7 @@
  * 所有 hook 函数接收 Context，不返回值（直接在 ctx 上修改）。
  */
 
-import type { Context } from "./service.js";
+import type { Context } from "./service.ts";
 
 /** Hook 回调函数 */
 export type HookFn = (ctx: Context) => void | Promise<void>;

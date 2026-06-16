@@ -4,7 +4,7 @@
  * baseURL 含 /v1，与 ai-sdk 默认 https://api.openai.com/v1 保持一致。
  */
 
-import { createOpenAIProvider } from "../Provider.js";
+import { createOpenAIProvider } from "../Provider.ts";
 
 export const deepseek = createOpenAIProvider({
   id: "deepseek",

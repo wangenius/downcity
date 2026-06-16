@@ -13,8 +13,8 @@
 
 import { convertToModelMessages, generateText, jsonSchema, streamText, tool } from "ai";
 import type { DynamicToolUIPart, LanguageModel, ToolSet, UIMessage } from "ai";
-import type { Context } from "../service.js";
-import { Provider } from "./provider.js";
+import type { Context } from "../service.ts";
+import { Provider } from "./provider.ts";
 
 /**
  * OpenAI-compatible Provider 配置。

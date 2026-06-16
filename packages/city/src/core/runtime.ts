@@ -10,9 +10,9 @@
  * ```
  */
 
-import type { Database, DbClient } from "../store/db.js";
-import type { EnvEntry, EnvUpsertInput } from "../service/env/types.js";
-import type { EnvStore } from "../service/env/env-store.js";
+import type { Database, DbClient } from "../store/db.ts";
+import type { EnvEntry, EnvUpsertInput } from "../service/env/types.ts";
+import type { EnvStore } from "../service/env/env-store.ts";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
 

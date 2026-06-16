@@ -15,10 +15,10 @@
  * - GET  /v1/ai/models           — 模型列表
  */
 
-import { Service, type Context } from "../service.js";
-import { httpError, randomSecret } from "../../utils/helpers.js";
-import type { ActionFn } from "../action.js";
-import { sqliteAIImageJobs } from "./schema.js";
+import { Service, type Context } from "../service.ts";
+import { httpError, randomSecret } from "../../utils/helpers.ts";
+import type { ActionFn } from "../action.ts";
+import { sqliteAIImageJobs } from "./schema.ts";
 import type { UIMessage } from "ai";
 import type {
   AIServiceOptions,
@@ -26,13 +26,13 @@ import type {
   ModelConfig,
   ModelActions,
   PublicModel,
-} from "./types.js";
+} from "./types.ts";
 import type {
   AIBillingBridge,
   AIProviderBilledOutput,
   AIProviderBilledResponse,
   AIProviderBillingLine,
-} from "./billing.js";
+} from "./billing.ts";
 import type {
   AIImageJobRecord,
   AIImageJobStepContext,
@@ -40,7 +40,7 @@ import type {
   AIImageJobStepState,
   UserImageJobCreateResult,
   UserImageJobResult,
-} from "./job-types.js";
+} from "./job-types.ts";
 
 /** AIService 直接暴露的 SDK 通路模态列表。 */
 const MODALITIES = ["text", "stream", "image", "video", "tts", "asr"] as const;

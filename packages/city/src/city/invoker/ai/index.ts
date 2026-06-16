@@ -4,7 +4,7 @@
  * 路由：/v1/ai/{modality} 和 /v1/ai/models。
  */
 
-import { parseAIStreamBody } from "./stream.js";
+import { parseAIStreamBody } from "./stream.ts";
 import {
   CITY_MODEL_INVOKER,
   CITY_MODEL_KIND,
@@ -12,7 +12,7 @@ import {
   type CityModelConnection,
   type CityModelDescriptor,
 } from "@downcity/type";
-import type { UserModelRef } from "./types.js";
+import type { UserModelRef } from "./types.ts";
 import type {
   UserImageInput,
   UserImageJobCreateResult,
@@ -26,8 +26,8 @@ import type {
   UserTtsInput,
   UserTtsResult,
   UserVideoResult,
-} from "../../user/types.js";
-import type { RequestInitLike } from "../../http.js";
+} from "../../user/types.ts";
+import type { RequestInitLike } from "../../http.ts";
 
 const PREFIX = "/v1/ai";
 
@@ -42,7 +42,7 @@ const PREFIX = "/v1/ai";
  */
 export class AIInvoker {
   private readonly req: <T>(path: string, init: RequestInitLike) => Promise<T>;
-  private readonly reqRaw: (path: string, init: RequestInitLike) => Promise<{ body: import("../../http.js").RawStreamBody }>;
+  private readonly reqRaw: (path: string, init: RequestInitLike) => Promise<{ body: import("../../http.ts").RawStreamBody }>;
   private readonly input: (input: UserServiceInput) => Record<string, unknown>;
   private readonly baseUrl: string;
   private readonly token: string | undefined;
@@ -51,7 +51,7 @@ export class AIInvoker {
     baseUrl: string;
     token?: string;
     requestJSON: <T>(path: string, init: RequestInitLike) => Promise<T>;
-    requestRaw: (path: string, init: RequestInitLike) => Promise<{ body: import("../../http.js").RawStreamBody }>;
+    requestRaw: (path: string, init: RequestInitLike) => Promise<{ body: import("../../http.ts").RawStreamBody }>;
     buildInput: (input: UserServiceInput) => Record<string, unknown>;
   }) {
     this.baseUrl = opts.baseUrl;
@@ -307,7 +307,7 @@ export class ModelCatalog {
 }
 
 /** 将 UserModelInput 转为字符串 */
-export function serializeModel(model: import("./types.js").UserModelInput | undefined): string | undefined {
+export function serializeModel(model: import("./types.ts").UserModelInput | undefined): string | undefined {
   if (!model) return undefined;
   return typeof model === "string" ? model : model.id;
 }

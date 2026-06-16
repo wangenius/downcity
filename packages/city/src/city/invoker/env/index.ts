@@ -4,13 +4,13 @@
  * 管理端操作：list / upsert / remove / import。
  */
 
-import type { RequestInitLike } from "../../http.ts";
+import type { RequestInitLike } from "../../http.js";
 import type {
   EnvCatalogScope,
   EnvEntry,
   EnvRefreshResult,
   EnvUpsertInput,
-} from "./types.ts";
+} from "./types.js";
 
 const PREFIX = "/v1/env";
 

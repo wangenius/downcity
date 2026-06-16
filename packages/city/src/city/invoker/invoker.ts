@@ -8,7 +8,7 @@
  * GET Action 则支持通过第二个参数传 query。
  */
 
-import type { RequestInitLike } from "../http.ts";
+import type { RequestInitLike } from "../http.js";
 
 type Requester = <T>(path: string, init: RequestInitLike) => Promise<T>;
 

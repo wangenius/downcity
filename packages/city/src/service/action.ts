@@ -13,8 +13,8 @@
  * ```
  */
 
-import { Hook } from "./hook.ts";
-import type { Context } from "./service.ts";
+import { Hook } from "./hook.js";
+import type { Context } from "./service.js";
 
 /** Action 的业务逻辑函数 */
 export type ActionFn = (

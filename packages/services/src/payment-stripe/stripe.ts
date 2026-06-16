@@ -11,7 +11,7 @@ import type {
   StripeCheckoutSessionResult,
   StripeCreateCheckoutSessionInput,
   StripeWebhookEvent,
-} from "./types.ts";
+} from "./types.js";
 
 /**
  * 规范化 Stripe API 基础地址。

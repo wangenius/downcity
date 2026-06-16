@@ -12,7 +12,7 @@
 import {
   CREDIT_DECIMAL_PLACES,
   MICROCREDITS_PER_CREDIT,
-} from "../types/Amount.ts";
+} from "../types/Amount.js";
 
 /**
  * 将 credits 输入标准化为 microcredits。

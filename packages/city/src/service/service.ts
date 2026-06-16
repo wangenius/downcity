@@ -8,16 +8,16 @@
 
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
-import { Hook } from "./hook.ts";
-import { Action, type ActionFn } from "./action.ts";
-import type { CityTableApi } from "../store/table-api.ts";
-import type { Database, DbClient } from "../store/db.ts";
-import type { RuntimeUser } from "../core/auth/types.ts";
-import type { Authenticator } from "../core/auth/authenticator.ts";
-import type { EnvProvider } from "../core/runtime.ts";
-import type { TownStore } from "./towns/town-store.ts";
-import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.ts";
-import type { RuntimeMetering } from "../types/Metering.ts";
+import { Hook } from "./hook.js";
+import { Action, type ActionFn } from "./action.js";
+import type { CityTableApi } from "../store/table-api.js";
+import type { Database, DbClient } from "../store/db.js";
+import type { RuntimeUser } from "../core/auth/types.js";
+import type { Authenticator } from "../core/auth/authenticator.js";
+import type { EnvProvider } from "../core/runtime.js";
+import type { TownStore } from "./towns/town-store.js";
+import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.js";
+import type { RuntimeMetering } from "../types/Metering.js";
 
 // ===========================================================================
 // 鉴权级别

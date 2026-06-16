@@ -2,10 +2,10 @@
  * 管理端 SDK。
  */
 
-import { ServiceClient } from "../invoker/invoker.ts";
-import { BalanceInvoker } from "../invoker/balance/index.ts";
-import { EnvInvoker } from "../invoker/env/index.ts";
-import { TownsInvoker } from "../invoker/towns/index.ts";
+import { ServiceClient } from "../invoker/invoker.js";
+import { BalanceInvoker } from "../invoker/balance/index.js";
+import { EnvInvoker } from "../invoker/env/index.js";
+import { TownsInvoker } from "../invoker/towns/index.js";
 import {
   defaultFetch,
   normalizeBaseURL,
@@ -14,12 +14,12 @@ import {
   requiredString,
   type FetchLike,
   type RequestInitLike,
-} from "../http.ts";
+} from "../http.js";
 import type {
   AdminCityAccessOptions,
   AdminModelRecord,
   AdminServiceSummary,
-} from "./types.ts";
+} from "./types.js";
 
 export class AdminCityAccess {
   readonly balance: BalanceInvoker;

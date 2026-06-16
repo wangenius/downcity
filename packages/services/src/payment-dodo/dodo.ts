@@ -8,7 +8,7 @@
  */
 
 import DodoPayments from "dodopayments";
-import type { DodoPaymentEnvironment, DodoPaymentTopupRecord, DodoWebhookEvent } from "./types.ts";
+import type { DodoPaymentEnvironment, DodoPaymentTopupRecord, DodoWebhookEvent } from "./types.js";
 
 /**
  * Dodo Checkout API 创建参数。

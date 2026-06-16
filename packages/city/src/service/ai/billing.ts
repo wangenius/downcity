@@ -7,7 +7,7 @@
  * - Billing bridge 由外部服务注入，避免 @downcity/city 反向依赖 @downcity/services。
  */
 
-import type { Context } from "../service.ts";
+import type { Context } from "../service.js";
 
 /**
  * Provider 计算出的单次扣费结果。

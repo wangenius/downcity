@@ -7,12 +7,12 @@
  * TokenSigner 实例通过 getSigner() 缓存，避免重复 new TokenSigner(key)。
  */
 
-import { bearerToken, httpError } from "../../utils/helpers.ts";
-import { TokenSigner } from "./token-signer.ts";
-import { normalizeRouteAuth, type RouteAuth, type RouteIdentity } from "../../service/service.ts";
-import type { EnvProvider } from "../runtime.ts";
+import { bearerToken, httpError } from "../../utils/helpers.js";
+import { TokenSigner } from "./token-signer.js";
+import { normalizeRouteAuth, type RouteAuth, type RouteIdentity } from "../../service/service.js";
+import type { EnvProvider } from "../runtime.js";
 
-import type { CreateUserTokenInput, UserTokenPayload, UserTokenIssueResult, RuntimeUser } from "./types.ts";
+import type { CreateUserTokenInput, UserTokenPayload, UserTokenIssueResult, RuntimeUser } from "./types.js";
 
 /** 鉴权级别 */
 /** 鉴权结果 */

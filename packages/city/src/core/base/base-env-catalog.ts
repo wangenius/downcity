@@ -4,10 +4,10 @@
  * 负责把 service.env 与 AI 模型 env requirement 汇总成统一目录。
  */
 
-import { AIService } from "../../service/ai/ai-service.ts";
-import type { Service } from "../../service/service.ts";
-import type { EnvCatalogScope, EnvRequirementStatus } from "../../service/env/types.ts";
-import type { EnvProvider } from "../runtime.ts";
+import { AIService } from "../../service/ai/ai-service.js";
+import type { Service } from "../../service/service.js";
+import type { EnvCatalogScope, EnvRequirementStatus } from "../../service/env/types.js";
+import type { EnvProvider } from "../runtime.js";
 
 /**
  * 聚合当前 City 暴露的 env requirement。

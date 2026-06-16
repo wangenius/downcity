@@ -4,8 +4,8 @@
  * 管理端操作：Town CRUD + Token 签发。
  */
 
-import type { RequestInitLike } from "../../http.ts";
-import type { Town, TownCreateInput, TokenApplyInput, TokenApplyResult } from "./types.ts";
+import type { RequestInitLike } from "../../http.js";
+import type { Town, TownCreateInput, TokenApplyInput, TokenApplyResult } from "./types.js";
 
 const PREFIX = "/v1/towns";
 

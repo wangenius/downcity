@@ -6,7 +6,7 @@
  * - EnvProvider 由 City 初始化并注入，不需要产品手动传入。
  */
 
-import { Service } from "../service.ts";
+import { Service } from "../service.js";
 
 export class EnvService extends Service {
   constructor() {

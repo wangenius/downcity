@@ -2,7 +2,7 @@
  * deepseek-v4-flash
  */
 
-import { deepseek } from "./handler.ts";
+import { deepseek } from "./handler.js";
 
 export const deepseekV4Flash = deepseek.model({
   id: "deepseek-v4-flash",

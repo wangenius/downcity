@@ -11,7 +11,7 @@ import type {
   CreemCheckoutSessionResult,
   CreemCreateCheckoutSessionInput,
   CreemWebhookEvent,
-} from "./types.ts";
+} from "./types.js";
 
 /**
  * 规范化 Creem API 基础地址。

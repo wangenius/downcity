@@ -3,19 +3,19 @@
  */
 
 import type { UIMessage, UIMessageChunk } from "ai";
-import type { FetchLike } from "../http.ts";
-import type { UserModelInput } from "../invoker/ai/types.ts";
+import type { FetchLike } from "../http.js";
+import type { UserModelInput } from "../invoker/ai/types.js";
 import type {
   AIImageJobStatus,
   UserImageJobCreateResult,
   UserImageJobResult,
   UserImageJobResultInput,
-} from "../../service/ai/job-types.ts";
+} from "../../service/ai/job-types.js";
 import type {
   UserPaymentMethod,
   UserPaymentMethodReason,
   UserPaymentMethodType,
-} from "../invoker/payment/types.ts";
+} from "../invoker/payment/types.js";
 
 /** JSON 基础值。 */
 export type UserJsonPrimitive = string | number | boolean | null;

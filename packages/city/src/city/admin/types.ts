@@ -2,9 +2,9 @@
  * 管理端类型。
  */
 
-import type { FetchLike } from "../http.ts";
+import type { FetchLike } from "../http.js";
 import type { CityModelDescriptor } from "@downcity/type";
-import type { UserServiceSummary } from "../user/types.ts";
+import type { UserServiceSummary } from "../user/types.js";
 
 /** Admin City 内部访问层构造参数 */
 export interface AdminCityAccessOptions {

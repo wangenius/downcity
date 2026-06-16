@@ -15,16 +15,16 @@ import type {
   BalanceTopupStatus,
   BalanceRedeemCode,
   BalanceRedeemCodeStatus,
-} from "./types.ts";
+} from "./types.js";
 import {
   formatCredits,
   microcreditsToCredits,
   microcreditsToUsdCents,
-} from "./amount.ts";
+} from "./amount.js";
 import {
   CREDIT_DECIMAL_PLACES,
   MICROCREDITS_PER_CREDIT,
-} from "../types/Amount.ts";
+} from "../types/Amount.js";
 
 const REDEEM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 

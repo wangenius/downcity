@@ -11,8 +11,8 @@
 import { serve } from "@hono/node-server";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { compose_city } from "./compose-city.ts";
-import * as models from "./models/index.ts";
+import { compose_city } from "./compose-city.js";
+import * as models from "./models/index.js";
 
 /**
  * 解析 SQLite 数据库路径。

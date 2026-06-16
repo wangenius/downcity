@@ -7,9 +7,9 @@
  */
 
 import type { ServiceInstallContext, ServiceRouteContext } from "@downcity/city";
-import type { BalanceService } from "./service.ts";
-import type { BalanceExtra } from "./types.ts";
-import { normalizeUserId, readRequired, toBalanceUserView } from "./utils.ts";
+import type { BalanceService } from "./service.js";
+import type { BalanceExtra } from "./types.js";
+import { normalizeUserId, readRequired, toBalanceUserView } from "./utils.js";
 
 interface BalanceMutationBody extends Record<string, unknown>, BalanceExtra {
   /**

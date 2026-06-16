@@ -4,9 +4,9 @@
  * 基于 CityTableApi，不直接依赖 Drizzle。
  */
 
-import { normalizeEnvKey } from "../../utils/helpers.ts";
-import type { CityTableApi } from "../../store/table-api.ts";
-import type { EnvEntry, EnvUpsertInput } from "./types.ts";
+import { normalizeEnvKey } from "../../utils/helpers.js";
+import type { CityTableApi } from "../../store/table-api.js";
+import type { EnvEntry, EnvUpsertInput } from "./types.js";
 
 export class EnvStore {
   constructor(private table: CityTableApi<EnvEntry>) {}

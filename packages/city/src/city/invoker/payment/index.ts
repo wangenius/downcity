@@ -7,8 +7,8 @@
  * - 前端不再手写 provider service/action
  */
 
-import type { RequestInitLike } from "../../http.ts";
-import type { UserPaymentMethod } from "./types.ts";
+import type { RequestInitLike } from "../../http.js";
+import type { UserPaymentMethod } from "./types.js";
 
 const PREFIX = "/v1/payment";
 

@@ -12,8 +12,8 @@ import {
   httpError,
   type ServiceInstallContext,
 } from "@downcity/city";
-import { rawAll, rawFirst, rawRun } from "./raw.ts";
-import { registerBalanceRoutes } from "./routes.ts";
+import { rawAll, rawFirst, rawRun } from "./raw.js";
+import { registerBalanceRoutes } from "./routes.js";
 import {
   ACCOUNT_TABLE,
   LEDGER_TABLE,
@@ -23,7 +23,7 @@ import {
   balanceLedger,
   balanceRedeemCodes,
   balanceTopups,
-} from "./schema.ts";
+} from "./schema.js";
 import type {
   BalanceAccount,
   BalanceCreateRedeemCodeInput,
@@ -38,7 +38,7 @@ import type {
   BalanceRedeemCodeRedeemResult,
   BalanceTopup,
   BalanceTopupQuery,
-} from "./types.ts";
+} from "./types.js";
 import {
   generateRedeemCode,
   hashRedeemCode,
@@ -57,13 +57,13 @@ import {
   randomId,
   readRequired,
   stringifyMeta,
-} from "./utils.ts";
+} from "./utils.js";
 import {
   microcreditsToCredits,
   microcreditsToUsdCents,
   readAmountMicrocredits,
   readNonNegativeAmountMicrocredits,
-} from "./amount.ts";
+} from "./amount.js";
 
 type StoredRedeemCodeRow = BalanceRedeemCode & {
   /**

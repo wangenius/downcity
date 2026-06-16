@@ -4,9 +4,9 @@
  * 基于 CityTableApi，不直接依赖 Drizzle。
  */
 
-import { randomSecret } from "../../utils/helpers.ts";
-import type { CityTableApi } from "../../store/table-api.ts";
-import type { Town, TownCreateInput, TownStatus } from "./types.ts";
+import { randomSecret } from "../../utils/helpers.js";
+import type { CityTableApi } from "../../store/table-api.js";
+import type { Town, TownCreateInput, TownStatus } from "./types.js";
 
 export class TownStore {
   constructor(private table: CityTableApi<Town>) {}

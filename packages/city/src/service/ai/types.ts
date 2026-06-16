@@ -4,8 +4,8 @@
  * 包含模型配置、action 映射、运行时模型和执行上下文类型。
  */
 
-import type { ActionFn } from "../action.ts";
-import type { AIBillingBridge } from "./billing.ts";
+import type { ActionFn } from "../action.js";
+import type { AIBillingBridge } from "./billing.js";
 
 // ===========================================================================
 // 模型注册

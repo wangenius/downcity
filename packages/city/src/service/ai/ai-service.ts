@@ -181,31 +181,41 @@ function normalizeUsage(usage: unknown): {
   cached_tokens?: number;
 } {
   if (!isRecord(usage)) return {};
+  const input_token_details = isRecord(usage.inputTokenDetails) ? usage.inputTokenDetails : undefined;
   const cached_tokens = readNumberFieldValue(usage, [
-    "cachedInputTokens",
     "cached_input_tokens",
     "cachedTokens",
     "cached_tokens",
     "prompt_cache_hit_tokens",
+  ]) ?? readNestedNumberFieldValue(usage, "inputTokenDetails", [
+    "cacheReadTokens",
+    "cachedTokens",
   ]) ?? readNestedNumberFieldValue(usage, "prompt_tokens_details", [
     "cached_tokens",
     "cachedTokens",
+  ]) ?? readNumberFieldValue(usage, [
+    "cachedInputTokens",
   ]);
-  const direct_input_tokens = readNumberFieldValue(usage, [
-    "inputTokens",
-    "input_tokens",
-  ]);
-  const prompt_tokens = readNumberFieldValue(usage, [
+  const total_input_tokens = readNumberFieldValue(usage, [
     "promptTokens",
     "prompt_tokens",
+    "inputTokens",
+    "input_tokens",
     "promptTokenCount",
     "prompt_token_count",
   ]);
   const input_tokens = readNumberFieldValue(usage, ["prompt_cache_miss_tokens"])
-    ?? direct_input_tokens
-    ?? (prompt_tokens !== undefined && cached_tokens !== undefined
-      ? Math.max(prompt_tokens - cached_tokens, 0)
-      : prompt_tokens);
+    ?? (input_token_details ? readNumberFieldValue(input_token_details, [
+      "noCacheTokens",
+      "inputTokens",
+    ]) : undefined)
+    ?? readNestedNumberFieldValue(usage, "prompt_tokens_details", [
+      "no_cache_tokens",
+      "noCacheTokens",
+    ])
+    ?? (total_input_tokens !== undefined && cached_tokens !== undefined
+      ? Math.max(total_input_tokens - cached_tokens, 0)
+      : total_input_tokens);
 
   return {
     ...(input_tokens !== undefined ? { input_tokens } : {}),

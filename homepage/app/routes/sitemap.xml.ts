@@ -39,18 +39,6 @@ export const loader = async () => {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/product/console-ui`,
-      lastModified: new Date().toISOString(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/product/chrome-extension`,
-      lastModified: new Date().toISOString(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    },
-    {
       url: `${baseUrl}/product/sdk`,
       lastModified: new Date().toISOString(),
       changeFrequency: "weekly" as const,

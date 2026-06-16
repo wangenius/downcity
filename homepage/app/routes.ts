@@ -23,8 +23,6 @@ export default [
   // Product with child routes
   route("product", "routes/product.tsx", [
     index("routes/product/index.tsx"),
-    route("console-ui", "routes/product/console-ui.tsx"),
-    route("chrome-extension", "routes/product/chrome-extension.tsx"),
     route("sdk", "routes/product/sdk.tsx"),
     route("agent-sdk", "routes/product/agent-sdk.tsx"),
     route("ui-sdk", "routes/product/ui-sdk.tsx"),
@@ -35,12 +33,6 @@ export default [
     { id: "routes/zh/product" },
     [
       index("routes/product/index.tsx", { id: "routes/zh/product._index" }),
-      route("console-ui", "routes/product/console-ui.tsx", {
-        id: "routes/zh/product.console-ui",
-      }),
-      route("chrome-extension", "routes/product/chrome-extension.tsx", {
-        id: "routes/zh/product.chrome-extension",
-      }),
       route("sdk", "routes/product/sdk.tsx", {
         id: "routes/zh/product.sdk",
       }),

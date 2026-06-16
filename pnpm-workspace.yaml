@@ -1,5 +1,4 @@
 packages:
-  - products/console
   - homepage
   - packages/agent
   - packages/city
@@ -9,8 +8,7 @@ packages:
   - packages/type
   - cli/*
   - packages/ui
-  - products/chrome-extension
-  - cities/*
+  - templates/*
   - examples/*
 
 onlyBuiltDependencies:

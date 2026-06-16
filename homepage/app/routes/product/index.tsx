@@ -12,7 +12,7 @@ const page_content = {
   zh: {
     badge: "Product",
     title: "给 AI builders 的 Agent 基础设施产品矩阵",
-    subtitle: "Downcity 不是单点工具，而是一套可复用运行层：本地 Agent 宿主、控制台、浏览器入口、Agent SDK、City SDK 与 UI SDK 共同支撑多个 Agent 产品和工作流。",
+    subtitle: "Downcity 不是单点工具，而是一套可复用运行层：本地 Agent 宿主、Agent SDK、City SDK 与 UI SDK 共同支撑多个 Agent 产品和工作流。",
     logicBadge: "Product Logic",
     logicTitle: "Products、Agents 与 City Runtime",
     logicSubtitle:
@@ -34,18 +34,6 @@ const page_content = {
         desc: "官方 terminal/local Town：用命令行初始化、启动、管理和调试本地 Agent runtime。",
         source: "cli/town/",
         docsPath: "/zh/products-docs/town-cli/init",
-      },
-      {
-        id: "console-ui",
-        title: "Console UI",
-        desc: "在浏览器里统一管理 Agent、上下文、任务、模型和渠道状态。",
-        source: "products/console/",
-      },
-      {
-        id: "chrome-extension",
-        title: "Chrome Extension",
-        desc: "在任意网页一键把内容投递给 Agent，减少复制粘贴和切换成本。",
-        source: "products/chrome-extension/",
       },
       {
         id: "sdk",
@@ -70,8 +58,6 @@ const page_content = {
     facts: [
       "Downcity 面向 AI builders：核心价值是让多个 Agent 产品复用同一套运行基础设施。",
       "Official Town CLI：官方 terminal/local Town 实现，目录为 cli/town/。",
-      "Console UI：独立前端包，目录为 products/console/。",
-      "Chrome Extension：Manifest V3 插件，目录为 products/chrome-extension/。",
       "City SDK：核心 runtime 与服务访问方式位于 packages/city/。",
       "Agent SDK：本地 Agent / RemoteAgent SDK 位于 packages/agent/。",
       "Downcity UI SDK：React + Tailwind 组件包目录为 packages/ui/。",
@@ -81,7 +67,7 @@ const page_content = {
     badge: "Product",
     title: "Agent infrastructure products for AI builders",
     subtitle:
-      "Downcity is not one tool. It is one reusable runtime layer across local agent hosting, Console, browser entry, Agent SDK, City SDK, and UI SDK for many agent products and workflows.",
+      "Downcity is not one tool. It is one reusable runtime layer across local agent hosting, Agent SDK, City SDK, and UI SDK for many agent products and workflows.",
     logicBadge: "Product Logic",
     logicTitle: "Products, Agents, and City Runtime",
     logicSubtitle:
@@ -103,18 +89,6 @@ const page_content = {
         desc: "The official terminal/local Town for initializing, starting, managing, and debugging local agent runtime.",
         source: "cli/town/",
         docsPath: "/en/products-docs/town-cli/init",
-      },
-      {
-        id: "console-ui",
-        title: "Console UI",
-        desc: "Manage agents, contexts, tasks, models, and channels from one browser workspace.",
-        source: "products/console/",
-      },
-      {
-        id: "chrome-extension",
-        title: "Chrome Extension",
-        desc: "Send web content to your agent directly from any page with minimal context switching.",
-        source: "products/chrome-extension/",
       },
       {
         id: "sdk",
@@ -139,8 +113,6 @@ const page_content = {
     facts: [
       "Downcity is for AI builders: the core value is reusing one runtime infrastructure across many agent products.",
       "Official Town CLI is the terminal/local Town implementation under cli/town/.",
-      "Console UI is a dedicated frontend package under products/console/.",
-      "Chrome Extension is a Manifest V3 extension under products/chrome-extension/.",
       "City SDK runtime and service access helpers live in packages/city/.",
       "Agent SDK local Agent and RemoteAgent runtime are in packages/agent/.",
       "Downcity UI SDK is the React + Tailwind component package under packages/ui/.",

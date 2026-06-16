@@ -41,8 +41,8 @@ Neither one implements the server runtime itself. They both send requests into t
 
 Running Downcity is not just `new City(...)`. There is also an assembly layer:
 
-- `cities/node` is the Node.js + SQLite developer starter
-- `cities/edge` is the Cloudflare Workers + D1 developer starter
+- `templates/node` is the Node.js + SQLite developer starter
+- `templates/edge` is the Cloudflare Workers + D1 developer starter
 - each city block owns its own City assembly logic for its runtime
 
 This layer is responsible for assembling `City + AIService + official services + models` into a runnable instance.

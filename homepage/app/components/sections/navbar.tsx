@@ -63,8 +63,6 @@ export function Navbar() {
   const whitepaperPath = isZh ? "/zh/whitepaper" : "/whitepaper";
   const featuresPath = isZh ? "/zh/features" : "/features";
   const resourcesBasePath = isZh ? "/zh/resources" : "/resources";
-  const productConsoleUiPath = isZh ? "/zh/product/console-ui" : "/product/console-ui";
-  const productChromeExtensionPath = isZh ? "/zh/product/chrome-extension" : "/product/chrome-extension";
   const productSdkPath = isZh ? "/zh/product/sdk" : "/product/sdk";
   const productAgentSdkPath = isZh ? "/zh/product/agent-sdk" : "/product/agent-sdk";
   const productUiSdkPath = isZh ? "/zh/product/ui-sdk" : "/product/ui-sdk";
@@ -88,8 +86,6 @@ export function Navbar() {
     activePaths: [productBasePath],
     items: [
       { label: t("nav.productOverview"), description: isZh ? "完整产品矩阵" : "Full product index", path: productBasePath },
-      { label: t("nav.productConsoleUi"), description: isZh ? "浏览器里的 Agent 控制台" : "Agent control surface", path: productConsoleUiPath },
-      { label: t("nav.productChromeExtension"), description: isZh ? "把网页上下文送入 Agent" : "Send live web context", path: productChromeExtensionPath },
       { label: t("nav.productSdk"), description: isZh ? "接入 City SDK" : "Embed City SDK", path: productSdkPath },
       { label: t("nav.productAgentSdk"), description: isZh ? "把本地 Agent、Session、Plugin 嵌入应用" : "Embed local agents, sessions, and plugins", path: productAgentSdkPath },
       { label: t("nav.productUiSdk"), description: isZh ? "复用 Downcity 界面语言" : "Reuse the Downcity UI layer", path: productUiSdkPath },

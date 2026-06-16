@@ -29,7 +29,7 @@ const deepseek = new Provider("deepseek", {
 
 `@downcity/city` 不内置 OpenAI、DeepSeek 或其他具体图片 Provider 构造器。City 包只提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image_create()` / `client.ai.image_result()` 的统一任务协议。
 
-具体上游适配应放在具体 City 项目里实现，例如 `cities/edge/src/image-provider.ts`。这些 adapter 可以把不同上游的响应归一成 AI SDK `UIMessage` file parts，然后通过 `Provider.model()` 注册给 `AIService`：
+具体上游适配应放在具体 City 项目里实现，例如 `templates/edge/src/image-provider.ts`。这些 adapter 可以把不同上游的响应归一成 AI SDK `UIMessage` file parts，然后通过 `Provider.model()` 注册给 `AIService`：
 
 ```ts
 import { Provider } from "@downcity/city";

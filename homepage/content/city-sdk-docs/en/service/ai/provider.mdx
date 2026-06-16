@@ -27,7 +27,7 @@ new Provider(id: string, opts: ProviderOptions)
 
 `@downcity/city` does not ship concrete image provider factories for OpenAI, DeepSeek, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
 
-Provider-specific adapters should live in the concrete City project, for example `cities/edge/src/image-provider.ts`. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
+Provider-specific adapters should live in the concrete City project, for example `templates/edge/src/image-provider.ts`. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
 
 ```ts
 import { Provider } from "@downcity/city";

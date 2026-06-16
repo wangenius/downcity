@@ -11,7 +11,7 @@ const PAGE = {
     highlights: [
       {
         title: "统一视觉与交互",
-        description: "继承 Downcity Console 的信息组织方式，保持团队界面体验一致。",
+        description: "继承 Downcity 面向 Agent 工作台的信息组织方式，保持团队界面体验一致。",
       },
       {
         title: "降低 UI 搭建成本",
@@ -19,7 +19,7 @@ const PAGE = {
       },
       {
         title: "从产品形态反推组件能力",
-        description: "以真实 Console 场景沉淀可复用 UI 原语，而不是抽象空组件。",
+        description: "以真实 Agent 工作台场景沉淀可复用 UI 原语，而不是抽象空组件。",
       },
     ],
     scenesTitle: "典型场景",
@@ -32,7 +32,7 @@ const PAGE = {
     facts: [
       "包名：@downcity/ui",
       "源码目录：packages/ui/",
-      "当前组件能力来源：console-ui 与 homepage 的基础组件抽离",
+      "当前组件能力来源：packages/ui 与 homepage 的基础组件抽离",
     ],
   },
   en: {
@@ -44,7 +44,7 @@ const PAGE = {
     highlights: [
       {
         title: "Consistent visual and interaction model",
-        description: "Carry over Console-style information architecture for predictable team experience.",
+        description: "Carry over agent workspace information architecture for predictable team experience.",
       },
       {
         title: "Lower UI build cost",
@@ -52,7 +52,7 @@ const PAGE = {
       },
       {
         title: "Components shaped by real product use",
-        description: "Patterns are derived from practical console workflows, not abstract-only UI demos.",
+        description: "Patterns are derived from practical agent workspace workflows, not abstract-only UI demos.",
       },
     ],
     scenesTitle: "Typical Scenarios",
@@ -65,7 +65,7 @@ const PAGE = {
     facts: [
       "Package name: @downcity/ui",
       "Source directory: packages/ui/",
-      "Current capability source: shared primitives extracted from console-ui and homepage",
+      "Current capability source: shared primitives extracted from packages/ui and homepage",
     ],
   },
 } as const;
@@ -74,7 +74,7 @@ const PAGE = {
  * Product Downcity UI SDK 页面。
  * 说明：
  * 1. 明确 UI SDK 的用户价值是“复用 Agent 交互语言”。
- * 2. 事实依据来自现有文档与 console-ui 代码组织，不编造发布状态。
+ * 2. 事实依据来自现有文档与 packages/ui 代码组织，不编造发布状态。
  */
 export default function ProductUiSdkPage() {
   const { i18n } = useTranslation();

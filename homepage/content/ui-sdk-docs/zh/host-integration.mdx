@@ -42,7 +42,7 @@ import { someInternalRuntimeMethod } from "../../../cli/city/src/console/ui/xxx"
 cli/city
   └─ 提供 /api/ui/* 与 /api/dashboard/* 网关能力
 
-console-ui
+宿主应用
   └─ 封装 request / query / mutation / hook
 
 @downcity/ui
@@ -63,8 +63,8 @@ console-ui
 
 - `cli/city/src/console/ui/ConsoleUIGateway.ts`
 - `cli/city/src/types/ConsoleUI.ts`
-- `products/console/src/lib/dashboard-api.ts`
-- `products/console/src/hooks/useConsoleDashboard.ts`
+- `cli/town/src/shared/CityConnection.ts`
+- `packages/ui/src`
 
 这说明正确方向已经不是“组件直连主包源码”，而是：
 
@@ -145,7 +145,7 @@ export interface AgentWorkbenchCardProps
 
 ```text
 主包网关返回 agent 列表
-  -> console-ui adapter 转成 snapshot
+  -> 宿主应用 adapter 转成 snapshot
   -> AgentWorkbenchCard 渲染
   -> 用户点击 restart
   -> adapter 调用 /api/ui/agents/restart
@@ -161,7 +161,7 @@ export interface AgentWorkbenchCardProps
 
 ## 推荐的宿主层实现
 
-在 `console-ui` 中，应该继续把交互收敛在 query、mutation、hook 里，而不是下沉到 UI 原语。
+在宿主应用中，应该继续把交互收敛在 query、mutation、hook 里，而不是下沉到 UI 原语。
 
 ```tsx
 function AgentWorkbenchCardContainer(props: { agentId: string }) {
@@ -238,13 +238,13 @@ function AgentWorkbenchCardContainer(props: { agentId: string }) {
 - 纯展示型复合组件
 - 公共样式与公开类型
 
-### `console-ui`
+### 宿主应用
 
 放这些内容：
 
-- `dashboard-api`
-- `dashboard-queries`
-- `dashboard-mutations`
+- API clients
+- queries
+- mutations
 - 页面级 hook
 - 容器组件
 
@@ -274,7 +274,7 @@ function AgentWorkbenchCardContainer(props: { agentId: string }) {
 对 Downcity 来说，正确方案不是“把某个业务组件搬进 UI 包”，而是：
 
 - 在 `@downcity/ui` 中沉淀可复用视觉组件
-- 在 `console-ui` 中承接 `downcity` 主包交互
+- 在宿主应用中承接 `downcity` 主包交互
 - 通过稳定的 `snapshot + intent` 契约连接两者
 
 如果后面你要继续推进，我建议下一步直接做 `AgentWorkbenchCard + AgentInspectorSheet` 这一组，这是最贴近当前 `downcity` 运行时场景的一套组件。

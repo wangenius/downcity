@@ -38,7 +38,7 @@ Avoid this pattern because it couples UI code to the source layout of the main p
 cli/city
   └─ exposes /api/ui/* and /api/dashboard/* gateway capabilities
 
-console-ui
+host app
   └─ wraps request / query / mutation / hook logic
 
 @downcity/ui
@@ -59,8 +59,8 @@ These files already define a strong runtime boundary:
 
 - `cli/city/src/console/ui/ConsoleUIGateway.ts`
 - `cli/city/src/types/ConsoleUI.ts`
-- `products/console/src/lib/dashboard-api.ts`
-- `products/console/src/hooks/useConsoleDashboard.ts`
+- `cli/town/src/shared/CityConnection.ts`
+- `packages/ui/src`
 
 That means the right direction is already visible:
 
@@ -141,7 +141,7 @@ The important part is simple:
 
 ```text
 gateway returns agent list
-  -> console-ui adapter maps response into snapshot
+  -> host app adapter maps response into snapshot
   -> AgentWorkbenchCard renders
   -> user clicks restart
   -> adapter calls /api/ui/agents/restart
@@ -157,7 +157,7 @@ This preserves the most valuable lesson from `teamprofile`:
 
 ## Recommended host implementation
 
-In `console-ui`, keep interaction logic inside queries, mutations, and hooks instead of moving it into UI primitives.
+In the host app, keep interaction logic inside queries, mutations, and hooks instead of moving it into UI primitives.
 
 ```tsx
 function AgentWorkbenchCardContainer(props: { agentId: string }) {
@@ -234,13 +234,13 @@ Keep:
 - pure presentational composites
 - shared styles and exported public types
 
-### `console-ui`
+### Host app
 
 Keep:
 
-- `dashboard-api`
-- `dashboard-queries`
-- `dashboard-mutations`
+- API clients
+- queries
+- mutations
 - page-level hooks
 - container components
 
@@ -272,7 +272,7 @@ For Downcity, the correct solution is not “move a business component into the 
 It is:
 
 - keep reusable visuals in `@downcity/ui`
-- keep main-package interaction in `console-ui`
+- keep main-package interaction in the host app
 - connect them through a stable `snapshot + intent` contract
 
 If you want to keep going, the best next implementation target is `AgentWorkbenchCard + AgentInspectorSheet`.

@@ -10,8 +10,7 @@ Thanks for helping improve Downcity. This repository is a TypeScript monorepo fo
 - `packages/type`: shared protocol types.
 - `packages/ui`: React UI SDK.
 - `cli/*`: public command-line packages.
-- `cities/*`: deployable City compositions.
-- `products/*`: product surfaces such as the Chrome extension.
+- `templates/*`: deployable City compositions.
 - `homepage`: public website and user-facing docs.
 
 ## Before You Start

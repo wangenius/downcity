@@ -16,7 +16,7 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 - Built for AI builders: create the next agent product without rebuilding model routing, tools, memory, tasks, auth, usage, billing, and operations again.
 - Reusable runtime layer: a repo or folder can become an agent boundary, while Downcity owns the broader infrastructure for long-running agents.
 - City: centralize model catalogs, runtime env, service routing, accounts, balance, usage, payment, and HTTP access.
-- Operable agents: run agents as managed daemons, inspect status, review history, and interact through CLI, Console, browser extension, or SDK.
+- Operable agents: run agents as managed daemons, inspect status, review history, and interact through CLI or SDK.
 - Extensible architecture: plugins, services, SDK APIs, and UI components are explicit integration surfaces for products and teams.
 
 ## Packages
@@ -29,8 +29,7 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 | `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by City. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
-| `cities/*` | Developer-friendly City starter compositions for Node or edge runtimes; official private deployments live outside this repository. |
-| `products/chrome-extension` | Chrome extension for Agent Session side-panel chat, page context capture, and optional IM forwarding. |
+| `templates/*` | Developer-friendly City starter compositions for Node or edge runtimes; official private deployments live outside this repository. |
 | `homepage` | Official website and end-user documentation site. |
 
 ## Core Capabilities
@@ -41,7 +40,7 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 - City connection: use `town city` to connect local Agents to the active City server; manage City models and Service resources with `city`.
 - City backend capabilities: reuse accounts, balance, usage, payment, env, auth, and Service routing across agents and products.
 - Built-in agent capabilities: `chat`, `task`, `memory`, `shell`, `contact`, `skill`, `web`, `asr`, `tts`, and `workboard`.
-- Product surfaces: Console UI, Chrome Extension, Agent SDK, City SDK, and UI SDK.
+- Product surfaces: Town CLI, Agent SDK, City SDK, and UI SDK.
 
 ## Quick Start
 
@@ -208,18 +207,16 @@ downcity/
 │   ├── city/
 │   ├── town/
 │   └── downcity/
-├── cities/
+├── templates/
 │   ├── edge/
 │   └── node/
-├── products/
-│   └── chrome-extension/
 ├── homepage/
 ├── scripts/
 ├── package.json
 └── pnpm-workspace.yaml
 ```
 
-The `cities/*` projects are kept as convenient developer starters. They are not the private official production deployments.
+The `templates/*` projects are kept as convenient developer starters. They are not the private official production deployments.
 
 ## Documentation
 
@@ -245,7 +242,6 @@ pnpm build
 pnpm build:agent
 pnpm build:city
 pnpm build:homepage
-pnpm build:extension
 ```
 
 Typecheck:
@@ -262,7 +258,6 @@ Run in development mode:
 pnpm dev:city
 pnpm dev:agent
 pnpm dev:ui-sdk
-pnpm dev:console
 pnpm dev:homepage
 ```
 

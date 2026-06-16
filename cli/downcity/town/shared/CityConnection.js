@@ -149,7 +149,7 @@ export function emitCityServerList(options) {
         printResult({
             asJson: true,
             success: true,
-            title: "cities",
+            title: "templates",
             payload: {
                 count: servers.length,
                 servers,

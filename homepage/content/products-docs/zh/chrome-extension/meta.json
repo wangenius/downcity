@@ -1,9 +1,0 @@
-{
-  "title": "Chrome Extension",
-  "pages": [
-    "overview",
-    "install-and-connect",
-    "usage",
-    "troubleshooting"
-  ]
-}

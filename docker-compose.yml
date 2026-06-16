@@ -26,12 +26,12 @@ services:
         RUN pnpm install --frozen-lockfile
         RUN pnpm -C packages/city build
         RUN pnpm -C packages/services build
-        RUN pnpm -C cities/node typecheck
+        RUN pnpm -C templates/node typecheck
 
         EXPOSE 43127
         VOLUME ["/data"]
 
-        CMD ["pnpm", "-C", "cities/node", "start"]
+        CMD ["pnpm", "-C", "templates/node", "start"]
     environment:
       HOST: 0.0.0.0
       PORT: 43127

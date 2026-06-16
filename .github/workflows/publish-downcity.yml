@@ -14,7 +14,6 @@ on:
       - "cli/city/**"
       - "cli/town/**"
       - "cli/downcity/**"
-      - "products/console/**"
       - "packages/type/package.json"
       - "packages/shell/package.json"
       - "packages/agent/package.json"
@@ -90,7 +89,6 @@ jobs:
           pnpm -C packages/ui build
           pnpm -C cli/city build
           pnpm -C cli/town build
-          pnpm -C products/console build
           pnpm -C cli/downcity build
 
       - name: Validate npm token and package ownership

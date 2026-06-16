@@ -68,6 +68,46 @@ For OpenAI-compatible providers with custom upstream requirements, the `openai` 
 - Upstream (non-streaming): Provider JSON → OpenAI JSON
 - Upstream (streaming): Provider SSE events → OpenAI SSE chunks (event by event)
 
+## Provider Billing
+
+Provider actions may return a billing line next to the normal output. This keeps provider-specific usage parsing inside the provider instead of exposing token/cache fields as a global protocol.
+
+```ts
+const ai = new AIService({
+  billing: billingService({ balance }),
+});
+
+const provider = new Provider("priced-provider", {
+  text: async (ctx) => {
+    const result = await callUpstream(ctx.input);
+
+    return {
+      output: toUIMessage(result),
+      billing: {
+        amount_microcredits: priceUpstreamUsage(result.usage),
+        note: "priced-provider text",
+        metadata: {
+          provider_id: "priced-provider",
+          raw_usage: result.usage,
+        },
+      },
+    };
+  },
+});
+```
+
+For streams, return `billing` as a promise and resolve it when the upstream stream finishes:
+
+```ts
+return {
+  response: stream.toUIMessageStreamResponse(),
+  billing: stream.totalUsage.then((usage) => ({
+    amount_microcredits: priceUpstreamUsage(usage),
+    note: "priced-provider stream",
+  })),
+};
+```
+
 ## Routes
 
 | Route | Pathway |

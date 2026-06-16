@@ -98,7 +98,9 @@ export function compose_city(options: ComposeCityBaseOptions): {
       });
   if (billing) city.use(billing);
 
-  const ai = new AIService();
+  const ai = new AIService({
+    billing,
+  });
   ai.use(options.models);
   city.use(ai);
 

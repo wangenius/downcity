@@ -21,11 +21,18 @@ import type { ActionFn } from "../action.js";
 import { sqliteAIImageJobs } from "./schema.js";
 import type { UIMessage } from "ai";
 import type {
+  AIServiceOptions,
   AIModelEnvRequirement,
   ModelConfig,
   ModelActions,
   PublicModel,
 } from "./types.js";
+import type {
+  AIBillingBridge,
+  AIProviderBilledOutput,
+  AIProviderBilledResponse,
+  AIProviderBillingLine,
+} from "./billing.js";
 import type {
   AIImageJobRecord,
   AIImageJobStepContext,
@@ -45,6 +52,10 @@ const IMAGE_JOB_POLL_AFTER_MS = 2_000;
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
 type UsageRecord = Record<string, unknown>;
+type ResolvedProviderOutput = {
+  output: unknown;
+  billing?: AIProviderBillingLine | Promise<AIProviderBillingLine | undefined>;
+};
 
 /**
  * 判断一个值是否为 HTTP Response。
@@ -58,6 +69,27 @@ function isResponse(value: unknown): value is Response {
  */
 function isRecord(value: unknown): value is UsageRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+/**
+ * 判断 Provider 是否返回了带账单 Response。
+ */
+function isProviderBilledResponse(value: unknown): value is AIProviderBilledResponse {
+  return isRecord(value) && value.response instanceof Response;
+}
+
+/**
+ * 判断 Provider 是否返回了带账单普通输出。
+ */
+function isProviderBilledOutput(value: unknown): value is AIProviderBilledOutput {
+  return isRecord(value) && "output" in value;
+}
+
+/**
+ * 判断一个值是否为 Promise-like。
+ */
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return Boolean(value && typeof value === "object" && "then" in value && typeof (value as { then?: unknown }).then === "function");
 }
 
 /**
@@ -289,8 +321,12 @@ export class AIService extends Service {
   /** SDK 通路 action 映射（modality → action） */
   private modalityActions = new Map<string, ActionFn>();
 
-  constructor() {
+  /** AI 专用计费桥接。 */
+  private readonly billing?: AIBillingBridge;
+
+  constructor(options: AIServiceOptions = {}) {
     super({ id: "ai", name: "AI", tables: { image_jobs: sqliteAIImageJobs } });
+    this.billing = options.billing;
 
     // 为每个 modality 注册 routing action
     for (const modality of MODALITIES) {
@@ -486,8 +522,11 @@ export class AIService extends Service {
     const started_at = Date.now();
 
     try {
-      const output = await resolved.action(ctx);
+      const provider_output = await resolved.action(ctx);
+      const { output, billing } = this.resolveProviderOutput(provider_output);
       this.attachOutputMetering(ctx, output, modality, started_at);
+      const defer_billing = isResponse(output) || isPromiseLike(billing);
+      await this.handleBilling(ctx, billing, defer_billing);
       if (isResponse(output)) return output;
       return output;
     } catch (error) {
@@ -711,9 +750,12 @@ export class AIService extends Service {
 
     try {
       const output = await resolved.action(ctx);
-      this.attachOutputMetering(ctx, output, "openai", started_at);
-      if (isResponse(output)) return output;
-      return new Response(JSON.stringify(output), { status: 200, headers: { "content-type": "application/json" } });
+      const provider_output = this.resolveProviderOutput(output);
+      this.attachOutputMetering(ctx, provider_output.output, "openai", started_at);
+      const defer_billing = isResponse(provider_output.output) || isPromiseLike(provider_output.billing);
+      await this.handleBilling(ctx, provider_output.billing, defer_billing);
+      if (isResponse(provider_output.output)) return provider_output.output;
+      return new Response(JSON.stringify(provider_output.output), { status: 200, headers: { "content-type": "application/json" } });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const status = (error as { statusCode?: number }).statusCode ?? 500;
@@ -759,6 +801,62 @@ export class AIService extends Service {
       duration_ms: Date.now() - started_at,
       raw_usage: usage ?? ctx.metering?.raw_usage,
     };
+  }
+
+  /**
+   * 拆包 Provider 返回值。
+   *
+   * 关键说明（中文）
+   * - 新 Provider 可以返回 `{ output, billing }` 或 `{ response, billing }`。
+   * - 老 Provider 继续直接返回 UIMessage / Response，保持兼容。
+   */
+  private resolveProviderOutput(value: unknown): ResolvedProviderOutput {
+    if (isProviderBilledResponse(value)) {
+      return {
+        output: value.response,
+        billing: value.billing,
+      };
+    }
+    if (isProviderBilledOutput(value)) {
+      return {
+        output: value.output,
+        billing: value.billing,
+      };
+    }
+    return { output: value };
+  }
+
+  /**
+   * 安排 AI 专用扣费。
+   */
+  private async handleBilling(
+    ctx: Context,
+    billing: AIProviderBillingLine | Promise<AIProviderBillingLine | undefined> | undefined,
+    defer: boolean,
+  ): Promise<void> {
+    if (!billing || !this.billing) return;
+    ctx.locals.ai_billing_handled = true;
+    const promise = Promise.resolve(billing)
+      .then(async (line) => {
+        if (!line || line.amount_microcredits <= 0) return;
+        await this.billing?.charge({
+          ctx,
+          ...line,
+        });
+      });
+    if (!defer) {
+      await promise;
+      return;
+    }
+    if (ctx.waitUntil) {
+      try {
+        ctx.waitUntil(promise);
+        return;
+      } catch {
+        // 非 Worker 测试环境可能没有真实 ExecutionContext，继续走普通异步结算。
+      }
+    }
+    void promise;
   }
 
   // ========== 模型列表 ==========

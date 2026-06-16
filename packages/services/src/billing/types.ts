@@ -66,6 +66,31 @@ export interface BillingServiceOptions {
 }
 
 /**
+ * 外部服务显式提交的扣费输入。
+ */
+export interface BillingChargeInput {
+  /**
+   * 当前 service action context。
+   */
+  ctx: Context;
+
+  /**
+   * 扣费金额，单位为 microcredits。
+   */
+  amount_microcredits: number;
+
+  /**
+   * 账单说明。
+   */
+  note?: string;
+
+  /**
+   * 扩展审计信息。
+   */
+  metadata?: Record<string, unknown>;
+}
+
+/**
  * Pricing rule 输入。
  */
 export interface BillingPricingRuleInput extends Record<string, unknown> {

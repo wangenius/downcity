@@ -66,6 +66,46 @@ const openaiCustom = new Provider("openai-custom", {
 });
 ```
 
+## Provider 计费
+
+Provider action 可以在正常输出旁边返回一条 billing。这样 provider 自己解析上游 usage 和价格，AIService / BillingService 不需要理解 token、cache、reasoning 等 provider 私有字段。
+
+```ts
+const ai = new AIService({
+  billing: billingService({ balance }),
+});
+
+const provider = new Provider("priced-provider", {
+  text: async (ctx) => {
+    const result = await callUpstream(ctx.input);
+
+    return {
+      output: toUIMessage(result),
+      billing: {
+        amount_microcredits: priceUpstreamUsage(result.usage),
+        note: "priced-provider text",
+        metadata: {
+          provider_id: "priced-provider",
+          raw_usage: result.usage,
+        },
+      },
+    };
+  },
+});
+```
+
+流式调用可以返回一个 Promise，在上游 stream 结束后再 resolve 最终扣费：
+
+```ts
+return {
+  response: stream.toUIMessageStreamResponse(),
+  billing: stream.totalUsage.then((usage) => ({
+    amount_microcredits: priceUpstreamUsage(usage),
+    note: "priced-provider stream",
+  })),
+};
+```
+
 ## SDK 调用
 
 ```ts

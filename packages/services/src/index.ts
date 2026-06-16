@@ -45,6 +45,7 @@ export type {
 export { billingCharges, billingPricingRules, billingService, BillingService } from "./billing/index.js";
 export type {
   BillingBalanceBridge,
+  BillingChargeInput,
   BillingCharge,
   BillingChargeQuery,
   BillingChargeStatus,

@@ -56,10 +56,19 @@ export { Provider } from "./service/ai/provider.js";
 export { createOpenAICompatibleProvider } from "./service/ai/openai-compatible-provider.js";
 
 export type {
+  AIServiceOptions,
   ModelConfig,
   ModelActions,
   PublicModel,
 } from "./service/ai/types.js";
+
+export type {
+  AIBillingBridge,
+  AIBillingChargeInput,
+  AIProviderBilledOutput,
+  AIProviderBilledResponse,
+  AIProviderBillingLine,
+} from "./service/ai/billing.js";
 
 export type {
   OpenAICompatibleClient,

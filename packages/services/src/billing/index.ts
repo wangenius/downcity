@@ -6,6 +6,7 @@ export { BillingService, billingService } from "./service.js";
 export { billingCharges, billingPricingRules } from "./schema.js";
 export type {
   BillingBalanceBridge,
+  BillingChargeInput,
   BillingCharge,
   BillingChargeQuery,
   BillingChargeStatus,
@@ -15,4 +16,3 @@ export type {
   BillingPricingRuleStatus,
   BillingServiceOptions,
 } from "./types.js";
-

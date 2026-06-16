@@ -5,6 +5,7 @@
  */
 
 import type { ActionFn } from "../action.js";
+import type { AIBillingBridge } from "./billing.js";
 
 // ===========================================================================
 // 模型注册
@@ -107,4 +108,16 @@ export interface AIModelEnvRequirement {
   description: string;
   /** 当前是否必须提供该 key 才能调用模型 */
   required: boolean;
+}
+
+/**
+ * AIService 配置。
+ */
+export interface AIServiceOptions {
+  /**
+   * AI 专用计费桥接。
+   *
+   * Provider 可以直接返回最终扣费金额，AIService 会通过该 bridge 完成扣费。
+   */
+  billing?: AIBillingBridge;
 }

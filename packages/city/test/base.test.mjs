@@ -196,6 +196,95 @@ test("CityBase rejects mismatched town_id for authenticated user requests", asyn
   }
 })
 
+test("AIService charges explicit provider billing lines", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-explicit-billing-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const charges = []
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+
+    const ai = new AIService({
+      billing: {
+        async charge(input) {
+          charges.push({
+            action_id: input.ctx.action?.id,
+            model_id: input.ctx.variant?.id,
+            amount_microcredits: input.amount_microcredits,
+            note: input.note,
+            metadata: input.metadata,
+          })
+        },
+      },
+    })
+    ai.use({
+      id: "priced-text",
+      provider_id: "priced-provider",
+      name: "Priced Text",
+      default: ["text"],
+      actions: {
+        text: async () => ({
+          output: {
+            id: "msg_1",
+            role: "assistant",
+            parts: [{ type: "text", text: "ok", state: "done" }],
+          },
+          billing: {
+            amount_microcredits: 123,
+            note: "provider charge",
+            metadata: { provider_id: "priced-provider" },
+          },
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+
+    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+    }))).json()
+
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({ model: "priced-text", prompt: "hi" }),
+    }))
+
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).id, "msg_1")
+    assert.deepEqual(charges, [{
+      action_id: "text",
+      model_id: "priced-text",
+      amount_microcredits: 123,
+      note: "provider charge",
+      metadata: { provider_id: "priced-provider" },
+    }])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("CityBase AI image jobs persist and finish through waitUntil", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-"))

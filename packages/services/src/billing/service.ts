@@ -19,6 +19,7 @@ import { registerBillingRoutes } from "./routes.js";
 import type {
   BillingBalanceBridge,
   BillingCharge,
+  BillingChargeInput,
   BillingChargeQuery,
   BillingPricingRule,
   BillingPricingRuleInput,
@@ -104,6 +105,7 @@ export class BillingService extends InstallableService {
 
     ctx.hook.after(async (serviceCtx) => {
       if (!shouldBill(serviceCtx)) return;
+      if (serviceCtx.locals.ai_billing_handled) return;
       if (!isSuccessfulOutput(serviceCtx.output)) return;
       await this.settle(serviceCtx);
     });
@@ -230,10 +232,45 @@ export class BillingService extends InstallableService {
     return charge;
   }
 
+  /**
+   * 显式扣费。
+   *
+   * 关键说明（中文）
+   * - AI Provider 可以自行完成 usage 与价格换算，然后通过 AIService 调用这里。
+   * - Billing 只负责扣余额和记录账单，不理解 provider 内部 usage 结构。
+   */
+  async charge(input: BillingChargeInput): Promise<BillingCharge | undefined> {
+    if (!shouldBill(input.ctx)) return undefined;
+    const amount_microcredits = normalizeNonNegativeInteger(input.amount_microcredits, "amount_microcredits");
+    if (amount_microcredits <= 0) return undefined;
+    const charge = await this.createCharge(input.ctx, undefined, amount_microcredits, {
+      note: input.note,
+      metadata: input.metadata,
+    });
+    await this.balance.subMicrocredits(input.ctx.user!.user_id, amount_microcredits, {
+      note: charge.note,
+      ref: charge.charge_id,
+      meta: {
+        charge_id: charge.charge_id,
+        service_id: charge.service_id,
+        action_id: charge.action_id,
+        model_id: charge.model_id,
+        provider_id: charge.provider_id,
+        explicit_billing: true,
+        ...(input.metadata ? { billing: input.metadata } : {}),
+      },
+    });
+    return charge;
+  }
+
   private async createCharge(
     ctx: Context,
-    rule: BillingPricingRule,
+    rule: BillingPricingRule | undefined,
     amount_microcredits: number,
+    options: {
+      note?: string;
+      metadata?: Record<string, unknown>;
+    } = {},
   ): Promise<BillingCharge> {
     const now = new Date().toISOString();
     const charge: BillingCharge = {
@@ -244,14 +281,15 @@ export class BillingService extends InstallableService {
       action_id: ctx.action?.id ?? "",
       model_id: ctx.variant?.id ?? ctx.metering?.model_id ?? "",
       provider_id: ctx.metering?.provider_id ?? "",
-      rule_id: rule.rule_id,
+      rule_id: rule?.rule_id ?? "",
       amount: microcreditsToCredits(amount_microcredits),
       amount_microcredits,
       status: "settled",
-      note: `${ctx.service?.id ?? "service"} ${ctx.action?.id ?? "action"}`,
+      note: options.note || `${ctx.service?.id ?? "service"} ${ctx.action?.id ?? "action"}`,
       metadata_json: JSON.stringify({
         metering: ctx.metering ?? {},
-        pricing_rule: rule.rule_id,
+        pricing_rule: rule?.rule_id ?? "",
+        ...(options.metadata ? { billing: options.metadata } : {}),
       }),
       created_at: now,
     };

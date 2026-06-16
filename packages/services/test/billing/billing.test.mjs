@@ -187,6 +187,90 @@ test("billingService supports per-million token pricing rules", async () => {
   }
 })
 
+test("billingService supports explicit provider charges", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-billing-explicit-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+
+    const balance = balanceService({
+      init: 1,
+    })
+    base.use(balance)
+    base.use(billingService({
+      balance,
+      pricing_rules: [{
+        rule_id: "fallback_text",
+        service_id: "ai",
+        action_id: "text",
+        request_microcredits: 10_000,
+      }],
+    }))
+
+    const ai = new AIService({
+      billing: base.getService("billing"),
+    })
+    ai.use({
+      id: "priced-text",
+      provider_id: "priced-provider",
+      name: "Priced Text",
+      default: ["text"],
+      actions: {
+        text: async () => ({
+          output: {
+            id: "msg_1",
+            role: "assistant",
+            parts: [{ type: "text", text: "ok" }],
+          },
+          billing: {
+            amount_microcredits: 123,
+            note: "priced-provider charge",
+            metadata: { provider_id: "priced-provider" },
+          },
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+
+    const town = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/towns/create",
+      body: { name: "Demo" },
+    }))).json()
+    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/towns/tokens/apply",
+      body: { town_id: town.town_id, user_id: "user_1" },
+    }))).json()
+
+    const invokeResponse = await base.handleRequest(userRequest({
+      token: tokenBody.user_token,
+      path: "/v1/ai/text",
+      body: { prompt: "hi", model: "priced-text" },
+    }))
+    assert.equal(invokeResponse.status, 200)
+
+    const chargesResponse = await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/billing/charges",
+      method: "GET",
+    }))
+    const charges = await chargesResponse.json()
+    assert.equal(charges.items.length, 1)
+    assert.equal(charges.items[0].amount_microcredits, 123)
+    assert.equal(charges.items[0].note, "priced-provider charge")
+
+    const account = await balance.read("user_1")
+    assert.equal(account.balance, 999_877)
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 function adminRequest(adminSecret, { path: pathname, method = "POST", body }) {
   return new Request(`http://localhost${pathname}`, {
     method,

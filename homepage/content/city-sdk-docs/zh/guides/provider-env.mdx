@@ -10,13 +10,25 @@ description: 如何在 City 运行环境中配置 Provider API Key。
 在 `Provider` 构造时声明：
 
 ```ts
-const deepseek = new Provider("deepseek", {
-  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-  baseURL: "https://api.deepseek.com",
-  envKey: "DEEPSEEK_API_KEY",
-  text: deepseekTextHandler,
-  stream: deepseekStreamHandler,
-});
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
+
+class DeepSeekProvider extends Provider {
+  constructor() {
+    super({
+      id: "deepseek",
+      env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+      baseURL: "https://api.deepseek.com",
+      envKey: "DEEPSEEK_API_KEY",
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  }
+}
+
+const deepseek = new DeepSeekProvider();
 ```
 
 `env` 字段声明环境变量需求（key → 描述），`envKey` 指定自动透传时读取的 key。
@@ -44,10 +56,12 @@ curl -X POST http://127.0.0.1:43127/v1/env/import \
 ## 在 handler 中读取
 
 ```ts
-text: async (ctx) => {
+import { readRequiredEnv, type Context } from "@downcity/city";
+
+async text(ctx: Context) {
   const apiKey = ctx.env("DEEPSEEK_API_KEY");
-  // 或使用 readApiKey 辅助函数（找不到时抛错）
-  const apiKey2 = readApiKey(ctx, "DEEPSEEK_API_KEY");
+  // 或使用 readRequiredEnv 辅助函数（找不到时抛错）
+  const apiKey2 = readRequiredEnv(ctx, "DEEPSEEK_API_KEY");
 }
 ```
 

@@ -10,13 +10,25 @@ All provider API keys are managed through City's own env table.
 Declare them in the `Provider` constructor:
 
 ```ts
-const deepseek = new Provider("deepseek", {
-  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-  baseURL: "https://api.deepseek.com",
-  envKey: "DEEPSEEK_API_KEY",
-  text: deepseekTextHandler,
-  stream: deepseekStreamHandler,
-});
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
+
+class DeepSeekProvider extends Provider {
+  constructor() {
+    super({
+      id: "deepseek",
+      env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+      baseURL: "https://api.deepseek.com",
+      envKey: "DEEPSEEK_API_KEY",
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  }
+}
+
+const deepseek = new DeepSeekProvider();
 ```
 
 The `env` field declares required environment variables (`key -> description`), and `envKey` tells automatic passthrough which key to read.
@@ -44,10 +56,12 @@ curl -X POST http://127.0.0.1:43127/v1/env/import \
 ## Read them inside a handler
 
 ```ts
-text: async (ctx) => {
+import { readRequiredEnv, type Context } from "@downcity/city";
+
+async text(ctx: Context) {
   const apiKey = ctx.env("DEEPSEEK_API_KEY");
   // Or use the helper that throws when missing
-  const apiKey2 = readApiKey(ctx, "DEEPSEEK_API_KEY");
+  const apiKey2 = readRequiredEnv(ctx, "DEEPSEEK_API_KEY");
 }
 ```
 

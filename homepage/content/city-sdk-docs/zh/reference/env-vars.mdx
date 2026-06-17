@@ -24,24 +24,47 @@ description: City 运行时常见环境变量。
 model handler 直接读取 `ctx.env`：
 
 ```ts
-const deepseek = new Provider("deepseek", {
-  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-  envKey: "DEEPSEEK_API_KEY",
-  text: async (ctx) => {
-    const apiKey = ctx.env("DEEPSEEK_API_KEY");
-    const { createOpenAI } = await import("@ai-sdk/openai");
-    const client = createOpenAI({
-      apiKey,
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { generateText } from "ai";
+import {
+  Provider,
+  buildAssistantMessage,
+  type Context,
+  type AIProviderBilledOutput,
+  type OpenAICompatibleClientConfig,
+} from "@downcity/city";
+import type { UIMessage } from "ai";
+
+class DeepSeekProvider extends Provider {
+  constructor() {
+    super({
+      id: "deepseek",
+      env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+      envKey: "DEEPSEEK_API_KEY",
       baseURL: "https://api.deepseek.com",
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  }
+
+  async text(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+    const apiKey = ctx.env("DEEPSEEK_API_KEY");
+    const client = createOpenAICompatible({
+      apiKey,
+      baseURL: this.baseURL ?? "",
+      name: "deepseek",
     });
     const result = await generateText({
       model: client.chat("deepseek-v4-flash"),
       prompt: ctx.input.prompt,
     });
-    return assistantMessage(result.text, ctx);
-  },
-  stream: async (ctx) => { /* ... */ },
-});
+    return buildAssistantMessage(result.text, ctx, { finishReason: "stop" });
+  }
+}
+
+const deepseek = new DeepSeekProvider();
 ```
 
 所以实际约束很简单：

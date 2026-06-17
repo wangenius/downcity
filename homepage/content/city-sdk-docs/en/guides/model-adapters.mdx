@@ -19,9 +19,9 @@ Downcity's AI service has **two independent pathways** sharing a single model re
    POST /v1/ai/stream                  ↑
               │                         OpenAI-format body
               ▼                        { model, messages, stream }
-   provider.handlers.text                            │
-   provider.handlers.stream                          ▼
-      (ai-sdk wrapper)                  provider.handlers.openai
+   provider.text                                     │
+   provider.stream                                   ▼
+      (ai-sdk wrapper)                       provider.openai
               │                         (passthrough or format conversion)
               ▼                                    │
          UIMessage                                ▼
@@ -32,22 +32,48 @@ Downcity's AI service has **two independent pathways** sharing a single model re
 ## Provider Pattern
 
 ```ts
-// OpenAI-compatible: no openai handler → auto-passthrough
-const deepseek = new Provider("deepseek", {
-  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-  baseURL: "https://api.deepseek.com",
-  envKey: "DEEPSEEK_API_KEY",
-  text: deepseekTextHandler,
-  stream: deepseekStreamHandler,
-});
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { Provider, type OpenAICompatibleClientConfig, type Context, type AIProviderBilledResponse } from "@downcity/city";
 
-// Non-OpenAI format: must provide openai handler
-const openaiCustom = new Provider("openai-custom", {
-  env: { OPENAI_API_KEY: "OpenAI API Key" },
-  text: openaiTextHandler,
-  stream: openaiStreamHandler,
-  openai: openaiCompatibleHandler,
-});
+// OpenAI-compatible: override createClient to get default text / stream, no openai → auto-passthrough
+class DeepSeekProvider extends Provider {
+  constructor() {
+    super({
+      id: "deepseek",
+      env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+      baseURL: "https://api.deepseek.com",
+      envKey: "DEEPSEEK_API_KEY",
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  }
+}
+
+const deepseek = new DeepSeekProvider();
+
+// Non-OpenAI format: provide a custom openai method
+class OpenAICustomProvider extends Provider {
+  constructor() {
+    super({
+      id: "openai-custom",
+      env: { OPENAI_API_KEY: "OpenAI API Key" },
+      baseURL: "https://api.openai.com/v1",
+      envKey: "OPENAI_API_KEY",
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "openai-custom" });
+  }
+
+  async openai(ctx: Context): Promise<AIProviderBilledResponse> {
+    return openaiCompatibleHandler(ctx);
+  }
+}
+
+const openaiCustom = new OpenAICustomProvider();
 ```
 
 ## Auto Passthrough
@@ -73,27 +99,36 @@ For OpenAI-compatible providers with custom upstream requirements, the `openai` 
 Provider actions may return a billing line next to the normal output. This keeps provider-specific usage parsing inside the provider instead of exposing token/cache fields as a global protocol.
 
 ```ts
+import { Provider, buildAssistantMessage, type Context, type AIProviderBilledOutput } from "@downcity/city";
+import type { UIMessage } from "ai";
+
 const ai = new AIService({
   billing: billingService({ balance }),
 });
 
-const provider = new Provider("priced-provider", {
-  text: async (ctx) => {
+class PricedProvider extends Provider {
+  constructor() {
+    super({ id: "priced-provider" });
+  }
+
+  async text(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
     const result = await callUpstream(ctx.input);
 
-    return {
-      output: toUIMessage(result),
-      billing: {
-        amount_microcredits: priceUpstreamUsage(result.usage),
-        note: "priced-provider text",
-        metadata: {
-          provider_id: "priced-provider",
-          raw_usage: result.usage,
-        },
+    return buildAssistantMessage(result.text, ctx, {
+      finishReason: "stop",
+      usage: result.usage,
+    }, {
+      amount_microcredits: priceUpstreamUsage(result.usage),
+      note: "priced-provider text",
+      metadata: {
+        provider_id: "priced-provider",
+        raw_usage: result.usage,
       },
-    };
-  },
-});
+    });
+  }
+}
+
+const provider = new PricedProvider();
 ```
 
 For streams, return `billing` as a promise and resolve it when the upstream stream finishes:

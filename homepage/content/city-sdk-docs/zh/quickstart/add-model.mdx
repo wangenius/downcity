@@ -4,15 +4,25 @@ description: 用 Provider 注册模型，AIService 自动生成路由。
 ---
 
 ```ts
-import { AIService, Provider } from "@downcity/city";
+import { AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
-const deepseek = new Provider("deepseek", {
-  baseURL: "https://api.deepseek.com/v1",
-  envKey: "DEEPSEEK_API_KEY",
-  passthroughModel: "deepseek-chat",
-  text: myTextAction,
-  stream: myStreamAction,
-});
+class DeepSeekProvider extends Provider {
+  constructor() {
+    super({
+      id: "deepseek",
+      baseURL: "https://api.deepseek.com/v1",
+      envKey: "DEEPSEEK_API_KEY",
+      passthroughModel: "deepseek-chat",
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  }
+}
+
+const deepseek = new DeepSeekProvider();
 
 const ai = new AIService();
 ai.use(deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }));

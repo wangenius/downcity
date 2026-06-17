@@ -8,16 +8,25 @@ description: Register models with Provider + AIService. OpenAI-compatible provid
 For DeepSeek and other OpenAI-compatible providers:
 
 ```ts
-import { Provider, AIService } from "@downcity/city";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { Provider, AIService, type OpenAICompatibleClientConfig } from "@downcity/city";
 
-const deepseek = new Provider("deepseek", {
-  env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-  baseURL: "https://api.deepseek.com",
-  envKey: "DEEPSEEK_API_KEY",       // auto-passthrough uses this
-  text: deepseekTextHandler,        // SDK pathway
-  stream: deepseekStreamHandler,    // SDK pathway
-  // no openai → auto-passthrough
-});
+class DeepSeekProvider extends Provider {
+  constructor() {
+    super({
+      id: "deepseek",
+      env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
+      baseURL: "https://api.deepseek.com",
+      envKey: "DEEPSEEK_API_KEY",       // auto-passthrough uses this
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  }
+}
+
+const deepseek = new DeepSeekProvider();
 
 const ai = new AIService();
 ai.use(deepseek.model({
@@ -31,25 +40,33 @@ base.use(ai);
 
 ## Scenario 2: Custom OpenAI-Compatible Handler
 
-Use an `openai` handler when an OpenAI-compatible upstream needs request or response customization:
+Use an `openai` method when an OpenAI-compatible upstream needs request or response customization:
 
 ```ts
-const openaiCustom = new Provider("openai-custom", {
-  env: { OPENAI_API_KEY: "OpenAI API Key" },
-  text: openaiTextHandler,
-  stream: openaiStreamHandler,
-  openai: async (ctx) => {
+import { Provider, type Context, type AIProviderBilledResponse } from "@downcity/city";
+
+class OpenAICustomProvider extends Provider {
+  constructor() {
+    super({
+      id: "openai-custom",
+      env: { OPENAI_API_KEY: "OpenAI API Key" },
+    });
+  }
+
+  async openai(ctx: Context): Promise<AIProviderBilledResponse> {
     // Downstream: customize OpenAI body
     // Upstream: normalize response
     // (streaming: SSE event-by-event conversion)
-  },
-});
+  }
+}
+
+const openaiCustom = new OpenAICustomProvider();
 ```
 
-## Handler Signatures
+## Method Signatures
 
 | Pathway | ctx.input | Return |
 |---|---|---|
-| `text` | `{ prompt }` | `UIMessage` |
-| `stream` | `{ prompt }` | `Response` (SSE) or `UIMessageStream` |
-| `openai` | `{ model, messages, stream, ... }` | `Response` |
+| `text` | `{ prompt }` | `{ output: UIMessage; billing? }` |
+| `stream` | `{ prompt }` | `{ response: Response; billing? }` |
+| `openai` | `{ model, messages, stream, ... }` | `{ response: Response; billing? }` |

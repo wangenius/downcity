@@ -16,14 +16,24 @@ const base = new CityBase({ db });
 ## Service Registration
 
 ```ts
-import { AIService, Provider } from "@downcity/city";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
 
-const deepseek = new Provider("deepseek", {
-  baseURL: "https://api.deepseek.com",
-  envKey: "DEEPSEEK_API_KEY",
-  text: myTextHandler,
-  stream: myStreamHandler,
-});
+class DeepSeekProvider extends Provider {
+  constructor() {
+    super({
+      id: "deepseek",
+      baseURL: "https://api.deepseek.com",
+      envKey: "DEEPSEEK_API_KEY",
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  }
+}
+
+const deepseek = new DeepSeekProvider();
 
 const ai = new AIService();
 ai.use(deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }));

@@ -6,7 +6,15 @@ description: Run a complete call chain with the default database, Admin City, an
 ## 1. Start City
 
 ```ts
-import { CityBase, AIService, Provider } from "@downcity/city";
+import {
+  CityBase,
+  AIService,
+  Provider,
+  type Context,
+  type AIProviderBilledOutput,
+  type AIProviderBilledResponse,
+} from "@downcity/city";
+import type { UIMessage } from "ai";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -19,14 +27,34 @@ const db = Object.assign(drizzle(sqlite), {
 
 const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
 
-const echo = new Provider("echo", {
-  text: async (ctx) => ({
-    id: crypto.randomUUID(),
-    role: "assistant",
-    parts: [{ type: "text", text: `Echo: ${ctx.input.prompt}` }],
-  }),
-  stream: async (ctx) => { /* ... */ },
-});
+class EchoProvider extends Provider {
+  constructor() {
+    super({ id: "echo" });
+  }
+
+  async text(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+    return {
+      output: {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        parts: [{ type: "text", text: `Echo: ${ctx.input.prompt}` }],
+      },
+    };
+  }
+
+  async stream(ctx: Context): Promise<AIProviderBilledResponse> {
+    const { createUIMessageStreamResponse } = await import("ai");
+    return {
+      response: createUIMessageStreamResponse({
+        execute: async ({ writer }) => {
+          writer.write({ type: "text-delta", textDelta: `Echo: ${ctx.input.prompt}` });
+        },
+      }),
+    };
+  }
+}
+
+const echo = new EchoProvider();
 
 const ai = new AIService();
 ai.use(echo.model({ id: "local-echo", name: "Local Echo", default: true }));

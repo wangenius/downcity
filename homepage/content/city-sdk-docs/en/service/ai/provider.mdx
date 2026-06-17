@@ -1,154 +1,291 @@
 ---
 title: Provider & Model Registration
-description: Provider constructor, model(), handler signatures, and ModelConfig fields.
+description: Provider is an abstract base class for AI upstreams. Subclass it to declare actions.
 ---
 
-## Provider Constructor
+ `Provider` is an abstract base class that encapsulates an upstream AI provider's actions and connection info. Use `.model()` to produce a `ModelConfig`, then pass it to `AIService.use()`.
 
-```ts
-new Provider(id: string, opts: ProviderOptions)
-```
+ ## Quick Start: OpenAI-compatible Text Provider
 
-### ProviderOptions
+ Extend `Provider` and override `createClient` to get default `text` / `stream` actions:
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `env` | `Record<string, string>` | No | Env var key → description |
-| `baseURL` | `string` | No | Provider API URL, for auto-passthrough |
-| `envKey` | `string` | No | Env var name for API key, for auto-passthrough |
-| `text` | `ServiceHandler` | No | SDK text handler |
-| `stream` | `ServiceHandler` | No | SDK stream handler |
-| `image` | `ServiceHandler` | No | SDK direct image handler |
-| `image_job` | `ServiceHandler` | No | SDK image job step handler |
-| `video` | `ServiceHandler` | No | SDK video handler |
-| `openai` | `ServiceHandler` | No | OpenAI-compatible handler. Auto-passthrough if omitted |
+ ```ts
+ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+ import { Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
 
-## Image Providers
+ class DeepSeekProvider extends Provider {
+   constructor() {
+     super({
+       id: "deepseek",
+       envKey: "DEEPSEEK_API_KEY",
+       baseURL: "https://api.deepseek.com/v1",
+       passthroughModel: "deepseek-chat",
+     });
+   }
 
-`@downcity/city` does not ship concrete image provider factories for OpenAI, DeepSeek, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
+   protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+     return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+   }
+ }
 
-Provider-specific adapters should live in the concrete City project, for example `templates/edge/src/image-provider.ts`. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
+ const deepseek = new DeepSeekProvider();
 
-```ts
-import { Provider } from "@downcity/city";
+ const ai = new AIService();
+ ai.use(deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }));
+ base.use(ai);
+ ```
 
-const imageProvider = new Provider("my-image", {
-  env: { MY_IMAGE_API_KEY: "My Image API Key" },
-  image: async (ctx) => {
-    const response = await fetch("https://image.example.com/generate", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${ctx.env("MY_IMAGE_API_KEY")}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(ctx.input),
-    });
-    const data = await response.json();
+ This registers the routes automatically:
 
-    return {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      parts: [
-        {
-          type: "file",
-          mediaType: "image/png",
-          url: data.image_url,
-        },
-      ],
-    };
-  },
-});
+ ```
+ POST /v1/ai/text              → SDK path
+ POST /v1/ai/stream            → SDK path
+ POST /v1/ai/chat/completions  → auto-passthrough to DeepSeek
+ GET  /v1/ai/models            → model catalog
+ ```
 
-ai.use(imageProvider.model({
-  id: "image-basic",
-  name: "Image Basic",
-  default: ["image"],
-}));
-```
+ `passthroughModel` is the upstream model id used during auto-passthrough.
 
-The client call stays provider-neutral:
+ ## Overriding text / stream
 
-```ts
-const job = await client.ai.image_create({
-  model: "image-basic",
-  prompt: "A clean product photo of a ceramic mug",
-  ratio: "1:1",
-  quality: "standard",
-  count: 1,
-});
+ If the default OpenAI-compatible implementation is not enough, override `text` / `stream` directly:
 
-const current = await client.ai.image_result({ job_id: job.job_id });
-const file = current.result?.parts.find((part) => part.type === "file");
-```
+ ```ts
+ import { Provider, type Context, type AIProviderBilledOutput } from "@downcity/city";
+ import type { UIMessage } from "ai";
 
-## Two Patterns
+ class CustomTextProvider extends Provider {
+   constructor() {
+     super({ id: "custom", envKey: "CUSTOM_API_KEY" });
+   }
 
-### Pattern 1: OpenAI-Compatible (Auto Passthrough)
+   async text(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+     // custom implementation
+   }
 
-Provide `baseURL` + `envKey`, skip `openai`:
+   async stream(ctx: Context) {
+     // custom implementation
+   }
+ }
+ ```
 
-```ts
-const deepseek = new Provider("deepseek", {
-  baseURL: "https://api.deepseek.com",
-  envKey: "DEEPSEEK_API_KEY",
-  text: myTextHandler,
-  stream: myStreamHandler,
-  // no openai → auto-passthrough
-});
-```
+ ## Multimodal prompt extraction
 
-### Pattern 2: Custom OpenAI-Compatible Handler
+ Override `extractPrompt` to flatten multimodal messages into plain text:
 
-Provide an `openai` handler when the upstream needs request or response customization:
+ ```ts
+ class DeepSeekProvider extends Provider {
+   // ...
+   protected extractPrompt(input: { prompt?: string; messages?: Array<{ role: string; parts?: Array<{ type: string; text?: string }> }> }): string {
+     if (typeof input.prompt === "string") return input.prompt;
+     return input.messages
+       ?.find((m) => m.role === "user")
+       ?.parts?.map((part) => (part.type === "text" ? part.text : ""))
+       .filter(Boolean)
+       .join("\n") ?? "";
+   }
+ }
+ ```
 
-```ts
-const openaiCustom = new Provider("openai-custom", {
-  env: { OPENAI_API_KEY: "OpenAI API Key" },
-  text: myTextHandler,
-  stream: myStreamHandler,
-  openai: async (ctx) => {
-    // ctx.input is standard OpenAI body
-    // Downstream: customize request
-    // Upstream: normalize response
-  },
-});
-```
+ ## Image Providers
 
-## Handler Signatures
+ `@downcity/city` does not ship concrete image provider factories for OpenAI, DeepSeek, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
 
-```ts
-type ServiceHandler = (ctx: Context) => unknown | Response | Promise<unknown | Response>;
-```
+ Provider-specific adapters should live in the concrete City project. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
 
-| Pathway | ctx.input | Recommended Return |
-|---|---|---|
-| `text` | `{ prompt }` | `UIMessage` |
-| `stream` | `{ prompt }` | `Response` (SSE) or `UIMessageStream` |
-| `openai` | `{ model, messages, stream, tools, ... }` | `Response` |
+ ```ts
+ import { Provider, type AIProviderBilledOutput, type Context } from "@downcity/city";
+ import type { UIMessage } from "ai";
 
-## model() Method
+ class MyImageProvider extends Provider {
+   constructor() {
+     super({ id: "my-image", envKey: "MY_IMAGE_API_KEY" });
+   }
 
-```ts
-provider.model(spec): ModelConfig
-```
+   async image(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+     const apiKey = ctx.env("MY_IMAGE_API_KEY");
+     const response = await fetch("https://image.example.com/generate", {
+       method: "POST",
+       headers: {
+         authorization: `Bearer ${apiKey}`,
+         "content-type": "application/json",
+       },
+       body: JSON.stringify(ctx.input),
+     });
+     const data = await response.json();
 
-### spec
+     return {
+       output: {
+         id: crypto.randomUUID(),
+         role: "assistant",
+         parts: [
+           {
+             type: "file",
+             mediaType: "image/png",
+             url: data.image_url,
+           },
+         ],
+       },
+     };
+   }
+ }
 
-| Field | Type | Required |
-|---|---|---|
-| `id` | `string` | **Yes** |
-| `name` | `string` | **Yes** |
-| `description` | `string` | No |
-| `tags` | `string[]` | No |
-| `meta` | `Record<string, unknown>` | No |
-| `default` | `boolean \| string[]` | No |
+ const imageProvider = new MyImageProvider();
 
-## Registration
+ ai.use(imageProvider.model({
+   id: "image-basic",
+   name: "Image Basic",
+   default: ["image"],
+ }));
+ ```
 
-```ts
-const ai = new AIService();
-ai.use(
-  deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash", default: true }),
-);
-base.use(ai);
-```
+ The client call stays provider-neutral:
+
+ ```ts
+ const job = await client.ai.image_create({
+   model: "image-basic",
+   prompt: "A clean product photo of a ceramic mug",
+   ratio: "1:1",
+   quality: "standard",
+   count: 1,
+ });
+
+ const current = await client.ai.image_result({ job_id: job.job_id });
+ const file = current.result?.parts.find((part) => part.type === "file");
+ ```
+
+ ## Async image jobs
+
+ If image generation is asynchronous, override `image_job`:
+
+ ```ts
+ import { type AIImageJobStepResult, type Context } from "@downcity/city";
+
+ class LuchiImageProvider extends Provider {
+   // ...
+   async image_job(ctx: Context): Promise<AIImageJobStepResult> {
+     // create or poll upstream job
+     // return { status: "running" | "succeeded" | "failed", ... }
+   }
+ }
+ ```
+
+ ## Auto Passthrough
+
+ When `baseURL` + `envKey` are present but no `openai` method is defined, AIService generates a passthrough action automatically:
+
+ - The OpenAI-compatible body is forwarded as-is.
+ - The upstream Response is returned as-is.
+ - `passthroughModel` replaces `body.model` when set.
+
+ ```ts
+ // No need to write this — AIService handles it
+ // async openai(ctx) { return fetch(`${baseURL}/chat/completions`, ...) }
+ ```
+
+ ## Custom OpenAI-compatible Handler
+
+ Provide an `openai` method when the upstream needs request or response customization:
+
+ ```ts
+ import {
+   Provider,
+   type AIProviderBilledResponse,
+   type Context,
+   normalizeOpenAICompatibleBody,
+   readRequiredEnv,
+   trimTrailingSlash,
+ } from "@downcity/city";
+
+ class OpenAICustomProvider extends Provider {
+   constructor() {
+     super({ id: "openai-custom", envKey: "OPENAI_API_KEY", baseURL: "https://api.openai.com/v1" });
+   }
+
+   async openai(ctx: Context): Promise<AIProviderBilledResponse> {
+     const apiKey = readRequiredEnv(ctx, this.envKey ?? "");
+     const body = normalizeOpenAICompatibleBody(
+       ctx.input as Record<string, unknown>,
+       this.passthroughModel ?? "",
+     );
+     const response = await fetch(`${trimTrailingSlash(this.baseURL ?? "")}/chat/completions`, {
+       method: "POST",
+       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+       body: JSON.stringify(body),
+     });
+     return { response };
+   }
+ }
+ ```
+
+ ## Provider Billing
+
+ Override `buildBilling` to charge automatically after `text` / `stream`:
+
+ ```ts
+ import { normalizeAIUsage } from "@downcity/city";
+
+ class DeepSeekProvider extends Provider {
+   // ...
+   protected buildBilling(ctx: Context, usage: unknown) {
+     const normalized = normalizeAIUsage(usage);
+     // compute amount from usage
+     return {
+       amount_microcredits: 0,
+       note: `DeepSeek ${ctx.variant?.id}`,
+       metadata: { raw_usage: usage },
+     };
+   }
+ }
+ ```
+
+ You can also return billing directly from an action method:
+
+ ```ts
+ async text(ctx: Context) {
+   const result = await callUpstream(ctx.input);
+   return {
+     output: toUIMessage(result),
+     billing: {
+       amount_microcredits: priceUpstreamUsage(result.usage),
+       note: "custom text",
+     },
+   };
+ }
+ ```
+
+ ## Provider Fields & Methods
+
+ | Field | Required | Description |
+ |---|---|---|
+ | `id` | Yes | Provider unique id |
+ | `env` | No | Env var declarations |
+ | `baseURL` | Required for passthrough | Upstream API URL |
+ | `envKey` | Required for passthrough | Env var name for API key |
+ | `passthroughModel` | No | Replaces `body.model` during passthrough |
+
+ | Method | Description |
+ |---|---|
+ | `createClient` | Override when text/stream is needed; returns an OpenAI-compatible client |
+ | `text` | SDK text action (default from base class) |
+ | `stream` | SDK stream action (default from base class) |
+ | `image` | SDK image action |
+ | `image_job` | Async image job action |
+ | `video` | SDK video action |
+ | `openai` | /chat/completions action (auto-passthrough if omitted) |
+ | `buildBilling` | Build a billing line from usage |
+ | `extractPrompt` | Extract prompt from input (overrideable) |
+
+ ## Helper Functions
+
+ `@downcity/city` exports common helpers for Provider subclasses:
+
+ - `readRequiredEnv(ctx, key)`
+ - `resolveUpstreamModel(ctx, fallback)`
+ - `trimTrailingSlash(url)`
+ - `buildAssistantMessage(text, ctx, result, billing?)`
+ - `buildImageMessage(ctx, images, metadata)`
+ - `normalizeOpenAICompatibleBody(input, model)`
+ - `readOpenAICompatibleSseUsage(body)`
+ - `normalizeAIUsage(usage)`
+ - `buildToolSet(items)`

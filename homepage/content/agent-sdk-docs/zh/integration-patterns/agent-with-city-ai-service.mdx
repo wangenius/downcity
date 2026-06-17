@@ -69,7 +69,8 @@ downcity.json.execution.modelId
 City 侧通常会这样注册模型：
 
 ```ts
-import { CityBase, AIService, Provider } from "@downcity/city";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { CityBase, AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
 
 const base = new CityBase({
   db,
@@ -77,13 +78,22 @@ const base = new CityBase({
   raw,
 });
 
-const deepseek = new Provider("deepseek", {
-  baseURL: "https://api.deepseek.com/v1",
-  envKey: "DEEPSEEK_API_KEY",
-  passthroughModel: "deepseek-chat",
-  text: myTextAction,
-  stream: myStreamAction,
-});
+class DeepSeekProvider extends Provider {
+  constructor() {
+    super({
+      id: "deepseek",
+      baseURL: "https://api.deepseek.com/v1",
+      envKey: "DEEPSEEK_API_KEY",
+      passthroughModel: "deepseek-chat",
+    });
+  }
+
+  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  }
+}
+
+const deepseek = new DeepSeekProvider();
 
 const ai = new AIService();
 ai.use(

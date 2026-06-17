@@ -87,7 +87,7 @@ const current = agent.approval_mode({ session_id: "consoleui" });
 - Unrestricted 命令只有在逐次审批通过后才会离开 Safe Sandbox 执行。
 - `always-allow` 只影响当前 session 的新 approval 请求，不影响其它 session。
 - 对 unrestricted `shell_start` 会话执行的每一次 `shell_write` 也需要审批。
-- `agent.stop()` 会释放 Shell sessions。
+- `agent.dispose()` 会释放 Shell sessions。
 
 ## 相关文档
 

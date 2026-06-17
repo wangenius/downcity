@@ -8,8 +8,8 @@ description: 本地 Agent SDK 的核心公开接口
 本地 `Agent` 的核心公开使用面包括：
 
 - `new Agent(options)`
-- `agent.start(options?)`
-- `agent.stop()`
+- `agent.ready()`
+- `agent.dispose()`
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
@@ -40,48 +40,27 @@ description: 本地 Agent SDK 的核心公开接口
 - `Agent` 本身是本地执行壳
 - 真正的执行对象是它创建出来的 session
 
-从 API 设计上看，它更像一个“session 工厂 + 长期运行能力入口”。
+从 API 设计上看，它更像一个“session 工厂 + 后台能力管理入口”。Transport（RPC、HTTP）由 [`@downcity/server`](/zh/agent-sdk-docs/local-agent/http-and-rpc) 单独提供。
 
-## `start()` 和 `stop()`
+## `ready()` 和 `dispose()`
 
-`agent.start()` 负责启动当前 agent 的长期运行能力。
+`new Agent(...)` 之后，plugin lifecycle 与 ActionSchedule 会自动启动。
 
-当前真实语义包括：
+- `await agent.ready()`：等待后台能力启动完成。session 入口已经隐式等待，只有需要在外部确认就绪时才显式调用。
+- `await agent.dispose()`：停止 plugin lifecycle、ActionSchedule、shell 等后台资源。
 
-- 启动 plugin lifecycle
-- 可选启动本机 RPC 服务
+## RPC / HTTP 暴露
 
-推荐写法：
-
-```ts
-await agent.start({
-  rpc: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
-});
-```
-
-如果你不调用 `agent.start()`：
-
-- 仍然可以直接 `await agent.createSession()` 然后 `session.prompt()`
-- 但不会启动后台 plugin lifecycle
-- 也不会启动 RPC
-
-`agent.stop()` 则负责关闭当前 agent 已启动的长期运行能力。
-
-## HTTP 和 `Agent` 的关系
-
-如果你需要 HTTP 服务端点，不是通过：
+Agent 自身不再启动任何 transport。需要 RPC 或 HTTP 时，使用 [`@downcity/server`](/zh/agent-sdk-docs/local-agent/http-and-rpc)：
 
 ```ts
-agent.start({ http: { ... } })
-```
+import { AgentRPC, AgentHTTP } from "@downcity/server";
 
-而是通过 Town 发布 Agent HTTP 网关：
+const rpc = new AgentRPC(agent);
+await rpc.listen({ host: "127.0.0.1", port: 15314 });
 
-```bash
-town agent start
+const http = new AgentHTTP(agent);
+await http.server().listen({ host: "127.0.0.1", port: 5314 });
 ```
 
 ## `agent.plugins`

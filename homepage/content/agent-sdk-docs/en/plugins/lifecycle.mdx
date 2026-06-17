@@ -40,7 +40,7 @@ Typical examples:
 - `memory`
 - `shell`
 
-ActionSchedule is not a plugin. It is an Agent-level action scheduling loop that follows `agent.start()`.
+ActionSchedule is not a plugin. It is an Agent-level action scheduling loop that boots together with plugin lifecycles when the Agent is constructed.
 
 ## Runtime state is not enablement
 
@@ -62,13 +62,7 @@ Current runtime state snapshots use states such as:
 
 ## What starts lifecycle plugins
 
-In the local SDK, plugin lifecycles normally start through:
-
-```ts
-await agent.start({
-  plugins: true,
-});
-```
+In the local SDK, plugin lifecycles boot automatically inside `new Agent(...)`. Call `await agent.ready()` to wait for them, and `await agent.dispose()` to stop them.
 
 Advanced runtime code may also use exported helpers such as:
 

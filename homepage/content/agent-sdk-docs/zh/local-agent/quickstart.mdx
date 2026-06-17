@@ -77,11 +77,9 @@ console.log(result.text);
 - Agent 项目只选择 `modelId`
 - `City AIService` 管理 provider、API key、模型目录
 
-## 什么时候需要 `agent.start()`
+## Agent 的生命周期
 
-`new Agent(...)` 只是在当前进程里创建一个本地 agent 实例。
-
-如果你只是想在宿主代码里直接跑 session：
+`new Agent(...)` 之后，plugin lifecycle 与 ActionSchedule 会立即开始启动。调用方通常直接：
 
 ```ts
 const session = await agent.createSession();
@@ -89,27 +87,11 @@ const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```
 
-通常不需要调用 `agent.start()`。
+Session 入口内部已经隐式等待后台启动。如果需要在外部确认后台能力就绪（例如启动后立刻读取 plugin 状态），可以显式 `await agent.ready()`。
 
-当前 `agent.start()` 的职责是：
+不再使用时调用 `await agent.dispose()`，会停掉 plugin lifecycle、ActionSchedule、shell 等后台资源。
 
-- 启动 plugin lifecycle
-- 可选启动本机 RPC 服务
-
-例如：
-
-```ts
-const started = await agent.start({
-  rpc: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
-});
-
-console.log(started.rpc?.url);
-```
-
-如果你需要 HTTP 服务端点，应通过 `town agent start` 由 Town 发布 HTTP 网关，而不是 `agent.start({ http: ... })`。
+如果需要把当前 Agent 暴露给其他进程使用（RPC 或 HTTP），请使用独立包 [`@downcity/server`](/zh/agent-sdk-docs/local-agent/http-and-rpc)。Agent 自身不再启动任何 transport。
 
 ## 继续阅读
 

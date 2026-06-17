@@ -5,9 +5,9 @@ description: The minimal HTTP session routes Town can expose for RemoteAgent
 
 # SDK HTTP Endpoints
 
-These SDK routes are not exposed by `agent.start({ http: { ... } })`.
+These SDK routes do not belong to `Agent` itself.
 
-They are mounted by the Town Agent HTTP gateway when Town publishes a running Agent.
+They are exposed by `AgentHTTP` from [`@downcity/server`](/en/agent-sdk-docs/local-agent/http-and-rpc). Mount them as a standalone HTTP server, or as a Hono sub-router on any host server (Town gateway included).
 
 The current core set includes:
 

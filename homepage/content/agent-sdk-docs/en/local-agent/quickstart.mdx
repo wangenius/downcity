@@ -54,11 +54,9 @@ If you skip step 3 entirely, the local session has no model and cannot execute.
 
 When you are using the SDK for the first time, avoid stacking complex tools, managed plugins, extra plugins, or Town HTTP exposure immediately. Get the shortest execution path working first.
 
-## When you need `agent.start()`
+## Agent lifecycle
 
-`new Agent(...)` only creates a local agent instance inside the current process.
-
-If you only want to run sessions directly from host code:
+After `new Agent(...)`, plugin lifecycle and ActionSchedule start automatically. Most callers use sessions directly:
 
 ```ts
 const session = await agent.createSession();
@@ -66,17 +64,11 @@ const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```
 
-you usually do not need `agent.start()`.
+Session entry points already wait for background services internally. If you need to confirm the background is up explicitly (e.g. inspecting plugin state right after construction), call `await agent.ready()`.
 
-Call `agent.start(...)` only when you need long-lived runtime capabilities:
+When you are done, call `await agent.dispose()` to stop plugin lifecycle, ActionSchedule, and shell.
 
-- start local RPC so another local process can call the agent through `RemoteAgent`
-- start plugin lifecycles and the Agent's action scheduling loop for long-lived background work
-
-A simple mental model is:
-
-- no `start`: use the Agent as a local library
-- `start`: turn the Agent into a long-lived runtime that can expose RPC and run background capabilities
+If you need to expose the agent to other processes over RPC or HTTP, use the separate package [`@downcity/server`](/en/agent-sdk-docs/local-agent/http-and-rpc). The Agent itself no longer starts any transport.
 
 ## Continue reading
 

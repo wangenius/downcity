@@ -69,8 +69,8 @@ Use `Agent` when the agent runtime lives in the same local process or host envir
 Core methods:
 
 - `new Agent(options)`
-- `agent.start(options?)`
-- `agent.stop()`
+- `agent.ready()`
+- `agent.dispose()`
 - `agent.createSession(input?)`
 - `agent.getSession(sessionId)`
 - `agent.listSessions(input?)`
@@ -83,11 +83,11 @@ Core methods:
 Typical responsibilities:
 
 - create and resume local sessions
-- start plugin lifecycles and optional RPC capability
+- automatically start plugin lifecycles and ActionSchedule on construction; explicit `ready()` / `dispose()` only when needed
 - expose plugin integration
 - provide narrow advanced helpers for config and logging
 
-If you need HTTP, run the Agent through Town so Town can publish the HTTP gateway.
+If you need RPC or HTTP, use the `AgentRPC` / `AgentHTTP` classes from [`@downcity/server`](/en/agent-sdk-docs/local-agent/http-and-rpc).
 
 ## `RemoteAgent`
 

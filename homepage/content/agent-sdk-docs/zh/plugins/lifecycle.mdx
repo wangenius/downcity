@@ -40,7 +40,7 @@ Plugin lifecycle 讨论的是“长期运行状态由谁持有”。
 - `memory`
 - `shell`
 
-ActionSchedule 不是 plugin；它是跟随 `agent.start()` 启动的 Agent 级 action 调度 loop。
+ActionSchedule 不是 plugin；它是 Agent 构造时自动启动的 Agent 级 action 调度 loop（与 plugin lifecycle 同时起来）。
 
 ## runtime state 不等于 enablement
 
@@ -62,15 +62,9 @@ ActionSchedule 不是 plugin；它是跟随 `agent.start()` 启动的 Agent 级 
 
 ## 什么会启动 lifecycle plugins
 
-在本地 SDK 里，plugin lifecycle 一般通过下面这类入口启动：
+本地 SDK 中，plugin lifecycle 在 `new Agent(...)` 构造时自动启动；调用方可以 `await agent.ready()` 等待启动完成，`await agent.dispose()` 停止。
 
-```ts
-await agent.start({
-  plugins: true,
-});
-```
-
-更高级的 runtime 代码也可以直接使用这些导出 helper：
+更底层的 runtime 代码可以直接使用这些导出 helper：
 
 - `startAllPlugins(context)`
 - `stopAllPlugins(context)`

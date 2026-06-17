@@ -1,105 +1,90 @@
 ---
-title: 本地 Agent RPC 与 Town HTTP
-description: 理解 Agent RPC 与 Town 托管 HTTP 暴露之间的真实分工
+title: 通过 RPC 与 HTTP 暴露 Agent
+description: 使用 @downcity/server 提供的 AgentRPC 和 AgentHTTP 把本地 Agent 暴露成网络服务
 ---
 
-# 本地 Agent RPC 与 Town HTTP
+# 通过 RPC 与 HTTP 暴露 Agent
 
-本地 Agent 可以在当前进程里直接调用，也可以暴露本机 RPC 给另一个本地进程调用。
-
-HTTP 不是 `Agent` SDK 自己的 server 能力。在 Downcity 里，HTTP 暴露由 Town 负责。
-
-## `agent.start()` 当前负责什么
-
-`agent.start()` 负责：
-
-- 启动 plugin lifecycle
-- 可选启动本机 RPC 服务
-
-例如：
-
-```ts
-const started = await agent.start({
-  rpc: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
-});
-
-console.log(started.rpc?.url);
-```
-
-返回里会有：
-
-- `started.rpc?.url`
-- `started.pluginsStarted`
-
-## `agent.start()` 不负责什么
-
-`agent.start()` 不负责启动 HTTP server。
-
-也就是说，这样的写法并不是当前真实 API：
-
-```ts
-await agent.start({
-  http: {
-    host: "127.0.0.1",
-    port: 15314,
-  },
-});
-```
-
-## 如何通过 Town 暴露 HTTP
-
-如果你要 HTTP，对应做法是用 Town 启动 Agent，并让 Town 发布 Agent HTTP 网关：
+`@downcity/agent` 只负责构造 Agent 和运行会话。网络暴露能力放在独立包 `@downcity/server` 里，按需引入。
 
 ```bash
-town agent start
+pnpm add @downcity/agent @downcity/server
 ```
 
-这里的职责划分是：
+## Agent 不再有 `start()`
 
-- `Agent`：本地执行壳
-- `agent.start()`：长期运行能力中的 plugins / 本机 RPC
-- `town agent start`：Agent 进程宿主与 HTTP 网关发布者
+`new Agent(...)` 之后，plugin lifecycle 和 ActionSchedule 会自动启动。无需再手动调用 `start()`。
 
-## `start()` 和不 `start()` 的区别
+- `await agent.ready()`：等待后台服务启动完成。在构造之后立刻读取 plugin 状态时使用。
+- `await agent.dispose()`：释放后台资源（plugins、ActionSchedule、shell）。
 
-不调用 `agent.start()` 时：
+RPC 与 HTTP 不再是 Agent 的职责。
 
-- 你仍然可以直接 `await agent.createSession()`，再用 `session.prompt()` / `session.subscribe()`
-- 适合把 Agent 当作当前进程里的本地库
-- 不会启动 plugin 的后台生命周期
-- 不会启动 RPC
+## AgentRPC：暴露为本机 RPC
 
-调用 `agent.start()` 之后：
+`AgentRPC` 把 `Agent` 通过 NDJSON-over-TCP 暴露给 `RemoteAgent("rpc://...")` 使用。
 
-- plugins 默认会启动
-- ActionSchedule 和其他后台 loop 才会真正持续运行
-- 如果传了 `rpc`，还会暴露 `rpc://...` 地址
+```ts
+import { Agent } from "@downcity/agent";
+import { AgentRPC } from "@downcity/server";
 
-## 什么时候用 RPC
+const agent = new Agent({ id, path, model });
+await agent.ready();
 
-- 另一个本地进程想直接消费 Agent session 能力
-- 你不想自己额外挂 HTTP
-- 你想走更轻量的本机 transport
+const rpc = new AgentRPC(agent);
+const binding = await rpc.listen({ host: "127.0.0.1", port: 15314 });
+console.log(binding.url); // rpc://127.0.0.1:15314
 
-## 什么时候用 HTTP
+// 关闭
+await rpc.close();
+await agent.dispose();
+```
 
-- 外部 client 需要通过 Town 的 HTTP 网关调用 Agent
-- 你想给前后端或第三方程序一个标准 HTTP 入口
-- 你需要 Town 在同一个网关上托管 SDK 路由和 plugin HTTP 路由
+`AgentRPC` 默认监听 `127.0.0.1:15314`，协议为 NDJSON，无鉴权，仅用于本机或可信网络。
 
-## 一个和 plugin 相关的重要点
+## AgentHTTP：暴露最小 SDK HTTP 表面
 
-Town 暴露 Agent HTTP 网关时，已注册 plugin 的 `plugin.http.server.register(...)` 会自动挂到同一个 HTTP app 上。
+`AgentHTTP` 提供 `RemoteAgent` HTTP 客户端所需的最小 HTTP 表面（`/api/sdk/sessions/*`）。两种用法二选一。
 
-所以：
+### 方式 1：独立 HTTP server
 
-- `agent.plugins` 负责插件注册表与调用
-- Town 负责把插件的 HTTP 路由真正挂出去
+```ts
+import { Agent } from "@downcity/agent";
+import { AgentHTTP } from "@downcity/server";
+
+const agent = new Agent({ id, path, model });
+await agent.ready();
+
+const http = new AgentHTTP(agent);
+const binding = await http.server().listen({ host: "127.0.0.1", port: 5314 });
+console.log(binding.url); // http://127.0.0.1:5314
+
+// 关闭
+await http.close();
+await agent.dispose();
+```
+
+### 方式 2：挂载到你自己的 Hono server
+
+`AgentHTTP.router()` 返回一个 `Hono` 子路由，可以直接挂载：
+
+```ts
+import { Hono } from "hono";
+import { AgentHTTP } from "@downcity/server";
+
+const app = new Hono();
+const http = new AgentHTTP(agent);
+app.route("/", http.router());
+```
+
+CORS / logger / 鉴权等中间件由你自行决定。`AgentHTTP` 不会附带任何中间件。
+
+## 与 Town、RemoteAgent 的关系
+
+- `town agent start` 内部就是把 `Agent + AgentRPC + AgentHTTP.router()` 组装起来，再叠加 Town 自己的控制 / 静态资源路由。
+- `RemoteAgent` 客户端可以连到 `AgentRPC.listen()` 暴露的 `rpc://` 地址，或 `AgentHTTP` 暴露的 HTTP 表面。
 
 ## 相关文档
 
+- [Local Agent 快速开始](/zh/agent-sdk-docs/local-agent/quickstart)
 - [RemoteAgent 快速开始](/zh/agent-sdk-docs/remote-agent/quickstart)
-- [SDK HTTP 端点](/zh/agent-sdk-docs/api-reference/sdk-http-endpoints)

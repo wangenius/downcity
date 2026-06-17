@@ -120,9 +120,13 @@ function buildSeatbeltProfile(params: SandboxSpawnParams & {
     "(version 1)",
     "(deny default)",
     '(import "system.sb")',
-    "(allow process*)",
-    "(allow sysctl-read)",
-    "(allow file-read-metadata)",
+   "(allow process*)",
+   "(allow sysctl-read)",
+   "(allow file-read-metadata)",
+    // 关键点（中文）
+    // - LibreSSL 在 /dev/urandom 等设备上做 ioctl 读取随机数，SSL 握手需要。
+    // - 只放行 file-read* 不够，必须显式允许 file-ioctl，否则会出现 SSL_ERROR_SYSCALL。
+    "(allow file-ioctl)",
     ...readablePaths.map(
       (value) => `(allow file-read* (subpath "${escapeSeatbeltString(value)}"))`,
     ),
@@ -164,7 +168,10 @@ export function buildMacOsSeatbeltSandboxEnv(params: SandboxSpawnParams): NodeJS
   env.TEMP = params.config.tmpDir;
   env.TEMPDIR = params.config.tmpDir;
   env.TMPPREFIX = path.join(params.config.tmpDir, "zsh");
-  env.XDG_CACHE_HOME = params.config.cacheDir;
+  // 关键点（中文）
+  // - macOS 原生程序（如 curl / LibreSSL）默认使用 ~/Library/Caches 作为缓存目录。
+  // - 在 sandbox 内设置 XDG_CACHE_HOME 会干扰这些程序的路径解析，反而导致 SSL 握手失败。
+  // - 这里不导出 XDG_CACHE_HOME，改为在 spawn 时显式创建 ~/Library/Caches。
   env.DC_SANDBOX = "1";
   env.DC_SANDBOX_DIR = params.config.sandboxDir;
   env.DC_SANDBOX_HOME = params.config.homeDir;
@@ -187,6 +194,10 @@ export async function spawnMacOsSeatbeltSandbox(
   await fs.ensureDir(params.config.tmpDir);
   await fs.ensureDir(params.config.cacheDir);
   await fs.ensureDir(params.executionDir);
+  // 关键点（中文）
+  // - macOS 原生程序期望 home 目录下有 Library/Caches，否则可能在运行期尝试创建并失败。
+  // - 在 sandbox home 下预创建该目录，避免 curl / LibreSSL 等工具出现 SSL_ERROR_SYSCALL。
+  await fs.ensureDir(path.join(params.config.sandboxDir, "Library", "Caches"));
 
   const profile = buildSeatbeltProfile({
     ...params,

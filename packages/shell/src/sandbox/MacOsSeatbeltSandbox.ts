@@ -68,6 +68,36 @@ function buildWritablePaths(params: SandboxSpawnParams): string[] {
   ]);
 }
 
+/**
+ * 构建 macOS Seatbelt TLS/HTTPS 相关规则。
+ *
+ * 关键点（中文）
+ * - macOS Seatbelt 会阻止 sandbox 内进程读取系统 SSL 配置、根证书和用户钥匙串。
+ * - libressl/openssl 初始化时需要 `/private/etc/ssl/openssl.cnf` 和 `/etc/ssl/cert.pem`。
+ * - curl 在 macOS 上默认走 SecureTransport，需要访问系统钥匙串和 `trustd`/`SecurityServer`。
+ * - 这里显式放行 HTTPS 握手所需的最小文件集合和服务，避免把 TLS 请求误判为网络不通。
+ */
+function buildTlsRules(): string[] {
+  return [
+    // `/etc` 在 macOS 上是 `/private/etc` 的 symlink；seatbelt subpath 匹配通常按真实路径解析，
+    // 因此需要单独放行 `/private/etc`，否则 openssl 读取 `/private/etc/ssl/openssl.cnf` 会被拒绝。
+    `(allow file-read* (subpath "/private/etc"))`,
+
+    // 系统根证书（旧版 .keychain 与新版 .keychain-db）。
+    `(allow file-read* (literal "/System/Library/Keychains/SystemRootCertificates.keychain"))`,
+    `(allow file-read* (literal "/System/Library/Keychains/SystemRootCertificates.keychain-db"))`,
+    `(allow file-read* (literal "/Library/Keychains/System.keychain"))`,
+    `(allow file-read* (literal "/Library/Keychains/System.keychain-db"))`,
+
+    // 当前用户钥匙串，用于访问用户证书或自定义根证书。
+    `(allow file-read* (regex #"^/Users/[^/]+/Library/Keychains/.*"))`,
+
+    // Security 框架服务，SecureTransport 校验证书链时需要。
+    `(allow mach-lookup (global-name "com.apple.SecurityServer"))`,
+    `(allow mach-lookup (global-name "com.apple.trustd"))`,
+  ];
+}
+
 function buildNetworkRules(networkMode: SandboxSpawnParams["config"]["networkMode"]): string[] {
   if (networkMode === "restricted" || networkMode === "full") {
     return ["(allow network-outbound)", "(allow network-inbound)"];
@@ -100,6 +130,7 @@ function buildSeatbeltProfile(params: SandboxSpawnParams & {
       (value) => `(allow file-write* (subpath "${escapeSeatbeltString(value)}"))`,
     ),
     ...buildNetworkRules(params.config.networkMode),
+    ...buildTlsRules(),
   ];
 
   // 关键点（中文）

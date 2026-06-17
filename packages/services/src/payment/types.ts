@@ -48,27 +48,6 @@ export interface PaymentTopupRecord extends Record<string, unknown> {
 }
 
 /**
- * Payment 服务所需的 balance 最小桥接接口。
- */
-export interface PaymentServiceBalanceBridge {
-  /** 读取充值单。 */
-  readTopup(topup_id: string): Promise<PaymentTopupRecord>;
-
-  /** 完成充值单并真正入账。 */
-  finishTopup(
-    topup_id: string,
-    extra?: {
-      /** 说明文本。 */
-      note?: string;
-      /** 外部引用 ID。 */
-      ref?: string;
-      /** 结构化扩展字段。 */
-      meta?: Record<string, unknown>;
-    },
-  ): Promise<PaymentTopupRecord>;
-}
-
-/**
  * 单个支付方式返回项。
  */
 export interface PaymentMethodItem {
@@ -196,8 +175,20 @@ export interface PaymentProvider {
  * Payment 服务配置。
  */
 export interface PaymentServiceOptions {
-  /** 已挂载到 City 的 balance 服务实例。 */
-  balance: PaymentServiceBalanceBridge;
+  /** 读取充值单。 */
+  readTopup(topup_id: string): Promise<PaymentTopupRecord>;
+  /** 完成充值单并真正入账。 */
+  finishTopup(
+    topup_id: string,
+    extra?: {
+      /** 说明文本。 */
+      note?: string;
+      /** 外部引用 ID。 */
+      ref?: string;
+      /** 结构化扩展字段。 */
+      meta?: Record<string, unknown>;
+    },
+  ): Promise<PaymentTopupRecord>;
   /** 当前 City 启用的支付 provider。 */
   providers: PaymentProvider[];
 }

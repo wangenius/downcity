@@ -4,7 +4,6 @@
  * 包含创建 City 实例和健康检查所需的所有类型定义。
  */
 
-import type { Runtime } from "./runtime.js";
 import type { Database } from "../store/db.js";
 
 /**
@@ -46,35 +45,17 @@ export interface CityBaseHealthStatus {
 /**
  * 创建 City 实例时传入的顶层配置。
  *
- * 默认只需要传入 Drizzle db。City 会自动初始化内置 env/towns 能力。
+ * 关键说明（中文）
+ * - 只接收一个 Drizzle db 对象，City 自己从中推断方言和底层 client。
+ * - 不再需要传 `dialect`、`raw`、`runtime` 等冗余选项。
  */
 export interface CityBaseOptions {
   /**
    * Drizzle database 对象。
    *
-   * 支持 pg 与 sqlite 方言；D1 也属于 sqlite 方言。
+   * 关键说明（中文）
+   * - 支持 SQLite（含 D1）与 Postgres 方言；City 直接从 `db.dialect` 推断方言。
+   * - 支持的底层 client 通过 `db.$client` 暴露给 accounts 等需要原始连接的 service。
    */
-  db: Database & { $client?: unknown };
-
-  /**
-   * 数据库方言。
-   *
-   * 默认会从 Drizzle db 自动推断；当自定义 db 无法推断时可以显式传入。
-   */
-  dialect?: "pg" | "sqlite";
-
-  /**
-   * 原始数据库实例。
-   *
-   * 某些服务需要把底层数据库传给第三方库时使用，例如 accounts 服务。
-   * 默认使用 db.$client。
-   */
-  raw?: unknown;
-
-  /**
-   * 内部运行时能力。
-   *
-   * 保留给测试和高级适配场景；普通用户不需要传入。
-   */
-  runtime?: Runtime;
+  db: Database & { $client?: unknown; dialect?: unknown };
 }

@@ -4,38 +4,33 @@
 
 import { CityBase } from "@downcity/city";
 import {
-  paymentService,
+  PaymentService,
   stripePaymentProvider,
-  type PaymentServiceBalanceBridge,
 } from "../../src/index.js";
 
 const base = new CityBase({
   db: {} as never,
 });
 
-const balance: PaymentServiceBalanceBridge = {
-  async readTopup() {
-    return {
-      topup_id: "topup_demo",
-      user_id: "user_1",
-      amount: 100,
-      status: "pending",
-      note: "demo",
-    };
-  },
-  async finishTopup() {
-    return {
-      topup_id: "topup_demo",
-      user_id: "user_1",
-      amount: 100,
-      status: "paid",
-      note: "demo",
-    };
-  },
-};
+const readTopup = async (_topup_id: string) => ({
+  topup_id: "topup_demo",
+  user_id: "user_1",
+  amount: 100,
+  status: "pending",
+  note: "demo",
+});
 
-base.use(paymentService({
-  balance,
+const finishTopup = async (_topup_id: string) => ({
+  topup_id: "topup_demo",
+  user_id: "user_1",
+  amount: 100,
+  status: "paid",
+  note: "demo",
+});
+
+base.use(new PaymentService({
+  readTopup,
+  finishTopup,
   providers: [
     stripePaymentProvider({
       currency: "usd",

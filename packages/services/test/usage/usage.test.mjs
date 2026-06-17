@@ -5,7 +5,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase, AIService } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
-import { usageService } from "../../bin/index.js"
+import { UsageService } from "../../bin/index.js"
 
 test("usageService records successful service calls", async () => {
   const cwd = process.cwd()
@@ -14,8 +14,8 @@ test("usageService records successful service calls", async () => {
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
-    base.use(usageService())
+    const base = new CityBase({ db })
+    base.use(new UsageService())
 
     const ai = new AIService()
     ai.use({

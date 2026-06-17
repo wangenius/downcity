@@ -11,7 +11,15 @@
 import { serve } from "@hono/node-server";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { compose_city } from "./compose-city.js";
+import { CityBase, AIService } from "@downcity/city";
+import {
+  AccountsService,
+  BalanceService,
+  BillingService,
+  PaymentService,
+  UsageService,
+  stripePaymentProvider,
+} from "@downcity/services";
 import * as models from "./models/index.js";
 
 /**
@@ -49,18 +57,39 @@ const sqlite_path = resolve_sqlite_path(process.env.DOWNCITY_CITY_DATABASE_URL);
 const sqlite = new Database(sqlite_path);
 sqlite.pragma("journal_mode = WAL");
 
-const db = Object.assign(drizzle(sqlite), {
-  $client: { exec: (sql: string) => sqlite.exec(sql) },
-});
+const db = drizzle(sqlite);
 
-const { city } = compose_city({
-  db,
-  dialect: "sqlite",
-  raw: sqlite,
-  models: Object.values(models),
-  token_ttl: "7d",
-  record_usage_errors: true,
+/**
+ * 直接装配 Node City。
+ *
+ * 关键点（中文）
+ * - 不再通过 compose_city 函数隐藏装配过程，所有 service 的创建与注册都平铺在这里。
+ * - 顺序有依赖关系：payment 依赖 balance，billing 依赖 balance，ai 依赖 billing。
+ */
+const city = new CityBase({ db });
+
+const accounts = new AccountsService({ token_ttl: "7d" });
+city.use(accounts);
+
+const balance = new BalanceService({});
+city.use(balance);
+
+const payment = new PaymentService({
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  providers: [stripePaymentProvider()],
 });
+city.use(payment);
+
+const usage = new UsageService({ record_errors: true });
+city.use(usage);
+
+const billing = new BillingService({ balance });
+city.use(billing);
+
+const ai = new AIService({ billing });
+ai.use(Object.values(models));
+city.use(ai);
 
 await city.health();
 const env_table = await city.table<{ key: string; value: string }>("env");

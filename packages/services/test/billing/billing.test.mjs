@@ -5,7 +5,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase, AIService } from "@downcity/city"
 import { createSqliteDb } from "../balance/sqlite-db.mjs"
-import { balanceService, billingService, usageService } from "../../bin/index.js"
+import { BalanceService, BillingService, UsageService } from "../../bin/index.js"
 
 test("billingService settles AI metering into balance charges", async () => {
   const cwd = process.cwd()
@@ -14,14 +14,14 @@ test("billingService settles AI metering into balance charges", async () => {
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
 
-    const balance = balanceService({
+    const balance = new BalanceService({
       init: 1,
     })
     base.use(balance)
-    base.use(usageService())
-    base.use(billingService({
+    base.use(new UsageService())
+    base.use(new BillingService({
       balance,
       pricing_rules: [{
         rule_id: "ai_text_test",
@@ -108,13 +108,13 @@ test("billingService supports per-million token pricing rules", async () => {
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
 
-    const balance = balanceService({
+    const balance = new BalanceService({
       init: 1,
     })
     base.use(balance)
-    base.use(billingService({
+    base.use(new BillingService({
       balance,
       pricing_rules: [{
         rule_id: "deepseek_v4_flash_test",
@@ -194,13 +194,13 @@ test("billingService supports explicit provider charges", async () => {
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
 
-    const balance = balanceService({
+    const balance = new BalanceService({
       init: 1,
     })
     base.use(balance)
-    base.use(billingService({
+    base.use(new BillingService({
       balance,
       pricing_rules: [{
         rule_id: "fallback_text",

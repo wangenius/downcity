@@ -7,7 +7,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "../payment-stripe/sqlite-db.mjs"
-import { creemPaymentProvider, paymentService } from "../../bin/index.js"
+import { creemPaymentProvider, PaymentService } from "../../bin/index.js"
 
 test("paymentService lists enabled Creem payment method for guests", async () => {
   const cwd = process.cwd()
@@ -17,8 +17,8 @@ test("paymentService lists enabled Creem payment method for guests", async () =>
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
-    base.use(paymentService({
+    const base = new CityBase({ db })
+    base.use(new PaymentService({
       providers: [
         creemPaymentProvider({
           api_key: "creem_test",
@@ -58,8 +58,8 @@ test("paymentService marks Creem disabled when required config is missing", asyn
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
-    base.use(paymentService({
+    const base = new CityBase({ db })
+    base.use(new PaymentService({
       providers: [
         creemPaymentProvider({
           currency: "usd",
@@ -99,10 +99,12 @@ test("paymentService creates checkout sessions and finishes topups through webho
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
     const balance = createBalanceBridge()
-    base.use(paymentService({
-      balance,
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
         creemPaymentProvider({
           api_key: "creem_test",
@@ -257,10 +259,12 @@ test("paymentService falls back to request origin for redirect URLs and exposes 
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
     const balance = createBalanceBridge()
-    base.use(paymentService({
-      balance,
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
         creemPaymentProvider({
           api_key: "creem_test",
@@ -320,10 +324,12 @@ test("paymentService marks failed and expired payments without crediting balance
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
     const balance = createBalanceBridge()
-    base.use(paymentService({
-      balance,
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
         creemPaymentProvider({
           api_key: "creem_test",

@@ -59,11 +59,11 @@ pnpm add @downcity/services
 
 ```ts
 import { CityBase } from "@downcity/city";
-import { accountsService } from "@downcity/services";
+import { AccountsService } from "@downcity/services";
 
 const base = new CityBase();
 
-base.use(accountsService({
+base.use(new AccountsService({
   token_ttl: "7d",
 }));
 ```
@@ -155,7 +155,7 @@ const reply = await user.ai.text({
 });
 ```
 
-这也是为什么 `accountsService()` 和 `@downcity/city` 通常是一起看的：一个提供账号能力，一个提供调用入口。
+这也是为什么 `AccountsService()` 和 `@downcity/city` 通常是一起看的：一个提供账号能力，一个提供调用入口。
 
 ## 相关文档
 

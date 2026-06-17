@@ -3,8 +3,8 @@
  */
 
 import { CityBase } from "@downcity/city";
-import { accountsService } from "../../src/index.js";
+import { AccountsService } from "../../src/index.js";
 
 const base = new CityBase({ db: {} as never });
 
-base.use(accountsService({ token_ttl: "7d" }));
+base.use(new AccountsService({ token_ttl: "7d" }));

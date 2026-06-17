@@ -23,9 +23,9 @@ If usage, plans, balances, and pricing are fused too early, it becomes harder to
 ## Enable it
 
 ```ts
-import { usageService } from "@downcity/services";
+import { UsageService } from "@downcity/services";
 
-base.use(usageService({
+base.use(new UsageService({
   record_errors: true,
 }));
 ```
@@ -61,7 +61,7 @@ If you need to know whether calls really happened, whether one town is consuming
 
 ## Common API surface
 
-- `usageService({ record_errors })`
+- `UsageService({ record_errors })`
 - `admin.service("usage").get("events")`
 - `admin.service("usage").get("summary")`
 - `user.service("usage").get("me")`

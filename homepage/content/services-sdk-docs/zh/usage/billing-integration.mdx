@@ -27,23 +27,21 @@ payment provider
 ## 一个实际接法示例
 
 ```ts
-import { usageService } from "@downcity/services";
-import { balanceService } from "@downcity/services";
-import { paymentService } from "@downcity/services";
+import { UsageService } from "@downcity/services";
+import { BalanceService } from "@downcity/services";
+import { PaymentService } from "@downcity/services";
 import { stripePaymentProvider } from "@downcity/services";
 
-const balance = balanceService();
+const balance = new BalanceService();
 
-base.use(usageService({
+base.use(new UsageService({
   record_errors: true,
 }));
 
 base.use(balance);
-base.use(paymentService({
-  balance: {
-    readTopup: async (topup_id) => await balance.readTopup(topup_id),
-    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-  },
+base.use(new PaymentService({
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   providers: [
     stripePaymentProvider({
       secret_key: process.env.STRIPE_SECRET_KEY,
@@ -109,10 +107,10 @@ Downcity 更适合把：
 
 这一页最相关的入口通常是：
 
-- `usageService({ record_errors })`
+- `UsageService({ record_errors })`
 - `admin.service("usage").get("summary")`
 - `guest.service("payment").get("methods")`
-- `paymentService({ balance, providers: [stripePaymentProvider()] })`
+- `PaymentService({ balance, providers: [stripePaymentProvider()] })`
 
 ## 常见误解
 

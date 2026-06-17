@@ -7,7 +7,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
-import { paymentService, stripePaymentProvider } from "../../bin/index.js"
+import { PaymentService, stripePaymentProvider } from "../../bin/index.js"
 
 test("paymentService lists enabled payment methods for guests", async () => {
   const cwd = process.cwd()
@@ -17,8 +17,8 @@ test("paymentService lists enabled payment methods for guests", async () => {
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
-    base.use(paymentService({
+    const base = new CityBase({ db })
+    base.use(new PaymentService({
       providers: [
         stripePaymentProvider({
           secret_key: "sk_test",
@@ -57,8 +57,8 @@ test("paymentService marks payment methods as disabled when Stripe is not config
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
-    base.use(paymentService({
+    const base = new CityBase({ db })
+    base.use(new PaymentService({
       providers: [
         stripePaymentProvider({
           currency: "usd",
@@ -98,10 +98,12 @@ test("paymentService creates checkout sessions and finishes topups through webho
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
     const balance = createBalanceBridge()
-    base.use(paymentService({
-      balance,
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
         stripePaymentProvider({
           secret_key: "sk_test",
@@ -259,10 +261,12 @@ test("paymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and 
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
     const balance = createBalanceBridge()
-    base.use(paymentService({
-      balance,
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
         stripePaymentProvider({
           secret_key: "sk_test",
@@ -326,10 +330,12 @@ test("paymentService derives redirect URLs from request origin without base-url 
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
     const balance = createBalanceBridge()
-    base.use(paymentService({
-      balance,
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
         stripePaymentProvider({
           secret_key: "sk_test",
@@ -383,10 +389,12 @@ test("paymentService marks failed and expired payments without crediting balance
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
     const balance = createBalanceBridge()
-    base.use(paymentService({
-      balance,
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
         stripePaymentProvider({
           secret_key: "sk_test",

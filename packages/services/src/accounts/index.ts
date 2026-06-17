@@ -157,7 +157,7 @@ export class AccountsService extends InstallableService {
 
   private auth!: ReturnType<typeof betterAuth>;
 
-  constructor(private readonly options: AccountsServiceOptions) {
+  constructor(private readonly options: AccountsServiceOptions = {}) {
     super([
       { key: "BETTER_AUTH_SECRET", description: "better-auth signing secret", required: true },
       { key: "GITHUB_CLIENT_ID", description: "GitHub OAuth App Client ID", required: false },
@@ -813,10 +813,6 @@ export class AccountsService extends InstallableService {
 /**
  * 创建 Accounts 服务实例。
  */
-export function accountsService(options: AccountsServiceOptions = {}): InstallableService {
-  return new AccountsService(options);
-}
-
 /**
  * 默认开发邮件发送器。
  */

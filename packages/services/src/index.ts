@@ -9,11 +9,11 @@
  */
 
 export { accountsOAuthStates, userProfiles } from "./accounts/schema.js";
-export { AccountsService, accountsService } from "./accounts/index.js";
+export { AccountsService } from "./accounts/index.js";
 export type { AccountsServiceOptions } from "./accounts/index.js";
 
 export { balanceAccounts, balanceLedger, balanceRedeemCodes, balanceTopups } from "./balance/schema.js";
-export { BalanceService, balanceService } from "./balance/service.js";
+export { BalanceService } from "./balance/service.js";
 export type {
   BalanceAccount,
   BalanceCreditsConversion,
@@ -42,7 +42,7 @@ export type {
   Microcredits,
 } from "./types/Amount.js";
 
-export { billingCharges, billingPricingRules, billingService, BillingService } from "./billing/index.js";
+export { billingCharges, billingPricingRules, BillingService } from "./billing/index.js";
 export type {
   BillingBalanceBridge,
   BillingChargeInput,
@@ -59,7 +59,7 @@ export type {
 export {
   creemPaymentProvider,
   dodoPaymentProvider,
-  paymentService,
+  PaymentService,
   stripePaymentProvider,
   waffoPaymentProvider,
 } from "./payment/index.js";
@@ -78,10 +78,9 @@ export type {
   PaymentProviderWebhookEvent,
   PaymentProviderWebhookInput,
   PaymentRecord,
-  PaymentServiceBalanceBridge,
-  PaymentServiceOptions,
-  PaymentStatus,
-  PaymentTopupRecord,
+ PaymentServiceOptions,
+ PaymentTopupRecord,
+ PaymentStatus,
 } from "./payment/types.js";
 export type {
   CreemPaymentProviderOptions,
@@ -90,5 +89,5 @@ export type {
   WaffoPaymentProviderOptions,
 } from "./payment/types.js";
 
-export { usageEvents, usageService } from "./usage/index.js";
+export { usageEvents, UsageService } from "./usage/index.js";
 export type { UsageServiceOptions } from "./usage/index.js";

@@ -59,25 +59,25 @@ global
 
 ```ts
 import { CityBase } from "@downcity/city";
-import { accountsService } from "@downcity/services";
-import { balanceService } from "@downcity/services";
-import { paymentService } from "@downcity/services";
-import { stripePaymentProvider } from "@downcity/services";
-import { usageService } from "@downcity/services";
+import {
+  AccountsService,
+  BalanceService,
+  PaymentService,
+  stripePaymentProvider,
+  UsageService,
+} from "@downcity/services";
 
 const base = new CityBase({ db });
-const balance = balanceService();
+const balance = new BalanceService();
 
-base.use(accountsService({
+base.use(new AccountsService({
   token_ttl: "7d",
 }));
 
 base.use(balance);
-base.use(paymentService({
-  balance: {
-    readTopup: async (topup_id) => await balance.readTopup(topup_id),
-    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-  },
+base.use(new PaymentService({
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   providers: [
     stripePaymentProvider({
       secret_key: process.env.STRIPE_SECRET_KEY,
@@ -85,16 +85,16 @@ base.use(paymentService({
     }),
   ],
 }));
-base.use(usageService({
+base.use(new UsageService({
   record_errors: true,
 }));
 ```
 
 这段代码背后的意思是：
 
-- `accountsService()` 给 City 增加 `accounts` service
-- `paymentService()` 给 City 增加统一支付入口，用来暴露当前可用的支付方式
-- `usageService()` 给 City 增加 usage 记录能力和相关查询入口
+- `new AccountsService()` 给 City 增加 `accounts` service
+- `new PaymentService()` 给 City 增加统一支付入口，用来暴露当前可用的支付方式
+- `new UsageService()` 给 City 增加 usage 记录能力和相关查询入口
 - `stripePaymentProvider()` 给统一 Payment 服务增加 Stripe Checkout、webhook 和支付结果同步
 
 ## service 挂进来后产品端怎么调

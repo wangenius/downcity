@@ -5,13 +5,22 @@
  * - 这是一个标准的 City edge 项目示例，部署入口统一走 `city deploy`。
  * - 业务 env、admin key、provider key 统一由 City 自己管理。
  * - Worker 只负责承接 Edge runtime 能力，例如 D1 与 HTTP request。
+ * - 装配过程平铺在本文件，不再通过 compose_city 函数包裹。
  */
 
 import { drizzle } from "drizzle-orm/d1";
+import { CityBase, AIService } from "@downcity/city";
 import {
-  type CityBase,
-} from "@downcity/city";
-import { compose_city } from "./compose-city.js";
+  AccountsService,
+  BalanceService,
+  BillingService,
+  PaymentService,
+  UsageService,
+  creemPaymentProvider,
+  dodoPaymentProvider,
+  stripePaymentProvider,
+  waffoPaymentProvider,
+} from "@downcity/services";
 import {
   GeminiImageProvider,
   LuchiImageProvider,
@@ -37,7 +46,7 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-function get_city(env: Env, request: Request): Promise<CityBase> {
+function get_city(env: Env): Promise<CityBase> {
   if (!city_promise) {
     city_promise = init_city(env);
   }
@@ -46,98 +55,31 @@ function get_city(env: Env, request: Request): Promise<CityBase> {
 
 async function init_city(env: Env): Promise<CityBase> {
   const db = drizzle(env.DB);
-  const deepseek_provider = new DeepSeekProvider();
-  const luchi_image_provider = new LuchiImageProvider({
-    id: "luchi-image",
-    envKey: "LUCHI_IMAGE_API_KEY",
-    defaultModelId: "gpt-image-2",
-  });
-  const image_302_provider = new OpenAIImageProvider({
-    id: "302-image",
-    envKey: "AI302_API_KEY",
-    baseURL: "https://api.302.ai/v1",
-    defaultModelId: "gpt-image-1",
-    providerOptionsKey: "302ai",
-  });
-  const openai_image_provider = new OpenAIImageProvider({
-    id: "openai-image",
-    envKey: "OPENAI_API_KEY",
-    baseURL: "https://api.openai.com/v1",
-    defaultModelId: "gpt-image-1",
-  });
-  const gemini_image_provider = new GeminiImageProvider({
-    id: "gemini-image",
-    envKey: "GEMINI_API_KEY",
-    defaultModelId: "gemini-2.5-flash-image",
-  });
-  const { city } = compose_city({
-    db,
-    dialect: "sqlite",
-    raw: env.DB,
-    models: [
-      deepseek_provider.model({
-        id: "deepseek-v4-flash",
-        name: "DeepSeek V4 Flash",
-        description: "DeepSeek OpenAI-compatible text model",
-        tags: ["deepseek", "text"],
-      }),
-      deepseek_provider.model({
-        id: "deepseek-v4-pro",
-        name: "DeepSeek V4 Pro",
-        description: "DeepSeek OpenAI-compatible text model",
-        tags: ["deepseek", "text"],
-      }),
-      luchi_image_provider.model({
-        id: "luchi-gpt-image-2",
-        name: "Luchi GPT Image 2",
-        description: "Luchi async image generation model",
-        tags: ["luchi", "image"],
-        default: ["image"],
-        meta: {
-          upstream_model: "gpt-image-2",
-        },
-      }),
-      luchi_image_provider.model({
-        id: "luchi-gpt-image-1",
-        name: "Luchi GPT Image 1",
-        description: "Luchi async image generation model",
-        tags: ["luchi", "image"],
-        meta: {
-          upstream_model: "gpt-image-1",
-        },
-      }),
-      image_302_provider.model({
-        id: "302-gpt-image-1",
-        name: "302.ai GPT Image 1",
-        description: "302.ai OpenAI-compatible image generation model",
-        tags: ["302.ai", "image"],
-        meta: {
-          upstream_model: "gpt-image-1",
-        },
-      }),
-      openai_image_provider.model({
-        id: "openai-gpt-image-1",
-        name: "OpenAI GPT Image 1",
-        description: "OpenAI image generation model",
-        tags: ["openai", "image"],
-        meta: {
-          upstream_model: "gpt-image-1",
-        },
-      }),
-      gemini_image_provider.model({
-        id: "gemini-2.5-flash-image",
-        name: "Gemini 2.5 Flash Image",
-        description: "Gemini generateContent image model",
-        tags: ["gemini", "image"],
-        meta: {
-          upstream_model: "gemini-2.5-flash-image",
-        },
-      }),
+
+  // 关键说明（中文）
+  // 顺序有依赖关系：payment 依赖 balance 暴露的 readTopup / finishTopup；billing 依赖 balance；ai 依赖 billing。
+  const city = new CityBase({ db });
+
+  city.use(new AccountsService());
+
+  const balance = new BalanceService({ init: INITIAL_BALANCE });
+  city.use(balance);
+
+  city.use(new PaymentService({
+    readTopup: async (topup_id) => await balance.readTopup(topup_id),
+    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+    providers: [
+      stripePaymentProvider(),
+      creemPaymentProvider(),
+      dodoPaymentProvider(),
+      waffoPaymentProvider(),
     ],
-    record_usage_errors: true,
-    balance: {
-      init: INITIAL_BALANCE,
-    },
+  }));
+
+  city.use(new UsageService({ record_errors: true }));
+
+  const billing = new BillingService({
+    balance,
     pricing_rules: [
       {
         rule_id: "ai_chat_completions_default",
@@ -162,12 +104,91 @@ async function init_city(env: Env): Promise<CityBase> {
       },
     ],
   });
+  city.use(billing);
+
+  const deepseek_provider = new DeepSeekProvider();
+  const luchi_image_provider = new LuchiImageProvider({
+    id: "luchi-image",
+    envKey: "LUCHI_IMAGE_API_KEY",
+    defaultModelId: "gpt-image-2",
+  });
+  const image_302_provider = new OpenAIImageProvider({
+    id: "302-image",
+    envKey: "AI302_API_KEY",
+    baseURL: "https://api.302.ai/v1",
+    defaultModelId: "gpt-image-1",
+    providerOptionsKey: "302ai",
+  });
+  const openai_image_provider = new OpenAIImageProvider({
+    id: "openai-image",
+    envKey: "OPENAI_API_KEY",
+    baseURL: "https://api.openai.com/v1",
+    defaultModelId: "gpt-image-1",
+  });
+  const gemini_image_provider = new GeminiImageProvider({
+    id: "gemini-image",
+    envKey: "GEMINI_API_KEY",
+    defaultModelId: "gemini-2.5-flash-image",
+  });
+
+  const ai = new AIService({ billing });
+  ai.use([
+    deepseek_provider.model({
+      id: "deepseek-v4-flash",
+      name: "DeepSeek V4 Flash",
+      description: "DeepSeek OpenAI-compatible text model",
+      tags: ["deepseek", "text"],
+    }),
+    deepseek_provider.model({
+      id: "deepseek-v4-pro",
+      name: "DeepSeek V4 Pro",
+      description: "DeepSeek OpenAI-compatible text model",
+      tags: ["deepseek", "text"],
+    }),
+    luchi_image_provider.model({
+      id: "luchi-gpt-image-2",
+      name: "Luchi GPT Image 2",
+      description: "Luchi async image generation model",
+      tags: ["luchi", "image"],
+      default: ["image"],
+      meta: { upstream_model: "gpt-image-2" },
+    }),
+    luchi_image_provider.model({
+      id: "luchi-gpt-image-1",
+      name: "Luchi GPT Image 1",
+      description: "Luchi async image generation model",
+      tags: ["luchi", "image"],
+      meta: { upstream_model: "gpt-image-1" },
+    }),
+    image_302_provider.model({
+      id: "302-gpt-image-1",
+      name: "302.ai GPT Image 1",
+      description: "302.ai OpenAI-compatible image generation model",
+      tags: ["302.ai", "image"],
+      meta: { upstream_model: "gpt-image-1" },
+    }),
+    openai_image_provider.model({
+      id: "openai-gpt-image-1",
+      name: "OpenAI GPT Image 1",
+      description: "OpenAI image generation model",
+      tags: ["openai", "image"],
+      meta: { upstream_model: "gpt-image-1" },
+    }),
+    gemini_image_provider.model({
+      id: "gemini-2.5-flash-image",
+      name: "Gemini 2.5 Flash Image",
+      description: "Gemini generateContent image model",
+      tags: ["gemini", "image"],
+      meta: { upstream_model: "gemini-2.5-flash-image" },
+    }),
+  ]);
+  city.use(ai);
 
   await city.health();
-  const accounts = city.getService("accounts")!;
+
   // 关键说明（中文）
-  // accounts 的专用回调入口也统一挂到 `/v1/accounts/*`，
-  // 这样 client / admin / worker 对外只有一套路由空间。
+  // accounts 的专用回调入口也统一挂到 `/v1/accounts/*`，让 client / admin / worker 对外只有一套路由空间。
+  const accounts = city.getService("accounts")!;
   city.router().all("/v1/accounts/auth/*", (c) => (accounts as any).getAuthHandler()(c.req.raw));
   city.router().get("/v1/accounts/oauth/callback", async (c) => (accounts as any).handleOAuthCallback(c.req.raw));
 
@@ -188,7 +209,7 @@ export default {
       }));
     }
 
-    const city = await get_city(env, request);
+    const city = await get_city(env);
     if (request.method === "GET" && url.pathname === "/health") {
       const health = await city.health();
       return withCors(Response.json({
@@ -200,6 +221,7 @@ export default {
     return withCors(response);
   },
 };
+
 function withCors(response: Response): Response {
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(corsHeaders)) {

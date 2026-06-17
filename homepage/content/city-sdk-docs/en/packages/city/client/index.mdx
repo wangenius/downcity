@@ -264,7 +264,7 @@ const usage = await client.service("usage").get("me");
 const methods = await client.payment.methods();
 
 // trusted-side route
-const payments = await admin.service("payment.stripe").get("payments");
+const payments = await admin.service("payment").get("payments");
 
 // then execute the concrete payment method
 const checkout = await client.payment.method("stripe").invoke({

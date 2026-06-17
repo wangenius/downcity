@@ -59,11 +59,11 @@ pnpm add @downcity/services
 
 ```ts
 import { CityBase } from "@downcity/city";
-import { accountsService } from "@downcity/services";
+import { AccountsService } from "@downcity/services";
 
 const base = new CityBase();
 
-base.use(accountsService({
+base.use(new AccountsService({
   token_ttl: "7d",
 }));
 ```
@@ -153,7 +153,7 @@ const reply = await user.ai.text({
 });
 ```
 
-This is why `accountsService()` and `@downcity/city` are usually read together: one provides the auth capability, the other provides the calling surface.
+This is why `AccountsService()` and `@downcity/city` are usually read together: one provides the auth capability, the other provides the calling surface.
 
 ## Related docs
 

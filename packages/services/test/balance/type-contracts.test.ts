@@ -1,12 +1,12 @@
 import { CityBase } from "@downcity/city";
-import { balanceService } from "../../src/index.js";
+import { BalanceService } from "../../src/index.js";
 
 async function verifyBalanceServiceContract(): Promise<void> {
   const base = new CityBase({
     db: {} as never,
   });
 
-  const balance = balanceService({
+  const balance = new BalanceService({
     init: 100,
   });
 

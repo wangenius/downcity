@@ -39,7 +39,7 @@ export class CityBase {
   private town_store?: TownStore;
 
   constructor(options: CityBaseOptions) {
-    this.runtime = options.runtime ?? create_runtime_from_db(options);
+    this.runtime = create_runtime_from_db(options);
     this.use(new EnvService());
     this.use(new TownsService());
   }

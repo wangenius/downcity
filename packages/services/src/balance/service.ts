@@ -698,10 +698,3 @@ export class BalanceService extends InstallableService {
     return this._raw;
   }
 }
-
-/**
- * 创建 Balance 服务实例。
- */
-export function balanceService(options: BalanceServiceOptions = {}): BalanceService {
-  return new BalanceService(options);
-}

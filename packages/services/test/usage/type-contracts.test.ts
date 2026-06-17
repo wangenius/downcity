@@ -3,12 +3,12 @@
  */
 
 import { CityBase } from "@downcity/city";
-import { usageService } from "../../src/index.js";
+import { UsageService } from "../../src/index.js";
 
 const base = new CityBase({
   db: {} as never,
 });
 
-base.use(usageService({
+base.use(new UsageService({
   record_errors: true,
 }));

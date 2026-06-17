@@ -9,36 +9,31 @@
 import { CityBase } from "@downcity/city";
 import {
   creemPaymentProvider,
-  paymentService,
+  PaymentService,
   type PaymentCheckoutCreateResult,
-  type PaymentServiceBalanceBridge,
 } from "../../src/index.js";
 
-const balance: PaymentServiceBalanceBridge = {
-  async readTopup(topup_id) {
-    return {
-      topup_id,
-      user_id: "user_1",
-      amount: 100,
-      status: "pending",
-      note: "demo",
-    };
-  },
-  async finishTopup(topup_id) {
-    return {
-      topup_id,
-      user_id: "user_1",
-      amount: 100,
-      status: "paid",
-      note: "demo",
-    };
-  },
-};
+const readTopup = async (topup_id: string) => ({
+  topup_id,
+  user_id: "user_1",
+  amount: 100,
+  status: "pending",
+  note: "demo",
+});
 
-const base = new CityBase({ db: {} as any, dialect: "sqlite" });
+const finishTopup = async (topup_id: string) => ({
+  topup_id,
+  user_id: "user_1",
+  amount: 100,
+  status: "paid",
+  note: "demo",
+});
 
-base.use(paymentService({
-  balance,
+const base = new CityBase({ db: {} as any });
+
+base.use(new PaymentService({
+  readTopup,
+  finishTopup,
   providers: [
     creemPaymentProvider({
       api_key: "creem_test",

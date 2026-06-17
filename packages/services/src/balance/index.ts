@@ -2,7 +2,7 @@
  * balance 服务子模块公共入口。
  */
 
-export { BalanceService, balanceService } from "./service.js";
+export { BalanceService } from "./service.js";
 export {
   balanceAccounts,
   balanceLedger,

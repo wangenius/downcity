@@ -3,35 +3,36 @@ title: "Creem Payment Service"
 description: "Turn one-time Creem Checkout payments into global balance topups."
 ---
 
-`creemPaymentService()` adds a hosted Creem Checkout flow that completes an existing `balance` topup after Creem confirms payment through webhook.
+`PaymentService` with `creemPaymentProvider()` adds a hosted Creem Checkout flow that completes an existing `balance` topup after Creem confirms payment through webhook.
 
 It is not a subscription or entitlement service. The service only owns Checkout creation, local payment records, webhook event records, and the final call to `balance.finishTopup()`.
 
 ## Enable it
 
 ```ts
-import { balanceService } from "@downcity/services";
+import { CityBase } from "@downcity/city";
 import {
-  creemPaymentMethod,
-  creemPaymentService,
-  paymentService,
-  type CreemPaymentServiceBalanceBridge,
+  BalanceService,
+  PaymentService,
+  creemPaymentProvider,
 } from "@downcity/services";
 
-const balance = balanceService();
-const creemBalanceBridge: CreemPaymentServiceBalanceBridge = {
-  readTopup: async (topup_id) => await balance.readTopup(topup_id),
-  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-};
+const base = new CityBase({ db });
+const balance = new BalanceService();
 
 base.use(balance);
-base.use(paymentService({
-  methods: [
-    creemPaymentMethod(),
+base.use(new PaymentService({
+  // PaymentService takes `readTopup` and `finishTopup` directly.
+  // There is no balance bridge object anymore.
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  providers: [
+      creemPaymentProvider({
+        api_key: process.env.CREEM_API_KEY,
+        product_id: process.env.CREEM_PRODUCT_ID,
+        webhook_secret: process.env.CREEM_WEBHOOK_SECRET,
+      }),
   ],
-}));
-base.use(creemPaymentService({
-  balance: creemBalanceBridge,
 }));
 ```
 
@@ -51,14 +52,15 @@ The Creem success redirect URL is generated automatically from `DOWNCITY_CITY_BA
 Create a trusted topup first through `balance`, then create a Creem checkout for it:
 
 ```ts
-const checkout = await user.service("payment.creem").action("checkout/create").invoke({
+const checkout = await user.service("payment").action("checkout/create").invoke({
+  method_id: "creem",
   topup_id: "topup_demo",
 });
 
 location.href = checkout.checkout_url;
 ```
 
-`paymentService()` also exposes Creem through:
+`PaymentService()` also exposes Creem through:
 
 ```ts
 const methods = await guest.service("payment").get("methods");
@@ -71,7 +73,7 @@ The Creem method is enabled only when both `CREEM_API_KEY` and `CREEM_PRODUCT_ID
 Configure Creem to send webhook events to:
 
 ```txt
-POST /v1/payment.creem/webhook
+POST /v1/payment/webhook
 ```
 
 The service applies `checkout.completed` once per event id. Repeated events return the stored sync status and do not credit balance twice.
@@ -79,10 +81,10 @@ The service applies `checkout.completed` once per event id. Repeated events retu
 ## Routes
 
 - `GET /v1/payment/methods`
-- `POST /v1/payment.creem/checkout/create`
-- `GET /v1/payment.creem/payments/me`
-- `GET /v1/payment.creem/payments`
-- `GET /v1/payment.creem/events`
-- `POST /v1/payment.creem/webhook`
-- `GET /v1/payment.creem/redirect/success`
-- `GET /v1/payment.creem/redirect/cancel`
+- `POST /v1/payment/checkout/create`
+- `GET /v1/payment/payments/me`
+- `GET /v1/payment/payments`
+- `GET /v1/payment/events`
+- `POST /v1/payment/webhook`
+- `GET /v1/payment/redirect/success`
+- `GET /v1/payment/redirect/cancel`

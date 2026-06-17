@@ -3,7 +3,7 @@ title: "Stripe Payment Service"
 description: "Turn one-time Stripe payments into global balance topups."
 ---
 
-`@downcity/services` now has a narrow responsibility:
+Stripe is exposed through `PaymentService` + `stripePaymentProvider()` and has a narrow responsibility:
 
 - create Stripe Checkout Sessions
 - store Stripe payment records
@@ -50,30 +50,28 @@ pnpm add @downcity/services
 ## Enable it
 
 ```ts
-import { balanceService } from "@downcity/services";
+import { CityBase } from "@downcity/city";
 import {
-  paymentService,
-  stripePaymentMethod,
-  stripePaymentService,
-  type StripePaymentServiceBalanceBridge,
+  BalanceService,
+  PaymentService,
+  stripePaymentProvider,
 } from "@downcity/services";
 
-const balance = balanceService();
-const stripeBalanceBridge: StripePaymentServiceBalanceBridge = {
-  readTopup: async (topup_id) => await balance.readTopup(topup_id),
-  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-};
+const base = new CityBase({ db });
+const balance = new BalanceService();
 
 base.use(balance);
-base.use(paymentService({
-  methods: [
-    stripePaymentMethod(),
+base.use(new PaymentService({
+  // PaymentService takes `readTopup` and `finishTopup` directly.
+  // There is no balance bridge object anymore.
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  providers: [
+      stripePaymentProvider({
+        secret_key: process.env.STRIPE_SECRET_KEY,
+        webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+      }),
   ],
-}));
-base.use(stripePaymentService({
-  balance: stripeBalanceBridge,
-  secret_key: process.env.STRIPE_SECRET_KEY,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
 }));
 ```
 
@@ -99,8 +97,8 @@ const methods = await guest.service("payment").get("methods");
 ## Routes
 
 - `GET /v1/payment/methods`
-- `POST /v1/payment.stripe/checkout/create`
-- `GET /v1/payment.stripe/payments/me`
-- `GET /v1/payment.stripe/payments`
-- `GET /v1/payment.stripe/events`
-- `POST /v1/payment.stripe/webhook`
+- `POST /v1/payment/checkout/create`
+- `GET /v1/payment/payments/me`
+- `GET /v1/payment/payments`
+- `GET /v1/payment/events`
+- `POST /v1/payment/webhook`

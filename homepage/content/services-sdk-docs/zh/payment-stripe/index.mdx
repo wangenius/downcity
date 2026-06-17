@@ -3,7 +3,7 @@ title: "Stripe Payment 服务"
 description: "把一次性 Stripe 支付同步成用户全局余额充值。"
 ---
 
-`@downcity/services` 当前的职责很收敛：
+Stripe 通过 `PaymentService` + `stripePaymentProvider()` 提供能力，职责很收敛：
 
 - 创建 Stripe Checkout
 - 记录 Stripe 支付记录
@@ -50,30 +50,28 @@ pnpm add @downcity/services
 ## 启用方式
 
 ```ts
-import { balanceService } from "@downcity/services";
+import { CityBase } from "@downcity/city";
 import {
-  paymentService,
-  stripePaymentMethod,
-  stripePaymentService,
-  type StripePaymentServiceBalanceBridge,
+  BalanceService,
+  PaymentService,
+  stripePaymentProvider,
 } from "@downcity/services";
 
-const balance = balanceService();
-const stripeBalanceBridge: StripePaymentServiceBalanceBridge = {
-  readTopup: async (topup_id) => await balance.readTopup(topup_id),
-  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-};
+const base = new CityBase({ db });
+const balance = new BalanceService();
 
 base.use(balance);
-base.use(paymentService({
-  methods: [
-    stripePaymentMethod(),
+base.use(new PaymentService({
+  // 关键说明（中文）：PaymentService 直接接收 readTopup / finishTopup 两个函数，
+  // 不再需要 balance bridge 对象包一层。
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  providers: [
+      stripePaymentProvider({
+        secret_key: process.env.STRIPE_SECRET_KEY,
+        webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+      }),
   ],
-}));
-base.use(stripePaymentService({
-  balance: stripeBalanceBridge,
-  secret_key: process.env.STRIPE_SECRET_KEY,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
 }));
 ```
 
@@ -99,8 +97,8 @@ const methods = await guest.service("payment").get("methods");
 ## 路由
 
 - `GET /v1/payment/methods`
-- `POST /v1/payment.stripe/checkout/create`
-- `GET /v1/payment.stripe/payments/me`
-- `GET /v1/payment.stripe/payments`
-- `GET /v1/payment.stripe/events`
-- `POST /v1/payment.stripe/webhook`
+- `POST /v1/payment/checkout/create`
+- `GET /v1/payment/payments/me`
+- `GET /v1/payment/payments`
+- `GET /v1/payment/events`
+- `POST /v1/payment/webhook`

@@ -1,8 +1,9 @@
 /**
  * City 组装模块。
  *
- * 负责把用户传入的 Drizzle db 适配成 City 内部 runtime 能力，
- * 并提供默认的数据库 env provider。
+ * 关键说明（中文）
+ * - 用户只需要传入 Drizzle db，方言、底层 client 全部由 City 自己从 db 推断。
+ * - 用户既不需要传 `dialect`，也不需要传 `raw`，避免参数语义重复。
  */
 
 import { pgEnv, sqliteEnv } from "../../service/env/schema.js";
@@ -16,9 +17,13 @@ import type { EnvEntry, EnvUpsertInput } from "../../service/env/types.js";
 
 /**
  * 从 CityBaseOptions 创建 runtime。
+ *
+ * 关键说明（中文）
+ * - 通过 Drizzle 暴露的 `db.dialect` 自动推断 sqlite / pg 方言。
+ * - 通过 `db.$client` 提取底层 client，既用于 DDL 也作为 raw 暴露给需要它的 service。
  */
 export function create_runtime_from_db(options: CityBaseOptions): Runtime {
-  const dialect = options.dialect ?? infer_dialect(options.db);
+  const dialect = infer_dialect(options.db);
   const builtin_tables = builtin_tables_for(dialect);
   const client = extract_db_client(options.db);
 
@@ -27,7 +32,7 @@ export function create_runtime_from_db(options: CityBaseOptions): Runtime {
     client,
     env: new DatabaseEnvProvider(),
     builtinTables: builtin_tables,
-    raw: options.raw ?? options.db.$client,
+    raw: options.db.$client,
   };
 }
 
@@ -42,12 +47,19 @@ function builtin_tables_for(dialect: "pg" | "sqlite"): BuiltinTables {
 
 /**
  * 从 Drizzle 实例推断方言。
+ *
+ * 关键说明（中文）
+ * - Drizzle v0.30+ 会在 db 上挂一个 `dialect` 实例（SQLiteSyncDialect / SQLiteAsyncDialect / PgDialect）。
+ * - 我们直接读 dialect 实例的构造函数名，比读 db 自身名字更稳定，覆盖 better-sqlite3 / d1 / node-sqlite / pg。
  */
-function infer_dialect(db: unknown): "pg" | "sqlite" {
-  const entity_kind = (db as { constructor?: { name?: string } }).constructor?.name ?? "";
-  if (/pg|postgres/i.test(entity_kind)) return "pg";
-  if (/sqlite|d1/i.test(entity_kind)) return "sqlite";
-  throw new Error("Unable to infer Drizzle dialect. Pass { dialect: \"pg\" } or { dialect: \"sqlite\" } to City.");
+function infer_dialect(db: { dialect?: unknown; constructor?: { name?: string } }): "pg" | "sqlite" {
+  const dialect_name = (db.dialect as { constructor?: { name?: string } } | undefined)?.constructor?.name ?? "";
+  if (/SQLite/i.test(dialect_name)) return "sqlite";
+  if (/Pg/i.test(dialect_name)) return "pg";
+  const ctor_name = db.constructor?.name ?? "";
+  if (/sqlite|d1/i.test(ctor_name)) return "sqlite";
+  if (/pg|postgres/i.test(ctor_name)) return "pg";
+  throw new Error("Unable to infer Drizzle dialect from db. Please pass a Drizzle SQLite or Postgres database.");
 }
 
 /**

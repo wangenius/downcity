@@ -103,7 +103,7 @@ import { Provider, buildAssistantMessage, type Context, type AIProviderBilledOut
 import type { UIMessage } from "ai";
 
 const ai = new AIService({
-  billing: billingService({ balance }),
+  billing: new BillingService({ balance }),
 });
 
 class PricedProvider extends Provider {

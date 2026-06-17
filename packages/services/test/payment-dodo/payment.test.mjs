@@ -6,7 +6,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "../payment-stripe/sqlite-db.mjs"
-import { dodoPaymentProvider, paymentService } from "../../bin/index.js"
+import { dodoPaymentProvider, PaymentService } from "../../bin/index.js"
 
 test("paymentService lists enabled Dodo payment method for guests", async () => {
   const cwd = process.cwd()
@@ -15,8 +15,8 @@ test("paymentService lists enabled Dodo payment method for guests", async () => 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
-    base.use(paymentService({
+    const base = new CityBase({ db })
+    base.use(new PaymentService({
       providers: [
         dodoPaymentProvider({
           api_key: "dodo_test",
@@ -56,10 +56,12 @@ test("paymentService creates Dodo checkout sessions and finishes topups through 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
     const balance = createBalanceBridge()
-    base.use(paymentService({
-      balance,
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
         dodoPaymentProvider({
           api_key: "dodo_test",

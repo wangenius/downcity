@@ -361,13 +361,6 @@ export class BillingService extends InstallableService {
 }
 
 /**
- * 创建 Billing 服务实例。
- */
-export function billingService(options: BillingServiceOptions): BillingService {
-  return new BillingService(options);
-}
-
-/**
  * 是否应该对当前调用计费。
  */
 function shouldBill(ctx: Context): boolean {

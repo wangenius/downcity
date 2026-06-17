@@ -3,35 +3,36 @@ title: "Dodo Payment Service"
 description: "Turn one-time Dodo Payments Checkout sessions into global balance topups."
 ---
 
-`dodoPaymentService()` creates Dodo Payments Checkout sessions and completes an existing `balance` topup after Dodo sends a successful payment webhook.
+`PaymentService` with `dodoPaymentProvider()` creates Dodo Payments Checkout sessions and completes an existing `balance` topup after Dodo sends a successful payment webhook.
 
 The service only owns Checkout creation, local payment records, webhook event records, and the final call to `balance.finishTopup()`.
 
 ## Enable it
 
 ```ts
-import { balanceService } from "@downcity/services";
+import { CityBase } from "@downcity/city";
 import {
-  dodoPaymentMethod,
-  dodoPaymentService,
-  paymentService,
-  type DodoPaymentServiceBalanceBridge,
+  BalanceService,
+  PaymentService,
+  dodoPaymentProvider,
 } from "@downcity/services";
 
-const balance = balanceService();
-const dodoBalanceBridge: DodoPaymentServiceBalanceBridge = {
-  readTopup: async (topup_id) => await balance.readTopup(topup_id),
-  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-};
+const base = new CityBase({ db });
+const balance = new BalanceService();
 
 base.use(balance);
-base.use(paymentService({
-  methods: [
-    dodoPaymentMethod(),
+base.use(new PaymentService({
+  // PaymentService takes `readTopup` and `finishTopup` directly.
+  // There is no balance bridge object anymore.
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  providers: [
+      dodoPaymentProvider({
+        api_key: process.env.DODO_PAYMENTS_API_KEY,
+        product_id: process.env.DODO_PRODUCT_ID,
+        webhook_key: process.env.DODO_WEBHOOK_KEY,
+      }),
   ],
-}));
-base.use(dodoPaymentService({
-  balance: dodoBalanceBridge,
 }));
 ```
 
@@ -52,14 +53,15 @@ Dodo return and cancel URLs are generated automatically from `DOWNCITY_CITY_BASE
 Create a trusted topup first through `balance`, then create a Dodo checkout for it:
 
 ```ts
-const checkout = await user.service("payment.dodo").action("checkout/create").invoke({
+const checkout = await user.service("payment").action("checkout/create").invoke({
+  method_id: "dodo",
   topup_id: "topup_demo",
 });
 
 location.href = checkout.checkout_url;
 ```
 
-`paymentService()` exposes Dodo through:
+`PaymentService()` exposes Dodo through:
 
 ```ts
 const methods = await guest.service("payment").get("methods");
@@ -72,7 +74,7 @@ The Dodo method is enabled only when both `DODO_PAYMENTS_API_KEY` and `DODO_PROD
 Configure Dodo to send webhook events to:
 
 ```txt
-POST /v1/payment.dodo/webhook
+POST /v1/payment/webhook
 ```
 
 The service applies `payment.succeeded` once per event id. Repeated events return the stored sync status and do not credit balance twice.
@@ -80,10 +82,10 @@ The service applies `payment.succeeded` once per event id. Repeated events retur
 ## Routes
 
 - `GET /v1/payment/methods`
-- `POST /v1/payment.dodo/checkout/create`
-- `GET /v1/payment.dodo/payments/me`
-- `GET /v1/payment.dodo/payments`
-- `GET /v1/payment.dodo/events`
-- `POST /v1/payment.dodo/webhook`
-- `GET /v1/payment.dodo/redirect/success`
-- `GET /v1/payment.dodo/redirect/cancel`
+- `POST /v1/payment/checkout/create`
+- `GET /v1/payment/payments/me`
+- `GET /v1/payment/payments`
+- `GET /v1/payment/events`
+- `POST /v1/payment/webhook`
+- `GET /v1/payment/redirect/success`
+- `GET /v1/payment/redirect/cancel`

@@ -28,11 +28,9 @@ Stripe 事件
 ## 启用示例
 
 ```ts
-base.use(paymentService({
-  balance: {
-    readTopup: async (topup_id) => await balance.readTopup(topup_id),
-    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-  },
+base.use(new PaymentService({
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   providers: [
     stripePaymentProvider({
       secret_key: process.env.STRIPE_SECRET_KEY,

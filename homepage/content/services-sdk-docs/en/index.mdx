@@ -7,12 +7,10 @@ description: "Install one Downcity package for accounts, balance, usage, Stripe 
 
 With one installation, you can opt into:
 
-- `accountsService()` for registration, login, OAuth, sessions, and `user_token`
-- `balanceService()` for global wallet, ledger, topups, and redeem codes
-- `paymentService()` for exposing which payment methods the current City supports
-- `usageService()` for real user-side service-call facts
-- `stripePaymentService()` for translating Stripe one-time payments into wallet credit
-- `creemPaymentService()` for translating Creem one-time payments into wallet credit
+- `AccountsService` for registration, login, OAuth, sessions, and `user_token`
+- `BalanceService` for global wallet, ledger, topups, and redeem codes
+- `PaymentService` for exposing which payment methods the current City supports, together with providers like `stripePaymentProvider` and `creemPaymentProvider`
+- `UsageService` for real user-side service-call facts
 
 ## Install
 
@@ -25,40 +23,28 @@ pnpm add @downcity/services
 ```ts
 import { CityBase } from "@downcity/city";
 import {
-  accountsService,
-  balanceService,
-  creemPaymentMethod,
-  creemPaymentService,
-  paymentService,
-  stripePaymentMethod,
-  stripePaymentService,
-  usageService,
+  AccountsService,
+  BalanceService,
+  creemPaymentProvider,
+  PaymentService,
+  stripePaymentProvider,
+  UsageService,
 } from "@downcity/services";
 
-const base = new CityBase();
-const balance = balanceService();
+const base = new CityBase({ db });
+const balance = new BalanceService();
 
-base.use(accountsService());
+base.use(new AccountsService());
 base.use(balance);
-base.use(paymentService({
-  methods: [
-    stripePaymentMethod(),
-    creemPaymentMethod(),
+base.use(new PaymentService({
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
+  providers: [
+    stripePaymentProvider(),
+    creemPaymentProvider(),
   ],
 }));
-base.use(usageService());
-base.use(stripePaymentService({
-  balance: {
-    readTopup: async (topup_id) => await balance.readTopup(topup_id),
-    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-  },
-}));
-base.use(creemPaymentService({
-  balance: {
-    readTopup: async (topup_id) => await balance.readTopup(topup_id),
-    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-  },
-}));
+base.use(new UsageService());
 ```
 
 On the product side, the usual first call is:
@@ -67,7 +53,7 @@ On the product side, the usual first call is:
 const methods = await guest.service("payment").get("methods");
 ```
 
-Then the frontend can choose the concrete method from `methods.items`, such as `payment.stripe` or `payment.creem`.
+Then the frontend can choose the concrete method from `methods.items`, such as `stripe` or `creem`.
 
 ## Read by capability
 

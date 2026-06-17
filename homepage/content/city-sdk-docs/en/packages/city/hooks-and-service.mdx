@@ -57,25 +57,25 @@ Their meanings are:
 
 ```ts
 import { CityBase } from "@downcity/city";
-import { accountsService } from "@downcity/services";
-import { balanceService } from "@downcity/services";
-import { paymentService } from "@downcity/services";
-import { stripePaymentProvider } from "@downcity/services";
-import { usageService } from "@downcity/services";
+import {
+  AccountsService,
+  BalanceService,
+  PaymentService,
+  stripePaymentProvider,
+  UsageService,
+} from "@downcity/services";
 
 const base = new CityBase({ db });
-const balance = balanceService();
+const balance = new BalanceService();
 
-base.use(accountsService({
+base.use(new AccountsService({
   token_ttl: "7d",
 }));
 
 base.use(balance);
-base.use(paymentService({
-  balance: {
-    readTopup: async (topup_id) => await balance.readTopup(topup_id),
-    finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
-  },
+base.use(new PaymentService({
+  readTopup: async (topup_id) => await balance.readTopup(topup_id),
+  finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   providers: [
     stripePaymentProvider({
       secret_key: process.env.STRIPE_SECRET_KEY,
@@ -83,7 +83,7 @@ base.use(paymentService({
     }),
   ],
 }));
-base.use(usageService({
+base.use(new UsageService({
   record_errors: true,
 }));
 ```

@@ -32,9 +32,9 @@ description: "给用户维护一份全局余额、流水、充值单和 redeem_c
 ## 最小启用方式
 
 ```ts
-import { balanceService } from "@downcity/services";
+import { BalanceService } from "@downcity/services";
 
-const balance = balanceService({
+const balance = new BalanceService({
   init: 100,
   unit: "credits",
 });

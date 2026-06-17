@@ -5,7 +5,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
-import { balanceService } from "../../bin/index.js"
+import { BalanceService } from "../../bin/index.js"
 
 test("balanceService manages global balance, ledger, and topups", async () => {
   const cwd = process.cwd()
@@ -15,9 +15,9 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new CityBase({ db })
 
-    const balance = balanceService({
+    const balance = new BalanceService({
       init: 100,
     })
     base.use(balance)

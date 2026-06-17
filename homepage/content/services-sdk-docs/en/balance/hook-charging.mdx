@@ -7,7 +7,7 @@ The recommended pattern is not declarative pricing.
 
 Instead:
 
-1. register `balanceService()`
+1. register `BalanceService()`
 2. call it directly from business hooks
 3. `require()` before execution
 4. `sub()` after a successful call
@@ -24,7 +24,7 @@ Pricing usually belongs to business logic:
 That logic fits your own hooks better than service config.
 
 ```ts
-const balance = balanceService({
+const balance = new BalanceService({
   init: 100,
 });
 

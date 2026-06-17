@@ -41,9 +41,9 @@ usage service 记录的是：
 ## 启用示例
 
 ```ts
-import { usageService } from "@downcity/services";
+import { UsageService } from "@downcity/services";
 
-base.use(usageService({
+base.use(new UsageService({
   record_errors: true,
 }));
 ```
@@ -100,7 +100,7 @@ usage 事实层是最先该看的地方。
 
 这一页最相关的公共入口是：
 
-- `usageService({ record_errors })`
+- `UsageService({ record_errors })`
 - `admin.service("usage").get("events")`
 - `admin.service("usage").get("summary")`
 - `user.service("usage").get("me")`

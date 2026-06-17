@@ -5,7 +5,7 @@ import path from "node:path"
 import test from "node:test"
 import { CityBase } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
-import { accountsService } from "../../bin/index.js"
+import { AccountsService } from "../../bin/index.js"
 
 test("accountsService registers users, logs in, and issues CityBase tokens", async () => {
   const cwd = process.cwd()
@@ -282,8 +282,8 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
 
 async function setupBase(tempDir, env = {}) {
   const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-  const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
-  base.use(accountsService({ token_ttl: "7d" }))
+  const base = new CityBase({ db })
+  base.use(new AccountsService({ token_ttl: "7d" }))
   await base.health()
 
   const envProvider = base.getService("env")._env

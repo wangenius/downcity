@@ -30,9 +30,9 @@ Those rules should stay in your own business hooks.
 ## Minimal setup
 
 ```ts
-import { balanceService } from "@downcity/services";
+import { BalanceService } from "@downcity/services";
 
-const balance = balanceService({
+const balance = new BalanceService({
   init: 100,
   unit: "credits",
 });

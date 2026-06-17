@@ -44,9 +44,9 @@ pnpm add @downcity/services
 ## 启用方式
 
 ```ts
-import { usageService } from "@downcity/services";
+import { UsageService } from "@downcity/services";
 
-base.use(usageService({
+base.use(new UsageService({
   record_errors: true,
 }));
 ```

@@ -17,6 +17,7 @@ on:
       - "packages/type/package.json"
       - "packages/shell/package.json"
       - "packages/agent/package.json"
+      - "packages/server/package.json"
       - "packages/city/package.json"
       - "packages/services/package.json"
       - "packages/plugins/package.json"
@@ -83,6 +84,7 @@ jobs:
           pnpm -C packages/type build
           pnpm -C packages/shell build
           pnpm -C packages/agent build
+          pnpm -C packages/server build
           pnpm -C packages/city build
           pnpm -C packages/services build
           pnpm -C packages/plugins build

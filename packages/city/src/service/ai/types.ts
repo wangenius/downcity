@@ -6,10 +6,48 @@
 
 import type { ActionFn } from "../action.js";
 import type { AIBillingBridge } from "./billing.js";
+import type { LanguageModel } from "ai";
 
 // ===========================================================================
 // 模型注册
 // ===========================================================================
+
+/**
+ * Provider 构造选项。
+ */
+export interface ProviderOptions {
+  /** Provider 唯一 ID。 */
+  id: string;
+  /** 模型所需环境变量说明。 */
+  env?: Record<string, string>;
+  /** Provider 的 baseURL（用于自动透传）。 */
+  baseURL?: string;
+  /** Provider 的环境变量 key。 */
+  envKey?: string;
+  /** 上游 API 实际模型 ID（自动透传时替换 body.model）。 */
+  passthroughModel?: string;
+}
+
+/**
+ * OpenAI-compatible client 工厂入参。
+ */
+export interface OpenAICompatibleClientConfig {
+  /** 上游 API Key。 */
+  apiKey: string;
+  /** 上游 OpenAI-compatible baseURL。 */
+  baseURL: string;
+  /** Provider 展示名称，通常用于底层 SDK 调试和埋点。 */
+  name: string;
+}
+
+/**
+ * OpenAI-compatible chat client 最小能力约束。
+ */
+export interface OpenAICompatibleClient {
+  /** 根据模型 ID 创建可传给 AI SDK 的 chat model。 */
+  chat(modelId: string): LanguageModel;
+}
+
 
 /**
  * 模型 action 映射，key 为通路名称。
@@ -19,7 +57,7 @@ import type { AIBillingBridge } from "./billing.js";
  * - OpenAI 兼容通路：openai — 给 /chat/completions 端点用
  *
  * 每个 action 接收 Context，返回对应通路的结果。
- * Provider 在构造时提供这些 action，通过 model() 方法绑定到模型配置。
+ * Provider 通过方法声明提供 action，通过 model() 方法绑定到模型配置。
  */
 export interface ModelActions {
   /** 文本生成 action */

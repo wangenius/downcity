@@ -53,14 +53,41 @@ export type {
 
 export { AIService } from "./service/ai/ai-service.js";
 export { Provider } from "./service/ai/provider.js";
-export { createOpenAICompatibleProvider } from "./service/ai/openai-compatible-provider.js";
 
 export type {
   AIServiceOptions,
   ModelConfig,
   ModelActions,
+  OpenAICompatibleClient,
+  OpenAICompatibleClientConfig,
+  ProviderOptions,
   PublicModel,
 } from "./service/ai/types.js";
+
+export {
+  buildAssistantMessage,
+  buildImageMessage,
+  buildToolSet,
+  isRecord,
+  normalizeAIUsage,
+  normalizeOpenAICompatibleBody,
+  readErrorMessage,
+  readImageJobStepContext,
+  readJsonResponse,
+  readOpenAICompatibleSseUsage,
+  readRequiredEnv,
+  readString,
+  resolveUpstreamModel,
+  stripUndefined,
+  toRecord,
+  trimTrailingSlash,
+} from "./service/ai/helpers.js";
+
+export type {
+  BuildAssistantMessageResult,
+  ExtractedImage,
+  ToolCallShape,
+} from "./service/ai/helpers.js";
 
 export type {
   AIBillingBridge,
@@ -69,13 +96,6 @@ export type {
   AIProviderBilledResponse,
   AIProviderBillingLine,
 } from "./service/ai/billing.js";
-
-export type {
-  OpenAICompatibleClient,
-  OpenAICompatibleClientConfig,
-  OpenAICompatibleClientFactory,
-  OpenAICompatibleProviderOptions,
-} from "./service/ai/openai-compatible-provider.js";
 
 // ===========================================================================
 // 场景 3：用户鉴权与 Token

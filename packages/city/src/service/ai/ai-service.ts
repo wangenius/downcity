@@ -19,6 +19,7 @@ import { Service, type Context } from "../service.js";
 import { httpError, randomSecret } from "../../utils/helpers.js";
 import type { ActionFn } from "../action.js";
 import { sqliteAIImageJobs } from "./schema.js";
+import { normalizeAIUsage } from "./helpers.js";
 import type { UIMessage } from "ai";
 import type {
   AIServiceOptions,
@@ -180,83 +181,7 @@ function normalizeUsage(usage: unknown): {
   output_tokens?: number;
   cached_tokens?: number;
 } {
-  if (!isRecord(usage)) return {};
-  const input_token_details = isRecord(usage.inputTokenDetails) ? usage.inputTokenDetails : undefined;
-  const cached_tokens = readNumberFieldValue(usage, [
-    "cached_input_tokens",
-    "cachedTokens",
-    "cached_tokens",
-    "prompt_cache_hit_tokens",
-  ]) ?? readNestedNumberFieldValue(usage, "inputTokenDetails", [
-    "cacheReadTokens",
-    "cachedTokens",
-  ]) ?? readNestedNumberFieldValue(usage, "prompt_tokens_details", [
-    "cached_tokens",
-    "cachedTokens",
-  ]) ?? readNumberFieldValue(usage, [
-    "cachedInputTokens",
-  ]);
-  const total_input_tokens = readNumberFieldValue(usage, [
-    "promptTokens",
-    "prompt_tokens",
-    "inputTokens",
-    "input_tokens",
-    "promptTokenCount",
-    "prompt_token_count",
-  ]);
-  const input_tokens = readNumberFieldValue(usage, ["prompt_cache_miss_tokens"])
-    ?? (input_token_details ? readNumberFieldValue(input_token_details, [
-      "noCacheTokens",
-      "inputTokens",
-    ]) : undefined)
-    ?? readNestedNumberFieldValue(usage, "prompt_tokens_details", [
-      "no_cache_tokens",
-      "noCacheTokens",
-    ])
-    ?? (total_input_tokens !== undefined && cached_tokens !== undefined
-      ? Math.max(total_input_tokens - cached_tokens, 0)
-      : total_input_tokens);
-
-  return {
-    ...(input_tokens !== undefined ? { input_tokens } : {}),
-    ...readNumberField(usage, [
-      "outputTokens",
-      "output_tokens",
-      "completionTokens",
-      "completion_tokens",
-      "candidatesTokenCount",
-      "candidates_token_count",
-    ], "output_tokens"),
-    ...(cached_tokens !== undefined ? { cached_tokens } : {}),
-  };
-}
-
-/**
- * 读取多个候选数字字段。
- */
-function readNumberField(
-  record: UsageRecord,
-  keys: string[],
-  output_key: "input_tokens" | "output_tokens" | "cached_tokens",
-): Partial<Record<"input_tokens" | "output_tokens" | "cached_tokens", number>> {
-  const value = readNumberFieldValue(record, keys);
-  return value !== undefined ? { [output_key]: value } : {};
-}
-
-function readNumberFieldValue(record: UsageRecord, keys: string[]): number | undefined {
-  for (const key of keys) {
-    const value = record[key];
-    const normalized = Number(value);
-    if (Number.isFinite(normalized) && normalized >= 0) {
-      return normalized;
-    }
-  }
-  return undefined;
-}
-
-function readNestedNumberFieldValue(record: UsageRecord, parent: string, keys: string[]): number | undefined {
-  const nested = record[parent];
-  return isRecord(nested) ? readNumberFieldValue(nested, keys) : undefined;
+  return normalizeAIUsage(usage);
 }
 
 /**

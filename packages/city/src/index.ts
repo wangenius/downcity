@@ -90,12 +90,13 @@ export type {
 } from "./service/ai/helpers.js";
 
 export type {
-  AIBillingBridge,
-  AIBillingChargeInput,
-  AIProviderBilledOutput,
-  AIProviderBilledResponse,
-  AIProviderBillingLine,
-} from "./service/ai/billing.js";
+  AIBalanceBridge,
+  AIBalanceChargeInput,
+  AIProviderBillFn,
+  AIProviderChargedOutput,
+  AIProviderChargedResponse,
+  AIProviderChargeLine,
+} from "./service/ai/charge.js";
 
 // ===========================================================================
 // 场景 3：用户鉴权与 Token

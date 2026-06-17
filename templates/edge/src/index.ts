@@ -10,10 +10,10 @@
 
 import { drizzle } from "drizzle-orm/d1";
 import { CityBase, AIService } from "@downcity/city";
+import type { Context } from "@downcity/city";
 import {
   AccountsService,
   BalanceService,
-  BillingService,
   PaymentService,
   UsageService,
   creemPaymentProvider,
@@ -57,7 +57,7 @@ async function init_city(env: Env): Promise<CityBase> {
   const db = drizzle(env.DB);
 
   // 关键说明（中文）
-  // 顺序有依赖关系：payment 依赖 balance 暴露的 readTopup / finishTopup；billing 依赖 balance；ai 依赖 billing。
+  // 顺序有依赖关系：payment 依赖 balance 暴露的 readTopup / finishTopup；ai 依赖 balance 执行扣费。
   const city = new CityBase({ db });
 
   city.use(new AccountsService());
@@ -77,34 +77,6 @@ async function init_city(env: Env): Promise<CityBase> {
   }));
 
   city.use(new UsageService({ record_errors: true }));
-
-  const billing = new BillingService({
-    balance,
-    pricing_rules: [
-      {
-        rule_id: "ai_chat_completions_default",
-        service_id: "ai",
-        action_id: "chat/completions",
-        request_microcredits: CHAT_REQUEST_COST_MICROCREDITS,
-        note: "Default AI chat request price",
-      },
-      {
-        rule_id: "ai_image_default",
-        service_id: "ai",
-        action_id: "image",
-        image_microcredits: IMAGE_COST_MICROCREDITS,
-        note: "Default AI image price",
-      },
-      {
-        rule_id: "ai_image_create_default",
-        service_id: "ai",
-        action_id: "image/create",
-        request_microcredits: IMAGE_COST_MICROCREDITS,
-        note: "Default async AI image create price",
-      },
-    ],
-  });
-  city.use(billing);
 
   const deepseek_provider = new DeepSeekProvider();
   const luchi_image_provider = new LuchiImageProvider({
@@ -131,19 +103,21 @@ async function init_city(env: Env): Promise<CityBase> {
     defaultModelId: "gemini-2.5-flash-image",
   });
 
-  const ai = new AIService({ billing });
+  const ai = new AIService({ balance });
   ai.use([
     deepseek_provider.model({
       id: "deepseek-v4-flash",
       name: "DeepSeek V4 Flash",
       description: "DeepSeek OpenAI-compatible text model",
       tags: ["deepseek", "text"],
+      bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_MICROCREDITS),
     }),
     deepseek_provider.model({
       id: "deepseek-v4-pro",
       name: "DeepSeek V4 Pro",
       description: "DeepSeek OpenAI-compatible text model",
       tags: ["deepseek", "text"],
+      bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_MICROCREDITS),
     }),
     luchi_image_provider.model({
       id: "luchi-gpt-image-2",
@@ -151,14 +125,20 @@ async function init_city(env: Env): Promise<CityBase> {
       description: "Luchi async image generation model",
       tags: ["luchi", "image"],
       default: ["image"],
-      meta: { upstream_model: "gpt-image-2" },
+      meta: {
+        upstream_model: "gpt-image-2",
+      },
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
     }),
     luchi_image_provider.model({
       id: "luchi-gpt-image-1",
       name: "Luchi GPT Image 1",
       description: "Luchi async image generation model",
       tags: ["luchi", "image"],
-      meta: { upstream_model: "gpt-image-1" },
+      meta: {
+        upstream_model: "gpt-image-1",
+      },
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
     }),
     image_302_provider.model({
       id: "302-gpt-image-1",
@@ -166,6 +146,7 @@ async function init_city(env: Env): Promise<CityBase> {
       description: "302.ai OpenAI-compatible image generation model",
       tags: ["302.ai", "image"],
       meta: { upstream_model: "gpt-image-1" },
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
     }),
     openai_image_provider.model({
       id: "openai-gpt-image-1",
@@ -173,6 +154,7 @@ async function init_city(env: Env): Promise<CityBase> {
       description: "OpenAI image generation model",
       tags: ["openai", "image"],
       meta: { upstream_model: "gpt-image-1" },
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
     }),
     gemini_image_provider.model({
       id: "gemini-2.5-flash-image",
@@ -180,6 +162,7 @@ async function init_city(env: Env): Promise<CityBase> {
       description: "Gemini generateContent image model",
       tags: ["gemini", "image"],
       meta: { upstream_model: "gemini-2.5-flash-image" },
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
     }),
   ]);
   city.use(ai);
@@ -232,4 +215,32 @@ function withCors(response: Response): Response {
     statusText: response.statusText,
     headers,
   });
+}
+
+/**
+ * 生成一次 AI 调用的账单行。
+ */
+function bill_ai_request(ctx: Context, output: unknown, amount_microcredits: number) {
+  const mode = String(ctx.metering?.metadata?.mode ?? "request");
+  return {
+    amount_microcredits,
+    note: `AI ${mode}`,
+    ref: read_bill_ref(output),
+    metadata: {
+      service_id: "ai",
+      action_id: mode,
+      model_id: ctx.metering?.model_id ?? ctx.variant?.id,
+      provider_id: ctx.metering?.provider_id,
+    },
+  };
+}
+
+/**
+ * 从输出对象中提取账单引用。
+ */
+function read_bill_ref(output: unknown): string | undefined {
+  if (!output || typeof output !== "object" || Array.isArray(output)) return undefined;
+  const record = output as Record<string, unknown>;
+  const ref = record.job_id ?? record.id ?? record.ref;
+  return typeof ref === "string" && ref.trim() ? ref.trim() : undefined;
 }

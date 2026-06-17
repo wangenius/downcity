@@ -4,7 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 
-import { CityBase, AIService } from "../bin/index.js"
+import { CityBase, AIService, Provider } from "../bin/index.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
 
 test("CityBase instruction aggregates built-in and service documentation", async () => {
@@ -196,9 +196,9 @@ test("CityBase rejects mismatched town_id for authenticated user requests", asyn
   }
 })
 
-test("AIService charges explicit provider billing lines", async () => {
+test("AIService charges explicit provider charge lines", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-explicit-billing-"))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-explicit-charge-"))
 
   try {
     process.chdir(tempDir)
@@ -207,11 +207,10 @@ test("AIService charges explicit provider billing lines", async () => {
     const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
 
     const ai = new AIService({
-      billing: {
+      balance: {
         async charge(input) {
           charges.push({
-            action_id: input.ctx.action?.id,
-            model_id: input.ctx.variant?.id,
+            user_id: input.user_id,
             amount_microcredits: input.amount_microcredits,
             note: input.note,
             metadata: input.metadata,
@@ -231,7 +230,7 @@ test("AIService charges explicit provider billing lines", async () => {
             role: "assistant",
             parts: [{ type: "text", text: "ok", state: "done" }],
           },
-          billing: {
+          charge: {
             amount_microcredits: 123,
             note: "provider charge",
             metadata: { provider_id: "priced-provider" },
@@ -273,11 +272,198 @@ test("AIService charges explicit provider billing lines", async () => {
     assert.equal(response.status, 200)
     assert.equal((await response.json()).id, "msg_1")
     assert.deepEqual(charges, [{
-      action_id: "text",
-      model_id: "priced-text",
+      user_id: "user_1",
       amount_microcredits: 123,
       note: "provider charge",
       metadata: { provider_id: "priced-provider" },
+    }])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("AIService uses provider bill when model bill is not set", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-provider-bill-"))
+
+  class TestProvider extends Provider {
+    async text() {
+      return {
+        output: {
+          id: "msg_provider_bill",
+          role: "assistant",
+          parts: [{ type: "text", text: "ok" }],
+        },
+      }
+    }
+
+    bill(ctx, output) {
+      return {
+        amount_microcredits: 222,
+        note: "provider bill",
+        ref: output.id,
+        metadata: {
+          model_id: ctx.metering?.model_id,
+          provider_id: ctx.metering?.provider_id,
+        },
+      }
+    }
+  }
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const charges = []
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+
+    const ai = new AIService({
+      balance: {
+        async charge(input) {
+          charges.push({
+            amount_microcredits: input.amount_microcredits,
+            note: input.note,
+            ref: input.ref,
+            metadata: input.metadata,
+          })
+        },
+      },
+    })
+    const provider = new TestProvider({ id: "test-provider" })
+    ai.use(provider.model({
+      id: "provider-billed-text",
+      name: "Provider Billed Text",
+      default: ["text"],
+    }))
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+    }))).json()
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({ model: "provider-billed-text", prompt: "hi" }),
+    }))
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(charges, [{
+      amount_microcredits: 222,
+      note: "provider bill",
+      ref: "msg_provider_bill",
+      metadata: {
+        model_id: "provider-billed-text",
+        provider_id: "test-provider",
+      },
+    }])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("AIService lets model bill override provider bill", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-model-bill-override-"))
+
+  class TestProvider extends Provider {
+    async text() {
+      return {
+        output: {
+          id: "msg_model_bill",
+          role: "assistant",
+          parts: [{ type: "text", text: "ok" }],
+        },
+      }
+    }
+
+    bill() {
+      return {
+        amount_microcredits: 222,
+        note: "provider bill",
+      }
+    }
+  }
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const charges = []
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+
+    const ai = new AIService({
+      balance: {
+        async charge(input) {
+          charges.push({
+            amount_microcredits: input.amount_microcredits,
+            note: input.note,
+          })
+        },
+      },
+    })
+    const provider = new TestProvider({ id: "test-provider" })
+    ai.use(provider.model({
+      id: "model-billed-text",
+      name: "Model Billed Text",
+      default: ["text"],
+      bill() {
+        return {
+          amount_microcredits: 333,
+          note: "model bill",
+        }
+      },
+    }))
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+    }))).json()
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({ model: "model-billed-text", prompt: "hi" }),
+    }))
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(charges, [{
+      amount_microcredits: 333,
+      note: "model bill",
     }])
   } finally {
     process.chdir(cwd)
@@ -352,6 +538,191 @@ test("CityBase AI image jobs persist and finish through waitUntil", async () => 
       message: "succeeded",
       poll_after_ms: 2000,
     })
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("AIService charges image create requests from model bill", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-image-create-charge-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const charges = []
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+
+    const ai = new AIService({
+      balance: {
+        async charge(input) {
+          charges.push(input)
+        },
+      },
+    })
+    ai.use({
+      id: "priced-image",
+      provider_id: "image-provider",
+      name: "Priced Image",
+      default: ["image"],
+      bill(ctx, output) {
+        return {
+          amount_microcredits: 777,
+          note: "AI image create",
+          ref: output.job_id,
+          metadata: {
+            service_id: "ai",
+            action_id: ctx.metering?.metadata?.mode,
+            model_id: ctx.metering?.model_id,
+            provider_id: ctx.metering?.provider_id,
+          },
+        }
+      },
+      actions: {
+        image: async () => ({
+          id: "msg_image",
+          role: "assistant",
+          parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,aQ==" }],
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+
+    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+    }))).json()
+
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({ model: "priced-image", prompt: "draw" }),
+    }), {
+      execution: {
+        waitUntil() {},
+      },
+    })
+
+    assert.equal(response.status, 200)
+    const body = await response.json()
+    assert.match(body.job_id, /^img_/)
+    assert.deepEqual(charges, [{
+      user_id: "user_1",
+      amount_microcredits: 777,
+      note: "AI image create",
+      ref: body.job_id,
+      metadata: {
+        service_id: "ai",
+        action_id: "image/create",
+        model_id: "priced-image",
+        provider_id: "image-provider",
+      },
+    }])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("AIService prefers action charge over model bill", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-charge-priority-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const charges = []
+    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+
+    const ai = new AIService({
+      balance: {
+        async charge(input) {
+          charges.push({
+            amount_microcredits: input.amount_microcredits,
+            note: input.note,
+          })
+        },
+      },
+    })
+    ai.use({
+      id: "priority-text",
+      provider_id: "priority-provider",
+      name: "Priority Text",
+      default: ["text"],
+      bill() {
+        return {
+          amount_microcredits: 999,
+          note: "model bill",
+        }
+      },
+      actions: {
+        text: async () => ({
+          output: {
+            id: "msg_priority",
+            role: "assistant",
+            parts: [{ type: "text", text: "ok" }],
+          },
+          charge: {
+            amount_microcredits: 111,
+            note: "action charge",
+          },
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+    }))).json()
+
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({ model: "priority-text", prompt: "hi" }),
+    }))
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(charges, [{
+      amount_microcredits: 111,
+      note: "action charge",
+    }])
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })

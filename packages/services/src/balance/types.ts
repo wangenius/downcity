@@ -57,7 +57,12 @@ export interface BalanceExtra {
 /**
  * 余额流水类型。
  */
-export type BalanceLedgerKind = "init" | "add" | "sub" | "topup" | "redeem";
+export type BalanceLedgerKind = "init" | "add" | "sub" | "topup" | "redeem" | "charge";
+
+/**
+ * 通用扣费状态。
+ */
+export type BalanceChargeStatus = "settled";
 
 /**
  * 充值单状态。
@@ -374,6 +379,79 @@ export interface BalanceRedeemCodeRedeemResult extends Record<string, unknown> {
 }
 
 /**
+ * 通用扣费输入。
+ */
+export interface BalanceChargeInput extends BalanceExtra {
+  /**
+   * 用户 ID。
+   */
+  user_id: string;
+
+  /**
+   * 扣费金额，单位为 microcredits。
+   */
+  amount_microcredits: number;
+
+  /**
+   * 结构化扣费审计信息。
+   *
+   * AI、插件、任务、订单等业务字段都应该放在这里，
+   * BalanceService 不解析这些业务字段。
+   */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * 通用扣费记录。
+ */
+export interface BalanceCharge extends Record<string, unknown> {
+  /**
+   * 扣费记录 ID。
+   */
+  charge_id: string;
+
+  /**
+   * 用户 ID。
+   */
+  user_id: string;
+
+  /**
+   * 扣费金额，单位为 credits。
+   */
+  amount: number;
+
+  /**
+   * 扣费金额，单位为 microcredits。
+   */
+  amount_microcredits: number;
+
+  /**
+   * 扣费状态。
+   */
+  status: BalanceChargeStatus;
+
+  /**
+   * 扣费说明。
+   */
+  note: string;
+
+  /**
+   * 外部引用 ID。
+   */
+  ref: string;
+
+  /**
+   * 扩展字段 JSON 文本。
+   */
+  metadata_json: string;
+
+  /**
+   * 扣费创建时间。
+   */
+  created_at: string;
+}
+
+/**
  * 历史查询条件。
  */
 export interface BalanceHistoryQuery {
@@ -422,6 +500,23 @@ export interface BalanceRedeemCodeQuery {
    * 可选兑换用户 ID。
    *
    * 为空时返回所有用户。
+   */
+  user_id?: string;
+
+  /**
+   * 返回条数上限。
+   */
+  limit?: number | string;
+}
+
+/**
+ * 通用扣费记录查询条件。
+ */
+export interface BalanceChargeQuery {
+  /**
+   * 可选用户 ID。
+   *
+   * 为空时返回全局扣费记录。
    */
   user_id?: string;
 

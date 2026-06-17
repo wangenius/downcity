@@ -13,7 +13,7 @@
  import {
    Provider,
    type Context,
-   type AIProviderBilledResponse,
+   type AIProviderChargedResponse,
    type OpenAICompatibleClientConfig,
    normalizeOpenAICompatibleBody,
    readRequiredEnv,
@@ -56,7 +56,7 @@
        .join("\n") ?? "";
    }
 
-   async openai(ctx: Context): Promise<AIProviderBilledResponse> {
+   async openai(ctx: Context): Promise<AIProviderChargedResponse> {
      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
      const body = normalizeOpenAICompatibleBody(
        ctx.input as Record<string, unknown>,

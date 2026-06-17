@@ -29,11 +29,11 @@ import type {
   PublicModel,
 } from "./types.js";
 import type {
-  AIBillingBridge,
-  AIProviderBilledOutput,
-  AIProviderBilledResponse,
-  AIProviderBillingLine,
-} from "./billing.js";
+  AIBalanceBridge,
+  AIProviderChargedOutput,
+  AIProviderChargedResponse,
+  AIProviderChargeLine,
+} from "./charge.js";
 import type {
   AIImageJobRecord,
   AIImageJobStepContext,
@@ -55,7 +55,7 @@ type EnvReader = (key: string) => string | undefined;
 type UsageRecord = Record<string, unknown>;
 type ResolvedProviderOutput = {
   output: unknown;
-  billing?: AIProviderBillingLine | Promise<AIProviderBillingLine | undefined>;
+  charge?: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined>;
 };
 
 /**
@@ -75,14 +75,14 @@ function isRecord(value: unknown): value is UsageRecord {
 /**
  * 判断 Provider 是否返回了带账单 Response。
  */
-function isProviderBilledResponse(value: unknown): value is AIProviderBilledResponse {
+function isProviderChargedResponse(value: unknown): value is AIProviderChargedResponse {
   return isRecord(value) && value.response instanceof Response;
 }
 
 /**
  * 判断 Provider 是否返回了带账单普通输出。
  */
-function isProviderBilledOutput(value: unknown): value is AIProviderBilledOutput {
+function isProviderChargedOutput(value: unknown): value is AIProviderChargedOutput {
   return isRecord(value) && "output" in value;
 }
 
@@ -256,12 +256,12 @@ export class AIService extends Service {
   /** SDK 通路 action 映射（modality → action） */
   private modalityActions = new Map<string, ActionFn>();
 
-  /** AI 专用计费桥接。 */
-  private readonly billing?: AIBillingBridge;
+  /** AI 专用余额桥接。 */
+  private readonly balance?: AIBalanceBridge;
 
   constructor(options: AIServiceOptions = {}) {
     super({ id: "ai", name: "AI", tables: { image_jobs: sqliteAIImageJobs } });
-    this.billing = options.billing;
+    this.balance = options.balance;
 
     // 为每个 modality 注册 routing action
     for (const modality of MODALITIES) {
@@ -458,10 +458,11 @@ export class AIService extends Service {
 
     try {
       const provider_output = await resolved.action(ctx);
-      const { output, billing } = this.resolveProviderOutput(provider_output);
+      const { output, charge } = this.resolveProviderOutput(provider_output);
       this.attachOutputMetering(ctx, output, modality, started_at);
-      const defer_billing = isResponse(output) || isPromiseLike(billing);
-      await this.handleBilling(ctx, billing, defer_billing);
+      const resolved_charge = charge ?? resolved.model?.bill?.(ctx, output);
+      const defer_charge = isResponse(output) || isPromiseLike(resolved_charge);
+      await this.handleCharge(ctx, resolved_charge, defer_charge);
       if (isResponse(output)) return output;
       return output;
     } catch (error) {
@@ -475,8 +476,11 @@ export class AIService extends Service {
 
   private async createImageJob(ctx: Context): Promise<UserImageJobCreateResult> {
     const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image" }, ctx.env);
-    const now = new Date().toISOString();
     const job_id = `img_${randomSecret(12)}`;
+    this.attachResolvedModel(ctx, resolved.model, "image/create");
+    await this.handleCharge(ctx, resolved.model?.bill?.(ctx, { job_id }), false);
+
+    const now = new Date().toISOString();
     const record: AIImageJobRecord = {
       job_id,
       status: "queued",
@@ -493,7 +497,6 @@ export class AIService extends Service {
 
     await this.imageJobTable(ctx).insert(recordToRow(record));
 
-    this.attachResolvedModel(ctx, resolved.model, "image");
     const job_ctx: Context = {
       ...ctx,
       input: { ...ctx.input },
@@ -687,8 +690,9 @@ export class AIService extends Service {
       const output = await resolved.action(ctx);
       const provider_output = this.resolveProviderOutput(output);
       this.attachOutputMetering(ctx, provider_output.output, "openai", started_at);
-      const defer_billing = isResponse(provider_output.output) || isPromiseLike(provider_output.billing);
-      await this.handleBilling(ctx, provider_output.billing, defer_billing);
+      const resolved_charge = provider_output.charge ?? resolved.model?.bill?.(ctx, provider_output.output);
+      const defer_charge = isResponse(provider_output.output) || isPromiseLike(resolved_charge);
+      await this.handleCharge(ctx, resolved_charge, defer_charge);
       if (isResponse(provider_output.output)) return provider_output.output;
       return new Response(JSON.stringify(provider_output.output), { status: 200, headers: { "content-type": "application/json" } });
     } catch (error) {
@@ -699,7 +703,7 @@ export class AIService extends Service {
   }
 
   /**
-   * 将解析出的模型写回原始 Context，供 hook / usage / billing 读取。
+   * 将解析出的模型写回原始 Context，供 hook / usage / charge 读取。
    */
   private attachResolvedModel(ctx: Context, model: ModelConfig | undefined, mode: string): void {
     if (!model) return;
@@ -742,20 +746,20 @@ export class AIService extends Service {
    * 拆包 Provider 返回值。
    *
    * 关键说明（中文）
-   * - 新 Provider 可以返回 `{ output, billing }` 或 `{ response, billing }`。
+   * - 新 Provider 可以返回 `{ output, charge }` 或 `{ response, charge }`。
    * - 老 Provider 继续直接返回 UIMessage / Response，保持兼容。
    */
   private resolveProviderOutput(value: unknown): ResolvedProviderOutput {
-    if (isProviderBilledResponse(value)) {
+    if (isProviderChargedResponse(value)) {
       return {
         output: value.response,
-        billing: value.billing,
+        charge: value.charge,
       };
     }
-    if (isProviderBilledOutput(value)) {
+    if (isProviderChargedOutput(value)) {
       return {
         output: value.output,
-        billing: value.billing,
+        charge: value.charge,
       };
     }
     return { output: value };
@@ -764,18 +768,19 @@ export class AIService extends Service {
   /**
    * 安排 AI 专用扣费。
    */
-  private async handleBilling(
+  private async handleCharge(
     ctx: Context,
-    billing: AIProviderBillingLine | Promise<AIProviderBillingLine | undefined> | undefined,
+    charge: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined> | undefined,
     defer: boolean,
   ): Promise<void> {
-    if (!billing || !this.billing) return;
-    ctx.locals.ai_billing_handled = true;
-    const promise = Promise.resolve(billing)
+    if (!charge || !this.balance) return;
+    ctx.locals.ai_charge_handled = true;
+    const promise = Promise.resolve(charge)
       .then(async (line) => {
         if (!line || line.amount_microcredits <= 0) return;
-        await this.billing?.charge({
-          ctx,
+        if (!ctx.user?.user_id) return;
+        await this.balance?.charge({
+          user_id: ctx.user.user_id,
           ...line,
         });
       });

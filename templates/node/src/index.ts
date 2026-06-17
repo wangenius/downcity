@@ -15,7 +15,6 @@ import { CityBase, AIService } from "@downcity/city";
 import {
   AccountsService,
   BalanceService,
-  BillingService,
   PaymentService,
   UsageService,
   stripePaymentProvider,
@@ -128,7 +127,7 @@ async function sync_local_env(city: CityBase): Promise<void> {
  *
  * 关键点（中文）
  * - 不再通过 compose_city 函数隐藏装配过程，所有 service 的创建与注册都平铺在这里。
- * - 顺序有依赖关系：payment 依赖 balance，billing 依赖 balance，ai 依赖 billing。
+ * - 顺序有依赖关系：payment 依赖 balance，ai 依赖 balance 执行扣费。
  */
 const city = new CityBase({ db });
 
@@ -148,10 +147,7 @@ city.use(payment);
 const usage = new UsageService({ record_errors: true });
 city.use(usage);
 
-const billing = new BillingService({ balance });
-city.use(billing);
-
-const ai = new AIService({ billing });
+const ai = new AIService({ balance });
 ai.use(Object.values(models));
 city.use(ai);
 

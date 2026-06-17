@@ -11,8 +11,8 @@ import {
   AIService,
   Provider,
   type Context,
-  type AIProviderBilledOutput,
-  type AIProviderBilledResponse,
+  type AIProviderChargedOutput,
+  type AIProviderChargedResponse,
 } from "@downcity/city";
 import type { UIMessage } from "ai";
 import Database from "better-sqlite3";
@@ -32,7 +32,7 @@ class EchoProvider extends Provider {
     super({ id: "echo" });
   }
 
-  async text(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+  async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
     return {
       output: {
         id: crypto.randomUUID(),
@@ -42,7 +42,7 @@ class EchoProvider extends Provider {
     };
   }
 
-  async stream(ctx: Context): Promise<AIProviderBilledResponse> {
+  async stream(ctx: Context): Promise<AIProviderChargedResponse> {
     const { createUIMessageStreamResponse } = await import("ai");
     return {
       response: createUIMessageStreamResponse({

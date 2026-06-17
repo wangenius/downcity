@@ -5,6 +5,7 @@
 export { BalanceService } from "./service.js";
 export {
   balanceAccounts,
+  balanceCharges,
   balanceLedger,
   balanceRedeemCodes,
   balanceTopups,
@@ -12,6 +13,10 @@ export {
 
 export type {
   BalanceAccount,
+  BalanceCharge,
+  BalanceChargeInput,
+  BalanceChargeQuery,
+  BalanceChargeStatus,
   BalanceCreditsConversion,
   BalanceCreateRedeemCodeInput,
   BalanceExtra,

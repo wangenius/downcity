@@ -5,7 +5,7 @@
  */
 
 import type { ActionFn } from "../action.js";
-import type { AIBillingBridge } from "./billing.js";
+import type { AIBalanceBridge, AIProviderBillFn } from "./charge.js";
 import type { LanguageModel } from "ai";
 
 // ===========================================================================
@@ -108,6 +108,8 @@ export interface ModelConfig {
   passthroughModel?: string;
   /** 各通路 action 绑定 */
   actions: ModelActions;
+  /** 本模型的出账方法，只生成扣费草稿，不直接扣余额。 */
+  bill?: AIProviderBillFn;
 }
 
 // ===========================================================================
@@ -153,9 +155,9 @@ export interface AIModelEnvRequirement {
  */
 export interface AIServiceOptions {
   /**
-   * AI 专用计费桥接。
+   * AI 专用余额桥接。
    *
    * Provider 可以直接返回最终扣费金额，AIService 会通过该 bridge 完成扣费。
    */
-  billing?: AIBillingBridge;
+  balance?: AIBalanceBridge;
 }

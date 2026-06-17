@@ -12,6 +12,7 @@ export const ACCOUNT_TABLE = "service_balance_accounts";
 export const LEDGER_TABLE = "service_balance_ledger";
 export const TOPUP_TABLE = "service_balance_topups";
 export const REDEEM_CODE_TABLE = "service_balance_redeem_codes";
+export const CHARGE_TABLE = "service_balance_charges";
 
 /**
  * SQLite 余额账户表。
@@ -201,4 +202,49 @@ export const balanceRedeemCodes = sqliteTable(REDEEM_CODE_TABLE, {
    * 更新时间。
    */
   updated_at: text("updated_at").notNull(),
+});
+
+/**
+ * SQLite 通用扣费记录表。
+ */
+export const balanceCharges = sqliteTable(CHARGE_TABLE, {
+  /**
+   * 扣费记录 ID。
+   */
+  charge_id: text("charge_id").primaryKey(),
+
+  /**
+   * 用户 ID。
+   */
+  user_id: text("user_id").notNull(),
+
+  /**
+   * 扣费金额，单位为 microcredits。
+   */
+  amount_microcredits: integer("amount_microcredits").notNull(),
+
+  /**
+   * 扣费状态。
+   */
+  status: text("status").notNull(),
+
+  /**
+   * 可读说明。
+   */
+  note: text("note").notNull(),
+
+  /**
+   * 外部引用 ID。
+   */
+  ref: text("ref").notNull(),
+
+  /**
+   * 扩展字段 JSON。
+   */
+  metadata_json: text("metadata_json").notNull(),
+
+  /**
+   * 创建时间。
+   */
+  created_at: text("created_at").notNull(),
 });

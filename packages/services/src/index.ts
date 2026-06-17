@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - 对外统一暴露 Downcity 官方服务
- * - 保留 accounts / balance / billing / payment / usage 五个清晰服务边界
+ * - 对外统一暴露 accounts / balance / payment / usage 等官方服务
  * - Stripe / Creem / Dodo / Waffo 统一作为 payment provider 暴露
  * - 业务侧只需要从一个包完成导入
  */
@@ -12,10 +12,14 @@ export { accountsOAuthStates, userProfiles } from "./accounts/schema.js";
 export { AccountsService } from "./accounts/index.js";
 export type { AccountsServiceOptions } from "./accounts/index.js";
 
-export { balanceAccounts, balanceLedger, balanceRedeemCodes, balanceTopups } from "./balance/schema.js";
+export { balanceAccounts, balanceCharges, balanceLedger, balanceRedeemCodes, balanceTopups } from "./balance/schema.js";
 export { BalanceService } from "./balance/service.js";
 export type {
   BalanceAccount,
+  BalanceCharge,
+  BalanceChargeInput,
+  BalanceChargeQuery,
+  BalanceChargeStatus,
   BalanceCreditsConversion,
   BalanceCreateRedeemCodeInput,
   BalanceExtra,
@@ -41,20 +45,6 @@ export type {
   Credits,
   Microcredits,
 } from "./types/Amount.js";
-
-export { billingCharges, billingPricingRules, BillingService } from "./billing/index.js";
-export type {
-  BillingBalanceBridge,
-  BillingChargeInput,
-  BillingCharge,
-  BillingChargeQuery,
-  BillingChargeStatus,
-  BillingPricingRule,
-  BillingPricingRuleInput,
-  BillingPricingRuleQuery,
-  BillingPricingRuleStatus,
-  BillingServiceOptions,
-} from "./billing/index.js";
 
 export {
   creemPaymentProvider,

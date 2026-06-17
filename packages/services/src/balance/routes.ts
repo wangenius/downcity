@@ -22,6 +22,16 @@ interface BalanceMutationBody extends Record<string, unknown>, BalanceExtra {
    */
   amount?: number;
 
+  /**
+   * 变动金额，单位为 microcredits。
+   */
+  amount_microcredits?: number;
+
+  /**
+   * 结构化扣费审计信息。
+   */
+  metadata?: Record<string, unknown>;
+
 }
 
 interface BalanceFinishTopupBody extends Record<string, unknown>, BalanceExtra {
@@ -97,6 +107,18 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
 
   ctx.route({
     method: "GET",
+    path: "/charges/me",
+    auth: ["user"],
+    handler: async (c) => {
+      const input = await c.json<BalanceQueryBody>();
+      return c.jsonResponse({
+        items: await service.listCharges({ user_id: readUserId(c), limit: input.limit }),
+      });
+    },
+  });
+
+  ctx.route({
+    method: "GET",
     path: "/topups/me",
     auth: ["user"],
     handler: async (c) => {
@@ -149,6 +171,16 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
 
   ctx.route({
     method: "GET",
+    path: "/charges",
+    auth: ["admin"],
+    handler: async (c) => {
+      const input = await c.json<BalanceQueryBody>();
+      return c.jsonResponse({ items: await service.listCharges(input) });
+    },
+  });
+
+  ctx.route({
+    method: "GET",
     path: "/topups",
     auth: ["admin"],
     handler: async (c) => {
@@ -190,6 +222,23 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
     handler: async (c) => {
       const body = await c.json<BalanceMutationBody>();
       return c.jsonResponse(await service.sub(readRequired(body.user_id, "user_id"), Number(body.amount), body));
+    },
+  });
+
+  ctx.route({
+    method: "POST",
+    path: "/charge",
+    auth: ["admin"],
+    handler: async (c) => {
+      const body = await c.json<BalanceMutationBody>();
+      return c.jsonResponse(await service.charge({
+        user_id: readRequired(body.user_id, "user_id"),
+        amount_microcredits: Number(body.amount_microcredits),
+        note: body.note,
+        ref: body.ref,
+        meta: body.meta,
+        metadata: body.metadata,
+      }));
     },
   });
 

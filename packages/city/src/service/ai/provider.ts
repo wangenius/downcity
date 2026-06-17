@@ -12,66 +12,67 @@ import type { LanguageModel, ToolSet, UIMessage } from "ai";
 import type { Context } from "../service.js";
 import type { ActionFn } from "../action.js";
 import type {
-  AIProviderBilledOutput,
-  AIProviderBilledResponse,
-   AIProviderBillingLine,
- } from "./billing.js";
- import type { AIImageJobStepResult } from "./job-types.js";
- import type {
-   ModelConfig,
-   ModelActions,
-   OpenAICompatibleClient,
-   OpenAICompatibleClientConfig,
-   ProviderOptions,
- } from "./types.js";
- import {
-   buildAssistantMessage,
-   buildToolSet,
-   readRequiredEnv,
-   resolveUpstreamModel,
- } from "./helpers.js";
+  AIProviderBillFn,
+  AIProviderChargedOutput,
+  AIProviderChargedResponse,
+  AIProviderChargeLine,
+} from "./charge.js";
+import type { AIImageJobStepResult } from "./job-types.js";
+import type {
+  ModelConfig,
+  ModelActions,
+  OpenAICompatibleClient,
+  OpenAICompatibleClientConfig,
+  ProviderOptions,
+} from "./types.js";
+import {
+  buildAssistantMessage,
+  buildToolSet,
+  readRequiredEnv,
+  resolveUpstreamModel,
+} from "./helpers.js";
 
- // ===========================================================================
- // 内部类型
- // ===========================================================================
+// ===========================================================================
+// 内部类型
+// ===========================================================================
 
- interface OpenAIActionInput {
-   /** 多轮 UIMessage。 */
-   messages?: UIMessage[];
-   /** 单轮 prompt。 */
-   prompt?: string;
-   /** OpenAI function tools。 */
-   tools?: Record<string, unknown>[];
- }
+interface OpenAIActionInput {
+  /** 多轮 UIMessage。 */
+  messages?: UIMessage[];
+  /** 单轮 prompt。 */
+  prompt?: string;
+  /** OpenAI function tools。 */
+  tools?: Record<string, unknown>[];
+}
 
- interface ToolCallShape {
-   /** tool call 唯一 ID。 */
-   toolCallId: string;
-   /** tool 名称。 */
-   toolName: string;
-   /** tool 输入。 */
-   input: unknown;
- }
+interface ToolCallShape {
+  /** tool call 唯一 ID。 */
+  toolCallId: string;
+  /** tool 名称。 */
+  toolName: string;
+  /** tool 输入。 */
+  input: unknown;
+}
 
- interface ResolvedActionInputWithTools {
-   /** 已转换为 ai-sdk ToolSet 的 tools。 */
-   tools: ToolSet;
-   /** 已转换为模型侧 messages 的消息列表。 */
-   messages: Awaited<ReturnType<typeof convertToModelMessages>>;
- }
+interface ResolvedActionInputWithTools {
+  /** 已转换为 ai-sdk ToolSet 的 tools。 */
+  tools: ToolSet;
+  /** 已转换为模型侧 messages 的消息列表。 */
+  messages: Awaited<ReturnType<typeof convertToModelMessages>>;
+}
 
- interface ResolvedActionInputWithPrompt {
-   /** 供单轮调用使用的 prompt 文本。 */
-   prompt: string;
- }
+interface ResolvedActionInputWithPrompt {
+  /** 供单轮调用使用的 prompt 文本。 */
+  prompt: string;
+}
 
- type ResolvedActionInput =
-   | ResolvedActionInputWithTools
-   | ResolvedActionInputWithPrompt;
+type ResolvedActionInput =
+  | ResolvedActionInputWithTools
+  | ResolvedActionInputWithPrompt;
 
- // ===========================================================================
- // Provider 基类
- // ===========================================================================
+// ===========================================================================
+// Provider 基类
+// ===========================================================================
 
  /**
   * AI Provider 基类。
@@ -79,7 +80,7 @@ import type {
   * 子类通过覆盖方法声明 action，model() 会自动收集并生成 ModelConfig。
   * 默认 text / stream 使用 OpenAI-compatible 协议，覆盖 createClient 即可接入不同上游。
   */
- export abstract class Provider {
+export abstract class Provider {
    /** Provider 唯一 ID。 */
    readonly id: string;
    /** 模型所需环境变量说明。 */
@@ -123,11 +124,11 @@ import type {
    }
 
    /**
-    * 从 usage 生成计费行。
+    * 为一次完成的调用生成扣费草稿。
     *
-    * 默认不返回计费，由 billingService pricing rules 兜底。
+    * 默认不返回扣费。真正扣款由 AIService 调用 BalanceService 完成。
     */
-   protected buildBilling(ctx: Context, usage: unknown): AIProviderBillingLine | undefined {
+   protected bill(ctx: Context, output: unknown): AIProviderChargeLine | undefined {
      return undefined;
    }
 
@@ -161,7 +162,7 @@ import type {
    /**
     * 文本生成 action（OpenAI-compatible 默认实现）。
     */
-   async text(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+   async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
      const input = ctx.input as OpenAIActionInput;
      const resolved_input = await this.resolveActionInput(input);
      const model = this.createChatModel(ctx);
@@ -176,7 +177,7 @@ import type {
          finishReason: result.finishReason,
          usage: result.usage,
          toolCalls: result.toolCalls as ToolCallShape[],
-       }, this.buildBilling(ctx, result.usage));
+       });
      }
 
      const result = await generateText({
@@ -187,37 +188,35 @@ import type {
      return buildAssistantMessage(result.text, ctx, {
        finishReason: result.finishReason,
        usage: result.usage,
-     }, this.buildBilling(ctx, result.usage));
+     });
    }
 
    /**
     * 流式生成 action（OpenAI-compatible 默认实现）。
     */
-   async stream(ctx: Context): Promise<AIProviderBilledResponse> {
+   async stream(ctx: Context): Promise<AIProviderChargedResponse> {
      const input = ctx.input as OpenAIActionInput;
      const resolved_input = await this.resolveActionInput(input);
      const model = this.createChatModel(ctx);
 
      if ("tools" in resolved_input) {
-       const result = streamText({
-         model,
-         messages: resolved_input.messages,
-         tools: resolved_input.tools,
-       });
+      const result = streamText({
+        model,
+        messages: resolved_input.messages,
+        tools: resolved_input.tools,
+      });
       return {
         response: result.toUIMessageStreamResponse(),
-        billing: Promise.resolve(result.totalUsage.then((usage) => this.buildBilling(ctx, usage))),
       };
     }
 
     const result = streamText({
-       model,
-       prompt: resolved_input.prompt,
-       temperature: 1,
+      model,
+      prompt: resolved_input.prompt,
+      temperature: 1,
     });
     return {
       response: result.toUIMessageStreamResponse(),
-      billing: Promise.resolve(result.totalUsage.then((usage) => this.buildBilling(ctx, usage))),
     };
   }
 
@@ -226,7 +225,7 @@ import type {
     *
     * 子类实现图片生成时覆盖。
     */
-   image?(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>>;
+   image?(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>>;
 
    /**
     * 图片任务推进 action。
@@ -238,24 +237,24 @@ import type {
    /**
     * 视频生成 action。
     */
-   video?(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>>;
+   video?(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>>;
 
    /**
     * 语音合成 action。
     */
-   tts?(ctx: Context): Promise<AIProviderBilledResponse>;
+   tts?(ctx: Context): Promise<AIProviderChargedResponse>;
 
    /**
     * 语音识别 action。
     */
-   asr?(ctx: Context): Promise<AIProviderBilledResponse>;
+   asr?(ctx: Context): Promise<AIProviderChargedResponse>;
 
    /**
     * OpenAI 兼容 /chat/completions action。
     *
     * 未覆盖时由 AIService 自动透传。
     */
-   openai?(ctx: Context): Promise<AIProviderBilledResponse>;
+   openai?(ctx: Context): Promise<AIProviderChargedResponse>;
 
    /**
     * 生成模型配置。
@@ -269,6 +268,7 @@ import type {
      tags?: string[];
      meta?: Record<string, unknown>;
      default?: boolean | string[];
+     bill?: AIProviderBillFn;
    }): ModelConfig {
      const actions: ModelActions = {};
      const all_modalities = [
@@ -282,18 +282,18 @@ import type {
        "openai",
      ] as const;
 
-    for (const modality of all_modalities) {
-      const fn = (this as unknown as Record<string, unknown>)[modality];
-      if (typeof fn !== "function") continue;
+     for (const modality of all_modalities) {
+       const fn = (this as unknown as Record<string, unknown>)[modality];
+       if (typeof fn !== "function") continue;
 
        // text / stream 默认由基类实现，只有子类显式覆盖或提供了 createClient 才暴露
        if (modality === "text" || modality === "stream") {
-        const is_overridden = fn !== (Provider.prototype as unknown as Record<string, unknown>)[modality];
+         const is_overridden = fn !== (Provider.prototype as unknown as Record<string, unknown>)[modality];
          const has_create_client = this.createClient !== Provider.prototype.createClient;
          if (!is_overridden && !has_create_client) continue;
        }
 
-      actions[modality] = fn.bind(this) as ActionFn;
+       actions[modality] = fn.bind(this) as ActionFn;
      }
 
      return {
@@ -309,6 +309,7 @@ import type {
        envKey: this.envKey,
        passthroughModel: this.passthroughModel,
        actions,
+       bill: spec.bill ?? this.bill.bind(this),
      };
    }
- }
+}

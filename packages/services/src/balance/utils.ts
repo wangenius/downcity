@@ -8,6 +8,8 @@
 
 import type {
   BalanceAccount,
+  BalanceCharge,
+  BalanceChargeStatus,
   BalanceUserBalance,
   BalanceLedgerEntry,
   BalanceLedgerKind,
@@ -288,5 +290,23 @@ export function parseRedeemCodeRow(row: BalanceRedeemCode & { code_hash?: string
     redeemed_at: String(row.redeemed_at ?? ""),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
+  };
+}
+
+/**
+ * 解析通用扣费记录行。
+ */
+export function parseChargeRow(row: BalanceCharge): BalanceCharge {
+  const amount_microcredits = Number(row.amount_microcredits ?? 0);
+  return {
+    charge_id: String(row.charge_id),
+    user_id: String(row.user_id),
+    amount: microcreditsToCredits(amount_microcredits),
+    amount_microcredits,
+    status: String(row.status ?? "settled") as BalanceChargeStatus,
+    note: String(row.note ?? ""),
+    ref: String(row.ref ?? ""),
+    metadata_json: String(row.metadata_json ?? "{}"),
+    created_at: String(row.created_at),
   };
 }

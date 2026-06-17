@@ -12,7 +12,7 @@
 import {
   Provider,
   type AIImageJobStepResult,
-  type AIProviderBilledOutput,
+  type AIProviderChargedOutput,
   type Context,
   buildImageMessage,
   isRecord,
@@ -183,7 +183,7 @@ import {
      this.provider_options_key = options.providerOptionsKey ?? "openai";
    }
 
-   async image(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+   async image(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
      const input = normalizeImageActionInput(ctx.input);
      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
      const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
@@ -236,7 +236,7 @@ import {
      this.base_url = options.baseURL ?? "https://generativelanguage.googleapis.com/v1beta";
    }
 
-   async image(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+   async image(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
      const input = normalizeImageActionInput(ctx.input);
      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
      const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
@@ -292,7 +292,7 @@ import {
      this.max_polls = options.maxPolls ?? 60;
    }
 
-   async image(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+   async image(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
      const input = normalizeImageActionInput(ctx.input);
      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
      const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");

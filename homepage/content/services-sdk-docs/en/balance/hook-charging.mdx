@@ -10,7 +10,7 @@ Instead:
 1. register `BalanceService()`
 2. call it directly from business hooks
 3. `require()` before execution
-4. `sub()` after a successful call
+4. `charge()` after a successful call
 
 ## Why this is more flexible
 
@@ -48,9 +48,11 @@ ai.hook.after(async (ctx) => {
   const amount = Number(ctx.locals.balance_amount ?? 0);
   if (amount <= 0) return;
 
-  await balance.sub(ctx.user!.user_id, amount, {
+  await balance.charge({
+    user_id: ctx.user!.user_id,
+    amount_microcredits: amount * 1_000_000,
     note: "agent chat",
-    meta: {
+    metadata: {
       town_id: ctx.town?.town_id,
       model_id: ctx.variant?.id,
     },

@@ -33,7 +33,7 @@ Downcity's AI service has **two independent pathways** sharing a single model re
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { Provider, type OpenAICompatibleClientConfig, type Context, type AIProviderBilledResponse } from "@downcity/city";
+import { Provider, type OpenAICompatibleClientConfig, type Context, type AIProviderChargedResponse } from "@downcity/city";
 
 // OpenAI-compatible: override createClient to get default text / stream, no openai → auto-passthrough
 class DeepSeekProvider extends Provider {
@@ -68,7 +68,7 @@ class OpenAICustomProvider extends Provider {
     return createOpenAICompatible({ apiKey, baseURL, name: "openai-custom" });
   }
 
-  async openai(ctx: Context): Promise<AIProviderBilledResponse> {
+  async openai(ctx: Context): Promise<AIProviderChargedResponse> {
     return openaiCompatibleHandler(ctx);
   }
 }
@@ -96,14 +96,14 @@ For OpenAI-compatible providers with custom upstream requirements, the `openai` 
 
 ## Provider Billing
 
-Provider actions may return a billing line next to the normal output. This keeps provider-specific usage parsing inside the provider instead of exposing token/cache fields as a global protocol.
+Provider actions may return a charge line next to the normal output, but the preferred place for shared pricing logic is `bill(ctx, output)` on the provider or model. This keeps provider-specific usage parsing inside the provider instead of exposing token/cache fields as a global protocol.
 
 ```ts
-import { Provider, buildAssistantMessage, type Context, type AIProviderBilledOutput } from "@downcity/city";
+import { Provider, buildAssistantMessage, type Context, type AIProviderChargedOutput } from "@downcity/city";
 import type { UIMessage } from "ai";
 
 const ai = new AIService({
-  billing: new BillingService({ balance }),
+  balance,
 });
 
 class PricedProvider extends Provider {
@@ -111,19 +111,23 @@ class PricedProvider extends Provider {
     super({ id: "priced-provider" });
   }
 
-  async text(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+  protected bill(ctx: Context, output: unknown) {
+    return {
+      amount_microcredits: priceUpstreamUsage(output?.metadata?.usage),
+      note: "priced-provider text",
+      metadata: {
+        provider_id: "priced-provider",
+        raw_usage: output?.metadata?.usage,
+      },
+    };
+  }
+
+  async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
     const result = await callUpstream(ctx.input);
 
     return buildAssistantMessage(result.text, ctx, {
       finishReason: "stop",
       usage: result.usage,
-    }, {
-      amount_microcredits: priceUpstreamUsage(result.usage),
-      note: "priced-provider text",
-      metadata: {
-        provider_id: "priced-provider",
-        raw_usage: result.usage,
-      },
     });
   }
 }
@@ -131,12 +135,12 @@ class PricedProvider extends Provider {
 const provider = new PricedProvider();
 ```
 
-For streams, return `billing` as a promise and resolve it when the upstream stream finishes:
+For streams, an action may still return `charge` as a promise when the final amount is only available after the upstream stream finishes:
 
 ```ts
 return {
   response: stream.toUIMessageStreamResponse(),
-  billing: stream.totalUsage.then((usage) => ({
+  charge: stream.totalUsage.then((usage) => ({
     amount_microcredits: priceUpstreamUsage(usage),
     note: "priced-provider stream",
   })),

@@ -16,16 +16,21 @@ import { rawAll, rawFirst, rawRun } from "./raw.js";
 import { registerBalanceRoutes } from "./routes.js";
 import {
   ACCOUNT_TABLE,
+  CHARGE_TABLE,
   LEDGER_TABLE,
   REDEEM_CODE_TABLE,
   TOPUP_TABLE,
   balanceAccounts,
+  balanceCharges,
   balanceLedger,
   balanceRedeemCodes,
   balanceTopups,
 } from "./schema.js";
 import type {
   BalanceAccount,
+  BalanceCharge,
+  BalanceChargeInput,
+  BalanceChargeQuery,
   BalanceCreateRedeemCodeInput,
   BalanceExtra,
   BalanceHistoryQuery,
@@ -50,6 +55,7 @@ import {
   normalizeText,
   normalizeUserId,
   parseAccountRow,
+  parseChargeRow,
   parseLedgerRow,
   parseMetaJSON,
   parseRedeemCodeRow,
@@ -86,6 +92,7 @@ export class BalanceService extends InstallableService {
     ledger: balanceLedger,
     topups: balanceTopups,
     redeem_codes: balanceRedeemCodes,
+    charges: balanceCharges,
   };
 
   private readonly initMicrocredits: number;
@@ -100,8 +107,8 @@ export class BalanceService extends InstallableService {
       "提供用户级全局余额、余额流水、充值单与 redeem_code 能力。",
       "内部账务与管理端的 `balance` / `amount` / `balance_after` 字段均使用 microcredits 整数；用户侧 `/me` 返回 credits 主字段并附带 microcredits。",
       `首次自动开户发放 ${this.initMicrocredits} microcredits。`,
-      "推荐在业务 hook 中调用 require/add/sub，把具体计费策略放在业务侧，而不是写死在服务内部。",
-      "管理端可查询所有账户、流水、充值单与 redeem_code；用户侧可查询自己的余额、历史记录、充值单，并直接兑换 redeem_code。",
+      "推荐在业务侧自行计算扣费金额后调用 charge，把具体计费策略放在业务侧，而不是写死在 BalanceService 内部。",
+      "管理端可查询所有账户、流水、充值单、扣费记录与 redeem_code；用户侧可查询自己的余额、历史记录、充值单，并直接兑换 redeem_code。",
     ].join("\n");
   }
 
@@ -170,6 +177,63 @@ export class BalanceService extends InstallableService {
    */
   async subMicrocredits(user_id: string, amount_microcredits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
     return await this.applyDelta(normalizeUserId(user_id), -readAmountMicrocredits({ amount_microcredits }), "sub", extra);
+  }
+
+  /**
+   * 执行一笔通用扣费，并写入扣费记录与余额流水。
+   *
+   * 关键说明（中文）
+   * - BalanceService 不理解 AI、订单、插件等业务语义
+   * - 业务侧应该先自行计算扣费金额，再把审计字段放入 metadata
+   * - 扣款失败时抛出 402，不会写入 charge 记录
+   */
+  async charge(input: BalanceChargeInput): Promise<BalanceCharge> {
+    const user_id = normalizeUserId(input.user_id);
+    const amount_microcredits = readAmountMicrocredits({
+      amount_microcredits: input.amount_microcredits,
+    }, "amount");
+    const charge_id = `chg_${randomId()}`;
+    const note = normalizeText(input.note) || "charge";
+    const ref = normalizeText(input.ref) || charge_id;
+    const metadata = input.metadata ?? input.meta;
+    const now = new Date().toISOString();
+
+    await this.applyDelta(user_id, -amount_microcredits, "charge", {
+      note,
+      ref,
+      meta: {
+        ...(metadata ?? {}),
+        charge_id,
+      },
+    });
+
+    const charge: BalanceCharge = {
+      charge_id,
+      user_id,
+      amount: microcreditsToCredits(amount_microcredits),
+      amount_microcredits,
+      status: "settled",
+      note,
+      ref,
+      metadata_json: stringifyMeta(metadata),
+      created_at: now,
+    };
+
+    await rawRun(this.resolveRaw(), [
+      `INSERT INTO ${CHARGE_TABLE} (charge_id, user_id, amount_microcredits, status, note, ref, metadata_json, created_at)`,
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    ].join(" "), [
+      charge.charge_id,
+      charge.user_id,
+      charge.amount_microcredits,
+      charge.status,
+      charge.note,
+      charge.ref,
+      charge.metadata_json,
+      charge.created_at,
+    ]);
+
+    return charge;
   }
 
   /**
@@ -522,6 +586,27 @@ export class BalanceService extends InstallableService {
       "LIMIT ?",
     ].join(" "), [...params, normalizeLimit(query.limit)]);
     return rows.map(parseRedeemCodeRow);
+  }
+
+  /**
+   * 列出通用扣费记录。
+   */
+  async listCharges(query: BalanceChargeQuery = {}): Promise<BalanceCharge[]> {
+    const params: unknown[] = [];
+    const where = query.user_id
+      ? (() => {
+          params.push(normalizeUserId(query.user_id));
+          return "WHERE user_id = ?";
+        })()
+      : "";
+
+    const rows = await rawAll<BalanceCharge>(this.resolveRaw(), [
+      `SELECT charge_id, user_id, amount_microcredits, status, note, ref, metadata_json, created_at FROM ${CHARGE_TABLE}`,
+      where,
+      "ORDER BY created_at DESC, rowid DESC",
+      "LIMIT ?",
+    ].join(" "), [...params, normalizeLimit(query.limit)]);
+    return rows.map(parseChargeRow);
   }
 
   /**

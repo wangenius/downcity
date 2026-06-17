@@ -43,7 +43,7 @@ base.use(ai);
 Use an `openai` method when an OpenAI-compatible upstream needs request or response customization:
 
 ```ts
-import { Provider, type Context, type AIProviderBilledResponse } from "@downcity/city";
+import { Provider, type Context, type AIProviderChargedResponse } from "@downcity/city";
 
 class OpenAICustomProvider extends Provider {
   constructor() {
@@ -53,7 +53,7 @@ class OpenAICustomProvider extends Provider {
     });
   }
 
-  async openai(ctx: Context): Promise<AIProviderBilledResponse> {
+  async openai(ctx: Context): Promise<AIProviderChargedResponse> {
     // Downstream: customize OpenAI body
     // Upstream: normalize response
     // (streaming: SSE event-by-event conversion)
@@ -67,6 +67,6 @@ const openaiCustom = new OpenAICustomProvider();
 
 | Pathway | ctx.input | Return |
 |---|---|---|
-| `text` | `{ prompt }` | `{ output: UIMessage; billing? }` |
-| `stream` | `{ prompt }` | `{ response: Response; billing? }` |
-| `openai` | `{ model, messages, stream, ... }` | `{ response: Response; billing? }` |
+| `text` | `{ prompt }` | `{ output: UIMessage; charge? }` |
+| `stream` | `{ prompt }` | `{ response: Response; charge? }` |
+| `openai` | `{ model, messages, stream, ... }` | `{ response: Response; charge? }` |

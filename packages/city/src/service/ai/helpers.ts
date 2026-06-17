@@ -7,7 +7,7 @@
 
  import type { DynamicToolUIPart, FileUIPart, ToolSet, UIMessage } from "ai";
  import { jsonSchema, tool } from "ai";
- import type { AIProviderBillingLine } from "./billing.js";
+ import type { AIProviderChargeLine } from "./charge.js";
  import type { AIImageJobStepContext } from "./job-types.js";
  import type { Context } from "../service.js";
 
@@ -157,8 +157,8 @@
    text: string,
    ctx: Context,
    result: BuildAssistantMessageResult,
-   billing?: AIProviderBillingLine,
- ): { output: UIMessage; billing?: AIProviderBillingLine } {
+   charge?: AIProviderChargeLine,
+ ): { output: UIMessage; charge?: AIProviderChargeLine } {
    const parts: UIMessage["parts"] = [{ type: "text", text }];
 
    if (result.toolCalls) {
@@ -187,7 +187,7 @@
          usage: result.usage,
        },
      },
-     billing,
+     charge,
    };
  }
 

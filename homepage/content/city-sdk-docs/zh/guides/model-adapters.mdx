@@ -55,7 +55,7 @@ POST /v1/ai/chat/completions
 当 OpenAI 兼容上游需要自定义请求或响应处理时，可以写 `openai` action：
 
 ```ts
-import { Provider, type Context, type AIProviderBilledResponse } from "@downcity/city";
+import { Provider, type Context, type AIProviderChargedResponse } from "@downcity/city";
 
 class OpenAICustomProvider extends Provider {
   constructor() {
@@ -66,7 +66,7 @@ class OpenAICustomProvider extends Provider {
     });
   }
 
-  async openai(ctx: Context): Promise<AIProviderBilledResponse> {
+  async openai(ctx: Context): Promise<AIProviderChargedResponse> {
     const body = customizeOpenAIBody(ctx.input);
     const apiKey = ctx.env("OPENAI_API_KEY");
     const response = await fetch(`${this.baseURL}/chat/completions`, {
@@ -84,16 +84,16 @@ class OpenAICustomProvider extends Provider {
 const openaiCustom = new OpenAICustomProvider();
 ```
 
-## Provider 计费
+## Provider 出账
 
-Provider action 可以在正常输出旁边返回一条 billing。这样 provider 自己解析上游 usage 和价格，AIService / BillingService 不需要理解 token、cache、reasoning 等 provider 私有字段。
+Provider action 可以在正常输出旁边返回一条 charge，但更推荐把共享计费逻辑放到 provider 或 model 的 `bill(ctx, output)` 中。这样 provider 自己解析上游 usage 和价格，AIService / BalanceService 不需要理解 token、cache、reasoning 等 provider 私有字段。
 
 ```ts
-import { Provider, buildAssistantMessage, type Context, type AIProviderBilledOutput } from "@downcity/city";
+import { Provider, buildAssistantMessage, type Context, type AIProviderChargedOutput } from "@downcity/city";
 import type { UIMessage } from "ai";
 
 const ai = new AIService({
-  billing: new BillingService({ balance }),
+  balance,
 });
 
 class PricedProvider extends Provider {
@@ -101,19 +101,23 @@ class PricedProvider extends Provider {
     super({ id: "priced-provider" });
   }
 
-  async text(ctx: Context): Promise<AIProviderBilledOutput<UIMessage>> {
+  protected bill(ctx: Context, output: unknown) {
+    return {
+      amount_microcredits: priceUpstreamUsage(output?.metadata?.usage),
+      note: "priced-provider text",
+      metadata: {
+        provider_id: "priced-provider",
+        raw_usage: output?.metadata?.usage,
+      },
+    };
+  }
+
+  async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
     const result = await callUpstream(ctx.input);
 
     return buildAssistantMessage(result.text, ctx, {
       finishReason: "stop",
       usage: result.usage,
-    }, {
-      amount_microcredits: priceUpstreamUsage(result.usage),
-      note: "priced-provider text",
-      metadata: {
-        provider_id: "priced-provider",
-        raw_usage: result.usage,
-      },
     });
   }
 }
@@ -121,12 +125,12 @@ class PricedProvider extends Provider {
 const provider = new PricedProvider();
 ```
 
-流式调用可以返回一个 Promise，在上游 stream 结束后再 resolve 最终扣费：
+流式调用仍然可以从 action 返回一个 `charge` Promise，用于在上游 stream 结束后再 resolve 最终扣费：
 
 ```ts
 return {
   response: stream.toUIMessageStreamResponse(),
-  billing: stream.totalUsage.then((usage) => ({
+  charge: stream.totalUsage.then((usage) => ({
     amount_microcredits: priceUpstreamUsage(usage),
     note: "priced-provider stream",
   })),

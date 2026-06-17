@@ -1,17 +1,28 @@
-/**
- * Worker OpenAI-Compatible Provider 工具模块。
- *
- * 关键说明（中文）
- * - 统一复用 core 中的共享 OpenAI-compatible Provider 实现
- * - Worker 侧只负责静态绑定 `createOpenAI`，不再维护重复 action 逻辑
- */
+ /**
+  * Worker OpenAI-compatible Provider。
+  *
+  * 关键点（中文）
+  * - 继承 Provider 基类，默认拥有 text / stream 能力。
+  * - 覆盖 createClient 静态绑定 @ai-sdk/openai。
+  */
 
-import { createOpenAI } from "@ai-sdk/openai";
-import { createOpenAICompatibleProvider, type OpenAICompatibleProviderOptions, type Provider } from "@downcity/city";
+ import { createOpenAI } from "@ai-sdk/openai";
+ import { Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
 
-/**
- * 创建 Worker 侧 OpenAI-compatible Provider。
- */
-export function createOpenAIProvider(options: OpenAICompatibleProviderOptions): Provider {
-  return createOpenAICompatibleProvider(options, createOpenAI);
-}
+ /**
+  * OpenAI-compatible Provider。
+  */
+ export class OpenAIProvider extends Provider {
+   constructor(options: {
+     id: string;
+     envKey: string;
+     baseURL: string;
+     passthroughModel: string;
+   }) {
+     super(options);
+   }
+
+   protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+     return createOpenAI({ apiKey, baseURL });
+   }
+ }

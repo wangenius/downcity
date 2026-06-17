@@ -13,11 +13,11 @@ import {
 } from "@downcity/city";
 import { compose_city } from "./compose-city.js";
 import {
-  createGeminiImageProvider,
-  createLuchiImageProvider,
-  createOpenAIImageProvider,
+  GeminiImageProvider,
+  LuchiImageProvider,
+  OpenAIImageProvider,
 } from "./image-provider.js";
-import { createDeepSeekProvider } from "./deepseek-provider.js";
+import { DeepSeekProvider } from "./deepseek-provider.js";
 
 const INITIAL_BALANCE = 100;
 const CHAT_REQUEST_COST_MICROCREDITS = 10_000;
@@ -46,31 +46,26 @@ function get_city(env: Env, request: Request): Promise<CityBase> {
 
 async function init_city(env: Env): Promise<CityBase> {
   const db = drizzle(env.DB);
-  const deepseek_provider = createDeepSeekProvider({
-    id: "deepseek",
-    envKey: "DEEPSEEK_API_KEY",
-    baseURL: "https://api.deepseek.com/v1",
-    defaultModelId: "deepseek-v4-flash",
-  });
-  const luchi_image_provider = createLuchiImageProvider({
+  const deepseek_provider = new DeepSeekProvider();
+  const luchi_image_provider = new LuchiImageProvider({
     id: "luchi-image",
     envKey: "LUCHI_IMAGE_API_KEY",
     defaultModelId: "gpt-image-2",
   });
-  const image_302_provider = createOpenAIImageProvider({
+  const image_302_provider = new OpenAIImageProvider({
     id: "302-image",
     envKey: "AI302_API_KEY",
     baseURL: "https://api.302.ai/v1",
     defaultModelId: "gpt-image-1",
     providerOptionsKey: "302ai",
   });
-  const openai_image_provider = createOpenAIImageProvider({
+  const openai_image_provider = new OpenAIImageProvider({
     id: "openai-image",
     envKey: "OPENAI_API_KEY",
     baseURL: "https://api.openai.com/v1",
     defaultModelId: "gpt-image-1",
   });
-  const gemini_image_provider = createGeminiImageProvider({
+  const gemini_image_provider = new GeminiImageProvider({
     id: "gemini-image",
     envKey: "GEMINI_API_KEY",
     defaultModelId: "gemini-2.5-flash-image",

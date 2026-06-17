@@ -1,13 +1,28 @@
-/**
- * Provider 封装 — 基于 @downcity/city 的 Provider 类。
- */
+ /**
+  * Node 侧 OpenAI-compatible Provider。
+  *
+  * 关键点（中文）
+  * - 继承 Provider 基类，默认拥有 text / stream 能力。
+  * - 覆盖 createClient 静态绑定 @ai-sdk/openai。
+  */
 
-import { createOpenAI } from "@ai-sdk/openai";
-import { createOpenAICompatibleProvider, type OpenAICompatibleProviderOptions, type Provider } from "@downcity/city";
+ import { createOpenAI } from "@ai-sdk/openai";
+ import { Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
 
-/**
- * 创建 Node 侧 OpenAI-compatible Provider。
- */
-export function createOpenAIProvider(options: OpenAICompatibleProviderOptions): Provider {
-  return createOpenAICompatibleProvider(options, createOpenAI);
-}
+ /**
+  * OpenAI-compatible Provider。
+  */
+ export class OpenAIProvider extends Provider {
+   constructor(options: {
+     id: string;
+     envKey: string;
+     baseURL: string;
+     passthroughModel: string;
+   }) {
+     super(options);
+   }
+
+   protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
+     return createOpenAI({ apiKey, baseURL });
+   }
+ }

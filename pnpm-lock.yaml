@@ -641,6 +641,9 @@ importers:
       '@downcity/shell':
         specifier: workspace:^
         version: link:../shell
+      ai:
+        specifier: ^6.0.193
+        version: 6.0.193(zod@4.4.3)
       hono:
         specifier: ^4.12.23
         version: 4.12.23

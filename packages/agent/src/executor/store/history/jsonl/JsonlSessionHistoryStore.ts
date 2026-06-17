@@ -493,6 +493,28 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     });
   }
 
+  /**
+   * 批量追加消息。
+   *
+   * 关键点（中文）
+   * - 一次锁、一次 IO，适合 fork 等需要拷贝整段历史的场景。
+   * - 不处理 inflight，调用方需自行确保历史已经收口。
+   */
+  async appendMany(messages: SessionMessageV1[]): Promise<void> {
+    if (!Array.isArray(messages) || messages.length === 0) return;
+    const normalized_list = messages
+      .map((message) => this.normalizePersistedMessage(message))
+      .filter((message): message is SessionMessageV1 => message !== null);
+    if (normalized_list.length === 0) return;
+
+    const payload = normalized_list
+      .map((message) => `${JSON.stringify(message)}\n`)
+      .join("");
+    await this.withWriteLock(async () => {
+      await fs.appendFile(this.getMessagesFilePath(), payload, "utf8");
+    });
+  }
+
   async readInflight(): Promise<SessionMessageV1 | null> {
     await this.ensureLayout();
     return this.readInflightUnsafe();

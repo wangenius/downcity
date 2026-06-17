@@ -302,13 +302,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
     },
     messages: SessionMessageV1[],
   ): Promise<void> {
-    for (const message of messages) {
-      await forked_bundle.history_store.append(message);
-    }
-    await forked_bundle.state_service.ensure_title_from_history({
-      generate: true,
-    });
-    await forked_bundle.state_service.touch_metadata();
+    await forked_bundle.history_store.appendMany(messages);
   }
 
   private stringify_system_content(content: unknown): string {

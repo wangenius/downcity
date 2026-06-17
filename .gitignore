@@ -12,6 +12,11 @@ package-lock.json
 yarn.lock
 
 *.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 .kiro
 
 tsconfig.tsbuildinfo

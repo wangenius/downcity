@@ -28,7 +28,7 @@
     "dev:homepage": "pnpm -C homepage dev",
     "homepage": "pnpm -C homepage dev",
     "publish": "./scripts/publish.sh",
-    "typecheck": "pnpm -C packages/type typecheck && pnpm -C packages/shell typecheck && pnpm -C packages/agent typecheck && pnpm -C packages/city typecheck && pnpm -C packages/services typecheck && pnpm -C packages/plugins typecheck && pnpm -C cli/city typecheck && pnpm -C cli/town typecheck && pnpm -C cli/downcity typecheck && pnpm -C templates/node typecheck && pnpm -C templates/edge typecheck",
+    "typecheck": "pnpm -C packages/type typecheck && pnpm -C packages/shell typecheck && pnpm -C packages/agent typecheck && pnpm -C packages/city typecheck && pnpm -C packages/services typecheck && pnpm -C packages/plugins typecheck && pnpm -C cli/city typecheck && pnpm -C cli/town typecheck && pnpm -C cli/downcity typecheck && pnpm -C templates/node typecheck && pnpm -C templates/edge typecheck && pnpm -C templates/client typecheck",
     "build:packages": "bash ./scripts/build-packages.sh",
     "patch:build": "bash ./scripts/build-packages.sh",
     "agent:patch:build": "bash ./scripts/build-packages.sh --agent",

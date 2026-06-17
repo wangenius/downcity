@@ -1,0 +1,11 @@
+{
+  "name": "@downcity/templates",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:node": "pnpm -C node dev",
+    "dev:client": "pnpm -C client dev",
+    "typecheck": "pnpm -C node typecheck && pnpm -C edge typecheck && pnpm -C client typecheck"
+  }
+}

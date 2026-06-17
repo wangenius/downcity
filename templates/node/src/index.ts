@@ -22,6 +22,38 @@ import {
 } from "@downcity/services";
 import * as models from "./models/index.js";
 
+type RefreshableCity = {
+  runtime?: {
+    env?: {
+      refresh(): Promise<void>;
+    };
+  };
+};
+
+interface EnvRow {
+  [key: string]: unknown;
+
+  /**
+   * 环境变量名。
+   */
+  key: string;
+
+  /**
+   * 环境变量值。
+   */
+  value: string;
+
+  /**
+   * 创建时间。
+   */
+  created_at: string;
+
+  /**
+   * 更新时间。
+   */
+  updated_at: string;
+}
+
 /**
  * 解析 SQLite 数据库路径。
  *
@@ -59,6 +91,38 @@ sqlite.pragma("journal_mode = WAL");
 
 const db = drizzle(sqlite);
 
+const bootstrap_env_keys = [
+  "DOWNCITY_CITY_ADMIN_SECRET_KEY",
+  "DOWNCITY_CITY_TOKEN_SIGNING_KEY",
+  "BETTER_AUTH_SECRET",
+  "DEEPSEEK_API_KEY",
+] as const;
+
+/**
+ * 同步本地 .env 到 City env 表。
+ *
+ * 关键说明（中文）
+ * - City 默认把 env 托管在数据库中，服务运行时只读 City env 表。
+ * - 本地模板允许开发者用 `.env` 配置启动参数，因此这里显式同步关键密钥。
+ * - 空值和占位值不会写入，避免把示例配置误认为真实 provider key。
+ */
+async function sync_local_env(city: CityBase): Promise<void> {
+  const env_table = await city.table<EnvRow>("env");
+  for (const key of bootstrap_env_keys) {
+    const value = process.env[key]?.trim();
+    if (!value || value === "sk-...") continue;
+    const now = new Date().toISOString();
+    const existing = await env_table.select({ key });
+    if (existing.length > 0) {
+      await env_table.update({ where: { key }, values: { value, updated_at: now } });
+      continue;
+    }
+    await env_table.insert({ key, value, created_at: now, updated_at: now });
+  }
+
+  await (city as unknown as RefreshableCity).runtime?.env?.refresh();
+}
+
 /**
  * 直接装配 Node City。
  *
@@ -92,7 +156,8 @@ ai.use(Object.values(models));
 city.use(ai);
 
 await city.health();
-const env_table = await city.table<{ key: string; value: string }>("env");
+await sync_local_env(city);
+const env_table = await city.table<EnvRow>("env");
 const admin_key = (await env_table.select({ key: "DOWNCITY_CITY_ADMIN_SECRET_KEY" }))[0]?.value ?? "(not set)";
 serve({ fetch: city.router().fetch, port, hostname: host });
 console.log(`Downcity http://${host}:${port}`);

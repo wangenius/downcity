@@ -8,9 +8,9 @@
  */
 import { Hono } from "hono";
 import http from "node:http";
+import type { Hono as HonoType } from "hono";
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { AgentSessionCollection } from "@downcity/agent";
 import type { Shell } from "@downcity/shell";
 /**
  * Agent HTTP 网关启动参数。
@@ -24,8 +24,8 @@ export interface AgentHttpGatewayStartOptions {
     getAgentRuntime: () => AgentRuntime;
     /** 当前 agent context 读取函数。 */
     getAgentContext: () => AgentContext;
-    /** 可选 SDK Session 集合绑定。 */
-    sessionCollection?: AgentSessionCollection;
+    /** 可选 SDK transport 子路由（来自 `@downcity/server` 的 `AgentHTTP.router()`）。 */
+    sdkRouter?: HonoType;
     /** 可选 Shell 绑定。 */
     getShell?: () => Shell | undefined;
 }
@@ -43,7 +43,7 @@ export interface AgentHttpGatewayInstance {
 /**
  * 创建 Agent HTTP 网关 Hono 应用。
  */
-export declare function createAgentHttpGatewayApp(options: Pick<AgentHttpGatewayStartOptions, "getAgentRuntime" | "getAgentContext" | "sessionCollection" | "getShell">): Hono;
+export declare function createAgentHttpGatewayApp(options: Pick<AgentHttpGatewayStartOptions, "getAgentRuntime" | "getAgentContext" | "sdkRouter" | "getShell">): Hono;
 /**
  * 启动 Town 托管的 Agent HTTP 网关。
  */

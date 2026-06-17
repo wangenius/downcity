@@ -12,6 +12,7 @@
 import path from "node:path";
 import { Agent, loadDowncityConfig, loadStaticSystemPrompts, StaticPromptCatalog, } from "@downcity/agent";
 import { Shell } from "@downcity/shell";
+import { AgentHTTP, AgentRPC } from "@downcity/server";
 import { CliError } from "../shared/CliError.js";
 import { createRuntimeModel } from "../town/city-model/CreateRuntimeModel.js";
 import { mergeProcessEnvWithPlatformGlobalEnv } from "../env/ProcessEnv.js";
@@ -100,22 +101,19 @@ export async function runCommand(cwd = ".", options) {
     process.env.DC_AGENT_RPC_HOST = rpc_host;
     process.env.DC_AGENT_ID = agentId;
     process.env.DC_AGENT_PATH = projectRoot;
-    const startResult = await agent.start({
-        rpc: {
-            port: rpc_port,
-            host: rpc_host,
-        },
-        plugins: true,
-    });
-    if (!startResult.rpc?.server) {
-        throw new Error("Agent start did not return expected RPC binding");
-    }
+    // 关键点（中文）：等待 Agent 后台能力（plugin lifecycle / ActionSchedule）启动完成。
+    await agent.ready();
+    // 关键点（中文）：RPC transport 由 `@downcity/server` 提供，独立于 Agent 实例本身。
+    const rpc = new AgentRPC(agent);
+    await rpc.listen({ host: rpc_host, port: rpc_port });
+    // 关键点（中文）：SDK HTTP transport 由 `@downcity/server` 提供子路由，挂到 town gateway 上。
+    const agent_http = new AgentHTTP(agent);
     const server = await startAgentHttpGateway({
         host,
         port,
         getAgentRuntime: () => agent.getRuntime(),
         getAgentContext: () => agent.getContext(),
-        sessionCollection: agent.getSessionCollection(),
+        sdkRouter: agent_http.router(),
         getShell: () => agent.getShell(),
     });
     const agentLogger = agent.getLogger();
@@ -129,7 +127,8 @@ export async function runCommand(cwd = ".", options) {
         agentLogger.info(`Received ${signal} signal, shutting down...`);
         promptCatalog.stop();
         await server.stop();
-        await agent.stop();
+        await rpc.close();
+        await agent.dispose();
         // Save logs
         await agentLogger.saveAllLogs();
         agentLogger.info("👋 Downcity town stopped");

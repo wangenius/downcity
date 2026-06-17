@@ -14,16 +14,15 @@ import http from "node:http";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 import { logger as serverLogger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import type { Hono as HonoType } from "hono";
 import { createExecuteRouter } from "./http/execute/execute.js";
 import { healthRouter } from "./http/health/health.js";
 import { createPluginsRouter } from "./http/plugins/plugins.js";
 import { createStaticRouter } from "./http/static/static.js";
 import { createControlRouter } from "./http/control/ControlRouter.js";
-import { createSdkRouter } from "./http/sdk/Router.js";
 import { createShellRouter } from "./http/shell/shell.js";
 import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { AgentSessionCollection } from "@downcity/agent";
 import type { Shell } from "@downcity/shell";
 
 /**
@@ -38,8 +37,8 @@ export interface AgentHttpGatewayStartOptions {
   getAgentRuntime: () => AgentRuntime;
   /** 当前 agent context 读取函数。 */
   getAgentContext: () => AgentContext;
-  /** 可选 SDK Session 集合绑定。 */
-  sessionCollection?: AgentSessionCollection;
+  /** 可选 SDK transport 子路由（来自 `@downcity/server` 的 `AgentHTTP.router()`）。 */
+  sdkRouter?: HonoType;
   /** 可选 Shell 绑定。 */
   getShell?: () => Shell | undefined;
 }
@@ -62,7 +61,7 @@ export interface AgentHttpGatewayInstance {
 export function createAgentHttpGatewayApp(
   options: Pick<
     AgentHttpGatewayStartOptions,
-    "getAgentRuntime" | "getAgentContext" | "sessionCollection" | "getShell"
+    "getAgentRuntime" | "getAgentContext" | "sdkRouter" | "getShell"
   >,
 ): Hono {
   const app = new Hono();
@@ -95,8 +94,8 @@ export function createAgentHttpGatewayApp(
     getAgentRuntime: options.getAgentRuntime,
     getAgentContext: options.getAgentContext,
   }));
-  if (options.sessionCollection) {
-    app.route("/", createSdkRouter(options.sessionCollection));
+  if (options.sdkRouter) {
+    app.route("/", options.sdkRouter);
   }
   for (const plugin of options.getAgentContext().agent.pluginInstances.values()) {
     plugin.http?.server?.register({

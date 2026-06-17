@@ -9,7 +9,7 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
@@ -25,7 +25,6 @@ import {
   createAgentPluginRegistry,
 } from "@/agent/local/AgentPluginFactory.js";
 import {
-  createAgentContext,
   createAgentRuntime,
 } from "@/agent/local/AgentRuntimeFactory.js";
 import {
@@ -165,6 +164,9 @@ export class AgentAssemblyService {
 
     const logger = new Logger();
     logger.bindProjectRoot(path);
+    // 关键点（中文）
+    // - 这里产出的 env 是 agent 全生命周期共享的 mutable 对象引用。
+    // - runtime / context / shell 都持有同一引用；后续 `agent.setEnv()` 会原地修改它。
     const env = resolveAgentEnv(path, this.options.env);
     const instruction = normalizeInstructionInput(this.options.instruction);
     const config = this.load_config(id, path);
@@ -184,27 +186,42 @@ export class AgentAssemblyService {
 
     this.register_plugins(plugin_instances, this.options.plugins || []);
 
-    let agent_context!: AgentContext;
+    // 关键点（中文）
+    // - plugin_registry 仍然延迟读取 agent_context（避免循环依赖）。
+    // - context 一构造完就赋值，registry 第一次读 get_context 时已经是非空。
+    let agent_context: AgentContext | undefined;
     const plugin_registry = createAgentPluginRegistry({
       plugins: [...plugin_instances.values()],
-      get_context: () => agent_context,
+      get_context: () => {
+        if (!agent_context) {
+          throw new Error("AgentContext is not assembled yet");
+        }
+        return agent_context;
+      },
     });
     const plugins = plugin_registry;
     if (this.should_register_plugin_call_tool(plugin_instances)) {
       tools.plugin_call = tools.plugin_call || plugin_tools.plugin_call;
     }
-    agent_context = createAgentContext({
-      runtime,
-      project_root: path,
+    const resolve_session_model = this.resolve_session_model;
+    agent_context = new AgentContext({
+      agent: runtime,
+      cwd: path,
+      rootPath: path,
       logger,
       config,
       env,
       systems: instruction,
-      plugin_instances,
+      paths: runtime.paths,
+      pluginConfig: runtime.pluginConfig,
+      session: {
+        get: (session_id) => this.get_session_port(session_id),
+        listExecutingSessionIds: () => runtime.listExecutingSessionIds(),
+        getExecutingSessionCount: () => runtime.getExecutingSessionCount(),
+        resolveModel: async (session_id) =>
+          await resolve_session_model(session_id),
+      },
       plugins,
-      get_session_port: this.get_session_port,
-      resolve_session_model: async (session_id) =>
-        await this.resolve_session_model(session_id),
     });
     const shell = this.options.shell;
     if (shell) {
@@ -216,7 +233,7 @@ export class AgentAssemblyService {
         emit_event: (event) => {
           const session_id = String(event.session_id || "").trim();
           if (!session_id) return;
-          agent_context.session.get(session_id).publishEvent(event as unknown as AgentSessionEvent);
+      agent_context!.session.get(session_id).publishEvent(event as unknown as AgentSessionEvent);
         },
       });
       Object.assign(tools, shell.tools);
@@ -235,7 +252,7 @@ export class AgentAssemblyService {
       plugin_registry,
       plugins,
       runtime,
-      agent_context,
+      agent_context: agent_context!,
       ...(shell ? { shell } : {}),
     };
   }

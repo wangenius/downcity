@@ -114,6 +114,26 @@ new Agent({
 - 如果宿主需要合并多层 env，应先在外部合并，再把最终结果传给 `env`
 - 这些值会参与配置解析与运行时上下文装配，但不会自动回写系统环境变量
 
+### 运行时更新 env
+
+构造 agent 之后，你也可以在运行期增量更新或整体替换它的环境变量。所有 plugin、session、shell 共享同一份 env 引用，调用以下方法会立即生效：
+
+```ts
+const agent = new Agent({ id, path, env: { FOO: "1" } });
+
+agent.getEnv();              // => { FOO: "1" }
+agent.patchEnv({ BAR: "2" }); // 增量合并
+agent.patchEnv({ FOO: null }); // null 表示删除
+agent.setEnv({ ONLY: "ok" });  // 整体覆盖
+```
+
+关键点：
+
+- `getEnv()` 返回的是浅拷贝快照，修改它不会影响 agent 真实状态
+- `patchEnv()` 中 `null` / `undefined` 表示删除该 key，其余值会强制转字符串
+- `setEnv()` 会先清空当前 env，再写入新值，仍然保持原引用不变
+- 运行时变更只活在内存，不会回写项目 `.env` 或系统环境变量
+
 ## `tools`
 
 agent 级默认工具集合。

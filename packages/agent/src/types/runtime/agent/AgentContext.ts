@@ -3,11 +3,12 @@
  *
  * 职责说明（中文）
  * - 这里定义 plugin runtime、plugin、prompt system 共用的统一执行上下文。
- * - `AgentContext` 表达的是“当前一次执行可见的能力面”，不是宿主状态本体。
+ * - `AgentContext` 是一个 class，表达“当前一次执行可见的能力面”，不是宿主状态本体。
+ * - 同一 agent 实例全程共享同一个 context；plugin、session、executor 都基于它读写状态。
  *
  * 边界说明（中文）
  * - `AgentRuntime` 负责保存长期状态；`AgentContext` 负责把这些状态暴露成执行接口。
- * - 这里只定义协议，不负责任何上下文装配逻辑。
+ * - 这里同时声明类型协议与默认实现；plugin 作者拿到的就是这个 class 的实例。
  */
 
 import type { LanguageModel } from "ai";
@@ -18,7 +19,7 @@ import type {
   AgentPluginConfigRuntime,
 } from "@/types/agent/AgentRuntimeAssembly.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { JsonValue } from "@/types/common/Json.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
   SessionMetadataV1,
@@ -216,61 +217,120 @@ export interface SessionCollectionPort {
 }
 
 /**
- * 统一执行上下文。
+ * AgentContext 构造参数。
+ *
+ * 关键点（中文）
+ * - 装配方负责把 runtime / session / plugins 等上层依赖注入进来。
+ * - `env` 必须传入 agent 持有的 mutable 共享对象引用，不要在这里克隆。
  */
-export interface AgentContext {
-  /**
-   * 当前执行上下文对应的 agent 状态。
-   */
+export interface AgentContextOptions {
+  /** 当前执行上下文对应的 agent 状态。 */
   agent: AgentRuntime;
-  /**
-   * 当前命令工作目录。
-   */
+  /** 当前命令工作目录。 */
   cwd: string;
-  /**
-   * 当前项目根目录。
-   */
+  /** 当前项目根目录。 */
   rootPath: string;
-  /**
-   * 统一日志器。
-   */
+  /** 统一日志器。 */
   logger: Logger;
-  /**
-   * 当前运行时已解析配置。
-   */
+  /** 当前运行时已解析配置。 */
   config: DowncityConfig;
   /**
-   * 当前项目环境变量快照。
-   */
-  env: Record<string, string>;
-  /**
-   * 当前生效的 system 文本集合。
-   */
-  systems: string[];
-  /**
-   * 当前可见的路径能力集合。
-   */
-  paths: AgentPathRuntime;
-  /**
-   * 当前可见的 plugin 配置持久化能力集合。
-   */
-  pluginConfig: AgentPluginConfigRuntime;
-  /**
-   * Session 能力入口。
+   * 当前 agent env 共享对象引用。
    *
    * 关键点（中文）
-   * - plugin runtime 与 plugin 都通过这里访问 session 执行与持久化能力。
-   * - 内外统一使用 `sessionId` 语义。
+   * - 必须是 Agent 持有的同一个 mutable 引用，不要克隆后再传入。
+   * - 通过 `agent.setEnv` / `agent.patchEnv` 原地更新会被本 context 立即感知。
    */
+  env: Record<string, string>;
+  /** 当前生效的 system 文本集合。 */
+  systems: string[];
+  /** 当前可见的路径能力集合。 */
+  paths: AgentPathRuntime;
+  /** 当前可见的 plugin 配置持久化能力集合。 */
+  pluginConfig: AgentPluginConfigRuntime;
+  /** Session 能力入口。 */
   session: SessionCollectionPort;
-  /**
-   * 跨 plugin runtime 调用主入口。
-   */
-  invoke: InvokePluginPort;
-  /**
-   * Plugin 调用入口。
-   */
+  /** Plugin 调用入口。 */
   plugins: AgentPlugins;
+}
+
+/**
+ * 统一执行上下文。
+ *
+ * 关键点（中文）
+ * - 字段全部 readonly，构造一次后语义稳定，避免 plugin 误改。
+ * - `env` 引用 agent 级共享 mutable 对象，`...ctx.env` / `ctx.env.FOO` 直接可用。
+ * - `invoke` 是构造期组装的 plugin 调用端口，对外仍以 `InvokePluginPort` 形态暴露。
+ */
+export class AgentContext {
+  /** 当前执行上下文对应的 agent 状态。 */
+  readonly agent: AgentRuntime;
+  /** 当前命令工作目录。 */
+  readonly cwd: string;
+  /** 当前项目根目录。 */
+  readonly rootPath: string;
+  /** 统一日志器。 */
+  readonly logger: Logger;
+  /** 当前运行时已解析配置。 */
+  readonly config: DowncityConfig;
+  /** 当前项目环境变量共享视图。 */
+  readonly env: Record<string, string>;
+  /** 当前生效的 system 文本集合。 */
+  readonly systems: string[];
+  /** 当前可见的路径能力集合。 */
+  readonly paths: AgentPathRuntime;
+  /** 当前可见的 plugin 配置持久化能力集合。 */
+  readonly pluginConfig: AgentPluginConfigRuntime;
+  /** Session 能力入口。 */
+  readonly session: SessionCollectionPort;
+  /** Plugin 调用入口。 */
+  readonly plugins: AgentPlugins;
+  /** 跨 plugin runtime 调用主入口。 */
+  readonly invoke: InvokePluginPort;
+
+  constructor(options: AgentContextOptions) {
+    this.agent = options.agent;
+    this.cwd = options.cwd;
+    this.rootPath = options.rootPath;
+    this.logger = options.logger;
+    this.config = options.config;
+    this.env = options.env;
+    this.systems = options.systems;
+    this.paths = options.paths;
+    this.pluginConfig = options.pluginConfig;
+    this.session = options.session;
+    this.plugins = options.plugins;
+    this.invoke = {
+      invoke: (params) => this.invoke_plugin_action(params),
+    };
+  }
+
+  /**
+   * 跨 plugin runtime 调用 action 的内部实现。
+   *
+   * 关键点（中文）
+   * - 统一把 `runAction` 的成功/失败结果归一化为 `InvokePluginResult`。
+   * - 这里替代了原 `createAgentContext` 工厂里的胶水匿名函数。
+   */
+  private async invoke_plugin_action(
+    params: InvokePluginParams,
+  ): Promise<InvokePluginResult> {
+    const result = await this.plugins.runAction({
+      plugin: params.plugin,
+      action: params.action,
+      ...(params.payload !== undefined ? { payload: params.payload } : {}),
+    });
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || result.message || "plugin action failed",
+      };
+    }
+    return {
+      success: true,
+      ...(result.data !== undefined ? { data: result.data } : {}),
+    };
+  }
 }
 
 /**

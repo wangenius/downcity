@@ -114,6 +114,26 @@ Key points:
 - if a host needs layered env merging, it should merge first and then pass the final result through `env`
 - these values participate in config resolution and runtime context assembly, but are not written back to the system environment automatically
 
+### Updating env at runtime
+
+After constructing the agent, you can also update or replace its environment variables at runtime. All plugins, sessions, and the shell share the same env reference, so the following methods take effect immediately:
+
+```ts
+const agent = new Agent({ id, path, env: { FOO: "1" } });
+
+agent.getEnv();              // => { FOO: "1" }
+agent.patchEnv({ BAR: "2" }); // merge
+agent.patchEnv({ FOO: null }); // null means delete
+agent.setEnv({ ONLY: "ok" });  // replace all
+```
+
+Key points:
+
+- `getEnv()` returns a shallow snapshot, so mutating it does not affect the agent
+- `patchEnv()` treats `null` / `undefined` as delete; other values are coerced to string
+- `setEnv()` clears the current env first and then writes the new values, keeping the same underlying reference
+- Runtime changes live in memory only; they are not written back to the project `.env` or to the system environment
+
 ## `tools`
 
 The default tool set at the agent level.

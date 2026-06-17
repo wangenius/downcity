@@ -209,6 +209,51 @@ export class Agent {
   }
 
   /**
+   * 返回当前 agent env 的浅拷贝快照。
+   *
+   * 关键点（中文）
+   * - 返回的是拷贝，调用方修改它不会影响 agent 真实状态。
+   * - 想改 env 请使用 `setEnv` / `patchEnv`。
+   */
+  getEnv(): Record<string, string> {
+    return { ...this.env };
+  }
+
+  /**
+   * 整体覆盖 agent env。
+   *
+   * 关键点（中文）
+   * - 直接清空当前共享 env 对象，再写入新值，保证 plugin / runtime / shell 看到的是同一引用。
+   * - 仅写入字符串值，`null` / `undefined` 表示删除该 key。
+   */
+  setEnv(next: Record<string, string | null | undefined>): void {
+    for (const key of Object.keys(this.env)) {
+      delete this.env[key];
+    }
+    this.patchEnv(next);
+  }
+
+  /**
+   * 增量合并 agent env。
+   *
+   * 关键点（中文）
+   * - `null` / `undefined` 表示删除该 key；其他值会强制转字符串后写入。
+   * - 修改原地生效，所有持有 `context.env` 引用的模块立即可见。
+   */
+  patchEnv(patch: Record<string, string | null | undefined>): void {
+    if (!patch || typeof patch !== "object") return;
+    for (const [raw_key, raw_value] of Object.entries(patch)) {
+      const key = String(raw_key || "").trim();
+      if (!key) continue;
+      if (raw_value === null || raw_value === undefined) {
+        delete this.env[key];
+        continue;
+      }
+      this.env[key] = String(raw_value);
+    }
+  }
+
+  /**
    * 返回当前项目根目录解析后的配置快照。
    */
   getConfig(): DowncityConfig {

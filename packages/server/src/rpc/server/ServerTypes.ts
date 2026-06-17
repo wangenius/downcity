@@ -3,17 +3,17 @@
  *
  * 关键点（中文）
  * - 这里描述 handler 需要的依赖，不承载 socket 生命周期。
- * - Server.ts 负责网络，handler 负责把协议方法转成 Agent 操作。
+ * - `RpcServer.ts` 负责网络层，handler 把协议方法转成 Agent 操作。
  */
 
-import type { AgentSessionCollection } from "@/types/agent/AgentTypes.js";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
-import type { RpcEventFrame } from "@/types/rpc/RpcProtocol.js";
+import type { AgentSessionCollection } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { Shell } from "@downcity/shell";
+import type { RpcEventFrame } from "@/types/RpcProtocol.js";
 
 /**
- * RPC Server 启动参数。
+ * RPC server 启动参数。
  */
 export interface RpcServerStartOptions {
   /** RPC 服务监听端口。 */
@@ -54,17 +54,11 @@ export interface RpcSocketSubscription {
   unsubscribe: () => void;
 }
 
-/**
- * 写入 RPC 成功帧。
- */
+/** 写入 RPC 成功帧。 */
 export type RpcWriteSuccess = (id: string, data?: unknown) => void;
 
-/**
- * 写入 RPC 失败帧。
- */
+/** 写入 RPC 失败帧。 */
 export type RpcWriteError = (id: string, error: unknown) => void;
 
-/**
- * 写入 RPC 事件帧。
- */
+/** 写入 RPC 事件帧。 */
 export type RpcWriteEvent = (frame: RpcEventFrame) => void;

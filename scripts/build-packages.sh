@@ -11,23 +11,24 @@ cd "$ROOT_DIR"
 source "$ROOT_DIR/scripts/lib/build-common.sh"
 
 PACKAGES=()
-ALL_PACKAGES=("type" "shell" "agent" "city" "services" "plugins" "ui" "cli")
+ALL_PACKAGES=("type" "shell" "agent" "server" "city" "services" "plugins" "ui" "cli")
 BUILD_PACKAGES=()
 BUMP=true
 
 usage() {
-  echo "Usage: npm run patch:build -- [--type] [--shell] [--agent] [--city] [--services] [--plugins] [--cli] [--ui] [--all] [--no-bump]"
+  echo "Usage: npm run patch:build -- [--type] [--shell] [--agent] [--server] [--city] [--services] [--plugins] [--cli] [--ui] [--all] [--no-bump]"
   echo ""
   echo "  默认构建 agent + plugins + cli，并自增对应 package 的 patch 版本号"
   echo "  --type     构建 @downcity/type"
   echo "  --shell    构建 @downcity/shell"
   echo "  --agent    构建 @downcity/agent"
+  echo "  --server   构建 @downcity/server"
   echo "  --city     构建 @downcity/city"
   echo "  --services 构建 @downcity/services"
   echo "  --plugins  构建 @downcity/plugins"
   echo "  --cli      构建 Downcity CLI 产品包（内部 city/town 构建单元 + downcity）"
   echo "  --ui       构建 @downcity/ui"
-  echo "  --all      构建全部 packages（type + shell + agent + city + services + plugins + ui + cli）"
+  echo "  --all      构建全部 packages（type + shell + agent + server + city + services + plugins + ui + cli）"
   echo "  --no-bump  跳过 patch 版本号自增"
   exit 1
 }
@@ -68,6 +69,7 @@ resolve_build_packages() {
       local has_agent=false
       local has_plugins=false
       local has_ui=false
+      local has_server=false
       local item
       for item in "${resolved[@]}"; do
         if [[ "$item" == "type" ]]; then
@@ -85,6 +87,9 @@ resolve_build_packages() {
         if [[ "$item" == "ui" ]]; then
           has_ui=true
         fi
+        if [[ "$item" == "server" ]]; then
+          has_server=true
+        fi
       done
       if [[ "$has_type" == false ]]; then
         resolved+=("type")
@@ -94,6 +99,9 @@ resolve_build_packages() {
       fi
       if [[ "$has_agent" == false ]]; then
         resolved+=("agent")
+      fi
+      if [[ "$has_server" == false ]]; then
+        resolved+=("server")
       fi
       if [[ "$has_plugins" == false ]]; then
         resolved+=("plugins")
@@ -133,6 +141,32 @@ resolve_build_packages() {
       fi
       if [[ "$selected" == "agent" && "$has_shell" == false ]]; then
         resolved+=("shell")
+      fi
+    fi
+    if [[ "$selected" == "server" ]]; then
+      local has_type=false
+      local has_shell=false
+      local has_agent=false
+      local item
+      for item in "${resolved[@]}"; do
+        if [[ "$item" == "type" ]]; then
+          has_type=true
+        fi
+        if [[ "$item" == "shell" ]]; then
+          has_shell=true
+        fi
+        if [[ "$item" == "agent" ]]; then
+          has_agent=true
+        fi
+      done
+      if [[ "$has_type" == false ]]; then
+        resolved+=("type")
+      fi
+      if [[ "$has_shell" == false ]]; then
+        resolved+=("shell")
+      fi
+      if [[ "$has_agent" == false ]]; then
+        resolved+=("agent")
       fi
     fi
     if [[ "$selected" == "services" ]]; then
@@ -214,7 +248,7 @@ should_sync_global_cli() {
   local pkg
   for pkg in "${PACKAGES[@]}"; do
     case "$pkg" in
-      agent|city|plugins|ui|cli)
+      agent|city|plugins|ui|cli|server)
         return 0
         ;;
     esac
@@ -228,12 +262,13 @@ while [[ $# -gt 0 ]]; do
     --type)     add_package "type" ;;
     --shell)    add_package "shell" ;;
     --agent)    add_package "agent" ;;
+    --server)   add_package "server" ;;
     --city)     add_package "city" ;;
     --services) add_package "services" ;;
     --plugins)  add_package "plugins" ;;
     --cli)      add_package "cli" ;;
     --ui)       add_package "ui" ;;
-    --all)      PACKAGES=("type" "shell" "agent" "city" "services" "plugins" "ui" "cli") ; shift ; continue ;;
+    --all)      PACKAGES=("type" "shell" "agent" "server" "city" "services" "plugins" "ui" "cli") ; shift ; continue ;;
     --no-bump)  BUMP=false ;;
     -h|--help)  usage ;;
     *)          usage ;;

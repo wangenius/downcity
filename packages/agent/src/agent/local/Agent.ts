@@ -20,9 +20,6 @@ import type {
   AgentSession,
   AgentSessionCollection,
   AgentSessionSummaryPage,
-  AgentStartOptions,
-  AgentStartResult,
-  AgentStopResult,
 } from "@/types/agent/AgentTypes.js";
 import type {
   ShellApprovalMode,
@@ -41,7 +38,7 @@ import {
   type AgentAssemblyResult,
 } from "@/agent/local/services/AgentAssemblyService.js";
 import { AgentSessionManager } from "@/agent/local/services/AgentSessionManager.js";
-import { AgentLifecycleService } from "@/agent/local/services/AgentLifecycleService.js";
+import { AgentBackgroundService } from "@/agent/local/services/AgentBackgroundService.js";
 
 /**
  * SDK 本地 Agent。
@@ -61,7 +58,7 @@ export class Agent {
   private readonly defaultModel?: AgentModel;
   private readonly SessionClass: AgentOptions["Session"];
   private readonly sessionManager: AgentSessionManager;
-  private readonly lifecycleService: AgentLifecycleService;
+  private readonly backgroundService: AgentBackgroundService;
   private readonly shell?: AgentOptions["shell"];
 
   private instruction: string[];
@@ -102,11 +99,10 @@ export class Agent {
 
     this.sessionManager = this.create_session_manager(assembly);
     session_manager_ref = this.sessionManager;
-    this.lifecycleService = new AgentLifecycleService({
+    // 关键点（中文）：构造完成即触发后台能力启动；调用方可 `await agent.ready()` 等待。
+    this.backgroundService = new AgentBackgroundService({
       logger: this.logger,
       agent_context: this.agentContext,
-      session_collection: this.sessionManager.get_session_collection(),
-      get_runtime: () => this.runtime,
       get_shell: () => this.shell,
     });
   }
@@ -135,17 +131,25 @@ export class Agent {
   }
 
   /**
-   * 启动当前 agent 实例的长期运行能力。
+   * 等待 Agent 后台能力启动完成。
+   *
+   * 关键点（中文）
+   * - Agent 构造完成即开始启动 plugin lifecycle 与 ActionSchedule。
+   * - 调用方在需要确认后台能力就绪时使用，例如启动后立刻读取 plugin 状态。
    */
-  async start(options?: AgentStartOptions): Promise<AgentStartResult> {
-    return await this.lifecycleService.start(options);
+  async ready(): Promise<void> {
+    await this.backgroundService.ready();
   }
 
   /**
-   * 停止当前 agent 实例的长期运行能力。
+   * 释放当前 Agent 的后台能力。
+   *
+   * 关键点（中文）
+   * - 关闭 plugin lifecycle、ActionSchedule、shell 等后台资源。
+   * - 不负责任何 transport（RPC / HTTP）；transport 由 `@downcity/server` 自行管理。
    */
-  async stop(): Promise<AgentStopResult> {
-    return await this.lifecycleService.stop();
+  async dispose(): Promise<void> {
+    await this.backgroundService.dispose();
   }
 
   /**

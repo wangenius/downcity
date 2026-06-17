@@ -1,5 +1,5 @@
 /**
- * Agent 本机 RPC Server。
+ * Agent 本机 RPC server 网络层。
  *
  * 职责说明（中文）
  * - 为本机 `RemoteAgent(rpc://...)` 与 Town runtime 提供 Agent RPC 入口。
@@ -11,17 +11,15 @@ import net from "node:net";
 import type {
   RpcRequest,
   RpcServerFrame,
-} from "@/types/rpc/RpcProtocol.js";
+} from "@/types/RpcProtocol.js";
 import type {
   RpcServerStartOptions,
   RpcSocketSubscription,
 } from "@/rpc/server/ServerTypes.js";
 import { dispatchRpcRequest } from "@/rpc/server/RequestDispatcher.js";
 
-export type { RpcServerStartOptions } from "@/rpc/server/ServerTypes.js";
-
 /**
- * RPC Server 运行实例。
+ * RPC server 运行实例。
  */
 export interface RpcServerInstance {
   /** 当前监听 host。 */
@@ -37,7 +35,7 @@ export interface RpcServerInstance {
 }
 
 /**
- * 启动 Agent 本机 RPC 服务。
+ * 启动 Agent 本机 RPC server。
  */
 export async function startRpcServer(
   options: RpcServerStartOptions,

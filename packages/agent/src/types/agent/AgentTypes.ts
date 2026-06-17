@@ -19,12 +19,7 @@ export type {
 } from "@/types/session/SessionOptions.js";
 export type {
   AgentOptions,
-  AgentRpcBinding,
-  AgentRpcStartOptions,
   AgentSessionConstructor,
-  AgentStartOptions,
-  AgentStartResult,
-  AgentStopResult,
 } from "@/types/agent/AgentOptions.js";
 export type { RemoteAgentOptions } from "@/types/agent/RemoteAgentOptions.js";
 export type {

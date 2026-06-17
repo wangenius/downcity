@@ -252,6 +252,9 @@ importers:
       '@downcity/plugins':
         specifier: workspace:^
         version: link:../../packages/plugins
+      '@downcity/server':
+        specifier: workspace:^
+        version: link:../../packages/server
       '@downcity/shell':
         specifier: workspace:^
         version: link:../../packages/shell
@@ -623,6 +626,28 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      tsc-alias:
+        specifier: ^1.8.17
+        version: 1.8.17
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/server:
+    dependencies:
+      '@downcity/agent':
+        specifier: workspace:^
+        version: link:../agent
+      '@downcity/shell':
+        specifier: workspace:^
+        version: link:../shell
+      hono:
+        specifier: ^4.12.23
+        version: 4.12.23
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
       tsc-alias:
         specifier: ^1.8.17
         version: 1.8.17

@@ -26,11 +26,6 @@ export type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
   AgentOptions,
-  AgentRpcBinding,
-  AgentRpcStartOptions,
-  AgentStartOptions,
-  AgentStartResult,
-  AgentStopResult,
   RemoteAgentOptions,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
@@ -129,9 +124,6 @@ export {
 export {
   registerPluginActionCommandsForCli,
 } from "./plugin/core/PluginCommand.js";
-
-// Agent RPC 集成
-export { startRpcServer } from "./rpc/Server.js";
 
 // Runtime plugin 运行集成
 export {

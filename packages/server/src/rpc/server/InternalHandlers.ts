@@ -4,14 +4,15 @@
  * 关键点（中文）
  * - 只处理 `internal.*` 方法。
  * - 这些方法服务 Town 本机管理通道，不属于 RemoteAgent 的用户 SDK 面。
+ * - 实现依赖 `@downcity/agent` 的 internal 路径，故只能由 `@downcity/server` 同进程使用。
  */
 
-import fs from "fs-extra";
+import { rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { SystemModelMessage } from "ai";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
-import type { RpcRequest } from "@/types/rpc/RpcProtocol.js";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
+import type { RpcRequest } from "@/types/RpcProtocol.js";
 import type {
   RpcRequestHandlerOptions,
   RpcWriteSuccess,
@@ -19,14 +20,14 @@ import type {
 import {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesPath,
-} from "@/config/Paths.js";
-import { resolveSessionSystemMessages } from "@/executor/composer/system/default/SystemDomain.js";
+} from "@downcity/agent/internal/config/Paths.js";
+import { resolveSessionSystemMessages } from "@downcity/agent/internal/executor/composer/system/default/SystemDomain.js";
 import {
   controlPluginState,
   listPluginStates,
-} from "@/plugin/core/PluginStateController.js";
-import { parsePluginCommandRequestBody } from "@/plugin/core/PluginCommandRequest.js";
-import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
+} from "@downcity/agent/internal/plugin/core/PluginStateController.js";
+import { parsePluginCommandRequestBody } from "@downcity/agent/internal/plugin/core/PluginCommandRequest.js";
+import { runPluginCommand } from "@downcity/agent/internal/plugin/core/PluginActionRunner.js";
 
 /**
  * 处理 internal RPC 请求。
@@ -55,7 +56,7 @@ export async function handleInternalRpcRequest(params: {
         runtime.paths.agentId,
         session_id,
       );
-      await fs.remove(dirname(messages_path));
+      await rm(dirname(messages_path), { recursive: true, force: true });
       runtime.getSession(session_id).clearExecutor();
       write_success(request.id, {
         sessionId: session_id,
@@ -67,7 +68,10 @@ export async function handleInternalRpcRequest(params: {
       const runtime = requireAgentRuntime(options);
       const session_id = String(request.params.sessionId || "").trim();
       if (!session_id) throw new Error("Missing sessionId");
-      await fs.remove(getDowncityChatHistoryPath(runtime.rootPath, session_id));
+      await rm(getDowncityChatHistoryPath(runtime.rootPath, session_id), {
+        recursive: true,
+        force: true,
+      });
       write_success(request.id, {
         sessionId: session_id,
         cleared: true,

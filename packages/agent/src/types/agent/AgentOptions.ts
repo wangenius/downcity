@@ -10,7 +10,6 @@ import type { Tool } from "ai";
 import type { Shell } from "@downcity/shell";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
-import type { RpcServerInstance } from "@/rpc/Server.js";
 import type {
   AgentManagedSession,
   SessionOptions,
@@ -111,72 +110,4 @@ export interface AgentOptions {
    * - 覆盖后的最终 env 会参与配置解析与运行时上下文装配，但不会回写到宿主环境。
    */
   env?: Record<string, string>;
-}
-
-/**
- * Agent 启动参数。
- */
-export interface AgentStartOptions {
-  /**
-   * 是否启动本机 RPC 服务。
-   *
-   * 关键点（中文）
-   * - `false` 表示不启动。
-   * - 传对象时会按给定 host/port 启动。
-   * - 省略时默认不启动，避免 SDK 本地嵌入场景误开端口。
-   */
-  rpc?: false | AgentRpcStartOptions;
-
-  /**
-   * 是否启动当前 agent 的 plugins。
-   *
-   * 关键点（中文）
-   * - 默认 `true`。
-   * - `false` 适合只需要 session 能力、不希望启动后台能力的嵌入场景。
-   */
-  plugins?: boolean;
-}
-
-/**
- * Agent 停止结果快照。
- */
-export interface AgentStopResult {
-  /** 本次是否实际停止了本机 RPC 服务。 */
-  rpcStopped: boolean;
-  /** 本次是否实际停止了 plugins。 */
-  pluginsStopped: boolean;
-}
-
-/**
- * Agent 启动后的状态快照。
- */
-export interface AgentStartResult {
-  /** 当前 agent 是否已启动本机 RPC 服务。 */
-  rpc?: AgentRpcBinding;
-  /** 当前 agent 是否已启动 plugins。 */
-  pluginsStarted: boolean;
-}
-
-/**
- * Agent RPC 启动参数。
- */
-export interface AgentRpcStartOptions {
-  /** RPC 监听主机。 */
-  host?: string;
-  /** RPC 监听端口。 */
-  port?: number;
-}
-
-/**
- * Agent RPC 绑定信息。
- */
-export interface AgentRpcBinding {
-  /** 远程访问地址。 */
-  url: string;
-  /** 当前 host。 */
-  host: string;
-  /** 当前 port。 */
-  port: number;
-  /** RPC server 句柄。 */
-  server: RpcServerInstance;
 }

@@ -6,7 +6,7 @@
  * - 这些方法是 RemoteAgent RPC transport 的稳定 SDK 面。
  */
 
-import type { RpcRequest } from "@/types/rpc/RpcProtocol.js";
+import type { RpcRequest } from "@/types/RpcProtocol.js";
 import type {
   RpcSocketSubscription,
   RpcWriteEvent,

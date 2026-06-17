@@ -1,14 +1,35 @@
 {
-  "name": "@downcity/plugins",
-  "version": "1.0.82",
+  "name": "@downcity/server",
+  "version": "0.1.1",
   "type": "module",
-  "description": "Downcity 内建 plugin 集合包",
+  "description": "Downcity Server — Agent transport layer (RPC + HTTP) for @downcity/agent",
   "main": "./bin/index.js",
   "types": "./bin/index.d.ts",
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangenius/downcity.git",
+    "directory": "packages/server"
+  },
+  "homepage": "https://downcity.ai",
+  "bugs": {
+    "url": "https://github.com/wangenius/downcity/issues"
+  },
+  "keywords": [
+    "downcity",
+    "agent",
+    "rpc",
+    "http"
+  ],
   "exports": {
     ".": {
-      "import": "./bin/index.js",
-      "types": "./bin/index.d.ts"
+      "types": "./bin/index.d.ts",
+      "import": "./bin/index.js"
     }
   },
   "scripts": {
@@ -18,27 +39,14 @@
     "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
     "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json"
   },
+  "license": "MIT",
   "dependencies": {
     "@downcity/agent": "workspace:^",
     "@downcity/shell": "workspace:^",
-    "@larksuiteoapi/node-sdk": "^1.66.0",
-    "ai": "^6.0.193",
-    "better-sqlite3": "^12.10.0",
-    "commander": "^15.0.0",
-    "execa": "^9.6.1",
-    "fs-extra": "^11.3.5",
-    "js-yaml": "^4.1.1",
-    "node-cron": "^4.2.1",
-    "ws": "^8.21.0",
-    "zod": "^4.4.3"
+    "hono": "^4.12.23"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/fs-extra": "^11.0.4",
-    "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.9.1",
-    "@types/node-cron": "^3.0.11",
-    "@types/ws": "^8.18.1",
     "tsc-alias": "^1.8.17",
     "typescript": "^6.0.3"
   }

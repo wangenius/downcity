@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.1.191",
+  "version": "1.1.192",
   "type": "module",
   "description": "Downcity CLI bundle — installs city and town commands",
   "bin": {
@@ -34,6 +34,7 @@
     "@downcity/agent": "workspace:^",
     "@downcity/city": "workspace:^",
     "@downcity/plugins": "workspace:^",
+    "@downcity/server": "workspace:^",
     "@downcity/shell": "workspace:^",
     "@earendil-works/pi-tui": "^0.74.2",
     "@larksuiteoapi/node-sdk": "^1.66.0",

@@ -269,44 +269,6 @@ async function createRemoteChatSession(params) {
         session_id: session.id,
     };
 }
-async function createAgentChatSessionPicker(params) {
-    const sessions = await listRemoteChatSessions({
-        remote_agent: params.remote_agent,
-    });
-    const choices = [
-        {
-            title: "+ Create new session",
-            description: "Start with an empty CLI chat context",
-            value: { kind: "create" },
-        },
-        {
-            title: AGENT_CHAT_DEFAULT_SESSION_ID,
-            description: "Default local CLI chat session",
-            value: {
-                kind: "session",
-                sessionId: AGENT_CHAT_DEFAULT_SESSION_ID,
-            },
-        },
-        ...sessions
-            .filter((item) => item.sessionId !== AGENT_CHAT_DEFAULT_SESSION_ID)
-            .map((item) => ({
-            title: item.title || item.sessionId,
-            description: buildSessionChoiceDescription(item),
-            value: {
-                kind: "session",
-                sessionId: item.sessionId,
-            },
-        })),
-    ];
-    const response = (await prompts({
-        type: "select",
-        name: "choice",
-        message: "选择或创建 Agent session",
-        choices,
-        initial: 0,
-    }));
-    return response.choice || null;
-}
 async function resolveInteractiveChatSession(params) {
     const preselected_session = resolveAgentChatSessionOptions(params.options);
     if (!preselected_session.success) {
@@ -343,28 +305,15 @@ async function resolveInteractiveChatSession(params) {
             success: true,
             target: resolved.target,
             remote_agent,
+            show_initial_picker: false,
         };
     }
-    const choice = await createAgentChatSessionPicker({ remote_agent });
-    if (!choice) {
-        await remote_agent.close();
-        return {
-            success: false,
-        };
-    }
-    if (choice.kind === "create") {
-        const created = await createRemoteChatSession({ remote_agent });
-        resolved.target.sessionId = created.session_id;
-        resolved.target.createNewSession = false;
-    }
-    else if (choice.sessionId) {
-        resolved.target.sessionId = choice.sessionId;
-        resolved.target.createNewSession = false;
-    }
+    // 关键点（中文）：未显式指定 session 时，进入 TUI 后由 SessionPicker 自行选择。
     return {
         success: true,
         target: resolved.target,
         remote_agent,
+        show_initial_picker: true,
     };
 }
 async function getOrCreateRemoteSession(params) {
@@ -694,6 +643,7 @@ export async function chatCommand(options) {
         await run_agent_chat_tui({
             agent_id: agentId,
             session_id: interactive.target.sessionId,
+            show_initial_picker: interactive.show_initial_picker,
             list_sessions: async () => await listRemoteChatSessions({
                 remote_agent: interactive.remote_agent,
             }),

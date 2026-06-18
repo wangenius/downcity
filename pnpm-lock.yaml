@@ -180,6 +180,9 @@ importers:
       '@downcity/shell':
         specifier: workspace:^
         version: link:../../packages/shell
+      '@downcity/type':
+        specifier: workspace:*
+        version: link:../../packages/type
       '@earendil-works/pi-tui':
         specifier: ^0.74.2
         version: 0.74.2
@@ -246,6 +249,34 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/fs-extra':
+        specifier: ^11.0.4
+        version: 11.0.4
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      '@types/node-cron':
+        specifier: ^3.0.11
+        version: 3.0.11
+      '@types/prompts':
+        specifier: ^2.4.9
+        version: 2.4.9
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      tsc-alias:
+        specifier: ^1.8.17
+        version: 1.8.17
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   cli/town:
     dependencies:

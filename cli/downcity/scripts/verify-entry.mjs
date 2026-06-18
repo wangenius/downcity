@@ -1,9 +1,9 @@
 /**
- * downcity 聚合包入口校验脚本。
+ * downcity CLI 入口校验脚本。
  *
  * 关键点（中文）
- * - typecheck 阶段不需要重新编译，只确认两个源码入口存在。
- * - 这个检查保护 `npm i -g downcity` 后能同时得到 `city` 与 `town`。
+ * - typecheck 阶段不需要重新编译，只确认源码入口存在。
+ * - 这个检查保护 `npm i -g downcity` 后能得到 `city` 命令。
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -12,12 +12,7 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const package_root = path.resolve(__dirname, "..");
-const entry_paths = [
-  path.join(package_root, "bin/city/index.js"),
-  path.join(package_root, "bin/town/index.js"),
-];
+const entry_path = path.join(package_root, "bin/index.js");
 
-for (const entry_path of entry_paths) {
-  await fs.access(entry_path);
-  console.log(`[verify-entry] found ${entry_path}`);
-}
+await fs.access(entry_path);
+console.log(`[verify-entry] found ${entry_path}`);

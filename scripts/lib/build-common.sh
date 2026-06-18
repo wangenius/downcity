@@ -105,7 +105,7 @@ install_downcity_cli_globally() {
   package_dir="$global_modules/downcity"
   source_dir="$workspace_root/cli/downcity"
 
-  if [[ ! -f "$source_dir/bin/town/index.js" || ! -f "$source_dir/bin/city/index.js" ]]; then
+  if [[ ! -f "$source_dir/bin/index.js" ]]; then
     echo "Missing Downcity CLI build output. Run cli/downcity build first." >&2
     return 1
   fi
@@ -117,20 +117,15 @@ install_downcity_cli_globally() {
   if [[ -d "$package_dir/node_modules" ]]; then
     rm -rf \
       "$package_dir/bin" \
-      "$package_dir/city" \
-      "$package_dir/town" \
-      "$package_dir/public" \
       "$package_dir/README.md" \
       "$package_dir/package.json"
     cp -R "$source_dir/bin" "$package_dir/bin"
-    cp -R "$source_dir/city" "$package_dir/city"
-    cp -R "$source_dir/town" "$package_dir/town"
     cp "$source_dir/README.md" "$package_dir/README.md"
     cp "$source_dir/package.json" "$package_dir/package.json"
     sync_downcity_workspace_packages_globally "$workspace_root" "$package_dir"
 
     # 关键点（中文）：如果这次 CLI 引入了新的直连依赖，增量同步无法补齐 node_modules，
-    # 这里自动回退到一次完整 deploy，避免全局 `city` / `town` 因缺依赖直接崩溃。
+    # 这里自动回退到一次完整 deploy，避免全局 `city` 因缺依赖直接崩溃。
     if ! downcity_global_runtime_has_required_dependencies "$package_dir" "$source_dir/package.json"; then
       deploy_dir="$(mktemp -d "${TMPDIR:-/tmp}/downcity-cli-deploy.XXXXXX")"
       trap 'rm -rf "$deploy_dir"' RETURN
@@ -144,11 +139,9 @@ install_downcity_cli_globally() {
     deploy_downcity_cli_package "$package_dir" "$deploy_dir"
   fi
 
-  chmod +x "$package_dir/bin/town/index.js"
-  chmod +x "$package_dir/bin/city/index.js"
+  chmod +x "$package_dir/bin/index.js"
 
   legacy_command="stu""dio"
   rm -f "$global_bin/town" "$global_bin/$legacy_command" "$global_bin/city" 2>/dev/null || true
-  ln -s "../lib/node_modules/downcity/bin/town/index.js" "$global_bin/town"
-  ln -s "../lib/node_modules/downcity/bin/city/index.js" "$global_bin/city"
+  ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/city"
 }

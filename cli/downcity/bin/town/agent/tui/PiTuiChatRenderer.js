@@ -1,0 +1,63 @@
+/**
+ * 基于 pi-tui 的交互式 chat 渲染器。
+ *
+ * 关键点（中文）
+ * - 实现 AgentChatInteractiveRendererPort，接入 AgentChat 的 runSdkPromptTurn。
+ * - 把 SDK 事件转交给 StreamingUIController，驱动消息流更新。
+ */
+import { StreamingUIController } from "./controllers/StreamingUI.js";
+/**
+ * pi-tui 版交互式渲染器。
+ */
+export class PiTuiChatRenderer {
+    streaming_ui;
+    emitted_visible_text = false;
+    /**
+     * @param message_list 消息流组件。
+     * @param request_render 通知 TUI 重绘的回调。
+     */
+    constructor(message_list, request_render) {
+        this.streaming_ui = new StreamingUIController({
+            message_list,
+            request_render,
+        });
+    }
+    /**
+     * 启动新一轮渲染。
+     */
+    start_turn() {
+        this.emitted_visible_text = false;
+        this.streaming_ui.start_turn();
+    }
+    /**
+     * 绑定当前 turn id。
+     *
+     * @param turn_id turn id。
+     */
+    attach_turn_id(turn_id) {
+        this.streaming_ui.attach_turn_id(turn_id);
+    }
+    /**
+     * 渲染单个 session 事件。
+     *
+     * @param event AgentSessionEvent。
+     */
+    render_event(event) {
+        this.streaming_ui.handle_event(event);
+        if (event.type === "text-delta" && (event.text || "").trim()) {
+            this.emitted_visible_text = true;
+        }
+    }
+    /**
+     * 结束当前一轮渲染。
+     *
+     * @returns 渲染结果快照。
+     */
+    finish_turn() {
+        this.streaming_ui.finish_turn();
+        return {
+            emitted_visible_text: this.emitted_visible_text,
+        };
+    }
+}
+//# sourceMappingURL=PiTuiChatRenderer.js.map

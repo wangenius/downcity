@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # 关键点（中文）：
-# 1) 这个脚本负责“packages 级 patch bump + build”，不承担 homepage / console 的全仓交付链路。
+# 1) 这个脚本负责"packages 级 patch bump + build"，不承担 homepage / console 的全仓交付链路。
 # 2) 统一入口支持按包选择：type、shell、agent、city、services、plugins、ui、cli；默认构建 agent + plugins + cli。
 # 3) bump 只作用于本次显式选中的 package，避免误改无关包版本号。
 
@@ -26,7 +26,7 @@ usage() {
   echo "  --city     构建 @downcity/city"
   echo "  --services 构建 @downcity/services"
   echo "  --plugins  构建 @downcity/plugins"
-  echo "  --cli      构建 Downcity CLI 产品包（内部 city/town 构建单元 + downcity）"
+  echo "  --cli      构建 downcity CLI 包"
   echo "  --ui       构建 @downcity/ui"
   echo "  --all      构建全部 packages（type + shell + agent + server + city + services + plugins + ui + cli）"
   echo "  --no-bump  跳过 patch 版本号自增"
@@ -234,9 +234,7 @@ run_build() {
   local pkg="$1"
   echo ""
   if [[ "$pkg" == "cli" ]]; then
-    echo "--- Downcity CLI products ---"
-    run_project_build "$ROOT_DIR/cli/city"
-    run_project_build "$ROOT_DIR/cli/town"
+    echo "--- Downcity CLI ---"
     run_project_build "$ROOT_DIR/cli/downcity"
     return 0
   fi
@@ -286,8 +284,6 @@ if $BUMP; then
   echo "==> patch bump: ${PACKAGES[*]}"
   for pkg in "${PACKAGES[@]}"; do
     if [[ "$pkg" == "cli" ]]; then
-      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/city/package.json"
-      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/town/package.json"
       node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/downcity/package.json"
     else
       node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/packages/$pkg/package.json"

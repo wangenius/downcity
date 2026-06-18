@@ -171,11 +171,11 @@ export function getSharedChatQueueStore(): ChatQueueStore {
  * 从运行时解析 chat queue store。
  *
  * 关键点（中文）
- * - 新路径优先读取 `runtime.agent.pluginInstances.chat.queueStore`。
+ * - 新路径优先读取 `context.pluginInstances.chat.queueStore`。
  * - 迁移阶段若拿不到，则回退到共享 queue store，保证旧入口可继续工作。
  */
-export function resolveChatQueueStore(runtime?: AgentContext): ChatQueueStorePort {
-  const chatService = runtime?.agent?.pluginInstances?.get?.("chat") as
+export function resolveChatQueueStore(context?: AgentContext): ChatQueueStorePort {
+  const chatService = context?.pluginInstances?.get?.("chat") as
     | { queueStore?: ChatQueueStorePort }
     | undefined;
   if (chatService?.queueStore) {

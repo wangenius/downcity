@@ -177,6 +177,9 @@ importers:
       '@downcity/shell':
         specifier: workspace:^
         version: link:../../packages/shell
+      '@earendil-works/pi-tui':
+        specifier: ^0.74.2
+        version: 0.74.2
       '@larksuiteoapi/node-sdk':
         specifier: ^1.66.0
         version: 1.66.0
@@ -261,6 +264,9 @@ importers:
       '@downcity/type':
         specifier: workspace:*
         version: link:../../packages/type
+      '@earendil-works/pi-tui':
+        specifier: ^0.74.2
+        version: 0.74.2
       ai:
         specifier: ^6.0.193
         version: 6.0.193(zod@4.4.3)
@@ -1250,6 +1256,10 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@earendil-works/pi-tui@0.74.2':
+    resolution: {integrity: sha512-valQPz74qbdydRqII6t9rJ46YANMOOJeDhKm25a1ZrWvWwdjAaAEu6s3ur/LWz84Wkkwcbub2ZkVjzCZi8gFGA==}
+    engines: {node: '>=20.0.0'}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -4904,6 +4914,9 @@ packages:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
     engines: {node: '>=6'}
 
+  koffi@2.16.2:
+    resolution: {integrity: sha512-owU0MRwv6xkrVqCd+33uw6BaYppkTRXbO/rVdJNI2dvZG0gzyRhYwW25eWtc5pauwK8TGh3AbkFONSezdykfSA==}
+
   kysely@0.29.2:
     resolution: {integrity: sha512-s6WVJyEZrbm6jhBpiKHsGHyePMrVQKJ85wZCFCr9W4QHv6WTjWIrdvTmO9hDEA3bNK0xkrE2DqrHsXMLWuZpQg==}
     engines: {node: '>=22.0.0'}
@@ -5045,6 +5058,11 @@ packages:
 
   markdown-table@3.0.4:
     resolution: {integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==}
+
+  marked@15.0.12:
+    resolution: {integrity: sha512-8dD6FusOQSrpv9Z1rdNMdlSgQOIP880DHqnohobOmYLElGEqAL/JvxvuxZO16r4HtjTlfPRDC1hbvxC9dPN2nA==}
+    engines: {node: '>= 18'}
+    hasBin: true
 
   marked@16.4.2:
     resolution: {integrity: sha512-TI3V8YYWvkVf3KJe1dRkpnjs68JUPyEa5vjKrp1XEEJUAOaQc+Qj+L1qWbPd0SJuAdQkFU0h73sXXqwDYxsiDA==}
@@ -6875,6 +6893,13 @@ snapshots:
   '@date-fns/tz@1.5.0': {}
 
   '@drizzle-team/brocli@0.10.2': {}
+
+  '@earendil-works/pi-tui@0.74.2':
+    dependencies:
+      get-east-asian-width: 1.6.0
+      marked: 15.0.12
+    optionalDependencies:
+      koffi: 2.16.2
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -10182,6 +10207,9 @@ snapshots:
 
   kleur@4.1.5: {}
 
+  koffi@2.16.2:
+    optional: true
+
   kysely@0.29.2: {}
 
   layout-base@1.0.2: {}
@@ -10286,6 +10314,8 @@ snapshots:
   markdown-extensions@2.0.0: {}
 
   markdown-table@3.0.4: {}
+
+  marked@15.0.12: {}
 
   marked@16.4.2: {}
 

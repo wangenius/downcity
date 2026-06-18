@@ -11,7 +11,6 @@ import { rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { SystemModelMessage } from "ai";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { RpcRequest } from "@/types/RpcProtocol.js";
 import type {
   RpcRequestHandlerOptions,
@@ -48,16 +47,16 @@ export async function handleInternalRpcRequest(params: {
       return true;
     }
     case "internal.sessions.clear_messages": {
-      const runtime = requireAgentRuntime(options);
+      const context = requireAgentContext(options);
       const session_id = String(request.params.sessionId || "").trim();
       if (!session_id) throw new Error("Missing sessionId");
       const messages_path = getDowncitySessionMessagesPath(
-        runtime.rootPath,
-        runtime.paths.agentId,
+        context.rootPath,
+        context.paths.agentId,
         session_id,
       );
       await rm(dirname(messages_path), { recursive: true, force: true });
-      runtime.getSession(session_id).clearExecutor();
+      context.getSession(session_id).clearExecutor();
       write_success(request.id, {
         sessionId: session_id,
         cleared: true,
@@ -65,10 +64,10 @@ export async function handleInternalRpcRequest(params: {
       return true;
     }
     case "internal.sessions.clear_chat_history": {
-      const runtime = requireAgentRuntime(options);
+      const context = requireAgentContext(options);
       const session_id = String(request.params.sessionId || "").trim();
       if (!session_id) throw new Error("Missing sessionId");
-      await rm(getDowncityChatHistoryPath(runtime.rootPath, session_id), {
+      await rm(getDowncityChatHistoryPath(context.rootPath, session_id), {
         recursive: true,
         force: true,
       });
@@ -79,15 +78,14 @@ export async function handleInternalRpcRequest(params: {
       return true;
     }
     case "internal.sessions.resolve_system_prompt": {
-      const runtime = requireAgentRuntime(options);
       const context = requireAgentContext(options);
       const session_id =
         String(request.params.sessionId || "").trim() || "consoleui-chat-main";
       const system_messages = await resolveSessionSystemMessages({
-        projectRoot: runtime.rootPath,
+        projectRoot: context.rootPath,
         sessionId: session_id,
         profile: "chat",
-        staticSystemPrompts: runtime.systems,
+        staticSystemPrompts: context.systems,
         context,
       });
       write_success(request.id, {
@@ -224,14 +222,6 @@ function requireAgentContext(options: RpcRequestHandlerOptions): AgentContext {
     throw new Error("Agent RPC server was started without AgentContext");
   }
   return context;
-}
-
-function requireAgentRuntime(options: RpcRequestHandlerOptions): AgentRuntime {
-  const runtime = options.getAgentRuntime?.();
-  if (!runtime) {
-    throw new Error("Agent RPC server was started without AgentRuntime");
-  }
-  return runtime;
 }
 
 function normalizeSystemText(input: string | null | undefined): string {

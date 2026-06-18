@@ -6,7 +6,7 @@
  * - chat / queue 等渠道语义由宿主显式注入的 plugin 自行实现。
  */
 
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { ControlSessionExecuteAttachmentInput } from "./types/ControlSessionExecute.js";
 import { buildExecuteInputText } from "./ExecuteInput.js";
 
@@ -17,7 +17,7 @@ import { buildExecuteInputText } from "./ExecuteInput.js";
  * - 按普通 session 同步执行。
  */
 export async function executeBySessionId(params: {
-  agentState: AgentRuntime;
+  agentState: AgentContext;
   sessionId: string;
   instructions: string;
   attachments?: ControlSessionExecuteAttachmentInput[];

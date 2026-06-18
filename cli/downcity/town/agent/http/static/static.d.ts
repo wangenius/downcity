@@ -7,7 +7,7 @@
  * 3. 只处理静态资源协议，不承载业务逻辑。
  */
 import { Hono } from "hono";
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 /**
  * 静态资源路由参数。
  */
@@ -15,7 +15,7 @@ type StaticRouterOptions = {
     /**
      * 读取当前 agent runtime。
      */
-    getAgentRuntime: () => AgentRuntime;
+    getAgentContext: () => AgentContext;
 };
 /**
  * 创建静态资源路由。

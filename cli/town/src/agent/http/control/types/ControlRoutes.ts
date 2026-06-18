@@ -7,7 +7,6 @@
  */
 
 import type { Hono } from "hono";
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 
 /**
@@ -18,11 +17,6 @@ export interface ControlRouteRegistrationParams {
    * Hono 应用实例。
    */
   app: Hono;
-
-  /**
-   * 读取当前 agent 状态。
-   */
-  getAgentRuntime: () => AgentRuntime;
 
   /**
    * 读取当前统一执行上下文。

@@ -98,7 +98,7 @@ export function registerControlSessionRoutes(
   for (const routePath of buildControlRouteAliases("/sessions")) {
     app.get(routePath, async (c) => {
       try {
-        const runtime = params.getAgentRuntime();
+        const runtime = params.getAgentContext();
         const limit = toLimit(c.req.query("limit"));
         const executingSessionIds = new Set<string>(
           runtime.listExecutingSessionIds(),
@@ -139,7 +139,7 @@ export function registerControlSessionRoutes(
   for (const routePath of buildControlRouteAliases("/sessions/:sessionId/messages")) {
     app.get(routePath, async (c) => {
       try {
-        const runtime = params.getAgentRuntime();
+        const runtime = params.getAgentContext();
         const limit = toLimit(c.req.query("limit"), 200);
         const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
         if (!sessionId) {
@@ -171,7 +171,7 @@ export function registerControlSessionRoutes(
   for (const routePath of buildControlRouteAliases("/sessions/:sessionId/messages")) {
     app.delete(routePath, async (c) => {
       try {
-        const runtime = params.getAgentRuntime();
+        const runtime = params.getAgentContext();
         const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
         if (!sessionId) {
           return c.json({ success: false, error: "Missing sessionId" }, 400);
@@ -201,7 +201,7 @@ export function registerControlSessionRoutes(
   for (const routePath of buildControlRouteAliases("/sessions/:sessionId/chat-history")) {
     app.delete(routePath, async (c) => {
       try {
-        const runtime = params.getAgentRuntime();
+        const runtime = params.getAgentContext();
         const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
         if (!sessionId) {
           return c.json({ success: false, error: "Missing sessionId" }, 400);
@@ -224,7 +224,7 @@ export function registerControlSessionRoutes(
   for (const routePath of buildControlRouteAliases("/sessions/:sessionId/archives")) {
     app.get(routePath, async (c) => {
       try {
-        const runtime = params.getAgentRuntime();
+        const runtime = params.getAgentContext();
         const limit = toLimit(c.req.query("limit"), 100);
         const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
         if (!sessionId) {
@@ -311,7 +311,7 @@ export function registerControlSessionRoutes(
   for (const routePath of buildControlRouteAliases("/sessions/:sessionId/archives/:archiveId")) {
     app.get(routePath, async (c) => {
       try {
-        const runtime = params.getAgentRuntime();
+        const runtime = params.getAgentContext();
         const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
         const archiveId = decodeMaybe(String(c.req.param("archiveId") || "").trim());
         if (!sessionId) {
@@ -370,7 +370,7 @@ export function registerControlSessionRoutes(
   for (const routePath of buildControlRouteAliases("/system-prompt")) {
     app.get(routePath, async (c) => {
       try {
-        const runtime = params.getAgentRuntime();
+        const runtime = params.getAgentContext();
         const sessionId =
           decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
           TOWN_CHAT_SESSION_ID;
@@ -395,7 +395,7 @@ export function registerControlSessionRoutes(
   for (const routePath of buildControlRouteAliases("/sessions/:sessionId/execute")) {
     app.post(routePath, async (c) => {
       try {
-        const runtime = params.getAgentRuntime();
+        const runtime = params.getAgentContext();
         const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
         const body = (await c.req.json().catch(() => ({}))) as Partial<ControlSessionExecuteRequestBody>;
         const instructions = String(body.instructions || "").trim();

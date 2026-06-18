@@ -4,7 +4,7 @@
  * 职责说明（中文）
  * - 由 `town agent start` 启动 HTTP 入口，对外承载控制面、plugin 与 SDK HTTP 路由。
  * - Agent 进程本体只暴露本机 RPC；HTTP server 生命周期归 Town CLI 管理。
- * - HTTP route 实现放在 Town 内部，Agent 只提供 runtime/context/sessionCollection。
+ * - HTTP route 实现放在 Town 内部，Agent 只提供 AgentContext / sessionCollection。
  */
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -30,9 +30,9 @@ export function createAgentHttpGatewayApp(options) {
         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowHeaders: ["Content-Type", "Authorization"],
     }));
-    // 关键点（中文）：HTTP 协议面由 Town 装配，Agent 只提供 runtime/context。
+    // 关键点（中文）：HTTP 协议面由 Town 装配，Agent 只提供 AgentContext。
     app.route("/", createStaticRouter({
-        getAgentRuntime: options.getAgentRuntime,
+        getAgentContext: options.getAgentContext,
     }));
     app.route("/", healthRouter);
     app.route("/", createPluginsRouter({
@@ -42,16 +42,15 @@ export function createAgentHttpGatewayApp(options) {
         getShell: () => options.getShell?.(),
     }));
     app.route("/", createExecuteRouter({
-        getAgentRuntime: options.getAgentRuntime,
+        getAgentContext: options.getAgentContext,
     }));
     app.route("/", createControlRouter({
-        getAgentRuntime: options.getAgentRuntime,
         getAgentContext: options.getAgentContext,
     }));
     if (options.sdkRouter) {
         app.route("/", options.sdkRouter);
     }
-    for (const plugin of options.getAgentContext().agent.pluginInstances.values()) {
+    for (const plugin of options.getAgentContext().pluginInstances.values()) {
         plugin.http?.server?.register({
             app,
             getContext: options.getAgentContext,

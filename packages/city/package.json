@@ -1,6 +1,6 @@
 {
   "name": "@downcity/city",
-  "version": "0.2.82",
+  "version": "0.2.83",
   "description": "Downcity City runtime and City access SDK for services, actions, auth, env, and towns.",
   "type": "module",
   "main": "./bin/index.js",

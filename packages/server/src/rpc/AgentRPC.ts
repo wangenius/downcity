@@ -52,7 +52,6 @@ export class AgentRPC {
         port,
         sessionCollection: this.agent.getSessionCollection(),
         getAgentContext: () => this.agent.getContext(),
-        getAgentRuntime: () => this.agent.getRuntime(),
         getShell: () => this.agent.getShell(),
       });
       this.rpc_instance = instance;

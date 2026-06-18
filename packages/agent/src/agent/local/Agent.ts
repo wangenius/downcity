@@ -9,7 +9,6 @@
 
 import type { Tool } from "ai";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
@@ -50,7 +49,6 @@ export class Agent {
   readonly plugins: AgentPlugins;
 
   private readonly logger: Logger;
-  private readonly runtime: AgentRuntime;
   private readonly agentContext: AgentContext;
   private readonly pluginRegistry: PluginRegistry;
   private readonly config: DowncityConfig;
@@ -89,7 +87,6 @@ export class Agent {
     this.tools = assembly.tools;
     this.plugins = assembly.plugins;
     this.logger = assembly.logger;
-    this.runtime = assembly.runtime;
     this.agentContext = assembly.agent_context;
     this.pluginRegistry = assembly.plugin_registry;
     this.config = assembly.config;
@@ -268,13 +265,6 @@ export class Agent {
   }
 
   /**
-   * 返回当前 agent runtime。
-   */
-  getRuntime(): AgentRuntime {
-    return this.runtime;
-  }
-
-  /**
    * 返回当前 agent context。
    */
   getContext(): AgentContext {
@@ -303,8 +293,7 @@ export class Agent {
       project_root: this.path || assembly.path,
       tools: this.tools || assembly.tools,
       logger: this.logger || assembly.logger,
-      runtime: this.runtime || assembly.runtime,
-      get_agent_context: () => this.agentContext || assembly.agent_context,
+      get_agent_context: () => this.agentContext ?? assembly.agent_context,
       get_instruction: () => this.instruction,
       plugin_instances: assembly.plugin_instances,
       default_model: this.defaultModel,

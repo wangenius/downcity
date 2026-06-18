@@ -3,17 +3,12 @@
  *
  * 职责说明（中文）
  * - 这里定义 plugin runtime、plugin、prompt system 共用的统一执行上下文。
- * - `AgentContext` 是一个 class，表达“当前一次执行可见的能力面”，不是宿主状态本体。
+ * - `AgentContext` 是一个 class，表达"当前一次执行可见的能力面"，不是宿主状态本体。
  * - 同一 agent 实例全程共享同一个 context；plugin、session、executor 都基于它读写状态。
- *
- * 边界说明（中文）
- * - `AgentRuntime` 负责保存长期状态；`AgentContext` 负责把这些状态暴露成执行接口。
- * - 这里同时声明类型协议与默认实现；plugin 作者拿到的就是这个 class 的实例。
  */
 
 import type { LanguageModel } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
@@ -21,6 +16,7 @@ import type {
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
+import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type {
   SessionMetadataV1,
   SessionMessageV1,
@@ -220,12 +216,10 @@ export interface SessionCollectionPort {
  * AgentContext 构造参数。
  *
  * 关键点（中文）
- * - 装配方负责把 runtime / session / plugins 等上层依赖注入进来。
+ * - 装配方负责把 session / plugins 等上层依赖注入进来。
  * - `env` 必须传入 agent 持有的 mutable 共享对象引用，不要在这里克隆。
  */
 export interface AgentContextOptions {
-  /** 当前执行上下文对应的 agent 状态。 */
-  agent: AgentRuntime;
   /** 当前命令工作目录。 */
   cwd: string;
   /** 当前项目根目录。 */
@@ -248,6 +242,8 @@ export interface AgentContextOptions {
   paths: AgentPathRuntime;
   /** 当前可见的 plugin 配置持久化能力集合。 */
   pluginConfig: AgentPluginConfigRuntime;
+  /** 当前 agent 持有的插件实例集合。 */
+  pluginInstances: Map<string, BasePlugin>;
   /** Session 能力入口。 */
   session: SessionCollectionPort;
   /** Plugin 调用入口。 */
@@ -263,8 +259,6 @@ export interface AgentContextOptions {
  * - `invoke` 是构造期组装的 plugin 调用端口，对外仍以 `InvokePluginPort` 形态暴露。
  */
 export class AgentContext {
-  /** 当前执行上下文对应的 agent 状态。 */
-  readonly agent: AgentRuntime;
   /** 当前命令工作目录。 */
   readonly cwd: string;
   /** 当前项目根目录。 */
@@ -281,6 +275,8 @@ export class AgentContext {
   readonly paths: AgentPathRuntime;
   /** 当前可见的 plugin 配置持久化能力集合。 */
   readonly pluginConfig: AgentPluginConfigRuntime;
+  /** 当前 agent 持有的插件实例集合。 */
+  readonly pluginInstances: Map<string, BasePlugin>;
   /** Session 能力入口。 */
   readonly session: SessionCollectionPort;
   /** Plugin 调用入口。 */
@@ -289,7 +285,6 @@ export class AgentContext {
   readonly invoke: InvokePluginPort;
 
   constructor(options: AgentContextOptions) {
-    this.agent = options.agent;
     this.cwd = options.cwd;
     this.rootPath = options.rootPath;
     this.logger = options.logger;
@@ -298,11 +293,37 @@ export class AgentContext {
     this.systems = options.systems;
     this.paths = options.paths;
     this.pluginConfig = options.pluginConfig;
+    this.pluginInstances = options.pluginInstances;
     this.session = options.session;
     this.plugins = options.plugins;
     this.invoke = {
       invoke: (params) => this.invoke_plugin_action(params),
     };
+  }
+
+  /**
+   * 读取指定 sessionId 对应的 session 端口。
+   *
+   * 关键点（中文）
+   * - 返回值是统一的 `SessionPort`，而不是裸 `Executor`。
+   * - 这样 HTTP / plugin runtime / chat queue / contact 等入口都能复用同一层会话装配与执行兜底。
+   */
+  getSession(sessionId: string): SessionPort {
+    return this.session.get(sessionId);
+  }
+
+  /**
+   * 返回当前执行中的 sessionId 列表。
+   */
+  listExecutingSessionIds(): string[] {
+    return this.session.listExecutingSessionIds();
+  }
+
+  /**
+   * 返回当前执行中的 session 数量。
+   */
+  getExecutingSessionCount(): number {
+    return this.session.getExecutingSessionCount();
   }
 
   /**

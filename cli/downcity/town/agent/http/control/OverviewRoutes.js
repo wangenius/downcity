@@ -34,7 +34,7 @@ export function registerControlOverviewRoutes(params) {
     for (const routePath of buildControlRouteAliases("/overview")) {
         app.get(routePath, async (c) => {
             try {
-                const runtime = params.getAgentRuntime();
+                const runtime = params.getAgentContext();
                 const sessionLimit = toLimit(c.req.query("sessionLimit") || c.req.query("contextLimit"), 20);
                 const sessions = await listControlSessionSummaries({
                     projectRoot: runtime.rootPath,

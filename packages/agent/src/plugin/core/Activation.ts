@@ -9,7 +9,6 @@
 import { readProjectPluginEnabled } from "@/plugin/core/ProjectConfigStore.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentRuntimeBase } from "@/types/runtime/agent/AgentRuntime.js";
 
 /**
  * 读取当前项目配置下的 plugin 启用态。
@@ -17,12 +16,11 @@ import type { AgentRuntimeBase } from "@/types/runtime/agent/AgentRuntime.js";
 export function isPluginEnabled(params: {
   plugin: Plugin;
   context?: Pick<AgentContext, "config">;
-  runtime?: Pick<AgentRuntimeBase, "config">;
 }): boolean {
   const pluginName = String(params.plugin.name || "").trim();
   if (!pluginName) return false;
   return readProjectPluginEnabled({
     pluginName,
-    config: params.context?.config || params.runtime?.config,
+    config: params.context?.config,
   });
 }

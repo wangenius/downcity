@@ -2,7 +2,7 @@
  * AgentAssemblyService：本地 Agent 装配服务。
  *
  * 关键点（中文）
- * - 统一装配 logger、config、env、runtime、context 与 plugin registry。
+ * - 统一装配 logger、config、env、context 与 plugin registry。
  * - 该服务只负责一次性长期对象装配，不负责 session 缓存和生命周期启动。
  * - session/lifecycle service 通过它暴露的长期对象协作，避免在 facade 中重复拼装。
  */
@@ -10,7 +10,6 @@
 import type { LanguageModel, Tool } from "ai";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type { AgentOptions } from "@/types/agent/AgentTypes.js";
@@ -25,8 +24,9 @@ import {
   createAgentPluginRegistry,
 } from "@/agent/local/AgentPluginFactory.js";
 import {
-  createAgentRuntime,
-} from "@/agent/local/AgentRuntimeFactory.js";
+  createAgentPathRuntime,
+  createAgentPluginConfigRuntime,
+} from "@/agent/local/AgentRuntimeAssembly.js";
 import {
   plugin_tools,
   setPluginToolRuntime,
@@ -114,11 +114,6 @@ export interface AgentAssemblyResult {
   plugins: AgentPlugins;
 
   /**
-   * 当前 agent runtime。
-   */
-  runtime: AgentRuntime;
-
-  /**
    * 当前 agent context。
    */
   agent_context: AgentContext;
@@ -166,23 +161,11 @@ export class AgentAssemblyService {
     logger.bindProjectRoot(path);
     // 关键点（中文）
     // - 这里产出的 env 是 agent 全生命周期共享的 mutable 对象引用。
-    // - runtime / context / shell 都持有同一引用；后续 `agent.setEnv()` 会原地修改它。
+    // - context / shell 都持有同一引用；后续 `agent.setEnv()` 会原地修改它。
     const env = resolveAgentEnv(path, this.options.env);
     const instruction = normalizeInstructionInput(this.options.instruction);
     const config = this.load_config(id, path);
     const plugin_instances = new Map<string, BasePlugin>();
-
-    const runtime = createAgentRuntime({
-      agent_id: id,
-      project_root: path,
-      logger,
-      config,
-      env,
-      systems: instruction,
-      plugin_instances,
-      get_session_port: this.get_session_port,
-      list_cached_sessions: this.list_cached_sessions,
-    });
 
     this.register_plugins(plugin_instances, this.options.plugins || []);
 
@@ -204,20 +187,27 @@ export class AgentAssemblyService {
       tools.plugin_call = tools.plugin_call || plugin_tools.plugin_call;
     }
     const resolve_session_model = this.resolve_session_model;
+    const paths = createAgentPathRuntime(path, id);
+    const pluginConfig = createAgentPluginConfigRuntime(path);
     agent_context = new AgentContext({
-      agent: runtime,
       cwd: path,
       rootPath: path,
       logger,
       config,
       env,
       systems: instruction,
-      paths: runtime.paths,
-      pluginConfig: runtime.pluginConfig,
+      paths,
+      pluginConfig,
+      pluginInstances: plugin_instances,
       session: {
         get: (session_id) => this.get_session_port(session_id),
-        listExecutingSessionIds: () => runtime.listExecutingSessionIds(),
-        getExecutingSessionCount: () => runtime.getExecutingSessionCount(),
+        listExecutingSessionIds: () =>
+          this.list_cached_sessions()
+            .filter((session) => session.isExecuting())
+            .map((session) => session.id),
+        getExecutingSessionCount: () =>
+          this.list_cached_sessions()
+            .filter((session) => session.isExecuting()).length,
         resolveModel: async (session_id) =>
           await resolve_session_model(session_id),
       },
@@ -251,7 +241,6 @@ export class AgentAssemblyService {
       plugin_instances,
       plugin_registry,
       plugins,
-      runtime,
       agent_context: agent_context!,
       ...(shell ? { shell } : {}),
     };

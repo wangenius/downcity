@@ -16,7 +16,7 @@ import { getDowncityPublicDirPath } from "../../../config/Paths.js";
 export function createStaticRouter(options) {
     const router = new Hono();
     router.get("/", async (c) => {
-        const indexPath = path.join(options.getAgentRuntime().rootPath, "public", "index.html");
+        const indexPath = path.join(options.getAgentContext().rootPath, "public", "index.html");
         if (await fs.pathExists(indexPath)) {
             const content = await fs.readFile(indexPath, "utf-8");
             return c.body(content, 200, {
@@ -27,7 +27,7 @@ export function createStaticRouter(options) {
         return c.text("Downcity Agent Server", 200);
     });
     router.get("/styles.css", async (c) => {
-        const cssPath = path.join(options.getAgentRuntime().rootPath, "public", "styles.css");
+        const cssPath = path.join(options.getAgentContext().rootPath, "public", "styles.css");
         if (await fs.pathExists(cssPath)) {
             const content = await fs.readFile(cssPath, "utf-8");
             return c.body(content, 200, {
@@ -38,7 +38,7 @@ export function createStaticRouter(options) {
         return c.text("Not Found", 404);
     });
     router.get("/app.js", async (c) => {
-        const jsPath = path.join(options.getAgentRuntime().rootPath, "public", "app.js");
+        const jsPath = path.join(options.getAgentContext().rootPath, "public", "app.js");
         if (await fs.pathExists(jsPath)) {
             const content = await fs.readFile(jsPath, "utf-8");
             return c.body(content, 200, {
@@ -49,7 +49,7 @@ export function createStaticRouter(options) {
         return c.text("Not Found", 404);
     });
     router.get("/downcity/public/*", async (c) => {
-        const root = getDowncityPublicDirPath(options.getAgentRuntime().rootPath);
+        const root = getDowncityPublicDirPath(options.getAgentContext().rootPath);
         const prefix = "/downcity/public/";
         const requestPath = c.req.path;
         const rel = requestPath.startsWith(prefix)

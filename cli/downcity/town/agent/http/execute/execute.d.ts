@@ -7,7 +7,7 @@
  * 3. 统一处理接口层错误返回。
  */
 import { Hono } from "hono";
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 /**
  * 执行入口路由参数。
  */
@@ -15,7 +15,7 @@ type ExecuteRouterOptions = {
     /**
      * 读取当前 agent runtime。
      */
-    getAgentRuntime: () => AgentRuntime;
+    getAgentContext: () => AgentContext;
 };
 /**
  * 创建执行入口路由。

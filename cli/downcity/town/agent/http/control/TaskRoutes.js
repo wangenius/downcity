@@ -72,7 +72,7 @@ export function registerControlTaskRoutes(params) {
     for (const routePath of buildControlRouteAliases("/tasks")) {
         app.get(routePath, async (c) => {
             try {
-                const runtime = params.getAgentRuntime();
+                const runtime = params.getAgentContext();
                 const status = toOptionalString(c.req.query("status"));
                 const tasks = await listTasksViaPlugin({
                     routes: params,
@@ -193,7 +193,7 @@ export function registerControlTaskRoutes(params) {
     for (const routePath of buildControlRouteAliases("/tasks/:title/runs/:timestamp")) {
         app.delete(routePath, async (c) => {
             try {
-                const runtime = params.getAgentRuntime();
+                const runtime = params.getAgentContext();
                 const title = decodeMaybe(String(c.req.param("title") || "").trim());
                 const timestamp = String(c.req.param("timestamp") || "").trim();
                 if (!title) {
@@ -237,7 +237,7 @@ export function registerControlTaskRoutes(params) {
     for (const routePath of buildControlRouteAliases("/tasks/:title/runs")) {
         app.delete(routePath, async (c) => {
             try {
-                const runtime = params.getAgentRuntime();
+                const runtime = params.getAgentContext();
                 const title = decodeMaybe(String(c.req.param("title") || "").trim());
                 if (!title) {
                     return c.json({ success: false, error: "Invalid title" }, 400);
@@ -296,7 +296,7 @@ export function registerControlTaskRoutes(params) {
         });
         app.get(routePath, async (c) => {
             try {
-                const runtime = params.getAgentRuntime();
+                const runtime = params.getAgentContext();
                 const title = decodeMaybe(String(c.req.param("title") || "").trim());
                 if (!title) {
                     return c.json({ success: false, error: "Invalid title" }, 400);
@@ -317,7 +317,7 @@ export function registerControlTaskRoutes(params) {
     for (const routePath of buildControlRouteAliases("/tasks/:title/runs/:timestamp")) {
         app.get(routePath, async (c) => {
             try {
-                const runtime = params.getAgentRuntime();
+                const runtime = params.getAgentContext();
                 const title = decodeMaybe(String(c.req.param("title") || "").trim());
                 const timestamp = String(c.req.param("timestamp") || "").trim();
                 if (!title) {
@@ -344,7 +344,7 @@ export function registerControlTaskRoutes(params) {
     for (const routePath of buildControlRouteAliases("/logs")) {
         app.get(routePath, async (c) => {
             try {
-                const runtime = params.getAgentRuntime();
+                const runtime = params.getAgentContext();
                 const limit = toLimit(c.req.query("limit"), 200);
                 const logs = await readRecentLogs({
                     projectRoot: runtime.rootPath,

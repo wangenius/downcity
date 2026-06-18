@@ -3,7 +3,6 @@
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type {
   PluginLifecycle,
   PluginState,
@@ -27,15 +26,10 @@ function resolveLifecycle(plugin: BasePlugin): PluginLifecycle | undefined {
  */
 export function listPluginInstances(input?: {
   context?: AgentContext;
-  runtime?: AgentRuntime;
 }): BasePlugin[] {
-  const contextPlugins = input?.context?.agent?.pluginInstances;
+  const contextPlugins = input?.context?.pluginInstances;
   if (contextPlugins instanceof Map && contextPlugins.size > 0) {
     return [...contextPlugins.values()];
-  }
-  const runtimePlugins = input?.runtime?.pluginInstances;
-  if (runtimePlugins instanceof Map && runtimePlugins.size > 0) {
-    return [...runtimePlugins.values()];
   }
   return [];
 }
@@ -47,7 +41,6 @@ export function resolvePluginByName(
   name: string,
   input?: {
     context?: AgentContext;
-    runtime?: AgentRuntime;
   },
 ): BasePlugin | null {
   const key = String(name || "").trim();
@@ -136,7 +129,6 @@ export function markPluginCommand(
  */
 export function listPluginStates(input?: {
   context?: AgentContext;
-  runtime?: AgentRuntime;
 }): PluginStateSnapshot[] {
   return listPluginInstances(input)
     .map((plugin) =>
@@ -152,7 +144,6 @@ export function isPluginRunning(
   pluginName: string,
   input?: {
     context?: AgentContext;
-    runtime?: AgentRuntime;
   },
 ): boolean {
   const plugin = resolvePluginByName(pluginName, input);

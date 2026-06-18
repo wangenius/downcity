@@ -8,7 +8,6 @@
 
 import type { AgentSessionCollection } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { Shell } from "@downcity/shell";
 import type { RpcEventFrame } from "@/types/RpcProtocol.js";
 
@@ -24,8 +23,6 @@ export interface RpcServerStartOptions {
   sessionCollection: AgentSessionCollection;
   /** Agent 上下文访问口。 */
   getAgentContext?: () => AgentContext;
-  /** Agent 运行态访问口。 */
-  getAgentRuntime?: () => AgentRuntime;
   /** Shell 访问口。 */
   getShell?: () => Shell | undefined;
 }
@@ -38,8 +35,6 @@ export interface RpcRequestHandlerOptions {
   sessionCollection: AgentSessionCollection;
   /** Agent 上下文访问口。 */
   getAgentContext?: () => AgentContext;
-  /** Agent 运行态访问口。 */
-  getAgentRuntime?: () => AgentRuntime;
   /** Shell 访问口。 */
   getShell?: () => Shell | undefined;
 }

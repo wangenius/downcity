@@ -5,7 +5,7 @@
  * - control 层只负责把请求转成 session prompt。
  * - chat / queue 等渠道语义由宿主显式注入的 plugin 自行实现。
  */
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { ControlSessionExecuteAttachmentInput } from "./types/ControlSessionExecute.js";
 /**
  * 在指定 session 中执行一轮请求。
@@ -14,7 +14,7 @@ import type { ControlSessionExecuteAttachmentInput } from "./types/ControlSessio
  * - 按普通 session 同步执行。
  */
 export declare function executeBySessionId(params: {
-    agentState: AgentRuntime;
+    agentState: AgentContext;
     sessionId: string;
     instructions: string;
     attachments?: ControlSessionExecuteAttachmentInput[];

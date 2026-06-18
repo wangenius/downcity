@@ -55,7 +55,6 @@ export type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
 } from "./types/sdk/AgentSessionTurn.js";
-export type { AgentRuntime, AgentRuntimeBase } from "./types/runtime/agent/AgentRuntime.js";
 export { AgentContext } from "./types/runtime/agent/AgentContext.js";
 export type {
   AgentContextOptions,

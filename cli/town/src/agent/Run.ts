@@ -132,7 +132,6 @@ export async function runCommand(
   const server = await startAgentHttpGateway({
     host,
     port,
-    getAgentRuntime: () => agent.getRuntime(),
     getAgentContext: () => agent.getContext(),
     sdkRouter: agent_http.router(),
     getShell: () => agent.getShell(),

@@ -20,7 +20,6 @@ export function createControlRouter(options) {
     const router = new Hono();
     registerControlApiRoutes({
         app: router,
-        getAgentRuntime: options.getAgentRuntime,
         getAgentContext: options.getAgentContext,
     });
     return router;

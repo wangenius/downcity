@@ -12,16 +12,11 @@
  * - 当前公开路径统一使用 `/api/control/*`。
  */
 import { Hono } from "hono";
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 /**
  * control router 参数。
  */
 type ControlRouterOptions = {
-    /**
-     * 读取当前 agent runtime。
-     */
-    getAgentRuntime: () => AgentRuntime;
     /**
      * 读取当前 agent 执行上下文。
      */

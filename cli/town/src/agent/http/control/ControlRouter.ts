@@ -13,7 +13,6 @@
  */
 
 import { Hono } from "hono";
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import { registerControlApiRoutes } from "./ControlApiRoutes.js";
 
@@ -21,10 +20,6 @@ import { registerControlApiRoutes } from "./ControlApiRoutes.js";
  * control router 参数。
  */
 type ControlRouterOptions = {
-  /**
-   * 读取当前 agent runtime。
-   */
-  getAgentRuntime: () => AgentRuntime;
   /**
    * 读取当前 agent 执行上下文。
    */
@@ -40,7 +35,6 @@ export function createControlRouter(
   const router = new Hono();
   registerControlApiRoutes({
     app: router,
-    getAgentRuntime: options.getAgentRuntime,
     getAgentContext: options.getAgentContext,
   });
   return router;

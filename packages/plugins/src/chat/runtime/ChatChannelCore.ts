@@ -41,7 +41,7 @@ export type ChatRuntimeBindings = {
 export function resolveChatPluginBindings(
   context: AgentContext,
 ): ChatRuntimeBindings | null {
-  const candidate = context.agent?.pluginInstances?.get?.("chat") as
+  const candidate = context.pluginInstances?.get?.("chat") as
     | ChatRuntimeBindings
     | undefined;
   return candidate || null;

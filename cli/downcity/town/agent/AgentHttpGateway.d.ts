@@ -4,12 +4,11 @@
  * 职责说明（中文）
  * - 由 `town agent start` 启动 HTTP 入口，对外承载控制面、plugin 与 SDK HTTP 路由。
  * - Agent 进程本体只暴露本机 RPC；HTTP server 生命周期归 Town CLI 管理。
- * - HTTP route 实现放在 Town 内部，Agent 只提供 runtime/context/sessionCollection。
+ * - HTTP route 实现放在 Town 内部，Agent 只提供 AgentContext / sessionCollection。
  */
 import { Hono } from "hono";
 import http from "node:http";
 import type { Hono as HonoType } from "hono";
-import type { AgentRuntime } from "@downcity/agent/internal/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { Shell } from "@downcity/shell";
 /**
@@ -20,8 +19,6 @@ export interface AgentHttpGatewayStartOptions {
     port: number;
     /** HTTP 服务监听主机。 */
     host: string;
-    /** 当前 agent runtime 读取函数。 */
-    getAgentRuntime: () => AgentRuntime;
     /** 当前 agent context 读取函数。 */
     getAgentContext: () => AgentContext;
     /** 可选 SDK transport 子路由（来自 `@downcity/server` 的 `AgentHTTP.router()`）。 */
@@ -43,7 +40,7 @@ export interface AgentHttpGatewayInstance {
 /**
  * 创建 Agent HTTP 网关 Hono 应用。
  */
-export declare function createAgentHttpGatewayApp(options: Pick<AgentHttpGatewayStartOptions, "getAgentRuntime" | "getAgentContext" | "sdkRouter" | "getShell">): Hono;
+export declare function createAgentHttpGatewayApp(options: Pick<AgentHttpGatewayStartOptions, "getAgentContext" | "sdkRouter" | "getShell">): Hono;
 /**
  * 启动 Town 托管的 Agent HTTP 网关。
  */

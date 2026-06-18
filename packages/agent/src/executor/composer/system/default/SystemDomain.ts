@@ -173,7 +173,7 @@ export async function loadManagedPluginSystemPrompts(input: {
       .filter(Boolean),
   );
 
-  for (const plugin of input.context.agent.pluginInstances.values()) {
+  for (const plugin of input.context.pluginInstances.values()) {
     if (disabledPluginNames.has(plugin.name)) continue;
     if (typeof plugin.system !== "function") continue;
     try {

@@ -27,7 +27,6 @@ import {
   getSdkAgentSessionDirPath,
   listAgentSessionSummaryPage,
 } from "@/session/index.js";
-import type { AgentRuntime } from "@/types/runtime/agent/AgentRuntime.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
@@ -56,12 +55,10 @@ type AgentSessionManagerOptions = {
   logger: Logger;
 
   /**
-   * 当前 agent runtime。
-   */
-  runtime: AgentRuntime;
-
-  /**
    * 延迟读取当前 agent context。
+   *
+   * 关键点（中文）
+   * - 装配期通过 getter 拿到 context，避免循环引用。
    */
   get_agent_context: () => AgentContext;
 
@@ -94,7 +91,6 @@ export class AgentSessionManager {
   private readonly project_root: string;
   private readonly tools: Record<string, Tool>;
   private readonly logger: Logger;
-  private readonly runtime: AgentRuntime;
   private readonly get_agent_context: AgentSessionManagerOptions["get_agent_context"];
   private readonly get_instruction: AgentSessionManagerOptions["get_instruction"];
   private readonly plugin_instances: Map<string, BasePlugin>;
@@ -109,7 +105,6 @@ export class AgentSessionManager {
     this.project_root = options.project_root;
     this.tools = options.tools;
     this.logger = options.logger;
-    this.runtime = options.runtime;
     this.get_agent_context = options.get_agent_context;
     this.get_instruction = options.get_instruction;
     this.plugin_instances = options.plugin_instances;
@@ -211,7 +206,7 @@ export class AgentSessionManager {
       projectRoot: this.project_root,
       agentId: this.agent_id,
       input,
-      executingSessionIds: new Set(this.runtime.listExecutingSessionIds()),
+      executingSessionIds: new Set(this.get_agent_context().listExecutingSessionIds()),
     });
   }
 

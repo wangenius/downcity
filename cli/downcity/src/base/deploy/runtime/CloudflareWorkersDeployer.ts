@@ -13,13 +13,13 @@ import { addServer, readActiveServer, readServer } from "../../core/session.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
 import type {
-  CityDeployOptions,
-  CityProjectConfigFile,
-} from "../../types/CityProjectConfig.js";
+  FederationDeployOptions,
+  FederationProjectConfigFile,
+} from "../../types/FederationProjectConfig.js";
 import {
-  readCityProjectDeployEnv,
-  writeCityProjectDeployEnv,
-} from "../config/CityProjectEnvLoader.js";
+  readFederationProjectDeployEnv,
+  writeFederationProjectDeployEnv,
+} from "../config/FederationProjectEnvLoader.js";
 import { resolveCloudflareAccount } from "./CloudflareAccountResolver.js";
 import { resolveD1Database } from "./D1DatabaseResolver.js";
 import { writeWranglerConfig } from "./WranglerConfigWriter.js";
@@ -31,10 +31,10 @@ import { runPackageDeployScripts } from "./PackageScriptRunner.js";
  * 部署 Cloudflare Workers City 项目。
  */
 export async function deployCloudflareWorkers(
-  config_file: CityProjectConfigFile,
-  options: CityDeployOptions,
+  config_file: FederationProjectConfigFile,
+  options: FederationDeployOptions,
 ): Promise<void> {
-  let env_file = readCityProjectDeployEnv(config_file.project_dir);
+  let env_file = readFederationProjectDeployEnv(config_file.project_dir);
 
   emitCliBlock({
     tone: "accent",
@@ -133,7 +133,7 @@ export async function deployCloudflareWorkers(
  * 执行 Wrangler deploy。
  */
 async function runWranglerDeploy(
-  config_file: CityProjectConfigFile,
+  config_file: FederationProjectConfigFile,
   params: {
     account_id?: string;
     config_path: string;

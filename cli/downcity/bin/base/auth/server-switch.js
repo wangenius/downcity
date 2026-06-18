@@ -6,7 +6,7 @@
  * - admin access 只在低频管理场景中单独配置
  * - server 仍然作为本地连接记录持久化保存
  */
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import { isCancel, password, select, text } from "../tui/Prompts.js";
 import { addServer, readActiveServer, readConfig, readServer, removeServer, setActiveServer, updateServer, } from "../core/session.js";
 import { showError, showSuccess } from "../core/ui.js";
@@ -276,9 +276,9 @@ export async function promptRemoveServer(baseUrl) {
 }
 async function verifyServerAdminAccess(server) {
     try {
-        const admin = new City({
+        const admin = new CityPact({
             role: "admin",
-            city_url: server.base_url,
+            federation_url: server.base_url,
             admin_secret_key: server.admin_secret_key,
         });
         await admin.listServices();
@@ -290,9 +290,9 @@ async function verifyServerAdminAccess(server) {
 }
 async function verifyServerPublicAccess(server) {
     try {
-        const user = new City({
+        const user = new CityPact({
             role: "user",
-            city_url: server.base_url,
+            federation_url: server.base_url,
         });
         await user.service("accounts").get("providers");
         return true;

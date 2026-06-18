@@ -16,7 +16,7 @@ export interface TownCityUserSession {
     /**
      * 当前 user token 绑定的 town id。
      */
-    town_id: string;
+    city_id: string;
     /**
      * City 用户 ID。
      */
@@ -45,10 +45,10 @@ export interface TownCityLoginInput {
     /**
      * City base 地址。
      */
-    city_url: string;
+    federation_url: string;
     /**
      * 登录后 session 使用的 town id。
      */
-    town_id: string;
+    city_id: string;
 }
 //# sourceMappingURL=TownCitySession.d.ts.map

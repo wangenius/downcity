@@ -14,7 +14,7 @@ const DEFAULT_IMAGE_JOBS_TABLE = "ai_image_jobs";
  * 默认 SQLite 图片任务表。
  */
 export const sqliteAIImageJobs = sqliteTable(DEFAULT_IMAGE_JOBS_TABLE, {
-  /** City 内部生成的图片任务 ID。 */
+  /** Federation 内部生成的图片任务 ID。 */
   job_id: sqliteText("job_id").primaryKey(),
   /** 任务状态：queued / running / succeeded / failed。 */
   status: sqliteText("status").notNull(),
@@ -26,8 +26,8 @@ export const sqliteAIImageJobs = sqliteTable(DEFAULT_IMAGE_JOBS_TABLE, {
   error: sqliteText("error"),
   /** 当前任务状态说明，便于客户端展示或排障。 */
   message: sqliteText("message"),
-  /** 当前 user_token 绑定的 Town ID。 */
-  town_id: sqliteText("town_id"),
+  /** 当前 user_token 绑定的 City ID。 */
+  city_id: sqliteText("city_id"),
   /** 当前终端用户 ID。 */
   user_id: sqliteText("user_id"),
   /** 本次任务解析到的模型 ID。 */
@@ -42,7 +42,7 @@ export const sqliteAIImageJobs = sqliteTable(DEFAULT_IMAGE_JOBS_TABLE, {
  * 默认 Postgres 图片任务表。
  */
 export const pgAIImageJobs = pgTable(DEFAULT_IMAGE_JOBS_TABLE, {
-  /** City 内部生成的图片任务 ID。 */
+  /** Federation 内部生成的图片任务 ID。 */
   job_id: pgText("job_id").primaryKey(),
   /** 任务状态：queued / running / succeeded / failed。 */
   status: pgText("status").notNull(),
@@ -54,8 +54,8 @@ export const pgAIImageJobs = pgTable(DEFAULT_IMAGE_JOBS_TABLE, {
   error: pgText("error"),
   /** 当前任务状态说明，便于客户端展示或排障。 */
   message: pgText("message"),
-  /** 当前 user_token 绑定的 Town ID。 */
-  town_id: pgText("town_id"),
+  /** 当前 user_token 绑定的 City ID。 */
+  city_id: pgText("city_id"),
   /** 当前终端用户 ID。 */
   user_id: pgText("user_id"),
   /** 本次任务解析到的模型 ID。 */

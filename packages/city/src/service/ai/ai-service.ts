@@ -225,7 +225,7 @@ function rowToImageJobRecord(row: Record<string, unknown>): AIImageJobRecord {
     result_json: readNullableString(row.result_json),
     error: readNullableString(row.error),
     message: readNullableString(row.message),
-    town_id: readNullableString(row.town_id),
+    city_id: readNullableString(row.city_id),
     user_id: readNullableString(row.user_id),
     model_id: readNullableString(row.model_id),
     created_at: String(row.created_at ?? ""),
@@ -488,7 +488,7 @@ export class AIService extends Service {
       result_json: null,
       error: null,
       message: "queued",
-      town_id: ctx.town?.town_id ?? readOptionalString(ctx.input.town_id),
+      city_id: ctx.city?.city_id ?? readOptionalString(ctx.input.city_id),
       user_id: ctx.user?.user_id ?? null,
       model_id: resolved.model?.id ?? null,
       created_at: now,
@@ -654,7 +654,7 @@ export class AIService extends Service {
 
   private ensureImageJobAccess(ctx: Context, record: AIImageJobRecord): void {
     if (ctx.identity?.kind !== "user") return;
-    if (record.town_id && ctx.town?.town_id && record.town_id !== ctx.town.town_id) {
+    if (record.city_id && ctx.city?.city_id && record.city_id !== ctx.city.city_id) {
       throw httpError(404, `Image job not found: ${record.job_id}`);
     }
     if (record.user_id && ctx.user?.user_id && record.user_id !== ctx.user.user_id) {

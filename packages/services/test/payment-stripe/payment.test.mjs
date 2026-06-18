@@ -5,7 +5,7 @@ import http from "node:http"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { CityBase } from "@downcity/city"
+import { Federation } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { PaymentService, stripePaymentProvider } from "../../bin/index.js"
 
@@ -17,7 +17,7 @@ test("paymentService lists enabled payment methods for guests", async () => {
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     base.use(new PaymentService({
       providers: [
         stripePaymentProvider({
@@ -57,7 +57,7 @@ test("paymentService marks payment methods as disabled when Stripe is not config
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     base.use(new PaymentService({
       providers: [
         stripePaymentProvider({
@@ -98,7 +98,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     const balance = createBalanceBridge()
     base.use(new PaymentService({
       readTopup: (id) => balance.readTopup(id),
@@ -116,16 +116,16 @@ test("paymentService creates checkout sessions and finishes topups through webho
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/tokens/apply",
-      body: { town_id: town.town_id, user_id: "user_1" },
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
     const topup = await balance.createTopup("user_1", 50, { note: "recharge" })
@@ -252,7 +252,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
   }
 })
 
-test("paymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and exposes HTML pages", async () => {
+test("paymentService falls back to DOWNCITY_FEDERATION_BASE_URL for redirect URLs and exposes HTML pages", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-redirect-"))
   const stripeStub = await createStripeStub()
@@ -261,7 +261,7 @@ test("paymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and 
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     const balance = createBalanceBridge()
     base.use(new PaymentService({
       readTopup: (id) => balance.readTopup(id),
@@ -277,16 +277,16 @@ test("paymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and 
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/tokens/apply",
-      body: { town_id: town.town_id, user_id: "user_3" },
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_3" },
     }))).json()
 
     const topup = await balance.createTopup("user_3", 80, { note: "redirect fallback" })
@@ -330,7 +330,7 @@ test("paymentService derives redirect URLs from request origin without base-url 
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     const balance = createBalanceBridge()
     base.use(new PaymentService({
       readTopup: (id) => balance.readTopup(id),
@@ -346,15 +346,15 @@ test("paymentService derives redirect URLs from request origin without base-url 
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/tokens/apply",
-      body: { town_id: town.town_id, user_id: "user_4" },
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_4" },
     }))).json()
 
     const topup = await balance.createTopup("user_4", 120, { note: "request origin fallback" })
@@ -389,7 +389,7 @@ test("paymentService marks failed and expired payments without crediting balance
     process.chdir(tempDir)
 
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     const balance = createBalanceBridge()
     base.use(new PaymentService({
       readTopup: (id) => balance.readTopup(id),
@@ -405,16 +405,16 @@ test("paymentService marks failed and expired payments without crediting balance
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/tokens/apply",
-      body: { town_id: town.town_id, user_id: "user_2" },
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_2" },
     }))).json()
 
     const expiredTopup = await balance.createTopup("user_2", 30, { note: "expired" })

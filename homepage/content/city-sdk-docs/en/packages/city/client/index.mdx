@@ -5,24 +5,24 @@ description: "Provides User City and Admin City, and unifies AI, custom service,
 
 City is the access layer exported by `@downcity/city`. It is how products connect to the City runtime.
 
-It is not only a thin wrapper for AI calls. It unifies these town-facing call surfaces into one package:
+It is not only a thin wrapper for AI calls. It unifies these city-facing call surfaces into one package:
 
-- `User City`: end-user town calls to AI services, custom services, and public services
-- `Admin City`: trusted-side management of towns, `user_token`, and runtime env
+- `User City`: end-user city calls to AI services, custom services, and public services
+- `Admin City`: trusted-side management of cities, `user_token`, and runtime env
 - `service(name)`: the common entry for your own services and the services exposed by official packages
 
-If your question is "how does a town actually connect to City?", this page should be the first package-level entry.
+If your question is "how does a city actually connect to City?", this page should be the first package-level entry.
 
 ## Two clients
 
 | Client | Used by | Responsibility |
 | --- | --- | --- |
-| `User City` | Frontends, apps, extensions, desktop clients | Calls AI services, custom services, and public services with `town_id + user_token` |
-| `Admin City` | Town backends, admin scripts, internal tools | Manages towns, issues tokens, writes runtime env, and calls admin-side services |
+| `User City` | Frontends, apps, extensions, desktop clients | Calls AI services, custom services, and public services with `city_id + user_token` |
+| `Admin City` | City backends, admin scripts, internal tools | Manages cities, issues tokens, writes runtime env, and calls admin-side services |
 
 ## Use it when
 
-- your town already has `town_id + user_token`
+- your city already has `city_id + user_token`
 - you want product clients to call `text()`, `stream()`, `image()`, custom services, or services
 - you want a trusted backend to issue tokens or manage City data
 - you want registration, login, OAuth, usage, and payment-related capabilities to follow the same call model
@@ -49,7 +49,7 @@ In practice, City unifies:
 - AI calls
 - calls to services you wrote yourself
 - calls to services exposed by official services
-- trusted-side management calls for town, token, and env
+- trusted-side management calls for city, token, and env
 
 ## The four most common call types
 
@@ -83,7 +83,7 @@ Use this for business services that you register yourself in City.
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "town_demo",
 });
 
 const usage = await user.service("usage").get("me");
@@ -94,14 +94,14 @@ Use this for services exposed by official packages such as `@downcity/services`,
 ### 4. Trusted-side management
 
 ```ts
-const issued = await admin.towns.tokens.apply({
-  town_id: "town_demo",
+const issued = await admin.cities.tokens.apply({
+  city_id: "town_demo",
   user_id: "user_123",
   ttl: "7d",
 });
 ```
 
-Use this for town, token, and runtime env actions that must stay in trusted environments.
+Use this for city, token, and runtime env actions that must stay in trusted environments.
 
 ## What is a service
 
@@ -122,12 +122,12 @@ client.service("service_id").get("path", query)
 ## Minimal `User City` example
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const client = new City({
+const client = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
-  town_id: "town_demo",
+  federation_url: "https://base.example.com",
+  city_id: "town_demo",
   user_token: "ub_xxx",
 });
 
@@ -141,8 +141,8 @@ const result = await client.ai.text({
 
 This stage assumes you already have:
 
-- `city_url`
-- `town_id`
+- `federation_url`
+- `city_id`
 - `user_token`
 
 If you do not have `user_token` yet, you normally start with one of the auth flows below.
@@ -150,20 +150,20 @@ If you do not have `user_token` yet, you normally start with one of the auth flo
 ## Minimal `Admin City` example
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const admin = new City({
+const admin = new CityPact({
   role: "admin",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const town = await admin.towns.create({
-  name: "Demo Town",
+const city = await admin.cities.create({
+  name: "Demo City",
 });
 
-const token = await admin.towns.tokens.apply({
-  town_id: town.town_id,
+const token = await admin.cities.tokens.apply({
+  city_id: city.city_id,
   user_id: "user_123",
   ttl: "30m",
 });
@@ -179,7 +179,7 @@ The two most common flows are:
 frontend submits login data
   -> your backend validates the user
   -> your backend uses Admin City to request user_token from City
-  -> backend returns town_id + user_token
+  -> backend returns city_id + user_token
   -> frontend creates User City
   -> frontend starts calling client.ai.* or client.service(...)
 ```
@@ -189,10 +189,10 @@ Use this when you already have a mature account system.
 ### Pattern B: use the accounts service directly
 
 ```txt
-frontend creates a guest User City with city_url only
+frontend creates a guest User City with federation_url only
   -> calls guest.service("accounts").action("register" / "login")
   -> accounts service returns user_token
-  -> frontend creates a normal User City with city_url + town_id + user_token
+  -> frontend creates a normal User City with federation_url + city_id + user_token
   -> frontend continues with AI calls or other service calls
 ```
 
@@ -201,9 +201,9 @@ Use this when you want the fastest path to a minimal auth system.
 ## Login with the accounts service
 
 ```ts
-const guest = new City({
+const guest = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
 });
 
 const session = await guest.service("accounts").action("login").invoke<{
@@ -213,13 +213,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "town_demo",
 });
 
-const user = new City({
+const user = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
-  town_id: "town_demo",
+  federation_url: "https://base.example.com",
+  city_id: "town_demo",
   user_token: session.user_token,
 });
 
@@ -231,18 +231,18 @@ const reply = await user.ai.text({
 The key detail is:
 
 - guest entry points such as `register`, `login`, `oauth/start`, and `oauth/result` are usually guest-access Actions
-- they still run through `User City`, but at this stage you only need `city_url`
-- once you enter the logged-in user context, you switch to a normal `User City` with `town_id + user_token`
+- they still run through `User City`, but at this stage you only need `federation_url`
+- once you enter the logged-in user context, you switch to a normal `User City` with `city_id + user_token`
 
 ## Custom services and service routes
 
-Besides `client.ai.*`, both town and admin clients can use `service(name)` against the shared `/v1/*` route system:
+Besides `client.ai.*`, both city and admin clients can use `service(name)` against the shared `/v1/*` route system:
 
 ```ts
 const session = await client.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "town_demo",
 });
 ```
 
@@ -274,7 +274,7 @@ const checkout = await client.payment.method("stripe").invoke({
 
 ## Common package combinations
 
-### Minimal AI town integration
+### Minimal AI city integration
 
 - `@downcity/city`
 - `@downcity/city`
@@ -299,17 +299,17 @@ const checkout = await client.payment.method("stripe").invoke({
 
 ## Recommended reading order
 
-If this is your first Downcity town integration, read in this order:
+If this is your first Downcity city integration, read in this order:
 
 1. Start here to build the mental model for `User City`, `Admin City`, and `service(...)`
 2. Then read [User City](/en/city-sdk-docs/reference/city-user) for detailed product-side calls
 3. Then read [Admin City](/en/city-sdk-docs/reference/city-admin) for trusted-side token issuance
 4. If you want minimal registration/login, continue to [@downcity/services](/en/services-sdk-docs)
-5. If you want the full login scenario, read [City Services Docs / Accounts](/en/services-sdk-docs/accounts)
+5. If you want the full login scenario, read [Federation Services Docs / Accounts](/en/services-sdk-docs/accounts)
 
 ## Read next
 
 - To understand the City side, go back to [@downcity/city](/en/city-sdk-docs/packages/city)
 - For full SDK surfaces, read [User City](/en/city-sdk-docs/reference/city-user) and [Admin City](/en/city-sdk-docs/reference/city-admin)
 - To see how auth can return `user_token` directly, read [@downcity/services](/en/services-sdk-docs)
-- To see the full login flow, read [City Services Docs / Accounts](/en/services-sdk-docs/accounts)
+- To see the full login flow, read [Federation Services Docs / Accounts](/en/services-sdk-docs/accounts)

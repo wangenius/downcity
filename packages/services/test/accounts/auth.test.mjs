@@ -3,11 +3,11 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { CityBase } from "@downcity/city"
+import { Federation } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { AccountsService } from "../../bin/index.js"
 
-test("accountsService registers users, logs in, and issues CityBase tokens", async () => {
+test("accountsService registers users, logs in, and issues Federation tokens", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-service-"))
 
@@ -15,8 +15,8 @@ test("accountsService registers users, logs in, and issues CityBase tokens", asy
     process.chdir(tempDir)
     const { base, adminSecret } = await setupBase(tempDir)
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
 
@@ -32,7 +32,7 @@ test("accountsService registers users, logs in, and issues CityBase tokens", asy
     if (registered.verification_token) {
       const verifyResponse = await base.handleRequest(jsonRequest("/v1/accounts/verify-email", {
         token: registered.verification_token,
-        town_id: town.town_id,
+        city_id: city.city_id,
       }))
       assert.equal(verifyResponse.status, 200)
       const verified = await verifyResponse.json()
@@ -42,7 +42,7 @@ test("accountsService registers users, logs in, and issues CityBase tokens", asy
     const loginResponse = await base.handleRequest(jsonRequest("/v1/accounts/login", {
       email: "user@example.com",
       password: "password123",
-      town_id: town.town_id,
+      city_id: city.city_id,
     }))
     assert.equal(loginResponse.status, 200)
     const loggedIn = await loginResponse.json()
@@ -123,14 +123,14 @@ test("accountsService completes Google OAuth callback and resolves the state tok
       GOOGLE_CLIENT_SECRET: "google_client_secret",
     })
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
 
     const startResponse = await base.handleRequest(jsonRequest("/v1/accounts/oauth/start", {
       provider: "google",
-      town_id: town.town_id,
+      city_id: city.city_id,
     }))
     assert.equal(startResponse.status, 200)
     const start = await startResponse.json()
@@ -201,14 +201,14 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
       WECHAT_CLIENT_SECRET: "wechat_client_secret",
     })
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
 
     const startResponse = await base.handleRequest(jsonRequest("/v1/accounts/oauth/start", {
       provider: "wechat",
-      town_id: town.town_id,
+      city_id: city.city_id,
     }))
     assert.equal(startResponse.status, 200)
     const start = await startResponse.json()
@@ -282,7 +282,7 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
 
 async function setupBase(tempDir, env = {}) {
   const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-  const base = new CityBase({ db })
+  const base = new Federation({ db })
   base.use(new AccountsService({ token_ttl: "7d" }))
   await base.health()
 
@@ -293,7 +293,7 @@ async function setupBase(tempDir, env = {}) {
 
   return {
     base,
-    adminSecret: await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY"),
+    adminSecret: await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY"),
   }
 }
 

@@ -25,9 +25,9 @@ export interface AIImageJobStepState {
 
 /** 注入给 provider image_job action 的内部任务上下文。 */
 export interface AIImageJobStepContext {
-  /** City 内部生成的图片任务 ID。 */
+  /** Federation 内部生成的图片任务 ID。 */
   job_id: string;
-  /** 当前 City 任务状态。 */
+  /** 当前 Federation 任务状态。 */
   status: AIImageJobStatus;
   /** 上一次推进后持久化的 Provider 状态。 */
   state?: AIImageJobStepState;
@@ -51,7 +51,7 @@ export interface AIImageJobStepResult {
 
 /** 图片生成任务表行。 */
 export interface AIImageJobRecord {
-  /** City 内部生成的图片任务 ID。 */
+  /** Federation 内部生成的图片任务 ID。 */
   job_id: string;
   /** 当前任务状态。 */
   status: AIImageJobStatus;
@@ -63,8 +63,8 @@ export interface AIImageJobRecord {
   error?: string | null;
   /** 当前任务状态说明，便于客户端展示或排障。 */
   message?: string | null;
-  /** 当前 user_token 绑定的 Town ID。 */
-  town_id?: string | null;
+  /** 当前 user_token 绑定的 City ID。 */
+  city_id?: string | null;
   /** 当前终端用户 ID。 */
   user_id?: string | null;
   /** 本次任务解析到的模型 ID。 */
@@ -77,7 +77,7 @@ export interface AIImageJobRecord {
 
 /** image/create 返回给客户端的结果。 */
 export interface UserImageJobCreateResult {
-  /** City 内部生成的图片任务 ID。 */
+  /** Federation 内部生成的图片任务 ID。 */
   job_id: string;
   /** 创建后的任务状态。 */
   status: AIImageJobStatus;
@@ -87,7 +87,7 @@ export interface UserImageJobCreateResult {
 
 /** image/result 返回给客户端的结果。 */
 export interface UserImageJobResult {
-  /** City 内部生成的图片任务 ID。 */
+  /** Federation 内部生成的图片任务 ID。 */
   job_id: string;
   /** 当前任务状态。 */
   status: AIImageJobStatus;
@@ -103,6 +103,6 @@ export interface UserImageJobResult {
 
 /** image/result 的查询输入。 */
 export interface UserImageJobResultInput {
-  /** City 内部生成的图片任务 ID。 */
+  /** Federation 内部生成的图片任务 ID。 */
   job_id: string;
 }

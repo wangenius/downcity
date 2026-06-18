@@ -55,7 +55,7 @@ export interface TownCityServerProfile {
      * 说明（中文）
      * - 为空表示未登录或 session 文件不可用。
      */
-    town_id?: string;
+    city_id?: string;
     /**
      * Town user session 中的用户 id。
      *
@@ -71,11 +71,11 @@ export interface TownCityConnectionState {
     /**
      * 当前 Town 选择的 City base 地址。
      */
-    city_url: string;
+    federation_url: string;
     /**
      * 当前 Town user session 使用的 City town id。
      */
-    town_id: string;
+    city_id: string;
     /**
      * 是否已保存 user token。
      *

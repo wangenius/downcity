@@ -11,7 +11,7 @@ import { dirname } from "node:path";
 import { addServer, readActiveServer, readServer } from "../../core/session.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
-import { readCityProjectDeployEnv, } from "../config/CityProjectEnvLoader.js";
+import { readFederationProjectDeployEnv, } from "../config/FederationProjectEnvLoader.js";
 import { resolveCloudflareAccount } from "./CloudflareAccountResolver.js";
 import { resolveD1Database } from "./D1DatabaseResolver.js";
 import { writeWranglerConfig } from "./WranglerConfigWriter.js";
@@ -22,7 +22,7 @@ import { runPackageDeployScripts } from "./PackageScriptRunner.js";
  * 部署 Cloudflare Workers City 项目。
  */
 export async function deployCloudflareWorkers(config_file, options) {
-    let env_file = readCityProjectDeployEnv(config_file.project_dir);
+    let env_file = readFederationProjectDeployEnv(config_file.project_dir);
     emitCliBlock({
         tone: "accent",
         title: "City project",

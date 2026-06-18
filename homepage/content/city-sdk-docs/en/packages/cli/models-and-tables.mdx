@@ -20,7 +20,7 @@ Many "the AI path is wrong" issues are not provider failures. They are model-lay
 
 When you debug runtime behavior, you usually end up checking tables such as:
 
-- `towns`
+- `cities`
 - `env`
 - usage event tables
 - accounts-related tables
@@ -30,14 +30,14 @@ When you debug runtime behavior, you usually end up checking tables such as:
 
 ```bash
 city
-town city login
-town city status
+city city login
+city city status
 ```
 
 Use these commands to:
 
-- inspect models exposed by City AIService
-- select a City base and sign in with Town
+- inspect models exposed by Federation AIService
+- select a City base and sign in with City
 - confirm local Agents can resolve City connection settings before startup
 
 ## Common table-debugging scenarios
@@ -60,8 +60,8 @@ Looking at the tables first is often the fastest way to distinguish:
 ```bash
 city
 # or start a local agent
-town agent start .
-town city status
+city agent start .
+city city status
 ```
 
 Then continue inside the interactive panel to inspect:
@@ -91,7 +91,7 @@ It is better understood as a City-oriented operations tool.
 
 ### Looking at models alone is not always enough
 
-Models, service tables, usage events, and env data can all affect one town flow, so you often need to inspect them together.
+Models, service tables, usage events, and env data can all affect one city flow, so you often need to inspect them together.
 
 ## Read next
 

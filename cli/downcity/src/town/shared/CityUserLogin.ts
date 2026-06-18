@@ -1,14 +1,14 @@
 /**
- * Town City user 登录流程。
+ * Town CityPact user 登录流程。
  *
  * 关键点（中文）
- * - 只负责通过 City user auth providers 获取 user_token。
+ * - 只负责通过 CityPact user auth providers 获取 user_token。
  * - 不读写 Town 本地状态，调用方负责持久化 session。
  */
 
 import { spawnSync } from "node:child_process";
 import prompts from "../tui/Prompts.js";
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import type {
   TownCityLoginInput,
@@ -31,7 +31,7 @@ interface AccountsMeResult {
    */
   user?: {
     /**
-     * City 用户 ID。
+     * CityPact 用户 ID。
      */
     user_id?: string;
   };
@@ -94,24 +94,24 @@ function mapProvidersToOptions(items: AccountsProviderItem[]): AuthOption[] {
   return options;
 }
 
-async function loadAuthOptions(city_url: string): Promise<AuthOption[]> {
-  const client = new City({ role: "user", city_url });
+async function loadAuthOptions(federation_url: string): Promise<AuthOption[]> {
+  const client = new CityPact({ role: "user", federation_url });
   const accounts = client.service("accounts");
   const result = await accounts.get<{ items?: AccountsProviderItem[] }>("providers");
   return mapProvidersToOptions(result.items ?? []);
 }
 
 async function promptAuthMethod(
-  city_url: string,
+  federation_url: string,
   options?: town_city_user_login_options,
 ): Promise<TownCityAuthMethod | null> {
-  const auth_options = await loadAuthOptions(city_url);
+  const auth_options = await loadAuthOptions(federation_url);
   if (auth_options.length === 0) {
     if (options?.silent !== true) {
       emitCliBlock({
         tone: "warning",
         title: "No sign-in methods",
-        note: "This City base has no enabled user auth providers.",
+        note: "This CityPact base has no enabled user auth providers.",
       });
     }
     return null;
@@ -146,11 +146,11 @@ async function emailLogin(input: TownCityLoginInput): Promise<TownCityUserSessio
   const password = String(response.password || "");
   if (!email || !email.includes("@") || !password) return null;
 
-  const client = new City({ role: "user", city_url: input.city_url });
+  const client = new CityPact({ role: "user", federation_url: input.federation_url });
   const result = await client.service("accounts").action("login").invoke<LoginResult>({
     email,
     password,
-    town_id: input.town_id,
+    city_id: input.city_id,
   });
   if (result.error || !result.user_token) {
     throw new Error(result.error || "login failed: no token");
@@ -184,7 +184,7 @@ async function emailRegister(
   if (!email || !email.includes("@")) throw new Error("invalid email");
   if (password.length < 8) throw new Error("password must be at least 8 characters");
 
-  const client = new City({ role: "user", city_url: input.city_url });
+  const client = new CityPact({ role: "user", federation_url: input.federation_url });
   const accounts = client.service("accounts");
   const registered = await accounts.action("register").invoke<RegisterResult>({
     email,
@@ -212,7 +212,7 @@ async function emailRegister(
 
   const verified = await accounts.action("verify-email").invoke<VerifyResult>({
     token: verification_token,
-    town_id: input.town_id,
+    city_id: input.city_id,
   });
   if (verified.error || !verified.user_token) {
     throw new Error(verified.error || "verification failed: no token");
@@ -230,11 +230,11 @@ async function oauthAuth(
   provider: string,
   options?: town_city_user_login_options,
 ): Promise<TownCityUserSession | null> {
-  const client = new City({ role: "user", city_url: input.city_url });
+  const client = new CityPact({ role: "user", federation_url: input.federation_url });
   const accounts = client.service("accounts");
   const started = await accounts.action("oauth/start").invoke<OAuthStartResult>({
     provider,
-    town_id: input.town_id,
+    city_id: input.city_id,
   });
   if (started.error || !started.url || !started.state) {
     throw new Error(started.error || "failed to start OAuth");
@@ -261,7 +261,7 @@ async function oauthAuth(
   });
 }
 
-async function pollOAuth(client: City, state: string): Promise<OAuthPollResult | null> {
+async function pollOAuth(client: CityPact, state: string): Promise<OAuthPollResult | null> {
   const accounts = client.service("accounts");
   for (let index = 0; index < 180; index += 1) {
     try {
@@ -282,8 +282,8 @@ function buildUserSession(input: TownCityLoginInput & {
   user_label?: string;
 }): TownCityUserSession {
   return {
-    base_url: input.city_url,
-    town_id: readString(input.town_id) || "town_downcity",
+    base_url: input.federation_url,
+    city_id: readString(input.city_id) || "city_downcity",
     user_token: input.user_token,
     user_id: readString(input.user_id) || undefined,
     user_label: readString(input.user_label) || undefined,
@@ -310,10 +310,10 @@ async function readUserSessionFromToken(input: TownCityLoginInput & {
   user_id?: string;
   user_label?: string;
 }> {
-  const client = new City({
+  const client = new CityPact({
     role: "user",
-    city_url: input.city_url,
-    town_id: input.town_id,
+    federation_url: input.federation_url,
+    city_id: input.city_id,
     user_token: input.user_token,
   });
   const result = await client.service("accounts").get<AccountsMeResult>("me");
@@ -363,13 +363,13 @@ function formatOAuthProviderLabel(provider: string): string {
 }
 
 /**
- * 执行 Town City user 登录。
+ * 执行 Town CityPact user 登录。
  */
 export async function performTownCityUserLogin(
   input: TownCityLoginInput,
   options?: town_city_user_login_options,
 ): Promise<TownCityUserSession | null> {
-  const method = await promptAuthMethod(input.city_url, options);
+  const method = await promptAuthMethod(input.federation_url, options);
   if (!method) return null;
   if (method.startsWith("oauth:")) {
     return await oauthAuth(input, method.slice("oauth:".length), options);

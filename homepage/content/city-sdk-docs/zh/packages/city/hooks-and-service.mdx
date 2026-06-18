@@ -58,7 +58,7 @@ global
 ## 最常见的 service 挂载示例
 
 ```ts
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import {
   AccountsService,
   BalanceService,
@@ -67,7 +67,7 @@ import {
   UsageService,
 } from "@downcity/services";
 
-const base = new CityBase({ db });
+const base = new Federation({ db });
 const balance = new BalanceService();
 
 base.use(new AccountsService({
@@ -105,7 +105,7 @@ base.use(new UsageService({
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "town_demo",
 });
 
 const usage = await admin.service("usage").get("summary");
@@ -170,7 +170,7 @@ service 负责把能力挂进 City，真正的产品调用入口仍然是 [@down
 
 ## 继续阅读
 
-- 想看 town 端怎么统一调用 service，读 [@downcity/city](/zh/city-sdk-docs/packages/city/city-runtime)
+- 想看 city 端怎么统一调用 service，读 [@downcity/city](/zh/city-sdk-docs/packages/city/city-runtime)
 - 想看账号能力，读 [@downcity/services](/zh/services-sdk-docs)
 - 想看 usage 记录，读 [@downcity/services](/zh/services-sdk-docs)
 - 想看 Stripe 一次性充值，读 [@downcity/services](/zh/services-sdk-docs)

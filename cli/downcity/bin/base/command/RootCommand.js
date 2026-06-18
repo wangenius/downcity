@@ -15,8 +15,8 @@ import { runCityApp } from "../app.js";
 import { readPersistedCliLocale } from "../core/session.js";
 import { createVersionBanner } from "../../shared/IndexSupport.js";
 import { setCliVerbosity } from "../../shared/CliReporter.js";
-import { deployCityProject } from "../deploy/commands/deploy.js";
-import { createCityProject } from "../create/commands/create.js";
+import { deployFederationProject } from "../deploy/commands/deploy.js";
+import { createFederationProject } from "../create/commands/create.js";
 import { refreshEnvCache } from "../env/commands/refresh.js";
 import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "../../shared/CliLocale.js";
 const __filename = fileURLToPath(import.meta.url);
@@ -63,8 +63,8 @@ export async function runCityCli() {
     program
         .command("create [dir]")
         .description(t({
-        zh: "交互式创建 City 项目骨架",
-        en: "interactively scaffold a City project",
+        zh: "交互式创建 Federation 项目骨架",
+        en: "interactively scaffold a Federation project",
     }))
         .option("-f, --force", t({
         zh: "允许覆盖已有项目文件",
@@ -72,13 +72,13 @@ export async function runCityCli() {
     }))
         .helpOption("--help", helpText())
         .action(createVersionBanner(packageJson.version, async (dir, options) => {
-        await createCityProject(dir ?? ".", options);
+        await createFederationProject(dir ?? ".", options);
     }));
     program
         .command("deploy [source]")
         .description(t({
-        zh: "部署当前目录或本地目录中的 City 项目",
-        en: "deploy a City project from the current directory or a local path",
+        zh: "部署当前目录或本地目录中的 Federation 项目",
+        en: "deploy a Federation project from the current directory or a local path",
     }))
         .option("--dry-run", t({
         zh: "只执行 Wrangler dry-run，不发布 Worker",
@@ -106,7 +106,7 @@ export async function runCityCli() {
     }))
         .helpOption("--help", helpText())
         .action(createVersionBanner(packageJson.version, async (source, options) => {
-        await deployCityProject(source ?? ".", options);
+        await deployFederationProject(source ?? ".", options);
     }));
     const env_program = program
         .command("env")

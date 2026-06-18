@@ -16,11 +16,11 @@ export interface TownCityUserEnvOverrides {
     /**
      * City base URL 是否来自环境变量。
      */
-    city_url: boolean;
+    federation_url: boolean;
     /**
      * City town id 是否来自环境变量。
      */
-    town_id: boolean;
+    city_id: boolean;
     /**
      * City user token 是否来自环境变量。
      */
@@ -33,11 +33,11 @@ export interface ResolvedTownCityUser {
     /**
      * City base URL。
      */
-    city_url: string;
+    federation_url: string;
     /**
      * City town id。
      */
-    town_id: string;
+    city_id: string;
     /**
      * City user token。
      */

@@ -1,12 +1,12 @@
 /**
  * Runtime 能力接口模块。
  *
- * 定义 City 内部依赖的能力集合。用户侧只需要传入 Drizzle db，
+ * 定义 Federation 内部依赖的能力集合。用户侧只需要传入 Drizzle db，
  * City 会从 db 组装这些能力。
  *
  * 使用示例：
  * ```ts
- * const base = new CityBase({ db });
+ * const base = new Federation({ db });
  * ```
  */
 
@@ -74,25 +74,25 @@ export interface EnvProvider {
   /**
    * 关联数据库存储。
    *
-   * City 初始化内置 env 表后调用。
-   * 默认 env provider 会把 City env 表作为唯一业务 env 来源。
+   * Federation 初始化内置 env 表后调用。
+   * 默认 env provider 会把 Federation env 表作为唯一业务 env 来源。
    */
   attachStore(store: EnvStore): Promise<void>;
 }
 
 // ===========================================================================
-// BuiltinTables — City 内置表定义
+// BuiltinTables — Federation 内置表定义
 // ===========================================================================
 
 /**
- * City 内置表定义。
+ * Federation 内置表定义。
  *
- * 包含 towns 和 env 两个内置表。
+ * 包含 cities 和 env 两个内置表。
  * 适配器根据数据库类型（SQLite / Postgres）提供对应的表定义。
  */
 export interface BuiltinTables {
   /** 产品表 */
-  towns: TableDef;
+  cities: TableDef;
   /** 环境变量表 */
   env: TableDef;
 }
@@ -104,7 +104,7 @@ export interface BuiltinTables {
 /**
  * 运行时能力接口。
  *
- * 这是 City 内部从 Drizzle db 组装出来的结构，不作为用户主要入口。
+ * 这是 Federation 内部从 Drizzle db 组装出来的结构，不作为用户主要入口。
  */
 export interface Runtime {
   /**
@@ -127,7 +127,7 @@ export interface Runtime {
   env: EnvProvider;
 
   /**
-   * City 内置表定义（towns + env）。
+   * Federation 内置表定义（cities + env）。
    *
    * 适配器根据数据库类型提供正确的 Drizzle 表定义。
    */

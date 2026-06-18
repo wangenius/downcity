@@ -3,23 +3,23 @@ title: Issue `user_token`
 description: Give the product client a user-scoped credential that can call the City runtime.
 ---
 
-`user_token` must be issued by a trusted environment. Your backend uses `Admin City` and asks City for a token based on `town_id + user_id`.
+`user_token` must be issued by a trusted environment. Your backend uses `Admin City` and asks City for a token based on `city_id + user_id`.
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const client = new City({
+const client = new CityPact({
   role: "admin",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const town = await client.towns.create({
+const city = await client.cities.create({
   name: "Web App",
 });
 
-const user = await client.towns.tokens.apply({
-  town_id: town.town_id,
+const user = await client.cities.tokens.apply({
+  city_id: city.city_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -28,7 +28,7 @@ const user = await client.towns.tokens.apply({
 });
 ```
 
-Return `user.user_token` and `town.town_id` to the product client.
+Return `user.user_token` and `city.city_id` to the product client.
 
 ## What `metadata` is for
 
@@ -41,7 +41,7 @@ const action = service.action("generate", async (ctx) => {
 
 action.before(async (ctx) => {
   await quotaService.check({
-    town_id: ctx.town?.town_id,
+    city_id: ctx.city?.city_id,
     user_id: ctx.user?.user_id,
     plan: ctx.user?.metadata?.plan,
   });

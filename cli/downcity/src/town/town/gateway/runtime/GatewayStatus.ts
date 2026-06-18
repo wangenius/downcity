@@ -109,11 +109,11 @@ export async function gatewayStatusCommand(): Promise<void> {
       : [
           {
             label: "url",
-            value: city.city_url,
+            value: city.federation_url,
           },
           {
             label: "town",
-            value: city.town_id,
+            value: city.city_id,
           },
           {
             label: "user token",

@@ -1,7 +1,7 @@
 /**
  * Admin Custom Service 命令。
  */
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import type { admin_tui_runtime } from "../../types/AdminTui.js";
-export declare function manageCustom(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void>;
+export declare function manageCustom(a: CityPact, _baseUrl: string, runtime: admin_tui_runtime): Promise<void>;
 //# sourceMappingURL=custom.d.ts.map

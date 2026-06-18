@@ -136,7 +136,7 @@ This starter is useful for local experiments and custom deployments. Downcity's 
 
 ## 7. Initialize City
 
-Call `/health` once after deployment. This lets the Worker boot City and create the built-in `env` / `towns` tables.
+Call `/health` once after deployment. This lets the Worker boot City and create the built-in `env` / `cities` tables.
 
 ```bash
 curl https://my-city.<your-subdomain>.workers.dev/health
@@ -147,7 +147,7 @@ Expected shape:
 ```json
 {
   "ok": true,
-  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "ai"]
+  "services": ["env", "cities", "accounts", "balance", "payment", "usage", "ai"]
 }
 ```
 
@@ -160,7 +160,7 @@ npx wrangler d1 execute my-city-db --remote \
   --command "SELECT value FROM env WHERE key='DOWNCITY_CITY_ADMIN_SECRET_KEY'"
 ```
 
-Keep this key in a trusted place. It is the credential used by `Admin City`, Town CLI, or direct admin HTTP calls.
+Keep this key in a trusted place. It is the credential used by `Admin City`, City CLI, or direct admin HTTP calls.
 
 ## 9. Write provider and service env
 
@@ -222,4 +222,4 @@ After code changes:
 city deploy --verify
 ```
 
-Runtime env lives in D1, so redeploying the Worker does not erase provider keys, OAuth secrets, towns, balances, usage records, or Stripe payment records.
+Runtime env lives in D1, so redeploying the Worker does not erase provider keys, OAuth secrets, cities, balances, usage records, or Stripe payment records.

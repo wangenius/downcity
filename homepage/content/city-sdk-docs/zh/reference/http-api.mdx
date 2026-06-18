@@ -43,12 +43,12 @@ Admin GET                GET  /v1/{service}/{action}
 
 | 路由 | 方法 | 用途 |
 | --- | --- | --- |
-| `/v1/towns/list` | `GET` | Town 列表 |
-| `/v1/towns/create` | `POST` | 创建 Town |
-| `/v1/towns/pause` | `POST` | 暂停 Town |
-| `/v1/towns/activate` | `POST` | 启用 Town |
-| `/v1/towns/remove` | `POST` | 删除 Town |
-| `/v1/towns/tokens/apply` | `POST` | 签发 user_token |
+| `/v1/cities/list` | `GET` | City 列表 |
+| `/v1/cities/create` | `POST` | 创建 City |
+| `/v1/cities/pause` | `POST` | 暂停 City |
+| `/v1/cities/activate` | `POST` | 启用 City |
+| `/v1/cities/remove` | `POST` | 删除 City |
+| `/v1/cities/tokens/apply` | `POST` | 签发 user_token |
 | `/v1/env/list` | `GET` | 环境变量列表 |
 | `/v1/env/upsert` | `POST` | 写入环境变量 |
 | `/v1/env/remove` | `POST` | 删除环境变量 |
@@ -125,7 +125,7 @@ Content-Type: application/json
 
 ```json
 {
-  "town_id": "town_xxx",
+  "city_id": "town_xxx",
   "model": "deepseek-v4-flash",
   "prompt": "写一段欢迎语"
 }
@@ -210,21 +210,21 @@ Authorization: Bearer <admin_secret_key>
 Content-Type: application/json
 ```
 
-### `POST /v1/towns/create`
+### `POST /v1/cities/create`
 
 ```json
 { "name": "Chrome Extension" }
 ```
 
 ```json
-{ "town_id": "town_xxx", "name": "Chrome Extension", "status": "active", ... }
+{ "city_id": "town_xxx", "name": "Chrome Extension", "status": "active", ... }
 ```
 
-### `POST /v1/towns/tokens/apply`
+### `POST /v1/cities/tokens/apply`
 
 ```json
 {
-  "town_id": "town_xxx",
+  "city_id": "town_xxx",
   "user_id": "user_123",
   "metadata": { "plan": "pro" },
   "ttl": "7d"
@@ -232,7 +232,7 @@ Content-Type: application/json
 ```
 
 ```json
-{ "user_token": "ub_xxx", "town_id": "town_xxx", "user_id": "user_123", ... }
+{ "user_token": "ub_xxx", "city_id": "town_xxx", "user_id": "user_123", ... }
 ```
 
 ### `POST /v1/env/upsert`
@@ -247,7 +247,7 @@ Content-Type: application/json
 | --- | --- |
 | `200` | 请求成功 |
 | `401` | token 缺失、过期、签名无效 |
-| `403` | town_id 不匹配、town 已暂停 |
+| `403` | city_id 不匹配、city 已暂停 |
 | `404` | 路由不存在、service 未注册 |
 | `422` | model 不存在、action 未命中 |
 | `500` | action 逻辑抛出未指定 statusCode 的错误 |

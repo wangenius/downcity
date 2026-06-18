@@ -2,7 +2,7 @@
  * Payment 服务类型契约测试。
  */
 
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import { PaymentService, stripePaymentProvider } from "../../src/index.js";
 
 const readTopup = async (topup_id: string) => ({
@@ -21,7 +21,7 @@ const finishTopup = async (topup_id: string) => ({
   note: "demo",
 });
 
-const base = new CityBase({
+const base = new Federation({
   db: {} as never,
 });
 

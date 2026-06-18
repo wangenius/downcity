@@ -22,7 +22,7 @@ The client owns:
 
 - UI and interaction
 - calling `User City`
-- holding `town_id`
+- holding `city_id`
 - storing or refreshing `user_token`
 
 The City runtime owns:
@@ -37,7 +37,7 @@ The City runtime owns:
 ## The most common minimum shape
 
 ```plaintext
-Town frontend
+City frontend
   ↓
 Your login / token-issuing endpoint
   ↓
@@ -48,7 +48,7 @@ That product backend can stay very thin at first:
 
 - user login
 - `Admin City.tokens.apply()`
-- returning `user_token + town_id` to the client
+- returning `user_token + city_id` to the client
 
 ## Why this fits early products better
 

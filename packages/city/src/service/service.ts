@@ -15,7 +15,7 @@ import type { Database, DbClient } from "../store/db.js";
 import type { RuntimeUser } from "../core/auth/types.js";
 import type { Authenticator } from "../core/auth/authenticator.js";
 import type { EnvProvider } from "../core/runtime.js";
-import type { TownStore } from "./towns/town-store.js";
+import type { CityStore } from "./cities/city-store.js";
 import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.js";
 import type { RuntimeMetering } from "../types/Metering.js";
 
@@ -47,8 +47,8 @@ export interface Context {
   user?: RuntimeUser;
   /** 当前请求身份 */
   identity?: { kind: RouteIdentity };
-  /** 所属 town */
-  town?: { town_id: string; status: string };
+  /** 所属 city */
+  city?: { city_id: string; status: string };
   /** 当前解析的 variant（如 AI model、翻译语言对等）。由 Service 自行注入 */
   variant?: { id: string; name: string; meta?: Record<string, unknown> };
   /** 当前调用的标准化计量信息。由 Service 或 Provider 自行注入 */
@@ -134,7 +134,7 @@ export class Service {
   _client?: { $client: DbClient };
   _authenticator?: Authenticator;
   _env?: EnvProvider;
-  _townStore?: TownStore;
+  _cityStore?: CityStore;
 
   /** 原始数据库实例（better-sqlite3 / D1 等） */
   _raw?: unknown;
@@ -186,7 +186,7 @@ export class Service {
     return [...this.actionMap.values()].map((e) => e.action);
   }
 
-  /** 列出 Action 及其元数据（City 内部使用） */
+  /** 列出 Action 及其元数据（Federation 内部使用） */
   _listActionDefs(): Array<{ action: Action; method: "GET" | "POST"; auth: RouteAuth }> {
     return [...this.actionMap.values()];
   }

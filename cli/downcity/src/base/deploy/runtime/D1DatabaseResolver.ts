@@ -11,20 +11,20 @@
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
 import type {
-  CityProjectConfigFile,
-  CityProjectDeployEnvFile,
-} from "../../types/CityProjectConfig.js";
+  FederationProjectConfigFile,
+  FederationProjectDeployEnvFile,
+} from "../../types/FederationProjectConfig.js";
 import {
-  writeCityProjectDeployEnv,
-} from "../config/CityProjectEnvLoader.js";
+  writeFederationProjectDeployEnv,
+} from "../config/FederationProjectEnvLoader.js";
 import { runCommand } from "./CommandRunner.js";
 
 /** D1 解析参数。 */
 export interface ResolveD1DatabaseParams {
   /** City 项目配置文件。 */
-  config_file: CityProjectConfigFile;
+  config_file: FederationProjectConfigFile;
   /** City 项目本地部署环境文件。 */
-  env_file: CityProjectDeployEnvFile;
+  env_file: FederationProjectDeployEnvFile;
   /** Cloudflare account id。 */
   account_id?: string;
   /** 找不到同名数据库时是否允许创建。 */
@@ -34,7 +34,7 @@ export interface ResolveD1DatabaseParams {
 /** D1 解析结果。 */
 export interface ResolveD1DatabaseResult {
   /** 更新后的本地部署环境文件。 */
-  env_file: CityProjectDeployEnvFile;
+  env_file: FederationProjectDeployEnvFile;
   /** 本次部署解析出的 D1 database id。 */
   resolved_database_id?: string;
 }
@@ -61,7 +61,7 @@ export async function resolveD1Database(
     database_name: database.name,
   });
   if (listed_database_id) {
-    const next_env_file = writeCityProjectDeployEnv(params.env_file, {
+    const next_env_file = writeFederationProjectDeployEnv(params.env_file, {
       city_d1_database_name: database.name,
     });
 
@@ -111,7 +111,7 @@ export async function resolveD1Database(
     });
   }
 
-  const next_env_file = writeCityProjectDeployEnv(params.env_file, {
+  const next_env_file = writeFederationProjectDeployEnv(params.env_file, {
     city_d1_database_name: database.name,
   });
 

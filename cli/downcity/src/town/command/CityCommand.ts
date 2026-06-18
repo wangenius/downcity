@@ -9,7 +9,7 @@
 
 import type { Command } from "commander";
 import { parseBoolean } from "../../shared/IndexSupport.js";
-import { DEFAULT_TOWN_ID } from "../shared/CityStateStore.js";
+import { DEFAULT_CITY_ID } from "../shared/CityStateStore.js";
 import {
   emitCityConnectionStatus,
   emitCityUserWhoami,
@@ -127,7 +127,7 @@ export function registerCityConnectionCommand(program: Command): void {
     .option("--town-id <townId>", t({
       zh: "City town id",
       en: "City town id",
-    }), DEFAULT_TOWN_ID)
+    }), DEFAULT_CITY_ID)
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
       en: "output as JSON",
@@ -138,7 +138,7 @@ export function registerCityConnectionCommand(program: Command): void {
     ) => {
       await runCityLoginCommand({
         url,
-        town_id: options.townId,
+        city_id: options.townId,
         as_json: options.json === true,
       });
     });

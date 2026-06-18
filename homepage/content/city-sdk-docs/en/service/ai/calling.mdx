@@ -6,10 +6,10 @@ description: SDK pathway (User City) and OpenAI-compatible pathway (curl / OpenA
 ## SDK Pathway
 
 ```ts
-const client = new City({
+const client = new CityPact({
   role: "user",
-  city_url: "http://127.0.0.1:43127",
-  town_id: "town_downcity",
+  federation_url: "http://127.0.0.1:43127",
+  city_id: "town_downcity",
   user_token: "ub_xxx",
 });
 
@@ -79,7 +79,7 @@ await session.ask("Write an HTTP server");
 
 | Scenario | Pathway |
 |---|---|
-| Your own town code, simple prompt → text | SDK |
+| Your own city code, simple prompt → text | SDK |
 | Streaming output to your own UI | SDK |
 | downcity agent agent conversations | OpenAI-Compatible |
 | OpenAI SDK or compatible clients | OpenAI-Compatible |

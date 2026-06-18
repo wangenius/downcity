@@ -22,7 +22,7 @@ CLI 最常被用来做两件事：
 
 当你排查这些能力时，最后往往都会落到表：
 
-- `towns`
+- `cities`
 - `env`
 - usage 事件表
 - accounts 相关表
@@ -36,14 +36,14 @@ CLI 最常被用来做两件事：
 
 ```bash
 city
-town city login
-town city status
+city city login
+city city status
 ```
 
 适合：
 
-- 查看 City AIService 暴露出的模型
-- 选择 City base 并通过 Town 登录
+- 查看 Federation AIService 暴露出的模型
+- 选择 City base 并通过 City 登录
 - 在启动本机 Agent 前确认 City 连接设置可用
 
 ## 最常见的表排查场景
@@ -76,8 +76,8 @@ CLI 正适合先肉眼确认。
 ```bash
 city
 # or start a local agent
-town agent start .
-town city status
+city agent start .
+city city status
 ```
 
 然后在交互式面板里继续看：

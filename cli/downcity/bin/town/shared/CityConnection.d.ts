@@ -8,7 +8,7 @@
  * - CLI 命令装配统一放在 `src/command/CityCommand.ts`，本模块只保留状态与登录流程。
  */
 import type { TownCityConnectionState } from "../types/TownCityConnection.js";
-export declare function readTownCityAdminSecretForBase(city_url: string): string | undefined;
+export declare function readTownCityAdminSecretForBase(federation_url: string): string | undefined;
 export declare function readTownCityConnectionState(): TownCityConnectionState;
 export declare function emitCityConnectionStatus(options?: {
     as_json?: boolean;
@@ -29,7 +29,7 @@ export declare function runCityUseCommand(params: {
 }): Promise<void>;
 export declare function runCityLoginCommand(params: {
     url?: string;
-    town_id?: string;
+    city_id?: string;
     as_json?: boolean;
 }): Promise<void>;
 export declare function runCityLogoutCommand(options?: {

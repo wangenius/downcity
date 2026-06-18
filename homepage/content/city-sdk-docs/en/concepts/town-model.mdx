@@ -3,7 +3,7 @@ title: Product Boundary Model
 description: Why Downcity is a reusable AI infrastructure runtime instead of a separate backend per project.
 ---
 
-The core mental model of Downcity is not "one town, one backend." It is:
+The core mental model of Downcity is not "one city, one backend." It is:
 
 > one City runtime serving many AI products and workflows.
 
@@ -24,17 +24,17 @@ Once you ship a second or third AI product, these capabilities repeat everywhere
     <div className="dc-doc-node">
       <strong>Product A</strong>
       <span>Web tools, content products, workflow utilities.</span>
-      <code>town_id = town_a</code>
+      <code>city_id = town_a</code>
     </div>
     <div className="dc-doc-node">
       <strong>Product B</strong>
       <span>Chrome extensions, desktop tools, mobile entry points.</span>
-      <code>town_id = town_b</code>
+      <code>city_id = town_b</code>
     </div>
     <div className="dc-doc-node">
       <strong>Product C</strong>
       <span>Client demos, internal tools, vertical sites.</span>
-      <code>town_id = town_c</code>
+      <code>city_id = town_c</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -74,12 +74,12 @@ If every new product copies a separate AI backend, the same issues appear quickl
 
 Once the AI call layer is centralized into the City runtime, a new product usually only needs two steps:
 
-1. create a new `town_id`
+1. create a new `city_id`
 2. connect `User City` in the product client
 
-## What `town_id` means in this model
+## What `city_id` means in this model
 
-`town_id` is not a model name, and it is not the full abstraction of your tenant system.
+`city_id` is not a model name, and it is not the full abstraction of your tenant system.
 
 It is the runtime's stable primary key for the product boundary. It answers questions like:
 
@@ -88,11 +88,11 @@ It is the runtime's stable primary key for the product boundary. It answers ques
 - which product dimension hooks and usage should record against
 - whether a user's calls should be separated across different products
 
-If you are building a multi-product portfolio, `town_id` is the most stable boundary.
+If you are building a multi-product portfolio, `city_id` is the most stable boundary.
 
-## The role of model at the town layer
+## The role of model at the city layer
 
-In the current implementation, a model is a runtime capability unit registered in Runtime, not something owned by a specific town.
+In the current implementation, a model is a runtime capability unit registered in Runtime, not something owned by a specific city.
 
 At the product layer, a model is more like a visible capability:
 

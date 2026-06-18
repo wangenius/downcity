@@ -21,8 +21,8 @@ export interface AuthResult {
   level: RouteIdentity;
   /** 解析出的用户信息（user 级别时可用） */
   user?: RuntimeUser;
-  /** 解析出的 Town 信息（user 级别时可用） */
-  town?: { town_id: string; status: string };
+  /** 解析出的 City 信息（user 级别时可用） */
+  city?: { city_id: string; status: string };
 }
 
 /** 统一鉴权器 */
@@ -32,18 +32,18 @@ export class Authenticator {
 
   constructor(
     private env: EnvProvider,
-    private store: () => Promise<{ town: { get(id: string): Promise<{ town_id: string; status: string } | undefined> } }>,
+    private store: () => Promise<{ city: { get(id: string): Promise<{ city_id: string; status: string } | undefined> } }>,
   ) {}
 
   /**
    * 获取（或创建）TokenSigner 单例。
    *
-   * 首次调用时从 env 读取 DOWNCITY_CITY_TOKEN_SIGNING_KEY 创建实例并缓存。
+   * 首次调用时从 env 读取 DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY 创建实例并缓存。
    */
   private getSigner(): TokenSigner {
     if (!this.tokenSigner) {
-      const signingKey = this.env.get("DOWNCITY_CITY_TOKEN_SIGNING_KEY");
-      if (!signingKey) throw new Error("DOWNCITY_CITY_TOKEN_SIGNING_KEY is required");
+      const signingKey = this.env.get("DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY");
+      if (!signingKey) throw new Error("DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY is required");
       this.tokenSigner = new TokenSigner(signingKey);
     }
     return this.tokenSigner;
@@ -59,7 +59,7 @@ export class Authenticator {
     const token = bearerToken(request);
     if (!token) return { level: "guest" };
 
-    const adminKey = this.env.get("DOWNCITY_CITY_ADMIN_SECRET_KEY");
+    const adminKey = this.env.get("DOWNCITY_FEDERATION_ADMIN_SECRET_KEY");
     if (adminKey && token === adminKey) {
       return { level: "admin" };
     }
@@ -67,14 +67,14 @@ export class Authenticator {
     try {
       const payload = await this.getSigner().verify(token);
       const store = await this.store();
-      const town = await store.town.get(payload.town_id);
-      if (!town) return { level: "guest" };
-      if (town.status !== "active") return { level: "guest" };
+      const city = await store.city.get(payload.city_id);
+      if (!city) return { level: "guest" };
+      if (city.status !== "active") return { level: "guest" };
 
       return {
         level: "user",
         user: { user_id: payload.user_id, metadata: payload.metadata ?? {} },
-        town,
+        city,
       };
     } catch {
       return { level: "guest" };
@@ -108,21 +108,21 @@ export class Authenticator {
   }
 
   /**
-   * 签发 user_token（验证 town 状态后签发）。
+   * 签发 user_token（验证 city 状态后签发）。
    *
    * @param input - token 创建参数
    * @returns 签发结果（含 token 字符串）
    */
   async createToken(input: CreateUserTokenInput): Promise<UserTokenIssueResult> {
     const store = await this.store();
-    const town = await store.town.get(input.town_id);
-    if (!town) throw httpError(404, `Unknown town: ${input.town_id}`);
-    if (town.status !== "active") throw httpError(403, `Town is not active: ${input.town_id}`);
+    const city = await store.city.get(input.city_id);
+    if (!city) throw httpError(404, `Unknown city: ${input.city_id}`);
+    if (city.status !== "active") throw httpError(403, `City is not active: ${input.city_id}`);
 
     const user_token = await this.getSigner().sign(input);
     return {
       user_token,
-      town_id: input.town_id,
+      city_id: input.city_id,
       user_id: input.user_id,
       ...(input.ttl
         ? { expires_at: new Date(Date.now() + TokenSigner.parseTTL(input.ttl) * 1000).toISOString() }

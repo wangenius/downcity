@@ -14,10 +14,10 @@ import { stdin as input, stdout as output } from "node:process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { Agent } from "@downcity/agent";
-import { City, type CityModel } from "@downcity/city";
+import { CityPact, type CityModel } from "@downcity/city";
 
-const DEFAULT_CITY_URL = "http://127.0.0.1:43127";
-const DEFAULT_TOWN_ID = "town_downcity";
+const DEFAULT_FEDERATION_URL = "http://127.0.0.1:43127";
+const DEFAULT_CITY_ID = "town_downcity";
 const DEFAULT_USER_ID = "dev_cli_user";
 const DEFAULT_TOKEN_TTL = "7d";
 const DEFAULT_AGENT_ID = "template_client";
@@ -30,14 +30,14 @@ type LocalAgentSession = Awaited<ReturnType<typeof create_agent_session>>;
  */
 interface ClientConfig {
   /**
-   * 本地 City HTTP 入口地址。
+   * 本地 Federation HTTP 入口地址。
    */
-  city_url: string;
+  federation_url: string;
 
   /**
    * 本次请求使用的 Town ID。
    */
-  town_id: string;
+  city_id: string;
 
   /**
    * 本次请求绑定的终端用户 ID。
@@ -89,11 +89,11 @@ function read_optional_env(name: string): string | undefined {
  */
 function read_config(): ClientConfig {
   return {
-    city_url: read_optional_env("DOWNCITY_CLIENT_CITY_URL") ?? read_optional_env("CITY_URL") ?? DEFAULT_CITY_URL,
-    town_id: read_optional_env("DOWNCITY_CLIENT_TOWN_ID") ?? read_optional_env("TOWN_ID") ?? DEFAULT_TOWN_ID,
+    federation_url: read_optional_env("DOWNCITY_CLIENT_FEDERATION_URL") ?? read_optional_env("FEDERATION_URL") ?? DEFAULT_FEDERATION_URL,
+    city_id: read_optional_env("DOWNCITY_CLIENT_CITY_ID") ?? read_optional_env("CITY_ID") ?? DEFAULT_CITY_ID,
     user_id: read_optional_env("DOWNCITY_CLIENT_USER_ID") ?? read_optional_env("USER_ID") ?? DEFAULT_USER_ID,
     user_token: read_optional_env("DOWNCITY_CLIENT_USER_TOKEN") ?? read_optional_env("USER_TOKEN"),
-    admin_secret_key: read_optional_env("DOWNCITY_CITY_ADMIN_SECRET_KEY") ?? read_optional_env("ADMIN_SECRET_KEY"),
+    admin_secret_key: read_optional_env("DOWNCITY_FEDERATION_ADMIN_SECRET_KEY") ?? read_optional_env("ADMIN_SECRET_KEY"),
     model_id: read_optional_env("DOWNCITY_CLIENT_MODEL_ID") ?? read_optional_env("MODEL_ID"),
     agent_id: read_optional_env("DOWNCITY_CLIENT_AGENT_ID") ?? DEFAULT_AGENT_ID,
     agent_path: resolve(read_optional_env("DOWNCITY_CLIENT_AGENT_PATH") ?? DEFAULT_AGENT_PATH),
@@ -109,19 +109,19 @@ async function resolve_user_token(config: ClientConfig): Promise<string> {
     throw new Error(
       [
         "缺少 user_token。",
-        "请设置 DOWNCITY_CLIENT_USER_TOKEN，或设置 DOWNCITY_CITY_ADMIN_SECRET_KEY 让 client 自动签发本地开发 token。",
+        "请设置 DOWNCITY_CLIENT_USER_TOKEN，或设置 DOWNCITY_FEDERATION_ADMIN_SECRET_KEY 让 client 自动签发本地开发 token。",
         "node 模板启动后会在终端打印 Admin key。",
       ].join("\n"),
     );
   }
 
-  const admin = new City({
+  const admin = new CityPact({
     role: "admin",
-    city_url: config.city_url,
+    federation_url: config.federation_url,
     admin_secret_key: config.admin_secret_key,
   });
-  const issued = await admin.towns.tokens.apply({
-    town_id: config.town_id,
+  const issued = await admin.cities.tokens.apply({
+    city_id: config.city_id,
     user_id: config.user_id,
     ttl: DEFAULT_TOKEN_TTL,
   });
@@ -138,7 +138,7 @@ function is_readline_closed_error(error: unknown): boolean {
 /**
  * 解析本地 Agent 使用的 City 模型。
  */
-async function resolve_agent_model(client: City<"user">, model_id: string | undefined): Promise<CityModel> {
+async function resolve_agent_model(client: CityPact<"user">, model_id: string | undefined): Promise<CityModel> {
   const catalog = await client.ai.listModels();
   const models = catalog.all();
   const model = model_id
@@ -147,7 +147,7 @@ async function resolve_agent_model(client: City<"user">, model_id: string | unde
 
   if (model) return model;
   if (models.length === 0) {
-    throw new Error("当前 City 没有可用模型。请先在 templates/node/.env 中配置真实 DEEPSEEK_API_KEY。");
+    throw new Error("当前 Federation 没有可用模型。请先在 templates/node/.env 中配置真实 DEEPSEEK_API_KEY。");
   }
   throw new Error(`模型不存在：${model_id}`);
 }
@@ -163,7 +163,7 @@ async function create_agent_session(config: ClientConfig, model: CityModel) {
     model,
     instruction: [
       "你是 Downcity templates/client 的本地调试 Agent。",
-      "回答要简洁、直接，优先帮助开发者验证本地 City 与 Agent SDK 调用链路。",
+      "回答要简洁、直接，优先帮助开发者验证本地 Federation 与 Agent SDK 调用链路。",
     ],
   });
   try {
@@ -176,12 +176,12 @@ async function create_agent_session(config: ClientConfig, model: CityModel) {
 /**
  * 打印可用模型列表。
  */
-async function print_models(client: City<"user">): Promise<void> {
+async function print_models(client: CityPact<"user">): Promise<void> {
   const catalog = await client.ai.listModels();
   const models = catalog.all();
 
   if (models.length === 0) {
-    console.log("当前 City 没有可用模型。");
+    console.log("当前 Federation 没有可用模型。");
     return;
   }
 
@@ -196,7 +196,7 @@ async function print_models(client: City<"user">): Promise<void> {
  * 通过 Downcity Agent SDK 执行一次文本请求。
  */
 async function request_text(input: {
-  client: City<"user">;
+  client: CityPact<"user">;
   config: ClientConfig;
   session?: LocalAgentSession;
   prompt: string;
@@ -225,16 +225,16 @@ async function request_text(input: {
 async function main(): Promise<void> {
   const config = read_config();
   const user_token = await resolve_user_token(config);
-  const client = new City<"user">({
+  const client = new CityPact<"user">({
     role: "user",
-    city_url: config.city_url,
-    town_id: config.town_id,
+    federation_url: config.federation_url,
+    city_id: config.city_id,
     user_token,
   });
   let session: LocalAgentSession | undefined;
 
-  console.log(`Downcity client -> ${config.city_url}`);
-  console.log(`Town: ${config.town_id}`);
+  console.log(`Downcity client -> ${config.federation_url}`);
+  console.log(`City: ${config.city_id}`);
   console.log(`Agent: ${config.agent_id}`);
   console.log(`Model: ${config.model_id ?? "auto"}`);
   console.log("输入 prompt 后回车发送；输入 /models 查看模型；输入 /exit 退出。");

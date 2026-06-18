@@ -56,7 +56,7 @@ Their meanings are:
 ## Common service mounting example
 
 ```ts
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import {
   AccountsService,
   BalanceService,
@@ -65,7 +65,7 @@ import {
   UsageService,
 } from "@downcity/services";
 
-const base = new CityBase({ db });
+const base = new Federation({ db });
 const balance = new BalanceService();
 
 base.use(new AccountsService({
@@ -96,7 +96,7 @@ Once mounted, services still look like normal services from the product side:
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "town_demo",
 });
 
 const usage = await admin.service("usage").get("summary");

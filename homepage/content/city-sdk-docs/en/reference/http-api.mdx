@@ -18,7 +18,7 @@ The bearer credential decides the request identity:
 
 Each action declares which identities it allows. The default is `["user"]`; `[]` means guest access is allowed.
 
-## Town Routes (common user-side routes)
+## City Routes (common user-side routes)
 
 | Route | Method | Purpose | Pathway |
 | --- | --- | --- | --- |
@@ -45,12 +45,12 @@ Each action declares which identities it allows. The default is `["user"]`; `[]`
 
 | Route | Method | Purpose |
 | --- | --- | --- |
-| `/v1/towns/list` | `GET` | List towns |
-| `/v1/towns/create` | `POST` | Create town |
-| `/v1/towns/pause` | `POST` | Pause town |
-| `/v1/towns/activate` | `POST` | Activate town |
-| `/v1/towns/remove` | `POST` | Remove town |
-| `/v1/towns/tokens/apply` | `POST` | Issue user_token |
+| `/v1/cities/list` | `GET` | List cities |
+| `/v1/cities/create` | `POST` | Create city |
+| `/v1/cities/pause` | `POST` | Pause city |
+| `/v1/cities/activate` | `POST` | Activate city |
+| `/v1/cities/remove` | `POST` | Remove city |
+| `/v1/cities/tokens/apply` | `POST` | Issue user_token |
 | `/v1/env/list` | `GET` | View runtime env |
 | `/v1/env/upsert` | `POST` | Write env variable |
 | `/v1/env/remove` | `POST` | Delete env variable |
@@ -94,7 +94,7 @@ The same route returns different visibility by identity:
 
 Request:
 ```json
-{ "town_id": "town_xxx", "model": "deepseek-v4-flash", "prompt": "Hello" }
+{ "city_id": "town_xxx", "model": "deepseek-v4-flash", "prompt": "Hello" }
 ```
 
 Response:
@@ -102,7 +102,7 @@ Response:
 { "id": "msg_xxx", "role": "assistant", "parts": [{ "type": "text", "text": "Hi!" }] }
 ```
 
-If the request body includes `town_id`, it must match the town bound to the `user_token`. Otherwise City returns `403`.
+If the request body includes `city_id`, it must match the city bound to the `user_token`. Otherwise City returns `403`.
 
 ## `GET /v1/services`
 

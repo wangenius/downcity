@@ -6,7 +6,7 @@
  * - 真正刷新逻辑位于 City SDK 与服务端 EnvService，CLI 不复制业务规则。
  */
 
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import { adminAuth } from "../../auth/admin.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../../admin/auth-error.js";
 import { readActiveServer } from "../../core/session.js";
@@ -31,9 +31,9 @@ export async function refreshEnvCache(): Promise<void> {
     return;
   }
 
-  const admin = new City({
+  const admin = new CityPact({
     role: "admin",
-    city_url: session.base_url,
+    federation_url: session.base_url,
     admin_secret_key: session.admin_secret_key,
   });
 

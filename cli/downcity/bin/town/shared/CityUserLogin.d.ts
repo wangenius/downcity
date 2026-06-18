@@ -1,8 +1,8 @@
 /**
- * Town City user 登录流程。
+ * Town CityPact user 登录流程。
  *
  * 关键点（中文）
- * - 只负责通过 City user auth providers 获取 user_token。
+ * - 只负责通过 CityPact user auth providers 获取 user_token。
  * - 不读写 Town 本地状态，调用方负责持久化 session。
  */
 import type { TownCityLoginInput, TownCityUserSession } from "../types/TownCitySession.js";
@@ -11,7 +11,7 @@ interface town_city_user_login_options {
     silent?: boolean;
 }
 /**
- * 执行 Town City user 登录。
+ * 执行 Town CityPact user 登录。
  */
 export declare function performTownCityUserLogin(input: TownCityLoginInput, options?: town_city_user_login_options): Promise<TownCityUserSession | null>;
 export {};

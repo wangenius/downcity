@@ -6,7 +6,7 @@
  * - 覆盖统一 PaymentService、provider 和主要返回类型
  */
 
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import {
   creemPaymentProvider,
   PaymentService,
@@ -29,7 +29,7 @@ const finishTopup = async (topup_id: string) => ({
   note: "demo",
 });
 
-const base = new CityBase({ db: {} as any });
+const base = new Federation({ db: {} as any });
 
 base.use(new PaymentService({
   readTopup,

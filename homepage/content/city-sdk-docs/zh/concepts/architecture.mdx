@@ -7,7 +7,7 @@ description: Downcity 如何按 Kernel、Capabilities、Interfaces 和 Compositi
 
 ```txt
 Interfaces
-  -> towns 通过 client / Town terminal 接入 City
+  -> cities 通过 client / City terminal 接入 City
 Composition
   -> server / worker 把 City、官方服务、模型组装起来
 Kernel
@@ -20,7 +20,7 @@ Capabilities
 
 ```txt
 产品前端 / App / 内部工具
-  -> User City / Admin City / Town terminal
+  -> User City / Admin City / City terminal
   -> City
   -> Service / AIService
   -> Provider / Database
@@ -53,12 +53,12 @@ HTTP 请求进入 City 后，City 会先做这些事情：
 
 1. 刷新运行时 env 视图
 2. 校验 `user_token` 或 admin key
-3. 解析 `town_id`、`user_id` 和身份级别
+3. 解析 `city_id`、`user_id` 和身份级别
 4. 找到目标 Service / Action
 5. 组装统一 `ctx`
 6. 执行 hook 和 action
 
-如果 token 无效、过期或 `town_id` 不匹配，City 会直接返回 401 或 403。
+如果 token 无效、过期或 `city_id` 不匹配，City 会直接返回 401 或 403。
 
 ## 4. Capabilities：Service 与 Action
 

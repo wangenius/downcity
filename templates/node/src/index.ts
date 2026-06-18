@@ -5,13 +5,13 @@
  *
  * 负责在 Node.js 环境中启动一套可部署的 City。
  * 本地默认使用 `./data.sqlite`，容器部署时推荐通过
- * `DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite` 指向持久化 volume。
+ * `DOWNCITY_FEDERATION_DATABASE_URL=file:/data/downfederation.sqlite` 指向持久化 volume。
  */
 
 import { serve } from "@hono/node-server";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { CityBase, AIService } from "@downcity/city";
+import { Federation, AIService } from "@downcity/city";
 import {
   AccountsService,
   BalanceService,
@@ -67,12 +67,12 @@ function resolve_sqlite_path(database_url: string | undefined): string {
   }
 
   if (!database_url.startsWith("file:")) {
-    throw new Error("templates/node only supports file: SQLite URLs in DOWNCITY_CITY_DATABASE_URL.");
+    throw new Error("templates/node only supports file: SQLite URLs in DOWNCITY_FEDERATION_DATABASE_URL.");
   }
 
   const path = database_url.slice("file:".length).trim();
   if (!path) {
-    throw new Error("DOWNCITY_CITY_DATABASE_URL must include a SQLite file path.");
+    throw new Error("DOWNCITY_FEDERATION_DATABASE_URL must include a SQLite file path.");
   }
 
   return path;
@@ -84,15 +84,15 @@ if (!Number.isInteger(port) || port <= 0 || port > 65535) {
   throw new Error("PORT must be a valid TCP port number.");
 }
 
-const sqlite_path = resolve_sqlite_path(process.env.DOWNCITY_CITY_DATABASE_URL);
+const sqlite_path = resolve_sqlite_path(process.env.DOWNCITY_FEDERATION_DATABASE_URL);
 const sqlite = new Database(sqlite_path);
 sqlite.pragma("journal_mode = WAL");
 
 const db = drizzle(sqlite);
 
 const bootstrap_env_keys = [
-  "DOWNCITY_CITY_ADMIN_SECRET_KEY",
-  "DOWNCITY_CITY_TOKEN_SIGNING_KEY",
+  "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY",
+  "DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY",
   "BETTER_AUTH_SECRET",
   "DEEPSEEK_API_KEY",
 ] as const;
@@ -105,8 +105,8 @@ const bootstrap_env_keys = [
  * - 本地模板允许开发者用 `.env` 配置启动参数，因此这里显式同步关键密钥。
  * - 空值和占位值不会写入，避免把示例配置误认为真实 provider key。
  */
-async function sync_local_env(city: CityBase): Promise<void> {
-  const env_table = await city.table<EnvRow>("env");
+async function sync_local_env(federation: Federation): Promise<void> {
+  const env_table = await federation.table<EnvRow>("env");
   for (const key of bootstrap_env_keys) {
     const value = process.env[key]?.trim();
     if (!value || value === "sk-...") continue;
@@ -119,7 +119,7 @@ async function sync_local_env(city: CityBase): Promise<void> {
     await env_table.insert({ key, value, created_at: now, updated_at: now });
   }
 
-  await (city as unknown as RefreshableCity).runtime?.env?.refresh();
+  await (federation as unknown as RefreshableCity).runtime?.env?.refresh();
 }
 
 /**
@@ -129,33 +129,33 @@ async function sync_local_env(city: CityBase): Promise<void> {
  * - 不再通过 compose_city 函数隐藏装配过程，所有 service 的创建与注册都平铺在这里。
  * - 顺序有依赖关系：payment 依赖 balance，ai 依赖 balance 执行扣费。
  */
-const city = new CityBase({ db });
+const federation = new Federation({ db });
 
 const accounts = new AccountsService({ token_ttl: "7d" });
-city.use(accounts);
+federation.use(accounts);
 
 const balance = new BalanceService({});
-city.use(balance);
+federation.use(balance);
 
 const payment = new PaymentService({
   readTopup: async (topup_id) => await balance.readTopup(topup_id),
   finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
   providers: [stripePaymentProvider()],
 });
-city.use(payment);
+federation.use(payment);
 
 const usage = new UsageService({ record_errors: true });
-city.use(usage);
+federation.use(usage);
 
 const ai = new AIService({ balance });
 ai.use(Object.values(models));
-city.use(ai);
+federation.use(ai);
 
-await city.health();
-await sync_local_env(city);
-const env_table = await city.table<EnvRow>("env");
-const admin_key = (await env_table.select({ key: "DOWNCITY_CITY_ADMIN_SECRET_KEY" }))[0]?.value ?? "(not set)";
-serve({ fetch: city.router().fetch, port, hostname: host });
+await federation.health();
+await sync_local_env(federation);
+const env_table = await federation.table<EnvRow>("env");
+const admin_key = (await env_table.select({ key: "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY" }))[0]?.value ?? "(not set)";
+serve({ fetch: federation.router().fetch, port, hostname: host });
 console.log(`Downcity http://${host}:${port}`);
 console.log(`SQLite: ${sqlite_path}`);
 console.log(`Admin key: ${admin_key}`);

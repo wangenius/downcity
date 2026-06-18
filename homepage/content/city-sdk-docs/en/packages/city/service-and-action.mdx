@@ -20,7 +20,7 @@ Every Action is simultaneously:
 
 ## When you should write a custom service
 
-- you want town business actions, not raw model inference only
+- you want city business actions, not raw model inference only
 - you want one business entry shared across frontend, app, and internal tools
 - you want that capability to participate in hooks, auth, usage, and service governance
 
@@ -38,9 +38,9 @@ If you mainly want to expose `text`, `stream`, `image`, or `video`, then `AIServ
 ## Minimal custom service example
 
 ```ts
-import { CityBase, Service } from "@downcity/city";
+import { Federation, Service } from "@downcity/city";
 
-const base = new CityBase({ db });
+const base = new Federation({ db });
 
 const translate = new Service({
   id: "translate",
@@ -88,7 +88,7 @@ const list = await client.service("translate").get("list");
 
 ## Common scenarios
 
-### Scenario 1: town business action
+### Scenario 1: city business action
 
 ```ts
 const writer = new Service({ id: "writer", name: "Writer" });

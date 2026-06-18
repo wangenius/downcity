@@ -7,7 +7,7 @@
  * - `city` CLI 只负责 admin/base 管理，`town city` 只负责 user login。
  */
 import { parseBoolean } from "../../shared/IndexSupport.js";
-import { DEFAULT_TOWN_ID } from "../shared/CityStateStore.js";
+import { DEFAULT_CITY_ID } from "../shared/CityStateStore.js";
 import { emitCityConnectionStatus, emitCityUserWhoami, emitCityServerList, runCityConnectCommand, runCityDisconnectCommand, runCityLoginCommand, runCityLogoutCommand, runCityUseCommand, runInteractiveCityManager, } from "../shared/CityConnection.js";
 import { helpText, t } from "../../shared/CliLocale.js";
 /**
@@ -108,7 +108,7 @@ export function registerCityConnectionCommand(program) {
         .option("--town-id <townId>", t({
         zh: "City town id",
         en: "City town id",
-    }), DEFAULT_TOWN_ID)
+    }), DEFAULT_CITY_ID)
         .option("--json [enabled]", t({
         zh: "以 JSON 输出",
         en: "output as JSON",
@@ -116,7 +116,7 @@ export function registerCityConnectionCommand(program) {
         .action(async (url, options) => {
         await runCityLoginCommand({
             url,
-            town_id: options.townId,
+            city_id: options.townId,
             as_json: options.json === true,
         });
     });

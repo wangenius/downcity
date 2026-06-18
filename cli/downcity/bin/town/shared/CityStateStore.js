@@ -10,8 +10,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PlatformStore } from "../town/store/index.js";
-export const DEFAULT_CITY_URL = "https://base.downcity.ai";
-export const DEFAULT_TOWN_ID = "town_downcity";
+export const DEFAULT_FEDERATION_URL = "https://base.downcity.ai";
+export const DEFAULT_CITY_ID = "city_downcity";
 const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
 const TOWN_CITY_STATE_KEY = "town.city.state";
 /**
@@ -80,7 +80,7 @@ export function writePersistedTownCliLocale(cli_locale) {
  * 读取当前选中的 City base URL。
  */
 export function resolveSelectedBaseUrl(state = readTownCityState()) {
-    return normalizeCityUrl(readCityString(state.selected_base_url)) || DEFAULT_CITY_URL;
+    return normalizeCityUrl(readCityString(state.selected_base_url)) || DEFAULT_FEDERATION_URL;
 }
 /**
  * 读取当前选中 base 的 user session。
@@ -93,9 +93,9 @@ export function readCurrentTownCitySession() {
 /**
  * 读取指定 City base 的 user session。
  */
-export function readTownCitySessionForBase(city_url) {
+export function readTownCitySessionForBase(federation_url) {
     const state = readTownCityState();
-    const base_url = normalizeCityUrl(city_url);
+    const base_url = normalizeCityUrl(federation_url);
     if (!base_url)
         return null;
     return state.sessions?.[base_url] ?? null;
@@ -143,7 +143,7 @@ export function listTownCityServers() {
             source: existing.source === "town" ? "town" : profile.source,
             has_admin_secret_key: existing.has_admin_secret_key || profile.has_admin_secret_key,
             has_user_session: existing.has_user_session || profile.has_user_session,
-            town_id: existing.town_id || profile.town_id,
+            city_id: existing.city_id || profile.city_id,
             user_id: existing.user_id || profile.user_id,
         });
     };
@@ -156,21 +156,21 @@ export function listTownCityServers() {
             source: "town",
             has_admin_secret_key: Boolean(readCityAdminSecretForUrl(profile.base_url)),
             has_user_session: Boolean(session?.user_token),
-            town_id: session?.town_id,
+            city_id: session?.city_id,
             user_id: session?.user_id,
         });
     }
     for (const server of admin_servers)
         append(server);
-    const default_session = state.sessions?.[DEFAULT_CITY_URL];
+    const default_session = state.sessions?.[DEFAULT_FEDERATION_URL];
     append({
         name: "Downcity Base",
-        base_url: DEFAULT_CITY_URL,
-        selected: DEFAULT_CITY_URL === selected_base_url,
+        base_url: DEFAULT_FEDERATION_URL,
+        selected: DEFAULT_FEDERATION_URL === selected_base_url,
         source: "default",
-        has_admin_secret_key: Boolean(readCityAdminSecretForUrl(DEFAULT_CITY_URL)),
+        has_admin_secret_key: Boolean(readCityAdminSecretForUrl(DEFAULT_FEDERATION_URL)),
         has_user_session: Boolean(default_session?.user_token),
-        town_id: default_session?.town_id,
+        city_id: default_session?.city_id,
         user_id: default_session?.user_id,
     });
     return [...by_url.values()].sort((left, right) => Number(right.selected) - Number(left.selected)
@@ -181,8 +181,8 @@ export function listTownCityServers() {
 /**
  * 读取指定 City base 的 admin secret。
  */
-export function readCityAdminSecretForUrl(city_url) {
-    const target_url = normalizeCityUrl(city_url);
+export function readCityAdminSecretForUrl(federation_url) {
+    const target_url = normalizeCityUrl(federation_url);
     const raw = readCityAdminConfig();
     const servers = Array.isArray(raw.servers) ? raw.servers : [];
     const matched = servers.find((item) => normalizeCityUrl(readCityString(item.base_url) || readCityString(item.url)) === target_url);
@@ -198,12 +198,12 @@ function defaultProtocol(value) {
     }
     return "https";
 }
-function deriveServerName(city_url) {
+function deriveServerName(federation_url) {
     try {
-        return new URL(city_url).hostname || city_url;
+        return new URL(federation_url).hostname || federation_url;
     }
     catch {
-        return city_url;
+        return federation_url;
     }
 }
 function readJsonFile(file_path) {
@@ -236,7 +236,7 @@ function readCityAdminServers() {
             source: "city-admin",
             has_admin_secret_key: Boolean(readCityString(item.admin_secret_key)),
             has_user_session: Boolean(session?.user_token),
-            town_id: session?.town_id,
+            city_id: session?.city_id,
             user_id: session?.user_id,
         });
     }
@@ -267,7 +267,7 @@ function normalizeLocalState(value) {
             continue;
         sessions[base_url] = {
             base_url,
-            town_id: readCityString(session?.town_id) || DEFAULT_TOWN_ID,
+            city_id: readCityString(session?.city_id) || DEFAULT_CITY_ID,
             user_id: readCityString(session?.user_id) || undefined,
             user_label: readCityString(session?.user_label) || undefined,
             user_token,

@@ -140,10 +140,10 @@ return {
 ## SDK 调用
 
 ```ts
-const client = new City({
+const client = new CityPact({
   role: "user",
-  city_url,
-  town_id,
+  federation_url,
+  city_id,
   user_token,
 });
 const result = await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });

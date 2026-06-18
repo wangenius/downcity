@@ -9,7 +9,7 @@
  */
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
-import { writeCityProjectDeployEnv, } from "../config/CityProjectEnvLoader.js";
+import { writeFederationProjectDeployEnv, } from "../config/FederationProjectEnvLoader.js";
 import { runCommand } from "./CommandRunner.js";
 /**
  * 确认 D1 数据库存在，必要时创建并写入项目 `.env`。
@@ -30,7 +30,7 @@ export async function resolveD1Database(params) {
         database_name: database.name,
     });
     if (listed_database_id) {
-        const next_env_file = writeCityProjectDeployEnv(params.env_file, {
+        const next_env_file = writeFederationProjectDeployEnv(params.env_file, {
             city_d1_database_name: database.name,
         });
         emitCliBlock({
@@ -74,7 +74,7 @@ export async function resolveD1Database(params) {
             fix: "Create D1 manually in Cloudflare or keep CITY_D1_DATABASE_NAME set, then rerun city deploy.",
         });
     }
-    const next_env_file = writeCityProjectDeployEnv(params.env_file, {
+    const next_env_file = writeFederationProjectDeployEnv(params.env_file, {
         city_d1_database_name: database.name,
     });
     emitCliBlock({

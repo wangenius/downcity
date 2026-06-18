@@ -3,15 +3,15 @@ title: User City
 description: How product clients read the model directory and call AIService or custom services.
 ---
 
-`User City` is the runtime client for town-facing calls.
+`User City` is the runtime client for city-facing calls.
 
-It binds one user inside one town:
+It binds one user inside one city:
 
-- `city_url`
-- `town_id`, automatically injected into AI service and user action calls
+- `federation_url`
+- `city_id`, automatically injected into AI service and user action calls
 - `user_token`, required for AI service calls and authenticated actions
 
-For guest-access actions such as login, registration, or webhooks, you can pass `city_url` only.
+For guest-access actions such as login, registration, or webhooks, you can pass `federation_url` only.
 
 You can use it inside browsers, extensions, mobile apps, desktop apps, or your own backend acting on behalf of a user.
 
@@ -28,13 +28,13 @@ So from the product side, `User City` is not only "the thing that calls models."
 ## Minimal example
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import type { UIMessageChunk } from "ai";
 
-const client = new City({
+const client = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
-  town_id: "town_xxx",
+  federation_url: "https://base.example.com",
+  city_id: "town_xxx",
   user_token: "ub_xxx",
 });
 
@@ -49,9 +49,9 @@ const result = await client.ai.text({
 ## Public Actions
 
 ```ts
-const guest = new City({
+const guest = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
 });
 
 const session = await guest.service("accounts").action("login").invoke<{
@@ -61,11 +61,11 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_xxx",
+  city_id: "town_xxx",
 });
 ```
 
-After receiving `session.user_token`, create a User City with `town_id + user_token` for AI service calls.
+After receiving `session.user_token`, create a User City with `city_id + user_token` for AI service calls.
 
 ## Guest calls vs logged-in user calls
 
@@ -73,7 +73,7 @@ It helps to think about `User City` in two phases:
 
 ### Guest phase
 
-Pass `city_url` only. This is for guest-access Actions such as:
+Pass `federation_url` only. This is for guest-access Actions such as:
 
 - `accounts.register`
 - `accounts.login`
@@ -82,7 +82,7 @@ Pass `city_url` only. This is for guest-access Actions such as:
 
 ### Logged-in user phase
 
-Pass `city_url + town_id + user_token`. This is for:
+Pass `federation_url + city_id + user_token`. This is for:
 
 - AI services
 - custom services that require user context
@@ -91,9 +91,9 @@ Pass `city_url + town_id + user_token`. This is for:
 The most common transition looks like this:
 
 ```ts
-const guest = new City({
+const guest = new CityPact({
   role: "user",
-  city_url,
+  federation_url,
 });
 
 const session = await guest.service("accounts").action("login").invoke<{
@@ -101,13 +101,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_xxx",
+  city_id: "town_xxx",
 });
 
-const user = new City({
+const user = new CityPact({
   role: "user",
-  city_url,
-  town_id: "town_xxx",
+  federation_url,
+  city_id: "town_xxx",
   user_token: session.user_token,
 });
 ```
@@ -132,7 +132,7 @@ const catalog = await client.ai.listModels();
 const model = catalog.get("deepseek-v4-flash") ?? catalog.default();
 ```
 
-This keeps raw model IDs from scattering across your town code.
+This keeps raw model IDs from scattering across your city code.
 
 ## `ai.text()`
 
@@ -227,7 +227,7 @@ The low-level contract is intentionally small: the client sends `prompt` / `mess
 
 ## `ai.tts()` / `ai.asr()`
 
-`tts()` and `asr()` keep open return types because audio input and output transport shapes vary more across towns:
+`tts()` and `asr()` keep open return types because audio input and output transport shapes vary more across cities:
 
 ```ts
 await client.ai.tts({
@@ -283,7 +283,7 @@ const usage = await client.service("usage").get("me");
 
 ### Payment
 
-If you want the town code to think in terms of "payment methods" instead of hand-writing `service + action`, use:
+If you want the city code to think in terms of "payment methods" instead of hand-writing `service + action`, use:
 
 ```ts
 const methods = await client.payment.methods();
@@ -312,7 +312,7 @@ You do not need a second protocol for services. Just remember:
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_xxx",
+  city_id: "town_xxx",
 });
 ```
 
@@ -403,7 +403,7 @@ Usually one of these:
 - `user_token` is missing
 - the token expired
 - the token signature is invalid
-- the request `town_id` does not match the town bound to the token
+- the request `city_id` does not match the city bound to the token
 
 ### 422
 
@@ -417,10 +417,10 @@ Usually one of these:
 
 Do not use `User City` for:
 
-- creating towns
+- creating cities
 - issuing `user_token`
 - modifying runtime env
 - maintaining production provider keys
-- pausing or re-activating towns
+- pausing or re-activating cities
 
 Those are trusted-side actions and belong in [Admin City](/en/city-sdk-docs/reference/city-admin) or your own backend.

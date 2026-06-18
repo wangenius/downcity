@@ -3,7 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { CityBase, AIService } from "@downcity/city"
+import { Federation, AIService } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { BalanceService } from "../../bin/index.js"
 
@@ -14,21 +14,21 @@ test("balanceService charges users with generic metadata", async () => {
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
 
     const balance = new BalanceService({ init: 1 })
     base.use(balance)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/tokens/apply",
-      body: { town_id: town.town_id, user_id: "user_1" },
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
     const charge = await balance.charge({
@@ -99,7 +99,7 @@ test("AIService submits provider charges through BalanceService", async () => {
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
 
     const balance = new BalanceService({ init: 1 })
     base.use(balance)
@@ -128,15 +128,15 @@ test("AIService submits provider charges through BalanceService", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/tokens/apply",
-      body: { town_id: town.town_id, user_id: "user_1" },
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
     const response = await base.handleRequest(userRequest({

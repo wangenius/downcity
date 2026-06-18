@@ -20,8 +20,8 @@ import type {
 } from "../types/TownCityConnection.js";
 import type { TownCityUserSession } from "../types/TownCitySession.js";
 import {
-  DEFAULT_CITY_URL,
-  DEFAULT_TOWN_ID,
+  DEFAULT_FEDERATION_URL,
+  DEFAULT_CITY_ID,
   listTownCityServers,
   normalizeCityUrl,
   readCityAdminSecretForUrl,
@@ -39,8 +39,8 @@ function readString(value: unknown): string {
   return readCityString(value);
 }
 
-export function readTownCityAdminSecretForBase(city_url: string): string | undefined {
-  return readCityAdminSecretForUrl(city_url);
+export function readTownCityAdminSecretForBase(federation_url: string): string | undefined {
+  return readCityAdminSecretForUrl(federation_url);
 }
 
 function findTownCityServer(input?: string): TownCityServerProfile | null {
@@ -57,12 +57,12 @@ function findTownCityServer(input?: string): TownCityServerProfile | null {
 
 export function readTownCityConnectionState(): TownCityConnectionState {
   const state = readTownCityState();
-  const city_url = resolveSelectedBaseUrl(state);
-  const session = state.sessions?.[city_url] ?? null;
+  const federation_url = resolveSelectedBaseUrl(state);
+  const session = state.sessions?.[federation_url] ?? null;
   if (session?.user_token) {
     return {
-      city_url,
-      town_id: session.town_id || DEFAULT_TOWN_ID,
+      federation_url,
+      city_id: session.city_id || DEFAULT_CITY_ID,
       has_user_token: true,
       source: "town-session",
       user_id: session.user_id,
@@ -70,10 +70,10 @@ export function readTownCityConnectionState(): TownCityConnectionState {
     };
   }
 
-  const server = listTownCityServers().find((item) => item.base_url === city_url);
+  const server = listTownCityServers().find((item) => item.base_url === federation_url);
   return {
-    city_url,
-    town_id: DEFAULT_TOWN_ID,
+    federation_url,
+    city_id: DEFAULT_CITY_ID,
     has_user_token: false,
     source: server?.source === "city-admin"
       ? "city-admin"
@@ -103,8 +103,8 @@ export function emitCityConnectionStatus(options?: { as_json?: boolean }): void 
     title: "City connection",
     summary: state.has_user_token ? "signed in" : "city selected",
     facts: [
-      { label: "url", value: state.city_url },
-      { label: "town", value: state.town_id },
+      { label: "url", value: state.federation_url },
+      { label: "town", value: state.city_id },
       { label: "user token", value: state.has_user_token ? "configured" : "missing" },
       { label: "source", value: state.source },
       ...(state.user_id ? [{ label: "user", value: state.user_id }] : []),
@@ -124,8 +124,8 @@ export async function emitCityUserWhoami(options?: { as_json?: boolean }): Promi
         success: true,
         title: "city user",
         payload: {
-          city_url: user.city_url,
-          town_id: user.town_id,
+          federation_url: user.federation_url,
+          city_id: user.city_id,
           user_id: user.user_id,
           user_label: user.user_label,
           source: user.source,
@@ -141,13 +141,13 @@ export async function emitCityUserWhoami(options?: { as_json?: boolean }): Promi
       title: "City account",
       summary: user.source,
       facts: [
-        { label: "url", value: user.city_url },
-        { label: "town", value: user.town_id },
+        { label: "url", value: user.federation_url },
+        { label: "town", value: user.city_id },
         { label: "user", value: user.user_id || "unknown" },
         ...(user.user_label ? [{ label: "label", value: user.user_label }] : []),
         { label: "source", value: user.source },
-        { label: "env url", value: user.env_overrides.city_url ? "yes" : "no" },
-        { label: "env town", value: user.env_overrides.town_id ? "yes" : "no" },
+        { label: "env url", value: user.env_overrides.federation_url ? "yes" : "no" },
+        { label: "env town", value: user.env_overrides.city_id ? "yes" : "no" },
         { label: "env token", value: user.env_overrides.user_token ? "yes" : "no" },
       ],
       note: user.warnings.join(" ") || undefined,
@@ -209,21 +209,21 @@ export async function runCityConnectCommand(params: {
   url?: string;
   as_json?: boolean;
 }): Promise<void> {
-  let city_url = normalizeCityUrl(String(params.url || ""));
+  let federation_url = normalizeCityUrl(String(params.url || ""));
 
-  if (!city_url && process.stdin.isTTY && process.stdout.isTTY) {
+  if (!federation_url && process.stdin.isTTY && process.stdout.isTTY) {
     const response = (await prompts({
       type: "text",
-      name: "city_url",
+      name: "federation_url",
       message: "City URL",
-      initial: DEFAULT_CITY_URL,
-    })) as { city_url?: string };
-    city_url = normalizeCityUrl(String(response.city_url || ""));
+      initial: DEFAULT_FEDERATION_URL,
+    })) as { federation_url?: string };
+    federation_url = normalizeCityUrl(String(response.federation_url || ""));
   }
 
-  if (!city_url) city_url = DEFAULT_CITY_URL;
+  if (!federation_url) federation_url = DEFAULT_FEDERATION_URL;
 
-  const state = upsertTownProfile(readTownCityState(), { base_url: city_url });
+  const state = upsertTownProfile(readTownCityState(), { base_url: federation_url });
   writeTownCityState(state);
 
   printResult({
@@ -231,7 +231,7 @@ export async function runCityConnectCommand(params: {
     success: true,
     title: "city connected",
     payload: {
-      city_url,
+      federation_url,
       fix: "Run `town city login` to sign in as a user.",
     },
   });
@@ -266,7 +266,7 @@ export async function runCityUseCommand(params: {
     success: true,
     title: "city selected",
     payload: {
-      city_url: server.base_url,
+      federation_url: server.base_url,
       source: server.source,
       has_user_session: server.has_user_session,
       fix: server.has_user_session ? undefined : "Run `town city login` to sign in as a user.",
@@ -291,28 +291,28 @@ function saveTownCityUserSession(session: TownCityUserSession): void {
 
 export async function runCityLoginCommand(params: {
   url?: string;
-  town_id?: string;
+  city_id?: string;
   as_json?: boolean;
 }): Promise<void> {
   if (params.url) {
-    const city_url = normalizeCityUrl(params.url);
-    if (city_url) {
-      writeTownCityState(upsertTownProfile(readTownCityState(), { base_url: city_url }));
+    const federation_url = normalizeCityUrl(params.url);
+    if (federation_url) {
+      writeTownCityState(upsertTownProfile(readTownCityState(), { base_url: federation_url }));
     }
   }
   const state = readTownCityState();
-  const city_url = resolveSelectedBaseUrl(state);
-  const town_id = readString(params.town_id) || readCurrentTownCitySession()?.town_id || DEFAULT_TOWN_ID;
+  const federation_url = resolveSelectedBaseUrl(state);
+  const city_id = readString(params.city_id) || readCurrentTownCitySession()?.city_id || DEFAULT_CITY_ID;
   const session = await performTownCityUserLogin({
-    city_url,
-    town_id,
+    federation_url,
+    city_id,
   });
   if (!session) {
     printResult({
       asJson: params.as_json === true,
       success: false,
       title: "city login cancelled",
-      payload: { city_url },
+      payload: { federation_url },
     });
     return;
   }
@@ -323,8 +323,8 @@ export async function runCityLoginCommand(params: {
     success: true,
     title: "city user signed in",
     payload: {
-      city_url: session.base_url,
-      town_id: session.town_id,
+      federation_url: session.base_url,
+      city_id: session.city_id,
       user_id: session.user_id,
       user_label: session.user_label,
     },
@@ -333,9 +333,9 @@ export async function runCityLoginCommand(params: {
 
 export function runCityLogoutCommand(options?: { as_json?: boolean }): void {
   const state = readTownCityState();
-  const city_url = resolveSelectedBaseUrl(state);
+  const federation_url = resolveSelectedBaseUrl(state);
   const sessions = { ...(state.sessions ?? {}) };
-  delete sessions[city_url];
+  delete sessions[federation_url];
   writeTownCityState({
     ...state,
     sessions,
@@ -345,20 +345,20 @@ export function runCityLogoutCommand(options?: { as_json?: boolean }): void {
     success: true,
     title: "city user signed out",
     payload: {
-      city_url,
+      federation_url,
     },
   });
 }
 
 export function runCityDisconnectCommand(options?: { as_json?: boolean }): void {
   const state = readTownCityState();
-  const city_url = resolveSelectedBaseUrl(state);
-  const profiles = (state.profiles ?? []).filter((profile) => profile.base_url !== city_url);
+  const federation_url = resolveSelectedBaseUrl(state);
+  const profiles = (state.profiles ?? []).filter((profile) => profile.base_url !== federation_url);
   const sessions = { ...(state.sessions ?? {}) };
-  delete sessions[city_url];
+  delete sessions[federation_url];
   writeTownCityState({
     ...state,
-    selected_base_url: DEFAULT_CITY_URL,
+    selected_base_url: DEFAULT_FEDERATION_URL,
     profiles,
     sessions,
   });
@@ -367,8 +367,8 @@ export function runCityDisconnectCommand(options?: { as_json?: boolean }): void 
     success: true,
     title: "city base disconnected",
     payload: {
-      removed: city_url,
-      selected: DEFAULT_CITY_URL,
+      removed: federation_url,
+      selected: DEFAULT_FEDERATION_URL,
     },
   });
 }

@@ -136,7 +136,7 @@ city deploy templates/edge --verify
 
 ## 7. 初始化 City
 
-部署完成后，请求一次 `/health`。这会让 Worker 启动 City，并创建内置的 `env` / `towns` 表。
+部署完成后，请求一次 `/health`。这会让 Worker 启动 City，并创建内置的 `env` / `cities` 表。
 
 ```bash
 curl https://my-city.<your-subdomain>.workers.dev/health
@@ -147,7 +147,7 @@ curl https://my-city.<your-subdomain>.workers.dev/health
 ```json
 {
   "ok": true,
-  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "ai"]
+  "services": ["env", "cities", "accounts", "balance", "payment", "usage", "ai"]
 }
 ```
 
@@ -160,7 +160,7 @@ npx wrangler d1 execute my-city-db --remote \
   --command "SELECT value FROM env WHERE key='DOWNCITY_CITY_ADMIN_SECRET_KEY'"
 ```
 
-请把这个 key 存在可信位置。它是 `Admin City`、Town CLI 或直接调用 admin HTTP 接口时使用的管理凭证。
+请把这个 key 存在可信位置。它是 `Admin City`、City CLI 或直接调用 admin HTTP 接口时使用的管理凭证。
 
 ## 9. 写入 provider 和 service env
 
@@ -222,4 +222,4 @@ curl https://my-city.<your-subdomain>.workers.dev/health
 city deploy --verify
 ```
 
-运行时 env 保存在 D1 里，所以重新部署 Worker 不会丢失 provider key、OAuth secret、town、余额、usage 记录或 Stripe 支付记录。
+运行时 env 保存在 D1 里，所以重新部署 Worker 不会丢失 provider key、OAuth secret、city、余额、usage 记录或 Stripe 支付记录。

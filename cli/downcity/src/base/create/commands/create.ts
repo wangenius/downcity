@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 从零搭建一个可部署的 City 项目，而不是让用户手写底层部署文件。
  * - Git URL 只在 create 阶段 clone 到本地；deploy 阶段只处理本地项目。
- * - `city.json` 只写项目类型和部署目标，其他文件由 CLI 生成。
+ * - `federation.json` 只写项目类型和部署目标，其他文件由 CLI 生成。
  * - 当前先生成 Cloudflare Workers 项目骨架，后续可扩展更多 target。
  */
 
@@ -16,21 +16,21 @@ import { CliError } from "../../shared/CliError.js";
 import { runCommand } from "../../deploy/runtime/CommandRunner.js";
 
 /** Commander 传入的 create 选项。 */
-export interface CityCreateCommandOptions {
+export interface FederationCreateCommandOptions {
   /** 是否强制覆盖已有文件。 */
   force?: boolean;
 }
 
 /**
- * 创建 City 项目。
+ * 创建 Federation 项目。
  */
-export async function createCityProject(
+export async function createFederationProject(
   dir: string = ".",
-  options: CityCreateCommandOptions = {},
+  options: FederationCreateCommandOptions = {},
 ): Promise<void> {
   const input = String(dir || ".").trim() || ".";
   if (isGitUrl(input)) {
-    await cloneCityProject(input, options);
+    await cloneFederationProject(input, options);
     return;
   }
 
@@ -39,7 +39,7 @@ export async function createCityProject(
 
   const default_name = inferProjectName(project_dir);
   const name_input = await text({
-    message: "City name",
+    message: "Federation name",
     initialValue: default_name,
   });
   if (isCancel(name_input)) return;
@@ -70,7 +70,7 @@ export async function createCityProject(
     });
     if (isCancel(should_overwrite) || should_overwrite !== true) {
       throw new CliError({
-        title: "City project creation cancelled",
+        title: "Federation project creation cancelled",
         note: "Existing files were left unchanged.",
       });
     }
@@ -84,7 +84,7 @@ export async function createCityProject(
 
   emitCliBlock({
     tone: "success",
-    title: "City project created",
+    title: "Federation project created",
     facts: [
       { label: "name", value: name },
       { label: "target", value: target },
@@ -95,11 +95,11 @@ export async function createCityProject(
 }
 
 /**
- * 从 Git URL 创建本地 City 项目。
+ * 从 Git URL 创建本地 Federation 项目。
  */
-async function cloneCityProject(
+async function cloneFederationProject(
   git_url: string,
-  options: CityCreateCommandOptions,
+  options: FederationCreateCommandOptions,
 ): Promise<void> {
   const default_dir = inferGitProjectName(git_url);
   const dir_input = await text({
@@ -118,14 +118,14 @@ async function cloneCityProject(
   }
 
   await runCommand({
-    label: "Clone City project",
+    label: "Clone Federation project",
     command: `git clone --depth 1 ${shellQuote(git_url)} ${shellQuote(project_dir)}`,
     cwd: process.cwd(),
   });
 
   emitCliBlock({
     tone: "success",
-    title: "City project cloned",
+    title: "Federation project cloned",
     facts: [
       { label: "source", value: git_url },
       { label: "dir", value: project_dir },
@@ -144,7 +144,7 @@ function createCloudflareWorkersFiles(
   const package_name = normalizePackageName(name);
   return [
     {
-      path: "city.json",
+      path: "federation.json",
       content: `${JSON.stringify({ type: "city", name, target }, null, 2)}\n`,
     },
     {
@@ -208,15 +208,15 @@ function createCloudflareWorkersFiles(
  */
 function createWorkerEntrypoint(): string {
   return `/**
- * City Cloudflare Worker entry.
+ * Federation Cloudflare Worker entry.
  *
  * 关键点（中文）
- * - 这是 city create 生成的最小 City 入口。
- * - City runtime 默认使用 D1，部署资源由 city deploy 管理。
+ * - 这是 city create 生成的最小 Federation 入口。
+ * - Federation runtime 默认使用 D1，部署资源由 city deploy 管理。
  */
 
 import { drizzle } from "drizzle-orm/d1";
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import {
   accountsService,
   balanceService,
@@ -227,39 +227,39 @@ export interface Env {
   DB: D1Database;
 }
 
-let city_promise: Promise<CityBase> | undefined;
+let federation_promise: Promise<Federation> | undefined;
 
-function get_city(env: Env): Promise<CityBase> {
-  if (!city_promise) {
-    city_promise = init_city(env);
+function get_federation(env: Env): Promise<Federation> {
+  if (!federation_promise) {
+    federation_promise = init_federation(env);
   }
-  return city_promise;
+  return federation_promise;
 }
 
-async function init_city(env: Env): Promise<CityBase> {
+async function init_federation(env: Env): Promise<Federation> {
   const db = drizzle(env.DB);
-  const city = new CityBase({
+  const federation = new Federation({
     db,
     dialect: "sqlite",
     raw: env.DB,
   });
 
-  city.use(accountsService());
-  city.use(balanceService());
-  city.use(usageService());
+  federation.use(accountsService());
+  federation.use(balanceService());
+  federation.use(usageService());
 
-  await city.health();
-  return city;
+  await federation.health();
+  return federation;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const city = await get_city(env);
+    const federation = await get_federation(env);
     if (request.method === "GET" && url.pathname === "/health") {
-      return Response.json(await city.health());
+      return Response.json(await federation.health());
     }
-    return city.handleRequest(request);
+    return federation.handleRequest(request);
   },
 };
 `;

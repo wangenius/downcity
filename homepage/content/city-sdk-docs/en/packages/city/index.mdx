@@ -3,7 +3,7 @@ title: "@downcity/city"
 description: "The City core: services, models, auth, and the unified route surface."
 ---
 
-`@downcity/city` is the City itself. If you are deploying a real City that will serve one or more towns, this is the package everything rests on.
+`@downcity/city` is the City itself. If you are deploying a real City that will serve one or more cities, this is the package everything rests on.
 
 This is not a small helper around an AI SDK. It is the core server-side City where your AI services, custom services, official services, and shared `/v1/*` route surface come together.
 
@@ -22,13 +22,13 @@ If you only want the big picture first, finish this page and then follow the seq
 
 - creating the `City` instance
 - registering `Service`, official services, and `AIService`
-- town, env, and token-related built-in capabilities
+- city, env, and token-related built-in capabilities
 - the unified `/v1/*` route boundary
 - City access through `User City`, `Admin City`, and `City`
 
 ## What it does not own
 
-- It does not create the concrete database connection. Create a Drizzle ORM db and pass it to `new CityBase({ db })`.
+- It does not create the concrete database connection. Create a Drizzle ORM db and pass it to `new Federation({ db })`.
 - It does not own ready-made auth, usage, or payment business logic. Those come from official services.
 
 ## When this should be your first stop
@@ -42,7 +42,7 @@ If you only want the big picture first, finish this page and then follow the seq
 | Goal | Package combination |
 | --- | --- |
 | Local or standard Node deployment | `@downcity/city` + Drizzle SQLite / Postgres |
-| Town frontend or app calls | `@downcity/city` City exports |
+| City frontend or app calls | `@downcity/city` City exports |
 | Accounts, usage, or payments | `@downcity/city` + the matching official service |
 
 ## Install
@@ -54,7 +54,7 @@ pnpm add @downcity/city drizzle-orm better-sqlite3
 ## Minimal example
 
 ```ts
-import { CityBase, AIService } from "@downcity/city";
+import { Federation, AIService } from "@downcity/city";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -65,7 +65,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
+const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
 
 const ai = new AIService();
 

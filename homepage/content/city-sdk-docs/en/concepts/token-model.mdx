@@ -10,7 +10,7 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
     <div className="dc-doc-node">
       <strong>Trusted backend</strong>
       <span>Your backend uses Admin City and holds `admin_secret_key`.</span>
-      <code>Create town / request user_token</code>
+      <code>Create city / request user_token</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -24,7 +24,7 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>End-user client</strong>
-      <span>The frontend, extension, or app only gets `user_token + town_id` and uses User City to call services.</span>
+      <span>The frontend, extension, or app only gets `user_token + city_id` and uses User City to call services.</span>
       <code>No access to admin_secret_key</code>
     </div>
   </div>
@@ -32,38 +32,38 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
 
 ## user_token
 
-`user_token` is the call credential used by the end user or product client. `Admin City` requests it from City using `town_id + user_id`.
+`user_token` is the call credential used by the end user or product client. `Admin City` requests it from City using `city_id + user_id`.
 
-- `town_id`
+- `city_id`
 - `user_id`
 - `metadata`
 - `ttl`
 
-The client only carries `user_token` and `town_id`. It never touches provider keys or `admin_secret_key`.
+The client only carries `user_token` and `city_id`. It never touches provider keys or `admin_secret_key`.
 
 ## admin_secret_key
 
-`DOWNCITY_CITY_ADMIN_SECRET_KEY` is used to manage City: create towns, manage env, and issue `user_token` for users under a given town. City generates it automatically and writes it into `.env` on first startup.
+`DOWNCITY_CITY_ADMIN_SECRET_KEY` is used to manage City: create cities, manage env, and issue `user_token` for users under a given city. City generates it automatically and writes it into `.env` on first startup.
 
 ```ts
-const client = new City({
+const client = new CityPact({
   role: "admin",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const town = await client.towns.create({
+const city = await client.cities.create({
   name: "Chrome Extension",
 });
 ```
 
-## Multi-town reuse
+## Multi-city reuse
 
-Many clients can belong to the same town. When issuing a token, write `town_id` explicitly:
+Many clients can belong to the same city. When issuing a token, write `city_id` explicitly:
 
 ```ts
-const user = await client.towns.tokens.apply({
-  town_id: town.town_id,
+const user = await client.cities.tokens.apply({
+  city_id: city.city_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",

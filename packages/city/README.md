@@ -5,7 +5,7 @@
 它负责这些共用能力：
 
 - 挂载 `Service` / `AIService`
-- 初始化内置 `towns` / `env` 表
+- 初始化内置 `cities` / `env` 表
 - 校验 `user_token` 和 `admin_secret_key`
 - 暴露统一的 `/v1/*` HTTP 路由
 - 提供 env、数据库、hook 和鉴权上下文
@@ -19,7 +19,7 @@ pnpm add @downcity/city
 ## 最小示例
 
 ```ts
-import { CityBase, AIService } from "@downcity/city";
+import { Federation, AIService } from "@downcity/city";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -30,7 +30,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
+const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
 
 const ai = new AIService();
 ai.use({
@@ -66,9 +66,9 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 
 ## City 说明文档
 
-`base.instruction()` 会返回当前 CityBase 实例的聚合说明文档字符串，内容包含：
+`base.instruction()` 会返回当前 Federation 实例的聚合说明文档字符串，内容包含：
 
-- CityBase 的基本使用方式
+- Federation 的基本使用方式
 - 当前已挂载的 service
 - 每个模块需要的 env 配置
 - 每个模块补充的使用说明
@@ -81,7 +81,7 @@ console.log(text);
 如果你需要从远程管理端读取同一份说明，可以请求：
 
 ```txt
-GET /v1/city/instruction
+GET /v1/federation/instruction
 ```
 
 这个接口只允许 `admin_secret_key` 访问，返回 `text/plain`。
@@ -142,7 +142,7 @@ base.use(ai);
 
 ## 官方服务
 
-官方服务用于封装多 town 复用能力：
+官方服务用于封装多 city 复用能力：
 
 ```ts
 import { accountsService } from "@downcity/services";
@@ -163,12 +163,12 @@ base.use(usageService());
 - `auth: ["admin"]` 只允许 `admin_secret_key`
 - `auth: []` 表示免登录
 
-对于用户侧请求，`user_token` 绑定 town 身份。如果请求体或 query 中传了 `town_id`，它必须与 token 里的 town 一致。
+对于用户侧请求，`user_token` 绑定 city 身份。如果请求体或 query 中传了 `city_id`，它必须与 token 里的 city 一致。
 
 ## 主要导出
 
 - `City`
-- `CityBase`
+- `Federation`
 - `Service`
 - `ServiceDefinition`
 - `AIService`
@@ -177,7 +177,7 @@ base.use(usageService());
 - `CityModelDescriptor`
 - `TokenSigner`
 - `EnvService`
-- `TownsService`
+- `CitiesService`
 
 ## City 模型目录
 

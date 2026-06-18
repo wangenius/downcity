@@ -9,12 +9,12 @@ description: 用 User City 从产品侧调用 City runtime 的 Service 和 Actio
 - `client.service(id).action(name).invoke()` 调自定义 Service 或服务 Service
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const client = new City({
+const client = new CityPact({
   role: "user",
-  city_url: "http://127.0.0.1:43127",
-  town_id: "town_downcity",
+  federation_url: "http://127.0.0.1:43127",
+  city_id: "town_downcity",
   user_token: "ub_xxx",
 });
 
@@ -34,4 +34,4 @@ const result = await client.service("translate").action("zh2en").invoke({ text: 
 const oauth = await client.service("accounts").get("oauth/result", { state: "state_xxx" });
 ```
 
-创建 town、暂停 town、签发 `user_token` 和维护 Runtime env 都属于可信环境动作，用 `Admin City` 完成，不放到产品前端。
+创建 city、暂停 city、签发 `user_token` 和维护 Runtime env 都属于可信环境动作，用 `Admin City` 完成，不放到产品前端。

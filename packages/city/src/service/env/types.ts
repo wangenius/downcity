@@ -1,7 +1,7 @@
 /**
  * Env 层公共类型。
  *
- * Downcity 的业务 env 统一由 City 内部管理。
+ * Downcity 的业务 env 统一由 Federation 内部管理。
  * Service / Model 只声明自己需要哪些 key，具体值统一写入 City 的 env 表。
  */
 
@@ -75,7 +75,7 @@ export interface EnvRequirementStatus {
   required: boolean;
 
   /**
-   * 当前 City 是否已经配置了该 key。
+   * 当前 Federation 是否已经配置了该 key。
    */
   configured: boolean;
 

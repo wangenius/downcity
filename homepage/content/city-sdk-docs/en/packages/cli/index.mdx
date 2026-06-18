@@ -3,7 +3,7 @@ title: "City CLI"
 description: "Manage City models and tables from the terminal for setup, debugging, and routine operations."
 ---
 
-`downcity` is the global installation package for Downcity's CLI products. It installs two commands: `city` for City administration and `town` for local Agent hosting.
+`downcity` is the global installation package for Downcity's CLI products. It installs two commands: `city` for City administration and `city` for local Agent hosting.
 
 If `Admin City` owns "trusted programmatic calls", `city` owns "a human operating City directly from the terminal".
 
@@ -48,7 +48,7 @@ In interactive mode, `city` also lets you change the default language from the m
 If no City is connected yet, the dashboard first guides you to add one. After that, you can:
 
 - manage multiple City servers from `Manage Servers`
-- enter the Admin flow for env / models / towns / payment
+- enter the Admin flow for env / models / cities / payment
 - enter the User flow for login, recharge, and service calls
 
 ## Scriptable city commands
@@ -64,26 +64,26 @@ city env refresh
 
 These commands manage City projects, deployment, and City runtime env cache.
 
-## Boundary with `town city`
+## Boundary with `city city`
 
-`town city` is a Town command group. Use it when a local Town runtime or agent needs to select a City base and store a Town user login:
+`city city` is a City command group. Use it when a local City runtime or agent needs to select a City base and store a City user login:
 
 ```bash
-town city use
-town city login
-town city status
+city city use
+city city login
+city city status
 ```
 
 So the short version is:
 
 - `city`: operate City from the terminal
-- `town city`: connect Town and local agents to a City base
+- `city city`: connect City and local agents to a City base
 
 ## Boundaries with other packages
 
 - It does not replace `Admin City` from [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime).
 - It does not replace the runtime capabilities in [@downcity/city](/en/city-sdk-docs/packages/city).
-- It is better for human-operated inspection and maintenance than for code you embed into a town.
+- It is better for human-operated inspection and maintenance than for code you embed into a city.
 
 - `Admin City` is for trusted programmatic calls
 - `city` is for human-operated terminal workflows

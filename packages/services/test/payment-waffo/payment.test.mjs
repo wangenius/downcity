@@ -5,7 +5,7 @@ import http from "node:http"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { CityBase } from "@downcity/city"
+import { Federation } from "@downcity/city"
 import { createSqliteDb } from "../payment-stripe/sqlite-db.mjs"
 import { PaymentService, waffoPaymentProvider } from "../../bin/index.js"
 
@@ -16,7 +16,7 @@ test("paymentService lists enabled Waffo payment method for guests", async () =>
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     base.use(new PaymentService({
       providers: [
         waffoPaymentProvider({
@@ -61,7 +61,7 @@ test("paymentService creates Waffo checkout sessions and finishes topups through
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     const balance = createBalanceBridge()
     base.use(new PaymentService({
       readTopup: (id) => balance.readTopup(id),
@@ -81,15 +81,15 @@ test("paymentService creates Waffo checkout sessions and finishes topups through
     }))
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/tokens/apply",
-      body: { town_id: town.town_id, user_id: "user_1" },
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
     const topup = await balance.createTopup("user_1", 50, { note: "recharge" })

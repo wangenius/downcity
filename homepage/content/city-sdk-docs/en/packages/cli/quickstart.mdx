@@ -3,7 +3,7 @@ title: City CLI Quickstart
 description: "The most common first-time entry points, connection patterns, and use cases for the city command."
 ---
 
-The `downcity` package installs the `city` command for City operators. `city` is not a Town runtime SDK.
+The `downcity` package installs the `city` command for City operators. `city` is not a City runtime SDK.
 
 ## When you should open city first
 
@@ -24,15 +24,15 @@ If you are iterating on `city manage` inside this repository, run:
 pnpm build:cli
 ```
 
-That command builds the workspace `city`, `town`, and `downcity` CLIs. It does not automatically rewrite your global commands. To refresh an installed global CLI, use `town update` or reinstall the global package.
+That command builds the workspace `city`, `city`, and `downcity` CLIs. It does not automatically rewrite your global commands. To refresh an installed global CLI, use `city update` or reinstall the global package.
 
-If `city` / `town` is already installed, you can also run:
+If `city` / `city` is already installed, you can also run:
 
 ```bash
-town update
+city update
 ```
 
-`town update` updates the currently installed global Downcity CLI. During repository development, use the workspace build and local entry points when you only need to verify local source changes.
+`city update` updates the currently installed global Downcity CLI. During repository development, use the workspace build and local entry points when you only need to verify local source changes.
 
 ## First run
 
@@ -147,7 +147,7 @@ The Stripe webhook endpoint itself is fixed:
 
 ## What it is not for
 
-- embedding into town code
+- embedding into city code
 - replacing backend management workflows
 - long-lived automation
 
@@ -155,8 +155,8 @@ Those are better owned by `Admin City` or trusted backend scripts.
 
 ## Common entry points
 
-- `city` / `town`
-- `town update`
+- `city` / `city`
+- `city update`
 - `Connect an existing City`
 - `Server management`
 - `Sign in`

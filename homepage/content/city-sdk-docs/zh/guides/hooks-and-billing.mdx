@@ -66,7 +66,7 @@ interface Context {
   input: Record<string, unknown>    // 请求参数
   output?: unknown                  // Action 执行结果（after 可读）
   user?: { user_id, metadata }      // 当前用户
-  town?: { town_id, status }  // 所属 town
+  city?: { city_id, status }  // 所属 city
   service?: { id, name }            // 当前 Service
   action?: { id }                   // 当前 Action
 }

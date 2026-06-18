@@ -1,15 +1,15 @@
 /**
- * Downcity edge City 示例入口。
+ * Downcity edge Federation 示例入口。
  *
  * 关键点（中文）
- * - 这是一个标准的 City edge 项目示例，部署入口统一走 `city deploy`。
- * - 业务 env、admin key、provider key 统一由 City 自己管理。
+ * - 这是一个标准的 Federation edge 项目示例，部署入口统一走 `city deploy`。
+ * - 业务 env、admin key、provider key 统一由 Federation 自己管理。
  * - Worker 只负责承接 Edge runtime 能力，例如 D1 与 HTTP request。
  * - 装配过程平铺在本文件，不再通过 compose_city 函数包裹。
  */
 
 import { drizzle } from "drizzle-orm/d1";
-import { CityBase, AIService } from "@downcity/city";
+import { Federation, AIService } from "@downcity/city";
 import type { Context } from "@downcity/city";
 import {
   AccountsService,
@@ -37,7 +37,7 @@ export interface Env {
   DB: D1Database;
 }
 
-let city_promise: Promise<CityBase> | undefined;
+let federation_promise: Promise<Federation> | undefined;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,26 +46,26 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-function get_city(env: Env): Promise<CityBase> {
-  if (!city_promise) {
-    city_promise = init_city(env);
+function get_federation(env: Env): Promise<Federation> {
+  if (!federation_promise) {
+    federation_promise = init_federation(env);
   }
-  return city_promise;
+  return federation_promise;
 }
 
-async function init_city(env: Env): Promise<CityBase> {
+async function init_federation(env: Env): Promise<Federation> {
   const db = drizzle(env.DB);
 
   // 关键说明（中文）
   // 顺序有依赖关系：payment 依赖 balance 暴露的 readTopup / finishTopup；ai 依赖 balance 执行扣费。
-  const city = new CityBase({ db });
+  const federation = new Federation({ db });
 
-  city.use(new AccountsService());
+  federation.use(new AccountsService());
 
   const balance = new BalanceService({ init: INITIAL_BALANCE });
-  city.use(balance);
+  federation.use(balance);
 
-  city.use(new PaymentService({
+  federation.use(new PaymentService({
     readTopup: async (topup_id) => await balance.readTopup(topup_id),
     finishTopup: async (topup_id, extra) => await balance.finishTopup(topup_id, extra),
     providers: [
@@ -76,7 +76,7 @@ async function init_city(env: Env): Promise<CityBase> {
     ],
   }));
 
-  city.use(new UsageService({ record_errors: true }));
+  federation.use(new UsageService({ record_errors: true }));
 
   const deepseek_provider = new DeepSeekProvider();
   const luchi_image_provider = new LuchiImageProvider({
@@ -165,17 +165,17 @@ async function init_city(env: Env): Promise<CityBase> {
       bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
     }),
   ]);
-  city.use(ai);
+  federation.use(ai);
 
-  await city.health();
+  await federation.health();
 
   // 关键说明（中文）
   // accounts 的专用回调入口也统一挂到 `/v1/accounts/*`，让 client / admin / worker 对外只有一套路由空间。
-  const accounts = city.getService("accounts")!;
-  city.router().all("/v1/accounts/auth/*", (c) => (accounts as any).getAuthHandler()(c.req.raw));
-  city.router().get("/v1/accounts/oauth/callback", async (c) => (accounts as any).handleOAuthCallback(c.req.raw));
+  const accounts = federation.getService("accounts")!;
+  federation.router().all("/v1/accounts/auth/*", (c) => (accounts as any).getAuthHandler()(c.req.raw));
+  federation.router().get("/v1/accounts/oauth/callback", async (c) => (accounts as any).handleOAuthCallback(c.req.raw));
 
-  return city;
+  return federation;
 }
 
 export default {
@@ -192,15 +192,15 @@ export default {
       }));
     }
 
-    const city = await get_city(env);
+    const federation = await get_federation(env);
     if (request.method === "GET" && url.pathname === "/health") {
-      const health = await city.health();
+      const health = await federation.health();
       return withCors(Response.json({
         ...health,
         version: WORKER_VERSION,
       }));
     }
-    const response = await city.handleRequest(request, { execution: ctx });
+    const response = await federation.handleRequest(request, { execution: ctx });
     return withCors(response);
   },
 };

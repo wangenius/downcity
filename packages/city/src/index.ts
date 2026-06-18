@@ -1,18 +1,18 @@
 /**
  * @downcity/city 公共入口。
  *
- * City 包同时提供服务端 CityBase 与客户端 City：
- * - `CityBase` 用来创建和部署城市服务端
+ * City 包同时提供服务端 Federation 与客户端 City：
+ * - `Federation` 用来创建和部署城市服务端
  * - `City` 用来以 user 或 admin 角色访问城市
  */
 
 // ===========================================================================
-// 场景 1：创建 CityBase 实例
+// 场景 1：创建 Federation 实例
 // ===========================================================================
 
-export { CityBase } from "./core/base/base.js";
-export type { CityBaseOptions, CityBaseHealthStatus } from "./core/types.js";
-export type { CityHandleRequestOptions, CityRequestExecutionContext } from "./core/types.js";
+export { Federation } from "./core/federation/federation.js";
+export type { FederationOptions, FederationHealthStatus } from "./core/types.js";
+export type { FederationHandleRequestOptions, FederationRequestExecutionContext } from "./core/types.js";
 export type { Runtime, EnvProvider, BuiltinTables, TableDef } from "./core/runtime.js";
 
 // ===========================================================================
@@ -112,7 +112,7 @@ export type {
 } from "./core/auth/types.js";
 
 // ===========================================================================
-// 场景 4：管理 Town 与环境变量（内置 Service）
+// 场景 4：管理 City 与环境变量（内置 Service）
 // ===========================================================================
 
 export { EnvService } from "./service/env/env-service.js";
@@ -125,8 +125,8 @@ export type {
 } from "./service/env/types.js";
 export { EnvStore } from "./service/env/env-store.js";
 
-export { TownsService } from "./service/towns/towns-service.js";
-export type { Town, TownCreateInput, TownStatus } from "./service/towns/types.js";
+export { CitiesService } from "./service/cities/cities-service.js";
+export type { City, CityCreateInput, CityStatus } from "./service/cities/types.js";
 
 // ===========================================================================
 // 场景 5：数据库工具
@@ -138,7 +138,7 @@ export type { CityTableApi } from "./store/table-api.js";
 export type { CityUserSchemaInput } from "./store/types.js";
 
 // ===========================================================================
-// 场景 6：City 客户端访问入口
+// 场景 6：CityPact 客户端访问入口
 // ===========================================================================
 
 export type {
@@ -146,7 +146,7 @@ export type {
   FetchResponseLike,
   RawStreamBody,
   RequestInitLike,
-} from "./city/http.js";
+} from "./pact/http.js";
 
 export type {
   CityModel,
@@ -154,19 +154,19 @@ export type {
   CityModelEnvRequirement,
 } from "@downcity/type";
 
-export { City } from "./city/city.js";
+export { CityPact } from "./pact/pact.js";
 export type {
-  AdminCityOptions,
-  CityClientBaseOptions,
-  CityOptions,
-  CityOptionsForRole,
-  CityRole,
-  UserCityOptions,
-} from "./city/types/city.js";
+  AdminPactOptions,
+  CityPactClientBaseOptions,
+  CityPactOptions,
+  CityPactOptionsForRole,
+  CityPactRole,
+  UserPactOptions,
+} from "./pact/types/pact.js";
 
-export { AIInvoker, ModelCatalog, ModelHandle } from "./city/invoker/ai/index.js";
-export { PaymentInvoker, PaymentMethodHandle } from "./city/invoker/payment/index.js";
-export { ServiceClient, ActionClient } from "./city/invoker/invoker.js";
+export { AIInvoker, ModelCatalog, ModelHandle } from "./pact/invoker/ai/index.js";
+export { PaymentInvoker, PaymentMethodHandle } from "./pact/invoker/payment/index.js";
+export { ServiceClient, ActionClient } from "./pact/invoker/invoker.js";
 
 export type {
   UserPaymentMethod,
@@ -188,7 +188,7 @@ export type {
   UserStreamResult,
   UserTextResult,
   UserVideoResult,
-} from "./city/user/types.js";
+} from "./pact/user/types.js";
 
 export type {
   AIImageJobStepContext,
@@ -200,22 +200,22 @@ export type {
   UserPaymentMethod as PaymentMethod,
   UserPaymentMethodReason as PaymentMethodReason,
   UserPaymentMethodType as PaymentMethodType,
-} from "./city/invoker/payment/types.js";
+} from "./pact/invoker/payment/types.js";
 
 export type {
   UserModelRef,
   UserModelInput,
-} from "./city/invoker/ai/types.js";
+} from "./pact/invoker/ai/types.js";
 
-export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./city/invoker/balance/index.js";
-export { EnvInvoker } from "./city/invoker/env/index.js";
-export { TownsInvoker } from "./city/invoker/towns/index.js";
+export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./pact/invoker/balance/index.js";
+export { EnvInvoker } from "./pact/invoker/env/index.js";
+export { CitiesInvoker } from "./pact/invoker/cities/index.js";
 
 export type {
   AdminInstructionResult,
   AdminModelRecord,
   AdminServiceSummary,
-} from "./city/admin/types.js";
+} from "./pact/admin/types.js";
 
 export type {
   BalanceAccountRecord,
@@ -230,18 +230,18 @@ export type {
   BalanceTopupListInput,
   BalanceTopupRecord,
   BalanceTopupUpdateInput,
-} from "./city/invoker/balance/types.js";
+} from "./pact/invoker/balance/types.js";
 
 export type {
   TokenApplyInput,
   TokenApplyResult,
-} from "./city/invoker/towns/types.js";
+} from "./pact/invoker/cities/types.js";
 
 // ===========================================================================
 // 场景 7：内置表 Schema
 // ===========================================================================
 
-export { sqliteTowns, pgTowns } from "./service/towns/schema.js";
+export { sqliteCities, pgCities } from "./service/cities/schema.js";
 export { sqliteEnv, pgEnv } from "./service/env/schema.js";
 
 // ===========================================================================

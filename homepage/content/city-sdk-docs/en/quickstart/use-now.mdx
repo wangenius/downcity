@@ -7,7 +7,7 @@ description: Run a complete call chain with the default database, Admin City, an
 
 ```ts
 import {
-  CityBase,
+  Federation,
   AIService,
   Provider,
   type Context,
@@ -25,7 +25,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
+const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
 
 class EchoProvider extends Provider {
   constructor() {
@@ -64,17 +64,17 @@ await base.health();
 serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ```
 
-## 2. Create Town & Token
+## 2. Create City & Token
 
 ```ts
-const admin = new City({
+const admin = new CityPact({
   role: "admin",
-  city_url: "http://127.0.0.1:43127",
+  federation_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
-const town = await admin.towns.create({ name: "Demo Town" });
-const token = await admin.towns.tokens.apply({
-  town_id: town.town_id,
+const city = await admin.cities.create({ name: "Demo City" });
+const token = await admin.cities.tokens.apply({
+  city_id: city.city_id,
   user_id: "user_123",
   ttl: "7d",
 });
@@ -83,10 +83,10 @@ const token = await admin.towns.tokens.apply({
 ## 3. Client Call
 
 ```ts
-const client = new City({
+const client = new CityPact({
   role: "user",
-  city_url: "http://127.0.0.1:43127",
-  town_id: town.town_id,
+  federation_url: "http://127.0.0.1:43127",
+  city_id: city.city_id,
   user_token: token.user_token,
 });
 

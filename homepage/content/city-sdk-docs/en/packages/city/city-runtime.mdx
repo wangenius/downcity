@@ -17,7 +17,7 @@ That process owns:
 - the service registry
 - service mounting
 - the HTTP route surface
-- town, token, and env infrastructure
+- city, token, and env infrastructure
 
 ## When this page matters
 
@@ -41,7 +41,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
+const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
 
 const ai = new AIService();
 
@@ -111,7 +111,7 @@ export default {
 - service lifecycle
 - action routes
 - token auth
-- town / env / store infrastructure
+- city / env / store infrastructure
 
 The host runtime only needs to create the database object:
 
@@ -121,7 +121,7 @@ The host runtime only needs to create the database object:
 
 ## Common API surface
 
-- `new CityBase({ db })`
+- `new Federation({ db })`
 - `base.use(...)`
 - `base.router()`
 - `base.handleRequest(request)`

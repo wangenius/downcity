@@ -10,8 +10,8 @@ import type { TownCityServerProfile } from "../types/TownCityConnection.js";
 import type { TownCityUserSession } from "../types/TownCitySession.js";
 import type { CliLocale } from "../../types/CliLocale.js";
 import type { TownCityLocalState } from "../types/TownCityState.js";
-export declare const DEFAULT_CITY_URL = "https://base.downcity.ai";
-export declare const DEFAULT_TOWN_ID = "town_downcity";
+export declare const DEFAULT_FEDERATION_URL = "https://base.downcity.ai";
+export declare const DEFAULT_CITY_ID = "city_downcity";
 /**
  * 读取字符串字段。
  */
@@ -47,7 +47,7 @@ export declare function readCurrentTownCitySession(): TownCityUserSession | null
 /**
  * 读取指定 City base 的 user session。
  */
-export declare function readTownCitySessionForBase(city_url: string): TownCityUserSession | null;
+export declare function readTownCitySessionForBase(federation_url: string): TownCityUserSession | null;
 /**
  * 添加或更新 Town 本地 City base。
  */
@@ -68,5 +68,5 @@ export declare function listTownCityServers(): TownCityServerProfile[];
 /**
  * 读取指定 City base 的 admin secret。
  */
-export declare function readCityAdminSecretForUrl(city_url: string): string | undefined;
+export declare function readCityAdminSecretForUrl(federation_url: string): string | undefined;
 //# sourceMappingURL=CityStateStore.d.ts.map

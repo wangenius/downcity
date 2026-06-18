@@ -7,7 +7,7 @@
  * - 需要输入的动作会临时进入现有 prompt TUI，完成后回到本界面并展示结果。
  */
 import blessed from "neo-blessed";
-import { DEFAULT_CITY_URL, DEFAULT_TOWN_ID, listTownCityServers, normalizeCityUrl, readCurrentTownCitySession, readPersistedTownCliLocale, readTownCityState, readCityString, resolveSelectedBaseUrl, upsertTownProfile, writeTownCityState, } from "../shared/CityStateStore.js";
+import { DEFAULT_FEDERATION_URL, DEFAULT_CITY_ID, listTownCityServers, normalizeCityUrl, readCurrentTownCitySession, readPersistedTownCliLocale, readTownCityState, readCityString, resolveSelectedBaseUrl, upsertTownProfile, writeTownCityState, } from "../shared/CityStateStore.js";
 import { performTownCityUserLogin } from "../shared/CityUserLogin.js";
 import { CityUserManager } from "../shared/CityUserManager.js";
 import { readCurrentTownCityBalance, rechargeCurrentTownCityUser, } from "../shared/CityBalance.js";
@@ -18,22 +18,22 @@ import { is_disabled_selectable_item, resolve_loop_selectable_index, resolve_nex
 const cityUserManager = new CityUserManager();
 function read_city_connection_state() {
     const state = readTownCityState();
-    const city_url = resolveSelectedBaseUrl(state);
-    const session = state.sessions?.[city_url] ?? null;
+    const federation_url = resolveSelectedBaseUrl(state);
+    const session = state.sessions?.[federation_url] ?? null;
     if (session?.user_token) {
         return {
-            city_url,
-            town_id: session.town_id || DEFAULT_TOWN_ID,
+            federation_url,
+            city_id: session.city_id || DEFAULT_CITY_ID,
             has_user_token: true,
             source: "town-session",
             user_id: session.user_id,
             user_label: session.user_label,
         };
     }
-    const server = listTownCityServers().find((item) => item.base_url === city_url);
+    const server = listTownCityServers().find((item) => item.base_url === federation_url);
     return {
-        city_url,
-        town_id: DEFAULT_TOWN_ID,
+        federation_url,
+        city_id: DEFAULT_CITY_ID,
         has_user_token: false,
         source: server?.source === "city-admin"
             ? "city-admin"
@@ -232,7 +232,7 @@ function build_city_items(params) {
         {
             id: "status",
             title: t({ zh: "查看连接状态", en: "View connection status" }),
-            subtitle: params.connection.city_url,
+            subtitle: params.connection.federation_url,
             detail: format_connection_detail(params.connection),
         },
         section_item("city", "City"),
@@ -283,7 +283,7 @@ function build_city_items(params) {
         items.push({
             id: "whoami",
             title: t({ zh: "当前账号", en: "Current account" }),
-            subtitle: params.connection.user_label || params.connection.user_id || params.connection.town_id,
+            subtitle: params.connection.user_label || params.connection.user_id || params.connection.city_id,
             detail: format_connection_detail(params.connection),
         }, {
             id: "balance",
@@ -380,16 +380,16 @@ async function handle_city_action(params) {
         return;
     }
     if (params.action === "logout") {
-        const city_url = resolveSelectedBaseUrl(readTownCityState());
+        const federation_url = resolveSelectedBaseUrl(readTownCityState());
         const state = readTownCityState();
         const sessions = { ...(state.sessions ?? {}) };
-        delete sessions[city_url];
+        delete sessions[federation_url];
         writeTownCityState({ ...state, sessions });
         await params.refresh_state({
             keep_action: "login",
             detail_override: t({
-                zh: `已登出当前 City：${city_url}`,
-                en: `Signed out from current City: ${city_url}`,
+                zh: `已登出当前 City：${federation_url}`,
+                en: `Signed out from current City: ${federation_url}`,
             }),
         });
         return;
@@ -397,19 +397,19 @@ async function handle_city_action(params) {
 }
 async function handle_city_prompt_action(action) {
     if (action === "connect") {
-        const city_url = await prompt_city_url();
-        if (!city_url) {
+        const federation_url = await prompt_city_url();
+        if (!federation_url) {
             return {
                 initial_action: "connect",
                 detail_override: t({ zh: "已取消添加 City。", en: "Add City cancelled." }),
             };
         }
-        writeTownCityState(upsertTownProfile(readTownCityState(), { base_url: city_url }));
+        writeTownCityState(upsertTownProfile(readTownCityState(), { base_url: federation_url }));
         return {
             initial_action: "status",
             detail_override: t({
-                zh: `已添加并选择 City：${city_url}`,
-                en: `Added and selected City: ${city_url}`,
+                zh: `已添加并选择 City：${federation_url}`,
+                en: `Added and selected City: ${federation_url}`,
             }),
         };
     }
@@ -433,8 +433,8 @@ async function handle_city_prompt_action(action) {
     if (action === "login") {
         const connection = read_city_connection_state();
         const session = await performTownCityUserLogin({
-            city_url: connection.city_url,
-            town_id: readCurrentTownCitySession()?.town_id || DEFAULT_TOWN_ID,
+            federation_url: connection.federation_url,
+            city_id: readCurrentTownCitySession()?.city_id || DEFAULT_CITY_ID,
         }, { silent: true });
         if (!session) {
             return {
@@ -581,12 +581,12 @@ function create_city_manager_shell(state) {
 async function prompt_city_url() {
     const response = (await prompts({
         type: "text",
-        name: "city_url",
+        name: "federation_url",
         message: "City URL",
-        initial: DEFAULT_CITY_URL,
+        initial: DEFAULT_FEDERATION_URL,
     }));
-    const city_url = normalizeCityUrl(String(response.city_url || ""));
-    return city_url || null;
+    const federation_url = normalizeCityUrl(String(response.federation_url || ""));
+    return federation_url || null;
 }
 async function prompt_town_city_server() {
     const servers = listTownCityServers();
@@ -699,24 +699,24 @@ function build_city_subtitle(connection, balance) {
             en: ` · balance ${balance.balance}`,
         })
         : "";
-    return `${connection.city_url} · ${login_state}${balance_text}`;
+    return `${connection.federation_url} · ${login_state}${balance_text}`;
 }
 function format_connection_detail(connection) {
     return t({
         zh: [
             "{bold}当前 City 连接{/bold}",
-            `URL：${connection.city_url}`,
+            `URL：${connection.federation_url}`,
             `source：${connection.source}`,
-            `town id：${connection.town_id}`,
+            `town id：${connection.city_id}`,
             `登录态：${connection.has_user_token ? "已登录" : "未登录"}`,
             connection.user_id ? `账号 ID：${connection.user_id}` : "",
             connection.user_label ? `账号：${connection.user_label}` : "",
         ].filter(Boolean).join("\n"),
         en: [
             "{bold}Current City connection{/bold}",
-            `URL: ${connection.city_url}`,
+            `URL: ${connection.federation_url}`,
             `source: ${connection.source}`,
-            `town id: ${connection.town_id}`,
+            `town id: ${connection.city_id}`,
             `session: ${connection.has_user_token ? "signed in" : "not signed in"}`,
             connection.user_id ? `account ID: ${connection.user_id}` : "",
             connection.user_label ? `account: ${connection.user_label}` : "",
@@ -740,13 +740,13 @@ function format_login_detail(connection) {
     return t({
         zh: [
             "{bold}登录{/bold}",
-            `当前 City：${connection.city_url}`,
+            `当前 City：${connection.federation_url}`,
             "",
             "Enter 后选择可用登录方式。登录成功后，账号和余额会直接显示在这个 TUI 中。",
         ].join("\n"),
         en: [
             "{bold}Sign in{/bold}",
-            `Current City: ${connection.city_url}`,
+            `Current City: ${connection.federation_url}`,
             "",
             "Press Enter to choose an available sign-in method. After sign-in, account and balance will appear in this TUI.",
         ].join("\n"),
@@ -765,13 +765,13 @@ function format_balance_detail(account) {
 function format_current_user_detail(user) {
     return [
         `{bold}${t({ zh: "当前账号", en: "Current account" })}{/bold}`,
-        `URL: ${user.city_url}`,
-        `town: ${user.town_id}`,
+        `URL: ${user.federation_url}`,
+        `town: ${user.city_id}`,
         `user: ${user.user_id || "unknown"}`,
         user.user_label ? `label: ${user.user_label}` : "",
         `source: ${user.source}`,
-        `env url: ${user.env_overrides.city_url ? "yes" : "no"}`,
-        `env town: ${user.env_overrides.town_id ? "yes" : "no"}`,
+        `env url: ${user.env_overrides.federation_url ? "yes" : "no"}`,
+        `env town: ${user.env_overrides.city_id ? "yes" : "no"}`,
         `env token: ${user.env_overrides.user_token ? "yes" : "no"}`,
         user.warnings.length > 0 ? `\n${user.warnings.join("\n")}` : "",
     ].filter(Boolean).join("\n");
@@ -780,7 +780,7 @@ function format_session_detail(session) {
     return [
         `{bold}${t({ zh: "登录成功", en: "Signed in" })}{/bold}`,
         `URL: ${session.base_url}`,
-        `town: ${session.town_id}`,
+        `town: ${session.city_id}`,
         `user: ${session.user_id || "unknown"}`,
         session.user_label ? `label: ${session.user_label}` : "",
         `updated: ${session.updated_at}`,

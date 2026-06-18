@@ -5,7 +5,7 @@ description: "How guest User City, the accounts service, your own backend, user_
 
 Every login flow around City converges to one goal:
 
-> get `town_id + user_token` into the town frontend, then enter normal `User City` calls.
+> get `city_id + user_token` into the city frontend, then enter normal `User City` calls.
 
 ## Pattern one: your backend owns login
 
@@ -13,7 +13,7 @@ Every login flow around City converges to one goal:
 frontend submits login data
   -> your backend validates the account
   -> backend uses Admin City to request user_token
-  -> returns town_id + user_token
+  -> returns city_id + user_token
   -> frontend creates a normal User City
 ```
 
@@ -38,12 +38,12 @@ Good fit when:
 
 ## What a guest User City is
 
-It is simply a `User City` with `city_url` only:
+It is simply a `User City` with `federation_url` only:
 
 ```ts
-const guest = new City({
+const guest = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
 });
 ```
 
@@ -57,15 +57,15 @@ At this stage it is usually used only for guest-access Actions such as:
 ## Switching to a normal User City
 
 ```ts
-const user = new City({
+const user = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
-  town_id: "town_xxx",
+  federation_url: "https://base.example.com",
+  city_id: "town_xxx",
   user_token: session.user_token,
 });
 ```
 
-At that point the town enters real user context:
+At that point the city enters real user context:
 
 - it can call AI services
 - it can call custom services that require user identity

@@ -53,7 +53,7 @@ export interface OpenAICompatibleClient {
  * 模型 action 映射，key 为通路名称。
  *
  * 两条独立通路：
- * - SDK 通路：text / stream / image / video / tts / asr — 给 User City 用
+ * - SDK 通路：text / stream / image / video / tts / asr — 给 User CityPact 用
  * - OpenAI 兼容通路：openai — 给 /chat/completions 端点用
  *
  * 每个 action 接收 Context，返回对应通路的结果。

@@ -33,7 +33,7 @@ PORT=43127
 DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
 ```
 
-`/data` 必须是持久化 volume。town、model、用户、session、usage、payment 和 City env 都会保存在这个 SQLite 数据库里。
+`/data` 必须是持久化 volume。city、model、用户、session、usage、payment 和 City env 都会保存在这个 SQLite 数据库里。
 
 ## 域名路径
 
@@ -98,7 +98,7 @@ curl http://1.2.3.4:43127/health
 ```json
 {
   "ok": true,
-  "services": ["env", "towns", "accounts", "balance", "payment", "usage", "ai"]
+  "services": ["env", "cities", "accounts", "balance", "payment", "usage", "ai"]
 }
 ```
 
@@ -109,12 +109,12 @@ curl http://1.2.3.4:43127/health
 产品前端和应用应该通过 `@downcity/city` 调用 Node 街区：
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const client = new City({
+const client = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
-  town_id: "my-town",
+  federation_url: "https://base.example.com",
+  city_id: "my-city",
   user_token: "user_token",
 });
 ```
@@ -122,11 +122,11 @@ const client = new City({
 可信后端应该用 `Admin City` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const admin = new City({
+const admin = new CityPact({
   role: "admin",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```

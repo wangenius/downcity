@@ -11,7 +11,7 @@ import { isCancel, select, text } from "../../tui/Prompts.js";
 import { readCloudflareAccountId, writeCloudflareAccountId } from "../../core/session.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
-import type { CityProjectDeployEnvFile } from "../../types/CityProjectConfig.js";
+import type { FederationProjectDeployEnvFile } from "../../types/FederationProjectConfig.js";
 import { runCommand } from "./CommandRunner.js";
 
 /** Cloudflare account 解析参数。 */
@@ -19,7 +19,7 @@ export interface ResolveCloudflareAccountParams {
   /** City 项目目录。 */
   project_dir: string;
   /** 当前 City 本地部署环境。 */
-  env_file: CityProjectDeployEnvFile;
+  env_file: FederationProjectDeployEnvFile;
   /** 用户通过命令行或环境变量显式传入的 account id。 */
   account_id?: string;
 }
@@ -29,7 +29,7 @@ export interface ResolveCloudflareAccountResult {
   /** Cloudflare account id。 */
   account_id?: string;
   /** 可能写入 account id 后的本地部署环境。 */
-  env_file: CityProjectDeployEnvFile;
+  env_file: FederationProjectDeployEnvFile;
 }
 
 /**
@@ -137,7 +137,7 @@ async function resolveAccountAfterLookupDenied(
  * 交互式输入 Cloudflare account id。
  */
 async function promptForAccountId(
-  env_file: CityProjectDeployEnvFile,
+  env_file: FederationProjectDeployEnvFile,
 ): Promise<ResolveCloudflareAccountResult> {
   const account_id = await text({
     message: "Cloudflare account id",
@@ -161,7 +161,7 @@ async function promptForAccountId(
  * 保存 Cloudflare account id 到本地 City CLI 状态。
  */
 function persistCloudflareAccount(
-  env_file: CityProjectDeployEnvFile,
+  env_file: FederationProjectDeployEnvFile,
   account_id: string,
 ): ResolveCloudflareAccountResult {
   const normalized_account_id = normalizeAccountId(account_id);

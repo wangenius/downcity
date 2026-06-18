@@ -1,22 +1,22 @@
 ---
 title: Common Patterns and Errors
-description: "Common City combinations in real towns, and how to reason about token, model, and service-related errors."
+description: "Common City combinations in real cities, and how to reason about token, model, and service-related errors."
 ---
 
 ## The three most common combinations
 
-### Pure AI town
+### Pure AI city
 
 - `@downcity/city`
 - City exports from `@downcity/city`
 
-### AI town with minimal auth
+### AI city with minimal auth
 
 - `@downcity/city`
 - City exports from `@downcity/city`
 - `@downcity/services`
 
-### AI town with usage and payment
+### AI city with usage and payment
 
 - `@downcity/city`
 - City exports from `@downcity/city`
@@ -26,8 +26,8 @@ description: "Common City combinations in real towns, and how to reason about to
 
 - `user_token` was not sent
 - the token expired
-- the `town_id` does not match the token
-- the town has been paused
+- the `city_id` does not match the token
+- the city has been paused
 
 ## Most common 404 causes
 
@@ -45,4 +45,4 @@ description: "Common City combinations in real towns, and how to reason about to
 
 1. confirm whether the call is AI service, custom service, or service
 2. confirm whether the current phase is guest access or logged-in user access
-3. then compare `town_id`, `user_token`, service id, action id, and model id
+3. then compare `city_id`, `user_token`, service id, action id, and model id

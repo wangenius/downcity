@@ -1,6 +1,6 @@
 ---
 title: Admin City
-description: 可信环境如何管理 town、签发 user_token，并维护 Runtime env。
+description: 可信环境如何管理 city、签发 user_token，并维护 Runtime env。
 ---
 
 `Admin City` 只应该运行在可信环境里。
@@ -20,7 +20,7 @@ description: 可信环境如何管理 town、签发 user_token，并维护 Runti
 
 它最常负责三件事：
 
-- 管 `town`
+- 管 `city`
 - 签 `user_token`
 - 维护 runtime env
 - 执行可信侧 balance / redeem_code 管理动作
@@ -30,11 +30,11 @@ description: 可信环境如何管理 town、签发 user_token，并维护 Runti
 ## 最小示例
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const admin = new City({
+const admin = new CityPact({
   role: "admin",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 ```
@@ -54,37 +54,37 @@ const admin = new City({
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>Admin City</strong>
-      <span>调用 `/v1/towns/*`、`/v1/towns/tokens/apply`、`/v1/env/*`、`/v1/ai/models`、`/v1/base/instruction`。</span>
+      <span>调用 `/v1/cities/*`、`/v1/cities/tokens/apply`、`/v1/env/*`、`/v1/ai/models`、`/v1/base/instruction`。</span>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>Downcity</strong>
-      <span>校验 `admin_secret_key` 后，再执行 town、token 和 env 管理动作。</span>
+      <span>校验 `admin_secret_key` 后，再执行 city、token 和 env 管理动作。</span>
     </div>
   </div>
 </div>
 
-## `towns`
+## `cities`
 
 ### `list()`
 
 ```ts
-const items = await admin.towns.list();
+const items = await admin.cities.list();
 ```
 
 ### `create()`
 
 ```ts
-const town = await admin.towns.create({
+const city = await admin.cities.create({
   name: "Chrome Extension",
 });
 ```
 
 返回值包含：
 
-- `town_id`
+- `city_id`
 - `name`
 - `status`
 - `created_at`
@@ -93,32 +93,32 @@ const town = await admin.towns.create({
 ### `pause()` / `activate()`
 
 ```ts
-await admin.towns.pause(town.town_id);
+await admin.cities.pause(city.city_id);
 
-await admin.towns.activate(town.town_id);
+await admin.cities.activate(city.city_id);
 ```
 
 适合：
 
 - 暂停某个产品的所有用户调用
 - 临时下线某个产品
-- 重新开放一个 town
+- 重新开放一个 city
 
 ### `remove()`
 
 ```ts
-await admin.towns.remove(town.town_id);
+await admin.cities.remove(city.city_id);
 ```
 
-当前语义就是删除 town 记录。调用前要先确认这是否符合你的业务预期。
+当前语义就是删除 city 记录。调用前要先确认这是否符合你的业务预期。
 
 ## `tokens.apply()`
 
-这是最常用的管理端能力：为某个用户在某个 town 下申请 `user_token`。
+这是最常用的管理端能力：为某个用户在某个 city 下申请 `user_token`。
 
 ```ts
-const issued = await admin.towns.tokens.apply({
-  town_id: town.town_id,
+const issued = await admin.cities.tokens.apply({
+  city_id: city.city_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -131,7 +131,7 @@ const issued = await admin.towns.tokens.apply({
 返回值包含：
 
 - `user_token`
-- `town_id`
+- `city_id`
 - `user_id`
 - `expires_at`
 
@@ -148,14 +148,14 @@ const issued = await admin.towns.tokens.apply({
 router.post("/login", async (c) => {
   const user_id = await login(c);
 
-  const issued = await admin.towns.tokens.apply({
-    town_id: "town_xxx",
+  const issued = await admin.cities.tokens.apply({
+    city_id: "town_xxx",
     user_id,
     ttl: "7d",
   });
 
   return c.json({
-    town_id: "town_xxx",
+    city_id: "town_xxx",
     user_token: issued.user_token,
   });
 });
@@ -165,7 +165,7 @@ router.post("/login", async (c) => {
 
 1. 你的业务后端先完成用户登录
 2. 再由可信后端向 City 申请 `user_token`
-3. 把 `town_id + user_token` 返回给前端
+3. 把 `city_id + user_token` 返回给前端
 4. 前端再用 `User City` 调 City
 
 ## 它和 accounts 服务是什么关系
@@ -178,7 +178,7 @@ router.post("/login", async (c) => {
 
 - 业务后端自己校验用户名密码或 session
 - 业务后端再用 `Admin City` 申请 `user_token`
-- 前端拿到 `town_id + user_token`
+- 前端拿到 `city_id + user_token`
 
 ### 模式 B：accounts 服务做登录
 
@@ -246,7 +246,7 @@ await admin.env.refresh();
 
 ## `listServices()` / `listModels()` / `instruction()`
 
-除了 `towns.*` 和 `env.*`，管理端还可以读取 City 当前暴露的能力目录。
+除了 `cities.*` 和 `env.*`，管理端还可以读取 City 当前暴露的能力目录。
 
 ### `listServices()`
 
@@ -283,7 +283,7 @@ console.log(text);
 
 ## Admin City 也可以调 service 的管理侧 service
 
-除了 `towns.*` 和 `env.*`，`Admin City` 也可以调用 service 暴露出来的管理侧 service。
+除了 `cities.*` 和 `env.*`，`Admin City` 也可以调用 service 暴露出来的管理侧 service。
 
 例如：
 
@@ -307,7 +307,7 @@ await admin.balance.redeemCodes.disable({
 });
 ```
 
-也就是说，`Admin City` 不只是在调内建 towns/env 接口，它同样是可信侧调用统一 service 路由的入口。
+也就是说，`Admin City` 不只是在调内建 cities/env 接口，它同样是可信侧调用统一 service 路由的入口。
 
 ## 错误处理
 
@@ -318,8 +318,8 @@ await admin.balance.redeemCodes.disable({
 
 ```ts
 try {
-  await admin.towns.tokens.apply({
-    town_id: "town_xxx",
+  await admin.cities.tokens.apply({
+    city_id: "town_xxx",
     user_id: "user_123",
   });
 } catch (error) {
@@ -333,8 +333,8 @@ try {
 常见状态码：
 
 - `401`：`admin_secret_key` 缺失或错误。
-- `403`：目标 town 已暂停，不能继续签发 token。
-- `404`：目标 town 不存在。
+- `403`：目标 city 已暂停，不能继续签发 token。
+- `404`：目标 city 不存在。
 - `500`：City 缺少必要配置，或管理动作内部执行失败。
 
 ## 当前不归 `Admin City` 管的事情
@@ -350,4 +350,4 @@ try {
 
 - `City` 运行时层
 
-也就是说，`Admin City` 负责维护 town、token 和 env；模型定义和 service 挂载方式仍然属于 `City` 运行时层。
+也就是说，`Admin City` 负责维护 city、token 和 env；模型定义和 service 挂载方式仍然属于 `City` 运行时层。

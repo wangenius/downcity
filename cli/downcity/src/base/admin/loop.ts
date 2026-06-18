@@ -6,13 +6,13 @@
  * - City 连接配置、admin key 更新等低频操作通过 `更多` 回调交给 workspace 层处理。
  */
 
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import { type AdminSession } from "../core/session.js";
 import { adminErrorMessage, isAdminAuthError } from "./auth-error.js";
 import { create_admin_tui_runtime } from "../tui/AdminTuiRuntime.js";
 import type { admin_tui_runtime } from "../types/AdminTui.js";
 import { manageEnv } from "./commands/service-env.js";
-import { manageTowns } from "./commands/towns.js";
+import { manageCities } from "./commands/cities.js";
 import { manageAccounts } from "./commands/accounts.js";
 import { manageBalance } from "./commands/balance.js";
 import { manageUsage } from "./commands/usage.js";
@@ -22,11 +22,11 @@ import { manageModels } from "./commands/models.js";
 import { manageInstruction } from "./commands/instruction.js";
 import { t } from "../../shared/CliLocale.js";
 
-const commands: Record<string, (a: City, baseUrl: string, runtime: admin_tui_runtime) => Promise<void>> = {
+const commands: Record<string, (a: CityPact, baseUrl: string, runtime: admin_tui_runtime) => Promise<void>> = {
   env: manageEnv,
   instruction: manageInstruction,
   models: manageModels,
-  towns: manageTowns,
+  cities: manageCities,
   accounts: manageAccounts,
   balance: manageBalance,
   usage: manageUsage,
@@ -43,9 +43,9 @@ export async function adminLoop(
     runtime?: admin_tui_runtime;
   },
 ): Promise<"logout" | "quit" | "switch_identity" | "back"> {
-  const admin = new City({
+  const admin = new CityPact({
     role: "admin",
-    city_url: session.base_url,
+    federation_url: session.base_url,
     admin_secret_key: session.admin_secret_key,
   });
   const embedded = options?.embedded !== false;
@@ -99,10 +99,10 @@ export async function adminLoop(
             zh: "产品管理",
             en: "Products",
           }),
-          value: "towns",
+          value: "cities",
           hint: t({
-            zh: "管理产品/App 入口；Town 是 agent 活动空间，用于划分 user token、服务调用边界和运行状态。",
-            en: "Manage product/App entries. A Town is where agents operate and scopes user tokens, service calls, and runtime status.",
+            zh: "管理产品/App 入口；City 是 agent 活动空间，用于划分 user token、服务调用边界和运行状态。",
+            en: "Manage product/App entries. A City is where agents operate and scopes user tokens, service calls, and runtime status.",
           }),
         },
         {
@@ -134,8 +134,8 @@ export async function adminLoop(
           }),
           value: "usage",
           hint: t({
-            zh: "查看 Town/产品维度的 service 调用事件与聚合统计，用于排查消耗、成功失败状态和使用趋势。",
-            en: "View service-call events and summaries by Town/product to audit consumption, status, and usage trends.",
+            zh: "查看 City/产品维度的 service 调用事件与聚合统计，用于排查消耗、成功失败状态和使用趋势。",
+            en: "View service-call events and summaries by City/product to audit consumption, status, and usage trends.",
           }),
         },
         {

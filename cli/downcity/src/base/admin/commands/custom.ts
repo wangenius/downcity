@@ -2,12 +2,12 @@
  * Admin Custom Service 命令。
  */
 
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import { t } from "../../i18n.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
-export async function manageCustom(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
+export async function manageCustom(a: CityPact, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {
     const name = await runtime.text(t({
       zh: "service id（例如 accounts、usage、payment.stripe，留空返回）",

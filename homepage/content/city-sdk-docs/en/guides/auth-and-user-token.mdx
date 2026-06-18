@@ -10,8 +10,8 @@ Downcity does not host your user system. It only requires a verifiable `user_tok
 After a user logs in, issue a Downcity token through `Admin City`:
 
 ```ts
-const user = await admin.towns.tokens.apply({
-  town_id: "town_xxx",
+const user = await admin.cities.tokens.apply({
+  city_id: "town_xxx",
   user_id: session.user.id,
   metadata: {
     plan: session.user.plan,
@@ -22,7 +22,7 @@ const user = await admin.towns.tokens.apply({
 
 Then give the product side two values:
 
-- `town_id`
+- `city_id`
 - `user_token`
 
 ## If you do not have a heavy backend yet

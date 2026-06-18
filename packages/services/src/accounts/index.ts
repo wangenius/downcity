@@ -122,9 +122,9 @@ interface OAuthStateRow extends Record<string, unknown> {
   state: string;
 
   /**
-   * 目标 town_id。
+   * 目标 city_id。
    */
-  town_id: string;
+  city_id: string;
 
   /**
    * provider 标识。
@@ -169,7 +169,7 @@ export class AccountsService extends InstallableService {
     ]);
     this.instruction = ({ actions }) => [
       "提供 Downcity 的账号、邮箱验证、GitHub/Google/WeChat OAuth 登录能力。",
-      "注册或登录时传入 town_id 后，接口会返回绑定该 town 的 City user_token。",
+      "注册或登录时传入 city_id 后，接口会返回绑定该 city 的 City user_token。",
       "OAuth 回调地址固定为 /v1/accounts/oauth/callback，服务会根据 City 公网地址生成完整回调 URL。",
       `当前暴露 ${actions.length} 个动作，常用流程是 register/login -> verify-email 或 oauth/start -> me。`,
     ].join("\n");
@@ -276,7 +276,7 @@ export class AccountsService extends InstallableService {
       path: "/verify-email",
       auth: [],
       handler: async (c) => {
-        const body = await c.json<{ token?: string; town_id?: string }>();
+        const body = await c.json<{ token?: string; city_id?: string }>();
         const token = String(body.token ?? "").trim();
         if (!token) return c.jsonResponse({ error: "verification token required" }, 400);
 
@@ -298,7 +298,7 @@ export class AccountsService extends InstallableService {
           }
 
           const userToken = await ctx.createUserToken({
-            town_id: String(body.town_id ?? ""),
+            city_id: String(body.city_id ?? ""),
             user_id,
             ttl: this.options.token_ttl,
           });
@@ -315,7 +315,7 @@ export class AccountsService extends InstallableService {
       path: "/login",
       auth: [],
       handler: async (c) => {
-        const body = await c.json<{ email?: string; password?: string; town_id?: string }>();
+        const body = await c.json<{ email?: string; password?: string; city_id?: string }>();
         const email = String(body.email ?? "").trim().toLowerCase();
         const password = String(body.password ?? "");
 
@@ -346,7 +346,7 @@ export class AccountsService extends InstallableService {
           }
 
           const userToken = await ctx.createUserToken({
-            town_id: String(body.town_id ?? ""),
+            city_id: String(body.city_id ?? ""),
             user_id,
             ttl: this.options.token_ttl,
           });
@@ -374,7 +374,7 @@ export class AccountsService extends InstallableService {
       path: "/oauth/start",
       auth: [],
       handler: async (c) => {
-        const body = await c.json<{ provider?: string; town_id?: string }>();
+        const body = await c.json<{ provider?: string; city_id?: string }>();
         const provider = readOAuthProviderId(String(body.provider ?? "").trim());
         if (!provider) {
           return c.jsonResponse({ error: "provider must be github, google, or wechat" }, 400);
@@ -385,9 +385,9 @@ export class AccountsService extends InstallableService {
           return c.jsonResponse({ error: "provider not configured" }, 400);
         }
 
-        const town_id = String(body.town_id ?? "").trim() || "town_downcity";
+        const city_id = String(body.city_id ?? "").trim() || "town_downcity";
         const state = randomToken(24);
-        await this.createOAuthState(town_id, provider, state);
+        await this.createOAuthState(city_id, provider, state);
         const url = buildOAuthAuthorizeURL(config, this.getOAuthCallbackURL(), state);
         return c.jsonResponse({ url, state, provider });
       },
@@ -497,7 +497,7 @@ export class AccountsService extends InstallableService {
       );
       const authUserId = await this.ensureOAuthAuthUser(profile, request);
       const result = await this._authenticator!.createToken({
-        town_id: entry.town_id,
+        city_id: entry.city_id,
         user_id: authUserId,
         ttl: this.options.token_ttl,
       });
@@ -656,10 +656,10 @@ export class AccountsService extends InstallableService {
   /**
    * 创建 OAuth state。
    */
-  private async createOAuthState(town_id: string, provider: OAuthProviderId, state: string): Promise<void> {
+  private async createOAuthState(city_id: string, provider: OAuthProviderId, state: string): Promise<void> {
     await runPrepared(
-      this.rawPrepare(`INSERT INTO ${ACCOUNTS_OAUTH_STATE_TABLE} (state, town_id, provider, user_token, created_at) VALUES (?, ?, ?, ?, ?)`),
-      [state, town_id, provider, "", Date.now()],
+      this.rawPrepare(`INSERT INTO ${ACCOUNTS_OAUTH_STATE_TABLE} (state, city_id, provider, user_token, created_at) VALUES (?, ?, ?, ?, ?)`),
+      [state, city_id, provider, "", Date.now()],
     );
   }
 
@@ -668,7 +668,7 @@ export class AccountsService extends InstallableService {
    */
   private async readOAuthState(state: string): Promise<OAuthStateRow | null> {
     const row = await readPreparedFirst(
-      this.rawPrepare(`SELECT state, town_id, provider, user_token, created_at FROM ${ACCOUNTS_OAUTH_STATE_TABLE} WHERE state = ?`),
+      this.rawPrepare(`SELECT state, city_id, provider, user_token, created_at FROM ${ACCOUNTS_OAUTH_STATE_TABLE} WHERE state = ?`),
       [state],
     ) as OAuthStateRow | null;
     if (!row) return null;

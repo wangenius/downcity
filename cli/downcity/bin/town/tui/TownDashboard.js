@@ -337,10 +337,10 @@ function build_status_detail(params) {
             `PID：${params.pid ?? unknown_text()}`,
             "",
             `{bold}City 连接{/bold}`,
-            `base：${params.city_state.city_url}`,
+            `base：${params.city_state.federation_url}`,
             `source：${params.city_state.source}`,
             `user token：${configured_state_text(params.city_state.has_user_token)}`,
-            `town id：${params.city_state.town_id}`,
+            `town id：${params.city_state.city_id}`,
             "",
             `{bold}托管 Agent{/bold}`,
             `运行中：${params.managed_agents}`,
@@ -353,10 +353,10 @@ function build_status_detail(params) {
             `PID: ${params.pid ?? unknown_text()}`,
             "",
             `{bold}City connection{/bold}`,
-            `base: ${params.city_state.city_url}`,
+            `base: ${params.city_state.federation_url}`,
             `source: ${params.city_state.source}`,
             `user token: ${configured_state_text(params.city_state.has_user_token)}`,
-            `town id: ${params.city_state.town_id}`,
+            `town id: ${params.city_state.city_id}`,
             "",
             `{bold}Managed agents{/bold}`,
             `running: ${params.managed_agents}`,
@@ -368,22 +368,22 @@ function build_status_detail(params) {
 function build_city_subtitle(city_state) {
     if (city_state.has_user_token) {
         return t({
-            zh: `${city_state.city_url} · 已登录`,
-            en: `${city_state.city_url} · signed in`,
+            zh: `${city_state.federation_url} · 已登录`,
+            en: `${city_state.federation_url} · signed in`,
         });
     }
     return t({
-        zh: `${city_state.city_url} · 未登录`,
-        en: `${city_state.city_url} · not signed in`,
+        zh: `${city_state.federation_url} · 未登录`,
+        en: `${city_state.federation_url} · not signed in`,
     });
 }
 function build_city_detail(city_state) {
     return t({
         zh: [
             `{bold}当前 City 连接{/bold}`,
-            `base：${city_state.city_url}`,
+            `base：${city_state.federation_url}`,
             `source：${city_state.source}`,
-            `town id：${city_state.town_id}`,
+            `town id：${city_state.city_id}`,
             `user token：${configured_state_text(city_state.has_user_token)}`,
             city_state.user_id ? `user id：${city_state.user_id}` : "",
             "",
@@ -391,9 +391,9 @@ function build_city_detail(city_state) {
         ].filter(Boolean).join("\n"),
         en: [
             `{bold}Current City connection{/bold}`,
-            `base: ${city_state.city_url}`,
+            `base: ${city_state.federation_url}`,
             `source: ${city_state.source}`,
-            `town id: ${city_state.town_id}`,
+            `town id: ${city_state.city_id}`,
             `user token: ${configured_state_text(city_state.has_user_token)}`,
             city_state.user_id ? `user id: ${city_state.user_id}` : "",
             "",

@@ -1,21 +1,21 @@
 /**
- * `city deploy` 命令实现。
+ * `city deploy` 命令实现 —— 部署 Federation 项目。
  *
  * 关键点（中文）
  * - 命令层只负责读取目录、解析选项和选择 runtime deployer。
  * - 具体 Cloudflare / D1 / Wrangler 细节放在 runtime 模块中。
- * - `city.json` 是部署协议入口，避免用户直接记忆底层 Worker 脚本。
+ * - `city.json` 是部署协议入口，避免用户直接记忆底层 Worker 脚本（文件名保持 city.json）。
  */
 
 import { CliError } from "../../shared/CliError.js";
-import type { CityDeployOptions } from "../../types/CityProjectConfig.js";
-import { readCityProjectConfig } from "../config/CityProjectConfigReader.js";
+import type { FederationDeployOptions } from "../../types/FederationProjectConfig.js";
+import { readFederationProjectConfig } from "../config/FederationProjectConfigReader.js";
 import { deployCloudflareWorkers } from "../runtime/CloudflareWorkersDeployer.js";
-import { loadCityProjectEnv } from "../config/CityProjectEnvLoader.js";
-import { resolveCityDeployTarget } from "../config/CityDeployTargetResolver.js";
+import { loadFederationProjectEnv } from "../config/FederationProjectEnvLoader.js";
+import { resolveFederationDeployTarget } from "../config/FederationDeployTargetResolver.js";
 
 /** Commander 传入的原始 deploy 选项。 */
-export interface CityDeployCommandOptions {
+export interface FederationDeployCommandOptions {
   /** 是否只执行 dry-run。 */
   dryRun?: boolean;
   /** 是否部署后验证。 */
@@ -31,13 +31,13 @@ export interface CityDeployCommandOptions {
 }
 
 /**
- * 执行 City 项目部署。
+ * 执行 Federation 项目部署。
  */
-export async function deployCityProject(
+export async function deployFederationProject(
   source: string = ".",
-  raw_options: CityDeployCommandOptions = {},
+  raw_options: FederationDeployCommandOptions = {},
 ): Promise<void> {
-  const options: CityDeployOptions = {
+  const options: FederationDeployOptions = {
     source,
     dry_run: raw_options.dryRun === true,
     verify: raw_options.verify === true,
@@ -46,9 +46,9 @@ export async function deployCityProject(
     skip_typecheck: raw_options.skipTypecheck === true,
     account_id: raw_options.accountId,
   };
-  const target = await resolveCityDeployTarget(options.source);
-  const config_file = readCityProjectConfig(target.project_dir);
-  loadCityProjectEnv(config_file.project_dir);
+  const target = await resolveFederationDeployTarget(options.source);
+  const config_file = readFederationProjectConfig(target.project_dir);
+  loadFederationProjectEnv(config_file.project_dir);
 
   switch (config_file.config.target) {
     case "cloudflare-workers":
@@ -56,7 +56,7 @@ export async function deployCityProject(
       return;
     default:
       throw new CliError({
-        title: "Unsupported City target",
+        title: "Unsupported Federation target",
         note: `city deploy does not support ${config_file.config.target}.`,
       });
   }

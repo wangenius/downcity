@@ -1,7 +1,7 @@
 /**
  * Admin Balance 管理命令。
  */
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import type { admin_tui_runtime } from "../../types/AdminTui.js";
-export declare function manageBalance(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void>;
+export declare function manageBalance(a: CityPact, _baseUrl: string, runtime: admin_tui_runtime): Promise<void>;
 //# sourceMappingURL=balance.d.ts.map

@@ -3,7 +3,7 @@ title: "City CLI"
 description: "用终端管理 City 的模型和数据表，适合初始化、排查和日常运维。"
 ---
 
-`downcity` 是 Downcity 的全局安装聚合包。它会安装两个命令：`city` 负责 City 管理，`town` 负责本机 Agent 宿主。
+`downcity` 是 Downcity 的全局安装聚合包。它会安装两个命令：`city` 负责 City 管理，`city` 负责本机 Agent 宿主。
 
 如果说 `Admin City` 负责“程序里的可信调用”，那 `city` 负责“人坐在终端前的直接操作”。
 
@@ -48,7 +48,7 @@ DC_CLI_LANG=zh city
 如果还没有连接任何 City，dashboard 会先引导你添加一个 City；之后你可以：
 
 - 通过 `Manage Servers` 管理多个 City server
-- 进入 Admin 流程管理 env / models / towns / payment
+- 进入 Admin 流程管理 env / models / cities / payment
 - 进入 User 流程登录、充值和调用服务
 
 ## 可脚本化的 city 命令
@@ -64,20 +64,20 @@ city env refresh
 
 这些命令负责 City 项目、部署，以及 City runtime env cache。
 
-## 和 `town city` 的边界
+## 和 `city city` 的边界
 
-`town city` 是 Town 的命令组。当本机 Town runtime 或 agent 需要选择 City base、保存 Town user 登录态时，使用它：
+`city city` 是 City 的命令组。当本机 City runtime 或 agent 需要选择 City base、保存 City user 登录态时，使用它：
 
 ```bash
-town city use
-town city login
-town city status
+city city use
+city city login
+city city status
 ```
 
 一句话区分：
 
 - `city`：人在终端里直接操作 City
-- `town city`：让 Town 和本地 agent 连接到某个 City base
+- `city city`：让 City 和本地 agent 连接到某个 City base
 
 ## 它和其他 package 的边界
 

@@ -9,17 +9,17 @@ description: 初始化 Downcity City，准备默认数据库和 HTTP 服务。
 pnpm add @downcity/city drizzle-orm better-sqlite3
 ```
 
-准备好数据库即可。City 首次启动时会自动补齐 `DOWNCITY_CITY_ADMIN_SECRET_KEY`、`DOWNCITY_CITY_TOKEN_SIGNING_KEY` 和 `BETTER_AUTH_SECRET`。provider key 则在启动后通过 Town CLI / Admin API 写入：
+准备好数据库即可。City 首次启动时会自动补齐 `DOWNCITY_CITY_ADMIN_SECRET_KEY`、`DOWNCITY_CITY_TOKEN_SIGNING_KEY` 和 `BETTER_AUTH_SECRET`。provider key 则在启动后通过 City CLI / Admin API 写入：
 
 ```bash
 OPENAI_API_KEY="..."
 OPENAI_BASE_URL="https://api.openai.com/v1"
 ```
 
-创建 CityBase：
+创建 Federation：
 
 ```ts
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -30,7 +30,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
+const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
 ```
 
 默认数据库会落到：
@@ -47,7 +47,7 @@ const base = new CityBase({ db, dialect: "sqlite", raw: sqlite });
 import { drizzle } from "drizzle-orm/d1";
 
 const db = drizzle(env.DB);
-const base = new CityBase({ db, dialect: "sqlite", raw: env.DB });
+const base = new Federation({ db, dialect: "sqlite", raw: env.DB });
 ```
 
 City 会在第一次 `health()`、`handleRequest()`、`table()` 等运行时操作时自动初始化。

@@ -3,7 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { CityBase, AIService } from "@downcity/city"
+import { Federation, AIService } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { UsageService } from "../../bin/index.js"
 
@@ -14,7 +14,7 @@ test("usageService records successful service calls", async () => {
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db })
+    const base = new Federation({ db })
     base.use(new UsageService())
 
     const ai = new AIService()
@@ -33,15 +33,15 @@ test("usageService records successful service calls", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const town = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/create",
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
     const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/towns/tokens/apply",
-      body: { town_id: town.town_id, user_id: "user_1" },
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
     const invokeResponse = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
@@ -72,7 +72,7 @@ test("usageService records successful service calls", async () => {
     assert.deepEqual(await summaryResponse.json(), {
       items: [
         {
-          town_id: town.town_id,
+          city_id: city.city_id,
           service: "ai",
           status: "success",
           count: 1,

@@ -2,12 +2,12 @@
  * Admin Balance 管理命令。
  */
 
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import { t } from "../../i18n.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
 import type { admin_tui_runtime } from "../../types/AdminTui.js";
 
-export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
+export async function manageBalance(a: CityPact, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {
     const act = await runtime.select("Balance", [
         {

@@ -7,7 +7,7 @@ Downcity's City SDK is the way AI builders create, deploy, and call City. A City
 
 City exposes a stable **product-facing service boundary** instead of a raw provider API. Inside City, capabilities are organized as `Service`, `Action`, and `AIService`.
 
-- the product client holds `town_id + user_token`
+- the product client holds `city_id + user_token`
 - it calls `text()`, `stream()`, `image()`, and other services through `User City`
 - City keeps the model catalog, provider routing, hooks, usage, and env behind the boundary
 
@@ -26,13 +26,13 @@ City exposes a stable **product-facing service boundary** instead of a raw provi
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/guides">
     <em>Real Scenarios</em>
-    <strong>I am connecting a real town now</strong>
+    <strong>I am connecting a real city now</strong>
     <p>Read the practical guides for pure-client products, multi-product reuse, auth, provider env, hooks, and business logic.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/packages">
     <em>Packages</em>
     <strong>I want to read by package</strong>
-    <p>Jump straight into `@downcity/city`, client, and CLI docs; official service packages live in City Services Docs.</p>
+    <p>Jump straight into `@downcity/city`, client, and CLI docs; official service packages live in Federation Services Docs.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/reference">
     <em>API</em>
@@ -48,7 +48,7 @@ City exposes a stable **product-facing service boundary** instead of a raw provi
     <div className="dc-doc-node">
       <strong>Many product clients</strong>
       <span>Web apps, extensions, apps, desktop tools, client demos, and internal tools.</span>
-      <code>User City + town_id + user_token</code>
+      <code>User City + city_id + user_token</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>

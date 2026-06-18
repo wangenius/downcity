@@ -11,9 +11,9 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type {
-  CityProjectConfigFile,
-  CityProjectDeployEnvFile,
-} from "../../types/CityProjectConfig.js";
+  FederationProjectConfigFile,
+  FederationProjectDeployEnvFile,
+} from "../../types/FederationProjectConfig.js";
 
 /** 写入 wrangler.toml 的结果。 */
 export interface WranglerConfigWriteResult {
@@ -25,8 +25,8 @@ export interface WranglerConfigWriteResult {
  * 根据 City 项目配置和本地部署环境写入临时 wrangler.toml。
  */
 export function writeWranglerConfig(
-  config_file: CityProjectConfigFile,
-  env_file: CityProjectDeployEnvFile,
+  config_file: FederationProjectConfigFile,
+  env_file: FederationProjectDeployEnvFile,
   database_id?: string,
 ): WranglerConfigWriteResult {
   const config = config_file.config;

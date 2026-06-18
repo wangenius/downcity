@@ -9,7 +9,7 @@ import type { Database } from "../store/db.js";
 /**
  * 单次请求的运行时执行上下文。
  */
-export interface CityRequestExecutionContext {
+export interface FederationRequestExecutionContext {
   /**
    * 延长后台任务生命周期。
    *
@@ -19,17 +19,17 @@ export interface CityRequestExecutionContext {
 }
 
 /**
- * CityBase.handleRequest 的可选参数。
+ * Federation.handleRequest 的可选参数。
  */
-export interface CityHandleRequestOptions {
+export interface FederationHandleRequestOptions {
   /** 单次请求的运行时执行上下文。 */
-  execution?: CityRequestExecutionContext;
+  execution?: FederationRequestExecutionContext;
 }
 
 /**
  * City 健康检查结果。
  */
-export interface CityBaseHealthStatus {
+export interface FederationHealthStatus {
   /** 当前 Runtime 是否已经完成初始化并可处理请求 */
   ok: boolean;
   /** 服务名称，用于外部探测确认命中的服务类型 */
@@ -49,7 +49,7 @@ export interface CityBaseHealthStatus {
  * - 只接收一个 Drizzle db 对象，City 自己从中推断方言和底层 client。
  * - 不再需要传 `dialect`、`raw`、`runtime` 等冗余选项。
  */
-export interface CityBaseOptions {
+export interface FederationOptions {
   /**
    * Drizzle database 对象。
    *

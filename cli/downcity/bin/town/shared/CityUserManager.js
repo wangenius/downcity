@@ -1,19 +1,19 @@
 /**
- * Town 当前 City user 管理器。
+ * Town 当前 CityPact user 管理器。
  *
  * 关键点（中文）
- * - 这是 Town 访问 City 用户态服务的唯一身份入口。
+ * - 这是 Town 访问 CityPact 用户态服务的唯一身份入口。
  * - env 覆盖优先级、`town city login` session 回退、token 实际 user 校验都集中在这里。
  * - 业务模块只消费解析后的身份，避免余额、Agent、模型目录各自拼接身份。
  */
-import { City } from "@downcity/city";
-import { DEFAULT_CITY_URL, DEFAULT_TOWN_ID, normalizeCityUrl, readCityAdminSecretForUrl, readCurrentTownCitySession, readTownCitySessionForBase, } from "./CityStateStore.js";
+import { CityPact } from "@downcity/city";
+import { DEFAULT_FEDERATION_URL, DEFAULT_CITY_ID, normalizeCityUrl, readCityAdminSecretForUrl, readCurrentTownCitySession, readTownCitySessionForBase, } from "./CityStateStore.js";
 /**
- * Town 当前 City user 管理器。
+ * Town 当前 CityPact user 管理器。
  */
 export class CityUserManager {
     /**
-     * 解析当前有效 City user。
+     * 解析当前有效 CityPact user。
      */
     async resolveCurrentUser(input = {}) {
         const env = input.env ?? process.env;
@@ -30,34 +30,34 @@ export class CityUserManager {
             ? readFirstEnv(env, ["DOWNCITY_CITY_USER_TOKEN", "CITY_USER_TOKEN"])
             : "";
         const selected_session = readCurrentTownCitySession();
-        const city_url = normalizeCityUrl(env_city_url || selected_session?.base_url || DEFAULT_CITY_URL);
+        const federation_url = normalizeCityUrl(env_city_url || selected_session?.base_url || DEFAULT_FEDERATION_URL);
         const session = env_user_token
             ? selected_session
-            : readTownCitySessionForBase(city_url);
+            : readTownCitySessionForBase(federation_url);
         const env_overrides = {
-            city_url: Boolean(env_city_url),
-            town_id: Boolean(env_town_id),
+            federation_url: Boolean(env_city_url),
+            city_id: Boolean(env_town_id),
             user_token: Boolean(env_user_token),
         };
-        const town_id = env_town_id || session?.town_id || DEFAULT_TOWN_ID;
+        const city_id = env_town_id || session?.city_id || DEFAULT_CITY_ID;
         const user_token = env_user_token || session?.user_token || "";
         const source = env_user_token ? "env" : "town-session";
         const warnings = [];
-        if (!city_url) {
-            throw new Error("City URL is required. Run `town city use` or set DOWNCITY_CITY_URL.");
+        if (!federation_url) {
+            throw new Error("CityPact URL is required. Run `town city use` or set DOWNCITY_CITY_URL.");
         }
         if (require_user_token && !user_token) {
-            throw new Error("City user token is required. Run `town city login` first.");
+            throw new Error("CityPact user token is required. Run `town city login` first.");
         }
         if (env_user_token && selected_session?.user_id) {
             warnings.push("Env user token overrides the saved `town city login` session.");
         }
         if (env_city_url && !env_user_token && !session?.user_token) {
-            warnings.push("Env City URL selected a base without a saved Town user session.");
+            warnings.push("Env CityPact URL selected a base without a saved Town user session.");
         }
         const resolved = {
-            city_url,
-            town_id,
+            federation_url,
+            city_id,
             user_token,
             user_id: env_user_token ? undefined : session?.user_id,
             user_label: env_user_token ? undefined : session?.user_label,
@@ -71,7 +71,7 @@ export class CityUserManager {
         return resolved;
     }
     /**
-     * 创建当前有效 City user client。
+     * 创建当前有效 CityPact user client。
      */
     async createUserClient(input = {}) {
         const user = await this.resolveCurrentUser({
@@ -79,41 +79,41 @@ export class CityUserManager {
             require_user_token: input.require_user_token !== false,
         });
         if (!user.user_token) {
-            throw new Error("City user token is required. Run `town city login` first.");
+            throw new Error("CityPact user token is required. Run `town city login` first.");
         }
         return {
             user,
-            client: new City({
+            client: new CityPact({
                 role: "user",
-                city_url: user.city_url,
-                town_id: user.town_id,
+                federation_url: user.federation_url,
+                city_id: user.city_id,
                 user_token: user.user_token,
             }),
         };
     }
     /**
-     * 读取当前 City base 的 admin secret。
+     * 读取当前 CityPact base 的 admin secret。
      */
-    readAdminSecret(city_url, env = process.env) {
+    readAdminSecret(federation_url, env = process.env) {
         return readFirstEnv(env, ["DOWNCITY_CITY_ADMIN_SECRET_KEY", "CITY_ADMIN_SECRET_KEY"])
-            || readCityAdminSecretForUrl(city_url)
+            || readCityAdminSecretForUrl(federation_url)
             || undefined;
     }
     async verifyCurrentUser(user, session_user_id) {
-        const client = new City({
+        const client = new CityPact({
             role: "user",
-            city_url: user.city_url,
-            town_id: user.town_id,
+            federation_url: user.federation_url,
+            city_id: user.city_id,
             user_token: user.user_token,
         });
         const result = await client.service("accounts").get("me");
         const token_user_id = readString(result.user?.user_id);
         if (!token_user_id) {
-            throw new Error("City user token resolved without a user_id. Run `town city login` again.");
+            throw new Error("CityPact user token resolved without a user_id. Run `town city login` again.");
         }
         if (session_user_id && !user.env_overrides.user_token && session_user_id !== token_user_id) {
             throw new Error([
-                "Town City session user does not match the authenticated token.",
+                "Town CityPact session user does not match the authenticated token.",
                 `session=${session_user_id}`,
                 `token=${token_user_id}`,
                 "Run `town city logout` and then `town city login`.",

@@ -43,8 +43,8 @@ export class TokenSigner {
 
   /** 签发 user_token */
   async sign(input: CreateUserTokenInput): Promise<string> {
-    if (!input || typeof input.town_id !== "string" || input.town_id.length === 0) {
-      throw new TypeError("town_id is required");
+    if (!input || typeof input.city_id !== "string" || input.city_id.length === 0) {
+      throw new TypeError("city_id is required");
     }
 
     if (typeof input.user_id !== "string" || input.user_id.length === 0) {
@@ -55,7 +55,7 @@ export class TokenSigner {
     const now = Math.floor(Date.now() / 1000);
     const payload: UserTokenPayload = {
       aud: "downcity:user",
-      town_id: input.town_id,
+      city_id: input.city_id,
       user_id: input.user_id,
       metadata: input.metadata ?? {},
       iat: now,
@@ -93,7 +93,7 @@ export class TokenSigner {
       throw httpError(401, "Invalid user token audience");
     }
 
-    if (!payload.town_id || !payload.user_id) {
+    if (!payload.city_id || !payload.user_id) {
       throw httpError(401, "Invalid user token payload");
     }
 

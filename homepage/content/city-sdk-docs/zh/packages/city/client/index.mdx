@@ -8,7 +8,7 @@ City 是 `@downcity/city` 导出的访问层。产品侧通过它接入 City run
 它不只是“调一下 AI”的小工具，而是把这几类调用统一收口到一个产品侧入口里：
 
 - `User City`：终端产品调用 AI service、custom service 和公开 service
-- `Admin City`：可信环境管理 town、签发 `user_token`、维护 runtime env
+- `Admin City`：可信环境管理 city、签发 `user_token`、维护 runtime env
 - `service(name)`：统一调用你自己注册的 service，或官方服务暴露出来的接口
 
 如果你要做的是“前端产品如何接 City”，这页应该是 package 层的第一入口。
@@ -17,12 +17,12 @@ City 是 `@downcity/city` 导出的访问层。产品侧通过它接入 City run
 
 | 客户端 | 给谁用 | 负责什么 |
 | --- | --- | --- |
-| `User City` | 前端、App、扩展、桌面端 | 拿 `town_id + user_token` 调 AI service、custom service、公开 service |
-| `Admin City` | 产品后端、管理脚本、内部工具 | 管 town、签 token、写 runtime env、调管理侧 service |
+| `User City` | 前端、App、扩展、桌面端 | 拿 `city_id + user_token` 调 AI service、custom service、公开 service |
+| `Admin City` | 产品后端、管理脚本、内部工具 | 管 city、签 token、写 runtime env、调管理侧 service |
 
 ## 什么时候该用它
 
-- 你的产品已经拿到了 `town_id + user_token`
+- 你的产品已经拿到了 `city_id + user_token`
 - 你要让产品前端去调用 `text()`、`stream()`、`image()`、custom service 或 service
 - 你要在可信后端里签发 token 或写 City 的管理数据
 - 你想把注册、登录、OAuth、usage、payment 这些能力也放到同一套调用模型里
@@ -49,7 +49,7 @@ pnpm add @downcity/city
 - AI 调用
 - 你自己写的业务 service 调用
 - 官方服务 service 调用
-- town / token / env 管理调用
+- city / token / env 管理调用
 
 ## 四种最常见调用
 
@@ -83,7 +83,7 @@ const rewritten = await client
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "town_demo",
 });
 
 const usage = await user.service("usage").get("me");
@@ -94,14 +94,14 @@ const usage = await user.service("usage").get("me");
 ### 4. Trusted-side management
 
 ```ts
-const issued = await admin.towns.tokens.apply({
-  town_id: "town_demo",
+const issued = await admin.cities.tokens.apply({
+  city_id: "town_demo",
   user_id: "user_123",
   ttl: "7d",
 });
 ```
 
-适合 town、token、runtime env 这些必须在可信环境完成的动作。
+适合 city、token、runtime env 这些必须在可信环境完成的动作。
 
 ## 什么是 service
 
@@ -122,12 +122,12 @@ client.service("service_id").get("path", query)
 ## `User City` 最小示例
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const client = new City({
+const client = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
-  town_id: "town_demo",
+  federation_url: "https://base.example.com",
+  city_id: "town_demo",
   user_token: "ub_xxx",
 });
 
@@ -141,8 +141,8 @@ const result = await client.ai.text({
 
 这个阶段假设你已经有：
 
-- `city_url`
-- `town_id`
+- `federation_url`
+- `city_id`
 - `user_token`
 
 如果你还没有 `user_token`，通常要先走下面的登录链路。
@@ -150,20 +150,20 @@ const result = await client.ai.text({
 ## `Admin City` 最小示例
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const admin = new City({
+const admin = new CityPact({
   role: "admin",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const town = await admin.towns.create({
-  name: "Demo Town",
+const city = await admin.cities.create({
+  name: "Demo City",
 });
 
-const token = await admin.towns.tokens.apply({
-  town_id: town.town_id,
+const token = await admin.cities.tokens.apply({
+  city_id: city.city_id,
   user_id: "user_123",
   ttl: "30m",
 });
@@ -179,7 +179,7 @@ const token = await admin.towns.tokens.apply({
 前端提交登录信息
   -> 你的业务后端完成账号校验
   -> 业务后端用 Admin City 向 City 申请 user_token
-  -> 后端返回 town_id + user_token
+  -> 后端返回 city_id + user_token
   -> 前端创建 User City
   -> 前端开始调用 client.ai.* 或 client.service(...)
 ```
@@ -189,10 +189,10 @@ const token = await admin.towns.tokens.apply({
 ### 模式 B：直接用 accounts 服务
 
 ```txt
-前端先创建 guest User City（只有 city_url）
+前端先创建 guest User City（只有 federation_url）
   -> 调 guest.service("accounts").action("register" / "login")
   -> accounts service 返回 user_token
-  -> 前端再创建正常 User City（city_url + town_id + user_token）
+  -> 前端再创建正常 User City（federation_url + city_id + user_token）
   -> 前端继续调用 AI service 或其他 service
 ```
 
@@ -201,9 +201,9 @@ const token = await admin.towns.tokens.apply({
 ## 用 accounts 服务做登录
 
 ```ts
-const guest = new City({
+const guest = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
 });
 
 const session = await guest.service("accounts").action("login").invoke<{
@@ -213,13 +213,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "town_demo",
 });
 
-const user = new City({
+const user = new CityPact({
   role: "user",
-  city_url: "https://base.example.com",
-  town_id: "town_demo",
+  federation_url: "https://base.example.com",
+  city_id: "town_demo",
   user_token: session.user_token,
 });
 
@@ -231,8 +231,8 @@ const reply = await user.ai.text({
 这里要注意：
 
 - `register`、`login`、`oauth/start`、`oauth/result` 这类入口通常是免登录 Action
-- 它们仍然通过 `User City` 调，但这时只需要 `city_url`
-- 真正进入用户态调用后，才需要 `town_id + user_token`
+- 它们仍然通过 `User City` 调，但这时只需要 `federation_url`
+- 真正进入用户态调用后，才需要 `city_id + user_token`
 
 ## 自定义 service 与服务路由
 
@@ -242,7 +242,7 @@ const reply = await user.ai.text({
 const session = await client.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "town_demo",
 });
 ```
 
@@ -305,11 +305,11 @@ const checkout = await client.payment.method("stripe").invoke({
 2. 再看 [User City](/zh/city-sdk-docs/reference/city-user)，理解产品侧具体调法
 3. 再看 [Admin City](/zh/city-sdk-docs/reference/city-admin)，理解可信后端怎么签 token
 4. 如果你要最小注册登录，继续看 [@downcity/services](/zh/services-sdk-docs)
-5. 如果你要完整登录场景，再看 [City Services Docs / Accounts](/zh/services-sdk-docs/accounts)
+5. 如果你要完整登录场景，再看 [Federation Services Docs / Accounts](/zh/services-sdk-docs/accounts)
 
 ## 下一步读什么
 
 - 想理解 City 端是什么，回到 [@downcity/city](/zh/city-sdk-docs/packages/city)
 - 想查完整 SDK 接口，看 [User City](/zh/city-sdk-docs/reference/city-user) 和 [Admin City](/zh/city-sdk-docs/reference/city-admin)
 - 想看账号服务怎么直接返回 `user_token`，看 [@downcity/services](/zh/services-sdk-docs)
-- 想看完整登录链路，读 [City Services Docs / Accounts](/zh/services-sdk-docs/accounts)
+- 想看完整登录链路，读 [Federation Services Docs / Accounts](/zh/services-sdk-docs/accounts)

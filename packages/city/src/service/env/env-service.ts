@@ -2,8 +2,8 @@
  * env 内置服务。
  *
  * 关键说明（中文）
- * - City 默认注册该 service。
- * - EnvProvider 由 City 初始化并注入，不需要产品手动传入。
+ * - Federation 默认注册该 service。
+ * - EnvProvider 由 Federation 初始化并注入，不需要产品手动传入。
  */
 
 import { Service } from "../service.js";
@@ -13,7 +13,7 @@ export class EnvService extends Service {
     super({ id: "env", name: "Env" });
     this.instruction = [
       "管理 City 运行时环境变量。",
-      "适用于导入、列出、更新和删除 City 内部使用的 env 配置。",
+      "适用于导入、列出、更新和删除 Federation 内部使用的 env 配置。",
       "不要把真实密钥暴露给产品前端；应只在可信管理端调用这些接口。",
     ].join("\n");
 

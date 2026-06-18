@@ -27,17 +27,17 @@ What should stay in each product:
     <div className="dc-doc-node">
       <strong>Product A</strong>
       <span>For example, a web tool.</span>
-      <code>town_id = town_web</code>
+      <code>city_id = town_web</code>
     </div>
     <div className="dc-doc-node">
       <strong>Product B</strong>
       <span>For example, a Chrome extension.</span>
-      <code>town_id = town_extension</code>
+      <code>city_id = town_extension</code>
     </div>
     <div className="dc-doc-node">
       <strong>Product C</strong>
       <span>For example, a client demo or internal tool.</span>
-      <code>town_id = town_demo</code>
+      <code>city_id = town_demo</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -49,9 +49,9 @@ What should stay in each product:
   </div>
 </div>
 
-## How to think about `town_id`
+## How to think about `city_id`
 
-`town_id` is a product boundary, not a model boundary.
+`city_id` is a product boundary, not a model boundary.
 
 It is useful for:
 
@@ -60,15 +60,15 @@ It is useful for:
 - telling hooks where usage should be recorded
 - separating one user’s activity across different products
 
-A common pattern is one stable `town_id` per product:
+A common pattern is one stable `city_id` per product:
 
 ```ts
-const town = await admin.towns.create({
+const city = await admin.cities.create({
   name: "Chrome Extension",
 });
 
-const issued = await admin.towns.tokens.apply({
-  town_id: town.town_id,
+const issued = await admin.cities.tokens.apply({
+  city_id: city.city_id,
   user_id: "user_123",
   metadata: {
     plan: "starter",
@@ -79,7 +79,7 @@ const issued = await admin.towns.tokens.apply({
 
 ## What belongs in token metadata
 
-`town_id` says *which product this is*. Token metadata is better for *the user’s business state inside that product*.
+`city_id` says *which product this is*. Token metadata is better for *the user’s business state inside that product*.
 
 Common fields:
 
@@ -89,15 +89,15 @@ Common fields:
 - `feature_flag`
 - `team_id`
 
-That lets hooks differentiate behavior with `ctx.town` and `ctx.user.metadata` instead of cloning City for each town.
+That lets hooks differentiate behavior with `ctx.city` and `ctx.user.metadata` instead of cloning City for each city.
 
 ## Recommended layering
 
-### Town side
+### City side
 
 - keeps routes, UI, and business experience
 - uses `User City`
-- only holds `town_id + user_token`
+- only holds `city_id + user_token`
 
 ### Business backend
 
@@ -112,19 +112,19 @@ That lets hooks differentiate behavior with `ctx.town` and `ctx.user.metadata` i
 - owns usage and hooks
 - owns the reusable AI service layer
 
-## When to create a new town
+## When to create a new city
 
-Usually worth creating a new town when:
+Usually worth creating a new city when:
 
-- it is a separate town or market
+- it is a separate city or market
 - it needs to be paused or activated independently
 - it needs independent usage reporting or business strategy
-- you need to separate web app, extension, client demo, and other town surfaces
+- you need to separate web app, extension, client demo, and other city surfaces
 
-Usually not worth creating a new town when:
+Usually not worth creating a new city when:
 
-- it is only another page in the same town
-- it is only a feature flag inside the same town
+- it is only another page in the same city
+- it is only a feature flag inside the same city
 - it is just another conversation/session for one user
 
 Those are better kept inside your own business system or token metadata.

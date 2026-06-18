@@ -7,7 +7,7 @@
  * - 运行时模型通过 Town 自己保存的 User City session 构造。
  */
 
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import type { AgentModel } from "@downcity/agent";
 import type { CityModelDescriptor } from "@downcity/type";
 import { CityUserManager } from "../../shared/CityUserManager.js";
@@ -45,15 +45,15 @@ export async function listCityAiServiceModelsForAdmin(
     require_user_token: false,
     verify_user: false,
   });
-  const admin_secret_key = cityUserManager.readAdminSecret(user.city_url, env);
+  const admin_secret_key = cityUserManager.readAdminSecret(user.federation_url, env);
   if (!admin_secret_key) {
     throw new Error(
       "City admin_secret_key is required to list models. Set DOWNCITY_CITY_ADMIN_SECRET_KEY or configure admin access with `city`.",
     );
   }
-  const city = new City({
+  const city = new CityPact({
     role: "admin",
-    city_url: user.city_url,
+    federation_url: user.federation_url,
     admin_secret_key,
   });
   return await city.listModels();

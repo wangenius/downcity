@@ -2,7 +2,7 @@
  * 模块说明文档协议。
  *
  * 负责定义 City / Service / InstallableService 可共享的 instruction 能力，
- * 以及 City 聚合输出时使用的格式化工具。
+ * 以及 Federation 聚合输出时使用的格式化工具。
  */
 
 import type { Context, EnvRequirement, RouteAuth } from "./service.js";
@@ -33,7 +33,7 @@ export interface InstructionContext {
 }
 
 /**
- * City 聚合时看到的动作定义。
+ * Federation 聚合时看到的动作定义。
  */
 export interface InstructionActionDefinition {
   /**
@@ -141,13 +141,13 @@ export function formatInstructionDocument(input: {
 }): string {
   const lines: string[] = [];
 
-  lines.push("# Downcity CityBase Instruction");
+  lines.push("# Downcity Federation Instruction");
   lines.push("");
-  lines.push("## CityBase");
-  lines.push("CityBase 是 Downcity 的服务端基础设施运行容器，负责挂载 Service、初始化内置 env/towns 能力、统一处理 /v1/* HTTP 路由，以及校验 user_token 与 admin_secret_key。");
+  lines.push("## Federation");
+  lines.push("Federation 是 Downcity 的服务端基础设施运行容器，负责挂载 Service、初始化内置 env/cities 能力、统一处理 /v1/* HTTP 路由，以及校验 user_token 与 admin_secret_key。");
   lines.push("");
   lines.push("基础使用：");
-  lines.push("1. 创建 CityBase 实例。");
+  lines.push("1. 创建 Federation 实例。");
   lines.push("2. 通过 base.use(...) 注册业务 Service、AIService 或带 install(ctx) 生命周期的服务。");
   lines.push("3. 先调用 await base.health() 完成初始化。");
   lines.push("4. 通过 base.router().fetch 或 base.handleRequest(...) 对外提供请求处理。");

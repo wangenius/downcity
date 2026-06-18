@@ -3,23 +3,23 @@ title: 签发 user_token
 description: 给产品侧 client 一个可以调用 City 的用户凭证。
 ---
 
-`user_token` 需要由可信环境签发。开发者后端使用 `Admin City`，基于 `town_id + user_id` 向 City 申请 token。
+`user_token` 需要由可信环境签发。开发者后端使用 `Admin City`，基于 `city_id + user_id` 向 City 申请 token。
 
 ```ts
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 
-const client = new City({
+const client = new CityPact({
   role: "admin",
-  city_url: "https://base.example.com",
+  federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
 });
 
-const town = await client.towns.create({
+const city = await client.cities.create({
   name: "Web App",
 });
 
-const user = await client.towns.tokens.apply({
-  town_id: town.town_id,
+const user = await client.cities.tokens.apply({
+  city_id: city.city_id,
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -28,7 +28,7 @@ const user = await client.towns.tokens.apply({
 });
 ```
 
-把 `user.user_token` 和 `town.town_id` 返回给产品 client。
+把 `user.user_token` 和 `city.city_id` 返回给产品 client。
 
 ## metadata 的作用
 
@@ -41,7 +41,7 @@ const action = service.action("generate", async (ctx) => {
 
 action.before(async (ctx) => {
   await quotaService.check({
-    town_id: ctx.town?.town_id,
+    city_id: ctx.city?.city_id,
     user_id: ctx.user?.user_id,
     plan: ctx.user?.metadata?.plan,
   });

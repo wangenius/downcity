@@ -7,7 +7,7 @@
  * - server 仍然作为本地连接记录持久化保存
  */
 
-import { City } from "@downcity/city";
+import { CityPact } from "@downcity/city";
 import { isCancel, password, select, text } from "../tui/Prompts.js";
 import {
   addServer,
@@ -309,9 +309,9 @@ export async function promptRemoveServer(baseUrl?: string): Promise<boolean> {
 
 async function verifyServerAdminAccess(server: ServerProfile): Promise<boolean> {
   try {
-    const admin = new City({
+    const admin = new CityPact({
       role: "admin",
-      city_url: server.base_url,
+      federation_url: server.base_url,
       admin_secret_key: server.admin_secret_key,
     });
     await admin.listServices();
@@ -323,9 +323,9 @@ async function verifyServerAdminAccess(server: ServerProfile): Promise<boolean> 
 
 async function verifyServerPublicAccess(server: ServerProfile): Promise<boolean> {
   try {
-    const user = new City({
+    const user = new CityPact({
       role: "user",
-      city_url: server.base_url,
+      federation_url: server.base_url,
     });
     await user.service("accounts").get("providers");
     return true;

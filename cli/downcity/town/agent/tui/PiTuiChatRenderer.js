@@ -14,9 +14,13 @@ export class PiTuiChatRenderer {
     emitted_visible_text = false;
     /**
      * @param message_list 消息流组件。
+     * @param request_render 通知 TUI 重绘的回调。
      */
-    constructor(message_list) {
-        this.streaming_ui = new StreamingUIController({ message_list });
+    constructor(message_list, request_render) {
+        this.streaming_ui = new StreamingUIController({
+            message_list,
+            request_render,
+        });
     }
     /**
      * 启动新一轮渲染。

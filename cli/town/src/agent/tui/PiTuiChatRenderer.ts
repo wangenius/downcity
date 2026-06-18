@@ -24,9 +24,13 @@ export class PiTuiChatRenderer implements AgentChatInteractiveRendererPort {
 
   /**
    * @param message_list 消息流组件。
+   * @param request_render 通知 TUI 重绘的回调。
    */
-  constructor(message_list: MessageListComponent) {
-    this.streaming_ui = new StreamingUIController({ message_list });
+  constructor(message_list: MessageListComponent, request_render: () => void) {
+    this.streaming_ui = new StreamingUIController({
+      message_list,
+      request_render,
+    });
   }
 
   /**

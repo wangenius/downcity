@@ -14,15 +14,21 @@ import type { MessageListComponent } from "../components/MessageList.js";
 export interface StreamingUIOptions {
     /** 消息流组件。 */
     message_list: MessageListComponent;
+    /** TUI 请求重绘回调。流式 delta、tool 事件、结束都会调用。 */
+    request_render: () => void;
 }
 /**
  * 流式 UI 控制器。
  */
 export declare class StreamingUIController {
     private message_list;
+    private request_render_fn;
     private active_turn_id;
     private current_assistant_entry_id;
     private current_assistant_text;
+    private flush_timer;
+    private last_flush_at;
+    private pending_render;
     /**
      * @param options 构造选项。
      */
@@ -56,5 +62,14 @@ export declare class StreamingUIController {
     private add_approval_request;
     private add_approval_result;
     private add_error;
+    /**
+     * 调度一次重绘。多次调用会被合并到下一个 STREAMING_UI_FLUSH_MS 节拍。
+     */
+    private schedule_render;
+    /**
+     * 立刻触发一次重绘，并重置节流计时。
+     */
+    private flush_now;
+    private clear_flush_timer;
 }
 //# sourceMappingURL=StreamingUI.d.ts.map

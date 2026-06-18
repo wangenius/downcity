@@ -16,8 +16,9 @@ export declare class PiTuiChatRenderer implements AgentChatInteractiveRendererPo
     private emitted_visible_text;
     /**
      * @param message_list 消息流组件。
+     * @param request_render 通知 TUI 重绘的回调。
      */
-    constructor(message_list: MessageListComponent);
+    constructor(message_list: MessageListComponent, request_render: () => void);
     /**
      * 启动新一轮渲染。
      */

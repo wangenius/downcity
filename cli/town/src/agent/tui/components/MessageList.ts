@@ -79,6 +79,7 @@ export class MessageListComponent implements Component {
     if (component instanceof AssistantMessageComponent) {
       component.update_content(text);
     }
+    this.scroll_to_bottom();
   }
 
   /**
@@ -146,9 +147,9 @@ export class MessageListComponent implements Component {
       case "tool-approval-result":
         return new ToolCallBlockComponent(entry as ToolBlockEntry);
       case "status":
-        return new Text(current_theme.dim_fg("textDim", entry.text), 0, 0);
+        return new Text(`  ${current_theme.fg("textDim", entry.text)}`, 0, 0);
       case "error":
-        return new Text(current_theme.fg("error", entry.text), 0, 0);
+        return new Text(`  ${current_theme.fg("error", entry.text)}`, 0, 0);
       default:
         return new Container();
     }

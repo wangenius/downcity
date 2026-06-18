@@ -240,14 +240,15 @@ export class SessionPickerComponent {
     }
     render_item(item, inner_width) {
         const is_selected = this.filtered_items[this.selected_index]?.value === item.value;
+        // pointer 占 2 列：1 列符号 + 1 列空格，未选中时用两个空格占位保持对齐。
         const pointer = is_selected
-            ? current_theme.fg("primary", SELECT_POINTER)
+            ? current_theme.fg("primary", `${SELECT_POINTER} `)
             : "  ";
-        const pointer_width = visibleWidth(SELECT_POINTER);
+        const pointer_width = 2;
         const content_width = Math.max(1, inner_width - pointer_width);
         let main_text = item.label;
         if (item.is_current) {
-            main_text += CURRENT_MARK;
+            main_text += ` ${CURRENT_MARK}`;
         }
         const description_width = Math.floor(content_width * 0.45);
         const max_label_width = Math.max(1, content_width - description_width - 2);

@@ -10,6 +10,7 @@
 import type { AgentSessionEvent } from "@downcity/agent";
 
 import type { MessageListComponent } from "../components/MessageList.js";
+import { STREAMING_UI_FLUSH_MS } from "../constant/streaming.js";
 import { generateTuiId } from "../utils/id.js";
 import type { TranscriptEntry } from "../types.js";
 
@@ -19,6 +20,8 @@ import type { TranscriptEntry } from "../types.js";
 export interface StreamingUIOptions {
   /** 消息流组件。 */
   message_list: MessageListComponent;
+  /** TUI 请求重绘回调。流式 delta、tool 事件、结束都会调用。 */
+  request_render: () => void;
 }
 
 /**
@@ -26,15 +29,20 @@ export interface StreamingUIOptions {
  */
 export class StreamingUIController {
   private message_list: MessageListComponent;
+  private request_render_fn: () => void;
   private active_turn_id = "";
   private current_assistant_entry_id = "";
   private current_assistant_text = "";
+  private flush_timer: ReturnType<typeof setTimeout> | null = null;
+  private last_flush_at = 0;
+  private pending_render = false;
 
   /**
    * @param options 构造选项。
    */
   constructor(options: StreamingUIOptions) {
     this.message_list = options.message_list;
+    this.request_render_fn = options.request_render;
   }
 
   /**
@@ -44,6 +52,8 @@ export class StreamingUIController {
     this.active_turn_id = "";
     this.current_assistant_entry_id = "";
     this.current_assistant_text = "";
+    this.pending_render = false;
+    this.clear_flush_timer();
   }
 
   /**
@@ -107,6 +117,7 @@ export class StreamingUIController {
    */
   finish_turn(): void {
     this.finalize_assistant();
+    this.flush_now();
   }
 
   private extract_event_turn_id(event: AgentSessionEvent): string {
@@ -131,6 +142,7 @@ export class StreamingUIController {
       created_at: Date.now(),
     };
     this.message_list.add_entry(entry);
+    this.schedule_render();
   }
 
   private append_assistant_text(delta: string): void {
@@ -143,6 +155,7 @@ export class StreamingUIController {
       this.current_assistant_text,
       true,
     );
+    this.schedule_render();
   }
 
   private finalize_assistant(): void {
@@ -156,6 +169,7 @@ export class StreamingUIController {
     );
     this.current_assistant_entry_id = "";
     this.current_assistant_text = "";
+    this.schedule_render();
   }
 
   private add_tool_call(tool_name: string, args: unknown): void {
@@ -167,6 +181,7 @@ export class StreamingUIController {
       created_at: Date.now(),
     };
     this.message_list.add_entry(entry);
+    this.schedule_render();
   }
 
   private add_tool_result(tool_name: string, result: unknown): void {
@@ -178,6 +193,7 @@ export class StreamingUIController {
       created_at: Date.now(),
     };
     this.message_list.add_entry(entry);
+    this.schedule_render();
   }
 
   private add_approval_request(
@@ -198,6 +214,7 @@ export class StreamingUIController {
       created_at: Date.now(),
     };
     this.message_list.add_entry(entry);
+    this.schedule_render();
   }
 
   private add_approval_result(
@@ -212,6 +229,7 @@ export class StreamingUIController {
       created_at: Date.now(),
     };
     this.message_list.add_entry(entry);
+    this.schedule_render();
   }
 
   private add_error(text: string): void {
@@ -222,5 +240,43 @@ export class StreamingUIController {
       created_at: Date.now(),
     };
     this.message_list.add_entry(entry);
+    this.schedule_render();
+  }
+
+  /**
+   * 调度一次重绘。多次调用会被合并到下一个 STREAMING_UI_FLUSH_MS 节拍。
+   */
+  private schedule_render(): void {
+    this.pending_render = true;
+    if (this.flush_timer !== null) {
+      return;
+    }
+    const elapsed = Date.now() - this.last_flush_at;
+    const delay = elapsed >= STREAMING_UI_FLUSH_MS ? 0 : STREAMING_UI_FLUSH_MS - elapsed;
+    this.flush_timer = setTimeout(() => {
+      this.flush_timer = null;
+      this.flush_now();
+    }, delay);
+  }
+
+  /**
+   * 立刻触发一次重绘，并重置节流计时。
+   */
+  private flush_now(): void {
+    this.clear_flush_timer();
+    if (!this.pending_render) {
+      return;
+    }
+    this.pending_render = false;
+    this.last_flush_at = Date.now();
+    this.request_render_fn();
+  }
+
+  private clear_flush_timer(): void {
+    if (this.flush_timer === null) {
+      return;
+    }
+    clearTimeout(this.flush_timer);
+    this.flush_timer = null;
   }
 }

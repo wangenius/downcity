@@ -118,7 +118,7 @@ export class AgentChatTuiCoordinator {
     );
 
     this.add_status_message(
-      "Type /help for shortcuts, /session to switch, /new to create, /quit to exit.",
+      "Type /help for shortcuts · /session · /new · /clear · /quit",
     );
     this.update_layout();
     this.tui.start();
@@ -200,7 +200,7 @@ export class AgentChatTuiCoordinator {
     }
 
     if (text === "/help") {
-      this.add_status_message("system> /help · /session · /new · /clear · /quit");
+      this.add_status_message("/help · /session · /new · /clear · /quit");
       this.request_render();
       return;
     }
@@ -231,7 +231,7 @@ export class AgentChatTuiCoordinator {
     this.add_user_message(message);
     this.request_render();
 
-    const renderer = new PiTuiChatRenderer(this.message_list);
+    const renderer = new PiTuiChatRenderer(this.message_list, () => this.request_render());
     const outcome = await this.options.run_turn({
       session_id: this.current_session_id,
       message,
@@ -246,7 +246,7 @@ export class AgentChatTuiCoordinator {
     if (!outcome.success) {
       this.add_error_message(outcome.error || "agent chat failed");
     } else if (!outcome.emitted_visible_text) {
-      this.add_status_message("assistant> [no visible reply]");
+      this.add_status_message("[no visible reply]");
     }
 
     this.request_render();
@@ -318,7 +318,7 @@ export class AgentChatTuiCoordinator {
    * 创建新 session 并切换视图。
    */
   private async create_new_session(): Promise<void> {
-    this.add_status_message("status> Creating session...");
+    this.add_status_message("Creating session...");
     this.request_render();
 
     try {
@@ -341,7 +341,7 @@ export class AgentChatTuiCoordinator {
     this.status_line.set_state(this.app_state);
     this.terminal.setTitle(this.build_title());
     this.message_list.clear();
-    this.add_status_message(`system> Agent chat · ${this.app_state.agent_id} · ${session_id}`);
+    this.add_status_message(`Agent chat · ${this.app_state.agent_id} · ${session_id}`);
     this.request_render();
   }
 

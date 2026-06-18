@@ -6,20 +6,26 @@
  * - 维护当前 turn id，保证跨事件状态一致。
  * - 所有状态变更最终反映到 MessageListComponent。
  */
+import { STREAMING_UI_FLUSH_MS } from "../constant/streaming.js";
 import { generateTuiId } from "../utils/id.js";
 /**
  * 流式 UI 控制器。
  */
 export class StreamingUIController {
     message_list;
+    request_render_fn;
     active_turn_id = "";
     current_assistant_entry_id = "";
     current_assistant_text = "";
+    flush_timer = null;
+    last_flush_at = 0;
+    pending_render = false;
     /**
      * @param options 构造选项。
      */
     constructor(options) {
         this.message_list = options.message_list;
+        this.request_render_fn = options.request_render;
     }
     /**
      * 启动新一轮渲染。
@@ -28,6 +34,8 @@ export class StreamingUIController {
         this.active_turn_id = "";
         this.current_assistant_entry_id = "";
         this.current_assistant_text = "";
+        this.pending_render = false;
+        this.clear_flush_timer();
     }
     /**
      * 绑定当前 turn id。
@@ -87,6 +95,7 @@ export class StreamingUIController {
      */
     finish_turn() {
         this.finalize_assistant();
+        this.flush_now();
     }
     extract_event_turn_id(event) {
         if (event.type === "tool-approval-request" || event.type === "tool-approval-result") {
@@ -109,6 +118,7 @@ export class StreamingUIController {
             created_at: Date.now(),
         };
         this.message_list.add_entry(entry);
+        this.schedule_render();
     }
     append_assistant_text(delta) {
         if (!this.current_assistant_entry_id) {
@@ -116,6 +126,7 @@ export class StreamingUIController {
         }
         this.current_assistant_text += delta;
         this.message_list.update_assistant_text(this.current_assistant_entry_id, this.current_assistant_text, true);
+        this.schedule_render();
     }
     finalize_assistant() {
         if (!this.current_assistant_entry_id) {
@@ -124,6 +135,7 @@ export class StreamingUIController {
         this.message_list.update_assistant_text(this.current_assistant_entry_id, this.current_assistant_text, false);
         this.current_assistant_entry_id = "";
         this.current_assistant_text = "";
+        this.schedule_render();
     }
     add_tool_call(tool_name, args) {
         const entry = {
@@ -134,6 +146,7 @@ export class StreamingUIController {
             created_at: Date.now(),
         };
         this.message_list.add_entry(entry);
+        this.schedule_render();
     }
     add_tool_result(tool_name, result) {
         const entry = {
@@ -144,6 +157,7 @@ export class StreamingUIController {
             created_at: Date.now(),
         };
         this.message_list.add_entry(entry);
+        this.schedule_render();
     }
     add_approval_request(event) {
         const operation = event.operation || (event.toolName === "shell_write" ? "write" : "exec");
@@ -160,6 +174,7 @@ export class StreamingUIController {
             created_at: Date.now(),
         };
         this.message_list.add_entry(entry);
+        this.schedule_render();
     }
     add_approval_result(event) {
         const entry = {
@@ -171,6 +186,7 @@ export class StreamingUIController {
             created_at: Date.now(),
         };
         this.message_list.add_entry(entry);
+        this.schedule_render();
     }
     add_error(text) {
         const entry = {
@@ -180,6 +196,41 @@ export class StreamingUIController {
             created_at: Date.now(),
         };
         this.message_list.add_entry(entry);
+        this.schedule_render();
+    }
+    /**
+     * 调度一次重绘。多次调用会被合并到下一个 STREAMING_UI_FLUSH_MS 节拍。
+     */
+    schedule_render() {
+        this.pending_render = true;
+        if (this.flush_timer !== null) {
+            return;
+        }
+        const elapsed = Date.now() - this.last_flush_at;
+        const delay = elapsed >= STREAMING_UI_FLUSH_MS ? 0 : STREAMING_UI_FLUSH_MS - elapsed;
+        this.flush_timer = setTimeout(() => {
+            this.flush_timer = null;
+            this.flush_now();
+        }, delay);
+    }
+    /**
+     * 立刻触发一次重绘，并重置节流计时。
+     */
+    flush_now() {
+        this.clear_flush_timer();
+        if (!this.pending_render) {
+            return;
+        }
+        this.pending_render = false;
+        this.last_flush_at = Date.now();
+        this.request_render_fn();
+    }
+    clear_flush_timer() {
+        if (this.flush_timer === null) {
+            return;
+        }
+        clearTimeout(this.flush_timer);
+        this.flush_timer = null;
     }
 }
 //# sourceMappingURL=StreamingUI.js.map

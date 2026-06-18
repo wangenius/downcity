@@ -2,25 +2,25 @@
  * City 项目配置读取器。
  *
  * 关键点（中文）
- * - `city.json` 保持极简：type、name、target。
+ * - `federation.json` 保持极简：type、name、target。
  * - Cloudflare 细节由 CLI 默认处理，不要求开发者写一大段配置。
- * - 部署状态不写回 `city.json`，避免用户手写协议被机器污染。
+ * - 部署状态不写回 `federation.json`，避免用户手写协议被机器污染。
  */
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { CliError } from "../../shared/CliError.js";
-const CITY_CONFIG_FILE_NAME = "city.json";
+const FEDERATION_CONFIG_FILE_NAME = "federation.json";
 /**
  * 读取指定目录下的 City 项目配置。
  */
 export function readFederationProjectConfig(dir) {
     const project_dir = resolve(String(dir || "."));
-    const config_path = join(project_dir, CITY_CONFIG_FILE_NAME);
+    const config_path = join(project_dir, FEDERATION_CONFIG_FILE_NAME);
     if (!existsSync(config_path)) {
         throw new CliError({
             title: "City project config not found",
             note: `Expected ${config_path}`,
-            fix: "Create city.json in the City project, then run city deploy.",
+            fix: "Create federation.json in the City project, then run city deploy.",
         });
     }
     let raw_config;
@@ -29,9 +29,9 @@ export function readFederationProjectConfig(dir) {
     }
     catch (error) {
         throw new CliError({
-            title: "Invalid city.json",
+            title: "Invalid federation.json",
             note: error instanceof Error ? error.message : String(error),
-            fix: "Check that city.json is valid JSON.",
+            fix: "Check that federation.json is valid JSON.",
         });
     }
     return {
@@ -103,7 +103,7 @@ function inferProjectName(project_dir) {
  */
 function invalidConfig(config_path, note) {
     return new CliError({
-        title: "Invalid city.json",
+        title: "Invalid federation.json",
         note: `${config_path}: ${note}`,
         fix: "Use a minimal shape like { \"type\": \"city\", \"name\": \"my-city\", \"target\": \"cloudflare-workers\" }.",
     });

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `city deploy` 的用户心智是“部署一个 City 项目”，不是配置 Cloudflare 工程。
- * - 构建和类型检查从 package.json 自动推断，`city.json` 保持最小。
+ * - 构建和类型检查从 package.json 自动推断，`federation.json` 保持最小。
  * - D1 等部署绑定写入项目 `.env`，Worker URL 回写到 City 自己的 server 配置。
  */
 import { rmSync } from "node:fs";

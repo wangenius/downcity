@@ -136,7 +136,7 @@ export interface CityModelConnection {
   model_id: string;
 
   /**
-   * 每次请求都需要额外合并到请求体的 City 上下文字段，例如 `town_id`。
+   * 每次请求都需要额外合并到请求体的 City 上下文字段，例如 `city_id`。
    */
   request_body: Record<string, unknown>;
 }

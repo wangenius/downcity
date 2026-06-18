@@ -1,1 +1,0 @@
-{"version":3,"file":"AuthRoutes.d.ts","sourceRoot":"","sources":["../../../src/town/auth/AuthRoutes.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,OAAO,EAAE,IAAI,EAAgB,MAAM,MAAM,CAAC;AAC1C,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,kBAAkB,CAAC;AASpD;;GAEG;AACH,wBAAgB,kBAAkB,CAAC,MAAM,EAAE;IACzC,GAAG,EAAE,IAAI,CAAC;IACV,WAAW,CAAC,EAAE,WAAW,CAAC;CAC3B,GAAG,IAAI,CAiEP"}

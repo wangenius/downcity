@@ -20,26 +20,26 @@ export class CityUserManager {
         const allow_env_override = input.allow_env_override !== false;
         const require_user_token = input.require_user_token !== false;
         const verify_user = input.verify_user !== false;
-        const env_city_url = allow_env_override
+        const env_federation_url = allow_env_override
             ? readFirstEnv(env, ["DOWNCITY_CITY_URL", "CITY_URL"])
             : "";
-        const env_town_id = allow_env_override
+        const env_city_id = allow_env_override
             ? readFirstEnv(env, ["DOWNCITY_CITY_TOWN_ID", "CITY_TOWN_ID"])
             : "";
         const env_user_token = allow_env_override
             ? readFirstEnv(env, ["DOWNCITY_CITY_USER_TOKEN", "CITY_USER_TOKEN"])
             : "";
         const selected_session = readCurrentTownCitySession();
-        const federation_url = normalizeCityUrl(env_city_url || selected_session?.base_url || DEFAULT_FEDERATION_URL);
+        const federation_url = normalizeCityUrl(env_federation_url || selected_session?.base_url || DEFAULT_FEDERATION_URL);
         const session = env_user_token
             ? selected_session
             : readTownCitySessionForBase(federation_url);
         const env_overrides = {
-            federation_url: Boolean(env_city_url),
-            city_id: Boolean(env_town_id),
+            federation_url: Boolean(env_federation_url),
+            city_id: Boolean(env_city_id),
             user_token: Boolean(env_user_token),
         };
-        const city_id = env_town_id || session?.city_id || DEFAULT_CITY_ID;
+        const city_id = env_city_id || session?.city_id || DEFAULT_CITY_ID;
         const user_token = env_user_token || session?.user_token || "";
         const source = env_user_token ? "env" : "town-session";
         const warnings = [];
@@ -52,7 +52,7 @@ export class CityUserManager {
         if (env_user_token && selected_session?.user_id) {
             warnings.push("Env user token overrides the saved `town city login` session.");
         }
-        if (env_city_url && !env_user_token && !session?.user_token) {
+        if (env_federation_url && !env_user_token && !session?.user_token) {
             warnings.push("Env CityPact URL selected a base without a saved Town user session.");
         }
         const resolved = {

@@ -1,1 +1,0 @@
-{"version":3,"file":"AgentHostRuntime.d.ts","sourceRoot":"","sources":["../../../src/process/registry/AgentHostRuntime.ts"],"names":[],"mappings":"AAqBA,OAAO,KAAK,EACV,gBAAgB,EAChB,wBAAwB,EACzB,MAAM,iBAAiB,CAAC;AAGzB;;GAEG;AACH,wBAAgB,sBAAsB,CACpC,WAAW,EAAE,MAAM,EACnB,YAAY,EAAE,MAAM,GACnB,gBAAgB,CAkBlB;AAED;;GAEG;AACH,wBAAgB,8BAA8B,CAAC,WAAW,EAAE,MAAM,GAAG,wBAAwB,CAY5F"}

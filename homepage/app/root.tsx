@@ -19,6 +19,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/sections/navbar";
 import i18next from "@/lib/locales"; // naming conflict with fumadocs i18n
 import { i18n } from "@/lib/i18n";
+import { product } from "@/lib/product";
 
 const favicon_version = "20260601";
 
@@ -82,6 +83,9 @@ export const meta: Route.MetaFunction = () => {
   const title = "Downcity - Agent Infrastructure for AI Builders";
   const description =
     "Downcity gives AI builders one reusable runtime for agents, models, tools, tasks, memory, services, permissions, usage, billing, and control surfaces.";
+  // X/Twitter、LinkedIn、Discord 等抓取 Open Graph 图片时必须使用绝对 URL。
+  const site_origin = product.homepage ?? "https://downcity.ai";
+  const og_image = `${site_origin}/icon-512.png`;
 
   return [
     { title },
@@ -108,10 +112,11 @@ export const meta: Route.MetaFunction = () => {
       property: "og:description",
       content: description,
     },
-    { property: "og:image", content: "/icon-512.png" },
+    { property: "og:image", content: og_image },
 
     // Twitter
-    { name: "twitter:card", content: "summary_large_image" },
+    // icon-512.png 为 1:1 正方形，summary 卡片比 summary_large_image 更适合展示 logo。
+    { name: "twitter:card", content: "summary" },
     { name: "twitter:site", content: "@downcity_ai" },
     {
       name: "twitter:title",
@@ -121,7 +126,7 @@ export const meta: Route.MetaFunction = () => {
       name: "twitter:description",
       content: description,
     },
-    { name: "twitter:image", content: "/icon-512.png" },
+    { name: "twitter:image", content: og_image },
 
     // Additional SEO
     { name: "robots", content: "index, follow" },

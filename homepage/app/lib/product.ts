@@ -12,5 +12,5 @@ export const product: DowncityProduct = {
   version: "1.0.0",
   description:
     "Downcity is agent infrastructure for AI builders shipping many agent-powered products and workflows on one reusable runtime.",
-  homepage: "https://downcity.ai",
+  homepage: "https://www.downcity.ai",
 };

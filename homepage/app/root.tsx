@@ -79,12 +79,13 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
-export const meta: Route.MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ location }) => {
   const title = "Downcity - Agent Infrastructure for AI Builders";
   const description =
     "Downcity gives AI builders one reusable runtime for agents, models, tools, tasks, memory, services, permissions, usage, billing, and control surfaces.";
   // X/Twitter、LinkedIn、Discord 等抓取 Open Graph 图片时必须使用绝对 URL。
-  const site_origin = product.homepage ?? "https://downcity.ai";
+  const site_origin = product.homepage ?? "https://www.downcity.ai";
+  const canonical_url = `${site_origin}${location.pathname}${location.search}`;
   const og_image = `${site_origin}/icon-512.png`;
 
   return [
@@ -113,6 +114,8 @@ export const meta: Route.MetaFunction = () => {
       content: description,
     },
     { property: "og:image", content: og_image },
+    { property: "og:url", content: canonical_url },
+    { tagName: "link", rel: "canonical", href: canonical_url },
 
     // Twitter
     // icon-512.png 为 1:1 正方形，summary 卡片比 summary_large_image 更适合展示 logo。

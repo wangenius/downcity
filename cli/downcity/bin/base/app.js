@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Downcity City 交互入口与工作区调度。
+ * Downcity Federation 交互入口与工作区调度。
  *
  * 状态流转：
- *   welcome/home → connect/switch City → server workspace → server management/admin tools
+ *   welcome/home → connect/switch Federation → server workspace → server management/admin tools
  *
  * 关键说明（中文）
- * - `city` 只负责 City base 与 admin 管理。
- * - user 登录与本机 runtime 统一由 `city city login` 承担。
+ * - `downfed` 只负责 Federation 与 admin 管理。
+ * - user 登录与本机 runtime 统一由 `downcity` 承担。
  */
 import { readFileSync } from "node:fs";
 import { isCancel, select } from "./tui/Prompts.js";
@@ -19,7 +19,7 @@ import { updateCli } from "./core/update.js";
 import { getCliLocale, setCliLocale, t } from "./i18n.js";
 import { openServerWorkspace } from "./workspace/ServerWorkspace.js";
 import { open_city_dashboard } from "./tui/CityDashboard.js";
-export async function runCityApp(argv = []) {
+export async function runFederationApp(argv = []) {
     const cli = parseArgs(argv);
     if (cli.command === "update") {
         await runSelfUpdate();

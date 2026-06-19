@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
-import { runCityApp } from "../base/app.js";
+import { runFederationApp } from "../base/app.js";
 import { readPersistedCliLocale } from "../base/core/session.js";
 import { createVersionBanner } from "../shared/IndexSupport.js";
 import { setCliVerbosity } from "../shared/CliReporter.js";
@@ -58,7 +58,7 @@ export async function runDownfedCli() {
     }))
         .helpOption("--help", helpText())
         .action(createVersionBanner(packageJson.version, async (action) => {
-        await runCityApp(action ? [action] : []);
+        await runFederationApp(action ? [action] : []);
     }));
     program
         .command("create [dir]")
@@ -134,6 +134,10 @@ export async function runDownfedCli() {
     });
     program.showHelpAfterError();
     program.showSuggestionAfterError();
+    if (process.argv.length <= 2) {
+        await runFederationApp([]);
+        process.exit(0);
+    }
     await program.parseAsync(process.argv);
 }
 //# sourceMappingURL=RootCommand.js.map

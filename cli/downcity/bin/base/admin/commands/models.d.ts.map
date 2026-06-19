@@ -1,1 +1,0 @@
-{"version":3,"file":"models.d.ts","sourceRoot":"","sources":["../../../../src/base/admin/commands/models.ts"],"names":[],"mappings":"AAAA;;;;;;;GAOG;AAEH,OAAO,EAAE,QAAQ,EAAE,MAAM,gBAAgB,CAAC;AAG1C,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,yBAAyB,CAAC;AAEjE;;GAEG;AACH,wBAAsB,YAAY,CAAC,CAAC,EAAE,QAAQ,EAAE,QAAQ,EAAE,MAAM,EAAE,OAAO,EAAE,iBAAiB,GAAG,OAAO,CAAC,IAAI,CAAC,CAuE3G"}

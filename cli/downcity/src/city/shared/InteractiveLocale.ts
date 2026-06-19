@@ -7,10 +7,10 @@
  */
 
 import prompts from "../tui/Prompts.js";
-import type { CliLocale } from "../../types/CliLocale.js";
+import type { CliLocale } from "../../shared/types/CliLocale.js";
 import { writePersistedCityCliLocale } from "./CityStateStore.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
-import { getCliLocale, setCliLocale, t } from "./CliLocale.js";
+import { getCliLocale, setCliLocale, t } from "../../shared/CliLocale.js";
 
 interface prompt_city_cli_locale_options {
   /** 是否禁止向命令行直接输出结果块。 */

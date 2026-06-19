@@ -11,7 +11,7 @@ import prompts from "../tui/Prompts.js";
 import { ChatChannelAccountManager, } from "@downcity/plugins";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";
-import { t } from "./CliLocale.js";
+import { t } from "../../shared/CliLocale.js";
 const CHAT_CHANNELS = ["telegram", "feishu", "qq"];
 function createChannelAccountManager() {
     return new ChatChannelAccountManager();

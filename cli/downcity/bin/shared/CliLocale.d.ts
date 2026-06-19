@@ -6,7 +6,7 @@
  * - 默认读取 `--lang`、`DC_CLI_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG`。
  * - 当前仅支持 `zh` / `en`，未识别输入统一回退 `en`。
  */
-import type { CliLocale } from "../types/CliLocale.js";
+import type { CliLocale } from "./types/CliLocale.js";
 /**
  * 双语文案输入。
  */

@@ -9,7 +9,7 @@
  */
 import type { FederationProfile } from "../types/FederationMembership.js";
 import type { CityUserSession } from "../types/CitySession.js";
-import type { CliLocale } from "../../types/CliLocale.js";
+import type { CliLocale } from "../../shared/types/CliLocale.js";
 import type { CityLocalState } from "../types/CityState.js";
 /** 默认 Federation 地址。 */
 export declare const DEFAULT_FEDERATION_URL = "https://base.downcity.ai";

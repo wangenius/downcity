@@ -22,11 +22,11 @@ if (argv.length === 1 && (argv[0] === "-v" || argv[0] === "--version")) {
 }
 const invoked = process.argv[1] ? process.argv[1].replace(/\\/g, "/").split("/").pop() : "downcity";
 if (invoked === "downfed") {
-    const { runDownfedCli } = await import("./downfed/RootCommand.js");
+    const { runDownfedCli } = await import("./cli/downfed.js");
     await runDownfedCli();
 }
 else {
-    const { runDowncityCli } = await import("./downcity/RootCommand.js");
+    const { runDowncityCli } = await import("./cli/downcity.js");
     await runDowncityCli();
 }
 //# sourceMappingURL=index.js.map

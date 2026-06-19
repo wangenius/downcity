@@ -8,7 +8,7 @@
 import prompts from "../tui/Prompts.js";
 import { writePersistedCityCliLocale } from "./CityStateStore.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
-import { getCliLocale, setCliLocale, t } from "./CliLocale.js";
+import { getCliLocale, setCliLocale, t } from "../../shared/CliLocale.js";
 /**
  * 交互式切换并持久化 City CLI 语言。
  */

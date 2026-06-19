@@ -14,7 +14,7 @@ import path from "node:path";
 import { PlatformStore } from "../runtime/store/index.js";
 import type { FederationProfile } from "../types/FederationMembership.js";
 import type { CityUserSession } from "../types/CitySession.js";
-import type { CliLocale } from "../../types/CliLocale.js";
+import type { CliLocale } from "../../shared/types/CliLocale.js";
 import type {
   CityAdminConfig,
   CityLocalProfile,

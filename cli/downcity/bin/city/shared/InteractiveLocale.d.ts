@@ -5,7 +5,7 @@
  * - 统一承载 `city` 交互菜单中的语言选择逻辑，避免首页与 City 管理器重复实现。
  * - 写入 City 本地状态后立即更新进程内语言，保证后续菜单即时生效。
  */
-import type { CliLocale } from "../../types/CliLocale.js";
+import type { CliLocale } from "../../shared/types/CliLocale.js";
 interface prompt_city_cli_locale_options {
     /** 是否禁止向命令行直接输出结果块。 */
     silent?: boolean;

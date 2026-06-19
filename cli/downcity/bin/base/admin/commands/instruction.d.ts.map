@@ -1,1 +1,0 @@
-{"version":3,"file":"instruction.d.ts","sourceRoot":"","sources":["../../../../src/base/admin/commands/instruction.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,EAAE,QAAQ,EAAE,MAAM,gBAAgB,CAAC;AAE1C,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,yBAAyB,CAAC;AAEjE;;GAEG;AACH,wBAAsB,iBAAiB,CACrC,CAAC,EAAE,QAAQ,EACX,QAAQ,EAAE,MAAM,EAChB,OAAO,EAAE,iBAAiB,GACzB,OAAO,CAAC,IAAI,CAAC,CAOf"}

@@ -18,7 +18,7 @@ import type {
   CliReportList,
   CliReportListItem,
   CliReportTone,
-} from "../../../shared/CliReporterTypes.js";
+} from "../../../shared/types/CliReporter.js";
 
 /**
  * printResult 统一参数。

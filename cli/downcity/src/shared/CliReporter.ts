@@ -15,7 +15,7 @@ import type {
   CliReportList,
   CliReportListItem,
   CliReportTone,
-} from "./CliReporterTypes.js";
+} from "./types/CliReporter.js";
 
 const FACT_LABEL_MIN_WIDTH = 8;
 /**

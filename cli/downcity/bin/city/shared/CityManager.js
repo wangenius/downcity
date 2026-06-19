@@ -10,7 +10,7 @@ import { runInteractiveAgentManager } from "../agent/AgentManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
 import { run_interactive_federation_manager } from "./FederationConnection.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
-import { t } from "./CliLocale.js";
+import { t } from "../../shared/CliLocale.js";
 import { promptAndPersistCityCliLocale } from "./InteractiveLocale.js";
 import { open_city_dashboard } from "../tui/CityDashboard.js";
 /**

@@ -1,1 +1,0 @@
-{"version":3,"file":"payment.d.ts","sourceRoot":"","sources":["../../../../src/base/admin/commands/payment.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,EAAE,QAAQ,EAAE,MAAM,gBAAgB,CAAC;AAI1C,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,yBAAyB,CAAC;AAgCjE,wBAAsB,aAAa,CAAC,CAAC,EAAE,QAAQ,EAAE,OAAO,EAAE,MAAM,EAAE,OAAO,EAAE,iBAAiB,GAAG,OAAO,CAAC,IAAI,CAAC,CAkF3G"}

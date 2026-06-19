@@ -7,7 +7,7 @@
  */
 
 import type { CityUserSession } from "./CitySession.js";
-import type { CliLocale } from "./CliLocale.js";
+import type { CliLocale } from "../../shared/types/CliLocale.js";
 
 /**
  * `city` CLI admin 配置文件结构。

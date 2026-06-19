@@ -1,1 +1,0 @@
-{"version":3,"file":"accounts.d.ts","sourceRoot":"","sources":["../../../src/admin/commands/accounts.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,EAAE,IAAI,EAAE,MAAM,gBAAgB,CAAC;AAGtC,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,yBAAyB,CAAC;AAEjE,wBAAsB,cAAc,CAAC,CAAC,EAAE,IAAI,EAAE,QAAQ,EAAE,MAAM,EAAE,OAAO,EAAE,iBAAiB,GAAG,OAAO,CAAC,IAAI,CAAC,CAwDzG"}

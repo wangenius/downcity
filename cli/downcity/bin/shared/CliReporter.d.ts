@@ -6,7 +6,7 @@
  * - 将颜色、符号、对齐规则集中在这里，避免命令文件继续散落 `console.log` 模板串。
  * - 保持纯函数输出，方便测试并保证非 TTY 场景仍可读。
  */
-import type { CliRenderOptions, CliReportBlock, CliReportList } from "./CliReporterTypes.js";
+import type { CliRenderOptions, CliReportBlock, CliReportList } from "./types/CliReporter.js";
 /**
  * 设置全局 verbosity 级别。
  *

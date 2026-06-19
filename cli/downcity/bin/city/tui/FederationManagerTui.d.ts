@@ -1,13 +1,10 @@
 /**
- * City City 连接持久化全屏 TUI。
+ * Federation 交互式管理 TUI 入口。
  *
  * 关键点（中文）
- * - 裸 `city city` 使用这个界面，所有状态、loading 和结果都保留在 TUI 右侧。
- * - `city federation status/list/whoami/...` 子命令仍由 shared/FederationConnection 负责 stdout 输出。
- * - 需要输入的动作会临时进入现有 prompt TUI，完成后回到本界面并展示结果。
- */
-/**
- * 打开 City 连接管理 TUI。
+ * - 负责创建 blessed 全屏界面、主循环与动作分发。
+ * - 状态构建与动作处理拆到 FederationManagerState.ts。
+ * - 格式化与提示分别拆到 FederationManagerFormat.ts 与 FederationManagerPrompts.ts。
  */
 export declare function open_city_manager_tui(): Promise<void>;
 //# sourceMappingURL=FederationManagerTui.d.ts.map

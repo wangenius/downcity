@@ -9,13 +9,13 @@
  */
 import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
-import { create_city_tui_shell } from "./Shell.js";
+import { create_tui_shell } from "./Shell.js";
 /**
  * clack 兼容：select。
  */
 export async function select(input) {
     return await new Promise((resolve) => {
-        const shell = create_city_tui_shell({
+        const shell = create_tui_shell({
             screen_title: input.message,
             breadcrumb: input.message,
             footer: select_footer_text(),
@@ -143,7 +143,7 @@ export async function confirm(input) {
         en: "Yes",
     });
     return await new Promise((resolve) => {
-        const shell = create_city_tui_shell({
+        const shell = create_tui_shell({
             screen_title: input.message,
             breadcrumb: input.message,
             footer: confirm_footer_text(),
@@ -274,7 +274,7 @@ async function run_text_prompt(input, secret) {
 }
 async function open_text_prompt_once(input, options) {
     return await new Promise((resolve) => {
-        const shell = create_city_tui_shell({
+        const shell = create_tui_shell({
             screen_title: input.message,
             breadcrumb: input.message,
             footer: text_footer_text(options.secret),

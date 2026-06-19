@@ -1,32 +1,27 @@
 #!/usr/bin/env node
 
 /**
- * Downcity Federation 交互入口与工作区调度。
- *
- * 状态流转：
- *   welcome/home → connect/switch Federation → server workspace → server management/admin tools
+ * Downcity Federation 交互入口。
  *
  * 关键说明（中文）
  * - `downfed` 只负责 Federation 与 admin 管理。
+ * - 无参数时打开 Federation 管理 TUI。
  * - user 登录与本机 runtime 统一由 `downcity` 承担。
  */
 
 import { readFileSync } from "node:fs";
 import { isCancel, select } from "./tui/Prompts.js";
-import {
-  readActiveServer,
-  setActiveServer,
-  writePersistedCliLocale,
-} from "./core/session.js";
 import { parseArgs } from "./core/env.js";
-import { promptAddServer } from "./auth/server-switch.js";
 import { show, showError, showSuccess } from "./core/ui.js";
 import { updateCli } from "./core/update.js";
 import { getCliLocale, setCliLocale, t } from "./i18n.js";
 import { type CliLocale } from "./types/CliLocale.js";
-import { openServerWorkspace } from "./workspace/ServerWorkspace.js";
-import { open_city_dashboard } from "./tui/CityDashboard.js";
-import type { HomeAction, WelcomeAction } from "./types/Interactive.js";
+import { writePersistedCliLocale } from "./core/session.js";
+import { createFederationProject } from "./create/commands/create.js";
+import { deployFederationProject } from "./deploy/commands/deploy.js";
+import { refreshEnvCache } from "./env/commands/refresh.js";
+import { open_federation_dashboard } from "./tui/FederationDashboard.js";
+import type { FederationAction } from "./types/Interactive.js";
 import type { tui_action_result } from "./types/Tui.js";
 
 export async function runFederationApp(argv: string[] = []): Promise<void> {
@@ -36,21 +31,98 @@ export async function runFederationApp(argv: string[] = []): Promise<void> {
     return;
   }
 
-  await open_city_dashboard({
-    run_welcome_action: run_welcome_dashboard_action,
-    run_home_action: run_home_dashboard_action,
+  await open_federation_dashboard({
+    run_action: run_federation_dashboard_action,
   });
 }
 
+async function run_federation_dashboard_action(
+  action: FederationAction,
+): Promise<tui_action_result> {
+  if (action === "quit") {
+    return "quit";
+  }
+
+  if (action === "create_federation") {
+    await createFederationProject(".", { force: false });
+    return "refresh";
+  }
+
+  if (action === "deploy_federation") {
+    await deployFederationProject(".", {});
+    return "refresh";
+  }
+
+  if (action === "refresh_env") {
+    await refreshEnvCache();
+    return "refresh";
+  }
+
+  if (action === "more") {
+    return await run_federation_more_action();
+  }
+
+  return "refresh";
+}
+
+async function run_federation_more_action(): Promise<tui_action_result> {
+  const current_locale = getCliLocale();
+  const selected_action = await select({
+    message: t({
+      zh: "更多",
+      en: "More",
+    }),
+    options: [
+      {
+        label: t({
+          zh: "切换语言",
+          en: "Language",
+        }),
+        value: "set_language",
+        hint: current_locale === "zh"
+          ? t({ zh: "当前默认语言：中文", en: "Current default language: Chinese" })
+          : t({ zh: "当前默认语言：英文", en: "Current default language: English" }),
+      },
+      {
+        label: t({
+          zh: "升级 CLI",
+          en: "Upgrade CLI",
+        }),
+        value: "update",
+        hint: t({
+          zh: "刷新全局 downcity 命令",
+          en: "Refresh the global downcity command",
+        }),
+      },
+      {
+        label: t({ zh: "返回", en: "Back" }),
+        value: "back",
+      },
+    ],
+  });
+
+  if (!selected_action || isCancel(selected_action) || selected_action === "back") {
+    return "refresh";
+  }
+
+  if (selected_action === "set_language") {
+    await promptAndPersistCliLocale();
+    return "refresh";
+  }
+
+  await runSelfUpdate();
+  return "quit";
+}
+
 /**
- * 交互式切换并持久化 City CLI 语言。
+ * 交互式切换并持久化 CLI 语言。
  */
-async function promptAndPersistCityCliLocale(): Promise<void> {
+async function promptAndPersistCliLocale(): Promise<void> {
   const current_locale = getCliLocale();
   const selected_locale = await select({
     message: t({
-      zh: "选择 City CLI 语言",
-      en: "Choose the City CLI language",
+      zh: "选择 CLI 语言",
+      en: "Choose the CLI language",
     }),
     options: [
       {
@@ -126,117 +198,10 @@ async function runSelfUpdate(): Promise<void> {
       en: `CLI updated via ${result.mode} mode -> v${result.version}`,
     }));
     show(t({
-      zh: "请重新运行 `city` 以使用更新后的 CLI。",
-      en: "Please run `city` again to use the updated CLI.",
+      zh: "请重新运行 `downcity` 以使用更新后的 CLI。",
+      en: "Please run `downcity` again to use the updated CLI.",
     }));
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
   }
-}
-
-/**
- * 执行欢迎页动作。
- */
-async function run_welcome_dashboard_action(
-  action: WelcomeAction,
-): Promise<tui_action_result> {
-  if (action === "quit") {
-    return "quit";
-  }
-  if (action === "more") {
-    await run_city_more_actions();
-    return "refresh";
-  }
-
-  const connected_server = await promptAddServer();
-  if (!connected_server) {
-    return "refresh";
-  }
-
-  const result = await openServerWorkspace(connected_server.base_url);
-  return result === "quit" ? "quit" : "refresh";
-}
-
-/**
- * 执行首页动作。
- */
-async function run_home_dashboard_action(
-  action: HomeAction,
-): Promise<tui_action_result> {
-  if (action === "quit") {
-    return "quit";
-  }
-  if (action === "more") {
-    await run_city_more_actions();
-    return "refresh";
-  }
-  if (action === "connect_city") {
-    const connected_server = await promptAddServer();
-    if (!connected_server) {
-      return "refresh";
-    }
-    const result = await openServerWorkspace(connected_server.base_url);
-    return result === "quit" ? "quit" : "refresh";
-  }
-  if (action.startsWith("open_server:")) {
-    const base_url = action.slice("open_server:".length).trim();
-    if (!base_url) {
-      return "refresh";
-    }
-    setActiveServer(base_url);
-    const result = await openServerWorkspace(base_url);
-    return result === "quit" ? "quit" : "refresh";
-  }
-
-  const active_server = readActiveServer();
-  if (!active_server) {
-    return "refresh";
-  }
-
-  const result = await openServerWorkspace(active_server.base_url);
-  return result === "quit" ? "quit" : "refresh";
-}
-
-async function run_city_more_actions(): Promise<void> {
-  const current_locale = getCliLocale();
-  const selected_action = await select({
-    message: t({
-      zh: "更多",
-      en: "More",
-    }),
-    options: [
-      {
-        label: t({
-          zh: "切换语言",
-          en: "Language",
-        }),
-        value: "set_language",
-        hint: current_locale === "zh"
-          ? t({ zh: "当前默认语言：中文", en: "Current default language: Chinese" })
-          : t({ zh: "当前默认语言：英文", en: "Current default language: English" }),
-      },
-      {
-        label: t({
-          zh: "升级 CLI",
-          en: "Upgrade CLI",
-        }),
-        value: "update",
-        hint: t({
-          zh: "刷新全局 city 命令",
-          en: "Refresh the global city command",
-        }),
-      },
-    ],
-  });
-
-  if (!selected_action || isCancel(selected_action)) {
-    return;
-  }
-
-  if (selected_action === "set_language") {
-    await promptAndPersistCityCliLocale();
-    return;
-  }
-
-  await runSelfUpdate();
 }

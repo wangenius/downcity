@@ -1,5 +1,5 @@
 /**
- * City CLI 通用 TUI Shell。
+ * Downcity CLI 通用 TUI Shell。
  *
  * 关键说明（中文）
  * - 统一 `city` 顶层 dashboard、通用 prompts、后续 runtime 的两栏布局。
@@ -11,9 +11,9 @@ import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
 
 /**
- * City TUI Shell 配置。
+ * TUI Shell 配置。
  */
-export interface city_tui_shell_input {
+export interface tui_shell_input {
   /** 当前 screen 标题，会显示在终端标题栏。 */
   screen_title: string;
 
@@ -28,9 +28,9 @@ export interface city_tui_shell_input {
 }
 
 /**
- * City TUI Shell 实例。
+ * TUI Shell 实例。
  */
-export interface city_tui_shell {
+export interface tui_shell {
   /** blessed 全屏根节点。 */
   screen: blessed.Widgets.Screen;
 
@@ -54,9 +54,9 @@ export interface city_tui_shell {
 }
 
 /**
- * 创建 City CLI 通用 TUI Shell。
+ * 创建 Downcity CLI 通用 TUI Shell。
  */
-export function create_city_tui_shell(input: city_tui_shell_input): city_tui_shell {
+export function create_tui_shell(input: tui_shell_input): tui_shell {
   const screen = blessed.screen({
     smartCSR: true,
     fullUnicode: true,
@@ -124,7 +124,7 @@ export function create_city_tui_shell(input: city_tui_shell_input): city_tui_she
     content: input.footer ?? "",
   });
 
-  const shell: city_tui_shell = {
+  const shell: tui_shell = {
     screen,
     sidebar_box,
     breadcrumb_box,

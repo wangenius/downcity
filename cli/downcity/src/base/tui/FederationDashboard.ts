@@ -1,25 +1,21 @@
 /**
- * City 顶层全屏 TUI 仪表盘。
+ * Federation 顶层全屏 TUI 仪表盘。
  *
  * 关键说明（中文）
- * - 这是 `city` / `city manage` 的默认交互入口。
- * - 左侧 sidebar 承载 City 列表与 breadcrumb，右侧 main_section 展示当前项详情。
+ * - 这是 `downfed` / `downfed manage` 的默认交互入口。
+ * - 左侧 sidebar 承载 Federation 操作菜单，右侧 main_section 展示当前项详情。
  */
 
 import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
-import { create_city_tui_shell } from "./Shell.js";
-import { readActiveServer, readConfig } from "../core/session.js";
+import { create_tui_shell } from "./Shell.js";
 import { getCliLocale, t } from "../../shared/CliLocale.js";
-import type { HomeAction, WelcomeAction } from "../types/Interactive.js";
+import type { FederationAction } from "../types/Interactive.js";
 import type { tui_action_result, tui_list_item } from "../types/Tui.js";
 
-interface city_dashboard_options {
-  /** 执行欢迎页动作。 */
-  run_welcome_action: (action: WelcomeAction) => Promise<tui_action_result>;
-
-  /** 执行首页动作。 */
-  run_home_action: (action: HomeAction) => Promise<tui_action_result>;
+interface federation_dashboard_options {
+  /** 执行 Federation 仪表盘动作。 */
+  run_action: (action: FederationAction) => Promise<tui_action_result>;
 }
 
 interface blessed_list_element extends blessed.Widgets.ListElement {
@@ -37,21 +33,19 @@ interface blessed_list_element extends blessed.Widgets.ListElement {
 }
 
 /**
- * 打开 City 顶层仪表盘。
+ * 打开 Federation 顶层仪表盘。
  */
-export async function open_city_dashboard(
-  options: city_dashboard_options,
+export async function open_federation_dashboard(
+  options: federation_dashboard_options,
 ): Promise<void> {
   while (true) {
-    const state = build_city_dashboard_state();
-    const selection = await run_city_dashboard_once(state);
+    const state = build_federation_dashboard_state();
+    const selection = await run_federation_dashboard_once(state);
     if (!selection) {
       return;
     }
 
-    const result = state.mode === "welcome"
-      ? await options.run_welcome_action(selection as WelcomeAction)
-      : await options.run_home_action(selection as HomeAction);
+    const result = await options.run_action(selection as FederationAction);
 
     if (result === "quit") {
       return;
@@ -59,105 +53,48 @@ export async function open_city_dashboard(
   }
 }
 
-interface city_dashboard_state {
-  mode: "welcome" | "servers";
+interface federation_dashboard_state {
   title: string;
   subtitle: string;
   footer: string;
   items: tui_list_item[];
 }
 
-function build_city_dashboard_state(): city_dashboard_state {
-  const locale = getCliLocale();
-  const version = read_city_cli_version();
-  const active_server = readActiveServer();
-  const config = readConfig();
-  const connected_count = config.servers.length;
+function build_federation_dashboard_state(): federation_dashboard_state {
+  const version = read_federation_cli_version();
 
-  if (connected_count === 0) {
-    const items: tui_list_item[] = [
-      {
-        id: "connect_city",
-        title: t({ zh: "添加 City", en: "Add City" }),
-        subtitle: t({ zh: "添加一个 City base URL", en: "Add a City base URL" }),
-        detail: t({
-          zh: "添加并保存一个 City base。连接成功后会自动进入这个 City 的管理工作区。",
-          en: "Add and save a City base. After success, City opens this management workspace.",
-        }),
-      },
-      {
-        id: "more",
-        title: t({ zh: "更多", en: "More" }),
-        subtitle: locale === "zh"
-          ? t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" })
-          : t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" }),
-        detail: t({
-          zh: "进入更多操作，查看语言切换和 CLI 升级等设置。",
-          en: "Open more actions for language switching and CLI upgrade settings.",
-        }),
-      },
-      {
-        id: "quit",
-        title: t({ zh: "退出", en: "Exit" }),
-        subtitle: t({ zh: "关闭 City", en: "Close City" }),
-        detail: t({
-          zh: "退出当前 City CLI。",
-          en: "Exit the current City CLI.",
-        }),
-      },
-    ];
-
-    return {
-      mode: "welcome",
-      title: `City v${version}`,
-      subtitle: t({
-        zh: "当前还没有 City。先添加一个再进入管理。",
-        en: "No City has been added yet. Add one to start managing it.",
-      }),
-      footer: t({
-        zh: "Enter 进入 · Esc / q 退出 · ↑↓ 切换",
-        en: "Enter open · Esc / q quit · ↑↓ navigate",
-      }),
-      items,
-    };
-  }
-
-  const items: tui_list_item[] = config.servers.map((server) => {
-    const is_active = active_server?.base_url === server.base_url;
-    const admin_state = String(server.admin_secret_key || "").trim()
-      ? t({ zh: "已配置 admin", en: "admin configured" })
-      : t({ zh: "未配置 admin", en: "admin missing" });
-
-    return {
-      id: `open_server:${server.base_url}`,
-      title: is_active ? `★ ${server.name}` : server.name,
-      subtitle: `${server.base_url} · ${admin_state}`,
-      detail: t({
-        zh: `City：${server.name}\nURL：${server.base_url}\n状态：${admin_state}${is_active ? "\n\n当前已激活。" : ""}\n\n回车直接进入这个 City 的管理工作区。`,
-        en: `City: ${server.name}\nURL: ${server.base_url}\nStatus: ${admin_state}${is_active ? "\n\nCurrently active." : ""}\n\nPress Enter to open this City management workspace.`,
-      }),
-    };
-  });
-
-  items.push(
+  const items: tui_list_item[] = [
     {
-      id: "connect_city",
-      title: t({ zh: "添加 City", en: "Add City" }),
-      subtitle: t({
-        zh: `当前已连接 ${connected_count} 个 City`,
-        en: `${connected_count} connected City servers`,
-      }),
+      id: "create_federation",
+      title: t({ zh: "创建 Federation", en: "Create Federation" }),
+      subtitle: t({ zh: "交互式创建 Federation 项目骨架", en: "Interactively scaffold a Federation project" }),
       detail: t({
-        zh: "添加新的 City base URL，并保存到本地配置中。",
-        en: "Add a new City base URL and save it into the local configuration.",
+        zh: "在当前目录创建 Federation 项目骨架，包含 Wrangler 配置和示例代码。",
+        en: "Create a Federation project scaffold in the current directory, including Wrangler config and sample code.",
+      }),
+    },
+    {
+      id: "deploy_federation",
+      title: t({ zh: "部署 Federation", en: "Deploy Federation" }),
+      subtitle: t({ zh: "部署当前目录的 Federation 项目", en: "Deploy the Federation project in the current directory" }),
+      detail: t({
+        zh: "构建并部署当前目录中的 Federation 项目到 Cloudflare Workers。",
+        en: "Build and deploy the Federation project in the current directory to Cloudflare Workers.",
+      }),
+    },
+    {
+      id: "refresh_env",
+      title: t({ zh: "刷新 env cache", en: "Refresh env cache" }),
+      subtitle: t({ zh: "刷新 Federation runtime env cache", en: "Refresh the Federation runtime env cache" }),
+      detail: t({
+        zh: "刷新当前 Federation 的运行时环境变量缓存。",
+        en: "Refresh the runtime environment variable cache for the current Federation.",
       }),
     },
     {
       id: "more",
       title: t({ zh: "更多", en: "More" }),
-      subtitle: locale === "zh"
-        ? t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" })
-        : t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" }),
+      subtitle: t({ zh: "语言、升级等设置", en: "Language, upgrade, and more" }),
       detail: t({
         zh: "进入更多操作，查看语言切换和 CLI 升级等设置。",
         en: "Open more actions for language switching and CLI upgrade settings.",
@@ -166,35 +103,34 @@ function build_city_dashboard_state(): city_dashboard_state {
     {
       id: "quit",
       title: t({ zh: "退出", en: "Exit" }),
-      subtitle: t({ zh: "关闭 City", en: "Close City" }),
+      subtitle: t({ zh: "关闭 downfed", en: "Close downfed" }),
       detail: t({
-        zh: "退出当前 City CLI。",
-        en: "Exit the current City CLI.",
+        zh: "退出当前 downfed TUI。",
+        en: "Exit the current downfed TUI.",
       }),
     },
-  );
+  ];
 
   return {
-    mode: "servers",
-    title: `City v${version}`,
+    title: `Downcity Federation v${version}`,
     subtitle: t({
-      zh: `共 ${connected_count} 个 City${active_server ? ` · 当前：${active_server.name}` : ""}`,
-      en: `${connected_count} City servers${active_server ? ` · current: ${active_server.name}` : ""}`,
+      zh: "选择一项 Federation 管理操作",
+      en: "Choose a Federation management action",
     }),
     footer: t({
-      zh: "Enter 进入 City · Esc / q 退出 · ↑↓ 切换",
-      en: "Enter open City · Esc / q quit · ↑↓ navigate",
+      zh: "Enter 进入 · Esc / q 退出 · ↑↓ 切换",
+      en: "Enter open · Esc / q quit · ↑↓ navigate",
     }),
     items,
   };
 }
 
-async function run_city_dashboard_once(
-  state: city_dashboard_state,
+async function run_federation_dashboard_once(
+  state: federation_dashboard_state,
 ): Promise<string | null> {
   return await new Promise<string | null>((resolve) => {
-    const shell = create_city_tui_shell({
-      screen_title: "Downcity City",
+    const shell = create_tui_shell({
+      screen_title: "Downcity Federation",
       breadcrumb: state.title,
       footer: state.footer,
     });
@@ -276,7 +212,6 @@ async function run_city_dashboard_once(
     });
 
     list.on("keypress", () => {
-      // 关键点（中文）：上下移动焦点时立即刷新右侧说明，不能只在 Enter 选择时刷新。
       setImmediate(() => {
         if (finished) return;
         sync_selection();
@@ -340,7 +275,7 @@ function clamp_selected_index(
   return Math.max(0, Math.min(length - 1, index));
 }
 
-function read_city_cli_version(): string {
+function read_federation_cli_version(): string {
   try {
     const package_json_path = new URL("../../package.json", import.meta.url);
     const package_json = JSON.parse(readFileSync(package_json_path, "utf8")) as {

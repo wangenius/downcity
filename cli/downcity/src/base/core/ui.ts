@@ -39,7 +39,7 @@ export async function askUserCommand(): Promise<string | undefined> {
     { label: t({ zh: "列出服务", en: "List services" }), value: "services" },
     { label: t({ zh: "调用服务", en: "Call service" }), value: "service" },
     { label: t({ zh: "Server 管理", en: "Server management" }), value: "server_management", hint: t({ zh: "低频 admin 访问和本地连接配置", en: "Low-frequency admin access and local connection settings" }) },
-    { label: t({ zh: "切换 City", en: "Switch City" }), value: "switch_server" },
+    { label: t({ zh: "切换 Server", en: "Switch Server" }), value: "switch_server" },
     { label: t({ zh: "退出登录", en: "Sign out" }), value: "sign_out" },
     { label: t({ zh: "退出", en: "Exit" }), value: "quit" },
   ]});

@@ -1,9 +1,8 @@
 /**
- * 交互式 City CLI 的流程类型定义。
+ * 交互式 Federation CLI 的流程类型定义。
  *
  * 关键说明（中文）
- * - `city` 只负责 City base 与 admin 管理。
- * - user 登录与 runtime 入口由 `city` 负责。
+ * - `downfed` 只负责 Federation 管理。
  */
 export {};
 //# sourceMappingURL=Interactive.js.map

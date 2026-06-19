@@ -1,8 +1,8 @@
 /**
- * City City 本地状态类型。
+ * City 本地状态类型。
  *
  * 关键点（中文）
- * - 只描述 City 自己保存的 City base 与 session 索引。
+ * - 只描述 City 自己保存的 Federation 与 session 索引。
  * - `city` CLI 的 admin 配置只作为弱发现来源读取。
  */
 import type { CityUserSession } from "./CitySession.js";
@@ -12,11 +12,11 @@ import type { CliLocale } from "./CliLocale.js";
  */
 export interface CityAdminConfig {
     /**
-     * `city` CLI 当前激活的 City base URL。
+     * `downfed` admin 当前激活的 Federation URL。
      */
     active_server_url?: unknown;
     /**
-     * `city` CLI 保存的 City base 列表。
+     * `downfed` admin 保存的 Federation 列表。
      */
     servers?: Array<{
         /**
@@ -24,11 +24,11 @@ export interface CityAdminConfig {
          */
         name?: unknown;
         /**
-         * City base URL。
+         * Federation URL。
          */
-        base_url?: unknown;
+        federation_url?: unknown;
         /**
-         * 旧结构中的 City base URL 字段。
+         * 旧结构中的 Federation URL 字段。
          */
         url?: unknown;
         /**
@@ -38,7 +38,7 @@ export interface CityAdminConfig {
     }>;
 }
 /**
- * City 本地保存的 City base。
+ * City 本地保存的 Federation。
  */
 export interface CityLocalProfile {
     /**
@@ -46,24 +46,24 @@ export interface CityLocalProfile {
      */
     name: string;
     /**
-     * City base URL。
+     * Federation URL。
      */
-    base_url: string;
+    federation_url: string;
 }
 /**
  * City 本地保存的 City user 连接状态。
  */
 export interface CityLocalState {
     /**
-     * 当前选择的 City base URL。
+     * 当前选择的 Federation URL。
      */
-    selected_base_url?: string;
+    selected_federation_url?: string;
     /**
      * 当前持久化的 CLI 语言。
      */
     cli_locale?: CliLocale;
     /**
-     * City 本地保存的 City base 列表。
+     * City 本地保存的 Federation 列表。
      */
     profiles?: CityLocalProfile[];
     /**

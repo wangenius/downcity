@@ -9,7 +9,7 @@
 import { registerConfigCommand } from "./ConfigCommand.js";
 import { registerEnvCommand } from "./EnvCommand.js";
 import { registerTokenCommand } from "./TokenCommand.js";
-import { registerCityConnectionCommand } from "./CityCommand.js";
+import { register_federation_command } from "./FederationCommand.js";
 import { gatewayInitCommand } from "../runtime/gateway/runtime/GatewayInit.js";
 import { createVersionBanner } from "../../shared/IndexSupport.js";
 import { CliError } from "../../shared/CliError.js";
@@ -109,7 +109,7 @@ export function registerGatewayCommands(program, context) {
     registerConfigCommand(program);
     registerEnvCommand(program);
     registerTokenCommand(program);
-    registerCityConnectionCommand(program);
+    register_federation_command(program);
 }
 export { ensureRegisteredAgentProjectRoot, prepareForegroundAgent, };
 //# sourceMappingURL=GatewayCommand.js.map

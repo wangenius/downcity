@@ -15,7 +15,7 @@ import {
 import { isCityProcessAlive, readCityPid } from "../../../process/registry/CityRuntime.js";
 import { emitCliBlock, emitCliList } from "../../../../shared/CliReporter.js";
 import { resolveRunningManagedAgents } from "./GatewayProcess.js";
-import { readCityConnectionState } from "../../../shared/CityConnection.js";
+import { read_federation_membership_state } from "../../../shared/FederationConnection.js";
 
 /**
  * 打印当前受管 agent 面板。
@@ -90,20 +90,20 @@ export async function gatewayStatusCommand(): Promise<void> {
     ],
   });
 
-  const city = readCityConnectionState();
+  const city = read_federation_membership_state();
   emitCliBlock({
     tone: city.source === "missing"
       ? "warning"
       : city.has_user_token
         ? "success"
         : "warning",
-    title: "City connection",
+    title: "Federation membership",
     summary: city.source === "missing" ? "missing" : city.source,
     facts: city.source === "missing"
       ? [
           {
             label: "fix",
-            value: "city city login",
+            value: "city federation login",
           },
         ]
       : [

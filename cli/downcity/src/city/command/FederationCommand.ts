@@ -1,80 +1,80 @@
 /**
- * `city city` 命令装配模块。
+ * `city federation` 命令装配模块。
  *
  * 关键点（中文）
  * - 所有 commander 注册逻辑统一放在 `src/command/`。
- * - City user 连接、登录和状态读写由 `shared/CityConnection` 提供。
- * - `city` CLI 只负责 admin/base 管理，`city city` 只负责 user login。
+ * - Federation 成员资格、登录和状态读写由 `shared/FederationConnection` 提供。
+ * - `downfed` CLI 负责 Federation 基础设施管理；`city federation` 只负责让本机 City 加入/登录 Federation。
  */
 
 import type { Command } from "commander";
 import { parseBoolean } from "../../shared/IndexSupport.js";
 import { DEFAULT_CITY_ID } from "../shared/CityStateStore.js";
 import {
-  emitCityConnectionStatus,
+  emit_federation_status,
   emitCityUserWhoami,
-  emitCityServerList,
-  runCityConnectCommand,
-  runCityDisconnectCommand,
-  runCityLoginCommand,
-  runCityLogoutCommand,
-  runCityUseCommand,
-  runInteractiveCityManager,
-} from "../shared/CityConnection.js";
+  emit_federation_list,
+  run_federation_join_command,
+  run_federation_leave_command,
+  run_federation_login_command,
+  run_federation_logout_command,
+  run_federation_use_command,
+  run_interactive_federation_manager,
+} from "../shared/FederationConnection.js";
 import { helpText, t } from "../../shared/CliLocale.js";
 
 /**
- * 注册 `city city` 命令组。
+ * 注册 `city federation` 命令组。
  */
-export function registerCityConnectionCommand(program: Command): void {
-  const city = program
-    .command("city")
+export function register_federation_command(program: Command): void {
+  const federation = program
+    .command("federation")
     .description(t({
-      zh: "管理 City 的 City 连接与账号登录态",
-      en: "manage City City connections and account login state",
+      zh: "管理 City 的 Federation 成员资格与账号登录态",
+      en: "manage City Federation membership and account login state",
     }))
     .helpOption("--help", helpText())
     .action(async () => {
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
-        city.outputHelp();
+        federation.outputHelp();
         return;
       }
-      await runInteractiveCityManager();
+      await run_interactive_federation_manager();
     });
 
-  city
+  federation
     .command("status")
     .description(t({
-      zh: "查看 City 当前 City 连接状态",
-      en: "show the current City City connection status",
+      zh: "查看 City 当前 Federation 成员资格状态",
+      en: "show the current City Federation membership status",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
       en: "output as JSON",
     }), parseBoolean)
     .action((options: { json?: boolean }) => {
-      emitCityConnectionStatus({ as_json: options.json === true });
+      emit_federation_status({ as_json: options.json === true });
     });
 
-  city
+  federation
     .command("list")
     .description(t({
-      zh: "列出 City 可选择的 City",
-      en: "list Cities available to City",
+      zh: "列出 City 可选择的 Federation",
+      en: "list Federations available to City",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
       en: "output as JSON",
     }), parseBoolean)
     .action((options: { json?: boolean }) => {
-      emitCityServerList({ as_json: options.json === true });
+      emit_federation_list({ as_json: options.json === true });
     });
 
-  city
+  federation
     .command("whoami")
     .description(t({
-      zh: "查看 City 当前实际使用的 City 账号",
-      en: "show the current City account resolved by City",
+      zh: "查看 City 当前实际使用的 Federation 账号",
+      en: "show the current Federation account resolved by City",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
@@ -84,49 +84,49 @@ export function registerCityConnectionCommand(program: Command): void {
       await emitCityUserWhoami({ as_json: options.json === true });
     });
 
-  city
-    .command("connect [url]")
+  federation
+    .command("join [url]")
     .description(t({
-      zh: "手动添加并选择一个 City（默认 base.downcity.ai）",
-      en: "manually add and select a City (default: base.downcity.ai)",
+      zh: "加入并选择一个 Federation（默认 base.downcity.ai）",
+      en: "join and select a Federation (default: base.downcity.ai)",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
       en: "output as JSON",
     }), parseBoolean)
     .action(async (url: string | undefined, options: { json?: boolean }) => {
-      await runCityConnectCommand({
+      await run_federation_join_command({
         url,
         as_json: options.json === true,
       });
     });
 
-  city
-    .command("use [city]")
+  federation
+    .command("use [federation]")
     .description(t({
-      zh: "选择一个 City；可使用 City 本地或 city admin 已保存 City",
-      en: "select a City from City-local or city-admin saved Cities",
+      zh: "选择一个 Federation；可使用 City 本地或 downfed admin 已保存 Federation",
+      en: "select a Federation from City-local or downfed-admin saved Federations",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
       en: "output as JSON",
     }), parseBoolean)
     .action(async (server: string | undefined, options: { json?: boolean }) => {
-      await runCityUseCommand({
+      await run_federation_use_command({
         server,
         as_json: options.json === true,
       });
     });
 
-  city
+  federation
     .command("login [url]")
     .description(t({
-      zh: "登录当前或指定 City",
-      en: "sign in to the current or specified City",
+      zh: "登录当前或指定 Federation",
+      en: "sign in to the current or specified Federation",
     }))
     .option("--city-id <cityId>", t({
-      zh: "City city id",
-      en: "City city id",
+      zh: "当前 City 在该 Federation 中的 city_id",
+      en: "city_id of the current City within this Federation",
     }), DEFAULT_CITY_ID)
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
@@ -136,38 +136,38 @@ export function registerCityConnectionCommand(program: Command): void {
       url: string | undefined,
       options: { cityId?: string; json?: boolean },
     ) => {
-      await runCityLoginCommand({
+      await run_federation_login_command({
         url,
         city_id: options.cityId,
         as_json: options.json === true,
       });
     });
 
-  city
+  federation
     .command("logout")
     .description(t({
-      zh: "清除当前 City 的 City 登录态",
-      en: "clear the City session for the current City",
+      zh: "清除当前 Federation 的登录态",
+      en: "clear the session for the current Federation",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
       en: "output as JSON",
     }), parseBoolean)
     .action((options: { json?: boolean }) => {
-      runCityLogoutCommand({ as_json: options.json === true });
+      run_federation_logout_command({ as_json: options.json === true });
     });
 
-  city
-    .command("disconnect")
+  federation
+    .command("leave")
     .description(t({
-      zh: "重置 City 的 City 选择并回到默认 City",
-      en: "reset the City City selection and fall back to the default City",
+      zh: "离开当前 Federation 并回到默认 Federation",
+      en: "leave the current Federation and fall back to the default Federation",
     }))
     .option("--json [enabled]", t({
       zh: "以 JSON 输出",
       en: "output as JSON",
     }), parseBoolean)
     .action((options: { json?: boolean }) => {
-      runCityDisconnectCommand({ as_json: options.json === true });
+      run_federation_leave_command({ as_json: options.json === true });
     });
 }

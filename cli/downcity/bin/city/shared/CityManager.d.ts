@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 裸 `city` 是本机 Agent 与 Plugin 操作台，不是 City 资源管理器。
- * - City 只作为连接上下文进入 City；模型和服务资源仍回到 `city` CLI 管理。
+ * - City 通过 Federation 成员资格访问共享资源；Federation 管理由 `city federation` 子命令负责。
  */
 interface CityHelpProgram {
     /** 输出当前 City 根命令帮助。 */

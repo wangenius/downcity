@@ -1,5 +1,5 @@
 /**
- * City City user session 类型。
+ * City user session 类型。
  *
  * 关键点（中文）
  * - 这些类型只描述 City 本地 user 登录态。
@@ -7,13 +7,13 @@
  */
 
 /**
- * City 保存的 City user session。
+ * City 保存的 user session。
  */
 export interface CityUserSession {
   /**
-   * City base 地址。
+   * Federation 地址。
    */
-  base_url: string;
+  federation_url: string;
 
   /**
    * 当前 user token 绑定的 city id。
@@ -46,11 +46,11 @@ export interface CityUserSession {
 }
 
 /**
- * City City user 登录输入。
+ * City user 登录输入。
  */
 export interface CityLoginInput {
   /**
-   * City base 地址。
+   * Federation 地址。
    */
   federation_url: string;
 

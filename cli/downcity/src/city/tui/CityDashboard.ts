@@ -9,11 +9,11 @@
 
 import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
-import { readCityConnectionState } from "../shared/CityConnection.js";
+import { read_federation_membership_state } from "../shared/FederationConnection.js";
 import { getCliLocale, t } from "../../shared/CliLocale.js";
 import { readCityPid, isCityProcessAlive } from "../process/registry/CityRuntime.js";
 import { resolveRunningManagedAgents } from "../runtime/gateway/runtime/GatewayProcess.js";
-import type { CityConnectionState } from "../types/CityConnection.js";
+import type { FederationMembershipState } from "../types/FederationMembership.js";
 import type { tui_action_result, tui_list_item } from "../types/Tui.js";
 import {
   is_disabled_selectable_item,
@@ -24,7 +24,7 @@ import {
 type city_home_action =
   | "stop"
   | "restart"
-  | "city"
+  | "federation"
   | "agent"
   | "plugin"
   | "language"
@@ -100,7 +100,7 @@ async function build_city_dashboard_state(): Promise<city_dashboard_state> {
   const locale = getCliLocale();
   const pid = await readCityPid();
   const running = Boolean(pid && isCityProcessAlive(pid));
-  const city_state = readCityConnectionState();
+  const city_state = read_federation_membership_state();
   const managed_agents = await safe_count_running_agents();
 
   const items: tui_list_item[] = [
@@ -118,10 +118,10 @@ async function build_city_dashboard_state(): Promise<city_dashboard_state> {
       }),
     },
     {
-      id: "city",
-      title: t({ zh: "City 连接", en: "City connection" }),
-      subtitle: build_city_subtitle(city_state),
-      detail: build_city_detail(city_state),
+      id: "federation",
+      title: t({ zh: "Federation", en: "Federation" }),
+      subtitle: build_federation_subtitle(city_state),
+      detail: build_federation_detail(city_state),
     },
     {
       id: "plugin",
@@ -194,8 +194,8 @@ async function build_city_dashboard_state(): Promise<city_dashboard_state> {
   return {
     title: `City v${version}`,
     subtitle: t({
-      zh: `City：${runtime_state_text(running)} · City：${build_city_subtitle(city_state)} · agent：${managed_agents}`,
-      en: `City: ${runtime_state_text(running)} · City: ${build_city_subtitle(city_state)} · agents: ${managed_agents}`,
+      zh: `City：${runtime_state_text(running)} · City：${build_federation_subtitle(city_state)} · agent：${managed_agents}`,
+      en: `City: ${runtime_state_text(running)} · City: ${build_federation_subtitle(city_state)} · agents: ${managed_agents}`,
     }),
     footer: t({
       zh: "Enter 进入动作 · Esc / q 退出 · ↑↓ 切换 · 当前入口：全屏 TUI",
@@ -436,7 +436,7 @@ function build_status_subtitle(running: boolean, managed_agents: number): string
 function build_status_detail(params: {
   running: boolean;
   pid: number | null;
-  city_state: CityConnectionState;
+  city_state: FederationMembershipState;
   managed_agents: number;
 }): string {
   return t({
@@ -445,7 +445,7 @@ function build_status_detail(params: {
       `状态：${runtime_state_text(params.running)}`,
       `PID：${params.pid ?? unknown_text()}`,
       "",
-      `{bold}City 连接{/bold}`,
+      `{bold}Federation{/bold}`,
       `base：${params.city_state.federation_url}`,
       `source：${params.city_state.source}`,
       `user token：${configured_state_text(params.city_state.has_user_token)}`,
@@ -461,7 +461,7 @@ function build_status_detail(params: {
       `state: ${runtime_state_text(params.running)}`,
       `PID: ${params.pid ?? unknown_text()}`,
       "",
-      `{bold}City connection{/bold}`,
+      `{bold}Federation{/bold}`,
       `base: ${params.city_state.federation_url}`,
       `source: ${params.city_state.source}`,
       `user token: ${configured_state_text(params.city_state.has_user_token)}`,
@@ -475,7 +475,7 @@ function build_status_detail(params: {
   });
 }
 
-function build_city_subtitle(city_state: CityConnectionState): string {
+function build_federation_subtitle(city_state: FederationMembershipState): string {
   if (city_state.has_user_token) {
     return t({
       zh: `${city_state.federation_url} · 已登录`,
@@ -489,7 +489,7 @@ function build_city_subtitle(city_state: CityConnectionState): string {
   });
 }
 
-function build_city_detail(city_state: CityConnectionState): string {
+function build_federation_detail(city_state: FederationMembershipState): string {
   return t({
     zh: [
       `{bold}当前 City 连接{/bold}`,
@@ -499,7 +499,7 @@ function build_city_detail(city_state: CityConnectionState): string {
       `user token：${configured_state_text(city_state.has_user_token)}`,
       city_state.user_id ? `user id：${city_state.user_id}` : "",
       "",
-      "选择后进入现有 `city city` 交互管理器，继续 connect / use / login / recharge 等流程。",
+      "选择后进入 `city federation` 交互管理器，继续 join / use / login / recharge 等流程。",
     ].filter(Boolean).join("\n"),
     en: [
       `{bold}Current City connection{/bold}`,
@@ -509,7 +509,7 @@ function build_city_detail(city_state: CityConnectionState): string {
       `user token: ${configured_state_text(city_state.has_user_token)}`,
       city_state.user_id ? `user id: ${city_state.user_id}` : "",
       "",
-      "Selecting this opens the existing `city city` interactive manager for connect, use, login, recharge, and related flows.",
+      "Selecting this opens the `city federation` interactive manager for join, use, login, recharge, and related flows.",
     ].filter(Boolean).join("\n"),
   });
 }

@@ -3,11 +3,11 @@
  *
  * 关键点（中文）
  * - 裸 `city city` 使用这个界面，所有状态、loading 和结果都保留在 TUI 右侧。
- * - `city city status/list/whoami/...` 子命令仍由 shared/CityConnection 负责 stdout 输出。
+ * - `city federation status/list/whoami/...` 子命令仍由 shared/FederationConnection 负责 stdout 输出。
  * - 需要输入的动作会临时进入现有 prompt TUI，完成后回到本界面并展示结果。
  */
 import blessed from "neo-blessed";
-import { DEFAULT_FEDERATION_URL, DEFAULT_CITY_ID, listCityServers, normalizeCityUrl, readCurrentCitySession, readPersistedCityCliLocale, readCityState, readCityString, resolveSelectedBaseUrl, upsertCityProfile, writeCityState, } from "../shared/CityStateStore.js";
+import { DEFAULT_FEDERATION_URL, DEFAULT_CITY_ID, list_federations, normalizeCityUrl, read_current_city_session, readPersistedCityCliLocale, readCityState, readCityString, resolve_selected_federation_url, upsert_federation_profile, writeCityState, } from "../shared/CityStateStore.js";
 import { performCityUserLogin } from "../shared/CityUserLogin.js";
 import { CityUserManager } from "../shared/CityUserManager.js";
 import { readCurrentCityBalance, rechargeCurrentCityUser, } from "../shared/CityBalance.js";
@@ -16,9 +16,9 @@ import { getCliLocale, t } from "../../shared/CliLocale.js";
 import prompts from "./Prompts.js";
 import { is_disabled_selectable_item, resolve_loop_selectable_index, resolve_next_loop_selectable_index, } from "./SelectableList.js";
 const cityUserManager = new CityUserManager();
-function read_city_connection_state() {
+function read_federation_membership_state() {
     const state = readCityState();
-    const federation_url = resolveSelectedBaseUrl(state);
+    const federation_url = resolve_selected_federation_url(state);
     const session = state.sessions?.[federation_url] ?? null;
     if (session?.user_token) {
         return {
@@ -30,7 +30,7 @@ function read_city_connection_state() {
             user_label: session.user_label,
         };
     }
-    const server = listCityServers().find((item) => item.base_url === federation_url);
+    const server = list_federations().find((item) => item.federation_url === federation_url);
     return {
         federation_url,
         city_id: DEFAULT_CITY_ID,
@@ -43,16 +43,16 @@ function read_city_connection_state() {
     };
 }
 function save_city_user_session(session) {
-    const state = upsertCityProfile(readCityState(), {
-        base_url: session.base_url,
+    const state = upsert_federation_profile(readCityState(), {
+        federation_url: session.federation_url,
     });
     const sessions = {
         ...(state.sessions ?? {}),
-        [session.base_url]: session,
+        [session.federation_url]: session,
     };
     writeCityState({
         ...state,
-        selected_base_url: session.base_url,
+        selected_federation_url: session.federation_url,
         sessions,
     });
 }
@@ -193,24 +193,24 @@ async function run_city_manager_screen(initial_state) {
     });
 }
 async function build_city_manager_state(params) {
-    const connection = read_city_connection_state();
-    const balance_result = connection.has_user_token
+    const membership = read_federation_membership_state();
+    const balance_result = membership.has_user_token
         ? await read_balance_summary()
         : { account: null, error: undefined };
     const items = build_city_items({
-        connection,
+        membership,
         balance: balance_result.account,
         balance_error: balance_result.error,
     });
     return {
         items,
-        connection,
+        membership,
         balance: balance_result.account,
         balance_error: balance_result.error,
         detail_override: params?.detail_override,
         last_message: params?.last_message,
         initial_action: params?.initial_action,
-        subtitle: build_city_subtitle(connection, balance_result.account),
+        subtitle: build_city_subtitle(membership, balance_result.account),
     };
 }
 async function read_balance_summary() {
@@ -231,60 +231,60 @@ function build_city_items(params) {
         section_item("status", t({ zh: "状态", en: "Status" })),
         {
             id: "status",
-            title: t({ zh: "查看连接状态", en: "View connection status" }),
-            subtitle: params.connection.federation_url,
-            detail: format_connection_detail(params.connection),
+            title: t({ zh: "查看成员资格状态", en: "View membership status" }),
+            subtitle: params.membership.federation_url,
+            detail: format_membership_detail(params.membership),
         },
         section_item("city", "City"),
         {
             id: "use",
-            title: t({ zh: "选择 City", en: "Select City" }),
+            title: t({ zh: "选择 Federation", en: "Select Federation" }),
             subtitle: t({
-                zh: "从 City / city admin / 默认候选中选择",
-                en: "Choose from City, city admin, or default candidates",
+                zh: "从 City 本地 / downfed admin / 默认候选中选择",
+                en: "Choose from City-local, downfed-admin, or default candidates",
             }),
-            detail: format_city_list_detail(listCityServers()),
+            detail: format_federation_list_detail(list_federations()),
         },
         {
             id: "connect",
-            title: t({ zh: "添加 City", en: "Add City" }),
+            title: t({ zh: "加入 Federation", en: "Join Federation" }),
             subtitle: t({
                 zh: "手动写入一个 City 可用的 City",
-                en: "Manually add a City available to City",
+                en: "Manually join a Federation",
             }),
             detail: t({
                 zh: "输入 City URL 后会保存到 City 本地，并设为当前 City。",
-                en: "Enter a City URL to save it in City and make it the current City.",
+                en: "Enter a Federation URL to save it locally and make it the current Federation.",
             }),
         },
         {
             id: "list",
-            title: t({ zh: "查看可用 City", en: "List Cities" }),
+            title: t({ zh: "查看可用 Federation", en: "List Federations" }),
             subtitle: t({
-                zh: `${listCityServers().length} 个可用 City`,
-                en: `${listCityServers().length} available Cities`,
+                zh: `${list_federations().length} 个可用 Federation`,
+                en: `${list_federations().length} available Federations`,
             }),
-            detail: format_city_list_detail(listCityServers()),
+            detail: format_federation_list_detail(list_federations()),
         },
         section_item("account", t({ zh: "账号", en: "Account" })),
     ];
-    if (!params.connection.has_user_token) {
+    if (!params.membership.has_user_token) {
         items.push({
             id: "login",
             title: t({ zh: "登录", en: "Sign in" }),
             subtitle: t({
-                zh: "登录当前 City",
-                en: "Sign in to the current City",
+                zh: "登录当前 Federation",
+                en: "Sign in to the current Federation",
             }),
-            detail: format_login_detail(params.connection),
+            detail: format_login_detail(params.membership),
         });
     }
     else {
         items.push({
             id: "whoami",
             title: t({ zh: "当前账号", en: "Current account" }),
-            subtitle: params.connection.user_label || params.connection.user_id || params.connection.city_id,
-            detail: format_connection_detail(params.connection),
+            subtitle: params.membership.user_label || params.membership.user_id || params.membership.city_id,
+            detail: format_membership_detail(params.membership),
         }, {
             id: "balance",
             title: params.balance
@@ -318,11 +318,11 @@ function build_city_items(params) {
             id: "logout",
             title: t({ zh: "登出", en: "Sign out" }),
             subtitle: t({
-                zh: "清除当前 City 的 City 登录态",
+                zh: "清除当前 City 的 Federation 登录态",
                 en: "Clear the City session for the current City",
             }),
             detail: t({
-                zh: "只清除 City 本地保存的当前 City 登录态，不删除 City 账号。",
+                zh: "只清除 City 本地保存的当前 Federation 登录态，不删除 City 账号。",
                 en: "Only clears City's local session for the current City; it does not delete the City account.",
             }),
         });
@@ -338,27 +338,27 @@ function build_city_items(params) {
     }, section_item("navigation", t({ zh: "导航", en: "Navigation" })), {
         id: "exit",
         title: t({ zh: "退出", en: "Exit" }),
-        subtitle: t({ zh: "关闭 City 连接管理", en: "Close City connection management" }),
+        subtitle: t({ zh: "关闭 City 连接管理", en: "Close City membership management" }),
         detail: t({
-            zh: "退出当前 City 连接管理 TUI。",
-            en: "Exit the current City connection TUI.",
+            zh: "退出当前 Federation管理 TUI。",
+            en: "Exit the current City membership TUI.",
         }),
     });
     return items;
 }
 async function handle_city_action(params) {
     if (params.action === "status") {
-        const state = read_city_connection_state();
+        const state = read_federation_membership_state();
         await params.refresh_state({
             keep_action: "status",
-            detail_override: format_connection_detail(state),
+            detail_override: format_membership_detail(state),
         });
         return;
     }
     if (params.action === "list") {
         await params.refresh_state({
             keep_action: "list",
-            detail_override: format_city_list_detail(listCityServers()),
+            detail_override: format_federation_list_detail(list_federations()),
         });
         return;
     }
@@ -380,7 +380,7 @@ async function handle_city_action(params) {
         return;
     }
     if (params.action === "logout") {
-        const federation_url = resolveSelectedBaseUrl(readCityState());
+        const federation_url = resolve_selected_federation_url(readCityState());
         const state = readCityState();
         const sessions = { ...(state.sessions ?? {}) };
         delete sessions[federation_url];
@@ -401,10 +401,10 @@ async function handle_city_prompt_action(action) {
         if (!federation_url) {
             return {
                 initial_action: "connect",
-                detail_override: t({ zh: "已取消添加 City。", en: "Add City cancelled." }),
+                detail_override: t({ zh: "已取消添加 City。", en: "Join Federation cancelled." }),
             };
         }
-        writeCityState(upsertCityProfile(readCityState(), { base_url: federation_url }));
+        writeCityState(upsert_federation_profile(readCityState(), { federation_url }));
         return {
             initial_action: "status",
             detail_override: t({
@@ -414,27 +414,27 @@ async function handle_city_prompt_action(action) {
         };
     }
     if (action === "use") {
-        const server = await prompt_city_server();
+        const server = await prompt_federation();
         if (!server) {
             return {
                 initial_action: "use",
-                detail_override: t({ zh: "已取消选择 City。", en: "Select City cancelled." }),
+                detail_override: t({ zh: "已取消选择 City。", en: "Select Federation cancelled." }),
             };
         }
-        select_city_server(server);
+        select_federation(server);
         return {
             initial_action: "status",
             detail_override: t({
-                zh: `已选择 City：${server.base_url}`,
-                en: `Selected City: ${server.base_url}`,
+                zh: `已选择 Federation：${server.federation_url}`,
+                en: `Selected Federation: ${server.federation_url}`,
             }),
         };
     }
     if (action === "login") {
-        const connection = read_city_connection_state();
+        const membership = read_federation_membership_state();
         const session = await performCityUserLogin({
-            federation_url: connection.federation_url,
-            city_id: readCurrentCitySession()?.city_id || DEFAULT_CITY_ID,
+            federation_url: membership.federation_url,
+            city_id: read_current_city_session()?.city_id || DEFAULT_CITY_ID,
         }, { silent: true });
         if (!session) {
             return {
@@ -514,7 +514,7 @@ function create_city_manager_shell(state) {
         width: "34%",
         height: "100%-3",
         border: "line",
-        label: ` ${t({ zh: "City 连接", en: "City connection" })} `,
+        label: ` ${t({ zh: "City 连接", en: "City membership" })} `,
         style: {
             border: { fg: "green" },
         },
@@ -588,26 +588,26 @@ async function prompt_city_url() {
     const federation_url = normalizeCityUrl(String(response.federation_url || ""));
     return federation_url || null;
 }
-async function prompt_city_server() {
-    const servers = listCityServers();
+async function prompt_federation() {
+    const servers = list_federations();
     const response = (await prompts({
         type: "select",
-        name: "base_url",
+        name: "federation_url",
         message: t({
-            zh: "选择 City",
-            en: "Select City",
+            zh: "选择 Federation",
+            en: "Select Federation"
         }),
         choices: servers.map((server) => ({
             title: server.selected ? `* ${server.name}` : server.name,
-            description: `${server.source} · ${server.base_url}`,
-            value: server.base_url,
+            description: `${server.source} · ${server.federation_url}`,
+            value: server.federation_url,
         })),
         initial: Math.max(0, servers.findIndex((server) => server.selected)),
     }));
-    const base_url = readCityString(response.base_url);
-    if (!base_url)
+    const federation_url = readCityString(response.federation_url);
+    if (!federation_url)
         return null;
-    return servers.find((server) => server.base_url === base_url) ?? null;
+    return servers.find((server) => server.federation_url === federation_url) ?? null;
 }
 async function prompt_recharge_input() {
     const response = (await prompts([
@@ -641,15 +641,15 @@ async function prompt_recharge_input() {
         open_checkout: response.open_checkout !== false,
     };
 }
-function select_city_server(server) {
-    writeCityState(upsertCityProfile(readCityState(), {
-        base_url: server.base_url,
+function select_federation(server) {
+    writeCityState(upsert_federation_profile(readCityState(), {
+        federation_url: server.federation_url,
         name: server.name,
     }));
 }
 function format_header(state) {
     return [
-        `{bold}${t({ zh: "管理 City 连接", en: "Manage City connections" })}{/bold}`,
+        `{bold}${t({ zh: "管理 Federation", en: "Manage Federation" })}{/bold}`,
         state.subtitle,
         state.last_message ? `{green-fg}${state.last_message}{/green-fg}` : "",
     ].filter(Boolean).join("\n");
@@ -689,8 +689,8 @@ function format_footer(item) {
         return base;
     return `${base} · ${item.subtitle}`;
 }
-function build_city_subtitle(connection, balance) {
-    const login_state = connection.has_user_token
+function build_city_subtitle(membership, balance) {
+    const login_state = membership.has_user_token
         ? t({ zh: "已登录", en: "signed in" })
         : t({ zh: "未登录", en: "not signed in" });
     const balance_text = balance
@@ -699,54 +699,54 @@ function build_city_subtitle(connection, balance) {
             en: ` · balance ${balance.balance}`,
         })
         : "";
-    return `${connection.federation_url} · ${login_state}${balance_text}`;
+    return `${membership.federation_url} · ${login_state}${balance_text}`;
 }
-function format_connection_detail(connection) {
+function format_membership_detail(membership) {
     return t({
         zh: [
-            "{bold}当前 City 连接{/bold}",
-            `URL：${connection.federation_url}`,
-            `source：${connection.source}`,
-            `city id：${connection.city_id}`,
-            `登录态：${connection.has_user_token ? "已登录" : "未登录"}`,
-            connection.user_id ? `账号 ID：${connection.user_id}` : "",
-            connection.user_label ? `账号：${connection.user_label}` : "",
+            "{bold}当前 Federation{/bold}",
+            `URL：${membership.federation_url}`,
+            `source：${membership.source}`,
+            `city id：${membership.city_id}`,
+            `登录态：${membership.has_user_token ? "已登录" : "未登录"}`,
+            membership.user_id ? `账号 ID：${membership.user_id}` : "",
+            membership.user_label ? `账号：${membership.user_label}` : "",
         ].filter(Boolean).join("\n"),
         en: [
-            "{bold}Current City connection{/bold}",
-            `URL: ${connection.federation_url}`,
-            `source: ${connection.source}`,
-            `city id: ${connection.city_id}`,
-            `session: ${connection.has_user_token ? "signed in" : "not signed in"}`,
-            connection.user_id ? `account ID: ${connection.user_id}` : "",
-            connection.user_label ? `account: ${connection.user_label}` : "",
+            "{bold}Current Federation{/bold}",
+            `URL: ${membership.federation_url}`,
+            `source: ${membership.source}`,
+            `city id: ${membership.city_id}`,
+            `session: ${membership.has_user_token ? "signed in" : "not signed in"}`,
+            membership.user_id ? `account ID: ${membership.user_id}` : "",
+            membership.user_label ? `account: ${membership.user_label}` : "",
         ].filter(Boolean).join("\n"),
     });
 }
-function format_city_list_detail(servers) {
+function format_federation_list_detail(servers) {
     return [
-        `{bold}${t({ zh: "可用 City", en: "Available Cities" })}{/bold}`,
+        `{bold}${t({ zh: "可用 Federation", en: "Available Federations" })}{/bold}`,
         "",
         ...servers.map((server) => [
             `${server.selected ? "*" : "-"} ${server.name}`,
-            `  URL: ${server.base_url}`,
+            `  URL: ${server.federation_url}`,
             `  source: ${server.source}`,
             `  session: ${server.has_user_session ? "yes" : "no"}`,
             `  admin: ${server.has_admin_secret_key ? "yes" : "no"}`,
         ].join("\n")),
     ].join("\n");
 }
-function format_login_detail(connection) {
+function format_login_detail(membership) {
     return t({
         zh: [
             "{bold}登录{/bold}",
-            `当前 City：${connection.federation_url}`,
+            `当前 City：${membership.federation_url}`,
             "",
             "Enter 后选择可用登录方式。登录成功后，账号和余额会直接显示在这个 TUI 中。",
         ].join("\n"),
         en: [
             "{bold}Sign in{/bold}",
-            `Current City: ${connection.federation_url}`,
+            `Current City: ${membership.federation_url}`,
             "",
             "Press Enter to choose an available sign-in method. After sign-in, account and balance will appear in this TUI.",
         ].join("\n"),
@@ -779,7 +779,7 @@ function format_current_user_detail(user) {
 function format_session_detail(session) {
     return [
         `{bold}${t({ zh: "登录成功", en: "Signed in" })}{/bold}`,
-        `URL: ${session.base_url}`,
+        `URL: ${session.federation_url}`,
         `city: ${session.city_id}`,
         `user: ${session.user_id || "unknown"}`,
         session.user_label ? `label: ${session.user_label}` : "",
@@ -838,4 +838,4 @@ function find_action_index(items, action) {
 function is_disabled_item(item) {
     return is_disabled_selectable_item(item);
 }
-//# sourceMappingURL=CityManagerTui.js.map
+//# sourceMappingURL=FederationManagerTui.js.map

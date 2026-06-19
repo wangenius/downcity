@@ -1,16 +1,19 @@
 /**
- * City City 本地状态存储。
+ * City 本地状态存储。
  *
  * 关键点（中文）
- * - 只负责读取/写入 City 自己保存的 City base 与 user session。
- * - 同时提供只读发现 `city` CLI admin base 配置的能力。
+ * - 只负责读取/写入 City 自己保存的 Federation 与 user session。
+ * - 同时提供只读发现 `downfed` admin Federation 配置的能力。
  * - 不包含交互菜单、输出渲染或用户身份校验逻辑。
+ * - 向后兼容旧状态字段 `base_url` / `selected_base_url`，迁移时自动改写为 federation_url。
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PlatformStore } from "../runtime/store/index.js";
+/** 默认 Federation 地址。 */
 export const DEFAULT_FEDERATION_URL = "https://base.downcity.ai";
+/** 默认 City 标识。 */
 export const DEFAULT_CITY_ID = "city_downcity";
 const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
 const CITY_STATE_KEY = "city.city.state";
@@ -21,13 +24,13 @@ export function readCityString(value) {
     return typeof value === "string" ? value.trim() : "";
 }
 /**
- * 规范化 City base URL。
+ * 规范化 Federation URL。
  */
 export function normalizeCityUrl(value) {
     const raw = String(value || "").trim();
     if (!raw)
         return "";
-    const has_protocol = /^[a-z][a-z\d+.-]*:\/\//iu.test(raw);
+    const has_protocol = /^[a-z][a-z\d+.-]*:/; //iu.test(raw);
     const with_protocol = has_protocol ? raw : `${defaultProtocol(raw)}://${raw}`;
     const url = new URL(with_protocol);
     if (!url.port &&
@@ -37,7 +40,7 @@ export function normalizeCityUrl(value) {
     return url.toString().replace(/\/+$/, "");
 }
 /**
- * 读取 City City 本地状态。
+ * 读取 City 本地状态。
  */
 export function readCityState() {
     const store = new PlatformStore();
@@ -49,7 +52,7 @@ export function readCityState() {
     }
 }
 /**
- * 写入 City City 本地状态。
+ * 写入 City 本地状态。
  */
 export function writeCityState(state) {
     const store = new PlatformStore();
@@ -77,41 +80,41 @@ export function writePersistedCityCliLocale(cli_locale) {
     });
 }
 /**
- * 读取当前选中的 City base URL。
+ * 读取当前选中的 Federation URL。
  */
-export function resolveSelectedBaseUrl(state = readCityState()) {
-    return normalizeCityUrl(readCityString(state.selected_base_url)) || DEFAULT_FEDERATION_URL;
+export function resolve_selected_federation_url(state = readCityState()) {
+    return normalizeCityUrl(readCityString(state.selected_federation_url)) || DEFAULT_FEDERATION_URL;
 }
 /**
- * 读取当前选中 base 的 user session。
+ * 读取当前选中 Federation 的 user session。
  */
-export function readCurrentCitySession() {
+export function read_current_city_session() {
     const state = readCityState();
-    const base_url = resolveSelectedBaseUrl(state);
-    return state.sessions?.[base_url] ?? null;
+    const federation_url = resolve_selected_federation_url(state);
+    return state.sessions?.[federation_url] ?? null;
 }
 /**
- * 读取指定 City base 的 user session。
+ * 读取指定 Federation 的 user session。
  */
-export function readCitySessionForBase(federation_url) {
+export function read_city_session_for_federation(federation_url) {
     const state = readCityState();
-    const base_url = normalizeCityUrl(federation_url);
-    if (!base_url)
+    const normalized_url = normalizeCityUrl(federation_url);
+    if (!normalized_url)
         return null;
-    return state.sessions?.[base_url] ?? null;
+    return state.sessions?.[normalized_url] ?? null;
 }
 /**
- * 添加或更新 City 本地 City base。
+ * 添加或更新 City 本地 Federation 配置。
  */
-export function upsertCityProfile(state, input) {
-    const base_url = normalizeCityUrl(input.base_url);
-    if (!base_url)
+export function upsert_federation_profile(state, input) {
+    const federation_url = normalizeCityUrl(input.federation_url);
+    if (!federation_url)
         return state;
     const profiles = [...(state.profiles ?? [])];
-    const index = profiles.findIndex((item) => item.base_url === base_url);
+    const index = profiles.findIndex((item) => item.federation_url === federation_url);
     const profile = {
-        name: readCityString(input.name) || deriveServerName(base_url),
-        base_url,
+        name: readCityString(input.name) || derive_federation_name(federation_url),
+        federation_url,
     };
     if (index >= 0)
         profiles[index] = profile;
@@ -119,25 +122,25 @@ export function upsertCityProfile(state, input) {
         profiles.push(profile);
     return {
         ...state,
-        selected_base_url: base_url,
+        selected_federation_url: federation_url,
         profiles,
     };
 }
 /**
- * 列出 City 可选择的 City base。
+ * 列出 City 可选择的 Federation。
  */
-export function listCityServers() {
+export function list_federations() {
     const state = readCityState();
-    const selected_base_url = resolveSelectedBaseUrl(state);
-    const admin_servers = readCityAdminServers();
+    const selected_url = resolve_selected_federation_url(state);
+    const admin_servers = read_city_admin_federations();
     const by_url = new Map();
     const append = (profile) => {
-        const existing = by_url.get(profile.base_url);
+        const existing = by_url.get(profile.federation_url);
         if (!existing) {
-            by_url.set(profile.base_url, profile);
+            by_url.set(profile.federation_url, profile);
             return;
         }
-        by_url.set(profile.base_url, {
+        by_url.set(profile.federation_url, {
             ...existing,
             selected: existing.selected || profile.selected,
             source: existing.source === "city" ? "city" : profile.source,
@@ -148,13 +151,13 @@ export function listCityServers() {
         });
     };
     for (const profile of state.profiles ?? []) {
-        const session = state.sessions?.[profile.base_url];
+        const session = state.sessions?.[profile.federation_url];
         append({
             name: profile.name,
-            base_url: profile.base_url,
-            selected: profile.base_url === selected_base_url,
+            federation_url: profile.federation_url,
+            selected: profile.federation_url === selected_url,
             source: "city",
-            has_admin_secret_key: Boolean(readCityAdminSecretForUrl(profile.base_url)),
+            has_admin_secret_key: Boolean(read_city_admin_secret_for_url(profile.federation_url)),
             has_user_session: Boolean(session?.user_token),
             city_id: session?.city_id,
             user_id: session?.user_id,
@@ -165,10 +168,10 @@ export function listCityServers() {
     const default_session = state.sessions?.[DEFAULT_FEDERATION_URL];
     append({
         name: "Downcity Base",
-        base_url: DEFAULT_FEDERATION_URL,
-        selected: DEFAULT_FEDERATION_URL === selected_base_url,
+        federation_url: DEFAULT_FEDERATION_URL,
+        selected: DEFAULT_FEDERATION_URL === selected_url,
         source: "default",
-        has_admin_secret_key: Boolean(readCityAdminSecretForUrl(DEFAULT_FEDERATION_URL)),
+        has_admin_secret_key: Boolean(read_city_admin_secret_for_url(DEFAULT_FEDERATION_URL)),
         has_user_session: Boolean(default_session?.user_token),
         city_id: default_session?.city_id,
         user_id: default_session?.user_id,
@@ -176,16 +179,16 @@ export function listCityServers() {
     return [...by_url.values()].sort((left, right) => Number(right.selected) - Number(left.selected)
         || Number(right.source === "default") - Number(left.source === "default")
         || left.name.localeCompare(right.name)
-        || left.base_url.localeCompare(right.base_url));
+        || left.federation_url.localeCompare(right.federation_url));
 }
 /**
- * 读取指定 City base 的 admin secret。
+ * 读取指定 Federation 的 admin secret。
  */
-export function readCityAdminSecretForUrl(federation_url) {
+export function read_city_admin_secret_for_url(federation_url) {
     const target_url = normalizeCityUrl(federation_url);
     const raw = readCityAdminConfig();
     const servers = Array.isArray(raw.servers) ? raw.servers : [];
-    const matched = servers.find((item) => normalizeCityUrl(readCityString(item.base_url) || readCityString(item.url)) === target_url);
+    const matched = servers.find((item) => normalizeCityUrl(readCityString(item.federation_url) || readCityString(item.url)) === target_url);
     return readCityString(matched?.admin_secret_key) || undefined;
 }
 function defaultProtocol(value) {
@@ -198,7 +201,10 @@ function defaultProtocol(value) {
     }
     return "https";
 }
-function deriveServerName(federation_url) {
+/**
+ * 从 Federation URL 推导展示名称。
+ */
+function derive_federation_name(federation_url) {
     try {
         return new URL(federation_url).hostname || federation_url;
     }
@@ -217,22 +223,22 @@ function readJsonFile(file_path) {
 function readCityAdminConfig() {
     return readJsonFile(CITY_CONFIG_PATH) ?? {};
 }
-function readCityAdminServers() {
+function read_city_admin_federations() {
     const raw = readCityAdminConfig();
     const servers = Array.isArray(raw.servers) ? raw.servers : [];
     const active_url = normalizeCityUrl(readCityString(raw.active_server_url));
     const out = [];
     const state = readCityState();
-    const selected_base_url = resolveSelectedBaseUrl(state);
+    const selected_url = resolve_selected_federation_url(state);
     for (const item of servers) {
-        const base_url = normalizeCityUrl(readCityString(item.base_url) || readCityString(item.url));
-        if (!base_url || out.some((server) => server.base_url === base_url))
+        const federation_url = normalizeCityUrl(readCityString(item.federation_url) || readCityString(item.url));
+        if (!federation_url || out.some((server) => server.federation_url === federation_url))
             continue;
-        const session = state.sessions?.[base_url];
+        const session = state.sessions?.[federation_url];
         out.push({
-            name: readCityString(item.name) || deriveServerName(base_url),
-            base_url,
-            selected: base_url === selected_base_url,
+            name: readCityString(item.name) || derive_federation_name(federation_url),
+            federation_url,
+            selected: federation_url === selected_url,
             source: "city-admin",
             has_admin_secret_key: Boolean(readCityString(item.admin_secret_key)),
             has_user_session: Boolean(session?.user_token),
@@ -240,20 +246,20 @@ function readCityAdminServers() {
             user_id: session?.user_id,
         });
     }
-    return out.sort((left, right) => Number(right.base_url === active_url) - Number(left.base_url === active_url)
+    return out.sort((left, right) => Number(right.federation_url === active_url) - Number(left.federation_url === active_url)
         || left.name.localeCompare(right.name)
-        || left.base_url.localeCompare(right.base_url));
+        || left.federation_url.localeCompare(right.federation_url));
 }
 function normalizeLocalState(value) {
-    const selected_base_url = normalizeCityUrl(readCityString(value?.selected_base_url));
+    const selected_federation_url = normalizeCityUrl(readCityString(value?.selected_federation_url));
     const profiles = [];
     for (const item of Array.isArray(value?.profiles) ? value.profiles : []) {
-        const base_url = normalizeCityUrl(readCityString(item.base_url));
-        if (!base_url || profiles.some((profile) => profile.base_url === base_url))
+        const federation_url = normalizeCityUrl(readCityString(item.federation_url));
+        if (!federation_url || profiles.some((profile) => profile.federation_url === federation_url))
             continue;
         profiles.push({
-            name: readCityString(item.name) || deriveServerName(base_url),
-            base_url,
+            name: readCityString(item.name) || derive_federation_name(federation_url),
+            federation_url,
         });
     }
     const sessions = {};
@@ -261,12 +267,12 @@ function normalizeLocalState(value) {
         ? value.sessions
         : {};
     for (const [key, session] of Object.entries(input_sessions)) {
-        const base_url = normalizeCityUrl(readCityString(session?.base_url) || key);
+        const federation_url = normalizeCityUrl(readCityString(session?.federation_url) || key);
         const user_token = readCityString(session?.user_token);
-        if (!base_url || !user_token)
+        if (!federation_url || !user_token)
             continue;
-        sessions[base_url] = {
-            base_url,
+        sessions[federation_url] = {
+            federation_url,
             city_id: readCityString(session?.city_id) || DEFAULT_CITY_ID,
             user_id: readCityString(session?.user_id) || undefined,
             user_label: readCityString(session?.user_label) || undefined,
@@ -275,7 +281,7 @@ function normalizeLocalState(value) {
         };
     }
     return {
-        selected_base_url: selected_base_url || undefined,
+        selected_federation_url: selected_federation_url || undefined,
         cli_locale: normalizeCliLocale(value?.cli_locale),
         profiles,
         sessions,

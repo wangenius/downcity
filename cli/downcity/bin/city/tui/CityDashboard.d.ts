@@ -7,7 +7,7 @@
  * - 动作结束后返回仪表盘，形成统一终端操作台体验。
  */
 import type { tui_action_result } from "../types/Tui.js";
-type city_home_action = "stop" | "restart" | "city" | "agent" | "plugin" | "language" | "help" | "exit";
+type city_home_action = "stop" | "restart" | "federation" | "agent" | "plugin" | "language" | "help" | "exit";
 interface city_dashboard_options {
     /** 执行顶层动作。 */
     run_action: (action: city_home_action) => Promise<tui_action_result>;

@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 只面向当前 City 已登录的 City user，不提供 admin 加款入口。
  * - 充值链路复用 City 的 balance topup 与 payment checkout 服务。
- * - 交互菜单只调用这里的高层函数，避免 CityConnection 模块继续膨胀。
+ * - 交互菜单只调用这里的高层函数，避免 FederationConnection 模块继续膨胀。
  */
 
 import { spawnSync } from "node:child_process";

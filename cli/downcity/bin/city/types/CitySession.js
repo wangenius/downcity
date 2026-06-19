@@ -1,5 +1,5 @@
 /**
- * City City user session 类型。
+ * City user session 类型。
  *
  * 关键点（中文）
  * - 这些类型只描述 City 本地 user 登录态。

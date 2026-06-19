@@ -282,7 +282,7 @@ function buildUserSession(input: CityLoginInput & {
   user_label?: string;
 }): CityUserSession {
   return {
-    base_url: input.federation_url,
+    federation_url: input.federation_url,
     city_id: readString(input.city_id) || "city_downcity",
     user_token: input.user_token,
     user_id: readString(input.user_id) || undefined,

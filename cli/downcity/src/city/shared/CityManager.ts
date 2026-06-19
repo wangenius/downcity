@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 裸 `city` 是本机 Agent 与 Plugin 操作台，不是 City 资源管理器。
- * - City 只作为连接上下文进入 City；模型和服务资源仍回到 `city` CLI 管理。
+ * - City 通过 Federation 成员资格访问共享资源；Federation 管理由 `city federation` 子命令负责。
  */
 
 import {
@@ -12,7 +12,7 @@ import {
 } from "../runtime/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "../agent/AgentManager.js";
 import { runInteractivePluginManager } from "../command/PluginCommand.js";
-import { runInteractiveCityManager as runInteractiveCityConnectionManager } from "./CityConnection.js";
+import { run_interactive_federation_manager } from "./FederationConnection.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { t } from "./CliLocale.js";
 import { promptAndPersistCityCliLocale } from "./InteractiveLocale.js";
@@ -22,7 +22,7 @@ import type { tui_action_result } from "../types/Tui.js";
 type CityHomeAction =
   | "stop"
   | "restart"
-  | "city"
+  | "federation"
   | "agent"
   | "plugin"
   | "language"
@@ -89,10 +89,10 @@ async function run_city_dashboard_action(
       await restartCityRuntimeCommand(params.cli_path);
       return "refresh";
     }
-   if (action === "city") {
-      await runInteractiveCityConnectionManager();
-     return "refresh";
-   }
+    if (action === "federation") {
+      await run_interactive_federation_manager();
+      return "refresh";
+    }
     if (action === "agent") {
       await runInteractiveAgentManager();
       return "refresh";

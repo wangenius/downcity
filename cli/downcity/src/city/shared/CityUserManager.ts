@@ -12,9 +12,9 @@ import {
   DEFAULT_FEDERATION_URL,
   DEFAULT_CITY_ID,
   normalizeCityUrl,
-  readCityAdminSecretForUrl,
-  readCurrentCitySession,
-  readCitySessionForBase,
+  read_city_admin_secret_for_url,
+  read_current_city_session,
+  read_city_session_for_federation,
 } from "./CityStateStore.js";
 import type {
   ResolvedCityUser,
@@ -44,11 +44,11 @@ export class CityUserManager {
     const env_user_token = allow_env_override
       ? readFirstEnv(env, ["DOWNCITY_CITY_USER_TOKEN", "CITY_USER_TOKEN"])
       : "";
-    const selected_session = readCurrentCitySession();
-    const federation_url = normalizeCityUrl(env_federation_url || selected_session?.base_url || DEFAULT_FEDERATION_URL);
+    const selected_session = read_current_city_session();
+    const federation_url = normalizeCityUrl(env_federation_url || selected_session?.federation_url || DEFAULT_FEDERATION_URL);
     const session = env_user_token
       ? selected_session
-      : readCitySessionForBase(federation_url);
+      : read_city_session_for_federation(federation_url);
 
     const env_overrides: CityUserEnvOverrides = {
       federation_url: Boolean(env_federation_url),
@@ -61,16 +61,16 @@ export class CityUserManager {
     const warnings: string[] = [];
 
     if (!federation_url) {
-      throw new Error("CityPact URL is required. Run `city city use` or set DOWNCITY_CITY_URL.");
+      throw new Error("CityPact URL is required. Run `city federation use` or set DOWNCITY_CITY_URL.");
     }
     if (require_user_token && !user_token) {
-      throw new Error("CityPact user token is required. Run `city city login` first.");
+      throw new Error("CityPact user token is required. Run `city federation login` first.");
     }
     if (env_user_token && selected_session?.user_id) {
-      warnings.push("Env user token overrides the saved `city city login` session.");
+      warnings.push("Env user token overrides the saved `city federation login` session.");
     }
     if (env_federation_url && !env_user_token && !session?.user_token) {
-      warnings.push("Env CityPact URL selected a base without a saved City user session.");
+      warnings.push("Env CityPact URL selected a base without a saved Federation user session.");
     }
 
     const resolved: ResolvedCityUser = {
@@ -127,7 +127,7 @@ export class CityUserManager {
    */
   readAdminSecret(federation_url: string, env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env): string | undefined {
     return readFirstEnv(env, ["DOWNCITY_CITY_ADMIN_SECRET_KEY", "CITY_ADMIN_SECRET_KEY"])
-      || readCityAdminSecretForUrl(federation_url)
+      || read_city_admin_secret_for_url(federation_url)
       || undefined;
   }
 

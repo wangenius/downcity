@@ -4,9 +4,9 @@
  * Downcity CLI 统一入口。
  *
  * 关键点（中文）
- * - 入口文件只负责启动 CLI，commander 命令树由 `src/command/RootCommand.ts` 装配。
- * - `-v/--version` 走轻量快速路径，避免版本命令被完整 CLI 依赖链阻塞。
- * - 统一命令结构：`city base` — City 管理，`city town` — Town/Agent 管理。
+ * - 本包同时提供 `downfed` 与 `downcity`（别名 `city`）两个全局命令。
+ * - 根据执行时的命令名分发到对应的 commander 根命令。
+ * - `-v/--version` 走轻量快速路径。
  */
 
 import { readFileSync } from "node:fs";
@@ -28,6 +28,12 @@ if (argv.length === 1 && (argv[0] === "-v" || argv[0] === "--version")) {
   process.exit(0);
 }
 
-const { runDowncityCli } = await import("./command/RootCommand.js");
+const invoked = process.argv[1] ? process.argv[1].replace(/\\/g, "/").split("/").pop() : "downcity";
 
-await runDowncityCli();
+if (invoked === "downfed") {
+  const { runDownfedCli } = await import("./downfed/RootCommand.js");
+  await runDownfedCli();
+} else {
+  const { runDowncityCli } = await import("./downcity/RootCommand.js");
+  await runDowncityCli();
+}

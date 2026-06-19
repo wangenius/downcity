@@ -3,9 +3,9 @@
  * Downcity CLI 统一入口。
  *
  * 关键点（中文）
- * - 入口文件只负责启动 CLI，commander 命令树由 `src/command/RootCommand.ts` 装配。
- * - `-v/--version` 走轻量快速路径，避免版本命令被完整 CLI 依赖链阻塞。
- * - 统一命令结构：`city base` — City 管理，`city town` — Town/Agent 管理。
+ * - 本包同时提供 `downfed` 与 `downcity`（别名 `city`）两个全局命令。
+ * - 根据执行时的命令名分发到对应的 commander 根命令。
+ * - `-v/--version` 走轻量快速路径。
  */
 export {};
 //# sourceMappingURL=index.d.ts.map

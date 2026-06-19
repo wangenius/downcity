@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - `city` 只负责 City base 与 admin 管理。
- * - user 登录与 runtime 入口由 `town` 负责。
+ * - user 登录与 runtime 入口由 `city` 负责。
  */
 
 /**

@@ -19,7 +19,7 @@ export async function updateCli(cwd = process.cwd()) {
     const workspaceRoot = findDowncityWorkspaceRoot(cwd);
     if (workspaceRoot) {
         await run(commandOf("pnpm"), ["-C", "cli/city", "build"], workspaceRoot);
-        await run(commandOf("pnpm"), ["-C", "cli/town", "build"], workspaceRoot);
+        await run(commandOf("pnpm"), ["-C", "cli/city", "build"], workspaceRoot);
         await run(commandOf("pnpm"), ["-C", "cli/downcity", "build"], workspaceRoot);
         const deploy_dir = path.join(os.tmpdir(), `downcity-cli-deploy-${Date.now()}`);
         await run(commandOf("pnpm"), ["--filter", CLI_PACKAGE_NAME, "deploy", "--legacy", deploy_dir], workspaceRoot);
@@ -59,9 +59,9 @@ async function installCliDeployGlobally(deploy_dir, cwd) {
     await mkdir(global_paths.global_bin, { recursive: true });
     await rm(global_paths.package_dir, { recursive: true, force: true });
     await cp(deploy_dir, global_paths.package_dir, { recursive: true, force: true });
-    await chmod(global_paths.town_entry, 0o755);
     await chmod(global_paths.city_entry, 0o755);
-    await recreateSymlink(global_paths.town_bin, "../lib/node_modules/downcity/bin/town/index.js");
+    await chmod(global_paths.city_entry, 0o755);
+    await recreateSymlink(global_paths.city_bin, "../lib/node_modules/downcity/bin/city/index.js");
     await recreateSymlink(global_paths.city_bin, "../lib/node_modules/downcity/bin/city/index.js");
 }
 /**
@@ -77,9 +77,7 @@ async function resolveGlobalCliPaths(cwd) {
         global_modules,
         global_bin,
         package_dir,
-        town_entry: path.join(package_dir, "bin", "town", "index.js"),
         city_entry: path.join(package_dir, "bin", "city", "index.js"),
-        town_bin: path.join(global_bin, "town"),
         city_bin: path.join(global_bin, "city"),
     };
 }

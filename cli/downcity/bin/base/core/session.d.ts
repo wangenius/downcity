@@ -4,7 +4,7 @@
  * 关键说明（中文）
  * - server 是一等资源，必须显式配置后 CLI 才进入 admin 工作区
  * - 不再注入默认 server；没有 server 时必须先添加
- * - user session 由 `town` 维护，`city` 不再保存 user token
+ * - user session 由 `city` 维护，`city` 不再保存 user token
  * - admin_secret_key 直接属于 server 配置，不再作为独立 session 维护
  */
 import type { CliLocale } from "../../types/CliLocale.js";

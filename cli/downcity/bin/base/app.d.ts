@@ -7,7 +7,7 @@
  *
  * 关键说明（中文）
  * - `city` 只负责 City base 与 admin 管理。
- * - user 登录与本机 runtime 统一由 `town city login` 承担。
+ * - user 登录与本机 runtime 统一由 `city city login` 承担。
  */
 export declare function runCityApp(argv?: string[]): Promise<void>;
 //# sourceMappingURL=app.d.ts.map

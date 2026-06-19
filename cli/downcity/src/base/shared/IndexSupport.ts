@@ -73,16 +73,16 @@ export function createVersionBanner<TArgs extends unknown[]>(
  * 从当前入口文件推断 banner 应展示的命令名。
  *
  * 关键点（中文）
- * - 用户全局安装的是 `downcity` 聚合包，但实际执行的是 `city` 或 `town`。
+ * - 用户全局安装的是 `downcity` 聚合包，但实际执行的是 `city` 或 `city`。
  * - 聚合包与拆分包的入口都位于 `bin/<command>/index.js`，优先读取父目录名。
  */
 function resolveCurrentCommandName(): string {
   const entry_path = process.argv[1] || "";
   const command_name = basename(dirname(entry_path));
-  if (command_name === "city" || command_name === "town") return command_name;
+  if (command_name === "city" || command_name === "city") return command_name;
 
   const file_name = basename(entry_path).replace(/\.[cm]?js$/, "");
-  if (file_name === "city" || file_name === "town") return file_name;
+  if (file_name === "city" || file_name === "city") return file_name;
 
   return "downcity";
 }

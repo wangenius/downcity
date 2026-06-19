@@ -1,1 +1,0 @@
-{"version":3,"file":"storage.d.ts","sourceRoot":"","sources":["../../../src/town/utils/storage.ts"],"names":[],"mappings":"AAQA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,iBAAiB,CAAC;AAEjD,wBAAsB,SAAS,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC,CAI1D;AAED,wBAAsB,QAAQ,CAAC,QAAQ,EAAE,MAAM,EAAE,IAAI,EAAE,SAAS,GAAG,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC,CAExF"}

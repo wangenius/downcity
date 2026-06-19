@@ -1,0 +1,1 @@
+{"version":3,"file":"PortAllocator.d.ts","sourceRoot":"","sources":["../../../../src/city/process/daemon/PortAllocator.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAQH,KAAK,kBAAkB,GAAG;IACxB,KAAK,CAAC,EAAE,MAAM,CAAC;IACf,GAAG,CAAC,EAAE,MAAM,CAAC;IACb,IAAI,CAAC,EAAE,MAAM,CAAC;CACf,CAAC;AAyBF;;GAEG;AACH,wBAAsB,qBAAqB,CACzC,MAAM,GAAE,kBAAuB,GAC9B,OAAO,CAAC,MAAM,CAAC,CAejB"}

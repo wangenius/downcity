@@ -168,7 +168,7 @@ export type CliRenderOptions = {
    * 当前输出所属的终端命令名。
    *
    * 说明（中文）
-   * - `downcity` 只是安装聚合包，实际运行身份应该是 `city` 或 `town`。
+   * - `downcity` 只是安装聚合包，实际运行身份应该是 `city` 或 `city`。
    * - 这里用于让 banner 与用户敲下的命令保持一致。
    */
   command_name?: string;

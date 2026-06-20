@@ -5,9 +5,9 @@
  * - 负责收集 Federation URL、选择 Federation、充值输入等。
  * - 与 TUI 状态解耦，便于复用和单独测试。
  */
-import { DEFAULT_FEDERATION_URL, list_federations, normalizeCityUrl, readCityString, } from "../shared/CityStateStore.js";
+import { DEFAULT_FEDERATION_URL, list_federations, normalizeCityUrl, readCityString, } from "../../city/shared/CityStateStore.js";
 import { t } from "../../shared/CliLocale.js";
-import prompts from "./Prompts.js";
+import prompts from "../../city/tui/Prompts.js";
 export async function prompt_city_url() {
     const response = (await prompts({
         type: "text",

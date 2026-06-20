@@ -2,7 +2,7 @@
  * Admin Cities 管理命令。
  */
 import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
+import { adminErrorMessage, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
 export async function manageCities(city, _baseUrl, runtime) {
     while (true) {
         const act = await runtime.select(t({ zh: "产品管理", en: "Products" }), [

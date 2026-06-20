@@ -2,7 +2,7 @@
  * Admin Balance 管理命令。
  */
 import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
+import { adminErrorMessage, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
 export async function manageBalance(a, _baseUrl, runtime) {
     while (true) {
         const act = await runtime.select("Balance", [

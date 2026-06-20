@@ -9,7 +9,7 @@
  * - 后台常驻启动请使用 `city agent start`，并用
  *   `city agent restart` 管理。
  */
-import type { AgentStartOptions } from "../types/AgentStartOptions.js";
+import type { AgentStartOptions } from "../../city/types/AgentStartOptions.js";
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *

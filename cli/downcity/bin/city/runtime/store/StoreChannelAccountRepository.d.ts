@@ -6,7 +6,7 @@
  * - 负责敏感字段解密/加密与 chat account 的语义化组装。
  */
 import type { StoredChannelAccount, UpsertChannelAccountInput } from "@downcity/agent";
-import type { PlatformStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "../../../city/runtime/store/StoreShared.js";
 /**
  * 同步列出 chat accounts。
  */

@@ -5,7 +5,7 @@
  * - 覆盖 select / multiselect / confirm 三种选择交互。
  * - 统一左侧 sidebar 展示选项，右侧主区域展示详情。
  */
-import { type PromptObject } from "./Prompts.js";
+import { type PromptObject } from "../../city/tui/Prompts.js";
 /**
  * 运行单选 prompt。
  */

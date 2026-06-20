@@ -14,16 +14,16 @@ import {
   getDowncityChannelMetaPath,
   getDowncityChatSessionDirPath,
   getDowncitySessionDirPath,
-} from "../config/Paths.js";
-import { CliError } from "../../shared/CliError.js";
+} from "@/city/config/Paths.js";
+import { CliError } from "@/shared/CliError.js";
 import type {
   AgentHistoryChannelMetaFile,
   AgentHistoryCleanOptions,
   AgentHistoryCleanResult,
-} from "./AgentHistoryTypes.js";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { resolveAgentId } from "../../shared/IndexSupport.js";
+} from "@/city/agent/AgentHistoryTypes.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
+import { resolveAgentId } from "@/shared/IndexSupport.js";
 
 function normalizeText(input: unknown): string {
   return String(input || "").trim();

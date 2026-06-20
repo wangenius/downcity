@@ -5,7 +5,7 @@
  * - 实现 AgentChatInteractiveRendererPort，接入 AgentChat 的 runSdkPromptTurn。
  * - 把 SDK 事件转交给 StreamingUIController，驱动消息流更新。
  */
-import { StreamingUIController } from "./controllers/StreamingUI.js";
+import { StreamingUIController } from "../../../city/agent/tui/controllers/StreamingUI.js";
 /**
  * pi-tui 版交互式渲染器。
  */

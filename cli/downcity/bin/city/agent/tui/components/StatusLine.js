@@ -6,7 +6,7 @@
  * - 居中或左对齐，超出宽度时截断。
  */
 import { Text, truncateToWidth } from "@earendil-works/pi-tui";
-import { current_theme } from "../theme/index.js";
+import { current_theme } from "../../../../city/agent/tui/theme/index.js";
 /**
  * 顶部状态栏。
  */

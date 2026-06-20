@@ -10,7 +10,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { nanoid } from "nanoid";
-import { getPlatformStoreDbPath } from "../../process/registry/CityPaths.js";
+import { getPlatformStoreDbPath } from "@/city/process/registry/CityPaths.js";
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import {
   AUTH_DEFAULT_ROLES,
@@ -29,8 +29,8 @@ import {
   normalizeNonEmptyText,
   optionalTrimmedText,
   type PlatformStoreContext,
-} from "../store/StoreShared.js";
-import { ensurePlatformStoreSchema } from "../store/StoreSchema.js";
+} from "@/city/runtime/store/StoreShared.js";
+import { ensurePlatformStoreSchema } from "@/city/runtime/store/StoreSchema.js";
 
 /**
  * AuthStore 构造参数。

@@ -27,8 +27,8 @@ import {
 import type { ImagePluginInput } from "@downcity/plugins";
 import type { AsrPluginInput } from "@downcity/plugins";
 import type { TtsPluginInput } from "@downcity/plugins";
-import { CityUserManager } from "../../shared/CityUserManager.js";
-import { PlatformStore } from "../store/index.js";
+import { CityUserManager } from "@/city/shared/CityUserManager.js";
+import { PlatformStore } from "@/city/runtime/store/index.js";
 
 const city_user_manager = new CityUserManager();
 

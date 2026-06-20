@@ -8,11 +8,11 @@
  */
 
 import blessed from "neo-blessed";
-import { t } from "../../shared/CliLocale.js";
+import { t } from "@/shared/CliLocale.js";
 import {
   resolve_loop_selectable_index,
   resolve_next_loop_selectable_index,
-} from "./SelectableList.js";
+} from "@/city/tui/SelectableList.js";
 import {
   build_city_manager_state,
   handle_city_action,
@@ -20,15 +20,15 @@ import {
   is_prompt_action,
   city_manager_action,
   city_manager_state,
-} from "./FederationManagerState.js";
+} from "@/city/tui/FederationManagerState.js";
 import {
   format_header,
   format_city_item_label,
   format_city_detail,
   format_footer,
   is_disabled_item,
-} from "./FederationManagerFormat.js";
-import type { tui_list_item } from "../types/Tui.js";
+} from "@/city/tui/FederationManagerFormat.js";
+import type { tui_list_item } from "@/city/types/Tui.js";
 
 interface blessed_list_element extends blessed.Widgets.ListElement {
   on: (

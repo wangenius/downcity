@@ -6,7 +6,7 @@
  * - 路由层不做领域判断，所有业务逻辑统一委托给 `AuthService`。
  */
 import { Hono } from "hono";
-import type { AuthService } from "./AuthService.js";
+import type { AuthService } from "../../../city/runtime/auth/AuthService.js";
 /**
  * 注册 auth 路由。
  */

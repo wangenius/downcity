@@ -6,7 +6,7 @@
  * - 左侧 sidebar 承载所有菜单层级，右侧 section 只承载 loading、文本、JSON、消息与输入。
  * - 本模块只保留公共 runtime API，具体布局、渲染、输入循环拆分到 AdminTuiShell / AdminTuiRender / AdminTuiInput。
  */
-import type { admin_tui_runtime } from "../types/AdminTui.js";
+import type { admin_tui_runtime } from "../../federation/types/AdminTui.js";
 /**
  * 创建 admin TUI runtime。
  */

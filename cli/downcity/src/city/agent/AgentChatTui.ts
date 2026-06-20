@@ -6,9 +6,9 @@
  * - 真实的渲染、输入、布局逻辑在 `tui/AgentChatTuiCoordinator` 中。
  */
 
-import { AgentChatTuiCoordinator } from "./tui/AgentChatTuiCoordinator.js";
-import type { AgentChatInteractiveRendererPort } from "../types/AgentChatInteractive.js";
-import type { AgentChatSessionSummaryView } from "./AgentChatTypes.js";
+import { AgentChatTuiCoordinator } from "@/city/agent/tui/AgentChatTuiCoordinator.js";
+import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
+import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
 
 /**
  * 启动 city agent chat 的交互式 TUI。

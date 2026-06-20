@@ -6,11 +6,11 @@
  * - 写入 City 本地状态后立即更新进程内语言，保证后续菜单即时生效。
  */
 
-import prompts from "../tui/Prompts.js";
-import type { CliLocale } from "../../shared/types/CliLocale.js";
-import { writePersistedCityCliLocale } from "./CityStateStore.js";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { getCliLocale, setCliLocale, t } from "../../shared/CliLocale.js";
+import prompts from "@/city/tui/Prompts.js";
+import type { CliLocale } from "@/shared/types/CliLocale.js";
+import { writePersistedCityCliLocale } from "@/city/shared/CityStateStore.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { getCliLocale, setCliLocale, t } from "@/shared/CliLocale.js";
 
 interface prompt_city_cli_locale_options {
   /** 是否禁止向命令行直接输出结果块。 */

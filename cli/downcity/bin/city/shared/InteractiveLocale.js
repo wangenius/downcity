@@ -5,8 +5,8 @@
  * - 统一承载 `city` 交互菜单中的语言选择逻辑，避免首页与 City 管理器重复实现。
  * - 写入 City 本地状态后立即更新进程内语言，保证后续菜单即时生效。
  */
-import prompts from "../tui/Prompts.js";
-import { writePersistedCityCliLocale } from "./CityStateStore.js";
+import prompts from "../../city/tui/Prompts.js";
+import { writePersistedCityCliLocale } from "../../city/shared/CityStateStore.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { getCliLocale, setCliLocale, t } from "../../shared/CliLocale.js";
 /**

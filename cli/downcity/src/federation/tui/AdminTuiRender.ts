@@ -7,17 +7,17 @@
  */
 
 import blessed from "neo-blessed";
-import { t } from "../../shared/CliLocale.js";
+import { t } from "@/shared/CliLocale.js";
 import {
   type blessed_box_element,
   format_breadcrumb,
   is_plain_escape_input,
   type shell_layout,
-} from "./AdminTuiShell.js";
+} from "@/federation/tui/AdminTuiShell.js";
 import type {
   admin_tui_message_kind,
   admin_tui_select_option,
-} from "../types/AdminTui.js";
+} from "@/federation/types/AdminTui.js";
 
 /**
  * 渲染侧边栏选项列表。

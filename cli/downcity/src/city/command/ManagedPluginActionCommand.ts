@@ -17,10 +17,10 @@ import type { BasePlugin, PluginAction } from "@downcity/agent";
 import type { JsonObject, JsonValue } from "@downcity/agent";
 import type { PluginActionScheduleInput } from "@downcity/agent";
 import type { PluginCommandResponse } from "@downcity/agent";
-import { callServer } from "../process/daemon/Client.js";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { parseBoolean, parsePort } from "../../shared/IndexSupport.js";
-import { getCliLocale, helpText, t } from "../../shared/CliLocale.js";
+import { callServer } from "@/city/process/daemon/Client.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
+import { parseBoolean, parsePort } from "@/shared/IndexSupport.js";
+import { getCliLocale, helpText, t } from "@/shared/CliLocale.js";
 
 function buildChatPluginHelpText(): string {
   if (getCliLocale() === "zh") {

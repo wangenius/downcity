@@ -7,9 +7,9 @@
  * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情。
  */
 import { Spacer, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { STATUS_BULLET } from "../constant/symbols.js";
-import { MESSAGE_INDENT } from "../constant/rendering.js";
-import { current_theme } from "../theme/index.js";
+import { STATUS_BULLET } from "../../../../city/agent/tui/constant/symbols.js";
+import { MESSAGE_INDENT } from "../../../../city/agent/tui/constant/rendering.js";
+import { current_theme } from "../../../../city/agent/tui/theme/index.js";
 /**
  * tool 状态/结果卡片组件。
  */

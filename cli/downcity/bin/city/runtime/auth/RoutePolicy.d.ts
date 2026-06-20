@@ -7,8 +7,8 @@
  */
 import type { MiddlewareHandler } from "hono";
 import type { AuthRoutePolicy } from "@downcity/agent";
-import type { AuthService } from "./AuthService.js";
-import { type AuthMiddlewareVariables } from "./AuthMiddleware.js";
+import type { AuthService } from "../../../city/runtime/auth/AuthService.js";
+import { type AuthMiddlewareVariables } from "../../../city/runtime/auth/AuthMiddleware.js";
 /**
  * Server 侧路由权限矩阵。
  */

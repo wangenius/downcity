@@ -7,7 +7,7 @@
  * - agent daemon 启动前必须确保 city 后台已启动（强约束）。
  */
 import fs from "fs-extra";
-import { getCityPidPath } from "./CityPaths.js";
+import { getCityPidPath } from "../../../city/process/registry/CityPaths.js";
 /**
  * 读取 city 后台 pid（读取失败或内容非法返回 null）。
  */

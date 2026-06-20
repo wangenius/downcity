@@ -9,7 +9,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import { emitCliBlock, emitCliList } from "../../shared/CliReporter.js";
+import { emitCliBlock, emitCliList } from "@/shared/CliReporter.js";
 
 /**
  * alias 命令参数。

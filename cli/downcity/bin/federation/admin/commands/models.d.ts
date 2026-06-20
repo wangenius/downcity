@@ -7,7 +7,7 @@
  * - 如果模型缺少 provider key，会在这里直接显示缺失项。
  */
 import { CityPact } from "@downcity/city";
-import type { admin_tui_runtime } from "../../types/AdminTui.js";
+import type { admin_tui_runtime } from "../../../federation/types/AdminTui.js";
 /**
  * 展示全部代码注册模型及其运行状态。
  */

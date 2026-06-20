@@ -5,9 +5,9 @@
  * - 统一处理 list/control/command 三类需要访问 Agent runtime 的命令。
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
-import { printResult } from "../utils/cli/CliOutput.js";
-import { parseCommandPayload, resolvePluginProjectRoot, validateAgentProjectRoot, } from "./PluginTargetSupport.js";
-import { callServer } from "../process/daemon/Client.js";
+import { printResult } from "../../city/utils/cli/CliOutput.js";
+import { parseCommandPayload, resolvePluginProjectRoot, validateAgentProjectRoot, } from "../../city/shared/PluginTargetSupport.js";
+import { callServer } from "../../city/process/daemon/Client.js";
 const PLUGIN_COMMAND_TIMEOUT_MS = 120_000;
 /**
  * 执行 `plugin list`。

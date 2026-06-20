@@ -17,7 +17,7 @@ import {
   getDowncityMemoryLongTermPath,
   getDowncitySessionDirPath,
   getDowncitySessionRootDirPath,
-} from "../../config/Paths.js";
+} from "@/city/config/Paths.js";
 import { persistProjectPluginConfig } from "@downcity/agent";
 import type {
   AgentPathRuntime,

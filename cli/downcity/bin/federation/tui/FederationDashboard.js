@@ -7,7 +7,7 @@
  */
 import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
-import { create_tui_shell } from "./Shell.js";
+import { create_tui_shell } from "../../federation/tui/Shell.js";
 import { t } from "../../shared/CliLocale.js";
 /**
  * 打开 Federation 顶层仪表盘。

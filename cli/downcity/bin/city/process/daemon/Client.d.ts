@@ -5,7 +5,7 @@
  * - 业务模块统一通过 daemon API 与运行时通信。
  * - HTTP gateway 与本机 RPC 的地址解析分开，避免端口语义混淆。
  */
-import { type DaemonEndpoint, type DaemonJsonApiCallParams, type DaemonJsonApiCallResult } from "./Api.js";
+import { type DaemonEndpoint, type DaemonJsonApiCallParams, type DaemonJsonApiCallResult } from "../../../city/process/daemon/Api.js";
 type ResolveDaemonEndpointParams = {
     projectRoot: string;
     host?: string;

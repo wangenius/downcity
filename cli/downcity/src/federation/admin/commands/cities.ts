@@ -3,9 +3,9 @@
  */
 
 import { CityPact } from "@downcity/city";
-import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
-import type { admin_tui_runtime } from "../../types/AdminTui.js";
+import { t } from "@/shared/CliLocale.js";
+import { adminErrorMessage, rethrowAdminAuthError } from "@/federation/admin/auth-error.js";
+import type { admin_tui_runtime } from "@/federation/types/AdminTui.js";
 
 export async function manageCities(city: CityPact, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {

@@ -9,8 +9,8 @@
  */
 import { emitCliBlock } from "../../../shared/CliReporter.js";
 import { CliError } from "../../../shared/CliError.js";
-import { writeFederationProjectDeployEnv, } from "../config/FederationProjectEnvLoader.js";
-import { runCommand } from "./CommandRunner.js";
+import { writeFederationProjectDeployEnv, } from "../../../federation/deploy/config/FederationProjectEnvLoader.js";
+import { runCommand } from "../../../federation/deploy/runtime/CommandRunner.js";
 /**
  * 确认 D1 数据库存在，必要时创建并写入项目 `.env`。
  */

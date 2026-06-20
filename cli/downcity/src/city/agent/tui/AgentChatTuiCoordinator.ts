@@ -19,12 +19,12 @@ import {
   ChatEditorComponent,
   MessageListComponent,
   StatusLineComponent,
-} from "./components/index.js";
-import { SessionPickerComponent } from "./dialogs/SessionPicker.js";
-import { PiTuiChatRenderer } from "./PiTuiChatRenderer.js";
-import type { AgentChatSessionSummaryView } from "../AgentChatTypes.js";
-import type { AgentChatInteractiveRendererPort } from "../../types/AgentChatInteractive.js";
-import type { AppState } from "./types.js";
+} from "@/city/agent/tui/components/index.js";
+import { SessionPickerComponent } from "@/city/agent/tui/dialogs/SessionPicker.js";
+import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
+import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
+import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
+import type { AppState } from "@/city/agent/tui/types.js";
 
 /**
  * 协调器构造选项。

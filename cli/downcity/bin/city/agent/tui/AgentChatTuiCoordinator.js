@@ -6,9 +6,9 @@
  * - 不在这里积累事件路由或渲染逻辑，那些下沉到 StreamingUIController 与组件。
  */
 import { Key, matchesKey, ProcessTerminal, TUI, } from "@earendil-works/pi-tui";
-import { ChatEditorComponent, MessageListComponent, StatusLineComponent, } from "./components/index.js";
-import { SessionPickerComponent } from "./dialogs/SessionPicker.js";
-import { PiTuiChatRenderer } from "./PiTuiChatRenderer.js";
+import { ChatEditorComponent, MessageListComponent, StatusLineComponent, } from "../../../city/agent/tui/components/index.js";
+import { SessionPickerComponent } from "../../../city/agent/tui/dialogs/SessionPicker.js";
+import { PiTuiChatRenderer } from "../../../city/agent/tui/PiTuiChatRenderer.js";
 /**
  * Agent chat TUI 协调器。
  */

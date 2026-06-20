@@ -7,8 +7,8 @@
  */
 
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { ControlSessionExecuteAttachmentInput } from "./types/ControlSessionExecute.js";
-import { buildExecuteInputText } from "./ExecuteInput.js";
+import type { ControlSessionExecuteAttachmentInput } from "@/city/agent/control/types/ControlSessionExecute.js";
+import { buildExecuteInputText } from "@/city/agent/control/ExecuteInput.js";
 
 /**
  * 在指定 session 中执行一轮请求。

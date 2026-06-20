@@ -5,8 +5,8 @@
  * - 该模块只做协调器创建与生命周期对接，不再直接持有 UI 状态。
  * - 真实的渲染、输入、布局逻辑在 `tui/AgentChatTuiCoordinator` 中。
  */
-import type { AgentChatInteractiveRendererPort } from "../types/AgentChatInteractive.js";
-import type { AgentChatSessionSummaryView } from "./AgentChatTypes.js";
+import type { AgentChatInteractiveRendererPort } from "../../city/types/AgentChatInteractive.js";
+import type { AgentChatSessionSummaryView } from "../../city/agent/AgentChatTypes.js";
 /**
  * 启动 city agent chat 的交互式 TUI。
  *

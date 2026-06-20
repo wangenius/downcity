@@ -8,13 +8,13 @@
  */
 import path from "node:path";
 import fs from "node:fs";
-import { getProfileMdPath, getDowncityJsonPath } from "../config/Paths.js";
-import { listManagedAgentEntries } from "../process/registry/CityRegistry.js";
-import { isCityRunning } from "../process/registry/CityRuntime.js";
+import { getProfileMdPath, getDowncityJsonPath } from "../../city/config/Paths.js";
+import { listManagedAgentEntries } from "../../city/process/registry/CityRegistry.js";
+import { isCityRunning } from "../../city/process/registry/CityRuntime.js";
 import { resolveAgentId } from "../../shared/IndexSupport.js";
 import { CliError } from "../../shared/CliError.js";
 import { checkShellSandboxPreflight } from "@downcity/shell/sandbox/SandboxPreflight.js";
-import { assertProjectExecutionModelReady } from "../runtime/city-model/ExecutionModelBinding.js";
+import { assertProjectExecutionModelReady } from "../../city/runtime/city-model/ExecutionModelBinding.js";
 export function isRegistryEntryRunning(entry) {
     return entry.status !== "stopped";
 }

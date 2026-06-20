@@ -9,13 +9,13 @@
 
 import path from "path";
 import { fileURLToPath } from "url";
-import { buildRunArgsFromOptions } from "../process/daemon/CliArgs.js";
-import { startDaemonProcess, stopDaemonProcess } from "../process/daemon/Manager.js";
-import type { AgentStartOptions } from "../types/AgentStartOptions.js";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { resolveAgentId } from "../../shared/IndexSupport.js";
-import { checkAgentPreflight } from "../shared/PluginTargetSupport.js";
-import { CliError } from "../../shared/CliError.js";
+import { buildRunArgsFromOptions } from "@/city/process/daemon/CliArgs.js";
+import { startDaemonProcess, stopDaemonProcess } from "@/city/process/daemon/Manager.js";
+import type { AgentStartOptions } from "@/city/types/AgentStartOptions.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { resolveAgentId } from "@/shared/IndexSupport.js";
+import { checkAgentPreflight } from "@/city/shared/PluginTargetSupport.js";
+import { CliError } from "@/shared/CliError.js";
 
 /**
  * restart 命令执行流程。

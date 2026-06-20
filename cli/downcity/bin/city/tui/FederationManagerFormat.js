@@ -6,7 +6,7 @@
  * - 纯函数，不依赖 blessed 状态。
  */
 import { t } from "../../shared/CliLocale.js";
-import { is_disabled_selectable_item } from "./SelectableList.js";
+import { is_disabled_selectable_item } from "../../city/tui/SelectableList.js";
 export function is_disabled_item(item) {
     return is_disabled_selectable_item(item);
 }

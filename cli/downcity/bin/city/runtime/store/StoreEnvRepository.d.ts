@@ -6,7 +6,7 @@
  * - 当前版本只保留平台全局 env，不再区分 agent 私有层。
  */
 import type { StoredEnvEntry, StoredGlobalEnvEntry, UpsertEnvEntryInput, UpsertGlobalEnvEntryInput } from "@downcity/agent";
-import type { PlatformStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "../../../city/runtime/store/StoreShared.js";
 /**
  * 同步列出 env 条目。
  */

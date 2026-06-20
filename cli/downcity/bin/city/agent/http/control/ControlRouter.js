@@ -12,7 +12,7 @@
  * - 当前公开路径统一使用 `/api/control/*`。
  */
 import { Hono } from "hono";
-import { registerControlApiRoutes } from "./ControlApiRoutes.js";
+import { registerControlApiRoutes } from "../../../../city/agent/http/control/ControlApiRoutes.js";
 /**
  * 创建单 agent control API 专用路由。
  */

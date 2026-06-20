@@ -7,9 +7,9 @@
  * - 本模块只保留公共 runtime API，具体布局、渲染、输入循环拆分到 AdminTuiShell / AdminTuiRender / AdminTuiInput。
  */
 import { t } from "../../shared/CliLocale.js";
-import { create_shell } from "./AdminTuiShell.js";
-import { message_accent, message_title, render_loading, render_nav, render_option_detail, show_content, text_footer_text, } from "./AdminTuiRender.js";
-import { next_breadcrumb_parts, run_sidebar_select, run_text_in_content, } from "./AdminTuiInput.js";
+import { create_shell } from "../../federation/tui/AdminTuiShell.js";
+import { message_accent, message_title, render_loading, render_nav, render_option_detail, show_content, text_footer_text, } from "../../federation/tui/AdminTuiRender.js";
+import { next_breadcrumb_parts, run_sidebar_select, run_text_in_content, } from "../../federation/tui/AdminTuiInput.js";
 /**
  * 创建 admin TUI runtime。
  */

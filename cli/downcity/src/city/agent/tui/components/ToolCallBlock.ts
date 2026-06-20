@@ -9,15 +9,15 @@
 
 import { Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
-import { STATUS_BULLET } from "../constant/symbols.js";
-import { MESSAGE_INDENT } from "../constant/rendering.js";
-import { current_theme } from "../theme/index.js";
+import { STATUS_BULLET } from "@/city/agent/tui/constant/symbols.js";
+import { MESSAGE_INDENT } from "@/city/agent/tui/constant/rendering.js";
+import { current_theme } from "@/city/agent/tui/theme/index.js";
 import type {
   ToolApprovalRequestEntry,
   ToolApprovalResultEntry,
   ToolCallEntry,
   ToolResultEntry,
-} from "../types.js";
+} from "@/city/agent/tui/types.js";
 
 /**
  * 可展示的 tool 块条目联合类型。

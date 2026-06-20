@@ -7,7 +7,7 @@
  * - 业务模块只消费解析后的身份，避免余额、Agent、模型目录各自拼接身份。
  */
 import { CityPact } from "@downcity/city";
-import type { ResolvedCityUser, ResolveCityUserInput } from "../types/CityUser.js";
+import type { ResolvedCityUser, ResolveCityUserInput } from "../../city/types/CityUser.js";
 /**
  * City 当前 CityPact user 管理器。
  */

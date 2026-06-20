@@ -9,11 +9,11 @@
 
 import { Container, Spacer, Text, type Component } from "@earendil-works/pi-tui";
 
-import { current_theme } from "../theme/index.js";
-import type { TranscriptEntry } from "../types.js";
-import { AssistantMessageComponent } from "./AssistantMessage.js";
-import { ToolCallBlockComponent, type ToolBlockEntry } from "./ToolCallBlock.js";
-import { UserMessageComponent } from "./UserMessage.js";
+import { current_theme } from "@/city/agent/tui/theme/index.js";
+import type { TranscriptEntry } from "@/city/agent/tui/types.js";
+import { AssistantMessageComponent } from "@/city/agent/tui/components/AssistantMessage.js";
+import { ToolCallBlockComponent, type ToolBlockEntry } from "@/city/agent/tui/components/ToolCallBlock.js";
+import { UserMessageComponent } from "@/city/agent/tui/components/UserMessage.js";
 
 /**
  * 消息流展示组件。

@@ -5,7 +5,7 @@
  * - 负责 `PlatformStore` 的建表与轻量迁移。
  * - 启动时执行，不承担任何查询写入业务逻辑。
  */
-import type { PlatformStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "../../../city/runtime/store/StoreShared.js";
 /**
  * 初始化 PlatformStore 所需表结构。
  */

@@ -8,9 +8,9 @@
  */
 
 import { CityPact } from "@downcity/city";
-import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
-import type { admin_tui_runtime, admin_tui_select_option } from "../../types/AdminTui.js";
+import { t } from "@/shared/CliLocale.js";
+import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "@/federation/admin/auth-error.js";
+import type { admin_tui_runtime, admin_tui_select_option } from "@/federation/types/AdminTui.js";
 
 interface EnvRequirement {
   /** 环境变量 key */

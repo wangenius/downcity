@@ -6,7 +6,7 @@
  * - 提供前景色、背景色、粗体等便捷方法，减少组件里的重复 chalk 调用。
  */
 import chalk from "chalk";
-import { darkColors } from "./colors.js";
+import { darkColors } from "../../../../city/agent/tui/theme/colors.js";
 /**
  * 主题样式封装。
  */

@@ -7,8 +7,8 @@
  * - 静态 CLI catalog 使用同一套 City 装配入口，但不注入需要 City 登录态的 image/asr/tts。
  */
 import { AsrPlugin, ChatPlugin, ContactPlugin, FeishuChannel, ImagePlugin, MemoryPlugin, QqChannel, SkillPlugin, TaskPlugin, TelegramChannel, TtsPlugin, WebPlugin, WorkboardPlugin, } from "@downcity/plugins";
-import { CityUserManager } from "../../shared/CityUserManager.js";
-import { PlatformStore } from "../store/index.js";
+import { CityUserManager } from "../../../city/shared/CityUserManager.js";
+import { PlatformStore } from "../../../city/runtime/store/index.js";
 const city_user_manager = new CityUserManager();
 /**
  * 判断 chat account 是否具备对应渠道的完整凭据。

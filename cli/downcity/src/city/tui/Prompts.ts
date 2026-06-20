@@ -8,13 +8,13 @@
  */
 
 import blessed from "neo-blessed";
-import { t } from "../../shared/CliLocale.js";
+import { t } from "@/shared/CliLocale.js";
 import {
   run_confirm_prompt,
   run_multiselect_prompt,
   run_select_prompt,
-} from "./PromptSelect.js";
-import { run_number_prompt, run_text_prompt } from "./PromptInput.js";
+} from "@/city/tui/PromptSelect.js";
+import { run_number_prompt, run_text_prompt } from "@/city/tui/PromptInput.js";
 
 /**
  * 单个问题的最小兼容类型。

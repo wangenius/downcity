@@ -7,13 +7,13 @@
  */
 
 import blessed from "neo-blessed";
-import { t } from "../../shared/CliLocale.js";
+import { t } from "@/shared/CliLocale.js";
 import {
   type blessed_textbox_element,
   create_prompt_shell,
   is_plain_escape_input,
   type PromptObject,
-} from "./Prompts.js";
+} from "@/city/tui/Prompts.js";
 
 /**
  * 运行文本输入 prompt（含 password）。

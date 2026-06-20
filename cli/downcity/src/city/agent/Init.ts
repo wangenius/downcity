@@ -11,21 +11,21 @@
  */
 
 import path from "path";
-import prompts from "../tui/Prompts.js";
+import prompts from "@/city/tui/Prompts.js";
 import fs from "fs-extra";
-import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "../config/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/city/config/Paths.js";
 import {
   initializeAgentProject,
   normalizeDefaultAgentId,
 } from "@downcity/agent";
 import type { AgentProjectChannel } from "@downcity/agent";
 import type { ExecutionBindingConfig } from "@downcity/agent";
-import { emitCliBlock, emitCliList } from "../../shared/CliReporter.js";
-import { CliError } from "../../shared/CliError.js";
+import { emitCliBlock, emitCliList } from "@/shared/CliReporter.js";
+import { CliError } from "@/shared/CliError.js";
 import {
   assertPlatformModelReady,
   listPlatformModelChoices,
-} from "../runtime/city-model/ExecutionModelBinding.js";
+} from "@/city/runtime/city-model/ExecutionModelBinding.js";
 
 type InitPromptResponse = {
   id?: string;

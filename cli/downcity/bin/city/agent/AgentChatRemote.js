@@ -5,10 +5,10 @@
  * - 封装 `RemoteAgent` 创建、session 列表、session 创建/获取等远程操作。
  * - 不处理命令行交互与本地 agent 解析，只负责与 daemon RPC 的通信侧逻辑。
  */
-import { generateId } from "../utils/Id.js";
+import { generateId } from "../../city/utils/Id.js";
 import { RemoteAgent, } from "@downcity/agent";
-import { resolveDaemonRpcEndpoint } from "../process/daemon/Client.js";
-import { AGENT_CHAT_DEFAULT_SESSION_ID, AGENT_CHAT_NEW_SESSION_ID_PREFIX, } from "./AgentChatTypes.js";
+import { resolveDaemonRpcEndpoint } from "../../city/process/daemon/Client.js";
+import { AGENT_CHAT_DEFAULT_SESSION_ID, AGENT_CHAT_NEW_SESSION_ID_PREFIX, } from "../../city/agent/AgentChatTypes.js";
 /**
  * 生成 CLI chat 专用的新 sessionId。
  */

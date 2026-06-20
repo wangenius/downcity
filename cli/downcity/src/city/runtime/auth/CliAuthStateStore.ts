@@ -10,7 +10,7 @@ import {
   CLI_AUTH_TOKEN_ENV_KEY,
   formatBearerHeaderValue,
   resolveInvocationToken,
-} from "./AuthEnv.js";
+} from "@/city/runtime/auth/AuthEnv.js";
 
 /**
  * Bearer Token 解析参数。

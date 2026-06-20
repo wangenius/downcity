@@ -11,11 +11,11 @@ import type { ManagedAgentProcessView } from "@downcity/agent";
 import {
   getManagedAgentRegistryPath,
   getCityPidPath,
-} from "../../../process/registry/CityPaths.js";
-import { isCityProcessAlive, readCityPid } from "../../../process/registry/CityRuntime.js";
-import { emitCliBlock, emitCliList } from "../../../../shared/CliReporter.js";
-import { resolveRunningManagedAgents } from "./GatewayProcess.js";
-import { read_federation_membership_state } from "../../../shared/FederationConnection.js";
+} from "@/city/process/registry/CityPaths.js";
+import { isCityProcessAlive, readCityPid } from "@/city/process/registry/CityRuntime.js";
+import { emitCliBlock, emitCliList } from "@/shared/CliReporter.js";
+import { resolveRunningManagedAgents } from "@/city/runtime/gateway/runtime/GatewayProcess.js";
+import { read_federation_membership_state } from "@/city/shared/FederationConnection.js";
 
 /**
  * 打印当前受管 agent 面板。

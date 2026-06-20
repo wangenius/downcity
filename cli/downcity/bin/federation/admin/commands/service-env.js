@@ -7,7 +7,7 @@
  * - 直接管理：list / upsert / remove 裸 key-value
  */
 import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
+import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
 export async function manageEnv(a, _baseUrl, runtime) {
     while (true) {
         const services = await fetchEnvScopes(a, runtime);

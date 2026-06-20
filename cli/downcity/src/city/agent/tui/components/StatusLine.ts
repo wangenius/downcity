@@ -8,8 +8,8 @@
 
 import { Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 
-import { current_theme } from "../theme/index.js";
-import type { AppState } from "../types.js";
+import { current_theme } from "@/city/agent/tui/theme/index.js";
+import type { AppState } from "@/city/agent/tui/types.js";
 
 /**
  * 顶部状态栏。

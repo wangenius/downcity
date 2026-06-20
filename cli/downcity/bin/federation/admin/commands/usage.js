@@ -2,7 +2,7 @@
  * Admin Usage 管理命令。
  */
 import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
+import { adminErrorMessage, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
 export async function manageUsage(a, _baseUrl, runtime) {
     const svc = a.service("usage");
     while (true) {

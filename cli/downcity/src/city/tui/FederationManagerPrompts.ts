@@ -11,10 +11,10 @@ import {
   list_federations,
   normalizeCityUrl,
   readCityString,
-} from "../shared/CityStateStore.js";
-import { t } from "../../shared/CliLocale.js";
-import prompts from "./Prompts.js";
-import type { FederationProfile } from "../types/FederationMembership.js";
+} from "@/city/shared/CityStateStore.js";
+import { t } from "@/shared/CliLocale.js";
+import prompts from "@/city/tui/Prompts.js";
+import type { FederationProfile } from "@/city/types/FederationMembership.js";
 
 export async function prompt_city_url(): Promise<string | null> {
   const response = (await prompts({

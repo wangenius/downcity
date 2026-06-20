@@ -12,9 +12,9 @@ import {
   isProcessAlive,
   readDaemonMeta,
   readDaemonPid,
-} from "../process/daemon/Manager.js";
-import { getProfileMdPath, getDowncityJsonPath } from "../config/Paths.js";
-import { emitCliBlock } from "../../shared/CliReporter.js";
+} from "@/city/process/daemon/Manager.js";
+import { getProfileMdPath, getDowncityJsonPath } from "@/city/config/Paths.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
 
 /**
  * daemon 状态查询入口。

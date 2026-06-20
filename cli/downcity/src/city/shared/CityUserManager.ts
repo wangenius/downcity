@@ -15,13 +15,13 @@ import {
   read_city_admin_secret_for_url,
   read_current_city_session,
   read_city_session_for_federation,
-} from "./CityStateStore.js";
+} from "@/city/shared/CityStateStore.js";
 import type {
   ResolvedCityUser,
   ResolveCityUserInput,
   CityAccountsMeResult,
   CityUserEnvOverrides,
-} from "../types/CityUser.js";
+} from "@/city/types/CityUser.js";
 
 /**
  * City 当前 CityPact user 管理器。

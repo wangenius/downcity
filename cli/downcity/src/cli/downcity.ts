@@ -16,22 +16,22 @@ import {
   listPluginsWithoutLifecycle,
   registerPluginActionCommandsForCli,
 } from "@downcity/agent";
-import { registerAgentCommands } from "../city/command/AgentCommand.js";
-import { registerChatCommand } from "../city/command/ChatCommand.js";
-import { registerGatewayCommands } from "../city/command/GatewayCommand.js";
-import { registerManagedPluginCommandsForCli } from "../city/command/ManagedPluginActionCommand.js";
-import { registerPluginsCommand } from "../city/command/PluginCommand.js";
-import { createCityStaticBuiltinPlugins } from "../city/runtime/plugins/CityBuiltinPlugins.js";
-import { runInteractiveCityManager } from "../city/shared/CityManager.js";
-import { readPersistedCityCliLocale } from "../city/shared/CityStateStore.js";
-import { setCliVerbosity } from "../shared/CliReporter.js";
+import { registerAgentCommands } from "@/city/command/AgentCommand.js";
+import { registerChatCommand } from "@/city/command/ChatCommand.js";
+import { registerGatewayCommands } from "@/city/command/GatewayCommand.js";
+import { registerManagedPluginCommandsForCli } from "@/city/command/ManagedPluginActionCommand.js";
+import { registerPluginsCommand } from "@/city/command/PluginCommand.js";
+import { createCityStaticBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
+import { runInteractiveCityManager } from "@/city/shared/CityManager.js";
+import { readPersistedCityCliLocale } from "@/city/shared/CityStateStore.js";
+import { setCliVerbosity } from "@/shared/CliReporter.js";
 import {
   helpText,
   langOptionText,
   resolveCliLocale,
   setCliLocale,
   t,
-} from "../shared/CliLocale.js";
+} from "@/shared/CliLocale.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

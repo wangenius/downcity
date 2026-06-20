@@ -10,7 +10,7 @@
 import { Hono } from "hono";
 import fs from "fs-extra";
 import path from "path";
-import { getDowncityPublicDirPath } from "../../../config/Paths.js";
+import { getDowncityPublicDirPath } from "@/city/config/Paths.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 
 /**

@@ -6,7 +6,7 @@
  * - 清理范围固定为 session messages、chat audit、channel route 三处。
  * - 命令必须显式传 `--hard`，避免误删运行时历史。
  */
-import type { AgentHistoryCleanOptions, AgentHistoryCleanResult } from "./AgentHistoryTypes.js";
+import type { AgentHistoryCleanOptions, AgentHistoryCleanResult } from "../../city/agent/AgentHistoryTypes.js";
 /**
  * 执行 `city agent history clean`。
  */

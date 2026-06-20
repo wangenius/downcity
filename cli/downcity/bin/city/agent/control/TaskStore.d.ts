@@ -5,7 +5,7 @@
  * - 聚合 logs 与 task runs 读取逻辑。
  * - 仅负责磁盘侧读取与 control UI 视图映射。
  */
-import type { ControlLogEntry, ControlTaskRunDetail, ControlTaskRunSummary } from "./types/ControlViewData.js";
+import type { ControlLogEntry, ControlTaskRunDetail, ControlTaskRunSummary } from "../../../city/agent/control/types/ControlViewData.js";
 export declare const TASK_RUN_DIR_REGEX: RegExp;
 /**
  * 读取近期日志。

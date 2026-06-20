@@ -6,7 +6,7 @@
  * - 模型定义仍然来自代码注册；admin 只负责查看当前可用状态。
  * - 如果模型缺少 provider key，会在这里直接显示缺失项。
  */
-import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
+import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
 import { t } from "../../../shared/CliLocale.js";
 /**
  * 展示全部代码注册模型及其运行状态。

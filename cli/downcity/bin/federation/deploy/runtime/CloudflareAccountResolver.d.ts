@@ -6,7 +6,7 @@
  * - 有明确 account id 时直接复用；没有时先尝试 Wrangler 自动识别。
  * - Wrangler 已登录但无法枚举 account 时，进入最小交互：重新登录或手动输入 account id。
  */
-import type { FederationProjectDeployEnvFile } from "../../types/FederationProjectConfig.js";
+import type { FederationProjectDeployEnvFile } from "../../../federation/types/FederationProjectConfig.js";
 /** Cloudflare account 解析参数。 */
 export interface ResolveCloudflareAccountParams {
     /** City 项目目录。 */

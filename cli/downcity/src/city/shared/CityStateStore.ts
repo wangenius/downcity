@@ -11,15 +11,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PlatformStore } from "../runtime/store/index.js";
-import type { FederationProfile } from "../types/FederationMembership.js";
-import type { CityUserSession } from "../types/CitySession.js";
-import type { CliLocale } from "../../shared/types/CliLocale.js";
+import { PlatformStore } from "@/city/runtime/store/index.js";
+import type { FederationProfile } from "@/city/types/FederationMembership.js";
+import type { CityUserSession } from "@/city/types/CitySession.js";
+import type { CliLocale } from "@/shared/types/CliLocale.js";
 import type {
   CityAdminConfig,
   CityLocalProfile,
   CityLocalState,
-} from "../types/CityState.js";
+} from "@/city/types/CityState.js";
 
 /** 默认 Federation 地址。 */
 export const DEFAULT_FEDERATION_URL = "https://base.downcity.ai";

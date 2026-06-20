@@ -8,16 +8,16 @@
  * - dry-run 不创建远程资源，只使用已有 database name 解析临时 Wrangler 配置。
  */
 
-import { emitCliBlock } from "../../../shared/CliReporter.js";
-import { CliError } from "../../../shared/CliError.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { CliError } from "@/shared/CliError.js";
 import type {
   FederationProjectConfigFile,
   FederationProjectDeployEnvFile,
-} from "../../types/FederationProjectConfig.js";
+} from "@/federation/types/FederationProjectConfig.js";
 import {
   writeFederationProjectDeployEnv,
-} from "../config/FederationProjectEnvLoader.js";
-import { runCommand } from "./CommandRunner.js";
+} from "@/federation/deploy/config/FederationProjectEnvLoader.js";
+import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
 
 /** D1 解析参数。 */
 export interface ResolveD1DatabaseParams {

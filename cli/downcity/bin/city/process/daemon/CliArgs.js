@@ -6,7 +6,7 @@
  *   进程（显式 `--foreground true`），这里负责拼装其 argv。
  * - City 托管的 HTTP gateway 与 agent 本机 RPC 使用不同端口，避免职责混用。
  */
-import { allocateAvailablePort } from "./PortAllocator.js";
+import { allocateAvailablePort } from "../../../city/process/daemon/PortAllocator.js";
 /**
  * 将 daemon 选项转换为 `agent start` 子进程 argv。
  *

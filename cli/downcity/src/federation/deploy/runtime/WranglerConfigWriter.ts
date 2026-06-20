@@ -13,7 +13,7 @@ import { join, resolve } from "node:path";
 import type {
   FederationProjectConfigFile,
   FederationProjectDeployEnvFile,
-} from "../../types/FederationProjectConfig.js";
+} from "@/federation/types/FederationProjectConfig.js";
 
 /** 写入 wrangler.toml 的结果。 */
 export interface WranglerConfigWriteResult {

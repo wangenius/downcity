@@ -8,19 +8,19 @@
  * - City 不管理 chat plugin 运行态；运行态由具体 agent 内部托管。
  */
 
-import prompts, { type PromptObject } from "../tui/Prompts.js";
+import prompts, { type PromptObject } from "@/city/tui/Prompts.js";
 import {
   ChatChannelAccountManager,
   type ChatChannelAccountListItem,
 } from "@downcity/plugins";
-import { emitCliBlock } from "../../shared/CliReporter.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
 import type { StoredChannelAccountChannel } from "@downcity/agent";
 import type {
   ChatAccountAction,
   ChatManagerListSelection,
-} from "./ChatManagerTypes.js";
-import { runInteractiveChatAuthSetFlow } from "../command/ChatAuthCommand.js";
-import { t } from "../../shared/CliLocale.js";
+} from "@/city/shared/ChatManagerTypes.js";
+import { runInteractiveChatAuthSetFlow } from "@/city/command/ChatAuthCommand.js";
+import { t } from "@/shared/CliLocale.js";
 
 const CHAT_CHANNELS: StoredChannelAccountChannel[] = ["telegram", "feishu", "qq"];
 

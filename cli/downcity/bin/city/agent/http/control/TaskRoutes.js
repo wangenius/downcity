@@ -8,9 +8,9 @@
 import fs from "fs-extra";
 import { basename, dirname, join } from "path";
 import { runPluginCommand } from "@downcity/agent/internal/plugin/core/Manager.js";
-import { getDowncityTasksDirPath } from "../../../config/Paths.js";
-import { buildControlRouteAliases, decodeMaybe, toLimit, toOptionalString, } from "../../control/CommonHelpers.js";
-import { TASK_RUN_DIR_REGEX, listTaskRuns, readRecentLogs, readTaskRunDetail, } from "../../control/Helpers.js";
+import { getDowncityTasksDirPath } from "../../../../city/config/Paths.js";
+import { buildControlRouteAliases, decodeMaybe, toLimit, toOptionalString, } from "../../../../city/agent/control/CommonHelpers.js";
+import { TASK_RUN_DIR_REGEX, listTaskRuns, readRecentLogs, readTaskRunDetail, } from "../../../../city/agent/control/Helpers.js";
 function resolveTaskIdFromTaskMdPath(taskMdPath) {
     const text = String(taskMdPath || "").trim();
     if (!text)

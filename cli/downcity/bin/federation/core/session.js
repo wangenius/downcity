@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { normalizeBaseUrl } from "./env.js";
+import { normalizeBaseUrl } from "../../federation/core/env.js";
 const DIR = path.join(os.homedir(), ".downcity");
 const CONFIG_FILE = path.join(DIR, "config.json");
 // ============================================================

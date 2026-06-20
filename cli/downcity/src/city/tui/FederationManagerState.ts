@@ -15,20 +15,20 @@ import {
   resolve_selected_federation_url,
   upsert_federation_profile,
   writeCityState,
-} from "../shared/CityStateStore.js";
-import { performCityUserLogin } from "../shared/CityUserLogin.js";
-import { CityUserManager } from "../shared/CityUserManager.js";
+} from "@/city/shared/CityStateStore.js";
+import { performCityUserLogin } from "@/city/shared/CityUserLogin.js";
+import { CityUserManager } from "@/city/shared/CityUserManager.js";
 import {
   readCurrentCityBalance,
   rechargeCurrentCityUser,
-} from "../shared/CityBalance.js";
-import { promptAndPersistCityCliLocale } from "../shared/InteractiveLocale.js";
-import { getCliLocale, t } from "../../shared/CliLocale.js";
+} from "@/city/shared/CityBalance.js";
+import { promptAndPersistCityCliLocale } from "@/city/shared/InteractiveLocale.js";
+import { getCliLocale, t } from "@/shared/CliLocale.js";
 import {
   prompt_city_url,
   prompt_federation,
   prompt_recharge_input,
-} from "./FederationManagerPrompts.js";
+} from "@/city/tui/FederationManagerPrompts.js";
 import {
   format_membership_detail,
   format_federation_list_detail,
@@ -41,11 +41,11 @@ import {
   loading_text,
   format_locale_description,
   build_city_subtitle,
-} from "./FederationManagerFormat.js";
-import type { FederationMembershipState, FederationProfile } from "../types/FederationMembership.js";
-import type { CityBalanceAccount } from "../types/CityBalance.js";
-import type { CityUserSession } from "../types/CitySession.js";
-import type { tui_list_item } from "../types/Tui.js";
+} from "@/city/tui/FederationManagerFormat.js";
+import type { FederationMembershipState, FederationProfile } from "@/city/types/FederationMembership.js";
+import type { CityBalanceAccount } from "@/city/types/CityBalance.js";
+import type { CityUserSession } from "@/city/types/CitySession.js";
+import type { tui_list_item } from "@/city/types/Tui.js";
 
 /** Federation 管理器可选动作。 */
 export type city_manager_action =

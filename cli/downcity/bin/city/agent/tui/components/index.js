@@ -1,10 +1,10 @@
 /**
  * city agent chat TUI 组件统一导出。
  */
-export { AssistantMessageComponent } from "./AssistantMessage.js";
-export { ChatEditorComponent } from "./ChatEditor.js";
-export { MessageListComponent } from "./MessageList.js";
-export { StatusLineComponent } from "./StatusLine.js";
-export { ToolCallBlockComponent } from "./ToolCallBlock.js";
-export { UserMessageComponent } from "./UserMessage.js";
+export { AssistantMessageComponent } from "../../../../city/agent/tui/components/AssistantMessage.js";
+export { ChatEditorComponent } from "../../../../city/agent/tui/components/ChatEditor.js";
+export { MessageListComponent } from "../../../../city/agent/tui/components/MessageList.js";
+export { StatusLineComponent } from "../../../../city/agent/tui/components/StatusLine.js";
+export { ToolCallBlockComponent } from "../../../../city/agent/tui/components/ToolCallBlock.js";
+export { UserMessageComponent } from "../../../../city/agent/tui/components/UserMessage.js";
 //# sourceMappingURL=index.js.map

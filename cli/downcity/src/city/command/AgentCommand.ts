@@ -10,31 +10,31 @@ import type { Command, Option } from "commander";
 import {
   emitRegisteredAgentListWithOptions,
   resolveCliAgentStartProjectRoot,
-} from "../agent/AgentSelection.js";
-import { runInteractiveAgentManager } from "../agent/AgentManager.js";
-import { chatCommand } from "../agent/AgentChat.js";
-import { agentHistoryCleanCommand } from "../agent/AgentHistory.js";
-import { initCommand } from "../agent/Init.js";
-import { restartCommand } from "../agent/Restart.js";
-import { stopCommand } from "../agent/Stop.js";
-import { runCommand } from "../agent/Run.js";
-import { startCommand } from "../agent/Start.js";
-import { statusCommand } from "../agent/Status.js";
-import type { AgentStartOptions } from "../types/AgentStartOptions.js";
-import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "../../shared/IndexSupport.js";
-import { runWithSpinner } from "../utils/cli/Spinner.js";
-import { emitCliBlock } from "../../shared/CliReporter.js";
+} from "@/city/agent/AgentSelection.js";
+import { runInteractiveAgentManager } from "@/city/agent/AgentManager.js";
+import { chatCommand } from "@/city/agent/AgentChat.js";
+import { agentHistoryCleanCommand } from "@/city/agent/AgentHistory.js";
+import { initCommand } from "@/city/agent/Init.js";
+import { restartCommand } from "@/city/agent/Restart.js";
+import { stopCommand } from "@/city/agent/Stop.js";
+import { runCommand } from "@/city/agent/Run.js";
+import { startCommand } from "@/city/agent/Start.js";
+import { statusCommand } from "@/city/agent/Status.js";
+import type { AgentStartOptions } from "@/city/types/AgentStartOptions.js";
+import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "@/shared/IndexSupport.js";
+import { runWithSpinner } from "@/city/utils/cli/Spinner.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
 import {
   cleanupStaleDaemonFiles,
   diagnoseDaemonStaleReasons,
   isProcessAlive as isDaemonProcessAlive,
   readDaemonPid,
-} from "../process/daemon/Manager.js";
+} from "@/city/process/daemon/Manager.js";
 import {
   ensureRegisteredAgentProjectRoot,
   prepareForegroundAgent,
-} from "../shared/CityAgentRuntime.js";
-import { helpText, t } from "../../shared/CliLocale.js";
+} from "@/city/shared/CityAgentRuntime.js";
+import { helpText, t } from "@/shared/CliLocale.js";
 
 /**
  * agent 命令注册参数。

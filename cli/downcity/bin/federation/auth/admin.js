@@ -3,7 +3,7 @@
  *
  * 当前版本直接复用当前 active server 上保存的 admin_secret_key。
  */
-import { showError } from "../core/ui.js";
+import { showError } from "../../federation/core/ui.js";
 import { t } from "../../shared/CliLocale.js";
 export async function adminAuth(server) {
     const adminSecretKey = String(server.admin_secret_key ?? "").trim();

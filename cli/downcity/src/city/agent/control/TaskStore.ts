@@ -8,14 +8,14 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { getLogsDirPath, getDowncityTasksDirPath } from "../../config/Paths.js";
+import { getLogsDirPath, getDowncityTasksDirPath } from "@/city/config/Paths.js";
 import type {
   ControlLogEntry,
   ControlTaskRunDetail,
   ControlTaskRunSummary,
-} from "./types/ControlViewData.js";
-import { truncateText } from "./CommonHelpers.js";
-import { loadSessionMessagesFromFile, toUiMessageTimeline } from "./MessageTimeline.js";
+} from "@/city/agent/control/types/ControlViewData.js";
+import { truncateText } from "@/city/agent/control/CommonHelpers.js";
+import { loadSessionMessagesFromFile, toUiMessageTimeline } from "@/city/agent/control/MessageTimeline.js";
 
 export const TASK_RUN_DIR_REGEX = /^\d{8}-\d{6}-\d{3}$/;
 const TASK_ID_REGEXP = /^[\p{L}\p{N}][\p{L}\p{N}_\-\s]{0,63}$/u;

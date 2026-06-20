@@ -9,7 +9,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { emitCliBlock } from "../../../shared/CliReporter.js";
-import { runCommand } from "./CommandRunner.js";
+import { runCommand } from "../../../federation/deploy/runtime/CommandRunner.js";
 /**
  * 自动执行 package.json 中的 build/typecheck。
  */

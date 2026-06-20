@@ -7,7 +7,7 @@
  */
 import type { Context, MiddlewareHandler } from "hono";
 import type { AuthPrincipal } from "@downcity/agent";
-import type { AuthService } from "./AuthService.js";
+import type { AuthService } from "../../../city/runtime/auth/AuthService.js";
 /**
  * Hono Context 中保存 principal 的 key。
  */

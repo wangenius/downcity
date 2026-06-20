@@ -6,7 +6,7 @@
  * - 这里只负责基于当前 City server 推导可复制的固定回调地址
  * - 这样用户在 Stripe Dashboard 里不需要手动拼 webhook URL
  */
-import { normalizeBaseUrl } from "./env.js";
+import { normalizeBaseUrl } from "../../federation/core/env.js";
 /**
  * 基于当前 City 地址构建 Stripe 相关 URL。
  */

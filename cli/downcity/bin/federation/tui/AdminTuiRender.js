@@ -7,7 +7,7 @@
  */
 import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
-import { format_breadcrumb, is_plain_escape_input, } from "./AdminTuiShell.js";
+import { format_breadcrumb, is_plain_escape_input, } from "../../federation/tui/AdminTuiShell.js";
 /**
  * 渲染侧边栏选项列表。
  */

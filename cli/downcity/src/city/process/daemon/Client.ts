@@ -11,12 +11,12 @@ import {
   type DaemonEndpoint,
   type DaemonJsonApiCallParams,
   type DaemonJsonApiCallResult,
-} from "./Api.js";
+} from "@/city/process/daemon/Api.js";
 import {
   formatCliBearerHeaderValue,
   resolveCliAuthToken,
-} from "../../shared/CliAuthToken.js";
-import { getDaemonMetaPath } from "./Manager.js";
+} from "@/city/shared/CliAuthToken.js";
+import { getDaemonMetaPath } from "@/city/process/daemon/Manager.js";
 import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**

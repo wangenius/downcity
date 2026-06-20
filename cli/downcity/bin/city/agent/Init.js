@@ -10,13 +10,13 @@
  * - 避免写入无意义的默认值：能省则省，保持配置简洁
  */
 import path from "path";
-import prompts from "../tui/Prompts.js";
+import prompts from "../../city/tui/Prompts.js";
 import fs from "fs-extra";
-import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "../config/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "../../city/config/Paths.js";
 import { initializeAgentProject, normalizeDefaultAgentId, } from "@downcity/agent";
 import { emitCliBlock, emitCliList } from "../../shared/CliReporter.js";
 import { CliError } from "../../shared/CliError.js";
-import { assertPlatformModelReady, listPlatformModelChoices, } from "../runtime/city-model/ExecutionModelBinding.js";
+import { assertPlatformModelReady, listPlatformModelChoices, } from "../../city/runtime/city-model/ExecutionModelBinding.js";
 /**
  * init 命令入口。
  *

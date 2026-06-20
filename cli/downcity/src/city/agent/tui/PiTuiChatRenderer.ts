@@ -11,9 +11,9 @@ import type { AgentSessionEvent } from "@downcity/agent";
 import type {
   AgentChatInteractiveRenderSnapshot,
   AgentChatInteractiveRendererPort,
-} from "../../types/AgentChatInteractive.js";
-import { StreamingUIController } from "./controllers/StreamingUI.js";
-import type { MessageListComponent } from "./components/MessageList.js";
+} from "@/city/types/AgentChatInteractive.js";
+import { StreamingUIController } from "@/city/agent/tui/controllers/StreamingUI.js";
+import type { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
 
 /**
  * pi-tui 版交互式渲染器。

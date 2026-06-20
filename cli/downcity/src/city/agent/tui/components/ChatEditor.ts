@@ -8,7 +8,7 @@
 
 import { Editor, type TUI } from "@earendil-works/pi-tui";
 
-import { createEditorTheme } from "../theme/pi-tui-theme.js";
+import { createEditorTheme } from "@/city/agent/tui/theme/pi-tui-theme.js";
 
 /**
  * 输入框提交回调。

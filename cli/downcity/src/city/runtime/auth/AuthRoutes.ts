@@ -7,14 +7,14 @@
  */
 
 import { Hono, type Context } from "hono";
-import type { AuthService } from "./AuthService.js";
-import { AuthService as DefaultAuthService } from "./AuthService.js";
-import { isAuthError } from "./AuthError.js";
+import type { AuthService } from "@/city/runtime/auth/AuthService.js";
+import { AuthService as DefaultAuthService } from "@/city/runtime/auth/AuthService.js";
+import { isAuthError } from "@/city/runtime/auth/AuthError.js";
 import {
   createRequireAuthMiddleware,
   getAuthPrincipal,
   type AuthMiddlewareVariables,
-} from "./AuthMiddleware.js";
+} from "@/city/runtime/auth/AuthMiddleware.js";
 
 /**
  * 注册 auth 路由。

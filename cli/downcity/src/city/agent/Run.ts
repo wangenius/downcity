@@ -19,13 +19,13 @@ import {
 } from "@downcity/agent";
 import { Shell } from "@downcity/shell";
 import { AgentHTTP, AgentRPC } from "@downcity/server";
-import type { AgentStartOptions } from "../types/AgentStartOptions.js";
-import { CliError } from "../../shared/CliError.js";
-import { createRuntimeModel } from "../runtime/city-model/CreateRuntimeModel.js";
-import { mergeProcessEnvWithPlatformGlobalEnv } from "../env/ProcessEnv.js";
-import { resolveAgentId } from "../../shared/IndexSupport.js";
-import { startAgentHttpGateway } from "./AgentHttpGateway.js";
-import { createCityBuiltinPlugins } from "../runtime/plugins/CityBuiltinPlugins.js";
+import type { AgentStartOptions } from "@/city/types/AgentStartOptions.js";
+import { CliError } from "@/shared/CliError.js";
+import { createRuntimeModel } from "@/city/runtime/city-model/CreateRuntimeModel.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "@/city/env/ProcessEnv.js";
+import { resolveAgentId } from "@/shared/IndexSupport.js";
+import { startAgentHttpGateway } from "@/city/agent/AgentHttpGateway.js";
+import { createCityBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。

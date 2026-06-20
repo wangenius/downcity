@@ -5,10 +5,10 @@
  * - 负责读取当前 Federation 成员资格、构建菜单项、处理用户动作。
  * - 与 TUI 渲染解耦，便于单独测试和后续扩展。
  */
-import type { FederationMembershipState, FederationProfile } from "../types/FederationMembership.js";
-import type { CityBalanceAccount } from "../types/CityBalance.js";
-import type { CityUserSession } from "../types/CitySession.js";
-import type { tui_list_item } from "../types/Tui.js";
+import type { FederationMembershipState, FederationProfile } from "../../city/types/FederationMembership.js";
+import type { CityBalanceAccount } from "../../city/types/CityBalance.js";
+import type { CityUserSession } from "../../city/types/CitySession.js";
+import type { tui_list_item } from "../../city/types/Tui.js";
 /** Federation 管理器可选动作。 */
 export type city_manager_action = "status" | "use" | "connect" | "list" | "login" | "whoami" | "recharge" | "logout" | "language" | "exit";
 /** Federation 管理器状态快照。 */

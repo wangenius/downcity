@@ -7,7 +7,7 @@
  * - `.env` 只保存 database name 与 binding，不暴露内部 database id。
  * - dry-run 不创建远程资源，只使用已有 database name 解析临时 Wrangler 配置。
  */
-import type { FederationProjectConfigFile, FederationProjectDeployEnvFile } from "../../types/FederationProjectConfig.js";
+import type { FederationProjectConfigFile, FederationProjectDeployEnvFile } from "../../../federation/types/FederationProjectConfig.js";
 /** D1 解析参数。 */
 export interface ResolveD1DatabaseParams {
     /** City 项目配置文件。 */

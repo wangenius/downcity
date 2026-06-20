@@ -6,10 +6,10 @@
  * - 真正刷新逻辑位于 City SDK 与服务端 EnvService，CLI 不复制业务规则。
  */
 import { CityPact } from "@downcity/city";
-import { adminAuth } from "../../auth/admin.js";
-import { adminErrorMessage, rethrowAdminAuthError } from "../../admin/auth-error.js";
-import { readActiveServer } from "../../core/session.js";
-import { showError, showSuccess } from "../../core/ui.js";
+import { adminAuth } from "../../../federation/auth/admin.js";
+import { adminErrorMessage, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
+import { readActiveServer } from "../../../federation/core/session.js";
+import { showError, showSuccess } from "../../../federation/core/ui.js";
 import { t } from "../../../shared/CliLocale.js";
 /**
  * 刷新当前 active City 的 runtime env cache。

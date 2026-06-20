@@ -10,14 +10,14 @@ import type {
   StoredChannelAccount,
   UpsertChannelAccountInput,
 } from "@downcity/agent";
-import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
-import type { PlatformStoreContext } from "./StoreShared.js";
+import { decryptText, decryptTextSync, encryptText } from "@/city/runtime/store/crypto.js";
+import type { PlatformStoreContext } from "@/city/runtime/store/StoreShared.js";
 import {
   normalizeChannelAccountChannel,
   normalizeNonEmptyText,
   nowIso,
   optionalTrimmedText,
-} from "./StoreShared.js";
+} from "@/city/runtime/store/StoreShared.js";
 
 /**
  * 同步列出 chat accounts。

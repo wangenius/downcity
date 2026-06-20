@@ -5,8 +5,8 @@
  * - 负责侧边栏选择、文本输入、密码输入的交互循环。
  * - 与 Render 模块配合：数据变更时调用 Render 刷新屏幕。
  */
-import { type blessed_textbox_element, type shell_layout } from "./AdminTuiShell.js";
-import type { admin_tui_select_option } from "../types/AdminTui.js";
+import { type blessed_textbox_element, type shell_layout } from "../../federation/tui/AdminTuiShell.js";
+import type { admin_tui_select_option } from "../../federation/types/AdminTui.js";
 /**
  * 运行侧边栏单选。
  */

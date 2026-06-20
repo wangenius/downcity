@@ -7,8 +7,8 @@
  * - `downfed` CLI 负责 Federation 基础设施管理；`city federation` 只负责让本机 City 加入/登录 Federation。
  */
 import { parseBoolean } from "../../shared/IndexSupport.js";
-import { DEFAULT_CITY_ID } from "../shared/CityStateStore.js";
-import { emit_federation_status, emitCityUserWhoami, emit_federation_list, run_federation_join_command, run_federation_leave_command, run_federation_login_command, run_federation_logout_command, run_federation_use_command, run_interactive_federation_manager, } from "../shared/FederationConnection.js";
+import { DEFAULT_CITY_ID } from "../../city/shared/CityStateStore.js";
+import { emit_federation_status, emitCityUserWhoami, emit_federation_list, run_federation_join_command, run_federation_leave_command, run_federation_login_command, run_federation_logout_command, run_federation_use_command, run_interactive_federation_manager, } from "../../city/shared/FederationConnection.js";
 import { helpText, t } from "../../shared/CliLocale.js";
 /**
  * 注册 `city federation` 命令组。

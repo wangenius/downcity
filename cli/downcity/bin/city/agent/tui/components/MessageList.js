@@ -7,10 +7,10 @@
  * - 支持更新 assistant 流式文本。
  */
 import { Container, Spacer, Text } from "@earendil-works/pi-tui";
-import { current_theme } from "../theme/index.js";
-import { AssistantMessageComponent } from "./AssistantMessage.js";
-import { ToolCallBlockComponent } from "./ToolCallBlock.js";
-import { UserMessageComponent } from "./UserMessage.js";
+import { current_theme } from "../../../../city/agent/tui/theme/index.js";
+import { AssistantMessageComponent } from "../../../../city/agent/tui/components/AssistantMessage.js";
+import { ToolCallBlockComponent } from "../../../../city/agent/tui/components/ToolCallBlock.js";
+import { UserMessageComponent } from "../../../../city/agent/tui/components/UserMessage.js";
 /**
  * 消息流展示组件。
  */

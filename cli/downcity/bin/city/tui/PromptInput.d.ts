@@ -5,7 +5,7 @@
  * - 覆盖 text / password / number 三种输入交互。
  * - 负责文本框创建、校验与 footer 提示。
  */
-import { type PromptObject } from "./Prompts.js";
+import { type PromptObject } from "../../city/tui/Prompts.js";
 /**
  * 运行文本输入 prompt（含 password）。
  */

@@ -8,7 +8,7 @@
  */
 
 import blessed from "neo-blessed";
-import { t } from "../../shared/CliLocale.js";
+import { t } from "@/shared/CliLocale.js";
 
 /**
  * TUI Shell 配置。

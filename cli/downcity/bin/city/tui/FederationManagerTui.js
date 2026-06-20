@@ -8,9 +8,9 @@
  */
 import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
-import { resolve_loop_selectable_index, resolve_next_loop_selectable_index, } from "./SelectableList.js";
-import { build_city_manager_state, handle_city_action, handle_city_prompt_action, is_prompt_action, } from "./FederationManagerState.js";
-import { format_header, format_city_item_label, format_city_detail, format_footer, is_disabled_item, } from "./FederationManagerFormat.js";
+import { resolve_loop_selectable_index, resolve_next_loop_selectable_index, } from "../../city/tui/SelectableList.js";
+import { build_city_manager_state, handle_city_action, handle_city_prompt_action, is_prompt_action, } from "../../city/tui/FederationManagerState.js";
+import { format_header, format_city_item_label, format_city_detail, format_footer, is_disabled_item, } from "../../city/tui/FederationManagerFormat.js";
 export async function open_city_manager_tui() {
     let next_state_params;
     while (true) {

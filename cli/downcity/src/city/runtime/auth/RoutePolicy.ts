@@ -9,9 +9,9 @@
 import type { MiddlewareHandler } from "hono";
 import type { AuthRoutePolicy } from "@downcity/agent";
 import type { AuthPermissionKey } from "@downcity/agent";
-import { isAuthError as isAuthDomainError } from "./AuthError.js";
-import type { AuthService } from "./AuthService.js";
-import { AUTH_PRINCIPAL_CONTEXT_KEY, type AuthMiddlewareVariables } from "./AuthMiddleware.js";
+import { isAuthError as isAuthDomainError } from "@/city/runtime/auth/AuthError.js";
+import type { AuthService } from "@/city/runtime/auth/AuthService.js";
+import { AUTH_PRINCIPAL_CONTEXT_KEY, type AuthMiddlewareVariables } from "@/city/runtime/auth/AuthMiddleware.js";
 
 /**
  * Server 侧路由权限矩阵。

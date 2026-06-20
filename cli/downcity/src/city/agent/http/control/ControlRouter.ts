@@ -14,7 +14,7 @@
 
 import { Hono } from "hono";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { registerControlApiRoutes } from "./ControlApiRoutes.js";
+import { registerControlApiRoutes } from "@/city/agent/http/control/ControlApiRoutes.js";
 
 /**
  * control router 参数。

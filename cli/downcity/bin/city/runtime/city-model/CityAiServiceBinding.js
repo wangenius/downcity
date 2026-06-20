@@ -7,7 +7,7 @@
  * - 运行时模型通过 City 自己保存的 User City session 构造。
  */
 import { CityPact } from "@downcity/city";
-import { CityUserManager } from "../../shared/CityUserManager.js";
+import { CityUserManager } from "../../../city/shared/CityUserManager.js";
 const cityUserManager = new CityUserManager();
 /**
  * 读取管理端模型目录。

@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PlatformStore } from "../runtime/store/index.js";
+import { PlatformStore } from "../../city/runtime/store/index.js";
 /** 默认 Federation 地址。 */
 export const DEFAULT_FEDERATION_URL = "https://base.downcity.ai";
 /** 默认 City 标识。 */

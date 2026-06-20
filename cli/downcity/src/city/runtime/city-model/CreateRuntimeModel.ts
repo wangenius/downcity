@@ -11,7 +11,7 @@ import type { DowncityConfig } from "@downcity/agent";
 import { getLogger } from "@downcity/agent";
 import { normalizeAgentModel } from "@downcity/agent/internal/model/CityModelAdapter.js";
 import type { LanguageModel } from "ai";
-import { createCityAiAgentModel } from "./CityAiServiceBinding.js";
+import { createCityAiAgentModel } from "@/city/runtime/city-model/CityAiServiceBinding.js";
 
 type ModelLogContext = {
   /**

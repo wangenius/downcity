@@ -8,12 +8,12 @@
  */
 
 import type { Command } from "commander";
-import { PlatformStore } from "../runtime/store/index.js";
+import { PlatformStore } from "@/city/runtime/store/index.js";
 import type { StoredEnvEntry } from "@downcity/agent";
-import { emitCliBlock, emitCliList } from "../../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { parseBoolean } from "../../shared/IndexSupport.js";
-import { helpText, t } from "../../shared/CliLocale.js";
+import { emitCliBlock, emitCliList } from "@/shared/CliReporter.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
+import { parseBoolean } from "@/shared/IndexSupport.js";
+import { helpText, t } from "@/shared/CliLocale.js";
 
 /**
  * 规范化 env key。

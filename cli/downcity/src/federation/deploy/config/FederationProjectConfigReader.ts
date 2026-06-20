@@ -9,12 +9,12 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { CliError } from "../../../shared/CliError.js";
+import { CliError } from "@/shared/CliError.js";
 import type {
   FederationProjectConfig,
   FederationProjectConfigFile,
   FederationProjectDatabaseConfig,
-} from "../../types/FederationProjectConfig.js";
+} from "@/federation/types/FederationProjectConfig.js";
 
 const FEDERATION_CONFIG_FILE_NAME = "federation.json";
 

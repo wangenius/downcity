@@ -5,20 +5,20 @@
  * - 裸 `city agent` 在交互式终端里进入这里，而不是只输出静态 help。
  * - 保留原有脚本化子命令不变，只把高频的人类操作收敛成轻量 manager。
  */
-import prompts from "../tui/Prompts.js";
+import prompts from "../../city/tui/Prompts.js";
 import fs from "fs-extra";
-import { initCommand } from "./Init.js";
-import { runCommand } from "./Run.js";
-import { startCommand } from "./Start.js";
-import { stopCommand } from "./Stop.js";
-import { restartCommand } from "./Restart.js";
-import { chatCommand } from "./AgentChat.js";
-import { listRegisteredAgentsForCli } from "./AgentSelection.js";
+import { initCommand } from "../../city/agent/Init.js";
+import { runCommand } from "../../city/agent/Run.js";
+import { startCommand } from "../../city/agent/Start.js";
+import { stopCommand } from "../../city/agent/Stop.js";
+import { restartCommand } from "../../city/agent/Restart.js";
+import { chatCommand } from "../../city/agent/AgentChat.js";
+import { listRegisteredAgentsForCli } from "../../city/agent/AgentSelection.js";
 import { emitCliBlock, emitCliList } from "../../shared/CliReporter.js";
 import { injectAgentContext } from "../../shared/IndexSupport.js";
-import { prepareForegroundAgent } from "../shared/CityAgentRuntime.js";
-import { getDowncityJsonPath } from "../config/Paths.js";
-import { PlatformStore } from "../runtime/store/index.js";
+import { prepareForegroundAgent } from "../../city/shared/CityAgentRuntime.js";
+import { getDowncityJsonPath } from "../../city/config/Paths.js";
+import { PlatformStore } from "../../city/runtime/store/index.js";
 import { t } from "../../shared/CliLocale.js";
 const CHAT_CHANNELS = ["telegram", "feishu", "qq"];
 function isInteractiveTerminal() {

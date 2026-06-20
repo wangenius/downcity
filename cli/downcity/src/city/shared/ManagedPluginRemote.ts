@@ -6,7 +6,7 @@
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
 import type {
   PluginCliBaseOptions,
   PluginCommandResponse,
@@ -18,8 +18,8 @@ import {
   parseCommandPayload,
   resolvePluginProjectRoot,
   validateAgentProjectRoot,
-} from "./PluginTargetSupport.js";
-import { callServer } from "../process/daemon/Client.js";
+} from "@/city/shared/PluginTargetSupport.js";
+import { callServer } from "@/city/process/daemon/Client.js";
 
 const PLUGIN_COMMAND_TIMEOUT_MS = 120_000;
 

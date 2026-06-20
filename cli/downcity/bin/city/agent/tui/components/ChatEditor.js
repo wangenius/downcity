@@ -6,7 +6,7 @@
  * - 负责设置边框颜色、清空输入、获取当前文本。
  */
 import { Editor } from "@earendil-works/pi-tui";
-import { createEditorTheme } from "../theme/pi-tui-theme.js";
+import { createEditorTheme } from "../../../../city/agent/tui/theme/pi-tui-theme.js";
 /**
  * 聊天输入框。
  */

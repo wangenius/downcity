@@ -5,8 +5,8 @@
  * - 这是 `downfed` / `downfed manage` 的默认交互入口。
  * - 左侧 sidebar 承载 Federation 操作菜单，右侧 main_section 展示当前项详情。
  */
-import type { FederationAction } from "../types/Interactive.js";
-import type { tui_action_result } from "../types/Tui.js";
+import type { FederationAction } from "../../federation/types/Interactive.js";
+import type { tui_action_result } from "../../federation/types/Tui.js";
 interface federation_dashboard_options {
     /** 执行 Federation 仪表盘动作。 */
     run_action: (action: FederationAction) => Promise<tui_action_result>;

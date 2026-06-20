@@ -7,10 +7,10 @@
  * - 不包含交互菜单、输出渲染或用户身份校验逻辑。
  * - 向后兼容旧状态字段 `base_url` / `selected_base_url`，迁移时自动改写为 federation_url。
  */
-import type { FederationProfile } from "../types/FederationMembership.js";
-import type { CityUserSession } from "../types/CitySession.js";
+import type { FederationProfile } from "../../city/types/FederationMembership.js";
+import type { CityUserSession } from "../../city/types/CitySession.js";
 import type { CliLocale } from "../../shared/types/CliLocale.js";
-import type { CityLocalState } from "../types/CityState.js";
+import type { CityLocalState } from "../../city/types/CityState.js";
 /** 默认 Federation 地址。 */
 export declare const DEFAULT_FEDERATION_URL = "https://base.downcity.ai";
 /** 默认 City 标识。 */

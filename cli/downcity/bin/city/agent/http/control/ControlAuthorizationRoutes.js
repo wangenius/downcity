@@ -6,7 +6,7 @@
  * - City 只做 HTTP 适配，具体授权数据读写统一交给 chat plugin access action。
  */
 import { CHAT_AUTHORIZATION_ACTIONS } from "@downcity/plugins";
-import { buildControlRouteAliases } from "../../control/CommonHelpers.js";
+import { buildControlRouteAliases } from "../../../../city/agent/control/CommonHelpers.js";
 const CHAT_PLUGIN_NAME = "chat";
 function normalizeChatChannel(value) {
     const text = String(value || "").trim().toLowerCase();

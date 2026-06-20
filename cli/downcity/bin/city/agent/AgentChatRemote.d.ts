@@ -6,7 +6,7 @@
  * - 不处理命令行交互与本地 agent 解析，只负责与 daemon RPC 的通信侧逻辑。
  */
 import { RemoteAgent, type AgentSessionSummary, type RemoteAgentSession } from "@downcity/agent";
-import { type AgentChatSessionSummaryView, type AgentChatTransportOptions } from "./AgentChatTypes.js";
+import { type AgentChatSessionSummaryView, type AgentChatTransportOptions } from "../../city/agent/AgentChatTypes.js";
 /**
  * 远端访问目标。
  */

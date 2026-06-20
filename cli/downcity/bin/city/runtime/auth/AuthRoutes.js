@@ -6,9 +6,9 @@
  * - 路由层不做领域判断，所有业务逻辑统一委托给 `AuthService`。
  */
 import { Hono } from "hono";
-import { AuthService as DefaultAuthService } from "./AuthService.js";
-import { isAuthError } from "./AuthError.js";
-import { createRequireAuthMiddleware, getAuthPrincipal, } from "./AuthMiddleware.js";
+import { AuthService as DefaultAuthService } from "../../../city/runtime/auth/AuthService.js";
+import { isAuthError } from "../../../city/runtime/auth/AuthError.js";
+import { createRequireAuthMiddleware, getAuthPrincipal, } from "../../../city/runtime/auth/AuthMiddleware.js";
 /**
  * 注册 auth 路由。
  */

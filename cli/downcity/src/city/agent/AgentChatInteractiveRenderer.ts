@@ -12,16 +12,16 @@ import type { AgentSessionEvent } from "@downcity/agent";
 import type {
   AgentChatInteractiveRenderSnapshot,
   AgentChatInteractiveRendererPort,
-} from "../types/AgentChatInteractive.js";
+} from "@/city/types/AgentChatInteractive.js";
 import {
   createSpinner,
   shouldRenderSpinner,
   type Spinner,
-} from "../utils/cli/Spinner.js";
+} from "@/city/utils/cli/Spinner.js";
 import {
   format_tool_call_block,
   format_tool_result_block,
-} from "./AgentChatToolFormatter.js";
+} from "@/city/agent/AgentChatToolFormatter.js";
 
 function format_approval_request_block(event: Extract<AgentSessionEvent, { type: "tool-approval-request" }>): {
   title: string;

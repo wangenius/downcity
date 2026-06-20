@@ -6,11 +6,11 @@
  * - Console UI 已从 City 启动链路断开，因此总览不再展示 Console 运行态。
  * - 与进程控制逻辑解耦，便于后续继续拆分命令入口文件。
  */
-import { getManagedAgentRegistryPath, getCityPidPath, } from "../../../process/registry/CityPaths.js";
-import { isCityProcessAlive, readCityPid } from "../../../process/registry/CityRuntime.js";
+import { getManagedAgentRegistryPath, getCityPidPath, } from "../../../../city/process/registry/CityPaths.js";
+import { isCityProcessAlive, readCityPid } from "../../../../city/process/registry/CityRuntime.js";
 import { emitCliBlock, emitCliList } from "../../../../shared/CliReporter.js";
-import { resolveRunningManagedAgents } from "./GatewayProcess.js";
-import { read_federation_membership_state } from "../../../shared/FederationConnection.js";
+import { resolveRunningManagedAgents } from "../../../../city/runtime/gateway/runtime/GatewayProcess.js";
+import { read_federation_membership_state } from "../../../../city/shared/FederationConnection.js";
 /**
  * 打印当前受管 agent 面板。
  */

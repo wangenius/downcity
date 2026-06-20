@@ -9,12 +9,12 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import prompts from "../tui/Prompts.js";
-import { getDowncityJsonPath } from "../config/Paths.js";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { CliError } from "../../shared/CliError.js";
-import { resolveAgentId } from "../../shared/IndexSupport.js";
-import { listPlatformModelChoices } from "../runtime/city-model/ExecutionModelBinding.js";
+import prompts from "@/city/tui/Prompts.js";
+import { getDowncityJsonPath } from "@/city/config/Paths.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { CliError } from "@/shared/CliError.js";
+import { resolveAgentId } from "@/shared/IndexSupport.js";
+import { listPlatformModelChoices } from "@/city/runtime/city-model/ExecutionModelBinding.js";
 
 /**
  * 读取当前 agent 的 execution.modelId。
@@ -109,7 +109,7 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   });
 
   // 关键点（中文）：检测控制面是否运行，决定能否即时重启。
-  const { isCityRunning } = await import("../process/registry/CityRuntime.js");
+  const { isCityRunning } = await import("@/city/process/registry/CityRuntime.js");
   const cityRuntimeRunning = await isCityRunning();
 
   if (!cityRuntimeRunning) {
@@ -133,7 +133,7 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
   })) as { restart?: boolean };
 
   if (restartNow.restart === true) {
-    const { restartCommand } = await import("./Restart.js");
+    const { restartCommand } = await import("@/city/agent/Restart.js");
     try {
       await restartCommand(projectRoot, {});
       return;

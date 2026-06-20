@@ -5,10 +5,10 @@
  * - 该模块承接本机 token 初始化、token 校验与 token 管理等业务语义。
  * - 路由层只调用这里，不直接碰数据库与密码哈希细节。
  */
-import { AuthError } from "./AuthError.js";
-import { AuthStore } from "./AuthStore.js";
-import { extractBearerToken, generateAccessToken, hashAccessToken } from "./TokenService.js";
-import { optionalTrimmedText } from "../store/StoreShared.js";
+import { AuthError } from "../../../city/runtime/auth/AuthError.js";
+import { AuthStore } from "../../../city/runtime/auth/AuthStore.js";
+import { extractBearerToken, generateAccessToken, hashAccessToken } from "../../../city/runtime/auth/TokenService.js";
+import { optionalTrimmedText } from "../../../city/runtime/store/StoreShared.js";
 const LOCAL_CLI_USERNAME = "local-cli";
 const LOCAL_CLI_DISPLAY_NAME = "Local CLI";
 const LOCAL_CLI_PASSWORD_HASH = "[token-only-local-cli]";

@@ -8,8 +8,8 @@
  */
 
 import type { Command } from "commander";
-import { parseBoolean } from "../../shared/IndexSupport.js";
-import { DEFAULT_CITY_ID } from "../shared/CityStateStore.js";
+import { parseBoolean } from "@/shared/IndexSupport.js";
+import { DEFAULT_CITY_ID } from "@/city/shared/CityStateStore.js";
 import {
   emit_federation_status,
   emitCityUserWhoami,
@@ -20,8 +20,8 @@ import {
   run_federation_logout_command,
   run_federation_use_command,
   run_interactive_federation_manager,
-} from "../shared/FederationConnection.js";
-import { helpText, t } from "../../shared/CliLocale.js";
+} from "@/city/shared/FederationConnection.js";
+import { helpText, t } from "@/shared/CliLocale.js";
 
 /**
  * 注册 `city federation` 命令组。

@@ -5,8 +5,8 @@
  * - 这里负责把“哪些接口需要登录、需要什么权限”集中配置。
  * - 当系统还没有任何统一账户用户时，受保护接口默认放行，避免首次 bootstrap 被锁死。
  */
-import { isAuthError as isAuthDomainError } from "./AuthError.js";
-import { AUTH_PRINCIPAL_CONTEXT_KEY } from "./AuthMiddleware.js";
+import { isAuthError as isAuthDomainError } from "../../../city/runtime/auth/AuthError.js";
+import { AUTH_PRINCIPAL_CONTEXT_KEY } from "../../../city/runtime/auth/AuthMiddleware.js";
 /**
  * Server 侧路由权限矩阵。
  */

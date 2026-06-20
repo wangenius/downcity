@@ -3,10 +3,10 @@
  */
 
 import { CityPact } from "@downcity/city";
-import { buildStripeEndpoints } from "../../core/stripe.js";
-import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
-import type { admin_tui_runtime } from "../../types/AdminTui.js";
+import { buildStripeEndpoints } from "@/federation/core/stripe.js";
+import { t } from "@/shared/CliLocale.js";
+import { adminErrorMessage, rethrowAdminAuthError } from "@/federation/admin/auth-error.js";
+import type { admin_tui_runtime } from "@/federation/types/AdminTui.js";
 
 interface StripePaymentListItem {
   /** 支付记录 ID */

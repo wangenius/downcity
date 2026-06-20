@@ -13,8 +13,8 @@ import type {
   ManagedAgentRegistryEntry,
   ManagedAgentRegistryV1,
 } from "@downcity/agent";
-import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "./CityPaths.js";
-import { isCityRunning } from "./CityRuntime.js";
+import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "@/city/process/registry/CityPaths.js";
+import { isCityRunning } from "@/city/process/registry/CityRuntime.js";
 
 const CONSOLE_DIR = getCityRuntimeDirPath();
 const MANAGED_AGENTS_FILE = getManagedAgentRegistryPath();

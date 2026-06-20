@@ -7,7 +7,7 @@
  */
 import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
-import { build_list_style, create_prompt_shell, is_plain_escape_input, } from "./Prompts.js";
+import { build_list_style, create_prompt_shell, is_plain_escape_input, } from "../../city/tui/Prompts.js";
 /**
  * 运行单选 prompt。
  */

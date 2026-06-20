@@ -6,7 +6,7 @@
  * - 校验项目 `execution.modelId` 是否能在 City AIService 中找到。
  * - City 只保存 model id，不保存 provider、key 或 endpoint。
  */
-import { type CityAiModelChoice } from "./CityAiServiceBinding.js";
+import { type CityAiModelChoice } from "../../../city/runtime/city-model/CityAiServiceBinding.js";
 /**
  * City AIService 模型下拉候选项。
  */

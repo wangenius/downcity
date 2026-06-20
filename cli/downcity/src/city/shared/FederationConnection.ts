@@ -8,17 +8,17 @@
  * - CLI 命令装配统一放在 `src/command/FederationCommand.ts`，本模块只保留状态与登录流程。
  */
 
-import { emitCliBlock, emitCliList } from "../../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { performCityUserLogin } from "./CityUserLogin.js";
-import { open_city_manager_tui } from "../tui/FederationManagerTui.js";
-import prompts from "../tui/Prompts.js";
-import { CityUserManager } from "./CityUserManager.js";
+import { emitCliBlock, emitCliList } from "@/shared/CliReporter.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
+import { performCityUserLogin } from "@/city/shared/CityUserLogin.js";
+import { open_city_manager_tui } from "@/city/tui/FederationManagerTui.js";
+import prompts from "@/city/tui/Prompts.js";
+import { CityUserManager } from "@/city/shared/CityUserManager.js";
 import type {
   FederationMembershipState,
   FederationProfile,
-} from "../types/FederationMembership.js";
-import type { CityUserSession } from "../types/CitySession.js";
+} from "@/city/types/FederationMembership.js";
+import type { CityUserSession } from "@/city/types/CitySession.js";
 import {
   DEFAULT_FEDERATION_URL,
   DEFAULT_CITY_ID,
@@ -31,7 +31,7 @@ import {
   resolve_selected_federation_url,
   upsert_federation_profile,
   writeCityState,
-} from "./CityStateStore.js";
+} from "@/city/shared/CityStateStore.js";
 const cityUserManager = new CityUserManager();
 
 function readString(value: unknown): string {

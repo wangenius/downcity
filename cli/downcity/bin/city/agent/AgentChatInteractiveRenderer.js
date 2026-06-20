@@ -7,8 +7,8 @@
  * - 把“终端展示状态机”从主命令流程中拆出，降低 `AgentChat.ts` 复杂度。
  */
 import chalk from "chalk";
-import { createSpinner, shouldRenderSpinner, } from "../utils/cli/Spinner.js";
-import { format_tool_call_block, format_tool_result_block, } from "./AgentChatToolFormatter.js";
+import { createSpinner, shouldRenderSpinner, } from "../../city/utils/cli/Spinner.js";
+import { format_tool_call_block, format_tool_result_block, } from "../../city/agent/AgentChatToolFormatter.js";
 function format_approval_request_block(event) {
     const operation = event.operation || (event.toolName === "shell_write" ? "write" : "exec");
     const command_label = operation === "write" ? "input_preview" : "cmd";

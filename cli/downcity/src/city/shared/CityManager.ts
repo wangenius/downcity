@@ -9,15 +9,15 @@
 import {
   restartCityRuntimeCommand,
   stopCityRuntimeCommand,
-} from "../runtime/gateway/runtime/GatewayProcess.js";
-import { runInteractiveAgentManager } from "../agent/AgentManager.js";
-import { runInteractivePluginManager } from "../command/PluginCommand.js";
-import { run_interactive_federation_manager } from "./FederationConnection.js";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { t } from "../../shared/CliLocale.js";
-import { promptAndPersistCityCliLocale } from "./InteractiveLocale.js";
-import { open_city_dashboard } from "../tui/CityDashboard.js";
-import type { tui_action_result } from "../types/Tui.js";
+} from "@/city/runtime/gateway/runtime/GatewayProcess.js";
+import { runInteractiveAgentManager } from "@/city/agent/AgentManager.js";
+import { runInteractivePluginManager } from "@/city/command/PluginCommand.js";
+import { run_interactive_federation_manager } from "@/city/shared/FederationConnection.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { t } from "@/shared/CliLocale.js";
+import { promptAndPersistCityCliLocale } from "@/city/shared/InteractiveLocale.js";
+import { open_city_dashboard } from "@/city/tui/CityDashboard.js";
+import type { tui_action_result } from "@/city/types/Tui.js";
 
 type CityHomeAction =
   | "stop"

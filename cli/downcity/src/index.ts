@@ -12,7 +12,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveCliLocale, setCliLocale } from "./shared/CliLocale.js";
+import { resolveCliLocale, setCliLocale } from "@/shared/CliLocale.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,9 +31,9 @@ if (argv.length === 1 && (argv[0] === "-v" || argv[0] === "--version")) {
 const invoked = process.argv[1] ? process.argv[1].replace(/\\/g, "/").split("/").pop() : "downcity";
 
 if (invoked === "downfed") {
-  const { runDownfedCli } = await import("./cli/downfed.js");
+  const { runDownfedCli } = await import("@/cli/downfed.js");
   await runDownfedCli();
 } else {
-  const { runDowncityCli } = await import("./cli/downcity.js");
+  const { runDowncityCli } = await import("@/cli/downcity.js");
   await runDowncityCli();
 }

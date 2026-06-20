@@ -7,7 +7,7 @@
  */
 
 import blessed from "neo-blessed";
-import { t } from "../../shared/CliLocale.js";
+import { t } from "@/shared/CliLocale.js";
 
 export interface blessed_box_element extends blessed.Widgets.BoxElement {
   focus: () => void;

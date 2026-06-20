@@ -16,20 +16,20 @@ import {
   getDowncitySessionMessagesArchiveDirPath,
   getDowncitySessionMessagesArchivePath,
   getDowncitySessionMessagesPath,
-} from "../../../config/Paths.js";
-import type { ControlSessionExecuteRequestBody } from "../../control/types/ControlSessionExecute.js";
-import type { ControlRouteRegistrationParams } from "./types/ControlRoutes.js";
+} from "@/city/config/Paths.js";
+import type { ControlSessionExecuteRequestBody } from "@/city/agent/control/types/ControlSessionExecute.js";
+import type { ControlRouteRegistrationParams } from "@/city/agent/http/control/types/ControlRoutes.js";
 import {
   buildControlRouteAliases,
   decodeMaybe,
   toLimit,
-} from "../../control/CommonHelpers.js";
+} from "@/city/agent/control/CommonHelpers.js";
 import {
   listControlSessionSummaries,
   loadSessionMessagesFromFile,
   toUiMessageTimeline,
-} from "../../control/Helpers.js";
-import { executeBySessionId } from "../../control/ExecuteBySession.js";
+} from "@/city/agent/control/Helpers.js";
+import { executeBySessionId } from "@/city/agent/control/ExecuteBySession.js";
 
 const CITY_CHAT_SESSION_ID = "city-chat-main";
 

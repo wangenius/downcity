@@ -8,7 +8,7 @@
 
 import type { EditorTheme, MarkdownTheme, SelectListTheme } from "@earendil-works/pi-tui";
 
-import { current_theme } from "./theme.js";
+import { current_theme } from "@/city/agent/tui/theme/theme.js";
 
 /**
  * 创建 pi-tui Markdown 组件可用的主题。

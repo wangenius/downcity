@@ -5,14 +5,14 @@
  * - 负责读取当前 Federation 成员资格、构建菜单项、处理用户动作。
  * - 与 TUI 渲染解耦，便于单独测试和后续扩展。
  */
-import { DEFAULT_CITY_ID, list_federations, read_current_city_session, readPersistedCityCliLocale, readCityState, resolve_selected_federation_url, upsert_federation_profile, writeCityState, } from "../shared/CityStateStore.js";
-import { performCityUserLogin } from "../shared/CityUserLogin.js";
-import { CityUserManager } from "../shared/CityUserManager.js";
-import { readCurrentCityBalance, rechargeCurrentCityUser, } from "../shared/CityBalance.js";
-import { promptAndPersistCityCliLocale } from "../shared/InteractiveLocale.js";
+import { DEFAULT_CITY_ID, list_federations, read_current_city_session, readPersistedCityCliLocale, readCityState, resolve_selected_federation_url, upsert_federation_profile, writeCityState, } from "../../city/shared/CityStateStore.js";
+import { performCityUserLogin } from "../../city/shared/CityUserLogin.js";
+import { CityUserManager } from "../../city/shared/CityUserManager.js";
+import { readCurrentCityBalance, rechargeCurrentCityUser, } from "../../city/shared/CityBalance.js";
+import { promptAndPersistCityCliLocale } from "../../city/shared/InteractiveLocale.js";
 import { getCliLocale, t } from "../../shared/CliLocale.js";
-import { prompt_city_url, prompt_federation, prompt_recharge_input, } from "./FederationManagerPrompts.js";
-import { format_membership_detail, format_federation_list_detail, format_login_detail, format_balance_detail, format_current_user_detail, format_session_detail, format_recharge_result, format_error_detail, loading_text, format_locale_description, build_city_subtitle, } from "./FederationManagerFormat.js";
+import { prompt_city_url, prompt_federation, prompt_recharge_input, } from "../../city/tui/FederationManagerPrompts.js";
+import { format_membership_detail, format_federation_list_detail, format_login_detail, format_balance_detail, format_current_user_detail, format_session_detail, format_recharge_result, format_error_detail, loading_text, format_locale_description, build_city_subtitle, } from "../../city/tui/FederationManagerFormat.js";
 const cityUserManager = new CityUserManager();
 export function read_federation_membership_state() {
     const state = readCityState();

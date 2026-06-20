@@ -8,8 +8,8 @@
  */
 import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
-import { run_confirm_prompt, run_multiselect_prompt, run_select_prompt, } from "./PromptSelect.js";
-import { run_number_prompt, run_text_prompt } from "./PromptInput.js";
+import { run_confirm_prompt, run_multiselect_prompt, run_select_prompt, } from "../../city/tui/PromptSelect.js";
+import { run_number_prompt, run_text_prompt } from "../../city/tui/PromptInput.js";
 /**
  * City 使用的 prompts 默认导出。
  */

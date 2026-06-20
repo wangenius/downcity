@@ -7,7 +7,7 @@
  * - 支持更新 assistant 流式文本。
  */
 import { type Component } from "@earendil-works/pi-tui";
-import type { TranscriptEntry } from "../types.js";
+import type { TranscriptEntry } from "../../../../city/agent/tui/types.js";
 /**
  * 消息流展示组件。
  */

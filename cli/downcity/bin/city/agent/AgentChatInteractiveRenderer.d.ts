@@ -7,7 +7,7 @@
  * - 把“终端展示状态机”从主命令流程中拆出，降低 `AgentChat.ts` 复杂度。
  */
 import type { AgentSessionEvent } from "@downcity/agent";
-import type { AgentChatInteractiveRenderSnapshot, AgentChatInteractiveRendererPort } from "../types/AgentChatInteractive.js";
+import type { AgentChatInteractiveRenderSnapshot, AgentChatInteractiveRendererPort } from "../../city/types/AgentChatInteractive.js";
 /**
  * 交互式单轮渲染器。
  */

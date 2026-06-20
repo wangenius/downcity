@@ -6,7 +6,7 @@
  * - 内部已经按职责拆成 schema、secure settings、env、chat accounts 多个模块。
  * - 这样既能保持外部 API 简洁，也能把通用存储层控制在可维护的模块粒度内。
  */
-import type { PlatformStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "../../../city/runtime/store/StoreShared.js";
 import type { StoredChannelAccount, StoredEnvEntry, StoredGlobalEnvEntry, UpsertChannelAccountInput, UpsertEnvEntryInput, UpsertGlobalEnvEntryInput } from "@downcity/agent";
 /**
  * 平台控制面全局存储门面。

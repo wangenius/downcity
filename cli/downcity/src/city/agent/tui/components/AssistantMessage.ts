@@ -8,10 +8,10 @@
 
 import { Container, Markdown, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
-import { STATUS_BULLET } from "../constant/symbols.js";
-import { MESSAGE_INDENT } from "../constant/rendering.js";
-import { current_theme } from "../theme/index.js";
-import { createMarkdownTheme } from "../theme/pi-tui-theme.js";
+import { STATUS_BULLET } from "@/city/agent/tui/constant/symbols.js";
+import { MESSAGE_INDENT } from "@/city/agent/tui/constant/rendering.js";
+import { current_theme } from "@/city/agent/tui/theme/index.js";
+import { createMarkdownTheme } from "@/city/agent/tui/theme/pi-tui-theme.js";
 
 /**
  * 渲染一条助手消息。

@@ -8,9 +8,9 @@
  */
 
 import type { Command } from "commander";
-import { registerChatAuthCommands } from "./ChatAuthCommand.js";
-import { runInteractiveChatManager } from "../shared/ChatManager.js";
-import { helpText, t } from "../../shared/CliLocale.js";
+import { registerChatAuthCommands } from "@/city/command/ChatAuthCommand.js";
+import { runInteractiveChatManager } from "@/city/shared/ChatManager.js";
+import { helpText, t } from "@/shared/CliLocale.js";
 
 /**
  * 注册 `city chat` 交互式入口。

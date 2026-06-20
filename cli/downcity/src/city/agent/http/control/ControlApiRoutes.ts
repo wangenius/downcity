@@ -7,11 +7,11 @@
  * - 单 agent control API 统一暴露在 `/api/control/*` 下。
  */
 
-import type { ControlRouteRegistrationParams } from "./types/ControlRoutes.js";
-import { registerControlAuthorizationRoutes } from "./ControlAuthorizationRoutes.js";
-import { registerControlSessionRoutes } from "./SessionRoutes.js";
-import { registerControlOverviewRoutes } from "./OverviewRoutes.js";
-import { registerControlTaskRoutes } from "./TaskRoutes.js";
+import type { ControlRouteRegistrationParams } from "@/city/agent/http/control/types/ControlRoutes.js";
+import { registerControlAuthorizationRoutes } from "@/city/agent/http/control/ControlAuthorizationRoutes.js";
+import { registerControlSessionRoutes } from "@/city/agent/http/control/SessionRoutes.js";
+import { registerControlOverviewRoutes } from "@/city/agent/http/control/OverviewRoutes.js";
+import { registerControlTaskRoutes } from "@/city/agent/http/control/TaskRoutes.js";
 
 /**
  * 注册单 agent control API 路由。

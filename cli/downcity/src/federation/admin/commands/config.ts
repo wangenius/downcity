@@ -6,7 +6,7 @@
  * - 这里保留空壳是为了避免历史导入直接报错
  */
 
-import { type AdminSession } from "../../core/session.js";
+import { type AdminSession } from "@/federation/core/session.js";
 
 export async function changeServerUrl(_session: AdminSession): Promise<boolean> {
   return false;

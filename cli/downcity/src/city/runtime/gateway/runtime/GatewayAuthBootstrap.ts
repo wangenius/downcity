@@ -8,8 +8,8 @@
  * - 启动流程不再写入任何本机默认 token 状态，只显示一次明文 token。
  */
 
-import { AuthService } from "../../auth/AuthService.js";
-import { emitCliBlock } from "../../../../shared/CliReporter.js";
+import { AuthService } from "@/city/runtime/auth/AuthService.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
 
 const DEFAULT_GATEWAY_BOOTSTRAP_TOKEN_NAME = "city-bootstrap";
 

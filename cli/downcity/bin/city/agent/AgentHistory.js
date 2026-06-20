@@ -8,10 +8,10 @@
  */
 import fs from "fs-extra";
 import path from "node:path";
-import { getDowncityChannelDirPath, getDowncityChannelMetaPath, getDowncityChatSessionDirPath, getDowncitySessionDirPath, } from "../config/Paths.js";
+import { getDowncityChannelDirPath, getDowncityChannelMetaPath, getDowncityChatSessionDirPath, getDowncitySessionDirPath, } from "../../city/config/Paths.js";
 import { CliError } from "../../shared/CliError.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "../../city/utils/cli/CliOutput.js";
 import { resolveAgentId } from "../../shared/IndexSupport.js";
 function normalizeText(input) {
     return String(input || "").trim();

@@ -8,7 +8,7 @@
  * - 支持实时搜索：有 query 时显示 Search 行，Esc 先清 query 再取消。
  */
 import { type Component, type Focusable } from "@earendil-works/pi-tui";
-import type { AgentChatSessionSummaryView } from "../../AgentChatTypes.js";
+import type { AgentChatSessionSummaryView } from "../../../../city/agent/AgentChatTypes.js";
 /**
  * Session 选择结果。
  */

@@ -5,7 +5,7 @@
  * - 当前先服务 `/api/auth/*` 的受保护子路由。
  * - 后续把更多控制面路由切到 Bearer 鉴权时，可直接复用这一层。
  */
-import { isAuthError } from "./AuthError.js";
+import { isAuthError } from "../../../city/runtime/auth/AuthError.js";
 /**
  * Hono Context 中保存 principal 的 key。
  */

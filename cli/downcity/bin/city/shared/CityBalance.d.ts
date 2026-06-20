@@ -6,7 +6,7 @@
  * - 充值链路复用 City 的 balance topup 与 payment checkout 服务。
  * - 交互菜单只调用这里的高层函数，避免 FederationConnection 模块继续膨胀。
  */
-import type { CityBalanceAccount, CityRechargeInput, CityRechargeResult } from "../types/CityBalance.js";
+import type { CityBalanceAccount, CityRechargeInput, CityRechargeResult } from "../../city/types/CityBalance.js";
 /**
  * 读取当前 City City user 的余额。
  */

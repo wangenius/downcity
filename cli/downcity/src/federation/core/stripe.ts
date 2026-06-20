@@ -7,7 +7,7 @@
  * - 这样用户在 Stripe Dashboard 里不需要手动拼 webhook URL
  */
 
-import { normalizeBaseUrl } from "./env.js";
+import { normalizeBaseUrl } from "@/federation/core/env.js";
 
 /**
  * Stripe 常用 endpoint 集合。

@@ -9,16 +9,16 @@
 
 import type { Command } from "commander";
 import { ActionScheduleStore } from "@downcity/agent";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import {
   normalizeScheduledJobStatus,
   parsePositiveIntOption,
   resolvePluginScheduleProjectRoot,
   validateAgentProjectRoot,
-} from "../shared/PluginTargetSupport.js";
-import { parseBoolean } from "../../shared/IndexSupport.js";
-import { helpText, t } from "../../shared/CliLocale.js";
+} from "@/city/shared/PluginTargetSupport.js";
+import { parseBoolean } from "@/shared/IndexSupport.js";
+import { helpText, t } from "@/shared/CliLocale.js";
 
 /**
  * 注入 ActionSchedule 管理命令通用选项。

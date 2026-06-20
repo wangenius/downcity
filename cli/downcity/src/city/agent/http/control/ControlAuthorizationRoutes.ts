@@ -11,7 +11,7 @@ import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import { CHAT_AUTHORIZATION_ACTIONS } from "@downcity/plugins";
-import { buildControlRouteAliases } from "../../control/CommonHelpers.js";
+import { buildControlRouteAliases } from "@/city/agent/control/CommonHelpers.js";
 
 const CHAT_PLUGIN_NAME = "chat";
 

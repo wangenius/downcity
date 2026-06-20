@@ -7,14 +7,14 @@
  */
 
 import blessed from "neo-blessed";
-import { t } from "../../shared/CliLocale.js";
+import { t } from "@/shared/CliLocale.js";
 import {
   type blessed_textbox_element,
   is_plain_escape_input,
   type shell_layout,
-} from "./AdminTuiShell.js";
-import { is_disabled_option, render_sidebar_hint } from "./AdminTuiRender.js";
-import type { admin_tui_select_option } from "../types/AdminTui.js";
+} from "@/federation/tui/AdminTuiShell.js";
+import { is_disabled_option, render_sidebar_hint } from "@/federation/tui/AdminTuiRender.js";
+import type { admin_tui_select_option } from "@/federation/types/AdminTui.js";
 
 /**
  * 运行侧边栏单选。

@@ -8,9 +8,9 @@
  */
 import path from "node:path";
 import fs from "fs-extra";
-import { getDowncityJsonPath } from "../config/Paths.js";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { aliasCommand } from "../shared/Alias.js";
+import { getDowncityJsonPath } from "../../city/config/Paths.js";
+import { printResult } from "../../city/utils/cli/CliOutput.js";
+import { aliasCommand } from "../../city/shared/Alias.js";
 import { parseBoolean } from "../../shared/IndexSupport.js";
 import { helpText, t } from "../../shared/CliLocale.js";
 /**

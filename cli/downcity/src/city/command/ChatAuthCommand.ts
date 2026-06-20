@@ -8,7 +8,7 @@
  */
 
 import path from "node:path";
-import prompts from "../tui/Prompts.js";
+import prompts from "@/city/tui/Prompts.js";
 import type { Command } from "commander";
 import {
   isChatAuthorizationChannel,
@@ -19,9 +19,9 @@ import {
   type ChatAuthorizationChannel,
   type ChatAuthorizationRole,
 } from "@downcity/plugins";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { parseBoolean } from "../../shared/IndexSupport.js";
-import { helpText, t } from "../../shared/CliLocale.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { parseBoolean } from "@/shared/IndexSupport.js";
+import { helpText, t } from "@/shared/CliLocale.js";
 
 type ChatAuthSetOptions = {
   /**

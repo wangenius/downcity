@@ -8,9 +8,9 @@
  */
 
 import { CityPact } from "@downcity/city";
-import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "../auth-error.js";
-import { t } from "../../../shared/CliLocale.js";
-import type { admin_tui_runtime } from "../../types/AdminTui.js";
+import { adminErrorMessage, isAdminNotFoundError, rethrowAdminAuthError } from "@/federation/admin/auth-error.js";
+import { t } from "@/shared/CliLocale.js";
+import type { admin_tui_runtime } from "@/federation/types/AdminTui.js";
 
 /**
  * 展示全部代码注册模型及其运行状态。

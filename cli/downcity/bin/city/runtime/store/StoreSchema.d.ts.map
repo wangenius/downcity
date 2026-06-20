@@ -1,1 +1,1 @@
-{"version":3,"file":"StoreSchema.d.ts","sourceRoot":"","sources":["../../../../src/city/runtime/store/StoreSchema.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,OAAO,KAAK,EAAE,oBAAoB,EAAE,MAAM,kBAAkB,CAAC;AAE7D;;GAEG;AACH,wBAAgB,yBAAyB,CAAC,OAAO,EAAE,oBAAoB,GAAG,IAAI,CAqD7E"}
+{"version":3,"file":"StoreSchema.d.ts","sourceRoot":"","sources":["../../../../src/city/runtime/store/StoreSchema.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,OAAO,KAAK,EAAE,oBAAoB,EAAE,MAAM,qCAAqC,CAAC;AAEhF;;GAEG;AACH,wBAAgB,yBAAyB,CAAC,OAAO,EAAE,oBAAoB,GAAG,IAAI,CAqD7E"}

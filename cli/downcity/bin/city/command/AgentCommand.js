@@ -5,21 +5,21 @@
  * - 统一承载 `city agent` 命令树，避免主入口继续混合 console 与 agent 两套语义。
  * - 只保留 agent 命令自身的校验与装配，不接管全局 CLI 初始化。
  */
-import { emitRegisteredAgentListWithOptions, resolveCliAgentStartProjectRoot, } from "../agent/AgentSelection.js";
-import { runInteractiveAgentManager } from "../agent/AgentManager.js";
-import { chatCommand } from "../agent/AgentChat.js";
-import { agentHistoryCleanCommand } from "../agent/AgentHistory.js";
-import { initCommand } from "../agent/Init.js";
-import { restartCommand } from "../agent/Restart.js";
-import { stopCommand } from "../agent/Stop.js";
-import { runCommand } from "../agent/Run.js";
-import { startCommand } from "../agent/Start.js";
-import { statusCommand } from "../agent/Status.js";
+import { emitRegisteredAgentListWithOptions, resolveCliAgentStartProjectRoot, } from "../../city/agent/AgentSelection.js";
+import { runInteractiveAgentManager } from "../../city/agent/AgentManager.js";
+import { chatCommand } from "../../city/agent/AgentChat.js";
+import { agentHistoryCleanCommand } from "../../city/agent/AgentHistory.js";
+import { initCommand } from "../../city/agent/Init.js";
+import { restartCommand } from "../../city/agent/Restart.js";
+import { stopCommand } from "../../city/agent/Stop.js";
+import { runCommand } from "../../city/agent/Run.js";
+import { startCommand } from "../../city/agent/Start.js";
+import { statusCommand } from "../../city/agent/Status.js";
 import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "../../shared/IndexSupport.js";
-import { runWithSpinner } from "../utils/cli/Spinner.js";
+import { runWithSpinner } from "../../city/utils/cli/Spinner.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
-import { cleanupStaleDaemonFiles, diagnoseDaemonStaleReasons, isProcessAlive as isDaemonProcessAlive, readDaemonPid, } from "../process/daemon/Manager.js";
-import { ensureRegisteredAgentProjectRoot, prepareForegroundAgent, } from "../shared/CityAgentRuntime.js";
+import { cleanupStaleDaemonFiles, diagnoseDaemonStaleReasons, isProcessAlive as isDaemonProcessAlive, readDaemonPid, } from "../../city/process/daemon/Manager.js";
+import { ensureRegisteredAgentProjectRoot, prepareForegroundAgent, } from "../../city/shared/CityAgentRuntime.js";
 import { helpText, t } from "../../shared/CliLocale.js";
 /**
  * 注册 `city agent` 命令组。

@@ -9,17 +9,17 @@
 
 import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
-import { read_federation_membership_state } from "../shared/FederationConnection.js";
-import { getCliLocale, t } from "../../shared/CliLocale.js";
-import { readCityPid, isCityProcessAlive } from "../process/registry/CityRuntime.js";
-import { resolveRunningManagedAgents } from "../runtime/gateway/runtime/GatewayProcess.js";
-import type { FederationMembershipState } from "../types/FederationMembership.js";
-import type { tui_action_result, tui_list_item } from "../types/Tui.js";
+import { read_federation_membership_state } from "@/city/shared/FederationConnection.js";
+import { getCliLocale, t } from "@/shared/CliLocale.js";
+import { readCityPid, isCityProcessAlive } from "@/city/process/registry/CityRuntime.js";
+import { resolveRunningManagedAgents } from "@/city/runtime/gateway/runtime/GatewayProcess.js";
+import type { FederationMembershipState } from "@/city/types/FederationMembership.js";
+import type { tui_action_result, tui_list_item } from "@/city/types/Tui.js";
 import {
   is_disabled_selectable_item,
   resolve_loop_selectable_index,
   resolve_next_loop_selectable_index,
-} from "./SelectableList.js";
+} from "@/city/tui/SelectableList.js";
 
 type city_home_action =
   | "stop"

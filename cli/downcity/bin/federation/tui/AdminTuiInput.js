@@ -7,8 +7,8 @@
  */
 import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
-import { is_plain_escape_input, } from "./AdminTuiShell.js";
-import { is_disabled_option, render_sidebar_hint } from "./AdminTuiRender.js";
+import { is_plain_escape_input, } from "../../federation/tui/AdminTuiShell.js";
+import { is_disabled_option, render_sidebar_hint } from "../../federation/tui/AdminTuiRender.js";
 /**
  * 运行侧边栏单选。
  */

@@ -5,8 +5,8 @@
  * - `city` 点开某个 City 后直接进入这个菜单。
  * - City 连接配置、admin key 更新等低频操作通过 `更多` 回调交给 workspace 层处理。
  */
-import { type AdminSession } from "../core/session.js";
-import type { admin_tui_runtime } from "../types/AdminTui.js";
+import { type AdminSession } from "../../federation/core/session.js";
+import type { admin_tui_runtime } from "../../federation/types/AdminTui.js";
 export declare function adminLoop(session: AdminSession, options?: {
     embedded?: boolean;
     title?: string;

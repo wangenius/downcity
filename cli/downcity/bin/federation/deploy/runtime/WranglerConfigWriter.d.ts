@@ -6,7 +6,7 @@
  * - Cloudflare 默认值由 CLI 管理，用户不需要在 `federation.json` 里写 worker_name 等细节。
  * - D1 database id 由 CLI 在部署时解析，不污染用户手写配置。
  */
-import type { FederationProjectConfigFile, FederationProjectDeployEnvFile } from "../../types/FederationProjectConfig.js";
+import type { FederationProjectConfigFile, FederationProjectDeployEnvFile } from "../../../federation/types/FederationProjectConfig.js";
 /** 写入 wrangler.toml 的结果。 */
 export interface WranglerConfigWriteResult {
     /** wrangler.toml 绝对路径。 */

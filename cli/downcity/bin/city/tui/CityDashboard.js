@@ -8,11 +8,11 @@
  */
 import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
-import { read_federation_membership_state } from "../shared/FederationConnection.js";
+import { read_federation_membership_state } from "../../city/shared/FederationConnection.js";
 import { getCliLocale, t } from "../../shared/CliLocale.js";
-import { readCityPid, isCityProcessAlive } from "../process/registry/CityRuntime.js";
-import { resolveRunningManagedAgents } from "../runtime/gateway/runtime/GatewayProcess.js";
-import { is_disabled_selectable_item, resolve_loop_selectable_index, resolve_next_loop_selectable_index, } from "./SelectableList.js";
+import { readCityPid, isCityProcessAlive } from "../../city/process/registry/CityRuntime.js";
+import { resolveRunningManagedAgents } from "../../city/runtime/gateway/runtime/GatewayProcess.js";
+import { is_disabled_selectable_item, resolve_loop_selectable_index, resolve_next_loop_selectable_index, } from "../../city/tui/SelectableList.js";
 /**
  * 打开 City 顶层仪表盘。
  */

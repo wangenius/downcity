@@ -13,7 +13,7 @@ import { config } from "dotenv";
 import type {
   FederationProjectDeployEnv,
   FederationProjectDeployEnvFile,
-} from "../../types/FederationProjectConfig.js";
+} from "@/federation/types/FederationProjectConfig.js";
 
 const DEPLOY_ENV_KEYS = [
   "CITY_D1_DATABASE_NAME",

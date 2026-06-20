@@ -17,13 +17,13 @@ import {
   type Focusable,
 } from "@earendil-works/pi-tui";
 
-import { SESSION_PICKER_MAX_VISIBLE } from "../constant/rendering.js";
-import { CURRENT_MARK, SELECT_POINTER } from "../constant/symbols.js";
-import { current_theme } from "../theme/index.js";
-import { formatRelativeTime } from "../utils/time.js";
-import { singleLine } from "../utils/text.js";
-import type { AgentChatSessionSummaryView } from "../../AgentChatTypes.js";
-import { AGENT_CHAT_DEFAULT_SESSION_ID } from "../../AgentChatTypes.js";
+import { SESSION_PICKER_MAX_VISIBLE } from "@/city/agent/tui/constant/rendering.js";
+import { CURRENT_MARK, SELECT_POINTER } from "@/city/agent/tui/constant/symbols.js";
+import { current_theme } from "@/city/agent/tui/theme/index.js";
+import { formatRelativeTime } from "@/city/agent/tui/utils/time.js";
+import { singleLine } from "@/city/agent/tui/utils/text.js";
+import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
+import { AGENT_CHAT_DEFAULT_SESSION_ID } from "@/city/agent/AgentChatTypes.js";
 
 const BORDER_HORIZONTAL = "─";
 const ELLIPSIS = "…";

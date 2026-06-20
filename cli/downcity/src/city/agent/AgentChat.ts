@@ -9,18 +9,18 @@
  * - 远程连接、session 创建/列表等操作委托给 `AgentChatRemote.ts`。
  */
 
-import prompts from "../tui/Prompts.js";
+import prompts from "@/city/tui/Prompts.js";
 import {
   RemoteAgent,
   type AgentSessionEvent,
 } from "@downcity/agent";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
 import {
   resolveProjectRootByAgentId,
   validateAgentProjectRoot,
-} from "../shared/PluginTargetSupport.js";
-import { listRegisteredAgentsForCli } from "./AgentSelection.js";
+} from "@/city/shared/PluginTargetSupport.js";
+import { listRegisteredAgentsForCli } from "@/city/agent/AgentSelection.js";
 import {
   createAgentChatSessionId,
   createRemoteAgent,
@@ -28,17 +28,17 @@ import {
   getOrCreateRemoteSession,
   listRemoteChatSessions,
   buildAgentChatFailureText,
-} from "./AgentChatRemote.js";
-import { run_agent_chat_tui } from "./AgentChatTui.js";
+} from "@/city/agent/AgentChatRemote.js";
+import { run_agent_chat_tui } from "@/city/agent/AgentChatTui.js";
 import type {
   AgentChatCliOptions,
   AgentChatExecutionOutcome,
   AgentChatSessionOptions,
-} from "./AgentChatTypes.js";
+} from "@/city/agent/AgentChatTypes.js";
 import {
   AGENT_CHAT_DEFAULT_SESSION_ID,
-} from "./AgentChatTypes.js";
-import type { AgentChatInteractiveRendererPort } from "../types/AgentChatInteractive.js";
+} from "@/city/agent/AgentChatTypes.js";
+import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
 
 type ResolvedAgentChatTarget = {
   /** 目标 agent id。 */

@@ -7,7 +7,7 @@
  * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
  */
 import { Command } from "commander";
-import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot } from "../runtime/gateway/runtime/GatewayProcess.js";
+import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot } from "../../city/runtime/gateway/runtime/GatewayProcess.js";
 /**
  * top-level city/gateway 命令注册参数。
  */

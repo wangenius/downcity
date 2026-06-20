@@ -9,19 +9,19 @@
  * - user 登录与本机 runtime 统一由 `downcity` 承担。
  */
 
-import { isCancel, select } from "./tui/Prompts.js";
-import { parseArgs } from "./core/env.js";
-import { show, showError, showSuccess } from "./core/ui.js";
-import { updateCli } from "./core/update.js";
-import { getCliLocale, setCliLocale, t } from "../shared/CliLocale.js";
-import { type CliLocale } from "../shared/types/CliLocale.js";
-import { writePersistedCliLocale } from "./core/session.js";
-import { createFederationProject } from "./create/commands/create.js";
-import { deployFederationProject } from "./deploy/commands/deploy.js";
-import { refreshEnvCache } from "./env/commands/refresh.js";
-import { open_federation_dashboard } from "./tui/FederationDashboard.js";
-import type { FederationAction } from "./types/Interactive.js";
-import type { tui_action_result } from "./types/Tui.js";
+import { isCancel, select } from "@/federation/tui/Prompts.js";
+import { parseArgs } from "@/federation/core/env.js";
+import { show, showError, showSuccess } from "@/federation/core/ui.js";
+import { updateCli } from "@/federation/core/update.js";
+import { getCliLocale, setCliLocale, t } from "@/shared/CliLocale.js";
+import { type CliLocale } from "@/shared/types/CliLocale.js";
+import { writePersistedCliLocale } from "@/federation/core/session.js";
+import { createFederationProject } from "@/federation/create/commands/create.js";
+import { deployFederationProject } from "@/federation/deploy/commands/deploy.js";
+import { refreshEnvCache } from "@/federation/env/commands/refresh.js";
+import { open_federation_dashboard } from "@/federation/tui/FederationDashboard.js";
+import type { FederationAction } from "@/federation/types/Interactive.js";
+import type { tui_action_result } from "@/federation/types/Tui.js";
 
 export async function runFederationApp(argv: string[] = []): Promise<void> {
   const cli = parseArgs(argv);

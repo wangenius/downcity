@@ -9,22 +9,22 @@
 
 import { rmSync } from "node:fs";
 import { dirname } from "node:path";
-import { addServer, readActiveServer, readServer } from "../../core/session.js";
-import { emitCliBlock } from "../../../shared/CliReporter.js";
-import { CliError } from "../../../shared/CliError.js";
+import { addServer, readActiveServer, readServer } from "@/federation/core/session.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { CliError } from "@/shared/CliError.js";
 import type {
   FederationDeployOptions,
   FederationProjectConfigFile,
-} from "../../types/FederationProjectConfig.js";
+} from "@/federation/types/FederationProjectConfig.js";
 import {
   readFederationProjectDeployEnv,
-} from "../config/FederationProjectEnvLoader.js";
-import { resolveCloudflareAccount } from "./CloudflareAccountResolver.js";
-import { resolveD1Database } from "./D1DatabaseResolver.js";
-import { writeWranglerConfig } from "./WranglerConfigWriter.js";
-import { runCommand } from "./CommandRunner.js";
-import { bumpProjectPatchVersion } from "./ProjectVersionManager.js";
-import { runPackageDeployScripts } from "./PackageScriptRunner.js";
+} from "@/federation/deploy/config/FederationProjectEnvLoader.js";
+import { resolveCloudflareAccount } from "@/federation/deploy/runtime/CloudflareAccountResolver.js";
+import { resolveD1Database } from "@/federation/deploy/runtime/D1DatabaseResolver.js";
+import { writeWranglerConfig } from "@/federation/deploy/runtime/WranglerConfigWriter.js";
+import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
+import { bumpProjectPatchVersion } from "@/federation/deploy/runtime/ProjectVersionManager.js";
+import { runPackageDeployScripts } from "@/federation/deploy/runtime/PackageScriptRunner.js";
 
 /**
  * 部署 Cloudflare Workers City 项目。

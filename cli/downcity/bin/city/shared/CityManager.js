@@ -5,14 +5,14 @@
  * - 裸 `city` 是本机 Agent 与 Plugin 操作台，不是 City 资源管理器。
  * - City 通过 Federation 成员资格访问共享资源；Federation 管理由 `city federation` 子命令负责。
  */
-import { restartCityRuntimeCommand, stopCityRuntimeCommand, } from "../runtime/gateway/runtime/GatewayProcess.js";
-import { runInteractiveAgentManager } from "../agent/AgentManager.js";
-import { runInteractivePluginManager } from "../command/PluginCommand.js";
-import { run_interactive_federation_manager } from "./FederationConnection.js";
+import { restartCityRuntimeCommand, stopCityRuntimeCommand, } from "../../city/runtime/gateway/runtime/GatewayProcess.js";
+import { runInteractiveAgentManager } from "../../city/agent/AgentManager.js";
+import { runInteractivePluginManager } from "../../city/command/PluginCommand.js";
+import { run_interactive_federation_manager } from "../../city/shared/FederationConnection.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { t } from "../../shared/CliLocale.js";
-import { promptAndPersistCityCliLocale } from "./InteractiveLocale.js";
-import { open_city_dashboard } from "../tui/CityDashboard.js";
+import { promptAndPersistCityCliLocale } from "../../city/shared/InteractiveLocale.js";
+import { open_city_dashboard } from "../../city/tui/CityDashboard.js";
 /**
  * 运行 `city` 裸命令交互式首页。
  */

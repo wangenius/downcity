@@ -5,7 +5,7 @@
  * - control 层只负责把请求转成 session prompt。
  * - chat / queue 等渠道语义由宿主显式注入的 plugin 自行实现。
  */
-import { buildExecuteInputText } from "./ExecuteInput.js";
+import { buildExecuteInputText } from "../../../city/agent/control/ExecuteInput.js";
 /**
  * 在指定 session 中执行一轮请求。
  *

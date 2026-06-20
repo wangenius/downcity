@@ -7,7 +7,7 @@
  * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情。
  */
 import { type Component } from "@earendil-works/pi-tui";
-import type { ToolApprovalRequestEntry, ToolApprovalResultEntry, ToolCallEntry, ToolResultEntry } from "../types.js";
+import type { ToolApprovalRequestEntry, ToolApprovalResultEntry, ToolCallEntry, ToolResultEntry } from "../../../../city/agent/tui/types.js";
 /**
  * 可展示的 tool 块条目联合类型。
  */

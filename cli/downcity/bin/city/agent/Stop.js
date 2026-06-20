@@ -7,7 +7,7 @@
  * - 若目标 agent 未运行，命令保持幂等，只输出 not running。
  */
 import path from "path";
-import { stopDaemonProcess } from "../process/daemon/Manager.js";
+import { stopDaemonProcess } from "../../city/process/daemon/Manager.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { resolveAgentId } from "../../shared/IndexSupport.js";
 /**

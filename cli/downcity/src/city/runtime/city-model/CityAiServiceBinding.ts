@@ -10,7 +10,7 @@
 import { CityPact } from "@downcity/city";
 import type { AgentModel } from "@downcity/agent";
 import type { CityModelDescriptor } from "@downcity/type";
-import { CityUserManager } from "../../shared/CityUserManager.js";
+import { CityUserManager } from "@/city/shared/CityUserManager.js";
 
 const cityUserManager = new CityUserManager();
 

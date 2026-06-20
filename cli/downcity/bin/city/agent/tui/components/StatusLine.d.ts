@@ -6,7 +6,7 @@
  * - 居中或左对齐，超出宽度时截断。
  */
 import { type Component } from "@earendil-works/pi-tui";
-import type { AppState } from "../types.js";
+import type { AppState } from "../../../../city/agent/tui/types.js";
 /**
  * 顶部状态栏。
  */

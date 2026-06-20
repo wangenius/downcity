@@ -6,7 +6,7 @@
  * - `.env` 只保存 City 项目自身真正需要的部署输入，例如 D1 name。
  * - Provider key、Stripe key 等业务密钥仍应写入 City env 表，而不是写入公开客户端。
  */
-import type { FederationProjectDeployEnv, FederationProjectDeployEnvFile } from "../../types/FederationProjectConfig.js";
+import type { FederationProjectDeployEnv, FederationProjectDeployEnvFile } from "../../../federation/types/FederationProjectConfig.js";
 /**
  * 加载 City 项目目录下的 `.env`。
  */

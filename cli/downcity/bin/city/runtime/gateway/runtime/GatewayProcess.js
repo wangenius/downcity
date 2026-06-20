@@ -9,23 +9,23 @@
 import { resolve } from "path";
 import fs from "fs-extra";
 import { spawn } from "child_process";
-import { getDaemonLogPath, isProcessAlive as isDaemonProcessAlive, readDaemonMeta, readDaemonPid, startDaemonProcess, stopDaemonProcess, } from "../../../process/daemon/Manager.js";
-import { buildRunArgsFromOptions } from "../../../process/daemon/CliArgs.js";
-import { assertProjectExecutionModelReady } from "../../city-model/ExecutionModelBinding.js";
-import { allocateAvailablePort } from "../../../process/daemon/PortAllocator.js";
-import { ensureManagedAgentRegistry, listManagedAgentEntries, markManagedAgentStopped, } from "../../../process/registry/CityRegistry.js";
-import { getGatewayMetaPath, getGatewayPidPath, getCityLogPath, getCityPidPath, getCityRuntimeDirPath, } from "../../../process/registry/CityPaths.js";
-import { isCityProcessAlive, isCityRunning, readCityPid, } from "../../../process/registry/CityRuntime.js";
-import { signalDetachedProcess, sweepDetachedBayProcesses, } from "../../../process/registry/ProcessSweep.js";
+import { getDaemonLogPath, isProcessAlive as isDaemonProcessAlive, readDaemonMeta, readDaemonPid, startDaemonProcess, stopDaemonProcess, } from "../../../../city/process/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "../../../../city/process/daemon/CliArgs.js";
+import { assertProjectExecutionModelReady } from "../../../../city/runtime/city-model/ExecutionModelBinding.js";
+import { allocateAvailablePort } from "../../../../city/process/daemon/PortAllocator.js";
+import { ensureManagedAgentRegistry, listManagedAgentEntries, markManagedAgentStopped, } from "../../../../city/process/registry/CityRegistry.js";
+import { getGatewayMetaPath, getGatewayPidPath, getCityLogPath, getCityPidPath, getCityRuntimeDirPath, } from "../../../../city/process/registry/CityPaths.js";
+import { isCityProcessAlive, isCityRunning, readCityPid, } from "../../../../city/process/registry/CityRuntime.js";
+import { signalDetachedProcess, sweepDetachedBayProcesses, } from "../../../../city/process/registry/ProcessSweep.js";
 import { injectAgentContext, resolveAgentId, sleep, } from "../../../../shared/IndexSupport.js";
-import { buildRuntimePortFacts } from "../../../shared/PortHints.js";
-import { ensureGatewayAuthBootstrap } from "./GatewayAuthBootstrap.js";
+import { buildRuntimePortFacts } from "../../../../city/shared/PortHints.js";
+import { ensureGatewayAuthBootstrap } from "../../../../city/runtime/gateway/runtime/GatewayAuthBootstrap.js";
 import { emitCliBlock } from "../../../../shared/CliReporter.js";
-import { runWithSpinner } from "../../../utils/cli/Spinner.js";
+import { runWithSpinner } from "../../../../city/utils/cli/Spinner.js";
 import { CliError } from "../../../../shared/CliError.js";
-import { ensureBayPublicHostEnv } from "../../../shared/PublicHostEnv.js";
-import { resolveCityCliPath } from "../../../shared/CityCliPath.js";
-import { checkShellSandboxHostPreflight } from "../../../shared/PluginTargetSupport.js";
+import { ensureBayPublicHostEnv } from "../../../../city/shared/PublicHostEnv.js";
+import { resolveCityCliPath } from "../../../../city/shared/CityCliPath.js";
+import { checkShellSandboxHostPreflight } from "../../../../city/shared/PluginTargetSupport.js";
 /**
  * 启动 city runtime 后台进程。
  */

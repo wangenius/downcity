@@ -9,22 +9,22 @@
 
 import { resolve } from "node:path";
 import type { ManagedAgentProcessView } from "@downcity/agent";
-import type { AgentStartOptions } from "../types/AgentStartOptions.js";
-import { allocateAvailablePort } from "../process/daemon/PortAllocator.js";
+import type { AgentStartOptions } from "@/city/types/AgentStartOptions.js";
+import { allocateAvailablePort } from "@/city/process/daemon/PortAllocator.js";
 import {
   getDaemonLogPath,
   isProcessAlive as isDaemonProcessAlive,
   readDaemonPid,
-} from "../process/daemon/Manager.js";
+} from "@/city/process/daemon/Manager.js";
 import {
   listManagedAgentEntries,
   markManagedAgentStopped,
-} from "../process/registry/CityRegistry.js";
-import { isCityRunning } from "../process/registry/CityRuntime.js";
-import { assertProjectExecutionModelReady } from "../runtime/city-model/ExecutionModelBinding.js";
-import { CliError } from "../../shared/CliError.js";
-import { injectAgentContext } from "../../shared/IndexSupport.js";
-import { checkShellSandboxHostPreflight } from "./PluginTargetSupport.js";
+} from "@/city/process/registry/CityRegistry.js";
+import { isCityRunning } from "@/city/process/registry/CityRuntime.js";
+import { assertProjectExecutionModelReady } from "@/city/runtime/city-model/ExecutionModelBinding.js";
+import { CliError } from "@/shared/CliError.js";
+import { injectAgentContext } from "@/shared/IndexSupport.js";
+import { checkShellSandboxHostPreflight } from "@/city/shared/PluginTargetSupport.js";
 
 /**
  * 解析当前仍在运行的 managed agent。

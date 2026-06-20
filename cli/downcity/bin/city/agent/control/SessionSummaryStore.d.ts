@@ -5,7 +5,7 @@
  * - 负责会话列表聚合。
  * - 只返回控制面视图需要的摘要字段。
  */
-import type { ControlSessionSummary } from "./types/ControlViewData.js";
+import type { ControlSessionSummary } from "../../../city/agent/control/types/ControlViewData.js";
 /**
  * 枚举控制面所需的 session 摘要。
  */

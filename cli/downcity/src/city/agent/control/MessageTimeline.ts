@@ -19,8 +19,8 @@ import type {
 } from "@downcity/agent/internal/executor/types/SessionMessages.js";
 import { pickLastSuccessfulChatSendText } from "@downcity/agent";
 import { extractToolCallsFromUiMessage } from "@downcity/agent/internal/executor/messages/UIMessageTransformer.js";
-import type { ControlTimelineEvent, ControlTimelineRole } from "./types/ControlViewData.js";
-import { truncateText } from "./CommonHelpers.js";
+import type { ControlTimelineEvent, ControlTimelineRole } from "@/city/agent/control/types/ControlViewData.js";
+import { truncateText } from "@/city/agent/control/CommonHelpers.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
 

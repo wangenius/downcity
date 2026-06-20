@@ -10,10 +10,10 @@
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, basename } from "node:path";
-import { confirm, isCancel, select, text } from "../../tui/Prompts.js";
-import { emitCliBlock } from "../../../shared/CliReporter.js";
-import { CliError } from "../../../shared/CliError.js";
-import { runCommand } from "../../deploy/runtime/CommandRunner.js";
+import { confirm, isCancel, select, text } from "@/federation/tui/Prompts.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { CliError } from "@/shared/CliError.js";
+import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
 
 /** Commander 传入的 create 选项。 */
 export interface FederationCreateCommandOptions {

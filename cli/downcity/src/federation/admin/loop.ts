@@ -7,20 +7,20 @@
  */
 
 import { CityPact } from "@downcity/city";
-import { type AdminSession } from "../core/session.js";
-import { adminErrorMessage, isAdminAuthError } from "./auth-error.js";
-import { create_admin_tui_runtime } from "../tui/AdminTuiRuntime.js";
-import type { admin_tui_runtime } from "../types/AdminTui.js";
-import { manageEnv } from "./commands/service-env.js";
-import { manageCities } from "./commands/cities.js";
-import { manageAccounts } from "./commands/accounts.js";
-import { manageBalance } from "./commands/balance.js";
-import { manageUsage } from "./commands/usage.js";
-import { managePayment } from "./commands/payment.js";
-import { manageCustom } from "./commands/custom.js";
-import { manageModels } from "./commands/models.js";
-import { manageInstruction } from "./commands/instruction.js";
-import { t } from "../../shared/CliLocale.js";
+import { type AdminSession } from "@/federation/core/session.js";
+import { adminErrorMessage, isAdminAuthError } from "@/federation/admin/auth-error.js";
+import { create_admin_tui_runtime } from "@/federation/tui/AdminTuiRuntime.js";
+import type { admin_tui_runtime } from "@/federation/types/AdminTui.js";
+import { manageEnv } from "@/federation/admin/commands/service-env.js";
+import { manageCities } from "@/federation/admin/commands/cities.js";
+import { manageAccounts } from "@/federation/admin/commands/accounts.js";
+import { manageBalance } from "@/federation/admin/commands/balance.js";
+import { manageUsage } from "@/federation/admin/commands/usage.js";
+import { managePayment } from "@/federation/admin/commands/payment.js";
+import { manageCustom } from "@/federation/admin/commands/custom.js";
+import { manageModels } from "@/federation/admin/commands/models.js";
+import { manageInstruction } from "@/federation/admin/commands/instruction.js";
+import { t } from "@/shared/CliLocale.js";
 
 const commands: Record<string, (a: CityPact, baseUrl: string, runtime: admin_tui_runtime) => Promise<void>> = {
   env: manageEnv,

@@ -8,10 +8,10 @@
 
 import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
-import { create_tui_shell } from "./Shell.js";
-import { t } from "../../shared/CliLocale.js";
-import type { FederationAction } from "../types/Interactive.js";
-import type { tui_action_result, tui_list_item } from "../types/Tui.js";
+import { create_tui_shell } from "@/federation/tui/Shell.js";
+import { t } from "@/shared/CliLocale.js";
+import type { FederationAction } from "@/federation/types/Interactive.js";
+import type { tui_action_result, tui_list_item } from "@/federation/types/Tui.js";
 
 interface federation_dashboard_options {
   /** 执行 Federation 仪表盘动作。 */

@@ -11,9 +11,9 @@ import fs from "fs";
 import path from "path";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "url";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { CliError } from "../../shared/CliError.js";
-import { runWithSpinner } from "../utils/cli/Spinner.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { CliError } from "@/shared/CliError.js";
+import { runWithSpinner } from "@/city/utils/cli/Spinner.js";
 
 export type UpdateManager = "npm" | "pnpm";
 

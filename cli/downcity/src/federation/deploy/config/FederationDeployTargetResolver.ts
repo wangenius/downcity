@@ -8,8 +8,8 @@
  */
 
 import { resolve } from "node:path";
-import type { FederationDeployTarget } from "../../types/FederationProjectConfig.js";
-import { CliError } from "../../../shared/CliError.js";
+import type { FederationDeployTarget } from "@/federation/types/FederationProjectConfig.js";
+import { CliError } from "@/shared/CliError.js";
 
 /**
  * 解析部署目标。

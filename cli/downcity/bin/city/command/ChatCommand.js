@@ -6,8 +6,8 @@
  * - 具体 chat 会话操作命令由 plugin action 注册器补充到同一个命令组。
  * - City 不在这里注册 chat platform 运行态控制命令。
  */
-import { registerChatAuthCommands } from "./ChatAuthCommand.js";
-import { runInteractiveChatManager } from "../shared/ChatManager.js";
+import { registerChatAuthCommands } from "../../city/command/ChatAuthCommand.js";
+import { runInteractiveChatManager } from "../../city/shared/ChatManager.js";
 import { helpText, t } from "../../shared/CliLocale.js";
 /**
  * 注册 `city chat` 交互式入口。

@@ -6,7 +6,7 @@
  * - 不读写 City 本地状态，调用方负责持久化 session。
  */
 import { spawnSync } from "node:child_process";
-import prompts from "../tui/Prompts.js";
+import prompts from "../../city/tui/Prompts.js";
 import { CityPact } from "@downcity/city";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 function readString(value) {

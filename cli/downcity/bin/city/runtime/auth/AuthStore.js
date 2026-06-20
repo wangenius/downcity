@@ -9,10 +9,10 @@ import fs from "fs-extra";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { nanoid } from "nanoid";
-import { getPlatformStoreDbPath } from "../../process/registry/CityPaths.js";
+import { getPlatformStoreDbPath } from "../../../city/process/registry/CityPaths.js";
 import { AUTH_DEFAULT_ROLES, AUTH_PERMISSION_DESCRIPTIONS, AUTH_PERMISSION_KEYS, } from "@downcity/agent";
-import { nowIso, normalizeNonEmptyText, optionalTrimmedText, } from "../store/StoreShared.js";
-import { ensurePlatformStoreSchema } from "../store/StoreSchema.js";
+import { nowIso, normalizeNonEmptyText, optionalTrimmedText, } from "../../../city/runtime/store/StoreShared.js";
+import { ensurePlatformStoreSchema } from "../../../city/runtime/store/StoreSchema.js";
 /**
  * AuthStore 门面。
  */

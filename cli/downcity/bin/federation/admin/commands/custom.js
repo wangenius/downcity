@@ -2,7 +2,7 @@
  * Admin Custom Service 命令。
  */
 import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
+import { adminErrorMessage, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
 export async function manageCustom(a, _baseUrl, runtime) {
     while (true) {
         const name = await runtime.text(t({

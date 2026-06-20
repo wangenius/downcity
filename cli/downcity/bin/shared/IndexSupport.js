@@ -7,8 +7,8 @@
  */
 import { readFileSync, existsSync } from "fs";
 import { basename, dirname, join, resolve } from "path";
-import { emitCliHeader, emitCliBlock, resetCliSectionFlow } from "./CliReporter.js";
-import { CliError } from "./CliError.js";
+import { emitCliHeader, emitCliBlock, resetCliSectionFlow } from "../shared/CliReporter.js";
+import { CliError } from "../shared/CliError.js";
 /**
  * 在关键运行命令执行前打印当前终端命令版本。
  *

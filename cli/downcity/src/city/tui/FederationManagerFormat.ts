@@ -6,13 +6,13 @@
  * - 纯函数，不依赖 blessed 状态。
  */
 
-import { t } from "../../shared/CliLocale.js";
-import { CityUserManager } from "../shared/CityUserManager.js";
-import { is_disabled_selectable_item } from "./SelectableList.js";
-import type { city_manager_state } from "./FederationManagerState.js";
-import type { FederationMembershipState, FederationProfile } from "../types/FederationMembership.js";
-import type { CityBalanceAccount, CityRechargeResult } from "../types/CityBalance.js";
-import type { tui_list_item } from "../types/Tui.js";
+import { t } from "@/shared/CliLocale.js";
+import { CityUserManager } from "@/city/shared/CityUserManager.js";
+import { is_disabled_selectable_item } from "@/city/tui/SelectableList.js";
+import type { city_manager_state } from "@/city/tui/FederationManagerState.js";
+import type { FederationMembershipState, FederationProfile } from "@/city/types/FederationMembership.js";
+import type { CityBalanceAccount, CityRechargeResult } from "@/city/types/CityBalance.js";
+import type { tui_list_item } from "@/city/types/Tui.js";
 
 export function is_disabled_item(item: tui_list_item | undefined): boolean {
   return is_disabled_selectable_item(item);

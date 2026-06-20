@@ -1,9 +1,9 @@
 /**
  * Admin Payment 管理命令。
  */
-import { buildStripeEndpoints } from "../../core/stripe.js";
+import { buildStripeEndpoints } from "../../../federation/core/stripe.js";
 import { t } from "../../../shared/CliLocale.js";
-import { adminErrorMessage, rethrowAdminAuthError } from "../auth-error.js";
+import { adminErrorMessage, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
 export async function managePayment(a, baseUrl, runtime) {
     const svc = a.service("payment.stripe");
     const endpoints = buildStripeEndpoints(baseUrl);

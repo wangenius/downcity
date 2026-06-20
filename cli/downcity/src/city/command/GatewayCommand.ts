@@ -8,17 +8,17 @@
  */
 
 import { Command } from "commander";
-import { registerConfigCommand } from "./ConfigCommand.js";
-import { registerEnvCommand } from "./EnvCommand.js";
-import { registerTokenCommand } from "./TokenCommand.js";
-import { register_federation_command } from "./FederationCommand.js";
-import { gatewayInitCommand } from "../runtime/gateway/runtime/GatewayInit.js";
-import { createVersionBanner } from "../../shared/IndexSupport.js";
-import { CliError } from "../../shared/CliError.js";
-import { updateCommand } from "../shared/Update.js";
+import { registerConfigCommand } from "@/city/command/ConfigCommand.js";
+import { registerEnvCommand } from "@/city/command/EnvCommand.js";
+import { registerTokenCommand } from "@/city/command/TokenCommand.js";
+import { register_federation_command } from "@/city/command/FederationCommand.js";
+import { gatewayInitCommand } from "@/city/runtime/gateway/runtime/GatewayInit.js";
+import { createVersionBanner } from "@/shared/IndexSupport.js";
+import { CliError } from "@/shared/CliError.js";
+import { updateCommand } from "@/city/shared/Update.js";
 import {
   gatewayStatusCommand,
-} from "../runtime/gateway/runtime/GatewayStatus.js";
+} from "@/city/runtime/gateway/runtime/GatewayStatus.js";
 import {
   prepareForegroundAgent,
   ensureRegisteredAgentProjectRoot,
@@ -26,8 +26,8 @@ import {
   runCityRuntimeCommand,
   startCityRuntimeCommand,
   stopCityRuntimeCommand,
-} from "../runtime/gateway/runtime/GatewayProcess.js";
-import { helpText, t } from "../../shared/CliLocale.js";
+} from "@/city/runtime/gateway/runtime/GatewayProcess.js";
+import { helpText, t } from "@/shared/CliLocale.js";
 
 /**
  * top-level city/gateway 命令注册参数。

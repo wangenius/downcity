@@ -6,8 +6,8 @@
  * - 文本按可用宽度自动换行，保持子弹对齐。
  */
 import { Spacer, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { USER_MESSAGE_BULLET } from "../constant/symbols.js";
-import { current_theme } from "../theme/index.js";
+import { USER_MESSAGE_BULLET } from "../../../../city/agent/tui/constant/symbols.js";
+import { current_theme } from "../../../../city/agent/tui/theme/index.js";
 /**
  * 渲染一条用户消息。
  */

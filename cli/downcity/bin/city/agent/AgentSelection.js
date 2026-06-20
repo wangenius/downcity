@@ -8,14 +8,14 @@
  */
 import { existsSync } from "fs";
 import { resolve } from "path";
-import prompts from "../tui/Prompts.js";
-import { getDowncityJsonPath, getProfileMdPath } from "../config/Paths.js";
-import { listManagedAgentEntries } from "../process/registry/CityRegistry.js";
+import prompts from "../../city/tui/Prompts.js";
+import { getDowncityJsonPath, getProfileMdPath } from "../../city/config/Paths.js";
+import { listManagedAgentEntries } from "../../city/process/registry/CityRegistry.js";
 import { emitCliBlock, emitCliList } from "../../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "../../city/utils/cli/CliOutput.js";
 import { CliError } from "../../shared/CliError.js";
 import { resolveAgentId } from "../../shared/IndexSupport.js";
-import { resolveRunningManagedAgents } from "../shared/CityAgentRuntime.js";
+import { resolveRunningManagedAgents } from "../../city/shared/CityAgentRuntime.js";
 /**
  * 判断一个目录是否已经满足最小 agent 初始化条件。
  */

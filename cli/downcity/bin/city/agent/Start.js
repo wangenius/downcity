@@ -12,11 +12,11 @@
  */
 import path from "path";
 import { fileURLToPath } from "url";
-import { startDaemonProcess } from "../process/daemon/Manager.js";
-import { buildRunArgsFromOptions } from "../process/daemon/CliArgs.js";
+import { startDaemonProcess } from "../../city/process/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "../../city/process/daemon/CliArgs.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { resolveAgentId } from "../../shared/IndexSupport.js";
-import { checkAgentPreflight } from "../shared/PluginTargetSupport.js";
+import { checkAgentPreflight } from "../../city/shared/PluginTargetSupport.js";
 import { CliError } from "../../shared/CliError.js";
 /**
  * daemon 启动入口。

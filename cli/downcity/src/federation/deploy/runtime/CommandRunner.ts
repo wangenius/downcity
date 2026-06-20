@@ -8,7 +8,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { CliError } from "../../../shared/CliError.js";
+import { CliError } from "@/shared/CliError.js";
 
 /** 本地命令执行参数。 */
 export interface RunCommandParams {

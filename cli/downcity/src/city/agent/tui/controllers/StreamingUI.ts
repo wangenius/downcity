@@ -9,10 +9,10 @@
 
 import type { AgentSessionEvent } from "@downcity/agent";
 
-import type { MessageListComponent } from "../components/MessageList.js";
-import { STREAMING_UI_FLUSH_MS } from "../constant/streaming.js";
-import { generateTuiId } from "../utils/id.js";
-import type { TranscriptEntry } from "../types.js";
+import type { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
+import { STREAMING_UI_FLUSH_MS } from "@/city/agent/tui/constant/streaming.js";
+import { generateTuiId } from "@/city/agent/tui/utils/id.js";
+import type { TranscriptEntry } from "@/city/agent/tui/types.js";
 
 /**
  * StreamingUIController 构造选项。

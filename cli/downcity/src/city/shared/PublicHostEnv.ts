@@ -7,12 +7,12 @@
  * - 写入平台 Env 后，后续 City 宿主会在启动 Agent/模型运行时前显式读取并传入。
  */
 
-import { PlatformStore } from "../runtime/store/index.js";
+import { PlatformStore } from "@/city/runtime/store/index.js";
 import type {
   BayPublicHostEnvEntry,
   BayPublicHostEnvResult,
   EnsureBayPublicHostEnvInput,
-} from "./PublicHostEnvTypes.js";
+} from "@/city/shared/PublicHostEnvTypes.js";
 
 const PUBLIC_HOST_DESCRIPTION = "Auto-detected public host for agent contact links.";
 

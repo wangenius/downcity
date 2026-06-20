@@ -6,7 +6,7 @@
  * - 构建和类型检查从 package.json 自动推断，`federation.json` 保持最小。
  * - D1 等部署绑定写入项目 `.env`，Worker URL 回写到 City 自己的 server 配置。
  */
-import type { FederationDeployOptions, FederationProjectConfigFile } from "../../types/FederationProjectConfig.js";
+import type { FederationDeployOptions, FederationProjectConfigFile } from "../../../federation/types/FederationProjectConfig.js";
 /**
  * 部署 Cloudflare Workers City 项目。
  */

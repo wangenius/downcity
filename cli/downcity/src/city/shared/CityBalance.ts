@@ -8,15 +8,15 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { CityUserManager } from "./CityUserManager.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { CityUserManager } from "@/city/shared/CityUserManager.js";
 import type {
   CityBalanceAccount,
   CityBalanceTopup,
   CityCheckoutResult,
   CityRechargeInput,
   CityRechargeResult,
-} from "../types/CityBalance.js";
+} from "@/city/types/CityBalance.js";
 
 const DEFAULT_PAYMENT_METHOD_ID = "stripe";
 const cityUserManager = new CityUserManager();

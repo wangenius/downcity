@@ -10,12 +10,12 @@
 import path from "node:path";
 import fs from "fs-extra";
 import type { Command } from "commander";
-import { getDowncityJsonPath } from "../config/Paths.js";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { aliasCommand } from "../shared/Alias.js";
-import { parseBoolean } from "../../shared/IndexSupport.js";
+import { getDowncityJsonPath } from "@/city/config/Paths.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
+import { aliasCommand } from "@/city/shared/Alias.js";
+import { parseBoolean } from "@/shared/IndexSupport.js";
 import type { DowncityConfig } from "@downcity/agent";
-import { helpText, t } from "../../shared/CliLocale.js";
+import { helpText, t } from "@/shared/CliLocale.js";
 
 /**
  * 解析项目根目录。

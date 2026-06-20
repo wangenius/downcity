@@ -8,14 +8,14 @@
  * - 远程访问统一走 `RemoteAgent({ url })`，不再在 CLI 侧维护第二套 HTTP SDK transport。
  * - 远程连接、session 创建/列表等操作委托给 `AgentChatRemote.ts`。
  */
-import prompts from "../tui/Prompts.js";
+import prompts from "../../city/tui/Prompts.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { resolveProjectRootByAgentId, validateAgentProjectRoot, } from "../shared/PluginTargetSupport.js";
-import { listRegisteredAgentsForCli } from "./AgentSelection.js";
-import { createAgentChatSessionId, createRemoteAgent, createRemoteChatSession, getOrCreateRemoteSession, listRemoteChatSessions, buildAgentChatFailureText, } from "./AgentChatRemote.js";
-import { run_agent_chat_tui } from "./AgentChatTui.js";
-import { AGENT_CHAT_DEFAULT_SESSION_ID, } from "./AgentChatTypes.js";
+import { printResult } from "../../city/utils/cli/CliOutput.js";
+import { resolveProjectRootByAgentId, validateAgentProjectRoot, } from "../../city/shared/PluginTargetSupport.js";
+import { listRegisteredAgentsForCli } from "../../city/agent/AgentSelection.js";
+import { createAgentChatSessionId, createRemoteAgent, createRemoteChatSession, getOrCreateRemoteSession, listRemoteChatSessions, buildAgentChatFailureText, } from "../../city/agent/AgentChatRemote.js";
+import { run_agent_chat_tui } from "../../city/agent/AgentChatTui.js";
+import { AGENT_CHAT_DEFAULT_SESSION_ID, } from "../../city/agent/AgentChatTypes.js";
 function normalizeChatMessage(input) {
     return String(input || "").trim();
 }

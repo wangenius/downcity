@@ -7,7 +7,7 @@
  * - City 只读发现 `downfed` admin 配置的 Federation，但不依赖其内部模块。
  * - CLI 命令装配统一放在 `src/command/FederationCommand.ts`，本模块只保留状态与登录流程。
  */
-import type { FederationMembershipState } from "../types/FederationMembership.js";
+import type { FederationMembershipState } from "../../city/types/FederationMembership.js";
 export declare function read_city_admin_secret_for_federation(federation_url: string): string | undefined;
 export declare function read_federation_membership_state(): FederationMembershipState;
 export declare function emit_federation_status(options?: {

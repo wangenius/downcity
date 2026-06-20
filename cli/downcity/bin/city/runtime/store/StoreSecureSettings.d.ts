@@ -5,7 +5,7 @@
  * - 管理 `platform_secure_settings` 表。
  * - 平台级与 agent 级敏感配置都复用这套存储。
  */
-import type { PlatformStoreContext } from "./StoreShared.js";
+import type { PlatformStoreContext } from "../../../city/runtime/store/StoreShared.js";
 /**
  * 同步读取加密 JSON 配置。
  */

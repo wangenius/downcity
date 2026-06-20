@@ -7,7 +7,7 @@
  */
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
 import type { AuthPrincipal } from "@downcity/agent";
-import { AuthStore, type AuthStoreOptions } from "./AuthStore.js";
+import { AuthStore, type AuthStoreOptions } from "../../../city/runtime/auth/AuthStore.js";
 /**
  * AuthService 构造参数。
  */

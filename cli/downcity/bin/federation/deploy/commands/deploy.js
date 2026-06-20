@@ -7,10 +7,10 @@
  * - `federation.json` 是部署协议入口，避免用户直接记忆底层 Worker 脚本（文件名保持 federation.json）。
  */
 import { CliError } from "../../../shared/CliError.js";
-import { readFederationProjectConfig } from "../config/FederationProjectConfigReader.js";
-import { deployCloudflareWorkers } from "../runtime/CloudflareWorkersDeployer.js";
-import { loadFederationProjectEnv } from "../config/FederationProjectEnvLoader.js";
-import { resolveFederationDeployTarget } from "../config/FederationDeployTargetResolver.js";
+import { readFederationProjectConfig } from "../../../federation/deploy/config/FederationProjectConfigReader.js";
+import { deployCloudflareWorkers } from "../../../federation/deploy/runtime/CloudflareWorkersDeployer.js";
+import { loadFederationProjectEnv } from "../../../federation/deploy/config/FederationProjectEnvLoader.js";
+import { resolveFederationDeployTarget } from "../../../federation/deploy/config/FederationDeployTargetResolver.js";
 /**
  * 执行 Federation 项目部署。
  */

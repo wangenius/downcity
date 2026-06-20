@@ -9,9 +9,9 @@
 
 import fs from "fs-extra";
 import Database from "better-sqlite3";
-import { getPlatformStoreDbPath } from "../../process/registry/CityPaths.js";
-import { ensurePlatformStoreSchema } from "./StoreSchema.js";
-import type { PlatformStoreContext } from "./StoreShared.js";
+import { getPlatformStoreDbPath } from "@/city/process/registry/CityPaths.js";
+import { ensurePlatformStoreSchema } from "@/city/runtime/store/StoreSchema.js";
+import type { PlatformStoreContext } from "@/city/runtime/store/StoreShared.js";
 import type {
   StoredChannelAccount,
   StoredEnvEntry,
@@ -22,7 +22,7 @@ import type {
 } from "@downcity/agent";
 import {
   getPlatformRootDirPath,
-} from "../../process/registry/CityPaths.js";
+} from "@/city/process/registry/CityPaths.js";
 import {
   buildAgentSecureSettingKey,
   getSecureSettingJson,
@@ -30,7 +30,7 @@ import {
   removeSecureSetting,
   setSecureSettingJson,
   setSecureSettingJsonSync,
-} from "./StoreSecureSettings.js";
+} from "@/city/runtime/store/StoreSecureSettings.js";
 import {
   clearGlobalEnvEntries,
   getGlobalEnvMap,
@@ -43,7 +43,7 @@ import {
   removeGlobalEnvEntry,
   upsertEnvEntry,
   upsertGlobalEnvEntry,
-} from "./StoreEnvRepository.js";
+} from "@/city/runtime/store/StoreEnvRepository.js";
 import {
   getChannelAccount,
   getChannelAccountSync,
@@ -51,7 +51,7 @@ import {
   listChannelAccountsSync,
   removeChannelAccount,
   upsertChannelAccount,
-} from "./StoreChannelAccountRepository.js";
+} from "@/city/runtime/store/StoreChannelAccountRepository.js";
 
 /**
  * 平台控制面全局存储门面。

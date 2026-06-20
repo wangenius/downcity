@@ -6,11 +6,11 @@
  * - 有明确 account id 时直接复用；没有时先尝试 Wrangler 自动识别。
  * - Wrangler 已登录但无法枚举 account 时，进入最小交互：重新登录或手动输入 account id。
  */
-import { isCancel, select, text } from "../../tui/Prompts.js";
-import { readCloudflareAccountId, writeCloudflareAccountId } from "../../core/session.js";
+import { isCancel, select, text } from "../../../federation/tui/Prompts.js";
+import { readCloudflareAccountId, writeCloudflareAccountId } from "../../../federation/core/session.js";
 import { emitCliBlock } from "../../../shared/CliReporter.js";
 import { CliError } from "../../../shared/CliError.js";
-import { runCommand } from "./CommandRunner.js";
+import { runCommand } from "../../../federation/deploy/runtime/CommandRunner.js";
 /**
  * 解析并准备 Cloudflare account。
  */

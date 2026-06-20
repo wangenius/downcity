@@ -9,7 +9,7 @@ import fs from "fs-extra";
 import { getToolName, isTextUIPart, isToolUIPart, } from "ai";
 import { pickLastSuccessfulChatSendText } from "@downcity/agent";
 import { extractToolCallsFromUiMessage } from "@downcity/agent/internal/executor/messages/UIMessageTransformer.js";
-import { truncateText } from "./CommonHelpers.js";
+import { truncateText } from "../../../city/agent/control/CommonHelpers.js";
 function stringifyForDisplay(input, maxChars = 2400) {
     if (input === undefined)
         return "";

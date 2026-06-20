@@ -8,7 +8,7 @@
  */
 import { getLogger } from "@downcity/agent";
 import { normalizeAgentModel } from "@downcity/agent/internal/model/CityModelAdapter.js";
-import { createCityAiAgentModel } from "./CityAiServiceBinding.js";
+import { createCityAiAgentModel } from "../../../city/runtime/city-model/CityAiServiceBinding.js";
 function normalizeRuntimeEnv(env) {
     const resolved = {};
     if (!env)

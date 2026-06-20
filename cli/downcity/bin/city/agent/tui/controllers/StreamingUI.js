@@ -6,8 +6,8 @@
  * - 维护当前 turn id，保证跨事件状态一致。
  * - 所有状态变更最终反映到 MessageListComponent。
  */
-import { STREAMING_UI_FLUSH_MS } from "../constant/streaming.js";
-import { generateTuiId } from "../utils/id.js";
+import { STREAMING_UI_FLUSH_MS } from "../../../../city/agent/tui/constant/streaming.js";
+import { generateTuiId } from "../../../../city/agent/tui/utils/id.js";
 /**
  * 流式 UI 控制器。
  */

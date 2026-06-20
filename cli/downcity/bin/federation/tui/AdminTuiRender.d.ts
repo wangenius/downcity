@@ -5,8 +5,8 @@
  * - 负责选项列表、内容区、loading、消息、表格的渲染。
  * - 不处理输入循环，只根据数据刷新屏幕。
  */
-import { type shell_layout } from "./AdminTuiShell.js";
-import type { admin_tui_message_kind, admin_tui_select_option } from "../types/AdminTui.js";
+import { type shell_layout } from "../../federation/tui/AdminTuiShell.js";
+import type { admin_tui_message_kind, admin_tui_select_option } from "../../federation/types/AdminTui.js";
 /**
  * 渲染侧边栏选项列表。
  */

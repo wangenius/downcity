@@ -6,8 +6,8 @@
  * - 把 SDK 事件转交给 StreamingUIController，驱动消息流更新。
  */
 import type { AgentSessionEvent } from "@downcity/agent";
-import type { AgentChatInteractiveRenderSnapshot, AgentChatInteractiveRendererPort } from "../../types/AgentChatInteractive.js";
-import type { MessageListComponent } from "./components/MessageList.js";
+import type { AgentChatInteractiveRenderSnapshot, AgentChatInteractiveRendererPort } from "../../../city/types/AgentChatInteractive.js";
+import type { MessageListComponent } from "../../../city/agent/tui/components/MessageList.js";
 /**
  * pi-tui 版交互式渲染器。
  */

@@ -8,8 +8,8 @@
  */
 import fs from "fs-extra";
 import path from "node:path";
-import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "./CityPaths.js";
-import { isCityRunning } from "./CityRuntime.js";
+import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "../../../city/process/registry/CityPaths.js";
+import { isCityRunning } from "../../../city/process/registry/CityRuntime.js";
 const CONSOLE_DIR = getCityRuntimeDirPath();
 const MANAGED_AGENTS_FILE = getManagedAgentRegistryPath();
 function buildEmptyRegistry() {

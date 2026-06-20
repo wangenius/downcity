@@ -8,8 +8,8 @@
 
 import chalk from "chalk";
 
-import type { ColorPalette } from "./colors.js";
-import { darkColors } from "./colors.js";
+import type { ColorPalette } from "@/city/agent/tui/theme/colors.js";
+import { darkColors } from "@/city/agent/tui/theme/colors.js";
 
 /**
  * 颜色 token 名称，对应 ColorPalette 的每个字段。

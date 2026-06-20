@@ -8,7 +8,7 @@
  */
 
 import fs from "fs-extra";
-import { getCityPidPath } from "./CityPaths.js";
+import { getCityPidPath } from "@/city/process/registry/CityPaths.js";
 
 /**
  * 读取 city 后台 pid（读取失败或内容非法返回 null）。

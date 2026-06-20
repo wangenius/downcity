@@ -12,9 +12,9 @@ import type {
   UpsertEnvEntryInput,
   UpsertGlobalEnvEntryInput,
 } from "@downcity/agent";
-import { decryptText, decryptTextSync, encryptText } from "./crypto.js";
-import type { PlatformStoreContext } from "./StoreShared.js";
-import { normalizeNonEmptyText, nowIso } from "./StoreShared.js";
+import { decryptText, decryptTextSync, encryptText } from "@/city/runtime/store/crypto.js";
+import type { PlatformStoreContext } from "@/city/runtime/store/StoreShared.js";
+import { normalizeNonEmptyText, nowIso } from "@/city/runtime/store/StoreShared.js";
 
 /**
  * 同步构造 env 条目。

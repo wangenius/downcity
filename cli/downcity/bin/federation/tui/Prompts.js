@@ -9,7 +9,7 @@
  */
 import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
-import { create_tui_shell } from "./Shell.js";
+import { create_tui_shell } from "../../federation/tui/Shell.js";
 /**
  * clack 兼容：select。
  */

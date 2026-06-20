@@ -8,9 +8,9 @@
  */
 
 import path from "path";
-import { stopDaemonProcess } from "../process/daemon/Manager.js";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { resolveAgentId } from "../../shared/IndexSupport.js";
+import { stopDaemonProcess } from "@/city/process/daemon/Manager.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { resolveAgentId } from "@/shared/IndexSupport.js";
 
 /**
  * stop 命令执行流程。

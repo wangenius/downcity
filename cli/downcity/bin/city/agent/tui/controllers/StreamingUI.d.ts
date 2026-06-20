@@ -7,7 +7,7 @@
  * - 所有状态变更最终反映到 MessageListComponent。
  */
 import type { AgentSessionEvent } from "@downcity/agent";
-import type { MessageListComponent } from "../components/MessageList.js";
+import type { MessageListComponent } from "../../../../city/agent/tui/components/MessageList.js";
 /**
  * StreamingUIController 构造选项。
  */

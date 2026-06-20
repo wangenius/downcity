@@ -9,10 +9,10 @@
 import fs from "fs-extra";
 import { dirname } from "path";
 import { resolveSessionSystemMessages } from "@downcity/agent/internal/executor/composer/system/default/SystemDomain.js";
-import { getDowncityChatHistoryPath, getDowncitySessionMessagesArchiveDirPath, getDowncitySessionMessagesArchivePath, getDowncitySessionMessagesPath, } from "../../../config/Paths.js";
-import { buildControlRouteAliases, decodeMaybe, toLimit, } from "../../control/CommonHelpers.js";
-import { listControlSessionSummaries, loadSessionMessagesFromFile, toUiMessageTimeline, } from "../../control/Helpers.js";
-import { executeBySessionId } from "../../control/ExecuteBySession.js";
+import { getDowncityChatHistoryPath, getDowncitySessionMessagesArchiveDirPath, getDowncitySessionMessagesArchivePath, getDowncitySessionMessagesPath, } from "../../../../city/config/Paths.js";
+import { buildControlRouteAliases, decodeMaybe, toLimit, } from "../../../../city/agent/control/CommonHelpers.js";
+import { listControlSessionSummaries, loadSessionMessagesFromFile, toUiMessageTimeline, } from "../../../../city/agent/control/Helpers.js";
+import { executeBySessionId } from "../../../../city/agent/control/ExecuteBySession.js";
 const CITY_CHAT_SESSION_ID = "city-chat-main";
 function normalizeSystemText(input) {
     return String(input || "").trim();

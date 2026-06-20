@@ -5,7 +5,7 @@
  * - 所有组件通过 `current_theme` 取色，切换主题时只需替换调色板。
  * - 提供前景色、背景色、粗体等便捷方法，减少组件里的重复 chalk 调用。
  */
-import type { ColorPalette } from "./colors.js";
+import type { ColorPalette } from "../../../../city/agent/tui/theme/colors.js";
 /**
  * 颜色 token 名称，对应 ColorPalette 的每个字段。
  */

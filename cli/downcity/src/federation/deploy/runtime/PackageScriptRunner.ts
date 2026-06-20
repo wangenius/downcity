@@ -9,8 +9,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { emitCliBlock } from "../../../shared/CliReporter.js";
-import { runCommand } from "./CommandRunner.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
 
 /** package.json 中和部署相关的脚本信息。 */
 interface PackageScripts {

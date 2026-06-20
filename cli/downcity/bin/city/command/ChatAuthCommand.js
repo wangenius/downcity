@@ -7,7 +7,7 @@
  * - 管理员执行 `city chat auth set telegram:12345678` 后交互式选择 role。
  */
 import path from "node:path";
-import prompts from "../tui/Prompts.js";
+import prompts from "../../city/tui/Prompts.js";
 import { isChatAuthorizationChannel, listChatAuthorizationRoles, readChatAuthorizationConfigSync, resolveAuthorizedUserRole, setChatAuthorizationUserRole, } from "@downcity/plugins";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { parseBoolean } from "../../shared/IndexSupport.js";

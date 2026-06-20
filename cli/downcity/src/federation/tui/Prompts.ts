@@ -9,8 +9,8 @@
  */
 
 import blessed from "neo-blessed";
-import { t } from "../../shared/CliLocale.js";
-import { create_tui_shell } from "./Shell.js";
+import { t } from "@/shared/CliLocale.js";
+import { create_tui_shell } from "@/federation/tui/Shell.js";
 
 interface prompt_select_option {
   label: string;

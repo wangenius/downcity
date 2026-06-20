@@ -5,8 +5,8 @@
  * 模型选择接受通用的 { id, name, hint } 数组，不依赖 server model 类型。
  */
 
-import { password, select, text, isCancel, intro, log } from "../tui/Prompts.js";
-import { t } from "../../shared/CliLocale.js";
+import { password, select, text, isCancel, intro, log } from "@/federation/tui/Prompts.js";
+import { t } from "@/shared/CliLocale.js";
 
 export { intro, log, isCancel };
 

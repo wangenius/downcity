@@ -5,8 +5,8 @@
  * - 类似 Kimi Code 的 KimiTUI，负责把状态、布局、输入、session 生命周期串起来。
  * - 不在这里积累事件路由或渲染逻辑，那些下沉到 StreamingUIController 与组件。
  */
-import type { AgentChatSessionSummaryView } from "../AgentChatTypes.js";
-import type { AgentChatInteractiveRendererPort } from "../../types/AgentChatInteractive.js";
+import type { AgentChatSessionSummaryView } from "../../../city/agent/AgentChatTypes.js";
+import type { AgentChatInteractiveRendererPort } from "../../../city/types/AgentChatInteractive.js";
 /**
  * 协调器构造选项。
  */

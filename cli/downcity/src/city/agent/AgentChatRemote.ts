@@ -6,19 +6,19 @@
  * - 不处理命令行交互与本地 agent 解析，只负责与 daemon RPC 的通信侧逻辑。
  */
 
-import { generateId } from "../utils/Id.js";
+import { generateId } from "@/city/utils/Id.js";
 import {
   RemoteAgent,
   type AgentSessionSummary,
   type RemoteAgentSession,
 } from "@downcity/agent";
-import { resolveDaemonRpcEndpoint } from "../process/daemon/Client.js";
+import { resolveDaemonRpcEndpoint } from "@/city/process/daemon/Client.js";
 import {
   AGENT_CHAT_DEFAULT_SESSION_ID,
   AGENT_CHAT_NEW_SESSION_ID_PREFIX,
   type AgentChatSessionSummaryView,
   type AgentChatTransportOptions,
-} from "./AgentChatTypes.js";
+} from "@/city/agent/AgentChatTypes.js";
 
 /**
  * 远端访问目标。

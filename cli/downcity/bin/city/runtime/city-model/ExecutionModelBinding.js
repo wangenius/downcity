@@ -8,9 +8,9 @@
  */
 import fs from "fs-extra";
 import { assertProjectExecutionTarget } from "@downcity/agent";
-import { getDowncityJsonPath } from "../../config/Paths.js";
-import { assertCityAiModelReady, listCityAiModelChoices, } from "./CityAiServiceBinding.js";
-import { mergeProcessEnvWithPlatformGlobalEnv } from "../../env/ProcessEnv.js";
+import { getDowncityJsonPath } from "../../../city/config/Paths.js";
+import { assertCityAiModelReady, listCityAiModelChoices, } from "../../../city/runtime/city-model/CityAiServiceBinding.js";
+import { mergeProcessEnvWithPlatformGlobalEnv } from "../../../city/env/ProcessEnv.js";
 /**
  * 读取 City AIService 模型候选列表。
  */

@@ -7,13 +7,13 @@
  */
 
 import { spawnSync } from "node:child_process";
-import prompts from "../tui/Prompts.js";
+import prompts from "@/city/tui/Prompts.js";
 import { CityPact } from "@downcity/city";
-import { emitCliBlock } from "../../shared/CliReporter.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
 import type {
   CityLoginInput,
   CityUserSession,
-} from "../types/CitySession.js";
+} from "@/city/types/CitySession.js";
 import type {
   AccountsProviderItem,
   AuthOption,
@@ -23,7 +23,7 @@ import type {
   RegisterResult,
   CityAuthMethod,
   VerifyResult,
-} from "../types/CityAuth.js";
+} from "@/city/types/CityAuth.js";
 
 interface AccountsMeResult {
   /**

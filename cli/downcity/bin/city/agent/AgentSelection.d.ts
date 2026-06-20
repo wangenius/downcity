@@ -6,7 +6,7 @@
  * - 统一承接 `city agent start` 在省略路径时的目标选择逻辑。
  * - 规则固定为：显式路径优先，其次当前目录已初始化，最后才进入交互选择。
  */
-import type { CliAgentPromptChoice, CliRegisteredAgentView, ResolveCliAgentStartTargetDecision, ResolveCliAgentStartTargetDecisionInput } from "./AgentSelectionTypes.js";
+import type { CliAgentPromptChoice, CliRegisteredAgentView, ResolveCliAgentStartTargetDecision, ResolveCliAgentStartTargetDecisionInput } from "../../city/agent/AgentSelectionTypes.js";
 /**
  * 读取当前 registry 中的已登记 agent 列表。
  */

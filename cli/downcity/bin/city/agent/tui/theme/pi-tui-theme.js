@@ -5,7 +5,7 @@
  * - Markdown 与 Editor 都需要传入 pi-tui 的 theme 对象。
  * - 这里把 city 的语义 token 映射为 pi-tui 的 theme 字段。
  */
-import { current_theme } from "./theme.js";
+import { current_theme } from "../../../../city/agent/tui/theme/theme.js";
 /**
  * 创建 pi-tui Markdown 组件可用的主题。
  *

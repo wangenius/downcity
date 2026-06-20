@@ -8,7 +8,7 @@
  * - 远程访问统一走 `RemoteAgent({ url })`，不再在 CLI 侧维护第二套 HTTP SDK transport。
  * - 远程连接、session 创建/列表等操作委托给 `AgentChatRemote.ts`。
  */
-import type { AgentChatCliOptions, AgentChatExecutionOutcome, AgentChatSessionOptions } from "./AgentChatTypes.js";
+import type { AgentChatCliOptions, AgentChatExecutionOutcome, AgentChatSessionOptions } from "../../city/agent/AgentChatTypes.js";
 /**
  * 向目标 agent 的 SDK actor session 发送一轮消息。
  */

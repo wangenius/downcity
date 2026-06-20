@@ -7,7 +7,7 @@
  * - 业务模块只消费解析后的身份，避免余额、Agent、模型目录各自拼接身份。
  */
 import { CityPact } from "@downcity/city";
-import { DEFAULT_FEDERATION_URL, DEFAULT_CITY_ID, normalizeCityUrl, read_city_admin_secret_for_url, read_current_city_session, read_city_session_for_federation, } from "./CityStateStore.js";
+import { DEFAULT_FEDERATION_URL, DEFAULT_CITY_ID, normalizeCityUrl, read_city_admin_secret_for_url, read_current_city_session, read_city_session_for_federation, } from "../../city/shared/CityStateStore.js";
 /**
  * City 当前 CityPact user 管理器。
  */

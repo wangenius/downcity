@@ -8,18 +8,18 @@
  * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 import fs from "node:fs";
-import prompts from "../tui/Prompts.js";
+import prompts from "../../city/tui/Prompts.js";
 import { listPluginViews, listPluginsWithLifecycle, listPluginsWithoutLifecycle, runLocalPluginAction, } from "@downcity/agent";
-import { printResult } from "../utils/cli/CliOutput.js";
-import { getDowncityJsonPath } from "../config/Paths.js";
+import { printResult } from "../../city/utils/cli/CliOutput.js";
+import { getDowncityJsonPath } from "../../city/config/Paths.js";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 import { parseBoolean, parsePort } from "../../shared/IndexSupport.js";
 import { helpText, t } from "../../shared/CliLocale.js";
-import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
-import { runManagedPluginCommandBridge } from "../shared/ManagedPluginRemote.js";
-import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
-import { runInteractiveChatManager } from "../shared/ChatManager.js";
-import { createCityStaticBuiltinPlugins } from "../runtime/plugins/CityBuiltinPlugins.js";
+import { resolveProjectRoot } from "../../city/shared/PluginTargetSupport.js";
+import { runManagedPluginCommandBridge } from "../../city/shared/ManagedPluginRemote.js";
+import { registerPluginScheduleCommands } from "../../city/command/PluginScheduleCommand.js";
+import { runInteractiveChatManager } from "../../city/shared/ChatManager.js";
+import { createCityStaticBuiltinPlugins } from "../../city/runtime/plugins/CityBuiltinPlugins.js";
 const CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_CITY = new Set([
     "status",
     "test",

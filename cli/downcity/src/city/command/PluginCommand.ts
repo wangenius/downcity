@@ -10,25 +10,25 @@
 
 import fs from "node:fs";
 import type { Command } from "commander";
-import prompts from "../tui/Prompts.js";
+import prompts from "@/city/tui/Prompts.js";
 import {
   listPluginViews,
   listPluginsWithLifecycle,
   listPluginsWithoutLifecycle,
   runLocalPluginAction,
 } from "@downcity/agent";
-import { printResult } from "../utils/cli/CliOutput.js";
+import { printResult } from "@/city/utils/cli/CliOutput.js";
 import type { JsonValue } from "@downcity/agent";
-import { getDowncityJsonPath } from "../config/Paths.js";
+import { getDowncityJsonPath } from "@/city/config/Paths.js";
 import type { PluginCliBaseOptions } from "@downcity/agent";
-import { emitCliBlock } from "../../shared/CliReporter.js";
-import { parseBoolean, parsePort } from "../../shared/IndexSupport.js";
-import { helpText, t } from "../../shared/CliLocale.js";
-import { resolveProjectRoot } from "../shared/PluginTargetSupport.js";
-import { runManagedPluginCommandBridge } from "../shared/ManagedPluginRemote.js";
-import { registerPluginScheduleCommands } from "./PluginScheduleCommand.js";
-import { runInteractiveChatManager } from "../shared/ChatManager.js";
-import { createCityStaticBuiltinPlugins } from "../runtime/plugins/CityBuiltinPlugins.js";
+import { emitCliBlock } from "@/shared/CliReporter.js";
+import { parseBoolean, parsePort } from "@/shared/IndexSupport.js";
+import { helpText, t } from "@/shared/CliLocale.js";
+import { resolveProjectRoot } from "@/city/shared/PluginTargetSupport.js";
+import { runManagedPluginCommandBridge } from "@/city/shared/ManagedPluginRemote.js";
+import { registerPluginScheduleCommands } from "@/city/command/PluginScheduleCommand.js";
+import { runInteractiveChatManager } from "@/city/shared/ChatManager.js";
+import { createCityStaticBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
 
 type StaticCatalogEntry = {
   name: string;

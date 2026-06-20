@@ -6,16 +6,16 @@
  * - 旧 gateway 源码暂时保留给历史 API/清理逻辑，但不再挂到用户命令入口。
  * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
  */
-import { registerConfigCommand } from "./ConfigCommand.js";
-import { registerEnvCommand } from "./EnvCommand.js";
-import { registerTokenCommand } from "./TokenCommand.js";
-import { register_federation_command } from "./FederationCommand.js";
-import { gatewayInitCommand } from "../runtime/gateway/runtime/GatewayInit.js";
+import { registerConfigCommand } from "../../city/command/ConfigCommand.js";
+import { registerEnvCommand } from "../../city/command/EnvCommand.js";
+import { registerTokenCommand } from "../../city/command/TokenCommand.js";
+import { register_federation_command } from "../../city/command/FederationCommand.js";
+import { gatewayInitCommand } from "../../city/runtime/gateway/runtime/GatewayInit.js";
 import { createVersionBanner } from "../../shared/IndexSupport.js";
 import { CliError } from "../../shared/CliError.js";
-import { updateCommand } from "../shared/Update.js";
-import { gatewayStatusCommand, } from "../runtime/gateway/runtime/GatewayStatus.js";
-import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot, restartCityRuntimeCommand, runCityRuntimeCommand, startCityRuntimeCommand, stopCityRuntimeCommand, } from "../runtime/gateway/runtime/GatewayProcess.js";
+import { updateCommand } from "../../city/shared/Update.js";
+import { gatewayStatusCommand, } from "../../city/runtime/gateway/runtime/GatewayStatus.js";
+import { prepareForegroundAgent, ensureRegisteredAgentProjectRoot, restartCityRuntimeCommand, runCityRuntimeCommand, startCityRuntimeCommand, stopCityRuntimeCommand, } from "../../city/runtime/gateway/runtime/GatewayProcess.js";
 import { helpText, t } from "../../shared/CliLocale.js";
 /**
  * 注册 top-level city 生命周期命令。

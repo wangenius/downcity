@@ -17,7 +17,6 @@ import {
 import type {
   admin_tui_message_kind,
   admin_tui_select_option,
-  admin_tui_table_input,
 } from "../types/AdminTui.js";
 
 /**

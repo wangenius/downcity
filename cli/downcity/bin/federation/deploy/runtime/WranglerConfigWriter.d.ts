@@ -15,5 +15,5 @@ export interface WranglerConfigWriteResult {
 /**
  * 根据 City 项目配置和本地部署环境写入临时 wrangler.toml。
  */
-export declare function writeWranglerConfig(config_file: FederationProjectConfigFile, env_file: FederationProjectDeployEnvFile, database_id?: string): WranglerConfigWriteResult;
+export declare function writeWranglerConfig(config_file: FederationProjectConfigFile, _env_file: FederationProjectDeployEnvFile, database_id?: string): WranglerConfigWriteResult;
 //# sourceMappingURL=WranglerConfigWriter.d.ts.map

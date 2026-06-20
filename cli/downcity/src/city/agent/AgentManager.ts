@@ -134,20 +134,6 @@ function loadChannelAccountMap(): Map<string, StoredChannelAccount> {
   return new Map(loadChannelAccounts().map((account) => [account.id, account]));
 }
 
-function formatAgentListDescription(agent: AgentManagerAgentSummary): string {
-  const execution_binding = agent.execution_binding || t({
-    zh: "未配置",
-    en: "not configured",
-  });
-  const channels = agent.channels.length > 0
-    ? agent.channels.join(", ")
-    : t({ zh: "未连接", en: "not connected" });
-  return t({
-    zh: `${agent.status} · 执行绑定：${execution_binding} · Chat 账号：${channels}`,
-    en: `${agent.status} · execution: ${execution_binding} · chat accounts: ${channels}`,
-  });
-}
-
 function formatAgentDetail(agent: AgentManagerAgentSummary): string {
   const execution_binding = agent.execution_binding || t({
     zh: "未配置",

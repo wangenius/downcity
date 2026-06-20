@@ -9,7 +9,6 @@
 import blessed from "neo-blessed";
 import { t } from "../../shared/CliLocale.js";
 import {
-  type blessed_list_element,
   type blessed_textbox_element,
   is_plain_escape_input,
   type shell_layout,

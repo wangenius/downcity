@@ -9,7 +9,6 @@
  * - user 登录与本机 runtime 统一由 `downcity` 承担。
  */
 
-import { readFileSync } from "node:fs";
 import { isCancel, select } from "./tui/Prompts.js";
 import { parseArgs } from "./core/env.js";
 import { show, showError, showSuccess } from "./core/ui.js";
@@ -161,27 +160,7 @@ async function promptAndPersistCliLocale(): Promise<void> {
       ? "Switched to Chinese and saved as the default language"
       : "Switched to English and saved as the default language",
   }));
-}
-
-/**
- * 读取当前 CLI 包版本。
- *
- * 关键说明（中文）
- * - 运行源码时从仓库 package.json 读取
- * - 发布后的全局安装同样从包根目录 package.json 读取
- * - 读取失败时回退到 unknown，避免 CLI 启动被版本展示阻断
- */
-function readCliVersion(): string {
-  try {
-    const packageJsonPath = new URL("../package.json", import.meta.url);
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
-      version?: string;
-    };
-    return String(packageJson.version ?? "unknown");
-  } catch {
-    return "unknown";
-  }
-}
+ }
 
 /**
  * 执行 CLI 自更新，并提示用户重新启动。

@@ -51,7 +51,7 @@ import {
 } from "../../../../shared/IndexSupport.js";
 import { buildRuntimePortFacts } from "../../../shared/PortHints.js";
 import { ensureGatewayAuthBootstrap } from "./GatewayAuthBootstrap.js";
-import { emitCliBlock, emitCliList } from "../../../../shared/CliReporter.js";
+import { emitCliBlock } from "../../../../shared/CliReporter.js";
 import { runWithSpinner } from "../../../utils/cli/Spinner.js";
 import { CliError } from "../../../../shared/CliError.js";
 import { ensureBayPublicHostEnv } from "../../../shared/PublicHostEnv.js";
@@ -86,13 +86,13 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
   const sweep = await sweepDetachedBayProcesses({
     include_city_runtime: true,
   });
-  for (const item of sweep.stopped) {
+  for (const _ of sweep.stopped) {
     emitCliBlock({
       tone: "warning",
       title: "Orphan city runtime cleaned",
     });
   }
-  for (const item of sweep.alive) {
+  for (const _ of sweep.alive) {
     emitCliBlock({
       tone: "warning",
       title: "Orphan city runtime still alive",
@@ -192,13 +192,13 @@ async function cleanupLegacyConsoleUiRuntime(timeoutMs: number): Promise<void> {
     timeoutMs,
   });
 
-  for (const item of sweep.stopped) {
+  for (const _ of sweep.stopped) {
     emitCliBlock({
       tone: "success",
       title: "Legacy Console UI process stopped",
     });
   }
-  for (const item of sweep.alive) {
+  for (const _ of sweep.alive) {
     emitCliBlock({
       tone: "warning",
       title: "Legacy Console UI process may still be running",
@@ -270,13 +270,13 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
       include_agent: true,
       timeoutMs,
     });
-    for (const item of orphanSweep.stopped) {
+  for (const _ of orphanSweep.stopped) {
       emitCliBlock({
         tone: "success",
         title: "Orphan process stopped",
       });
     }
-    for (const item of orphanSweep.alive) {
+  for (const _ of orphanSweep.alive) {
       emitCliBlock({
         tone: "warning",
         title: "Orphan process may still be running",

@@ -13,7 +13,6 @@ import type { StoredChannelAccount, StoredEnvEntry, StoredGlobalEnvEntry, Upsert
  */
 export declare class PlatformStore {
     private readonly sqlite;
-    private readonly db;
     constructor(dbPath?: string);
     /**
      * 暴露给内部 helper 的只读上下文视图。

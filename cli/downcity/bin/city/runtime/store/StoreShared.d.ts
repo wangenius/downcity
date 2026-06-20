@@ -6,12 +6,7 @@
  * - 对外不暴露业务语义，只服务 `utils/store/*` 内部实现。
  */
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { StoredChannelAccountChannel } from "@downcity/agent";
-/**
- * Drizzle SQLite 实例类型。
- */
-export type PlatformDrizzleDb = ReturnType<typeof drizzle>;
 /**
  * PlatformStore 子模块上下文。
  */
@@ -20,10 +15,6 @@ export interface PlatformStoreContext {
      * 原始 SQLite 连接。
      */
     sqlite: Database.Database;
-    /**
-     * Drizzle 查询实例。
-     */
-    db: PlatformDrizzleDb;
 }
 /**
  * 返回当前时间的 ISO 字符串。

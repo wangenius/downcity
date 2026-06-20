@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 /**
  * 根据 City 项目配置和本地部署环境写入临时 wrangler.toml。
  */
-export function writeWranglerConfig(config_file, env_file, database_id) {
+export function writeWranglerConfig(config_file, _env_file, database_id) {
     const config = config_file.config;
     const config_dir = mkdtempSync(join(tmpdir(), "downcity-wrangler-"));
     const config_path = join(config_dir, "wrangler.toml");

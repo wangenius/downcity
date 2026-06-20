@@ -26,7 +26,7 @@ export interface WranglerConfigWriteResult {
  */
 export function writeWranglerConfig(
   config_file: FederationProjectConfigFile,
-  env_file: FederationProjectDeployEnvFile,
+  _env_file: FederationProjectDeployEnvFile,
   database_id?: string,
 ): WranglerConfigWriteResult {
   const config = config_file.config;

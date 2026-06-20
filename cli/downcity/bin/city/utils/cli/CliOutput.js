@@ -8,12 +8,6 @@
  */
 import { emitCliBlock, emitCliList, } from "../../../shared/CliReporter.js";
 /**
- * 判断值是否为 plain object。
- */
-function isPlainObject(value) {
-    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-/**
  * 将 payload 转换为 facts 列表（用于人类可读渲染）。
  */
 function payloadToFacts(payload) {

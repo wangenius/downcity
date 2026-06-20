@@ -7,13 +7,7 @@
  */
 
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { StoredChannelAccountChannel } from "@downcity/agent";
-
-/**
- * Drizzle SQLite 实例类型。
- */
-export type PlatformDrizzleDb = ReturnType<typeof drizzle>;
 
 /**
  * PlatformStore 子模块上下文。
@@ -23,10 +17,6 @@ export interface PlatformStoreContext {
    * 原始 SQLite 连接。
    */
   sqlite: Database.Database;
-  /**
-   * Drizzle 查询实例。
-   */
-  db: PlatformDrizzleDb;
 }
 
 /**

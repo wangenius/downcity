@@ -10,12 +10,9 @@
 import {
   emitCliBlock,
   emitCliList,
-  formatCliBlock,
 } from "../../../shared/CliReporter.js";
 import type {
-  CliReportBlock,
   CliReportFact,
-  CliReportList,
   CliReportListItem,
   CliReportTone,
 } from "../../../shared/types/CliReporter.js";
@@ -59,13 +56,6 @@ export type PrintResultParams = {
   /** 键值对 payload。 */
   payload?: Record<string, unknown>;
 };
-
-/**
- * 判断值是否为 plain object。
- */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
 
 /**
  * 将 payload 转换为 facts 列表（用于人类可读渲染）。

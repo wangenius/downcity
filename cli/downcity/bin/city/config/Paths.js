@@ -47,9 +47,6 @@ export function getDowncitySchemaPath(cwd) {
 export function getCacheDirPath(cwd) {
     return path.join(getDowncityDirPath(cwd), ".cache");
 }
-function getDowncityProfileDirPath(cwd) {
-    return path.join(getDowncityDirPath(cwd), "profile");
-}
 /**
  * Memory 根目录（V2）。
  *
@@ -164,9 +161,6 @@ export function getDowncityChannelDirPath(cwd) {
  */
 export function getDowncityChannelMetaPath(cwd) {
     return path.join(getDowncityChannelDirPath(cwd), "meta.json");
-}
-function getDowncityChatMetaDirPath(cwd) {
-    return path.join(getDowncityChatDirPath(cwd), "meta");
 }
 /**
  * Chat 会话目录（按 sessionId 组织）。

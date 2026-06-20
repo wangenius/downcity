@@ -14,7 +14,7 @@ import type {
   admin_tui_select_option,
   admin_tui_table_input,
 } from "../types/AdminTui.js";
-import { create_shell, type shell_layout } from "./AdminTuiShell.js";
+import { create_shell } from "./AdminTuiShell.js";
 import {
   message_accent,
   message_title,

@@ -421,60 +421,6 @@ async function safe_count_running_agents(): Promise<number> {
   }
 }
 
-function build_status_subtitle(running: boolean, managed_agents: number): string {
-  return running
-    ? t({
-      zh: `runtime 运行中 · ${managed_agents} 个 agent 活跃`,
-      en: `runtime running · ${managed_agents} active agents`,
-    })
-    : t({
-      zh: `runtime 已停止 · ${managed_agents} 个 agent 活跃`,
-      en: `runtime stopped · ${managed_agents} active agents`,
-    });
-}
-
-function build_status_detail(params: {
-  running: boolean;
-  pid: number | null;
-  city_state: FederationMembershipState;
-  managed_agents: number;
-}): string {
-  return t({
-    zh: [
-      `{bold}City runtime{/bold}`,
-      `状态：${runtime_state_text(params.running)}`,
-      `PID：${params.pid ?? unknown_text()}`,
-      "",
-      `{bold}Federation{/bold}`,
-      `base：${params.city_state.federation_url}`,
-      `source：${params.city_state.source}`,
-      `user token：${configured_state_text(params.city_state.has_user_token)}`,
-      `city id：${params.city_state.city_id}`,
-      "",
-      `{bold}托管 Agent{/bold}`,
-      `运行中：${params.managed_agents}`,
-      "",
-      "选择该动作后会打印现有 `city status` 文本总览。",
-    ].join("\n"),
-    en: [
-      `{bold}City runtime{/bold}`,
-      `state: ${runtime_state_text(params.running)}`,
-      `PID: ${params.pid ?? unknown_text()}`,
-      "",
-      `{bold}Federation{/bold}`,
-      `base: ${params.city_state.federation_url}`,
-      `source: ${params.city_state.source}`,
-      `user token: ${configured_state_text(params.city_state.has_user_token)}`,
-      `city id: ${params.city_state.city_id}`,
-      "",
-      `{bold}Managed agents{/bold}`,
-      `running: ${params.managed_agents}`,
-      "",
-      "Selecting this action prints the existing `city status` text overview.",
-    ].join("\n"),
-  });
-}
-
 function build_federation_subtitle(city_state: FederationMembershipState): string {
   if (city_state.has_user_token) {
     return t({
@@ -530,13 +476,6 @@ function configured_state_text(configured: boolean): string {
   return configured
     ? t({ zh: "已配置", en: "configured" })
     : t({ zh: "缺失", en: "missing" });
-}
-
-/**
- * 未知值显示文案。
- */
-function unknown_text(): string {
-  return t({ zh: "未知", en: "unknown" });
 }
 
 function section_item(id: string, title: string): tui_list_item {

@@ -9,7 +9,7 @@
 import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
 import { create_tui_shell } from "./Shell.js";
-import { getCliLocale, t } from "../../shared/CliLocale.js";
+import { t } from "../../shared/CliLocale.js";
 import type { FederationAction } from "../types/Interactive.js";
 import type { tui_action_result, tui_list_item } from "../types/Tui.js";
 

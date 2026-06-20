@@ -160,6 +160,5 @@ export declare class AuthStore {
     toIssuedToken(record: AuthTokenRecord, token: string): AuthIssuedToken;
     private toAuthUser;
     private toAuthToken;
-    private _unused;
 }
 //# sourceMappingURL=AuthStore.d.ts.map

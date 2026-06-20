@@ -80,7 +80,7 @@ export async function createFederationProject(dir = ".", options = {}) {
 /**
  * 从 Git URL 创建本地 Federation 项目。
  */
-async function cloneFederationProject(git_url, options) {
+async function cloneFederationProject(git_url, _options) {
     const default_dir = inferGitProjectName(git_url);
     const dir_input = await text({
         message: "Local directory",

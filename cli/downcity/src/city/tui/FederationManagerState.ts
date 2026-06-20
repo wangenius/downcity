@@ -7,14 +7,11 @@
  */
 
 import {
-  DEFAULT_FEDERATION_URL,
   DEFAULT_CITY_ID,
   list_federations,
-  normalizeCityUrl,
   read_current_city_session,
   readPersistedCityCliLocale,
   readCityState,
-  readCityString,
   resolve_selected_federation_url,
   upsert_federation_profile,
   writeCityState,
@@ -46,7 +43,7 @@ import {
   build_city_subtitle,
 } from "./FederationManagerFormat.js";
 import type { FederationMembershipState, FederationProfile } from "../types/FederationMembership.js";
-import type { CityBalanceAccount, CityRechargeResult } from "../types/CityBalance.js";
+import type { CityBalanceAccount } from "../types/CityBalance.js";
 import type { CityUserSession } from "../types/CitySession.js";
 import type { tui_list_item } from "../types/Tui.js";
 

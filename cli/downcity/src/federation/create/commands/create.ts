@@ -99,7 +99,7 @@ export async function createFederationProject(
  */
 async function cloneFederationProject(
   git_url: string,
-  options: FederationCreateCommandOptions,
+  _options: FederationCreateCommandOptions,
 ): Promise<void> {
   const default_dir = inferGitProjectName(git_url);
   const dir_input = await text({

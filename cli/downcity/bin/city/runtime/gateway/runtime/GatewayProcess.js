@@ -52,13 +52,13 @@ export async function startCityRuntimeCommand(cliPath) {
     const sweep = await sweepDetachedBayProcesses({
         include_city_runtime: true,
     });
-    for (const item of sweep.stopped) {
+    for (const _ of sweep.stopped) {
         emitCliBlock({
             tone: "warning",
             title: "Orphan city runtime cleaned",
         });
     }
-    for (const item of sweep.alive) {
+    for (const _ of sweep.alive) {
         emitCliBlock({
             tone: "warning",
             title: "Orphan city runtime still alive",
@@ -138,13 +138,13 @@ async function cleanupLegacyConsoleUiRuntime(timeoutMs) {
         include_legacy_console_ui: true,
         timeoutMs,
     });
-    for (const item of sweep.stopped) {
+    for (const _ of sweep.stopped) {
         emitCliBlock({
             tone: "success",
             title: "Legacy Console UI process stopped",
         });
     }
-    for (const item of sweep.alive) {
+    for (const _ of sweep.alive) {
         emitCliBlock({
             tone: "warning",
             title: "Legacy Console UI process may still be running",
@@ -208,13 +208,13 @@ export async function stopCityRuntimeCommand(params) {
             include_agent: true,
             timeoutMs,
         });
-        for (const item of orphanSweep.stopped) {
+        for (const _ of orphanSweep.stopped) {
             emitCliBlock({
                 tone: "success",
                 title: "Orphan process stopped",
             });
         }
-        for (const item of orphanSweep.alive) {
+        for (const _ of orphanSweep.alive) {
             emitCliBlock({
                 tone: "warning",
                 title: "Orphan process may still be running",

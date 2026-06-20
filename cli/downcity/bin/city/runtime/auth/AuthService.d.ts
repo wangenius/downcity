@@ -110,8 +110,6 @@ export declare class AuthService {
     private isTokenActive;
     private ensureLocalCliUser;
     private requireTokenName;
-    private requireUserId;
-    private requireUser;
     private requireLocalCliUser;
     private requireLocalCliTokenRecord;
     private toUserPayload;

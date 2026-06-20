@@ -26,7 +26,6 @@ import {
   format_city_item_label,
   format_city_detail,
   format_footer,
-  build_city_subtitle,
   is_disabled_item,
 } from "./FederationManagerFormat.js";
 import type { tui_list_item } from "../types/Tui.js";

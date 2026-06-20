@@ -316,26 +316,13 @@ export class AuthService {
     return user;
   }
 
-  private requireTokenName(value: string): string {
-    const tokenName = String(value || "").trim();
-    if (!tokenName) throw new AuthError("token name is required", 400);
-    return tokenName;
-  }
+ private requireTokenName(value: string): string {
+   const tokenName = String(value || "").trim();
+   if (!tokenName) throw new AuthError("token name is required", 400);
+   return tokenName;
+ }
 
-  private requireUserId(value: string): string {
-    const userId = String(value || "").trim();
-    if (!userId) throw new AuthError("userId is required", 400);
-    return userId;
-  }
-
-  private requireUser(userIdInput: string): AuthUser {
-    const userId = this.requireUserId(userIdInput);
-    const user = this.store.getUserById(userId);
-    if (!user) throw new AuthError("User not found", 404);
-    return user;
-  }
-
-  private requireLocalCliUser(): AuthUser {
+ private requireLocalCliUser(): AuthUser {
     const user = this.store.findUserByUsername(LOCAL_CLI_USERNAME);
     if (!user) throw new AuthError("Local CLI access is not initialized", 404);
     this.ensureUserActive(user);

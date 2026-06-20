@@ -10,7 +10,6 @@ import fs from "fs-extra";
 import path from "node:path";
 import { getPlatformStoreKeyPath } from "../../process/registry/CityPaths.js";
 
-const MODEL_DB_KEY_PATH = "model-db.key";
 const ENCRYPTION_ALGO = "aes-256-gcm";
 
 let cachedKey: Buffer | null = null;
@@ -29,10 +28,6 @@ function resolveKeyFilePathSync(): string {
   const keyPath = getPlatformStoreKeyPath();
   fs.ensureDirSync(path.dirname(keyPath));
   return keyPath;
-}
-
-async function resolveKeyFilePath(): Promise<string> {
-  return resolveKeyFilePathSync();
 }
 
 function loadOrCreateKeySync(): Buffer {

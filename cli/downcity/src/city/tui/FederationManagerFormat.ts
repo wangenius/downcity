@@ -12,7 +12,6 @@ import { is_disabled_selectable_item } from "./SelectableList.js";
 import type { city_manager_state } from "./FederationManagerState.js";
 import type { FederationMembershipState, FederationProfile } from "../types/FederationMembership.js";
 import type { CityBalanceAccount, CityRechargeResult } from "../types/CityBalance.js";
-import type { CityUserSession } from "../types/CitySession.js";
 import type { tui_list_item } from "../types/Tui.js";
 
 export function is_disabled_item(item: tui_list_item | undefined): boolean {

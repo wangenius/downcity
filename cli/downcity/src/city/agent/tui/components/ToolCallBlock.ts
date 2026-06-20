@@ -7,7 +7,7 @@
  * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情。
  */
 
-import { Container, Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
 import { STATUS_BULLET } from "../constant/symbols.js";
 import { MESSAGE_INDENT } from "../constant/rendering.js";

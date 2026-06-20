@@ -9,7 +9,6 @@
 import fs from "fs-extra";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import { nanoid } from "nanoid";
 import { getPlatformStoreDbPath } from "../../process/registry/CityPaths.js";
 import type { AuthIssuedToken, AuthTokenSummary } from "@downcity/agent";
@@ -22,8 +21,6 @@ import {
 } from "@downcity/agent";
 import type {
   AuthAuditLog,
-  AuthPermission,
-  AuthRole,
   AuthTokenRecord,
   AuthUser,
 } from "@downcity/agent";
@@ -61,7 +58,6 @@ export class AuthStore {
     this.sqlite.pragma("journal_mode = WAL");
     this.context = {
       sqlite: this.sqlite,
-      db: drizzle(this.sqlite),
     };
     ensurePlatformStoreSchema(this.context);
   }
@@ -566,7 +562,4 @@ export class AuthStore {
     };
   }
 
-  private _unused(_row: SqliteRow): AuthRole | AuthPermission {
-    throw new Error("unused");
-  }
 }

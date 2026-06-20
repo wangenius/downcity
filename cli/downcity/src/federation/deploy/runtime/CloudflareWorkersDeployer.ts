@@ -18,7 +18,6 @@ import type {
 } from "../../types/FederationProjectConfig.js";
 import {
   readFederationProjectDeployEnv,
-  writeFederationProjectDeployEnv,
 } from "../config/FederationProjectEnvLoader.js";
 import { resolveCloudflareAccount } from "./CloudflareAccountResolver.js";
 import { resolveD1Database } from "./D1DatabaseResolver.js";

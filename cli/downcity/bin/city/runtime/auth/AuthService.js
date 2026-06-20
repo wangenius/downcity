@@ -264,19 +264,6 @@ export class AuthService {
             throw new AuthError("token name is required", 400);
         return tokenName;
     }
-    requireUserId(value) {
-        const userId = String(value || "").trim();
-        if (!userId)
-            throw new AuthError("userId is required", 400);
-        return userId;
-    }
-    requireUser(userIdInput) {
-        const userId = this.requireUserId(userIdInput);
-        const user = this.store.getUserById(userId);
-        if (!user)
-            throw new AuthError("User not found", 404);
-        return user;
-    }
     requireLocalCliUser() {
         const user = this.store.findUserByUsername(LOCAL_CLI_USERNAME);
         if (!user)

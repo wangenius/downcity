@@ -8,7 +8,6 @@
  */
 import fs from "fs-extra";
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import { getPlatformStoreDbPath } from "../../process/registry/CityPaths.js";
 import { ensurePlatformStoreSchema } from "./StoreSchema.js";
 import { getPlatformRootDirPath, } from "../../process/registry/CityPaths.js";
@@ -20,13 +19,11 @@ import { getChannelAccount, getChannelAccountSync, listChannelAccounts, listChan
  */
 export class PlatformStore {
     sqlite;
-    db;
     constructor(dbPath = getPlatformStoreDbPath()) {
         fs.ensureDirSync(getPlatformRootDirPath());
         this.sqlite = new Database(dbPath);
         this.sqlite.pragma("foreign_keys = ON");
         this.sqlite.pragma("journal_mode = WAL");
-        this.db = drizzle(this.sqlite);
         ensurePlatformStoreSchema(this.context);
     }
     /**
@@ -35,7 +32,6 @@ export class PlatformStore {
     get context() {
         return {
             sqlite: this.sqlite,
-            db: this.db,
         };
     }
     /**
@@ -229,7 +225,6 @@ export function withPlatformStore(callback) {
     sqlite.pragma("journal_mode = WAL");
     const context = {
         sqlite,
-        db: drizzle(sqlite),
     };
     ensurePlatformStoreSchema(context);
     try {

@@ -1,12 +1,13 @@
 {
   "name": "downcity",
-  "version": "1.1.204",
+  "version": "1.1.205",
   "type": "module",
   "description": "Downcity CLI — unified City and Town management",
   "bin": {
     "city": "./bin/index.js",
     "downcity": "./bin/index.js",
-    "downfed": "./bin/index.js"
+    "downfed": "./bin/index.js",
+    "fed": "./bin/index.js"
   },
   "files": [
     "bin/",

@@ -1,0 +1,1 @@
+{"version":3,"file":"TokenPrompts.d.ts","sourceRoot":"","sources":["../../../../src/city/command/token/TokenPrompts.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AA0EH,wBAAsB,sBAAsB,IAAI,OAAO,CAAC,MAAM,GAAG,IAAI,CAAC,CA8CrE;AAiFD,wBAAsB,+BAA+B,CAAC,OAAO,EAAE;IAC7D,SAAS,CAAC,EAAE,MAAM,CAAC;CACpB,GAAG,OAAO,CAAC,IAAI,CAAC,CAWhB;AA8ED,wBAAsB,0BAA0B,IAAI,OAAO,CAAC,IAAI,CAAC,CAsEhE"}

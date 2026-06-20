@@ -53,6 +53,10 @@ export declare class AgentChatTuiCoordinator {
     private remove_input_listener;
     private is_initial_picker;
     /**
+     * slash 命令宿主，解耦命令分发与 coordinator 内部实现。
+     */
+    private get slash_command_host();
+    /**
      * @param options 协调器选项。
      */
     constructor(options: AgentChatTuiCoordinatorOptions);

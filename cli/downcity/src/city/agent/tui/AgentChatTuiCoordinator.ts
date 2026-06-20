@@ -26,6 +26,11 @@ import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
 import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
 import type { AppState } from "@/city/agent/tui/types.js";
+import {
+  dispatchSlashCommand,
+  resolveSlashCommandInput,
+  type SlashCommandHost,
+} from "@/city/agent/tui/commands/index.js";
 
 /**
  * 协调器构造选项。
@@ -71,6 +76,36 @@ export class AgentChatTuiCoordinator {
   private remove_input_listener: (() => void) | null = null;
 
   private is_initial_picker = false;
+
+  /**
+   * slash 命令宿主，解耦命令分发与 coordinator 内部实现。
+   */
+  private get slash_command_host(): SlashCommandHost {
+    return {
+      is_streaming: this.app_state.is_executing,
+      send_normal_user_input: async (text: string) => {
+        await this.run_turn(text);
+      },
+      show_error: (text: string) => {
+        this.add_error_message(text);
+      },
+      show_help: () => {
+        this.add_status_message("/help · /session · /new · /clear · /quit");
+      },
+      clear_transcript: () => {
+        this.message_list.clear();
+      },
+      create_new_session: async () => {
+        await this.create_new_session();
+      },
+      show_session_picker: async () => {
+        await this.show_session_picker();
+      },
+      stop: async () => {
+        await this.stop();
+      },
+    };
+  }
 
   /**
    * @param options 协调器选项。
@@ -163,7 +198,7 @@ export class AgentChatTuiCoordinator {
    * @param raw_text 原始输入文本。
    */
   private async handle_user_input(raw_text: string): Promise<void> {
-    if (this.stopped || this.app_state.is_executing) {
+    if (this.stopped) {
       return;
     }
 
@@ -176,30 +211,23 @@ export class AgentChatTuiCoordinator {
 
     this.editor.clear();
 
-    if (text === "/quit" || text === "/exit") {
-      await this.stop();
-      return;
-    }
+    const intent = resolveSlashCommandInput({
+      input: text,
+      is_streaming: this.app_state.is_executing,
+    });
 
-    if (text === "/clear") {
-      this.message_list.clear();
+    if (
+      intent.kind === "builtin" ||
+      intent.kind === "blocked" ||
+      intent.kind === "invalid"
+    ) {
+      await dispatchSlashCommand(this.slash_command_host, intent);
       this.request_render();
       return;
     }
 
-    if (text === "/help") {
-      this.add_status_message("/help · /session · /new · /clear · /quit");
-      this.request_render();
-      return;
-    }
-
-    if (text === "/new") {
-      await this.create_new_session();
-      return;
-    }
-
-    if (text === "/session") {
-      await this.show_session_picker();
+    if (intent.kind === "message") {
+      await this.run_turn(intent.input);
       return;
     }
 

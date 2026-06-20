@@ -1,0 +1,1 @@
+{"version":3,"file":"dispatch.d.ts","sourceRoot":"","sources":["../../../../../src/city/agent/tui/commands/dispatch.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,KAAK,EAAE,gBAAgB,EAAE,MAAM,mCAAmC,CAAC;AAC1E,OAAO,KAAK,EAAE,kBAAkB,EAAE,MAAM,oCAAoC,CAAC;AAE7E;;;;;GAKG;AACH,wBAAsB,oBAAoB,CACxC,IAAI,EAAE,gBAAgB,EACtB,MAAM,EAAE,kBAAkB,GACzB,OAAO,CAAC,IAAI,CAAC,CAgBf"}

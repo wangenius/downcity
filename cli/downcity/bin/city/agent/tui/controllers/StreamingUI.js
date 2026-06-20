@@ -58,18 +58,24 @@ export class StreamingUIController {
         switch (event.type) {
             case "turn-start":
                 this.attach_turn_id(event.turnId);
-                this.create_assistant_entry();
+                // 关键点（中文）：对齐 Kimi Code，不在 turn-start 预创建 assistant entry。
+                // 第一个 text-delta 到达时才创建，保证 entry 位置与文本实际出现位置一致。
                 break;
             case "text-delta":
                 this.append_assistant_text(event.text || "");
                 break;
             case "tool-call":
+                // 关键点（中文）：tool 开始前先 finalize 当前 assistant text，
+                // 让后续 text 在 tool result 之后创建新 entry。
+                this.finalize_assistant();
                 this.add_tool_call(event.toolName, event.args);
                 break;
             case "tool-result":
                 this.add_tool_result(event.toolName, event.result);
                 break;
             case "tool-approval-request":
+                // 关键点（中文）：approval 也是交互断点，先结束当前 assistant text。
+                this.finalize_assistant();
                 this.add_approval_request(event);
                 break;
             case "tool-approval-result":
@@ -85,6 +91,10 @@ export class StreamingUIController {
                 this.finalize_assistant();
                 break;
             case "assistant-step":
+                // 关键点（中文）：每个 assistant step 结束都是文本断点，
+                // finalize 后下一个 text-delta 会创建新 entry。
+                this.finalize_assistant();
+                break;
             case "session-title":
             default:
                 break;

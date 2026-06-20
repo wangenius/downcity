@@ -6,8 +6,9 @@
  * - 负责设置边框颜色、清空输入、获取当前文本。
  */
 
-import { Editor, type TUI } from "@earendil-works/pi-tui";
+import { CombinedAutocompleteProvider, Editor, type TUI } from "@earendil-works/pi-tui";
 
+import { BUILTIN_SLASH_COMMANDS } from "@/city/agent/tui/commands/index.js";
 import { createEditorTheme } from "@/city/agent/tui/theme/pi-tui-theme.js";
 
 /**
@@ -27,8 +28,19 @@ export class ChatEditorComponent extends Editor {
   constructor(tui: TUI) {
     super(tui, createEditorTheme(), {
       paddingX: 1,
+      autocompleteMaxVisible: 6,
     });
     this.borderColor = (text: string) => createEditorTheme().borderColor(text);
+
+    // 关键点（中文）：集成 pi-tui 的 CombinedAutocompleteProvider，
+    // 输入 "/" 时弹出 slash 命令自动完成面板。对齐 Kimi Code 的编辑器行为。
+    const commands = BUILTIN_SLASH_COMMANDS.map((command) => ({
+      name: command.name,
+      description: command.description,
+    }));
+    this.setAutocompleteProvider(
+      new CombinedAutocompleteProvider(commands, process.cwd()),
+    );
   }
 
   /**

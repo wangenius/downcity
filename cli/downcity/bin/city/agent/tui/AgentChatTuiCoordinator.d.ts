@@ -2,8 +2,9 @@
  * city agent chat TUI 协调器。
  *
  * 关键点（中文）
- * - 类似 Kimi Code 的 KimiTUI，负责把状态、布局、输入、session 生命周期串起来。
- * - 不在这里积累事件路由或渲染逻辑，那些下沉到 StreamingUIController 与组件。
+ * - 对齐 Kimi Code 的 KimiTUI 布局：transcriptContainer + status/activity + editor，交给 pi-tui 裁剪顶部溢出。
+ * - 不再手动计算 message list 的可用高度或维护 scroll_offset。
+ * - 消息直接作为子组件追加到 MessageList（Container），终端自然向下生长，最新内容靠近底部输入区。
  */
 import type { AgentChatSessionSummaryView } from "../../../city/agent/AgentChatTypes.js";
 import type { AgentChatInteractiveRendererPort } from "../../../city/types/AgentChatInteractive.js";
@@ -69,13 +70,9 @@ export declare class AgentChatTuiCoordinator {
      */
     stop(): Promise<void>;
     /**
-     * 请求重新渲染，并在渲染前更新布局。
+     * 请求重新渲染。
      */
     private request_render;
-    /**
-     * 根据终端尺寸重新计算消息流视口高度。
-     */
-    private update_layout;
     /**
      * 处理用户输入。
      *

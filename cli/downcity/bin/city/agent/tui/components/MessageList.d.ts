@@ -2,35 +2,18 @@
  * 消息流组件。
  *
  * 关键点（中文）
- * - 管理所有 TranscriptEntry 到 pi-tui 组件的映射。
- * - 负责视口滚动，新消息自动滚到底部。
- * - 支持更新 assistant 流式文本。
+ * - 直接继承 pi-tui 的 Container，把每个 TranscriptEntry 渲染成独立子组件。
+ * - 不维护固定视口高度，也不手动切片；交给外层 TUI 统一裁剪顶部溢出。
+ * - 对齐 Kimi Code 的 transcriptContainer 思路：消息自然向下生长，最新内容永远靠近底部输入区。
  */
-import { type Component } from "@earendil-works/pi-tui";
+import { Container } from "@earendil-works/pi-tui";
 import type { TranscriptEntry } from "../../../../city/agent/tui/types.js";
 /**
  * 消息流展示组件。
  */
-export declare class MessageListComponent implements Component {
+export declare class MessageListComponent extends Container {
     private entries;
     private components;
-    private available_height;
-    private scroll_offset;
-    private readonly spacer;
-    /**
-     * 清理组件缓存（主题切换时调用）。
-     */
-    invalidate(): void;
-    /**
-     * 设置视口高度。
-     *
-     * @param height 可用高度（行数）。
-     */
-    set_available_height(height: number): void;
-    /**
-     * 获取当前条目数量。
-     */
-    get entry_count(): number;
     /**
      * 添加一条消息条目。
      *
@@ -46,20 +29,13 @@ export declare class MessageListComponent implements Component {
      */
     update_assistant_text(entry_id: string, text: string, streaming: boolean): void;
     /**
-    * 滚动到消息流底部。
-    */
-    scroll_to_bottom(): void;
-    /**
      * 清空所有消息。
      */
     clear(): void;
     /**
-     * 渲染视口内的消息。
-     *
-     * @param width 可用宽度。
-     * @returns 渲染后的行数组。
+     * 获取当前条目数量。
      */
-    render(width: number): string[];
+    get entry_count(): number;
     private create_component;
 }
 //# sourceMappingURL=MessageList.d.ts.map

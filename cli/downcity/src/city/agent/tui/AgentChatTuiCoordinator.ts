@@ -2,8 +2,9 @@
  * city agent chat TUI 协调器。
  *
  * 关键点（中文）
- * - 类似 Kimi Code 的 KimiTUI，负责把状态、布局、输入、session 生命周期串起来。
- * - 不在这里积累事件路由或渲染逻辑，那些下沉到 StreamingUIController 与组件。
+ * - 对齐 Kimi Code 的 KimiTUI 布局：transcriptContainer + status/activity + editor，交给 pi-tui 裁剪顶部溢出。
+ * - 不再手动计算 message list 的可用高度或维护 scroll_offset。
+ * - 消息直接作为子组件追加到 MessageList（Container），终端自然向下生长，最新内容靠近底部输入区。
  */
 
 import {
@@ -17,9 +18,9 @@ import {
 
 import {
   ChatEditorComponent,
-  MessageListComponent,
   StatusLineComponent,
 } from "@/city/agent/tui/components/index.js";
+import { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
 import { SessionPickerComponent } from "@/city/agent/tui/dialogs/SessionPicker.js";
 import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
@@ -108,8 +109,9 @@ export class AgentChatTuiCoordinator {
     }
     this.running = true;
 
-    this.tui.addChild(this.status_line as Component);
+    // 关键点（中文）：顺序是 transcript → status/activity → editor，让 pi-tui 从顶部裁剪溢出。
     this.tui.addChild(this.message_list as Component);
+    this.tui.addChild(this.status_line as Component);
     this.tui.addChild(this.editor as Component);
     this.tui.setFocus(this.editor as Component);
 
@@ -120,7 +122,6 @@ export class AgentChatTuiCoordinator {
     this.add_status_message(
       "Type /help for shortcuts · /session · /new · /clear · /quit",
     );
-    this.update_layout();
     this.tui.start();
 
     if (options?.show_initial_picker === true) {
@@ -147,26 +148,13 @@ export class AgentChatTuiCoordinator {
   }
 
   /**
-   * 请求重新渲染，并在渲染前更新布局。
+   * 请求重新渲染。
    */
   private request_render(): void {
     if (this.stopped) {
       return;
     }
-    this.update_layout();
     this.tui.requestRender();
-  }
-
-  /**
-   * 根据终端尺寸重新计算消息流视口高度。
-   */
-  private update_layout(): void {
-    const terminal_rows = this.tui.terminal.rows;
-    const terminal_cols = this.tui.terminal.columns;
-    const status_height = this.status_line.render(terminal_cols).length || 1;
-    const editor_height = this.editor.render(terminal_cols).length || 3;
-    const message_height = Math.max(1, terminal_rows - status_height - editor_height);
-    this.message_list.set_available_height(message_height);
   }
 
   /**

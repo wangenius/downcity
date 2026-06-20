@@ -2,18 +2,23 @@
  * 消息流组件。
  *
  * 关键点（中文）
- * - 直接继承 pi-tui 的 Container，把每个 TranscriptEntry 渲染成独立子组件。
- * - 不维护固定视口高度，也不手动切片；交给外层 TUI 统一裁剪顶部溢出。
- * - 对齐 Kimi Code 的 transcriptContainer 思路：消息自然向下生长，最新内容永远靠近底部输入区。
+ * - 继承 GutterContainer（直接从 Kimi Code 挪用），给消息区左右留 1 列边距。
+ * - 消息直接 append 为子组件，不在每条消息间固定插入 Spacer。
+ * - 不维护固定视口高度，不手动切片；交给外层 TUI 统一裁剪顶部溢出。
+ * - 对齐 Kimi Code 的 transcriptContainer 思路：消息自然向下生长，最新内容靠近底部输入区。
  */
-import { Container } from "@earendil-works/pi-tui";
+import { GutterContainer } from "../../../../city/agent/tui/components/GutterContainer.js";
 import type { TranscriptEntry } from "../../../../city/agent/tui/types.js";
 /**
  * 消息流展示组件。
  */
-export declare class MessageListComponent extends Container {
+export declare class MessageListComponent extends GutterContainer {
     private entries;
     private components;
+    /**
+     * 构造消息流组件。
+     */
+    constructor();
     /**
      * 添加一条消息条目。
      *

@@ -2,25 +2,35 @@
  * 消息流组件。
  *
  * 关键点（中文）
- * - 直接继承 pi-tui 的 Container，把每个 TranscriptEntry 渲染成独立子组件。
- * - 不维护固定视口高度，也不手动切片；交给外层 TUI 统一裁剪顶部溢出。
- * - 对齐 Kimi Code 的 transcriptContainer 思路：消息自然向下生长，最新内容永远靠近底部输入区。
+ * - 继承 GutterContainer（直接从 Kimi Code 挪用），给消息区左右留 1 列边距。
+ * - 消息直接 append 为子组件，不在每条消息间固定插入 Spacer。
+ * - 不维护固定视口高度，不手动切片；交给外层 TUI 统一裁剪顶部溢出。
+ * - 对齐 Kimi Code 的 transcriptContainer 思路：消息自然向下生长，最新内容靠近底部输入区。
  */
 
-import { Container, Spacer, Text, type Component } from "@earendil-works/pi-tui";
+import { Text, type Component } from "@earendil-works/pi-tui";
 
-import { current_theme } from "@/city/agent/tui/theme/index.js";
+import { GutterContainer } from "@/city/agent/tui/components/GutterContainer.js";
+import { CHROME_GUTTER } from "@/city/agent/tui/constant/rendering.js";
 import type { TranscriptEntry } from "@/city/agent/tui/types.js";
 import { AssistantMessageComponent } from "@/city/agent/tui/components/AssistantMessage.js";
 import { ToolCallBlockComponent, type ToolBlockEntry } from "@/city/agent/tui/components/ToolCallBlock.js";
 import { UserMessageComponent } from "@/city/agent/tui/components/UserMessage.js";
+import { current_theme } from "@/city/agent/tui/theme/index.js";
 
 /**
  * 消息流展示组件。
  */
-export class MessageListComponent extends Container {
+export class MessageListComponent extends GutterContainer {
   private entries: TranscriptEntry[] = [];
   private components = new Map<string, Component>();
+
+  /**
+   * 构造消息流组件。
+   */
+  constructor() {
+    super(CHROME_GUTTER, CHROME_GUTTER);
+  }
 
   /**
    * 添加一条消息条目。
@@ -31,7 +41,6 @@ export class MessageListComponent extends Container {
     this.entries.push(entry);
     const component = this.create_component(entry);
     this.components.set(entry.id, component);
-    this.addChild(new Spacer(1));
     this.addChild(component);
   }
 
@@ -76,18 +85,18 @@ export class MessageListComponent extends Container {
       case "user":
         return new UserMessageComponent(entry.text);
       case "assistant":
-        return new AssistantMessageComponent(true);
+        return new AssistantMessageComponent();
       case "tool-call":
       case "tool-result":
       case "tool-approval-request":
       case "tool-approval-result":
         return new ToolCallBlockComponent(entry as ToolBlockEntry);
       case "status":
-        return new Text(`  ${current_theme.fg("textDim", entry.text)}`, 0, 0);
+        return new Text(current_theme.fg("textDim", entry.text), 0, 0);
       case "error":
-        return new Text(`  ${current_theme.fg("error", entry.text)}`, 0, 0);
+        return new Text(current_theme.fg("error", entry.text), 0, 0);
       default:
-        return new Container();
+        return new GutterContainer(CHROME_GUTTER, CHROME_GUTTER);
     }
   }
 }

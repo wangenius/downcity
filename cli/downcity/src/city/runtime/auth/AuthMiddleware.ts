@@ -40,12 +40,12 @@ export function createRequireAuthMiddleware(
       c.set(AUTH_PRINCIPAL_CONTEXT_KEY, principal);
       await next();
     } catch (error) {
-      if (isAuthError(error)) {
-        return c.json(
-          { success: false, error: error.message },
-          error.status as 200,
-        );
-      }
+     if (isAuthError(error)) {
+       return c.json(
+         { success: false, error: error.message },
+          error.status,
+       );
+     }
       return c.json({ success: false, error: String(error) }, 500);
     }
   };

@@ -5,7 +5,7 @@
  * - 使用 roleUser 色渲染子弹前缀与文本。
  * - 文本按可用宽度自动换行，保持子弹对齐。
  */
-import { Spacer, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { USER_MESSAGE_BULLET } from "../../../../city/agent/tui/constant/symbols.js";
 import { current_theme } from "../../../../city/agent/tui/theme/index.js";
 /**
@@ -13,13 +13,11 @@ import { current_theme } from "../../../../city/agent/tui/theme/index.js";
  */
 export class UserMessageComponent {
     text;
-    spacer;
     /**
      * @param text 用户输入文本。
      */
     constructor(text) {
         this.text = text;
-        this.spacer = new Spacer(1);
     }
     /**
      * 组件无需缓存清理。
@@ -42,9 +40,6 @@ export class UserMessageComponent {
         const bullet_width = visibleWidth(bullet);
         const content_width = Math.max(1, safe_width - bullet_width);
         const lines = [];
-        for (const line of this.spacer.render(safe_width)) {
-            lines.push(line);
-        }
         const colored_text = current_theme.bold_fg("roleUser", this.text);
         const text_lines = new Text(colored_text, 0, 0).render(content_width);
         for (let i = 0; i < text_lines.length; i += 1) {

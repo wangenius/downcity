@@ -273,9 +273,20 @@ export async function adminLoop(
       return "switch_identity";
     }
 
-    try {
-      const command_key = String(svc);
-      await commands[command_key]?.(admin, session.base_url, runtime);
+   try {
+     const command_key = String(svc);
+      const command = commands[command_key];
+      if (command === undefined) {
+        await runtime.show_message(
+          "error",
+          t({
+            zh: "暂不支持该选项",
+            en: "This option is not supported",
+          }),
+        );
+        continue;
+      }
+      await command(admin, session.base_url, runtime);
     } catch (e) {
       if (isAdminAuthError(e)) {
         await runtime.show_message("error", adminErrorMessage(e));

@@ -6,7 +6,7 @@
  * - 文本按可用宽度自动换行，保持子弹对齐。
  */
 
-import { Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
 import { USER_MESSAGE_BULLET } from "@/city/agent/tui/constant/symbols.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
@@ -16,14 +16,12 @@ import { current_theme } from "@/city/agent/tui/theme/index.js";
  */
 export class UserMessageComponent implements Component {
   private readonly text: string;
-  private readonly spacer: Spacer;
 
   /**
    * @param text 用户输入文本。
    */
   constructor(text: string) {
     this.text = text;
-    this.spacer = new Spacer(1);
   }
 
   /**
@@ -50,10 +48,6 @@ export class UserMessageComponent implements Component {
     const content_width = Math.max(1, safe_width - bullet_width);
 
     const lines: string[] = [];
-
-    for (const line of this.spacer.render(safe_width)) {
-      lines.push(line);
-    }
 
     const colored_text = current_theme.bold_fg("roleUser", this.text);
     const text_lines = new Text(colored_text, 0, 0).render(content_width);

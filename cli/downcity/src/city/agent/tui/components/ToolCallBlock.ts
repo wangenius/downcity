@@ -4,13 +4,14 @@
  * 关键点（中文）
  * - 标题使用 primary 色，详情行使用 textDim。
  * - 支持 tool-call、tool-result、approval-request、approval-result 四种展示形态。
- * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情。
+ * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情，默认折叠，避免单个 tool 结果占满屏幕。
+ * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
  */
 
-import { Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
 import { STATUS_BULLET } from "@/city/agent/tui/constant/symbols.js";
-import { MESSAGE_INDENT } from "@/city/agent/tui/constant/rendering.js";
+import { MESSAGE_INDENT, RESULT_PREVIEW_LINES } from "@/city/agent/tui/constant/rendering.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import type {
   ToolApprovalRequestEntry,
@@ -30,17 +31,33 @@ export type ToolBlockEntry =
 
 /**
  * tool 状态/结果卡片组件。
+ *
+ * 默认折叠，仅展示标题与最多 RESULT_PREVIEW_LINES 行详情，
+ * 避免长输出把历史消息顶出可视区。
  */
 export class ToolCallBlockComponent implements Component {
   private readonly entry: ToolBlockEntry;
-  private readonly spacer: Spacer;
+  private expanded = false;
 
   /**
    * @param entry tool 相关条目。
    */
   constructor(entry: ToolBlockEntry) {
     this.entry = entry;
-    this.spacer = new Spacer(1);
+  }
+
+  /**
+   * 切换展开/折叠状态。
+   */
+  toggle(): void {
+    this.expanded = !this.expanded;
+  }
+
+  /**
+   * 当前是否处于展开状态。
+   */
+  is_expanded(): boolean {
+    return this.expanded;
   }
 
   /**
@@ -66,26 +83,35 @@ export class ToolCallBlockComponent implements Component {
     const bullet_width = visibleWidth(bullet);
     const content_width = Math.max(1, safe_width - bullet_width);
 
-    const title = this.build_title();
-    const detail_lines = this.build_detail_lines();
-
     const lines: string[] = [];
 
-    for (const line of this.spacer.render(safe_width)) {
-      lines.push(line);
-    }
-
+    // header：标题一行，首行带 bullet。
+    const title = this.build_title();
     const title_lines = new Text(current_theme.fg("primary", title), 0, 0).render(content_width);
     for (let i = 0; i < title_lines.length; i += 1) {
       const prefix = i === 0 ? bullet : " ".repeat(bullet_width);
       lines.push(prefix + title_lines[i]);
     }
 
+    // body：先按可用宽度算出实际视觉行，再按展开状态截断。
+    const detail_lines = this.build_detail_lines();
+    const body_lines: string[] = [];
     for (const detail of detail_lines) {
       const colored_detail = current_theme.fg("textDim", detail);
-      const detail_lines_rendered = new Text(colored_detail, 0, 0).render(content_width);
-      for (const line of detail_lines_rendered) {
-        lines.push(MESSAGE_INDENT + line);
+      const rendered = new Text(colored_detail, 0, 0).render(content_width);
+      for (const line of rendered) {
+        body_lines.push(MESSAGE_INDENT + line);
+      }
+    }
+
+    if (body_lines.length > 0) {
+      const visible_body = this.expanded
+        ? body_lines
+        : body_lines.slice(0, RESULT_PREVIEW_LINES);
+      lines.push(...visible_body);
+      if (!this.expanded && body_lines.length > RESULT_PREVIEW_LINES) {
+        const remaining = body_lines.length - RESULT_PREVIEW_LINES;
+        lines.push(MESSAGE_INDENT + current_theme.dim(`... (${remaining} more lines)`));
       }
     }
 
@@ -155,6 +181,6 @@ export class ToolCallBlockComponent implements Component {
     if (!trimmed) {
       return ["no output"];
     }
-    return trimmed.split("\n").slice(0, 12);
+    return trimmed.split("\n");
   }
 }

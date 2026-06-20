@@ -11,7 +11,6 @@ import { type Component } from "@earendil-works/pi-tui";
  */
 export declare class UserMessageComponent implements Component {
     private readonly text;
-    private readonly spacer;
     /**
      * @param text 用户输入文本。
      */

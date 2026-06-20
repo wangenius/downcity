@@ -7,6 +7,16 @@
  */
 export declare const MESSAGE_INDENT = "  ";
 /**
+ * 界面左右边距（列数）。
+ * 与 Kimi Code 的 CHROME_GUTTER 保持一致。
+ */
+export declare const CHROME_GUTTER = 1;
+/**
+ * tool 结果折叠时默认预览行数。
+ * 对齐 Kimi Code 的 RESULT_PREVIEW_LINES。
+ */
+export declare const RESULT_PREVIEW_LINES = 3;
+/**
  * 列表选择器默认最大可见项数。
  */
 export declare const DEFAULT_SELECT_MAX_VISIBLE = 6;

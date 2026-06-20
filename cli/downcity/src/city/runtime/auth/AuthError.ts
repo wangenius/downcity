@@ -13,9 +13,9 @@ export class AuthError extends Error {
   /**
    * HTTP 状态码。
    */
-  readonly status: number;
+  readonly status: 400 | 401 | 403 | 404;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: 400 | 401 | 403 | 404) {
     super(message);
     this.name = "AuthError";
     this.status = status;
@@ -28,4 +28,3 @@ export class AuthError extends Error {
 export function isAuthError(error: unknown): error is AuthError {
   return error instanceof AuthError;
 }
-

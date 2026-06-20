@@ -12,8 +12,8 @@ export declare class AuthError extends Error {
     /**
      * HTTP 状态码。
      */
-    readonly status: number;
-    constructor(message: string, status: number);
+    readonly status: 400 | 401 | 403 | 404;
+    constructor(message: string, status: 400 | 401 | 403 | 404);
 }
 /**
  * 判断是否为 AuthError。

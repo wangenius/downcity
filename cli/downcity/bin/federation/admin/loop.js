@@ -256,7 +256,15 @@ export async function adminLoop(session, options) {
         }
         try {
             const command_key = String(svc);
-            await commands[command_key]?.(admin, session.base_url, runtime);
+            const command = commands[command_key];
+            if (command === undefined) {
+                await runtime.show_message("error", t({
+                    zh: "暂不支持该选项",
+                    en: "This option is not supported",
+                }));
+                continue;
+            }
+            await command(admin, session.base_url, runtime);
         }
         catch (e) {
             if (isAdminAuthError(e)) {

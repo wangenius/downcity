@@ -122,9 +122,9 @@ client.service("service_id").get("path", query)
 ## Minimal `User City` example
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "town_demo",
@@ -150,9 +150,9 @@ If you do not have `user_token` yet, you normally start with one of the auth flo
 ## Minimal `Admin City` example
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const admin = new CityPact({
+const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
@@ -201,7 +201,7 @@ Use this when you want the fastest path to a minimal auth system.
 ## Login with the accounts service
 
 ```ts
-const guest = new CityPact({
+const guest = new City({
   role: "user",
   federation_url: "https://base.example.com",
 });
@@ -216,7 +216,7 @@ const session = await guest.service("accounts").action("login").invoke<{
   city_id: "town_demo",
 });
 
-const user = new CityPact({
+const user = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "town_demo",

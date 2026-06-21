@@ -126,7 +126,7 @@ export type {
 export { EnvStore } from "./service/env/env-store.js";
 
 export { CitiesService } from "./service/cities/cities-service.js";
-export type { City, CityCreateInput, CityStatus } from "./service/cities/types.js";
+export type { CityRecord, CityCreateInput, CityStatus } from "./service/cities/types.js";
 
 // ===========================================================================
 // 场景 5：数据库工具
@@ -138,7 +138,7 @@ export type { CityTableApi } from "./store/table-api.js";
 export type { CityUserSchemaInput } from "./store/types.js";
 
 // ===========================================================================
-// 场景 6：CityPact 客户端访问入口
+// 场景 6：City 客户端访问入口
 // ===========================================================================
 
 export type {
@@ -154,15 +154,15 @@ export type {
   CityModelEnvRequirement,
 } from "@downcity/type";
 
-export { CityPact } from "./pact/pact.js";
+export { City } from "./client/city.js";
 export type {
-  AdminPactOptions,
-  CityPactClientBaseOptions,
-  CityPactOptions,
-  CityPactOptionsForRole,
-  CityPactRole,
-  UserPactOptions,
-} from "./pact/types/pact.js";
+  AdminCityOptions,
+  CityBaseOptions,
+  CityOptions,
+  CityOptionsForRole,
+  CityRole,
+  UserCityOptions,
+} from "./client/types.js";
 
 export { AIInvoker, ModelCatalog, ModelHandle } from "./pact/invoker/ai/index.js";
 export { PaymentInvoker, PaymentMethodHandle } from "./pact/invoker/payment/index.js";

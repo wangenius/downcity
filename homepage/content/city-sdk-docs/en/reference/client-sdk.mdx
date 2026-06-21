@@ -20,7 +20,7 @@ If you want the integration story first, start with [@downcity/city](/en/city-sd
 
 ```ts
 // City side
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url,
   city_id,
@@ -45,7 +45,7 @@ const checkout = await client.payment.method("stripe").invoke({
 });
 
 // Admin side
-const admin = new CityPact({
+const admin = new City({
   role: "admin",
   federation_url,
   admin_secret_key,
@@ -77,7 +77,7 @@ Both paths end in the same user context:
 
 ```txt
 federation_url + city_id + user_token
-  -> new CityPact({ role: "user", ... })
+  -> new City({ role: "user", ... })
   -> client.ai.* or client.service(...)
 ```
 

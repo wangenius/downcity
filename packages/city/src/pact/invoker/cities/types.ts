@@ -3,8 +3,8 @@
  */
 
 /** City 记录 */
-export interface City {
-  /** City 的唯一 ID，User CityPact 请求会使用它绑定访问边界。 */
+export interface CityRecord {
+  /** City 的唯一 ID，User City 请求会使用它绑定访问边界。 */
   city_id: string;
 
   /** City 的展示名称，便于管理端识别不同产品或场景。 */
@@ -46,7 +46,7 @@ export interface TokenApplyInput {
 
 /** token 签发结果 */
 export interface TokenApplyResult {
-  /** 可交给 User CityPact 使用的 token */
+  /** 可交给 User City 使用的 token */
   user_token: string;
   /** token 所属 City ID */
   city_id: string;

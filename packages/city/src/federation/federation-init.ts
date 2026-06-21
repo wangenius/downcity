@@ -14,7 +14,7 @@ import { randomSecret } from "../utils/helpers.js";
 import type { Service } from "../service/service.js";
 import type { CityUserSchemaInput } from "../store/types.js";
 import type { Runtime } from "./runtime.js";
-import type { City } from "../service/cities/types.js";
+import type { CityRecord } from "../service/cities/types.js";
 import type { EnvEntry } from "../service/env/types.js";
 import type { Database, DbClient } from "../store/db.js";
 
@@ -70,7 +70,7 @@ export async function initialize_federation(params: {
 
   const cities_table = table_map.get("cities");
   if (!cities_table) throw new Error("City cities table is not initialized");
-  const city_store = new CityStore(cities_table as CityTableApi<City>);
+  const city_store = new CityStore(cities_table as CityTableApi<CityRecord>);
 
   const configured_base_url = env.get("DOWNCITY_FEDERATION_BASE_URL")
     ?? env.get("BETTER_AUTH_URL")

@@ -30,9 +30,9 @@ If `User City` owns "how a user-context city call reaches City," then `Admin Cit
 ## Minimal example
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const admin = new CityPact({
+const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,

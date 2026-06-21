@@ -5,14 +5,14 @@
  */
 
 import type { RequestInitLike } from "../../http.js";
-import type { City, CityCreateInput, TokenApplyInput, TokenApplyResult } from "./types.js";
+import type { CityRecord, CityCreateInput, TokenApplyInput, TokenApplyResult } from "./types.js";
 
 const PREFIX = "/v1/cities";
 
 /**
  * City 和 Token 管理调用器。
  *
- * 通过 Admin CityPact .cities 访问：
+ * 通过 Admin City .cities 访问：
  * ```ts
  * await admin.cities.list();
  * await admin.cities.create({ name: "My App" });
@@ -33,13 +33,13 @@ export class CitiesInvoker {
   }
 
   /** 列出 City */
-  async list(): Promise<City[]> {
-    const body = await this.req<{ items: City[] }>(`${PREFIX}/list`, { method: "GET" });
+  async list(): Promise<CityRecord[]> {
+    const body = await this.req<{ items: CityRecord[] }>(`${PREFIX}/list`, { method: "GET" });
     return body.items;
   }
 
   /** 创建 */
-  create(input: CityCreateInput): Promise<City> {
+  create(input: CityCreateInput): Promise<CityRecord> {
     return this.req(`${PREFIX}/create`, {
       method: "POST",
       body: JSON.stringify(input),
@@ -47,7 +47,7 @@ export class CitiesInvoker {
   }
 
   /** 暂停 */
-  pause(city_id: string): Promise<City> {
+  pause(city_id: string): Promise<CityRecord> {
     return this.req(`${PREFIX}/pause`, {
       method: "POST",
       body: JSON.stringify({ city_id }),
@@ -55,7 +55,7 @@ export class CitiesInvoker {
   }
 
   /** 激活 */
-  activate(city_id: string): Promise<City> {
+  activate(city_id: string): Promise<CityRecord> {
     return this.req(`${PREFIX}/activate`, {
       method: "POST",
       body: JSON.stringify({ city_id }),

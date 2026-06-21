@@ -6,7 +6,7 @@ import type { FetchLike } from "../http.js";
 import type { CityModelDescriptor } from "@downcity/type";
 import type { UserServiceSummary } from "../user/types.js";
 
-/** Admin CityPact 内部访问层构造参数 */
+/** Admin City 内部访问层构造参数 */
 export interface AdminPactAccessOptions {
   /** City 管理端 server URL */
   base_url: string;

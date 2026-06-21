@@ -41,7 +41,7 @@ City 的登录问题，最终都落到一个目标：
 它只是一个只有 `federation_url` 的 `User City`：
 
 ```ts
-const guest = new CityPact({
+const guest = new City({
   role: "user",
   federation_url: "https://base.example.com",
 });
@@ -57,7 +57,7 @@ const guest = new CityPact({
 ## 切到正常 User City
 
 ```ts
-const user = new CityPact({
+const user = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "town_xxx",

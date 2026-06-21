@@ -20,7 +20,7 @@ description: Downcity SDK 按角色拆分：User City 负责产品运行时调�
 
 ```ts
 // 产品侧
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url,
   city_id,
@@ -45,7 +45,7 @@ const checkout = await client.payment.method("stripe").invoke({
 });
 
 // 管理端
-const admin = new CityPact({
+const admin = new City({
   role: "admin",
   federation_url,
   admin_secret_key,
@@ -77,7 +77,7 @@ await admin.service("cities").action("create").invoke({ name: "My App" });
 
 ```txt
 federation_url + city_id + user_token
-  -> new CityPact({ role: "user", ... })
+  -> new City({ role: "user", ... })
   -> client.ai.* 或 client.service(...)
 ```
 

@@ -6,10 +6,10 @@
  * - 模型定义仍然来自代码注册；admin 只负责查看当前可用状态。
  * - 如果模型缺少 provider key，会在这里直接显示缺失项。
  */
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 import type { admin_tui_runtime } from "../../../federation/types/AdminTui.js";
 /**
  * 展示全部代码注册模型及其运行状态。
  */
-export declare function manageModels(a: CityPact, _baseUrl: string, runtime: admin_tui_runtime): Promise<void>;
+export declare function manageModels(a: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void>;
 //# sourceMappingURL=models.d.ts.map

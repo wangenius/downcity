@@ -1,21 +1,21 @@
 /**
- * CityPact 公开类型模块。
+ * City 客户端构造类型模块。
  *
- * CityPact 是访问 Federation 的统一入口：开发者只需要声明访问角色，
- * SDK 会在内部选择 admin 或 user 能力面。
+ * City 是访问 Federation 的统一客户端入口：开发者只需要声明访问角色，
+ * SDK 会在内部选择 admin 或 user 能力面。底层 HTTP 协议实现位于 `pact/`。
  */
 
-import type { FetchLike } from "../http.js";
+import type { FetchLike } from "../pact/http.js";
 
 /**
  * City 访问角色。
  */
-export type CityPactRole = "admin" | "user";
+export type CityRole = "admin" | "user";
 
 /**
- * City 共享构造参数。
+ * City 客户端共享构造参数。
  */
-export interface CityPactClientBaseOptions {
+export interface CityBaseOptions {
   /**
    * Federation 的 HTTP 入口地址。
    *
@@ -32,9 +32,9 @@ export interface CityPactClientBaseOptions {
 }
 
 /**
- * Admin CityPact 构造参数。
+ * Admin 角色的 City 构造参数。
  */
-export interface AdminPactOptions extends CityPactClientBaseOptions {
+export interface AdminCityOptions extends CityBaseOptions {
   /**
    * 使用 admin 身份访问 Federation。
    */
@@ -49,9 +49,9 @@ export interface AdminPactOptions extends CityPactClientBaseOptions {
 }
 
 /**
- * User CityPact 构造参数。
+ * User 角色的 City 构造参数。
  */
-export interface UserPactOptions extends CityPactClientBaseOptions {
+export interface UserCityOptions extends CityBaseOptions {
   /**
    * 使用 user 身份访问 Federation。
    */
@@ -73,11 +73,11 @@ export interface UserPactOptions extends CityPactClientBaseOptions {
 /**
  * City 构造参数。
  */
-export type CityPactOptions = AdminPactOptions | UserPactOptions;
+export type CityOptions = AdminCityOptions | UserCityOptions;
 
 /**
  * 按角色收窄后的 City 构造参数。
  */
-export type CityPactOptionsForRole<TRole extends CityPactRole> = TRole extends "admin"
-  ? AdminPactOptions
-  : UserPactOptions;
+export type CityOptionsForRole<TRole extends CityRole> = TRole extends "admin"
+  ? AdminCityOptions
+  : UserCityOptions;

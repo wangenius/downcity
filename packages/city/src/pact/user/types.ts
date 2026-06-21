@@ -48,7 +48,7 @@ export interface UserServiceSummary {
   }>;
 }
 
-/** User CityPact 内部访问层构造参数 */
+/** User City 内部访问层构造参数 */
 export interface UserPactAccessOptions {
   /** City 的 HTTP 入口地址。 */
   base_url: string;

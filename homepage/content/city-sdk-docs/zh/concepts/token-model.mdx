@@ -46,7 +46,7 @@ client 只携带 `user_token` 和 `city_id`，不接触 provider key，也不接
 `DOWNCITY_CITY_ADMIN_SECRET_KEY` 用于管理 City：创建 city、管理 env、为某个 city 下的用户签发 `user_token`。City 首次启动时会自动生成并写入 `.env`。
 
 ```ts
-const client = new CityPact({
+const client = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,

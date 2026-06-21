@@ -32,7 +32,7 @@ export class AdminPactAccess {
 
   constructor(options: AdminPactAccessOptions) {
     if (!options || typeof options !== "object") {
-      throw new TypeError("Admin CityPact options are required");
+      throw new TypeError("Admin City options are required");
     }
 
     this.base_url = normalizeBaseURL(options.base_url, "base_url");
@@ -48,7 +48,7 @@ export class AdminPactAccess {
     this.cities = new CitiesInvoker({ requestJSON: req });
   }
 
-  /** 获取 Service 调用器（与 User CityPact 共用同一路由） */
+  /** 获取 Service 调用器（与 User City 共用同一路由） */
   service(name: string): ServiceClient {
     const id = String(name ?? "").trim();
     if (!id) throw new TypeError("service name is required");

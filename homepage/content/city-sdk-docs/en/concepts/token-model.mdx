@@ -46,7 +46,7 @@ The client only carries `user_token` and `city_id`. It never touches provider ke
 `DOWNCITY_CITY_ADMIN_SECRET_KEY` is used to manage City: create cities, manage env, and issue `user_token` for users under a given city. City generates it automatically and writes it into `.env` on first startup.
 
 ```ts
-const client = new CityPact({
+const client = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,

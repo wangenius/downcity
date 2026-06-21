@@ -67,7 +67,7 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 ## 2. Create City & Token
 
 ```ts
-const admin = new CityPact({
+const admin = new City({
   role: "admin",
   federation_url: "http://127.0.0.1:43127",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
@@ -83,7 +83,7 @@ const token = await admin.cities.tokens.apply({
 ## 3. Client Call
 
 ```ts
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url: "http://127.0.0.1:43127",
   city_id: city.city_id,

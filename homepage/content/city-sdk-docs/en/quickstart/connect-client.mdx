@@ -6,9 +6,9 @@ description: Call the City runtime from a product client with User City.
 Product clients use `User City`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "town_xxx",

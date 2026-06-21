@@ -1,19 +1,19 @@
 /**
- * City 当前 CityPact user 管理器。
+ * City 当前 City user 管理器。
  *
  * 关键点（中文）
- * - 这是 City 访问 CityPact 用户态服务的唯一身份入口。
+ * - 这是 City 访问 City 用户态服务的唯一身份入口。
  * - env 覆盖优先级、`city city login` session 回退、token 实际 user 校验都集中在这里。
  * - 业务模块只消费解析后的身份，避免余额、Agent、模型目录各自拼接身份。
  */
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 import { DEFAULT_FEDERATION_URL, DEFAULT_CITY_ID, normalizeCityUrl, read_city_admin_secret_for_url, read_current_city_session, read_city_session_for_federation, } from "../../city/shared/CityStateStore.js";
 /**
- * City 当前 CityPact user 管理器。
+ * City 当前 City user 管理器。
  */
 export class CityUserManager {
     /**
-     * 解析当前有效 CityPact user。
+     * 解析当前有效 City user。
      */
     async resolveCurrentUser(input = {}) {
         const env = input.env ?? process.env;
@@ -44,16 +44,16 @@ export class CityUserManager {
         const source = env_user_token ? "env" : "city-session";
         const warnings = [];
         if (!federation_url) {
-            throw new Error("CityPact URL is required. Run `city federation use` or set DOWNCITY_CITY_URL.");
+            throw new Error("City URL is required. Run `city federation use` or set DOWNCITY_CITY_URL.");
         }
         if (require_user_token && !user_token) {
-            throw new Error("CityPact user token is required. Run `city federation login` first.");
+            throw new Error("City user token is required. Run `city federation login` first.");
         }
         if (env_user_token && selected_session?.user_id) {
             warnings.push("Env user token overrides the saved `city federation login` session.");
         }
         if (env_federation_url && !env_user_token && !session?.user_token) {
-            warnings.push("Env CityPact URL selected a base without a saved Federation user session.");
+            warnings.push("Env City URL selected a base without a saved Federation user session.");
         }
         const resolved = {
             federation_url,
@@ -71,7 +71,7 @@ export class CityUserManager {
         return resolved;
     }
     /**
-     * 创建当前有效 CityPact user client。
+     * 创建当前有效 City user client。
      */
     async createUserClient(input = {}) {
         const user = await this.resolveCurrentUser({
@@ -79,11 +79,11 @@ export class CityUserManager {
             require_user_token: input.require_user_token !== false,
         });
         if (!user.user_token) {
-            throw new Error("CityPact user token is required. Run `city city login` first.");
+            throw new Error("City user token is required. Run `city city login` first.");
         }
         return {
             user,
-            client: new CityPact({
+            client: new City({
                 role: "user",
                 federation_url: user.federation_url,
                 city_id: user.city_id,
@@ -92,7 +92,7 @@ export class CityUserManager {
         };
     }
     /**
-     * 读取当前 CityPact base 的 admin secret。
+     * 读取当前 City base 的 admin secret。
      */
     readAdminSecret(federation_url, env = process.env) {
         return readFirstEnv(env, ["DOWNCITY_CITY_ADMIN_SECRET_KEY", "CITY_ADMIN_SECRET_KEY"])
@@ -100,7 +100,7 @@ export class CityUserManager {
             || undefined;
     }
     async verifyCurrentUser(user, session_user_id) {
-        const client = new CityPact({
+        const client = new City({
             role: "user",
             federation_url: user.federation_url,
             city_id: user.city_id,
@@ -109,11 +109,11 @@ export class CityUserManager {
         const result = await client.service("accounts").get("me");
         const token_user_id = readString(result.user?.user_id);
         if (!token_user_id) {
-            throw new Error("CityPact user token resolved without a user_id. Run `city city login` again.");
+            throw new Error("City user token resolved without a user_id. Run `city city login` again.");
         }
         if (session_user_id && !user.env_overrides.user_token && session_user_id !== token_user_id) {
             throw new Error([
-                "City CityPact session user does not match the authenticated token.",
+                "City session user does not match the authenticated token.",
                 `session=${session_user_id}`,
                 `token=${token_user_id}`,
                 "Run `city city logout` and then `city city login`.",

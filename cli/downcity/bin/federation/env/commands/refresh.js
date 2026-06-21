@@ -5,7 +5,7 @@
  * - 这个命令只负责脚本化调用当前 active City 的 env refresh。
  * - 真正刷新逻辑位于 City SDK 与服务端 EnvService，CLI 不复制业务规则。
  */
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 import { adminAuth } from "../../../federation/auth/admin.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "../../../federation/admin/auth-error.js";
 import { readActiveServer } from "../../../federation/core/session.js";
@@ -27,7 +27,7 @@ export async function refreshEnvCache() {
     if (!session) {
         return;
     }
-    const admin = new CityPact({
+    const admin = new City({
         role: "admin",
         federation_url: session.base_url,
         admin_secret_key: session.admin_secret_key,

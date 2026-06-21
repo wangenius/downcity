@@ -14,7 +14,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { Agent } from "@downcity/agent";
-import { CityPact, type CityModel } from "@downcity/city";
+import { City, type CityModel } from "@downcity/city";
 
 const DEFAULT_FEDERATION_URL = "http://127.0.0.1:43127";
 const DEFAULT_CITY_ID = "town_downcity";
@@ -115,7 +115,7 @@ async function resolve_user_token(config: ClientConfig): Promise<string> {
     );
   }
 
-  const admin = new CityPact({
+  const admin = new City({
     role: "admin",
     federation_url: config.federation_url,
     admin_secret_key: config.admin_secret_key,
@@ -138,7 +138,7 @@ function is_readline_closed_error(error: unknown): boolean {
 /**
  * 解析本地 Agent 使用的 City 模型。
  */
-async function resolve_agent_model(client: CityPact<"user">, model_id: string | undefined): Promise<CityModel> {
+async function resolve_agent_model(client: City<"user">, model_id: string | undefined): Promise<CityModel> {
   const catalog = await client.ai.listModels();
   const models = catalog.all();
   const model = model_id
@@ -176,7 +176,7 @@ async function create_agent_session(config: ClientConfig, model: CityModel) {
 /**
  * 打印可用模型列表。
  */
-async function print_models(client: CityPact<"user">): Promise<void> {
+async function print_models(client: City<"user">): Promise<void> {
   const catalog = await client.ai.listModels();
   const models = catalog.all();
 
@@ -196,7 +196,7 @@ async function print_models(client: CityPact<"user">): Promise<void> {
  * 通过 Downcity Agent SDK 执行一次文本请求。
  */
 async function request_text(input: {
-  client: CityPact<"user">;
+  client: City<"user">;
   config: ClientConfig;
   session?: LocalAgentSession;
   prompt: string;
@@ -225,7 +225,7 @@ async function request_text(input: {
 async function main(): Promise<void> {
   const config = read_config();
   const user_token = await resolve_user_token(config);
-  const client = new CityPact<"user">({
+  const client = new City<"user">({
     role: "user",
     federation_url: config.federation_url,
     city_id: config.city_id,

@@ -109,9 +109,9 @@ curl http://1.2.3.4:43127/health
 产品前端和应用应该通过 `@downcity/city` 调用 Node 街区：
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "my-city",
@@ -122,9 +122,9 @@ const client = new CityPact({
 可信后端应该用 `Admin City` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const admin = new CityPact({
+const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,

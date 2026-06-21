@@ -9,9 +9,9 @@ description: 用 User City 从产品侧调用 City runtime 的 Service 和 Actio
 - `client.service(id).action(name).invoke()` 调自定义 Service 或服务 Service
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url: "http://127.0.0.1:43127",
   city_id: "town_downcity",

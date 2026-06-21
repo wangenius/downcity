@@ -6,9 +6,9 @@ description: Give the product client a user-scoped credential that can call the 
 `user_token` must be issued by a trusted environment. Your backend uses `Admin City` and asks City for a token based on `city_id + user_id`.
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new CityPact({
+const client = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,

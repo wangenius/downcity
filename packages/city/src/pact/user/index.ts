@@ -28,7 +28,7 @@ export class UserPactAccess {
 
   constructor(options: UserPactAccessOptions) {
     if (!options || typeof options !== "object") {
-      throw new TypeError("User CityPact options are required");
+      throw new TypeError("User City options are required");
     }
 
     this.serverUrl = normalizeBaseURL(options.base_url, "base_url");

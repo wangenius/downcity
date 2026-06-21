@@ -5,7 +5,7 @@
  * - `city` 点开某个 City 后直接进入这个菜单。
  * - City 连接配置、admin key 更新等低频操作通过 `更多` 回调交给 workspace 层处理。
  */
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 import { adminErrorMessage, isAdminAuthError } from "../../federation/admin/auth-error.js";
 import { create_admin_tui_runtime } from "../../federation/tui/AdminTuiRuntime.js";
 import { manageEnv } from "../../federation/admin/commands/service-env.js";
@@ -30,7 +30,7 @@ const commands = {
     custom: manageCustom,
 };
 export async function adminLoop(session, options) {
-    const admin = new CityPact({
+    const admin = new City({
         role: "admin",
         federation_url: session.base_url,
         admin_secret_key: session.admin_secret_key,

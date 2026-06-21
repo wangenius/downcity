@@ -1,23 +1,23 @@
 /**
- * CityPact 统一访问入口。
+ * City 客户端统一访问入口。
  *
- * CityPact 面向开发者表达“我以某种角色进入 Federation”，内部再委托给
- * admin / user 访问层，避免用户在第一层概念上关心 client 拆分。
+ * City 面向开发者表达“我以某种角色进入 Federation”，内部再委托给
+ * admin / user 协议访问层（`pact/`），让用户在第一层概念上无需关心 client 拆分。
  */
 
-import { AdminPactAccess } from "./admin/index.js";
-import { UserPactAccess } from "./user/index.js";
-import type { ServiceClient } from "./invoker/invoker.js";
-import type { CityPactOptionsForRole, CityPactRole } from "./types/pact.js";
-import type { AdminModelRecord, AdminServiceSummary } from "./admin/types.js";
-import type { UserServiceSummary } from "./user/types.js";
+import { AdminPactAccess } from "../pact/admin/index.js";
+import { UserPactAccess } from "../pact/user/index.js";
+import type { ServiceClient } from "../pact/invoker/invoker.js";
+import type { CityOptionsForRole, CityRole } from "./types.js";
+import type { AdminModelRecord, AdminServiceSummary } from "../pact/admin/types.js";
+import type { UserServiceSummary } from "../pact/user/types.js";
 
 /**
- * Downcity CityPact。
+ * Downcity City 客户端。
  */
-export class CityPact<TRole extends CityPactRole = CityPactRole> {
+export class City<TRole extends CityRole = CityRole> {
   /**
-   * 当前 CityPact 访问角色。
+   * 当前 City 客户端的访问角色。
    */
   readonly role: TRole;
 
@@ -35,9 +35,9 @@ export class CityPact<TRole extends CityPactRole = CityPactRole> {
    */
   private readonly user_access?: UserPactAccess;
 
-  constructor(options: CityPactOptionsForRole<TRole>) {
+  constructor(options: CityOptionsForRole<TRole>) {
     if (!options || typeof options !== "object") {
-      throw new TypeError("CityPact options are required");
+      throw new TypeError("City options are required");
     }
 
     this.role = options.role as TRole;
@@ -60,35 +60,35 @@ export class CityPact<TRole extends CityPactRole = CityPactRole> {
   }
 
   /**
-   * User CityPact 的 AI 调用入口。
+   * User 角色的 AI 调用入口。
    */
   get ai(): UserPactAccess["ai"] {
     return this.require_user().ai;
   }
 
   /**
-   * User CityPact 的支付入口。
+   * User 角色的支付入口。
    */
   get payment(): UserPactAccess["payment"] {
     return this.require_user().payment;
   }
 
   /**
-   * Admin CityPact 的余额服务入口。
+   * Admin 角色的余额服务入口。
    */
   get balance(): AdminPactAccess["balance"] {
     return this.require_admin().balance;
   }
 
   /**
-   * Admin CityPact 的环境变量服务入口。
+   * Admin 角色的环境变量服务入口。
    */
   get env(): AdminPactAccess["env"] {
     return this.require_admin().env;
   }
 
   /**
-   * Admin CityPact 的 City 管理入口。
+   * Admin 角色的 City 管理入口。
    */
   get cities(): AdminPactAccess["cities"] {
     return this.require_admin().cities;
@@ -124,14 +124,14 @@ export class CityPact<TRole extends CityPactRole = CityPactRole> {
 
   private require_admin(): AdminPactAccess {
     if (!this.admin_access) {
-      throw new TypeError("CityPact role admin is required for this operation");
+      throw new TypeError("City role admin is required for this operation");
     }
     return this.admin_access;
   }
 
   private require_user(): UserPactAccess {
     if (!this.user_access) {
-      throw new TypeError("CityPact role user is required for this operation");
+      throw new TypeError("City role user is required for this operation");
     }
     return this.user_access;
   }

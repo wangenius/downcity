@@ -1,7 +1,7 @@
 /**
  * Client 包的最小 Node 类型声明。
  *
- * Admin CityPact 在 Node 环境可以从 `process.env` 读取 `admin_secret_key`。
+ * Admin City 在 Node 环境可以从 `process.env` 读取 `admin_secret_key`。
  * 这里避免为了一个可选读取能力把 `@types/node` 强制安装到 client 包。
  */
 

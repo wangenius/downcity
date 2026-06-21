@@ -30,9 +30,9 @@ description: 可信环境如何管理 city、签发 user_token，并维护 Runti
 ## 最小示例
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const admin = new CityPact({
+const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,

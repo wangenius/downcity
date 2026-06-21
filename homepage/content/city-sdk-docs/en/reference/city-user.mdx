@@ -28,10 +28,10 @@ So from the product side, `User City` is not only "the thing that calls models."
 ## Minimal example
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 import type { UIMessageChunk } from "ai";
 
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "town_xxx",
@@ -49,7 +49,7 @@ const result = await client.ai.text({
 ## Public Actions
 
 ```ts
-const guest = new CityPact({
+const guest = new City({
   role: "user",
   federation_url: "https://base.example.com",
 });
@@ -91,7 +91,7 @@ Pass `federation_url + city_id + user_token`. This is for:
 The most common transition looks like this:
 
 ```ts
-const guest = new CityPact({
+const guest = new City({
   role: "user",
   federation_url,
 });
@@ -104,7 +104,7 @@ const session = await guest.service("accounts").action("login").invoke<{
   city_id: "town_xxx",
 });
 
-const user = new CityPact({
+const user = new City({
   role: "user",
   federation_url,
   city_id: "town_xxx",

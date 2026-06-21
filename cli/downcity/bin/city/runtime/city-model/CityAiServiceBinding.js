@@ -6,7 +6,7 @@
  * - 模型目录唯一来源是 City 的 AIService：`/v1/ai/models`。
  * - 运行时模型通过 City 自己保存的 User City session 构造。
  */
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 import { CityUserManager } from "../../../city/shared/CityUserManager.js";
 const cityUserManager = new CityUserManager();
 /**
@@ -22,7 +22,7 @@ export async function listCityAiServiceModelsForAdmin(env = process.env) {
     if (!admin_secret_key) {
         throw new Error("City admin_secret_key is required to list models. Set DOWNCITY_CITY_ADMIN_SECRET_KEY or configure admin access with `city`.");
     }
-    const city = new CityPact({
+    const city = new City({
         role: "admin",
         federation_url: user.federation_url,
         admin_secret_key,

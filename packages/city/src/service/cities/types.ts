@@ -12,7 +12,7 @@ export type CityStatus = "active" | "paused";
 /**
  * City 记录。
  */
-export interface City extends Record<string, unknown> {
+export interface CityRecord extends Record<string, unknown> {
   /**
    * City 的唯一 ID。
    */

@@ -109,9 +109,9 @@ If the request times out, the Dokploy service is not exposed publicly, the VPS f
 City frontends and apps should call the Node block through `@downcity/city`:
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const client = new CityPact({
+const client = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "my-city",
@@ -122,9 +122,9 @@ const client = new CityPact({
 Trusted backends should use `Admin City` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
 
 ```ts
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 
-const admin = new CityPact({
+const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,

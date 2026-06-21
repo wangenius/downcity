@@ -1,13 +1,13 @@
 /**
- * City CityPact user 登录流程。
+ * City user 登录流程。
  *
  * 关键点（中文）
- * - 只负责通过 CityPact user auth providers 获取 user_token。
+ * - 只负责通过 City user auth providers 获取 user_token。
  * - 不读写 City 本地状态，调用方负责持久化 session。
  */
 import { spawnSync } from "node:child_process";
 import prompts from "../../city/tui/Prompts.js";
-import { CityPact } from "@downcity/city";
+import { City } from "@downcity/city";
 import { emitCliBlock } from "../../shared/CliReporter.js";
 function readString(value) {
     return typeof value === "string" ? value.trim() : "";
@@ -46,7 +46,7 @@ function mapProvidersToOptions(items) {
     return options;
 }
 async function loadAuthOptions(federation_url) {
-    const client = new CityPact({ role: "user", federation_url });
+    const client = new City({ role: "user", federation_url });
     const accounts = client.service("accounts");
     const result = await accounts.get("providers");
     return mapProvidersToOptions(result.items ?? []);
@@ -58,7 +58,7 @@ async function promptAuthMethod(federation_url, options) {
             emitCliBlock({
                 tone: "warning",
                 title: "No sign-in methods",
-                note: "This CityPact base has no enabled user auth providers.",
+                note: "This City base has no enabled user auth providers.",
             });
         }
         return null;
@@ -92,7 +92,7 @@ async function emailLogin(input) {
     const password = String(response.password || "");
     if (!email || !email.includes("@") || !password)
         return null;
-    const client = new CityPact({ role: "user", federation_url: input.federation_url });
+    const client = new City({ role: "user", federation_url: input.federation_url });
     const result = await client.service("accounts").action("login").invoke({
         email,
         password,
@@ -127,7 +127,7 @@ async function emailRegister(input, options) {
         throw new Error("invalid email");
     if (password.length < 8)
         throw new Error("password must be at least 8 characters");
-    const client = new CityPact({ role: "user", federation_url: input.federation_url });
+    const client = new City({ role: "user", federation_url: input.federation_url });
     const accounts = client.service("accounts");
     const registered = await accounts.action("register").invoke({
         email,
@@ -166,7 +166,7 @@ async function emailRegister(input, options) {
     });
 }
 async function oauthAuth(input, provider, options) {
-    const client = new CityPact({ role: "user", federation_url: input.federation_url });
+    const client = new City({ role: "user", federation_url: input.federation_url });
     const accounts = client.service("accounts");
     const started = await accounts.action("oauth/start").invoke({
         provider,
@@ -230,7 +230,7 @@ async function buildVerifiedUserSession(input) {
     });
 }
 async function readUserSessionFromToken(input) {
-    const client = new CityPact({
+    const client = new City({
         role: "user",
         federation_url: input.federation_url,
         city_id: input.city_id,
@@ -284,7 +284,7 @@ function formatOAuthProviderLabel(provider) {
         .join(" ");
 }
 /**
- * 执行 City CityPact user 登录。
+ * 执行 City user 登录。
  */
 export async function performCityUserLogin(input, options) {
     const method = await promptAuthMethod(input.federation_url, options);

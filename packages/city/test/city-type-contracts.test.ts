@@ -1,12 +1,12 @@
 /**
- * @downcity/city CityPact 客户端类型契约测试。
+ * @downcity/city City 客户端类型契约测试。
  */
 
 import type { UIMessage, UIMessageChunk } from "ai";
 import type {
   AIInvoker,
   CityModelDescriptor,
-  CityPact,
+  City,
   ModelCatalog,
   ModelHandle,
   PaymentMethodHandle,
@@ -17,10 +17,10 @@ import type {
   UserServiceSummary,
 } from "../src/index.js";
 
-declare const client: CityPact<"user">;
-declare const admin: CityPact<"admin">;
-declare const user_city: CityPact<"user">;
-declare const admin_city: CityPact<"admin">;
+declare const client: City<"user">;
+declare const admin: City<"admin">;
+declare const user_city: City<"user">;
+declare const admin_city: City<"admin">;
 
 const ai: AIInvoker = client.ai;
 

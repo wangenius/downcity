@@ -1,5 +1,5 @@
 /**
- * Env Service 调用器（对应 core service/env/env-service.ts EnvService）。
+ * Env Service 调用器（对应 service/env/env-service.ts EnvService）。
  *
  * 管理端操作：list / upsert / remove / import。
  */

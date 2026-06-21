@@ -1,5 +1,5 @@
 /**
- * AI SDK UIMessage stream 解析（对应 core AIService stream handler 的输出）。
+ * AI SDK UIMessage stream 解析（对应 AIService stream handler 的输出）。
  */
 
 import { DefaultChatTransport } from "ai";

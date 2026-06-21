@@ -6,14 +6,14 @@
  * - 用户既不需要传 `dialect`，也不需要传 `raw`，避免参数语义重复。
  */
 
-import { pgEnv, sqliteEnv } from "../../service/env/schema.js";
-import { EnvStore } from "../../service/env/env-store.js";
-import { pgCities, sqliteCities } from "../../service/cities/schema.js";
-import { normalizeEnvKey, parseDotenvEntries } from "../../utils/helpers.js";
-import type { FederationOptions } from "../types.js";
-import type { DbClient } from "../../store/db.js";
-import type { BuiltinTables, EnvProvider, Runtime } from "../runtime.js";
-import type { EnvEntry, EnvUpsertInput } from "../../service/env/types.js";
+import { pgEnv, sqliteEnv } from "../service/env/schema.js";
+import { EnvStore } from "../service/env/env-store.js";
+import { pgCities, sqliteCities } from "../service/cities/schema.js";
+import { normalizeEnvKey, parseDotenvEntries } from "../utils/helpers.js";
+import type { FederationOptions } from "./types.js";
+import type { DbClient } from "../store/db.js";
+import type { BuiltinTables, EnvProvider, Runtime } from "./runtime.js";
+import type { EnvEntry, EnvUpsertInput } from "../service/env/types.js";
 
 /**
  * 从 FederationOptions 创建 runtime。

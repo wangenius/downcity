@@ -1,5 +1,5 @@
 /**
- * Cities Service 调用器（对应 core service/cities/cities-service.ts CitiesService）。
+ * Cities Service 调用器（对应 service/cities/cities-service.ts CitiesService）。
  *
  * 管理端操作：City CRUD + Token 签发。
  */

@@ -9,7 +9,7 @@ import { Service, type Context, type EnvRequirement } from "./service.js";
 import { Hook } from "./hook.js";
 import { TableApi } from "../store/table-api.js";
 import type { CityTableApi } from "../store/table-api.js";
-import type { CreateUserTokenInput, UserTokenIssueResult, RuntimeUser } from "../core/auth/types.js";
+import type { CreateUserTokenInput, UserTokenIssueResult, RuntimeUser } from "../federation/auth/types.js";
 import type { InstructionDefinition } from "./instruction.js";
 
 // ===========================================================================

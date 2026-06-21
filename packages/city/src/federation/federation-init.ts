@@ -5,18 +5,18 @@
  * 并把 runtime 依赖注入到各个 service。
  */
 
-import { executeDDL } from "../../store/db.js";
-import { TableApi, buildCreateUserTableSQL, type CityTableApi } from "../../store/table-api.js";
-import { EnvStore } from "../../service/env/env-store.js";
-import { CityStore } from "../../service/cities/city-store.js";
-import { Authenticator } from "../auth/authenticator.js";
-import { randomSecret } from "../../utils/helpers.js";
-import type { Service } from "../../service/service.js";
-import type { CityUserSchemaInput } from "../../store/types.js";
-import type { Runtime } from "../runtime.js";
-import type { City } from "../../service/cities/types.js";
-import type { EnvEntry } from "../../service/env/types.js";
-import type { Database, DbClient } from "../../store/db.js";
+import { executeDDL } from "../store/db.js";
+import { TableApi, buildCreateUserTableSQL, type CityTableApi } from "../store/table-api.js";
+import { EnvStore } from "../service/env/env-store.js";
+import { CityStore } from "../service/cities/city-store.js";
+import { Authenticator } from "./auth/authenticator.js";
+import { randomSecret } from "../utils/helpers.js";
+import type { Service } from "../service/service.js";
+import type { CityUserSchemaInput } from "../store/types.js";
+import type { Runtime } from "./runtime.js";
+import type { City } from "../service/cities/types.js";
+import type { EnvEntry } from "../service/env/types.js";
+import type { Database, DbClient } from "../store/db.js";
 
 /**
  * Federation 初始化后的内部状态。

@@ -1,5 +1,5 @@
 /**
- * AI 模型类型（对应 core service/ai/types.ts PublicModel）。
+ * AI 模型类型（对应 service/ai/types.ts PublicModel）。
  *
  * 关键点（中文）
  * - CityModel 是跨 package 共享协议，定义在 @downcity/type。

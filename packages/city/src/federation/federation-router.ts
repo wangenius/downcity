@@ -9,13 +9,13 @@
  */
 
 import { Hono } from "hono";
-import type { CityTableApi } from "../../store/table-api.js";
-import type { Service, Context } from "../../service/service.js";
-import { InstallableService } from "../../service/installable-service.js";
-import { httpError } from "../../utils/helpers.js";
-import type { Authenticator } from "../auth/authenticator.js";
-import type { Runtime } from "../runtime.js";
-import type { RuntimeUser } from "../auth/types.js";
+import type { CityTableApi } from "../store/table-api.js";
+import type { Service, Context } from "../service/service.js";
+import { InstallableService } from "../service/installable-service.js";
+import { httpError } from "../utils/helpers.js";
+import type { Authenticator } from "./auth/authenticator.js";
+import type { Runtime } from "./runtime.js";
+import type { RuntimeUser } from "./auth/types.js";
 import { build_federation_instruction } from "./federation-instruction.js";
 import { collect_federation_env_catalog } from "./federation-env-catalog.js";
 

@@ -10,10 +10,10 @@
 // 场景 1：创建 Federation 实例
 // ===========================================================================
 
-export { Federation } from "./core/federation/federation.js";
-export type { FederationOptions, FederationHealthStatus } from "./core/types.js";
-export type { FederationHandleRequestOptions, FederationRequestExecutionContext } from "./core/types.js";
-export type { Runtime, EnvProvider, BuiltinTables, TableDef } from "./core/runtime.js";
+export { Federation } from "./federation/federation.js";
+export type { FederationOptions, FederationHealthStatus } from "./federation/types.js";
+export type { FederationHandleRequestOptions, FederationRequestExecutionContext } from "./federation/types.js";
+export type { Runtime, EnvProvider, BuiltinTables, TableDef } from "./federation/runtime.js";
 
 // ===========================================================================
 // 场景 2：注册 Service / InstallableService / AI 模型
@@ -102,14 +102,14 @@ export type {
 // 场景 3：用户鉴权与 Token
 // ===========================================================================
 
-export { TokenSigner } from "./core/auth/token-signer.js";
+export { TokenSigner } from "./federation/auth/token-signer.js";
 
 export type {
   RuntimeUser,
   CreateUserTokenInput,
   UserTokenPayload,
   UserTokenIssueResult,
-} from "./core/auth/types.js";
+} from "./federation/auth/types.js";
 
 // ===========================================================================
 // 场景 4：管理 City 与环境变量（内置 Service）

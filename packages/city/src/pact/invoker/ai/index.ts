@@ -1,5 +1,5 @@
 /**
- * AI Service 调用器（对应 core service/ai/ai-service.ts AIService）。
+ * AI Service 调用器（对应 service/ai/ai-service.ts AIService）。
  *
  * 路由：/v1/ai/{modality} 和 /v1/ai/models。
  */

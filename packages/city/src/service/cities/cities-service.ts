@@ -7,7 +7,7 @@
  */
 
 import { Service } from "../service.js";
-import type { Authenticator } from "../../core/auth/authenticator.js";
+import type { Authenticator } from "../../federation/auth/authenticator.js";
 import { CityStore } from "./city-store.js";
 
 export class CitiesService extends Service {

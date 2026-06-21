@@ -11,20 +11,20 @@
  */
 
 import type { Hono, ExecutionContext as HonoExecutionContext } from "hono";
-import { Service } from "../../service/service.js";
-import { asInstallableService, type ServiceDefinition } from "../../service/installable-service.js";
-import { EnvService } from "../../service/env/env-service.js";
-import { CitiesService } from "../../service/cities/cities-service.js";
+import { Service } from "../service/service.js";
+import { asInstallableService, type ServiceDefinition } from "../service/installable-service.js";
+import { EnvService } from "../service/env/env-service.js";
+import { CitiesService } from "../service/cities/cities-service.js";
 import { build_federation_instruction } from "./federation-instruction.js";
 import { initialize_federation } from "./federation-init.js";
 import { build_federation_router } from "./federation-router.js";
 import { create_federation_runtime } from "./federation-runtime.js";
-import type { FederationOptions, FederationHealthStatus, FederationHandleRequestOptions } from "../types.js";
-import type { Authenticator } from "../auth/authenticator.js";
-import type { Runtime } from "../runtime.js";
-import type { CityTableApi } from "../../store/table-api.js";
-import type { CityStore } from "../../service/cities/city-store.js";
-import type { Database, DbClient } from "../../store/db.js";
+import type { FederationOptions, FederationHealthStatus, FederationHandleRequestOptions } from "./types.js";
+import type { Authenticator } from "./auth/authenticator.js";
+import type { Runtime } from "./runtime.js";
+import type { CityTableApi } from "../store/table-api.js";
+import type { CityStore } from "../service/cities/city-store.js";
+import type { Database, DbClient } from "../store/db.js";
 
 export class Federation {
   private readonly runtime: Runtime;

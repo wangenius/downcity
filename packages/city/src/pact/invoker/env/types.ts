@@ -1,5 +1,5 @@
 /**
- * Env 类型（对应 core service/env/types.ts）。
+ * Env 类型（对应 service/env/types.ts）。
  */
 
 /** 环境变量记录 */

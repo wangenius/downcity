@@ -1,5 +1,5 @@
 /**
- * City / Token 类型（对应 core service/cities/types.ts + core/auth/types.ts）。
+ * City / Token 类型（对应 service/cities/types.ts + federation/auth/types.ts）。
  */
 
 /** City 记录 */

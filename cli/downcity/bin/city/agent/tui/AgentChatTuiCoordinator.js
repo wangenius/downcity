@@ -406,8 +406,9 @@ export class AgentChatTuiCoordinator {
         return error instanceof Error ? error.message : String(error);
     }
     /**
-     * 切换最后一个 tool 卡片的展开/折叠状态。
-     * 对齐 Kimi Code 的 Ctrl+O 展开 tool output。
+     * 统一切换所有 tool 卡片的展开/折叠状态。
+     * 对齐 Kimi Code 的 Ctrl+O：全局 toolOutputExpanded 翻转，
+     * 同时作用于现有及后续新建的 tool 卡片。
      */
     toggle_tool_output_expansion() {
         this.tool_output_expanded = !this.tool_output_expanded;

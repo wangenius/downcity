@@ -135,7 +135,7 @@ export interface DowncityConfig {
   id: string;
   version: string;
   /**
-   * Runtime startup configuration used by `town agent start`.
+   * Runtime startup configuration used by `downcity agent start`.
    * CLI flags (if provided) take precedence over this config.
    */
   start?: {

@@ -1,13 +1,13 @@
 ---
 title: Logic Map
-description: Explain how Town runtime, Console, agent, execution context, session, and plugins collaborate
+description: Explain how Downcity runtime, Console, agent, execution context, session, and plugins collaborate
 ---
 
 # Logic Map
 
 The current logic map is:
 
-- `town` manages local runtime and the managed agent registry
+- `downcity` manages local runtime and the managed agent registry
 - `console` provides the browser control surface
 - `agent` hosts one project runtime
 - `session` executes one turn
@@ -38,5 +38,5 @@ sequenceDiagram
 
 - plugin owns capability entry and augmentation
 - session owns execution
-- Town runtime and agent own runtime management
+- Downcity runtime and agent own runtime management
 - Console observes and controls through runtime APIs

@@ -2,7 +2,8 @@
   "title": "理解 Downcity City",
   "pages": [
     "index",
-    "town-model",
+    "federation",
+    "product-model",
     "architecture",
     "token-model",
     "trust-boundary",

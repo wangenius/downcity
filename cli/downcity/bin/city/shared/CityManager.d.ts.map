@@ -1,1 +1,0 @@
-{"version":3,"file":"CityManager.d.ts","sourceRoot":"","sources":["../../../src/city/shared/CityManager.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAyBH,UAAU,eAAe;IACvB,uBAAuB;IACvB,UAAU,EAAE,MAAM,IAAI,CAAC;CACxB;AAED;;GAEG;AACH,wBAAsB,yBAAyB,CAAC,MAAM,EAAE;IACtD;;OAEG;IACH,OAAO,EAAE,eAAe,CAAC;IAEzB;;OAEG;IACH,QAAQ,EAAE,MAAM,CAAC;CAClB,GAAG,OAAO,CAAC,IAAI,CAAC,CAiBhB"}

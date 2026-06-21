@@ -23,9 +23,9 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 
 | Package | Purpose |
 | --- | --- |
-| `downcity` | Public CLI bundle that installs `town` for local Agent hosting and `city` for City administration. |
+| `downcity` | Public CLI bundle that installs the `downcity` command (alias `city`) for local Agent hosting and City administration. |
 | `@downcity/agent` | Single-agent runtime and SDK for sessions, tool loops, services, plugins, HTTP/RPC, sandboxing, and host integration. |
-| `@downcity/city` | City runtime and access SDK for Service registration, Actions, auth, env, town-scoped access, and HTTP calling. |
+| `@downcity/city` | City runtime and access SDK for Service registration, Actions, auth, env, city-scoped access, and HTTP calling. |
 | `@downcity/type` | Shared protocol types used across packages, including City model descriptors returned by City. |
 | `@downcity/services` | Public services for accounts, balance, usage, payment, and Stripe payment flows. |
 | `@downcity/ui` | React + Tailwind UI SDK for reusable Console and host-application components. |
@@ -35,12 +35,12 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 ## Core Capabilities
 
 - Agent project runtime: initialize a repo or folder with `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/`.
-- Local hosting and operations: run `town start` or `town console` to host local agents and access the control surface.
+- Local hosting and operations: run `downcity start` or `downcity status` to host local agents and access the control surface.
 - Agent lifecycle: create, start, stop, restart, inspect, chat with, diagnose, and observe project agents.
-- City connection: use `town city` to connect local Agents to the active City server; manage City models and Service resources with `city`.
+- City connection: use `downcity federation` to connect local Agents to the active City server; manage City models and Service resources with `city`.
 - City backend capabilities: reuse accounts, balance, usage, payment, env, auth, and Service routing across agents and products.
 - Built-in agent capabilities: `chat`, `task`, `memory`, `shell`, `contact`, `skill`, `web`, `asr`, `tts`, and `workboard`.
-- Product surfaces: Town CLI, Agent SDK, City SDK, and UI SDK.
+- Product surfaces: Downcity CLI, Agent SDK, City SDK, and UI SDK.
 
 ## Quick Start
 
@@ -52,39 +52,37 @@ npm install -g downcity
 pnpm add -g downcity
 ```
 
-The package exposes both commands:
+The package exposes the `downcity` command (alias `city`):
 
 ```bash
-town --version
-city --version
+downcity --version
 ```
 
-`town` is the local Agent host command. `city` is the City administration command. Use `town update` to upgrade the global CLI.
+`downcity` hosts and manages local Agents and administers the City. Use `downcity update` to upgrade the global CLI.
 
 ### 2. Initialize the platform
 
 ```bash
-town init
+downcity init
 ```
 
 This sets up the global Downcity storage and configuration, by default under `~/.downcity/`.
 
-### 3. Connect Town to City
+### 3. Connect to City
 
 ```bash
-city
-town city use
-town city status
+downcity federation use
+downcity federation status
 ```
 
-`city` manages City models and Service resources. `town city` imports the active City connection for local Agent runtime use.
+`downcity` manages City models and Service resources. `downcity federation` imports the active City connection for local Agent runtime use.
 
 ### 4. Create an agent project
 
 Run this inside the target repository:
 
 ```bash
-town agent create .
+downcity agent create .
 ```
 
 This creates or updates:
@@ -112,10 +110,10 @@ your-project/
 ### 5. Start the agent and talk to it
 
 ```bash
-town agent start .
-town agent status .
-town agent chat -m "Summarize this repository"
-town agent chat --new-session
+downcity agent start .
+downcity agent status .
+downcity agent chat -m "Summarize this repository"
+downcity agent chat --new-session
 ```
 
 Interactive chat can also pick an existing session or create a new one before the TUI opens.
@@ -123,23 +121,23 @@ Interactive chat can also pick an existing session or create a new one before th
 To run in the foreground:
 
 ```bash
-town agent start . --foreground
+downcity agent start . --foreground
 ```
 
 ### 6. Start Console
 
 ```bash
-town start --console
+downcity start
 # or
-town console
+downcity status
 ```
 
 Useful status commands:
 
 ```bash
-town status
-town agent list
-town console status
+downcity status
+downcity agent list
+downcity status
 ```
 
 ## SDK Example
@@ -204,8 +202,6 @@ downcity/
 │   ├── type/
 │   └── ui/
 ├── cli/
-│   ├── city/
-│   ├── town/
 │   └── downcity/
 ├── templates/
 │   ├── edge/
@@ -225,7 +221,7 @@ The `templates/*` projects are kept as convenient developer starters. They are n
 - Agent SDK docs: [downcity.ai/agent-sdk-docs](https://downcity.ai/agent-sdk-docs)
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
-- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/city/README.md](./cli/city/README.md), [cli/town/README.md](./cli/town/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
+- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
 
 ## Local Development
 
@@ -266,6 +262,6 @@ pnpm dev:homepage
 - Downcity can execute shell commands, read and write project files, start local daemons, and receive external messages through chat channels.
 - Local shell and script commands run through the agent sandbox by default. The project is writable, network is open, and sandbox HOME/cache lives at `.downcity/sandbox`.
 - Use a clean Git branch and audit changes with `git status` and `git diff`.
-- Keep secrets out of the repository; prefer local environment variables or `town env`.
+- Keep secrets out of the repository; prefer local environment variables or `downcity env`.
 - Use tokens and auth boundaries for Console, HTTP access, and chat channel integrations.
 - Host-level installs such as `sudo`, `brew install`, Xcode tools, and writes to system directories are outside the sandbox boundary.

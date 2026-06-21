@@ -1,6 +1,6 @@
 ---
 title: 模型配置（City + Agent）
-description: City AIService 模型目录与项目绑定的职责边界
+description: Federation AIService 模型目录与项目绑定的职责边界
 ---
 
 # 模型配置
@@ -13,13 +13,13 @@ description: City AIService 模型目录与项目绑定的职责边界
 ## 职责流程
 
 1. 用 `city` 准备或检查模型目录。
-2. 让 Town 以本机用户身份连接 City。
+2. 让 Downcity 以本机用户身份连接 City。
 3. 在 agent 项目设置 `execution.modelId`。
 4. 重启 agent 并进行一次实际调用验证。
 
 ## 命令在哪里
 
-具体工作流见 [Town City 文档](/zh/products-docs/town-cli/city)、[Town config 文档](/zh/products-docs/town-cli/config) 和 [Agent restart 文档](/zh/products-docs/town-cli/agent/restart)。
+具体工作流见 [Downcity City 文档](/zh/docs/reference/cli)、[Downcity config 文档](/zh/docs/reference/cli) 和 [Agent restart 文档](/zh/docs/reference/cli)。
 
 ## 失败场景
 

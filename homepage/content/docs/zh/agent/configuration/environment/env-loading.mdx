@@ -29,6 +29,6 @@ description: 项目 Agent 启动时如何组合宿主 env 与项目 .env
 
 ## 修改后要做什么
 
-通常需要通过 [Agent restart 工作流](/zh/products-docs/town-cli/agent/restart) 重启 agent。
+通常需要通过 [Agent restart 工作流](/zh/docs/reference/cli) 重启 agent。
 
 因为 agent 启动时会读取这份 env 快照，单纯改 `.env` 或宿主注入值不会自动刷新当前运行中的进程。

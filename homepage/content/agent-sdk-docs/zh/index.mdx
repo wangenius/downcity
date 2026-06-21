@@ -27,7 +27,7 @@ description: 理解 @downcity/agent 提供的本地 Agent、远程 Agent、Sessi
 - 本地脚本或内部工具
 - 你已经自己管理模型实例
 
-### 2. Downcity / Town / City 集成模式
+### 2. Downcity / Downcity / City 集成模式
 
 这种模式下，Agent 项目不直接持有 provider、API key 或模型实例。
 
@@ -139,7 +139,7 @@ await session.set({ model })
 也就是说，在 Downcity 集成模式里：
 
 - Agent 项目只保存 `modelId`
-- Town 负责去 City AIService 解析这个 `modelId`
+- Downcity 负责去 City AIService 解析这个 `modelId`
 - provider、key、baseURL 都不放在 Agent 项目里
 
 ### 远程 SDK session

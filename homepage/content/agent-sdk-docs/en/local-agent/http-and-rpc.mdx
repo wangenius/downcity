@@ -79,9 +79,9 @@ app.route("/", http.router());
 
 CORS / logger / auth middleware are your responsibility. `AgentHTTP` does not attach any.
 
-## Relationship with Town and RemoteAgent
+## Relationship with Downcity and RemoteAgent
 
-- `town agent start` wires `Agent + AgentRPC + AgentHTTP.router()` together and adds Town's own control / static routes on top.
+- `downcity agent start` wires `Agent + AgentRPC + AgentHTTP.router()` together and adds Downcity's own control / static routes on top.
 - `RemoteAgent` clients can connect to the `rpc://` URL exposed by `AgentRPC.listen()` or to the HTTP surface exposed by `AgentHTTP`.
 
 ## Related docs

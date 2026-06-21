@@ -1,0 +1,103 @@
+---
+title: Federation 与 City
+description: 分清服务端运行时 Federation 和客户端访问入口 City，避免把两个名字混在一起。
+---
+
+在 `@downcity/city` 里，服务端和客户端是两个不同的类，名字也不同。最容易踩的坑，就是把它们都当成“City”。
+
+- 服务端运行时是 `Federation`
+- 客户端访问入口是 `City`
+
+这一页只解决一件事：**让你看代码时立刻知道自己在写哪一端。**
+
+## 一句话区分
+
+- `Federation`：部署在服务端的共享后端运行时，承载模型目录、service/action 路由、token 校验、usage 和 hooks。多个产品（`city_id`）共用同一个 `Federation`。
+- `City`：产品侧或可信后端用来访问 `Federation` 的客户端，按 `role` 分成 `User City` 和 `Admin City`。
+
+换句话说：你部署一个 `Federation`，然后用 `City` 去连它。
+
+## 服务端：`Federation`
+
+服务端永远从 `new Federation({ db })` 开始。它负责把数据库、service、模型目录和统一路由组装成一个能跑的后端：
+
+```ts
+import { Federation, Service } from "@downcity/city";
+
+const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
+
+base.use(new Service({ id: "translate" }));
+
+await base.health();
+serve({ fetch: base.router().fetch, port: 3001 });
+```
+
+`Federation` 负责：
+
+- 注册 `Service`、官方服务和 `AIService`
+- 校验 `user_token` 和 `admin_secret_key`
+- 暴露统一的 `/v1/*` 路由
+- 协调 runtime env、hooks、usage 和数据库
+
+> 文档里出现的“City runtime”指的就是这个 `Federation` 实例，不是客户端 `City`。
+
+## 客户端：`City`
+
+产品端和可信后端都用 `City` 去访问 `Federation`，区别只在 `role`：
+
+```ts
+import { City } from "@downcity/city";
+
+// 可信后端：持有 admin_secret_key，管理 city、签发 user_token
+const admin = new City({
+  role: "admin",
+  federation_url: "https://base.example.com",
+  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+});
+
+// 产品前端：只拿 city_id + user_token，调用 service
+const client = new City({
+  role: "user",
+  federation_url: "https://base.example.com",
+  city_id,
+  user_token,
+});
+```
+
+- `Admin City`：运行在可信后端，负责创建 city、管理 env、签发 `user_token`。
+- `User City`：运行在产品 client，只持有 `city_id + user_token`，调用 `ai.text()`、`ai.stream()`、`ai.image()` 和 Service action。
+
+客户端永远拿不到 provider key，`User City` 也永远拿不到 `admin_secret_key`。
+
+## 一张图记住边界
+
+<div className="dc-doc-flow" aria-label="Federation 与 City 的边界">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>客户端 City</strong>
+      <span>`User City` 在产品前端，`Admin City` 在可信后端。</span>
+      <code>new City({ role })</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>服务端 Federation</strong>
+      <span>共享后端运行时，承载模型目录、service 路由、token 校验、usage 和 hooks。</span>
+      <code>new Federation({ db })</code>
+    </div>
+  </div>
+</div>
+
+## 和 CLI 的对应关系
+
+CLI 也是按这条边界拆的：
+
+- `downfed`：管理 `Federation`（创建、部署、City 实体、服务资源、env）。
+- `downcity`：本机 Agent 宿主与管理入口。
+
+## 接下来读什么
+
+- 想看完整调用链，读 [架构总览](/zh/city-sdk-docs/concepts/architecture)
+- 想分清两类密钥，读 [token 模型](/zh/city-sdk-docs/concepts/token-model)
+- 想直接上手部署，读 [创建 Federation](/zh/city-sdk-docs/quickstart/create-city)

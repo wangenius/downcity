@@ -1,0 +1,103 @@
+---
+title: Federation and City
+description: Separate the server-side runtime Federation from the client-side entry City so the two names stop blurring together.
+---
+
+In `@downcity/city` the server and the client are two different classes with two different names. The most common mistake is treating both of them as "City".
+
+- the server-side runtime is `Federation`
+- the client-side entry is `City`
+
+This page solves one thing: **so that when you read code, you immediately know which side you are writing.**
+
+## One-line distinction
+
+- `Federation`: the shared backend runtime deployed on the server. It owns the model catalog, service/action routing, token verification, usage, and hooks. Many products (`city_id`) share the same `Federation`.
+- `City`: the client used by a product or a trusted backend to reach the `Federation`. It splits into `User City` and `Admin City` by `role`.
+
+In short: you deploy one `Federation`, then use `City` to connect to it.
+
+## Server side: `Federation`
+
+The server always starts from `new Federation({ db })`. It assembles the database, services, model catalog, and unified routing into a runnable backend:
+
+```ts
+import { Federation, Service } from "@downcity/city";
+
+const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
+
+base.use(new Service({ id: "translate" }));
+
+await base.health();
+serve({ fetch: base.router().fetch, port: 3001 });
+```
+
+`Federation` owns:
+
+- registering `Service`, official services, and `AIService`
+- verifying `user_token` and `admin_secret_key`
+- exposing the unified `/v1/*` routes
+- coordinating runtime env, hooks, usage, and the database
+
+> When the docs say "City runtime", they mean this `Federation` instance, not the client-side `City`.
+
+## Client side: `City`
+
+Both product clients and trusted backends use `City` to reach the `Federation`; the only difference is `role`:
+
+```ts
+import { City } from "@downcity/city";
+
+// Trusted backend: holds admin_secret_key, manages cities, issues user_token
+const admin = new City({
+  role: "admin",
+  federation_url: "https://base.example.com",
+  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+});
+
+// Product frontend: only holds city_id + user_token, calls services
+const client = new City({
+  role: "user",
+  federation_url: "https://base.example.com",
+  city_id,
+  user_token,
+});
+```
+
+- `Admin City`: runs in a trusted backend; creates cities, manages env, issues `user_token`.
+- `User City`: runs in a product client; only holds `city_id + user_token` and calls `ai.text()`, `ai.stream()`, `ai.image()`, and Service actions.
+
+The client never receives provider keys, and `User City` never receives the `admin_secret_key`.
+
+## One diagram for the boundary
+
+<div className="dc-doc-flow" aria-label="Boundary between Federation and City">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Client City</strong>
+      <span>`User City` in the product frontend, `Admin City` in a trusted backend.</span>
+      <code>new City({ role })</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Server Federation</strong>
+      <span>Shared backend runtime that owns the model catalog, service routing, token verification, usage, and hooks.</span>
+      <code>new Federation({ db })</code>
+    </div>
+  </div>
+</div>
+
+## How the CLI maps to this
+
+The CLI is split along the same boundary:
+
+- `downfed`: manages the `Federation` (create, deploy, City entities, service resources, env).
+- `downcity`: the local Agent host and management entry.
+
+## What to read next
+
+- For the full request chain, read [Architecture](/en/city-sdk-docs/concepts/architecture)
+- To separate the two kinds of keys, read [Token model](/en/city-sdk-docs/concepts/token-model)
+- To deploy hands-on, read [Create Federation](/en/city-sdk-docs/quickstart/create-city)

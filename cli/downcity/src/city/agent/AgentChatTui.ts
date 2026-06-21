@@ -20,8 +20,6 @@ export async function run_agent_chat_tui(params: {
   agent_id: string;
   /** 初始 session id。 */
   session_id: string;
-  /** 是否在启动后立刻弹出 session picker，等同于 `/session` 命令。 */
-  show_initial_picker?: boolean;
   /** 列出远程 session。 */
   list_sessions: () => Promise<AgentChatSessionSummaryView[]>;
   /** 创建新 session。 */
@@ -46,7 +44,5 @@ export async function run_agent_chat_tui(params: {
     run_turn: params.run_turn,
   });
 
-  await coordinator.run({
-    show_initial_picker: params.show_initial_picker === true,
-  });
+  await coordinator.run();
 }

@@ -92,7 +92,7 @@ const providers = await guest.service("accounts").get("providers");
 ```ts
 const start = await guest.service("accounts").action("oauth/start").invoke({
   provider: "google",
-  town_id: "town_demo",
+  city_id: "city_demo",
 });
 ```
 
@@ -120,7 +120,7 @@ Google 登录完成后，accounts service 仍然会按统一方式返回 City `u
 const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  town_id: "town_demo",
+  city_id: "city_demo",
   user_token: result.user_token,
 });
 ```
@@ -137,4 +137,4 @@ const user = new City({
 - 想看 OAuth 整体链路，继续读 [OAuth 与 Session](/zh/services-sdk-docs/accounts/oauth-and-session)
 - 如果你还要接微信网站登录，继续读 [微信登录配置](/zh/services-sdk-docs/accounts/wechat-login)
 - 想看完整接入流程，读 [Accounts 服务](/zh/services-sdk-docs/accounts)
-- 部署后记得通过 Town CLI / Admin API 把 `GOOGLE_CLIENT_ID` 和 `GOOGLE_CLIENT_SECRET` 写进 City env
+- 部署后记得通过 Downcity CLI / Admin API 把 `GOOGLE_CLIENT_ID` 和 `GOOGLE_CLIENT_SECRET` 写进 City env

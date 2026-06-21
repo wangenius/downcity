@@ -1,5 +1,5 @@
 /**
- * `town skill` 命令 helper。
+ * `downcity skill` 命令 helper。
  *
  * 设计目标（中文）
  * - 尽量不自建 registry：直接复用社区的 `npx skills` 生态（find/install）。

@@ -29,11 +29,10 @@ const page_content = {
     ],
     cards: [
       {
-        id: "town-cli",
-        title: "Official Town CLI",
-        desc: "官方 terminal/local Town：用命令行初始化、启动、管理和调试本地 Agent runtime。",
-        source: "cli/town/",
-        docsPath: "/zh/products-docs/town-cli/init",
+        id: "cli",
+        title: "Downcity CLI",
+        desc: "官方命令行：初始化、启动、管理和调试本地 Agent runtime。",
+        source: "cli/downcity/",
       },
       {
         id: "sdk",
@@ -57,7 +56,7 @@ const page_content = {
     factsTitle: "产品事实",
     facts: [
       "Downcity 面向 AI builders：核心价值是让多个 Agent 产品复用同一套运行基础设施。",
-      "Official Town CLI：官方 terminal/local Town 实现，目录为 cli/town/。",
+      "Downcity CLI：官方命令行实现，目录为 cli/downcity/。",
       "City SDK：核心 runtime 与服务访问方式位于 packages/city/。",
       "Agent SDK：本地 Agent / RemoteAgent SDK 位于 packages/agent/。",
       "Downcity UI SDK：React + Tailwind 组件包目录为 packages/ui/。",
@@ -84,11 +83,10 @@ const page_content = {
     ],
     cards: [
       {
-        id: "town-cli",
-        title: "Official Town CLI",
-        desc: "The official terminal/local Town for initializing, starting, managing, and debugging local agent runtime.",
-        source: "cli/town/",
-        docsPath: "/en/products-docs/town-cli/init",
+        id: "cli",
+        title: "Downcity CLI",
+        desc: "The official CLI for initializing, starting, managing, and debugging local agent runtime.",
+        source: "cli/downcity/",
       },
       {
         id: "sdk",
@@ -112,7 +110,7 @@ const page_content = {
     factsTitle: "Product Facts",
     facts: [
       "Downcity is for AI builders: the core value is reusing one runtime infrastructure across many agent products.",
-      "Official Town CLI is the terminal/local Town implementation under cli/town/.",
+      "Downcity CLI is the official command-line implementation under cli/downcity/.",
       "City SDK runtime and service access helpers live in packages/city/.",
       "Agent SDK local Agent and RemoteAgent runtime are in packages/agent/.",
       "Downcity UI SDK is the React + Tailwind component package under packages/ui/.",
@@ -147,7 +145,7 @@ export default function ProductOverviewPage() {
         {content.cards.map((card) => (
           <Link
             key={card.id}
-            to={"docsPath" in card ? card.docsPath : `${base_path}/${card.id}`}
+            to={`${base_path}/${card.id}`}
             className={`${marketingTheme.panel} p-5 transition-colors hover:bg-card/92 md:p-6`}
           >
             <p className={marketingTheme.eyebrow}>{card.source}</p>

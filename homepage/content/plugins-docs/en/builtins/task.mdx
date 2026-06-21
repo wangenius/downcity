@@ -29,19 +29,19 @@ Use `task` when you need:
 
 ## How users use it
 
-Use `town task` when you want a reusable task definition:
+Use `downcity task` when you want a reusable task definition:
 
 ```bash
-town task list
-town task create --title "daily-summary" --description "Send a daily summary" --when "0 9 * * *" --session-id <sessionId>
-town task run daily-summary --reason "manual check"
-town task update daily-summary --status paused
-town task enable daily-summary
-town task disable daily-summary
-town task delete daily-summary
+downcity task list
+downcity task create --title "daily-summary" --description "Send a daily summary" --when "0 9 * * *" --session-id <sessionId>
+downcity task run daily-summary --reason "manual check"
+downcity task update daily-summary --status paused
+downcity task enable daily-summary
+downcity task disable daily-summary
+downcity task delete daily-summary
 ```
 
-Use `town chat send --delay/--time` or another plugin action with `--delay/--time` for a one-shot delayed action. Use `town task` when the automation should remain as a named, editable task.
+Use `downcity chat send --delay/--time` or another plugin action with `--delay/--time` for a one-shot delayed action. Use `downcity task` when the automation should remain as a named, editable task.
 
 ## SDK Assembly
 
@@ -82,7 +82,7 @@ The action names are `list`, `create`, `run`, `delete`, `update`, `status`, `ena
 
 ## Public status
 
-`TaskPlugin` is exported from `@downcity/plugins`. It can be attached directly in SDK usage, although the most common path is still through the agent runtime and `town task`.
+`TaskPlugin` is exported from `@downcity/plugins`. It can be attached directly in SDK usage, although the most common path is still through the agent runtime and `downcity task`.
 
 ## Related docs
 

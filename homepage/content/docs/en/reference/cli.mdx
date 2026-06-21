@@ -7,11 +7,8 @@ description: Where Downcity command-line references live
 
 Downcity docs explain the design model, runtime boundaries, and configuration semantics.
 
-Concrete command usage lives in product docs:
+The unified `downcity` command (alias `city`) hosts local Agents and administers the City. For concrete flags, use the local command help from the installed CLI; the City SDK docs cover the City-side surface.
 
-- [Town CLI](/en/products-docs/town-cli)
-- [Agent CLI product docs](/en/products-docs/town-cli/agent/agent)
-- [Plugin CLI product docs](/en/products-docs/town-cli/plugin/plugin)
 - [City CLI](/en/city-sdk-docs/packages/cli)
 
 ## Local help
@@ -20,20 +17,20 @@ For exact flags, use local command help from the installed CLI. Product docs des
 
 ## Interactive TUI
 
-Running `city` or `town` without a subcommand now opens the interactive TUI by default. `city` starts from the City list and opens the selected City's admin management inside one stable layout. In both CLIs, the left sidebar carries menu hierarchy with a breadcrumb at the top, while loading states, forms, tables, JSON, messages, and selection details render in the right section until you exit the TUI.
+Running `city` or `downcity` without a subcommand now opens the interactive TUI by default. `city` starts from the City list and opens the selected City's admin management inside one stable layout. In both CLIs, the left sidebar carries menu hierarchy with a breadcrumb at the top, while loading states, forms, tables, JSON, messages, and selection details render in the right section until you exit the TUI.
 
 ## CLI language
 
-`city` and `town` support both Chinese and English.
+`city` and `downcity` support both Chinese and English.
 
 - Use `--lang zh` or `--lang en` to switch the current command explicitly.
 - If `--lang` is not passed, the CLI first uses the last language selected in the interactive menu, then falls back to `DC_CLI_LANG`, `LC_ALL`, `LC_MESSAGES`, and `LANG`.
-- In interactive mode, both `city` and `town` can change the default language from their menus and persist that preference locally.
+- In interactive mode, both `city` and `downcity` can change the default language from their menus and persist that preference locally.
 
 Examples:
 
 ```bash
-town --lang en --help
+downcity --lang en --help
 city --lang zh
-DC_CLI_LANG=zh town agent --help
+DC_CLI_LANG=zh downcity agent --help
 ```

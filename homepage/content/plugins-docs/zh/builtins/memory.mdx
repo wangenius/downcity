@@ -65,15 +65,15 @@ const memory = new MemoryPlugin({
 
 ## 用户怎么使用
 
-普通本地使用直接走 `town memory` 快捷命令：
+普通本地使用直接走 `downcity memory` 快捷命令：
 
 ```bash
-town memory status
-town memory search "project decision" --max-results 5
-town memory read .downcity/memory/wiki/project-decisions.md --from 1 --lines 20
-town memory remember --content "Prefer constructor-based plugin config." --topic "plugin system"
-town memory digest --session-id <sessionId> --max-messages 30
-town memory revise .downcity/memory/wiki/plugin-system.md --instruction "Merge the latest constructor config decision"
+downcity memory status
+downcity memory search "project decision" --max-results 5
+downcity memory read .downcity/memory/wiki/project-decisions.md --from 1 --lines 20
+downcity memory remember --content "Prefer constructor-based plugin config." --topic "plugin system"
+downcity memory digest --session-id <sessionId> --max-messages 30
+downcity memory revise .downcity/memory/wiki/plugin-system.md --instruction "Merge the latest constructor config decision"
 ```
 
 ## SDK action 用法

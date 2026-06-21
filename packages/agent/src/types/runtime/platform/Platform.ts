@@ -27,7 +27,7 @@ export interface PlatformAgentOption {
   projectRoot: string;
 
   /**
-   * 当前 Town 托管的 Agent 进程是否存活。
+   * 当前 downcity 托管的 Agent 进程是否存活。
    */
   running: boolean;
 
@@ -62,12 +62,12 @@ export interface PlatformAgentOption {
   stoppedAt?: string;
 
   /**
-   * 当前读取到的 Town 托管进程 pid（仅 running=true 时有值）。
+   * 当前读取到的 downcity 托管进程 pid（仅 running=true 时有值）。
    */
   daemonPid?: number;
 
   /**
-   * Town 托管进程日志路径（用于排障展示）。
+   * downcity 托管进程日志路径（用于排障展示）。
    */
   logPath?: string;
 
@@ -168,7 +168,7 @@ export interface PlatformAgentDirectoryInspection {
   knownAgent: boolean;
 
   /**
-   * 若已登记，当前 Town 托管进程是否运行中。
+   * 若已登记，当前 downcity 托管进程是否运行中。
    */
   running: boolean;
 
@@ -356,7 +356,7 @@ export interface ManagedAgentRegistryEntry {
   projectRoot: string;
 
   /**
-   * registry 最近一次记录的 Town 托管进程 pid。
+   * registry 最近一次记录的 downcity 托管进程 pid。
    */
   pid: number;
 
@@ -402,7 +402,7 @@ export interface ManagedAgentRegistryV1 {
 }
 
 /**
- * `town agent list --running` 输出可复用的受管 agent 运行态视图。
+ * `downcity agent list --running` 输出可复用的受管 agent 运行态视图。
  */
 export interface ManagedAgentProcessView {
   /**
@@ -416,7 +416,7 @@ export interface ManagedAgentProcessView {
   registeredPid: number;
 
   /**
-   * 当前实际存活的 Town 托管进程 pid。
+   * 当前实际存活的 downcity 托管进程 pid。
    */
   daemonPid: number;
 
@@ -436,7 +436,7 @@ export interface ManagedAgentProcessView {
   updatedAt: string;
 
   /**
-   * Town 托管进程日志文件路径。
+   * downcity 托管进程日志文件路径。
    */
   logPath: string;
 }

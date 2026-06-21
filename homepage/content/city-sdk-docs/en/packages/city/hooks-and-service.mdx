@@ -96,7 +96,7 @@ Once mounted, services still look like normal services from the product side:
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  city_id: "town_demo",
+  city_id: "city_demo",
 });
 
 const usage = await admin.service("usage").get("summary");

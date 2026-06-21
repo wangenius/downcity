@@ -98,12 +98,12 @@ As a first mental model:
 The service now keeps two layers of data:
 
 - better-auth auth tables: `auth_users`, `auth_accounts`, `auth_sessions`, `auth_verifications`
-- town-facing table: `auth_profiles`
+- downcity-facing table: `auth_profiles`
 - oauth polling table: `service_accounts_oauth_states`
 
-The first layer answers auth questions. The second layer answers town-facing display questions.
+The first layer answers auth questions. The second layer answers downcity-facing display questions.
 
-If the town frontend needs to decide which sign-in buttons to render, it should call this first:
+If the downcity frontend needs to decide which sign-in buttons to render, it should call this first:
 
 ```ts
 const providers = await guest.service("accounts").get("providers");
@@ -117,7 +117,7 @@ Then render email, GitHub, Google, or WeChat only from the server response. Do n
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "city_demo",
 });
 ```
 
@@ -138,13 +138,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "city_demo",
 });
 
 const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  town_id: "town_demo",
+  city_id: "city_demo",
   user_token: session.user_token,
 });
 
@@ -159,5 +159,5 @@ This is why `AccountsService()` and `@downcity/city` are usually read together: 
 
 - For the step-by-step flows, continue with the three subpages in this section
 - For the full account capability, continue in [Accounts Service](/en/services-sdk-docs/accounts)
-- For the town SDK, read [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime)
+- For the downcity SDK, read [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime)
 - For more detailed product-side calling patterns, read [User City](/en/city-sdk-docs/reference/city-user)

@@ -83,7 +83,7 @@ Use this for business services that you register yourself in City.
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  city_id: "town_demo",
+  city_id: "city_demo",
 });
 
 const usage = await user.service("usage").get("me");
@@ -95,7 +95,7 @@ Use this for services exposed by official packages such as `@downcity/services`,
 
 ```ts
 const issued = await admin.cities.tokens.apply({
-  city_id: "town_demo",
+  city_id: "city_demo",
   user_id: "user_123",
   ttl: "7d",
 });
@@ -127,7 +127,7 @@ import { City } from "@downcity/city";
 const client = new City({
   role: "user",
   federation_url: "https://base.example.com",
-  city_id: "town_demo",
+  city_id: "city_demo",
   user_token: "ub_xxx",
 });
 
@@ -213,13 +213,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  city_id: "town_demo",
+  city_id: "city_demo",
 });
 
 const user = new City({
   role: "user",
   federation_url: "https://base.example.com",
-  city_id: "town_demo",
+  city_id: "city_demo",
   user_token: session.user_token,
 });
 
@@ -242,7 +242,7 @@ Besides `client.ai.*`, both city and admin clients can use `service(name)` again
 const session = await client.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  city_id: "town_demo",
+  city_id: "city_demo",
 });
 ```
 

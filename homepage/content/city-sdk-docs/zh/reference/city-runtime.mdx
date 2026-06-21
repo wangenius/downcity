@@ -1,9 +1,9 @@
 ---
-title: City
-description: City 是运行时容器，管理 Service 生命周期、鉴权和 HTTP 路由。
+title: Federation
+description: Federation 是服务端运行时容器，管理 Service 生命周期、鉴权和 HTTP 路由。
 ---
 
-`City` 是 Downcity 的核心实例。封装了 HTTP 路由、鉴权、环境变量和数据库基础设施。
+`Federation` 是 Downcity 服务端的核心实例（即文档里说的 City runtime）。它封装了 HTTP 路由、鉴权、环境变量和数据库基础设施。客户端访问入口是 [`City`](/zh/city-sdk-docs/reference/city-user)，不要和它混淆。
 
 ## 最小使用
 
@@ -34,7 +34,7 @@ translate.action("en2zh", async (ctx) => {
 base.use(translate);
 ```
 
-City 自动为每个 Action 生成 HTTP 路由：
+Federation 自动为每个 Action 生成 HTTP 路由：
 
 ```
 POST /v1/translate/zh2en  →  translate.action("zh2en")
@@ -109,7 +109,7 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 
 ## instruction 文档聚合
 
-`City` 可以直接返回当前实例的说明文档字符串：
+`Federation` 可以直接返回当前实例的说明文档字符串：
 
 ```ts
 const text = await base.instruction();
@@ -117,7 +117,7 @@ const text = await base.instruction();
 
 这份文本会聚合：
 
-- City 自身怎么使用
+- Federation 自身怎么使用
 - 当前注册的 service
 - 每个模块声明的 env 配置
 - 服务补充的使用说明
@@ -132,6 +132,6 @@ GET /v1/base/instruction
 
 ## 鉴权
 
-City 自动处理 `user_token` 和 `admin_secret_key` 的校验。Action 默认要求 `user_token`；传 `auth: ["admin"]` 时只允许管理端访问，传 `auth: []` 时表示免登录。
+Federation 自动处理 `user_token` 和 `admin_secret_key` 的校验。Action 默认要求 `user_token`；传 `auth: ["admin"]` 时只允许管理端访问，传 `auth: []` 时表示免登录。
 
 详见 [信任边界](/zh/city-sdk-docs/concepts/trust-boundary)。

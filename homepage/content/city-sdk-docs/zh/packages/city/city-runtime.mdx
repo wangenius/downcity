@@ -1,13 +1,13 @@
 ---
-title: City 运行时
+title: Federation 运行时
 description: "Federation 实例、runtime、router、serve 和统一入口在 @downcity/city 里的角色。"
 ---
 
-`City` 是 Downcity 的长期运行容器。它不是一个零散函数集合，而是把 Drizzle db、service、鉴权和统一 `/v1/*` 路由收在同一个服务端入口里。
+`Federation` 是 Downcity 的服务端长期运行容器（文档里也叫 City runtime）。它不是一个零散函数集合，而是把 Drizzle db、service、鉴权和统一 `/v1/*` 路由收在同一个服务端入口里。产品侧访问它用的是 `City` 客户端，区别见 [Federation 与 City](/zh/city-sdk-docs/concepts/federation)。
 
 ## 这个概念在说什么
 
-可以先把 City 理解成“多个产品共用的 AI infrastructure runtime 进程”。
+可以先把 Federation 理解成“多个产品共用的 AI infrastructure runtime 进程”。
 
 它长期持有这些能力：
 
@@ -17,24 +17,24 @@ description: "Federation 实例、runtime、router、serve 和统一入口在 @d
 - HTTP 路由入口
 - token、city、env 等基础设施
 
-所以你通常不是“调用一下 City”，而是“启动一套 City runtime，然后让多个产品 client 长期连接它”。
+所以你通常不是“调用一下 Federation”，而是“启动一套 Federation runtime，然后让多个产品 client 长期连接它”。
 
 ## 什么时候你需要关心这一页
 
-- 你准备第一次真正把 City 跑起来
-- 你想理解为什么 `City` 只需要一个 Drizzle db
+- 你准备第一次真正把 Federation 跑起来
+- 你想理解为什么 `Federation` 只需要一个 Drizzle db
 - 你已经会写 service，但还不清楚 `router()`、`handleRequest()`、`serve()` 各自用在什么地方
-- 你要把 City 接到现有 Node 服务、Cloudflare Worker 或别的 HTTP 入口上
+- 你要把 Federation 接到现有 Node 服务、Cloudflare Worker 或别的 HTTP 入口上
 
 ## 什么时候这页不是重点
 
-- 你只想知道产品前端怎么调 City：优先读 [@downcity/city](/zh/city-sdk-docs/packages/city/city-runtime)
+- 你只想知道产品前端怎么用 `City` 客户端调用：优先读 [Client SDK](/zh/city-sdk-docs/packages/city/client)
 - 你只想知道账号登录怎么跑通：优先读 [@downcity/services](/zh/services-sdk-docs)
 - 你只想看某个 custom service 怎么写：优先读 [Service 与 Action](/zh/city-sdk-docs/packages/city/service-and-action)
 
 ## 最小可运行示例
 
-下面这个例子说明 City 运行时最小长什么样：
+下面这个例子说明 Federation 运行时最小长什么样：
 
 ```ts
 import { AIService, Federation } from "@downcity/city";
@@ -85,13 +85,13 @@ serve({
 
 这个例子里真正重要的是三件事：
 
-1. `db` 决定 City 使用哪一个 Drizzle 数据库
-2. `base.use(...)` 决定 City 暴露哪些能力
+1. `db` 决定 Federation 使用哪一个 Drizzle 数据库
+2. `base.use(...)` 决定 Federation 暴露哪些能力
 3. `base.router()` / `base.handleRequest()` 决定你怎么把它接进 HTTP 层
 
-## 场景一：City 自己就是主服务
+## 场景一：Federation 自己就是主服务
 
-如果你想让 City 自己作为主 HTTP 入口，最直接的理解方式就是上面的 `serve()`：
+如果你想让 Federation 自己作为主 HTTP 入口，最直接的理解方式就是上面的 `serve()`：
 
 ```ts
 import { serve } from "@hono/node-server";
@@ -102,13 +102,13 @@ serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
 
 这种方式适合：
 
-- 先快速跑起一个独立 City
+- 先快速跑起一个独立 Federation
 - 单独部署一个可复用的 AI backend
-- 小团队先把 City 和业务后端拆成两个清晰边界
+- 小团队先把 Federation 和业务后端拆成两个清晰边界
 
 ## 场景二：接进你自己的服务框架
 
-如果你已经有现成的 HTTP 框架，更常见的是按请求转给 City：
+如果你已经有现成的 HTTP 框架，更常见的是按请求转给 Federation：
 
 ```ts
 export default {
@@ -122,7 +122,7 @@ export default {
 
 - Cloudflare Workers
 - 你已经有现成网关或 API server
-- 想把 City 当成内部运行时，而不是单独开一个端口
+- 想把 Federation 当成内部运行时，而不是单独开一个端口
 
 ## 为什么只传 db
 
@@ -137,13 +137,13 @@ export default {
 
 - Node.js 可以用 `drizzle-orm/better-sqlite3` 或 Drizzle pg
 - Cloudflare Workers 可以用 `drizzle-orm/d1`
-- City 启动时会把需要的 env 写入内置 `env` 表
+- Federation 启动时会把需要的 env 写入内置 `env` 表
 
 这就是为什么同一套 runtime 模型可以复用到不同宿主环境，而不是每换一个平台就重写一套后端。
 
 ## 常用 API / 入口
 
-这一页最相关的 City API 是：
+这一页最相关的 Federation API 是：
 
 - `new Federation({ db })`：创建 Federation 实例
 - `base.use(...)`：挂 service、AIService 和官方服务
@@ -156,11 +156,11 @@ export default {
 
 ## 常见误解
 
-### City 是 runtime，不是整个 SDK
+### Federation 是 runtime，不是整个 SDK
 
-City 是服务端长期运行容器。产品侧真正调用它用的是 [@downcity/city](/zh/city-sdk-docs/packages/city/city-runtime)。
+Federation 是服务端长期运行容器。产品侧真正调用它用的是 `City` 客户端，见 [Client SDK](/zh/city-sdk-docs/packages/city/client)。
 
-### City 不是纯 HTTP 代理
+### Federation 不是纯 HTTP 代理
 
 它背后还持有：
 
@@ -169,13 +169,13 @@ City 是服务端长期运行容器。产品侧真正调用它用的是 [@downci
 - service 数据层
 - hook 生命周期
 
-### City 不等于某一个 AI provider
+### Federation 不等于某一个 AI provider
 
-provider、model、service、custom service 都只是 City 上挂载的能力，不是 City 本身。
+provider、model、service、custom service 都只是 Federation 上挂载的能力，不是 Federation 本身。
 
 ## 继续阅读
 
-- 想知道 City 里到底挂的是什么，读 [Service 与 Action](/zh/city-sdk-docs/packages/city/service-and-action)
+- 想知道 Federation 里到底挂的是什么，读 [Service 与 Action](/zh/city-sdk-docs/packages/city/service-and-action)
 - 想知道服务和扩展点怎么进去，读 [Hook 与服务挂载](/zh/city-sdk-docs/packages/city/hooks-and-service)
 - 想知道数据层怎么落地，读 [Store 与 Table](/zh/city-sdk-docs/packages/city/store-and-table)
-- 想看更底层 API，再读 [City API](/zh/city-sdk-docs/reference/city-runtime)
+- 想看更底层 API，再读 [Federation API](/zh/city-sdk-docs/reference/city-runtime)

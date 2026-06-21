@@ -12,7 +12,7 @@
     },
     "tools": {
       "title": "Agent Clients",
-      "items": ["Codex", "OpenCode", "Downcity CLI", "Town CLI"]
+      "items": ["Codex", "OpenCode", "Downcity CLI"]
     }
   }
 }

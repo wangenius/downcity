@@ -11,7 +11,7 @@ After a user logs in, issue a Downcity token through `Admin City`:
 
 ```ts
 const user = await admin.cities.tokens.apply({
-  city_id: "town_xxx",
+  city_id: "city_xxx",
   user_id: session.user.id,
   metadata: {
     plan: session.user.plan,

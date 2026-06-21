@@ -1,19 +1,19 @@
 ---
 title: Port and Instance Lifecycle
-description: How Town runtime, agent, and plugin endpoints coordinate on port allocation, routing, and runtime lifecycle
+description: How Downcity runtime, agent, and plugin endpoints coordinate on port allocation, routing, and runtime lifecycle
 ---
 
 # Port and Instance Lifecycle
 
 ## Unified Rule
 
-- Agent ports are allocated by Town runtime.
+- Agent ports are allocated by Downcity runtime.
 - Agent lifecycle operations do not require users to manage ports manually.
 - Plugin calls resolve the target agent first, then the endpoint.
 
 ## Runtime Roles
 
-### Town runtime
+### Downcity runtime
 
 - Maintains `~/.downcity/main/agents.json`
 - Starts/stops/restarts agent daemons
@@ -37,7 +37,7 @@ description: How Town runtime, agent, and plugin endpoints coordinate on port al
 
 ## Agent Port Allocation
 
-1. Validate Town runtime is running
+1. Validate Downcity runtime is running
 2. Validate project files
 3. Allocate an available port
 4. Start daemon

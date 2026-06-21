@@ -2,8 +2,8 @@
  * 平台存储类型定义。
  *
  * 关键点（中文）
- * - Town 只保存平台级 env、channel account 与安全配置。
- * - 模型能力由 City AIService 暴露，Town 不再声明 provider/model 存储类型。
+ * - downcity 只保存平台级 env、channel account 与安全配置。
+ * - 模型能力由 City AIService 暴露，downcity 不再声明 provider/model 存储类型。
  */
 
 /**

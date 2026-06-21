@@ -52,7 +52,6 @@ export function Navbar() {
   const homePath = isZh ? "/zh" : "/";
   const startPath = isZh ? "/zh/start" : "/start";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
-  const productsDocsPath = isZh ? "/zh/products-docs" : "/en/products-docs";
   const citySdkDocsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
   const agentSdkDocsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
   const servicesSdkDocsPath = isZh ? "/zh/services-sdk-docs" : "/en/services-sdk-docs";
@@ -97,7 +96,6 @@ export function Navbar() {
     label: t("nav.docs"),
     activePaths: [
       docsPath,
-      productsDocsPath,
       citySdkDocsPath,
       agentSdkDocsPath,
       servicesSdkDocsPath,
@@ -106,7 +104,6 @@ export function Navbar() {
     ],
     items: [
       { label: "Downcity Docs", description: isZh ? "核心文档空间" : "Core documentation space", path: docsPath },
-      { label: "Products", description: isZh ? "产品文档空间" : "Product documentation space", path: productsDocsPath },
       { label: "City SDK", description: isZh ? "City SDK 文档空间" : "City SDK documentation space", path: citySdkDocsPath },
       {
         label: "Agent SDK",

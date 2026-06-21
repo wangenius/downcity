@@ -11,6 +11,8 @@ City exposes a stable **product-facing service boundary** instead of a raw provi
 - it calls `text()`, `stream()`, `image()`, and other services through `User City`
 - City keeps the model catalog, provider routing, hooks, usage, and env behind the boundary
 
+The server-side runtime class is `Federation` (also called the City runtime here); product clients use the `City` client to reach it. For the boundary between them, see [Federation and City](/en/city-sdk-docs/concepts/federation).
+
 ## Pick your reading path
 
 <div className="dc-doc-grid">

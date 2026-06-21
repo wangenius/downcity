@@ -2,7 +2,7 @@
  * RemoteAgent HTTP transport。
  *
  * 关键点（中文）
- * - 只适配 Town Agent HTTP gateway 的 SDK routes。
+ * - 只适配 downcity Agent HTTP gateway 的 SDK routes。
  * - 不处理 RemoteSession 的 turn lifecycle，避免 transport 与 actor 逻辑混在一起。
  */
 
@@ -44,7 +44,7 @@ type SdkEventsReadyFrame = {
 };
 
 /**
- * Town HTTP gateway transport。
+ * downcity HTTP gateway transport。
  */
 export class HttpRemoteAgentTransport implements RemoteAgentTransport {
   private readonly base_url: string;

@@ -1,6 +1,6 @@
 ---
 title: RemoteAgent Quickstart
-description: Connect to an Agent that has already been exposed by Town over HTTP or by Agent RPC
+description: Connect to an Agent that has already been exposed by Downcity over HTTP or by Agent RPC
 ---
 
 # RemoteAgent Quickstart
@@ -15,10 +15,10 @@ It currently supports:
 
 ## Expose a reachable server-side endpoint first
 
-### Option 1: publish HTTP through Town
+### Option 1: publish HTTP through Downcity
 
 ```bash
-town agent start
+downcity agent start
 ```
 
 ### Option 2: start RPC on the server
@@ -78,7 +78,7 @@ If you are in pure SDK mode, configure the model on the server-side local `Agent
 If you are in Downcity integration mode, the model usually comes from:
 
 - `downcity.json.execution.modelId`
-- the connected `City AIService`
+- the connected `Federation AIService`
 
 ## Good fit for
 

@@ -230,7 +230,7 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     const city = new City({
       role: "user",
       city_url: `http://127.0.0.1:${String(address.port)}`,
-      town_id: "town_demo",
+      city_id: "city_demo",
       user_token: "ub_test",
     });
     const catalog = await city.ai.listModels();
@@ -266,7 +266,7 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     assert.equal(tool_executed, true);
     assert.equal(stream_requests, 0);
     assert.equal(agent_requests.length, 2);
-    assert.equal(requests.every((request) => request?.town_id === "town_demo"), true);
+    assert.equal(requests.every((request) => request?.city_id === "city_demo"), true);
     assert.equal(agent_requests[0]?.model, "mock-model");
 
     const second_request_messages = Array.isArray(agent_requests[1]?.messages)

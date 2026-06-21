@@ -1,1 +1,0 @@
-{"version":3,"file":"PackageScriptRunner.d.ts","sourceRoot":"","sources":["../../../../src/federation/deploy/runtime/PackageScriptRunner.ts"],"names":[],"mappings":"AAAA;;;;;;;GAOG;AAeH;;GAEG;AACH,wBAAsB,uBAAuB,CAAC,MAAM,EAAE;IACpD,iBAAiB;IACjB,WAAW,EAAE,MAAM,CAAC;IACpB,kBAAkB;IAClB,UAAU,EAAE,OAAO,CAAC;IACpB,sBAAsB;IACtB,cAAc,EAAE,OAAO,CAAC;CACzB,GAAG,OAAO,CAAC,IAAI,CAAC,CAmBhB"}

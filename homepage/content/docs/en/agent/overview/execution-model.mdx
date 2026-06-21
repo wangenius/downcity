@@ -20,7 +20,7 @@ Current project agents use a single project execution binding: `api`.
 
 This means:
 
-- the project uses one model from the connected City AIService
+- the project uses one model from the connected Federation AIService
 - the project stores only the `modelId`
 - provider details, credentials, and model names live in City
 
@@ -30,7 +30,7 @@ At a high level, startup and execution look like this:
 
 1. read project config
 2. resolve `execution.modelId`
-3. resolve the final model from City AIService
+3. resolve the final model from Federation AIService
 4. create session executors
 5. combine static prompts, history, tools, and model into one execution context
 
@@ -57,7 +57,7 @@ Yes.
 
 Whether you enter through:
 
-- Town CLI
+- Downcity CLI
 - a chat channel
 - a task run
 - SDK `Agent` or `RemoteAgent`

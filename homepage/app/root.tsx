@@ -155,14 +155,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // 文档页使用 fumadocs 自身导航，不展示站点全局 Header。
   const isDocsPath =
     path === "/docs" ||
-    path === "/products-docs" ||
     path === "/city-sdk-docs" ||
     path === "/agent-sdk-docs" ||
     path === "/services-sdk-docs" ||
     path === "/plugins-docs" ||
     path === "/ui-sdk-docs" ||
     path.startsWith("/docs/") ||
-    path.startsWith("/products-docs/") ||
     path.startsWith("/city-sdk-docs/") ||
     path.startsWith("/agent-sdk-docs/") ||
     path.startsWith("/services-sdk-docs/") ||
@@ -170,8 +168,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     path.startsWith("/ui-sdk-docs/") ||
     path.startsWith("/en/docs") ||
     path.startsWith("/zh/docs") ||
-    path.startsWith("/en/products-docs") ||
-    path.startsWith("/zh/products-docs") ||
     path.startsWith("/en/city-sdk-docs") ||
     path.startsWith("/zh/city-sdk-docs") ||
     path.startsWith("/en/agent-sdk-docs") ||

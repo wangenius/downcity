@@ -23,7 +23,7 @@ await session.set({ model });
 ## 推荐做法
 
 - 在服务端本地 Agent 上配置模型
-- 或在 Downcity 集成模式里，通过 `execution.modelId` 绑定 `City AIService` 模型
+- 或在 Downcity 集成模式里，通过 `execution.modelId` 绑定 `Federation AIService` 模型
 - 客户端只做远程调用
 
 如果你把模型控制逻辑也放到客户端，就很容易和当前能力边界冲突。
@@ -32,7 +32,7 @@ await session.set({ model });
 
 如果服务端既没有：
 
-- 通过 Town Agent 网关暴露 HTTP
+- 通过 Downcity Agent 网关暴露 HTTP
 
 也没有：
 

@@ -93,7 +93,6 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
     await run_agent_chat_tui({
       agent_id: agentId,
       session_id: interactive.target.sessionId,
-      show_initial_picker: interactive.show_initial_picker,
       list_sessions: async () =>
         await listRemoteChatSessions({
           remote_agent: interactive.remote_agent,

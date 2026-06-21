@@ -153,11 +153,11 @@ Important difference:
 - local `AgentSession` supports `set({ model })`
 - remote `RemoteAgentSession` does not accept a local model instance from the client
 
-## Agent projects and City AIService
+## Agent projects and Federation AIService
 
 If you are using this SDK inside a normal Downcity Agent project, there is one more distinction:
 
 - pure SDK embedding: pass a local `model`
-- Downcity project: bind through `execution.modelId` to `City AIService`
+- Downcity project: bind through `execution.modelId` to `Federation AIService`
 
 So `session.set({ model })` is not the default path for every scenario.

@@ -39,9 +39,10 @@ export async function startCommand(
   await checkAgentPreflight(projectRoot);
 
   // 计算当前 CLI 的入口路径（编译后是 `bin/index.js`）。
+  // 本模块位于 `bin/city/agent/`，需上溯两级才能到达 `bin/index.js`。
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const cliPath = path.resolve(__dirname, "../index.js");
+  const cliPath = path.resolve(__dirname, "../../index.js");
 
   const args = await buildRunArgsFromOptions(projectRoot, options || {});
 

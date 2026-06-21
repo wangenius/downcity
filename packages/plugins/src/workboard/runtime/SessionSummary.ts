@@ -2,7 +2,7 @@
  * Workboard session 摘要采集。
  *
  * 关键点（中文）
- * - workboard 只需要模糊运行态，不复用 Town control 视图模型。
+ * - workboard 只需要模糊运行态，不复用 downcity control 视图模型。
  * - 这里只读取消息数量、更新时间与执行中状态，不暴露消息内容。
  */
 

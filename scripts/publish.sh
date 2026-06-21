@@ -52,8 +52,6 @@ const files = [
   'packages/city/package.json',
   'packages/services/package.json',
   'packages/plugins/package.json',
-  'cli/city/package.json',
-  'cli/town/package.json',
   'cli/downcity/package.json',
 ];
 
@@ -181,8 +179,6 @@ main() {
     packages/city/package.json \
     packages/services/package.json \
     packages/plugins/package.json \
-    cli/city/package.json \
-    cli/town/package.json \
     cli/downcity/package.json
   
   # 7. 输入提交信息

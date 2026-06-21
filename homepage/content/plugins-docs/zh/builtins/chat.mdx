@@ -35,22 +35,22 @@ description: 渠道 runtime、queue worker、chat 授权、chat system text 和 
 
 ## 用户怎么使用
 
-大多数用户不直接控制渠道 runtime，而是使用 Town 暴露出来的 `town chat` 会话命令：
+大多数用户不直接控制渠道 runtime，而是使用 Downcity 暴露出来的 `downcity chat` 会话命令：
 
 ```bash
-town chat
-town chat list
-town chat info --chat-key <chatKey>
-town chat send --chat-key <chatKey> --text "Done"
-town chat react --chat-key <chatKey> --message-id <messageId> --emoji "👍"
-town chat context --chat-key <chatKey>
-town chat history --chat-key <chatKey> --limit 30
-town chat delete --chat-key <chatKey>
+downcity chat
+downcity chat list
+downcity chat info --chat-key <chatKey>
+downcity chat send --chat-key <chatKey> --text "Done"
+downcity chat react --chat-key <chatKey> --message-id <messageId> --emoji "👍"
+downcity chat context --chat-key <chatKey>
+downcity chat history --chat-key <chatKey> --limit 30
+downcity chat delete --chat-key <chatKey>
 ```
 
-不带子命令的 `town chat` 会打开交互式 chat account 管理器。先在这里添加 Telegram、Feishu 或 QQ 账号，再把 agent 连接到这些账号。
+不带子命令的 `downcity chat` 会打开交互式 chat account 管理器。先在这里添加 Telegram、Feishu 或 QQ 账号，再把 agent 连接到这些账号。
 
-Town 会刻意隐藏 `status`、`test`、`open`、`close`、`reconnect`、`configuration`、`configure` 这些渠道 runtime action。它们存在于 plugin runtime 里，但不是普通用户的 CLI 使用路径。
+Downcity 会刻意隐藏 `status`、`test`、`open`、`close`、`reconnect`、`configuration`、`configure` 这些渠道 runtime action。它们存在于 plugin runtime 里，但不是普通用户的 CLI 使用路径。
 
 ## SDK 装配
 

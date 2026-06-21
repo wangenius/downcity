@@ -18,7 +18,7 @@ import type {
 import type {
   WorkboardTilePoint as TilePoint,
   WorkboardTileRect as TileRect,
-  WorkboardTownBuilding as TownBuilding,
+  WorkboardVillageBuilding as VillageBuilding,
 } from "../types/workboard-stage-map";
 
 const TILE_SIZE = 40;
@@ -30,7 +30,7 @@ const STAGE_HEIGHT = TILE_SIZE * GRID_ROWS;
 /**
  * Workboard 小镇中心广场坐标。
  */
-export const WORKBOARD_TOWN_PLAZA_POINT: DowncityWorkboardStagePoint = { x: 800, y: 480 };
+export const WORKBOARD_VILLAGE_PLAZA_POINT: DowncityWorkboardStagePoint = { x: 800, y: 480 };
 
 /**
  * Workboard 小镇中每个状态建筑连接主路的入口坐标。
@@ -86,7 +86,7 @@ const ZONE_PIXEL_PALETTE: Record<
   },
 };
 
-const TOWN_PATH_TILES: TileRect[] = [
+const VILLAGE_PATH_TILES: TileRect[] = [
   { col: 0, row: 10, cols: 40, rows: 4 },
   { col: 19, row: 0, cols: 2, rows: 24 },
   { col: 12, row: 7, cols: 7, rows: 2 },
@@ -95,7 +95,7 @@ const TOWN_PATH_TILES: TileRect[] = [
   { col: 21, row: 15, cols: 7, rows: 2 },
 ];
 
-const TOWN_WATER_TILES: TileRect[] = [
+const VILLAGE_WATER_TILES: TileRect[] = [
   { col: 0, row: 0, cols: 10, rows: 2 },
   { col: 30, row: 0, cols: 10, rows: 2 },
   { col: 0, row: 22, cols: 11, rows: 2 },
@@ -104,14 +104,14 @@ const TOWN_WATER_TILES: TileRect[] = [
   { col: 38, row: 17, cols: 2, rows: 5 },
 ];
 
-const TOWN_FENCE_TILES: TileRect[] = [
+const VILLAGE_FENCE_TILES: TileRect[] = [
   { col: 2, row: 2, cols: 15, rows: 1 },
   { col: 23, row: 2, cols: 15, rows: 1 },
   { col: 2, row: 22, cols: 15, rows: 1 },
   { col: 23, row: 22, cols: 15, rows: 1 },
 ];
 
-const TOWN_BUILDINGS: TownBuilding[] = [
+const VILLAGE_BUILDINGS: VillageBuilding[] = [
   {
     col: 1,
     row: 3,
@@ -206,7 +206,7 @@ const TOWN_BUILDINGS: TownBuilding[] = [
   },
 ];
 
-const TOWN_TREE_POINTS: TilePoint[] = [
+const VILLAGE_TREE_POINTS: TilePoint[] = [
   { col: 19, row: 2 },
   { col: 20, row: 21 },
   { col: 7, row: 2 },
@@ -217,7 +217,7 @@ const TOWN_TREE_POINTS: TilePoint[] = [
   { col: 22, row: 19 },
 ];
 
-const TOWN_SHRUB_POINTS: TilePoint[] = [
+const VILLAGE_SHRUB_POINTS: TilePoint[] = [
   { col: 16, row: 8 },
   { col: 23, row: 8 },
   { col: 16, row: 15 },
@@ -228,7 +228,7 @@ const TOWN_SHRUB_POINTS: TilePoint[] = [
   { col: 35, row: 22 },
 ];
 
-const TOWN_FLOWER_POINTS: TilePoint[] = [
+const VILLAGE_FLOWER_POINTS: TilePoint[] = [
   { col: 6, row: 11 },
   { col: 11, row: 12 },
   { col: 16, row: 9 },
@@ -307,18 +307,18 @@ function renderGrassTiles(): React.ReactNode[] {
   });
 }
 
-function renderTownPath(tile: TileRect, index: number): React.ReactNode {
+function renderVillagePath(tile: TileRect, index: number): React.ReactNode {
   const rect = tileToRect(tile);
   const cobbles = Array.from({ length: tile.cols * tile.rows }, (_, cobbleIndex) => {
     const col = tile.col + (cobbleIndex % tile.cols);
     const row = tile.row + Math.floor(cobbleIndex / tile.cols);
     const x = col * TILE_SIZE + ((col + row) % 2 === 0 ? 8 : 22);
     const y = row * TILE_SIZE + ((col * 3 + row) % 2 === 0 ? 10 : 24);
-    return <rect key={`town-path-cobble-${index}-${cobbleIndex}`} x={x} y={y} width="8" height="5" fill="rgba(134,105,67,0.24)" />;
+    return <rect key={`village-path-cobble-${index}-${cobbleIndex}`} x={x} y={y} width="8" height="5" fill="rgba(134,105,67,0.24)" />;
   });
 
   return (
-    <g key={`town-path-${index}`}>
+    <g key={`village-path-${index}`}>
       <rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} fill="rgba(193,165,104,0.98)" />
       <rect x={rect.x} y={rect.y} width={rect.width} height="4" fill="rgba(116,92,62,0.34)" />
       <rect x={rect.x} y={rect.y + rect.height - 4} width={rect.width} height="4" fill="rgba(116,92,62,0.28)" />
@@ -327,10 +327,10 @@ function renderTownPath(tile: TileRect, index: number): React.ReactNode {
   );
 }
 
-function renderTownWater(tile: TileRect, index: number): React.ReactNode {
+function renderVillageWater(tile: TileRect, index: number): React.ReactNode {
   const rect = tileToRect(tile);
   return (
-    <g key={`town-water-${index}`}>
+    <g key={`village-water-${index}`}>
       <rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} fill="rgba(82,139,149,0.9)" />
       <rect x={rect.x + 8} y={rect.y + 10} width={Math.max(12, rect.width - 16)} height="4" fill="rgba(160,205,199,0.34)" />
       <rect x={rect.x + 18} y={rect.y + rect.height - 14} width={Math.max(18, rect.width - 48)} height="4" fill="rgba(53,103,112,0.24)" />
@@ -338,15 +338,15 @@ function renderTownWater(tile: TileRect, index: number): React.ReactNode {
   );
 }
 
-function renderTownFence(tile: TileRect, index: number): React.ReactNode {
+function renderVillageFence(tile: TileRect, index: number): React.ReactNode {
   const rect = tileToRect(tile);
   const posts = Array.from({ length: tile.cols }, (_, postIndex) => {
     const x = rect.x + postIndex * TILE_SIZE + 16;
-    return <rect key={`town-fence-post-${index}-${postIndex}`} x={x} y={rect.y + 8} width="8" height="24" fill="rgba(111,78,47,0.88)" />;
+    return <rect key={`village-fence-post-${index}-${postIndex}`} x={x} y={rect.y + 8} width="8" height="24" fill="rgba(111,78,47,0.88)" />;
   });
 
   return (
-    <g key={`town-fence-${index}`}>
+    <g key={`village-fence-${index}`}>
       <rect x={rect.x + 8} y={rect.y + 15} width={rect.width - 16} height="6" fill="rgba(151,104,61,0.82)" />
       <rect x={rect.x + 8} y={rect.y + 25} width={rect.width - 16} height="5" fill="rgba(126,88,54,0.7)" />
       {posts}
@@ -354,9 +354,9 @@ function renderTownFence(tile: TileRect, index: number): React.ReactNode {
   );
 }
 
-function renderTownPlaza(): React.ReactNode {
+function renderVillagePlaza(): React.ReactNode {
   return (
-    <g key="town-plaza">
+    <g key="village-plaza">
       <TileRectSvg tile={{ col: 17, row: 9, cols: 6, rows: 6 }} fill="rgba(211,189,128,0.96)" stroke="rgba(126,97,58,0.36)" />
       <TileRectSvg tile={{ col: 18, row: 10, cols: 4, rows: 4 }} fill="rgba(232,210,148,0.98)" stroke="rgba(126,97,58,0.32)" />
       <rect x="776" y="456" width="48" height="48" fill="rgba(116,160,178,0.92)" stroke="rgba(64,91,105,0.76)" strokeWidth="4" />
@@ -408,14 +408,14 @@ function renderFlower(point: TilePoint, index: number): React.ReactNode {
   );
 }
 
-function renderTownProp(prop: TownBuilding["props"][number], index: number): React.ReactNode {
+function renderVillageProp(prop: VillageBuilding["props"][number], index: number): React.ReactNode {
   const rect = tileToRect(prop);
   const x = rect.x + 6;
   const y = rect.y + 7;
 
   if (prop.kind === "bed") {
     return (
-      <g key={`town-prop-${index}`}>
+      <g key={`village-prop-${index}`}>
         <rect x={x} y={y} width="28" height="24" fill="rgba(178,112,68,0.88)" />
         <rect x={x + 4} y={y + 4} width="20" height="8" fill="rgba(249,209,122,0.9)" />
         <rect x={x + 4} y={y + 14} width="20" height="7" fill="rgba(208,94,67,0.78)" />
@@ -425,7 +425,7 @@ function renderTownProp(prop: TownBuilding["props"][number], index: number): Rea
 
   if (prop.kind === "shelf") {
     return (
-      <g key={`town-prop-${index}`}>
+      <g key={`village-prop-${index}`}>
         <rect x={x} y={y} width={Math.max(24, rect.width - 12)} height="9" fill="rgba(124,83,56,0.92)" />
         <rect x={x} y={y + 12} width={Math.max(24, rect.width - 12)} height="9" fill="rgba(124,83,56,0.84)" />
         <rect x={x + 5} y={y + 3} width="5" height="4" fill="rgba(229,195,96,0.9)" />
@@ -435,7 +435,7 @@ function renderTownProp(prop: TownBuilding["props"][number], index: number): Rea
 
   if (prop.kind === "table") {
     return (
-      <g key={`town-prop-${index}`}>
+      <g key={`village-prop-${index}`}>
         <rect x={x + 3} y={y + 5} width={Math.max(28, rect.width - 18)} height="18" fill="rgba(156,103,64,0.92)" />
         <rect x={x + 8} y={y + 9} width="6" height="6" fill="rgba(236,226,188,0.9)" />
       </g>
@@ -444,7 +444,7 @@ function renderTownProp(prop: TownBuilding["props"][number], index: number): Rea
 
   if (prop.kind === "sofa") {
     return (
-      <g key={`town-prop-${index}`}>
+      <g key={`village-prop-${index}`}>
         <rect x={x} y={y + 4} width="26" height="19" fill="rgba(99,143,178,0.88)" />
         <rect x={x + 4} y={y + 8} width="18" height="7" fill="rgba(145,185,211,0.9)" />
       </g>
@@ -452,14 +452,14 @@ function renderTownProp(prop: TownBuilding["props"][number], index: number): Rea
   }
 
   return (
-    <g key={`town-prop-${index}`}>
+    <g key={`village-prop-${index}`}>
       <rect x={x} y={y + 4} width="26" height="16" fill="rgba(124,83,56,0.92)" />
       <rect x={x + 4} y={y} width="18" height="8" fill="rgba(194,214,221,0.9)" />
     </g>
   );
 }
 
-function renderTownBuilding(building: TownBuilding, activeZoneId?: DowncityWorkboardZoneId): React.ReactNode {
+function renderVillageBuilding(building: VillageBuilding, activeZoneId?: DowncityWorkboardZoneId): React.ReactNode {
   const rect = tileToRect(building);
   const active = building.zoneId === activeZoneId;
   const doorX = rect.x + rect.width / 2 - 24;
@@ -467,7 +467,7 @@ function renderTownBuilding(building: TownBuilding, activeZoneId?: DowncityWorkb
   const stepY = building.entrance === "top" ? rect.y - 22 : rect.y + rect.height + 6;
 
   return (
-    <g key={`town-building-${building.zoneId}`}>
+    <g key={`village-building-${building.zoneId}`}>
       <rect x={doorX + 4} y={stepY} width="40" height="22" fill="rgba(193,165,104,0.92)" opacity="0.9" />
       <rect x={rect.x - 6} y={rect.y - 6} width={rect.width + 12} height={rect.height + 12} fill={building.wall} opacity={active ? 1 : 0.82} />
       <rect x={rect.x + 8} y={rect.y + 8} width={rect.width - 16} height={rect.height - 16} fill={building.floor} />
@@ -502,7 +502,7 @@ function renderTownBuilding(building: TownBuilding, activeZoneId?: DowncityWorkb
       })}
       <rect x={doorX} y={doorY} width="48" height="16" fill="rgba(226,204,139,0.98)" />
       <rect x={doorX + 8} y={doorY + 4} width="32" height="8" fill="rgba(91,65,44,0.55)" />
-      {building.props.map(renderTownProp)}
+      {building.props.map(renderVillageProp)}
       <rect x={rect.x - 8} y={rect.y - 8} width={rect.width + 16} height={rect.height + 16} fill="none" stroke={active ? ZONE_PIXEL_PALETTE[building.zoneId].stroke : "rgba(17,17,19,0.34)"} strokeWidth={active ? 5 : 3} />
     </g>
   );
@@ -528,17 +528,17 @@ export function PixelAtlasMap(props: {
     >
       <rect x={0} y={0} width={STAGE_WIDTH} height={STAGE_HEIGHT} fill="rgba(247,244,236,0.98)" />
       {renderGrassTiles()}
-      {TOWN_WATER_TILES.map(renderTownWater)}
-      {TOWN_PATH_TILES.map(renderTownPath)}
-      {renderTownPlaza()}
-      {TOWN_FENCE_TILES.map(renderTownFence)}
-      {TOWN_SHRUB_POINTS.map(renderShrub)}
-      {TOWN_TREE_POINTS.map(renderTree)}
-      {TOWN_FLOWER_POINTS.map(renderFlower)}
-      {TOWN_BUILDINGS.map((building) => renderTownBuilding(building, activeZoneId))}
+      {VILLAGE_WATER_TILES.map(renderVillageWater)}
+      {VILLAGE_PATH_TILES.map(renderVillagePath)}
+      {renderVillagePlaza()}
+      {VILLAGE_FENCE_TILES.map(renderVillageFence)}
+      {VILLAGE_SHRUB_POINTS.map(renderShrub)}
+      {VILLAGE_TREE_POINTS.map(renderTree)}
+      {VILLAGE_FLOWER_POINTS.map(renderFlower)}
+      {VILLAGE_BUILDINGS.map((building) => renderVillageBuilding(building, activeZoneId))}
 
       {props.zones.map((zone) => {
-        const building = TOWN_BUILDINGS.find((item) => item.zoneId === zone.id);
+        const building = VILLAGE_BUILDINGS.find((item) => item.zoneId === zone.id);
         if (!building) return null;
 
         const layout = WORKBOARD_ZONE_LAYOUT[zone.id];

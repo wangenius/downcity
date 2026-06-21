@@ -385,7 +385,7 @@ export class AccountsService extends InstallableService {
           return c.jsonResponse({ error: "provider not configured" }, 400);
         }
 
-        const city_id = String(body.city_id ?? "").trim() || "town_downcity";
+        const city_id = String(body.city_id ?? "").trim() || "city_downcity";
         const state = randomToken(24);
         await this.createOAuthState(city_id, provider, state);
         const url = buildOAuthAuthorizeURL(config, this.getOAuthCallbackURL(), state);

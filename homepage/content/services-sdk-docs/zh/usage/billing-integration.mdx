@@ -73,7 +73,7 @@ base.use(new PaymentService({
 很多产品第一阶段并不着急上线完整账单，只想先知道：
 
 - 哪些模型被用得最多
-- 哪些 town 消耗最大
+- 哪些 downcity 消耗最大
 - 哪些用户是重度使用者
 
 usage service 很适合这种“先看事实、后定规则”的阶段。
@@ -96,7 +96,7 @@ await syncUsageToBillingSystem(summary);
 - 按模型收费
 - 按额度收费
 - 套餐内免费，超额再收费
-- 不同 town 用不同规则
+- 不同 downcity 用不同规则
 
 Downcity 更适合把：
 

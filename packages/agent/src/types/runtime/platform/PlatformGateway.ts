@@ -106,12 +106,12 @@ export interface PlatformAgentShipPluginsConfig {
  */
 export interface PlatformAgentShipStartConfig {
   /**
-   * Town Agent HTTP gateway host。
+   * downcity Agent HTTP gateway host。
    */
   host?: unknown;
 
   /**
-   * Town Agent HTTP gateway port。
+   * downcity Agent HTTP gateway port。
    */
   port?: unknown;
 }

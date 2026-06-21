@@ -1,6 +1,6 @@
 ---
 title: Downcity 核心概念
-description: 用一页文档讲清楚 Downcity、town、City、Federation、Agent、Session、AIService、Plugin 等关键概念及其关系
+description: 用一页文档讲清楚 Downcity、downcity、City、Federation、Agent、Session、AIService、Plugin 等关键概念及其关系
 ---
 
 # Downcity 核心概念
@@ -13,13 +13,13 @@ description: 用一页文档讲清楚 Downcity、town、City、Federation、Agen
 
 ```mermaid
 flowchart TD
-  Product["产品表层<br/>Console / Chrome Extension / 自己的应用"] --> Town["town<br/>本机 Agent 宿主"]
+  Product["产品表层<br/>Console / Chrome Extension / 自己的应用"] --> Downcity["downcity<br/>本机 Agent 宿主"]
   Product --> AgentSdk["Agent SDK<br/>@downcity/agent"]
-  Town --> Agent["Agent<br/>一个项目执行体"]
+  Downcity --> Agent["Agent<br/>一个项目执行体"]
   AgentSdk --> Agent
   Agent --> Session["Session<br/>一次会话 / 执行线程"]
   Agent --> Plugin["Plugin<br/>能力扩展"]
-  Town --> Federation["Federation<br/>共享后端运行时 / City 联盟"]
+  Downcity --> Federation["Federation<br/>共享后端运行时 / City 联盟"]
   Federation --> AIService["Federation AIService<br/>模型目录与模型调用入口"]
   Federation --> Service["Federation Services<br/>accounts / usage / balance / payment"]
   Agent --> AIService
@@ -28,7 +28,7 @@ flowchart TD
 ## 一句话理解
 
 - `Downcity`：整套产品与运行层的总称
-- `town`：本机 Agent 宿主与管理入口
+- `downcity`：本机 Agent 宿主与管理入口
 - `City`：后端城市实体与生活环境
 - `Federation`：共享后端运行时，承载多个 City 的联盟容器
 - `Agent`：真正执行任务的运行实体
@@ -53,9 +53,9 @@ flowchart TD
 
 - 你可以把它当“做 Agent 产品时复用的一层基础设施”
 
-## 2. town 是什么
+## 2. downcity 是什么
 
-`town` 是本机侧的 Agent 宿主和 CLI 入口。
+`downcity` 是本机侧的 Agent 宿主和 CLI 入口。
 
 它主要负责：
 
@@ -68,7 +68,7 @@ flowchart TD
 - 保存完整模型 provider 配置
 - 自己维护模型目录
 
-也就是说，town 更像：
+也就是说，downcity 更像：
 
 - “本机的 Agent runtime 管理面”
 
@@ -93,7 +93,7 @@ flowchart TD
 
 ### Agent 项目里的运行体
 
-这是 town 管理的正常项目 Agent。
+这是 downcity 管理的正常项目 Agent。
 
 通常它会绑定：
 
@@ -119,7 +119,7 @@ new Agent({
 
 ## 5. Agent 项目是什么
 
-`Agent 项目` 指的是一个已经被 Downcity 初始化、可以被 town 托管的项目目录。
+`Agent 项目` 指的是一个已经被 Downcity 初始化、可以被 downcity 托管的项目目录。
 
 它通常包含：
 
@@ -326,6 +326,6 @@ Agent 项目只保存：
 1. [Project Logic Overview](/zh/docs/concepts/project-logic-overview)
 2. [快速开始](/zh/docs/quickstart/getting-started)
 3. [模型配置](/zh/docs/configuration/model)
-4. [City CLI](/zh/products-docs/city-cli)
+4. [City CLI](/zh/docs/city-cli)
 5. [Federation AIService](/zh/city-sdk-docs/service/ai/index)
 6. [Agent SDK](/zh/agent-sdk-docs)

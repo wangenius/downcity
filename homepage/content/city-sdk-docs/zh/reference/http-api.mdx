@@ -125,7 +125,7 @@ Content-Type: application/json
 
 ```json
 {
-  "city_id": "town_xxx",
+  "city_id": "city_xxx",
   "model": "deepseek-v4-flash",
   "prompt": "写一段欢迎语"
 }
@@ -217,14 +217,14 @@ Content-Type: application/json
 ```
 
 ```json
-{ "city_id": "town_xxx", "name": "Chrome Extension", "status": "active", ... }
+{ "city_id": "city_xxx", "name": "Chrome Extension", "status": "active", ... }
 ```
 
 ### `POST /v1/cities/tokens/apply`
 
 ```json
 {
-  "city_id": "town_xxx",
+  "city_id": "city_xxx",
   "user_id": "user_123",
   "metadata": { "plan": "pro" },
   "ttl": "7d"
@@ -232,7 +232,7 @@ Content-Type: application/json
 ```
 
 ```json
-{ "user_token": "ub_xxx", "city_id": "town_xxx", "user_id": "user_123", ... }
+{ "user_token": "ub_xxx", "city_id": "city_xxx", "user_id": "user_123", ... }
 ```
 
 ### `POST /v1/env/upsert`

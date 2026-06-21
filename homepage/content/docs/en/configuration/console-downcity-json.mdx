@@ -18,7 +18,7 @@ City-side config is unified in:
 
 `downcity.db` contains these major groups:
 
-1. City AIService model catalog (providers/models)
+1. Federation AIService model catalog (providers/models)
 2. City-managed env records (`env_entries`)
 4. Bot account vault (`channel_accounts`)
 5. Chat user authorization (`chat_auth_roles`, `chat_auth_role_permissions`, `chat_auth_channel_defaults`, `chat_auth_user_roles`)
@@ -49,7 +49,7 @@ Current versions use explicit layers:
 Key behavior:
 
 1. Agent runtime env map is `new Agent({ env }) + <agent>/.env` (`.env` wins).
-2. When the host is `town`, City-side env is read from `downcity.db` and passed explicitly to `Agent`.
+2. When the host is `downcity`, City-side env is read from `downcity.db` and passed explicitly to `Agent`.
 3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
 5. Chat user permissions are resolved from `chat_auth_*` tables, not from an agent project.
@@ -57,9 +57,9 @@ Key behavior:
 
 ## Management entry points
 
-Local Town state, project plugin parameters, plugin runtime operations, and City model binding all have product-level command surfaces.
+Local Downcity state, project plugin parameters, plugin runtime operations, and City model binding all have product-level command surfaces.
 
-Use [Town CLI](/en/products-docs/town-cli), [Town config docs](/en/products-docs/town-cli/config), [Plugin CLI docs](/en/products-docs/town-cli/plugin/plugin), and [Town City docs](/en/products-docs/town-cli/city) for concrete workflows.
+Use [Downcity CLI](/en/docs/reference/cli), [Downcity config docs](/en/docs/reference/cli), [Plugin CLI docs](/en/docs/reference/cli), and [Downcity City docs](/en/docs/reference/cli) for concrete workflows.
 
 ## Related docs
 
@@ -70,8 +70,8 @@ Use [Town CLI](/en/products-docs/town-cli), [Town config docs](/en/products-docs
 
 These process-state files stay in filesystem (not config):
 
-1. `~/.downcity/main/town.pid`
-2. `~/.downcity/main/town.log`
+1. `~/.downcity/main/downcity.pid`
+2. `~/.downcity/main/downcity.daemon.log`
 3. `~/.downcity/main/agents.json`
 
-Legacy `gateway.pid` and `gateway.json` files may be cleaned by `town stop` if they exist from older installs.
+Legacy `gateway.pid` and `gateway.json` files may be cleaned by `downcity stop` if they exist from older installs.

@@ -57,7 +57,7 @@ src/
 │   └── project/           # Agent 项目初始化与项目初始化类型
 ├── executor/              # 内部执行内核，负责历史、system、tool loop、增量输出与消息持久化
 ├── plugin/                # 插件系统，负责插件注册、hook、action、内建插件与插件类型
-├── rpc/                   # Agent 本机 RPC runtime，对外 HTTP gateway 由 Town 提供
+├── rpc/                   # Agent 本机 RPC runtime，对外 HTTP gateway 由 downcity 提供
 ├── runtime/               # 运行时实现细节层，统一收纳 host / sandbox / control 等内部能力
 │   ├── host/              # 宿主注入能力协议
 │   └── sandbox/           # 命令沙箱与沙箱协议
@@ -98,7 +98,7 @@ src/
   - `host/` 放宿主注入能力协议
   - `sandbox/` 放命令执行隔离与沙箱协议
   - `control/` 放 runtime 控制面内部协议与处理器
-- `src/rpc/` 放 Agent 本机 RPC runtime；HTTP gateway 由 Town CLI 基于 RPC 转发提供
+- `src/rpc/` 放 Agent 本机 RPC runtime；HTTP gateway 由 downcity CLI 基于 RPC 转发提供
 - 模型实例解析不在 `agent` 包内完成，而由宿主先创建 `LanguageModel`，再通过 `new Agent({ model })` 或 `session.set({ model })` 注入
 - `model` 也可以接收 City City 返回的 `CityModel`，Agent 会在内部适配成 AI SDK `LanguageModel`
 

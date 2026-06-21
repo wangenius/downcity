@@ -252,7 +252,7 @@ export abstract class BaseChatChannel {
       lines.push(
         "",
         "请把下面命令发给管理员：",
-        `town chat auth set ${this.channel}:${userId}`,
+        `downcity chat auth set ${this.channel}:${userId}`,
       );
     }
 

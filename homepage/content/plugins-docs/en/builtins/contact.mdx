@@ -29,17 +29,17 @@ Use `contact` when one agent needs to:
 
 ## How users use it
 
-Use `town contact` from an agent project:
+Use `downcity contact` from an agent project:
 
 ```bash
-town contact link --ttl-seconds 600
-town contact approve <code> --name teammate
-town contact list
-town contact check teammate
-town contact chat --to teammate "Can you review this?"
-town contact share --to teammate --text "Notes attached" ./notes.md
-town contact inbox
-town contact receive <shareId>
+downcity contact link --ttl-seconds 600
+downcity contact approve <code> --name teammate
+downcity contact list
+downcity contact check teammate
+downcity contact chat --to teammate "Can you review this?"
+downcity contact share --to teammate --text "Notes attached" ./notes.md
+downcity contact inbox
+downcity contact receive <shareId>
 ```
 
 `link` creates a short-lived code. The other agent runs `approve <code>` to establish the trusted contact.
@@ -85,7 +85,7 @@ The user-facing action names are `link`, `approve`, `list`, `check`, `chat`, `sh
 
 ## Public status
 
-`ContactPlugin` is exported from `@downcity/plugins`. It can be attached directly in SDK usage, although the most common path is still through the agent runtime and `town contact`.
+`ContactPlugin` is exported from `@downcity/plugins`. It can be attached directly in SDK usage, although the most common path is still through the agent runtime and `downcity contact`.
 
 ## Related docs
 

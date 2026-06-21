@@ -1,9 +1,9 @@
 ---
 title: Global wallet model
-description: "Why @downcity/services stores balance by user instead of creating one wallet per town."
+description: "Why @downcity/services stores balance by user instead of creating one wallet per downcity."
 ---
 
-`@downcity/services` keeps balance by user, not by town.
+`@downcity/services` keeps balance by user, not by downcity.
 
 By default, credits are USD-linked:
 
@@ -14,8 +14,8 @@ By default, credits are USD-linked:
 
 That means:
 
-- user A spends inside town X
-- user A spends inside town Y
+- user A spends inside downcity X
+- user A spends inside downcity Y
 - both consume the same shared balance
 
 ## Why this fits Downcity better
@@ -28,7 +28,7 @@ The typical Downcity shape is:
 
 If balance is split per product, both product UX and operations become fragmented.
 
-## Does town still matter
+## Does downcity still matter
 
 Yes, but it belongs in ledger metadata rather than in the wallet primary key.
 
@@ -36,7 +36,7 @@ Yes, but it belongs in ledger metadata rather than in the wallet primary key.
 await balance.sub(ctx.user!.user_id, 10, {
   note: "agent chat",
   meta: {
-    town_id: ctx.town?.town_id,
+    city_id: ctx.downcity?.city_id,
     model_id: ctx.variant?.id,
   },
 });

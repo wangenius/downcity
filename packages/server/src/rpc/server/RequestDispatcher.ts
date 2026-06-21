@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - server.ts 不直接包含业务 switch，只负责把已解析请求交给这里。
- * - dispatcher 按命名空间分发，避免 SDK 与 Town internal 方法混在一起。
+ * - dispatcher 按命名空间分发，避免 SDK 与 downcity internal 方法混在一起。
  */
 
 import type { RpcRequest } from "@/types/RpcProtocol.js";

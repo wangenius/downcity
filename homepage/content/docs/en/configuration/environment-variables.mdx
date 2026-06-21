@@ -29,14 +29,14 @@ Key points:
 
 1. `@downcity/agent` does not auto-read host `process.env`.
 2. `new Agent({ env })` is the host injection entrypoint.
-3. When the host is `town`, City-side env is read from `downcity.db` and passed explicitly into `Agent`.
+3. When the host is `downcity`, City-side env is read from `downcity.db` and passed explicitly into `Agent`.
 4. `downcity.json` stores bindings (`execution.modelId`, `channel.channelAccountId`), not plaintext credentials.
 
 ## 2. Data Flow (diagram)
 
 ```mermaid
 sequenceDiagram
-  participant CLI as Town runtime host
+  participant CLI as Downcity runtime host
   participant DB as ~/.downcity/downcity.db
   participant HOST as new Agent({ env })
   participant ENV as <agent>/.env
@@ -86,7 +86,7 @@ So key precedence for runtime metadata is: `DC_CITY_*` / `DC_AGENT_*` / `DC_SESS
 
 ### 4.2 Does not read project `.env`
 
-1. City AIService model/provider pool (`model_providers`, `models`) from `downcity.db`.
+1. Federation AIService model/provider pool (`model_providers`, `models`) from `downcity.db`.
 2. Plugin config from project `downcity.json` (`plugins.*`, including plugin-owned dependency config).
 3. Bot account credential source of truth (`channel_accounts`).
 4. Runtime context vars (`DC_CTX_*`) are generated at request time.
@@ -126,13 +126,13 @@ flowchart TD
 
 ## 7. Recommended Setup
 
-1. Prepare local Town state and verify the City connection once.
+1. Prepare local Downcity state and verify the City connection once.
 2. Manage shared env in City UI `Global / Env`, or pass them explicitly through `new Agent({ env })`.
-3. Create chat accounts from the Town chat product surface.
+3. Create chat accounts from the Downcity chat product surface.
 4. In each agent `downcity.json`, bind channel to `channelAccountId`.
 5. Keep agent-private runtime keys in `<agent>/.env` only when needed.
 
-Concrete workflows live in [Town CLI](/en/products-docs/town-cli), [Town City docs](/en/products-docs/town-cli/city), [Town config docs](/en/products-docs/town-cli/config), and [Town chat docs](/en/products-docs/town-cli/plugin/chat).
+Concrete workflows live in [Downcity CLI](/en/docs/reference/cli), [Downcity City docs](/en/docs/reference/cli), [Downcity config docs](/en/docs/reference/cli), and [Downcity chat docs](/en/docs/reference/cli).
 
 ## 8. Best-Practice Checklist
 
@@ -140,7 +140,7 @@ Concrete workflows live in [Town CLI](/en/products-docs/town-cli), [Town City do
 2. Keep `downcity.json` as binding/config file, not secret storage.
 3. Use `<agent>/.env` as project-local runtime overlay only.
 4. Use `new Agent({ env })` only for explicit host-side overrides.
-5. Validate chat routing through the Town chat product surface after changing bindings.
+5. Validate chat routing through the Downcity chat product surface after changing bindings.
 6. If values look inherited, check `channelAccountId`, host-injected `env`, and project `.env`.
 
 ## 9. Homepage Agent Marketplace
@@ -159,7 +159,7 @@ Behavior:
 
 ## 10. Public address
 
-Current `town` CLI no longer starts or rebinds Console UI. Public Console access should be provided by the Console product deployment, reverse proxy, tunnel, or hosting layer.
+Current `downcity` CLI no longer starts or rebinds Console UI. Public Console access should be provided by the Console product deployment, reverse proxy, tunnel, or hosting layer.
 
 These values are normally injected by local runtime host discovery or by the deployment environment. They are not endpoint parameters that users enter for `contact link`:
 

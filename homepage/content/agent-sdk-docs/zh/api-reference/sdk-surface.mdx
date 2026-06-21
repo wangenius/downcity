@@ -153,12 +153,12 @@ await turn.finished;
 - 本地 `AgentSession` 支持 `set({ model })`
 - 远程 `RemoteAgentSession` 不接受客户端直接传本地模型实例
 
-## Agent 项目和 City AIService 的关系
+## Agent 项目和 Federation AIService 的关系
 
 如果你在正常的 Downcity Agent 项目里使用这套 SDK，还要额外区分：
 
 - 纯 SDK 嵌入：本地直接传 `model`
-- Downcity 项目：通过 `execution.modelId` 绑定到 `City AIService`
+- Downcity 项目：通过 `execution.modelId` 绑定到 `Federation AIService`
 
 也就是说，`session.set({ model })` 不是所有场景都该用的默认路径。
 
@@ -180,6 +180,6 @@ await turn.finished;
 
 - [Agent 类](/zh/agent-sdk-docs/api-reference/agent-class)
 - [RemoteAgent 类](/zh/agent-sdk-docs/api-reference/remote-agent-class)
-- [Agent 与 City AIService](/zh/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
+- [Agent 与 Federation AIService](/zh/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
 - [Session 总览](/zh/agent-sdk-docs/sessions/overview)
 - [Session 类型与结果](/zh/agent-sdk-docs/api-reference/session-types)

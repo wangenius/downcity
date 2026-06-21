@@ -301,7 +301,7 @@ done
 echo ""
 echo "==> 完成"
 
-# patch build 后，只要本次改动会影响全局 town/city 的交付，就先补齐 CLI 产物，再同步全局安装。
+# patch build 后，只要本次改动会影响全局 downcity 的交付，就先补齐 CLI 产物，再同步全局安装。
 if should_sync_global_cli; then
   if [[ ! " ${BUILD_PACKAGES[*]} " =~ " cli " ]]; then
     echo ""

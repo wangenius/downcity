@@ -15,7 +15,7 @@ import {
   WORKBOARD_FOCUSED_STATIONS_BY_ZONE,
 } from "./workboard-room-layout";
 import {
-  WORKBOARD_TOWN_PLAZA_POINT,
+  WORKBOARD_VILLAGE_PLAZA_POINT,
   WORKBOARD_ZONE_GATE_POINTS,
   WORKBOARD_ZONE_LAYOUT,
 } from "./workboard-stage-map";
@@ -285,8 +285,8 @@ export function buildOverviewPatrolRoute(params: {
   const laneOffset = (laneIndex - 1) * 10;
   const roadY = params.zoneId === "engaged" || params.zoneId === "steady" ? 460 : 500;
   const plazaLane = {
-    x: WORKBOARD_TOWN_PLAZA_POINT.x + laneOffset,
-    y: WORKBOARD_TOWN_PLAZA_POINT.y + (roadY < WORKBOARD_TOWN_PLAZA_POINT.y ? -10 : 10),
+    x: WORKBOARD_VILLAGE_PLAZA_POINT.x + laneOffset,
+    y: WORKBOARD_VILLAGE_PLAZA_POINT.y + (roadY < WORKBOARD_VILLAGE_PLAZA_POINT.y ? -10 : 10),
   };
 
   // 关键节点：overview 使用正交 tile 路径，避免 sprite 穿过建筑或草地。
@@ -299,7 +299,7 @@ export function buildOverviewPatrolRoute(params: {
     { x: city.x, y: roadY },
     { x: plazaLane.x, y: roadY },
     plazaLane,
-    WORKBOARD_TOWN_PLAZA_POINT,
+    WORKBOARD_VILLAGE_PLAZA_POINT,
     plazaLane,
     { x: plazaLane.x, y: roadY },
     { x: city.x, y: roadY },

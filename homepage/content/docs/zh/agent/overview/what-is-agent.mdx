@@ -21,7 +21,7 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 
 - 读取项目根目录下的 `downcity.json`
 - 加载 `PROFILE.md` 和 `SOUL.md`
-- 绑定项目选择的 City AIService 模型
+- 绑定项目选择的 Federation AIService 模型
 - 创建和维护会话
 - 暴露 HTTP / CLI 入口
 - 启动项目配置中启用的 plugin
@@ -38,13 +38,13 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 ## Agent 不负责什么
 
 - 不负责管理多个项目
-- 不负责 City AIService 模型目录管理
+- 不负责 Federation AIService 模型目录管理
 - 不负责 city 级 channel account 的保存
 - 不负责全局控制面和 Console UI
 
-这些职责会拆分到 Town 和 City：Town 管本地 Agent 与 Agent plugin，City 管模型、渠道账号等能力。
+这些职责会拆分到 Downcity 和 City：Downcity 管本地 Agent 与 Agent plugin，City 管模型、渠道账号等能力。
 
-如果你把 `town` 和 `agent` 的职责混在一起理解，后面就会很容易遇到这些困惑：
+如果你把 `downcity` 和 `agent` 的职责混在一起理解，后面就会很容易遇到这些困惑：
 
 - 不知道模型应该去哪里配
 - 不知道 channel account 应该改项目还是改全局
@@ -55,7 +55,7 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 ## 你会在什么场景下用它
 
 - 让一个项目变成可对话的 agent
-- 通过 Town 在终端里直接和项目对话
+- 通过 Downcity 在终端里直接和项目对话
 - 通过 Telegram、飞书、QQ 等渠道把消息送进项目 agent
 - 在 Node.js 应用里通过 `@downcity/agent` 嵌入本地 agent
 - 通过 `RemoteAgent` 调用另一个进程里已经运行的 agent
@@ -66,7 +66,7 @@ Downcity 的 `agent` 是一个面向单个项目的运行时。
 
 ### 1. CLI / Runtime 方式
 
-Town 提供面向用户的本地运行时入口。这条路径适合“把一个代码仓库启动成一个 agent”。
+Downcity 提供面向用户的本地运行时入口。这条路径适合“把一个代码仓库启动成一个 agent”。
 
 ### 2. SDK 嵌入方式
 
@@ -100,12 +100,12 @@ import { Agent } from "@downcity/agent";
 
 1. 先看 [Agent 和 Console 的关系](/zh/docs/agent/overview/agent-vs-console)
 2. 再看 [Agent 生命周期](/zh/docs/agent/overview/lifecycle)
-3. 然后进入 [Agent CLI 产品文档](/zh/products-docs/town-cli/agent/agent)
+3. 然后进入 [Agent CLI 产品文档](/zh/docs/reference/cli)
 4. 如果你要做集成，再进入 [Agent SDK 总览](/zh/agent-sdk-docs)
 
 ## 继续阅读
 
 - [Agent 和 Console 的关系](/zh/docs/agent/overview/agent-vs-console)
 - [Agent 生命周期](/zh/docs/agent/overview/lifecycle)
-- [Agent CLI 产品文档](/zh/products-docs/town-cli/agent/agent)
+- [Agent CLI 产品文档](/zh/docs/reference/cli)
 - [Agent SDK 总览](/zh/agent-sdk-docs)

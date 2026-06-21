@@ -27,6 +27,7 @@ import {
   createRemoteChatSession,
   getOrCreateRemoteSession,
   buildAgentChatFailureText,
+  listRemoteChatSessions,
 } from "@/city/agent/AgentChatRemote.js";
 import type {
   AgentChatCliOptions,
@@ -289,7 +290,6 @@ export async function resolveInteractiveChatSession(params: {
       success: true;
       target: ResolvedAgentChatTarget;
       remote_agent: RemoteAgent;
-      show_initial_picker: boolean;
     }
   | {
       success: false;
@@ -334,17 +334,52 @@ export async function resolveInteractiveChatSession(params: {
       success: true,
       target: resolved.target,
       remote_agent,
-      show_initial_picker: false,
     };
   }
 
-  // 关键点（中文）：未显式指定 session 时，进入 TUI 后由 SessionPicker 自行选择。
+  // 关键点（中文）：未显式指定 session 时，直接复用最近活跃的会话，
+  // 不再弹出 SessionPicker；没有任何历史会话时回落到默认 session。
+  // 用户仍可在 TUI 内通过 /session 命令随时切换。
+  const latest_session_id = await resolveLatestChatSessionId({ remote_agent });
+  if (latest_session_id) {
+    resolved.target.sessionId = latest_session_id;
+  }
   return {
     success: true,
     target: resolved.target,
     remote_agent,
-    show_initial_picker: true,
   };
+}
+
+/**
+ * 解析最近活跃的 chat session id。
+ *
+ * 说明（中文）
+ * - 按 `updatedAt` 取最新的会话；缺失 `updatedAt` 视为最旧。
+ * - 列表为空时返回 null，由调用方回落到默认 session。
+ *
+ * @param params.remote_agent 远程 agent 句柄。
+ * @returns 最近活跃的 session id；无历史会话时为 null。
+ */
+async function resolveLatestChatSessionId(params: {
+  remote_agent: RemoteAgent;
+}): Promise<string | null> {
+  let sessions: Awaited<ReturnType<typeof listRemoteChatSessions>>;
+  try {
+    sessions = await listRemoteChatSessions({ remote_agent: params.remote_agent });
+  } catch {
+    return null;
+  }
+  if (sessions.length === 0) {
+    return null;
+  }
+  let latest = sessions[0];
+  for (const candidate of sessions) {
+    if ((candidate.updatedAt ?? 0) > (latest.updatedAt ?? 0)) {
+      latest = candidate;
+    }
+  }
+  return latest.sessionId;
 }
 
 export async function runSdkPromptTurn(params: {

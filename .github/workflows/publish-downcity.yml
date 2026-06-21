@@ -12,7 +12,7 @@ on:
     paths:
       - ".github/workflows/publish-downcity.yml"
       - "cli/city/**"
-      - "cli/town/**"
+      - "cli/downcity/**"
       - "cli/downcity/**"
       - "packages/type/package.json"
       - "packages/shell/package.json"
@@ -90,7 +90,7 @@ jobs:
           pnpm -C packages/plugins build
           pnpm -C packages/ui build
           pnpm -C cli/city build
-          pnpm -C cli/town build
+          pnpm -C cli/downcity build
           pnpm -C cli/downcity build
 
       - name: Validate npm token and package ownership

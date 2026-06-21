@@ -1,7 +1,9 @@
 ---
-title: Create City
-description: Initialize a Downcity City with the default database and HTTP service.
+title: Create Federation
+description: Initialize the Downcity server-side Federation with the default database and HTTP service.
 ---
+
+The server-side runtime class is `Federation` (also called the City runtime in these docs); product clients use the `City` client to reach it. See [Federation and City](/en/city-sdk-docs/concepts/federation) for the distinction.
 
 Install the packages:
 
@@ -9,7 +11,7 @@ Install the packages:
 pnpm add @downcity/city drizzle-orm better-sqlite3
 ```
 
-The database is the only thing you need before boot. On first boot City fills `DOWNCITY_CITY_ADMIN_SECRET_KEY`, `DOWNCITY_CITY_TOKEN_SIGNING_KEY`, and `BETTER_AUTH_SECRET` automatically. Provider keys are written later through City CLI or the Admin API:
+The database is the only thing you need before boot. On first boot Federation fills `DOWNCITY_CITY_ADMIN_SECRET_KEY`, `DOWNCITY_CITY_TOKEN_SIGNING_KEY`, and `BETTER_AUTH_SECRET` automatically. Provider keys are written later through City CLI or the Admin API:
 
 ```bash
 OPENAI_API_KEY="..."
@@ -50,9 +52,9 @@ const db = drizzle(env.DB);
 const base = new Federation({ db, dialect: "sqlite", raw: env.DB });
 ```
 
-City initializes itself automatically on the first `health()`, `handleRequest()`, `table()`, or similar runtime call.
+Federation initializes itself automatically on the first `health()`, `handleRequest()`, `table()`, or similar runtime call.
 
-If your City needs its own business tables, declare them on a Service or service:
+If your Federation needs its own business tables, declare them on a Service or service:
 
 ```ts
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
@@ -79,7 +81,7 @@ await table.insert({
 });
 ```
 
-Tables declared by services use the same database connection as City. Regular projects do not need manual table creation.
+Tables declared by services use the same database connection as Federation. Regular projects do not need manual table creation.
 
 Start the HTTP service:
 
@@ -90,4 +92,4 @@ await base.health();
 serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
 ```
 
-This service is the shared City used by later cities. Management and business data are handled through your own database and city backend for now.
+This service is the shared Federation used by later cities. Management and business data are handled through your own database and city backend for now.

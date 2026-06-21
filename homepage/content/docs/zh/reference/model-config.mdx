@@ -1,18 +1,18 @@
 ---
 title: Model 配置参考
-description: Agent 项目如何绑定 Downcity City AIService 模型
+description: Agent 项目如何绑定 Downcity Federation AIService 模型
 ---
 
 # Model 配置参考
 
-Downcity 不把完整模型实现细节放进 Agent 项目。项目只保存模型 ID；provider key、provider routing 和模型目录由City AIService 负责。
+Downcity 不把完整模型实现细节放进 Agent 项目。项目只保存模型 ID；provider key、provider routing 和模型目录由 Federation AIService 负责。
 
 ## 心智模型
 
 ```txt
-City AIService 模型目录
+Federation AIService 模型目录
   -> city
-  -> Town 选择 City 模型
+  -> Downcity 选择 City 模型
   -> downcity.json execution.modelId
   -> agent session runtime
 ```
@@ -35,14 +35,14 @@ Agent 项目通过 `execution.modelId` 绑定模型：
 说明：
 
 - `execution.type` 应写为 `api`
-- `execution.modelId` 应对应已连接 City AIService 暴露的某个模型
+- `execution.modelId` 应对应已连接 Federation AIService 暴露的某个模型
 - provider secrets 和 provider 连接细节不写进项目配置
 
 ## 命令在哪里
 
-先连接 Town 与 City，再写入项目绑定；模型绑定变更后重启 agent。
+先连接 Downcity 与 City，再写入项目绑定；模型绑定变更后重启 agent。
 
-具体工作流见 [Town City 文档](/zh/products-docs/town-cli/city)、[Town config 文档](/zh/products-docs/town-cli/config) 和 [Agent restart 文档](/zh/products-docs/town-cli/agent/restart)。
+具体工作流见 [Downcity City 文档](/zh/docs/reference/cli)、[Downcity config 文档](/zh/docs/reference/cli) 和 [Agent restart 文档](/zh/docs/reference/cli)。
 
 ## 项目不应该保存什么
 

@@ -35,18 +35,18 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
     steps: [
       {
         title: "安装 CLI",
-        description: "先让本地有一个明确的运行入口。安装后会得到 `town` 和 `city` 两个命令。",
-        command: "npm install -g downcity\ntown --version\ncity --version",
+        description: "先让本地有一个明确的运行入口。安装后会得到 `downcity` 命令（别名 `city`）。",
+        command: "npm install -g downcity\ndowncity --version",
       },
       {
         title: "在仓库里创建 Agent",
         description: "进入真实项目目录后初始化，让规则、权限和产物落在仓库本身，而不是外部平台。",
-        command: "cd /path/to/your-repo\ntown agent create .",
+        command: "cd /path/to/your-repo\ndowncity agent create .",
       },
       {
         title: "连接 City 并启动 Runtime",
-        description: "先把当前 City 会话导入 Town，再启动 runtime。默认后台运行，需要观察日志时再切前台模式。",
-        command: "city\n\ntown city use\ntown start\ntown agent start\n# 调试时\ntown agent start --foreground",
+        description: "先把当前 City 会话导入 downcity，再启动 runtime。默认后台运行，需要观察日志时再切前台模式。",
+        command: "downcity federation use\ndowncity start\ndowncity agent start\n# 调试时\ndowncity agent start --foreground",
       },
       {
         title: "做一次健康检查",
@@ -70,18 +70,18 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
     steps: [
       {
         title: "Install the CLI",
-        description: "Establish one local runtime entry point first. Installing exposes `town` and `city` as separate commands.",
-        command: "npm install -g downcity\ntown --version\ncity --version",
+        description: "Establish one local runtime entry point first. Installing exposes the `downcity` command (alias `city`).",
+        command: "npm install -g downcity\ndowncity --version",
       },
       {
         title: "Create the agent inside your repo",
         description: "Initialize inside a real project so rules, permissions, and artifacts stay in the repo instead of a separate platform.",
-        command: "cd /path/to/your-repo\ntown agent create .",
+        command: "cd /path/to/your-repo\ndowncity agent create .",
       },
       {
         title: "Connect City and start runtime",
-        description: "Import the active City session into Town, then start the runtime. Use foreground mode only when you need live logs in the current shell.",
-        command: "city\n\ntown city use\ntown start\ntown agent start\n# for debugging\ntown agent start --foreground",
+        description: "Import the active City session into downcity, then start the runtime. Use foreground mode only when you need live logs in the current shell.",
+        command: "downcity federation use\ndowncity start\ndowncity agent start\n# for debugging\ndowncity agent start --foreground",
       },
       {
         title: "Run a health check",

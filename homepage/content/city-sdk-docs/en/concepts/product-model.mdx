@@ -1,0 +1,102 @@
+---
+title: Product Boundary Model
+description: Why Downcity is a reusable AI infrastructure runtime instead of a separate backend per project.
+---
+
+The core mental model of Downcity is not "one city, one backend." It is:
+
+> one City runtime serving many AI products and workflows.
+
+The reason is simple. What gets rebuilt again and again is usually not your business backend, but the AI call layer:
+
+- provider key storage
+- model catalog
+- token validation
+- usage records
+- hooks, quotas, billing, and logs
+
+Once you ship a second or third AI product, these capabilities repeat everywhere.
+
+## Many products, one City runtime
+
+<div className="dc-doc-flow" aria-label="Many products share one runtime">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Product A</strong>
+      <span>Web tools, content products, workflow utilities.</span>
+      <code>city_id = city_a</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Product B</strong>
+      <span>Chrome extensions, desktop tools, mobile entry points.</span>
+      <code>city_id = city_b</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Product C</strong>
+      <span>Client demos, internal tools, vertical sites.</span>
+      <code>city_id = city_c</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>City runtime</strong>
+      <span>City model catalog, provider env, Service routes, token validation, usage, and hooks.</span>
+    </div>
+  </div>
+</div>
+
+## What should stay in the City runtime
+
+- Model catalog and provider configuration
+- `user_token` validation
+- AI service calls such as `client.ai.text()`, `client.ai.stream()`, and `client.ai.image_create()` / `client.ai.image_result()`
+- Usage records, logs, quotas, and business hooks
+- Call logic reused across multiple products
+
+## What should stay in the product or business system
+
+- User registration, login, and account systems
+- Orders, subscriptions, balances, and CRM
+- Pages, interactions, workflows, and content data
+- Each product's own brand, pricing, and go-to-market strategy
+
+In other words, Downcity centralizes the **AI infrastructure** layer, not your whole business system.
+
+## Why this is more stable than "one backend per project"
+
+If every new product copies a separate AI backend, the same issues appear quickly:
+
+- provider keys scattered across many places
+- inconsistent token rules
+- inconsistent usage and logging conventions
+- every new provider, model, or quota strategy requires edits in many repos
+
+Once the AI call layer is centralized into the City runtime, a new product usually only needs two steps:
+
+1. create a new `city_id`
+2. connect `User City` in the product client
+
+## What `city_id` means in this model
+
+`city_id` is not a model name, and it is not the full abstraction of your tenant system.
+
+It is the runtime's stable primary key for the product boundary. It answers questions like:
+
+- which product started this call
+- whether this product is currently `active`
+- which product dimension hooks and usage should record against
+- whether a user's calls should be separated across different products
+
+If you are building a multi-product portfolio, `city_id` is the most stable boundary.
+
+## The role of model at the city layer
+
+In the current implementation, a model is a runtime capability unit registered in Runtime, not something owned by a specific city.
+
+At the product layer, a model is more like a visible capability:
+
+- you can pass it explicitly into `client.ai.text({ model })`
+- or omit it and let AIService use the default model for the current pathway
+
+This means the product sees stable model IDs, not upstream provider details.

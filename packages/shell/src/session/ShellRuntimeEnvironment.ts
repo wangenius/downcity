@@ -37,7 +37,7 @@ export function buildShellEnv(context: ShellHostContext): NodeJS.ProcessEnv {
   const agentId = configuredAgentId || (agentPath ? path.basename(agentPath) : "");
 
   // 关键点（中文）
-  // - agent 自己在 shell 里执行 `town <service> ...` 时，也需要显式知道“当前 agent 是谁”。
+  // - agent 自己在 shell 里执行 `downcity <service> ...` 时，也需要显式知道“当前 agent 是谁”。
   // - 否则 service CLI 会退回到当前终端 cwd / registry 猜测，在多 agent 或外部工作目录下
   //   很容易把请求发到错误项目，最终误报 “Agent runtime 没启动”。
   if (agentPath) env.DC_AGENT_PATH = agentPath;

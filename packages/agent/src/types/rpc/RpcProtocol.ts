@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 该文件只描述本机 RPC 的线协议，不包含 socket 或业务执行逻辑。
  * - Client 与 Server 共享同一份 request/frame 类型，避免协议两边漂移。
- * - 字段名保持现有协议格式，兼容已发布的 Town 托管 runtime 调用。
+ * - 字段名保持现有协议格式，兼容已发布的 downcity 托管 runtime 调用。
  */
 
 import type {
@@ -29,7 +29,7 @@ import type { ShellApprovalMode } from "@downcity/shell";
  *
  * 关键点（中文）
  * - `sdk.*` 面向 RemoteAgent 的稳定会话 SDK。
- * - `internal.*` 面向 Town 本机管理通道。
+ * - `internal.*` 面向 downcity 本机管理通道。
  */
 export type RpcRequest =
   | {

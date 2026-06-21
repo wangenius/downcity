@@ -12,7 +12,7 @@ export function meta() {
   const baseUrl = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — Product`;
   const description =
-    "Product matrix for Downcity agent infrastructure: Town CLI, City SDK, Agent SDK, and Downcity UI SDK.";
+    "Product matrix for Downcity agent infrastructure: Downcity CLI, City SDK, Agent SDK, and Downcity UI SDK.";
 
   return [
     { charSet: "utf-8" },

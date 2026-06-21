@@ -117,7 +117,7 @@ const providers = await guest.service("accounts").get("providers");
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "city_demo",
 });
 ```
 
@@ -140,13 +140,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "city_demo",
 });
 
 const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  town_id: "town_demo",
+  city_id: "city_demo",
   user_token: session.user_token,
 });
 

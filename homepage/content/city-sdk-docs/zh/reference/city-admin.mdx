@@ -149,13 +149,13 @@ router.post("/login", async (c) => {
   const user_id = await login(c);
 
   const issued = await admin.cities.tokens.apply({
-    city_id: "town_xxx",
+    city_id: "city_xxx",
     user_id,
     ttl: "7d",
   });
 
   return c.json({
-    city_id: "town_xxx",
+    city_id: "city_xxx",
     user_token: issued.user_token,
   });
 });
@@ -319,7 +319,7 @@ await admin.balance.redeemCodes.disable({
 ```ts
 try {
   await admin.cities.tokens.apply({
-    city_id: "town_xxx",
+    city_id: "city_xxx",
     user_id: "user_123",
   });
 } catch (error) {

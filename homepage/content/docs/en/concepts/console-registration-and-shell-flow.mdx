@@ -1,9 +1,9 @@
 ---
-title: Town Registration, Execution Context, and Shell Flow
+title: Downcity Registration, Execution Context, and Shell Flow
 description: Explains managed agent registry writes, how the execution context surface connects runtime capability, and how shell injects environment
 ---
 
-# Town Registration, Execution Context, and Shell Flow
+# Downcity Registration, Execution Context, and Shell Flow
 
 ## 1. Managed Agent Registration
 
@@ -35,7 +35,7 @@ flowchart TD
   A["agent runtime startup"] --> B["start daemon"]
   B --> C["write debug metadata"]
   B --> D["upsert managed agent registry"]
-  D --> E["Town registry"]
+  D --> E["Downcity registry"]
 
   F["managed plugin caller"] --> G["agent API"]
   G --> H["execution context"]

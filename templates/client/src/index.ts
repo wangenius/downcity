@@ -17,7 +17,7 @@ import { Agent } from "@downcity/agent";
 import { City, type CityModel } from "@downcity/city";
 
 const DEFAULT_FEDERATION_URL = "http://127.0.0.1:43127";
-const DEFAULT_CITY_ID = "town_downcity";
+const DEFAULT_CITY_ID = "city_downcity";
 const DEFAULT_USER_ID = "dev_cli_user";
 const DEFAULT_TOKEN_TTL = "7d";
 const DEFAULT_AGENT_ID = "template_client";
@@ -35,7 +35,7 @@ interface ClientConfig {
   federation_url: string;
 
   /**
-   * 本次请求使用的 Town ID。
+   * 本次请求使用的 City ID。
    */
   city_id: string;
 

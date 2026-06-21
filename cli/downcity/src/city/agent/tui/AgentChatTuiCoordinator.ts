@@ -75,8 +75,6 @@ export class AgentChatTuiCoordinator {
   private overlay_handle: OverlayHandle | null = null;
   private remove_input_listener: (() => void) | null = null;
 
-  private is_initial_picker = false;
-
   /**
    * 全局 tool output 展开状态。
    * 对齐 Kimi Code：Ctrl+O 统一切换所有 tool 卡片，
@@ -163,7 +161,7 @@ export class AgentChatTuiCoordinator {
    * @param options 启动选项。
    * @returns TUI 停止后 resolve。
    */
-  async run(options?: { show_initial_picker?: boolean }): Promise<void> {
+  async run(): Promise<void> {
     if (this.running || this.stopped) {
       return;
     }
@@ -183,10 +181,6 @@ export class AgentChatTuiCoordinator {
       "Type /help for shortcuts · /session · /new · /clear · /quit",
     );
     this.tui.start();
-
-    if (options?.show_initial_picker === true) {
-      await this.show_session_picker(true);
-    }
 
     return await new Promise<void>((resolve) => {
       this.resolve_run = resolve;
@@ -308,15 +302,11 @@ export class AgentChatTuiCoordinator {
 
   /**
    * 显示 session 选择器弹窗。
-   *
-   * @param is_initial 是否为启动时的初始选择器。
    */
-  private async show_session_picker(is_initial = false): Promise<void> {
+  private async show_session_picker(): Promise<void> {
     if (this.overlay_handle) {
       return;
     }
-
-    this.is_initial_picker = is_initial;
 
     let sessions: AgentChatSessionSummaryView[] = [];
     try {
@@ -340,9 +330,6 @@ export class AgentChatTuiCoordinator {
       },
       on_cancel: () => {
         this.hide_session_picker();
-        if (this.is_initial_picker) {
-          void this.stop();
-        }
       },
     });
 

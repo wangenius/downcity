@@ -1,16 +1,16 @@
 ---
-title: Agent and City AIService
-description: Understand the model ownership boundary between Agent, Town, City, and AIService, and how to use them together
+title: Agent and Federation AIService
+description: Understand the model ownership boundary between Agent, Downcity, City, and AIService, and how to use them together
 ---
 
-# Agent and City AIService
+# Agent and Federation AIService
 
 If you are using Agent inside a normal Downcity project, the model usually should not be owned directly by the Agent project.
 
 Split responsibilities across four layers:
 
-- `City AIService`: owns the model catalog, providers, API keys, and model routing
-- `Town`: connects to City, reads the catalog, validates and resolves `modelId`
+- `Federation AIService`: owns the model catalog, providers, API keys, and model routing
+- `Downcity`: connects to City, reads the catalog, validates and resolves `modelId`
 - `Agent project`: stores only `execution.modelId`
 - `@downcity/agent` session: actually executes prompts
 
@@ -27,7 +27,7 @@ The right mental model is:
 
 ```text
 downcity.json.execution.modelId
-  -> Town reads and validates it
-  -> City AIService resolves the target model
+  -> Downcity reads and validates it
+  -> Federation AIService resolves the target model
   -> Agent runtime executes with that model
 ```

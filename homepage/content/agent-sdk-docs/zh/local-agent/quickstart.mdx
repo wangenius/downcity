@@ -1,6 +1,6 @@
 ---
 title: 本地 Agent 快速开始
-description: 用 Agent SDK 在本地进程里创建一个可执行的 Agent，并理解本地模型与 City AIService 模型的差异
+description: 用 Agent SDK 在本地进程里创建一个可执行的 Agent，并理解本地模型与 Federation AIService 模型的差异
 ---
 
 # 本地 Agent 快速开始
@@ -65,17 +65,17 @@ console.log(result.text);
 
 ### Downcity Agent 项目模式
 
-如果你是在正常的 Downcity / Town 项目里跑 Agent，通常不应该在项目里直接持有 provider 配置或模型实例。
+如果你是在正常的 Downcity / Downcity 项目里跑 Agent，通常不应该在项目里直接持有 provider 配置或模型实例。
 
 这时模型来自：
 
 - `downcity.json.execution.modelId`
-- 已连接的 `City AIService`
+- 已连接的 `Federation AIService`
 
 也就是说：
 
 - Agent 项目只选择 `modelId`
-- `City AIService` 管理 provider、API key、模型目录
+- `Federation AIService` 管理 provider、API key、模型目录
 
 ## Agent 的生命周期
 
@@ -96,6 +96,6 @@ Session 入口内部已经隐式等待后台启动。如果需要在外部确认
 ## 继续阅读
 
 - [构造参数](/zh/agent-sdk-docs/local-agent/constructor-options)
-- [本地 Agent RPC 与 Town HTTP](/zh/agent-sdk-docs/local-agent/http-and-rpc)
-- [Agent 与 City AIService](/zh/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
+- [本地 Agent RPC 与 Downcity HTTP](/zh/agent-sdk-docs/local-agent/http-and-rpc)
+- [Agent 与 Federation AIService](/zh/agent-sdk-docs/integration-patterns/agent-with-city-ai-service)
 - [Session set / prompt / subscribe](/zh/agent-sdk-docs/sessions/overview)

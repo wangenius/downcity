@@ -142,7 +142,7 @@ install_downcity_cli_globally() {
   chmod +x "$package_dir/bin/index.js"
 
  legacy_command="stu""dio"
-  rm -f "$global_bin/town" "$global_bin/$legacy_command" "$global_bin/city" "$global_bin/downcity" "$global_bin/downfed" "$global_bin/fed" 2>/dev/null || true
+  rm -f "$global_bin/$legacy_command" "$global_bin/city" "$global_bin/downcity" "$global_bin/downfed" "$global_bin/fed" 2>/dev/null || true
   ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/city"
   ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/downcity"
   ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/downfed"

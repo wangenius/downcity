@@ -1,18 +1,18 @@
 ---
 title: Model Config Reference
-description: How agent projects bind to City AIService models in Downcity
+description: How agent projects bind to Federation AIService models in Downcity
 ---
 
 # Model Config Reference
 
-Downcity keeps model selection out of the agent project implementation. The project only stores a model ID; the City AIService owns provider keys, provider routing, and the model catalog.
+Downcity keeps model selection out of the agent project implementation. The project only stores a model ID; the Federation AIService owns provider keys, provider routing, and the model catalog.
 
 ## Mental model
 
 ```txt
-City AIService model catalog
+Federation AIService model catalog
   -> city
-  -> Town selects a City model
+  -> Downcity selects a City model
   -> downcity.json execution.modelId
   -> agent session runtime
 ```
@@ -35,14 +35,14 @@ Agent projects bind through `execution.modelId`:
 Notes:
 
 - `execution.type` should be `api`
-- `execution.modelId` should match a model exposed by the connected City AIService
+- `execution.modelId` should match a model exposed by the connected Federation AIService
 - provider secrets and provider connection details stay outside the project config
 
 ## Where commands live
 
-Connect Town to City, write the project binding, then restart the agent after changing it.
+Connect Downcity to City, write the project binding, then restart the agent after changing it.
 
-Concrete workflows live in [Town City docs](/en/products-docs/town-cli/city), [Town config docs](/en/products-docs/town-cli/config), and [Agent restart docs](/en/products-docs/town-cli/agent/restart).
+Concrete workflows live in [Downcity City docs](/en/docs/reference/cli), [Downcity config docs](/en/docs/reference/cli), and [Agent restart docs](/en/docs/reference/cli).
 
 ## What the project does not store
 

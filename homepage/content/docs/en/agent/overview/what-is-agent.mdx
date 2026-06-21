@@ -21,7 +21,7 @@ Once an agent starts, it is responsible for the current project runtime:
 
 - reading `downcity.json`
 - loading `PROFILE.md` and `SOUL.md`
-- binding the project to its selected City AIService model
+- binding the project to its selected Federation AIService model
 - creating and maintaining sessions
 - exposing project-level HTTP and CLI entry points
 - starting enabled project plugins
@@ -42,11 +42,11 @@ into one executable runtime context.
 An agent does not own global platform concerns:
 
 - it does not manage multiple projects
-- it does not own the City AIService model catalog
+- it does not own the Federation AIService model catalog
 - it does not persist City-level channel accounts
 - it is not the Console UI or the global control plane
 
-Those concerns are split between Town and City: Town manages local Agents and Agent plugins, while City manages models, channel accounts, and Service capabilities.
+Those concerns are split between Downcity and City: Downcity manages local Agents and Agent plugins, while City manages models, channel accounts, and Service capabilities.
 
 This boundary matters, because once you mix global concerns and project concerns together, it becomes much harder to answer basic questions like:
 
@@ -59,7 +59,7 @@ This boundary matters, because once you mix global concerns and project concerns
 You use an agent when you want to turn a repository into a long-running execution unit:
 
 - make one project conversational
-- chat with a project through Town
+- chat with a project through Downcity
 - receive Telegram, Feishu, or QQ messages into the project runtime
 - embed an agent into your own Node.js app with `@downcity/agent`
 - call a running agent process through `RemoteAgent`
@@ -68,7 +68,7 @@ You use an agent when you want to turn a repository into a long-running executio
 
 ### 1. CLI / runtime mode
 
-Town provides the user-facing local runtime path. This path is best when your goal is "turn this repository into an agent runtime and use it directly."
+Downcity provides the user-facing local runtime path. This path is best when your goal is "turn this repository into an agent runtime and use it directly."
 
 ### 2. SDK integration mode
 
@@ -102,5 +102,5 @@ If this is your first time in the Agent docs, the cleanest path is:
 
 1. [Agent vs Console](/en/docs/agent/overview/agent-vs-console)
 2. [Agent lifecycle](/en/docs/agent/overview/lifecycle)
-3. [Agent CLI product docs](/en/products-docs/town-cli/agent/agent)
+3. [Agent CLI product docs](/en/docs/reference/cli)
 4. [Agent SDK overview](/en/agent-sdk-docs)

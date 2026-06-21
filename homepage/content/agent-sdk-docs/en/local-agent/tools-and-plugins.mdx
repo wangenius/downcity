@@ -130,9 +130,9 @@ Generated image file parts are always materialized under `.downcity/resources/`,
 
 ## plugin HTTP
 
-If Town exposes the Agent HTTP gateway, registered plugins with `plugin.http.server.register(...)` are also mounted onto the same HTTP app automatically.
+If Downcity exposes the Agent HTTP gateway, registered plugins with `plugin.http.server.register(...)` are also mounted onto the same HTTP app automatically.
 
 So:
 
 - plugin existence comes from the `plugins` array you pass into `Agent`
-- plugin HTTP exposure happens when Town publishes the Agent HTTP gateway
+- plugin HTTP exposure happens when Downcity publishes the Agent HTTP gateway

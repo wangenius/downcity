@@ -31,7 +31,7 @@ Current project agents use one execution binding:
 }
 ```
 
-This means the project must bind to a model ID from the connected City AIService.
+This means the project must bind to a model ID from the connected Federation AIService.
 
 In the current code, this binding is not optional decoration. It is one of the core prerequisites for startup.
 
@@ -46,13 +46,13 @@ During startup, the agent will:
 - start HTTP
 - start configured project plugins
 
-In background mode, Town also maintains daemon state so lifecycle actions can inspect, stop, restart, or repair the process later.
+In background mode, Downcity also maintains daemon state so lifecycle actions can inspect, stop, restart, or repair the process later.
 
 ## 4. Execute and interact
 
 Once running, the agent can be entered through multiple surfaces:
 
-- Town CLI
+- Downcity CLI
 - connected chat channels
 - project-level HTTP control routes
 - SDK `Agent` and `RemoteAgent`
@@ -79,6 +79,6 @@ That loop is normal when you are shaping a long-lived project agent.
 
 This page describes the lifecycle model. Concrete command workflows live in:
 
-- [Agent CLI product docs](/en/products-docs/town-cli/agent/agent)
-- [Town City product docs](/en/products-docs/town-cli/city)
+- [Agent CLI product docs](/en/docs/reference/cli)
+- [Downcity City product docs](/en/docs/reference/cli)
 - [Agent SDK overview](/en/agent-sdk-docs)

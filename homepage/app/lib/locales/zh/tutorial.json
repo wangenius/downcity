@@ -4,12 +4,12 @@
   "step1": {
     "title": "初始化配置",
     "description": "在仓库中创建/初始化 agent 项目。系统会生成 `PROFILE.md` 与配置文件，为你的代码仓库赋予独特的人格与边界。",
-    "command": "town agent create ."
+    "command": "downcity agent create ."
   },
   "step2": {
     "title": "唤醒运行时",
     "description": "在本地启动 Agent Runtime。它将接管代码仓库的读写权限，并连接到你配置的即时通讯软件（如 Telegram），随时作为员工待命。",
-    "command": "town agent start"
+    "command": "downcity agent start"
   },
   "step3": {
     "title": "自然语言协作",

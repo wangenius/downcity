@@ -11,15 +11,15 @@
  */
 export function validateChatSendCommand(cmd: string): string | null {
   const source = String(cmd ?? "");
-  if (!/\b(?:bay|town)\s+chat\s+send\b/.test(source)) return null;
+  if (!/\b(?:bay|downcity)\s+chat\s+send\b/.test(source)) return null;
   if (!/[\r\n]/.test(source)) return null;
-  if (/\b(?:bay|town)\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) {
+  if (/\b(?:bay|downcity)\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) {
     return null;
   }
-  if (/\b(?:bay|town)\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) {
+  if (/\b(?:bay|downcity)\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) {
     return null;
   }
-  if (/\b(?:bay|town)\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source)) {
+  if (/\b(?:bay|downcity)\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source)) {
     return null;
   }
   return [

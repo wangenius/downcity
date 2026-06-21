@@ -99,19 +99,6 @@ export default [
     route("zh/docs/*", "routes/docs/page.tsx", { id: "docs-zh" }),
   ]),
 
-  // Products docs routes with layout
-  layout("routes/products-docs/layout.tsx", [
-    route("en/products-docs/*", "routes/products-docs/page.tsx", {
-      id: "products-docs-en",
-    }),
-    route("products-docs/*", "routes/products-docs/redirect.tsx", {
-      id: "products-docs-redirect",
-    }),
-    route("zh/products-docs/*", "routes/products-docs/page.tsx", {
-      id: "products-docs-zh",
-    }),
-  ]),
-
   // City SDK docs routes with layout
   layout("routes/city-sdk-docs/layout.tsx", [
     route("en/city-sdk-docs/*", "routes/city-sdk-docs/page.tsx", {
@@ -175,7 +162,6 @@ export default [
 
   // API routes
   route("api/search", "routes/docs/search.ts"),
-  route("api/products-docs/search", "routes/products-docs/search.ts"),
   route("api/city-sdk-docs/search", "routes/city-sdk-docs/search.ts"),
   route("api/agent-sdk-docs/search", "routes/agent-sdk-docs/search.ts"),
   route("api/services-sdk-docs/search", "routes/services-sdk-docs/search.ts"),

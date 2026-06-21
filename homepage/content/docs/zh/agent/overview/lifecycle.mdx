@@ -31,7 +31,7 @@ description: 从初始化到启动、聊天、停机，理解一个 Agent 的完
 }
 ```
 
-也就是说，项目要绑定到已连接 City AIService 中的某个模型 ID。
+也就是说，项目要绑定到已连接 Federation AIService 中的某个模型 ID。
 
 在当前代码里，这个执行绑定不是可选装饰，而是启动链路的硬前提之一。
 
@@ -46,13 +46,13 @@ description: 从初始化到启动、聊天、停机，理解一个 Agent 的完
 - 启动 HTTP 服务
 - 启动项目内配置的 plugin
 
-如果使用后台模式，Town 还会为它维护 daemon 状态，让生命周期操作可以继续检查、停止、重启或修复这个进程。
+如果使用后台模式，Downcity 还会为它维护 daemon 状态，让生命周期操作可以继续检查、停止、重启或修复这个进程。
 
 ## 4. 执行和交互
 
 运行中的 agent 可以通过多种入口执行：
 
-- Town CLI
+- Downcity CLI
 - 已接入的聊天渠道
 - 项目级 HTTP 控制接口
 - SDK `Agent` / `RemoteAgent`
@@ -81,6 +81,6 @@ description: 从初始化到启动、聊天、停机，理解一个 Agent 的完
 
 这一页讲的是生命周期模型。具体命令工作流放在：
 
-- [Agent CLI 产品文档](/zh/products-docs/town-cli/agent/agent)
-- [Town City 产品文档](/zh/products-docs/town-cli/city)
+- [Agent CLI 产品文档](/zh/docs/reference/cli)
+- [Downcity City 产品文档](/zh/docs/reference/cli)
 - [Agent SDK 总览](/zh/agent-sdk-docs)

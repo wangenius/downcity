@@ -1,0 +1,130 @@
+---
+title: Many Products, One City Runtime
+description: How one City runtime can serve multiple products without mixing product differences with shared infrastructure.
+---
+
+When many products share one runtime, the goal is not “save one server.” The goal is to separate **shared infrastructure** from **product-specific differences**.
+
+What should be shared:
+
+- provider env
+- model directory
+- service routing
+- hooks, usage, and logs
+- `user_token` verification
+
+What should stay in each product:
+
+- pages and interaction
+- the user system
+- plan, order, and balance rules
+- product-specific brand, positioning, and pricing
+
+## One diagram for the reuse boundary
+
+<div className="dc-doc-flow" aria-label="Many products share one runtime">
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>Product A</strong>
+      <span>For example, a web tool.</span>
+      <code>city_id = city_web</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Product B</strong>
+      <span>For example, a Chrome extension.</span>
+      <code>city_id = city_extension</code>
+    </div>
+    <div className="dc-doc-node">
+      <strong>Product C</strong>
+      <span>For example, a client demo or internal tool.</span>
+      <code>city_id = city_demo</code>
+    </div>
+  </div>
+  <div className="dc-doc-arrow" aria-hidden="true">→</div>
+  <div className="dc-doc-lane">
+    <div className="dc-doc-node">
+      <strong>City runtime</strong>
+      <span>Reuses the model directory, provider env, service logic, usage records, and hooks.</span>
+    </div>
+  </div>
+</div>
+
+## How to think about `city_id`
+
+`city_id` is a product boundary, not a model boundary.
+
+It is useful for:
+
+- identifying which product sent the call
+- deciding whether a product is still `active`
+- telling hooks where usage should be recorded
+- separating one user’s activity across different products
+
+A common pattern is one stable `city_id` per product:
+
+```ts
+const city = await admin.cities.create({
+  name: "Chrome Extension",
+});
+
+const issued = await admin.cities.tokens.apply({
+  city_id: city.city_id,
+  user_id: "user_123",
+  metadata: {
+    plan: "starter",
+    channel: "extension",
+  },
+});
+```
+
+## What belongs in token metadata
+
+`city_id` says *which product this is*. Token metadata is better for *the user’s business state inside that product*.
+
+Common fields:
+
+- `plan`
+- `organization_id`
+- `channel`
+- `feature_flag`
+- `team_id`
+
+That lets hooks differentiate behavior with `ctx.city` and `ctx.user.metadata` instead of cloning City for each city.
+
+## Recommended layering
+
+### City side
+
+- keeps routes, UI, and business experience
+- uses `User City`
+- only holds `city_id + user_token`
+
+### Business backend
+
+- owns login, orders, balance, subscriptions, and business data
+- uses `Admin City` in a trusted environment
+- issues `user_token` after a successful login
+
+### City
+
+- owns the model directory
+- owns provider calls
+- owns usage and hooks
+- owns the reusable AI service layer
+
+## When to create a new city
+
+Usually worth creating a new city when:
+
+- it is a separate city or market
+- it needs to be paused or activated independently
+- it needs independent usage reporting or business strategy
+- you need to separate web app, extension, client demo, and other city surfaces
+
+Usually not worth creating a new city when:
+
+- it is only another page in the same city
+- it is only a feature flag inside the same city
+- it is just another conversation/session for one user
+
+Those are better kept inside your own business system or token metadata.

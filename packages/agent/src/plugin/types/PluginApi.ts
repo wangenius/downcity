@@ -2,7 +2,7 @@
  * plugin catalog / availability / action API 类型。
  *
  * 关键点（中文）
- * - 统一描述 Town CLI -> Agent runtime 的 plugin 管理协议。
+ * - 统一描述 downcity CLI -> Agent runtime 的 plugin 管理协议。
  * - 当前阶段支持 list / availability / action 三类调用。
  */
 

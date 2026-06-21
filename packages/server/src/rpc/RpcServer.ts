@@ -2,7 +2,7 @@
  * Agent 本机 RPC server 网络层。
  *
  * 职责说明（中文）
- * - 为本机 `RemoteAgent(rpc://...)` 与 Town runtime 提供 Agent RPC 入口。
+ * - 为本机 `RemoteAgent(rpc://...)` 与 downcity runtime 提供 Agent RPC 入口。
  * - 只负责 TCP/NDJSON framing、socket 生命周期与订阅清理。
  * - 具体 `sdk.*` / `internal.*` 方法由 server handlers 承接。
  */

@@ -31,17 +31,17 @@ description: agent 间点对点连接、审批、聊天和分享流的说明
 
 ## 用户怎么使用
 
-在 agent 项目里使用 `town contact`：
+在 agent 项目里使用 `downcity contact`：
 
 ```bash
-town contact link --ttl-seconds 600
-town contact approve <code> --name teammate
-town contact list
-town contact check teammate
-town contact chat --to teammate "Can you review this?"
-town contact share --to teammate --text "Notes attached" ./notes.md
-town contact inbox
-town contact receive <shareId>
+downcity contact link --ttl-seconds 600
+downcity contact approve <code> --name teammate
+downcity contact list
+downcity contact check teammate
+downcity contact chat --to teammate "Can you review this?"
+downcity contact share --to teammate --text "Notes attached" ./notes.md
+downcity contact inbox
+downcity contact receive <shareId>
 ```
 
 `link` 会生成一个短期有效的 code。另一个 agent 执行 `approve <code>` 后，就能建立可信 contact。
@@ -87,7 +87,7 @@ await agent.plugins.runAction({
 
 ## 公开性说明
 
-`ContactPlugin` 从 `@downcity/plugins` 包根导出。它可以在 SDK 中直接装配，但更常见的使用路径仍然是 agent runtime 与 `town contact`。
+`ContactPlugin` 从 `@downcity/plugins` 包根导出。它可以在 SDK 中直接装配，但更常见的使用路径仍然是 agent runtime 与 `downcity contact`。
 
 ## 相关文档
 

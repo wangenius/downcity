@@ -1,1 +1,0 @@
-{"version":3,"file":"admin.d.ts","sourceRoot":"","sources":["../../../src/federation/auth/admin.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH,OAAO,EAAE,KAAK,YAAY,EAAE,KAAK,aAAa,EAAE,MAAM,8BAA8B,CAAC;AAIrF,wBAAsB,SAAS,CAAC,MAAM,EAAE,aAAa,GAAG,OAAO,CAAC,YAAY,GAAG,SAAS,CAAC,CAcxF"}

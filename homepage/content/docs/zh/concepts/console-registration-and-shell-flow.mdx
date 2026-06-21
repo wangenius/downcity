@@ -1,9 +1,9 @@
 ---
-title: Town 注册、Execution Context 与 Shell 流程
+title: Downcity 注册、Execution Context 与 Shell 流程
 description: 说明受管 agent registry 何时写入、execution context 能力面怎样连接 runtime 能力，以及 shell 的环境注入
 ---
 
-# Town 注册、Execution Context 与 Shell 流程
+# Downcity 注册、Execution Context 与 Shell 流程
 
 ## 1. 受管 Agent 注册
 
@@ -35,7 +35,7 @@ flowchart TD
   A["agent runtime startup"] --> B["start daemon"]
   B --> C["write debug metadata"]
   B --> D["upsert managed agent registry"]
-  D --> E["Town registry"]
+  D --> E["Downcity registry"]
 
   F["托管 plugin caller"] --> G["agent API"]
   G --> H["execution context"]

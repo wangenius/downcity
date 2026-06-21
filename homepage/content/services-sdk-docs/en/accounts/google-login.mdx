@@ -62,12 +62,12 @@ https://downcity.example.com/v1/accounts/oauth/callback
 
 Register that exact URL under the Google OAuth client's `Authorized redirect URIs`.
 
-If you are only using the Downcity accounts service server-side OAuth flow, this redirect URI is the critical part. You usually do not need to register your town frontend as a JavaScript origin for this flow alone.
+If you are only using the Downcity accounts service server-side OAuth flow, this redirect URI is the critical part. You usually do not need to register your downcity frontend as a JavaScript origin for this flow alone.
 
 ## The fields Google users most often get wrong
 
 - choosing the wrong `Application type` instead of `Web application`
-- putting the town frontend URL into `Authorized redirect URIs` instead of the City callback URL
+- putting the downcity frontend URL into `Authorized redirect URIs` instead of the City callback URL
 - using one public domain in production but registering another one in Google Cloud
 - changing redirect settings and testing immediately before Google finishes applying the change
 
@@ -92,7 +92,7 @@ To start login:
 ```ts
 const start = await guest.service("accounts").action("oauth/start").invoke({
   provider: "google",
-  town_id: "town_demo",
+  city_id: "city_demo",
 });
 ```
 
@@ -114,13 +114,13 @@ Downcity only handles the standard OAuth start and callback flow. It does not by
 
 After Google login succeeds, the accounts service still returns a normal City `user_token`.
 
-So the town does not need a different post-login client flow just because the user came from Google:
+So the downcity does not need a different post-login client flow just because the user came from Google:
 
 ```ts
 const user = new City({
   role: "user",
   city_url: "https://base.example.com",
-  town_id: "town_demo",
+  city_id: "city_demo",
   user_token: result.user_token,
 });
 ```
@@ -137,4 +137,4 @@ const user = new City({
 - For the overall OAuth flow, continue with [OAuth and Session](/en/services-sdk-docs/accounts/oauth-and-session)
 - If you also need WeChat Website App login, continue with [WeChat Login Setup](/en/services-sdk-docs/accounts/wechat-login)
 - For the full integration path, read [Accounts Service](/en/services-sdk-docs/accounts)
-- After deployment, write `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` into City env through Town CLI or the Admin API
+- After deployment, write `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` into City env through Downcity CLI or the Admin API

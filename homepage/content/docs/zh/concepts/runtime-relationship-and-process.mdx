@@ -1,13 +1,13 @@
 ---
 title: Runtime Relationship And Process
-description: Town runtime、Console、agent、execution context、session 与 plugin runtime 的协作关系与启动顺序
+description: Downcity runtime、Console、agent、execution context、session 与 plugin runtime 的协作关系与启动顺序
 ---
 
 # Runtime Relationship And Process
 
 当前运行关系可以概括成：
 
-- `town` 负责本机 runtime 与受管 agent 注册
+- `downcity` 负责本机 runtime 与受管 agent 注册
 - `console` 提供浏览器控制面
 - `agent` 负责承载
 - `execution context` 负责暴露统一能力
@@ -16,7 +16,7 @@ description: Town runtime、Console、agent、execution context、session 与 pl
 
 ## 启动顺序
 
-1. Town runtime 启动
+1. Downcity runtime 启动
 2. agent 在受管 agent registry 下启动
 3. agent 初始化模型访问、session store 与 plugin registry
 4. 托管 plugin 进入可用状态

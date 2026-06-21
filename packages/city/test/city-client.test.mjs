@@ -1,15 +1,15 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { City, CityBase } from "../bin/index.js"
+import { City } from "../bin/index.js"
 
 test("AIInvoker.text() posts to /v1/ai/text", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "town_demo",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
@@ -17,15 +17,15 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
   assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", town_id: "town_demo" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", city_id: "city_demo" })
 })
 
 test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
   const requests = []
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "town_demo",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -48,7 +48,7 @@ test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
     model: "openai-gpt-image-1",
     size: "1024x1024",
     count: 1,
-    town_id: "town_demo",
+    city_id: "city_demo",
   })
 })
 
@@ -56,8 +56,8 @@ test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
   const requests = []
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "town_demo",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -72,7 +72,7 @@ test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
   assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
   assert.deepEqual(JSON.parse(requests[0].init.body), {
     job_id: "img_1",
-    town_id: "town_demo",
+    city_id: "city_demo",
   })
 })
 
@@ -89,8 +89,8 @@ test("AIInvoker.text() serializes AI SDK provider tools with inputSchema", async
   }
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "town_demo",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
@@ -124,22 +124,22 @@ test("User City delegates AI calls", async () => {
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
   const city = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "town_demo",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
   const result = await city.ai.text({ prompt: "hi" })
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", town_id: "town_demo" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", city_id: "city_demo" })
 })
 
 test("AIInvoker.listModels() returns ModelCatalog", async () => {
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "town_demo", user_token: "ub_test",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo", user_token: "ub_test",
     fetch: async () => json({ items: [
       { id: "gpt-5.4", name: "GPT-5.4", description: "P", modalities: ["text", "stream"], tags: [], meta: {}, env: {} },
       { id: "claude", name: "Claude", description: "A", modalities: ["text"], tags: [], meta: {}, env: {} },
@@ -156,8 +156,8 @@ test("AIInvoker.listModels() returns ModelCatalog", async () => {
 test("AIInvoker.model(string) builds a correct ModelHandle", async () => {
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "town_demo",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async () => json({ ok: true }),
   })
@@ -172,7 +172,7 @@ test("AIInvoker.stream() returns parsed chunks", async () => {
   const chunks = [{ type: "start", messageId: "msg_1" }, { type: "text-delta", id: "t1", delta: "hi" }, { type: "finish" }]
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/", town_id: "town_demo", user_token: "ub_test",
+    federation_url: "https://api.example.com/base/", city_id: "city_demo", user_token: "ub_test",
     fetch: async () => streamResponse(chunks),
   })
   const stream = await client.ai.stream({ prompt: "hi" })
@@ -184,8 +184,8 @@ test("AIInvoker.stream() returns parsed chunks", async () => {
 test("User City listServices()", async () => {
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "p",
+    federation_url: "https://api.example.com/base/",
+    city_id: "p",
     user_token: "t",
     fetch: async () => json({
       items: [
@@ -204,19 +204,19 @@ test("User City service() → ServiceInvoker", async () => {
   const requests = []
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/", town_id: "p", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
+    federation_url: "https://api.example.com/base/", city_id: "p", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
   const result = await client.service("notes").action("create").invoke({ title: "hello" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "https://api.example.com/base/v1/notes/create")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello", town_id: "p" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello", city_id: "p" })
 })
 
 test("ServiceClient.get() appends query params for GET actions", async () => {
   const requests = []
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "p",
+    federation_url: "https://api.example.com/base/",
+    city_id: "p",
     user_token: "t",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
   })
@@ -230,8 +230,8 @@ test("User City payment.methods() reads the unified payment directory", async ()
   const requests = []
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "p",
+    federation_url: "https://api.example.com/base/",
+    city_id: "p",
     fetch: async (url, init) => {
       requests.push({ url, init })
       return json({
@@ -271,8 +271,8 @@ test("User City payment.method(id).invoke() dispatches to the unified payment ch
   const requests = []
   const client = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "p",
+    federation_url: "https://api.example.com/base/",
+    city_id: "p",
     user_token: "t",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -314,8 +314,8 @@ test("User City payment.method(id).invoke() dispatches to the unified payment ch
 test("User City payment.method(id).invoke() rejects disabled or user-required methods early", async () => {
   const disabledClient = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "p",
+    federation_url: "https://api.example.com/base/",
+    city_id: "p",
     fetch: async () => json({
       items: [
         {
@@ -340,8 +340,8 @@ test("User City payment.method(id).invoke() rejects disabled or user-required me
 
   const guestClient = new City({
     role: "user",
-    city_url: "https://api.example.com/base/",
-    town_id: "p",
+    federation_url: "https://api.example.com/base/",
+    city_id: "p",
     fetch: async () => json({
       items: [
         {
@@ -368,7 +368,7 @@ test("Admin City service() uses the shared /v1 route prefix", async () => {
   const requests = []
   const admin = new City({
     role: "admin",
-    city_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
+    federation_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
   const result = await admin.service("usage").action("report").invoke({ range: "today" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "http://localhost:3001/v1/usage/report")
@@ -379,7 +379,7 @@ test("Admin City env list / catalog / upsert / remove", async () => {
   const requests = []
   const admin = new City({
     role: "admin",
-    city_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
+    federation_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/env/list")) return json({ items: [{ key: "K", value: "V", source: "database" }] })
     if (url.endsWith("/v1/env/catalog")) {
@@ -411,24 +411,24 @@ test("Admin City env list / catalog / upsert / remove", async () => {
   assert.equal(requests[3].url, "http://localhost:3001/v1/env/remove")
 })
 
-test("Admin City towns CRUD + tokens.apply", async () => {
-  const requests = []; const p = { town_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
+test("Admin City cities CRUD + tokens.apply", async () => {
+  const requests = []; const p = { city_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
   const admin = new City({
     role: "admin",
-    city_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
+    federation_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
     requests.push({ url, init })
-    if (url.endsWith("/v1/towns/list")) return json({ items: [p] })
-    if (url.endsWith("/v1/towns/create")) return json(p)
-    if (url.endsWith("/v1/towns/tokens/apply")) return json({ user_token: "ub_test", town_id: "p1", user_id: "u1", expires_at: "2026-01-01T00:00:00.000Z" })
+    if (url.endsWith("/v1/cities/list")) return json({ items: [p] })
+    if (url.endsWith("/v1/cities/create")) return json(p)
+    if (url.endsWith("/v1/cities/tokens/apply")) return json({ user_token: "ub_test", city_id: "p1", user_id: "u1", expires_at: "2026-01-01T00:00:00.000Z" })
     return json({ success: true })
   }})
-  assert.deepEqual(await admin.towns.list(), [p])
-  assert.equal((await admin.towns.create({ name: "Demo" })).town_id, "p1")
-  await admin.towns.pause("p1")
-  assert.equal(requests[2].url, "http://localhost:3001/v1/towns/pause")
-  assert.deepEqual(await admin.towns.tokens.apply({ town_id: "p1", user_id: "u1" }), {
+  assert.deepEqual(await admin.cities.list(), [p])
+  assert.equal((await admin.cities.create({ name: "Demo" })).city_id, "p1")
+  await admin.cities.pause("p1")
+  assert.equal(requests[2].url, "http://localhost:3001/v1/cities/pause")
+  assert.deepEqual(await admin.cities.tokens.apply({ city_id: "p1", user_id: "u1" }), {
     user_token: "ub_test",
-    town_id: "p1",
+    city_id: "p1",
     user_id: "u1",
     expires_at: "2026-01-01T00:00:00.000Z",
   })
@@ -438,7 +438,7 @@ test("Admin City listServices() / listModels() / instruction()", async () => {
   const requests = []
   const admin = new City({
     role: "admin",
-    city_url: "http://localhost:3001/",
+    federation_url: "http://localhost:3001/",
     admin_secret_key: "sk",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -466,8 +466,8 @@ test("Admin City listServices() / listModels() / instruction()", async () => {
           ],
         })
       }
-      if (url.endsWith("/v1/city/instruction")) {
-        return text("CityBase instruction document")
+      if (url.endsWith("/v1/federation/instruction")) {
+        return text("Federation instruction document")
       }
       return json({ ok: true })
     },
@@ -489,7 +489,7 @@ test("Admin City listServices() / listModels() / instruction()", async () => {
       default_modes: ["text"],
     },
   ])
-  assert.equal(await admin.instruction(), "CityBase instruction document")
+  assert.equal(await admin.instruction(), "Federation instruction document")
   assert.equal(requests[2].init.headers.authorization, "Bearer sk")
 })
 

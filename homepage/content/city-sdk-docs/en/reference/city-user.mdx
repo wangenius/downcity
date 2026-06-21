@@ -34,7 +34,7 @@ import type { UIMessageChunk } from "ai";
 const client = new City({
   role: "user",
   federation_url: "https://base.example.com",
-  city_id: "town_xxx",
+  city_id: "city_xxx",
   user_token: "ub_xxx",
 });
 
@@ -61,7 +61,7 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  city_id: "town_xxx",
+  city_id: "city_xxx",
 });
 ```
 
@@ -101,13 +101,13 @@ const session = await guest.service("accounts").action("login").invoke<{
 }>({
   email: "user@example.com",
   password: "password123",
-  city_id: "town_xxx",
+  city_id: "city_xxx",
 });
 
 const user = new City({
   role: "user",
   federation_url,
-  city_id: "town_xxx",
+  city_id: "city_xxx",
   user_token: session.user_token,
 });
 ```
@@ -312,7 +312,7 @@ You do not need a second protocol for services. Just remember:
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  city_id: "town_xxx",
+  city_id: "city_xxx",
 });
 ```
 

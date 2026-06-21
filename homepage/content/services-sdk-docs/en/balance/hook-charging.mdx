@@ -18,7 +18,7 @@ Pricing usually belongs to business logic:
 
 - which actions should charge
 - whether one model costs more
-- whether one town should be free
+- whether one downcity should be free
 - whether one user segment gets discounts
 
 That logic fits your own hooks better than service config.
@@ -53,7 +53,7 @@ ai.hook.after(async (ctx) => {
     amount_microcredits: amount * 1_000_000,
     note: "agent chat",
     metadata: {
-      town_id: ctx.town?.town_id,
+      city_id: ctx.downcity?.city_id,
       model_id: ctx.variant?.id,
     },
   });

@@ -1,19 +1,19 @@
 ---
-title: City Model Catalog
-description: Understand the relationship between City AIService models and Agent project binding
+title: Federation Model Catalog
+description: Understand the relationship between Federation AIService models and Agent project binding
 ---
 
-# City Model Catalog
+# Federation Model Catalog
 
 An Agent project does not store the full model definition by itself.
 
 ## Where the model catalog lives
 
-The model catalog belongs to City AIService.
+The model catalog belongs to Federation AIService (the built-in model service running on the shared backend Federation). For where Federation sits overall, see [Downcity core concepts](/en/docs/concepts/downcity-core-concepts).
 
 From a user perspective:
 
-- City stores the provider, model name, API key, and other full model details
+- Federation stores the provider, model name, API key, and other full model details
 - the project only stores `execution.modelId`
 
 That is why you usually do not see the full provider configuration inside the project itself.
@@ -28,7 +28,7 @@ If you maintain multiple projects, this becomes very valuable quickly.
 
 ## Typical workflow
 
-1. Prepare a model in City AIService.
+1. Prepare a model in Federation AIService.
 2. Bind the project's `execution.modelId` to that model.
 
 After that, switching models is mostly just switching the `modelId`.

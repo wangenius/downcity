@@ -1,4 +1,0 @@
-{
-  "title": "Town CLI",
-  "pages": ["init", "start", "stop", "restart", "update", "status", "city", "config", "env", "agent", "plugin", "variables"]
-}

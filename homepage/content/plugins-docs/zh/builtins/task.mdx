@@ -29,19 +29,19 @@ description: task 定义、task actions，以及归属于 plugin 实例的 cron 
 
 ## 用户怎么使用
 
-当你需要一条可复用的任务定义时，使用 `town task`：
+当你需要一条可复用的任务定义时，使用 `downcity task`：
 
 ```bash
-town task list
-town task create --title "daily-summary" --description "Send a daily summary" --when "0 9 * * *" --session-id <sessionId>
-town task run daily-summary --reason "manual check"
-town task update daily-summary --status paused
-town task enable daily-summary
-town task disable daily-summary
-town task delete daily-summary
+downcity task list
+downcity task create --title "daily-summary" --description "Send a daily summary" --when "0 9 * * *" --session-id <sessionId>
+downcity task run daily-summary --reason "manual check"
+downcity task update daily-summary --status paused
+downcity task enable daily-summary
+downcity task disable daily-summary
+downcity task delete daily-summary
 ```
 
-如果只是一次性的延迟动作，用 `town chat send --delay/--time`，或者给其他 plugin action 加 `--delay/--time`。如果这件事应该长期存在、可编辑、可手动重跑，再使用 `town task`。
+如果只是一次性的延迟动作，用 `downcity chat send --delay/--time`，或者给其他 plugin action 加 `--delay/--time`。如果这件事应该长期存在、可编辑、可手动重跑，再使用 `downcity task`。
 
 ## SDK 装配
 
@@ -82,7 +82,7 @@ action 名称是 `list`、`create`、`run`、`delete`、`update`、`status`、`e
 
 ## 公开性说明
 
-`TaskPlugin` 从 `@downcity/plugins` 包根导出。它可以在 SDK 中直接装配，但更常见的使用路径仍然是 agent runtime 与 `town task`。
+`TaskPlugin` 从 `@downcity/plugins` 包根导出。它可以在 SDK 中直接装配，但更常见的使用路径仍然是 agent runtime 与 `downcity task`。
 
 ## 相关文档
 

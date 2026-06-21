@@ -1,5 +1,4 @@
 import { source } from "@/lib/source";
-import { productsDocsSource } from "@/lib/products-docs-source";
 import { citySdkDocsSource } from "@/lib/city-sdk-docs-source";
 import { agentSdkDocsSource } from "@/lib/agent-sdk-docs-source";
 import { servicesSdkDocsSource } from "@/lib/services-sdk-docs-source";
@@ -12,7 +11,6 @@ export const loader = async () => {
 
   // Get all documentation pages
   const pages = source.getPages();
-  const productsDocsPages = productsDocsSource.getPages();
   const citySdkPages = citySdkDocsSource.getPages();
   const agentSdkPages = agentSdkDocsSource.getPages();
   const servicesSdkPages = servicesSdkDocsSource.getPages();
@@ -81,12 +79,6 @@ export const loader = async () => {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/products-docs`,
-      lastModified: new Date().toISOString(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    },
-    {
       url: `${baseUrl}/city-sdk-docs`,
       lastModified: new Date().toISOString(),
       changeFrequency: "weekly" as const,
@@ -124,13 +116,6 @@ export const loader = async () => {
     lastModified: new Date().toISOString(),
     changeFrequency: "weekly" as const,
     priority: 0.8,
-  }));
-
-  const productsDocumentationPages = productsDocsPages.map((page) => ({
-    url: `${baseUrl}${page.path}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: "weekly" as const,
-    priority: 0.7,
   }));
 
   const citySdkDocumentationPages = citySdkPages.map((page) => ({
@@ -171,7 +156,6 @@ export const loader = async () => {
   const allPages = [
     ...staticPages,
     ...docsPages,
-    ...productsDocumentationPages,
     ...citySdkDocumentationPages,
     ...agentSdkDocumentationPages,
     ...servicesSdkDocumentationPages,

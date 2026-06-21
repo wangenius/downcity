@@ -56,3 +56,5 @@ cli/downcity/public/
 # Chrome extension signed artifacts
 chrome-extension/dist.crx
 chrome-extension/dist.pem
+
+bin

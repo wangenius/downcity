@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 只处理 `internal.*` 方法。
- * - 这些方法服务 Town 本机管理通道，不属于 RemoteAgent 的用户 SDK 面。
+ * - 这些方法服务 downcity 本机管理通道，不属于 RemoteAgent 的用户 SDK 面。
  * - 实现依赖 `@downcity/agent` 的 internal 路径，故只能由 `@downcity/server` 同进程使用。
  */
 
@@ -244,7 +244,7 @@ function toSystemMessageText(message: SystemModelMessage): string {
 }
 
 /**
- * 把 system messages 转成 Console/Town 可直接渲染的结构。
+ * 把 system messages 转成 Console/downcity 可直接渲染的结构。
  */
 function toSystemPromptPayload(messages: SystemModelMessage[]): {
   sections: Array<{

@@ -39,22 +39,22 @@ export interface WorkboardTileRect extends WorkboardTilePoint {
 /**
  * 小镇建筑内部可渲染的家具类型。
  */
-export type WorkboardTownPropKind = "desk" | "bed" | "shelf" | "table" | "sofa";
+export type WorkboardVillagePropKind = "desk" | "bed" | "shelf" | "table" | "sofa";
 
 /**
  * 小镇建筑内部的单个家具。
  */
-export interface WorkboardTownProp extends WorkboardTileRect {
+export interface WorkboardVillageProp extends WorkboardTileRect {
   /**
    * 家具的像素渲染类型。
    */
-  kind: WorkboardTownPropKind;
+  kind: WorkboardVillagePropKind;
 }
 
 /**
  * 小镇地图上的单栋状态建筑。
  */
-export interface WorkboardTownBuilding extends WorkboardTileRect {
+export interface WorkboardVillageBuilding extends WorkboardTileRect {
   /**
    * 建筑绑定的公开状态簇标识。
    */
@@ -79,7 +79,7 @@ export interface WorkboardTownBuilding extends WorkboardTileRect {
   /**
    * 建筑内部的家具 tile 集合。
    */
-  props: WorkboardTownProp[];
+  props: WorkboardVillageProp[];
 }
 
 /**

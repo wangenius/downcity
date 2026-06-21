@@ -53,7 +53,7 @@ Stripe redirect URLs are generated automatically from `DOWNCITY_CITY_BASE_URL`. 
 
 ## What gets synced in this version
 
-This layer does not grant town access and does not mirror every Stripe object.
+This layer does not grant downcity access and does not mirror every Stripe object.
 
 In this version it does four concrete things:
 
@@ -70,7 +70,7 @@ The one-time topup flow only needs a small Stripe event surface:
 - `checkout.session.expired`: marks the payment as expired
 - `payment_intent.payment_failed`: marks the payment as failed
 
-Other Stripe events can be ignored until the town explicitly needs a new payment flow.
+Other Stripe events can be ignored until the downcity explicitly needs a new payment flow.
 
 ## Idempotency rules
 

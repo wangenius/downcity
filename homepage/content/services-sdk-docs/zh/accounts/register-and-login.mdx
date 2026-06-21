@@ -11,7 +11,7 @@ description: "@downcity/services 下最常见的 register、login 和 user_token
 const session = await guest.service("accounts").action("register").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "city_demo",
 });
 ```
 
@@ -21,13 +21,13 @@ const session = await guest.service("accounts").action("register").invoke({
 const session = await guest.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
-  town_id: "town_demo",
+  city_id: "city_demo",
 });
 ```
 
-## 为什么这里要带 `town_id`
+## 为什么这里要带 `city_id`
 
-因为 service 在登录或注册成功后，通常会顺手向 City 申请该 town 下的 `user_token`。
+因为 service 在登录或注册成功后，通常会顺手向 City 申请该 downcity 下的 `user_token`。
 
 所以它需要知道：
 
@@ -42,7 +42,7 @@ const session = await guest.service("accounts").action("login").invoke({
 const user = new City({
   role: "user",
   city_url,
-  town_id: "town_demo",
+  city_id: "city_demo",
   user_token: session.user_token,
 });
 ```

@@ -4,17 +4,17 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 
-import { CityBase, AIService, Provider } from "../bin/index.js"
+import { Federation, AIService, Provider } from "../bin/index.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
 
-test("CityBase instruction aggregates built-in and service documentation", async () => {
+test("Federation instruction aggregates built-in and service documentation", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-instruction-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     base.use({
       id: "demo",
@@ -37,9 +37,9 @@ test("CityBase instruction aggregates built-in and service documentation", async
 
     const text = await base.instruction()
 
-    assert.match(text, /# Downcity CityBase Instruction/)
+    assert.match(text, /# Downcity Federation Instruction/)
     assert.match(text, /## Env \(env\)/)
-    assert.match(text, /## Towns \(towns\)/)
+    assert.match(text, /## Cities \(cities\)/)
     assert.match(text, /## Demo InstallableService \(demo\)/)
     assert.match(text, /这是一个测试服务说明。/)
     assert.match(text, /GET \/v1\/demo\/ping \| auth: admin/)
@@ -49,19 +49,19 @@ test("CityBase instruction aggregates built-in and service documentation", async
   }
 })
 
-test("CityBase instruction endpoint requires admin auth and returns text", async () => {
+test("Federation instruction endpoint requires admin auth and returns text", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-instruction-http-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const guestResponse = await base.handleRequest(new Request("http://localhost/v1/city/instruction", {
+    const guestResponse = await base.handleRequest(new Request("http://localhost/v1/federation/instruction", {
       method: "GET",
     }))
     assert.equal(guestResponse.status, 401)
@@ -72,7 +72,7 @@ test("CityBase instruction endpoint requires admin auth and returns text", async
       },
     })
 
-    const adminResponse = await base.handleRequest(new Request("http://localhost/v1/city/instruction", {
+    const adminResponse = await base.handleRequest(new Request("http://localhost/v1/federation/instruction", {
       method: "GET",
       headers: {
         authorization: `Bearer ${adminSecret}`,
@@ -81,34 +81,34 @@ test("CityBase instruction endpoint requires admin auth and returns text", async
 
     assert.equal(adminResponse.status, 200)
     assert.equal(adminResponse.headers.get("content-type"), "text/plain; charset=utf-8")
-    assert.match(await adminResponse.text(), /Downcity CityBase Instruction/)
+    assert.match(await adminResponse.text(), /Downcity Federation Instruction/)
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
   }
 })
 
-test("CityBase bootstraps internal secrets into the env table", async () => {
+test("Federation bootstraps internal secrets into the env table", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-env-bootstrap-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     await base.health()
 
     const envProvider = base.getService("env")._env
-    assert.match(envProvider.get("DOWNCITY_CITY_ADMIN_SECRET_KEY"), /^admin_/)
-    assert.match(envProvider.get("DOWNCITY_CITY_TOKEN_SIGNING_KEY"), /^sign_/)
+    assert.match(envProvider.get("DOWNCITY_FEDERATION_ADMIN_SECRET_KEY"), /^admin_/)
+    assert.match(envProvider.get("DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY"), /^sign_/)
     assert.match(envProvider.get("BETTER_AUTH_SECRET"), /^better_auth_/)
 
     const items = await envProvider.list()
     assert.deepEqual(items.map((item) => item.key).sort(), [
       "BETTER_AUTH_SECRET",
-      "DOWNCITY_CITY_ADMIN_SECRET_KEY",
-      "DOWNCITY_CITY_TOKEN_SIGNING_KEY",
+      "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY",
+      "DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY",
     ])
 
     const envTable = await base.table("env")
@@ -126,14 +126,14 @@ test("CityBase bootstraps internal secrets into the env table", async () => {
   }
 })
 
-test("CityBase rejects mismatched town_id for authenticated user requests", async () => {
+test("Federation rejects mismatched city_id for authenticated user requests", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-town-"))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-city-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     const ai = new AIService()
     ai.use({
@@ -151,9 +151,9 @@ test("CityBase rejects mismatched town_id for authenticated user requests", asyn
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const bay_response = await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+    const bay_response = await base.handleRequest(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -163,11 +163,11 @@ test("CityBase rejects mismatched town_id for authenticated user requests", asyn
         name: "Demo",
       }),
     }))
-    const town = await bay_response.json()
+    const city = await bay_response.json()
 
     const authenticator = await base.getAuthenticator()
     const issued = await authenticator.createToken({
-      town_id: town.town_id,
+      city_id: city.city_id,
       user_id: "user_1",
     })
 
@@ -178,7 +178,7 @@ test("CityBase rejects mismatched town_id for authenticated user requests", asyn
         authorization: `Bearer ${issued.user_token}`,
       },
       body: JSON.stringify({
-        town_id: "town_other",
+        city_id: "city_other",
         prompt: "hi",
       }),
     }))
@@ -186,7 +186,7 @@ test("CityBase rejects mismatched town_id for authenticated user requests", asyn
     assert.equal(response.status, 403)
     assert.deepEqual(await response.json(), {
       error: {
-        message: "town_id does not match the authenticated token",
+        message: "city_id does not match the authenticated token",
         type: "server_error",
       },
     })
@@ -204,7 +204,7 @@ test("AIService charges explicit provider charge lines", async () => {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const charges = []
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     const ai = new AIService({
       balance: {
@@ -241,9 +241,9 @@ test("AIService charges explicit provider charge lines", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -251,13 +251,13 @@ test("AIService charges explicit provider charge lines", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
     const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
@@ -315,7 +315,7 @@ test("AIService uses provider bill when model bill is not set", async () => {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const charges = []
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     const ai = new AIService({
       balance: {
@@ -338,8 +338,8 @@ test("AIService uses provider bill when model bill is not set", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
-    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -347,13 +347,13 @@ test("AIService uses provider bill when model bill is not set", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
     const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
       method: "POST",
@@ -407,7 +407,7 @@ test("AIService lets model bill override provider bill", async () => {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const charges = []
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     const ai = new AIService({
       balance: {
@@ -434,8 +434,8 @@ test("AIService lets model bill override provider bill", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
-    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -443,13 +443,13 @@ test("AIService lets model bill override provider bill", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
     const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
       method: "POST",
@@ -471,14 +471,14 @@ test("AIService lets model bill override provider bill", async () => {
   }
 })
 
-test("CityBase AI image jobs persist and finish through waitUntil", async () => {
+test("Federation AI image jobs persist and finish through waitUntil", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
     const message = {
       id: "msg_image_1",
       role: "assistant",
@@ -497,7 +497,7 @@ test("CityBase AI image jobs persist and finish through waitUntil", async () => 
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
     const pending = []
     const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
@@ -552,7 +552,7 @@ test("AIService charges image create requests from model bill", async () => {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const charges = []
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     const ai = new AIService({
       balance: {
@@ -590,9 +590,9 @@ test("AIService charges image create requests from model bill", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -600,13 +600,13 @@ test("AIService charges image create requests from model bill", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
     const response = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
@@ -651,7 +651,7 @@ test("AIService prefers action charge over model bill", async () => {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const charges = []
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     const ai = new AIService({
       balance: {
@@ -691,8 +691,8 @@ test("AIService prefers action charge over model bill", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
-    const town = await (await base.handleRequest(new Request("http://localhost/v1/towns/create", {
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -700,13 +700,13 @@ test("AIService prefers action charge over model bill", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/towns/tokens/apply", {
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ town_id: town.town_id, user_id: "user_1" }),
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
     const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
@@ -729,14 +729,14 @@ test("AIService prefers action charge over model bill", async () => {
   }
 })
 
-test("CityBase AI image jobs can advance through result polling", async () => {
+test("Federation AI image jobs can advance through result polling", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-poll-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
     const message = {
       id: "msg_image_1",
       role: "assistant",
@@ -769,7 +769,7 @@ test("CityBase AI image jobs can advance through result polling", async () => {
     base.use(ai)
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
     const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
@@ -805,14 +805,14 @@ test("CityBase AI image jobs can advance through result polling", async () => {
   }
 })
 
-test("CityBase exposes service env requirements and env catalog", async () => {
+test("Federation exposes service env requirements and env catalog", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-core-services-env-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     base.use({
       id: "payment.stripe",
@@ -856,7 +856,7 @@ test("CityBase exposes service env requirements and env catalog", async () => {
     })
 
     await base.getService("env")._env.upsert({ key: "STRIPE_SECRET_KEY", value: "sk_test" })
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
     const catalogResponse = await base.handleRequest(new Request("http://localhost/v1/env/catalog", {
       method: "GET",
@@ -895,14 +895,14 @@ test("CityBase exposes service env requirements and env catalog", async () => {
   }
 })
 
-test("CityBase refreshes runtime env only after explicit env refresh", async () => {
+test("Federation refreshes runtime env only after explicit env refresh", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-env-refresh-"))
 
   try {
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new CityBase({ db, dialect: "sqlite", raw: db.raw })
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
 
     base.use({
       id: "demo.env",
@@ -924,7 +924,7 @@ test("CityBase refreshes runtime env only after explicit env refresh", async () 
     })
 
     await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_CITY_ADMIN_SECRET_KEY")
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
     const beforeResponse = await base.handleRequest(new Request("http://localhost/v1/demo.env/value", {
       method: "GET",

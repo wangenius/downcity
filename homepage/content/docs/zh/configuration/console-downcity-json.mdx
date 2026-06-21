@@ -18,7 +18,7 @@ City 侧配置统一存储在：
 
 `downcity.db` 中主要包含以下数据域：
 
-1. City AIService 模型目录（providers/models）
+1. Federation AIService 模型目录（providers/models）
 2. City 侧管理的 env 记录（`env_entries`）
 4. Bot 账号凭据池（`channel_accounts`）
 5. Chat 用户授权（`chat_auth_roles`、`chat_auth_role_permissions`、`chat_auth_channel_defaults`、`chat_auth_user_roles`）
@@ -49,7 +49,7 @@ City 侧配置统一存储在：
 关键行为：
 
 1. Agent 运行时 env 最终是 `new Agent({ env }) + <agent>/.env`（`.env` 优先）。
-2. 当宿主是 `town` 时，会先从 `downcity.db` 读取 City 侧 env，再显式传给 `Agent`。
+2. 当宿主是 `downcity` 时，会先从 `downcity.db` 读取 City 侧 env，再显式传给 `Agent`。
 3. `downcity.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
 4. 渠道真实凭据来自 `channel_accounts`。
 5. 用户聊天权限来自 `chat_auth_*` 表，不保存在 agent 项目里。
@@ -57,9 +57,9 @@ City 侧配置统一存储在：
 
 ## 管理入口
 
-本地 Town 状态、项目 plugin 参数、plugin 运行态操作，以及 City 模型绑定，都有对应的产品级命令表层。
+本地 Downcity 状态、项目 plugin 参数、plugin 运行态操作，以及 City 模型绑定，都有对应的产品级命令表层。
 
-具体工作流见 [Town CLI](/zh/products-docs/town-cli)、[Town config 文档](/zh/products-docs/town-cli/config)、[Plugin CLI 文档](/zh/products-docs/town-cli/plugin/plugin) 和 [Town City 文档](/zh/products-docs/town-cli/city)。
+具体工作流见 [Downcity CLI](/zh/docs/reference/cli)、[Downcity config 文档](/zh/docs/reference/cli)、[Plugin CLI 文档](/zh/docs/reference/cli) 和 [Downcity City 文档](/zh/docs/reference/cli)。
 
 ## 相关文档
 
@@ -70,8 +70,8 @@ City 侧配置统一存储在：
 
 以下运行文件仍保留在文件系统（非配置）：
 
-1. `~/.downcity/main/town.pid`
-2. `~/.downcity/main/town.log`
+1. `~/.downcity/main/downcity.pid`
+2. `~/.downcity/main/downcity.daemon.log`
 3. `~/.downcity/main/agents.json`
 
-如果旧安装遗留了 `gateway.pid` 与 `gateway.json`，`town stop` 可能会顺手清理它们。
+如果旧安装遗留了 `gateway.pid` 与 `gateway.json`，`downcity stop` 可能会顺手清理它们。

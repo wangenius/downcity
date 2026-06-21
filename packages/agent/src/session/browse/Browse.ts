@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 统一负责 session 列表摘要、session 详情与 history 分页的投影逻辑。
  * - session title 允许为空；浏览层不会再从首条 user message 推导 fallback title。
- * - 面向 SDK / RemoteAgent / Town gateway route 复用，避免在多个入口重复拼列表与分页语义。
+ * - 面向 SDK / RemoteAgent / downcity gateway route 复用，避免在多个入口重复拼列表与分页语义。
  * - 这里不持有运行态状态；执行状态等动态信息通过调用参数显式注入。
  */
 

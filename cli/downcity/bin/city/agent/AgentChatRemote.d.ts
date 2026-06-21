@@ -5,7 +5,7 @@
  * - 封装 `RemoteAgent` 创建、session 列表、session 创建/获取等远程操作。
  * - 不处理命令行交互与本地 agent 解析，只负责与 daemon RPC 的通信侧逻辑。
  */
-import { RemoteAgent, type AgentSessionSummary, type RemoteAgentSession } from "@downcity/agent";
+import { RemoteAgent, type AgentSessionSummary, type AgentSession } from "@downcity/agent";
 import { type AgentChatSessionSummaryView, type AgentChatTransportOptions } from "../../city/agent/AgentChatTypes.js";
 /**
  * 远端访问目标。
@@ -54,7 +54,7 @@ export declare function getOrCreateRemoteSession(params: {
     remote_agent: RemoteAgent;
     session_id: string;
     create_new_session?: boolean;
-}): Promise<RemoteAgentSession>;
+}): Promise<AgentSession>;
 /**
  * 把 SDK session 摘要转换成 CLI 视图。
  */

@@ -7,13 +7,14 @@
  */
 
 import type {
+  AgentSession,
+  AgentSessionConfigSnapshot,
   AgentSessionForkInput,
   AgentSessionHistoryInput,
   AgentSessionHistoryPage,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSystemSnapshot,
-  RemoteAgentSession,
 } from "@/types/agent/AgentTypes.js";
 import type {
   AgentSessionEvent,
@@ -50,8 +51,10 @@ type RemoteTurnLifecycle = {
 /**
  * 远程 Session 客户端。
  */
-export class RemoteSession implements RemoteAgentSession {
+export class RemoteSession implements AgentSession {
   readonly id: string;
+  readonly agentId: string;
+  readonly config: AgentSessionConfigSnapshot;
 
   private readonly transport: RemoteSessionTransport;
   private readonly event_hub = new SessionEventHub();
@@ -62,9 +65,12 @@ export class RemoteSession implements RemoteAgentSession {
   private event_subscriber_count = 0;
   private event_subscription: TransportSubscription | null = null;
 
-  constructor(transport: RemoteSessionTransport, session_id: string) {
+  constructor(transport: RemoteSessionTransport, info: AgentSessionInfo) {
     this.transport = transport;
-    this.id = session_id;
+    this.id = info.sessionId;
+    this.agentId = info.agentId;
+    // 远程 session 不暴露服务端模型实例，config 返回空快照。
+    this.config = {} as AgentSessionConfigSnapshot;
   }
 
   /**
@@ -134,9 +140,9 @@ export class RemoteSession implements RemoteAgentSession {
   /**
    * 分叉远程 session。
    */
-  async fork(input?: AgentSessionForkInput | string): Promise<RemoteAgentSession> {
+  async fork(input?: AgentSessionForkInput | string): Promise<AgentSession> {
     const info = await this.transport.fork(this.id, input);
-    return new RemoteSession(this.transport, info.sessionId);
+    return new RemoteSession(this.transport, info);
   }
 
   private async ensure_event_pump(): Promise<void> {

@@ -1,9 +1,11 @@
 /**
- * 顶部状态栏组件。
+ * 状态栏组件。
  *
  * 关键点（中文）
- * - 展示当前 agent / session / 状态提示。
- * - 居中或左对齐，超出宽度时截断。
+ * - 不展示 agent / session 标题，避免与终端标题重复。
+ * - 仅在有状态提示（如 `Thinking...`）时渲染单行文本。
+ * - 空闲时返回空数组，不占用消息区域空间。
+ * - 超出宽度时截断。
  */
 import { type Component } from "@earendil-works/pi-tui";
 import type { AppState } from "../../../../city/agent/tui/types.js";
@@ -27,7 +29,7 @@ export declare class StatusLineComponent implements Component {
      */
     invalidate(): void;
     /**
-     * 渲染状态栏。
+     * 渲染状态栏。空闲时不占用空间，仅在有 `status_text` 时返回一行状态提示。
      *
      * @param width 可用宽度。
      * @returns 渲染后的行数组。

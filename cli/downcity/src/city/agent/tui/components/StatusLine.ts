@@ -1,9 +1,11 @@
 /**
- * 顶部状态栏组件。
+ * 状态栏组件。
  *
  * 关键点（中文）
- * - 展示当前 agent / session / 状态提示。
- * - 居中或左对齐，超出宽度时截断。
+ * - 不展示 agent / session 标题，避免与终端标题重复。
+ * - 仅在有状态提示（如 `Thinking...`）时渲染单行文本。
+ * - 空闲时返回空数组，不占用消息区域空间。
+ * - 超出宽度时截断。
  */
 
 import { Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
@@ -15,14 +17,10 @@ import type { AppState } from "@/city/agent/tui/types.js";
  * 顶部状态栏。
  */
 export class StatusLineComponent implements Component {
-  private app_state: AppState;
-
   /**
    * @param app_state 初始应用状态。
    */
-  constructor(app_state: AppState) {
-    this.app_state = app_state;
-  }
+  constructor(private app_state: AppState) {}
 
   /**
    * 更新状态。
@@ -41,7 +39,7 @@ export class StatusLineComponent implements Component {
   }
 
   /**
-   * 渲染状态栏。
+   * 渲染状态栏。空闲时不占用空间，仅在有 `status_text` 时返回一行状态提示。
    *
    * @param width 可用宽度。
    * @returns 渲染后的行数组。
@@ -52,16 +50,12 @@ export class StatusLineComponent implements Component {
       return [""];
     }
 
-    const agent_part = current_theme.bold_fg("textStrong", this.app_state.agent_id);
-    const session_part = current_theme.fg("textDim", this.app_state.session_id);
+    if (!this.app_state.status_text) {
+      return [];
+    }
+
     const status_part = current_theme.fg("primary", this.app_state.status_text);
-
-    const raw_text = `Agent chat · ${agent_part} · ${session_part}`;
-    const full_text = this.app_state.status_text
-      ? `${raw_text} · ${status_part}`
-      : raw_text;
-
-    const text_lines = new Text(full_text, 0, 0).render(safe_width);
+    const text_lines = new Text(status_part, 0, 0).render(safe_width);
     return text_lines.map((line) => truncateToWidth(line, safe_width, "…"));
   }
 }

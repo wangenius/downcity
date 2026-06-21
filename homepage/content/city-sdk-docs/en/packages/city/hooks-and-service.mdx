@@ -12,7 +12,7 @@ The easiest split is:
 - hooks: insert rules into an existing call lifecycle
 - services: add a full reusable capability set into City
 
-That is why auth, usage, and payment do not become separate systems. They become extension points inside the same City runtime.
+That is why auth, usage, and payment do not become separate systems. They become extension points inside the same Federation.
 
 ## When to think hook first
 
@@ -142,11 +142,11 @@ Hooks are best for cross-cutting governance logic, not for turning every feature
 
 ### Services do not replace City
 
-Services add capability into the City runtime. The product-side calling surface is still [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime).
+Services add capability into the Federation. The product-side calling surface is still [@downcity/city](/en/city-sdk-docs/packages/city/federation).
 
 ## Read next
 
-- For unified product-side service calls, read [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime)
+- For unified product-side service calls, read [@downcity/city](/en/city-sdk-docs/packages/city/federation)
 - For auth capability, read [@downcity/services](/en/services-sdk-docs)
 - For usage recording, read [@downcity/services](/en/services-sdk-docs)
 - For one-time Stripe topups, read [@downcity/services](/en/services-sdk-docs)

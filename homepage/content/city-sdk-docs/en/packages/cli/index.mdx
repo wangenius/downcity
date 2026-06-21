@@ -62,11 +62,11 @@ city deploy --verify
 city env refresh
 ```
 
-These commands manage City projects, deployment, and City runtime env cache.
+These commands manage City projects, deployment, and Federation env cache.
 
 ## Boundary with `city city`
 
-`city city` is a City command group. Use it when a local City runtime or agent needs to select a City base and store a City user login:
+`city city` is a City command group. Use it when a local Federation or agent needs to select a City base and store a City user login:
 
 ```bash
 city city use
@@ -81,7 +81,7 @@ So the short version is:
 
 ## Boundaries with other packages
 
-- It does not replace `Admin City` from [@downcity/city](/en/city-sdk-docs/packages/city/city-runtime).
+- It does not replace `Admin City` from [@downcity/city](/en/city-sdk-docs/packages/city/federation).
 - It does not replace the runtime capabilities in [@downcity/city](/en/city-sdk-docs/packages/city).
 - It is better for human-operated inspection and maintenance than for code you embed into a city.
 

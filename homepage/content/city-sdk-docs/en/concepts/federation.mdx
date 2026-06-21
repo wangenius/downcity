@@ -39,8 +39,6 @@ serve({ fetch: base.router().fetch, port: 3001 });
 - exposing the unified `/v1/*` routes
 - coordinating runtime env, hooks, usage, and the database
 
-> When the docs say "City runtime", they mean this `Federation` instance, not the client-side `City`.
-
 ## Client side: `City`
 
 Both product clients and trusted backends use `City` to reach the `Federation`; the only difference is `role`:

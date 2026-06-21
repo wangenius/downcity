@@ -4,7 +4,7 @@
     "index",
     "client",
     "city",
-    "city-runtime",
+    "federation",
     "service-and-action",
     "hooks-and-service",
     "store-and-table"

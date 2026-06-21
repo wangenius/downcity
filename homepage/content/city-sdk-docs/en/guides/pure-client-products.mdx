@@ -5,7 +5,7 @@ description: How new AI products can start as frontend-first products.
 
 “Pure-client product” does not mean “no backend at all.” It means you stop rebuilding the AI backend for every product.
 
-Downcity lets a new product start from the frontend, extension, or app and connect to an already deployed City runtime. You can validate the product UX first, then decide how much product-specific backend you really need.
+Downcity lets a new product start from the frontend, extension, or app and connect to an already deployed Federation. You can validate the product UX first, then decide how much product-specific backend you really need.
 
 ## Good fits
 
@@ -25,7 +25,7 @@ The client owns:
 - holding `city_id`
 - storing or refreshing `user_token`
 
-The City runtime owns:
+The Federation owns:
 
 - provider keys
 - model directory
@@ -41,7 +41,7 @@ City frontend
   ↓
 Your login / token-issuing endpoint
   ↓
-City runtime
+Federation
 ```
 
 That product backend can stay very thin at first:

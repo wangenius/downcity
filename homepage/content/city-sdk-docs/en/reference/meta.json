@@ -2,7 +2,7 @@
   "title": "Reference",
   "pages": [
     "index",
-    "city-runtime",
+    "federation",
     "city-user",
     "city-admin",
     "http-api",

@@ -62,11 +62,11 @@ city deploy --verify
 city env refresh
 ```
 
-这些命令负责 City 项目、部署，以及 City runtime env cache。
+这些命令负责 City 项目、部署，以及 Federation env cache。
 
 ## 和 `city city` 的边界
 
-`city city` 是 City 的命令组。当本机 City runtime 或 agent 需要选择 City base、保存 City user 登录态时，使用它：
+`city city` 是 City 的命令组。当本机 Federation 或 agent 需要选择 City base、保存 City user 登录态时，使用它：
 
 ```bash
 city city use
@@ -81,7 +81,7 @@ city city status
 
 ## 它和其他 package 的边界
 
-- 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city/city-runtime) 里的 `Admin City`
+- 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city/federation) 里的 `Admin City`
 - 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city) 的运行时能力
 - 更适合“人工排查”和“初始化运维”，而不是嵌进产品代码里
 

@@ -5,7 +5,7 @@ description: Why Downcity is a reusable AI infrastructure runtime instead of a s
 
 The core mental model of Downcity is not "one city, one backend." It is:
 
-> one City runtime serving many AI products and workflows.
+> one Federation serving many AI products and workflows.
 
 The reason is simple. What gets rebuilt again and again is usually not your business backend, but the AI call layer:
 
@@ -17,7 +17,7 @@ The reason is simple. What gets rebuilt again and again is usually not your busi
 
 Once you ship a second or third AI product, these capabilities repeat everywhere.
 
-## Many products, one City runtime
+## Many products, one Federation
 
 <div className="dc-doc-flow" aria-label="Many products share one runtime">
   <div className="dc-doc-lane">
@@ -40,13 +40,13 @@ Once you ship a second or third AI product, these capabilities repeat everywhere
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>City runtime</strong>
+      <strong>Federation</strong>
       <span>City model catalog, provider env, Service routes, token validation, usage, and hooks.</span>
     </div>
   </div>
 </div>
 
-## What should stay in the City runtime
+## What should stay in the Federation
 
 - Model catalog and provider configuration
 - `user_token` validation
@@ -72,7 +72,7 @@ If every new product copies a separate AI backend, the same issues appear quickl
 - inconsistent usage and logging conventions
 - every new provider, model, or quota strategy requires edits in many repos
 
-Once the AI call layer is centralized into the City runtime, a new product usually only needs two steps:
+Once the AI call layer is centralized into the Federation, a new product usually only needs two steps:
 
 1. create a new `city_id`
 2. connect `User City` in the product client

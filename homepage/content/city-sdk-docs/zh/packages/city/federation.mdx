@@ -3,7 +3,7 @@ title: Federation 运行时
 description: "Federation 实例、runtime、router、serve 和统一入口在 @downcity/city 里的角色。"
 ---
 
-`Federation` 是 Downcity 的服务端长期运行容器（文档里也叫 City runtime）。它不是一个零散函数集合，而是把 Drizzle db、service、鉴权和统一 `/v1/*` 路由收在同一个服务端入口里。产品侧访问它用的是 `City` 客户端，区别见 [Federation 与 City](/zh/city-sdk-docs/concepts/federation)。
+`Federation` 是 Downcity 的服务端长期运行容器（文档里也叫 Federation）。它不是一个零散函数集合，而是把 Drizzle db、service、鉴权和统一 `/v1/*` 路由收在同一个服务端入口里。产品侧访问它用的是 `City` 客户端，区别见 [Federation 与 City](/zh/city-sdk-docs/concepts/federation)。
 
 ## 这个概念在说什么
 
@@ -178,4 +178,4 @@ provider、model、service、custom service 都只是 Federation 上挂载的能
 - 想知道 Federation 里到底挂的是什么，读 [Service 与 Action](/zh/city-sdk-docs/packages/city/service-and-action)
 - 想知道服务和扩展点怎么进去，读 [Hook 与服务挂载](/zh/city-sdk-docs/packages/city/hooks-and-service)
 - 想知道数据层怎么落地，读 [Store 与 Table](/zh/city-sdk-docs/packages/city/store-and-table)
-- 想看更底层 API，再读 [Federation API](/zh/city-sdk-docs/reference/city-runtime)
+- 想看更底层 API，再读 [Federation API](/zh/city-sdk-docs/reference/federation)

@@ -1,9 +1,9 @@
 ---
 title: City SDK
-description: City runtime and SDK capabilities for many AI products.
+description: Federation and SDK capabilities for many AI products.
 ---
 
-Downcity's City SDK is the way AI builders create, deploy, and call City. A City runtime can serve multiple web apps, extensions, desktop tools, client demos, and internal tools without making each product rebuild the same AI backend.
+Downcity's City SDK is the way AI builders create, deploy, and call City. A Federation can serve multiple web apps, extensions, desktop tools, client demos, and internal tools without making each product rebuild the same AI backend.
 
 City exposes a stable **product-facing service boundary** instead of a raw provider API. Inside City, capabilities are organized as `Service`, `Action`, and `AIService`.
 
@@ -11,7 +11,7 @@ City exposes a stable **product-facing service boundary** instead of a raw provi
 - it calls `text()`, `stream()`, `image()`, and other services through `User City`
 - City keeps the model catalog, provider routing, hooks, usage, and env behind the boundary
 
-The server-side runtime class is `Federation` (also called the City runtime here); product clients use the `City` client to reach it. For the boundary between them, see [Federation and City](/en/city-sdk-docs/concepts/federation).
+The server-side runtime class is `Federation` (also called the Federation here); product clients use the `City` client to reach it. For the boundary between them, see [Federation and City](/en/city-sdk-docs/concepts/federation).
 
 ## Pick your reading path
 
@@ -19,12 +19,12 @@ The server-side runtime class is `Federation` (also called the City runtime here
   <a className="dc-doc-card" href="/en/city-sdk-docs/quickstart">
     <em>Start Here</em>
     <strong>I want to run one full call chain</strong>
-    <p>Deploy a City runtime, expose one model, issue a token, and make a product client call `text()` or `stream()` successfully.</p>
+    <p>Deploy a Federation, expose one model, issue a token, and make a product client call `text()` or `stream()` successfully.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/concepts">
     <em>Mental Model</em>
     <strong>I want to understand the boundaries first</strong>
-    <p>Separate the City runtime, product clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
+    <p>Separate the Federation, product clients, your business backend, AI gateways, and real providers before implementation details start leaking together.</p>
   </a>
   <a className="dc-doc-card" href="/en/city-sdk-docs/guides">
     <em>Real Scenarios</em>
@@ -56,12 +56,12 @@ The server-side runtime class is `Federation` (also called the City runtime here
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
-      <strong>City runtime</strong>
+      <strong>Federation</strong>
       <span>Verifies the token, resolves the model catalog, and dispatches the request to AIService, services, or custom Service actions.</span>
     </div>
     <div className="dc-doc-node">
       <strong>Hooks and usage</strong>
-      <span>Quota, balance, billing, logging, and risk control can plug into the City runtime while your own business rules stay in your system.</span>
+      <span>Quota, balance, billing, logging, and risk control can plug into the Federation while your own business rules stay in your system.</span>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -95,7 +95,7 @@ The server-side runtime class is `Federation` (also called the City runtime here
 
 More precisely:
 
-> The City SDK owns the City runtime and its Service-facing AI infrastructure.
+> The City SDK owns the Federation and its Service-facing AI infrastructure.
 > Your products still own their users, business logic, interface, and pricing model.
 
 ## Recommended order

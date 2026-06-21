@@ -35,11 +35,11 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
-  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+  admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 ```
 
-如果没有显式传 `admin_secret_key`，SDK 会尝试从 `process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY` 读取。
+如果没有显式传 `admin_secret_key`，SDK 会尝试从 `process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` 读取。
 
 ## 典型调用链
 

@@ -35,11 +35,11 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
-  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+  admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 ```
 
-If `admin_secret_key` is omitted, the SDK tries to read `process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY`.
+If `admin_secret_key` is omitted, the SDK tries to read `process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`.
 
 ## Typical call chain
 

@@ -1,0 +1,103 @@
+---
+title: Workboard Game
+description: Game-style map rendering components for the agent activity world
+---
+
+# Workboard Game Components
+
+The workboard game components provide a game-style interactive map for agent activity visualization. They translate the `DowncityWorkboardGameMapConfig` into a playable world.
+
+## Components
+
+| Component | Description |
+|-----------|-------------|
+| `WorkboardGameAtlas` | Top-level zoomed-out view showing all zones and agent positions |
+| `WorkboardGameInspector` | Agent detail inspector panel |
+| `WorkboardGameRoom` | Focused room-level view inside a zone |
+| `WorkboardPixelAgent` | Pixel-art agent character rendered on the game map |
+| `WorkboardRoomField` | Room backdrop and field rendering |
+
+## WorkboardGameAtlas
+
+Atlas-level overview rendering all zones, corridors, and agents.
+
+```tsx
+import { WorkboardGameAtlas } from "@downcity/ui";
+
+<WorkboardGameAtlas
+  config={mapConfig}
+  hoveredAgentId={hoveredId}
+  onSelectZone={(id) => setZone(id)}
+  onHoverAgent={(id) => setHover(id)}
+/>
+```
+
+## WorkboardGameInspector
+
+Inspector panel showing details for a selected agent.
+
+```tsx
+import { WorkboardGameInspector } from "@downcity/ui";
+
+<WorkboardGameInspector
+  agent={selectedAgent}
+  open={true}
+/>
+```
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `agent` | `DowncityWorkboardAgentItem` | Agent to inspect |
+| `open` | `boolean` | Panel visibility |
+
+## WorkboardGameRoom
+
+Zoomed-in room view for a specific zone.
+
+```tsx
+import { WorkboardGameRoom } from "@downcity/ui";
+
+<WorkboardGameRoom
+  skillState={{}}
+  actorResource={{
+    actors: config.actors,
+    routes: config.patrols,
+  }}
+  onActorClick={(agentId) => setSelected(agentId)}
+/>
+```
+
+## WorkboardPixelAgent
+
+Pixel-art agent sprite component.
+
+```tsx
+import { WorkboardPixelAgent } from "@downcity/ui";
+
+<WorkboardPixelAgent
+  agentId={id}
+  agentName={name}
+  active={isFocused}
+  variant="single"
+/>
+```
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `agentId` | `string` | Agent identifier |
+| `agentName` | `string` | Display name |
+| `active` | `boolean` | Highlight as focused |
+| `variant` | `"single"` | Rendering variant |
+
+## WorkboardRoomField
+
+Room backdrop and environment rendering.
+
+```tsx
+import { WorkboardRoomField } from "@downcity/ui";
+
+<WorkboardRoomField
+  room={roomConfig}
+  tileSize={32}
+/>
+```

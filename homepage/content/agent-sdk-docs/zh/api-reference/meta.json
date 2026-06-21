@@ -6,6 +6,8 @@
     "remote-agent-class",
     "session-types",
     "session-events",
-    "sdk-http-endpoints"
+    "sdk-http-endpoints",
+    "agent-rpc",
+    "agent-http"
   ]
 }

@@ -1,0 +1,42 @@
+---
+title: WorkboardStage
+description: Focused agent workboard view for inspecting individual agent state
+---
+
+# WorkboardStage
+
+`WorkboardStage` is a focused panel that shows the detailed state of a single agent — its activity timeline, signals, and status indicators for one zone.
+
+## Import
+
+```tsx
+import { WorkboardStage } from "@downcity/ui";
+```
+
+## Usage
+
+```tsx
+<WorkboardStage
+  zoneId={zoneId}
+  agents={agents}
+  config={config}
+  zoneConfig={stageConfig}
+/>
+```
+
+### Zone config
+
+```tsx
+interface WorkboardStageZoneConfig {
+  title: string;
+  subtitle: string;
+  badge: string;
+}
+```
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `zoneId` | `string` | Current zone identifier |
+| `agents` | `DowncityWorkboardAgentItem[]` | Agents in this zone |
+| `config` | `DowncityWorkboardGameMapConfig` | Full game map config |
+| `zoneConfig` | `WorkboardStageZoneConfig` | Zone display config |

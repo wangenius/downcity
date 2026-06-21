@@ -1,0 +1,67 @@
+---
+title: AgentRPC
+description: RPC transport layer for local Agent — for inter-process session access
+---
+
+# AgentRPC
+
+`AgentRPC` is the RPC transport for a locally running `Agent`. It lets other processes or services access the agent's sessions over a Unix socket or TCP port without going through HTTP.
+
+Only available when you install `@downcity/server`:
+
+```bash
+pnpm add @downcity/server
+```
+
+## Minimal usage
+
+```ts
+import { AgentRPC } from "@downcity/server";
+import { Agent } from "@downcity/agent";
+
+const agent = new Agent({ id: "demo", path: process.cwd() });
+const rpc = new AgentRPC(agent);
+
+const binding = await rpc.listen();
+// listening on a random Unix socket or TCP address
+```
+
+## Constructor
+
+```ts
+new AgentRPC(agent: Agent)
+```
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `agent` | `Agent` | A fully constructed local Agent instance |
+
+## Methods
+
+### `listen(options?)`
+
+Start listening for RPC connections.
+
+```ts
+const binding = await rpc.listen({
+  // optional: specify port or socket path
+});
+```
+
+Returns `AgentRpcBinding` containing the connection endpoint info.
+
+### `close()`
+
+Stop the RPC server and release resources.
+
+```ts
+await rpc.close();
+```
+
+## When to use it
+
+- You want another local process to access the same agent sessions
+- You are building a local multi-process architecture
+- You want a lightweight RPC transport without HTTP overhead
+
+See also: [AgentHTTP](/en/agent-sdk-docs/api-reference/agent-http) for the HTTP transport layer.

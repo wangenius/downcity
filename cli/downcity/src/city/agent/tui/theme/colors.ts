@@ -6,8 +6,6 @@
  * - 每个 token 都附带用途注释，组件必须通过 token 取色，禁止裸写颜色值。
  */
 
-import chalk from "chalk";
-
 /**
  * 语义颜色调色板。
  *
@@ -47,7 +45,25 @@ export interface ColorPalette {
   /** 错误状态：失败消息、错误输出。 */
   error: string;
 
-  /** 用户消息专属角色色：子弹与文本。 */
+  /** diff 新增行。 */
+  diffAdded: string;
+
+  /** diff 删除行。 */
+  diffRemoved: string;
+
+  /** diff 新增行中高亮改变的单词。 */
+  diffAddedStrong: string;
+
+  /** diff 删除行中高亮改变的单词。 */
+  diffRemovedStrong: string;
+
+  /** diff 行号 gutter。 */
+  diffGutter: string;
+
+  /** diff 元信息 / hunk header。 */
+  diffMeta: string;
+
+  /** 用户消息：bullet 与文本颜色。 */
   roleUser: string;
 }
 
@@ -57,15 +73,26 @@ export interface ColorPalette {
 export const darkColors: ColorPalette = {
   primary: "#4FA8FF",
   accent: "#5BC0BE",
+
   text: "#E0E0E0",
   textStrong: "#F5F5F5",
   textDim: "#888888",
   textMuted: "#6B6B6B",
+
   border: "#5A5A5A",
   borderFocus: "#E8A838",
+
   success: "#4EC87E",
   warning: "#E8A838",
   error: "#E85454",
+
+  diffAdded: "#4EC87E",
+  diffRemoved: "#E85454",
+  diffAddedStrong: "#7AD99B",
+  diffRemovedStrong: "#F08585",
+  diffGutter: "#6B6B6B",
+  diffMeta: "#888888",
+
   roleUser: "#FFCB6B",
 };
 
@@ -75,15 +102,26 @@ export const darkColors: ColorPalette = {
 export const lightColors: ColorPalette = {
   primary: "#1565C0",
   accent: "#00838F",
+
   text: "#1A1A1A",
   textStrong: "#1A1A1A",
   textDim: "#454545",
   textMuted: "#5F5F5F",
+
   border: "#737373",
   borderFocus: "#92660A",
+
   success: "#0E7A38",
   warning: "#92660A",
   error: "#B91C1C",
+
+  diffAdded: "#0E7A38",
+  diffRemoved: "#B91C1C",
+  diffAddedStrong: "#0E7A38",
+  diffRemovedStrong: "#B91C1C",
+  diffGutter: "#737373",
+  diffMeta: "#5F5F5F",
+
   roleUser: "#9A4A00",
 };
 
@@ -100,15 +138,4 @@ export type ResolvedTheme = "dark" | "light";
  */
 export function getBuiltInPalette(theme: ResolvedTheme): ColorPalette {
   return theme === "light" ? lightColors : darkColors;
-}
-
-/**
- * 为文本应用指定 token 的前景色。
- *
- * @param token 语义颜色 token。
- * @param text 目标文本。
- * @returns 带 ANSI 颜色的文本。
- */
-export function colorize(token: keyof ColorPalette, text: string): string {
-  return chalk.hex(darkColors[token])(text);
 }

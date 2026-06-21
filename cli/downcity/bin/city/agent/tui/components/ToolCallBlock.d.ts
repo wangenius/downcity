@@ -2,12 +2,13 @@
  * tool 调用与结果展示组件。
  *
  * 关键点（中文）
- * - 标题使用 primary 色，详情行使用 textDim。
+ * - 对齐 Kimi Code ToolCallComponent 的 header 样式：
+ *   运行中显示 `Using {tool} (keyArg)`，完成后显示 `Used {tool} (keyArg)`。
+ * - bullet 颜色随状态变化：pending 用 text，success 用 success，error 用 error。
  * - 同一组件先展示 tool-call 参数，收到 tool-result 后通过 `update_result` 更新为结果。
- * - 支持 tool-call、approval-request、approval-result 三种展示形态。
- * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情，默认折叠，避免单个 tool 结果占满屏幕。
- * - approval-result 根据决策显示 ✓ / ✗ 标记。
- * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
+ * - 支持 approval-request / approval-result 展示形态。
+ * - 默认折叠，仅展示标题与最多 RESULT_PREVIEW_LINES 行详情，
+ *   避免长输出把历史消息顶出可视区。
  */
 import { type Component } from "@earendil-works/pi-tui";
 import type { ToolApprovalRequestEntry, ToolApprovalResultEntry, ToolCallEntry } from "../../../../city/agent/tui/types.js";
@@ -17,9 +18,6 @@ import type { ToolApprovalRequestEntry, ToolApprovalResultEntry, ToolCallEntry }
 export type ToolBlockEntry = ToolCallEntry | ToolApprovalRequestEntry | ToolApprovalResultEntry;
 /**
  * tool 状态/结果卡片组件。
- *
- * 默认折叠，仅展示标题与最多 RESULT_PREVIEW_LINES 行详情，
- * 避免长输出把历史消息顶出可视区。
  */
 export declare class ToolCallBlockComponent implements Component {
     private readonly entry;

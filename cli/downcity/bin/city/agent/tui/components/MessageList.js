@@ -171,8 +171,11 @@ export class MessageListComponent {
         switch (entry.kind) {
             case "user":
                 return new UserMessageComponent(entry.text);
-            case "assistant":
-                return new AssistantMessageComponent(true, entry.text);
+            case "assistant": {
+                const component = new AssistantMessageComponent(true);
+                component.update_content(entry.text);
+                return component;
+            }
             case "tool-call":
             case "tool-approval-request":
             case "tool-approval-result":

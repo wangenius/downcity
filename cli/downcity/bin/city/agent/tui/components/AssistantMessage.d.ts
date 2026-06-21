@@ -2,8 +2,9 @@
  * 助手消息组件。
  *
  * 关键点（中文）
- * - 使用 pi-tui Markdown 渲染助手文本。
+ * - 完全对齐 Kimi Code AssistantMessageComponent：使用 pi-tui Markdown 渲染助手文本。
  * - 前缀使用状态子弹，文本为空时不渲染。
+ * - 支持 set_show_bullet 动态切换 bullet 显示。
  */
 import { type Component } from "@earendil-works/pi-tui";
 /**
@@ -16,11 +17,13 @@ export declare class AssistantMessageComponent implements Component {
     /**
      * @param show_bullet 是否在首行显示状态子弹。
      */
+    constructor(show_bullet?: boolean);
     /**
-     * @param show_bullet 是否在首行显示状态子弹。
-     * @param text 可选初始文本。
+     * 设置是否显示首行 bullet。
+     *
+     * @param show 是否显示。
      */
-    constructor(show_bullet?: boolean, text?: string);
+    set_show_bullet(show: boolean): void;
     /**
      * 更新要渲染的文本。
      *

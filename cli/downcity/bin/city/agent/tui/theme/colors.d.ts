@@ -33,7 +33,19 @@ export interface ColorPalette {
     warning: string;
     /** 错误状态：失败消息、错误输出。 */
     error: string;
-    /** 用户消息专属角色色：子弹与文本。 */
+    /** diff 新增行。 */
+    diffAdded: string;
+    /** diff 删除行。 */
+    diffRemoved: string;
+    /** diff 新增行中高亮改变的单词。 */
+    diffAddedStrong: string;
+    /** diff 删除行中高亮改变的单词。 */
+    diffRemovedStrong: string;
+    /** diff 行号 gutter。 */
+    diffGutter: string;
+    /** diff 元信息 / hunk header。 */
+    diffMeta: string;
+    /** 用户消息：bullet 与文本颜色。 */
     roleUser: string;
 }
 /**
@@ -55,12 +67,4 @@ export type ResolvedTheme = "dark" | "light";
  * @returns 对应的 ColorPalette。
  */
 export declare function getBuiltInPalette(theme: ResolvedTheme): ColorPalette;
-/**
- * 为文本应用指定 token 的前景色。
- *
- * @param token 语义颜色 token。
- * @param text 目标文本。
- * @returns 带 ANSI 颜色的文本。
- */
-export declare function colorize(token: keyof ColorPalette, text: string): string;
 //# sourceMappingURL=colors.d.ts.map

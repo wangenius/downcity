@@ -6,13 +6,17 @@
  *   描述换行的 slash 自动完成，以及标准应用级快捷键回调。
  */
 import { Editor, isKeyRelease, Key, matchesKey, SelectList, } from "@earendil-works/pi-tui";
-import { SlashFirstAutocompleteProvider } from "../../../../city/agent/tui/components/editor/SlashCommandAutocompleteProvider.js";
 import { BUILTIN_SLASH_COMMANDS } from "../../../../city/agent/tui/commands/index.js";
 import { createEditorTheme } from "../../../../city/agent/tui/theme/pi-tui-theme.js";
 import { current_theme } from "../../../../city/agent/tui/theme/index.js";
+import { FileMentionProvider } from "../../../../city/agent/tui/components/editor/FileMentionProvider.js";
 import { WrappingSelectList } from "../../../../city/agent/tui/components/editor/WrappingSelectList.js";
 // oxlint-disable-next-line no-control-regex -- ESC 是匹配 ANSI SGR 转义序列所必需的。
 const ANSI_SGR = /\u001B\[[0-9;]*m/g;
+// paste marker 形如 [paste #1 +123 lines] / [paste #2 1234 chars]。
+const PASTE_MARKER_RE = /\[paste #(\d+)(?: ((?:\+\d+ lines|\d+ chars)))?\]/g;
+const BRACKET_PASTE_START = "\u001B[200~";
+const BRACKET_PASTE_END = "\u001B[201~";
 // Kitty keyboard protocol CSI-u 序列：ESC [ keycode ; modifier[:eventType] u。
 // oxlint-disable-next-line no-control-regex
 const KITTY_CSI_U = /^\u001B\[(\d+);(\d+)((?::\d+)*)u$/;
@@ -34,7 +38,23 @@ export class ChatEditorComponent extends Editor {
     on_ctrl_g;
     on_ctrl_o;
     on_ctrl_s;
+    on_undo;
+    on_insert_newline;
+    on_text_paste;
+    on_shift_tab;
+    /** 空编辑器时按 ↑，返回 true 表示已消费。 */
+    on_up_arrow_empty;
+    /** 空编辑器时按 ↓，返回 true 表示已消费。 */
+    on_down_arrow_empty;
+    /**
+     * 粘贴图片回调（Unix 用 Ctrl-V，Windows 用 Alt-V）。
+     * 返回 true 表示已处理，false 继续走普通粘贴。
+     */
+    on_paste_image;
     connected_above = false;
+    border_highlighted = false;
+    consuming_paste = false;
+    consume_buffer = "";
     submit_handler;
     /**
      * @param tui 所属 TUI 实例。
@@ -50,7 +70,7 @@ export class ChatEditorComponent extends Editor {
             }
             return new SelectList(items, this.getAutocompleteMaxVisible(), theme.selectList);
         };
-        this.setAutocompleteProvider(new SlashFirstAutocompleteProvider(BUILTIN_SLASH_COMMANDS, process.cwd()));
+        this.setAutocompleteProvider(new FileMentionProvider(BUILTIN_SLASH_COMMANDS, process.cwd()));
     }
     /**
      * 设置提交回调。
@@ -78,6 +98,39 @@ export class ChatEditorComponent extends Editor {
         if (isKeyRelease(normalized)) {
             return;
         }
+        // 如果刚刚展开了一个 paste marker，丢弃终端随 Ctrl-V 一起发送的 bracketed paste 尾部。
+        if (this.consuming_paste) {
+            this.consume_buffer += normalized;
+            if (this.consume_buffer.includes(BRACKET_PASTE_END)) {
+                this.consuming_paste = false;
+                this.consume_buffer = "";
+            }
+            return;
+        }
+        // 光标落在已有 paste marker 上时，先展开 marker 而不是粘贴新内容。
+        if (normalized.includes(BRACKET_PASTE_START) && this.expand_paste_marker_at_cursor()) {
+            if (!normalized.includes(BRACKET_PASTE_END)) {
+                this.consuming_paste = true;
+            }
+            return;
+        }
+        // 粘贴图片：Windows 终端保留 Ctrl-V 做自带粘贴，用 Alt-V。
+        const paste_key = process.platform === "win32" ? "alt+v" : Key.ctrl("v");
+        if (matchesKey(normalized, paste_key)) {
+            if (this.expand_paste_marker_at_cursor()) {
+                return;
+            }
+            if (this.on_paste_image !== undefined) {
+                const handler = this.on_paste_image;
+                void handler().then((handled) => {
+                    if (!handled) {
+                        this.on_text_paste?.();
+                        super.handleInput.call(this, normalized);
+                    }
+                });
+                return;
+            }
+        }
         if (matchesKey(normalized, Key.ctrl("d"))) {
             if (this.getText().length === 0) {
                 this.on_ctrl_d?.();
@@ -102,11 +155,31 @@ export class ChatEditorComponent extends Editor {
         }
         const newline_input = get_newline_input(normalized);
         if (newline_input !== undefined) {
+            this.on_insert_newline?.();
             super.handleInput(newline_input);
             return;
         }
+        if (matchesKey(normalized, "shift+tab")) {
+            this.on_shift_tab?.();
+            return;
+        }
+        if (matchesKey(normalized, Key.ctrl("-"))) {
+            this.on_undo?.();
+        }
+        if (matchesKey(normalized, Key.up)) {
+            if (this.getText().length === 0 && this.on_up_arrow_empty) {
+                if (this.on_up_arrow_empty())
+                    return;
+            }
+        }
+        if (matchesKey(normalized, Key.down)) {
+            if (this.getText().length === 0 && this.on_down_arrow_empty) {
+                if (this.on_down_arrow_empty())
+                    return;
+            }
+        }
         if (matchesKey(normalized, Key.escape)) {
-            if (this.isShowingAutocomplete()) {
+            if (this.has_autocomplete_activity()) {
                 this.cancel_autocomplete_activity();
                 return;
             }
@@ -142,11 +215,45 @@ export class ChatEditorComponent extends Editor {
             }
         }
         return wrap_with_side_borders(lines, (s) => this.borderColor(s), {
-            connected_above: this.connected_above,
+            connected_above: this.connected_above && !this.border_highlighted,
         });
+    }
+    /**
+     * 是否正在显示自动完成或仍有未完成的补全请求。
+     */
+    has_autocomplete_activity() {
+        const autocomplete = this;
+        return (this.isShowingAutocomplete() ||
+            autocomplete.autocompleteAbort !== undefined ||
+            autocomplete.autocompleteDebounceTimer !== undefined);
     }
     cancel_autocomplete_activity() {
         this.cancelAutocomplete();
+    }
+    /**
+     * 如果光标位于 paste marker 上，将其展开为实际内容。
+     */
+    expand_paste_marker_at_cursor() {
+        const { line, col } = this.getCursor();
+        const lines = this.getLines();
+        const current_line = lines[line] ?? "";
+        for (const match of current_line.matchAll(PASTE_MARKER_RE)) {
+            const start = match.index ?? 0;
+            const end = start + match[0].length;
+            if (col < start || col > end)
+                continue;
+            const paste_id = Number(match[1]);
+            const pastes = this.pastes;
+            const content = pastes.get(paste_id);
+            if (content === undefined)
+                return false;
+            const text = this.getText();
+            const offset = lines.slice(0, line).reduce((sum, l) => sum + l.length + 1, 0) + start;
+            const new_text = text.slice(0, offset) + content + text.slice(offset + match[0].length);
+            this.setText(new_text);
+            return true;
+        }
+        return false;
     }
 }
 /**
@@ -178,7 +285,7 @@ function normalize_caps_locked_ctrl(data) {
     }
     const lowered_codepoint = codepoint + 32;
     const stripped_modifier = (modifier & ~CAPS_LOCK_BIT) + 1;
-    return `\u001B[${String(lowered_codepoint)};${String(stripped_modifier)}${tail}u`;
+    return "\u001B[" + String(lowered_codepoint) + ";" + String(stripped_modifier) + tail + "u";
 }
 function get_newline_input(data) {
     if (data === "\n" || data === "\u001B\r" || data === "\u001B[13;2~") {
@@ -213,7 +320,7 @@ function strip_sgr(s) {
     return s.replace(ANSI_SGR, "");
 }
 /**
- * 高亮第一行里的 `/token`。
+ * 高亮第一行里的 /token。
  */
 function highlight_first_slash_token(line) {
     const visible = strip_sgr(line);
@@ -239,7 +346,38 @@ function highlight_first_slash_token(line) {
     if (token.slice(1).includes("/")) {
         return undefined;
     }
-    return highlight_visible_ranges(line, [{ start: slash_index, end: end_visible }]);
+    const ranges = [{ start: slash_index, end: end_visible }];
+    if (token === "/goal") {
+        ranges.push(...goal_command_path_ranges(visible, end_visible));
+    }
+    return highlight_visible_ranges(line, ranges);
+}
+function goal_command_path_ranges(visible, command_end) {
+    const next_range = read_token_range(visible, command_end);
+    if (next_range === null || visible.slice(next_range.start, next_range.end) !== "next") {
+        return [];
+    }
+    const ranges = [next_range];
+    const manage_range = read_token_range(visible, next_range.end);
+    if (manage_range !== null &&
+        visible.slice(manage_range.start, manage_range.end) === "manage") {
+        ranges.push(manage_range);
+    }
+    return ranges;
+}
+function read_token_range(visible, start) {
+    let token_start = start;
+    while (token_start < visible.length && is_token_space(visible[token_start]))
+        token_start += 1;
+    if (token_start >= visible.length)
+        return null;
+    let token_end = token_start;
+    while (token_end < visible.length && !is_token_space(visible[token_end]))
+        token_end += 1;
+    return { start: token_start, end: token_end };
+}
+function is_token_space(ch) {
+    return ch === " " || ch === "\t";
 }
 function highlight_visible_ranges(line, ranges) {
     let out = "";
@@ -254,7 +392,7 @@ function highlight_visible_ranges(line, ranges) {
     return out + line.slice(raw_cursor);
 }
 /**
- * 在第一行内容前注入 `> ` prompt 符号。
+ * 在第一行内容前注入 >  prompt 符号。
  */
 function inject_prompt_symbol(line) {
     if (line.length < 4) {

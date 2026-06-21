@@ -5,7 +5,6 @@
  * - 完全参考 Kimi Code 的语义 token 设计，确保颜色含义一致。
  * - 每个 token 都附带用途注释，组件必须通过 token 取色，禁止裸写颜色值。
  */
-import chalk from "chalk";
 /**
  * 暗色主题默认调色板。
  */
@@ -21,6 +20,12 @@ export const darkColors = {
     success: "#4EC87E",
     warning: "#E8A838",
     error: "#E85454",
+    diffAdded: "#4EC87E",
+    diffRemoved: "#E85454",
+    diffAddedStrong: "#7AD99B",
+    diffRemovedStrong: "#F08585",
+    diffGutter: "#6B6B6B",
+    diffMeta: "#888888",
     roleUser: "#FFCB6B",
 };
 /**
@@ -38,6 +43,12 @@ export const lightColors = {
     success: "#0E7A38",
     warning: "#92660A",
     error: "#B91C1C",
+    diffAdded: "#0E7A38",
+    diffRemoved: "#B91C1C",
+    diffAddedStrong: "#0E7A38",
+    diffRemovedStrong: "#B91C1C",
+    diffGutter: "#737373",
+    diffMeta: "#5F5F5F",
     roleUser: "#9A4A00",
 };
 /**
@@ -48,15 +59,5 @@ export const lightColors = {
  */
 export function getBuiltInPalette(theme) {
     return theme === "light" ? lightColors : darkColors;
-}
-/**
- * 为文本应用指定 token 的前景色。
- *
- * @param token 语义颜色 token。
- * @param text 目标文本。
- * @returns 带 ANSI 颜色的文本。
- */
-export function colorize(token, text) {
-    return chalk.hex(darkColors[token])(text);
 }
 //# sourceMappingURL=colors.js.map

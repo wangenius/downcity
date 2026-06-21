@@ -2,15 +2,16 @@
  * tool 调用与结果展示组件。
  *
  * 关键点（中文）
- * - 标题使用 primary 色，详情行使用 textDim。
+ * - 对齐 Kimi Code ToolCallComponent 的 header 样式：
+ *   运行中显示 `Using {tool} (keyArg)`，完成后显示 `Used {tool} (keyArg)`。
+ * - bullet 颜色随状态变化：pending 用 text，success 用 success，error 用 error。
  * - 同一组件先展示 tool-call 参数，收到 tool-result 后通过 `update_result` 更新为结果。
- * - 支持 tool-call、approval-request、approval-result 三种展示形态。
- * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情，默认折叠，避免单个 tool 结果占满屏幕。
- * - approval-result 根据决策显示 ✓ / ✗ 标记。
- * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
+ * - 支持 approval-request / approval-result 展示形态。
+ * - 默认折叠，仅展示标题与最多 RESULT_PREVIEW_LINES 行详情，
+ *   避免长输出把历史消息顶出可视区。
  */
 
-import { Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { Spacer, Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 
 import {
   FAILURE_MARK,
@@ -33,11 +34,11 @@ export type ToolBlockEntry =
   | ToolApprovalRequestEntry
   | ToolApprovalResultEntry;
 
+/** key argument 最大展示长度。 */
+const MAX_KEY_ARG_LENGTH = 60;
+
 /**
  * tool 状态/结果卡片组件。
- *
- * 默认折叠，仅展示标题与最多 RESULT_PREVIEW_LINES 行详情，
- * 避免长输出把历史消息顶出可视区。
  */
 export class ToolCallBlockComponent implements Component {
   private readonly entry: ToolBlockEntry;
@@ -110,10 +111,6 @@ export class ToolCallBlockComponent implements Component {
       return [""];
     }
 
-    const bullet = current_theme.fg("primary", STATUS_BULLET);
-    const bullet_width = visibleWidth(bullet);
-    const content_width = Math.max(1, safe_width - bullet_width);
-
     const lines: string[] = [];
 
     // 关键点（中文）：对齐 Kimi Code，tool 卡片顶部自带 1 行间距。
@@ -121,20 +118,20 @@ export class ToolCallBlockComponent implements Component {
       lines.push(line);
     }
 
-    // header：标题一行，首行带 bullet。
+    // header：build_title 已包含染色 bullet。
     const title = this.build_title();
-    const title_lines = new Text(current_theme.fg("primary", title), 0, 0).render(content_width);
+    const title_lines = new Text(title, 0, 0).render(safe_width);
     for (let i = 0; i < title_lines.length; i += 1) {
-      const prefix = i === 0 ? bullet : " ".repeat(bullet_width);
-      lines.push(prefix + title_lines[i]);
+      const line = i === 0 ? title_lines[i] : MESSAGE_INDENT + title_lines[i];
+      lines.push(line);
     }
 
-    // body：先按可用宽度算出实际视觉行，再按展开状态截断。
+    // body：缩进与 bullet 对齐。
     const detail_lines = this.build_detail_lines();
     const body_lines: string[] = [];
     for (const detail of detail_lines) {
       const colored_detail = current_theme.fg("textDim", detail);
-      const rendered = new Text(colored_detail, 0, 0).render(content_width);
+      const rendered = new Text(colored_detail, 0, 0).render(safe_width);
       for (const line of rendered) {
         body_lines.push(MESSAGE_INDENT + line);
       }
@@ -157,16 +154,41 @@ export class ToolCallBlockComponent implements Component {
   private build_title(): string {
     switch (this.entry.kind) {
       case "tool-call": {
-        if (this.entry.result !== undefined || this.entry.status === "success") {
-          return `[result] ${this.entry.tool_name}`;
+        const is_success = this.entry.status === "success";
+        const is_error = this.entry.status === "error";
+        const bullet = is_success
+          ? current_theme.fg("success", STATUS_BULLET)
+          : is_error
+            ? current_theme.fg("error", FAILURE_MARK)
+            : current_theme.fg("text", STATUS_BULLET);
+        let verb: string;
+        if (is_error) {
+          verb = "Failed";
+        } else if (is_success) {
+          verb = "Used";
+        } else {
+          verb = "Using";
         }
-        return `[tool] ${this.entry.tool_name}`;
+        const tool_label = current_theme.bold_fg("primary", this.entry.tool_name);
+        const key_arg = extract_key_argument(this.entry.tool_name, this.entry.args);
+        const arg_str = key_arg ? current_theme.dim(` (${key_arg})`) : "";
+        return `${bullet}${verb} ${tool_label}${arg_str}`;
       }
-      case "tool-approval-request":
-        return `[approval] ${this.entry.tool_name} requests unrestricted sandbox`;
+      case "tool-approval-request": {
+        const bullet = current_theme.fg("accent", "▶ ");
+        const tool_label = current_theme.bold_fg("primary", this.entry.tool_name);
+        return `${bullet}${tool_label} requests unrestricted sandbox`;
+      }
       case "tool-approval-result": {
-        const mark = this.entry.decision === "approved" ? SUCCESS_MARK : FAILURE_MARK;
-        return `[approval] ${mark}${this.entry.decision}`;
+        const is_approved = this.entry.decision === "approved";
+        const mark = is_approved
+          ? current_theme.fg("success", SUCCESS_MARK)
+          : current_theme.fg("error", FAILURE_MARK);
+        const decision_text = current_theme.bold_fg(
+          is_approved ? "success" : "error",
+          this.entry.decision,
+        );
+        return `${mark}${decision_text}`;
       }
       default:
         return "";
@@ -225,4 +247,78 @@ export class ToolCallBlockComponent implements Component {
     }
     return trimmed.split("\n");
   }
+}
+
+/**
+ * 路径类参数 key 集合：截断时保留尾部文件名。
+ */
+const PATH_KEYS = new Set(["path", "file_path"]);
+
+/**
+ * 从 tool 参数中提取用于 header 展示的关键参数。
+ *
+ * 对齐 Kimi Code 的 extractKeyArgument：
+ * - 优先取工具语义上最标识性的参数。
+ * - glob 拼接 pattern + path 作为摘要。
+ * - 路径类参数超长时保留尾部文件名（前缀用 … 省略）。
+ */
+function extract_key_argument(tool_name: string, args: unknown): string | null {
+  if (args === null || typeof args !== "object") {
+    return null;
+  }
+  const record = args as Record<string, unknown>;
+  const lower_name = tool_name.toLowerCase();
+
+  // glob：拼接 pattern 与可选 path，生成单行摘要。
+  if (lower_name === "glob") {
+    const pattern = record["pattern"];
+    if (typeof pattern !== "string" || pattern.length === 0) {
+      return null;
+    }
+    let summary = pattern;
+    const path = record["path"];
+    if (typeof path === "string" && path.length > 0) {
+      summary += ` · ${path}`;
+    }
+    return truncate_arg_value("pattern", summary);
+  }
+
+  const key_map: Record<string, string[]> = {
+    shell_exec: ["cmd", "command"],
+    shell_start: ["cmd", "command"],
+    shell_write: ["cmd", "command", "input"],
+    read: ["path", "file_path"],
+    write: ["path", "file_path"],
+    edit: ["path", "file_path"],
+    grep: ["pattern"],
+  };
+
+  const candidates = key_map[lower_name] ?? Object.keys(record);
+  for (const key of candidates) {
+    const value = record[key];
+    if (typeof value === "string" && value.length > 0) {
+      const first_line = value.split("\n")[0] ?? value;
+      const display =
+        lower_name.includes("shell") && value.includes("\n")
+          ? `${first_line}…`
+          : first_line;
+      return truncate_arg_value(key, display);
+    }
+  }
+  return null;
+}
+
+/**
+ * 截断过长参数值，保持 header 简洁。
+ *
+ * 路径类 key 保留尾部文件名（前缀省略为 …），其余 key 截断尾部。
+ */
+function truncate_arg_value(key: string, value: string): string {
+  if (value.length <= MAX_KEY_ARG_LENGTH) {
+    return value;
+  }
+  if (PATH_KEYS.has(key)) {
+    return "…" + value.slice(value.length - (MAX_KEY_ARG_LENGTH - 1));
+  }
+  return value.slice(0, MAX_KEY_ARG_LENGTH - 1) + "…";
 }

@@ -46,6 +46,18 @@ export declare class Theme {
      */
     dim_fg(token: ColorToken, text: string): string;
     /**
+     * 前景色 + 斜体。
+     */
+    italic_fg(token: ColorToken, text: string): string;
+    /**
+     * 前景色 + 下划线。
+     */
+    underline_fg(token: ColorToken, text: string): string;
+    /**
+     * 前景色 + 删除线。
+     */
+    strikethrough_fg(token: ColorToken, text: string): string;
+    /**
      * 背景色。
      */
     bg(token: ColorToken, text: string): string;
@@ -57,6 +69,18 @@ export declare class Theme {
      * 纯暗淡，不带颜色。
      */
     dim(text: string): string;
+    /**
+     * 纯斜体，不带颜色。
+     */
+    italic(text: string): string;
+    /**
+     * 纯下划线，不带颜色。
+     */
+    underline(text: string): string;
+    /**
+     * 纯删除线，不带颜色。
+     */
+    strikethrough(text: string): string;
 }
 /**
  * 全局主题单例，默认暗色。

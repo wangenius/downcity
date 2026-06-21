@@ -73,6 +73,28 @@ export class Theme {
     return chalk.hex(this.palette[token]).dim(text);
   }
 
+
+  /**
+   * 前景色 + 斜体。
+   */
+  italic_fg(token: ColorToken, text: string): string {
+    return chalk.hex(this.palette[token]).italic(text);
+  }
+
+  /**
+   * 前景色 + 下划线。
+   */
+  underline_fg(token: ColorToken, text: string): string {
+    return chalk.hex(this.palette[token]).underline(text);
+  }
+
+  /**
+   * 前景色 + 删除线。
+   */
+  strikethrough_fg(token: ColorToken, text: string): string {
+    return chalk.hex(this.palette[token]).strikethrough(text);
+  }
+
   /**
    * 背景色。
    */
@@ -92,6 +114,27 @@ export class Theme {
    */
   dim(text: string): string {
     return chalk.dim(text);
+  }
+
+  /**
+   * 纯斜体，不带颜色。
+   */
+  italic(text: string): string {
+    return chalk.italic(text);
+  }
+
+  /**
+   * 纯下划线，不带颜色。
+   */
+  underline(text: string): string {
+    return chalk.underline(text);
+  }
+
+  /**
+   * 纯删除线，不带颜色。
+   */
+  strikethrough(text: string): string {
+    return chalk.strikethrough(text);
   }
 }
 

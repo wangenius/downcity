@@ -2,8 +2,9 @@
  * 助手消息组件。
  *
  * 关键点（中文）
- * - 使用 pi-tui Markdown 渲染助手文本。
+ * - 完全对齐 Kimi Code AssistantMessageComponent：使用 pi-tui Markdown 渲染助手文本。
  * - 前缀使用状态子弹，文本为空时不渲染。
+ * - 支持 set_show_bullet 动态切换 bullet 显示。
  */
 
 import { Container, Markdown, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
@@ -21,19 +22,21 @@ export class AssistantMessageComponent implements Component {
   private last_text = "";
   private show_bullet: boolean;
 
- /**
-  * @param show_bullet 是否在首行显示状态子弹。
-  */
   /**
    * @param show_bullet 是否在首行显示状态子弹。
-   * @param text 可选初始文本。
    */
-  constructor(show_bullet: boolean = true, text?: string) {
+  constructor(show_bullet: boolean = true) {
     this.show_bullet = show_bullet;
     this.content_container = new Container();
-    if (text !== undefined && text.trim().length > 0) {
-      this.update_content(text);
-    }
+  }
+
+  /**
+   * 设置是否显示首行 bullet。
+   *
+   * @param show 是否显示。
+   */
+  set_show_bullet(show: boolean): void {
+    this.show_bullet = show;
   }
 
   /**
@@ -42,13 +45,16 @@ export class AssistantMessageComponent implements Component {
    * @param text 助手文本。
    */
   update_content(text: string): void {
-    if (text === this.last_text) {
+    const display_text = text;
+    if (display_text === this.last_text) {
       return;
     }
-    this.last_text = text;
+    this.last_text = display_text;
     this.content_container.clear();
-    if (text.trim().length > 0) {
-      this.content_container.addChild(new Markdown(text.trim(), 0, 0, createMarkdownTheme()));
+    if (display_text.trim().length > 0) {
+      this.content_container.addChild(
+        new Markdown(display_text.trim(), 0, 0, createMarkdownTheme()),
+      );
     }
   }
 
@@ -56,6 +62,7 @@ export class AssistantMessageComponent implements Component {
    * 主题切换时重置缓存。
    */
   invalidate(): void {
+    // Markdown 会缓存 ANSI 颜色，主题切换后需要重建。
     this.content_container.clear();
     if (this.last_text.trim().length > 0) {
       this.content_container.addChild(

@@ -52,34 +52,21 @@ interface ShellOptions {
 
 `shell.dispose()` — Release shell resources.
 
-## SandboxRunner
+## Sandbox
 
-`SandboxRunner` provides an isolated execution environment. It wraps the shell with sandbox policies.
+Sandboxing is configured through the project's `downcity.json` and resolved at runtime by the SDK. The sandbox backend is selected automatically based on the host platform:
 
-```ts
-import { SandboxRunner } from "@downcity/shell";
-import { Sandbox } from "@downcity/shell";
+- `macos-seatbelt` — macOS sandbox
+- `linux-bubblewrap` — Linux sandbox
+- `unrestricted-host` — No sandboxing
 
-const runner = new SandboxRunner({
-  sandbox: Sandbox.DISABLED,  // or Sandbox.NSJAIL, Sandbox.BUBBLEWRAP
-  timeLimitMs: 30_000,
-});
-```
-
-### Sandbox backends
-
-| Value | Backend | Description |
-|-------|---------|-------------|
-| `Sandbox.DISABLED` | — | No sandboxing, run commands directly |
-| `Sandbox.NSJAIL` | nsjail | Lightweight sandbox using Linux namespaces |
-| `Sandbox.BUBBLEWRAP` | bubblewrap | Sandbox using bubblewrap |
+The SDK's internal sandbox runner handles shell subprocess creation, platform-specific backend invocation, and one-shot command execution. You do not normally need to interact with it directly.
 
 ### ConfigResolver
 
 `SandboxConfigResolver` loads sandbox configuration from the project environment.
 
 `SandboxPreflight` runs pre-execution checks to validate the sandbox setup.
-
 ## Approval
 
 `ShellApprovalRuntime` manages the interactive approval loop — command execution requires a manual approve/deny step when `autoApprove` is false.

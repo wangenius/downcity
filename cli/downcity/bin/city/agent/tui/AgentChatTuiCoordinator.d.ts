@@ -145,5 +145,10 @@ export declare class AgentChatTuiCoordinator {
      * @returns 错误文本。
      */
     private format_error;
+    /**
+     * 切换最后一个 tool 卡片的展开/折叠状态。
+     * 对齐 Kimi Code 的 Ctrl+O 展开 tool output。
+     */
+    private toggle_last_tool_block;
 }
 //# sourceMappingURL=AgentChatTuiCoordinator.d.ts.map

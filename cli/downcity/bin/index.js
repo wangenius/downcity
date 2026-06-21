@@ -21,7 +21,7 @@ if (argv.length === 1 && (argv[0] === "-v" || argv[0] === "--version")) {
     process.exit(0);
 }
 const invoked = process.argv[1] ? process.argv[1].replace(/\\/g, "/").split("/").pop() : "downcity";
-if (invoked === "downfed") {
+if (invoked === "downfed" || invoked === "fed") {
     const { runDownfedCli } = await import("./cli/downfed.js");
     await runDownfedCli();
 }

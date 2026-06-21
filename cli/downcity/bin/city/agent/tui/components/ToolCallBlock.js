@@ -7,7 +7,7 @@
  * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情，默认折叠，避免单个 tool 结果占满屏幕。
  * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
  */
-import { Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { Spacer, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { STATUS_BULLET } from "../../../../city/agent/tui/constant/symbols.js";
 import { MESSAGE_INDENT, RESULT_PREVIEW_LINES } from "../../../../city/agent/tui/constant/rendering.js";
 import { current_theme } from "../../../../city/agent/tui/theme/index.js";
@@ -20,11 +20,13 @@ import { current_theme } from "../../../../city/agent/tui/theme/index.js";
 export class ToolCallBlockComponent {
     entry;
     expanded = false;
+    spacer;
     /**
      * @param entry tool 相关条目。
      */
     constructor(entry) {
         this.entry = entry;
+        this.spacer = new Spacer(1);
     }
     /**
      * 切换展开/折叠状态。
@@ -59,6 +61,10 @@ export class ToolCallBlockComponent {
         const bullet_width = visibleWidth(bullet);
         const content_width = Math.max(1, safe_width - bullet_width);
         const lines = [];
+        // 关键点（中文）：对齐 Kimi Code，tool 卡片顶部自带 1 行间距。
+        for (const line of this.spacer.render(safe_width)) {
+            lines.push(line);
+        }
         // header：标题一行，首行带 bullet。
         const title = this.build_title();
         const title_lines = new Text(current_theme.fg("primary", title), 0, 0).render(content_width);

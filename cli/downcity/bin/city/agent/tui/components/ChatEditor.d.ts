@@ -31,5 +31,13 @@ export declare class ChatEditorComponent extends Editor {
      * 清空当前输入。
      */
     clear(): void;
+    /**
+     * 覆写渲染，注入 prompt 符号并高亮 slash 命令首 token。
+      * 对齐 Kimi Code 的 CustomEditor.render。
+      *
+      * @param width 可用宽度。
+      * @returns 渲染后的行数组。
+      */
+    render(width: number): string[];
 }
 //# sourceMappingURL=ChatEditor.d.ts.map

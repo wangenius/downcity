@@ -8,7 +8,7 @@
  * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
  */
 
-import { Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
 import { STATUS_BULLET } from "@/city/agent/tui/constant/symbols.js";
 import { MESSAGE_INDENT, RESULT_PREVIEW_LINES } from "@/city/agent/tui/constant/rendering.js";
@@ -38,12 +38,14 @@ export type ToolBlockEntry =
 export class ToolCallBlockComponent implements Component {
   private readonly entry: ToolBlockEntry;
   private expanded = false;
+  private readonly spacer: Spacer;
 
   /**
    * @param entry tool 相关条目。
    */
   constructor(entry: ToolBlockEntry) {
     this.entry = entry;
+    this.spacer = new Spacer(1);
   }
 
   /**
@@ -84,6 +86,11 @@ export class ToolCallBlockComponent implements Component {
     const content_width = Math.max(1, safe_width - bullet_width);
 
     const lines: string[] = [];
+
+    // 关键点（中文）：对齐 Kimi Code，tool 卡片顶部自带 1 行间距。
+    for (const line of this.spacer.render(safe_width)) {
+      lines.push(line);
+    }
 
     // header：标题一行，首行带 bullet。
     const title = this.build_title();

@@ -21,6 +21,7 @@ import {
   StatusLineComponent,
 } from "@/city/agent/tui/components/index.js";
 import { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
+import { ToolCallBlockComponent } from "@/city/agent/tui/components/ToolCallBlock.js";
 import { SessionPickerComponent } from "@/city/agent/tui/dialogs/SessionPicker.js";
 import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
@@ -417,6 +418,11 @@ export class AgentChatTuiCoordinator {
       void this.stop();
       return { consume: true };
     }
+    if (matchesKey(data, Key.ctrl("o"))) {
+      this.toggle_last_tool_block();
+      this.request_render();
+      return { consume: true };
+    }
     return undefined;
   }
 
@@ -435,5 +441,20 @@ export class AgentChatTuiCoordinator {
    */
   private format_error(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+  }
+
+  /**
+   * 切换最后一个 tool 卡片的展开/折叠状态。
+   * 对齐 Kimi Code 的 Ctrl+O 展开 tool output。
+   */
+  private toggle_last_tool_block(): void {
+    const children = this.message_list.children;
+    for (let i = children.length - 1; i >= 0; i -= 1) {
+      const child = children[i];
+      if (child instanceof ToolCallBlockComponent) {
+        child.toggle();
+        return;
+      }
+    }
   }
 }

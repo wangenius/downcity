@@ -22,6 +22,7 @@ export type ToolBlockEntry = ToolCallEntry | ToolResultEntry | ToolApprovalReque
 export declare class ToolCallBlockComponent implements Component {
     private readonly entry;
     private expanded;
+    private readonly spacer;
     /**
      * @param entry tool 相关条目。
      */

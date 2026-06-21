@@ -7,13 +7,13 @@
  * - 不维护固定视口高度，不手动切片；交给外层 TUI 统一裁剪顶部溢出。
  * - 对齐 Kimi Code 的 transcriptContainer 思路：消息自然向下生长，最新内容靠近底部输入区。
  */
-import { Text } from "@earendil-works/pi-tui";
 import { GutterContainer } from "../../../../city/agent/tui/components/GutterContainer.js";
+import { NoticeMessageComponent } from "../../../../city/agent/tui/components/NoticeMessage.js";
+import { StatusMessageComponent } from "../../../../city/agent/tui/components/StatusMessage.js";
 import { CHROME_GUTTER } from "../../../../city/agent/tui/constant/rendering.js";
 import { AssistantMessageComponent } from "../../../../city/agent/tui/components/AssistantMessage.js";
 import { ToolCallBlockComponent } from "../../../../city/agent/tui/components/ToolCallBlock.js";
 import { UserMessageComponent } from "../../../../city/agent/tui/components/UserMessage.js";
-import { current_theme } from "../../../../city/agent/tui/theme/index.js";
 /**
  * 消息流展示组件。
  */
@@ -82,9 +82,9 @@ export class MessageListComponent extends GutterContainer {
             case "tool-approval-result":
                 return new ToolCallBlockComponent(entry);
             case "status":
-                return new Text(current_theme.fg("textDim", entry.text), 0, 0);
+                return new StatusMessageComponent(entry.text);
             case "error":
-                return new Text(current_theme.fg("error", entry.text), 0, 0);
+                return new NoticeMessageComponent(entry.text);
             default:
                 return new GutterContainer(CHROME_GUTTER, CHROME_GUTTER);
         }

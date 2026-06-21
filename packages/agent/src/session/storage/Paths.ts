@@ -46,6 +46,76 @@ export function getSdkAgentSessionsRootDirPath(
 }
 
 /**
+ * 单个 agent 的已归档 sessions 根目录路径。
+ *
+ * 关键点（中文）
+ * - `archive_session` 会把整个 session 目录从 `sessions/<sessionId>` 移动到此处。
+ * - `clean_archive` 会永久删除该目录下的全部内容。
+ */
+export function getSdkAgentArchivedSessionsDirPath(
+  projectRoot: string,
+  agentId: string,
+): string {
+  return path.join(getSdkAgentDirPath(projectRoot, agentId), "archived-sessions");
+}
+
+/**
+ * 单个已归档 session 的根目录路径。
+ */
+export function getSdkAgentArchivedSessionDirPath(
+  projectRoot: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getSdkAgentArchivedSessionsDirPath(projectRoot, agentId),
+    encodeURIComponent(String(sessionId || "").trim()),
+  );
+}
+
+/**
+ * 单个已归档 session 的消息目录路径。
+ */
+export function getSdkAgentArchivedSessionMessagesDirPath(
+  projectRoot: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getSdkAgentArchivedSessionDirPath(projectRoot, agentId, sessionId),
+    "messages",
+  );
+}
+
+/**
+ * 单个已归档 session 的消息 JSONL 文件路径。
+ */
+export function getSdkAgentArchivedSessionMessagesPath(
+  projectRoot: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getSdkAgentArchivedSessionMessagesDirPath(projectRoot, agentId, sessionId),
+    "messages.jsonl",
+  );
+}
+
+/**
+ * 单个已归档 session 的 meta.json 路径。
+ */
+export function getSdkAgentArchivedSessionMetaPath(
+  projectRoot: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getSdkAgentArchivedSessionMessagesDirPath(projectRoot, agentId, sessionId),
+    "meta.json",
+  );
+}
+
+/**
  * 单个 session 根目录路径。
  */
 export function getSdkAgentSessionDirPath(

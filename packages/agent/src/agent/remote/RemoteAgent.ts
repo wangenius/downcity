@@ -10,6 +10,11 @@
 import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentSessionSummaryPage,
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
@@ -45,7 +50,7 @@ export class RemoteAgent {
   /**
    * 新建一个远程 session。
    */
-  async createSession(
+  async create_session(
     input?: AgentCreateSessionInput,
   ): Promise<RemoteAgentSession> {
     const info = await this.transport.create_session(input);
@@ -55,10 +60,10 @@ export class RemoteAgent {
   /**
    * 获取一个已存在的远程 session。
    */
-  async getSession(sessionId: string): Promise<RemoteAgentSession> {
+  async get_session(sessionId: string): Promise<RemoteAgentSession> {
     const resolved_session_id = String(sessionId || "").trim();
     if (!resolved_session_id) {
-      throw new Error("getSession requires a non-empty sessionId");
+      throw new Error("get_session requires a non-empty sessionId");
     }
     const info = await this.transport.get_info(resolved_session_id);
     return new RemoteSession(this.transport, info.sessionId);
@@ -67,10 +72,35 @@ export class RemoteAgent {
   /**
    * 列出远程 agent 的 session 摘要页。
    */
-  async listSessions(
+  async list_sessions(
     input?: AgentListSessionsInput,
   ): Promise<AgentSessionSummaryPage> {
     return await this.transport.list_sessions(input);
+  }
+
+  /**
+   * 归档远程 agent 的单个 session。
+   */
+  async archive_session(
+    input: AgentArchiveSessionInput,
+  ): Promise<AgentArchiveSessionResult> {
+    return await this.transport.archive_session(input);
+  }
+
+  /**
+   * 列出远程 agent 的已归档 session 摘要页。
+   */
+  async archive_sessions(
+    input?: AgentArchiveSessionsInput,
+  ): Promise<AgentArchiveSessionsResult> {
+    return await this.transport.archive_sessions(input);
+  }
+
+  /**
+   * 清空远程 agent 的已归档 session。
+   */
+  async clean_archive(): Promise<AgentCleanArchiveResult> {
+    return await this.transport.clean_archive();
   }
 
   /**

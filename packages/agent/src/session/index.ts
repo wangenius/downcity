@@ -10,6 +10,11 @@ export { Session } from "./Session.js";
 
 export {
   getSdkAgentDirPath,
+  getSdkAgentArchivedSessionDirPath,
+  getSdkAgentArchivedSessionMessagesDirPath,
+  getSdkAgentArchivedSessionMessagesPath,
+  getSdkAgentArchivedSessionMetaPath,
+  getSdkAgentArchivedSessionsDirPath,
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
   getSdkAgentSessionInflightPath,
@@ -25,6 +30,7 @@ export {
   normalizeSessionTitle,
   patchSessionModelLabel,
   readSessionMetadata,
+  readSessionMetadataFromPath,
   resolveSystemTimezone,
   writeSessionMetadata,
 } from "./storage/Metadata.js";
@@ -41,6 +47,7 @@ export {
 export {
   buildSessionHistoryPage,
   buildSessionInfo,
+  listArchivedAgentSessionSummaryPage,
   listAgentSessionSummaryPage,
   loadSessionMessagesFromPath,
   resolveSessionMessagePreview,

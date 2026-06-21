@@ -11,6 +11,11 @@ import net from "node:net";
 import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentSessionHistoryInput,
   AgentSessionHistoryPage,
   AgentSessionInfo,
@@ -102,6 +107,48 @@ export class RpcClient {
       params: input,
     });
     return data.session;
+  }
+
+  /**
+   * 归档远程 session。
+   */
+  async archive_session(
+    input: AgentArchiveSessionInput,
+  ): Promise<AgentArchiveSessionResult> {
+    const data = await this.request<{ result: AgentArchiveSessionResult }>({
+      method: "sdk.sessions.archive",
+      params: {
+        sessionId: input.id,
+      },
+    });
+    return data.result;
+  }
+
+  /**
+   * 列出远程已归档 session。
+   */
+  async archive_sessions(
+    input?: AgentArchiveSessionsInput,
+  ): Promise<AgentArchiveSessionsResult> {
+    const data = await this.request<{ page: AgentArchiveSessionsResult }>({
+      method: "sdk.sessions.archived.list",
+      params: input,
+    });
+    return data.page;
+  }
+
+  /**
+   * 清空远程已归档 session。
+   */
+  async clean_archive(): Promise<AgentCleanArchiveResult> {
+    const data = await this.request<{ removedSessionIds: string[] }>({
+      method: "sdk.sessions.archived.clean",
+    });
+    return {
+      removedSessionIds: Array.isArray(data.removedSessionIds)
+        ? data.removedSessionIds
+        : [],
+    };
   }
 
   /**

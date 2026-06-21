@@ -8,12 +8,15 @@ description: 远程 Agent 客户端的核心公开接口
 `RemoteAgent` 的核心公开使用面包括：
 
 - `new RemoteAgent({ url })`
-- `agent.createSession(input?)`
-- `agent.getSession(sessionId)`
-- `agent.listSessions(input?)`
-- `agent.runPluginAction(input)`
+ - `agent.create_session(input?)`
+ - `agent.get_session(sessionId)`
+ - `agent.list_sessions(input?)`
+ - `agent.archive_session({ id })`
+ - `agent.archive_sessions(input?)`
+ - `agent.clean_archive()`
+ - `agent.runPluginAction(input)`
 
-`agent.createSession()` 和 `agent.getSession()` 返回 `RemoteAgentSession`。
+`agent.create_session()` 和 `agent.get_session()` 返回 `RemoteAgentSession`。
 
 ## `runPluginAction`
 

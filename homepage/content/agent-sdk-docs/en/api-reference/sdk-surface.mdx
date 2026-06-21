@@ -18,10 +18,10 @@ The SDK is session-first.
 
 In most apps, the real object you work with is not `Agent` itself, but the session returned by:
 
-- `agent.createSession()`
-- `agent.getSession(sessionId)`
-- `remoteAgent.createSession()`
-- `remoteAgent.getSession(sessionId)`
+- `agent.create_session()`
+- `agent.get_session(sessionId)`
+- `remoteAgent.create_session()`
+- `remoteAgent.get_session(sessionId)`
 
 ## Typical local flow
 
@@ -33,7 +33,7 @@ const agent = new Agent({
   path: process.cwd(),
 });
 
-const session = await agent.createSession();
+const session = await agent.create_session();
 await session.set({ model });
 
 const turn = await session.prompt({
@@ -54,7 +54,7 @@ const agent = new RemoteAgent({
   url: "http://127.0.0.1:5314/agents/repo-helper",
 });
 
-const session = await agent.getSession("repo-analysis");
+const session = await agent.get_session("repo-analysis");
 const turn = await session.prompt({
   query: "Continue",
 });
@@ -71,10 +71,13 @@ Core methods:
 - `new Agent(options)`
 - `agent.ready()`
 - `agent.dispose()`
-- `agent.createSession(input?)`
-- `agent.getSession(sessionId)`
-- `agent.listSessions(input?)`
-- `agent.runPluginAction(input)`
+ - `agent.create_session(input?)`
+ - `agent.get_session(sessionId)`
+ - `agent.list_sessions(input?)`
+ - `agent.archive_session({ id })`
+ - `agent.archive_sessions(input?)`
+ - `agent.clean_archive()`
+ - `agent.runPluginAction(input)`
 - `agent.setInstruction(input)`
 - `agent.getConfig()`
 - `agent.getLogger()`
@@ -96,9 +99,12 @@ Use `RemoteAgent` when another process has already exposed an agent.
 Core methods:
 
 - `new RemoteAgent({ url })`
-- `agent.createSession(input?)`
-- `agent.getSession(sessionId)`
-- `agent.listSessions(input?)`
+ - `agent.create_session(input?)`
+ - `agent.get_session(sessionId)`
+ - `agent.list_sessions(input?)`
+ - `agent.archive_session({ id })`
+ - `agent.archive_sessions(input?)`
+ - `agent.clean_archive()`
 
 It currently supports:
 
@@ -132,7 +138,7 @@ Core methods:
 
 Typical usage order:
 
-1. `await agent.createSession()`
+1. `await agent.create_session()`
 2. `await session.set({ model })` or provide a default model on `Agent`
 3. `const turn = await session.prompt({ query })`
 4. `await turn.finished`

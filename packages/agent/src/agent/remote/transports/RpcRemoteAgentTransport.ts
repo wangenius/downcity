@@ -9,6 +9,11 @@
 import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentSessionForkInput,
   AgentSessionHistoryInput,
   AgentSessionHistoryPage,
@@ -109,6 +114,22 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
 
   async list_sessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage> {
     return await this.client.list_sessions(input);
+  }
+
+  async archive_session(
+    input: AgentArchiveSessionInput,
+  ): Promise<AgentArchiveSessionResult> {
+    return await this.client.archive_session(input);
+  }
+
+  async archive_sessions(
+    input?: AgentArchiveSessionsInput,
+  ): Promise<AgentArchiveSessionsResult> {
+    return await this.client.archive_sessions(input);
+  }
+
+  async clean_archive(): Promise<AgentCleanArchiveResult> {
+    return await this.client.clean_archive();
   }
 
   async run_plugin_action(

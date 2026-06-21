@@ -8,6 +8,11 @@
 
 import type {
   AgentCreateSessionInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentListSessionsInput,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
@@ -30,13 +35,22 @@ import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
  */
 export interface AgentSessionCollection {
   /** 新建一个 session。 */
-  createSession(input?: AgentCreateSessionInput): Promise<AgentSession>;
+  create_session(input?: AgentCreateSessionInput): Promise<AgentSession>;
 
   /** 获取一个已存在的 session。 */
-  getSession(sessionId: string): Promise<AgentSession>;
+  get_session(sessionId: string): Promise<AgentSession>;
 
   /** 列出当前 agent 的 session 摘要页。 */
-  listSessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage>;
+  list_sessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage>;
+
+  /** 归档单个 session。 */
+  archive_session(input: AgentArchiveSessionInput): Promise<AgentArchiveSessionResult>;
+
+  /** 列出已归档的 session 摘要页。 */
+  archive_sessions(input?: AgentArchiveSessionsInput): Promise<AgentArchiveSessionsResult>;
+
+  /** 永久清空已归档 session。 */
+  clean_archive(): Promise<AgentCleanArchiveResult>;
 }
 
 /**

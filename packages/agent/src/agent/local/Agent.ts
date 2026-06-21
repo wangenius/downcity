@@ -13,6 +13,11 @@ import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
   AgentCreateSessionInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentListSessionsInput,
   AgentModel,
   AgentOptions,
@@ -107,24 +112,49 @@ export class Agent {
   /**
    * 新建一个 session。
    */
-  async createSession(input?: AgentCreateSessionInput): Promise<AgentSession> {
+  async create_session(input?: AgentCreateSessionInput): Promise<AgentSession> {
     return await this.sessionManager.create_session(input);
   }
 
   /**
    * 获取一个已存在的 session。
    */
-  async getSession(sessionId: string): Promise<AgentSession> {
+  async get_session(sessionId: string): Promise<AgentSession> {
     return await this.sessionManager.get_session(sessionId);
   }
 
   /**
    * 列出当前 agent 的 session 摘要页。
    */
-  async listSessions(
+  async list_sessions(
     input?: AgentListSessionsInput,
   ): Promise<AgentSessionSummaryPage> {
     return await this.sessionManager.list_sessions(input);
+  }
+
+  /**
+   * 归档单个 session。
+   */
+  async archive_session(
+    input: AgentArchiveSessionInput,
+  ): Promise<AgentArchiveSessionResult> {
+    return await this.sessionManager.archive_session(input);
+  }
+
+  /**
+   * 列出当前 agent 的已归档 session 摘要页。
+   */
+  async archive_sessions(
+    input?: AgentArchiveSessionsInput,
+  ): Promise<AgentArchiveSessionsResult> {
+    return await this.sessionManager.archive_sessions(input);
+  }
+
+  /**
+   * 永久清空已归档 session。
+   */
+  async clean_archive(): Promise<AgentCleanArchiveResult> {
+    return await this.sessionManager.clean_archive();
   }
 
   /**
@@ -274,7 +304,7 @@ export class Agent {
   /**
    * 返回当前 session collection。
    */
-  getSessionCollection(): AgentSessionCollection {
+  get_session_collection(): AgentSessionCollection {
     return this.sessionManager.get_session_collection();
   }
 

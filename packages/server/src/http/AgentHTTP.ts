@@ -54,7 +54,7 @@ export class AgentHTTP {
   router(): Hono {
     if (this.cached_router) return this.cached_router;
     const router = new Hono();
-    registerSdkSessionRoutes(router, this.agent.getSessionCollection());
+    registerSdkSessionRoutes(router, this.agent.get_session_collection());
     this.cached_router = router;
     return router;
   }

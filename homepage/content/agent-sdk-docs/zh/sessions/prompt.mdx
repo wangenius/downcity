@@ -26,7 +26,7 @@ await turn.finished;
 ## 例子
 
 ```ts
-const session = await agent.getSession("repo-analysis");
+const session = await agent.get_session("repo-analysis");
 
 const turn = await session.prompt({
   query: "分析这个仓库",

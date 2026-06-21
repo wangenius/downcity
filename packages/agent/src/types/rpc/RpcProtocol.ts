@@ -10,6 +10,11 @@
 import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentSessionHistoryInput,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
@@ -30,7 +35,7 @@ export type RpcRequest =
   | {
       /** 请求 id，用于匹配响应。 */
       id: string;
-      /** 列出 session。 */
+      /** 列出 sessions。 */
       method: "sdk.sessions.list";
       /** 列表过滤与分页参数。 */
       params?: AgentListSessionsInput;
@@ -46,13 +51,38 @@ export type RpcRequest =
   | {
       /** 请求 id，用于匹配响应。 */
       id: string;
-      /** 读取 session 信息。 */
+      /** 获取 session。 */
       method: "sdk.sessions.get";
       /** 目标 session 参数。 */
       params: {
         /** 目标 session id。 */
         sessionId: string;
       };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 归档 session。 */
+      method: "sdk.sessions.archive";
+      /** 归档参数。 */
+      params: {
+        /** 目标 session id。 */
+        sessionId: string;
+      };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 列出已归档 sessions。 */
+      method: "sdk.sessions.archived.list";
+      /** 列表过滤与分页参数。 */
+      params?: AgentArchiveSessionsInput;
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 清空已归档 sessions。 */
+      method: "sdk.sessions.archived.clean";
     }
   | {
       /** 请求 id，用于匹配响应。 */

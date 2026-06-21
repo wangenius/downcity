@@ -93,8 +93,30 @@ export async function readSessionMetadata(
     input.agentId,
     input.sessionId,
   );
+  return await readSessionMetadataFromPath({
+    filePath,
+    sessionId: input.sessionId,
+    agentId: input.agentId,
+  });
+}
+
+/**
+ * 从指定路径读取 session meta.json。
+ *
+ * 关键点（中文）
+ * - 供归档 session 等需要脱离默认 `sessions/` 目录的场景复用。
+ * - 路径本身不做校验，调用方需保证可访问。
+ */
+export async function readSessionMetadataFromPath(input: {
+  /** meta.json 文件路径。 */
+  filePath: string;
+  /** 当前 sessionId。 */
+  sessionId: string;
+  /** 当前 agentId。 */
+  agentId: string;
+}): Promise<SessionHistoryMetaV1> {
   try {
-    const raw = (await fs.readJson(filePath)) as Partial<SessionHistoryMetaV1>;
+    const raw = (await fs.readJson(input.filePath)) as Partial<SessionHistoryMetaV1>;
     return {
       v: 1,
       sessionId: input.sessionId,

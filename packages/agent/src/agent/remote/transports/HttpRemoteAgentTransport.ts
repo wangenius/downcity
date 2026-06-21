@@ -9,6 +9,11 @@
 import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentSessionForkInput,
   AgentSessionHistoryInput,
   AgentSessionHistoryPage,
@@ -248,6 +253,81 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
       throw new Error(String(payload.error || "Remote sessions list failed"));
     }
     return payload.page;
+  }
+
+  async archive_session(
+    input: AgentArchiveSessionInput,
+  ): Promise<AgentArchiveSessionResult> {
+    const session_id = String(input?.id || "").trim();
+    if (!session_id) {
+      throw new Error("archive_session requires a non-empty id");
+    }
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      sessionId?: string;
+      archivedAt?: number;
+    }>(
+      `${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/archive`,
+      {
+        method: "POST",
+        headers: this.headers({
+          "Content-Type": "application/json",
+        }),
+      },
+    );
+    if (!payload.success || !payload.sessionId) {
+      throw new Error(String(payload.error || "Remote session archive failed"));
+    }
+    return {
+      sessionId: payload.sessionId,
+      archivedAt:
+        typeof payload.archivedAt === "number" && Number.isFinite(payload.archivedAt)
+          ? payload.archivedAt
+          : Date.now(),
+    };
+  }
+
+  async archive_sessions(
+    input?: AgentArchiveSessionsInput,
+  ): Promise<AgentArchiveSessionsResult> {
+    const query = new URLSearchParams();
+    if (input?.limit !== undefined) query.set("limit", String(input.limit));
+    if (input?.cursor) query.set("cursor", input.cursor);
+    if (input?.query) query.set("query", input.query);
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      page?: AgentArchiveSessionsResult;
+    }>(
+      `${this.base_url}/api/sdk/archived-sessions${query.size > 0 ? `?${query.toString()}` : ""}`,
+      {
+        headers: this.headers(),
+      },
+    );
+    if (!payload.success || !payload.page) {
+      throw new Error(String(payload.error || "Remote archived sessions list failed"));
+    }
+    return payload.page;
+  }
+
+  async clean_archive(): Promise<AgentCleanArchiveResult> {
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      removedSessionIds?: string[];
+    }>(`${this.base_url}/api/sdk/archived-sessions`, {
+      method: "DELETE",
+      headers: this.headers(),
+    });
+    if (!payload.success) {
+      throw new Error(String(payload.error || "Remote clean archive failed"));
+    }
+    return {
+      removedSessionIds: Array.isArray(payload.removedSessionIds)
+        ? payload.removedSessionIds
+        : [],
+    };
   }
 
   async run_plugin_action(

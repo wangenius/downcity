@@ -17,6 +17,11 @@ export {
   normalizeAgentModel,
 } from "./model/CityModelAdapter.js";
 export type {
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentSessionCollection,
   AgentModel,
   AgentManagedSession,

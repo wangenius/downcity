@@ -11,6 +11,8 @@ import type { Hono } from "hono";
 import type {
   AgentListSessionsInput,
   AgentSessionCollection,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
 } from "@downcity/agent";
 import type { AgentSessionPromptInput } from "@downcity/agent";
 
@@ -33,7 +35,7 @@ export function registerSdkSessionRoutes(
         ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
         ...(c.req.query("query") ? { query: c.req.query("query") } : {}),
       };
-      const page = await sessionCollection.listSessions(input);
+      const page = await sessionCollection.list_sessions(input);
       return c.json({
         success: true,
         page,
@@ -55,7 +57,7 @@ export function registerSdkSessionRoutes(
       const body = (await c.req.json().catch(() => ({}))) as {
         sessionId?: unknown;
       };
-      const session = await sessionCollection.createSession({
+      const session = await sessionCollection.create_session({
         ...(body.sessionId ? { sessionId: String(body.sessionId).trim() } : {}),
       });
       return c.json({
@@ -79,7 +81,7 @@ export function registerSdkSessionRoutes(
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
-      const session = await sessionCollection.getSession(sessionId);
+      const session = await sessionCollection.get_session(sessionId);
       return c.json({
         success: true,
         session: await session.getInfo(),
@@ -102,7 +104,7 @@ export function registerSdkSessionRoutes(
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       const body = (await c.req.json()) as AgentSessionPromptInput;
-      const session = await sessionCollection.getSession(sessionId);
+      const session = await sessionCollection.get_session(sessionId);
       const turn = await session.prompt(body);
       return c.json({
         success: true,
@@ -128,7 +130,7 @@ export function registerSdkSessionRoutes(
     }
 
     try {
-      const session = await sessionCollection.getSession(sessionId);
+      const session = await sessionCollection.get_session(sessionId);
       const encoder = new TextEncoder();
       const requestSignal = c.req.raw.signal;
 
@@ -195,7 +197,7 @@ export function registerSdkSessionRoutes(
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
-      const session = await sessionCollection.getSession(sessionId);
+      const session = await sessionCollection.get_session(sessionId);
       const history = await session.history({
         ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
         ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
@@ -227,7 +229,7 @@ export function registerSdkSessionRoutes(
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
-      const session = await sessionCollection.getSession(sessionId);
+      const session = await sessionCollection.get_session(sessionId);
       const history = await session.history({
         view: "message",
       });
@@ -253,7 +255,7 @@ export function registerSdkSessionRoutes(
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
-      const session = await sessionCollection.getSession(sessionId);
+      const session = await sessionCollection.get_session(sessionId);
       return c.json({
         success: true,
         system: await session.system(),
@@ -278,13 +280,79 @@ export function registerSdkSessionRoutes(
       const body = (await c.req.json().catch(() => ({}))) as {
         messageId?: unknown;
       };
-      const session = await sessionCollection.getSession(sessionId);
+      const session = await sessionCollection.get_session(sessionId);
       const forked = await session.fork(
         String(body.messageId || "").trim() || undefined,
       );
       return c.json({
         success: true,
         session: await forked.getInfo(),
+      });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  });
+
+  app.post("/api/sdk/sessions/:sessionId/archive", async (c) => {
+    try {
+      const sessionId = String(c.req.param("sessionId") || "").trim();
+      if (!sessionId) {
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
+      }
+      const input: AgentArchiveSessionInput = { id: sessionId };
+      const result = await sessionCollection.archive_session(input);
+      return c.json({
+        success: true,
+        sessionId: result.sessionId,
+        archivedAt: result.archivedAt,
+      });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  });
+
+  app.get("/api/sdk/archived-sessions", async (c) => {
+    try {
+      const input: AgentArchiveSessionsInput = {
+        ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
+        ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
+        ...(c.req.query("query") ? { query: c.req.query("query") } : {}),
+      };
+      const page = await sessionCollection.archive_sessions(input);
+      return c.json({
+        success: true,
+        page,
+        sessions: page.items,
+      });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  });
+
+  app.delete("/api/sdk/archived-sessions", async (c) => {
+    try {
+      const result = await sessionCollection.clean_archive();
+      return c.json({
+        success: true,
+        removedSessionIds: result.removedSessionIds,
       });
     } catch (error) {
       return c.json(

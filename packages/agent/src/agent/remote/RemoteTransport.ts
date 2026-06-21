@@ -9,6 +9,11 @@
 import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentSessionForkInput,
   AgentSessionHistoryInput,
   AgentSessionHistoryPage,
@@ -76,6 +81,12 @@ export type RemoteAgentTransport = RemoteSessionTransport & {
   create_session(input?: AgentCreateSessionInput): Promise<AgentSessionInfo>;
   /** 列出 sessions。 */
   list_sessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage>;
+  /** 归档 session。 */
+  archive_session(input: AgentArchiveSessionInput): Promise<AgentArchiveSessionResult>;
+  /** 列出已归档 sessions。 */
+  archive_sessions(input?: AgentArchiveSessionsInput): Promise<AgentArchiveSessionsResult>;
+  /** 清空归档 sessions。 */
+  clean_archive(): Promise<AgentCleanArchiveResult>;
   /** 执行远程 Agent runtime 内的 plugin action。 */
   run_plugin_action(
     input: RemoteAgentPluginActionInput,

@@ -46,7 +46,7 @@ export async function createRemoteAgent(params) {
  * 列出远程 chat session 摘要。
  */
 export async function listRemoteChatSessions(params) {
-    const page = await params.remote_agent.listSessions({ limit: 30 });
+    const page = await params.remote_agent.list_sessions({ limit: 30 });
     const sessions = page.items.map(toSessionSummaryView);
     if (!sessions.some((item) => item.sessionId === AGENT_CHAT_DEFAULT_SESSION_ID)) {
         sessions.unshift({
@@ -61,7 +61,7 @@ export async function listRemoteChatSessions(params) {
  */
 export async function createRemoteChatSession(params) {
     const session_id = String(params.session_id || "").trim() || createAgentChatSessionId();
-    const session = await params.remote_agent.createSession({
+    const session = await params.remote_agent.create_session({
         sessionId: session_id,
     });
     return {
@@ -73,15 +73,15 @@ export async function createRemoteChatSession(params) {
  */
 export async function getOrCreateRemoteSession(params) {
     if (params.create_new_session === true) {
-        return await params.remote_agent.createSession({
+        return await params.remote_agent.create_session({
             sessionId: params.session_id,
         });
     }
     try {
-        return await params.remote_agent.getSession(params.session_id);
+        return await params.remote_agent.get_session(params.session_id);
     }
     catch {
-        return await params.remote_agent.createSession({
+        return await params.remote_agent.create_session({
             sessionId: params.session_id,
         });
     }

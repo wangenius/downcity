@@ -28,7 +28,7 @@ const agent = new Agent({
   model: openai.responses("gpt-5"),
 });
 
-const session = await agent.createSession();
+const session = await agent.create_session();
 const turn = await session.prompt({
   query: "总结一下当前仓库结构",
 });
@@ -40,7 +40,7 @@ console.log(result.text);
 ## 最重要的三步
 
 1. `new Agent(...)`
-2. `await agent.createSession()`
+2. `await agent.create_session()`
 3. 确保 session 有 model
 
 这三步里第 3 步最容易被遗漏，也是本地 SDK 最常见的踩坑点。
@@ -82,7 +82,7 @@ console.log(result.text);
 `new Agent(...)` 之后，plugin lifecycle 与 ActionSchedule 会立即开始启动。调用方通常直接：
 
 ```ts
-const session = await agent.createSession();
+const session = await agent.create_session();
 const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```

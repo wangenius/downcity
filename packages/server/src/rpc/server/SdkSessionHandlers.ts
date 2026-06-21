@@ -33,45 +33,45 @@ export async function handleSdkSessionRpcRequest(params: {
 
   switch (request.method) {
     case "sdk.sessions.list": {
-      const page = await options.sessionCollection.listSessions(request.params);
+      const page = await options.sessionCollection.list_sessions(request.params);
       write_success(request.id, { page });
       return true;
     }
     case "sdk.sessions.create": {
-      const session = await options.sessionCollection.createSession(request.params);
+      const session = await options.sessionCollection.create_session(request.params);
       write_success(request.id, { session: await session.getInfo() });
       return true;
     }
     case "sdk.sessions.get": {
-      const session = await options.sessionCollection.getSession(request.params.sessionId);
+      const session = await options.sessionCollection.get_session(request.params.sessionId);
       write_success(request.id, { session: await session.getInfo() });
       return true;
     }
     case "sdk.sessions.prompt": {
-      const session = await options.sessionCollection.getSession(request.params.sessionId);
+      const session = await options.sessionCollection.get_session(request.params.sessionId);
       const turn = await session.prompt(request.params.input);
       write_success(request.id, { turn: { id: turn.id } });
       return true;
     }
     case "sdk.sessions.history": {
-      const session = await options.sessionCollection.getSession(request.params.sessionId);
+      const session = await options.sessionCollection.get_session(request.params.sessionId);
       const history = await session.history(request.params.input);
       write_success(request.id, { history });
       return true;
     }
     case "sdk.sessions.system": {
-      const session = await options.sessionCollection.getSession(request.params.sessionId);
+      const session = await options.sessionCollection.get_session(request.params.sessionId);
       write_success(request.id, { system: await session.system() });
       return true;
     }
     case "sdk.sessions.fork": {
-      const session = await options.sessionCollection.getSession(request.params.sessionId);
+      const session = await options.sessionCollection.get_session(request.params.sessionId);
       const forked = await session.fork(request.params.messageId);
       write_success(request.id, { session: await forked.getInfo() });
       return true;
     }
     case "sdk.sessions.subscribe": {
-      const session = await options.sessionCollection.getSession(request.params.sessionId);
+      const session = await options.sessionCollection.get_session(request.params.sessionId);
       const subscription_id = [
         request.params.sessionId,
         Date.now(),
@@ -98,6 +98,23 @@ export async function handleSdkSessionRpcRequest(params: {
         subscriptions.delete(request.params.subscriptionId);
       }
       write_success(request.id, { unsubscribed: true });
+      return true;
+    }
+    case "sdk.sessions.archive": {
+      const result = await options.sessionCollection.archive_session({
+        id: request.params.sessionId,
+      });
+      write_success(request.id, { result });
+      return true;
+    }
+    case "sdk.sessions.archived.list": {
+      const page = await options.sessionCollection.archive_sessions(request.params);
+      write_success(request.id, { page });
+      return true;
+    }
+    case "sdk.sessions.archived.clean": {
+      const result = await options.sessionCollection.clean_archive();
+      write_success(request.id, { removedSessionIds: result.removedSessionIds });
       return true;
     }
     default:

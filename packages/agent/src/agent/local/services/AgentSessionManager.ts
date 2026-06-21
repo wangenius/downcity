@@ -13,6 +13,11 @@ import type { Tool } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type {
   AgentCreateSessionInput,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentListSessionsInput,
   AgentManagedSession,
   AgentModel,
@@ -24,7 +29,10 @@ import type {
 } from "@/types/agent/AgentTypes.js";
 import { Session } from "@/session/Session.js";
 import {
+  getSdkAgentArchivedSessionDirPath,
+  getSdkAgentArchivedSessionsDirPath,
   getSdkAgentSessionDirPath,
+  listArchivedAgentSessionSummaryPage,
   listAgentSessionSummaryPage,
 } from "@/session/index.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
@@ -32,6 +40,14 @@ import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { createInstructionSystemBlocks } from "@/agent/local/AgentInstructions.js";
+
+function decodeMaybe(input: string): string {
+  try {
+    return decodeURIComponent(input);
+  } catch {
+    return input;
+  }
+}
 
 type AgentSessionManagerOptions = {
   /**
@@ -111,9 +127,12 @@ export class AgentSessionManager {
     this.default_model = options.default_model;
     this.SessionClass = options.SessionClass || Session;
     this.session_collection = {
-      createSession: async (input) => await this.create_session(input),
-      getSession: async (session_id) => await this.get_session(session_id),
-      listSessions: async (input) => await this.list_sessions(input),
+      create_session: async (input) => await this.create_session(input),
+      get_session: async (session_id) => await this.get_session(session_id),
+      list_sessions: async (input) => await this.list_sessions(input),
+      archive_session: async (input) => await this.archive_session(input),
+      archive_sessions: async (input) => await this.archive_sessions(input),
+      clean_archive: async () => await this.clean_archive(),
     };
   }
 
@@ -175,7 +194,7 @@ export class AgentSessionManager {
   async get_session(session_id: string): Promise<AgentSession> {
     const resolved_session_id = String(session_id || "").trim();
     if (!resolved_session_id) {
-      throw new Error("getSession requires a non-empty sessionId");
+      throw new Error("get_session requires a non-empty sessionId");
     }
     const session_dir_path = getSdkAgentSessionDirPath(
       this.project_root,
@@ -208,6 +227,106 @@ export class AgentSessionManager {
       input,
       executingSessionIds: new Set(this.get_agent_context().listExecutingSessionIds()),
     });
+  }
+
+  /**
+   * 归档单个 session。
+   */
+  async archive_session(
+    input: AgentArchiveSessionInput,
+  ): Promise<AgentArchiveSessionResult> {
+    const session_id = String(input?.id || "").trim();
+    if (!session_id) {
+      throw new Error("archive_session requires a non-empty id");
+    }
+
+    const executing_session_ids = new Set(
+      this.get_agent_context().listExecutingSessionIds(),
+    );
+    if (executing_session_ids.has(session_id)) {
+      throw new Error(`Session "${session_id}" is currently executing`);
+    }
+
+    const source_path = getSdkAgentSessionDirPath(
+      this.project_root,
+      this.agent_id,
+      session_id,
+    );
+    if (!(await fs.pathExists(source_path))) {
+      throw new Error(`Session "${session_id}" not found`);
+    }
+
+    const target_path = getSdkAgentArchivedSessionDirPath(
+      this.project_root,
+      this.agent_id,
+      session_id,
+    );
+    if (await fs.pathExists(target_path)) {
+      throw new Error(`Archived session "${session_id}" already exists`);
+    }
+
+    await fs.ensureDir(getSdkAgentArchivedSessionsDirPath(
+      this.project_root,
+      this.agent_id,
+    ));
+    await fs.move(source_path, target_path);
+
+    // 关键点（中文）：归档后清理缓存，避免后续操作访问已移动目录。
+    this.sessions_by_id.delete(session_id);
+    this.configured_session_ids.delete(session_id);
+
+    return {
+      sessionId: session_id,
+      archivedAt: Date.now(),
+    };
+  }
+
+  /**
+   * 列出当前 agent 的已归档 session 摘要页。
+   */
+  async archive_sessions(
+    input?: AgentArchiveSessionsInput,
+  ): Promise<AgentArchiveSessionsResult> {
+    return await listArchivedAgentSessionSummaryPage({
+      projectRoot: this.project_root,
+      agentId: this.agent_id,
+      input,
+    });
+  }
+
+  /**
+   * 永久清空已归档 session。
+   */
+  async clean_archive(): Promise<AgentCleanArchiveResult> {
+    const archived_root = getSdkAgentArchivedSessionsDirPath(
+      this.project_root,
+      this.agent_id,
+    );
+    if (!(await fs.pathExists(archived_root))) {
+      return {
+        removedSessionIds: [],
+      };
+    }
+
+    const entries = await fs.readdir(archived_root, { withFileTypes: true });
+    const removed_session_ids: string[] = [];
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const session_id = decodeMaybe(entry.name);
+      if (!session_id) continue;
+      const session_path = getSdkAgentArchivedSessionDirPath(
+        this.project_root,
+        this.agent_id,
+        session_id,
+      );
+      await fs.remove(session_path);
+      removed_session_ids.push(session_id);
+    }
+
+    return {
+      removedSessionIds: removed_session_ids,
+    };
   }
 
   private get_or_create_session(input?: {

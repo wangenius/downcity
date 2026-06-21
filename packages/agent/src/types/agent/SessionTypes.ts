@@ -333,3 +333,71 @@ export interface AgentSessionForkInput {
    */
   messageId?: string;
 }
+
+/**
+ * 归档单个 session 的输入参数。
+ */
+export interface AgentArchiveSessionInput {
+  /**
+   * 要归档的 session id。
+   *
+   * 关键点（中文）
+   * - 必须指向当前 agent 下已存在的未归档 session。
+   * - 正在执行中的 session 不允许归档。
+   */
+  id: string;
+}
+
+/**
+ * 列出已归档 session 的输入参数。
+ */
+export interface AgentArchiveSessionsInput {
+  /**
+   * 当前页返回上限。
+   *
+   * 说明（中文）
+   * - 省略时由 SDK 使用默认值。
+   */
+  limit?: number;
+
+  /**
+   * 分页游标。
+   *
+   * 说明（中文）
+   * - 当前使用 SDK 自身生成的透明字符串游标。
+   * - 调用方只负责透传，不应自行解析其内部格式。
+   */
+  cursor?: string;
+
+  /**
+   * 关键词过滤。
+   *
+   * 说明（中文）
+   * - 推荐用于匹配 `sessionId`、标题与预览文本。
+   * - 属于轻量包含匹配，不承诺复杂搜索语义。
+   */
+  query?: string;
+}
+
+/**
+ * 归档单个 session 的结果。
+ */
+export interface AgentArchiveSessionResult {
+  /** 被归档的 session id。 */
+  sessionId: string;
+  /** 归档时间戳（ms）。 */
+  archivedAt: number;
+}
+
+/**
+ * 列出已归档 session 的结果。
+ */
+export interface AgentArchiveSessionsResult extends AgentSessionSummaryPage {}
+
+/**
+ * 清空归档目录的结果。
+ */
+export interface AgentCleanArchiveResult {
+  /** 被永久删除的归档 session id 列表。 */
+  removedSessionIds: string[];
+}

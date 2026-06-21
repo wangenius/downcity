@@ -33,7 +33,11 @@ import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.j
 import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleText.js";
 import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
 import { getSdkAgentSessionsRootDirPath } from "@/session/storage/Paths.js";
+import { getSdkAgentArchivedSessionsDirPath } from "@/session/storage/Paths.js";
+import { getSdkAgentArchivedSessionMessagesPath } from "@/session/storage/Paths.js";
+import { getSdkAgentArchivedSessionMetaPath } from "@/session/storage/Paths.js";
 import { readSessionMetadata } from "@/session/storage/Metadata.js";
+import { readSessionMetadataFromPath } from "@/session/storage/Metadata.js";
 import {
   ensureSessionTitle,
 } from "@/session/SessionTitle.js";
@@ -474,6 +478,103 @@ export async function listAgentSessionSummaryPage(params: {
     if (!entry.isDirectory()) continue;
     const sessionId = decodeMaybe(entry.name);
     if (!sessionId) continue;
+    const metadata = await readSessionMetadataFromPath({
+      filePath: getSdkAgentArchivedSessionMetaPath(
+        params.projectRoot,
+        params.agentId,
+        sessionId,
+      ),
+      sessionId,
+      agentId: params.agentId,
+    });
+    const messages = await loadSessionMessagesFromPath(
+      getSdkAgentArchivedSessionMessagesPath(
+        params.projectRoot,
+        params.agentId,
+        sessionId,
+      ),
+    );
+    // 关键点（中文）：归档 session 不再生成新 title，仅读取已有 meta。
+    const metadataWithTitle = metadata;
+    const info = buildSessionInfo({
+      projectRoot: params.projectRoot,
+      agentId: params.agentId,
+      sessionId,
+      metadata: metadataWithTitle,
+      messages,
+      executing: params.executingSessionIds?.has(sessionId),
+    });
+    const summary: AgentSessionSummary = {
+      agentId: info.agentId,
+      sessionId: info.sessionId,
+      ...(info.title ? { title: info.title } : {}),
+      ...(info.previewText ? { previewText: info.previewText } : {}),
+      messageCount: info.messageCount,
+      ...(typeof info.createdAt === "number" ? { createdAt: info.createdAt } : {}),
+      ...(typeof info.updatedAt === "number" ? { updatedAt: info.updatedAt } : {}),
+      ...(info.modelLabel ? { modelLabel: info.modelLabel } : {}),
+      ...(info.executing ? { executing: true } : {}),
+    };
+
+    if (query) {
+      const haystack = [
+        summary.sessionId,
+        summary.title || "",
+        summary.previewText || "",
+      ]
+        .join("\n")
+        .toLowerCase();
+      if (!haystack.includes(query)) continue;
+    }
+
+    summaries.push(summary);
+  }
+
+  summaries.sort((left, right) => (right.updatedAt || 0) - (left.updatedAt || 0));
+
+  const items = summaries.slice(cursor, cursor + limit);
+  const nextOffset = cursor + items.length;
+  return {
+    items,
+    total: summaries.length,
+    ...(nextOffset < summaries.length
+      ? { nextCursor: encodeCursor(nextOffset) }
+      : {}),
+    hasMore: nextOffset < summaries.length,
+  };
+}
+
+/**
+ * 列出指定 agent 的已归档 session 摘要页。
+ */
+export async function listArchivedAgentSessionSummaryPage(params: {
+  projectRoot: string;
+  agentId: string;
+  input?: AgentListSessionsInput;
+}): Promise<AgentSessionSummaryPage> {
+  const limit = normalizeLimit(params.input?.limit, 50, 500);
+  const cursor = normalizeCursor(params.input?.cursor);
+  const query = String(params.input?.query || "").trim().toLowerCase();
+  const archivedRoot = getSdkAgentArchivedSessionsDirPath(
+    params.projectRoot,
+    params.agentId,
+  );
+
+  if (!(await fs.pathExists(archivedRoot))) {
+    return {
+      items: [],
+      total: 0,
+      hasMore: false,
+    };
+  }
+
+  const entries = await fs.readdir(archivedRoot, { withFileTypes: true });
+  const summaries: AgentSessionSummary[] = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const sessionId = decodeMaybe(entry.name);
+    if (!sessionId) continue;
     const metadata = await readSessionMetadata({
       projectRoot: params.projectRoot,
       agentId: params.agentId,
@@ -496,7 +597,7 @@ export async function listAgentSessionSummaryPage(params: {
       sessionId,
       metadata: metadataWithTitle,
       messages,
-      executing: params.executingSessionIds?.has(sessionId),
+      executing: false,
     });
     const summary: AgentSessionSummary = {
       agentId: info.agentId,
@@ -507,7 +608,6 @@ export async function listAgentSessionSummaryPage(params: {
       ...(typeof info.createdAt === "number" ? { createdAt: info.createdAt } : {}),
       ...(typeof info.updatedAt === "number" ? { updatedAt: info.updatedAt } : {}),
       ...(info.modelLabel ? { modelLabel: info.modelLabel } : {}),
-      ...(info.executing ? { executing: true } : {}),
     };
 
     if (query) {

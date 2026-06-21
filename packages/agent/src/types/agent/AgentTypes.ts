@@ -27,6 +27,11 @@ export type {
   RemoteAgentPluginActionResult,
 } from "@/types/agent/RemoteAgentPluginAction.js";
 export type {
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
   AgentCreateSessionInput,
   AgentListSessionsInput,
   AgentSessionConfigSnapshot,

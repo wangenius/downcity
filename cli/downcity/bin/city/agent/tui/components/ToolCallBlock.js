@@ -111,7 +111,8 @@ export class ToolCallBlockComponent {
             lines.push(...visible_body);
             if (!this.expanded && body_lines.length > RESULT_PREVIEW_LINES) {
                 const remaining = body_lines.length - RESULT_PREVIEW_LINES;
-                lines.push(MESSAGE_INDENT + current_theme.dim(`... (${remaining} more lines)`));
+                lines.push(MESSAGE_INDENT +
+                    current_theme.dim(`... (${remaining} more lines, ctrl+o to expand)`));
             }
         }
         return lines.map((line) => truncateToWidth(line, safe_width, "…"));
@@ -126,16 +127,10 @@ export class ToolCallBlockComponent {
                     : is_error
                         ? current_theme.fg("error", FAILURE_MARK)
                         : current_theme.fg("text", STATUS_BULLET);
-                let verb;
-                if (is_error) {
-                    verb = "Failed";
-                }
-                else if (is_success) {
-                    verb = "Used";
-                }
-                else {
-                    verb = "Using";
-                }
+                // 对齐 Kimi Code：完成（无论成功或失败）统一显示 "Used"，
+                // 仅通过 bullet（✗）区分错误；进行中显示 "Using"。
+                const is_finished = is_success || is_error;
+                const verb = is_finished ? "Used" : "Using";
                 const tool_label = current_theme.bold_fg("primary", this.entry.tool_name);
                 const key_arg = extract_key_argument(this.entry.tool_name, this.entry.args);
                 const arg_str = key_arg ? current_theme.dim(` (${key_arg})`) : "";
@@ -274,6 +269,6 @@ function truncate_arg_value(key, value) {
     if (PATH_KEYS.has(key)) {
         return "…" + value.slice(value.length - (MAX_KEY_ARG_LENGTH - 1));
     }
-    return value.slice(0, MAX_KEY_ARG_LENGTH - 1) + "…";
+    return value.slice(0, MAX_KEY_ARG_LENGTH - 3) + "...";
 }
 //# sourceMappingURL=ToolCallBlock.js.map

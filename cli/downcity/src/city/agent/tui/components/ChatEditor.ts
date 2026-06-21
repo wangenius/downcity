@@ -117,6 +117,12 @@ export class ChatEditorComponent extends Editor {
     this.setAutocompleteProvider(
       new FileMentionProvider(BUILTIN_SLASH_COMMANDS, process.cwd()),
     );
+
+    // 输入变化时同步边框高亮：以 "/" 开头（slash 命令）时高亮为主色。
+    // 对齐 Kimi Code 的 updateEditorBorderHighlight。
+    this.onChange = (text: string) => {
+      this.update_border_highlight(text);
+    };
   }
 
   /**
@@ -141,6 +147,21 @@ export class ChatEditorComponent extends Editor {
    */
   clear(): void {
     this.setText("");
+    this.update_border_highlight("");
+  }
+
+  /**
+   * 根据当前文本同步边框高亮状态。
+   * 以 "/" 开头（slash 命令）时高亮为主色，否则恢复默认边框色。
+   *
+   * @param text 当前文本，省略时读取编辑器内容。
+   */
+  update_border_highlight(text?: string): void {
+    const trimmed = (text ?? this.getText()).trimStart();
+    const highlighted = trimmed.startsWith("/");
+    this.border_highlighted = highlighted;
+    this.borderColor = (s: string) =>
+      current_theme.fg(highlighted ? "primary" : "border", s);
   }
 
   override handleInput(data: string): void {

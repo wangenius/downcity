@@ -53,6 +53,12 @@ export declare class AgentChatTuiCoordinator {
     private remove_input_listener;
     private is_initial_picker;
     /**
+     * 全局 tool output 展开状态。
+     * 对齐 Kimi Code：Ctrl+O 统一切换所有 tool 卡片，
+     * 新创建的 tool 卡片也会沿用当前状态。
+     */
+    private tool_output_expanded;
+    /**
      * slash 命令宿主，解耦命令分发与 coordinator 内部实现。
      */
     private get slash_command_host();
@@ -153,6 +159,6 @@ export declare class AgentChatTuiCoordinator {
      * 切换最后一个 tool 卡片的展开/折叠状态。
      * 对齐 Kimi Code 的 Ctrl+O 展开 tool output。
      */
-    private toggle_last_tool_block;
+    private toggle_tool_output_expansion;
 }
 //# sourceMappingURL=AgentChatTuiCoordinator.d.ts.map

@@ -54,6 +54,13 @@ export declare class ChatEditorComponent extends Editor {
      * 清空当前输入。
      */
     clear(): void;
+    /**
+     * 根据当前文本同步边框高亮状态。
+     * 以 "/" 开头（slash 命令）时高亮为主色，否则恢复默认边框色。
+     *
+     * @param text 当前文本，省略时读取编辑器内容。
+     */
+    update_border_highlight(text?: string): void;
     handleInput(data: string): void;
     /**
      * 覆写渲染，注入 prompt 符号、高亮 slash 命令，并补全边框。

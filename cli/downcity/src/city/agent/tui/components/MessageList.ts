@@ -40,6 +40,13 @@ export class MessageListComponent implements Component {
   private get_viewport_height_fn: () => number;
 
   /**
+   * 全局 tool output 展开状态。
+   * 对齐 Kimi Code：Ctrl+O 统一切换所有 tool 卡片，
+   * 新创建的 tool 卡片也会沿用该状态。
+   */
+  private tool_output_expanded = false;
+
+  /**
    * 构造可滚动消息流组件。
    *
    * @param options 构造选项。
@@ -49,17 +56,25 @@ export class MessageListComponent implements Component {
   }
 
   /**
-   * 内部子组件列表，供 coordinator 查找 tool block。
-   */
-  get children(): readonly Component[] {
-    return this.inner.children;
-  }
-
-  /**
    * 当前滚动偏移（0 表示贴底）。
    */
   get current_scroll_offset(): number {
     return this.scroll_offset;
+  }
+
+  /**
+   * 统一设置所有 tool 卡片的展开状态，并记录为全局状态。
+   * 后续新建的 tool 卡片会沿用该状态。
+   *
+   * @param expanded 是否展开。
+   */
+  set_all_tool_blocks_expanded(expanded: boolean): void {
+    this.tool_output_expanded = expanded;
+    for (const component of this.components.values()) {
+      if (component instanceof ToolCallBlockComponent) {
+        component.set_expanded(expanded);
+      }
+    }
   }
 
   /**
@@ -207,8 +222,12 @@ export class MessageListComponent implements Component {
       }
       case "tool-call":
       case "tool-approval-request":
-      case "tool-approval-result":
-        return new ToolCallBlockComponent(entry as ToolBlockEntry);
+      case "tool-approval-result": {
+        const component = new ToolCallBlockComponent(entry as ToolBlockEntry);
+        // 新建 tool 卡片沿用当前全局展开状态。
+        component.set_expanded(this.tool_output_expanded);
+        return component;
+      }
       case "status":
         return new StatusMessageComponent(entry.text);
       case "error":

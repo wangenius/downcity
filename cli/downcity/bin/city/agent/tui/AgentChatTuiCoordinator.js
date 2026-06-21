@@ -9,7 +9,6 @@
 import { Key, matchesKey, ProcessTerminal, TUI, } from "@earendil-works/pi-tui";
 import { ChatEditorComponent, StatusLineComponent, } from "../../../city/agent/tui/components/index.js";
 import { MessageListComponent } from "../../../city/agent/tui/components/MessageList.js";
-import { ToolCallBlockComponent } from "../../../city/agent/tui/components/ToolCallBlock.js";
 import { SessionPickerComponent } from "../../../city/agent/tui/dialogs/SessionPicker.js";
 import { PiTuiChatRenderer } from "../../../city/agent/tui/PiTuiChatRenderer.js";
 import { dispatchSlashCommand, resolveSlashCommandInput, } from "../../../city/agent/tui/commands/index.js";
@@ -31,6 +30,12 @@ export class AgentChatTuiCoordinator {
     overlay_handle = null;
     remove_input_listener = null;
     is_initial_picker = false;
+    /**
+     * 全局 tool output 展开状态。
+     * 对齐 Kimi Code：Ctrl+O 统一切换所有 tool 卡片，
+     * 新创建的 tool 卡片也会沿用当前状态。
+     */
+    tool_output_expanded = false;
     /**
      * slash 命令宿主，解耦命令分发与 coordinator 内部实现。
      */
@@ -94,7 +99,7 @@ export class AgentChatTuiCoordinator {
             void this.stop();
         };
         this.editor.on_ctrl_o = () => {
-            this.toggle_last_tool_block();
+            this.toggle_tool_output_expansion();
             this.request_render();
         };
     }
@@ -404,15 +409,9 @@ export class AgentChatTuiCoordinator {
      * 切换最后一个 tool 卡片的展开/折叠状态。
      * 对齐 Kimi Code 的 Ctrl+O 展开 tool output。
      */
-    toggle_last_tool_block() {
-        const children = this.message_list.children;
-        for (let i = children.length - 1; i >= 0; i -= 1) {
-            const child = children[i];
-            if (child instanceof ToolCallBlockComponent) {
-                child.toggle();
-                return;
-            }
-        }
+    toggle_tool_output_expansion() {
+        this.tool_output_expanded = !this.tool_output_expanded;
+        this.message_list.set_all_tool_blocks_expanded(this.tool_output_expanded);
     }
 }
 //# sourceMappingURL=AgentChatTuiCoordinator.js.map

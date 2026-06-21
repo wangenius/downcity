@@ -28,19 +28,28 @@ export declare class MessageListComponent implements Component {
     private last_rendered_line_count;
     private get_viewport_height_fn;
     /**
+     * 全局 tool output 展开状态。
+     * 对齐 Kimi Code：Ctrl+O 统一切换所有 tool 卡片，
+     * 新创建的 tool 卡片也会沿用该状态。
+     */
+    private tool_output_expanded;
+    /**
      * 构造可滚动消息流组件。
      *
      * @param options 构造选项。
      */
     constructor(options: MessageListOptions);
     /**
-     * 内部子组件列表，供 coordinator 查找 tool block。
-     */
-    get children(): readonly Component[];
-    /**
      * 当前滚动偏移（0 表示贴底）。
      */
     get current_scroll_offset(): number;
+    /**
+     * 统一设置所有 tool 卡片的展开状态，并记录为全局状态。
+     * 后续新建的 tool 卡片会沿用该状态。
+     *
+     * @param expanded 是否展开。
+     */
+    set_all_tool_blocks_expanded(expanded: boolean): void;
     /**
      * 添加一条消息条目。
      *

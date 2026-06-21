@@ -69,11 +69,14 @@ export class StatusLineComponent {
         if (!this.is_active()) {
             return [];
         }
+        // 对齐 Kimi Code 的 composing 活动指示器：
+        // - 仅 braille 帧染主色，标签保持默认色（MoonLoader 的 colorFn 只作用于帧）。
+        // - 指示器上方留 1 行空白（ActivityPane 的 Spacer(1)），左侧缩进 1 列（MoonLoader 的 padding）。
         const frame = BRAILLE_SPINNER_FRAMES[this.spinner_frame] ?? BRAILLE_SPINNER_FRAMES[0];
-        const label = `${frame} ${this.app_state.status_text}`;
-        const status_part = current_theme.fg("primary", label);
-        const text_lines = new Text(status_part, 0, 0).render(safe_width);
-        return text_lines.map((line) => truncateToWidth(line, safe_width, "…"));
+        const colored_frame = current_theme.fg("primary", frame);
+        const label = `${colored_frame} ${this.app_state.status_text}`;
+        const text_lines = new Text(label, 1, 0).render(safe_width);
+        return ["", ...text_lines.map((line) => truncateToWidth(line, safe_width, "…"))];
     }
     /**
      * 当前是否处于需要展示动画的执行态。

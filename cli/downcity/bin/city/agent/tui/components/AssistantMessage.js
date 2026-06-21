@@ -20,9 +20,16 @@ export class AssistantMessageComponent {
     /**
      * @param show_bullet 是否在首行显示状态子弹。
      */
-    constructor(show_bullet = true) {
+    /**
+     * @param show_bullet 是否在首行显示状态子弹。
+     * @param text 可选初始文本。
+     */
+    constructor(show_bullet = true, text) {
         this.show_bullet = show_bullet;
         this.content_container = new Container();
+        if (text !== undefined && text.trim().length > 0) {
+            this.update_content(text);
+        }
     }
     /**
      * 更新要渲染的文本。

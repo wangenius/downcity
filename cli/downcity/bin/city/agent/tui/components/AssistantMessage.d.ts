@@ -16,7 +16,11 @@ export declare class AssistantMessageComponent implements Component {
     /**
      * @param show_bullet 是否在首行显示状态子弹。
      */
-    constructor(show_bullet?: boolean);
+    /**
+     * @param show_bullet 是否在首行显示状态子弹。
+     * @param text 可选初始文本。
+     */
+    constructor(show_bullet?: boolean, text?: string);
     /**
      * 更新要渲染的文本。
      *

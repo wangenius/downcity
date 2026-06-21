@@ -2,8 +2,8 @@
  * 聊天输入框组件。
  *
  * 关键点（中文）
- * - 对 pi-tui Editor 的薄封装，统一主题与提交回调。
- * - 负责设置边框颜色、清空输入、获取当前文本。
+ * - 直接对齐 Kimi Code 的 CustomEditor：带完整边框、prompt 符号、slash 高亮、
+ *   描述换行的 slash 自动完成，以及标准应用级快捷键回调。
  */
 import { Editor, type TUI } from "@earendil-works/pi-tui";
 /**
@@ -14,6 +14,13 @@ export type ChatEditorSubmitHandler = (text: string) => void;
  * 聊天输入框。
  */
 export declare class ChatEditorComponent extends Editor {
+    on_escape?: () => void;
+    on_ctrl_c?: () => void;
+    on_ctrl_d?: () => void;
+    on_ctrl_g?: () => void;
+    on_ctrl_o?: () => void;
+    on_ctrl_s?: () => void;
+    connected_above: boolean;
     private submit_handler?;
     /**
      * @param tui 所属 TUI 实例。
@@ -31,13 +38,11 @@ export declare class ChatEditorComponent extends Editor {
      * 清空当前输入。
      */
     clear(): void;
+    handleInput(data: string): void;
     /**
-     * 覆写渲染，注入 prompt 符号并高亮 slash 命令首 token。
-      * 对齐 Kimi Code 的 CustomEditor.render。
-      *
-      * @param width 可用宽度。
-      * @returns 渲染后的行数组。
-      */
+     * 覆写渲染，注入 prompt 符号、高亮 slash 命令，并补全边框。
+     */
     render(width: number): string[];
+    private cancel_autocomplete_activity;
 }
 //# sourceMappingURL=ChatEditor.d.ts.map

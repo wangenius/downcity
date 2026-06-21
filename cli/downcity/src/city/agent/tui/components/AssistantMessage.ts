@@ -21,12 +21,19 @@ export class AssistantMessageComponent implements Component {
   private last_text = "";
   private show_bullet: boolean;
 
+ /**
+  * @param show_bullet 是否在首行显示状态子弹。
+  */
   /**
    * @param show_bullet 是否在首行显示状态子弹。
+   * @param text 可选初始文本。
    */
-  constructor(show_bullet: boolean = true) {
+  constructor(show_bullet: boolean = true, text?: string) {
     this.show_bullet = show_bullet;
     this.content_container = new Container();
+    if (text !== undefined && text.trim().length > 0) {
+      this.update_content(text);
+    }
   }
 
   /**

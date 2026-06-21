@@ -2,9 +2,9 @@
  * city agent chat TUI 协调器。
  *
  * 关键点（中文）
- * - 对齐 Kimi Code 的 KimiTUI 布局：transcriptContainer + status/activity + editor，交给 pi-tui 裁剪顶部溢出。
- * - 不再手动计算 message list 的可用高度或维护 scroll_offset。
- * - 消息直接作为子组件追加到 MessageList（Container），终端自然向下生长，最新内容靠近底部输入区。
+ * - 对齐 Kimi Code 的 KimiTUI 布局：transcript + status/activity + editor。
+ * - transcript 使用可滚动消息流，支持 PageUp/PageDown 回看历史。
+ * - 编辑器负责消费标准快捷键（Ctrl+C/D/O/S），再回调 coordinator。
  */
 import type { AgentChatSessionSummaryView } from "../../../city/agent/AgentChatTypes.js";
 import type { AgentChatInteractiveRendererPort } from "../../../city/types/AgentChatInteractive.js";
@@ -77,6 +77,10 @@ export declare class AgentChatTuiCoordinator {
      * 请求重新渲染。
      */
     private request_render;
+    /**
+     * 计算消息流当前可用的可视高度。
+     */
+    private get_message_list_viewport_height;
     /**
      * 处理用户输入。
      *

@@ -5,12 +5,17 @@
  * - 标题使用 primary 色，详情行使用 textDim。
  * - 支持 tool-call、tool-result、approval-request、approval-result 四种展示形态。
  * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情，默认折叠，避免单个 tool 结果占满屏幕。
+ * - approval-result 根据决策显示 ✓ / ✗ 标记。
  * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
  */
 
 import { Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
-import { STATUS_BULLET } from "@/city/agent/tui/constant/symbols.js";
+import {
+  FAILURE_MARK,
+  STATUS_BULLET,
+  SUCCESS_MARK,
+} from "@/city/agent/tui/constant/symbols.js";
 import { MESSAGE_INDENT, RESULT_PREVIEW_LINES } from "@/city/agent/tui/constant/rendering.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import type {
@@ -53,6 +58,15 @@ export class ToolCallBlockComponent implements Component {
    */
   toggle(): void {
     this.expanded = !this.expanded;
+  }
+
+  /**
+   * 设置展开状态。
+   *
+   * @param expanded 是否展开。
+   */
+  set_expanded(expanded: boolean): void {
+    this.expanded = expanded;
   }
 
   /**
@@ -133,8 +147,10 @@ export class ToolCallBlockComponent implements Component {
         return `[result] ${this.entry.tool_name}`;
       case "tool-approval-request":
         return `[approval] ${this.entry.tool_name} requests unrestricted sandbox`;
-      case "tool-approval-result":
-        return `[approval] ${this.entry.decision}`;
+      case "tool-approval-result": {
+        const mark = this.entry.decision === "approved" ? SUCCESS_MARK : FAILURE_MARK;
+        return `[approval] ${mark}${this.entry.decision}`;
+      }
       default:
         return "";
     }

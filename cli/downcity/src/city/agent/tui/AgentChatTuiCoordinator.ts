@@ -2,9 +2,9 @@
  * city agent chat TUI 协调器。
  *
  * 关键点（中文）
- * - 对齐 Kimi Code 的 KimiTUI 布局：transcriptContainer + status/activity + editor，交给 pi-tui 裁剪顶部溢出。
- * - 不再手动计算 message list 的可用高度或维护 scroll_offset。
- * - 消息直接作为子组件追加到 MessageList（Container），终端自然向下生长，最新内容靠近底部输入区。
+ * - 对齐 Kimi Code 的 KimiTUI 布局：transcript + status/activity + editor。
+ * - transcript 使用可滚动消息流，支持 PageUp/PageDown 回看历史。
+ * - 编辑器负责消费标准快捷键（Ctrl+C/D/O/S），再回调 coordinator。
  */
 
 import {
@@ -126,10 +126,28 @@ export class AgentChatTuiCoordinator {
     this.terminal.setTitle(this.build_title());
 
     this.status_line = new StatusLineComponent(this.app_state);
-    this.message_list = new MessageListComponent();
     this.editor = new ChatEditorComponent(this.tui);
+    this.editor.connected_above = true;
+
+    this.message_list = new MessageListComponent({
+      get_viewport_height: () => this.get_message_list_viewport_height(),
+    });
+
     this.editor.on_submit = (text) => {
       void this.handle_user_input(text);
+    };
+    this.editor.on_ctrl_c = () => {
+      void this.stop();
+    };
+    this.editor.on_ctrl_d = () => {
+      void this.stop();
+    };
+    this.editor.on_ctrl_s = () => {
+      void this.stop();
+    };
+    this.editor.on_ctrl_o = () => {
+      this.toggle_last_tool_block();
+      this.request_render();
     };
   }
 
@@ -145,7 +163,7 @@ export class AgentChatTuiCoordinator {
     }
     this.running = true;
 
-    // 关键点（中文）：顺序是 transcript → status/activity → editor，让 pi-tui 从顶部裁剪溢出。
+    // 顺序：transcript → status/activity → editor，最新内容靠近底部输入区。
     this.tui.addChild(this.message_list as Component);
     this.tui.addChild(this.status_line as Component);
     this.tui.addChild(this.editor as Component);
@@ -194,6 +212,16 @@ export class AgentChatTuiCoordinator {
   }
 
   /**
+   * 计算消息流当前可用的可视高度。
+   */
+  private get_message_list_viewport_height(): number {
+    const width = this.terminal.columns;
+    const status_lines = this.status_line.render(width).length;
+    const editor_lines = this.editor.render(width).length;
+    return Math.max(1, this.terminal.rows - status_lines - editor_lines);
+  }
+
+  /**
    * 处理用户输入。
    *
    * @param raw_text 原始输入文本。
@@ -211,6 +239,7 @@ export class AgentChatTuiCoordinator {
     }
 
     this.editor.clear();
+    this.message_list.scroll_to_bottom();
 
     const intent = resolveSlashCommandInput({
       input: text,
@@ -245,6 +274,7 @@ export class AgentChatTuiCoordinator {
     this.app_state.status_text = "Thinking...";
     this.status_line.set_state(this.app_state);
     this.editor.disableSubmit = true;
+    this.message_list.scroll_to_bottom();
     this.add_user_message(message);
     this.request_render();
 
@@ -414,15 +444,35 @@ export class AgentChatTuiCoordinator {
     if (this.overlay_handle && !this.overlay_handle.isHidden()) {
       return undefined;
     }
-    if (matchesKey(data, Key.ctrl("c")) || matchesKey(data, Key.ctrl("d"))) {
-      void this.stop();
-      return { consume: true };
-    }
-    if (matchesKey(data, Key.ctrl("o"))) {
-      this.toggle_last_tool_block();
+
+    const page_size = Math.max(1, this.get_message_list_viewport_height() - 1);
+
+    if (matchesKey(data, Key.pageUp)) {
+      this.message_list.scroll_by(page_size);
       this.request_render();
       return { consume: true };
     }
+    if (matchesKey(data, Key.pageDown)) {
+      this.message_list.scroll_by(-page_size);
+      this.request_render();
+      return { consume: true };
+    }
+    if (matchesKey(data, Key.shift("up"))) {
+      this.message_list.scroll_by(1);
+      this.request_render();
+      return { consume: true };
+    }
+    if (matchesKey(data, Key.shift("down"))) {
+      this.message_list.scroll_by(-1);
+      this.request_render();
+      return { consume: true };
+    }
+    if (matchesKey(data, Key.ctrl("l"))) {
+      this.message_list.scroll_to_bottom();
+      this.request_render();
+      return { consume: true };
+    }
+
     return undefined;
   }
 

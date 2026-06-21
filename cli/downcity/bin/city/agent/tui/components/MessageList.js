@@ -1,11 +1,11 @@
 /**
- * 消息流组件。
+ * 可滚动消息流组件。
  *
  * 关键点（中文）
- * - 继承 GutterContainer（直接从 Kimi Code 挪用），给消息区左右留 1 列边距。
- * - 消息直接 append 为子组件，不在每条消息间固定插入 Spacer。
- * - 不维护固定视口高度，不手动切片；交给外层 TUI 统一裁剪顶部溢出。
- * - 对齐 Kimi Code 的 transcriptContainer 思路：消息自然向下生长，最新内容靠近底部输入区。
+ * - 内部使用 GutterContainer 保留左右边距。
+ * - 维护 scroll_offset，支持 PageUp/PageDown 等快捷键回看历史。
+ * - 默认 follow-tail：scroll_offset 为 0 时始终显示最新内容。
+ * - 消息顺序按 append 先后排列，最新内容在底部。
  */
 import { GutterContainer } from "../../../../city/agent/tui/components/GutterContainer.js";
 import { NoticeMessageComponent } from "../../../../city/agent/tui/components/NoticeMessage.js";
@@ -15,16 +15,33 @@ import { AssistantMessageComponent } from "../../../../city/agent/tui/components
 import { ToolCallBlockComponent } from "../../../../city/agent/tui/components/ToolCallBlock.js";
 import { UserMessageComponent } from "../../../../city/agent/tui/components/UserMessage.js";
 /**
- * 消息流展示组件。
+ * 可滚动消息流展示组件。
  */
-export class MessageListComponent extends GutterContainer {
+export class MessageListComponent {
+    inner = new GutterContainer(CHROME_GUTTER, CHROME_GUTTER);
     entries = [];
     components = new Map();
+    scroll_offset = 0;
+    get_viewport_height_fn;
     /**
-     * 构造消息流组件。
+     * 构造可滚动消息流组件。
+     *
+     * @param options 构造选项。
      */
-    constructor() {
-        super(CHROME_GUTTER, CHROME_GUTTER);
+    constructor(options) {
+        this.get_viewport_height_fn = options.get_viewport_height;
+    }
+    /**
+     * 内部子组件列表，供 coordinator 查找 tool block。
+     */
+    get children() {
+        return this.inner.children;
+    }
+    /**
+     * 当前滚动偏移（0 表示贴底）。
+     */
+    get current_scroll_offset() {
+        return this.scroll_offset;
     }
     /**
      * 添加一条消息条目。
@@ -35,7 +52,12 @@ export class MessageListComponent extends GutterContainer {
         this.entries.push(entry);
         const component = this.create_component(entry);
         this.components.set(entry.id, component);
-        this.addChild(component);
+        this.inner.addChild(component);
+        // 用户已经向上滚动时，保持阅读位置；贴底时继续贴底。
+        if (this.scroll_offset > 0) {
+            // 新内容出现在底部，阅读位置相对底部会下移，这里不做补偿，
+            // 由 render 时根据总高度重新钳制。
+        }
     }
     /**
      * 更新指定 assistant 条目的文本。
@@ -62,7 +84,8 @@ export class MessageListComponent extends GutterContainer {
     clear() {
         this.entries = [];
         this.components.clear();
-        super.clear();
+        this.inner.clear();
+        this.scroll_offset = 0;
     }
     /**
      * 获取当前条目数量。
@@ -70,12 +93,59 @@ export class MessageListComponent extends GutterContainer {
     get entry_count() {
         return this.entries.length;
     }
+    /**
+     * 按行数滚动。
+     *
+     * @param delta 正数向上（看历史），负数向下（回底部方向）。
+     */
+    scroll_by(delta) {
+        this.scroll_offset = Math.max(0, this.scroll_offset + delta);
+    }
+    /**
+     * 滚动到底部（follow-tail）。
+     */
+    scroll_to_bottom() {
+        this.scroll_offset = 0;
+    }
+    /**
+     * 切换当前是否贴底。
+     *
+     * @returns 切换后是否贴底。
+     */
+    toggle_follow_tail() {
+        this.scroll_offset = this.scroll_offset === 0 ? 1 : 0;
+        return this.scroll_offset === 0;
+    }
+    /**
+     * 渲染消息流。
+     *
+     * @param width 可用宽度。
+     * @returns 渲染后的行数组。
+     */
+    render(width) {
+        const all_lines = this.inner.render(width);
+        const viewport_height = this.get_viewport_height_fn();
+        if (viewport_height <= 0 || all_lines.length <= viewport_height) {
+            this.scroll_offset = 0;
+            return all_lines;
+        }
+        const max_offset = all_lines.length - viewport_height;
+        this.scroll_offset = Math.min(this.scroll_offset, max_offset);
+        const start = Math.max(0, all_lines.length - viewport_height - this.scroll_offset);
+        return all_lines.slice(start, start + viewport_height);
+    }
+    /**
+     * 通知内部组件主题已变化。
+     */
+    invalidate() {
+        this.inner.invalidate();
+    }
     create_component(entry) {
         switch (entry.kind) {
             case "user":
                 return new UserMessageComponent(entry.text);
             case "assistant":
-                return new AssistantMessageComponent();
+                return new AssistantMessageComponent(true, entry.text);
             case "tool-call":
             case "tool-result":
             case "tool-approval-request":

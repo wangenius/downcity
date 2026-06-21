@@ -2,13 +2,15 @@
  * 流式会话事件控制器。
  *
  * 关键点（中文）
- * - 把 @downcity/agent 的 AgentSessionEvent 映射为消息流条目。
- * - 维护当前 turn id，保证跨事件状态一致。
- * - 所有状态变更最终反映到 MessageListComponent。
+ * - 对齐 Kimi Code StreamingUIController 的语义方法：
+ *   appendAssistantDelta / onStreamingTextStart / onStreamingTextUpdate / onStreamingTextEnd。
+ * - 用 _streaming_block 维护当前 assistant 条目，保证增量只更新同一个组件。
+ * - flush 节拍合并高频 text-delta，降低终端重绘开销。
  */
 
 import type { AgentSessionEvent } from "@downcity/agent";
 
+import { AssistantMessageComponent } from "@/city/agent/tui/components/AssistantMessage.js";
 import type { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
 import { STREAMING_UI_FLUSH_MS } from "@/city/agent/tui/constant/streaming.js";
 import { generateTuiId } from "@/city/agent/tui/utils/id.js";
@@ -24,6 +26,13 @@ export interface StreamingUIOptions {
   request_render: () => void;
 }
 
+interface StreamingBlock {
+  /** assistant 条目 ID。 */
+  entry_id: string;
+  /** assistant 渲染组件。 */
+  component: AssistantMessageComponent;
+}
+
 /**
  * 流式 UI 控制器。
  */
@@ -31,8 +40,9 @@ export class StreamingUIController {
   private message_list: MessageListComponent;
   private request_render_fn: () => void;
   private active_turn_id = "";
-  private current_assistant_entry_id = "";
-  private current_assistant_text = "";
+  private streaming_block: StreamingBlock | null = null;
+  private assistant_draft = "";
+  private pending_assistant_flush = false;
   private flush_timer: ReturnType<typeof setTimeout> | null = null;
   private last_flush_at = 0;
   private pending_render = false;
@@ -50,8 +60,9 @@ export class StreamingUIController {
    */
   start_turn(): void {
     this.active_turn_id = "";
-    this.current_assistant_entry_id = "";
-    this.current_assistant_text = "";
+    this.on_streaming_text_end();
+    this.assistant_draft = "";
+    this.pending_assistant_flush = false;
     this.pending_render = false;
     this.clear_flush_timer();
   }
@@ -76,18 +87,16 @@ export class StreamingUIController {
       return;
     }
 
-   switch (event.type) {
+    switch (event.type) {
       case "turn-start":
         this.attach_turn_id(event.turnId);
-        // 关键点（中文）：对齐 Kimi Code，不在 turn-start 预创建 assistant entry。
+        // 对齐 Kimi Code：不在 turn-start 预创建 assistant entry，
         // 第一个 text-delta 到达时才创建，保证 entry 位置与文本实际出现位置一致。
         break;
       case "text-delta":
-        this.append_assistant_text(event.text || "");
+        this.append_assistant_delta(event.text || "");
         break;
       case "tool-call":
-        // 关键点（中文）：tool 开始前先 finalize 当前 assistant text，
-        // 让后续 text 在 tool result 之后创建新 entry。
         this.finalize_assistant();
         this.add_tool_call(event.toolName, event.args);
         break;
@@ -95,7 +104,6 @@ export class StreamingUIController {
         this.add_tool_result(event.toolName, event.result);
         break;
       case "tool-approval-request":
-        // 关键点（中文）：approval 也是交互断点，先结束当前 assistant text。
         this.finalize_assistant();
         this.add_approval_request(event);
         break;
@@ -103,7 +111,7 @@ export class StreamingUIController {
         this.add_approval_result(event);
         break;
       case "reasoning-delta":
-        // reasoning 不在 TUI 中直接展示，只保证状态为 thinking。
+        // reasoning 不在 TUI 中直接展示。
         break;
       case "error":
         this.add_error(event.message || "unknown error");
@@ -112,7 +120,7 @@ export class StreamingUIController {
         this.finalize_assistant();
         break;
       case "assistant-step":
-        // 关键点（中文）：每个 assistant step 结束都是文本断点，
+        // 每个 assistant step 结束都是文本断点，
         // finalize 后下一个 text-delta 会创建新 entry。
         this.finalize_assistant();
         break;
@@ -127,58 +135,86 @@ export class StreamingUIController {
    */
   finish_turn(): void {
     this.finalize_assistant();
-    this.flush_now();
+    this.flush();
   }
 
-  private extract_event_turn_id(event: AgentSessionEvent): string {
-    if (event.type === "tool-approval-request" || event.type === "tool-approval-result") {
-      return "";
+  /**
+   * 追加 assistant 文本增量。
+   *
+   * @param delta 新增文本片段。
+   */
+  private append_assistant_delta(delta: string): void {
+    if (this.streaming_block === null) {
+      this.on_streaming_text_start();
     }
-    if ("turnId" in event && typeof event.turnId === "string") {
-      return event.turnId;
-    }
-    return "";
+    this.assistant_draft += delta;
+    this.pending_assistant_flush = true;
+    this.schedule_render();
   }
 
-  private create_assistant_entry(): void {
-    const id = generateTuiId();
-    this.current_assistant_entry_id = id;
-    this.current_assistant_text = "";
+  /**
+   * 开始一个新的 assistant 流式条目。
+   */
+  private on_streaming_text_start(): void {
+    const entry_id = generateTuiId();
     const entry: TranscriptEntry = {
-      id,
+      id: entry_id,
       kind: "assistant",
       text: "",
       streaming: true,
       created_at: Date.now(),
     };
+    const component = new AssistantMessageComponent();
     this.message_list.add_entry(entry);
-    this.schedule_render();
+    this.streaming_block = { entry_id, component };
   }
 
-  private append_assistant_text(delta: string): void {
-    if (!this.current_assistant_entry_id) {
-      this.create_assistant_entry();
-    }
-    this.current_assistant_text += delta;
-    this.message_list.update_assistant_text(
-      this.current_assistant_entry_id,
-      this.current_assistant_text,
-      true,
-    );
-    this.schedule_render();
-  }
-
-  private finalize_assistant(): void {
-    if (!this.current_assistant_entry_id) {
+  /**
+   * 将当前 draft 刷入组件与条目。
+   */
+  private flush(): void {
+    this.clear_flush_timer();
+    if (!this.pending_assistant_flush) {
       return;
     }
-    this.message_list.update_assistant_text(
-      this.current_assistant_entry_id,
-      this.current_assistant_text,
-      false,
-    );
-    this.current_assistant_entry_id = "";
-    this.current_assistant_text = "";
+    this.pending_assistant_flush = false;
+    this.last_flush_at = Date.now();
+
+    if (this.streaming_block !== null) {
+      this.streaming_block.component.update_content(this.assistant_draft);
+      this.message_list.update_assistant_text(
+        this.streaming_block.entry_id,
+        this.assistant_draft,
+        true,
+      );
+    }
+
+    if (this.pending_render) {
+      this.pending_render = false;
+      this.request_render_fn();
+    }
+  }
+
+  /**
+   * 结束当前 assistant 流式条目。
+   */
+  private on_streaming_text_end(): void {
+    if (this.streaming_block === null) {
+      return;
+    }
+    const { entry_id } = this.streaming_block;
+    this.message_list.update_assistant_text(entry_id, this.assistant_draft, false);
+    this.streaming_block = null;
+    this.assistant_draft = "";
+    this.pending_assistant_flush = false;
+  }
+
+  /**
+   * 结束当前 assistant 文本块。
+   */
+  private finalize_assistant(): void {
+    this.flush();
+    this.on_streaming_text_end();
     this.schedule_render();
   }
 
@@ -253,6 +289,16 @@ export class StreamingUIController {
     this.schedule_render();
   }
 
+  private extract_event_turn_id(event: AgentSessionEvent): string {
+    if (event.type === "tool-approval-request" || event.type === "tool-approval-result") {
+      return "";
+    }
+    if ("turnId" in event && typeof event.turnId === "string") {
+      return event.turnId;
+    }
+    return "";
+  }
+
   /**
    * 调度一次重绘。多次调用会被合并到下一个 STREAMING_UI_FLUSH_MS 节拍。
    */
@@ -264,22 +310,8 @@ export class StreamingUIController {
     const elapsed = Date.now() - this.last_flush_at;
     const delay = elapsed >= STREAMING_UI_FLUSH_MS ? 0 : STREAMING_UI_FLUSH_MS - elapsed;
     this.flush_timer = setTimeout(() => {
-      this.flush_timer = null;
-      this.flush_now();
+      this.flush();
     }, delay);
-  }
-
-  /**
-   * 立刻触发一次重绘，并重置节流计时。
-   */
-  private flush_now(): void {
-    this.clear_flush_timer();
-    if (!this.pending_render) {
-      return;
-    }
-    this.pending_render = false;
-    this.last_flush_at = Date.now();
-    this.request_render_fn();
   }
 
   private clear_flush_timer(): void {

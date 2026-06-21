@@ -5,6 +5,7 @@
  * - 标题使用 primary 色，详情行使用 textDim。
  * - 支持 tool-call、tool-result、approval-request、approval-result 四种展示形态。
  * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情，默认折叠，避免单个 tool 结果占满屏幕。
+ * - approval-result 根据决策显示 ✓ / ✗ 标记。
  * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
  */
 import { type Component } from "@earendil-works/pi-tui";
@@ -31,6 +32,12 @@ export declare class ToolCallBlockComponent implements Component {
      * 切换展开/折叠状态。
      */
     toggle(): void;
+    /**
+     * 设置展开状态。
+     *
+     * @param expanded 是否展开。
+     */
+    set_expanded(expanded: boolean): void;
     /**
      * 当前是否处于展开状态。
      */

@@ -2,9 +2,10 @@
  * 流式会话事件控制器。
  *
  * 关键点（中文）
- * - 把 @downcity/agent 的 AgentSessionEvent 映射为消息流条目。
- * - 维护当前 turn id，保证跨事件状态一致。
- * - 所有状态变更最终反映到 MessageListComponent。
+ * - 对齐 Kimi Code StreamingUIController 的语义方法：
+ *   appendAssistantDelta / onStreamingTextStart / onStreamingTextUpdate / onStreamingTextEnd。
+ * - 用 _streaming_block 维护当前 assistant 条目，保证增量只更新同一个组件。
+ * - flush 节拍合并高频 text-delta，降低终端重绘开销。
  */
 import type { AgentSessionEvent } from "@downcity/agent";
 import type { MessageListComponent } from "../../../../city/agent/tui/components/MessageList.js";
@@ -24,8 +25,9 @@ export declare class StreamingUIController {
     private message_list;
     private request_render_fn;
     private active_turn_id;
-    private current_assistant_entry_id;
-    private current_assistant_text;
+    private streaming_block;
+    private assistant_draft;
+    private pending_assistant_flush;
     private flush_timer;
     private last_flush_at;
     private pending_render;
@@ -53,23 +55,38 @@ export declare class StreamingUIController {
      * 结束当前一轮渲染。
      */
     finish_turn(): void;
-    private extract_event_turn_id;
-    private create_assistant_entry;
-    private append_assistant_text;
+    /**
+     * 追加 assistant 文本增量。
+     *
+     * @param delta 新增文本片段。
+     */
+    private append_assistant_delta;
+    /**
+     * 开始一个新的 assistant 流式条目。
+     */
+    private on_streaming_text_start;
+    /**
+     * 将当前 draft 刷入组件与条目。
+     */
+    private flush;
+    /**
+     * 结束当前 assistant 流式条目。
+     */
+    private on_streaming_text_end;
+    /**
+     * 结束当前 assistant 文本块。
+     */
     private finalize_assistant;
     private add_tool_call;
     private add_tool_result;
     private add_approval_request;
     private add_approval_result;
     private add_error;
+    private extract_event_turn_id;
     /**
      * 调度一次重绘。多次调用会被合并到下一个 STREAMING_UI_FLUSH_MS 节拍。
      */
     private schedule_render;
-    /**
-     * 立刻触发一次重绘，并重置节流计时。
-     */
-    private flush_now;
     private clear_flush_timer;
 }
 //# sourceMappingURL=StreamingUI.d.ts.map

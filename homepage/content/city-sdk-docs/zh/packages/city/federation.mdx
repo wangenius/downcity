@@ -49,7 +49,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
+const base = new Federation({ db });
 
 const ai = new AIService();
 

@@ -32,7 +32,7 @@ const db = Object.assign(drizzle(sqlite), {
   $client: { exec: (sql: string) => sqlite.exec(sql) },
 });
 
-const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
+const base = new Federation({ db });
 ```
 
 默认数据库会落到：
@@ -49,7 +49,7 @@ const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
 import { drizzle } from "drizzle-orm/d1";
 
 const db = drizzle(env.DB);
-const base = new Federation({ db, dialect: "sqlite", raw: env.DB });
+const base = new Federation({ db });
 ```
 
 Federation 会在第一次 `health()`、`handleRequest()`、`table()` 等运行时操作时自动初始化。

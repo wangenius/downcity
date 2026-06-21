@@ -72,11 +72,7 @@ City 侧通常会这样注册模型：
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { Federation, AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
 
-const base = new Federation({
-  db,
-  dialect: "sqlite",
-  raw,
-});
+const base = new Federation({ db });
 
 class DeepSeekProvider extends Provider {
   constructor() {

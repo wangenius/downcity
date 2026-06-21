@@ -33,7 +33,7 @@ export interface Env {
 export default {
   async fetch(request: Request, env: Env) {
     const db = drizzle(env.DB);
-    const base = new Federation({ db, dialect: "sqlite", raw: env.DB });
+    const base = new Federation({ db });
 
     await base.health();
     return base.handleRequest(request);

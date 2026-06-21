@@ -24,7 +24,7 @@ The server always starts from `new Federation({ db })`. It assembles the databas
 ```ts
 import { Federation, Service } from "@downcity/city";
 
-const base = new Federation({ db, dialect: "sqlite", raw: sqlite });
+const base = new Federation({ db });
 
 base.use(new Service({ id: "translate" }));
 

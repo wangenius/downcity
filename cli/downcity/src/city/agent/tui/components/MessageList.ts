@@ -4,7 +4,8 @@
  * 关键点（中文）
  * - 内部使用 GutterContainer 保留左右边距。
  * - 维护 scroll_offset，支持 PageUp/PageDown 等快捷键回看历史。
- * - 默认 follow-tail：scroll_offset 为 0 时始终显示最新内容。
+ * - 默认贴底：scroll_offset 为 0 时始终显示最新内容。
+ * - 用户向上滚动后，新追加的内容不应改变当前视口顶部位置。
  * - 消息顺序按 append 先后排列，最新内容在底部。
  */
 
@@ -35,6 +36,7 @@ export class MessageListComponent implements Component {
   private entries: TranscriptEntry[] = [];
   private components = new Map<string, Component>();
   private scroll_offset = 0;
+  private last_rendered_line_count = 0;
   private get_viewport_height_fn: () => number;
 
   /**
@@ -98,6 +100,26 @@ export class MessageListComponent implements Component {
   }
 
   /**
+   * 注入指定 tool 调用的执行结果。
+   *
+   * @param tool_call_id tool 调用唯一标识。
+   * @param result tool 返回结果。
+   */
+  update_tool_result(tool_call_id: string, result: unknown): void {
+    for (const entry of this.entries) {
+      if (entry.kind === "tool-call" && entry.tool_call_id === tool_call_id) {
+        entry.result = result;
+        entry.status = "success";
+        const component = this.components.get(entry.id);
+        if (component instanceof ToolCallBlockComponent) {
+          component.update_result(result);
+        }
+        return;
+      }
+    }
+  }
+
+  /**
    * 清空所有消息。
    */
   clear(): void {
@@ -149,6 +171,14 @@ export class MessageListComponent implements Component {
   render(width: number): string[] {
     const all_lines = this.inner.render(width);
     const viewport_height = this.get_viewport_height_fn();
+    const line_count_delta = all_lines.length - this.last_rendered_line_count;
+    this.last_rendered_line_count = all_lines.length;
+
+    // 用户已向上滚动且内容变长时，增加偏移以保持视口顶部内容稳定。
+    if (line_count_delta > 0 && this.scroll_offset > 0) {
+      this.scroll_offset += line_count_delta;
+    }
+
     if (viewport_height <= 0 || all_lines.length <= viewport_height) {
       this.scroll_offset = 0;
       return all_lines;
@@ -173,7 +203,6 @@ export class MessageListComponent implements Component {
       case "assistant":
         return new AssistantMessageComponent(true, entry.text);
       case "tool-call":
-      case "tool-result":
       case "tool-approval-request":
       case "tool-approval-result":
         return new ToolCallBlockComponent(entry as ToolBlockEntry);

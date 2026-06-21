@@ -3,17 +3,18 @@
  *
  * 关键点（中文）
  * - 标题使用 primary 色，详情行使用 textDim。
- * - 支持 tool-call、tool-result、approval-request、approval-result 四种展示形态。
+ * - 同一组件先展示 tool-call 参数，收到 tool-result 后通过 `update_result` 更新为结果。
+ * - 支持 tool-call、approval-request、approval-result 三种展示形态。
  * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情，默认折叠，避免单个 tool 结果占满屏幕。
  * - approval-result 根据决策显示 ✓ / ✗ 标记。
  * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
  */
 import { type Component } from "@earendil-works/pi-tui";
-import type { ToolApprovalRequestEntry, ToolApprovalResultEntry, ToolCallEntry, ToolResultEntry } from "../../../../city/agent/tui/types.js";
+import type { ToolApprovalRequestEntry, ToolApprovalResultEntry, ToolCallEntry } from "../../../../city/agent/tui/types.js";
 /**
  * 可展示的 tool 块条目联合类型。
  */
-export type ToolBlockEntry = ToolCallEntry | ToolResultEntry | ToolApprovalRequestEntry | ToolApprovalResultEntry;
+export type ToolBlockEntry = ToolCallEntry | ToolApprovalRequestEntry | ToolApprovalResultEntry;
 /**
  * tool 状态/结果卡片组件。
  *
@@ -42,6 +43,12 @@ export declare class ToolCallBlockComponent implements Component {
      * 当前是否处于展开状态。
      */
     is_expanded(): boolean;
+    /**
+     * 注入 tool 执行结果。
+     *
+     * @param result tool 返回结果。
+     */
+    update_result(result: unknown): void;
     /**
      * 无缓存需要清理。
      */

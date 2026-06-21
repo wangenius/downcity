@@ -78,7 +78,6 @@ export declare class StreamingUIController {
      */
     private finalize_assistant;
     private add_tool_call;
-    private add_tool_result;
     private add_approval_request;
     private add_approval_result;
     private add_error;

@@ -8,7 +8,7 @@
 /**
  * 消息流条目类型联合。
  */
-export type TranscriptEntry = UserEntry | AssistantEntry | ToolCallEntry | ToolResultEntry | ToolApprovalRequestEntry | ToolApprovalResultEntry | StatusEntry | ErrorEntry;
+export type TranscriptEntry = UserEntry | AssistantEntry | ToolCallEntry | ToolApprovalRequestEntry | ToolApprovalResultEntry | StatusEntry | ErrorEntry;
 /**
  * 基础条目字段。
  */
@@ -41,20 +41,23 @@ export interface AssistantEntry extends BaseEntry {
  */
 export interface ToolCallEntry extends BaseEntry {
     kind: "tool-call";
+    /** tool 调用唯一标识，用于关联后续结果。 */
+    tool_call_id: string;
     /** tool 名称。 */
     tool_name: string;
     /** tool 参数（JSON 任意类型）。 */
     args: unknown;
-}
-/**
- * tool 执行结果记录。
- */
-export interface ToolResultEntry extends BaseEntry {
-    kind: "tool-result";
-    /** tool 名称。 */
-    tool_name: string;
-    /** tool 结果（JSON 任意类型）。 */
-    result: unknown;
+    /** tool 执行结果；收到 tool-result 事件后填充。 */
+    result?: unknown;
+    /**
+     * tool 执行状态。
+     * - `pending`：已调用，等待结果。
+     * - `success`：已返回结果。
+     * - `error`：执行失败。
+     */
+    status?: "pending" | "success" | "error";
+    /** 当前卡片是否展开显示完整结果。 */
+    expanded?: boolean;
 }
 /**
  * 需要人工审批的 sandbox 请求。

@@ -3,7 +3,8 @@
  *
  * 关键点（中文）
  * - 标题使用 primary 色，详情行使用 textDim。
- * - 支持 tool-call、tool-result、approval-request、approval-result 四种展示形态。
+ * - 同一组件先展示 tool-call 参数，收到 tool-result 后通过 `update_result` 更新为结果。
+ * - 支持 tool-call、approval-request、approval-result 三种展示形态。
  * - 对齐 Kimi Code 的 tool 卡片视觉：标题一行 + 缩进详情，默认折叠，避免单个 tool 结果占满屏幕。
  * - approval-result 根据决策显示 ✓ / ✗ 标记。
  * - 详情超过 RESULT_PREVIEW_LINES 时截断，展开后显示完整内容。
@@ -28,6 +29,9 @@ export class ToolCallBlockComponent {
     constructor(entry) {
         this.entry = entry;
         this.spacer = new Spacer(1);
+        if (entry.kind === "tool-call") {
+            entry.status = entry.status ?? "pending";
+        }
     }
     /**
      * 切换展开/折叠状态。
@@ -48,6 +52,18 @@ export class ToolCallBlockComponent {
      */
     is_expanded() {
         return this.expanded;
+    }
+    /**
+     * 注入 tool 执行结果。
+     *
+     * @param result tool 返回结果。
+     */
+    update_result(result) {
+        if (this.entry.kind !== "tool-call") {
+            return;
+        }
+        this.entry.result = result;
+        this.entry.status = "success";
     }
     /**
      * 无缓存需要清理。
@@ -105,10 +121,12 @@ export class ToolCallBlockComponent {
     }
     build_title() {
         switch (this.entry.kind) {
-            case "tool-call":
+            case "tool-call": {
+                if (this.entry.result !== undefined || this.entry.status === "success") {
+                    return `[result] ${this.entry.tool_name}`;
+                }
                 return `[tool] ${this.entry.tool_name}`;
-            case "tool-result":
-                return `[result] ${this.entry.tool_name}`;
+            }
             case "tool-approval-request":
                 return `[approval] ${this.entry.tool_name} requests unrestricted sandbox`;
             case "tool-approval-result": {
@@ -121,10 +139,12 @@ export class ToolCallBlockComponent {
     }
     build_detail_lines() {
         switch (this.entry.kind) {
-            case "tool-call":
+            case "tool-call": {
+                if (this.entry.result !== undefined) {
+                    return this.format_result(this.entry.result);
+                }
                 return this.format_json_args(this.entry.args);
-            case "tool-result":
-                return this.format_result(this.entry.result);
+            }
             case "tool-approval-request":
                 return [
                     `approval_id: ${this.entry.approval_id}`,

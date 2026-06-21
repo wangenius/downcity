@@ -7,7 +7,6 @@
  */
 
 import {
-  CombinedAutocompleteProvider,
   Editor,
   isKeyRelease,
   Key,
@@ -16,6 +15,7 @@ import {
   type SelectItem,
   type TUI,
 } from "@earendil-works/pi-tui";
+import { SlashFirstAutocompleteProvider } from "@/city/agent/tui/components/editor/SlashCommandAutocompleteProvider.js";
 
 import { BUILTIN_SLASH_COMMANDS } from "@/city/agent/tui/commands/index.js";
 import { createEditorTheme } from "@/city/agent/tui/theme/pi-tui-theme.js";
@@ -90,7 +90,7 @@ export class ChatEditorComponent extends Editor {
     };
 
     this.setAutocompleteProvider(
-      new CombinedAutocompleteProvider([...BUILTIN_SLASH_COMMANDS], process.cwd()),
+      new SlashFirstAutocompleteProvider(BUILTIN_SLASH_COMMANDS, process.cwd()),
     );
   }
 

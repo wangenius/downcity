@@ -5,7 +5,8 @@
  * - 直接对齐 Kimi Code 的 CustomEditor：带完整边框、prompt 符号、slash 高亮、
  *   描述换行的 slash 自动完成，以及标准应用级快捷键回调。
  */
-import { CombinedAutocompleteProvider, Editor, isKeyRelease, Key, matchesKey, SelectList, } from "@earendil-works/pi-tui";
+import { Editor, isKeyRelease, Key, matchesKey, SelectList, } from "@earendil-works/pi-tui";
+import { SlashFirstAutocompleteProvider } from "../../../../city/agent/tui/components/editor/SlashCommandAutocompleteProvider.js";
 import { BUILTIN_SLASH_COMMANDS } from "../../../../city/agent/tui/commands/index.js";
 import { createEditorTheme } from "../../../../city/agent/tui/theme/pi-tui-theme.js";
 import { current_theme } from "../../../../city/agent/tui/theme/index.js";
@@ -49,7 +50,7 @@ export class ChatEditorComponent extends Editor {
             }
             return new SelectList(items, this.getAutocompleteMaxVisible(), theme.selectList);
         };
-        this.setAutocompleteProvider(new CombinedAutocompleteProvider([...BUILTIN_SLASH_COMMANDS], process.cwd()));
+        this.setAutocompleteProvider(new SlashFirstAutocompleteProvider(BUILTIN_SLASH_COMMANDS, process.cwd()));
     }
     /**
      * 设置提交回调。

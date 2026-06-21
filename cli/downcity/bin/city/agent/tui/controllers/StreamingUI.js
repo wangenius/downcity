@@ -70,10 +70,10 @@ export class StreamingUIController {
                 break;
             case "tool-call":
                 this.finalize_assistant();
-                this.add_tool_call(event.toolName, event.args);
+                this.add_tool_call(event.toolName, event.toolCallId, event.args);
                 break;
             case "tool-result":
-                this.add_tool_result(event.toolName, event.result);
+                this.message_list.update_tool_result(event.toolCallId, event.result);
                 break;
             case "tool-approval-request":
                 this.finalize_assistant();
@@ -92,9 +92,7 @@ export class StreamingUIController {
                 this.finalize_assistant();
                 break;
             case "assistant-step":
-                // 每个 assistant step 结束都是文本断点，
-                // finalize 后下一个 text-delta 会创建新 entry。
-                this.finalize_assistant();
+                // 不拆分 assistant 文本块；step 边界对当前 TUI 渲染无影响。
                 break;
             case "session-title":
             default:
@@ -177,23 +175,14 @@ export class StreamingUIController {
         this.on_streaming_text_end();
         this.schedule_render();
     }
-    add_tool_call(tool_name, args) {
+    add_tool_call(tool_name, tool_call_id, args) {
         const entry = {
             id: generateTuiId(),
             kind: "tool-call",
+            tool_call_id,
             tool_name,
             args,
-            created_at: Date.now(),
-        };
-        this.message_list.add_entry(entry);
-        this.schedule_render();
-    }
-    add_tool_result(tool_name, result) {
-        const entry = {
-            id: generateTuiId(),
-            kind: "tool-result",
-            tool_name,
-            result,
+            status: "pending",
             created_at: Date.now(),
         };
         this.message_list.add_entry(entry);

@@ -4,7 +4,8 @@
  * 关键点（中文）
  * - 内部使用 GutterContainer 保留左右边距。
  * - 维护 scroll_offset，支持 PageUp/PageDown 等快捷键回看历史。
- * - 默认 follow-tail：scroll_offset 为 0 时始终显示最新内容。
+ * - 默认贴底：scroll_offset 为 0 时始终显示最新内容。
+ * - 用户向上滚动后，新追加的内容不应改变当前视口顶部位置。
  * - 消息顺序按 append 先后排列，最新内容在底部。
  */
 import { type Component } from "@earendil-works/pi-tui";
@@ -24,6 +25,7 @@ export declare class MessageListComponent implements Component {
     private entries;
     private components;
     private scroll_offset;
+    private last_rendered_line_count;
     private get_viewport_height_fn;
     /**
      * 构造可滚动消息流组件。
@@ -53,6 +55,13 @@ export declare class MessageListComponent implements Component {
      * @param streaming 是否仍在流式输出中。
      */
     update_assistant_text(entry_id: string, text: string, streaming: boolean): void;
+    /**
+     * 注入指定 tool 调用的执行结果。
+     *
+     * @param tool_call_id tool 调用唯一标识。
+     * @param result tool 返回结果。
+     */
+    update_tool_result(tool_call_id: string, result: unknown): void;
     /**
      * 清空所有消息。
      */

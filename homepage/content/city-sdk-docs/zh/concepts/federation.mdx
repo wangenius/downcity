@@ -52,7 +52,7 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
-  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+  admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 
 // 产品前端：只拿 city_id + user_token，调用 service
@@ -76,7 +76,7 @@ const client = new City({
     <div className="dc-doc-node">
       <strong>客户端 City</strong>
       <span>`User City` 在产品前端，`Admin City` 在可信后端。</span>
-      <code>new City({ role })</code>
+      <code>{'new City({ role })'}</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>

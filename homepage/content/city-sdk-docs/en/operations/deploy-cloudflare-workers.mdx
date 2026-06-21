@@ -153,11 +153,11 @@ Expected shape:
 
 ## 8. Retrieve the admin key
 
-On first boot, City stores `DOWNCITY_CITY_ADMIN_SECRET_KEY` in its own `env` table. For Workers + D1, retrieve it from the remote D1 database:
+On first boot, City stores `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` in its own `env` table. For Workers + D1, retrieve it from the remote D1 database:
 
 ```bash
 npx wrangler d1 execute my-city-db --remote \
-  --command "SELECT value FROM env WHERE key='DOWNCITY_CITY_ADMIN_SECRET_KEY'"
+  --command "SELECT value FROM env WHERE key='DOWNCITY_FEDERATION_ADMIN_SECRET_KEY'"
 ```
 
 Keep this key in a trusted place. It is the credential used by `Admin City`, City CLI, or direct admin HTTP calls.

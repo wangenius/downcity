@@ -9,7 +9,7 @@ Check:
 
 - whether the request includes `Authorization: Bearer <user_token>`
 - whether the token has expired
-- whether City has `DOWNCITY_CITY_TOKEN_SIGNING_KEY` configured
+- whether City has `DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` configured
 - whether the token was issued by the current City
 - whether `city_id` matches the city embedded in the token
 
@@ -44,7 +44,7 @@ These cases usually return `422`.
 
 Check:
 
-- whether City has both `DOWNCITY_CITY_TOKEN_SIGNING_KEY` and `DOWNCITY_CITY_ADMIN_SECRET_KEY`
+- whether City has both `DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` and `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`
 - whether the target service has a registered handler
 - whether the handler or provider call threw an error without `statusCode`
 - whether the `onError` hook recorded the original error

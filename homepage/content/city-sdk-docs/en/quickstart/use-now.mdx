@@ -70,7 +70,7 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 const admin = new City({
   role: "admin",
   federation_url: "http://127.0.0.1:43127",
-  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+  admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 const city = await admin.cities.create({ name: "Demo City" });
 const token = await admin.cities.tokens.apply({

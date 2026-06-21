@@ -1,18 +1,16 @@
 ---
-title: City Overview
-description: City is the server runtime entry of Downcity. For details, read the newer reference entry pages directly.
+title: Runtime API
+description: Lightweight overview of the Downcity server-side runtime. For details, read the newer reference entry pages directly.
 ---
 
-This page is kept as a lightweight overview for the older entry path. The new reading order is:
+This page is kept as a lightweight overview. The new reading order is:
 
 - [Reference home](/en/city-sdk-docs/reference): choose an entry by role first
-- [City](/en/city-sdk-docs/reference/federation)
+- [Federation](/en/city-sdk-docs/reference/federation)
 - [HTTP API](/en/city-sdk-docs/reference/http-api)
 - [Environment variables](/en/city-sdk-docs/reference/env-vars)
 
-## What City is responsible for
-
-City currently handles the following:
+## What Federation is responsible for
 
 - initialize the Runtime database
 - validate `user_token`
@@ -21,13 +19,4 @@ City currently handles the following:
 - mount Service actions and service routes into the same `/v1/*` space
 - connect usage, plans, balances, billing, logs, and risk control through hooks
 
-If you want the concrete methods, such as:
-
-- `use()`
-- `getService()`
-- `getServices()`
-- `table()`
-- `router()`
-- `handleRequest()`
-
-go directly to [City](/en/city-sdk-docs/reference/federation).
+Continue with [Federation](/en/city-sdk-docs/reference/federation) for concrete methods.

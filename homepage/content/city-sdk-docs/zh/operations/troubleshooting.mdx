@@ -9,7 +9,7 @@ description: 调试 City、client、token 和 env 的常见路径。
 
 - 请求是否带了 `Authorization: Bearer <user_token>`。
 - token 是否过期。
-- City 是否配置了 `DOWNCITY_CITY_TOKEN_SIGNING_KEY`。
+- City 是否配置了 `DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY`。
 - token 是否由当前 City 签发。
 - `city_id` 是否和 token 里的 city 一致。
 
@@ -44,7 +44,7 @@ description: 调试 City、client、token 和 env 的常见路径。
 
 检查：
 
-- City 是否配置了 `DOWNCITY_CITY_TOKEN_SIGNING_KEY` 和 `DOWNCITY_CITY_ADMIN_SECRET_KEY`。
+- City 是否配置了 `DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` 和 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`。
 - 目标 service 是否已经注册 handler。
 - handler 或 provider 调用是否抛出了没有 `statusCode` 的错误。
 - `onError` hook 是否记录了原始错误。

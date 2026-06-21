@@ -2,6 +2,8 @@
   "title": "参考",
   "pages": [
     "index",
+    "client-sdk",
+    "runtime-api",
     "federation",
     "city-user",
     "city-admin",

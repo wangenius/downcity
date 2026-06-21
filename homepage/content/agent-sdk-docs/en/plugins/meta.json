@@ -9,6 +9,7 @@
     "plugin-call-surfaces",
     "plugin-hooks",
     "hooks",
+    "built-in-plugins",
     "plugin-system",
     "plugin-availability",
     "plugin-http",

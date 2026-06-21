@@ -22,21 +22,21 @@ After rotation, every service handler connected to this runtime reads the new va
 
 Downcity maintains two critical keys of its own:
 
-- `DOWNCITY_CITY_ADMIN_SECRET_KEY`
-- `DOWNCITY_CITY_TOKEN_SIGNING_KEY`
+- `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`
+- `DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY`
 
 ### admin secret
 
-`DOWNCITY_CITY_ADMIN_SECRET_KEY` is used by `Admin City` to manage City.
+`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` is used by `Admin City` to manage City.
 
 ### token signing key
 
-`DOWNCITY_CITY_TOKEN_SIGNING_KEY` is used internally by City to issue and validate `user_token`.
+`DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` is used internally by City to issue and validate `user_token`.
 
 ## What to watch during rotation
 
 - Rotating a provider key usually does not affect existing `user_token`
-- Rotating `DOWNCITY_CITY_TOKEN_SIGNING_KEY` invalidates old tokens
+- Rotating `DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` invalidates old tokens
 - If you rotate the signing key in production, shorten token TTL ahead of time or schedule a clear cutover window
 
 ## Recommendations

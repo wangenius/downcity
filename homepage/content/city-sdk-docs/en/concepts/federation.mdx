@@ -50,7 +50,7 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
-  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+  admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 
 // Product frontend: only holds city_id + user_token, calls services
@@ -74,7 +74,7 @@ The client never receives provider keys, and `User City` never receives the `adm
     <div className="dc-doc-node">
       <strong>Client City</strong>
       <span>`User City` in the product frontend, `Admin City` in a trusted backend.</span>
-      <code>new City({ role })</code>
+      <code>{'new City({ role })'}</code>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>

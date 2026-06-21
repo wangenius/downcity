@@ -22,21 +22,21 @@ await admin.env.upsert({
 
 Downcity 自己维护两类关键密钥：
 
-- `DOWNCITY_CITY_ADMIN_SECRET_KEY`
-- `DOWNCITY_CITY_TOKEN_SIGNING_KEY`
+- `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`
+- `DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY`
 
 ### admin secret
 
-`DOWNCITY_CITY_ADMIN_SECRET_KEY` 用于 `Admin City` 管理 City。
+`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` 用于 `Admin City` 管理 City。
 
 ### token signing key
 
-`DOWNCITY_CITY_TOKEN_SIGNING_KEY` 用于 City 内部签发和校验 `user_token`。
+`DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` 用于 City 内部签发和校验 `user_token`。
 
 ## 轮换时要注意什么
 
 - 轮换 provider key 一般不影响已签发的 `user_token`
-- 轮换 `DOWNCITY_CITY_TOKEN_SIGNING_KEY` 会让旧 token 失效
+- 轮换 `DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` 会让旧 token 失效
 - 如果你在线上轮换 signing key，通常需要提前缩短 token TTL，或安排明确切换窗口
 
 ## 建议

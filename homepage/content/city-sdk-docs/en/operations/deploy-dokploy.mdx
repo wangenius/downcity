@@ -21,8 +21,8 @@ Create an app in Dokploy from this Git repository:
 Configure these two stable bootstrap secrets in Dokploy:
 
 ```txt
-DOWNCITY_CITY_ADMIN_SECRET_KEY=admin_xxx
-DOWNCITY_CITY_TOKEN_SIGNING_KEY=sign_xxx
+DOWNCITY_FEDERATION_ADMIN_SECRET_KEY=admin_xxx
+DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY=sign_xxx
 ```
 
 `HOST`, `PORT`, and `DOWNCITY_CITY_DATABASE_URL` are already defined in `docker-compose.yml`:
@@ -119,7 +119,7 @@ const client = new City({
 });
 ```
 
-Trusted backends should use `Admin City` with `DOWNCITY_CITY_ADMIN_SECRET_KEY`:
+Trusted backends should use `Admin City` with `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`:
 
 ```ts
 import { City } from "@downcity/city";
@@ -127,7 +127,7 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
-  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+  admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 ```
 

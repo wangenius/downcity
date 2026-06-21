@@ -2,6 +2,8 @@
   "title": "Reference",
   "pages": [
     "index",
+    "client-sdk",
+    "runtime-api",
     "federation",
     "city-user",
     "city-admin",

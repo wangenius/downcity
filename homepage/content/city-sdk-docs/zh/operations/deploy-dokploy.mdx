@@ -21,8 +21,8 @@ Node 街区是 Downcity City Infra 的标准 Docker / Dokploy 部署形态。
 Dokploy 里必须配置这两个稳定的 bootstrap secret：
 
 ```txt
-DOWNCITY_CITY_ADMIN_SECRET_KEY=admin_xxx
-DOWNCITY_CITY_TOKEN_SIGNING_KEY=sign_xxx
+DOWNCITY_FEDERATION_ADMIN_SECRET_KEY=admin_xxx
+DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY=sign_xxx
 ```
 
 `HOST`、`PORT` 和 `DOWNCITY_CITY_DATABASE_URL` 已经写在 `docker-compose.yml` 中：
@@ -119,7 +119,7 @@ const client = new City({
 });
 ```
 
-可信后端应该用 `Admin City` 携带 `DOWNCITY_CITY_ADMIN_SECRET_KEY`：
+可信后端应该用 `Admin City` 携带 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`：
 
 ```ts
 import { City } from "@downcity/city";
@@ -127,7 +127,7 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
-  admin_secret_key: process.env.DOWNCITY_CITY_ADMIN_SECRET_KEY,
+  admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 ```
 

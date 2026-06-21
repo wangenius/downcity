@@ -153,11 +153,11 @@ curl https://my-city.<your-subdomain>.workers.dev/health
 
 ## 8. 取回 admin key
 
-City 首次启动时会把 `DOWNCITY_CITY_ADMIN_SECRET_KEY` 写入自己的 `env` 表。Workers + D1 部署下，可以从远程 D1 查询：
+City 首次启动时会把 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` 写入自己的 `env` 表。Workers + D1 部署下，可以从远程 D1 查询：
 
 ```bash
 npx wrangler d1 execute my-city-db --remote \
-  --command "SELECT value FROM env WHERE key='DOWNCITY_CITY_ADMIN_SECRET_KEY'"
+  --command "SELECT value FROM env WHERE key='DOWNCITY_FEDERATION_ADMIN_SECRET_KEY'"
 ```
 
 请把这个 key 存在可信位置。它是 `Admin City`、City CLI 或直接调用 admin HTTP 接口时使用的管理凭证。

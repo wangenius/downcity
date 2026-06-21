@@ -28,7 +28,7 @@ if [[ "$BUILD_SCOPE" == "all" ]]; then
   run_project_build "$ROOT_DIR/packages/plugins"
   run_project_build "$ROOT_DIR/packages/ui"
   run_project_build "$ROOT_DIR/homepage"
-  run_project_build "$ROOT_DIR/cli/downcity"
+  run_project_build "$ROOT_DIR/packages/cli"
   install_downcity_cli_globally "$ROOT_DIR"
   exit 0
 fi
@@ -42,5 +42,5 @@ run_project_build "$ROOT_DIR/packages/city"
 run_project_build "$ROOT_DIR/packages/services"
 run_project_build "$ROOT_DIR/packages/plugins"
 run_project_build "$ROOT_DIR/packages/ui"
-run_project_build "$ROOT_DIR/cli/downcity"
+run_project_build "$ROOT_DIR/packages/cli"
 install_downcity_cli_globally "$ROOT_DIR"

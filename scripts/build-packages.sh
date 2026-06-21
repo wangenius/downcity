@@ -235,7 +235,7 @@ run_build() {
   echo ""
   if [[ "$pkg" == "cli" ]]; then
     echo "--- Downcity CLI ---"
-    run_project_build "$ROOT_DIR/cli/downcity"
+    run_project_build "$ROOT_DIR/packages/cli"
     return 0
   fi
   echo "--- @downcity/$pkg ---"
@@ -284,7 +284,7 @@ if $BUMP; then
   echo "==> patch bump: ${PACKAGES[*]}"
   for pkg in "${PACKAGES[@]}"; do
     if [[ "$pkg" == "cli" ]]; then
-      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/cli/downcity/package.json"
+      node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/packages/cli/package.json"
     else
       node "$ROOT_DIR/scripts/bump-package-version.mjs" "$ROOT_DIR/packages/$pkg/package.json"
     fi

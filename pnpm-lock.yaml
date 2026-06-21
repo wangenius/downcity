@@ -12,148 +12,6 @@ importers:
         specifier: latest
         version: 1.3.14
 
-  cli/downcity:
-    dependencies:
-      '@ai-sdk/anthropic':
-        specifier: ^3.0.81
-        version: 3.0.81(zod@4.4.3)
-      '@ai-sdk/google':
-        specifier: ^3.0.80
-        version: 3.0.80(zod@4.4.3)
-      '@ai-sdk/huggingface':
-        specifier: ^1.0.50
-        version: 1.0.50(zod@4.4.3)
-      '@ai-sdk/moonshotai':
-        specifier: ^2.0.23
-        version: 2.0.23(zod@4.4.3)
-      '@ai-sdk/open-responses':
-        specifier: ^1.0.16
-        version: 1.0.16(zod@4.4.3)
-      '@ai-sdk/openai':
-        specifier: ^3.0.67
-        version: 3.0.67(zod@4.4.3)
-      '@ai-sdk/openai-compatible':
-        specifier: ^2.0.48
-        version: 2.0.48(zod@4.4.3)
-      '@ai-sdk/xai':
-        specifier: ^3.0.93
-        version: 3.0.93(zod@4.4.3)
-      '@downcity/agent':
-        specifier: workspace:^
-        version: link:../../packages/agent
-      '@downcity/city':
-        specifier: workspace:^
-        version: link:../../packages/city
-      '@downcity/plugins':
-        specifier: workspace:^
-        version: link:../../packages/plugins
-      '@downcity/server':
-        specifier: workspace:^
-        version: link:../../packages/server
-      '@downcity/shell':
-        specifier: workspace:^
-        version: link:../../packages/shell
-      '@downcity/type':
-        specifier: workspace:*
-        version: link:../../packages/type
-      '@earendil-works/pi-tui':
-        specifier: ^0.74.2
-        version: 0.74.2
-      '@larksuiteoapi/node-sdk':
-        specifier: ^1.66.0
-        version: 1.66.0
-      '@openrouter/ai-sdk-provider':
-        specifier: ^2.9.0
-        version: 2.9.0(ai@6.0.193(zod@4.4.3))(zod@4.4.3)
-      ai:
-        specifier: ^6.0.193
-        version: 6.0.193(zod@4.4.3)
-      better-sqlite3:
-        specifier: ^12.10.0
-        version: 12.10.0
-      chalk:
-        specifier: ^5.6.2
-        version: 5.6.2
-      cli-highlight:
-        specifier: ^2.1.11
-        version: 2.1.11
-      commander:
-        specifier: ^15.0.0
-        version: 15.0.0
-      dotenv:
-        specifier: ^17.4.2
-        version: 17.4.2
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@cloudflare/workers-types@4.20260530.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(bun-types@1.3.14)(kysely@0.29.2)(postgres@3.4.9)
-      execa:
-        specifier: ^9.6.1
-        version: 9.6.1
-      fast-glob:
-        specifier: ^3.3.3
-        version: 3.3.3
-      fs-extra:
-        specifier: ^11.3.5
-        version: 11.3.5
-      hono:
-        specifier: ^4.12.23
-        version: 4.12.23
-      js-yaml:
-        specifier: ^4.1.1
-        version: 4.1.1
-      nanoid:
-        specifier: ^5.1.11
-        version: 5.1.11
-      neo-blessed:
-        specifier: ^0.2.0
-        version: 0.2.0
-      node-cron:
-        specifier: ^4.2.1
-        version: 4.2.1
-      openai:
-        specifier: ^6.39.1
-        version: 6.39.1(ws@8.21.0)(zod@4.4.3)
-      ora:
-        specifier: ^9.4.0
-        version: 9.4.0
-      prompts:
-        specifier: ^2.4.2
-        version: 2.4.2
-      ws:
-        specifier: ^8.21.0
-        version: 8.21.0
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.13
-        version: 7.6.13
-      '@types/fs-extra':
-        specifier: ^11.0.4
-        version: 11.0.4
-      '@types/js-yaml':
-        specifier: ^4.0.9
-        version: 4.0.9
-      '@types/node':
-        specifier: ^25.9.1
-        version: 25.9.1
-      '@types/node-cron':
-        specifier: ^3.0.11
-        version: 3.0.11
-      '@types/prompts':
-        specifier: ^2.4.9
-        version: 2.4.9
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.1
-      tsc-alias:
-        specifier: ^1.8.17
-        version: 1.8.17
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
   homepage:
     dependencies:
       '@base-ui/react':
@@ -402,6 +260,148 @@ importers:
       better-sqlite3:
         specifier: ^12.10.0
         version: 12.10.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/cli:
+    dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^3.0.81
+        version: 3.0.81(zod@4.4.3)
+      '@ai-sdk/google':
+        specifier: ^3.0.80
+        version: 3.0.80(zod@4.4.3)
+      '@ai-sdk/huggingface':
+        specifier: ^1.0.50
+        version: 1.0.50(zod@4.4.3)
+      '@ai-sdk/moonshotai':
+        specifier: ^2.0.23
+        version: 2.0.23(zod@4.4.3)
+      '@ai-sdk/open-responses':
+        specifier: ^1.0.16
+        version: 1.0.16(zod@4.4.3)
+      '@ai-sdk/openai':
+        specifier: ^3.0.67
+        version: 3.0.67(zod@4.4.3)
+      '@ai-sdk/openai-compatible':
+        specifier: ^2.0.48
+        version: 2.0.48(zod@4.4.3)
+      '@ai-sdk/xai':
+        specifier: ^3.0.93
+        version: 3.0.93(zod@4.4.3)
+      '@downcity/agent':
+        specifier: workspace:^
+        version: link:../agent
+      '@downcity/city':
+        specifier: workspace:^
+        version: link:../city
+      '@downcity/plugins':
+        specifier: workspace:^
+        version: link:../plugins
+      '@downcity/server':
+        specifier: workspace:^
+        version: link:../server
+      '@downcity/shell':
+        specifier: workspace:^
+        version: link:../shell
+      '@downcity/type':
+        specifier: workspace:*
+        version: link:../type
+      '@earendil-works/pi-tui':
+        specifier: ^0.74.2
+        version: 0.74.2
+      '@larksuiteoapi/node-sdk':
+        specifier: ^1.66.0
+        version: 1.66.0
+      '@openrouter/ai-sdk-provider':
+        specifier: ^2.9.0
+        version: 2.9.0(ai@6.0.193(zod@4.4.3))(zod@4.4.3)
+      ai:
+        specifier: ^6.0.193
+        version: 6.0.193(zod@4.4.3)
+      better-sqlite3:
+        specifier: ^12.10.0
+        version: 12.10.0
+      chalk:
+        specifier: ^5.6.2
+        version: 5.6.2
+      cli-highlight:
+        specifier: ^2.1.11
+        version: 2.1.11
+      commander:
+        specifier: ^15.0.0
+        version: 15.0.0
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@cloudflare/workers-types@4.20260530.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(bun-types@1.3.14)(kysely@0.29.2)(postgres@3.4.9)
+      execa:
+        specifier: ^9.6.1
+        version: 9.6.1
+      fast-glob:
+        specifier: ^3.3.3
+        version: 3.3.3
+      fs-extra:
+        specifier: ^11.3.5
+        version: 11.3.5
+      hono:
+        specifier: ^4.12.23
+        version: 4.12.23
+      js-yaml:
+        specifier: ^4.1.1
+        version: 4.1.1
+      nanoid:
+        specifier: ^5.1.11
+        version: 5.1.11
+      neo-blessed:
+        specifier: ^0.2.0
+        version: 0.2.0
+      node-cron:
+        specifier: ^4.2.1
+        version: 4.2.1
+      openai:
+        specifier: ^6.39.1
+        version: 6.39.1(ws@8.21.0)(zod@4.4.3)
+      ora:
+        specifier: ^9.4.0
+        version: 9.4.0
+      prompts:
+        specifier: ^2.4.2
+        version: 2.4.2
+      ws:
+        specifier: ^8.21.0
+        version: 8.21.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/fs-extra':
+        specifier: ^11.0.4
+        version: 11.0.4
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      '@types/node-cron':
+        specifier: ^3.0.11
+        version: 3.0.11
+      '@types/prompts':
+        specifier: ^2.4.9
+        version: 2.4.9
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      tsc-alias:
+        specifier: ^1.8.17
+        version: 1.8.17
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

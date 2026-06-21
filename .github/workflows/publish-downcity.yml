@@ -12,8 +12,8 @@ on:
     paths:
       - ".github/workflows/publish-downcity.yml"
       - "cli/city/**"
-      - "cli/downcity/**"
-      - "cli/downcity/**"
+      - "packages/cli/**"
+      - "packages/cli/**"
       - "packages/type/package.json"
       - "packages/shell/package.json"
       - "packages/agent/package.json"
@@ -62,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="$(node -p "require('./cli/downcity/package.json').version")"
+          VERSION="$(node -p "require('./packages/cli/package.json').version")"
 
           if npm view "downcity@${VERSION}" version >/dev/null 2>&1; then
             echo "downcity@${VERSION} already exists, skipping publish"
@@ -90,8 +90,8 @@ jobs:
           pnpm -C packages/plugins build
           pnpm -C packages/ui build
           pnpm -C cli/city build
-          pnpm -C cli/downcity build
-          pnpm -C cli/downcity build
+          pnpm -C packages/cli build
+          pnpm -C packages/cli build
 
       - name: Validate npm token and package ownership
         if: steps.version.outputs.should_publish == 'true'
@@ -118,7 +118,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="$(node -p "require('./cli/downcity/package.json').version")"
+          VERSION="$(node -p "require('./packages/cli/package.json').version")"
 
           if npm view downcity versions --json >/tmp/downcity-versions.json 2>/dev/null; then
             if grep -q "\"${VERSION}\"" /tmp/downcity-versions.json; then
@@ -128,7 +128,7 @@ jobs:
           fi
 
           PACK_DIR="$(mktemp -d)"
-          pnpm -C cli/downcity pack --pack-destination "${PACK_DIR}" >/dev/null
+          pnpm -C packages/cli pack --pack-destination "${PACK_DIR}" >/dev/null
           DOWNCITY_TARBALL="$(find "${PACK_DIR}" -maxdepth 1 -name '*.tgz' -print -quit)"
           if [[ -z "${DOWNCITY_TARBALL}" ]]; then
             echo "No downcity tarball generated."

@@ -103,16 +103,16 @@ install_downcity_cli_globally() {
   global_modules="$npm_prefix/lib/node_modules"
   global_bin="$npm_prefix/bin"
   package_dir="$global_modules/downcity"
-  source_dir="$workspace_root/cli/downcity"
+  source_dir="$workspace_root/packages/cli"
 
   if [[ ! -f "$source_dir/bin/index.js" ]]; then
-    echo "Missing Downcity CLI build output. Run cli/downcity build first." >&2
+    echo "Missing Downcity CLI build output. Run packages/cli build first." >&2
     return 1
   fi
 
   mkdir -p "$global_modules" "$global_bin" "$package_dir"
 
-  # 关键点（中文）：日常 patch build 已经构建好了 cli/downcity，不需要再 `pnpm deploy`
+  # 关键点（中文）：日常 patch build 已经构建好了 packages/cli，不需要再 `pnpm deploy`
   # 联网解析依赖。只更新 CLI 代码，并复用全局安装中已有的 node_modules。
   if [[ -d "$package_dir/node_modules" ]]; then
     rm -rf \

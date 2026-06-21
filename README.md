@@ -198,11 +198,10 @@ downcity/
 ├── packages/
 │   ├── agent/
 │   ├── city/
+│   ├── cli/
 │   ├── services/
 │   ├── type/
 │   └── ui/
-├── cli/
-│   └── downcity/
 ├── templates/
 │   ├── edge/
 │   └── node/
@@ -221,7 +220,7 @@ The `templates/*` projects are kept as convenient developer starters. They are n
 - Agent SDK docs: [downcity.ai/agent-sdk-docs](https://downcity.ai/agent-sdk-docs)
 - UI SDK docs: [downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
 - Chinese overview: [README.zh-CN.md](./README.zh-CN.md)
-- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [cli/downcity/README.md](./cli/downcity/README.md), [packages/ui/README.md](./packages/ui/README.md)
+- Package docs: [packages/agent/README.md](./packages/agent/README.md), [packages/city/README.md](./packages/city/README.md), [packages/type/README.md](./packages/type/README.md), [packages/services/README.md](./packages/services/README.md), [packages/cli/README.md](./packages/cli/README.md), [packages/ui/README.md](./packages/ui/README.md)
 
 ## Local Development
 

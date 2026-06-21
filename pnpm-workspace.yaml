@@ -7,7 +7,7 @@ packages:
   - packages/server
   - packages/shell
   - packages/type
-  - cli/*
+  - packages/cli
   - packages/ui
   - templates/*
   - examples/*

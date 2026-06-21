@@ -31,7 +31,7 @@ print_error() {
 }
 
 get_current_version() {
-  node -p "require('./cli/downcity/package.json').version"
+  node -p "require('./packages/cli/package.json').version"
 }
 
 set_new_version() {
@@ -52,7 +52,7 @@ const files = [
   'packages/city/package.json',
   'packages/services/package.json',
   'packages/plugins/package.json',
-  'cli/downcity/package.json',
+  'packages/cli/package.json',
 ];
 
 for (const file of files) {
@@ -179,7 +179,7 @@ main() {
     packages/city/package.json \
     packages/services/package.json \
     packages/plugins/package.json \
-    cli/downcity/package.json
+    packages/cli/package.json
   
   # 7. 输入提交信息
   local default_msg="chore: release v${new_version}"

@@ -198,11 +198,10 @@ downcity/
 ├── packages/
 │   ├── agent/
 │   ├── city/
+│   ├── cli/
 │   ├── services/
 │   ├── type/
 │   └── ui/
-├── cli/
-│   └── downcity/
 ├── templates/
 │   ├── edge/
 │   └── node/
@@ -220,7 +219,7 @@ downcity/
 - City SDK 文档：[downcity.ai/city-sdk-docs](https://downcity.ai/city-sdk-docs)
 - Agent SDK 文档：[downcity.ai/agent-sdk-docs](https://downcity.ai/agent-sdk-docs)
 - UI SDK 文档：[downcity.ai/ui-sdk-docs](https://downcity.ai/ui-sdk-docs)
-- 包文档：[packages/agent/README.md](./packages/agent/README.md)、[packages/city/README.md](./packages/city/README.md)、[packages/type/README.md](./packages/type/README.md)、[packages/services/README.md](./packages/services/README.md)、[cli/downcity/README.md](./cli/downcity/README.md)、[packages/ui/README.md](./packages/ui/README.md)
+- 包文档：[packages/agent/README.md](./packages/agent/README.md)、[packages/city/README.md](./packages/city/README.md)、[packages/type/README.md](./packages/type/README.md)、[packages/services/README.md](./packages/services/README.md)、[packages/cli/README.md](./packages/cli/README.md)、[packages/ui/README.md](./packages/ui/README.md)
 
 ## 本地开发
 

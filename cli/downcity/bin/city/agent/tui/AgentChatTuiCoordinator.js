@@ -75,7 +75,7 @@ export class AgentChatTuiCoordinator {
         this.terminal = new ProcessTerminal();
         this.tui = new TUI(this.terminal);
         this.terminal.setTitle(this.build_title());
-        this.status_line = new StatusLineComponent(this.app_state);
+        this.status_line = new StatusLineComponent(this.app_state, this.tui);
         this.editor = new ChatEditorComponent(this.tui);
         this.editor.connected_above = true;
         this.message_list = new MessageListComponent({
@@ -134,6 +134,7 @@ export class AgentChatTuiCoordinator {
         this.stopped = true;
         this.hide_session_picker();
         this.remove_input_listener?.();
+        this.status_line.dispose();
         this.tui.stop();
         this.resolve_run?.();
     }
@@ -196,7 +197,7 @@ export class AgentChatTuiCoordinator {
      */
     async run_turn(message) {
         this.app_state.is_executing = true;
-        this.app_state.status_text = "Thinking...";
+        this.app_state.status_text = "working...";
         this.status_line.set_state(this.app_state);
         this.editor.disableSubmit = true;
         this.message_list.scroll_to_bottom();

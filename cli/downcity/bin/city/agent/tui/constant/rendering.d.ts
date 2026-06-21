@@ -17,6 +17,16 @@ export declare const CHROME_GUTTER = 1;
  */
 export declare const RESULT_PREVIEW_LINES = 3;
 /**
+ * 工作中 braille 动画帧。
+ * 与 Kimi Code 的 BRAILLE_SPINNER_FRAMES 保持一致。
+ */
+export declare const BRAILLE_SPINNER_FRAMES: readonly ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+/**
+ * braille 动画帧切换间隔（毫秒）。
+ * 与 Kimi Code 的 BRAILLE_SPINNER_INTERVAL_MS 保持一致。
+ */
+export declare const BRAILLE_SPINNER_INTERVAL_MS = 80;
+/**
  * 列表选择器默认最大可见项数。
  */
 export declare const DEFAULT_SELECT_MAX_VISIBLE = 6;

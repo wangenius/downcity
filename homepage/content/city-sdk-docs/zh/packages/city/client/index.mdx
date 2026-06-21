@@ -18,7 +18,7 @@ City 是 `@downcity/city` 导出的访问层。产品侧通过它接入 Federati
 | 客户端 | 给谁用 | 负责什么 |
 | --- | --- | --- |
 | `User City` | 前端、App、扩展、桌面端 | 拿 `city_id + user_token` 调 AI service、custom service、公开 service |
-| `Admin City` | 产品后端、管理脚本、内部工具 | 管 city、签 token、写 runtime env、调管理侧 service |
+| `Admin City` | 产品后端、管理脚本、内部工具 | 签 token、写 runtime env、调管理侧 service |
 
 ## 什么时候该用它
 
@@ -94,8 +94,7 @@ const usage = await user.service("usage").get("me");
 ### 4. Trusted-side management
 
 ```ts
-const issued = await admin.cities.tokens.apply({
-  city_id: "city_demo",
+const issued = await admin.tokens.apply({
   user_id: "user_123",
   ttl: "7d",
 });
@@ -155,15 +154,11 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
+  city_id: "city_demo",
   admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 
-const city = await admin.cities.create({
-  name: "Demo City",
-});
-
-const token = await admin.cities.tokens.apply({
-  city_id: city.city_id,
+const token = await admin.tokens.apply({
   user_id: "user_123",
   ttl: "30m",
 });

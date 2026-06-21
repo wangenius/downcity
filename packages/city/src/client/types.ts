@@ -41,6 +41,13 @@ export interface AdminCityOptions extends CityBaseOptions {
   role: "admin";
 
   /**
+   * 当前管理的 City ID。
+   *
+   * token 签发等服务会自动使用该 ID，调用方无需再传 city_id。
+   */
+  city_id: string;
+
+  /**
    * Federation 管理密钥。
    *
    * 未传入时会由 Federation 回退读取 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`。

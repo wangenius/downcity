@@ -10,6 +10,14 @@ import type { UserServiceSummary } from "../user/types.js";
 export interface AdminPactAccessOptions {
   /** City 管理端 server URL */
   base_url: string;
+
+  /**
+   * 当前管理的 City ID。
+   *
+   * 传入后 token 签发等服务会自动使用该 ID，调用方无需再传 city_id。
+   */
+  city_id: string;
+
   /** 管理密钥 */
   admin_secret_key?: string;
   /** 自定义 fetch 实现 */

@@ -46,6 +46,7 @@ export async function adminLoop(
   const admin = new City({
     role: "admin",
     federation_url: session.base_url,
+    city_id: session.city_id,
     admin_secret_key: session.admin_secret_key,
   });
   const embedded = options?.embedded !== false;

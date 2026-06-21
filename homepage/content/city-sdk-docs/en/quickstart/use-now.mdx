@@ -70,11 +70,10 @@ serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
 const admin = new City({
   role: "admin",
   federation_url: "http://127.0.0.1:43127",
+  city_id: "city_demo",
   admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
-const city = await admin.cities.create({ name: "Demo City" });
-const token = await admin.cities.tokens.apply({
-  city_id: city.city_id,
+const token = await admin.tokens.apply({
   user_id: "user_123",
   ttl: "7d",
 });
@@ -86,7 +85,7 @@ const token = await admin.cities.tokens.apply({
 const client = new City({
   role: "user",
   federation_url: "http://127.0.0.1:43127",
-  city_id: city.city_id,
+  city_id: token.city_id,
   user_token: token.user_token,
 });
 

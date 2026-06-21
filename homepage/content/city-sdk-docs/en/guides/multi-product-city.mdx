@@ -63,12 +63,7 @@ It is useful for:
 A common pattern is one stable `city_id` per product:
 
 ```ts
-const city = await admin.cities.create({
-  name: "Chrome Extension",
-});
-
-const issued = await admin.cities.tokens.apply({
-  city_id: city.city_id,
+const issued = await admin.tokens.apply({
   user_id: "user_123",
   metadata: {
     plan: "starter",

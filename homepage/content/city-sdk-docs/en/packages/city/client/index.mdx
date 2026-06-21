@@ -18,7 +18,7 @@ If your question is "how does a city actually connect to City?", this page shoul
 | Client | Used by | Responsibility |
 | --- | --- | --- |
 | `User City` | Frontends, apps, extensions, desktop clients | Calls AI services, custom services, and public services with `city_id + user_token` |
-| `Admin City` | City backends, admin scripts, internal tools | Manages cities, issues tokens, writes runtime env, and calls admin-side services |
+| `Admin City` | City backends, admin scripts, internal tools | Issues tokens, writes runtime env, and calls admin-side services |
 
 ## Use it when
 
@@ -94,8 +94,7 @@ Use this for services exposed by official packages such as `@downcity/services`,
 ### 4. Trusted-side management
 
 ```ts
-const issued = await admin.cities.tokens.apply({
-  city_id: "city_demo",
+const issued = await admin.tokens.apply({
   user_id: "user_123",
   ttl: "7d",
 });
@@ -155,15 +154,11 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
+  city_id: "city_demo",
   admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 
-const city = await admin.cities.create({
-  name: "Demo City",
-});
-
-const token = await admin.cities.tokens.apply({
-  city_id: city.city_id,
+const token = await admin.tokens.apply({
   user_id: "user_123",
   ttl: "30m",
 });

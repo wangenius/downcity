@@ -69,7 +69,7 @@ export async function manageCities(city: City, _baseUrl: string, runtime: admin_
 
     try {
       if (act === "list") {
-        const items = await runtime.with_loading(t({ zh: "产品管理", en: "Products" }), async () => await city.cities.list());
+        const items = await runtime.with_loading(t({ zh: "产品管理", en: "Products" }), async () => await city.service("cities").get<{ items: { city_id: string; name: string; status: string }[] }>("list").then(b => b.items));
         await runtime.show_table({
           title: t({ zh: `${items.length} 个产品`, en: `${items.length} Products` }),
           columns: ["City ID", t({ zh: "名称", en: "Name" }), t({ zh: "状态", en: "Status" })],
@@ -82,33 +82,27 @@ export async function manageCities(city: City, _baseUrl: string, runtime: admin_
         const name = await runtime.text(t({ zh: "产品名称", en: "product name" }));
         if (!name) continue;
         const city_id = await runtime.text("city_id (optional)");
-        const item = await runtime.with_loading(t({ zh: "创建产品", en: "Create product" }), async () => await city.cities.create(
-          city_id
-            ? { name, city_id }
-            : { name },
-        ));
+        const item: { city_id: string; name: string } = await runtime.with_loading(t({ zh: "创建产品", en: "Create product" }), async () => await city.service("cities").action("create").invoke<{ city_id: string; name: string }>(city_id ? { name, city_id } : { name }));
         await runtime.show_message("success", t({ zh: `已创建：${item.city_id}`, en: `created: ${item.city_id}` }));
       } else if (act === "pause") {
         const id = await runtime.text("city_id");
         if (!id) continue;
-        await runtime.with_loading(t({ zh: "暂停产品", en: "Pause product" }), async () => await city.cities.pause(id));
+        await runtime.with_loading(t({ zh: "暂停产品", en: "Pause product" }), async () => await city.service("cities").action("pause").invoke({ city_id: id }));
         await runtime.show_message("success", t({ zh: `已暂停：${id}`, en: `paused: ${id}` }));
       } else if (act === "activate") {
         const id = await runtime.text("city_id");
         if (!id) continue;
-        await runtime.with_loading(t({ zh: "启用产品", en: "Activate product" }), async () => await city.cities.activate(id));
+        await runtime.with_loading(t({ zh: "启用产品", en: "Activate product" }), async () => await city.service("cities").action("activate").invoke({ city_id: id }));
         await runtime.show_message("success", t({ zh: `已启用：${id}`, en: `activated: ${id}` }));
       } else if (act === "remove") {
         const id = await runtime.text("city_id");
         if (!id) continue;
-        await runtime.with_loading(t({ zh: "移除产品", en: "Remove product" }), async () => await city.cities.remove(id));
+        await runtime.with_loading(t({ zh: "移除产品", en: "Remove product" }), async () => await city.service("cities").action("remove").invoke({ city_id: id }));
         await runtime.show_message("success", t({ zh: `已移除：${id}`, en: `removed: ${id}` }));
       } else if (act === "token") {
-        const city_id = await runtime.text("city_id");
-        if (!city_id) continue;
         const user_id = await runtime.text("user_id");
         if (!user_id) continue;
-        const token = await runtime.with_loading(t({ zh: "签发 Token", en: "Issue Token" }), async () => await city.cities.tokens.apply({ city_id, user_id }));
+        const token = await runtime.with_loading(t({ zh: "签发 Token", en: "Issue Token" }), async () => await city.tokens.apply({ user_id }));
         await runtime.show_text("City Token", token.user_token);
       }
     } catch (e) {

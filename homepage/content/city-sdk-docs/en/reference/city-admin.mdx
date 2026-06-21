@@ -35,6 +35,7 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
+  city_id: "city_demo",
   admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 ```
@@ -66,59 +67,14 @@ If `admin_secret_key` is omitted, the SDK tries to read `process.env.DOWNCITY_FE
   </div>
 </div>
 
-## `cities`
-
-### `list()`
-
-```ts
-const items = await admin.cities.list();
-```
-
-### `create()`
-
-```ts
-const city = await admin.cities.create({
-  name: "Chrome Extension",
-});
-```
-
-The response includes:
-
-- `city_id`
-- `name`
-- `status`
-- `created_at`
-- `updated_at`
-
-### `pause()` / `activate()`
-
-```ts
-await admin.cities.pause(city.city_id);
-
-await admin.cities.activate(city.city_id);
-```
-
-Useful when you need to:
-
-- stop all user calls for one city
-- temporarily take a city offline
-- reopen calls for a city later
-
-### `remove()`
-
-```ts
-await admin.cities.remove(city.city_id);
-```
-
-The current behavior is direct city deletion. Confirm that this matches your business expectation before using it.
-
 ## `tokens.apply()`
 
-This is the most common trusted-side action: issue a `user_token` for one user under one city.
+This is the most common trusted-side action: issue a `user_token` for a user under the target city.
+
+`city_id` is automatically injected from the `City` constructor. You only need to pass `user_id`.
 
 ```ts
-const issued = await admin.cities.tokens.apply({
-  city_id: city.city_id,
+const issued = await admin.tokens.apply({
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -148,14 +104,13 @@ The response includes:
 router.post("/login", async (c) => {
   const user_id = await login(c);
 
-  const issued = await admin.cities.tokens.apply({
-    city_id: "city_xxx",
+  const issued = await admin.tokens.apply({
     user_id,
     ttl: "7d",
   });
 
   return c.json({
-    city_id: "city_xxx",
+    city_id: issued.city_id,
     user_token: issued.user_token,
   });
 });
@@ -246,7 +201,7 @@ These changes are written to the `env` table in the City database. Both business
 
 ## `listServices()` / `listModels()` / `instruction()`
 
-Besides `cities.*` and `env.*`, the admin side can also read the current capability catalog exposed by City.
+Besides `tokens` and `env`, the admin side can also read the current capability catalog exposed by City.
 
 ### `listServices()`
 
@@ -283,7 +238,7 @@ It maps to `GET /v1/base/instruction` and returns the aggregated plain-text City
 
 ## Admin City can also call service-provided admin services
 
-Besides `cities.*` and `env.*`, `Admin City` can call admin-side services exposed by official packages.
+Besides `tokens` and `env`, `Admin City` can call admin-side services exposed by official packages.
 
 For example:
 
@@ -307,7 +262,7 @@ await admin.balance.redeemCodes.disable({
 });
 ```
 
-In other words, `Admin City` is not only for built-in cities/env endpoints. It is also the trusted-side entry into the same unified service route space.
+In other words, `Admin City` is not only for built-in token/env endpoints. It is also the trusted-side entry into the same unified service route space.
 
 ## Error handling
 
@@ -318,8 +273,7 @@ When `Admin City` receives a non-2xx HTTP response, it throws an `Error` with tw
 
 ```ts
 try {
-  await admin.cities.tokens.apply({
-    city_id: "city_xxx",
+  await admin.tokens.apply({
     user_id: "user_123",
   });
 } catch (error) {
@@ -341,6 +295,7 @@ Common statuses:
 
 These do not belong to `Admin City` yet:
 
+- city CRUD (use `admin.service("cities")` via generic service calls instead)
 - model configuration
 - direct edits to the `models` table
 - service handler registration

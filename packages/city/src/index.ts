@@ -112,7 +112,7 @@ export type {
 } from "./federation/auth/types.js";
 
 // ===========================================================================
-// 场景 4：管理 City 与环境变量（内置 Service）
+// 场景 4：管理环境变量（内置 Service）
 // ===========================================================================
 
 export { EnvService } from "./service/env/env-service.js";
@@ -124,9 +124,6 @@ export type {
   EnvCatalogScope,
 } from "./service/env/types.js";
 export { EnvStore } from "./service/env/env-store.js";
-
-export { CitiesService } from "./service/cities/cities-service.js";
-export type { CityRecord, CityCreateInput, CityStatus } from "./service/cities/types.js";
 
 // ===========================================================================
 // 场景 5：数据库工具
@@ -209,7 +206,6 @@ export type {
 
 export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./pact/invoker/balance/index.js";
 export { EnvInvoker } from "./pact/invoker/env/index.js";
-export { CitiesInvoker } from "./pact/invoker/cities/index.js";
 
 export type {
   AdminInstructionResult,
@@ -232,16 +228,10 @@ export type {
   BalanceTopupUpdateInput,
 } from "./pact/invoker/balance/types.js";
 
-export type {
-  TokenApplyInput,
-  TokenApplyResult,
-} from "./pact/invoker/cities/types.js";
-
 // ===========================================================================
 // 场景 7：内置表 Schema
 // ===========================================================================
 
-export { sqliteCities, pgCities } from "./service/cities/schema.js";
 export { sqliteEnv, pgEnv } from "./service/env/schema.js";
 
 // ===========================================================================

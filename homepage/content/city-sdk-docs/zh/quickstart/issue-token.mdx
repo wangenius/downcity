@@ -8,18 +8,14 @@ description: 给产品侧 client 一个可以调用 City 的用户凭证。
 ```ts
 import { City } from "@downcity/city";
 
-const client = new City({
+const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
+  city_id: "city_demo",
   admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 
-const city = await client.cities.create({
-  name: "Web App",
-});
-
-const user = await client.cities.tokens.apply({
-  city_id: city.city_id,
+const user = await admin.tokens.apply({
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -28,7 +24,7 @@ const user = await client.cities.tokens.apply({
 });
 ```
 
-把 `user.user_token` 和 `city.city_id` 返回给产品 client。
+把 `user.user_token` 和 `user.city_id` 返回给产品 client。
 
 ## metadata 的作用
 

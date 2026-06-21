@@ -5,7 +5,6 @@
 import { ServiceClient } from "../invoker/invoker.js";
 import { BalanceInvoker } from "../invoker/balance/index.js";
 import { EnvInvoker } from "../invoker/env/index.js";
-import { CitiesInvoker } from "../invoker/cities/index.js";
 import {
   defaultFetch,
   normalizeBaseURL,
@@ -24,9 +23,9 @@ import type {
 export class AdminPactAccess {
   readonly balance: BalanceInvoker;
   readonly env: EnvInvoker;
-  readonly cities: CitiesInvoker;
 
   private readonly base_url: string;
+  readonly city_id: string;
   private readonly secret: string;
   private readonly fetchImpl: FetchLike;
 
@@ -36,6 +35,7 @@ export class AdminPactAccess {
     }
 
     this.base_url = normalizeBaseURL(options.base_url, "base_url");
+    this.city_id = requiredString(options.city_id, "city_id");
     this.secret = requiredString(
       options.admin_secret_key ?? process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
       "admin_secret_key",
@@ -45,7 +45,6 @@ export class AdminPactAccess {
     const req = <T>(path: string, init: RequestInitLike) => this.json<T>(path, init);
     this.balance = new BalanceInvoker({ requestJSON: req });
     this.env = new EnvInvoker({ requestJSON: req });
-    this.cities = new CitiesInvoker({ requestJSON: req });
   }
 
   /** 获取 Service 调用器（与 User City 共用同一路由） */
@@ -93,6 +92,23 @@ export class AdminPactAccess {
       fetch: this.fetchImpl,
       url: `${this.base_url}${path}`,
       init: this.withAuth(init),
+    });
+  }
+
+
+  /**
+   * 为当前 City 签发 user token。
+   *
+   * 不需要传 city_id，构造时传入的 city_id 会自动注入。
+   */
+  async applyToken(input: {
+    user_id: string;
+    metadata?: Record<string, unknown>;
+    ttl?: string | number;
+  }): Promise<{ user_token: string; city_id: string; user_id: string; expires_at?: string }> {
+    return this.json('/v1/cities/tokens/apply', {
+      method: 'POST',
+      body: JSON.stringify({ ...input, city_id: this.city_id }),
     });
   }
 

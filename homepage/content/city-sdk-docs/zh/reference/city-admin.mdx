@@ -35,6 +35,7 @@ import { City } from "@downcity/city";
 const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
+  city_id: "city_demo",
   admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 ```
@@ -66,59 +67,14 @@ const admin = new City({
   </div>
 </div>
 
-## `cities`
-
-### `list()`
-
-```ts
-const items = await admin.cities.list();
-```
-
-### `create()`
-
-```ts
-const city = await admin.cities.create({
-  name: "Chrome Extension",
-});
-```
-
-返回值包含：
-
-- `city_id`
-- `name`
-- `status`
-- `created_at`
-- `updated_at`
-
-### `pause()` / `activate()`
-
-```ts
-await admin.cities.pause(city.city_id);
-
-await admin.cities.activate(city.city_id);
-```
-
-适合：
-
-- 暂停某个产品的所有用户调用
-- 临时下线某个产品
-- 重新开放一个 city
-
-### `remove()`
-
-```ts
-await admin.cities.remove(city.city_id);
-```
-
-当前语义就是删除 city 记录。调用前要先确认这是否符合你的业务预期。
-
 ## `tokens.apply()`
 
-这是最常用的管理端能力：为某个用户在某个 city 下申请 `user_token`。
+这是最常用的管理端能力：为某个用户签发 `user_token`。
+
+`city_id` 在 `City` 构造时传入，会自动注入到请求中。调用方只需传 `user_id`。
 
 ```ts
-const issued = await admin.cities.tokens.apply({
-  city_id: city.city_id,
+const issued = await admin.tokens.apply({
   user_id: "user_123",
   metadata: {
     plan: "pro",
@@ -148,14 +104,13 @@ const issued = await admin.cities.tokens.apply({
 router.post("/login", async (c) => {
   const user_id = await login(c);
 
-  const issued = await admin.cities.tokens.apply({
-    city_id: "city_xxx",
+  const issued = await admin.tokens.apply({
     user_id,
     ttl: "7d",
   });
 
   return c.json({
-    city_id: "city_xxx",
+    city_id: issued.city_id,
     user_token: issued.user_token,
   });
 });
@@ -246,7 +201,7 @@ await admin.env.refresh();
 
 ## `listServices()` / `listModels()` / `instruction()`
 
-除了 `cities.*` 和 `env.*`，管理端还可以读取 City 当前暴露的能力目录。
+除了 `tokens` 和 `env`，管理端还可以读取 City 当前暴露的能力目录。
 
 ### `listServices()`
 
@@ -283,7 +238,7 @@ console.log(text);
 
 ## Admin City 也可以调 service 的管理侧 service
 
-除了 `cities.*` 和 `env.*`，`Admin City` 也可以调用 service 暴露出来的管理侧 service。
+除了 `tokens` 和 `env`，`Admin City` 也可以调用 service 暴露出来的管理侧 service。
 
 例如：
 
@@ -307,7 +262,7 @@ await admin.balance.redeemCodes.disable({
 });
 ```
 
-也就是说，`Admin City` 不只是在调内建 cities/env 接口，它同样是可信侧调用统一 service 路由的入口。
+也就是说，`Admin City` 不只是在调内建 token/env 接口，它同样是可信侧调用统一 service 路由的入口。
 
 ## 错误处理
 
@@ -318,8 +273,7 @@ await admin.balance.redeemCodes.disable({
 
 ```ts
 try {
-  await admin.cities.tokens.apply({
-    city_id: "city_xxx",
+  await admin.tokens.apply({
     user_id: "user_123",
   });
 } catch (error) {
@@ -341,6 +295,7 @@ try {
 
 这几件事当前不走 `Admin City`：
 
+- City CRUD（改用 `admin.service("cities")` 通用调用）
 - 模型配置
 - 注册 service handler
 - 用户前端直接登录交互

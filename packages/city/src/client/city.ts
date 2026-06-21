@@ -45,6 +45,7 @@ export class City<TRole extends CityRole = CityRole> {
     if (options.role === "admin") {
       this.admin_access = new AdminPactAccess({
         base_url: options.federation_url,
+        city_id: options.city_id,
         admin_secret_key: options.admin_secret_key,
         fetch: options.fetch,
       });
@@ -88,10 +89,13 @@ export class City<TRole extends CityRole = CityRole> {
   }
 
   /**
-   * Admin 角色的 City 管理入口。
+   * Token 管理入口。
+   *
+   * 不需要传 city_id，构造时传入的 city_id 会自动注入。
    */
-  get cities(): AdminPactAccess["cities"] {
-    return this.require_admin().cities;
+  get tokens(): { apply: (input: { user_id: string; metadata?: Record<string, unknown>; ttl?: string | number }) => Promise<{ user_token: string; city_id: string; user_id: string; expires_at?: string }> } {
+    const admin = this.require_admin();
+    return { apply: (input) => admin.applyToken(input) };
   }
 
   /**

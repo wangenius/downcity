@@ -24,6 +24,8 @@ const CONFIG_FILE = path.join(DIR, "config.json");
 export interface AdminSession {
   /** 当前 server 的 server URL */
   base_url: string;
+  /** 当前管理的 City ID */
+  city_id: string;
   /** 当前 server 的 admin secret key */
   admin_secret_key: string;
 }

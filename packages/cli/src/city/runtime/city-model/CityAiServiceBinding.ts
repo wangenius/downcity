@@ -54,6 +54,7 @@ export async function listCityAiServiceModelsForAdmin(
   const city = new City({
     role: "admin",
     federation_url: user.federation_url,
+    city_id: user.federation_url,
     admin_secret_key,
   });
   return await city.listModels();

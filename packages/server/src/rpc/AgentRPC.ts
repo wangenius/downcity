@@ -50,7 +50,7 @@ export class AgentRPC {
       const instance = await startRpcServer({
         host,
         port,
-        sessionCollection: this.agent.get_session_collection(),
+        sessionCollection: this.agent.session_collection(),
         getAgentContext: () => this.agent.getContext(),
         getShell: () => this.agent.getShell(),
       });

@@ -45,7 +45,7 @@ const agent = new RemoteAgent({
   url: "http://127.0.0.1:5314/agents/repo-helper",
 });
 
-const session = await agent.create_session();
+const session = await agent.session_collection().create_session();
 const turn = await session.prompt({
   query: "Summarize the current repository structure",
 });

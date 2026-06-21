@@ -19,13 +19,13 @@ description: RemoteAgent 下 session 可用的核心方法和能力边界
 ## 获取 session
 
 ```ts
-const session = await agent.create_session();
+const session = await agent.session_collection().create_session();
 ```
 
 如果你要继续一个已有远程会话：
 
 ```ts
-const session = await agent.get_session("repo-analysis");
+const session = await agent.session_collection().get_session("repo-analysis");
 ```
 
 这样就可以切换到一个已知远程 session，而不是每次都从头开始。

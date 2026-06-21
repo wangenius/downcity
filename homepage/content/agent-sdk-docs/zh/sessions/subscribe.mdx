@@ -16,7 +16,7 @@ const unsubscribe = session.subscribe((event) => {
 ## 例子
 
 ```ts
-const session = await agent.get_session("repo-analysis");
+const session = await agent.session_collection().get_session("repo-analysis");
 
 const unsubscribe = session.subscribe((event) => {
   if (event.type === "text-delta") {

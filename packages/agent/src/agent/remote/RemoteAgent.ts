@@ -122,7 +122,7 @@ export class RemoteAgent {
   }
 
   /**
-  * 返回当前远程 session collection 入口。
+   * 返回当前远程 session collection 入口。
    *
    * 关键点（中文）
    * - `RemoteAgentTransport` 只负责协议传输，不直接等价于 `AgentSessionCollection`。
@@ -130,8 +130,8 @@ export class RemoteAgent {
    */
   session_collection(): AgentSessionCollection {
     return {
-      create_session: async (input) => {
-        const info = await this.transport.create_session(input);
+     create_session: async (input) => {
+       const info = await this.transport.create_session(input);
         return new RemoteSession(this.transport, info);
       },
       get_session: async (session_id) => {

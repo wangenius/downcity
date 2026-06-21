@@ -10,7 +10,7 @@ description: Read the current Session summary and detail snapshot
 ## Example
 
 ```ts
-const session = await agent.get_session("repo-analysis");
+const session = await agent.session_collection().get_session("repo-analysis");
 
 const info = await session.getInfo();
 

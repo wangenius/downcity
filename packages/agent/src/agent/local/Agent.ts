@@ -12,18 +12,9 @@ import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
-  AgentCreateSessionInput,
-  AgentArchiveSessionInput,
-  AgentArchiveSessionsInput,
-  AgentArchiveSessionResult,
-  AgentArchiveSessionsResult,
-  AgentCleanArchiveResult,
-  AgentListSessionsInput,
   AgentModel,
   AgentOptions,
-  AgentSession,
   AgentSessionCollection,
-  AgentSessionSummaryPage,
 } from "@/types/agent/AgentTypes.js";
 import type {
   ShellApprovalMode,
@@ -107,54 +98,6 @@ export class Agent {
       agent_context: this.agentContext,
       get_shell: () => this.shell,
     });
-  }
-
-  /**
-   * 新建一个 session。
-   */
-  async create_session(input?: AgentCreateSessionInput): Promise<AgentSession> {
-    return await this.sessionManager.create_session(input);
-  }
-
-  /**
-   * 获取一个已存在的 session。
-   */
-  async get_session(sessionId: string): Promise<AgentSession> {
-    return await this.sessionManager.get_session(sessionId);
-  }
-
-  /**
-   * 列出当前 agent 的 session 摘要页。
-   */
-  async list_sessions(
-    input?: AgentListSessionsInput,
-  ): Promise<AgentSessionSummaryPage> {
-    return await this.sessionManager.list_sessions(input);
-  }
-
-  /**
-   * 归档单个 session。
-   */
-  async archive_session(
-    input: AgentArchiveSessionInput,
-  ): Promise<AgentArchiveSessionResult> {
-    return await this.sessionManager.archive_session(input);
-  }
-
-  /**
-   * 列出当前 agent 的已归档 session 摘要页。
-   */
-  async archive_sessions(
-    input?: AgentArchiveSessionsInput,
-  ): Promise<AgentArchiveSessionsResult> {
-    return await this.sessionManager.archive_sessions(input);
-  }
-
-  /**
-   * 永久清空已归档 session。
-   */
-  async clean_archive(): Promise<AgentCleanArchiveResult> {
-    return await this.sessionManager.clean_archive();
   }
 
   /**
@@ -302,9 +245,9 @@ export class Agent {
   }
 
   /**
-   * 返回当前 session collection。
+   * 返回当前 session collection 入口。
    */
-  get_session_collection(): AgentSessionCollection {
+  session_collection(): AgentSessionCollection {
     return this.sessionManager.get_session_collection();
   }
 

@@ -19,13 +19,13 @@ These APIs stay intentionally close to the local session surface so you can reus
 ## Get a session
 
 ```ts
-const session = await agent.create_session();
+const session = await agent.session_collection().create_session();
 ```
 
 To continue an existing remote conversation:
 
 ```ts
-const session = await agent.get_session("repo-analysis");
+const session = await agent.session_collection().get_session("repo-analysis");
 ```
 
 That lets you switch to a known remote session instead of always starting over.

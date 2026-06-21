@@ -98,10 +98,10 @@ export async function createRemoteChatSession(params: {
   const session = await params.remote_agent.session_collection().create_session({
     sessionId: session_id,
   });
-   return {
-      session_id: session.id,
-    };
-  }
+  return {
+    session_id: session.id,
+  };
+}
 
 /**
  * 获取或创建远程 session。

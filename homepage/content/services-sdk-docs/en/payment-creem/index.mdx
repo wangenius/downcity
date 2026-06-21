@@ -10,14 +10,14 @@ It is not a subscription or entitlement service. The service only owns Checkout 
 ## Enable it
 
 ```ts
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import {
   BalanceService,
   PaymentService,
   creemPaymentProvider,
 } from "@downcity/services";
 
-const base = new CityBase({ db });
+const base = new Federation({ db });
 const balance = new BalanceService();
 
 base.use(balance);

@@ -70,9 +70,9 @@ City 侧通常会这样注册模型：
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { CityBase, AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
+import { Federation, AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
 
-const base = new CityBase({
+const base = new Federation({
   db,
   dialect: "sqlite",
   raw,

@@ -50,14 +50,14 @@ pnpm add @downcity/services
 ## Enable it
 
 ```ts
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import {
   BalanceService,
   PaymentService,
   stripePaymentProvider,
 } from "@downcity/services";
 
-const base = new CityBase({ db });
+const base = new Federation({ db });
 const balance = new BalanceService();
 
 base.use(balance);

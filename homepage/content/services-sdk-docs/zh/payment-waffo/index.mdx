@@ -10,14 +10,14 @@ description: "把一次性 Waffo Pancake Checkout 同步成用户全局余额充
 ## 启用方式
 
 ```ts
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import {
   BalanceService,
   PaymentService,
   waffoPaymentProvider,
 } from "@downcity/services";
 
-const base = new CityBase({ db });
+const base = new Federation({ db });
 const balance = new BalanceService();
 
 base.use(balance);

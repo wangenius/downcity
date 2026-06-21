@@ -21,7 +21,7 @@ pnpm add @downcity/services
 ## 最小接入
 
 ```ts
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import {
   AccountsService,
   BalanceService,
@@ -31,7 +31,7 @@ import {
   UsageService,
 } from "@downcity/services";
 
-const base = new CityBase({ db });
+const base = new Federation({ db });
 const balance = new BalanceService();
 
 base.use(new AccountsService());

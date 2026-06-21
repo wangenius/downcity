@@ -58,10 +58,10 @@ pnpm add @downcity/services
 ## 启用方式
 
 ```ts
-import { CityBase } from "@downcity/city";
+import { Federation } from "@downcity/city";
 import { AccountsService } from "@downcity/services";
 
-const base = new CityBase();
+const base = new Federation();
 
 base.use(new AccountsService({
   token_ttl: "7d",

@@ -1,14 +1,15 @@
 /**
  * AI Service 任务类型模块。
  *
- * 服务端任务表和 SDK 轮询协议共享这些结构，避免 image/create、image/result
- * 之间出现隐式约定。
+ * 这里保留 AI 图片任务的 provider step 协议与 SDK 轮询协议。
+ * 底层持久化使用 City 通用 async_jobs 表。
  */
 
 import type { UIMessage } from "ai";
+import type { AsyncJobStatus } from "../../types/AsyncJob.js";
 
 /** 图片生成任务状态。 */
-export type AIImageJobStatus = "queued" | "running" | "succeeded" | "failed";
+export type AIImageJobStatus = AsyncJobStatus;
 
 /** 图片任务推进 action 的状态。 */
 export type AIImageJobStepStatus = "running" | "succeeded" | "failed";
@@ -47,32 +48,6 @@ export interface AIImageJobStepResult {
   message?: string;
   /** 建议客户端下一次查询 result 的间隔毫秒数。 */
   poll_after_ms?: number;
-}
-
-/** 图片生成任务表行。 */
-export interface AIImageJobRecord {
-  /** Federation 内部生成的图片任务 ID。 */
-  job_id: string;
-  /** 当前任务状态。 */
-  status: AIImageJobStatus;
-  /** 原始图片生成输入，JSON 字符串。 */
-  input_json: string;
-  /** 成功后的 UIMessage 结果，JSON 字符串。 */
-  result_json?: string | null;
-  /** 失败时给客户端展示的错误消息。 */
-  error?: string | null;
-  /** 当前任务状态说明，便于客户端展示或排障。 */
-  message?: string | null;
-  /** 当前 user_token 绑定的 City ID。 */
-  city_id?: string | null;
-  /** 当前终端用户 ID。 */
-  user_id?: string | null;
-  /** 本次任务解析到的模型 ID。 */
-  model_id?: string | null;
-  /** 创建时间。 */
-  created_at: string;
-  /** 更新时间。 */
-  updated_at: string;
 }
 
 /** image/create 返回给客户端的结果。 */

@@ -34,6 +34,11 @@ export type {
 } from "./types/Metering.js";
 
 export type {
+  AsyncJobRecord,
+  AsyncJobStatus,
+} from "./types/AsyncJob.js";
+
+export type {
   ActionFn,
   HookFn,
 } from "./service/action.js";
@@ -241,6 +246,7 @@ export type {
 // ===========================================================================
 
 export { sqliteEnv, pgEnv } from "./service/env/schema.js";
+export { sqliteAsyncJobs, pgAsyncJobs } from "./service/async-job/schema.js";
 
 // ===========================================================================
 // 场景 8：工具函数

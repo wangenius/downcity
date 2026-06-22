@@ -18,9 +18,10 @@
 import { Service, type Context } from "../service.js";
 import { httpError, randomSecret } from "../../utils/helpers.js";
 import type { ActionFn } from "../action.js";
-import { sqliteAIImageJobs } from "./schema.js";
+import { sqliteAsyncJobs } from "../async-job/schema.js";
 import { normalizeAIUsage } from "./helpers.js";
 import type { UIMessage } from "ai";
+import type { AsyncJobRecord, AsyncJobStatus } from "../../types/AsyncJob.js";
 import type {
   AIServiceOptions,
   AIModelEnvRequirement,
@@ -35,7 +36,6 @@ import type {
   AIProviderChargeLine,
 } from "./charge.js";
 import type {
-  AIImageJobRecord,
   AIImageJobStepContext,
   AIImageJobStepResult,
   AIImageJobStepState,
@@ -49,6 +49,8 @@ const MODALITIES = ["text", "stream", "image", "video", "tts", "asr"] as const;
 const DEFAULT_MODEL_MODE = "text";
 /** 图片任务轮询建议间隔 */
 const IMAGE_JOB_POLL_AFTER_MS = 2_000;
+/** 图片生成任务在通用 async_jobs 表中的类型。 */
+const IMAGE_GENERATE_JOB_TYPE = "ai.image.generate";
 
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
@@ -210,23 +212,26 @@ function isImageJobStepResult(value: unknown): value is AIImageJobStepResult {
 /**
  * 把类型化任务记录转成 TableApi 使用的普通行。
  */
-function recordToRow(record: Partial<AIImageJobRecord>): Record<string, unknown> {
+function recordToRow(record: Partial<AsyncJobRecord>): Record<string, unknown> {
   return { ...record };
 }
 
 /**
  * 把 TableApi 普通行转成图片任务记录。
  */
-function rowToImageJobRecord(row: Record<string, unknown>): AIImageJobRecord {
+function rowToAsyncJobRecord(row: Record<string, unknown>): AsyncJobRecord {
   return {
     job_id: String(row.job_id ?? ""),
+    job_type: String(row.job_type ?? ""),
     status: readJobStatus(row.status),
     input_json: String(row.input_json ?? "{}"),
+    state_json: readNullableString(row.state_json),
     result_json: readNullableString(row.result_json),
     error: readNullableString(row.error),
     message: readNullableString(row.message),
     city_id: readNullableString(row.city_id),
     user_id: readNullableString(row.user_id),
+    service_id: readNullableString(row.service_id),
     model_id: readNullableString(row.model_id),
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
@@ -236,7 +241,7 @@ function rowToImageJobRecord(row: Record<string, unknown>): AIImageJobRecord {
 /**
  * 读取任务状态。
  */
-function readJobStatus(value: unknown): AIImageJobRecord["status"] {
+function readJobStatus(value: unknown): AsyncJobStatus {
   return value === "queued" || value === "running" || value === "succeeded" || value === "failed"
     ? value
     : "failed";
@@ -260,7 +265,7 @@ export class AIService extends Service {
   private readonly balance?: AIBalanceBridge;
 
   constructor(options: AIServiceOptions = {}) {
-    super({ id: "ai", name: "AI", tables: { image_jobs: sqliteAIImageJobs } });
+    super({ id: "ai", name: "AI", tables: { async_jobs: sqliteAsyncJobs } });
     this.balance = options.balance;
 
     // 为每个 modality 注册 routing action
@@ -481,21 +486,24 @@ export class AIService extends Service {
     await this.handleCharge(ctx, resolved.model?.bill?.(ctx, { job_id }), false);
 
     const now = new Date().toISOString();
-    const record: AIImageJobRecord = {
+    const record: AsyncJobRecord = {
       job_id,
+      job_type: IMAGE_GENERATE_JOB_TYPE,
       status: "queued",
       input_json: JSON.stringify(ctx.input),
+      state_json: null,
       result_json: null,
       error: null,
       message: "queued",
       city_id: ctx.city?.city_id ?? readOptionalString(ctx.input.city_id),
       user_id: ctx.user?.user_id ?? null,
+      service_id: "ai",
       model_id: resolved.model?.id ?? null,
       created_at: now,
       updated_at: now,
     };
 
-    await this.imageJobTable(ctx).insert(recordToRow(record));
+    await this.asyncJobTable(ctx).insert(recordToRow(record));
 
     const job_ctx: Context = {
       ...ctx,
@@ -505,7 +513,7 @@ export class AIService extends Service {
       error: undefined,
     };
     if (resolved.model?.actions.image_job) {
-      let advanced: AIImageJobRecord;
+      let advanced: AsyncJobRecord;
       try {
         advanced = await this.advanceImageJob(job_ctx, record);
       } catch (error) {
@@ -547,7 +555,7 @@ export class AIService extends Service {
     return this.toImageJobResult(record);
   }
 
-  private async advanceImageJob(ctx: Context, record: AIImageJobRecord): Promise<AIImageJobRecord> {
+  private async advanceImageJob(ctx: Context, record: AsyncJobRecord): Promise<AsyncJobRecord> {
     const input = parseImageJobInput(record.input_json);
     const resolved = this.resolve({ model: input.model as string | undefined, mode: "image" }, ctx.env);
     const step_action = resolved.model?.actions.image_job;
@@ -562,7 +570,7 @@ export class AIService extends Service {
         image_job: {
           job_id: record.job_id,
           status: record.status,
-          state: parseImageJobStepState(record.result_json),
+          state: parseImageJobStepState(record.state_json),
         } satisfies AIImageJobStepContext,
       },
     };
@@ -576,6 +584,7 @@ export class AIService extends Service {
       if (!output.result) throw httpError(500, "image_job action succeeded without result");
       await this.updateImageJob(ctx, record.job_id, {
         status: "succeeded",
+        state_json: null,
         result_json: JSON.stringify(output.result),
         error: null,
         message: output.message ?? "succeeded",
@@ -591,7 +600,7 @@ export class AIService extends Service {
     } else {
       await this.updateImageJob(ctx, record.job_id, {
         status: "running",
-        result_json: output.state ? JSON.stringify(output.state) : record.result_json,
+        state_json: output.state ? JSON.stringify(output.state) : record.state_json,
         error: null,
         message: output.message ?? "running",
         updated_at,
@@ -618,6 +627,7 @@ export class AIService extends Service {
 
       await this.updateImageJob(ctx, job_id, {
         status: "succeeded",
+        state_json: null,
         result_json: JSON.stringify(result),
         error: null,
         message: "succeeded",
@@ -633,26 +643,35 @@ export class AIService extends Service {
     }
   }
 
-  private imageJobTable(ctx: Context) {
-    const table = ctx.db.image_jobs;
-    if (!table) throw httpError(500, "AI image job table is not initialized");
+  private asyncJobTable(ctx: Context) {
+    const table = ctx.db.async_jobs;
+    if (!table) throw httpError(500, "Async job table is not initialized");
     return table;
   }
 
-  private async getImageJob(ctx: Context, job_id: string): Promise<AIImageJobRecord | undefined> {
-    const rows = await this.imageJobTable(ctx).select({ job_id });
-    return rows[0] ? rowToImageJobRecord(rows[0]) : undefined;
+  private async getImageJob(ctx: Context, job_id: string): Promise<AsyncJobRecord | undefined> {
+    const rows = await this.asyncJobTable(ctx).select({
+      job_id,
+      job_type: IMAGE_GENERATE_JOB_TYPE,
+    });
+    return rows[0] ? rowToAsyncJobRecord(rows[0]) : undefined;
   }
 
   private async updateImageJob(
     ctx: Context,
     job_id: string,
-    values: Partial<AIImageJobRecord>,
+    values: Partial<AsyncJobRecord>,
   ): Promise<void> {
-    await this.imageJobTable(ctx).update({ where: { job_id }, values: recordToRow(values) });
+    await this.asyncJobTable(ctx).update({
+      where: {
+        job_id,
+        job_type: IMAGE_GENERATE_JOB_TYPE,
+      },
+      values: recordToRow(values),
+    });
   }
 
-  private ensureImageJobAccess(ctx: Context, record: AIImageJobRecord): void {
+  private ensureImageJobAccess(ctx: Context, record: AsyncJobRecord): void {
     if (ctx.identity?.kind !== "user") return;
     if (record.city_id && ctx.city?.city_id && record.city_id !== ctx.city.city_id) {
       throw httpError(404, `Image job not found: ${record.job_id}`);
@@ -662,7 +681,7 @@ export class AIService extends Service {
     }
   }
 
-  private toImageJobResult(record: AIImageJobRecord): UserImageJobResult {
+  private toImageJobResult(record: AsyncJobRecord): UserImageJobResult {
     const result = record.status === "succeeded" && record.result_json
       ? parseImageJobResult(record.result_json)
       : undefined;

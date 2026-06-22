@@ -60,8 +60,12 @@ export interface PersistSdkAssistantResultParams
   };
   /**
    * 本轮执行得到的 assistant 消息。
+   *
+   * 关键点（中文）
+   * - stop/abort 且没有 assistant 内容时允许为空。
+   * - 为空时仅刷新 metadata，不写入伪造 assistant 正文。
    */
-  assistantMessage: SessionMessageV1;
+  assistantMessage?: SessionMessageV1 | null;
 }
 
 /**
@@ -104,7 +108,9 @@ export async function persistSdkAssistantResult(
   await persistAssistantResult({
     writer: params.executor,
     assistantMessage: params.assistantMessage,
-    fallbackText: extractTextFromUiMessage(params.assistantMessage),
+    fallbackText: params.assistantMessage
+      ? extractTextFromUiMessage(params.assistantMessage)
+      : undefined,
   });
   await touchSessionMetadata(params);
 }

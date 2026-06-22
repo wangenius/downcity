@@ -146,7 +146,7 @@ export class SessionTurnService {
   }): Promise<{
     text: string;
     success: boolean;
-    assistantMessage: SessionMessageV1;
+    assistantMessage?: SessionMessageV1 | null;
     error?: string;
   }> {
     const tool_name_by_call_id = new Map<string, string>();
@@ -214,9 +214,13 @@ export class SessionTurnService {
       result.deferredPersistedUserMessages,
     );
     return {
-      text: extractTextFromUiMessage(result.assistantMessage),
+      text: result.assistantMessage
+        ? extractTextFromUiMessage(result.assistantMessage)
+        : "",
       success: result.success,
-      assistantMessage: result.assistantMessage,
+      ...(result.assistantMessage
+        ? { assistantMessage: result.assistantMessage }
+        : {}),
       ...(result.error ? { error: result.error } : {}),
     };
   }

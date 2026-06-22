@@ -106,7 +106,7 @@ export interface SessionPromptRuntimeOptions {
   }) => Promise<{
     text: string;
     success: boolean;
-    assistantMessage: SessionMessageV1;
+    assistantMessage?: SessionMessageV1 | null;
     error?: string;
   }>;
 
@@ -233,7 +233,9 @@ export class SessionPromptRuntime {
           turnId,
           text: result.text,
           success: stopped ? false : result.success,
-          assistantMessage: result.assistantMessage,
+          ...(result.assistantMessage
+            ? { assistantMessage: result.assistantMessage }
+            : {}),
           ...(stopped
             ? { error: TURN_STOPPED_MESSAGE }
             : result.error ? { error: result.error } : {}),

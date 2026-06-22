@@ -415,18 +415,16 @@ export class CoreEngineRunner {
         await this.logger.log("info", "[agent] stopped", {
           sessionId: session_id,
         });
-        const stopped_message = mergePendingAssistantFileParts(
-          final_assistant_ui_message ||
-            this.context_composer.buildFallbackAssistantMessage(
-              error_text,
-              input.run_context,
-            ),
-          input.run_context.pendingAssistantFileParts,
-        );
+        const stopped_message = final_assistant_ui_message
+          ? mergePendingAssistantFileParts(
+              final_assistant_ui_message,
+              input.run_context.pendingAssistantFileParts,
+            )
+          : null;
         return {
           success: false,
           error: error_text,
-          assistantMessage: stopped_message,
+          ...(stopped_message ? { assistantMessage: stopped_message } : {}),
           deferredPersistedUserMessages: [
             ...input.run_context.deferredPersistedUserMessages,
           ],

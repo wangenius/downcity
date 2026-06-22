@@ -289,7 +289,7 @@ export class SessionStateService {
    * 持久化最终 assistant 结果。
    */
   async persist_assistant_result(
-    assistant_message: SessionMessageV1,
+    assistant_message?: SessionMessageV1 | null,
   ): Promise<void> {
     await persistSdkAssistantResult({
       projectRoot: this.project_root,

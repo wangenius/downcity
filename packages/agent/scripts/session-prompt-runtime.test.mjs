@@ -247,3 +247,41 @@ test("SessionPromptRuntime stops current turn and cancels unmerged queued prompt
     ["turn-start", "turn-start", "turn-finish", "turn-finish"],
   );
 });
+
+test("SessionPromptRuntime does not synthesize assistant text when stopped before output", async () => {
+  const executionFinished = createDeferred();
+
+  const runtime = new SessionPromptRuntime({
+    sessionId: "test",
+    publish: () => {},
+    createAndPersistUserMessage: async (input) => {
+      return createUserMessage(input.query, 1);
+    },
+    executeTurn: async (input) => {
+      await new Promise((resolve) => {
+        input.abortSignal.addEventListener("abort", resolve, { once: true });
+      });
+      await executionFinished.promise;
+      return {
+        text: "",
+        success: false,
+        error: "Turn stopped",
+      };
+    },
+    stopTurn: () => {
+      executionFinished.resolve();
+      return true;
+    },
+  });
+
+  const turn = await runtime.prompt({ query: "first" });
+  await waitUntil(() => runtime.isActive());
+
+  runtime.stop();
+  const result = await turn.finished;
+
+  assert.equal(result.success, false);
+  assert.equal(result.error, "Turn stopped");
+  assert.equal(result.text, "");
+  assert.equal(result.assistantMessage, undefined);
+});

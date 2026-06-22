@@ -2,10 +2,10 @@
  * 可安装服务桥接模块。
  *
  * 提供 `InstallableService` 基类，把带 `install(ctx)` 生命周期的服务
- * 统一桥接到 `Service.action()` 体系。
+ * 统一桥接到 Downcity action route 与原生 HTTP route 体系。
  */
 
-import { Service, type Context, type EnvRequirement } from "./service.js";
+import { Service, type Context, type EnvRequirement, type ServiceNativeRouteHandler, type ServiceRouteMethod } from "./service.js";
 import { Hook } from "./hook.js";
 import { TableApi } from "../store/table-api.js";
 import type { CityTableApi } from "../store/table-api.js";
@@ -19,12 +19,7 @@ import type { InstructionDefinition } from "./instruction.js";
 export interface ServiceInstallContext {
   table<TRow extends Record<string, unknown> = Record<string, unknown>>(name: string): CityTableApi<TRow>;
 
-  route(config: {
-    method: "GET" | "POST";
-    path: string;
-    auth?: Array<"user" | "admin">;
-    handler: (ctx: ServiceRouteContext) => Promise<Response> | Response;
-  }): void;
+  route(config: ServiceActionRouteConfig | ServiceNativeRouteConfig): void;
 
   hook: {
     before(fn: (ctx: Context) => Promise<void> | void): void;
@@ -34,6 +29,44 @@ export interface ServiceInstallContext {
 
   createUserToken(input: CreateUserTokenInput): Promise<UserTokenIssueResult>;
   env(key: string): string | undefined;
+}
+
+export interface ServiceActionRouteConfig {
+  method: "GET" | "POST";
+  path: string;
+  auth?: Array<"user" | "admin">;
+  /**
+   * 是否公开访问。
+   *
+   * 关键说明（中文）
+   * - `true` 等价于 `auth: []`
+   * - 仅影响 Downcity Action 路由的鉴权要求
+   */
+  public?: boolean;
+  handler: (ctx: ServiceRouteContext) => Promise<Response> | Response;
+}
+
+export interface ServiceNativeRouteConfig {
+  method: ServiceRouteMethod;
+  path: string;
+  /**
+   * 是否公开访问。
+   *
+   * 关键说明（中文）
+   * - `true` 等价于 `auth: []`
+   * - native HTTP route 不进入 action/hook 管线，但仍可声明 route 级鉴权
+   */
+  public?: boolean;
+  auth?: Array<"user" | "admin">;
+  handler: {
+    /**
+     * 原生 HTTP 请求处理器。
+     *
+     * 适用于 OAuth callback、第三方 webhook、better-auth 等需要完整
+     * `Request` / `Response` 语义的协议入口。
+     */
+    request: ServiceNativeRouteHandler;
+  };
 }
 
 export interface ServiceRouteContext {
@@ -49,6 +82,19 @@ export interface ServiceRouteContext {
   text(): Promise<string>;
   /** 快速返回 JSON Response */
   jsonResponse(body: unknown, status?: number): Response;
+}
+
+function is_native_route_config(
+  config: ServiceActionRouteConfig | ServiceNativeRouteConfig,
+): config is ServiceNativeRouteConfig {
+  return typeof config.handler === "object" && config.handler !== null && "request" in config.handler;
+}
+
+function resolve_route_auth(
+  config: { auth?: Array<"user" | "admin">; public?: boolean },
+): Array<"user" | "admin"> | undefined {
+  if (config.public === true) return [];
+  return config.auth;
 }
 
 // ===========================================================================
@@ -86,6 +132,16 @@ export abstract class InstallableService extends Service {
       },
 
       route(config): void {
+        if (is_native_route_config(config)) {
+          self._registerNativeRoute({
+            method: config.method,
+            path: config.path,
+            auth: resolve_route_auth(config),
+            handler: config.handler.request,
+          });
+          return;
+        }
+
         // 去掉前导 /，与 client ServiceClient.action() 的 normalizeName 对齐
         const actionId = config.path.replace(/^\/+/, "");
         self.action(actionId, async (svcCtx: Context) => {
@@ -99,7 +155,7 @@ export abstract class InstallableService extends Service {
               status, headers: { "content-type": "application/json" },
             }),
           });
-        }, { method: config.method as "GET" | "POST", auth: config.auth });
+        }, { method: config.method as "GET" | "POST", auth: resolve_route_auth(config) });
       },
 
       hook: {

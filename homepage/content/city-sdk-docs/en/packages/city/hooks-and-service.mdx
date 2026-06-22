@@ -88,6 +88,8 @@ base.use(new UsageService({
 }));
 ```
 
+In this setup, `AccountsService` owns the full accounts HTTP surface. Mounting it once also exposes registration, login, OAuth start/result, the better-auth passthrough route, and the OAuth callback route, so edge workers do not need to call `router()` for accounts internals.
+
 ## How product-side callers reach services
 
 Once mounted, services still look like normal services from the product side:

@@ -169,12 +169,6 @@ async function init_federation(env: Env): Promise<Federation> {
 
   await federation.health();
 
-  // 关键说明（中文）
-  // accounts 的专用回调入口也统一挂到 `/v1/accounts/*`，让 client / admin / worker 对外只有一套路由空间。
-  const accounts = federation.getService("accounts")!;
-  federation.router().all("/v1/accounts/auth/*", (c) => (accounts as any).getAuthHandler()(c.req.raw));
-  federation.router().get("/v1/accounts/oauth/callback", async (c) => (accounts as any).handleOAuthCallback(c.req.raw));
-
   return federation;
 }
 

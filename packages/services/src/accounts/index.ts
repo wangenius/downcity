@@ -223,9 +223,27 @@ export class AccountsService extends InstallableService {
 
   install(ctx: ServiceInstallContext): void {
     ctx.route({
+      method: "ALL",
+      path: "/auth/*",
+      public: true,
+      handler: {
+        request: (request) => this.auth.handler(request),
+      },
+    });
+
+    ctx.route({
+      method: "GET",
+      path: "/oauth/callback",
+      public: true,
+      handler: {
+        request: (request) => this.handleOAuthCallback(request),
+      },
+    });
+
+    ctx.route({
       method: "POST",
       path: "/register",
-      auth: [],
+      public: true,
       handler: async (c) => {
         const body = await c.json<{ email?: string; password?: string; name?: string }>();
         const email = String(body.email ?? "").trim().toLowerCase();
@@ -274,7 +292,7 @@ export class AccountsService extends InstallableService {
     ctx.route({
       method: "POST",
       path: "/verify-email",
-      auth: [],
+      public: true,
       handler: async (c) => {
         const body = await c.json<{ token?: string; city_id?: string }>();
         const token = String(body.token ?? "").trim();
@@ -313,7 +331,7 @@ export class AccountsService extends InstallableService {
     ctx.route({
       method: "POST",
       path: "/login",
-      auth: [],
+      public: true,
       handler: async (c) => {
         const body = await c.json<{ email?: string; password?: string; city_id?: string }>();
         const email = String(body.email ?? "").trim().toLowerCase();
@@ -365,14 +383,14 @@ export class AccountsService extends InstallableService {
     ctx.route({
       method: "GET",
       path: "/providers",
-      auth: [],
+      public: true,
       handler: async (c) => c.jsonResponse({ items: this.listProviders() }),
     });
 
     ctx.route({
       method: "POST",
       path: "/oauth/start",
-      auth: [],
+      public: true,
       handler: async (c) => {
         const body = await c.json<{ provider?: string; city_id?: string }>();
         const provider = readOAuthProviderId(String(body.provider ?? "").trim());
@@ -396,7 +414,7 @@ export class AccountsService extends InstallableService {
     ctx.route({
       method: "GET",
       path: "/oauth/result",
-      auth: [],
+      public: true,
       handler: async (c) => {
         const state = String(new URL(c.request.url).searchParams.get("state") ?? "").trim();
         if (!state) return c.jsonResponse({ error: "state required" }, 400);

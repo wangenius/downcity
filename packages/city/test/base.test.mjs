@@ -126,6 +126,61 @@ test("Federation bootstraps internal secrets into the env table", async () => {
   }
 })
 
+test("InstallableService route supports native Request handlers", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-native-route-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+
+    base.use({
+      id: "native",
+      name: "Native Route Demo",
+      install(ctx) {
+        ctx.route({
+          method: "ALL",
+          path: "/echo/*",
+          public: true,
+          handler: {
+            request: async (request) => Response.json({
+              method: request.method,
+              pathname: new URL(request.url).pathname,
+              query: new URL(request.url).searchParams.get("q"),
+              header: request.headers.get("x-demo"),
+              body: await request.text(),
+            }),
+          },
+        })
+      },
+    })
+
+    await base.health()
+
+    const response = await base.handleRequest(new Request("http://example.com/v1/native/echo/deep/path?q=yes", {
+      method: "PUT",
+      headers: {
+        "content-type": "text/plain",
+        "x-demo": "kept",
+      },
+      body: "raw body",
+    }))
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      method: "PUT",
+      pathname: "/v1/native/echo/deep/path",
+      query: "yes",
+      header: "kept",
+      body: "raw body",
+    })
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("Federation rejects mismatched city_id for authenticated user requests", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-city-"))

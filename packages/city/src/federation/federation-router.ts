@@ -9,8 +9,9 @@
  */
 
 import { Hono } from "hono";
+import type { Handler } from "hono";
 import type { CityTableApi } from "../store/table-api.js";
-import type { Service, Context } from "../service/service.js";
+import type { Service, Context, ServiceRouteMethod } from "../service/service.js";
 import { InstallableService } from "../service/installable-service.js";
 import { httpError } from "../utils/helpers.js";
 import type { Authenticator } from "./auth/authenticator.js";
@@ -57,10 +58,6 @@ export function build_federation_router(params: {
     // 管理端通过 /v1/env/upsert、/remove、/import 修改 env 时会自动更新当前 cache；
     // 如果直接改数据库，可通过 /v1/env/refresh 或 city CLI 手动刷新。
     sync_request_origin(services, new URL(c.req.raw.url).origin);
-    const result = await authenticator.resolve(c.req.raw);
-    c.set("identity", { kind: result.level });
-    if (result.user) c.set("user", result.user);
-    if (result.city) c.set("city", result.city);
     await next();
   });
 
@@ -76,11 +73,7 @@ export function build_federation_router(params: {
 
   app.get("/v1/env/catalog", async (c) => {
     try {
-      authenticator.authorize({
-        level: c.get("identity")?.kind ?? "guest",
-        user: c.get("user"),
-        city: c.get("city"),
-      }, ["admin"]);
+      authenticator.authorize(await authenticator.resolve(c.req.raw), ["admin"]);
 
       return c.json({ items: collect_federation_env_catalog(services, runtime.env) });
     } catch (error) {
@@ -90,11 +83,7 @@ export function build_federation_router(params: {
 
   app.get("/v1/federation/instruction", async (c) => {
     try {
-      authenticator.authorize({
-        level: c.get("identity")?.kind ?? "guest",
-        user: c.get("user"),
-        city: c.get("city"),
-      }, ["admin"]);
+      authenticator.authorize(await authenticator.resolve(c.req.raw), ["admin"]);
 
       return new Response(await build_federation_instruction(services), {
         status: 200,
@@ -106,6 +95,22 @@ export function build_federation_router(params: {
       return build_error_response(error);
     }
   });
+
+  for (const service of services) {
+    for (const def of service._listNativeRouteDefs()) {
+      const path = `/v1/${encodeURIComponent(service.id)}${def.path}`;
+      register_native_route(app, def.method, path, async (c) => {
+        try {
+          if (def.auth.length > 0) {
+            authenticator.authorize(await authenticator.resolve(c.req.raw), def.auth);
+          }
+          return await def.handler(c.req.raw);
+        } catch (error) {
+          return build_error_response(error);
+        }
+      });
+    }
+  }
 
   for (const service of services) {
     for (const def of service._listActionDefs()) {
@@ -132,9 +137,7 @@ export function build_federation_router(params: {
           request: c.req.raw,
           raw_body,
           db,
-          identity: c.get("identity") ?? { kind: "guest" },
-          user: c.get("user"),
-          city: c.get("city"),
+          identity: { kind: "guest" },
           env: (key) => runtime.env.get(key),
           service: { id: service.id, name: service.name },
           action: { id: action.id },
@@ -147,11 +150,10 @@ export function build_federation_router(params: {
         }
 
         try {
-          authenticator.authorize({
-            level: ctx.identity?.kind ?? "guest",
-            user: ctx.user,
-            city: ctx.city,
-          }, def.auth);
+          const identity = authenticator.authorize(await authenticator.resolve(c.req.raw), def.auth);
+          ctx.identity = { kind: identity.level };
+          ctx.user = identity.user;
+          ctx.city = identity.city;
           ensure_city_identity_match(ctx);
 
           for (const hook of global_service_hooks(services)) {
@@ -196,6 +198,30 @@ function global_service_hooks(services: Service[]): InstallableService["globalHo
   return services
     .filter((service): service is InstallableService => service instanceof InstallableService)
     .map((service) => service.globalHook);
+}
+
+/**
+ * 注册 Service 原生 HTTP route。
+ */
+function register_native_route(
+  app: Hono,
+  method: ServiceRouteMethod,
+  path: string,
+  handler: Handler,
+): void {
+  if (method === "ALL") {
+    app.all(path, handler);
+    return;
+  }
+  if (method === "GET") {
+    app.get(path, handler);
+    return;
+  }
+  if (method === "POST") {
+    app.post(path, handler);
+    return;
+  }
+  app.options(path, handler);
 }
 
 /**

@@ -111,6 +111,30 @@ test("accountsService reports enabled providers from server state", async () => 
   }
 })
 
+test("accountsService exposes better-auth passthrough as an installed public route", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-auth-route-"))
+
+  try {
+    process.chdir(tempDir)
+    const { base } = await setupBase(tempDir)
+
+    const response = await base.handleRequest(new Request("http://localhost/v1/accounts/auth/session", {
+      method: "GET",
+      headers: {
+        "x-demo": "kept",
+      },
+    }))
+    const body = await response.text()
+
+    assert.notEqual(response.status, 401)
+    assert.doesNotMatch(body, /Authentication required/)
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("accountsService completes Google OAuth callback and resolves the state token", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-service-"))
@@ -161,8 +185,7 @@ test("accountsService completes Google OAuth callback and resolves the state tok
       throw new Error(`Unexpected fetch URL: ${url}`)
     }
 
-    const accounts = base.getService("accounts")
-    const callbackResponse = await accounts.handleOAuthCallback(new Request(`http://localhost/v1/accounts/oauth/callback?state=${start.state}&code=test-google-code`))
+    const callbackResponse = await base.handleRequest(new Request(`http://localhost/v1/accounts/oauth/callback?state=${start.state}&code=test-google-code`))
     assert.equal(callbackResponse.status, 200)
     assert.match(await callbackResponse.text(), /Login Successful/)
 
@@ -251,8 +274,7 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
       throw new Error(`Unexpected fetch URL: ${url}`)
     }
 
-    const accounts = base.getService("accounts")
-    const callbackResponse = await accounts.handleOAuthCallback(new Request(`http://localhost/v1/accounts/oauth/callback?state=${start.state}&code=test-wechat-code`))
+    const callbackResponse = await base.handleRequest(new Request(`http://localhost/v1/accounts/oauth/callback?state=${start.state}&code=test-wechat-code`))
     assert.equal(callbackResponse.status, 200)
     assert.match(await callbackResponse.text(), /Login Successful/)
 

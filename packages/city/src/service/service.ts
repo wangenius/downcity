@@ -98,6 +98,32 @@ export interface ActionOptions {
   auth?: RouteAuth;
 }
 
+/** Service route 支持的 HTTP 方法。 */
+export type ServiceRouteMethod = "GET" | "POST" | "OPTIONS" | "ALL";
+
+/**
+ * 原生 HTTP route 处理器。
+ *
+ * 关键说明（中文）
+ * - 处理器拿到完整 `Request`，并直接返回 `Response`
+ * - 适用于 OAuth callback、第三方 webhook、better-auth 等外部协议入口
+ */
+export type ServiceNativeRouteHandler = (request: Request) => Promise<Response> | Response;
+
+/**
+ * Service 拥有的原生 HTTP route 定义。
+ */
+export interface ServiceNativeRouteDefinition {
+  /** HTTP 方法，`ALL` 表示匹配所有方法。 */
+  method: ServiceRouteMethod;
+  /** Service namespace 内的路径，例如 `/auth/*`。 */
+  path: string;
+  /** 允许访问该 route 的身份集合；空数组表示公开。 */
+  auth: RouteAuth;
+  /** 原生 HTTP route 处理器。 */
+  handler: ServiceNativeRouteHandler;
+}
+
 /**
  * 归一化 action 鉴权配置。
  *
@@ -127,6 +153,8 @@ export class Service {
 
   /** Action 注册表 */
   private actionMap = new Map<string, { action: Action; method: "GET" | "POST"; auth: RouteAuth }>();
+  /** 原生 HTTP route 注册表 */
+  private nativeRouteMap = new Map<string, ServiceNativeRouteDefinition>();
 
   // ========== City 注入 ==========
 
@@ -192,6 +220,34 @@ export class Service {
   }
 
   /**
+   * 注册原生 HTTP route（Federation 内部使用）。
+   */
+  _registerNativeRoute(definition: {
+    method: ServiceRouteMethod;
+    path: string;
+    auth?: RouteAuth;
+    handler: ServiceNativeRouteHandler;
+  }): void {
+    const path = normalizeNativeRoutePath(definition.path);
+    const method = definition.method;
+    const key = `${method} ${path}`;
+    if (this.nativeRouteMap.has(key)) {
+      throw new Error(`Duplicate native route: ${this.id}.${method} ${path}`);
+    }
+    this.nativeRouteMap.set(key, {
+      method,
+      path,
+      auth: normalizeRouteAuth(definition.auth),
+      handler: definition.handler,
+    });
+  }
+
+  /** 列出原生 HTTP route 及其元数据（Federation 内部使用）。 */
+  _listNativeRouteDefs(): ServiceNativeRouteDefinition[] {
+    return [...this.nativeRouteMap.values()];
+  }
+
+  /**
    * 返回 instruction 聚合时使用的动作定义。
    */
   _listInstructionActions(): InstructionActionDefinition[] {
@@ -204,3 +260,11 @@ export class Service {
 }
 
 export type InstructionService = Service & InstructionCapable;
+
+/**
+ * 归一化 Service namespace 内的原生 route 路径。
+ */
+function normalizeNativeRoutePath(path: string): string {
+  const normalized = `/${path.replace(/^\/+/, "")}`;
+  return normalized === "/" ? "" : normalized;
+}

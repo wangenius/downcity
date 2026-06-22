@@ -63,3 +63,60 @@ export function tui_viewport(lines: string[], height: number, scroll_offset: num
   const offset = Math.max(0, Math.min(max_offset, scroll_offset));
   return lines.slice(offset, offset + safe_height);
 }
+
+/**
+ * 计算全屏 TUI 内容区可用高度。
+ *
+ * 关键点（中文）
+ * - pi-tui 在普通滚动缓冲区里做差分渲染，内容刚好顶满终端时容易触发底部滚屏。
+ * - 这里统一预留 1 行安全空间，让重绘不会把旧帧持续推到下方。
+ */
+export function tui_safe_body_height(reserved_rows: number): number {
+  const terminal_rows = process.stdout.rows || Number(process.env.LINES) || 24;
+  return Math.max(1, terminal_rows - reserved_rows);
+}
+
+/**
+ * 计算全屏 TUI 的安全渲染宽度。
+ *
+ * 关键点（中文）
+ * - 终端最后一列容易触发自动换行，导致差分渲染把旧帧向下推。
+ * - 全屏组件统一少占 1 列，让每一行都不会写到最右边界。
+ */
+export function tui_safe_render_width(width: number, minimum_width = 1): number {
+  const safe_width = Math.max(1, width) - 1;
+  return Math.max(minimum_width, safe_width);
+}
+
+/**
+ * 计算稳定列表视口的滚动位置。
+ *
+ * 关键点（中文）
+ * - 只有选中项离开当前可见范围时才移动视口，避免上下选择时列表整体晃动。
+ * - 调用方可持有 scroll_offset，让下一次渲染延续当前窗口位置。
+ */
+export function resolve_tui_visible_scroll(input: {
+  /** 当前选中的完整列表索引。 */
+  selected_index: number;
+  /** 当前列表视口起始索引。 */
+  scroll_offset: number;
+  /** 视口可显示的列表行数。 */
+  viewport_height: number;
+  /** 完整列表项数量。 */
+  item_count: number;
+}): number {
+  const viewport_height = Math.max(1, input.viewport_height);
+  const item_count = Math.max(0, input.item_count);
+  if (item_count <= viewport_height) return 0;
+
+  const max_scroll = Math.max(0, item_count - viewport_height);
+  let scroll_offset = Math.max(0, Math.min(input.scroll_offset, max_scroll));
+
+  if (input.selected_index < scroll_offset) {
+    scroll_offset = input.selected_index;
+  } else if (input.selected_index >= scroll_offset + viewport_height) {
+    scroll_offset = input.selected_index - viewport_height + 1;
+  }
+
+  return Math.max(0, Math.min(scroll_offset, max_scroll));
+}

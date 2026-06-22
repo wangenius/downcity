@@ -9,7 +9,7 @@
 
 import { readFileSync } from "node:fs";
 import { readConfig } from "@/federation/core/session.js";
-import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
+import { run_managed_dashboard_loop } from "@/shared/tui/ManagedTuiRuntime.js";
 import { t } from "@/shared/CliLocale.js";
 import type { FederationAction } from "@/federation/types/Interactive.js";
 import type { tui_action_result, tui_list_item } from "@/federation/types/Tui.js";
@@ -25,24 +25,11 @@ interface federation_dashboard_options {
 export async function open_federation_dashboard(
   options: federation_dashboard_options,
 ): Promise<void> {
-  const runtime = new ManagedTuiRuntime({ title: "Downcity Federation" });
-  try {
-    while (true) {
-      const state = build_federation_dashboard_state();
-      const selection = await runtime.dashboard(state);
-      if (!selection) {
-        return;
-      }
-
-      const result = await options.run_action(selection as FederationAction);
-
-      if (result === "quit") {
-        return;
-      }
-    }
-  } finally {
-    runtime.close();
-  }
+  await run_managed_dashboard_loop<FederationAction>({
+    runtime_title: "Downcity Federation",
+    build_state: build_federation_dashboard_state,
+    run_action: options.run_action,
+  });
 }
 
 interface federation_dashboard_state {

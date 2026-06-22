@@ -14,7 +14,7 @@ import { readCityPid, isCityProcessAlive } from "@/city/process/registry/CityRun
 import { resolveRunningManagedAgents } from "@/city/runtime/gateway/runtime/GatewayProcess.js";
 import type { FederationMembershipState } from "@/city/types/FederationMembership.js";
 import type { tui_action_result, tui_list_item } from "@/city/types/Tui.js";
-import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
+import { run_managed_dashboard_loop } from "@/shared/tui/ManagedTuiRuntime.js";
 
 type city_home_action =
   | "stop"
@@ -44,23 +44,11 @@ interface city_dashboard_state {
 export async function open_city_dashboard(
   options: city_dashboard_options,
 ): Promise<void> {
-  const runtime = new ManagedTuiRuntime({ title: "Downcity City" });
-  try {
-    while (true) {
-      const state = await build_city_dashboard_state();
-      const selection = await runtime.dashboard(state);
-      if (!selection) {
-        return;
-      }
-
-      const result = await options.run_action(selection as city_home_action);
-      if (result === "quit") {
-        return;
-      }
-    }
-  } finally {
-    runtime.close();
-  }
+  await run_managed_dashboard_loop<city_home_action>({
+    runtime_title: "Downcity City",
+    build_state: build_city_dashboard_state,
+    run_action: options.run_action,
+  });
 }
 
 async function build_city_dashboard_state(): Promise<city_dashboard_state> {

@@ -20,7 +20,15 @@ import type {
   tui_prompt_option,
   tui_table_input,
 } from "@/shared/types/TuiPrompt.js";
-import { tui_pad_end, tui_truncate, tui_viewport, tui_wrap_lines } from "@/shared/tui/TuiText.js";
+import {
+  resolve_tui_visible_scroll,
+  tui_safe_body_height,
+  tui_safe_render_width,
+  tui_pad_end,
+  tui_truncate,
+  tui_viewport,
+  tui_wrap_lines,
+} from "@/shared/tui/TuiText.js";
 
 const BORDER = "─";
 const POINTER = "❯";
@@ -126,6 +134,7 @@ export interface tui_loading_component_input {
 export class TuiDashboardComponent implements Component, Focusable {
   focused = false;
   private selected_index = 0;
+  private list_scroll = 0;
   private detail_scroll = 0;
   private readonly title: string;
   private readonly subtitle: string;
@@ -184,7 +193,7 @@ export class TuiDashboardComponent implements Component, Focusable {
       title: this.title,
       subtitle: this.subtitle,
       footer: this.footer,
-      left_lines: this.render_list(Math.max(24, Math.floor(width * 0.34))),
+      left_lines: this.render_visible_list(Math.max(24, Math.floor(width * 0.34))),
       right_lines: this.render_detail(Math.max(20, width - Math.max(24, Math.floor(width * 0.34)) - 3)),
     });
   }
@@ -196,6 +205,12 @@ export class TuiDashboardComponent implements Component, Focusable {
       this.selected_index + delta,
       delta,
     );
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: get_two_pane_body_height(),
+      item_count: this.items.length,
+    });
     this.detail_scroll = 0;
   }
 
@@ -212,6 +227,17 @@ export class TuiDashboardComponent implements Component, Focusable {
       const suffix = item.subtitle ? current_theme.dim_fg("textMuted", ` ${item.subtitle}`) : "";
       return tui_truncate(`${pointer} ${title}${suffix}`, width);
     });
+  }
+
+  private render_visible_list(width: number): string[] {
+    const body_height = get_two_pane_body_height();
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: body_height,
+      item_count: this.items.length,
+    });
+    return this.render_list(width).slice(this.list_scroll, this.list_scroll + body_height);
   }
 
   private render_detail(width: number): string[] {
@@ -233,6 +259,7 @@ export class TuiDashboardComponent implements Component, Focusable {
 export class TuiMultiSelectComponent implements Component, Focusable {
   focused = false;
   private selected_index = 0;
+  private list_scroll = 0;
   private detail_scroll = 0;
   private readonly title: string;
   private readonly subtitle: string;
@@ -295,13 +322,19 @@ export class TuiMultiSelectComponent implements Component, Focusable {
       title: this.title,
       subtitle: this.subtitle,
       footer: this.footer,
-      left_lines: this.render_list(left_width),
+      left_lines: this.render_visible_list(left_width),
       right_lines: this.render_detail(Math.max(20, width - left_width - 3)),
     });
   }
 
   private move(delta: number): void {
     this.selected_index = find_next_enabled_index(this.options, this.selected_index + delta, delta);
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: get_two_pane_body_height(),
+      item_count: this.options.length,
+    });
     this.detail_scroll = 0;
   }
 
@@ -331,6 +364,17 @@ export class TuiMultiSelectComponent implements Component, Focusable {
     });
   }
 
+  private render_visible_list(width: number): string[] {
+    const body_height = get_two_pane_body_height();
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: body_height,
+      item_count: this.options.length,
+    });
+    return this.render_list(width).slice(this.list_scroll, this.list_scroll + body_height);
+  }
+
   private render_detail(width: number): string[] {
     const option = this.options[this.selected_index];
     if (!option) return [];
@@ -349,6 +393,7 @@ export class TuiMultiSelectComponent implements Component, Focusable {
 export class TuiSelectComponent implements Component, Focusable {
   focused = false;
   private selected_index = 0;
+  private list_scroll = 0;
   private detail_scroll = 0;
   private readonly title: string;
   private readonly subtitle: string;
@@ -409,7 +454,7 @@ export class TuiSelectComponent implements Component, Focusable {
         title: this.title,
         subtitle: this.subtitle,
         footer: this.footer,
-        left_lines: this.render_list(left_width),
+        left_lines: this.render_visible_list(left_width),
         right_lines: this.render_detail(Math.max(20, width - left_width - 3)),
       });
     }
@@ -427,6 +472,12 @@ export class TuiSelectComponent implements Component, Focusable {
 
   private move(delta: number): void {
     this.selected_index = find_next_enabled_index(this.options, this.selected_index + delta, delta);
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: get_two_pane_body_height(),
+      item_count: this.options.length,
+    });
     this.detail_scroll = 0;
   }
 
@@ -443,6 +494,17 @@ export class TuiSelectComponent implements Component, Focusable {
       const hint = option.hint ? current_theme.dim_fg("textMuted", ` ${option.hint}`) : "";
       return tui_truncate(`${pointer} ${label}${hint}`, width);
     });
+  }
+
+  private render_visible_list(width: number): string[] {
+    const body_height = get_two_pane_body_height();
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: body_height,
+      item_count: this.options.length,
+    });
+    return this.render_list(width).slice(this.list_scroll, this.list_scroll + body_height);
   }
 
   private render_detail(width: number): string[] {
@@ -636,20 +698,19 @@ function render_two_pane(input: {
   left_lines: string[];
   right_lines: string[];
 }): string[] {
-  const width = Math.max(40, input.width);
+  const width = tui_safe_render_width(input.width, 40);
   const left_width = Math.max(24, Math.min(42, Math.floor(width * 0.38)));
   const right_width = Math.max(10, width - left_width - 3);
-  const body_height = Math.max(1, process.stdout.rows - 5);
+  const body_height = get_two_pane_body_height();
   const left = input.left_lines.slice(0, body_height);
   const right = input.right_lines.slice(0, body_height);
-  const rows = Math.max(left.length, right.length, 1);
   const output = [
     tui_truncate(current_theme.bold_fg("primary", input.title), width),
     tui_truncate(current_theme.dim_fg("textMuted", input.subtitle), width),
     tui_truncate(BORDER.repeat(width), width),
   ];
 
-  for (let index = 0; index < rows; index += 1) {
+  for (let index = 0; index < body_height; index += 1) {
     const left_line = tui_pad_end(left[index] ?? "", left_width);
     const right_line = tui_truncate(right[index] ?? "", right_width);
     output.push(`${left_line} ${current_theme.dim_fg("border", "│")} ${right_line}`);
@@ -658,6 +719,10 @@ function render_two_pane(input: {
   output.push(tui_truncate(BORDER.repeat(width), width));
   output.push(tui_truncate(current_theme.dim_fg("textMuted", input.footer), width));
   return output;
+}
+
+function get_two_pane_body_height(): number {
+  return tui_safe_body_height(5);
 }
 
 function find_next_enabled_index(

@@ -10,7 +10,15 @@
 import { Key, matchesKey, type Component, type Focusable } from "@earendil-works/pi-tui";
 import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
-import { tui_pad_end, tui_truncate, tui_viewport, tui_wrap_lines } from "@/shared/tui/TuiText.js";
+import {
+  resolve_tui_visible_scroll,
+  tui_safe_body_height,
+  tui_safe_render_width,
+  tui_pad_end,
+  tui_truncate,
+  tui_viewport,
+  tui_wrap_lines,
+} from "@/shared/tui/TuiText.js";
 import {
   resolve_loop_selectable_index,
   resolve_next_loop_selectable_index,
@@ -83,6 +91,7 @@ class CityManagerComponent implements Component, Focusable {
   focused = false;
   private state: city_manager_state;
   private selected_index: number;
+  private list_scroll = 0;
   private detail_scroll = 0;
   private readonly finish: (value: city_manager_action | null) => void;
   private readonly request_render: () => void;
@@ -132,14 +141,22 @@ class CityManagerComponent implements Component, Focusable {
   }
 
   render(width: number): string[] {
-    const safe_width = Math.max(40, width);
+    const safe_width = tui_safe_render_width(width, 40);
     const left_width = Math.max(24, Math.min(42, Math.floor(safe_width * 0.38)));
     const right_width = Math.max(10, safe_width - left_width - 3);
-    const body_height = Math.max(1, process.stdout.rows - 5);
-    const left_lines = this.render_list(left_width).slice(0, body_height);
+    const body_height = tui_safe_body_height(5);
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: body_height,
+      item_count: this.state.items.length,
+    });
+    const left_lines = this.render_list(left_width).slice(
+      this.list_scroll,
+      this.list_scroll + body_height,
+    );
     const right_lines = this.render_detail(right_width);
     const right_view = tui_viewport(right_lines, body_height, this.detail_scroll);
-    const rows = Math.max(left_lines.length, right_view.length, 1);
     const item = this.state.items[this.selected_index];
 
     const output = [
@@ -148,7 +165,7 @@ class CityManagerComponent implements Component, Focusable {
       tui_truncate(BORDER.repeat(safe_width), safe_width),
     ];
 
-    for (let index = 0; index < rows; index += 1) {
+    for (let index = 0; index < body_height; index += 1) {
       const left = tui_pad_end(left_lines[index] ?? "", left_width);
       const right = tui_truncate(right_view[index] ?? "", right_width);
       output.push(`${left} ${current_theme.dim_fg("border", "│")} ${right}`);
@@ -169,6 +186,12 @@ class CityManagerComponent implements Component, Focusable {
       ...this.state,
       detail_override: undefined,
     };
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: tui_safe_body_height(5),
+      item_count: this.state.items.length,
+    });
     this.detail_scroll = 0;
     this.request_render();
   }
@@ -192,6 +215,12 @@ class CityManagerComponent implements Component, Focusable {
         0,
       );
     }
+    this.list_scroll = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.list_scroll,
+      viewport_height: tui_safe_body_height(5),
+      item_count: next_state.items.length,
+    });
     this.detail_scroll = 0;
     this.request_render();
   }

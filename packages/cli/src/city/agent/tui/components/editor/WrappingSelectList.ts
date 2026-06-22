@@ -15,6 +15,7 @@ import {
   type SelectListLayoutOptions,
   type SelectListTheme,
 } from "@earendil-works/pi-tui";
+import { resolve_tui_visible_scroll } from "@/shared/tui/TuiText.js";
 
 // 与 pi-tui 私有常量保持一致（dist/components/select-list.js）。
 const DEFAULT_PRIMARY_COLUMN_WIDTH = 32;
@@ -38,6 +39,7 @@ interface SelectListInternals {
   readonly maxVisible: number;
   readonly theme: SelectListTheme;
   readonly layout: SelectListLayoutOptions;
+  scrollOffset?: number;
 }
 
 /**
@@ -45,16 +47,20 @@ interface SelectListInternals {
  */
 export class WrappingSelectList extends SelectList {
   override render(width: number): string[] {
-    const { filteredItems, selectedIndex, maxVisible, theme } = this.internals();
+    const internals = this.internals();
+    const { filteredItems, selectedIndex, maxVisible, theme } = internals;
     if (filteredItems.length === 0) {
       return [theme.noMatch("  No matching commands")];
     }
 
     const primary_column_width = this.primary_column_width();
-    const start_index = Math.max(
-      0,
-      Math.min(filteredItems.length - maxVisible, selectedIndex - Math.floor(maxVisible / 2)),
-    );
+    const start_index = resolve_tui_visible_scroll({
+      selected_index: selectedIndex,
+      scroll_offset: internals.scrollOffset ?? 0,
+      viewport_height: maxVisible,
+      item_count: filteredItems.length,
+    });
+    internals.scrollOffset = start_index;
     const end_index = Math.min(start_index + maxVisible, filteredItems.length);
 
     const lines: string[] = [];

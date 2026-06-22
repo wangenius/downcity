@@ -118,6 +118,7 @@ async function resolve_user_token(config: ClientConfig): Promise<string> {
   const admin = new City({
     role: "admin",
     federation_url: config.federation_url,
+    city_id: config.city_id,
     admin_secret_key: config.admin_secret_key,
   });
   const issued = await admin.cities.tokens.apply({
@@ -166,10 +167,11 @@ async function create_agent_session(config: ClientConfig, model: CityModel) {
       "回答要简洁、直接，优先帮助开发者验证本地 Federation 与 Agent SDK 调用链路。",
     ],
   });
+  const sessions = agent.session_collection();
   try {
-    return await agent.getSession("local_cli");
+    return await sessions.get_session("local_cli");
   } catch {
-    return await agent.createSession({ sessionId: "local_cli" });
+    return await sessions.create_session({ sessionId: "local_cli" });
   }
 }
 

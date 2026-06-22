@@ -22,6 +22,7 @@ import { CURRENT_MARK, SELECT_POINTER } from "@/city/agent/tui/constant/symbols.
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import { formatRelativeTime } from "@/city/agent/tui/utils/time.js";
 import { singleLine } from "@/city/agent/tui/utils/text.js";
+import { resolve_tui_visible_scroll } from "@/shared/tui/TuiText.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
 import { AGENT_CHAT_DEFAULT_SESSION_ID } from "@/city/agent/AgentChatTypes.js";
 
@@ -59,6 +60,7 @@ export class SessionPickerComponent implements Component, Focusable {
   private filtered_items: SessionItem[];
   private current_session_id: string;
   private selected_index = 0;
+  private scroll_offset = 0;
   private query = "";
   private max_visible: number;
   private on_select: (result: SessionPickerResult) => void;
@@ -180,6 +182,10 @@ export class SessionPickerComponent implements Component, Focusable {
         lines.push(this.render_item(item, inner_width));
       }
     }
+    const used_list_lines = visible_items.length === 0 ? 1 : visible_items.length;
+    for (let index = used_list_lines; index < this.max_visible; index += 1) {
+      lines.push("");
+    }
 
     lines.push(this.render_scroll_info(inner_width));
     lines.push(current_theme.fg("primary", BORDER_HORIZONTAL.repeat(safe_width)));
@@ -241,16 +247,27 @@ export class SessionPickerComponent implements Component, Focusable {
       );
     }
     this.selected_index = Math.min(this.selected_index, Math.max(0, this.filtered_items.length - 1));
+    this.scroll_offset = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.scroll_offset,
+      viewport_height: this.max_visible,
+      item_count: this.filtered_items.length,
+    });
   }
 
   private get_visible_items(): SessionItem[] {
     const total = this.filtered_items.length;
     if (total <= this.max_visible) {
+      this.scroll_offset = 0;
       return this.filtered_items;
     }
-    const half = Math.floor(this.max_visible / 2);
-    const start = Math.max(0, Math.min(this.selected_index - half, total - this.max_visible));
-    return this.filtered_items.slice(start, start + this.max_visible);
+    this.scroll_offset = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.scroll_offset,
+      viewport_height: this.max_visible,
+      item_count: total,
+    });
+    return this.filtered_items.slice(this.scroll_offset, this.scroll_offset + this.max_visible);
   }
 
   private move_selection(direction: number): void {
@@ -265,6 +282,12 @@ export class SessionPickerComponent implements Component, Focusable {
     } else {
       this.selected_index = next;
     }
+    this.scroll_offset = resolve_tui_visible_scroll({
+      selected_index: this.selected_index,
+      scroll_offset: this.scroll_offset,
+      viewport_height: this.max_visible,
+      item_count: this.filtered_items.length,
+    });
   }
 
   private confirm_selection(): void {
